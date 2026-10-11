@@ -77,6 +77,24 @@ only through the `eurostat: coverage check (dry run)` and
 overwrites or deletes. Comext (DS-*) and partitioning of too-big datasets are out of
 scope. No schedule. Everything else, including all other ingestion, stays paused.
 
+## Branches, pull requests and triggers
+
+Owner direction, 11 October 2026:
+
+- All development happens on a feature branch, never by committing directly to
+  `main`. Name it `<type>/<short-topic>` with type one of `feat`, `fix`, `docs`,
+  `chore`.
+- Changes reach `main` only through a pull request.
+- After the pull request is merged, delete its branch (the repository setting
+  "Automatically delete head branches" does this; delete manually if it did not).
+  Do not keep merged, abandoned or one-off branches.
+- `1 · Ingest → Landing` and `2 · Transform → Bronze / Silver / Gold` run only by
+  manual dispatch. Never add `push` or `schedule` triggers to them, and never
+  commit or merge to start a data run. `3 · Deploy portal` may run on pushes to
+  `main` that change portal code.
+- No workflow files on feature branches other than edits to the three
+  operational workflows; any workflow file on any branch shows up in Actions.
+
 ## Deliver
 
 Report what changed, what actually ran, whether it reached main and what remains.
