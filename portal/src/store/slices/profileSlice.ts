@@ -119,7 +119,6 @@ export const createProfileSlice: StateCreator<
           "home",
           "connections",
           "settings",
-          "catalog",
           "review",
           "explorer",
         ]);
@@ -128,11 +127,7 @@ export const createProfileSlice: StateCreator<
           .map((tab) => ({
             ...tab,
             title:
-              tab.type === "catalog"
-                ? "Data catalogue"
-                : tab.type === "review"
-                  ? "Saved project input"
-                  : tab.title,
+              tab.type === "review" ? "Saved project input" : tab.title,
           }));
         set({
           tabs: tabs.length > 0 ? tabs : [{ id: "home", title: "Home", type: "home", content: "" }],

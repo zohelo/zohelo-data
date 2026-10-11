@@ -19,7 +19,6 @@ import {
   Settings,
   Bookmark,
   ChevronRight,
-  Layers,
 } from "lucide-react";
 import { useDuckStore, type EditorTabType } from "@/store";
 import { getUiConfig } from "@/lib/appConfig";
@@ -225,24 +224,6 @@ export default function Sidebar({ isExplorerOpen, onToggleExplorer }: SidebarPro
           </TooltipProvider>
 
           <Separator className="my-2 mx-2" />
-
-          {/* Data catalogue */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={isTabActive("catalog") ? "secondary" : "ghost"}
-                  size="icon"
-                  className="mx-auto h-9 w-9"
-                  onClick={() => openOrFocusTab("catalog", "Data catalogue")}
-                  aria-label="Data catalogue"
-                >
-                  <Layers className="h-4 w-4 text-primary" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Data catalogue</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
 
           {/* Connections */}
           {!ui.hideConnections && (

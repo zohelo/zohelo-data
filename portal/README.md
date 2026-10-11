@@ -7,7 +7,6 @@ Project-wide architecture, data boundaries, and operational status live in the r
 - [Repository overview](../README.md)
 - [Architecture](../docs/architecture.md)
 - [Development and verification](../docs/development.md)
-- [Portal user guide](../docs/using-the-portal.md)
 - [Shared contribution rules](../AGENTS.md)
 
 ## Local development
