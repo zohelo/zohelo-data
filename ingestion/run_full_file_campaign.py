@@ -5,8 +5,8 @@ import os
 from pathlib import Path
 import tempfile
 
-from source_campaign import load_settings
-from ingestion.full_source_campaign import SOURCES, coverage, run_full_campaign
+from ingestion.run_api_campaign import load_settings
+from ingestion.common.full_source_campaign import SOURCES, coverage, run_full_campaign
 
 
 def main():
@@ -25,15 +25,15 @@ def main():
         return 0
     if not args.verify_current and not args.allow_production_write:
         parser.error("R2 production ingestion requires --allow-production-write")
-    from ingestion.source_campaign_store import R2CampaignStore
-    from ingestion.bulk_transport import BulkR2RawStore
+    from ingestion.common.source_campaign_store import R2CampaignStore
+    from ingestion.common.bulk_transport import BulkR2RawStore
     campaign_id = args.source + "_bulk"
     # Full-distribution campaign state and publication indexes live in the
     # lakehouse control bucket. Large native payloads are streamed separately
     # to 01_landing/<source>/bulk/ in the private landing bucket.
     store = R2CampaignStore(campaign_id, publication_only=True)
     raw_store = BulkR2RawStore(args.source)
-    from ingestion.bulk_publication import publish_bulk_index, verify_bulk_index
+    from ingestion.common.bulk_publication import publish_bulk_index, verify_bulk_index
     if args.verify_current:
         state = store.load()
         if not state or not state.get("receipts"):

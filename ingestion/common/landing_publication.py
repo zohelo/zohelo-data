@@ -17,7 +17,7 @@ from uuid import uuid4
 
 import duckdb
 
-from ingestion.source_campaign_store import (
+from ingestion.common.source_campaign_store import (
     CampaignCapacityError,
     CampaignStoreError,
     MAX_LANDING_FILE_BYTES,

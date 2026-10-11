@@ -5,11 +5,12 @@ Use the versions in `.python-version` and `.node-version`.
 ```sh
 python -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
-npm --prefix portal ci --ignore-scripts --no-audit --no-fund
+npm --prefix serving/portal ci --ignore-scripts --no-audit --no-fund
 ```
 
 Run the Python/SQL command needed for the task. For the portal, use
-`npm --prefix portal run dev` or `npm --prefix portal run build`.
+`npm --prefix serving/portal run dev` or `npm --prefix serving/portal run build`.
+Run Python from the repository root with `PYTHONPATH=.`.
 
 The owner removed repository tests, fixtures, test commands and CI/check
 workflows. Do not recreate them automatically or follow historical

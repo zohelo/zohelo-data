@@ -84,7 +84,7 @@ class StorageManager:
 
     @classmethod
     def _read_storage_config(cls, config_path=None):
-        default_path = Path(__file__).resolve().parents[1] / "config" / "storage.yaml"
+        default_path = Path(__file__).resolve().parents[2] / "config" / "storage.yaml"
         path = Path(config_path) if config_path is not None else default_path
         try:
             with path.open("r", encoding="utf-8") as handle:

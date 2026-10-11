@@ -18,7 +18,7 @@ import runpy
 import zipfile
 
 BASE = Path(__file__).resolve().parent
-HELPERS = runpy.run_path(str(BASE / "reconcile-r2-medallion.py"))
+HELPERS = runpy.run_path(str(BASE / "reconcile_helpers.py"))
 SOURCES = ("opendata_org", "gus_bdl", "world_bank_wdi", "gus_dbw")
 SUMMARY_FIELDS = {
     "format_version", "kind", "record_type", "source_id", "status", "complete",

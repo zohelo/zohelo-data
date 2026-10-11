@@ -18,7 +18,7 @@ from uuid import uuid4
 
 import duckdb
 
-from ingestion.source_campaign_store import (
+from ingestion.common.source_campaign_store import (
     CampaignCapacityError,
     CampaignStoreError,
     MAX_LANDING_FILE_BYTES,
@@ -314,7 +314,7 @@ def _source_identity(store: Any) -> tuple[str, str]:
 def _campaign_coverage(state: Mapping[str, Any]) -> str:
     # Keep the catalogue/current-generation rules in their owning campaign module.
     # The local import avoids coupling module initialization to the publisher.
-    from ingestion.full_source_campaign import coverage
+    from ingestion.common.full_source_campaign import coverage
 
     status = coverage(state).get("coverage_status")
     if status not in {"incomplete", "complete_current_catalogue"}:

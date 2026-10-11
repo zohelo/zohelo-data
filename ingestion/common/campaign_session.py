@@ -4,7 +4,7 @@ from __future__ import annotations
 from copy import deepcopy
 import time
 
-from ingestion.source_campaign import run_campaign
+from ingestion.common.source_campaign import run_campaign
 
 
 def run_collection_session(store, adapter, settings, *, today_factory, publish,

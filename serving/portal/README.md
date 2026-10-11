@@ -4,10 +4,10 @@ This directory contains the React, TypeScript, and Vite application published at
 
 Project-wide architecture, data boundaries, and operational status live in the repository root:
 
-- [Repository overview](../README.md)
-- [Architecture](../docs/architecture.md)
-- [Development and verification](../docs/development.md)
-- [Shared contribution rules](../AGENTS.md)
+- [Repository overview](../../README.md)
+- [Architecture](../../docs/architecture.md)
+- [Development and verification](../../docs/development.md)
+- [Shared contribution rules](../../AGENTS.md)
 
 ## Local development
 
@@ -18,7 +18,7 @@ npm ci --ignore-scripts --no-audit --no-fund
 npm run dev
 ```
 
-The local Vite server runs at `http://localhost:5173`. From the repository root, the equivalent commands use `npm --prefix portal ...`.
+The local Vite server runs at `http://localhost:5173`. From the repository root, the equivalent commands use `npm --prefix serving/portal ...`.
 
 Before submitting a portal change, run the checks relevant to it:
 

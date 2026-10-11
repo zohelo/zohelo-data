@@ -10,9 +10,9 @@ from zoneinfo import ZoneInfo
 
 import yaml
 
-from ingestion.source_campaign import fetch
-from ingestion.campaign_session import run_collection_session
-from ingestion.source_credentials import effective_source_settings, make_authenticated_fetch, source_access_status
+from ingestion.common.source_campaign import fetch
+from ingestion.common.campaign_session import run_collection_session
+from ingestion.common.source_credentials import effective_source_settings, make_authenticated_fetch, source_access_status
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,7 +30,7 @@ def landing_summary(manifest):
 
 
 def publish_batch(store, adapter, code_sha):
-    from ingestion.landing_publication import publish_landing
+    from ingestion.common.landing_publication import publish_landing
     return landing_summary(publish_landing(store, adapter, code_sha))
 
 
@@ -39,7 +39,7 @@ def production_storage(allow_write):
         raise PermissionError("Drive campaign writes require --allow-production-write")
     if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("GITHUB_REF") != "refs/heads/main":
         raise PermissionError("Production campaigns must use the serialized main-branch Actions workflow")
-    from storage_manager import StorageManager
+    from ingestion.common.storage_manager import StorageManager
     storage = StorageManager(allow_interactive_auth=False)
     storage.resolve_root(create=False)
     return storage
@@ -100,7 +100,7 @@ def main():
         # Bound one complete parallel run, including two maximum-size state snapshots
         # per attempt and extra initialization/receipt headroom. This is a preflight,
         # not a reservation against unrelated account writers.
-        from ingestion.landing_publication import MAX_NEW_RESPONSES, MAX_LANDING_FILE_BYTES
+        from ingestion.common.landing_publication import MAX_NEW_RESPONSES, MAX_LANDING_FILE_BYTES
         reserve = 16 * 1024 * 1024
         for source_id in SOURCE_IDS:
             settings = load_settings(source_id)
@@ -111,7 +111,7 @@ def main():
                 reserve += 8 * 1024 * 1024
         if limit is not None and usage is not None and int(limit) - int(usage) < reserve:
             raise RuntimeError("Available Drive quota is below the configured campaign-run reserve")
-        from ingestion.source_campaign_store import DriveCampaignStore
+        from ingestion.common.source_campaign_store import DriveCampaignStore
         # One serialized coordinator creates shared parents before parallel provider jobs.
         for source_id in SOURCE_IDS:
             if load_settings(source_id)["enabled"]:
@@ -133,24 +133,24 @@ def main():
     if args.backend == "drive":
         # Legacy backend retained only for historical recovery. New production
         # ingestion writes to R2.
-        from ingestion.source_campaign_store import DriveCampaignStore
+        from ingestion.common.source_campaign_store import DriveCampaignStore
         storage = production_storage(args.allow_production_write)
         store = DriveCampaignStore(storage, args.source)
     elif args.backend == "r2":
         if not args.allow_production_write:
             raise ValueError("R2 production ingestion requires --allow-production-write")
-        from ingestion.source_campaign_store import R2CampaignStore
+        from ingestion.common.source_campaign_store import R2CampaignStore
         store = R2CampaignStore(args.source)
     else:
         if args.local_root is None:
             raise ValueError("Local ingestion requires an explicit --local-root")
-        from ingestion.source_campaign_store import LocalCampaignStore
+        from ingestion.common.source_campaign_store import LocalCampaignStore
         store = LocalCampaignStore(args.local_root, args.source)
     if args.retry_validation_failures:
-        from ingestion.campaign_recovery import retry_validation_failures
+        from ingestion.common.campaign_recovery import retry_validation_failures
         print(json.dumps(retry_validation_failures(store, os.environ.get("GITHUB_SHA", "local"))), flush=True)
     if args.verify_state:
-        from ingestion.source_campaign import validate_state
+        from ingestion.common.source_campaign import validate_state
         state = store.load()
         if state is None:
             raise RuntimeError("No provider quota ledger is available")
@@ -160,7 +160,7 @@ def main():
                           "pending_tasks": len(state["pending"])}), flush=True)
         return 0
     if args.verify_landing:
-        from ingestion.landing_publication import verify_landing
+        from ingestion.common.landing_publication import verify_landing
         manifest = verify_landing(store)
         if manifest is None:
             raise RuntimeError("No published Landing snapshot is available to verify")

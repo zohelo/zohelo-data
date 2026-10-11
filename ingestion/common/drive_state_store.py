@@ -3,7 +3,7 @@ import io
 
 from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 
-from drive_release_store import DRIVE_REPEATABLE_REQUEST_RETRIES, DriveReleaseStore
+from ingestion.common.drive_release_store import DRIVE_REPEATABLE_REQUEST_RETRIES, DriveReleaseStore
 
 
 class DriveStateStore(DriveReleaseStore):
