@@ -1,4 +1,4 @@
-name: Deploy portal
+name: 3 · Deploy portal
 
 on:
   push:
@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: portal-pages
+  group: zohelo-portal
   cancel-in-progress: false
 
 jobs:

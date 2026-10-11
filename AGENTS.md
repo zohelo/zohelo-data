@@ -45,9 +45,18 @@ Landing→Bronze→Silver→Gold rules.
 Keep exactly the three current operational Actions unless the owner asks for a
 new one:
 
-1. Ingestion (R2 manual)
-2. Transformations (R2)
-3. Deploy portal
+1. `1 · Ingest → Landing` (`ingestion.yml`)
+2. `2 · Transform → Bronze / Silver / Gold` (`transform.yml`)
+3. `3 · Deploy portal` (`deploy-portal.yml`)
+
+Naming convention (owner direction, 11 October 2026): workflows are named by
+pipeline stage and target layer. Every operation is `<source>: <action>`, or
+`platform: <action>` when it is not tied to one source, e.g.
+`eurostat: load new versions to Landing`. Job ids are `<source>-<action>` in
+kebab-case; inputs are snake_case without per-operation prefixes; concurrency
+groups are `zohelo-<stage>-<scope>`. The ingestion menu lists only authorized
+operations; paused ones return when the owner resumes them. R2 paths are storage
+nouns and are not renamed with operations.
 
 No scheduled ingestion is currently authorized.
 
@@ -60,7 +69,8 @@ claim Python file promotion or zero-copy references implement dbt cleansing or
 integrated dimensional modeling.
 
 Owner direction, 11 October 2026: manual Eurostat bulk-to-Landing is authorized,
-only through the `eurostat_landing` operation of "Ingestion (R2 manual)"
+only through the `eurostat: coverage check (dry run)` and
+`eurostat: load new versions to Landing` operations of `1 · Ingest → Landing`
 (`src/eurostat_bulk_landing.py`). It writes exact provider bytes plus receipts to
 `01_landing/eurostat/bulk/data/` and coverage/run records to
 `06_control/eurostat_bulk_landing/`; it never parses, never touches Bronze, never

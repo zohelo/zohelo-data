@@ -8,11 +8,15 @@ portal at https://data.zohelo.com/.
 
 There are three operational GitHub Actions:
 
-- **Ingestion (R2 manual)** — explicitly selected source ingestion into private
-  Cloudflare R2. It has no schedule.
-- **Transformations (R2)** — medallion/Iceberg promotion and bounded maintenance.
-- **Deploy portal** — builds and deploys the internal portal and its private R2
-  read service.
+- **1 · Ingest → Landing** — manually selected, authorized source loads into
+  private Cloudflare R2 Landing. It has no schedule.
+- **2 · Transform → Bronze / Silver / Gold** — medallion/Iceberg promotion,
+  reconciliation and bounded maintenance.
+- **3 · Deploy portal** — builds and deploys the internal portal and its private
+  R2 read service.
+
+Operations are named `<source>: <action>` (or `platform: <action>`); see
+AGENTS.md for the convention.
 
 Repository regression-test/CI workflows were intentionally removed. Data
 operations still retain ordinary integrity checks, exact-byte verification,

@@ -1,17 +1,20 @@
-"""Manual Eurostat bulk TSV downloads into private R2 Landing (raw bytes only).
+"""Eurostat full-file (bulk TSV) load into private R2 Landing, raw bytes only.
 
-Owner-authorized 11 Oct 2026 as the only resumed ingestion path. It never parses
-observations and never touches Bronze.
+Workflow "1 · Ingest → Landing", operations "eurostat: coverage check (dry run)"
+and "eurostat: load new versions to Landing". Owner-authorized 11 Oct 2026 as the
+only resumed ingestion path. It never parses observations and never touches Bronze.
 
-plan    Download the official data inventory, classify every non-Comext dataset
-        (current / current_legacy / stale / missing) and write the classification
-        to 06_control/eurostat_bulk_landing/coverage/. Downloads no dataset.
-ingest  Download missing datasets first, then stale ones, to
-        01_landing/eurostat/bulk/data/{CODE}/{version}.tsv.gz and write
-        {version}.receipt.json next to it. The receipt marks completion; R2 is the
-        only state, so a rerun resumes. Nothing is ever overwritten or deleted.
+coverage-check  Download the official data inventory, classify every non-Comext
+                dataset (current / current_legacy / stale / missing) and write the
+                result to 06_control/eurostat_bulk_landing/coverage/. No downloads.
+load            Download missing datasets first, then stale ones, to
+                01_landing/eurostat/bulk/data/{CODE}/{version}.tsv.gz and write
+                {version}.receipt.json next to it. The receipt marks completion; R2
+                is the only state, so a rerun resumes. Nothing is ever overwritten
+                or deleted.
 
---limit applies per shard. Shards split datasets by a hash of the dataset code.
+--max-datasets applies per parallel job. Each job takes a fixed slice of datasets
+by a hash of the dataset code (--job-index i of --parallel-jobs n).
 """
 from __future__ import annotations
 
@@ -97,8 +100,9 @@ def version_token(version: str | None) -> str:
     return f"{safe}-{hashlib.sha256(value.encode()).hexdigest()[:8]}"
 
 
-def shard_of(code: str, shards: int) -> int:
-    return int(hashlib.sha256(code.encode("utf-8")).hexdigest()[:16], 16) % shards
+def job_slot(code: str, parallel_jobs: int) -> int:
+    """Fixed parallel-job slice for a dataset: hash of its code modulo the job count."""
+    return int(hashlib.sha256(code.encode("utf-8")).hexdigest()[:16], 16) % parallel_jobs
 
 
 def request_url(url: str, params: dict) -> str:
@@ -762,7 +766,7 @@ def load_legacy() -> tuple[set[str], dict[str, dict], bool]:
 
 
 def plan_items(inventory_body: bytes, landing: dict, legacy_ids: set[str], legacy_by_code: dict,
-               shards: int, patterns: list[str]) -> tuple[list[dict], dict]:
+               parallel_jobs: int, patterns: list[str]) -> tuple[list[dict], dict]:
     distributions = distributions_from_inventory("data", inventory_body)
     stats = {"inventory_distributions": len(distributions), "excluded_comext": 0,
              "excluded_other_kinds": 0, "excluded_by_filter": 0}
@@ -799,7 +803,7 @@ def plan_items(inventory_body: bytes, landing: dict, legacy_ids: set[str], legac
             "version": version,
             "token": token,
             "status": status,
-            "shard": shard_of(code, shards),
+            "job": job_slot(code, parallel_jobs),
             "url": require_official(request_url(spec["url"], spec.get("params") or {})),
             "landing_versions": sorted(held["receipts"]),
             "orphan_data_object": token in held["data"] and token not in held["receipts"],
@@ -813,7 +817,7 @@ def plan_items(inventory_body: bytes, landing: dict, legacy_ids: set[str], legac
     return items, stats
 
 
-CSV_COLUMNS = ("dataset_code", "status", "eurostat_version", "version_token", "shard", "title",
+CSV_COLUMNS = ("dataset_code", "status", "eurostat_version", "version_token", "parallel_job", "title",
                "landing_versions", "orphan_data_object", "legacy_entries",
                "legacy_partition_leaves", "legacy_task_id", "source_url", "landing_key")
 
@@ -823,7 +827,7 @@ def coverage_csv(items: list[dict]) -> bytes:
     writer = csv.writer(out, lineterminator="\n")
     writer.writerow(CSV_COLUMNS)
     for row in items:
-        writer.writerow([row["code"], row["status"], row["version"], row["token"], row["shard"],
+        writer.writerow([row["code"], row["status"], row["version"], row["token"], row["job"],
                          row["title"], ";".join(row["landing_versions"]),
                          str(row["orphan_data_object"]).lower(), row["legacy_entries"],
                          row["legacy_partition_leaves"], row["legacy_task_id"], row["url"],
@@ -850,29 +854,30 @@ def step_summary(markdown: str) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--mode", choices=("plan", "ingest"), required=True)
+    parser.add_argument("--mode", choices=("coverage-check", "load"), required=True)
     parser.add_argument("--allow-production-write", action="store_true",
-                        help="required for ingest (writes raw bytes to R2 Landing)")
-    parser.add_argument("--datasets", default="",
+                        help="required for load (writes raw bytes to R2 Landing)")
+    parser.add_argument("--dataset-filter", default="",
                         help="comma/space separated dataset codes or glob patterns (case-insensitive)")
-    parser.add_argument("--limit", type=int, default=0, help="max datasets per shard (0 = all)")
-    parser.add_argument("--workers", type=int, default=4)
-    parser.add_argument("--shard", type=int, default=0)
-    parser.add_argument("--shards", type=int, default=1)
+    parser.add_argument("--max-datasets", type=int, default=0,
+                        help="max datasets per parallel job (0 = all)")
+    parser.add_argument("--parallel-downloads", type=int, default=4)
+    parser.add_argument("--job-index", type=int, default=0)
+    parser.add_argument("--parallel-jobs", type=int, default=1)
     parser.add_argument("--budget-minutes", type=float, default=330.0,
                         help="stop starting new downloads after this many minutes")
     parser.add_argument("--grace-minutes", type=float, default=20.0,
                         help="abort in-flight transfers this long after the budget")
     args = parser.parse_args(argv)
-    if not 1 <= args.shards <= 16 or not 0 <= args.shard < args.shards:
-        parser.error("use 1-16 shards and 0 <= shard < shards")
-    if not 1 <= args.workers <= 8:
-        parser.error("workers must be 1-8")
-    if args.limit < 0:
-        parser.error("limit must be >= 0")
-    if args.mode == "ingest" and not args.allow_production_write:
-        parser.error("ingest writes to R2 Landing and requires --allow-production-write")
-    patterns = [p.lower() for p in re.split(r"[\s,]+", args.datasets.strip()) if p]
+    if not 1 <= args.parallel_jobs <= 16 or not 0 <= args.job_index < args.parallel_jobs:
+        parser.error("use 1-16 parallel jobs and 0 <= job index < parallel jobs")
+    if not 1 <= args.parallel_downloads <= 8:
+        parser.error("parallel downloads must be 1-8")
+    if args.max_datasets < 0:
+        parser.error("max datasets must be >= 0")
+    if args.mode == "load" and not args.allow_production_write:
+        parser.error("load writes to R2 Landing and requires --allow-production-write")
+    patterns = [p.lower() for p in re.split(r"[\s,]+", args.dataset_filter.strip()) if p]
 
     started = time.monotonic()
     deadline = started + args.budget_minutes * 60
@@ -898,7 +903,7 @@ def main(argv: list[str] | None = None) -> int:
         landing = load_landing_state(r2)
         legacy_ids, legacy_by_code, legacy_found = load_legacy()
         items, stats = plan_items(inventory_body, landing, legacy_ids, legacy_by_code,
-                                  args.shards, patterns)
+                                  args.parallel_jobs, patterns)
         total = counts(items)
         summary = {
             "mode": args.mode, "run_id": run_id, "code_sha": code_sha,
@@ -909,15 +914,15 @@ def main(argv: list[str] | None = None) -> int:
             "scope": "eurostat_tsv_gzip data distributions, Comext (DS-*) excluded",
         }
 
-        if args.mode == "plan":
+        if args.mode == "coverage-check":
             base = f"{CONTROL_PREFIX}coverage/{run_id}"
             r2.put_new(r2.lakehouse, base + ".csv", coverage_csv(items), "text/csv")
             summary["coverage_csv"] = f"r2://{r2.lakehouse}/{base}.csv"
-            summary["per_shard"] = {}
-            for shards in (1, 2, 4, 8):
-                summary["per_shard"][str(shards)] = [
-                    counts([i for i in items if shard_of(i["code"], shards) == s])
-                    for s in range(shards)
+            summary["per_parallel_job"] = {}
+            for jobs in (1, 2, 4, 8):
+                summary["per_parallel_job"][str(jobs)] = [
+                    counts([i for i in items if job_slot(i["code"], jobs) == j])
+                    for j in range(jobs)
                 ]
             summary["elapsed_seconds"] = round(time.monotonic() - started, 1)
             rendered = json.dumps(summary, indent=2, sort_keys=True)
@@ -925,21 +930,21 @@ def main(argv: list[str] | None = None) -> int:
             print(rendered, flush=True)
             table = "\n".join(f"| {s} | {total[s]:,} |" for s in STATUSES)
             step_summary(
-                f"## Eurostat bulk → Landing: plan\n\n"
+                f"## eurostat: coverage check (dry run)\n\n"
                 f"Inventory `{inventory_sha[:12]}` · {len(items):,} datasets "
                 f"(Comext excluded: {stats['excluded_comext']:,})\n\n"
                 f"| status | datasets |\n|---|---:|\n{table}\n\n"
                 f"Coverage CSV: `{summary['coverage_csv']}`\n")
             return 0
 
-        selected = [i for i in items if i["shard"] == args.shard]
+        selected = [i for i in items if i["job"] == args.job_index]
         queue_items = ([i for i in selected if i["status"] == "missing"]
                        + [i for i in selected if i["status"] == "stale"])
-        if args.limit:
-            queue_items = queue_items[: args.limit]
-        log({"event": "ingest_start", "shard": args.shard, "shards": args.shards,
-             "queued": len(queue_items), "shard_classification": counts(selected)})
-        run_workers(ctx, queue_items, args.workers)
+        if args.max_datasets:
+            queue_items = queue_items[: args.max_datasets]
+        log({"event": "load_start", "job_index": args.job_index, "parallel_jobs": args.parallel_jobs,
+             "queued": len(queue_items), "job_classification": counts(selected)})
+        run_workers(ctx, queue_items, args.parallel_downloads)
 
         landed = [r for r in ctx.results if r["outcome"] == "landed"]
         failed = [r for r in ctx.results if r["outcome"] == "failed"]
@@ -947,9 +952,10 @@ def main(argv: list[str] | None = None) -> int:
         for row in failed:
             by_reason[row["reason"]] += 1
         summary.update({
-            "shard": args.shard, "shards": args.shards, "workers": args.workers,
-            "limit_per_shard": args.limit,
-            "shard_classification_at_start": counts(selected),
+            "job_index": args.job_index, "parallel_jobs": args.parallel_jobs,
+            "parallel_downloads": args.parallel_downloads,
+            "max_datasets_per_job": args.max_datasets,
+            "job_classification_at_start": counts(selected),
             "queued": len(queue_items),
             "landed": len(landed),
             "landed_bytes": sum(r["size_bytes"] for r in landed),
@@ -960,14 +966,14 @@ def main(argv: list[str] | None = None) -> int:
             "results": ctx.results,
             "elapsed_seconds": round(time.monotonic() - started, 1),
         })
-        key = f"{CONTROL_PREFIX}runs/{run_id}/shard-{args.shard}-of-{args.shards}.json"
+        key = f"{CONTROL_PREFIX}runs/{run_id}/job-{args.job_index}-of-{args.parallel_jobs}.json"
         rendered = json.dumps(summary, indent=2, sort_keys=True, default=str)
         r2.put_new(r2.lakehouse, key, rendered.encode(), "application/json")
         brief = {k: v for k, v in summary.items() if k != "results"}
         print(json.dumps(brief, indent=2, sort_keys=True, default=str), flush=True)
         reasons = "\n".join(f"| {k} | {v} |" for k, v in sorted(by_reason.items())) or "| – | 0 |"
         step_summary(
-            f"## Eurostat bulk → Landing: ingest shard {args.shard + 1}/{args.shards}\n\n"
+            f"## eurostat: load new versions to Landing · job {args.job_index + 1}/{args.parallel_jobs}\n\n"
             f"Queued {len(queue_items):,} · landed **{len(landed):,}** "
             f"({summary['landed_bytes'] / 1e9:.2f} GB) · failed {len(failed):,} · "
             f"not started (time budget) {summary['not_started_time_budget']:,} · "

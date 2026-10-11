@@ -74,8 +74,10 @@ Two storage modes are supported:
 - **full-distribution campaigns** — large native objects through
   `BulkR2RawStore`, with campaign/control state in R2.
 
-The **Ingestion (R2 manual)** workflow exposes explicit manual operations for
-smoke verification, standard campaigns and supported bulk campaigns. It has no
+The **1 · Ingest → Landing** workflow exposes only currently authorized manual
+operations: `platform: R2 connectivity check`, `eurostat: coverage check (dry run)`
+and `eurostat: load new versions to Landing`. The paused API-incremental and
+full-file campaign entrypoints remain in the code without a menu entry. It has no
 schedule.
 
 Optional GUS BDL/DBW API credentials are supplied only as transport headers and
@@ -114,9 +116,11 @@ release-folder architecture.
 
 Only these workflows are operational:
 
-1. `ingestion.yml` — manual R2 ingestion.
-2. `transform.yml` — R2/Iceberg transformations and bounded maintenance.
-3. `deploy-portal.yml` — internal portal deployment and R2 portal index.
+1. `ingestion.yml` — **1 · Ingest → Landing**: manual R2 Landing loads.
+2. `transform.yml` — **2 · Transform → Bronze / Silver / Gold**: R2/Iceberg
+   transformations, reconciliation and bounded maintenance.
+3. `deploy-portal.yml` — **3 · Deploy portal**: internal portal deployment and
+   R2 portal index.
 
 There are no repository regression-test workflows and no scheduled ingestion.
 

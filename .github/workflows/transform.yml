@@ -1,24 +1,30 @@
-name: Transformations (R2 manual)
+name: 2 · Transform → Bronze / Silver / Gold
+
+# Naming: operations are "<source>: <action>"; "platform:" when not tied to one source.
 
 on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Existing R2 data operation (no provider ingestion)
+        description: Operation (R2 data only, no provider calls)
         type: choice
-        default: promote
-        options: [promote, reconcile-eurostat, inspect-retained]
+        default: "platform: promote Bronze → Silver → Gold"
+        options:
+          - "platform: promote Bronze → Silver → Gold"
+          - "eurostat: reconcile Bronze with Landing"
+          - "platform: inspect retained inputs"
 
 permissions:
   contents: read
 
 concurrency:
-  group: zohelo-r2-transform
+  group: zohelo-transform
   cancel-in-progress: false
 
 jobs:
-  reconcile_eurostat:
-    if: github.event_name == 'push' || inputs.operation == 'reconcile-eurostat' || inputs.operation == 'inspect-retained'
+  eurostat-reconcile:
+    if: "inputs.operation == 'eurostat: reconcile Bronze with Landing' || inputs.operation == 'platform: inspect retained inputs'"
+    name: ${{ inputs.operation }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
     env:
@@ -51,7 +57,7 @@ jobs:
           path: ${{ runner.temp }}/retained-reconciliation-inventory.json
           retention-days: 7
       - name: Reconcile accepted Eurostat distributions from R2
-        if: inputs.operation != 'inspect-retained'
+        if: "inputs.operation != 'platform: inspect retained inputs'"
         run: |
           python - <<'PY'
           import json, os, subprocess, sys, time
@@ -98,17 +104,18 @@ jobs:
               raise RuntimeError("Eurostat batch limit reached; continue from durable membership")
           PY
       - name: Archive exact Eurostat inputs proven by Bronze
-        if: inputs.operation != 'inspect-retained'
+        if: "inputs.operation != 'platform: inspect retained inputs'"
         run: python scripts/archive-proven-eurostat-wdi-r2.py --source eurostat
       - name: Inspect remaining Eurostat coverage
-        if: inputs.operation != 'inspect-retained'
+        if: "inputs.operation != 'platform: inspect retained inputs'"
         run: python scripts/inspect-eurostat-wdi-lineage-r2.py --source eurostat
       - name: Refresh portal index after accepted R2 writes
-        if: success() && inputs.operation != 'inspect-retained'
+        if: "success() && inputs.operation != 'platform: inspect retained inputs'"
         run: python scripts/publish-r2-portal-index.py
 
-  promote:
-    if: github.event_name == 'workflow_dispatch' && (inputs.operation == 'promote' || inputs.operation == '')
+  platform-promote:
+    if: "inputs.operation == 'platform: promote Bronze → Silver → Gold'"
+    name: ${{ inputs.operation }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
