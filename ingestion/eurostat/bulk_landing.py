@@ -454,6 +454,10 @@ def classify_body(result: Download) -> tuple[str, dict]:
     if result.status == 404:
         raise Failed("not_found", result.small[:300].decode("utf-8", "replace"))
     if result.status != 200:
+        fault = provider_fault(result.small)
+        if fault and fault.get("fault_type") == "NOT_AVAILABLE":
+            # Listed in the inventory but withdrawn/unavailable at Eurostat (seen as HTTP 401).
+            raise Failed("not_available", fault.get("fault_message", ""))
         raise Failed(f"http_{result.status}", result.small[:300].decode("utf-8", "replace"))
     if result.gzip is not None:
         body = bytes(result.gzip.prefix)
@@ -475,6 +479,16 @@ def classify_body(result: Download) -> tuple[str, dict]:
     if re.search(rb'"status"\s*:\s*413', body):
         return "needs_partition", {"provider_body": body[:200].decode("utf-8", "replace")}
     raise Failed("not_gzip", body[:200].decode("utf-8", "replace"))
+
+
+def provider_fault(body: bytes) -> dict | None:
+    """Parse a small Eurostat SOAP fault body, if that is what it is."""
+    if not body or body.lstrip()[:1] != b"<":
+        return None
+    try:
+        return parse_eurostat_async(body)
+    except FullSourceAdapterError:
+        return None
 
 
 def parse_envelope(body: bytes) -> dict:
@@ -1012,7 +1026,7 @@ def main(argv: list[str] | None = None) -> int:
                     for r in failed[:25]
                 ],
             })
-        hard = [r for r in failed if r["reason"] not in {"needs_partition", "no_results", "not_found"}]
+        hard = [r for r in failed if r["reason"] not in {"needs_partition", "no_results", "not_found", "not_available"}]
         return 1 if hard else 0
 
 
