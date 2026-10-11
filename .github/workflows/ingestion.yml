@@ -115,6 +115,8 @@ jobs:
         job: ${{ fromJSON(needs.eurostat-setup.outputs.matrix) }}
     env:
       PYTHONPATH: .
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      R2_DATA_CATALOG_TOKEN: ${{ secrets.R2_DATA_CATALOG_TOKEN }}
       CLOUDFLARE_R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
       CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
       R2_S3_ENDPOINT: ${{ vars.R2_S3_ENDPOINT }}
