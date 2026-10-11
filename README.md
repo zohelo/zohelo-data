@@ -46,5 +46,4 @@ Google Drive is no longer a production data store. Google sign-in in the portal
 is identity/authentication only.
 
 See [Architecture](docs/architecture.md), [Data lifecycle](docs/data-lifecycle.md),
-[Development](docs/development.md), [Status](docs/deliverables.md), and
-[Agent guide](AGENTS.md).
+[Development](docs/development.md) and [Agent guide](AGENTS.md).

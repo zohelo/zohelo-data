@@ -10,7 +10,6 @@ import {
   Cable,
   Settings,
   BookOpen,
-  Layers,
   ClipboardList,
   FolderOpen,
 } from "lucide-react";
@@ -106,8 +105,6 @@ const SortableTab = React.memo(function SortableTab({ tab, isActive }: SortableT
               <Cable className="h-4 w-4" />
             ) : tab.type === "settings" ? (
               <Settings className="h-4 w-4" />
-            ) : tab.type === "catalog" ? (
-              <Layers className="h-4 w-4" />
             ) : tab.type === "review" ? (
               <ClipboardList className="h-4 w-4" />
             ) : tab.type === "explorer" ? (

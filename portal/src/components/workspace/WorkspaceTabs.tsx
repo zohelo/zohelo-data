@@ -64,7 +64,6 @@ const NotebookTab = lazy(() => import("@/components/notebook/NotebookTab"));
 const DashboardTab = lazy(() => import("@/components/dashboard/DashboardTab"));
 const ConnectionsTab = lazy(() => import("@/components/workspace/ConnectionsTab"));
 const SettingsTab = lazy(() => import("@/components/workspace/SettingsTab"));
-const CatalogDocsTab = lazy(() => import("@/components/workspace/CatalogDocsTab"));
 const ReviewDecisionsTab = lazy(() => import("@/components/workspace/ReviewDecisionsTab"));
 const R2ExplorerTab = lazy(() => import("@/components/workspace/R2ExplorerTab"));
 
@@ -231,8 +230,6 @@ export default function WorkspaceTabs() {
                     <ConnectionsTab />
                   ) : tab.type === "settings" ? (
                     <SettingsTab />
-                  ) : tab.type === "catalog" ? (
-                    <CatalogDocsTab />
                   ) : tab.type === "review" ? (
                     <ReviewDecisionsTab />
                   ) : tab.type === "explorer" ? (

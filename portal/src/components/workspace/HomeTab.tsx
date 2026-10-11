@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bookmark, Database, Terminal } from "lucide-react";
+import { Bookmark, Terminal } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useDuckStore } from "@/store";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,6 @@ const HomeTab = () => {
   const createTab = useDuckStore((state) => state.createTab);
   const error = useDuckStore((state) => state.error);
   const queryHistory = useDuckStore((state) => state.queryHistory);
-  const tabs = useDuckStore((state) => state.tabs);
-  const setActiveTab = useDuckStore((state) => state.setActiveTab);
   const currentProfileId = useDuckStore((state) => state.currentProfileId);
   const savedQueriesVersion = useDuckStore((state) => state.savedQueriesVersion);
   const lakehouseStatusMessage = useDuckStore((state) => state.lakehouseStatusMessage);
@@ -50,12 +48,6 @@ const HomeTab = () => {
     };
   }, [currentProfileId, savedQueriesVersion]);
 
-  const openCatalogue = () => {
-    const existing = tabs.find((tab) => tab.type === "catalog");
-    if (existing) setActiveTab(existing.id);
-    else createTab("catalog", "", "Data catalogue");
-  };
-
   return (
     <div className="flex h-full flex-col">
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 overflow-auto p-6 sm:p-8">
@@ -78,18 +70,13 @@ const HomeTab = () => {
           <div>
             <h2 className="text-lg font-semibold">SQL workspace</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Open a query, inspect its results, and use the data catalogue to find published
-              tables.
+              Open a query and inspect its results.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => createTab("sql", "")}>
               <Terminal className="mr-2 h-4 w-4" />
               New SQL query
-            </Button>
-            <Button variant="outline" onClick={openCatalogue}>
-              <Database className="mr-2 h-4 w-4" />
-              Data catalogue
             </Button>
           </div>
           {lakehouseStatusMessage && (

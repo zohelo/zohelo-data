@@ -160,12 +160,11 @@ provider calls. Keep ingestion paused until a later owner instruction to resume.
   references does not perform cleansing, joins or dimensional modeling.
   Existing source-specific BDL, Eurostat, NBP and WDI modeled tables are outside
   that pass-through mapping.
-- The checked-in dbt profile targets a local DuckDB database and models use
-  local Parquet sources. A production dbt path that reads the R2 Bronze tables
-  and commits Silver/Gold Iceberg snapshots is not configured.
+- There is no dbt project in the repository. The earlier local-DuckDB dbt models
+  were removed on 11 October 2026 because they did not read the R2 Bronze tables;
+  a production dbt path that commits Silver/Gold Iceberg snapshots is still to
+  be designed.
 - Current Eurostat reconciliation writes `bronze.eurostat_full_observations`.
-  Legacy Eurostat dbt models read a different local decoded source. Running those
-  old models unchanged does not establish coverage of the reconciled bulk data.
 - Source-specific dimension tables exist, but shared cross-source entity keys,
   effective-dated mappings and consistent measures are not established across
   BDL, DBW, Eurostat and WDI.

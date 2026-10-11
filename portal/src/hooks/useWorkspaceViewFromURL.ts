@@ -9,11 +9,11 @@ export function useWorkspaceViewFromURL() {
 
   useEffect(() => {
     const view = params.get("view");
-    if (!profileId || (view !== "review" && view !== "catalog")) return;
+    if (!profileId || view !== "review") return;
     const state = useDuckStore.getState();
     const existing = state.tabs.find((tab) => tab.type === view);
     if (existing) state.setActiveTab(existing.id);
-    else state.createTab(view, "", view === "review" ? "Saved project input" : "Data catalogue");
+    else state.createTab(view, "", "Saved project input");
     const remaining = new URLSearchParams(params);
     remaining.delete("view");
     setParams(remaining, { replace: true });

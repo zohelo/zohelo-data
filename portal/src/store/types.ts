@@ -222,7 +222,7 @@ export interface MountedFolderInfo {
 //
 
 export type EditorTabType =
-  "sql" | "notebook" | "dashboard" | "home" | "connections" | "settings" | "catalog" | "review" | "explorer";
+  "sql" | "notebook" | "dashboard" | "home" | "connections" | "settings" | "review" | "explorer";
 
 export interface NotebookCell {
   id: string;

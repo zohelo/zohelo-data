@@ -95,7 +95,7 @@ export default defineConfig(({ mode }) => {
           // Public OAuth information must stay accessible without booting the
           // workspace, including when a previous visit installed the worker.
           navigateFallbackDenylist: [
-            /\/(about|privacy|terms|catalogue-viewer)\.html$/,
+            /\/(about|privacy|terms)\.html$/,
             /\/portal-build\.json(?:\?.*)?$/,
             /\/docs(?:\/|$)/,
           ],
