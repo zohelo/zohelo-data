@@ -761,7 +761,7 @@ def load_landing_state(r2: R2) -> dict[str, dict[str, set]]:
     return state
 
 
-def load_legacy() -> tuple[set[str], dict[str, dict], bool]:
+def load_legacy() -> tuple[set[str], dict[str, dict], bool, dict]:
     from ingestion.common.source_campaign_store import R2CampaignStore
 
     state = R2CampaignStore(LEGACY_CAMPAIGN, publication_only=True).load()
@@ -776,7 +776,126 @@ def load_legacy() -> tuple[set[str], dict[str, dict], bool]:
             by_code[code]["entries"] += 1
             if isinstance(dataset_id, str) and "::partition::" in dataset_id:
                 by_code[code]["partition_leaves"] += 1
-    return set(completed), by_code, state is not None
+    return set(completed), by_code, state is not None, completed
+
+
+def legacy_raw_descriptors(completed: dict, task_id: str) -> list[dict] | None:
+    """Raw-file descriptors behind one completed old-campaign dataset.
+
+    A plain dataset has one raw file. A partitioned dataset is complete only through
+    its leaf entries (``<task_id>::<partition>``), each with its own raw file.
+    Returns None when the entry carries no usable descriptor.
+    """
+    entry = completed.get(task_id)
+    if not isinstance(entry, dict):
+        return None
+    if isinstance(entry.get("raw"), dict):
+        return [entry["raw"]]
+    leaves = [value.get("raw") for key, value in completed.items()
+              if key.startswith(task_id + "::") and isinstance(value, dict)]
+    leaves = [raw for raw in leaves if isinstance(raw, dict)]
+    return leaves or None
+
+
+def bronze_raw_hashes() -> set[str] | None:
+    """raw_sha256 values already in bronze.eurostat_full_observations (R2 SQL), or None."""
+    import requests
+
+    account = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "").strip()
+    token = os.environ.get("R2_DATA_CATALOG_TOKEN", "").strip()
+    bucket = os.environ.get("R2_LAKEHOUSE_BUCKET", "").strip()
+    if not (account and token and bucket):
+        return None
+    url = (f"https://api.sql.cloudflarestorage.com/api/v1/accounts/{account}"
+           f"/r2-sql/query/{bucket}")
+    query = ("SELECT DISTINCT raw_sha256 FROM bronze.eurostat_full_observations "
+             "WHERE raw_sha256 IS NOT NULL;")
+    last: Exception | None = None
+    for attempt in range(4):
+        try:
+            response = requests.post(url, headers={"Authorization": f"Bearer {token}",
+                                                   "Content-Type": "application/json"},
+                                     json={"query": query}, timeout=180)
+            response.raise_for_status()
+            payload = response.json()
+            break
+        except Exception as exc:  # transient network or 5xx
+            last = exc
+            time.sleep(10 * (attempt + 1))
+    else:
+        raise RuntimeError(f"R2 SQL query failed: {last}")
+    rows: list = []
+    result = payload.get("result")
+    for candidate in ([result] if isinstance(result, dict) else (result or [])) + [payload]:
+        if not isinstance(candidate, dict):
+            continue
+        value = candidate.get("results", candidate.get("rows"))
+        if isinstance(value, dict) and isinstance(value.get("rows"), list):
+            rows = [dict(zip(value["columns"], row)) for row in value["rows"]]
+            break
+        if isinstance(value, list):
+            rows = value
+            break
+    return {row.get("raw_sha256") for row in rows
+            if isinstance(row, dict) and isinstance(row.get("raw_sha256"), str)}
+
+
+def verify_legacy(items: list[dict], completed: dict, r2: "R2") -> dict:
+    """Check old-campaign ('current_legacy') datasets in R2 Landing and in Bronze. Read-only."""
+    from concurrent.futures import ThreadPoolExecutor as _Pool
+    from ingestion.common.source_campaign_store import _R2ObjectStore
+
+    resolver = _R2ObjectStore(r2.client, landing_bucket=r2.landing, lakehouse_bucket=r2.lakehouse)
+    bronze = bronze_raw_hashes()
+    legacy = [row for row in items if row["status"] == "current_legacy"]
+
+    def check(row: dict) -> None:
+        raws = legacy_raw_descriptors(completed, row["legacy_task_id"])
+        row["legacy_raw_files"] = len(raws or [])
+        if not raws:
+            row["legacy_landing"] = "no_descriptor"
+            row["legacy_bronze"] = "unknown"
+            return
+        landing = "present"
+        for raw in raws:
+            try:
+                bucket, key = resolver._parse(raw.get("id"))
+                head = r2.head(bucket, key)
+            except Exception:
+                head, bucket = None, None
+            if head is None:
+                landing = "missing"
+                break
+            if bucket != r2.landing:
+                landing = "outside_landing"
+            if int(head.get("ContentLength", -1)) != raw.get("size_bytes"):
+                landing = "size_mismatch"
+                break
+        row["legacy_landing"] = landing
+        if bronze is None:
+            row["legacy_bronze"] = "not_checked"
+        else:
+            hits = sum(raw.get("sha256") in bronze for raw in raws)
+            row["legacy_bronze"] = ("present" if hits == len(raws)
+                                    else "partial" if hits else "missing")
+
+    with _Pool(max_workers=16) as pool:
+        list(pool.map(check, legacy))
+    tally: dict[str, dict[str, int]] = {"landing": defaultdict(int), "bronze": defaultdict(int),
+                                        "landing_and_bronze": defaultdict(int)}
+    for row in legacy:
+        tally["landing"][row["legacy_landing"]] += 1
+        tally["bronze"][row["legacy_bronze"]] += 1
+        tally["landing_and_bronze"][f"{row['legacy_landing']}/{row['legacy_bronze']}"] += 1
+    result = {k: dict(v) for k, v in tally.items()}
+    result["datasets"] = len(legacy)
+    result["partitioned_datasets"] = sum(row.get("legacy_raw_files", 0) > 1 for row in legacy)
+    result["bronze_distinct_raw_files"] = None if bronze is None else len(bronze)
+    result["examples_not_in_both"] = [
+        {"dataset": row["code"], "landing": row["legacy_landing"], "bronze": row["legacy_bronze"]}
+        for row in legacy if (row["legacy_landing"], row["legacy_bronze"]) != ("present", "present")
+    ][:40]
+    return result
 
 
 def plan_items(inventory_body: bytes, landing: dict, legacy_ids: set[str], legacy_by_code: dict,
@@ -833,7 +952,8 @@ def plan_items(inventory_body: bytes, landing: dict, legacy_ids: set[str], legac
 
 CSV_COLUMNS = ("dataset_code", "status", "eurostat_version", "version_token", "parallel_job", "title",
                "landing_versions", "orphan_data_object", "legacy_entries",
-               "legacy_partition_leaves", "legacy_task_id", "source_url", "landing_key")
+               "legacy_partition_leaves", "legacy_task_id", "legacy_landing", "legacy_bronze",
+               "source_url", "landing_key")
 
 
 def coverage_csv(items: list[dict]) -> bytes:
@@ -844,7 +964,8 @@ def coverage_csv(items: list[dict]) -> bytes:
         writer.writerow([row["code"], row["status"], row["version"], row["token"], row["job"],
                          row["title"], ";".join(row["landing_versions"]),
                          str(row["orphan_data_object"]).lower(), row["legacy_entries"],
-                         row["legacy_partition_leaves"], row["legacy_task_id"], row["url"],
+                         row["legacy_partition_leaves"], row["legacy_task_id"],
+                         row.get("legacy_landing", ""), row.get("legacy_bronze", ""), row["url"],
                          row["data_key"]])
     return out.getvalue().encode("utf-8")
 
@@ -928,7 +1049,7 @@ def main(argv: list[str] | None = None) -> int:
                              "control_object": f"r2://{r2.lakehouse}/{inventory_key}"}
 
         landing = load_landing_state(r2)
-        legacy_ids, legacy_by_code, legacy_found = load_legacy()
+        legacy_ids, legacy_by_code, legacy_found, legacy_completed = load_legacy()
         items, stats = plan_items(inventory_body, landing, legacy_ids, legacy_by_code,
                                   args.parallel_jobs, patterns)
         total = counts(items)
@@ -942,6 +1063,7 @@ def main(argv: list[str] | None = None) -> int:
         }
 
         if args.mode == "coverage-check":
+            summary["legacy_verification"] = verify_legacy(items, legacy_completed, r2)
             base = f"{CONTROL_PREFIX}coverage/{run_id}"
             r2.put_new(r2.lakehouse, base + ".csv", coverage_csv(items), "text/csv")
             summary["coverage_csv"] = f"r2://{r2.lakehouse}/{base}.csv"
@@ -967,7 +1089,7 @@ def main(argv: list[str] | None = None) -> int:
                     "classification", "datasets_considered", "excluded_comext",
                     "excluded_other_kinds", "excluded_by_filter", "inventory_distributions",
                     "legacy_campaign_state_found", "legacy_completed_entries",
-                    "per_parallel_job", "coverage_csv", "elapsed_seconds")
+                    "per_parallel_job", "coverage_csv", "elapsed_seconds", "legacy_verification")
             } | {"inventory_sha256": inventory_sha})
             return 0
 
