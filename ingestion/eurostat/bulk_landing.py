@@ -849,6 +849,19 @@ def step_summary(markdown: str) -> None:
             handle.write(markdown + "\n")
 
 
+def annotate(level: str, title: str, data: dict) -> None:
+    """Publish a compact JSON result as a GitHub Actions run annotation.
+
+    Annotations are shown on the run page and are readable through the REST API,
+    unlike job logs, so a run can be reviewed without downloading logs.
+    """
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
+    message = json.dumps(data, sort_keys=True, default=str, separators=(",", ":"))
+    message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+    print(f"::{level} title={title}::{message[:60000]}", flush=True)
+
+
 # --------------------------------------------------------------------------- main
 
 def main(argv: list[str] | None = None) -> int:
@@ -935,6 +948,13 @@ def main(argv: list[str] | None = None) -> int:
                 f"(Comext excluded: {stats['excluded_comext']:,})\n\n"
                 f"| status | datasets |\n|---|---:|\n{table}\n\n"
                 f"Coverage CSV: `{summary['coverage_csv']}`\n")
+            annotate("notice", "eurostat coverage check", {
+                k: summary[k] for k in (
+                    "classification", "datasets_considered", "excluded_comext",
+                    "excluded_other_kinds", "excluded_by_filter", "inventory_distributions",
+                    "legacy_campaign_state_found", "legacy_completed_entries",
+                    "per_parallel_job", "coverage_csv", "elapsed_seconds")
+            } | {"inventory_sha256": inventory_sha})
             return 0
 
         selected = [i for i in items if i["job"] == args.job_index]
@@ -980,6 +1000,18 @@ def main(argv: list[str] | None = None) -> int:
             f"provider pauses {len(ctx.pacer.events)}\n\n"
             f"| failure reason | datasets |\n|---|---:|\n{reasons}\n\n"
             f"Run summary: `r2://{r2.lakehouse}/{key}`\n")
+        annotate("notice", f"eurostat load job {args.job_index + 1} of {args.parallel_jobs}", {
+            k: v for k, v in brief.items() if k != "provider_pauses"
+        } | {"provider_pause_count": len(ctx.pacer.events), "run_summary": f"r2://{r2.lakehouse}/{key}"})
+        if failed:
+            annotate("warning", "eurostat load failures", {
+                "failed": len(failed),
+                "first_failures": [
+                    {"dataset": r["dataset_code"], "reason": r["reason"],
+                     "detail": r.get("detail", "")[:160]}
+                    for r in failed[:25]
+                ],
+            })
         hard = [r for r in failed if r["reason"] not in {"needs_partition", "no_results", "not_found"}]
         return 1 if hard else 0
 
