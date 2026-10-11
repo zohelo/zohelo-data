@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     env:
-      PYTHONPATH: src
+      PYTHONPATH: .
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       R2_DATA_CATALOG_TOKEN: ${{ secrets.R2_DATA_CATALOG_TOKEN }}
       R2_CATALOG_URI: ${{ vars.R2_CATALOG_URI }}
@@ -48,7 +48,7 @@ jobs:
       - name: Install reconciliation dependencies
         run: python -m pip install "duckdb==1.5.5" "pandas==3.0.5" "pyiceberg==0.12.0" "pyarrow==20.0.0" boto3 requests s3fs
       - name: Inspect retained inputs and existing table lineage
-        run: python scripts/inspect-retained-reconciliation-r2.py --output "$RUNNER_TEMP/retained-reconciliation-inventory.json"
+        run: python transformation/reconciliation/inspect_retained_inputs.py --output "$RUNNER_TEMP/retained-reconciliation-inventory.json"
       - name: Preserve retained input inventory
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -70,7 +70,7 @@ jobs:
                   sys.exit(2)
               print(json.dumps({"operation": "retained_eurostat_batch", "batch": batch}), flush=True)
               log = Path(os.environ["RUNNER_TEMP"]) / "eurostat-batch.jsonl"
-              command = [sys.executable, "-u", "scripts/catch-up-eurostat-r2-bronze.py", "--max-distributions", "64", "--session-seconds", str(min(900, remaining-120))]
+              command = [sys.executable, "-u", "transformation/bronze/eurostat_catch_up.py", "--max-distributions", "64", "--session-seconds", str(min(900, remaining-120))]
               process = subprocess.Popen(command, stdout=subprocess.PIPE)
               try:
                   # Stream progress immediately while retaining the exact receipt
@@ -105,13 +105,13 @@ jobs:
           PY
       - name: Archive exact Eurostat inputs proven by Bronze
         if: "inputs.operation != 'platform: inspect retained inputs'"
-        run: python scripts/archive-proven-eurostat-wdi-r2.py --source eurostat
+        run: python transformation/reconciliation/archive_proven_inputs.py --source eurostat
       - name: Inspect remaining Eurostat coverage
         if: "inputs.operation != 'platform: inspect retained inputs'"
-        run: python scripts/inspect-eurostat-wdi-lineage-r2.py --source eurostat
+        run: python transformation/reconciliation/inspect_lineage.py --source eurostat
       - name: Refresh portal index after accepted R2 writes
         if: "success() && inputs.operation != 'platform: inspect retained inputs'"
-        run: python scripts/publish-r2-portal-index.py
+        run: python serving/publish_portal_index.py
 
   platform-promote:
     if: "inputs.operation == 'platform: promote Bronze → Silver → Gold'"
@@ -137,7 +137,7 @@ jobs:
           CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
           R2_S3_ENDPOINT: ${{ vars.R2_S3_ENDPOINT }}
           R2_LAKEHOUSE_BUCKET: ${{ vars.R2_LAKEHOUSE_BUCKET }}
-        run: python scripts/promote-current-r2.py
+        run: python transformation/promotion/promote_current.py
       - name: Keep pass-through promotions zero-copy
         env:
           R2_DATA_CATALOG_TOKEN: ${{ secrets.R2_DATA_CATALOG_TOKEN }}
@@ -148,4 +148,4 @@ jobs:
           CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
           R2_S3_ENDPOINT: ${{ vars.R2_S3_ENDPOINT }}
           R2_LAKEHOUSE_BUCKET: ${{ vars.R2_LAKEHOUSE_BUCKET }}
-        run: python scripts/optimize-r2-promotions.py
+        run: python transformation/promotion/optimize_promotions.py

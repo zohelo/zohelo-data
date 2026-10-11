@@ -2,7 +2,7 @@ name: 1 · Ingest → Landing
 
 # Naming: operations are "<source>: <action>"; "platform:" when not tied to one source.
 # Only currently authorized operations are listed. The paused API-incremental and
-# full-file extracts (src/source_campaign.py, src/full_source_campaign.py) stay in
+# full-file extracts (ingestion/run_api_campaign.py, ingestion/run_full_file_campaign.py) stay in
 # the repo and get an operation here again when the owner resumes them.
 
 on:
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      PYTHONPATH: src
+      PYTHONPATH: .
       CLOUDFLARE_R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
       CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
       R2_S3_ENDPOINT: ${{ vars.R2_S3_ENDPOINT }}
@@ -66,8 +66,8 @@ jobs:
       - name: Write, read back and remove test objects in R2
         run: |
           set -euo pipefail
-          python scripts/r2-campaign-store-smoke.py
-          python scripts/r2-bulk-store-smoke.py
+          python checks/r2_campaign_store_check.py
+          python checks/r2_bulk_store_check.py
 
   eurostat-setup:
     if: startsWith(inputs.operation, 'eurostat:')
@@ -114,7 +114,7 @@ jobs:
       matrix:
         job: ${{ fromJSON(needs.eurostat-setup.outputs.matrix) }}
     env:
-      PYTHONPATH: src
+      PYTHONPATH: .
       CLOUDFLARE_R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
       CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
       R2_S3_ENDPOINT: ${{ vars.R2_S3_ENDPOINT }}
@@ -145,4 +145,4 @@ jobs:
                 --dataset-filter "$DATASET_FILTER"
                 --budget-minutes 330 --grace-minutes 20)
           if [ "$MODE" = load ]; then args+=(--allow-production-write); fi
-          python src/eurostat_bulk_landing.py "${args[@]}"
+          python ingestion/eurostat/bulk_landing.py "${args[@]}"

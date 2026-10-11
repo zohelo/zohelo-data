@@ -41,13 +41,13 @@ import time
 from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 import zlib
 
-from ingestion.full_source_adapters import (
+from ingestion.common.full_source_adapters import (
     EUROSTAT_INVENTORY_URL,
     FullSourceAdapterError,
     distributions_from_inventory,
     parse_eurostat_async,
 )
-from ingestion.full_source_campaign import task_for
+from ingestion.common.full_source_campaign import task_for
 
 
 SOURCE_ID = "eurostat"
@@ -748,7 +748,7 @@ def load_landing_state(r2: R2) -> dict[str, dict[str, set]]:
 
 
 def load_legacy() -> tuple[set[str], dict[str, dict], bool]:
-    from ingestion.source_campaign_store import R2CampaignStore
+    from ingestion.common.source_campaign_store import R2CampaignStore
 
     state = R2CampaignStore(LEGACY_CAMPAIGN, publication_only=True).load()
     completed = (state or {}).get("completed", {}) if isinstance(state, dict) else {}

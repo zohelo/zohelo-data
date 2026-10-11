@@ -30,6 +30,15 @@ Never:
 - delete the only recoverable raw source copy;
 - expose R2 writer credentials to the browser.
 
+## Repository structure
+
+Keep code in the folder of its dataflow stage: `ingestion/<source>/` (shared code
+in `ingestion/common/`), `transformation/<bronze|promotion|reconciliation>/`,
+`semantic/`, `serving/`, `checks/`; settings in `config/`, documentation in
+`docs/`. No top-level `src/` or `scripts/` folders, no dated or one-off files:
+history lives in git. Python file names are snake_case; Python runs with the
+repository root on `PYTHONPATH`. See README.md for the tree.
+
 ## Storage contract
 
 - `zohelo-landing-prod/01_landing`: native/current raw inputs.
@@ -71,7 +80,7 @@ integrated dimensional modeling.
 Owner direction, 11 October 2026: manual Eurostat bulk-to-Landing is authorized,
 only through the `eurostat: coverage check (dry run)` and
 `eurostat: load new versions to Landing` operations of `1 · Ingest → Landing`
-(`src/eurostat_bulk_landing.py`). It writes exact provider bytes plus receipts to
+(`ingestion/eurostat/bulk_landing.py`). It writes exact provider bytes plus receipts to
 `01_landing/eurostat/bulk/data/` and coverage/run records to
 `06_control/eurostat_bulk_landing/`; it never parses, never touches Bronze, never
 overwrites or deletes. Comext (DS-*) and partitioning of too-big datasets are out of

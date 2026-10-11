@@ -1494,7 +1494,7 @@ class DriveCampaignStore(_CampaignStore):
     ) -> None:
         # LocalCampaignStore remains usable when Google dependencies are not
         # installed; only constructing the Drive backend imports them.
-        from ingestion.drive_state_store import DriveStateStore
+        from ingestion.common.drive_state_store import DriveStateStore
 
         source_id = _require_source_id(source_id)
         if type(publication_only) is not bool:

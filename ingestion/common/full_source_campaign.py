@@ -13,7 +13,7 @@ from pathlib import Path
 import shutil
 import time
 
-from ingestion.source_campaign import canonical, new_state, quota_wait, retry_delay, state_digest
+from ingestion.common.source_campaign import canonical, new_state, quota_wait, retry_delay, state_digest
 
 
 SOURCES = ("world_bank_wdi", "eurostat")
@@ -240,7 +240,7 @@ def _next_recovery_request(task, spec):
                 }
         return requests["contentconstraint"], {"kind": "structure", "name": "constraint"}
     if phase == "partitions_pending":
-        from ingestion.eurostat_bulk_recovery import pending_partition_requests
+        from ingestion.eurostat.bulk_recovery import pending_partition_requests
         pending = pending_partition_requests(plan)
         if not pending:
             raise ValueError("Eurostat partition plan has no pending leaf")
@@ -274,7 +274,7 @@ def _record_protocol(store, raw_store, state, task, spec, path, request, transpo
 
 def _apply_413_response(store, raw_store, state, task, spec, path, request,
                         transport, context, now, code_sha):
-    from ingestion.eurostat_bulk_recovery import start_413_recovery, split_partition_on_413
+    from ingestion.eurostat.bulk_recovery import start_413_recovery, split_partition_on_413
     if state["provider_id"] != "eurostat" or context["kind"] not in {"parent", "partition"}:
         raise ValueError("HTTP 413 is unsupported for this full-distribution request")
     raw = _record_protocol(
@@ -308,7 +308,7 @@ def _restore_protocol_body(raw_store, descriptor, workdir, label):
 
 
 def _advance_partition_structure(task, name, key, body, raw, raw_store, workdir):
-    from ingestion.eurostat_bulk_recovery import apply_dataflow, apply_datastructure, build_partitions
+    from ingestion.eurostat.bulk_recovery import apply_dataflow, apply_datastructure, build_partitions
     plan = task["partition_recovery"]
     if name == "dataflow":
         task["partition_recovery"] = _guard_partition_plan(apply_dataflow(plan, body, raw))
@@ -340,9 +340,9 @@ def run_full_campaign(store, raw_store, quota_store, source_id, settings, workdi
                       max_seconds=1200, max_requests=24, code_sha="unknown",
                       clock=time.time, fetcher=None, inspector=None, planner=None, inventory_planner=None,
                       publish=None, on_progress=None):
-    from ingestion.bulk_transport import fetch_to_file, BulkTransportError
-    from ingestion.source_campaign_store import CampaignStoreError
-    from ingestion.full_source_adapters import initial_distributions, inspect_distribution, distributions_from_inventory
+    from ingestion.common.bulk_transport import fetch_to_file, BulkTransportError
+    from ingestion.common.source_campaign_store import CampaignStoreError
+    from ingestion.common.full_source_adapters import initial_distributions, inspect_distribution, distributions_from_inventory
     fetcher = fetcher or fetch_to_file
     inspector = inspector or inspect_distribution
     planner = planner or initial_distributions
@@ -472,7 +472,7 @@ def run_full_campaign(store, raw_store, quota_store, source_id, settings, workdi
             if inspected.get("status") in {
                 "async", "available", "expired", "async_error", "no_results",
             }:
-                from ingestion.eurostat_bulk_recovery import start_async_recovery, advance_async_recovery
+                from ingestion.eurostat.bulk_recovery import start_async_recovery, advance_async_recovery
                 if source_id != "eurostat" or context["kind"] not in {"parent", "partition"}:
                     raise ValueError("Asynchronous preparation is unsupported for this request")
                 raw = _record_protocol(
@@ -565,7 +565,7 @@ def run_full_campaign(store, raw_store, quota_store, source_id, settings, workdi
             candidate["raw_bytes"] += raw["size_bytes"]
             candidate["accepted_responses"] += 1
             if partition_id is not None:
-                from ingestion.eurostat_bulk_recovery import accept_partition
+                from ingestion.eurostat.bulk_recovery import accept_partition
                 candidate_task["partition_recovery"] = _guard_partition_plan(
                     accept_partition(
                         candidate_task["partition_recovery"], partition_id,

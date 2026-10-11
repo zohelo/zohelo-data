@@ -29,9 +29,9 @@ from pyiceberg.table import TableProperties
 from pyiceberg.typedef import Record
 import requests
 
-from eurostat_bulk_decode import decode_full_distribution
-from ingestion.full_source_campaign import task_for
-from ingestion.source_campaign_store import R2CampaignStore, _R2ObjectStore
+from transformation.bronze.eurostat_decode import decode_full_distribution
+from ingestion.common.full_source_campaign import task_for
+from ingestion.common.source_campaign_store import R2CampaignStore, _R2ObjectStore
 
 SOURCE_ID = "eurostat_bulk"
 TABLE_ID = ("bronze", "eurostat_full_observations")

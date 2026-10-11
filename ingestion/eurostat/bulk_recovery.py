@@ -17,7 +17,7 @@ from typing import Any, Mapping
 from urllib.parse import parse_qsl, quote, unquote_to_bytes, urlsplit, urlunsplit
 import xml.etree.ElementTree as ET
 
-from ingestion.full_source_adapters import parse_eurostat_async
+from ingestion.common.full_source_adapters import parse_eurostat_async
 
 
 EUROSTAT_HOST = "ec.europa.eu"

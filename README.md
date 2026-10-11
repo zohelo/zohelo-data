@@ -22,6 +22,33 @@ Repository regression-test/CI workflows were intentionally removed. Data
 operations still retain ordinary integrity checks, exact-byte verification,
 bounded retries, resumable checkpoints and writer serialization.
 
+## Repository structure
+
+The repository follows the dataflow:
+
+```text
+config/              source campaign settings, storage settings
+ingestion/           sources → R2 Landing
+  common/            R2 stores, HTTP transport, checkpointed campaign engines
+  eurostat/          Eurostat full-file load to Landing (current), API adapter
+  world_bank/        World Bank WDI API adapter (paused)
+  gus_bdl/           GUS BDL API adapter (paused)
+  gus_dbw/           GUS DBW API adapter (paused)
+  run_api_campaign.py, run_full_file_campaign.py   paused campaign entrypoints
+transformation/      Landing → Bronze → Silver → Gold
+  bronze/            Eurostat decode and Bronze catch-up
+  promotion/         Bronze → Silver → Gold promotion and optimization
+  reconciliation/    archive, lineage and retained-input inspection
+semantic/            dimensional model and metrics (not built yet)
+serving/             portal, R2 read worker, portal index
+  portal/            internal SQL/data portal (React, DuckDB-WASM)
+  worker/            Cloudflare Worker serving private R2 reads
+checks/              platform checks (R2 connectivity)
+docs/                architecture, data lifecycle, development
+```
+
+Python runs with the repository root on `PYTHONPATH`.
+
 ## Storage
 
 ```text

@@ -11,8 +11,8 @@ import tempfile
 import boto3
 from botocore.config import Config
 
-from ingestion.bulk_transport import BulkR2RawStore
-from ingestion.source_campaign_store import R2CampaignStore
+from ingestion.common.bulk_transport import BulkR2RawStore
+from ingestion.common.source_campaign_store import R2CampaignStore
 
 
 def req(name: str) -> str:

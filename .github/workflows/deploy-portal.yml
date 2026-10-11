@@ -4,11 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'portal/**'
-      - 'worker/**'
-      - 'scripts/publish-r2-portal-index.py'
-      - '!portal/scripts/**'
-      - 'scripts/verify_portal_build_marker.py'
+      - 'serving/**'
+      - '!serving/portal/scripts/**'
       - '.python-version'
       - '.node-version'
       - '.github/workflows/deploy-portal.yml'
@@ -48,12 +45,12 @@ jobs:
           R2_LANDING_BUCKET: ${{ vars.R2_LANDING_BUCKET }}
         run: |
           python -m pip install boto3
-          python scripts/publish-r2-portal-index.py
+          python serving/publish_portal_index.py
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version-file: .node-version
           cache: npm
-          cache-dependency-path: portal/package-lock.json
+          cache-dependency-path: serving/portal/package-lock.json
       - name: Deploy the private R2 read API
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -61,18 +58,18 @@ jobs:
           PORTAL_ALLOWED_GOOGLE_EMAIL: ${{ secrets.PORTAL_ALLOWED_GOOGLE_EMAIL }}
         run: |
           set -euo pipefail
-          output="$(npx --yes wrangler@latest deploy --config worker/wrangler.toml 2>&1)"
+          output="$(npx --yes wrangler@latest deploy --config serving/worker/wrangler.toml 2>&1)"
           printf '%s\n' "$output"
           api_url="$(printf '%s\n' "$output" | grep -Eo 'https://[^[:space:]]+\.workers\.dev' | tail -1)"
           test -n "$api_url"
           echo "DUCK_UI_R2_API_BASE=${api_url%/}" >> "$GITHUB_ENV"
-          printf '%s' "$PORTAL_ALLOWED_GOOGLE_EMAIL" | npx --yes wrangler@latest secret put ALLOWED_GOOGLE_EMAIL --config worker/wrangler.toml
-          openssl rand -hex 32 | npx --yes wrangler@latest secret put DOWNLOAD_SIGNING_KEY --config worker/wrangler.toml
+          printf '%s' "$PORTAL_ALLOWED_GOOGLE_EMAIL" | npx --yes wrangler@latest secret put ALLOWED_GOOGLE_EMAIL --config serving/worker/wrangler.toml
+          openssl rand -hex 32 | npx --yes wrangler@latest secret put DOWNLOAD_SIGNING_KEY --config serving/worker/wrangler.toml
       - name: Install portal dependencies
-        working-directory: portal
+        working-directory: serving/portal
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Build the portal
-        working-directory: portal
+        working-directory: serving/portal
         env:
           DUCK_UI_BASEPATH: ${{ steps.pages.outputs.base_path }}/
           DUCK_UI_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
@@ -83,7 +80,7 @@ jobs:
           python - <<'PYCODE'
           import json, os
           from pathlib import Path
-          Path('portal/dist/portal-build.json').write_text(json.dumps({
+          Path('serving/portal/dist/portal-build.json').write_text(json.dumps({
               'git_commit': os.environ['GITHUB_SHA'],
               'supported_release_formats': [1, 2],
               'supported_drive_layouts': [],
@@ -93,7 +90,7 @@ jobs:
           PYCODE
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
         with:
-          path: portal/dist
+          path: serving/portal/dist
 
   deploy:
     if: github.ref == 'refs/heads/main'
@@ -119,6 +116,6 @@ jobs:
           PORTAL_ORIGIN: ${{ steps.deployment.outputs.page_url }}
           EXPECTED_GIT_COMMIT: ${{ github.sha }}
         run: |
-          python scripts/verify_portal_build_marker.py \
+          python serving/verify_portal_build.py \
             --origin "$PORTAL_ORIGIN" \
             --expected-git-commit "$EXPECTED_GIT_COMMIT"
