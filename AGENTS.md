@@ -59,6 +59,14 @@ requirements and current implementation gaps in docs/architecture.md. Do not
 claim Python file promotion or zero-copy references implement dbt cleansing or
 integrated dimensional modeling.
 
+Owner direction, 11 October 2026: manual Eurostat bulk-to-Landing is authorized,
+only through the `eurostat_landing` operation of "Ingestion (R2 manual)"
+(`src/eurostat_bulk_landing.py`). It writes exact provider bytes plus receipts to
+`01_landing/eurostat/bulk/data/` and coverage/run records to
+`06_control/eurostat_bulk_landing/`; it never parses, never touches Bronze, never
+overwrites or deletes. Comext (DS-*) and partitioning of too-big datasets are out of
+scope. No schedule. Everything else, including all other ingestion, stays paused.
+
 ## Deliver
 
 Report what changed, what actually ran, whether it reached main and what remains.
