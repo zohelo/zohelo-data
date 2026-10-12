@@ -64,9 +64,12 @@ def dbt(*args) -> str:
     env = dict(os.environ, DBT_PROFILES_DIR=str(WAREHOUSE_DIR))
     run = subprocess.run(["dbt", *args, "--project-dir", str(WAREHOUSE_DIR), "--target", "trial"],
                          cwd=WAREHOUSE_DIR, env=env, capture_output=True, text=True, timeout=1800)
-    tail = (run.stdout + run.stderr)[-1500:]
+    import re
+    text = re.sub(r"\x1b\[[0-9;]*m", "", run.stdout + run.stderr)
+    tail = text[-1500:]
     if run.returncode:
-        raise RuntimeError(f"dbt {args[0]} exit {run.returncode}: {tail}")
+        errors = [line for line in text.splitlines() if "rror" in line or "not supported" in line.lower()]
+        raise RuntimeError(f"dbt {args[0]} exit {run.returncode}: " + " | ".join(errors)[-1200:])
     return tail[-500:]
 
 
