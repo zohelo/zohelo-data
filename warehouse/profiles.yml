@@ -1,0 +1,36 @@
+# Connection: DuckDB in memory, R2 Data Catalog attached as "r2". Credentials come
+# from environment variables (GitHub secrets/variables); nothing secret is stored here.
+zohelo:
+  target: prod
+  outputs:
+    prod: &r2
+      type: duckdb
+      path: ":memory:"
+      threads: 4
+      schema: main
+      # Iceberg tables cannot be renamed inside the transaction that created them,
+      # and dbt's table materialization builds under a temporary name, then renames.
+      disable_transactions: true
+      extensions: [httpfs, iceberg]
+      secrets:
+        - type: iceberg
+          name: r2_catalog
+          token: "{{ env_var('R2_DATA_CATALOG_TOKEN') }}"
+        # Data files are s3:// paths in the R2 bucket; DuckDB's S3 reader must use R2.
+        - type: s3
+          name: r2_files
+          key_id: "{{ env_var('CLOUDFLARE_R2_ACCESS_KEY_ID') }}"
+          secret: "{{ env_var('CLOUDFLARE_R2_SECRET_ACCESS_KEY') }}"
+          endpoint: "{{ env_var('R2_S3_ENDPOINT') | replace('https://', '') | trim('/') }}"
+          region: auto
+          url_style: path
+      attach:
+        - path: "{{ env_var('R2_WAREHOUSE') }}"
+          alias: r2
+          type: iceberg
+          secret: r2_catalog
+          options:
+            endpoint: "{{ env_var('R2_CATALOG_URI') }}"
+    trial:
+      <<: *r2
+      schema: zz_dbt_trial

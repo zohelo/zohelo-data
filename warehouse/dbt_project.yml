@@ -1,0 +1,22 @@
+name: zohelo
+version: "1.0.0"
+profile: zohelo
+
+model-paths: ["models", "semantic_models"]
+analysis-paths: ["analyses"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+clean-targets: ["target", "dbt_packages"]
+
+# Every model is an Iceberg table in the R2 Data Catalog (attached as database "r2").
+# The folder decides the namespace: models/silver -> silver, models/gold -> gold
+# (target "trial" writes everything to its own scratch namespace instead).
+models:
+  zohelo:
+    +database: r2
+    +materialized: table
+    silver:
+      +schema: silver
+    gold:
+      +schema: gold
