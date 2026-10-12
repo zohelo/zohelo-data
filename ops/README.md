@@ -19,4 +19,5 @@ Rules:
 | Script | Purpose | Remove when |
 |---|---|---|
 | `inspect_retained_inputs` | Read-only R2 inventory per source (Landing, Archive, control, Iceberg tables). Args: `--source gus_bdl …` (at most 5 sources per run: GitHub shows only 10 annotations per step) | every registered source has its own `landing.verify` / `bronze.verify` |
+| `migrate_eurostat_landing` | One-off: copy Eurostat Landing from its two earlier layouts into the agreed layout (`--mode plan` / `--mode copy`) | the Eurostat code reads only the agreed layout and the originals are retired |
 | `_r2_inventory` | Helper for `inspect_retained_inputs` | with it |
