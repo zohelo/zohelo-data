@@ -21,7 +21,7 @@ from ops import _r2_inventory as _helpers
 from ingestion.common.report import annotate as _annotate
 
 HELPERS = vars(_helpers)
-SOURCES = ("opendata_org", "gus_bdl", "world_bank_wdi", "gus_dbw")
+SOURCES = tuple(_helpers.KNOWN_SOURCES)
 SUMMARY_FIELDS = {
     "format_version", "kind", "record_type", "source_id", "status", "complete",
     "coverage_status", "row_count", "total_rows", "accepted_distribution_count",
