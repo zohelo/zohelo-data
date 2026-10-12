@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
-"""Advance Eurostat full-distribution files from R2 Landing into the Iceberg Bronze table.
+"""Advance Eurostat data files from R2 Landing into the Iceberg Bronze table.
 
-Two Landing layouts are read:
-- the old campaign layout (``01_landing/eurostat/bulk/raw-<sha>.bin``), found through the
-  old campaign checkpoint; historical Drive IDs resolve through the migration index;
-- the current layout written by the eurostat ``landing.extract`` activity
-  (``01_landing/eurostat/bulk/data/{CODE}/{version}.tsv.gz`` + ``.receipt.json``).
-
-This is an R2-only, bounded worker. It never calls Eurostat and never removes Landing.
-Iceberg raw_sha256 membership is the idempotent checkpoint. A file the decoder rejects
-is recorded under 06_control/eurostat_bulk_bronze/failures/ and skipped on later runs.
+Reads the Landing layout of docs/landing.md
+(``01_landing/eurostat/snapshot/data/<CODE>/<version>__<ingested>.tsv.gz`` + receipt) and
+loads the latest version of every dataset. This is an R2-only, bounded worker. It never
+calls Eurostat and never removes Landing. Iceberg raw_sha256 membership is the idempotent
+checkpoint. A file the decoder rejects is recorded under
+06_control/eurostat_bulk_bronze/failures/ and skipped on later runs.
 """
 
 from __future__ import annotations
 
 import argparse
-from hashlib import md5, sha256
+from hashlib import sha256
 import json
 import os
 from pathlib import Path
@@ -24,7 +21,6 @@ import tempfile
 import time
 from pathlib import PurePosixPath
 from typing import Any
-from urllib.parse import urlsplit
 
 import boto3
 from botocore.config import Config
@@ -36,19 +32,13 @@ from pyiceberg.table import TableProperties
 from pyiceberg.typedef import Record
 import requests
 
-from ingestion.to_bronze.eurostat.decode import (
-    EurostatBulkDecodeError,
-    decode_full_distribution,
-    decode_landing_distribution,
-)
-from ingestion.legacy.engine.full_source_campaign import task_for
-from ingestion.legacy.engine.source_campaign_store import R2CampaignStore, _R2ObjectStore
+from ingestion.to_bronze.eurostat.decode import EurostatBulkDecodeError, decode_landing_distribution
 
 SOURCE_ID = "eurostat_bulk"
 TABLE_ID = ("bronze", "eurostat_full_observations")
 OUTPUT_PREFIX = "02_bronze/eurostat_full_observations/data/retained/"
 DEFAULT_MAX_DISTRIBUTIONS = 64
-LANDING_DATA_PREFIX = "01_landing/eurostat/bulk/data/"
+LANDING_DATA_PREFIX = "01_landing/eurostat/snapshot/data/"
 FAILURE_PREFIX = "06_control/eurostat_bulk_bronze/failures/"
 SHA_RE = __import__("re").compile(r"^[0-9a-f]{64}$")
 RETRY_DELAYS = (2, 5, 10, 20, 40)
@@ -177,79 +167,6 @@ def existing_raw_hashes() -> set[str]:
     return values
 
 
-def canonical_json(value: dict[str, Any]) -> bytes:
-    return json.dumps(
-        value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
-    ).encode("utf-8")
-
-
-def is_data_receipt(receipt: Any) -> bool:
-    return (
-        isinstance(receipt, dict)
-        and receipt.get("schema_version") == 1
-        and receipt.get("source_id") == "eurostat"
-        and receipt.get("accepted") is True
-        and receipt.get("kind") == "full_distribution"
-        and isinstance(receipt.get("distribution"), dict)
-        and receipt["distribution"].get("kind") == "eurostat_tsv_gzip"
-        and isinstance(receipt.get("raw"), dict)
-    )
-
-
-def stream_legacy_raw(
-    client,
-    resolver: _R2ObjectStore,
-    descriptor: dict[str, Any],
-    destination: Path,
-) -> None:
-    object_id = descriptor.get("id")
-    expected_sha = descriptor.get("sha256")
-    expected_md5 = descriptor.get("md5")
-    expected_size = descriptor.get("size_bytes")
-    if (
-        not isinstance(object_id, str)
-        or not isinstance(expected_sha, str)
-        or SHA_RE.fullmatch(expected_sha) is None
-        or not isinstance(expected_md5, str)
-        or len(expected_md5) != 32
-        or type(expected_size) is not int
-        or expected_size <= 0
-    ):
-        raise RuntimeError("Eurostat raw descriptor is invalid")
-    bucket, key = resolver._parse(object_id)
-    if bucket != req("R2_LANDING_BUCKET"):
-        raise RuntimeError(f"Eurostat raw object resolved outside Landing: {bucket}/{key}")
-    if shutil.disk_usage(destination.parent).free < expected_size * 4 + 1024 * 1024 * 1024:
-        raise RuntimeError("runner disk headroom is insufficient for Eurostat decode")
-    response = client.get_object(Bucket=bucket, Key=key)
-    body = response["Body"]
-    sha = sha256()
-    m5 = md5(usedforsecurity=False)
-    size = 0
-    try:
-        with destination.open("xb") as handle:
-            while True:
-                block = body.read(8 * 1024 * 1024)
-                if not block:
-                    break
-                size += len(block)
-                if size > expected_size:
-                    raise RuntimeError("Eurostat raw object exceeded its descriptor size")
-                sha.update(block)
-                m5.update(block)
-                handle.write(block)
-            handle.flush()
-            os.fsync(handle.fileno())
-    finally:
-        body.close()
-    if (
-        size != expected_size
-        or sha.hexdigest() != expected_sha
-        or m5.hexdigest() != expected_md5
-    ):
-        raise RuntimeError("Eurostat raw bytes do not match their accepted receipt")
-
-
 def output_identity(path: Path) -> tuple[str, int, int]:
     digest = sha256()
     with path.open("rb") as handle:
@@ -297,7 +214,7 @@ def put_output(client, bucket: str, raw_sha: str, path: Path) -> tuple[str, int,
 
 
 def landing_candidates(client, landing_bucket: str) -> list[dict[str, Any]]:
-    """Receipts of the current Landing layout: one entry per landed file."""
+    """The latest Landing version of every dataset (highest source version, then ingest)."""
     from concurrent.futures import ThreadPoolExecutor
 
     keys = []
@@ -317,7 +234,9 @@ def landing_candidates(client, landing_bucket: str) -> list[dict[str, Any]]:
         size = receipt.get("size_bytes")
         obj = receipt.get("object") or {}
         if (
-            receipt.get("kind") != "eurostat_bulk_landing"
+            receipt.get("schema_version") != 2
+            or receipt.get("kind") != "eurostat_landing"
+            or receipt.get("area") != "data"
             or not isinstance(sha, str) or SHA_RE.fullmatch(sha) is None
             or type(size) is not int or size <= 0
             or obj.get("bucket") != landing_bucket
@@ -326,10 +245,17 @@ def landing_candidates(client, landing_bucket: str) -> list[dict[str, Any]]:
             raise RuntimeError(f"invalid Eurostat Landing receipt: {key}")
         return {"source": "landing", "raw_sha256": sha, "size": size,
                 "receipt_key": key, "receipt_bytes": body, "data_key": obj["key"],
-                "dataset_id": receipt.get("dataset_code")}
+                "dataset_id": receipt.get("dataset_code"),
+                "order": (str(receipt.get("version_token") or ""), str(receipt.get("ingested_at") or ""))}
 
     with ThreadPoolExecutor(max_workers=16) as pool:
-        return list(pool.map(read, sorted(keys)))
+        receipts = list(pool.map(read, sorted(keys)))
+    latest: dict[str, dict[str, Any]] = {}
+    for item in receipts:
+        held = latest.get(item["dataset_id"])
+        if held is None or item["order"] > held["order"]:
+            latest[item["dataset_id"]] = item
+    return sorted(latest.values(), key=lambda item: item["dataset_id"])
 
 
 def recorded_failures(client, bucket: str) -> set[str]:
@@ -410,95 +336,26 @@ def main(argv=None) -> int:
     table = retry_read(lambda: cat.load_table(TABLE_ID), "load_eurostat_table")
     bucket = req("R2_LAKEHOUSE_BUCKET")
     landing_bucket = req("R2_LANDING_BUCKET")
-    resolver = _R2ObjectStore.from_env()
-    if resolver.landing_bucket != landing_bucket:
-        raise RuntimeError("R2 campaign resolver Landing bucket mismatch")
-
-    source = R2CampaignStore(SOURCE_ID, publication_only=True)
-    state = source.load()
-    if (
-        not isinstance(state, dict)
-        or state.get("source_id") != SOURCE_ID
-        or state.get("provider_id") != "eurostat"
-        or not isinstance(state.get("receipts"), list)
-    ):
-        raise RuntimeError("Eurostat bulk campaign state is invalid")
-
     existing = existing_raw_hashes()
-    completed = state.get("completed")
-    if not isinstance(completed, dict):
-        raise RuntimeError("Eurostat bulk campaign completed map is invalid")
-
-    recent_roots = state.get("recent_roots")
-    if not isinstance(recent_roots, dict):
-        raise RuntimeError("Eurostat bulk campaign recent_roots map is invalid")
-    current_data_roots = {
-        task_for(spec)["id"]
-        for spec in recent_roots.values()
-        if isinstance(spec, dict) and spec.get("kind") == "eurostat_tsv_gzip"
-    }
-    if not current_data_roots:
-        raise RuntimeError("Eurostat current catalogue has no TSV data roots")
-
-    candidates: list[tuple[int, str, dict[str, Any], dict[str, Any]]] = []
-    seen_raw: set[str] = set()
-    accepted_data = 0
-    for task_id, value in completed.items():
-        if not isinstance(task_id, str) or not isinstance(value, dict):
-            continue
-        parent_task_id = task_id.split("::", 1)[0]
-        if parent_task_id not in current_data_roots:
-            continue
-        raw = value.get("raw")
-        descriptor = value.get("receipt")
-        if not isinstance(raw, dict) or not isinstance(descriptor, dict):
-            # Aggregate partition completions have no raw/receipt pair.
-            continue
-        raw_sha = raw.get("sha256")
-        raw_size = raw.get("size_bytes")
-        receipt_sha = descriptor.get("sha256")
-        receipt_size = descriptor.get("size_bytes")
-        if (
-            not isinstance(raw_sha, str)
-            or SHA_RE.fullmatch(raw_sha) is None
-            or type(raw_size) is not int
-            or raw_size <= 0
-            or not isinstance(receipt_sha, str)
-            or SHA_RE.fullmatch(receipt_sha) is None
-            or type(receipt_size) is not int
-            or receipt_size <= 0
-        ):
-            raise RuntimeError(f"invalid completed Eurostat descriptor: {task_id}")
-        accepted_data += 1
-        if raw_sha in existing or raw_sha in seen_raw:
-            continue
-        seen_raw.add(raw_sha)
-        candidates.append({"source": "legacy", "raw_sha256": raw_sha, "size": raw_size,
-                           "task_id": task_id, "descriptor": descriptor, "raw": raw})
-
     failed_before = recorded_failures(client, bucket)
     landing_files = landing_candidates(client, landing_bucket)
+    candidates: list[dict[str, Any]] = []
+    seen_raw: set[str] = set()
     for item in landing_files:
-        if item["raw_sha256"] in existing or item["raw_sha256"] in seen_raw:
+        sha_value = item["raw_sha256"]
+        if sha_value in existing or sha_value in seen_raw or sha_value in failed_before:
             continue
-        seen_raw.add(item["raw_sha256"])
+        seen_raw.add(sha_value)
         candidates.append(item)
-    candidates = [item for item in candidates if item["raw_sha256"] not in failed_before]
     candidates.sort(key=lambda item: (item["size"], item["raw_sha256"]))
     missing_data = len(candidates)
     selected = candidates[: args.max_distributions]
 
     print(json.dumps({
         "status": "eurostat_retained_candidates_selected",
-        "current_catalogue_data_roots": len(current_data_roots),
-        "accepted_data_completed_entries": accepted_data,
-        "landing_files_current_layout": len(landing_files),
+        "landing_datasets_latest": len(landing_files),
         "existing_distinct_raw_sha256": len(existing),
         "missing_distinct_raw_sha256": missing_data,
-        "missing_by_layout": {
-            "old_campaign": sum(item["source"] == "legacy" for item in candidates),
-            "current_layout": sum(item["source"] == "landing" for item in candidates),
-        },
         "recorded_failures_skipped": len(failed_before),
         "selected": len(selected),
         "selected_raw_bytes": sum(int(item["size"]) for item in selected),
@@ -510,12 +367,10 @@ def main(argv=None) -> int:
             "operation": "catch-up-eurostat-r2-bronze",
             "processed": 0,
             "existing_distinct_raw_sha256": len(existing),
-            "accepted_data_completed_entries": accepted_data,
             "missing_distinct_raw_sha256": missing_data,
             "recorded_failures_skipped": len(failed_before),
             "reason": "no_missing_landing_files",
             "landing_deleted": False,
-            "google_drive_accessed": False,
         }, sort_keys=True))
         return 0
 
@@ -534,49 +389,23 @@ def main(argv=None) -> int:
             receipt_path = work / "receipt.json"
             output_path = work / "observations.parquet"
             try:
-                if item["source"] == "legacy":
-                    descriptor = item["descriptor"]
-                    receipt = source.read_receipt(descriptor)
-                    if not is_data_receipt(receipt):
-                        raise RuntimeError(f"completed Eurostat item is not a data receipt: {item['task_id']}")
-                    if receipt.get("raw") != item["raw"]:
-                        raise RuntimeError(f"completed Eurostat raw descriptor drifted: {item['task_id']}")
-                    receipt_raw = canonical_json(receipt)
-                    if (
-                        len(receipt_raw) != descriptor.get("size_bytes")
-                        or sha256(receipt_raw).hexdigest() != descriptor.get("sha256")
-                    ):
-                        raise RuntimeError("Eurostat receipt bytes do not match their descriptor")
-                    receipt_path.write_bytes(receipt_raw)
-                    stream_legacy_raw(client, resolver, receipt["raw"], raw_path)
-                    report = decode_full_distribution(
-                        raw_path,
-                        receipt_path,
-                        output_path,
-                        receipt_descriptor={
-                            "id": descriptor.get("id"),
-                            "sha256": descriptor.get("sha256"),
-                            "size_bytes": descriptor.get("size_bytes"),
-                        },
-                    )
-                else:
-                    receipt_path.write_bytes(item["receipt_bytes"])
-                    stream_landing_raw(client, landing_bucket, item["data_key"], raw_sha,
-                                       int(item["size"]), raw_path)
-                    report = decode_landing_distribution(
-                        raw_path,
-                        receipt_path,
-                        output_path,
-                        receipt_uri=f"r2://{landing_bucket}/{item['receipt_key']}",
-                        raw_uri=f"r2://{landing_bucket}/{item['data_key']}",
-                    )
+                receipt_path.write_bytes(item["receipt_bytes"])
+                stream_landing_raw(client, landing_bucket, item["data_key"], raw_sha,
+                                   int(item["size"]), raw_path)
+                report = decode_landing_distribution(
+                    raw_path,
+                    receipt_path,
+                    output_path,
+                    receipt_uri=f"r2://{landing_bucket}/{item['receipt_key']}",
+                    raw_uri=f"r2://{landing_bucket}/{item['data_key']}",
+                )
             except EurostatBulkDecodeError as exc:
                 # The file is intact but does not satisfy the Bronze contract: record it
                 # durably and keep going, so one file cannot block every later batch.
                 detail = {
                     "raw_sha256": raw_sha,
                     "layout": item["source"],
-                    "dataset_id": item.get("dataset_id") or item.get("task_id"),
+                    "dataset_id": item.get("dataset_id"),
                     "landing_key": item.get("data_key"),
                     "error": str(exc)[:1000],
                     "recorded_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -623,7 +452,6 @@ def main(argv=None) -> int:
             "missing_distinct_raw_sha256": missing_data - len(failed),
             "missing_distinct_raw_sha256_before": missing_data,
             "landing_deleted": False,
-            "google_drive_accessed": False,
         }, sort_keys=True), flush=True)
         return 0
 
@@ -701,10 +529,8 @@ def main(argv=None) -> int:
         "bytes_added": sum(int(item["bytes"]) for item in to_append),
         "existing_distinct_raw_sha256_before": len(existing),
         "existing_distinct_raw_sha256_after": len(after),
-        "accepted_data_completed_entries": accepted_data,
         "missing_distinct_raw_sha256_before": missing_data,
         "landing_deleted": False,
-        "google_drive_accessed": False,
         "elapsed_seconds": round(time.monotonic() - started, 1),
     }, sort_keys=True), flush=True)
     return 0

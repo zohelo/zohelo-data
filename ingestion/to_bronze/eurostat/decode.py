@@ -7,7 +7,6 @@ verifiable Parquet relation without changing the Landing object.
 """
 from __future__ import annotations
 
-import argparse
 import csv
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
@@ -17,9 +16,7 @@ import json
 import math
 from pathlib import Path
 import re
-import sys
 from typing import Any, Mapping
-from urllib.parse import urlsplit
 
 import duckdb
 import pandas as pd
@@ -64,29 +61,6 @@ class EurostatBulkDecodeError(ValueError):
     """A retained Eurostat distribution cannot satisfy the Bronze contract."""
 
 
-def decode_full_distribution(
-    source: Path,
-    receipt: Path,
-    output: Path,
-    *,
-    receipt_descriptor: Mapping[str, Any],
-) -> dict[str, Any]:
-    """Stream one exact Eurostat TSV.GZ distribution into a fresh Parquet file.
-
-    Empty and ``:`` cells are both retained as missing but remain distinguishable
-    through ``missing_reason``.  Numeric source text is kept alongside the
-    analytical double so downstream consumers never depend on a lossy conversion.
-    """
-    source = Path(source)
-    receipt = Path(receipt)
-    output = Path(output)
-    identity = _validated_receipt_identity(
-        source=source, receipt=receipt, output=output,
-        descriptor=receipt_descriptor,
-    )
-    return _decode_with_identity(source, output, identity)
-
-
 def decode_landing_distribution(
     source: Path,
     receipt: Path,
@@ -95,11 +69,7 @@ def decode_landing_distribution(
     receipt_uri: str,
     raw_uri: str,
 ) -> dict[str, Any]:
-    """Decode one file loaded by the eurostat ``landing.extract`` activity.
-
-    Same Bronze contract as :func:`decode_full_distribution`; identity comes from the
-    new Landing receipt (``01_landing/eurostat/bulk/data/{CODE}/{version}.receipt.json``).
-    """
+    """Decode one Landing data file; identity comes from its receipt (docs/landing.md)."""
     source = Path(source)
     receipt = Path(receipt)
     output = Path(output)
@@ -334,138 +304,6 @@ def _parse_cell(
     return value_text, numeric_float, status, False, None
 
 
-def _validated_receipt_identity(
-    *,
-    source: Path,
-    receipt: Path,
-    output: Path,
-    descriptor: Mapping[str, Any],
-) -> dict[str, Any]:
-    if not source.is_file():
-        raise EurostatBulkDecodeError("Eurostat distribution path is not a regular file")
-    if not receipt.is_file():
-        raise EurostatBulkDecodeError("Eurostat receipt path is not a regular file")
-    if output.exists():
-        raise EurostatBulkDecodeError("Eurostat Bronze output must be a fresh path")
-    if not isinstance(descriptor, Mapping) or set(descriptor) != {
-        "id", "sha256", "size_bytes"
-    }:
-        raise EurostatBulkDecodeError("Eurostat receipt descriptor has invalid fields")
-    receipt_file_id = descriptor.get("id")
-    receipt_sha256 = descriptor.get("sha256")
-    receipt_size_bytes = descriptor.get("size_bytes")
-    if not isinstance(receipt_file_id, str) or not _DRIVE_FILE_ID_RE.fullmatch(receipt_file_id):
-        raise EurostatBulkDecodeError("Eurostat receipt Drive identity is invalid")
-    if not isinstance(receipt_sha256, str) or not _SHA256_RE.fullmatch(receipt_sha256):
-        raise EurostatBulkDecodeError("Eurostat receipt SHA-256 is invalid")
-    if type(receipt_size_bytes) is not int or receipt_size_bytes <= 0:
-        raise EurostatBulkDecodeError("Eurostat receipt size is invalid")
-    if receipt.stat().st_size != receipt_size_bytes or _file_sha256(receipt) != receipt_sha256:
-        raise EurostatBulkDecodeError("Eurostat receipt bytes do not match the immutable descriptor")
-    try:
-        accepted = json.loads(receipt.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise EurostatBulkDecodeError(f"Eurostat receipt is not valid UTF-8 JSON: {exc}") from exc
-    if (
-        not isinstance(accepted, dict)
-        or accepted.get("schema_version") != 1
-        or accepted.get("source_id") != "eurostat"
-        or accepted.get("accepted") is not True
-        or accepted.get("kind") != "full_distribution"
-    ):
-        raise EurostatBulkDecodeError("receipt is not an accepted Eurostat full distribution")
-    distribution = accepted.get("distribution")
-    raw = accepted.get("raw")
-    inspection = accepted.get("inspection")
-    if not isinstance(distribution, dict) or not isinstance(raw, dict):
-        raise EurostatBulkDecodeError("Eurostat receipt is missing distribution or raw metadata")
-    if not isinstance(inspection, dict) or inspection.get("status") != "complete":
-        raise EurostatBulkDecodeError("Eurostat receipt inspection is not complete")
-    distribution_id = distribution.get("dataset_id")
-    if not _bounded_text(distribution_id, 2048):
-        raise EurostatBulkDecodeError("Eurostat dataset identity is invalid")
-    original_dataset_id = distribution.get("original_dataset_id")
-    partition_id = distribution.get("partition_id")
-    partition_selection = distribution.get("partition_selection")
-    partitioned = original_dataset_id is not None or partition_id is not None
-    if partitioned:
-        if (
-            not _bounded_text(original_dataset_id, 2048)
-            or not _bounded_text(partition_id, 2048)
-            or not isinstance(partition_selection, dict)
-        ):
-            raise EurostatBulkDecodeError("Eurostat partition identity is invalid")
-        dataset_id = original_dataset_id
-        partition_selection_json = json.dumps(
-            partition_selection,
-            ensure_ascii=False,
-            separators=(",", ":"),
-            sort_keys=True,
-        )
-    else:
-        dataset_id = distribution_id
-        partition_id = None
-        if partition_selection is not None:
-            raise EurostatBulkDecodeError(
-                "unpartitioned Eurostat receipt has a partition selection"
-            )
-        partition_selection_json = None
-    empty_partition = inspection.get("empty_partition") is True
-    if empty_partition and not partitioned:
-        raise EurostatBulkDecodeError(
-            "only an accepted constrained Eurostat partition may be empty"
-        )
-    if distribution.get("kind") != "eurostat_tsv_gzip":
-        raise EurostatBulkDecodeError("Eurostat receipt is not a TSV.GZ data distribution")
-    url = distribution.get("url")
-    if not isinstance(url, str) or urlsplit(url).scheme != "https" or not urlsplit(url).hostname:
-        raise EurostatBulkDecodeError("Eurostat receipt distribution URL is invalid")
-    if not isinstance(distribution.get("params"), dict):
-        raise EurostatBulkDecodeError("Eurostat receipt distribution parameters are invalid")
-    source_version = distribution.get("version")
-    if source_version is not None and not _bounded_text(source_version, 1024):
-        raise EurostatBulkDecodeError("Eurostat source version is invalid")
-    raw_sha256 = raw.get("sha256")
-    raw_file_id = raw.get("id")
-    raw_name = raw.get("name")
-    raw_md5 = raw.get("md5")
-    raw_size = raw.get("size_bytes")
-    if not isinstance(raw_sha256, str) or not _SHA256_RE.fullmatch(raw_sha256):
-        raise EurostatBulkDecodeError("Eurostat distribution SHA-256 is invalid")
-    if not isinstance(raw_file_id, str) or not _DRIVE_FILE_ID_RE.fullmatch(raw_file_id):
-        raise EurostatBulkDecodeError("Eurostat Drive file identity is invalid")
-    if (
-        raw_name != f"raw-{raw_sha256}.bin"
-        or not isinstance(raw_md5, str)
-        or not _MD5_RE.fullmatch(raw_md5)
-        or type(raw_size) is not int
-        or raw_size <= 0
-        or source.stat().st_size != raw_size
-    ):
-        raise EurostatBulkDecodeError("Eurostat raw descriptor is invalid")
-    retrieved_at_utc = accepted.get("retrieved_at_utc")
-    try:
-        parsed = datetime.fromisoformat(retrieved_at_utc.replace("Z", "+00:00"))
-    except (AttributeError, ValueError):
-        raise EurostatBulkDecodeError("Eurostat retrieval timestamp is invalid") from None
-    if parsed.tzinfo is None or parsed.utcoffset() != timedelta(0):
-        raise EurostatBulkDecodeError("Eurostat retrieval timestamp must be UTC")
-    return {
-        "dataset_id": dataset_id,
-        "distribution_id": distribution_id,
-        "partition_id": partition_id,
-        "partition_selection_json": partition_selection_json,
-        "empty_partition": empty_partition,
-        "source_version": source_version,
-        "retrieved_at_utc": retrieved_at_utc,
-        "raw_sha256": raw_sha256,
-        "raw_file_id": raw_file_id,
-        "receipt_sha256": receipt_sha256,
-        "receipt_file_id": receipt_file_id,
-        "receipt_size_bytes": receipt_size_bytes,
-    }
-
-
 def _validated_landing_identity(
     *,
     source: Path,
@@ -488,8 +326,9 @@ def _validated_landing_identity(
         raise EurostatBulkDecodeError(f"Eurostat Landing receipt is not valid JSON: {exc}") from exc
     if (
         not isinstance(accepted, dict)
-        or accepted.get("schema_version") != 1
-        or accepted.get("kind") != "eurostat_bulk_landing"
+        or accepted.get("schema_version") != 2
+        or accepted.get("kind") != "eurostat_landing"
+        or accepted.get("area") != "data"
         or accepted.get("source_id") != "eurostat"
     ):
         raise EurostatBulkDecodeError("receipt is not a Eurostat Landing receipt")
@@ -508,7 +347,7 @@ def _validated_landing_identity(
     obj = accepted.get("object")
     if not isinstance(obj, dict) or not raw_uri.endswith("/" + str(obj.get("key"))):
         raise EurostatBulkDecodeError("Eurostat receipt object does not match the raw file")
-    retrieved_at = accepted.get("retrieved_at")
+    retrieved_at = accepted.get("ingested_at")
     try:
         parsed = datetime.fromisoformat(str(retrieved_at).replace("Z", "+00:00"))
     except ValueError:
@@ -545,50 +384,3 @@ def _file_sha256(path: Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
-
-
-def main(argv: list[str] | None = None) -> int:
-    """Run the local, non-publishing decoder for one receipt-bound distribution."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("source", type=Path)
-    parser.add_argument("receipt", type=Path)
-    parser.add_argument("output", type=Path)
-    parser.add_argument("--receipt-file-id", required=True)
-    parser.add_argument("--receipt-sha256", required=True)
-    parser.add_argument("--receipt-size-bytes", required=True, type=int)
-    args = parser.parse_args(argv)
-    try:
-        report = decode_full_distribution(
-            args.source,
-            args.receipt,
-            args.output,
-            receipt_descriptor={
-                "id": args.receipt_file_id,
-                "sha256": args.receipt_sha256,
-                "size_bytes": args.receipt_size_bytes,
-            },
-        )
-    except EurostatBulkDecodeError as exc:
-        print(
-            json.dumps(
-                {
-                    "status": "eurostat_full_distribution_decode_failed",
-                    "error_type": type(exc).__name__,
-                    "detail": str(exc),
-                },
-                sort_keys=True,
-            ),
-            file=sys.stderr,
-        )
-        return 1
-    print(
-        json.dumps(
-            {"status": "eurostat_full_distribution_decoded", **report},
-            sort_keys=True,
-        )
-    )
-    return 0
-
-
-if __name__ == "__main__":  # pragma: no cover - exercised through the library tests
-    raise SystemExit(main())

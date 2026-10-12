@@ -48,14 +48,14 @@ The receipt is written after the file and marks it complete: SHA-256, size, sour
 URL, both timestamps and transfer details. Files are the exact source bytes, never
 modified or overwritten.
 
-Migration: all Eurostat files were copied into this layout on 12 October 2026. The
-Eurostat code still reads and writes the two earlier layouts
-(`01_landing/eurostat/bulk/raw-<sha>.bin`, `01_landing/eurostat/bulk/data/<CODE>/<version>.tsv.gz`)
-until it is switched; then the old copies are archived and removed.
+Migration: all Eurostat files were copied into this layout on 12 October 2026 and the
+Eurostat code reads and writes only this layout. The earlier copies under
+`01_landing/eurostat/bulk/` are archived (content-addressed, `05_archive/eurostat/raw/<sha256>.bin`)
+and then removed from Landing.
 
 ## Landing → Bronze → Archive
 
-- Bronze (`ingestion/to_bronze/`) reads verified Landing files, keeps the source's
+- Bronze (`ingestion/to_bronze/`) loads the latest version of every entity, keeps the source's
   meaning and grain and adds provenance (Landing key, SHA-256). Checkpoint: the
   Landing SHA-256 is in the Bronze table. Files the decoder rejects are recorded with
   a reason, never dropped silently.

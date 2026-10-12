@@ -7,8 +7,8 @@ Supported bounded scopes:
 - World Bank WDI: the one bulk ZIP whose SHA-256 equals silver.wdi_observations.archive_sha256.
 
 Every archive copy is server-side copied and then fully streamed back through SHA-256
-before the immutable receipt is written. Landing is never deleted here because the
-migrated source-campaign pointers still require separate R2-native reconciliation.
+before the immutable receipt is written. Archive keys are content-addressed
+(05_archive/<source>/<kind>/<sha256>.bin). Landing is never deleted here.
 """
 
 from __future__ import annotations
@@ -18,144 +18,20 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
-import os
 from pathlib import PurePosixPath
-import re
 from typing import Any
 
-import boto3
-from botocore.config import Config
-import requests
+from ingestion.common.r2 import landing_objects, req, s3, sha_column
 
 SOURCES=("eurostat","world_bank_wdi")
-NAME_RE=re.compile(r"^(raw|response)-([0-9a-f]{64})\.bin$")
-
-
-def req(name:str)->str:
-    value=os.environ.get(name,"").strip()
-    if not value:
-        raise RuntimeError(f"missing environment variable: {name}")
-    return value
-
-
-def s3():
-    return boto3.client(
-        "s3",endpoint_url=req("R2_S3_ENDPOINT").rstrip("/"),region_name="auto",
-        aws_access_key_id=req("CLOUDFLARE_R2_ACCESS_KEY_ID"),
-        aws_secret_access_key=req("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
-        config=Config(signature_version="s3v4",retries={"max_attempts":8,"mode":"standard"}))
-
-
-def list_objects(client,bucket:str,prefix:str)->list[dict[str,Any]]:
-    rows=[]
-    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket,Prefix=prefix):
-        for item in page.get("Contents",[]):
-            key=str(item["Key"]); size=int(item.get("Size",0))
-            if key.endswith("/") and size==0:
-                continue
-            rows.append({"key":key,"size":size})
-    rows.sort(key=lambda x:x["key"])
-    return rows
-
-
-
-CURRENT_LAYOUT_PREFIX="01_landing/eurostat/bulk/data/"
-
-
-def current_layout_digests(client,bucket:str,keys:list[str])->dict[str,str]:
-    """SHA-256 of current-layout Eurostat files, from the metadata written at load time."""
-    from concurrent.futures import ThreadPoolExecutor
-    def head(key:str)->tuple[str,str]:
-        meta=client.head_object(Bucket=bucket,Key=key).get("Metadata") or {}
-        digest=str(meta.get("sha256",""))
-        if not re.fullmatch(r"[0-9a-f]{64}",digest):
-            raise RuntimeError(f"current-layout Landing object has no SHA-256 metadata: {key}")
-        return key,digest
-    with ThreadPoolExecutor(max_workers=16) as pool:
-        return dict(pool.map(head,keys))
-
-def landing(client,bucket:str,source:str)->dict[str,dict[str,Any]]:
-    result={}
-    prefix=f"01_landing/{source}/"
-    current=[]
-    for item in list_objects(client,bucket,prefix):
-        if item["size"]<=0:
-            continue
-        if item["key"].startswith(CURRENT_LAYOUT_PREFIX):
-            if item["key"].endswith(".tsv.gz"):
-                current.append(item)
-            elif not item["key"].endswith(".receipt.json"):
-                raise RuntimeError(f"unexpected Landing object: {item['key']}")
-            continue
-        name=PurePosixPath(item["key"]).name
-        match=NAME_RE.fullmatch(name)
-        if not match:
-            raise RuntimeError(f"unexpected Landing object: {item['key']}")
-        kind,digest=match.groups()
-        if digest in result:
-            raise RuntimeError(f"duplicate Landing digest: {digest}")
-        result[digest]={**item,"kind":kind,"sha256":digest}
-    digests=current_layout_digests(client,bucket,[item["key"] for item in current]) if current else {}
-    for item in current:
-        digest=digests[item["key"]]
-        if digest in result:
-            if int(result[digest]["size"])!=int(item["size"]):
-                raise RuntimeError(f"duplicate Landing digest with different size: {digest}")
-            continue  # identical bytes already held in the old layout
-        result[digest]={**item,"kind":"raw","sha256":digest}
-    return result
-
-
-def sql(query:str)->list[dict[str,Any]]:
-    url=(f"https://api.sql.cloudflarestorage.com/api/v1/accounts/"
-         f"{req('CLOUDFLARE_ACCOUNT_ID')}/r2-sql/query/{req('R2_LAKEHOUSE_BUCKET')}")
-    response=requests.post(
-        url,
-        headers={"Authorization":f"Bearer {req('R2_DATA_CATALOG_TOKEN')}",
-                 "Content-Type":"application/json"},
-        json={"query":query},timeout=180,
-    )
-    if response.status_code!=200:
-        raise RuntimeError(f"R2 SQL {response.status_code}: {response.text[:500]}")
-    payload=response.json()
-    if payload.get("success") is False:
-        raise RuntimeError(f"R2 SQL failed: {json.dumps(payload)[:800]}")
-    candidates=[]
-    if isinstance(payload.get("result"),list): candidates.extend(payload["result"])
-    elif isinstance(payload.get("result"),dict): candidates.append(payload["result"])
-    candidates.append(payload)
-    for candidate in candidates:
-        if not isinstance(candidate,dict): continue
-        value=candidate.get("results")
-        if isinstance(value,list) and (not value or isinstance(value[0],dict)):
-            return value
-        if isinstance(value,dict):
-            columns=value.get("columns"); rows=value.get("rows")
-            if isinstance(columns,list) and isinstance(rows,list):
-                return [dict(zip(columns,row)) for row in rows]
-        rows=candidate.get("rows")
-        if isinstance(rows,list) and (not rows or isinstance(rows[0],dict)):
-            return rows
-    raise RuntimeError(f"unsupported R2 SQL response: {json.dumps(payload)[:1000]}")
-
-
-def one_column(query:str,column:str)->set[str]:
-    result=set()
-    for row in sql(query):
-        value=row.get(column)
-        if value is None: continue
-        if not isinstance(value,str) or not re.fullmatch(r"[0-9a-f]{64}",value):
-            raise RuntimeError(f"invalid {column}: {value!r}")
-        result.add(value)
-    return result
 
 
 def proven_for(source:str,meta:dict[str,dict[str,Any]])->tuple[set[str],dict[str,Any]]:
     if source=="eurostat":
-        bulk=one_column(
+        bulk=sha_column(
             "SELECT DISTINCT raw_sha256 FROM bronze.eurostat_full_observations "
             "WHERE raw_sha256 IS NOT NULL;","raw_sha256")
-        responses=one_column(
+        responses=sha_column(
             "SELECT DISTINCT response_sha256 FROM bronze.eurostat_observations "
             "WHERE response_sha256 IS NOT NULL;","response_sha256")
         proven=bulk|responses
@@ -167,7 +43,7 @@ def proven_for(source:str,meta:dict[str,dict[str,Any]])->tuple[set[str],dict[str
             ],
         }
     bulk={digest for digest,item in meta.items() if "/bulk/" in item["key"]}
-    modeled=one_column(
+    modeled=sha_column(
         "SELECT DISTINCT archive_sha256 FROM silver.wdi_observations "
         "WHERE archive_sha256 IS NOT NULL;","archive_sha256")
     if len(bulk)!=1 or modeled!=bulk:
@@ -227,6 +103,14 @@ def ensure_archive(client,bucket:str,source:str,item:dict[str,Any])->dict[str,An
     }
 
 
+def list_objects(client,bucket:str,prefix:str)->list[dict[str,Any]]:
+    rows=[]
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket,Prefix=prefix):
+        for item in page.get("Contents",[]):
+            rows.append({"key":str(item["Key"]),"size":int(item.get("Size",0))})
+    return sorted(rows,key=lambda row:row["key"])
+
+
 def blockers(client,lakehouse_bucket:str,source:str)->list[str]:
     prefixes=[f"06_control/source_campaigns/{source}/",f"06_control/source_campaigns/{source}_bulk/"]
     if source=="eurostat":
@@ -260,7 +144,7 @@ def main(argv=None)->int:
     parser.add_argument("--source",choices=SOURCES,required=True)
     args=parser.parse_args(argv)
     client=s3(); landing_bucket=req("R2_LANDING_BUCKET"); lakehouse_bucket=req("R2_LAKEHOUSE_BUCKET")
-    meta=landing(client,landing_bucket,args.source)
+    meta=landing_objects(client,landing_bucket,args.source)
     proven,proof=proven_for(args.source,meta)
     if not proven<=set(meta):
         raise RuntimeError(f"Iceberg provenance lacks Landing bytes: {len(proven-set(meta))}")
