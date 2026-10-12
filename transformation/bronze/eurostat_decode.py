@@ -84,6 +84,33 @@ def decode_full_distribution(
         source=source, receipt=receipt, output=output,
         descriptor=receipt_descriptor,
     )
+    return _decode_with_identity(source, output, identity)
+
+
+def decode_landing_distribution(
+    source: Path,
+    receipt: Path,
+    output: Path,
+    *,
+    receipt_uri: str,
+    raw_uri: str,
+) -> dict[str, Any]:
+    """Decode one file loaded by ``eurostat: load new versions to Landing``.
+
+    Same Bronze contract as :func:`decode_full_distribution`; identity comes from the
+    new Landing receipt (``01_landing/eurostat/bulk/data/{CODE}/{version}.receipt.json``).
+    """
+    source = Path(source)
+    receipt = Path(receipt)
+    output = Path(output)
+    identity = _validated_landing_identity(
+        source=source, receipt=receipt, output=output,
+        receipt_uri=receipt_uri, raw_uri=raw_uri,
+    )
+    return _decode_with_identity(source, output, identity)
+
+
+def _decode_with_identity(source: Path, output: Path, identity: Mapping[str, Any]) -> dict[str, Any]:
     dataset_id = identity["dataset_id"]
     if _file_sha256(source) != identity["raw_sha256"]:
         raise EurostatBulkDecodeError("Eurostat distribution SHA-256 does not match its receipt")
@@ -436,6 +463,71 @@ def _validated_receipt_identity(
         "receipt_sha256": receipt_sha256,
         "receipt_file_id": receipt_file_id,
         "receipt_size_bytes": receipt_size_bytes,
+    }
+
+
+def _validated_landing_identity(
+    *,
+    source: Path,
+    receipt: Path,
+    output: Path,
+    receipt_uri: str,
+    raw_uri: str,
+) -> dict[str, Any]:
+    if not source.is_file() or not receipt.is_file():
+        raise EurostatBulkDecodeError("Eurostat Landing file or receipt is not a regular file")
+    if output.exists():
+        raise EurostatBulkDecodeError("Eurostat Bronze output must be a fresh path")
+    for label, uri in (("receipt", receipt_uri), ("raw", raw_uri)):
+        if not isinstance(uri, str) or not uri.startswith("r2://") or len(uri) > 1024:
+            raise EurostatBulkDecodeError(f"Eurostat Landing {label} URI is invalid")
+    receipt_bytes = receipt.read_bytes()
+    try:
+        accepted = json.loads(receipt_bytes.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise EurostatBulkDecodeError(f"Eurostat Landing receipt is not valid JSON: {exc}") from exc
+    if (
+        not isinstance(accepted, dict)
+        or accepted.get("schema_version") != 1
+        or accepted.get("kind") != "eurostat_bulk_landing"
+        or accepted.get("source_id") != "eurostat"
+    ):
+        raise EurostatBulkDecodeError("receipt is not a Eurostat Landing receipt")
+    dataset_id = accepted.get("dataset_code")
+    if not _bounded_text(dataset_id, 2048):
+        raise EurostatBulkDecodeError("Eurostat dataset identity is invalid")
+    source_version = accepted.get("eurostat_version") or None
+    if source_version is not None and not _bounded_text(source_version, 1024):
+        raise EurostatBulkDecodeError("Eurostat source version is invalid")
+    raw_sha256 = accepted.get("sha256")
+    raw_size = accepted.get("size_bytes")
+    if not isinstance(raw_sha256, str) or not _SHA256_RE.fullmatch(raw_sha256):
+        raise EurostatBulkDecodeError("Eurostat distribution SHA-256 is invalid")
+    if type(raw_size) is not int or raw_size <= 0 or source.stat().st_size != raw_size:
+        raise EurostatBulkDecodeError("Eurostat distribution size does not match its receipt")
+    obj = accepted.get("object")
+    if not isinstance(obj, dict) or not raw_uri.endswith("/" + str(obj.get("key"))):
+        raise EurostatBulkDecodeError("Eurostat receipt object does not match the raw file")
+    retrieved_at = accepted.get("retrieved_at")
+    try:
+        parsed = datetime.fromisoformat(str(retrieved_at).replace("Z", "+00:00"))
+    except ValueError:
+        raise EurostatBulkDecodeError("Eurostat retrieval timestamp is invalid") from None
+    if parsed.tzinfo is None or parsed.utcoffset() != timedelta(0):
+        raise EurostatBulkDecodeError("Eurostat retrieval timestamp must be UTC")
+    return {
+        "dataset_id": dataset_id,
+        "distribution_id": dataset_id,
+        "partition_id": None,
+        "partition_selection_json": None,
+        "empty_partition": False,
+        "source_version": source_version,
+        "retrieved_at_utc": retrieved_at,
+        "raw_sha256": raw_sha256,
+        "raw_file_id": raw_uri,
+        "receipt_sha256": sha256(receipt_bytes).hexdigest(),
+        "receipt_file_id": receipt_uri,
+        "receipt_size_bytes": len(receipt_bytes),
     }
 
 

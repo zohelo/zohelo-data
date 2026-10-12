@@ -58,11 +58,34 @@ def list_objects(client,bucket:str,prefix:str)->list[dict[str,Any]]:
     return rows
 
 
+
+CURRENT_LAYOUT_PREFIX="01_landing/eurostat/bulk/data/"
+
+
+def current_layout_digests(client,bucket:str,keys:list[str])->dict[str,str]:
+    """SHA-256 of current-layout Eurostat files, from the metadata written at load time."""
+    from concurrent.futures import ThreadPoolExecutor
+    def head(key:str)->tuple[str,str]:
+        meta=client.head_object(Bucket=bucket,Key=key).get("Metadata") or {}
+        digest=str(meta.get("sha256",""))
+        if not re.fullmatch(r"[0-9a-f]{64}",digest):
+            raise RuntimeError(f"current-layout Landing object has no SHA-256 metadata: {key}")
+        return key,digest
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        return dict(pool.map(head,keys))
+
 def landing(client,bucket:str,source:str)->dict[str,dict[str,Any]]:
     result={}
     prefix=f"01_landing/{source}/"
+    current=[]
     for item in list_objects(client,bucket,prefix):
         if item["size"]<=0:
+            continue
+        if item["key"].startswith(CURRENT_LAYOUT_PREFIX):
+            if item["key"].endswith(".tsv.gz"):
+                current.append(item)
+            elif not item["key"].endswith(".receipt.json"):
+                raise RuntimeError(f"unexpected Landing object: {item['key']}")
             continue
         name=PurePosixPath(item["key"]).name
         match=NAME_RE.fullmatch(name)
@@ -72,6 +95,14 @@ def landing(client,bucket:str,source:str)->dict[str,dict[str,Any]]:
         if digest in result:
             raise RuntimeError(f"duplicate Landing digest: {digest}")
         result[digest]={**item,"kind":kind,"sha256":digest}
+    digests=current_layout_digests(client,bucket,[item["key"] for item in current]) if current else {}
+    for item in current:
+        digest=digests[item["key"]]
+        if digest in result:
+            if int(result[digest]["size"])!=int(item["size"]):
+                raise RuntimeError(f"duplicate Landing digest with different size: {digest}")
+            continue  # identical bytes already held in the old layout
+        result[digest]={**item,"kind":"raw","sha256":digest}
     return result
 
 
