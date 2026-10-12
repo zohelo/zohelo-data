@@ -1,9 +1,8 @@
 name: Ops · ad-hoc
 
-# Ad-hoc, check, inspection and one-off scripts from ops/. Runs exactly one script
-# with the R2 credentials. Nothing here is part of the dataflow; the Pipeline
-# workflow never changes for ad-hoc work. Delete a script from ops/ when it is no
-# longer needed. Manual dispatch only.
+# Standing operational tasks from ops/: defined scripts the owner may run again from
+# time to time (inventories, checks). Not part of the dataflow, not for experiments
+# (those use Dev · branch runs). Runs only from main. Manual dispatch only.
 
 on:
   workflow_dispatch:
@@ -25,6 +24,7 @@ concurrency:
 
 jobs:
   ops:
+    if: github.ref == 'refs/heads/main'
     name: "ops · ${{ inputs.script }}"
     runs-on: ubuntu-latest
     timeout-minutes: 350

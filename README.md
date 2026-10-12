@@ -17,9 +17,9 @@ ingestion/           source → Landing → Bronze (Python)
   legacy/            retired code, kept until each source is rebuilt
 warehouse/           Bronze → Silver → Gold, dimensional model, semantic layer; warehouse.yaml
 portal/              serving: app/ (portal), worker/ (R2 read API), portal index; portal.yaml
-.github/workflows/   orchestration: Pipeline, Ops · ad-hoc, Deploy portal
+.github/workflows/   Pipeline, Ops · ad-hoc, Dev · branch runs, Deploy portal
 run.py               entry point for every Pipeline activity
-ops/                 ad-hoc scripts, removed in the PR that finishes their task
+ops/                 standing operational tasks (dev/ exists only on feature branches)
 docs/                architecture, landing, operating, sources
 ```
 
