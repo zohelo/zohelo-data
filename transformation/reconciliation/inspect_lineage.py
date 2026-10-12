@@ -38,13 +38,36 @@ def s3():
         config=Config(signature_version="s3v4",retries={"max_attempts":8,"mode":"standard"}))
 
 
+
+CURRENT_LAYOUT_PREFIX="01_landing/eurostat/bulk/data/"
+
+
+def current_layout_digests(client,bucket:str,keys:list[str])->dict[str,str]:
+    """SHA-256 of current-layout Eurostat files, from the metadata written at load time."""
+    from concurrent.futures import ThreadPoolExecutor
+    def head(key:str)->tuple[str,str]:
+        meta=client.head_object(Bucket=bucket,Key=key).get("Metadata") or {}
+        digest=str(meta.get("sha256",""))
+        if not re.fullmatch(r"[0-9a-f]{64}",digest):
+            raise RuntimeError(f"current-layout Landing object has no SHA-256 metadata: {key}")
+        return key,digest
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        return dict(pool.map(head,keys))
+
 def landing(client,bucket:str,source:str)->dict[str,dict[str,Any]]:
     prefix=f"01_landing/{source}/"
     result={}
+    current=[]
     for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket,Prefix=prefix):
         for item in page.get("Contents",[]):
             key=str(item["Key"]); size=int(item.get("Size",0))
             if size<=0 or key.endswith("/"):
+                continue
+            if key.startswith(CURRENT_LAYOUT_PREFIX):
+                if key.endswith(".tsv.gz"):
+                    current.append({"key":key,"size":size})
+                elif not key.endswith(".receipt.json"):
+                    raise RuntimeError(f"unexpected Landing object: {key}")
                 continue
             name=PurePosixPath(key).name
             match=NAME_RE.fullmatch(name)
@@ -54,6 +77,14 @@ def landing(client,bucket:str,source:str)->dict[str,dict[str,Any]]:
             if digest in result:
                 raise RuntimeError(f"duplicate Landing SHA-256 identity: {digest}")
             result[digest]={"key":key,"size":size,"kind":kind}
+    digests=current_layout_digests(client,bucket,[item["key"] for item in current]) if current else {}
+    for item in current:
+        digest=digests[item["key"]]
+        if digest in result:
+            if int(result[digest]["size"])!=int(item["size"]):
+                raise RuntimeError(f"duplicate Landing SHA-256 with different size: {digest}")
+            continue
+        result[digest]={**item,"kind":"raw"}
     return result
 
 
@@ -178,7 +209,7 @@ def main()->int:
     client=s3(); bucket=req("R2_LANDING_BUCKET")
     meta=landing(client,bucket,args.source)
     result=inspect_eurostat(meta) if args.source=="eurostat" else inspect_wdi(meta)
-    print(json.dumps({
+    summary={
         "result":"pass",
         "operation":"inspect-exact-landing-iceberg-hash-membership",
         "source":args.source,
@@ -186,7 +217,11 @@ def main()->int:
         "landing_bytes":sum(int(item["size"]) for item in meta.values()),
         "writes_performed":False,
         **result,
-    },sort_keys=True))
+    }
+    print(json.dumps(summary,sort_keys=True))
+    if os.environ.get("GITHUB_ACTIONS")=="true":
+        message=json.dumps(summary,sort_keys=True,separators=(",",":")).replace("%","%25").replace("\r","%0D").replace("\n","%0A")
+        print(f"::notice title={args.source} Landing to Bronze lineage::{message[:60000]}",flush=True)
     return 0
 
 if __name__=="__main__":
