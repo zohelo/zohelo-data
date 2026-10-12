@@ -30,6 +30,10 @@ def connect():
     for sql in ("INSTALL httpfs", "LOAD httpfs", "INSTALL iceberg", "LOAD iceberg"):
         con.execute(sql)
     con.execute("CREATE SECRET r2_catalog (TYPE ICEBERG, TOKEN ?)", [os.environ["R2_DATA_CATALOG_TOKEN"]])
+    # Data files are s3:// paths in the R2 bucket; point DuckDB's S3 reader at R2.
+    con.execute("CREATE SECRET r2_files (TYPE S3, KEY_ID ?, SECRET ?, ENDPOINT ?, REGION 'auto', URL_STYLE 'path')",
+                [os.environ["CLOUDFLARE_R2_ACCESS_KEY_ID"], os.environ["CLOUDFLARE_R2_SECRET_ACCESS_KEY"],
+                 os.environ["R2_S3_ENDPOINT"].split("://", 1)[-1].rstrip("/")])
     con.execute(f"ATTACH '{os.environ['R2_WAREHOUSE']}' AS r2 "
                 f"(TYPE ICEBERG, ENDPOINT '{os.environ['R2_CATALOG_URI']}', SECRET r2_catalog)")
     return con
