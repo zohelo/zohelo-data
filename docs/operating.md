@@ -26,7 +26,7 @@ Every source uses the same activity names; a source implements the ones it needs
 A Pipeline run is one activity or `landing → bronze (all steps)`; the portal index
 refresh is added automatically after writing activities. An activity runs only when
 it is implemented and listed under `activities:` in the source's `source.yaml`
-(or `config/platform.yaml`). Activities are idempotent and resume from durable
+(platform activities: `warehouse/warehouse.yaml`, `portal/portal.yaml`). Activities are idempotent and resume from durable
 state, so a rerun is always safe. Results are published as run annotations and the
 job summary.
 

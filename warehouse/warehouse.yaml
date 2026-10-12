@@ -1,0 +1,4 @@
+# Warehouse activities the Pipeline may run (source "platform"); owner authorization.
+#   silver_gold.promote   Bronze → Silver → Gold pass-through (passthrough/), until the SQL project
+activities: [silver_gold.promote]
+schedule: null   # manual only; a schedule needs owner approval

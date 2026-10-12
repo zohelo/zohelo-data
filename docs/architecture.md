@@ -9,12 +9,11 @@ decision.
 
 | Stage | Repository | Storage |
 |---|---|---|
-| Configuration | `config/platform.yaml`, `requirements.txt`, `.python-version`, `.node-version` | — |
 | Source → Landing | `ingestion/sources/<source_system>/` (`source.yaml` + code), shared `ingestion/common/`, retired code `ingestion/legacy/` | `zohelo-landing-prod/01_landing/` |
 | Landing → Bronze | `landing_to_bronze/sources/<source_system>/`, shared `landing_to_bronze/common/` (lineage, archive) | Iceberg `bronze`, `05_archive/` |
-| Bronze → Silver → Gold, dimensional model, semantic layer | `warehouse/` | Iceberg `silver`, `gold` |
+| Bronze → Silver → Gold, dimensional model, semantic layer | `warehouse/` (`warehouse.yaml`) | Iceberg `silver`, `gold` |
 | Data catalog and lineage | generated from `warehouse/`, shown in the portal | — |
-| Serving | `portal/` (`app/` portal, `worker/` R2 read API, `publish_index.py`) | `06_control/portal_index/` |
+| Serving | `portal/` (`app/` portal, `worker/` R2 read API, `publish_index.py`, `portal.yaml`) | `06_control/portal_index/` |
 | Orchestration | `.github/workflows/`, `run.py` | `06_control/` run records |
 | Ad-hoc | `ops/` | — |
 
@@ -40,8 +39,9 @@ rules in [landing.md](landing.md); per-source routes in [sources.md](sources.md)
   only when grain, measure, unit, frequency and population agree.
 - **Semantic layer** — metric definitions on Gold.
 
-Silver and Gold are currently pass-through copies of Bronze
-(`warehouse/passthrough/`); the SQL project replaces them.
+Today's Silver and Gold: pass-through copies of Bronze (`warehouse/passthrough/`)
+for DBW, OpenData, GLEIF, MF Biała Lista, PRG and TERYT; NBP, BDL and WDI Silver/Gold
+were built by retired code. The SQL project replaces both.
 
 ## Tools
 

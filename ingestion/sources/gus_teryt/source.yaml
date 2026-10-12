@@ -1,0 +1,14 @@
+source_system: gus_teryt
+description: "GUS TERYT — territorial register (TERC, SIMC, ULIC)"
+
+extraction:
+  initial: to_be_decided
+  production: to_be_decided
+  incremental_policy: to_be_decided
+  schedule: null
+
+landing: 01_landing/gus_teryt/   # empty: raw files were archived after the Bronze build
+archive: 05_archive/gus_teryt/
+bronze: [bronze.teryt_terc, bronze.teryt_simc, bronze.teryt_ulic]
+
+activities: []   # paused; Bronze/Silver/Gold were built by retired code

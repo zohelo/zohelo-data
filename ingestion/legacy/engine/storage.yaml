@@ -1,4 +1,4 @@
-# config/storage.yaml
+# storage.yaml (legacy, read by storage_manager.py)
 storage:
   protocol: "r2"
   provider: "cloudflare"

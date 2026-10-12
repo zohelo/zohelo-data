@@ -9,7 +9,6 @@ through the internal portal at https://data.zohelo.com/.
 In dataflow order:
 
 ```text
-config/              platform configuration (storage contract, platform activities)
 ingestion/           source → Landing (Python)
   sources/<source>/  source.yaml (extraction strategy, authorized activities) + code
   common/            shared ingestion code
@@ -17,8 +16,8 @@ ingestion/           source → Landing (Python)
 landing_to_bronze/   Landing → Bronze (Python)
   sources/<source>/  Bronze loader per source
   common/            lineage and archive
-warehouse/           Bronze → Silver → Gold, dimensional model, semantic layer (SQL project)
-portal/              serving: app/ (portal), worker/ (R2 read API), portal index
+warehouse/           Bronze → Silver → Gold, dimensional model, semantic layer; warehouse.yaml
+portal/              serving: app/ (portal), worker/ (R2 read API), portal index; portal.yaml
 .github/workflows/   orchestration: Pipeline, Ops · ad-hoc, Deploy portal
 run.py               entry point for every Pipeline activity
 ops/                 ad-hoc scripts, removed in the PR that finishes their task

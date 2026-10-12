@@ -1,8 +1,9 @@
 # Sources: download and discovery routes
 
-Checked 8 September 2026. This note records the public, no-sign-up path to the
-complete product scope for the four selected sources. It supplements the bounded
-starter contracts; it does not treat those starter slices as complete.
+Researched download and discovery routes per source system, checked 8 September
+2026. Each source's chosen extraction is recorded in its `source.yaml`
+([landing.md](landing.md) gives the decision order). Sources not listed here have no
+researched route yet.
 
 ## Implementation route matrix
 

@@ -8,8 +8,8 @@ implemented and authorized:
   implemented  ingestion/sources/<source>/__init__.py (landing.inspect/extract/verify)
                landing_to_bronze/sources/<source>/__init__.py (bronze.*, landing.archive)
                PLATFORM_ACTIVITIES below (silver_gold.promote, serving.refresh_index)
-  authorized   ingestion/sources/<source>/source.yaml "activities", or
-               config/platform.yaml "activities" for platform Activities are idempotent, so a
+  authorized   ingestion/sources/<source>/source.yaml "activities";
+               warehouse/warehouse.yaml and portal/portal.yaml for platform activities Activities are idempotent, so a
 scheduled run and a manual run are the same thing and a failed run resumes.
 """
 from __future__ import annotations
@@ -25,7 +25,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent
 SOURCES = ROOT / "ingestion" / "sources"
-PLATFORM = ROOT / "config" / "platform.yaml"
+PLATFORM_CONFIG = (ROOT / "warehouse" / "warehouse.yaml", ROOT / "portal" / "portal.yaml")
 
 # Activity order is the dataflow order; the workflow has one job per activity.
 ORDER = ("landing.inspect", "landing.extract", "landing.verify", "bronze.load",
@@ -74,7 +74,9 @@ PLATFORM_ACTIVITIES = {"silver_gold.promote": _promote, "serving.refresh_index":
 def load_config() -> dict:
     sources = {path.parent.name: yaml.safe_load(path.read_text())
                for path in sorted(SOURCES.glob("*/source.yaml"))}
-    return {"sources": sources, "platform": yaml.safe_load(PLATFORM.read_text())}
+    platform = [a for path in PLATFORM_CONFIG
+                for a in (yaml.safe_load(path.read_text()).get("activities") or [])]
+    return {"sources": sources, "platform": {"activities": platform}}
 
 
 def implemented(source: str) -> dict:

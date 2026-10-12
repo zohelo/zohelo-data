@@ -73,10 +73,7 @@ jobs:
           from pathlib import Path
           Path('portal/app/dist/portal-build.json').write_text(json.dumps({
               'git_commit': os.environ['GITHUB_SHA'],
-              'supported_release_formats': [1, 2],
-              'supported_drive_layouts': [],
               'data_source': 'cloudflare-r2',
-              'supported_retained_bronze_formats': [1, 2],
           }) + '\n')
           PYCODE
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa

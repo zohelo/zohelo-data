@@ -18,7 +18,5 @@ Rules:
 
 | Script | Purpose | Remove when |
 |---|---|---|
-| `inspect_retained_inputs` | Read-only R2 inventory per source (Landing, Archive, control, Iceberg tables). Args: `--source gus_bdl …` | Each source has its own `landing.verify` / `bronze.verify` |
-| `r2_campaign_store_check` | Write, read back and remove test objects through the campaign store | R2 store code changes are verified another way |
-| `r2_bulk_store_check` | Same for the bulk raw store | as above |
+| `inspect_retained_inputs` | Read-only R2 inventory per source (Landing, Archive, control, Iceberg tables). Args: `--source gus_bdl …` (at most 5 sources per run: GitHub shows only 10 annotations per step) | every registered source has its own `landing.verify` / `bronze.verify` |
 | `_r2_inventory` | Helper for `inspect_retained_inputs` | with it |

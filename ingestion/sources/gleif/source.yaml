@@ -1,0 +1,14 @@
+source_system: gleif
+description: "GLEIF — LEI records, relationships and reporting exceptions (golden copy files)"
+
+extraction:
+  initial: to_be_decided
+  production: to_be_decided
+  incremental_policy: to_be_decided
+  schedule: null
+
+landing: 01_landing/gleif/   # empty: raw files were archived after the Bronze build
+archive: 05_archive/gleif/
+bronze: [bronze.gleif_lei2, bronze.gleif_relationship_records, bronze.gleif_reporting_exceptions]
+
+activities: []   # paused; Bronze/Silver/Gold were built by retired code

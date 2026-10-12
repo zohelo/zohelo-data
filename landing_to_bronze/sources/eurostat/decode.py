@@ -95,7 +95,7 @@ def decode_landing_distribution(
     receipt_uri: str,
     raw_uri: str,
 ) -> dict[str, Any]:
-    """Decode one file loaded by ``eurostat: load new versions to Landing``.
+    """Decode one file loaded by the eurostat ``landing.extract`` activity.
 
     Same Bronze contract as :func:`decode_full_distribution`; identity comes from the
     new Landing receipt (``01_landing/eurostat/bulk/data/{CODE}/{version}.receipt.json``).

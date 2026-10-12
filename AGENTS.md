@@ -13,12 +13,16 @@ design is in `docs/`.
 ## Repository structure (owner direction, 12 October 2026)
 
 Organized by dataflow stage; see README.md and docs/architecture.md:
-`config/`, `ingestion/`, `landing_to_bronze/`, `warehouse/`, `portal/`,
+`ingestion/`, `landing_to_bronze/`, `warehouse/`, `portal/`,
 `.github/workflows/` + `run.py`, `ops/`, `docs/`.
 
 - A source's code lives in `ingestion/sources/<source_system>/` and
   `landing_to_bronze/sources/<source_system>/`; its configuration is
   `ingestion/sources/<source_system>/source.yaml`.
+- Configuration lives next to the code it controls (`source.yaml`,
+  `warehouse/warehouse.yaml`, `portal/portal.yaml`); no shared config folder until
+  there is genuine infrastructure configuration. Never add configuration that no code
+  reads — describe it in `docs/` instead.
 - Retired code lives only in `ingestion/legacy/` until its source is rebuilt.
 - No dated, one-off, status or result files anywhere; history lives in git.
 - Python file names are snake_case; Python runs from the repository root.
@@ -39,7 +43,8 @@ Exactly three workflows: **Pipeline** (`pipeline.yml`), **Ops · ad-hoc** (`ops.
 - Pipeline is the fixed dataflow, one job per activity (docs/operating.md). Change it
   only when the dataflow changes; never add ad-hoc operations to it.
 - An activity runs only when implemented and listed under `activities:` in the
-  source's `source.yaml` (or `config/platform.yaml`). Adding a source or an activity
+  source's `source.yaml` (platform activities: `warehouse/warehouse.yaml`,
+  `portal/portal.yaml`). Adding a source or an activity
   means code plus that list.
 - Ad-hoc checks, inspections and one-off fixes go to `ops/` and run through Ops.
   Each ops script is listed in `ops/README.md` and deleted in the pull request that
