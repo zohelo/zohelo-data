@@ -8,6 +8,9 @@ zohelo:
       path: ":memory:"
       threads: 4
       schema: main
+      # Iceberg tables cannot be renamed inside the transaction that created them,
+      # and dbt's table materialization builds under a temporary name, then renames.
+      disable_transactions: true
       extensions: [httpfs, iceberg]
       secrets:
         - type: iceberg
