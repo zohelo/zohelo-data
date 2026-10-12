@@ -13,6 +13,7 @@ import csv
 from datetime import datetime, timezone
 import io
 import json
+import os
 from pathlib import Path, PurePosixPath
 import runpy
 import zipfile
@@ -115,7 +116,7 @@ def control_summary(value):
             counts["depth_limit_reached"] += 1
             return
         if isinstance(node, dict):
-            for field in ("task_kind", "kind", "record_type"):
+            for field in ("task_kind", "kind", "record_type", "status", "outcome", "state"):
                 if isinstance(node.get(field), str):
                     counts[f"{field}:{node[field]}"] += 1
             if any(k in node for k in ("sha256", "raw_sha256", "parquet_name", "raw_file_id", "archive_sha256")):
@@ -209,6 +210,53 @@ def representative_objects(objects, limit):
     return list(selected.values())
 
 
+def source_brief(source, item):
+    """Compact per-source summary for a run annotation (the full JSON stays in the artifact)."""
+    def grouped(objects, depth):
+        groups = {}
+        for obj in objects:
+            parts = PurePosixPath(obj["key"]).parts
+            name = parts[depth] if len(parts) > depth + 1 else "(files)"
+            entry = groups.setdefault(name, {"objects": 0, "bytes": 0})
+            entry["objects"] += 1
+            entry["bytes"] += obj["size"]
+        return groups
+    landing = item["landing"]
+    brief = {
+        "landing": {"objects": len(landing), "bytes": sum(o["size"] for o in landing),
+                    "by_folder": grouped(landing, 2),
+                    "by_extension": dict(Counter(PurePosixPath(o["key"]).suffix or "(none)" for o in landing))},
+        "archive": {"objects": len(item["archive"]), "bytes": sum(o["size"] for o in item["archive"])},
+        "control": {"objects": len(item["control"]), "bytes": sum(o["size"] for o in item["control"]),
+                    "by_folder": grouped(item["control"], 3)},
+        "tables": [{"table": t["table"], "rows": sum(f["rows"] for f in t["data_files"]),
+                    "files": len(t["data_files"]), "bytes": sum(f["bytes"] for f in t["data_files"]),
+                    "columns": [c["name"] for c in t["schema"]][:40]} for t in item["tables"]],
+        "control_probes": [{"key": p["key"], "summary": p.get("structure", {}).get("summary"),
+                            "container_sizes": p.get("structure", {}).get("container_sizes"),
+                            "kind_counts": dict(list((p.get("structure", {}).get("kind_counts") or {}).items())[:25])}
+                           for p in item["control_probes"] if "structure" in p][:20],
+    }
+    if source == "gus_bdl":
+        web = [o for o in landing if "/web_bulk/" in o["key"]]
+        brief["web_bulk"] = {"objects": len(web), "bytes": sum(o["size"] for o in web),
+                             "distinct_subgroups": len({PurePosixPath(o["key"]).parts[3] for o in web
+                                                        if len(PurePosixPath(o["key"]).parts) > 4})}
+    return brief
+
+
+def annotate(title, data):
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
+    message = json.dumps(data, sort_keys=True, default=str, separators=(",", ":"))
+    if len(message) > 60000:
+        data = {k: v for k, v in data.items() if k != "control_probes"}
+        data["control_probes"] = "omitted: annotation size limit"
+        message = json.dumps(data, sort_keys=True, default=str, separators=(",", ":"))
+    message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+    print(f"::notice title={title}::{message[:60000]}", flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", choices=SOURCES, nargs="+", default=list(SOURCES))
@@ -237,7 +285,7 @@ def main():
         candidates = [(lakehouse_bucket, obj) for obj in control]
         candidates += [(landing_bucket, obj) for obj in landing if "/_control/" in obj["key"]]
         candidates = [(bucket, obj) for bucket, obj in candidates if obj["key"].endswith(".json")]
-        candidates.sort(key=lambda pair: (not any(word in PurePosixPath(pair[1]["key"]).name for word in ("checkpoint", "state", "current", "complete")), pair[1]["key"]))
+        candidates.sort(key=lambda pair: (not any(word in PurePosixPath(pair[1]["key"]).name for word in ("checkpoint", "state", "current", "complete", "queue")), pair[1]["key"]))
         used = 0
         for bucket, obj in candidates:
             if len(item["control_probes"]) >= args.max_control_files or used + obj["size"] > args.max_control_bytes:
@@ -261,6 +309,7 @@ def main():
         print(json.dumps({"source": source, "landing_objects": len(landing), "landing_bytes": sum(obj["size"] for obj in landing),
             "archive_objects": len(archive), "tables": len(item["tables"]), "probes": len(item["probes"]),
             "control_probe_limits": item["control_probe_limits"], "coverage_proven": False}), flush=True)
+        annotate(f"retained inventory {source}", source_brief(source, item))
     return 0
 
 
