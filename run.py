@@ -5,10 +5,10 @@
 
 A run is an ordered list of activities (RUNS). An activity is allowed only when it is
 implemented and authorized:
-  implemented  ingestion/sources/<source>/__init__.py (landing.inspect/extract/verify)
-               landing_to_bronze/sources/<source>/__init__.py (bronze.*, landing.archive)
+  implemented  ingestion/to_landing/<source>/__init__.py (landing.inspect/extract/verify)
+               ingestion/to_bronze/<source>/__init__.py (bronze.*, landing.archive)
                PLATFORM_ACTIVITIES below (silver_gold.promote, serving.refresh_index)
-  authorized   ingestion/sources/<source>/source.yaml "activities";
+  authorized   ingestion/sources/<source>.yaml "activities";
                warehouse/warehouse.yaml and portal/portal.yaml for platform activities Activities are idempotent, so a
 scheduled run and a manual run are the same thing and a failed run resumes.
 """
@@ -72,8 +72,8 @@ PLATFORM_ACTIVITIES = {"silver_gold.promote": _promote, "serving.refresh_index":
 
 
 def load_config() -> dict:
-    sources = {path.parent.name: yaml.safe_load(path.read_text())
-               for path in sorted(SOURCES.glob("*/source.yaml"))}
+    sources = {path.stem: yaml.safe_load(path.read_text())
+               for path in sorted(SOURCES.glob("*.yaml"))}
     platform = [a for path in PLATFORM_CONFIG
                 for a in (yaml.safe_load(path.read_text()).get("activities") or [])]
     return {"sources": sources, "platform": {"activities": platform}}
@@ -83,11 +83,11 @@ def implemented(source: str) -> dict:
     if source == "platform":
         return PLATFORM_ACTIVITIES
     code = {}
-    for package in ("ingestion", "landing_to_bronze"):
+    for package in ("ingestion.to_landing", "ingestion.to_bronze"):
         try:
-            module = importlib.import_module(f"{package}.sources.{source}")
+            module = importlib.import_module(f"{package}.{source}")
         except ModuleNotFoundError as error:
-            if error.name != f"{package}.sources.{source}":
+            if error.name != f"{package}.{source}":
                 raise
             continue
         code.update(module.ACTIVITIES)
@@ -159,7 +159,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.source == "platform" or args.source not in config["sources"]:
             parser.error(f"unknown data source {args.source!r}")
         if args.activity not in authorized(config, args.source):
-            parser.error(f"{args.activity} is not authorized for {args.source} (ingestion/sources/{args.source}/source.yaml)")
+            parser.error(f"{args.activity} is not authorized for {args.source} (ingestion/sources/{args.source}.yaml)")
         code = implemented(args.source)
         if args.activity not in code:
             parser.error(f"{args.activity} is not implemented for {args.source}")

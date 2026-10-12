@@ -2,7 +2,7 @@ name: Run pipeline activity
 description: Install the pipeline's Python dependencies and run one activity with run.py.
 inputs:
   source:
-    description: Source id from ingestion/sources/<source>/source.yaml, or platform
+    description: Source id from ingestion/sources/<source>.yaml, or platform
     required: true
   activity:
     description: Activity name, e.g. landing.extract

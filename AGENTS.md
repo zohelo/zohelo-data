@@ -13,13 +13,12 @@ design is in `docs/`.
 ## Repository structure (owner direction, 12 October 2026)
 
 Organized by dataflow stage; see README.md and docs/architecture.md:
-`ingestion/`, `landing_to_bronze/`, `warehouse/`, `portal/`,
+`ingestion/`, `warehouse/`, `portal/`,
 `.github/workflows/` + `run.py`, `ops/`, `docs/`.
 
-- A source's code lives in `ingestion/sources/<source_system>/` and
-  `landing_to_bronze/sources/<source_system>/`; its configuration is
-  `ingestion/sources/<source_system>/source.yaml`.
-- Configuration lives next to the code it controls (`source.yaml`,
+- A source's configuration is `ingestion/sources/<source_system>.yaml`; its code is
+  `ingestion/to_landing/<source_system>/` and `ingestion/to_bronze/<source_system>/`.
+- Configuration lives next to the code it controls (`ingestion/sources/<source>.yaml`,
   `warehouse/warehouse.yaml`, `portal/portal.yaml`); no shared config folder until
   there is genuine infrastructure configuration. Never add configuration that no code
   reads — describe it in `docs/` instead.
@@ -43,7 +42,7 @@ Exactly three workflows: **Pipeline** (`pipeline.yml`), **Ops · ad-hoc** (`ops.
 - Pipeline is the fixed dataflow, one job per activity (docs/operating.md). Change it
   only when the dataflow changes; never add ad-hoc operations to it.
 - An activity runs only when implemented and listed under `activities:` in the
-  source's `source.yaml` (platform activities: `warehouse/warehouse.yaml`,
+  source's `ingestion/sources/<source>.yaml` (platform activities: `warehouse/warehouse.yaml`,
   `portal/portal.yaml`). Adding a source or an activity
   means code plus that list.
 - Ad-hoc checks, inspections and one-off fixes go to `ops/` and run through Ops.
@@ -63,7 +62,7 @@ Exactly three workflows: **Pipeline** (`pipeline.yml`), **Ops · ad-hoc** (`ops.
 Per source, in order: the source's bulk feature; else a researched bulk workaround
 that the owner decides; else the API after testing it for a full load. Record the
 decision and the production load (`snapshot`/`delta`, incremental policy, schedule)
-in `source.yaml`. Landing layout and rules: docs/landing.md.
+in `ingestion/sources/<source>.yaml`. Landing layout and rules: docs/landing.md.
 
 ## Data safety
 

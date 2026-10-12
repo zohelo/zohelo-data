@@ -1,7 +1,7 @@
 # Sources: download and discovery routes
 
 Researched download and discovery routes per source system, checked 8 September
-2026. Each source's chosen extraction is recorded in its `source.yaml`
+2026. Each source's chosen extraction is recorded in `ingestion/sources/<source>.yaml`
 ([landing.md](landing.md) gives the decision order). Sources not listed here have no
 researched route yet.
 

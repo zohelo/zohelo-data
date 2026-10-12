@@ -9,13 +9,12 @@ through the internal portal at https://data.zohelo.com/.
 In dataflow order:
 
 ```text
-ingestion/           source → Landing (Python)
-  sources/<source>/  source.yaml (extraction strategy, authorized activities) + code
-  common/            shared ingestion code
+ingestion/           source → Landing → Bronze (Python)
+  sources/           <source>.yaml: extraction strategy, authorized activities
+  to_landing/        <source>/: extract to Landing
+  to_bronze/         <source>/: load Landing into Bronze
+  common/            reporting, lineage, archive
   legacy/            retired code, kept until each source is rebuilt
-landing_to_bronze/   Landing → Bronze (Python)
-  sources/<source>/  Bronze loader per source
-  common/            lineage and archive
 warehouse/           Bronze → Silver → Gold, dimensional model, semantic layer; warehouse.yaml
 portal/              serving: app/ (portal), worker/ (R2 read API), portal index; portal.yaml
 .github/workflows/   orchestration: Pipeline, Ops · ad-hoc, Deploy portal

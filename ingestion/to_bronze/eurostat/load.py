@@ -15,7 +15,7 @@ import time
 
 from ingestion.common.report import annotate, step_summary
 
-BATCH_MODULE = "landing_to_bronze.sources.eurostat.batch"
+BATCH_MODULE = "ingestion.to_bronze.eurostat.batch"
 BATCH_SIZE = 64
 BATCH_SECONDS = 900
 MAX_BATCHES = 128

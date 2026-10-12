@@ -1,14 +1,18 @@
 # Warehouse
 
-Bronze → Silver → Gold, the dimensional model and the semantic layer, as one SQL
-project (planned: dbt with DuckDB and MetricFlow, after a trial writing Iceberg
-tables to the R2 catalog). Planned layout:
+The dbt project for Bronze → Silver → Gold, the dimensional model and the semantic
+layer (dbt with DuckDB and MetricFlow; created by the dbt trial). Target layout:
 
 ```
-models/silver/<source_system>/   typed, cleaned, conformed source tables
-models/gold/                     conformed dimensions and facts
-semantic/                        semantic models and metrics
+dbt_project.yml, profiles.yml     project and connection (credentials from env vars)
+models/bronze/sources.yml         Bronze tables declared as dbt sources (built by ingestion/to_bronze)
+models/silver/<source_system>/    typed, cleaned, conformed source tables
+models/gold/                      conformed dimensions and facts
+semantic_models/                  semantic models and metrics
+macros/  seeds/  snapshots/
+warehouse.yaml                    activities the Pipeline may run
 ```
 
-Until then `passthrough/` publishes Silver and Gold as copies / zero-copy references
-of Bronze (`silver_gold.promote`). It does no cleansing or modelling.
+Until the dbt models exist, `passthrough/` publishes Silver and Gold as copies /
+zero-copy references of Bronze (`silver_gold.promote`); it is deleted when dbt
+models replace those tables.
