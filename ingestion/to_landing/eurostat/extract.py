@@ -1,20 +1,19 @@
-"""Eurostat full-file (bulk TSV) load into private R2 Landing, raw bytes only.
+"""Eurostat bulk data distributions into private R2 Landing, exact bytes only.
 
 Pipeline activities eurostat landing.inspect / landing.extract / landing.verify
-(see ingestion/sources/eurostat/__init__.py). Owner-authorized 11 Oct 2026. It never
-parses observations and never touches Bronze.
+(see __init__.py). Owner-authorized 11 Oct 2026. It never parses observations and
+never touches Bronze. Layout (docs/landing.md):
+01_landing/eurostat/snapshot/data/<CODE>/<source_version>__<ingested_at>.tsv.gz + .receipt.json
 
-inspect         Download the official data inventory, classify every non-Comext
-                dataset (current / current_legacy / stale / missing) and write the
-                result to 06_control/eurostat_bulk_landing/coverage/. No downloads.
-verify          inspect plus Landing integrity of the legacy-layout files (present,
-                exact size); also reports their Bronze membership. Gaps warn,
-                integrity problems fail.
-load            Download missing datasets first, then stale ones, to
-                01_landing/eurostat/bulk/data/{CODE}/{version}.tsv.gz and write
-                {version}.receipt.json next to it. The receipt marks completion; R2
-                is the only state, so a rerun resumes. Nothing is ever overwritten
-                or deleted.
+inspect   Download the official data inventory, classify every non-Comext dataset
+          (current / stale / missing against Landing receipts) and write the result to
+          06_control/eurostat_bulk_landing/coverage/. No downloads.
+verify    inspect plus Landing integrity: every receipt has its data object with the
+          receipted size; data objects without a receipt are listed. Gaps warn,
+          integrity problems fail.
+load      Download missing datasets first, then stale ones, and write the receipt
+          after the data object. The receipt marks completion; R2 is the only state,
+          so a rerun resumes. Nothing is ever overwritten or deleted.
 
 --max-datasets applies per parallel job. Each job takes a fixed slice of datasets
 by a hash of the dataset code (--job-index i of --parallel-jobs n).
@@ -22,7 +21,7 @@ by a hash of the dataset code (--job-index i of --parallel-jobs n).
 from __future__ import annotations
 
 import argparse
-from collections import defaultdict
+from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 import csv
 from datetime import datetime, timezone
@@ -44,19 +43,17 @@ import time
 from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 import zlib
 
-from ingestion.legacy.engine.full_source_adapters import (
+from ingestion.to_landing.eurostat.inventory import (
     EUROSTAT_INVENTORY_URL,
     FullSourceAdapterError,
     distributions_from_inventory,
     parse_eurostat_async,
 )
-from ingestion.legacy.engine.full_source_campaign import task_for
 from ingestion.common.report import annotate, step_summary
 
 
 SOURCE_ID = "eurostat"
-LEGACY_CAMPAIGN = "eurostat_bulk"
-LANDING_PREFIX = "01_landing/eurostat/bulk/data/"
+LANDING_PREFIX = "01_landing/eurostat/snapshot/data/"
 CONTROL_PREFIX = "06_control/eurostat_bulk_landing/"
 OFFICIAL_HOST = "ec.europa.eu"
 USER_AGENT = "zohelo-data-eurostat-bulk-landing/1 (manual, polite; github.com/zohelo/zohelo-data)"
@@ -75,7 +72,7 @@ ASYNC_POLL_SECONDS = 30
 ASYNC_MAX_WAIT = 45 * 60
 ASYNC_MAX_SUBMISSIONS = 3
 MIN_FREE_DISK = 2 * 1024 ** 3
-STATUSES = ("current", "current_legacy", "stale", "missing")
+STATUSES = ("current", "stale", "missing")
 
 
 def transport_url(url: str) -> str:
@@ -140,12 +137,27 @@ def retry_after_seconds(value: str | None) -> float | None:
     return max(0.0, (when - datetime.now(timezone.utc)).total_seconds())
 
 
-def landing_keys(code: str, token: str) -> tuple[str, str]:
-    base = f"{LANDING_PREFIX}{code}/{token}"
+def compact_utc(timestamp: str) -> str:
+    parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+def landing_keys(code: str, token: str, ingested_at: str) -> tuple[str, str]:
+    """Data and receipt keys: <prefix><CODE>/<source_version>__<ingested_at>.(tsv.gz|receipt.json)."""
+    base = f"{LANDING_PREFIX}{code}/{token}__{compact_utc(ingested_at)}"
     return base + ".tsv.gz", base + ".receipt.json"
 
 
-# --------------------------------------------------------------------------- R2
+def split_name(name: str) -> tuple[str, str, str] | None:
+    """'<token>__<ingested>.<ext>' -> (token, ingested, ext) or None."""
+    stem, dot, ext = name.partition(".")
+    token, sep, ingested = stem.partition("__")
+    if not sep or not token or not ingested or not dot:
+        return None
+    return token, ingested, ext
+
 
 class R2:
     def __init__(self) -> None:
@@ -577,7 +589,7 @@ def follow_async(ctx: Context, session, item: dict, envelope: dict, dest: Path) 
 
 def finalize(ctx: Context, item: dict, result: Download, via: dict, retrieved_at: str) -> dict:
     r2 = ctx.r2
-    data_key, receipt_key = item["data_key"], item["receipt_key"]
+    data_key, receipt_key = landing_keys(item["code"], item["token"], retrieved_at)
     if r2.head(r2.landing, receipt_key) is not None:
         return {"outcome": "already_current"}
     existing = r2.head(r2.landing, data_key)
@@ -603,14 +615,14 @@ def finalize(ctx: Context, item: dict, result: Download, via: dict, retrieved_at
     if (stored is None or int(stored["ContentLength"]) != result.size
             or stored.get("Metadata", {}).get("sha256") != result.sha256):
         raise RuntimeError(f"uploaded object r2://{r2.landing}/{data_key} failed verification")
-    write_receipt(ctx, item, {
+    write_receipt(ctx, item, receipt_key, {
         "sha256": result.sha256,
         "size_bytes": result.size,
         "gzip": {"members": result.gzip.members,
                  "decompressed_bytes": result.gzip.decompressed_bytes,
                  "integrity": "verified"},
         "final_url": result.final_url,
-        "retrieved_at": retrieved_at,
+        "ingested_at": retrieved_at,
         "http_headers": result.headers,
         "transfer": via,
         "object": {"bucket": r2.landing, "key": data_key, "reused_existing_object": reused},
@@ -619,12 +631,16 @@ def finalize(ctx: Context, item: dict, result: Download, via: dict, retrieved_at
             "reused_existing_object": reused, "via": via["mode"]}
 
 
-def write_receipt(ctx: Context, item: dict, observed: dict) -> None:
+def write_receipt(ctx: Context, item: dict, receipt_key: str, observed: dict) -> None:
     receipt = {
-        "schema_version": 1,
-        "kind": "eurostat_bulk_landing",
+        "schema_version": 2,
+        "kind": "eurostat_landing",
         "source_id": SOURCE_ID,
         "dataset_code": item["code"],
+        "part": None,
+        "content": "snapshot",
+        "area": "data",
+        "source_kind": "eurostat_tsv_gzip",
         "eurostat_version": item["version"],
         "version_token": item["token"],
         "source_url": item["url"],
@@ -634,32 +650,40 @@ def write_receipt(ctx: Context, item: dict, observed: dict) -> None:
         "run_id": ctx.run_id,
         "code_sha": ctx.code_sha,
     }
-    ctx.r2.put_new(ctx.r2.landing, item["receipt_key"],
+    ctx.r2.put_new(ctx.r2.landing, receipt_key,
                    json.dumps(receipt, indent=2, sort_keys=True).encode(), "application/json")
 
 
-def recover_orphan(ctx: Context, item: dict) -> dict | None:
+def held_objects(ctx: Context, item: dict) -> tuple[list[str], list[str]]:
+    """Receipts and data objects already in Landing for this dataset version."""
+    keys = list(ctx.r2.list_keys(ctx.r2.landing, item["prefix"]))
+    receipts = [k for k in keys if k.endswith(".receipt.json")]
+    data = [k for k in keys if k.endswith(".tsv.gz")]
+    return receipts, data
+
+
+def recover_orphan(ctx: Context, item: dict, data_key: str) -> dict | None:
     """Finish a data object that a previous run verified and uploaded but never receipted."""
     r2 = ctx.r2
-    head = r2.head(r2.landing, item["data_key"])
+    head = r2.head(r2.landing, data_key)
     if head is None:
         return None
     meta = head.get("Metadata", {})
     required = ("sha256", "size", "retrieved-at", "gzip-members", "decompressed-bytes")
     if any(not meta.get(k) for k in required) or meta.get("size") != str(head["ContentLength"]):
         raise Failed("orphan_conflict", "data object without receipt lacks upload verification metadata")
-    write_receipt(ctx, item, {
+    write_receipt(ctx, item, data_key[: -len(".tsv.gz")] + ".receipt.json", {
         "sha256": meta["sha256"],
         "size_bytes": int(head["ContentLength"]),
         "gzip": {"members": int(meta["gzip-members"]),
                  "decompressed_bytes": int(meta["decompressed-bytes"]),
                  "integrity": "verified_before_upload"},
         "final_url": meta.get("final-url"),
-        "retrieved_at": meta["retrieved-at"],
+        "ingested_at": meta["retrieved-at"],
         "http_headers": {},
         "transfer": {"mode": meta.get("transfer-mode", "unknown"),
                      "receipt_recovered_from_object_metadata": True},
-        "object": {"bucket": r2.landing, "key": item["data_key"], "reused_existing_object": True},
+        "object": {"bucket": r2.landing, "key": data_key, "reused_existing_object": True},
     })
     return {"outcome": "landed", "sha256": meta["sha256"], "size_bytes": int(head["ContentLength"]),
             "reused_existing_object": True, "via": "receipt_recovery"}
@@ -671,11 +695,13 @@ def land(ctx: Context, session, item: dict) -> dict:
     dest = ctx.workdir / f"{threading.get_ident()}.download"
     started = time.monotonic()
     try:
-        if ctx.r2.head(ctx.r2.landing, item["receipt_key"]) is not None:
+        receipts, data = held_objects(ctx, item)
+        if receipts:
             return {**base, "outcome": "already_current"}
-        recovered = recover_orphan(ctx, item)
-        if recovered is not None:
-            return {**base, **recovered, "seconds": round(time.monotonic() - started, 1)}
+        if data:
+            recovered = recover_orphan(ctx, item, sorted(data)[-1])
+            if recovered is not None:
+                return {**base, **recovered, "seconds": round(time.monotonic() - started, 1)}
         if shutil.disk_usage(ctx.workdir).free < MIN_FREE_DISK:
             raise Failed("runner_disk_low", "less than 2 GiB free before download")
         retrieved_at = utc_now()
@@ -752,158 +778,57 @@ def fetch_inventory(ctx: Context) -> tuple[bytes, Download]:
 
 
 def load_landing_state(r2: R2) -> dict[str, dict[str, set]]:
+    """Per dataset code: version tokens with a receipt, and version tokens with data."""
     state: dict[str, dict[str, set]] = defaultdict(lambda: {"receipts": set(), "data": set()})
     for key in r2.list_keys(r2.landing, LANDING_PREFIX):
-        rest = key[len(LANDING_PREFIX):]
-        if "/" not in rest:
+        code, _, name = key[len(LANDING_PREFIX):].partition("/")
+        parts = split_name(name)
+        if not code or parts is None:
             continue
-        code, name = rest.split("/", 1)
-        if name.endswith(".receipt.json"):
-            state[code]["receipts"].add(name[: -len(".receipt.json")])
-        elif name.endswith(".tsv.gz"):
-            state[code]["data"].add(name[: -len(".tsv.gz")])
+        token, _, ext = parts
+        if ext == "receipt.json":
+            state[code]["receipts"].add(token)
+        elif ext == "tsv.gz":
+            state[code]["data"].add(token)
     return state
 
 
-def load_legacy() -> tuple[set[str], dict[str, dict], bool, dict]:
-    from ingestion.legacy.engine.source_campaign_store import R2CampaignStore
+def verify_landing(r2: R2, patterns: list[str]) -> dict:
+    """Every receipt has its data object with the receipted size; data without receipt is listed."""
+    receipts, sizes = [], {}
+    paginator = r2.client.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=r2.landing, Prefix=LANDING_PREFIX):
+        for obj in page.get("Contents", []):
+            code = obj["Key"][len(LANDING_PREFIX):].partition("/")[0]
+            if patterns and not any(fnmatch.fnmatch(code.lower(), p) for p in patterns):
+                continue
+            if obj["Key"].endswith(".receipt.json"):
+                receipts.append(obj["Key"])
+            else:
+                sizes[obj["Key"]] = obj["Size"]
 
-    state = R2CampaignStore(LEGACY_CAMPAIGN, publication_only=True).load()
-    completed = (state or {}).get("completed", {}) if isinstance(state, dict) else {}
-    by_code: dict[str, dict] = defaultdict(lambda: {"entries": 0, "partition_leaves": 0})
-    for entry in completed.values():
-        if not isinstance(entry, dict):
-            continue
-        dataset_id = entry.get("dataset_id")
-        original = entry.get("original_dataset_id")
-        for code in {c for c in (dataset_id, original) if isinstance(c, str)}:
-            by_code[code]["entries"] += 1
-            if isinstance(dataset_id, str) and "::partition::" in dataset_id:
-                by_code[code]["partition_leaves"] += 1
-    return set(completed), by_code, state is not None, completed
+    def check(key: str) -> str:
+        receipt = json.loads(r2.client.get_object(Bucket=r2.landing, Key=key)["Body"].read())
+        data_key = (receipt.get("object") or {}).get("key")
+        if data_key not in sizes:
+            return "data_missing"
+        if sizes[data_key] != receipt.get("size_bytes"):
+            return "size_mismatch"
+        return "ok"
 
-
-def legacy_raw_descriptors(completed: dict, task_id: str) -> list[dict] | None:
-    """Raw-file descriptors behind one completed old-campaign dataset.
-
-    A plain dataset has one raw file. A partitioned dataset is complete only through
-    its leaf entries (``<task_id>::<partition>``), each with its own raw file.
-    Returns None when the entry carries no usable descriptor.
-    """
-    entry = completed.get(task_id)
-    if not isinstance(entry, dict):
-        return None
-    if isinstance(entry.get("raw"), dict):
-        return [entry["raw"]]
-    leaves = [value.get("raw") for key, value in completed.items()
-              if key.startswith(task_id + "::") and isinstance(value, dict)]
-    leaves = [raw for raw in leaves if isinstance(raw, dict)]
-    return leaves or None
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        outcomes = list(pool.map(check, receipts))
+    receipted = {k[: -len(".receipt.json")] for k in receipts}
+    orphans = sorted(k for k in sizes if k.rsplit(".", 2)[0] not in receipted
+                     and k[: -len(".tsv.gz")] not in receipted)
+    tally = dict(Counter(outcomes))
+    return {"receipts": len(receipts), "result": tally, "orphan_data_objects": len(orphans),
+            "orphan_examples": orphans[:10],
+            "problems": [{"receipt": k, "result": o} for k, o in zip(receipts, outcomes) if o != "ok"][:20]}
 
 
-def bronze_raw_hashes() -> set[str] | None:
-    """raw_sha256 values already in bronze.eurostat_full_observations (R2 SQL), or None."""
-    import requests
-
-    account = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "").strip()
-    token = os.environ.get("R2_DATA_CATALOG_TOKEN", "").strip()
-    bucket = os.environ.get("R2_LAKEHOUSE_BUCKET", "").strip()
-    if not (account and token and bucket):
-        return None
-    url = (f"https://api.sql.cloudflarestorage.com/api/v1/accounts/{account}"
-           f"/r2-sql/query/{bucket}")
-    query = ("SELECT DISTINCT raw_sha256 FROM bronze.eurostat_full_observations "
-             "WHERE raw_sha256 IS NOT NULL;")
-    last: Exception | None = None
-    for attempt in range(4):
-        try:
-            response = requests.post(url, headers={"Authorization": f"Bearer {token}",
-                                                   "Content-Type": "application/json"},
-                                     json={"query": query}, timeout=180)
-            response.raise_for_status()
-            payload = response.json()
-            break
-        except Exception as exc:  # transient network or 5xx
-            last = exc
-            time.sleep(10 * (attempt + 1))
-    else:
-        raise RuntimeError(f"R2 SQL query failed: {last}")
-    rows: list = []
-    result = payload.get("result")
-    for candidate in ([result] if isinstance(result, dict) else (result or [])) + [payload]:
-        if not isinstance(candidate, dict):
-            continue
-        value = candidate.get("results", candidate.get("rows"))
-        if isinstance(value, dict) and isinstance(value.get("rows"), list):
-            rows = [dict(zip(value["columns"], row)) for row in value["rows"]]
-            break
-        if isinstance(value, list):
-            rows = value
-            break
-    return {row.get("raw_sha256") for row in rows
-            if isinstance(row, dict) and isinstance(row.get("raw_sha256"), str)}
-
-
-def verify_legacy(items: list[dict], completed: dict, r2: "R2") -> dict:
-    """Check old-campaign ('current_legacy') datasets in R2 Landing and in Bronze. Read-only."""
-    from concurrent.futures import ThreadPoolExecutor as _Pool
-    from ingestion.legacy.engine.source_campaign_store import _R2ObjectStore
-
-    resolver = _R2ObjectStore(r2.client, landing_bucket=r2.landing, lakehouse_bucket=r2.lakehouse)
-    bronze = bronze_raw_hashes()
-    legacy = [row for row in items if row["status"] == "current_legacy"]
-
-    def check(row: dict) -> None:
-        raws = legacy_raw_descriptors(completed, row["legacy_task_id"])
-        row["legacy_raw_files"] = len(raws or [])
-        if not raws:
-            row["legacy_landing"] = "no_descriptor"
-            row["legacy_bronze"] = "unknown"
-            return
-        landing = "present"
-        for raw in raws:
-            try:
-                bucket, key = resolver._parse(raw.get("id"))
-                head = r2.head(bucket, key)
-            except Exception:
-                head, bucket = None, None
-            if head is None:
-                landing = "missing"
-                break
-            if bucket != r2.landing:
-                landing = "outside_landing"
-            if int(head.get("ContentLength", -1)) != raw.get("size_bytes"):
-                landing = "size_mismatch"
-                break
-        row["legacy_landing"] = landing
-        if bronze is None:
-            row["legacy_bronze"] = "not_checked"
-        else:
-            hits = sum(raw.get("sha256") in bronze for raw in raws)
-            row["legacy_bronze"] = ("present" if hits == len(raws)
-                                    else "partial" if hits else "missing")
-
-    with _Pool(max_workers=16) as pool:
-        list(pool.map(check, legacy))
-    tally: dict[str, dict[str, int]] = {"landing": defaultdict(int), "bronze": defaultdict(int),
-                                        "landing_and_bronze": defaultdict(int)}
-    for row in legacy:
-        tally["landing"][row["legacy_landing"]] += 1
-        tally["bronze"][row["legacy_bronze"]] += 1
-        tally["landing_and_bronze"][f"{row['legacy_landing']}/{row['legacy_bronze']}"] += 1
-    result = {k: dict(v) for k, v in tally.items()}
-    result["datasets"] = len(legacy)
-    result["partitioned_datasets"] = sum(row.get("legacy_raw_files", 0) > 1 for row in legacy)
-    result["bronze_distinct_raw_files"] = None if bronze is None else len(bronze)
-    result["examples_not_in_both"] = [
-        {"dataset": row["code"], "landing": row["legacy_landing"], "bronze": row["legacy_bronze"]}
-        for row in legacy if (row["legacy_landing"], row["legacy_bronze"]) != ("present", "present")
-    ][:40]
-    return result
-
-
-def plan_items(inventory_body: bytes, landing: dict, legacy_ids: set[str], legacy_by_code: dict,
-               parallel_jobs: int, patterns: list[str]) -> tuple[list[dict], dict]:
+def plan_items(inventory_body: bytes, landing: dict, parallel_jobs: int,
+               patterns: list[str]) -> tuple[list[dict], dict]:
     distributions = distributions_from_inventory("data", inventory_body)
     stats = {"inventory_distributions": len(distributions), "excluded_comext": 0,
              "excluded_other_kinds": 0, "excluded_by_filter": 0}
@@ -922,17 +847,12 @@ def plan_items(inventory_body: bytes, landing: dict, legacy_ids: set[str], legac
         version = spec.get("version") or ""
         token = version_token(version)
         held = landing.get(code, {"receipts": set(), "data": set()})
-        legacy_id = task_for(spec)["id"]
-        legacy = legacy_by_code.get(code, {"entries": 0, "partition_leaves": 0})
         if token in held["receipts"]:
             status = "current"
-        elif legacy_id in legacy_ids:
-            status = "current_legacy"
-        elif held["receipts"] or legacy["entries"]:
+        elif held["receipts"]:
             status = "stale"
         else:
             status = "missing"
-        data_key, receipt_key = landing_keys(code, token)
         metadata = spec.get("catalogue_metadata") or {}
         items.append({
             "code": code,
@@ -944,20 +864,14 @@ def plan_items(inventory_body: bytes, landing: dict, legacy_ids: set[str], legac
             "url": require_official(request_url(spec["url"], spec.get("params") or {})),
             "landing_versions": sorted(held["receipts"]),
             "orphan_data_object": token in held["data"] and token not in held["receipts"],
-            "legacy_task_id": legacy_id,
-            "legacy_entries": legacy["entries"],
-            "legacy_partition_leaves": legacy["partition_leaves"],
-            "data_key": data_key,
-            "receipt_key": receipt_key,
+            "prefix": f"{LANDING_PREFIX}{code}/{token}__",
         })
     items.sort(key=lambda row: row["code"])
     return items, stats
 
 
 CSV_COLUMNS = ("dataset_code", "status", "eurostat_version", "version_token", "parallel_job", "title",
-               "landing_versions", "orphan_data_object", "legacy_entries",
-               "legacy_partition_leaves", "legacy_task_id", "legacy_landing", "legacy_bronze",
-               "source_url", "landing_key")
+               "landing_versions", "orphan_data_object", "source_url", "landing_prefix")
 
 
 def coverage_csv(items: list[dict]) -> bytes:
@@ -967,10 +881,7 @@ def coverage_csv(items: list[dict]) -> bytes:
     for row in items:
         writer.writerow([row["code"], row["status"], row["version"], row["token"], row["job"],
                          row["title"], ";".join(row["landing_versions"]),
-                         str(row["orphan_data_object"]).lower(), row["legacy_entries"],
-                         row["legacy_partition_leaves"], row["legacy_task_id"],
-                         row.get("legacy_landing", ""), row.get("legacy_bronze", ""), row["url"],
-                         row["data_key"]])
+                         str(row["orphan_data_object"]).lower(), row["url"], row["prefix"]])
     return out.getvalue().encode("utf-8")
 
 
@@ -986,15 +897,12 @@ def verify_verdict(summary: dict) -> int:
 
     Missing or stale datasets after an extract are expected in small numbers
     (provider NOT_AVAILABLE, versions published since the extract), so they warn.
-    A legacy Landing object that is absent or has the wrong size fails the activity.
+    A receipt whose data object is missing or has another size fails the activity.
     """
     gaps = {s: summary["classification"].get(s, 0) for s in ("missing", "stale")}
-    legacy = summary.get("legacy_verification") or {}
-    landing = legacy.get("landing", {})
-    broken = {k: v for k, v in landing.items() if k != "present"}
-    annotate("notice", "eurostat landing verify result", {
-        "gaps": gaps, "legacy_landing": landing, "legacy_bronze": legacy.get("bronze"),
-        "examples_not_in_both": legacy.get("examples_not_in_both", [])[:10]})
+    integrity = summary["landing_integrity"]
+    broken = {k: v for k, v in integrity["result"].items() if k != "ok"}
+    annotate("notice", "eurostat landing verify result", {"gaps": gaps, **integrity})
     if any(gaps.values()):
         annotate("warning", "eurostat landing gaps", gaps)
     if broken:
@@ -1055,22 +963,18 @@ def main(argv: list[str] | None = None) -> int:
                              "control_object": f"r2://{r2.lakehouse}/{inventory_key}"}
 
         landing = load_landing_state(r2)
-        legacy_ids, legacy_by_code, legacy_found, legacy_completed = load_legacy()
-        items, stats = plan_items(inventory_body, landing, legacy_ids, legacy_by_code,
-                                  args.parallel_jobs, patterns)
+        items, stats = plan_items(inventory_body, landing, args.parallel_jobs, patterns)
         total = counts(items)
         summary = {
             "mode": args.mode, "run_id": run_id, "code_sha": code_sha,
             "inventory": ctx.inventory_ref, "dataset_filter": patterns,
-            "legacy_campaign_state_found": legacy_found,
-            "legacy_completed_entries": len(legacy_ids),
             "datasets_considered": len(items), "classification": total, **stats,
             "scope": "eurostat_tsv_gzip data distributions, Comext (DS-*) excluded",
         }
 
         if args.mode in ("inspect", "verify"):
             if args.mode == "verify":
-                summary["legacy_verification"] = verify_legacy(items, legacy_completed, r2)
+                summary["landing_integrity"] = verify_landing(r2, patterns)
             base = f"{CONTROL_PREFIX}coverage/{run_id}"
             r2.put_new(r2.lakehouse, base + ".csv", coverage_csv(items), "text/csv")
             summary["coverage_csv"] = f"r2://{r2.lakehouse}/{base}.csv"
@@ -1095,7 +999,6 @@ def main(argv: list[str] | None = None) -> int:
                 k: summary[k] for k in (
                     "classification", "datasets_considered", "excluded_comext",
                     "excluded_other_kinds", "excluded_by_filter", "inventory_distributions",
-                    "legacy_campaign_state_found", "legacy_completed_entries",
                     "coverage_csv", "elapsed_seconds") if k in summary
             } | {"inventory_sha256": inventory_sha,
                  "parallel_jobs_4": summary["per_parallel_job"]["4"]})
