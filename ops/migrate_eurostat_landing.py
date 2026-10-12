@@ -35,7 +35,37 @@ OLD_PREFIX = "01_landing/eurostat/bulk/"
 CURRENT_PREFIX = OLD_PREFIX + "data/"
 NEW_PREFIX = "01_landing/eurostat/snapshot/"
 LEGACY_CAMPAIGN = "eurostat_bulk"
-KIND_TARGET = {"eurostat_tsv_gzip": ("data", ".tsv.gz")}
+# kind -> (area, file stem suffix, expected content); the extension is confirmed from the
+# file's first bytes at copy time (gzip, zip, xml or text).
+KIND_TARGET = {
+    "eurostat_tsv_gzip": ("data", "", "tsv"),
+    "eurostat_structure_sdmx": ("metadata", ".structure", "xml"),
+    "eurostat_metadata_zip": ("metadata", ".sdmx", "zip"),
+    "eurostat_codelist_tsv": ("metadata", ".codelist", "tsv"),
+    "eurostat_inventory": ("metadata", "", "tsv"),
+    "eurostat_inventory_codelist": ("metadata", "", "tsv"),
+    "eurostat_inventory_metadata": ("metadata", "", "tsv"),
+}
+CONTENT_TYPES = {"gz": "application/gzip", "zip": "application/zip", "xml": "application/xml",
+                 "tsv": "text/tab-separated-values"}
+INVENTORY_ENTITY = {"eurostat_inventory": "inventory-data",
+                    "eurostat_inventory_codelist": "inventory-codelist",
+                    "eurostat_inventory_metadata": "inventory-metadata"}
+
+
+def extension(stem_suffix: str, content: str, head: bytes) -> str:
+    """Native extension from the first bytes; refuse content that contradicts the kind."""
+    if head[:2] == b"\x1f\x8b":
+        return f"{stem_suffix}.{content}.gz"
+    if head[:2] == b"PK":
+        if content != "zip":
+            raise RuntimeError("unexpected ZIP content")
+        return f"{stem_suffix}.zip"
+    if content == "zip":
+        raise RuntimeError("expected ZIP content")
+    if content == "xml" and not head.lstrip().startswith(b"<"):
+        raise RuntimeError("expected XML content")
+    return f"{stem_suffix}.{content}"
 
 
 def compact(timestamp: str) -> str:
@@ -60,6 +90,7 @@ def current_items(r2: R2) -> list[dict]:
         token = receipt.get("version_token") or version_token(receipt.get("eurostat_version"))
         data, rec = target("data", code, token, compact(receipt["retrieved_at"]), ".tsv.gz", None)
         return {"layout": "current", "kind": "eurostat_tsv_gzip", "code": code, "part": None,
+                "area": "data", "stem_suffix": "", "content": "tsv", "base": data[: -len(".tsv.gz")],
                 "version": receipt.get("eurostat_version"), "token": token,
                 "ingested_at": receipt["retrieved_at"], "sha256": receipt["sha256"],
                 "size": int(receipt["size_bytes"]), "source_url": receipt.get("source_url"),
@@ -103,14 +134,17 @@ def legacy_items(r2: R2) -> tuple[list[dict], list[dict]]:
                                        "distribution": {k: v for k, v in dist.items() if k != "kind"},
                                        "size": raw.get("size_bytes")}})
             return None
-        area, ext = KIND_TARGET[kind]
+        area, stem_suffix, content = KIND_TARGET[kind]
+        code = INVENTORY_ENTITY.get(kind) or code.split("::")[0]
         token = version_token(dist.get("version"))
         ingested = receipt.get("retrieved_at_utc")
         if not ingested:
             skipped.append({"task": task_id, "reason": "no_retrieved_at"})
             return None
-        data, rec = target(area, code, token, compact(ingested), ext, part)
-        return {"layout": "legacy", "kind": kind, "code": code, "part": part,
+        data, rec = target(area, code, token, compact(ingested), stem_suffix + "." + content, part)
+        return {"layout": "legacy", "kind": kind, "code": code, "part": part, "area": area,
+                "stem_suffix": stem_suffix, "content": content,
+                "base": data[: -len(stem_suffix + "." + content)],
                 "version": dist.get("version"), "token": token, "ingested_at": ingested,
                 "sha256": raw["sha256"], "size": int(raw["size_bytes"]),
                 "source_url": dist.get("url") or dist.get("download_url"),
@@ -132,6 +166,8 @@ def stream_sha256(r2: R2, key: str) -> tuple[str, int]:
 
 
 def copy_one(r2: R2, item: dict, run_id: str) -> str:
+    head_bytes = r2.client.get_object(Bucket=r2.landing, Key=item["from_key"], Range="bytes=0-63")["Body"].read()
+    item["to_key"] = item["base"] + extension(item["stem_suffix"], item["content"], head_bytes)
     existing = r2.head(r2.landing, item["to_receipt"])
     if existing is not None:
         receipt = json.loads(r2.client.get_object(Bucket=r2.landing, Key=item["to_receipt"])["Body"].read())
@@ -143,7 +179,8 @@ def copy_one(r2: R2, item: dict, run_id: str) -> str:
         if head is not None:
             raise RuntimeError(f"different object already at {item['to_key']}")
         r2.client.copy({"Bucket": r2.landing, "Key": item["from_key"]}, r2.landing, item["to_key"],
-                       ExtraArgs={"MetadataDirective": "REPLACE", "ContentType": "application/gzip",
+                       ExtraArgs={"MetadataDirective": "REPLACE",
+                                  "ContentType": CONTENT_TYPES[item["to_key"].rsplit(".", 1)[1]],
                                   "Metadata": {"sha256": item["sha256"], "size": str(item["size"]),
                                                "retrieved-at": item["ingested_at"],
                                                "eurostat-version": item["version"] or "",
@@ -155,6 +192,7 @@ def copy_one(r2: R2, item: dict, run_id: str) -> str:
     receipt = {
         "schema_version": 2, "kind": "eurostat_landing", "source_id": "eurostat",
         "dataset_code": item["code"], "part": item["part"], "content": "snapshot",
+        "area": item["area"], "source_kind": item["kind"],
         "eurostat_version": item["version"], "version_token": item["token"],
         "ingested_at": item["ingested_at"], "sha256": sha, "size_bytes": size,
         "source_url": item["source_url"],

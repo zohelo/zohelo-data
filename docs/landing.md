@@ -40,6 +40,8 @@ After the initial load, choose the production load per source:
   download time. Both UTC, `YYYYMMDDTHHMMSSZ`.
 - A file holding only part of an entity (a source that had to be split) adds
   `__part-<id>` before the extension.
+- The extension is the native format; where one entity has several metadata files a
+  short type goes before it (Eurostat: `.structure.xml`, `.sdmx.zip`, `.codelist.tsv`).
 - Example: `01_landing/eurostat/snapshot/data/NAMA_10_GDP/20261009T210000Z__20261011T190512Z.tsv.gz`
 
 The receipt is written after the file and marks it complete: SHA-256, size, source
