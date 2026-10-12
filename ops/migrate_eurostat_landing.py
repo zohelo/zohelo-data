@@ -98,7 +98,10 @@ def legacy_items(r2: R2) -> tuple[list[dict], list[dict]]:
             skipped.append({"task": task_id, "reason": "outside_landing"})
             return None
         if kind not in KIND_TARGET:
-            skipped.append({"task": task_id, "reason": f"kind:{kind}"})
+            skipped.append({"task": task_id, "reason": f"kind:{kind}",
+                            "sample": {"dataset_id": dataset_id, "original": entry.get("original_dataset_id"),
+                                       "distribution": {k: v for k, v in dist.items() if k != "kind"},
+                                       "size": raw.get("size_bytes")}})
             return None
         area, ext = KIND_TARGET[kind]
         token = version_token(dist.get("version"))
@@ -196,6 +199,11 @@ def main(argv=None) -> int:
         "examples": [{k: i[k] for k in ("layout", "from_key", "to_key")} for i in items[:2] + legacy[:1]],
     }
     annotate("notice", "eurostat landing migration plan", plan)
+    seen: set = set()
+    for item in skipped:
+        if "sample" in item and item["reason"] not in seen and len(seen) < 8:
+            seen.add(item["reason"])
+            annotate("notice", f"eurostat migration sample {item['reason']}", item["sample"])
     if clashes:
         annotate("error", "eurostat landing migration clashes", clashes[:20])
         return 1
