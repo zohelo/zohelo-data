@@ -4,8 +4,9 @@
 
 | Workflow | Runs | Trigger |
 |---|---|---|
-| **Pipeline** (`pipeline.yml`) | the dataflow: pick a `source` and a `run` | manual |
-| **Ops · ad-hoc** (`ops.yml`) | one script from `ops/` | manual |
+| **Pipeline** (`pipeline.yml`) | the dataflow: pick a `source` and a `run` | manual, `main` only |
+| **Ops · ad-hoc** (`ops.yml`) | one standing task from `ops/` | manual, `main` only |
+| **Dev · branch runs** (`dev.yml`) | one `dev/` script on a feature branch (trials, tests); deleted before merge | manual, never `main` |
 | **Deploy portal** (`deploy-portal.yml`) | build and deploy `portal/app` and `portal/worker` | push to `main` changing them, or manual |
 
 ## Activities

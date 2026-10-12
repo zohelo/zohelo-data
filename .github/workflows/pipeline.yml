@@ -68,6 +68,8 @@ env:
 
 jobs:
   plan:
+    # Production data runs only from main; experiments use Dev · branch runs.
+    if: github.ref == 'refs/heads/main'
     name: "plan · ${{ inputs.source }} · ${{ inputs.run }}"
     runs-on: ubuntu-latest
     timeout-minutes: 5

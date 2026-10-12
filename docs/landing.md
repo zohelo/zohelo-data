@@ -48,9 +48,10 @@ The receipt is written after the file and marks it complete: SHA-256, size, sour
 URL, both timestamps and transfer details. Files are the exact source bytes, never
 modified or overwritten.
 
-Migration: Eurostat still uses its two earlier layouts
-(`01_landing/eurostat/bulk/raw-<sha>.bin` and `01_landing/eurostat/bulk/data/<CODE>/<version>.tsv.gz`)
-until they are copied into this layout.
+Migration: all Eurostat files were copied into this layout on 12 October 2026. The
+Eurostat code still reads and writes the two earlier layouts
+(`01_landing/eurostat/bulk/raw-<sha>.bin`, `01_landing/eurostat/bulk/data/<CODE>/<version>.tsv.gz`)
+until it is switched; then the old copies are archived and removed.
 
 ## Landing → Bronze → Archive
 

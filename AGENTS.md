@@ -35,27 +35,35 @@ instead of adding a new one.
 
 ## Workflows and activities
 
-Exactly three workflows: **Pipeline** (`pipeline.yml`), **Ops · ad-hoc** (`ops.yml`),
-**Deploy portal** (`deploy-portal.yml`). Shared Pipeline job steps are in
-`.github/actions/activity/`.
+Exactly four workflows (owner direction, 12 October 2026):
 
-- Pipeline is the fixed dataflow, one job per activity (docs/operating.md). Change it
-  only when the dataflow changes; never add ad-hoc operations to it.
+1. **Pipeline** (`pipeline.yml`) — the fixed dataflow, one job per activity
+   (docs/operating.md). Runs only from `main`. Change it only when the dataflow
+   changes; never add ad-hoc operations to it.
+2. **Ops · ad-hoc** (`ops.yml`) — standing operational tasks in `ops/` that the owner
+   may run again (inventories, checks). Runs only from `main`. Not for experiments.
+3. **Dev · branch runs** (`dev.yml`) — one-off trials, tests and checks that need R2,
+   while working on a feature branch. Scripts live in `dev/` on that branch and are
+   deleted before the merge; `dev/` never exists on `main`. Never runs on `main`.
+   Writes only to scratch locations (`zz_dev_*` namespaces or prefixes) that the same
+   script removes, unless the owner approved a one-off production change.
+4. **Deploy portal** (`deploy-portal.yml`) — portal build and deploy.
+
+Shared Pipeline job steps are in `.github/actions/activity/`.
+
 - An activity runs only when implemented and listed under `activities:` in the
   source's `ingestion/sources/<source>.yaml` (platform activities: `warehouse/warehouse.yaml`,
-  `portal/portal.yaml`). Adding a source or an activity
-  means code plus that list.
-- Ad-hoc checks, inspections and one-off fixes go to `ops/` and run through Ops.
-  Each ops script is listed in `ops/README.md` and deleted in the pull request that
-  finishes its task.
+  `portal/portal.yaml`). Adding a source or an activity means code plus that list.
+- When something cannot be checked from the agent session, use a `dev/` script on the
+  feature branch; never push to `main` or add an Ops script just to run a check.
 - Activities publish results as run annotations (`ingestion.common.report`, under
   about 4 KB each); job logs are not readable from agent sessions.
-- Pipeline and Ops run by manual dispatch only. No `push` triggers on them; no
+- Pipeline, Ops and Dev run by manual dispatch only. No `push` triggers on them; no
   `schedule` without owner approval. Never commit or merge to start a data run.
   Deploy portal runs on pushes to `main` that change `portal/app` or `portal/worker`.
 - Naming: activities `<stage>.<verb>`; runs `<stage>: <verb>`; sources by
   `source_system` id; concurrency groups `zohelo-pipeline-<source>[-read]`,
-  `zohelo-ops-<script>`, `zohelo-portal`.
+  `zohelo-ops-<script>`, `zohelo-dev-<branch>-<script>`, `zohelo-portal`.
 
 ## Extraction (owner direction, 12 October 2026)
 
@@ -88,7 +96,7 @@ in `ingestion/sources/<source>.yaml`. Landing layout and rules: docs/landing.md.
   `chore`); never commit directly to `main`.
 - Changes reach `main` only through a pull request; the owner merges.
 - Merged branches are deleted (repository setting); delete leftovers manually.
-- No workflow files on branches other than edits to the three workflows.
+- No workflow files on branches other than edits to the four workflows.
 - Do not restore removed tests, CI workflows or historical task queues.
 
 ## Deliver
