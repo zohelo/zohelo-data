@@ -1,5 +1,4 @@
-# Python dependencies of the operational workflows, for local development.
-# The workflows install the same packages (with these pins) in their own steps.
+# Python dependencies of the pipeline and ops; the workflows install this file.
 boto3
 requests
 pyyaml

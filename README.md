@@ -6,45 +6,46 @@ portal at https://data.zohelo.com/.
 
 ## Operate
 
-There are three operational GitHub Actions:
+Three GitHub Actions workflows, all manual except portal deploys:
 
-- **1 · Ingest → Landing** — manually selected, authorized source loads into
-  private Cloudflare R2 Landing. It has no schedule.
-- **2 · Transform → Bronze / Silver / Gold** — medallion/Iceberg promotion,
-  reconciliation and bounded maintenance.
-- **3 · Deploy portal** — builds and deploys the internal portal and its private
-  R2 read service.
+- **Pipeline** — the dataflow. Pick a `source` and a `run`: one activity
+  (`landing: inspect`, `landing: extract`, `landing: verify`, `bronze: load`,
+  `bronze: verify`, `archive: copy Bronze-proven Landing`) or
+  `landing → bronze (all steps)`; source `platform` runs `silver/gold: promote`
+  and `serving: refresh portal index`. Only activities authorized in
+  `config/sources.yaml` run.
+- **Ops · ad-hoc** — runs one script from `ops/` (checks, inspections, one-off
+  fixes). Nothing ad-hoc goes into the Pipeline.
+- **Deploy portal** — builds and deploys the internal portal and its private R2
+  read service.
 
-Operations are named `<source>: <action>` (or `platform: <action>`); see
-AGENTS.md for the convention.
-
+Results of every activity are published as run annotations and the job summary.
 Repository regression-test/CI workflows were intentionally removed. Data
-operations still retain ordinary integrity checks, exact-byte verification,
-bounded retries, resumable checkpoints and writer serialization.
+operations keep integrity checks, exact-byte verification, bounded retries,
+resumable checkpoints and one writer per source.
 
 ## Repository structure
 
-The repository follows the dataflow:
-
 ```text
-config/              source campaign settings, storage settings
-ingestion/           sources → R2 Landing
-  common/            R2 stores, HTTP transport, checkpointed campaign engines
-  eurostat/          Eurostat full-file load to Landing (current), API adapter
-  world_bank/        World Bank WDI API adapter (paused)
-  gus_bdl/           GUS BDL API adapter (paused)
-  gus_dbw/           GUS DBW API adapter (paused)
-  run_api_campaign.py, run_full_file_campaign.py   paused campaign entrypoints
-transformation/      Landing → Bronze → Silver → Gold
-  bronze/            Eurostat decode and Bronze catch-up
-  promotion/         Bronze → Silver → Gold promotion and optimization
-  reconciliation/    archive, lineage and retained-input inspection
+config/
+  sources.yaml       source registry: authorized activities, storage, schedule
+  api_campaigns.yaml settings of the paused API campaign engine
+  storage.yaml       storage settings
+pipeline/            the dataflow; entry point: python -m pipeline.run
+  run.py             plans runs and executes one activity
+  sources/<source>/  one folder per source; __init__.py maps activities to code
+    eurostat/        landing.py (inspect/extract/verify), bronze.py + bronze_batch.py
+                     + decode.py (Bronze load), api_adapter.py (paused)
+    gus_bdl/  gus_dbw/  world_bank_wdi/  opendata_org/
+  common/            R2 stores, transport, campaign engine, lineage, archive, report
+  silver_gold/       Bronze → Silver → Gold promotion (pass-through today)
+ops/                 ad-hoc scripts for the Ops workflow (see ops/README.md)
 semantic/            dimensional model and metrics (not built yet)
 serving/             portal, R2 read worker, portal index
-  portal/            internal SQL/data portal (React, DuckDB-WASM)
-  worker/            Cloudflare Worker serving private R2 reads
-checks/              platform checks (R2 connectivity)
 docs/                architecture, data lifecycle, development
+.github/
+  workflows/         pipeline.yml, ops.yml, deploy-portal.yml
+  actions/activity/  shared steps of a pipeline job
 ```
 
 Python runs with the repository root on `PYTHONPATH`.
