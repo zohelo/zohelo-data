@@ -1,0 +1,25 @@
+# Connection: DuckDB in memory, R2 Data Catalog attached as "r2". Credentials come
+# from environment variables (GitHub secrets/variables); nothing secret is stored here.
+zohelo:
+  target: prod
+  outputs:
+    prod: &r2
+      type: duckdb
+      path: ":memory:"
+      threads: 4
+      schema: main
+      extensions: [httpfs, iceberg]
+      secrets:
+        - type: iceberg
+          name: r2_catalog
+          token: "{{ env_var('R2_DATA_CATALOG_TOKEN') }}"
+      attach:
+        - path: "{{ env_var('R2_WAREHOUSE') }}"
+          alias: r2
+          type: iceberg
+          secret: r2_catalog
+          options:
+            endpoint: "{{ env_var('R2_CATALOG_URI') }}"
+    trial:
+      <<: *r2
+      schema: zz_dbt_trial
