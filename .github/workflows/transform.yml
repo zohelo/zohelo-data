@@ -18,7 +18,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: zohelo-transform
+  # The read-only inventory gets its own group so it never waits behind a writer.
+  group: "zohelo-transform${{ inputs.operation == 'platform: inspect retained inputs' && '-inspect' || '' }}"
   cancel-in-progress: false
 
 jobs:
