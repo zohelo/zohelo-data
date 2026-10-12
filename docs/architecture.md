@@ -48,9 +48,9 @@ were built by retired code. The SQL project replaces both.
 ## Tools
 
 - Python for extraction and Landing → Bronze.
-- Bronze → Gold and the semantic layer: a SQL project in `warehouse/` — dbt with
-  DuckDB and MetricFlow, subject to a trial proving writes of Iceberg tables to the
-  R2 catalog. Its generated catalog provides lineage both ways: metric ↔ Gold ↔
+- Bronze → Gold and the semantic layer: the dbt project in `warehouse/` (dbt-duckdb
+  writing Iceberg tables to the R2 catalog, proven 12 October 2026; MetricFlow for
+  metrics). Its generated catalog provides lineage both ways: metric ↔ Gold ↔
   Silver ↔ Bronze table ↔ loader ↔ Landing ↔ source system.
 - No orchestrator or distributed compute beyond GitHub Actions without a measured
   need.

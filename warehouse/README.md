@@ -13,9 +13,14 @@ macros/  seeds/  snapshots/  analyses/
 warehouse.yaml                    activities the Pipeline may run
 ```
 
-`models/silver/gus_teryt/teryt_terc.sql` is the trial model (`ops/dbt_trial`, target
-`trial` → scratch namespace). Until dbt models replace them, `passthrough/` publishes
-Silver and Gold as copies / zero-copy references of Bronze (`silver_gold.promote`).
+Proven on 12 October 2026: dbt-duckdb reads Bronze and writes Iceberg tables to the R2
+catalog (readable by DuckDB and R2 SQL). Iceberg tables cannot be renamed in the
+transaction that created them, so the profile commits each statement separately; a
+table rebuild is therefore not atomic.
+
+Target `trial` writes every model to the scratch namespace `zz_dbt_trial`. Until dbt
+models replace them, `passthrough/` publishes Silver and Gold as copies / zero-copy
+references of Bronze (`silver_gold.promote`).
 
 ```sh
 cd warehouse && DBT_PROFILES_DIR=. dbt build --target trial   # needs the R2 env vars
