@@ -10,5 +10,7 @@ extraction:
 landing: 01_landing/gus_teryt/   # empty: raw files were archived after the Bronze build
 archive: 05_archive/gus_teryt/
 bronze: [bronze.teryt_terc, bronze.teryt_simc, bronze.teryt_ulic]
+silver: [silver.teryt_terc, silver.teryt_simc, silver.teryt_ulic]
+gold: [gold.dim_territory, gold.dim_locality, gold.dim_street]
 
 activities: []   # paused; Bronze/Silver/Gold were built by retired code

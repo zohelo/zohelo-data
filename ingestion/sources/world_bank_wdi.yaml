@@ -9,6 +9,8 @@ extraction:
 
 landing: 01_landing/world_bank_wdi/
 bronze: [bronze.wdi_data, bronze.wdi_country, bronze.wdi_series, bronze.wdi_country_series, bronze.wdi_footnote, bronze.wdi_series_time]
+silver: [silver.wdi_countries, silver.wdi_indicators, silver.wdi_observations]
+gold: [gold.dim_wdi_geography, gold.dim_wdi_indicator, gold.dim_wdi_year, gold.fact_wdi_observations, gold.mart_wdi_coverage]
 control: [06_control/source_campaigns/world_bank_wdi/]
 
 activities: [bronze.verify]   # read-only; ingestion paused

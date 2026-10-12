@@ -63,5 +63,6 @@ and then removed from Landing.
   validated. The archive copy must reproduce the original SHA-256. Already-compressed
   formats (gzip, ZIP, Parquet) are not recompressed.
 - A Landing file may be deleted only after its Archive copy is verified and no
-  checkpoint still points to it. Never delete because ingestion or a Bronze build
+  checkpoint still points to it. Its receipt stays in Landing and points to the Archive
+  copy (`ops/restore_from_archive` puts the file back). Never delete because ingestion or a Bronze build
   merely succeeded or started.

@@ -10,5 +10,7 @@ extraction:
 landing: 01_landing/gugik_prg/   # empty: raw files were archived after the Bronze build
 archive: 05_archive/gugik_prg/
 bronze: [bronze.prg_country, bronze.prg_voivodeships, bronze.prg_counties, bronze.prg_municipalities, bronze.prg_surface_areas]
+silver: [silver.prg_country, silver.prg_voivodeships, silver.prg_counties, silver.prg_municipalities, silver.prg_surface_areas]
+gold: [gold.dim_prg_country, gold.dim_prg_voivodeship, gold.dim_prg_county, gold.dim_prg_municipality, gold.fact_prg_surface_areas]
 
 activities: []   # paused; Bronze/Silver/Gold were built by retired code

@@ -148,3 +148,22 @@ def latest_snapshot(meta: dict[str, dict[str, Any]], area: str = "data") -> set[
             if path["entity"] not in latest or order > latest[path["entity"]][0]:
                 latest[path["entity"]] = (order, digest)
     return {digest for _, digest in latest.values()}
+
+
+def catalog():
+    """The R2 Data Catalog (Apache Iceberg REST) holding bronze, silver and gold."""
+    from pyiceberg.catalog.rest import RestCatalog
+    return RestCatalog(
+        name="zohelo", warehouse=req("R2_WAREHOUSE"), uri=req("R2_CATALOG_URI"),
+        token=req("R2_DATA_CATALOG_TOKEN"),
+        **{"s3.access-key-id": req("CLOUDFLARE_R2_ACCESS_KEY_ID"),
+           "s3.secret-access-key": req("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
+           "s3.endpoint": req("R2_S3_ENDPOINT"), "s3.region": "auto"})
+
+
+def sources() -> dict[str, dict[str, Any]]:
+    """The source registry: ingestion/sources/<source>.yaml by source id."""
+    from pathlib import Path
+    import yaml
+    folder = Path(__file__).resolve().parents[1] / "sources"
+    return {path.stem: yaml.safe_load(path.read_text()) for path in sorted(folder.glob("*.yaml"))}

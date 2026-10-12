@@ -9,6 +9,8 @@ extraction:
 
 landing: 01_landing/gus_bdl/
 bronze: [bronze.bdl_observations, bronze.bdl_variables, bronze.bdl_subjects, bronze.bdl_units, bronze.bdl_years, bronze.bdl_dictionary_entries]
+silver: [silver.bdl_dictionary_entries, silver.bdl_observation_revisions, silver.bdl_observations, silver.bdl_subjects, silver.bdl_units, silver.bdl_variables]
+gold: [gold.dim_bdl_period, gold.dim_bdl_subject, gold.dim_bdl_unit, gold.dim_bdl_variable, gold.fact_bdl_observations, gold.mart_bdl_coverage]
 control: [01_landing/gus_bdl/web_bulk/_control/, 06_control/source_campaigns/gus_bdl/]
 
 activities: []   # paused; legacy code in ingestion/legacy/

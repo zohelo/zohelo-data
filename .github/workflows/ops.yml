@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       script:
-        description: "Script name in ops/ without .py (e.g. inspect_retained_inputs)"
+        description: "Script name in ops/ without .py (e.g. platform_inventory)"
         required: true
       args:
         description: "Optional arguments, space separated (no shell expansion)"
