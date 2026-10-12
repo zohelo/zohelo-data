@@ -232,29 +232,47 @@ def source_brief(source, item):
         "tables": [{"table": t["table"], "rows": sum(f["rows"] for f in t["data_files"]),
                     "files": len(t["data_files"]), "bytes": sum(f["bytes"] for f in t["data_files"]),
                     "columns": [c["name"] for c in t["schema"]][:40]} for t in item["tables"]],
-        "control_probes": [{"key": p["key"], "summary": p.get("structure", {}).get("summary"),
-                            "container_sizes": p.get("structure", {}).get("container_sizes"),
-                            "kind_counts": dict(list((p.get("structure", {}).get("kind_counts") or {}).items())[:25])}
-                           for p in item["control_probes"] if "structure" in p][:20],
+        "control_probes": [probe_brief(p) for p in item["control_probes"] if "structure" in p],
     }
     if source == "gus_bdl":
         web = [o for o in landing if "/web_bulk/" in o["key"]]
         brief["web_bulk"] = {"objects": len(web), "bytes": sum(o["size"] for o in web),
                              "distinct_subgroups": len({PurePosixPath(o["key"]).parts[3] for o in web
-                                                        if len(PurePosixPath(o["key"]).parts) > 4})}
+                                                        if len(PurePosixPath(o["key"]).parts) > 4
+                                                        and not PurePosixPath(o["key"]).parts[3].startswith("_")})}
     return brief
 
 
+ANNOTATION_LIMIT = 3900  # GitHub keeps only about 4 KB of an annotation message
+
+
 def annotate(title, data):
+    """Publish data as notices of at most ANNOTATION_LIMIT characters each."""
     if os.environ.get("GITHUB_ACTIONS") != "true":
         return
-    message = json.dumps(data, sort_keys=True, default=str, separators=(",", ":"))
-    if len(message) > 60000:
-        data = {k: v for k, v in data.items() if k != "control_probes"}
-        data["control_probes"] = "omitted: annotation size limit"
-        message = json.dumps(data, sort_keys=True, default=str, separators=(",", ":"))
+    message = json.dumps(data, default=str, separators=(",", ":"))
+    if len(message) > ANNOTATION_LIMIT:
+        message = message[:ANNOTATION_LIMIT - 12] + "…[truncated]"
     message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-    print(f"::notice title={title}::{message[:60000]}", flush=True)
+    print(f"::notice title={title}::{message}", flush=True)
+
+
+def probe_brief(probe):
+    structure = probe.get("structure", {})
+    return {"key": probe["key"].split("/", 2)[-1], "summary": structure.get("summary"),
+            "sizes": structure.get("container_sizes"),
+            "kinds": dict(list((structure.get("kind_counts") or {}).items())[:25])}
+
+
+def annotate_source(source, item):
+    brief = source_brief(source, item)
+    probes = brief.pop("control_probes")
+    for table in brief["tables"]:
+        table["columns"] = len(table["columns"])
+    annotate(f"retained inventory {source}", brief)
+    # Queue and checkpoint files first: they carry the campaign status counts.
+    probes.sort(key=lambda p: ("/states/" in p["key"], p["key"]))
+    annotate(f"retained control {source}", probes[:6])
 
 
 def main():
@@ -309,7 +327,7 @@ def main():
         print(json.dumps({"source": source, "landing_objects": len(landing), "landing_bytes": sum(obj["size"] for obj in landing),
             "archive_objects": len(archive), "tables": len(item["tables"]), "probes": len(item["probes"]),
             "control_probe_limits": item["control_probe_limits"], "coverage_proven": False}), flush=True)
-        annotate(f"retained inventory {source}", source_brief(source, item))
+        annotate_source(source, item)
     return 0
 
 
