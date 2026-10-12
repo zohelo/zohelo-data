@@ -1,0 +1,14 @@
+source_system: gus_bdl
+description: "GUS Local Data Bank (BDL) — Web UI bulk archives (web_bulk) and API responses"
+
+extraction:
+  initial: to_be_decided
+  production: to_be_decided
+  incremental_policy: to_be_decided
+  schedule: null
+
+landing: 01_landing/gus_bdl/
+bronze: [bronze.bdl_observations, bronze.bdl_variables, bronze.bdl_subjects, bronze.bdl_units, bronze.bdl_years, bronze.bdl_dictionary_entries]
+control: [01_landing/gus_bdl/web_bulk/_control/, 06_control/source_campaigns/gus_bdl/]
+
+activities: []   # paused; legacy code in ingestion/legacy/

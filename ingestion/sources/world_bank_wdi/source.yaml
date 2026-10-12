@@ -1,0 +1,14 @@
+source_system: world_bank_wdi
+description: World Bank WDI bulk CSV archive and API responses
+
+extraction:
+  initial: to_be_decided
+  production: to_be_decided
+  incremental_policy: to_be_decided
+  schedule: null
+
+landing: 01_landing/world_bank_wdi/
+bronze: [bronze.wdi_data, bronze.wdi_country, bronze.wdi_series, bronze.wdi_country_series, bronze.wdi_footnote, bronze.wdi_series_time]
+control: [06_control/source_campaigns/world_bank_wdi/]
+
+activities: [bronze.verify]   # read-only; ingestion paused

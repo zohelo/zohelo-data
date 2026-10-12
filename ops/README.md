@@ -10,7 +10,7 @@ Rules:
 - One file per script, `snake_case.py`, runnable as `python -m ops.<name> [args]`.
   Files starting with `_` are helpers and cannot be dispatched.
 - Write output files to `$OPS_OUTPUT_DIR`; the workflow keeps them as a run artifact
-  for 7 days. Publish results as annotations with `pipeline.common.report.annotate`.
+  for 7 days. Publish results as annotations with `ingestion.common.report.annotate`.
 - List every script in the table below with why it exists and when to remove it.
   Delete scripts that are no longer needed; git keeps the history.
 - If an ops script becomes something the dataflow needs on every run, move it into

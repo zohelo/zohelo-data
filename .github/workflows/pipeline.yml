@@ -1,8 +1,8 @@
 name: Pipeline
 
 # The fixed dataflow: one job per activity, in dataflow order. A run is a source plus
-# a run type; pipeline/run.py turns it into the list of activities and refuses any
-# activity that is not implemented or not authorized in config/sources.yaml.
+# a run type; run.py turns it into the list of activities and refuses any
+# activity that is not implemented or not authorized in ingestion/sources/<source>/source.yaml.
 # This file changes only when the dataflow changes. Ad-hoc work goes to ops.yml.
 # Manual dispatch only; schedules need owner approval.
 
@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       source:
-        description: Source (config/sources.yaml); platform for silver/gold and serving
+        description: Source (ingestion/sources/<source>/source.yaml); platform for silver/gold and serving
         required: true
         type: choice
         default: eurostat
@@ -100,7 +100,7 @@ jobs:
             echo "filter may contain only codes, globs, commas and spaces" >&2; exit 2
           fi
           python -m pip install --quiet pyyaml
-          plan="$(python -m pipeline.run plan --source "$SOURCE" --run "$RUN" --parallel-jobs "$PARALLEL_JOBS")"
+          plan="$(python run.py plan --source "$SOURCE" --run "$RUN" --parallel-jobs "$PARALLEL_JOBS")"
           echo "$plan"
           echo "activities=$(jq -c .activities <<<"$plan")" >> "$GITHUB_OUTPUT"
           echo "extract_matrix=$(jq -c .extract_matrix <<<"$plan")" >> "$GITHUB_OUTPUT"

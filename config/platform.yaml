@@ -1,0 +1,17 @@
+# Platform configuration: storage contract and cross-source activities.
+# Credentials and endpoints are GitHub secrets/variables, never stored here.
+
+storage:
+  landing_bucket: zohelo-landing-prod        # GitHub variable R2_LANDING_BUCKET
+  lakehouse_bucket: zohelo-lakehouse-prod    # GitHub variable R2_LAKEHOUSE_BUCKET
+  prefixes:
+    landing: 01_landing/      # native source files + receipts (see docs/landing.md)
+    archive: 05_archive/      # verified raw history
+    control: 06_control/      # run records, checkpoints, portal index
+  catalog_namespaces: [bronze, silver, gold]   # R2 Data Catalog (Apache Iceberg)
+
+# Cross-source activities, run in the Pipeline workflow with source "platform".
+#   silver_gold.promote     Bronze → Silver → Gold pass-through (warehouse/passthrough)
+#   serving.refresh_index   rebuild the portal file index from live R2 (portal/publish_index.py)
+activities: [silver_gold.promote, serving.refresh_index]
+schedule: null

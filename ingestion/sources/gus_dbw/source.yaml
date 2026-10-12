@@ -1,0 +1,14 @@
+source_system: gus_dbw
+description: GUS DBW indicators
+
+extraction:
+  initial: to_be_decided
+  production: to_be_decided
+  incremental_policy: to_be_decided
+  schedule: null
+
+landing: 01_landing/gus_dbw/
+bronze: [bronze.dbw_observations, bronze.dbw_dictionaries, bronze.dbw_indicators, bronze.dbw_metadata]
+control: [06_control/source_campaigns/gus_dbw_bronze/]
+
+activities: []   # paused; legacy code in ingestion/legacy/

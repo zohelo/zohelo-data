@@ -1,0 +1,14 @@
+source_system: opendata_org
+description: OpenData organizations, people and locations bulk ZIP
+
+extraction:
+  initial: to_be_decided
+  production: to_be_decided
+  incremental_policy: to_be_decided
+  schedule: null
+
+landing: 01_landing/opendata_org/
+bronze: [bronze.opendata_org_organizations, bronze.opendata_org_people, bronze.opendata_org_locations]
+control: [06_control/source_campaigns/opendata_org_bronze/]
+
+activities: []   # paused

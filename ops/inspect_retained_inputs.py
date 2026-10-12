@@ -18,7 +18,7 @@ from pathlib import Path, PurePosixPath
 import zipfile
 
 from ops import _r2_inventory as _helpers
-from pipeline.common.report import annotate as _annotate
+from ingestion.common.report import annotate as _annotate
 
 HELPERS = vars(_helpers)
 SOURCES = ("opendata_org", "gus_bdl", "world_bank_wdi", "gus_dbw")
