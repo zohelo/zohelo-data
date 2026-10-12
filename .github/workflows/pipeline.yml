@@ -14,7 +14,7 @@ on:
         required: true
         type: choice
         default: eurostat
-        options: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, opendata_org, platform]
+        options: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, opendata_org, nbp, gleif, mf_biala_lista, gugik_prg, gus_teryt, platform]
       run:
         description: Run
         required: true

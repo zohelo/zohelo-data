@@ -1,26 +1,15 @@
-.user.yml
-logs/
-target/
+# Python
 **/__pycache__/
 *.pyc
+.venv/
+
+# Node and builds
 node_modules/
 dist/
-.venv/
-.local/
-/pip-*/
+
+# Local environment and data
 .env
 .env.*
 !.env.example
 *.duckdb
 *.duckdb.wal
-dbt_packages/
-portal/public/docs/
-campaign-summary.json
-*-summary.json
-data/
-scratch/
-*.conf
-.wireguard/
-.devcontainer/wireguard/
-.agents/
-ORIGINAL_REQUEST.md

@@ -1,0 +1,5 @@
+# Portal activities the Pipeline may run (source "platform"); owner authorization.
+#   serving.refresh_index   rebuild the portal file index from live R2 (publish_index.py);
+#                           also runs automatically after Pipeline runs that write data
+activities: [serving.refresh_index]
+schedule: null   # manual only; a schedule needs owner approval

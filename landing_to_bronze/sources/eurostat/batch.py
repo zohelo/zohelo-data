@@ -4,7 +4,7 @@
 Two Landing layouts are read:
 - the old campaign layout (``01_landing/eurostat/bulk/raw-<sha>.bin``), found through the
   old campaign checkpoint; historical Drive IDs resolve through the migration index;
-- the current layout written by ``eurostat: load new versions to Landing``
+- the current layout written by the eurostat ``landing.extract`` activity
   (``01_landing/eurostat/bulk/data/{CODE}/{version}.tsv.gz`` + ``.receipt.json``).
 
 This is an R2-only, bounded worker. It never calls Eurostat and never removes Landing.
