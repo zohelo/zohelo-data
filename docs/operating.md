@@ -14,18 +14,18 @@ Every source uses the same activity names; a source implements the ones it needs
 
 | Activity | Code | Meaning |
 |---|---|---|
-| `landing.inspect` | `ingestion/sources/<s>/` | source catalogue vs Landing: missing / changed / current; no Landing writes |
-| `landing.extract` | `ingestion/sources/<s>/` | download missing or changed entities with receipts; never overwrites |
-| `landing.verify` | `ingestion/sources/<s>/` | Landing integrity and remaining gaps |
-| `bronze.load` | `landing_to_bronze/sources/<s>/` | incremental Landing → Bronze; rejections recorded |
-| `bronze.verify` | `landing_to_bronze/common/lineage.py` | every Landing file is in Bronze or rejected with a reason |
-| `landing.archive` | `landing_to_bronze/common/archive.py` | copy Bronze-accepted Landing files to Archive |
+| `landing.inspect` | `ingestion/to_landing/<s>/` | source catalogue vs Landing: missing / changed / current; no Landing writes |
+| `landing.extract` | `ingestion/to_landing/<s>/` | download missing or changed entities with receipts; never overwrites |
+| `landing.verify` | `ingestion/to_landing/<s>/` | Landing integrity and remaining gaps |
+| `bronze.load` | `ingestion/to_bronze/<s>/` | incremental Landing → Bronze; rejections recorded |
+| `bronze.verify` | `ingestion/common/lineage.py` | every Landing file is in Bronze or rejected with a reason |
+| `landing.archive` | `ingestion/common/archive.py` | copy Bronze-accepted Landing files to Archive |
 | `silver_gold.promote` | `warehouse/passthrough/` | platform: Bronze → Silver → Gold pass-through |
 | `serving.refresh_index` | `portal/publish_index.py` | platform: rebuild the portal file index |
 
 A Pipeline run is one activity or `landing → bronze (all steps)`; the portal index
 refresh is added automatically after writing activities. An activity runs only when
-it is implemented and listed under `activities:` in the source's `source.yaml`
+it is implemented and listed under `activities:` in `ingestion/sources/<source>.yaml`
 (platform activities: `warehouse/warehouse.yaml`, `portal/portal.yaml`). Activities are idempotent and resume from durable
 state, so a rerun is always safe. Results are published as run annotations and the
 job summary.

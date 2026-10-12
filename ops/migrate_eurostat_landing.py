@@ -29,7 +29,7 @@ import threading
 import time
 
 from ingestion.common.report import annotate, step_summary
-from ingestion.sources.eurostat.extract import R2, version_token
+from ingestion.to_landing.eurostat.extract import R2, version_token
 
 OLD_PREFIX = "01_landing/eurostat/bulk/"
 CURRENT_PREFIX = OLD_PREFIX + "data/"

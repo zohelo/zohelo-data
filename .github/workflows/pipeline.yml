@@ -2,7 +2,7 @@ name: Pipeline
 
 # The fixed dataflow: one job per activity, in dataflow order. A run is a source plus
 # a run type; run.py turns it into the list of activities and refuses any
-# activity that is not implemented or not authorized in ingestion/sources/<source>/source.yaml.
+# activity that is not implemented or not authorized in ingestion/sources/<source>.yaml.
 # This file changes only when the dataflow changes. Ad-hoc work goes to ops.yml.
 # Manual dispatch only; schedules need owner approval.
 
@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       source:
-        description: Source (ingestion/sources/<source>/source.yaml); platform for silver/gold and serving
+        description: Source (ingestion/sources/<source>.yaml); platform for silver/gold and serving
         required: true
         type: choice
         default: eurostat

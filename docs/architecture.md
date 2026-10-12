@@ -9,8 +9,10 @@ decision.
 
 | Stage | Repository | Storage |
 |---|---|---|
-| Source → Landing | `ingestion/sources/<source_system>/` (`source.yaml` + code), shared `ingestion/common/`, retired code `ingestion/legacy/` | `zohelo-landing-prod/01_landing/` |
-| Landing → Bronze | `landing_to_bronze/sources/<source_system>/`, shared `landing_to_bronze/common/` (lineage, archive) | Iceberg `bronze`, `05_archive/` |
+| Source configuration | `ingestion/sources/<source_system>.yaml` (extraction strategy, authorized activities) | — |
+| Source → Landing | `ingestion/to_landing/<source_system>/` | `zohelo-landing-prod/01_landing/` |
+| Landing → Bronze | `ingestion/to_bronze/<source_system>/` | Iceberg `bronze`, `05_archive/` |
+| Shared ingestion code | `ingestion/common/` (reporting, lineage, archive); retired code `ingestion/legacy/` | — |
 | Bronze → Silver → Gold, dimensional model, semantic layer | `warehouse/` (`warehouse.yaml`) | Iceberg `silver`, `gold` |
 | Data catalog and lineage | generated from `warehouse/`, shown in the portal | — |
 | Serving | `portal/` (`app/` portal, `worker/` R2 read API, `publish_index.py`, `portal.yaml`) | `06_control/portal_index/` |

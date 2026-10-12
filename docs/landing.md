@@ -6,7 +6,7 @@ how it moves on to Bronze and Archive.
 ## Extraction strategy
 
 Decide per source, in this order, and record the decision in
-`ingestion/sources/<source_system>/source.yaml` (`extraction:`):
+`ingestion/sources/<source_system>.yaml` (`extraction:`):
 
 1. **Bulk feature** — the source offers a dedicated bulk/full download. Always the
    target for the initial load.
@@ -54,7 +54,7 @@ until they are copied into this layout.
 
 ## Landing → Bronze → Archive
 
-- Bronze (`landing_to_bronze/`) reads verified Landing files, keeps the source's
+- Bronze (`ingestion/to_bronze/`) reads verified Landing files, keeps the source's
   meaning and grain and adds provenance (Landing key, SHA-256). Checkpoint: the
   Landing SHA-256 is in the Bronze table. Files the decoder rejects are recorded with
   a reason, never dropped silently.

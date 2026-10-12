@@ -8,7 +8,7 @@ from __future__ import annotations
 
 
 def _extract(mode: str, p) -> int:
-    from ingestion.sources.eurostat import extract
+    from ingestion.to_landing.eurostat import extract
     args = ["--mode", mode, "--dataset-filter", p.filter,
             "--parallel-downloads", str(p.parallel_downloads)]
     if mode == "load":

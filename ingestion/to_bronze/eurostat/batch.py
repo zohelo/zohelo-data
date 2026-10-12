@@ -36,7 +36,7 @@ from pyiceberg.table import TableProperties
 from pyiceberg.typedef import Record
 import requests
 
-from landing_to_bronze.sources.eurostat.decode import (
+from ingestion.to_bronze.eurostat.decode import (
     EurostatBulkDecodeError,
     decode_full_distribution,
     decode_landing_distribution,
