@@ -1,0 +1,240 @@
+name: Pipeline
+
+# The fixed dataflow: one job per activity, in dataflow order. A run is a source plus
+# a run type; pipeline/run.py turns it into the list of activities and refuses any
+# activity that is not implemented or not authorized in config/sources.yaml.
+# This file changes only when the dataflow changes. Ad-hoc work goes to ops.yml.
+# Manual dispatch only; schedules need owner approval.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Source (config/sources.yaml); platform for silver/gold and serving
+        required: true
+        type: choice
+        default: eurostat
+        options: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, opendata_org, platform]
+      run:
+        description: Run
+        required: true
+        type: choice
+        default: "landing: inspect"
+        options:
+          - "landing: inspect"
+          - "landing: extract"
+          - "landing: verify"
+          - "bronze: load"
+          - "bronze: verify"
+          - "archive: copy Bronze-proven Landing"
+          - "landing → bronze (all steps)"
+          - "silver/gold: promote"
+          - "serving: refresh portal index"
+      filter:
+        description: "Optional item filter: dataset codes or globs, comma separated (e.g. nama_10_*)"
+        required: false
+        default: ""
+      max_items:
+        description: "landing extract: max items per parallel job (0 = all)"
+        required: false
+        default: "0"
+      parallel_jobs:
+        description: "landing extract: parallel jobs, each a fixed hash slice of items (1-8)"
+        required: false
+        default: "1"
+      parallel_downloads:
+        description: "landing extract: concurrent downloads per job (1-8)"
+        required: false
+        default: "4"
+
+permissions:
+  contents: read
+
+concurrency:
+  # One writer per source; read-only runs get their own group and never wait behind it.
+  group: "zohelo-pipeline-${{ inputs.source }}${{ (inputs.run == 'landing: inspect' || inputs.run == 'landing: verify' || inputs.run == 'bronze: verify') && '-read' || '' }}"
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+  R2_DATA_CATALOG_TOKEN: ${{ secrets.R2_DATA_CATALOG_TOKEN }}
+  R2_CATALOG_URI: ${{ vars.R2_CATALOG_URI }}
+  R2_WAREHOUSE: ${{ vars.R2_WAREHOUSE }}
+  CLOUDFLARE_R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+  CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+  R2_S3_ENDPOINT: ${{ vars.R2_S3_ENDPOINT }}
+  R2_LANDING_BUCKET: ${{ vars.R2_LANDING_BUCKET }}
+  R2_LAKEHOUSE_BUCKET: ${{ vars.R2_LAKEHOUSE_BUCKET }}
+
+jobs:
+  plan:
+    name: "plan · ${{ inputs.source }} · ${{ inputs.run }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      activities: ${{ steps.plan.outputs.activities }}
+      extract_matrix: ${{ steps.plan.outputs.extract_matrix }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version-file: .python-version
+      - name: Plan activities
+        id: plan
+        env:
+          PYTHONPATH: .
+          SOURCE: ${{ inputs.source }}
+          RUN: ${{ inputs.run }}
+          FILTER: ${{ inputs.filter }}
+          MAX_ITEMS: ${{ inputs.max_items }}
+          PARALLEL_JOBS: ${{ inputs.parallel_jobs }}
+          PARALLEL_DOWNLOADS: ${{ inputs.parallel_downloads }}
+        run: |
+          set -euo pipefail
+          case "$MAX_ITEMS" in ''|*[!0-9]*) echo "max_items must be a non-negative integer" >&2; exit 2 ;; esac
+          case "$PARALLEL_DOWNLOADS" in 1|2|3|4|5|6|7|8) ;; *) echo "parallel_downloads must be 1-8" >&2; exit 2 ;; esac
+          case "$PARALLEL_JOBS" in 1|2|3|4|5|6|7|8) ;; *) echo "parallel_jobs must be 1-8" >&2; exit 2 ;; esac
+          if [ -n "$FILTER" ] && ! printf '%s' "$FILTER" | grep -Eq '^[A-Za-z0-9_.$*?, -]*$'; then
+            echo "filter may contain only codes, globs, commas and spaces" >&2; exit 2
+          fi
+          python -m pip install --quiet pyyaml
+          plan="$(python -m pipeline.run plan --source "$SOURCE" --run "$RUN" --parallel-jobs "$PARALLEL_JOBS")"
+          echo "$plan"
+          echo "activities=$(jq -c .activities <<<"$plan")" >> "$GITHUB_OUTPUT"
+          echo "extract_matrix=$(jq -c .extract_matrix <<<"$plan")" >> "$GITHUB_OUTPUT"
+          echo "::notice title=pipeline plan::$(jq -c '{source: env.SOURCE, run: env.RUN, activities}' <<<"$plan")"
+
+  landing-inspect:
+    needs: [plan]
+    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'landing.inspect') }}"
+    name: landing.inspect
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/activity
+        with:
+          source: ${{ inputs.source }}
+          activity: landing.inspect
+          filter: ${{ inputs.filter }}
+
+  landing-extract:
+    needs: [plan, landing-inspect]
+    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'landing.extract') }}"
+    name: "landing.extract · job ${{ matrix.job }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        job: ${{ fromJSON(needs.plan.outputs.extract_matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/activity
+        with:
+          source: ${{ inputs.source }}
+          activity: landing.extract
+          filter: ${{ inputs.filter }}
+          max-items: ${{ inputs.max_items }}
+          parallel-jobs: ${{ inputs.parallel_jobs }}
+          job-index: ${{ matrix.job }}
+          parallel-downloads: ${{ inputs.parallel_downloads }}
+          budget-minutes: "330"
+
+  landing-verify:
+    needs: [plan, landing-extract]
+    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'landing.verify') }}"
+    name: landing.verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/activity
+        with:
+          source: ${{ inputs.source }}
+          activity: landing.verify
+          filter: ${{ inputs.filter }}
+
+  bronze-load:
+    needs: [plan, landing-verify]
+    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'bronze.load') }}"
+    name: bronze.load
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/activity
+        with:
+          source: ${{ inputs.source }}
+          activity: bronze.load
+          budget-minutes: "300"
+
+  bronze-verify:
+    needs: [plan, bronze-load]
+    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'bronze.verify') }}"
+    name: bronze.verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/activity
+        with:
+          source: ${{ inputs.source }}
+          activity: bronze.verify
+
+  landing-archive:
+    needs: [plan, bronze-verify]
+    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'landing.archive') }}"
+    name: landing.archive
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/activity
+        with:
+          source: ${{ inputs.source }}
+          activity: landing.archive
+
+  silver-gold-promote:
+    needs: [plan, landing-archive]
+    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'silver_gold.promote') }}"
+    name: silver_gold.promote
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/activity
+        with:
+          source: ${{ inputs.source }}
+          activity: silver_gold.promote
+
+  serving-refresh-index:
+    needs: [plan, silver-gold-promote]
+    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'serving.refresh_index') }}"
+    name: serving.refresh_index
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/activity
+        with:
+          source: ${{ inputs.source }}
+          activity: serving.refresh_index

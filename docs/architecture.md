@@ -74,11 +74,12 @@ Two storage modes are supported:
 - **full-distribution campaigns** — large native objects through
   `BulkR2RawStore`, with campaign/control state in R2.
 
-The **1 · Ingest → Landing** workflow exposes only currently authorized manual
-operations: `platform: R2 connectivity check`, `eurostat: coverage check (dry run)`
-and `eurostat: load new versions to Landing`. The paused API-incremental and
-full-file campaign entrypoints remain in the code without a menu entry. It has no
-schedule.
+The **Pipeline** workflow runs only activities authorized in
+`config/sources.yaml` (today: Eurostat Landing and Bronze activities, WDI
+`bronze.verify`, platform promotion and portal index). The paused API-incremental
+and full-file campaign entrypoints (`pipeline/common/run_api_campaign.py`,
+`pipeline/common/run_full_file_campaign.py`) remain in the code without an
+activity. There is no schedule.
 
 Optional GUS BDL/DBW API credentials are supplied only as transport headers and
 are never written into durable request/receipt state.
@@ -116,13 +117,14 @@ release-folder architecture.
 
 Only these workflows are operational:
 
-1. `ingestion.yml` — **1 · Ingest → Landing**: manual R2 Landing loads.
-2. `transform.yml` — **2 · Transform → Bronze / Silver / Gold**: R2/Iceberg
-   transformations, reconciliation and bounded maintenance.
-3. `deploy-portal.yml` — **3 · Deploy portal**: internal portal deployment and
-   R2 portal index.
+1. `pipeline.yml` — **Pipeline**: the dataflow, one job per activity
+   (Landing inspect → extract → verify → Bronze load → verify → archive, plus
+   platform Silver/Gold promotion and portal index refresh).
+2. `ops.yml` — **Ops · ad-hoc**: one script from `ops/` per run.
+3. `deploy-portal.yml` — **Deploy portal**: internal portal deployment and R2
+   portal index.
 
-There are no repository regression-test workflows and no scheduled ingestion.
+There are no repository regression-test workflows and no scheduled runs.
 
 ## Recovery and safety
 
