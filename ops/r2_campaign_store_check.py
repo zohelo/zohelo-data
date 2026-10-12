@@ -10,7 +10,7 @@ import urllib.request
 import boto3
 from botocore.config import Config
 
-from pipeline.common.source_campaign_store import R2CampaignStore
+from ingestion.legacy.engine.source_campaign_store import R2CampaignStore
 
 
 def req(name: str) -> str:

@@ -1,0 +1,16 @@
+source_system: eurostat
+description: Eurostat data distributions from the bulk download (Files API); Comext excluded
+
+# Extraction strategy (docs/landing.md): source bulk feature → bulk workaround → API.
+extraction:
+  initial: bulk                         # official bulk download, one gzip TSV per dataset
+  production: snapshot                  # every file is a complete dataset version
+  incremental_policy: changed_since_last  # inventory "last data change" vs Landing
+  schedule: null                        # manual only; a schedule needs owner approval
+
+landing: 01_landing/eurostat/
+bronze: [bronze.eurostat_full_observations]
+control: [06_control/eurostat_bulk_landing/, 06_control/eurostat_bulk_bronze/]
+
+# Activities the Pipeline may run (owner authorization).
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive]

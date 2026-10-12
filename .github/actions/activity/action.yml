@@ -1,8 +1,8 @@
 name: Run pipeline activity
-description: Install the pipeline's Python dependencies and run one activity with pipeline/run.py.
+description: Install the pipeline's Python dependencies and run one activity with run.py.
 inputs:
   source:
-    description: Source id from config/sources.yaml, or platform
+    description: Source id from ingestion/sources/<source>/source.yaml, or platform
     required: true
   activity:
     description: Activity name, e.g. landing.extract
@@ -49,7 +49,7 @@ runs:
         PARALLEL_DOWNLOADS: ${{ inputs.parallel-downloads }}
         BUDGET_MINUTES: ${{ inputs.budget-minutes }}
       run: |
-        python -m pipeline.run activity --source "$SOURCE" --activity "$ACTIVITY" \
+        python run.py activity --source "$SOURCE" --activity "$ACTIVITY" \
           --filter "$FILTER" --max-items "$MAX_ITEMS" --parallel-jobs "$PARALLEL_JOBS" \
           --job-index "$JOB_INDEX" --parallel-downloads "$PARALLEL_DOWNLOADS" \
           --budget-minutes "$BUDGET_MINUTES"
