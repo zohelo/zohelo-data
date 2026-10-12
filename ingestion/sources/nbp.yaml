@@ -10,5 +10,7 @@ extraction:
 landing: 01_landing/nbp/   # empty: raw files were archived after the Bronze build
 archive: 05_archive/nbp/
 bronze: [bronze.nbp_exchange_rates_table_a, bronze.nbp_exchange_rates_table_b, bronze.nbp_exchange_rates_table_c, bronze.nbp_gold_prices]
+silver: [silver.nbp_change_events, silver.nbp_exchange_rates_table_a, silver.nbp_exchange_rates_table_b, silver.nbp_exchange_rates_table_c, silver.nbp_gold_prices]
+gold: [gold.dim_commodity, gold.dim_currency, gold.dim_date, gold.dim_source_table, gold.fact_fx_quotes, gold.fact_gold_prices]
 
 activities: []   # paused; Bronze/Silver/Gold were built by retired code

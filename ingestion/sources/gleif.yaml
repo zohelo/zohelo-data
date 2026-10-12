@@ -10,5 +10,7 @@ extraction:
 landing: 01_landing/gleif/   # empty: raw files were archived after the Bronze build
 archive: 05_archive/gleif/
 bronze: [bronze.gleif_lei2, bronze.gleif_relationship_records, bronze.gleif_reporting_exceptions]
+silver: [silver.gleif_lei2, silver.gleif_relationship_records, silver.gleif_reporting_exceptions]
+gold: [gold.dim_corporate_entity, gold.fact_corporate_relationships, gold.fact_corporate_reporting_exceptions]
 
 activities: []   # paused; Bronze/Silver/Gold were built by retired code

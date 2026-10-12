@@ -10,5 +10,7 @@ extraction:
 landing: 01_landing/mf_biala_lista/   # empty: raw files were archived after the Bronze build
 archive: 05_archive/mf_biala_lista/
 bronze: [bronze.biala_lista_header, bronze.biala_lista_masks, bronze.biala_lista_taxpayers]
+silver: [silver.biala_lista_header, silver.biala_lista_masks, silver.biala_lista_taxpayers]
+gold: [gold.dim_vat_header, gold.dim_vat_masks, gold.dim_vat_taxpayer_account]
 
 activities: []   # paused; Bronze/Silver/Gold were built by retired code
