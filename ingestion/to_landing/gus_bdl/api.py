@@ -45,6 +45,10 @@ class Bdl:
             time.sleep(min(delay, 60))
 
     def get(self, path: str, **params: Any) -> dict:
+        return self.get_raw(path, **params)[2]
+
+    def get_raw(self, path: str, **params: Any) -> tuple[str, bytes, dict]:
+        """(final URL, exact response bytes, parsed JSON) of one request."""
         params.setdefault("format", "json")
         for attempt in range(8):
             self._wait()
@@ -63,7 +67,7 @@ class Bdl:
                 time.sleep(2 ** attempt * 2)
                 continue
             response.raise_for_status()
-            return response.json()
+            return response.url, response.content, response.json()
         raise RuntimeError(f"BDL API kept failing: {path} {params}")
 
     def pages(self, path: str, **params: Any) -> Iterator[dict]:

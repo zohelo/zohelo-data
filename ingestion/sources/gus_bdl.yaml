@@ -18,4 +18,4 @@ bronze: [bronze.bdl_subgroup_observations, bronze.bdl_rejected_files, bronze.bdl
 silver: [silver.bdl_dictionary_entries, silver.bdl_observation_revisions, silver.bdl_observations, silver.bdl_subjects, silver.bdl_units, silver.bdl_variables]
 gold: [gold.dim_bdl_period, gold.dim_bdl_subject, gold.dim_bdl_unit, gold.dim_bdl_variable, gold.fact_bdl_observations, gold.mart_bdl_coverage]
 
-activities: [landing.inspect, bronze.load]   # website extraction and API refresh follow
+activities: [landing.inspect, landing.extract, bronze.load]   # landing.extract = API metadata (variables, units); website extraction and API data refresh follow
