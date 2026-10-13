@@ -26,7 +26,10 @@ for target in targets:
     if r.content[:2] == b"PK":
         z = zipfile.ZipFile(io.BytesIO(r.content))
         info["members"] = [(i.filename, i.file_size) for i in z.infolist()][:4]
-        first = z.read(z.infolist()[0])[:300]
-        info["first"] = first.decode("utf-8", "replace")
+        csv_member = [i for i in z.infolist() if i.filename.endswith(".csv")][0]
+        raw = z.read(csv_member)
+        info = {"bytes": info["bytes"], "csv_head": raw[:2].hex(), "header": raw.split(b"\n", 2)[0].decode("utf-8-sig", "replace")[:300],
+                "row2": raw.split(b"\n", 2)[1].decode("utf-8", "replace")[:200],
+                "xml_date": re.findall(rb'date="([0-9-]+)"', z.read([i for i in z.infolist() if i.filename.endswith(".xml")][0])[:400])}
     out["files"][target.split("$")[-1]] = info
 annotate("notice", "teryt probe", out)
