@@ -10,3 +10,21 @@ models:
         tests: [not_null, unique]
       - name: member_type
         tests: [{accepted_values: {arguments: {values: ['day', 'not_applicable', 'unknown']}}}]
+  - name: dim_currency
+    description: >-
+      Conformed currency, v1 from NBP quotations (code, latest Polish name, NBP tables,
+      first/last quote) plus PLN and special members _Z (not monetary) and _X (other).
+    columns:
+      - name: currency_code
+        tests: [not_null, unique]
+  - name: fact_fx_rate
+    description: >-
+      Exchange rates: PLN per 1 unit of currency_code, by date, rate type (mid/bid/ask)
+      and source table (NBP A/B/C). Keys: date_key → dim_date, currency_code → dim_currency.
+    columns:
+      - name: date_key
+        tests: [not_null, {relationships: {arguments: {to: ref('dim_date'), field: date_key}}}]
+      - name: currency_code
+        tests: [not_null, {relationships: {arguments: {to: ref('dim_currency'), field: currency_code}}}]
+      - name: rate
+        tests: [not_null]
