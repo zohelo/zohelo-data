@@ -1,26 +1,33 @@
-"""Probe the PRG national package: HEAD, then download once and list ZIP members (no R2 writes)."""
-import io
+"""Probe PRG layers with DuckDB spatial: fields, rows, CRS, geometry types (no R2 writes)."""
+import tempfile
+import time
 import zipfile
+from pathlib import Path
 
+import duckdb
 import requests
 
 from ingestion.common.report import annotate
 
 UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
-URLS = ["https://opendata.geoportal.gov.pl/prg/granice/00_jednostki_administracyjne.zip",
-        "https://opendata.geoportal.gov.pl/prg/granice/"]
+URL = "https://opendata.geoportal.gov.pl/prg/granice/00_jednostki_administracyjne.zip"
 out = {}
-s = requests.Session()
-s.headers["User-Agent"] = UA
-for url in URLS:
-    r = s.head(url, timeout=60, allow_redirects=True)
-    out[url] = {"status": r.status_code, "final": r.url, "length": r.headers.get("Content-Length"),
-                "modified": r.headers.get("Last-Modified"), "etag": r.headers.get("ETag"),
-                "type": r.headers.get("Content-Type"), "ranges": r.headers.get("Accept-Ranges")}
-listing = s.get(URLS[1], timeout=60)
-out["listing"] = listing.text[:1500] if listing.ok else listing.status_code
-r = s.get(URLS[0], timeout=900)
-z = zipfile.ZipFile(io.BytesIO(r.content))
-out["members"] = [(i.filename, i.file_size) for i in z.infolist()][:40]
-out["bytes"] = len(r.content)
+with tempfile.TemporaryDirectory() as t:
+    zpath = Path(t) / "prg.zip"
+    started = time.monotonic()
+    with requests.get(URL, headers={"User-Agent": UA}, stream=True, timeout=900) as r, zpath.open("wb") as f:
+        for block in r.iter_content(8 << 20):
+            f.write(block)
+    out["download_s"] = round(time.monotonic() - started)
+    zipfile.ZipFile(zpath).extractall(t)
+    con = duckdb.connect()
+    con.execute("INSTALL spatial; LOAD spatial;")
+    for shp in sorted(Path(t).glob("*.shp")):
+        started = time.monotonic()
+        cols = con.execute("DESCRIBE SELECT * FROM ST_Read(?)", [str(shp)]).fetchall()
+        n, types = con.execute("SELECT count(*), list(DISTINCT ST_GeometryType(geom)) FROM ST_Read(?)", [str(shp)]).fetchone()
+        out[shp.stem] = {"rows": n, "geom_types": [str(x) for x in types],
+                         "fields": [f"{c[0]}:{c[1]}" for c in cols if c[0] != "geom"],
+                         "read_s": round(time.monotonic() - started)}
+    out["prj"] = next(Path(t).glob("A01*.prj")).read_text()[:120]
 annotate("notice", "prg probe", out)
