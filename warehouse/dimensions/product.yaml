@@ -1,0 +1,24 @@
+name: product
+kind: conformed
+status: draft
+description: Products by activity (statistical product classification) — CPA and the Polish PKWiU, with versions and correspondences to NACE/PKD and to HS/CN.
+grain: one row = one code of one classification version (scheme, version, code)
+key: {surrogate: product_key, natural: [scheme, version, code]}
+identifiers: [CPA code, PKWiU code, PRODCOM code]
+standards:
+  - {name: CPA, owner: Eurostat, version: "2.1 (2015); 2.2 (unverified)", url: "https://ec.europa.eu/eurostat/web/cpa", verified: false}
+  - {name: PKWiU, owner: GUS, version: "2015; 2025 (unverified)", url: "https://stat.gov.pl/Klasyfikacje/", verified: false}
+  - {name: PRODCOM list, owner: Eurostat, version: yearly, url: "https://ec.europa.eu/eurostat/web/prodcom", verified: false}
+hierarchy: [section, division, group, class, category, subcategory]
+versioning: {type: versioned_codelist, correspondences: "CPA↔PKWiU, CPA↔NACE (activity.yaml), CPA↔CN/HS (trade_product.yaml)"}
+special_members: {_T: all products, _Z: not applicable}
+attributes: [{name: label_en / label_pl, source: Eurostat / GUS}, {name: level, source: classification}]
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "cpa2_1 / prodcom dimensions in some datasets"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "PKWiU groups as text labels (rare)"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "PKWiU dictionaries (unverified)"}
+  not_used: [world_bank_wdi, nbp, gleif, mf_biala_lista, gus_teryt, gugik_prg, opendata_org]
+  inventory: GL-002, 019, 040 (lower bound)
+mapping_notes: []
+open_questions: ["Current CPA and PKWiU versions aligned with NACE 2.1 / PKD 2025."]

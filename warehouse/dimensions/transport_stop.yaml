@@ -1,0 +1,25 @@
+name: transport_stop
+kind: entity
+status: draft
+description: Transport access points — public-transport stops and stations (GTFS), rail stations, airports, sea ports — with feed-scoped and international identifiers.
+grain: one row = one stop/station version (SCD2)
+key: {surrogate: transport_stop_key, natural: "(scheme, id): (GTFS feed, stop_id), UIC station code, IATA/ICAO airport code, UN/LOCODE port"}
+identifiers: [GTFS stop_id (feed-scoped), UIC station code, IATA, ICAO, UN/LOCODE]
+standards:
+  - {name: GTFS Schedule, owner: MobilityData, version: current, url: "https://gtfs.org/", verified: false}
+  - {name: UN/LOCODE, owner: UNECE, version: semi-annual, url: "https://unece.org/trade/uncefact/unlocode", verified: false}
+  - {name: ICAO / IATA location codes, owner: ICAO / IATA, version: current, url: "https://www.icao.int/", verified: false}
+hierarchy: [station / parent_station, stop / platform]
+versioning: {type: scd2, rule: "feed version dates; stop_id can be reused across feed versions — validate by location"}
+special_members: {_Z: not applicable, _U: unknown}
+attributes:
+  - {name: stop_type, description: "bus/tram stop, rail station, airport, port", source: source}
+  - {name: name / lat / lon, source: GTFS / register}
+  - {name: geography_key (gmina via point-in-polygon on PRG vintage), source: derived (gugik_prg)}
+  - {name: operator_organisation_key, source: feed agency}
+used_by:
+  platform: {}
+  not_used: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, gleif, mf_biala_lista, gugik_prg, gus_teryt, opendata_org]
+  inventory: PL-ENV-025…032
+mapping_notes: []
+open_questions: ["National stop register (if any) as the conformed key for Polish GTFS feeds — unverified."]

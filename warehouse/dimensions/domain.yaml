@@ -1,0 +1,91 @@
+name: domain
+kind: conformed
+status: draft
+description: >-
+  Statistical subject domain of an indicator or dataset, on the UN Classification of
+  Statistical Activities (CSA 2.1). Used for discovery: each indicator has one primary
+  area and optional secondary areas; SDG goal and COFOG are separate tags; provider
+  native themes map through a crosswalk.
+grain: one row = one CSA member (domain, area or subarea) or one local extension
+key: {surrogate: domain_code, natural: [domain_code]}
+identifiers: ["CSA 2.1 code: 1 (domain), 101 (area), 20101 (subarea)", "local extension: <CSA code>.<nn>"]
+standards:
+  - {name: Classification of Statistical Activities (CSA 2.1), owner: UN Statistical Commission / UNSD, version: "2.1 (UNSC 2026)", url: "https://unstats.un.org/unsd/classifications/CSA2 (CSA2_Structure.xlsx)", verified: false}
+hierarchy: [L1 domain, L2 area, L3 subarea, L4 local extension]
+versioning: {type: versioned_codelist}
+members:
+  # data domains 1–5 only; L2 list per owner research (13 Oct 2026), codes to verify against CSA2_Structure.xlsx
+  "1": Demographic and social statistics
+  "101": Population
+  "102": Migration
+  "103": Labour
+  "104": Education
+  "105": Health
+  "106": Income and consumption
+  "107": Social protection
+  "108": Human settlements and housing
+  "109": Culture (incl. media, sport)
+  "110": Time-use
+  "2": Economic statistics
+  "201": Macroeconomic accounts
+  "202": Business
+  "203": Sectoral statistics
+  "20301": Agriculture, forestry, fishing
+  "20302": Energy
+  "20303": Mining, manufacturing, construction
+  "20304": Transport
+  "20305": Tourism
+  "20306": Banking, insurance
+  "20307": Wholesale and retail
+  "204": International trade
+  "205": Prices
+  "206": Science, technology and innovation
+  "3": Environment statistics
+  "301-306": Environment areas (names to load from CSA2_Structure.xlsx)
+  "4": Governance statistics
+  "401-408": Governance areas (40801 crime; names to load)
+  "5": Cross-cutting statistics
+  "501": Sustainable development
+  "502": Human rights
+  "503": Gender
+  "504": Special population groups
+  "505": Living conditions, poverty
+  "506": Climate change
+  "507": Regional statistics
+  "508": Information society
+  "509": Circular economy
+  "510": Social economy
+  "511": Food security
+  "109.01": Media (local extension — owner decision pending)
+  "109.02": Sport (local extension — owner decision pending)
+special_members: {_Z: not classified (reference data such as registers)}
+attributes:
+  - {name: level, source: CSA}
+  - {name: parent_code, source: CSA}
+  - {name: label_en, source: CSA}
+  - {name: label_pl, source: registry translation}
+  - {name: is_local_extension, source: registry}
+bridges:
+  map_domain__eurostat: "Eurostat TOC theme/folder → CSA area"
+  map_domain__oecd: "OECD OECDCS1 category → CSA area"
+  map_domain__world_bank_wdi: "WDI Topic (first segment, e.g. 'Economic Policy & Debt') → CSA area"
+  map_domain__gus_bdl: "BDL subject K (kategoria) / G (grupa) / P (podgrupa) → CSA area"
+  map_domain__gus_dbw: "DBW area (dziedzina) / PBSSP topic → CSA area"
+  tags: "indicator_tag(indicator_key, scheme SDG|COFOG, code)"
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "TOC hierarchy (table_of_contents) placing each dataset under themes"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "subjects hierarchy K→G→P on every variable"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "area (dziedzina) → variable hierarchy"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "Series.Topic text 'Topic: Subtopic'"}
+    gleif: {inventory: CD-015, expresses_as: "_Z (register)"}
+    mf_biala_lista: {inventory: PLG-011, expresses_as: "_Z (register)"}
+    gus_teryt: {inventory: PLS-007, expresses_as: "_Z (reference data)"}
+    gugik_prg: {inventory: PL-ENV-001, expresses_as: "_Z (reference data)"}
+    nbp: {inventory: PLG-001, expresses_as: "fixed: 205 Prices / 20306 banking (exchange rates) — assigned by registry"}
+    opendata_org: {inventory: null, expresses_as: "_Z (register)"}
+  inventory: every statistical source; the inventory's `domains` column is free text and maps to CSA areas
+mapping_notes: ["Assign one primary area per indicator; secondary areas only when the indicator is explicitly cross-cutting (e.g. 503 Gender)."]
+open_questions:
+  - "Owner decision: local extensions beyond CSA (proposed 109.01 Media, 109.02 Sport; others only on demand)."
+  - Verify all codes and labels against CSA2_Structure.xlsx before seeding.

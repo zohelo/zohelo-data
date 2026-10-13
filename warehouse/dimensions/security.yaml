@@ -1,0 +1,30 @@
+name: security
+kind: entity
+status: draft
+description: Financial instruments (shares, bonds, Treasury debt instruments, ETFs, indices, benchmarks) with ISIN as conformed key, venue tickers in the cross-reference and the issuer as a link to organisation.
+grain: one row = one instrument version (SCD2)
+key:
+  surrogate: security_key
+  durable: security_id
+  natural: "ISIN; else (MIC, ticker) or (source, symbol) for indices and vendor symbols"
+identifiers: [ISIN, ticker (venue-scoped), CFI, FISN, vendor symbol (Stooq, Alpha Vantage …)]
+standards:
+  - {name: ISO 6166 ISIN, owner: ISO / ANNA, version: current, url: "https://www.anna-web.org/", verified: false}
+  - {name: ISO 10962 CFI, owner: ISO, version: "2021 (unverified)", url: "https://www.iso.org/standard/81140.html", verified: false}
+  - {name: ISO 18774 FISN, owner: ISO, version: current, url: "https://www.anna-web.org/", verified: false}
+hierarchy: [instrument class (CFI category), instrument]
+versioning: {type: scd2, rule: "ticker, name, listing status and venue changes are new versions; corporate actions as events"}
+special_members: {_Z: not applicable, _U: unknown instrument}
+attributes:
+  - {name: issuer_organisation_key, source: gleif ISIN↔LEI mapping / GPW / ESPI}
+  - {name: cfi_code / instrument_type, source: ANNA / venue}
+  - {name: currency_code, source: venue}
+  - {name: listing (bridge to market with dates), source: venue}
+  - {name: maturity_date / coupon, description: debt instruments, source: MF / GPW}
+used_by:
+  platform:
+    gleif: {inventory: CD-015, expresses_as: "ISIN↔LEI relationship file (certified mapping; not in current Bronze tables — unverified)"}
+  not_used: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, mf_biala_lista, gugik_prg, gus_teryt, opendata_org]
+  inventory: PLG-008; CD-001…009, 011…013, 015, 026
+mapping_notes: ["Indices and benchmarks (GPW Benchmark, WIBOR/WIRON) have no ISIN in some cases — key by (administrator, code)."]
+open_questions: ["Separate dim for indices/benchmarks if their attributes diverge."]

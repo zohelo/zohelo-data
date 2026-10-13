@@ -1,0 +1,25 @@
+name: trade_product
+kind: conformed
+status: draft
+description: Traded goods classifications — HS, CN, SITC, BEC — with editions and correspondences; the classification edition is part of the key.
+grain: one row = one code of one classification edition (scheme, edition, code)
+key: {surrogate: trade_product_key, natural: [scheme, edition, code]}
+identifiers: [HS 6-digit, CN 8-digit, SITC code, BEC code]
+standards:
+  - {name: Harmonized System (HS), owner: WCO, version: "2017; 2022", url: "https://www.wcoomd.org/en/topics/nomenclature.aspx", verified: false}
+  - {name: Combined Nomenclature (CN), owner: European Commission, version: yearly, url: "https://taxation-customs.ec.europa.eu/customs-4/calculation-customs-duties/customs-tariff/combined-nomenclature_en", verified: false}
+  - {name: SITC Rev. 4, owner: UNSD, version: "4", url: "https://unstats.un.org/unsd/classifications/Econ", verified: false}
+  - {name: BEC Rev. 5, owner: UNSD, version: "5", url: "https://unstats.un.org/unsd/classifications/Econ", verified: false}
+hierarchy: [section, chapter (2), heading (4), subheading (6), CN subheading (8)]
+versioning: {type: versioned_codelist, correspondences: "HS edition↔edition, CN year↔year, HS↔SITC↔BEC, CN↔CPA"}
+special_members: {_T: all products (TOTAL), _Z: not applicable, _X: confidential / not specified}
+attributes: [{name: label_en, source: WCO / EC / UNSD}, {name: level, source: classification}]
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "sitc06 / hs / cn dimensions in non-Comext trade datasets (ext_*); Comext DS-* out of scope"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "n/a (trade not in BDL, unverified)"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "CN/SITC dictionaries in trade areas (unverified)"}
+  not_used: [world_bank_wdi, nbp, gleif, mf_biala_lista, gus_teryt, gugik_prg, opendata_org]
+  inventory: GL-002, 014, 019, 020 (lower bound)
+mapping_notes: []
+open_questions: []

@@ -53,6 +53,8 @@ details live in [landing.md](landing.md), [architecture.md](architecture.md),
   flags), source codes resolved to labels, channels unified.
 - Gold: conformed dimensions shared by all sources (geography with levels and vintages,
   period, indicator, unit, source, classifications) and facts at their true grain.
+  Design: [model.md](model.md); dimension definitions: `warehouse/dimensions/`. Map the
+  source in each dimension's `used_by` before modelling it.
 - Semantic layer: MetricFlow metrics on Gold. Lineage both ways through dbt.
 
 ## 6. Serving and operations

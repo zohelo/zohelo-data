@@ -1,0 +1,35 @@
+name: dataset
+kind: conformed
+status: draft
+description: The source's unit of publication and versioning (the playbook's "entity") — Eurostat dataset, BDL variable/subject, DBW area, WDI archive, register file — with its version history.
+grain: one row = one dataset version (source_system, dataset_code, source_version)
+key: {surrogate: dataset_key, natural: [source_system, dataset_code, source_version]}
+identifiers: [Eurostat dataset code (e.g. nama_10_gdp), BDL subject/variable id, DBW area id, WDI archive date, GLEIF golden-copy publication, TERYT state date]
+standards:
+  - {name: DCAT-AP dataset/distribution, owner: European Commission (SEMIC), version: "3.x", url: "https://semiceu.github.io/DCAT-AP/", verified: false}
+hierarchy: [source, dataset family / theme, dataset, version]
+versioning: {type: scd2, rule: "one row per source version; is_current flag; Landing SHA-256 and ingestion time as lineage"}
+special_members: {_Z: not applicable}
+attributes:
+  - {name: title_en / title_pl, source: source catalogue}
+  - {name: source_version, description: "source last-update (Eurostat 'last data change', BDL lastUpdate, file date)", source: Landing receipt}
+  - {name: landing_sha256 / ingested_at, source: Landing receipt}
+  - {name: bronze_table, source: config}
+  - {name: dimensions, description: "ordered source dimension ids (e.g. Eurostat series_dimensions)", source: Bronze}
+  - {name: obs_count / period_from / period_to, source: Bronze}
+  - {name: licence_notice, source: source}
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "dataset_id partition + inventory 'last data change'"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "variable / subject with lastUpdate"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "area / variable with update metadata"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "WDI_CSV.zip release (dated object)"}
+    nbp: {inventory: PLG-001, expresses_as: "table type A/B/C/gold × table number/date"}
+    gleif: {inventory: CD-015, expresses_as: "golden copy file (LEI2, RR, REPEX) × publication date"}
+    mf_biala_lista: {inventory: PLG-011, expresses_as: "daily flat file"}
+    gugik_prg: {inventory: PL-ENV-001, expresses_as: "PRG package × edition"}
+    gus_teryt: {inventory: PLS-007, expresses_as: "TERC/SIMC/ULIC file × state date"}
+    opendata_org: {inventory: null, expresses_as: "ZIP archive × category × release (unverified)"}
+  inventory: all sources
+mapping_notes: []
+open_questions: ["Owner decision: does Gold keep all dataset versions (vintages) or only the current one — see docs/model.md."]

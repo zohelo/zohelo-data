@@ -1,0 +1,23 @@
+name: seasonal_adjustment
+kind: conformed
+status: draft
+description: Seasonal and calendar adjustment of a time series per SDMX CL_SEASONAL_ADJUST.
+grain: one row = one adjustment code
+key: {surrogate: seasonal_adjustment_code, natural: [seasonal_adjustment_code]}
+identifiers: [SDMX CL_SEASONAL_ADJUST code]
+standards:
+  - {name: CL_SEASONAL_ADJUST, owner: SDMX, version: current, url: "https://sdmx.org/sdmx_cdcl", verified: false}
+hierarchy: []
+versioning: {type: versioned_codelist}
+members: {N: neither seasonally nor calendar adjusted, S: seasonally adjusted, W: calendar adjusted, Y: seasonally and calendar adjusted, T: trend-cycle (codes unverified)}
+special_members: {_Z: not applicable (annual data), _U: not stated}
+attributes: [{name: label_en / label_pl, source: SDMX / registry}]
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "s_adj dimension: NSA, SA, SCA, CA, TC"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "rare; in short-period variable labels (unverified)"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "in variable labels (unverified)"}
+  not_used: [world_bank_wdi, nbp, gleif, mf_biala_lista, gus_teryt, gugik_prg, opendata_org]
+  inventory: GL-001, GL-003, GL-013, GL-016 and other SDMX providers
+mapping_notes: ["Eurostat NSA→N, SA→S, CA→W, SCA→Y, TC→T (verify)."]
+open_questions: []

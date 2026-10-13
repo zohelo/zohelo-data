@@ -1,0 +1,40 @@
+name: calendar
+kind: conformed
+status: draft
+description: One row per day; the target of date roles (effective date, publication date, as-of date) and of the period→day bridge.
+grain: one row = one calendar day
+key:
+  surrogate: date_key   # yyyymmdd integer
+  natural: [date]
+identifiers: [ISO 8601 date]
+standards:
+  - {name: ISO 8601, owner: ISO, version: "2019", url: "https://www.iso.org/iso-8601-date-and-time-format.html", verified: false}
+hierarchy: [year, quarter, month, day; iso_year, iso_week, day]
+versioning: {type: static}
+special_members:
+  _Z: "date_key 0 — date not applicable"
+  _U: "date_key -1 — date unknown"
+attributes:
+  - {name: year / quarter / month / day_of_month / day_of_week, source: derived}
+  - {name: iso_year / iso_week, source: derived}
+  - {name: is_weekend, source: derived}
+  - {name: is_pl_public_holiday, description: Polish statutory holidays, source: registry seed (unverified list)}
+  - {name: is_nbp_publication_day, description: derived from nbp table A dates, source: nbp}
+  - {name: school_year / fiscal_year, description: Polish school year Sep–Aug; fiscal year = calendar year for PL government, source: registry}
+used_by:
+  platform:
+    nbp: {inventory: PLG-001, expresses_as: "effectiveDate per table (A, B, C); gold price date"}
+    gleif: {inventory: CD-015, expresses_as: "InitialRegistrationDate, LastUpdateDate, NextRenewalDate, relationship period dates"}
+    mf_biala_lista: {inventory: PLG-011, expresses_as: "generation date of the daily flat file (hash input)"}
+    gus_teryt: {inventory: PLS-007, expresses_as: "STAN_NA (state date) per record"}
+    gugik_prg: {inventory: PL-ENV-001, expresses_as: "edition / effective dates of boundary records"}
+    eurostat: {inventory: GL-001, expresses_as: "only via period (daily datasets) and dataset last-update dates"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "only via period; variable lastUpdate"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "only via period; metadata update dates"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "only via period (year)"}
+    opendata_org: {inventory: null, expresses_as: "record dates (unverified)"}
+  inventory: all sources (event, snapshot and publication dates)
+mapping_notes:
+  - Store instants in UTC on facts; a date role uses the source's local date (Europe/Warsaw for Polish publishers).
+open_questions:
+  - Range (proposed 1900-01-01 … 2100-12-31).

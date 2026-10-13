@@ -1,0 +1,25 @@
+name: consumption_purpose
+kind: conformed
+status: draft
+description: Individual consumption by purpose (COICOP 2018 and ECOICOP) for household budgets and consumer prices.
+grain: one row = one code of one version (scheme, version, code)
+key: {surrogate: consumption_purpose_key, natural: [scheme, version, code]}
+identifiers: [COICOP code (e.g. 01.1.1)]
+standards:
+  - {name: COICOP 2018, owner: UNSD, version: "2018", url: "https://unstats.un.org/unsd/classifications/Econ/coicop", verified: false}
+  - {name: ECOICOP, owner: Eurostat, version: "v1; v2 (HICP from 2026, unverified)", url: "https://ec.europa.eu/eurostat/web/hicp", verified: false}
+  - {name: SDMX CL_COICOP, owner: SDMX, version: current, url: "https://sdmx.org/sdmx_cdcl", verified: false}
+hierarchy: [division, group, class, subclass]
+versioning: {type: versioned_codelist, correspondences: "ECOICOP v1↔v2, COICOP 1999↔2018"}
+special_members: {_T: all items (CP00), _Z: not applicable}
+attributes: [{name: label_en / label_pl, source: UNSD / GUS}, {name: special_aggregate, description: "e.g. energy, food incl. alcohol and tobacco", source: eurostat}]
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "coicop / coicop18 dimension in prc_hicp_* and hbs_*"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "CPI groups as text labels (unverified)"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "price index dictionaries (unverified)"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "n/a (CPI total only)"}
+  not_used: [nbp, gleif, mf_biala_lista, gus_teryt, gugik_prg, opendata_org]
+  inventory: none named explicitly (implied by price and household-budget sources GL-001, GL-003, GL-011, PLS-004)
+mapping_notes: []
+open_questions: []

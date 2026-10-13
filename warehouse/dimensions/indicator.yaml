@@ -1,0 +1,54 @@
+name: indicator
+kind: conformed
+status: draft
+description: >-
+  The indicator catalogue: one row per measured concept as published by a source, with
+  everything a person or an AI agent needs to find, understand and query it. Central
+  entry point for discovery in the portal and the semantic layer.
+grain: one row = one source indicator (source_system, source_indicator_code)
+key:
+  surrogate: indicator_key
+  natural: [source_system, source_indicator_code]
+identifiers:
+  - "eurostat: dataset code + fixed non-breakdown dimension codes (e.g. nama_10_gdp|na_item=B1GQ) — rule open"
+  - "gus_bdl: variable id"
+  - "gus_dbw: variable id (zmienna) within area"
+  - "world_bank_wdi: Series Code (e.g. NY.GDP.MKTP.CD)"
+  - "nbp: table + rate type (e.g. A.mid), gold price"
+standards:
+  - {name: SDMX concept / DSD, owner: SDMX, version: "3.0", url: "https://sdmx.org/", verified: false}
+  - {name: DCAT-AP (dataset-level metadata), owner: European Commission (SEMIC), version: "3.x", url: "https://semiceu.github.io/DCAT-AP/", verified: false}
+hierarchy: [domain (domain.yaml) → dataset (dataset.yaml) → indicator]
+versioning: {type: scd2, rule: "new row when definition, unit or available dimensions change; source lastUpdate kept as attribute"}
+special_members: {_Z: not an indicator (entity snapshots and events)}
+attributes:
+  - {name: label_en / label_pl, source: source}
+  - {name: definition, description: source definition text, source: source metadata}
+  - {name: measure_type, description: "stock|flow|rate|ratio|index|count|price|level", source: registry}
+  - {name: default_unit_key, source: unit.yaml}
+  - {name: price_base_key / seasonal_adjustment_key, source: parsed}
+  - {name: frequencies, description: available frequencies, source: data}
+  - {name: available_dimensions, description: "list of conformed and source-specific dimensions with member counts", source: data}
+  - {name: coverage_geography / coverage_period_from / coverage_period_to / observation_count, source: data}
+  - {name: primary_domain / secondary_domains, source: domain.yaml crosswalk}
+  - {name: tags, description: "SDG goal/target/indicator, COFOG", source: registry / source}
+  - {name: dataset_key / source_key, source: dataset.yaml / source.yaml}
+  - {name: licence, source: source.yaml}
+  - {name: last_source_update / last_loaded / freshness_status, source: Landing receipts + data}
+  - {name: aggregation_rule, description: "sum|avg|weighted|none — never default to SUM", source: registry}
+  - {name: same_as, description: "links to equivalent indicators of other sources with relationship exact|close|related and evidence", source: registry}
+  - {name: description_for_ai, description: "short generated summary of meaning, grain and caveats", source: generated, reviewed}
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "dataset + non-breakdown dimensions (na_item, indic_*, unit) — DSD + metabase.txt.gz give dataset → dimension → codes"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "variable (n1..n5 labels, measureUnitId, subjectId, level), /variables/{id} metadata"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "area → variable → cross-section; variable metadata"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "WDISeries.csv: Series Code, Indicator Name, Long definition, Unit of measure, Periodicity, Aggregation method, Topic, License Type"}
+    nbp: {inventory: PLG-001, expresses_as: "fixed small set: FX mid (A, B), FX bid/ask (C), gold price"}
+  not_used: [gleif, mf_biala_lista, gus_teryt, gugik_prg, opendata_org]   # registers: entity snapshots, not indicators
+  inventory: every statistical-observation source
+mapping_notes:
+  - Indicators of different sources are never merged; equivalence is the `same_as` link with evidence.
+open_questions:
+  - Eurostat indicator grain rule (which dimensions belong to the indicator vs the breakdown).
+  - BDL has 172,573 variables (8 Sep 2026) — catalogue size and portal search design.

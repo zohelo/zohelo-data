@@ -1,0 +1,24 @@
+name: sex
+kind: conformed
+status: draft
+description: Sex breakdown per SDMX CL_SEX.
+grain: one row = one sex code
+key: {surrogate: sex_code, natural: [sex_code]}
+identifiers: [SDMX CL_SEX code]
+standards:
+  - {name: CL_SEX, owner: SDMX, version: current, url: "https://sdmx.org/sdmx_cdcl", verified: false}
+hierarchy: [_T, [F, M, _O other, _U unknown]]
+versioning: {type: versioned_codelist}
+members: {F: female, M: male, _O: other, _U: unknown}
+special_members: {_T: total (both sexes), _Z: not applicable}
+attributes: [{name: label_en / label_pl, source: SDMX / registry}]
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "sex dimension: T, M, F (T → _T)"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "text in variable dimension labels n1..n5 ('mężczyźni', 'kobiety', 'ogółem')"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "positional dimension member 'płeć' in a cross-section (unverified)"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "inside indicator code/name (e.g. '.FE', '.MA', 'female')"}
+  not_used: [nbp, gleif, mf_biala_lista, gus_teryt, gugik_prg, opendata_org]
+  inventory: GL-001, 023, 024, 026, 027, 028, 031, 033, 038, 039; PLS-012 (lower bound; most person-aggregate sources)
+mapping_notes: ["WDI: split sex out of the indicator into a breakdown only through a reviewed indicator mapping; otherwise keep _Z and the indicator as is."]
+open_questions: []

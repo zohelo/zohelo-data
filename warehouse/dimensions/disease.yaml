@@ -1,0 +1,25 @@
+name: disease
+kind: conformed
+status: draft
+description: Diseases and causes of death (ICD-10, ICD-11) and the Eurostat/WHO short lists; procedures (ICD-9-CM PL) stay source-specific until a second source uses them.
+grain: one row = one code of one classification version (scheme, version, code)
+key: {surrogate: disease_key, natural: [scheme, version, code]}
+identifiers: [ICD-10 code, ICD-11 code, Eurostat icd10 short-list code]
+standards:
+  - {name: ICD-10, owner: WHO, version: "2019", url: "https://icd.who.int/browse10/2019/en", verified: false}
+  - {name: ICD-11, owner: WHO, version: "2022+", url: "https://icd.who.int/", verified: false}
+  - {name: European Shortlist for Causes of Death, owner: Eurostat, version: current, url: "https://ec.europa.eu/eurostat/web/health/methodology", verified: false}
+hierarchy: [chapter, block, category (3-char), subcategory (4-char)]
+versioning: {type: versioned_codelist, correspondences: "ICD-10↔ICD-11 (WHO mapping tables)"}
+special_members: {_T: all causes, _Z: not applicable, _U: ill-defined / unknown cause}
+attributes: [{name: label_en / label_pl, source: WHO / CSIOZ}]
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "icd10 dimension (short list: A-R_V-Y, C, I …) in hlth_cd_*"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "causes of death groups as text labels (unverified)"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "health dictionaries (unverified)"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "inside indicator names (e.g. communicable diseases)"}
+  not_used: [nbp, gleif, mf_biala_lista, gus_teryt, gugik_prg, opendata_org]
+  inventory: GL-024, 025; PLS-012, 019
+mapping_notes: []
+open_questions: []
