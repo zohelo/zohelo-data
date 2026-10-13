@@ -107,6 +107,7 @@ jobs:
       R2_S3_ENDPOINT: ${{ vars.R2_S3_ENDPOINT }}
       R2_LANDING_BUCKET: ${{ vars.R2_LANDING_BUCKET }}
       R2_LAKEHOUSE_BUCKET: ${{ vars.R2_LAKEHOUSE_BUCKET }}
+      GUS_BDL_API_KEY: ${{ secrets.GUS_BDL_API_KEY }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
