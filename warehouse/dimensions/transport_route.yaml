@@ -1,0 +1,23 @@
+name: transport_route
+kind: entity
+status: draft
+description: Transport lines and network segments — GTFS routes (trips are events), rail lines, national road numbers and road sections (GDDKiA traffic census).
+grain: one row = one route or segment version (SCD2)
+key: {surrogate: transport_route_key, natural: "(scheme, id): (GTFS feed, route_id), (road number, section id, survey edition)"}
+identifiers: [GTFS route_id (feed-scoped), road number + section id (GDDKiA)]
+standards:
+  - {name: GTFS Schedule, owner: MobilityData, version: current, url: "https://gtfs.org/", verified: false}
+hierarchy: [mode, operator/agency or road category, route / road, section]
+versioning: {type: scd2}
+special_members: {_Z: not applicable, _U: unknown}
+attributes:
+  - {name: mode, description: "bus, tram, rail, road", source: GTFS route_type / registry}
+  - {name: short_name / long_name, source: source}
+  - {name: operator_organisation_key, source: feed agency}
+  - {name: length_km / start / end, description: road sections, source: GDDKiA}
+used_by:
+  platform: {}
+  not_used: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, gleif, mf_biala_lista, gugik_prg, gus_teryt, opendata_org]
+  inventory: PL-ENV-022, 023, 028…032
+mapping_notes: ["Schedules (trips/stop_times) and realtime positions are event facts; they never update this dimension."]
+open_questions: []

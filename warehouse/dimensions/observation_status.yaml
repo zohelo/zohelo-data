@@ -1,0 +1,36 @@
+name: observation_status
+kind: conformed
+status: draft
+description: >-
+  Status of an observation value (normal, estimated, provisional, break, missing …) per
+  SDMX CL_OBS_STATUS, plus confidentiality per CL_CONF_STATUS. Missing, suppressed,
+  not applicable and zero are distinct; a missing value is never stored as 0.
+grain: one row = one (obs_status, conf_status) combination
+key: {surrogate: observation_status_key, natural: [obs_status, conf_status]}
+identifiers: [SDMX CL_OBS_STATUS code, SDMX CL_CONF_STATUS code]
+standards:
+  - {name: CL_OBS_STATUS, owner: SDMX, version: "2.3 (per owner research)", url: "https://sdmx.org/sdmx_cdcl", verified: false}
+  - {name: CL_CONF_STATUS, owner: SDMX, version: current, url: "https://sdmx.org/sdmx_cdcl", verified: false}
+hierarchy: [value_present (yes/no), obs_status]
+versioning: {type: versioned_codelist}
+members:
+  obs_status: {A: normal, B: time-series break, D: definition differs, E: estimated, F: forecast, M: missing – cannot exist, L: missing – exists but not collected, O: missing, P: provisional, Q: missing – suppressed, U: low reliability, other codes per CL_OBS_STATUS}
+  conf_status: {F: free, C: confidential, other codes per CL_CONF_STATUS}
+special_members: {_Z: status not applicable, _U: source gives no status}
+attributes:
+  - {name: is_missing, source: registry}
+  - {name: is_estimate, source: registry}
+  - {name: label_en / label_pl, source: SDMX / registry}
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "status_code flags after the value: b, c, d, e, f, n, p, u, z; ':' value = not available (verify flag set against Bronze)"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "attrId per observation → /attributes (18 flags, e.g. 'dane niedostępne', 'tajemnica statystyczna')"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "flags / symbols in observation records (unverified)"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "no per-value flag; empty cell = missing; footnotes in WDIfootnote.csv"}
+    nbp: {inventory: PLG-001, expresses_as: "none (all values normal)"}
+  not_used: [gleif, mf_biala_lista, gus_teryt, gugik_prg, opendata_org]
+  inventory: all statistical sources
+mapping_notes:
+  - "map_observation_status__eurostat, __gus_bdl, __gus_dbw: source flag → (obs_status, conf_status); Eurostat c → conf_status C, value missing."
+  - Several source flags on one value (Eurostat 'bep') map to one primary obs_status plus a flag list attribute on the fact (open question).
+open_questions: ["Combined flags handling.", "Exact BDL attribute list and meanings."]

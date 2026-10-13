@@ -1,0 +1,58 @@
+name: identifier_scheme
+kind: conformed
+status: draft
+description: >-
+  Namespaces of official identifiers used by entity dimensions, and the generic
+  identifier cross-reference bridge that links an identifier value to an entity row
+  with validity and evidence.
+grain: one row = one identifier scheme
+key: {surrogate: identifier_scheme_code, natural: [identifier_scheme_code]}
+identifiers: [scheme code]
+standards:
+  - {name: ISO 17442 (LEI), owner: ISO / GLEIF, version: current, url: "https://www.gleif.org/", verified: false}
+  - {name: ISO 6166 (ISIN), owner: ISO / ANNA, version: current, url: "https://www.anna-web.org/", verified: false}
+  - {name: ISO 10383 (MIC), owner: ISO, version: current, url: "https://www.iso20022.org/market-identifier-codes", verified: false}
+  - {name: ISO 9362 (BIC), owner: ISO / SWIFT, version: current, url: "https://www.swift.com/standards/data-standards/bic", verified: false}
+  - {name: GLEIF Registration Authorities List, owner: GLEIF, version: current, url: "https://www.gleif.org/en/about-lei/code-lists/gleif-registration-authorities-list", verified: false}
+versioning: {type: static, rule: "identifier values carry their own validity in the bridge"}
+members:
+  REGON: {entity: organisation, format: "9 digits (legal unit) / 14 digits (local unit)", owner: GUS}
+  NIP: {entity: organisation, format: 10 digits, owner: MF}
+  KRS: {entity: organisation, format: 10 digits zero-padded, owner: Ministry of Justice}
+  LEI: {entity: organisation, format: 20 chars, owner: GLEIF}
+  CEIDG: {entity: organisation (sole trader), format: UUID (unverified), owner: MRiT}
+  BIC: {entity: organisation, format: 8/11 chars}
+  CIK: {entity: organisation, format: up to 10 digits, owner: US SEC}
+  ISIN: {entity: security, format: 12 chars}
+  TICKER: {entity: security, format: venue-scoped symbol, owner: venue}
+  MIC: {entity: market, format: 4 chars}
+  RSPO: {entity: institution (school), owner: MEN}
+  POLON: {entity: institution (higher education), owner: OPI PIB}
+  RPWDL: {entity: institution (healthcare), format: register book number, owner: CeZ}
+  TERYT_TERC / TERYT_SIMC / TERYT_ULIC: {entity: geography / address, owner: GUS}
+  GTFS_STOP / GTFS_ROUTE: {entity: transport_stop / transport_route, format: feed-scoped}
+  PKW_COMMITTEE / SEJM_MP: {entity: political_actor, format: election- or term-scoped}
+  ELI: {entity: document (legal act)}
+  NRB / IBAN: {entity: organisation bank account (satellite), note: "MF white list publishes only hashes"}
+  WIKIDATA_QID: {entity: any, note: cross-reference evidence only}
+  OPENDATA_ORG_ID: {entity: organisation / person / address, note: "vendor id (unverified)"}
+special_members: {_U: identifier scheme unknown}
+attributes:
+  - {name: validation_rule, description: "check digit / regex", source: registry}
+  - {name: scope, description: "global | national | venue/feed/term scoped", source: registry}
+bridges:
+  bridge_entity_identifier: >-
+    (entity_kind, entity_key, identifier_scheme_code, identifier_value, valid_from,
+    valid_to, source_system, evidence, is_primary). Matching only on identifiers or
+    certified mappings (e.g. GLEIF RA-code mappings); never on names or addresses alone.
+used_by:
+  platform:
+    gleif: {inventory: CD-015, expresses_as: "LEI; RegistrationAuthority id + entity id (e.g. KRS number); BIC/ISIN/MIC/OpenCorporates mapping files (certified)"}
+    mf_biala_lista: {inventory: PLG-011, expresses_as: "hash of (date, NIP, account) — cannot produce identifiers, only verify known pairs"}
+    gus_teryt: {inventory: PLS-007, expresses_as: "TERC, SIMC, ULIC"}
+    gugik_prg: {inventory: PL-ENV-001, expresses_as: "TERYT code per boundary"}
+    opendata_org: {inventory: null, expresses_as: "vendor ids; external ids (LEI/EIN/…) unverified"}
+  not_used: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp]
+  inventory: "REGON 10, ISIN 8, NIP 7, LEI 7, KRS 6, ticker 5, MIC 4, GTFS 4, CIK 2, RSPO 2, ELI 2 (see README)"
+mapping_notes: []
+open_questions: []

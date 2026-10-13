@@ -1,0 +1,35 @@
+name: source
+kind: conformed
+status: draft
+description: Source systems and their providers (producer vs republisher), licence and access, from ingestion/sources/*.yaml and the source inventory.
+grain: one row = one source system (source_system id)
+key: {surrogate: source_key, natural: [source_system]}
+identifiers: [source_system id, inventory id (GL-/PLS-/PLG-/PL-ENV-/CD-/EX-)]
+standards:
+  - {name: DCAT-AP (catalogue/agent), owner: European Commission (SEMIC), version: "3.x", url: "https://semiceu.github.io/DCAT-AP/", verified: false}
+hierarchy: [provider (organisation), product, source_system]
+versioning: {type: scd2}
+special_members: {_Z: derived by zohelo (calculated data)}
+attributes:
+  - {name: provider_name / provider_type, description: "international-public, national-public, commercial …", source: inventory}
+  - {name: provider_organisation_key, description: link to organisation.yaml (e.g. GUS by REGON), source: registry}
+  - {name: role, description: "producer|compiler|registry operator|republisher|gateway", source: inventory}
+  - {name: licence / attribution / reuse_notes, source: inventory + docs/sources.md}
+  - {name: extraction_initial / production / incremental_policy, source: ingestion/sources/<source>.yaml}
+  - {name: activities / bronze_tables, source: ingestion/sources/<source>.yaml}
+  - {name: timezone, source: config}
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "row"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "row"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "row"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "row"}
+    nbp: {inventory: PLG-001, expresses_as: "row"}
+    gleif: {inventory: CD-015, expresses_as: "row"}
+    mf_biala_lista: {inventory: PLG-011, expresses_as: "row"}
+    gugik_prg: {inventory: PL-ENV-001, expresses_as: "row"}
+    gus_teryt: {inventory: PLS-007, expresses_as: "row"}
+    opendata_org: {inventory: null, expresses_as: "row; licence: commercial redistribution needs agreement with BrightQuery (legacy config)"}
+  inventory: all 182 (candidates are rows with is_on_platform = false only if the portal needs them)
+mapping_notes: ["Generated from ingestion/sources/*.yaml + a seed of inventory fields; never hand-edited in two places."]
+open_questions: ["Should non-admitted inventory sources appear in the dimension (proposed: no; the portal reads the inventory separately)."]

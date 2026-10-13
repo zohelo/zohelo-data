@@ -1,0 +1,25 @@
+name: institutional_sector
+kind: conformed
+status: draft
+description: ESA 2010 / SNA 2008 institutional sectors and subsectors, for the reporting sector and the counterpart sector.
+grain: one row = one sector code
+key: {surrogate: sector_code, natural: [sector_code]}
+identifiers: ["ESA 2010 code (S1, S11, S12, S121…S129, S13, S1311, S1313, S1314, S14, S15, S2)"]
+standards:
+  - {name: ESA 2010 sectors, owner: Eurostat, version: "2010", url: "https://ec.europa.eu/eurostat/web/esa-2010", verified: false}
+  - {name: SNA 2008 / SNA 2025, owner: UNSD, version: "2008; 2025 (unverified)", url: "https://unstats.un.org/unsd/nationalaccount/", verified: false}
+  - {name: SDMX CL_SECTOR, owner: SDMX, version: current, url: "https://sdmx.org/sdmx_cdcl", verified: false}
+hierarchy: [total economy S1, sector, subsector, sub-subsector]
+versioning: {type: versioned_codelist}
+special_members: {_T: all sectors, _Z: not applicable}
+attributes: [{name: label_en / label_pl, source: Eurostat / GUS}, {name: is_resident, description: "S2 rest of world = false", source: ESA}]
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "sector / sector_cp dimensions in nasa_*, gov_*"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "ownership sectors (sektor publiczny/prywatny) as text — a different concept, map partially"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "sector dictionaries (unverified)"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "inside indicator names (general government, private sector)"}
+  not_used: [nbp, gleif, mf_biala_lista, gus_teryt, gugik_prg, opendata_org]
+  inventory: GL-015, 016, 034; PLG-002…006, 009, 016…018
+mapping_notes: ["Polish 'sektor własności' (public/private ownership) is not ESA; keep it source-specific until a second source needs it."]
+open_questions: []

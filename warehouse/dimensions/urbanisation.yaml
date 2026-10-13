@@ -1,0 +1,25 @@
+name: urbanisation
+kind: conformed
+status: draft
+description: Degree of urbanisation (DEGURBA) breakdown per SDMX CL_DEG_URB / Eurostat deg_urb; Polish urban/rural (miasto/wieś) maps partially.
+grain: one row = one code
+key: {surrogate: deg_urb_code, natural: [deg_urb_code]}
+identifiers: [Eurostat deg_urb code (DEG1, DEG2, DEG3)]
+standards:
+  - {name: DEGURBA, owner: Eurostat / UN, version: "2020 methodology", url: "https://ec.europa.eu/eurostat/web/degree-of-urbanisation", verified: false}
+  - {name: SDMX CL_DEG_URB, owner: SDMX, version: current, url: "https://sdmx.org/sdmx_cdcl", verified: false}
+hierarchy: []
+versioning: {type: versioned_codelist}
+members: {DEG1: cities, DEG2: towns and suburbs, DEG3: rural areas, PL_URBAN: miasto (Polish administrative urban — local), PL_RURAL: wieś (local)}
+special_members: {_T: total, _Z: not applicable}
+attributes: [{name: is_local, source: registry}]
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "deg_urb dimension (ilc_*, lfs_*); LAU-level classification file"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "'miasto'/'wieś' labels and level-7 gmina parts (unverified)"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "miasto/wieś dimension (unverified)"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "inside indicator names (urban, rural)"}
+  not_used: [nbp, gleif, mf_biala_lista, gus_teryt, gugik_prg, opendata_org]
+  inventory: not named in the inventory; implied by survey sources (GL-001, PLS-005, PLS-028)
+mapping_notes: ["Polish administrative urban/rural ≠ DEGURBA; map only as 'partial', never 'exact'."]
+open_questions: []

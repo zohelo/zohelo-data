@@ -1,0 +1,90 @@
+name: geography
+kind: conformed
+status: draft
+description: >-
+  Reference areas from every geographic scheme the platform meets, with scheme vintages,
+  a flattened hierarchy and a cross-scheme bridge. Used for reference area and, through a
+  role, for partner/counterpart areas.
+grain: one row = one member of one scheme vintage (scheme, code, vintage)
+key:
+  surrogate: geography_key
+  natural: [scheme, code, vintage]
+identifiers:
+  - ISO 3166-1 alpha-2 / alpha-3 / numeric
+  - UN M49 numeric
+  - NUTS code (per NUTS version)
+  - LAU code (per year)
+  - TERYT TERC (WWPPGGT, 7 chars) and SIMC locality id (7 digits)
+  - GUS KTS symbol / BDL unit id (12 chars, layout MM VV R SS PP GG T)
+  - World Bank economy code (ISO3-like, incl. non-ISO codes and aggregates)
+  - Eurostat GEO code (ISO alpha-2 with EL/UK exceptions, NUTS, aggregates)
+standards:
+  - {name: ISO 3166-1, owner: ISO, version: current, url: "https://www.iso.org/iso-3166-country-codes.html", verified: false}
+  - {name: UN M49, owner: UNSD, version: current, url: "https://unstats.un.org/unsd/methodology/m49/", verified: false}
+  - {name: NUTS, owner: Eurostat, version: "2016, 2021, 2024 (2027 unverified)", url: "https://ec.europa.eu/eurostat/web/nuts", verified: false}
+  - {name: LAU, owner: Eurostat, version: yearly, url: "https://ec.europa.eu/eurostat/web/nuts/local-administrative-units", verified: false}
+  - {name: TERYT (TERC, SIMC, ULIC), owner: GUS, version: daily register state, url: "https://eteryt.stat.gov.pl/", verified: false}
+  - {name: KTS (Klasyfikacja Terytorialnych Jednostek Statystycznych), owner: GUS, version: "2026 KTS–TERYT table", url: "https://stat.gov.pl/ (tablica_kts-teryt_2026.xls)", verified: false}
+  - {name: SDMX CL_AREA, owner: SDMX, version: current, url: "https://sdmx.org/sdmx_cdcl", verified: false}
+hierarchy:
+  # flattened L0–L7 per scheme; level meaning is scheme-specific (level_name attribute)
+  ISO/M49: [L0 world, L1 M49 region, L2 M49 sub-region, L3 country]
+  NUTS: [L0 country, L1 NUTS1, L2 NUTS2, L3 NUTS3, L4 LAU]
+  KTS/BDL: [L0 Polska, L1 makroregion, L2 województwo, L3 region, L4 podregion, L5 powiat, L6 gmina, L7 "level 7 (unverified: read /levels)"]
+  TERYT: [województwo, powiat, gmina (with rodzaj), miejscowość (SIMC)]
+versioning:
+  type: vintage
+  rule: >-
+    Members per (scheme, code, vintage) with valid_from/valid_to. A code reused with a new
+    meaning gets a new vintage row; a renamed unit with an unchanged area keeps its code
+    and changes attributes (SCD2 on attributes).
+  aggregates: >-
+    EU27_2020, EA20, EU28, World Bank regions and income groups, OECD etc. are members with
+    is_aggregate = true and a dated composition in bridge_geography_composition
+    (aggregate, member, valid_from, valid_to). World Bank income groups change every 1 July.
+special_members:
+  _T: all areas / not broken down by area
+  _Z: not applicable (e.g. a world-level indicator with no area)
+  _X: area unknown or unallocated (Eurostat 'EXT_EU', 'NSP' and similar map here or stay as own members — open question)
+attributes:
+  - {name: name_en, source: scheme owner}
+  - {name: name_pl, source: gus_teryt / gus_bdl}
+  - {name: level, description: 0–7 in the flattened hierarchy, source: registry}
+  - {name: level_name, source: scheme owner}
+  - {name: parent_key, description: parent in the same scheme vintage, source: scheme owner}
+  - {name: "l0_code … l7_code", description: flattened ancestors, source: derived}
+  - {name: is_aggregate, source: registry}
+  - {name: iso2 / iso3 / m49, source: ISO / UNSD}
+  - {name: teryt_type (rodzaj gminy 1–5, 8–9), source: gus_teryt}
+  - {name: wb_region / wb_income_group / wb_lending_category, description: dated, source: world_bank_wdi}
+  - {name: degree_of_urbanisation, description: see urbanisation.yaml, source: eurostat (LAU)}
+  - {name: area_km2 / geometry_ref, description: boundary vintage reference only, geometry stays in PRG tables, source: gugik_prg}
+bridges:
+  bridge_geography_scheme: >-
+    (from_key, to_key, relationship exact|contains|part_of|overlaps, weight, valid_from,
+    valid_to, evidence). BDL↔TERC (TERC = chars 3–4 + 8–12 of the BDL unit id, per owner
+    research), KTS↔NUTS, TERC↔LAU, ISO↔M49↔World Bank↔Eurostat GEO. Weights are optional
+    analytical assumptions, never source facts.
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "geo dimension: ISO alpha-2 with EL (GR) and UK (GB), NUTS codes of the dataset's NUTS version, aggregates (EU27_2020, EA20 …)"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "unit id (12-char KTS-based), unit level 0–6(7), localities via /units/localities"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "territorial items in cross-sections, without TERYT codes; map by name + level (unverified)"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "Country Code (ISO3-like incl. XKX and aggregates such as WLD, EUU), 2-alpha code, region, income group in Country.csv"}
+    gus_teryt: {inventory: PLS-007, expresses_as: "TERC (WOJ, POW, GMI, RODZ), SIMC (SYM, SYMPOD), ULIC (streets, see address.yaml); STAN_NA state date"}
+    gugik_prg: {inventory: PL-ENV-001, expresses_as: "boundary polygons per unit keyed by TERYT code (attribute name e.g. JPT_KOD_JE, unverified), edition date"}
+    nbp: {inventory: PLG-001, expresses_as: "none directly; currency → country only as an attribute of currency"}
+    gleif: {inventory: CD-015, expresses_as: "legal and headquarters address country (ISO 3166-1 alpha-2), region (ISO 3166-2), jurisdiction"}
+    mf_biala_lista: {inventory: PLG-011, expresses_as: "none (hash file)"}
+    opendata_org: {inventory: null, expresses_as: "location records (addresses, countries); scheme unverified"}
+  inventory: see README coverage table (107 sources reference areas; 11 partner/counterpart)
+mapping_notes:
+  - Eurostat EL→GR and UK→GB in the ISO attributes; keep the Eurostat code as a member of scheme ESTAT_GEO.
+  - World Bank codes are ISO3 except documented exceptions; map with WDI Country.csv, never by name.
+  - BDL level 2 (województwo) ↔ TERC WOJ; level 5 ↔ powiat; level 6 ↔ gmina incl. rodzaj; makroregion/region/podregion ↔ NUTS1/2/3 (verify against the KTS–TERYT and KTS–NUTS tables).
+  - DBW territorial items carry no TERYT; mapping needs the DBW dictionary (open question).
+open_questions:
+  - NUTS 2027 existence and applicability (unverified).
+  - Polish LAU code = TERC 7-char code? (unverified).
+  - BDL level 7 meaning (unverified).
+  - Partner area as a role of this dimension vs a separate dim_partner_geography view (proposed: role).

@@ -1,0 +1,24 @@
+name: education
+kind: conformed
+status: draft
+description: Education level (ISCED 2011) and field of education (ISCED-F 2013) — two schemes in one dimension, distinguished by scheme.
+grain: one row = one code of one scheme (scheme, code)
+key: {surrogate: education_key, natural: [scheme, code]}
+identifiers: [ISCED 2011 level code, ISCED-F 2013 field code]
+standards:
+  - {name: ISCED 2011, owner: UNESCO UIS, version: "2011", url: "https://uis.unesco.org/en/topic/international-standard-classification-education-isced", verified: false}
+  - {name: ISCED-F 2013, owner: UNESCO UIS, version: "2013", url: "https://uis.unesco.org/en/topic/international-standard-classification-education-isced", verified: false}
+hierarchy: {ISCED_2011: [level group (ED0-2, ED3_4, ED5-8), level 0–8], ISCED_F_2013: [broad field, narrow field, detailed field]}
+versioning: {type: versioned_codelist}
+special_members: {_T: all levels / fields, _Z: not applicable, _U: unknown}
+attributes: [{name: label_en / label_pl, source: UNESCO / GUS}, {name: polish_school_type, description: "mapping of Polish school types (RSPO) to ISCED", source: registry}]
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "isced11 (ED0-2, ED3_4, ED5-8) and isced_f dimensions"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "Polish school types / education levels as text labels"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "education dictionaries (unverified)"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "inside indicator names (primary, secondary, tertiary)"}
+  not_used: [nbp, gleif, mf_biala_lista, gus_teryt, gugik_prg, opendata_org]
+  inventory: GL-026; PLS-021, 022, 024 (lower bound)
+mapping_notes: []
+open_questions: []

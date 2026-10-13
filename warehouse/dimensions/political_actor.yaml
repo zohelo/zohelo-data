@@ -1,0 +1,29 @@
+name: political_actor
+kind: entity
+status: draft
+description: >-
+  Actors and units of political life — parties, electoral committees, parliamentary
+  clubs, office holders (MPs, senators, councillors), candidates, constituencies and
+  polling districts. Election- and term-scoped identifiers; office holders link to person.
+grain: one row = one actor version, typed by actor_type
+key:
+  surrogate: political_actor_key
+  natural: "(actor_type, scope, source id): e.g. (MP, Sejm term 10, mp id), (committee, election id, PKW number), (constituency, election id, number)"
+identifiers: [Sejm MP id per term, Senate senator id, PKW committee number per election, constituency number per election, polling district number per gmina and election, party register number (EwP, unverified)]
+standards:
+  - {name: Sejm API, owner: Kancelaria Sejmu, version: n/a, url: "https://api.sejm.gov.pl/", verified: false}
+  - {name: PKW election results data, owner: PKW / KBW, version: per election, url: "https://wybory.gov.pl/", verified: false}
+hierarchy: {party: [party, committee, club], electoral_geography: [election, constituency, gmina, polling district], office: [body, term, office holder]}
+versioning: {type: scd2, rule: "constituencies and polling districts are per election (vintage); memberships as dated bridges"}
+special_members: {_Z: not applicable, _U: unknown}
+attributes:
+  - {name: actor_type, description: "party | committee | club | office_holder | candidate | constituency | polling_district", source: registry}
+  - {name: person_key, description: office holders and candidates, source: Sejm / PKW}
+  - {name: geography_key, description: "gmina (TERYT) of a polling district; constituency = set of powiats", source: PKW}
+  - {name: election_id / term, source: PKW / Sejm}
+used_by:
+  platform: {}
+  not_used: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, gleif, mf_biala_lista, gugik_prg, gus_teryt, opendata_org]
+  inventory: "PLG-024, 025, 029 (votes are event facts; bills are documents)"
+mapping_notes: ["Votes are event facts (vote × MP); bills and prints are documents."]
+open_questions: ["Party register identifier (EwP number) availability."]

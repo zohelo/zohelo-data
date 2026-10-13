@@ -1,0 +1,29 @@
+name: person
+kind: entity
+status: draft
+description: >-
+  Natural persons appearing in public registers in a public role (company officers,
+  beneficial owners, MPs and candidates, researchers). Only fields the source's terms
+  allow; no inference of identity across sources without an official identifier.
+grain: one row = one person version (SCD2) as asserted by one register
+key:
+  surrogate: person_key
+  durable: person_id
+  natural: "scheme-qualified register id (e.g. SEJM_MP term+id, ORCID, source person id)"
+identifiers: [Sejm MP id (term-scoped), PKW candidate id (election-scoped), ORCID, OPENDATA_ORG_ID]
+standards:
+  - {name: ORCID, owner: ORCID, version: n/a, url: "https://orcid.org/", verified: false}
+hierarchy: []
+versioning: {type: scd2}
+special_members: {_Z: not applicable, _U: unknown / unresolved person}
+attributes:
+  - {name: display_name, source: register}
+  - {name: roles, description: "bridge to organisation / political_actor with role and dates", source: register}
+  - {name: privacy_class, description: "public-role | restricted — restricted fields are not loaded", source: registry}
+used_by:
+  platform:
+    opendata_org: {inventory: null, expresses_as: "people table linked to organisations (fields and legal basis unverified)"}
+  not_used: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, gleif, mf_biala_lista, gugik_prg, gus_teryt]
+  inventory: PLS-023; PLG-015, 019, 024, 025, 029; CD-014, 016, 028, 030
+mapping_notes: ["Person-aggregates (counts of people by sex/age) are statistical observations, not this dimension."]
+open_questions: ["Owner review of the GDPR basis before any person-level load beyond public office holders (opendata_org people is already in Bronze)."]

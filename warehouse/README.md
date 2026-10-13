@@ -9,6 +9,7 @@ models/bronze/sources.yml         Bronze tables as dbt sources (built by ingesti
 models/silver/<source_system>/    typed, cleaned, conformed source tables
 models/gold/                      conformed dimensions and facts
 semantic_models/                  MetricFlow semantic models and metrics
+dimensions/                       dimension registry (definitions-as-code, draft; docs/model.md)
 macros/  seeds/  snapshots/  analyses/
 warehouse.yaml                    activities the Pipeline may run
 ```

@@ -1,0 +1,34 @@
+name: currency
+kind: conformed
+status: draft
+description: Currencies per ISO 4217 (SDMX CL_CURRENCY), including historical currencies; used by unit, exchange-rate facts and monetary attributes.
+grain: one row = one currency code with validity
+key: {surrogate: currency_code, natural: [currency_code]}
+identifiers: [ISO 4217 alpha-3, ISO 4217 numeric]
+standards:
+  - {name: ISO 4217, owner: ISO (SIX as maintenance agency), version: current list + historic list, url: "https://www.iso.org/iso-4217-currency-codes.html", verified: false}
+  - {name: SDMX CL_CURRENCY, owner: SDMX, version: current, url: "https://sdmx.org/sdmx_cdcl", verified: false}
+hierarchy: []
+versioning: {type: scd2, rule: "valid_from/valid_to per ISO list (e.g. historic PLZ → PLN 1995)"}
+special_members:
+  _Z: not monetary
+  XDC: national currency of the reference area (SDMX convention)
+  _X: other / unspecified currency
+attributes:
+  - {name: name_en / name_pl, source: ISO / nbp}
+  - {name: minor_units, source: ISO 4217}
+  - {name: countries, description: "bridge to geography (dated)", source: ISO 4217}
+  - {name: nbp_table, description: "A, B (and C) membership, dated", source: nbp}
+  - {name: nbp_multiplier, description: "quotation per 1 or 100 units", source: nbp}
+used_by:
+  platform:
+    nbp: {inventory: PLG-001, expresses_as: "code (ISO 4217) + currency name per rate row; tables A/B mid, C bid/ask"}
+    eurostat: {inventory: GL-001, expresses_as: "currency dimension (ert_*) and inside unit codes (MIO_EUR, MIO_NAC)"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "Country.csv currency unit; US$/LCU in indicator names"}
+    gleif: {inventory: CD-015, expresses_as: "n/a"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "PLN implied by measure units (zł)"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "PLN implied by units"}
+  not_used: [mf_biala_lista, gus_teryt, gugik_prg, opendata_org]
+  inventory: GL-013, 015, 016; PLS-032, 033; PLG-001, 005, 008; CD-002, 009
+mapping_notes: ["Exchange-rate facts are keyed by (base currency, quote currency, rate type, source); rate type mid/bid/ask is source-specific (breakdown.yaml) until ECB (GL-016) is admitted."]
+open_questions: []

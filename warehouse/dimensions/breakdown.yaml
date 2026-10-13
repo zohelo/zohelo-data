@@ -1,0 +1,35 @@
+name: breakdown
+kind: source_specific
+status: draft
+description: >-
+  Source-specific breakdowns that have no conformed dimension yet, kept in a bridge next
+  to the statistical-observation fact. A fact row carries a breakdown_set_key; the
+  bridge lists (source dimension id, source code, label) for each member of the set.
+  Promoted to a conformed dimension when a second source has the same concept
+  (README promotion rule).
+grain: one row = one (source_system, dimension_id, code) member; bridge row = (breakdown_set_key, member)
+key:
+  surrogate: breakdown_member_key
+  natural: [source_system, dimension_id, code]
+  set: breakdown_set_key   # hash of the sorted member list of one observation
+identifiers: [source dimension id + code]
+standards: []
+hierarchy: [source_system, dimension_id, code]
+versioning: {type: versioned_codelist, rule: "source codelist version (Eurostat codelist version, BDL lastUpdate)"}
+special_members: {_T: total of the source dimension, _Z: dimension not applicable}
+attributes:
+  - {name: label_en / label_pl, source: source}
+  - {name: parent_code, source: source codelist hierarchy}
+  - {name: is_total, source: source / registry}
+  - {name: promotion_candidate, description: "conformed dimension it could map to", source: registry}
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "any ESTAT dimension without a conformed home (na_item, indic_*, wstatus, citizen …); codes from shared ESTAT codelists; metabase.txt.gz lists dataset→dimension→codes"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "variable labels n1..n5 (text only, no codes) — the variable is the indicator; parsed parts map to conformed dims where possible"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "up to 4 positional dimensions per cross-section (dictionary ids + members)"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "none (series × country × year only)"}
+    nbp: {inventory: PLG-001, expresses_as: "table type (A, B, C) and rate type (mid, bid, ask) — promotion candidate when ECB (GL-016) or other FX sources are admitted"}
+  not_used: [gleif, mf_biala_lista, gugik_prg, gus_teryt, opendata_org]
+  inventory: every SDMX/table source has some
+mapping_notes: ["A source dimension that maps to a conformed one (sex, age, NACE, unit …) never also appears here for the same fact."]
+open_questions: ["BDL: parse n1..n5 labels into conformed members or keep the variable as the full indicator (proposed: keep, plus optional parsed mapping)."]

@@ -1,0 +1,31 @@
+name: frequency
+kind: conformed
+status: draft
+description: Observation frequency per SDMX CL_FREQ.
+grain: one row = one frequency code
+key: {surrogate: frequency_code, natural: [frequency_code]}
+identifiers: [SDMX CL_FREQ code]
+standards:
+  - {name: CL_FREQ, owner: SDMX, version: latest in SDMX global registry, url: "https://sdmx.org/sdmx_cdcl", verified: false}
+hierarchy: []
+versioning: {type: versioned_codelist}
+members: {A: annual, S: half-yearly, Q: quarterly, M: monthly, W: weekly, D: daily, B: business daily, H: hourly, I: irregular (others per codelist)}
+special_members: {_Z: not applicable}
+attributes:
+  - {name: periods_per_year, source: registry}
+  - {name: label_en / label_pl, source: SDMX / registry}
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "freq dimension (A, Q, M, D …) in every dataset"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "implicit: annual variables; short-period variables carry a period type (unverified)"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "period type in variable metadata (unverified)"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "Series.Periodicity (Annual)"}
+    nbp: {inventory: PLG-001, expresses_as: "implicit: A and C business daily, B weekly"}
+    gleif: {inventory: CD-015, expresses_as: "n/a"}
+    mf_biala_lista: {inventory: PLG-011, expresses_as: "n/a (daily file)"}
+    gus_teryt: {inventory: PLS-007, expresses_as: "n/a"}
+    gugik_prg: {inventory: PL-ENV-001, expresses_as: "n/a"}
+    opendata_org: {inventory: null, expresses_as: "n/a"}
+  inventory: all statistical sources
+mapping_notes: ["Eurostat freq codes equal CL_FREQ codes (verify)."]
+open_questions: []

@@ -1,0 +1,46 @@
+name: unit
+kind: conformed
+status: draft
+description: >-
+  Unit of measure decomposed into base unit + multiplier + currency. Price base and
+  seasonal adjustment are separate dimensions even where a source bakes them into its
+  unit code (Eurostat CP_MEUR, CLV15_MEUR, WDI indicator names).
+grain: one row = one (base_unit, unit_multiplier, currency) combination
+key:
+  surrogate: unit_key
+  natural: [base_unit, unit_multiplier, currency_code]
+identifiers: ["UCUM code for physical units", "SDMX CL_UNIT_MULT exponent", "ISO 4217 currency (currency.yaml)"]
+standards:
+  - {name: UCUM, owner: Regenstrief Institute, version: "2.x", url: "https://ucum.org/", verified: false}
+  - {name: CL_UNIT_MULT, owner: SDMX, version: current, url: "https://sdmx.org/sdmx_cdcl", verified: false}
+  - {name: Eurostat UNIT codelist, owner: Eurostat, version: current, url: "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/codelist/ESTAT/UNIT", verified: false}
+hierarchy: [measure_type (count, money, physical, ratio, index), base_unit]
+versioning: {type: versioned_codelist}
+special_members:
+  _Z: unit not applicable (e.g. text or code-valued observations)
+  _U: unit unknown (source does not state it)
+attributes:
+  - {name: base_unit, description: "e.g. PS (persons), NR (number), PC (percent), KG, KWH, IX (index), XDC (national currency)", source: SDMX/UCUM}
+  - {name: unit_multiplier, description: "power of 10 (0, 3, 6, 9)", source: CL_UNIT_MULT}
+  - {name: measure_type, description: "stock|flow|rate|ratio|index|count|price — drives allowed aggregation", source: registry}
+  - {name: index_base_period, description: "e.g. 2015=100", source: source unit code}
+  - {name: is_additive, source: registry}
+  - {name: label_en / label_pl, source: eurostat / gus_bdl}
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "unit dimension: shared ESTAT UNIT codelist; multiplier, currency and price base inside the code (THS_PER, MIO_EUR, CLV15_MEUR, I15, PC_GDP)"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "/measures (measureUnitId on the variable, e.g. osoba, tys. zł, %), precision attribute"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "unit in variable/cross-section metadata (unverified)"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "Series.Unit of measure and the indicator name, e.g. '(current US$)', '(% of GDP)'"}
+    nbp: {inventory: PLG-001, expresses_as: "PLN per 1 (or per 100 for some currencies — 'przelicznik') unit of currency; gold PLN per gram"}
+    gleif: {inventory: CD-015, expresses_as: "n/a"}
+    mf_biala_lista: {inventory: PLG-011, expresses_as: "n/a"}
+    gus_teryt: {inventory: PLS-007, expresses_as: "n/a"}
+    gugik_prg: {inventory: PL-ENV-001, expresses_as: "area in ha/km² (unverified)"}
+    opendata_org: {inventory: null, expresses_as: "n/a"}
+  inventory: all statistical sources
+mapping_notes:
+  - "Parse Eurostat unit codes into base unit, multiplier, currency and price base with a reviewed mapping table (map_unit__eurostat)."
+  - "WDI: unit and price base parsed from indicator names; keep the parse rule and the original text."
+open_questions:
+  - Whether to also keep the source unit as a member (scheme-qualified) for exact round-tripping (proposed: keep the source code on the fact).
