@@ -105,8 +105,8 @@ in `ingestion/sources/<source>.yaml`. Landing layout and rules: docs/landing.md.
 Work the [playbook](docs/playbook.md) without asking when the step stays inside the
 agreed rules:
 
-- Research sources, write code, run Dev branch runs, open pull requests (the owner
-  merges).
+- Research sources, write code, run Dev branch runs, open pull requests and merge
+  those in the "Claude merges" group below.
 - Run and rerun authorized Pipeline activities from `main`, including restarts after
   transient failures and the next run after a time budget; follow up with scheduled
   check-ins instead of waiting in the conversation.
@@ -129,10 +129,21 @@ something failed twice); keep reports short.
 
 - Develop on a feature branch `<type>/<short-topic>` (`feat`, `fix`, `docs`,
   `chore`); never commit directly to `main`.
-- Changes reach `main` only through a pull request; the owner merges.
+- Changes reach `main` only through a pull request that passes the `check` job
+  (`dev.yml`: compile, lint, configuration consistency, repository rules; no
+  credentials, no committed tests).
+- **Claude merges** (auto-merge after `check` passes): fixes and features inside the
+  playbook for sources whose `activities:` are already authorized, ingestion and Ops
+  code, Bronze and Silver models, Gold models following `docs/model.md`, docs that do
+  not change rules.
+- **The owner merges**: changes to `AGENTS.md`, `docs/playbook.md` or the rules in
+  `docs/model.md`; a new source or a change to any `activities:` list; anything that
+  deletes data or changes `archive_policy`/retention; workflows, infrastructure, costs,
+  credentials. The PR description says which group it belongs to.
 - Merged branches are deleted (repository setting); delete leftovers manually.
 - No workflow files on branches other than edits to the four workflows.
-- Do not restore removed tests, CI workflows or historical task queues.
+- The `check` job is the only CI; do not restore removed tests, test workflows or
+  historical task queues.
 
 ## Deliver
 
