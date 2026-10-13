@@ -88,6 +88,20 @@ def head_sha256(client, bucket: str, keys: list[str]) -> dict[str, str]:
         return dict(pool.map(head, keys))
 
 
+def get_with_backoff(client, bucket: str, key: str, attempts: int = 6) -> bytes:
+    """GET an object, waiting out R2 throttling (ServiceUnavailable / SlowDown) with backoff."""
+    import time
+    from botocore.exceptions import ClientError
+    for attempt in range(attempts):
+        try:
+            return client.get_object(Bucket=bucket, Key=key)["Body"].read()
+        except ClientError as exc:
+            code = str(exc.response.get("Error", {}).get("Code", ""))
+            if code not in {"ServiceUnavailable", "SlowDown", "InternalError", "503"} or attempt == attempts - 1:
+                raise
+            time.sleep(2 ** attempt * 2)
+
+
 def landing_objects(client, bucket: str, source: str) -> dict[str, dict[str, Any]]:
     """Landing files of one source by SHA-256, including files already moved to Archive.
 
@@ -119,14 +133,14 @@ def landing_objects(client, bucket: str, source: str) -> dict[str, dict[str, Any
                                        "layout": "content_addressed", "sha256": digest})
 
     def read(key: str) -> tuple[str, str, int, str | None] | None:
-        receipt = json.loads(client.get_object(Bucket=bucket, Key=key)["Body"].read())
+        receipt = json.loads(get_with_backoff(client, bucket, key))
         digest, size = receipt.get("sha256"), receipt.get("size_bytes")
         data_key = (receipt.get("object") or {}).get("key")
         if not (isinstance(digest, str) and SHA_RE.fullmatch(digest) and type(size) is int and data_key):
             return None
         return data_key, digest, size, key
 
-    with ThreadPoolExecutor(max_workers=16) as pool:
+    with ThreadPoolExecutor(max_workers=8) as pool:      # R2 throttles bursts of reads
         receipted = {r[0]: r for r in pool.map(read, receipt_keys) if r}
     unreceipted = [k for k in objects if k not in receipted]
     for key, digest in head_sha256(client, bucket, unreceipted).items():

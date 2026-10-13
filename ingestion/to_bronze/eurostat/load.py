@@ -17,8 +17,8 @@ import time
 from ingestion.common.report import annotate, step_summary
 
 BATCH_MODULE = "ingestion.to_bronze.eurostat.batch"
-BATCH_SIZE = 64
-BATCH_SECONDS = 900
+BATCH_SIZE = 256
+BATCH_SECONDS = 2700         # fewer batches = fewer full receipt listings
 MAX_BATCHES = 128
 MARGIN_SECONDS = 3600            # one file can take ~1 h (AVIA_TF_ACA: 1.48B cells)
 

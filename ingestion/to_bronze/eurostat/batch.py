@@ -26,6 +26,7 @@ import tempfile
 import time
 from typing import Any
 
+import botocore.exceptions
 import pyarrow as pa
 from pyiceberg.exceptions import NoSuchTableError
 from pyiceberg.io.pyarrow import parquet_file_to_data_file
@@ -63,12 +64,18 @@ REJECTED_SCHEMA = Schema(
 )
 
 
+THROTTLED = {"ServiceUnavailable", "SlowDown", "InternalError", "RequestTimeout", "TooManyRequests", "503", "500"}
+
+
 def transient(exc: Exception | None) -> bool:
     seen = set()
     while exc is not None and id(exc) not in seen:
         seen.add(id(exc))
-        if isinstance(exc, (requests.ConnectionError, requests.Timeout)):
+        if isinstance(exc, (requests.ConnectionError, requests.Timeout,
+                            botocore.exceptions.ConnectionError, botocore.exceptions.ReadTimeoutError)):
             return True
+        if isinstance(exc, botocore.exceptions.ClientError):
+            return str(exc.response.get("Error", {}).get("Code", "")) in THROTTLED
         if isinstance(exc, requests.HTTPError):
             return exc.response is not None and exc.response.status_code in {429, 500, 502, 503, 504}
         exc = exc.__cause__
@@ -143,7 +150,7 @@ def landing_candidates(client, landing_bucket: str) -> list[dict[str, Any]]:
                 "data_key": obj["key"], "dataset_id": receipt.get("dataset_code"),
                 "order": (str(receipt.get("version_token") or ""), str(receipt.get("ingested_at") or ""))}
 
-    with ThreadPoolExecutor(max_workers=16) as pool:
+    with ThreadPoolExecutor(max_workers=8) as pool:      # R2 throttles bursts of reads
         receipts = list(pool.map(read, sorted(keys)))
     latest: dict[str, dict[str, Any]] = {}
     for item in receipts:
