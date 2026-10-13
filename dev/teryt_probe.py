@@ -30,12 +30,13 @@ for url in PAGES:
     if r.status_code == 200 and r.url.endswith("pobieranie/pliki_pelne.aspx"):
         found_page = (r.url, r.text)
 download = None
+fields = {}
 if found_page:
     url, html = found_page
     fields = dict(re.findall(r'<input[^>]+name="(__[A-Z]+)"[^>]+value="([^"]*)"', html))
     targets = [t for t in re.findall(r"__doPostBack\((?:'|&#39;|&quot;)([^'&]+)", html) if re.search(r"TERC", t, re.I)]
     snippets = [re.sub(r"\s+", " ", html[max(0, m.start() - 300): m.start() + 300]) for m in re.finditer(r"TERC", html)][:4]
-    out["terc_snippets"] = [x[:600] for x in snippets]
+    del snippets
     buttons = re.findall(r'<input[^>]+type="(?:submit|image)"[^>]+name="([^"]+)"[^>]*>', html)
     terc_buttons = [b for b in buttons if re.search(r"terc", b, re.I)]
     data = dict(fields)
@@ -50,4 +51,4 @@ if found_page:
                     "content_type": r.headers.get("Content-Type"),
                     "disposition": r.headers.get("Content-Disposition"), "bytes": len(r.content),
                     "head": r.content[:40].hex()}
-annotate("notice", "teryt probe", {"pages": out, "download": download})
+annotate("notice", "teryt probe", {"download": download, "fields": sorted(fields) if found_page else None})
