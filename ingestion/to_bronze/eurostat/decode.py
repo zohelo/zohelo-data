@@ -49,7 +49,7 @@ class EurostatBulkDecodeError(ValueError):
 
 def decode_landing_distribution(source: Path, receipt: Path, output: Path, *,
                                 receipt_uri: str, raw_uri: str,
-                                memory_limit: str = "6GB") -> dict[str, Any]:
+                                memory_limit: str = "10GB") -> dict[str, Any]:
     """Decode one Landing data file; identity comes from its receipt (docs/landing.md)."""
     source, receipt, output = Path(source), Path(receipt), Path(output)
     identity = _validated_landing_identity(source=source, receipt=receipt, output=output,
