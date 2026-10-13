@@ -23,6 +23,10 @@ from ingestion.common.r2 import catalog, req, s3, sources
 from ingestion.common.report import annotate, step_summary
 
 LAYERS = ("bronze", "silver", "gold")
+# R2 Standard storage (docs/operating.md): first 10 GB-month free per account, then
+# $0.015 per GB-month. Operations are not estimated here. A warning is raised above
+# COST_WARNING_USD so the owner hears about it before an invoice does.
+FREE_GB, USD_PER_GB_MONTH, COST_WARNING_USD = 10.0, 0.015, 2.0
 
 
 def folders(client, bucket: str, prefix: str, depth: int) -> dict[str, dict[str, Any]]:
@@ -100,7 +104,13 @@ def main(argv=None) -> int:
         "unclaimed_tables": unclaimed_tables[:30], "unclaimed_landing_folders": unclaimed_landing[:20],
         "registered_tables_missing": sorted(n for s in report.values() for l in LAYERS for n in s[l]["missing"])[:30],
     }
+    stored_gb = sum(totals["buckets_gb"].values())
+    totals["storage_estimate"] = {
+        "stored_gb": round(stored_gb, 2), "free_gb": FREE_GB,
+        "usd_per_month": round(max(0.0, stored_gb - FREE_GB) * USD_PER_GB_MONTH, 2)}
     annotate("notice", "inventory totals", totals)
+    if totals["storage_estimate"]["usd_per_month"] > COST_WARNING_USD:
+        annotate("warning", "R2 storage above free tier", totals["storage_estimate"])
 
     selected = [s for s in report if not args.source or s in args.source]
     compact = {s: {"landing": [report[s]["landing"]["objects"], gb(report[s]["landing"]["bytes"]),

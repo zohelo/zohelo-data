@@ -3,7 +3,7 @@
 Each batch runs in its own process, so DuckDB memory is released between batches. The
 Bronze table's file list is the checkpoint, so a run that stops on its time budget
 resumes on the next run. A batch prints one JSON line with "operation": <operation> and
-"result": "pass"; a failed batch publishes its last output lines as an annotation.
+"result": "pass"; a failed batch publishes its last output lines (without per-file progress) as an annotation.
 Exit codes: 0 complete, 2 time budget / batch limit (rerun continues), other = failure.
 """
 from __future__ import annotations
@@ -39,15 +39,18 @@ def run_batches(source: str, batch_module: str, operation: str, budget_minutes: 
         command = [sys.executable, "-u", "-m", batch_module,
                    "--max-files", str(batch_size),
                    "--session-seconds", str(min(batch_seconds, remaining - 120))]
-        receipts, tail = [], deque(maxlen=40)
+        # Progress lines ("prepared" files) would push the error out of the ~4 KB annotation.
+        receipts, tail = [], deque(maxlen=14)
         with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) as process:
             for line in process.stdout:
                 sys.stdout.write(line)
-                tail.append(line.rstrip()[:300])
                 try:
                     item = json.loads(line)
                 except ValueError:
+                    tail.append(line.rstrip()[:260])
                     continue
+                if not (isinstance(item, dict) and item.get("status") == "prepared"):
+                    tail.append(line.rstrip()[:260])
                 if (isinstance(item, dict) and item.get("operation") == operation
                         and item.get("result") == "pass"):
                     receipts.append(item)
