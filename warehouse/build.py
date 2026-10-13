@@ -35,6 +35,9 @@ def main(select: str = "", target: str = "prod") -> int:
             summary["failures"].append({"node": r["unique_id"], "message": str(r.get("message"))[:300]})
     if not results:
         summary["output_tail"] = completed.stdout[-1500:]
+    if completed.returncode == 0 and target == "prod":
+        from warehouse import catalog
+        summary["catalog"] = catalog.publish()
     annotate("notice" if completed.returncode == 0 else "error", "warehouse dbt build", summary)
     step_summary(f"## warehouse · dbt build\n\n```json\n{json.dumps(summary, indent=2)}\n```\n")
     return completed.returncode
