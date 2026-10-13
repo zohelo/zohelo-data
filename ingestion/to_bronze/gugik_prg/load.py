@@ -4,7 +4,7 @@
 The ZIP's shapefile layers (A00 … A06) are read with DuckDB spatial and written as one
 Parquet file ``02_bronze/gugik_prg/boundaries/<entity>/<raw_sha256>.parquet``: one row per
 boundary feature, the layer name, every attribute as text (the source's own values,
-numbers cast to text), the geometry as WKB in the source CRS (EPSG:2180, PUWG 1992), the
+numbers cast to text), the geometry as WKB in the source CRS (geographic ETRS89 per the .prj, October 2026), the
 CRS text from the layer's .prj, and provenance. Partitioned by entity; the file list is
 the checkpoint. Rejections: bronze.prg_rejected_files.
 """

@@ -46,7 +46,7 @@ sources:
     description: >-
       One row per boundary feature of every layer of the newest national package (A00 country,
       A01 voivodeships, A02 powiats, A03 gminas, A05 cadastral units, A06 cadastral precincts);
-      attributes as text (jpt_kod_je = TERYT code), geometry as WKB in EPSG:2180 with the
+      attributes as text (jpt_kod_je = TERYT code), geometry as WKB (geographic ETRS89 as published) with the
       layer's .prj text in crs_wkt.
   - name: prg_rejected_files
     description: Landing files the PRG Bronze decoder rejected, with the reason.
