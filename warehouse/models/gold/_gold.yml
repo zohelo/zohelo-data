@@ -46,7 +46,8 @@ models:
     description: >-
       Conformed geography, v1 with the TERYT schemes: TERC (Polska → województwo → powiat →
       gmina) and SIMC localities, vintage = TERYT catalogue state date; flattened
-      ancestors l0–l3; special members _T, _Z, _X. geography_key = scheme:code:vintage.
+      ancestors l0–l3; area_ha / area_km2 for TERC units from PRG; special members _T, _Z,
+      _X. geography_key = scheme:code:vintage.
     columns:
       - name: geography_key
         tests: [not_null, unique]

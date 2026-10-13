@@ -1,9 +1,17 @@
 {# Conformed geography (warehouse/dimensions/geography.yaml), v1: the Polish TERYT schemes.
    Scheme TERC: Polska (L0) → województwo (L1) → powiat (L2) → gmina (L3);
    scheme SIMC: localities (L4) under their gmina. Vintage = TERYT catalogue state date.
+   Area (hectares) of voivodeships, powiats and gminas comes from PRG (silver.prg_units).
    Further schemes (ISO/M49, NUTS/LAU, KTS/BDL, World Bank, Eurostat GEO) and the
    cross-scheme bridge follow as their sources are modelled. #}
 with terc as (select * from {{ ref('teryt_terc') }}),
+prg as (
+    -- a unit drawn as several features is summed, so the join never duplicates members
+    select case when unit_level = 'kraj' then 'PL' else teryt_code end as prg_code, sum(area_ha) as area_ha
+    from {{ ref('prg_units') }}
+    where unit_level in ('kraj', 'wojewodztwo', 'powiat', 'gmina')
+    group by 1
+),
 simc as (select * from {{ ref('teryt_simc') }}),
 vintage as (select max(catalogue_date) as d from terc),
 members as (
@@ -27,12 +35,14 @@ members as (
     from simc s
 )
 select
-    scheme || ':' || code || ':' || strftime(vintage, '%Y%m%d') as geography_key,
-    scheme, code, vintage, vintage as valid_from, null::date as valid_to,
+    members.scheme || ':' || members.code || ':' || strftime(members.vintage, '%Y%m%d') as geography_key,
+    members.scheme, members.code, members.vintage, vintage as valid_from, null::date as valid_to,
     level, level_name, name_pl, parent_code,
     'PL' as l0_code, l1_code, l2_code, l3_code,
-    teryt_type, false as is_aggregate, 'member' as member_type
+    teryt_type, prg.area_ha, round(prg.area_ha / 100, 2) as area_km2,
+    false as is_aggregate, 'member' as member_type
 from members
-union all select '_T', '_T', '_T', null, null, null, null, null, 'wszystkie obszary (all areas)', null, null, null, null, null, null, true, 'all_areas'
-union all select '_Z', '_Z', '_Z', null, null, null, null, null, 'nie dotyczy (not applicable)', null, null, null, null, null, null, false, 'not_applicable'
-union all select '_X', '_X', '_X', null, null, null, null, null, 'nieznany (unknown)', null, null, null, null, null, null, false, 'unknown'
+left join prg on members.scheme = 'TERC' and prg.prg_code = members.code
+union all select '_T', '_T', '_T', null, null, null, null, null, 'wszystkie obszary (all areas)', null, null, null, null, null, null, null, null, true, 'all_areas'
+union all select '_Z', '_Z', '_Z', null, null, null, null, null, 'nie dotyczy (not applicable)', null, null, null, null, null, null, null, null, false, 'not_applicable'
+union all select '_X', '_X', '_X', null, null, null, null, null, 'nieznany (unknown)', null, null, null, null, null, null, null, null, false, 'unknown'
