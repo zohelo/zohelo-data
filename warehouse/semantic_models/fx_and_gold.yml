@@ -1,0 +1,70 @@
+# MetricFlow semantic layer: exchange rates and gold price (NBP).
+semantic_models:
+  - name: currency
+    description: Conformed currency dimension (gold.dim_currency).
+    model: ref('dim_currency')
+    entities:
+      - {name: currency, type: primary, expr: currency_code}
+    dimensions:
+      - {name: currency_name_pl, type: categorical, expr: name_pl}
+      - {name: member_type, type: categorical}
+
+  - name: fx_rate
+    description: Exchange rates, PLN per 1 unit of a currency, by date, rate type and NBP table.
+    model: ref('fact_fx_rate')
+    defaults: {agg_time_dimension: rate_date}
+    entities:
+      - {name: fx_rate_row, type: primary, expr: "currency_code || '|' || date_key || '|' || rate_type || '|' || source_table"}
+      - {name: currency, type: foreign, expr: currency_code}
+    dimensions:
+      - {name: rate_date, type: time, type_params: {time_granularity: day}}
+      - {name: rate_type, type: categorical}
+      - {name: source_table, type: categorical}
+    measures:
+      - {name: rate_avg, agg: average, expr: rate}
+      - {name: rate_min, agg: min, expr: rate}
+      - {name: rate_max, agg: max, expr: rate}
+      - {name: quotes, agg: count, expr: rate}
+
+  - name: gold_price
+    description: NBP gold price, PLN per gram of 1000-fineness gold.
+    model: ref('fact_gold_price')
+    defaults: {agg_time_dimension: price_date}
+    entities:
+      - {name: gold_price_day, type: primary, expr: date_key}
+    dimensions:
+      - {name: price_date, type: time, type_params: {time_granularity: day}}
+    measures:
+      - {name: gold_price_avg, agg: average, expr: price_pln_per_gram}
+      - {name: gold_price_max, agg: max, expr: price_pln_per_gram}
+      - {name: gold_price_min, agg: min, expr: price_pln_per_gram}
+
+metrics:
+  - name: fx_mid_rate
+    label: Exchange rate, NBP mid (PLN per unit)
+    description: Average NBP mid rate (tables A and B) over the chosen period, PLN per 1 unit of the currency.
+    type: simple
+    type_params: {measure: rate_avg}
+    filter: "{{ Dimension('fx_rate__rate_type') }} = 'mid'"
+  - name: fx_bid_rate
+    label: Exchange rate, NBP bid (PLN per unit)
+    description: Average NBP buying rate (table C) over the chosen period.
+    type: simple
+    type_params: {measure: rate_avg}
+    filter: "{{ Dimension('fx_rate__rate_type') }} = 'bid'"
+  - name: fx_ask_rate
+    label: Exchange rate, NBP ask (PLN per unit)
+    description: Average NBP selling rate (table C) over the chosen period.
+    type: simple
+    type_params: {measure: rate_avg}
+    filter: "{{ Dimension('fx_rate__rate_type') }} = 'ask'"
+  - name: fx_quote_count
+    label: Number of NBP quotations
+    description: Count of NBP rate quotations (data coverage).
+    type: simple
+    type_params: {measure: quotes}
+  - name: gold_price
+    label: Gold price, NBP (PLN per gram)
+    description: Average NBP gold price over the chosen period, PLN per gram of 1000-fineness gold.
+    type: simple
+    type_params: {measure: gold_price_avg}
