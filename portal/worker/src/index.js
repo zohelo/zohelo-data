@@ -1,5 +1,7 @@
 const FOLDER = "application/vnd.google-apps.folder";
 const INDEX_CURRENT = "_portal_index/v1/current.json";
+// Published by warehouse/catalog.py after each production model build.
+const CATALOG_CURRENT = "_portal_catalog/v1/catalog.json";
 const ORIGINS = new Set([
   "https://data.zohelo.com",
   "https://rutkala.github.io",
@@ -241,6 +243,11 @@ export default {
       const url=new URL(request.url);
       if (url.pathname==="/health") return json({ok:true,storage:"cloudflare-r2"},200,origin);
       if (url.pathname==="/drive/v3/files") return json(await listFiles(url,env),200,origin);
+      if (url.pathname==="/drive/v3/catalog") {
+        const catalog=await env.LAKEHOUSE.get(CATALOG_CURRENT);
+        if (!catalog) return json({error:{status:"NOT_FOUND",message:"The data catalog has not been published yet."}},404,origin);
+        return json(await catalog.json(),200,origin);
+      }
       const match=/^\/drive\/v3\/files\/([^/]+)$/.exec(url.pathname);
       if (!match) return json({error:{status:"NOT_FOUND"}},404,origin);
       const id=decodeURIComponent(match[1]);
