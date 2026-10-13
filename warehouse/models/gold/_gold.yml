@@ -1,6 +1,8 @@
 version: 2
 models:
   - name: dim_date
+    time_spine:
+      standard_granularity_column: calendar_date
     description: >-
       Conformed calendar (warehouse/dimensions/calendar.yaml), one row per day 1900–2100
       plus special members 0 (not applicable) and -1 (unknown). date_key = yyyymmdd.
@@ -8,6 +10,8 @@ models:
     columns:
       - name: date_key
         tests: [not_null, unique]
+      - name: calendar_date
+        granularity: day
       - name: member_type
         tests: [{accepted_values: {arguments: {values: ['day', 'not_applicable', 'unknown']}}}]
   - name: dim_currency
@@ -46,3 +50,8 @@ models:
     columns:
       - name: geography_key
         tests: [not_null, unique]
+  - name: fact_gold_price
+    description: NBP gold price, PLN per gram of 1000-fineness gold, one row per date (date_key → dim_date).
+    columns:
+      - name: date_key
+        tests: [not_null, unique, {relationships: {arguments: {to: ref('dim_date'), field: date_key}}}]
