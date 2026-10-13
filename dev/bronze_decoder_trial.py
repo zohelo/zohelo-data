@@ -24,9 +24,13 @@ from ingestion.to_bronze.eurostat.decode import EurostatBulkDecodeError, decode_
 
 
 def main() -> int:
+    import sys
+    largest = int(sys.argv[sys.argv.index("--largest") + 1]) if "--largest" in sys.argv else 0
     client, landing = s3(), req("R2_LANDING_BUCKET")
     cands = landing_candidates(client, landing)
     by_size = sorted(cands, key=lambda c: c["size"])
+    if largest:
+        return large_only(client, landing, by_size[-largest:])
     picks = {by_size[len(by_size) * q // 100]["raw_sha256"]: by_size[len(by_size) * q // 100]
              for q in (10, 50, 90, 99)}
     for c in by_size[-2:]:
@@ -89,6 +93,32 @@ def main() -> int:
             print(json.dumps(row), flush=True)
     (Path(os.environ.get("DEV_OUTPUT_DIR", ".")) / "trial.json").write_text(json.dumps(results, indent=2))
     annotate("notice", "decoder trial", results)
+    return 0
+
+
+def large_only(client, landing, items) -> int:
+    results = []
+    with tempfile.TemporaryDirectory() as tmp:
+        for i, item in enumerate(items):
+            work = Path(tmp) / str(i)
+            work.mkdir()
+            raw, rec, out = work / "d.tsv.gz", work / "r.json", work / "o.parquet"
+            rec.write_bytes(item["receipt_bytes"])
+            download(client, landing, item, raw)
+            row = {"dataset": item["dataset_id"], "gz_mb": round(item["size"] / 1e6, 1)}
+            t0 = time.monotonic()
+            try:
+                rep = decode_landing_distribution(raw, rec, out, receipt_uri="r2://x/r",
+                                                  raw_uri=f"r2://{landing}/{item['data_key']}")
+                row.update(seconds=round(time.monotonic() - t0, 1), rows=rep["observation_cells"],
+                           new_mb=round(rep["output_bytes"] / 1e6, 1))
+            except EurostatBulkDecodeError as exc:
+                row["rejected"] = str(exc)[:300]
+            results.append(row)
+            print(json.dumps(row), flush=True)
+            for f in (raw, out):
+                f.unlink(missing_ok=True)
+    annotate("notice", "decoder trial (largest files)", results)
     return 0
 
 

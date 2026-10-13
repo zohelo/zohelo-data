@@ -9,10 +9,9 @@ extraction:
   schedule: null                        # manual only; a schedule needs owner approval
 
 landing: 01_landing/eurostat/
-bronze: [bronze.eurostat_full_observations]
+bronze: [bronze.eurostat_full_observations, bronze.eurostat_rejected_files]
 silver: []
 gold: []
-control: [06_control/eurostat_bulk_landing/, 06_control/eurostat_bulk_bronze/]
 
 # Activities the Pipeline may run (owner authorization).
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive]

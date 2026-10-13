@@ -29,7 +29,7 @@ docs/                architecture, landing, operating, sources
 zohelo-landing-prod     01_landing/  exact source files + receipts
                         05_archive/  verified raw history
 zohelo-lakehouse-prod   Iceberg bronze / silver / gold (R2 Data Catalog)
-                        06_control/  run records, checkpoints, portal index
+                        _portal_index/  the portal's file index (current version only)
 ```
 
 See [architecture](docs/architecture.md), [landing](docs/landing.md),

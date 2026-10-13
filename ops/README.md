@@ -13,8 +13,8 @@ script.
 | Script | Purpose | Writes |
 |---|---|---|
 | `platform_inventory` | Per source: Landing / Archive files, GB and latest write; Bronze / Silver / Gold tables, rows, files, GB. Storage per bucket and folder; tables and Landing folders no source claims; registered tables that do not exist. Doubles as the connectivity check. Args: `--source <id> …` | nothing |
-| `orphan_files` | Data files in table folders that no snapshot of any table references (R2 maintenance never removes them). Args: `--min-age-hours 48`, `--delete` | with `--delete`: removes those files |
-| `retry_rejected` | Bronze rejections grouped by reason and dataset family; with `--apply` clears them so the next `bronze: load` retries (records kept under `retried/`). Args: `--source eurostat [--dataset GLOB …] [--apply]` | with `--apply`: control records |
+| `orphan_files` | Parquet files under `02_bronze/`, `03_silver/`, `04_gold/` that no snapshot of any table references, including folders of dropped tables (R2 maintenance never removes them). Args: `--min-age-hours 48`, `--delete` | with `--delete`: removes those files |
+| `retry_rejected` | Bronze rejections (`bronze.eurostat_rejected_files`) grouped by reason and dataset family; with `--apply` deletes the matching rows so the next `bronze: load` retries them (the table history keeps them). Args: `--source eurostat [--dataset GLOB …] [--apply]` | with `--apply`: rows of the rejections table |
 | `restore_from_archive` | Receipts in Landing whose data file is gone; with `--apply` copies the Archive file back and verifies its SHA-256. Args: `--source eurostat [--dataset GLOB …] [--apply]` | with `--apply`: adds Landing files, never overwrites |
 
 Rules: one file per script, `snake_case.py`, runnable as `python -m ops.<name>`. Write

@@ -15,8 +15,8 @@ decision.
 | Shared ingestion code | `ingestion/common/` (reporting, lineage, archive); retired code `ingestion/legacy/` | — |
 | Bronze → Silver → Gold, dimensional model, semantic layer | `warehouse/` (`warehouse.yaml`) | Iceberg `silver`, `gold` |
 | Data catalog and lineage | generated from `warehouse/`, shown in the portal | — |
-| Serving | `portal/` (`app/` portal, `worker/` R2 read API, `publish_index.py`, `portal.yaml`) | `06_control/portal_index/` |
-| Orchestration | `.github/workflows/`, `run.py` | `06_control/` run records |
+| Serving | `portal/` (`app/` portal, `worker/` R2 read API, `publish_index.py`, `portal.yaml`) | `_portal_index/` |
+| Orchestration | `.github/workflows/`, `run.py` | run results in the workflow run (annotations, summary); no state files |
 | Ad-hoc | `ops/` | — |
 
 `run.py` is the single entry point: it plans a run and executes one activity.

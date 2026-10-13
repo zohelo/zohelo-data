@@ -41,9 +41,18 @@ def main(argv=None) -> int:
     p.add_argument("--min-age-hours", type=float, default=48)
     p.add_argument("--delete-prefix", nargs="*", default=[])
     p.add_argument("--keep-prefix", nargs="*", default=[])
+    p.add_argument("--drop-table", nargs="*", default=[], help="namespace.table, dropped first (apply only)")
     args = p.parse_args(argv)
     client, bucket = s3(), req("R2_LAKEHOUSE_BUCKET")
-    refs = referenced(catalog())
+    cat = catalog()
+    dropped = []
+    if args.mode == "apply":
+        for name in args.drop_table:
+            ns, table = name.split(".")
+            if cat.table_exists((ns, table)):
+                cat.drop_table((ns, table))
+                dropped.append(name)
+    refs = referenced(cat)
     cutoff = datetime.now(timezone.utc) - timedelta(hours=args.min_age_hours)
 
     summary = defaultdict(lambda: [0, 0, 0, 0])  # ref n, ref bytes, unref n, unref bytes
@@ -82,7 +91,7 @@ def main(argv=None) -> int:
              for k, v in sorted(summary.items(), key=lambda kv: -(kv[1][1] + kv[1][3]))}
     (OUT / "cleanup.json").write_text(json.dumps({"folders": table, "samples": samples}, indent=2))
     annotate("notice", "totals", {
-        "mode": args.mode, "referenced_files": len(refs),
+        "mode": args.mode, "dropped_tables": dropped, "referenced_files": len(refs),
         "unreferenced_gb": round(sum(v[3] for v in summary.values()) / 1e9, 2),
         "deleted": deleted, "deleted_gb": round(sum(o["size"] for o in to_delete) / 1e9, 2),
         "format": "folder: [referenced n, GB, unreferenced n, GB]"})

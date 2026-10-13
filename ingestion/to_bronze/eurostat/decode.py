@@ -80,33 +80,28 @@ def decode_landing_distribution(source: Path, receipt: Path, output: Path, *,
             con.execute("SET threads = 2")
             con.execute("SET preserve_insertion_order = true")
             columns = {f"c{i}": "VARCHAR" for i in range(len(header))}
+            # One pass over the file: the split series key per row; the table keeps file
+            # order, so rowid + 2 is the source line. No window, join or sort anywhere, so
+            # memory stays bounded by DuckDB's streaming operators.
             con.execute(
-                "CREATE TABLE src AS SELECT row_number() OVER () + 1 AS line, * FROM read_csv(?, "
-                "auto_detect = false, delim = '\t', quote = '', escape = '', comment = '', "
-                "header = false, skip = 1, columns = ?, "
-                "nullstr = ?, strict_mode = true, null_padding = false, parallel = false, "
-                "compression = 'gzip', max_line_size = 100000000)",
+                "CREATE TABLE src AS SELECT "
+                "list_transform(string_split(c0, ','), x -> trim(x)) AS parts, * EXCLUDE (c0) "
+                "FROM read_csv(?, auto_detect = false, delim = '\t', quote = '', escape = '', "
+                "comment = '', header = false, skip = 1, columns = ?, nullstr = ?, strict_mode = true, "
+                "null_padding = false, parallel = false, compression = 'gzip', max_line_size = 8000000)",
                 [str(source), columns, _NULL_MARKER])
-            con.execute("CREATE TABLE periods (col VARCHAR, period_key VARCHAR, pos INTEGER)")
-            con.executemany("INSERT INTO periods VALUES (?, ?, ?)",
-                            [(f"c{i}", p, i) for i, p in enumerate(periods, start=1)])
-            source_rows, nulls = con.execute(
+            source_rows, nulls, bad, distinct = con.execute(
                 "SELECT count(*), count(*) FILTER (WHERE "
-                + " OR ".join(f"c{i} IS NULL" for i in range(len(header))) + ") FROM src").fetchone()
+                + " OR ".join(f"c{i} IS NULL" for i in range(1, len(header)))
+                + "), min(rowid + 2) FILTER (WHERE len(parts) <> ? OR list_contains(parts, '')), "
+                "count(DISTINCT parts) FROM src", [len(dimensions)]).fetchone()
             if source_rows == 0:
                 raise EurostatBulkDecodeError("Eurostat TSV has no series")
             if nulls:
                 raise EurostatBulkDecodeError("Eurostat TSV has rows with missing fields")
-            con.execute("CREATE TABLE series AS SELECT line, "
-                        "list_transform(string_split(c0, ','), x -> trim(x)) AS parts FROM src")
-            bad = con.execute(
-                "SELECT line FROM series WHERE len(parts) <> ? OR list_contains(parts, '') LIMIT 1",
-                [len(dimensions)]).fetchone()
-            if bad:
-                raise EurostatBulkDecodeError(f"Eurostat TSV row {bad[0]} has an invalid series key")
-            duplicate = con.execute(
-                "SELECT count(*) - count(DISTINCT parts) FROM series").fetchone()[0]
-            if duplicate:
+            if bad is not None:
+                raise EurostatBulkDecodeError(f"Eurostat TSV row {bad} has an invalid series key")
+            if distinct != source_rows:
                 raise EurostatBulkDecodeError("Eurostat TSV repeats a complete dimensional observation key")
 
             def code(name: str) -> str:
@@ -119,20 +114,18 @@ def decode_landing_distribution(source: Path, receipt: Path, output: Path, *,
                   SELECT ?::VARCHAR AS dataset_id, ?::VARCHAR AS source_version,
                          ?::TIMESTAMPTZ AS ingested_at, ?::VARCHAR AS raw_sha256,
                          ?::VARCHAR AS series_dimensions,
-                         array_to_string(s.parts, ',') AS series_key,
+                         array_to_string(parts, ',') AS series_key,
                          {code('freq')} AS freq_code, {code('unit')} AS unit_code,
                          {code('geo')} AS geo_code,
-                         p.period_key,
-                         regexp_extract(trim(u.cell), '^(\\S*)', 1) AS value_text,
-                         nullif(trim(regexp_extract(trim(u.cell), '^\\S*\\s+(.*)$', 1)), '') AS status_code,
-                         u.line AS source_row_number
-                  FROM (UNPIVOT src ON {value_columns} INTO NAME col VALUE cell) AS u
-                  JOIN series AS s USING (line)
-                  JOIN periods AS p USING (col)
-                  ORDER BY u.line, p.pos
+                         (?::VARCHAR[])[substr(col, 2)::INTEGER] AS period_key,
+                         regexp_extract(trim(cell), '^(\\S*)', 1) AS value_text,
+                         nullif(trim(regexp_extract(trim(cell), '^\\S*\\s+(.*)$', 1)), '') AS status_code,
+                         line AS source_row_number
+                  FROM (UNPIVOT (SELECT rowid + 2 AS line, * FROM src)
+                        ON {value_columns} INTO NAME col VALUE cell)
                 ) TO '{escaped}' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 1000000)
             """, [identity["dataset_id"], identity["source_version"], identity["ingested_at"],
-                  identity["raw_sha256"], ",".join(dimensions)])
+                  identity["raw_sha256"], ",".join(dimensions), periods])
             cells = con.execute(f"SELECT count(*) FROM read_parquet('{escaped}')").fetchone()[0]
         if cells != source_rows * len(periods):
             raise EurostatBulkDecodeError("Eurostat Bronze row count differs from series × periods")

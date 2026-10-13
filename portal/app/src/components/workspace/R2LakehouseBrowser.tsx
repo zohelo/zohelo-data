@@ -30,7 +30,6 @@ const layerLabels: Record<string, string> = {
   "03_silver": "Silver",
   "04_gold": "Gold",
   "05_archive": "Archive",
-  "06_control": "Control",
 };
 
 const formatBytes = (bytes?: number) => {

@@ -1,5 +1,5 @@
 const FOLDER = "application/vnd.google-apps.folder";
-const INDEX_CURRENT = "06_control/portal_index/v1/current.json";
+const INDEX_CURRENT = "_portal_index/v1/current.json";
 const ORIGINS = new Set([
   "https://data.zohelo.com",
   "https://rutkala.github.io",

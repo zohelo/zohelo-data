@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Find (and with --delete remove) data files no Iceberg table references any more.
+"""Find (and with --delete remove) table data files no Iceberg snapshot references.
 
 R2 Data Catalog maintenance expires snapshots but never removes orphan files: files
-left by failed commits, by tables that were replaced, or by pass-through copies.
-A file counts as referenced when ANY snapshot of ANY table in ANY namespace references it (zero-copy tables share files across namespaces). Only folders that
-contain referenced data files are scanned, only objects older than --min-age-hours are
-candidates (an in-flight load may not have committed yet), and only the lakehouse
-bucket is touched. Without --delete nothing is written.
+left by failed commits, by tables that were dropped or replaced, or by earlier loaders.
+Everything under the layer folders (02_bronze/, 03_silver/, 04_gold/) of the lakehouse
+bucket is scanned, including folders no table points to any more. A file counts as
+referenced when ANY snapshot of ANY table in ANY namespace references it (zero-copy
+tables share files). Only Parquet files older than --min-age-hours are candidates (an
+in-flight load may not have committed yet). Without --delete nothing is written.
 """
 from __future__ import annotations
 
@@ -20,16 +21,18 @@ from urllib.parse import urlsplit
 from ingestion.common.r2 import catalog, req, s3
 from ingestion.common.report import annotate
 
+LAYERS = ("02_bronze/", "03_silver/", "04_gold/")
 
-def referenced_files(cat) -> tuple[set[str], set[str]]:
-    """(object keys of every data file referenced by any snapshot, their folders)."""
+
+def referenced_files(cat) -> set[str]:
+    """Object keys of every data file referenced by any snapshot of any table."""
     keys: set[str] = set()
-    for namespace in cat.list_namespaces():   # every namespace: zero-copy tables share files
+    for namespace in cat.list_namespaces():
         for identifier in cat.list_tables(namespace):
             table = cat.load_table(identifier)
             for path in table.inspect.all_files().column("file_path").to_pylist():
                 keys.add(urlsplit(path).path.lstrip("/"))
-    return keys, {key.rsplit("/", 1)[0] + "/" for key in keys}
+    return keys
 
 
 def main(argv=None) -> int:
@@ -38,14 +41,14 @@ def main(argv=None) -> int:
     parser.add_argument("--delete", action="store_true")
     args = parser.parse_args(argv)
     client, bucket = s3(), req("R2_LAKEHOUSE_BUCKET")
-    keys, prefixes = referenced_files(catalog())
+    keys = referenced_files(catalog())
     cutoff = datetime.now(timezone.utc) - timedelta(hours=args.min_age_hours)
 
     orphans, young = [], 0
-    for prefix in sorted(prefixes):
-        for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix, Delimiter="/"):
+    for prefix in LAYERS:
+        for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix):
             for obj in page.get("Contents", []):
-                if obj["Key"] in keys:
+                if obj["Key"] in keys or not obj["Key"].endswith(".parquet"):
                     continue
                 if obj["LastModified"] > cutoff:
                     young += 1
@@ -56,15 +59,18 @@ def main(argv=None) -> int:
     if args.delete:
         for start in range(0, len(orphans), 1000):
             batch = orphans[start:start + 1000]
-            client.delete_objects(Bucket=bucket, Delete={"Objects": [{"Key": o["key"]} for o in batch], "Quiet": True})
+            response = client.delete_objects(Bucket=bucket, Delete={
+                "Objects": [{"Key": o["key"]} for o in batch], "Quiet": True})
+            if response.get("Errors"):
+                raise RuntimeError(f"delete failed: {response['Errors'][:3]}")
             deleted += len(batch)
     by_folder: dict[str, list[int]] = {}
     for orphan in orphans:
-        folder = orphan["key"].rsplit("/", 1)[0]
+        folder = "/".join(orphan["key"].split("/")[:3])
         by_folder.setdefault(folder, [0, 0])
         by_folder[folder][0] += 1
         by_folder[folder][1] += orphan["bytes"]
-    result = {"referenced_files": len(keys), "folders_scanned": len(prefixes), "orphans": len(orphans),
+    result = {"referenced_files": len(keys), "orphans": len(orphans),
               "orphan_gb": round(sum(o["bytes"] for o in orphans) / 1e9, 3),
               "skipped_younger_than_min_age": young, "deleted": deleted,
               "top_folders": dict(sorted(by_folder.items(), key=lambda kv: -kv[1][1])[:15])}

@@ -56,9 +56,13 @@ and then removed from Landing.
 ## Landing → Bronze → Archive
 
 - Bronze (`ingestion/to_bronze/`) loads the latest version of every entity, keeps the source's
-  meaning and grain and adds provenance (Landing key, SHA-256). Checkpoint: the
-  Landing SHA-256 is in the Bronze table. Files the decoder rejects are recorded with
-  a reason, never dropped silently.
+  meaning and grain and adds provenance (Landing SHA-256, source version, ingestion
+  time). Bronze does not interpret values: numbers stay text, casting is a Silver rule.
+  Checkpoint: the Landing SHA-256 is in the Bronze table. Files the decoder rejects are
+  recorded with a reason in a Bronze rejections table (e.g. `bronze.eurostat_rejected_files`),
+  never dropped silently.
+- State lives in the data itself (receipts in Landing, Iceberg tables and their file
+  lists) — there is no separate control folder.
 - A Landing file is copied to `05_archive/` only after its Bronze commit is
   validated. The archive copy must reproduce the original SHA-256. Already-compressed
   formats (gzip, ZIP, Parquet) are not recompressed.
