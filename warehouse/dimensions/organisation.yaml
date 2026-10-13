@@ -1,0 +1,53 @@
+name: organisation
+kind: entity
+status: draft
+description: >-
+  Legal entities and other organisations (companies, sole traders, non-profits, public
+  bodies, issuers, contracting authorities, suppliers). Official identifiers are the
+  conformed keys; roles such as issuer or contracting authority are bridges, not
+  separate dimensions. Legal unit, local unit (establishment) and sole-trader activity
+  are distinct entity types.
+grain: one row = one organisation version (SCD2) of one entity_type
+key:
+  surrogate: organisation_key       # per version
+  durable: organisation_id          # stable across versions
+  natural: "first available of LEI, KRS, REGON-9, NIP, CEIDG id, source id (scheme-qualified)"
+identifiers: [LEI, KRS, REGON (9 / 14), NIP, CEIDG, BIC, CIK, OpenCorporates id, OPENDATA_ORG_ID]
+standards:
+  - {name: ISO 17442 LEI + LEI-CDF 3.x, owner: GLEIF, version: "CDF 3.1 (unverified)", url: "https://www.gleif.org/en/about-lei/common-data-file-format", verified: false}
+  - {name: ISO 20275 Entity Legal Forms (ELF), owner: GLEIF, version: current, url: "https://www.gleif.org/en/about-lei/code-lists/iso-20275-entity-legal-forms-code-list", verified: false}
+  - {name: REGON / KRS / NIP, owner: GUS / Ministry of Justice / MF, version: n/a, url: "https://wyszukiwarkaregon.stat.gov.pl/", verified: false}
+hierarchy: [ultimate parent, direct parent, organisation, local unit]   # via relationship facts, not columns
+versioning:
+  type: scd2
+  rule: "new version on change of name, legal form, status, address, PKD, sector; identifiers in bridge_entity_identifier with their own validity"
+special_members: {_Z: no organisation applies, _U: organisation unknown / unresolved}
+attributes:
+  - {name: entity_type, description: "legal_unit | local_unit | sole_trader | fund | branch | public_body", source: registry}
+  - {name: legal_name / other_names, source: gleif, krs, regon}
+  - {name: legal_form, description: ELF code + national form, source: gleif / regon}
+  - {name: status, description: "active, lapsed, in liquidation, deleted (+ dates)", source: gleif / krs / regon}
+  - {name: registered_address_key / hq_address_key, source: gleif / regon (address.yaml)}
+  - {name: country / jurisdiction, source: gleif}
+  - {name: pkd_activity_key, source: regon / ceidg / krs (activity.yaml)}
+  - {name: institutional_sector_code, source: registry / regon (unverified)}
+  - {name: lei_registration_status / managing_lou, source: gleif}
+  - {name: vat_status, description: "active/exempt as of date — only via verification of known NIP", source: mf_biala_lista}
+facts_and_bridges:
+  - "fact_organisation_relationship (relationship fact): GLEIF RR-CDF direct/ultimate accounting consolidation, branches, fund management; KRS/CRBR ownership later"
+  - "fact_reporting_exception: GLEIF reasons for missing parents"
+  - "bridge_organisation_role: issuer (security.yaml), contracting authority / supplier (document.yaml), healthcare provider (institution.yaml)"
+used_by:
+  platform:
+    gleif: {inventory: CD-015, expresses_as: "LEI records (lei2: legal name, legal form, addresses, registration authority + entity id, status); relationship records; reporting exceptions"}
+    mf_biala_lista: {inventory: PLG-011, expresses_as: "SHA-512 hashes of (date, NIP, account) for active and exempt VAT payers, plus masks of virtual accounts — no names or plain identifiers (per MF flat-file spec, verify against Bronze)"}
+    opendata_org: {inventory: null, expresses_as: "organisations table of an entity-resolution distribution (BrightQuery/OpenData.org); identifiers and coverage unverified, likely US-centric"}
+    nbp: {inventory: PLG-001, expresses_as: "n/a"}
+  not_used: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, gugik_prg, gus_teryt]
+  inventory: 46 sources — see README coverage table (REGON 10, NIP 7, LEI 7, KRS 6)
+mapping_notes:
+  - "GLEIF gives KRS numbers for Polish entities via RegistrationAuthorityEntityID (RA code for KRS to verify) — the first certified LEI↔KRS link."
+  - Never merge a sole trader (CEIDG/NIP) with a legal person; never match on names.
+open_questions:
+  - opendata_org identifier set and licence (commercial redistribution needs agreement).
+  - Whether local units (REGON-14) get their own dimension when REGON BIR (PLS-008) is admitted.

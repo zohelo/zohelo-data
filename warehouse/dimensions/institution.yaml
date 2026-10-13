@@ -1,0 +1,33 @@
+name: institution
+kind: entity
+status: draft
+description: >-
+  Public-service establishments from sector registers — schools and education
+  establishments (RSPO), higher-education and research institutions (POL-on), healthcare
+  entities, practices and service locations (RPWDL, NFZ), courts, prisons, culture
+  institutions. Distinct from the legal organisation that runs them (link by REGON).
+grain: one row = one establishment version (SCD2) in its sector register
+key:
+  surrogate: institution_key
+  durable: institution_id
+  natural: "(register scheme, register id): RSPO number, POL-on id, RPWDL book number + unit code, court/prison code"
+identifiers: [RSPO, POLON, RPWDL, NFZ provider code, REGON (of the operator; may be shared)]
+standards:
+  - {name: RSPO, owner: MEN, version: n/a, url: "https://rspo.gov.pl/", verified: false}
+  - {name: POL-on / RAD-on, owner: OPI PIB, version: n/a, url: "https://radon.nauka.gov.pl/", verified: false}
+  - {name: RPWDL, owner: Ministry of Health / CeZ, version: n/a, url: "https://rpwdl.ezdrowie.gov.pl/", verified: false}
+hierarchy: [operator organisation, institution, organisational unit / service location]
+versioning: {type: scd2}
+special_members: {_Z: not applicable, _U: unknown}
+attributes:
+  - {name: institution_type, description: "school type (→ education.yaml), university, hospital, clinic, court …", source: register}
+  - {name: operator_organisation_key, source: register (REGON)}
+  - {name: address_key / geography_key (gmina), source: register + TERYT}
+  - {name: public_private, source: register}
+  - {name: status / opened / closed, source: register}
+used_by:
+  platform: {}
+  not_used: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, gleif, mf_biala_lista, gugik_prg, gus_teryt, opendata_org]
+  inventory: GL-004, 032; PLS-014, 015, 020…023; PLG-031, 032
+mapping_notes: ["REGON can be shared by several schools of one governing body — never use it as the institution key."]
+open_questions: ["Split into education / health / justice dimensions once their attributes diverge (promotion rule in reverse)."]

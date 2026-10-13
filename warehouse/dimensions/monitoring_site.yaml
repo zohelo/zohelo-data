@@ -1,0 +1,24 @@
+name: monitoring_site
+kind: entity
+status: draft
+description: Measurement locations — meteorological and hydrological stations (IMGW), air-quality stations and sensors (GIOŚ), water monitoring points, boreholes, EEA sites, reanalysis grid cells.
+grain: one row = one site (or sensor) version (SCD2)
+key: {surrogate: monitoring_site_key, natural: "(network, site id[, sensor id])"}
+identifiers: [IMGW station id, GIOŚ station/sensor id, EEA sampling point id, monitoring point code, borehole id, grid cell (dataset, lat, lon)]
+standards:
+  - {name: INSPIRE Environmental Monitoring Facilities, owner: European Commission, version: n/a, url: "https://inspire.ec.europa.eu/", verified: false}
+  - {name: WMO station identifiers (WIGOS), owner: WMO, version: n/a, url: "https://community.wmo.int/", verified: false}
+hierarchy: [network, station, sensor / parameter]
+versioning: {type: scd2, rule: "location, status and measured parameters change over time"}
+special_members: {_Z: not applicable, _U: unknown}
+attributes:
+  - {name: network / operator_organisation_key, source: source}
+  - {name: lat / lon / elevation, source: source}
+  - {name: geography_key (gmina via PRG point-in-polygon), source: derived}
+  - {name: parameters, description: measured parameters (pollutant, variable), source: source}
+used_by:
+  platform: {}
+  not_used: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, gleif, mf_biala_lista, gugik_prg, gus_teryt, opendata_org]
+  inventory: GL-036, 037; PL-ENV-008…012, 014
+mapping_notes: ["Measured parameter (PM10, temperature …) is a conformed candidate (pollutant/variable codelist) once two networks are admitted."]
+open_questions: []

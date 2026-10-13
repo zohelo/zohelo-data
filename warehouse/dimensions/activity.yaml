@@ -1,0 +1,34 @@
+name: activity
+kind: conformed
+status: draft
+description: Economic activity (industry) classification with versions and correspondences — NACE Rev. 2 / 2.1, PKD 2007 / 2025, ISIC Rev. 4 / 5.
+grain: one row = one code of one classification version (scheme, version, code)
+key: {surrogate: activity_key, natural: [scheme, version, code]}
+identifiers: ["NACE code (A, 01, 01.1, 01.11)", "PKD code (NACE + Polish 5th character, e.g. 01.11.Z)", "ISIC code"]
+standards:
+  - {name: NACE Rev. 2, owner: Eurostat, version: "2 (2008)", url: "https://ec.europa.eu/eurostat/web/nace", verified: false}
+  - {name: NACE Rev. 2.1, owner: Eurostat, version: "2.1 (Reg. (EU) 2023/137, from 2025)", url: "https://ec.europa.eu/eurostat/web/nace", verified: false}
+  - {name: PKD 2007 / PKD 2025, owner: GUS, version: "2007; 2025", url: "https://stat.gov.pl/Klasyfikacje/", verified: false}
+  - {name: ISIC Rev. 4 / Rev. 5, owner: UNSD, version: "4; 5", url: "https://unstats.un.org/unsd/classifications/Econ/isic", verified: false}
+  - {name: SDMX CL_ACTIVITY, owner: SDMX, version: current, url: "https://sdmx.org/sdmx_cdcl", verified: false}
+hierarchy: [section, division, group, class, subclass (PKD only)]
+versioning:
+  type: versioned_codelist
+  correspondences: "bridge_activity_correspondence(from_key, to_key, relationship 1:1|1:n|n:1|n:m, weight optional): NACE 2↔2.1, PKD 2007↔2025, NACE↔PKD, NACE↔ISIC"
+special_members: {_T: all activities (TOTAL), _Z: not applicable, _X: not elsewhere classified / unknown}
+attributes:
+  - {name: label_en / label_pl, source: Eurostat / GUS}
+  - {name: level, source: classification}
+  - {name: "section_code … class_code", description: flattened ancestors, source: derived}
+  - {name: aggregate_group, description: "Eurostat aggregates such as B-E, B-S_X_O, G-I", source: eurostat}
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "nace_r2 dimension (letters, B-E style aggregates, TOTAL)"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "PKD sections as text labels in n1..n5 (e.g. 'sekcja C')"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "PKD dictionary members in cross-section dimensions (unverified)"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "ISIC broad sectors inside indicator names (agriculture, industry, services)"}
+    opendata_org: {inventory: null, expresses_as: "industry codes on organisations (scheme unverified; possibly NAICS/SIC)"}
+  not_used: [nbp, gleif, mf_biala_lista, gus_teryt, gugik_prg]
+  inventory: GL-001, 040; PLS-027, 028; PLG-014; CD-021 (lower bound; also REGON PLS-008, KRS PLG-012 carry PKD)
+mapping_notes: ["Organisation PKD codes (REGON/CEIDG/KRS) are attributes of the organisation SCD2 rows, keyed to this dimension."]
+open_questions: ["NAICS/SIC for non-EU registers (opendata_org) — add as further schemes when needed."]

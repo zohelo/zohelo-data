@@ -1,0 +1,24 @@
+name: facility
+kind: entity
+status: draft
+description: Physical installations reported individually — industrial facilities (EEA industrial reporting), energy generation units and gas interconnection points, mining areas and concessions.
+grain: one row = one facility version (SCD2)
+key: {surrogate: facility_key, natural: "(scheme, id): EEA facility id, PSE unit code, GAZ-SYSTEM point code (EIC?), MIDAS mining-area id"}
+identifiers: [EEA facility/installation id, ENTSO-E EIC code (unverified), MIDAS deposit/area id]
+standards:
+  - {name: EEA Industrial Reporting (E-PRTR successor), owner: EEA, version: current, url: "https://industry.eea.europa.eu/", verified: false}
+  - {name: Energy Identification Code (EIC), owner: ENTSO-E, version: n/a, url: "https://www.entsoe.eu/data/energy-identification-codes-eic/", verified: false}
+hierarchy: [site, facility, installation / unit]
+versioning: {type: scd2}
+special_members: {_Z: not applicable, _U: unknown}
+attributes:
+  - {name: facility_type / technology / capacity, source: source}
+  - {name: operator_organisation_key, source: source}
+  - {name: lat / lon / geography_key, source: source + derived}
+  - {name: activity_key, source: EEA (NACE)}
+used_by:
+  platform: {}
+  not_used: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, gleif, mf_biala_lista, gugik_prg, gus_teryt, opendata_org]
+  inventory: GL-037; PL-ENV-015, 021 (PL-ENV-019 publishes aggregated generation units)
+mapping_notes: []
+open_questions: []

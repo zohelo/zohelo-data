@@ -1,0 +1,29 @@
+name: spatial_feature
+kind: entity
+status: draft
+description: >-
+  Geospatial objects other than reference areas — administrative boundary geometries
+  (PRG), parcels and buildings, named places, topographic objects, water bodies,
+  protected areas, forest compartments, deposits, OSM objects. Holds geometry
+  references and feature validity; split by feature_type when one is modelled in depth.
+grain: one row = one feature version (feature_type, native id, valid_from)
+key: {surrogate: spatial_feature_key, natural: "(feature_type, scheme, native id, version)"}
+identifiers: [PRG unit id / TERYT code, cadastral parcel id (TERYT-based), building id, PRNG id, BDOT10k id, water body code (JCWP), protected-area code (Natura 2000 site code), OSM type+id]
+standards:
+  - {name: INSPIRE data specifications, owner: European Commission, version: n/a, url: "https://inspire.ec.europa.eu/", verified: false}
+  - {name: PUWG 1992 (EPSG:2180) / ETRS89, owner: GUGiK / EPSG, version: n/a, url: "https://epsg.io/2180", verified: false}
+hierarchy: [feature_type, feature]
+versioning: {type: scd2, rule: "geometry and attribute validity intervals; boundary vintage = PRG edition"}
+special_members: {_Z: not applicable}
+attributes:
+  - {name: feature_type, source: registry}
+  - {name: geometry_ref, description: "pointer to geometry file/table, CRS", source: source}
+  - {name: geography_key, description: "for PRG units: the TERYT member of geography.yaml", source: gugik_prg}
+  - {name: area_km2, source: gugik_prg (surface areas)}
+used_by:
+  platform:
+    gugik_prg: {inventory: PL-ENV-001, expresses_as: "prg_country, prg_voivodeships, prg_counties, prg_municipalities (boundaries keyed by TERYT) and prg_surface_areas"}
+  not_used: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, gleif, mf_biala_lista, gus_teryt, opendata_org]
+  inventory: PL-ENV-001…006, 011…013, 016…018; CD-027
+mapping_notes: ["PRG boundaries are the geometry of geography members (TERYT scheme) per edition; geography.yaml holds the codes, this dimension the geometries."]
+open_questions: ["Owner: store geometries in Iceberg (WKB) or as files referenced from Gold."]

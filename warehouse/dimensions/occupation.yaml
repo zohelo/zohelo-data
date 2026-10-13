@@ -1,0 +1,23 @@
+name: occupation
+kind: conformed
+status: draft
+description: Occupation per ISCO-08 and the Polish KZiS (Klasyfikacja zawodów i specjalności, ISCO-08-based, 6-digit).
+grain: one row = one code of one scheme version (scheme, version, code)
+key: {surrogate: occupation_key, natural: [scheme, version, code]}
+identifiers: [ISCO-08 code, KZiS code]
+standards:
+  - {name: ISCO-08, owner: ILO, version: "08", url: "https://ilostat.ilo.org/methods/concepts-and-definitions/classification-occupation/", verified: false}
+  - {name: KZiS, owner: Ministry of Family, Labour and Social Policy, version: current (unverified), url: "https://psz.praca.gov.pl/rynek-pracy/bazy-danych/klasyfikacja-zawodow-i-specjalnosci", verified: false}
+hierarchy: [major group, sub-major group, minor group, unit group, KZiS occupation (6-digit)]
+versioning: {type: versioned_codelist, correspondences: "KZiS→ISCO-08 by the first 4 digits (unverified)"}
+special_members: {_T: all occupations, _Z: not applicable, _U: unknown}
+attributes: [{name: label_en / label_pl, source: ILO / MRPiPS}]
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "isco08 dimension (OC1…OC9)"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "occupation groups as text labels (rare)"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "occupation dictionaries (unverified)"}
+  not_used: [world_bank_wdi, nbp, gleif, mf_biala_lista, gus_teryt, gugik_prg, opendata_org]
+  inventory: PLS-029, 030 (Barometr Zawodów uses its own occupation groups → source-specific until mapped)
+mapping_notes: []
+open_questions: []

@@ -1,0 +1,25 @@
+name: commodity
+kind: source_specific
+status: draft
+description: >-
+  Market commodities quoted as prices (gold today; later agricultural, energy and
+  exchange-traded commodities). Source-specific while only NBP gold is on the platform;
+  promotion candidate with a mapping to CPC/HS or FAO item codes when a second source arrives.
+grain: one row = one (source_system, commodity_code, specification)
+key: {surrogate: commodity_key, natural: [source_system, commodity_code]}
+identifiers: [source commodity code / symbol]
+standards:
+  - {name: CPC Ver. 2.1 (candidate anchor), owner: UNSD, version: "2.1", url: "https://unstats.un.org/unsd/classifications/Econ/cpc", verified: false}
+hierarchy: [commodity group, commodity, specification (grade, delivery)]
+versioning: {type: static}
+special_members: {_Z: not applicable}
+attributes:
+  - {name: label_en / label_pl, source: source}
+  - {name: quote_unit, description: "e.g. PLN per gram (NBP gold, 1000 fineness)", source: nbp}
+used_by:
+  platform:
+    nbp: {inventory: PLG-001, expresses_as: "gold price (cena złota) per date — single commodity; legacy gold.dim_commodity"}
+  not_used: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, gleif, mf_biala_lista, gugik_prg, gus_teryt, opendata_org]
+  inventory: GL-022; PLS-032, 033; PLG-001; CD-002, 009, 010 (promotion candidates)
+mapping_notes: []
+open_questions: ["Anchor standard at promotion: CPC, HS or FAO item list."]

@@ -17,7 +17,7 @@ from typing import Any
 from ingestion.common.r2 import landing_objects, latest_snapshot, req, s3, sha_column
 from ingestion.common.report import annotate
 
-SOURCES=("eurostat","world_bank_wdi")
+SOURCES=("eurostat","nbp","world_bank_wdi")
 
 
 def summarize(name:str,landing_set:set[str],proven:set[str],meta:dict[str,dict[str,Any]])->dict[str,Any]:
@@ -64,6 +64,20 @@ def inspect_eurostat(meta:dict[str,dict[str,Any]])->dict[str,Any]:
     }
 
 
+def inspect_snapshot(meta:dict[str,dict[str,Any]],source:str)->dict[str,Any]:
+    from ingestion.common.bronze_files import proven_hashes
+    latest=latest_snapshot(meta)
+    loaded,rejected=proven_hashes(source)
+    unloaded=latest-loaded
+    return {
+        "latest":summarize("latest",latest,loaded,meta),
+        "latest_rejected_with_reason":len(unloaded&rejected),
+        "latest_unexplained":len(unloaded-rejected),
+        "latest_unexplained_sample":sorted(meta[d]["key"] for d in unloaded-rejected)[:10],
+        "all_provenance_recoverable": loaded <= set(meta),
+    }
+
+
 def inspect_wdi(meta:dict[str,dict[str,Any]])->dict[str,Any]:
     bulk={digest for digest,item in meta.items() if "/bulk/" in item["key"]}
     responses={digest for digest,item in meta.items() if "/responses/" in item["key"]}
@@ -91,7 +105,8 @@ def main(argv=None)->int:
     args=parser.parse_args(argv)
     client=s3(); bucket=req("R2_LANDING_BUCKET")
     meta=landing_objects(client,bucket,args.source)
-    result=inspect_eurostat(meta) if args.source=="eurostat" else inspect_wdi(meta)
+    result=(inspect_eurostat(meta) if args.source=="eurostat" else inspect_wdi(meta)
+            if args.source=="world_bank_wdi" else inspect_snapshot(meta,args.source))
     summary={
         "result":"pass",
         "operation":"inspect-exact-landing-iceberg-hash-membership",

@@ -5,8 +5,13 @@ name: Dev · branch runs
 # deleted before the branch is merged, so dev/ never exists on main. Never runs on main.
 # Writes are allowed only to scratch locations (namespace or prefix starting with
 # zz_dev_), removed by the same script, unless the owner approved a one-off change.
+#
+# The `check` job runs on every pull request without credentials: compile, lint,
+# configuration consistency and repository rules. It is the required status check for
+# auto-merge (AGENTS.md, "Branches and pull requests").
 
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       script:
@@ -25,10 +30,61 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    name: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version-file: .python-version
+      - name: Install
+        run: python -m pip install -r requirements.txt pyflakes
+      - name: Repository rules
+        run: |
+          set -euo pipefail
+          if [ -e dev ]; then echo "dev/ must be deleted before merge" >&2; exit 1; fi
+          workflows=$(ls .github/workflows | sort | tr '\n' ' ')
+          if [ "$workflows" != "deploy-portal.yml dev.yml ops.yml pipeline.yml " ]; then
+            echo "only the four workflows are allowed, found: $workflows" >&2; exit 1
+          fi
+      - name: Compile and lint
+        run: |
+          set -euo pipefail
+          python -m compileall -q ingestion ops run.py portal/publish_index.py warehouse
+          python -m pyflakes $(find ingestion ops warehouse -name '*.py' -not -path 'ingestion/legacy/*') run.py portal/publish_index.py
+      - name: Configuration consistency
+        env:
+          PYTHONPATH: .
+        run: |
+          python - <<'PY'
+          import pathlib, sys, yaml
+          import run
+          for path in sorted(pathlib.Path(".").rglob("*")):
+              if path.suffix in (".yml", ".yaml") and "node_modules" not in path.parts:
+                  yaml.safe_load(path.read_text())
+          config, problems = run.load_config(), []
+          for source in [*config["sources"], "platform"]:
+              missing = set(run.authorized(config, source)) - set(run.implemented(source))
+              if missing:
+                  problems.append(f"{source}: authorized but not implemented: {sorted(missing)}")
+          for name, activities in run.RUNS.items():
+              unknown = set(activities) - set(run.ORDER)
+              if unknown:
+                  problems.append(f"run {name!r}: unknown activities {sorted(unknown)}")
+          if problems:
+              sys.exit("\n".join(problems))
+          print("configuration ok:", len(config["sources"]), "sources")
+          PY
+
   dev:
-    if: github.ref != 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
     name: "dev · ${{ github.ref_name }} · ${{ inputs.script }}"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 350
     env:
       PYTHONPATH: .
@@ -44,10 +100,10 @@ jobs:
       R2_LAKEHOUSE_BUCKET: ${{ vars.R2_LAKEHOUSE_BUCKET }}
       GUS_BDL_API_KEY: ${{ secrets.GUS_BDL_API_KEY }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version-file: .python-version
           cache: pip
@@ -69,7 +125,7 @@ jobs:
           python -m "dev.$SCRIPT" "${argv[@]}"
       - name: Keep script output files
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: dev-${{ inputs.script }}-${{ github.run_id }}
           path: /tmp/dev-output

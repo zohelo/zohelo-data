@@ -1,0 +1,22 @@
+name: government_function
+kind: conformed
+status: draft
+description: Functions of government (COFOG); also used as an indicator tag. Polish budget classification (dział/rozdział/paragraf) maps to it via a crosswalk.
+grain: one row = one COFOG code
+key: {surrogate: cofog_code, natural: [cofog_code]}
+identifiers: ["COFOG code (GF01…GF10, GF0101 …)"]
+standards:
+  - {name: COFOG, owner: UNSD / OECD, version: "1999", url: "https://unstats.un.org/unsd/classifications/Family/Detail/4", verified: false}
+  - {name: SDMX CL_COFOG, owner: SDMX, version: current, url: "https://sdmx.org/sdmx_cdcl", verified: false}
+hierarchy: [division (10), group]
+versioning: {type: versioned_codelist}
+special_members: {_T: total expenditure, _Z: not applicable}
+attributes: [{name: label_en / label_pl, source: UNSD / GUS}]
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "cofog99 dimension in gov_10a_exp"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "local-government budget variables by budget dział (text), not COFOG"}
+  not_used: [gus_dbw, world_bank_wdi, nbp, gleif, mf_biala_lista, gus_teryt, gugik_prg, opendata_org]
+  inventory: PLG-007, 010 (Polish budget classification); GL-001, GL-003 (COFOG)
+mapping_notes: ["Polish budget classification (dział → COFOG) is many-to-many; keep it source-specific with a mapping table when MF sources are admitted."]
+open_questions: []

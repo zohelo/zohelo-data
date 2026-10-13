@@ -1,0 +1,24 @@
+name: market
+kind: entity
+status: draft
+description: Trading venues and market segments keyed by ISO 10383 MIC (operating MIC → segment MIC), plus non-MIC markets such as TGE energy markets.
+grain: one row = one MIC (or source-scoped market code) version
+key: {surrogate: market_key, natural: "MIC; else (source_system, market_code)"}
+identifiers: [MIC (operating and segment), LEI of the operator]
+standards:
+  - {name: ISO 10383 MIC, owner: ISO / SWIFT, version: monthly list, url: "https://www.iso20022.org/market-identifier-codes", verified: false}
+hierarchy: [operating MIC, segment MIC]
+versioning: {type: scd2, rule: "MIC list status (active, expired) with dates"}
+special_members: {_Z: not traded on a venue (OTC / not applicable), _U: unknown}
+attributes:
+  - {name: operator_organisation_key, source: MIC list / gleif}
+  - {name: country, source: MIC list}
+  - {name: market_category, description: "regulated, MTF, …", source: MIC list}
+  - {name: timezone, source: registry}
+used_by:
+  platform:
+    gleif: {inventory: CD-015, expresses_as: "MIC↔LEI mapping file (not in current Bronze — unverified)"}
+  not_used: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, mf_biala_lista, gugik_prg, gus_teryt, opendata_org]
+  inventory: CD-001, 002, 005, 009, 010, 015
+mapping_notes: ["GPW Main Market and NewConnect MICs: XWAR and others (verify against the MIC list)."]
+open_questions: []

@@ -1,0 +1,45 @@
+name: period
+kind: conformed
+status: draft
+description: >-
+  Reference periods of statistical observations as SDMX TIME_PERIOD values with their
+  frequency, start and end day. Annual values are never expanded into days; the
+  period→day bridge serves date filtering and calendar alignment.
+grain: one row = one reference period (frequency, time_period)
+key:
+  surrogate: period_key
+  natural: [time_period]     # SDMX format determines frequency
+identifiers: ["SDMX TIME_PERIOD: YYYY, YYYY-Sn, YYYY-Qn, YYYY-MM, YYYY-Www, YYYY-MM-DD, YYYY-Dddd and reporting periods YYYY-A1/S/Q/M/W/D"]
+standards:
+  - {name: SDMX 3.0 TIME_PERIOD and reporting periods, owner: SDMX, version: "3.0", url: "https://sdmx.org/standards-2/", verified: false}
+  - {name: ISO 8601, owner: ISO, version: "2019", url: "https://www.iso.org/iso-8601-date-and-time-format.html", verified: false}
+hierarchy: [year, half-year, quarter, month, week (ISO, separate branch), day]
+versioning: {type: static}
+special_members:
+  _Z: period not applicable (timeless reference data)
+  _T: all periods (cumulative / totals over time)
+attributes:
+  - {name: frequency_code, description: see frequency.yaml, source: derived from format}
+  - {name: start_date / end_date, description: first and last day, source: derived}
+  - {name: year / half / quarter / month / week, source: derived}
+  - {name: label_en / label_pl, source: derived}
+  - {name: is_school_year / is_fiscal_year, description: non-calendar periods such as 2024/25, source: gus_bdl / sio (open question)}
+bridges:
+  bridge_period_day: "(period_key, date_key) for every day of the period"
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "TIME_PERIOD column per observation; formats in TSV from SDMX 3.0 (e.g. 2023, 2023-Q1, 2023-01; verify Bronze lexemes)"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "year (annual) and, for short-period variables, period ids (unverified mapping to months/quarters)"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "year + period id (okres) from dictionaries, e.g. month/quarter codes (unverified)"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "wide year columns 1960…2025 → YYYY"}
+    nbp: {inventory: PLG-001, expresses_as: "daily → YYYY-MM-DD (table B is weekly but dated by day)"}
+    gleif: {inventory: CD-015, expresses_as: "none (dates use calendar)"}
+    mf_biala_lista: {inventory: PLG-011, expresses_as: "none (file date uses calendar)"}
+    gus_teryt: {inventory: PLS-007, expresses_as: "none (state date uses calendar)"}
+    gugik_prg: {inventory: PL-ENV-001, expresses_as: "none"}
+    opendata_org: {inventory: null, expresses_as: "none"}
+  inventory: all statistical sources
+mapping_notes:
+  - Older Eurostat lexemes (2023Q1, 2023M01) normalise to SDMX formats in Silver.
+open_questions:
+  - School and academic years (SIO, POL-on, BDL education variables): own frequency code or YYYY-A1 with start month attribute?

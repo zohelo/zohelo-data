@@ -9,8 +9,9 @@ implemented and authorized:
                ingestion/to_bronze/<source>/__init__.py (bronze.*, landing.archive)
                PLATFORM_ACTIVITIES below (silver_gold.promote, serving.refresh_index)
   authorized   ingestion/sources/<source>.yaml "activities";
-               warehouse/warehouse.yaml and portal/portal.yaml for platform activities Activities are idempotent, so a
-scheduled run and a manual run are the same thing and a failed run resumes.
+               warehouse/warehouse.yaml and portal/portal.yaml for platform activities
+Activities are idempotent, so a scheduled run and a manual run are the same thing and a
+failed run resumes.
 """
 from __future__ import annotations
 

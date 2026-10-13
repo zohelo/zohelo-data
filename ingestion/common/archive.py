@@ -16,7 +16,7 @@ every file of that area, this:
 Idempotent and resumable: an existing, verified Archive copy is reused. Stops starting
 new files when the time budget is used up (exit 2; the next run continues).
 
-Supported proofs: Eurostat (Bronze file per Landing SHA-256); World Bank WDI (the bulk ZIP
+Supported proofs: sources in bronze_files.SOURCE_TABLES (Bronze file per Landing SHA-256); World Bank WDI (the bulk ZIP
 whose SHA-256 equals silver.wdi_observations.archive_sha256).
 """
 from __future__ import annotations
@@ -34,14 +34,13 @@ from typing import Any
 from ingestion.common.r2 import archive_key, landing_objects, latest_snapshot, raw_chunks, req, s3, sha_column, sources
 from ingestion.common.report import annotate, step_summary
 
-SOURCES = ("eurostat", "world_bank_wdi")
+SOURCES = ("eurostat", "nbp", "world_bank_wdi")
 
 
 def proven_for(source: str, meta: dict[str, dict[str, Any]]) -> set[str]:
-    if source == "eurostat":
-        from ingestion.common.r2 import catalog
-        from ingestion.to_bronze.eurostat.batch import TABLE_ID, loaded_hashes
-        return loaded_hashes(catalog().load_table(TABLE_ID))
+    from ingestion.common.bronze_files import SOURCE_TABLES, proven_hashes
+    if source in SOURCE_TABLES:
+        return proven_hashes(source)[0]
     bulk = {digest for digest, item in meta.items() if "/bulk/" in item["key"]}
     modeled = sha_column("SELECT DISTINCT archive_sha256 FROM silver.wdi_observations "
                          "WHERE archive_sha256 IS NOT NULL;", "archive_sha256")

@@ -1,0 +1,28 @@
+name: address
+kind: entity
+status: draft
+description: Streets (TERYT ULIC) and address points (PRG address register), the anchor for geocoding register entities to TERYT localities and gminas.
+grain: one row = one address point version (SCD2); streets as a parent level
+key: {surrogate: address_key, natural: "(SIMC, ULIC SYM_UL, house number) for Polish addresses; else (source, address id)"}
+identifiers: [TERYT SIMC (locality), TERYT ULIC SYM_UL (street), PRG address point id (stable id unconfirmed)]
+standards:
+  - {name: TERYT ULIC, owner: GUS, version: daily state, url: "https://eteryt.stat.gov.pl/", verified: false}
+  - {name: PRG address points / INSPIRE Addresses, owner: GUGiK, version: n/a, url: "https://www.geoportal.gov.pl/", verified: false}
+hierarchy: [gmina (TERC), locality (SIMC), street (ULIC), address point]
+versioning: {type: scd2}
+special_members: {_Z: no address, _U: address not resolved}
+attributes:
+  - {name: street_prefix / street_name, source: gus_teryt (ULIC CECHA, NAZWA_1, NAZWA_2)}
+  - {name: postal_code, source: PRG / register}
+  - {name: lat / lon, source: PRG address points}
+  - {name: geography_key (gmina, locality), source: gus_teryt}
+  - {name: is_resolved / match_method, source: derived}
+used_by:
+  platform:
+    gus_teryt: {inventory: PLS-007, expresses_as: "ULIC: WOJ, POW, GMI, RODZ_GMI, SYM, SYM_UL, CECHA, NAZWA_1, NAZWA_2, STAN_NA"}
+    gleif: {inventory: CD-015, expresses_as: "legal and HQ addresses as text + country/region/postal code"}
+    opendata_org: {inventory: null, expresses_as: "locations table (fields unverified)"}
+  not_used: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, mf_biala_lista, gugik_prg]
+  inventory: PLS-007, 015, 021, 026; PL-ENV-007, 033, 034
+mapping_notes: ["Textual addresses resolve to TERYT only with an explicit match method; unresolved stays _U."]
+open_questions: ["gugik_prg Bronze holds boundaries, not address points — address points need PL-ENV-007."]

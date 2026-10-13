@@ -1,0 +1,26 @@
+name: age
+kind: conformed
+status: draft
+description: Age class as an interval [age_from, age_to) with SDMX CL_AGE codes; overlapping classes allowed, so totals come only from _T.
+grain: one row = one age class
+key: {surrogate: age_code, natural: [age_code]}
+identifiers: ["SDMX CL_AGE code (e.g. Y15T64, Y_GE65, Y_LT15)"]
+standards:
+  - {name: CL_AGE, owner: SDMX, version: current, url: "https://sdmx.org/sdmx_cdcl", verified: false}
+hierarchy: [_T, broad classes, 5-year classes, single years]
+versioning: {type: versioned_codelist}
+special_members: {_T: all ages, _Z: not applicable, _U: age unknown}
+attributes:
+  - {name: age_from / age_to, description: "years; age_to null = open-ended", source: derived}
+  - {name: age_unit, description: "Y years, M months (infants)", source: SDMX}
+  - {name: is_standard_class, source: registry}
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "age dimension: Y15-64, Y_GE65, Y_LT5, TOTAL, UNK (ESTAT codes differ from CL_AGE)"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "text labels in n1..n5 ('15-64 lat', '65 lat i więcej')"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "positional dimension member 'wiek' (unverified)"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "inside indicator code/name (e.g. 'ages 15-64')"}
+  not_used: [nbp, gleif, mf_biala_lista, gus_teryt, gugik_prg, opendata_org]
+  inventory: GL-001, 024, 026, 033, 039; PLS-012 (lower bound)
+mapping_notes: ["Parse source labels to (age_from, age_to) and look up the CL_AGE code; an unparseable label stays source-specific."]
+open_questions: []

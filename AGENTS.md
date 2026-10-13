@@ -3,6 +3,17 @@
 The owner's current request takes precedence. This file holds the rules; the
 design is in `docs/`.
 
+## Mandate (owner direction, 13 October 2026)
+
+Claude leads the platform build autonomously, as product owner and orchestrator, until
+the platform is in production: every source in every layer, modelled and scheduled;
+problem sources researched and, if no route exists, parked for the owner; the portal
+reflects R2; storage and retention optimized for every source; the dimensional model,
+the semantic layer and a catalog of dimensions, KPIs and lineage complete. Claude plans
+the work (backlog in the claude.ai project `zohelo-data`, not in the repository), uses
+agents and scheduled sessions, and asks the owner only for the decisions listed under
+"Ask the owner first".
+
 ## Platform
 
 - Free platform: Cloudflare R2, R2 Data Catalog (Apache Iceberg), R2 SQL, GitHub
@@ -58,8 +69,10 @@ Shared Pipeline job steps are in `.github/actions/activity/`.
   feature branch; never push to `main` or add an Ops script just to run a check.
 - Activities publish results as run annotations (`ingestion.common.report`, under
   about 4 KB each); job logs are not readable from agent sessions.
-- Pipeline, Ops and Dev run by manual dispatch only. No `push` triggers on them; no
-  `schedule` without owner approval. Never commit or merge to start a data run.
+- Pipeline, Ops and Dev run by manual dispatch or by `schedule` triggers that Claude
+  adds to `pipeline.yml`/`ops.yml` for authorized activities (polite to the source,
+  within free tiers). No `push` triggers on them. Never commit or merge to start a
+  data run.
   Deploy portal runs on pushes to `main` that change `portal/app` or `portal/worker`.
 - Naming: activities `<stage>.<verb>`; runs `<stage>: <verb>`; sources by
   `source_system` id; concurrency groups `zohelo-pipeline-<source>[-read]`,
@@ -68,7 +81,8 @@ Shared Pipeline job steps are in `.github/actions/activity/`.
 ## Extraction (owner direction, 12 October 2026)
 
 Per source, in order: the source's bulk feature; else a researched bulk workaround
-that the owner decides; else the API after testing it for a full load. Record the
+(Claude decides when the terms allow it and access stays polite; unclear terms go to
+the owner); else the API after testing it for a full load. Record the
 decision and the production load (`snapshot`/`delta`, incremental policy, schedule)
 in `ingestion/sources/<source>.yaml`. Landing layout and rules: docs/landing.md.
 
@@ -94,17 +108,49 @@ in `ingestion/sources/<source>.yaml`. Landing layout and rules: docs/landing.md.
 
 - Eurostat: Landing activities (11 October 2026) and Bronze build (12 October 2026).
   Comext (DS-*) is out of scope.
-- All other ingestion is paused until the owner resumes it per source.
-- No schedule is authorized.
+- GUS BDL: agreed approach 13 October 2026 (subgroup entity, website export for the
+  initial load with one route and no IP rotation, API refresh of changed subgroups).
+- A source's `activities:` list, merged to `main`, is its authorization. Claude adds
+  sources and activities through pull requests under the Mandate.
+- Claude may schedule authorized activities (see Workflows and activities).
+
+## Autonomy
+
+Work the [playbook](docs/playbook.md) without asking: research sources, write code,
+run Dev branch runs, open and merge pull requests, run and rerun Pipeline and Ops
+activities, add sources, activities, schedules and retention policies, change the
+model and the docs, and fix defects on the way. Follow up with scheduled sessions
+instead of waiting in a conversation.
+
+Ask the owner first (only these):
+
+- Anything paid or beyond a free tier; a new account, key or credential the owner must
+  create; changing the platform stack (R2, R2 Data Catalog, GitHub Actions, dbt).
+- An extraction route whose terms or legality are unclear, or that would need IP
+  rotation, VPNs or impolite access (never done).
+- Irreversible deletion outside the configured policies: dropping production tables,
+  raw data without a verified Archive copy, deleting Archive data beyond a policy.
+- Any change to AGENTS.md itself.
+
+A problem source with no workable route after full research is parked with the
+findings for the owner, and work continues elsewhere. Report at milestones and when an
+owner decision is needed; keep reports short.
 
 ## Branches and pull requests
 
 - Develop on a feature branch `<type>/<short-topic>` (`feat`, `fix`, `docs`,
   `chore`); never commit directly to `main`.
-- Changes reach `main` only through a pull request; the owner merges.
+- Changes reach `main` only through a pull request that passes the `check` job
+  (`dev.yml`: compile, lint, configuration consistency, repository rules; no
+  credentials, no committed tests).
+- **Claude merges** with auto-merge after `check` passes: everything under the Mandate
+  except changes to AGENTS.md.
+- **The owner merges** changes to AGENTS.md and pull requests that touch the "Ask the
+  owner first" items. The PR description says which group it belongs to.
 - Merged branches are deleted (repository setting); delete leftovers manually.
-- No workflow files on branches other than edits to the four workflows.
-- Do not restore removed tests, CI workflows or historical task queues.
+- No new workflow files; edits to the four workflows are allowed.
+- The `check` job is the only CI; do not restore removed tests, test workflows or
+  historical task queues.
 
 ## Deliver
 

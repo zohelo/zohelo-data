@@ -32,5 +32,5 @@ zohelo-lakehouse-prod   Iceberg bronze / silver / gold (R2 Data Catalog)
                         _portal_index/  the portal's file index (current version only)
 ```
 
-See [architecture](docs/architecture.md), [landing](docs/landing.md),
+See the [source playbook](docs/playbook.md), [architecture](docs/architecture.md), [landing](docs/landing.md),
 [operating](docs/operating.md) and [sources](docs/sources.md).

@@ -1,0 +1,27 @@
+name: price_base
+kind: conformed
+status: draft
+description: Valuation basis of monetary values — current prices, constant prices, chain-linked volumes, previous-year prices, PPP — with the reference year.
+grain: one row = one (price_basis, reference_year)
+key: {surrogate: price_base_key, natural: [price_basis, reference_year]}
+identifiers: ["SDMX PRICE_BASE concept (codes unverified)"]
+standards:
+  - {name: SDMX PRICE_BASE / CL_PRICES, owner: SDMX, version: current, url: "https://sdmx.org/sdmx_cdcl", verified: false}
+  - {name: ESA 2010 volume measures, owner: Eurostat, version: "2010", url: "https://ec.europa.eu/eurostat/web/esa-2010", verified: false}
+hierarchy: [price_basis, reference_year]
+versioning: {type: static}
+members: {CUR: current prices, CON: constant prices (reference_year), CLV: chain-linked volumes (reference_year), PYP: previous-year prices, PPP: purchasing power parity (reference_year)}
+special_members: {_Z: not a monetary value, _U: basis not stated}
+attributes:
+  - {name: reference_year, source: source unit code}
+  - {name: label_en / label_pl, source: registry}
+used_by:
+  platform:
+    eurostat: {inventory: GL-001, expresses_as: "inside unit codes: CP_MEUR, CLV10/15/20_MEUR, PYP_MEUR, PPS"}
+    world_bank_wdi: {inventory: GL-005, expresses_as: "inside indicator name: current US$, constant 2015 US$, current international $ (PPP), constant LCU"}
+    gus_bdl: {inventory: PLS-001, expresses_as: "in variable labels n1..n5 / measure (e.g. ceny stałe, unverified)"}
+    gus_dbw: {inventory: PLS-002, expresses_as: "in variable or dimension labels (unverified)"}
+  not_used: [nbp, gleif, mf_biala_lista, gus_teryt, gugik_prg, opendata_org]
+  inventory: macro and price sources (GL-003, GL-011, GL-012, GL-016, PLG-002 …) — not counted reliably
+mapping_notes: []
+open_questions: ["Confirm SDMX codes for PRICE_BASE before adopting them as member codes."]

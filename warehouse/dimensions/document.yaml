@@ -1,0 +1,33 @@
+name: document
+kind: entity
+status: draft
+description: >-
+  Versioned public documents with official identifiers — legal acts (ELI), parliamentary
+  prints and bills, corporate filings (ESPI/EBI, EDGAR, ESEF, KRS RDF), procurement
+  notices, regulatory decisions, audit reports, planning acts and permits. One
+  dimension with document_type until a type needs its own attributes.
+grain: one row = one document version (expression), typed by document_type
+key:
+  surrogate: document_key
+  durable: document_id     # the work (e.g. the act), versions below it
+  natural: "(document_type, scheme, id, version): ELI URI, ESPI report number + issuer, EDGAR accession, TED publication number, BZP notice id + version, UOKiK case number, NIK audit number, RCL project id"
+identifiers: [ELI, ESPI/EBI report number, EDGAR accession number, ESEF filing id, TED publication number, BZP notice id / OCID, UOKiK case number, NIK audit id, RCL project id, RWDZ reference]
+standards:
+  - {name: European Legislation Identifier (ELI), owner: EU Publications Office, version: n/a, url: "https://eur-lex.europa.eu/eli-register/about.html", verified: false}
+  - {name: Open Contracting Data Standard (OCDS), owner: Open Contracting Partnership, version: "1.1", url: "https://standard.open-contracting.org/", verified: false}
+  - {name: eForms, owner: EU Publications Office, version: current, url: "https://docs.ted.europa.eu/eforms/", verified: false}
+hierarchy: [document_type, work, version (expression), file (manifestation)]
+versioning: {type: scd2, rule: "amendments and corrections are new versions; legal status (in force, repealed) dated"}
+special_members: {_Z: not applicable, _U: unknown}
+attributes:
+  - {name: document_type, description: "legal_act | bill | filing | procurement_notice | decision | audit_report | planning_act | permit", source: registry}
+  - {name: issuer_organisation_key / authority, source: source}
+  - {name: published_date / effective_date / status, source: source}
+  - {name: title / language, source: source}
+  - {name: source_url / file_sha256, source: Landing receipt}
+used_by:
+  platform: {}
+  not_used: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, gleif, mf_biala_lista, gugik_prg, gus_teryt, opendata_org]
+  inventory: GL-032; PLG-020…028, 034; PL-ENV-017, 033, 035; CD-003, 006…008, 012…014, 016, 030
+mapping_notes: ["Procurement: procedure, lot, award and contract are separate facts linked to notice documents; one award counted once."]
+open_questions: ["Split procurement (procedure/lot) into its own entity when PLG-022/023 are admitted."]
