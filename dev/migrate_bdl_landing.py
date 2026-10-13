@@ -28,7 +28,7 @@ import os
 from pathlib import Path
 import threading
 
-from ingestion.common.r2 import req, s3
+from ingestion.common.r2 import get_with_backoff, req, s3
 from ingestion.common.report import annotate
 from ingestion.to_landing.gus_bdl.api import Bdl, token
 
@@ -58,7 +58,7 @@ def main(argv=None) -> int:
         plan_keys = plan_keys[: args.max_subgroups]
 
     def read_plan(key: str) -> dict:
-        plan = json.loads(client.get_object(Bucket=bucket, Key=key)["Body"].read())
+        plan = json.loads(get_with_backoff(client, bucket, key))
         nodes = plan.get("nodes", {})
         leaves = [n for n in nodes.values() if not n.get("children")]
         sub = plan.get("subgroup_id")
@@ -79,7 +79,7 @@ def main(argv=None) -> int:
         return {"subgroup": sub, "leaves": len(leaves), "parts": parts, "complete": complete,
                 "missing_files": missing_files}
 
-    with ThreadPoolExecutor(max_workers=8) as pool:
+    with ThreadPoolExecutor(max_workers=4) as pool:
         plans = list(pool.map(read_plan, plan_keys))
     complete = [p for p in plans if p["complete"]]
 
@@ -152,8 +152,21 @@ def main(argv=None) -> int:
     if args.mode == "copy":
         jobs = [(p, part, i) for p in complete if p.get("version") for i, part in
                 enumerate(sorted(p["parts"], key=lambda x: x["completed"]), start=1)]
-        with ThreadPoolExecutor(max_workers=8) as pool:
-            list(pool.map(lambda job: copy(*job), jobs))
+        def safe_copy(job):
+            import time
+            for attempt in range(4):
+                try:
+                    return copy(*job)
+                except Exception as exc:  # throttling or a transient error: retry, then report
+                    if attempt == 3:
+                        with lock:
+                            outcomes["copy_errors"] += 1
+                            errors.append(f"{job[1]['old_key']}: {exc}"[:300])
+                        return
+                    time.sleep(5 * 2 ** attempt)
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            list(pool.map(safe_copy, jobs))
 
     summary = {
         "mode": args.mode, "plans": len(plans), "complete": len(complete),
