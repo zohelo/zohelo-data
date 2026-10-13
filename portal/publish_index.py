@@ -22,6 +22,7 @@ ROOT_ID="r2-root-zohelo-data"
 EXCLUDED_LAKEHOUSE_PREFIXES=(
     "__r2_data_catalog/",
     "_portal_index/",
+    "_portal_catalog/",
 )
 
 def required(name):
