@@ -41,7 +41,10 @@ COLUMNS = ([("entity", "VARCHAR"), ("catalogue", "VARCHAR")]
 
 
 def decode(body: bytes, receipt: dict[str, Any], output: Path) -> int:
-    """CSV member → Parquet with the fixed Bronze columns; returns the row count."""
+    """CSV member → Parquet with the fixed Bronze columns; returns the row count.
+
+    TERYT CSV fields are not quoted (street names contain bare '"'), so quoting is off;
+    a field never contains ';'. Strict mode still rejects rows with a wrong field count."""
     archive = zipfile.ZipFile(io.BytesIO(body))
     members = [i for i in archive.infolist() if i.filename.lower().endswith(".csv")]
     if len(members) != 1:
@@ -51,7 +54,7 @@ def decode(body: bytes, receipt: dict[str, Any], output: Path) -> int:
     con = duckdb.connect()
     try:
         con.execute("CREATE TABLE src AS SELECT * FROM read_csv(?, delim=';', header=true, all_varchar=true, "
-                    "quote='\"', nullstr='\x01', strict_mode=true, encoding='utf-8')", [str(csv_path)])
+                    "quote='', escape='', nullstr='\x01', strict_mode=true, encoding='utf-8')", [str(csv_path)])
         found = [r[0] for r in con.execute("DESCRIBE src").fetchall()]
         unknown = [c for c in found if c.upper() not in SOURCE_COLUMNS]
         if unknown or "STAN_NA" not in [c.upper() for c in found]:
