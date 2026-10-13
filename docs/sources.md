@@ -266,6 +266,15 @@ exceeded`; page the dates and treat valid no-data `404` responses as empty windo
 not deletions. The XML `dir.txt` is an official exact filename inventory for the FX
 archive and complements the API, especially for representation-level completeness.
 
+**Implemented (FX tables and gold):** `ingestion/to_landing/nbp/` fetches one entity
+per table and calendar quarter (`A_2024Q1` … `GOLD_2026Q4`; 356 requests for the full
+history, one at a time with a pause). Version = the latest effective date in the
+response. Quarters that ended more than 10 days ago are fetched once; open quarters
+are re-fetched and written only when the bytes changed. Bronze: `bronze.nbp_observations`
+(one row per quote or gold price, values as source text). The yearly CSV/XLS archives
+add only pre-2002 history and the broader statistics below are a separate scope (not
+yet built).
+
 ### Broader statistics inventory and distributions
 
 Crawl only the following official navigation subtrees, follow their pagination/year
