@@ -30,6 +30,7 @@ on:
           - "archive: apply retention"
           - "landing → bronze (all steps)"
           - "silver/gold: promote"
+          - "silver/gold: build models"
           - "serving: refresh portal index"
       filter:
         description: "Optional item filter: dataset codes or globs, comma separated (e.g. nama_10_*)"
@@ -243,8 +244,24 @@ jobs:
           source: ${{ inputs.source }}
           activity: silver_gold.promote
 
-  serving-refresh-index:
+  silver-gold-build:
     needs: [plan, silver-gold-promote]
+    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'silver_gold.build') }}"
+    name: silver_gold.build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/activity
+        with:
+          source: ${{ inputs.source }}
+          activity: silver_gold.build
+          filter: ${{ inputs.filter }}
+
+  serving-refresh-index:
+    needs: [plan, silver-gold-build]
     if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'serving.refresh_index') }}"
     name: serving.refresh_index
     runs-on: ubuntu-24.04

@@ -1,0 +1,24 @@
+version: 2
+models:
+  - name: nbp_fx_rates
+    description: >-
+      NBP exchange rates (tables A, B, C) from bronze.nbp_observations: newest version of
+      every table-quarter, typed. PLN per 1 unit of currency. Table A/B carry mid_rate,
+      table C bid_rate/ask_rate and trading_date.
+    columns:
+      - name: table_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['A', 'B', 'C']}}}]
+      - name: effective_date
+        tests: [not_null]
+      - name: currency_code
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: nbp_gold_fixings
+    description: NBP gold price, PLN per gram of 1000-fineness gold, one row per effective date.
+    columns:
+      - name: effective_date
+        tests: [not_null, unique]
+      - name: price_pln_per_gram
+        tests: [not_null]

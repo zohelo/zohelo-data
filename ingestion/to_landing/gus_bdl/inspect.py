@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 import fnmatch
+import time
 import json
 
 from ingestion.common.r2 import get_with_backoff, req, s3
@@ -45,7 +46,9 @@ def landing_versions(client, bucket: str) -> dict[str, str]:
     return newest
 
 
-def main(patterns: list[str] | None = None) -> int:
+def main(patterns: list[str] | None = None, budget_minutes: float = 50) -> int:
+    """Stops checking after budget_minutes (the Pipeline job has 60) and exits 2."""
+    deadline = time.monotonic() + budget_minutes * 60
     client, bucket = s3(), req("R2_LANDING_BUCKET")
     held = landing_versions(client, bucket)
     api = Bdl()
@@ -54,18 +57,22 @@ def main(patterns: list[str] | None = None) -> int:
     status: Counter = Counter()
     examples: dict[str, list[str]] = defaultdict(list)
     for subject in subgroups:
+        if time.monotonic() > deadline:
+            status["not_checked_time_budget"] += 1
+            continue
         sid = subject["id"]
         version = held.get(sid)
         if version is None:
             state = "missing"
         else:
-            last = token(api.last_update(sid))
+            last = token(api.last_update(sid, subject))
             state = "stale" if version == token(None) or last > version else "current"
         status[state] += 1
         if len(examples[state]) < 15:
             examples[state].append(sid)
     summary = {"subgroups_in_bdl": len(subgroups), **status, "landing_subgroups": len(held),
                "api_requests": api.requests, "examples": dict(examples)}
+    summary["listing_has_last_update"] = any("lastUpdate" in s for s in subgroups[:5])
     annotate("notice", "gus_bdl landing inspect", summary)
     step_summary("## gus_bdl · landing inspect\n\n" + "\n".join(f"- {k}: {v}" for k, v in status.items()) + "\n")
-    return 0
+    return 2 if status["not_checked_time_budget"] else 0

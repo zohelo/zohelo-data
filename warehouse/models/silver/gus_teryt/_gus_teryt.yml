@@ -1,0 +1,16 @@
+version: 2
+models:
+  - name: teryt_terc
+    description: TERYT TERC (official) — voivodeships, powiats and gminas at the newest catalogue state; terc_code = WOJ[POW[GMI RODZ]].
+    columns:
+      - name: terc_code
+        tests: [not_null, unique]
+      - name: unit_level
+        tests: [{accepted_values: {arguments: {values: ['wojewodztwo', 'powiat', 'gmina']}}}]
+  - name: teryt_simc
+    description: TERYT SIMC (official) — localities at the newest catalogue state with gmina TERC code and parent locality.
+    columns:
+      - name: simc_code
+        tests: [not_null, unique]
+      - name: gmina_terc_code
+        tests: [not_null, {relationships: {arguments: {to: ref('teryt_terc'), field: terc_code}}}]
