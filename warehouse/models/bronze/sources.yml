@@ -100,14 +100,21 @@ sources:
   - name: biala_lista_masks
   - name: biala_lista_taxpayers
 - name: nbp
-  description: Narodowy Bank Polski — exchange rate tables A/B/C and gold prices (API)
+  description: Narodowy Bank Polski — exchange rate tables A/B/C and gold prices (NBP Web API)
   database: r2
   schema: bronze
   meta:
     landing: 01_landing/nbp/
-    loaded_by: retired code (ingestion/legacy/)
+    loaded_by: ingestion/to_bronze/nbp/ (nbp_exchange_rates_table_* and nbp_gold_prices by retired code)
     config: ingestion/sources/nbp.yaml
   tables:
+  - name: nbp_observations
+    description: >-
+      One row per quote (tables A/B/C) or gold price, newest and superseded versions of
+      every table-quarter (entity), values as source text; partitioned by table_code.
+      Loaded by ingestion/to_bronze/nbp/ from 01_landing/nbp/snapshot/data/.
+  - name: nbp_rejected_files
+    description: Landing files the NBP Bronze decoder rejected, with the reason.
   - name: nbp_exchange_rates_table_a
   - name: nbp_exchange_rates_table_b
   - name: nbp_exchange_rates_table_c

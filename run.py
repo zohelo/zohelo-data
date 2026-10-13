@@ -7,7 +7,7 @@ A run is an ordered list of activities (RUNS). An activity is allowed only when 
 implemented and authorized:
   implemented  ingestion/to_landing/<source>/__init__.py (landing.inspect/extract/verify)
                ingestion/to_bronze/<source>/__init__.py (bronze.*, landing.archive)
-               PLATFORM_ACTIVITIES below (silver_gold.promote, serving.refresh_index)
+               PLATFORM_ACTIVITIES below (silver_gold.promote/build, serving.refresh_index)
   authorized   ingestion/sources/<source>.yaml "activities";
                warehouse/warehouse.yaml and portal/portal.yaml for platform activities
 Activities are idempotent, so a scheduled run and a manual run are the same thing and a
@@ -30,8 +30,10 @@ PLATFORM_CONFIG = (ROOT / "warehouse" / "warehouse.yaml", ROOT / "portal" / "por
 
 # Activity order is the dataflow order; the workflow has one job per activity.
 ORDER = ("landing.inspect", "landing.extract", "landing.verify", "bronze.load",
-         "bronze.verify", "landing.archive", "archive.prune", "silver_gold.promote", "serving.refresh_index")
-WRITES = {"landing.extract", "bronze.load", "landing.archive", "archive.prune", "silver_gold.promote"}
+         "bronze.verify", "landing.archive", "archive.prune", "silver_gold.promote",
+         "silver_gold.build", "serving.refresh_index")
+WRITES = {"landing.extract", "bronze.load", "landing.archive", "archive.prune", "silver_gold.promote",
+          "silver_gold.build"}
 
 RUNS = {
     "landing: inspect": ["landing.inspect"],
@@ -44,6 +46,7 @@ RUNS = {
     "landing → bronze (all steps)": ["landing.inspect", "landing.extract", "landing.verify",
                                      "bronze.load", "bronze.verify", "landing.archive", "archive.prune"],
     "silver/gold: promote": ["silver_gold.promote"],
+    "silver/gold: build models": ["silver_gold.build"],
     "serving: refresh portal index": ["serving.refresh_index"],
 }
 
@@ -70,7 +73,13 @@ def _refresh_index(p: Params) -> int:
     return publish_index.main() or 0
 
 
-PLATFORM_ACTIVITIES = {"silver_gold.promote": _promote, "serving.refresh_index": _refresh_index}
+def _build(p: Params) -> int:
+    from warehouse import build
+    return build.main(p.filter)
+
+
+PLATFORM_ACTIVITIES = {"silver_gold.promote": _promote, "silver_gold.build": _build,
+                       "serving.refresh_index": _refresh_index}
 
 
 def load_config() -> dict:
