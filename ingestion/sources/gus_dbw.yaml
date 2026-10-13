@@ -11,6 +11,5 @@ landing: 01_landing/gus_dbw/
 bronze: [bronze.dbw_observations, bronze.dbw_dictionaries, bronze.dbw_indicators, bronze.dbw_metadata]
 silver: [silver.dbw_dictionaries, silver.dbw_indicators, silver.dbw_metadata, silver.dbw_observations]
 gold: [gold.dim_dbw_dictionary, gold.dim_dbw_indicator, gold.dim_dbw_metadata, gold.fact_dbw_observations]
-control: [06_control/source_campaigns/gus_dbw_bronze/]
 
 activities: []   # paused; legacy code in ingestion/legacy/

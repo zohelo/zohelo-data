@@ -1,317 +1,165 @@
-"""Decode one retained Eurostat full-distribution TSV into source-shaped Bronze.
+"""Decode one Landing Eurostat ``.tsv.gz`` into source-shaped Bronze Parquet.
 
-Landing remains the exact native ``.tsv.gz`` object.  This module is a downstream,
-replayable transformation: it streams the retained file, preserves every native
-dimension code, period, value lexeme and status flag, and writes an independently
-verifiable Parquet relation without changing the Landing object.
+Bronze keeps the source as published: one row per series × period with the native
+series key, period, value lexeme and status flag. Nothing is interpreted — numbers stay
+text (``value_text``), ``:`` stays ``:``, an empty cell stays empty — so every file the
+source publishes can be loaded; casting is a Silver rule. Provenance per row is the
+Landing raw SHA-256 (plus dataset and version); the receipt in Landing holds the rest.
+
+The TSV is read and unpivoted by DuckDB (no per-cell Python), written as ZSTD Parquet in
+source order (series by series), which keeps repeated values cheap to store.
 """
 from __future__ import annotations
 
-import csv
 from datetime import datetime, timedelta
-from decimal import Decimal, InvalidOperation
 import gzip
 from hashlib import sha256
 import json
-import math
 from pathlib import Path
 import re
-from typing import Any, Mapping
+from typing import Any
 
 import duckdb
-import pandas as pd
-
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
-_MD5_RE = re.compile(r"^[0-9a-f]{32}$")
 _DIMENSION_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,127}$")
-_DRIVE_FILE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,1024}$")
-_BATCH_ROWS = 10_000
+_NULL_MARKER = "\x1f__zohelo_never_null__"
 
 BRONZE_COLUMNS = (
     ("dataset_id", "VARCHAR"),
-    ("distribution_id", "VARCHAR"),
-    ("partition_id", "VARCHAR"),
-    ("partition_selection_json", "VARCHAR"),
-    ("period_key", "VARCHAR"),
+    ("source_version", "VARCHAR"),
+    ("ingested_at", "TIMESTAMPTZ"),
+    ("raw_sha256", "VARCHAR"),
+    ("series_dimensions", "VARCHAR"),
+    ("series_key", "VARCHAR"),
     ("freq_code", "VARCHAR"),
     ("unit_code", "VARCHAR"),
     ("geo_code", "VARCHAR"),
-    ("dimension_key_json", "VARCHAR"),
-    ("dimension_key_sha256", "VARCHAR"),
+    ("period_key", "VARCHAR"),
     ("value_text", "VARCHAR"),
-    ("value_numeric", "DOUBLE"),
     ("status_code", "VARCHAR"),
-    ("is_missing", "BOOLEAN"),
-    ("missing_reason", "VARCHAR"),
-    ("source_version", "VARCHAR"),
-    ("retrieved_at_utc", "TIMESTAMPTZ"),
-    ("raw_sha256", "VARCHAR"),
-    ("raw_file_id", "VARCHAR"),
-    ("receipt_sha256", "VARCHAR"),
-    ("receipt_file_id", "VARCHAR"),
-    ("receipt_size_bytes", "BIGINT"),
     ("source_row_number", "BIGINT"),
-    ("source_period_position", "BIGINT"),
 )
-_BRONZE_COLUMN_NAMES = tuple(name for name, _kind in BRONZE_COLUMNS)
+COLUMN_NAMES = tuple(name for name, _ in BRONZE_COLUMNS)
 
 
 class EurostatBulkDecodeError(ValueError):
-    """A retained Eurostat distribution cannot satisfy the Bronze contract."""
+    """A Landing file cannot satisfy the Bronze contract (recorded, never dropped silently)."""
 
 
-def decode_landing_distribution(
-    source: Path,
-    receipt: Path,
-    output: Path,
-    *,
-    receipt_uri: str,
-    raw_uri: str,
-) -> dict[str, Any]:
+def decode_landing_distribution(source: Path, receipt: Path, output: Path, *,
+                                receipt_uri: str, raw_uri: str,
+                                memory_limit: str = "10GB") -> dict[str, Any]:
     """Decode one Landing data file; identity comes from its receipt (docs/landing.md)."""
-    source = Path(source)
-    receipt = Path(receipt)
-    output = Path(output)
-    identity = _validated_landing_identity(
-        source=source, receipt=receipt, output=output,
-        receipt_uri=receipt_uri, raw_uri=raw_uri,
-    )
-    return _decode_with_identity(source, output, identity)
-
-
-def _decode_with_identity(source: Path, output: Path, identity: Mapping[str, Any]) -> dict[str, Any]:
-    dataset_id = identity["dataset_id"]
+    source, receipt, output = Path(source), Path(receipt), Path(output)
+    identity = _validated_landing_identity(source=source, receipt=receipt, output=output,
+                                           receipt_uri=receipt_uri, raw_uri=raw_uri)
     if _file_sha256(source) != identity["raw_sha256"]:
         raise EurostatBulkDecodeError("Eurostat distribution SHA-256 does not match its receipt")
+    try:
+        with gzip.open(source, "rt", encoding="utf-8-sig", errors="strict", newline="") as stream:
+            header_line = stream.readline().rstrip("\r\n")
+            first_series = stream.readline()
+    except (OSError, EOFError, UnicodeError) as exc:
+        raise EurostatBulkDecodeError(f"invalid Eurostat full distribution: {exc}") from exc
+    if not header_line:
+        raise EurostatBulkDecodeError("Eurostat TSV is empty")
+    header = header_line.split("\t")
+    dimensions, periods = _parse_header(header)
+    if not first_series.strip():
+        raise EurostatBulkDecodeError("Eurostat TSV has no series")
 
     output.parent.mkdir(parents=True, exist_ok=True)
     database = output.parent / f".{output.name}.duckdb"
     if database.exists():
         raise EurostatBulkDecodeError("Eurostat decoder working database already exists")
-
-    measurements = {
-        "dataset_id": dataset_id,
-        "distribution_id": identity["distribution_id"],
-        "partition_id": identity["partition_id"],
-        "empty_partition": identity["empty_partition"],
-        "source_rows": 0,
-        "observation_cells": 0,
-        "missing_cells": 0,
-        "empty_cells": 0,
-        "colon_cells": 0,
-        "flagged_cells": 0,
-        "periods": 0,
-    }
     completed = False
     try:
-        with duckdb.connect(str(database)) as connection:
-            # Eurostat headers require unique periods and every source series emits the
-            # same ordered period set. A repeated complete observation key therefore
-            # implies a repeated series key, so checking only period position 1 is exact
-            # while reducing the aggregation by the number of periods in the dataset.
-            connection.execute("SET memory_limit = '4GB'")
-            connection.execute("SET threads = 1")
-            connection.execute("SET preserve_insertion_order = false")
-            definitions = ", ".join(
-                f'"{name}" {kind}' for name, kind in BRONZE_COLUMNS
-            )
-            connection.execute(f"CREATE TABLE bronze ({definitions})")
-            if not identity["empty_partition"]:
-                _load_observations(connection, source, identity, measurements)
+        with duckdb.connect(str(database)) as con:
+            con.execute(f"SET memory_limit = '{memory_limit}'")
+            con.execute("SET threads = 2")
+            con.execute("SET preserve_insertion_order = true")
+            columns = {f"c{i}": "VARCHAR" for i in range(len(header))}
+            # One pass over the file: the split series key per row; the table keeps file
+            # order, so rowid + 2 is the source line. No window, join or sort anywhere, so
+            # memory stays bounded by DuckDB's streaming operators.
+            con.execute(
+                "CREATE TABLE src AS SELECT "
+                "list_transform(string_split(c0, ','), x -> trim(x)) AS parts, * EXCLUDE (c0) "
+                "FROM read_csv(?, auto_detect = false, delim = '\t', quote = '', escape = '', "
+                "comment = '', header = false, skip = 1, columns = ?, nullstr = ?, strict_mode = true, "
+                "null_padding = false, parallel = false, compression = 'gzip', max_line_size = 8000000)",
+                [str(source), columns, _NULL_MARKER])
+            source_rows, nulls, bad, distinct = con.execute(
+                "SELECT count(*), count(*) FILTER (WHERE "
+                + " OR ".join(f"c{i} IS NULL" for i in range(1, len(header)))
+                + "), min(rowid + 2) FILTER (WHERE len(parts) <> ? OR list_contains(parts, '')), "
+                "count(DISTINCT parts) FROM src", [len(dimensions)]).fetchone()
+            if source_rows == 0:
+                raise EurostatBulkDecodeError("Eurostat TSV has no series")
+            if nulls:
+                raise EurostatBulkDecodeError("Eurostat TSV has rows with missing fields")
+            if bad is not None:
+                raise EurostatBulkDecodeError(f"Eurostat TSV row {bad} has an invalid series key")
+            if distinct != source_rows:
+                raise EurostatBulkDecodeError("Eurostat TSV repeats a complete dimensional observation key")
 
-            duplicate = connection.execute(
-                """
-                SELECT dimension_key_sha256, count(*)
-                FROM bronze
-                WHERE source_period_position = 1
-                GROUP BY dimension_key_sha256
-                HAVING count(*) > 1
-                LIMIT 1
-                """
-            ).fetchone()
-            if duplicate is not None:
-                raise EurostatBulkDecodeError(
-                    "Eurostat TSV repeats a complete dimensional observation key"
-                )
+            def code(name: str) -> str:
+                return f"parts[{dimensions.index(name) + 1}]" if name in dimensions else "NULL::VARCHAR"
+
+            value_columns = ", ".join(f"c{i}" for i in range(1, len(header)))
             escaped = str(output).replace("'", "''")
-            connection.execute(
-                f"COPY bronze TO '{escaped}' (FORMAT PARQUET, COMPRESSION ZSTD)"
-            )
-        if not output.is_file():
-            raise EurostatBulkDecodeError("Eurostat Bronze output was not created")
-        measurements["output_bytes"] = output.stat().st_size
-        measurements["output_sha256"] = _file_sha256(output)
+            con.execute(f"""
+                COPY (
+                  SELECT ?::VARCHAR AS dataset_id, ?::VARCHAR AS source_version,
+                         ?::TIMESTAMPTZ AS ingested_at, ?::VARCHAR AS raw_sha256,
+                         ?::VARCHAR AS series_dimensions,
+                         array_to_string(parts, ',') AS series_key,
+                         {code('freq')} AS freq_code, {code('unit')} AS unit_code,
+                         {code('geo')} AS geo_code,
+                         (?::VARCHAR[])[substr(col, 2)::INTEGER] AS period_key,
+                         regexp_extract(trim(cell), '^(\\S*)', 1) AS value_text,
+                         nullif(trim(regexp_extract(trim(cell), '^\\S*\\s+(.*)$', 1)), '') AS status_code,
+                         line AS source_row_number
+                  FROM (UNPIVOT (SELECT rowid + 2 AS line, * FROM src)
+                        ON {value_columns} INTO NAME col VALUE cell)
+                ) TO '{escaped}' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 1000000)
+            """, [identity["dataset_id"], identity["source_version"], identity["ingested_at"],
+                  identity["raw_sha256"], ",".join(dimensions), periods])
+            cells = con.execute(f"SELECT count(*) FROM read_parquet('{escaped}')").fetchone()[0]
+        if cells != source_rows * len(periods):
+            raise EurostatBulkDecodeError("Eurostat Bronze row count differs from series × periods")
         completed = True
-    except EurostatBulkDecodeError:
-        raise
-    except (OSError, EOFError, UnicodeError, csv.Error, duckdb.Error) as exc:
-        raise EurostatBulkDecodeError(f"invalid Eurostat full distribution: {exc}") from exc
+    except duckdb.Error as exc:
+        raise EurostatBulkDecodeError(f"invalid Eurostat full distribution: {str(exc)[:600]}") from exc
     finally:
         database.unlink(missing_ok=True)
+        Path(str(database) + ".wal").unlink(missing_ok=True)
         if not completed and output.exists():
             output.unlink()
-
-    return measurements
-
-
-def _load_observations(
-    connection: duckdb.DuckDBPyConnection,
-    source: Path,
-    identity: Mapping[str, Any],
-    measurements: dict[str, Any],
-) -> None:
-    """Decode the native TSV body after receipt and raw identity are accepted."""
-    with gzip.open(
-        source, "rt", encoding="utf-8-sig", errors="strict", newline=""
-    ) as stream:
-        reader = csv.reader(stream, delimiter="\t")
-        try:
-            header = next(reader)
-        except StopIteration:
-            raise EurostatBulkDecodeError("Eurostat TSV is empty") from None
-        dimension_names, periods = _parse_header(header)
-        measurements["periods"] = len(periods)
-        batch: list[tuple[Any, ...]] = []
-        for line_number, row in enumerate(reader, start=2):
-            if len(row) != len(header):
-                raise EurostatBulkDecodeError(
-                    f"Eurostat TSV row {line_number} has {len(row)} fields; "
-                    f"expected {len(header)}"
-                )
-            dimension_codes = [part.strip() for part in row[0].split(",")]
-            if len(dimension_codes) != len(dimension_names) or any(
-                not code for code in dimension_codes
-            ):
-                raise EurostatBulkDecodeError(
-                    f"Eurostat TSV row {line_number} has an invalid series key"
-                )
-            series_dimensions = dict(zip(dimension_names, dimension_codes))
-            measurements["source_rows"] += 1
-            for period_position, (period, cell) in enumerate(
-                zip(periods, row[1:]), start=1
-            ):
-                dimensions = {**series_dimensions, "time": period}
-                key_json = json.dumps(
-                    dimensions,
-                    ensure_ascii=False,
-                    separators=(",", ":"),
-                    sort_keys=True,
-                )
-                parsed = _parse_cell(cell, line_number, period)
-                if parsed[3]:
-                    measurements["missing_cells"] += 1
-                    measurements[f"{parsed[4]}_cells"] += 1
-                if parsed[2] is not None:
-                    measurements["flagged_cells"] += 1
-                batch.append(
-                    (
-                        identity["dataset_id"],
-                        identity["distribution_id"],
-                        identity["partition_id"],
-                        identity["partition_selection_json"],
-                        period,
-                        series_dimensions.get("freq"),
-                        series_dimensions.get("unit"),
-                        series_dimensions.get("geo"),
-                        key_json,
-                        sha256(key_json.encode("utf-8")).hexdigest(),
-                        parsed[0],
-                        parsed[1],
-                        parsed[2],
-                        parsed[3],
-                        parsed[4],
-                        identity["source_version"],
-                        identity["retrieved_at_utc"],
-                        identity["raw_sha256"],
-                        identity["raw_file_id"],
-                        identity["receipt_sha256"],
-                        identity["receipt_file_id"],
-                        identity["receipt_size_bytes"],
-                        line_number,
-                        period_position,
-                    )
-                )
-                measurements["observation_cells"] += 1
-                if len(batch) >= _BATCH_ROWS:
-                    _append_batch(connection, batch)
-        if batch:
-            _append_batch(connection, batch)
-
-
-def _append_batch(
-    connection: duckdb.DuckDBPyConnection,
-    batch: list[tuple[Any, ...]],
-) -> None:
-    """Append one typed frame instead of binding every row through executemany."""
-    frame = pd.DataFrame.from_records(
-        batch,
-        columns=_BRONZE_COLUMN_NAMES,
-        coerce_float=False,
-    )
-    connection.append("bronze", frame)
-    batch.clear()
+    return {"dataset_id": identity["dataset_id"], "raw_sha256": identity["raw_sha256"],
+            "source_rows": source_rows, "periods": len(periods), "observation_cells": cells,
+            "output_bytes": output.stat().st_size}
 
 
 def _parse_header(header: list[str]) -> tuple[list[str], list[str]]:
     if not header or "\\TIME_PERIOD" not in header[0].upper():
-        raise EurostatBulkDecodeError(
-            "Eurostat TSV header has no series key/TIME_PERIOD column"
-        )
+        raise EurostatBulkDecodeError("Eurostat TSV header has no series key/TIME_PERIOD column")
     series_header, marker = header[0].split("\\", 1)
     if marker.strip().upper() != "TIME_PERIOD":
         raise EurostatBulkDecodeError("Eurostat TSV has an unsupported observation axis")
     dimensions = [value.strip().lower() for value in series_header.split(",")]
-    if (
-        not dimensions
-        or any(not _DIMENSION_RE.fullmatch(value) for value in dimensions)
-        or len(set(dimensions)) != len(dimensions)
-        or "time" in dimensions
-    ):
+    if (not dimensions or any(not _DIMENSION_RE.fullmatch(v) for v in dimensions)
+            or len(set(dimensions)) != len(dimensions) or "time" in dimensions):
         raise EurostatBulkDecodeError("Eurostat TSV has invalid series dimensions")
     periods = [value.strip() for value in header[1:]]
-    if not periods or any(not value for value in periods) or len(set(periods)) != len(periods):
+    if not periods or any(not v for v in periods) or len(set(periods)) != len(periods):
         raise EurostatBulkDecodeError("Eurostat TSV has invalid or duplicate periods")
     return dimensions, periods
 
 
-def _parse_cell(
-    raw: str, line_number: int, period: str
-) -> tuple[str | None, float | None, str | None, bool, str | None]:
-    stripped = raw.strip()
-    if not stripped:
-        return "", None, None, True, "empty"
-    parts = stripped.split(maxsplit=1)
-    value_text = parts[0]
-    status = parts[1].strip() if len(parts) == 2 and parts[1].strip() else None
-    if value_text == ":":
-        return ":", None, status, True, "colon"
-    try:
-        numeric = Decimal(value_text)
-    except InvalidOperation:
-        raise EurostatBulkDecodeError(
-            f"Eurostat TSV row {line_number} period {period!r} has a non-numeric value"
-        ) from None
-    if not numeric.is_finite():
-        raise EurostatBulkDecodeError(
-            f"Eurostat TSV row {line_number} period {period!r} has a non-finite value"
-        )
-    numeric_float = float(numeric)
-    if not math.isfinite(numeric_float):
-        raise EurostatBulkDecodeError(
-            f"Eurostat TSV row {line_number} period {period!r} exceeds numeric range"
-        )
-    return value_text, numeric_float, status, False, None
-
-
-def _validated_landing_identity(
-    *,
-    source: Path,
-    receipt: Path,
-    output: Path,
-    receipt_uri: str,
-    raw_uri: str,
-) -> dict[str, Any]:
+def _validated_landing_identity(*, source: Path, receipt: Path, output: Path,
+                                receipt_uri: str, raw_uri: str) -> dict[str, Any]:
     if not source.is_file() or not receipt.is_file():
         raise EurostatBulkDecodeError("Eurostat Landing file or receipt is not a regular file")
     if output.exists():
@@ -319,18 +167,13 @@ def _validated_landing_identity(
     for label, uri in (("receipt", receipt_uri), ("raw", raw_uri)):
         if not isinstance(uri, str) or not uri.startswith("r2://") or len(uri) > 1024:
             raise EurostatBulkDecodeError(f"Eurostat Landing {label} URI is invalid")
-    receipt_bytes = receipt.read_bytes()
     try:
-        accepted = json.loads(receipt_bytes.decode("utf-8"))
+        accepted = json.loads(receipt.read_bytes().decode("utf-8"))
     except (UnicodeError, json.JSONDecodeError) as exc:
         raise EurostatBulkDecodeError(f"Eurostat Landing receipt is not valid JSON: {exc}") from exc
-    if (
-        not isinstance(accepted, dict)
-        or accepted.get("schema_version") != 2
-        or accepted.get("kind") != "eurostat_landing"
-        or accepted.get("area") != "data"
-        or accepted.get("source_id") != "eurostat"
-    ):
+    if (not isinstance(accepted, dict) or accepted.get("schema_version") != 2
+            or accepted.get("kind") != "eurostat_landing" or accepted.get("area") != "data"
+            or accepted.get("source_id") != "eurostat"):
         raise EurostatBulkDecodeError("receipt is not a Eurostat Landing receipt")
     dataset_id = accepted.get("dataset_code")
     if not _bounded_text(dataset_id, 2048):
@@ -338,8 +181,7 @@ def _validated_landing_identity(
     source_version = accepted.get("eurostat_version") or None
     if source_version is not None and not _bounded_text(source_version, 1024):
         raise EurostatBulkDecodeError("Eurostat source version is invalid")
-    raw_sha256 = accepted.get("sha256")
-    raw_size = accepted.get("size_bytes")
+    raw_sha256, raw_size = accepted.get("sha256"), accepted.get("size_bytes")
     if not isinstance(raw_sha256, str) or not _SHA256_RE.fullmatch(raw_sha256):
         raise EurostatBulkDecodeError("Eurostat distribution SHA-256 is invalid")
     if type(raw_size) is not int or raw_size <= 0 or source.stat().st_size != raw_size:
@@ -347,35 +189,20 @@ def _validated_landing_identity(
     obj = accepted.get("object")
     if not isinstance(obj, dict) or not raw_uri.endswith("/" + str(obj.get("key"))):
         raise EurostatBulkDecodeError("Eurostat receipt object does not match the raw file")
-    retrieved_at = accepted.get("ingested_at")
+    ingested_at = accepted.get("ingested_at")
     try:
-        parsed = datetime.fromisoformat(str(retrieved_at).replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(str(ingested_at).replace("Z", "+00:00"))
     except ValueError:
-        raise EurostatBulkDecodeError("Eurostat retrieval timestamp is invalid") from None
+        raise EurostatBulkDecodeError("Eurostat ingestion timestamp is invalid") from None
     if parsed.tzinfo is None or parsed.utcoffset() != timedelta(0):
-        raise EurostatBulkDecodeError("Eurostat retrieval timestamp must be UTC")
-    return {
-        "dataset_id": dataset_id,
-        "distribution_id": dataset_id,
-        "partition_id": None,
-        "partition_selection_json": None,
-        "empty_partition": False,
-        "source_version": source_version,
-        "retrieved_at_utc": retrieved_at,
-        "raw_sha256": raw_sha256,
-        "raw_file_id": raw_uri,
-        "receipt_sha256": sha256(receipt_bytes).hexdigest(),
-        "receipt_file_id": receipt_uri,
-        "receipt_size_bytes": len(receipt_bytes),
-    }
+        raise EurostatBulkDecodeError("Eurostat ingestion timestamp must be UTC")
+    return {"dataset_id": dataset_id, "source_version": source_version,
+            "ingested_at": parsed.isoformat(), "raw_sha256": raw_sha256}
 
 
 def _bounded_text(value: Any, limit: int) -> bool:
-    return (
-        isinstance(value, str)
-        and 0 < len(value) <= limit
-        and not any(ord(character) < 32 for character in value)
-    )
+    return (isinstance(value, str) and 0 < len(value) <= limit
+            and not any(ord(character) < 32 for character in value))
 
 
 def _file_sha256(path: Path) -> str:

@@ -5,9 +5,8 @@ Pipeline activities eurostat landing.inspect / landing.extract / landing.verify
 never touches Bronze. Layout (docs/landing.md):
 01_landing/eurostat/snapshot/data/<CODE>/<source_version>__<ingested_at>.tsv.gz + .receipt.json
 
-inspect   Download the official data inventory, classify every non-Comext dataset
-          (current / stale / missing against Landing receipts) and write the result to
-          06_control/eurostat_bulk_landing/coverage/. No downloads.
+inspect   Download the official data inventory and classify every non-Comext dataset
+          (current / stale / missing against Landing receipts). No downloads.
 verify    inspect plus Landing integrity: every receipt has its data object with the
           receipted size; data objects without a receipt are listed. Gaps warn,
           integrity problems fail.
@@ -23,12 +22,10 @@ from __future__ import annotations
 import argparse
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
-import csv
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 import fnmatch
 import hashlib
-import io
 import json
 import os
 from pathlib import Path
@@ -54,7 +51,6 @@ from ingestion.common.report import annotate, step_summary
 
 SOURCE_ID = "eurostat"
 LANDING_PREFIX = "01_landing/eurostat/snapshot/data/"
-CONTROL_PREFIX = "06_control/eurostat_bulk_landing/"
 OFFICIAL_HOST = "ec.europa.eu"
 USER_AGENT = "zohelo-data-eurostat-bulk-landing/1 (manual, polite; github.com/zohelo/zohelo-data)"
 
@@ -172,7 +168,6 @@ class R2:
             return value
 
         self.landing = env("R2_LANDING_BUCKET")
-        self.lakehouse = env("R2_LAKEHOUSE_BUCKET")
         self.client = boto3.client(
             "s3",
             endpoint_url=env("R2_S3_ENDPOINT").rstrip("/"),
@@ -870,20 +865,6 @@ def plan_items(inventory_body: bytes, landing: dict, parallel_jobs: int,
     return items, stats
 
 
-CSV_COLUMNS = ("dataset_code", "status", "eurostat_version", "version_token", "parallel_job", "title",
-               "landing_versions", "orphan_data_object", "source_url", "landing_prefix")
-
-
-def coverage_csv(items: list[dict]) -> bytes:
-    out = io.StringIO()
-    writer = csv.writer(out, lineterminator="\n")
-    writer.writerow(CSV_COLUMNS)
-    for row in items:
-        writer.writerow([row["code"], row["status"], row["version"], row["token"], row["job"],
-                         row["title"], ";".join(row["landing_versions"]),
-                         str(row["orphan_data_object"]).lower(), row["url"], row["prefix"]])
-    return out.getvalue().encode("utf-8")
-
 
 def counts(items: list[dict]) -> dict[str, int]:
     result = {status: 0 for status in STATUSES}
@@ -955,12 +936,8 @@ def main(argv: list[str] | None = None) -> int:
         ctx = Context(r2, Path(tmp), deadline, hard_deadline, run_id, code_sha, {})
         inventory_body, inventory_dl = fetch_inventory(ctx)
         inventory_sha = hashlib.sha256(inventory_body).hexdigest()
-        inventory_key = f"{CONTROL_PREFIX}inventories/data/{inventory_sha}.tsv"
-        if r2.head(r2.lakehouse, inventory_key) is None:
-            r2.put_new(r2.lakehouse, inventory_key, inventory_body, "text/tab-separated-values")
         ctx.inventory_ref = {"sha256": inventory_sha, "bytes": len(inventory_body),
-                             "retrieved_at": utc_now(), "source_url": inventory_dl.final_url,
-                             "control_object": f"r2://{r2.lakehouse}/{inventory_key}"}
+                             "retrieved_at": utc_now(), "source_url": inventory_dl.final_url}
 
         landing = load_landing_state(r2)
         items, stats = plan_items(inventory_body, landing, args.parallel_jobs, patterns)
@@ -975,9 +952,6 @@ def main(argv: list[str] | None = None) -> int:
         if args.mode in ("inspect", "verify"):
             if args.mode == "verify":
                 summary["landing_integrity"] = verify_landing(r2, patterns)
-            base = f"{CONTROL_PREFIX}coverage/{run_id}"
-            r2.put_new(r2.lakehouse, base + ".csv", coverage_csv(items), "text/csv")
-            summary["coverage_csv"] = f"r2://{r2.lakehouse}/{base}.csv"
             summary["per_parallel_job"] = {}
             for jobs in (1, 2, 4, 8):
                 summary["per_parallel_job"][str(jobs)] = [
@@ -985,21 +959,18 @@ def main(argv: list[str] | None = None) -> int:
                     for j in range(jobs)
                 ]
             summary["elapsed_seconds"] = round(time.monotonic() - started, 1)
-            rendered = json.dumps(summary, indent=2, sort_keys=True)
-            r2.put_new(r2.lakehouse, base + ".summary.json", rendered.encode(), "application/json")
-            print(rendered, flush=True)
+            print(json.dumps(summary, indent=2, sort_keys=True), flush=True)
             table = "\n".join(f"| {s} | {total[s]:,} |" for s in STATUSES)
             step_summary(
                 f"## eurostat · landing {args.mode}\n\n"
                 f"Inventory `{inventory_sha[:12]}` · {len(items):,} datasets "
                 f"(Comext excluded: {stats['excluded_comext']:,})\n\n"
-                f"| status | datasets |\n|---|---:|\n{table}\n\n"
-                f"Coverage CSV: `{summary['coverage_csv']}`\n")
+                f"| status | datasets |\n|---|---:|\n{table}\n")
             annotate("notice", f"eurostat landing {args.mode}", {
                 k: summary[k] for k in (
                     "classification", "datasets_considered", "excluded_comext",
                     "excluded_other_kinds", "excluded_by_filter", "inventory_distributions",
-                    "coverage_csv", "elapsed_seconds") if k in summary
+                    "elapsed_seconds") if k in summary
             } | {"inventory_sha256": inventory_sha,
                  "parallel_jobs_4": summary["per_parallel_job"]["4"]})
             if args.mode == "inspect":
@@ -1035,9 +1006,6 @@ def main(argv: list[str] | None = None) -> int:
             "results": ctx.results,
             "elapsed_seconds": round(time.monotonic() - started, 1),
         })
-        key = f"{CONTROL_PREFIX}runs/{run_id}/job-{args.job_index}-of-{args.parallel_jobs}.json"
-        rendered = json.dumps(summary, indent=2, sort_keys=True, default=str)
-        r2.put_new(r2.lakehouse, key, rendered.encode(), "application/json")
         brief = {k: v for k, v in summary.items() if k != "results"}
         print(json.dumps(brief, indent=2, sort_keys=True, default=str), flush=True)
         reasons = "\n".join(f"| {k} | {v} |" for k, v in sorted(by_reason.items())) or "| – | 0 |"
@@ -1047,11 +1015,10 @@ def main(argv: list[str] | None = None) -> int:
             f"({summary['landed_bytes'] / 1e9:.2f} GB) · failed {len(failed):,} · "
             f"not started (time budget) {summary['not_started_time_budget']:,} · "
             f"provider pauses {len(ctx.pacer.events)}\n\n"
-            f"| failure reason | datasets |\n|---|---:|\n{reasons}\n\n"
-            f"Run summary: `r2://{r2.lakehouse}/{key}`\n")
+            f"| failure reason | datasets |\n|---|---:|\n{reasons}\n")
         annotate("notice", f"eurostat landing extract job {args.job_index + 1} of {args.parallel_jobs}", {
             k: v for k, v in brief.items() if k != "provider_pauses"
-        } | {"provider_pause_count": len(ctx.pacer.events), "run_summary": f"r2://{r2.lakehouse}/{key}"})
+        } | {"provider_pause_count": len(ctx.pacer.events)})
         if failed:
             annotate("warning", "eurostat landing extract failures", {
                 "failed": len(failed),

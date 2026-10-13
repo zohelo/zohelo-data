@@ -14,6 +14,13 @@ sources:
     config: ingestion/sources/eurostat.yaml
   tables:
   - name: eurostat_full_observations
+    description: >-
+      One row per series × period as published (Eurostat .tsv.gz), latest Landing version
+      of every dataset; partitioned by dataset_id. value_text is the source lexeme
+      (numbers, ':' for not available, '' for empty), status_code the flag; series_key
+      holds the codes in the order of series_dimensions. Cast values in Silver.
+  - name: eurostat_rejected_files
+    description: Landing files the Bronze decoder rejected, with the reason (cleared by ops/retry_rejected).
 - name: gleif
   description: GLEIF — LEI records, relationships and reporting exceptions (golden copy files)
   database: r2

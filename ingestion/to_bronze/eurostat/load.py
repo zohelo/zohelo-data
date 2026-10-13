@@ -3,8 +3,8 @@
 Runs bronze_batch.py repeatedly, each batch in its own process so DuckDB memory is
 released between batches. Membership of raw_sha256 in the Iceberg table is the
 checkpoint, so a run that stops on its time budget resumes on the next run.
-Decoder rejections are recorded under 06_control/eurostat_bulk_bronze/failures/
-and skipped, never retried silently.
+Decoder rejections are recorded in bronze.eurostat_rejected_files and skipped, never
+retried silently (ops/retry_rejected clears them).
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ BATCH_MODULE = "ingestion.to_bronze.eurostat.batch"
 BATCH_SIZE = 64
 BATCH_SECONDS = 900
 MAX_BATCHES = 128
-MARGIN_SECONDS = 180
+MARGIN_SECONDS = 3600            # one file can take ~1 h (AVIA_TF_ACA: 1.48B cells)
 
 
 def load(budget_minutes: float) -> int:
@@ -40,7 +40,7 @@ def load(budget_minutes: float) -> int:
             return 2
         print(json.dumps({"operation": "eurostat_bronze_batch", "batch": batch}), flush=True)
         command = [sys.executable, "-u", "-m", BATCH_MODULE,
-                   "--max-distributions", str(BATCH_SIZE),
+                   "--max-files", str(BATCH_SIZE),
                    "--session-seconds", str(min(BATCH_SECONDS, remaining - 120))]
         receipts = []
         with subprocess.Popen(command, stdout=subprocess.PIPE, text=True) as process:
@@ -50,7 +50,7 @@ def load(budget_minutes: float) -> int:
                     item = json.loads(line)
                 except ValueError:
                     continue
-                if (isinstance(item, dict) and item.get("operation") == "catch-up-eurostat-r2-bronze"
+                if (isinstance(item, dict) and item.get("operation") == "eurostat-bronze-batch"
                         and item.get("result") == "pass"):
                     receipts.append(item)
             returncode = process.wait()

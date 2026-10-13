@@ -15,13 +15,13 @@ from pathlib import PurePosixPath
 import boto3
 from botocore.config import Config
 
-CURRENT_KEY="06_control/portal_index/v1/current.json"
+INDEX_ROOT="_portal_index/v1/"
+CURRENT_KEY=INDEX_ROOT+"current.json"
 FOLDER="application/vnd.google-apps.folder"
 ROOT_ID="r2-root-zohelo-data"
 EXCLUDED_LAKEHOUSE_PREFIXES=(
     "__r2_data_catalog/",
-    "06_control/portal_index/",
-    "06_control/drive_to_r2/",
+    "_portal_index/",
 )
 
 def required(name):
@@ -108,7 +108,7 @@ def main():
 
     source_inventory_sha256=digest.hexdigest()
     source_run=source_inventory_sha256[:24]
-    prefix=f"06_control/portal_index/v1/{source_run}"
+    prefix=f"{INDEX_ROOT}{source_run}"
 
     try:
         current=json.loads(s3.get_object(Bucket=lakehouse,Key=CURRENT_KEY)["Body"].read())
@@ -193,8 +193,21 @@ def main():
     }
     s3.put_object(Bucket=lakehouse,Key=CURRENT_KEY,Body=compact(pointer),
                   ContentType="application/json",CacheControl="no-store")
-    print(json.dumps({"status":"published",**pointer},sort_keys=True))
+    pruned=prune_previous(s3,lakehouse,prefix+"/")
+    print(json.dumps({"status":"published","pruned_previous_objects":pruned,**pointer},sort_keys=True))
     return 0
+
+
+def prune_previous(s3,bucket,keep_prefix):
+    """Delete earlier index versions; only the current pointer and its index are kept."""
+    stale=[]
+    for page in s3.get_paginator("list_objects_v2").paginate(Bucket=bucket,Prefix=INDEX_ROOT):
+        for item in page.get("Contents",[]):
+            if item["Key"]!=CURRENT_KEY and not item["Key"].startswith(keep_prefix):
+                stale.append({"Key":item["Key"]})
+    for start in range(0,len(stale),1000):
+        s3.delete_objects(Bucket=bucket,Delete={"Objects":stale[start:start+1000],"Quiet":True})
+    return len(stale)
 
 if __name__=="__main__":
     raise SystemExit(main())

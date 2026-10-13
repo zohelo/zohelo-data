@@ -76,6 +76,11 @@ in `ingestion/sources/<source>.yaml`. Landing layout and rules: docs/landing.md.
 
 - Keep credentials private; bounded retries and timeouts; resumable checkpoints; one
   writer per source; exact source bytes; integrity checks on every write.
+- State lives in the data (Landing receipts, Iceberg tables and their file lists); no
+  control or run-record folders in R2. Run results go to annotations and the job summary.
+- Storage is paid beyond the free tier: store each thing once, keep Bronze lean (no
+  per-row hashes or JSON copies of keys; one file per source file), remove what no
+  table or receipt references.
 - Never overwrite Landing. Delete a Landing file only after its Archive copy is
   verified and no checkpoint points to it.
 - Never claim complete source coverage from partial data.
