@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from hashlib import sha256
 import json
@@ -81,10 +82,13 @@ def landed(client, bucket: str) -> dict[str, list[dict[str, Any]]]:
     receipts = []
     for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=PREFIX):
         receipts += [o["Key"] for o in page.get("Contents", []) if o["Key"].endswith(".receipt.json")]
+    def read(key: str) -> dict[str, Any]:
+        return {**json.loads(get_with_backoff(client, bucket, key)), "receipt_key": key}
+
     out: dict[str, list[dict[str, Any]]] = {}
-    for key in receipts:
-        body = json.loads(get_with_backoff(client, bucket, key))
-        out.setdefault(body["entity"], []).append({**body, "receipt_key": key})
+    with ThreadPoolExecutor(max_workers=8) as pool:      # R2 throttles larger bursts of reads
+        for body in pool.map(read, receipts):
+            out.setdefault(body["entity"], []).append(body)
     for rows in out.values():
         rows.sort(key=lambda r: (r["version_token"], r["ingested_at"]))
     return out
