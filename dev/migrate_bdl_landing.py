@@ -83,10 +83,26 @@ def main(argv=None) -> int:
         plans = list(pool.map(read_plan, plan_keys))
     complete = [p for p in plans if p["complete"]]
 
+    copied_subgroups = set()
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=NEW):
+        for o in page.get("Contents", []):
+            if o["Key"].endswith(".receipt.json"):
+                copied_subgroups.add(o["Key"][len(NEW):].split("/", 1)[0])
     api = Bdl()
     versions: Counter = Counter()
+    errors: list[str] = []
     for p in complete:
-        last = api.last_update(p["subgroup"])
+        if p["subgroup"] in copied_subgroups:
+            p["version"], p["last_update"] = None, None
+            versions["already_copied"] += 1
+            continue
+        try:
+            last = api.last_update(p["subgroup"])
+        except Exception as exc:                      # report and skip; rerun picks it up
+            errors.append(f"{p['subgroup']}: {str(exc)[:150]}")
+            p["version"] = None
+            versions["api_error"] += 1
+            continue
         first_export = min(utc(x["completed"]) for x in p["parts"])
         if last is not None and last <= first_export:
             p["version"], state = token(last), "current_at_export"
@@ -134,7 +150,7 @@ def main(argv=None) -> int:
             outcomes["copied"] += 1
 
     if args.mode == "copy":
-        jobs = [(p, part, i) for p in complete for i, part in
+        jobs = [(p, part, i) for p in complete if p.get("version") for i, part in
                 enumerate(sorted(p["parts"], key=lambda x: x["completed"]), start=1)]
         with ThreadPoolExecutor(max_workers=8) as pool:
             list(pool.map(lambda job: copy(*job), jobs))
@@ -147,7 +163,8 @@ def main(argv=None) -> int:
         "complete_gb": round(sum(x["size"] for p in complete for x in p["parts"]) / 1e9, 3),
         "missing_files": sum(p["missing_files"] for p in plans),
         "versions": dict(versions), "api_requests": api.requests, **outcomes,
-        "multi_part_subgroups": sum(1 for p in complete if len(p["parts"]) > 1)}
+        "multi_part_subgroups": sum(1 for p in complete if len(p["parts"]) > 1),
+        "api_errors": errors[:10]}
     (OUT / "bdl-migration.json").write_text(json.dumps({"summary": summary, "subgroups": [
         {k: v for k, v in p.items() if k != "parts"} | {"parts": len(p["parts"])} for p in plans]}, indent=2))
     annotate("notice", "bdl landing migration", summary)
@@ -155,4 +172,11 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import traceback
+    try:
+        raise SystemExit(main())
+    except SystemExit:
+        raise
+    except BaseException:
+        annotate("error", "bdl landing migration failed", {"traceback": traceback.format_exc()[-3000:]})
+        raise
