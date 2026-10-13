@@ -13,6 +13,7 @@ with rates as (
 )
 select
     cast(strftime(effective_date, '%Y%m%d') as integer) as date_key,
+    effective_date as rate_date,
     currency_code,
     'PLN' as quote_currency_code,
     rate_type,
