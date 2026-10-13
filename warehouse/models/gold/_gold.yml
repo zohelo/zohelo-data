@@ -1,0 +1,12 @@
+version: 2
+models:
+  - name: dim_date
+    description: >-
+      Conformed calendar (warehouse/dimensions/calendar.yaml), one row per day 1900–2100
+      plus special members 0 (not applicable) and -1 (unknown). date_key = yyyymmdd.
+      Polish holiday and working-day flags from 1990 (rule-based, empty before).
+    columns:
+      - name: date_key
+        tests: [not_null, unique]
+      - name: member_type
+        tests: [{accepted_values: {arguments: {values: ['day', 'not_applicable', 'unknown']}}}]
