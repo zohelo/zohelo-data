@@ -19,7 +19,7 @@ BATCH_MODULE = "ingestion.to_bronze.eurostat.batch"
 BATCH_SIZE = 64
 BATCH_SECONDS = 900
 MAX_BATCHES = 128
-MARGIN_SECONDS = 180
+MARGIN_SECONDS = 3600            # one file can take ~1 h (AVIA_TF_ACA: 1.48B cells)
 
 
 def load(budget_minutes: float) -> int:
