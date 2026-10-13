@@ -27,6 +27,7 @@ from typing import Any
 
 import pyarrow as pa
 from pyiceberg.exceptions import NoSuchTableError
+from pyiceberg.io.pyarrow import parquet_file_to_data_file
 from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import Schema
 from pyiceberg.transforms import IdentityTransform
@@ -44,8 +45,10 @@ LANDING_DATA_PREFIX = "01_landing/eurostat/snapshot/data/"
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 RETRY_DELAYS = (2, 5, 10, 20, 40)
 TYPES = {"VARCHAR": StringType(), "BIGINT": LongType(), "TIMESTAMPTZ": TimestamptzType()}
-TABLE_PROPERTIES = {
-    "write.parquet.compression-codec": "zstd",
+# Applied only when computing file statistics (R2 Data Catalog rejects these as table
+# properties). Full bounds keep long dataset codes exact, so the partition value can be
+# derived from the file and scans can prune by dataset_id and raw_sha256.
+STATS_PROPERTIES = {
     "write.metadata.metrics.column.dataset_id": "full",
     "write.metadata.metrics.column.raw_sha256": "full",
 }
@@ -92,7 +95,7 @@ def observations_table(cat):
                           for i, (name, kind) in enumerate(BRONZE_COLUMNS, start=1)])
         spec = PartitionSpec(PartitionField(source_id=1, field_id=1000,
                                             transform=IdentityTransform(), name="dataset_id"))
-        table = cat.create_table(TABLE_ID, schema=schema, partition_spec=spec, properties=TABLE_PROPERTIES)
+        table = cat.create_table(TABLE_ID, schema=schema, partition_spec=spec)
         with table.transaction() as tx:
             tx.set_properties(**{"schema.name-mapping.default":
                                  table.schema().name_mapping.model_dump_json()})
@@ -192,10 +195,15 @@ def commit(cat, uris: list[str]) -> None:
         missing = [u for u in uris if u not in present]
         if not missing:
             return
+        metadata = table.metadata.model_copy(
+            update={"properties": {**table.metadata.properties, **STATS_PROPERTIES}})
+        files = [parquet_file_to_data_file(table.io, metadata, uri) for uri in missing]
         try:
             with table.transaction() as tx:
-                tx.add_files(missing, snapshot_properties={"zohelo.operation": "eurostat-bronze-batch"},
-                             check_duplicate_files=False)
+                with tx.update_snapshot(snapshot_properties={
+                        "zohelo.operation": "eurostat-bronze-batch"}).fast_append() as append:
+                    for data_file in files:
+                        append.append_data_file(data_file)
             return
         except Exception as exc:
             if not transient(exc) or attempt == len(RETRY_DELAYS):

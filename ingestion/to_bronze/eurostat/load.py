@@ -8,6 +8,7 @@ retried silently (ops/retry_rejected clears them).
 """
 from __future__ import annotations
 
+from collections import deque
 import json
 import subprocess
 import sys
@@ -42,10 +43,11 @@ def load(budget_minutes: float) -> int:
         command = [sys.executable, "-u", "-m", BATCH_MODULE,
                    "--max-files", str(BATCH_SIZE),
                    "--session-seconds", str(min(BATCH_SECONDS, remaining - 120))]
-        receipts = []
-        with subprocess.Popen(command, stdout=subprocess.PIPE, text=True) as process:
+        receipts, tail = [], deque(maxlen=40)
+        with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) as process:
             for line in process.stdout:
                 sys.stdout.write(line)
+                tail.append(line.rstrip()[:300])
                 try:
                     item = json.loads(line)
                 except ValueError:
@@ -55,6 +57,7 @@ def load(budget_minutes: float) -> int:
                     receipts.append(item)
             returncode = process.wait()
         if returncode:
+            annotate("error", "eurostat Bronze batch output", {"last_lines": list(tail)})
             report(f"batch_failed_exit_{returncode}", "error")
             return returncode
         if len(receipts) != 1:
