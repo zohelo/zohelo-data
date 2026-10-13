@@ -23,12 +23,12 @@ from pyiceberg.io.pyarrow import parquet_file_to_data_file
 from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import Schema
 from pyiceberg.transforms import IdentityTransform
-from pyiceberg.types import LongType, NestedField, StringType, TimestamptzType
+from pyiceberg.types import BinaryType, LongType, NestedField, StringType, TimestamptzType
 import requests
 
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 RETRY_DELAYS = (2, 5, 10, 20, 40)
-TYPES = {"VARCHAR": StringType(), "BIGINT": LongType(), "TIMESTAMPTZ": TimestamptzType()}
+TYPES = {"VARCHAR": StringType(), "BIGINT": LongType(), "TIMESTAMPTZ": TimestamptzType(), "BLOB": BinaryType()}
 THROTTLED = {"ServiceUnavailable", "SlowDown", "InternalError", "RequestTimeout", "TooManyRequests", "503", "500"}
 REJECTED_SCHEMA = Schema(
     NestedField(1, "entity", StringType(), required=False),
@@ -169,6 +169,7 @@ SOURCE_TABLES = {
     "nbp": ([("bronze", "nbp_observations")], ("bronze", "nbp_rejected_files")),
     "gus_bdl": ([("bronze", "bdl_subgroup_observations")], ("bronze", "bdl_rejected_files")),
     "gus_teryt": ([("bronze", "teryt_records")], ("bronze", "teryt_rejected_files")),
+    "gugik_prg": ([("bronze", "prg_boundaries")], ("bronze", "prg_rejected_files")),
 }
 
 

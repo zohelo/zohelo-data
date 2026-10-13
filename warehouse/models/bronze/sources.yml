@@ -34,14 +34,22 @@ sources:
   - name: gleif_relationship_records
   - name: gleif_reporting_exceptions
 - name: gugik_prg
-  description: GUGiK PRG — administrative boundaries
+  description: GUGiK PRG — national register of boundaries (administrative and cadastral units)
   database: r2
   schema: bronze
   meta:
     landing: 01_landing/gugik_prg/
-    loaded_by: retired code (ingestion/legacy/)
+    loaded_by: ingestion/to_bronze/gugik_prg/ (prg_country … prg_surface_areas by retired code)
     config: ingestion/sources/gugik_prg.yaml
   tables:
+  - name: prg_boundaries
+    description: >-
+      One row per boundary feature of every layer of the newest national package (A00 country,
+      A01 voivodeships, A02 powiats, A03 gminas, A05 cadastral units, A06 cadastral precincts);
+      attributes as text (jpt_kod_je = TERYT code), geometry as WKB (geographic ETRS89 as published) with the
+      layer's .prj text in crs_wkt.
+  - name: prg_rejected_files
+    description: Landing files the PRG Bronze decoder rejected, with the reason.
   - name: prg_country
   - name: prg_voivodeships
   - name: prg_counties
