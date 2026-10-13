@@ -86,9 +86,11 @@ class Bdl:
                 if subject.get("children"):
                     stack.append(subject["id"])
 
-    def last_update(self, subject_id: str) -> datetime | None:
-        """The subgroup's lastUpdate in UTC (the API reports Warsaw local time without offset)."""
-        value = self.get(f"/subjects/{subject_id}", lang="pl").get("lastUpdate")
+    def last_update(self, subject_id: str, listed: dict | None = None) -> datetime | None:
+        """The subgroup's lastUpdate in UTC (the API reports Warsaw local time without offset).
+
+        Uses the value from the subject listing when it carries one (no extra request)."""
+        value = (listed or {}).get("lastUpdate") or self.get(f"/subjects/{subject_id}", lang="pl").get("lastUpdate")
         if not value:
             return None
         parsed = datetime.fromisoformat(value)

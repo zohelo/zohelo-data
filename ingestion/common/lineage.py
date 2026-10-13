@@ -17,7 +17,7 @@ from typing import Any
 from ingestion.common.r2 import landing_objects, latest_snapshot, req, s3, sha_column
 from ingestion.common.report import annotate
 
-SOURCES=("eurostat","nbp","world_bank_wdi")
+SOURCES=("eurostat","gus_teryt","nbp","world_bank_wdi")
 
 
 def summarize(name:str,landing_set:set[str],proven:set[str],meta:dict[str,dict[str,Any]])->dict[str,Any]:
