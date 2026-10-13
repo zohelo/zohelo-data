@@ -28,11 +28,8 @@ from ingestion.common.report import annotate, step_summary
 
 
 def bronze_hashes(source: str) -> set[str]:
-    if source == "eurostat":
-        from ingestion.common.r2 import catalog
-        from ingestion.to_bronze.eurostat.batch import TABLE_ID, loaded_hashes
-        return loaded_hashes(catalog().load_table(TABLE_ID))
-    return set()
+    from ingestion.common.bronze_files import SOURCE_TABLES, proven_hashes
+    return proven_hashes(source)[0] if source in SOURCE_TABLES else set()
 
 
 def old_receipts(client, bucket: str, source: str) -> dict[str, list[dict[str, Any]]]:

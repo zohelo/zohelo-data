@@ -161,3 +161,24 @@ def record_rejections(cat, table_id: tuple[str, str], rejected: list[dict[str, A
     now = datetime.now(timezone.utc)
     rows = [{**r, "recorded_at": r.get("recorded_at") or now} for r in rejected]
     rejected_table(cat, table_id).append(pa.Table.from_pylist(rows, schema=REJECTED_SCHEMA.as_arrow()))
+
+
+# Bronze tables that hold one file per Landing SHA-256, by source: (data tables, rejections).
+SOURCE_TABLES = {
+    "eurostat": ([("bronze", "eurostat_full_observations")], ("bronze", "eurostat_rejected_files")),
+    "nbp": ([("bronze", "nbp_observations")], ("bronze", "nbp_rejected_files")),
+}
+
+
+def proven_hashes(source: str) -> tuple[set[str], set[str]]:
+    """(Landing SHA-256 loaded into Bronze, Landing SHA-256 rejected with a reason)."""
+    from ingestion.common.r2 import catalog
+    tables, rejections = SOURCE_TABLES[source]
+    cat = catalog()
+    loaded: set[str] = set()
+    for table_id in tables:
+        try:
+            loaded |= loaded_hashes(cat.load_table(table_id))
+        except NoSuchTableError:
+            pass
+    return loaded, rejected_hashes(cat, rejections)

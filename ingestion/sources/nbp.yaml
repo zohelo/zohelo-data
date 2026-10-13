@@ -1,16 +1,27 @@
 source_system: nbp
-description: "Narodowy Bank Polski — exchange rate tables A/B/C and gold prices (API)"
+description: "Narodowy Bank Polski — exchange rate tables A/B/C and gold prices (NBP Web API)"
 
+# Extraction strategy (docs/landing.md). NBP offers no machine bulk file for these feeds:
+# the yearly CSV/XLS archives on nbp.pl are human exports. The Web API is the documented
+# machine route and serves the full history (tables from 2002-01-02, gold from
+# 2013-01-02) in 356 requests of at most 93 days. Entity = table × calendar quarter.
 extraction:
-  initial: to_be_decided
-  production: to_be_decided
-  incremental_policy: to_be_decided
-  schedule: null
+  initial: api                          # tested route: 356 quarter requests, one at a time
+  production: snapshot                  # each file is the complete quarter as published
+  incremental_policy: changed_since_last  # open quarters re-fetched; unchanged bytes skipped
+  schedule: null                        # target: weekdays after 12:30 Europe/Warsaw (table A 11:45–12:15)
 
-landing: 01_landing/nbp/   # empty: raw files were archived after the Bronze build
-archive: 05_archive/nbp/
-bronze: [bronze.nbp_exchange_rates_table_a, bronze.nbp_exchange_rates_table_b, bronze.nbp_exchange_rates_table_c, bronze.nbp_gold_prices]
-silver: [silver.nbp_change_events, silver.nbp_exchange_rates_table_a, silver.nbp_exchange_rates_table_b, silver.nbp_exchange_rates_table_c, silver.nbp_gold_prices]
-gold: [gold.dim_commodity, gold.dim_currency, gold.dim_date, gold.dim_source_table, gold.fact_fx_quotes, gold.fact_gold_prices]
+landing: 01_landing/nbp/
+# Landing → Archive: Bronze-loaded files are moved; JSON is stored zstd-compressed.
+# Retention: newest version of every quarter plus 90 days (open quarters change daily).
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.nbp_observations, bronze.nbp_rejected_files]
+# Legacy tables from retired code, replaced by bronze.nbp_observations and future models:
+# bronze.nbp_exchange_rates_table_a/b/c, bronze.nbp_gold_prices, silver.nbp_*, gold.dim_*/fact_fx_quotes/fact_gold_prices
+silver: []
+gold: []
 
-activities: []   # paused; Bronze/Silver/Gold were built by retired code
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
