@@ -1,0 +1,141 @@
+# Bronze tables, declared as dbt sources. They are built by ingestion/to_bronze (or by
+# retired code), not by dbt; declaring them makes dbt lineage start at Bronze and
+# link each table to its loader and Landing location (meta).
+# Generated from ingestion/sources/*.yaml; add columns and descriptions as tables are modelled.
+version: 2
+sources:
+- name: eurostat
+  description: Eurostat data distributions from the bulk download (Files API); Comext excluded
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/eurostat/
+    loaded_by: ingestion/to_bronze/eurostat/
+    config: ingestion/sources/eurostat.yaml
+  tables:
+  - name: eurostat_full_observations
+    description: >-
+      One row per series × period as published (Eurostat .tsv.gz), latest Landing version
+      of every dataset; partitioned by dataset_id. value_text is the source lexeme
+      (numbers, ':' for not available, '' for empty), status_code the flag; series_key
+      holds the codes in the order of series_dimensions. Cast values in Silver.
+  - name: eurostat_rejected_files
+    description: Landing files the Bronze decoder rejected, with the reason (cleared by ops/retry_rejected).
+- name: gleif
+  description: GLEIF — LEI records, relationships and reporting exceptions (golden copy files)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gleif/
+    loaded_by: retired code (ingestion/legacy/)
+    config: ingestion/sources/gleif.yaml
+  tables:
+  - name: gleif_lei2
+  - name: gleif_relationship_records
+  - name: gleif_reporting_exceptions
+- name: gugik_prg
+  description: GUGiK PRG — administrative boundaries
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gugik_prg/
+    loaded_by: retired code (ingestion/legacy/)
+    config: ingestion/sources/gugik_prg.yaml
+  tables:
+  - name: prg_country
+  - name: prg_voivodeships
+  - name: prg_counties
+  - name: prg_municipalities
+  - name: prg_surface_areas
+- name: gus_bdl
+  description: GUS Local Data Bank (BDL) — Web UI bulk archives (web_bulk) and API responses
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gus_bdl/
+    loaded_by: retired code (ingestion/legacy/)
+    config: ingestion/sources/gus_bdl.yaml
+  tables:
+  - name: bdl_observations
+  - name: bdl_variables
+  - name: bdl_subjects
+  - name: bdl_units
+  - name: bdl_years
+  - name: bdl_dictionary_entries
+- name: gus_dbw
+  description: GUS DBW indicators
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gus_dbw/
+    loaded_by: retired code (ingestion/legacy/)
+    config: ingestion/sources/gus_dbw.yaml
+  tables:
+  - name: dbw_observations
+  - name: dbw_dictionaries
+  - name: dbw_indicators
+  - name: dbw_metadata
+- name: gus_teryt
+  description: GUS TERYT — territorial register (TERC, SIMC, ULIC)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gus_teryt/
+    loaded_by: retired code (ingestion/legacy/)
+    config: ingestion/sources/gus_teryt.yaml
+  tables:
+  - name: teryt_terc
+  - name: teryt_simc
+  - name: teryt_ulic
+- name: mf_biala_lista
+  description: Ministry of Finance VAT taxpayer white list (flat file)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mf_biala_lista/
+    loaded_by: retired code (ingestion/legacy/)
+    config: ingestion/sources/mf_biala_lista.yaml
+  tables:
+  - name: biala_lista_header
+  - name: biala_lista_masks
+  - name: biala_lista_taxpayers
+- name: nbp
+  description: Narodowy Bank Polski — exchange rate tables A/B/C and gold prices (API)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/nbp/
+    loaded_by: retired code (ingestion/legacy/)
+    config: ingestion/sources/nbp.yaml
+  tables:
+  - name: nbp_exchange_rates_table_a
+  - name: nbp_exchange_rates_table_b
+  - name: nbp_exchange_rates_table_c
+  - name: nbp_gold_prices
+- name: opendata_org
+  description: OpenData organizations, people and locations bulk ZIP
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/opendata_org/
+    loaded_by: retired code (ingestion/legacy/)
+    config: ingestion/sources/opendata_org.yaml
+  tables:
+  - name: opendata_org_organizations
+  - name: opendata_org_people
+  - name: opendata_org_locations
+- name: world_bank_wdi
+  description: World Bank WDI bulk CSV archive and API responses
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/world_bank_wdi/
+    loaded_by: retired code (ingestion/legacy/)
+    config: ingestion/sources/world_bank_wdi.yaml
+  tables:
+  - name: wdi_data
+  - name: wdi_country
+  - name: wdi_series
+  - name: wdi_country_series
+  - name: wdi_footnote
+  - name: wdi_series_time
