@@ -66,6 +66,7 @@ env:
   R2_S3_ENDPOINT: ${{ vars.R2_S3_ENDPOINT }}
   R2_LANDING_BUCKET: ${{ vars.R2_LANDING_BUCKET }}
   R2_LAKEHOUSE_BUCKET: ${{ vars.R2_LAKEHOUSE_BUCKET }}
+  GUS_BDL_API_KEY: ${{ secrets.GUS_BDL_API_KEY }}
 
 jobs:
   plan:
