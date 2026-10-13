@@ -1,126 +1,150 @@
 #!/usr/bin/env python3
-"""Archive only R2 Landing objects already proven by current Iceberg provenance.
+"""landing.archive: move Landing files that Bronze has loaded into the Archive.
 
-Supported bounded scopes:
-- Eurostat: Landing files registered in bronze.eurostat_full_observations (one Bronze
-  file per Landing SHA-256).
-- World Bank WDI: the one bulk ZIP whose SHA-256 equals silver.wdi_observations.archive_sha256.
+For every Landing file whose SHA-256 is proven in Bronze, every superseded version (a
+newer version of the entity exists; retention decides how long it is kept), and — if
+the source's ``archive_policy.without_bronze`` lists an area such as ``metadata`` —
+every file of that area, this:
 
-Every archive copy is server-side copied and then fully streamed back through SHA-256
-before it counts. Archive keys are content-addressed
-(05_archive/<source>/<kind>/<sha256>.bin). Landing is never deleted here. The result is
-reported as an annotation; the Archive key itself is the record.
+1. writes the content-addressed Archive copy ``05_archive/<source>/raw/<sha256>``:
+   ``.bin`` = the exact bytes for already-compressed formats (server-side copy),
+   ``.zst`` = a zstd-compressed copy for uncompressed formats (XML, CSV, JSON …);
+2. reads the Archive copy back and checks the original SHA-256 and size;
+3. only then deletes the Landing data file (``archive_policy.move: true``). The receipt
+   stays in Landing as the pointer; ops/restore_from_archive puts a file back.
+
+Idempotent and resumable: an existing, verified Archive copy is reused. Stops starting
+new files when the time budget is used up (exit 2; the next run continues).
+
+Supported proofs: Eurostat (Bronze file per Landing SHA-256); World Bank WDI (the bulk ZIP
+whose SHA-256 equals silver.wdi_observations.archive_sha256).
 """
-
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from hashlib import sha256
 import json
+import tempfile
+import threading
+import time
 from typing import Any
 
-from ingestion.common.r2 import landing_objects, req, s3, sha_column
-from ingestion.common.report import annotate
+from ingestion.common.r2 import archive_key, landing_objects, latest_snapshot, raw_chunks, req, s3, sha_column, sources
+from ingestion.common.report import annotate, step_summary
 
-SOURCES=("eurostat","world_bank_wdi")
+SOURCES = ("eurostat", "world_bank_wdi")
 
 
-def proven_for(source:str,meta:dict[str,dict[str,Any]])->tuple[set[str],dict[str,Any]]:
-    if source=="eurostat":
+def proven_for(source: str, meta: dict[str, dict[str, Any]]) -> set[str]:
+    if source == "eurostat":
         from ingestion.common.r2 import catalog
         from ingestion.to_bronze.eurostat.batch import TABLE_ID, loaded_hashes
-        bulk=loaded_hashes(catalog().load_table(TABLE_ID))
-        return bulk,{"proof":"bronze_file_per_landing_sha256",
-                     "bronze_tables":[{"table":"bronze.eurostat_full_observations","distinct_sha256":len(bulk)}]}
-    bulk={digest for digest,item in meta.items() if "/bulk/" in item["key"]}
-    modeled=sha_column(
-        "SELECT DISTINCT archive_sha256 FROM silver.wdi_observations "
-        "WHERE archive_sha256 IS NOT NULL;","archive_sha256")
-    if len(bulk)!=1 or modeled!=bulk:
-        raise RuntimeError(
-            f"WDI bulk/model lineage mismatch: landing={sorted(bulk)} modeled={sorted(modeled)}")
-    return bulk,{
-        "proof":"silver_archive_sha256_equals_bulk_landing_sha256",
-        "bronze_tables":[
-            {"tables":["bronze.wdi_country","bronze.wdi_country_series","bronze.wdi_data",
-                       "bronze.wdi_footnote","bronze.wdi_series","bronze.wdi_series_time"],
-             "modeled_lineage_table":"silver.wdi_observations",
-             "column":"archive_sha256","distinct_sha256":1},
-        ],
-    }
+        return loaded_hashes(catalog().load_table(TABLE_ID))
+    bulk = {digest for digest, item in meta.items() if "/bulk/" in item["key"]}
+    modeled = sha_column("SELECT DISTINCT archive_sha256 FROM silver.wdi_observations "
+                         "WHERE archive_sha256 IS NOT NULL;", "archive_sha256")
+    if len(bulk) != 1 or modeled != bulk:
+        raise RuntimeError(f"WDI bulk/model lineage mismatch: landing={sorted(bulk)} modeled={sorted(modeled)}")
+    return bulk
 
 
-def hash_object(client,bucket:str,key:str)->tuple[str,int]:
-    response=client.get_object(Bucket=bucket,Key=key)
-    body=response["Body"]; digest=sha256(); size=0
+def verified(client, bucket: str, key: str, digest: str, size: int) -> bool:
+    observed, length = sha256(), 0
+    for block in raw_chunks(client, bucket, key):
+        observed.update(block)
+        length += len(block)
+    return observed.hexdigest() == digest and length == size
+
+
+def ensure_archive(client, bucket: str, source: str, item: dict[str, Any]) -> str:
+    """Write (or reuse) the verified Archive copy; returns 'reused' or 'copied'."""
+    target = archive_key(source, item["sha256"], item["key"])
     try:
-        while True:
-            chunk=body.read(1024*1024)
-            if not chunk: break
-            digest.update(chunk); size+=len(chunk)
-    finally:
-        body.close()
-    return digest.hexdigest(),size
-
-
-def archive_key(source:str,item:dict[str,Any])->str:
-    return f"05_archive/{source}/{item['kind']}/{item['sha256']}.bin"
-
-
-def ensure_archive(client,bucket:str,source:str,item:dict[str,Any])->dict[str,Any]:
-    target=archive_key(source,item)
-    copied=False
-    try:
-        head=client.head_object(Bucket=bucket,Key=target)
-        present=int(head.get("ContentLength",-1))==int(item["size"])
-    except Exception:
-        present=False
-    if not present:
-        client.copy_object(
-            Bucket=bucket,Key=target,
-            CopySource={"Bucket":bucket,"Key":item["key"]},
-            MetadataDirective="REPLACE",
-            Metadata={"source-sha256":item["sha256"]},
-            ContentType="application/octet-stream",
-        )
-        copied=True
-    observed,size=hash_object(client,bucket,target)
-    if observed!=item["sha256"] or size!=item["size"]:
+        client.head_object(Bucket=bucket, Key=target)
+        if verified(client, bucket, target, item["sha256"], int(item["size"])):
+            return "reused"
+        client.delete_object(Bucket=bucket, Key=target)      # a broken copy is never kept
+    except client.exceptions.ClientError:
+        pass
+    metadata = {"source-sha256": item["sha256"], "source-size": str(item["size"]),
+                "source-key": item["key"][-900:]}
+    if target.endswith(".bin"):
+        client.copy_object(Bucket=bucket, Key=target, CopySource={"Bucket": bucket, "Key": item["key"]},
+                           MetadataDirective="REPLACE", Metadata=metadata,
+                           ContentType="application/octet-stream")
+    else:
+        import zstandard
+        with tempfile.TemporaryFile() as handle:
+            with zstandard.ZstdCompressor(level=12, threads=-1).stream_writer(handle, closefd=False) as writer:
+                for block in raw_chunks(client, bucket, item["key"]):
+                    writer.write(block)
+            handle.seek(0)
+            client.upload_fileobj(handle, bucket, target, ExtraArgs={
+                "Metadata": {**metadata, "compression": "zstd"}, "ContentType": "application/zstd"})
+    if not verified(client, bucket, target, item["sha256"], int(item["size"])):
+        client.delete_object(Bucket=bucket, Key=target)
         raise RuntimeError(f"Archive readback mismatch: {item['key']}")
-    return {
-        "source_key":item["key"],"archive_key":target,"size":size,"sha256":observed,
-        "kind":item["kind"],"copied_this_run":copied,"compression":"none_exact_native_bytes",
-    }
+    return "copied"
 
 
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source", choices=SOURCES, required=True)
+    parser.add_argument("--budget-minutes", type=float, default=100)
+    args = parser.parse_args(argv)
+    deadline = time.monotonic() + args.budget_minutes * 60
+    policy = (sources().get(args.source) or {}).get("archive_policy") or {}
+    move = bool(policy.get("move"))
+    without_bronze = set(policy.get("without_bronze") or [])
+    client, bucket = s3(), req("R2_LANDING_BUCKET")
 
-def main(argv=None)->int:
-    parser=argparse.ArgumentParser()
-    parser.add_argument("--source",choices=SOURCES,required=True)
-    args=parser.parse_args(argv)
-    client=s3(); landing_bucket=req("R2_LANDING_BUCKET")
-    meta=landing_objects(client,landing_bucket,args.source)
-    proven,proof=proven_for(args.source,meta)
-    if not proven<=set(meta):
-        raise RuntimeError(f"Iceberg provenance lacks Landing bytes: {len(proven-set(meta))}")
-    selected=[meta[digest] for digest in sorted(proven)]
+    meta = landing_objects(client, bucket, args.source)
+    proven = proven_for(args.source, meta)
+    if not proven <= set(meta):
+        raise RuntimeError(f"Bronze provenance without Landing receipt or file: {len(proven - set(meta))}")
+    # Superseded: no path of these bytes is the newest version of its entity any more.
+    newest = latest_snapshot(meta, "data") | latest_snapshot(meta, "metadata")
+    superseded = {d for d, item in meta.items() if item.get("snapshot_paths") and d not in newest}
+    selected = [item for digest, item in meta.items() if item.get("present") and
+                (digest in proven or digest in superseded or item.get("area") in without_bronze)]
+    selected.sort(key=lambda item: item["size"])
 
-    with ThreadPoolExecutor(max_workers=16) as pool:
-        archived=list(pool.map(lambda item: ensure_archive(client,landing_bucket,args.source,item),selected))
+    outcomes: Counter = Counter()
+    moved_bytes = [0]
+    lock = threading.Lock()
 
-    summary={
-        "source":args.source,"proof":proof,
-        "proven_landing_objects":len(selected),
-        "proven_landing_gb":round(sum(int(x["size"]) for x in selected)/1e9,2),
-        "archive_objects_verified":len(archived),
-        "archive_objects_copied_this_run":sum(1 for x in archived if x["copied_this_run"]),
-        "unproven_landing_objects":len(meta)-len(selected),
-        "landing_deleted":False,
-    }
-    print(json.dumps(summary,sort_keys=True))
-    annotate("notice",f"{args.source} archive",summary)
-    return 0
+    def process(item: dict[str, Any]) -> None:
+        if time.monotonic() > deadline:
+            with lock:
+                outcomes["not_started_time_budget"] += 1
+            return
+        result = ensure_archive(client, bucket, args.source, item)
+        removed = 0
+        if move:
+            # Every Landing path holding these bytes is covered by the one Archive copy.
+            for path in item.get("snapshot_paths") or [{"key": item["key"], "present": True}]:
+                if path.get("present"):
+                    client.delete_object(Bucket=bucket, Key=path["key"])
+                    removed += 1
+        with lock:
+            outcomes[f"archive_{result}"] += 1
+            outcomes["landing_files_deleted"] += removed
+            moved_bytes[0] += int(item["size"]) if removed else 0
 
-if __name__=="__main__":
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(process, selected))
+    summary = {"source": args.source, "move": move, "proven_in_bronze": len(proven),
+               "superseded_versions": len(superseded),
+               "without_bronze_areas": sorted(without_bronze), "selected": len(selected),
+               "selected_gb": round(sum(int(i["size"]) for i in selected) / 1e9, 2),
+               "landing_gb_freed": round(moved_bytes[0] / 1e9, 2), **outcomes}
+    print(json.dumps(summary, sort_keys=True))
+    annotate("notice", f"{args.source} landing archive", summary)
+    step_summary(f"## {args.source} · landing archive\n\n```json\n{json.dumps(summary, indent=2)}\n```\n")
+    return 2 if outcomes["not_started_time_budget"] else 0
+
+
+if __name__ == "__main__":
     raise SystemExit(main())
