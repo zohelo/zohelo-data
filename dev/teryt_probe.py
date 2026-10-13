@@ -24,16 +24,18 @@ for url in PAGES:
         continue
     links = sorted(set(re.findall(r'href="([^"]*pliki[^"]*)"', r.text, re.I)))[:15]
     inputs = re.findall(r'<input[^>]+(?:type="submit"|type="image")[^>]*>', r.text, re.I)
-    anchors = re.findall(r"__doPostBack\('([^']+)'", r.text)
+    anchors = re.findall(r"__doPostBack\((?:'|&#39;|&quot;)([^'&]+)", r.text)
     out[url] = {"status": r.status_code, "final": r.url, "len": len(r.text), "pliki_links": links,
                 "submits": [re.sub(r"\s+", " ", i)[:160] for i in inputs][:20], "postbacks": sorted(set(anchors))[:30]}
-    if r.status_code == 200 and (inputs or anchors) and "pliki_pelne" in r.url:
+    if r.status_code == 200 and r.url.endswith("pobieranie/pliki_pelne.aspx"):
         found_page = (r.url, r.text)
 download = None
 if found_page:
     url, html = found_page
     fields = dict(re.findall(r'<input[^>]+name="(__[A-Z]+)"[^>]+value="([^"]*)"', html))
-    targets = [t for t in re.findall(r"__doPostBack\('([^']+)'", html) if re.search(r"TERC", t, re.I)]
+    targets = [t for t in re.findall(r"__doPostBack\((?:'|&#39;|&quot;)([^'&]+)", html) if re.search(r"TERC", t, re.I)]
+    snippets = [re.sub(r"\s+", " ", html[max(0, m.start() - 300): m.start() + 300]) for m in re.finditer(r"TERC", html)][:4]
+    out["terc_snippets"] = [x[:600] for x in snippets]
     buttons = re.findall(r'<input[^>]+type="(?:submit|image)"[^>]+name="([^"]+)"[^>]*>', html)
     terc_buttons = [b for b in buttons if re.search(r"terc", b, re.I)]
     data = dict(fields)
