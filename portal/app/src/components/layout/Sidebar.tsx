@@ -19,6 +19,7 @@ import {
   Settings,
   Bookmark,
   ChevronRight,
+  Library,
 } from "lucide-react";
 import { useDuckStore, type EditorTabType } from "@/store";
 import { getUiConfig } from "@/lib/appConfig";
@@ -42,6 +43,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 
 // Loaded on demand: most sessions never open connection management.
 const ConnectionsContent = lazy(() => import("@/components/workspace/ConnectionsTab"));
+// The data catalog (metrics, tables, dimensions) is also loaded on demand.
+const CatalogPanel = lazy(() => import("@/components/catalog/CatalogPanel"));
 import PasswordDialog from "@/components/profile/PasswordDialog";
 import ProfileAvatar from "@/components/profile/ProfileAvatar";
 
@@ -63,6 +66,7 @@ export default function Sidebar({ isExplorerOpen, onToggleExplorer }: SidebarPro
   const [historyOpen, setHistoryOpen] = useState(false);
   const [savedQueriesOpen, setSavedQueriesOpen] = useState(false);
   const [connectionsOpen, setConnectionsOpen] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const [switchTarget, setSwitchTarget] = useState<(typeof profiles)[0] | null>(null);
   const ui = getUiConfig();
 
@@ -289,6 +293,24 @@ export default function Sidebar({ isExplorerOpen, onToggleExplorer }: SidebarPro
             </Tooltip>
           </TooltipProvider>
 
+          {/* Data catalog */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={catalogOpen ? "secondary" : "ghost"}
+                  size="icon"
+                  className="mx-auto h-9 w-9"
+                  onClick={() => setCatalogOpen(true)}
+                  aria-label="Data catalog"
+                >
+                  <Library className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Data catalog</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
           {/* Query History */}
           <TooltipProvider>
             <Tooltip>
@@ -453,6 +475,19 @@ export default function Sidebar({ isExplorerOpen, onToggleExplorer }: SidebarPro
           <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading…</div>}>
             {connectionsOpen && <ConnectionsContent />}
           </Suspense>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={catalogOpen} onOpenChange={setCatalogOpen}>
+        <SheetContent side="right" className="w-full overflow-hidden p-0 sm:max-w-2xl">
+          <SheetHeader className="border-b px-4 py-3">
+            <SheetTitle>Data catalog</SheetTitle>
+          </SheetHeader>
+          <div className="h-[calc(100%-53px)]">
+            <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading…</div>}>
+              {catalogOpen && <CatalogPanel />}
+            </Suspense>
+          </div>
         </SheetContent>
       </Sheet>
 
