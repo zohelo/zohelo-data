@@ -56,6 +56,14 @@ sources:
     loaded_by: retired code (ingestion/legacy/)
     config: ingestion/sources/gus_bdl.yaml
   tables:
+  - name: bdl_subgroup_observations
+    description: >-
+      One row per CSV row of a subgroup export (newest complete version per subgroup;
+      partitioned by subgroup_id). dimension_names / dimension_values are JSON arrays of
+      the subgroup's dimension labels (= API variable name components n1…n5); value_text is
+      the source lexeme (decimal comma); variable_id is filled for API refreshes only.
+  - name: bdl_rejected_files
+    description: Landing files the BDL Bronze decoder rejected, with the reason (cleared by ops/retry_rejected).
   - name: bdl_observations
   - name: bdl_variables
   - name: bdl_subjects

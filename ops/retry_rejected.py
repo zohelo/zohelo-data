@@ -21,7 +21,8 @@ from pyiceberg.expressions import In
 from ingestion.common.r2 import catalog
 from ingestion.common.report import annotate
 
-REJECTIONS = {"eurostat": ("bronze", "eurostat_rejected_files")}
+REJECTIONS = {"eurostat": ("bronze", "eurostat_rejected_files"),
+              "gus_bdl": ("bronze", "bdl_rejected_files")}
 
 
 def reason(error: str) -> str:

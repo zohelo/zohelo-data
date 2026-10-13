@@ -184,6 +184,16 @@ Primary evidence:
 
 ## GUS Local Data Bank (BDL)
 
+**Extraction (owner decision 13 Oct 2026).** Entity = subgroup (P####, an API `subject`
+with variables); version = its `lastUpdate` (`/subjects/{id}`, Warsaw local time). The
+initial load is the website's subgroup export ("CSV – tablica relacyjna" ZIP; large
+subgroups in parts), one browser and one route, no IP rotation. Changed subgroups are
+refreshed whole through the API with the registered key, so every Landing version is a
+complete subgroup and the newest version wins, whichever channel produced it. Website
+CSV columns = `Kod;Nazwa;<subgroup dimensions>;Rok;Wartosc;Jednostka miary;Atrybut`; the
+dimension values equal the API variables' name components n1…n5, which is how Silver
+maps website rows to variable ids.
+
 The reviewed [BDL v1 OpenAPI](https://bdl.stat.gov.pl/api/v1/swagger/doc/swagger.json)
 has no bulk export and no changed-variable feed. Complete collection must enumerate
 the API. The public API exposes the same statistical scope as the BDL application,
@@ -221,7 +231,8 @@ retain `lastUpdate`, descriptions, dimensions, units, aggregates, attributes,
 precision and formatted values.
 
 The official anonymous limits are 5 requests/second, 100/15 minutes, 1,000/12 hours,
-and 10,000/seven days. Response headers `X-Rate-Limit-Limit`,
+and 10,000/seven days; with a registered key (`X-ClientId`, secret `GUS_BDL_API_KEY`)
+10/s, 500/15 min, 5,000/12 h and 50,000/7 days. Response headers `X-Rate-Limit-Limit`,
 `X-Rate-Limit-Remaining`, and `X-Rate-Limit-Reset` may require a slower rate. A
 complete run is necessarily multi-cycle: the known minimum already exceeds 534,000
 requests before continuation pages. Checkpoint each validated page. Conditional
