@@ -28,3 +28,13 @@ models:
         tests: [not_null, {relationships: {arguments: {to: ref('dim_currency'), field: currency_code}}}]
       - name: rate
         tests: [not_null]
+  - name: dim_period
+    description: >-
+      Conformed reference period (warehouse/dimensions/period.yaml): SDMX TIME_PERIOD
+      values 1900–2100 for A, S, Q, M, W (ISO) and D with start/end day; special members
+      _Z (not applicable) and _T (all periods). period_key = time_period.
+    columns:
+      - name: period_key
+        tests: [not_null, unique]
+      - name: frequency_code
+        tests: [{accepted_values: {arguments: {values: ['A', 'S', 'Q', 'M', 'W', 'D', '_Z', '_T']}}}]

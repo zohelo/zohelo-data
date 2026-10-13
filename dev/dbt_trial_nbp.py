@@ -3,10 +3,10 @@ from ingestion.common.r2 import catalog
 from ingestion.common.report import annotate
 from warehouse import build
 
-code = build.main("silver.nbp dim_date dim_currency fact_fx_rate", target="trial")
+code = build.main("silver.nbp dim_date dim_period dim_currency fact_fx_rate", target="trial")
 cat = catalog()
 counts = {}
-for name in ("nbp_fx_rates", "nbp_gold_fixings", "dim_date", "dim_currency", "fact_fx_rate"):
+for name in ("nbp_fx_rates", "nbp_gold_fixings", "dim_date", "dim_period", "dim_currency", "fact_fx_rate"):
     try:
         table = cat.load_table(("zz_dbt_trial", name))
         arrow = table.scan().to_arrow()
