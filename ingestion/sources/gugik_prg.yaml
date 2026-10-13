@@ -1,16 +1,25 @@
 source_system: gugik_prg
-description: "GUGiK PRG — administrative boundaries"
+description: "GUGiK PRG — national register of boundaries: administrative units and cadastral units (shapefiles)"
 
+# Extraction strategy (docs/landing.md). Bulk feature: one national ZIP of shapefiles on
+# opendata.geoportal.gov.pl (~377 MB, ~7 min). No validators from the server, so every run
+# downloads and writes only when the SHA-256 changed. Free for any purpose (GUGiK).
 extraction:
-  initial: to_be_decided
-  production: to_be_decided
-  incremental_policy: to_be_decided
-  schedule: null
+  initial: bulk
+  production: snapshot                  # the package is the complete register state
+  incremental_policy: changed_since_last  # by SHA-256 of the download
+  schedule: null                        # target: monthly (state 1 January + corrections)
 
-landing: 01_landing/gugik_prg/   # empty: raw files were archived after the Bronze build
-archive: 05_archive/gugik_prg/
-bronze: [bronze.prg_country, bronze.prg_voivodeships, bronze.prg_counties, bronze.prg_municipalities, bronze.prg_surface_areas]
-silver: [silver.prg_country, silver.prg_voivodeships, silver.prg_counties, silver.prg_municipalities, silver.prg_surface_areas]
-gold: [gold.dim_prg_country, gold.dim_prg_voivodeship, gold.dim_prg_county, gold.dim_prg_municipality, gold.fact_prg_surface_areas]
+landing: 01_landing/gugik_prg/
+# ZIP kept as exact bytes (.bin). Yearly changes: newest version + 90 days.
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.prg_boundaries, bronze.prg_rejected_files]
+# Legacy tables from retired code (bronze/silver prg_*, gold.dim_prg_*, fact_prg_surface_areas)
+# are replaced by bronze.prg_boundaries and the geography models.
+silver: []
+gold: []
 
-activities: []   # paused; Bronze/Silver/Gold were built by retired code
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

@@ -34,7 +34,7 @@ from typing import Any
 from ingestion.common.r2 import archive_key, landing_objects, latest_snapshot, raw_chunks, req, s3, sha_column, sources
 from ingestion.common.report import annotate, step_summary
 
-SOURCES = ("eurostat", "gus_teryt", "nbp", "world_bank_wdi")
+SOURCES = ("eurostat", "gugik_prg", "gus_teryt", "nbp", "world_bank_wdi")
 
 
 def proven_for(source: str, meta: dict[str, dict[str, Any]]) -> set[str]:
