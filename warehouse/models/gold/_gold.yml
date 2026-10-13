@@ -38,3 +38,11 @@ models:
         tests: [not_null, unique]
       - name: frequency_code
         tests: [{accepted_values: {arguments: {values: ['A', 'S', 'Q', 'M', 'W', 'D', '_Z', '_T']}}}]
+  - name: dim_geography
+    description: >-
+      Conformed geography, v1 with the TERYT schemes: TERC (Polska → województwo → powiat →
+      gmina) and SIMC localities, vintage = TERYT catalogue state date; flattened
+      ancestors l0–l3; special members _T, _Z, _X. geography_key = scheme:code:vintage.
+    columns:
+      - name: geography_key
+        tests: [not_null, unique]
