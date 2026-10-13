@@ -57,6 +57,15 @@ jobs:
           set -euo pipefail
           python -m compileall -q ingestion ops run.py portal/publish_index.py warehouse
           python -m pyflakes $(find ingestion ops warehouse -name '*.py' -not -path 'ingestion/legacy/*') run.py portal/publish_index.py
+      - name: dbt parse
+        env:
+          R2_DATA_CATALOG_TOKEN: check
+          CLOUDFLARE_R2_ACCESS_KEY_ID: check
+          CLOUDFLARE_R2_SECRET_ACCESS_KEY: check
+          R2_S3_ENDPOINT: https://check.invalid
+          R2_WAREHOUSE: check
+          R2_CATALOG_URI: https://check.invalid
+        run: cd warehouse && dbt parse --profiles-dir . --target prod --no-partial-parse
       - name: Configuration consistency
         env:
           PYTHONPATH: .
