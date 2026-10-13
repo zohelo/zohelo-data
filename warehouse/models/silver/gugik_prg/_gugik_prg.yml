@@ -1,0 +1,14 @@
+version: 2
+models:
+  - name: prg_units
+    description: >-
+      PRG units of the newest national package: layer, level, TERYT code (JPT_KOD_JE), name,
+      area in hectares (JPT_POWIER), validity dates, geometry as WKB (geographic ETRS89 as
+      published).
+    columns:
+      - name: layer
+        tests: [not_null]
+      - name: unit_level
+        tests: [not_null]
+      - name: teryt_code
+        description: TERYT code as published; for gminas the 7-character TERC code.
