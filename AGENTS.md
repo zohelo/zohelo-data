@@ -94,8 +94,36 @@ in `ingestion/sources/<source>.yaml`. Landing layout and rules: docs/landing.md.
 
 - Eurostat: Landing activities (11 October 2026) and Bronze build (12 October 2026).
   Comext (DS-*) is out of scope.
-- All other ingestion is paused until the owner resumes it per source.
+- GUS BDL: agreed approach 13 October 2026 (subgroup entity, website export for the
+  initial load with one route and no IP rotation, API refresh of changed subgroups).
+- A source's `activities:` list, merged to `main`, is its authorization. Other sources
+  stay paused until their PR adds activities.
 - No schedule is authorized.
+
+## Autonomy
+
+Work the [playbook](docs/playbook.md) without asking when the step stays inside the
+agreed rules:
+
+- Research sources, write code, run Dev branch runs, open pull requests (the owner
+  merges).
+- Run and rerun authorized Pipeline activities from `main`, including restarts after
+  transient failures and the next run after a time budget; follow up with scheduled
+  check-ins instead of waiting in the conversation.
+- Run Ops tasks in report mode; delete orphan files and apply `archive_policy` as
+  configured.
+- Fix defects found on the way, in a pull request.
+
+Ask the owner first:
+
+- An extraction route that is a workaround (website automation, unofficial files) or
+  whose terms are unclear; anything needing an account, key or paid service.
+- Deleting data outside the configured policies (dropping tables, raw data without a
+  verified Archive copy, another layout's files).
+- Schedules, new workflows, changes to the agreed rules or the repository structure.
+
+Report at milestones (a source reaches a playbook stage, a decision is needed,
+something failed twice); keep reports short.
 
 ## Branches and pull requests
 
