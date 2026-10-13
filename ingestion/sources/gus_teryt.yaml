@@ -1,16 +1,26 @@
 source_system: gus_teryt
-description: "GUS TERYT — territorial register (TERC, SIMC, ULIC)"
+description: "GUS TERYT — territorial register: TERC (units), SIMC (localities), ULIC (streets), WMRODZ (locality types)"
 
+# Extraction strategy (docs/landing.md). Bulk feature: the public eTERYT "pliki pełne"
+# page serves every catalogue as a full ZIP (XML + CSV) via a plain form postback, no
+# account (the SOAP service TERYT ws1 needs one). 9 requests per run, one at a time.
 extraction:
-  initial: to_be_decided
-  production: to_be_decided
-  incremental_policy: to_be_decided
-  schedule: null
+  initial: bulk                         # eight full files
+  production: snapshot                  # each file is a complete catalogue state
+  incremental_policy: changed_since_last  # written only when the catalogue state date is newer
+  schedule: null                        # target: weekly (ULIC changes daily; TERC/SIMC rarely)
 
-landing: 01_landing/gus_teryt/   # empty: raw files were archived after the Bronze build
-archive: 05_archive/gus_teryt/
-bronze: [bronze.teryt_terc, bronze.teryt_simc, bronze.teryt_ulic]
-silver: [silver.teryt_terc, silver.teryt_simc, silver.teryt_ulic]
-gold: [gold.dim_territory, gold.dim_locality, gold.dim_street]
+landing: 01_landing/gus_teryt/
+# ZIPs are kept as exact bytes (.bin). ULIC gets a new state date daily, so keep only
+# 30 days of superseded versions beyond the newest.
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 30}
+  prune: report
+bronze: [bronze.teryt_records, bronze.teryt_rejected_files]
+# Legacy tables from retired code (bronze/silver teryt_terc/simc/ulic, gold.dim_territory/
+# dim_locality/dim_street) are replaced by bronze.teryt_records and the geography models.
+silver: []
+gold: []
 
-activities: []   # paused; Bronze/Silver/Gold were built by retired code
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

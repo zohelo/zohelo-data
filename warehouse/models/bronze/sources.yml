@@ -84,14 +84,22 @@ sources:
   - name: dbw_indicators
   - name: dbw_metadata
 - name: gus_teryt
-  description: GUS TERYT — territorial register (TERC, SIMC, ULIC)
+  description: GUS TERYT — territorial register (TERC, SIMC, ULIC, WMRODZ)
   database: r2
   schema: bronze
   meta:
     landing: 01_landing/gus_teryt/
-    loaded_by: retired code (ingestion/legacy/)
+    loaded_by: ingestion/to_bronze/gus_teryt/ (teryt_terc/simc/ulic by retired code)
     config: ingestion/sources/gus_teryt.yaml
   tables:
+  - name: teryt_records
+    description: >-
+      One row per catalogue record as published in the CSV member of each eTERYT full file,
+      newest version per catalogue variant (entity: TERC_Urzedowy, TERC_Adresowy,
+      SIMC_Urzedowy, SIMC_Adresowy, SIMC_Statystyczny, ULIC_Urzedowy, ULIC_Adresowy,
+      WMRODZ); union of the catalogue columns as text; partitioned by entity.
+  - name: teryt_rejected_files
+    description: Landing files the TERYT Bronze decoder rejected, with the reason.
   - name: teryt_terc
   - name: teryt_simc
   - name: teryt_ulic
