@@ -9,9 +9,18 @@ extraction:
   schedule: null                        # manual only; a schedule needs owner approval
 
 landing: 01_landing/eurostat/
+# Landing → Archive (docs/landing.md): Bronze-loaded files are moved (copy, verify, delete);
+# metadata has no Bronze table yet and is moved as well. Uncompressed formats are stored
+# zstd-compressed. Retention: newest version of every entity plus anything ingested in the
+# last 90 days. prune: report → only reports; switch to delete after reviewing a report.
+archive_policy:
+  move: true
+  without_bronze: [metadata]
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
 bronze: [bronze.eurostat_full_observations, bronze.eurostat_rejected_files]
 silver: []
 gold: []
 
 # Activities the Pipeline may run (owner authorization).
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive]
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

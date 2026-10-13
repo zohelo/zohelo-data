@@ -2,7 +2,8 @@
 
 bronze.load       load.py: batches of batch.py, decode.py per file → bronze.eurostat_full_observations
 bronze.verify     ingestion/common/lineage.py --source eurostat
-landing.archive   ingestion/common/archive.py --source eurostat
+landing.archive   ingestion/common/archive.py --source eurostat (move to Archive)
+archive.prune     ingestion/common/retention.py --source eurostat (archive_policy.retention)
 """
 from __future__ import annotations
 
@@ -22,4 +23,10 @@ def _archive(p) -> int:
     return archive.main(["--source", "eurostat"])
 
 
-ACTIVITIES = {"bronze.load": _load, "bronze.verify": _verify, "landing.archive": _archive}
+def _prune(p) -> int:
+    from ingestion.common import retention
+    return retention.main(["--source", "eurostat"])
+
+
+ACTIVITIES = {"bronze.load": _load, "bronze.verify": _verify, "landing.archive": _archive,
+              "archive.prune": _prune}

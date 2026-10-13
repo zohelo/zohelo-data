@@ -789,7 +789,10 @@ def load_landing_state(r2: R2) -> dict[str, dict[str, set]]:
 
 
 def verify_landing(r2: R2, patterns: list[str]) -> dict:
-    """Every receipt has its data object with the receipted size; data without receipt is listed."""
+    """Every receipt has its data file with the receipted size, in Landing or (once moved by
+    landing.archive) in the Archive; data without receipt is listed."""
+    from ingestion.common.r2 import archive_key, archived
+    stored = archived(r2.client, r2.landing, "eurostat")
     receipts, sizes = [], {}
     paginator = r2.client.get_paginator("list_objects_v2")
     for page in paginator.paginate(Bucket=r2.landing, Prefix=LANDING_PREFIX):
@@ -806,6 +809,9 @@ def verify_landing(r2: R2, patterns: list[str]) -> dict:
         receipt = json.loads(r2.client.get_object(Bucket=r2.landing, Key=key)["Body"].read())
         data_key = (receipt.get("object") or {}).get("key")
         if data_key not in sizes:
+            held = stored.get(str(receipt.get("sha256")))
+            if held and held["key"] == archive_key("eurostat", receipt["sha256"], data_key):
+                return "archived"
             return "data_missing"
         if sizes[data_key] != receipt.get("size_bytes"):
             return "size_mismatch"
@@ -819,7 +825,7 @@ def verify_landing(r2: R2, patterns: list[str]) -> dict:
     tally = dict(Counter(outcomes))
     return {"receipts": len(receipts), "result": tally, "orphan_data_objects": len(orphans),
             "orphan_examples": orphans[:10],
-            "problems": [{"receipt": k, "result": o} for k, o in zip(receipts, outcomes) if o != "ok"][:20]}
+            "problems": [{"receipt": k, "result": o} for k, o in zip(receipts, outcomes) if o not in ("ok", "archived")][:20]}
 
 
 def plan_items(inventory_body: bytes, landing: dict, parallel_jobs: int,
@@ -882,7 +888,7 @@ def verify_verdict(summary: dict) -> int:
     """
     gaps = {s: summary["classification"].get(s, 0) for s in ("missing", "stale")}
     integrity = summary["landing_integrity"]
-    broken = {k: v for k, v in integrity["result"].items() if k != "ok"}
+    broken = {k: v for k, v in integrity["result"].items() if k not in ("ok", "archived")}
     annotate("notice", "eurostat landing verify result", {"gaps": gaps, **integrity})
     if any(gaps.values()):
         annotate("warning", "eurostat landing gaps", gaps)

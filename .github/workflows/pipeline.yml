@@ -26,7 +26,8 @@ on:
           - "landing: verify"
           - "bronze: load"
           - "bronze: verify"
-          - "archive: copy Bronze-proven Landing"
+          - "archive: move Bronze-loaded Landing"
+          - "archive: apply retention"
           - "landing → bronze (all steps)"
           - "silver/gold: promote"
           - "serving: refresh portal index"
@@ -211,8 +212,23 @@ jobs:
           source: ${{ inputs.source }}
           activity: landing.archive
 
-  silver-gold-promote:
+  archive-prune:
     needs: [plan, landing-archive]
+    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'archive.prune') }}"
+    name: archive.prune
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/activity
+        with:
+          source: ${{ inputs.source }}
+          activity: archive.prune
+
+  silver-gold-promote:
+    needs: [plan, archive-prune]
     if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'silver_gold.promote') }}"
     name: silver_gold.promote
     runs-on: ubuntu-latest

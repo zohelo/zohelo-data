@@ -63,10 +63,18 @@ and then removed from Landing.
   never dropped silently.
 - State lives in the data itself (receipts in Landing, Iceberg tables and their file
   lists) — there is no separate control folder.
-- A Landing file is copied to `05_archive/` only after its Bronze commit is
-  validated. The archive copy must reproduce the original SHA-256. Already-compressed
-  formats (gzip, ZIP, Parquet) are not recompressed.
-- A Landing file may be deleted only after its Archive copy is verified and no
-  checkpoint still points to it. Its receipt stays in Landing and points to the Archive
-  copy (`ops/restore_from_archive` puts the file back). Never delete because ingestion or a Bronze build
-  merely succeeded or started.
+- Landing is an inbox, not storage. Once Bronze holds a file, `landing.archive` moves
+  it: content-addressed copy `05_archive/<source>/raw/<sha256>`, read back and checked
+  against the original SHA-256, then deleted from Landing. Its receipt stays in Landing
+  as the pointer (`ops/restore_from_archive` puts the file back; `bronze.load` reads
+  from the Archive when needed). Areas without a Bronze table yet (Eurostat metadata)
+  are moved too when the source's `archive_policy.without_bronze` lists them. Never
+  delete because ingestion or a Bronze build merely started.
+- Archive format: already-compressed formats (gzip, ZIP, 7z, Parquet) are kept as the
+  exact bytes (`.bin`); uncompressed formats (XML, CSV, JSON) are stored
+  zstd-compressed (`.zst`) and restore to the exact original bytes.
+- Retention per source (`archive_policy.retention` in `ingestion/sources/<source>.yaml`):
+  snapshot sources keep the newest version of every entity plus everything ingested in
+  the last `keep_days` (agreed: 1 version + 90 days); older versions and their
+  receipts are deleted by `archive.prune`. Delta / append-only sources set no retention
+  — their raw is unique and kept. `prune: report` reports only; `delete` applies.

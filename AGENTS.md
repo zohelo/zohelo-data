@@ -81,8 +81,10 @@ in `ingestion/sources/<source>.yaml`. Landing layout and rules: docs/landing.md.
 - Storage is paid beyond the free tier: store each thing once, keep Bronze lean (no
   per-row hashes or JSON copies of keys; one file per source file), remove what no
   table or receipt references.
-- Never overwrite Landing. Delete a Landing file only after its Archive copy is
-  verified and no checkpoint points to it.
+- Never overwrite Landing. Landing → Archive is a move (owner decision 13 October 2026):
+  once Bronze holds a file, copy it to the Archive, verify the SHA-256, then delete it
+  from Landing; the receipt stays. Archive retention per source as configured
+  (Eurostat: newest version + 90 days); docs/landing.md.
 - Never claim complete source coverage from partial data.
 - Never expose R2 writer credentials to the browser.
 - Do not claim Silver/Gold modelling exists while `warehouse/passthrough` only copies

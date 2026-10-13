@@ -20,7 +20,8 @@ Every source uses the same activity names; a source implements the ones it needs
 | `landing.verify` | `ingestion/to_landing/<s>/` | Landing integrity and remaining gaps |
 | `bronze.load` | `ingestion/to_bronze/<s>/` | incremental Landing → Bronze; rejections recorded |
 | `bronze.verify` | `ingestion/common/lineage.py` | every Landing file is in Bronze or rejected with a reason |
-| `landing.archive` | `ingestion/common/archive.py` | copy Bronze-accepted Landing files to Archive |
+| `landing.archive` | `ingestion/common/archive.py` | move Bronze-loaded Landing files to Archive (copy, verify SHA-256, delete from Landing; receipt stays) |
+| `archive.prune` | `ingestion/common/retention.py` | apply the source's Archive retention (`archive_policy` in its config) |
 | `silver_gold.promote` | `warehouse/passthrough/` | platform: Bronze → Silver → Gold pass-through |
 | `serving.refresh_index` | `portal/publish_index.py` | platform: rebuild the portal file index |
 

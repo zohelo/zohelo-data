@@ -7,7 +7,8 @@ loads the latest version of every dataset. Each Landing file becomes one Parquet
 ``02_bronze/eurostat/observations/<dataset_id>/<raw_sha256>.parquet`` registered in the
 Iceberg table (partitioned by dataset_id), so the table's file list is the checkpoint.
 Files the decoder rejects are recorded in bronze.eurostat_rejected_files and skipped on
-later runs (ops/retry_rejected clears them). Never calls Eurostat, never touches Landing.
+later runs (ops/retry_rejected clears them). Never calls Eurostat, never touches Landing;
+reads a file from the Archive when landing.archive has already moved it.
 Prints one JSON line with "operation": "eurostat-bronze-batch" as its result.
 """
 from __future__ import annotations
@@ -34,7 +35,7 @@ from pyiceberg.transforms import IdentityTransform
 from pyiceberg.types import LongType, NestedField, StringType, TimestamptzType
 import requests
 
-from ingestion.common.r2 import catalog, req, s3
+from ingestion.common.r2 import archive_key, catalog, raw_chunks, req, s3
 from ingestion.to_bronze.eurostat.decode import (
     BRONZE_COLUMNS, COLUMN_NAMES, EurostatBulkDecodeError, decode_landing_distribution)
 
@@ -153,20 +154,22 @@ def landing_candidates(client, landing_bucket: str) -> list[dict[str, Any]]:
 
 
 def download(client, bucket: str, item: dict[str, Any], destination: Path) -> None:
+    """The Landing file's exact bytes, from Landing or, once moved, from the Archive."""
     if shutil.disk_usage(destination.parent).free < item["size"] * 6 + (2 << 30):
         raise RuntimeError("runner disk headroom is insufficient for Eurostat decode")
-    body = client.get_object(Bucket=bucket, Key=item["data_key"])["Body"]
-    digest, size = sha256(), 0
+    key = item["data_key"]
     try:
-        with destination.open("xb") as handle:
-            for block in iter(lambda: body.read(8 << 20), b""):
-                size += len(block)
-                digest.update(block)
-                handle.write(block)
-    finally:
-        body.close()
+        client.head_object(Bucket=bucket, Key=key)
+    except client.exceptions.ClientError:
+        key = archive_key("eurostat", item["raw_sha256"], item["data_key"])
+    digest, size = sha256(), 0
+    with destination.open("xb") as handle:
+        for block in raw_chunks(client, bucket, key):
+            size += len(block)
+            digest.update(block)
+            handle.write(block)
     if size != item["size"] or digest.hexdigest() != item["raw_sha256"]:
-        raise RuntimeError(f"Eurostat Landing bytes do not match their receipt: {item['data_key']}")
+        raise RuntimeError(f"Eurostat raw bytes do not match their receipt: {key}")
 
 
 def upload(client, bucket: str, item: dict[str, Any], path: Path) -> str:

@@ -29,8 +29,8 @@ PLATFORM_CONFIG = (ROOT / "warehouse" / "warehouse.yaml", ROOT / "portal" / "por
 
 # Activity order is the dataflow order; the workflow has one job per activity.
 ORDER = ("landing.inspect", "landing.extract", "landing.verify", "bronze.load",
-         "bronze.verify", "landing.archive", "silver_gold.promote", "serving.refresh_index")
-WRITES = {"landing.extract", "bronze.load", "landing.archive", "silver_gold.promote"}
+         "bronze.verify", "landing.archive", "archive.prune", "silver_gold.promote", "serving.refresh_index")
+WRITES = {"landing.extract", "bronze.load", "landing.archive", "archive.prune", "silver_gold.promote"}
 
 RUNS = {
     "landing: inspect": ["landing.inspect"],
@@ -38,9 +38,10 @@ RUNS = {
     "landing: verify": ["landing.verify"],
     "bronze: load": ["bronze.load"],
     "bronze: verify": ["bronze.verify"],
-    "archive: copy Bronze-proven Landing": ["landing.archive"],
+    "archive: move Bronze-loaded Landing": ["landing.archive"],
+    "archive: apply retention": ["archive.prune"],
     "landing → bronze (all steps)": ["landing.inspect", "landing.extract", "landing.verify",
-                                     "bronze.load", "bronze.verify", "landing.archive"],
+                                     "bronze.load", "bronze.verify", "landing.archive", "archive.prune"],
     "silver/gold: promote": ["silver_gold.promote"],
     "serving: refresh portal index": ["serving.refresh_index"],
 }

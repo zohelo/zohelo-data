@@ -15,7 +15,6 @@ import requests
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 CONTENT_ADDRESSED_RE = re.compile(r"^(raw|response)-([0-9a-f]{64})\.bin$")
 SNAPSHOT = "snapshot/"
-OLD_EUROSTAT_DATA = "01_landing/eurostat/bulk/data/"   # 11-12 Oct layout, until retired
 
 
 def req(name: str) -> str:
@@ -90,50 +89,69 @@ def head_sha256(client, bucket: str, keys: list[str]) -> dict[str, str]:
 
 
 def landing_objects(client, bucket: str, source: str) -> dict[str, dict[str, Any]]:
-    """Landing files of one source by SHA-256.
+    """Landing files of one source by SHA-256, including files already moved to Archive.
 
-    Agreed layout (docs/landing.md): 01_landing/<source>/snapshot/<area>/<entity>/<version>__<ingested>.<ext>,
-    digest from object metadata. Earlier layouts still present are included: content-addressed
-    raw-/response-<sha>.bin names and Eurostat's 11-12 Oct data/ layout. When the same bytes
-    exist in several layouts, the agreed-layout key wins.
+    Agreed layout (docs/landing.md): 01_landing/<source>/snapshot/<area>/<entity>/<version>__<ingested>.<ext>.
+    Every receipt counts, whether its data file is still in Landing (``present``) or was moved
+    to Archive (the receipt stays as the pointer); a data file without a receipt is identified
+    by its SHA-256 object metadata. Content-addressed raw-/response-<sha>.bin names of earlier
+    layouts are included as they are.
     """
     prefix = f"01_landing/{source}/"
-    snapshot, metadata_keyed, result = [], [], {}
+    objects, receipt_keys, result = {}, [], {}
     for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix):
         for item in page.get("Contents", []):
             key, size = str(item["Key"]), int(item.get("Size", 0))
-            if size <= 0 or key.endswith("/") or key.endswith(".receipt.json"):
+            if size <= 0 or key.endswith("/"):
                 continue
             rest = key[len(prefix):]
             if rest.startswith(SNAPSHOT):
-                snapshot.append({"key": key, "size": size})
-            elif key.startswith(OLD_EUROSTAT_DATA):
-                metadata_keyed.append({"key": key, "size": size})
-            else:
-                match = CONTENT_ADDRESSED_RE.fullmatch(PurePosixPath(key).name)
-                if not match:
-                    raise RuntimeError(f"unexpected Landing object: {key}")
-                kind, digest = match.groups()
-                result.setdefault(digest, {"key": key, "size": size, "kind": kind,
-                                           "layout": "content_addressed", "sha256": digest})
-    digests = head_sha256(client, bucket, [i["key"] for i in snapshot + metadata_keyed])
-    for item in metadata_keyed:
-        digest = digests[item["key"]]
-        result.setdefault(digest, {**item, "kind": "raw", "layout": "eurostat_data_v1", "sha256": digest})
-    for item in snapshot:
-        digest = digests[item["key"]]
-        area, entity, name = item["key"][len(prefix) + len(SNAPSHOT):].split("/", 2)
+                if key.endswith(".receipt.json"):
+                    receipt_keys.append(key)
+                else:
+                    objects[key] = size
+                continue
+            match = CONTENT_ADDRESSED_RE.fullmatch(PurePosixPath(key).name)
+            if not match:
+                raise RuntimeError(f"unexpected Landing object: {key}")
+            kind, digest = match.groups()
+            result.setdefault(digest, {"key": key, "size": size, "kind": kind, "present": True,
+                                       "layout": "content_addressed", "sha256": digest})
+
+    def read(key: str) -> tuple[str, str, int, str | None] | None:
+        receipt = json.loads(client.get_object(Bucket=bucket, Key=key)["Body"].read())
+        digest, size = receipt.get("sha256"), receipt.get("size_bytes")
+        data_key = (receipt.get("object") or {}).get("key")
+        if not (isinstance(digest, str) and SHA_RE.fullmatch(digest) and type(size) is int and data_key):
+            return None
+        return data_key, digest, size, key
+
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        receipted = {r[0]: r for r in pool.map(read, receipt_keys) if r}
+    unreceipted = [k for k in objects if k not in receipted]
+    for key, digest in head_sha256(client, bucket, unreceipted).items():
+        receipted[key] = (key, digest, objects[key], None)
+    for data_key, digest, size, receipt_key in receipted.values():
+        if not data_key.startswith(prefix + SNAPSHOT):
+            continue
+        present = data_key in objects
+        if present and objects[data_key] != size:
+            raise RuntimeError(f"Landing object size differs from its receipt: {data_key}")
+        area, entity, name = data_key[len(prefix) + len(SNAPSHOT):].split("/", 2)
         token, _, rest = name.partition("__")
         ingested = rest.split(".", 1)[0].split("__", 1)[0]
         held = result.get(digest)
-        if held is not None and int(held["size"]) != item["size"]:
+        if held is not None and int(held["size"]) != size:
             raise RuntimeError(f"same SHA-256 with different sizes in Landing: {digest}")
         # Identical bytes can sit under several entities or versions; keep every snapshot path.
         paths = (held or {}).get("snapshot_paths", []) + [
-            {"key": item["key"], "area": area, "entity": entity, "version": token, "ingested": ingested}]
-        result[digest] = {**item, "kind": "raw" if area == "data" else "metadata", "layout": "snapshot",
+            {"key": data_key, "area": area, "entity": entity, "version": token,
+             "ingested": ingested, "present": present, "receipt": receipt_key}]
+        result[digest] = {"key": data_key if present or held is None else held["key"], "size": size,
+                          "kind": "raw" if area == "data" else "metadata", "layout": "snapshot",
                           "area": area, "entity": entity, "version": token, "ingested": ingested,
-                          "sha256": digest, "snapshot_paths": paths}
+                          "sha256": digest, "snapshot_paths": paths,
+                          "present": present or bool(held and held.get("present"))}
     return result
 
 
@@ -167,3 +185,45 @@ def sources() -> dict[str, dict[str, Any]]:
     import yaml
     folder = Path(__file__).resolve().parents[1] / "sources"
     return {path.stem: yaml.safe_load(path.read_text()) for path in sorted(folder.glob("*.yaml"))}
+
+
+# ----------------------------------------------------------------------------- Archive
+# Content-addressed raw history: 05_archive/<source>/raw/<sha256>.bin holds the exact
+# source bytes of an already-compressed format; <sha256>.zst holds a zstd-compressed copy
+# of an uncompressed format (XML, CSV, JSON …). Both restore to the original SHA-256.
+COMPRESSED_FORMATS = (".gz", ".tgz", ".zip", ".7z", ".zst", ".bz2", ".xz", ".parquet")
+
+
+def archive_key(source: str, digest: str, landing_key: str) -> str:
+    native = landing_key.lower().endswith(COMPRESSED_FORMATS)
+    return f"05_archive/{source}/raw/{digest}{'.bin' if native else '.zst'}"
+
+
+def archived(client, bucket: str, source: str) -> dict[str, dict[str, Any]]:
+    """Archive objects of a source by SHA-256: key, size, last modified."""
+    result = {}
+    prefix = f"05_archive/{source}/raw/"
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix):
+        for item in page.get("Contents", []):
+            name = item["Key"][len(prefix):]
+            digest = name.split(".", 1)[0]
+            if SHA_RE.fullmatch(digest) and "/" not in name:
+                result[digest] = {"key": item["Key"], "size": int(item["Size"]),
+                                  "modified": item["LastModified"]}
+    return result
+
+
+def raw_chunks(client, bucket: str, key: str, chunk: int = 8 << 20):
+    """Yield the original bytes of a Landing or Archive object (zstd archive copies decompressed)."""
+    body = client.get_object(Bucket=bucket, Key=key)["Body"]
+    try:
+        if key.endswith(".zst"):
+            import zstandard
+            reader = zstandard.ZstdDecompressor().stream_reader(body)
+            while block := reader.read(chunk):
+                yield block
+        else:
+            while block := body.read(chunk):
+                yield block
+    finally:
+        body.close()

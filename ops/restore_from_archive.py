@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Put archived raw files back into Landing so they can be reprocessed.
 
-When a Landing data file is removed after archiving, its receipt stays in Landing and
-points to the Archive copy (05_archive/<source>/raw/<sha256>.bin). This finds receipts
-whose data object is missing and, with --apply, copies the Archive file back to the
-receipt's key and verifies the SHA-256 by reading it back. Never overwrites.
+When landing.archive moves a Landing data file, its receipt stays in Landing and points
+to the Archive copy (05_archive/<source>/raw/<sha256>.bin, or .zst for a zstd-compressed
+copy of an uncompressed format). This finds receipts whose data object is missing and,
+with --apply, writes the original bytes back to the receipt's key and verifies the
+SHA-256 by reading them back. Never overwrites.
 Args: --source eurostat [--dataset CODE_OR_GLOB ...] [--apply]
 """
 from __future__ import annotations
@@ -15,8 +16,9 @@ from concurrent.futures import ThreadPoolExecutor
 import fnmatch
 import hashlib
 import json
+import tempfile
 
-from ingestion.common.r2 import req, s3
+from ingestion.common.r2 import archive_key, raw_chunks, req, s3
 from ingestion.common.report import annotate
 
 
@@ -47,7 +49,7 @@ def main(argv=None) -> int:
         if not target or target in present:
             return None
         return {"receipt": key, "target": target, "sha256": receipt["sha256"], "size": receipt["size_bytes"],
-                "archive": f"05_archive/{args.source}/raw/{receipt['sha256']}.bin"}
+                "archive": archive_key(args.source, receipt["sha256"], target)}
 
     with ThreadPoolExecutor(max_workers=16) as pool:
         missing = [m for m in pool.map(inspect, receipts) if m]
@@ -57,16 +59,23 @@ def main(argv=None) -> int:
             head = client.head_object(Bucket=bucket, Key=item["archive"])
         except Exception:
             return "not_in_archive"
-        if int(head["ContentLength"]) != int(item["size"]):
+        if item["archive"].endswith(".bin") and int(head["ContentLength"]) != int(item["size"]):
             return "archive_size_mismatch"
         if not args.apply:
             return "restorable"
-        client.copy_object(Bucket=bucket, Key=item["target"], CopySource={"Bucket": bucket, "Key": item["archive"]},
-                           MetadataDirective="REPLACE", Metadata={"sha256": item["sha256"], "restored-from": item["archive"]})
+        meta = {"sha256": item["sha256"], "restored-from": item["archive"]}
+        if item["archive"].endswith(".bin"):
+            client.copy_object(Bucket=bucket, Key=item["target"], MetadataDirective="REPLACE", Metadata=meta,
+                               CopySource={"Bucket": bucket, "Key": item["archive"]})
+        else:
+            with tempfile.TemporaryFile() as handle:
+                for block in raw_chunks(client, bucket, item["archive"]):
+                    handle.write(block)
+                handle.seek(0)
+                client.upload_fileobj(handle, bucket, item["target"], ExtraArgs={"Metadata": meta})
         digest = hashlib.sha256()
-        body = client.get_object(Bucket=bucket, Key=item["target"])["Body"]
-        for chunk in iter(lambda: body.read(8 * 1024 * 1024), b""):
-            digest.update(chunk)
+        for block in raw_chunks(client, bucket, item["target"]):
+            digest.update(block)
         if digest.hexdigest() != item["sha256"]:
             client.delete_object(Bucket=bucket, Key=item["target"])
             return "readback_mismatch"
