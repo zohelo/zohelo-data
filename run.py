@@ -2,7 +2,7 @@
 
     python run.py plan --source eurostat --run "landing → bronze (all steps)"
     python run.py activity --source eurostat --activity landing.extract [--filter ...]
-    python run.py schedule [--check]    start the declared runs that are due (hourly trigger);
+    python run.py schedule [--check]    start the declared runs that are due (scheduled trigger, twice an hour);
                                         --check validates the source declarations and schedules
 
 A run is an ordered list of activities (RUNS). An activity is allowed only when it is
