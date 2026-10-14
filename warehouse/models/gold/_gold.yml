@@ -60,3 +60,23 @@ models:
     columns:
       - name: date_key
         tests: [not_null, unique, {relationships: {arguments: {to: ref('dim_date'), field: date_key}}}]
+  - name: dim_indicator
+    description: >-
+      Indicator catalogue, v1 with the World Bank WDI indicators (code, English name, topic,
+      unit, periodicity, definitions, source, licence). indicator_key = source_system:code.
+    columns:
+      - name: indicator_key
+        tests: [not_null, unique]
+  - name: fact_observation
+    description: >-
+      Statistical observations at their true grain (indicator × reference area × reference
+      period, one value, source-tagged); v1 holds World Bank WDI annual values.
+    columns:
+      - name: indicator_key
+        tests: [not_null, {relationships: {arguments: {to: ref('dim_indicator'), field: indicator_key}}}]
+      - name: geography_key
+        tests: [not_null, {relationships: {arguments: {to: ref('dim_geography'), field: geography_key}}}]
+      - name: period_key
+        tests: [not_null, {relationships: {arguments: {to: ref('dim_period'), field: period_key}}}]
+      - name: value
+        tests: [not_null]

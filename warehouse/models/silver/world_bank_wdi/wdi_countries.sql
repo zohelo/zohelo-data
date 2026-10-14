@@ -17,7 +17,8 @@ records as (
            max(case when field = 'Region' then value_text end) as region,
            max(case when field = 'Income Group' then value_text end) as income_group,
            max(case when field = 'Lending category' then value_text end) as lending_category,
-           max(raw_sha256) as raw_sha256
+           max(raw_sha256) as raw_sha256,
+           max(source_version) as source_version
     from newest
     group by source_row_number
 )

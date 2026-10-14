@@ -1,0 +1,87 @@
+# MetricFlow: statistical observations (gold.fact_observation) with the indicator and
+# geography dimensions. Headline metrics are the observation value filtered to one indicator.
+semantic_models:
+  - name: indicator
+    description: Indicator catalogue (gold.dim_indicator).
+    model: ref('dim_indicator')
+    entities:
+      - {name: indicator, type: primary, expr: indicator_key}
+    dimensions:
+      - {name: indicator_name, type: categorical, expr: name_en}
+      - {name: topic, type: categorical}
+      - {name: source_system, type: categorical}
+
+  - name: geography
+    description: Conformed geography (gold.dim_geography).
+    model: ref('dim_geography')
+    entities:
+      - {name: geography, type: primary, expr: geography_key}
+    dimensions:
+      - {name: scheme, type: categorical}
+      - {name: area_code, type: categorical, expr: code}
+      - {name: area_name_en, type: categorical, expr: name_en}
+      - {name: area_name_pl, type: categorical, expr: name_pl}
+      - {name: level_name, type: categorical}
+      - {name: wb_region, type: categorical}
+      - {name: wb_income_group, type: categorical}
+      - {name: is_aggregate, type: categorical}
+
+  - name: observation
+    description: Statistical observations, one value per indicator × reference area × period.
+    model: ref('fact_observation')
+    defaults: {agg_time_dimension: period_start_date}
+    entities:
+      - {name: observation, type: primary, expr: "indicator_key || '|' || geography_key || '|' || period_key"}
+      - {name: indicator, type: foreign, expr: indicator_key}
+      - {name: geography, type: foreign, expr: geography_key}
+    dimensions:
+      - {name: period_start_date, type: time, type_params: {time_granularity: year}}
+      - {name: frequency_code, type: categorical}
+      - {name: observation_source, type: categorical, expr: source_system}
+      - {name: indicator_code, type: categorical, expr: indicator_key}
+    measures:
+      - {name: observation_value, agg: sum, expr: value}
+      - {name: observation_count, agg: count, expr: value}
+
+metrics:
+  - name: observation_count
+    label: Number of observations
+    description: Count of statistical observations (data coverage), across all indicators.
+    type: simple
+    type_params: {measure: observation_count}
+  - name: population_total
+    label: Population, total (WDI SP.POP.TOTL)
+    description: Total population (World Bank WDI SP.POP.TOTL); sum over the selected areas and years.
+    type: simple
+    type_params: {measure: observation_value}
+    filter: "{{ Dimension('observation__indicator_code') }} = 'WDI:SP.POP.TOTL'"
+  - name: gdp_current_usd
+    label: GDP, current US$ (WDI NY.GDP.MKTP.CD)
+    description: Gross domestic product in current US dollars (World Bank WDI NY.GDP.MKTP.CD).
+    type: simple
+    type_params: {measure: observation_value}
+    filter: "{{ Dimension('observation__indicator_code') }} = 'WDI:NY.GDP.MKTP.CD'"
+  - name: gdp_per_capita_current_usd
+    label: GDP per capita, current US$ (WDI NY.GDP.PCAP.CD)
+    description: GDP per capita in current US dollars (World Bank WDI NY.GDP.PCAP.CD); select one area and year (not additive).
+    type: simple
+    type_params: {measure: observation_value}
+    filter: "{{ Dimension('observation__indicator_code') }} = 'WDI:NY.GDP.PCAP.CD'"
+  - name: inflation_cpi_pct
+    label: Inflation, consumer prices, annual % (WDI FP.CPI.TOTL.ZG)
+    description: Consumer price inflation, annual percent (World Bank WDI FP.CPI.TOTL.ZG); select one area and year (not additive).
+    type: simple
+    type_params: {measure: observation_value}
+    filter: "{{ Dimension('observation__indicator_code') }} = 'WDI:FP.CPI.TOTL.ZG'"
+  - name: unemployment_rate_pct
+    label: Unemployment, % of labour force (WDI SL.UEM.TOTL.ZS)
+    description: Unemployment, total, percent of total labour force, modelled ILO estimate (World Bank WDI SL.UEM.TOTL.ZS); not additive.
+    type: simple
+    type_params: {measure: observation_value}
+    filter: "{{ Dimension('observation__indicator_code') }} = 'WDI:SL.UEM.TOTL.ZS'"
+  - name: life_expectancy_years
+    label: Life expectancy at birth, years (WDI SP.DYN.LE00.IN)
+    description: Life expectancy at birth, total, years (World Bank WDI SP.DYN.LE00.IN); not additive.
+    type: simple
+    type_params: {measure: observation_value}
+    filter: "{{ Dimension('observation__indicator_code') }} = 'WDI:SP.DYN.LE00.IN'"
