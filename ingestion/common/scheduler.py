@@ -9,9 +9,9 @@ Schedules are declared, not coded: each ``ingestion/sources/<source>.yaml`` (and
         filter: ""                      # optional, as in a manual run
 
 The Pipeline workflow's hourly ``schedule`` trigger runs ``python run.py schedule``,
-which dispatches every run whose cron time fell since the previous scheduled run
-(GitHub often starts hourly schedules late, so a fixed one-hour window would skip runs;
-the window is 60–360 minutes). The dispatched run is
+which dispatches every run whose cron time fell after the previous scheduled run was
+queued, up to this run's queue time (GitHub often starts hourly schedules late, so a
+fixed one-hour window would skip or repeat runs; at most 360 minutes are caught up). The dispatched run is
 an ordinary Pipeline run (same plan, authorization and concurrency), so a scheduled run
 and a manual run are the same thing. ``schedule: null`` or ``[]`` means manual only.
 """
@@ -92,31 +92,43 @@ def validate(config: dict, plan) -> list[str]:
     return problems
 
 
-MIN_WINDOW, MAX_WINDOW = 60, 360
+DEFAULT_WINDOW, MAX_WINDOW = 60, 360
 
 
-def window_minutes(repo: str | None, token: str | None, now: datetime) -> int:
-    """Minutes since the previous scheduled Pipeline run started (60 when unknown)."""
+def _minute(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(second=0, microsecond=0)
+
+
+def window(repo: str | None, token: str | None, now: datetime) -> tuple[datetime, int, int | None]:
+    """(end minute, window minutes, raw gap) for this scheduled run.
+
+    Both ends are the runs' queue times (created_at): the window is (previous run's
+    minute, this run's minute], so consecutive runs cover each minute once and a skipped
+    or late run is caught up by the next one. A failed previous run still counts as
+    covering its minutes. Unknown history: the last 60 minutes up to now."""
+    fallback = (now.replace(second=0, microsecond=0), DEFAULT_WINDOW, None)
     if not repo or not token:
-        return MIN_WINDOW
+        return fallback
     try:
         response = requests.get(
             f"https://api.github.com/repos/{repo}/actions/workflows/pipeline.yml/runs",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
-            params={"event": "schedule", "per_page": 5},
+            params={"event": "schedule", "per_page": 10},
             timeout=30,
         )
         response.raise_for_status()
-    except requests.RequestException:
-        return MIN_WINDOW
-    current = os.environ.get("GITHUB_RUN_ID", "")
-    previous = [r["created_at"] for r in response.json().get("workflow_runs", []) if str(r["id"]) != current]
-    if not previous:
-        return MIN_WINDOW
-    started = datetime.fromisoformat(previous[0].replace("Z", "+00:00"))
-    # Minutes in (previous run's minute, this run's minute]: each minute is covered once.
-    gap = now.replace(second=0, microsecond=0) - started.replace(second=0, microsecond=0)
-    return max(MIN_WINDOW, min(MAX_WINDOW, int(gap.total_seconds() // 60)))
+        runs = response.json()["workflow_runs"]
+        current_id = os.environ.get("GITHUB_RUN_ID", "")
+        current = [r for r in runs if str(r["id"]) == current_id]
+        earlier = [r for r in runs if str(r["id"]) != current_id]
+        if not current or not earlier:
+            return fallback
+        end = _minute(current[0]["created_at"])
+        start = max(_minute(r["created_at"]) for r in earlier if _minute(r["created_at"]) < end)
+    except (requests.RequestException, ValueError, KeyError, TypeError):
+        return fallback
+    gap = int((end - start).total_seconds() // 60)
+    return end, max(1, min(MAX_WINDOW, gap)), gap
 
 
 def main(config: dict, plan, now: datetime | None = None) -> int:
@@ -124,9 +136,9 @@ def main(config: dict, plan, now: datetime | None = None) -> int:
     problems = validate(config, plan)
     started, skipped = [], []
     repo, token = os.environ.get("GITHUB_REPOSITORY"), os.environ.get("GITHUB_TOKEN")
-    window = window_minutes(repo, token, now)
+    end, minutes, gap = window(repo, token, now)
     for e in entries(config):
-        if not due(str(e["cron"]), now, window):
+        if not due(str(e["cron"]), end, minutes):
             continue
         inputs = {"source": e["source"], "run": e["run"], "filter": str(e.get("filter") or "")}
         if not repo or not token:
@@ -143,11 +155,14 @@ def main(config: dict, plan, now: datetime | None = None) -> int:
         )
     summary = {
         "at": now.isoformat(timespec="minutes"),
-        "window_minutes": window,
+        "window": {"end": end.isoformat(timespec="minutes"), "minutes": minutes, "gap_minutes": gap},
         "started": started,
         "skipped": skipped,
         "invalid_schedules": problems,
     }
-    annotate("error" if skipped or problems else "notice", "scheduler", summary)
+    clamped = gap is not None and gap > MAX_WINDOW
+    if clamped:
+        summary["warning"] = f"{gap - MAX_WINDOW} minutes before the window were not checked"
+    annotate("error" if skipped or problems else "warning" if clamped else "notice", "scheduler", summary)
     step_summary(f"## scheduler\n\n```json\n{json.dumps(summary, indent=2, ensure_ascii=False)}\n```\n")
     return 1 if skipped or problems else 0
