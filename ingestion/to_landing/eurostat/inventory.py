@@ -1,8 +1,7 @@
 """Eurostat Files API inventory and asynchronous-delivery parsing.
 
 Turns the official inventory into request descriptors and parses SDMX asynchronous
-envelopes and faults. Pure functions: no network, no storage. (Moved from the retired
-campaign engine, ingestion/legacy/engine/full_source_adapters.py.)
+envelopes and faults. Pure functions: no network, no storage.
 """
 
 from __future__ import annotations

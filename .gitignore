@@ -13,3 +13,6 @@ dist/
 !.env.example
 *.duckdb
 *.duckdb.wal
+
+# Local Claude Code settings
+.claude/
