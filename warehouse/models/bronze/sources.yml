@@ -64,6 +64,15 @@ sources:
     loaded_by: retired code (ingestion/legacy/)
     config: ingestion/sources/gus_bdl.yaml
   tables:
+  - name: bdl_metadata_variables
+    description: >-
+      BDL API variables per subgroup (one Landing page per Parquet file): variable id, n1–n5
+      dimension labels as on the website exports, level, measure unit; source_version = the
+      subgroup's data version. Maps Bronze export rows to variable ids in Silver.
+  - name: bdl_metadata_units
+    description: BDL API territorial units (levels 0–6): 12-character unit id, name, parent id, level, kind.
+  - name: bdl_metadata_rejected_files
+    description: BDL metadata pages the Bronze loader rejected, with the reason.
   - name: bdl_subgroup_observations
     description: >-
       One row per CSV row of a subgroup export (newest complete version per subgroup;
