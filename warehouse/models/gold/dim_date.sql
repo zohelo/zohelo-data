@@ -50,10 +50,10 @@ easter as (
                         floor((y % 100) / 4) as i,
                         (y % 100) % 4 as k
                     from range(1900, 2101) as t (y)
-                )
-            )
-        )
-    )
+                ) as s4
+            ) as s3
+        ) as s2
+    ) as s1
 ),
 
 holidays as (
@@ -63,70 +63,70 @@ holidays as (
     from easter
     union all
     select
-        easter_sunday + 1,
-        'Poniedziałek Wielkanocny'
+        easter_sunday + 1 as holiday_date,
+        'Poniedziałek Wielkanocny' as holiday_name
     from easter
     union all
     select
-        easter_sunday + 49,
-        'Zielone Świątki'
+        easter_sunday + 49 as holiday_date,
+        'Zielone Świątki' as holiday_name
     from easter
     union all
     select
-        easter_sunday + 60,
-        'Boże Ciało'
+        easter_sunday + 60 as holiday_date,
+        'Boże Ciało' as holiday_name
     from easter
     union all
     select
-        make_date(year, 1, 1),
-        'Nowy Rok'
+        make_date(year, 1, 1) as holiday_date,
+        'Nowy Rok' as holiday_name
     from easter
     union all
     select
-        make_date(year, 1, 6),
-        'Święto Trzech Króli'
+        make_date(year, 1, 6) as holiday_date,
+        'Święto Trzech Króli' as holiday_name
     from easter
     where year >= 2011
     union all
     select
-        make_date(year, 5, 1),
-        'Święto Pracy'
+        make_date(year, 5, 1) as holiday_date,
+        'Święto Pracy' as holiday_name
     from easter
     union all
     select
-        make_date(year, 5, 3),
-        'Święto Konstytucji 3 Maja'
+        make_date(year, 5, 3) as holiday_date,
+        'Święto Konstytucji 3 Maja' as holiday_name
     from easter
     union all
     select
-        make_date(year, 8, 15),
-        'Wniebowzięcie NMP'
+        make_date(year, 8, 15) as holiday_date,
+        'Wniebowzięcie NMP' as holiday_name
     from easter
     union all
     select
-        make_date(year, 11, 1),
-        'Wszystkich Świętych'
+        make_date(year, 11, 1) as holiday_date,
+        'Wszystkich Świętych' as holiday_name
     from easter
     union all
     select
-        make_date(year, 11, 11),
-        'Narodowe Święto Niepodległości'
+        make_date(year, 11, 11) as holiday_date,
+        'Narodowe Święto Niepodległości' as holiday_name
     from easter
     union all
     select
-        make_date(year, 12, 24),
-        'Wigilia'
+        make_date(year, 12, 24) as holiday_date,
+        'Wigilia' as holiday_name
     from easter
     where year >= 2025
     union all
     select
-        make_date(year, 12, 25),
-        'Boże Narodzenie (pierwszy dzień)'
+        make_date(year, 12, 25) as holiday_date,
+        'Boże Narodzenie (pierwszy dzień)' as holiday_name
     from easter
     union all
     select
-        make_date(year, 12, 26),
-        'Boże Narodzenie (drugi dzień)'
+        make_date(year, 12, 26) as holiday_date,
+        'Boże Narodzenie (drugi dzień)' as holiday_name
     from easter
 ),
 
@@ -162,48 +162,48 @@ select
         as pl_school_year_start,
     'day' as member_type
 from days as d
-left join holiday_days as h on h.holiday_date = d.calendar_date
+left join holiday_days as h on d.calendar_date = h.holiday_date
 union all
 select
-    0,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    'not_applicable'
+    0 as date_key,
+    null as calendar_date,
+    null as year,
+    null as quarter,
+    null as month,
+    null as day_of_month,
+    null as day_of_week_iso,
+    null as day_name,
+    null as month_name,
+    null as iso_year,
+    null as iso_week,
+    null as day_of_year,
+    null as is_weekend,
+    null as is_pl_public_holiday,
+    null as pl_holiday_name,
+    null as is_pl_working_day,
+    null as year_month,
+    null as year_quarter,
+    null as pl_school_year_start,
+    'not_applicable' as member_type
 union all
 select
-    -1,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    'unknown'
+    -1 as date_key,
+    null as calendar_date,
+    null as year,
+    null as quarter,
+    null as month,
+    null as day_of_month,
+    null as day_of_week_iso,
+    null as day_name,
+    null as month_name,
+    null as iso_year,
+    null as iso_week,
+    null as day_of_year,
+    null as is_weekend,
+    null as is_pl_public_holiday,
+    null as pl_holiday_name,
+    null as is_pl_working_day,
+    null as year_month,
+    null as year_quarter,
+    null as pl_school_year_start,
+    'unknown' as member_type

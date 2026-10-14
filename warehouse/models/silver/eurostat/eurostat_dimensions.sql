@@ -3,7 +3,9 @@
 with structures as (
     select
         *,
-        dense_rank() over (partition by artefact_id, artefact_version order by ingested_at desc, raw_sha256) as newest
+        dense_rank() over (
+            partition by artefact_id, artefact_version order by ingested_at desc, raw_sha256 asc
+        ) as newest
     from {{ source('eurostat', 'eurostat_structure_items') }}
     where artefact in ('dimension', 'time_dimension')
 )
@@ -19,4 +21,4 @@ select
     json_extract_string(s.references_json, '$.Enumeration.version') as codelist_version
 from {{ ref('eurostat_dataflows') }} as f
 inner join structures as s
-    on s.artefact_id = f.data_structure_id and s.artefact_version = f.data_structure_version and s.newest = 1
+    on f.data_structure_id = s.artefact_id and f.data_structure_version = s.artefact_version and s.newest = 1

@@ -17,7 +17,9 @@ force-sort-within-sections = true
 dialect = "duckdb"
 templater = "jinja"
 max_line_length = 120
-exclude_rules = ["structure.column_order"]
+# RF04: conformed dimension columns are named year, month, quarter, week… on purpose.
+# AL05: `range(…) as t (d)` needs the alias to name its column even if `t` is unused.
+exclude_rules = ["structure.column_order", "references.keywords", "aliasing.unused"]
 
 [tool.sqlfluff.templater.jinja]
 # dbt's ref/source/config/var/is_incremental as stubs: no connection to the lakehouse needed.

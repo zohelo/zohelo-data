@@ -22,12 +22,12 @@ select
 from quoted
 union all
 select
-    'PLN',
-    'złoty polski',
-    [],
-    null,
-    null,
-    'currency'
+    'PLN' as currency_code,
+    'złoty polski' as name_pl,
+    [] as nbp_tables,
+    null as first_nbp_quote,
+    null as last_nbp_quote,
+    'currency' as member_type
 where
     not exists (
         select 1 from quoted
@@ -35,17 +35,17 @@ where
     )
 union all
 select
-    '_Z',
-    'nie dotyczy (not monetary)',
-    [],
-    null,
-    null,
-    'not_applicable'
+    '_Z' as currency_code,
+    'nie dotyczy (not monetary)' as name_pl,
+    [] as nbp_tables,
+    null as first_nbp_quote,
+    null as last_nbp_quote,
+    'not_applicable' as member_type
 union all
 select
-    '_X',
-    'inna / nieokreślona (other or unspecified)',
-    [],
-    null,
-    null,
-    'unknown'
+    '_X' as currency_code,
+    'inna / nieokreślona (other or unspecified)' as name_pl,
+    [] as nbp_tables,
+    null as first_nbp_quote,
+    null as last_nbp_quote,
+    'unknown' as member_type

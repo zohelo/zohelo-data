@@ -10,4 +10,4 @@ select
     source_version,
     raw_sha256
 from {{ source('gus_bdl', 'bdl_metadata_units') }}
-qualify row_number() over (partition by unit_id order by ingested_at desc, raw_sha256) = 1
+qualify row_number() over (partition by unit_id order by ingested_at desc, raw_sha256 asc) = 1
