@@ -3,11 +3,19 @@
 landing.inspect   extract.py --mode inspect   provider inventory vs Landing, no downloads
 landing.extract   extract.py --mode load      download new or changed datasets (hash-sliced jobs)
 landing.verify    extract.py --mode verify    Landing integrity and remaining gaps
+
+landing.extract with filter "structure" lands the bulk SDMX structure messages instead
+(structure.py; job 0 only).
 """
 from __future__ import annotations
 
 
 def _extract(mode: str, p) -> int:
+    if mode == "load" and p.filter.strip() == "structure":
+        if p.job_index:
+            return 0
+        from ingestion.to_landing.eurostat import structure
+        return structure.main()
     from ingestion.to_landing.eurostat import extract
     args = ["--mode", mode, "--dataset-filter", p.filter,
             "--parallel-downloads", str(p.parallel_downloads)]
