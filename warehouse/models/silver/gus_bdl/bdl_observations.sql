@@ -20,14 +20,14 @@ current_files as (
         source_version = max(source_version) over (partition by subgroup_id)
         and row_number() over (
             partition by subgroup_id, source_version, part_index
-            order by ingested_at desc, raw_sha256
+            order by ingested_at desc, raw_sha256 asc
         ) = 1
 ),
 
 rows as (
     select o.*
     from {{ source('gus_bdl', 'bdl_subgroup_observations') }} as o
-    where o.raw_sha256 in (select raw_sha256 from current_files)
+    where o.raw_sha256 in (select current_files.raw_sha256 from current_files)
 )
 
 select
@@ -47,4 +47,4 @@ select
     r.raw_sha256
 from rows as r
 left join {{ ref('bdl_variables') }} as v
-    on v.subgroup_id = r.subgroup_id and v.dimension_key = r.dimension_values
+    on r.subgroup_id = v.subgroup_id and r.dimension_values = v.dimension_key

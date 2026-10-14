@@ -16,8 +16,8 @@ with rates as (
         effective_date,
         currency_code,
         table_code,
-        'bid',
-        bid_rate,
+        'bid' as rate_type,
+        bid_rate as rate,
         raw_sha256
     from {{ ref('nbp_fx_rates') }}
     where bid_rate is not null
@@ -26,8 +26,8 @@ with rates as (
         effective_date,
         currency_code,
         table_code,
-        'ask',
-        ask_rate,
+        'ask' as rate_type,
+        ask_rate as rate,
         raw_sha256
     from {{ ref('nbp_fx_rates') }}
     where ask_rate is not null

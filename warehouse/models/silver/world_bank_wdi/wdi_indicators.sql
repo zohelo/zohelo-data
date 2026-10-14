@@ -3,7 +3,8 @@
 with newest as (
     select * from {{ source('world_bank_wdi', 'wdi_bulk_metadata') }}
     where
-        source_version = (select max(source_version) from {{ source('world_bank_wdi', 'wdi_bulk_metadata') }})
+        source_version
+        = (select max(latest.source_version) from {{ source('world_bank_wdi', 'wdi_bulk_metadata') }} as latest)
         and lower(member) like '%series.csv' and lower(member) not like '%country%'
 )
 

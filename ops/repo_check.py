@@ -111,6 +111,18 @@ def workflows(files: list[Path]) -> list[str]:
     return problems
 
 
+SQLFLUFF = "sqlfluff==4.4.0"  # pinned here so the workflow does not change when the version does
+
+
+def sqlfluff() -> list[str]:
+    """dbt models pass sqlfluff (settings in pyproject.toml); installs the pinned version if missing."""
+    import shutil
+
+    if shutil.which("sqlfluff") is None:
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", SQLFLUFF], check=True)
+    return tool(["sqlfluff", "lint", "warehouse/models", "--processes", "2", "--disable-progress-bar"])
+
+
 def tool(command: list[str]) -> list[str]:
     """Run a linter; its output is the finding."""
     result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
@@ -157,6 +169,7 @@ def main() -> int:
         "ruff check": lambda: tool(["ruff", "check", *PYTHON_PATHS]),
         "ruff format": lambda: tool(["ruff", "format", "--check", *PYTHON_PATHS]),
         "yamllint": lambda: tool(["yamllint", "-s", "-d", YAMLLINT, "ingestion", "warehouse", "portal", ".github"]),
+        "sqlfluff": sqlfluff,
         "configuration": lambda: configuration(files),
     }
     failed = 0
