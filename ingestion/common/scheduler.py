@@ -9,7 +9,9 @@ Schedules are declared, not coded: each ``ingestion/sources/<source>.yaml`` (and
         filter: ""                      # optional, as in a manual run
 
 The Pipeline workflow's hourly ``schedule`` trigger runs ``python run.py schedule``,
-which dispatches every run whose cron time fell in the last hour. The dispatched run is
+which dispatches every run whose cron time fell since the previous scheduled run
+(GitHub often starts hourly schedules late, so a fixed one-hour window would skip runs;
+the window is 60–360 minutes). The dispatched run is
 an ordinary Pipeline run (same plan, authorization and concurrency), so a scheduled run
 and a manual run are the same thing. ``schedule: null`` or ``[]`` means manual only.
 """
@@ -90,13 +92,41 @@ def validate(config: dict, plan) -> list[str]:
     return problems
 
 
+MIN_WINDOW, MAX_WINDOW = 60, 360
+
+
+def window_minutes(repo: str | None, token: str | None, now: datetime) -> int:
+    """Minutes since the previous scheduled Pipeline run started (60 when unknown)."""
+    if not repo or not token:
+        return MIN_WINDOW
+    try:
+        response = requests.get(
+            f"https://api.github.com/repos/{repo}/actions/workflows/pipeline.yml/runs",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
+            params={"event": "schedule", "per_page": 5},
+            timeout=30,
+        )
+        response.raise_for_status()
+    except requests.RequestException:
+        return MIN_WINDOW
+    current = os.environ.get("GITHUB_RUN_ID", "")
+    previous = [r["created_at"] for r in response.json().get("workflow_runs", []) if str(r["id"]) != current]
+    if not previous:
+        return MIN_WINDOW
+    started = datetime.fromisoformat(previous[0].replace("Z", "+00:00"))
+    # Minutes in (previous run's minute, this run's minute]: each minute is covered once.
+    gap = now.replace(second=0, microsecond=0) - started.replace(second=0, microsecond=0)
+    return max(MIN_WINDOW, min(MAX_WINDOW, int(gap.total_seconds() // 60)))
+
+
 def main(config: dict, plan, now: datetime | None = None) -> int:
     now = now or datetime.now(UTC)
     problems = validate(config, plan)
     started, skipped = [], []
     repo, token = os.environ.get("GITHUB_REPOSITORY"), os.environ.get("GITHUB_TOKEN")
+    window = window_minutes(repo, token, now)
     for e in entries(config):
-        if not due(str(e["cron"]), now):
+        if not due(str(e["cron"]), now, window):
             continue
         inputs = {"source": e["source"], "run": e["run"], "filter": str(e.get("filter") or "")}
         if not repo or not token:
@@ -113,6 +143,7 @@ def main(config: dict, plan, now: datetime | None = None) -> int:
         )
     summary = {
         "at": now.isoformat(timespec="minutes"),
+        "window_minutes": window,
         "started": started,
         "skipped": skipped,
         "invalid_schedules": problems,
