@@ -16,7 +16,7 @@ from ingestion.common.report import annotate, step_summary
 from warehouse import eurostat_batch
 
 PROJECT = Path(__file__).resolve().parent
-ROW_BUDGET = 400_000_000   # Bronze rows per Eurostat Silver batch (one GitHub runner build)
+ROW_BUDGET = 1_500_000_000   # Bronze rows per Eurostat Silver batch (395M took 7 min on a runner)
 
 
 def main(select: str = "", target: str = "prod", variables: dict | None = None) -> int:
