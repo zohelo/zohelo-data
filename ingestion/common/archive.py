@@ -33,7 +33,12 @@ from typing import Any
 from ingestion.common.r2 import archive_key, landing_objects, latest_snapshot, raw_chunks, req, s3, sources
 from ingestion.common.report import annotate, step_summary
 
-SOURCES = ("eurostat", "gugik_prg", "gus_teryt", "nbp", "world_bank_wdi")
+def _archive_sources() -> tuple[str, ...]:
+    """Sources with an ``archive_policy`` in ingestion/sources/<source>.yaml."""
+    return tuple(s for s, c in sources().items() if c.get("archive_policy"))
+
+
+SOURCES = _archive_sources()
 
 
 def proven_for(source: str, meta: dict[str, dict[str, Any]]) -> set[str]:

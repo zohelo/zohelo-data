@@ -19,9 +19,10 @@ from ingestion.common.report import annotate, step_summary
 from warehouse import eurostat_batch
 
 PROJECT = Path(__file__).resolve().parent
-ROW_BUDGET = 150_000_000     # Bronze rows per Eurostat Silver batch: dbt stages the batch in a temp table (~190 B/row); 400M wide rows filled 75 GB
-LOOP_MINUTES = 140           # Eurostat-only runs: start no new batch after this (job timeout 180)
-LOOP_BUILDS = 8              # at most 8 builds per run (GitHub shows 10 annotations per step)
+SETTINGS = eurostat_batch.SETTINGS   # warehouse/warehouse.yaml "eurostat_silver"
+ROW_BUDGET = int(SETTINGS["row_budget"])
+LOOP_MINUTES = float(SETTINGS["loop_minutes"])
+LOOP_BUILDS = int(SETTINGS["loop_builds"])
 EUROSTAT_ONLY = {"eurostat_dataset_versions", "eurostat_observations"}
 
 

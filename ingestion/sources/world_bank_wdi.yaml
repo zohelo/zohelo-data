@@ -18,9 +18,10 @@ archive_policy:
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
 bronze: [bronze.wdi_bulk_observations, bronze.wdi_bulk_metadata, bronze.wdi_rejected_files]
-# Legacy tables from retired code: bronze.wdi_data/country/series/country_series/footnote/series_time,
-# silver.wdi_*, gold.*wdi* — replaced by the tables above and the models built on them.
-silver: []
-gold: []
+silver: [silver.wdi_observations, silver.wdi_countries, silver.wdi_indicators]
+gold: []                              # WDI in Gold: shared models (warehouse/warehouse.yaml)
+# Tables of retired code still in the catalog, replaced by the tables above (globs allowed).
+legacy_tables: [bronze.wdi_data, bronze.wdi_country, bronze.wdi_series, bronze.wdi_country_series,
+                bronze.wdi_footnote, bronze.wdi_series_time, gold.*wdi*]
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

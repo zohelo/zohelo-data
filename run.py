@@ -2,7 +2,8 @@
 
     python run.py plan --source eurostat --run "landing → bronze (all steps)"
     python run.py activity --source eurostat --activity landing.extract [--filter ...]
-    python run.py schedule [--check]    start the declared runs that are due (hourly trigger)
+    python run.py schedule [--check]    start the declared runs that are due (hourly trigger);
+                                        --check validates the source declarations and schedules
 
 A run is an ordered list of activities (RUNS). An activity is allowed only when it is
 implemented and authorized:
@@ -93,6 +94,39 @@ def load_config() -> dict:
     return {"sources": sources, "platform": {"activities": platform, "schedule": schedule}}
 
 
+SOURCE_KEYS = {"source_system", "description", "extraction", "landing", "archive_policy", "archive_folder",
+               "bronze", "silver", "gold", "legacy_tables", "activities"}
+EXTRACTION_KEYS = {"initial", "production", "incremental_policy", "schedule"}
+
+
+def config_problems(config: dict) -> list[str]:
+    """Problems with the source declarations (one documented key set; docs/operating.md)."""
+    problems = []
+    for source, cfg in config["sources"].items():
+        cfg = cfg or {}
+        unknown = set(cfg) - SOURCE_KEYS
+        missing = {"source_system", "description", "landing", "bronze", "activities"} - set(cfg)
+        if unknown:
+            problems.append(f"{source}: unknown keys {sorted(unknown)}")
+        if missing:
+            problems.append(f"{source}: missing keys {sorted(missing)}")
+        if cfg.get("source_system") != source:
+            problems.append(f"{source}: source_system must equal the file name")
+        if set(cfg.get("extraction") or {}) - EXTRACTION_KEYS:
+            problems.append(f"{source}: unknown extraction keys {sorted(set(cfg['extraction']) - EXTRACTION_KEYS)}")
+        for layer in ("bronze", "silver", "gold"):
+            bad = [t for t in cfg.get(layer) or [] if not str(t).startswith(f"{layer}.")]
+            if bad:
+                problems.append(f"{source}: {layer} lists tables of another layer: {bad}")
+        if "bronze.load" in (cfg.get("activities") or []):
+            policy = cfg.get("archive_policy") or {}
+            if not {"move", "retention"} <= set(policy):
+                problems.append(f"{source}: bronze.load needs archive_policy with move and retention")
+            if not any(str(t).endswith("rejected_files") for t in cfg.get("bronze") or []):
+                problems.append(f"{source}: bronze.load needs a *_rejected_files table in bronze")
+    return problems
+
+
 def implemented(source: str) -> dict:
     if source == "platform":
         return PLATFORM_ACTIVITIES
@@ -160,7 +194,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "schedule":
         from ingestion.common import scheduler
         if args.check:
-            problems = scheduler.validate(config, plan)
+            problems = config_problems(config) + scheduler.validate(config, plan)
             print(json.dumps({"schedules": len(scheduler.entries(config)), "problems": problems}))
             return 1 if problems else 0
         return scheduler.main(config, plan)

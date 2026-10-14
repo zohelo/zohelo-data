@@ -22,6 +22,7 @@ import re
 
 import pyarrow as pa
 from pyiceberg.exceptions import NamespaceAlreadyExistsError, NoSuchTableError
+import yaml
 
 from ingestion.common.r2 import catalog
 
@@ -35,8 +36,9 @@ LOG_SCHEMA = pa.schema([("dataset_id", pa.string()), ("raw_sha256", pa.string())
 MODEL = "eurostat_observations"
 # The batch travels as dbt --vars (one command-line argument, ≤128 KB on Linux): at most
 # MAX_PAIRS (dataset, file) pairs per list, ~100 bytes each.
-MAX_PAIRS = 500
-OVERSIZED_ROWS = 700_000_000
+SETTINGS = yaml.safe_load((Path(__file__).resolve().parent / "warehouse.yaml").read_text())["eurostat_silver"]
+MAX_PAIRS = int(SETTINGS["max_versions"])
+OVERSIZED_ROWS = int(SETTINGS["oversized_rows"])
 
 
 def wanted(selectors: list[str]) -> bool:

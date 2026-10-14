@@ -18,9 +18,10 @@ archive_policy:
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
 bronze: [bronze.prg_boundaries, bronze.prg_rejected_files]
-# Legacy tables from retired code (bronze/silver prg_*, gold.dim_prg_*, fact_prg_surface_areas)
-# are replaced by bronze.prg_boundaries and the geography models.
-silver: []
-gold: []
+silver: [silver.prg_units]
+gold: []                              # areas on gold.dim_geography (warehouse/warehouse.yaml)
+# Tables of retired code still in the catalog, replaced by the tables above (globs allowed).
+legacy_tables: [bronze.prg_country, bronze.prg_voivodeships, bronze.prg_counties, bronze.prg_municipalities,
+                bronze.prg_surface_areas, silver.prg_*, gold.dim_prg_*, gold.fact_prg_surface_areas]
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

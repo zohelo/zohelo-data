@@ -209,18 +209,22 @@ def record_rejections(cat, table_id: tuple[str, str], rejected: list[dict[str, A
     rejected_table(cat, table_id, entity_column).append(pa.Table.from_pylist(rows, schema=schema.as_arrow()))
 
 
-# Bronze tables that hold one file per Landing SHA-256, by source: (data tables, rejections).
-SOURCE_TABLES = {
-    "eurostat": ([("bronze", "eurostat_full_observations"), ("bronze", "eurostat_structure_items")],
-                 ("bronze", "eurostat_rejected_files")),
-    "nbp": ([("bronze", "nbp_observations")], ("bronze", "nbp_rejected_files")),
-    "gus_bdl": ([("bronze", "bdl_subgroup_observations"), ("bronze", "bdl_metadata_variables"),
-                 ("bronze", "bdl_metadata_units")], ("bronze", "bdl_rejected_files")),
-    "gus_teryt": ([("bronze", "teryt_records")], ("bronze", "teryt_rejected_files")),
-    "gugik_prg": ([("bronze", "prg_boundaries")], ("bronze", "prg_rejected_files")),
-    "world_bank_wdi": ([("bronze", "wdi_bulk_observations"), ("bronze", "wdi_bulk_metadata")],
-                       ("bronze", "wdi_rejected_files")),
-}
+def source_tables() -> dict[str, tuple[list[tuple[str, str]], list[tuple[str, str]]]]:
+    """Bronze tables per rebuilt source, from the ``bronze:`` list in ingestion/sources/<source>.yaml:
+    (tables holding one file per Landing SHA-256, rejected-files tables). Only sources whose
+    Pipeline loads Bronze (``bronze.load`` in ``activities``) are included."""
+    from ingestion.common.r2 import sources
+    out = {}
+    for source, config in sources().items():
+        if "bronze.load" not in (config.get("activities") or []):
+            continue
+        names = [tuple(str(n).split(".", 1)) for n in config.get("bronze") or []]
+        out[source] = ([n for n in names if not n[1].endswith("rejected_files")],
+                       [n for n in names if n[1].endswith("rejected_files")])
+    return out
+
+
+SOURCE_TABLES = source_tables()
 
 
 def proven_hashes(source: str) -> tuple[set[str], set[str]]:
@@ -234,4 +238,7 @@ def proven_hashes(source: str) -> tuple[set[str], set[str]]:
             loaded |= loaded_hashes(cat.load_table(table_id))
         except NoSuchTableError:
             pass
-    return loaded, rejected_hashes(cat, rejections)
+    rejected: set[str] = set()
+    for table_id in rejections:
+        rejected |= rejected_hashes(cat, table_id)
+    return loaded, rejected
