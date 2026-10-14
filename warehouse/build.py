@@ -5,7 +5,7 @@ builds everything. When the Eurostat Silver model is selected, warehouse/eurosta
 plans its batch first (passed as dbt vars) and records it after the model ran. A run that
 selects only the Eurostat Silver models repeats batches while Silver is incomplete and the
 time budget allows (LOOP_MINUTES). Target prod writes to the silver/gold namespaces;
-results (models, tests, failures) are published as an annotation per build.
+results (models, tests, failures) are published per build as an annotation (GitHub keeps the first 10 per step) and in the step summary (all builds).
 """
 
 from __future__ import annotations
