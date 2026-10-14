@@ -1,10 +1,29 @@
 # Dimensional model
 
-How Gold is modelled (owner decisions, 13 October 2026). Draft for owner review; nothing
-here is built yet — `warehouse/passthrough/` still only copies Bronze. Dimension
-definitions live as code in [warehouse/dimensions/](../warehouse/dimensions/README.md),
-one YAML file per dimension, with the source mappings and a coverage table over the
-182-source inventory.
+How Gold is modelled (owner decisions, 13 October 2026). Dimension definitions live as
+code in [warehouse/dimensions/](../warehouse/dimensions/README.md), one YAML file per
+dimension, with the source mappings and a coverage table over the 182-source inventory.
+The dbt project in `warehouse/models/` builds Silver and Gold (Pipeline `platform`,
+"silver/gold: build models"); `warehouse/passthrough/` still copies the Bronze of sources
+not yet modelled.
+
+## Built (October 2026)
+
+| Gold table | Content |
+|---|---|
+| `dim_date` | calendar 1900–2100, ISO weeks, Polish statutory holidays and working days from 1990; MetricFlow time spine |
+| `dim_period` | SDMX TIME_PERIOD A/S/Q/M/W/D 1900–2100 with start/end day; `_Z`, `_T` |
+| `dim_geography` | schemes TERC (Polska → województwo → powiat → gmina → część gminy), SIMC localities, WB economies and aggregates; PRG areas; `_T`, `_Z`, `_X` |
+| `dim_currency` | currencies quoted by NBP + PLN; `_Z`, `_X` |
+| `dim_indicator` | WDI indicators |
+| `fact_observation` | WDI annual observations (indicator × geography × period) |
+| `fact_fx_rate`, `fact_gold_price` | NBP exchange rates (mid/bid/ask) and gold price |
+
+Metrics (MetricFlow, `warehouse/semantic_models/`): NBP rates and gold price; WDI
+population, GDP, GDP per capita, inflation, unemployment, life expectancy; observation
+count. A machine-readable catalog of every table, column, test, lineage edge, metric and
+registry dimension is published after each build (`warehouse/catalog.py`) and shown in the
+portal.
 
 ## Three kinds of dimensions
 
@@ -91,14 +110,12 @@ Versioned code lists with correspondence bridges: NACE Rev. 2/2.1 ↔ PKD 2007/2
 ISIC 4/5; CPA ↔ PKWiU; COICOP 2018; ISCED 2011 / ISCED-F 2013; ISCO-08 (KZiS);
 HS/CN/SITC/BEC; ESA 2010 sectors; COFOG; ICD-10/11.
 
-## Open owner decisions
+## Decisions taken (14 October 2026, under the owner's mandate)
 
-1. **Revision history in Gold.** Keep every source version of an observation (vintages:
-   `source_version` in the key, "as published on" queries possible, storage grows with
-   each Eurostat/BDL revision) or only the current value (Gold = newest version; history
-   only in Archive within its retention). Proposed: current only in Gold, with
-   `source_version` as an attribute; vintages later for selected indicators.
-2. **Local domain extensions beyond CSA.** Proposed: only where CSA stops and a real
-   source needs it (109.01 Media, 109.02 Sport); everything else maps to CSA codes.
+1. **Revision history in Gold:** current values only (Gold = newest source version, with
+   `source_version` as an attribute); history stays in the Archive within its retention.
+   Vintages can be added later for selected indicators.
+2. **Local domain extensions beyond CSA:** only where CSA stops and a real source needs
+   it (109.01 Media, 109.02 Sport); everything else maps to CSA codes.
 
 Other open points are listed per dimension (`open_questions`) and marked `unverified`.
