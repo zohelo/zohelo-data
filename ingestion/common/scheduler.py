@@ -47,7 +47,7 @@ def parse(cron: str) -> list[set[int]]:
     parts = cron.split()
     if len(parts) != 5:
         raise ValueError(f"cron needs 5 fields: {cron!r}")
-    return [_field(p, lo, hi) for p, (lo, hi) in zip(parts, FIELDS)]
+    return [_field(p, lo, hi) for p, (lo, hi) in zip(parts, FIELDS, strict=False)]
 
 
 def matches(fields: list[set[int]], when: datetime) -> bool:

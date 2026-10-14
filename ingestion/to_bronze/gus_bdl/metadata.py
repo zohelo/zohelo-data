@@ -56,7 +56,8 @@ UNIT_COLUMNS = [
     ("level", "VARCHAR"),
     ("kind", "VARCHAR"),
     ("has_description", "VARCHAR"),
-] + PROVENANCE
+    *PROVENANCE,
+]
 
 
 def arrow_schema(columns: list[tuple[str, str]]) -> pa.Schema:
@@ -116,7 +117,9 @@ def load() -> dict[str, Any]:
     tables = {"variables": (VARIABLES_ID, VARIABLE_COLUMNS, "subgroup_id"), "units": (UNITS_ID, UNIT_COLUMNS, "entity")}
     done: set[str] = bf.rejected_hashes(cat, REJECTED_ID)
     for table_id, columns, partition in tables.values():
-        done |= bf.loaded_hashes(bf.retry(lambda: bf.ensure_table(cat, table_id, columns, partition), "table"))
+        done |= bf.loaded_hashes(
+            bf.retry(lambda t=table_id, c=columns, p=partition: bf.ensure_table(cat, t, c, p), "table")
+        )
     keys = []
     for page in client.get_paginator("list_objects_v2").paginate(Bucket=landing, Prefix=METADATA):
         keys += [o["Key"] for o in page.get("Contents", []) if o["Key"].endswith(".receipt.json")]
