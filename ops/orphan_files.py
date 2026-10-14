@@ -17,8 +17,8 @@ import argparse
 from datetime import UTC, datetime, timedelta
 import json
 import os
-import traceback
 from pathlib import Path
+import traceback
 from urllib.parse import urlsplit
 
 from ingestion.common.r2 import catalog, req, s3
