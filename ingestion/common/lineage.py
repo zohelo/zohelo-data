@@ -40,18 +40,11 @@ def summarize(name:str,landing_set:set[str],proven:set[str],meta:dict[str,dict[s
 
 
 def inspect_eurostat(meta:dict[str,dict[str,Any]])->dict[str,Any]:
-    from ingestion.common.r2 import catalog
-    from pyiceberg.exceptions import NoSuchTableError
-    from ingestion.to_bronze.eurostat.batch import REJECTED_ID, TABLE_ID, loaded_hashes, rejected_hashes
+    from ingestion.common.bronze_files import proven_hashes
     data={d for d,i in meta.items() if i["kind"]=="raw"}
     latest=latest_snapshot(meta)
     superseded={d for d in data if meta[d]["layout"]=="snapshot"}-latest
-    cat=catalog()
-    full=loaded_hashes(cat.load_table(TABLE_ID))
-    try:
-        rejected=rejected_hashes(cat.load_table(REJECTED_ID))
-    except NoSuchTableError:
-        rejected=set()
+    full,rejected=proven_hashes("eurostat")
     unloaded=latest-full
     return {
         "latest":summarize("latest",latest,full,meta),
