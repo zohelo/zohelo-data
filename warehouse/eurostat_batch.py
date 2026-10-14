@@ -84,21 +84,22 @@ def prepare(namespace: str, row_budget: int) -> dict:
         r["is_current"] = newest[r["dataset_id"]][1] == r["raw_sha256"]
     _overwrite(cat, (namespace, "eurostat_file_index"), pa.Table.from_pylist(rows, schema=INDEX_SCHEMA))
 
-    current = {r["raw_sha256"]: r for r in rows if r["is_current"]}
+    # Keyed by (dataset_id, raw_sha256): Eurostat publishes some byte-identical files under
+    # several dataset codes, so a file hash alone does not identify a dataset version.
+    current = {(r["dataset_id"], r["raw_sha256"]): r for r in rows if r["is_current"]}
     log = _read(cat, (namespace, "eurostat_loaded_files"), LOG_SCHEMA).to_pylist()
-    loaded = {r["raw_sha256"] for r in log}
+    loaded = {(r["dataset_id"], r["raw_sha256"]) for r in log}
     superseded = sorted(loaded - set(current))
     batch, total = [], 0
-    for r in sorted((r for r in current.values() if r["raw_sha256"] not in loaded),
-                    key=lambda r: r["dataset_id"]):
+    for key in sorted(k for k in current if k not in loaded):
+        r = current[key]
         if batch and total + r["record_count"] > row_budget:
             break
         batch.append(r)
         total += r["record_count"]
-    remaining = sum(1 for s in current if s not in loaded) - len(batch)
-    return {"vars": {"eurostat_batch_datasets": [r["dataset_id"] for r in batch],
-                     "eurostat_batch_hashes": [r["raw_sha256"] for r in batch],
-                     "eurostat_superseded": superseded},
+    remaining = sum(1 for k in current if k not in loaded) - len(batch)
+    return {"vars": {"eurostat_batch": [[r["dataset_id"], r["raw_sha256"]] for r in batch],
+                     "eurostat_superseded": [list(k) for k in superseded]},
             "summary": {"datasets_current": len(current), "batch_datasets": len(batch), "batch_rows": total,
                         "superseded": len(superseded), "remaining_after_batch": remaining}}
 
@@ -106,9 +107,8 @@ def prepare(namespace: str, row_budget: int) -> dict:
 def finish(namespace: str, plan: dict) -> None:
     cat = catalog()
     log_id = (namespace, "eurostat_loaded_files")
-    gone = set(plan["vars"]["eurostat_superseded"])
-    log = [r for r in _read(cat, log_id, LOG_SCHEMA).to_pylist() if r["raw_sha256"] not in gone]
+    gone = {tuple(k) for k in plan["vars"]["eurostat_superseded"]}
+    log = [r for r in _read(cat, log_id, LOG_SCHEMA).to_pylist() if (r["dataset_id"], r["raw_sha256"]) not in gone]
     now = datetime.now(timezone.utc)
-    log += [{"dataset_id": d, "raw_sha256": h, "loaded_at": now}
-            for d, h in zip(plan["vars"]["eurostat_batch_datasets"], plan["vars"]["eurostat_batch_hashes"])]
+    log += [{"dataset_id": d, "raw_sha256": h, "loaded_at": now} for d, h in plan["vars"]["eurostat_batch"]]
     _overwrite(cat, log_id, pa.Table.from_pylist(log, schema=LOG_SCHEMA))

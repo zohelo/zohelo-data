@@ -9,7 +9,10 @@ models:
       - name: dataset_id
         tests: [not_null, unique]
       - name: raw_sha256
-        tests: [not_null, unique]
+        description: >-
+          Landing file SHA-256. Not unique: Eurostat publishes some byte-identical files
+          under two dataset codes.
+        tests: [not_null]
   - name: eurostat_observations
     description: >-
       Eurostat observations of the newest version of each dataset, typed: freq, unit, geo as
@@ -23,10 +26,10 @@ models:
           - not_null:
               config:
                 where: >-
-                  raw_sha256 in ('{{ var("eurostat_batch_hashes", []) | join("', '") }}')
+                  raw_sha256 in ('{{ var("eurostat_batch", []) | map("last") | join("', '") }}')
       - name: time_period
         tests:
           - not_null:
               config:
                 where: >-
-                  raw_sha256 in ('{{ var("eurostat_batch_hashes", []) | join("', '") }}')
+                  raw_sha256 in ('{{ var("eurostat_batch", []) | map("last") | join("', '") }}')

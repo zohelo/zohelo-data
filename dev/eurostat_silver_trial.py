@@ -18,6 +18,10 @@ for step in (1, 2):
     out[f"build_{step}"] = {"exit": code, "seconds": round(time.time() - started), "rows": arrow.num_rows,
                             "datasets": len(set(arrow.column("dataset_id").to_pylist())),
                             "logged_files": log.num_rows,
+                            "expected_rows": sum(r["record_count"] for r in cat.load_table(
+                                ("zz_dbt_trial", "eurostat_file_index")).scan().to_arrow().to_pylist()
+                                if (r["dataset_id"], r["raw_sha256"]) in
+                                {(x["dataset_id"], x["raw_sha256"]) for x in log.to_pylist()}),
                             "periods_sample": sorted(set(arrow.column("time_period").to_pylist()))[:6]}
 out["datasets_with_versions"] = cat.load_table(("zz_dbt_trial", "eurostat_dataset_versions")).scan().to_arrow().num_rows
 for name in ("eurostat_observations", "eurostat_dataset_versions", "eurostat_file_index", "eurostat_loaded_files"):
