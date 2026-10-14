@@ -94,13 +94,15 @@ def decode_landing_distribution(source: Path, receipt: Path, output: Path, *,
                 "SELECT count(*), count(*) FILTER (WHERE "
                 + " OR ".join(f"c{i} IS NULL" for i in range(1, len(header)))
                 + "), min(rowid + 2) FILTER (WHERE len(parts) <> ? OR list_contains(parts, '')), "
-                "count(DISTINCT parts) FROM src", [len(dimensions)]).fetchone()
+                "count(DISTINCT hash(parts)) FROM src", [len(dimensions)]).fetchone()
             if source_rows == 0:
                 raise EurostatBulkDecodeError("Eurostat TSV has no series")
             if nulls:
                 raise EurostatBulkDecodeError("Eurostat TSV has rows with missing fields")
             if bad is not None:
                 raise EurostatBulkDecodeError(f"Eurostat TSV row {bad} has an invalid series key")
+            # hash(): a 64-bit fingerprint keeps the distinct check within memory on the
+            # largest files (AVIA_*: DISTINCT over the key lists ran out of 9.3 GB).
             if distinct != source_rows:
                 raise EurostatBulkDecodeError("Eurostat TSV repeats a complete dimensional observation key")
 
@@ -108,6 +110,9 @@ def decode_landing_distribution(source: Path, receipt: Path, output: Path, *,
                 return f"parts[{dimensions.index(name) + 1}]" if name in dimensions else "NULL::VARCHAR"
 
             value_columns = ", ".join(f"c{i}" for i in range(1, len(header)))
+            # The unpivot need not keep file order (source_row_number records it); without
+            # it DuckDB streams the largest files instead of buffering them.
+            con.execute("SET preserve_insertion_order = false")
             escaped = str(output).replace("'", "''")
             con.execute(f"""
                 COPY (
