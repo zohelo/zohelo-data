@@ -98,22 +98,35 @@ def project_id(token: str, org: str) -> str:
     return graphql(token, query, {"org": org, "n": PROJECT})["organization"]["projectV2"]["id"]
 
 
+TRUSTED = {"OWNER", "MEMBER"}  # the repository is public: only organisation members' comments are published
+
+
 def newest_comment(token: str, repo: str, issue: int) -> dict[str, Any]:
-    """The newest comment of an issue (REST, newest page first)."""
+    """The newest comment of an issue written by an organisation owner or member (REST, newest page first)."""
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
-    url = f"{REST}/repos/{repo}/issues/{issue}/comments"
-    first = requests.get(url, headers=headers, params={"per_page": 100}, timeout=60)
-    first.raise_for_status()
-    last = first.links.get("last", {}).get("url")
-    comments = requests.get(last, headers=headers, timeout=60).json() if last else first.json()
-    if not comments:
-        raise RuntimeError(f"issue {issue} has no comments")
-    return comments[-1]
+    response = requests.get(
+        f"{REST}/repos/{repo}/issues/{issue}/comments", headers=headers, params={"per_page": 100}, timeout=60
+    )
+    response.raise_for_status()
+    last = response.links.get("last", {}).get("url")
+    if last:
+        response = requests.get(last, headers=headers, timeout=60)
+        response.raise_for_status()
+    while True:
+        trusted = [c for c in response.json() if c.get("author_association") in TRUSTED]
+        if trusted:
+            return trusted[-1]
+        previous = response.links.get("prev", {}).get("url")
+        if not previous:
+            raise RuntimeError(f"issue {issue} has no comment by an organisation owner or member")
+        response = requests.get(previous, headers=headers, timeout=60)
+        response.raise_for_status()
 
 
 def status(token: str, org: str, argv: list[str]) -> int:
     """Publish the newest Work log comment as a project status update."""
-    if not argv or not argv[0].isdigit() or (len(argv) > 1 and argv[1] not in STATUSES):
+    valid = 1 <= len(argv) <= 2 and argv[0].isascii() and argv[0].isdigit()
+    if not valid or (len(argv) == 2 and argv[1] not in STATUSES):
         print(f"usage: status <issue> [{'|'.join(sorted(STATUSES))}]", file=sys.stderr)
         return 2
     repo = os.environ.get("GITHUB_REPOSITORY", f"{org}/zohelo-data")
