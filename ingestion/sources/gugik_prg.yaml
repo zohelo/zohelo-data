@@ -8,7 +8,8 @@ extraction:
   initial: bulk
   production: snapshot                  # the package is the complete register state
   incremental_policy: changed_since_last  # by SHA-256 of the download
-  schedule: null                        # target: monthly (state 1 January + corrections)
+  schedule:                             # UTC; monthly (state 1 January + corrections)
+    - {cron: "40 2 3 * *", run: "landing → bronze (all steps)"}
 
 landing: 01_landing/gugik_prg/
 # ZIP kept as exact bytes (.bin). Yearly changes: newest version + 90 days.

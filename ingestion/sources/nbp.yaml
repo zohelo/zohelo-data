@@ -9,7 +9,8 @@ extraction:
   initial: api                          # tested route: 356 quarter requests, one at a time
   production: snapshot                  # each file is the complete quarter as published
   incremental_policy: changed_since_last  # open quarters re-fetched; unchanged bytes skipped
-  schedule: null                        # target: weekdays after 12:30 Europe/Warsaw (table A 11:45–12:15)
+  schedule:                             # UTC; weekdays 13:30 Warsaw (summer), after table A/C
+    - {cron: "30 11 * * 1-5", run: "landing → bronze (all steps)"}
 
 landing: 01_landing/nbp/
 # Landing → Archive: Bronze-loaded files are moved; JSON is stored zstd-compressed.

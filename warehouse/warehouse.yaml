@@ -2,4 +2,8 @@
 #   silver_gold.promote   Bronze → Silver → Gold pass-through (passthrough/), until the SQL project
 #   silver_gold.build     dbt build of the SQL project (models/), optional --select from the run filter
 activities: [silver_gold.promote, silver_gold.build]
-schedule: null
+# Declared schedules (UTC), dispatched by run.py schedule: models daily after the source
+# loads; Eurostat Silver batches every 3 hours until Silver has caught up.
+schedule:
+  - {cron: "30 7 * * *", run: "silver/gold: build models"}
+  - {cron: "45 1-22/3 * * *", run: "silver/gold: build models", filter: "eurostat_dataset_versions eurostat_observations"}
