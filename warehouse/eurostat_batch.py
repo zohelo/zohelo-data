@@ -61,8 +61,23 @@ def _read(cat, table_id: tuple[str, str], schema: pa.Schema) -> pa.Table:
     return table.scan().to_arrow().cast(schema)
 
 
+def _drop_legacy(cat, namespace: str) -> bool:
+    """A table of the model's name without its columns is the legacy passthrough copy, which
+    new models replace (owner decision, 13 Oct 2026); without the drop, the incremental
+    model would append to it."""
+    try:
+        names = {f.name for f in cat.load_table((namespace, MODEL)).schema().fields}
+    except NoSuchTableError:
+        return False
+    if {"raw_sha256", "breakdown_codes", "time_period"} <= names:
+        return False
+    cat.drop_table((namespace, MODEL))
+    return True
+
+
 def prepare(namespace: str, row_budget: int) -> dict:
     cat = catalog()
+    dropped_legacy = _drop_legacy(cat, namespace)
     files = cat.load_table(BRONZE_ID).inspect.files()
     rows = []
     for path, partition, count, size, metrics in zip(
@@ -101,7 +116,8 @@ def prepare(namespace: str, row_budget: int) -> dict:
     return {"vars": {"eurostat_batch": [[r["dataset_id"], r["raw_sha256"]] for r in batch],
                      "eurostat_superseded": [list(k) for k in superseded]},
             "summary": {"datasets_current": len(current), "batch_datasets": len(batch), "batch_rows": total,
-                        "superseded": len(superseded), "remaining_after_batch": remaining}}
+                        "superseded": len(superseded), "remaining_after_batch": remaining,
+                        "dropped_legacy_table": dropped_legacy}}
 
 
 def finish(namespace: str, plan: dict) -> None:
