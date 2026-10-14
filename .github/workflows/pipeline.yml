@@ -70,6 +70,8 @@ env:
   R2_LANDING_BUCKET: ${{ vars.R2_LANDING_BUCKET }}
   R2_LAKEHOUSE_BUCKET: ${{ vars.R2_LAKEHOUSE_BUCKET }}
   GUS_BDL_API_KEY: ${{ secrets.GUS_BDL_API_KEY }}
+  GUS_BDL_WEB_EMAIL: ${{ secrets.GUS_BDL_WEB_EMAIL }}
+  GUS_BDL_WEB_PASSWORD: ${{ secrets.GUS_BDL_WEB_PASSWORD }}
 
 jobs:
   scheduler:

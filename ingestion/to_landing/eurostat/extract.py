@@ -455,9 +455,8 @@ def fetch(
                         raise Failed("not_gzip", "non-gzip body larger than a control envelope")
                     if max_bytes is not None and size > max_bytes:
                         raise Failed("too_large", f"body exceeds {max_bytes} bytes")
-                    if size % (64 * CHUNK) < len(chunk):
-                        if shutil.disk_usage(dest.parent).free < MIN_FREE_DISK // 2:
-                            raise Failed("runner_disk_low", "free disk fell below 1 GiB")
+                    if size % (64 * CHUNK) < len(chunk) and shutil.disk_usage(dest.parent).free < MIN_FREE_DISK // 2:
+                        raise Failed("runner_disk_low", "free disk fell below 1 GiB")
         except (Failed, zlib.error):
             raise
         except Exception as exc:  # ChunkedEncodingError, ProtocolError, read timeout
@@ -485,7 +484,7 @@ def attempt(
             throttles += 1
             ctx.count("throttled_responses")
             if throttles > MAX_THROTTLES:
-                raise Failed("throttled", f"{throttles} consecutive 429/503 responses")
+                raise Failed("throttled", f"{throttles} consecutive 429/503 responses") from exc
             ctx.pacer.throttle(exc.status, exc.retry_after)
             continue
         except (Retryable, zlib.error) as exc:
@@ -493,7 +492,7 @@ def attempt(
             ctx.count("retried_transfers")
             log({"event": "retry", "url": url, "attempt": failures, "detail": str(exc)[:300]})
             if failures >= MAX_ATTEMPTS:
-                raise Failed("transfer_failed", str(exc))
+                raise Failed("transfer_failed", str(exc)) from exc
             time.sleep(min(120.0, RETRY_BASE * 2**failures + random.uniform(0, RETRY_BASE / 2)))
             continue
         if 500 <= result.status < 600:
@@ -932,9 +931,9 @@ def verify_landing(r2: R2, patterns: list[str]) -> dict:
         "result": tally,
         "orphan_data_objects": len(orphans),
         "orphan_examples": orphans[:10],
-        "problems": [{"receipt": k, "result": o} for k, o in zip(receipts, outcomes) if o not in ("ok", "archived")][
-            :20
-        ],
+        "problems": [
+            {"receipt": k, "result": o} for k, o in zip(receipts, outcomes, strict=False) if o not in ("ok", "archived")
+        ][:20],
     }
 
 
