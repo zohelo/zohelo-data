@@ -2,8 +2,10 @@
 
 The run filter becomes dbt's --select (e.g. "silver.nbp" or "nbp_fx_rates+"); empty
 builds everything. When the Eurostat Silver model is selected, warehouse/eurostat_batch.py
-plans its batch first (passed as dbt vars) and records it after the model ran. Target prod writes to the silver/gold namespaces; results (models,
-tests, failures) are published as an annotation.
+plans its batch first (passed as dbt vars) and records it after the model ran. A run that
+selects only the Eurostat Silver models repeats batches while Silver is incomplete and the
+time budget allows (LOOP_MINUTES). Target prod writes to the silver/gold namespaces;
+results (models, tests, failures) are published as an annotation per build.
 """
 from __future__ import annotations
 
@@ -11,17 +13,36 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import time
 
 from ingestion.common.report import annotate, step_summary
 from warehouse import eurostat_batch
 
 PROJECT = Path(__file__).resolve().parent
-ROW_BUDGET = 1_500_000_000   # Bronze rows per Eurostat Silver batch (395M took 7 min on a runner)
+ROW_BUDGET = 1_500_000_000   # Bronze rows per Eurostat Silver batch (~390M rows took 7–13 min on a runner)
+LOOP_MINUTES = 140           # Eurostat-only runs: start no new batch after this (job timeout 180)
+LOOP_BUILDS = 8              # at most 8 builds per run (GitHub shows 10 annotations per step)
+EUROSTAT_ONLY = {"eurostat_dataset_versions", "eurostat_observations"}
 
 
 def main(select: str = "", target: str = "prod", variables: dict | None = None) -> int:
-    command = ["dbt", "build", "--target", target, "--project-dir", str(PROJECT), "--profiles-dir", str(PROJECT)]
     selectors = [s.strip() for s in select.replace(",", " ").split() if s.strip()]
+    if not selectors or not set(selectors) <= EUROSTAT_ONLY:
+        return build_once(selectors, target, variables)[0]
+    started, longest = time.monotonic(), 0.0
+    for _ in range(LOOP_BUILDS):
+        began = time.monotonic()
+        code, remaining = build_once(selectors, target, variables)
+        longest = max(longest, time.monotonic() - began)
+        elapsed = time.monotonic() - started
+        if code != 0 or not remaining or elapsed + 1.3 * longest > LOOP_MINUTES * 60:
+            return code
+    return code
+
+
+def build_once(selectors: list[str], target: str, variables: dict | None) -> tuple[int, int]:
+    """One dbt build; returns (exit code, Eurostat versions still to load after it)."""
+    command = ["dbt", "build", "--target", target, "--project-dir", str(PROJECT), "--profiles-dir", str(PROJECT)]
     if selectors:
         command += ["--select", *selectors]
     variables = dict(variables or {})
@@ -56,4 +77,4 @@ def main(select: str = "", target: str = "prod", variables: dict | None = None) 
         summary["catalog"] = catalog.publish()
     annotate("notice" if completed.returncode == 0 else "error", "warehouse dbt build", summary)
     step_summary(f"## warehouse · dbt build\n\n```json\n{json.dumps(summary, indent=2)}\n```\n")
-    return completed.returncode
+    return completed.returncode, (plan["summary"]["remaining_after_batch"] if plan else 0)
