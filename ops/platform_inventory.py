@@ -55,9 +55,9 @@ def tables(cat) -> dict[str, dict[str, Any]]:
             table = cat.load_table(identifier)
             snapshot = table.current_snapshot()
             summary = snapshot.summary if snapshot is not None and snapshot.summary is not None else {}
-            out[name] = {"rows": int(summary.get("total-records", 0)),
-                         "files": int(summary.get("total-data-files", 0)),
-                         "bytes": int(summary.get("total-files-size", 0)),
+            out[name] = {"rows": int(summary.get("total-records") or 0),
+                         "files": int(summary.get("total-data-files") or 0),
+                         "bytes": int(summary.get("total-files-size") or 0),
                          "snapshots": len(table.metadata.snapshots)}
     return out
 
