@@ -170,9 +170,19 @@ sources:
   schema: bronze
   meta:
     landing: 01_landing/world_bank_wdi/
-    loaded_by: retired code (ingestion/legacy/)
+    loaded_by: ingestion/to_bronze/world_bank_wdi/ (wdi_data … wdi_series_time by retired code)
     config: ingestion/sources/world_bank_wdi.yaml
   tables:
+  - name: wdi_bulk_observations
+    description: >-
+      WDI observation file of the newest bulk archive, one row per country × indicator × year
+      with a value (empty cells are not stored), values as text, partitioned by entity (WDI_CSV).
+  - name: wdi_bulk_metadata
+    description: >-
+      Every other WDI member (country, series, country-series, series-time, footnote) as
+      field/value rows: member file, source row number, field, value text.
+  - name: wdi_rejected_files
+    description: WDI Landing archives the Bronze decoder rejected, with the reason.
   - name: wdi_data
   - name: wdi_country
   - name: wdi_series

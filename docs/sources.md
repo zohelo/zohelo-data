@@ -53,6 +53,13 @@ normative member manifest, so enumerate and retain every ZIP member. In particul
 identify the observation file and country, series, country-series, series-time,
 and footnote metadata by their headers; do not silently accept a data-only archive.
 
+**Implemented:** `ingestion/to_landing/world_bank_wdi/` lands the stable-URL archive as
+entity `WDI_CSV` (version = Last-Modified; written only when the SHA-256 changed, after
+the ZIP CRC check); Bronze `bronze.wdi_bulk_observations` (long: country × indicator ×
+year with a value) and `bronze.wdi_bulk_metadata` (other members as field/value rows,
+members identified by header). The legacy content-addressed objects stay until the new
+Bronze is verified.
+
 The catalogue marks this WDI dataset Public and [Creative Commons Attribution 4.0](https://datacatalog.worldbank.org/public-licenses?fragment=cc).
 CC BY 4.0 permits sharing and adaptation, including commercial use, with attribution
 and an indication of changes. No WDI-specific geography restriction was found.
