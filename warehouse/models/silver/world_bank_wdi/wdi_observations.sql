@@ -4,6 +4,7 @@ with newest as (
     select * from {{ source('world_bank_wdi', 'wdi_bulk_observations') }}
     where source_version = (select max(source_version) from {{ source('world_bank_wdi', 'wdi_bulk_observations') }})
 )
+
 select
     country_code as economy_code,
     indicator_code,
