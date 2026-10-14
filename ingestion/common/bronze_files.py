@@ -18,26 +18,36 @@ from typing import Any
 
 import botocore.exceptions
 import pyarrow as pa
-from pyiceberg.exceptions import NoSuchTableError
+from pyiceberg.exceptions import NamespaceAlreadyExistsError, NoSuchTableError
 from pyiceberg.io.pyarrow import parquet_file_to_data_file
 from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import Schema
 from pyiceberg.transforms import IdentityTransform
-from pyiceberg.types import BinaryType, LongType, NestedField, StringType, TimestamptzType
+from pyiceberg.types import BinaryType, IntegerType, LongType, NestedField, StringType, TimestamptzType
 import requests
 
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 RETRY_DELAYS = (2, 5, 10, 20, 40)
-TYPES = {"VARCHAR": StringType(), "BIGINT": LongType(), "TIMESTAMPTZ": TimestamptzType(), "BLOB": BinaryType()}
+TYPES = {"VARCHAR": StringType(), "BIGINT": LongType(), "INTEGER": IntegerType(),
+         "TIMESTAMPTZ": TimestamptzType(), "BLOB": BinaryType()}
 THROTTLED = {"ServiceUnavailable", "SlowDown", "InternalError", "RequestTimeout", "TooManyRequests", "503", "500"}
-REJECTED_SCHEMA = Schema(
-    NestedField(1, "entity", StringType(), required=False),
-    NestedField(2, "raw_sha256", StringType(), required=False),
-    NestedField(3, "landing_key", StringType(), required=False),
-    NestedField(4, "error", StringType(), required=False),
-    NestedField(5, "recorded_at", TimestamptzType(), required=False),
-    NestedField(6, "code_sha", StringType(), required=False),
-)
+
+
+def rejected_schema(entity_column: str = "entity") -> Schema:
+    """Rejected-files table schema. New tables use ``entity``; the Eurostat and BDL tables
+    were created with ``dataset_id`` in that position and keep it (same meaning: the
+    Landing entity — dataset code or subgroup id)."""
+    return Schema(
+        NestedField(1, entity_column, StringType(), required=False),
+        NestedField(2, "raw_sha256", StringType(), required=False),
+        NestedField(3, "landing_key", StringType(), required=False),
+        NestedField(4, "error", StringType(), required=False),
+        NestedField(5, "recorded_at", TimestamptzType(), required=False),
+        NestedField(6, "code_sha", StringType(), required=False),
+    )
+
+
+REJECTED_SCHEMA = rejected_schema()
 
 
 def transient(exc: Exception | None) -> bool:
@@ -74,7 +84,7 @@ def ensure_table(cat, table_id: tuple[str, str], columns: list[tuple[str, str]],
     except NoSuchTableError:
         try:
             cat.create_namespace(table_id[0])
-        except Exception:
+        except NamespaceAlreadyExistsError:
             pass
         schema = Schema(*[NestedField(i, name, TYPES[kind], required=False)
                           for i, (name, kind) in enumerate(columns, start=1)])
@@ -90,11 +100,12 @@ def ensure_table(cat, table_id: tuple[str, str], columns: list[tuple[str, str]],
     return table
 
 
-def rejected_table(cat, table_id: tuple[str, str]):
+def rejected_table(cat, table_id: tuple[str, str], entity_column: str = "entity"):
+    """Load the rejected-files table, creating it if absent."""
     try:
         return cat.load_table(table_id)
     except NoSuchTableError:
-        return cat.create_table(table_id, schema=REJECTED_SCHEMA)
+        return cat.create_table(table_id, schema=rejected_schema(entity_column))
 
 
 def loaded_hashes(table) -> set[str]:
@@ -115,21 +126,52 @@ def rejected_hashes(cat, table_id: tuple[str, str]) -> set[str]:
     return set(table.scan(selected_fields=("raw_sha256",)).to_arrow().column("raw_sha256").to_pylist())
 
 
+def _missing(exc: botocore.exceptions.ClientError) -> bool:
+    return str(exc.response.get("Error", {}).get("Code", "")) in {"404", "NoSuchKey", "NotFound"}
+
+
 def upload(client, bucket: str, key: str, path: Path, raw_sha256: str) -> str:
-    """Upload once; an existing object must be byte-identical (same SHA-256 metadata)."""
+    """Upload once and verify; an existing object must be byte-identical (same SHA-256 metadata).
+
+    An existing object with other bytes is an unregistered leftover of a failed run and is
+    replaced. Any error other than "not found" is raised, never treated as absent.
+    """
     digest = sha256(path.read_bytes()).hexdigest()
     try:
         head = client.head_object(Bucket=bucket, Key=key)
-        if (head.get("Metadata") or {}).get("sha256") != digest:
-            client.delete_object(Bucket=bucket, Key=key)    # unregistered leftover of a failed run
-            raise FileNotFoundError
-    except Exception:
-        client.upload_file(str(path), bucket, key, ExtraArgs={
-            "ContentType": "application/vnd.apache.parquet",
-            "Metadata": {"sha256": digest, "raw-sha256": raw_sha256}})
-        if (client.head_object(Bucket=bucket, Key=key).get("Metadata") or {}).get("sha256") != digest:
-            raise RuntimeError(f"Bronze upload verification failed: {key}")
+        if (head.get("Metadata") or {}).get("sha256") == digest:
+            return f"s3://{bucket}/{key}"
+        client.delete_object(Bucket=bucket, Key=key)
+    except botocore.exceptions.ClientError as exc:
+        if not _missing(exc):
+            raise
+    client.upload_file(str(path), bucket, key, ExtraArgs={
+        "ContentType": "application/vnd.apache.parquet",
+        "Metadata": {"sha256": digest, "raw-sha256": raw_sha256}})
+    if (client.head_object(Bucket=bucket, Key=key).get("Metadata") or {}).get("sha256") != digest:
+        raise RuntimeError(f"Bronze upload verification failed: {key}")
     return f"s3://{bucket}/{key}"
+
+
+def download(client, bucket: str, source: str, key: str, raw_sha256: str, size: int | None,
+             destination: Path) -> None:
+    """The Landing file's exact bytes, from Landing or, once moved, from the Archive;
+    size (when known) and SHA-256 are verified against the receipt."""
+    from ingestion.common.r2 import archive_key, raw_chunks
+    try:
+        client.head_object(Bucket=bucket, Key=key)
+    except botocore.exceptions.ClientError as exc:
+        if not _missing(exc):
+            raise
+        key = archive_key(source, raw_sha256, key)
+    digest, written = sha256(), 0
+    with destination.open("xb") as handle:
+        for block in raw_chunks(client, bucket, key):
+            written += len(block)
+            digest.update(block)
+            handle.write(block)
+    if (size is not None and written != size) or digest.hexdigest() != raw_sha256:
+        raise RuntimeError(f"{source} raw bytes do not match their receipt: {key}")
 
 
 def commit(cat, table_id: tuple[str, str], uris: list[str], stats_columns: list[str], operation: str) -> None:
@@ -155,12 +197,16 @@ def commit(cat, table_id: tuple[str, str], uris: list[str], stats_columns: list[
             time.sleep(RETRY_DELAYS[attempt])
 
 
-def record_rejections(cat, table_id: tuple[str, str], rejected: list[dict[str, Any]]) -> None:
+def record_rejections(cat, table_id: tuple[str, str], rejected: list[dict[str, Any]],
+                      entity_column: str = "entity") -> None:
+    """Append decoder rejections (dicts with entity, raw_sha256, landing_key, error)."""
     if not rejected:
         return
     now = datetime.now(timezone.utc)
-    rows = [{**r, "recorded_at": r.get("recorded_at") or now} for r in rejected]
-    rejected_table(cat, table_id).append(pa.Table.from_pylist(rows, schema=REJECTED_SCHEMA.as_arrow()))
+    rows = [{**{k: v for k, v in r.items() if k != "entity"}, entity_column: r.get("entity", r.get(entity_column)),
+             "recorded_at": r.get("recorded_at") or now} for r in rejected]
+    schema = rejected_schema(entity_column)
+    rejected_table(cat, table_id, entity_column).append(pa.Table.from_pylist(rows, schema=schema.as_arrow()))
 
 
 def source_tables() -> dict[str, tuple[list[tuple[str, str]], list[tuple[str, str]]]]:

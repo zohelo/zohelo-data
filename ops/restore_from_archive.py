@@ -18,6 +18,8 @@ import hashlib
 import json
 import tempfile
 
+from botocore.exceptions import ClientError
+
 from ingestion.common.r2 import archive_key, raw_chunks, req, s3
 from ingestion.common.report import annotate
 
@@ -57,8 +59,10 @@ def main(argv=None) -> int:
     def restore(item: dict) -> str:
         try:
             head = client.head_object(Bucket=bucket, Key=item["archive"])
-        except Exception:
-            return "not_in_archive"
+        except ClientError as exc:
+            if str(exc.response.get("Error", {}).get("Code")) in ("404", "NoSuchKey", "NotFound"):
+                return "not_in_archive"
+            raise
         if item["archive"].endswith(".bin") and int(head["ContentLength"]) != int(item["size"]):
             return "archive_size_mismatch"
         if not args.apply:

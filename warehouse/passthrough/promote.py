@@ -17,6 +17,7 @@ from urllib.parse import urlsplit
 
 import boto3
 from botocore.config import Config
+from botocore.exceptions import ClientError
 from pyiceberg.catalog.rest import RestCatalog
 from pyiceberg.exceptions import NamespaceAlreadyExistsError, NoSuchTableError, TableAlreadyExistsError, TooManyRequestsError
 from pyiceberg.manifest import DataFile, DataFileContent, FileFormat
@@ -89,8 +90,9 @@ def ensure_ns(cat,ns):
         if any(tuple(item)==(ns,) for item in cat.list_namespaces()):
             _NAMESPACE_CACHE.add(ns)
             return
-    except Exception:
-        pass
+    except Exception as exc:   # the listing is only a shortcut; creation below decides
+        print(json.dumps({"result":"warning","operation":"list_namespaces",
+                          "error":f"{type(exc).__name__}: {exc}"[:300]}),flush=True)
     for attempt in range(1,6):
         try:
             cat.create_namespace(ns)
@@ -124,7 +126,8 @@ def copy_one(client,bucket,src,dst,size):
     try:
         h=client.head_object(Bucket=bucket,Key=dst)
         if int(h["ContentLength"])==size: return
-    except Exception: pass
+    except ClientError as exc:
+        if str(exc.response.get("Error",{}).get("Code")) not in ("404","NoSuchKey","NotFound"): raise
     client.copy_object(Bucket=bucket,Key=dst,CopySource={"Bucket":bucket,"Key":src})
     h=client.head_object(Bucket=bucket,Key=dst)
     if int(h["ContentLength"])!=size: raise RuntimeError(f"copy size mismatch {dst}")
