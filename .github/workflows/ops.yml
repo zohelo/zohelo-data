@@ -61,7 +61,9 @@ jobs:
           app-id: ${{ vars.PROJECT_APP_ID || secrets.PROJECT_APP_ID }}
           private-key: ${{ secrets.PROJECT_APP_KEY }}
           owner: ${{ github.repository_owner }}
-          permission-organization-projects: read  # inspect only; raised when write modes arrive
+          # write only for the modes that change the board
+          permission-organization-projects: ${{ startsWith(inputs.args, 'status') && 'write' || 'read' }}
+          permission-issues: read  # the Work log comment published as a status update
       - name: "ops/${{ inputs.script }}.py"
         env:
           GH_PROJECT_TOKEN: ${{ steps.project.outputs.token }}
