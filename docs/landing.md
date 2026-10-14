@@ -96,7 +96,7 @@ The pattern names are the register's `access.kind` values (one vocabulary):
 | `api` | REST/JSON, XML or SDMX API; the full load is a set of requests split by entity, page or period | NBP, GUS BDL API, GUS DBW; SDMX sources (OECD, ECB, IMF) as an `api` sub-type `sdmx` |
 | `web` | no machine route: a polite browser session (one route, no rotation) that asks the site for an export | GUS BDL website export |
 
-### Shared engine (`ingestion/common/landing.py`)
+### Shared engine (`ingestion/to_landing/patterns/`)
 
 - Polite HTTP: user agent, timeouts, retries with backoff, and the source's quota
   windows (per second and longer windows, e.g. BDL 100/15 min, 1,000/12 h), declared
@@ -135,7 +135,7 @@ extraction:
       - entity: WDI_CSV
         url: https://databank.worldbank.org/data/download/WDI_CSV.zip
         format: zip
-        version: last_modified       # last_modified | etag | content_sha | hook
+        version: last_modified       # last_modified | ingested (download time); later: etag, hook
 ```
 
 ```yaml

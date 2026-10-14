@@ -60,7 +60,8 @@ normative member manifest, so enumerate and retain every ZIP member. In particul
 identify the observation file and country, series, country-series, series-time,
 and footnote metadata by their headers; do not silently accept a data-only archive.
 
-**Implemented:** `ingestion/to_landing/world_bank_wdi/` lands the stable-URL archive as
+**Implemented:** the shared `bulk_file` pattern (`ingestion/to_landing/patterns/`,
+declared in `world_bank_wdi.yaml`) lands the stable-URL archive as
 entity `WDI_CSV` (version = Last-Modified; written only when the SHA-256 changed, after
 the ZIP CRC check); Bronze `bronze.wdi_bulk_observations` (long: country × indicator ×
 year with a value) and `bronze.wdi_bulk_metadata` (other members as field/value rows,

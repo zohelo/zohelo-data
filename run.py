@@ -7,7 +7,8 @@
 
 A run is an ordered list of activities (RUNS). An activity is allowed only when it is
 implemented and authorized:
-  implemented  ingestion/to_landing/<source>/__init__.py (landing.inspect/extract/verify)
+  implemented  ingestion/to_landing/<source>/__init__.py (landing.inspect/extract/verify), or the
+               shared pattern named by extraction.kind (bulk_file: ingestion/to_landing/patterns/)
                ingestion/to_bronze/<source>/__init__.py (bronze.*, landing.archive)
                PLATFORM_ACTIVITIES below (silver_gold.promote/build, serving.refresh_index)
   authorized   ingestion/sources/<source>.yaml "activities";
@@ -133,7 +134,8 @@ SOURCE_KEYS = {
     "legacy_tables",
     "activities",
 }
-EXTRACTION_KEYS = {"initial", "production", "incremental_policy", "schedule"}
+EXTRACTION_KEYS = {"initial", "production", "incremental_policy", "schedule", "kind", "bulk_file"}
+KINDS = {"bulk_file"}  # implemented shared patterns (docs/landing.md, common ingestion framework)
 
 
 def config_problems(config: dict) -> list[str]:
@@ -149,6 +151,18 @@ def config_problems(config: dict) -> list[str]:
             problems.append(f"{source}: missing keys {sorted(missing)}")
         if cfg.get("source_system") != source:
             problems.append(f"{source}: source_system must equal the file name")
+        kind = (cfg.get("extraction") or {}).get("kind")
+        if kind is not None and kind not in KINDS:
+            problems.append(f"{source}: extraction.kind {kind!r} is not an implemented pattern {sorted(KINDS)}")
+        if kind == "bulk_file":
+            files = ((cfg["extraction"].get("bulk_file") or {}).get("files")) or []
+            if not files or any(not {"entity", "url"} <= set(f) for f in files):
+                problems.append(f"{source}: extraction.bulk_file.files needs entity and url for every file")
+            for f in files:
+                if f.get("format", "raw") not in {"zip", "gzip", "raw"}:
+                    problems.append(f"{source}: {f.get('entity')}: format must be zip, gzip or raw")
+                if f.get("version", "last_modified") not in {"last_modified", "ingested"}:
+                    problems.append(f"{source}: {f.get('entity')}: version must be last_modified or ingested")
         if set(cfg.get("extraction") or {}) - EXTRACTION_KEYS:
             problems.append(f"{source}: unknown extraction keys {sorted(set(cfg['extraction']) - EXTRACTION_KEYS)}")
         for layer in ("bronze", "silver", "gold"):
@@ -168,6 +182,16 @@ def implemented(source: str) -> dict:
     if source == "platform":
         return PLATFORM_ACTIVITIES
     code = {}
+    kind = ((yaml.safe_load((SOURCES / f"{source}.yaml").read_text()) or {}).get("extraction") or {}).get("kind")
+    if kind == "bulk_file":  # common ingestion framework (docs/landing.md): no source package needed
+        from ingestion.to_landing.patterns import bulk_file
+
+        code.update(
+            {
+                f"landing.{name}": (lambda p, mode=mode: bulk_file.main(source, mode))
+                for name, mode in (("inspect", "inspect"), ("extract", "load"), ("verify", "verify"))
+            }
+        )
     for package in ("ingestion.to_landing", "ingestion.to_bronze"):
         try:
             module = importlib.import_module(f"{package}.{source}")

@@ -32,7 +32,7 @@ import duckdb
 from ingestion.common import bronze_files as bf
 from ingestion.common.r2 import archive_key, catalog, raw_chunks, req, s3
 from ingestion.common.report import annotate, step_summary
-from ingestion.to_landing.world_bank_wdi.extract import landed
+from ingestion.to_landing.patterns import bulk_file
 
 OBS_ID = ("bronze", "wdi_bulk_observations")
 META_ID = ("bronze", "wdi_bulk_metadata")
@@ -135,7 +135,7 @@ def load(budget_minutes: float) -> int:
     for table_id, columns in ((OBS_ID, OBS_COLUMNS), (META_ID, META_COLUMNS)):
         bf.retry(lambda t=table_id, c=columns: bf.ensure_table(cat, t, c, "entity"), "table")
     done = bf.loaded_hashes(cat.load_table(OBS_ID)) | bf.rejected_hashes(cat, REJECTED_ID)
-    held = landed(client, landing_bucket)
+    held = bulk_file.landed(client, landing_bucket, bulk_file.prefix("world_bank_wdi", "WDI_CSV"))
     totals: dict[str, Any] = {"candidates": 0, "appended_files": 0, "rejected": 0}
     if held and held[-1]["sha256"] not in done:
         receipt = held[-1]

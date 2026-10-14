@@ -25,7 +25,7 @@ import duckdb
 from ingestion.common import bronze_files as bf
 from ingestion.common.r2 import archive_key, catalog, raw_chunks, req, s3
 from ingestion.common.report import annotate, step_summary
-from ingestion.to_landing.gugik_prg.extract import landed
+from ingestion.to_landing.patterns import bulk_file
 
 TABLE_ID = ("bronze", "prg_boundaries")
 REJECTED_ID = ("bronze", "prg_rejected_files")
@@ -129,7 +129,7 @@ def load(budget_minutes: float) -> int:
     lake, landing_bucket = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
     bf.retry(lambda: bf.ensure_table(cat, TABLE_ID, COLUMNS, "entity"), "load_table")
     done = bf.loaded_hashes(cat.load_table(TABLE_ID)) | bf.rejected_hashes(cat, REJECTED_ID)
-    held = landed(client, landing_bucket)
+    held = bulk_file.landed(client, landing_bucket, bulk_file.prefix("gugik_prg", "jednostki_administracyjne"))
     totals: dict[str, Any] = {"candidates": 0, "appended_files": 0, "rejected": 0}
     if held and held[-1]["sha256"] not in done:
         receipt = held[-1]
