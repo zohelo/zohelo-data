@@ -17,6 +17,7 @@ import argparse
 from datetime import UTC, datetime, timedelta
 import json
 import os
+import traceback
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -118,5 +119,14 @@ def main(argv=None) -> int:
     return 0
 
 
+def run(argv=None) -> int:
+    """main() with any failure published as an annotation (nothing silent)."""
+    try:
+        return main(argv)
+    except Exception:
+        annotate("error", "orphan files failed", {"traceback": traceback.format_exc()[-3000:]})
+        raise
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(run())
