@@ -21,7 +21,7 @@ from pathlib import Path
 import re
 
 import pyarrow as pa
-from pyiceberg.exceptions import NoSuchTableError
+from pyiceberg.exceptions import NamespaceAlreadyExistsError, NoSuchTableError
 
 from ingestion.common.r2 import catalog
 
@@ -49,7 +49,7 @@ def _overwrite(cat, table_id: tuple[str, str], rows: pa.Table) -> None:
     except NoSuchTableError:
         try:
             cat.create_namespace(table_id[0])
-        except Exception:
+        except NamespaceAlreadyExistsError:
             pass
         table = cat.create_table(table_id, schema=rows.schema)
     table.overwrite(rows)

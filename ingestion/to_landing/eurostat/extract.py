@@ -40,6 +40,8 @@ import time
 from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 import zlib
 
+import urllib3
+
 from ingestion.to_landing.eurostat.inventory import (
     EUROSTAT_INVENTORY_URL,
     FullSourceAdapterError,
@@ -372,7 +374,7 @@ def fetch(session, url: str, dest: Path, hard_deadline: float, max_bytes: int | 
         if status != 200:
             try:
                 small = response.raw.read(MAX_SMALL_BODY, decode_content=False) or b""
-            except Exception:
+            except (OSError, urllib3.exceptions.HTTPError):   # body unreadable; the status decides
                 small = b""
             return Download(status, current, headers, dest, "", len(small), None, small)
 
