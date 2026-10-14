@@ -8,6 +8,10 @@ zohelo:
       path: ":memory:"
       threads: 4
       schema: main
+      # Large inserts (Eurostat Silver batches) need not keep source order; without it
+      # DuckDB streams instead of buffering to its temp directory.
+      settings:
+        preserve_insertion_order: false
       # Iceberg tables cannot be renamed inside the transaction that created them,
       # and dbt's table materialization builds under a temporary name, then renames.
       disable_transactions: true

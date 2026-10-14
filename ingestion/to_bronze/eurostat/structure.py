@@ -3,7 +3,8 @@
 Landing ``metadata`` holds SDMX 2.1 structure messages (``source_kind``
 eurostat_structure_sdmx, ``*.structure.xml``): the bulk messages of all dataflows, data
 structures, code lists and concept schemes (entities ESTAT_ALL_*, to_landing/eurostat/
-structure.py), and legacy per-dataset messages with all descendants. ``dataset_id`` is
+structure.py), and legacy per-dataset messages with all descendants (not loaded: the
+bulk messages supersede them). ``dataset_id`` is
 the Landing entity (dataset code or ESTAT_ALL_*); ``artefact_id`` identifies the
 artefact. One Bronze row per artefact or item, as published:
 
@@ -41,6 +42,7 @@ from ingestion.common.r2 import archive_key, catalog, get_with_backoff, raw_chun
 
 METADATA = "01_landing/eurostat/snapshot/metadata/"
 TABLE_ID = ("bronze", "eurostat_structure_items")
+BULK_PREFIX = "ESTAT_ALL_"
 REJECTED_ID = ("bronze", "eurostat_structure_rejected_files")
 COLUMNS = [("dataset_id", "VARCHAR"), ("artefact", "VARCHAR"), ("agency_id", "VARCHAR"),
            ("artefact_id", "VARCHAR"), ("artefact_version", "VARCHAR"), ("item_id", "VARCHAR"),
@@ -158,7 +160,10 @@ def load(budget_minutes: float = 120) -> dict[str, Any]:
         keys += [o["Key"] for o in page.get("Contents", []) if o["Key"].endswith(".receipt.json")]
     with ThreadPoolExecutor(max_workers=16) as pool:
         receipts = list(pool.map(lambda k: json.loads(get_with_backoff(client, landing, k)), keys))
-    todo = [r for r in receipts if r.get("source_kind") == "eurostat_structure_sdmx" and r["sha256"] not in done]
+    # Only the bulk messages: the legacy per-dataset messages repeat the same artefacts
+    # (15 GB, half the datasets) and are superseded by them.
+    todo = [r for r in receipts if r.get("source_kind") == "eurostat_structure_sdmx"
+            and str(r.get("dataset_code", "")).startswith(BULK_PREFIX) and r["sha256"] not in done]
 
     def fetch(receipt: dict[str, Any]) -> tuple[dict[str, Any], bytes]:
         key = receipt["object"]["key"]
@@ -174,8 +179,8 @@ def load(budget_minutes: float = 120) -> dict[str, Any]:
     uris, rejected, count, files, stopped = [], [], 0, 0, False
     with tempfile.TemporaryDirectory(prefix="zohelo-eurostat-structure-") as temporary, \
             ThreadPoolExecutor(max_workers=8) as pool:
-        # Chunks keep at most 32 structure messages (~3.5 MB each) in memory.
-        chunks = (todo[i:i + 32] for i in range(0, len(todo), 32))
+        # One message at a time: the code list message alone is ~175 MB of XML.
+        chunks = ([r] for r in todo)
         for receipt, body in (pair for chunk in chunks for pair in pool.map(fetch, chunk)):
             if (datetime.now(timezone.utc) - started).total_seconds() > budget_minutes * 60:
                 stopped = True
