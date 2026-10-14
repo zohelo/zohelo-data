@@ -130,7 +130,9 @@ def main(argv=None) -> int:
         "unclaimed_tables": unclaimed_tables[:30],
         "unclaimed_landing_folders": unclaimed_landing[:20],
         "legacy_tables": {"count": len(legacy_found), "gb": gb(sum(found[n]["bytes"] for n in legacy_found))},
-        "registered_tables_missing": sorted(n for s in report.values() for l in LAYERS for n in s[l]["missing"])[:30],
+        "registered_tables_missing": sorted(
+            n for s in report.values() for layer in LAYERS for n in s[layer]["missing"]
+        )[:30],
     }
     stored_gb = sum(totals["buckets_gb"].values())
     totals["storage_estimate"] = {
@@ -151,7 +153,10 @@ def main(argv=None) -> int:
                 report[s]["landing"]["latest"][:10],
             ],
             "archive": [report[s]["archive"]["objects"], gb(report[s]["archive"]["bytes"])],
-            **{l: [report[s][l]["tables"], report[s][l]["rows"], report[s][l]["gb"]] for l in LAYERS},
+            **{
+                layer: [report[s][layer]["tables"], report[s][layer]["rows"], report[s][layer]["gb"]]
+                for layer in LAYERS
+            },
         }
         for s in selected
     }
@@ -168,7 +173,8 @@ def main(argv=None) -> int:
     lines = [
         "## Platform inventory",
         "",
-        "| source | Landing files | Landing GB | latest | Archive GB | Bronze rows | Silver rows | Gold rows | activities |",
+        "| source | Landing files | Landing GB | latest | Archive GB "
+        "| Bronze rows | Silver rows | Gold rows | activities |",
         "|---|---:|---:|---|---:|---:|---:|---:|---|",
     ]
     for s in selected:

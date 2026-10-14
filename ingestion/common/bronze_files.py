@@ -9,6 +9,7 @@ checkpoint; decoder rejections go to ``bronze.<source>_rejected_files``.
 
 from __future__ import annotations
 
+import contextlib
 from datetime import UTC, datetime
 from hashlib import sha256
 import json
@@ -95,10 +96,8 @@ def ensure_table(cat, table_id: tuple[str, str], columns: list[tuple[str, str]],
     try:
         table = cat.load_table(table_id)
     except NoSuchTableError:
-        try:
+        with contextlib.suppress(NamespaceAlreadyExistsError):
             cat.create_namespace(table_id[0])
-        except NamespaceAlreadyExistsError:
-            pass
         schema = Schema(
             *[NestedField(i, name, TYPES[kind], required=False) for i, (name, kind) in enumerate(columns, start=1)]
         )
@@ -207,10 +206,12 @@ def commit(cat, table_id: tuple[str, str], uris: list[str], stats_columns: list[
         metadata = table.metadata.model_copy(update={"properties": {**table.metadata.properties, **stats}})
         files = [parquet_file_to_data_file(table.io, metadata, uri) for uri in missing]
         try:
-            with table.transaction() as tx:
-                with tx.update_snapshot(snapshot_properties={"zohelo.operation": operation}).fast_append() as append:
-                    for data_file in files:
-                        append.append_data_file(data_file)
+            with (
+                table.transaction() as tx,
+                tx.update_snapshot(snapshot_properties={"zohelo.operation": operation}).fast_append() as append,
+            ):
+                for data_file in files:
+                    append.append_data_file(data_file)
             return
         except Exception as exc:
             if not transient(exc) or attempt == len(RETRY_DELAYS):
@@ -266,10 +267,8 @@ def proven_hashes(source: str) -> tuple[set[str], set[str]]:
     cat = catalog()
     loaded: set[str] = set()
     for table_id in tables:
-        try:
+        with contextlib.suppress(NoSuchTableError):
             loaded |= loaded_hashes(cat.load_table(table_id))
-        except NoSuchTableError:
-            pass
     rejected: set[str] = set()
     for table_id in rejections:
         rejected |= rejected_hashes(cat, table_id)

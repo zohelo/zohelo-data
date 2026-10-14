@@ -17,6 +17,7 @@ and derived, so they are overwritten.
 
 from __future__ import annotations
 
+import contextlib
 from datetime import UTC, datetime
 from pathlib import Path
 import re
@@ -60,10 +61,8 @@ def _overwrite(cat, table_id: tuple[str, str], rows: pa.Table) -> None:
     try:
         table = cat.load_table(table_id)
     except NoSuchTableError:
-        try:
+        with contextlib.suppress(NamespaceAlreadyExistsError):
             cat.create_namespace(table_id[0])
-        except NamespaceAlreadyExistsError:
-            pass
         table = cat.create_table(table_id, schema=rows.schema)
     table.overwrite(rows)
 
@@ -103,6 +102,7 @@ def prepare(namespace: str, row_budget: int) -> dict:
         files.column("record_count").to_pylist(),
         files.column("file_size_in_bytes").to_pylist(),
         files.column("readable_metrics").to_pylist(),
+        strict=False,
     ):
         sha = Path(path).stem
         if not SHA_RE.fullmatch(sha):

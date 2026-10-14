@@ -68,7 +68,7 @@ def sql(query: str) -> list[dict[str, Any]]:
         if isinstance(value, dict):
             columns, rows = value.get("columns"), value.get("rows")
             if isinstance(columns, list) and isinstance(rows, list):
-                return [dict(zip(columns, row)) for row in rows]
+                return [dict(zip(columns, row, strict=False)) for row in rows]
         rows = candidate.get("rows")
         if isinstance(rows, list) and (not rows or isinstance(rows[0], dict)):
             return rows
@@ -181,7 +181,8 @@ def landing_objects(client, bucket: str, source: str) -> dict[str, dict[str, Any
         if held is not None and int(held["size"]) != size:
             raise RuntimeError(f"same SHA-256 with different sizes in Landing: {digest}")
         # Identical bytes can sit under several entities or versions; keep every snapshot path.
-        paths = (held or {}).get("snapshot_paths", []) + [
+        paths = [
+            *(held or {}).get("snapshot_paths", []),
             {
                 "key": data_key,
                 "area": area,
@@ -190,7 +191,7 @@ def landing_objects(client, bucket: str, source: str) -> dict[str, dict[str, Any
                 "ingested": ingested,
                 "present": present,
                 "receipt": receipt_key,
-            }
+            },
         ]
         result[digest] = {
             "key": data_key if present or held is None else held["key"],

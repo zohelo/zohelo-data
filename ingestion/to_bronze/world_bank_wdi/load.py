@@ -38,26 +38,25 @@ OBS_ID = ("bronze", "wdi_bulk_observations")
 META_ID = ("bronze", "wdi_bulk_metadata")
 REJECTED_ID = ("bronze", "wdi_rejected_files")
 PROVENANCE = [("raw_sha256", "VARCHAR"), ("source_version", "VARCHAR"), ("ingested_at", "TIMESTAMPTZ")]
-OBS_COLUMNS = (
-    [
-        ("entity", "VARCHAR"),
-        ("country_name", "VARCHAR"),
-        ("country_code", "VARCHAR"),
-        ("indicator_name", "VARCHAR"),
-        ("indicator_code", "VARCHAR"),
-        ("year", "VARCHAR"),
-        ("value_text", "VARCHAR"),
-    ]
-    + PROVENANCE
-    + [("source_row_number", "BIGINT")]
-)
+OBS_COLUMNS = [
+    ("entity", "VARCHAR"),
+    ("country_name", "VARCHAR"),
+    ("country_code", "VARCHAR"),
+    ("indicator_name", "VARCHAR"),
+    ("indicator_code", "VARCHAR"),
+    ("year", "VARCHAR"),
+    ("value_text", "VARCHAR"),
+    *PROVENANCE,
+    ("source_row_number", "BIGINT"),
+]
 META_COLUMNS = [
     ("entity", "VARCHAR"),
     ("member", "VARCHAR"),
     ("source_row_number", "BIGINT"),
     ("field", "VARCHAR"),
     ("value_text", "VARCHAR"),
-] + PROVENANCE
+    *PROVENANCE,
+]
 OBS_HEADER = ["Country Name", "Country Code", "Indicator Name", "Indicator Code"]
 
 
@@ -111,7 +110,7 @@ def decode(zip_path: Path, receipt: dict[str, Any], workdir: Path) -> tuple[Path
                 reader = csv.reader(handle)
                 header = next(reader)
                 for number, row in enumerate(reader, start=2):
-                    for field, value in zip(header, row):
+                    for field, value in zip(header, row, strict=False):
                         if field and value != "":
                             writer.writerow([path.name, number, field, value])
                             meta_rows += 1
@@ -134,7 +133,7 @@ def load(budget_minutes: float) -> int:
     client, cat = s3(), bf.retry(catalog, "catalog")
     lake, landing_bucket = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
     for table_id, columns in ((OBS_ID, OBS_COLUMNS), (META_ID, META_COLUMNS)):
-        bf.retry(lambda: bf.ensure_table(cat, table_id, columns, "entity"), "table")
+        bf.retry(lambda t=table_id, c=columns: bf.ensure_table(cat, t, c, "entity"), "table")
     done = bf.loaded_hashes(cat.load_table(OBS_ID)) | bf.rejected_hashes(cat, REJECTED_ID)
     held = landed(client, landing_bucket)
     totals: dict[str, Any] = {"candidates": 0, "appended_files": 0, "rejected": 0}
