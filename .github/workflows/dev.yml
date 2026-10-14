@@ -39,24 +39,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version-file: .python-version
       - name: Install
-        run: python -m pip install -r requirements.txt pyflakes
-      - name: Repository rules
-        run: |
-          set -euo pipefail
-          if [ -e dev ]; then echo "dev/ must be deleted before merge" >&2; exit 1; fi
-          workflows=$(ls .github/workflows | sort | tr '\n' ' ')
-          if [ "$workflows" != "deploy-portal.yml dev.yml ops.yml pipeline.yml " ]; then
-            echo "only the four workflows are allowed, found: $workflows" >&2; exit 1
-          fi
-      - name: Compile and lint
-        run: |
-          set -euo pipefail
-          python -m compileall -q ingestion ops run.py portal/publish_index.py warehouse
-          python -m pyflakes $(find ingestion ops warehouse -name '*.py' -not -path 'ingestion/legacy/*') run.py portal/publish_index.py
+        run: python -m pip install -r requirements.txt ruff==0.16.8 yamllint==1.38.0
+      - name: Quality rules (docs/quality.md)
+        env:
+          PYTHONPATH: .
+        run: python -m ops.repo_check
       - name: dbt parse
         env:
           R2_DATA_CATALOG_TOKEN: check
@@ -66,29 +58,19 @@ jobs:
           R2_WAREHOUSE: check
           R2_CATALOG_URI: https://check.invalid
         run: cd warehouse && dbt parse --profiles-dir . --target prod --no-partial-parse
-      - name: Configuration consistency
+      - name: Secret scan (commits of this pull request)
         env:
-          PYTHONPATH: .
+          GITLEAKS_VERSION: 8.26.0
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          python - <<'PY'
-          import pathlib, sys, yaml
-          import run
-          for path in sorted(pathlib.Path(".").rglob("*")):
-              if path.suffix in (".yml", ".yaml") and "node_modules" not in path.parts:
-                  yaml.safe_load(path.read_text())
-          config, problems = run.load_config(), []
-          for source in [*config["sources"], "platform"]:
-              missing = set(run.authorized(config, source)) - set(run.implemented(source))
-              if missing:
-                  problems.append(f"{source}: authorized but not implemented: {sorted(missing)}")
-          for name, activities in run.RUNS.items():
-              unknown = set(activities) - set(run.ORDER)
-              if unknown:
-                  problems.append(f"run {name!r}: unknown activities {sorted(unknown)}")
-          if problems:
-              sys.exit("\n".join(problems))
-          print("configuration ok:", len(config["sources"]), "sources")
-          PY
+          set -euo pipefail
+          url=https://github.com/gitleaks/gitleaks/releases/download/v$GITLEAKS_VERSION
+          file=gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz
+          curl -sSfL -o "$file" "$url/$file"
+          curl -sSfL -o checksums.txt "$url/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep " $file\$" checksums.txt | sha256sum -c -
+          tar -xzf "$file" gitleaks
+          ./gitleaks git --no-banner --redact --log-opts="origin/$BASE_REF..HEAD" .
 
   dev:
     if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
@@ -108,6 +90,8 @@ jobs:
       R2_LANDING_BUCKET: ${{ vars.R2_LANDING_BUCKET }}
       R2_LAKEHOUSE_BUCKET: ${{ vars.R2_LAKEHOUSE_BUCKET }}
       GUS_BDL_API_KEY: ${{ secrets.GUS_BDL_API_KEY }}
+      GUS_BDL_WEB_EMAIL: ${{ secrets.GUS_BDL_WEB_EMAIL }}
+      GUS_BDL_WEB_PASSWORD: ${{ secrets.GUS_BDL_WEB_PASSWORD }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
