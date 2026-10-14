@@ -14,6 +14,7 @@ The version token is the subgroup's lastUpdate from the BDL API.
 
 from __future__ import annotations
 
+import contextlib
 from datetime import UTC, datetime
 from hashlib import sha256
 import json
@@ -98,10 +99,13 @@ def note(page, trace: list, step: str) -> None:
 
 def wait_for_result_table(page) -> None:
     """Until the result table shows its Export control (a table URL alone is not ready)."""
+    from playwright.sync_api import TimeoutError as PlaywrightTimeout
+
     for _ in range(180):
         if "/bdl/errors/" in page.url:
             raise RuntimeError(f"BDL error page: {page.url}")
-        settle(page)
+        with contextlib.suppress(PlaywrightTimeout):  # a long table postback; keep waiting
+            settle(page)
         if page.get_by_text(re.compile(r"^(Eksport|Export)$", re.IGNORECASE)).first.is_visible():
             return
         page.wait_for_timeout(1000)
@@ -174,22 +178,22 @@ def fingerprint(entry: dict[str, Any]) -> str:
     return sha256(json.dumps([entry["text"], entry["row"]]).encode()).hexdigest()
 
 
-def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list) -> tuple[Path, str]:
-    """Request a background package for the current selection and download it when ready."""
-    for _ in range(36):  # earlier packages still generating would be mistaken for ours
+def settled_exports(page) -> set[str]:
+    """Fingerprints of the account's packages once none is still generating."""
+    for _ in range(36):  # a package still generating would later be mistaken for ours
         before = exports(page)
         if all(e["ready"] for e in before):
-            break
+            return {fingerprint(e) for e in before}
         page.wait_for_timeout(5000)
-    else:
-        raise RuntimeError("earlier BDL packages did not finish generating")
-    seen = {fingerprint(e) for e in before}
-    page.goto(subgroup["url"], wait_until="domcontentloaded", timeout=60_000)
-    settle(page)
+    raise RuntimeError("earlier BDL packages did not finish generating")
+
+
+def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list, seen: set[str]) -> tuple[Path, str]:
+    """Request a background package for the current selection and download it when ready.
+
+    The selection lives in the page session, so the export list is read before selecting."""
     button = download_button(page)
-    if button is None:
-        raise RuntimeError("'Pobierz' is not enabled after returning to the subgroup")
-    note(page, trace, f"package requested ({len(before)} earlier packages)")
+    note(page, trace, f"package requested ({len(seen)} earlier packages)")
     with page.expect_response(lambda r: r.request.method == "POST", timeout=360_000) as response_info:
         button.click(no_wait_after=True)
     if not response_info.value.ok:
@@ -217,6 +221,7 @@ def export(page, subgroup: dict[str, Any], workdir: Path, trace: list) -> dict[s
 
     Returns {"status": "downloaded", "path", "export_file_name", "information"} or
     {"status": "too_large" | "no_data", "information"}."""
+    seen = settled_exports(page)
     page.goto(subgroup["url"], wait_until="domcontentloaded", timeout=60_000)
     settle(page)
     note(page, trace, "dimensions page")
@@ -238,7 +243,7 @@ def export(page, subgroup: dict[str, Any], workdir: Path, trace: list) -> dict[s
     # The "Pobierz" (download) control asks the site to generate the whole selection as a
     # package in the background; it appears in the account's export list on /bdl/start.
     if download_button(page) is not None:
-        path, name = generated_export(page, subgroup, workdir, trace)
+        path, name = generated_export(page, subgroup, workdir, trace, seen)
         return {"status": "downloaded", "path": path, "export_file_name": name, "information": information}
     if information > MAX_INFORMATION:
         return {"status": "too_large", "information": information}
