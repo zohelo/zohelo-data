@@ -78,3 +78,72 @@ and then removed from Landing.
   the last `keep_days` (agreed: 1 version + 90 days); older versions and their
   receipts are deleted by `archive.prune`. Delta / append-only sources set no retention
   — their raw is unique and kept. `prune: report` reports only; `delete` applies.
+
+## Common ingestion framework (design, 14 Oct 2026)
+
+Goal: a new standard source needs only `ingestion/sources/<source>.yaml` (and a
+register entry), no new Python. Today every source has its own extractor
+(`ingestion/to_landing/<source>/`, 3,200 lines); WDI and PRG are the same bulk-file
+code twice, and every extractor re-implements listing, receipts and verification.
+
+### Four patterns
+
+| Pattern | When | Examples |
+|---|---|---|
+| `bulk_file` | one or more fixed URLs, each a complete file (ZIP, CSV, XML) | World Bank WDI, GUGiK PRG, GLEIF golden copy, MF white list |
+| `paged_api` | REST/JSON or XML API; the full load is a set of requests split by entity, page or date window | NBP, GUS BDL API, GUS DBW |
+| `sdmx` | SDMX 2.1/3.0 REST: dataflow catalogue, structures, data per dataflow | Eurostat (dissemination API), OECD, ECB, IMF, UNICEF |
+| `web_export` | no machine route: a polite browser session (one route, no rotation) that asks the site for an export | GUS BDL website export, TERYT form |
+
+Shared by all patterns (`ingestion/common/landing.py`): polite HTTP session
+(user agent, timeouts, retries with backoff, per-source rate limit), Landing listing
+(`landed()`), verified upload + receipt (`put_with_receipt()`, same receipt fields
+for every source), `inspect`/`verify` summaries and annotations. Each pattern is one
+module in `ingestion/to_landing/patterns/`; a source package remains only for logic
+that is genuinely source-specific (Eurostat inventory, BDL subgroup selection).
+
+### Declaration (`extraction:` in the source YAML)
+
+```yaml
+extraction:
+  pattern: bulk_file            # bulk_file | paged_api | sdmx | web_export
+  initial: bulk                 # as today
+  production: snapshot
+  incremental_policy: changed_since_last
+  schedule: [...]
+  bulk_file:
+    files:
+      - entity: WDI_CSV
+        url: https://databank.worldbank.org/data/download/WDI_CSV.zip
+        format: zip              # extension and integrity check (zip test, gzip, xml parse)
+        version: last_modified   # last_modified | etag | content_sha | url_date
+  paged_api:
+    base_url: https://api.nbp.pl/api
+    entities: [A, B, C, GOLD]    # or a catalogue request that lists them
+    request: "/exchangerates/tables/{entity}/{start}/{end}/?format=json"
+    split: {kind: date_window, days: 93, start: "2002-01-02"}   # page | offset | cursor | date_window
+    rate: {per_second: 2}
+    version: content_sha
+  sdmx:
+    base_url: https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1
+    agency: ESTAT
+    dataflows: all               # or a list
+    structures: true
+  web_export:
+    module: gus_bdl.web_export   # browser steps stay code; politeness and receipts are shared
+```
+
+The configuration check (`run.py schedule --check`, `ops/repo_check`) validates the
+block per pattern.
+
+### Migration order
+
+1. `bulk_file`: WDI and PRG onto shared code (identical receipts), then GLEIF and
+   MF white list — this also unblocks their declared extraction (`to_be_decided`).
+2. `paged_api`: NBP (date windows), then GUS DBW (rebuild, #304) directly on it.
+3. `sdmx`: new SDMX sources (OECD, ECB, IMF); Eurostat keeps its bulk route.
+4. `web_export`: BDL website export as the first module, then TERYT.
+
+Each step is one PR with a trial showing the new extractor lands byte-identical files
+and equivalent receipts for the migrated source; the old package is deleted in the
+same PR.
