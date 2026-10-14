@@ -6,6 +6,13 @@ description: World Bank World Development Indicators — bulk CSV archive (data 
 # changed. The legacy Landing objects (one content-addressed bulk ZIP + 3,518 API
 # responses) stay until the new Bronze is verified, then retire with the legacy tables.
 extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: WDI_CSV
+        url: https://databank.worldbank.org/data/download/WDI_CSV.zip
+        format: zip
+        version: last_modified     # the response's Last-Modified; download time when absent
   initial: bulk
   production: snapshot                  # each archive is the complete database
   incremental_policy: changed_since_last  # Last-Modified / SHA-256

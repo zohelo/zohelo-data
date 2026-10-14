@@ -5,6 +5,13 @@ description: "GUGiK PRG — national register of boundaries: administrative unit
 # opendata.geoportal.gov.pl (~377 MB, ~7 min). No validators from the server, so every run
 # downloads and writes only when the SHA-256 changed. Free for any purpose (GUGiK).
 extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: jednostki_administracyjne
+        url: https://opendata.geoportal.gov.pl/prg/granice/00_jednostki_administracyjne.zip
+        format: zip
+        version: ingested          # the server sends no validators
   initial: bulk
   production: snapshot                  # the package is the complete register state
   incremental_policy: changed_since_last  # by SHA-256 of the download
