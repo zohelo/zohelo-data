@@ -120,8 +120,10 @@ def main():
         ):
             print(json.dumps({"status":"current","source_run":source_run,"source_files":source_files}))
             return 0
-    except Exception:
-        pass
+    except s3.exceptions.NoSuchKey:
+        pass                                  # first publication: no current index yet
+    except json.JSONDecodeError as exc:
+        print(json.dumps({"status":"warning","current_index":"unreadable","error":str(exc)[:200]}),flush=True)
 
     ids={f"{i:02x}":{} for i in range(256)}
     parents={f"{i:02x}":{} for i in range(256)}
