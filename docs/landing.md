@@ -161,8 +161,11 @@ block per kind.
    MF white list (which also settles their `to_be_decided` extraction).
 2. `api`: NBP, then GUS DBW (rebuild, #304) directly on it; SDMX sources after.
 3. `web`: BDL website export as the first module.
+4. Eurostat stays on its own package for now (largest and most special source); it
+   moves to `bulk_file` + inventory hook once the others run on the framework.
 
 Acceptance per migrated source: old and new extractor run in the same window (or
-against a recorded response) and land byte-identical files under the same keys; core
-receipt fields match; Bronze loads the new receipts. The old package is deleted in the
+against a recorded response) and land byte-identical files under the same prefix and
+key pattern with the same `version_token`; core receipt fields match apart from
+`schema_version` and `ingested_at`; Bronze loads the new receipts. The old package is deleted in the
 same PR. New sources (DBW) are accepted by `landing.verify` plus a Bronze trial.
