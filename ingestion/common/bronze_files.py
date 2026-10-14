@@ -167,7 +167,8 @@ def record_rejections(cat, table_id: tuple[str, str], rejected: list[dict[str, A
 SOURCE_TABLES = {
     "eurostat": ([("bronze", "eurostat_full_observations")], ("bronze", "eurostat_rejected_files")),
     "nbp": ([("bronze", "nbp_observations")], ("bronze", "nbp_rejected_files")),
-    "gus_bdl": ([("bronze", "bdl_subgroup_observations")], ("bronze", "bdl_rejected_files")),
+    "gus_bdl": ([("bronze", "bdl_subgroup_observations"), ("bronze", "bdl_metadata_variables"),
+                 ("bronze", "bdl_metadata_units")], ("bronze", "bdl_rejected_files")),
     "gus_teryt": ([("bronze", "teryt_records")], ("bronze", "teryt_rejected_files")),
     "gugik_prg": ([("bronze", "prg_boundaries")], ("bronze", "prg_rejected_files")),
 }
