@@ -19,7 +19,7 @@ from ingestion.common.report import annotate, step_summary
 from warehouse import eurostat_batch
 
 PROJECT = Path(__file__).resolve().parent
-ROW_BUDGET = 400_000_000     # Bronze rows per Eurostat Silver batch: ~390M took 7–13 min; 638M filled 75 GB of DuckDB temp space
+ROW_BUDGET = 150_000_000     # Bronze rows per Eurostat Silver batch: dbt stages the batch in a temp table (~190 B/row); 400M wide rows filled 75 GB
 LOOP_MINUTES = 140           # Eurostat-only runs: start no new batch after this (job timeout 180)
 LOOP_BUILDS = 8              # at most 8 builds per run (GitHub shows 10 annotations per step)
 EUROSTAT_ONLY = {"eurostat_dataset_versions", "eurostat_observations"}
