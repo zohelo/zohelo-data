@@ -1,0 +1,21 @@
+version: 2
+models:
+  - name: wdi_observations
+    description: WDI observations of the newest bulk archive, one row per economy × indicator × year; value as double plus the source lexeme.
+    columns:
+      - name: economy_code
+        tests: [not_null, {relationships: {arguments: {to: ref('wdi_countries'), field: economy_code}}}]
+      - name: indicator_code
+        tests: [not_null, {relationships: {arguments: {to: ref('wdi_indicators'), field: indicator_code}}}]
+      - name: year
+        tests: [not_null]
+  - name: wdi_countries
+    description: WDI economies (countries and aggregates such as WLD, EUU) with ISO 2-alpha code, region, income group, lending category; is_aggregate when no region.
+    columns:
+      - name: economy_code
+        tests: [not_null, unique]
+  - name: wdi_indicators
+    description: WDI indicators with name, topic, unit, periodicity, definitions, source and licence.
+    columns:
+      - name: indicator_code
+        tests: [not_null, unique]
