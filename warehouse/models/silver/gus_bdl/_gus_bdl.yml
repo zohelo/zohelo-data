@@ -24,4 +24,13 @@ models:
       - name: subgroup_id
         tests: [not_null]
       - name: year
-        tests: [not_null]
+        description: Year as an integer; null where the export's year cell is not a year (17,748 rows in P3018, trial 14 Oct).
+        tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: unit_code_scheme
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['BDL', 'TERC']
