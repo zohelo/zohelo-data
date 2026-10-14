@@ -1,0 +1,27 @@
+version: 2
+models:
+  - name: bdl_variables
+    description: >-
+      BDL variables from the API metadata, newest version per subgroup: variable id, labels
+      n1–n5, dimension_key (the labels as a JSON array, as in the website exports), level,
+      measure unit.
+    columns:
+      - name: variable_id
+        tests: [not_null, unique]
+  - name: bdl_units
+    description: >-
+      BDL territorial units from the API metadata: 12-character unit id (KTS-based), name,
+      parent id, level 0–6 (0 Poland … 6 gmina part), kind.
+    columns:
+      - name: unit_id
+        tests: [not_null, unique]
+  - name: bdl_observations
+    description: >-
+      BDL observations of the newest complete version of each subgroup: unit, year, typed
+      value (decimal comma → point), measure unit, attribute, and the API variable id
+      resolved from subgroup + dimension labels.
+    columns:
+      - name: subgroup_id
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
