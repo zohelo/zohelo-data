@@ -51,8 +51,18 @@ jobs:
           cache-dependency-path: requirements.txt
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
+      # Token of the zohelo-automation GitHub App for the Projects board (ops/project.py).
+      - name: Project token
+        id: project
+        if: inputs.script == 'project'
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        with:
+          app-id: ${{ vars.PROJECT_APP_ID }}
+          private-key: ${{ secrets.PROJECT_APP_KEY }}
+          owner: ${{ github.repository_owner }}
       - name: "ops/${{ inputs.script }}.py"
         env:
+          GH_PROJECT_TOKEN: ${{ steps.project.outputs.token }}
           SCRIPT: ${{ inputs.script }}
           ARGS: ${{ inputs.args }}
         run: |
