@@ -57,9 +57,11 @@ jobs:
         if: inputs.script == 'project'
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
         with:
-          app-id: ${{ vars.PROJECT_APP_ID }}
+          # The App ID may be stored as a variable or a secret; it is not confidential either way.
+          app-id: ${{ vars.PROJECT_APP_ID || secrets.PROJECT_APP_ID }}
           private-key: ${{ secrets.PROJECT_APP_KEY }}
           owner: ${{ github.repository_owner }}
+          permission-organization-projects: read  # inspect only; raised when write modes arrive
       - name: "ops/${{ inputs.script }}.py"
         env:
           GH_PROJECT_TOKEN: ${{ steps.project.outputs.token }}
