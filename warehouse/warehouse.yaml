@@ -19,4 +19,4 @@ eurostat_silver:
   max_versions: 500           # dataset versions per batch (dbt --vars is one argument, ≤128 KB)
   oversized_rows: 700000000   # single files above this are deferred until a sliced load exists
   loop_minutes: 140           # a run selecting only the Eurostat models starts no batch after this
-  loop_builds: 8              # at most this many builds per run
+  loop_builds: 20             # at most this many builds per run (time is the usual limit: ~8 builds took 64 min)
