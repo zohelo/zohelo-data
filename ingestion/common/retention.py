@@ -14,12 +14,13 @@ reported). Everything else is deleted together with the receipts that point to i
 (``prune: delete``); ``prune: report`` only reports. Sources without ``retention`` keep
 everything (delta / append-only raw is never pruned by default).
 """
+
 from __future__ import annotations
 
 import argparse
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 import json
 from typing import Any
 
@@ -29,13 +30,16 @@ from ingestion.common.report import annotate, step_summary
 
 def bronze_hashes(source: str) -> set[str]:
     from ingestion.common.bronze_files import SOURCE_TABLES, proven_hashes
+
     return proven_hashes(source)[0] if source in SOURCE_TABLES else set()
 
 
 def old_receipts(client, bucket: str, source: str) -> dict[str, list[dict[str, Any]]]:
     """Receipts of retired Landing layouts kept in the Archive (05_archive/<s>/landing_receipts_*/)."""
     keys = []
-    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=f"05_archive/{source}/landing_receipts_"):
+    for page in client.get_paginator("list_objects_v2").paginate(
+        Bucket=bucket, Prefix=f"05_archive/{source}/landing_receipts_"
+    ):
         keys += [o["Key"] for o in page.get("Contents", []) if o["Key"].endswith(".json")]
 
     def read(key: str):
@@ -57,12 +61,12 @@ def old_receipts(client, bucket: str, source: str) -> dict[str, list[dict[str, A
 def ingested_time(value: str) -> datetime | None:
     for fmt in ("%Y%m%dT%H%M%SZ",):
         try:
-            return datetime.strptime(value, fmt).replace(tzinfo=timezone.utc)
+            return datetime.strptime(value, fmt).replace(tzinfo=UTC)
         except ValueError:
             pass
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
     except ValueError:
         return None
 
@@ -79,7 +83,7 @@ def main(argv=None) -> int:
     keep_latest, keep_days = int(retention.get("keep_latest", 1)), float(retention.get("keep_days", 90))
     apply = policy.get("prune") == "delete"
     client, bucket = s3(), req("R2_LANDING_BUCKET")
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     meta = landing_objects(client, bucket, args.source)
     stored = archived(client, bucket, args.source)
@@ -142,20 +146,29 @@ def main(argv=None) -> int:
             for receipt in receipts_of.get(digest, []):
                 keys.append(receipt)
         for start in range(0, len(keys), 1000):
-            response = client.delete_objects(Bucket=bucket, Delete={
-                "Objects": [{"Key": k} for k in keys[start:start + 1000]], "Quiet": True})
+            response = client.delete_objects(
+                Bucket=bucket, Delete={"Objects": [{"Key": k} for k in keys[start : start + 1000]], "Quiet": True}
+            )
             if response.get("Errors"):
                 raise RuntimeError(f"delete failed: {response['Errors'][:3]}")
-            deleted_objects += len(keys[start:start + 1000])
-    summary = {"source": args.source, "mode": "delete" if apply else "report",
-               "keep_latest": keep_latest, "keep_days": keep_days,
-               "archive_files": len(stored), "archive_gb": round(sum(o["size"] for o in stored.values()) / 1e9, 2),
-               **reasons, "prune_gb": round(sum(o["size"] for _, o in doomed) / 1e9, 2),
-               "deleted_objects": deleted_objects,
-               "prune_examples": [o["key"] for _, o in doomed[:5]]}
+            deleted_objects += len(keys[start : start + 1000])
+    summary = {
+        "source": args.source,
+        "mode": "delete" if apply else "report",
+        "keep_latest": keep_latest,
+        "keep_days": keep_days,
+        "archive_files": len(stored),
+        "archive_gb": round(sum(o["size"] for o in stored.values()) / 1e9, 2),
+        **reasons,
+        "prune_gb": round(sum(o["size"] for _, o in doomed) / 1e9, 2),
+        "deleted_objects": deleted_objects,
+        "prune_examples": [o["key"] for _, o in doomed[:5]],
+    }
     print(json.dumps(summary, sort_keys=True, default=str))
     annotate("notice", f"{args.source} archive retention", summary)
-    step_summary(f"## {args.source} · archive retention\n\n```json\n{json.dumps(summary, indent=2, default=str)}\n```\n")
+    step_summary(
+        f"## {args.source} · archive retention\n\n```json\n{json.dumps(summary, indent=2, default=str)}\n```\n"
+    )
     return 0
 
 

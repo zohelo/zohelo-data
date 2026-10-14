@@ -16,12 +16,13 @@ has no version in the API; it is landed when --units is given (yearly is enough)
 Polite: the shared Bdl client keeps below the key's limits; a time budget ends a run
 (exit 2, the next run continues).
 """
+
 from __future__ import annotations
 
 import argparse
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 import fnmatch
 from hashlib import sha256
 import json
@@ -41,8 +42,11 @@ def landed_variable_versions(client, bucket: str) -> dict[str, set[str]]:
     """Versions with a complete set of variable pages, per subgroup."""
     keys = []
     for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=METADATA):
-        keys += [o["Key"] for o in page.get("Contents", [])
-                 if o["Key"].endswith(".receipt.json") and "/units/" not in o["Key"]]
+        keys += [
+            o["Key"]
+            for o in page.get("Contents", [])
+            if o["Key"].endswith(".receipt.json") and "/units/" not in o["Key"]
+        ]
 
     def read(key: str) -> dict[str, Any]:
         return json.loads(get_with_backoff(client, bucket, key))
@@ -62,21 +66,40 @@ def landed_variable_versions(client, bucket: str) -> dict[str, set[str]]:
     return out
 
 
-def write_pages(client, bucket: str, entity: str, version: str, kind: str, pages: list[tuple[str, bytes]],
-                extra: dict[str, Any]) -> None:
-    ingested = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+def write_pages(
+    client, bucket: str, entity: str, version: str, kind: str, pages: list[tuple[str, bytes]], extra: dict[str, Any]
+) -> None:
+    ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     for index, (url, body) in enumerate(pages, start=1):
         key = f"{METADATA}{entity}/{version}__{ingested}__part-{index:03d}.{kind}.json"
         digest = sha256(body).hexdigest()
-        client.put_object(Bucket=bucket, Key=key, Body=body, ContentType="application/json",
-                          Metadata={"sha256": digest})
-        receipt = {"schema_version": 2, "kind": "gus_bdl_landing", "source_id": "gus_bdl", "area": "metadata",
-                   "channel": "api", "entity": entity, "metadata_kind": kind, "version_token": version,
-                   "ingested_at": ingested, "source_url": url, "sha256": digest, "size_bytes": len(body),
-                   "object": {"bucket": bucket, "key": key}, "part": {"index": index, "total": len(pages)},
-                   "code_sha": os.environ.get("GITHUB_SHA", ""), **extra}
-        client.put_object(Bucket=bucket, Key=key[: -len(".json")] + ".receipt.json", ContentType="application/json",
-                          Body=json.dumps(receipt, indent=2, sort_keys=True).encode())
+        client.put_object(
+            Bucket=bucket, Key=key, Body=body, ContentType="application/json", Metadata={"sha256": digest}
+        )
+        receipt = {
+            "schema_version": 2,
+            "kind": "gus_bdl_landing",
+            "source_id": "gus_bdl",
+            "area": "metadata",
+            "channel": "api",
+            "entity": entity,
+            "metadata_kind": kind,
+            "version_token": version,
+            "ingested_at": ingested,
+            "source_url": url,
+            "sha256": digest,
+            "size_bytes": len(body),
+            "object": {"bucket": bucket, "key": key},
+            "part": {"index": index, "total": len(pages)},
+            "code_sha": os.environ.get("GITHUB_SHA", ""),
+            **extra,
+        }
+        client.put_object(
+            Bucket=bucket,
+            Key=key[: -len(".json")] + ".receipt.json",
+            ContentType="application/json",
+            Body=json.dumps(receipt, indent=2, sort_keys=True).encode(),
+        )
 
 
 def fetch_pages(api: Bdl, path: str, **params: Any) -> list[tuple[str, bytes]]:
@@ -102,16 +125,18 @@ def main(argv=None) -> int:
     patterns = [p.strip().lower() for p in args.filter.replace(",", " ").split() if p.strip()]
     data_versions = landing_versions(client, bucket)
     held = {} if args.dry_run else landed_variable_versions(client, bucket)
-    todo = sorted(s for s, v in data_versions.items()
-                  if (not patterns or any(fnmatch.fnmatch(s.lower(), p) for p in patterns))
-                  and v not in held.get(s, set()))
+    todo = sorted(
+        s
+        for s, v in data_versions.items()
+        if (not patterns or any(fnmatch.fnmatch(s.lower(), p) for p in patterns)) and v not in held.get(s, set())
+    )
     api, outcomes = Bdl(), Counter()
     if args.units:
         unit_pages = []
         for level in range(0, 7):
             unit_pages += fetch_pages(api, "/units", level=level, lang="pl")
         if not args.dry_run:
-            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
             write_pages(client, bucket, "units", stamp, "units", unit_pages, {})
         outcomes["unit_pages"] = len(unit_pages)
     for subgroup in todo:
@@ -121,13 +146,25 @@ def main(argv=None) -> int:
         pages = fetch_pages(api, "/variables", **{"subject-id": subgroup, "lang": "pl"})
         variables = sum(len(json.loads(body).get("results") or []) for _, body in pages)
         if not args.dry_run:
-            write_pages(client, bucket, subgroup, data_versions[subgroup], "variables", pages,
-                        {"subgroup_id": subgroup, "variables": variables})
+            write_pages(
+                client,
+                bucket,
+                subgroup,
+                data_versions[subgroup],
+                "variables",
+                pages,
+                {"subgroup_id": subgroup, "variables": variables},
+            )
         outcomes["subgroups_landed"] += 1
         outcomes["variable_pages"] += len(pages)
         outcomes["variables"] += variables
-    summary = {"dry_run": args.dry_run, "subgroups_with_data": len(data_versions), "selected": len(todo),
-               "api_requests": api.requests, **outcomes}
+    summary = {
+        "dry_run": args.dry_run,
+        "subgroups_with_data": len(data_versions),
+        "selected": len(todo),
+        "api_requests": api.requests,
+        **outcomes,
+    }
     print(json.dumps(summary, sort_keys=True))
     annotate("notice", "gus_bdl landing metadata", summary)
     step_summary(f"## gus_bdl · landing metadata\n\n```json\n{json.dumps(summary, indent=2)}\n```\n")

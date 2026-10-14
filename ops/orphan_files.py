@@ -9,10 +9,11 @@ referenced when ANY snapshot of ANY table in ANY namespace references it (zero-c
 tables share files). Only Parquet files older than --min-age-hours are candidates (an
 in-flight load may not have committed yet). Without --delete nothing is written.
 """
+
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 import json
 import os
 from pathlib import Path
@@ -42,7 +43,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     client, bucket = s3(), req("R2_LAKEHOUSE_BUCKET")
     keys = referenced_files(catalog())
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=args.min_age_hours)
+    cutoff = datetime.now(UTC) - timedelta(hours=args.min_age_hours)
 
     orphans, young = [], 0
     for prefix in LAYERS:
@@ -58,9 +59,10 @@ def main(argv=None) -> int:
     deleted = 0
     if args.delete:
         for start in range(0, len(orphans), 1000):
-            batch = orphans[start:start + 1000]
-            response = client.delete_objects(Bucket=bucket, Delete={
-                "Objects": [{"Key": o["key"]} for o in batch], "Quiet": True})
+            batch = orphans[start : start + 1000]
+            response = client.delete_objects(
+                Bucket=bucket, Delete={"Objects": [{"Key": o["key"]} for o in batch], "Quiet": True}
+            )
             if response.get("Errors"):
                 raise RuntimeError(f"delete failed: {response['Errors'][:3]}")
             deleted += len(batch)
@@ -70,10 +72,14 @@ def main(argv=None) -> int:
         by_folder.setdefault(folder, [0, 0])
         by_folder[folder][0] += 1
         by_folder[folder][1] += orphan["bytes"]
-    result = {"referenced_files": len(keys), "orphans": len(orphans),
-              "orphan_gb": round(sum(o["bytes"] for o in orphans) / 1e9, 3),
-              "skipped_younger_than_min_age": young, "deleted": deleted,
-              "top_folders": dict(sorted(by_folder.items(), key=lambda kv: -kv[1][1])[:15])}
+    result = {
+        "referenced_files": len(keys),
+        "orphans": len(orphans),
+        "orphan_gb": round(sum(o["bytes"] for o in orphans) / 1e9, 3),
+        "skipped_younger_than_min_age": young,
+        "deleted": deleted,
+        "top_folders": dict(sorted(by_folder.items(), key=lambda kv: -kv[1][1])[:15]),
+    }
     annotate("notice", "orphan files", result)
     output = Path(os.environ.get("OPS_OUTPUT_DIR", ".")) / "orphan-files.json"
     output.parent.mkdir(parents=True, exist_ok=True)

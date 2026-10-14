@@ -4,6 +4,7 @@
 Table maintenance is a catalog setting the owner turns on in Cloudflare, not a script;
 this confirms it is on and with which values (read-only).
 """
+
 from __future__ import annotations
 
 import requests

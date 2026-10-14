@@ -14,9 +14,10 @@ dataset order, up to a row budget) and the loaded files that have been supersede
 ``finish`` records them after the model has run. Both tables are small (one row per file)
 and derived, so they are overwritten.
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 import re
 
@@ -28,11 +29,19 @@ from ingestion.common.r2 import catalog
 
 BRONZE_ID = ("bronze", "eurostat_full_observations")
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
-INDEX_SCHEMA = pa.schema([("dataset_id", pa.string()), ("raw_sha256", pa.string()),
-                          ("ingested_at", pa.timestamp("us", tz="UTC")), ("record_count", pa.int64()),
-                          ("file_size_bytes", pa.int64()), ("is_current", pa.bool_())])
-LOG_SCHEMA = pa.schema([("dataset_id", pa.string()), ("raw_sha256", pa.string()),
-                        ("loaded_at", pa.timestamp("us", tz="UTC"))])
+INDEX_SCHEMA = pa.schema(
+    [
+        ("dataset_id", pa.string()),
+        ("raw_sha256", pa.string()),
+        ("ingested_at", pa.timestamp("us", tz="UTC")),
+        ("record_count", pa.int64()),
+        ("file_size_bytes", pa.int64()),
+        ("is_current", pa.bool_()),
+    ]
+)
+LOG_SCHEMA = pa.schema(
+    [("dataset_id", pa.string()), ("raw_sha256", pa.string()), ("loaded_at", pa.timestamp("us", tz="UTC"))]
+)
 MODEL = "eurostat_observations"
 # The batch travels as dbt --vars (one command-line argument, ≤128 KB on Linux): at most
 # MAX_PAIRS (dataset, file) pairs per list, ~100 bytes each.
@@ -42,7 +51,9 @@ OVERSIZED_ROWS = int(SETTINGS["oversized_rows"])
 
 
 def wanted(selectors: list[str]) -> bool:
-    return not selectors or any(s.strip("+").split(".")[-1] in (MODEL, "eurostat_dataset_versions", "eurostat", "silver") for s in selectors)
+    return not selectors or any(
+        s.strip("+").split(".")[-1] in (MODEL, "eurostat_dataset_versions", "eurostat", "silver") for s in selectors
+    )
 
 
 def _overwrite(cat, table_id: tuple[str, str], rows: pa.Table) -> None:
@@ -87,18 +98,28 @@ def prepare(namespace: str, row_budget: int) -> dict:
     files = cat.load_table(BRONZE_ID).inspect.files()
     rows = []
     for path, partition, count, size, metrics in zip(
-            files.column("file_path").to_pylist(), files.column("partition").to_pylist(),
-            files.column("record_count").to_pylist(), files.column("file_size_in_bytes").to_pylist(),
-            files.column("readable_metrics").to_pylist()):
+        files.column("file_path").to_pylist(),
+        files.column("partition").to_pylist(),
+        files.column("record_count").to_pylist(),
+        files.column("file_size_in_bytes").to_pylist(),
+        files.column("readable_metrics").to_pylist(),
+    ):
         sha = Path(path).stem
         if not SHA_RE.fullmatch(sha):
             continue
         ingested = ((metrics or {}).get("ingested_at") or {}).get("upper_bound")
-        rows.append({"dataset_id": partition["dataset_id"], "raw_sha256": sha, "ingested_at": ingested,
-                     "record_count": count, "file_size_bytes": size})
+        rows.append(
+            {
+                "dataset_id": partition["dataset_id"],
+                "raw_sha256": sha,
+                "ingested_at": ingested,
+                "record_count": count,
+                "file_size_bytes": size,
+            }
+        )
     newest: dict[str, tuple] = {}
     for r in rows:
-        key = (r["ingested_at"] or datetime.min.replace(tzinfo=timezone.utc), r["raw_sha256"])
+        key = (r["ingested_at"] or datetime.min.replace(tzinfo=UTC), r["raw_sha256"])
         if r["dataset_id"] not in newest or key > newest[r["dataset_id"]]:
             newest[r["dataset_id"]] = key
     for r in rows:
@@ -124,13 +145,22 @@ def prepare(namespace: str, row_budget: int) -> dict:
         batch.append(r)
         total += r["record_count"]
     remaining = sum(1 for k in current if k not in loaded) - len(batch) - len(oversized)
-    return {"vars": {"eurostat_batch": [[r["dataset_id"], r["raw_sha256"]] for r in batch],
-                     "eurostat_superseded": [list(k) for k in superseded]},
-            "summary": {"datasets_current": len(current), "batch_datasets": len(batch), "batch_rows": total,
-                        "superseded": len(superseded), "remaining_after_batch": remaining,
-                        "dropped_legacy_table": dropped_legacy,
-                        "deferred_oversized": [[r["dataset_id"], r["record_count"]] for r in oversized][:20],
-                        "deferred_oversized_count": len(oversized)}}
+    return {
+        "vars": {
+            "eurostat_batch": [[r["dataset_id"], r["raw_sha256"]] for r in batch],
+            "eurostat_superseded": [list(k) for k in superseded],
+        },
+        "summary": {
+            "datasets_current": len(current),
+            "batch_datasets": len(batch),
+            "batch_rows": total,
+            "superseded": len(superseded),
+            "remaining_after_batch": remaining,
+            "dropped_legacy_table": dropped_legacy,
+            "deferred_oversized": [[r["dataset_id"], r["record_count"]] for r in oversized][:20],
+            "deferred_oversized_count": len(oversized),
+        },
+    }
 
 
 def finish(namespace: str, plan: dict) -> None:
@@ -138,6 +168,6 @@ def finish(namespace: str, plan: dict) -> None:
     log_id = (namespace, "eurostat_loaded_files")
     gone = {tuple(k) for k in plan["vars"]["eurostat_superseded"]}
     log = [r for r in _read(cat, log_id, LOG_SCHEMA).to_pylist() if (r["dataset_id"], r["raw_sha256"]) not in gone]
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     log += [{"dataset_id": d, "raw_sha256": h, "loaded_at": now} for d, h in plan["vars"]["eurostat_batch"]]
     _overwrite(cat, log_id, pa.Table.from_pylist(log, schema=LOG_SCHEMA))

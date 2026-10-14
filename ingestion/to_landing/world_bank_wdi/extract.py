@@ -10,10 +10,11 @@ the newest landed one, after the ZIP and every member have been checked. CC BY 4
 Layout: ``01_landing/world_bank_wdi/snapshot/data/WDI_CSV/<version>__<ingested>.zip`` + receipt.
 Modes: inspect (Landing state and the server's Last-Modified via HEAD), load, verify.
 """
+
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from hashlib import sha256
 import json
@@ -46,7 +47,7 @@ def landed(client, bucket: str) -> list[dict[str, Any]]:
 
 def version_from(headers: dict[str, str], fallback: str) -> str:
     try:
-        return parsedate_to_datetime(headers["Last-Modified"]).astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        return parsedate_to_datetime(headers["Last-Modified"]).astimezone(UTC).strftime("%Y%m%dT%H%M%SZ")
     except (KeyError, TypeError, ValueError):
         return fallback
 
@@ -55,8 +56,9 @@ def download(path: Path) -> tuple[str, int, dict[str, str], str]:
     for attempt in range(4):
         digest, size = sha256(), 0
         try:
-            with requests.get(URL, headers={"User-Agent": USER_AGENT}, stream=True, timeout=(30, 300),
-                              allow_redirects=True) as response:
+            with requests.get(
+                URL, headers={"User-Agent": USER_AGENT}, stream=True, timeout=(30, 300), allow_redirects=True
+            ) as response:
                 if response.status_code != 200:
                     raise RuntimeError(f"WDI download {response.status_code}")
                 with path.open("wb") as handle:
@@ -86,25 +88,52 @@ def run_load(client, bucket: str, held: list[dict[str, Any]]) -> dict[str, Any]:
         if held and held[-1]["sha256"] == digest:
             return {"outcome": "unchanged", "sha256": digest}
         members = [(i.filename, i.file_size) for i in zipfile.ZipFile(path).infolist()]
-        ingested = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         version = version_from(headers, ingested)
         key = f"{PREFIX}{version}__{ingested}.zip"
-        client.upload_file(str(path), bucket, key, ExtraArgs={"ContentType": "application/zip",
-                                                              "Metadata": {"sha256": digest}})
+        client.upload_file(
+            str(path), bucket, key, ExtraArgs={"ContentType": "application/zip", "Metadata": {"sha256": digest}}
+        )
         head = client.head_object(Bucket=bucket, Key=key)
         if head["ContentLength"] != size or (head.get("Metadata") or {}).get("sha256") != digest:
             raise RuntimeError(f"Landing write could not be verified: {key}")
-    receipt = {"schema_version": 2, "kind": "world_bank_wdi_landing", "source_id": SOURCE, "entity": ENTITY,
-               "content": "snapshot", "area": "data", "source_kind": "wdi_csv_zip", "version_token": version,
-               "ingested_at": ingested, "source_url": URL, "final_url": final_url, "sha256": digest,
-               "size_bytes": size, "object": {"bucket": bucket, "key": key}, "members": members,
-               "http": {"last_modified": headers.get("Last-Modified"), "etag": headers.get("ETag"),
-                        "content_type": headers.get("Content-Type")},
-               "replaces_sha256": held[-1]["sha256"] if held else None, "code_sha": os.environ.get("GITHUB_SHA", "")}
-    client.put_object(Bucket=bucket, Key=key[: -len(".zip")] + ".receipt.json", ContentType="application/json",
-                      Body=json.dumps(receipt, indent=2, sort_keys=True).encode())
-    return {"outcome": "landed_new" if not held else "landed_changed", "sha256": digest,
-            "size_mb": round(size / 1e6, 1), "version": version, "members": [m for m, _ in members]}
+    receipt = {
+        "schema_version": 2,
+        "kind": "world_bank_wdi_landing",
+        "source_id": SOURCE,
+        "entity": ENTITY,
+        "content": "snapshot",
+        "area": "data",
+        "source_kind": "wdi_csv_zip",
+        "version_token": version,
+        "ingested_at": ingested,
+        "source_url": URL,
+        "final_url": final_url,
+        "sha256": digest,
+        "size_bytes": size,
+        "object": {"bucket": bucket, "key": key},
+        "members": members,
+        "http": {
+            "last_modified": headers.get("Last-Modified"),
+            "etag": headers.get("ETag"),
+            "content_type": headers.get("Content-Type"),
+        },
+        "replaces_sha256": held[-1]["sha256"] if held else None,
+        "code_sha": os.environ.get("GITHUB_SHA", ""),
+    }
+    client.put_object(
+        Bucket=bucket,
+        Key=key[: -len(".zip")] + ".receipt.json",
+        ContentType="application/json",
+        Body=json.dumps(receipt, indent=2, sort_keys=True).encode(),
+    )
+    return {
+        "outcome": "landed_new" if not held else "landed_changed",
+        "sha256": digest,
+        "size_mb": round(size / 1e6, 1),
+        "version": version,
+        "members": [m for m, _ in members],
+    }
 
 
 def main(argv=None) -> int:
@@ -113,14 +142,18 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     client, bucket = s3(), req("R2_LANDING_BUCKET")
     held = landed(client, bucket)
-    summary: dict[str, Any] = {"mode": args.mode, "landed_versions": len(held),
-                               "newest": held[-1]["version_token"] if held else None}
+    summary: dict[str, Any] = {
+        "mode": args.mode,
+        "landed_versions": len(held),
+        "newest": held[-1]["version_token"] if held else None,
+    }
     status = 0
     if args.mode == "inspect":
         head = requests.head(URL, headers={"User-Agent": USER_AGENT}, allow_redirects=True, timeout=60)
         summary["server_version"] = version_from(dict(head.headers), "unknown")
-        summary["state"] = ("missing" if not held else "stale" if summary["server_version"] > held[-1]["version_token"]
-                            else "current")
+        summary["state"] = (
+            "missing" if not held else "stale" if summary["server_version"] > held[-1]["version_token"] else "current"
+        )
     elif args.mode == "load":
         summary.update(run_load(client, bucket, held))
     else:
@@ -128,8 +161,12 @@ def main(argv=None) -> int:
         for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=PREFIX):
             present |= {o["Key"] for o in page.get("Contents", []) if not o["Key"].endswith(".receipt.json")}
         stored = archived(client, bucket, SOURCE)
-        missing = [r["object"]["key"] for r in held if r["object"]["key"] not in present
-                   and stored.get(r["sha256"], {}).get("key") != archive_key(SOURCE, r["sha256"], r["object"]["key"])]
+        missing = [
+            r["object"]["key"]
+            for r in held
+            if r["object"]["key"] not in present
+            and stored.get(r["sha256"], {}).get("key") != archive_key(SOURCE, r["sha256"], r["object"]["key"])
+        ]
         summary.update({"missing_data": len(missing), "missing_sample": missing[:5]})
         status = 1 if missing else 0
     print(json.dumps(summary, sort_keys=True))

@@ -7,13 +7,14 @@ receipts announce (part.total). Classification per subgroup:
   missing  no complete version in Landing
 No downloads and no Landing writes; about one API request per subgroup.
 """
+
 from __future__ import annotations
 
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 import fnmatch
-import time
 import json
+import time
 
 from ingestion.common.r2 import get_with_backoff, req, s3
 from ingestion.common.report import annotate, step_summary
@@ -52,8 +53,9 @@ def main(patterns: list[str] | None = None, budget_minutes: float = 50) -> int:
     client, bucket = s3(), req("R2_LANDING_BUCKET")
     held = landing_versions(client, bucket)
     api = Bdl()
-    subgroups = [s for s in api.subgroups()
-                 if not patterns or any(fnmatch.fnmatch(s["id"].lower(), p.lower()) for p in patterns)]
+    subgroups = [
+        s for s in api.subgroups() if not patterns or any(fnmatch.fnmatch(s["id"].lower(), p.lower()) for p in patterns)
+    ]
     status: Counter = Counter()
     examples: dict[str, list[str]] = defaultdict(list)
     for subject in subgroups:
@@ -70,8 +72,13 @@ def main(patterns: list[str] | None = None, budget_minutes: float = 50) -> int:
         status[state] += 1
         if len(examples[state]) < 15:
             examples[state].append(sid)
-    summary = {"subgroups_in_bdl": len(subgroups), **status, "landing_subgroups": len(held),
-               "api_requests": api.requests, "examples": dict(examples)}
+    summary = {
+        "subgroups_in_bdl": len(subgroups),
+        **status,
+        "landing_subgroups": len(held),
+        "api_requests": api.requests,
+        "examples": dict(examples),
+    }
     summary["listing_has_last_update"] = any("lastUpdate" in s for s in subgroups[:5])
     annotate("notice", "gus_bdl landing inspect", summary)
     step_summary("## gus_bdl · landing inspect\n\n" + "\n".join(f"- {k}: {v}" for k, v in status.items()) + "\n")

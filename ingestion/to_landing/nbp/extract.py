@@ -19,12 +19,13 @@ Modes:
 Polite access: one request at a time, a pause between requests, retries with backoff
 on 429/5xx, an identifying User-Agent.
 """
+
 from __future__ import annotations
 
 import argparse
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from hashlib import sha256
 import json
 import os
@@ -55,7 +56,7 @@ def quarters(start: date, today: date) -> list[tuple[int, int]]:
 
 def window(table: str, year: int, quarter: int, today: date) -> tuple[date, date]:
     first = date(year, 3 * quarter - 2, 1)
-    last = (date(year + (quarter == 4), (3 * quarter) % 12 + 1, 1) - timedelta(days=1))
+    last = date(year + (quarter == 4), (3 * quarter) % 12 + 1, 1) - timedelta(days=1)
     return max(first, TABLES[table]), min(last, today)
 
 
@@ -71,9 +72,16 @@ def expected(today: date) -> list[dict[str, Any]]:
         for year, quarter in quarters(start, today):
             first, last = window(table, year, quarter, today)
             quarter_end = date(year + (quarter == 4), (3 * quarter) % 12 + 1, 1) - timedelta(days=1)
-            items.append({"entity": f"{table}_{year}Q{quarter}", "table": table, "start": first, "end": last,
-                          "open": quarter_end >= today - timedelta(days=OPEN_DAYS),
-                          "url": url(table, first, last)})
+            items.append(
+                {
+                    "entity": f"{table}_{year}Q{quarter}",
+                    "table": table,
+                    "start": first,
+                    "end": last,
+                    "open": quarter_end >= today - timedelta(days=OPEN_DAYS),
+                    "url": url(table, first, last),
+                }
+            )
     return items
 
 
@@ -82,11 +90,12 @@ def landed(client, bucket: str) -> dict[str, list[dict[str, Any]]]:
     receipts = []
     for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=PREFIX):
         receipts += [o["Key"] for o in page.get("Contents", []) if o["Key"].endswith(".receipt.json")]
+
     def read(key: str) -> dict[str, Any]:
         return {**json.loads(get_with_backoff(client, bucket, key)), "receipt_key": key}
 
     out: dict[str, list[dict[str, Any]]] = {}
-    with ThreadPoolExecutor(max_workers=8) as pool:      # R2 throttles larger bursts of reads
+    with ThreadPoolExecutor(max_workers=8) as pool:  # R2 throttles larger bursts of reads
         for body in pool.map(read, receipts):
             out.setdefault(body["entity"], []).append(body)
     for rows in out.values():
@@ -104,7 +113,7 @@ def fetch(session: requests.Session, address: str) -> tuple[int, bytes, dict[str
             return response.status_code, response.content, dict(response.headers)
         if response is not None and response.status_code not in (429, 500, 502, 503, 504):
             raise RuntimeError(f"NBP API {response.status_code} for {address}: {response.text[:200]}")
-        time.sleep(min(60, 5 * 2 ** attempt))
+        time.sleep(min(60, 5 * 2**attempt))
     raise RuntimeError(f"NBP API kept failing: {address}")
 
 
@@ -125,8 +134,9 @@ def put_new(client, bucket: str, key: str, body: bytes, content_type: str) -> No
         raise RuntimeError(f"Landing key exists with different bytes: {key}")
     except client.exceptions.ClientError:
         pass
-    client.put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type,
-                      Metadata={"sha256": sha256(body).hexdigest()})
+    client.put_object(
+        Bucket=bucket, Key=key, Body=body, ContentType=content_type, Metadata={"sha256": sha256(body).hexdigest()}
+    )
     if (client.head_object(Bucket=bucket, Key=key).get("Metadata") or {}).get("sha256") != sha256(body).hexdigest():
         raise RuntimeError(f"Landing write could not be verified: {key}")
 
@@ -155,19 +165,41 @@ def run_load(client, bucket: str, items: list[dict[str, Any]], held: dict[str, l
             outcomes["unchanged"] += 1
             continue
         version = version_of(item["table"], body)
-        ingested = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         key = f"{PREFIX}{item['entity']}/{version}__{ingested}.json"
         put_new(client, bucket, key, body, "application/json")
-        receipt = {"schema_version": 2, "kind": "nbp_landing", "source_id": SOURCE, "entity": item["entity"],
-                   "table": item["table"], "content": "snapshot", "area": "data", "source_kind": "nbp_api_json",
-                   "window": {"start": item["start"].isoformat(), "end": item["end"].isoformat()},
-                   "version_token": version, "ingested_at": ingested, "source_url": item["url"],
-                   "sha256": digest, "size_bytes": len(body), "object": {"bucket": bucket, "key": key},
-                   "http": {"status": status, "content_type": headers.get("Content-Type"),
-                            "last_modified": headers.get("Last-Modified"), "etag": headers.get("ETag")},
-                   "replaces_sha256": previous["sha256"] if previous else None, "code_sha": code_sha}
-        put_new(client, bucket, key[: -len(".json")] + ".receipt.json",
-                json.dumps(receipt, indent=2, sort_keys=True).encode(), "application/json")
+        receipt = {
+            "schema_version": 2,
+            "kind": "nbp_landing",
+            "source_id": SOURCE,
+            "entity": item["entity"],
+            "table": item["table"],
+            "content": "snapshot",
+            "area": "data",
+            "source_kind": "nbp_api_json",
+            "window": {"start": item["start"].isoformat(), "end": item["end"].isoformat()},
+            "version_token": version,
+            "ingested_at": ingested,
+            "source_url": item["url"],
+            "sha256": digest,
+            "size_bytes": len(body),
+            "object": {"bucket": bucket, "key": key},
+            "http": {
+                "status": status,
+                "content_type": headers.get("Content-Type"),
+                "last_modified": headers.get("Last-Modified"),
+                "etag": headers.get("ETag"),
+            },
+            "replaces_sha256": previous["sha256"] if previous else None,
+            "code_sha": code_sha,
+        }
+        put_new(
+            client,
+            bucket,
+            key[: -len(".json")] + ".receipt.json",
+            json.dumps(receipt, indent=2, sort_keys=True).encode(),
+            "application/json",
+        )
         outcomes["landed_new" if not previous else "landed_changed"] += 1
     return outcomes
 
@@ -184,8 +216,12 @@ def run_verify(client, bucket: str, held: dict[str, list]) -> dict[str, Any]:
             if key not in present and stored.get(r["sha256"], {}).get("key") != archive_key(SOURCE, r["sha256"], key):
                 problems.append(key)
     receipted = {r["object"]["key"] for rows in held.values() for r in rows}
-    return {"receipts": sum(len(v) for v in held.values()), "missing_data": len(problems),
-            "missing_sample": problems[:10], "data_without_receipt": sorted(present - receipted)[:10]}
+    return {
+        "receipts": sum(len(v) for v in held.values()),
+        "missing_data": len(problems),
+        "missing_sample": problems[:10],
+        "data_without_receipt": sorted(present - receipted)[:10],
+    }
 
 
 def main(argv=None) -> int:
@@ -195,7 +231,7 @@ def main(argv=None) -> int:
     parser.add_argument("--budget-minutes", type=float, default=300)
     args = parser.parse_args(argv)
     client, bucket = s3(), req("R2_LANDING_BUCKET")
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
     tables = {t.strip().upper() for t in args.filter.split(",") if t.strip()}
     items = [i for i in expected(today) if not tables or i["table"] in tables]
     held = landed(client, bucket)
@@ -205,9 +241,14 @@ def main(argv=None) -> int:
         status = 1 if summary["missing_data"] else 0
     else:
         missing = [i["entity"] for i in items if i["entity"] not in held]
-        summary = {"mode": args.mode, "expected": len(items), "landed_entities": len(held),
-                   "missing": len(missing), "missing_sample": missing[:10],
-                   "open": [i["entity"] for i in items if i["open"]]}
+        summary = {
+            "mode": args.mode,
+            "expected": len(items),
+            "landed_entities": len(held),
+            "missing": len(missing),
+            "missing_sample": missing[:10],
+            "open": [i["entity"] for i in items if i["open"]],
+        }
         status = 0
         if args.mode == "load":
             outcomes = run_load(client, bucket, items, held, args.budget_minutes)

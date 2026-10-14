@@ -13,9 +13,10 @@ which dispatches every run whose cron time fell in the last hour. The dispatched
 an ordinary Pipeline run (same plan, authorization and concurrency), so a scheduled run
 and a manual run are the same thing. ``schedule: null`` or ``[]`` means manual only.
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 import json
 import os
 
@@ -51,8 +52,13 @@ def parse(cron: str) -> list[set[int]]:
 
 def matches(fields: list[set[int]], when: datetime) -> bool:
     minute, hour, day, month, weekday = fields
-    return (when.minute in minute and when.hour in hour and when.day in day
-            and when.month in month and (when.weekday() + 1) % 7 in weekday)
+    return (
+        when.minute in minute
+        and when.hour in hour
+        and when.day in day
+        and when.month in month
+        and (when.weekday() + 1) % 7 in weekday
+    )
 
 
 def due(cron: str, now: datetime, window_minutes: int = 60) -> bool:
@@ -65,7 +71,7 @@ def due(cron: str, now: datetime, window_minutes: int = 60) -> bool:
 def entries(config: dict) -> list[dict]:
     out = []
     for source, cfg in config["sources"].items():
-        for item in ((cfg.get("extraction") or {}).get("schedule") or []):
+        for item in (cfg.get("extraction") or {}).get("schedule") or []:
             out.append({"source": source, **item})
     for item in config["platform"].get("schedule") or []:
         out.append({"source": "platform", **item})
@@ -85,7 +91,7 @@ def validate(config: dict, plan) -> list[str]:
 
 
 def main(config: dict, plan, now: datetime | None = None) -> int:
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     problems = validate(config, plan)
     started, skipped = [], []
     repo, token = os.environ.get("GITHUB_REPOSITORY"), os.environ.get("GITHUB_TOKEN")
@@ -99,11 +105,18 @@ def main(config: dict, plan, now: datetime | None = None) -> int:
         response = requests.post(
             f"https://api.github.com/repos/{repo}/actions/workflows/pipeline.yml/dispatches",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
-            json={"ref": "main", "inputs": inputs}, timeout=30)
+            json={"ref": "main", "inputs": inputs},
+            timeout=30,
+        )
         (started if response.status_code == 204 else skipped).append(
-            {**inputs, **({} if response.status_code == 204 else {"reason": response.text[:200]})})
-    summary = {"at": now.isoformat(timespec="minutes"), "started": started, "skipped": skipped,
-               "invalid_schedules": problems}
+            {**inputs, **({} if response.status_code == 204 else {"reason": response.text[:200]})}
+        )
+    summary = {
+        "at": now.isoformat(timespec="minutes"),
+        "started": started,
+        "skipped": skipped,
+        "invalid_schedules": problems,
+    }
     annotate("error" if skipped or problems else "notice", "scheduler", summary)
     step_summary(f"## scheduler\n\n```json\n{json.dumps(summary, indent=2, ensure_ascii=False)}\n```\n")
     return 1 if skipped or problems else 0

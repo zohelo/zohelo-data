@@ -8,9 +8,10 @@ Landing file, ``02_bronze/nbp/observations/<entity>/<raw_sha256>.parquet``, part
 quarter stays in Bronze until Silver picks the newest per entity (raw_sha256 + source_version).
 Rejections: bronze.nbp_rejected_files.
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import sha256
 import json
 import os
@@ -31,14 +32,28 @@ TABLE_ID = ("bronze", "nbp_observations")
 REJECTED_ID = ("bronze", "nbp_rejected_files")
 OUTPUT_PREFIX = "02_bronze/nbp/observations/"
 COLUMNS = [
-    ("table_code", "VARCHAR"), ("entity", "VARCHAR"), ("table_no", "VARCHAR"),
-    ("effective_date", "VARCHAR"), ("trading_date", "VARCHAR"), ("currency_name", "VARCHAR"),
-    ("currency_code", "VARCHAR"), ("mid", "VARCHAR"), ("bid", "VARCHAR"), ("ask", "VARCHAR"),
-    ("gold_price", "VARCHAR"), ("raw_sha256", "VARCHAR"), ("source_version", "VARCHAR"),
-    ("ingested_at", "TIMESTAMPTZ"), ("source_row_number", "BIGINT"),
+    ("table_code", "VARCHAR"),
+    ("entity", "VARCHAR"),
+    ("table_no", "VARCHAR"),
+    ("effective_date", "VARCHAR"),
+    ("trading_date", "VARCHAR"),
+    ("currency_name", "VARCHAR"),
+    ("currency_code", "VARCHAR"),
+    ("mid", "VARCHAR"),
+    ("bid", "VARCHAR"),
+    ("ask", "VARCHAR"),
+    ("gold_price", "VARCHAR"),
+    ("raw_sha256", "VARCHAR"),
+    ("source_version", "VARCHAR"),
+    ("ingested_at", "TIMESTAMPTZ"),
+    ("source_row_number", "BIGINT"),
 ]
-ARROW = pa.schema([(n, pa.timestamp("us", tz="UTC") if k == "TIMESTAMPTZ" else pa.int64() if k == "BIGINT"
-                    else pa.string()) for n, k in COLUMNS])
+ARROW = pa.schema(
+    [
+        (n, pa.timestamp("us", tz="UTC") if k == "TIMESTAMPTZ" else pa.int64() if k == "BIGINT" else pa.string())
+        for n, k in COLUMNS
+    ]
+)
 COMMIT_EVERY = 50
 
 
@@ -48,24 +63,39 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
     if not isinstance(data, list) or not data:
         raise ValueError("NBP response is not a non-empty JSON array")
     table = receipt["table"]
-    base = {"table_code": table, "entity": receipt["entity"], "raw_sha256": receipt["sha256"],
-            "source_version": receipt["version_token"],
-            "ingested_at": datetime.strptime(receipt["ingested_at"], "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)}
+    base = {
+        "table_code": table,
+        "entity": receipt["entity"],
+        "raw_sha256": receipt["sha256"],
+        "source_version": receipt["version_token"],
+        "ingested_at": datetime.strptime(receipt["ingested_at"], "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC),
+    }
     rows, number = [], 0
     for record in data:
         if table == "GOLD":
             number += 1
-            rows.append({**base, "effective_date": record["data"], "gold_price": record["cena"],
-                         "source_row_number": number})
+            rows.append(
+                {**base, "effective_date": record["data"], "gold_price": record["cena"], "source_row_number": number}
+            )
             continue
         if record.get("table") != table:
             raise ValueError(f"table {record.get('table')!r} in a {table} file")
         for rate in record["rates"]:
             number += 1
-            rows.append({**base, "table_no": record["no"], "effective_date": record["effectiveDate"],
-                         "trading_date": record.get("tradingDate"), "currency_name": rate.get("currency"),
-                         "currency_code": rate["code"], "mid": rate.get("mid"), "bid": rate.get("bid"),
-                         "ask": rate.get("ask"), "source_row_number": number})
+            rows.append(
+                {
+                    **base,
+                    "table_no": record["no"],
+                    "effective_date": record["effectiveDate"],
+                    "trading_date": record.get("tradingDate"),
+                    "currency_name": rate.get("currency"),
+                    "currency_code": rate["code"],
+                    "mid": rate.get("mid"),
+                    "bid": rate.get("bid"),
+                    "ask": rate.get("ask"),
+                    "source_row_number": number,
+                }
+            )
     return pa.Table.from_pylist(rows, schema=ARROW)
 
 
@@ -101,9 +131,15 @@ def load(budget_minutes: float) -> int:
             try:
                 rows = decode(body, receipt)
             except (ValueError, KeyError, TypeError) as exc:
-                rejected.append({"entity": receipt["entity"], "raw_sha256": receipt["sha256"],
-                                 "landing_key": receipt["object"]["key"], "error": f"{type(exc).__name__}: {exc}"[:1000],
-                                 "code_sha": code_sha})
+                rejected.append(
+                    {
+                        "entity": receipt["entity"],
+                        "raw_sha256": receipt["sha256"],
+                        "landing_key": receipt["object"]["key"],
+                        "error": f"{type(exc).__name__}: {exc}"[:1000],
+                        "code_sha": code_sha,
+                    }
+                )
                 continue
             path = Path(temporary) / f"{receipt['sha256']}.parquet"
             pq.write_table(rows, path, compression="zstd")

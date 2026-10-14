@@ -7,9 +7,10 @@ member of the ZIP read by DuckDB with every column as text, mapped onto the unio
 the catalogue columns (absent columns stay null), plus provenance. Partitioned by entity;
 the table's file list is the checkpoint. Rejections: bronze.teryt_rejected_files.
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import sha256
 import io
 import json
@@ -31,13 +32,39 @@ TABLE_ID = ("bronze", "teryt_records")
 REJECTED_ID = ("bronze", "teryt_rejected_files")
 OUTPUT_PREFIX = "02_bronze/gus_teryt/records/"
 # Union of the CSV columns of all eight catalogue variants (as published, October 2026).
-SOURCE_COLUMNS = ["WOJ", "POW", "GMI", "RODZ", "RODZ_GMI", "RM", "MZ", "NMST", "NMSK", "SYMBM", "SYMSTAT",
-                  "NAZWA", "NAZWA_DOD", "NAZWA_RM", "SYM", "SYMPOD", "SYM_UL", "CECHA", "NAZWA_1", "NAZWA_2",
-                  "STAN_NA"]
-COLUMNS = ([("entity", "VARCHAR"), ("catalogue", "VARCHAR")]
-           + [(c.lower(), "VARCHAR") for c in SOURCE_COLUMNS]
-           + [("raw_sha256", "VARCHAR"), ("source_version", "VARCHAR"), ("ingested_at", "TIMESTAMPTZ"),
-              ("source_row_number", "BIGINT")])
+SOURCE_COLUMNS = [
+    "WOJ",
+    "POW",
+    "GMI",
+    "RODZ",
+    "RODZ_GMI",
+    "RM",
+    "MZ",
+    "NMST",
+    "NMSK",
+    "SYMBM",
+    "SYMSTAT",
+    "NAZWA",
+    "NAZWA_DOD",
+    "NAZWA_RM",
+    "SYM",
+    "SYMPOD",
+    "SYM_UL",
+    "CECHA",
+    "NAZWA_1",
+    "NAZWA_2",
+    "STAN_NA",
+]
+COLUMNS = (
+    [("entity", "VARCHAR"), ("catalogue", "VARCHAR")]
+    + [(c.lower(), "VARCHAR") for c in SOURCE_COLUMNS]
+    + [
+        ("raw_sha256", "VARCHAR"),
+        ("source_version", "VARCHAR"),
+        ("ingested_at", "TIMESTAMPTZ"),
+        ("source_row_number", "BIGINT"),
+    ]
+)
 
 
 def decode(body: bytes, receipt: dict[str, Any], output: Path) -> int:
@@ -53,24 +80,36 @@ def decode(body: bytes, receipt: dict[str, Any], output: Path) -> int:
     csv_path.write_bytes(archive.read(members[0]))
     con = duckdb.connect()
     try:
-        con.execute("CREATE TABLE src AS SELECT * FROM read_csv(?, delim=';', header=true, all_varchar=true, "
-                    "quote='', escape='', nullstr='\x01', strict_mode=true, encoding='utf-8')", [str(csv_path)])
+        con.execute(
+            "CREATE TABLE src AS SELECT * FROM read_csv(?, delim=';', header=true, all_varchar=true, "
+            "quote='', escape='', nullstr='\x01', strict_mode=true, encoding='utf-8')",
+            [str(csv_path)],
+        )
         found = [r[0] for r in con.execute("DESCRIBE src").fetchall()]
         unknown = [c for c in found if c.upper() not in SOURCE_COLUMNS]
         if unknown or "STAN_NA" not in [c.upper() for c in found]:
             raise ValueError(f"unexpected TERYT columns: {found}")
         present = {c.upper(): c for c in found}
-        ingested = datetime.strptime(receipt["ingested_at"], "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
-        select = ", ".join([
-            "? AS entity", "? AS catalogue",
-            *[f'src."{present[c]}" AS {c.lower()}' if c in present else f"NULL::VARCHAR AS {c.lower()}"
-              for c in SOURCE_COLUMNS],
-            "? AS raw_sha256", "? AS source_version", "?::TIMESTAMPTZ AS ingested_at",
-            "(rowid + 2)::BIGINT AS source_row_number"])
-        target = str(output).replace("'", "''")             # a temporary path, quoted for SQL
-        con.execute(f"COPY (SELECT {select} FROM src ORDER BY rowid) TO '{target}' (FORMAT parquet, COMPRESSION zstd)",
-                    [receipt["entity"], receipt["entity"].split("_")[0], receipt["sha256"],
-                     receipt["version_token"], ingested])
+        ingested = datetime.strptime(receipt["ingested_at"], "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
+        select = ", ".join(
+            [
+                "? AS entity",
+                "? AS catalogue",
+                *[
+                    f'src."{present[c]}" AS {c.lower()}' if c in present else f"NULL::VARCHAR AS {c.lower()}"
+                    for c in SOURCE_COLUMNS
+                ],
+                "? AS raw_sha256",
+                "? AS source_version",
+                "?::TIMESTAMPTZ AS ingested_at",
+                "(rowid + 2)::BIGINT AS source_row_number",
+            ]
+        )
+        target = str(output).replace("'", "''")  # a temporary path, quoted for SQL
+        con.execute(
+            f"COPY (SELECT {select} FROM src ORDER BY rowid) TO '{target}' (FORMAT parquet, COMPRESSION zstd)",
+            [receipt["entity"], receipt["entity"].split("_")[0], receipt["sha256"], receipt["version_token"], ingested],
+        )
         return con.execute("SELECT count(*) FROM src").fetchone()[0]
     finally:
         con.close()
@@ -108,10 +147,15 @@ def load(budget_minutes: float) -> int:
             try:
                 rows = decode(body, receipt, path)
             except (ValueError, duckdb.Error, zipfile.BadZipFile) as exc:
-                rejected.append({"entity": receipt["entity"], "raw_sha256": receipt["sha256"],
-                                 "landing_key": receipt["object"]["key"],
-                                 "error": f"{type(exc).__name__}: {exc}"[:1000],
-                                 "code_sha": os.environ.get("GITHUB_SHA", "")})
+                rejected.append(
+                    {
+                        "entity": receipt["entity"],
+                        "raw_sha256": receipt["sha256"],
+                        "landing_key": receipt["object"]["key"],
+                        "error": f"{type(exc).__name__}: {exc}"[:1000],
+                        "code_sha": os.environ.get("GITHUB_SHA", ""),
+                    }
+                )
                 continue
             key = f"{OUTPUT_PREFIX}{receipt['entity']}/{receipt['sha256']}.parquet"
             uris.append(bf.upload(client, lake, key, path, receipt["sha256"]))
@@ -123,6 +167,8 @@ def load(budget_minutes: float) -> int:
     totals["rejected"] = len(rejected)
     totals["remaining"] = totals["candidates"] - totals["appended_files"] - totals["rejected"]
     result = "complete" if totals["remaining"] == 0 else "incomplete_time_budget"
-    annotate("notice" if result == "complete" else "warning", "gus_teryt Bronze from Landing", {"result": result, **totals})
+    annotate(
+        "notice" if result == "complete" else "warning", "gus_teryt Bronze from Landing", {"result": result, **totals}
+    )
     step_summary(f"## gus_teryt · bronze load: {result}\n\n```json\n{json.dumps(totals, indent=2)}\n```\n")
     return 0 if result == "complete" else 2

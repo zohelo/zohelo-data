@@ -13,10 +13,11 @@ Entity: ``jednostki_administracyjne``. Layout:
 ``01_landing/gugik_prg/snapshot/data/jednostki_administracyjne/<version>__<ingested>.zip`` + receipt.
 Modes: inspect (Landing state, no download), load, verify.
 """
+
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import sha256
 import json
 import os
@@ -79,24 +80,45 @@ def run_load(client, bucket: str, held: list[dict[str, Any]]) -> dict[str, Any]:
         seconds = round(time.monotonic() - started)
         if held and held[-1]["sha256"] == digest:
             return {"outcome": "unchanged", "sha256": digest, "download_seconds": seconds}
-        ingested = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         key = f"{PREFIX}{ingested}__{ingested}.zip"
-        client.upload_file(str(path), bucket, key, ExtraArgs={"ContentType": "application/zip",
-                                                              "Metadata": {"sha256": digest}})
+        client.upload_file(
+            str(path), bucket, key, ExtraArgs={"ContentType": "application/zip", "Metadata": {"sha256": digest}}
+        )
         head = client.head_object(Bucket=bucket, Key=key)
         if head["ContentLength"] != size or (head.get("Metadata") or {}).get("sha256") != digest:
             raise RuntimeError(f"Landing write could not be verified: {key}")
-    receipt = {"schema_version": 2, "kind": "gugik_prg_landing", "source_id": SOURCE, "entity": ENTITY,
-               "content": "snapshot", "area": "data", "source_kind": "prg_shapefile_zip",
-               "version_token": ingested, "version_basis": "download time (server sends no validators)",
-               "ingested_at": ingested, "source_url": URL, "sha256": digest, "size_bytes": size,
-               "object": {"bucket": bucket, "key": key},
-               "http": {"content_type": headers.get("Content-Type"), "content_length": headers.get("Content-Length")},
-               "replaces_sha256": held[-1]["sha256"] if held else None, "code_sha": os.environ.get("GITHUB_SHA", "")}
-    client.put_object(Bucket=bucket, Key=key[: -len(".zip")] + ".receipt.json", ContentType="application/json",
-                      Body=json.dumps(receipt, indent=2, sort_keys=True).encode())
-    return {"outcome": "landed_new" if not held else "landed_changed", "sha256": digest,
-            "size_mb": round(size / 1e6, 1), "download_seconds": seconds}
+    receipt = {
+        "schema_version": 2,
+        "kind": "gugik_prg_landing",
+        "source_id": SOURCE,
+        "entity": ENTITY,
+        "content": "snapshot",
+        "area": "data",
+        "source_kind": "prg_shapefile_zip",
+        "version_token": ingested,
+        "version_basis": "download time (server sends no validators)",
+        "ingested_at": ingested,
+        "source_url": URL,
+        "sha256": digest,
+        "size_bytes": size,
+        "object": {"bucket": bucket, "key": key},
+        "http": {"content_type": headers.get("Content-Type"), "content_length": headers.get("Content-Length")},
+        "replaces_sha256": held[-1]["sha256"] if held else None,
+        "code_sha": os.environ.get("GITHUB_SHA", ""),
+    }
+    client.put_object(
+        Bucket=bucket,
+        Key=key[: -len(".zip")] + ".receipt.json",
+        ContentType="application/json",
+        Body=json.dumps(receipt, indent=2, sort_keys=True).encode(),
+    )
+    return {
+        "outcome": "landed_new" if not held else "landed_changed",
+        "sha256": digest,
+        "size_mb": round(size / 1e6, 1),
+        "download_seconds": seconds,
+    }
 
 
 def main(argv=None) -> int:
@@ -105,8 +127,11 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     client, bucket = s3(), req("R2_LANDING_BUCKET")
     held = landed(client, bucket)
-    summary: dict[str, Any] = {"mode": args.mode, "landed_versions": len(held),
-                               "newest": held[-1]["version_token"] if held else None}
+    summary: dict[str, Any] = {
+        "mode": args.mode,
+        "landed_versions": len(held),
+        "newest": held[-1]["version_token"] if held else None,
+    }
     status = 0
     if args.mode == "load":
         summary.update(run_load(client, bucket, held))
@@ -115,8 +140,12 @@ def main(argv=None) -> int:
         for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=PREFIX):
             present |= {o["Key"] for o in page.get("Contents", []) if not o["Key"].endswith(".receipt.json")}
         stored = archived(client, bucket, SOURCE)
-        missing = [r["object"]["key"] for r in held if r["object"]["key"] not in present
-                   and stored.get(r["sha256"], {}).get("key") != archive_key(SOURCE, r["sha256"], r["object"]["key"])]
+        missing = [
+            r["object"]["key"]
+            for r in held
+            if r["object"]["key"] not in present
+            and stored.get(r["sha256"], {}).get("key") != archive_key(SOURCE, r["sha256"], r["object"]["key"])
+        ]
         summary.update({"missing_data": len(missing), "missing_sample": missing[:5]})
         status = 1 if missing else 0
     print(json.dumps(summary, sort_keys=True))

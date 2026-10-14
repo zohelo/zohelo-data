@@ -5,6 +5,7 @@ Bronze keeps the source as published: one row per CSV row, dimension labels as J
 (names once per file, values per row), the value lexeme as text (decimal comma kept) and
 the attribute label. No casting; Silver maps rows to API variable ids and types values.
 """
+
 from __future__ import annotations
 
 import csv
@@ -18,11 +19,21 @@ import zipfile
 import duckdb
 
 BRONZE_COLUMNS = (
-    ("subgroup_id", "VARCHAR"), ("source_version", "VARCHAR"), ("ingested_at", "TIMESTAMPTZ"),
-    ("raw_sha256", "VARCHAR"), ("channel", "VARCHAR"), ("part_index", "INTEGER"),
-    ("unit_code", "VARCHAR"), ("unit_name", "VARCHAR"), ("dimension_names", "VARCHAR"),
-    ("dimension_values", "VARCHAR"), ("variable_id", "BIGINT"), ("year", "VARCHAR"),
-    ("value_text", "VARCHAR"), ("measure_unit", "VARCHAR"), ("attribute", "VARCHAR"),
+    ("subgroup_id", "VARCHAR"),
+    ("source_version", "VARCHAR"),
+    ("ingested_at", "TIMESTAMPTZ"),
+    ("raw_sha256", "VARCHAR"),
+    ("channel", "VARCHAR"),
+    ("part_index", "INTEGER"),
+    ("unit_code", "VARCHAR"),
+    ("unit_name", "VARCHAR"),
+    ("dimension_names", "VARCHAR"),
+    ("dimension_values", "VARCHAR"),
+    ("variable_id", "BIGINT"),
+    ("year", "VARCHAR"),
+    ("value_text", "VARCHAR"),
+    ("measure_unit", "VARCHAR"),
+    ("attribute", "VARCHAR"),
     ("source_row_number", "BIGINT"),
 )
 COLUMN_NAMES = tuple(name for name, _ in BRONZE_COLUMNS)
@@ -55,7 +66,7 @@ def decode_web_export(source: Path, receipt: dict[str, Any], output: Path, memor
     if header[:2] != FIXED_HEAD or header[-4:] != FIXED_TAIL or len(header) < 6:
         raise BdlDecodeError(f"unexpected BDL CSV header: {header[:8]}")
     dims = header[2:-4]
-    names = {f"c{i}": "VARCHAR" for i in range(len(header) + 1)}   # + trailing empty column
+    names = {f"c{i}": "VARCHAR" for i in range(len(header) + 1)}  # + trailing empty column
     database = output.parent / "work.duckdb"
     try:
         with duckdb.connect(str(database)) as con:
@@ -63,12 +74,16 @@ def decode_web_export(source: Path, receipt: dict[str, Any], output: Path, memor
             con.execute(
                 "CREATE TABLE src AS SELECT * FROM read_csv(?, auto_detect=false, delim=';', quote='\"', "
                 "escape='\"', header=false, skip=1, columns=?, nullstr='\x1f', null_padding=true, "
-                "strict_mode=false, parallel=false, max_line_size=8000000)", [str(work), names])
+                "strict_mode=false, parallel=false, max_line_size=8000000)",
+                [str(work), names],
+            )
             n = len(header)
-            dim_values = ("to_json([" + ", ".join(f"c{i}" for i in range(2, 2 + len(dims))) + "])::VARCHAR"
-                          if dims else "'[]'")
+            dim_values = (
+                "to_json([" + ", ".join(f"c{i}" for i in range(2, 2 + len(dims))) + "])::VARCHAR" if dims else "'[]'"
+            )
             escaped = str(output).replace("'", "''")
-            con.execute(f"""
+            con.execute(
+                f"""
                 COPY (SELECT ?::VARCHAR AS subgroup_id, ?::VARCHAR AS source_version,
                              ?::TIMESTAMPTZ AS ingested_at, ?::VARCHAR AS raw_sha256,
                              'web_export' AS channel, ?::INTEGER AS part_index,
@@ -78,11 +93,18 @@ def decode_web_export(source: Path, receipt: dict[str, Any], output: Path, memor
                              nullif(c{n - 1}, '') AS attribute, rowid + 2 AS source_row_number
                       FROM src)
                 TO '{escaped}' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 1000000)""",
-                [receipt["subgroup_id"], receipt.get("version_token"), receipt["ingested_at"],
-                 receipt["sha256"], int((receipt.get("part") or {}).get("index", 1)),
-                 json.dumps(dims, ensure_ascii=False, separators=(",", ":"))])
+                [
+                    receipt["subgroup_id"],
+                    receipt.get("version_token"),
+                    receipt["ingested_at"],
+                    receipt["sha256"],
+                    int((receipt.get("part") or {}).get("index", 1)),
+                    json.dumps(dims, ensure_ascii=False, separators=(",", ":")),
+                ],
+            )
             rows, bad = con.execute(
-                f"SELECT count(*), count(*) FILTER (WHERE c0 IS NULL OR c{n - 4} IS NULL) FROM src").fetchone()
+                f"SELECT count(*), count(*) FILTER (WHERE c0 IS NULL OR c{n - 4} IS NULL) FROM src"
+            ).fetchone()
     except duckdb.Error as exc:
         raise BdlDecodeError(f"invalid BDL CSV: {str(exc)[:500]}") from exc
     finally:

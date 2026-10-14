@@ -4,6 +4,7 @@ Results are published as GitHub Actions annotations (readable on the run page
 and through the REST API) and, for humans, as the job step summary. GitHub keeps
 only about 4 KB of an annotation message, so messages are capped here.
 """
+
 from __future__ import annotations
 
 import json
@@ -19,7 +20,7 @@ def annotate(level: str, title: str, data) -> None:
         print(f"[{level}] {title}: {message}", flush=True)
         return
     if len(message) > ANNOTATION_LIMIT:
-        message = message[:ANNOTATION_LIMIT - 12] + "…[truncated]"
+        message = message[: ANNOTATION_LIMIT - 12] + "…[truncated]"
     message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
     print(f"::{level} title={title}::{message}", flush=True)
 

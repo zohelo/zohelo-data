@@ -7,12 +7,13 @@ per Landing file: 02_bronze/gus_bdl/subgroup_observations/<P####>/<raw_sha256>.p
 partitioned by subgroup_id; the table's file list is the checkpoint. Rejections go to
 bronze.bdl_rejected_files. Reads a moved file from the Archive. Prints one JSON result line.
 """
+
 from __future__ import annotations
 
 import argparse
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 import json
 import os
 from pathlib import Path
@@ -27,7 +28,7 @@ from ingestion.to_bronze.gus_bdl.decode import BRONZE_COLUMNS, BdlDecodeError, d
 
 TABLE_ID = ("bronze", "bdl_subgroup_observations")
 REJECTED_ID = ("bronze", "bdl_rejected_files")
-ENTITY_COLUMN = "dataset_id"          # rejected-files table predates the shared "entity" name
+ENTITY_COLUMN = "dataset_id"  # rejected-files table predates the shared "entity" name
 DATA = "01_landing/gus_bdl/snapshot/data/"
 OUTPUT_PREFIX = "02_bronze/gus_bdl/subgroup_observations/"
 STATS_COLUMNS = ["subgroup_id", "raw_sha256"]
@@ -60,7 +61,7 @@ def candidates(client, bucket: str) -> list[dict[str, Any]]:
     for (subgroup, version), parts in versions.items():
         total = int((parts[0].get("part") or {}).get("total", 1))
         if len({(p.get("part") or {}).get("index", 1) for p in parts}) < total:
-            continue                                        # incomplete version: never loaded
+            continue  # incomplete version: never loaded
         if subgroup not in newest or version > newest[subgroup][0]:
             newest[subgroup] = (version, parts)
     return [p for _, parts in newest.values() for p in parts]
@@ -85,20 +86,32 @@ def main(argv=None) -> int:
             work = Path(tmp) / f"{index:04d}"
             work.mkdir()
             raw, output = work / "export.zip", work / "out.parquet"
-            bf.download(client, landing, "gus_bdl", receipt["object"]["key"], receipt["sha256"],
-                        receipt.get("size_bytes"), raw)
+            bf.download(
+                client, landing, "gus_bdl", receipt["object"]["key"], receipt["sha256"], receipt.get("size_bytes"), raw
+            )
             try:
                 report = decode_web_export(raw, receipt, output)
             except BdlDecodeError as exc:
-                rejected.append({"entity": receipt["subgroup_id"], "raw_sha256": receipt["sha256"],
-                                 "landing_key": receipt["object"]["key"], "error": str(exc)[:1000],
-                                 "recorded_at": datetime.now(timezone.utc),
-                                 "code_sha": os.environ.get("GITHUB_SHA", "unknown")})
+                rejected.append(
+                    {
+                        "entity": receipt["subgroup_id"],
+                        "raw_sha256": receipt["sha256"],
+                        "landing_key": receipt["object"]["key"],
+                        "error": str(exc)[:1000],
+                        "recorded_at": datetime.now(UTC),
+                        "code_sha": os.environ.get("GITHUB_SHA", "unknown"),
+                    }
+                )
                 shutil.rmtree(work, ignore_errors=True)
                 continue
             key = f"{OUTPUT_PREFIX}{receipt['subgroup_id']}/{receipt['sha256']}.parquet"
-            prepared.append({"uri": bf.upload(client, bucket, key, output, receipt["sha256"]), "rows": report["rows"],
-                             "bytes": report["output_bytes"]})
+            prepared.append(
+                {
+                    "uri": bf.upload(client, bucket, key, output, receipt["sha256"]),
+                    "rows": report["rows"],
+                    "bytes": report["output_bytes"],
+                }
+            )
             shutil.rmtree(work, ignore_errors=True)
     if prepared:
         bf.commit(cat, TABLE_ID, [p["uri"] for p in prepared], STATS_COLUMNS, "bdl-bronze-batch")
@@ -107,12 +120,24 @@ def main(argv=None) -> int:
         if lost:
             raise RuntimeError(f"Bronze commit lacks prepared files: {lost[:3]}")
     bf.record_rejections(cat, REJECTED_ID, rejected, ENTITY_COLUMN)
-    print(json.dumps({"operation": "bdl-bronze-batch", "result": "pass",
-                      "processed": len(prepared) + len(rejected), "appended_files": len(prepared),
-                      "rows_added": sum(p["rows"] for p in prepared), "bytes_added": sum(p["bytes"] for p in prepared),
-                      "failed": len(rejected), "failed_datasets": [r["entity"] for r in rejected],
-                      "missing_distinct_raw_sha256": len(todo) - len(prepared) - len(rejected),
-                      "elapsed_seconds": round(time.monotonic() - started, 1)}, sort_keys=True), flush=True)
+    print(
+        json.dumps(
+            {
+                "operation": "bdl-bronze-batch",
+                "result": "pass",
+                "processed": len(prepared) + len(rejected),
+                "appended_files": len(prepared),
+                "rows_added": sum(p["rows"] for p in prepared),
+                "bytes_added": sum(p["bytes"] for p in prepared),
+                "failed": len(rejected),
+                "failed_datasets": [r["entity"] for r in rejected],
+                "missing_distinct_raw_sha256": len(todo) - len(prepared) - len(rejected),
+                "elapsed_seconds": round(time.monotonic() - started, 1),
+            },
+            sort_keys=True,
+        ),
+        flush=True,
+    )
     return 0
 
 

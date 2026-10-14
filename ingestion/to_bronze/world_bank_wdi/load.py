@@ -14,10 +14,11 @@ From the WDI CSV ZIP (members identified by their headers, not by name):
 One Parquet file per Landing file and table, partitioned by entity; the file list is the
 checkpoint. Rejections: bronze.wdi_rejected_files.
 """
+
 from __future__ import annotations
 
 import csv
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import sha256
 import json
 import os
@@ -37,11 +38,26 @@ OBS_ID = ("bronze", "wdi_bulk_observations")
 META_ID = ("bronze", "wdi_bulk_metadata")
 REJECTED_ID = ("bronze", "wdi_rejected_files")
 PROVENANCE = [("raw_sha256", "VARCHAR"), ("source_version", "VARCHAR"), ("ingested_at", "TIMESTAMPTZ")]
-OBS_COLUMNS = ([("entity", "VARCHAR"), ("country_name", "VARCHAR"), ("country_code", "VARCHAR"),
-                ("indicator_name", "VARCHAR"), ("indicator_code", "VARCHAR"), ("year", "VARCHAR"),
-                ("value_text", "VARCHAR")] + PROVENANCE + [("source_row_number", "BIGINT")])
-META_COLUMNS = ([("entity", "VARCHAR"), ("member", "VARCHAR"), ("source_row_number", "BIGINT"),
-                 ("field", "VARCHAR"), ("value_text", "VARCHAR")] + PROVENANCE)
+OBS_COLUMNS = (
+    [
+        ("entity", "VARCHAR"),
+        ("country_name", "VARCHAR"),
+        ("country_code", "VARCHAR"),
+        ("indicator_name", "VARCHAR"),
+        ("indicator_code", "VARCHAR"),
+        ("year", "VARCHAR"),
+        ("value_text", "VARCHAR"),
+    ]
+    + PROVENANCE
+    + [("source_row_number", "BIGINT")]
+)
+META_COLUMNS = [
+    ("entity", "VARCHAR"),
+    ("member", "VARCHAR"),
+    ("source_row_number", "BIGINT"),
+    ("field", "VARCHAR"),
+    ("value_text", "VARCHAR"),
+] + PROVENANCE
 OBS_HEADER = ["Country Name", "Country Code", "Indicator Name", "Indicator Code"]
 
 
@@ -54,29 +70,38 @@ def decode(zip_path: Path, receipt: dict[str, Any], workdir: Path) -> tuple[Path
     members = [m for m in zipfile.ZipFile(zip_path).infolist() if m.filename.lower().endswith(".csv")]
     zipfile.ZipFile(zip_path).extractall(workdir / "members", members)
     paths = [workdir / "members" / m.filename for m in members]
-    observation = [p for p in paths if header_of(p)[:4] == OBS_HEADER and header_of(p)[4:5] and header_of(p)[4].isdigit()]
+    observation = [
+        p for p in paths if header_of(p)[:4] == OBS_HEADER and header_of(p)[4:5] and header_of(p)[4].isdigit()
+    ]
     if len(observation) != 1:
         raise ValueError(f"expected one observation member, found {[p.name for p in observation]}")
-    ingested = datetime.strptime(receipt["ingested_at"], "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+    ingested = datetime.strptime(receipt["ingested_at"], "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
     prov = [receipt["sha256"], receipt["version_token"], ingested]
     con = duckdb.connect()
     con.execute("SET memory_limit='10GB'")
     obs_out, meta_out = workdir / "obs.parquet", workdir / "meta.parquet"
     years = [c for c in header_of(observation[0])[4:] if c.isdigit()]
-    con.execute("CREATE TABLE raw AS SELECT * FROM read_csv(?, header=true, all_varchar=true, "
-                "delim=',', quote='\"', escape='\"', nullstr='\x01', strict_mode=true)", [str(observation[0])])
+    con.execute(
+        "CREATE TABLE raw AS SELECT * FROM read_csv(?, header=true, all_varchar=true, "
+        "delim=',', quote='\"', escape='\"', nullstr='\x01', strict_mode=true)",
+        [str(observation[0])],
+    )
     con.execute("CREATE TABLE wide AS SELECT rowid + 2 AS line, * FROM raw")
     year_list = ", ".join(f'"{y}"' for y in years)
     target = str(obs_out).replace("'", "''")
-    con.execute(f"""COPY (SELECT ? AS entity, "Country Name" AS country_name, "Country Code" AS country_code,
+    con.execute(
+        f"""COPY (SELECT ? AS entity, "Country Name" AS country_name, "Country Code" AS country_code,
                        "Indicator Name" AS indicator_name, "Indicator Code" AS indicator_code, year, value_text,
                        ? AS raw_sha256, ? AS source_version, ?::TIMESTAMPTZ AS ingested_at, line AS source_row_number
                 FROM (UNPIVOT wide ON {year_list} INTO NAME year VALUE value_text)
                 WHERE value_text <> '') TO '{target}' (FORMAT parquet, COMPRESSION zstd)""",
-                [receipt["entity"], *prov])
+        [receipt["entity"], *prov],
+    )
     counts = {"observations": con.execute(f"SELECT count(*) FROM read_parquet('{target}')").fetchone()[0]}
     meta_rows = 0
-    with tempfile.NamedTemporaryFile("w", suffix=".csv", dir=workdir, delete=False, newline="", encoding="utf-8") as tmp:
+    with tempfile.NamedTemporaryFile(
+        "w", suffix=".csv", dir=workdir, delete=False, newline="", encoding="utf-8"
+    ) as tmp:
         writer = csv.writer(tmp)
         writer.writerow(["member", "source_row_number", "field", "value_text"])
         for path in paths:
@@ -92,10 +117,13 @@ def decode(zip_path: Path, receipt: dict[str, Any], workdir: Path) -> tuple[Path
                             meta_rows += 1
         meta_csv = tmp.name
     target = str(meta_out).replace("'", "''")
-    con.execute(f"""COPY (SELECT ? AS entity, member, source_row_number::BIGINT AS source_row_number, field, value_text,
+    con.execute(
+        f"""COPY (SELECT ? AS entity, member, source_row_number::BIGINT AS source_row_number, field, value_text,
                        ? AS raw_sha256, ? AS source_version, ?::TIMESTAMPTZ AS ingested_at
                 FROM read_csv(?, header=true, all_varchar=true, quote='\"', escape='\"', nullstr='\x01'))
-                TO '{target}' (FORMAT parquet, COMPRESSION zstd)""", [receipt["entity"], *prov, meta_csv])
+                TO '{target}' (FORMAT parquet, COMPRESSION zstd)""",
+        [receipt["entity"], *prov, meta_csv],
+    )
     counts["metadata_values"] = meta_rows
     counts["members"] = len(paths)
     con.close()
@@ -130,18 +158,32 @@ def load(budget_minutes: float) -> int:
             try:
                 obs, meta, counts = decode(zip_path, receipt, work)
             except (ValueError, duckdb.Error, zipfile.BadZipFile, csv.Error, UnicodeDecodeError) as exc:
-                bf.record_rejections(cat, REJECTED_ID, [{
-                    "entity": receipt["entity"], "raw_sha256": receipt["sha256"], "landing_key": receipt["object"]["key"],
-                    "error": f"{type(exc).__name__}: {exc}"[:1000], "code_sha": os.environ.get("GITHUB_SHA", "")}])
+                bf.record_rejections(
+                    cat,
+                    REJECTED_ID,
+                    [
+                        {
+                            "entity": receipt["entity"],
+                            "raw_sha256": receipt["sha256"],
+                            "landing_key": receipt["object"]["key"],
+                            "error": f"{type(exc).__name__}: {exc}"[:1000],
+                            "code_sha": os.environ.get("GITHUB_SHA", ""),
+                        }
+                    ],
+                )
                 totals["rejected"] = 1
             else:
                 for table_id, path, name in ((META_ID, meta, "metadata"), (OBS_ID, obs, "observations")):
-                    uri = bf.upload(client, lake, f"02_bronze/world_bank_wdi/{name}/{receipt['entity']}/{receipt['sha256']}.parquet",
-                                    path, receipt["sha256"])
+                    uri = bf.upload(
+                        client,
+                        lake,
+                        f"02_bronze/world_bank_wdi/{name}/{receipt['entity']}/{receipt['sha256']}.parquet",
+                        path,
+                        receipt["sha256"],
+                    )
                     bf.commit(cat, table_id, [uri], ["entity", "raw_sha256"], "wdi-bronze-load")
                 totals.update(counts)
                 totals["appended_files"] = 1
     annotate("notice", "world_bank_wdi Bronze from Landing", {"result": "complete", **totals})
     step_summary(f"## world_bank_wdi · bronze load\n\n```json\n{json.dumps(totals, indent=2)}\n```\n")
     return 0
-

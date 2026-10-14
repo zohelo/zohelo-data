@@ -7,6 +7,7 @@ groups under it; with --peek it also shows the first bytes and the most frequent
 tags of up to --limit objects. A key argument peeks that one object.
 Args: PREFIX_OR_KEY ... [--peek] [--limit 3]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -28,10 +29,15 @@ def summarize(client, bucket: str, prefix: str) -> tuple[dict, list[str]]:
         for obj in page.get("Contents", []):
             keys.append(obj["Key"])
             size += obj["Size"]
-            rest = obj["Key"][len(prefix):].split("/")
+            rest = obj["Key"][len(prefix) :].split("/")
             groups["/".join(rest[:2]) if len(rest) > 2 else rest[0][:40]] += 1
-    return {"prefix": prefix, "objects": len(keys), "mb": round(size / 1e6, 1),
-            "groups": groups.most_common(25), "sample": keys[:8]}, keys
+    return {
+        "prefix": prefix,
+        "objects": len(keys),
+        "mb": round(size / 1e6, 1),
+        "groups": groups.most_common(25),
+        "sample": keys[:8],
+    }, keys
 
 
 def peek(client, bucket: str, key: str) -> dict:
@@ -42,8 +48,12 @@ def peek(client, bucket: str, key: str) -> dict:
         # A ranged read cuts the gzip stream; decode what arrived.
         body = zlib.decompressobj(16 + zlib.MAX_WBITS).decompress(body)
     text = body.decode("utf-8", "replace")
-    return {"key": key, "range": obj.get("ContentRange"), "head": text[:2500],
-            "tags": Counter(re.findall(r"<([A-Za-z_:]+)[ >]", text)).most_common(30)}
+    return {
+        "key": key,
+        "range": obj.get("ContentRange"),
+        "head": text[:2500],
+        "tags": Counter(re.findall(r"<([A-Za-z_:]+)[ >]", text)).most_common(30),
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -57,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
         if path.endswith("/"):
             summary, keys = summarize(client, bucket, path)
             annotate("notice", f"objects {path}", summary)
-            targets = [k for k in keys if not k.endswith(".receipt.json")][:args.limit] if args.peek else []
+            targets = [k for k in keys if not k.endswith(".receipt.json")][: args.limit] if args.peek else []
         else:
             targets = [path]
         for key in targets:

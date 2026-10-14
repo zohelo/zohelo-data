@@ -13,9 +13,10 @@ eurostat_structure_sdmx, read by ingestion/to_bronze/eurostat/structure.py). A m
 is written only when its SHA-256 differs from the newest landed one. Nothing is
 overwritten. Run by Eurostat ``landing: extract`` with filter ``structure``.
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import sha256
 import json
 import os
@@ -94,25 +95,48 @@ def main() -> int:
             if digest == held:
                 results[entity] = {"outcome": "unchanged"}
                 continue
-            ingested = datetime.now(timezone.utc)
+            ingested = datetime.now(UTC)
             token = ingested.strftime("%Y%m%dT%H%M%SZ")
             key = f"{PREFIX}{entity}/{token}__{token}.structure.xml"
-            client.upload_file(str(path), bucket, key, ExtraArgs={
-                "ContentType": "application/vnd.sdmx.structure+xml", "Metadata": {"sha256": digest}})
+            client.upload_file(
+                str(path),
+                bucket,
+                key,
+                ExtraArgs={"ContentType": "application/vnd.sdmx.structure+xml", "Metadata": {"sha256": digest}},
+            )
             head = client.head_object(Bucket=bucket, Key=key)
             if head["ContentLength"] != size or (head.get("Metadata") or {}).get("sha256") != digest:
                 raise RuntimeError(f"Landing write could not be verified: {key}")
-        receipt = {"schema_version": 2, "kind": "eurostat_landing", "source_id": "eurostat",
-                   "dataset_code": entity, "part": None, "content": "snapshot", "area": "metadata",
-                   "source_kind": "eurostat_structure_sdmx", "eurostat_version": None, "version_token": token,
-                   "ingested_at": ingested.isoformat(), "source_url": url, "sha256": digest, "size_bytes": size,
-                   "object": {"bucket": bucket, "key": key}, "replaces_sha256": held,
-                   "http": {"content_type": headers.get("Content-Type"), "etag": headers.get("ETag"),
-                            "last_modified": headers.get("Last-Modified")},
-                   "code_sha": os.environ.get("GITHUB_SHA", "")}
-        client.put_object(Bucket=bucket, Key=key[: -len(".structure.xml")] + ".receipt.json",
-                          ContentType="application/json",
-                          Body=json.dumps(receipt, indent=2, sort_keys=True).encode())
+        receipt = {
+            "schema_version": 2,
+            "kind": "eurostat_landing",
+            "source_id": "eurostat",
+            "dataset_code": entity,
+            "part": None,
+            "content": "snapshot",
+            "area": "metadata",
+            "source_kind": "eurostat_structure_sdmx",
+            "eurostat_version": None,
+            "version_token": token,
+            "ingested_at": ingested.isoformat(),
+            "source_url": url,
+            "sha256": digest,
+            "size_bytes": size,
+            "object": {"bucket": bucket, "key": key},
+            "replaces_sha256": held,
+            "http": {
+                "content_type": headers.get("Content-Type"),
+                "etag": headers.get("ETag"),
+                "last_modified": headers.get("Last-Modified"),
+            },
+            "code_sha": os.environ.get("GITHUB_SHA", ""),
+        }
+        client.put_object(
+            Bucket=bucket,
+            Key=key[: -len(".structure.xml")] + ".receipt.json",
+            ContentType="application/json",
+            Body=json.dumps(receipt, indent=2, sort_keys=True).encode(),
+        )
         results[entity] = {"outcome": "landed", "mb": round(size / 1e6, 1)}
         time.sleep(5)
     annotate("notice", "eurostat structure landing", results)
