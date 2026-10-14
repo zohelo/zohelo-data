@@ -5,8 +5,8 @@ with newest as (
     where
         entity = 'SIMC_Urzedowy'
         and source_version = (
-            select max(source_version) from {{ source('gus_teryt', 'teryt_records') }}
-            where entity = 'SIMC_Urzedowy'
+            select max(latest.source_version) from {{ source('gus_teryt', 'teryt_records') }} as latest
+            where latest.entity = 'SIMC_Urzedowy'
         )
 )
 
