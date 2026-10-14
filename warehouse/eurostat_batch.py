@@ -1,0 +1,114 @@
+"""Batching of the incremental Eurostat Silver build (design: project doc eurostat-silver-design.md).
+
+Scanning Bronze to find the newest version of each dataset reads billions of rows, so
+the batch is planned from Iceberg metadata instead:
+
+  <ns>.eurostat_file_index   one row per Bronze file (= one Landing file): dataset_id (the
+                             partition value), raw_sha256 (the file name), ingested_at (the
+                             column's upper bound), record_count, is_current (newest
+                             ingested_at of its dataset). Rebuilt on every build.
+  <ns>.eurostat_loaded_files the Landing files whose rows are in Silver, with load time.
+
+``prepare`` returns the dbt vars of one build: the next current files not yet loaded (in
+dataset order, up to a row budget) and the loaded files that have been superseded;
+``finish`` records them after the model has run. Both tables are small (one row per file)
+and derived, so they are overwritten.
+"""
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from pathlib import Path
+import re
+
+import pyarrow as pa
+from pyiceberg.exceptions import NoSuchTableError
+
+from ingestion.common.r2 import catalog
+
+BRONZE_ID = ("bronze", "eurostat_full_observations")
+SHA_RE = re.compile(r"^[0-9a-f]{64}$")
+INDEX_SCHEMA = pa.schema([("dataset_id", pa.string()), ("raw_sha256", pa.string()),
+                          ("ingested_at", pa.timestamp("us", tz="UTC")), ("record_count", pa.int64()),
+                          ("file_size_bytes", pa.int64()), ("is_current", pa.bool_())])
+LOG_SCHEMA = pa.schema([("dataset_id", pa.string()), ("raw_sha256", pa.string()),
+                        ("loaded_at", pa.timestamp("us", tz="UTC"))])
+MODEL = "eurostat_observations"
+
+
+def wanted(selectors: list[str]) -> bool:
+    return not selectors or any(s.strip("+").split(".")[-1] in (MODEL, "eurostat_dataset_versions", "eurostat", "silver") for s in selectors)
+
+
+def _overwrite(cat, table_id: tuple[str, str], rows: pa.Table) -> None:
+    try:
+        table = cat.load_table(table_id)
+    except NoSuchTableError:
+        try:
+            cat.create_namespace(table_id[0])
+        except Exception:
+            pass
+        table = cat.create_table(table_id, schema=rows.schema)
+    table.overwrite(rows)
+
+
+def _read(cat, table_id: tuple[str, str], schema: pa.Schema) -> pa.Table:
+    try:
+        table = cat.load_table(table_id)
+    except NoSuchTableError:
+        return schema.empty_table()
+    if table.current_snapshot() is None:
+        return schema.empty_table()
+    return table.scan().to_arrow().cast(schema)
+
+
+def prepare(namespace: str, row_budget: int) -> dict:
+    cat = catalog()
+    files = cat.load_table(BRONZE_ID).inspect.files()
+    rows = []
+    for path, partition, count, size, metrics in zip(
+            files.column("file_path").to_pylist(), files.column("partition").to_pylist(),
+            files.column("record_count").to_pylist(), files.column("file_size_in_bytes").to_pylist(),
+            files.column("readable_metrics").to_pylist()):
+        sha = Path(path).stem
+        if not SHA_RE.fullmatch(sha):
+            continue
+        ingested = ((metrics or {}).get("ingested_at") or {}).get("upper_bound")
+        rows.append({"dataset_id": partition["dataset_id"], "raw_sha256": sha, "ingested_at": ingested,
+                     "record_count": count, "file_size_bytes": size})
+    newest: dict[str, tuple] = {}
+    for r in rows:
+        key = (r["ingested_at"] or datetime.min.replace(tzinfo=timezone.utc), r["raw_sha256"])
+        if r["dataset_id"] not in newest or key > newest[r["dataset_id"]]:
+            newest[r["dataset_id"]] = key
+    for r in rows:
+        r["is_current"] = newest[r["dataset_id"]][1] == r["raw_sha256"]
+    _overwrite(cat, (namespace, "eurostat_file_index"), pa.Table.from_pylist(rows, schema=INDEX_SCHEMA))
+
+    # Keyed by (dataset_id, raw_sha256): Eurostat publishes some byte-identical files under
+    # several dataset codes, so a file hash alone does not identify a dataset version.
+    current = {(r["dataset_id"], r["raw_sha256"]): r for r in rows if r["is_current"]}
+    log = _read(cat, (namespace, "eurostat_loaded_files"), LOG_SCHEMA).to_pylist()
+    loaded = {(r["dataset_id"], r["raw_sha256"]) for r in log}
+    superseded = sorted(loaded - set(current))
+    batch, total = [], 0
+    for key in sorted(k for k in current if k not in loaded):
+        r = current[key]
+        if batch and total + r["record_count"] > row_budget:
+            break
+        batch.append(r)
+        total += r["record_count"]
+    remaining = sum(1 for k in current if k not in loaded) - len(batch)
+    return {"vars": {"eurostat_batch": [[r["dataset_id"], r["raw_sha256"]] for r in batch],
+                     "eurostat_superseded": [list(k) for k in superseded]},
+            "summary": {"datasets_current": len(current), "batch_datasets": len(batch), "batch_rows": total,
+                        "superseded": len(superseded), "remaining_after_batch": remaining}}
+
+
+def finish(namespace: str, plan: dict) -> None:
+    cat = catalog()
+    log_id = (namespace, "eurostat_loaded_files")
+    gone = {tuple(k) for k in plan["vars"]["eurostat_superseded"]}
+    log = [r for r in _read(cat, log_id, LOG_SCHEMA).to_pylist() if (r["dataset_id"], r["raw_sha256"]) not in gone]
+    now = datetime.now(timezone.utc)
+    log += [{"dataset_id": d, "raw_sha256": h, "loaded_at": now} for d, h in plan["vars"]["eurostat_batch"]]
+    _overwrite(cat, log_id, pa.Table.from_pylist(log, schema=LOG_SCHEMA))
