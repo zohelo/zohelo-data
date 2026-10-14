@@ -45,12 +45,16 @@ models:
   - name: dim_geography
     description: >-
       Conformed geography, v1 with the TERYT schemes: TERC (Polska → województwo → powiat →
-      gmina) and SIMC localities, vintage = TERYT catalogue state date; flattened
-      ancestors l0–l3; area_ha / area_km2 for TERC units from PRG; special members _T, _Z,
+      gmina → część gminy for RODZ 4/5/8/9) and SIMC localities (level 5), vintage = TERYT
+      catalogue state date; flattened ancestors l0–l4; area_ha / area_km2 for TERC units from
+      PRG (country area includes internal and territorial waters); special members _T, _Z,
       _X. geography_key = scheme:code:vintage.
     columns:
       - name: geography_key
         tests: [not_null, unique]
+      - name: l3_code
+        description: The gmina (TERC, RODZ 1–3) a member belongs to; derived for gmina parts and localities.
+        tests: [{relationships: {arguments: {to: ref('teryt_terc'), field: terc_code}}}]
   - name: fact_gold_price
     description: NBP gold price, PLN per gram of 1000-fineness gold, one row per date (date_key → dim_date).
     columns:
