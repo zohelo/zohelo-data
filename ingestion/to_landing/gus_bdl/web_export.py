@@ -35,7 +35,6 @@ WEB = "https://bdl.stat.gov.pl/bdl"
 MAX_INFORMATION = 3500  # the website refuses larger selections in one export
 PAUSE_SECONDS = 20  # between subgroups
 INFO_RE = re.compile(r"Wybrano\s+([0-9\s]+)\s+informacji", re.IGNORECASE)
-EXPORT_NAME_RE = re.compile(r"_([0-9]+)_CREL_([0-9]{14})\.zip$", re.IGNORECASE)
 
 
 def ensure_browser() -> None:
@@ -98,15 +97,28 @@ def note(page, trace: list, step: str) -> None:
 
 
 def wait_for_result_table(page) -> None:
-    """The result table page: URL /podgrup/tablica, or a visible Export / relational CSV control."""
-    for _ in range(120):
-        if "/bdl/dane/podgrup/tablica" in page.url:
+    """Until the result table shows its Export control (a table URL alone is not ready)."""
+    for _ in range(180):
+        if "/bdl/errors/" in page.url:
+            raise RuntimeError(f"BDL error page: {page.url}")
+        settle(page)
+        if page.get_by_text(re.compile(r"^(Eksport|Export)$", re.IGNORECASE)).first.is_visible():
             return
-        for pattern in (r"^(Eksport|Export)$", r"CSV\s*[–-]\s*(tablica\s+)?relacyj"):
-            if page.get_by_text(re.compile(pattern, re.IGNORECASE)).first.is_visible():
-                return
         page.wait_for_timeout(1000)
-    raise RuntimeError(f"result table not ready; at {page.url}")
+    raise RuntimeError(f"result table did not show its Export control; at {page.url}")
+
+
+def save_download(download, subgroup: dict[str, Any], workdir: Path) -> tuple[Path, str]:
+    """Save a provider ZIP after checking its name identifies the subgroup and it is a ZIP."""
+    name = download.suggested_filename
+    number = subgroup["id"][1:]
+    if not re.search(rf"(?:^|_){number}(?:_|\.)", name, re.IGNORECASE):
+        raise RuntimeError(f"export file name {name!r} does not identify {subgroup['id']}")
+    path = workdir / f"{subgroup['id']}.zip"
+    download.save_as(path)
+    if path.read_bytes()[:2] != b"PK":
+        raise RuntimeError(f"export of {subgroup['id']} is not a ZIP archive")
+    return path, name
 
 
 def enabled_next(page):
@@ -155,7 +167,17 @@ def export(page, subgroup: dict[str, Any], workdir: Path, trace: list) -> dict[s
     if not information:
         return {"status": "no_data", "information": information}
     if information > MAX_INFORMATION:
-        return {"status": "too_large", "information": information}
+        # Large subgroups: the dimensions page offers a whole-subgroup download instead.
+        button = page.locator(
+            "#ctl00_ContentPlaceHolder_download1:visible, #ctl00_ContentPlaceHolder_download2:visible"
+        ).first
+        if not (button.count() and button.is_enabled()):
+            return {"status": "too_large", "information": information}
+        note(page, trace, "whole-subgroup download")
+        with page.expect_download(timeout=360_000) as download_info:
+            button.click(no_wait_after=True)
+        path, name = save_download(download_info.value, subgroup, workdir)
+        return {"status": "downloaded", "path": path, "export_file_name": name, "information": information}
     enabled_next(page).click()
     page.wait_for_url(re.compile(r"/bdl/dane/podgrup/teryt"), timeout=30_000)
     settle(page)
@@ -165,6 +187,11 @@ def export(page, subgroup: dict[str, Any], workdir: Path, trace: list) -> dict[s
     settle(page)
     page.locator("button.rlbTransferAllFrom").first.click()
     settle(page)
+    page.wait_for_function(
+        "() => (window.$find('ctl00_ContentPlaceHolder_terytList_SelectedUnits')"
+        "?.get_items?.()?.get_count?.() || 0) > 0",
+        timeout=45_000,
+    )
     note(page, trace, "territories selected")
     enabled_next(page).click()
     wait_for_result_table(page)
@@ -174,16 +201,8 @@ def export(page, subgroup: dict[str, Any], workdir: Path, trace: list) -> dict[s
         page.get_by_text(re.compile(r"^(Eksport|Export)$", re.IGNORECASE)).first.click()
         page.wait_for_timeout(500)
     with page.expect_download(timeout=180_000) as download_info:
-        option.click()
-    download = download_info.value
-    name = download.suggested_filename
-    match = EXPORT_NAME_RE.search(name)
-    if not match or match.group(1) != subgroup["id"][1:].lstrip("0"):
-        raise RuntimeError(f"export file name {name!r} does not identify {subgroup['id']}")
-    path = workdir / f"{subgroup['id']}.zip"
-    download.save_as(path)
-    if path.read_bytes()[:2] != b"PK":
-        raise RuntimeError(f"export of {subgroup['id']} is not a ZIP archive")
+        option.click(no_wait_after=True)
+    path, name = save_download(download_info.value, subgroup, workdir)
     return {"status": "downloaded", "path": path, "export_file_name": name, "information": information}
 
 
