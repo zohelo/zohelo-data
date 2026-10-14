@@ -36,6 +36,7 @@ MODEL = "eurostat_observations"
 # The batch travels as dbt --vars (one command-line argument, ≤128 KB on Linux): at most
 # MAX_PAIRS (dataset, file) pairs per list, ~100 bytes each.
 MAX_PAIRS = 500
+OVERSIZED_ROWS = 700_000_000
 
 
 def wanted(selectors: list[str]) -> bool:
@@ -108,19 +109,26 @@ def prepare(namespace: str, row_budget: int) -> dict:
     log = _read(cat, (namespace, "eurostat_loaded_files"), LOG_SCHEMA).to_pylist()
     loaded = {(r["dataset_id"], r["raw_sha256"]) for r in log}
     superseded = sorted(loaded - set(current))[:MAX_PAIRS]
-    batch, total = [], 0
+    batch, total, oversized = [], 0, []
     for key in sorted(k for k in current if k not in loaded):
         r = current[key]
+        # A single file above OVERSIZED_ROWS exhausts the runner's temp disk (1.48B rows
+        # failed at 75 GB); those are deferred until a sliced load exists.
+        if r["record_count"] > OVERSIZED_ROWS:
+            oversized.append(r)
+            continue
         if batch and (total + r["record_count"] > row_budget or len(batch) >= MAX_PAIRS):
             break
         batch.append(r)
         total += r["record_count"]
-    remaining = sum(1 for k in current if k not in loaded) - len(batch)
+    remaining = sum(1 for k in current if k not in loaded) - len(batch) - len(oversized)
     return {"vars": {"eurostat_batch": [[r["dataset_id"], r["raw_sha256"]] for r in batch],
                      "eurostat_superseded": [list(k) for k in superseded]},
             "summary": {"datasets_current": len(current), "batch_datasets": len(batch), "batch_rows": total,
                         "superseded": len(superseded), "remaining_after_batch": remaining,
-                        "dropped_legacy_table": dropped_legacy}}
+                        "dropped_legacy_table": dropped_legacy,
+                        "deferred_oversized": [[r["dataset_id"], r["record_count"]] for r in oversized][:20],
+                        "deferred_oversized_count": len(oversized)}}
 
 
 def finish(namespace: str, plan: dict) -> None:
