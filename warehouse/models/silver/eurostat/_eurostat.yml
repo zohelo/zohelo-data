@@ -35,8 +35,9 @@ models:
                   raw_sha256 in ('{{ var("eurostat_batch", []) | map("last") | join("', '") }}')
   - name: eurostat_dataflows
     description: >-
-      One row per Eurostat dataset from its newest SDMX structure message: English name and
-      description, data structure reference, last data/structure update annotations.
+      One row per Eurostat dataflow (dataset) from the newest structure message that defines
+      it (bulk ESTAT_ALL_DATAFLOW or per-dataset): English name and description, data
+      structure reference, last data/structure update annotations.
     columns:
       - name: dataset_id
         tests: [not_null, unique]
