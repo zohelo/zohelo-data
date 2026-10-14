@@ -156,6 +156,7 @@ def configuration(files: list[Path]) -> list[str]:
                 problems.append(f"{f}: {exc}")
     if problems:
         return problems
+    problems += register(files)
     config = run.load_config()
     problems += run.config_problems(config)
     for source in [*config["sources"], "platform"]:
@@ -167,6 +168,24 @@ def configuration(files: list[Path]) -> list[str]:
         if unknown:
             problems.append(f"run {name!r}: unknown activities {sorted(unknown)}")
     problems += scheduler.validate(config, run.plan)
+    return problems
+
+
+STATUSES = {"registered", "landing", "bronze", "silver"}
+
+
+def register(files: list[Path]) -> list[str]:
+    """The source register (ingestion/register.yaml) and the source declarations agree."""
+    entries = yaml.safe_load((ROOT / "ingestion/register.yaml").read_text())["sources"]
+    problems, ids = [], [e.get("id") for e in entries]
+    problems += [f"register: duplicate id {i}" for i in sorted({i for i in ids if ids.count(i) > 1})]
+    problems += [
+        f"register: {e.get('id')}: status {e.get('status')!r}" for e in entries if e.get("status") not in STATUSES
+    ]
+    linked = {e["source_system"] for e in entries if e.get("source_system")}
+    declared = {f.stem for f in files if f.parent == Path("ingestion/sources") and f.suffix == ".yaml"}
+    problems += [f"register: source_system {s} has no ingestion/sources/{s}.yaml" for s in sorted(linked - declared)]
+    problems += [f"register: ingestion/sources/{s}.yaml is not in the register" for s in sorted(declared - linked)]
     return problems
 
 

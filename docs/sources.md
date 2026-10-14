@@ -1,5 +1,12 @@
 # Sources: download and discovery routes
 
+All candidate sources (about 180) are listed in the source register
+`ingestion/register.yaml`: one entry per source with the same fields (provider, access
+kind, endpoint, interfaces, auth, limits, licence status, update behaviour, history and
+incremental load approach, identifiers, research priority and blockers) and a `status`
+(registered → landing → bronze → silver). An onboarded source links to its declaration
+via `source_system`. This page details the routes of the onboarded sources.
+
 Researched download and discovery routes per source system, checked 8 September
 2026. Each source's chosen extraction is recorded in `ingestion/sources/<source>.yaml`
 ([landing.md](landing.md) gives the decision order). Sources not listed here have no
