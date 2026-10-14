@@ -92,7 +92,7 @@ topics, BDL K/G/P, DBW areas) map through crosswalks.
 
 ## Time
 
-- `dim_calendar`: one row per day; date roles on facts (effective, publication, as-of).
+- `dim_date` (built): one row per day; date roles on facts (effective, publication, as-of).
 - `dim_period`: SDMX TIME_PERIOD (YYYY, YYYY-Qn, YYYY-MM, YYYY-Www, YYYY-MM-DD …) with
   frequency, start and end day. Annual values are never expanded to days.
 - `bridge_period_day` links each period to its days for filtering and alignment.

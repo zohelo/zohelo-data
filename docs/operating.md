@@ -22,7 +22,8 @@ Every source uses the same activity names; a source implements the ones it needs
 | `bronze.verify` | `ingestion/common/lineage.py` | every Landing file is in Bronze or rejected with a reason |
 | `landing.archive` | `ingestion/common/archive.py` | move Bronze-loaded Landing files to Archive (copy, verify SHA-256, delete from Landing; receipt stays) |
 | `archive.prune` | `ingestion/common/retention.py` | apply the source's Archive retention (`archive_policy` in its config) |
-| `silver_gold.promote` | `warehouse/passthrough/` | platform: Bronze → Silver → Gold pass-through |
+| `silver_gold.promote` | `warehouse/passthrough/` | platform: Bronze → Silver → Gold pass-through for sources not yet modelled |
+| `silver_gold.build` | `warehouse/build.py` | platform: dbt build of `warehouse/models/` (filter = model names); Eurostat Silver in batches; publishes the data catalog |
 | `serving.refresh_index` | `portal/publish_index.py` | platform: rebuild the portal file index |
 
 A Pipeline run is one activity or `landing → bronze (all steps)`; the portal index
@@ -46,4 +47,11 @@ npm --prefix portal/app run dev
 ```
 
 Production reads and writes need the R2 credentials, which exist only in GitHub
-Actions. There is no repository test suite or CI workflow.
+Actions. There is no repository test suite; the `check` job in `dev.yml` runs on every
+pull request (compile, lint, YAML, configuration consistency, dbt parse) and must pass
+before merge. Quality rules: [quality.md](quality.md).
+
+Schedules are declared under `schedule:` in each source's YAML and in
+`warehouse/warehouse.yaml` (cron in UTC + run + optional filter). The Pipeline's hourly
+`scheduler` job (`python run.py schedule`) starts the runs that are due;
+`python run.py schedule --check` validates the declarations.
