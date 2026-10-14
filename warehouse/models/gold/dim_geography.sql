@@ -4,8 +4,11 @@
    Warszawa and delegations of Kraków, Łódź, Poznań, Wrocław, RODZ 8/9);
    scheme SIMC: localities (L5) under their gmina or gmina part. Vintage = TERYT catalogue
    state date. Area (hectares) of voivodeships, powiats and gminas comes from PRG
-   (silver.prg_units). Further schemes (ISO/M49, NUTS/LAU, KTS/BDL, World Bank, Eurostat GEO)
-   and the cross-scheme bridge follow as their sources are modelled. #}
+   (silver.prg_units).
+   Scheme WB: World Bank economies (level 3) and aggregates (is_aggregate) from WDI, with
+   ISO 2-alpha code, region, income group and lending category; vintage = WDI release.
+   Schemes are stacked with UNION ALL BY NAME, so each brings only its own attributes.
+   Further schemes (M49, NUTS/LAU, KTS/BDL, Eurostat GEO) and the cross-scheme bridge follow. #}
 with terc as (select * from {{ ref('teryt_terc') }}),
 prg as (
     -- a unit drawn as several features is summed, so the join never duplicates members
@@ -15,6 +18,7 @@ prg as (
     group by 1
 ),
 simc as (select * from {{ ref('teryt_simc') }}),
+wdi as (select * from {{ ref('wdi_countries') }}),
 vintage as (select max(catalogue_date) as d from terc),
 members as (
     select 'TERC' as scheme, 'PL' as code, 0 as level, 'kraj' as level_name, 'Polska' as name_pl,
@@ -39,7 +43,7 @@ members as (
                 when gmina_type_code in ('8', '9') then woj_code || pow_code || '011'
                 else terc_code end,
            case when gmina_type_code in ('4', '5', '8', '9') then terc_code end,
-           coalesce(gmina_type_code, unit_type_pl), catalogue_date
+           coalesce(cast(gmina_type_code as varchar), unit_type_pl), catalogue_date
     from terc
     union all
     select 'SIMC', s.simc_code, 5, 'miejscowosc', s.name_pl, s.gmina_terc_code,
@@ -50,16 +54,40 @@ members as (
            case when substr(s.gmina_terc_code, 7, 1) in ('4', '5', '8', '9') then s.gmina_terc_code end,
            s.locality_type_code, s.catalogue_date
     from simc s
+),
+teryt_members as (
+    select
+        members.scheme || ':' || members.code || ':' || strftime(members.vintage, '%Y%m%d') as geography_key,
+        members.scheme, members.code, members.vintage, members.vintage as valid_from, null::date as valid_to,
+        level, level_name, name_pl, parent_code,
+        'PL' as l0_code, l1_code, l2_code, l3_code, l4_code,
+        teryt_type, prg.area_ha, round(prg.area_ha / 100, 2) as area_km2,
+        false as is_aggregate, 'member' as member_type
+    from members
+    left join prg on members.scheme = 'TERC' and prg.prg_code = members.code
+),
+wb_members as (
+    select
+        'WB:' || economy_code || ':' || source_version[1:8] as geography_key,
+        'WB' as scheme, economy_code as code,
+        cast(strptime(source_version[1:8], '%Y%m%d') as date) as vintage,
+        cast(strptime(source_version[1:8], '%Y%m%d') as date) as valid_from, null::date as valid_to,
+        case when is_aggregate then null else 3 end as level,
+        case when is_aggregate then 'aggregate' else 'economy' end as level_name,
+        short_name as name_en, long_name as long_name_en, iso2_code,
+        region as wb_region, income_group as wb_income_group, lending_category as wb_lending_category,
+        is_aggregate, 'member' as member_type
+    from wdi
+),
+special as (
+    select * from (values
+        ('_T', '_T', '_T', 'wszystkie obszary (all areas)', 'all areas', true, 'all_areas'),
+        ('_Z', '_Z', '_Z', 'nie dotyczy (not applicable)', 'not applicable', false, 'not_applicable'),
+        ('_X', '_X', '_X', 'nieznany (unknown)', 'unknown', false, 'unknown')
+    ) t(geography_key, scheme, code, name_pl, name_en, is_aggregate, member_type)
 )
-select
-    members.scheme || ':' || members.code || ':' || strftime(members.vintage, '%Y%m%d') as geography_key,
-    members.scheme, members.code, members.vintage, vintage as valid_from, null::date as valid_to,
-    level, level_name, name_pl, parent_code,
-    'PL' as l0_code, l1_code, l2_code, l3_code, l4_code,
-    teryt_type, prg.area_ha, round(prg.area_ha / 100, 2) as area_km2,
-    false as is_aggregate, 'member' as member_type
-from members
-left join prg on members.scheme = 'TERC' and prg.prg_code = members.code
-union all select '_T', '_T', '_T', null, null, null, null, null, 'wszystkie obszary (all areas)', null, null, null, null, null, null, null, null, null, true, 'all_areas'
-union all select '_Z', '_Z', '_Z', null, null, null, null, null, 'nie dotyczy (not applicable)', null, null, null, null, null, null, null, null, null, false, 'not_applicable'
-union all select '_X', '_X', '_X', null, null, null, null, null, 'nieznany (unknown)', null, null, null, null, null, null, null, null, null, false, 'unknown'
+select * from teryt_members
+union all by name
+select * from wb_members
+union all by name
+select * from special
