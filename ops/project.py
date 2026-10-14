@@ -98,7 +98,10 @@ def project_id(token: str, org: str) -> str:
     return graphql(token, query, {"org": org, "n": PROJECT})["organization"]["projectV2"]["id"]
 
 
-TRUSTED = {"OWNER", "MEMBER"}  # the repository is public: only organisation members' comments are published
+# The repository is public: only comments by organisation owners or members, or by the owner's account
+# (an app token sees private membership as CONTRIBUTOR), are published.
+TRUSTED = {"OWNER", "MEMBER"}
+AUTHORS = {"rutkala"}
 
 
 def newest_comment(token: str, repo: str, issue: int) -> dict[str, Any]:
@@ -113,7 +116,11 @@ def newest_comment(token: str, repo: str, issue: int) -> dict[str, Any]:
         response = requests.get(last, headers=headers, timeout=60)
         response.raise_for_status()
     while True:
-        trusted = [c for c in response.json() if c.get("author_association") in TRUSTED]
+        trusted = [
+            c
+            for c in response.json()
+            if c.get("author_association") in TRUSTED or (c.get("user") or {}).get("login") in AUTHORS
+        ]
         if trusted:
             return trusted[-1]
         previous = response.links.get("prev", {}).get("url")
@@ -163,5 +170,14 @@ def main(argv: list[str]) -> int:
     return 0
 
 
+def run(argv: list[str]) -> int:
+    """main() with failures published as an error annotation (job logs are not readable by AI sessions)."""
+    try:
+        return main(argv)
+    except Exception as exc:
+        annotate("error", "project failed", {"error": type(exc).__name__, "detail": str(exc)[:3000]})
+        raise
+
+
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    raise SystemExit(run(sys.argv[1:]))
