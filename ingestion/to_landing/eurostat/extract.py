@@ -17,12 +17,13 @@ load      Download missing datasets first, then stale ones, and write the receip
 --max-datasets applies per parallel job. Each job takes a fixed slice of datasets
 by a hash of the dataset code (--job-index i of --parallel-jobs n).
 """
+
 from __future__ import annotations
 
 import argparse
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 import fnmatch
 import hashlib
@@ -42,14 +43,13 @@ import zlib
 
 import urllib3
 
+from ingestion.common.report import annotate, step_summary
 from ingestion.to_landing.eurostat.inventory import (
     EUROSTAT_INVENTORY_URL,
     FullSourceAdapterError,
     distributions_from_inventory,
     parse_eurostat_async,
 )
-from ingestion.common.report import annotate, step_summary
-
 
 SOURCE_ID = "eurostat"
 LANDING_PREFIX = "01_landing/eurostat/snapshot/data/"
@@ -61,15 +61,15 @@ MAX_INVENTORY_BYTES = 128 * 1024 * 1024
 MAX_SMALL_BODY = 64 * 1024
 CONNECT_TIMEOUT = 30
 READ_TIMEOUT = 300
-MAX_ATTEMPTS = 4            # network / truncation / integrity failures per request
-MAX_THROTTLES = 12          # 429/503 responses tolerated per request
-DEFAULT_BACKOFF = 60        # seconds, when 429/503 carries no Retry-After
-RETRY_BASE = 10             # seconds, transfer/integrity retry backoff base
+MAX_ATTEMPTS = 4  # network / truncation / integrity failures per request
+MAX_THROTTLES = 12  # 429/503 responses tolerated per request
+DEFAULT_BACKOFF = 60  # seconds, when 429/503 carries no Retry-After
+RETRY_BASE = 10  # seconds, transfer/integrity retry backoff base
 MAX_RETRY_AFTER = 3600
 ASYNC_POLL_SECONDS = 30
 ASYNC_MAX_WAIT = 45 * 60
 ASYNC_MAX_SUBMISSIONS = 3
-MIN_FREE_DISK = 2 * 1024 ** 3
+MIN_FREE_DISK = 2 * 1024**3
 STATUSES = ("current", "stale", "missing")
 
 
@@ -80,8 +80,9 @@ def transport_url(url: str) -> str:
 
 # --------------------------------------------------------------------------- helpers
 
+
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def version_token(version: str | None) -> str:
@@ -94,7 +95,7 @@ def version_token(version: str | None) -> str:
     except ValueError:
         parsed = None
     if parsed is not None and parsed.tzinfo is not None:
-        return parsed.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        return parsed.astimezone(UTC).strftime("%Y%m%dT%H%M%SZ")
     safe = re.sub(r"[^0-9A-Za-z.-]+", "-", value).strip("-")[:64] or "v"
     return f"{safe}-{hashlib.sha256(value.encode()).hexdigest()[:8]}"
 
@@ -114,8 +115,13 @@ def request_url(url: str, params: dict) -> str:
 
 def require_official(url: str) -> str:
     parts = urlsplit(url)
-    if (parts.scheme != "https" or (parts.hostname or "").lower() != OFFICIAL_HOST
-            or parts.port not in (None, 443) or parts.username or parts.password):
+    if (
+        parts.scheme != "https"
+        or (parts.hostname or "").lower() != OFFICIAL_HOST
+        or parts.port not in (None, 443)
+        or parts.username
+        or parts.password
+    ):
         raise FullSourceAdapterError(f"refusing non-official URL: {url[:200]}")
     return url
 
@@ -131,15 +137,15 @@ def retry_after_seconds(value: str | None) -> float | None:
     except (TypeError, ValueError):
         return None
     if when.tzinfo is None:
-        when = when.replace(tzinfo=timezone.utc)
-    return max(0.0, (when - datetime.now(timezone.utc)).total_seconds())
+        when = when.replace(tzinfo=UTC)
+    return max(0.0, (when - datetime.now(UTC)).total_seconds())
 
 
 def compact_utc(timestamp: str) -> str:
     parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def landing_keys(code: str, token: str, ingested_at: str) -> tuple[str, str]:
@@ -176,16 +182,20 @@ class R2:
             region_name="auto",
             aws_access_key_id=env("CLOUDFLARE_R2_ACCESS_KEY_ID"),
             aws_secret_access_key=env("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
-            config=Config(signature_version="s3v4",
-                          retries={"max_attempts": 10, "mode": "standard"},
-                          max_pool_connections=32),
+            config=Config(
+                signature_version="s3v4", retries={"max_attempts": 10, "mode": "standard"}, max_pool_connections=32
+            ),
         )
-        self.transfer = TransferConfig(multipart_threshold=64 * 1024 * 1024,
-                                       multipart_chunksize=64 * 1024 * 1024,
-                                       max_concurrency=4, use_threads=True)
+        self.transfer = TransferConfig(
+            multipart_threshold=64 * 1024 * 1024,
+            multipart_chunksize=64 * 1024 * 1024,
+            max_concurrency=4,
+            use_threads=True,
+        )
 
     def head(self, bucket: str, key: str) -> dict | None:
         from botocore.exceptions import ClientError
+
         try:
             return self.client.head_object(Bucket=bucket, Key=key)
         except ClientError as exc:
@@ -198,8 +208,13 @@ class R2:
         """Create an object that must not exist yet (never overwrite)."""
         if self.head(bucket, key) is not None:
             raise RuntimeError(f"refusing to overwrite r2://{bucket}/{key}")
-        self.client.put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type,
-                               Metadata={"sha256": hashlib.sha256(body).hexdigest()})
+        self.client.put_object(
+            Bucket=bucket,
+            Key=key,
+            Body=body,
+            ContentType=content_type,
+            Metadata={"sha256": hashlib.sha256(body).hexdigest()},
+        )
         if self.head(bucket, key) is None:
             raise RuntimeError(f"write of r2://{bucket}/{key} could not be verified")
 
@@ -211,6 +226,7 @@ class R2:
 
 
 # --------------------------------------------------------------------------- politeness
+
 
 class Pacer:
     """One pause shared by all workers: a 429/503 stops every new request."""
@@ -231,10 +247,17 @@ class Pacer:
             until = time.monotonic() + delay
             if until > self._pause_until:
                 self._pause_until = until
-            self.events.append({"at": utc_now(), "status": status,
-                                "retry_after": retry_after, "pause_seconds": round(delay, 1)})
-            log({"event": "provider_pause", "status": status, "retry_after": retry_after,
-                 "pause_seconds": round(delay, 1)})
+            self.events.append(
+                {"at": utc_now(), "status": status, "retry_after": retry_after, "pause_seconds": round(delay, 1)}
+            )
+            log(
+                {
+                    "event": "provider_pause",
+                    "status": status,
+                    "retry_after": retry_after,
+                    "pause_seconds": round(delay, 1),
+                }
+            )
             return delay
 
     def ok(self) -> None:
@@ -262,6 +285,7 @@ def log(value: dict) -> None:
 
 
 # --------------------------------------------------------------------------- download
+
 
 class Throttled(Exception):
     def __init__(self, status: int, retry_after: float | None) -> None:
@@ -328,8 +352,17 @@ class GzipCheck:
 
 
 class Download:
-    def __init__(self, status: int, final_url: str, headers: dict, path: Path,
-                 sha256: str, size: int, gzip: GzipCheck | None, small: bytes) -> None:
+    def __init__(
+        self,
+        status: int,
+        final_url: str,
+        headers: dict,
+        path: Path,
+        sha256: str,
+        size: int,
+        gzip: GzipCheck | None,
+        small: bytes,
+    ) -> None:
         self.status = status
         self.final_url = final_url
         self.headers = headers
@@ -340,21 +373,33 @@ class Download:
         self.small = small
 
 
-KEPT_HEADERS = ("content-type", "content-length", "content-encoding", "content-disposition",
-                "last-modified", "etag", "date")
+KEPT_HEADERS = (
+    "content-type",
+    "content-length",
+    "content-encoding",
+    "content-disposition",
+    "last-modified",
+    "etag",
+    "date",
+)
 
 
-def fetch(session, url: str, dest: Path, hard_deadline: float, max_bytes: int | None = None,
-          allow_plain: bool = False) -> Download:
+def fetch(
+    session, url: str, dest: Path, hard_deadline: float, max_bytes: int | None = None, allow_plain: bool = False
+) -> Download:
     """One GET, body streamed to ``dest`` with SHA-256 and gzip verification."""
     current = require_official(url)
     for _ in range(6):
         if time.monotonic() > hard_deadline:
             raise Failed("aborted_time_budget", "hard deadline reached before request")
         try:
-            response = session.get(transport_url(current), stream=True, allow_redirects=False,
-                                   timeout=(CONNECT_TIMEOUT, READ_TIMEOUT),
-                                   headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"})
+            response = session.get(
+                transport_url(current),
+                stream=True,
+                allow_redirects=False,
+                timeout=(CONNECT_TIMEOUT, READ_TIMEOUT),
+                headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"},
+            )
         except Exception as exc:  # connection errors, timeouts
             raise Retryable(f"{type(exc).__name__}: {exc}") from exc
         if response.status_code in (301, 302, 303, 307, 308):
@@ -374,7 +419,7 @@ def fetch(session, url: str, dest: Path, hard_deadline: float, max_bytes: int | 
         if status != 200:
             try:
                 small = response.raw.read(MAX_SMALL_BODY, decode_content=False) or b""
-            except (OSError, urllib3.exceptions.HTTPError):   # body unreadable; the status decides
+            except (OSError, urllib3.exceptions.HTTPError):  # body unreadable; the status decides
                 small = b""
             return Download(status, current, headers, dest, "", len(small), None, small)
 
@@ -425,8 +470,9 @@ def fetch(session, url: str, dest: Path, hard_deadline: float, max_bytes: int | 
         return Download(status, current, headers, dest, digest.hexdigest(), size, check, small)
 
 
-def attempt(ctx: "Context", session, url: str, dest: Path, max_bytes: int | None = None,
-            allow_plain: bool = False) -> Download:
+def attempt(
+    ctx: Context, session, url: str, dest: Path, max_bytes: int | None = None, allow_plain: bool = False
+) -> Download:
     """Fetch with bounded retries; 429/503 pause every worker via the shared pacer."""
     failures = 0
     throttles = 0
@@ -448,13 +494,13 @@ def attempt(ctx: "Context", session, url: str, dest: Path, max_bytes: int | None
             log({"event": "retry", "url": url, "attempt": failures, "detail": str(exc)[:300]})
             if failures >= MAX_ATTEMPTS:
                 raise Failed("transfer_failed", str(exc))
-            time.sleep(min(120.0, RETRY_BASE * 2 ** failures + random.uniform(0, RETRY_BASE / 2)))
+            time.sleep(min(120.0, RETRY_BASE * 2**failures + random.uniform(0, RETRY_BASE / 2)))
             continue
         if 500 <= result.status < 600:
             failures += 1
             if failures >= MAX_ATTEMPTS:
                 raise Failed(f"http_{result.status}", result.small[:300].decode("utf-8", "replace"))
-            time.sleep(min(120.0, RETRY_BASE * 2 ** failures))
+            time.sleep(min(120.0, RETRY_BASE * 2**failures))
             continue
         ctx.pacer.ok()
         return result
@@ -478,6 +524,7 @@ def classify_body(result: Download) -> tuple[str, dict]:
             if result.size > MAX_SMALL_BODY:
                 raise Failed("unexpected_content", "large gzip body starting with XML")
             import gzip as _gzip
+
             body = _gzip.decompress(result.path.read_bytes())
             return "envelope", parse_envelope(body)
         if re.search(rb'"status"\s*:\s*413', body):
@@ -513,9 +560,18 @@ def parse_envelope(body: bytes) -> dict:
 
 # --------------------------------------------------------------------------- runtime
 
+
 class Context:
-    def __init__(self, r2: R2 | None, workdir: Path, deadline: float, hard_deadline: float,
-                 run_id: str, code_sha: str, inventory_ref: dict) -> None:
+    def __init__(
+        self,
+        r2: R2 | None,
+        workdir: Path,
+        deadline: float,
+        hard_deadline: float,
+        run_id: str,
+        code_sha: str,
+        inventory_ref: dict,
+    ) -> None:
         self.r2 = r2
         self.workdir = workdir
         self.deadline = deadline
@@ -577,8 +633,7 @@ def follow_async(ctx: Context, session, item: dict, envelope: dict, dest: Path) 
             raise Failed("async_unsupported", json.dumps(parsed, default=str)[:300])
         kind, info = classify_body(result)
         if kind == "data":
-            return result, {"mode": "async", "request_ids": sorted(set(request_ids)),
-                            "submissions": submissions}
+            return result, {"mode": "async", "request_ids": sorted(set(request_ids)), "submissions": submissions}
         if kind == "needs_partition":
             raise Failed("needs_partition", json.dumps(info)[:300])
         parsed = info
@@ -597,35 +652,59 @@ def finalize(ctx: Context, item: dict, result: Download, via: dict, retrieved_at
         reused = True
     else:
         r2.client.upload_file(
-            str(result.path), r2.landing, data_key, Config=r2.transfer,
-            ExtraArgs={"ContentType": "application/gzip",
-                       "Metadata": {"sha256": result.sha256, "size": str(result.size),
-                                    "retrieved-at": retrieved_at,
-                                    "eurostat-version": item["version"] or "",
-                                    "gzip-members": str(result.gzip.members),
-                                    "decompressed-bytes": str(result.gzip.decompressed_bytes),
-                                    "final-url": result.final_url[:512],
-                                    "transfer-mode": via["mode"],
-                                    "source-url": item["url"][:512]}})
+            str(result.path),
+            r2.landing,
+            data_key,
+            Config=r2.transfer,
+            ExtraArgs={
+                "ContentType": "application/gzip",
+                "Metadata": {
+                    "sha256": result.sha256,
+                    "size": str(result.size),
+                    "retrieved-at": retrieved_at,
+                    "eurostat-version": item["version"] or "",
+                    "gzip-members": str(result.gzip.members),
+                    "decompressed-bytes": str(result.gzip.decompressed_bytes),
+                    "final-url": result.final_url[:512],
+                    "transfer-mode": via["mode"],
+                    "source-url": item["url"][:512],
+                },
+            },
+        )
         reused = False
     stored = r2.head(r2.landing, data_key)
-    if (stored is None or int(stored["ContentLength"]) != result.size
-            or stored.get("Metadata", {}).get("sha256") != result.sha256):
+    if (
+        stored is None
+        or int(stored["ContentLength"]) != result.size
+        or stored.get("Metadata", {}).get("sha256") != result.sha256
+    ):
         raise RuntimeError(f"uploaded object r2://{r2.landing}/{data_key} failed verification")
-    write_receipt(ctx, item, receipt_key, {
+    write_receipt(
+        ctx,
+        item,
+        receipt_key,
+        {
+            "sha256": result.sha256,
+            "size_bytes": result.size,
+            "gzip": {
+                "members": result.gzip.members,
+                "decompressed_bytes": result.gzip.decompressed_bytes,
+                "integrity": "verified",
+            },
+            "final_url": result.final_url,
+            "ingested_at": retrieved_at,
+            "http_headers": result.headers,
+            "transfer": via,
+            "object": {"bucket": r2.landing, "key": data_key, "reused_existing_object": reused},
+        },
+    )
+    return {
+        "outcome": "landed",
         "sha256": result.sha256,
         "size_bytes": result.size,
-        "gzip": {"members": result.gzip.members,
-                 "decompressed_bytes": result.gzip.decompressed_bytes,
-                 "integrity": "verified"},
-        "final_url": result.final_url,
-        "ingested_at": retrieved_at,
-        "http_headers": result.headers,
-        "transfer": via,
-        "object": {"bucket": r2.landing, "key": data_key, "reused_existing_object": reused},
-    })
-    return {"outcome": "landed", "sha256": result.sha256, "size_bytes": result.size,
-            "reused_existing_object": reused, "via": via["mode"]}
+        "reused_existing_object": reused,
+        "via": via["mode"],
+    }
 
 
 def write_receipt(ctx: Context, item: dict, receipt_key: str, observed: dict) -> None:
@@ -647,8 +726,9 @@ def write_receipt(ctx: Context, item: dict, receipt_key: str, observed: dict) ->
         "run_id": ctx.run_id,
         "code_sha": ctx.code_sha,
     }
-    ctx.r2.put_new(ctx.r2.landing, receipt_key,
-                   json.dumps(receipt, indent=2, sort_keys=True).encode(), "application/json")
+    ctx.r2.put_new(
+        ctx.r2.landing, receipt_key, json.dumps(receipt, indent=2, sort_keys=True).encode(), "application/json"
+    )
 
 
 def held_objects(ctx: Context, item: dict) -> tuple[list[str], list[str]]:
@@ -669,26 +749,36 @@ def recover_orphan(ctx: Context, item: dict, data_key: str) -> dict | None:
     required = ("sha256", "size", "retrieved-at", "gzip-members", "decompressed-bytes")
     if any(not meta.get(k) for k in required) or meta.get("size") != str(head["ContentLength"]):
         raise Failed("orphan_conflict", "data object without receipt lacks upload verification metadata")
-    write_receipt(ctx, item, data_key[: -len(".tsv.gz")] + ".receipt.json", {
+    write_receipt(
+        ctx,
+        item,
+        data_key[: -len(".tsv.gz")] + ".receipt.json",
+        {
+            "sha256": meta["sha256"],
+            "size_bytes": int(head["ContentLength"]),
+            "gzip": {
+                "members": int(meta["gzip-members"]),
+                "decompressed_bytes": int(meta["decompressed-bytes"]),
+                "integrity": "verified_before_upload",
+            },
+            "final_url": meta.get("final-url"),
+            "ingested_at": meta["retrieved-at"],
+            "http_headers": {},
+            "transfer": {"mode": meta.get("transfer-mode", "unknown"), "receipt_recovered_from_object_metadata": True},
+            "object": {"bucket": r2.landing, "key": data_key, "reused_existing_object": True},
+        },
+    )
+    return {
+        "outcome": "landed",
         "sha256": meta["sha256"],
         "size_bytes": int(head["ContentLength"]),
-        "gzip": {"members": int(meta["gzip-members"]),
-                 "decompressed_bytes": int(meta["decompressed-bytes"]),
-                 "integrity": "verified_before_upload"},
-        "final_url": meta.get("final-url"),
-        "ingested_at": meta["retrieved-at"],
-        "http_headers": {},
-        "transfer": {"mode": meta.get("transfer-mode", "unknown"),
-                     "receipt_recovered_from_object_metadata": True},
-        "object": {"bucket": r2.landing, "key": data_key, "reused_existing_object": True},
-    })
-    return {"outcome": "landed", "sha256": meta["sha256"], "size_bytes": int(head["ContentLength"]),
-            "reused_existing_object": True, "via": "receipt_recovery"}
+        "reused_existing_object": True,
+        "via": "receipt_recovery",
+    }
 
 
 def land(ctx: Context, session, item: dict) -> dict:
-    base = {"dataset_code": item["code"], "eurostat_version": item["version"],
-            "classification": item["status"]}
+    base = {"dataset_code": item["code"], "eurostat_version": item["version"], "classification": item["status"]}
     dest = ctx.workdir / f"{threading.get_ident()}.download"
     started = time.monotonic()
     try:
@@ -710,16 +800,26 @@ def land(ctx: Context, session, item: dict) -> dict:
         if kind == "envelope" and info.get("http_status") == 413:
             raise Failed("needs_partition", info.get("fault_message", "EXTRACTION_TOO_BIG"))
         if kind == "envelope":
-            log({"event": "async_envelope", "dataset_code": item["code"],
-                 "status": info.get("provider_status") or info.get("status")})
+            log(
+                {
+                    "event": "async_envelope",
+                    "dataset_code": item["code"],
+                    "status": info.get("provider_status") or info.get("status"),
+                }
+            )
             with ctx.async_lock:  # Eurostat asks for one asynchronous request at a time.
                 result, via = follow_async(ctx, session, item, info, dest)
             retrieved_at = utc_now()
         outcome = finalize(ctx, item, result, via, retrieved_at)
         return {**base, **outcome, "seconds": round(time.monotonic() - started, 1)}
     except Failed as exc:
-        return {**base, "outcome": "failed", "reason": exc.reason, "detail": exc.detail,
-                "seconds": round(time.monotonic() - started, 1)}
+        return {
+            **base,
+            "outcome": "failed",
+            "reason": exc.reason,
+            "detail": exc.detail,
+            "seconds": round(time.monotonic() - started, 1),
+        }
     finally:
         dest.unlink(missing_ok=True)
 
@@ -757,6 +857,7 @@ def run_workers(ctx: Context, items: list[dict], workers: int) -> None:
 
 # --------------------------------------------------------------------------- planning
 
+
 def fetch_inventory(ctx: Context) -> tuple[bytes, Download]:
     import requests
 
@@ -770,6 +871,7 @@ def fetch_inventory(ctx: Context) -> tuple[bytes, Download]:
     dest.unlink(missing_ok=True)
     if body[:2] == b"\x1f\x8b":
         import gzip as _gzip
+
         body = _gzip.decompress(body)
     return body, result
 
@@ -778,7 +880,7 @@ def load_landing_state(r2: R2) -> dict[str, dict[str, set]]:
     """Per dataset code: version tokens with a receipt, and version tokens with data."""
     state: dict[str, dict[str, set]] = defaultdict(lambda: {"receipts": set(), "data": set()})
     for key in r2.list_keys(r2.landing, LANDING_PREFIX):
-        code, _, name = key[len(LANDING_PREFIX):].partition("/")
+        code, _, name = key[len(LANDING_PREFIX) :].partition("/")
         parts = split_name(name)
         if not code or parts is None:
             continue
@@ -794,12 +896,13 @@ def verify_landing(r2: R2, patterns: list[str]) -> dict:
     """Every receipt has its data file with the receipted size, in Landing or (once moved by
     landing.archive) in the Archive; data without receipt is listed."""
     from ingestion.common.r2 import archive_key, archived
+
     stored = archived(r2.client, r2.landing, "eurostat")
     receipts, sizes = [], {}
     paginator = r2.client.get_paginator("list_objects_v2")
     for page in paginator.paginate(Bucket=r2.landing, Prefix=LANDING_PREFIX):
         for obj in page.get("Contents", []):
-            code = obj["Key"][len(LANDING_PREFIX):].partition("/")[0]
+            code = obj["Key"][len(LANDING_PREFIX) :].partition("/")[0]
             if patterns and not any(fnmatch.fnmatch(code.lower(), p) for p in patterns):
                 continue
             if obj["Key"].endswith(".receipt.json"):
@@ -822,19 +925,29 @@ def verify_landing(r2: R2, patterns: list[str]) -> dict:
     with ThreadPoolExecutor(max_workers=16) as pool:
         outcomes = list(pool.map(check, receipts))
     receipted = {k[: -len(".receipt.json")] for k in receipts}
-    orphans = sorted(k for k in sizes if k.rsplit(".", 2)[0] not in receipted
-                     and k[: -len(".tsv.gz")] not in receipted)
+    orphans = sorted(k for k in sizes if k.rsplit(".", 2)[0] not in receipted and k[: -len(".tsv.gz")] not in receipted)
     tally = dict(Counter(outcomes))
-    return {"receipts": len(receipts), "result": tally, "orphan_data_objects": len(orphans),
-            "orphan_examples": orphans[:10],
-            "problems": [{"receipt": k, "result": o} for k, o in zip(receipts, outcomes) if o not in ("ok", "archived")][:20]}
+    return {
+        "receipts": len(receipts),
+        "result": tally,
+        "orphan_data_objects": len(orphans),
+        "orphan_examples": orphans[:10],
+        "problems": [{"receipt": k, "result": o} for k, o in zip(receipts, outcomes) if o not in ("ok", "archived")][
+            :20
+        ],
+    }
 
 
-def plan_items(inventory_body: bytes, landing: dict, parallel_jobs: int,
-               patterns: list[str]) -> tuple[list[dict], dict]:
+def plan_items(
+    inventory_body: bytes, landing: dict, parallel_jobs: int, patterns: list[str]
+) -> tuple[list[dict], dict]:
     distributions = distributions_from_inventory("data", inventory_body)
-    stats = {"inventory_distributions": len(distributions), "excluded_comext": 0,
-             "excluded_other_kinds": 0, "excluded_by_filter": 0}
+    stats = {
+        "inventory_distributions": len(distributions),
+        "excluded_comext": 0,
+        "excluded_other_kinds": 0,
+        "excluded_by_filter": 0,
+    }
     items = []
     for spec in distributions:
         if spec["kind"] != "eurostat_tsv_gzip":
@@ -857,21 +970,22 @@ def plan_items(inventory_body: bytes, landing: dict, parallel_jobs: int,
         else:
             status = "missing"
         metadata = spec.get("catalogue_metadata") or {}
-        items.append({
-            "code": code,
-            "title": metadata.get("title") or "",
-            "version": version,
-            "token": token,
-            "status": status,
-            "job": job_slot(code, parallel_jobs),
-            "url": require_official(request_url(spec["url"], spec.get("params") or {})),
-            "landing_versions": sorted(held["receipts"]),
-            "orphan_data_object": token in held["data"] and token not in held["receipts"],
-            "prefix": f"{LANDING_PREFIX}{code}/{token}__",
-        })
+        items.append(
+            {
+                "code": code,
+                "title": metadata.get("title") or "",
+                "version": version,
+                "token": token,
+                "status": status,
+                "job": job_slot(code, parallel_jobs),
+                "url": require_official(request_url(spec["url"], spec.get("params") or {})),
+                "landing_versions": sorted(held["receipts"]),
+                "orphan_data_object": token in held["data"] and token not in held["receipts"],
+                "prefix": f"{LANDING_PREFIX}{code}/{token}__",
+            }
+        )
     items.sort(key=lambda row: row["code"])
     return items, stats
-
 
 
 def counts(items: list[dict]) -> dict[str, int]:
@@ -902,23 +1016,26 @@ def verify_verdict(summary: dict) -> int:
 
 # --------------------------------------------------------------------------- main
 
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--mode", choices=("inspect", "verify", "load"), required=True)
-    parser.add_argument("--allow-production-write", action="store_true",
-                        help="required for load (writes raw bytes to R2 Landing)")
-    parser.add_argument("--dataset-filter", default="",
-                        help="comma/space separated dataset codes or glob patterns (case-insensitive)")
-    parser.add_argument("--max-datasets", type=int, default=0,
-                        help="max datasets per parallel job (0 = all)")
+    parser.add_argument(
+        "--allow-production-write", action="store_true", help="required for load (writes raw bytes to R2 Landing)"
+    )
+    parser.add_argument(
+        "--dataset-filter", default="", help="comma/space separated dataset codes or glob patterns (case-insensitive)"
+    )
+    parser.add_argument("--max-datasets", type=int, default=0, help="max datasets per parallel job (0 = all)")
     parser.add_argument("--parallel-downloads", type=int, default=4)
     parser.add_argument("--job-index", type=int, default=0)
     parser.add_argument("--parallel-jobs", type=int, default=1)
-    parser.add_argument("--budget-minutes", type=float, default=330.0,
-                        help="stop starting new downloads after this many minutes")
-    parser.add_argument("--grace-minutes", type=float, default=20.0,
-                        help="abort in-flight transfers this long after the budget")
+    parser.add_argument(
+        "--budget-minutes", type=float, default=330.0, help="stop starting new downloads after this many minutes"
+    )
+    parser.add_argument(
+        "--grace-minutes", type=float, default=20.0, help="abort in-flight transfers this long after the budget"
+    )
     args = parser.parse_args(argv)
     if not 1 <= args.parallel_jobs <= 16 or not 0 <= args.job_index < args.parallel_jobs:
         parser.error("use 1-16 parallel jobs and 0 <= job index < parallel jobs")
@@ -933,7 +1050,7 @@ def main(argv: list[str] | None = None) -> int:
     started = time.monotonic()
     deadline = started + args.budget_minutes * 60
     hard_deadline = deadline + args.grace_minutes * 60
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     run_id = f"{stamp}-{os.urandom(3).hex()}"
     if os.environ.get("GITHUB_RUN_ID"):
         run_id += f"-run{os.environ['GITHUB_RUN_ID']}-{os.environ.get('GITHUB_RUN_ATTEMPT', '1')}"
@@ -944,16 +1061,25 @@ def main(argv: list[str] | None = None) -> int:
         ctx = Context(r2, Path(tmp), deadline, hard_deadline, run_id, code_sha, {})
         inventory_body, inventory_dl = fetch_inventory(ctx)
         inventory_sha = hashlib.sha256(inventory_body).hexdigest()
-        ctx.inventory_ref = {"sha256": inventory_sha, "bytes": len(inventory_body),
-                             "retrieved_at": utc_now(), "source_url": inventory_dl.final_url}
+        ctx.inventory_ref = {
+            "sha256": inventory_sha,
+            "bytes": len(inventory_body),
+            "retrieved_at": utc_now(),
+            "source_url": inventory_dl.final_url,
+        }
 
         landing = load_landing_state(r2)
         items, stats = plan_items(inventory_body, landing, args.parallel_jobs, patterns)
         total = counts(items)
         summary = {
-            "mode": args.mode, "run_id": run_id, "code_sha": code_sha,
-            "inventory": ctx.inventory_ref, "dataset_filter": patterns,
-            "datasets_considered": len(items), "classification": total, **stats,
+            "mode": args.mode,
+            "run_id": run_id,
+            "code_sha": code_sha,
+            "inventory": ctx.inventory_ref,
+            "dataset_filter": patterns,
+            "datasets_considered": len(items),
+            "classification": total,
+            **stats,
             "scope": "eurostat_tsv_gzip data distributions, Comext (DS-*) excluded",
         }
 
@@ -963,8 +1089,7 @@ def main(argv: list[str] | None = None) -> int:
             summary["per_parallel_job"] = {}
             for jobs in (1, 2, 4, 8):
                 summary["per_parallel_job"][str(jobs)] = [
-                    counts([i for i in items if job_slot(i["code"], jobs) == j])
-                    for j in range(jobs)
+                    counts([i for i in items if job_slot(i["code"], jobs) == j]) for j in range(jobs)
                 ]
             summary["elapsed_seconds"] = round(time.monotonic() - started, 1)
             print(json.dumps(summary, indent=2, sort_keys=True), flush=True)
@@ -973,25 +1098,45 @@ def main(argv: list[str] | None = None) -> int:
                 f"## eurostat · landing {args.mode}\n\n"
                 f"Inventory `{inventory_sha[:12]}` · {len(items):,} datasets "
                 f"(Comext excluded: {stats['excluded_comext']:,})\n\n"
-                f"| status | datasets |\n|---|---:|\n{table}\n")
-            annotate("notice", f"eurostat landing {args.mode}", {
-                k: summary[k] for k in (
-                    "classification", "datasets_considered", "excluded_comext",
-                    "excluded_other_kinds", "excluded_by_filter", "inventory_distributions",
-                    "elapsed_seconds") if k in summary
-            } | {"inventory_sha256": inventory_sha,
-                 "parallel_jobs_4": summary["per_parallel_job"]["4"]})
+                f"| status | datasets |\n|---|---:|\n{table}\n"
+            )
+            annotate(
+                "notice",
+                f"eurostat landing {args.mode}",
+                {
+                    k: summary[k]
+                    for k in (
+                        "classification",
+                        "datasets_considered",
+                        "excluded_comext",
+                        "excluded_other_kinds",
+                        "excluded_by_filter",
+                        "inventory_distributions",
+                        "elapsed_seconds",
+                    )
+                    if k in summary
+                }
+                | {"inventory_sha256": inventory_sha, "parallel_jobs_4": summary["per_parallel_job"]["4"]},
+            )
             if args.mode == "inspect":
                 return 0
             return verify_verdict(summary)
 
         selected = [i for i in items if i["job"] == args.job_index]
-        queue_items = ([i for i in selected if i["status"] == "missing"]
-                       + [i for i in selected if i["status"] == "stale"])
+        queue_items = [i for i in selected if i["status"] == "missing"] + [
+            i for i in selected if i["status"] == "stale"
+        ]
         if args.max_datasets:
             queue_items = queue_items[: args.max_datasets]
-        log({"event": "load_start", "job_index": args.job_index, "parallel_jobs": args.parallel_jobs,
-             "queued": len(queue_items), "job_classification": counts(selected)})
+        log(
+            {
+                "event": "load_start",
+                "job_index": args.job_index,
+                "parallel_jobs": args.parallel_jobs,
+                "queued": len(queue_items),
+                "job_classification": counts(selected),
+            }
+        )
         run_workers(ctx, queue_items, args.parallel_downloads)
 
         landed = [r for r in ctx.results if r["outcome"] == "landed"]
@@ -999,21 +1144,26 @@ def main(argv: list[str] | None = None) -> int:
         by_reason: dict[str, int] = defaultdict(int)
         for row in failed:
             by_reason[row["reason"]] += 1
-        summary.update({
-            "job_index": args.job_index, "parallel_jobs": args.parallel_jobs,
-            "parallel_downloads": args.parallel_downloads,
-            "max_datasets_per_job": args.max_datasets,
-            "job_classification_at_start": counts(selected),
-            "queued": len(queue_items),
-            "landed": len(landed),
-            "landed_bytes": sum(r["size_bytes"] for r in landed),
-            "already_current": sum(r["outcome"] == "already_current" for r in ctx.results),
-            "failed": len(failed), "failed_by_reason": dict(by_reason),
-            "not_started_time_budget": ctx.counters.get("not_started_time_budget", 0),
-            "counters": dict(ctx.counters), "provider_pauses": ctx.pacer.events,
-            "results": ctx.results,
-            "elapsed_seconds": round(time.monotonic() - started, 1),
-        })
+        summary.update(
+            {
+                "job_index": args.job_index,
+                "parallel_jobs": args.parallel_jobs,
+                "parallel_downloads": args.parallel_downloads,
+                "max_datasets_per_job": args.max_datasets,
+                "job_classification_at_start": counts(selected),
+                "queued": len(queue_items),
+                "landed": len(landed),
+                "landed_bytes": sum(r["size_bytes"] for r in landed),
+                "already_current": sum(r["outcome"] == "already_current" for r in ctx.results),
+                "failed": len(failed),
+                "failed_by_reason": dict(by_reason),
+                "not_started_time_budget": ctx.counters.get("not_started_time_budget", 0),
+                "counters": dict(ctx.counters),
+                "provider_pauses": ctx.pacer.events,
+                "results": ctx.results,
+                "elapsed_seconds": round(time.monotonic() - started, 1),
+            }
+        )
         brief = {k: v for k, v in summary.items() if k != "results"}
         print(json.dumps(brief, indent=2, sort_keys=True, default=str), flush=True)
         reasons = "\n".join(f"| {k} | {v} |" for k, v in sorted(by_reason.items())) or "| – | 0 |"
@@ -1023,19 +1173,26 @@ def main(argv: list[str] | None = None) -> int:
             f"({summary['landed_bytes'] / 1e9:.2f} GB) · failed {len(failed):,} · "
             f"not started (time budget) {summary['not_started_time_budget']:,} · "
             f"provider pauses {len(ctx.pacer.events)}\n\n"
-            f"| failure reason | datasets |\n|---|---:|\n{reasons}\n")
-        annotate("notice", f"eurostat landing extract job {args.job_index + 1} of {args.parallel_jobs}", {
-            k: v for k, v in brief.items() if k != "provider_pauses"
-        } | {"provider_pause_count": len(ctx.pacer.events)})
+            f"| failure reason | datasets |\n|---|---:|\n{reasons}\n"
+        )
+        annotate(
+            "notice",
+            f"eurostat landing extract job {args.job_index + 1} of {args.parallel_jobs}",
+            {k: v for k, v in brief.items() if k != "provider_pauses"}
+            | {"provider_pause_count": len(ctx.pacer.events)},
+        )
         if failed:
-            annotate("warning", "eurostat landing extract failures", {
-                "failed": len(failed),
-                "first_failures": [
-                    {"dataset": r["dataset_code"], "reason": r["reason"],
-                     "detail": r.get("detail", "")[:160]}
-                    for r in failed[:25]
-                ],
-            })
+            annotate(
+                "warning",
+                "eurostat landing extract failures",
+                {
+                    "failed": len(failed),
+                    "first_failures": [
+                        {"dataset": r["dataset_code"], "reason": r["reason"], "detail": r.get("detail", "")[:160]}
+                        for r in failed[:25]
+                    ],
+                },
+            )
         hard = [r for r in failed if r["reason"] not in {"needs_partition", "no_results", "not_found", "not_available"}]
         return 1 if hard else 0
 

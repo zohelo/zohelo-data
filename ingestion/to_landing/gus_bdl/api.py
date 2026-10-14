@@ -4,20 +4,22 @@ Uses the registered key (env GUS_BDL_API_KEY, header X-ClientId) and stays below
 limits (10/s, 500/15 min, 5,000/12 h, 50,000/7 days) with a local budget; a 429 waits for
 the reset the server reports. One client per process; never parallel.
 """
+
 from __future__ import annotations
 
 from collections import deque
-from datetime import datetime, timezone
+from collections.abc import Iterator
+from datetime import UTC, datetime
 import os
 import time
-from typing import Any, Iterator
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import requests
 
 BASE = "https://bdl.stat.gov.pl/api/v1"
 WARSAW = ZoneInfo("Europe/Warsaw")
-WINDOWS = ((1, 8), (15 * 60, 450), (12 * 3600, 4800))   # (seconds, max requests), below the key's limits
+WINDOWS = ((1, 8), (15 * 60, 450), (12 * 3600, 4800))  # (seconds, max requests), below the key's limits
 
 
 class Bdl:
@@ -57,14 +59,14 @@ class Bdl:
             try:
                 response = self.session.get(f"{BASE}{path}", params=params, timeout=60)
             except (requests.ConnectionError, requests.Timeout):
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
                 continue
             if response.status_code == 429:
                 reset = response.headers.get("X-Rate-Limit-Reset") or response.headers.get("Retry-After") or "60"
                 time.sleep(min(max(float(reset) if reset.replace(".", "").isdigit() else 60, 5), 900))
                 continue
             if response.status_code >= 500:
-                time.sleep(2 ** attempt * 2)
+                time.sleep(2**attempt * 2)
                 continue
             response.raise_for_status()
             return response.url, response.content, response.json()
@@ -98,9 +100,9 @@ class Bdl:
         if not value:
             return None
         parsed = datetime.fromisoformat(value)
-        return (parsed if parsed.tzinfo else parsed.replace(tzinfo=WARSAW)).astimezone(timezone.utc)
+        return (parsed if parsed.tzinfo else parsed.replace(tzinfo=WARSAW)).astimezone(UTC)
 
 
 def token(moment: datetime | None) -> str:
     """Layout timestamp YYYYMMDDTHHMMSSZ; an unknown version sorts first."""
-    return moment.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ") if moment else "19700101T000000Z"
+    return moment.astimezone(UTC).strftime("%Y%m%dT%H%M%SZ") if moment else "19700101T000000Z"

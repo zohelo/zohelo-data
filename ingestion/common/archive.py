@@ -18,6 +18,7 @@ new files when the time budget is used up (exit 2; the next run continues).
 
 Supported proofs: sources in bronze_files.SOURCE_TABLES (Bronze file per Landing SHA-256).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -33,6 +34,7 @@ from typing import Any
 from ingestion.common.r2 import archive_key, landing_objects, latest_snapshot, raw_chunks, req, s3, sources
 from ingestion.common.report import annotate, step_summary
 
+
 def _archive_sources() -> tuple[str, ...]:
     """Sources with an ``archive_policy`` in ingestion/sources/<source>.yaml."""
     return tuple(s for s, c in sources().items() if c.get("archive_policy"))
@@ -43,6 +45,7 @@ SOURCES = _archive_sources()
 
 def proven_for(source: str, meta: dict[str, dict[str, Any]]) -> set[str]:
     from ingestion.common.bronze_files import SOURCE_TABLES, proven_hashes
+
     if source in SOURCE_TABLES:
         return proven_hashes(source)[0]
     raise RuntimeError(f"no Bronze proof registered for {source} (bronze_files.SOURCE_TABLES)")
@@ -63,24 +66,33 @@ def ensure_archive(client, bucket: str, source: str, item: dict[str, Any]) -> st
         client.head_object(Bucket=bucket, Key=target)
         if verified(client, bucket, target, item["sha256"], int(item["size"])):
             return "reused"
-        client.delete_object(Bucket=bucket, Key=target)      # a broken copy is never kept
+        client.delete_object(Bucket=bucket, Key=target)  # a broken copy is never kept
     except client.exceptions.ClientError:
         pass
-    metadata = {"source-sha256": item["sha256"], "source-size": str(item["size"]),
-                "source-key": item["key"][-900:]}
+    metadata = {"source-sha256": item["sha256"], "source-size": str(item["size"]), "source-key": item["key"][-900:]}
     if target.endswith(".bin"):
-        client.copy_object(Bucket=bucket, Key=target, CopySource={"Bucket": bucket, "Key": item["key"]},
-                           MetadataDirective="REPLACE", Metadata=metadata,
-                           ContentType="application/octet-stream")
+        client.copy_object(
+            Bucket=bucket,
+            Key=target,
+            CopySource={"Bucket": bucket, "Key": item["key"]},
+            MetadataDirective="REPLACE",
+            Metadata=metadata,
+            ContentType="application/octet-stream",
+        )
     else:
         import zstandard
+
         with tempfile.TemporaryFile() as handle:
             with zstandard.ZstdCompressor(level=12, threads=-1).stream_writer(handle, closefd=False) as writer:
                 for block in raw_chunks(client, bucket, item["key"]):
                     writer.write(block)
             handle.seek(0)
-            client.upload_fileobj(handle, bucket, target, ExtraArgs={
-                "Metadata": {**metadata, "compression": "zstd"}, "ContentType": "application/zstd"})
+            client.upload_fileobj(
+                handle,
+                bucket,
+                target,
+                ExtraArgs={"Metadata": {**metadata, "compression": "zstd"}, "ContentType": "application/zstd"},
+            )
     if not verified(client, bucket, target, item["sha256"], int(item["size"])):
         client.delete_object(Bucket=bucket, Key=target)
         raise RuntimeError(f"Archive readback mismatch: {item['key']}")
@@ -105,8 +117,11 @@ def main(argv=None) -> int:
     # Superseded: no path of these bytes is the newest version of its entity any more.
     newest = latest_snapshot(meta, "data") | latest_snapshot(meta, "metadata")
     superseded = {d for d, item in meta.items() if item.get("snapshot_paths") and d not in newest}
-    selected = [item for digest, item in meta.items() if item.get("present") and
-                (digest in proven or digest in superseded or item.get("area") in without_bronze)]
+    selected = [
+        item
+        for digest, item in meta.items()
+        if item.get("present") and (digest in proven or digest in superseded or item.get("area") in without_bronze)
+    ]
     selected.sort(key=lambda item: item["size"])
 
     outcomes: Counter = Counter()
@@ -133,11 +148,17 @@ def main(argv=None) -> int:
 
     with ThreadPoolExecutor(max_workers=8) as pool:
         list(pool.map(process, selected))
-    summary = {"source": args.source, "move": move, "proven_in_bronze": len(proven),
-               "superseded_versions": len(superseded),
-               "without_bronze_areas": sorted(without_bronze), "selected": len(selected),
-               "selected_gb": round(sum(int(i["size"]) for i in selected) / 1e9, 2),
-               "landing_gb_freed": round(moved_bytes[0] / 1e9, 2), **outcomes}
+    summary = {
+        "source": args.source,
+        "move": move,
+        "proven_in_bronze": len(proven),
+        "superseded_versions": len(superseded),
+        "without_bronze_areas": sorted(without_bronze),
+        "selected": len(selected),
+        "selected_gb": round(sum(int(i["size"]) for i in selected) / 1e9, 2),
+        "landing_gb_freed": round(moved_bytes[0] / 1e9, 2),
+        **outcomes,
+    }
     print(json.dumps(summary, sort_keys=True))
     annotate("notice", f"{args.source} landing archive", summary)
     step_summary(f"## {args.source} · landing archive\n\n```json\n{json.dumps(summary, indent=2)}\n```\n")

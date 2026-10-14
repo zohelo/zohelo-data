@@ -1,0 +1,14 @@
+# Tool configuration only (zohelo-data is not an installable package). Rules: docs/quality.md.
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["ingestion/legacy", "portal/app", "portal/worker"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+# RUF001-003: Polish and typographic characters (ł, →, —) are intended in strings and docs.
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true

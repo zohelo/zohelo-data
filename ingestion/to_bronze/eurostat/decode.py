@@ -9,6 +9,7 @@ Landing raw SHA-256 (plus dataset and version); the receipt in Landing holds the
 The TSV is read and unpivoted by DuckDB (no per-cell Python), written as ZSTD Parquet in
 source order (series by series), which keeps repeated values cheap to store.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -47,13 +48,14 @@ class EurostatBulkDecodeError(ValueError):
     """A Landing file cannot satisfy the Bronze contract (recorded, never dropped silently)."""
 
 
-def decode_landing_distribution(source: Path, receipt: Path, output: Path, *,
-                                receipt_uri: str, raw_uri: str,
-                                memory_limit: str = "10GB") -> dict[str, Any]:
+def decode_landing_distribution(
+    source: Path, receipt: Path, output: Path, *, receipt_uri: str, raw_uri: str, memory_limit: str = "10GB"
+) -> dict[str, Any]:
     """Decode one Landing data file; identity comes from its receipt (docs/landing.md)."""
     source, receipt, output = Path(source), Path(receipt), Path(output)
-    identity = _validated_landing_identity(source=source, receipt=receipt, output=output,
-                                           receipt_uri=receipt_uri, raw_uri=raw_uri)
+    identity = _validated_landing_identity(
+        source=source, receipt=receipt, output=output, receipt_uri=receipt_uri, raw_uri=raw_uri
+    )
     if _file_sha256(source) != identity["raw_sha256"]:
         raise EurostatBulkDecodeError("Eurostat distribution SHA-256 does not match its receipt")
     try:
@@ -89,12 +91,15 @@ def decode_landing_distribution(source: Path, receipt: Path, output: Path, *,
                 "FROM read_csv(?, auto_detect = false, delim = '\t', quote = '', escape = '', "
                 "comment = '', header = false, skip = 1, columns = ?, nullstr = ?, strict_mode = true, "
                 "null_padding = false, parallel = false, compression = 'gzip', max_line_size = 8000000)",
-                [str(source), columns, _NULL_MARKER])
+                [str(source), columns, _NULL_MARKER],
+            )
             source_rows, nulls, bad, distinct = con.execute(
                 "SELECT count(*), count(*) FILTER (WHERE "
                 + " OR ".join(f"c{i} IS NULL" for i in range(1, len(header)))
                 + "), min(rowid + 2) FILTER (WHERE len(parts) <> ? OR list_contains(parts, '')), "
-                "count(DISTINCT hash(parts)) FROM src", [len(dimensions)]).fetchone()
+                "count(DISTINCT hash(parts)) FROM src",
+                [len(dimensions)],
+            ).fetchone()
             if source_rows == 0:
                 raise EurostatBulkDecodeError("Eurostat TSV has no series")
             if nulls:
@@ -114,14 +119,15 @@ def decode_landing_distribution(source: Path, receipt: Path, output: Path, *,
             # it DuckDB streams the largest files instead of buffering them.
             con.execute("SET preserve_insertion_order = false")
             escaped = str(output).replace("'", "''")
-            con.execute(f"""
+            con.execute(
+                f"""
                 COPY (
                   SELECT ?::VARCHAR AS dataset_id, ?::VARCHAR AS source_version,
                          ?::TIMESTAMPTZ AS ingested_at, ?::VARCHAR AS raw_sha256,
                          ?::VARCHAR AS series_dimensions,
                          array_to_string(parts, ',') AS series_key,
-                         {code('freq')} AS freq_code, {code('unit')} AS unit_code,
-                         {code('geo')} AS geo_code,
+                         {code("freq")} AS freq_code, {code("unit")} AS unit_code,
+                         {code("geo")} AS geo_code,
                          (?::VARCHAR[])[substr(col, 2)::INTEGER] AS period_key,
                          regexp_extract(trim(cell), '^(\\S*)', 1) AS value_text,
                          nullif(trim(regexp_extract(trim(cell), '^\\S*\\s+(.*)$', 1)), '') AS status_code,
@@ -129,8 +135,16 @@ def decode_landing_distribution(source: Path, receipt: Path, output: Path, *,
                   FROM (UNPIVOT (SELECT rowid + 2 AS line, * FROM src)
                         ON {value_columns} INTO NAME col VALUE cell)
                 ) TO '{escaped}' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 1000000)
-            """, [identity["dataset_id"], identity["source_version"], identity["ingested_at"],
-                  identity["raw_sha256"], ",".join(dimensions), periods])
+            """,
+                [
+                    identity["dataset_id"],
+                    identity["source_version"],
+                    identity["ingested_at"],
+                    identity["raw_sha256"],
+                    ",".join(dimensions),
+                    periods,
+                ],
+            )
             cells = con.execute(f"SELECT count(*) FROM read_parquet('{escaped}')").fetchone()[0]
         if cells != source_rows * len(periods):
             raise EurostatBulkDecodeError("Eurostat Bronze row count differs from series × periods")
@@ -142,9 +156,14 @@ def decode_landing_distribution(source: Path, receipt: Path, output: Path, *,
         Path(str(database) + ".wal").unlink(missing_ok=True)
         if not completed and output.exists():
             output.unlink()
-    return {"dataset_id": identity["dataset_id"], "raw_sha256": identity["raw_sha256"],
-            "source_rows": source_rows, "periods": len(periods), "observation_cells": cells,
-            "output_bytes": output.stat().st_size}
+    return {
+        "dataset_id": identity["dataset_id"],
+        "raw_sha256": identity["raw_sha256"],
+        "source_rows": source_rows,
+        "periods": len(periods),
+        "observation_cells": cells,
+        "output_bytes": output.stat().st_size,
+    }
 
 
 def _parse_header(header: list[str]) -> tuple[list[str], list[str]]:
@@ -154,8 +173,12 @@ def _parse_header(header: list[str]) -> tuple[list[str], list[str]]:
     if marker.strip().upper() != "TIME_PERIOD":
         raise EurostatBulkDecodeError("Eurostat TSV has an unsupported observation axis")
     dimensions = [value.strip().lower() for value in series_header.split(",")]
-    if (not dimensions or any(not _DIMENSION_RE.fullmatch(v) for v in dimensions)
-            or len(set(dimensions)) != len(dimensions) or "time" in dimensions):
+    if (
+        not dimensions
+        or any(not _DIMENSION_RE.fullmatch(v) for v in dimensions)
+        or len(set(dimensions)) != len(dimensions)
+        or "time" in dimensions
+    ):
         raise EurostatBulkDecodeError("Eurostat TSV has invalid series dimensions")
     periods = [value.strip() for value in header[1:]]
     if not periods or any(not v for v in periods) or len(set(periods)) != len(periods):
@@ -163,8 +186,9 @@ def _parse_header(header: list[str]) -> tuple[list[str], list[str]]:
     return dimensions, periods
 
 
-def _validated_landing_identity(*, source: Path, receipt: Path, output: Path,
-                                receipt_uri: str, raw_uri: str) -> dict[str, Any]:
+def _validated_landing_identity(
+    *, source: Path, receipt: Path, output: Path, receipt_uri: str, raw_uri: str
+) -> dict[str, Any]:
     if not source.is_file() or not receipt.is_file():
         raise EurostatBulkDecodeError("Eurostat Landing file or receipt is not a regular file")
     if output.exists():
@@ -176,9 +200,13 @@ def _validated_landing_identity(*, source: Path, receipt: Path, output: Path,
         accepted = json.loads(receipt.read_bytes().decode("utf-8"))
     except (UnicodeError, json.JSONDecodeError) as exc:
         raise EurostatBulkDecodeError(f"Eurostat Landing receipt is not valid JSON: {exc}") from exc
-    if (not isinstance(accepted, dict) or accepted.get("schema_version") != 2
-            or accepted.get("kind") != "eurostat_landing" or accepted.get("area") != "data"
-            or accepted.get("source_id") != "eurostat"):
+    if (
+        not isinstance(accepted, dict)
+        or accepted.get("schema_version") != 2
+        or accepted.get("kind") != "eurostat_landing"
+        or accepted.get("area") != "data"
+        or accepted.get("source_id") != "eurostat"
+    ):
         raise EurostatBulkDecodeError("receipt is not a Eurostat Landing receipt")
     dataset_id = accepted.get("dataset_code")
     if not _bounded_text(dataset_id, 2048):
@@ -201,13 +229,16 @@ def _validated_landing_identity(*, source: Path, receipt: Path, output: Path,
         raise EurostatBulkDecodeError("Eurostat ingestion timestamp is invalid") from None
     if parsed.tzinfo is None or parsed.utcoffset() != timedelta(0):
         raise EurostatBulkDecodeError("Eurostat ingestion timestamp must be UTC")
-    return {"dataset_id": dataset_id, "source_version": source_version,
-            "ingested_at": parsed.isoformat(), "raw_sha256": raw_sha256}
+    return {
+        "dataset_id": dataset_id,
+        "source_version": source_version,
+        "ingested_at": parsed.isoformat(),
+        "raw_sha256": raw_sha256,
+    }
 
 
 def _bounded_text(value: Any, limit: int) -> bool:
-    return (isinstance(value, str) and 0 < len(value) <= limit
-            and not any(ord(character) < 32 for character in value))
+    return isinstance(value, str) and 0 < len(value) <= limit and not any(ord(character) < 32 for character in value)
 
 
 def _file_sha256(path: Path) -> str:

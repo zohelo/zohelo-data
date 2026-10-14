@@ -15,12 +15,13 @@ the newest landed one.
 Layout: ``01_landing/gus_teryt/snapshot/data/<entity>/<version>__<ingested>.zip`` + receipt.
 Modes: inspect (Landing versions per entity, no requests to eTERYT), load, verify.
 """
+
 from __future__ import annotations
 
 import argparse
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import sha256
 import io
 import json
@@ -37,13 +38,18 @@ from ingestion.common.report import annotate, step_summary
 
 SOURCE = "gus_teryt"
 PREFIX = "01_landing/gus_teryt/snapshot/data/"
-PAGE = ("https://eteryt.stat.gov.pl/eTeryt/rejestr_teryt/udostepnianie_danych/baza_teryt/"
-        "uzytkownicy_indywidualni/pobieranie/pliki_pelne.aspx")
+PAGE = (
+    "https://eteryt.stat.gov.pl/eTeryt/rejestr_teryt/udostepnianie_danych/baza_teryt/"
+    "uzytkownicy_indywidualni/pobieranie/pliki_pelne.aspx"
+)
 CONTROLS = {
-    "TERC_Urzedowy": "ctl00$body$BTERCUrzedowyPobierz", "TERC_Adresowy": "ctl00$body$BTERCAdresowyPobierz",
-    "SIMC_Urzedowy": "ctl00$body$BSIMCUrzedowyPobierz", "SIMC_Adresowy": "ctl00$body$BSIMCAdresowyPobierz",
+    "TERC_Urzedowy": "ctl00$body$BTERCUrzedowyPobierz",
+    "TERC_Adresowy": "ctl00$body$BTERCAdresowyPobierz",
+    "SIMC_Urzedowy": "ctl00$body$BSIMCUrzedowyPobierz",
+    "SIMC_Adresowy": "ctl00$body$BSIMCAdresowyPobierz",
     "SIMC_Statystyczny": "ctl00$body$BSIMCStatystycznyPobierz",
-    "ULIC_Urzedowy": "ctl00$body$BULICUrzedowyPobierz", "ULIC_Adresowy": "ctl00$body$BULICAdresowyPobierz",
+    "ULIC_Urzedowy": "ctl00$body$BULICUrzedowyPobierz",
+    "ULIC_Adresowy": "ctl00$body$BULICAdresowyPobierz",
     "WMRODZ": "ctl00$body$BRodzMiejPobierz",
 }
 PAUSE_SECONDS = 2
@@ -104,7 +110,7 @@ def request(session: requests.Session, method: str, data: dict | None = None) ->
                 raise RuntimeError(f"eTERYT {response.status_code}")
         except (requests.ConnectionError, requests.Timeout):
             pass
-        time.sleep(10 * 2 ** attempt)
+        time.sleep(10 * 2**attempt)
     raise RuntimeError("eTERYT kept failing")
 
 
@@ -130,20 +136,38 @@ def run_load(client, bucket: str, entities: list[str], held: dict[str, list]) ->
             outcomes["unchanged_version"] += 1
             continue
         digest = sha256(body).hexdigest()
-        ingested = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         key = f"{PREFIX}{entity}/{version}__{ingested}.zip"
         put_new(client, bucket, key, body, "application/zip")
-        receipt = {"schema_version": 2, "kind": "gus_teryt_landing", "source_id": SOURCE, "entity": entity,
-                   "content": "snapshot", "area": "data", "source_kind": "eteryt_full_file_zip",
-                   "version_token": version, "ingested_at": ingested, "source_url": PAGE,
-                   "form_control": CONTROLS[entity], "sha256": digest, "size_bytes": len(body),
-                   "object": {"bucket": bucket, "key": key},
-                   "http": {"content_type": response.headers.get("Content-Type"),
-                            "content_disposition": response.headers.get("Content-Disposition")},
-                   "replaces_sha256": previous["sha256"] if previous else None,
-                   "code_sha": os.environ.get("GITHUB_SHA", "")}
-        put_new(client, bucket, key[: -len(".zip")] + ".receipt.json",
-                json.dumps(receipt, indent=2, sort_keys=True).encode(), "application/json")
+        receipt = {
+            "schema_version": 2,
+            "kind": "gus_teryt_landing",
+            "source_id": SOURCE,
+            "entity": entity,
+            "content": "snapshot",
+            "area": "data",
+            "source_kind": "eteryt_full_file_zip",
+            "version_token": version,
+            "ingested_at": ingested,
+            "source_url": PAGE,
+            "form_control": CONTROLS[entity],
+            "sha256": digest,
+            "size_bytes": len(body),
+            "object": {"bucket": bucket, "key": key},
+            "http": {
+                "content_type": response.headers.get("Content-Type"),
+                "content_disposition": response.headers.get("Content-Disposition"),
+            },
+            "replaces_sha256": previous["sha256"] if previous else None,
+            "code_sha": os.environ.get("GITHUB_SHA", ""),
+        }
+        put_new(
+            client,
+            bucket,
+            key[: -len(".zip")] + ".receipt.json",
+            json.dumps(receipt, indent=2, sort_keys=True).encode(),
+            "application/json",
+        )
         outcomes["landed_new" if not previous else "landed_newer_version"] += 1
     return outcomes
 
@@ -153,12 +177,20 @@ def run_verify(client, bucket: str, held: dict[str, list]) -> dict[str, Any]:
     for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=PREFIX):
         present |= {o["Key"] for o in page.get("Contents", []) if not o["Key"].endswith(".receipt.json")}
     stored = archived(client, bucket, SOURCE)
-    missing = [r["object"]["key"] for rows in held.values() for r in rows
-               if r["object"]["key"] not in present
-               and stored.get(r["sha256"], {}).get("key") != archive_key(SOURCE, r["sha256"], r["object"]["key"])]
+    missing = [
+        r["object"]["key"]
+        for rows in held.values()
+        for r in rows
+        if r["object"]["key"] not in present
+        and stored.get(r["sha256"], {}).get("key") != archive_key(SOURCE, r["sha256"], r["object"]["key"])
+    ]
     receipted = {r["object"]["key"] for rows in held.values() for r in rows}
-    return {"receipts": len(receipted), "missing_data": len(missing), "missing_sample": missing[:10],
-            "data_without_receipt": sorted(present - receipted)[:10]}
+    return {
+        "receipts": len(receipted),
+        "missing_data": len(missing),
+        "missing_sample": missing[:10],
+        "data_without_receipt": sorted(present - receipted)[:10],
+    }
 
 
 def main(argv=None) -> int:
@@ -177,9 +209,12 @@ def main(argv=None) -> int:
         summary = {"mode": "verify", **run_verify(client, bucket, held)}
         status = 1 if summary["missing_data"] else 0
     else:
-        summary = {"mode": args.mode, "entities": len(entities),
-                   "landed_versions": {e: held[e][-1]["version_token"] for e in entities if e in held},
-                   "missing": [e for e in entities if e not in held]}
+        summary = {
+            "mode": args.mode,
+            "entities": len(entities),
+            "landed_versions": {e: held[e][-1]["version_token"] for e in entities if e in held},
+            "missing": [e for e in entities if e not in held],
+        }
         status = 0
         if args.mode == "load":
             summary.update(run_load(client, bucket, entities, held))

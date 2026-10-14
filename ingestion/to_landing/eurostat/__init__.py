@@ -7,6 +7,7 @@ landing.verify    extract.py --mode verify    Landing integrity and remaining ga
 landing.extract with filter "structure" lands the bulk SDMX structure messages instead
 (structure.py; job 0 only).
 """
+
 from __future__ import annotations
 
 
@@ -15,14 +16,25 @@ def _extract(mode: str, p) -> int:
         if p.job_index:
             return 0
         from ingestion.to_landing.eurostat import structure
+
         return structure.main()
     from ingestion.to_landing.eurostat import extract
-    args = ["--mode", mode, "--dataset-filter", p.filter,
-            "--parallel-downloads", str(p.parallel_downloads)]
+
+    args = ["--mode", mode, "--dataset-filter", p.filter, "--parallel-downloads", str(p.parallel_downloads)]
     if mode == "load":
-        args += ["--allow-production-write", "--max-datasets", str(p.max_items),
-                 "--job-index", str(p.job_index), "--parallel-jobs", str(p.parallel_jobs),
-                 "--budget-minutes", str(p.budget_minutes), "--grace-minutes", "20"]
+        args += [
+            "--allow-production-write",
+            "--max-datasets",
+            str(p.max_items),
+            "--job-index",
+            str(p.job_index),
+            "--parallel-jobs",
+            str(p.parallel_jobs),
+            "--budget-minutes",
+            str(p.budget_minutes),
+            "--grace-minutes",
+            "20",
+        ]
     return extract.main(args)
 
 

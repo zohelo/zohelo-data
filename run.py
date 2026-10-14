@@ -15,6 +15,7 @@ implemented and authorized:
 Activities are idempotent, so a scheduled run and a manual run are the same thing and a
 failed run resumes.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -31,11 +32,26 @@ SOURCES = ROOT / "ingestion" / "sources"
 PLATFORM_CONFIG = (ROOT / "warehouse" / "warehouse.yaml", ROOT / "portal" / "portal.yaml")
 
 # Activity order is the dataflow order; the workflow has one job per activity.
-ORDER = ("landing.inspect", "landing.extract", "landing.verify", "bronze.load",
-         "bronze.verify", "landing.archive", "archive.prune", "silver_gold.promote",
-         "silver_gold.build", "serving.refresh_index")
-WRITES = {"landing.extract", "bronze.load", "landing.archive", "archive.prune", "silver_gold.promote",
-          "silver_gold.build"}
+ORDER = (
+    "landing.inspect",
+    "landing.extract",
+    "landing.verify",
+    "bronze.load",
+    "bronze.verify",
+    "landing.archive",
+    "archive.prune",
+    "silver_gold.promote",
+    "silver_gold.build",
+    "serving.refresh_index",
+)
+WRITES = {
+    "landing.extract",
+    "bronze.load",
+    "landing.archive",
+    "archive.prune",
+    "silver_gold.promote",
+    "silver_gold.build",
+}
 
 RUNS = {
     "landing: inspect": ["landing.inspect"],
@@ -45,8 +61,15 @@ RUNS = {
     "bronze: verify": ["bronze.verify"],
     "archive: move Bronze-loaded Landing": ["landing.archive"],
     "archive: apply retention": ["archive.prune"],
-    "landing → bronze (all steps)": ["landing.inspect", "landing.extract", "landing.verify",
-                                     "bronze.load", "bronze.verify", "landing.archive", "archive.prune"],
+    "landing → bronze (all steps)": [
+        "landing.inspect",
+        "landing.extract",
+        "landing.verify",
+        "bronze.load",
+        "bronze.verify",
+        "landing.archive",
+        "archive.prune",
+    ],
     "silver/gold: promote": ["silver_gold.promote"],
     "silver/gold: build models": ["silver_gold.build"],
     "serving: refresh portal index": ["serving.refresh_index"],
@@ -65,6 +88,7 @@ class Params:
 
 def _promote(p: Params) -> int:
     from warehouse.passthrough import promote, zero_copy
+
     promote.main()
     zero_copy.main()
     return 0
@@ -72,30 +96,43 @@ def _promote(p: Params) -> int:
 
 def _refresh_index(p: Params) -> int:
     from portal import publish_index
+
     return publish_index.main() or 0
 
 
 def _build(p: Params) -> int:
     from warehouse import build
+
     return build.main(p.filter)
 
 
-PLATFORM_ACTIVITIES = {"silver_gold.promote": _promote, "silver_gold.build": _build,
-                       "serving.refresh_index": _refresh_index}
+PLATFORM_ACTIVITIES = {
+    "silver_gold.promote": _promote,
+    "silver_gold.build": _build,
+    "serving.refresh_index": _refresh_index,
+}
 
 
 def load_config() -> dict:
-    sources = {path.stem: yaml.safe_load(path.read_text())
-               for path in sorted(SOURCES.glob("*.yaml"))}
-    platform = [a for path in PLATFORM_CONFIG
-                for a in (yaml.safe_load(path.read_text()).get("activities") or [])]
-    schedule = [e for path in PLATFORM_CONFIG
-                for e in (yaml.safe_load(path.read_text()).get("schedule") or [])]
+    sources = {path.stem: yaml.safe_load(path.read_text()) for path in sorted(SOURCES.glob("*.yaml"))}
+    platform = [a for path in PLATFORM_CONFIG for a in (yaml.safe_load(path.read_text()).get("activities") or [])]
+    schedule = [e for path in PLATFORM_CONFIG for e in (yaml.safe_load(path.read_text()).get("schedule") or [])]
     return {"sources": sources, "platform": {"activities": platform, "schedule": schedule}}
 
 
-SOURCE_KEYS = {"source_system", "description", "extraction", "landing", "archive_policy", "archive_folder",
-               "bronze", "silver", "gold", "legacy_tables", "activities"}
+SOURCE_KEYS = {
+    "source_system",
+    "description",
+    "extraction",
+    "landing",
+    "archive_policy",
+    "archive_folder",
+    "bronze",
+    "silver",
+    "gold",
+    "legacy_tables",
+    "activities",
+}
 EXTRACTION_KEYS = {"initial", "production", "incremental_policy", "schedule"}
 
 
@@ -155,14 +192,13 @@ def plan(source: str, run: str, config: dict) -> list[str]:
     activities = RUNS[run]
     platform_run = all(a in PLATFORM_ACTIVITIES for a in activities)
     if platform_run != (source == "platform"):
-        raise SystemExit("silver/gold and serving runs use source 'platform'; "
-                         "landing/bronze runs use a data source")
+        raise SystemExit("silver/gold and serving runs use source 'platform'; landing/bronze runs use a data source")
     code, allowed = implemented(source), authorized(config, source)
     refused = [a for a in activities if a not in code or a not in allowed]
     if refused:
         raise SystemExit(
-            f"{source}: {', '.join(refused)} not available "
-            f"(implemented: {sorted(code)}; authorized: {allowed})")
+            f"{source}: {', '.join(refused)} not available (implemented: {sorted(code)}; authorized: {allowed})"
+        )
     steps = sorted(activities, key=ORDER.index)
     if source != "platform" and WRITES & set(steps):
         steps.append("serving.refresh_index")
@@ -170,8 +206,7 @@ def plan(source: str, run: str, config: dict) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
     p_plan = sub.add_parser("plan", help="print the activities of a run as JSON")
     p_plan.add_argument("--source", required=True)
@@ -193,6 +228,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "schedule":
         from ingestion.common import scheduler
+
         if args.check:
             problems = config_problems(config) + scheduler.validate(config, plan)
             print(json.dumps({"schedules": len(scheduler.entries(config)), "problems": problems}))
@@ -203,8 +239,7 @@ def main(argv: list[str] | None = None) -> int:
         if not 1 <= args.parallel_jobs <= 8:
             parser.error("parallel jobs must be 1-8")
         steps = plan(args.source, args.run, config)
-        print(json.dumps({"activities": steps,
-                          "extract_matrix": list(range(args.parallel_jobs))}))
+        print(json.dumps({"activities": steps, "extract_matrix": list(range(args.parallel_jobs))}))
         return 0
 
     # Platform activities run inside a data-source run (portal index refresh after writes)
@@ -222,8 +257,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.activity not in code:
             parser.error(f"{args.activity} is not implemented for {args.source}")
         func = code[args.activity]
-    params = Params(args.filter, args.max_items, args.parallel_jobs, args.job_index,
-                    args.parallel_downloads, args.budget_minutes)
+    params = Params(
+        args.filter, args.max_items, args.parallel_jobs, args.job_index, args.parallel_downloads, args.budget_minutes
+    )
     print(json.dumps({"pipeline": args.source, "activity": args.activity, **vars(params)}), flush=True)
     return int(func(params) or 0)
 

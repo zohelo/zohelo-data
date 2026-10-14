@@ -8,9 +8,10 @@ numbers cast to text), the geometry as WKB in the source CRS (geographic ETRS89 
 CRS text from the layer's .prj, and provenance. Partitioned by entity; the file list is
 the checkpoint. Rejections: bronze.prg_rejected_files.
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import sha256
 import json
 import os
@@ -30,15 +31,51 @@ TABLE_ID = ("bronze", "prg_boundaries")
 REJECTED_ID = ("bronze", "prg_rejected_files")
 OUTPUT_PREFIX = "02_bronze/gugik_prg/boundaries/"
 # Attributes of the PRG layers (union over A00–A06, as published in October 2026).
-ATTRIBUTES = ["OGC_FID", "JPT_KOD_JE", "JPT_SJR_KO", "JPT_NAZWA_", "JPT_POWIER", "JPT_ORGAN_", "JPT_KOD__1",
-              "JPT_NAZWA1", "JPT_ORGAN1", "JPT_WAZNA_", "IIP_PRZEST", "IIP_IDENTY", "JPT_KJ_IIP", "JPT_KJ_I_1",
-              "JPT_KJ_I_2", "JPT_KJ_I_3", "JPT_SPS_KO", "JPT_POWI_1", "JPT_JOR_ID", "WERSJA_OD", "WERSJA_DO",
-              "WAZNY_OD", "WAZNY_DO", "IIP_WERSJA", "JPT_OPIS", "JPT_ID", "REGON", "Shape_Leng", "Shape_Le_1",
-              "Shape_Area"]
-COLUMNS = ([("entity", "VARCHAR"), ("layer", "VARCHAR")] + [(a.lower(), "VARCHAR") for a in ATTRIBUTES]
-           + [("geometry_wkb", "BLOB"), ("geometry_type", "VARCHAR"), ("crs_wkt", "VARCHAR"),
-              ("raw_sha256", "VARCHAR"), ("source_version", "VARCHAR"), ("ingested_at", "TIMESTAMPTZ"),
-              ("source_row_number", "BIGINT")])
+ATTRIBUTES = [
+    "OGC_FID",
+    "JPT_KOD_JE",
+    "JPT_SJR_KO",
+    "JPT_NAZWA_",
+    "JPT_POWIER",
+    "JPT_ORGAN_",
+    "JPT_KOD__1",
+    "JPT_NAZWA1",
+    "JPT_ORGAN1",
+    "JPT_WAZNA_",
+    "IIP_PRZEST",
+    "IIP_IDENTY",
+    "JPT_KJ_IIP",
+    "JPT_KJ_I_1",
+    "JPT_KJ_I_2",
+    "JPT_KJ_I_3",
+    "JPT_SPS_KO",
+    "JPT_POWI_1",
+    "JPT_JOR_ID",
+    "WERSJA_OD",
+    "WERSJA_DO",
+    "WAZNY_OD",
+    "WAZNY_DO",
+    "IIP_WERSJA",
+    "JPT_OPIS",
+    "JPT_ID",
+    "REGON",
+    "Shape_Leng",
+    "Shape_Le_1",
+    "Shape_Area",
+]
+COLUMNS = (
+    [("entity", "VARCHAR"), ("layer", "VARCHAR")]
+    + [(a.lower(), "VARCHAR") for a in ATTRIBUTES]
+    + [
+        ("geometry_wkb", "BLOB"),
+        ("geometry_type", "VARCHAR"),
+        ("crs_wkt", "VARCHAR"),
+        ("raw_sha256", "VARCHAR"),
+        ("source_version", "VARCHAR"),
+        ("ingested_at", "TIMESTAMPTZ"),
+        ("source_row_number", "BIGINT"),
+    ]
+)
 
 
 def decode(zip_path: Path, receipt: dict[str, Any], output: Path) -> dict[str, int]:
@@ -50,7 +87,7 @@ def decode(zip_path: Path, receipt: dict[str, Any], output: Path) -> dict[str, i
         raise ValueError("PRG package without shapefiles")
     con = duckdb.connect()
     con.execute("INSTALL spatial; LOAD spatial;")
-    ingested = datetime.strptime(receipt["ingested_at"], "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+    ingested = datetime.strptime(receipt["ingested_at"], "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
     counts, selects = {}, []
     for shp in layers:
         found = [r[0] for r in con.execute("DESCRIBE SELECT * FROM ST_Read(?)", [str(shp)]).fetchall()]
@@ -62,18 +99,24 @@ def decode(zip_path: Path, receipt: dict[str, Any], output: Path) -> dict[str, i
         path = str(shp).replace("'", "''")
         crs_sql = "NULL" if crs is None else "'" + crs.replace("'", "''") + "'"
         layer = shp.stem.replace("'", "''")
-        columns = ", ".join(f'CAST("{a}" AS VARCHAR) AS {a.lower()}' if a in found else f"NULL::VARCHAR AS {a.lower()}"
-                            for a in ATTRIBUTES)
-        selects.append(f"SELECT '{layer}' AS layer, {columns}, ST_AsWKB(geom) AS geometry_wkb, "
-                       f"ST_GeometryType(geom)::VARCHAR AS geometry_type, {crs_sql} AS crs_wkt, "
-                       f"(row_number() OVER ())::BIGINT AS source_row_number FROM ST_Read('{path}')")
+        columns = ", ".join(
+            f'CAST("{a}" AS VARCHAR) AS {a.lower()}' if a in found else f"NULL::VARCHAR AS {a.lower()}"
+            for a in ATTRIBUTES
+        )
+        selects.append(
+            f"SELECT '{layer}' AS layer, {columns}, ST_AsWKB(geom) AS geometry_wkb, "
+            f"ST_GeometryType(geom)::VARCHAR AS geometry_type, {crs_sql} AS crs_wkt, "
+            f"(row_number() OVER ())::BIGINT AS source_row_number FROM ST_Read('{path}')"
+        )
         counts[shp.stem] = con.execute("SELECT count(*) FROM ST_Read(?)", [str(shp)]).fetchone()[0]
     union = " UNION ALL ".join(selects)
     target = str(output).replace("'", "''")
-    con.execute(f"COPY (SELECT ? AS entity, u.* EXCLUDE (source_row_number), ? AS raw_sha256, ? AS source_version, "
-                f"?::TIMESTAMPTZ AS ingested_at, u.source_row_number FROM ({union}) u) "
-                f"TO '{target}' (FORMAT parquet, COMPRESSION zstd, ROW_GROUP_SIZE 20000)",
-                [receipt["entity"], receipt["sha256"], receipt["version_token"], ingested])
+    con.execute(
+        f"COPY (SELECT ? AS entity, u.* EXCLUDE (source_row_number), ? AS raw_sha256, ? AS source_version, "
+        f"?::TIMESTAMPTZ AS ingested_at, u.source_row_number FROM ({union}) u) "
+        f"TO '{target}' (FORMAT parquet, COMPRESSION zstd, ROW_GROUP_SIZE 20000)",
+        [receipt["entity"], receipt["sha256"], receipt["version_token"], ingested],
+    )
     written = [c[0] for c in con.execute(f"DESCRIBE SELECT * FROM read_parquet('{target}')").fetchall()]
     if written != [c for c, _ in COLUMNS]:
         raise ValueError(f"PRG Parquet columns differ from the table: {written}")
@@ -108,13 +151,28 @@ def load(budget_minutes: float) -> int:
             try:
                 totals["rows_by_layer"] = decode(zip_path, receipt, output)
             except (ValueError, duckdb.Error, zipfile.BadZipFile) as exc:
-                bf.record_rejections(cat, REJECTED_ID, [{
-                    "entity": receipt["entity"], "raw_sha256": receipt["sha256"], "landing_key": receipt["object"]["key"],
-                    "error": f"{type(exc).__name__}: {exc}"[:1000], "code_sha": os.environ.get("GITHUB_SHA", "")}])
+                bf.record_rejections(
+                    cat,
+                    REJECTED_ID,
+                    [
+                        {
+                            "entity": receipt["entity"],
+                            "raw_sha256": receipt["sha256"],
+                            "landing_key": receipt["object"]["key"],
+                            "error": f"{type(exc).__name__}: {exc}"[:1000],
+                            "code_sha": os.environ.get("GITHUB_SHA", ""),
+                        }
+                    ],
+                )
                 totals["rejected"] = 1
             else:
-                uri = bf.upload(client, lake, f"{OUTPUT_PREFIX}{receipt['entity']}/{receipt['sha256']}.parquet",
-                                output, receipt["sha256"])
+                uri = bf.upload(
+                    client,
+                    lake,
+                    f"{OUTPUT_PREFIX}{receipt['entity']}/{receipt['sha256']}.parquet",
+                    output,
+                    receipt["sha256"],
+                )
                 bf.commit(cat, TABLE_ID, [uri], ["entity", "layer", "raw_sha256"], "gugik-prg-bronze-load")
                 totals["appended_files"] = 1
                 totals["parquet_mb"] = round(output.stat().st_size / 1e6, 1)

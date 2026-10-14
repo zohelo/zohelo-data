@@ -22,10 +22,11 @@ Code lists repeat across datasets (GEO, UNIT …); Silver keeps one copy per
 the file list is the checkpoint; rejections go to bronze.eurostat_structure_rejected_files.
 Other metadata files (ESMS reference metadata ZIPs, inventory TSVs) are not loaded here.
 """
+
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import sha256
 import json
 import os
@@ -44,17 +45,39 @@ METADATA = "01_landing/eurostat/snapshot/metadata/"
 TABLE_ID = ("bronze", "eurostat_structure_items")
 BULK_PREFIX = "ESTAT_ALL_"
 REJECTED_ID = ("bronze", "eurostat_structure_rejected_files")
-COLUMNS = [("dataset_id", "VARCHAR"), ("artefact", "VARCHAR"), ("agency_id", "VARCHAR"),
-           ("artefact_id", "VARCHAR"), ("artefact_version", "VARCHAR"), ("item_id", "VARCHAR"),
-           ("parent_id", "VARCHAR"), ("position", "VARCHAR"), ("references_json", "VARCHAR"),
-           ("names_json", "VARCHAR"), ("descriptions_json", "VARCHAR"), ("annotations_json", "VARCHAR"),
-           ("raw_sha256", "VARCHAR"), ("source_version", "VARCHAR"), ("ingested_at", "TIMESTAMPTZ"),
-           ("source_row_number", "BIGINT")]
+COLUMNS = [
+    ("dataset_id", "VARCHAR"),
+    ("artefact", "VARCHAR"),
+    ("agency_id", "VARCHAR"),
+    ("artefact_id", "VARCHAR"),
+    ("artefact_version", "VARCHAR"),
+    ("item_id", "VARCHAR"),
+    ("parent_id", "VARCHAR"),
+    ("position", "VARCHAR"),
+    ("references_json", "VARCHAR"),
+    ("names_json", "VARCHAR"),
+    ("descriptions_json", "VARCHAR"),
+    ("annotations_json", "VARCHAR"),
+    ("raw_sha256", "VARCHAR"),
+    ("source_version", "VARCHAR"),
+    ("ingested_at", "TIMESTAMPTZ"),
+    ("source_row_number", "BIGINT"),
+]
 XML_LANG = "{http://www.w3.org/XML/1998/namespace}lang"
-MAINTAINABLE = {"Dataflow": "dataflow", "DataStructure": "data_structure", "Codelist": "codelist",
-                "ConceptScheme": "concept_scheme"}
-ITEMS = {"Code": "code", "Concept": "concept", "Dimension": "dimension", "TimeDimension": "time_dimension",
-         "Attribute": "attribute", "PrimaryMeasure": "measure"}
+MAINTAINABLE = {
+    "Dataflow": "dataflow",
+    "DataStructure": "data_structure",
+    "Codelist": "codelist",
+    "ConceptScheme": "concept_scheme",
+}
+ITEMS = {
+    "Code": "code",
+    "Concept": "concept",
+    "Dimension": "dimension",
+    "TimeDimension": "time_dimension",
+    "Attribute": "attribute",
+    "PrimaryMeasure": "measure",
+}
 
 
 def local(tag: str) -> str:
@@ -78,7 +101,9 @@ def annotations(element: ET.Element) -> str | None:
             if name == "AnnotationText":
                 entry.setdefault("text", {})[part.get(XML_LANG, "")] = part.text or ""
             else:
-                entry[{"AnnotationType": "type", "AnnotationTitle": "title", "AnnotationURL": "url"}.get(name, name)] = part.text or ""
+                entry[
+                    {"AnnotationType": "type", "AnnotationTitle": "title", "AnnotationURL": "url"}.get(name, name)
+                ] = part.text or ""
         out.append(entry)
     return json.dumps(out, ensure_ascii=False)
 
@@ -107,22 +132,35 @@ def rows_for(receipt: dict[str, Any], body: bytes) -> list[dict[str, Any]]:
         raise ValueError(f"not an SDMX structure message: {local(root.tag)}")
     ingested = datetime.fromisoformat(str(receipt["ingested_at"]).replace("Z", "+00:00"))
     if ingested.tzinfo is None:
-        ingested = ingested.replace(tzinfo=timezone.utc)
-    base = {"dataset_id": receipt["dataset_code"], "raw_sha256": receipt["sha256"],
-            "source_version": receipt.get("eurostat_version") or receipt.get("version_token"),
-            "ingested_at": ingested}
+        ingested = ingested.replace(tzinfo=UTC)
+    base = {
+        "dataset_id": receipt["dataset_code"],
+        "raw_sha256": receipt["sha256"],
+        "source_version": receipt.get("eurostat_version") or receipt.get("version_token"),
+        "ingested_at": ingested,
+    }
     rows: list[dict[str, Any]] = []
 
     def add(element: ET.Element, artefact: str, owner: ET.Element, item: bool) -> None:
-        rows.append({**base, "artefact": artefact, "agency_id": owner.get("agencyID"),
-                     "artefact_id": owner.get("id"), "artefact_version": owner.get("version"),
-                     "item_id": element.get("id") if item else None,
-                     "parent_id": parent_of(element) if item else None,
-                     "position": element.get("position") if item else None,
-                     "references_json": references(element) if artefact in (
-                         "dimension", "time_dimension", "attribute", "measure", "dataflow") else None,
-                     "names_json": texts(element, "Name"), "descriptions_json": texts(element, "Description"),
-                     "annotations_json": annotations(element), "source_row_number": len(rows) + 1})
+        rows.append(
+            {
+                **base,
+                "artefact": artefact,
+                "agency_id": owner.get("agencyID"),
+                "artefact_id": owner.get("id"),
+                "artefact_version": owner.get("version"),
+                "item_id": element.get("id") if item else None,
+                "parent_id": parent_of(element) if item else None,
+                "position": element.get("position") if item else None,
+                "references_json": references(element)
+                if artefact in ("dimension", "time_dimension", "attribute", "measure", "dataflow")
+                else None,
+                "names_json": texts(element, "Name"),
+                "descriptions_json": texts(element, "Description"),
+                "annotations_json": annotations(element),
+                "source_row_number": len(rows) + 1,
+            }
+        )
 
     def walk(element: ET.Element, owner: ET.Element | None) -> None:
         for child in element:
@@ -150,7 +188,7 @@ def arrow_schema() -> pa.Schema:
 
 
 def load(budget_minutes: float = 120) -> dict[str, Any]:
-    started = datetime.now(timezone.utc)
+    started = datetime.now(UTC)
     client, cat = s3(), bf.retry(catalog, "catalog")
     lake, landing = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
     table = bf.retry(lambda: bf.ensure_table(cat, TABLE_ID, COLUMNS, "dataset_id"), "table")
@@ -162,8 +200,13 @@ def load(budget_minutes: float = 120) -> dict[str, Any]:
         receipts = list(pool.map(lambda k: json.loads(get_with_backoff(client, landing, k)), keys))
     # Only the bulk messages: the legacy per-dataset messages repeat the same artefacts
     # (15 GB, half the datasets) and are superseded by them.
-    todo = [r for r in receipts if r.get("source_kind") == "eurostat_structure_sdmx"
-            and str(r.get("dataset_code", "")).startswith(BULK_PREFIX) and r["sha256"] not in done]
+    todo = [
+        r
+        for r in receipts
+        if r.get("source_kind") == "eurostat_structure_sdmx"
+        and str(r.get("dataset_code", "")).startswith(BULK_PREFIX)
+        and r["sha256"] not in done
+    ]
 
     def fetch(receipt: dict[str, Any]) -> tuple[dict[str, Any], bytes]:
         key = receipt["object"]["key"]
@@ -177,20 +220,28 @@ def load(budget_minutes: float = 120) -> dict[str, Any]:
         return receipt, body
 
     uris, rejected, count, files, stopped = [], [], 0, 0, False
-    with tempfile.TemporaryDirectory(prefix="zohelo-eurostat-structure-") as temporary, \
-            ThreadPoolExecutor(max_workers=8) as pool:
+    with (
+        tempfile.TemporaryDirectory(prefix="zohelo-eurostat-structure-") as temporary,
+        ThreadPoolExecutor(max_workers=8) as pool,
+    ):
         # One message at a time: the code list message alone is ~175 MB of XML.
         chunks = ([r] for r in todo)
         for receipt, body in (pair for chunk in chunks for pair in pool.map(fetch, chunk)):
-            if (datetime.now(timezone.utc) - started).total_seconds() > budget_minutes * 60:
+            if (datetime.now(UTC) - started).total_seconds() > budget_minutes * 60:
                 stopped = True
                 break
             try:
                 rows = rows_for(receipt, body)
             except (ET.ParseError, ValueError, KeyError, TypeError) as exc:
-                rejected.append({"entity": receipt.get("dataset_code"), "raw_sha256": receipt["sha256"],
-                                 "landing_key": receipt["object"]["key"], "error": f"{type(exc).__name__}: {exc}"[:1000],
-                                 "code_sha": os.environ.get("GITHUB_SHA", "")})
+                rejected.append(
+                    {
+                        "entity": receipt.get("dataset_code"),
+                        "raw_sha256": receipt["sha256"],
+                        "landing_key": receipt["object"]["key"],
+                        "error": f"{type(exc).__name__}: {exc}"[:1000],
+                        "code_sha": os.environ.get("GITHUB_SHA", ""),
+                    }
+                )
                 continue
             path = Path(temporary) / f"{receipt['sha256']}.parquet"
             pq.write_table(pa.Table.from_pylist(rows, schema=arrow_schema()), path, compression="zstd")
@@ -205,5 +256,10 @@ def load(budget_minutes: float = 120) -> dict[str, Any]:
         if uris:
             bf.commit(cat, TABLE_ID, uris, ["dataset_id", "raw_sha256"], "eurostat-structure-bronze")
     bf.record_rejections(cat, REJECTED_ID, rejected)
-    return {"structure_files_pending": len(todo), "loaded_files": files, "rows": count,
-            "rejected_files": len(rejected), "stopped_on_budget": stopped}
+    return {
+        "structure_files_pending": len(todo),
+        "loaded_files": files,
+        "rows": count,
+        "rejected_files": len(rejected),
+        "stopped_on_budget": stopped,
+    }

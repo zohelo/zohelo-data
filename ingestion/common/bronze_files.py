@@ -6,9 +6,10 @@ table partitioned by the entity column, with column statistics computed client-s
 (R2 Data Catalog rejects the metrics table properties). The table's file list is the
 checkpoint; decoder rejections go to ``bronze.<source>_rejected_files``.
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -28,8 +29,13 @@ import requests
 
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 RETRY_DELAYS = (2, 5, 10, 20, 40)
-TYPES = {"VARCHAR": StringType(), "BIGINT": LongType(), "INTEGER": IntegerType(),
-         "TIMESTAMPTZ": TimestamptzType(), "BLOB": BinaryType()}
+TYPES = {
+    "VARCHAR": StringType(),
+    "BIGINT": LongType(),
+    "INTEGER": IntegerType(),
+    "TIMESTAMPTZ": TimestamptzType(),
+    "BLOB": BinaryType(),
+}
 THROTTLED = {"ServiceUnavailable", "SlowDown", "InternalError", "RequestTimeout", "TooManyRequests", "503", "500"}
 
 
@@ -54,8 +60,15 @@ def transient(exc: Exception | None) -> bool:
     seen = set()
     while exc is not None and id(exc) not in seen:
         seen.add(id(exc))
-        if isinstance(exc, (requests.ConnectionError, requests.Timeout,
-                            botocore.exceptions.ConnectionError, botocore.exceptions.ReadTimeoutError)):
+        if isinstance(
+            exc,
+            (
+                requests.ConnectionError,
+                requests.Timeout,
+                botocore.exceptions.ConnectionError,
+                botocore.exceptions.ReadTimeoutError,
+            ),
+        ):
             return True
         if isinstance(exc, botocore.exceptions.ClientError):
             return str(exc.response.get("Error", {}).get("Code", "")) in THROTTLED
@@ -86,11 +99,13 @@ def ensure_table(cat, table_id: tuple[str, str], columns: list[tuple[str, str]],
             cat.create_namespace(table_id[0])
         except NamespaceAlreadyExistsError:
             pass
-        schema = Schema(*[NestedField(i, name, TYPES[kind], required=False)
-                          for i, (name, kind) in enumerate(columns, start=1)])
+        schema = Schema(
+            *[NestedField(i, name, TYPES[kind], required=False) for i, (name, kind) in enumerate(columns, start=1)]
+        )
         source_id = [name for name, _ in columns].index(partition) + 1
-        spec = PartitionSpec(PartitionField(source_id=source_id, field_id=1000,
-                                            transform=IdentityTransform(), name=partition))
+        spec = PartitionSpec(
+            PartitionField(source_id=source_id, field_id=1000, transform=IdentityTransform(), name=partition)
+        )
         table = cat.create_table(table_id, schema=schema, partition_spec=spec)
         with table.transaction() as tx:
             tx.set_properties(**{"schema.name-mapping.default": table.schema().name_mapping.model_dump_json()})
@@ -145,19 +160,25 @@ def upload(client, bucket: str, key: str, path: Path, raw_sha256: str) -> str:
     except botocore.exceptions.ClientError as exc:
         if not _missing(exc):
             raise
-    client.upload_file(str(path), bucket, key, ExtraArgs={
-        "ContentType": "application/vnd.apache.parquet",
-        "Metadata": {"sha256": digest, "raw-sha256": raw_sha256}})
+    client.upload_file(
+        str(path),
+        bucket,
+        key,
+        ExtraArgs={
+            "ContentType": "application/vnd.apache.parquet",
+            "Metadata": {"sha256": digest, "raw-sha256": raw_sha256},
+        },
+    )
     if (client.head_object(Bucket=bucket, Key=key).get("Metadata") or {}).get("sha256") != digest:
         raise RuntimeError(f"Bronze upload verification failed: {key}")
     return f"s3://{bucket}/{key}"
 
 
-def download(client, bucket: str, source: str, key: str, raw_sha256: str, size: int | None,
-             destination: Path) -> None:
+def download(client, bucket: str, source: str, key: str, raw_sha256: str, size: int | None, destination: Path) -> None:
     """The Landing file's exact bytes, from Landing or, once moved, from the Archive;
     size (when known) and SHA-256 are verified against the receipt."""
     from ingestion.common.r2 import archive_key, raw_chunks
+
     try:
         client.head_object(Bucket=bucket, Key=key)
     except botocore.exceptions.ClientError as exc:
@@ -197,14 +218,21 @@ def commit(cat, table_id: tuple[str, str], uris: list[str], stats_columns: list[
             time.sleep(RETRY_DELAYS[attempt])
 
 
-def record_rejections(cat, table_id: tuple[str, str], rejected: list[dict[str, Any]],
-                      entity_column: str = "entity") -> None:
+def record_rejections(
+    cat, table_id: tuple[str, str], rejected: list[dict[str, Any]], entity_column: str = "entity"
+) -> None:
     """Append decoder rejections (dicts with entity, raw_sha256, landing_key, error)."""
     if not rejected:
         return
-    now = datetime.now(timezone.utc)
-    rows = [{**{k: v for k, v in r.items() if k != "entity"}, entity_column: r.get("entity", r.get(entity_column)),
-             "recorded_at": r.get("recorded_at") or now} for r in rejected]
+    now = datetime.now(UTC)
+    rows = [
+        {
+            **{k: v for k, v in r.items() if k != "entity"},
+            entity_column: r.get("entity", r.get(entity_column)),
+            "recorded_at": r.get("recorded_at") or now,
+        }
+        for r in rejected
+    ]
     schema = rejected_schema(entity_column)
     rejected_table(cat, table_id, entity_column).append(pa.Table.from_pylist(rows, schema=schema.as_arrow()))
 
@@ -214,13 +242,16 @@ def source_tables() -> dict[str, tuple[list[tuple[str, str]], list[tuple[str, st
     (tables holding one file per Landing SHA-256, rejected-files tables). Only sources whose
     Pipeline loads Bronze (``bronze.load`` in ``activities``) are included."""
     from ingestion.common.r2 import sources
+
     out = {}
     for source, config in sources().items():
         if "bronze.load" not in (config.get("activities") or []):
             continue
         names = [tuple(str(n).split(".", 1)) for n in config.get("bronze") or []]
-        out[source] = ([n for n in names if not n[1].endswith("rejected_files")],
-                       [n for n in names if n[1].endswith("rejected_files")])
+        out[source] = (
+            [n for n in names if not n[1].endswith("rejected_files")],
+            [n for n in names if n[1].endswith("rejected_files")],
+        )
     return out
 
 
@@ -230,6 +261,7 @@ SOURCE_TABLES = source_tables()
 def proven_hashes(source: str) -> tuple[set[str], set[str]]:
     """(Landing SHA-256 loaded into Bronze, Landing SHA-256 rejected with a reason)."""
     from ingestion.common.r2 import catalog
+
     tables, rejections = SOURCE_TABLES[source]
     cat = catalog()
     loaded: set[str] = set()

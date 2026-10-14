@@ -8,6 +8,7 @@ with --apply, writes the original bytes back to the receipt's key and verifies t
 SHA-256 by reading them back. Never overwrites.
 Args: --source eurostat [--dataset CODE_OR_GLOB ...] [--apply]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -37,7 +38,7 @@ def main(argv=None) -> int:
     present, receipts = set(), []
     for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix):
         for obj in page.get("Contents", []):
-            entity = obj["Key"][len(prefix):].split("/")[1] if obj["Key"].count("/") > 4 else ""
+            entity = obj["Key"][len(prefix) :].split("/")[1] if obj["Key"].count("/") > 4 else ""
             if patterns and not any(fnmatch.fnmatch(entity.lower(), p) for p in patterns):
                 continue
             if obj["Key"].endswith(".receipt.json"):
@@ -50,8 +51,13 @@ def main(argv=None) -> int:
         target = (receipt.get("object") or {}).get("key")
         if not target or target in present:
             return None
-        return {"receipt": key, "target": target, "sha256": receipt["sha256"], "size": receipt["size_bytes"],
-                "archive": archive_key(args.source, receipt["sha256"], target)}
+        return {
+            "receipt": key,
+            "target": target,
+            "sha256": receipt["sha256"],
+            "size": receipt["size_bytes"],
+            "archive": archive_key(args.source, receipt["sha256"], target),
+        }
 
     with ThreadPoolExecutor(max_workers=16) as pool:
         missing = [m for m in pool.map(inspect, receipts) if m]
@@ -69,8 +75,13 @@ def main(argv=None) -> int:
             return "restorable"
         meta = {"sha256": item["sha256"], "restored-from": item["archive"]}
         if item["archive"].endswith(".bin"):
-            client.copy_object(Bucket=bucket, Key=item["target"], MetadataDirective="REPLACE", Metadata=meta,
-                               CopySource={"Bucket": bucket, "Key": item["archive"]})
+            client.copy_object(
+                Bucket=bucket,
+                Key=item["target"],
+                MetadataDirective="REPLACE",
+                Metadata=meta,
+                CopySource={"Bucket": bucket, "Key": item["archive"]},
+            )
         else:
             with tempfile.TemporaryFile() as handle:
                 for block in raw_chunks(client, bucket, item["archive"]):
@@ -87,9 +98,17 @@ def main(argv=None) -> int:
 
     with ThreadPoolExecutor(max_workers=16) as pool:
         outcomes = Counter(pool.map(restore, missing))
-    annotate("notice", f"{args.source} restore from archive", {
-        "receipts": len(receipts), "data_missing": len(missing), **outcomes, "applied": args.apply,
-        "examples": [m["target"] for m in missing[:5]]})
+    annotate(
+        "notice",
+        f"{args.source} restore from archive",
+        {
+            "receipts": len(receipts),
+            "data_missing": len(missing),
+            **outcomes,
+            "applied": args.apply,
+            "examples": [m["target"] for m in missing[:5]],
+        },
+    )
     return 1 if outcomes["readback_mismatch"] or outcomes["archive_size_mismatch"] else 0
 
 

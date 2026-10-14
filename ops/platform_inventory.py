@@ -10,6 +10,7 @@ that do not exist. Fails fast when credentials or the catalog are broken.
 Output: annotations (totals + sources), the job summary, and the full JSON in
 $OPS_OUTPUT_DIR. Args: --source <id> ... to limit the per-source part.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -55,10 +56,12 @@ def tables(cat) -> dict[str, dict[str, Any]]:
             table = cat.load_table(identifier)
             snapshot = table.current_snapshot()
             summary = snapshot.summary if snapshot is not None and snapshot.summary is not None else {}
-            out[name] = {"rows": int(summary.get("total-records") or 0),
-                         "files": int(summary.get("total-data-files") or 0),
-                         "bytes": int(summary.get("total-files-size") or 0),
-                         "snapshots": len(table.metadata.snapshots)}
+            out[name] = {
+                "rows": int(summary.get("total-records") or 0),
+                "files": int(summary.get("total-data-files") or 0),
+                "bytes": int(summary.get("total-files-size") or 0),
+                "snapshots": len(table.metadata.snapshots),
+            }
     return out
 
 
@@ -76,8 +79,10 @@ def main(argv=None) -> int:
 
     landing = folders(client, landing_bucket, "01_landing/", 2)
     archive = folders(client, landing_bucket, "05_archive/", 2)
-    buckets = {landing_bucket: folders(client, landing_bucket, "", 1),
-               lakehouse_bucket: folders(client, lakehouse_bucket, "", 1)}
+    buckets = {
+        landing_bucket: folders(client, landing_bucket, "", 1),
+        lakehouse_bucket: folders(client, lakehouse_bucket, "", 1),
+    }
     found = tables(cat)
 
     claimed_tables, claimed_landing, report = set(), set(), {}
@@ -90,14 +95,20 @@ def main(argv=None) -> int:
             names = list(config.get(layer) or [])
             claimed_tables.update(names)
             present = [found[n] for n in names if n in found]
-            layers[layer] = {"tables": len(present), "rows": sum(t["rows"] for t in present),
-                             "files": sum(t["files"] for t in present),
-                             "gb": gb(sum(t["bytes"] for t in present)),
-                             # A rejected-files table is created with the first rejection.
-                             "missing": [n for n in names if n not in found and not n.endswith("_rejected_files")]}
-        report[source] = {"landing": landing.get(landing_folder, {"objects": 0, "bytes": 0, "latest": ""}),
-                          "archive": archive.get(archive_folder, {"objects": 0, "bytes": 0, "latest": ""}),
-                          **layers, "activities": config.get("activities") or []}
+            layers[layer] = {
+                "tables": len(present),
+                "rows": sum(t["rows"] for t in present),
+                "files": sum(t["files"] for t in present),
+                "gb": gb(sum(t["bytes"] for t in present)),
+                # A rejected-files table is created with the first rejection.
+                "missing": [n for n in names if n not in found and not n.endswith("_rejected_files")],
+            }
+        report[source] = {
+            "landing": landing.get(landing_folder, {"objects": 0, "bytes": 0, "latest": ""}),
+            "archive": archive.get(archive_folder, {"objects": 0, "bytes": 0, "latest": ""}),
+            **layers,
+            "activities": config.get("activities") or [],
+        }
 
     # Shared Gold of the dbt project and retired-code tables still in the catalog are claimed too.
     platform = yaml.safe_load((ROOT / "warehouse" / "warehouse.yaml").read_text()) or {}
@@ -109,30 +120,44 @@ def main(argv=None) -> int:
     unclaimed_landing = sorted(set(landing) - claimed_landing)
     totals = {
         "buckets_gb": {bucket: gb(sum(f["bytes"] for f in tops.values())) for bucket, tops in buckets.items()},
-        "folders_gb": {f"{bucket}/{name}": gb(info["bytes"])
-                       for bucket, tops in buckets.items() for name, info in sorted(tops.items())},
-        "iceberg_tables": len(found), "iceberg_rows": sum(t["rows"] for t in found.values()),
-        "unclaimed_tables": unclaimed_tables[:30], "unclaimed_landing_folders": unclaimed_landing[:20],
+        "folders_gb": {
+            f"{bucket}/{name}": gb(info["bytes"])
+            for bucket, tops in buckets.items()
+            for name, info in sorted(tops.items())
+        },
+        "iceberg_tables": len(found),
+        "iceberg_rows": sum(t["rows"] for t in found.values()),
+        "unclaimed_tables": unclaimed_tables[:30],
+        "unclaimed_landing_folders": unclaimed_landing[:20],
         "legacy_tables": {"count": len(legacy_found), "gb": gb(sum(found[n]["bytes"] for n in legacy_found))},
         "registered_tables_missing": sorted(n for s in report.values() for l in LAYERS for n in s[l]["missing"])[:30],
     }
     stored_gb = sum(totals["buckets_gb"].values())
     totals["storage_estimate"] = {
-        "stored_gb": round(stored_gb, 2), "free_gb": FREE_GB,
-        "usd_per_month": round(max(0.0, stored_gb - FREE_GB) * USD_PER_GB_MONTH, 2)}
+        "stored_gb": round(stored_gb, 2),
+        "free_gb": FREE_GB,
+        "usd_per_month": round(max(0.0, stored_gb - FREE_GB) * USD_PER_GB_MONTH, 2),
+    }
     annotate("notice", "inventory totals", totals)
     if totals["storage_estimate"]["usd_per_month"] > COST_WARNING_USD:
         annotate("warning", "R2 storage above free tier", totals["storage_estimate"])
 
     selected = [s for s in report if not args.source or s in args.source]
-    compact = {s: {"landing": [report[s]["landing"]["objects"], gb(report[s]["landing"]["bytes"]),
-                               report[s]["landing"]["latest"][:10]],
-                   "archive": [report[s]["archive"]["objects"], gb(report[s]["archive"]["bytes"])],
-                   **{l: [report[s][l]["tables"], report[s][l]["rows"], report[s][l]["gb"]] for l in LAYERS}}
-               for s in selected}
+    compact = {
+        s: {
+            "landing": [
+                report[s]["landing"]["objects"],
+                gb(report[s]["landing"]["bytes"]),
+                report[s]["landing"]["latest"][:10],
+            ],
+            "archive": [report[s]["archive"]["objects"], gb(report[s]["archive"]["bytes"])],
+            **{l: [report[s][l]["tables"], report[s][l]["rows"], report[s][l]["gb"]] for l in LAYERS},
+        }
+        for s in selected
+    }
     note = {"format": "landing [files, GB, latest]; archive [files, GB]; layer [tables, rows, GB]"}
     chunk: dict = {}
-    for source, row in compact.items():           # pack sources into as few annotations as fit
+    for source, row in compact.items():  # pack sources into as few annotations as fit
         if len(json.dumps({**note, **chunk, source: row})) > 3800:
             annotate("notice", "inventory sources", {**note, **chunk})
             chunk = {}
@@ -140,21 +165,37 @@ def main(argv=None) -> int:
     if chunk:
         annotate("notice", "inventory sources", {**note, **chunk})
 
-    lines = ["## Platform inventory", "",
-             "| source | Landing files | Landing GB | latest | Archive GB | Bronze rows | Silver rows | Gold rows | activities |",
-             "|---|---:|---:|---|---:|---:|---:|---:|---|"]
+    lines = [
+        "## Platform inventory",
+        "",
+        "| source | Landing files | Landing GB | latest | Archive GB | Bronze rows | Silver rows | Gold rows | activities |",
+        "|---|---:|---:|---|---:|---:|---:|---:|---|",
+    ]
     for s in selected:
         r = report[s]
-        lines.append(f"| {s} | {r['landing']['objects']:,} | {gb(r['landing']['bytes'])} | {r['landing']['latest'][:10]} "
-                     f"| {gb(r['archive']['bytes'])} | {r['bronze']['rows']:,} | {r['silver']['rows']:,} "
-                     f"| {r['gold']['rows']:,} | {', '.join(r['activities']) or '–'} |")
+        lines.append(
+            f"| {s} | {r['landing']['objects']:,} | {gb(r['landing']['bytes'])} | {r['landing']['latest'][:10]} "
+            f"| {gb(r['archive']['bytes'])} | {r['bronze']['rows']:,} | {r['silver']['rows']:,} "
+            f"| {r['gold']['rows']:,} | {', '.join(r['activities']) or '–'} |"
+        )
     step_summary("\n".join(lines) + "\n")
 
     output = Path(os.environ.get("OPS_OUTPUT_DIR", ".")) / "platform-inventory.json"
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps({"totals": totals, "sources": report, "tables": found,
-                                  "buckets": buckets, "landing_folders": landing,
-                                  "archive_folders": archive}, indent=2, default=str))
+    output.write_text(
+        json.dumps(
+            {
+                "totals": totals,
+                "sources": report,
+                "tables": found,
+                "buckets": buckets,
+                "landing_folders": landing,
+                "archive_folders": archive,
+            },
+            indent=2,
+            default=str,
+        )
+    )
     return 0
 
 

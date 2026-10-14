@@ -1,4 +1,5 @@
 """Shared R2 access for ingestion: S3 client, R2 SQL queries and Landing listings."""
+
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
@@ -26,18 +27,27 @@ def req(name: str) -> str:
 
 def s3():
     return boto3.client(
-        "s3", endpoint_url=req("R2_S3_ENDPOINT").rstrip("/"), region_name="auto",
+        "s3",
+        endpoint_url=req("R2_S3_ENDPOINT").rstrip("/"),
+        region_name="auto",
         aws_access_key_id=req("CLOUDFLARE_R2_ACCESS_KEY_ID"),
         aws_secret_access_key=req("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
-        config=Config(signature_version="s3v4", retries={"max_attempts": 8, "mode": "standard"}))
+        config=Config(signature_version="s3v4", retries={"max_attempts": 8, "mode": "standard"}),
+    )
 
 
 def sql(query: str) -> list[dict[str, Any]]:
     """Run one R2 SQL query and return its rows as dicts."""
-    url = (f"https://api.sql.cloudflarestorage.com/api/v1/accounts/"
-           f"{req('CLOUDFLARE_ACCOUNT_ID')}/r2-sql/query/{req('R2_LAKEHOUSE_BUCKET')}")
-    response = requests.post(url, json={"query": query}, timeout=180, headers={
-        "Authorization": f"Bearer {req('R2_DATA_CATALOG_TOKEN')}", "Content-Type": "application/json"})
+    url = (
+        f"https://api.sql.cloudflarestorage.com/api/v1/accounts/"
+        f"{req('CLOUDFLARE_ACCOUNT_ID')}/r2-sql/query/{req('R2_LAKEHOUSE_BUCKET')}"
+    )
+    response = requests.post(
+        url,
+        json={"query": query},
+        timeout=180,
+        headers={"Authorization": f"Bearer {req('R2_DATA_CATALOG_TOKEN')}", "Content-Type": "application/json"},
+    )
     if response.status_code != 200:
         raise RuntimeError(f"R2 SQL {response.status_code}: {response.text[:500]}")
     payload = response.json()
@@ -79,11 +89,13 @@ def sha_column(query: str, column: str) -> set[str]:
 
 def head_sha256(client, bucket: str, keys: list[str]) -> dict[str, str]:
     """SHA-256 recorded in each object's metadata at write time."""
+
     def head(key: str) -> tuple[str, str]:
         digest = str((client.head_object(Bucket=bucket, Key=key).get("Metadata") or {}).get("sha256", ""))
         if not SHA_RE.fullmatch(digest):
             raise RuntimeError(f"Landing object has no SHA-256 metadata: {key}")
         return key, digest
+
     with ThreadPoolExecutor(max_workers=16) as pool:
         return dict(pool.map(head, keys))
 
@@ -91,7 +103,9 @@ def head_sha256(client, bucket: str, keys: list[str]) -> dict[str, str]:
 def get_with_backoff(client, bucket: str, key: str, attempts: int = 6) -> bytes:
     """GET an object, waiting out R2 throttling (ServiceUnavailable / SlowDown) with backoff."""
     import time
+
     from botocore.exceptions import ClientError
+
     for attempt in range(attempts):
         try:
             return client.get_object(Bucket=bucket, Key=key)["Body"].read()
@@ -99,7 +113,7 @@ def get_with_backoff(client, bucket: str, key: str, attempts: int = 6) -> bytes:
             code = str(exc.response.get("Error", {}).get("Code", ""))
             if code not in {"ServiceUnavailable", "SlowDown", "InternalError", "503"} or attempt == attempts - 1:
                 raise
-            time.sleep(2 ** attempt * 2)
+            time.sleep(2**attempt * 2)
 
 
 def landing_objects(client, bucket: str, source: str) -> dict[str, dict[str, Any]]:
@@ -118,7 +132,7 @@ def landing_objects(client, bucket: str, source: str) -> dict[str, dict[str, Any
             key, size = str(item["Key"]), int(item.get("Size", 0))
             if size <= 0 or key.endswith("/"):
                 continue
-            rest = key[len(prefix):]
+            rest = key[len(prefix) :]
             if rest.startswith(SNAPSHOT):
                 if key.endswith(".receipt.json"):
                     receipt_keys.append(key)
@@ -129,8 +143,17 @@ def landing_objects(client, bucket: str, source: str) -> dict[str, dict[str, Any
             if not match:
                 raise RuntimeError(f"unexpected Landing object: {key}")
             kind, digest = match.groups()
-            result.setdefault(digest, {"key": key, "size": size, "kind": kind, "present": True,
-                                       "layout": "content_addressed", "sha256": digest})
+            result.setdefault(
+                digest,
+                {
+                    "key": key,
+                    "size": size,
+                    "kind": kind,
+                    "present": True,
+                    "layout": "content_addressed",
+                    "sha256": digest,
+                },
+            )
 
     def read(key: str) -> tuple[str, str, int, str | None] | None:
         receipt = json.loads(get_with_backoff(client, bucket, key))
@@ -140,7 +163,7 @@ def landing_objects(client, bucket: str, source: str) -> dict[str, dict[str, Any
             return None
         return data_key, digest, size, key
 
-    with ThreadPoolExecutor(max_workers=8) as pool:      # R2 throttles bursts of reads
+    with ThreadPoolExecutor(max_workers=8) as pool:  # R2 throttles bursts of reads
         receipted = {r[0]: r for r in pool.map(read, receipt_keys) if r}
     unreceipted = [k for k in objects if k not in receipted]
     for key, digest in head_sha256(client, bucket, unreceipted).items():
@@ -151,7 +174,7 @@ def landing_objects(client, bucket: str, source: str) -> dict[str, dict[str, Any
         present = data_key in objects
         if present and objects[data_key] != size:
             raise RuntimeError(f"Landing object size differs from its receipt: {data_key}")
-        area, entity, name = data_key[len(prefix) + len(SNAPSHOT):].split("/", 2)
+        area, entity, name = data_key[len(prefix) + len(SNAPSHOT) :].split("/", 2)
         token, _, rest = name.partition("__")
         ingested = rest.split(".", 1)[0].split("__", 1)[0]
         held = result.get(digest)
@@ -159,13 +182,29 @@ def landing_objects(client, bucket: str, source: str) -> dict[str, dict[str, Any
             raise RuntimeError(f"same SHA-256 with different sizes in Landing: {digest}")
         # Identical bytes can sit under several entities or versions; keep every snapshot path.
         paths = (held or {}).get("snapshot_paths", []) + [
-            {"key": data_key, "area": area, "entity": entity, "version": token,
-             "ingested": ingested, "present": present, "receipt": receipt_key}]
-        result[digest] = {"key": data_key if present or held is None else held["key"], "size": size,
-                          "kind": "raw" if area == "data" else "metadata", "layout": "snapshot",
-                          "area": area, "entity": entity, "version": token, "ingested": ingested,
-                          "sha256": digest, "snapshot_paths": paths,
-                          "present": present or bool(held and held.get("present"))}
+            {
+                "key": data_key,
+                "area": area,
+                "entity": entity,
+                "version": token,
+                "ingested": ingested,
+                "present": present,
+                "receipt": receipt_key,
+            }
+        ]
+        result[digest] = {
+            "key": data_key if present or held is None else held["key"],
+            "size": size,
+            "kind": "raw" if area == "data" else "metadata",
+            "layout": "snapshot",
+            "area": area,
+            "entity": entity,
+            "version": token,
+            "ingested": ingested,
+            "sha256": digest,
+            "snapshot_paths": paths,
+            "present": present or bool(held and held.get("present")),
+        }
     return result
 
 
@@ -185,18 +224,27 @@ def latest_snapshot(meta: dict[str, dict[str, Any]], area: str = "data") -> set[
 def catalog():
     """The R2 Data Catalog (Apache Iceberg REST) holding bronze, silver and gold."""
     from pyiceberg.catalog.rest import RestCatalog
+
     return RestCatalog(
-        name="zohelo", warehouse=req("R2_WAREHOUSE"), uri=req("R2_CATALOG_URI"),
+        name="zohelo",
+        warehouse=req("R2_WAREHOUSE"),
+        uri=req("R2_CATALOG_URI"),
         token=req("R2_DATA_CATALOG_TOKEN"),
-        **{"s3.access-key-id": req("CLOUDFLARE_R2_ACCESS_KEY_ID"),
-           "s3.secret-access-key": req("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
-           "s3.endpoint": req("R2_S3_ENDPOINT"), "s3.region": "auto"})
+        **{
+            "s3.access-key-id": req("CLOUDFLARE_R2_ACCESS_KEY_ID"),
+            "s3.secret-access-key": req("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
+            "s3.endpoint": req("R2_S3_ENDPOINT"),
+            "s3.region": "auto",
+        },
+    )
 
 
 def sources() -> dict[str, dict[str, Any]]:
     """The source registry: ingestion/sources/<source>.yaml by source id."""
     from pathlib import Path
+
     import yaml
+
     folder = Path(__file__).resolve().parents[1] / "sources"
     return {path.stem: yaml.safe_load(path.read_text()) for path in sorted(folder.glob("*.yaml"))}
 
@@ -219,11 +267,10 @@ def archived(client, bucket: str, source: str) -> dict[str, dict[str, Any]]:
     prefix = f"05_archive/{source}/raw/"
     for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix):
         for item in page.get("Contents", []):
-            name = item["Key"][len(prefix):]
+            name = item["Key"][len(prefix) :]
             digest = name.split(".", 1)[0]
             if SHA_RE.fullmatch(digest) and "/" not in name:
-                result[digest] = {"key": item["Key"], "size": int(item["Size"]),
-                                  "modified": item["LastModified"]}
+                result[digest] = {"key": item["Key"], "size": int(item["Size"]), "modified": item["LastModified"]}
     return result
 
 
@@ -233,6 +280,7 @@ def raw_chunks(client, bucket: str, key: str, chunk: int = 8 << 20):
     try:
         if key.endswith(".zst"):
             import zstandard
+
             reader = zstandard.ZstdDecompressor().stream_reader(body)
             while block := reader.read(chunk):
                 yield block

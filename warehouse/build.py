@@ -7,6 +7,7 @@ selects only the Eurostat Silver models repeats batches while Silver is incomple
 time budget allows (LOOP_MINUTES). Target prod writes to the silver/gold namespaces;
 results (models, tests, failures) are published as an annotation per build.
 """
+
 from __future__ import annotations
 
 import json
@@ -19,7 +20,7 @@ from ingestion.common.report import annotate, step_summary
 from warehouse import eurostat_batch
 
 PROJECT = Path(__file__).resolve().parent
-SETTINGS = eurostat_batch.SETTINGS   # warehouse/warehouse.yaml "eurostat_silver"
+SETTINGS = eurostat_batch.SETTINGS  # warehouse/warehouse.yaml "eurostat_silver"
 ROW_BUDGET = int(SETTINGS["row_budget"])
 LOOP_MINUTES = float(SETTINGS["loop_minutes"])
 LOOP_BUILDS = int(SETTINGS["loop_builds"])
@@ -31,6 +32,7 @@ def main(select: str = "", target: str = "prod", variables: dict | None = None) 
         return _main(select, target, variables)
     except Exception:
         import traceback
+
         annotate("error", "warehouse build crashed", {"traceback": traceback.format_exc()[-3000:]})
         raise
 
@@ -69,8 +71,13 @@ def build_once(selectors: list[str], target: str, variables: dict | None) -> tup
     results = []
     if results_path.exists():
         results = json.loads(results_path.read_text()).get("results", [])
-    summary = {"target": target, "select": selectors, "exit_code": completed.returncode,
-               "by_status": {}, "failures": []}
+    summary = {
+        "target": target,
+        "select": selectors,
+        "exit_code": completed.returncode,
+        "by_status": {},
+        "failures": [],
+    }
     for r in results:
         summary["by_status"][r["status"]] = summary["by_status"].get(r["status"], 0) + 1
         if r["status"] in ("error", "fail", "runtime error"):
@@ -84,6 +91,7 @@ def build_once(selectors: list[str], target: str, variables: dict | None) -> tup
         summary["output_tail"] = completed.stdout[-1500:]
     if completed.returncode == 0 and target == "prod":
         from warehouse import catalog
+
         summary["catalog"] = catalog.publish()
     annotate("notice" if completed.returncode == 0 else "error", "warehouse dbt build", summary)
     step_summary(f"## warehouse · dbt build\n\n```json\n{json.dumps(summary, indent=2)}\n```\n")
