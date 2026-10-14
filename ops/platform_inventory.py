@@ -93,7 +93,8 @@ def main(argv=None) -> int:
             layers[layer] = {"tables": len(present), "rows": sum(t["rows"] for t in present),
                              "files": sum(t["files"] for t in present),
                              "gb": gb(sum(t["bytes"] for t in present)),
-                             "missing": [n for n in names if n not in found]}
+                             # A rejected-files table is created with the first rejection.
+                             "missing": [n for n in names if n not in found and not n.endswith("_rejected_files")]}
         report[source] = {"landing": landing.get(landing_folder, {"objects": 0, "bytes": 0, "latest": ""}),
                           "archive": archive.get(archive_folder, {"objects": 0, "bytes": 0, "latest": ""}),
                           **layers, "activities": config.get("activities") or []}
