@@ -35,7 +35,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 
 | Rule | Check |
 |---|---|
-| Compiles; ruff lint clean with rule sets E, F, W, I, B, UP, SIM, RUF, PL (selected) | [auto] |
+| Compiles; ruff lint clean with rule sets E, F, W, I, B, UP, SIM, RUF (settings in `pyproject.toml`) | [auto] |
 | ruff format (line length 120) | [auto] |
 | Public functions have type hints and a one-line docstring; modules a docstring saying what they do in the dataflow | [review] |
 | Configuration comes from declarations or environment variables, never hard-coded bucket names, keys or paths | [review] |
@@ -80,7 +80,8 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 
 ## Enforcement
 
-1. `check` job on every pull request: `python -m ops.repo_check` (root allowlist and file
+1. `check` job on every pull request (from the owner's `dev.yml` change; until then the
+   job runs compile, pyflakes, YAML parse, configuration, dbt parse): `python -m ops.repo_check` (root allowlist and file
    rules, no `dev/`, four workflows with pinned actions, compile, ruff check + format,
    yamllint, configuration and schedules), `dbt parse`, and a gitleaks secret scan.
    Rule changes are made in `ops/repo_check.py` and `pyproject.toml`, not in the workflow.

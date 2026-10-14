@@ -36,8 +36,28 @@ ROOT_ALLOWED = {
     ".node-version",
 }
 WORKFLOWS = ["deploy-portal.yml", "dev.yml", "ops.yml", "pipeline.yml"]
-FORBIDDEN_SUFFIXES = {".parquet", ".ipynb", ".zip", ".gz", ".7z", ".xlsx", ".pem", ".key", ".env"}
+FORBIDDEN_SUFFIXES = {
+    ".parquet",
+    ".ipynb",
+    ".csv",
+    ".tsv",
+    ".db",
+    ".duckdb",
+    ".sqlite",
+    ".xls",
+    ".xlsx",
+    ".zip",
+    ".gz",
+    ".bz2",
+    ".xz",
+    ".tar",
+    ".7z",
+    ".pem",
+    ".key",
+    ".p12",
+}
 MAX_BYTES = 1_000_000
+USES_LINE = re.compile(r"^\s*-?\s*uses:")
 PINNED_ACTION = re.compile(r"uses:\s*(\./\S+|[\w./-]+@[0-9a-f]{40}\s+#\s*v\S+)")
 PYTHON_PATHS = ["ingestion", "ops", "warehouse", "run.py", "portal/publish_index.py"]
 # Long description lines are prose for the reader; they are not wrapped.
@@ -63,6 +83,8 @@ def repository(files: list[Path]) -> list[str]:
     if workflows != WORKFLOWS:
         problems.append(f"workflows must be exactly {WORKFLOWS}, found {workflows}")
     for f in files:
+        if not (ROOT / f).exists():  # deleted locally, not yet committed
+            continue
         size = (ROOT / f).stat().st_size
         if size > MAX_BYTES:
             problems.append(f"{f}: {size:,} bytes is above 1 MB")
@@ -70,16 +92,22 @@ def repository(files: list[Path]) -> list[str]:
             problems.append(f"{f}: empty file")
         if f.suffix.lower() in FORBIDDEN_SUFFIXES:
             problems.append(f"{f}: {f.suffix} files are not committed")
+        if f.name.startswith(".env") and f.name != ".env.example":
+            problems.append(f"{f}: environment files are not committed (only .env.example)")
     return problems
 
 
-def workflows() -> list[str]:
-    """Every action is pinned by a full commit SHA with a version comment."""
+def workflows(files: list[Path]) -> list[str]:
+    """Every action in workflows and local actions is pinned by a full commit SHA with a version comment."""
     problems = []
-    for path in sorted((ROOT / ".github/workflows").glob("*.yml")):
-        for number, line in enumerate(path.read_text().splitlines(), 1):
-            if "uses:" in line and not PINNED_ACTION.search(line):
-                problems.append(f"{path.name}:{number}: action not pinned by SHA with a version comment")
+    for f in files:
+        if f.parts[:2] != (".github", "workflows") and not (
+            f.parts[:2] == (".github", "actions") and f.stem == "action"
+        ):
+            continue
+        for number, line in enumerate((ROOT / f).read_text().splitlines(), 1):
+            if USES_LINE.match(line) and not PINNED_ACTION.search(line):
+                problems.append(f"{f}:{number}: action not pinned by SHA with a version comment")
     return problems
 
 
@@ -91,17 +119,23 @@ def tool(command: list[str]) -> list[str]:
     return [(result.stdout + result.stderr).strip()[-6000:] or f"{command[0]} failed"]
 
 
-def configuration() -> list[str]:
+def configuration(files: list[Path]) -> list[str]:
     """Every YAML parses; sources, runs and schedules are consistent (run.py)."""
     sys.path.insert(0, str(ROOT))
     from ingestion.common import scheduler
     import run
 
-    for path in sorted(ROOT.rglob("*.y*ml")):
-        if "node_modules" not in path.parts:
-            yaml.safe_load(path.read_text())
+    problems = []
+    for f in files:
+        if f.suffix in (".yml", ".yaml") and (ROOT / f).exists():
+            try:
+                yaml.safe_load((ROOT / f).read_text())
+            except yaml.YAMLError as exc:
+                problems.append(f"{f}: {exc}")
+    if problems:
+        return problems
     config = run.load_config()
-    problems = list(run.config_problems(config))
+    problems += run.config_problems(config)
     for source in [*config["sources"], "platform"]:
         missing = set(run.authorized(config, source)) - set(run.implemented(source))
         if missing:
@@ -114,16 +148,16 @@ def configuration() -> list[str]:
     return problems
 
 
-def main(argv: list[str] | None = None) -> int:
+def main() -> int:
     files = tracked()
     checks = {
         "repository": lambda: repository(files),
-        "workflows": workflows,
+        "workflows": lambda: workflows(files),
         "compile": lambda: tool([sys.executable, "-m", "compileall", "-q", *PYTHON_PATHS]),
         "ruff check": lambda: tool(["ruff", "check", *PYTHON_PATHS]),
         "ruff format": lambda: tool(["ruff", "format", "--check", *PYTHON_PATHS]),
         "yamllint": lambda: tool(["yamllint", "-s", "-d", YAMLLINT, "ingestion", "warehouse", "portal", ".github"]),
-        "configuration": configuration,
+        "configuration": lambda: configuration(files),
     }
     failed = 0
     for name, check in checks.items():
