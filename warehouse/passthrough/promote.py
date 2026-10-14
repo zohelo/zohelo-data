@@ -38,13 +38,6 @@ SILVER = {
  "opendata_org_locations":"opendata_org_locations",
  "opendata_org_organizations":"opendata_org_organizations",
  "opendata_org_people":"opendata_org_people",
- "prg_counties":"prg_counties",
- "prg_country":"prg_country",
- "prg_municipalities":"prg_municipalities",
- "prg_voivodeships":"prg_voivodeships",
- "teryt_simc":"teryt_simc",
- "teryt_terc":"teryt_terc",
- "teryt_ulic":"teryt_ulic",
 }
 GOLD = {
  "biala_lista_header":"dim_vat_header",
@@ -60,13 +53,6 @@ GOLD = {
  "opendata_org_locations":"dim_opendata_location",
  "opendata_org_organizations":"dim_opendata_organization",
  "opendata_org_people":"dim_opendata_person",
- "prg_counties":"dim_prg_county",
- "prg_country":"dim_prg_country",
- "prg_municipalities":"dim_prg_municipality",
- "prg_voivodeships":"dim_prg_voivodeship",
- "teryt_simc":"dim_locality",
- "teryt_terc":"dim_territory",
- "teryt_ulic":"dim_street",
 }
 PREFIX={"silver":"03_silver","gold":"04_gold"}
 
