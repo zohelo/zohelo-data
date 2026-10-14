@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Read (and later manage) the organisation's GitHub Projects board through GraphQL.
+"""Read the organisation's GitHub Projects board through GraphQL.
 
-Runs in the Ops workflow with a token of the `zohelo-automation` GitHub App (variable
-PROJECT_APP_ID, secret PROJECT_APP_KEY; the workflow mints GH_PROJECT_TOKEN). Projects
+Runs in the Ops workflow with a token of the `zohelo-automation` GitHub App (PROJECT_APP_ID as a
+variable or secret, secret PROJECT_APP_KEY; the workflow mints GH_PROJECT_TOKEN). Projects
 live at organisation level and are reachable only through GraphQL, which neither the
 workflow's GITHUB_TOKEN nor an AI session can use.
 
@@ -60,6 +60,7 @@ def graphql(token: str, query: str, variables: dict[str, Any]) -> dict[str, Any]
 
 
 def main(argv: list[str]) -> int:
+    """Run one mode; print the result and keep it as projects.json in OPS_OUTPUT_DIR."""
     token = os.environ.get("GH_PROJECT_TOKEN", "")
     org = os.environ.get("GITHUB_REPOSITORY_OWNER", "zohelo")
     if not token:
