@@ -33,3 +33,24 @@ models:
               config:
                 where: >-
                   raw_sha256 in ('{{ var("eurostat_batch", []) | map("last") | join("', '") }}')
+  - name: eurostat_dataflows
+    description: >-
+      One row per Eurostat dataset from its newest SDMX structure message: English name and
+      description, data structure reference, last data/structure update annotations.
+    columns:
+      - name: dataset_id
+        tests: [not_null, unique]
+  - name: eurostat_codes
+    description: >-
+      Eurostat code lists (GEO, UNIT, NACE_R2 …) deduplicated across datasets: one row per
+      agency, code list, version and code, with parent code and en/de/fr labels.
+    columns:
+      - name: code
+        tests: [not_null]
+  - name: eurostat_dimensions
+    description: >-
+      Dimensions of each Eurostat dataset (newest structure): position, concept, and the
+      code list and version enumerating it (join to eurostat_codes).
+    columns:
+      - name: dataset_id
+        tests: [not_null]
