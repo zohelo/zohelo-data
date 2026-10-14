@@ -80,9 +80,10 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 
 ## Enforcement
 
-1. Now: `check` job (compile, pyflakes, YAML parse, configuration consistency, dbt parse,
-   four workflows, no `dev/`).
-2. Next (owner merges the workflow change): `check` adds ruff, sqlfluff, yamllint, gitleaks,
-   the root allowlist and file rules, and `run.py schedule --check`.
+1. `check` job on every pull request: `python -m ops.repo_check` (root allowlist and file
+   rules, no `dev/`, four workflows with pinned actions, compile, ruff check + format,
+   yamllint, configuration and schedules), `dbt parse`, and a gitleaks secret scan.
+   Rule changes are made in `ops/repo_check.py` and `pyproject.toml`, not in the workflow.
+2. Next: sqlfluff for the dbt models, once the models are formatted.
 3. Reviewer: an AI agent that did not write the change reviews every PR against this file
    in the scheduled pass before auto-merge; a weekly quality score goes to the Owner Desk.
