@@ -1,25 +1,18 @@
 {{ config(materialized='incremental', incremental_strategy='append',
-          pre_hook="{% if is_incremental() %}delete from {{ this }} where raw_sha256 not in (select raw_sha256 from {{ ref('eurostat_dataset_versions') }}){% endif %}") }}
+          pre_hook="{% if is_incremental() %}{{ eurostat_clear() }}{% endif %}") }}
 {# Eurostat observations, newest version of each dataset, typed (design: project doc
-   claude/eurostat-silver-design.md). Incremental per Landing file (raw_sha256): each build
-   adds at most var('eurostat_datasets_per_build') datasets not yet in Silver, and the
-   pre-hook removes rows of datasets that have a newer version, so Silver converges over
-   successive builds without one oversized rebuild.
+   claude/eurostat-silver-design.md). Incremental per Landing file (raw_sha256): the batch
+   (vars eurostat_batch_*) is planned by warehouse/eurostat_batch.py from Iceberg metadata,
+   up to a row budget per build; the pre-hook removes superseded versions. Silver converges
+   over successive builds without one oversized rebuild. The literal dataset_id filter
+   lets the scan prune Bronze partitions.
    time_period is normalised to SDMX (2023Q1 → 2023-Q1, 2023M01 → 2023-01, 2023S1 → 2023-S1,
    2023W01 → 2023-W01); value ':' or empty → null; the series dimensions other than freq,
    unit and geo stay as published in breakdown_dimensions / breakdown_codes. #}
-with todo as (
-    select raw_sha256 from {{ ref('eurostat_dataset_versions') }}
-    {% if is_incremental() %}
-    where raw_sha256 not in (select distinct raw_sha256 from {{ this }})
-    {% endif %}
-    order by dataset_id
-    limit {{ var('eurostat_datasets_per_build', 400) }}
-),
-rows as (
-    select b.*
-    from {{ source('eurostat', 'eurostat_full_observations') }} b
-    where b.raw_sha256 in (select raw_sha256 from todo)
+with rows as (
+    select *
+    from {{ source('eurostat', 'eurostat_full_observations') }}
+    where {{ eurostat_batch_filter() }}
 )
 select
     dataset_id,
