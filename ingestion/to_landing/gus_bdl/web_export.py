@@ -213,6 +213,13 @@ def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list,
                 page.locator(f"#{new[0]['id']}").evaluate("e => e.click()")
             return save_download(download_info.value, subgroup, workdir)
         page.wait_for_timeout(5000)
+    listed = exports(page)
+    trace.append(
+        {
+            "step": "export list after waiting",
+            "entries": [[e["ready"], e["text"][:40], e["row"][:200]] for e in listed[:8]],
+        }
+    )
     raise RuntimeError("BDL package was requested but did not appear in the export list")
 
 
@@ -261,7 +268,8 @@ def export(page, subgroup: dict[str, Any], workdir: Path, trace: list) -> dict[s
         "?.get_items?.()?.get_count?.() || 0) > 0",
         timeout=45_000,
     )
-    note(page, trace, "territories selected")
+    selected = re.search(r"Wybranych elementów:\s*([0-9\s]+)", page.locator("body").inner_text())
+    note(page, trace, f"territories selected: {selected.group(1).strip() if selected else '?'}")
     enabled_next(page).click()
     wait_for_result_table(page)
     note(page, trace, "result table")
