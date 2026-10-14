@@ -1,7 +1,7 @@
 {{ config(materialized='incremental', incremental_strategy='append',
           pre_hook="{% if is_incremental() %}{{ eurostat_clear() }}{% endif %}") }}
-{# Eurostat observations, newest version of each dataset, typed (design: project doc
-   claude/eurostat-silver-design.md). Incremental per Landing file (raw_sha256): the batch
+{# Eurostat observations, newest version of each dataset, typed (design: warehouse/README.md,
+   "Eurostat Silver"). Incremental per Landing file (raw_sha256): the batch
    (vars eurostat_batch_*) is planned by warehouse/eurostat_batch.py from Iceberg metadata,
    up to a row budget per build; the pre-hook removes superseded versions. Silver converges
    over successive builds without one oversized rebuild. The literal dataset_id filter

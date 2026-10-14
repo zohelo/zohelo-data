@@ -19,9 +19,15 @@ catalog (readable by DuckDB and R2 SQL). Iceberg tables cannot be renamed in the
 transaction that created them, so the profile commits each statement separately; a
 table rebuild is therefore not atomic.
 
-Target `trial` writes every model to the scratch namespace `zz_dbt_trial`. Until dbt
-models replace them, `passthrough/` publishes Silver and Gold as copies / zero-copy
-references of Bronze (`silver_gold.promote`).
+Target `trial` writes every model to the scratch namespace `zz_dbt_trial`. Sources not
+yet modelled (GUS DBW, dane.gov.pl, GLEIF, MF Biała Lista) are still published by
+`passthrough/` as copies / zero-copy references of Bronze (`silver_gold.promote`).
+
+Eurostat Silver is too large for one build: `eurostat_batch.py` plans each build's batch
+from the Bronze file list (Iceberg metadata), one batch per build, at most 400M Bronze
+rows and 500 dataset versions; superseded versions are deleted before the insert. Files
+above 700M rows are deferred. A run that selects only the Eurostat models repeats
+batches for up to 140 minutes.
 
 ```sh
 cd warehouse && DBT_PROFILES_DIR=. dbt build --target trial   # needs the R2 env vars

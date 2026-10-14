@@ -1,4 +1,4 @@
-"""Batching of the incremental Eurostat Silver build (design: project doc eurostat-silver-design.md).
+"""Batching of the incremental Eurostat Silver build (design: warehouse/README.md).
 
 Scanning Bronze to find the newest version of each dataset reads billions of rows, so
 the batch is planned from Iceberg metadata instead:
