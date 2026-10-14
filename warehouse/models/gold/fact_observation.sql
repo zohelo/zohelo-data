@@ -3,10 +3,13 @@
    Keys: indicator_key → dim_indicator, geography_key → dim_geography,
    period_key → dim_period. Eurostat and BDL observations join here as they are modelled. #}
 with wdi as (
-    select o.*, cast(strptime(o.source_version[1:8], '%Y%m%d') as date) as vintage
-    from {{ ref('wdi_observations') }} o
+    select
+        o.*,
+        cast(strptime(o.source_version[1:8], '%Y%m%d') as date) as vintage
+    from {{ ref('wdi_observations') }} as o
     where o.value is not null
 )
+
 select
     'WDI:' || indicator_code as indicator_key,
     'WB:' || economy_code || ':' || strftime(vintage, '%Y%m%d') as geography_key,

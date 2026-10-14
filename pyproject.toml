@@ -12,3 +12,20 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.isort]
 force-sort-within-sections = true
+
+[tool.sqlfluff.core]
+dialect = "duckdb"
+templater = "jinja"
+max_line_length = 120
+exclude_rules = ["structure.column_order"]
+
+[tool.sqlfluff.templater.jinja]
+# dbt's ref/source/config/var/is_incremental as stubs: no connection to the lakehouse needed.
+apply_dbt_builtins = true
+load_macros_from_path = "warehouse/macros"
+
+[tool.sqlfluff.rules.capitalisation.keywords]
+capitalisation_policy = "lower"
+
+[tool.sqlfluff.rules.capitalisation.functions]
+extended_capitalisation_policy = "lower"

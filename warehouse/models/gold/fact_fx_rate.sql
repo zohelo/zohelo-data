@@ -2,15 +2,37 @@
    of the currency. NBP: table A/B mid, table C bid and ask (mapping_notes in
    warehouse/dimensions/currency.yaml). #}
 with rates as (
-    select effective_date, currency_code, table_code, 'mid' as rate_type, mid_rate as rate, raw_sha256
-    from {{ ref('nbp_fx_rates') }} where mid_rate is not null
+    select
+        effective_date,
+        currency_code,
+        table_code,
+        'mid' as rate_type,
+        mid_rate as rate,
+        raw_sha256
+    from {{ ref('nbp_fx_rates') }}
+    where mid_rate is not null
     union all
-    select effective_date, currency_code, table_code, 'bid', bid_rate, raw_sha256
-    from {{ ref('nbp_fx_rates') }} where bid_rate is not null
+    select
+        effective_date,
+        currency_code,
+        table_code,
+        'bid',
+        bid_rate,
+        raw_sha256
+    from {{ ref('nbp_fx_rates') }}
+    where bid_rate is not null
     union all
-    select effective_date, currency_code, table_code, 'ask', ask_rate, raw_sha256
-    from {{ ref('nbp_fx_rates') }} where ask_rate is not null
+    select
+        effective_date,
+        currency_code,
+        table_code,
+        'ask',
+        ask_rate,
+        raw_sha256
+    from {{ ref('nbp_fx_rates') }}
+    where ask_rate is not null
 )
+
 select
     cast(strftime(effective_date, '%Y%m%d') as integer) as date_key,
     effective_date as rate_date,

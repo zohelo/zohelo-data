@@ -2,11 +2,13 @@
    typed. One row per table × effective date × currency. Rates are PLN per 1 unit of the
    currency as published by the API (mid for A/B; bid/ask for C, trading_date for C). #}
 with ranked as (
-    select *,
-           rank() over (partition by entity order by source_version desc, ingested_at desc) as version_rank
+    select
+        *,
+        rank() over (partition by entity order by source_version desc, ingested_at desc) as version_rank
     from {{ source('nbp', 'nbp_observations') }}
     where table_code in ('A', 'B', 'C')
 )
+
 select
     table_code,
     table_no,
