@@ -2,15 +2,24 @@
    per unit: voivodeship (WOJ), powiat (WOJ+POW), gmina (WOJ+POW+GMI+RODZ). #}
 with newest as (
     select * from {{ source('gus_teryt', 'teryt_records') }}
-    where entity = 'TERC_Urzedowy'
-      and source_version = (select max(source_version) from {{ source('gus_teryt', 'teryt_records') }}
-                            where entity = 'TERC_Urzedowy')
+    where
+        entity = 'TERC_Urzedowy'
+        and source_version = (
+            select max(latest.source_version) from {{ source('gus_teryt', 'teryt_records') }} as latest
+            where latest.entity = 'TERC_Urzedowy'
+        )
 )
+
 select
-    woj || coalesce(nullif(pow, ''), '') || coalesce(nullif(gmi, ''), '') || coalesce(nullif(rodz, ''), '') as terc_code,
-    case when coalesce(pow, '') = '' then 'wojewodztwo'
-         when coalesce(gmi, '') = '' then 'powiat'
-         else 'gmina' end as unit_level,
+    woj
+    || coalesce(nullif(pow, ''), '')
+    || coalesce(nullif(gmi, ''), '')
+    || coalesce(nullif(rodz, ''), '') as terc_code,
+    case
+        when coalesce(pow, '') = '' then 'wojewodztwo'
+        when coalesce(gmi, '') = '' then 'powiat'
+        else 'gmina'
+    end as unit_level,
     woj as woj_code,
     nullif(pow, '') as pow_code,
     nullif(gmi, '') as gmi_code,

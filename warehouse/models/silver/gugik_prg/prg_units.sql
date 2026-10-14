@@ -4,8 +4,10 @@
    the geometry as WKB in the published CRS. #}
 with newest as (
     select * from {{ source('gugik_prg', 'prg_boundaries') }}
-    where source_version = (select max(source_version) from {{ source('gugik_prg', 'prg_boundaries') }})
+    where
+        source_version = (select max(latest.source_version) from {{ source('gugik_prg', 'prg_boundaries') }} as latest)
 )
+
 select
     layer,
     case

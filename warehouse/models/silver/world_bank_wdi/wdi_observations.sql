@@ -2,8 +2,11 @@
    Replaces the legacy pass-through table of the same name. #}
 with newest as (
     select * from {{ source('world_bank_wdi', 'wdi_bulk_observations') }}
-    where source_version = (select max(source_version) from {{ source('world_bank_wdi', 'wdi_bulk_observations') }})
+    where
+        source_version
+        = (select max(latest.source_version) from {{ source('world_bank_wdi', 'wdi_bulk_observations') }} as latest)
 )
+
 select
     country_code as economy_code,
     indicator_code,

@@ -2,10 +2,14 @@
    gmina (TERC) and parent locality. #}
 with newest as (
     select * from {{ source('gus_teryt', 'teryt_records') }}
-    where entity = 'SIMC_Urzedowy'
-      and source_version = (select max(source_version) from {{ source('gus_teryt', 'teryt_records') }}
-                            where entity = 'SIMC_Urzedowy')
+    where
+        entity = 'SIMC_Urzedowy'
+        and source_version = (
+            select max(latest.source_version) from {{ source('gus_teryt', 'teryt_records') }} as latest
+            where latest.entity = 'SIMC_Urzedowy'
+        )
 )
+
 select
     sym as simc_code,
     nullif(sympod, sym) as parent_simc_code,

@@ -2,9 +2,12 @@
    topic, unit, periodicity, definitions, source and licence. #}
 with newest as (
     select * from {{ source('world_bank_wdi', 'wdi_bulk_metadata') }}
-    where source_version = (select max(source_version) from {{ source('world_bank_wdi', 'wdi_bulk_metadata') }})
-      and lower(member) like '%series.csv' and lower(member) not like '%country%'
+    where
+        source_version
+        = (select max(latest.source_version) from {{ source('world_bank_wdi', 'wdi_bulk_metadata') }} as latest)
+        and lower(member) like '%series.csv' and lower(member) not like '%country%'
 )
+
 select
     max(case when field = 'Series Code' then value_text end) as indicator_code,
     max(case when field = 'Indicator Name' then value_text end) as indicator_name,

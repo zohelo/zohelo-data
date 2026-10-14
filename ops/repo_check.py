@@ -111,6 +111,28 @@ def workflows(files: list[Path]) -> list[str]:
     return problems
 
 
+SQLFLUFF = "sqlfluff==4.4.0"  # pinned here so the workflow does not change when the version does
+
+
+def sqlfluff() -> list[str]:
+    """dbt models pass sqlfluff (settings in pyproject.toml), with the pinned version."""
+    from importlib import metadata
+
+    try:
+        installed = metadata.version("sqlfluff")
+    except metadata.PackageNotFoundError:
+        installed = None
+    if installed != SQLFLUFF.split("==")[1]:
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "-q", SQLFLUFF], capture_output=True, text=True
+        )
+        if result.returncode:
+            return [f"could not install {SQLFLUFF}: {result.stderr.strip()[-500:]}"]
+    return tool(
+        [sys.executable, "-m", "sqlfluff", "lint", "warehouse/models", "--processes", "2", "--disable-progress-bar"]
+    )
+
+
 def tool(command: list[str]) -> list[str]:
     """Run a linter; its output is the finding."""
     result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
@@ -157,6 +179,7 @@ def main() -> int:
         "ruff check": lambda: tool(["ruff", "check", *PYTHON_PATHS]),
         "ruff format": lambda: tool(["ruff", "format", "--check", *PYTHON_PATHS]),
         "yamllint": lambda: tool(["yamllint", "-s", "-d", YAMLLINT, "ingestion", "warehouse", "portal", ".github"]),
+        "sqlfluff": sqlfluff,
         "configuration": lambda: configuration(files),
     }
     failed = 0
