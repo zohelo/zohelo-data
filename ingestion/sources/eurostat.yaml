@@ -6,7 +6,8 @@ extraction:
   initial: bulk                         # official bulk download, one gzip TSV per dataset
   production: snapshot                  # every file is a complete dataset version
   incremental_policy: changed_since_last  # inventory "last data change" vs Landing
-  schedule: null                        # manual only; a schedule needs owner approval
+  schedule:                             # UTC; daily: datasets changed since the last run
+    - {cron: "15 4 * * *", run: "landing → bronze (all steps)"}
 
 landing: 01_landing/eurostat/
 # Landing → Archive (docs/landing.md): Bronze-loaded files are moved (copy, verify, delete);

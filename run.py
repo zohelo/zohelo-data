@@ -2,6 +2,7 @@
 
     python run.py plan --source eurostat --run "landing → bronze (all steps)"
     python run.py activity --source eurostat --activity landing.extract [--filter ...]
+    python run.py schedule [--check]    start the declared runs that are due (hourly trigger)
 
 A run is an ordered list of activities (RUNS). An activity is allowed only when it is
 implemented and authorized:
@@ -87,7 +88,9 @@ def load_config() -> dict:
                for path in sorted(SOURCES.glob("*.yaml"))}
     platform = [a for path in PLATFORM_CONFIG
                 for a in (yaml.safe_load(path.read_text()).get("activities") or [])]
-    return {"sources": sources, "platform": {"activities": platform}}
+    schedule = [e for path in PLATFORM_CONFIG
+                for e in (yaml.safe_load(path.read_text()).get("schedule") or [])]
+    return {"sources": sources, "platform": {"activities": platform, "schedule": schedule}}
 
 
 def implemented(source: str) -> dict:
@@ -149,8 +152,18 @@ def main(argv: list[str] | None = None) -> int:
     p_act.add_argument("--job-index", type=int, default=0)
     p_act.add_argument("--parallel-downloads", type=int, default=4)
     p_act.add_argument("--budget-minutes", type=float, default=300.0)
+    p_sched = sub.add_parser("schedule", help="dispatch the declared runs that are due")
+    p_sched.add_argument("--check", action="store_true", help="only validate the declared schedules")
     args = parser.parse_args(argv)
     config = load_config()
+
+    if args.command == "schedule":
+        from ingestion.common import scheduler
+        if args.check:
+            problems = scheduler.validate(config, plan)
+            print(json.dumps({"schedules": len(scheduler.entries(config)), "problems": problems}))
+            return 1 if problems else 0
+        return scheduler.main(config, plan)
 
     if args.command == "plan":
         if not 1 <= args.parallel_jobs <= 8:
