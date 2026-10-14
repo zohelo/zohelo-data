@@ -8,9 +8,9 @@ Schedules are declared, not coded: each ``ingestion/sources/<source>.yaml`` (and
         run: "landing → bronze (all steps)"
         filter: ""                      # optional, as in a manual run
 
-The Pipeline workflow's hourly ``schedule`` trigger runs ``python run.py schedule``,
+The Pipeline workflow's ``schedule`` trigger (twice an hour; GitHub may drop some) runs ``python run.py schedule``,
 which dispatches every run whose cron time fell after the previous scheduled run was
-queued, up to this run's queue time (GitHub often starts hourly schedules late, so a
+queued, up to this run's queue time (GitHub often starts schedules late or skips them, so a
 fixed one-hour window would skip or repeat runs; at most 360 minutes are caught up). The dispatched run is
 an ordinary Pipeline run (same plan, authorization and concurrency), so a scheduled run
 and a manual run are the same thing. ``schedule: null`` or ``[]`` means manual only.
