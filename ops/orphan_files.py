@@ -3,8 +3,9 @@
 
 R2 Data Catalog maintenance expires snapshots but never removes orphan files: files
 left by failed commits, by tables that were dropped or replaced, or by earlier loaders.
-Everything under the layer folders (02_bronze/, 03_silver/, 04_gold/) of the lakehouse
-bucket is scanned, including folders no table points to any more. A file counts as
+Everything under the layer folders (02_bronze/, 03_silver/, 04_gold/) and the catalog's
+own default table location (__r2_data_catalog/, where dbt-built tables live) of the
+lakehouse bucket is scanned, including folders no table points to any more. A file counts as
 referenced when ANY snapshot of ANY table in ANY namespace references it (zero-copy
 tables share files). Only Parquet files older than --min-age-hours are candidates (an
 in-flight load may not have committed yet). Without --delete nothing is written.
@@ -22,7 +23,7 @@ from urllib.parse import urlsplit
 from ingestion.common.r2 import catalog, req, s3
 from ingestion.common.report import annotate
 
-LAYERS = ("02_bronze/", "03_silver/", "04_gold/")
+LAYERS = ("02_bronze/", "03_silver/", "04_gold/", "__r2_data_catalog/")
 
 
 def referenced_files(cat) -> set[str]:
