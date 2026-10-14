@@ -21,6 +21,14 @@ sources:
       holds the codes in the order of series_dimensions. Cast values in Silver.
   - name: eurostat_rejected_files
     description: Landing files the Bronze decoder rejected, with the reason (cleared by ops/retry_rejected).
+  - name: eurostat_structure_items
+    description: >-
+      SDMX structure metadata per dataset as published (dataflow, data structure and its
+      components, concept schemes, code lists and codes), one row per artefact or item;
+      names, descriptions and annotations as JSON by language. Code lists repeat across
+      datasets; partitioned by dataset_id.
+  - name: eurostat_structure_rejected_files
+    description: Structure messages the decoder rejected, with the reason.
 - name: gleif
   description: GLEIF — LEI records, relationships and reporting exceptions (golden copy files)
   database: r2

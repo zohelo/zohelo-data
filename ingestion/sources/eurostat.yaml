@@ -10,7 +10,8 @@ extraction:
 
 landing: 01_landing/eurostat/
 # Landing → Archive (docs/landing.md): Bronze-loaded files are moved (copy, verify, delete);
-# metadata has no Bronze table yet and is moved as well. Uncompressed formats are stored
+# metadata is moved as well (structure messages load into bronze.eurostat_structure_items;
+# ESMS reference metadata and inventory TSVs have no Bronze table). Uncompressed formats are stored
 # zstd-compressed. Retention: newest version of every entity plus anything ingested in the
 # last 90 days. prune: report → only reports; switch to delete after reviewing a report.
 archive_policy:
@@ -18,7 +19,8 @@ archive_policy:
   without_bronze: [metadata]
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
-bronze: [bronze.eurostat_full_observations, bronze.eurostat_rejected_files]
+bronze: [bronze.eurostat_full_observations, bronze.eurostat_rejected_files,
+         bronze.eurostat_structure_items, bronze.eurostat_structure_rejected_files]
 silver: []
 gold: []
 
