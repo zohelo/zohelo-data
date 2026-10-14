@@ -22,8 +22,9 @@ archive_policy:
   prune: report
 bronze: [bronze.eurostat_full_observations, bronze.eurostat_rejected_files,
          bronze.eurostat_structure_items, bronze.eurostat_structure_rejected_files]
-silver: []
-gold: []
+silver: [silver.eurostat_observations, silver.eurostat_dataset_versions, silver.eurostat_file_index,
+         silver.eurostat_loaded_files, silver.eurostat_dataflows, silver.eurostat_codes, silver.eurostat_dimensions]
+gold: []                              # Eurostat in Gold: shared models in warehouse/warehouse.yaml
 
 # Activities the Pipeline may run (owner authorization).
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

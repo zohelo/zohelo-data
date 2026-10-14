@@ -14,14 +14,18 @@ from __future__ import annotations
 
 import argparse
 from collections import defaultdict
+import fnmatch
 import json
 import os
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from ingestion.common.r2 import catalog, req, s3, sources
 from ingestion.common.report import annotate, step_summary
 
+ROOT = Path(__file__).resolve().parents[1]
 LAYERS = ("bronze", "silver", "gold")
 # R2 Standard storage (docs/operating.md): first 10 GB-month free per account, then
 # $0.015 per GB-month. Operations are not estimated here. A warning is raised above
@@ -79,7 +83,7 @@ def main(argv=None) -> int:
     claimed_tables, claimed_landing, report = set(), set(), {}
     for source, config in registry.items():
         landing_folder = (config.get("landing") or f"01_landing/{source}/").rstrip("/")
-        archive_folder = (config.get("archive") or f"05_archive/{source}/").rstrip("/")
+        archive_folder = (config.get("archive_folder") or f"05_archive/{source}/").rstrip("/")
         claimed_landing.add(landing_folder)
         layers = {}
         for layer in LAYERS:
@@ -94,6 +98,12 @@ def main(argv=None) -> int:
                           "archive": archive.get(archive_folder, {"objects": 0, "bytes": 0, "latest": ""}),
                           **layers, "activities": config.get("activities") or []}
 
+    # Shared Gold of the dbt project and retired-code tables still in the catalog are claimed too.
+    platform = yaml.safe_load((ROOT / "warehouse" / "warehouse.yaml").read_text()) or {}
+    claimed_tables.update(platform.get("gold") or [])
+    legacy = [g for c in registry.values() for g in (c.get("legacy_tables") or [])]
+    legacy_found = sorted(n for n in found if any(fnmatch.fnmatch(n, g) for g in legacy))
+    claimed_tables.update(legacy_found)
     unclaimed_tables = sorted(set(found) - claimed_tables)
     unclaimed_landing = sorted(set(landing) - claimed_landing)
     totals = {
@@ -102,6 +112,7 @@ def main(argv=None) -> int:
                        for bucket, tops in buckets.items() for name, info in sorted(tops.items())},
         "iceberg_tables": len(found), "iceberg_rows": sum(t["rows"] for t in found.values()),
         "unclaimed_tables": unclaimed_tables[:30], "unclaimed_landing_folders": unclaimed_landing[:20],
+        "legacy_tables": {"count": len(legacy_found), "gb": gb(sum(found[n]["bytes"] for n in legacy_found))},
         "registered_tables_missing": sorted(n for s in report.values() for l in LAYERS for n in s[l]["missing"])[:30],
     }
     stored_gb = sum(totals["buckets_gb"].values())

@@ -14,8 +14,20 @@ extraction:
   schedule: null
 
 landing: 01_landing/gus_bdl/
-bronze: [bronze.bdl_subgroup_observations, bronze.bdl_rejected_files, bronze.bdl_observations, bronze.bdl_variables, bronze.bdl_subjects, bronze.bdl_units, bronze.bdl_years, bronze.bdl_dictionary_entries]
-silver: [silver.bdl_dictionary_entries, silver.bdl_observation_revisions, silver.bdl_observations, silver.bdl_subjects, silver.bdl_units, silver.bdl_variables]
-gold: [gold.dim_bdl_period, gold.dim_bdl_subject, gold.dim_bdl_unit, gold.dim_bdl_variable, gold.fact_bdl_observations, gold.mart_bdl_coverage]
+# Landing → Archive: Bronze-loaded files are moved. Retention: newest version of every
+# subgroup plus 90 days; prune: report only until a report has been reviewed.
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.bdl_subgroup_observations, bronze.bdl_rejected_files, bronze.bdl_metadata_variables,
+         bronze.bdl_metadata_units, bronze.bdl_metadata_rejected_files]
+silver: [silver.bdl_observations, silver.bdl_variables, silver.bdl_units]
+gold: []
+# Tables of retired code still in the catalog, replaced by the tables above (globs allowed).
+legacy_tables: [bronze.bdl_observations, bronze.bdl_variables, bronze.bdl_subjects, bronze.bdl_units,
+                bronze.bdl_years, bronze.bdl_dictionary_entries, silver.bdl_dictionary_entries,
+                silver.bdl_observation_revisions, silver.bdl_subjects, gold.dim_bdl_*, gold.fact_bdl_observations,
+                gold.mart_bdl_coverage]
 
 activities: [landing.inspect, landing.extract, bronze.load]   # landing.extract = API metadata (variables, units); website extraction and API data refresh follow

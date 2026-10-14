@@ -55,3 +55,24 @@ Schedules are declared under `schedule:` in each source's YAML and in
 `warehouse/warehouse.yaml` (cron in UTC + run + optional filter). The Pipeline's hourly
 `scheduler` job (`python run.py schedule`) starts the runs that are due;
 `python run.py schedule --check` validates the declarations.
+
+## Source declarations
+
+Every source is declared in `ingestion/sources/<source>.yaml` with one key set, validated by
+`python run.py schedule --check`:
+
+| Key | Meaning |
+|---|---|
+| `source_system` | the source id (= file name) |
+| `description` | what the source is |
+| `extraction` | `initial`, `production`, `incremental_policy`, `schedule` (cron in UTC + run + optional filter) |
+| `landing` | Landing folder |
+| `archive_policy` | `move`, `retention` (`keep_latest`, `keep_days`), `prune` (`report`/`delete`), optional `without_bronze`; required when `bronze.load` is authorized |
+| `archive_folder` | Archive folder of a source not yet rebuilt (default `05_archive/<source>/`) |
+| `bronze`, `silver`, `gold` | tables the source owns in each layer; `*_rejected_files` tables record decoder rejections |
+| `legacy_tables` | tables of retired code still in the catalog (globs allowed), until deleted |
+| `activities` | the Pipeline activities authorized for the source |
+
+Shared Gold models and the Eurostat Silver batching settings are declared in
+`warehouse/warehouse.yaml`. Code derives table lists (Bronze proofs, archive sources,
+inventory) from these files; nothing is listed twice.

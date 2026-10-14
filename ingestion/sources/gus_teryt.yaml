@@ -19,9 +19,10 @@ archive_policy:
   retention: {keep_latest: 1, keep_days: 30}
   prune: report
 bronze: [bronze.teryt_records, bronze.teryt_rejected_files]
-# Legacy tables from retired code (bronze/silver teryt_terc/simc/ulic, gold.dim_territory/
-# dim_locality/dim_street) are replaced by bronze.teryt_records and the geography models.
-silver: []
-gold: []
+silver: [silver.teryt_terc, silver.teryt_simc]
+gold: []                              # gold.dim_geography (warehouse/warehouse.yaml)
+# Tables of retired code still in the catalog, replaced by the tables above (globs allowed).
+legacy_tables: [bronze.teryt_terc, bronze.teryt_simc, bronze.teryt_ulic, silver.teryt_ulic,
+                gold.dim_territory, gold.dim_locality, gold.dim_street]
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
