@@ -56,12 +56,12 @@ sources:
   - name: prg_municipalities
   - name: prg_surface_areas
 - name: gus_bdl
-  description: GUS Local Data Bank (BDL) — Web UI bulk archives (web_bulk) and API responses
+  description: GUS Local Data Bank (BDL) — subgroup website exports and API metadata
   database: r2
   schema: bronze
   meta:
     landing: 01_landing/gus_bdl/
-    loaded_by: retired code (ingestion/legacy/)
+    loaded_by: ingestion/to_bronze/gus_bdl/ (bdl_observations, bdl_variables, bdl_units … by retired code)
     config: ingestion/sources/gus_bdl.yaml
   tables:
   - name: bdl_metadata_variables
@@ -70,7 +70,7 @@ sources:
       dimension labels as on the website exports, level, measure unit; source_version = the
       subgroup's data version. Maps Bronze export rows to variable ids in Silver.
   - name: bdl_metadata_units
-    description: BDL API territorial units (levels 0–6): 12-character unit id, name, parent id, level, kind.
+    description: "BDL API territorial units (levels 0–6) with 12-character unit id, name, parent id, level, kind."
   - name: bdl_metadata_rejected_files
     description: BDL metadata pages the Bronze loader rejected, with the reason.
   - name: bdl_subgroup_observations
