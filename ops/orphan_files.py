@@ -18,6 +18,7 @@ from datetime import UTC, datetime, timedelta
 import json
 import os
 from pathlib import Path
+import traceback
 from urllib.parse import urlsplit
 
 from ingestion.common.r2 import catalog, req, s3
@@ -47,8 +48,16 @@ def referenced_files(cat) -> tuple[set[str], dict[str, str]]:
         for identifier in cat.list_tables(namespace):
             table = cat.load_table(identifier)
             folders[urlsplit(table.location()).path.strip("/")] = ".".join(identifier)
-            for path in table.inspect.all_files().column("file_path").to_pylist():
-                keys.add(urlsplit(path).path.lstrip("/"))
+            # Manifests read directly: table.inspect.all_files() decodes column bounds and
+            # fails on bounds truncated inside a UTF-8 character (Polish names, pyiceberg 0.12).
+            seen: set[str] = set()
+            for snapshot in table.snapshots():
+                for manifest in snapshot.manifests(table.io):
+                    if manifest.manifest_path in seen:
+                        continue
+                    seen.add(manifest.manifest_path)
+                    for entry in manifest.fetch_manifest_entry(table.io, discard_deleted=False):
+                        keys.add(urlsplit(entry.data_file.file_path).path.lstrip("/"))
     return keys, folders
 
 
@@ -118,5 +127,14 @@ def main(argv=None) -> int:
     return 0
 
 
+def run(argv=None) -> int:
+    """main() with any failure published as an annotation (nothing silent)."""
+    try:
+        return main(argv)
+    except Exception:
+        annotate("error", "orphan files failed", {"traceback": traceback.format_exc()[-3000:]})
+        raise
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(run())
