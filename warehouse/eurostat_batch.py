@@ -33,6 +33,9 @@ INDEX_SCHEMA = pa.schema([("dataset_id", pa.string()), ("raw_sha256", pa.string(
 LOG_SCHEMA = pa.schema([("dataset_id", pa.string()), ("raw_sha256", pa.string()),
                         ("loaded_at", pa.timestamp("us", tz="UTC"))])
 MODEL = "eurostat_observations"
+# The batch travels as dbt --vars (one command-line argument, ≤128 KB on Linux): at most
+# MAX_PAIRS (dataset, file) pairs per list, ~100 bytes each.
+MAX_PAIRS = 500
 
 
 def wanted(selectors: list[str]) -> bool:
@@ -104,11 +107,11 @@ def prepare(namespace: str, row_budget: int) -> dict:
     current = {(r["dataset_id"], r["raw_sha256"]): r for r in rows if r["is_current"]}
     log = _read(cat, (namespace, "eurostat_loaded_files"), LOG_SCHEMA).to_pylist()
     loaded = {(r["dataset_id"], r["raw_sha256"]) for r in log}
-    superseded = sorted(loaded - set(current))
+    superseded = sorted(loaded - set(current))[:MAX_PAIRS]
     batch, total = [], 0
     for key in sorted(k for k in current if k not in loaded):
         r = current[key]
-        if batch and total + r["record_count"] > row_budget:
+        if batch and (total + r["record_count"] > row_budget or len(batch) >= MAX_PAIRS):
             break
         batch.append(r)
         total += r["record_count"]
