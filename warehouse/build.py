@@ -16,11 +16,13 @@ from ingestion.common.report import annotate, step_summary
 PROJECT = Path(__file__).resolve().parent
 
 
-def main(select: str = "", target: str = "prod") -> int:
+def main(select: str = "", target: str = "prod", variables: dict | None = None) -> int:
     command = ["dbt", "build", "--target", target, "--project-dir", str(PROJECT), "--profiles-dir", str(PROJECT)]
     selectors = [s.strip() for s in select.replace(",", " ").split() if s.strip()]
     if selectors:
         command += ["--select", *selectors]
+    if variables:
+        command += ["--vars", json.dumps(variables)]
     completed = subprocess.run(command, cwd=PROJECT, env={**os.environ}, text=True, capture_output=True)
     print(completed.stdout[-20000:], completed.stderr[-5000:], sep="\n", flush=True)
     results_path = PROJECT / "target" / "run_results.json"

@@ -1,0 +1,18 @@
+version: 2
+models:
+  - name: eurostat_dataset_versions
+    description: Newest Bronze version (raw_sha256, source_version) of every Eurostat dataset.
+    columns:
+      - name: dataset_id
+        tests: [not_null, unique]
+  - name: eurostat_observations
+    description: >-
+      Eurostat observations of the newest version of each dataset, typed: freq, unit, geo as
+      published, time_period in SDMX format (period_source as published), value (null for ':'),
+      status flags, the remaining series dimensions in breakdown_dimensions/breakdown_codes.
+      Incremental per dataset version; converges over successive builds.
+    columns:
+      - name: dataset_id
+        tests: [not_null]
+      - name: time_period
+        tests: [not_null]
