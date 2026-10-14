@@ -56,10 +56,11 @@ def declaration(source: str) -> list[dict[str, Any]]:
 
 
 def prefix(source: str, entity: str, landing_root: str = "01_landing") -> str:
+    """Landing folder of one entity."""
     return f"{landing_root}/{source}/snapshot/data/{entity}/"
 
 
-def landed(client, bucket: str, folder: str) -> list[dict[str, Any]]:
+def landed(client: Any, bucket: str, folder: str) -> list[dict[str, Any]]:
     """Receipts under a prefix, oldest version first."""
     keys = []
     for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=folder):
@@ -69,10 +70,12 @@ def landed(client, bucket: str, folder: str) -> list[dict[str, Any]]:
 
 
 def stamp(moment: datetime) -> str:
+    """Layout timestamp YYYYMMDDTHHMMSSZ (UTC)."""
     return moment.astimezone(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def server_version(headers: dict[str, str]) -> str | None:
+    """The response's Last-Modified as a layout timestamp, if any."""
     try:
         return stamp(parsedate_to_datetime(headers["Last-Modified"]))
     except (KeyError, TypeError, ValueError):
@@ -94,8 +97,8 @@ def check_format(path: Path, fmt: str) -> dict[str, Any]:
     return {}
 
 
-def download(url: str, path: Path) -> tuple[str, int, dict[str, str], str]:
-    """Stream to disk with retries; returns (sha256, size, headers, final URL)."""
+def download(url: str, path: Path, fmt: str) -> tuple[str, int, dict[str, str], str, dict[str, Any]]:
+    """Stream to disk and check the format, with retries; returns (sha256, size, headers, URL, detail)."""
     for attempt in range(RETRIES):
         digest, size = sha256(), 0
         try:
@@ -112,8 +115,16 @@ def download(url: str, path: Path) -> tuple[str, int, dict[str, str], str]:
                 expected = int(response.headers.get("Content-Length") or 0)
                 if expected and size != expected:
                     raise RuntimeError(f"download truncated: {size} of {expected} bytes")
-                return digest.hexdigest(), size, dict(response.headers), response.url
-        except (requests.ConnectionError, requests.Timeout, RuntimeError) as exc:
+                detail = check_format(path, fmt)  # a corrupt file is downloaded again
+                return digest.hexdigest(), size, dict(response.headers), response.url, detail
+        except (
+            requests.ConnectionError,
+            requests.Timeout,
+            RuntimeError,
+            zipfile.BadZipFile,
+            gzip.BadGzipFile,
+            EOFError,
+        ) as exc:
             if attempt == RETRIES - 1:
                 raise
             print(json.dumps({"status": "retry", "url": url, "error": str(exc)[:200]}), flush=True)
@@ -121,16 +132,16 @@ def download(url: str, path: Path) -> tuple[str, int, dict[str, str], str]:
     raise RuntimeError("unreachable")
 
 
-def load_file(client, bucket: str, source: str, spec: dict[str, Any], landing_root: str) -> dict[str, Any]:
+def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landing_root: str) -> dict[str, Any]:
+    """Download one declared file and land it with a receipt unless its bytes are unchanged."""
     fmt = spec.get("format", "raw")
     folder = prefix(source, spec["entity"], landing_root)
     held = landed(client, bucket, folder)
     with tempfile.TemporaryDirectory(prefix=f"zohelo-{source}-") as temporary:
         path = Path(temporary) / f"file.{EXTENSIONS[fmt]}"
         started = time.monotonic()
-        digest, size, headers, final_url = download(spec["url"], path)
+        digest, size, headers, final_url, detail = download(spec["url"], path, fmt)
         seconds = round(time.monotonic() - started)
-        detail = check_format(path, fmt)
         if held and held[-1]["sha256"] == digest:
             return {"entity": spec["entity"], "outcome": "unchanged", "sha256": digest, "download_seconds": seconds}
         ingested = stamp(datetime.now(UTC))
@@ -204,14 +215,13 @@ def main(source: str, mode: str, landing_root: str = "01_landing") -> int:
         }
         if mode == "inspect":
             head = requests.head(spec["url"], headers={"User-Agent": USER_AGENT}, allow_redirects=True, timeout=60)
-            row["server_version"] = server_version(dict(head.headers))
-            row["state"] = (
-                "missing"
-                if not held
-                else "stale"
-                if (row["server_version"] or "") > held[-1]["version_token"]
-                else "current"
-            )
+            row["server_version"] = server_version(dict(head.headers)) or "unknown"
+            if not held:
+                row["state"] = "missing"
+            elif row["server_version"] == "unknown":  # no validator: load compares the SHA-256
+                row["state"] = "unknown"
+            else:
+                row["state"] = "stale" if row["server_version"] > held[-1]["version_token"] else "current"
         else:
             present = set()
             for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=folder):

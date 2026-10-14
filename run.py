@@ -158,6 +158,11 @@ def config_problems(config: dict) -> list[str]:
             files = ((cfg["extraction"].get("bulk_file") or {}).get("files")) or []
             if not files or any(not {"entity", "url"} <= set(f) for f in files):
                 problems.append(f"{source}: extraction.bulk_file.files needs entity and url for every file")
+            for f in files:
+                if f.get("format", "raw") not in {"zip", "gzip", "raw"}:
+                    problems.append(f"{source}: {f.get('entity')}: format must be zip, gzip or raw")
+                if f.get("version", "last_modified") not in {"last_modified", "ingested"}:
+                    problems.append(f"{source}: {f.get('entity')}: version must be last_modified or ingested")
         if set(cfg.get("extraction") or {}) - EXTRACTION_KEYS:
             problems.append(f"{source}: unknown extraction keys {sorted(set(cfg['extraction']) - EXTRACTION_KEYS)}")
         for layer in ("bronze", "silver", "gold"):
