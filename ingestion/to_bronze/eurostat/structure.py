@@ -1,9 +1,11 @@
 """Eurostat structure metadata → bronze.eurostat_structure_items.
 
-Landing ``metadata`` holds, per dataset, the SDMX 2.1 structure message of its dataflow
-with all descendants (``source_kind`` eurostat_structure_sdmx, ``*.structure.xml``):
-the dataflow, its data structure (dimensions, attributes, measure), concept schemes and
-code lists. One Bronze row per artefact or item, as published:
+Landing ``metadata`` holds SDMX 2.1 structure messages (``source_kind``
+eurostat_structure_sdmx, ``*.structure.xml``): the bulk messages of all dataflows, data
+structures, code lists and concept schemes (entities ESTAT_ALL_*, to_landing/eurostat/
+structure.py), and legacy per-dataset messages with all descendants. ``dataset_id`` is
+the Landing entity (dataset code or ESTAT_ALL_*); ``artefact_id`` identifies the
+artefact. One Bronze row per artefact or item, as published:
 
   artefact           dataflow | data_structure | dimension | time_dimension | attribute |
                      measure | codelist | code | concept_scheme | concept
@@ -135,8 +137,8 @@ def rows_for(receipt: dict[str, Any], body: bytes) -> list[dict[str, Any]]:
                 walk(child, owner)
 
     walk(root, None)
-    if not any(r["artefact"] == "dataflow" for r in rows):
-        raise ValueError("structure message without a dataflow")
+    if not any(r["item_id"] is None for r in rows):
+        raise ValueError("structure message without a maintainable artefact")
     return rows
 
 
