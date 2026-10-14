@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Read-only exact Landing-to-Iceberg hash membership for Eurostat and WDI.
+"""Read-only exact Landing-to-Iceberg hash membership (bronze.verify).
 
 This script never archives, deletes, rewrites pointers, or mutates Iceberg metadata.
 Landing identities (SHA-256 from object metadata or content-addressed names) are compared
-with Bronze provenance: for Eurostat the Bronze file list (one file per Landing SHA-256)
-and bronze.eurostat_rejected_files, read from the catalog; for WDI a provenance column
-through R2 SQL. For Eurostat the expectation is the latest version of every dataset in
-the agreed Landing layout; older versions are reported as superseded.
+with Bronze provenance: the Bronze file list (one file per Landing SHA-256) and the
+rejections table of every source in bronze_files.SOURCE_TABLES, read from the catalog.
+The expectation is the latest version of every entity in the agreed Landing layout;
+older versions are reported as superseded (Eurostat).
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ import argparse
 import json
 from typing import Any
 
-from ingestion.common.r2 import landing_objects, latest_snapshot, req, s3, sha_column
+from ingestion.common.r2 import landing_objects, latest_snapshot, req, s3
 from ingestion.common.report import annotate
 
 SOURCES=("eurostat","gugik_prg","gus_teryt","nbp","world_bank_wdi")
@@ -78,35 +78,13 @@ def inspect_snapshot(meta:dict[str,dict[str,Any]],source:str)->dict[str,Any]:
     }
 
 
-def inspect_wdi(meta:dict[str,dict[str,Any]])->dict[str,Any]:
-    bulk={digest for digest,item in meta.items() if "/bulk/" in item["key"]}
-    responses={digest for digest,item in meta.items() if "/responses/" in item["key"]}
-    if len(bulk)!=1 or len(bulk)+len(responses)!=len(meta):
-        raise RuntimeError("WDI Landing does not contain exactly one bulk object plus responses")
-    modeled=sha_column(
-        "SELECT DISTINCT archive_sha256 FROM silver.wdi_observations "
-        "WHERE archive_sha256 IS NOT NULL;",
-        "archive_sha256",
-    )
-    return {
-        "bulk":summarize("bulk",bulk,modeled,meta),
-        "responses":{
-            "landing_sha256":len(responses),
-            "landing_bytes":sum(int(meta[d]["size"]) for d in responses),
-            "modeled_provenance_column":"none_currently_observed_for_api_responses",
-        },
-        "modeled_archive_sha256":sorted(modeled),
-    }
-
-
 def main(argv=None)->int:
     parser=argparse.ArgumentParser()
     parser.add_argument("--source",choices=SOURCES,required=True)
     args=parser.parse_args(argv)
     client=s3(); bucket=req("R2_LANDING_BUCKET")
     meta=landing_objects(client,bucket,args.source)
-    result=(inspect_eurostat(meta) if args.source=="eurostat" else inspect_wdi(meta)
-            if args.source=="world_bank_wdi" else inspect_snapshot(meta,args.source))
+    result=inspect_eurostat(meta) if args.source=="eurostat" else inspect_snapshot(meta,args.source)
     summary={
         "result":"pass",
         "operation":"inspect-exact-landing-iceberg-hash-membership",

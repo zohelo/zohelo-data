@@ -171,6 +171,8 @@ SOURCE_TABLES = {
                  ("bronze", "bdl_metadata_units")], ("bronze", "bdl_rejected_files")),
     "gus_teryt": ([("bronze", "teryt_records")], ("bronze", "teryt_rejected_files")),
     "gugik_prg": ([("bronze", "prg_boundaries")], ("bronze", "prg_rejected_files")),
+    "world_bank_wdi": ([("bronze", "wdi_bulk_observations"), ("bronze", "wdi_bulk_metadata")],
+                       ("bronze", "wdi_rejected_files")),
 }
 
 

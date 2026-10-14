@@ -1,15 +1,25 @@
 source_system: world_bank_wdi
-description: World Bank WDI bulk CSV archive and API responses
+description: World Bank World Development Indicators — bulk CSV archive (data + metadata)
 
+# Extraction strategy (docs/landing.md). Bulk feature: the WDI CSV ZIP on the publisher's
+# stable URL (~270 MB, CC BY 4.0). Version = Last-Modified; written only when the SHA-256
+# changed. The legacy Landing objects (one content-addressed bulk ZIP + 3,518 API
+# responses) stay until the new Bronze is verified, then retire with the legacy tables.
 extraction:
-  initial: to_be_decided
-  production: to_be_decided
-  incremental_policy: to_be_decided
-  schedule: null
+  initial: bulk
+  production: snapshot                  # each archive is the complete database
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: null                        # target: weekly check (WDI updates a few times a year)
 
 landing: 01_landing/world_bank_wdi/
-bronze: [bronze.wdi_data, bronze.wdi_country, bronze.wdi_series, bronze.wdi_country_series, bronze.wdi_footnote, bronze.wdi_series_time]
-silver: [silver.wdi_countries, silver.wdi_indicators, silver.wdi_observations]
-gold: [gold.dim_wdi_geography, gold.dim_wdi_indicator, gold.dim_wdi_year, gold.fact_wdi_observations, gold.mart_wdi_coverage]
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.wdi_bulk_observations, bronze.wdi_bulk_metadata, bronze.wdi_rejected_files]
+# Legacy tables from retired code: bronze.wdi_data/country/series/country_series/footnote/series_time,
+# silver.wdi_*, gold.*wdi* — replaced by the tables above and the models built on them.
+silver: []
+gold: []
 
-activities: [bronze.verify]   # read-only; ingestion paused
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
