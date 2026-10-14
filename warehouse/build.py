@@ -26,6 +26,15 @@ EUROSTAT_ONLY = {"eurostat_dataset_versions", "eurostat_observations"}
 
 
 def main(select: str = "", target: str = "prod", variables: dict | None = None) -> int:
+    try:
+        return _main(select, target, variables)
+    except Exception:
+        import traceback
+        annotate("error", "warehouse build crashed", {"traceback": traceback.format_exc()[-3000:]})
+        raise
+
+
+def _main(select: str, target: str, variables: dict | None) -> int:
     selectors = [s.strip() for s in select.replace(",", " ").split() if s.strip()]
     if not selectors or not set(selectors) <= EUROSTAT_ONLY:
         return build_once(selectors, target, variables)[0]
