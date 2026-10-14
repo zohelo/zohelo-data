@@ -111,7 +111,11 @@ def wait_for_result_table(page) -> None:
 def save_download(download, subgroup: dict[str, Any], workdir: Path) -> tuple[Path, str]:
     """Save a provider ZIP after checking its name identifies the subgroup and it is a ZIP."""
     name = download.suggested_filename
-    number = subgroup["id"][1:]
+    number, name = subgroup["id"][1:], " ".join(subgroup["name"].split())[:40]
+
+    def ours(e: dict[str, Any]) -> bool:
+        return number in e["row"] + e["text"] or bool(name and name in e["row"])
+
     if not re.search(rf"(?:^|_){number}(?:_|\.)", name, re.IGNORECASE):
         raise RuntimeError(f"export file name {name!r} does not identify {subgroup['id']}")
     path = workdir / f"{subgroup['id']}.zip"
@@ -143,6 +147,71 @@ def login(page, email: str, password: str) -> None:
         raise RuntimeError("BDL website login failed")
 
 
+DOWNLOAD_IDS = ("ctl00_ContentPlaceHolder_download1", "ctl00_ContentPlaceHolder_download2")
+EXPORTS_JS = """els => els.map(e => ({
+    id: e.id, text: (e.textContent || '').trim().replace(/\\s+/g, ' '),
+    ready: !/aspNetDisabled/i.test(typeof e.className === 'string' ? e.className : '') && !e.disabled
+           && Boolean(e.getAttribute('href') || e.getAttribute('onclick')),
+    row: (e.closest('tr')?.innerText || '').trim().replace(/\\s+/g, ' ').slice(0, 500)}))"""
+
+
+def download_button(page):
+    for control_id in DOWNLOAD_IDS:
+        control = page.locator(f"#{control_id}")
+        if control.count() and control.is_visible() and control.is_enabled():
+            return control
+    return None
+
+
+def exports(page) -> list[dict[str, Any]]:
+    """The account's generated packages listed on the start page."""
+    page.goto(f"{WEB}/start", wait_until="domcontentloaded", timeout=30_000)
+    settle(page)
+    return page.locator('[id$="_Export"]').evaluate_all(EXPORTS_JS)
+
+
+def fingerprint(entry: dict[str, Any]) -> str:
+    return sha256(json.dumps([entry["text"], entry["row"]]).encode()).hexdigest()
+
+
+def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list) -> tuple[Path, str]:
+    """Request a background package for the current selection and download it when ready."""
+    for _ in range(36):  # earlier packages still generating would be mistaken for ours
+        before = exports(page)
+        if all(e["ready"] for e in before):
+            break
+        page.wait_for_timeout(5000)
+    else:
+        raise RuntimeError("earlier BDL packages did not finish generating")
+    seen = {fingerprint(e) for e in before}
+    page.goto(subgroup["url"], wait_until="domcontentloaded", timeout=60_000)
+    settle(page)
+    button = download_button(page)
+    if button is None:
+        raise RuntimeError("'Pobierz' is not enabled after returning to the subgroup")
+    note(page, trace, f"package requested ({len(before)} earlier packages)")
+    with page.expect_response(lambda r: r.request.method == "POST", timeout=360_000) as response_info:
+        button.click(no_wait_after=True)
+    if not response_info.value.ok:
+        raise RuntimeError(f"BDL package request returned HTTP {response_info.value.status}")
+    number, name = subgroup["id"][1:], " ".join(subgroup["name"].split())[:40]
+
+    def ours(e: dict[str, Any]) -> bool:
+        return number in e["row"] + e["text"] or bool(name and name in e["row"])
+
+    for _ in range(72):  # up to 6 minutes
+        new = [e for e in exports(page) if fingerprint(e) not in seen and e["ready"] and ours(e)]
+        if len(new) > 1:
+            raise RuntimeError(f"several new packages match {subgroup['id']}")
+        if new:
+            note(page, trace, "package ready")
+            with page.expect_download(timeout=180_000) as download_info:
+                page.locator(f"#{new[0]['id']}").evaluate("e => e.click()")
+            return save_download(download_info.value, subgroup, workdir)
+        page.wait_for_timeout(5000)
+    raise RuntimeError("BDL package was requested but did not appear in the export list")
+
+
 def export(page, subgroup: dict[str, Any], workdir: Path, trace: list) -> dict[str, Any]:
     """Select everything in one subgroup and download the relational CSV ZIP.
 
@@ -166,18 +235,13 @@ def export(page, subgroup: dict[str, Any], workdir: Path, trace: list) -> dict[s
     information = information_count(page)
     if not information:
         return {"status": "no_data", "information": information}
-    if information > MAX_INFORMATION:
-        # Large subgroups: the dimensions page offers a whole-subgroup download instead.
-        button = page.locator(
-            "#ctl00_ContentPlaceHolder_download1:visible, #ctl00_ContentPlaceHolder_download2:visible"
-        ).first
-        if not (button.count() and button.is_enabled()):
-            return {"status": "too_large", "information": information}
-        note(page, trace, "whole-subgroup download")
-        with page.expect_download(timeout=360_000) as download_info:
-            button.click(no_wait_after=True)
-        path, name = save_download(download_info.value, subgroup, workdir)
+    # The "Pobierz" (download) control asks the site to generate the whole selection as a
+    # package in the background; it appears in the account's export list on /bdl/start.
+    if download_button(page) is not None:
+        path, name = generated_export(page, subgroup, workdir, trace)
         return {"status": "downloaded", "path": path, "export_file_name": name, "information": information}
+    if information > MAX_INFORMATION:
+        return {"status": "too_large", "information": information}
     enabled_next(page).click()
     page.wait_for_url(re.compile(r"/bdl/dane/podgrup/teryt"), timeout=30_000)
     settle(page)
