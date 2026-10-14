@@ -70,6 +70,45 @@ def information_count(page) -> int | None:
     return int(match.group(1).replace(" ", "").replace("\xa0", "")) if match else None
 
 
+SETTLED_JS = """() => {
+    const m = window.Sys?.WebForms?.PageRequestManager?.getInstance?.();
+    return !m?.get_isInAsyncPostBack?.();
+}"""
+
+
+def settle(page) -> None:
+    """Wait until the page's ASP.NET partial postback has finished."""
+    page.wait_for_load_state("domcontentloaded")
+    page.wait_for_function(SETTLED_JS, timeout=60_000)
+    page.wait_for_timeout(300)
+    page.wait_for_function(SETTLED_JS, timeout=60_000)
+
+
+def note(page, trace: list, step: str) -> None:
+    """Record where the browser is (URL, selection count, start of the visible text)."""
+    text = page.locator("body").inner_text()
+    trace.append(
+        {
+            "step": step,
+            "url": page.url[-90:],
+            "information": information_count(page),
+            "text": " ".join(text.split())[:160],
+        }
+    )
+
+
+def wait_for_result_table(page) -> None:
+    """The result table page: URL /podgrup/tablica, or a visible Export / relational CSV control."""
+    for _ in range(120):
+        if "/bdl/dane/podgrup/tablica" in page.url:
+            return
+        for pattern in (r"^(Eksport|Export)$", r"CSV\s*[–-]\s*(tablica\s+)?relacyj"):
+            if page.get_by_text(re.compile(pattern, re.IGNORECASE)).first.is_visible():
+                return
+        page.wait_for_timeout(1000)
+    raise RuntimeError(f"result table not ready; at {page.url}")
+
+
 def enabled_next(page):
     """The 'Dalej' button once the page's postback has finished."""
     for _ in range(40):
@@ -92,13 +131,14 @@ def login(page, email: str, password: str) -> None:
         raise RuntimeError("BDL website login failed")
 
 
-def export(page, subgroup: dict[str, Any], workdir: Path) -> dict[str, Any]:
+def export(page, subgroup: dict[str, Any], workdir: Path, trace: list) -> dict[str, Any]:
     """Select everything in one subgroup and download the relational CSV ZIP.
 
     Returns {"status": "downloaded", "path", "export_file_name", "information"} or
     {"status": "too_large" | "no_data", "information"}."""
     page.goto(subgroup["url"], wait_until="domcontentloaded", timeout=60_000)
-    page.wait_for_timeout(1200)
+    settle(page)
+    note(page, trace, "dimensions page")
     clicked: set[str] = set()
     for _ in range(20):  # every dimension's "select all", one postback at a time
         ids = page.locator('[id$="_SelectAll"]').evaluate_all(
@@ -109,7 +149,8 @@ def export(page, subgroup: dict[str, Any], workdir: Path) -> dict[str, Any]:
             break
         page.locator(f"#{todo[0]}").click()
         clicked.add(todo[0])
-        page.wait_for_timeout(1200)
+        settle(page)
+    note(page, trace, f"selected all in {len(clicked)} dimensions")
     information = information_count(page)
     if not information:
         return {"status": "no_data", "information": information}
@@ -117,13 +158,17 @@ def export(page, subgroup: dict[str, Any], workdir: Path) -> dict[str, Any]:
         return {"status": "too_large", "information": information}
     enabled_next(page).click()
     page.wait_for_url(re.compile(r"/bdl/dane/podgrup/teryt"), timeout=30_000)
-    page.wait_for_timeout(800)
+    settle(page)
+    note(page, trace, "territories page")
     page.locator("#ctl00_ContentPlaceHolder_terytList_MenuButton").click()
     page.locator("li.rmItem").filter(has_text="Zaznacz wszystkie").first.locator(".rmLink").click()
-    page.wait_for_timeout(700)
+    settle(page)
     page.locator("button.rlbTransferAllFrom").first.click()
+    settle(page)
+    note(page, trace, "territories selected")
     enabled_next(page).click()
-    page.get_by_text(re.compile(r"^(Eksport|Export)$", re.IGNORECASE)).first.wait_for(timeout=120_000)
+    wait_for_result_table(page)
+    note(page, trace, "result table")
     option = page.get_by_text(re.compile(r"CSV\s*[–-]\s*(tablica\s+)?relacyj", re.IGNORECASE)).first
     if not option.is_visible():
         page.get_by_text(re.compile(r"^(Eksport|Export)$", re.IGNORECASE)).first.click()
@@ -197,16 +242,17 @@ def main(limit: int = 20, budget_minutes: float = 50, only: list[str] | None = N
         for subgroup in todo[:limit]:
             if time.monotonic() > deadline:
                 break
+            trace: list = []
             try:
                 version = api.last_update(subgroup["id"], subgroup["subject"])
-                result = export(page, subgroup, Path(tmp))
+                result = export(page, subgroup, Path(tmp), trace)
                 if result["status"] == "downloaded":
                     land(client, bucket, subgroup, version, result)
                     summary["landed"].append([subgroup["id"], result["information"]])
                 else:
-                    summary[result["status"]].append([subgroup["id"], result["information"]])
+                    summary[result["status"]].append([subgroup["id"], result["information"], trace])
             except Exception as exc:  # one subgroup's failure is recorded; the run goes on
-                summary["failed"].append([subgroup["id"], f"{type(exc).__name__}: {str(exc)[:200]}"])
+                summary["failed"].append([subgroup["id"], f"{type(exc).__name__}: {str(exc)[:200]}", trace])
             time.sleep(PAUSE_SECONDS)
         browser.close()
     summary["remaining"] = len(todo) - len(summary["landed"])
