@@ -20,6 +20,8 @@ from typing import Any
 
 import requests
 
+from ingestion.common.report import annotate, step_summary
+
 API = "https://api.github.com/graphql"
 
 INSPECT = """
@@ -59,6 +61,24 @@ def graphql(token: str, query: str, variables: dict[str, Any]) -> dict[str, Any]
     return body["data"]
 
 
+def compact(project: dict[str, Any]) -> dict[str, Any]:
+    """A project in a few hundred bytes: fields with types and options, iterations, views."""
+    fields = []
+    for field in project["fields"]["nodes"]:
+        extra = [o["name"] for o in field.get("options") or []]
+        iterations = (field.get("configuration") or {}).get("iterations")
+        if iterations:
+            extra = [f"{i['title']}@{i['startDate']}/{i['duration']}d" for i in iterations]
+        fields.append(f"{field['name']}:{field['dataType']}" + (f"[{'|'.join(extra)}]" if extra else ""))
+    return {
+        "items": project["items"]["totalCount"],
+        "closed": project["closed"],
+        "public": project["public"],
+        "fields": fields,
+        "views": [f"{v['number']}:{v['name']}:{v['layout']}" for v in project["views"]["nodes"]],
+    }
+
+
 def main(argv: list[str]) -> int:
     """Run one mode; print the result and keep it as projects.json in OPS_OUTPUT_DIR."""
     token = os.environ.get("GH_PROJECT_TOKEN", "")
@@ -70,9 +90,12 @@ def main(argv: list[str]) -> int:
     if mode != "inspect":
         print(f"unknown mode {mode!r} (available: inspect)", file=sys.stderr)
         return 2
-    data = graphql(token, INSPECT, {"org": org})
-    text = json.dumps(data["organization"]["projectsV2"]["nodes"], indent=2)
+    projects = graphql(token, INSPECT, {"org": org})["organization"]["projectsV2"]["nodes"]
+    text = json.dumps(projects, indent=2)
     print(text)
+    for project in projects:  # one annotation each: readable through the REST API
+        annotate("notice", f"project {project['number']}: {project['title']}", compact(project))
+    step_summary(f"## Projects of {org}\n\n```json\n{text}\n```\n")
     out = Path(os.environ.get("OPS_OUTPUT_DIR", "."))
     out.mkdir(parents=True, exist_ok=True)
     (out / "projects.json").write_text(text)
