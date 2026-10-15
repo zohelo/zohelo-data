@@ -125,48 +125,64 @@ def rejected_table(cat, table_id: tuple[str, str], entity_column: str = "entity"
         return cat.create_table(table_id, schema=rejected_schema(entity_column))
 
 
-def file_hashes(table) -> list[tuple[bool, set[str]]]:
-    """Per data file of the table: (named after a SHA-256, raw SHA-256 of the rows in it).
+def loaded_hashes(table) -> set[str]:
+    """Raw SHA-256 of every Landing file already in the table.
 
     A loader names each Bronze file after its Landing file's SHA-256. R2 Data Catalog
     compaction rewrites small files under other names, and a check by file name alone then
     treats their Landing files as new and loads them again (#803: NBP doubled). The hashes
     of every other file are read from its `raw_sha256` column."""
     if table.current_snapshot() is None:
-        return []
-    files = []
+        return set()
+    hashes: set[str] = set()
     for path in table.inspect.data_files().column("file_path").to_pylist():
         stem = Path(path).stem
         if SHA_RE.fullmatch(stem):
-            files.append((True, {stem}))
+            hashes.add(stem)
             continue
         column = read_columns(table, path, ["raw_sha256"]).column("raw_sha256")
-        files.append((False, {h for h in pc.unique(column).to_pylist() if h}))
-    return files
+        hashes.update(h for h in pc.unique(column).to_pylist() if h)
+    return hashes
 
 
-def loaded_hashes(table) -> set[str]:
-    """Raw SHA-256 of every Landing file already in the table."""
-    return set().union(*(hashes for _, hashes in file_hashes(table)))
+def hashes_and_duplicates(table) -> tuple[set[str], dict[str, set[str]]]:
+    """Raw SHA-256 of every Landing file in the table, and those whose rows it holds twice.
 
-
-def duplicated_hashes(files: list[tuple[bool, set[str]]]) -> dict[str, set[str]]:
-    """Landing files whose rows are in the table more than once.
-
-    ``loaded_twice``: in a file named after it and in any other file — compaction removes the
-    files it rewrites, so this is a second load. ``in_several_compacted``: only in compacted
-    files, in more than one; compaction may split one file's rows, so this is to check, not
-    proof."""
-    named: dict[str, int] = {}
-    compacted: dict[str, int] = {}
-    for is_named, hashes in files:
-        counts = named if is_named else compacted
-        for h in hashes:
-            counts[h] = counts.get(h, 0) + 1
-    return {
-        "loaded_twice": {h for h, n in named.items() if n + compacted.get(h, 0) > 1},
-        "in_several_compacted": {h for h, n in compacted.items() if n > 1 and h not in named},
-    }
+    A Landing file is identified by (partition value, raw SHA-256): Eurostat publishes some
+    byte-identical files under several dataset codes. ``loaded_twice``: in more than one file
+    named after it, in such a file and in a compacted file (compaction removes the files it
+    rewrites), or a source row number repeated inside compacted files. ``unverifiable``: in
+    several compacted files of a table without ``source_row_number`` (compaction may split one
+    file's rows)."""
+    if table.current_snapshot() is None:
+        return set(), {"loaded_twice": set(), "unverifiable": set()}
+    with_rows = "source_row_number" in {f.name for f in table.schema().fields}
+    named: dict[tuple, int] = {}
+    compacted_files: dict[tuple, int] = {}
+    rows: dict[tuple, int] = {}
+    numbers: dict[tuple, set[int]] = {}
+    files = table.inspect.data_files()
+    for path, partition in zip(
+        files.column("file_path").to_pylist(), files.column("partition").to_pylist(), strict=True
+    ):
+        entity = next(iter((partition or {}).values()), None)
+        stem = Path(path).stem
+        if SHA_RE.fullmatch(stem):
+            named[(entity, stem)] = named.get((entity, stem), 0) + 1
+            continue
+        data = read_columns(table, path, ["raw_sha256", "source_row_number"] if with_rows else ["raw_sha256"])
+        hashes = data.column("raw_sha256").to_pylist()
+        for h in set(hashes) - {None}:
+            compacted_files[(entity, h)] = compacted_files.get((entity, h), 0) + 1
+        if with_rows:
+            for h, n in zip(hashes, data.column("source_row_number").to_pylist(), strict=True):
+                rows[(entity, h)] = rows.get((entity, h), 0) + 1
+                numbers.setdefault((entity, h), set()).add(n)
+    twice = {k for k, n in named.items() if n > 1 or k in compacted_files}
+    twice |= {k for k, n in rows.items() if n > len(numbers[k])}
+    unverifiable = set() if with_rows else {k for k, n in compacted_files.items() if n > 1 and k not in named}
+    loaded = {h for _, h in (named.keys() | compacted_files.keys()) if h}
+    return loaded, {"loaded_twice": {h for _, h in twice}, "unverifiable": {h for _, h in unverifiable}}
 
 
 def read_columns(table, path: str, columns: list[str]) -> pa.Table:
@@ -315,8 +331,8 @@ def proven_hashes(source: str) -> tuple[set[str], set[str]]:
 
 
 def bronze_hashes(source: str) -> tuple[set[str], set[str], dict[str, dict[str, set[str]]]]:
-    """Loaded and rejected Landing SHA-256 of a source, and per Bronze table the hashes whose
-    rows the table holds more than once (``duplicated_hashes``)."""
+    """Loaded and rejected Landing SHA-256 of a source, and per Bronze table the Landing files
+    whose rows it holds twice (``hashes_and_duplicates``)."""
     from ingestion.common.r2 import catalog
 
     tables, rejections = SOURCE_TABLES[source]
@@ -325,9 +341,8 @@ def bronze_hashes(source: str) -> tuple[set[str], set[str], dict[str, dict[str, 
     duplicated: dict[str, dict[str, set[str]]] = {}
     for table_id in tables:
         with contextlib.suppress(NoSuchTableError):
-            files = file_hashes(cat.load_table(table_id))
-            loaded |= set().union(*(hashes for _, hashes in files))
-            duplicated[".".join(table_id)] = duplicated_hashes(files)
+            hashes, duplicated[".".join(table_id)] = hashes_and_duplicates(cat.load_table(table_id))
+            loaded |= hashes
     rejected: set[str] = set()
     for table_id in rejections:
         rejected |= rejected_hashes(cat, table_id)

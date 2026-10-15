@@ -43,7 +43,7 @@ def summarize(name: str, landing_set: set[str], proven: set[str], meta: dict[str
 
 
 def duplicates(duplicated: dict[str, dict[str, set[str]]]) -> dict[str, Any]:
-    """Per Bronze table: Landing files loaded twice, and files only in several compacted files."""
+    """Per Bronze table: Landing files loaded twice, and files that cannot be checked."""
     return {
         table: {kind: {"count": len(hashes), "sample": sorted(hashes)[:3]} for kind, hashes in found.items() if hashes}
         for table, found in duplicated.items()
