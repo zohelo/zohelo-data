@@ -34,3 +34,8 @@ annotate("notice", "files per receipt", q("select table_code, count(distinct raw
 snap = Counter(s.summary.operation.value for s in table.snapshots())
 annotate("notice", "snapshots", {"count": len(table.snapshots()), "ops": dict(snap),
          "last": [(s.timestamp_ms, s.summary.additional_properties) for s in table.snapshots()[-4:]]})
+annotate("notice", "fx grain after dedupe", q("""
+with d as (select * from f qualify row_number() over (partition by raw_sha256, source_row_number order by ingested_at) = 1),
+r as (select *, rank() over (partition by entity order by source_version desc, ingested_at desc) k from d)
+select count(*) nrows, count(distinct table_code || '|' || effective_date || '|' || upper(currency_code)) keys
+from r where k = 1"""))
