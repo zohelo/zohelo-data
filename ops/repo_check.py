@@ -108,6 +108,22 @@ def workflows(files: list[Path]) -> list[str]:
         for number, line in enumerate((ROOT / f).read_text().splitlines(), 1):
             if USES_LINE.match(line) and not PINNED_ACTION.search(line):
                 problems.append(f"{f}:{number}: action not pinned by SHA with a version comment")
+    return problems + alert_job()
+
+
+def alert_job() -> list[str]:
+    """pipeline.yml's notify job waits for every other job and sees none of the workflow-level secrets."""
+    workflow = yaml.safe_load((ROOT / ".github/workflows/pipeline.yml").read_text())
+    jobs = workflow["jobs"]
+    notify = jobs.get("notify") or {}
+    problems = [
+        f"pipeline.yml: notify.needs misses {job}"
+        for job in sorted(set(jobs) - {"notify"} - set(notify.get("needs") or []))
+    ]
+    secrets = sorted(k for k, v in (workflow.get("env") or {}).items() if "secrets." in str(v))
+    exposed = [k for k in secrets if (notify.get("env") or {}).get(k, None) != ""]
+    if exposed:
+        problems.append(f"pipeline.yml: notify job must blank the workflow-level secrets {exposed}")
     return problems
 
 
