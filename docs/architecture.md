@@ -10,7 +10,7 @@ decision.
 | Stage | Repository | Storage |
 |---|---|---|
 | Source configuration | `ingestion/sources/<source_system>.yaml` (extraction strategy, authorized activities) | — |
-| Source → Landing | `ingestion/to_landing/<source_system>/` | `zohelo-landing-prod/01_landing/` |
+| Source → Landing | `ingestion/to_landing/<source_system>/`, or the shared pattern named by `extraction.kind` (`ingestion/to_landing/patterns/`) | `zohelo-landing-prod/01_landing/` |
 | Landing → Bronze | `ingestion/to_bronze/<source_system>/` | Iceberg `bronze`, `05_archive/` |
 | Shared ingestion code | `ingestion/common/` (R2 access, Bronze file helpers, reporting, lineage, archive, retention, scheduler); retired code `ingestion/legacy/` | — |
 | Bronze → Silver → Gold, dimensional model, semantic layer | `warehouse/` (`warehouse.yaml`) | Iceberg `silver`, `gold` |
