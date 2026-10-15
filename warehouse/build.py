@@ -53,6 +53,12 @@ def _main(select: str, target: str, variables: dict | None) -> int:
     return code
 
 
+def _short(message: str, head: int = 200, tail: int = 600) -> str:
+    """A failure message cut to fit an annotation, keeping its end: errors such as Iceberg
+    commit failures put a long catalog URL first and the HTTP status and reason last."""
+    return message if len(message) <= head + tail else f"{message[:head]} ... {message[-tail:]}"
+
+
 def build_once(selectors: list[str], target: str, variables: dict | None) -> tuple[int, int]:
     """One dbt build; returns (exit code, Eurostat versions still to load after it)."""
     command = ["dbt", "build", "--target", target, "--project-dir", str(PROJECT), "--profiles-dir", str(PROJECT)]
@@ -82,7 +88,11 @@ def build_once(selectors: list[str], target: str, variables: dict | None) -> tup
     for r in results:
         summary["by_status"][r["status"]] = summary["by_status"].get(r["status"], 0) + 1
         if r["status"] in ("error", "fail", "runtime error"):
-            summary["failures"].append({"node": r["unique_id"], "message": str(r.get("message"))[:300]})
+            summary["failures"].append({"node": r["unique_id"], "message": str(r.get("message"))})
+    # One annotation holds about 3,900 characters: the failures share 2,400 of them.
+    budget = 2400 // max(1, len(summary["failures"]))
+    for failure in summary["failures"]:
+        failure["message"] = _short(failure["message"], head=min(200, budget // 4), tail=min(600, budget * 3 // 4))
     if plan is not None:
         summary["eurostat_batch"] = plan["summary"]
         if any(r["unique_id"].endswith("." + eurostat_batch.MODEL) and r["status"] == "success" for r in results):
