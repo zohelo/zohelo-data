@@ -129,10 +129,9 @@ def load(budget_minutes: float) -> int:
     lake, landing_bucket = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
     bf.retry(lambda: bf.ensure_table(cat, TABLE_ID, COLUMNS, "entity"), "load_table")
     done = bf.loaded_hashes(cat.load_table(TABLE_ID)) | bf.rejected_hashes(cat, REJECTED_ID)
-    held = bulk_file.landed(client, landing_bucket, bulk_file.prefix("gugik_prg", "jednostki_administracyjne"))
+    receipt = bulk_file.newest(client, landing_bucket, "gugik_prg", bulk_file.single_entity("gugik_prg"))
     totals: dict[str, Any] = {"candidates": 0, "appended_files": 0, "rejected": 0}
-    if held and held[-1]["sha256"] not in done:
-        receipt = held[-1]
+    if receipt["sha256"] not in done:
         totals["candidates"] = 1
         with tempfile.TemporaryDirectory(prefix="zohelo-prg-bronze-") as temporary:
             zip_path, output = Path(temporary) / "prg.zip", Path(temporary) / "out.parquet"

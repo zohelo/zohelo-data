@@ -135,10 +135,9 @@ def load(budget_minutes: float) -> int:
     for table_id, columns in ((OBS_ID, OBS_COLUMNS), (META_ID, META_COLUMNS)):
         bf.retry(lambda t=table_id, c=columns: bf.ensure_table(cat, t, c, "entity"), "table")
     done = bf.loaded_hashes(cat.load_table(OBS_ID)) | bf.rejected_hashes(cat, REJECTED_ID)
-    held = bulk_file.landed(client, landing_bucket, bulk_file.prefix("world_bank_wdi", "WDI_CSV"))
+    receipt = bulk_file.newest(client, landing_bucket, "world_bank_wdi", bulk_file.single_entity("world_bank_wdi"))
     totals: dict[str, Any] = {"candidates": 0, "appended_files": 0, "rejected": 0}
-    if held and held[-1]["sha256"] not in done:
-        receipt = held[-1]
+    if receipt["sha256"] not in done:
         totals["candidates"] = 1
         with tempfile.TemporaryDirectory(prefix="zohelo-wdi-bronze-") as temporary:
             work = Path(temporary)

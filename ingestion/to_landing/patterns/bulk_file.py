@@ -14,9 +14,10 @@ framework")::
 
 Each file lands as ``01_landing/<source>/snapshot/data/<entity>/<version>__<ingested>.<ext>``
 with a receipt, only when its SHA-256 differs from the newest landed copy. The download
-streams to disk, is checked by format, uploaded and verified by size and SHA-256. Modes:
-inspect (Landing vs the server's Last-Modified), load, verify (every receipt has its file
-in Landing or the Archive).
+streams to disk, is checked by format, uploaded and verified by size and SHA-256; network
+errors and 5xx/408/429 are retried, other 4xx fail at once. Modes: inspect (Landing vs the
+server's Last-Modified; an unreachable URL is an error), load, verify (every receipt has
+its file in Landing or the Archive).
 """
 
 from __future__ import annotations
@@ -44,6 +45,11 @@ USER_AGENT = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public st
 EXTENSIONS = {"zip": "zip", "gzip": "gz", "raw": "bin"}
 CONTENT_TYPES = {"zip": "application/zip", "gzip": "application/gzip", "raw": "application/octet-stream"}
 RETRIES = 4
+RETRY_STATUSES = {408, 429}  # client errors worth retrying; other 4xx fail at once
+
+
+class PermanentError(RuntimeError):
+    """A download failure that retrying will not fix (a 4xx response)."""
 
 
 def declaration(source: str) -> list[dict[str, Any]]:
@@ -55,18 +61,39 @@ def declaration(source: str) -> list[dict[str, Any]]:
     return list(extraction["bulk_file"]["files"])
 
 
+def single_entity(source: str) -> str:
+    """The entity of a bulk_file source that declares exactly one file (its Bronze loader reads that one)."""
+    entities = [spec["entity"] for spec in declaration(source)]
+    if len(entities) != 1:
+        raise ValueError(f"{source}: expected exactly one declared file, found {entities}")
+    return entities[0]
+
+
+def newest(client: Any, bucket: str, source: str, entity: str) -> dict[str, Any]:
+    """Receipt of the newest landed copy of an entity; raises when nothing has landed."""
+    held = landed(client, bucket, prefix(source, entity))
+    if not held:
+        raise RuntimeError(f"{source}: no Landing receipts under {prefix(source, entity)}")
+    return held[-1]
+
+
 def prefix(source: str, entity: str, landing_root: str = "01_landing") -> str:
     """Landing folder of one entity."""
     return f"{landing_root}/{source}/snapshot/data/{entity}/"
 
 
 def landed(client: Any, bucket: str, folder: str) -> list[dict[str, Any]]:
-    """Receipts under a prefix, oldest version first."""
+    """Receipts under a prefix, oldest landed first.
+
+    Ordered by ``ingested_at``, not ``version_token``: the token mixes two time bases (the
+    server's Last-Modified, or the download time when that header is missing), while a copy
+    lands only when its bytes changed, so the last one landed is the current one.
+    """
     keys = []
     for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=folder):
         keys += [o["Key"] for o in page.get("Contents", []) if o["Key"].endswith(".receipt.json")]
     rows = [{**json.loads(get_with_backoff(client, bucket, k)), "receipt_key": k} for k in keys]
-    return sorted(rows, key=lambda r: (r["version_token"], r["ingested_at"]))
+    return sorted(rows, key=lambda r: r["ingested_at"])
 
 
 def stamp(moment: datetime) -> str:
@@ -105,6 +132,8 @@ def download(url: str, path: Path, fmt: str) -> tuple[str, int, dict[str, str], 
             with requests.get(
                 url, headers={"User-Agent": USER_AGENT}, stream=True, timeout=(30, 300), allow_redirects=True
             ) as response:
+                if 400 <= response.status_code < 500 and response.status_code not in RETRY_STATUSES:
+                    raise PermanentError(f"download {response.status_code}: {url}")
                 if response.status_code != 200:
                     raise RuntimeError(f"download {response.status_code}")
                 with path.open("wb") as handle:
@@ -117,9 +146,10 @@ def download(url: str, path: Path, fmt: str) -> tuple[str, int, dict[str, str], 
                     raise RuntimeError(f"download truncated: {size} of {expected} bytes")
                 detail = check_format(path, fmt)  # a corrupt file is downloaded again
                 return digest.hexdigest(), size, dict(response.headers), response.url, detail
+        except PermanentError:
+            raise
         except (
-            requests.ConnectionError,
-            requests.Timeout,
+            requests.RequestException,  # includes mid-stream drops (ChunkedEncodingError)
             RuntimeError,
             zipfile.BadZipFile,
             gzip.BadGzipFile,
@@ -202,6 +232,7 @@ def main(source: str, mode: str, landing_root: str = "01_landing") -> int:
     """Run one mode for every declared file of a bulk_file source; exit 1 on missing data."""
     client, bucket = s3(), req("R2_LANDING_BUCKET")
     results, status = [], 0
+    stored = archived(client, bucket, source) if mode == "verify" else {}
     for spec in declaration(source):
         folder = prefix(source, spec["entity"], landing_root)
         if mode == "load":
@@ -214,9 +245,16 @@ def main(source: str, mode: str, landing_root: str = "01_landing") -> int:
             "newest": held[-1]["version_token"] if held else None,
         }
         if mode == "inspect":
-            head = requests.head(spec["url"], headers={"User-Agent": USER_AGENT}, allow_redirects=True, timeout=60)
-            row["server_version"] = server_version(dict(head.headers)) or "unknown"
-            if not held:
+            try:
+                head = requests.head(spec["url"], headers={"User-Agent": USER_AGENT}, allow_redirects=True, timeout=60)
+                http = str(head.status_code)
+            except requests.RequestException as exc:
+                head, http = None, type(exc).__name__
+            row["server_version"] = (server_version(dict(head.headers)) if head is not None else None) or "unknown"
+            if http != "200":  # a moved or blocked URL is an error, not a missing validator
+                row.update({"state": "unreachable", "http": http})
+                status = 1
+            elif not held:
                 row["state"] = "missing"
             elif row["server_version"] == "unknown":  # no validator: load compares the SHA-256
                 row["state"] = "unknown"
@@ -226,7 +264,6 @@ def main(source: str, mode: str, landing_root: str = "01_landing") -> int:
             present = set()
             for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=folder):
                 present |= {o["Key"] for o in page.get("Contents", []) if not o["Key"].endswith(".receipt.json")}
-            stored = archived(client, bucket, source)
             missing = [
                 r["object"]["key"]
                 for r in held
