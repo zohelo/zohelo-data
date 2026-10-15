@@ -145,8 +145,43 @@ def loaded_hashes(table) -> set[str]:
     return hashes
 
 
-def read_columns(table, path: str, columns: list[str]) -> pa.Table:
-    """Some columns of one data file of the table (a file not named after a SHA-256)."""
+def duplicated_hashes(table) -> dict[str, set[str]]:
+    """Landing files (raw SHA-256) whose rows the table holds twice; read by bronze.verify only.
+
+    A Landing file is identified by (partition value, raw SHA-256): Eurostat publishes some
+    byte-identical files under several dataset codes. ``loaded_twice``: in more than one file
+    named after it, in such a file and in a compacted file (compaction removes the files it
+    rewrites), or with a row repeated in full (every column) inside one compacted file — a
+    reload repeats rows exactly, while rows of one Landing file differ at least in their
+    period, field or source row. ``several_compacted``: in more than one compacted file, which
+    compaction may cause by splitting one file's rows; to check, not proof."""
+    if table.current_snapshot() is None:
+        return {"loaded_twice": set(), "several_compacted": set()}
+    named: dict[tuple, int] = {}
+    compacted: dict[tuple, int] = {}
+    twice: set[tuple] = set()
+    files = table.inspect.data_files()
+    paths = files.column("file_path").to_pylist()
+    for path, partition in zip(paths, files.column("partition").to_pylist(), strict=True):
+        entity = next(iter((partition or {}).values()), None)
+        stem = Path(path).stem
+        if SHA_RE.fullmatch(stem):
+            named[(entity, stem)] = named.get((entity, stem), 0) + 1
+            continue
+        data = read_columns(table, path, None)
+        for h in pc.unique(data.column("raw_sha256")).to_pylist():
+            if h:
+                compacted[(entity, h)] = compacted.get((entity, h), 0) + 1
+        counts = data.group_by(data.column_names).aggregate([([], "count_all")])
+        repeated = counts.filter(pc.greater(counts.column("count_all"), 1)).column("raw_sha256")
+        twice |= {(entity, h) for h in pc.unique(repeated).to_pylist() if h}
+    twice |= {k for k, n in named.items() if n > 1 or k in compacted}
+    several = {k for k, n in compacted.items() if n > 1 and k not in twice}
+    return {"loaded_twice": {h for _, h in twice}, "several_compacted": {h for _, h in several}}
+
+
+def read_columns(table, path: str, columns: list[str] | None) -> pa.Table:
+    """Some columns (None: all) of one data file of the table (a file not named after a SHA-256)."""
 
     def read() -> pa.Table:
         with table.io.new_input(path).open() as handle:
@@ -298,3 +333,15 @@ def proven_hashes(source: str) -> tuple[set[str], set[str]]:
     for table_id in rejections:
         rejected |= rejected_hashes(cat, table_id)
     return loaded, rejected
+
+
+def source_duplicates(source: str) -> dict[str, dict[str, set[str]]]:
+    """Per Bronze table of the source: ``duplicated_hashes``."""
+    from ingestion.common.r2 import catalog
+
+    cat = catalog()
+    found: dict[str, dict[str, set[str]]] = {}
+    for table_id in SOURCE_TABLES[source][0]:
+        with contextlib.suppress(NoSuchTableError):
+            found[".".join(table_id)] = duplicated_hashes(cat.load_table(table_id))
+    return found

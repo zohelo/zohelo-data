@@ -6,7 +6,9 @@ Landing identities (SHA-256 from object metadata or content-addressed names) are
 with Bronze provenance: the Bronze file list (one file per Landing SHA-256) and the
 rejections table of every source in bronze_files.SOURCE_TABLES, read from the catalog.
 The expectation is the latest version of every entity in the agreed Landing layout;
-older versions are reported as superseded (Eurostat).
+older versions are reported as superseded (Eurostat). Landing files whose rows a Bronze
+table holds twice (#803) get their own annotation, a warning while the known NBP duplicates
+await their clean-up.
 """
 
 from __future__ import annotations
@@ -93,7 +95,20 @@ def main(argv=None) -> int:
     }
     print(json.dumps(summary, sort_keys=True))
     annotate("notice", f"{args.source} Landing to Bronze lineage", summary)
+    report_duplicates(args.source)
     return 0
+
+
+def report_duplicates(source: str) -> None:
+    """Annotate per Bronze table the Landing files it holds twice (count and a sample)."""
+    from ingestion.common.bronze_files import source_duplicates
+
+    found = {
+        table: {kind: {"count": len(hashes), "sample": sorted(hashes)[:3]} for kind, hashes in kinds.items() if hashes}
+        for table, kinds in source_duplicates(source).items()
+    }
+    twice = any("loaded_twice" in kinds for kinds in found.values())
+    annotate("warning" if twice else "notice", f"{source} Bronze duplicates", found)
 
 
 if __name__ == "__main__":
