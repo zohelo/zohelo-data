@@ -6,9 +6,10 @@ activity action starts `sample` in the background before the activity, and runs 
 only when the activity failed or was cancelled: the report shows free disk and memory over
 the last minutes and the kernel's out-of-memory lines, so the cause is visible without the
 job log. A runner that is shut down as a whole skips that report step too, so `sample` also
-publishes live annotations while the activity runs: a notice every HEARTBEAT_MINUTES and a
-warning the first time free memory or disk falls below each threshold. GitHub keeps
-annotations already written when the job dies (at most 10 notices and 10 warnings per step).
+publishes live annotations while the activity runs: a notice every HEARTBEAT_MINUTES (at most
+MAX_HEARTBEATS, so the activity keeps notices for its own results) and a warning the first
+time free memory or disk falls below each threshold. GitHub keeps annotations already written
+when the job dies (at most 10 notices and 10 warnings per step).
 """
 
 from __future__ import annotations
@@ -26,7 +27,8 @@ INTERVAL_SECONDS = 30
 MOUNTS = ("/", "/mnt")
 REPORT_SAMPLES = 16  # last eight minutes; keeps the annotation under its 3,900 characters
 OOM_LINES = 5
-HEARTBEAT_MINUTES = 20  # 9 notices cover the longest activity timeout (180 min)
+HEARTBEAT_MINUTES = 25
+MAX_HEARTBEATS = 4  # first 100 min; leaves 6 of the step's 10 notices to the activity itself
 MEMORY_THRESHOLDS_GB = (3.0, 1.5, 0.5)
 DISK_THRESHOLDS_GB = (5.0, 1.0)  # per mount: 3 + 2 × 2 = 7 warnings at most
 
@@ -69,6 +71,7 @@ def sample(log: Path) -> None:
     keeps next to the log, and sampling goes on."""
     reported: set[tuple[str, float]] = set()
     started = last_heartbeat = time.monotonic()
+    heartbeats = 0
     while True:
         current = snapshot()
         try:
@@ -82,8 +85,8 @@ def sample(log: Path) -> None:
             annotate(
                 "warning", "runner resources low (live)", {"below_gb": {key: threshold}, "minute": minutes, **current}
             )
-        if time.monotonic() - last_heartbeat >= HEARTBEAT_MINUTES * 60:
-            last_heartbeat = time.monotonic()
+        if heartbeats < MAX_HEARTBEATS and time.monotonic() - last_heartbeat >= HEARTBEAT_MINUTES * 60:
+            last_heartbeat, heartbeats = time.monotonic(), heartbeats + 1
             annotate("notice", "runner resources (live)", {"minute": minutes, **current})
         time.sleep(INTERVAL_SECONDS)
 
