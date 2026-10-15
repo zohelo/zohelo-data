@@ -8,12 +8,14 @@ Schedules are declared, not coded: each ``ingestion/sources/<source>.yaml`` (and
         run: "landing → bronze (all steps)"
         filter: ""                      # optional, as in a manual run
 
-The Pipeline workflow's ``schedule`` trigger (twice an hour; GitHub may drop some) runs ``python run.py schedule``,
-which dispatches every run whose cron time fell after the previous scheduled run was
-queued, up to this run's queue time (GitHub often starts schedules late or skips them, so a
-fixed one-hour window would skip or repeat runs; at most 360 minutes are caught up). The dispatched run is
-an ordinary Pipeline run (same plan, authorization and concurrency), so a scheduled run
-and a manual run are the same thing. ``schedule: null`` or ``[]`` means manual only.
+The Pipeline workflow's ``schedule`` trigger (twice an hour; GitHub drops many, #802) or a
+dispatch of run ``scheduler: dispatch due runs`` runs ``python run.py schedule``, which
+dispatches every run whose cron time fell after the previous scheduler run was queued, up
+to this run's queue time (GitHub often starts schedules late or skips them, so a fixed
+one-hour window would skip or repeat runs; at most 360 minutes are caught up). The
+dispatched run is an ordinary Pipeline run (same plan, authorization and concurrency), so
+a scheduled run and a manual run are the same thing. ``schedule: null`` or ``[]`` means
+manual only.
 """
 
 from __future__ import annotations
@@ -93,6 +95,7 @@ def validate(config: dict, plan) -> list[str]:
 
 
 DEFAULT_WINDOW, MAX_WINDOW = 60, 360
+DISPATCH_RUN = "scheduler: dispatch due runs"  # Pipeline run that starts the scheduler by dispatch (#802)
 
 
 def _minute(value: str) -> datetime:
@@ -100,35 +103,52 @@ def _minute(value: str) -> datetime:
 
 
 def window(repo: str | None, token: str | None, now: datetime) -> tuple[datetime, int, int | None]:
-    """(end minute, window minutes, raw gap) for this scheduled run.
+    """(end minute, window minutes, raw gap) for this scheduler run.
 
-    Both ends are the runs' queue times (created_at): the window is (previous run's
-    minute, this run's minute], so consecutive runs cover each minute once and a skipped
-    or late run is caught up by the next one. A failed previous run still counts as
-    covering its minutes. Unknown history: the last 60 minutes up to now."""
+    Scheduler runs are schedule events and dispatches of DISPATCH_RUN (their run name ends
+    with it), so the two triggers share one window and never repeat a minute. Both ends
+    are the runs' queue times (created_at): the window is (previous run's minute, this
+    run's minute], so consecutive runs cover each minute once and a skipped
+    or late run is caught up by the next one. Runs are ordered by queue time, then id; when the
+    previous run was queued in the same minute the window is empty. A failed previous run
+    still counts as covering its minutes; a cancelled one (replaced while queued) does not;
+    scheduler dispatches count only on main. Unknown history: the last 60 minutes up to now."""
     fallback = (now.replace(second=0, microsecond=0), DEFAULT_WINDOW, None)
     if not repo or not token:
         return fallback
     try:
-        response = requests.get(
-            f"https://api.github.com/repos/{repo}/actions/workflows/pipeline.yml/runs",
-            headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
-            params={"event": "schedule", "per_page": 10},
-            timeout=30,
-        )
-        response.raise_for_status()
-        runs = response.json()["workflow_runs"]
+        runs = []
+        for event in ("schedule", "workflow_dispatch"):
+            response = requests.get(
+                f"https://api.github.com/repos/{repo}/actions/workflows/pipeline.yml/runs",
+                headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
+                params={"event": event, "per_page": 10 if event == "schedule" else 50},
+                timeout=30,
+            )
+            response.raise_for_status()
+            runs += [
+                r
+                for r in response.json()["workflow_runs"]
+                if event == "schedule"
+                or (r.get("head_branch") == "main" and str(r.get("display_title", "")).endswith(DISPATCH_RUN))
+            ]
+        # A run cancelled while queued (a newer one replaced it in the concurrency group) never ran.
+        runs = [r for r in runs if r.get("conclusion") != "cancelled"]
         current_id = os.environ.get("GITHUB_RUN_ID", "")
         current = [r for r in runs if str(r["id"]) == current_id]
-        earlier = [r for r in runs if str(r["id"]) != current_id]
-        if not current or not earlier:
+        if not current:
+            return fallback
+        key = lambda r: (datetime.fromisoformat(r["created_at"].replace("Z", "+00:00")), int(r["id"]))  # noqa: E731
+        earlier = [r for r in runs if key(r) < key(current[0])]
+        if not earlier:
             return fallback
         end = _minute(current[0]["created_at"])
-        start = max(_minute(r["created_at"]) for r in earlier if _minute(r["created_at"]) < end)
+        start = _minute(max(earlier, key=key)["created_at"])
     except (requests.RequestException, ValueError, KeyError, TypeError):
         return fallback
     gap = int((end - start).total_seconds() // 60)
-    return end, max(1, min(MAX_WINDOW, gap)), gap
+    # gap 0: the previous scheduler run was queued in this same minute and already covered it.
+    return end, max(0, min(MAX_WINDOW, gap)), gap
 
 
 def main(config: dict, plan, now: datetime | None = None) -> int:

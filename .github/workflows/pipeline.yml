@@ -5,6 +5,9 @@ name: Pipeline
 # activity that is not implemented or not authorized in ingestion/sources/<source>.yaml.
 # This file changes only when the dataflow changes. Ad-hoc work goes to ops.yml.
 # Scheduled twice an hour (run.py schedule dispatches the declared runs that are due) and by manual dispatch.
+# GitHub drops many schedule events (#802), so the scheduler can also be started by a dispatch with
+# run "scheduler: dispatch due runs" (any source); both kinds share one catch-up window.
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('Pipeline · {0} · {1}', inputs.source, inputs.run) || 'Pipeline' }}"
 
 on:
   schedule:
@@ -34,6 +37,7 @@ on:
           - "silver/gold: promote"
           - "silver/gold: build models"
           - "serving: refresh portal index"
+          - "scheduler: dispatch due runs"
       filter:
         description: "Optional item filter: dataset codes or globs, comma separated (e.g. nama_10_*)"
         required: false
@@ -56,7 +60,7 @@ permissions:
 
 concurrency:
   # One writer per source; read-only runs get their own group and never wait behind it.
-  group: "zohelo-pipeline-${{ inputs.source }}${{ (inputs.run == 'landing: inspect' || inputs.run == 'landing: verify' || inputs.run == 'bronze: verify') && '-read' || '' }}"
+  group: "zohelo-pipeline-${{ (github.event_name == 'schedule' || inputs.run == 'scheduler: dispatch due runs') && 'scheduler' || inputs.source }}${{ (inputs.run == 'landing: inspect' || inputs.run == 'landing: verify' || inputs.run == 'bronze: verify') && '-read' || '' }}"
   cancel-in-progress: false
 
 env:
@@ -75,7 +79,9 @@ env:
 
 jobs:
   scheduler:
-    if: github.event_name == 'schedule'
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.run == 'scheduler: dispatch due runs')
     name: scheduler
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -98,7 +104,9 @@ jobs:
           python run.py schedule
   plan:
     # Production data runs only from main; experiments use Dev · branch runs.
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    if: >-
+      github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
+      inputs.run != 'scheduler: dispatch due runs'
     name: "plan · ${{ inputs.source }} · ${{ inputs.run }}"
     runs-on: ubuntu-24.04
     timeout-minutes: 5
