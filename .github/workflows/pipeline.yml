@@ -310,10 +310,11 @@ jobs:
           activity: serving.refresh_index
 
   notify:
-    # A failed run opens (or comments on) an `alert` issue, so the owner gets an e-mail.
+    # A failed or cancelled run opens (or comments on) an `alert` issue, so the owner gets an
+    # e-mail. Cancelled counts: a job killed from outside (exit 143) ends as cancelled.
     needs: [scheduler, plan, landing-inspect, landing-extract, landing-verify, bronze-load, bronze-verify,
             landing-archive, archive-prune, silver-gold-promote, silver-gold-build, serving-refresh-index]
-    if: failure()
+    if: failure() || cancelled()
     name: notify
     runs-on: ubuntu-24.04
     timeout-minutes: 5

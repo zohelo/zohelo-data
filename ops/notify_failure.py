@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Open (or update) a GitHub issue when a Pipeline run fails, so failures reach the owner.
 
-Run by the Pipeline workflow's `notify` job when any job of the run failed. One open
-issue per source and run type ("Pipeline failed: <source> · <run>"), labelled `alert`:
-a repeated failure adds a comment instead of a new issue; closing the issue after the
-fix re-arms the alert. GitHub e-mails the owner about new issues and comments.
+Run by the Pipeline workflow's `notify` job when any job of the run failed or was
+cancelled. One open issue per source and run type ("Pipeline failed: <source> · <run>"),
+labelled `alert`: a repeated failure adds a comment instead of a new issue; closing the
+issue after the fix re-arms the alert. GitHub e-mails the owner about new issues and comments.
 Needs GITHUB_TOKEN with `issues: write`; reads the run context from the environment.
 """
 
@@ -31,7 +31,9 @@ def main() -> int:
     session.headers.update({"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
     title = f"Pipeline failed: {source} · {run}"
     link = f"https://github.com/{repo}/actions/runs/{run_id}"
-    body = f"Run {link} ({event}) failed. The job annotations on the run page say which activity and why."
+    body = (
+        f"Run {link} ({event}) failed or was cancelled. The job annotations on the run page say which activity and why."
+    )
 
     found = session.get(
         f"{API}/repos/{repo}/issues", params={"labels": LABEL, "state": "open", "per_page": 100}, timeout=30
