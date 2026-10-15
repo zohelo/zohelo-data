@@ -312,6 +312,14 @@ jobs:
     permissions:
       contents: read
       issues: write
+    # Least privilege: this job only needs github.token, so it blanks the workflow-level secrets.
+    env:
+      R2_DATA_CATALOG_TOKEN: ""
+      CLOUDFLARE_R2_ACCESS_KEY_ID: ""
+      CLOUDFLARE_R2_SECRET_ACCESS_KEY: ""
+      GUS_BDL_API_KEY: ""
+      GUS_BDL_WEB_EMAIL: ""
+      GUS_BDL_WEB_PASSWORD: ""
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
