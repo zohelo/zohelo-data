@@ -20,6 +20,8 @@ from typing import Any
 
 import botocore.exceptions
 import pyarrow as pa
+import pyarrow.compute as pc
+import pyarrow.parquet as pq
 from pyiceberg.exceptions import NamespaceAlreadyExistsError, NoSuchTableError
 from pyiceberg.io.pyarrow import parquet_file_to_data_file
 from pyiceberg.partitioning import PartitionField, PartitionSpec
@@ -123,11 +125,24 @@ def rejected_table(cat, table_id: tuple[str, str], entity_column: str = "entity"
 
 
 def loaded_hashes(table) -> set[str]:
-    """Raw SHA-256 of every Landing file already in the table (from the file names)."""
+    """Raw SHA-256 of every Landing file already in the table.
+
+    A loader names each Bronze file after its Landing file's SHA-256. R2 Data Catalog
+    compaction rewrites small files under other names, and a check by file name alone then
+    treats their Landing files as new and loads them again (#803: NBP doubled). The hashes
+    of every other file are read from its `raw_sha256` column."""
     if table.current_snapshot() is None:
         return set()
-    paths = table.inspect.files().column("file_path").to_pylist()
-    return {Path(p).stem for p in paths if SHA_RE.fullmatch(Path(p).stem)}
+    hashes: set[str] = set()
+    for path in table.inspect.files().column("file_path").to_pylist():
+        stem = Path(path).stem
+        if SHA_RE.fullmatch(stem):
+            hashes.add(stem)
+            continue
+        with table.io.new_input(path).open() as handle:
+            column = pq.read_table(handle, columns=["raw_sha256"]).column("raw_sha256")
+        hashes.update(h for h in pc.unique(column).to_pylist() if h)
+    return hashes
 
 
 def rejected_hashes(cat, table_id: tuple[str, str]) -> set[str]:
