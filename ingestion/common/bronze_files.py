@@ -125,24 +125,48 @@ def rejected_table(cat, table_id: tuple[str, str], entity_column: str = "entity"
         return cat.create_table(table_id, schema=rejected_schema(entity_column))
 
 
-def loaded_hashes(table) -> set[str]:
-    """Raw SHA-256 of every Landing file already in the table.
+def file_hashes(table) -> list[tuple[bool, set[str]]]:
+    """Per data file of the table: (named after a SHA-256, raw SHA-256 of the rows in it).
 
     A loader names each Bronze file after its Landing file's SHA-256. R2 Data Catalog
     compaction rewrites small files under other names, and a check by file name alone then
     treats their Landing files as new and loads them again (#803: NBP doubled). The hashes
     of every other file are read from its `raw_sha256` column."""
     if table.current_snapshot() is None:
-        return set()
-    hashes: set[str] = set()
+        return []
+    files = []
     for path in table.inspect.data_files().column("file_path").to_pylist():
         stem = Path(path).stem
         if SHA_RE.fullmatch(stem):
-            hashes.add(stem)
+            files.append((True, {stem}))
             continue
         column = read_columns(table, path, ["raw_sha256"]).column("raw_sha256")
-        hashes.update(h for h in pc.unique(column).to_pylist() if h)
-    return hashes
+        files.append((False, {h for h in pc.unique(column).to_pylist() if h}))
+    return files
+
+
+def loaded_hashes(table) -> set[str]:
+    """Raw SHA-256 of every Landing file already in the table."""
+    return set().union(*(hashes for _, hashes in file_hashes(table)))
+
+
+def duplicated_hashes(files: list[tuple[bool, set[str]]]) -> dict[str, set[str]]:
+    """Landing files whose rows are in the table more than once.
+
+    ``loaded_twice``: in a file named after it and in any other file — compaction removes the
+    files it rewrites, so this is a second load. ``in_several_compacted``: only in compacted
+    files, in more than one; compaction may split one file's rows, so this is to check, not
+    proof."""
+    named: dict[str, int] = {}
+    compacted: dict[str, int] = {}
+    for is_named, hashes in files:
+        counts = named if is_named else compacted
+        for h in hashes:
+            counts[h] = counts.get(h, 0) + 1
+    return {
+        "loaded_twice": {h for h, n in named.items() if n + compacted.get(h, 0) > 1},
+        "in_several_compacted": {h for h, n in compacted.items() if n > 1 and h not in named},
+    }
 
 
 def read_columns(table, path: str, columns: list[str]) -> pa.Table:
@@ -286,15 +310,25 @@ SOURCE_TABLES = source_tables()
 
 def proven_hashes(source: str) -> tuple[set[str], set[str]]:
     """(Landing SHA-256 loaded into Bronze, Landing SHA-256 rejected with a reason)."""
+    loaded, rejected, _ = bronze_hashes(source)
+    return loaded, rejected
+
+
+def bronze_hashes(source: str) -> tuple[set[str], set[str], dict[str, dict[str, set[str]]]]:
+    """Loaded and rejected Landing SHA-256 of a source, and per Bronze table the hashes whose
+    rows the table holds more than once (``duplicated_hashes``)."""
     from ingestion.common.r2 import catalog
 
     tables, rejections = SOURCE_TABLES[source]
     cat = catalog()
     loaded: set[str] = set()
+    duplicated: dict[str, dict[str, set[str]]] = {}
     for table_id in tables:
         with contextlib.suppress(NoSuchTableError):
-            loaded |= loaded_hashes(cat.load_table(table_id))
+            files = file_hashes(cat.load_table(table_id))
+            loaded |= set().union(*(hashes for _, hashes in files))
+            duplicated[".".join(table_id)] = duplicated_hashes(files)
     rejected: set[str] = set()
     for table_id in rejections:
         rejected |= rejected_hashes(cat, table_id)
-    return loaded, rejected
+    return loaded, rejected, duplicated

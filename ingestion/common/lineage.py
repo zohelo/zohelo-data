@@ -6,7 +6,9 @@ Landing identities (SHA-256 from object metadata or content-addressed names) are
 with Bronze provenance: the Bronze file list (one file per Landing SHA-256) and the
 rejections table of every source in bronze_files.SOURCE_TABLES, read from the catalog.
 The expectation is the latest version of every entity in the agreed Landing layout;
-older versions are reported as superseded (Eurostat).
+older versions are reported as superseded (Eurostat). Landing files whose rows a Bronze
+table holds twice (#803) are reported per table; while the known NBP duplicates await their
+clean-up this is a warning, not a failure.
 """
 
 from __future__ import annotations
@@ -40,13 +42,22 @@ def summarize(name: str, landing_set: set[str], proven: set[str], meta: dict[str
     }
 
 
+def duplicates(duplicated: dict[str, dict[str, set[str]]]) -> dict[str, Any]:
+    """Per Bronze table: Landing files loaded twice, and files only in several compacted files."""
+    return {
+        table: {kind: {"count": len(hashes), "sample": sorted(hashes)[:3]} for kind, hashes in found.items() if hashes}
+        for table, found in duplicated.items()
+        if any(found.values())
+    }
+
+
 def inspect_eurostat(meta: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    from ingestion.common.bronze_files import proven_hashes
+    from ingestion.common.bronze_files import bronze_hashes
 
     data = {d for d, i in meta.items() if i["kind"] == "raw"}
     latest = latest_snapshot(meta)
     superseded = {d for d in data if meta[d]["layout"] == "snapshot"} - latest
-    full, rejected = proven_hashes("eurostat")
+    full, rejected, duplicated = bronze_hashes("eurostat")
     unloaded = latest - full
     return {
         "latest": summarize("latest", latest, full, meta),
@@ -56,14 +67,15 @@ def inspect_eurostat(meta: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "superseded_versions": len(superseded),
         "superseded_in_bronze": len(superseded & full),
         "all_provenance_recoverable": full <= set(meta),
+        "bronze_duplicates": duplicates(duplicated),
     }
 
 
 def inspect_snapshot(meta: dict[str, dict[str, Any]], source: str) -> dict[str, Any]:
-    from ingestion.common.bronze_files import proven_hashes
+    from ingestion.common.bronze_files import bronze_hashes
 
     latest = latest_snapshot(meta)
-    loaded, rejected = proven_hashes(source)
+    loaded, rejected, duplicated = bronze_hashes(source)
     unloaded = latest - loaded
     return {
         "latest": summarize("latest", latest, loaded, meta),
@@ -71,6 +83,7 @@ def inspect_snapshot(meta: dict[str, dict[str, Any]], source: str) -> dict[str, 
         "latest_unexplained": len(unloaded - rejected),
         "latest_unexplained_sample": sorted(meta[d]["key"] for d in unloaded - rejected)[:10],
         "all_provenance_recoverable": loaded <= set(meta),
+        "bronze_duplicates": duplicates(duplicated),
     }
 
 
@@ -92,7 +105,8 @@ def main(argv=None) -> int:
         **result,
     }
     print(json.dumps(summary, sort_keys=True))
-    annotate("notice", f"{args.source} Landing to Bronze lineage", summary)
+    twice = any("loaded_twice" in found for found in summary["bronze_duplicates"].values())
+    annotate("warning" if twice else "notice", f"{args.source} Landing to Bronze lineage", summary)
     return 0
 
 
