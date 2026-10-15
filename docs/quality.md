@@ -70,6 +70,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 |---|---|
 | Exactly the four workflows; actions pinned by full SHA with version comment; `runs-on` pinned | [auto] |
 | Least privilege `permissions:` per workflow and job | [review] |
+| The Pipeline's `notify` job needs every other job and blanks every workflow-level secret | [auto] repo_check `workflows` |
 | Workflow changes, like all changes, merge after the `check` job and the independent review pass (owner authorization, 14 Oct 2026) | process |
 
 ## 7. Pull requests
