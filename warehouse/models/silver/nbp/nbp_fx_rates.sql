@@ -1,11 +1,19 @@
 {# NBP exchange rates, tables A/B/C: the newest Landing version of every table-quarter,
    typed. One row per table × effective date × currency. Rates are PLN per 1 unit of the
    currency as published by the API (mid for A/B; bid/ask for C, trading_date for C). #}
-with ranked as (
+with source_rows as (
+    -- Bronze may hold a source row more than once (bronze.nbp_observations did, 15 Oct):
+    -- one row per Landing file and row number.
+    select *
+    from {{ source('nbp', 'nbp_observations') }}
+    qualify row_number() over (partition by raw_sha256, source_row_number order by ingested_at) = 1
+),
+
+ranked as (
     select
         *,
         rank() over (partition by entity order by source_version desc, ingested_at desc) as version_rank
-    from {{ source('nbp', 'nbp_observations') }}
+    from source_rows
     where table_code in ('A', 'B', 'C')
 )
 
