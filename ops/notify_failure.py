@@ -43,7 +43,9 @@ def main() -> int:
     if existing:
         number = existing[0]["number"]
         response = session.post(
-            f"{API}/repos/{repo}/issues/{number}/comments", json={"body": f"Failed again: {link}"}, timeout=30
+            f"{API}/repos/{repo}/issues/{number}/comments",
+            json={"body": f"Failed or cancelled again: {link}"},
+            timeout=30,
         )
     else:
         response = session.post(
