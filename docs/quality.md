@@ -62,6 +62,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 | yamllint clean; descriptions with `: ` quoted | [auto] |
 | Source YAML has: description, extraction strategy, landing path, archive policy, Bronze tables, activities, schedule | [auto] `run.py schedule --check` + schema check |
 | Schedules are valid cron and name existing runs | [auto] `run.py schedule --check` |
+| `run.py schedule` needs only pyyaml and requests (what the scheduler job installs); heavy imports stay inside the activities | [auto] repo_check `scheduler imports` |
 
 ## 6. Workflows
 
