@@ -145,48 +145,43 @@ def loaded_hashes(table) -> set[str]:
     return hashes
 
 
-def hashes_and_duplicates(table) -> tuple[set[str], dict[str, set[str]]]:
-    """Raw SHA-256 of every Landing file in the table, and those whose rows it holds twice.
+def duplicated_hashes(table) -> dict[str, set[str]]:
+    """Landing files (raw SHA-256) whose rows the table holds twice; read by bronze.verify only.
 
     A Landing file is identified by (partition value, raw SHA-256): Eurostat publishes some
     byte-identical files under several dataset codes. ``loaded_twice``: in more than one file
     named after it, in such a file and in a compacted file (compaction removes the files it
-    rewrites), or a source row number repeated inside compacted files. ``unverifiable``: in
-    several compacted files of a table without ``source_row_number`` (compaction may split one
-    file's rows)."""
+    rewrites), or with a row repeated in full (every column) inside one compacted file — a
+    reload repeats rows exactly, while rows of one Landing file differ at least in their
+    period, field or source row. ``several_compacted``: in more than one compacted file, which
+    compaction may cause by splitting one file's rows; to check, not proof."""
     if table.current_snapshot() is None:
-        return set(), {"loaded_twice": set(), "unverifiable": set()}
-    with_rows = "source_row_number" in {f.name for f in table.schema().fields}
+        return {"loaded_twice": set(), "several_compacted": set()}
     named: dict[tuple, int] = {}
-    compacted_files: dict[tuple, int] = {}
-    rows: dict[tuple, int] = {}
-    numbers: dict[tuple, set[int]] = {}
+    compacted: dict[tuple, int] = {}
+    twice: set[tuple] = set()
     files = table.inspect.data_files()
-    for path, partition in zip(
-        files.column("file_path").to_pylist(), files.column("partition").to_pylist(), strict=True
-    ):
+    paths = files.column("file_path").to_pylist()
+    for path, partition in zip(paths, files.column("partition").to_pylist(), strict=True):
         entity = next(iter((partition or {}).values()), None)
         stem = Path(path).stem
         if SHA_RE.fullmatch(stem):
             named[(entity, stem)] = named.get((entity, stem), 0) + 1
             continue
-        data = read_columns(table, path, ["raw_sha256", "source_row_number"] if with_rows else ["raw_sha256"])
-        hashes = data.column("raw_sha256").to_pylist()
-        for h in set(hashes) - {None}:
-            compacted_files[(entity, h)] = compacted_files.get((entity, h), 0) + 1
-        if with_rows:
-            for h, n in zip(hashes, data.column("source_row_number").to_pylist(), strict=True):
-                rows[(entity, h)] = rows.get((entity, h), 0) + 1
-                numbers.setdefault((entity, h), set()).add(n)
-    twice = {k for k, n in named.items() if n > 1 or k in compacted_files}
-    twice |= {k for k, n in rows.items() if n > len(numbers[k])}
-    unverifiable = set() if with_rows else {k for k, n in compacted_files.items() if n > 1 and k not in named}
-    loaded = {h for _, h in (named.keys() | compacted_files.keys()) if h}
-    return loaded, {"loaded_twice": {h for _, h in twice}, "unverifiable": {h for _, h in unverifiable}}
+        data = read_columns(table, path, None)
+        for h in pc.unique(data.column("raw_sha256")).to_pylist():
+            if h:
+                compacted[(entity, h)] = compacted.get((entity, h), 0) + 1
+        counts = data.group_by(data.column_names).aggregate([([], "count_all")])
+        repeated = counts.filter(pc.greater(counts.column("count_all"), 1)).column("raw_sha256")
+        twice |= {(entity, h) for h in pc.unique(repeated).to_pylist() if h}
+    twice |= {k for k, n in named.items() if n > 1 or k in compacted}
+    several = {k for k, n in compacted.items() if n > 1 and k not in twice}
+    return {"loaded_twice": {h for _, h in twice}, "several_compacted": {h for _, h in several}}
 
 
-def read_columns(table, path: str, columns: list[str]) -> pa.Table:
-    """Some columns of one data file of the table (a file not named after a SHA-256)."""
+def read_columns(table, path: str, columns: list[str] | None) -> pa.Table:
+    """Some columns (None: all) of one data file of the table (a file not named after a SHA-256)."""
 
     def read() -> pa.Table:
         with table.io.new_input(path).open() as handle:
@@ -326,24 +321,27 @@ SOURCE_TABLES = source_tables()
 
 def proven_hashes(source: str) -> tuple[set[str], set[str]]:
     """(Landing SHA-256 loaded into Bronze, Landing SHA-256 rejected with a reason)."""
-    loaded, rejected, _ = bronze_hashes(source)
-    return loaded, rejected
-
-
-def bronze_hashes(source: str) -> tuple[set[str], set[str], dict[str, dict[str, set[str]]]]:
-    """Loaded and rejected Landing SHA-256 of a source, and per Bronze table the Landing files
-    whose rows it holds twice (``hashes_and_duplicates``)."""
     from ingestion.common.r2 import catalog
 
     tables, rejections = SOURCE_TABLES[source]
     cat = catalog()
     loaded: set[str] = set()
-    duplicated: dict[str, dict[str, set[str]]] = {}
     for table_id in tables:
         with contextlib.suppress(NoSuchTableError):
-            hashes, duplicated[".".join(table_id)] = hashes_and_duplicates(cat.load_table(table_id))
-            loaded |= hashes
+            loaded |= loaded_hashes(cat.load_table(table_id))
     rejected: set[str] = set()
     for table_id in rejections:
         rejected |= rejected_hashes(cat, table_id)
-    return loaded, rejected, duplicated
+    return loaded, rejected
+
+
+def source_duplicates(source: str) -> dict[str, dict[str, set[str]]]:
+    """Per Bronze table of the source: ``duplicated_hashes``."""
+    from ingestion.common.r2 import catalog
+
+    cat = catalog()
+    found: dict[str, dict[str, set[str]]] = {}
+    for table_id in SOURCE_TABLES[source][0]:
+        with contextlib.suppress(NoSuchTableError):
+            found[".".join(table_id)] = duplicated_hashes(cat.load_table(table_id))
+    return found
