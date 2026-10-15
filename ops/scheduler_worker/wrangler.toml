@@ -1,0 +1,17 @@
+# External clock for the Pipeline scheduler (#802); deploy, pause and resume with
+# `ops/scheduler_trigger.py` (Ops · ad-hoc, script scheduler_trigger). The secret
+# GITHUB_TOKEN is set by the owner in the Cloudflare dashboard (src/index.js); deploys keep it.
+name = "zohelo-scheduler"
+main = "src/index.js"
+compatibility_date = "2026-09-30"
+workers_dev = false
+
+[triggers]
+crons = ["17,47 * * * *"]
+
+[vars]
+GITHUB_REPOSITORY = "zohelo/zohelo-data"
+WORKFLOW = "pipeline.yml"
+REF = "main"
+SOURCE = "platform"
+RUN = "scheduler: dispatch due runs"

@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tomllib
 
 import yaml
 
@@ -184,6 +185,28 @@ def configuration(files: list[Path]) -> list[str]:
         if unknown:
             problems.append(f"run {name!r}: unknown activities {sorted(unknown)}")
     problems += scheduler.validate(config, run.plan)
+    problems += scheduler_worker(scheduler.DISPATCH_RUN)
+    return problems
+
+
+SCHEDULER_WORKER = Path("ops/scheduler_worker/wrangler.toml")
+
+
+def scheduler_worker(dispatch_run: str) -> list[str]:
+    """The external scheduler clock (#802) dispatches a Pipeline run that exists and starts the scheduler."""
+    worker = tomllib.loads((ROOT / SCHEDULER_WORKER).read_text())["vars"]
+    workflow = ROOT / ".github/workflows" / worker["WORKFLOW"]
+    if not workflow.exists():
+        return [f"{SCHEDULER_WORKER}: no workflow {worker['WORKFLOW']}"]
+    triggers = yaml.safe_load(workflow.read_text())
+    inputs = (triggers.get("on") or triggers.get(True))["workflow_dispatch"]["inputs"]
+    problems = []
+    if worker["RUN"] != dispatch_run or worker["RUN"] not in inputs["run"]["options"]:
+        problems.append(f"{SCHEDULER_WORKER}: RUN {worker['RUN']!r} is not the scheduler dispatch {dispatch_run!r}")
+    if worker["SOURCE"] not in inputs["source"]["options"]:
+        problems.append(f"{SCHEDULER_WORKER}: SOURCE {worker['SOURCE']!r} is not a Pipeline source")
+    if worker["REF"] != "main":
+        problems.append(f"{SCHEDULER_WORKER}: REF must be main (scheduler dispatches count only on main)")
     return problems
 
 

@@ -19,10 +19,19 @@ script.
 | `notify_failure` | Run by the Pipeline workflow's `notify` job (not by ops.yml): opens an `alert` issue "Pipeline failed: <source> · <run>" with the run link, or comments on the open one; closing the issue re-arms it. | GitHub issues |
 | `orphan_files` | Parquet files under `02_bronze/`, `03_silver/`, `04_gold/` and `__r2_data_catalog/` that no snapshot of any table references, including folders of dropped tables (R2 maintenance never removes them). Args: `--min-age-hours 48`, `--delete` | with `--delete`: removes those files |
 | `project` | The organisation's Projects board through GraphQL, with a token of the `zohelo-automation` GitHub App (variable `PROJECT_APP_ID`, secret `PROJECT_APP_KEY`). Args: `inspect` (projects, fields, options, iterations, views); `status <issue> [ON_TRACK\|AT_RISK\|OFF_TRACK\|COMPLETE\|INACTIVE]` posts the newest comment by the owner or an org member on the Work log issue as a status update of project 1 | `status`: adds a project status update |
+| `scheduler_trigger` | The external clock of the Pipeline scheduler (#802): Cloudflare Worker `zohelo-scheduler` (`ops/scheduler_worker/`) whose Cron Trigger (`17,47 * * * *`) dispatches Pipeline `platform` · `scheduler: dispatch due runs`, because GitHub's own schedule fires only a fraction of its slots. Args: `status` (default: Cron Triggers, whether the Worker's token is set), `deploy`, `pause`, `resume` | `deploy`/`pause`/`resume`: the Worker and its Cron Triggers |
 | `retry_rejected` | Bronze rejections (`bronze.eurostat_rejected_files`) grouped by reason and dataset family; with `--apply` deletes the matching rows so the next `bronze: load` retries them (the table history keeps them). Args: `--source eurostat [--dataset GLOB …] [--apply]` | with `--apply`: rows of the rejections table |
 | `restore_from_archive` | Receipts in Landing whose data file is gone; with `--apply` copies the Archive file back and verifies its SHA-256. Args: `--source eurostat [--dataset GLOB …] [--apply]` | with `--apply`: adds Landing files, never overwrites |
 
-Rules: one file per script, `snake_case.py`, runnable as `python -m ops.<name>`. Write
+**Scheduler clock runbook.** Pause: Ops `script=scheduler_trigger args=pause` (GitHub's own
+schedule keeps running as the backup; a later `deploy` restores the Cron Triggers). Resume:
+`args=resume`. The Worker's only secret, `GITHUB_TOKEN` (fine-grained, this repository,
+Actions: read and write), is set by the owner in the Cloudflare dashboard and never passes
+through the repository; when it expires, dispatches fail with HTTP 401 and the 07:00
+operations session sees the scheduler run count drop. Scheduler runs started by the Worker
+are workflow dispatches named `Pipeline · platform · scheduler: dispatch due runs`.
+
+Rules: one file per script (a script's deployable assets may sit in a folder of its own, like `scheduler_worker/`), `snake_case.py`, runnable as `python -m ops.<name>`. Write
 output files to `$OPS_OUTPUT_DIR` (kept 7 days as a run artifact) and publish results as
 annotations (`ingestion.common.report.annotate`; GitHub shows at most 10 per step). List
 every script here; remove it when the task no longer exists.
