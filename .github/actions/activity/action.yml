@@ -49,7 +49,14 @@ runs:
         PARALLEL_DOWNLOADS: ${{ inputs.parallel-downloads }}
         BUDGET_MINUTES: ${{ inputs.budget-minutes }}
       run: |
+        python -m ops.runner_resources sample "$RUNNER_TEMP/runner_resources.log" > /dev/null 2>&1 &
         python run.py activity --source "$SOURCE" --activity "$ACTIVITY" \
           --filter "$FILTER" --max-items "$MAX_ITEMS" --parallel-jobs "$PARALLEL_JOBS" \
           --job-index "$JOB_INDEX" --parallel-downloads "$PARALLEL_DOWNLOADS" \
           --budget-minutes "$BUDGET_MINUTES"
+    - name: Runner resources (only when the activity failed)
+      if: failure()
+      shell: bash
+      env:
+        PYTHONPATH: .
+      run: python -m ops.runner_resources report "$RUNNER_TEMP/runner_resources.log"
