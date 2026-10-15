@@ -12,6 +12,10 @@ zohelo:
       # DuckDB streams instead of buffering to its temp directory.
       settings:
         preserve_insertion_order: false
+        # Hosted runners have 16 GB; DuckDB's default (80 %) leaves little for dbt and
+        # Iceberg writes, and builds were killed (exit 143). Spill goes to the big /mnt disk.
+        memory_limit: "{{ env_var('DUCKDB_MEMORY_LIMIT', '10GB') }}"
+        temp_directory: "{{ env_var('DUCKDB_TEMP_DIRECTORY', '.duckdb_tmp') }}"
       # Iceberg tables cannot be renamed inside the transaction that created them,
       # and dbt's table materialization builds under a temporary name, then renames.
       disable_transactions: true

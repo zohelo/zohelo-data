@@ -48,15 +48,18 @@ runs:
         JOB_INDEX: ${{ inputs.job-index }}
         PARALLEL_DOWNLOADS: ${{ inputs.parallel-downloads }}
         BUDGET_MINUTES: ${{ inputs.budget-minutes }}
+        DUCKDB_TEMP_DIRECTORY: /mnt/duckdb_tmp
       run: |
+        sudo mkdir -p "$DUCKDB_TEMP_DIRECTORY" && sudo chown "$(id -u)" "$DUCKDB_TEMP_DIRECTORY"
         python -m ops.runner_resources sample "$RUNNER_TEMP/runner_resources.log" \
           > /dev/null 2> "$RUNNER_TEMP/runner_resources.err" &
         python run.py activity --source "$SOURCE" --activity "$ACTIVITY" \
           --filter "$FILTER" --max-items "$MAX_ITEMS" --parallel-jobs "$PARALLEL_JOBS" \
           --job-index "$JOB_INDEX" --parallel-downloads "$PARALLEL_DOWNLOADS" \
           --budget-minutes "$BUDGET_MINUTES"
-    - name: Runner resources (only when the activity failed)
-      if: failure()
+    # A job killed from outside (exit 143, e.g. runner out of memory) ends as cancelled, not failed.
+    - name: Runner resources (only when the activity failed or was cancelled)
+      if: failure() || cancelled()
       shell: bash
       env:
         PYTHONPATH: .

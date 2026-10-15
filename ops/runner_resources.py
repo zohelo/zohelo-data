@@ -3,8 +3,9 @@
 
 A run that dies from outside (exit code 143 or 137) writes no annotation of its own. The
 activity action starts `sample` in the background before the activity, and runs `report`
-only when the activity failed: the report shows free disk and memory over the last minutes
-and the kernel's out-of-memory lines, so the cause is visible without the job log.
+only when the activity failed or was cancelled: the report shows free disk and memory over
+the last minutes and the kernel's out-of-memory lines, so the cause is visible without the
+job log.
 """
 
 from __future__ import annotations
