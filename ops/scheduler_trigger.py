@@ -10,7 +10,8 @@ by the owner in the Cloudflare dashboard; this script only reports whether it is
 Modes (one argument):
   status   the Worker's Cron Triggers and whether its token is set (default; read-only)
   deploy   deploy the Worker (code, variables, Cron Triggers; its secret is kept)
-  pause    remove the Cron Triggers (the Worker stays deployed; GitHub's schedule remains)
+  pause    remove the Cron Triggers (the Worker stays deployed; GitHub's schedule remains;
+           a later `deploy` turns them back on)
   resume   restore the Cron Triggers from wrangler.toml
 """
 
@@ -49,7 +50,13 @@ def cloudflare(method: str, part: str, body: list | None = None) -> tuple[int, d
 
 
 def deploy() -> list[str]:
-    result = subprocess.run([*WRANGLER, "deploy", "--config", str(CONFIG)], capture_output=True, text=True)
+    """Deploy code, variables and Cron Triggers with wrangler; the dashboard-set secret is kept."""
+    try:
+        result = subprocess.run(
+            [*WRANGLER, "deploy", "--config", str(CONFIG)], capture_output=True, text=True, timeout=600
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("wrangler deploy timed out after 10 minutes") from exc
     if result.returncode != 0:
         raise RuntimeError(f"wrangler deploy failed: {(result.stderr or result.stdout)[-800:]}")
     return [line.strip() for line in result.stdout.splitlines() if "Version ID" in line or "schedule" in line]

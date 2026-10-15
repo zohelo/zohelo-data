@@ -23,7 +23,10 @@ script.
 | `retry_rejected` | Bronze rejections (`bronze.eurostat_rejected_files`) grouped by reason and dataset family; with `--apply` deletes the matching rows so the next `bronze: load` retries them (the table history keeps them). Args: `--source eurostat [--dataset GLOB …] [--apply]` | with `--apply`: rows of the rejections table |
 | `restore_from_archive` | Receipts in Landing whose data file is gone; with `--apply` copies the Archive file back and verifies its SHA-256. Args: `--source eurostat [--dataset GLOB …] [--apply]` | with `--apply`: adds Landing files, never overwrites |
 
-**Scheduler clock runbook.** Pause: Ops `script=scheduler_trigger args=pause` (GitHub's own
+**Scheduler clock runbook.** First setup: Ops `script=scheduler_trigger args=deploy`; the
+owner creates the fine-grained token (the organisation must allow fine-grained tokens and may
+have to approve it) and adds it to the Worker as secret `GITHUB_TOKEN`; `args=status` then
+shows `token_set: true`, and Worker dispatches appear within 30 minutes. Pause: Ops `script=scheduler_trigger args=pause` (GitHub's own
 schedule keeps running as the backup; a later `deploy` restores the Cron Triggers). Resume:
 `args=resume`. The Worker's only secret, `GITHUB_TOKEN` (fine-grained, this repository,
 Actions: read and write), is set by the owner in the Cloudflare dashboard and never passes
