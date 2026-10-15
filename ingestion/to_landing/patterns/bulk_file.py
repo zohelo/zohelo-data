@@ -162,6 +162,28 @@ def download(url: str, path: Path, fmt: str) -> tuple[str, int, dict[str, str], 
     raise RuntimeError("unreachable")
 
 
+def probe(url: str) -> tuple[requests.Response | None, str]:
+    """HEAD the URL (GET headers only when HEAD is refused), with retries; returns (response, status or error)."""
+    response, http = None, ""
+    for attempt in range(3):
+        try:
+            response = requests.head(url, headers={"User-Agent": USER_AGENT}, allow_redirects=True, timeout=60)
+            if response.status_code in (403, 405, 501):  # some servers refuse HEAD but serve GET
+                response = requests.get(
+                    url, headers={"User-Agent": USER_AGENT}, allow_redirects=True, timeout=60, stream=True
+                )
+                response.close()  # headers only; the body is not read
+            http = str(response.status_code)
+        except requests.RequestException as exc:
+            response, http = None, type(exc).__name__
+        permanent = response is not None and 400 <= response.status_code < 500
+        if http == "200" or (permanent and response.status_code not in RETRY_STATUSES):
+            break
+        if attempt < 2:
+            time.sleep(10 * (attempt + 1))
+    return response, http
+
+
 def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landing_root: str) -> dict[str, Any]:
     """Download one declared file and land it with a receipt unless its bytes are unchanged."""
     fmt = spec.get("format", "raw")
@@ -245,11 +267,7 @@ def main(source: str, mode: str, landing_root: str = "01_landing") -> int:
             "newest": held[-1]["version_token"] if held else None,
         }
         if mode == "inspect":
-            try:
-                head = requests.head(spec["url"], headers={"User-Agent": USER_AGENT}, allow_redirects=True, timeout=60)
-                http = str(head.status_code)
-            except requests.RequestException as exc:
-                head, http = None, type(exc).__name__
+            head, http = probe(spec["url"])
             row["server_version"] = (server_version(dict(head.headers)) if head is not None else None) or "unknown"
             if http != "200":  # a moved or blocked URL is an error, not a missing validator
                 row.update({"state": "unreachable", "http": http})
