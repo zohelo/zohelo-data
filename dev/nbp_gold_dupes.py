@@ -20,12 +20,16 @@ annotate("notice", "rank-1 duplicates: same file twice?", q("""
 with r as (select *, rank() over (partition by entity order by source_version desc, ingested_at desc) k from g),
 d as (select effective_date from r where k = 1 group by 1 having count(*) > 1)
 select count(*) rows, count(distinct raw_sha256) files, count(distinct entity) entities,
-       count(distinct (raw_sha256, source_row_number)) distinct_file_rows
+       count(distinct raw_sha256 || ':' || cast(source_row_number as varchar)) distinct_file_rows
 from r where k = 1 and effective_date in (select effective_date from d)"""))
 annotate("notice", "entities sample", q("""
 select entity, count(*) rows, count(distinct raw_sha256) files, min(effective_date) lo, max(effective_date) hi,
        min(ingested_at) first_in, max(ingested_at) last_in
 from g group by 1 order by rows desc limit 12"""))
+fx = catalog().load_table(("bronze", "nbp_observations")).scan(row_filter="table_code != 'GOLD'").to_arrow()
+con.register("f", fx)
+annotate("notice", "file rows seen twice (all tables)", q("select table_code, count(*) n from (select table_code, raw_sha256, source_row_number, count(*) c from f group by all having c > 1) group by 1"))
+annotate("notice", "files per receipt", q("select table_code, count(distinct raw_sha256) files, count(*) n from f group by 1"))
 snap = Counter(s.summary.operation.value for s in table.snapshots())
 annotate("notice", "snapshots", {"count": len(table.snapshots()), "ops": dict(snap),
          "last": [(s.timestamp_ms, s.summary.additional_properties) for s in table.snapshots()[-4:]]})
