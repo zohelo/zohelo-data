@@ -21,7 +21,7 @@ whose YAML sets `extraction.kind` (for example `bulk_file`) runs the shared patt
 | `landing.extract` | `ingestion/to_landing/<s>/` or `patterns/<kind>.py` | download missing or changed entities with receipts; never overwrites |
 | `landing.verify` | `ingestion/to_landing/<s>/` or `patterns/<kind>.py` | Landing integrity and remaining gaps |
 | `bronze.load` | `ingestion/to_bronze/<s>/` | incremental Landing → Bronze; rejections recorded |
-| `bronze.verify` | `ingestion/common/lineage.py` | every Landing file is in Bronze or rejected with a reason |
+| `bronze.verify` | `ingestion/common/lineage.py` | every Landing file is in Bronze or rejected with a reason; Landing files a Bronze table holds twice (warning). `gus_bdl`: the duplicate check only |
 | `landing.archive` | `ingestion/common/archive.py` | move Bronze-loaded Landing files to Archive (copy, verify SHA-256, delete from Landing; receipt stays) |
 | `archive.prune` | `ingestion/common/retention.py` | apply the source's Archive retention (`archive_policy` in its config) |
 | `silver_gold.promote` | `warehouse/passthrough/` | platform: Bronze → Silver → Gold pass-through for sources not yet modelled |
