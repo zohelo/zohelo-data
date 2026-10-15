@@ -18,7 +18,7 @@ details live in [landing.md](landing.md), [architecture.md](architecture.md),
   `snapshot|delta`, incremental policy, schedule `null`), tables per layer,
   `archive_policy`, `activities`.
 
-## 2. Landing (`ingestion/to_landing/<source>/`)
+## 2. Landing (`ingestion/to_landing/<source>/` or the shared pattern `ingestion/to_landing/patterns/<kind>.py`)
 
 - `landing.inspect`: source catalogue vs Landing → current / stale / missing; no writes.
 - `landing.extract`: missing first, then stale; exact source bytes, receipt after the

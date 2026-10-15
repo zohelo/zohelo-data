@@ -11,7 +11,7 @@ In dataflow order:
 ```text
 ingestion/           source → Landing → Bronze (Python)
   sources/           <source>.yaml: extraction strategy, authorized activities
-  to_landing/        <source>/: extract to Landing
+  to_landing/        <source>/: extract to Landing; patterns/: shared code named by extraction.kind
   to_bronze/         <source>/: load Landing into Bronze
   common/            reporting, lineage, archive
   legacy/            retired code, kept until each source is rebuilt

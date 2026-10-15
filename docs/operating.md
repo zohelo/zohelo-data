@@ -11,13 +11,15 @@
 
 ## Activities
 
-Every source uses the same activity names; a source implements the ones it needs.
+Every source uses the same activity names; a source implements the ones it needs. A source
+whose YAML sets `extraction.kind` (for example `bulk_file`) runs the shared pattern in
+`ingestion/to_landing/patterns/` instead of a folder of its own.
 
 | Activity | Code | Meaning |
 |---|---|---|
-| `landing.inspect` | `ingestion/to_landing/<s>/` | source catalogue vs Landing: missing / changed / current; no Landing writes |
-| `landing.extract` | `ingestion/to_landing/<s>/` | download missing or changed entities with receipts; never overwrites |
-| `landing.verify` | `ingestion/to_landing/<s>/` | Landing integrity and remaining gaps |
+| `landing.inspect` | `ingestion/to_landing/<s>/` or `patterns/<kind>.py` | source catalogue vs Landing: missing / changed / current; no Landing writes |
+| `landing.extract` | `ingestion/to_landing/<s>/` or `patterns/<kind>.py` | download missing or changed entities with receipts; never overwrites |
+| `landing.verify` | `ingestion/to_landing/<s>/` or `patterns/<kind>.py` | Landing integrity and remaining gaps |
 | `bronze.load` | `ingestion/to_bronze/<s>/` | incremental Landing → Bronze; rejections recorded |
 | `bronze.verify` | `ingestion/common/lineage.py` | every Landing file is in Bronze or rejected with a reason |
 | `landing.archive` | `ingestion/common/archive.py` | move Bronze-loaded Landing files to Archive (copy, verify SHA-256, delete from Landing; receipt stays) |
