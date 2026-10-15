@@ -5,7 +5,10 @@ A run that dies from outside (exit code 143 or 137) writes no annotation of its 
 activity action starts `sample` in the background before the activity, and runs `report`
 only when the activity failed or was cancelled: the report shows free disk and memory over
 the last minutes and the kernel's out-of-memory lines, so the cause is visible without the
-job log.
+job log. A runner that is shut down as a whole skips that report step too, so `sample` also
+publishes live annotations while the activity runs: a notice every HEARTBEAT_MINUTES and a
+warning the first time free memory or disk falls below each threshold. GitHub keeps
+annotations already written when the job dies (at most 10 notices and 10 warnings per step).
 """
 
 from __future__ import annotations
@@ -23,6 +26,9 @@ INTERVAL_SECONDS = 30
 MOUNTS = ("/", "/mnt")
 REPORT_SAMPLES = 16  # last eight minutes; keeps the annotation under its 3,900 characters
 OOM_LINES = 5
+HEARTBEAT_MINUTES = 20  # 9 notices cover the longest activity timeout (180 min)
+MEMORY_THRESHOLDS_GB = (3.0, 1.5, 0.5)
+DISK_THRESHOLDS_GB = (5.0, 1.0)  # per mount: 3 + 2 × 2 = 7 warnings at most
 
 
 def _gb(value: int) -> float:
@@ -44,15 +50,41 @@ def snapshot() -> dict:
     return sample
 
 
+def crossed(current: dict, reported: set[tuple[str, float]]) -> list[tuple[str, float]]:
+    """Thresholds newly passed by this snapshot: (key, threshold) pairs not reported before,
+    lowest threshold last; the caller adds them to `reported` so each warns once."""
+    limits = {"mem_available": MEMORY_THRESHOLDS_GB}
+    limits.update({f"disk_free{mount}": DISK_THRESHOLDS_GB for mount in MOUNTS})
+    new = []
+    for key, thresholds in limits.items():
+        if key not in current:
+            continue
+        new.extend((key, t) for t in thresholds if current[key] < t and (key, t) not in reported)
+    return new
+
+
 def sample(log: Path) -> None:
-    """Append one snapshot per interval until the job ends; a failed write (full disk) is
-    reported on stderr, which the action keeps next to the log, and sampling goes on."""
+    """Append one snapshot per interval until the job ends and publish live annotations (see
+    the module docstring); a failed write (full disk) is reported on stderr, which the action
+    keeps next to the log, and sampling goes on."""
+    reported: set[tuple[str, float]] = set()
+    started = last_heartbeat = time.monotonic()
     while True:
+        current = snapshot()
         try:
             with log.open("a", encoding="utf-8") as handle:
-                handle.write(json.dumps(snapshot()) + "\n")
+                handle.write(json.dumps(current) + "\n")
         except OSError as error:
             print(f"{time.strftime('%H:%M:%S', time.gmtime())} {error}", file=sys.stderr, flush=True)
+        minutes = round((time.monotonic() - started) / 60)
+        for key, threshold in crossed(current, reported):
+            reported.add((key, threshold))
+            annotate(
+                "warning", "runner resources low (live)", {"below_gb": {key: threshold}, "minute": minutes, **current}
+            )
+        if time.monotonic() - last_heartbeat >= HEARTBEAT_MINUTES * 60:
+            last_heartbeat = time.monotonic()
+            annotate("notice", "runner resources (live)", {"minute": minutes, **current})
         time.sleep(INTERVAL_SECONDS)
 
 

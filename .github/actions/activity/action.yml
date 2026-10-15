@@ -51,8 +51,9 @@ runs:
         DUCKDB_TEMP_DIRECTORY: /mnt/duckdb_tmp
       run: |
         sudo mkdir -p "$DUCKDB_TEMP_DIRECTORY" && sudo chown "$(id -u)" "$DUCKDB_TEMP_DIRECTORY"
+        # The sampler's stdout carries its live annotations (a killed runner skips the report below).
         python -m ops.runner_resources sample "$RUNNER_TEMP/runner_resources.log" \
-          > /dev/null 2> "$RUNNER_TEMP/runner_resources.err" &
+          2> "$RUNNER_TEMP/runner_resources.err" &
         python run.py activity --source "$SOURCE" --activity "$ACTIVITY" \
           --filter "$FILTER" --max-items "$MAX_ITEMS" --parallel-jobs "$PARALLEL_JOBS" \
           --job-index "$JOB_INDEX" --parallel-downloads "$PARALLEL_DOWNLOADS" \
