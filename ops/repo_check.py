@@ -171,6 +171,36 @@ def configuration(files: list[Path]) -> list[str]:
     return problems
 
 
+SCHEDULER_PACKAGES = {"pyyaml", "requests"}  # what the scheduler job in pipeline.yml installs
+IMPORT_NAMES = {"dbt-core": "dbt", "dbt-duckdb": "dbt"}
+BLOCKER = """
+import runpy, sys
+class Block:
+    def find_spec(self, name, path=None, target=None):
+        if name.split(".")[0] in BLOCKED:
+            raise ImportError("the scheduler job does not install " + name)
+sys.meta_path.insert(0, Block())
+sys.argv = ["run.py", "schedule", "--check"]
+runpy.run_path("run.py", run_name="__main__")
+"""
+
+
+def scheduler_imports() -> list[str]:
+    """`run.py schedule` works with only the packages the scheduler job installs (#788 broke it)."""
+    names = [re.split(r"[=<>\[ ]", line.strip())[0] for line in (ROOT / "requirements.txt").read_text().splitlines()]
+    blocked = {IMPORT_NAMES.get(n, n) for n in names if n and not n.startswith("#") and n not in SCHEDULER_PACKAGES}
+    result = subprocess.run(
+        [sys.executable, "-c", f"BLOCKED = {sorted(blocked)!r}\n{BLOCKER}"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        env={"PATH": "", "PYTHONPATH": str(ROOT)},
+    )
+    if result.returncode == 0:
+        return []
+    return [f"run.py schedule --check fails without {sorted(blocked)}: {result.stderr.strip().splitlines()[-1:]}"]
+
+
 STATUSES = {"registered", "landing", "bronze", "silver"}
 
 
@@ -200,6 +230,7 @@ def main() -> int:
         "yamllint": lambda: tool(["yamllint", "-s", "-d", YAMLLINT, "ingestion", "warehouse", "portal", ".github"]),
         "sqlfluff": sqlfluff,
         "configuration": lambda: configuration(files),
+        "scheduler imports": scheduler_imports,
     }
     failed = 0
     for name, check in checks.items():

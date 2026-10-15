@@ -178,17 +178,22 @@ def config_problems(config: dict) -> list[str]:
     return problems
 
 
+def _bulk_file():
+    """The bulk_file pattern, imported when an activity runs: the scheduler job installs only pyyaml and requests."""
+    from ingestion.to_landing.patterns import bulk_file
+
+    return bulk_file
+
+
 def implemented(source: str) -> dict:
     if source == "platform":
         return PLATFORM_ACTIVITIES
     code = {}
     kind = ((yaml.safe_load((SOURCES / f"{source}.yaml").read_text()) or {}).get("extraction") or {}).get("kind")
     if kind == "bulk_file":  # common ingestion framework (docs/landing.md): no source package needed
-        from ingestion.to_landing.patterns import bulk_file
-
         code.update(
             {
-                f"landing.{name}": (lambda p, mode=mode: bulk_file.main(source, mode))
+                f"landing.{name}": (lambda p, mode=mode: _bulk_file().main(source, mode))
                 for name, mode in (("inspect", "inspect"), ("extract", "load"), ("verify", "verify"))
             }
         )
