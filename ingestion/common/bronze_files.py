@@ -4,7 +4,8 @@ The convention of docs/playbook.md: every Landing file (SHA-256 ``raw_sha256``) 
 ``02_bronze/<source>/<table>/<entity>/<raw_sha256>.parquet``, registered in an Iceberg
 table partitioned by the entity column, with column statistics computed client-side
 (R2 Data Catalog rejects the metrics table properties). The table's file list is the
-checkpoint; decoder rejections go to ``bronze.<source>_rejected_files``.
+checkpoint: file names, or the ``raw_sha256`` column of files that catalog compaction
+rewrote under other names; decoder rejections go to ``bronze.<source>_rejected_files``.
 """
 
 from __future__ import annotations
@@ -134,15 +135,24 @@ def loaded_hashes(table) -> set[str]:
     if table.current_snapshot() is None:
         return set()
     hashes: set[str] = set()
-    for path in table.inspect.files().column("file_path").to_pylist():
+    for path in table.inspect.data_files().column("file_path").to_pylist():
         stem = Path(path).stem
         if SHA_RE.fullmatch(stem):
             hashes.add(stem)
             continue
-        with table.io.new_input(path).open() as handle:
-            column = pq.read_table(handle, columns=["raw_sha256"]).column("raw_sha256")
+        column = read_columns(table, path, ["raw_sha256"]).column("raw_sha256")
         hashes.update(h for h in pc.unique(column).to_pylist() if h)
     return hashes
+
+
+def read_columns(table, path: str, columns: list[str]) -> pa.Table:
+    """Some columns of one data file of the table (a file not named after a SHA-256)."""
+
+    def read() -> pa.Table:
+        with table.io.new_input(path).open() as handle:
+            return pq.read_table(handle, columns=columns)
+
+    return retry(read, "read_file")
 
 
 def rejected_hashes(cat, table_id: tuple[str, str]) -> set[str]:

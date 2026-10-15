@@ -34,7 +34,8 @@ details live in [landing.md](landing.md), [architecture.md](architecture.md),
   or JSON copies of keys; provenance = Landing SHA-256 + version + ingestion time.
 - One Parquet file per Landing file (`02_bronze/<source>/<entity table>/<entity>/<sha256>.parquet`),
   partitioned by entity, full column statistics computed client-side. The table's file
-  list is the checkpoint; rejections go to `bronze.<source>_rejected_files` with the reason.
+  list is the checkpoint (catalog compaction renames small files: their Landing SHA-256
+  comes from the `raw_sha256` column, never from the name alone); rejections go to `bronze.<source>_rejected_files` with the reason.
 - DuckDB-native decoding (no per-cell Python), bounded memory, tested on the largest
   real file before the full load.
 - `bronze.verify`: every newest Landing file is in Bronze or rejected with a reason.

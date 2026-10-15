@@ -38,7 +38,7 @@ STATS_COLUMNS = ["dataset_id", "raw_sha256"]  # full bounds: partition value and
 
 
 def loaded_hashes(table) -> set[str]:
-    """Raw SHA-256 of every Landing file already in Bronze (from the file names)."""
+    """Raw SHA-256 of every Landing file already in Bronze (file names, or the column of compacted files)."""
     return bf.loaded_hashes(table)
 
 

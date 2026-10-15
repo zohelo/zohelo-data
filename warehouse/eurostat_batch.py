@@ -26,6 +26,7 @@ import pyarrow as pa
 from pyiceberg.exceptions import NamespaceAlreadyExistsError, NoSuchTableError
 import yaml
 
+from ingestion.common import bronze_files as bf
 from ingestion.common.r2 import catalog
 
 BRONZE_ID = ("bronze", "eurostat_full_observations")
@@ -91,10 +92,30 @@ def _drop_legacy(cat, namespace: str) -> bool:
     return True
 
 
+def _compacted(table, path: str, dataset_id: str, size: int) -> list[dict]:
+    """Index rows for a file that catalog compaction rewrote under another name: one per
+    Landing file it holds (#803); its bytes are split by row count."""
+    data = bf.read_columns(table, path, ["raw_sha256", "ingested_at"])
+    groups = data.group_by("raw_sha256").aggregate([("raw_sha256", "count"), ("ingested_at", "max")]).to_pylist()
+    total = max(1, data.num_rows)
+    return [
+        {
+            "dataset_id": dataset_id,
+            "raw_sha256": g["raw_sha256"],
+            "ingested_at": g["ingested_at_max"],
+            "record_count": g["raw_sha256_count"],
+            "file_size_bytes": size * g["raw_sha256_count"] // total,
+        }
+        for g in groups
+        if g["raw_sha256"]
+    ]
+
+
 def prepare(namespace: str, row_budget: int) -> dict:
     cat = catalog()
     dropped_legacy = _drop_legacy(cat, namespace)
-    files = cat.load_table(BRONZE_ID).inspect.files()
+    table = cat.load_table(BRONZE_ID)
+    files = table.inspect.data_files()
     rows = []
     for path, partition, count, size, metrics in zip(
         files.column("file_path").to_pylist(),
@@ -106,6 +127,7 @@ def prepare(namespace: str, row_budget: int) -> dict:
     ):
         sha = Path(path).stem
         if not SHA_RE.fullmatch(sha):
+            rows += _compacted(table, path, partition["dataset_id"], size)
             continue
         ingested = ((metrics or {}).get("ingested_at") or {}).get("upper_bound")
         rows.append(
