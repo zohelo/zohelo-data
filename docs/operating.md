@@ -54,8 +54,10 @@ pull request (compile, lint, YAML, configuration consistency, dbt parse) and mus
 before merge. Quality rules: [quality.md](quality.md).
 
 Schedules are declared under `schedule:` in each source's YAML and in
-`warehouse/warehouse.yaml` (cron in UTC + run + optional filter). The Pipeline's twice-hourly
-`scheduler` job (`python run.py schedule`) starts the runs that are due;
+`warehouse/warehouse.yaml` (cron in UTC + run + optional filter). The Pipeline's
+`scheduler` job (`python run.py schedule`) starts the runs that are due. It runs on GitHub's
+twice-hourly schedule, which drops many events (#802), and on a dispatch of run
+`scheduler: dispatch due runs` (any source; main only); both kinds share one catch-up window;
 `python run.py schedule --check` validates the declarations.
 
 ## Source declarations
