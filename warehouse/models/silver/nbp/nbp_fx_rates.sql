@@ -32,3 +32,8 @@ select
     ingested_at
 from ranked
 where version_rank = 1
+-- Some tables (mostly older table B) list a currency several times in one table with the
+-- same name and rate (probe 15 Oct, #803: 2,054 date × currency groups); one row is kept.
+qualify row_number() over (
+    partition by table_code, effective_date, upper(currency_code) order by source_row_number
+) = 1

@@ -4,13 +4,11 @@ models:
     description: >-
       NBP exchange rates (tables A, B, C) from bronze.nbp_observations: newest version of
       every table-quarter, typed. PLN per 1 unit of currency. Table A/B carry mid_rate,
-      table C bid_rate/ask_rate and trading_date. Intended grain: table × effective date × currency.
+      table C bid_rate/ask_rate and trading_date. Grain: table × effective date × currency
+      (a currency the source repeats in one table, same rate, is kept once).
     tests:
-      # warn until the 9,370 extra rows of 15 Oct are explained (follow-up issue)
       - unique:
           column_name: "table_code || '|' || effective_date || '|' || currency_code"
-          config:
-            severity: warn
     columns:
       - name: table_code
         tests: [not_null, {accepted_values: {arguments: {values: ['A', 'B', 'C']}}}]
