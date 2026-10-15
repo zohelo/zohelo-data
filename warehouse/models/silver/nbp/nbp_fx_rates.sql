@@ -1,5 +1,6 @@
 {# NBP exchange rates, tables A/B/C: the newest Landing version of every table-quarter,
-   typed. One row per table × effective date × currency. Rates are PLN per 1 unit of the
+   typed, a currency repeated in one table with identical values kept once. One row per
+   table × effective date × currency. Rates are PLN per 1 unit of the
    currency as published by the API (mid for A/B; bid/ask for C, trading_date for C). #}
 with source_rows as (
     -- Bronze may hold a source row more than once (bronze.nbp_observations did, 15 Oct):
@@ -32,3 +33,12 @@ select
     ingested_at
 from ranked
 where version_rank = 1
+-- Some tables (mostly older table B) list a currency several times in one table with the
+-- same name and rate (probe 15 Oct, #803: 2,054 date × currency groups). Only repeats equal
+-- in every published field collapse; rows that differ stay and fail the grain test.
+qualify row_number() over (
+    partition by
+        table_code, table_no, effective_date, trading_date, upper(currency_code), currency_name,
+        mid, bid, ask
+    order by raw_sha256, source_row_number
+) = 1
