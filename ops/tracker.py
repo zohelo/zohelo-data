@@ -2,8 +2,10 @@
 """Data availability tracker: one page per source and layer, published as a pinned GitHub issue.
 
 Measures what exists (read-only): the source declarations (ingestion/sources/*.yaml), the dbt
-models in warehouse/models, Landing/Archive folders in R2, the Iceberg tables of the catalog
-(rows, snapshots, last write) and the latest Silver/Gold build. Open GitHub issues labelled
+models in warehouse/models and semantic models in warehouse/semantic_models, Landing/Archive
+folders in R2, the Iceberg tables of the catalog (rows, snapshots, last write), the published
+data catalog file and the newest finished Pipeline runs (per source and the Silver/Gold build).
+A cell is ✅ only when every declared table exists. Open GitHub issues labelled
 `source:<id>` and `layer:<layer>` are shown in their cell, as planned / in progress / problem.
 
 Every catalog table is classified: current (declared and written by today's code), copy
@@ -30,7 +32,8 @@ from typing import Any
 import requests
 import yaml
 
-from ingestion.common.r2 import catalog, req, s3, sources
+from ingestion.common.bronze_files import retry
+from ingestion.common.r2 import catalog, get_with_backoff, req, s3, sources
 from ingestion.common.report import annotate, step_summary
 from ops.platform_inventory import folders
 
@@ -39,15 +42,16 @@ REST = "https://api.github.com"
 LAYERS = ("bronze", "silver", "gold")
 STAGES = ("landing", "bronze", "silver", "gold", "semantic", "catalog", "portal")
 TEMP = re.compile(r"__dbt_(tmp|backup)$")
-STALE_DAYS = 3  # a scheduled source whose newest Landing file is older than this is flagged
+RUN_PAGES = 10  # newest 1,000 finished Pipeline runs (~2 weeks at today's scheduler cadence)
+CATALOG_KEY = "_portal_catalog/v1/catalog.json"
 
 
 def table_facts(cat) -> dict[str, dict[str, Any]]:
     """Rows, snapshot count and last write of every Iceberg table (metadata only, no scan)."""
     out = {}
     for layer in LAYERS:
-        for identifier in cat.list_tables(layer):
-            table = cat.load_table(identifier)
+        for identifier in retry(lambda layer=layer: cat.list_tables(layer), f"list {layer}"):
+            table = retry(lambda identifier=identifier: cat.load_table(identifier), f"load {identifier}")
             snapshot = table.current_snapshot()
             summary = snapshot.summary if snapshot is not None and snapshot.summary is not None else {}
             written = datetime.fromtimestamp(snapshot.timestamp_ms / 1000, UTC) if snapshot else None
@@ -89,20 +93,42 @@ def issues(token: str, repo: str) -> list[dict[str, Any]]:
     return out
 
 
-def last_build(token: str, repo: str) -> dict[str, Any] | None:
-    """The newest finished Silver/Gold build run of the Pipeline."""
+def runs(token: str, repo: str) -> list[dict[str, Any]]:
+    """The newest finished Pipeline runs, newest first."""
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
-    response = requests.get(
-        f"{REST}/repos/{repo}/actions/workflows/pipeline.yml/runs",
-        headers=headers,
-        params={"per_page": 50, "status": "completed"},
-        timeout=60,
-    )
-    response.raise_for_status()
-    for run in response.json().get("workflow_runs", []):
-        if "silver/gold: build" in (run.get("display_title") or ""):
-            return run
-    return None
+    out: list[dict[str, Any]] = []
+    for page in range(1, RUN_PAGES + 1):
+        response = requests.get(
+            f"{REST}/repos/{repo}/actions/workflows/pipeline.yml/runs",
+            headers=headers,
+            params={"per_page": 100, "status": "completed", "page": page},
+            timeout=60,
+        )
+        response.raise_for_status()
+        batch = response.json().get("workflow_runs", [])
+        out += batch
+        if len(batch) < 100:
+            break
+    return out
+
+
+def run_mark(run: dict[str, Any] | None) -> str:
+    """✅ / 🔴 / ⚪ and the date of a finished run."""
+    if not run:
+        return "no run in the last ~2 weeks"
+    icon = {"success": "✅", "cancelled": "⚪", "skipped": "⚪"}.get(run["conclusion"], "🔴")
+    return f"{icon} [{run['conclusion']} {run['created_at'][8:10]}.{run['created_at'][5:7]}]({run['html_url']})"
+
+
+def semantic_models() -> dict[str, list[str]]:
+    """Gold model → semantic models built on it (warehouse/semantic_models/*.yml)."""
+    out: dict[str, list[str]] = defaultdict(list)
+    for path in sorted((ROOT / "warehouse" / "semantic_models").glob("*.yml")):
+        for model in (yaml.safe_load(path.read_text()) or {}).get("semantic_models") or []:
+            found = re.search(r"ref\(\s*['\"]([a-z0-9_]+)['\"]\s*\)", str(model.get("model", "")))
+            if found:
+                out[found.group(1)].append(model.get("name", path.stem))
+    return out
 
 
 def day(moment: datetime | None) -> str:
@@ -162,22 +188,44 @@ def main(argv=None) -> int:
     shared_gold = list(platform.get("gold") or [])
     silver_models = models()
     feeds = gold_feeds(silver_models)
+    semantic = semantic_models()
     client = s3()
-    landing_bucket = req("R2_LANDING_BUCKET")
+    landing_bucket, lakehouse_bucket = req("R2_LANDING_BUCKET"), req("R2_LAKEHOUSE_BUCKET")
     landing = folders(client, landing_bucket, "01_landing/", 2)
     archive = folders(client, landing_bucket, "05_archive/", 2)
     tables = table_facts(catalog())
+    try:
+        catalog_text = get_with_backoff(client, lakehouse_bucket, CATALOG_KEY).decode()
+        catalog_written = client.head_object(Bucket=lakehouse_bucket, Key=CATALOG_KEY)["LastModified"]
+    except Exception as exc:  # the page still renders; the catalog column says why
+        catalog_text, catalog_written = "", None
+        annotate("warning", "tracker: data catalog not readable", {"key": CATALOG_KEY, "error": str(exc)[:300]})
     open_issues = issues(token, repo) if token else []
-    build = last_build(token, repo) if token else None
+    finished = runs(token, repo) if token else []
 
     def tagged(source: str, stage: str) -> list[dict[str, Any]]:
         return [
             i for i in open_issues if {f"source:{source}", f"layer:{stage}"} <= {label["name"] for label in i["labels"]}
         ]
 
+    def newest(prefix: str) -> dict[str, Any] | None:
+        return next((r for r in finished if (r.get("display_title") or "").startswith(prefix)), None)
+
     classes: dict[str, list[str]] = defaultdict(list)
     for name in sorted(tables):
         classes[classify(name, registry, shared_gold)[0]].append(name)
+
+    def measured(names: list[str], label: str) -> str:
+        """'<✅|⚠️> label · n/m tables · rows · last write' for declared tables, ✅ only if all exist."""
+        present = [n for n in names if n in tables]
+        rows_ = sum(tables[n]["rows"] for n in present)
+        written = max((tables[n]["written"] for n in present if tables[n]["written"]), default=None)
+        icon = "✅" if present and len(present) == len(names) else ("⚠️" if present else "❌")
+        if label.startswith("🟨") and icon == "✅":  # complete, but written by old code
+            icon, label = "🟨", label[1:].lstrip()
+        missing = len(names) - len(present)
+        text = f"{icon} {label} · {len(present)}/{len(names)} tables · {number(rows_)} rows · {day(written)}"
+        return text + (f" · {missing} missing" if missing else "")
 
     rows = []
     for source, config in registry.items():
@@ -185,50 +233,54 @@ def main(argv=None) -> int:
         schedule = (config.get("extraction") or {}).get("schedule")
         folder = (config.get("landing") or f"01_landing/{source}/").rstrip("/")
         land = landing.get(folder, {"objects": 0, "latest": ""})
+        latest = datetime.fromisoformat(land["latest"]).replace(tzinfo=UTC) if land["latest"] else None
         kept = archive.get((config.get("archive_folder") or f"05_archive/{source}/").rstrip("/"), {"objects": 0})
         history = f" · archive {kept['objects']:,}" if kept["objects"] else " · no archive"
-        latest = datetime.fromisoformat(land["latest"]).replace(tzinfo=UTC) if land["latest"] else None
         cells: dict[str, str] = {}
 
         if not acts:
-            cells["landing"] = f"⏸ paused, old code · {land['objects']:,} files · {day(latest)}{history}"
-        elif latest and schedule and (now - latest).days > STALE_DAYS:
-            cells["landing"] = f"⚠️ stale since {day(latest)} · {land['objects']:,} files{history}"
+            cells["landing"] = f"⏸ paused, old code · {land['objects']:,} objects · new content {day(latest)}{history}"
         else:
-            how = "scheduled" if schedule else "manual"
-            cells["landing"] = f"✅ {how} · {land['objects']:,} files · {day(latest)}{history}"
+            how = "scheduled" if schedule else "manual only"
+            last = run_mark(newest(f"Pipeline · {source} · "))
+            cells["landing"] = (
+                f"{how} · last run {last} · {land['objects']:,} objects · new content {day(latest)}{history}"
+            )
 
-        def layer_cell(layer: str, ok: str, config: dict[str, Any] = config) -> str:
-            declared = [n for n in config.get(layer) or [] if not n.endswith("_rejected_files")]
-            present = [n for n in declared if n in tables]
-            if not declared:
-                return ""
-            rows_ = sum(tables[n]["rows"] for n in present)
-            written = max((tables[n]["written"] for n in present if tables[n]["written"]), default=None)
-            missing = len(declared) - len(present)
-            text = f"{ok} · {len(present)}/{len(declared)} tables · {number(rows_)} rows · {day(written)}"
-            return text + (f" · {missing} missing" if missing else "")
+        bronze = [n for n in config.get("bronze") or [] if not n.endswith("_rejected_files")]
+        if bronze:
+            label = "loaded by current code" if "bronze.load" in acts else "🟨 old-code copy"
+            cells["bronze"] = measured(bronze, label)
+        else:
+            cells["bronze"] = "⬜ not built"
 
-        bronze_ok = "✅" if "bronze.load" in acts else "⏸ old load"
-        cells["bronze"] = layer_cell("bronze", bronze_ok) or "⬜ not built"
-
-        if source in silver_models:
-            cells["silver"] = layer_cell("silver", f"✅ modelled ({len(silver_models[source])})") or "⬜ not built"
-        elif config.get("silver"):
-            cells["silver"] = layer_cell("silver", "🟨 copy, not modelled")
+        silver = list(config.get("silver") or [])
+        if source in silver_models and silver:
+            cells["silver"] = measured(silver, f"modelled ({len(silver_models[source])} models)")
+        elif silver:
+            cells["silver"] = measured(silver, "🟨 old-code copy, not modelled")
         else:
             cells["silver"] = "⬜ not modelled"
 
         if source in feeds:
-            cells["gold"] = "✅ shared: " + ", ".join(feeds[source])
+            names = [f"gold.{m}" for m in feeds[source]]
+            cells["gold"] = measured(names, "shared: " + ", ".join(feeds[source]))
         elif config.get("gold"):
-            cells["gold"] = layer_cell("gold", "🟨 copy, not modelled")
+            cells["gold"] = measured(list(config["gold"]), "🟨 old-code copy, not modelled")
         else:
             cells["gold"] = "⬜ not modelled"
 
-        cells["semantic"] = "⬜"
-        cells["catalog"] = "⬜"
-        cells["portal"] = "📁 raw files" if land["objects"] else "⬜"
+        metrics = sorted({m for g in feeds.get(source, []) for m in semantic.get(g, [])})
+        cells["semantic"] = ("✅ " + ", ".join(metrics)) if metrics else "⬜ none"
+        own = [*silver, *[f"gold.{m}" for m in feeds.get(source, [])]] if source in silver_models else []
+        # catalog.json names tables <schema>.<alias>; the schema may carry a prefix, so match the ending
+        listed = [n for n in own if f'"{n}"' in catalog_text or f'.{n.split(".")[1]}"' in catalog_text]
+        if own:
+            icon = "✅" if len(listed) == len(own) else ("⚠️" if listed else "❌")
+            cells["catalog"] = f"{icon} {len(listed)}/{len(own)} tables · {day(catalog_written)}"
+        else:
+            cells["catalog"] = "⬜ not modelled"
+        cells["portal"] = "📁 raw files only" if land["objects"] else "⬜"
         for stage in STAGES:
             marks = issue_marks(tagged(source, stage))
             if marks:
@@ -237,40 +289,39 @@ def main(argv=None) -> int:
 
     gold_rows = [tables[n] for n in shared_gold if n in tables]
     gold_written = max((t["written"] for t in gold_rows if t["written"]), default=None)
-    build_line = "no finished build found"
-    if build:
-        icon = "✅" if build["conclusion"] == "success" else "🔴"
-        started = build["created_at"][:16].replace("T", " ")
-        build_line = f"{icon} {build['conclusion']} · {started} UTC ({build['html_url']})"
+    build = newest("Pipeline · platform · silver/gold: build")
     extra_snapshots = sum(max(0, t["snapshots"] - 1) for t in tables.values())
+    register = yaml.safe_load((ROOT / "ingestion" / "register.yaml").read_text()).get("sources", [])
+    not_onboarded = sum(1 for e in register if not e.get("source_system"))
 
     lines = [
         "# Data availability tracker",
         "",
-        f"_Generated {now:%d %b %Y %H:%M} UTC by `ops/tracker.py` from R2, the catalog, the code and the open "
-        "issues. Do not edit by hand: it is replaced on every run._",
+        f"_Generated {now:%d %b %Y %H:%M} UTC by `ops/tracker.py` from R2, the catalog, the code, Pipeline runs "
+        "and the open issues. Do not edit by hand: it is replaced on every run._",
         "",
-        "**Legend:** ✅ done (current code) · 🟨 copy made by old or pass-through code, not modelled · "
-        "⏸ paused · ⚠️ stale · ⬜ not started · 📁 raw files browsable in the portal · "
-        "issues: 🔴 problem · 🔵 in progress · ⬜ planned",
+        "**Legend:** ✅ done and measured · ⚠️ partly there · ❌ declared but missing · "
+        "🟨 old-code copy, not on current code · ⏸ paused · ⬜ not started · ⚪ cancelled run · "
+        "📁 Landing files browsable in the portal (tables are not in the portal yet) · "
+        "issues: 🔴 problem · 🔵 in progress · ⬜ planned. "
+        '"New content" is the newest Landing object: a run that finds unchanged bytes writes nothing.',
         "",
         "## Sources × layers",
         "",
-        "| Source | Landing | Bronze | Silver | Gold | Semantic | Catalog | Portal |",
+        "| Source | Landing | Bronze | Silver | Gold | Semantic layer | Data catalog | Portal |",
         "|---|---|---|---|---|---|---|---|",
     ]
     for source, cells in rows:
         lines.append(f"| **{source}** | " + " | ".join(cells[s] for s in STAGES) + " |")
-    register = yaml.safe_load((ROOT / "ingestion" / "register.yaml").read_text()).get("sources", [])
-    unregistered = sum(1 for e in register if not e.get("source_system"))
     lines += [
         "",
-        f"Plus **{unregistered} researched sources** in `ingestion/register.yaml` that are not onboarded yet.",
+        f"Plus **{not_onboarded} researched sources** in `ingestion/register.yaml` that are not onboarded yet.",
         "",
         "## Platform",
         "",
         f"- **Shared Gold** ({len(gold_rows)}/{len(shared_gold)} tables): last written {day(gold_written)}.",
-        f"- **Latest Silver/Gold build:** {build_line}",
+        f"- **Latest Silver/Gold build:** {run_mark(build)}",
+        f"- **Data catalog file** `{CATALOG_KEY}`: written {day(catalog_written)}.",
         f"- **Catalog tables:** {len(tables)} — current {len(classes['current'])}, "
         f"old-code copies {len(classes['copy'])}, legacy {len(classes['legacy'])}, "
         f"leftovers {len(classes['leftover'])}.",
