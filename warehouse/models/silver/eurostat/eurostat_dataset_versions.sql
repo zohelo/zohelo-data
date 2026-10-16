@@ -1,5 +1,6 @@
 {# Newest Bronze file (Landing version) of every Eurostat dataset, from the file index
-   that warehouse/eurostat_batch.py derives from Iceberg metadata before each build. #}
+   that warehouse/eurostat_batch.py derives from Iceberg metadata before each
+   Eurostat backfill build (not refreshed by other builds, #822). #}
 select
     dataset_id,
     raw_sha256,

@@ -18,7 +18,7 @@ models:
       Eurostat observations of the newest version of each dataset, typed: freq, unit, geo as
       published, time_period in SDMX format (period_source as published), value (null for ':'),
       status flags, the remaining series dimensions in breakdown_dimensions/breakdown_codes.
-      Incremental per dataset version, batched by row budget; converges over successive builds.
+      Incremental per dataset version, batched by row budget; converges over successive backfill builds (#822).
       Tests check the rows of the current batch.
     columns:
       - name: dataset_id
