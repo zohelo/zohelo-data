@@ -8,8 +8,8 @@ declares, and the pass-through copies of paused sources. Tables written by today
 
 Without --apply the run only lists the candidates (count, rows, GB) as annotations. With
 --apply it drops them, but only when --expect equals the number of candidates found now, so a
-list that changed since the owner's approval is refused. Dropped tables leave their data files
-behind; `ops/orphan_files --delete` removes them afterwards.
+list that changed since the owner's approval is refused. Tables are purged (the catalog may delete
+their files); files left behind are removed by `ops/orphan_files --delete --max-share <x>`.
 
 Args: --apply, --expect <n>.
 """
@@ -77,12 +77,21 @@ def main(argv=None) -> int:
     if args.expect != len(names):
         annotate("error", "retire refused", {"expected": args.expect, "found": len(names)})
         return 1
-    dropped = []
+    dropped, refused = [], 0
     for name in names:
         layer, table = name.split(".", 1)
-        retry(lambda layer=layer, table=table: cat.drop_table((layer, table)), f"drop {name}")
+        try:  # purge asks the catalog to delete the data files too; not every catalog honours it
+            retry(lambda layer=layer, table=table: cat.purge_table((layer, table)), f"purge {name}")
+        except Exception as exc:
+            if "NoSuchTable" in type(exc).__name__:
+                raise
+            if not refused:  # one warning; annotations per step are limited
+                annotate("warning", "purge refused, dropping instead", {"table": name, "error": str(exc)[:300]})
+            refused += 1
+            retry(lambda layer=layer, table=table: cat.drop_table((layer, table)), f"drop {name}")
         dropped.append(name)
     report("retired", dropped, found)
+    annotate("notice", "retire mode", {"purged": len(dropped) - refused, "dropped_only": refused})
     return 0
 
 

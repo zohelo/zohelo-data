@@ -64,6 +64,8 @@ def referenced_files(cat) -> tuple[set[str], dict[str, str]]:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--min-age-hours", type=float, default=48)
+    # Raise only for an approved clean-up that is expected to orphan most of a prefix (#835).
+    parser.add_argument("--max-share", type=float, default=MAX_ORPHAN_SHARE)
     parser.add_argument("--delete", action="store_true")
     args = parser.parse_args(argv)
     if args.delete and args.min_age_hours < MIN_DELETE_AGE_HOURS:
@@ -91,9 +93,9 @@ def main(argv=None) -> int:
         if scanned[prefix]
     }
     deleted = 0
-    if args.delete and any(share > MAX_ORPHAN_SHARE for share in orphan_share.values()):
+    if args.delete and any(share > args.max_share for share in orphan_share.values()):
         # A share this high suggests the catalog scan missed tables, not real orphans.
-        raise RuntimeError(f"refusing to delete: orphan share per prefix {orphan_share} above {MAX_ORPHAN_SHARE}")
+        raise RuntimeError(f"refusing to delete: orphan share per prefix {orphan_share} above {args.max_share}")
     if args.delete:
         for start in range(0, len(orphans), 1000):
             batch = orphans[start : start + 1000]

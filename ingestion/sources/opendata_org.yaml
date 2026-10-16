@@ -8,8 +8,9 @@ extraction:
   schedule: null
 
 landing: 01_landing/opendata_org/
-bronze: [bronze.opendata_org_organizations, bronze.opendata_org_people, bronze.opendata_org_locations]
-silver: [silver.opendata_org_locations, silver.opendata_org_organizations, silver.opendata_org_people]
-gold: [gold.dim_opendata_location, gold.dim_opendata_organization, gold.dim_opendata_person]
+bronze: []   # old-code copies retired 16 Oct (owner decision #835); rebuilt by the new solution
+silver: []
+gold: []
+legacy_tables: [bronze.opendata_org_organizations, bronze.opendata_org_people, bronze.opendata_org_locations, silver.opendata_org_locations, silver.opendata_org_organizations, silver.opendata_org_people, gold.dim_opendata_location, gold.dim_opendata_organization, gold.dim_opendata_person]
 
 activities: []   # paused
