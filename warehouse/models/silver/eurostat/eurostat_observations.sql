@@ -3,7 +3,7 @@
 {# Eurostat observations, newest version of each dataset, typed (design: warehouse/README.md,
    "Eurostat Silver"). Incremental per Landing file (raw_sha256): the batch
    (vars eurostat_batch_*) is planned by warehouse/eurostat_batch.py from Iceberg metadata,
-   up to a row budget per build; the pre-hook removes superseded versions. Silver converges
+   up to a row budget per backfill build (#822); the pre-hook removes superseded versions. Silver converges
    over successive builds without one oversized rebuild. The literal dataset_id filter
    lets the scan prune Bronze partitions.
    time_period is normalised to SDMX (2023Q1 → 2023-Q1, 2023M01 → 2023-01, 2023S1 → 2023-S1,

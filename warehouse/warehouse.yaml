@@ -3,10 +3,10 @@
 #   silver_gold.build     dbt build of the SQL project (models/), optional --select from the run filter
 activities: [silver_gold.promote, silver_gold.build]
 # Declared schedules (UTC), dispatched by run.py schedule: models daily after the source
-# loads; Eurostat Silver batches every 3 hours until Silver has caught up.
+# loads. Eurostat Silver catch-up is not scheduled (owner policy #822): it runs only as an
+# announced one-off backfill, a manual run with filter "eurostat_dataset_versions eurostat_observations".
 schedule:
   - {cron: "30 7 * * *", run: "silver/gold: build models"}
-  - {cron: "45 1-22/3 * * *", run: "silver/gold: build models", filter: "eurostat_dataset_versions eurostat_observations"}
 
 # Shared Gold built by the dbt project (conformed dimensions and facts across sources).
 gold: [gold.dim_date, gold.dim_period, gold.dim_currency, gold.dim_geography, gold.dim_indicator,

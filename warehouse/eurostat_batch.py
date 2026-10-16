@@ -53,9 +53,9 @@ OVERSIZED_ROWS = int(SETTINGS["oversized_rows"])
 
 
 def wanted(selectors: list[str]) -> bool:
-    return not selectors or any(
-        s.strip("+").split(".")[-1] in (MODEL, "eurostat_dataset_versions", "eurostat", "silver") for s in selectors
-    )
+    """A batch is planned only when a run names the Eurostat Silver models explicitly (a one-off
+    backfill, owner policy #822); a full or "silver" build leaves Eurostat Silver unchanged."""
+    return any(s.strip("+").split(".")[-1] in (MODEL, "eurostat_dataset_versions", "eurostat") for s in selectors)
 
 
 def _overwrite(cat, table_id: tuple[str, str], rows: pa.Table) -> None:

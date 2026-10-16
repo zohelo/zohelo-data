@@ -1,7 +1,8 @@
 """silver_gold.build: dbt build of the warehouse SQL project against the R2 Data Catalog.
 
 The run filter becomes dbt's --select (e.g. "silver.nbp" or "nbp_fx_rates+"); empty
-builds everything. When the Eurostat Silver model is selected, warehouse/eurostat_batch.py
+builds everything. When a run names the Eurostat Silver models explicitly (one-off
+backfills only, owner policy #822; a full build leaves them unchanged), warehouse/eurostat_batch.py
 plans its batch first (passed as dbt vars) and records it after the model ran. A run that
 selects only the Eurostat Silver models repeats batches while Silver is incomplete and the
 time budget allows (LOOP_MINUTES). Target prod writes to the silver/gold namespaces;

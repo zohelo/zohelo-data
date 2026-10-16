@@ -23,11 +23,14 @@ Target `trial` writes every model to the scratch namespace `zz_dbt_trial`. Sourc
 yet modelled (GUS DBW, dane.gov.pl, GLEIF, MF Biała Lista) are still published by
 `passthrough/` as copies / zero-copy references of Bronze (`silver_gold.promote`).
 
-Eurostat Silver is too large for one build: `eurostat_batch.py` plans each build's batch
-from the Bronze file list (Iceberg metadata), one batch per build, at most 400M Bronze
-rows and 500 dataset versions; superseded versions are deleted before the insert. Files
-above 700M rows are deferred. A run that selects only the Eurostat models repeats
-batches for up to 140 minutes.
+Eurostat Silver is too large for one build and is loaded only by announced one-off
+backfills (owner policy #822): a run whose filter names the Eurostat models
+(`eurostat_dataset_versions eurostat_observations`). `eurostat_batch.py` then plans the
+batch from the Bronze file list (Iceberg metadata), at most 150M Bronze rows and 500
+dataset versions per build; superseded versions are deleted before the insert. Files
+above 700M rows are deferred. Such a run repeats batches for up to 140 minutes. Other
+builds (the daily full build, a `silver` filter) leave Eurostat Silver and its file index
+unchanged; `eurostat_dataset_versions` reflects Bronze as of the last backfill.
 
 ```sh
 cd warehouse && DBT_PROFILES_DIR=. dbt build --target trial   # needs the R2 env vars
