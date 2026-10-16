@@ -31,4 +31,5 @@ gold: []                              # areas on gold.dim_geography (warehouse/w
 legacy_tables: [bronze.prg_country, bronze.prg_voivodeships, bronze.prg_counties, bronze.prg_municipalities,
                 bronze.prg_surface_areas, silver.prg_*, gold.dim_prg_*, gold.fact_prg_surface_areas]
 
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

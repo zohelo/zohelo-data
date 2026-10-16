@@ -122,6 +122,7 @@ def load_config() -> dict:
 
 
 SOURCE_KEYS = {
+    "bronze_latest_only",
     "source_system",
     "description",
     "extraction",
@@ -205,7 +206,8 @@ def implemented(source: str) -> dict:
                 raise
             continue
         code.update(module.ACTIVITIES)
-    if "bronze.load" in code:  # latest version only (policy #822/#845): a load replaces superseded versions
+    declared = (yaml.safe_load((SOURCES / f"{source}.yaml").read_text()) or {}).get("bronze_latest_only")
+    if "bronze.load" in code and declared:  # latest version only (#845): a load replaces superseded versions
         code["bronze.load"] = lambda p, load=code["bronze.load"]: _load_latest_only(source, load, p)
     return code
 

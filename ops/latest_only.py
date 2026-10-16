@@ -4,7 +4,7 @@
 Without --apply: per source and Bronze table, the Landing files held, how many are superseded
 (not the latest version of their entity), their rows in files named after them, and files the
 receipts do not know (kept). With --apply: removes the superseded rows (``ingestion.common.latest``).
-The Bronze load of every source runs the same prune after loading, so new versions replace old ones.
+The Bronze load of every source declaring `bronze_latest_only: true` runs the same prune after loading.
 
 Args: --source <id> ... (default: every source that loads Bronze), --apply.
 """

@@ -31,4 +31,5 @@ gold: []                              # WDI in Gold: shared models (warehouse/wa
 legacy_tables: [bronze.wdi_data, bronze.wdi_country, bronze.wdi_series, bronze.wdi_country_series,
                 bronze.wdi_footnote, bronze.wdi_series_time, gold.*wdi*]
 
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

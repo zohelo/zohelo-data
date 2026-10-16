@@ -6,8 +6,9 @@ versions live only in the Landing Archive. Bronze loaders append each new Landin
 are no longer the latest version of their entity.
 
 Latest is decided from the Landing receipts (``r2.landing_objects``, which include files
-already moved to the Archive): per (area, entity), every file of the highest version is kept
-(a version may come in several parts, e.g. BDL ``__part-NNN``). Files a table holds but the
+already moved to the Archive): per (area, entity), the files of the newest download are kept.
+Only sources declaring ``bronze_latest_only: true`` are pruned after their loads; GUS BDL is
+not declared until a partly landed version (``__part-NNN``) can be told from a complete one. Files a table holds but the
 receipts do not know are kept and reported, never deleted. A file whose bytes are the latest
 of another entity is kept too (identical bytes can sit under several entities).
 """
@@ -27,15 +28,19 @@ CHUNK = 300  # raw SHA-256 values per delete commit
 
 
 def keep_digests(meta: dict[str, dict[str, Any]]) -> set[str]:
-    """SHA-256 of every file of the highest version of each (area, entity)."""
+    """SHA-256 of every file of the newest download of each (area, entity) in the snapshot layout.
+
+    Newest = latest ingest stamp (YYYYMMDDTHHMMSSZ, sortable). Version tokens are not compared:
+    their shapes differ between sources and even within one (Last-Modified vs download time,
+    "noversion", sanitized hashes). Files of one ingest (parts) are all kept."""
     best: dict[tuple[str, str], tuple[str, set[str]]] = {}
     for digest, item in meta.items():
         for path in item.get("snapshot_paths", []):
             key = (path["area"], path["entity"])
             held = best.get(key)
-            if held is None or path["version"] > held[0]:
-                best[key] = (path["version"], {digest})
-            elif path["version"] == held[0]:
+            if held is None or path["ingested"] > held[0]:
+                best[key] = (path["ingested"], {digest})
+            elif path["ingested"] == held[0]:
                 held[1].add(digest)
     return set().union(*(digests for _, digests in best.values())) if best else set()
 
@@ -57,7 +62,10 @@ def superseded_rows(table, hashes: set[str]) -> int:
 def prune(source: str, apply: bool) -> dict[str, Any]:
     """Per Bronze table of the source: files held, superseded, unknown; with apply, delete the superseded rows."""
     meta = landing_objects(s3(), req("R2_LANDING_BUCKET"), source)
-    known, keep = set(meta), keep_digests(meta)
+    # Only snapshot-layout files can be superseded; content-addressed files of the earlier layout
+    # have no entity or version, so they are kept and reported.
+    known = {d for d, item in meta.items() if item.get("snapshot_paths")}
+    keep = keep_digests(meta)
     cat = catalog()
     report: dict[str, Any] = {}
     for table_id in SOURCE_TABLES[source][0]:
@@ -70,7 +78,7 @@ def prune(source: str, apply: bool) -> dict[str, Any]:
                 "files": len(held),
                 "superseded": len(old),
                 "superseded_rows_in_named_files": superseded_rows(table, set(old)),
-                "unknown_kept": len(held - known),
+                "unknown_kept": len(held - known),  # not in the receipts, or earlier content-addressed layout
             }
             if apply and old:
                 for start in range(0, len(old), CHUNK):
