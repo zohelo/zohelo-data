@@ -6,7 +6,7 @@ backfills only, owner policy #822; a full build leaves them unchanged), warehous
 plans its batch first (passed as dbt vars) and records it after the model ran. A run that
 selects only the Eurostat Silver models repeats batches while Silver is incomplete and the
 time budget allows (LOOP_MINUTES). A build whose only failures are the catalog's rate
-limit (HTTP 429) is resumed with `dbt retry` after declared waits (RATE_LIMIT_WAITS).
+limit (HTTP 429) is resumed with `dbt retry` after declared waits, with fewer threads.
 Target prod writes to the silver/gold namespaces; results (models, tests, failures) are
 published per build as an annotation (GitHub keeps the first 10 per step) and in the step
 summary (all builds).
@@ -30,9 +30,9 @@ SETTINGS = eurostat_batch.SETTINGS  # warehouse/warehouse.yaml "eurostat_silver"
 ROW_BUDGET = int(SETTINGS["row_budget"])
 LOOP_MINUTES = float(SETTINGS["loop_minutes"])
 LOOP_BUILDS = int(SETTINGS["loop_builds"])
-RATE_LIMIT_WAITS = [
-    float(s) for s in yaml.safe_load((PROJECT / "warehouse.yaml").read_text())["rate_limit_retry_waits"]
-]
+_RETRY = yaml.safe_load((PROJECT / "warehouse.yaml").read_text())
+RATE_LIMIT_WAITS = [float(s) for s in _RETRY["rate_limit_retry_waits"]]
+RATE_LIMIT_THREADS = int(_RETRY["rate_limit_retry_threads"])
 EUROSTAT_ONLY = {"eurostat_dataset_versions", "eurostat_observations"}
 
 
@@ -141,9 +141,10 @@ def build_once(selectors: list[str], target: str, variables: dict | None) -> tup
             break
         time.sleep(wait)
         retry = ["dbt", "retry", "--target", target, "--project-dir", str(PROJECT), "--profiles-dir", str(PROJECT)]
-        returncode, retried, tail = _dbt(retry)
+        returncode, retried, tail = _dbt([*retry, "--threads", str(RATE_LIMIT_THREADS)])
         retries.append({"after_seconds": wait, "nodes": len(retried), "exit_code": returncode})
         if not retried:
+            retries[-1]["output_tail"] = tail[-600:]  # why it wrote no results (job logs are unreadable)
             break
         latest.update({r["unique_id"]: r for r in retried})
     results = list(latest.values())

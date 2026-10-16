@@ -17,7 +17,9 @@ warehouse.yaml                    activities the Pipeline may run
 Proven on 12 October 2026: dbt-duckdb reads Bronze and writes Iceberg tables to the R2
 catalog (readable by DuckDB and R2 SQL). Iceberg tables cannot be renamed in the
 transaction that created them, so the profile commits each statement separately; a
-table rebuild is therefore not atomic.
+table rebuild is therefore not atomic. When the catalog's rate limit (HTTP 429) fails a
+build, `build.py` resumes it with `dbt retry` on fewer threads (`warehouse.yaml`
+`rate_limit_retry_*`), which also replaces tables a failed rename left as `__dbt_backup`.
 
 Target `trial` writes every model to the scratch namespace `zz_dbt_trial`. Sources not
 yet modelled (GUS DBW, dane.gov.pl, GLEIF, MF Biała Lista) are still published by
