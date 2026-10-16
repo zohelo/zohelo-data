@@ -43,7 +43,7 @@ REST = "https://api.github.com"
 LAYERS = ("bronze", "silver", "gold")
 STAGES = ("landing", "bronze", "silver", "gold", "semantic", "catalog", "portal")
 TEMP = re.compile(r"__dbt_(tmp|backup)$")
-RUN_PAGES = 10  # up to 1,000 finished Pipeline runs (GitHub returns only the runs it still keeps)
+RUN_PAGES = 10  # up to 1,000 finished Pipeline runs, newest first
 CATALOG_KEY = "_portal_catalog/v1/catalog.json"
 
 
@@ -113,10 +113,10 @@ def runs(token: str, repo: str) -> list[dict[str, Any]]:
     return out
 
 
-def run_mark(run: dict[str, Any] | None) -> str:
+def run_mark(run: dict[str, Any] | None, since: str = "") -> str:
     """✅ / 🔴 / ⚪ and the date of a finished run."""
     if not run:
-        return "no run on record (GitHub keeps only recent runs)"
+        return f"no Pipeline run since {since}" if since else "no Pipeline run on record"
     icon = {"success": "✅", "cancelled": "⚪", "skipped": "⚪"}.get(run["conclusion"], "🔴")
     return f"{icon} [{run['conclusion']} {run['created_at'][8:10]}.{run['created_at'][5:7]}]({run['html_url']})"
 
@@ -209,6 +209,8 @@ def main(argv=None) -> int:
     open_issues = issues(token, repo) if token else []
     finished = runs(token, repo) if token else []
 
+    history_start = f"{finished[-1]['created_at'][8:10]}.{finished[-1]['created_at'][5:7]}" if finished else ""
+
     def tagged(source: str, stage: str) -> list[dict[str, Any]]:
         return [
             i for i in open_issues if {f"source:{source}", f"layer:{stage}"} <= {label["name"] for label in i["labels"]}
@@ -249,7 +251,7 @@ def main(argv=None) -> int:
             cells["landing"] = f"⏸ paused, old code · {land['objects']:,} objects · new content {day(latest)}{history}"
         else:
             how = "scheduled" if schedule else "manual only"
-            last = run_mark(newest(f"Pipeline · {source} · "))
+            last = run_mark(newest(f"Pipeline · {source} · "), history_start)
             cells["landing"] = (
                 f"{how} · last run {last} · {land['objects']:,} objects · new content {day(latest)}{history}"
             )
