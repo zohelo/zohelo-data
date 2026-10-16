@@ -8,13 +8,13 @@ explicit flag (`--apply`, `--delete`); without it they only report.
 Not for experiments, trials or one-off fixes: those are `dev/` scripts on a feature
 branch, run with **Dev · branch runs** and deleted before the merge. Recurring table
 maintenance (compaction, snapshot expiration) is an R2 Data Catalog setting, not a
-script.
+script (`catalog_maintenance --apply` sets it to the data policy).
 
 | Script | Purpose | Writes |
 |---|---|---|
 | `platform_inventory` | Per source: Landing / Archive files, GB and latest write; Bronze / Silver / Gold tables, rows, files, GB (from the snapshot summary, or the manifests when a writer left the totals out); total snapshots. Storage per bucket and folder with a monthly cost estimate (R2 Standard beyond the 10 GB free tier; warning above $2); tables and Landing folders no source claims; registered tables that do not exist. Doubles as the connectivity check. Args: `--source <id> …` | nothing |
 | `landing_objects` | What is stored in Landing: per prefix (ending in `/`) object count, MB, key groups and a sample; with `--peek` the first bytes (gzip decoded) and most frequent XML tags of up to `--limit` objects; a key peeks that object. Use when a source changes format or Bronze rejects files. Args: `PREFIX_OR_KEY … [--peek] [--limit 3]` | nothing |
-| `catalog_maintenance` | R2 Data Catalog settings: compaction and snapshot expiration on, with their values. | nothing |
+| `catalog_maintenance` | R2 Data Catalog settings: compaction and snapshot expiration, with their values. `--apply` sets snapshot expiration to the data policy (#822): keep 1 snapshot, expire older ones after 1 h (the catalog's hourly maintenance does the expiring); fails if the catalog reports other values afterwards. | with `--apply`: the catalog's snapshot-expiration setting |
 | `repo_check` | The [auto] rules of `docs/quality.md`: root allowlist, no `dev/`, the four workflows with SHA-pinned actions, file size/type, compile, ruff check and format, yamllint, sqlfluff on the dbt models (pinned version installed on demand), configuration and schedules. Run by the `check` job on every pull request (no credentials); run it locally before pushing: `python -m ops.repo_check`. | nothing |
 | `runner_resources` | Run by the activity action (`.github/actions/activity`, not by ops.yml): `sample` records free disk and memory every 30 s in the background and publishes live annotations while the activity runs (a notice every 25 min for the first 100 min, a warning when free memory or disk first falls below a threshold), which survive a runner that is shut down as a whole; `report`, only when the activity failed or was cancelled, annotates the lowest values, the last ten minutes and the kernel's out-of-memory lines (runs killed from outside, exit 143/137, leave no annotation of their own). | nothing |
 | `notify_failure` | Run by the Pipeline workflow's `notify` job (not by ops.yml), on a failed or cancelled run: opens an `alert` issue "Pipeline failed: <source> · <run>" with the run link, or comments on the open one; closing the issue re-arms it. | GitHub issues |
