@@ -27,4 +27,5 @@ silver: [silver.eurostat_observations, silver.eurostat_dataset_versions, silver.
 gold: []                              # Eurostat in Gold: shared models in warehouse/warehouse.yaml
 
 # Activities the Pipeline may run (owner authorization).
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

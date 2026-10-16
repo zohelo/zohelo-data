@@ -25,4 +25,5 @@ gold: []                              # gold.dim_geography (warehouse/warehouse.
 legacy_tables: [bronze.teryt_terc, bronze.teryt_simc, bronze.teryt_ulic, silver.teryt_ulic,
                 gold.dim_territory, gold.dim_locality, gold.dim_street]
 
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

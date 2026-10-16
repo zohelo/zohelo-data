@@ -26,4 +26,5 @@ gold: []                              # fact_fx_rate, fact_gold_price, dim_curre
 legacy_tables: [bronze.nbp_exchange_rates_table_*, bronze.nbp_gold_prices, silver.nbp_exchange_rates*,
                 silver.nbp_gold_prices, gold.fact_fx_quotes, gold.fact_gold_prices]
 
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

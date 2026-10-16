@@ -122,6 +122,7 @@ def load_config() -> dict:
 
 
 SOURCE_KEYS = {
+    "bronze_latest_only",
     "source_system",
     "description",
     "extraction",
@@ -205,7 +206,21 @@ def implemented(source: str) -> dict:
                 raise
             continue
         code.update(module.ACTIVITIES)
+    declared = (yaml.safe_load((SOURCES / f"{source}.yaml").read_text()) or {}).get("bronze_latest_only")
+    if "bronze.load" in code and declared:  # latest version only (#845): a load replaces superseded versions
+        code["bronze.load"] = lambda p, load=code["bronze.load"]: _load_latest_only(source, load, p)
     return code
+
+
+def _load_latest_only(source: str, load, p) -> int:
+    """Run the source's Bronze load, then remove superseded versions from its Bronze tables."""
+    status = load(p)
+    if status == 0:
+        from ingestion.common.latest import prune
+        from ingestion.common.report import annotate
+
+        annotate("notice", f"{source} Bronze latest only", prune(source, apply=True))
+    return status
 
 
 def authorized(config: dict, source: str) -> list[str]:
