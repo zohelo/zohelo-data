@@ -111,6 +111,23 @@ def _compacted(table, path: str, dataset_id: str, size: int) -> list[dict]:
     ]
 
 
+def _merge_versions(rows: list[dict]) -> list[dict]:
+    """One index row per (dataset_id, raw_sha256): compaction can split one Landing file over
+    several data files, and the row budget and OVERSIZED_ROWS guard need its total rows."""
+    merged: dict[tuple[str, str], dict] = {}
+    for r in rows:
+        key = (r["dataset_id"], r["raw_sha256"])
+        if key not in merged:
+            merged[key] = dict(r)
+            continue
+        m = merged[key]
+        m["record_count"] += r["record_count"]
+        m["file_size_bytes"] += r["file_size_bytes"]
+        if r["ingested_at"] is not None and (m["ingested_at"] is None or r["ingested_at"] > m["ingested_at"]):
+            m["ingested_at"] = r["ingested_at"]
+    return list(merged.values())
+
+
 def prepare(namespace: str, row_budget: int) -> dict:
     cat = catalog()
     dropped_legacy = _drop_legacy(cat, namespace)
@@ -139,6 +156,7 @@ def prepare(namespace: str, row_budget: int) -> dict:
                 "file_size_bytes": size,
             }
         )
+    rows = _merge_versions(rows)
     newest: dict[str, tuple] = {}
     for r in rows:
         key = (r["ingested_at"] or datetime.min.replace(tzinfo=UTC), r["raw_sha256"])
