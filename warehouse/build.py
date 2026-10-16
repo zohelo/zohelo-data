@@ -5,9 +5,11 @@ builds everything. When a run names the Eurostat Silver models explicitly (one-o
 backfills only, owner policy #822; a full build leaves them unchanged), warehouse/eurostat_batch.py
 plans its batch first (passed as dbt vars) and records it after the model ran. A run that
 selects only the Eurostat Silver models repeats batches while Silver is incomplete and the
-time budget allows (LOOP_MINUTES). Target prod writes to the silver/gold namespaces;
-results (models, tests, failures) are published per build as an annotation (GitHub keeps
-the first 10 per step) and in the step summary (all builds).
+time budget allows (LOOP_MINUTES). A build whose only failures are the catalog's rate
+limit (HTTP 429) is resumed with `dbt retry` after declared waits (RATE_LIMIT_WAITS).
+Target prod writes to the silver/gold namespaces; results (models, tests, failures) are
+published per build as an annotation (GitHub keeps the first 10 per step) and in the step
+summary (all builds).
 """
 
 from __future__ import annotations
@@ -18,6 +20,8 @@ from pathlib import Path
 import subprocess
 import time
 
+import yaml
+
 from ingestion.common.report import ANNOTATION_LIMIT, annotate, step_summary
 from warehouse import eurostat_batch
 
@@ -26,6 +30,9 @@ SETTINGS = eurostat_batch.SETTINGS  # warehouse/warehouse.yaml "eurostat_silver"
 ROW_BUDGET = int(SETTINGS["row_budget"])
 LOOP_MINUTES = float(SETTINGS["loop_minutes"])
 LOOP_BUILDS = int(SETTINGS["loop_builds"])
+RATE_LIMIT_WAITS = [
+    float(s) for s in yaml.safe_load((PROJECT / "warehouse.yaml").read_text())["rate_limit_retry_waits"]
+]
 EUROSTAT_ONLY = {"eurostat_dataset_versions", "eurostat_observations"}
 
 
@@ -87,6 +94,30 @@ def _for_annotation(summary: dict, shown: int = MAX_FAILURES_SHOWN) -> dict:
         listed = listed[:-1]
 
 
+RESULTS = PROJECT / "target" / "run_results.json"
+
+
+def _dbt(command: list[str]) -> tuple[int, list[dict], str]:
+    """Run one dbt command; returns its exit code, the results it wrote and its output tail.
+    `dbt retry` reads the previous run_results.json, so only results newer than the start count."""
+    started = time.time()
+    completed = subprocess.run(command, cwd=PROJECT, env={**os.environ}, text=True, capture_output=True)
+    print(completed.stdout[-20000:], completed.stderr[-5000:], sep="\n", flush=True)
+    results = []
+    if RESULTS.exists() and RESULTS.stat().st_mtime >= started:
+        results = json.loads(RESULTS.read_text()).get("results", [])
+    return completed.returncode, results, completed.stdout[-1500:]
+
+
+FAILED = ("error", "fail", "runtime error")
+
+
+def _rate_limited_only(results: list[dict]) -> bool:
+    """True when the build failed and every failure is the catalog's HTTP 429 (rate limit)."""
+    failures = [r for r in results if r["status"] in FAILED]
+    return bool(failures) and all("HTTP 429" in str(r.get("message")) for r in failures)
+
+
 def build_once(selectors: list[str], target: str, variables: dict | None) -> tuple[int, int]:
     """One dbt build; returns (exit code, Eurostat versions still to load after it)."""
     command = ["dbt", "build", "--target", target, "--project-dir", str(PROJECT), "--profiles-dir", str(PROJECT)]
@@ -100,22 +131,34 @@ def build_once(selectors: list[str], target: str, variables: dict | None) -> tup
         variables.update(plan["vars"])
     if variables:
         command += ["--vars", json.dumps(variables)]
-    completed = subprocess.run(command, cwd=PROJECT, env={**os.environ}, text=True, capture_output=True)
-    print(completed.stdout[-20000:], completed.stderr[-5000:], sep="\n", flush=True)
-    results_path = PROJECT / "target" / "run_results.json"
-    results = []
-    if results_path.exists():
-        results = json.loads(results_path.read_text()).get("results", [])
+    returncode, results, tail = _dbt(command)
+    # `dbt retry` re-runs the failed and skipped nodes of the previous invocation with its
+    # arguments and writes results for those nodes only; they replace the earlier ones.
+    latest = {r["unique_id"]: r for r in results}
+    retries = []
+    for wait in RATE_LIMIT_WAITS:
+        if returncode == 0 or not _rate_limited_only(list(latest.values())):
+            break
+        time.sleep(wait)
+        retry = ["dbt", "retry", "--target", target, "--project-dir", str(PROJECT), "--profiles-dir", str(PROJECT)]
+        returncode, retried, tail = _dbt(retry)
+        retries.append({"after_seconds": wait, "nodes": len(retried), "exit_code": returncode})
+        if not retried:
+            break
+        latest.update({r["unique_id"]: r for r in retried})
+    results = list(latest.values())
     summary = {
         "target": target,
         "select": selectors,
-        "exit_code": completed.returncode,
+        "exit_code": returncode,
         "by_status": {},
         "failures": [],
     }
+    if retries:
+        summary["rate_limit_retries"] = retries
     for r in results:
         summary["by_status"][r["status"]] = summary["by_status"].get(r["status"], 0) + 1
-        if r["status"] in ("error", "fail", "runtime error"):
+        if r["status"] in FAILED:
             summary["failures"].append({"node": r["unique_id"], "message": str(r.get("message"))})
     if plan is not None:
         summary["eurostat_batch"] = plan["summary"]
@@ -123,11 +166,11 @@ def build_once(selectors: list[str], target: str, variables: dict | None) -> tup
             eurostat_batch.finish(namespace, plan)
             summary["eurostat_batch"]["recorded"] = True
     if not results:
-        summary["output_tail"] = completed.stdout[-1500:]
-    if completed.returncode == 0 and target == "prod":
+        summary["output_tail"] = tail
+    if returncode == 0 and target == "prod":
         from warehouse import catalog
 
         summary["catalog"] = catalog.publish()
-    annotate("notice" if completed.returncode == 0 else "error", "warehouse dbt build", _for_annotation(summary))
+    annotate("notice" if returncode == 0 else "error", "warehouse dbt build", _for_annotation(summary))
     step_summary(f"## warehouse · dbt build\n\n```json\n{json.dumps(summary, indent=2)}\n```\n")
-    return completed.returncode, (plan["summary"]["remaining_after_batch"] if plan else 0)
+    return returncode, (plan["summary"]["remaining_after_batch"] if plan else 0)
