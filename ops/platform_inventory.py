@@ -21,6 +21,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from pyiceberg.manifest import DataFileContent
 import yaml
 
 from ingestion.common.r2 import catalog, req, s3, sources
@@ -48,6 +49,17 @@ def folders(client, bucket: str, prefix: str, depth: int) -> dict[str, dict[str,
     return dict(out)
 
 
+def manifest_totals(table, snapshot) -> tuple[int, int]:
+    """Data files and bytes of all live files (data and delete, like total-files-size) of a
+    snapshot, read from its manifests (no data scan; a snapshot without manifests gives 0, 0)."""
+    files = size = 0
+    for manifest in snapshot.manifests(table.io):
+        for entry in manifest.fetch_manifest_entry(table.io):
+            size += entry.data_file.file_size_in_bytes
+            files += entry.data_file.content == DataFileContent.DATA
+    return files, size
+
+
 def tables(cat) -> dict[str, dict[str, Any]]:
     out = {}
     for layer in LAYERS:
@@ -56,15 +68,13 @@ def tables(cat) -> dict[str, dict[str, Any]]:
             table = cat.load_table(identifier)
             snapshot = table.current_snapshot()
             summary = snapshot.summary if snapshot is not None and snapshot.summary is not None else {}
-            size = int(summary.get("total-files-size") or 0)
+            files, size = int(summary.get("total-data-files") or 0), int(summary.get("total-files-size") or 0)
             if not size and snapshot is not None:
-                # Some writers (dbt-built tables) leave total-files-size out of the summary:
-                # sum the data files of the current snapshot (manifest read, no data scan).
-                sizes = table.inspect.data_files().column("file_size_in_bytes")
-                size = int(sum(sizes.to_pylist()))
+                # Some writers (dbt-built tables) leave the totals out of the summary.
+                files, size = manifest_totals(table, snapshot)
             out[name] = {
                 "rows": int(summary.get("total-records") or 0),
-                "files": int(summary.get("total-data-files") or 0),
+                "files": files,
                 "bytes": size,
                 "snapshots": len(table.metadata.snapshots),
             }
