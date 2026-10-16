@@ -20,7 +20,7 @@ from typing import Any
 
 import pyarrow as pa
 from pyiceberg.exceptions import NoSuchTableError
-from pyiceberg.expressions import In
+from pyiceberg.expressions import And, EqualTo, In
 
 from ingestion.common.bronze_files import SOURCE_TABLES, loaded_hashes, retry
 from ingestion.common.r2 import catalog, landing_objects, req, s3
@@ -92,6 +92,48 @@ def superseded_rows(table, hashes: set[str]) -> int:
     return total
 
 
+def partition_groups(table, hashes: list[str]) -> list[tuple[dict[str, Any], list[str]]]:
+    """Superseded hashes grouped by the identity-partition values of the files named after them.
+
+    A delete scoped to one partition reads and rewrites only that partition's files: an unscoped
+    delete of hundreds of hashes made pyiceberg read compacted files across the whole table and
+    the runner was killed (Eurostat, 16 Oct). Hashes found only in compacted files form one group
+    without partition values."""
+    spec, schema = table.spec(), table.schema()
+    columns = {f.name: schema.find_field(f.source_id).name for f in spec.fields if str(f.transform) == "identity"}
+    wanted, where = set(hashes), {}
+    files = table.inspect.data_files()
+    for path, partition in zip(
+        files.column("file_path").to_pylist(), files.column("partition").to_pylist(), strict=True
+    ):
+        stem = path.rsplit("/", 1)[-1].split(".", 1)[0]
+        if stem in wanted:
+            where[stem] = tuple(sorted((columns[k], v) for k, v in (partition or {}).items() if k in columns))
+    groups: dict[tuple, list[str]] = {}
+    for digest in hashes:
+        groups.setdefault(where.get(digest, ()), []).append(digest)
+    return [(dict(key), sorted(group)) for key, group in groups.items()]
+
+
+def remove(cat, table_id: tuple[str, str], table, hashes: list[str]) -> int:
+    """Delete the rows of these Landing files, one partition at a time, in chunks; returns the count removed.
+
+    Hashes whose partition is unknown (only in compacted files) are skipped: an unscoped delete
+    of a partitioned table reads it whole. They stay listed as superseded for a later run."""
+    removed = 0
+    partitioned = bool(table.spec().fields)
+    for values, group in partition_groups(table, hashes):
+        if partitioned and not values:
+            continue
+        removed += len(group)
+        for start in range(0, len(group), CHUNK):
+            condition = In("raw_sha256", group[start : start + CHUNK])
+            for column, value in values.items():
+                condition = And(EqualTo(column, value), condition)
+            retry(lambda condition=condition: cat.load_table(table_id).delete(condition), f"prune {'.'.join(table_id)}")
+    return removed
+
+
 def prune(source: str, apply: bool) -> dict[str, Any]:
     """Per Bronze table of the source: files held, superseded, unknown; with apply, delete the superseded rows."""
     if source == "gus_bdl":
@@ -116,13 +158,7 @@ def prune(source: str, apply: bool) -> dict[str, Any]:
                 "unknown_kept": len(held - known),  # not in the receipts, or earlier content-addressed layout
             }
             if apply and old:
-                for start in range(0, len(old), CHUNK):
-                    chunk = old[start : start + CHUNK]
-                    retry(
-                        lambda table_id=table_id, chunk=chunk: cat.load_table(table_id).delete(In("raw_sha256", chunk)),
-                        f"prune {name}",
-                    )
-                entry["removed"] = len(old)
+                entry["removed"] = remove(cat, table_id, table, old)
             report[name] = entry
     return report
 
@@ -141,8 +177,5 @@ def prune_bdl(apply: bool) -> dict[str, Any]:
         "unknown_kept": 0,
     }
     if apply and old:
-        for start in range(0, len(old), CHUNK):
-            chunk = old[start : start + CHUNK]
-            retry(lambda chunk=chunk: cat.load_table(BDL_TABLE).delete(In("raw_sha256", chunk)), "prune bdl")
-        entry["removed"] = len(old)
+        entry["removed"] = remove(cat, BDL_TABLE, table, old)
     return {".".join(BDL_TABLE): entry}
