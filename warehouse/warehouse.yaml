@@ -11,6 +11,7 @@ schedule:
 # Catalog rate limit: a build whose only failures are HTTP 429 from the R2 Data Catalog is
 # resumed with `dbt retry` (its failed and skipped nodes) after each of these waits, in seconds.
 rate_limit_retry_waits: [60, 180, 420]
+rate_limit_retry_threads: 2     # fewer parallel catalog calls than the build's 4
 
 # Shared Gold built by the dbt project (conformed dimensions and facts across sources).
 gold: [gold.dim_date, gold.dim_period, gold.dim_currency, gold.dim_geography, gold.dim_indicator,
