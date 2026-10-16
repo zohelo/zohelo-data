@@ -43,7 +43,7 @@ REST = "https://api.github.com"
 LAYERS = ("bronze", "silver", "gold")
 STAGES = ("landing", "bronze", "silver", "gold", "semantic", "catalog", "portal")
 TEMP = re.compile(r"__dbt_(tmp|backup)$")
-RUN_PAGES = 10  # newest 1,000 finished Pipeline runs (~2 weeks at today's scheduler cadence)
+RUN_PAGES = 10  # up to 1,000 finished Pipeline runs (GitHub returns only the runs it still keeps)
 CATALOG_KEY = "_portal_catalog/v1/catalog.json"
 
 
@@ -116,7 +116,7 @@ def runs(token: str, repo: str) -> list[dict[str, Any]]:
 def run_mark(run: dict[str, Any] | None) -> str:
     """✅ / 🔴 / ⚪ and the date of a finished run."""
     if not run:
-        return "no run in the last ~2 weeks"
+        return "no run on record (GitHub keeps only recent runs)"
     icon = {"success": "✅", "cancelled": "⚪", "skipped": "⚪"}.get(run["conclusion"], "🔴")
     return f"{icon} [{run['conclusion']} {run['created_at'][8:10]}.{run['created_at'][5:7]}]({run['html_url']})"
 
