@@ -18,7 +18,7 @@ from pathlib import Path
 import subprocess
 import time
 
-from ingestion.common.report import annotate, step_summary
+from ingestion.common.report import ANNOTATION_LIMIT, annotate, step_summary
 from warehouse import eurostat_batch
 
 PROJECT = Path(__file__).resolve().parent
@@ -54,10 +54,37 @@ def _main(select: str, target: str, variables: dict | None) -> int:
     return code
 
 
+MAX_FAILURES_SHOWN = 8
+ANNOTATION_FIT = ANNOTATION_LIMIT - 100  # room for the title
+
+
 def _short(message: str, head: int = 200, tail: int = 600) -> str:
     """A failure message cut to fit an annotation, keeping its end: errors such as Iceberg
     commit failures put a long catalog URL first and the HTTP status and reason last."""
     return message if len(message) <= head + tail else f"{message[:head]} ... {message[-tail:]}"
+
+
+def _for_annotation(summary: dict, shown: int = MAX_FAILURES_SHOWN) -> dict:
+    """The summary fitted to one annotation: failures go last, at most `shown` of them (fewer
+    if escaping makes them too long) with a count of the rest, their messages sharing 2,400
+    characters, so the batch and catalog results are never cut off. The step summary keeps
+    every failure in full."""
+    failures = summary["failures"]
+    out = {k: v for k, v in summary.items() if k != "failures"}
+    budget = 2400 // max(1, min(len(failures), shown))
+    listed = [
+        {**f, "message": _short(f["message"], head=min(200, budget // 4), tail=max(1, min(600, budget * 3 // 4)))}
+        for f in failures[:shown]
+    ]
+    # JSON escaping (quotes, newlines, non-ASCII) can still push it over: drop failures from
+    # the end until the escaped text fits, counting them in failures_more.
+    while True:
+        if len(failures) > len(listed):
+            out["failures_more"] = len(failures) - len(listed)
+        out["failures"] = listed
+        if not listed or len(json.dumps(out, default=str, separators=(",", ":"))) <= ANNOTATION_FIT:
+            return out
+        listed = listed[:-1]
 
 
 def build_once(selectors: list[str], target: str, variables: dict | None) -> tuple[int, int]:
@@ -90,10 +117,6 @@ def build_once(selectors: list[str], target: str, variables: dict | None) -> tup
         summary["by_status"][r["status"]] = summary["by_status"].get(r["status"], 0) + 1
         if r["status"] in ("error", "fail", "runtime error"):
             summary["failures"].append({"node": r["unique_id"], "message": str(r.get("message"))})
-    # One annotation holds about 3,900 characters: the failures share 2,400 of them.
-    budget = 2400 // max(1, len(summary["failures"]))
-    for failure in summary["failures"]:
-        failure["message"] = _short(failure["message"], head=min(200, budget // 4), tail=min(600, budget * 3 // 4))
     if plan is not None:
         summary["eurostat_batch"] = plan["summary"]
         if any(r["unique_id"].endswith("." + eurostat_batch.MODEL) and r["status"] == "success" for r in results):
@@ -105,6 +128,6 @@ def build_once(selectors: list[str], target: str, variables: dict | None) -> tup
         from warehouse import catalog
 
         summary["catalog"] = catalog.publish()
-    annotate("notice" if completed.returncode == 0 else "error", "warehouse dbt build", summary)
+    annotate("notice" if completed.returncode == 0 else "error", "warehouse dbt build", _for_annotation(summary))
     step_summary(f"## warehouse · dbt build\n\n```json\n{json.dumps(summary, indent=2)}\n```\n")
     return completed.returncode, (plan["summary"]["remaining_after_batch"] if plan else 0)
