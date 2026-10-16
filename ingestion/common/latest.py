@@ -72,7 +72,8 @@ def keep_bdl(table) -> tuple[set[str], set[str]]:
         if version != newest_version[subgroup]:
             continue
         held = best.get((subgroup, part))
-        if held is None or (ingested, digest) > held:
+        # newest ingest; on a tie the smallest raw_sha256, exactly as Silver orders them
+        if held is None or ingested > held[0] or (ingested == held[0] and digest < held[1]):
             best[(subgroup, part)] = (ingested, digest)
     return set(files), {digest for _, digest in best.values()}
 
