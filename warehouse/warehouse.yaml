@@ -8,6 +8,10 @@ activities: [silver_gold.promote, silver_gold.build]
 schedule:
   - {cron: "30 7 * * *", run: "silver/gold: build models"}
 
+# Catalog rate limit: a build whose only failures are HTTP 429 from the R2 Data Catalog is
+# resumed with `dbt retry` (its failed and skipped nodes) after each of these waits, in seconds.
+rate_limit_retry_waits: [60, 180, 420]
+
 # Shared Gold built by the dbt project (conformed dimensions and facts across sources).
 gold: [gold.dim_date, gold.dim_period, gold.dim_currency, gold.dim_geography, gold.dim_indicator,
        gold.fact_observation, gold.fact_fx_rate, gold.fact_gold_price]
