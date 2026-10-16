@@ -56,10 +56,16 @@ def tables(cat) -> dict[str, dict[str, Any]]:
             table = cat.load_table(identifier)
             snapshot = table.current_snapshot()
             summary = snapshot.summary if snapshot is not None and snapshot.summary is not None else {}
+            size = int(summary.get("total-files-size") or 0)
+            if not size and snapshot is not None:
+                # Some writers (dbt-built tables) leave total-files-size out of the summary:
+                # sum the data files of the current snapshot (manifest read, no data scan).
+                sizes = table.inspect.data_files().column("file_size_in_bytes")
+                size = int(sum(sizes.to_pylist()))
             out[name] = {
                 "rows": int(summary.get("total-records") or 0),
                 "files": int(summary.get("total-data-files") or 0),
-                "bytes": int(summary.get("total-files-size") or 0),
+                "bytes": size,
                 "snapshots": len(table.metadata.snapshots),
             }
     return out
@@ -127,6 +133,7 @@ def main(argv=None) -> int:
         },
         "iceberg_tables": len(found),
         "iceberg_rows": sum(t["rows"] for t in found.values()),
+        "iceberg_snapshots": sum(t["snapshots"] for t in found.values()),
         "unclaimed_tables": unclaimed_tables[:30],
         "unclaimed_landing_folders": unclaimed_landing[:20],
         "legacy_tables": {"count": len(legacy_found), "gb": gb(sum(found[n]["bytes"] for n in legacy_found))},
