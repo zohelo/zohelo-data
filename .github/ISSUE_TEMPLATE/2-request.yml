@@ -1,0 +1,57 @@
+name: Request
+description: New data, a change, or an idea.
+title: "[Request] "
+labels: [ticket, enhancement]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: Write it in your own words, Polish or English. Claude triages every ticket in the next work session and answers here.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where
+      description: The part of the platform it is about. "Not sure" is fine.
+      options:
+        - Ingestion / Landing
+        - Bronze
+        - Silver
+        - Gold
+        - Semantic layer
+        - Data catalog
+        - Portal
+        - Platform / pipeline runs
+        - Storage / cost
+        - Backlog / planning / reporting
+        - Other / not sure
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source or table (optional)
+      description: For example NBP, Eurostat, gold.fact_fx_rate.
+  - type: textarea
+    id: what
+    attributes:
+      label: What you want
+      description: What should exist or change?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters
+      description: What it lets you or a user do.
+    validations:
+      required: false
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: How urgent
+      options:
+        - Blocks me
+        - Important, this week
+        - Whenever possible
+    validations:
+      required: true
