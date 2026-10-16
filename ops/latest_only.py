@@ -15,6 +15,7 @@ import argparse
 
 from ingestion.common.bronze_files import SOURCE_TABLES
 from ingestion.common.latest import prune
+from ingestion.common.r2 import sources
 from ingestion.common.report import annotate, step_summary
 
 
@@ -25,6 +26,10 @@ def main(argv=None) -> int:
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args(argv)
     selected = args.source or sorted(SOURCE_TABLES)
+    declared = {s for s, cfg in sources().items() if cfg.get("bronze_latest_only")}
+    if args.apply and set(selected) - declared:  # e.g. GUS BDL: partly landed versions (#845)
+        annotate("error", "latest only refused", {"not_declared": sorted(set(selected) - declared)})
+        return 1
     lines = [
         "## Latest version only (Bronze)",
         "",
