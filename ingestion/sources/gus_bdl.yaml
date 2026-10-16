@@ -30,4 +30,5 @@ legacy_tables: [bronze.bdl_observations, bronze.bdl_variables, bronze.bdl_subjec
                 silver.bdl_observation_revisions, silver.bdl_subjects, gold.dim_bdl_*, gold.fact_bdl_observations,
                 gold.mart_bdl_coverage]
 
+bronze_latest_only: true   # policy #822/#845 (Silver rule, ingestion/common/latest.keep_bdl)
 activities: [landing.inspect, landing.extract, bronze.load, bronze.verify]   # landing.extract = API metadata (variables, units); website extraction and API data refresh follow
