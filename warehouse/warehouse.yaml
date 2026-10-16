@@ -1,7 +1,7 @@
 # Warehouse activities the Pipeline may run (source "platform"); owner authorization.
 #   silver_gold.promote   Bronze → Silver → Gold pass-through (passthrough/), until the SQL project
 #   silver_gold.build     dbt build of the SQL project (models/), optional --select from the run filter
-activities: [silver_gold.promote, silver_gold.build]
+activities: [silver_gold.build]   # silver_gold.promote retired 16 Oct (#835); code kept until the new solution replaces it
 # Declared schedules (UTC), dispatched by run.py schedule: models daily after the source
 # loads. Eurostat Silver catch-up is not scheduled (owner policy #822): it runs only as an
 # announced one-off backfill, a manual run with filter "eurostat_dataset_versions eurostat_observations".

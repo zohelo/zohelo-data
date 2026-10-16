@@ -8,8 +8,9 @@ extraction:
   schedule: null
 
 landing: 01_landing/gus_dbw/
-bronze: [bronze.dbw_observations, bronze.dbw_dictionaries, bronze.dbw_indicators, bronze.dbw_metadata]
-silver: [silver.dbw_dictionaries, silver.dbw_indicators, silver.dbw_metadata, silver.dbw_observations]
-gold: [gold.dim_dbw_dictionary, gold.dim_dbw_indicator, gold.dim_dbw_metadata, gold.fact_dbw_observations]
+bronze: []   # old-code copies retired 16 Oct (owner decision #835); rebuilt by the new solution
+silver: []
+gold: []
+legacy_tables: [bronze.dbw_observations, bronze.dbw_dictionaries, bronze.dbw_indicators, bronze.dbw_metadata, silver.dbw_dictionaries, silver.dbw_indicators, silver.dbw_metadata, silver.dbw_observations, gold.dim_dbw_dictionary, gold.dim_dbw_indicator, gold.dim_dbw_metadata, gold.fact_dbw_observations]
 
 activities: []   # paused; legacy code in ingestion/legacy/
