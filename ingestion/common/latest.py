@@ -116,14 +116,22 @@ def partition_groups(table, hashes: list[str]) -> list[tuple[dict[str, Any], lis
 
 
 def remove(cat, table_id: tuple[str, str], table, hashes: list[str]) -> int:
-    """Delete the rows of these Landing files, one partition at a time, in chunks."""
+    """Delete the rows of these Landing files, one partition at a time, in chunks; returns the count removed.
+
+    Hashes whose partition is unknown (only in compacted files) are skipped: an unscoped delete
+    of a partitioned table reads it whole. They stay listed as superseded for a later run."""
+    removed = 0
+    partitioned = bool(table.spec().fields)
     for values, group in partition_groups(table, hashes):
+        if partitioned and not values:
+            continue
+        removed += len(group)
         for start in range(0, len(group), CHUNK):
             condition = In("raw_sha256", group[start : start + CHUNK])
             for column, value in values.items():
                 condition = And(EqualTo(column, value), condition)
             retry(lambda condition=condition: cat.load_table(table_id).delete(condition), f"prune {'.'.join(table_id)}")
-    return len(hashes)
+    return removed
 
 
 def prune(source: str, apply: bool) -> dict[str, Any]:
