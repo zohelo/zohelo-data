@@ -18,7 +18,7 @@ from pathlib import Path
 import subprocess
 import time
 
-from ingestion.common.report import annotate, step_summary
+from ingestion.common.report import ANNOTATION_LIMIT, annotate, step_summary
 from warehouse import eurostat_batch
 
 PROJECT = Path(__file__).resolve().parent
@@ -55,6 +55,7 @@ def _main(select: str, target: str, variables: dict | None) -> int:
 
 
 MAX_FAILURES_SHOWN = 8
+ANNOTATION_FIT = ANNOTATION_LIMIT - 100  # room for the title
 
 
 def _short(message: str, head: int = 200, tail: int = 600) -> str:
@@ -64,19 +65,26 @@ def _short(message: str, head: int = 200, tail: int = 600) -> str:
 
 
 def _for_annotation(summary: dict, shown: int = MAX_FAILURES_SHOWN) -> dict:
-    """The summary fitted to one annotation (about 3,900 characters): failures go last, at most
-    `shown` of them with a count of the rest, their messages sharing 2,400 characters, so the
-    batch and catalog results are never cut off. The step summary keeps every failure in full."""
+    """The summary fitted to one annotation: failures go last, at most `shown` of them (fewer
+    if escaping makes them too long) with a count of the rest, their messages sharing 2,400
+    characters, so the batch and catalog results are never cut off. The step summary keeps
+    every failure in full."""
     failures = summary["failures"]
     out = {k: v for k, v in summary.items() if k != "failures"}
     budget = 2400 // max(1, min(len(failures), shown))
-    out["failures"] = [
+    listed = [
         {**f, "message": _short(f["message"], head=min(200, budget // 4), tail=max(1, min(600, budget * 3 // 4)))}
         for f in failures[:shown]
     ]
-    if len(failures) > shown:
-        out["failures_more"] = len(failures) - shown
-    return out
+    # JSON escaping (quotes, newlines, non-ASCII) can still push it over: drop failures from
+    # the end until the escaped text fits, counting them in failures_more.
+    while True:
+        if len(failures) > len(listed):
+            out["failures_more"] = len(failures) - len(listed)
+        out["failures"] = listed
+        if not listed or len(json.dumps(out, default=str, separators=(",", ":"))) <= ANNOTATION_FIT:
+            return out
+        listed = listed[:-1]
 
 
 def build_once(selectors: list[str], target: str, variables: dict | None) -> tuple[int, int]:
