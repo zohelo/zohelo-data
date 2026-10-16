@@ -24,6 +24,7 @@ import argparse
 from collections import defaultdict
 from datetime import UTC, datetime
 import fnmatch
+import json
 import os
 from pathlib import Path
 import re
@@ -195,10 +196,15 @@ def main(argv=None) -> int:
     archive = folders(client, landing_bucket, "05_archive/", 2)
     tables = table_facts(catalog())
     try:
-        catalog_text = get_with_backoff(client, lakehouse_bucket, CATALOG_KEY).decode()
+        catalog_doc = json.loads(get_with_backoff(client, lakehouse_bucket, CATALOG_KEY))
         catalog_written = client.head_object(Bucket=lakehouse_bucket, Key=CATALOG_KEY)["LastModified"]
+        catalog_tables: set[str] | None = {
+            t["table"].split(".", 1)[-1] if t["table"].count(".") > 1 else t["table"]
+            for t in catalog_doc.get("tables") or []
+            if isinstance(t, dict) and t.get("table")
+        }
     except Exception as exc:  # the page still renders; the catalog column says why
-        catalog_text, catalog_written = "", None
+        catalog_tables, catalog_written = None, None
         annotate("warning", "tracker: data catalog not readable", {"key": CATALOG_KEY, "error": str(exc)[:300]})
     open_issues = issues(token, repo) if token else []
     finished = runs(token, repo) if token else []
@@ -221,10 +227,11 @@ def main(argv=None) -> int:
         rows_ = sum(tables[n]["rows"] for n in present)
         written = max((tables[n]["written"] for n in present if tables[n]["written"]), default=None)
         icon = "✅" if present and len(present) == len(names) else ("⚠️" if present else "❌")
-        if label.startswith("🟨") and icon == "✅":  # complete, but written by old code
-            icon, label = "🟨", label[1:].lstrip()
+        if label.startswith("🟨"):  # written by old code: one icon, 🟨 when complete
+            label = label[1:].lstrip()
+            icon = "🟨" if icon == "✅" else icon
         missing = len(names) - len(present)
-        text = f"{icon} {label} · {len(present)}/{len(names)} tables · {number(rows_)} rows · {day(written)}"
+        text = f"{icon} {label} · {len(present)}/{len(names)} · {number(rows_)} rows · {day(written)}"
         return text + (f" · {missing} missing" if missing else "")
 
     rows = []
@@ -256,7 +263,7 @@ def main(argv=None) -> int:
 
         silver = list(config.get("silver") or [])
         if source in silver_models and silver:
-            cells["silver"] = measured(silver, f"modelled ({len(silver_models[source])} models)")
+            cells["silver"] = measured(silver, f"modelled ({len(silver_models[source])} dbt)")
         elif silver:
             cells["silver"] = measured(silver, "🟨 old-code copy, not modelled")
         else:
@@ -272,14 +279,16 @@ def main(argv=None) -> int:
 
         metrics = sorted({m for g in feeds.get(source, []) for m in semantic.get(g, [])})
         cells["semantic"] = ("✅ " + ", ".join(metrics)) if metrics else "⬜ none"
-        own = [*silver, *[f"gold.{m}" for m in feeds.get(source, [])]] if source in silver_models else []
-        # catalog.json names tables <schema>.<alias>; the schema may carry a prefix, so match the ending
-        listed = [n for n in own if f'"{n}"' in catalog_text or f'.{n.split(".")[1]}"' in catalog_text]
-        if own:
-            icon = "✅" if len(listed) == len(own) else ("⚠️" if listed else "❌")
-            cells["catalog"] = f"{icon} {len(listed)}/{len(own)} tables · {day(catalog_written)}"
-        else:
+        # dbt-built tables of the source: its Silver models and the shared Gold they feed
+        own = [f"silver.{m}" for m in silver_models.get(source, [])] + [f"gold.{m}" for m in feeds.get(source, [])]
+        if not own:
             cells["catalog"] = "⬜ not modelled"
+        elif catalog_tables is None:
+            cells["catalog"] = "❔ catalog file not readable"
+        else:
+            listed = [n for n in own if n in catalog_tables or n.split(".")[1] in catalog_tables]
+            icon = "✅" if len(listed) == len(own) else ("⚠️" if listed else "❌")
+            cells["catalog"] = f"{icon} {len(listed)}/{len(own)} · {day(catalog_written)}"
         cells["portal"] = "📁 raw files only" if land["objects"] else "⬜"
         for stage in STAGES:
             marks = issue_marks(tagged(source, stage))
