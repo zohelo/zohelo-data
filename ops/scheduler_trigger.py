@@ -17,6 +17,7 @@ Modes (one argument):
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -29,6 +30,22 @@ from ingestion.common.report import annotate
 
 CONFIG = Path(__file__).resolve().parent / "scheduler_worker" / "wrangler.toml"
 WRANGLER = ["npx", "--yes", "wrangler@4.146.0"]
+# wrangler and its unpinned npm dependencies see only what they need, never the job's
+# lakehouse or GitHub credentials (quality review 16 Oct).
+WRANGLER_ENV = (
+    "PATH",
+    "HOME",
+    "LANG",
+    "TMPDIR",
+    "RUNNER_TEMP",
+    "CI",
+    "HTTPS_PROXY",
+    "HTTP_PROXY",
+    "NO_PROXY",
+    "NODE_EXTRA_CA_CERTS",
+    "SSL_CERT_FILE",
+)
+WRANGLER_SECRETS = ("CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID")
 API = "https://api.cloudflare.com/client/v4/accounts/{account}/workers/scripts/{script}/{part}"
 
 
@@ -49,11 +66,21 @@ def cloudflare(method: str, part: str, body: list | None = None) -> tuple[int, d
     return response.status_code, {"result": payload.get("result"), "errors": payload.get("errors")}
 
 
+def wrangler_env() -> dict[str, str]:
+    """The environment for wrangler: the allowlist above plus the Cloudflare credentials."""
+    env = {name: os.environ[name] for name in WRANGLER_ENV if name in os.environ}
+    return env | {name: req(name) for name in WRANGLER_SECRETS}
+
+
 def deploy() -> list[str]:
     """Deploy code, variables and Cron Triggers with wrangler; the dashboard-set secret is kept."""
     try:
         result = subprocess.run(
-            [*WRANGLER, "deploy", "--config", str(CONFIG)], capture_output=True, text=True, timeout=600
+            [*WRANGLER, "deploy", "--config", str(CONFIG)],
+            capture_output=True,
+            text=True,
+            timeout=600,
+            env=wrangler_env(),
         )
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError("wrangler deploy timed out after 10 minutes") from exc
