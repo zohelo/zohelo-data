@@ -83,15 +83,16 @@ def main(argv=None) -> int:
         try:  # purge asks the catalog to delete the data files too; not every catalog honours it
             retry(lambda layer=layer, table=table: cat.purge_table((layer, table)), f"purge {name}")
         except Exception as exc:
-            if "NoSuchTable" in type(exc).__name__:
-                raise
+            if "NoSuchTable" in type(exc).__name__:  # a retried purge whose first attempt succeeded
+                dropped.append(name)
+                continue
             if not refused:  # one warning; annotations per step are limited
                 annotate("warning", "purge refused, dropping instead", {"table": name, "error": str(exc)[:300]})
             refused += 1
             retry(lambda layer=layer, table=table: cat.drop_table((layer, table)), f"drop {name}")
         dropped.append(name)
     report("retired", dropped, found)
-    annotate("notice", "retire mode", {"purged": len(dropped) - refused, "dropped_only": refused})
+    annotate("notice", "retire mode", {"purge_requested": len(dropped) - refused, "dropped_only": refused})
     return 0
 
 
