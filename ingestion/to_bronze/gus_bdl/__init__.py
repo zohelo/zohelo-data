@@ -1,8 +1,7 @@
 """GUS BDL Landing → Bronze activities.
 
 bronze.load       load.py: batches of batch.py, decode.py per file → bronze.bdl_subgroup_observations
-bronze.verify     ingestion/common/lineage.py report_duplicates: Landing files a Bronze table holds
-                  twice (the Landing-to-Bronze membership check is not built for BDL yet)
+bronze.verify     ingestion/common/lineage.py --source gus_bdl (latest-only check and duplicate reporting)
 """
 
 from __future__ import annotations
@@ -17,8 +16,7 @@ def _load(p) -> int:
 def _verify(p) -> int:
     from ingestion.common import lineage
 
-    lineage.report_duplicates("gus_bdl")
-    return 0
+    return lineage.main(["--source", "gus_bdl"])
 
 
 ACTIVITIES = {"bronze.load": _load, "bronze.verify": _verify}

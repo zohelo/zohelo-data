@@ -110,11 +110,14 @@ Versioned code lists with correspondence bridges: NACE Rev. 2/2.1 ↔ PKD 2007/2
 ISIC 4/5; CPA ↔ PKWiU; COICOP 2018; ISCED 2011 / ISCED-F 2013; ISCO-08 (KZiS);
 HS/CN/SITC/BEC; ESA 2010 sectors; COFOG; ICD-10/11.
 
-## Decisions taken (14 October 2026, under the owner's mandate)
+## Decisions taken (14–16 October 2026, under the owner's mandate)
 
-1. **Revision history in Gold:** current values only (Gold = newest source version, with
-   `source_version` as an attribute); history stays in the Archive within its retention.
-   Vintages can be added later for selected indicators.
+1. **Latest version only across all layers (policy #822/#845, 16 October 2026):**
+   Bronze, Silver and Gold hold only the latest version of every source entity. A Bronze
+   load replaces the entity's previous version (superseded Landing files are pruned after each
+   load); Silver models select the latest version per entity (or clear superseded batches);
+   Gold fact and dimension tables are rebuilt from the deduplicated Silver tables. Superseded
+   versions live only in the Landing Archive within configured retention.
 2. **Local domain extensions beyond CSA:** only where CSA stops and a real source needs
    it (109.01 Media, 109.02 Sport); everything else maps to CSA codes.
 

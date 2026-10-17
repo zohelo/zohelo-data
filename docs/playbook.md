@@ -38,7 +38,7 @@ details live in [landing.md](landing.md), [architecture.md](architecture.md),
   comes from the `raw_sha256` column, never from the name alone); rejections go to `bronze.<source>_rejected_files` with the reason.
 - DuckDB-native decoding (no per-cell Python), bounded memory, tested on the largest
   real file before the full load.
-- `bronze.verify`: every newest Landing file is in Bronze or rejected with a reason.
+- `bronze.verify`: every newest Landing file is in Bronze or rejected with a reason, and no superseded versions remain in Bronze (one version per entity).
 
 ## 4. Archive and retention
 
