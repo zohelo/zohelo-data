@@ -20,8 +20,8 @@ whose YAML sets `extraction.kind` (for example `bulk_file`) runs the shared patt
 | `landing.inspect` | `ingestion/to_landing/<s>/` or `patterns/<kind>.py` | source catalogue vs Landing: missing / changed / current; no Landing writes |
 | `landing.extract` | `ingestion/to_landing/<s>/` or `patterns/<kind>.py` | download missing or changed entities with receipts; never overwrites |
 | `landing.verify` | `ingestion/to_landing/<s>/` or `patterns/<kind>.py` | Landing integrity and remaining gaps |
-| `bronze.load` | `ingestion/to_bronze/<s>/` | incremental Landing → Bronze; rejections recorded |
-| `bronze.verify` | `ingestion/common/lineage.py` | every Landing file is in Bronze or rejected with a reason; Landing files a Bronze table holds twice (warning). `gus_bdl`: the duplicate check only |
+| `bronze.load` | `ingestion/to_bronze/<s>/` | incremental Landing → Bronze; rejections recorded; prunes superseded versions after each load when `bronze_latest_only: true` |
+| `bronze.verify` | `ingestion/common/lineage.py` | every Landing file is in Bronze or rejected with a reason; verifies one version per entity in Bronze (fails on breach); Landing files a Bronze table holds twice (warning) |
 | `landing.archive` | `ingestion/common/archive.py` | move Bronze-loaded Landing files to Archive (copy, verify SHA-256, delete from Landing; receipt stays) |
 | `archive.prune` | `ingestion/common/retention.py` | apply the source's Archive retention (`archive_policy` in its config) |
 | `silver_gold.promote` | `warehouse/passthrough/` | platform: Bronze → Silver → Gold pass-through for sources not yet modelled |
@@ -73,6 +73,7 @@ Every source is declared in `ingestion/sources/<source>.yaml` with one key set, 
 | `landing` | Landing folder |
 | `archive_policy` | `move`, `retention` (`keep_latest`, `keep_days`), `prune` (`report`/`delete`), optional `without_bronze`; required when `bronze.load` is authorized |
 | `archive_folder` | Archive folder of a source not yet rebuilt (default `05_archive/<source>/`) |
+| `bronze_latest_only` | optional boolean; when `true`, a Bronze load removes superseded versions (policy #822/#845) |
 | `bronze`, `silver`, `gold` | tables the source owns in each layer; `*_rejected_files` tables record decoder rejections |
 | `legacy_tables` | tables of retired code still in the catalog (globs allowed), until deleted |
 | `activities` | the Pipeline activities authorized for the source |
