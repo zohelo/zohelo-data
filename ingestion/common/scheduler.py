@@ -102,8 +102,8 @@ def _minute(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(second=0, microsecond=0)
 
 
-def window(repo: str | None, token: str | None, now: datetime) -> tuple[datetime, int, int | None]:
-    """(end minute, window minutes, raw gap) for this scheduler run.
+def window(repo: str | None, token: str | None, now: datetime) -> tuple[datetime, int, int | None, datetime | None]:
+    """(end minute, window minutes, raw gap, start minute) for this scheduler run.
 
     Scheduler runs are schedule events and dispatches of DISPATCH_RUN (their run name ends
     with it), so the two triggers share one window and never repeat a minute. Both ends
@@ -112,8 +112,13 @@ def window(repo: str | None, token: str | None, now: datetime) -> tuple[datetime
     or late run is caught up by the next one. Runs are ordered by queue time, then id; when the
     previous run was queued in the same minute the window is empty. A failed previous run
     still counts as covering its minutes; a cancelled one (replaced while queued) does not;
-    scheduler dispatches count only on main. Unknown history: the last 60 minutes up to now."""
-    fallback = (now.replace(second=0, microsecond=0), DEFAULT_WINDOW, None)
+    scheduler dispatches count only on main. Unknown history: the last 60 minutes up to now.
+
+    When the raw gap between two scheduler runs exceeds MAX_WINDOW minutes, only the last
+    MAX_WINDOW minutes are returned as the window; the caller is responsible for walking the
+    rest of the gap in MAX_WINDOW chunks so weekly/monthly cron slots are never skipped
+    (#839)."""
+    fallback = (now.replace(second=0, microsecond=0), DEFAULT_WINDOW, None, None)
     if not repo or not token:
         return fallback
     try:
@@ -148,7 +153,23 @@ def window(repo: str | None, token: str | None, now: datetime) -> tuple[datetime
         return fallback
     gap = int((end - start).total_seconds() // 60)
     # gap 0: the previous scheduler run was queued in this same minute and already covered it.
-    return end, max(0, min(MAX_WINDOW, gap)), gap
+    return end, max(0, min(MAX_WINDOW, gap)), gap, start
+
+
+def _windows(end: datetime, start: datetime | None, minutes: int, gap: int | None) -> list[tuple[datetime, int]]:
+    """(end minute, minutes) chunks covering (start, end] in MAX_WINDOW steps.
+
+    A single chunk when gap <= MAX_WINDOW; otherwise walk back from ``end`` in
+    MAX_WINDOW chunks so a cron slot anywhere in the gap is checked (#839)."""
+    if start is None or gap is None or gap <= MAX_WINDOW:
+        return [(end, minutes)]
+    chunks: list[tuple[datetime, int]] = []
+    chunk_end = end
+    while chunk_end > start:
+        chunk_start = max(start, chunk_end - timedelta(minutes=MAX_WINDOW))
+        chunks.append((chunk_end, int((chunk_end - chunk_start).total_seconds() // 60)))
+        chunk_end = chunk_start
+    return chunks
 
 
 def main(config: dict, plan, now: datetime | None = None) -> int:
@@ -156,33 +177,33 @@ def main(config: dict, plan, now: datetime | None = None) -> int:
     problems = validate(config, plan)
     started, skipped = [], []
     repo, token = os.environ.get("GITHUB_REPOSITORY"), os.environ.get("GITHUB_TOKEN")
-    end, minutes, gap = window(repo, token, now)
+    end, minutes, gap, start = window(repo, token, now)
+    chunks = _windows(end, start, minutes, gap)
     for e in entries(config):
-        if not due(str(e["cron"]), end, minutes):
-            continue
-        inputs = {"source": e["source"], "run": e["run"], "filter": str(e.get("filter") or "")}
-        if not repo or not token:
-            skipped.append({**inputs, "reason": "no GITHUB_REPOSITORY/GITHUB_TOKEN"})
-            continue
-        response = requests.post(
-            f"https://api.github.com/repos/{repo}/actions/workflows/pipeline.yml/dispatches",
-            headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
-            json={"ref": "main", "inputs": inputs},
-            timeout=30,
-        )
-        (started if response.status_code == 204 else skipped).append(
-            {**inputs, **({} if response.status_code == 204 else {"reason": response.text[:200]})}
-        )
+        for chunk_end, chunk_minutes in chunks:
+            if not due(str(e["cron"]), chunk_end, chunk_minutes):
+                continue
+            inputs = {"source": e["source"], "run": e["run"], "filter": str(e.get("filter") or "")}
+            if not repo or not token:
+                skipped.append({**inputs, "reason": "no GITHUB_REPOSITORY/GITHUB_TOKEN"})
+                break
+            response = requests.post(
+                f"https://api.github.com/repos/{repo}/actions/workflows/pipeline.yml/dispatches",
+                headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
+                json={"ref": "main", "inputs": inputs},
+                timeout=30,
+            )
+            (started if response.status_code == 204 else skipped).append(
+                {**inputs, **({} if response.status_code == 204 else {"reason": response.text[:200]})}
+            )
+            break
     summary = {
         "at": now.isoformat(timespec="minutes"),
-        "window": {"end": end.isoformat(timespec="minutes"), "minutes": minutes, "gap_minutes": gap},
+        "window": {"end": end.isoformat(timespec="minutes"), "chunks": len(chunks), "gap_minutes": gap},
         "started": started,
         "skipped": skipped,
         "invalid_schedules": problems,
     }
-    clamped = gap is not None and gap > MAX_WINDOW
-    if clamped:
-        summary["warning"] = f"{gap - MAX_WINDOW} minutes before the window were not checked"
-    annotate("error" if skipped or problems else "warning" if clamped else "notice", "scheduler", summary)
+    annotate("error" if skipped or problems else "notice", "scheduler", summary)
     step_summary(f"## scheduler\n\n```json\n{json.dumps(summary, indent=2, ensure_ascii=False)}\n```\n")
     return 1 if skipped or problems else 0
