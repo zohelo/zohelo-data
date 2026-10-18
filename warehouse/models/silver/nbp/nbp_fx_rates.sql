@@ -33,12 +33,11 @@ select
     ingested_at
 from ranked
 where version_rank = 1
--- Some tables (mostly older table B) list a currency several times in one table with the
--- same name and rate (probe 15 Oct, #803: 2,054 date × currency groups). Only repeats equal
--- in every published field collapse; rows that differ stay and fail the grain test.
+-- Grain is one row per table × effective date × currency. A currency can appear in more
+-- than one publication (table_no) of the same quarter; keep the latest publication's row
+-- (highest table_no, then latest ingest). Rows that differ in published fields beyond
+-- table_no are collapsed to that one row (#803).
 qualify row_number() over (
-    partition by
-        table_code, table_no, effective_date, trading_date, upper(currency_code), currency_name,
-        mid, bid, ask
-    order by raw_sha256, source_row_number
+    partition by table_code, effective_date, upper(currency_code)
+    order by table_no desc, ingested_at desc, raw_sha256 asc, source_row_number asc
 ) = 1
