@@ -17,7 +17,9 @@ NS = "zz_dbt_trial"
 def counts(cat):
     t = cat.load_table((NS, "bdl_observations"))
     s = t.current_snapshot().summary.additional_properties if t.current_snapshot() else {}
-    return {k: s.get(k) for k in ("total-records", "total-position-deletes", "total-equality-deletes", "total-data-files")}
+    return {
+        k: s.get(k) for k in ("total-records", "total-position-deletes", "total-equality-deletes", "total-data-files")
+    }
 
 
 def stage(name, cat, selectors, variables):
@@ -40,12 +42,21 @@ def main():
         groups = pc.unique(sample["subgroup_id"]).to_pylist()
         gone, other = groups[0], groups[-1]
         t.delete(delete_filter=f"subgroup_id == '{gone}'")
-        stale = cat.load_table((NS, "bdl_observations")).scan(row_filter=f"subgroup_id == '{other}'", limit=5).to_arrow()
-        stale = stale.set_column(stale.schema.get_field_index("variables_key"), "variables_key",
-                                 pa.array(["trial-stale"] * len(stale), stale.schema.field("variables_key").type))
+        stale = (
+            cat.load_table((NS, "bdl_observations")).scan(row_filter=f"subgroup_id == '{other}'", limit=5).to_arrow()
+        )
+        stale = stale.set_column(
+            stale.schema.get_field_index("variables_key"),
+            "variables_key",
+            pa.array(["trial-stale"] * len(stale), stale.schema.field("variables_key").type),
+        )
         t = cat.load_table((NS, "bdl_observations"))
         t.append(stale)
-        annotate("notice", "trial perturbed", {"deleted_subgroup": gone, "stale_rows_in": other, "stale_rows": len(stale), **counts(cat)})
+        annotate(
+            "notice",
+            "trial perturbed",
+            {"deleted_subgroup": gone, "stale_rows_in": other, "stale_rows": len(stale), **counts(cat)},
+        )
         if stage("incremental_repair", cat, ["bdl_observations"], {}):
             return 1
         return 0

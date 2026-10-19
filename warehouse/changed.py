@@ -173,9 +173,7 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
     for uid in graph:
         stale(uid)
     full = sorted(
-        m["name"]
-        for m in graph.values()
-        if m["incremental"] and reasons.get(m["name"]) in FULL_REFRESH_REASONS
+        m["name"] for m in graph.values() if m["incremental"] and reasons.get(m["name"]) in FULL_REFRESH_REASONS
     )
     return {
         "select": sorted(reasons),
