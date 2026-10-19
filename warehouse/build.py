@@ -2,7 +2,8 @@
 
 The run filter becomes dbt's --select (e.g. "silver.nbp" or "nbp_fx_rates+"). An empty
 filter (the scheduled run) builds only the models whose inputs or code changed since their
-last build (warehouse/changed.py, owner policy #822); "fqn:*" builds everything. When a
+last build (warehouse/changed.py, owner policy #822), incremental models incrementally unless
+their code changed; "fqn:*" builds everything (incremental models incrementally). When a
 run names the Eurostat Silver models explicitly (one-off backfills only, owner policy #822;
 a full build leaves them unchanged), warehouse/eurostat_batch.py
 plans its batch first (passed as dbt vars) and records it after the model ran. A run that
@@ -82,6 +83,9 @@ def changed_only(target: str, variables: dict | None) -> int:
         summary = {"target": target, "changed_only": {"rebuilt": 0, **_why(plan)}, "catalog": published}
         annotate("notice", "warehouse dbt build", summary)
         return 0
+    variables = dict(variables or {})
+    if plan["full_refresh"]:
+        variables["full_refresh_models"] = plan["full_refresh"]
     return build_once(plan["select"], target, variables, changed_plan={"cat": cat, "meta": meta, **plan})[0]
 
 
@@ -208,7 +212,11 @@ def build_once(
     if changed_plan is not None:
         from warehouse import changed
 
-        summary["changed_only"] = {"rebuilt": len(selectors), **_why(changed_plan)}
+        summary["changed_only"] = {
+            "rebuilt": len(selectors),
+            "full_refresh": changed_plan["full_refresh"],
+            **_why(changed_plan),
+        }
         summary["changed_only"]["properties"] = changed.record(
             changed_plan["cat"], changed_plan["meta"], results, started_ms
         )

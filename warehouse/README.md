@@ -34,6 +34,20 @@ A manual run (any filter; `fqn:*` builds everything) writes no properties, so th
 scheduled run rebuilds what it built, once. A model table changed by anything but dbt
 (other than compaction) is not noticed downstream: only dbt writes Silver and Gold.
 
+Incremental models (`materialized='incremental'`; today `silver.bdl_observations`, ~229 M
+rows) are rebuilt incrementally when selected. `bdl_observations` keys each row by its
+recipe: subgroup, Bronze file (`raw_sha256`) and `variables_key` (digest of the subgroup's
+variable mapping in `bdl_variables`). Its pre-hook deletes rows whose recipe is no longer
+current, then the build inserts the current recipes it lacks; the singular test
+`tests/bdl_observations_current.sql` fails if Silver holds anything else
+(`macros/bdl_observations.sql`). When such a model's code fingerprint changed (its own SQL or
+config, or shared code: macros, dimensions, `dbt_project.yml`, requirements) or it has no
+build properties, the scheduled build rebuilds it in full once (dbt var
+`full_refresh_models`, listed as `changed_only.full_refresh` in the build annotation).
+Bronze rows rewritten under the same `raw_sha256` (a to_bronze re-decode) are not noticed:
+such a fix must also change the model's code (e.g. a line in its header comment), so the
+next scheduled build rebuilds it in full; announce it in the Work log.
+
 Target `trial` writes every model to the scratch namespace `zz_dbt_trial`. Sources not
 yet modelled (GUS DBW, dane.gov.pl, GLEIF, MF Biała Lista) are still published by
 `passthrough/` as copies / zero-copy references of Bronze (`silver_gold.promote`).
