@@ -57,7 +57,9 @@ Schedules are declared under `schedule:` in each source's YAML and in
 `warehouse/warehouse.yaml` (cron in UTC + run + optional filter). The Pipeline's
 `scheduler` job (`python run.py schedule`) starts the runs that are due. It runs on GitHub's
 twice-hourly schedule, which drops many events (#802), and on a dispatch of run
-`scheduler: dispatch due runs` (any source; main only); both kinds share one catch-up window;
+`scheduler: dispatch due runs` (any source; main only); both kinds share one catch-up window,
+and a long gap between scheduler runs is checked in full. A weekly or monthly schedule whose
+latest slot has no successful run since is dispatched again, at most twice per slot (#839);
 `python run.py schedule --check` validates the declarations.
 
 ## Source declarations
