@@ -124,9 +124,19 @@ def run_load(client, bucket: str, entities: list[str], held: dict[str, list]) ->
     fields = dict(re.findall(r'<input[^>]+name="(__[A-Z]+)"[^>]+value="([^"]*)"', html))
     if "__VIEWSTATE" not in fields:
         raise RuntimeError("eTERYT page without form state; the page changed")
-    for entity in entities:
-        if CONTROLS[entity].split("$")[-1] not in html:
-            raise RuntimeError(f"eTERYT page has no download control for {entity}; the page changed")
+    # A catalogue whose download button is gone is skipped with a warning, so one page change does
+    # not stop the others (#843: SIMC_Statystyczny became a generate-on-demand button in Oct 2026).
+    absent = [e for e in entities if CONTROLS[e].split("$")[-1] not in html]
+    if absent:
+        annotate(
+            "warning",
+            "gus_teryt eTERYT page changed",
+            {"not_landed": absent, "page_controls": sorted(set(re.findall(r"ctl00\$body\$\w+", html)))[:20]},
+        )
+        if len(absent) == len(entities):
+            raise RuntimeError(f"eTERYT page has none of the download controls for {absent}; the page changed")
+    outcomes["not_on_page"] = len(absent)
+    for entity in (e for e in entities if e not in absent):
         time.sleep(PAUSE_SECONDS)
         response = request(session, "POST", {**fields, "__EVENTTARGET": CONTROLS[entity], "__EVENTARGUMENT": ""})
         body = response.content
