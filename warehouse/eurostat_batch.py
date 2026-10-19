@@ -45,6 +45,8 @@ LOG_SCHEMA = pa.schema(
     [("dataset_id", pa.string()), ("raw_sha256", pa.string()), ("loaded_at", pa.timestamp("us", tz="UTC"))]
 )
 MODEL = "eurostat_observations"
+# Built only by announced one-off backfills that name them (owner policy #822).
+EUROSTAT_ONLY = {"eurostat_dataset_versions", MODEL}
 # The batch travels as dbt --vars (one command-line argument, ≤128 KB on Linux): at most
 # MAX_PAIRS (dataset, file) pairs per list, ~100 bytes each.
 SETTINGS = yaml.safe_load((Path(__file__).resolve().parent / "warehouse.yaml").read_text())["eurostat_silver"]

@@ -30,12 +30,17 @@ from pathlib import Path
 import subprocess
 from typing import Any
 
+from warehouse.eurostat_batch import EUROSTAT_ONLY
+
 PROJECT = Path(__file__).resolve().parent
 BUILT_FROM = "zohelo.built_from_ms"
 FINGERPRINT = "zohelo.build_fingerprint"
 # Code outside a model's own SQL that can change what it writes.
 SHARED_CODE = ("macros", "dimensions", "dbt_project.yml", "../requirements.txt")
-EXTERNAL_MODELS = {"eurostat_dataset_versions", "eurostat_observations"}  # warehouse/build.py EUROSTAT_ONLY
+EXTERNAL_MODELS = EUROSTAT_ONLY
+# A Bronze commit stamped just before a build started may become visible only after dbt
+# read that table; the recorded start is moved back by this margin (an extra rebuild at worst).
+START_MARGIN_MS = 10 * 60 * 1000
 
 
 def manifest(target: str = "prod") -> dict[str, Any]:
@@ -70,19 +75,31 @@ def shared_digest() -> str:
 def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """unique_id → name, namespace, table, parents (unique ids of models and sources), fingerprint."""
     shared = shared_digest()
+    nodes = {**meta["nodes"], **meta["sources"]}
     out = {}
     for uid, node in meta["nodes"].items():
         if node.get("resource_type") != "model":
             continue
-        code = json.dumps([shared, node["checksum"]["checksum"], node.get("config", {})], sort_keys=True, default=str)
+        # Parents' resolved relations: repointing a source or ref to another table is a change.
+        parents = sorted(".".join(relation(nodes[p])) for p in node["depends_on"]["nodes"] if p in nodes)
+        code = json.dumps(
+            [shared, node["checksum"]["checksum"], node.get("config", {}), parents], sort_keys=True, default=str
+        )
         out[uid] = {
             "name": node["name"],
-            "namespace": node["schema"],
-            "table": node.get("alias") or node["name"],
+            "namespace": relation(node)[0],
+            "table": relation(node)[1],
             "parents": [p for p in node["depends_on"]["nodes"] if p.startswith(("model.", "source."))],
             "fingerprint": hashlib.sha256(code.encode()).hexdigest()[:32],
         }
     return out
+
+
+def relation(node: dict[str, Any]) -> tuple[str, str]:
+    """(namespace, table) of a model or source node."""
+    if node.get("resource_type") == "source":
+        return node["schema"], node.get("identifier") or node["name"]
+    return node["schema"], node.get("alias") or node["name"]
 
 
 def table_state(cat, namespace: str, table: str) -> dict[str, Any] | None:
@@ -106,8 +123,8 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
     """{"select": model names to build, "reasons": name → why, "unchanged": count}."""
     graph = models(meta)
     relations = {uid: (m["namespace"], m["table"]) for uid, m in graph.items()}
-    for uid, source in meta["sources"].items():
-        relations[uid] = (source["schema"], source.get("identifier") or source["name"])
+    for uid in {p for m in graph.values() for p in m["parents"] if p.startswith("source.")}:
+        relations[uid] = relation(meta["sources"][uid])
     state = {uid: table_state(cat, *rel) for uid, rel in relations.items()}
 
     def updated(uid: str) -> int:
@@ -149,19 +166,30 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
     return {"select": sorted(reasons), "reasons": reasons, "unchanged": len(graph) - len(reasons)}
 
 
-def record(cat, meta: dict[str, Any], built: Iterable[str], started_ms: int) -> dict[str, Any]:
-    """Set the build properties on the models a successful build wrote. A failure only means
-    the model is rebuilt next time, so it is reported, not raised."""
+def record(cat, meta: dict[str, Any], results: Iterable[dict[str, Any]], started_ms: int) -> dict[str, Any]:
+    """Set the build properties on each model the build wrote whose own tests all passed (dbt
+    run results). A model with a failing test, or whose property write fails, keeps no
+    properties and is rebuilt (and tested) next time; write failures are reported, not raised."""
+    results = list(results)
     graph = {m["name"]: m for m in models(meta).values()}
+    failed_tests = {r["unique_id"] for r in results if r["unique_id"].startswith("test.") and r["status"] != "pass"}
+    untrusted = {
+        p.split(".")[-1] for t in failed_tests for p in meta["nodes"].get(t, {}).get("depends_on", {}).get("nodes", [])
+    }
+    built = [
+        r["unique_id"].split(".")[-1]
+        for r in results
+        if r["unique_id"].startswith("model.") and r["status"] == "success"
+    ]
     recorded, failed = 0, []
     for name in built:
         model = graph.get(name)
-        if model is None or name in EXTERNAL_MODELS:
+        if model is None or name in EXTERNAL_MODELS or name in untrusted:
             continue
         try:
             table = cat.load_table((model["namespace"], model["table"]))
             with table.transaction() as tx:
-                tx.set_properties({BUILT_FROM: str(started_ms), FINGERPRINT: model["fingerprint"]})
+                tx.set_properties({BUILT_FROM: str(started_ms - START_MARGIN_MS), FINGERPRINT: model["fingerprint"]})
             recorded += 1
         except Exception as exc:  # any failure only means a rebuild next run
             failed.append(f"{name}: {type(exc).__name__}: {str(exc)[:200]}")

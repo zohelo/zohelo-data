@@ -25,9 +25,14 @@ The scheduled build (empty filter) rebuilds only models whose inputs or code cha
 (owner policy #822, `changed.py`): a model is selected when its table is missing, its
 code fingerprint (SQL, config, macros, dimensions, `dbt_project.yml`, requirements)
 differs, an upstream model is rebuilt, or a Bronze input or upstream table changed after
-its last build started. A successful build records `zohelo.built_from_ms` and
-`zohelo.build_fingerprint` as table properties of the models it wrote; a failed build
-records nothing, so those models are rebuilt next time. Filter `fqn:*` builds everything.
+its last build started. The scheduled build records `zohelo.built_from_ms` and
+`zohelo.build_fingerprint` as table properties of each model it wrote whose tests passed;
+models it did not finish or whose tests failed get none, so they are rebuilt (and tested)
+next time; tests of unchanged models run when the model next rebuilds. The
+recorded start is moved back 10 minutes to cover Bronze commits that become visible late.
+A manual run (any filter; `fqn:*` builds everything) writes no properties, so the next
+scheduled run rebuilds what it built, once. A model table changed by anything but dbt
+(other than compaction) is not noticed downstream: only dbt writes Silver and Gold.
 
 Target `trial` writes every model to the scratch namespace `zz_dbt_trial`. Sources not
 yet modelled (GUS DBW, dane.gov.pl, GLEIF, MF Biała Lista) are still published by

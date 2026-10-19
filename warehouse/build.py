@@ -35,7 +35,7 @@ LOOP_BUILDS = int(SETTINGS["loop_builds"])
 _RETRY = yaml.safe_load((PROJECT / "warehouse.yaml").read_text())
 RATE_LIMIT_WAITS = [float(s) for s in _RETRY["rate_limit_retry_waits"]]
 RATE_LIMIT_THREADS = int(_RETRY["rate_limit_retry_threads"])
-EUROSTAT_ONLY = {"eurostat_dataset_versions", "eurostat_observations"}
+EUROSTAT_ONLY = eurostat_batch.EUROSTAT_ONLY
 
 
 def main(select: str = "", target: str = "prod", variables: dict | None = None) -> int:
@@ -75,7 +75,12 @@ def changed_only(target: str, variables: dict | None) -> int:
     plan = changed.plan(cat, meta)
     step_summary(f"## warehouse · changed models\n\n```json\n{json.dumps(plan, indent=2)}\n```\n")
     if not plan["select"]:
-        annotate("notice", "warehouse dbt build", {"target": target, "changed_only": {"rebuilt": 0, **_why(plan)}})
+        from warehouse import catalog as data_catalog
+
+        # Descriptions, tests and metrics can change without a rebuild; the parse's manifest is current.
+        published = data_catalog.publish()
+        summary = {"target": target, "changed_only": {"rebuilt": 0, **_why(plan)}, "catalog": published}
+        annotate("notice", "warehouse dbt build", summary)
         return 0
     return build_once(plan["select"], target, variables, changed_plan={"cat": cat, "meta": meta, **plan})[0]
 
@@ -204,15 +209,9 @@ def build_once(
         from warehouse import changed
 
         summary["changed_only"] = {"rebuilt": len(selectors), **_why(changed_plan)}
-        if returncode == 0:
-            built = [
-                r["unique_id"].split(".")[-1]
-                for r in results
-                if r["unique_id"].startswith("model.") and r["status"] == "success"
-            ]
-            summary["changed_only"]["properties"] = changed.record(
-                changed_plan["cat"], changed_plan["meta"], built, started_ms
-            )
+        summary["changed_only"]["properties"] = changed.record(
+            changed_plan["cat"], changed_plan["meta"], results, started_ms
+        )
     if returncode == 0 and target == "prod":
         from warehouse import catalog
 
