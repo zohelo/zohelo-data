@@ -198,27 +198,31 @@ def last_slot(cron: str, end: datetime) -> datetime | None:
     return None
 
 
-def pipeline_runs(repo: str, token: str, since: datetime) -> dict[str, list[dict]]:
-    """Dispatched Pipeline runs created at or after ``since``, by run name ("Pipeline · source · run")."""
+def pipeline_runs(repo: str, token: str, since: datetime, until: datetime) -> dict[str, list[dict]]:
+    """Dispatched Pipeline runs created from ``since``'s day to ``until``'s day, by run name.
+
+    Read one day at a time: the runs API returns at most 1,000 results per query, and the
+    scheduler's own dispatches add ~48 runs a day, so one query over weeks would drop the
+    oldest runs (#855 review). A day that fills every page raises (history incomplete)."""
     out: dict[str, list[dict]] = {}
-    for page in range(1, 11):
-        response = requests.get(
-            f"https://api.github.com/repos/{repo}/actions/workflows/pipeline.yml/runs",
-            headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
-            params={
-                "event": "workflow_dispatch",
-                "created": f">={since.strftime('%Y-%m-%dT%H:%M:%SZ')}",
-                "per_page": 100,
-                "page": page,
-            },
-            timeout=30,
-        )
-        response.raise_for_status()
-        runs = response.json()["workflow_runs"]
-        for r in runs:
-            out.setdefault(str(r.get("display_title", "")), []).append(r)
-        if len(runs) < 100:
-            break
+    day = since.date()
+    while day <= until.date():
+        for page in range(1, 11):
+            response = requests.get(
+                f"https://api.github.com/repos/{repo}/actions/workflows/pipeline.yml/runs",
+                headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
+                params={"event": "workflow_dispatch", "created": day.isoformat(), "per_page": 100, "page": page},
+                timeout=30,
+            )
+            response.raise_for_status()
+            runs = response.json()["workflow_runs"]
+            for r in runs:
+                out.setdefault(str(r.get("display_title", "")), []).append(r)
+            if len(runs) < 100:
+                break
+        else:
+            raise ValueError(f"run history incomplete for {day}: over 1,000 runs")
+        day += timedelta(days=1)
     return out
 
 
@@ -239,7 +243,7 @@ def catch_up(config: dict, end: datetime, start: datetime, repo: str, token: str
         slots.append((e, slot))
     if not slots:
         return []
-    runs = pipeline_runs(repo, token, min(slot for _, slot in slots))
+    runs = pipeline_runs(repo, token, min(slot for _, slot in slots), end)
     due_again = []
     for e, slot in slots:
         since = [r for r in runs.get(f"Pipeline · {e['source']} · {e['run']}", []) if _minute(r["created_at"]) >= slot]
@@ -294,7 +298,7 @@ def main(config: dict, plan, now: datetime | None = None) -> int:
             ]
         except (requests.RequestException, ValueError, KeyError, TypeError) as error:
             again = []
-            skipped.append({"catch_up": "run history unreadable", "reason": f"{type(error).__name__}: {error}"[:200]})
+            skipped.append({"catch_up": "not checked", "reason": f"{type(error).__name__}: {error}"[:200]})
         for e in again:
             inputs = {"source": e["source"], "run": e["run"], "filter": str(e.get("filter") or "")}
             reason = _dispatch(repo, token, inputs)
