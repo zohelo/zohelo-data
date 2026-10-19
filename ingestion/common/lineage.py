@@ -6,9 +6,11 @@ Landing identities (SHA-256 from object metadata or content-addressed names) are
 with Bronze provenance: the Bronze file list (one file per Landing SHA-256) and the
 rejections table of every source in bronze_files.SOURCE_TABLES, read from the catalog.
 The expectation is the latest version of every entity in the agreed Landing layout;
-older versions are reported as superseded (Eurostat). Landing files whose rows a Bronze
-table holds twice (#803) get their own annotation, a warning while the known NBP duplicates
-await their clean-up.
+older versions are reported as superseded (Eurostat). The latest-only gate (#845) uses the
+rule the prune after a load applies (``latest.keep_digests``), computed from the hashes read
+once for the membership check (#851); ``superseded_in_bronze`` is for information only.
+Landing files whose rows a Bronze table holds twice (#803) get their own annotation, a warning
+while the known NBP duplicates await their clean-up.
 """
 
 from __future__ import annotations
@@ -42,13 +44,10 @@ def summarize(name: str, landing_set: set[str], proven: set[str], meta: dict[str
     }
 
 
-def inspect_eurostat(meta: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    from ingestion.common.bronze_files import proven_hashes
-
+def inspect_eurostat(meta: dict[str, dict[str, Any]], full: set[str], rejected: set[str]) -> dict[str, Any]:
     data = {d for d, i in meta.items() if i["kind"] == "raw"}
     latest = latest_snapshot(meta)
     superseded = {d for d in data if meta[d]["layout"] == "snapshot"} - latest
-    full, rejected = proven_hashes("eurostat")
     unloaded = latest - full
     return {
         "latest": summarize("latest", latest, full, meta),
@@ -61,13 +60,10 @@ def inspect_eurostat(meta: dict[str, dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def inspect_snapshot(meta: dict[str, dict[str, Any]], source: str) -> dict[str, Any]:
-    from ingestion.common.bronze_files import proven_hashes
-
+def inspect_snapshot(meta: dict[str, dict[str, Any]], loaded: set[str], rejected: set[str]) -> dict[str, Any]:
     data = {d for d, i in meta.items() if i.get("kind") == "raw"}
     latest = latest_snapshot(meta)
     superseded = {d for d in data if meta[d].get("layout") == "snapshot"} - latest
-    loaded, rejected = proven_hashes(source)
     unloaded = latest - loaded
     return {
         "latest": summarize("latest", latest, loaded, meta),
@@ -80,13 +76,46 @@ def inspect_snapshot(meta: dict[str, dict[str, Any]], source: str) -> dict[str, 
     }
 
 
-def check_latest_only(source: str) -> tuple[bool, dict[str, Any]]:
-    """Verify that every Bronze table of the source holds only the latest version of every entity (policy #822/#845)."""
-    from ingestion.common.latest import prune
+def check_latest_only(meta: dict[str, dict[str, Any]], held: dict[str, set[str]]) -> tuple[bool, dict[str, Any]]:
+    """Every Bronze table holds only the latest version of every entity (policy #822/#845).
 
-    report = prune(source, apply=False)
-    superseded = sum(entry.get("superseded", 0) for entry in report.values())
-    return superseded == 0, report
+    Same rule as the prune after a load (``latest.keep_digests``), computed from the Landing
+    receipts and table hashes this step already read: no second pass over the tables (#851)."""
+    from ingestion.common.latest import keep_digests
+
+    known = {d for d, item in meta.items() if item.get("snapshot_paths")}
+    keep = keep_digests(meta)
+    report: dict[str, Any] = {}
+    for name, hashes in held.items():
+        old = (hashes & known) - keep
+        report[name] = {
+            "files": len(hashes),
+            "superseded": len(old),
+            "superseded_sample": sorted(old)[:5],
+            "unknown_kept": len(hashes - known),
+        }
+    return all(entry["superseded"] == 0 for entry in report.values()), report
+
+
+def bronze_hashes(source: str) -> tuple[dict[str, set[str]], set[str]]:
+    """(per Bronze table: Landing SHA-256 it holds, Landing SHA-256 rejected with a reason), read once."""
+    from pyiceberg.exceptions import NoSuchTableError
+
+    from ingestion.common.bronze_files import SOURCE_TABLES, loaded_hashes, rejected_hashes
+    from ingestion.common.r2 import catalog
+
+    tables, rejections = SOURCE_TABLES[source]
+    cat = catalog()
+    held: dict[str, set[str]] = {}
+    for table_id in tables:
+        try:
+            held[".".join(table_id)] = loaded_hashes(cat.load_table(table_id))
+        except NoSuchTableError:
+            continue
+    rejected: set[str] = set()
+    for table_id in rejections:
+        rejected |= rejected_hashes(cat, table_id)
+    return held, rejected
 
 
 def main(argv=None) -> int:
@@ -94,11 +123,13 @@ def main(argv=None) -> int:
     parser.add_argument("--source", choices=SOURCES, required=True)
     args = parser.parse_args(argv)
 
-    passed_latest, report_latest = check_latest_only(args.source)
-    if not passed_latest:
-        annotate("error", f"{args.source} Bronze latest-only breach", report_latest)
-
     if args.source == "gus_bdl":
+        from ingestion.common.latest import prune
+
+        report_latest = prune("gus_bdl", apply=False)
+        passed_latest = all(entry.get("superseded", 0) == 0 for entry in report_latest.values())
+        if not passed_latest:
+            annotate("error", f"{args.source} Bronze latest-only breach", report_latest)
         summary = {
             "result": "pass" if passed_latest else "fail",
             "operation": "inspect-exact-landing-iceberg-hash-membership",
@@ -114,9 +145,13 @@ def main(argv=None) -> int:
     client = s3()
     bucket = req("R2_LANDING_BUCKET")
     meta = landing_objects(client, bucket, args.source)
-    result = inspect_eurostat(meta) if args.source == "eurostat" else inspect_snapshot(meta, args.source)
-    if result.get("superseded_in_bronze", 0) > 0:
-        passed_latest = False
+    held, rejected = bronze_hashes(args.source)
+    passed_latest, report_latest = check_latest_only(meta, held)
+    if not passed_latest:
+        annotate("error", f"{args.source} Bronze latest-only breach", report_latest)
+    loaded = set().union(*held.values()) if held else set()
+    inspect = inspect_eurostat if args.source == "eurostat" else inspect_snapshot
+    result = inspect(meta, loaded, rejected)
     summary = {
         "result": "pass" if passed_latest else "fail",
         "operation": "inspect-exact-landing-iceberg-hash-membership",
