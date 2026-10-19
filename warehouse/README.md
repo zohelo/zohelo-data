@@ -21,6 +21,19 @@ table rebuild is therefore not atomic. When the catalog's rate limit (HTTP 429) 
 build, `build.py` resumes it with `dbt retry` on fewer threads (`warehouse.yaml`
 `rate_limit_retry_*`), which also replaces tables a failed rename left as `__dbt_backup`.
 
+The scheduled build (empty filter) rebuilds only models whose inputs or code changed
+(owner policy #822, `changed.py`): a model is selected when its table is missing, its
+code fingerprint (SQL, config, macros, dimensions, `dbt_project.yml`, requirements)
+differs, an upstream model is rebuilt, or a Bronze input or upstream table changed after
+its last build started. The scheduled build records `zohelo.built_from_ms` and
+`zohelo.build_fingerprint` as table properties of each model it wrote whose tests passed;
+models it did not finish or whose tests failed get none, so they are rebuilt (and tested)
+next time; tests of unchanged models run when the model next rebuilds. The
+recorded start is moved back 10 minutes to cover Bronze commits that become visible late.
+A manual run (any filter; `fqn:*` builds everything) writes no properties, so the next
+scheduled run rebuilds what it built, once. A model table changed by anything but dbt
+(other than compaction) is not noticed downstream: only dbt writes Silver and Gold.
+
 Target `trial` writes every model to the scratch namespace `zz_dbt_trial`. Sources not
 yet modelled (GUS DBW, dane.gov.pl, GLEIF, MF Biała Lista) are still published by
 `passthrough/` as copies / zero-copy references of Bronze (`silver_gold.promote`).
@@ -31,7 +44,7 @@ backfills (owner policy #822): a run whose filter names the Eurostat models
 batch from the Bronze file list (Iceberg metadata), at most 150M Bronze rows and 500
 dataset versions per build; superseded versions are deleted before the insert. Files
 above 700M rows are deferred. Such a run repeats batches for up to 140 minutes. Other
-builds (the daily full build, a `silver` filter) leave Eurostat Silver and its file index
+builds (the daily build, a `silver` filter) leave Eurostat Silver and its file index
 unchanged; `eurostat_dataset_versions` reflects Bronze as of the last backfill.
 
 ```sh
