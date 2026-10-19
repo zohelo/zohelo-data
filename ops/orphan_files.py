@@ -21,6 +21,7 @@ from pathlib import Path
 import traceback
 from urllib.parse import urlsplit
 
+from ingestion.common.bronze_files import retry
 from ingestion.common.r2 import catalog, req, s3
 from ingestion.common.report import annotate
 
@@ -34,7 +35,8 @@ MAX_ORPHAN_SHARE = 0.5  # refuse --delete when orphans exceed this share of a pr
 def namespaces(cat, parent: tuple = ()) -> list[tuple]:
     """Every namespace, nested ones included."""
     found = []
-    for ns in cat.list_namespaces(parent) if parent else cat.list_namespaces():
+    listed = retry(lambda: cat.list_namespaces(parent) if parent else cat.list_namespaces(), "list namespaces")
+    for ns in listed:
         found += [ns, *namespaces(cat, ns)]
     return found
 
@@ -45,8 +47,10 @@ def referenced_files(cat) -> tuple[set[str], dict[str, str]]:
     keys: set[str] = set()
     folders: dict[str, str] = {}
     for namespace in namespaces(cat):
-        for identifier in cat.list_tables(namespace):
-            table = cat.load_table(identifier)
+        # Catalog reads are retried: the scan takes ~45 min and the catalog closes idle
+        # connections, which once failed the approved --delete run before it deleted (#865).
+        for identifier in retry(lambda namespace=namespace: cat.list_tables(namespace), f"list {namespace}"):
+            table = retry(lambda identifier=identifier: cat.load_table(identifier), f"load {identifier}")
             folders[urlsplit(table.location()).path.strip("/")] = ".".join(identifier)
             # Manifests read directly: table.inspect.all_files() decodes column bounds and
             # fails on bounds truncated inside a UTF-8 character (Polish names, pyiceberg 0.12).
