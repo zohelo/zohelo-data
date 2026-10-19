@@ -2,8 +2,7 @@
 """Expire Iceberg snapshots the catalog's own maintenance leaves behind (policy #822, #820).
 
 The R2 Data Catalog setting (ops/catalog_maintenance) keeps 1 snapshot and expires older
-ones after 1 hour, but on 19 Oct six tables without new commits since ~14 Oct still held
-2–143 snapshots up to 126 h old: the catalog does not expire snapshots of idle tables.
+ones after 1 hour, but it does not expire snapshots of tables without new commits (#820).
 This script applies the same policy to every Bronze / Silver / Gold table: snapshots
 older than MAX_AGE that are neither the current snapshot nor a branch/tag head.
 
@@ -68,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
                 try:
                     table.maintenance.expire_snapshots().by_ids(ids).commit()
                     after = len(cat.load_table(identifier).metadata.snapshots)
-                    expired += before - after
+                    expired += len(ids)
                 except Exception as exc:  # report every table, then fail the run
                     errors[name] = repr(exc)[:200]
             rows.append((name, [before, len(ids), after]))
@@ -80,7 +79,8 @@ def main(argv: list[str] | None = None) -> int:
         "tables_with_expirable": len(rows),
         "expirable": sum(row[1][1] for row in rows),
         "expired": expired,
-        "errors": errors,
+        "error_count": len(errors),
+        "errors": dict(list(errors.items())[:5]),
     }
     annotate("error" if errors else "notice", "expire snapshots", fit(payload, rows))
     return 1 if errors else 0
