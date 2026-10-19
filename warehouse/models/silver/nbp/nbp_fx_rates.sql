@@ -1,6 +1,7 @@
 {# NBP exchange rates, tables A/B/C: the newest Landing version of every table-quarter,
-   typed, a currency repeated in one table with identical values kept once. One row per
-   table × effective date × currency. Rates are PLN per 1 unit of the
+   typed. One row per table × effective date × currency; when the newest version holds
+   more than one published value set for a key, published_variants > 1 and its test
+   reports it (never silent, #803). Rates are PLN per 1 unit of the
    currency as published by the API (mid for A/B; bid/ask for C, trading_date for C). #}
 with source_rows as (
     -- Bronze may hold a source row more than once (bronze.nbp_observations did, 15 Oct):
@@ -16,6 +17,18 @@ ranked as (
         rank() over (partition by entity order by source_version desc, ingested_at desc) as version_rank
     from source_rows
     where table_code in ('A', 'B', 'C')
+),
+
+current_rows as (
+    -- Distinct published value sets per key in the newest version: 1 = repeats only.
+    select
+        *,
+        dense_rank() over (
+            partition by table_code, effective_date, upper(currency_code)
+            order by table_no, trading_date, currency_name, mid, bid, ask
+        ) as variant
+    from ranked
+    where version_rank = 1
 )
 
 select
@@ -30,13 +43,12 @@ select
     cast(ask as decimal(18, 8)) as ask_rate,
     raw_sha256,
     source_version,
-    ingested_at
-from ranked
-where version_rank = 1
--- Grain is one row per table × effective date × currency. A currency can appear in more
--- than one publication (table_no) of the same quarter; keep the latest publication's row
--- (highest table_no, then latest ingest). Rows that differ in published fields beyond
--- table_no are collapsed to that one row (#803).
+    ingested_at,
+    max(variant) over (partition by table_code, effective_date, upper(currency_code)) as published_variants
+from current_rows
+-- Grain is one row per table × effective date × currency: keep the row of the highest
+-- table_no, then latest ingest. Repeats equal in every published field collapse silently;
+-- differing rows are counted in published_variants and fail its test (#803, #852 review).
 qualify row_number() over (
     partition by table_code, effective_date, upper(currency_code)
     order by table_no desc, ingested_at desc, raw_sha256 asc, source_row_number asc
