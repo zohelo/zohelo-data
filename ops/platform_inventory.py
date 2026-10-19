@@ -2,13 +2,13 @@
 """Platform inventory (read-only): what each source holds in every layer, and storage totals.
 
 Per registered source (ingestion/sources/*.yaml): Landing and Archive files, bytes and
-latest write; Bronze / Silver / Gold tables with rows, data files, bytes and snapshot
-count and oldest snapshot age (from Iceberg metadata, no data scan). Also storage per bucket and top folder,
-Landing/Archive folders and Iceberg tables that no source claims, and registered tables
-that do not exist. Fails fast when credentials or the catalog are broken.
+latest write; Bronze / Silver / Gold tables with rows, data files, bytes, snapshot count
+and oldest snapshot age (from Iceberg metadata, no data scan). Also storage per bucket
+and top folder, Landing/Archive folders and Iceberg tables that no source claims, and
+registered tables that do not exist. Fails fast when credentials or the catalog are broken.
 
-Output: annotations (totals, tables holding more than one snapshot, sources), the job summary, and the full JSON in
-$OPS_OUTPUT_DIR. Args: --source <id> ... to limit the per-source part.
+Output: annotations (totals, tables with more than one snapshot, sources), the job
+summary, and the full JSON in $OPS_OUTPUT_DIR. Args: --source <id> ... to limit the per-source part.
 """
 
 from __future__ import annotations
@@ -69,6 +69,7 @@ def tables(cat) -> dict[str, dict[str, Any]]:
             name = f"{layer}.{identifier[-1]}"
             table = cat.load_table(identifier)
             snapshot = table.current_snapshot()
+            oldest_ms = min((s.timestamp_ms for s in table.metadata.snapshots), default=now_ms)
             summary = snapshot.summary if snapshot is not None and snapshot.summary is not None else {}
             files, size = int(summary.get("total-data-files") or 0), int(summary.get("total-files-size") or 0)
             if not size and snapshot is not None:
@@ -80,9 +81,7 @@ def tables(cat) -> dict[str, dict[str, Any]]:
                 "bytes": size,
                 "snapshots": len(table.metadata.snapshots),
                 # Policy #822 keeps 1 snapshot, max age 1 h: older ones mean expiry lags or does not run.
-                "oldest_snapshot_hours": round(
-                    (now_ms - min((s.timestamp_ms for s in table.metadata.snapshots), default=now_ms)) / 3.6e6, 1
-                ),
+                "oldest_snapshot_hours": max(0.0, round((now_ms - oldest_ms) / 3.6e6, 1)),
             }
     return out
 
@@ -133,10 +132,11 @@ def main(argv=None) -> int:
         }
 
     # Shared Gold of the dbt project and retired-code tables still in the catalog are claimed too.
+    # A declared table is never legacy, even when a legacy glob matches it (as ops/tracker.py).
     platform = yaml.safe_load((ROOT / "warehouse" / "warehouse.yaml").read_text()) or {}
     claimed_tables.update(platform.get("gold") or [])
     legacy = [g for c in registry.values() for g in (c.get("legacy_tables") or [])]
-    legacy_found = sorted(n for n in found if any(fnmatch.fnmatch(n, g) for g in legacy))
+    legacy_found = sorted(n for n in found if n not in claimed_tables and any(fnmatch.fnmatch(n, g) for g in legacy))
     claimed_tables.update(legacy_found)
     unclaimed_tables = sorted(set(found) - claimed_tables)
     unclaimed_landing = sorted(set(landing) - claimed_landing)
