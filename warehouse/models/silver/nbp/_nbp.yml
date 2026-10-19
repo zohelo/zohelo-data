@@ -23,15 +23,13 @@ models:
       - name: published_variants
         description: >-
           Distinct published value sets (table_no, trading_date, currency_name, mid, bid, ask)
-          for this table × date × currency in the newest Landing version; 1 = no conflict.
-          Warn while #803's conflicting groups are investigated, then error.
+          for this table × date × currency in the newest Landing version; 1 = no conflict
+          (0 conflicting keys on 19 Oct, Dev probe 39203961456).
         tests:
           - accepted_values:
               arguments:
                 values: [1]
                 quote: false
-              config:
-                severity: warn
   - name: nbp_gold_fixings
     description: NBP gold price, PLN per gram of 1000-fineness gold, one row per effective date.
     columns:
