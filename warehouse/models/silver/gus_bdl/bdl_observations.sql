@@ -10,8 +10,8 @@
    Landing file (raw_sha256) and variables_key, a digest of the subgroup's variable mapping
    (bdl_variables). The pre-hook deletes rows whose recipe is no longer current (superseded
    file or changed mapping); the build then inserts the current recipes Silver lacks, so a
-   failed run is repaired by the next one. A change to this model's code makes the scheduled
-   build rebuild it in full once (warehouse/changed.py). Recipe rule: macros/bdl_observations.sql. #}
+   failed run is repaired by the next one. A changed code fingerprint (this model or shared
+   code) makes the scheduled build rebuild it in full once (warehouse/changed.py). Recipe rule: macros/bdl_observations.sql. #}
 with {{ bdl_current_recipes() }},
 
 new_recipes as (
