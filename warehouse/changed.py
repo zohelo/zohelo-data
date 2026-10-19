@@ -17,6 +17,11 @@ is rebuilt when
   upstream table's ``built_from_ms`` (its snapshot time if it has none, e.g. the
   Eurostat Silver models, which only announced one-off backfills build).
 
+An incremental model (materialized='incremental', e.g. silver.bdl_observations) is rebuilt
+incrementally, except when its own code changed or it has no build properties: then it is
+listed in ``full_refresh`` and the build passes it as the dbt var ``full_refresh_models``
+(the model's config turns that into a full refresh of that model only).
+
 Table compaction also makes a new snapshot, so a compacted input causes a rebuild:
 conservative, never a missed change. The Eurostat Silver models are never selected here.
 """
@@ -41,6 +46,8 @@ EXTERNAL_MODELS = EUROSTAT_ONLY
 # A Bronze commit stamped just before a build started may become visible only after dbt
 # read that table; the recorded start is moved back by this margin (an extra rebuild at worst).
 START_MARGIN_MS = 10 * 60 * 1000
+# Rebuild reasons after which an incremental model's rows cannot be trusted to follow its code.
+FULL_REFRESH_REASONS = ("no build properties", "code changed")
 
 
 def manifest(target: str = "prod") -> dict[str, Any]:
@@ -91,6 +98,7 @@ def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
             "table": relation(node)[1],
             "parents": [p for p in node["depends_on"]["nodes"] if p.startswith(("model.", "source."))],
             "fingerprint": hashlib.sha256(code.encode()).hexdigest()[:32],
+            "incremental": node.get("config", {}).get("materialized") == "incremental",
         }
     return out
 
@@ -120,7 +128,8 @@ def table_state(cat, namespace: str, table: str) -> dict[str, Any] | None:
 
 
 def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
-    """{"select": model names to build, "reasons": name → why, "unchanged": count}."""
+    """{"select": model names to build, "reasons": name → why, "unchanged": count,
+    "full_refresh": incremental models among them to rebuild in full}."""
     graph = models(meta)
     relations = {uid: (m["namespace"], m["table"]) for uid, m in graph.items()}
     for uid in {p for m in graph.values() for p in m["parents"] if p.startswith("source.")}:
@@ -163,7 +172,17 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
 
     for uid in graph:
         stale(uid)
-    return {"select": sorted(reasons), "reasons": reasons, "unchanged": len(graph) - len(reasons)}
+    full = sorted(
+        m["name"]
+        for m in graph.values()
+        if m["incremental"] and reasons.get(m["name"]) in FULL_REFRESH_REASONS
+    )
+    return {
+        "select": sorted(reasons),
+        "reasons": reasons,
+        "unchanged": len(graph) - len(reasons),
+        "full_refresh": full,
+    }
 
 
 def record(cat, meta: dict[str, Any], results: Iterable[dict[str, Any]], started_ms: int) -> dict[str, Any]:
