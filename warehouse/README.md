@@ -21,6 +21,14 @@ table rebuild is therefore not atomic. When the catalog's rate limit (HTTP 429) 
 build, `build.py` resumes it with `dbt retry` on fewer threads (`warehouse.yaml`
 `rate_limit_retry_*`), which also replaces tables a failed rename left as `__dbt_backup`.
 
+The scheduled build (empty filter) rebuilds only models whose inputs or code changed
+(owner policy #822, `changed.py`): a model is selected when its table is missing, its
+code fingerprint (SQL, config, macros, dimensions, `dbt_project.yml`, requirements)
+differs, an upstream model is rebuilt, or a Bronze input or upstream table changed after
+its last build started. A successful build records `zohelo.built_from_ms` and
+`zohelo.build_fingerprint` as table properties of the models it wrote; a failed build
+records nothing, so those models are rebuilt next time. Filter `fqn:*` builds everything.
+
 Target `trial` writes every model to the scratch namespace `zz_dbt_trial`. Sources not
 yet modelled (GUS DBW, dane.gov.pl, GLEIF, MF Biała Lista) are still published by
 `passthrough/` as copies / zero-copy references of Bronze (`silver_gold.promote`).
@@ -31,7 +39,7 @@ backfills (owner policy #822): a run whose filter names the Eurostat models
 batch from the Bronze file list (Iceberg metadata), at most 150M Bronze rows and 500
 dataset versions per build; superseded versions are deleted before the insert. Files
 above 700M rows are deferred. Such a run repeats batches for up to 140 minutes. Other
-builds (the daily full build, a `silver` filter) leave Eurostat Silver and its file index
+builds (the daily build, a `silver` filter) leave Eurostat Silver and its file index
 unchanged; `eurostat_dataset_versions` reflects Bronze as of the last backfill.
 
 ```sh

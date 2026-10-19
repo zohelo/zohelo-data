@@ -25,7 +25,7 @@ whose YAML sets `extraction.kind` (for example `bulk_file`) runs the shared patt
 | `landing.archive` | `ingestion/common/archive.py` | move Bronze-loaded Landing files to Archive (copy, verify SHA-256, delete from Landing; receipt stays) |
 | `archive.prune` | `ingestion/common/retention.py` | apply the source's Archive retention (`archive_policy` in its config) |
 | `silver_gold.promote` | `warehouse/passthrough/` | platform: Bronze → Silver → Gold pass-through for sources not yet modelled |
-| `silver_gold.build` | `warehouse/build.py` | platform: dbt build of `warehouse/models/` (filter = model names); Eurostat Silver in batches; publishes the data catalog |
+| `silver_gold.build` | `warehouse/build.py` | platform: dbt build of `warehouse/models/` (filter = model names; empty = only models whose inputs or code changed, `fqn:*` = all); Eurostat Silver in batches; publishes the data catalog |
 | `serving.refresh_index` | `portal/publish_index.py` | platform: rebuild the portal file index |
 
 A Pipeline run is one activity or `landing → bronze (all steps)`; the portal index
