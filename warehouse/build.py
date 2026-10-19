@@ -1,8 +1,10 @@
 """silver_gold.build: dbt build of the warehouse SQL project against the R2 Data Catalog.
 
-The run filter becomes dbt's --select (e.g. "silver.nbp" or "nbp_fx_rates+"); empty
-builds everything. When a run names the Eurostat Silver models explicitly (one-off
-backfills only, owner policy #822; a full build leaves them unchanged), warehouse/eurostat_batch.py
+The run filter becomes dbt's --select (e.g. "silver.nbp" or "nbp_fx_rates+"). An empty
+filter (the scheduled run) builds only the models whose inputs or code changed since their
+last build (warehouse/changed.py, owner policy #822); "fqn:*" builds everything. When a
+run names the Eurostat Silver models explicitly (one-off backfills only, owner policy #822;
+a full build leaves them unchanged), warehouse/eurostat_batch.py
 plans its batch first (passed as dbt vars) and records it after the model ran. A run that
 selects only the Eurostat Silver models repeats batches while Silver is incomplete and the
 time budget allows (LOOP_MINUTES). A build whose only failures are the catalog's rate
@@ -48,6 +50,8 @@ def main(select: str = "", target: str = "prod", variables: dict | None = None) 
 
 def _main(select: str, target: str, variables: dict | None) -> int:
     selectors = [s.strip() for s in select.replace(",", " ").split() if s.strip()]
+    if not selectors and target == "prod":
+        return changed_only(target, variables)
     if not selectors or not set(selectors) <= EUROSTAT_ONLY:
         return build_once(selectors, target, variables)[0]
     started, longest = time.monotonic(), 0.0
@@ -59,6 +63,30 @@ def _main(select: str, target: str, variables: dict | None) -> int:
         if code != 0 or not remaining or elapsed + 1.3 * longest > LOOP_MINUTES * 60:
             return code
     return code
+
+
+def changed_only(target: str, variables: dict | None) -> int:
+    """The scheduled build: only models whose inputs or code changed (warehouse/changed.py)."""
+    from ingestion.common.r2 import catalog
+    from warehouse import changed
+
+    cat = catalog()
+    meta = changed.manifest(target)
+    plan = changed.plan(cat, meta)
+    step_summary(f"## warehouse · changed models\n\n```json\n{json.dumps(plan, indent=2)}\n```\n")
+    if not plan["select"]:
+        annotate("notice", "warehouse dbt build", {"target": target, "changed_only": {"rebuilt": 0, **_why(plan)}})
+        return 0
+    return build_once(plan["select"], target, variables, changed_plan={"cat": cat, "meta": meta, **plan})[0]
+
+
+def _why(plan: dict) -> dict:
+    """Counts of the rebuild reasons by kind, and of unchanged models (fits any annotation)."""
+    kinds: dict[str, int] = {}
+    for reason in plan["reasons"].values():
+        kind = reason.split(":")[0]
+        kinds[kind] = kinds.get(kind, 0) + 1
+    return {"unchanged": plan["unchanged"], "why": kinds}
 
 
 MAX_FAILURES_SHOWN = 8
@@ -118,8 +146,12 @@ def _rate_limited_only(results: list[dict]) -> bool:
     return bool(failures) and all("HTTP 429" in str(r.get("message")) for r in failures)
 
 
-def build_once(selectors: list[str], target: str, variables: dict | None) -> tuple[int, int]:
-    """One dbt build; returns (exit code, Eurostat versions still to load after it)."""
+def build_once(
+    selectors: list[str], target: str, variables: dict | None, changed_plan: dict | None = None
+) -> tuple[int, int]:
+    """One dbt build; returns (exit code, Eurostat versions still to load after it). With a
+    changed-only plan, a successful build records its build properties on the models it wrote."""
+    started_ms = int(time.time() * 1000)
     command = ["dbt", "build", "--target", target, "--project-dir", str(PROJECT), "--profiles-dir", str(PROJECT)]
     if selectors:
         command += ["--select", *selectors]
@@ -168,6 +200,19 @@ def build_once(selectors: list[str], target: str, variables: dict | None) -> tup
             summary["eurostat_batch"]["recorded"] = True
     if not results:
         summary["output_tail"] = tail
+    if changed_plan is not None:
+        from warehouse import changed
+
+        summary["changed_only"] = {"rebuilt": len(selectors), **_why(changed_plan)}
+        if returncode == 0:
+            built = [
+                r["unique_id"].split(".")[-1]
+                for r in results
+                if r["unique_id"].startswith("model.") and r["status"] == "success"
+            ]
+            summary["changed_only"]["properties"] = changed.record(
+                changed_plan["cat"], changed_plan["meta"], built, started_ms
+            )
     if returncode == 0 and target == "prod":
         from warehouse import catalog
 
