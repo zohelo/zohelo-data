@@ -18,6 +18,7 @@ from datetime import UTC, datetime, timedelta
 import json
 from typing import Any
 
+from ingestion.common.bronze_files import retry
 from ingestion.common.r2 import catalog
 from ingestion.common.report import annotate
 
@@ -57,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
     for layer in LAYERS:
         for identifier in cat.list_tables(layer):
             name = f"{layer}.{identifier[-1]}"
-            table = cat.load_table(identifier)
+            table = retry(lambda identifier=identifier: cat.load_table(identifier), f"load {name}")
             ids = expirable(table, cutoff_ms)
             if not ids:
                 continue

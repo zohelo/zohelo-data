@@ -25,6 +25,7 @@ from typing import Any
 from pyiceberg.manifest import DataFileContent
 import yaml
 
+from ingestion.common.bronze_files import retry
 from ingestion.common.r2 import catalog, req, s3, sources
 from ingestion.common.report import annotate, step_summary
 
@@ -67,7 +68,7 @@ def tables(cat) -> dict[str, dict[str, Any]]:
     for layer in LAYERS:
         for identifier in cat.list_tables(layer):
             name = f"{layer}.{identifier[-1]}"
-            table = cat.load_table(identifier)
+            table = retry(lambda identifier=identifier: cat.load_table(identifier), f"load {name}")
             snapshot = table.current_snapshot()
             oldest_ms = min((s.timestamp_ms for s in table.metadata.snapshots), default=now_ms)
             summary = snapshot.summary if snapshot is not None and snapshot.summary is not None else {}
