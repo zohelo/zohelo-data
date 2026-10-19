@@ -3,11 +3,11 @@
 
 Per registered source (ingestion/sources/*.yaml): Landing and Archive files, bytes and
 latest write; Bronze / Silver / Gold tables with rows, data files, bytes and snapshot
-count (from Iceberg metadata, no data scan). Also storage per bucket and top folder,
+count and oldest snapshot age (from Iceberg metadata, no data scan). Also storage per bucket and top folder,
 Landing/Archive folders and Iceberg tables that no source claims, and registered tables
 that do not exist. Fails fast when credentials or the catalog are broken.
 
-Output: annotations (totals + sources), the job summary, and the full JSON in
+Output: annotations (totals, tables holding more than one snapshot, sources), the job summary, and the full JSON in
 $OPS_OUTPUT_DIR. Args: --source <id> ... to limit the per-source part.
 """
 
@@ -19,6 +19,7 @@ import fnmatch
 import json
 import os
 from pathlib import Path
+import time
 from typing import Any
 
 from pyiceberg.manifest import DataFileContent
@@ -62,6 +63,7 @@ def manifest_totals(table, snapshot) -> tuple[int, int]:
 
 def tables(cat) -> dict[str, dict[str, Any]]:
     out = {}
+    now_ms = time.time() * 1000
     for layer in LAYERS:
         for identifier in cat.list_tables(layer):
             name = f"{layer}.{identifier[-1]}"
@@ -77,6 +79,10 @@ def tables(cat) -> dict[str, dict[str, Any]]:
                 "files": files,
                 "bytes": size,
                 "snapshots": len(table.metadata.snapshots),
+                # Policy #822 keeps 1 snapshot, max age 1 h: older ones mean expiry lags or does not run.
+                "oldest_snapshot_hours": round(
+                    (now_ms - min((s.timestamp_ms for s in table.metadata.snapshots), default=now_ms)) / 3.6e6, 1
+                ),
             }
     return out
 
@@ -146,7 +152,11 @@ def main(argv=None) -> int:
         "iceberg_snapshots": sum(t["snapshots"] for t in found.values()),
         "unclaimed_tables": unclaimed_tables[:30],
         "unclaimed_landing_folders": unclaimed_landing[:20],
-        "legacy_tables": {"count": len(legacy_found), "gb": gb(sum(found[n]["bytes"] for n in legacy_found))},
+        "legacy_tables": {
+            "count": len(legacy_found),
+            "gb": gb(sum(found[n]["bytes"] for n in legacy_found)),
+            "names": legacy_found[:10],
+        },
         "registered_tables_missing": sorted(
             n for s in report.values() for layer in LAYERS for n in s[layer]["missing"]
         )[:30],
@@ -158,6 +168,23 @@ def main(argv=None) -> int:
         "usd_per_month": round(max(0.0, stored_gb - FREE_GB) * USD_PER_GB_MONTH, 2),
     }
     annotate("notice", "inventory totals", totals)
+
+    # Tables holding more than one snapshot, most snapshots first (list last, fitted to one annotation).
+    extra = sorted(
+        ((n, t["snapshots"], t["oldest_snapshot_hours"]) for n, t in found.items() if t["snapshots"] > 1),
+        key=lambda row: (-row[1], row[0]),
+    )
+    snapshots: dict[str, Any] = {
+        "format": "table: [snapshots, oldest snapshot age in hours]",
+        "tables_over_one": len(extra),
+        "oldest_hours": max((row[2] for row in extra), default=0),
+        "tables": {},
+    }
+    for name, count, age in extra:
+        if len(json.dumps({**snapshots, "tables": {**snapshots["tables"], name: [count, age]}})) > 3800:
+            break
+        snapshots["tables"][name] = [count, age]
+    annotate("notice", "inventory snapshots", snapshots)
     if totals["storage_estimate"]["usd_per_month"] > COST_WARNING_USD:
         annotate("warning", "R2 storage above free tier", totals["storage_estimate"])
 
