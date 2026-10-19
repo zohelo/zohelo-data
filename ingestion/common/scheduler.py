@@ -12,7 +12,9 @@ The Pipeline workflow's ``schedule`` trigger (twice an hour; GitHub drops many, 
 dispatch of run ``scheduler: dispatch due runs`` runs ``python run.py schedule``, which
 dispatches every run whose cron time fell after the previous scheduler run was queued, up
 to this run's queue time (GitHub often starts schedules late or skips them, so a fixed
-one-hour window would skip or repeat runs; at most 360 minutes are caught up). The
+one-hour window would skip or repeat runs; a long gap is walked in 360-minute chunks). A
+weekly or monthly schedule whose latest slot has no successful run since (the dispatched run
+failed, or a scheduler run failed) is dispatched again, at most twice per slot (#839). The
 dispatched run is an ordinary Pipeline run (same plan, authorization and concurrency), so
 a scheduled run and a manual run are the same thing. ``schedule: null`` or ``[]`` means
 manual only.
@@ -172,6 +174,96 @@ def _windows(end: datetime, start: datetime | None, minutes: int, gap: int | Non
     return chunks
 
 
+CATCH_UP_ATTEMPTS = 2  # runs per weekly/monthly slot before the alert issue is the only signal
+CATCH_UP_DAYS = 32  # how far back the latest slot of a periodic schedule is searched
+
+
+def periodic(cron: str) -> bool:
+    """A schedule that does not fire every day (day-of-month or weekday restricted)."""
+    _, _, day, _, weekday = parse(cron)
+    return len(day) < 31 or len(weekday) < 7
+
+
+def last_slot(cron: str, end: datetime) -> datetime | None:
+    """The latest cron minute at or before ``end`` within CATCH_UP_DAYS."""
+    fields = parse(cron)
+    day = end.replace(second=0, microsecond=0)
+    for back in range(CATCH_UP_DAYS + 1):
+        date = day - timedelta(days=back)
+        for hour in sorted(fields[1], reverse=True):
+            for minute in sorted(fields[0], reverse=True):
+                when = date.replace(hour=hour, minute=minute)
+                if when <= end and matches(fields, when):
+                    return when
+    return None
+
+
+def pipeline_runs(repo: str, token: str, since: datetime) -> dict[str, list[dict]]:
+    """Dispatched Pipeline runs created at or after ``since``, by run name ("Pipeline · source · run")."""
+    out: dict[str, list[dict]] = {}
+    for page in range(1, 11):
+        response = requests.get(
+            f"https://api.github.com/repos/{repo}/actions/workflows/pipeline.yml/runs",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
+            params={
+                "event": "workflow_dispatch",
+                "created": f">={since.strftime('%Y-%m-%dT%H:%M:%SZ')}",
+                "per_page": 100,
+                "page": page,
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+        runs = response.json()["workflow_runs"]
+        for r in runs:
+            out.setdefault(str(r.get("display_title", "")), []).append(r)
+        if len(runs) < 100:
+            break
+    return out
+
+
+def catch_up(config: dict, end: datetime, start: datetime, repo: str, token: str) -> list[dict]:
+    """Weekly/monthly entries whose latest slot before this window has no successful run (#839).
+
+    Slots inside this run's window are left to the normal path. A slot is dispatched again when
+    no run since it succeeded or is still queued/running, and fewer than CATCH_UP_ATTEMPTS runs
+    started since it (so a run that keeps failing is retried once, not every 30 minutes)."""
+    slots = []
+    for e in entries(config):
+        cron = str(e["cron"])
+        if not periodic(cron):
+            continue
+        slot = last_slot(cron, end)
+        if slot is None or slot > start:
+            continue
+        slots.append((e, slot))
+    if not slots:
+        return []
+    runs = pipeline_runs(repo, token, min(slot for _, slot in slots))
+    due_again = []
+    for e, slot in slots:
+        since = [r for r in runs.get(f"Pipeline · {e['source']} · {e['run']}", []) if _minute(r["created_at"]) >= slot]
+        if any(r.get("conclusion") == "success" or r.get("status") != "completed" for r in since):
+            continue
+        if len(since) < CATCH_UP_ATTEMPTS:
+            due_again.append({**e, "slot": slot.isoformat(timespec="minutes"), "runs_since": len(since)})
+    return due_again
+
+
+def _dispatch(repo: str, token: str, inputs: dict) -> str | None:
+    """Start a Pipeline run; None on success, else the reason."""
+    try:
+        response = requests.post(
+            f"https://api.github.com/repos/{repo}/actions/workflows/pipeline.yml/dispatches",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
+            json={"ref": "main", "inputs": inputs},
+            timeout=30,
+        )
+    except requests.RequestException as error:
+        return f"{type(error).__name__}: {error}"[:200]
+    return None if response.status_code == 204 else response.text[:200]
+
+
 def main(config: dict, plan, now: datetime | None = None) -> int:
     now = now or datetime.now(UTC)
     problems = validate(config, plan)
@@ -187,20 +279,32 @@ def main(config: dict, plan, now: datetime | None = None) -> int:
             if not repo or not token:
                 skipped.append({**inputs, "reason": "no GITHUB_REPOSITORY/GITHUB_TOKEN"})
                 break
-            response = requests.post(
-                f"https://api.github.com/repos/{repo}/actions/workflows/pipeline.yml/dispatches",
-                headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
-                json={"ref": "main", "inputs": inputs},
-                timeout=30,
-            )
-            (started if response.status_code == 204 else skipped).append(
-                {**inputs, **({} if response.status_code == 204 else {"reason": response.text[:200]})}
-            )
+            reason = _dispatch(repo, token, inputs)
+            (started if reason is None else skipped).append({**inputs, **({"reason": reason} if reason else {})})
             break
+    caught_up = []
+    if repo and token:
+        try:
+            window_start = start or end - timedelta(minutes=minutes)
+            just_started = {(i["source"], i["run"]) for i in started}
+            again = [
+                e
+                for e in catch_up(config, end, window_start, repo, token)
+                if (e["source"], e["run"]) not in just_started
+            ]
+        except (requests.RequestException, ValueError, KeyError, TypeError) as error:
+            again = []
+            skipped.append({"catch_up": "run history unreadable", "reason": f"{type(error).__name__}: {error}"[:200]})
+        for e in again:
+            inputs = {"source": e["source"], "run": e["run"], "filter": str(e.get("filter") or "")}
+            reason = _dispatch(repo, token, inputs)
+            item = {**inputs, "slot": e["slot"], "runs_since": e["runs_since"]}
+            (caught_up if reason is None else skipped).append({**item, **({"reason": reason} if reason else {})})
     summary = {
         "at": now.isoformat(timespec="minutes"),
         "window": {"end": end.isoformat(timespec="minutes"), "chunks": len(chunks), "gap_minutes": gap},
         "started": started,
+        "caught_up": caught_up,
         "skipped": skipped,
         "invalid_schedules": problems,
     }
