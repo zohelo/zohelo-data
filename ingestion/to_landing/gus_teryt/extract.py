@@ -101,17 +101,19 @@ def put_new(client, bucket: str, key: str, body: bytes, content_type: str) -> No
 
 
 def request(session: requests.Session, method: str, data: dict | None = None) -> requests.Response:
+    last = ""
     for attempt in range(5):
         try:
             response = session.request(method, PAGE, data=data, timeout=180)
             if response.status_code == 200:
                 return response
             if response.status_code not in (429, 500, 502, 503, 504):
-                raise RuntimeError(f"eTERYT {response.status_code}")
-        except (requests.ConnectionError, requests.Timeout):
-            pass
+                raise RuntimeError(f"eTERYT {method} HTTP {response.status_code}")
+            last = f"HTTP {response.status_code}"
+        except (requests.ConnectionError, requests.Timeout) as error:
+            last = f"{type(error).__name__}: {error}"[:300]
         time.sleep(10 * 2**attempt)
-    raise RuntimeError("eTERYT kept failing")
+    raise RuntimeError(f"eTERYT {method} kept failing after 5 attempts; last: {last}")
 
 
 def run_load(client, bucket: str, entities: list[str], held: dict[str, list]) -> Counter:

@@ -25,6 +25,7 @@ import importlib
 import json
 from pathlib import Path
 import sys
+import traceback
 
 import yaml
 
@@ -305,7 +306,25 @@ def main(argv: list[str] | None = None) -> int:
         args.filter, args.max_items, args.parallel_jobs, args.job_index, args.parallel_downloads, args.budget_minutes
     )
     print(json.dumps({"pipeline": args.source, "activity": args.activity, **vars(params)}), flush=True)
-    return int(func(params) or 0)
+    try:
+        return int(func(params) or 0)
+    except (Exception, SystemExit) as error:
+        if isinstance(error, SystemExit) and error.code in (None, 0):
+            raise
+        _annotate_crash(args.source, args.activity, error)
+        raise
+
+
+def _annotate_crash(source: str, activity: str, error: BaseException) -> None:
+    """Publish an activity crash as an error annotation (#843): job logs are not readable by AI sessions."""
+    from ingestion.common.report import annotate
+
+    frames = traceback.extract_tb(error.__traceback__)
+    where = [f"{f.filename.rsplit('/', 1)[-1]}:{f.lineno} {f.name}" for f in frames[-3:]]
+    detail = error.code if isinstance(error, SystemExit) else str(error)
+    annotate(
+        "error", f"{source} {activity} crashed", {"error": type(error).__name__, "message": detail, "where": where}
+    )
 
 
 if __name__ == "__main__":
