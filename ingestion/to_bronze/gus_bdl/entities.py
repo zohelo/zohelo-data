@@ -351,12 +351,13 @@ def main(argv=None) -> int:
 
     queue = sorted(p["todo"], key=lambda t: t["size"])
     serial: list[dict[str, Any]] = []
-    while queue and time.monotonic() < deadline:
+    while queue and time.monotonic() < deadline - (900 if serial else 0):
         broken = False
         with ProcessPoolExecutor(max_workers=args.workers) as pool:
             running: dict = {}
             while (queue or running) and not broken:
-                while queue and len(running) < args.workers and time.monotonic() < deadline:
+                stop = deadline - (900 if serial else 0)  # killed subgroups keep time to run alone
+                while queue and len(running) < args.workers and time.monotonic() < stop:
                     task = queue.pop(0)
                     running[pool.submit(work, task, paths, args.memory, tmp_root)] = task
                 if not running:
@@ -379,7 +380,7 @@ def main(argv=None) -> int:
         commit()
     for task in serial:  # each in its own one-worker pool with the full memory: a kill fails that subgroup only
         if time.monotonic() + 600 > deadline:
-            break
+            continue
         with ProcessPoolExecutor(max_workers=1) as alone:
             try:
                 account(alone.submit(work, task, paths, "10GB", tmp_root).result())

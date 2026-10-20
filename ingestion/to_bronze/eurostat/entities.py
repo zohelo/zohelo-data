@@ -356,12 +356,14 @@ def main(argv=None) -> int:
     small = [c for c in todo if c["size"] <= BIG_BYTES]
     serial = [c for c in todo if c["size"] > BIG_BYTES]  # alone, with the runner's full memory
     queue = list(small)
-    while queue and time.monotonic() < deadline:
+    while queue and time.monotonic() < deadline - (3600 if serial else 0):
         broken = False
         with ProcessPoolExecutor(max_workers=args.workers) as pool:
             running: dict = {}
             while (queue or running) and not broken:
-                while queue and len(running) < args.workers and time.monotonic() < deadline:
+                # the serial phase (big files, retries) keeps its hour; small files stop before it
+                stop = deadline - (3600 if serial else 0)
+                while queue and len(running) < args.workers and time.monotonic() < stop:
                     c = queue.pop(0)
                     running[pool.submit(work, c, c["need_bronze"], digest, args.memory, tmp_root, paths)] = c
                 if not running:
@@ -384,7 +386,7 @@ def main(argv=None) -> int:
         commit()
     for c in serial:  # each in its own one-worker pool: a kill fails that dataset only
         if time.monotonic() + (3600 if c["size"] > BIG_BYTES else 300) > deadline:
-            break
+            continue  # a smaller one may still fit
         with ProcessPoolExecutor(max_workers=1) as alone:
             try:
                 account(alone.submit(work, c, c["need_bronze"], digest, "10GB", tmp_root, paths).result())
