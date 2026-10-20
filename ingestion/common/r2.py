@@ -226,8 +226,8 @@ def latest_snapshot(meta: dict[str, dict[str, Any]], area: str = "data") -> set[
 # A long scan leaves the pooled keep-alive connection idle; the catalog closes it and the
 # next request fails with RemoteDisconnected (#851 bronze.verify, build properties 20 Oct).
 # POST/DELETE (commits, drops) are retried only when the connection failed before the
-# request was sent, so a commit is never sent twice.
-CATALOG_RETRY = {"total": 5, "backoff_factor": 2, "status_forcelist": (429, 500, 502, 503, 504)}
+# request was sent (other=0: TLS errors are not retried), so a commit is never sent twice.
+CATALOG_RETRY = {"total": 5, "other": 0, "backoff_factor": 2, "status_forcelist": (429, 500, 502, 503, 504)}
 CATALOG_OPEN_DELAYS = (5, 20)
 
 
