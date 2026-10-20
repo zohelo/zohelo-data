@@ -12,7 +12,7 @@ SQL and the subgroup's variable mapping (silver.bdl_variables), so a changed map
 that subgroup. A run that would redo most subgroups (a changed model, a recreated table) needs
 ``--approved <issue>`` (owner rule R6, #875). A subgroup is rejected (recorded in
 bronze.bdl_rejected_files, listed in the result) when a part fails the decoder or the Silver
-checks: grain unit × dimensions × year, no two different published values for one key.
+checks: grain unit (code + name) × dimensions × year, no two different published values for one key.
 State comes from the tables' file lists only. Prints one JSON result line.
 """
 
@@ -185,7 +185,7 @@ def work(task: dict[str, Any], paths: dict[str, str], memory: str, tmp_root: str
                 lookups={"variables": str(lookup)},
                 same_rows=False,
                 not_null=("subgroup_id", "unit_code", "year"),
-                unique_key=("unit_code", "dimension_values", "year"),
+                unique_key=("unit_code", "unit_name", "dimension_values", "year"),
                 reject_if="value_conflict",
                 memory_limit=memory,
                 temp_directory=str(work_dir),

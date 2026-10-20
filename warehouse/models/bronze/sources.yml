@@ -205,6 +205,6 @@ sources:
       breakdown_dimensions / breakdown_codes; one file per dataset (raw_sha256 = its Landing file).
   - name: bdl_observations
     description: >-
-      GUS BDL observations, typed, one row per unit × dimensions × year of each subgroup's newest
+      GUS BDL observations, typed, one row per unit (code + name: the export gives the Górnośląsko-Zagłębiowska Metropolia the code of ŚLĄSKIE) × dimensions × year of each subgroup's newest
       complete download (overlapping parts: identical rows collapse, an empty value gives way to a
       published one; conflicting values reject the subgroup); variable_id from bdl_variables.

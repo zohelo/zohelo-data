@@ -2,8 +2,10 @@
 -- (all parts of the subgroup's newest complete download); `bronze` is that file, `variables` the
 -- subgroup's rows of silver.bdl_variables. The result replaces the subgroup's partition in
 -- silver.bdl_observations (design #875).
--- One row per unit_code x dimension_values x year. Parts of one download can overlap (their
--- territory selections share units); the rule, from the 20 Oct probe (#868, #875):
+-- One row per unit (unit_code + unit_name) x dimension_values x year. The unit needs its name:
+-- the website export gives the Górnośląsko-Zagłębiowska Metropolia the code of ŚLĄSKIE
+-- (012400000000; probe 20 Oct, P1314/P1410). Parts of one download can overlap (their territory
+-- selections share units); the rule, from the 20 Oct probe (#868, #875):
 --   identical rows collapse; an empty value gives way to a published one;
 --   two different published values for one key are a conflict: value_conflicts counts them
 --   and the loader rejects the subgroup (listed for the owner, never silently collapsed).
@@ -18,9 +20,10 @@ with typed as (
 ranked as (
     select
         *,
-        count(distinct published) over (partition by unit_code, dimension_values, year_int) as published_values,
+        count(distinct published) over (partition by unit_code, unit_name, dimension_values, year_int)
+            as published_values,
         row_number() over (
-            partition by unit_code, dimension_values, year_int
+            partition by unit_code, unit_name, dimension_values, year_int
             order by published is null, part_index, source_row_number
         ) as pick
     from typed
