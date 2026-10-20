@@ -1,6 +1,6 @@
 """Pipeline entry point: plan a run, or execute one activity for one source.
 
-    python run.py plan --source eurostat --run "landing → bronze (all steps)"
+    python run.py plan --source eurostat --run "full dataflow: landing → bronze → silver → gold → portal"
     python run.py activity --source eurostat --activity landing.extract [--filter ...]
     python run.py schedule [--check]    start the declared runs that are due (scheduled trigger, twice an hour);
                                         --check validates the source declarations and schedules
@@ -63,7 +63,7 @@ RUNS = {
     "bronze: verify": ["bronze.verify"],
     "archive: move Bronze-loaded Landing": ["landing.archive"],
     "archive: apply retention": ["archive.prune"],
-    "landing → bronze (all steps)": [
+    "full dataflow: landing → bronze → silver → gold → portal": [
         "landing.inspect",
         "landing.extract",
         "landing.verify",
@@ -71,6 +71,7 @@ RUNS = {
         "bronze.verify",
         "landing.archive",
         "archive.prune",
+        "silver_gold.build",
     ],
     "silver/gold: promote": ["silver_gold.promote"],
     "silver/gold: build models": ["silver_gold.build"],
@@ -247,11 +248,21 @@ def plan(source: str, run: str, config: dict) -> list[str]:
         raise SystemExit(f"unknown source {source!r}; sources: {sorted(config['sources'])}")
     if run not in RUNS:
         raise SystemExit(f"unknown run {run!r}")
-    activities = RUNS[run]
+    activities = list(RUNS[run])
+    # The source's full dataflow (owner direction 20 Oct, #875): after Landing and Bronze (and
+    # Silver, which entity sources write with Bronze), the changed-only model build carries what
+    # changed into Silver/Gold and the semantic layer, then the portal index. The model build is
+    # a platform activity, authorized in warehouse/warehouse.yaml.
+    full = source != "platform" and run.startswith("full dataflow")
+    if full and "silver_gold.build" not in authorized(config, "platform"):
+        activities.remove("silver_gold.build")
     platform_run = all(a in PLATFORM_ACTIVITIES for a in activities)
     if platform_run != (source == "platform"):
         raise SystemExit("silver/gold and serving runs use source 'platform'; landing/bronze runs use a data source")
     code, allowed = implemented(source), authorized(config, source)
+    if source != "platform":  # platform activities inside a source run are authorized by the platform
+        code = {**code, **{a: PLATFORM_ACTIVITIES[a] for a in activities if a in PLATFORM_ACTIVITIES}}
+        allowed = allowed + [a for a in activities if a in PLATFORM_ACTIVITIES]
     refused = [a for a in activities if a not in code or a not in allowed]
     if refused:
         raise SystemExit(
@@ -318,6 +329,8 @@ def main(argv: list[str] | None = None) -> int:
     params = Params(
         args.filter, args.max_items, args.parallel_jobs, args.job_index, args.parallel_downloads, args.budget_minutes
     )
+    if args.activity == "silver_gold.build" and args.source != "platform":
+        params.filter = ""  # inside a source run: the changed-only build (a source filter is not a dbt selector)
     print(json.dumps({"pipeline": args.source, "activity": args.activity, **vars(params)}), flush=True)
     try:
         return int(func(params) or 0)

@@ -25,11 +25,14 @@ whose YAML sets `extraction.kind` (for example `bulk_file`) runs the shared patt
 | `landing.archive` | `ingestion/common/archive.py` | move Bronze-loaded Landing files to Archive (copy, verify SHA-256, delete from Landing; receipt stays) |
 | `archive.prune` | `ingestion/common/retention.py` | apply the source's Archive retention (`archive_policy` in its config) |
 | `silver_gold.promote` | `warehouse/passthrough/` | platform: Bronze → Silver → Gold pass-through for sources not yet modelled |
-| `silver_gold.build` | `warehouse/build.py` | platform: dbt build of `warehouse/models/` (filter = model names; empty = only models whose inputs or code changed, `fqn:*` = all); Eurostat Silver in batches; publishes the data catalog |
+| `silver_gold.build` | `warehouse/build.py` | platform: dbt build of `warehouse/models/` (filter = model names; empty = only models whose inputs or code changed, `fqn:*` = all); publishes the data catalog |
 | `serving.refresh_index` | `portal/publish_index.py` | platform: rebuild the portal file index |
 
-A Pipeline run is one activity or `landing → bronze (all steps)`; the portal index
-refresh is added automatically after writing activities. An activity runs only when
+A Pipeline run is one activity or a source's `full dataflow: landing → bronze → silver → gold → portal`
+(owner direction 20 Oct, #875): Landing, Bronze (entity sources write Silver with Bronze), archive,
+then the changed-only model build (Silver/Gold models, semantic layer, data catalog), then the
+portal index. Scheduled source runs are full dataflow runs. The portal index refresh is added
+automatically after writing activities. An activity runs only when
 it is implemented and listed under `activities:` in `ingestion/sources/<source>.yaml`
 (platform activities: `warehouse/warehouse.yaml`, `portal/portal.yaml`). Activities are idempotent and resume from durable
 state, so a rerun is always safe. Results are published as run annotations and the

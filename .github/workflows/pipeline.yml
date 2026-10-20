@@ -33,7 +33,7 @@ on:
           - "bronze: verify"
           - "archive: move Bronze-loaded Landing"
           - "archive: apply retention"
-          - "landing → bronze (all steps)"
+          - "full dataflow: landing → bronze → silver → gold → portal"
           - "silver/gold: promote"
           - "silver/gold: build models"
           - "serving: refresh portal index"

@@ -9,7 +9,7 @@ extraction:
   production: snapshot                  # each file is a complete catalogue state
   incremental_policy: changed_since_last  # written only when the catalogue state date is newer
   schedule:                             # UTC; weekly, Monday night (ULIC changes daily; TERC/SIMC rarely)
-    - {cron: "10 2 * * 1", run: "landing → bronze (all steps)"}
+    - {cron: "10 2 * * 1", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/gus_teryt/
 # ZIPs are kept as exact bytes (.bin). ULIC gets a new state date daily, so keep only

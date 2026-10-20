@@ -7,7 +7,7 @@ extraction:
   production: snapshot                  # every file is a complete dataset version
   incremental_policy: changed_since_last  # inventory "last data change" vs Landing
   schedule:                             # UTC; daily: datasets changed since the last run
-    - {cron: "15 4 * * *", run: "landing → bronze (all steps)"}
+    - {cron: "15 4 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/eurostat/
 # Landing → Archive (docs/landing.md): Bronze-loaded files are moved (copy, verify, delete);

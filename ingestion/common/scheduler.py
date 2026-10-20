@@ -5,7 +5,7 @@ Schedules are declared, not coded: each ``ingestion/sources/<source>.yaml`` (and
 
     schedule:
       - cron: "30 11 * * 1-5"          # UTC, 5 fields: minute hour day month weekday
-        run: "landing → bronze (all steps)"
+        run: "full dataflow: landing → bronze → silver → gold → portal"
         filter: ""                      # optional, as in a manual run
 
 The Pipeline workflow's ``schedule`` trigger (twice an hour; GitHub drops many, #802) or a
