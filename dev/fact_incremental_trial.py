@@ -34,7 +34,7 @@ def main():
     cat = catalog()
     try:
         began = time.monotonic()
-        code, _ = build_once(["wdi_observations", *EXCLUDE], "trial", {})
+        code, _ = build_once(["wdi_observations", *EXCLUDE, "fact_observation_current"], "trial", {})
         annotate(
             "notice",
             "trial wdi_observations full build",
