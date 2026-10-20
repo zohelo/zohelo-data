@@ -40,7 +40,7 @@ from ingestion.common import bronze_files as bf
 from ingestion.common import entity_tables as et
 from ingestion.common.r2 import catalog, get_with_backoff, req, s3
 from ingestion.common.report import annotate
-from ingestion.to_bronze.gus_bdl.decode import BRONZE_COLUMNS, BdlDecodeError, decode_web_export
+from ingestion.to_bronze.gus_bdl.decode import BRONZE_COLUMNS, BdlDecodeError, BdlEmptyExport, decode_web_export
 
 ENTITY = "subgroup_id"
 BRONZE = ("bronze", "bdl_observations")
@@ -54,6 +54,12 @@ SILVER_MODEL = "bdl_observations"
 STATS = [ENTITY]
 COMMIT_EVERY = 200
 COMMIT_SECONDS = 600
+TYPES = {
+    "VARCHAR": pa.string(),
+    "BIGINT": pa.int64(),
+    "INTEGER": pa.int32(),
+    "TIMESTAMPTZ": pa.timestamp("us", tz="UTC"),
+}
 SILVER_COLUMNS = [
     ("subgroup_id", "VARCHAR"),
     ("variable_id", "BIGINT"),
@@ -155,6 +161,9 @@ def work(task: dict[str, Any], paths: dict[str, str], memory: str, tmp_root: str
                 )
                 try:
                     decode_web_export(raw, part, part_out)
+                except BdlEmptyExport:  # its territories have no data: an empty part, not an error
+                    raw.unlink()
+                    continue
                 except BdlDecodeError as exc:
                     out.update(
                         status="rejected",
@@ -166,12 +175,17 @@ def work(task: dict[str, Any], paths: dict[str, str], memory: str, tmp_root: str
                 raw.unlink()
                 files.append(str(part_out))
             local_bronze = work_dir / "bronze.parquet"
-            with duckdb.connect() as con:
-                listing = ", ".join("'" + f.replace("'", "''") + "'" for f in files)
-                con.execute(
-                    f"COPY (SELECT * FROM read_parquet([{listing}])) TO '{local_bronze}' "
-                    "(FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 1000000)"
+            if not files:  # every part empty: the subgroup is published without data; one empty file
+                pq.write_table(
+                    pa.table({n: pa.array([], TYPES[t]) for n, t in BRONZE_COLUMNS}), local_bronze, compression="zstd"
                 )
+            else:
+                with duckdb.connect() as con:
+                    listing = ", ".join("'" + f.replace("'", "''") + "'" for f in files)
+                    con.execute(
+                        f"COPY (SELECT * FROM read_parquet([{listing}])) TO '{local_bronze}' "
+                        "(FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 1000000)"
+                    )
             out["bronze"] = bf.upload(client, bucket, bronze_key, local_bronze, rcp)
             out["bronze_action"] = "decoded"
         lookup = work_dir / "variables.parquet"
@@ -216,7 +230,9 @@ def refused_keys(cat, rejected_id: tuple[str, str], create: bool) -> set[str]:
         return set()
     if table.current_snapshot() is None:
         return set()
-    return set(table.scan(selected_fields=("raw_sha256",)).to_arrow().column("raw_sha256").to_pylist())
+    rows = table.scan(selected_fields=("raw_sha256", "error")).to_arrow().to_pylist()
+    # Empty exports were rejected by the earlier loader; they are valid (an empty part), not a refusal.
+    return {r["raw_sha256"] for r in rows if not str(r.get("error") or "").startswith("BDL export has no rows")}
 
 
 def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, create: bool = True) -> dict[str, Any]:

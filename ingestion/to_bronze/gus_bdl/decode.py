@@ -44,6 +44,10 @@ class BdlDecodeError(ValueError):
     """The file cannot satisfy the Bronze contract (recorded with the reason, never dropped)."""
 
 
+class BdlEmptyExport(BdlDecodeError):
+    """A valid export with no rows: its territory selection has no data (a part, or a whole subgroup)."""
+
+
 def decode_web_export(source: Path, receipt: dict[str, Any], output: Path, memory_limit: str = "8GB") -> dict:
     data = source.read_bytes()
     if sha256(data).hexdigest() != receipt["sha256"] or len(data) != receipt["size_bytes"]:
@@ -125,7 +129,7 @@ def decode_web_export(source: Path, receipt: dict[str, Any], output: Path, memor
         database.unlink(missing_ok=True)
         work.unlink(missing_ok=True)
     if rows == 0:
-        raise BdlDecodeError("BDL export has no rows")
+        raise BdlEmptyExport("BDL export has no rows")
     if bad:
         raise BdlDecodeError(f"{bad} rows without unit code or year")
     if shifted:
