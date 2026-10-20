@@ -2,7 +2,9 @@
    A fact row's recipe is its source_system and the Silver input file it came from
    (raw_sha256). recipes: one row per current input file with at least one non-null value.
    Each source joins with its own union branch (BDL #749, Eurostat #840). raw_sha256 is
-   coalesced to '' on both sides, so the NOT IN key predicates never see a null. #}
+   coalesced to '' on both sides, so the NOT IN key predicates never see a null.
+   source_version is not in the recipe although geography_key depends on it: WDI Bronze never
+   reloads a raw_sha256 it holds (to_bronze/world_bank_wdi/load.py), so a sha has one version. #}
 {% macro fact_observation_recipes() -%}
 recipes as (
     select distinct

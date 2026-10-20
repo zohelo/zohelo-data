@@ -16,7 +16,7 @@ not yet modelled.
 | `dim_geography` | schemes TERC (Polska → województwo → powiat → gmina → część gminy), SIMC localities, WB economies and aggregates; PRG areas; `_T`, `_Z`, `_X` |
 | `dim_currency` | currencies quoted by NBP + PLN; `_Z`, `_X` |
 | `dim_indicator` | WDI indicators |
-| `fact_observation` | WDI annual observations (indicator × geography × period) |
+| `fact_observation` | WDI annual observations (indicator × geography × period); incremental per source input file |
 | `fact_fx_rate`, `fact_gold_price` | NBP exchange rates (mid/bid/ask) and gold price |
 
 Metrics (MetricFlow, `warehouse/semantic_models/`): NBP rates and gold price; WDI

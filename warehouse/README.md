@@ -36,7 +36,10 @@ scheduled run rebuilds what it built, once. A model table changed by anything bu
 (other than compaction) is not noticed downstream: only dbt writes Silver and Gold.
 
 Incremental models (`materialized='incremental'`; today `silver.bdl_observations`, ~229 M
-rows) are rebuilt incrementally when selected. `bdl_observations` keys each row by its
+rows, and `gold.fact_observation`) are rebuilt incrementally when selected.
+`fact_observation` keys each row by (`source_system`, `raw_sha256` of its Silver input), one
+recipe branch per source in `macros/fact_observation.sql`, checked by
+`tests/fact_observation_current.sql`; a new WDI archive rewrites only WDI's rows. `bdl_observations` keys each row by its
 recipe: subgroup, Bronze file (`raw_sha256`) and `variables_key` (digest of the subgroup's
 variable mapping in `bdl_variables`). Its pre-hook deletes rows whose recipe is no longer
 current, then the build inserts the current recipes it lacks; the singular test
