@@ -102,8 +102,13 @@ def decode_web_export(source: Path, receipt: dict[str, Any], output: Path, memor
                     json.dumps(dims, ensure_ascii=False, separators=(",", ":")),
                 ],
             )
-            rows, bad = con.execute(
-                f"SELECT count(*), count(*) FILTER (WHERE c0 IS NULL OR c{n - 4} IS NULL) FROM src"
+            # A row with more fields than the header names (a dimension column without a
+            # header, e.g. P3018 of 2014) shifts every column after it: the year column then
+            # holds dimension labels. Such files are rejected, never loaded shifted (#875).
+            rows, bad, shifted = con.execute(
+                f"SELECT count(*), count(*) FILTER (WHERE c0 IS NULL OR c{n - 4} IS NULL), "
+                f"count(*) FILTER (WHERE NOT regexp_full_match(trim(c{n - 4}), '[0-9]{{4}}') "
+                f"OR coalesce(c{n}, '') <> '') FROM src"
             ).fetchone()
     except duckdb.Error as exc:
         raise BdlDecodeError(f"invalid BDL CSV: {str(exc)[:500]}") from exc
@@ -114,4 +119,6 @@ def decode_web_export(source: Path, receipt: dict[str, Any], output: Path, memor
         raise BdlDecodeError("BDL export has no rows")
     if bad:
         raise BdlDecodeError(f"{bad} rows without unit code or year")
+    if shifted:
+        raise BdlDecodeError(f"{shifted} rows do not match the header (more fields than named, or year not YYYY)")
     return {"rows": rows, "dimensions": dims, "output_bytes": output.stat().st_size}

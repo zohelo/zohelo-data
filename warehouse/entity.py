@@ -4,7 +4,8 @@ The model is plain SQL that selects from the relation ``bronze`` (the one Bronze
 entity version); small lookup tables can be passed as extra relations. The result is written
 as one ZSTD Parquet file, which the loader then puts in place of the entity's partition in
 Silver. Checks run on the result before it is accepted: the row count matches the rule of the
-model (``same_rows``: one Silver row per Bronze row) and the listed columns are never null.
+model (``same_rows``: one Silver row per Bronze row), the listed columns are never null, the
+grain (``unique_key``) holds, and no row meets ``reject_if``.
 """
 
 from __future__ import annotations
@@ -48,6 +49,8 @@ def apply(
     *,
     not_null: tuple[str, ...] = (),
     same_rows: bool = True,
+    unique_key: tuple[str, ...] = (),
+    reject_if: str = "",
     lookups: dict[str, str] | None = None,
     memory_limit: str = "10GB",
     temp_directory: str | None = None,
@@ -69,6 +72,18 @@ def apply(
         bronze_rows = con.execute("SELECT count(*) FROM bronze").fetchone()[0]
         checks = ", ".join([f"count(*) FILTER (WHERE {c} IS NULL)" for c in not_null] or ["0"])
         rows, *nulls = con.execute(f"SELECT count(*), {checks} FROM read_parquet('{target}')").fetchone()
+        keys = (
+            con.execute(
+                f"SELECT count(*) FROM (SELECT DISTINCT {', '.join(unique_key)} FROM read_parquet('{target}'))"
+            ).fetchone()[0]
+            if unique_key
+            else rows
+        )
+        flagged = (
+            con.execute(f"SELECT count(*) FROM read_parquet('{target}') WHERE {reject_if}").fetchone()[0]
+            if reject_if
+            else 0
+        )
     except duckdb.Error as exc:
         output.unlink(missing_ok=True)
         raise EntityModelError(f"{model}: {str(exc)[:600]}") from exc
@@ -77,6 +92,10 @@ def apply(
     problems = [f"{c} null in {n} rows" for c, n in zip(not_null, nulls[: len(not_null)], strict=True) if n]
     if same_rows and rows != bronze_rows:
         problems.append(f"{rows} Silver rows for {bronze_rows} Bronze rows")
+    if keys != rows:
+        problems.append(f"{rows - keys} rows repeat the key ({', '.join(unique_key)})")
+    if flagged:
+        problems.append(f"{flagged} rows where {reject_if}")
     if problems:
         output.unlink(missing_ok=True)
         raise EntityModelError(f"{model}: " + "; ".join(problems))
