@@ -70,7 +70,12 @@ models:
   - name: fact_observation
     description: >-
       Statistical observations at their true grain (indicator × reference area × reference
-      period, one value, source-tagged); v1 holds World Bank WDI annual values.
+      period, one value, source-tagged); v1 holds World Bank WDI annual values. Incremental
+      per source input file (#870); the test fact_observation_current checks Gold holds
+      exactly the current recipes.
+    tests:
+      - unique:
+          column_name: "indicator_key || '|' || geography_key || '|' || period_key"
     columns:
       - name: indicator_key
         tests: [not_null, {relationships: {arguments: {to: ref('dim_indicator'), field: indicator_key}}}]

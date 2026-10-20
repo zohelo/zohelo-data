@@ -43,7 +43,6 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   eurostat_dimensions: {rows: 200000}  # 54,101
   fact_fx_rate: {rows: 1000000}  # 512,519
   fact_gold_price: {rows: 20000}  # 3,479
-  fact_observation: {rows: 12000000, exception: "#870"}  # 9,045,734; must be incremental before #749/#840 add BDL/Eurostat
   nbp_fx_rates: {rows: 1000000}  # 428,392
   nbp_gold_fixings: {rows: 20000}  # 3,479
   prg_units: {rows: 200000}  # 60,367
