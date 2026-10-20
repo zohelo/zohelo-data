@@ -251,7 +251,7 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, cr
         bronze = bf.retry(lambda: cat.load_table(ids["bronze"]), "bronze")
         silver = bf.retry(lambda: cat.load_table(ids["silver"]), "silver")
     refused = refused_keys(cat, ids["rejected"], create)
-    empty = empty_keys(cat, ids["rejected"])
+    without_data = empty_keys(cat, ids["rejected"])
     b_state, s_state = et.state(bronze, ENTITY), et.state(silver, ENTITY)
     groups: dict[str, list[dict]] = defaultdict(list)
     for part in candidates(client, req("R2_LANDING_BUCKET")):
@@ -264,7 +264,7 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, cr
     todo, rejected, expected, expected_silver, redo_rows, no_data = [], [], {}, {}, 0, []
     for sg, parts in groups.items():
         rcp = recipe(parts)
-        if rcp in empty:
+        if rcp in without_data:
             no_data.append(sg)
             continue
         mapping = mappings.get(sg, empty)
