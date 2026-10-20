@@ -26,4 +26,8 @@ bronze: [bronze.bdl_observations, bronze.bdl_rejected_files, bronze.bdl_metadata
 silver: [silver.bdl_observations, silver.bdl_variables, silver.bdl_units]
 gold: []
 
+# Refresh policy for all layers (owner decision #875): a new subgroup download replaces that
+# subgroup in Bronze, Silver and Gold; nothing else is rewritten.
+refresh: {mode: incremental, unit: subgroup, decided: "#875"}
+
 activities: [landing.inspect, landing.extract, bronze.load, bronze.verify, landing.archive]   # landing.extract = API metadata (variables, units); website extraction and API data refresh follow

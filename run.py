@@ -124,6 +124,7 @@ def load_config() -> dict:
 
 SOURCE_KEYS = {
     "bronze_latest_only",
+    "refresh",
     "source_system",
     "description",
     "extraction",
@@ -171,6 +172,18 @@ def config_problems(config: dict) -> list[str]:
             bad = [t for t in cfg.get(layer) or [] if not str(t).startswith(f"{layer}.")]
             if bad:
                 problems.append(f"{source}: {layer} lists tables of another layer: {bad}")
+        refresh = cfg.get("refresh") or {}
+        if "bronze.load" in (cfg.get("activities") or []):
+            # Owner decision 20 Oct (#875): every loaded source declares its refresh policy for all layers.
+            if refresh.get("mode") not in {"incremental", "full"} or not refresh.get("decided"):
+                problems.append(f"{source}: refresh needs mode (incremental|full) and decided (owner decision issue)")
+            entities = Path(__file__).parent / "ingestion" / "to_bronze" / source / "entities.py"
+            if refresh.get("mode") == "incremental" and (not refresh.get("unit") or not entities.exists()):
+                problems.append(
+                    f"{source}: incremental refresh needs unit and an entity loader (to_bronze/{source}/entities.py)"
+                )
+            if refresh.get("mode") == "full" and entities.exists():
+                problems.append(f"{source}: has an entity loader but declares full refresh")
         if "bronze.load" in (cfg.get("activities") or []):
             policy = cfg.get("archive_policy") or {}
             if not {"move", "retention"} <= set(policy):

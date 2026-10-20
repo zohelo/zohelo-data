@@ -271,8 +271,13 @@ def main(argv=None) -> int:
         else:
             how = "scheduled" if schedule else "manual only"
             last = run_mark(newest(f"Pipeline · {source} · "), history_start)
+            refresh = config.get("refresh") or {}
+            policy = f"{refresh.get('mode', '❔ no policy')}" + (
+                f" per {refresh['unit']}" if refresh.get("unit") else ""
+            )
             cells["landing"] = (
-                f"{how} · last run {last} · {land['objects']:,} objects · new content {day(latest)}{history}"
+                f"{how} · refresh {policy} · last run {last} · {land['objects']:,} objects · "
+                f"new content {day(latest)}{history}"
             )
 
         bronze = [n for n in config.get("bronze") or [] if not n.endswith("_rejected_files")]

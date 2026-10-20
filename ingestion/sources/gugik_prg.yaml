@@ -32,4 +32,7 @@ legacy_tables: [bronze.prg_country, bronze.prg_voivodeships, bronze.prg_counties
                 bronze.prg_surface_areas, silver.prg_*, gold.dim_prg_*, gold.fact_prg_surface_areas]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (owner decision #875): small, rebuilt in full (monthly).
+refresh: {mode: full, decided: "#875"}
+
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

@@ -26,5 +26,9 @@ bronze: [bronze.eurostat_observations, bronze.eurostat_rejected_files,
 silver: [silver.eurostat_observations, silver.eurostat_dataflows, silver.eurostat_codes, silver.eurostat_dimensions]
 gold: []                              # Eurostat in Gold: shared models in warehouse/warehouse.yaml
 
+# Refresh policy for all layers (owner decision #875): a new dataset version replaces that
+# dataset in Bronze, Silver and Gold; nothing else is rewritten.
+refresh: {mode: incremental, unit: dataset, decided: "#875"}
+
 # Activities the Pipeline may run (owner authorization).
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

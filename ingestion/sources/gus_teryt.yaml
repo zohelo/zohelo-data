@@ -26,4 +26,7 @@ legacy_tables: [bronze.teryt_terc, bronze.teryt_simc, bronze.teryt_ulic, silver.
                 gold.dim_territory, gold.dim_locality, gold.dim_street]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (owner decision #875): small dictionaries, rebuilt in full.
+refresh: {mode: full, decided: "#875"}
+
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
