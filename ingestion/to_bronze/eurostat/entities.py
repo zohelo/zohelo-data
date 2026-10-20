@@ -20,7 +20,7 @@ recorded in bronze.eurostat_rejected_files and reported. Prints one JSON result 
 from __future__ import annotations
 
 import argparse
-from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, ThreadPoolExecutor, wait
 from datetime import UTC, datetime
 from hashlib import sha256
 import json
@@ -37,7 +37,6 @@ from ingestion.common import bronze_files as bf
 from ingestion.common import entity_tables as et
 from ingestion.common.r2 import catalog, req, s3
 from ingestion.common.report import annotate
-from ingestion.to_bronze.eurostat.batch import landing_candidates
 from ingestion.to_bronze.eurostat.decode import BRONZE_COLUMNS, EurostatBulkDecodeError, decode_landing_distribution
 
 ENTITY = "dataset_id"
@@ -65,6 +64,51 @@ SILVER_COLUMNS = [
     ("raw_sha256", "VARCHAR"),
     ("source_version", "VARCHAR"),
 ]
+
+
+LANDING_DATA_PREFIX = "01_landing/eurostat/snapshot/data/"
+
+
+def landing_candidates(client, landing_bucket: str) -> list[dict[str, Any]]:
+    """The latest Landing version of every dataset (highest source version, then ingest)."""
+    keys = []
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=landing_bucket, Prefix=LANDING_DATA_PREFIX):
+        keys += [item["Key"] for item in page.get("Contents", []) if item["Key"].endswith(".receipt.json")]
+
+    def read(key: str) -> dict[str, Any]:
+        body = bf.retry(lambda: client.get_object(Bucket=landing_bucket, Key=key)["Body"].read(), "read_receipt")
+        receipt = json.loads(body)
+        sha, size, obj = receipt.get("sha256"), receipt.get("size_bytes"), receipt.get("object") or {}
+        if (
+            receipt.get("schema_version") != 2
+            or receipt.get("kind") != "eurostat_landing"
+            or receipt.get("area") != "data"
+            or not isinstance(sha, str)
+            or not bf.SHA_RE.fullmatch(sha)
+            or type(size) is not int
+            or size <= 0
+            or obj.get("bucket") != landing_bucket
+            or not str(obj.get("key", "")).startswith(LANDING_DATA_PREFIX)
+        ):
+            raise RuntimeError(f"invalid Eurostat Landing receipt: {key}")
+        return {
+            "raw_sha256": sha,
+            "size": size,
+            "receipt_key": key,
+            "receipt_bytes": body,
+            "data_key": obj["key"],
+            "dataset_id": receipt.get("dataset_code"),
+            "order": (str(receipt.get("version_token") or ""), str(receipt.get("ingested_at") or "")),
+        }
+
+    with ThreadPoolExecutor(max_workers=8) as pool:  # R2 throttles bursts of reads
+        receipts = list(pool.map(read, sorted(keys)))
+    latest: dict[str, dict[str, Any]] = {}
+    for item in receipts:
+        held = latest.get(item["dataset_id"])
+        if held is None or item["order"] > held["order"]:
+            latest[item["dataset_id"]] = item
+    return sorted(latest.values(), key=lambda item: item["dataset_id"])
 
 
 def model_digest() -> str:

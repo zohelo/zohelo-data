@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import argparse
 from collections import defaultdict
-from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, ThreadPoolExecutor, wait
 from datetime import UTC, datetime
 from hashlib import sha256
 import json
@@ -37,9 +37,8 @@ import pyarrow.parquet as pq
 
 from ingestion.common import bronze_files as bf
 from ingestion.common import entity_tables as et
-from ingestion.common.r2 import catalog, req, s3
+from ingestion.common.r2 import catalog, get_with_backoff, req, s3
 from ingestion.common.report import annotate
-from ingestion.to_bronze.gus_bdl.batch import candidates
 from ingestion.to_bronze.gus_bdl.decode import BRONZE_COLUMNS, BdlDecodeError, decode_web_export
 
 ENTITY = "subgroup_id"
@@ -72,6 +71,35 @@ SILVER_COLUMNS = [
     ("raw_sha256", "VARCHAR"),
     ("value_conflict", "BOOLEAN"),
 ]
+
+
+DATA = "01_landing/gus_bdl/snapshot/data/"
+
+
+def candidates(client, bucket: str) -> list[dict[str, Any]]:
+    """Every part of the newest complete version per subgroup."""
+    keys = []
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=DATA):
+        keys += [o["Key"] for o in page.get("Contents", []) if o["Key"].endswith(".receipt.json")]
+
+    def read(key: str) -> dict:
+        body = get_with_backoff(client, bucket, key)
+        return {**json.loads(body), "_receipt_key": key, "_receipt_bytes": body}
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        receipts = list(pool.map(read, keys))
+    versions: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for r in receipts:
+        if r.get("kind") == "gus_bdl_landing" and r.get("area") == "data":
+            versions[(r["subgroup_id"], r["version_token"])].append(r)
+    newest: dict[str, tuple[str, list[dict]]] = {}
+    for (subgroup, version), parts in versions.items():
+        total = int((parts[0].get("part") or {}).get("total", 1))
+        if len({(p.get("part") or {}).get("index", 1) for p in parts}) < total:
+            continue  # incomplete version: never loaded
+        if subgroup not in newest or version > newest[subgroup][0]:
+            newest[subgroup] = (version, parts)
+    return [p for _, parts in newest.values() for p in parts]
 
 
 def recipe(parts: list[dict[str, Any]]) -> str:
@@ -339,3 +367,15 @@ def verify(min_pct: float = 99.0) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+def proven() -> set[str]:
+    """Landing SHA-256 of every part whose subgroup's Bronze file holds exactly its download (archive proof)."""
+    cat, client = bf.retry(catalog, "catalog"), s3()
+    held = et.state(bf.retry(lambda: cat.load_table(BRONZE), "bronze"), ENTITY)
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for part in candidates(client, req("R2_LANDING_BUCKET")):
+        groups[part["subgroup_id"]].append(part)
+    return {
+        p["sha256"] for sg, parts in groups.items() if held.get(sg, {}).get("recipes") == {recipe(parts)} for p in parts
+    }

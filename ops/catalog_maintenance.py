@@ -23,6 +23,9 @@ API = "https://api.cloudflare.com/client/v4/accounts/{account}/r2-catalog/{bucke
 
 # Owner data policy #822: no table history in the lakehouse (the API's minimum is 1).
 SNAPSHOT_POLICY = {"state": "enabled", "min_snapshots_to_keep": 1, "max_snapshot_age": "1h"}
+# Design #875: compaction off. It rewrote files named after their Landing SHA-256 under other
+# names, which broke the loaders' record of what is loaded (NBP doubled, #803; column scans).
+COMPACTION_POLICY = {"state": "disabled"}
 
 
 def call(method: str, url: str, headers: dict, body: dict | None = None) -> dict:
@@ -40,14 +43,19 @@ def call(method: str, url: str, headers: dict, body: dict | None = None) -> dict
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
-    parser.add_argument("--apply", action="store_true", help="set snapshot expiration to the #822 policy")
+    parser.add_argument("--apply", action="store_true", help="set snapshot expiration (#822) and compaction off (#875)")
     args = parser.parse_args(argv)
 
     base = API.format(account=req("CLOUDFLARE_ACCOUNT_ID"), bucket=req("R2_LAKEHOUSE_BUCKET"))
     headers = {"Authorization": f"Bearer {req('R2_DATA_CATALOG_TOKEN')}"}
     out: dict = {}
     if args.apply:
-        out["update"] = call("POST", f"{base}/maintenance-configs", headers, {"snapshot_expiration": SNAPSHOT_POLICY})
+        out["update"] = call(
+            "POST",
+            f"{base}/maintenance-configs",
+            headers,
+            {"snapshot_expiration": SNAPSHOT_POLICY, "compaction": COMPACTION_POLICY},
+        )
     out["catalog"] = call("GET", base, headers)
     out["maintenance"] = call("GET", f"{base}/maintenance-configs", headers)
     failed = any(part["status"] != 200 for part in out.values())
@@ -55,6 +63,8 @@ def main(argv: list[str] | None = None) -> int:
         config = (out["maintenance"]["result"] or {}).get("maintenance_config", {})
         current = config.get("snapshot_expiration", {})
         mismatch = {key: current.get(key) for key, value in SNAPSHOT_POLICY.items() if current.get(key) != value}
+        if (config.get("compaction") or {}).get("state") != COMPACTION_POLICY["state"]:
+            mismatch["compaction"] = (config.get("compaction") or {}).get("state")
         if mismatch:
             out["policy_mismatch"] = mismatch
             failed = True

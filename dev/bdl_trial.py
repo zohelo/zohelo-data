@@ -17,7 +17,7 @@ from ingestion.common import entity_tables as et
 from ingestion.common.r2 import catalog, req, s3
 from ingestion.common.report import annotate
 from ingestion.to_bronze.gus_bdl import entities
-from ingestion.to_bronze.gus_bdl.batch import candidates
+from ingestion.to_bronze.gus_bdl.entities import candidates
 
 NS = "zz_dev_bdl"
 

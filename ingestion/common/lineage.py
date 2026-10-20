@@ -22,7 +22,7 @@ from typing import Any
 from ingestion.common.r2 import landing_objects, latest_snapshot, req, s3
 from ingestion.common.report import annotate
 
-SOURCES = ("eurostat", "gugik_prg", "gus_bdl", "gus_teryt", "nbp", "world_bank_wdi")
+SOURCES = ("gugik_prg", "gus_teryt", "nbp", "world_bank_wdi")  # Eurostat, GUS BDL: entities.verify (#875)
 
 
 def summarize(name: str, landing_set: set[str], proven: set[str], meta: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -41,22 +41,6 @@ def summarize(name: str, landing_set: set[str], proven: set[str], meta: dict[str
         "represented_sample": sorted(represented)[:12],
         "unrepresented_sample": sorted(unrepresented)[:12],
         "provenance_without_landing_sample": sorted(missing_raw)[:12],
-    }
-
-
-def inspect_eurostat(meta: dict[str, dict[str, Any]], full: set[str], rejected: set[str]) -> dict[str, Any]:
-    data = {d for d, i in meta.items() if i["kind"] == "raw"}
-    latest = latest_snapshot(meta)
-    superseded = {d for d in data if meta[d]["layout"] == "snapshot"} - latest
-    unloaded = latest - full
-    return {
-        "latest": summarize("latest", latest, full, meta),
-        "latest_rejected_with_reason": len(unloaded & rejected),
-        "latest_unexplained": len(unloaded - rejected),
-        "latest_unexplained_sample": sorted(meta[d]["key"] for d in unloaded - rejected)[:10],
-        "superseded_versions": len(superseded),
-        "superseded_in_bronze": len(superseded & full),
-        "all_provenance_recoverable": full <= set(meta),
     }
 
 
@@ -123,25 +107,6 @@ def main(argv=None) -> int:
     parser.add_argument("--source", choices=SOURCES, required=True)
     args = parser.parse_args(argv)
 
-    if args.source == "gus_bdl":
-        from ingestion.common.latest import prune
-
-        report_latest = prune("gus_bdl", apply=False)
-        passed_latest = all(entry.get("superseded", 0) == 0 for entry in report_latest.values())
-        if not passed_latest:
-            annotate("error", f"{args.source} Bronze latest-only breach", report_latest)
-        summary = {
-            "result": "pass" if passed_latest else "fail",
-            "operation": "inspect-exact-landing-iceberg-hash-membership",
-            "source": args.source,
-            "latest_only": report_latest,
-            "writes_performed": False,
-        }
-        print(json.dumps(summary, sort_keys=True))
-        annotate("notice" if passed_latest else "error", f"{args.source} Landing to Bronze lineage", summary)
-        report_duplicates(args.source)
-        return 0 if passed_latest else 1
-
     client = s3()
     bucket = req("R2_LANDING_BUCKET")
     meta = landing_objects(client, bucket, args.source)
@@ -150,8 +115,7 @@ def main(argv=None) -> int:
     if not passed_latest:
         annotate("error", f"{args.source} Bronze latest-only breach", report_latest)
     loaded = set().union(*held.values()) if held else set()
-    inspect = inspect_eurostat if args.source == "eurostat" else inspect_snapshot
-    result = inspect(meta, loaded, rejected)
+    result = inspect_snapshot(meta, loaded, rejected)
     summary = {
         "result": "pass" if passed_latest else "fail",
         "operation": "inspect-exact-landing-iceberg-hash-membership",

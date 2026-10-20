@@ -46,6 +46,10 @@ SOURCES = _archive_sources()
 def proven_for(source: str, meta: dict[str, dict[str, Any]]) -> set[str]:
     from ingestion.common.bronze_files import SOURCE_TABLES, proven_hashes
 
+    if source == "gus_bdl":  # one Bronze file per subgroup download, named by its parts (#875)
+        from ingestion.to_bronze.gus_bdl.entities import proven
+
+        return proven() | proven_hashes(source)[0]  # data parts, plus metadata pages (named by SHA-256)
     if source in SOURCE_TABLES:
         return proven_hashes(source)[0]
     raise RuntimeError(f"no Bronze proof registered for {source} (bronze_files.SOURCE_TABLES)")

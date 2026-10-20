@@ -20,12 +20,11 @@ archive_policy:
   without_bronze: [metadata]
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
-bronze: [bronze.eurostat_full_observations, bronze.eurostat_rejected_files,
+# Observations: one file per dataset in Bronze and in Silver, replaced whole (design #875).
+bronze: [bronze.eurostat_observations, bronze.eurostat_rejected_files,
          bronze.eurostat_structure_items, bronze.eurostat_structure_rejected_files]
-silver: [silver.eurostat_observations, silver.eurostat_dataset_versions, silver.eurostat_file_index,
-         silver.eurostat_loaded_files, silver.eurostat_dataflows, silver.eurostat_codes, silver.eurostat_dimensions]
+silver: [silver.eurostat_observations, silver.eurostat_dataflows, silver.eurostat_codes, silver.eurostat_dimensions]
 gold: []                              # Eurostat in Gold: shared models in warehouse/warehouse.yaml
 
 # Activities the Pipeline may run (owner authorization).
-bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
