@@ -54,12 +54,7 @@ SILVER_MODEL = "bdl_observations"
 STATS = [ENTITY]
 COMMIT_EVERY = 200
 COMMIT_SECONDS = 600
-TYPES = {
-    "VARCHAR": pa.string(),
-    "BIGINT": pa.int64(),
-    "INTEGER": pa.int32(),
-    "TIMESTAMPTZ": pa.timestamp("us", tz="UTC"),
-}
+EMPTY = "empty: every part of the download has no rows (published without data)"
 SILVER_COLUMNS = [
     ("subgroup_id", "VARCHAR"),
     ("variable_id", "BIGINT"),
@@ -175,17 +170,15 @@ def work(task: dict[str, Any], paths: dict[str, str], memory: str, tmp_root: str
                 raw.unlink()
                 files.append(str(part_out))
             local_bronze = work_dir / "bronze.parquet"
-            if not files:  # every part empty: the subgroup is published without data; one empty file
-                pq.write_table(
-                    pa.table({n: pa.array([], TYPES[t]) for n, t in BRONZE_COLUMNS}), local_bronze, compression="zstd"
+            if not files:  # every part empty: published without data (a table cannot hold an empty file)
+                out.update(status="rejected", error=EMPTY, raw_sha256=rcp, landing_key=f"subgroup {sg}")
+                return out
+            with duckdb.connect() as con:
+                listing = ", ".join("'" + f.replace("'", "''") + "'" for f in files)
+                con.execute(
+                    f"COPY (SELECT * FROM read_parquet([{listing}])) TO '{local_bronze}' "
+                    "(FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 1000000)"
                 )
-            else:
-                with duckdb.connect() as con:
-                    listing = ", ".join("'" + f.replace("'", "''") + "'" for f in files)
-                    con.execute(
-                        f"COPY (SELECT * FROM read_parquet([{listing}])) TO '{local_bronze}' "
-                        "(FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 1000000)"
-                    )
             out["bronze"] = bf.upload(client, bucket, bronze_key, local_bronze, rcp)
             out["bronze_action"] = "decoded"
         lookup = work_dir / "variables.parquet"
@@ -231,8 +224,22 @@ def refused_keys(cat, rejected_id: tuple[str, str], create: bool) -> set[str]:
     if table.current_snapshot() is None:
         return set()
     rows = table.scan(selected_fields=("raw_sha256", "error")).to_arrow().to_pylist()
-    # Empty exports were rejected by the earlier loader; they are valid (an empty part), not a refusal.
+    # Empty exports were rejected by the earlier loader; an empty part is valid, not a refusal.
     return {r["raw_sha256"] for r in rows if not str(r.get("error") or "").startswith("BDL export has no rows")}
+
+
+def empty_keys(cat, rejected_id: tuple[str, str]) -> set[str]:
+    """Recipes of downloads whose every part is empty (recorded with EMPTY): no entity, not a refusal."""
+    from pyiceberg.exceptions import NoSuchTableError
+
+    try:
+        table = cat.load_table(rejected_id)
+    except NoSuchTableError:
+        return set()
+    if table.current_snapshot() is None:
+        return set()
+    rows = table.scan(selected_fields=("raw_sha256", "error")).to_arrow().to_pylist()
+    return {r["raw_sha256"] for r in rows if r.get("error") == EMPTY}
 
 
 def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, create: bool = True) -> dict[str, Any]:
@@ -244,6 +251,7 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, cr
         bronze = bf.retry(lambda: cat.load_table(ids["bronze"]), "bronze")
         silver = bf.retry(lambda: cat.load_table(ids["silver"]), "silver")
     refused = refused_keys(cat, ids["rejected"], create)
+    empty = empty_keys(cat, ids["rejected"])
     b_state, s_state = et.state(bronze, ENTITY), et.state(silver, ENTITY)
     groups: dict[str, list[dict]] = defaultdict(list)
     for part in candidates(client, req("R2_LANDING_BUCKET")):
@@ -253,9 +261,12 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, cr
     mappings = variables(cat)
     model = (Path(__file__).resolve().parents[3] / "warehouse" / "entity" / f"{SILVER_MODEL}.sql").read_text()
     empty = pa.table({"dimension_key": pa.array([], pa.string()), "variable_id": pa.array([], pa.int64())})
-    todo, rejected, expected, expected_silver, redo_rows = [], [], {}, {}, 0
+    todo, rejected, expected, expected_silver, redo_rows, no_data = [], [], {}, {}, 0, []
     for sg, parts in groups.items():
         rcp = recipe(parts)
+        if rcp in empty:
+            no_data.append(sg)
+            continue
         mapping = mappings.get(sg, empty)
         tag = silver_tag(model, mapping)
         if f"{rcp}.{tag}" in refused or any(p["sha256"] in refused for p in parts):
@@ -286,6 +297,7 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, cr
         "expected_silver": expected_silver,
         "subgroups": len(groups),
         "rejected": rejected,
+        "no_data": no_data,
         "redo_rows": redo_rows,
         "bronze": b_state,
         "silver": s_state,
@@ -359,6 +371,8 @@ def main(argv=None) -> int:
             totals["rows"] += result["rows"]
             totals["bronze_rows"] += result["bronze_rows"]
             totals["bronze_decoded"] += result.get("bronze_action") == "decoded"
+        elif result["error"] == EMPTY:
+            totals["published_without_data"] = totals.get("published_without_data", 0) + 1
         else:
             rejected_now.append({"subgroup": result[ENTITY], "error": result["error"][:300]})
 
@@ -403,7 +417,7 @@ def main(argv=None) -> int:
             except Exception as exc:
                 account(failure(task, exc))
         commit()
-    left = len(p["todo"]) - totals["silver_written"] - len(rejected_now)
+    left = len(p["todo"]) - totals["silver_written"] - len(rejected_now) - totals.get("published_without_data", 0)
     summary = {
         "operation": "bdl-entities",
         "result": "complete" if left == 0 else ("failures" if failed else "incomplete_time_budget"),
@@ -431,6 +445,7 @@ def completeness_report() -> dict[str, Any]:
     report = et.completeness(p["expected"], p["bronze"], p["silver"], p["expected_silver"])
     report["rejected_count"] = len(p["rejected"])
     report["rejected_subgroups"] = sorted(p["rejected"])[:20]
+    report["published_without_data"] = sorted(p["no_data"])
     report["minutes"] = round((time.monotonic() - started) / 60, 1)
     return report
 
