@@ -114,20 +114,31 @@ def replace(
 
 
 def configure(table_id: tuple[str, str]) -> dict[str, Any]:
-    """Per-table maintenance: compaction off (file names are the checkpoint), one snapshot kept."""
+    """Per-table maintenance: compaction off (file names are the checkpoint), one snapshot kept.
+
+    The catalog-wide setting (ops/catalog_maintenance --apply) already has compaction off; this
+    per-table setting is a second guard, so a Cloudflare API that does not answer is retried and
+    then reported as a warning, never a reason to stop a load."""
+    from ingestion.common.report import annotate
+
     url = (
         f"https://api.cloudflare.com/client/v4/accounts/{req('CLOUDFLARE_ACCOUNT_ID')}/r2-catalog/"
         f"{req('R2_LAKEHOUSE_BUCKET')}/namespaces/{table_id[0]}/tables/{table_id[1]}/maintenance-configs"
     )
     headers = {"Authorization": f"Bearer {req('R2_DATA_CATALOG_TOKEN')}"}
     body = {"compaction": {"state": "disabled"}, "snapshot_expiration": SNAPSHOT_POLICY}
-    response = requests.post(url, headers=headers, json=body, timeout=30)
-    payload = response.json() if response.headers.get("content-type", "").startswith("application/json") else {}
-    if response.status_code != 200 or not payload.get("success", True):
-        raise RuntimeError(
-            f"maintenance config of {'.'.join(table_id)} failed: {response.status_code} {response.text[:300]}"
-        )
-    return payload.get("result") or {}
+    problem = ""
+    for attempt in range(4):
+        try:
+            response = requests.post(url, headers=headers, json=body, timeout=60)
+            if response.status_code == 200:
+                return response.json().get("result") or {}
+            problem = f"{response.status_code} {response.text[:300]}"
+        except requests.RequestException as exc:
+            problem = f"{type(exc).__name__}: {str(exc)[:200]}"
+        time.sleep(10 * (attempt + 1))
+    annotate("warning", f"maintenance config of {'.'.join(table_id)} not set", {"error": problem})
+    return {}
 
 
 def completeness(
