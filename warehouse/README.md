@@ -26,7 +26,8 @@ The scheduled build (empty filter) rebuilds only models whose inputs or code cha
 code fingerprint (SQL, config, macros, dimensions, `dbt_project.yml`, requirements)
 differs, an upstream model is rebuilt, or a Bronze input or upstream table changed after
 its last build started. The scheduled build records `zohelo.built_from_ms` and
-`zohelo.build_fingerprint` as table properties of each model it wrote whose tests passed;
+`zohelo.build_fingerprint` as table properties of each model it wrote whose tests passed
+(`pass` or `warn`: a warn-severity test such as `bdl_observations.year` not_null counts as passed);
 models it did not finish or whose tests failed get none, so they are rebuilt (and tested)
 next time; tests of unchanged models run when the model next rebuilds. The
 recorded start is moved back 10 minutes to cover Bronze commits that become visible late.

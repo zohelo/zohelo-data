@@ -183,13 +183,21 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+TEST_OK = ("pass", "warn")  # dbt test statuses that leave a model trusted
+
+
 def record(cat, meta: dict[str, Any], results: Iterable[dict[str, Any]], started_ms: int) -> dict[str, Any]:
     """Set the build properties on each model the build wrote whose own tests all passed (dbt
     run results). A model with a failing test, or whose property write fails, keeps no
-    properties and is rebuilt (and tested) next time; write failures are reported, not raised."""
+    properties and is rebuilt (and tested) next time; write failures are reported, not raised.
+    A `warn` result is a pass at the severity the project declared (e.g. bdl_observations.year
+    not_null warns on every build), so only `fail`, `error`, `skipped` and unknown statuses
+    make a model untrusted."""
     results = list(results)
     graph = {m["name"]: m for m in models(meta).values()}
-    failed_tests = {r["unique_id"] for r in results if r["unique_id"].startswith("test.") and r["status"] != "pass"}
+    failed_tests = {
+        r["unique_id"] for r in results if r["unique_id"].startswith("test.") and r["status"] not in TEST_OK
+    }
     untrusted = {
         p.split(".")[-1] for t in failed_tests for p in meta["nodes"].get(t, {}).get("depends_on", {}).get("nodes", [])
     }
