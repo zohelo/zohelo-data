@@ -57,7 +57,7 @@ def main() -> int:
     out["run1"] = run(args.datasets, args.minutes)
     out["run2_noop"] = run(args.datasets, 30)
     bronze_id, silver_id = (NS, "bronze_eurostat_observations"), (NS, "silver_eurostat_observations")
-    victim = sorted(args.datasets)[0]
+    victim = "TPS00001" if "TPS00001" in args.datasets else sorted(args.datasets)[0]
     et.replace(cat, bronze_id, "dataset_id", {victim: []}, ["dataset_id"], "trial-remove")
     et.replace(cat, silver_id, "dataset_id", {victim: []}, ["dataset_id"], "trial-remove")
     out["run3_one_redone"] = run(args.datasets, 30)

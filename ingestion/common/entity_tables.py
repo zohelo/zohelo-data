@@ -126,3 +126,38 @@ def configure(table_id: tuple[str, str]) -> dict[str, Any]:
             f"maintenance config of {'.'.join(table_id)} failed: {response.status_code} {response.text[:300]}"
         )
     return payload.get("result") or {}
+
+
+def completeness(
+    expected: dict[str, str], bronze: dict[str, dict[str, Any]], silver: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    """Layer against the layer below, per entity, from metadata (owner rule R5/R6, #875).
+
+    ``expected``: entity -> recipe of its newest Landing version (what Bronze must hold).
+    Bronze is complete for an entity when it holds exactly that one recipe; Silver when it
+    holds exactly one file derived from Bronze's current recipe (``<recipe>.<model>``)."""
+
+    def pct(n: int, d: int) -> float:
+        return round(100.0 * n / d, 2) if d else 100.0
+
+    bronze_ok = {e for e, r in expected.items() if bronze.get(e, {}).get("recipes") == {r}}
+    silver_ok = {
+        e
+        for e in bronze_ok
+        if len(rs := silver.get(e, {}).get("recipes", set())) == 1 and next(iter(rs)).startswith(expected[e] + ".")
+    }
+    extra_bronze = sorted(set(bronze) - set(expected))
+    multi = sorted(e for e, s in {**bronze, **silver}.items() if len(s.get("paths", [])) > 1)
+    return {
+        "entities": len(expected),
+        "bronze_complete": len(bronze_ok),
+        "bronze_pct": pct(len(bronze_ok), len(expected)),
+        "silver_complete": len(silver_ok),
+        "silver_pct": pct(len(silver_ok), len(bronze_ok)),
+        "bronze_rows": sum(bronze[e]["rows"] for e in bronze_ok),
+        "silver_rows": sum(silver[e]["rows"] for e in silver_ok),
+        "bronze_missing_sample": sorted(set(expected) - bronze_ok)[:10],
+        "silver_missing_sample": sorted(bronze_ok - silver_ok)[:10],
+        "not_in_landing": len(extra_bronze),
+        "entities_with_several_files": len(multi),
+    }
