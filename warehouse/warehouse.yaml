@@ -29,26 +29,26 @@ eurostat_silver:
 # Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
 # below ~1M rows are rebuilt in full; #868). repo_check fails on a model missing here or a ceiling
 # above 1M without an exception issue; a prod build warns above the ceiling and fails above twice it.
-full_rebuild:
-  bdl_units: {rows: 1000000}
-  bdl_variables: {rows: 1000000}
-  dim_currency: {rows: 1000000}
-  dim_date: {rows: 1000000}
-  dim_geography: {rows: 1000000}
-  dim_indicator: {rows: 1000000}
-  dim_period: {rows: 1000000}
-  eurostat_codes: {rows: 1000000}
-  eurostat_dataflows: {rows: 1000000}
-  eurostat_dataset_versions: {rows: 1000000}
-  eurostat_dimensions: {rows: 1000000}
-  fact_fx_rate: {rows: 1000000}
-  fact_gold_price: {rows: 1000000}
-  fact_observation: {rows: 20000000, exception: "#870"}
-  nbp_fx_rates: {rows: 1000000}
-  nbp_gold_fixings: {rows: 1000000}
-  prg_units: {rows: 1000000}
-  teryt_simc: {rows: 1000000}
-  teryt_terc: {rows: 1000000}
-  wdi_countries: {rows: 1000000}
-  wdi_indicators: {rows: 1000000}
-  wdi_observations: {rows: 20000000, exception: "#870"}
+full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 39374769989)
+  bdl_units: {rows: 20000}  # 4,694
+  bdl_variables: {rows: 200000}  # 50,985
+  dim_currency: {rows: 1000}  # 195
+  dim_date: {rows: 200000}  # 73,416
+  dim_geography: {rows: 300000}  # 106,494
+  dim_indicator: {rows: 100000}  # 1,498
+  dim_period: {rows: 300000}  # 87,723
+  eurostat_codes: {rows: 1000000}  # 294,750
+  eurostat_dataflows: {rows: 30000}  # 8,146
+  eurostat_dataset_versions: {rows: 30000}  # 8,148
+  eurostat_dimensions: {rows: 200000}  # 54,101
+  fact_fx_rate: {rows: 1000000}  # 512,519
+  fact_gold_price: {rows: 20000}  # 3,479
+  fact_observation: {rows: 12000000, exception: "#870"}  # 9,045,734; must be incremental before #749/#840 add BDL/Eurostat
+  nbp_fx_rates: {rows: 1000000}  # 428,392
+  nbp_gold_fixings: {rows: 20000}  # 3,479
+  prg_units: {rows: 200000}  # 60,367
+  teryt_simc: {rows: 300000}  # 101,865
+  teryt_terc: {rows: 20000}  # 4,360
+  wdi_countries: {rows: 1000}  # 265
+  wdi_indicators: {rows: 10000}  # 1,498
+  wdi_observations: {rows: 12000000, exception: "#870"}  # 9,045,734; rebuilt weekly with WDI
