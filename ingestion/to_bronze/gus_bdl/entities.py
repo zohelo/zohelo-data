@@ -346,27 +346,28 @@ def main(argv=None) -> int:
     return 0 if left == 0 else 2
 
 
-def verify(min_pct: float = 99.0) -> int:
-    """bronze.verify: Landing → Bronze → Silver completeness per subgroup, from metadata (R5/R6, #875)."""
+def completeness_report() -> dict[str, Any]:
+    """Landing → Bronze → Silver completeness per subgroup, from table metadata (R5, #875)."""
     started = time.monotonic()
     cat, client = bf.retry(catalog, "catalog"), s3()
-    ids = {"bronze": BRONZE, "silver": SILVER, "rejected": REJECTED}
-    p = plan(cat, client, ids, None)
+    p = plan(cat, client, {"bronze": BRONZE, "silver": SILVER, "rejected": REJECTED}, None)
     report = et.completeness(
         p["expected"],
         et.state(bf.retry(lambda: cat.load_table(BRONZE), "bronze"), ENTITY),
         et.state(bf.retry(lambda: cat.load_table(SILVER), "silver"), ENTITY),
     )
-    report["rejected_subgroups"] = sorted(p["skipped_rejected"])[:20]
     report["rejected_count"] = len(p["skipped_rejected"])
+    report["rejected_subgroups"] = sorted(p["skipped_rejected"])[:20]
     report["minutes"] = round((time.monotonic() - started) / 60, 1)
+    return report
+
+
+def verify(min_pct: float = 99.0) -> int:
+    """bronze.verify: fails when a layer is below ``min_pct`` complete or a subgroup holds several files (R6)."""
+    report = completeness_report()
     failed = report["bronze_pct"] < min_pct or report["silver_pct"] < min_pct or report["entities_with_several_files"]
     annotate("error" if failed else "notice", "gus_bdl completeness (Landing → Bronze → Silver)", report)
     return 1 if failed else 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
 
 
 def proven() -> set[str]:

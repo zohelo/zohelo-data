@@ -361,11 +361,8 @@ if __name__ == "__main__":
     raise SystemExit(main())
 
 
-def verify(min_pct: float = 99.0) -> int:
-    """bronze.verify: Landing → Bronze → Silver completeness per dataset, from metadata only (R5/R6, #875).
-
-    Fails when a layer is below ``min_pct`` complete against the layer below or a dataset holds
-    more than one file. Datasets whose newest Landing file was rejected are listed, not counted."""
+def completeness_report() -> dict[str, Any]:
+    """Landing → Bronze → Silver completeness per dataset, from table metadata (R5, #875)."""
     started = time.monotonic()
     cat, client = bf.retry(catalog, "catalog"), s3()
     rejected = bf.rejected_table(cat, REJECTED, ENTITY)
@@ -379,8 +376,16 @@ def verify(min_pct: float = 99.0) -> int:
         et.state(bf.retry(lambda: cat.load_table(BRONZE), "bronze"), ENTITY),
         et.state(bf.retry(lambda: cat.load_table(SILVER), "silver"), ENTITY),
     )
+    report["rejected_count"] = sum(1 for c in latest if c["raw_sha256"] in refused)
     report["rejected_latest"] = sorted(c[ENTITY] for c in latest if c["raw_sha256"] in refused)[:20]
     report["minutes"] = round((time.monotonic() - started) / 60, 1)
+    return report
+
+
+def verify(min_pct: float = 99.0) -> int:
+    """bronze.verify: fails when a layer is below ``min_pct`` complete against the layer below or a
+    dataset holds more than one file (owner rule R6, #875). Rejected datasets are listed, not counted."""
+    report = completeness_report()
     failed = report["bronze_pct"] < min_pct or report["silver_pct"] < min_pct or report["entities_with_several_files"]
     annotate("error" if failed else "notice", "eurostat completeness (Landing → Bronze → Silver)", report)
     return 1 if failed else 0

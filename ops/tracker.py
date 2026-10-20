@@ -24,6 +24,7 @@ import argparse
 from collections import defaultdict
 from datetime import UTC, datetime
 import fnmatch
+from importlib import import_module
 import json
 import os
 from pathlib import Path
@@ -45,6 +46,24 @@ STAGES = ("landing", "bronze", "silver", "gold", "semantic", "catalog", "portal"
 TEMP = re.compile(r"__dbt_(tmp|backup)$")
 RUN_PAGES = 10  # up to 1,000 finished Pipeline runs, newest first
 CATALOG_KEY = "_portal_catalog/v1/catalog.json"
+
+
+# Sources whose loaders replace whole entities (design #875): their Bronze and Silver cells show
+# completeness against the layer below, measured from table metadata.
+ENTITY_SOURCES = {
+    "eurostat": "ingestion.to_bronze.eurostat.entities",
+    "gus_bdl": "ingestion.to_bronze.gus_bdl.entities",
+}
+
+
+def completeness_cell(report: dict[str, Any], layer: str, against: str) -> str:
+    """'✅ 100% of … · n/m · rows' — ✅ at 99% or more (owner rule R6), ⚠️ below, ❌ at 0."""
+    pct = report[f"{layer}_pct"]
+    done = report[f"{layer}_complete"]
+    total = report["entities"] if layer == "bronze" else report["bronze_complete"]
+    icon = "✅" if pct >= 99 else ("⚠️" if done else "❌")
+    extra = f" · {report['rejected_count']} rejected" if layer == "bronze" and report.get("rejected_count") else ""
+    return f"{icon} {pct:g}% {against} · {done:,}/{total:,} · {number(report[f'{layer}_rows'])} rows{extra}"
 
 
 def table_facts(cat) -> dict[str, dict[str, Any]]:
@@ -296,6 +315,13 @@ def main(argv=None) -> int:
             marks = issue_marks(tagged(source, stage))
             if marks:
                 cells[stage] = f"{cells[stage]} {marks}".strip()
+        if source in ENTITY_SOURCES:  # completeness against the layer below, not table existence (#875)
+            try:
+                report = import_module(ENTITY_SOURCES[source]).completeness_report()
+                cells["bronze"] = completeness_cell(report, "bronze", "of newest Landing versions")
+                cells["silver"] = completeness_cell(report, "silver", "of Bronze")
+            except Exception as exc:  # the page still renders; the cell says why
+                cells["bronze"] += f" · ❔ completeness not measured ({type(exc).__name__})"
         rows.append((source, cells))
 
     gold_rows = [tables[n] for n in shared_gold if n in tables]
