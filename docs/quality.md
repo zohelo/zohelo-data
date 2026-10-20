@@ -51,6 +51,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 | sqlfluff (dialect duckdb, jinja templater with dbt built-ins, no lakehouse connection; settings in `pyproject.toml`): lowercase keywords, explicit aliases, qualified columns when several tables are joined; RF04 (keyword-named columns such as `year`) and AL05 are off on purpose | [auto] |
 | No `select *` in a Gold model's output from upstream models; import CTEs (`x as (select * from ref(...))`) and unions of the model's own CTEs are allowed | [review] |
 | Every model has a YAML entry with description, column descriptions for keys, and at least one test (`not_null`/`unique` on the grain) | [auto] |
+| A model that is not incremental (full rebuild) has a row ceiling in `warehouse.yaml` `full_rebuild`; above 1M rows only with an `exception:` issue (owner policy #822); prod builds warn above the ceiling and fail above twice it | [auto] repo_check `configuration`, `build.py` |
 | Model header comment: what it is, grain, source | [review] |
 | Gold facts join conformed dimensions through keys; no source-specific codes in Gold keys without a scheme prefix | [review] |
 | Metrics declared in `semantic_models/` with description and filter | [review] |

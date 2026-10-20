@@ -25,3 +25,30 @@ eurostat_silver:
   oversized_rows: 700000000   # single files above this are deferred until a sliced load exists
   loop_minutes: 140           # a run selecting only the Eurostat models starts no batch after this
   loop_builds: 20             # at most this many builds per run (time is the usual limit: ~8 builds took 64 min)
+
+# Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
+# below ~1M rows are rebuilt in full; #868). repo_check fails on a model missing here or a ceiling
+# above 1M without an exception issue; a prod build warns above the ceiling and fails above twice it.
+full_rebuild:
+  bdl_units: {rows: 1000000}
+  bdl_variables: {rows: 1000000}
+  dim_currency: {rows: 1000000}
+  dim_date: {rows: 1000000}
+  dim_geography: {rows: 1000000}
+  dim_indicator: {rows: 1000000}
+  dim_period: {rows: 1000000}
+  eurostat_codes: {rows: 1000000}
+  eurostat_dataflows: {rows: 1000000}
+  eurostat_dataset_versions: {rows: 1000000}
+  eurostat_dimensions: {rows: 1000000}
+  fact_fx_rate: {rows: 1000000}
+  fact_gold_price: {rows: 1000000}
+  fact_observation: {rows: 20000000, exception: "#870"}
+  nbp_fx_rates: {rows: 1000000}
+  nbp_gold_fixings: {rows: 1000000}
+  prg_units: {rows: 1000000}
+  teryt_simc: {rows: 1000000}
+  teryt_terc: {rows: 1000000}
+  wdi_countries: {rows: 1000000}
+  wdi_indicators: {rows: 1000000}
+  wdi_observations: {rows: 20000000, exception: "#870"}
