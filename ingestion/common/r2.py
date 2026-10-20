@@ -222,22 +222,45 @@ def latest_snapshot(meta: dict[str, dict[str, Any]], area: str = "data") -> set[
     return {digest for _, digest in latest.values()}
 
 
+# Catalog GETs/HEADs retried by urllib3 on dropped or refused connections and 429/5xx.
+# A long scan leaves the pooled keep-alive connection idle; the catalog closes it and the
+# next request fails with RemoteDisconnected (#851 bronze.verify, build properties 20 Oct).
+# POST/DELETE (commits, drops) are retried only when the connection failed before the
+# request was sent (other=0: TLS errors are not retried), so a commit is never sent twice.
+CATALOG_RETRY = {"total": 5, "other": 0, "backoff_factor": 2, "status_forcelist": (429, 500, 502, 503, 504)}
+CATALOG_OPEN_DELAYS = (5, 20)
+
+
 def catalog():
     """The R2 Data Catalog (Apache Iceberg REST) holding bronze, silver and gold."""
-    from pyiceberg.catalog.rest import RestCatalog
+    import time
 
-    return RestCatalog(
-        name="zohelo",
-        warehouse=req("R2_WAREHOUSE"),
-        uri=req("R2_CATALOG_URI"),
-        token=req("R2_DATA_CATALOG_TOKEN"),
-        **{
-            "s3.access-key-id": req("CLOUDFLARE_R2_ACCESS_KEY_ID"),
-            "s3.secret-access-key": req("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
-            "s3.endpoint": req("R2_S3_ENDPOINT"),
-            "s3.region": "auto",
-        },
-    )
+    from pyiceberg.catalog.rest import RestCatalog
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.retry import Retry
+
+    for attempt in range(len(CATALOG_OPEN_DELAYS) + 1):
+        try:
+            cat = RestCatalog(
+                name="zohelo",
+                warehouse=req("R2_WAREHOUSE"),
+                uri=req("R2_CATALOG_URI"),
+                token=req("R2_DATA_CATALOG_TOKEN"),
+                **{
+                    "s3.access-key-id": req("CLOUDFLARE_R2_ACCESS_KEY_ID"),
+                    "s3.secret-access-key": req("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
+                    "s3.endpoint": req("R2_S3_ENDPOINT"),
+                    "s3.region": "auto",
+                },
+            )
+            break
+        except (requests.ConnectionError, requests.Timeout):
+            if attempt == len(CATALOG_OPEN_DELAYS):
+                raise
+            time.sleep(CATALOG_OPEN_DELAYS[attempt])
+    retry = Retry(allowed_methods=frozenset({"GET", "HEAD"}), raise_on_status=False, **CATALOG_RETRY)
+    cat._session.mount("https://", HTTPAdapter(max_retries=retry))
+    return cat
 
 
 def sources() -> dict[str, dict[str, Any]]:
