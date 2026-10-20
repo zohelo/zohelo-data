@@ -75,6 +75,20 @@ def build(source: str, minutes: float, workers: int) -> int:
     return entities.main([*args, "--approved", "875"])
 
 
+def check(source: str) -> dict:
+    """Completeness of the new tables against Landing (metadata only)."""
+    cat, client = catalog(), s3()
+    if source == "eurostat":
+        from ingestion.to_bronze.eurostat import entities as m
+
+        p = m.plan(cat, client, m.model_digest(), None, NEW[source], m.BRONZE, m.REJECTED, create=False)
+    else:
+        from ingestion.to_bronze.gus_bdl import entities as m
+
+        p = m.plan(cat, client, {"bronze": m.BRONZE, "silver": NEW[source], "rejected": m.REJECTED}, None, create=False)
+    return et.completeness(p["expected"], p["bronze"], p["silver"], p["expected_silver"])
+
+
 def compare(source: str) -> int:
     cat, client = catalog(), s3()
     if source == "eurostat":
@@ -118,8 +132,9 @@ def swap(source: str) -> int:
         annotate("error", f"checkpoint swap {source}", {"refused": f"{'.'.join(NEW[source])} does not exist"})
         return 1
     new_rows = et.state(cat.load_table(NEW[source]), ENTITY[source])
-    if not new_rows:
-        annotate("error", f"checkpoint swap {source}", {"refused": "new Silver table is empty"})
+    report = check(source)
+    if report["bronze_pct"] < 99 or report["silver_pct"] < 99 or report["entities_with_several_files"]:
+        annotate("error", f"checkpoint swap {source}", {"refused": "new tables below 99% complete", **report})
         return 1
     done = []
     for table_id, purge in RETIRE[source]:

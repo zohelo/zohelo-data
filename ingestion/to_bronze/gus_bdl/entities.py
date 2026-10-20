@@ -237,7 +237,7 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, cr
     mappings = variables(cat)
     model = (Path(__file__).resolve().parents[3] / "warehouse" / "entity" / f"{SILVER_MODEL}.sql").read_text()
     empty = pa.table({"dimension_key": pa.array([], pa.string()), "variable_id": pa.array([], pa.int64())})
-    todo, rejected, expected, expected_silver = [], [], {}, {}
+    todo, rejected, expected, expected_silver, redo_rows = [], [], {}, {}, 0
     for sg, parts in groups.items():
         rcp = recipe(parts)
         mapping = mappings.get(sg, empty)
@@ -248,6 +248,8 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, cr
         expected[sg], expected_silver[sg] = rcp, f"{rcp}.{tag}"
         need_bronze = b_state.get(sg, {}).get("recipes") != {rcp}
         need_silver = need_bronze or s_state.get(sg, {}).get("recipes") != {f"{rcp}.{tag}"}
+        if need_silver and not need_bronze:
+            redo_rows += b_state[sg]["rows"]  # unchanged data redone (rule R6)
         if need_bronze or need_silver:
             current = b_state.get(sg, {}).get("paths", [])
             todo.append(
@@ -268,6 +270,7 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, cr
         "expected_silver": expected_silver,
         "subgroups": len(groups),
         "rejected": rejected,
+        "redo_rows": redo_rows,
         "bronze": b_state,
         "silver": s_state,
     }
@@ -294,8 +297,8 @@ def main(argv=None) -> int:
     p = plan(cat, client, ids, set(args.only) if args.only else None)
     for key in ("bronze", "silver"):
         et.configure(ids[key])
-    if et.needs_approval(len(p["todo"]), p["subgroups"], args.approved or args.trial):
-        annotate("error", "bdl entities: approval needed", {"rule": "R6 #875", "subgroups_to_redo": len(p["todo"])})
+    if et.needs_approval(p["redo_rows"], args.approved or args.trial):
+        annotate("error", "bdl entities: approval needed", {"rule": "R6 #875", "rows_to_redo": p["redo_rows"]})
         return 1
     tmp_root = os.environ.get("DUCKDB_TEMP_DIRECTORY") or tempfile.gettempdir()
     Path(tmp_root).mkdir(parents=True, exist_ok=True)
@@ -347,32 +350,42 @@ def main(argv=None) -> int:
         return {ENTITY: task[ENTITY], "status": "failed", "error": f"{type(exc).__name__}: {exc}"}
 
     queue = sorted(p["todo"], key=lambda t: t["size"])
-    broken = False
-    with ProcessPoolExecutor(max_workers=args.workers) as pool:
-        running: dict = {}
-        while (queue or running) and not broken:
-            while queue and len(running) < args.workers and time.monotonic() < deadline:
-                task = queue.pop(0)
-                running[pool.submit(work, task, paths, args.memory, tmp_root)] = task
-            if not running:
-                break
-            finished, _ = wait(running, timeout=60, return_when=FIRST_COMPLETED)
-            for f in finished:
-                task = running.pop(f)
-                try:
-                    account(f.result())
-                except BrokenProcessPool as exc:  # a worker was killed (memory): keep what is done, stop
-                    account(failure(task, exc))
-                    broken = True
-                except Exception as exc:  # non-data failure of one subgroup: the next run retries it
-                    account(failure(task, exc))
-            if len(pending) >= COMMIT_EVERY or (pending and time.monotonic() - last > COMMIT_SECONDS):
-                commit()
-        if broken:
-            for task in running.values():
-                account(failure(task, RuntimeError("worker pool broken")))
-            pool.shutdown(wait=False, cancel_futures=True)
-    commit()
+    serial: list[dict[str, Any]] = []
+    while queue and time.monotonic() < deadline:
+        broken = False
+        with ProcessPoolExecutor(max_workers=args.workers) as pool:
+            running: dict = {}
+            while (queue or running) and not broken:
+                while queue and len(running) < args.workers and time.monotonic() < deadline:
+                    task = queue.pop(0)
+                    running[pool.submit(work, task, paths, args.memory, tmp_root)] = task
+                if not running:
+                    break
+                finished, _ = wait(running, timeout=60, return_when=FIRST_COMPLETED)
+                for f in finished:
+                    task = running.pop(f)
+                    try:
+                        account(f.result())
+                    except BrokenProcessPool:  # a worker was killed (memory): unknown which; retry alone
+                        serial.append(task)
+                        broken = True
+                    except Exception as exc:  # non-data failure of one subgroup: the next run retries it
+                        account(failure(task, exc))
+                if len(pending) >= COMMIT_EVERY or (pending and time.monotonic() - last > COMMIT_SECONDS):
+                    commit()
+            if broken:
+                serial += list(running.values())
+                pool.shutdown(wait=False, cancel_futures=True)
+        commit()
+    for task in serial:  # each in its own one-worker pool with the full memory: a kill fails that subgroup only
+        if time.monotonic() + 600 > deadline:
+            break
+        with ProcessPoolExecutor(max_workers=1) as alone:
+            try:
+                account(alone.submit(work, task, paths, "10GB", tmp_root).result())
+            except Exception as exc:
+                account(failure(task, exc))
+        commit()
     left = len(p["todo"]) - totals["silver_written"] - len(rejected_now)
     summary = {
         "operation": "bdl-entities",

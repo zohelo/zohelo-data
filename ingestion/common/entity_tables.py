@@ -165,8 +165,11 @@ def completeness(
     }
 
 
-def needs_approval(todo: int, entities: int, approved: str) -> bool:
-    """Owner rule R6 (#875): a run that would redo most of a source is a full rebuild. More than
-    max(500, 10% of the entities) to do needs an approval issue, whatever the reason (a changed
-    model, a recreated or emptied table)."""
-    return todo > max(500, entities // 10) and not approved
+ROW_LIMIT = 10_000_000  # owner rule R6 (#875)
+
+
+def needs_approval(redo_rows: int, approved: str) -> bool:
+    """Owner rule R6 (#875): redoing more than ROW_LIMIT rows of data that did not change (Silver of
+    an unchanged Bronze file: a changed model or mapping, a lost or recreated Silver table) is a full
+    rebuild and needs an approval issue. New source versions are normal loads and never count."""
+    return redo_rows > ROW_LIMIT and not approved

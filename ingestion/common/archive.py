@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
+import contextlib
 from hashlib import sha256
 import json
 import tempfile
@@ -47,13 +48,18 @@ def proven_for(source: str, meta: dict[str, dict[str, Any]]) -> set[str]:
     from ingestion.common.bronze_files import SOURCE_TABLES, proven_hashes
 
     if source == "gus_bdl":  # one Bronze file per subgroup download, named by its parts (#875)
+        from pyiceberg.exceptions import NoSuchTableError
+
         from ingestion.common.bronze_files import loaded_hashes
         from ingestion.common.r2 import catalog
         from ingestion.to_bronze.gus_bdl.entities import BRONZE, proven
 
         cat = catalog()  # data parts by the subgroup rule; metadata pages by file name (their SHA-256)
-        metadata = [t for t in SOURCE_TABLES[source][0] if t != BRONZE]
-        return proven().union(*(loaded_hashes(cat.load_table(t)) for t in metadata))
+        held = proven()
+        for table_id in [t for t in SOURCE_TABLES[source][0] if t != BRONZE]:
+            with contextlib.suppress(NoSuchTableError):
+                held |= loaded_hashes(cat.load_table(table_id))
+        return held
     if source in SOURCE_TABLES:
         return proven_hashes(source)[0]
     raise RuntimeError(f"no Bronze proof registered for {source} (bronze_files.SOURCE_TABLES)")

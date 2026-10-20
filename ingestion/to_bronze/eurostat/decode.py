@@ -149,6 +149,15 @@ def decode_landing_distribution(
         if cells != source_rows * len(periods):
             raise EurostatBulkDecodeError("Eurostat Bronze row count differs from series × periods")
         completed = True
+    except (
+        duckdb.OutOfMemoryException,
+        duckdb.IOException,
+        duckdb.HTTPException,
+        duckdb.InterruptException,
+        duckdb.FatalException,
+        duckdb.InternalException,
+    ) as exc:
+        raise RuntimeError(f"Eurostat decode could not run (not a verdict on the file): {str(exc)[:600]}") from exc
     except duckdb.Error as exc:
         raise EurostatBulkDecodeError(f"invalid Eurostat full distribution: {str(exc)[:600]}") from exc
     finally:

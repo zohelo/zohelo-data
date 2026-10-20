@@ -242,7 +242,7 @@ def plan(
     latest = landing_candidates(client, req("R2_LANDING_BUCKET"))
     if only:
         latest = [c for c in latest if c[ENTITY] in only]
-    todo, expected, expected_silver, rejected = [], {}, {}, []
+    todo, expected, expected_silver, rejected, redo_rows = [], {}, {}, [], 0
     for c in latest:
         ds, sha = c[ENTITY], c["raw_sha256"]
         if sha in refused or f"{sha}.{digest}" in refused:
@@ -251,6 +251,8 @@ def plan(
         expected[ds], expected_silver[ds] = sha, f"{sha}.{digest}"
         need_bronze = b_state.get(ds, {}).get("recipes") != {sha}
         need_silver = need_bronze or s_state.get(ds, {}).get("recipes") != {f"{sha}.{digest}"}
+        if need_silver and not need_bronze:
+            redo_rows += b_state[ds]["rows"]  # unchanged data redone (rule R6)
         if need_bronze or need_silver:
             current = b_state.get(ds, {}).get("paths", [])
             todo.append({**c, "need_bronze": need_bronze, "bronze_uri": None if need_bronze else current[0]})
@@ -260,6 +262,7 @@ def plan(
         "expected": expected,
         "expected_silver": expected_silver,
         "rejected": rejected,
+        "redo_rows": redo_rows,
         "bronze": b_state,
         "silver": s_state,
     }
@@ -296,8 +299,8 @@ def main(argv=None) -> int:
     p = plan(cat, client, digest, set(args.only) if args.only else None, silver_id, bronze_id, rejected_id)
     for table_id in (bronze_id, silver_id):
         et.configure(table_id)
-    if et.needs_approval(len(p["todo"]), p["latest"], args.approved or args.trial):
-        annotate("error", "eurostat entities: approval needed", {"rule": "R6 #875", "datasets_to_redo": len(p["todo"])})
+    if et.needs_approval(p["redo_rows"], args.approved or args.trial):
+        annotate("error", "eurostat entities: approval needed", {"rule": "R6 #875", "rows_to_redo": p["redo_rows"]})
         return 1
     todo = sorted(p["todo"], key=lambda c: c["size"])
     totals: dict[str, Any] = {"bronze_decoded": 0, "bronze_registered": 0, "silver_written": 0, "rows": 0}
@@ -351,41 +354,42 @@ def main(argv=None) -> int:
         return {ENTITY: c[ENTITY], "status": "failed", "error": f"{type(exc).__name__}: {exc}"}
 
     small = [c for c in todo if c["size"] <= BIG_BYTES]
-    big = [c for c in todo if c["size"] > BIG_BYTES]
-    broken = False
-    with ProcessPoolExecutor(max_workers=args.workers) as pool:
-        running: dict = {}
-        queue = list(small)
-        while (queue or running) and not broken:
-            while queue and len(running) < args.workers and time.monotonic() < deadline:
-                c = queue.pop(0)
-                running[pool.submit(work, c, c["need_bronze"], digest, args.memory, tmp_root, paths)] = c
-            if not running:
-                break
-            finished, _ = wait(running, timeout=60, return_when=FIRST_COMPLETED)
-            for f in finished:
-                c = running.pop(f)
-                try:
-                    account(f.result())
-                except BrokenProcessPool as exc:  # a worker was killed (memory): keep what is done, stop
-                    account(failure(c, exc))
-                    broken = True
-                except Exception as exc:  # one dataset failed for a non-data reason: next run retries it
-                    account(failure(c, exc))
-            if len(pending) >= COMMIT_EVERY or (pending and time.monotonic() - last_commit > COMMIT_SECONDS):
-                commit()
-        if broken:
-            for c in running.values():
-                account(failure(c, RuntimeError("worker pool broken")))
-            pool.shutdown(wait=False, cancel_futures=True)
-    commit()
-    for c in [] if broken else big:  # one at a time, with the runner's full memory
-        if time.monotonic() + 3600 > deadline:
+    serial = [c for c in todo if c["size"] > BIG_BYTES]  # alone, with the runner's full memory
+    queue = list(small)
+    while queue and time.monotonic() < deadline:
+        broken = False
+        with ProcessPoolExecutor(max_workers=args.workers) as pool:
+            running: dict = {}
+            while (queue or running) and not broken:
+                while queue and len(running) < args.workers and time.monotonic() < deadline:
+                    c = queue.pop(0)
+                    running[pool.submit(work, c, c["need_bronze"], digest, args.memory, tmp_root, paths)] = c
+                if not running:
+                    break
+                finished, _ = wait(running, timeout=60, return_when=FIRST_COMPLETED)
+                for f in finished:
+                    c = running.pop(f)
+                    try:
+                        account(f.result())
+                    except BrokenProcessPool:  # a worker was killed (memory): unknown which; retry alone
+                        serial.append(c)
+                        broken = True
+                    except Exception as exc:  # one dataset failed for a non-data reason: next run retries it
+                        account(failure(c, exc))
+                if len(pending) >= COMMIT_EVERY or (pending and time.monotonic() - last_commit > COMMIT_SECONDS):
+                    commit()
+            if broken:  # the other datasets of the broken pool go alone too; a new pool takes the rest
+                serial += list(running.values())
+                pool.shutdown(wait=False, cancel_futures=True)
+        commit()
+    for c in serial:  # each in its own one-worker pool: a kill fails that dataset only
+        if time.monotonic() + (3600 if c["size"] > BIG_BYTES else 300) > deadline:
             break
-        try:
-            account(work(c, c["need_bronze"], digest, "10GB", tmp_root, paths))
-        except Exception as exc:
-            account(failure(c, exc))
+        with ProcessPoolExecutor(max_workers=1) as alone:
+            try:
+                account(alone.submit(work, c, c["need_bronze"], digest, "10GB", tmp_root, paths).result())
+            except Exception as exc:
+                account(failure(c, exc))
         commit()
     left = len(todo) - totals["silver_written"] - len(rejected_now)
     summary = {

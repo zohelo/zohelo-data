@@ -110,6 +110,15 @@ def decode_web_export(source: Path, receipt: dict[str, Any], output: Path, memor
                 f"count(*) FILTER (WHERE NOT regexp_full_match(trim(c{n - 4}), '[0-9]{{4}}') "
                 f"OR coalesce(c{n}, '') <> '') FROM src"
             ).fetchone()
+    except (
+        duckdb.OutOfMemoryException,
+        duckdb.IOException,
+        duckdb.HTTPException,
+        duckdb.InterruptException,
+        duckdb.FatalException,
+        duckdb.InternalException,
+    ) as exc:
+        raise RuntimeError(f"BDL decode could not run (not a verdict on the file): {str(exc)[:500]}") from exc
     except duckdb.Error as exc:
         raise BdlDecodeError(f"invalid BDL CSV: {str(exc)[:500]}") from exc
     finally:
