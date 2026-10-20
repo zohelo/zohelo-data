@@ -54,7 +54,11 @@ def eurostat(cat, client) -> None:
     by_sha = defaultdict(list)
     for f in original:
         by_sha[Path(f["path"]).stem].append(f)
-    covered = [c for c in latest if any(f["partition"].get("dataset_id") == c["dataset_id"] for f in by_sha.get(c["raw_sha256"], []))]
+    covered = [
+        c
+        for c in latest
+        if any(f["partition"].get("dataset_id") == c["dataset_id"] for f in by_sha.get(c["raw_sha256"], []))
+    ]
     per_partition = Counter(f["partition"].get("dataset_id") for f in files)
     annotate(
         "notice",
@@ -127,7 +131,9 @@ def scratch(cat, client) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         for entity, version in (("A", "a1"), ("B", "b1"), ("A", "a2")):
             path = Path(tmp) / f"{entity}{version}.parquet"
-            pq.write_table(pa.table({"entity": [entity] * 3, "raw_sha256": [version] * 3, "value": [1, 2, 3]}, schema=schema), path)
+            pq.write_table(
+                pa.table({"entity": [entity] * 3, "raw_sha256": [version] * 3, "value": [1, 2, 3]}, schema=schema), path
+            )
             key = f"zz_dev_checkpoint/{entity}/{version}.parquet"
             client.upload_file(str(path), bucket, key)
             uris[(entity, version)] = f"s3://{bucket}/{key}"
@@ -135,7 +141,12 @@ def scratch(cat, client) -> None:
     # Replace partition A: delete + append in one transaction.
     table = cat.load_table(table_id)
     metadata = table.metadata.model_copy(
-        update={"properties": {**table.metadata.properties, **{f"write.metadata.metrics.column.{c}": "full" for c in ("entity", "raw_sha256")}}}
+        update={
+            "properties": {
+                **table.metadata.properties,
+                **{f"write.metadata.metrics.column.{c}": "full" for c in ("entity", "raw_sha256")},
+            }
+        }
     )
     new_file = bf.parquet_file_to_data_file(table.io, metadata, uris[("A", "a2")])
     try:
@@ -146,12 +157,22 @@ def scratch(cat, client) -> None:
         table = cat.load_table(table_id)
         out["replace"] = {
             "files_after": sorted(Path(f["path"]).name for f in files_of(table)),
-            "snapshots": [s.summary.additional_properties | {"operation": str(s.summary.operation)} for s in table.metadata.snapshots][-3:],
+            "snapshots": [
+                s.summary.additional_properties | {"operation": str(s.summary.operation)}
+                for s in table.metadata.snapshots
+            ][-3:],
         }
     except Exception as exc:  # report, do not hide
         out["replace_error"] = repr(exc)[:500]
     out["maintenance_get"] = maintenance(SCRATCH, "trial", None)
-    out["maintenance_set"] = maintenance(SCRATCH, "trial", {"compaction": {"state": "disabled"}, "snapshot_expiration": {"state": "enabled", "min_snapshots_to_keep": 1, "max_snapshot_age": "1h"}})
+    out["maintenance_set"] = maintenance(
+        SCRATCH,
+        "trial",
+        {
+            "compaction": {"state": "disabled"},
+            "snapshot_expiration": {"state": "enabled", "min_snapshots_to_keep": 1, "max_snapshot_age": "1h"},
+        },
+    )
     out["maintenance_after"] = maintenance(SCRATCH, "trial", None)
     try:
         cat.rename_table(table_id, (SCRATCH, "trial_renamed"))

@@ -28,7 +28,7 @@ from pyiceberg.io.pyarrow import parquet_file_to_data_file
 from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import Schema
 from pyiceberg.transforms import IdentityTransform
-from pyiceberg.types import BinaryType, IntegerType, LongType, NestedField, StringType, TimestamptzType
+from pyiceberg.types import BinaryType, DoubleType, IntegerType, LongType, NestedField, StringType, TimestamptzType
 import requests
 
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -39,6 +39,7 @@ TYPES = {
     "INTEGER": IntegerType(),
     "TIMESTAMPTZ": TimestamptzType(),
     "BLOB": BinaryType(),
+    "DOUBLE": DoubleType(),
 }
 THROTTLED = {"ServiceUnavailable", "SlowDown", "InternalError", "RequestTimeout", "TooManyRequests", "503", "500"}
 
