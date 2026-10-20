@@ -36,6 +36,8 @@ LOOP_BUILDS = int(SETTINGS["loop_builds"])
 _RETRY = yaml.safe_load((PROJECT / "warehouse.yaml").read_text())
 RATE_LIMIT_WAITS = [float(s) for s in _RETRY["rate_limit_retry_waits"]]
 RATE_LIMIT_THREADS = int(_RETRY["rate_limit_retry_threads"])
+# Owner policy #822: only small tables are rebuilt in full; each full-rebuild model has a row ceiling.
+FULL_REBUILD = _RETRY["full_rebuild"]
 EUROSTAT_ONLY = eurostat_batch.EUROSTAT_ONLY
 
 
@@ -220,10 +222,78 @@ def build_once(
         summary["changed_only"]["properties"] = changed.record(
             changed_plan["cat"], changed_plan["meta"], results, started_ms
         )
+    if target == "prod" and any(r["unique_id"].startswith("model.") and r["status"] == "success" for r in results):
+        try:
+            summary["row_ceilings"] = row_ceilings(results)
+        except Exception as exc:  # the check never hides the build's own result
+            summary["row_ceilings"] = {"above_twice": [], "errors": [f"{type(exc).__name__}: {str(exc)[:200]}"]}
+        if summary["row_ceilings"]["above_twice"] and returncode == 0:
+            returncode = 1
     if returncode == 0 and target == "prod":
         from warehouse import catalog
 
         summary["catalog"] = catalog.publish()
-    annotate("notice" if returncode == 0 else "error", "warehouse dbt build", _for_annotation(summary))
+    level = "notice" if returncode == 0 else "error"
+    ceilings = summary.get("row_ceilings") or {}
+    if level == "notice" and (ceilings.get("over") or ceilings.get("unlisted") or ceilings.get("errors")):
+        level = "warning"
+    annotate(level, "warehouse dbt build", _for_annotation(summary))
     step_summary(f"## warehouse · dbt build\n\n```json\n{json.dumps(summary, indent=2)}\n```\n")
     return returncode, (plan["summary"]["remaining_after_batch"] if plan else 0)
+
+
+def table_rows(table) -> int:
+    """Rows of a table's current snapshot: its summary's total-records, or the data files'
+    record counts when a writer left the totals out (no data scan; deletes not subtracted)."""
+    from pyiceberg.manifest import DataFileContent
+
+    snapshot = table.current_snapshot()
+    if snapshot is None:
+        return 0
+    total = snapshot.summary.get("total-records") if snapshot.summary is not None else None
+    if total is not None:
+        return int(total)
+    return sum(
+        entry.data_file.record_count
+        for manifest in snapshot.manifests(table.io)
+        for entry in manifest.fetch_manifest_entry(table.io)
+        if entry.data_file.content == DataFileContent.DATA
+    )
+
+
+def row_ceilings(results: list[dict]) -> dict:
+    """Owner policy #822 (#868): the rows of each full-rebuild model this build wrote, against
+    its ceiling in warehouse.yaml `full_rebuild`. Above the ceiling: a warning; above twice the
+    ceiling: the build fails, so a full rebuild that grew is noticed and made incremental (or
+    given an exception). A full-rebuild model missing from the list is reported as unlisted
+    (repo_check fails on it too). dbt's manifest of this build gives materializations and tables."""
+    from ingestion.common.r2 import catalog
+    from warehouse import changed
+
+    meta = json.loads((PROJECT / "target" / "manifest.json").read_text())
+    cat = catalog()
+    out: dict = {"checked": 0, "over": [], "above_twice": [], "unlisted": [], "errors": []}
+    for r in results:
+        uid = r["unique_id"]
+        node = meta["nodes"].get(uid)
+        if not uid.startswith("model.") or r["status"] != "success" or node is None:
+            continue
+        if node.get("config", {}).get("materialized") == "incremental":
+            continue
+        name = node["name"]
+        if name not in FULL_REBUILD:
+            out["unlisted"].append(name)
+            continue
+        try:
+            rows = table_rows(cat.load_table(changed.relation(node)))
+        except Exception as exc:  # reported, never hides the build's own result
+            out["errors"].append(f"{name}: {type(exc).__name__}: {str(exc)[:150]}")
+            continue
+        out["checked"] += 1
+        ceiling = int(FULL_REBUILD[name]["rows"])
+        if rows > ceiling:
+            out["over"].append({"model": name, "rows": rows, "ceiling": ceiling})
+        if rows > 2 * ceiling:
+            out["above_twice"].append(name)
+    out["errors"] = out["errors"][:5]
+    return out

@@ -186,6 +186,41 @@ def configuration(files: list[Path]) -> list[str]:
             problems.append(f"run {name!r}: unknown activities {sorted(unknown)}")
     problems += scheduler.validate(config, run.plan)
     problems += scheduler_worker(scheduler.DISPATCH_RUN)
+    problems += full_rebuild(files)
+    return problems
+
+
+INCREMENTAL = re.compile(r"materialized\s*=\s*['\"]incremental['\"]")
+POLICY_ROWS = 1_000_000  # owner policy #822: only tables below ~1M rows are rebuilt in full
+EXCEPTION = re.compile(r"^#\d+$")
+
+
+def full_rebuild(files: list[Path]) -> list[str]:
+    """Every dbt model that is not incremental (the project default is a full-rebuild table)
+    has a row ceiling in warehouse/warehouse.yaml `full_rebuild`; a ceiling above 1M rows
+    names the issue that makes it incremental or records the owner's exception (#868)."""
+    declared = yaml.safe_load((ROOT / "warehouse/warehouse.yaml").read_text()).get("full_rebuild") or {}
+    models = {
+        f.stem: INCREMENTAL.search((ROOT / f).read_text()) is not None
+        for f in files
+        if f.parts[:2] == ("warehouse", "models") and f.suffix == ".sql" and (ROOT / f).exists()
+    }
+    problems = [
+        f"warehouse.yaml full_rebuild: model {name} is not incremental and has no row ceiling"
+        for name, incremental in sorted(models.items())
+        if not incremental and name not in declared
+    ]
+    for name, entry in sorted(declared.items()):
+        if name not in models:
+            problems.append(f"warehouse.yaml full_rebuild: {name} is not a model")
+            continue
+        if models[name]:
+            problems.append(f"warehouse.yaml full_rebuild: {name} is incremental; remove it")
+        rows = entry.get("rows") if isinstance(entry, dict) else None
+        if not isinstance(rows, int) or isinstance(rows, bool) or rows <= 0:
+            problems.append(f"warehouse.yaml full_rebuild: {name} needs rows: <positive integer>")
+        elif rows > POLICY_ROWS and not EXCEPTION.match(str(entry.get("exception", ""))):
+            problems.append(f'warehouse.yaml full_rebuild: {name} ceiling {rows:,} > 1M needs exception: "#<issue>"')
     return problems
 
 

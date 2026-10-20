@@ -49,6 +49,14 @@ Bronze rows rewritten under the same `raw_sha256` (a to_bronze re-decode) are no
 such a fix must also change the model's code (e.g. a line in its header comment), so the
 next scheduled build rebuilds it in full; announce it in the Work log.
 
+Every other model is a full-rebuild table (the project default) and must be small (owner
+policy #822: below ~1M rows). `warehouse.yaml` `full_rebuild` gives each one a row ceiling;
+`repo_check` fails when a non-incremental model has none, when a listed model is gone or
+incremental, or when a ceiling above 1M names no `exception:` issue. After a prod build,
+`build.py` reads the rows of each full-rebuild model it wrote (snapshot `total-records`)
+and reports them as `row_ceilings` in the build annotation: above the ceiling the
+annotation is a warning; above twice the ceiling the build fails.
+
 Target `trial` writes every model to the scratch namespace `zz_dbt_trial`. Sources not
 yet modelled (GUS DBW, dane.gov.pl, GLEIF, MF Biała Lista) are still published by
 `passthrough/` as copies / zero-copy references of Bronze (`silver_gold.promote`).
