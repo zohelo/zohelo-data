@@ -44,13 +44,35 @@ RETIRE = {
 }
 
 
+def catalog_compaction_off() -> dict:
+    """Catalog-wide compaction off before any build (#875): it must not rewrite the old Eurostat
+    Bronze files the new table re-registers. Same setting as ops/catalog_maintenance --apply."""
+    import requests
+
+    url = (
+        f"https://api.cloudflare.com/client/v4/accounts/{req('CLOUDFLARE_ACCOUNT_ID')}/r2-catalog/"
+        f"{req('R2_LAKEHOUSE_BUCKET')}/maintenance-configs"
+    )
+    headers = {"Authorization": f"Bearer {req('R2_DATA_CATALOG_TOKEN')}"}
+    body = {
+        "compaction": {"state": "disabled"},
+        "snapshot_expiration": {"state": "enabled", "min_snapshots_to_keep": 1, "max_snapshot_age": "1h"},
+    }
+    response = requests.post(url, headers=headers, json=body, timeout=30)
+    if response.status_code != 200:
+        raise RuntimeError(f"catalog maintenance: {response.status_code} {response.text[:300]}")
+    return response.json().get("result") or {}
+
+
 def build(source: str, minutes: float, workers: int) -> int:
+    annotate("notice", "catalog compaction off", catalog_compaction_off())
+    et.configure(OLD_BRONZE[source])  # the old table too, until it is dropped
     if source == "eurostat":
         from ingestion.to_bronze.eurostat import entities
     else:
         from ingestion.to_bronze.gus_bdl import entities
     args = ["--silver-table", ".".join(NEW[source]), "--minutes", str(minutes), "--workers", str(workers)]
-    return entities.main(args)
+    return entities.main([*args, "--approved", "875"])
 
 
 def compare(source: str) -> int:
@@ -58,24 +80,14 @@ def compare(source: str) -> int:
     if source == "eurostat":
         from ingestion.to_bronze.eurostat import entities as m
 
-        refused = set()
-        rejected = bf.rejected_table(cat, m.REJECTED, m.ENTITY)
-        if rejected.current_snapshot() is not None:
-            refused = set(rejected.scan(selected_fields=("raw_sha256",)).to_arrow().column("raw_sha256").to_pylist())
-        expected = {
-            c[m.ENTITY]: c["raw_sha256"]
-            for c in m.landing_candidates(client, req("R2_LANDING_BUCKET"))
-            if c["raw_sha256"] not in refused
-        }
+        p = m.plan(cat, client, m.model_digest(), None, NEW[source], m.BRONZE, m.REJECTED, create=False)
     else:
         from ingestion.to_bronze.gus_bdl import entities as m
 
-        expected = m.plan(cat, client, {"bronze": m.BRONZE, "silver": NEW[source], "rejected": m.REJECTED}, None)[
-            "expected"
-        ]
-    new_b = et.state(cat.load_table(NEW_BRONZE[source]), ENTITY[source])
-    new_s = et.state(cat.load_table(NEW[source]), ENTITY[source])
-    report = et.completeness(expected, new_b, new_s)
+        p = m.plan(cat, client, {"bronze": m.BRONZE, "silver": NEW[source], "rejected": m.REJECTED}, None, create=False)
+    new_b, new_s = p["bronze"], p["silver"]
+    report = et.completeness(p["expected"], new_b, new_s, p["expected_silver"])
+    report["rejected"] = sorted(p["rejected"])[:30]
     old = et.state(cat.load_table(OLD_BRONZE[source]), ENTITY[source])
     both = sorted(set(old) & set(new_b))
     differ = [e for e in both if old[e]["rows"] != new_b[e]["rows"]]
@@ -100,7 +112,15 @@ def compare(source: str) -> int:
 
 
 def swap(source: str) -> int:
+    """Refuses unless the new Silver table exists and is complete enough; never runs twice."""
     cat = catalog()
+    if not cat.table_exists(NEW[source]):
+        annotate("error", f"checkpoint swap {source}", {"refused": f"{'.'.join(NEW[source])} does not exist"})
+        return 1
+    new_rows = et.state(cat.load_table(NEW[source]), ENTITY[source])
+    if not new_rows:
+        annotate("error", f"checkpoint swap {source}", {"refused": "new Silver table is empty"})
+        return 1
     done = []
     for table_id, purge in RETIRE[source]:
         with contextlib.suppress(NoSuchTableError):
@@ -112,8 +132,7 @@ def swap(source: str) -> int:
     final = (NEW[source][0], NEW[source][1].removesuffix("_new"))
     cat.rename_table(NEW[source], final)
     et.configure(final)
-    rows = et.state(cat.load_table(final), ENTITY[source])
-    out = {"retired": done, "renamed": f"{'.'.join(NEW[source])} -> {'.'.join(final)}", "entities": len(rows)}
+    out = {"retired": done, "renamed": f"{'.'.join(NEW[source])} -> {'.'.join(final)}", "entities": len(new_rows)}
     annotate("notice", f"checkpoint swap {source}", out)
     print(json.dumps(out))
     return 0

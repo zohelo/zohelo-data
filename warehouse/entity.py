@@ -24,6 +24,10 @@ class EntityModelError(ValueError):
     """The model's result breaks its contract for this entity (the entity is rejected, not loaded)."""
 
 
+class EntityRunError(RuntimeError):
+    """The model could not run (storage, memory, I/O): not a verdict on the data; retried next run."""
+
+
 def _connect(memory_limit: str, temp_directory: str | None) -> duckdb.DuckDBPyConnection:
     con = duckdb.connect()
     con.execute(f"SET memory_limit = '{memory_limit}'")
@@ -84,9 +88,14 @@ def apply(
             if reject_if
             else 0
         )
+        sample = (
+            con.execute(f"SELECT * FROM read_parquet('{target}') WHERE {reject_if} LIMIT 3").fetchall()
+            if flagged
+            else []
+        )
     except duckdb.Error as exc:
         output.unlink(missing_ok=True)
-        raise EntityModelError(f"{model}: {str(exc)[:600]}") from exc
+        raise EntityRunError(f"{model}: {str(exc)[:600]}") from exc
     finally:
         con.close()
     problems = [f"{c} null in {n} rows" for c, n in zip(not_null, nulls[: len(not_null)], strict=True) if n]
@@ -95,7 +104,7 @@ def apply(
     if keys != rows:
         problems.append(f"{rows - keys} rows repeat the key ({', '.join(unique_key)})")
     if flagged:
-        problems.append(f"{flagged} rows where {reject_if}")
+        problems.append(f"{flagged} rows where {reject_if}, e.g. {[list(map(str, r)) for r in sample]}")
     if problems:
         output.unlink(missing_ok=True)
         raise EntityModelError(f"{model}: " + "; ".join(problems))

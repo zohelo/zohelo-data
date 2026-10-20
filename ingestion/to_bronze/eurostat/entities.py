@@ -8,19 +8,23 @@ Silver each hold exactly one file per dataset:
   03_silver/eurostat/observations/<dataset>/<raw_sha256>.<model>.parquet   (warehouse/entity/eurostat_observations.sql)
 
 ``<model>`` is a digest of the Silver SQL, so a changed model marks every dataset's Silver as
-out of date; redoing more than ROW_LIMIT rows that way is a full rebuild and needs
-``--approved <issue>`` (owner rule R6, #875). What each table holds is read from its file list
-(entity_tables.state): nothing is scanned. A dataset whose Bronze file already exists in R2
+out of date. A run that would redo most datasets (a changed model, a recreated table) is a full
+rebuild and needs ``--approved <issue>`` (owner rule R6, #875; entity_tables.needs_approval).
+What each table holds is read from its file list (entity_tables.state): nothing is scanned.
+A dataset whose Bronze file already exists in R2
 (same Landing SHA-256 in the object metadata) is registered as it is, not decoded again.
 Work runs in parallel processes; finished datasets are committed in chunks, so a run that
 stops on its time budget resumes where it stopped. Decoder or Silver-model rejections are
-recorded in bronze.eurostat_rejected_files and reported. Prints one JSON result line.
+recorded in bronze.eurostat_rejected_files (decoder: by Landing SHA-256; Silver model: by
+``<sha>.<model>``, so a fixed model retries them) and reported. A dataset that fails for another
+reason (storage, memory) is reported and retried by the next run. Prints one JSON result line.
 """
 
 from __future__ import annotations
 
 import argparse
 from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, ThreadPoolExecutor, wait
+from concurrent.futures.process import BrokenProcessPool
 from datetime import UTC, datetime
 from hashlib import sha256
 import json
@@ -47,7 +51,6 @@ BRONZE_PREFIX = "02_bronze/eurostat/observations/"
 SILVER_PREFIX = "03_silver/eurostat/observations/"
 SILVER_MODEL = "eurostat_observations"
 STATS = [ENTITY, "raw_sha256"]
-ROW_LIMIT = 10_000_000  # owner rule R6: redoing more rows than this for a model change needs approval
 COMMIT_EVERY = 200  # datasets
 COMMIT_SECONDS = 600
 BIG_BYTES = 50 << 20  # Landing files above this decode alone, with the full memory limit
@@ -146,6 +149,7 @@ def work(
     out: dict[str, Any] = {
         ENTITY: ds,
         "raw_sha256": sha,
+        "landing_key": item["data_key"],
         "bronze": item.get("bronze_uri") or f"s3://{bucket}/{bronze_key}",
     }
     work_dir = Path(tempfile.mkdtemp(prefix="eurostat-", dir=tmp_root))
@@ -166,34 +170,53 @@ def work(
                 if shutil.disk_usage(work_dir).free < item["size"] * 6 + (2 << 30):
                     raise RuntimeError("runner disk headroom is insufficient for Eurostat decode")
                 bf.download(client, landing_bucket, "eurostat", item["data_key"], sha, item["size"], raw)
-                decode_landing_distribution(
-                    raw,
-                    receipt,
-                    local_bronze,
-                    receipt_uri=f"r2://{landing_bucket}/{item['receipt_key']}",
-                    raw_uri=f"r2://{landing_bucket}/{item['data_key']}",
-                    memory_limit=memory,
-                )
+                try:
+                    decode_landing_distribution(
+                        raw,
+                        receipt,
+                        local_bronze,
+                        receipt_uri=f"r2://{landing_bucket}/{item['receipt_key']}",
+                        raw_uri=f"r2://{landing_bucket}/{item['data_key']}",
+                        memory_limit=memory,
+                    )
+                except EurostatBulkDecodeError as exc:  # verdict on the file: keyed by its SHA-256
+                    out.update(status="rejected", error=f"decoder: {exc}"[:1000])
+                    return out
                 raw.unlink()
                 bf.upload(client, bucket, bronze_key, local_bronze, sha)
                 out["bronze_action"] = "decoded"
         silver = work_dir / "silver.parquet"
-        report = entity.apply(
-            SILVER_MODEL,
-            str(local_bronze) if local_bronze else out["bronze"],
-            silver,
-            not_null=("dataset_id", "time_period"),
-            memory_limit=memory,
-            temp_directory=str(work_dir),
-        )
+        try:
+            report = entity.apply(
+                SILVER_MODEL,
+                str(local_bronze) if local_bronze else out["bronze"],
+                silver,
+                not_null=("dataset_id", "time_period"),
+                memory_limit=memory,
+                temp_directory=str(work_dir),
+            )
+        except entity.EntityModelError as exc:  # verdict of this model: keyed by <sha>.<model>
+            out.update(status="rejected", error=f"silver: {exc}"[:1000], raw_sha256=f"{sha}.{digest}")
+            return out
         out["silver"] = bf.upload(client, bucket, silver_key, silver, sha)
         out.update(rows=report["rows"], silver_bytes=report["bytes"], status="ok")
-    except (EurostatBulkDecodeError, entity.EntityModelError) as exc:
-        out.update(status="rejected", error=str(exc)[:1000], landing_key=item["data_key"])
+        return out
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
-    out["seconds"] = round(time.monotonic() - started, 1)
-    return out
+        out["seconds"] = round(time.monotonic() - started, 1)
+
+
+def refused_keys(cat, rejected_id: tuple[str, str], create: bool) -> set[str]:
+    """Keys recorded as rejected: Landing SHA-256 (decoder) or <sha>.<model> (Silver model)."""
+    from pyiceberg.exceptions import NoSuchTableError
+
+    try:
+        table = bf.rejected_table(cat, rejected_id, ENTITY) if create else cat.load_table(rejected_id)
+    except NoSuchTableError:
+        return set()
+    if table.current_snapshot() is None:
+        return set()
+    return set(table.scan(selected_fields=("raw_sha256",)).to_arrow().column("raw_sha256").to_pylist())
 
 
 def plan(
@@ -204,35 +227,39 @@ def plan(
     silver_id: tuple[str, str] = SILVER,
     bronze_id=BRONZE,
     rejected_id=REJECTED,
+    create: bool = True,
 ) -> dict[str, Any]:
-    """What each dataset needs: Bronze (new Landing version) and/or Silver (new Bronze or model)."""
-    bronze = bf.retry(lambda: bf.ensure_table(cat, bronze_id, list(BRONZE_COLUMNS), ENTITY), "bronze_table")
-    silver = bf.retry(lambda: bf.ensure_table(cat, silver_id, SILVER_COLUMNS, ENTITY), "silver_table")
-    rejected = bf.rejected_table(cat, rejected_id, ENTITY)
-    done_rejected = set()
-    if rejected.current_snapshot() is not None:
-        done_rejected = set(rejected.scan(selected_fields=("raw_sha256",)).to_arrow().column("raw_sha256").to_pylist())
+    """What each dataset needs: Bronze (new Landing version) and/or Silver (new Bronze or model).
+    ``create=False`` (checks): reads only, never creates a table."""
+    if create:
+        bronze = bf.retry(lambda: bf.ensure_table(cat, bronze_id, list(BRONZE_COLUMNS), ENTITY), "bronze_table")
+        silver = bf.retry(lambda: bf.ensure_table(cat, silver_id, SILVER_COLUMNS, ENTITY), "silver_table")
+    else:
+        bronze = bf.retry(lambda: cat.load_table(bronze_id), "bronze_table")
+        silver = bf.retry(lambda: cat.load_table(silver_id), "silver_table")
+    refused = refused_keys(cat, rejected_id, create)
     b_state, s_state = et.state(bronze, ENTITY), et.state(silver, ENTITY)
     latest = landing_candidates(client, req("R2_LANDING_BUCKET"))
     if only:
         latest = [c for c in latest if c[ENTITY] in only]
-    todo, model_only_rows = [], 0
+    todo, expected, expected_silver, rejected = [], {}, {}, []
     for c in latest:
         ds, sha = c[ENTITY], c["raw_sha256"]
-        if sha in done_rejected:
+        if sha in refused or f"{sha}.{digest}" in refused:
+            rejected.append(ds)
             continue
+        expected[ds], expected_silver[ds] = sha, f"{sha}.{digest}"
         need_bronze = b_state.get(ds, {}).get("recipes") != {sha}
-        silver_recipes = s_state.get(ds, {}).get("recipes", set())
-        need_silver = need_bronze or silver_recipes != {f"{sha}.{digest}"}
-        if need_silver and not need_bronze and any(r.startswith(sha + ".") for r in silver_recipes):
-            model_only_rows += b_state[ds]["rows"]  # same data, changed model: counts as a rebuild
+        need_silver = need_bronze or s_state.get(ds, {}).get("recipes") != {f"{sha}.{digest}"}
         if need_bronze or need_silver:
             current = b_state.get(ds, {}).get("paths", [])
             todo.append({**c, "need_bronze": need_bronze, "bronze_uri": None if need_bronze else current[0]})
     return {
         "todo": todo,
         "latest": len(latest),
-        "model_only_rows": model_only_rows,
+        "expected": expected,
+        "expected_silver": expected_silver,
+        "rejected": rejected,
         "bronze": b_state,
         "silver": s_state,
     }
@@ -245,7 +272,7 @@ def main(argv=None) -> int:
     )
     parser.add_argument("--workers", type=int, default=3)
     parser.add_argument("--only", nargs="*", help="dataset ids (trials)")
-    parser.add_argument("--approved", default="", help="owner approval issue for a model-change rebuild over ROW_LIMIT")
+    parser.add_argument("--approved", default="", help="owner approval issue for a run that redoes most datasets (R6)")
     parser.add_argument("--memory", default="4GB", help="DuckDB memory per worker for small files")
     parser.add_argument(
         "--silver-table", default=".".join(SILVER), help="namespace.table (the checkpoint builds beside the old table)"
@@ -269,13 +296,13 @@ def main(argv=None) -> int:
     p = plan(cat, client, digest, set(args.only) if args.only else None, silver_id, bronze_id, rejected_id)
     for table_id in (bronze_id, silver_id):
         et.configure(table_id)
-    if p["model_only_rows"] > ROW_LIMIT and not args.approved:
-        annotate(
-            "error", "eurostat entities: approval needed", {"rule": "R6 #875", "rows_to_redo": p["model_only_rows"]}
-        )
+    if et.needs_approval(len(p["todo"]), p["latest"], args.approved or args.trial):
+        annotate("error", "eurostat entities: approval needed", {"rule": "R6 #875", "datasets_to_redo": len(p["todo"])})
         return 1
     todo = sorted(p["todo"], key=lambda c: c["size"])
-    totals = {"bronze_decoded": 0, "bronze_registered": 0, "silver_written": 0, "rows": 0, "rejected": []}
+    totals: dict[str, Any] = {"bronze_decoded": 0, "bronze_registered": 0, "silver_written": 0, "rows": 0}
+    rejected_now: list[str] = []
+    failed: list[dict[str, str]] = []
     pending: list[dict[str, Any]] = []
     last_commit = time.monotonic()
     tmp_root = os.environ.get("DUCKDB_TEMP_DIRECTORY") or tempfile.gettempdir()
@@ -307,6 +334,9 @@ def main(argv=None) -> int:
         pending, last_commit = [], time.monotonic()
 
     def account(result: dict[str, Any]) -> None:
+        if result["status"] == "failed":
+            failed.append({"dataset": result[ENTITY], "error": result["error"][:200]})
+            return
         pending.append(result)
         key = {"decoded": "bronze_decoded", "registered": "bronze_registered"}.get(result.get("bronze_action", ""))
         if key:
@@ -315,14 +345,18 @@ def main(argv=None) -> int:
             totals["silver_written"] += 1
             totals["rows"] += result["rows"]
         else:
-            totals["rejected"].append(result[ENTITY])
+            rejected_now.append(result[ENTITY])
+
+    def failure(c: dict[str, Any], exc: BaseException) -> dict[str, Any]:
+        return {ENTITY: c[ENTITY], "status": "failed", "error": f"{type(exc).__name__}: {exc}"}
 
     small = [c for c in todo if c["size"] <= BIG_BYTES]
     big = [c for c in todo if c["size"] > BIG_BYTES]
+    broken = False
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
         running: dict = {}
         queue = list(small)
-        while queue or running:
+        while (queue or running) and not broken:
             while queue and len(running) < args.workers and time.monotonic() < deadline:
                 c = queue.pop(0)
                 running[pool.submit(work, c, c["need_bronze"], digest, args.memory, tmp_root, paths)] = c
@@ -330,54 +364,57 @@ def main(argv=None) -> int:
                 break
             finished, _ = wait(running, timeout=60, return_when=FIRST_COMPLETED)
             for f in finished:
-                running.pop(f)
-                account(f.result())
+                c = running.pop(f)
+                try:
+                    account(f.result())
+                except BrokenProcessPool as exc:  # a worker was killed (memory): keep what is done, stop
+                    account(failure(c, exc))
+                    broken = True
+                except Exception as exc:  # one dataset failed for a non-data reason: next run retries it
+                    account(failure(c, exc))
             if len(pending) >= COMMIT_EVERY or (pending and time.monotonic() - last_commit > COMMIT_SECONDS):
                 commit()
+        if broken:
+            for c in running.values():
+                account(failure(c, RuntimeError("worker pool broken")))
+            pool.shutdown(wait=False, cancel_futures=True)
     commit()
-    for c in big:  # one at a time, with the runner's full memory
+    for c in [] if broken else big:  # one at a time, with the runner's full memory
         if time.monotonic() + 3600 > deadline:
             break
-        account(work(c, c["need_bronze"], digest, "10GB", tmp_root, paths))
+        try:
+            account(work(c, c["need_bronze"], digest, "10GB", tmp_root, paths))
+        except Exception as exc:
+            account(failure(c, exc))
         commit()
-    left = len(todo) - totals["silver_written"] - len(totals["rejected"])
+    left = len(todo) - totals["silver_written"] - len(rejected_now)
     summary = {
         "operation": "eurostat-entities",
-        "result": "complete" if left == 0 else "incomplete_time_budget",
+        "result": "complete" if left == 0 else ("failures" if failed else "incomplete_time_budget"),
         "latest_versions": p["latest"],
         "todo": len(todo),
         "remaining": left,
-        **{k: v for k, v in totals.items() if k != "rejected"},
-        "rejected": len(totals["rejected"]),
-        "rejected_datasets": totals["rejected"][:20],
+        **totals,
+        "rejected": len(rejected_now),
+        "rejected_datasets": rejected_now[:20],
+        "rejected_earlier": len(p["rejected"]),
+        "failed": len(failed),
+        "failed_datasets": failed[:10],
         "minutes": round((time.monotonic() - started) / 60, 1),
     }
     print(json.dumps(summary, sort_keys=True), flush=True)
-    annotate("notice" if left == 0 and not totals["rejected"] else "warning", "eurostat entities", summary)
+    annotate("notice" if left == 0 and not rejected_now else "warning", "eurostat entities", summary)
     return 0 if left == 0 else 2
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
-
-
 def completeness_report() -> dict[str, Any]:
-    """Landing → Bronze → Silver completeness per dataset, from table metadata (R5, #875)."""
+    """Landing → Bronze → Silver completeness per dataset, from table metadata only (R5, #875)."""
     started = time.monotonic()
     cat, client = bf.retry(catalog, "catalog"), s3()
-    rejected = bf.rejected_table(cat, REJECTED, ENTITY)
-    refused = set()
-    if rejected.current_snapshot() is not None:
-        refused = set(rejected.scan(selected_fields=("raw_sha256",)).to_arrow().column("raw_sha256").to_pylist())
-    latest = landing_candidates(client, req("R2_LANDING_BUCKET"))
-    expected = {c[ENTITY]: c["raw_sha256"] for c in latest if c["raw_sha256"] not in refused}
-    report = et.completeness(
-        expected,
-        et.state(bf.retry(lambda: cat.load_table(BRONZE), "bronze"), ENTITY),
-        et.state(bf.retry(lambda: cat.load_table(SILVER), "silver"), ENTITY),
-    )
-    report["rejected_count"] = sum(1 for c in latest if c["raw_sha256"] in refused)
-    report["rejected_latest"] = sorted(c[ENTITY] for c in latest if c["raw_sha256"] in refused)[:20]
+    p = plan(cat, client, model_digest(), None, create=False)
+    report = et.completeness(p["expected"], p["bronze"], p["silver"], p["expected_silver"])
+    report["rejected_count"] = len(p["rejected"])
+    report["rejected_latest"] = sorted(p["rejected"])[:20]
     report["minutes"] = round((time.monotonic() - started) / 60, 1)
     return report
 
@@ -389,3 +426,7 @@ def verify(min_pct: float = 99.0) -> int:
     failed = report["bronze_pct"] < min_pct or report["silver_pct"] < min_pct or report["entities_with_several_files"]
     annotate("error" if failed else "notice", "eurostat completeness (Landing → Bronze → Silver)", report)
     return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

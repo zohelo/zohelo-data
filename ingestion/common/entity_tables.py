@@ -9,7 +9,7 @@ digest of their inputs), so the table's file list alone tells what it holds:
 - ``replace``: a new version replaces the entity's partition: one transaction drops the
   entity's files from the file list and appends the new ones. Nothing is read or rewritten
   row by row, a rerun is a no-op, and duplicates cannot arise;
-- ``drop_entities``: entities that left the source;
+- entities that left the source stay and are reported (``completeness``: ``not_in_landing``);
 - ``configure``: compaction off and one snapshot kept (owner policy #822), per table.
 """
 
@@ -20,6 +20,7 @@ from pathlib import Path
 import time
 from typing import Any
 
+from pyiceberg.exceptions import CommitFailedException
 from pyiceberg.expressions import In
 from pyiceberg.io.pyarrow import parquet_file_to_data_file
 import requests
@@ -98,8 +99,9 @@ def replace(
                         ).fast_append() as add:
                             for data_file in files:
                                 add.append_data_file(data_file)
-            except Exception as exc:  # a lost response is re-checked against the table, never resent blindly
-                if not bf.transient(exc) or attempt == len(bf.RETRY_DELAYS):
+            except Exception as exc:  # a lost response or a lost race is re-checked against the table
+                retryable = bf.transient(exc) or isinstance(exc, CommitFailedException)
+                if not retryable or attempt == len(bf.RETRY_DELAYS):
                     raise
                 time.sleep(bf.RETRY_DELAYS[attempt])
         held = state(bf.retry(lambda: cat.load_table(table_id), "load_table"), entity_column)
@@ -129,25 +131,25 @@ def configure(table_id: tuple[str, str]) -> dict[str, Any]:
 
 
 def completeness(
-    expected: dict[str, str], bronze: dict[str, dict[str, Any]], silver: dict[str, dict[str, Any]]
+    expected: dict[str, str],
+    bronze: dict[str, dict[str, Any]],
+    silver: dict[str, dict[str, Any]],
+    expected_silver: dict[str, str],
 ) -> dict[str, Any]:
     """Layer against the layer below, per entity, from metadata (owner rule R5/R6, #875).
 
-    ``expected``: entity -> recipe of its newest Landing version (what Bronze must hold).
-    Bronze is complete for an entity when it holds exactly that one recipe; Silver when it
-    holds exactly one file derived from Bronze's current recipe (``<recipe>.<model>``)."""
+    ``expected``: entity -> recipe of its newest Landing version (what Bronze must hold);
+    ``expected_silver``: entity -> the Silver recipe the current model makes from it
+    (``<recipe>.<model>``). An entity is complete in a layer when it holds exactly that one file."""
 
     def pct(n: int, d: int) -> float:
         return round(100.0 * n / d, 2) if d else 100.0
 
     bronze_ok = {e for e, r in expected.items() if bronze.get(e, {}).get("recipes") == {r}}
-    silver_ok = {
-        e
-        for e in bronze_ok
-        if len(rs := silver.get(e, {}).get("recipes", set())) == 1 and next(iter(rs)).startswith(expected[e] + ".")
-    }
+    silver_ok = {e for e in bronze_ok if silver.get(e, {}).get("recipes") == {expected_silver.get(e)}}
     extra_bronze = sorted(set(bronze) - set(expected))
-    multi = sorted(e for e, s in {**bronze, **silver}.items() if len(s.get("paths", [])) > 1)
+    multi = {e for e, s in bronze.items() if len(s.get("paths", [])) > 1}
+    multi |= {e for e, s in silver.items() if len(s.get("paths", [])) > 1}
     return {
         "entities": len(expected),
         "bronze_complete": len(bronze_ok),
@@ -161,3 +163,10 @@ def completeness(
         "not_in_landing": len(extra_bronze),
         "entities_with_several_files": len(multi),
     }
+
+
+def needs_approval(todo: int, entities: int, approved: str) -> bool:
+    """Owner rule R6 (#875): a run that would redo most of a source is a full rebuild. More than
+    max(500, 10% of the entities) to do needs an approval issue, whatever the reason (a changed
+    model, a recreated or emptied table)."""
+    return todo > max(500, entities // 10) and not approved

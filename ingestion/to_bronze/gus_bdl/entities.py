@@ -9,7 +9,7 @@ The entity is a subgroup; its version is every part of the newest complete downl
 
 ``<recipe>`` is the SHA-256 of the sorted SHA-256s of the parts; ``<model>`` digests the Silver
 SQL and the subgroup's variable mapping (silver.bdl_variables), so a changed mapping redoes only
-that subgroup. A changed SQL model redoes every subgroup: over ROW_LIMIT rows that needs
+that subgroup. A run that would redo most subgroups (a changed model, a recreated table) needs
 ``--approved <issue>`` (owner rule R6, #875). A subgroup is rejected (recorded in
 bronze.bdl_rejected_files, listed in the result) when a part fails the decoder or the Silver
 checks: grain unit × dimensions × year, no two different published values for one key.
@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 from collections import defaultdict
 from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, ThreadPoolExecutor, wait
+from concurrent.futures.process import BrokenProcessPool
 from datetime import UTC, datetime
 from hashlib import sha256
 import json
@@ -51,7 +52,6 @@ BRONZE_PREFIX = "02_bronze/gus_bdl/observations/"
 SILVER_PREFIX = "03_silver/gus_bdl/observations/"
 SILVER_MODEL = "bdl_observations"
 STATS = [ENTITY]
-ROW_LIMIT = 10_000_000
 COMMIT_EVERY = 200
 COMMIT_SECONDS = 600
 SILVER_COLUMNS = [
@@ -88,10 +88,15 @@ def candidates(client, bucket: str) -> list[dict[str, Any]]:
 
     with ThreadPoolExecutor(max_workers=8) as pool:
         receipts = list(pool.map(read, keys))
-    versions: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    by_part: dict[tuple[str, str], dict[int, dict]] = defaultdict(dict)
     for r in receipts:
         if r.get("kind") == "gus_bdl_landing" and r.get("area") == "data":
-            versions[(r["subgroup_id"], r["version_token"])].append(r)
+            index = int((r.get("part") or {}).get("index", 1))
+            held = by_part[(r["subgroup_id"], r["version_token"])].get(index)
+            # A part downloaded again under the same version replaces the earlier download of it.
+            if held is None or (r.get("ingested_at") or "") > (held.get("ingested_at") or ""):
+                by_part[(r["subgroup_id"], r["version_token"])][index] = r
+    versions = {key: list(parts.values()) for key, parts in by_part.items()}
     newest: dict[str, tuple[str, list[dict]]] = {}
     for (subgroup, version), parts in versions.items():
         total = int((parts[0].get("part") or {}).get("total", 1))
@@ -185,8 +190,13 @@ def work(task: dict[str, Any], paths: dict[str, str], memory: str, tmp_root: str
                 memory_limit=memory,
                 temp_directory=str(work_dir),
             )
-        except entity.EntityModelError as exc:
-            out.update(status="rejected", error=str(exc)[:1000], raw_sha256=rcp, landing_key=f"subgroup {sg}")
+        except entity.EntityModelError as exc:  # verdict of this model and mapping: keyed by <recipe>.<tag>
+            out.update(
+                status="rejected",
+                error=f"silver: {exc}"[:1000],
+                raw_sha256=f"{rcp}.{task['tag']}",
+                landing_key=f"subgroup {sg}",
+            )
             return out
         out["silver"] = bf.upload(client, bucket, f"{paths['silver']}{sg}/{rcp}.{task['tag']}.parquet", silver, rcp)
         out.update(rows=report["rows"], bronze_rows=report["bronze_rows"])
@@ -196,13 +206,28 @@ def work(task: dict[str, Any], paths: dict[str, str], memory: str, tmp_root: str
         out["seconds"] = round(time.monotonic() - started, 1)
 
 
-def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None) -> dict[str, Any]:
-    bronze = bf.retry(lambda: bf.ensure_table(cat, ids["bronze"], list(BRONZE_COLUMNS), ENTITY), "bronze")
-    silver = bf.retry(lambda: bf.ensure_table(cat, ids["silver"], SILVER_COLUMNS, ENTITY), "silver")
-    rejected = bf.rejected_table(cat, ids["rejected"], REJECTED_COLUMN)
-    refused = set()
-    if rejected.current_snapshot() is not None:
-        refused = set(rejected.scan(selected_fields=("raw_sha256",)).to_arrow().column("raw_sha256").to_pylist())
+def refused_keys(cat, rejected_id: tuple[str, str], create: bool) -> set[str]:
+    """Keys recorded as rejected: a part's Landing SHA-256 (decoder) or <recipe>.<tag> (Silver)."""
+    from pyiceberg.exceptions import NoSuchTableError
+
+    try:
+        table = bf.rejected_table(cat, rejected_id, REJECTED_COLUMN) if create else cat.load_table(rejected_id)
+    except NoSuchTableError:
+        return set()
+    if table.current_snapshot() is None:
+        return set()
+    return set(table.scan(selected_fields=("raw_sha256",)).to_arrow().column("raw_sha256").to_pylist())
+
+
+def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, create: bool = True) -> dict[str, Any]:
+    """What each subgroup needs. ``create=False`` (checks): reads only, never creates a table."""
+    if create:
+        bronze = bf.retry(lambda: bf.ensure_table(cat, ids["bronze"], list(BRONZE_COLUMNS), ENTITY), "bronze")
+        silver = bf.retry(lambda: bf.ensure_table(cat, ids["silver"], SILVER_COLUMNS, ENTITY), "silver")
+    else:
+        bronze = bf.retry(lambda: cat.load_table(ids["bronze"]), "bronze")
+        silver = bf.retry(lambda: cat.load_table(ids["silver"]), "silver")
+    refused = refused_keys(cat, ids["rejected"], create)
     b_state, s_state = et.state(bronze, ENTITY), et.state(silver, ENTITY)
     groups: dict[str, list[dict]] = defaultdict(list)
     for part in candidates(client, req("R2_LANDING_BUCKET")):
@@ -212,20 +237,17 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None) ->
     mappings = variables(cat)
     model = (Path(__file__).resolve().parents[3] / "warehouse" / "entity" / f"{SILVER_MODEL}.sql").read_text()
     empty = pa.table({"dimension_key": pa.array([], pa.string()), "variable_id": pa.array([], pa.int64())})
-    todo, model_only_rows, skipped_rejected, expected = [], 0, [], {}
+    todo, rejected, expected, expected_silver = [], [], {}, {}
     for sg, parts in groups.items():
         rcp = recipe(parts)
-        if rcp in refused or any(p["sha256"] in refused for p in parts):
-            skipped_rejected.append(sg)
-            continue
-        expected[sg] = rcp
         mapping = mappings.get(sg, empty)
         tag = silver_tag(model, mapping)
+        if f"{rcp}.{tag}" in refused or any(p["sha256"] in refused for p in parts):
+            rejected.append(sg)
+            continue
+        expected[sg], expected_silver[sg] = rcp, f"{rcp}.{tag}"
         need_bronze = b_state.get(sg, {}).get("recipes") != {rcp}
-        held = s_state.get(sg, {}).get("recipes", set())
-        need_silver = need_bronze or held != {f"{rcp}.{tag}"}
-        if need_silver and not need_bronze and held and all(r.startswith(rcp + ".") for r in held):
-            model_only_rows += s_state[sg]["rows"]
+        need_silver = need_bronze or s_state.get(sg, {}).get("recipes") != {f"{rcp}.{tag}"}
         if need_bronze or need_silver:
             current = b_state.get(sg, {}).get("paths", [])
             todo.append(
@@ -243,9 +265,11 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None) ->
     return {
         "todo": todo,
         "expected": expected,
+        "expected_silver": expected_silver,
         "subgroups": len(groups),
-        "skipped_rejected": skipped_rejected,
-        "model_only_rows": model_only_rows,
+        "rejected": rejected,
+        "bronze": b_state,
+        "silver": s_state,
     }
 
 
@@ -254,7 +278,7 @@ def main(argv=None) -> int:
     parser.add_argument("--minutes", type=float, default=50)
     parser.add_argument("--workers", type=int, default=3)
     parser.add_argument("--only", nargs="*")
-    parser.add_argument("--approved", default="")
+    parser.add_argument("--approved", default="", help="owner approval issue for a run that redoes most subgroups (R6)")
     parser.add_argument("--memory", default="4GB")
     parser.add_argument("--silver-table", default=".".join(SILVER))
     parser.add_argument("--trial", default="", help="scratch namespace and prefix (Dev trials): writes only there")
@@ -270,12 +294,14 @@ def main(argv=None) -> int:
     p = plan(cat, client, ids, set(args.only) if args.only else None)
     for key in ("bronze", "silver"):
         et.configure(ids[key])
-    if p["model_only_rows"] > ROW_LIMIT and not args.approved:
-        annotate("error", "bdl entities: approval needed", {"rule": "R6 #875", "rows_to_redo": p["model_only_rows"]})
+    if et.needs_approval(len(p["todo"]), p["subgroups"], args.approved or args.trial):
+        annotate("error", "bdl entities: approval needed", {"rule": "R6 #875", "subgroups_to_redo": len(p["todo"])})
         return 1
     tmp_root = os.environ.get("DUCKDB_TEMP_DIRECTORY") or tempfile.gettempdir()
     Path(tmp_root).mkdir(parents=True, exist_ok=True)
-    totals: dict[str, Any] = {"bronze_decoded": 0, "silver_written": 0, "rows": 0, "bronze_rows": 0, "rejected": []}
+    totals: dict[str, Any] = {"bronze_decoded": 0, "silver_written": 0, "rows": 0, "bronze_rows": 0}
+    rejected_now: list[dict[str, str]] = []
+    failed: list[dict[str, str]] = []
     pending: list[dict[str, Any]] = []
     last = time.monotonic()
 
@@ -304,10 +330,27 @@ def main(argv=None) -> int:
         )
         pending, last = [], time.monotonic()
 
+    def account(result: dict[str, Any]) -> None:
+        if result["status"] == "failed":
+            failed.append({"subgroup": result[ENTITY], "error": result["error"][:200]})
+            return
+        pending.append(result)
+        if result["status"] == "ok":
+            totals["silver_written"] += 1
+            totals["rows"] += result["rows"]
+            totals["bronze_rows"] += result["bronze_rows"]
+            totals["bronze_decoded"] += result.get("bronze_action") == "decoded"
+        else:
+            rejected_now.append({"subgroup": result[ENTITY], "error": result["error"][:300]})
+
+    def failure(task: dict[str, Any], exc: BaseException) -> dict[str, Any]:
+        return {ENTITY: task[ENTITY], "status": "failed", "error": f"{type(exc).__name__}: {exc}"}
+
     queue = sorted(p["todo"], key=lambda t: t["size"])
+    broken = False
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
         running: dict = {}
-        while queue or running:
+        while (queue or running) and not broken:
             while queue and len(running) < args.workers and time.monotonic() < deadline:
                 task = queue.pop(0)
                 running[pool.submit(work, task, paths, args.memory, tmp_root)] = task
@@ -315,49 +358,49 @@ def main(argv=None) -> int:
                 break
             finished, _ = wait(running, timeout=60, return_when=FIRST_COMPLETED)
             for f in finished:
-                running.pop(f)
-                result = f.result()
-                pending.append(result)
-                if result["status"] == "ok":
-                    totals["silver_written"] += 1
-                    totals["rows"] += result["rows"]
-                    totals["bronze_rows"] += result["bronze_rows"]
-                    totals["bronze_decoded"] += result.get("bronze_action") == "decoded"
-                else:
-                    totals["rejected"].append({"subgroup": result[ENTITY], "error": result["error"][:200]})
+                task = running.pop(f)
+                try:
+                    account(f.result())
+                except BrokenProcessPool as exc:  # a worker was killed (memory): keep what is done, stop
+                    account(failure(task, exc))
+                    broken = True
+                except Exception as exc:  # non-data failure of one subgroup: the next run retries it
+                    account(failure(task, exc))
             if len(pending) >= COMMIT_EVERY or (pending and time.monotonic() - last > COMMIT_SECONDS):
                 commit()
+        if broken:
+            for task in running.values():
+                account(failure(task, RuntimeError("worker pool broken")))
+            pool.shutdown(wait=False, cancel_futures=True)
     commit()
-    left = len(p["todo"]) - totals["silver_written"] - len(totals["rejected"])
+    left = len(p["todo"]) - totals["silver_written"] - len(rejected_now)
     summary = {
         "operation": "bdl-entities",
-        "result": "complete" if left == 0 else "incomplete_time_budget",
+        "result": "complete" if left == 0 else ("failures" if failed else "incomplete_time_budget"),
         "subgroups": p["subgroups"],
         "todo": len(p["todo"]),
         "remaining": left,
-        "skipped_rejected_earlier": len(p["skipped_rejected"]),
-        **{k: v for k, v in totals.items() if k != "rejected"},
-        "rejected": len(totals["rejected"]),
-        "rejected_subgroups": totals["rejected"][:15],
+        "rejected_earlier": len(p["rejected"]),
+        **totals,
+        "rejected": len(rejected_now),
+        "rejected_subgroups": rejected_now[:12],
+        "failed": len(failed),
+        "failed_subgroups": failed[:10],
         "minutes": round((time.monotonic() - started) / 60, 1),
     }
     print(json.dumps(summary, sort_keys=True, default=str), flush=True)
-    annotate("notice" if left == 0 and not totals["rejected"] else "warning", "bdl entities", summary)
+    annotate("notice" if left == 0 and not rejected_now else "warning", "bdl entities", summary)
     return 0 if left == 0 else 2
 
 
 def completeness_report() -> dict[str, Any]:
-    """Landing → Bronze → Silver completeness per subgroup, from table metadata (R5, #875)."""
+    """Landing → Bronze → Silver completeness per subgroup, from table metadata only (R5, #875)."""
     started = time.monotonic()
     cat, client = bf.retry(catalog, "catalog"), s3()
-    p = plan(cat, client, {"bronze": BRONZE, "silver": SILVER, "rejected": REJECTED}, None)
-    report = et.completeness(
-        p["expected"],
-        et.state(bf.retry(lambda: cat.load_table(BRONZE), "bronze"), ENTITY),
-        et.state(bf.retry(lambda: cat.load_table(SILVER), "silver"), ENTITY),
-    )
-    report["rejected_count"] = len(p["skipped_rejected"])
-    report["rejected_subgroups"] = sorted(p["skipped_rejected"])[:20]
+    p = plan(cat, client, {"bronze": BRONZE, "silver": SILVER, "rejected": REJECTED}, None, create=False)
+    report = et.completeness(p["expected"], p["bronze"], p["silver"], p["expected_silver"])
+    report["rejected_count"] = len(p["rejected"])
+    report["rejected_subgroups"] = sorted(p["rejected"])[:20]
     report["minutes"] = round((time.monotonic() - started) / 60, 1)
     return report
 
@@ -380,3 +423,7 @@ def proven() -> set[str]:
     return {
         p["sha256"] for sg, parts in groups.items() if held.get(sg, {}).get("recipes") == {recipe(parts)} for p in parts
     }
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
