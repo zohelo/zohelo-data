@@ -168,4 +168,10 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import traceback
+
+    try:
+        raise SystemExit(main())
+    except Exception:
+        annotate("error", "checkpoint_rebuild crashed", traceback.format_exc()[-3000:])
+        raise
