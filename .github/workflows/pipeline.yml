@@ -322,6 +322,7 @@ jobs:
     # A model build replaced in its queue by a newer one (concurrency zohelo-pipeline-build) ends as
     # cancelled by design and is not an alert; a failed build is (#878 review).
     if: >-
+      always() && (
       failure() ||
       needs.silver-gold-build.result == 'failure' ||
       needs.scheduler.result == 'cancelled' ||
@@ -334,7 +335,7 @@ jobs:
       needs.landing-archive.result == 'cancelled' ||
       needs.archive-prune.result == 'cancelled' ||
       needs.silver-gold-promote.result == 'cancelled' ||
-      needs.serving-refresh-index.result == 'cancelled'
+      needs.serving-refresh-index.result == 'cancelled')
     name: notify
     runs-on: ubuntu-24.04
     timeout-minutes: 5
