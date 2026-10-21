@@ -62,7 +62,7 @@ class PackagesStuck(RuntimeError):
 
 
 HARD_DEADLINE = float("inf")  # monotonic; set by main() a little after the time budget
-HARD_MARGIN_SECONDS = 12 * 60  # the job has 25 minutes beyond the budget
+HARD_MARGIN_SECONDS = 8 * 60  # the job has 25 minutes beyond the budget; single waits take up to 6
 
 
 def check_time() -> None:
@@ -274,6 +274,7 @@ def select_dimensions(page, subgroup: dict[str, Any], trace: list) -> int | None
     settle(page)
     clicked: set[str] = set()
     for _ in range(20):  # every dimension's "select all", one postback at a time
+        check_time()
         ids = page.locator('[id$="_SelectAll"]').evaluate_all(
             "els => els.filter(e => (e.offsetWidth || e.offsetHeight) && !e.disabled).map(e => e.id)"
         )
