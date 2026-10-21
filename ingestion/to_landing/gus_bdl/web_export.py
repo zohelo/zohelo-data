@@ -16,6 +16,7 @@ The version token is the subgroup's lastUpdate from the BDL API.
 
 from __future__ import annotations
 
+from collections import Counter
 import contextlib
 from datetime import UTC, datetime
 from hashlib import sha256
@@ -175,22 +176,24 @@ def fingerprint(entry: dict[str, Any]) -> str:
     return sha256(json.dumps([entry["text"], entry["row"]]).encode()).hexdigest()
 
 
-def settled_exports(page) -> set[str]:
-    """Fingerprints of the account's packages once none is still generating."""
+def settled_exports(page) -> Counter:
+    """How many of the account's packages carry each fingerprint, once none is still generating.
+
+    Counted, not a set: two packages of one subgroup made on one day look the same (name and date)."""
     for _ in range(36):  # a package still generating would later be mistaken for ours
         before = exports(page)
         if all(e["ready"] for e in before):
-            return {fingerprint(e) for e in before}
+            return Counter(fingerprint(e) for e in before)
         page.wait_for_timeout(5000)
     raise RuntimeError("earlier BDL packages did not finish generating")
 
 
-def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list, seen: set[str]) -> tuple[Path, str]:
+def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list, seen: Counter) -> tuple[Path, str]:
     """Request a background package for the current selection and download it when ready.
 
     The selection lives in the page session, so the export list is read before selecting."""
     button = download_button(page)
-    note(page, trace, f"package requested ({len(seen)} earlier packages)")
+    note(page, trace, f"package requested ({sum(seen.values())} earlier packages)")
     with page.expect_response(lambda r: r.request.method == "POST", timeout=360_000) as response_info:
         button.click(no_wait_after=True)
     if not response_info.value.ok:
@@ -201,7 +204,16 @@ def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list,
         return number in e["row"] + e["text"] or bool(name and name in e["row"])
 
     for _ in range(72):  # up to 6 minutes
-        new = [e for e in exports(page) if fingerprint(e) not in seen and e["ready"] and ours(e)]
+        listed = exports(page)
+        counts = Counter(fingerprint(e) for e in listed)
+        # The list is newest first: a fingerprint listed more often than before is new in its first entries.
+        new, taken = [], Counter()
+        for e in listed:
+            f = fingerprint(e)
+            if taken[f] < counts[f] - seen[f]:
+                taken[f] += 1
+                if e["ready"] and ours(e):
+                    new.append(e)
         if len(new) > 1:
             raise RuntimeError(f"several new packages match {subgroup['id']}")
         if new:
@@ -220,7 +232,9 @@ def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list,
     raise RuntimeError("BDL package was requested but did not appear in the export list")
 
 
-CELL_BUDGET = 160_000  # information × units in one table: 250 × 648 worked, 400 × 648 failed (P3442, 21 Oct)
+CELL_BUDGET = int(os.environ.get("GUS_BDL_WEB_CELL_BUDGET", "80000"))  # information × units in one table
+# 250 × 648 = 162k worked in the administrative layout, 400 × 648 failed (P3442, 21 Oct); the
+# statistical layout's first 246 units (Poland, regions, subregions: dense) failed at 160k.
 MAX_UNITS = 250
 LAYOUT = "ctl00_ContentPlaceHolder_ukladTeryt"
 UNITS = "ctl00_ContentPlaceHolder_terytList_UnitsList"
@@ -376,13 +390,21 @@ def export(
             continue
         if time.monotonic() > deadline:
             return {"status": "unfinished", "information": information, "parts": total}
-        if not fresh:
-            select_dimensions(page, subgroup, trace)
-            to_territories(page)
-        set_layout(page, part["layout"])
-        select_units(page, part["territories"])
-        path, name = table_export(page, subgroup, workdir, trace, f"{subgroup['id']}-{index:03d}")
-        fresh = False
+        for attempt in (1, 2):  # the error page says the server may be overloaded: one retry after a pause
+            if not fresh:
+                select_dimensions(page, subgroup, trace)
+                to_territories(page)
+            set_layout(page, part["layout"])
+            select_units(page, part["territories"])
+            fresh = False
+            try:
+                path, name = table_export(page, subgroup, workdir, trace, f"{subgroup['id']}-{index:03d}")
+                break
+            except RuntimeError as exc:
+                if attempt == 2 or "BDL error page" not in str(exc):
+                    raise RuntimeError(f"part {index} of {total} ({part['layout']}): {exc}") from exc
+                note(page, trace, f"part {index}: server error, retrying after a pause")
+                page.wait_for_timeout(60_000)
         land_part(
             {"path": path, "export_file_name": name, "information": information},
             index,
