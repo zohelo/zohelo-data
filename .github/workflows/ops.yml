@@ -85,8 +85,16 @@ jobs:
             exit 2
           fi
           mkdir -p "$OPS_OUTPUT_DIR"
+          # Phones turn "--" into a long dash: accept — and – as "--" so a run typed on a phone works.
+          ARGS="${ARGS//—/--}"
+          ARGS="${ARGS//–/--}"
+          echo "::notice title=ops arguments::${SCRIPT} ${ARGS}"
           read -ra argv <<< "$ARGS"
-          python -m "ops.$SCRIPT" "${argv[@]}"
+          if ! python -m "ops.$SCRIPT" "${argv[@]}"; then
+            status=$?
+            [ "$status" -eq 2 ] && echo "::error title=ops arguments not accepted::${SCRIPT} ${ARGS} (see the script's options)"
+            exit "$status"
+          fi
       - name: Keep script output files
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
