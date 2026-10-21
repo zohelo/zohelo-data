@@ -16,7 +16,6 @@ The version token is the subgroup's lastUpdate from the BDL API.
 
 from __future__ import annotations
 
-from collections import Counter
 import contextlib
 from datetime import UTC, datetime
 from hashlib import sha256
@@ -62,7 +61,7 @@ class PackagesStuck(RuntimeError):
 
 
 HARD_DEADLINE = float("inf")  # monotonic; set by main() a little after the time budget
-HARD_MARGIN_SECONDS = 8 * 60  # the job has 25 minutes beyond the budget; single waits take up to 6
+HARD_MARGIN_SECONDS = 8 * 60  # the job has 25 minutes beyond the budget; one stretch without a check takes up to ~7.5
 
 
 def check_time() -> None:
@@ -190,73 +189,86 @@ def download_button(page):
     return None
 
 
+PACKAGE_MINUTES = 30  # a large package can take this long to generate (P2017, 10,416 values, 21 Oct)
+
+
 def exports(page) -> list[dict[str, Any]]:
-    """The account's generated packages listed on the start page."""
-    page.goto(f"{WEB}/start", wait_until="domcontentloaded", timeout=30_000)
-    settle(page)
-    return page.locator('[id$="_Export"]').evaluate_all(EXPORTS_JS)
+    """The account's generated packages listed on the start page, newest first (the site lists 3)."""
+    from playwright.sync_api import TimeoutError as PlaywrightTimeout
+
+    for attempt in range(4):  # the start page is slow while the site generates packages
+        try:
+            page.goto(f"{WEB}/start", wait_until="domcontentloaded", timeout=90_000)
+            settle(page)
+            return page.locator('[id$="_Export"]').evaluate_all(EXPORTS_JS)
+        except PlaywrightTimeout:
+            if attempt == 3:
+                raise
+            check_time()
+            page.wait_for_timeout(15_000)
+    return []
 
 
 def fingerprint(entry: dict[str, Any]) -> str:
     return sha256(json.dumps([entry["text"], entry["row"]]).encode()).hexdigest()
 
 
-def settled_exports(page) -> Counter:
-    """How many of the account's packages carry each fingerprint, once none is still generating.
-
-    Counted, not a set: two packages of one subgroup made on one day look the same (name and date)."""
-    for _ in range(36):  # a package still generating would later be mistaken for ours
+def settled_exports(page) -> list[str]:
+    """The account's package list (fingerprints, newest first) once none is still generating."""
+    deadline = time.monotonic() + PACKAGE_MINUTES * 60
+    while time.monotonic() < deadline:  # a package still generating would later be mistaken for ours
         check_time()
         before = exports(page)
         if all(e["ready"] for e in before):
-            return Counter(fingerprint(e) for e in before)
-        page.wait_for_timeout(5000)
-    raise PackagesStuck("earlier BDL packages did not finish generating in 3 minutes")
+            return [fingerprint(e) for e in before]
+        page.wait_for_timeout(10_000)
+    raise PackagesStuck(f"earlier BDL packages did not finish generating in {PACKAGE_MINUTES} minutes")
 
 
-def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list, seen: Counter) -> tuple[Path, str]:
+def new_on_top(listed: list[dict[str, Any]], seen: list[str]) -> bool:
+    """The newest entry is an additional package (its look is listed more often than before),
+    not a list that changed because an older entry expired."""
+    top = fingerprint(listed[0])
+    return sum(fingerprint(e) == top for e in listed) > seen.count(top)
+
+
+def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list, seen: list[str]) -> tuple[Path, str]:
     """Request a background package for the current selection and download it when ready.
 
-    The selection lives in the page session, so the export list is read before selecting."""
+    The site lists only the newest 3 packages, and two packages of one subgroup made on one
+    day look the same (21 Oct), so a new package is recognised by its life cycle: every
+    package was ready before the request (settled_exports), so a package seen generating
+    after it is ours; once the list is ready again its newest entry is downloaded. An extra
+    package on top also counts, in case generation finished between two looks (new_on_top). The ZIP name must
+    carry the subgroup number (save_download)."""
     button = download_button(page)
-    note(page, trace, f"package requested ({sum(seen.values())} earlier packages)")
+    note(page, trace, f"package requested ({len(seen)} packages listed before)")
     with page.expect_response(lambda r: r.request.method == "POST", timeout=360_000) as response_info:
         button.click(no_wait_after=True)
     if not response_info.value.ok:
         raise RuntimeError(f"BDL package request returned HTTP {response_info.value.status}")
     name = " ".join(subgroup["name"].split())[:40]
-
-    def ours(e: dict[str, Any]) -> bool:  # the list shows the subgroup's name (no number); the ZIP name is checked too
-        return bool(name) and (e["text"].startswith(name) or name in e["row"])
-
-    for _ in range(72):  # up to 6 minutes
+    generating_seen = False
+    deadline = time.monotonic() + PACKAGE_MINUTES * 60
+    listed: list[dict[str, Any]] = []
+    while time.monotonic() < deadline:
         check_time()
         listed = exports(page)
-        counts = Counter(fingerprint(e) for e in listed)
-        # The list is newest first: a fingerprint listed more often than before is new in its first entries.
-        new, taken = [], Counter()
-        for e in listed:
-            f = fingerprint(e)
-            if taken[f] < counts[f] - seen[f]:
-                taken[f] += 1
-                if e["ready"] and ours(e):
-                    new.append(e)
-        if len(new) > 1:
-            raise RuntimeError(f"several new packages match {subgroup['id']}")
-        if new:
+        if any(not e["ready"] for e in listed):
+            generating_seen = True
+        elif listed and (generating_seen or new_on_top(listed, seen)):
+            top = listed[0]
+            if not (top["text"].startswith(name) or name in top["row"]):
+                raise RuntimeError(f"the newest package is not {subgroup['id']}: {top['text'][:60]}")
             note(page, trace, "package ready")
-            with page.expect_download(timeout=180_000) as download_info:
-                page.locator(f"#{new[0]['id']}").evaluate("e => e.click()")
+            with page.expect_download(timeout=240_000) as download_info:
+                page.locator(f"#{top['id']}").evaluate("e => e.click()")
             return save_download(download_info.value, subgroup, workdir)
-        page.wait_for_timeout(5000)
-    listed = exports(page)
+        page.wait_for_timeout(10_000 if generating_seen else 2000)
     trace.append(
-        {
-            "step": "export list after waiting",
-            "entries": [[e["ready"], e["text"][:40], e["row"][:200]] for e in listed[:8]],
-        }
+        {"step": "export list after waiting", "entries": [[e["ready"], e["text"][:40], e["row"][-40:]] for e in listed]}
     )
-    raise RuntimeError("BDL package was requested but did not appear in the export list")
+    raise RuntimeError(f"BDL package was requested but no new package appeared in {PACKAGE_MINUTES} minutes")
 
 
 CELL_BUDGET = 80_000  # information × units in one table; part of the plan, so a constant
