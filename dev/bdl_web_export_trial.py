@@ -20,7 +20,7 @@ try:
     web_export.DATA = SCRATCH
     web_export.PAUSE_SECONDS = 5
     only = sys.argv[1:] or None
-    code = web_export.main(limit=2, budget_minutes=25, only=only)
+    code = web_export.main(limit=2, budget_minutes=45, only=only)
     client, bucket = s3(), req("R2_LANDING_BUCKET")
     keys = [
         o["Key"]

@@ -3,12 +3,14 @@
 BDL has no bulk download; the website's subgroup export ("CSV – tablica relacyjna" ZIP)
 is the agreed workaround (owner decision 13 Oct 2026). One browser, one route, one
 subgroup at a time with a pause, no IP rotation; login with GUS_BDL_WEB_EMAIL /
-GUS_BDL_WEB_PASSWORD. This module handles subgroups whose full selection is at most
-MAX_INFORMATION values (one file); larger subgroups are reported as deferred until the
-splitter (one file per dimension × territory part) exists.
+GUS_BDL_WEB_PASSWORD. Routes per subgroup (export() has the rule): the website's background
+package of the whole subgroup above MAX_INFORMATION values; otherwise the result table of
+all territories; when the site cannot build it, territory parts per layout (part i of n in
+the receipt, landed as they download, so a run resumes). Above MAX_INFORMATION without the
+package control the subgroup is reported as too large (a dimension split is not built).
 
 Landing layout and receipt match the existing web exports:
-  01_landing/gus_bdl/snapshot/data/<P####>/<version_token>__<ingested>.zip (+ .receipt.json)
+  01_landing/gus_bdl/snapshot/data/<P####>/<version_token>__<ingested>[__part-NNN].zip (+ .receipt.json)
 The version token is the subgroup's lastUpdate from the BDL API.
 """
 
@@ -43,26 +45,25 @@ def ensure_browser() -> None:
     subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
 
 
-def missing_subgroups(api: Bdl, held: dict[str, str]) -> list[dict[str, Any]]:
-    """Subgroups with no complete Landing version, with their export URL (K/G/P numbers)."""
+def entry(api: Bdl, subject: dict[str, Any], parents: dict[str, str]) -> dict[str, Any]:
+    """A subgroup with its export URL (K/G/P numbers)."""
+    group = subject["parentId"]
+    if group not in parents:
+        parents[group] = api.get(f"/subjects/{group}", lang="pl")["parentId"]
+    category = parents[group]
+    return {
+        "id": subject["id"],
+        "name": subject.get("name", ""),
+        "subject": subject,
+        "url": f"{WEB}/dane/podgrup/wymiary/{category[1:]}/{group[1:]}/{subject['id'][1:]}",
+    }
+
+
+def missing_subgroups(api: Bdl, held: dict[str, str], only: list[str] | None = None) -> list[dict[str, Any]]:
+    """Subgroups with no complete Landing version (only: just these, without listing every subgroup)."""
     parents: dict[str, str] = {}
-    out = []
-    for subject in api.subgroups():
-        if subject["id"] in held:
-            continue
-        group = subject["parentId"]
-        if group not in parents:
-            parents[group] = api.get(f"/subjects/{group}", lang="pl")["parentId"]
-        category = parents[group]
-        out.append(
-            {
-                "id": subject["id"],
-                "name": subject.get("name", ""),
-                "subject": subject,
-                "url": f"{WEB}/dane/podgrup/wymiary/{category[1:]}/{group[1:]}/{subject['id'][1:]}",
-            }
-        )
-    return out
+    subjects = [api.get(f"/subjects/{sid}", lang="pl") for sid in only] if only else api.subgroups()
+    return [entry(api, subject, parents) for subject in subjects if subject["id"] not in held]
 
 
 def information_count(page) -> int | None:
@@ -112,13 +113,13 @@ def wait_for_result_table(page) -> None:
     raise RuntimeError(f"result table did not show its Export control; at {page.url}")
 
 
-def save_download(download, subgroup: dict[str, Any], workdir: Path) -> tuple[Path, str]:
+def save_download(download, subgroup: dict[str, Any], workdir: Path, stem: str = "") -> tuple[Path, str]:
     """Save a provider ZIP after checking its name identifies the subgroup and it is a ZIP."""
     name = download.suggested_filename
     number = subgroup["id"][1:]
     if not re.search(rf"(?:^|_){number}(?:_|\.)", name, re.IGNORECASE):
         raise RuntimeError(f"export file name {name!r} does not identify {subgroup['id']}")
-    path = workdir / f"{subgroup['id']}.zip"
+    path = workdir / f"{stem or subgroup['id']}.zip"
     download.save_as(path)
     if path.read_bytes()[:2] != b"PK":
         raise RuntimeError(f"export of {subgroup['id']} is not a ZIP archive")
@@ -219,15 +220,17 @@ def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list,
     raise RuntimeError("BDL package was requested but did not appear in the export list")
 
 
-def export(page, subgroup: dict[str, Any], workdir: Path, trace: list) -> dict[str, Any]:
-    """Select everything in one subgroup and download the relational CSV ZIP.
+CELL_BUDGET = 160_000  # information × units in one table: 250 × 648 worked, 400 × 648 failed (P3442, 21 Oct)
+MAX_UNITS = 250
+LAYOUT = "ctl00_ContentPlaceHolder_ukladTeryt"
+UNITS = "ctl00_ContentPlaceHolder_terytList_UnitsList"
+SELECTED = "ctl00_ContentPlaceHolder_terytList_SelectedUnits"
 
-    Returns {"status": "downloaded", "path", "export_file_name", "information"} or
-    {"status": "too_large" | "no_data", "information"}."""
-    seen = settled_exports(page)
+
+def select_dimensions(page, subgroup: dict[str, Any], trace: list) -> int | None:
+    """Open the subgroup and select everything in every dimension; returns the information count."""
     page.goto(subgroup["url"], wait_until="domcontentloaded", timeout=60_000)
     settle(page)
-    note(page, trace, "dimensions page")
     clicked: set[str] = set()
     for _ in range(20):  # every dimension's "select all", one postback at a time
         ids = page.locator('[id$="_SelectAll"]').evaluate_all(
@@ -240,52 +243,185 @@ def export(page, subgroup: dict[str, Any], workdir: Path, trace: list) -> dict[s
         clicked.add(todo[0])
         settle(page)
     note(page, trace, f"selected all in {len(clicked)} dimensions")
-    information = information_count(page)
-    if not information:
-        return {"status": "no_data", "information": information}
-    # The "Pobierz" (download) control asks the site to generate the whole selection as a
-    # package in the background; it appears in the account's export list on /bdl/start.
-    if download_button(page) is not None:
-        path, name = generated_export(page, subgroup, workdir, trace, seen)
-        return {"status": "downloaded", "path": path, "export_file_name": name, "information": information}
-    if information > MAX_INFORMATION:
-        return {"status": "too_large", "information": information}
+    return information_count(page)
+
+
+def to_territories(page) -> None:
     enabled_next(page).click()
     page.wait_for_url(re.compile(r"/bdl/dane/podgrup/teryt"), timeout=30_000)
     settle(page)
-    note(page, trace, "territories page")
+
+
+def layouts(page) -> list[str]:
+    """The territorial layouts offered (statistical, administrative, functional)."""
+    return page.evaluate(
+        f"""() => {{ const it = window.$find('{LAYOUT}').get_items();
+        return Array.from({{length: it.get_count()}}, (_, i) => it.getItem(i).get_text().trim()); }}"""
+    )
+
+
+def set_layout(page, label: str) -> None:
+    current = lambda: page.evaluate(f"() => window.$find('{LAYOUT}').get_text().trim()")  # noqa: E731
+    if current() == label:
+        return
+    page.locator(f"#{LAYOUT}_Arrow").click()
+    page.locator(".rcbItem").filter(has_text=label).first.click()
+    settle(page)
+    page.wait_for_function(f"() => (window.$find('{UNITS}')?.get_items?.()?.get_count?.() || 0) > 0", timeout=45_000)
+    if current() != label:
+        raise RuntimeError(f"territorial layout {label!r} did not stay selected")
+
+
+def unit_values(page) -> list[str]:
+    return page.evaluate(
+        f"""() => {{ const it = window.$find('{UNITS}').get_items();
+        return Array.from({{length: it.get_count()}}, (_, i) => String(it.getItem(i).get_value())); }}"""
+    )
+
+
+def select_units(page, values: list[str]) -> None:
+    """Move exactly these units to the selection."""
+    page.evaluate(
+        f"""values => {{ const b = window.$find('{UNITS}'); b.clearSelection();
+        for (const v of values) {{ const item = b.findItemByValue(v);
+            if (!item) throw new Error('unit ' + v + ' not listed'); item.select(); }} }}""",
+        values,
+    )
+    page.locator("button.rlbTransferFrom:visible").first.click()
+    settle(page)
+    page.wait_for_function(
+        f"n => (window.$find('{SELECTED}')?.get_items?.()?.get_count?.() || 0) === n", arg=len(values), timeout=45_000
+    )
+
+
+def select_all_units(page) -> None:
     page.locator("#ctl00_ContentPlaceHolder_terytList_MenuButton").click()
     page.locator("li.rmItem").filter(has_text="Zaznacz wszystkie").first.locator(".rmLink").click()
     settle(page)
     page.locator("button.rlbTransferAllFrom").first.click()
     settle(page)
-    page.wait_for_function(
-        "() => (window.$find('ctl00_ContentPlaceHolder_terytList_SelectedUnits')"
-        "?.get_items?.()?.get_count?.() || 0) > 0",
-        timeout=45_000,
-    )
-    selected = re.search(r"Wybranych elementów:\s*([0-9\s]+)", page.locator("body").inner_text())
-    note(page, trace, f"territories selected: {selected.group(1).strip() if selected else '?'}")
+    page.wait_for_function(f"() => (window.$find('{SELECTED}')?.get_items?.()?.get_count?.() || 0) > 0", timeout=45_000)
+
+
+def table_export(page, subgroup: dict[str, Any], workdir: Path, trace: list, stem: str) -> tuple[Path, str]:
+    """From the territories page: build the result table and download its relational CSV ZIP."""
     enabled_next(page).click()
     wait_for_result_table(page)
     note(page, trace, "result table")
     option = page.get_by_text(re.compile(r"CSV\s*[–-]\s*(tablica\s+)?relacyj", re.IGNORECASE)).first
     if not option.is_visible():
         page.get_by_text(re.compile(r"^(Eksport|Export)$", re.IGNORECASE)).first.click()
-        page.wait_for_timeout(500)
-    with page.expect_download(timeout=180_000) as download_info:
+        option.wait_for(state="visible", timeout=15_000)
+    with page.expect_download(timeout=240_000) as download_info:
         option.click(no_wait_after=True)
-    path, name = save_download(download_info.value, subgroup, workdir)
-    return {"status": "downloaded", "path": path, "export_file_name": name, "information": information}
+    return save_download(download_info.value, subgroup, workdir, stem)
 
 
-def land(client, bucket: str, subgroup: dict[str, Any], version: datetime | None, result: dict[str, Any]) -> str:
-    """Write the ZIP and its receipt to Landing; returns the data key."""
+def plan_parts(page, information: int) -> list[dict[str, Any]]:
+    """Territory parts of a subgroup too large for one table: every layout's units in chunks
+    of at most CELL_BUDGET / information units (overlapping layouts collapse in Silver)."""
+    size = max(1, min(MAX_UNITS, CELL_BUDGET // max(1, information)))
+    parts = []
+    for label in layouts(page):
+        set_layout(page, label)
+        values = unit_values(page)
+        parts += [{"layout": label, "territories": values[i : i + size]} for i in range(0, len(values), size)]
+    return parts
+
+
+def export(
+    page, subgroup: dict[str, Any], workdir: Path, trace: list, landed: dict[int, set[int]], land_part, deadline: float
+) -> dict[str, Any]:
+    """Export one subgroup, landing each file as it is downloaded (land_part(result, index, total, selection)).
+
+    Routes, as the September campaign: above MAX_INFORMATION values the website's background
+    package ("Pobierz") of the whole subgroup; otherwise the result table of all territories;
+    when the site cannot build that table (HTTP 500), territory parts per layout. `landed` maps
+    a part total to the part indexes already in Landing for this version, so a run resumes.
+    Returns {"status": "downloaded" | "too_large" | "no_data" | "unfinished", "information", "parts"}."""
+    seen = settled_exports(page)
+    information = select_dimensions(page, subgroup, trace)
+    if not information:
+        return {"status": "no_data", "information": information}
+    whole = {"kind": "download", "layout": None, "territories": ["all"], "dimensions": {}}
+    if download_button(page) is not None:
+        path, name = generated_export(page, subgroup, workdir, trace, seen)
+        land_part({"path": path, "export_file_name": name, "information": information}, 1, 1, whole)
+        return {"status": "downloaded", "information": information, "parts": 1}
+    if information > MAX_INFORMATION:
+        return {"status": "too_large", "information": information}
+    split = any(total > 1 for total in landed)
+    if not split:
+        to_territories(page)
+        select_all_units(page)
+        note(page, trace, "all territories selected")
+        try:
+            path, name = table_export(page, subgroup, workdir, trace, subgroup["id"])
+        except RuntimeError as exc:
+            if "BDL error page" not in str(exc):
+                raise
+            note(page, trace, "whole table refused; splitting by territory")
+        else:
+            land_part({"path": path, "export_file_name": name, "information": information}, 1, 1, whole)
+            return {"status": "downloaded", "information": information, "parts": 1}
+        select_dimensions(page, subgroup, trace)
+    to_territories(page)
+    parts = plan_parts(page, information)
+    total = len(parts)
+    done = landed.get(total, set())
+    note(page, trace, f"{total} territory parts, {len(done)} already landed")
+    fresh = True  # the territories page of the current dimension selection, nothing selected yet
+    for index, part in enumerate(parts, start=1):
+        if index in done:
+            continue
+        if time.monotonic() > deadline:
+            return {"status": "unfinished", "information": information, "parts": total}
+        if not fresh:
+            select_dimensions(page, subgroup, trace)
+            to_territories(page)
+        set_layout(page, part["layout"])
+        select_units(page, part["territories"])
+        path, name = table_export(page, subgroup, workdir, trace, f"{subgroup['id']}-{index:03d}")
+        fresh = False
+        land_part(
+            {"path": path, "export_file_name": name, "information": information},
+            index,
+            total,
+            {"kind": "download", "layout": part["layout"], "territories": part["territories"], "dimensions": {}},
+        )
+        done.add(index)
+    return {"status": "downloaded", "information": information, "parts": total}
+
+
+def landed_parts(client, bucket: str, subgroup_id: str, version_token: str) -> dict[int, set[int]]:
+    """Part indexes in Landing for this subgroup version, by announced part total."""
+    out: dict[int, set[int]] = {}
+    prefix = f"{DATA}{subgroup_id}/{version_token}__"
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix):
+        for o in page.get("Contents", []):
+            if o["Key"].endswith(".receipt.json"):
+                part = json.loads(client.get_object(Bucket=bucket, Key=o["Key"])["Body"].read()).get("part") or {}
+                out.setdefault(int(part.get("total", 1)), set()).add(int(part.get("index", 1)))
+    return out
+
+
+def land(
+    client,
+    bucket: str,
+    subgroup: dict[str, Any],
+    version: datetime | None,
+    result: dict[str, Any],
+    index: int = 1,
+    total: int = 1,
+    selection: dict[str, Any] | None = None,
+) -> str:
+    """Write one ZIP and its receipt to Landing; returns the data key."""
     body = result["path"].read_bytes()
     digest = sha256(body).hexdigest()
     now = datetime.now(UTC)
     version_token = token(version)
-    key = f"{DATA}{subgroup['id']}/{version_token}__{now.strftime('%Y%m%dT%H%M%SZ')}.zip"
+    suffix = f"__part-{index:03d}" if total > 1 else ""
+    key = f"{DATA}{subgroup['id']}/{version_token}__{now.strftime('%Y%m%dT%H%M%SZ')}{suffix}.zip"
     client.put_object(Bucket=bucket, Key=key, Body=body, ContentType="application/zip", Metadata={"sha256": digest})
     receipt = {
         "schema_version": 2,
@@ -304,7 +440,7 @@ def land(client, bucket: str, subgroup: dict[str, Any], version: datetime | None
         "selected_information": result["information"],
         "source_url": subgroup["url"],
         "code_sha": os.environ.get("GITHUB_SHA", ""),
-        "part": {"index": 1, "total": 1},
+        "part": {"index": index, "total": total, "selection": selection or {}},
     }
     client.put_object(
         Bucket=bucket,
@@ -312,6 +448,7 @@ def land(client, bucket: str, subgroup: dict[str, Any], version: datetime | None
         ContentType="application/json",
         Body=json.dumps(receipt, indent=2, sort_keys=True).encode(),
     )
+    result["path"].unlink(missing_ok=True)
     return key
 
 
@@ -322,10 +459,15 @@ def main(limit: int = 20, budget_minutes: float = 50, only: list[str] | None = N
     deadline = time.monotonic() + budget_minutes * 60
     client, bucket = s3(), req("R2_LANDING_BUCKET")
     api = Bdl()
-    todo = missing_subgroups(api, landing_versions(client, bucket))
-    if only:
-        todo = [s for s in todo if s["id"] in only]
-    summary: dict[str, Any] = {"missing": len(todo), "landed": [], "too_large": [], "no_data": [], "failed": []}
+    todo = missing_subgroups(api, landing_versions(client, bucket), only)
+    summary: dict[str, Any] = {
+        "missing": len(todo),
+        "landed": [],
+        "too_large": [],
+        "no_data": [],
+        "unfinished": [],
+        "failed": [],
+    }
     ensure_browser()
     with sync_playwright() as pw, tempfile.TemporaryDirectory() as tmp:
         browser = pw.chromium.launch(headless=True)
@@ -337,14 +479,18 @@ def main(limit: int = 20, budget_minutes: float = 50, only: list[str] | None = N
             trace: list = []
             try:
                 version = api.last_update(subgroup["id"], subgroup["subject"])
-                result = export(page, subgroup, Path(tmp), trace)
+                landed = landed_parts(client, bucket, subgroup["id"], token(version))
+
+                def land_part(result, index, total, selection, subgroup=subgroup, version=version):
+                    land(client, bucket, subgroup, version, result, index, total, selection)
+
+                result = export(page, subgroup, Path(tmp), trace, landed, land_part, deadline)
                 if result["status"] == "downloaded":
-                    land(client, bucket, subgroup, version, result)
-                    summary["landed"].append([subgroup["id"], result["information"]])
+                    summary["landed"].append([subgroup["id"], result["information"], result["parts"]])
                 else:
-                    summary[result["status"]].append([subgroup["id"], result["information"], trace])
+                    summary[result["status"]].append([subgroup["id"], result["information"], trace[-3:]])
             except Exception as exc:  # one subgroup's failure is recorded; the run goes on
-                summary["failed"].append([subgroup["id"], f"{type(exc).__name__}: {str(exc)[:200]}", trace])
+                summary["failed"].append([subgroup["id"], f"{type(exc).__name__}: {str(exc)[:200]}", trace[-4:]])
             time.sleep(PAUSE_SECONDS)
         browser.close()
     summary["remaining"] = len(todo) - len(summary["landed"])
