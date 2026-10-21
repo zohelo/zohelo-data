@@ -115,11 +115,7 @@ def wait_for_result_table(page) -> None:
 def save_download(download, subgroup: dict[str, Any], workdir: Path) -> tuple[Path, str]:
     """Save a provider ZIP after checking its name identifies the subgroup and it is a ZIP."""
     name = download.suggested_filename
-    number, name = subgroup["id"][1:], " ".join(subgroup["name"].split())[:40]
-
-    def ours(e: dict[str, Any]) -> bool:
-        return number in e["row"] + e["text"] or bool(name and name in e["row"])
-
+    number = subgroup["id"][1:]
     if not re.search(rf"(?:^|_){number}(?:_|\.)", name, re.IGNORECASE):
         raise RuntimeError(f"export file name {name!r} does not identify {subgroup['id']}")
     path = workdir / f"{subgroup['id']}.zip"
