@@ -41,9 +41,33 @@ PAUSE_SECONDS = 20  # between subgroups
 INFO_RE = re.compile(r"Wybrano\s+([0-9\s]+)\s+informacji", re.IGNORECASE)
 
 
+PLAYWRIGHT = "playwright==1.56.0"  # installed by this activity only (no other job needs it)
+
+
 def ensure_browser() -> None:
-    """Install Chromium for Playwright on a fresh runner (no-op when present)."""
+    """Install Playwright and Chromium on a fresh runner (no-op when present)."""
+    try:
+        import playwright  # noqa: F401
+    except ImportError:
+        subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", PLAYWRIGHT], check=True)
     subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+
+
+class OutOfTime(RuntimeError):
+    """The run's hard time limit passed inside a subgroup: stop, the next run resumes."""
+
+
+class PackagesStuck(RuntimeError):
+    """An earlier package of the account never finishes: every later package would be ambiguous."""
+
+
+HARD_DEADLINE = float("inf")  # monotonic; set by main() a little after the time budget
+HARD_MARGIN_SECONDS = 12 * 60  # the job has 25 minutes beyond the budget
+
+
+def check_time() -> None:
+    if time.monotonic() > HARD_DEADLINE:
+        raise OutOfTime("hard time limit reached inside a subgroup")
 
 
 def entry(api: Bdl, subject: dict[str, Any], parents: dict[str, str]) -> dict[str, Any]:
@@ -104,6 +128,7 @@ def wait_for_result_table(page) -> None:
     from playwright.sync_api import TimeoutError as PlaywrightTimeout
 
     for _ in range(180):
+        check_time()
         if "/bdl/errors/" in page.url:
             raise RuntimeError(f"BDL error page: {page.url}")
         with contextlib.suppress(PlaywrightTimeout):  # a long table postback; keep waiting
@@ -181,11 +206,12 @@ def settled_exports(page) -> Counter:
 
     Counted, not a set: two packages of one subgroup made on one day look the same (name and date)."""
     for _ in range(36):  # a package still generating would later be mistaken for ours
+        check_time()
         before = exports(page)
         if all(e["ready"] for e in before):
             return Counter(fingerprint(e) for e in before)
         page.wait_for_timeout(5000)
-    raise RuntimeError("earlier BDL packages did not finish generating")
+    raise PackagesStuck("earlier BDL packages did not finish generating in 3 minutes")
 
 
 def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list, seen: Counter) -> tuple[Path, str]:
@@ -198,12 +224,13 @@ def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list,
         button.click(no_wait_after=True)
     if not response_info.value.ok:
         raise RuntimeError(f"BDL package request returned HTTP {response_info.value.status}")
-    number, name = subgroup["id"][1:], " ".join(subgroup["name"].split())[:40]
+    name = " ".join(subgroup["name"].split())[:40]
 
-    def ours(e: dict[str, Any]) -> bool:
-        return number in e["row"] + e["text"] or bool(name and name in e["row"])
+    def ours(e: dict[str, Any]) -> bool:  # the list shows the subgroup's name (no number); the ZIP name is checked too
+        return bool(name) and (e["text"].startswith(name) or name in e["row"])
 
     for _ in range(72):  # up to 6 minutes
+        check_time()
         listed = exports(page)
         counts = Counter(fingerprint(e) for e in listed)
         # The list is newest first: a fingerprint listed more often than before is new in its first entries.
@@ -232,7 +259,7 @@ def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list,
     raise RuntimeError("BDL package was requested but did not appear in the export list")
 
 
-CELL_BUDGET = int(os.environ.get("GUS_BDL_WEB_CELL_BUDGET", "80000"))  # information × units in one table
+CELL_BUDGET = 80_000  # information × units in one table; part of the plan, so a constant
 # 250 × 648 = 162k worked in the administrative layout, 400 × 648 failed (P3442, 21 Oct); the
 # statistical layout's first 246 units (Poland, regions, subregions: dense) failed at 160k.
 MAX_UNITS = 250
@@ -374,6 +401,8 @@ def export(
     if information > MAX_INFORMATION:
         return {"status": "too_large", "information": information}
     split = any(total > 1 for total in landed)
+    if split and not split_allowed:
+        return {"status": "needs_split", "information": information}
     if not split:
         to_territories(page)
         select_all_units(page)
@@ -401,6 +430,7 @@ def export(
             continue
         if time.monotonic() > deadline:
             return {"status": "unfinished", "information": information, "parts": total}
+        check_time()
         for attempt in (1, 2):  # the error page says the server may be overloaded: one retry after a pause
             if not fresh:
                 select_dimensions(page, subgroup, trace)
@@ -486,28 +516,40 @@ def land(
 
 
 def main(limit: int = 20, budget_minutes: float = 50, only: list[str] | None = None, split: bool = False) -> int:
-    """Export up to `limit` missing subgroups within the time budget; exit 2 when work remains."""
-    from playwright.sync_api import sync_playwright
+    """Export up to `limit` missing subgroups within the time budget.
 
-    deadline = time.monotonic() + budget_minutes * 60
+    Exit 0: every selected subgroup has an outcome (landed, or reported: no data, too large,
+    needs territory parts, failed this time; failures are retried by the next run and listed
+    as an error annotation, while the landed ones go on to Bronze). Exit 2: the time budget
+    ended the run with subgroups not yet visited (the next run resumes). Exit 1: the run had
+    to stop (an earlier package of the account never finishes generating)."""
+    global HARD_DEADLINE
+    started = time.monotonic()
+    deadline = started + budget_minutes * 60
+    HARD_DEADLINE = deadline + HARD_MARGIN_SECONDS
     client, bucket = s3(), req("R2_LANDING_BUCKET")
     api = Bdl()
-    todo = missing_subgroups(api, landing_versions(client, bucket), only)
+    todo = missing_subgroups(api, landing_versions(client, bucket), only)[:limit]
     summary: dict[str, Any] = {
         "missing": len(todo),
         "landed": [],
         "too_large": [],
         "no_data": [],
-        "unfinished": [],
         "needs_split": [],
+        "unfinished": [],
         "failed": [],
+        "stopped": None,
     }
+    visited = 0
     ensure_browser()
+    from playwright.sync_api import sync_playwright
+
     with sync_playwright() as pw, tempfile.TemporaryDirectory() as tmp:
         browser = pw.chromium.launch(headless=True)
         page = browser.new_context(accept_downloads=True, locale="pl-PL").new_page()
+        page.set_default_timeout(120_000)
         login(page, req("GUS_BDL_WEB_EMAIL"), req("GUS_BDL_WEB_PASSWORD"))
-        for subgroup in todo[:limit]:
+        for subgroup in todo:
             if time.monotonic() > deadline:
                 break
             trace: list = []
@@ -525,17 +567,26 @@ def main(limit: int = 20, budget_minutes: float = 50, only: list[str] | None = N
                     summary["landed"].append([subgroup["id"], result["information"], result["parts"], seconds])
                 else:
                     summary[result["status"]].append([subgroup["id"], result["information"]])
+                visited += result["status"] != "unfinished"
+            except OutOfTime:
+                summary["unfinished"].append([subgroup["id"], None])
+                break
+            except PackagesStuck as exc:
+                summary["stopped"] = str(exc)
+                break
             except Exception as exc:  # one subgroup's failure is recorded; the run goes on
                 summary["failed"].append([subgroup["id"], f"{type(exc).__name__}: {str(exc)[:200]}", trace[-2:]])
+                visited += 1
             time.sleep(PAUSE_SECONDS)
         browser.close()
-    summary["remaining"] = len(todo) - len(summary["landed"])
-    annotate("error" if summary["failed"] else "notice", "gus_bdl web export", summary)
+    summary["not_visited"] = len(todo) - visited
+    summary["minutes"] = round((time.monotonic() - started) / 60)
+    annotate("error" if summary["failed"] or summary["stopped"] else "notice", "gus_bdl web export", summary)
     step_summary(
         "## gus_bdl · web export\n\n"
         + "\n".join(f"- {k}: {len(v) if isinstance(v, list) else v}" for k, v in summary.items())
         + "\n"
     )
-    if summary["failed"]:
+    if summary["stopped"]:
         return 1
-    return 2 if summary["remaining"] else 0
+    return 2 if summary["not_visited"] else 0

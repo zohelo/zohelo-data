@@ -89,22 +89,26 @@ def candidates(client, bucket: str) -> list[dict[str, Any]]:
 
     with ThreadPoolExecutor(max_workers=8) as pool:
         receipts = list(pool.map(read, keys))
-    by_part: dict[tuple[str, str], dict[int, dict]] = defaultdict(dict)
+    # Parts belong to one plan of a version: (subgroup, version, part total). A plan whose
+    # indexes are not exactly 1..total is incomplete; parts of different totals never mix.
+    by_part: dict[tuple[str, str, int], dict[int, dict]] = defaultdict(dict)
     for r in receipts:
         if r.get("kind") == "gus_bdl_landing" and r.get("area") == "data":
-            index = int((r.get("part") or {}).get("index", 1))
-            held = by_part[(r["subgroup_id"], r["version_token"])].get(index)
+            part = r.get("part") or {}
+            plan = (r["subgroup_id"], r["version_token"], int(part.get("total", 1)))
+            index = int(part.get("index", 1))
+            held = by_part[plan].get(index)
             # A part downloaded again under the same version replaces the earlier download of it.
             if held is None or (r.get("ingested_at") or "") > (held.get("ingested_at") or ""):
-                by_part[(r["subgroup_id"], r["version_token"])][index] = r
-    versions = {key: list(parts.values()) for key, parts in by_part.items()}
-    newest: dict[str, tuple[str, list[dict]]] = {}
-    for (subgroup, version), parts in versions.items():
-        total = int((parts[0].get("part") or {}).get("total", 1))
-        if len({(p.get("part") or {}).get("index", 1) for p in parts}) < total:
+                by_part[plan][index] = r
+    newest: dict[str, tuple[tuple[str, str], list[dict]]] = {}
+    for (subgroup, version, total), parts in by_part.items():
+        if set(parts) != set(range(1, total + 1)):
             continue  # incomplete version: never loaded
-        if subgroup not in newest or version > newest[subgroup][0]:
-            newest[subgroup] = (version, parts)
+        # Same version complete under two plans: the newer download wins.
+        rank = (version, max(p.get("ingested_at") or "" for p in parts.values()))
+        if subgroup not in newest or rank > newest[subgroup][0]:
+            newest[subgroup] = (rank, list(parts.values()))
     return [p for _, parts in newest.values() for p in parts]
 
 

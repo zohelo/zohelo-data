@@ -34,15 +34,14 @@ def landing_versions(client, bucket: str) -> dict[str, str]:
 
     with ThreadPoolExecutor(max_workers=8) as pool:
         receipts = list(pool.map(read, keys))
-    parts: dict[tuple[str, str], set] = defaultdict(set)
-    totals: dict[tuple[str, str], int] = {}
+    # Parts of one plan (subgroup, version, part total) must be exactly 1..total (as entities.candidates).
+    parts: dict[tuple[str, str, int], set] = defaultdict(set)
     for r in receipts:
-        ident = (r["subgroup_id"], r["version_token"])
-        parts[ident].add((r.get("part") or {}).get("index", 1))
-        totals[ident] = int((r.get("part") or {}).get("total", 1))
+        part = r.get("part") or {}
+        parts[(r["subgroup_id"], r["version_token"], int(part.get("total", 1)))].add(int(part.get("index", 1)))
     newest: dict[str, str] = {}
-    for (subgroup, version), seen in parts.items():
-        if len(seen) >= totals[(subgroup, version)] and version > newest.get(subgroup, ""):
+    for (subgroup, version, total), seen in parts.items():
+        if seen == set(range(1, total + 1)) and version > newest.get(subgroup, ""):
             newest[subgroup] = version
     return newest
 
