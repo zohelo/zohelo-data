@@ -9,8 +9,8 @@ The entity is a subgroup; its version is every part of the newest complete downl
 
 ``<recipe>`` is the SHA-256 of the sorted SHA-256s of the parts; ``<model>`` digests the Silver
 SQL and the subgroup's variable mapping (silver.bdl_variables), so a changed mapping redoes only
-that subgroup. A run that would redo most subgroups (a changed model, a recreated table) needs
-``--approved <issue>`` (owner rule R6, #875). A subgroup is rejected (recorded in
+that subgroup. A changed SQL model recomputes every subgroup's Silver from unchanged Bronze
+(reported as ``redo_rows``). A subgroup is rejected (recorded in
 bronze.bdl_rejected_files, listed in the result) when a part fails the decoder or the Silver
 checks: grain unit (code + name) × dimensions × year, no two different published values for one key.
 State comes from the tables' file lists only. Prints one JSON result line.
@@ -129,7 +129,7 @@ def variables(cat) -> dict[str, pa.Table]:
 
 
 def silver_tag(model: str, mapping: pa.Table | None) -> str:
-    """<model digest 6><mapping digest 6>: a changed SQL model redoes every subgroup (rule R6); a
+    """<model digest 6><mapping digest 6>: a changed SQL model redoes every subgroup; a
     changed variable mapping redoes only that subgroup and is a normal refresh, not a rebuild."""
     rows = json.dumps(mapping.to_pylist() if mapping is not None else [], sort_keys=True)
     return sha256(model.encode()).hexdigest()[:6] + sha256(rows.encode()).hexdigest()[:6]
@@ -280,7 +280,7 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, cr
         need_bronze = b_state.get(sg, {}).get("recipes") != {rcp}
         need_silver = need_bronze or s_state.get(sg, {}).get("recipes") != {f"{rcp}.{tag}"}
         held = s_state.get(sg, {}).get("recipes", set())
-        # R6 counts only the redo of unchanged data under a changed SQL model, not a mapping refresh
+        # reported: Silver recomputed from unchanged Bronze because the SQL model changed
         redo = need_silver and not need_bronze and not any(r.startswith(f"{rcp}.{tag[:6]}") for r in held)
         if redo:
             redo_rows += b_state[sg]["rows"]
@@ -318,7 +318,6 @@ def main(argv=None) -> int:
     parser.add_argument("--minutes", type=float, default=50)
     parser.add_argument("--workers", type=int, default=3)
     parser.add_argument("--only", nargs="*")
-    parser.add_argument("--approved", default="", help="owner approval issue for a run that redoes most subgroups (R6)")
     parser.add_argument("--memory", default="4GB")
     parser.add_argument("--silver-table", default=".".join(SILVER))
     parser.add_argument("--trial", default="", help="scratch namespace and prefix (Dev trials): writes only there")
@@ -334,14 +333,6 @@ def main(argv=None) -> int:
     p = plan(cat, client, ids, set(args.only) if args.only else None)
     for key in ("bronze", "silver"):
         et.configure(ids[key])
-    blocked = et.needs_approval(p["redo_rows"], et.approval("gus_bdl", args.approved or args.trial))
-    if blocked:  # new downloads still load; only the redo of unchanged data waits for the owner (R6)
-        annotate(
-            "error",
-            "bdl entities: approval needed for a redo",
-            {"rule": "R6 #875", "rows_to_redo": p["redo_rows"], "how": "refresh.approved_rebuild: <issue>"},
-        )
-        p["todo"] = [t for t in p["todo"] if not t["redo"]]
     if p["remove"]:  # subgroups whose newest download is published without data
         for key in ("bronze", "silver"):
             et.replace(cat, ids[key], ENTITY, {sg: [] for sg in p["remove"]}, STATS, "bdl-entities")
@@ -441,6 +432,7 @@ def main(argv=None) -> int:
         "result": "complete" if left == 0 else ("failures" if failed else "incomplete_time_budget"),
         "subgroups": p["subgroups"],
         "todo": len(p["todo"]),
+        "redo_rows": p["redo_rows"],
         "remaining": left,
         "rejected_earlier": len(p["rejected"]),
         **totals,
@@ -452,7 +444,7 @@ def main(argv=None) -> int:
     }
     print(json.dumps(summary, sort_keys=True, default=str), flush=True)
     annotate("notice" if left == 0 and not rejected_now else "warning", "bdl entities", summary)
-    return 1 if blocked else (0 if left == 0 else 2)
+    return 0 if left == 0 else 2
 
 
 def completeness_report() -> dict[str, Any]:
@@ -469,7 +461,7 @@ def completeness_report() -> dict[str, Any]:
 
 
 def verify(min_pct: float = 99.0) -> int:
-    """bronze.verify: fails when a layer is below ``min_pct`` complete or a subgroup holds several files (R6)."""
+    """bronze.verify: fails when a layer is below ``min_pct`` complete or a subgroup holds several files (#875)."""
     report = completeness_report()
     failed = report["bronze_pct"] < min_pct or report["silver_pct"] < min_pct or report["entities_with_several_files"]
     annotate("error" if failed else "notice", "gus_bdl completeness (Landing → Bronze → Silver)", report)

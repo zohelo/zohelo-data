@@ -8,8 +8,8 @@ Silver each hold exactly one file per dataset:
   03_silver/eurostat/observations/<dataset>/<raw_sha256>.<model>.parquet   (warehouse/entity/eurostat_observations.sql)
 
 ``<model>`` is a digest of the Silver SQL, so a changed model marks every dataset's Silver as
-out of date. A run that would redo most datasets (a changed model, a recreated table) is a full
-rebuild and needs ``--approved <issue>`` (owner rule R6, #875; entity_tables.needs_approval).
+out of date and is recomputed (a full rebuild of Silver from unchanged Bronze, reported as
+``redo_rows``); the daily refresh otherwise touches only datasets with a new version.
 What each table holds is read from its file list (entity_tables.state): nothing is scanned.
 A dataset whose Bronze file already exists in R2
 (same Landing SHA-256 in the object metadata) is registered as it is, not decoded again.
@@ -251,7 +251,7 @@ def plan(
         expected[ds], expected_silver[ds] = sha, f"{sha}.{digest}"
         need_bronze = b_state.get(ds, {}).get("recipes") != {sha}
         need_silver = need_bronze or s_state.get(ds, {}).get("recipes") != {f"{sha}.{digest}"}
-        redo = need_silver and not need_bronze  # unchanged data redone (rule R6)
+        redo = need_silver and not need_bronze  # Silver recomputed from unchanged Bronze (model change)
         if redo:
             redo_rows += b_state[ds]["rows"]
         if need_bronze or need_silver:
@@ -278,7 +278,6 @@ def main(argv=None) -> int:
     )
     parser.add_argument("--workers", type=int, default=3)
     parser.add_argument("--only", nargs="*", help="dataset ids (trials)")
-    parser.add_argument("--approved", default="", help="owner approval issue for a run that redoes most datasets (R6)")
     parser.add_argument("--memory", default="4GB", help="DuckDB memory per worker for small files")
     parser.add_argument(
         "--silver-table", default=".".join(SILVER), help="namespace.table (the checkpoint builds beside the old table)"
@@ -302,14 +301,6 @@ def main(argv=None) -> int:
     p = plan(cat, client, digest, set(args.only) if args.only else None, silver_id, bronze_id, rejected_id)
     for table_id in (bronze_id, silver_id):
         et.configure(table_id)
-    blocked = et.needs_approval(p["redo_rows"], et.approval("eurostat", args.approved or args.trial))
-    if blocked:  # new versions still load; only the redo of unchanged data waits for the owner (R6)
-        annotate(
-            "error",
-            "eurostat entities: approval needed for a redo",
-            {"rule": "R6 #875", "rows_to_redo": p["redo_rows"], "how": "refresh.approved_rebuild: <issue>"},
-        )
-        p["todo"] = [c for c in p["todo"] if not c["redo"]]
     todo = sorted(p["todo"], key=lambda c: c["size"])
     totals: dict[str, Any] = {"bronze_decoded": 0, "bronze_registered": 0, "silver_written": 0, "rows": 0}
     rejected_now: list[str] = []
@@ -407,6 +398,7 @@ def main(argv=None) -> int:
         "result": "complete" if left == 0 else ("failures" if failed else "incomplete_time_budget"),
         "latest_versions": p["latest"],
         "todo": len(todo),
+        "redo_rows": p["redo_rows"],
         "remaining": left,
         **totals,
         "rejected": len(rejected_now),
@@ -418,7 +410,7 @@ def main(argv=None) -> int:
     }
     print(json.dumps(summary, sort_keys=True), flush=True)
     annotate("notice" if left == 0 and not rejected_now else "warning", "eurostat entities", summary)
-    return 1 if blocked else (0 if left == 0 else 2)
+    return 0 if left == 0 else 2
 
 
 def completeness_report() -> dict[str, Any]:
@@ -435,7 +427,7 @@ def completeness_report() -> dict[str, Any]:
 
 def verify(min_pct: float = 99.0) -> int:
     """bronze.verify: fails when a layer is below ``min_pct`` complete against the layer below or a
-    dataset holds more than one file (owner rule R6, #875). Rejected datasets are listed, not counted."""
+    dataset holds more than one file (design #875). Rejected datasets are listed, not counted."""
     report = completeness_report()
     failed = report["bronze_pct"] < min_pct or report["silver_pct"] < min_pct or report["entities_with_several_files"]
     annotate("error" if failed else "notice", "eurostat completeness (Landing → Bronze → Silver)", report)

@@ -43,8 +43,7 @@ details live in [landing.md](landing.md), [architecture.md](architecture.md),
   per table (whole files dropped from the file list, nothing rewritten row by row). Silver
   is one SQL file per source in `warehouse/entity/`, applied to each entity right after
   Bronze, with checks (grain, not-null, conflicts) that reject the entity rather than load
-  it. A changed Silver SQL redoes every entity: over 10M rows that needs the owner's
-  approval (`--approved <issue>`).
+  it. A changed Silver SQL recomputes every entity's Silver from unchanged Bronze.
 - DuckDB-native decoding (no per-cell Python), bounded memory, tested on the largest
   real file before the full load.
 - `bronze.verify`: every newest Landing file is in Bronze or rejected with a reason, and no superseded versions remain in Bronze (one version per entity). For entity tables it reads table metadata only and fails below 99% completeness of a layer against the layer below.

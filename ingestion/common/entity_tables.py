@@ -148,7 +148,7 @@ def completeness(
     silver: dict[str, dict[str, Any]],
     expected_silver: dict[str, str],
 ) -> dict[str, Any]:
-    """Layer against the layer below, per entity, from metadata (owner rule R5/R6, #875).
+    """Layer against the layer below, per entity, from metadata (design #875).
 
     ``expected``: entity -> recipe of its newest Landing version (what Bronze must hold);
     ``expected_silver``: entity -> the Silver recipe the current model makes from it
@@ -175,22 +175,3 @@ def completeness(
         "not_in_landing": len(extra_bronze),
         "entities_with_several_files": len(multi),
     }
-
-
-ROW_LIMIT = 10_000_000  # owner rule R6 (#875)
-
-
-def approval(source: str, given: str = "") -> str:
-    """The owner's approval for a large redo: a run argument, or ``refresh.approved_rebuild`` (the
-    approval issue) in the source's config, which the owner's decision adds and the next PR removes."""
-    from ingestion.common.r2 import sources
-
-    refresh = (sources().get(source) or {}).get("refresh")
-    return given or (str(refresh.get("approved_rebuild") or "") if isinstance(refresh, dict) else "")
-
-
-def needs_approval(redo_rows: int, approved: str) -> bool:
-    """Owner rule R6 (#875): redoing more than ROW_LIMIT rows of data that did not change (Silver of
-    an unchanged Bronze file: a changed model or mapping, a lost or recreated Silver table) is a full
-    rebuild and needs an approval issue. New source versions are normal loads and never count."""
-    return redo_rows > ROW_LIMIT and not approved

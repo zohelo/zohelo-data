@@ -21,7 +21,17 @@ def main() -> int:
         return 1
     table.delete(IsNull(m.ENTITY))
     after = et.state(cat.load_table(m.BRONZE), m.ENTITY)
-    annotate("notice", "fix null partition", {"files_removed": len(nulls.get("paths", [])), "entities_before": len(before), "entities_after": len(after), "rows_after": sum(v["rows"] for v in after.values()), "null_left": None in after})
+    annotate(
+        "notice",
+        "fix null partition",
+        {
+            "files_removed": len(nulls.get("paths", [])),
+            "entities_before": len(before),
+            "entities_after": len(after),
+            "rows_after": sum(v["rows"] for v in after.values()),
+            "null_left": None in after,
+        },
+    )
     return 0
 
 

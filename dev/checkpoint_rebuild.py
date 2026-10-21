@@ -72,7 +72,7 @@ def build(source: str, minutes: float, workers: int) -> int:
     else:
         from ingestion.to_bronze.gus_bdl import entities
     args = ["--silver-table", ".".join(NEW[source]), "--minutes", str(minutes), "--workers", str(workers)]
-    return entities.main([*args, "--approved", "875"])
+    return entities.main(args)
 
 
 def check(source: str) -> dict:
