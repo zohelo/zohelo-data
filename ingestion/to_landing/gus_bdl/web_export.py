@@ -344,7 +344,14 @@ def plan_parts(page, information: int) -> list[dict[str, Any]]:
 
 
 def export(
-    page, subgroup: dict[str, Any], workdir: Path, trace: list, landed: dict[int, set[int]], land_part, deadline: float
+    page,
+    subgroup: dict[str, Any],
+    workdir: Path,
+    trace: list,
+    landed: dict[int, set[int]],
+    land_part,
+    deadline: float,
+    split_allowed: bool = True,
 ) -> dict[str, Any]:
     """Export one subgroup, landing each file as it is downloaded (land_part(result, index, total, selection)).
 
@@ -352,7 +359,9 @@ def export(
     package ("Pobierz") of the whole subgroup; otherwise the result table of all territories;
     when the site cannot build that table (HTTP 500), territory parts per layout. `landed` maps
     a part total to the part indexes already in Landing for this version, so a run resumes.
-    Returns {"status": "downloaded" | "too_large" | "no_data" | "unfinished", "information", "parts"}."""
+    Without split_allowed a refused whole table is reported (needs_split) instead of split.
+    Returns {"status": "downloaded" | "too_large" | "no_data" | "unfinished" | "needs_split",
+    "information", "parts"}."""
     seen = settled_exports(page)
     information = select_dimensions(page, subgroup, trace)
     if not information:
@@ -374,7 +383,9 @@ def export(
         except RuntimeError as exc:
             if "BDL error page" not in str(exc):
                 raise
-            note(page, trace, "whole table refused; splitting by territory")
+            note(page, trace, "whole table refused")
+            if not split_allowed:
+                return {"status": "needs_split", "information": information}
         else:
             land_part({"path": path, "export_file_name": name, "information": information}, 1, 1, whole)
             return {"status": "downloaded", "information": information, "parts": 1}
@@ -474,7 +485,7 @@ def land(
     return key
 
 
-def main(limit: int = 20, budget_minutes: float = 50, only: list[str] | None = None) -> int:
+def main(limit: int = 20, budget_minutes: float = 50, only: list[str] | None = None, split: bool = False) -> int:
     """Export up to `limit` missing subgroups within the time budget; exit 2 when work remains."""
     from playwright.sync_api import sync_playwright
 
@@ -488,6 +499,7 @@ def main(limit: int = 20, budget_minutes: float = 50, only: list[str] | None = N
         "too_large": [],
         "no_data": [],
         "unfinished": [],
+        "needs_split": [],
         "failed": [],
     }
     ensure_browser()
@@ -499,6 +511,7 @@ def main(limit: int = 20, budget_minutes: float = 50, only: list[str] | None = N
             if time.monotonic() > deadline:
                 break
             trace: list = []
+            began = time.monotonic()
             try:
                 version = api.last_update(subgroup["id"], subgroup["subject"])
                 landed = landed_parts(client, bucket, subgroup["id"], token(version))
@@ -506,13 +519,14 @@ def main(limit: int = 20, budget_minutes: float = 50, only: list[str] | None = N
                 def land_part(result, index, total, selection, subgroup=subgroup, version=version):
                     land(client, bucket, subgroup, version, result, index, total, selection)
 
-                result = export(page, subgroup, Path(tmp), trace, landed, land_part, deadline)
+                result = export(page, subgroup, Path(tmp), trace, landed, land_part, deadline, split)
                 if result["status"] == "downloaded":
-                    summary["landed"].append([subgroup["id"], result["information"], result["parts"]])
+                    seconds = round(time.monotonic() - began)
+                    summary["landed"].append([subgroup["id"], result["information"], result["parts"], seconds])
                 else:
-                    summary[result["status"]].append([subgroup["id"], result["information"], trace[-3:]])
+                    summary[result["status"]].append([subgroup["id"], result["information"]])
             except Exception as exc:  # one subgroup's failure is recorded; the run goes on
-                summary["failed"].append([subgroup["id"], f"{type(exc).__name__}: {str(exc)[:200]}", trace[-4:]])
+                summary["failed"].append([subgroup["id"], f"{type(exc).__name__}: {str(exc)[:200]}", trace[-2:]])
             time.sleep(PAUSE_SECONDS)
         browser.close()
     summary["remaining"] = len(todo) - len(summary["landed"])

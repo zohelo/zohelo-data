@@ -33,7 +33,9 @@ try:
         if k.endswith(".zip"):
             with zipfile.ZipFile(io.BytesIO(client.get_object(Bucket=bucket, Key=k)["Body"].read())) as z:
                 for m in z.infolist():
-                    rows = list(csv.reader(io.StringIO(z.read(m).decode("utf-8-sig", "replace")), delimiter=";"))
+                    rows = list(
+                        csv.reader(io.StringIO(z.read(m).decode("utf-8-sig", "replace"), newline=""), delimiter=";")
+                    )
                     units = {r[0] for r in rows[1:] if r}
                     contents[m.filename] = {
                         "rows": len(rows) - 1,
