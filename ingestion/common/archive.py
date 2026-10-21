@@ -133,8 +133,20 @@ def main(argv=None) -> int:
     superseded = {d for d, item in meta.items() if item.get("snapshot_paths") and d not in newest}
     if args.source == "gus_bdl":
         # The parts of one BDL download share the subgroup folder, so "one newest file per entity"
-        # would call every other part superseded. Only parts proven in Bronze move (#878 review).
-        superseded = set()
+        # would call every other part superseded. Superseded = a part of an older version than the
+        # subgroup's newest complete download (#878 review); incomplete newer downloads stay.
+        from ingestion.to_bronze.gus_bdl.entities import candidates
+
+        newest = candidates(client, bucket)
+        newest_version = {p["subgroup_id"]: p["version_token"] for p in newest}
+        superseded = {
+            d
+            for d, item in meta.items()
+            for path in item.get("snapshot_paths") or []
+            if path["area"] == "data"
+            and path["entity"] in newest_version
+            and path["version"] < newest_version[path["entity"]]
+        } - {p["sha256"] for p in newest}  # identical bytes also in a newest download stay
     selected = [
         item
         for digest, item in meta.items()
