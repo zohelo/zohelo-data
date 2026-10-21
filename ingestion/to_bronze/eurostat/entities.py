@@ -251,11 +251,14 @@ def plan(
         expected[ds], expected_silver[ds] = sha, f"{sha}.{digest}"
         need_bronze = b_state.get(ds, {}).get("recipes") != {sha}
         need_silver = need_bronze or s_state.get(ds, {}).get("recipes") != {f"{sha}.{digest}"}
-        if need_silver and not need_bronze:
-            redo_rows += b_state[ds]["rows"]  # unchanged data redone (rule R6)
+        redo = need_silver and not need_bronze  # unchanged data redone (rule R6)
+        if redo:
+            redo_rows += b_state[ds]["rows"]
         if need_bronze or need_silver:
             current = b_state.get(ds, {}).get("paths", [])
-            todo.append({**c, "need_bronze": need_bronze, "bronze_uri": None if need_bronze else current[0]})
+            todo.append(
+                {**c, "need_bronze": need_bronze, "bronze_uri": None if need_bronze else current[0], "redo": redo}
+            )
     return {
         "todo": todo,
         "latest": len(latest),
@@ -299,9 +302,14 @@ def main(argv=None) -> int:
     p = plan(cat, client, digest, set(args.only) if args.only else None, silver_id, bronze_id, rejected_id)
     for table_id in (bronze_id, silver_id):
         et.configure(table_id)
-    if et.needs_approval(p["redo_rows"], args.approved or args.trial):
-        annotate("error", "eurostat entities: approval needed", {"rule": "R6 #875", "rows_to_redo": p["redo_rows"]})
-        return 1
+    blocked = et.needs_approval(p["redo_rows"], et.approval("eurostat", args.approved or args.trial))
+    if blocked:  # new versions still load; only the redo of unchanged data waits for the owner (R6)
+        annotate(
+            "error",
+            "eurostat entities: approval needed for a redo",
+            {"rule": "R6 #875", "rows_to_redo": p["redo_rows"], "how": "refresh.approved_rebuild: <issue>"},
+        )
+        p["todo"] = [c for c in p["todo"] if not c["redo"]]
     todo = sorted(p["todo"], key=lambda c: c["size"])
     totals: dict[str, Any] = {"bronze_decoded": 0, "bronze_registered": 0, "silver_written": 0, "rows": 0}
     rejected_now: list[str] = []
@@ -410,7 +418,7 @@ def main(argv=None) -> int:
     }
     print(json.dumps(summary, sort_keys=True), flush=True)
     annotate("notice" if left == 0 and not rejected_now else "warning", "eurostat entities", summary)
-    return 0 if left == 0 else 2
+    return 1 if blocked else (0 if left == 0 else 2)
 
 
 def completeness_report() -> dict[str, Any]:

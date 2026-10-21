@@ -129,8 +129,10 @@ def variables(cat) -> dict[str, pa.Table]:
 
 
 def silver_tag(model: str, mapping: pa.Table | None) -> str:
+    """<model digest 6><mapping digest 6>: a changed SQL model redoes every subgroup (rule R6); a
+    changed variable mapping redoes only that subgroup and is a normal refresh, not a rebuild."""
     rows = json.dumps(mapping.to_pylist() if mapping is not None else [], sort_keys=True)
-    return sha256((model + "\n" + rows).encode()).hexdigest()[:12]
+    return sha256(model.encode()).hexdigest()[:6] + sha256(rows.encode()).hexdigest()[:6]
 
 
 def work(task: dict[str, Any], paths: dict[str, str], memory: str, tmp_root: str) -> dict[str, Any]:
@@ -261,11 +263,13 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, cr
     mappings = variables(cat)
     model = (Path(__file__).resolve().parents[3] / "warehouse" / "entity" / f"{SILVER_MODEL}.sql").read_text()
     empty = pa.table({"dimension_key": pa.array([], pa.string()), "variable_id": pa.array([], pa.int64())})
-    todo, rejected, expected, expected_silver, redo_rows, no_data = [], [], {}, {}, 0, []
+    todo, rejected, expected, expected_silver, redo_rows, no_data, stale_remove = [], [], {}, {}, 0, [], []
     for sg, parts in groups.items():
         rcp = recipe(parts)
         if rcp in without_data:
             no_data.append(sg)
+            if sg in b_state or sg in s_state:  # its newest download has no data: older data leaves too
+                stale_remove.append(sg)
             continue
         mapping = mappings.get(sg, empty)
         tag = silver_tag(model, mapping)
@@ -275,8 +279,11 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, cr
         expected[sg], expected_silver[sg] = rcp, f"{rcp}.{tag}"
         need_bronze = b_state.get(sg, {}).get("recipes") != {rcp}
         need_silver = need_bronze or s_state.get(sg, {}).get("recipes") != {f"{rcp}.{tag}"}
-        if need_silver and not need_bronze:
-            redo_rows += b_state[sg]["rows"]  # unchanged data redone (rule R6)
+        held = s_state.get(sg, {}).get("recipes", set())
+        # R6 counts only the redo of unchanged data under a changed SQL model, not a mapping refresh
+        redo = need_silver and not need_bronze and not any(r.startswith(f"{rcp}.{tag[:6]}") for r in held)
+        if redo:
+            redo_rows += b_state[sg]["rows"]
         if need_bronze or need_silver:
             current = b_state.get(sg, {}).get("paths", [])
             todo.append(
@@ -288,6 +295,7 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, cr
                     "bronze_uri": None if need_bronze else current[0],
                     "mapping": mapping,
                     "tag": tag,
+                    "redo": redo,
                     "size": sum(int(p.get("size_bytes") or 0) for p in parts),
                 }
             )
@@ -298,6 +306,7 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, cr
         "subgroups": len(groups),
         "rejected": rejected,
         "no_data": no_data,
+        "remove": stale_remove,
         "redo_rows": redo_rows,
         "bronze": b_state,
         "silver": s_state,
@@ -325,9 +334,18 @@ def main(argv=None) -> int:
     p = plan(cat, client, ids, set(args.only) if args.only else None)
     for key in ("bronze", "silver"):
         et.configure(ids[key])
-    if et.needs_approval(p["redo_rows"], args.approved or args.trial):
-        annotate("error", "bdl entities: approval needed", {"rule": "R6 #875", "rows_to_redo": p["redo_rows"]})
-        return 1
+    blocked = et.needs_approval(p["redo_rows"], et.approval("gus_bdl", args.approved or args.trial))
+    if blocked:  # new downloads still load; only the redo of unchanged data waits for the owner (R6)
+        annotate(
+            "error",
+            "bdl entities: approval needed for a redo",
+            {"rule": "R6 #875", "rows_to_redo": p["redo_rows"], "how": "refresh.approved_rebuild: <issue>"},
+        )
+        p["todo"] = [t for t in p["todo"] if not t["redo"]]
+    if p["remove"]:  # subgroups whose newest download is published without data
+        for key in ("bronze", "silver"):
+            et.replace(cat, ids[key], ENTITY, {sg: [] for sg in p["remove"]}, STATS, "bdl-entities")
+        annotate("notice", "bdl entities: removed, newest download has no data", {"subgroups": p["remove"]})
     tmp_root = os.environ.get("DUCKDB_TEMP_DIRECTORY") or tempfile.gettempdir()
     Path(tmp_root).mkdir(parents=True, exist_ok=True)
     totals: dict[str, Any] = {"bronze_decoded": 0, "silver_written": 0, "rows": 0, "bronze_rows": 0}
@@ -434,7 +452,7 @@ def main(argv=None) -> int:
     }
     print(json.dumps(summary, sort_keys=True, default=str), flush=True)
     annotate("notice" if left == 0 and not rejected_now else "warning", "bdl entities", summary)
-    return 0 if left == 0 else 2
+    return 1 if blocked else (0 if left == 0 else 2)
 
 
 def completeness_report() -> dict[str, Any]:

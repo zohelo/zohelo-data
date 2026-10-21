@@ -173,7 +173,7 @@ def config_problems(config: dict) -> list[str]:
             bad = [t for t in cfg.get(layer) or [] if not str(t).startswith(f"{layer}.")]
             if bad:
                 problems.append(f"{source}: {layer} lists tables of another layer: {bad}")
-        refresh = cfg.get("refresh") or {}
+        refresh = cfg.get("refresh") if isinstance(cfg.get("refresh"), dict) else {}
         if "bronze.load" in (cfg.get("activities") or []):
             # Owner decision 20 Oct (#875): every loaded source declares its refresh policy for all layers.
             if refresh.get("mode") not in {"incremental", "full"} or not refresh.get("decided"):

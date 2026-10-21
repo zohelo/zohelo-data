@@ -121,22 +121,23 @@ def configure(table_id: tuple[str, str]) -> dict[str, Any]:
     then reported as a warning, never a reason to stop a load."""
     from ingestion.common.report import annotate
 
-    url = (
-        f"https://api.cloudflare.com/client/v4/accounts/{req('CLOUDFLARE_ACCOUNT_ID')}/r2-catalog/"
-        f"{req('R2_LAKEHOUSE_BUCKET')}/namespaces/{table_id[0]}/tables/{table_id[1]}/maintenance-configs"
-    )
-    headers = {"Authorization": f"Bearer {req('R2_DATA_CATALOG_TOKEN')}"}
-    body = {"compaction": {"state": "disabled"}, "snapshot_expiration": SNAPSHOT_POLICY}
     problem = ""
     for attempt in range(4):
         try:
+            url = (
+                f"https://api.cloudflare.com/client/v4/accounts/{req('CLOUDFLARE_ACCOUNT_ID')}/r2-catalog/"
+                f"{req('R2_LAKEHOUSE_BUCKET')}/namespaces/{table_id[0]}/tables/{table_id[1]}/maintenance-configs"
+            )
+            headers = {"Authorization": f"Bearer {req('R2_DATA_CATALOG_TOKEN')}"}
+            body = {"compaction": {"state": "disabled"}, "snapshot_expiration": SNAPSHOT_POLICY}
             response = requests.post(url, headers=headers, json=body, timeout=60)
             if response.status_code == 200:
                 return response.json().get("result") or {}
             problem = f"{response.status_code} {response.text[:300]}"
-        except requests.RequestException as exc:
+        except (requests.RequestException, RuntimeError) as exc:  # RuntimeError: a missing setting (req)
             problem = f"{type(exc).__name__}: {str(exc)[:200]}"
-        time.sleep(10 * (attempt + 1))
+        if attempt < 3:
+            time.sleep(10 * (attempt + 1))
     annotate("warning", f"maintenance config of {'.'.join(table_id)} not set", {"error": problem})
     return {}
 
@@ -177,6 +178,15 @@ def completeness(
 
 
 ROW_LIMIT = 10_000_000  # owner rule R6 (#875)
+
+
+def approval(source: str, given: str = "") -> str:
+    """The owner's approval for a large redo: a run argument, or ``refresh.approved_rebuild`` (the
+    approval issue) in the source's config, which the owner's decision adds and the next PR removes."""
+    from ingestion.common.r2 import sources
+
+    refresh = (sources().get(source) or {}).get("refresh")
+    return given or (str(refresh.get("approved_rebuild") or "") if isinstance(refresh, dict) else "")
 
 
 def needs_approval(redo_rows: int, approved: str) -> bool:

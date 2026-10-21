@@ -131,6 +131,10 @@ def main(argv=None) -> int:
     # Superseded: no path of these bytes is the newest version of its entity any more.
     newest = latest_snapshot(meta, "data") | latest_snapshot(meta, "metadata")
     superseded = {d for d, item in meta.items() if item.get("snapshot_paths") and d not in newest}
+    if args.source == "gus_bdl":
+        # The parts of one BDL download share the subgroup folder, so "one newest file per entity"
+        # would call every other part superseded. Only parts proven in Bronze move (#878 review).
+        superseded = set()
     selected = [
         item
         for digest, item in meta.items()

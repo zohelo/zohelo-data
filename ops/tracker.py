@@ -316,10 +316,6 @@ def main(argv=None) -> int:
             icon = "✅" if len(listed) == len(own) else ("⚠️" if listed else "❌")
             cells["catalog"] = f"{icon} {len(listed)}/{len(own)} · {day(catalog_written)}"
         cells["portal"] = "📁 raw files only" if land["objects"] else "⬜"
-        for stage in STAGES:
-            marks = issue_marks(tagged(source, stage))
-            if marks:
-                cells[stage] = f"{cells[stage]} {marks}".strip()
         if source in ENTITY_SOURCES:  # completeness against the layer below, not table existence (#875)
             try:
                 report = import_module(ENTITY_SOURCES[source]).completeness_report()
@@ -327,6 +323,10 @@ def main(argv=None) -> int:
                 cells["silver"] = completeness_cell(report, "silver", "of Bronze")
             except Exception as exc:  # the page still renders; the cell says why
                 cells["bronze"] += f" · ❔ completeness not measured ({type(exc).__name__})"
+        for stage in STAGES:
+            marks = issue_marks(tagged(source, stage))
+            if marks:
+                cells[stage] = f"{cells[stage]} {marks}".strip()
         rows.append((source, cells))
 
     gold_rows = [tables[n] for n in shared_gold if n in tables]

@@ -78,7 +78,7 @@ Every source is declared in `ingestion/sources/<source>.yaml` with one key set, 
 | `landing` | Landing folder |
 | `archive_policy` | `move`, `retention` (`keep_latest`, `keep_days`), `prune` (`report`/`delete`), optional `without_bronze`; required when `bronze.load` is authorized |
 | `archive_folder` | Archive folder of a source not yet rebuilt (default `05_archive/<source>/`) |
-| `refresh` | required for loaded sources: `mode` `incremental` (with `unit`: the entity replaced whole in every layer; needs `to_bronze/<s>/entities.py`) or `full`, and `decided` (the owner decision issue). Changing it is an owner decision (#875) |
+| `refresh` | required for loaded sources: `mode` `incremental` (with `unit`: the entity replaced whole in every layer; needs `to_bronze/<s>/entities.py`) or `full`, and `decided` (the owner decision issue); optional `approved_rebuild: <issue>` lets a load redo more than 10M rows of unchanged data (rule R6), added with the owner's approval and removed afterwards. Changing it is an owner decision (#875) |
 | `bronze_latest_only` | optional boolean; when `true`, a Bronze load removes superseded versions (policy #822/#845) |
 | `bronze`, `silver`, `gold` | tables the source owns in each layer; `*_rejected_files` tables record decoder rejections |
 | `legacy_tables` | tables of retired code still in the catalog (globs allowed), until deleted |

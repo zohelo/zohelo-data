@@ -282,6 +282,11 @@ jobs:
     needs: [plan, silver-gold-promote]
     if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'silver_gold.build') }}"
     name: silver_gold.build
+    # One model build at a time across all sources (each source's full dataflow ends with one, #878).
+    # A newer queued build replaces an older queued one; the changed-only build still sees every change.
+    concurrency:
+      group: zohelo-pipeline-build
+      cancel-in-progress: false
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
