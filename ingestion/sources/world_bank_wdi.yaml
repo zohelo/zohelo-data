@@ -17,7 +17,7 @@ extraction:
   production: snapshot                  # each archive is the complete database
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
   schedule:                             # UTC; weekly check, unchanged bytes are skipped
-    - {cron: "20 3 * * 2", run: "landing → bronze (all steps)"}
+    - {cron: "20 3 * * 2", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/world_bank_wdi/
 archive_policy:
@@ -32,4 +32,8 @@ legacy_tables: [bronze.wdi_data, bronze.wdi_country, bronze.wdi_series, bronze.w
                 bronze.wdi_footnote, bronze.wdi_series_time, gold.*wdi*]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (owner decision #875): one archive file, ~9M rows, rebuilt in full
+# in under a minute when a new archive lands (weekly).
+refresh: {mode: full, decided: "#875"}
+
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

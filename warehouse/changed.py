@@ -15,15 +15,15 @@ is rebuilt when
 - an upstream model is rebuilt in this run, or
 - an input changed after its build started: a Bronze source's current snapshot, or an
   upstream table's ``built_from_ms`` (its snapshot time if it has none, e.g. the
-  Eurostat Silver models, which only announced one-off backfills build).
+  Eurostat and BDL observations, written per entity by their loaders, #875).
 
-An incremental model (materialized='incremental', e.g. silver.bdl_observations) is rebuilt
+An incremental model (materialized='incremental') is rebuilt
 incrementally, except when its own code changed or it has no build properties: then it is
 listed in ``full_refresh`` and the build passes it as the dbt var ``full_refresh_models``
 (the model's config turns that into a full refresh of that model only).
 
 Table compaction also makes a new snapshot, so a compacted input causes a rebuild:
-conservative, never a missed change. The Eurostat Silver models are never selected here.
+conservative, never a missed change.
 """
 
 from __future__ import annotations
@@ -35,14 +35,12 @@ from pathlib import Path
 import subprocess
 from typing import Any
 
-from warehouse.eurostat_batch import EUROSTAT_ONLY
-
 PROJECT = Path(__file__).resolve().parent
 BUILT_FROM = "zohelo.built_from_ms"
 FINGERPRINT = "zohelo.build_fingerprint"
 # Code outside a model's own SQL that can change what it writes.
 SHARED_CODE = ("macros", "dimensions", "dbt_project.yml", "../requirements.txt")
-EXTERNAL_MODELS = EUROSTAT_ONLY
+EXTERNAL_MODELS: frozenset[str] = frozenset()  # models built outside the scheduled build (none since #875)
 # A Bronze commit stamped just before a build started may become visible only after dbt
 # read that table; the recorded start is moved back by this margin (an extra rebuild at worst).
 START_MARGIN_MS = 10 * 60 * 1000

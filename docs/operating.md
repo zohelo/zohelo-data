@@ -20,16 +20,19 @@ whose YAML sets `extraction.kind` (for example `bulk_file`) runs the shared patt
 | `landing.inspect` | `ingestion/to_landing/<s>/` or `patterns/<kind>.py` | source catalogue vs Landing: missing / changed / current; no Landing writes |
 | `landing.extract` | `ingestion/to_landing/<s>/` or `patterns/<kind>.py` | download missing or changed entities with receipts; never overwrites |
 | `landing.verify` | `ingestion/to_landing/<s>/` or `patterns/<kind>.py` | Landing integrity and remaining gaps |
-| `bronze.load` | `ingestion/to_bronze/<s>/` | incremental Landing → Bronze; rejections recorded; prunes superseded versions after each load when `bronze_latest_only: true` |
+| `bronze.load` | `ingestion/to_bronze/<s>/` | incremental Landing → Bronze; rejections recorded; prunes superseded versions after each load when `bronze_latest_only: true`. Eurostat, GUS BDL: per entity, Bronze and Silver together (#875) |
 | `bronze.verify` | `ingestion/common/lineage.py` | every Landing file is in Bronze or rejected with a reason; verifies one version per entity in Bronze (fails on breach); Landing files a Bronze table holds twice (warning) |
 | `landing.archive` | `ingestion/common/archive.py` | move Bronze-loaded Landing files to Archive (copy, verify SHA-256, delete from Landing; receipt stays) |
 | `archive.prune` | `ingestion/common/retention.py` | apply the source's Archive retention (`archive_policy` in its config) |
 | `silver_gold.promote` | `warehouse/passthrough/` | platform: Bronze → Silver → Gold pass-through for sources not yet modelled |
-| `silver_gold.build` | `warehouse/build.py` | platform: dbt build of `warehouse/models/` (filter = model names; empty = only models whose inputs or code changed, `fqn:*` = all); Eurostat Silver in batches; publishes the data catalog |
+| `silver_gold.build` | `warehouse/build.py` | platform: dbt build of `warehouse/models/` (filter = model names; empty = only models whose inputs or code changed, `fqn:*` = all); publishes the data catalog |
 | `serving.refresh_index` | `portal/publish_index.py` | platform: rebuild the portal file index |
 
-A Pipeline run is one activity or `landing → bronze (all steps)`; the portal index
-refresh is added automatically after writing activities. An activity runs only when
+A Pipeline run is one activity or a source's `full dataflow: landing → bronze → silver → gold → portal`
+(owner direction 20 Oct, #875): Landing, Bronze (entity sources write Silver with Bronze), archive,
+then the changed-only model build (Silver/Gold models, semantic layer, data catalog), then the
+portal index. Scheduled source runs are full dataflow runs. The portal index refresh is added
+automatically after writing activities. An activity runs only when
 it is implemented and listed under `activities:` in `ingestion/sources/<source>.yaml`
 (platform activities: `warehouse/warehouse.yaml`, `portal/portal.yaml`). Activities are idempotent and resume from durable
 state, so a rerun is always safe. Results are published as run annotations and the
@@ -75,6 +78,7 @@ Every source is declared in `ingestion/sources/<source>.yaml` with one key set, 
 | `landing` | Landing folder |
 | `archive_policy` | `move`, `retention` (`keep_latest`, `keep_days`), `prune` (`report`/`delete`), optional `without_bronze`; required when `bronze.load` is authorized |
 | `archive_folder` | Archive folder of a source not yet rebuilt (default `05_archive/<source>/`) |
+| `refresh` | required for loaded sources (owner policy, 21 Oct, #875): scheduled ingestion of a **small** source is `mode: full`; of a **big** source `mode: incremental` with `unit` (the entity a new version replaces), incremental in **every layer** (needs `to_bronze/<s>/entities.py`); a change that requires recalculating the whole table (e.g. Silver logic) is a **full build** for any source. `decided`: the owner decision issue; small or big is decided per source by the owner |
 | `bronze_latest_only` | optional boolean; when `true`, a Bronze load removes superseded versions (policy #822/#845) |
 | `bronze`, `silver`, `gold` | tables the source owns in each layer; `*_rejected_files` tables record decoder rejections |
 | `legacy_tables` | tables of retired code still in the catalog (globs allowed), until deleted |

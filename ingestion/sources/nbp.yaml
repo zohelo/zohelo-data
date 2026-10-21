@@ -10,7 +10,7 @@ extraction:
   production: snapshot                  # each file is the complete quarter as published
   incremental_policy: changed_since_last  # open quarters re-fetched; unchanged bytes skipped
   schedule:                             # UTC; weekdays 13:30 Warsaw (summer), after table A/C
-    - {cron: "30 11 * * 1-5", run: "landing → bronze (all steps)"}
+    - {cron: "30 11 * * 1-5", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/nbp/
 # Landing → Archive: Bronze-loaded files are moved; JSON is stored zstd-compressed.
@@ -27,4 +27,7 @@ legacy_tables: [bronze.nbp_exchange_rates_table_*, bronze.nbp_gold_prices, silve
                 silver.nbp_gold_prices, gold.fact_fx_quotes, gold.fact_gold_prices]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (owner decision #875): under 1M rows; Silver and Gold rebuilt in full.
+refresh: {mode: full, decided: "#875"}
+
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

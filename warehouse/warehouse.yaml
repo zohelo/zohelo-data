@@ -3,8 +3,7 @@
 #   silver_gold.build     dbt build of the SQL project (models/), optional --select from the run filter
 activities: [silver_gold.build]   # silver_gold.promote retired 16 Oct (#835); code kept until the new solution replaces it
 # Declared schedules (UTC), dispatched by run.py schedule: models daily after the source
-# loads. Eurostat Silver catch-up is not scheduled (owner policy #822): it runs only as an
-# announced one-off backfill, a manual run with filter "eurostat_dataset_versions eurostat_observations".
+# loads. Eurostat and BDL observations are not dbt models: their loaders write Silver (#875).
 schedule:
   - {cron: "30 7 * * *", run: "silver/gold: build models"}
 
@@ -16,15 +15,6 @@ rate_limit_retry_threads: 2     # fewer parallel catalog calls than the build's 
 # Shared Gold built by the dbt project (conformed dimensions and facts across sources).
 gold: [gold.dim_date, gold.dim_period, gold.dim_currency, gold.dim_geography, gold.dim_indicator,
        gold.fact_observation, gold.fact_fx_rate, gold.fact_gold_price]
-
-# Eurostat Silver batching (warehouse/eurostat_batch.py, warehouse/build.py). dbt stages each
-# batch in a temp table (~190 bytes per Bronze row) on a runner with ~75 GB of temp space.
-eurostat_silver:
-  row_budget: 150000000       # Bronze rows per batch
-  max_versions: 500           # dataset versions per batch (dbt --vars is one argument, ≤128 KB)
-  oversized_rows: 700000000   # single files above this are deferred until a sliced load exists
-  loop_minutes: 140           # a run selecting only the Eurostat models starts no batch after this
-  loop_builds: 20             # at most this many builds per run (time is the usual limit: ~8 builds took 64 min)
 
 # Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
 # below ~1M rows are rebuilt in full; #868). repo_check fails on a model missing here or a ceiling
@@ -39,7 +29,6 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   dim_period: {rows: 300000}  # 87,723
   eurostat_codes: {rows: 1000000}  # 294,750
   eurostat_dataflows: {rows: 30000}  # 8,146
-  eurostat_dataset_versions: {rows: 30000}  # 8,148
   eurostat_dimensions: {rows: 200000}  # 54,101
   fact_fx_rate: {rows: 1000000}  # 512,519
   fact_gold_price: {rows: 20000}  # 3,479

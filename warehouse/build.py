@@ -3,12 +3,9 @@
 The run filter becomes dbt's --select (e.g. "silver.nbp" or "nbp_fx_rates+"). An empty
 filter (the scheduled run) builds only the models whose inputs or code changed since their
 last build (warehouse/changed.py, owner policy #822), incremental models incrementally unless
-their code changed; "fqn:*" builds everything (incremental models incrementally). When a
-run names the Eurostat Silver models explicitly (one-off backfills only, owner policy #822;
-a full build leaves them unchanged), warehouse/eurostat_batch.py
-plans its batch first (passed as dbt vars) and records it after the model ran. A run that
-selects only the Eurostat Silver models repeats batches while Silver is incomplete and the
-time budget allows (LOOP_MINUTES). A build whose only failures are the catalog's rate
+their code changed; "fqn:*" builds everything (incremental models incrementally). Eurostat and
+GUS BDL observations are not dbt models: their loaders write Silver per entity (design #875,
+warehouse/entity/). A build whose only failures are the catalog's rate
 limit (HTTP 429) is resumed with `dbt retry` after declared waits, with fewer threads.
 Target prod writes to the silver/gold namespaces; results (models, tests, failures) are
 published per build as an annotation (GitHub keeps the first 10 per step) and in the step
@@ -26,19 +23,13 @@ import time
 import yaml
 
 from ingestion.common.report import ANNOTATION_LIMIT, annotate, step_summary
-from warehouse import eurostat_batch
 
 PROJECT = Path(__file__).resolve().parent
-SETTINGS = eurostat_batch.SETTINGS  # warehouse/warehouse.yaml "eurostat_silver"
-ROW_BUDGET = int(SETTINGS["row_budget"])
-LOOP_MINUTES = float(SETTINGS["loop_minutes"])
-LOOP_BUILDS = int(SETTINGS["loop_builds"])
 _RETRY = yaml.safe_load((PROJECT / "warehouse.yaml").read_text())
 RATE_LIMIT_WAITS = [float(s) for s in _RETRY["rate_limit_retry_waits"]]
 RATE_LIMIT_THREADS = int(_RETRY["rate_limit_retry_threads"])
 # Owner policy #822: only small tables are rebuilt in full; each full-rebuild model has a row ceiling.
 FULL_REBUILD = _RETRY["full_rebuild"]
-EUROSTAT_ONLY = eurostat_batch.EUROSTAT_ONLY
 
 
 def main(select: str = "", target: str = "prod", variables: dict | None = None) -> int:
@@ -55,17 +46,7 @@ def _main(select: str, target: str, variables: dict | None) -> int:
     selectors = [s.strip() for s in select.replace(",", " ").split() if s.strip()]
     if not selectors and target == "prod":
         return changed_only(target, variables)
-    if not selectors or not set(selectors) <= EUROSTAT_ONLY:
-        return build_once(selectors, target, variables)[0]
-    started, longest = time.monotonic(), 0.0
-    for _ in range(LOOP_BUILDS):
-        began = time.monotonic()
-        code, remaining = build_once(selectors, target, variables)
-        longest = max(longest, time.monotonic() - began)
-        elapsed = time.monotonic() - started
-        if code != 0 or not remaining or elapsed + 1.3 * longest > LOOP_MINUTES * 60:
-            return code
-    return code
+    return build_once(selectors, target, variables)[0]
 
 
 def changed_only(target: str, variables: dict | None) -> int:
@@ -160,18 +141,13 @@ def _rate_limited_only(results: list[dict]) -> bool:
 def build_once(
     selectors: list[str], target: str, variables: dict | None, changed_plan: dict | None = None
 ) -> tuple[int, int]:
-    """One dbt build; returns (exit code, Eurostat versions still to load after it). With a
-    changed-only plan, a successful build records its build properties on the models it wrote."""
+    """One dbt build; returns (exit code, 0). With a changed-only plan, a successful build
+    records its build properties on the models it wrote."""
     started_ms = int(time.time() * 1000)
     command = ["dbt", "build", "--target", target, "--project-dir", str(PROJECT), "--profiles-dir", str(PROJECT)]
     if selectors:
         command += ["--select", *selectors]
     variables = dict(variables or {})
-    plan = None
-    if eurostat_batch.wanted(selectors):
-        namespace = "zz_dbt_trial" if target == "trial" else "silver"
-        plan = eurostat_batch.prepare(namespace, int(variables.pop("eurostat_row_budget", ROW_BUDGET)))
-        variables.update(plan["vars"])
     if variables:
         command += ["--vars", json.dumps(variables)]
     returncode, results, tail = _dbt(command)
@@ -204,11 +180,6 @@ def build_once(
         summary["by_status"][r["status"]] = summary["by_status"].get(r["status"], 0) + 1
         if r["status"] in FAILED:
             summary["failures"].append({"node": r["unique_id"], "message": str(r.get("message"))})
-    if plan is not None:
-        summary["eurostat_batch"] = plan["summary"]
-        if any(r["unique_id"].endswith("." + eurostat_batch.MODEL) and r["status"] == "success" for r in results):
-            eurostat_batch.finish(namespace, plan)
-            summary["eurostat_batch"]["recorded"] = True
     if not results:
         summary["output_tail"] = tail
     if changed_plan is not None:
@@ -239,7 +210,7 @@ def build_once(
         level = "warning"
     annotate(level, "warehouse dbt build", _for_annotation(summary))
     step_summary(f"## warehouse · dbt build\n\n```json\n{json.dumps(summary, indent=2)}\n```\n")
-    return returncode, (plan["summary"]["remaining_after_batch"] if plan else 0)
+    return returncode, 0
 
 
 def table_rows(table) -> int:

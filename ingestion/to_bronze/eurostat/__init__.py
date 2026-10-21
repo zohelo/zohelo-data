@@ -1,7 +1,9 @@
-"""Eurostat Landing → Bronze activities.
+"""Eurostat Landing → Bronze → Silver activities (design #875).
 
-bronze.load       load.py: batches of batch.py, decode.py per file → bronze.eurostat_full_observations
-bronze.verify     ingestion/common/lineage.py --source eurostat
+bronze.load       entities.py: per dataset, newest Landing version → bronze.eurostat_observations and
+                  silver.eurostat_observations (warehouse/entity/eurostat_observations.sql); before it,
+                  the bulk structure metadata → bronze.eurostat_structure_items (structure.py)
+bronze.verify     entities.verify: Landing → Bronze → Silver completeness from table metadata
 landing.archive   ingestion/common/archive.py --source eurostat (move to Archive)
 archive.prune     ingestion/common/retention.py --source eurostat (archive_policy.retention)
 """
@@ -10,15 +12,21 @@ from __future__ import annotations
 
 
 def _load(p) -> int:
-    from ingestion.to_bronze.eurostat import load
+    import time
 
-    return load.load(p.budget_minutes)
+    from ingestion.common.report import annotate
+    from ingestion.to_bronze.eurostat import entities, structure
+
+    started = time.monotonic()
+    annotate("notice", "eurostat structure Bronze", structure.load(min(30.0, p.budget_minutes / 4)))
+    left = p.budget_minutes - (time.monotonic() - started) / 60
+    return entities.main(["--minutes", f"{max(left - 10, 5):.0f}"])
 
 
 def _verify(p) -> int:
-    from ingestion.common import lineage
+    from ingestion.to_bronze.eurostat import entities
 
-    return lineage.main(["--source", "eurostat"])
+    return entities.verify()
 
 
 def _archive(p) -> int:

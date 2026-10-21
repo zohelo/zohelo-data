@@ -34,11 +34,19 @@ details live in [landing.md](landing.md), [architecture.md](architecture.md),
   or JSON copies of keys; provenance = Landing SHA-256 + version + ingestion time.
 - One Parquet file per Landing file (`02_bronze/<source>/<entity table>/<entity>/<sha256>.parquet`),
   partitioned by entity, full column statistics computed client-side. The table's file
-  list is the checkpoint (catalog compaction renames small files: their Landing SHA-256
-  comes from the `raw_sha256` column, never from the name alone); rejections go to `bronze.<source>_rejected_files` with the reason.
+  list is the checkpoint; catalog compaction is off (#875), so file names stay the record
+  of what is loaded. Rejections go to `bronze.<source>_rejected_files` with the reason.
+- Big sources (Eurostat, GUS BDL; design #875) use **entity tables**
+  (`ingestion/common/entity_tables.py`): the unit of work is one source entity version (a
+  dataset, a subgroup with all parts of one download). Bronze and Silver each hold exactly
+  one file per entity; a new version replaces the entity's partition in both, in one commit
+  per table (whole files dropped from the file list, nothing rewritten row by row). Silver
+  is one SQL file per source in `warehouse/entity/`, applied to each entity right after
+  Bronze, with checks (grain, not-null, conflicts) that reject the entity rather than load
+  it. A changed Silver SQL recomputes every entity's Silver from unchanged Bronze.
 - DuckDB-native decoding (no per-cell Python), bounded memory, tested on the largest
   real file before the full load.
-- `bronze.verify`: every newest Landing file is in Bronze or rejected with a reason, and no superseded versions remain in Bronze (one version per entity).
+- `bronze.verify`: every newest Landing file is in Bronze or rejected with a reason, and no superseded versions remain in Bronze (one version per entity). For entity tables it reads table metadata only and fails below 99% completeness of a layer against the layer below.
 
 ## 4. Archive and retention
 

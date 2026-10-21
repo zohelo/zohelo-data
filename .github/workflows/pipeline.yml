@@ -33,7 +33,7 @@ on:
           - "bronze: verify"
           - "archive: move Bronze-loaded Landing"
           - "archive: apply retention"
-          - "landing → bronze (all steps)"
+          - "full dataflow: landing → bronze → silver → gold → portal"
           - "silver/gold: promote"
           - "silver/gold: build models"
           - "serving: refresh portal index"
@@ -282,6 +282,11 @@ jobs:
     needs: [plan, silver-gold-promote]
     if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'silver_gold.build') }}"
     name: silver_gold.build
+    # One model build at a time across all sources (each source's full dataflow ends with one, #878).
+    # A newer queued build replaces an older queued one; the changed-only build still sees every change.
+    concurrency:
+      group: zohelo-pipeline-build
+      cancel-in-progress: false
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
@@ -314,7 +319,23 @@ jobs:
     # e-mail. Cancelled counts: a job killed from outside (exit 143) ends as cancelled.
     needs: [scheduler, plan, landing-inspect, landing-extract, landing-verify, bronze-load, bronze-verify,
             landing-archive, archive-prune, silver-gold-promote, silver-gold-build, serving-refresh-index]
-    if: failure() || cancelled() || contains(needs.*.result, 'cancelled')
+    # A model build replaced in its queue by a newer one (concurrency zohelo-pipeline-build) ends as
+    # cancelled by design and is not an alert; a failed build is (#878 review).
+    if: >-
+      always() && (
+      failure() ||
+      needs.silver-gold-build.result == 'failure' ||
+      needs.scheduler.result == 'cancelled' ||
+      needs.plan.result == 'cancelled' ||
+      needs.landing-inspect.result == 'cancelled' ||
+      needs.landing-extract.result == 'cancelled' ||
+      needs.landing-verify.result == 'cancelled' ||
+      needs.bronze-load.result == 'cancelled' ||
+      needs.bronze-verify.result == 'cancelled' ||
+      needs.landing-archive.result == 'cancelled' ||
+      needs.archive-prune.result == 'cancelled' ||
+      needs.silver-gold-promote.result == 'cancelled' ||
+      needs.serving-refresh-index.result == 'cancelled')
     name: notify
     runs-on: ubuntu-24.04
     timeout-minutes: 5

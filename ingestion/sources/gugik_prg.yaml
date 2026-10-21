@@ -16,7 +16,7 @@ extraction:
   production: snapshot                  # the package is the complete register state
   incremental_policy: changed_since_last  # by SHA-256 of the download
   schedule:                             # UTC; monthly (state 1 January + corrections)
-    - {cron: "40 2 3 * *", run: "landing → bronze (all steps)"}
+    - {cron: "40 2 3 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/gugik_prg/
 # ZIP kept as exact bytes (.bin). Yearly changes: newest version + 90 days.
@@ -32,4 +32,7 @@ legacy_tables: [bronze.prg_country, bronze.prg_voivodeships, bronze.prg_counties
                 bronze.prg_surface_areas, silver.prg_*, gold.dim_prg_*, gold.fact_prg_surface_areas]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (owner decision #875): small, rebuilt in full (monthly).
+refresh: {mode: full, decided: "#875"}
+
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

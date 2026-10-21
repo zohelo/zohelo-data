@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
+import contextlib
 from hashlib import sha256
 import json
 import tempfile
@@ -46,6 +47,19 @@ SOURCES = _archive_sources()
 def proven_for(source: str, meta: dict[str, dict[str, Any]]) -> set[str]:
     from ingestion.common.bronze_files import SOURCE_TABLES, proven_hashes
 
+    if source == "gus_bdl":  # one Bronze file per subgroup download, named by its parts (#875)
+        from pyiceberg.exceptions import NoSuchTableError
+
+        from ingestion.common.bronze_files import loaded_hashes
+        from ingestion.common.r2 import catalog
+        from ingestion.to_bronze.gus_bdl.entities import BRONZE, proven
+
+        cat = catalog()  # data parts by the subgroup rule; metadata pages by file name (their SHA-256)
+        held = proven()
+        for table_id in [t for t in SOURCE_TABLES[source][0] if t != BRONZE]:
+            with contextlib.suppress(NoSuchTableError):
+                held |= loaded_hashes(cat.load_table(table_id))
+        return held
     if source in SOURCE_TABLES:
         return proven_hashes(source)[0]
     raise RuntimeError(f"no Bronze proof registered for {source} (bronze_files.SOURCE_TABLES)")
@@ -117,6 +131,22 @@ def main(argv=None) -> int:
     # Superseded: no path of these bytes is the newest version of its entity any more.
     newest = latest_snapshot(meta, "data") | latest_snapshot(meta, "metadata")
     superseded = {d for d, item in meta.items() if item.get("snapshot_paths") and d not in newest}
+    if args.source == "gus_bdl":
+        # The parts of one BDL download share the subgroup folder, so "one newest file per entity"
+        # would call every other part superseded. Superseded = a part of an older version than the
+        # subgroup's newest complete download (#878 review); incomplete newer downloads stay.
+        from ingestion.to_bronze.gus_bdl.entities import candidates
+
+        newest = candidates(client, bucket)
+        newest_version = {p["subgroup_id"]: p["version_token"] for p in newest}
+        superseded = {
+            d
+            for d, item in meta.items()
+            for path in item.get("snapshot_paths") or []
+            if path["area"] == "data"
+            and path["entity"] in newest_version
+            and path["version"] < newest_version[path["entity"]]
+        } - {p["sha256"] for p in newest}  # identical bytes also in a newest download stay
     selected = [
         item
         for digest, item in meta.items()

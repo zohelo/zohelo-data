@@ -13,10 +13,10 @@ sources:
     loaded_by: ingestion/to_bronze/eurostat/
     config: ingestion/sources/eurostat.yaml
   tables:
-  - name: eurostat_full_observations
+  - name: eurostat_observations
     description: >-
-      One row per series × period as published (Eurostat .tsv.gz), latest Landing version
-      of every dataset; partitioned by dataset_id. value_text is the source lexeme
+      One row per series × period as published (Eurostat .tsv.gz), newest Landing version
+      of every dataset, one file per dataset (design #875); partitioned by dataset_id. value_text is the source lexeme
       (numbers, ':' for not available, '' for empty), status_code the flag; series_key
       holds the codes in the order of series_dimensions. Cast values in Silver.
   - name: eurostat_rejected_files
@@ -69,7 +69,7 @@ sources:
   schema: bronze
   meta:
     landing: 01_landing/gus_bdl/
-    loaded_by: ingestion/to_bronze/gus_bdl/ (bdl_observations, bdl_variables, bdl_units … by retired code)
+    loaded_by: ingestion/to_bronze/gus_bdl/
     config: ingestion/sources/gus_bdl.yaml
   tables:
   - name: bdl_metadata_variables
@@ -81,20 +81,14 @@ sources:
     description: "BDL API territorial units (levels 0–6) with 12-character unit id, name, parent id, level, kind."
   - name: bdl_metadata_rejected_files
     description: BDL metadata pages the Bronze loader rejected, with the reason.
-  - name: bdl_subgroup_observations
+  - name: bdl_observations
     description: >-
-      One row per CSV row of a subgroup export (newest complete version per subgroup;
-      partitioned by subgroup_id). dimension_names / dimension_values are JSON arrays of
+      One row per CSV row of a subgroup export: every part of the newest complete download of
+      each subgroup, one file per subgroup (design #875); partitioned by subgroup_id. dimension_names / dimension_values are JSON arrays of
       the subgroup's dimension labels (= API variable name components n1…n5); value_text is
       the source lexeme (decimal comma); variable_id is filled for API refreshes only.
   - name: bdl_rejected_files
     description: Landing files the BDL Bronze decoder rejected, with the reason (cleared by ops/retry_rejected).
-  - name: bdl_observations
-  - name: bdl_variables
-  - name: bdl_subjects
-  - name: bdl_units
-  - name: bdl_years
-  - name: bdl_dictionary_entries
 - name: gus_dbw
   description: GUS DBW indicators
   database: r2
@@ -197,3 +191,20 @@ sources:
   - name: wdi_country_series
   - name: wdi_footnote
   - name: wdi_series_time
+- name: silver_entities
+  description: >-
+    Silver tables written per source entity by the loaders, not by dbt (design #875): each
+    holds exactly the newest version of every entity, from warehouse/entity/<table>.sql.
+  database: r2
+  schema: silver
+  tables:
+  - name: eurostat_observations
+    description: >-
+      Eurostat observations, typed: freq, unit, geo as published, time_period in SDMX format,
+      value (null for ':' or empty), status flags, the other series dimensions in
+      breakdown_dimensions / breakdown_codes; one file per dataset (raw_sha256 = its Landing file).
+  - name: bdl_observations
+    description: >-
+      GUS BDL observations, typed, one row per unit (code + name: the export gives the Górnośląsko-Zagłębiowska Metropolia the code of ŚLĄSKIE) × dimensions × year of each subgroup's newest
+      complete download (overlapping parts: identical rows collapse, an empty value gives way to a
+      published one; conflicting values reject the subgroup); variable_id from bdl_variables.

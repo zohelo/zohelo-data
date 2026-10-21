@@ -44,6 +44,10 @@ class BdlDecodeError(ValueError):
     """The file cannot satisfy the Bronze contract (recorded with the reason, never dropped)."""
 
 
+class BdlEmptyExport(BdlDecodeError):
+    """A valid export with no rows: its territory selection has no data (a part, or a whole subgroup)."""
+
+
 def decode_web_export(source: Path, receipt: dict[str, Any], output: Path, memory_limit: str = "8GB") -> dict:
     data = source.read_bytes()
     if sha256(data).hexdigest() != receipt["sha256"] or len(data) != receipt["size_bytes"]:
@@ -102,16 +106,32 @@ def decode_web_export(source: Path, receipt: dict[str, Any], output: Path, memor
                     json.dumps(dims, ensure_ascii=False, separators=(",", ":")),
                 ],
             )
-            rows, bad = con.execute(
-                f"SELECT count(*), count(*) FILTER (WHERE c0 IS NULL OR c{n - 4} IS NULL) FROM src"
+            # A row with more fields than the header names (a dimension column without a
+            # header, e.g. P3018 of 2014) shifts every column after it: the year column then
+            # holds dimension labels. Such files are rejected, never loaded shifted (#875).
+            rows, bad, shifted = con.execute(
+                f"SELECT count(*), count(*) FILTER (WHERE c0 IS NULL OR c{n - 4} IS NULL), "
+                f"count(*) FILTER (WHERE NOT regexp_full_match(trim(c{n - 4}), '[0-9]{{4}}') "
+                f"OR coalesce(c{n}, '') <> '') FROM src"
             ).fetchone()
+    except (
+        duckdb.OutOfMemoryException,
+        duckdb.IOException,
+        duckdb.HTTPException,
+        duckdb.InterruptException,
+        duckdb.FatalException,
+        duckdb.InternalException,
+    ) as exc:
+        raise RuntimeError(f"BDL decode could not run (not a verdict on the file): {str(exc)[:500]}") from exc
     except duckdb.Error as exc:
         raise BdlDecodeError(f"invalid BDL CSV: {str(exc)[:500]}") from exc
     finally:
         database.unlink(missing_ok=True)
         work.unlink(missing_ok=True)
     if rows == 0:
-        raise BdlDecodeError("BDL export has no rows")
+        raise BdlEmptyExport("BDL export has no rows")
     if bad:
         raise BdlDecodeError(f"{bad} rows without unit code or year")
+    if shifted:
+        raise BdlDecodeError(f"{shifted} rows do not match the header (more fields than named, or year not YYYY)")
     return {"rows": rows, "dimensions": dims, "output_bytes": output.stat().st_size}
