@@ -78,7 +78,7 @@ Every source is declared in `ingestion/sources/<source>.yaml` with one key set, 
 | `landing` | Landing folder |
 | `archive_policy` | `move`, `retention` (`keep_latest`, `keep_days`), `prune` (`report`/`delete`), optional `without_bronze`; required when `bronze.load` is authorized |
 | `archive_folder` | Archive folder of a source not yet rebuilt (default `05_archive/<source>/`) |
-| `refresh` | required for loaded sources: `mode` `incremental` (with `unit`: the entity replaced whole in every layer; needs `to_bronze/<s>/entities.py`) or `full`, and `decided` (the owner decision issue)). The daily refresh of an incremental source processes only entities with a new version; a changed Silver model recomputes all of them. Changing the policy is an owner decision (#875) |
+| `refresh` | required for loaded sources (owner policy, 21 Oct, #875): scheduled ingestion of a **small** source is `mode: full`; of a **big** source `mode: incremental` with `unit` (the entity a new version replaces), incremental in **every layer** (needs `to_bronze/<s>/entities.py`); a change that requires recalculating the whole table (e.g. Silver logic) is a **full build** for any source. `decided`: the owner decision issue; small or big is decided per source by the owner |
 | `bronze_latest_only` | optional boolean; when `true`, a Bronze load removes superseded versions (policy #822/#845) |
 | `bronze`, `silver`, `gold` | tables the source owns in each layer; `*_rejected_files` tables record decoder rejections |
 | `legacy_tables` | tables of retired code still in the catalog (globs allowed), until deleted |
