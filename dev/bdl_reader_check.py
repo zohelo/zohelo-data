@@ -10,7 +10,7 @@ from ingestion.to_landing.gus_bdl import inspect
 
 client, bucket = s3(), req("R2_LANDING_BUCKET")
 new_versions = inspect.landing_versions(client, bucket)
-new_parts = entities.candidates()
+new_parts = entities.candidates(client, bucket)
 new_keys = {(r["subgroup_id"], r["version_token"]) for r in new_parts}
 
 
