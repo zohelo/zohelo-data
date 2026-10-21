@@ -61,7 +61,7 @@ class PackagesStuck(RuntimeError):
 
 
 HARD_DEADLINE = float("inf")  # monotonic; set by main() a little after the time budget
-HARD_MARGIN_SECONDS = 8 * 60  # the job has 25 minutes beyond the budget; single waits take up to 6
+HARD_MARGIN_SECONDS = 8 * 60  # the job has 25 minutes beyond the budget; one stretch without a check takes up to ~7.5
 
 
 def check_time() -> None:
@@ -225,14 +225,21 @@ def settled_exports(page) -> list[str]:
     raise PackagesStuck(f"earlier BDL packages did not finish generating in {PACKAGE_MINUTES} minutes")
 
 
+def new_on_top(listed: list[dict[str, Any]], seen: list[str]) -> bool:
+    """The newest entry is an additional package (its look is listed more often than before),
+    not a list that changed because an older entry expired."""
+    top = fingerprint(listed[0])
+    return sum(fingerprint(e) == top for e in listed) > seen.count(top)
+
+
 def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list, seen: list[str]) -> tuple[Path, str]:
     """Request a background package for the current selection and download it when ready.
 
     The site lists only the newest 3 packages, and two packages of one subgroup made on one
     day look the same (21 Oct), so a new package is recognised by its life cycle: every
     package was ready before the request (settled_exports), so a package seen generating
-    after it is ours; once the list is ready again its newest entry is downloaded. A changed
-    list also counts, in case generation finished between two looks. The ZIP name must
+    after it is ours; once the list is ready again its newest entry is downloaded. An extra
+    package on top also counts, in case generation finished between two looks (new_on_top). The ZIP name must
     carry the subgroup number (save_download)."""
     button = download_button(page)
     note(page, trace, f"package requested ({len(seen)} packages listed before)")
@@ -249,7 +256,7 @@ def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list,
         listed = exports(page)
         if any(not e["ready"] for e in listed):
             generating_seen = True
-        elif listed and (generating_seen or [fingerprint(e) for e in listed] != seen):
+        elif listed and (generating_seen or new_on_top(listed, seen)):
             top = listed[0]
             if not (top["text"].startswith(name) or name in top["row"]):
                 raise RuntimeError(f"the newest package is not {subgroup['id']}: {top['text'][:60]}")
