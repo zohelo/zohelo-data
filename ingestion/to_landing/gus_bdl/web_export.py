@@ -266,7 +266,13 @@ def generated_export(
             top, top_ready = now[0]
             if not top_ready and now.count((top, False)) > seen.count((top, False)):
                 generating_seen = True
-            elif top_ready and (generating_seen or now.count((top, True)) > seen.count((top, True))):
+            elif top_ready and (
+                generating_seen
+                or (  # an extra ready package, not an earlier slow one that finished meanwhile
+                    now.count((top, True)) > seen.count((top, True))
+                    and now.count((top, False)) >= seen.count((top, False))
+                )
+            ):
                 entry = listed[0]
                 if not (entry["text"].startswith(name) or name in entry["row"]):
                     raise RuntimeError(f"the newest package is not {subgroup['id']}: {entry['text'][:60]}")
