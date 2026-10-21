@@ -37,7 +37,25 @@ summary = {
     "parts_per_version": dict(buckets),
     "max_parts": max(totals.values()),
     "fields": dict(fields),
-    "multi_part_examples": multi,
+    "single_part_kinds": dict(
+        Counter(
+            json.dumps(
+                {
+                    k: (
+                        v
+                        if k != "selection"
+                        else {kk: (vv if kk in ("kind", "territories", "layout") else "...") for kk, vv in v.items()}
+                    )
+                    for k, v in (r.get("part") or {}).items()
+                    if k not in ("index", "total")
+                }
+            )[:300]
+            for r in receipts
+            if int((r.get("part") or {}).get("total", 1)) == 1
+        ).most_common(8)
+    ),
+    "single_part_example": next(r for r in receipts if int((r.get("part") or {}).get("total", 1)) == 1),
+    "ingested_months": dict(Counter(r["ingested_at"][:7] for r in receipts)),
 }
 try:
     from pyiceberg.catalog import load_catalog
