@@ -41,6 +41,10 @@ BUTTONS_JS = """() => [...document.querySelectorAll('button, input[type=submit],
   .map(e => [e.id, (e.title || e.value || e.textContent || '').trim().slice(0, 40), String(e.className).slice(0, 40)])
   .slice(0, 60)"""
 
+MENU_JS = """() => [...document.querySelectorAll('li, a, span')]
+  .filter(e => (e.offsetWidth || e.offsetHeight) && /csv|xls|eksport|export|pobierz/i.test(e.textContent || ''))
+  .map(e => [e.tagName, e.id, (e.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 60)]).slice(0, 20)"""
+
 out = {"subgroup": SID}
 try:
     from playwright.sync_api import sync_playwright
@@ -77,7 +81,8 @@ try:
         out["teryt_buttons"] = page.evaluate(BUTTONS_JS)
         out["teryt_download_button"] = w.download_button(page) is not None
         text = page.locator("body").inner_text()
-        out["teryt_text"] = " ".join(text.split())[:1500]
+        out["teryt_text"] = " ".join(text.split())[:200]
+        out.pop("teryt_buttons")
         source = out["teryt_lists"][0]["id"]
         dest = out["teryt_lists"][1]["id"]
         page.evaluate(
@@ -92,12 +97,24 @@ try:
         out["teryt_download_button_after"] = w.download_button(page) is not None
         w.enabled_next(page).click()
         w.wait_for_result_table(page)
+        out["table_url"] = page.url[-80:]
+        out["table_text"] = " ".join(page.locator("body").inner_text().split())[:400]
         option = page.get_by_text(w.re.compile(r"CSV\s*[–-]\s*(tablica\s+)?relacyj", w.re.IGNORECASE)).first
+        out["csv_option_visible_before"] = option.is_visible()
         if not option.is_visible():
             page.get_by_text(w.re.compile(r"^(Eksport|Export)$", w.re.IGNORECASE)).first.click()
-            page.wait_for_timeout(500)
-        with page.expect_download(timeout=180_000) as info:
-            option.click(no_wait_after=True)
+            page.wait_for_timeout(1500)
+        out["menu"] = page.evaluate(MENU_JS)
+        out["csv_option_visible"] = option.is_visible()
+        try:
+            with page.expect_download(timeout=240_000) as info:
+                option.click(no_wait_after=True)
+        except Exception as exc:
+            out["download_error"] = str(exc)[:300]
+            out["after_url"] = page.url[-80:]
+            out["after_text"] = " ".join(page.locator("body").inner_text().split())[:600]
+            out["exports"] = [[e["ready"], e["text"][:30], e["row"][:150]] for e in w.exports(page)[:5]]
+            raise
         path = Path(tmp) / "x.zip"
         info.value.save_as(path)
         import zipfile
@@ -115,6 +132,6 @@ try:
         browser.close()
     annotate("notice", "bdl teryt probe", out)
 except Exception:
-    out["traceback"] = traceback.format_exc()[-2000:]
+    out["traceback"] = traceback.format_exc()[-600:]
     annotate("error", "bdl teryt probe", out)
     raise
