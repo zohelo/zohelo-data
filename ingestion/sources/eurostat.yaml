@@ -7,8 +7,8 @@ extraction:
   production: snapshot                  # every file is a complete dataset version
   incremental_policy: changed_since_last  # inventory "last data change" vs Landing
   schedule:                             # UTC; datasets changed since the last run. Eurostat publishes
-                                        # twice a day, 11:00 and 23:00 Brussels: run about an hour after
-                                        # each (10:30/22:30 UTC is after both releases in summer and winter)
+                                        # twice a day, 11:00 and 23:00 Brussels: run 30-90 min after
+                                        # each (10:30/22:30 UTC: after both releases in CET and CEST)
     - {cron: "30 10,22 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/eurostat/
