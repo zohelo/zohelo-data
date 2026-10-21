@@ -56,10 +56,6 @@ class OutOfTime(RuntimeError):
     """The run's hard time limit passed inside a subgroup: stop, the next run resumes."""
 
 
-class PackagesStuck(RuntimeError):
-    """An earlier package of the account never finishes: every later package would be ambiguous."""
-
-
 HARD_DEADLINE = float("inf")  # monotonic; set by main() a little after the time budget
 HARD_MARGIN_SECONDS = 8 * 60  # the job has 25 minutes beyond the budget; one stretch without a check takes up to ~7.5
 
@@ -213,34 +209,45 @@ def fingerprint(entry: dict[str, Any]) -> str:
     return sha256(json.dumps([entry["text"], entry["row"]]).encode()).hexdigest()
 
 
-def settled_exports(page) -> list[str]:
-    """The account's package list (fingerprints, newest first) once none is still generating."""
-    deadline = time.monotonic() + PACKAGE_MINUTES * 60
-    while time.monotonic() < deadline:  # a package still generating would later be mistaken for ours
+SETTLE_MINUTES = 10  # how long an earlier package may finish before it is treated as stuck
+STUCK: list[list] = []  # packages that never finished generating (listed in the run summary)
+STUCK_LOOKS: set[str] = set()  # their fingerprints: not waited for again in this run
+
+
+def look(listed: list[dict[str, Any]]) -> list[tuple[str, bool]]:
+    return [(fingerprint(e), bool(e["ready"])) for e in listed]
+
+
+def settled_exports(page) -> list[tuple[str, bool]]:
+    """The account's package list (fingerprint, ready; newest first), after giving packages
+    still generating SETTLE_MINUTES to finish. One that never finishes (a failed package, 21 Oct)
+    stays in the list as not ready; generated_export tells it apart from ours by counting."""
+    deadline = time.monotonic() + SETTLE_MINUTES * 60
+    before: list[dict[str, Any]] = []
+    while time.monotonic() < deadline:
         check_time()
         before = exports(page)
-        if all(e["ready"] for e in before):
-            return [fingerprint(e) for e in before]
+        if all(e["ready"] or fingerprint(e) in STUCK_LOOKS for e in before):
+            return look(before)
         page.wait_for_timeout(10_000)
-    raise PackagesStuck(f"earlier BDL packages did not finish generating in {PACKAGE_MINUTES} minutes")
+    for e in before:
+        if not e["ready"] and fingerprint(e) not in STUCK_LOOKS:
+            STUCK_LOOKS.add(fingerprint(e))
+            STUCK.append([e["text"][:40], e["row"][-40:]])
+    return look(before)
 
 
-def new_on_top(listed: list[dict[str, Any]], seen: list[str]) -> bool:
-    """The newest entry is an additional package (its look is listed more often than before),
-    not a list that changed because an older entry expired."""
-    top = fingerprint(listed[0])
-    return sum(fingerprint(e) == top for e in listed) > seen.count(top)
-
-
-def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list, seen: list[str]) -> tuple[Path, str]:
+def generated_export(
+    page, subgroup: dict[str, Any], workdir: Path, trace: list, seen: list[tuple[str, bool]]
+) -> tuple[Path, str]:
     """Request a background package for the current selection and download it when ready.
 
-    The site lists only the newest 3 packages, and two packages of one subgroup made on one
-    day look the same (21 Oct), so a new package is recognised by its life cycle: every
-    package was ready before the request (settled_exports), so a package seen generating
-    after it is ours; once the list is ready again its newest entry is downloaded. An extra
-    package on top also counts, in case generation finished between two looks (new_on_top). The ZIP name must
-    carry the subgroup number (save_download)."""
+    The site lists only the newest 3 packages, two packages of one subgroup made on one day
+    look the same, and a failed package stays listed as not ready (21 Oct). So only the
+    newest entry is followed, and it is ours when, after the request, it is a package seen
+    generating that was not generating before (more not-ready entries of its look than
+    before), or an additional ready package of its look (finished between two looks). The
+    list name and the ZIP name (save_download) must both be this subgroup's."""
     button = download_button(page)
     note(page, trace, f"package requested ({len(seen)} packages listed before)")
     with page.expect_response(lambda r: r.request.method == "POST", timeout=360_000) as response_info:
@@ -254,16 +261,25 @@ def generated_export(page, subgroup: dict[str, Any], workdir: Path, trace: list,
     while time.monotonic() < deadline:
         check_time()
         listed = exports(page)
-        if any(not e["ready"] for e in listed):
-            generating_seen = True
-        elif listed and (generating_seen or new_on_top(listed, seen)):
-            top = listed[0]
-            if not (top["text"].startswith(name) or name in top["row"]):
-                raise RuntimeError(f"the newest package is not {subgroup['id']}: {top['text'][:60]}")
-            note(page, trace, "package ready")
-            with page.expect_download(timeout=240_000) as download_info:
-                page.locator(f"#{top['id']}").evaluate("e => e.click()")
-            return save_download(download_info.value, subgroup, workdir)
+        if listed:
+            now = look(listed)
+            top, top_ready = now[0]
+            if not top_ready and now.count((top, False)) > seen.count((top, False)):
+                generating_seen = True
+            elif top_ready and (
+                generating_seen
+                or (  # an extra ready package, not an earlier slow one that finished meanwhile
+                    now.count((top, True)) > seen.count((top, True))
+                    and now.count((top, False)) >= seen.count((top, False))
+                )
+            ):
+                entry = listed[0]
+                if not (entry["text"].startswith(name) or name in entry["row"]):
+                    raise RuntimeError(f"the newest package is not {subgroup['id']}: {entry['text'][:60]}")
+                note(page, trace, "package ready")
+                with page.expect_download(timeout=240_000) as download_info:
+                    page.locator(f"#{entry['id']}").evaluate("e => e.click()")
+                return save_download(download_info.value, subgroup, workdir)
         page.wait_for_timeout(10_000 if generating_seen else 2000)
     trace.append(
         {"step": "export list after waiting", "entries": [[e["ready"], e["text"][:40], e["row"][-40:]] for e in listed]}
@@ -534,8 +550,7 @@ def main(limit: int = 20, budget_minutes: float = 50, only: list[str] | None = N
     Exit 0: every selected subgroup has an outcome (landed, or reported: no data, too large,
     needs territory parts, failed this time; failures are retried by the next run and listed
     as an error annotation, while the landed ones go on to Bronze). Exit 2: the time budget
-    ended the run with subgroups not yet visited (the next run resumes). Exit 1: the run had
-    to stop (an earlier package of the account never finishes generating)."""
+    ended the run with subgroups not yet visited (the next run resumes)."""
     global HARD_DEADLINE
     started = time.monotonic()
     deadline = started + budget_minutes * 60
@@ -551,7 +566,6 @@ def main(limit: int = 20, budget_minutes: float = 50, only: list[str] | None = N
         "needs_split": [],
         "unfinished": [],
         "failed": [],
-        "stopped": None,
     }
     visited = 0
     ensure_browser()
@@ -584,22 +598,18 @@ def main(limit: int = 20, budget_minutes: float = 50, only: list[str] | None = N
             except OutOfTime:
                 summary["unfinished"].append([subgroup["id"], None])
                 break
-            except PackagesStuck as exc:
-                summary["stopped"] = str(exc)
-                break
             except Exception as exc:  # one subgroup's failure is recorded; the run goes on
                 summary["failed"].append([subgroup["id"], f"{type(exc).__name__}: {str(exc)[:200]}", trace[-2:]])
                 visited += 1
             time.sleep(PAUSE_SECONDS)
         browser.close()
     summary["not_visited"] = len(todo) - visited
+    summary["stuck_packages"] = STUCK
     summary["minutes"] = round((time.monotonic() - started) / 60)
-    annotate("error" if summary["failed"] or summary["stopped"] else "notice", "gus_bdl web export", summary)
+    annotate("error" if summary["failed"] else "notice", "gus_bdl web export", summary)
     step_summary(
         "## gus_bdl · web export\n\n"
         + "\n".join(f"- {k}: {len(v) if isinstance(v, list) else v}" for k, v in summary.items())
         + "\n"
     )
-    if summary["stopped"]:
-        return 1
     return 2 if summary["not_visited"] else 0
