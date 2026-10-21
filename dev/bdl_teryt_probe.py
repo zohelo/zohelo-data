@@ -45,7 +45,8 @@ MENU_JS = """() => [...document.querySelectorAll('li, a, span')]
   .filter(e => (e.offsetWidth || e.offsetHeight) && /csv|xls|eksport|export|pobierz/i.test(e.textContent || ''))
   .map(e => [e.tagName, e.id, (e.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 60)]).slice(0, 20)"""
 
-out = {"subgroup": SID}
+out = {"subgroup": SID, "chunk": CHUNK}
+START = __import__("time").monotonic()
 try:
     from playwright.sync_api import sync_playwright
 
@@ -130,6 +131,10 @@ try:
             out["zip"]["rows"] = len(lines)
             out["zip"]["head"] = lines[:3]
         browser.close()
+    out["seconds"] = round(__import__("time").monotonic() - START)
+    out.pop("teryt_layouts", None)
+    out.pop("menu", None)
+    out.pop("table_text", None)
     annotate("notice", "bdl teryt probe", out)
 except Exception:
     out["traceback"] = traceback.format_exc()[-600:]
