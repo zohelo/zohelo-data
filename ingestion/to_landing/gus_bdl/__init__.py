@@ -5,7 +5,8 @@ landing.extract   metadata.py: variables of every subgroup with data, as API pag
                   the filter selects subgroups (globs); "units" in the filter also lands the unit list.
                   "web" in the filter runs web_export.py instead: subgroups missing from Landing,
                   exported from the website (optionally only the P#### listed; "split" also
-                  exports subgroups that need territory parts)
+                  exports subgroups that need territory parts); "web packages" runs
+                  web_packages.py: collect ready whole-subgroup packages, request missing ones
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from __future__ import annotations
 def _inspect(p) -> int:
     from ingestion.to_landing.gus_bdl import inspect
 
-    tokens = [x for x in (p.filter or "").replace(",", " ").split() if x not in ("web", "split")]
+    tokens = [x for x in (p.filter or "").replace(",", " ").split() if x not in ("web", "split", "packages")]
     return inspect.main([x for x in tokens if x])
 
 
@@ -22,6 +23,12 @@ def _extract(p) -> int:
     from ingestion.to_landing.gus_bdl import metadata
 
     tokens = [x for x in (p.filter or "").replace(",", " ").split() if x]
+    if "web" in tokens and "packages" in tokens:
+        from ingestion.to_landing.gus_bdl import web_packages
+
+        if p.parallel_jobs > 1:
+            raise SystemExit("the BDL website export runs as one job (parallel_jobs 1)")
+        return web_packages.main(budget_minutes=min(p.budget_minutes, 330))
     if "web" in tokens:
         from ingestion.to_landing.gus_bdl import web_export
 
