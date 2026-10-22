@@ -22,7 +22,20 @@ WARSAW = ZoneInfo("Europe/Warsaw")
 WINDOWS = ((1, 8), (15 * 60, 450), (12 * 3600, 4800))  # (seconds, max requests), below the key's limits
 
 
+class BudgetSpent(RuntimeError):
+    """Waiting for the key's limit would pass the caller's deadline: stop, the next run resumes."""
+
+
 class Bdl:
+    _shared: Bdl | None = None
+
+    @classmethod
+    def shared(cls) -> Bdl:
+        """The process's one client, so every module's requests count against the same limits."""
+        if cls._shared is None:
+            cls._shared = cls()
+        return cls._shared
+
     def __init__(self, key: str | None = None):
         self.session = requests.Session()
         key = key if key is not None else os.environ.get("GUS_BDL_API_KEY", "")
@@ -31,6 +44,7 @@ class Bdl:
         self.session.headers["Accept"] = "application/json"
         self.calls: deque[float] = deque()
         self.requests = 0
+        self.deadline: float | None = None  # monotonic; a wait past it raises BudgetSpent
 
     def _wait(self) -> None:
         while True:
@@ -44,6 +58,8 @@ class Bdl:
                     delay = max(delay, span - (now - recent[0]) + 0.05)
             if delay <= 0:
                 return
+            if self.deadline is not None and now + delay > self.deadline:
+                raise BudgetSpent(f"the API limit frees up in {delay / 60:.0f} min, after the run's deadline")
             time.sleep(min(delay, 60))
 
     def get(self, path: str, **params: Any) -> dict:

@@ -6,16 +6,20 @@ landing.extract   metadata.py: variables of every subgroup with data, as API pag
                   "web" in the filter runs web_export.py instead: subgroups missing from Landing,
                   exported from the website (optionally only the P#### listed; "split" also
                   exports subgroups that need territory parts); "web packages" runs
-                  web_packages.py: collect ready whole-subgroup packages, request missing ones
+                  web_packages.py: collect ready whole-subgroup packages, request missing ones;
+                  "api P#### …" runs refresh.py --initial for the listed subgroups (#889), then
+                  metadata.py for them
 """
 
 from __future__ import annotations
+
+import time
 
 
 def _inspect(p) -> int:
     from ingestion.to_landing.gus_bdl import inspect
 
-    tokens = [x for x in (p.filter or "").replace(",", " ").split() if x not in ("web", "split", "packages")]
+    tokens = [x for x in (p.filter or "").replace(",", " ").split() if x not in ("web", "split", "packages", "api")]
     return inspect.main([x for x in tokens if x])
 
 
@@ -23,6 +27,18 @@ def _extract(p) -> int:
     from ingestion.to_landing.gus_bdl import metadata
 
     tokens = [x for x in (p.filter or "").replace(",", " ").split() if x]
+    if "api" in tokens:  # owner decision #889: the listed subgroups through the API, then their variables
+        from ingestion.to_landing.gus_bdl import metadata, refresh
+
+        only = [t for t in tokens if t.startswith("P")]
+        if not only:
+            raise SystemExit("'api' needs the subgroups to load (P####)")
+        budget = min(p.budget_minutes, 330)
+        started = time.monotonic()
+        status = refresh.main(["--initial", "--only", *only, "--budget-minutes", str(budget * 0.85)])
+        left = max(budget - (time.monotonic() - started) / 60, 10)
+        meta = metadata.main(["--filter", ",".join(only), "--budget-minutes", str(left)])
+        return status or meta
     if "web" in tokens and "packages" in tokens:
         from ingestion.to_landing.gus_bdl import web_packages
 

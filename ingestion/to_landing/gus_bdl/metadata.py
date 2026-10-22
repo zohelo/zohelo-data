@@ -32,7 +32,7 @@ from typing import Any
 
 from ingestion.common.r2 import get_with_backoff, req, s3
 from ingestion.common.report import annotate, step_summary
-from ingestion.to_landing.gus_bdl.api import Bdl
+from ingestion.to_landing.gus_bdl.api import Bdl, BudgetSpent
 from ingestion.to_landing.gus_bdl.inspect import landing_versions
 
 METADATA = "01_landing/gus_bdl/snapshot/metadata/"
@@ -130,7 +130,8 @@ def main(argv=None) -> int:
         for s, v in data_versions.items()
         if (not patterns or any(fnmatch.fnmatch(s.lower(), p) for p in patterns)) and v not in held.get(s, set())
     )
-    api, outcomes = Bdl(), Counter()
+    api, outcomes = Bdl.shared(), Counter()
+    api.deadline = deadline
     if args.units:
         unit_pages = []
         for level in range(0, 7):
@@ -143,7 +144,11 @@ def main(argv=None) -> int:
         if time.monotonic() > deadline:
             outcomes["not_started_time_budget"] += 1
             continue
-        pages = fetch_pages(api, "/variables", **{"subject-id": subgroup, "lang": "pl"})
+        try:
+            pages = fetch_pages(api, "/variables", **{"subject-id": subgroup, "lang": "pl"})
+        except BudgetSpent:
+            outcomes["not_started_time_budget"] += 1
+            continue
         variables = sum(len(json.loads(body).get("results") or []) for _, body in pages)
         if not args.dry_run:
             write_pages(

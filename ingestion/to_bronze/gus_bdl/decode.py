@@ -135,3 +135,74 @@ def decode_web_export(source: Path, receipt: dict[str, Any], output: Path, memor
     if shifted:
         raise BdlDecodeError(f"{shifted} rows do not match the header (more fields than named, or year not YYYY)")
     return {"rows": rows, "dimensions": dims, "output_bytes": output.stat().st_size}
+
+
+def _timestamp(value: str):
+    from datetime import UTC, datetime
+
+    text = str(value)
+    if len(text) == 16 and text.endswith("Z") and "T" in text:  # YYYYMMDDTHHMMSSZ (API refresh)
+        return datetime.strptime(text, "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
+    return datetime.fromisoformat(text.replace("Z", "+00:00"))
+
+
+def decode_api_page(source: Path, receipt: dict[str, Any], output: Path) -> dict:
+    """One BDL API page (/data/by-variable, landed by to_landing/gus_bdl/refresh.py) → the same Bronze
+    shape as a website export: one row per unit × year of the page's variable. Dimension labels,
+    measure unit and dimension names come from the receipt (stored when the page was landed)."""
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    data = source.read_bytes()
+    if sha256(data).hexdigest() != receipt["sha256"] or len(data) != receipt["size_bytes"]:
+        raise BdlDecodeError("BDL API page does not match its receipt")
+    try:
+        body = json.loads(data)
+    except json.JSONDecodeError as exc:
+        raise BdlDecodeError(f"BDL API page is not JSON: {exc}") from exc
+    variable = receipt.get("variable") or {}
+    if not variable.get("id"):
+        raise BdlDecodeError("BDL API receipt has no variable descriptor")
+    dims = json.dumps(receipt.get("dimension_names") or [], ensure_ascii=False, separators=(",", ":"))
+    labels = json.dumps(variable.get("labels") or [], ensure_ascii=False, separators=(",", ":"))
+    ingested = _timestamp(receipt["ingested_at"])
+    rows, n = [], 0
+    for unit in body.get("results") or []:
+        for value in unit.get("values") or []:
+            n += 1
+            year, val = value.get("year"), value.get("val", value.get("value"))
+            if not unit.get("id") or year is None:
+                raise BdlDecodeError(f"BDL API row {n} without unit id or year")
+            rows.append(
+                {
+                    "subgroup_id": receipt["subgroup_id"],
+                    "source_version": receipt.get("version_token"),
+                    "ingested_at": ingested,
+                    "raw_sha256": receipt["sha256"],
+                    "channel": "api",
+                    "part_index": int((receipt.get("part") or {}).get("index", 1)),
+                    "unit_code": str(unit["id"]),
+                    "unit_name": unit.get("name"),
+                    "dimension_names": dims,
+                    "dimension_values": labels,
+                    "variable_id": int(variable["id"]),
+                    "year": str(year),
+                    "value_text": None if val is None else (str(int(val)) if float(val).is_integer() else str(val)),
+                    "measure_unit": variable.get("measure_unit"),
+                    # API attribute id as text (1 = no attribute, dropped); the website export carries its
+                    # label instead, so Silver must not compare attributes across channels
+                    "attribute": None if value.get("attrId") in (None, 1) else str(value.get("attrId")),
+                    "source_row_number": n,
+                }
+            )
+    if not rows:
+        raise BdlEmptyExport("BDL API page has no rows")
+    types = {
+        "VARCHAR": pa.string(),
+        "BIGINT": pa.int64(),
+        "INTEGER": pa.int32(),
+        "TIMESTAMPTZ": pa.timestamp("us", tz="UTC"),
+    }
+    schema = pa.schema([(name, types[kind]) for name, kind in BRONZE_COLUMNS])
+    pq.write_table(pa.Table.from_pylist(rows, schema=schema), output, compression="zstd")
+    return {"rows": len(rows), "output_bytes": output.stat().st_size}
