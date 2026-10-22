@@ -158,15 +158,37 @@ def enabled_next(page):
     raise RuntimeError("no enabled 'Dalej' button after the BDL postback")
 
 
+def signed_in(page) -> bool:
+    try:
+        text = page.locator("body").inner_text(timeout=10_000)
+    except Exception:  # a page mid-navigation has no body yet
+        return False
+    return "Użytkownik:" in text and "Gość" not in text
+
+
 def login(page, email: str, password: str) -> None:
-    page.goto(f"{WEB}/logowanie", wait_until="domcontentloaded", timeout=45_000)
-    page.locator("#ctl00_ContentPlaceHolder_Email").fill(email)
-    page.locator("#ctl00_ContentPlaceHolder_Password").fill(password)
-    page.locator("#ctl00_ContentPlaceHolder_SignIn").click()
-    page.wait_for_timeout(1800)
-    text = page.locator("body").inner_text()
-    if "Gość" in text or "Użytkownik:" not in text:
-        raise RuntimeError("BDL website login failed")
+    """Sign in; the site can take many seconds to answer in the evening (22 Oct), so the
+    result is awaited, and a failed attempt (no signed-in page, or a browser error) is tried
+    again twice. A sign-in that completed late is noticed before the form is filled again."""
+    from playwright.sync_api import Error as PlaywrightError
+
+    for attempt in range(3):
+        try:
+            page.goto(f"{WEB}/logowanie", wait_until="domcontentloaded", timeout=90_000)
+            if signed_in(page):
+                return
+            page.locator("#ctl00_ContentPlaceHolder_Email").fill(email, timeout=60_000)
+            page.locator("#ctl00_ContentPlaceHolder_Password").fill(password, timeout=60_000)
+            page.locator("#ctl00_ContentPlaceHolder_SignIn").click(timeout=60_000)
+            for _ in range(60):  # up to a minute for the signed-in page
+                page.wait_for_timeout(1000)
+                if signed_in(page):
+                    return
+        except PlaywrightError:
+            if attempt == 2:
+                raise
+        page.wait_for_timeout(30_000)
+    raise RuntimeError("BDL website login failed (3 attempts)")
 
 
 DOWNLOAD_IDS = ("ctl00_ContentPlaceHolder_download1", "ctl00_ContentPlaceHolder_download2")
