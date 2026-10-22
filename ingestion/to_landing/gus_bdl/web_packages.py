@@ -47,7 +47,8 @@ PAGER = '[id*="DownloadedSubgroups_FilesList"] .rgNumPart a'
 
 
 def normal(name: str) -> str:
-    return " ".join(name.split()).casefold()
+    """Comparable form of a subgroup name: the first 40 characters, as the list may shorten it."""
+    return " ".join(name.split()).casefold()[:40]
 
 
 def pages(page):
@@ -88,29 +89,35 @@ def built_at(zip_name: str) -> datetime | None:
     return datetime.strptime(match.group(2), "%Y%m%d%H%M%S").replace(tzinfo=WARSAW) if match else None
 
 
-def collect(page, client, bucket, api, wanted: dict[str, dict], tmp: Path, summary: dict) -> set[str]:
-    """Download every ready package on every page; land those of wanted subgroups. Returns
-    the normalised names of packages listed in the last REQUEST_AGAIN_DAYS days."""
+def collect(page, client, bucket, api, wanted: dict[str, dict], tmp: Path, summary: dict, deadline: float) -> set[str]:
+    """Download every ready package that may belong to a wanted subgroup; the ZIP name decides
+    which subgroup it is. Returns the names (normal()) of packages listed in the last
+    REQUEST_AGAIN_DAYS days."""
     recent: set[str] = set()
     since = (datetime.now(UTC) - timedelta(days=REQUEST_AGAIN_DAYS)).date().isoformat()
-    by_name = {normal(s["name"]): sid for sid, s in wanted.items()}
+    names = {normal(s["name"]) for s in wanted.values()}
     for rows in pages(page):
         for row in rows:
             if row["date"] >= since:
                 recent.add(normal(row["name"]))
-            sid = by_name.get(normal(row["name"]))
-            if not row["ready"] or sid is None or sid in summary["landed_ids"]:
-                continue  # only packages of subgroups still missing are downloaded
-            subgroup = wanted[sid]
+            if not row["ready"] or normal(row["name"]) not in names:
+                continue  # only packages that may be a missing subgroup's are downloaded
+            if time.monotonic() > deadline:
+                summary["unfinished"] = True
+                return recent
+            w.check_time()
+            left_ms = max(30_000, int((w.HARD_DEADLINE - time.monotonic()) * 1000))
             try:
-                with page.expect_download(timeout=600_000) as info:
+                with page.expect_download(timeout=min(600_000, left_ms)) as info:
                     page.locator(f"#{row['id']}").evaluate("e => e.click()")
                 download = info.value
                 name = download.suggested_filename
                 match = ZIP_RE.search(name)
-                if not match or f"P{match.group(1)}" != sid:
-                    summary["skipped"].append([row["name"][:40], name, "ZIP name does not match"])
+                sid = f"P{match.group(1)}" if match else None
+                if sid not in wanted or sid in summary["landed_ids"]:
+                    summary["skipped"].append([row["name"][:40], name, "not a missing subgroup's package"])
                     continue
+                subgroup = wanted[sid]
                 version = api.last_update(sid, subgroup["subject"])
                 made = built_at(name)
                 if version and made and made < version:
@@ -118,7 +125,9 @@ def collect(page, client, bucket, api, wanted: dict[str, dict], tmp: Path, summa
                     continue
                 path = tmp / f"{sid}.zip"
                 download.save_as(path)
-                if path.read_bytes()[:2] != b"PK":
+                with path.open("rb") as handle:
+                    magic = handle.read(2)
+                if magic != b"PK":
                     raise RuntimeError("not a ZIP archive")
                 megabytes = round(path.stat().st_size / 1e6, 1)
                 result = {"path": path, "export_file_name": name, "information": subgroup["values"]}
@@ -129,7 +138,7 @@ def collect(page, client, bucket, api, wanted: dict[str, dict], tmp: Path, summa
             except w.OutOfTime:
                 raise
             except Exception as exc:  # one package's failure is recorded; the run goes on
-                summary["failed"].append([sid, f"{type(exc).__name__}: {str(exc)[:160]}"])
+                summary["failed"].append([row["name"][:40], f"{type(exc).__name__}: {str(exc)[:160]}"])
     return recent
 
 
@@ -184,11 +193,12 @@ def main(budget_minutes: float = 50) -> int:
         page.set_default_timeout(120_000)
         w.login(page, req("GUS_BDL_WEB_EMAIL"), req("GUS_BDL_WEB_PASSWORD"))
         try:
-            recent = collect(page, client, bucket, api, wanted, Path(tmp), summary)
+            recent = collect(page, client, bucket, api, wanted, Path(tmp), summary, deadline)
             todo = [s for sid, s in wanted.items() if sid not in summary["landed_ids"]]
             fresh = [s for s in todo if normal(s["name"]) not in recent]
             summary["already_listed"] = len(todo) - len(fresh)
-            request(page, fresh, deadline, summary)
+            if not summary["unfinished"]:
+                request(page, fresh, deadline, summary)
         except w.OutOfTime:
             summary["unfinished"] = True
         browser.close()
