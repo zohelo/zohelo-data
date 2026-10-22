@@ -159,14 +159,21 @@ def enabled_next(page):
 
 
 def login(page, email: str, password: str) -> None:
-    page.goto(f"{WEB}/logowanie", wait_until="domcontentloaded", timeout=45_000)
-    page.locator("#ctl00_ContentPlaceHolder_Email").fill(email)
-    page.locator("#ctl00_ContentPlaceHolder_Password").fill(password)
-    page.locator("#ctl00_ContentPlaceHolder_SignIn").click()
-    page.wait_for_timeout(1800)
-    text = page.locator("body").inner_text()
-    if "Gość" in text or "Użytkownik:" not in text:
-        raise RuntimeError("BDL website login failed")
+    """Sign in; the site can take many seconds to answer in the evening (22 Oct), so the
+    result is awaited, and a failed attempt is tried again twice."""
+    for attempt in range(3):
+        page.goto(f"{WEB}/logowanie", wait_until="domcontentloaded", timeout=90_000)
+        page.locator("#ctl00_ContentPlaceHolder_Email").fill(email)
+        page.locator("#ctl00_ContentPlaceHolder_Password").fill(password)
+        page.locator("#ctl00_ContentPlaceHolder_SignIn").click()
+        for _ in range(60):  # up to a minute for the signed-in page
+            page.wait_for_timeout(1000)
+            text = page.locator("body").inner_text()
+            if "Użytkownik:" in text and "Gość" not in text:
+                return
+        if attempt < 2:
+            page.wait_for_timeout(30_000)
+    raise RuntimeError("BDL website login failed (3 attempts)")
 
 
 DOWNLOAD_IDS = ("ctl00_ContentPlaceHolder_download1", "ctl00_ContentPlaceHolder_download2")
