@@ -170,7 +170,7 @@ def decode_api_page(source: Path, receipt: dict[str, Any], output: Path) -> dict
     for unit in body.get("results") or []:
         for value in unit.get("values") or []:
             n += 1
-            year, val = value.get("year"), value.get("val")
+            year, val = value.get("year"), value.get("val", value.get("value"))
             if not unit.get("id") or year is None:
                 raise BdlDecodeError(f"BDL API row {n} without unit id or year")
             rows.append(
@@ -189,6 +189,8 @@ def decode_api_page(source: Path, receipt: dict[str, Any], output: Path) -> dict
                     "year": str(year),
                     "value_text": None if val is None else (str(int(val)) if float(val).is_integer() else str(val)),
                     "measure_unit": variable.get("measure_unit"),
+                    # API attribute id as text (1 = no attribute, dropped); the website export carries its
+                    # label instead, so Silver must not compare attributes across channels
                     "attribute": None if value.get("attrId") in (None, 1) else str(value.get("attrId")),
                     "source_row_number": n,
                 }

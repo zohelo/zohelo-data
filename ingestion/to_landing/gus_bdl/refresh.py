@@ -9,8 +9,9 @@ subject publishes, page by page (``/data/by-variable``), landed as the exact res
 
   01_landing/gus_bdl/snapshot/data/<P####>/<lastUpdate>__<ingested>__part-NNN.api.json  (+ receipt)
 
-Receipts are written only after every page of the subgroup is in R2, so a stopped run leaves no
-partial version (its unreceipted pages are overwritten by the next run's keys or cleaned as orphans).
+A subgroup's pages are fetched into memory first; a run stopped by its budget stores nothing of
+that subgroup. Receipts are written only after every page is in R2, so a run that dies while
+storing leaves no partial version (its unreceipted pages stay as unreferenced objects, never read).
 Each receipt carries what Bronze needs to read its page alone: the variable's dimension labels
 (n1…n5), measure unit and the subject's dimension names. Subgroups never exported are not loaded
 here (initial load = website export). The shared Bdl client keeps below the key's limits; a time
@@ -34,7 +35,7 @@ from typing import Any
 
 from ingestion.common.r2 import req, s3
 from ingestion.common.report import annotate, step_summary
-from ingestion.to_landing.gus_bdl.api import Bdl, token
+from ingestion.to_landing.gus_bdl.api import Bdl, BudgetSpent, token
 from ingestion.to_landing.gus_bdl.inspect import landing_versions
 
 DATA = "01_landing/gus_bdl/snapshot/data/"
@@ -51,7 +52,7 @@ def variable_descriptor(v: dict[str, Any]) -> dict[str, Any]:
     labels = [v.get(f"n{i}") for i in range(1, 6)]
     return {
         "id": v.get("id"),
-        "labels": [x for x in labels if x],
+        "labels": [x for x in labels if x is not None],
         "measure_unit": v.get("measureUnitName"),
         "level": v.get("level"),
     }
@@ -130,16 +131,21 @@ def main(argv=None) -> int:
     client, bucket = s3(), req("R2_LANDING_BUCKET")
     held = landing_versions(client, bucket)
     check = sorted(args.only) if args.only else todays_share(sorted(held))
-    api, outcomes, refreshed, stale = Bdl(), Counter(), [], []
-    for subgroup in check:
+    api, outcomes, refreshed, stale, without_data = Bdl.shared(), Counter(), [], [], []
+    api.deadline = deadline
+    for position, subgroup in enumerate(check):
         if time.monotonic() > deadline:
             outcomes["not_checked_time_budget"] += 1
             continue
         if subgroup not in held and not args.initial:
             outcomes["not_in_landing_skipped"] += 1  # initial load is the website export
             continue
-        subject = api.get(f"/subjects/{subgroup}", lang="pl")
-        version = token(api.last_update(subgroup, subject))
+        try:
+            subject = api.get(f"/subjects/{subgroup}", lang="pl")
+            version = token(api.last_update(subgroup, subject))
+        except BudgetSpent:
+            outcomes["not_checked_time_budget"] += len(check) - position
+            break
         if subgroup in held and version <= held[subgroup] and held[subgroup] != token(None):
             outcomes["current"] += 1
             continue
@@ -149,9 +155,14 @@ def main(argv=None) -> int:
         if deadline - time.monotonic() < 20 * 60:  # a large subgroup can take most of an hour
             outcomes["stale_not_started_time_budget"] += 1
             continue
-        pages = fetch_subgroup(api, subgroup, subject)
+        try:
+            pages = fetch_subgroup(api, subgroup, subject)
+        except BudgetSpent:  # nothing of this subgroup is stored yet (pages are kept in memory)
+            outcomes["stale_not_started_time_budget"] += 1
+            break
         if not pages:
             outcomes["stale_without_data"] += 1
+            without_data.append(subgroup)
             continue
         land(client, bucket, subgroup, version, subject, pages)
         refreshed.append({"subgroup": subgroup, "version": version, "pages": len(pages)})
@@ -161,6 +172,7 @@ def main(argv=None) -> int:
         "stale": len(stale),
         "stale_sample": stale[:15],
         "refreshed": refreshed[:20],
+        "without_data": without_data,
         "api_requests": api.requests,
         "dry_run": args.dry_run,
         **outcomes,
