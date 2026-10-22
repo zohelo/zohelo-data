@@ -40,7 +40,13 @@ from ingestion.common import bronze_files as bf
 from ingestion.common import entity_tables as et
 from ingestion.common.r2 import catalog, get_with_backoff, req, s3
 from ingestion.common.report import annotate
-from ingestion.to_bronze.gus_bdl.decode import BRONZE_COLUMNS, BdlDecodeError, BdlEmptyExport, decode_web_export
+from ingestion.to_bronze.gus_bdl.decode import (
+    BRONZE_COLUMNS,
+    BdlDecodeError,
+    BdlEmptyExport,
+    decode_api_page,
+    decode_web_export,
+)
 
 ENTITY = "subgroup_id"
 BRONZE = ("bronze", "bdl_observations")
@@ -156,12 +162,13 @@ def work(task: dict[str, Any], paths: dict[str, str], memory: str, tmp_root: str
         if task["need_bronze"]:
             files = []
             for i, part in enumerate(sorted(task["parts"], key=lambda p: int((p.get("part") or {}).get("index", 1)))):
-                raw, part_out = work_dir / f"{i:04d}.zip", work_dir / f"{i:04d}.parquet"
+                api = part.get("channel") == "api"
+                raw, part_out = work_dir / f"{i:04d}.{'json' if api else 'zip'}", work_dir / f"{i:04d}.parquet"
                 bf.download(
                     client, landing, "gus_bdl", part["object"]["key"], part["sha256"], part.get("size_bytes"), raw
                 )
                 try:
-                    decode_web_export(raw, part, part_out)
+                    (decode_api_page if api else decode_web_export)(raw, part, part_out)
                 except BdlEmptyExport:  # its territories have no data: an empty part, not an error
                     raw.unlink()
                     continue
