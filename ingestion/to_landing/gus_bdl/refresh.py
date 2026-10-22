@@ -33,6 +33,8 @@ import os
 import time
 from typing import Any
 
+import requests
+
 from ingestion.common.r2 import req, s3
 from ingestion.common.report import annotate, step_summary
 from ingestion.to_landing.gus_bdl.api import Bdl, BudgetSpent, token
@@ -131,7 +133,7 @@ def main(argv=None) -> int:
     client, bucket = s3(), req("R2_LANDING_BUCKET")
     held = landing_versions(client, bucket)
     check = sorted(args.only) if args.only else todays_share(sorted(held))
-    api, outcomes, refreshed, stale, without_data = Bdl.shared(), Counter(), [], [], []
+    api, outcomes, refreshed, stale, without_data, gone = Bdl.shared(), Counter(), [], [], [], []
     api.deadline = deadline
     for position, subgroup in enumerate(check):
         if time.monotonic() > deadline:
@@ -146,6 +148,12 @@ def main(argv=None) -> int:
         except BudgetSpent:
             outcomes["not_checked_time_budget"] += len(check) - position
             break
+        except requests.HTTPError as exc:
+            if exc.response is None or exc.response.status_code != 404:
+                raise
+            outcomes["gone_at_source"] += 1  # the API no longer has this subgroup (P1342, 22 Oct)
+            gone.append(subgroup)
+            continue
         if subgroup in held and version <= held[subgroup] and held[subgroup] != token(None):
             outcomes["current"] += 1
             continue
@@ -173,6 +181,7 @@ def main(argv=None) -> int:
         "stale_sample": stale[:15],
         "refreshed": refreshed[:20],
         "without_data": without_data,
+        "gone_at_source": gone,
         "api_requests": api.requests,
         "dry_run": args.dry_run,
         **outcomes,
