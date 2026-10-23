@@ -27,18 +27,9 @@ def run():
     s = requests.Session()
     s.headers["User-Agent"] = x.USER_AGENT
     t0 = time.monotonic()
-    tree = x.get(s, f"{x.WEB}/api_app/wsk/getIndicatorsTree").json()
-    inds = x.indicators(tree)
-    raw, stats, samples_body = [], Counter(), {}
-    for ind in inds:
-        time.sleep(x.PAUSE_SECONDS)
-        body = x.get(s, f"{x.WEB}/api_app/getAggregatesById", id=ind["indicator_id"], czy_pl="true").json()
-        files = x.files_of(ind, body)
-        stats["indicators"] += 1
-        stats["indicators_without_files"] += not files
-        if not files and len(samples_body) < 3:
-            samples_body[ind["indicator_id"]] = json.dumps(body, ensure_ascii=False)[:3000]
-        raw += files
+    raw, stats = x.inventory(s, None, time.monotonic() + 200 * 60)
+    stats = Counter(stats)
+    samples_body = {}
     versions = defaultdict(set)
     for f in raw:
         versions[f["entity"]].add(f["version"])

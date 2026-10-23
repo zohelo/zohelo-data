@@ -53,6 +53,10 @@ FILE_RE = re.compile(r"^[0-9]+(_[0-9]+)+_pl\.zip$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
+class NotFound(RuntimeError):
+    """404: the website lists an indicator or file it does not serve."""
+
+
 def get(session: requests.Session, address: str, **params: Any) -> requests.Response:
     for attempt in range(6):
         try:
@@ -61,6 +65,8 @@ def get(session: requests.Session, address: str, **params: Any) -> requests.Resp
             response = None
         if response is not None and response.status_code == 200:
             return response
+        if response is not None and response.status_code == 404:
+            raise NotFound(f"DBW website 404 for {address} {params or ''}")
         if response is not None and response.status_code not in (429, 500, 502, 503, 504):
             raise RuntimeError(f"DBW website {response.status_code} for {address}: {response.text[:200]}")
         time.sleep(min(60, 5 * 2**attempt))
@@ -123,6 +129,9 @@ def inventory(session: requests.Session, only: set[int] | None, deadline: float)
         time.sleep(PAUSE_SECONDS)
         try:
             body = get(session, f"{WEB}/api_app/getAggregatesById", id=ind["indicator_id"], czy_pl="true").json()
+        except NotFound:  # in the tree, but nothing published for it (seen 24 Oct 2026)
+            stats["indicators_not_found"] += 1
+            continue
         except (RuntimeError, ValueError) as exc:  # one indicator's failure is counted; the run goes on
             stats["indicators_failed"] += 1
             stats.setdefault("indicators_failed_sample", []).append(f"{ind['indicator_id']}: {str(exc)[:120]}")
