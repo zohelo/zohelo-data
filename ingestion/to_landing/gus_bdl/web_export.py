@@ -57,7 +57,9 @@ class OutOfTime(RuntimeError):
 
 
 HARD_DEADLINE = float("inf")  # monotonic; set by main() a little after the time budget
-HARD_MARGIN_SECONDS = 8 * 60  # the job has 25 minutes beyond the budget; one stretch without a check takes up to ~7.5
+HARD_MARGIN_SECONDS = (
+    12 * 60
+)  # the job has 25 min beyond the budget; one stretch without a check (a 10 min download) fits
 
 
 def check_time() -> None:
@@ -436,8 +438,9 @@ def plan_parts(page, information: int) -> list[dict[str, Any]]:
         if label not in labels:
             continue
         set_layout(page, label)
-        values = [value for value, name in unit_items(page) if name not in seen]
-        seen.update(name for _, name in unit_items(page))
+        items = unit_items(page)
+        values = [value for value, name in items if name not in seen]
+        seen.update(name for _, name in items)
         parts += [{"layout": label, "territories": values[i : i + size]} for i in range(0, len(values), size)]
     return parts
 
@@ -613,6 +616,7 @@ def main(
     split: bool = False,
     small_only: bool = False,
     exclude: set[str] | None = None,
+    shard: tuple[int, int] | None = None,
 ) -> int:
     """Export up to `limit` missing subgroups within the time budget.
 
@@ -623,7 +627,8 @@ def main(
 
     small_only: subgroups that offer the background package are left to web_packages.py
     (reported as "package", not waited for); exclude: subgroups another route loads (the API
-    list of #889)."""
+    list of #889); shard (index, count): only the subgroups whose stable hash falls in this
+    job's share, so parallel jobs never work on the same subgroup."""
     global HARD_DEADLINE
     started = time.monotonic()
     deadline = started + budget_minutes * 60
@@ -631,9 +636,10 @@ def main(
     client, bucket = s3(), req("R2_LANDING_BUCKET")
     api = Bdl.shared()
     api.deadline = HARD_DEADLINE
-    todo = [
-        s for s in missing_subgroups(api, landing_versions(client, bucket), only) if s["id"] not in (exclude or set())
-    ]
+    held = landing_versions(client, bucket)
+    todo = [s for s in missing_subgroups(api, held, only) if s["id"] not in (exclude or set())]
+    if shard:
+        todo = [s for s in todo if int(sha256(s["id"].encode()).hexdigest(), 16) % shard[1] == shard[0]]
     todo = todo[:limit]
     summary: dict[str, Any] = {
         "missing": len(todo),

@@ -45,6 +45,7 @@ class Bdl:
         self.calls: deque[float] = deque()
         self.requests = 0
         self.deadline: float | None = None  # monotonic; a wait past it raises BudgetSpent
+        self._subgroups: list[dict] | None = None
 
     def _wait(self) -> None:
         while True:
@@ -77,9 +78,12 @@ class Bdl:
             except (requests.ConnectionError, requests.Timeout):
                 time.sleep(2**attempt)
                 continue
-            if response.status_code == 429:
+            if response.status_code == 429:  # the server's count (other processes within 12 h included)
                 reset = response.headers.get("X-Rate-Limit-Reset") or response.headers.get("Retry-After") or "60"
-                time.sleep(min(max(float(reset) if reset.replace(".", "").isdigit() else 60, 5), 900))
+                pause = min(max(float(reset) if reset.replace(".", "").isdigit() else 60, 5), 900)
+                if self.deadline is not None and time.monotonic() + pause > self.deadline:
+                    raise BudgetSpent(f"the API key's limit is reached (429, reset in {pause:.0f} s)")
+                time.sleep(pause)
                 continue
             if response.status_code >= 500:
                 time.sleep(2**attempt * 2)
@@ -97,16 +101,20 @@ class Bdl:
                 return
             page += 1
 
-    def subgroups(self) -> Iterator[dict]:
-        """Every subject with variables (P####), walking categories → groups → subgroups."""
-        stack = [s["id"] for s in self.pages("/subjects", lang="pl")]
-        while stack:
-            parent = stack.pop()
-            for subject in self.pages("/subjects", lang="pl", **{"parent-id": parent}):
-                if subject.get("hasVariables"):
-                    yield subject
-                if subject.get("children"):
-                    stack.append(subject["id"])
+    def subgroups(self) -> list[dict]:
+        """Every subject with variables (P####), walking categories → groups → subgroups; walked
+        once per client (~400 requests), so the steps of one run share the list."""
+        if self._subgroups is None:
+            found, stack = [], [s["id"] for s in self.pages("/subjects", lang="pl")]
+            while stack:
+                parent = stack.pop()
+                for subject in self.pages("/subjects", lang="pl", **{"parent-id": parent}):
+                    if subject.get("hasVariables"):
+                        found.append(subject)
+                    if subject.get("children"):
+                        stack.append(subject["id"])
+            self._subgroups = found
+        return list(self._subgroups)
 
     def last_update(self, subject_id: str, listed: dict | None = None) -> datetime | None:
         """The subgroup's lastUpdate in UTC (the API reports Warsaw local time without offset).

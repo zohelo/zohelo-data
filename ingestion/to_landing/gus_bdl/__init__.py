@@ -27,7 +27,9 @@ def _inspect(p) -> int:
 
 
 def _initial(p, tokens: list[str]) -> int:
-    """The BDL initial load in one run (owner decision #889; scheduled every 6 h, one browser):
+    """The BDL initial load in one run (owner decisions #889; scheduled every 6 h). With
+    parallel_jobs n (owner, 23 Oct: parallel website sessions, start with 3, up to 10), job 0
+    runs steps 1–4 and jobs 1…n-1 only step 4, each on its own share of the small subgroups:
     1. website packages of the big missing subgroups: collect ready ones, request missing ones;
     2. the listed cheapest subgroups through the API, until the key's 12 h limit;
     3. variables of every subgroup version landed without them (for Silver);
@@ -40,9 +42,9 @@ def _initial(p, tokens: list[str]) -> int:
     from ingestion.to_landing.gus_bdl import metadata, refresh, web_export, web_packages
     from ingestion.to_landing.gus_bdl.api import BudgetSpent
 
-    if p.parallel_jobs > 1:
-        raise SystemExit("the BDL initial load runs as one job (parallel_jobs 1)")
     budget = min(p.budget_minutes, 330)
+    shard = (p.job_index, p.parallel_jobs) if p.parallel_jobs > 1 else None
+    first = p.job_index == 0  # steps 1–3 (packages, API, variables) run in job 0 only: one package list, one API key
     end = time.monotonic() + budget * 60
     left = lambda: max((end - time.monotonic()) / 60, 0)  # noqa: E731
     api_list = [t for t in tokens if t.startswith("P")]
@@ -56,16 +58,28 @@ def _initial(p, tokens: list[str]) -> int:
         except Exception as exc:
             outcome[name] = f"crashed: {type(exc).__name__}: {str(exc)[:200]}"
 
-    step("packages", lambda: web_packages.main(budget_minutes=min(60.0, left() * 0.25)))
-    if api_list and left() > 30:
-        api_minutes = min(150.0, left() * 0.5)
-        step("api", lambda: refresh.main(["--initial", "--only", *api_list, "--budget-minutes", str(api_minutes)]))
-    step("variables", lambda: metadata.main(["--budget-minutes", str(min(20.0, max(left() * 0.1, 5)))]))
+    if first:
+        step("packages", lambda: web_packages.main(budget_minutes=min(60.0, left() * 0.25)))
+        if api_list and left() > 30:
+            api_minutes = min(150.0, left() * 0.5)
+            # every 6 h: ~2,000 requests a run keeps 4 runs a day under the key's 5,000 per 12 h
+            step(
+                "api",
+                lambda: refresh.main(
+                    ["--initial", "--only", *api_list, "--budget-minutes", str(api_minutes), "--max-requests", "2000"]
+                ),
+            )
+        step("variables", lambda: metadata.main(["--budget-minutes", str(min(20.0, max(left() * 0.1, 5)))]))
     if left() > 20:
         step(
             "website_small",
             lambda: web_export.main(
-                limit=10_000, budget_minutes=left() - 12, split=True, small_only=True, exclude=set(api_list)
+                limit=10_000,
+                budget_minutes=left() - 14,
+                split=True,
+                small_only=True,
+                exclude=set(api_list),
+                shard=shard,
             ),
         )
     crashed = [k for k, v in outcome.items() if str(v).startswith("crashed")]
