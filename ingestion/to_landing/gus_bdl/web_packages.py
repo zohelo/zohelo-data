@@ -171,7 +171,8 @@ def main(budget_minutes: float = 50) -> int:
     deadline = started + budget_minutes * 60
     w.HARD_DEADLINE = deadline + w.HARD_MARGIN_SECONDS
     client, bucket = s3(), req("R2_LANDING_BUCKET")
-    api = Bdl()
+    api = Bdl.shared()
+    api.deadline = w.HARD_DEADLINE
     wanted = {s["id"]: s for s in big_missing(api, landing_versions(client, bucket))}
     summary: dict[str, Any] = {
         "big_missing": len(wanted),

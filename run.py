@@ -256,6 +256,8 @@ def plan(source: str, run: str, config: dict) -> list[str]:
     full = source != "platform" and run.startswith("full dataflow")
     if full and "silver_gold.build" not in authorized(config, "platform"):
         activities.remove("silver_gold.build")
+    if full:  # a source's full dataflow is the steps that source has (GUS BDL: no landing.verify, archive.prune yet)
+        activities = [a for a in activities if a in PLATFORM_ACTIVITIES or a in authorized(config, source)]
     platform_run = all(a in PLATFORM_ACTIVITIES for a in activities)
     if platform_run != (source == "platform"):
         raise SystemExit("silver/gold and serving runs use source 'platform'; landing/bronze runs use a data source")
