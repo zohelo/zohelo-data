@@ -128,6 +128,9 @@ def main(argv=None) -> int:
     parser.add_argument(
         "--initial", action="store_true", help="also load listed subgroups never exported (owner decision #889)"
     )
+    parser.add_argument(
+        "--max-requests", type=int, default=0, help="stop starting subgroups after this many API requests (0: no cap)"
+    )
     args = parser.parse_args(argv)
     deadline = time.monotonic() + args.budget_minutes * 60
     client, bucket = s3(), req("R2_LANDING_BUCKET")
@@ -159,6 +162,10 @@ def main(argv=None) -> int:
             continue
         stale.append(subgroup)
         if args.dry_run:
+            continue
+        # a cheap subgroup costs up to ~1,000 requests: start one only if it fits under the cap
+        if args.max_requests and api.requests + 1000 > args.max_requests:
+            outcomes["stale_not_started_request_cap"] += 1
             continue
         if deadline - time.monotonic() < 20 * 60:  # a large subgroup can take most of an hour
             outcomes["stale_not_started_time_budget"] += 1

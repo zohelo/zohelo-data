@@ -84,6 +84,14 @@ def entries(config: dict) -> list[dict]:
     return out
 
 
+def _inputs(entry: dict) -> dict:
+    """Dispatch inputs of a schedule entry; parallel_jobs (1–8) only when declared."""
+    inputs = {"source": entry["source"], "run": entry["run"], "filter": str(entry.get("filter") or "")}
+    if entry.get("parallel_jobs"):
+        inputs["parallel_jobs"] = str(entry["parallel_jobs"])
+    return inputs
+
+
 def validate(config: dict, plan) -> list[str]:
     """Problems with declared schedules (used by the check job and before dispatching)."""
     problems = []
@@ -91,6 +99,8 @@ def validate(config: dict, plan) -> list[str]:
         try:
             parse(str(e.get("cron", "")))
             plan(e["source"], e.get("run", ""), config)
+            if e.get("parallel_jobs") is not None and e["parallel_jobs"] not in range(1, 9):
+                raise ValueError(f"parallel_jobs must be 1-8, not {e['parallel_jobs']!r}")
         except (ValueError, SystemExit, KeyError) as exc:
             problems.append(f"{e.get('source')}: {e.get('run')!r}: {exc}")
     return problems
@@ -279,7 +289,7 @@ def main(config: dict, plan, now: datetime | None = None) -> int:
         for chunk_end, chunk_minutes in chunks:
             if not due(str(e["cron"]), chunk_end, chunk_minutes):
                 continue
-            inputs = {"source": e["source"], "run": e["run"], "filter": str(e.get("filter") or "")}
+            inputs = _inputs(e)
             if not repo or not token:
                 skipped.append({**inputs, "reason": "no GITHUB_REPOSITORY/GITHUB_TOKEN"})
                 break
@@ -300,7 +310,7 @@ def main(config: dict, plan, now: datetime | None = None) -> int:
             again = []
             skipped.append({"catch_up": "not checked", "reason": f"{type(error).__name__}: {error}"[:200]})
         for e in again:
-            inputs = {"source": e["source"], "run": e["run"], "filter": str(e.get("filter") or "")}
+            inputs = _inputs(e)
             reason = _dispatch(repo, token, inputs)
             item = {**inputs, "slot": e["slot"], "runs_since": e["runs_since"]}
             (caught_up if reason is None else skipped).append({**item, **({"reason": reason} if reason else {})})

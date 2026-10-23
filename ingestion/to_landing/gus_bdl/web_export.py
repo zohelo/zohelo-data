@@ -57,7 +57,9 @@ class OutOfTime(RuntimeError):
 
 
 HARD_DEADLINE = float("inf")  # monotonic; set by main() a little after the time budget
-HARD_MARGIN_SECONDS = 8 * 60  # the job has 25 minutes beyond the budget; one stretch without a check takes up to ~7.5
+HARD_MARGIN_SECONDS = (
+    12 * 60
+)  # the job has 25 min beyond the budget; one stretch without a check (a 10 min download) fits
 
 
 def check_time() -> None:
@@ -65,8 +67,32 @@ def check_time() -> None:
         raise OutOfTime("hard time limit reached inside a subgroup")
 
 
+TREE_KEY = "_control/gus_bdl/subjects.json"  # lakehouse bucket; a control file, not source data
+TREE_DAYS = 7
+
+
+def subject_tree(api: Bdl) -> list[dict[str, Any]]:
+    """Every BDL subject (id, name, parentId, hasVariables), walked from the API at most once a
+    week and kept as a control file, so parallel jobs and repeated runs do not spend the key's
+    12 h limit on the same ~400-request walk (#899 review)."""
+    import botocore.exceptions
+
+    client, bucket = s3(), req("R2_LAKEHOUSE_BUCKET")
+    try:
+        held = json.loads(client.get_object(Bucket=bucket, Key=TREE_KEY)["Body"].read())
+        if (datetime.now(UTC) - datetime.fromisoformat(held["walked_at"])).days < TREE_DAYS:
+            return held["subjects"]
+    except (botocore.exceptions.ClientError, KeyError, ValueError):
+        pass
+    keep = ("id", "name", "parentId", "hasVariables", "levels", "years")
+    subjects = [{k: s.get(k) for k in keep} for s in api.all_subjects()]
+    body = {"walked_at": datetime.now(UTC).isoformat(), "subjects": subjects}
+    client.put_object(Bucket=bucket, Key=TREE_KEY, Body=json.dumps(body, ensure_ascii=False).encode())
+    return subjects
+
+
 def entry(api: Bdl, subject: dict[str, Any], parents: dict[str, str]) -> dict[str, Any]:
-    """A subgroup with its export URL (K/G/P numbers)."""
+    """A subgroup with its export URL (K/G/P numbers); parents maps a group to its category."""
     group = subject["parentId"]
     if group not in parents:
         parents[group] = api.get(f"/subjects/{group}", lang="pl")["parentId"]
@@ -81,8 +107,13 @@ def entry(api: Bdl, subject: dict[str, Any], parents: dict[str, str]) -> dict[st
 
 def missing_subgroups(api: Bdl, held: dict[str, str], only: list[str] | None = None) -> list[dict[str, Any]]:
     """Subgroups with no complete Landing version (only: just these, without listing every subgroup)."""
-    parents: dict[str, str] = {}
-    subjects = [api.get(f"/subjects/{sid}", lang="pl") for sid in only] if only else api.subgroups()
+    if only:
+        parents: dict[str, str] = {}
+        subjects = [api.get(f"/subjects/{sid}", lang="pl") for sid in only]
+    else:
+        tree = subject_tree(api)
+        parents = {s["id"]: s["parentId"] for s in tree if not s.get("hasVariables")}
+        subjects = [s for s in tree if s.get("hasVariables")]
     return [entry(api, subject, parents) for subject in subjects if subject["id"] not in held]
 
 
@@ -309,9 +340,10 @@ def generated_export(
     raise RuntimeError(f"BDL package was requested but no new package appeared in {PACKAGE_MINUTES} minutes")
 
 
-CELL_BUDGET = 80_000  # information × units in one table; part of the plan, so a constant
-# 250 × 648 = 162k worked in the administrative layout, 400 × 648 failed (P3442, 21 Oct); the
-# statistical layout's first 246 units (Poland, regions, subregions: dense) failed at 160k.
+CELL_BUDGET = 150_000  # information × units in one table; part of the plan, so a constant
+# 250 × 648 = 162k worked in the administrative layout (21 and 23 Oct, ~4 min a part), 400 × 648
+# failed; the statistical layout's dense first units failed at 160k, but its units that are not
+# in the administrative layout (macroregions, regions, subregions) are few (plan_parts).
 MAX_UNITS = 250
 LAYOUT = "ctl00_ContentPlaceHolder_ukladTeryt"
 UNITS = "ctl00_ContentPlaceHolder_terytList_UnitsList"
@@ -404,21 +436,52 @@ def table_export(page, subgroup: dict[str, Any], workdir: Path, trace: list, ste
     if not option.is_visible():
         page.get_by_text(re.compile(r"^(Eksport|Export)$", re.IGNORECASE)).first.click()
         option.wait_for(state="visible", timeout=15_000)
-    with page.expect_download(timeout=240_000) as download_info:
+    with page.expect_download(timeout=600_000) as download_info:  # a 250-unit part takes ~4 min (23 Oct)
         option.click(no_wait_after=True)
     return save_download(download_info.value, subgroup, workdir, stem)
 
 
+ADMINISTRATIVE = "Układ administracyjny"
+
+
+def unit_items(page) -> list[tuple[str, str]]:
+    """(value, visible name) of every unit listed in the current layout."""
+    return page.evaluate(
+        f"""() => {{ const it = window.$find('{UNITS}').get_items();
+        return Array.from({{length: it.get_count()}}, (_, i) =>
+            [String(it.getItem(i).get_value()), it.getItem(i).get_text().trim()]); }}"""
+    )
+
+
 def plan_parts(page, information: int) -> list[dict[str, Any]]:
-    """Territory parts of a subgroup too large for one table: every layout's units in chunks
-    of at most CELL_BUDGET / information units (overlapping layouts collapse in Silver)."""
+    """Territory parts of a subgroup too large for one table, in chunks of at most
+    CELL_BUDGET / information units: every unit of the administrative layout, then only the
+    units of the other layouts (statistical, functional) not already listed by name — the
+    other layouts repeat Poland, voivodeships, powiats and gminas, and a part takes ~4 min."""
     size = max(1, min(MAX_UNITS, CELL_BUDGET // max(1, information)))
+    labels = layouts(page)
+    order = [ADMINISTRATIVE] + [label for label in labels if label != ADMINISTRATIVE]
+    seen: set[str] = set()
     parts = []
-    for label in layouts(page):
+    for label in order:
+        if label not in labels:
+            continue
         set_layout(page, label)
-        values = unit_values(page)
+        items = unit_items(page)
+        values = [value for value, name in items if name not in seen]
+        seen.update(name for _, name in items)
         parts += [{"layout": label, "territories": values[i : i + size]} for i in range(0, len(values), size)]
     return parts
+
+
+def back_to_territories(page) -> None:
+    """The territories page of the current dimension selection, with no units selected
+    (re-entry between parts takes seconds; selecting every dimension again took a minute)."""
+    page.goto(f"{WEB}/dane/podgrup/teryt", wait_until="domcontentloaded", timeout=90_000)
+    settle(page)
+    if page.evaluate(f"() => window.$find('{SELECTED}')?.get_items?.()?.get_count?.() || 0"):
+        page.locator("button.rlbTransferAllTo").first.click()
+        settle(page)
 
 
 def export(
@@ -430,6 +493,7 @@ def export(
     land_part,
     deadline: float,
     split_allowed: bool = True,
+    small_only: bool = False,
 ) -> dict[str, Any]:
     """Export one subgroup, landing each file as it is downloaded (land_part(result, index, total, selection)).
 
@@ -440,11 +504,13 @@ def export(
     Without split_allowed a refused whole table is reported (needs_split) instead of split.
     Returns {"status": "downloaded" | "too_large" | "no_data" | "unfinished" | "needs_split",
     "information", "parts"}."""
-    seen = settled_exports(page)
+    seen = [] if small_only else settled_exports(page)
     information = select_dimensions(page, subgroup, trace)
     if not information:
         return {"status": "no_data", "information": information}
     whole = {"kind": "download", "layout": None, "territories": ["all"], "dimensions": {}}
+    if small_only and download_button(page) is not None:
+        return {"status": "package", "information": information}
     if download_button(page) is not None:
         path, name = generated_export(page, subgroup, workdir, trace, seen)
         land_part({"path": path, "export_file_name": name, "information": information}, 1, 1, whole)
@@ -482,20 +548,26 @@ def export(
         if time.monotonic() > deadline:
             return {"status": "unfinished", "information": information, "parts": total}
         check_time()
-        for attempt in (1, 2):  # the error page says the server may be overloaded: one retry after a pause
+        from playwright.sync_api import TimeoutError as PlaywrightTimeout
+
+        for attempt in (1, 2):  # a server error or a slow table: one retry after a pause
             if not fresh:
-                select_dimensions(page, subgroup, trace)
-                to_territories(page)
+                if attempt == 2:  # after an error page the selection may be gone: select again
+                    select_dimensions(page, subgroup, trace)
+                    to_territories(page)
+                else:
+                    back_to_territories(page)
             set_layout(page, part["layout"])
             select_units(page, part["territories"])
             fresh = False
             try:
                 path, name = table_export(page, subgroup, workdir, trace, f"{subgroup['id']}-{index:03d}")
                 break
-            except RuntimeError as exc:
-                if attempt == 2 or "BDL error page" not in str(exc):
+            except (RuntimeError, PlaywrightTimeout) as exc:
+                retryable = isinstance(exc, PlaywrightTimeout) or "BDL error page" in str(exc)
+                if attempt == 2 or not retryable:
                     raise RuntimeError(f"part {index} of {total} ({part['layout']}): {exc}") from exc
-                note(page, trace, f"part {index}: server error, retrying after a pause")
+                note(page, trace, f"part {index}: {type(exc).__name__}, retrying after a pause")
                 page.wait_for_timeout(60_000)
         land_part(
             {"path": path, "export_file_name": name, "information": information},
@@ -566,26 +638,45 @@ def land(
     return key
 
 
-def main(limit: int = 20, budget_minutes: float = 50, only: list[str] | None = None, split: bool = False) -> int:
+def main(
+    limit: int = 20,
+    budget_minutes: float = 50,
+    only: list[str] | None = None,
+    split: bool = False,
+    small_only: bool = False,
+    exclude: set[str] | None = None,
+    shard: tuple[int, int] | None = None,
+) -> int:
     """Export up to `limit` missing subgroups within the time budget.
 
     Exit 0: every selected subgroup has an outcome (landed, or reported: no data, too large,
     needs territory parts, failed this time; failures are retried by the next run and listed
     as an error annotation, while the landed ones go on to Bronze). Exit 2: the time budget
-    ended the run with subgroups not yet visited (the next run resumes)."""
+    ended the run with subgroups not yet visited (the next run resumes).
+
+    small_only: subgroups that offer the background package are left to web_packages.py
+    (reported as "package", not waited for); exclude: subgroups another route loads (the API
+    list of #889); shard (index, count): only the subgroups whose stable hash falls in this
+    job's share, so parallel jobs never work on the same subgroup."""
     global HARD_DEADLINE
     started = time.monotonic()
     deadline = started + budget_minutes * 60
     HARD_DEADLINE = deadline + HARD_MARGIN_SECONDS
     client, bucket = s3(), req("R2_LANDING_BUCKET")
-    api = Bdl()
-    todo = missing_subgroups(api, landing_versions(client, bucket), only)[:limit]
+    api = Bdl.shared()
+    api.deadline = HARD_DEADLINE
+    held = landing_versions(client, bucket)
+    todo = [s for s in missing_subgroups(api, held, only) if s["id"] not in (exclude or set())]
+    if shard:
+        todo = [s for s in todo if int(sha256(s["id"].encode()).hexdigest(), 16) % shard[1] == shard[0]]
+    todo = todo[:limit]
     summary: dict[str, Any] = {
         "missing": len(todo),
         "landed": [],
         "too_large": [],
         "no_data": [],
         "needs_split": [],
+        "package": [],
         "unfinished": [],
         "failed": [],
     }
@@ -610,7 +701,7 @@ def main(limit: int = 20, budget_minutes: float = 50, only: list[str] | None = N
                 def land_part(result, index, total, selection, subgroup=subgroup, version=version):
                     land(client, bucket, subgroup, version, result, index, total, selection)
 
-                result = export(page, subgroup, Path(tmp), trace, landed, land_part, deadline, split)
+                result = export(page, subgroup, Path(tmp), trace, landed, land_part, deadline, split, small_only)
                 if result["status"] == "downloaded":
                     seconds = round(time.monotonic() - began)
                     summary["landed"].append([subgroup["id"], result["information"], result["parts"], seconds])

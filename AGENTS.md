@@ -109,7 +109,10 @@ in `ingestion/sources/<source>.yaml`. Landing layout and rules: docs/landing.md.
 - Eurostat: Landing activities (11 October 2026) and Bronze build (12 October 2026).
   Comext (DS-*) is out of scope.
 - GUS BDL: agreed approach 13 October 2026 (subgroup entity, website export for the
-  initial load with one route and no IP rotation, API refresh of changed subgroups).
+  initial load, API refresh of changed subgroups). Owner decisions 22–23 October 2026 (#889):
+  the cheapest ~100 subgroups via the API; the rest from the website, with parallel website
+  sessions (separate GitHub jobs, one account; start with 3, up to 10, scaled by measured
+  part times and error rates). No VPNs.
 - A source's `activities:` list, merged to `main`, is its authorization. Claude adds
   sources and activities through pull requests under the Mandate.
 - Claude may schedule authorized activities (see Workflows and activities).
