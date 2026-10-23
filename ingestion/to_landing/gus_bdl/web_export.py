@@ -340,10 +340,10 @@ def generated_export(
     raise RuntimeError(f"BDL package was requested but no new package appeared in {PACKAGE_MINUTES} minutes")
 
 
-CELL_BUDGET = 150_000  # information × units in one table; part of the plan, so a constant
+CELL_BUDGET = 80_000  # information × units in one table; part of the plan, so a constant
 # 250 × 648 = 162k worked in the administrative layout (21 and 23 Oct, ~4 min a part), 400 × 648
-# failed; the statistical layout's dense first units failed at 160k, but its units that are not
-# in the administrative layout (macroregions, regions, subregions) are few (plan_parts).
+# failed; with 3–6 parallel sessions the dense first parts (Poland, voivodeships) failed at 150k
+# (P4013, P1775, P3438, 23 Oct); 80k parts worked on 21 Oct.
 MAX_UNITS = 250
 LAYOUT = "ctl00_ContentPlaceHolder_ukladTeryt"
 UNITS = "ctl00_ContentPlaceHolder_terytList_UnitsList"
