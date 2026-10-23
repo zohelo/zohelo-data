@@ -58,7 +58,8 @@ def _initial(p, tokens: list[str]) -> int:
     parallel_jobs n (owner, 23 Oct: parallel website sessions, start with 3, up to 10), job 0
     runs steps 1–4 and jobs 1…n-1 only step 4, each on its own share of the small subgroups:
     1. website packages of the big missing subgroups: collect ready ones, request missing ones;
-    2. the listed cheapest subgroups through the API, until the key's 12 h limit;
+    2. once per 12 h: the incremental API refresh of changed subgroups already held (a third of
+       them checked a day), then the listed cheapest subgroups through the API;
     3. variables of every subgroup version landed without them (for Silver);
     4. the small missing subgroups from the website (whole table, else territory parts),
        with the rest of the time; parts land as they download, so the next run resumes.
@@ -67,7 +68,7 @@ def _initial(p, tokens: list[str]) -> int:
     and Bronze/Silver must still load what landed."""
     from ingestion.common.report import annotate
     from ingestion.to_landing.gus_bdl import metadata, refresh, web_export, web_packages
-    from ingestion.to_landing.gus_bdl.api import BudgetSpent
+    from ingestion.to_landing.gus_bdl.api import Bdl, BudgetSpent
 
     budget = min(p.budget_minutes, 330)
     shard = (p.job_index, p.parallel_jobs) if p.parallel_jobs > 1 else None
@@ -92,15 +93,31 @@ def _initial(p, tokens: list[str]) -> int:
             window = _api_window_open()
         except Exception as exc:  # the control file unreadable: skip the API step this run
             window, outcome["api"] = False, f"skipped: {type(exc).__name__}"
-        if api_list and left() > 30 and window:
+        if left() > 30 and window:
+            # Once per 12 h, ≤3,000 requests (each call counts its own and estimates a subgroup's cost
+            # before loading it), plus ~400 for the rest of the two runs in a 12 h window: under the
+            # key's 5,000. First the scheduled incremental refresh (owner, 24 Oct): a sixth of the held
+            # subgroups checked, changed ones reloaded whole if they cost ≤1,000 requests (bigger ones
+            # go to the website packages); then the initial API list.
             api_minutes = min(150.0, left() * 0.5)
-            # ≤3,000 requests, plus ~400 for the rest of the two runs in a 12 h window: under 5,000
+            api_end = time.monotonic() + api_minutes * 60
+            api_left = lambda: str(max((api_end - time.monotonic()) / 60, 1))  # noqa: E731
+            step_base = Bdl.shared().requests
+            # never 0: refresh reads --max-requests 0 as "no cap"
+            api_rest = lambda: str(max(3000 - (Bdl.shared().requests - step_base), 1))  # noqa: E731
             step(
-                "api",
+                "api_incremental",
                 lambda: refresh.main(
-                    ["--initial", "--only", *api_list, "--budget-minutes", str(api_minutes), "--max-requests", "3000"]
+                    ["--budget-minutes", api_left(), "--max-requests", "2000", "--max-subgroup-requests", "1000"]
                 ),
             )
+            if api_list:
+                step(
+                    "api_initial",
+                    lambda: refresh.main(
+                        ["--initial", "--only", *api_list, "--budget-minutes", api_left(), "--max-requests", api_rest()]
+                    ),
+                )
         step("variables", lambda: metadata.main(["--budget-minutes", str(min(20.0, max(left() * 0.1, 5)))]))
     if left() > 20:
         step(

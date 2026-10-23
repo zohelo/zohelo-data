@@ -29,6 +29,7 @@ from collections import Counter
 from datetime import UTC, datetime
 from hashlib import sha256
 import json
+import math
 import os
 import time
 from typing import Any
@@ -41,13 +42,44 @@ from ingestion.to_landing.gus_bdl.api import Bdl, BudgetSpent, token
 from ingestion.to_landing.gus_bdl.inspect import landing_versions
 
 DATA = "01_landing/gus_bdl/snapshot/data/"
-CHECK_SHARE = 3  # each subgroup is checked every CHECK_SHARE days
+CHECK_SHARE = 6  # one share per 12 h slot: each subgroup is checked every 3 days
+STALE_BIG_KEY = "_control/gus_bdl/stale_big.json"  # lakehouse bucket: changed subgroups too big for the API
 
 
-def todays_share(subgroups: list[str], day: int | None = None) -> list[str]:
-    """The subgroups checked today: a stable third by hash, rotating daily."""
-    day = datetime.now(UTC).timetuple().tm_yday if day is None else day
-    return [s for s in subgroups if int(sha256(s.encode()).hexdigest(), 16) % CHECK_SHARE == day % CHECK_SHARE]
+def todays_share(subgroups: list[str], slot: int | None = None) -> list[str]:
+    """The subgroups checked in this 12 h slot: a stable sixth by hash, rotating every 12 h."""
+    now = datetime.now(UTC)
+    slot = now.timetuple().tm_yday * 2 + (now.hour >= 12) if slot is None else slot
+    return [s for s in subgroups if int(sha256(s.encode()).hexdigest(), 16) % CHECK_SHARE == slot % CHECK_SHARE]
+
+
+def unit_counts(api: Bdl) -> dict[int, int]:
+    """Territorial units per level (7 requests, once per client)."""
+    if not hasattr(api, "_unit_counts"):
+        api._unit_counts = {
+            lvl: api.get("/units", level=lvl, **{"page-size": 1}).get("totalRecords") or 0 for lvl in range(7)
+        }
+    return api._unit_counts
+
+
+def estimated_requests(api: Bdl, subgroup: str, subject: dict[str, Any]) -> int:
+    """Requests a whole API load of the subgroup costs: variable pages + variables × data pages per level."""
+    variables = api.get("/variables", **{"subject-id": subgroup, "page-size": 1}).get("totalRecords") or 0
+    levels = sorted({int(x) for x in subject.get("levels") or range(0, 7)})
+    units = unit_counts(api)
+    return math.ceil(variables / 100) + variables * sum(math.ceil(units[lvl] / 100) for lvl in levels)
+
+
+def note_stale_big(changed: list[str], current: list[str]) -> None:
+    """Keep the list of changed subgroups too big for the API (web_packages requests their
+    packages); subgroups found current again leave the list."""
+    client, bucket = s3(), req("R2_LAKEHOUSE_BUCKET")
+    try:
+        held = set(json.loads(client.get_object(Bucket=bucket, Key=STALE_BIG_KEY)["Body"].read())["subgroups"])
+    except Exception:  # first time, or unreadable: start a new list
+        held = set()
+    body = {"updated_at": datetime.now(UTC).isoformat(), "subgroups": sorted((held | set(changed)) - set(current))}
+    client.put_object(Bucket=bucket, Key=STALE_BIG_KEY, Body=json.dumps(body).encode())
 
 
 def variable_descriptor(v: dict[str, Any]) -> dict[str, Any]:
@@ -128,8 +160,12 @@ def main(argv=None) -> int:
     parser.add_argument(
         "--initial", action="store_true", help="also load listed subgroups never exported (owner decision #889)"
     )
+    parser.add_argument("--max-requests", type=int, default=0, help="requests this call may use (0: no cap)")
     parser.add_argument(
-        "--max-requests", type=int, default=0, help="stop starting subgroups after this many API requests (0: no cap)"
+        "--max-subgroup-requests",
+        type=int,
+        default=0,
+        help="a changed subgroup estimated above this goes to the website packages instead (0: no limit)",
     )
     args = parser.parse_args(argv)
     deadline = time.monotonic() + args.budget_minutes * 60
@@ -138,6 +174,8 @@ def main(argv=None) -> int:
     check = sorted(args.only) if args.only else todays_share(sorted(held))
     api, outcomes, refreshed, stale, without_data, gone = Bdl.shared(), Counter(), [], [], [], []
     api.deadline = deadline
+    base = api.requests  # the cap counts this call's requests only
+    too_big, current = [], []
     for position, subgroup in enumerate(check):
         if time.monotonic() > deadline:
             outcomes["not_checked_time_budget"] += 1
@@ -159,13 +197,22 @@ def main(argv=None) -> int:
             continue
         if subgroup in held and version <= held[subgroup] and held[subgroup] != token(None):
             outcomes["current"] += 1
+            current.append(subgroup)
             continue
         stale.append(subgroup)
         if args.dry_run:
             continue
-        # a cheap subgroup costs up to ~1,000 requests: start one only if it fits under the cap
-        if args.max_requests and api.requests + 1000 > args.max_requests:
-            outcomes["stale_not_started_request_cap"] += 1
+        try:
+            cost = estimated_requests(api, subgroup, subject)
+        except BudgetSpent:
+            outcomes["stale_not_started_time_budget"] += 1
+            break
+        if args.max_subgroup_requests and cost > args.max_subgroup_requests:
+            outcomes["stale_too_big_for_api"] += 1  # its website package is requested instead
+            too_big.append(subgroup)
+            continue
+        if args.max_requests and api.requests - base + cost > args.max_requests:
+            outcomes["stale_not_started_request_cap"] += 1  # a later run (another share) takes it
             continue
         if deadline - time.monotonic() < 20 * 60:  # a large subgroup can take most of an hour
             outcomes["stale_not_started_time_budget"] += 1
@@ -188,11 +235,17 @@ def main(argv=None) -> int:
         "stale_sample": stale[:15],
         "refreshed": refreshed[:20],
         "without_data": without_data,
+        "too_big_for_api": too_big,
         "gone_at_source": gone,
         "api_requests": api.requests,
         "dry_run": args.dry_run,
         **outcomes,
     }
+    if not args.dry_run and not args.initial:
+        try:
+            note_stale_big(too_big, current)
+        except Exception as exc:
+            summary["stale_big_list"] = f"not saved: {type(exc).__name__}"
     print(json.dumps(summary, sort_keys=True))
     annotate("notice", "gus_bdl landing refresh (API)", summary)
     step_summary(f"## gus_bdl · API refresh\n\n```json\n{json.dumps(summary, indent=2)}\n```\n")
