@@ -27,6 +27,32 @@ def _inspect(p) -> int:
     return inspect.main([x for x in tokens if x])
 
 
+API_RUNS_KEY = "_control/gus_bdl/api_runs.json"  # lakehouse bucket: when the last API step started
+
+
+def _api_window_open() -> bool:
+    """True (and the start recorded) when the last API step started 12 h or more ago: runs every
+    6 h drift with queueing, so a clock-hour rule could put two API steps in one window."""
+    import json
+
+    import botocore.exceptions
+
+    from ingestion.common.r2 import req, s3
+
+    client, bucket = s3(), req("R2_LAKEHOUSE_BUCKET")
+    now = datetime.now(UTC)
+    try:
+        last = datetime.fromisoformat(
+            json.loads(client.get_object(Bucket=bucket, Key=API_RUNS_KEY)["Body"].read())["last_api_at"]
+        )
+        if (now - last).total_seconds() < 12 * 3600:
+            return False
+    except (botocore.exceptions.ClientError, KeyError, ValueError):
+        pass
+    client.put_object(Bucket=bucket, Key=API_RUNS_KEY, Body=json.dumps({"last_api_at": now.isoformat()}).encode())
+    return True
+
+
 def _initial(p, tokens: list[str]) -> int:
     """The BDL initial load in one run (owner decisions #889; scheduled every 6 h). With
     parallel_jobs n (owner, 23 Oct: parallel website sessions, start with 3, up to 10), job 0
@@ -61,9 +87,8 @@ def _initial(p, tokens: list[str]) -> int:
 
     if first:
         step("packages", lambda: web_packages.main(budget_minutes=min(60.0, left() * 0.25)))
-        # the API step only in the 00:20 and 12:20 UTC runs: one per 12 h window of the key
-        api_run = datetime.now(UTC).hour in (0, 1, 12, 13)
-        if api_list and api_run and left() > 30:
+        # at most one API step per 12 h window of the key: the time of the last one is kept
+        if api_list and left() > 30 and _api_window_open():
             api_minutes = min(150.0, left() * 0.5)
             # ≤3,000 requests, plus ~400 for the rest of the two runs in a 12 h window: under 5,000
             step(
