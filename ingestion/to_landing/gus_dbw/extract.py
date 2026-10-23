@@ -121,12 +121,22 @@ def inventory(session: requests.Session, only: set[int] | None, deadline: float)
             stats["indicators_not_listed_time_budget"] += 1
             continue
         time.sleep(PAUSE_SECONDS)
-        body = get(session, f"{WEB}/api_app/getAggregatesById", id=ind["indicator_id"], czy_pl="true").json()
+        try:
+            body = get(session, f"{WEB}/api_app/getAggregatesById", id=ind["indicator_id"], czy_pl="true").json()
+        except (RuntimeError, ValueError) as exc:  # one indicator's failure is counted; the run goes on
+            stats["indicators_failed"] += 1
+            stats.setdefault("indicators_failed_sample", []).append(f"{ind['indicator_id']}: {str(exc)[:120]}")
+            continue
         files = files_of(ind, body)
         stats["indicators"] += 1
         stats["indicators_without_files"] += not files
         found += files
-    unique = {f["entity"]: f for f in found}
+    unique: dict[str, dict] = {}
+    for f in found:  # a file listed twice keeps its newest date
+        if f["entity"] not in unique or f["version"] > unique[f["entity"]]["version"]:
+            unique[f["entity"]] = f
+    if "indicators_failed_sample" in stats:
+        stats["indicators_failed_sample"] = stats["indicators_failed_sample"][:5]
     return sorted(unique.values(), key=lambda f: f["entity"]), dict(stats)
 
 
@@ -178,6 +188,7 @@ def put_new(client, bucket: str, key: str, body: bytes, content_type: str) -> No
 
 def run_load(client, bucket, session, todo: list[dict], held: dict[str, list], deadline: float) -> Counter:
     outcomes: Counter = Counter()
+    failures: list[str] = []
     code_sha = os.environ.get("GITHUB_SHA", "")
     for f in todo:
         if time.monotonic() > deadline:
@@ -185,16 +196,21 @@ def run_load(client, bucket, session, todo: list[dict], held: dict[str, list], d
             continue
         time.sleep(PAUSE_SECONDS)
         address = f"{WEB}/bulk_new/{f['file']}"
-        response = get(session, address)
+        try:
+            response = get(session, address)
+        except RuntimeError as exc:  # one file's failure is counted; the next run tries it again
+            outcomes["failed_download"] += 1
+            failures.append(f"{f['entity']}: {str(exc)[:120]}")
+            continue
         body = response.content
         if body[:2] != b"PK":
             outcomes["not_a_zip"] += 1
+            failures.append(f"{f['entity']}: not a ZIP")
             continue
         digest = sha256(body).hexdigest()
         previous = (held.get(f["entity"]) or [None])[-1]
-        if previous and previous["sha256"] == digest:
-            outcomes["unchanged_bytes"] += 1  # a new date, the same file: nothing to land
-            continue
+        # A new date with the same bytes still lands as the new version (else it would look
+        # stale on every run); the Archive keeps the bytes once and Bronze sees the same recipe.
         ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         key = f"{PREFIX}{f['entity']}/{f['version']}__{ingested}.zip"
         put_new(client, bucket, key, body, "application/zip")
@@ -235,7 +251,10 @@ def run_load(client, bucket, session, todo: list[dict], held: dict[str, list], d
             json.dumps(receipt, ensure_ascii=False, indent=2, sort_keys=True).encode(),
             "application/json",
         )
-        outcomes["landed_new" if not previous else "landed_changed"] += 1
+        same = previous and previous["sha256"] == digest
+        outcomes["landed_new" if not previous else "landed_same_bytes" if same else "landed_changed"] += 1
+    if failures:
+        outcomes["failures_sample"] = failures[:10]  # type: ignore[assignment]
     return outcomes
 
 
@@ -291,8 +310,10 @@ def main(argv=None) -> int:
             outcomes = run_load(client, bucket, session, groups["missing"] + groups["stale"], held, deadline)
             summary.update(outcomes)
             status = 2 if outcomes["not_started_time_budget"] or status else 0
+        if stats.get("indicators_failed") or summary.get("failed_download") or summary.get("not_a_zip"):
+            status = 1  # the rest was done; the failed indicators or files are retried next run
     print(json.dumps(summary, sort_keys=True, default=str))
-    annotate("notice", f"gus_dbw landing {args.mode}", summary)
+    annotate("error" if status == 1 else "notice", f"gus_dbw landing {args.mode}", summary)
     step_summary(f"## gus_dbw · landing {args.mode}\n\n```json\n{json.dumps(summary, indent=2, default=str)}\n```\n")
     return status
 

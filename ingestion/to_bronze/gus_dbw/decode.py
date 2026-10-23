@@ -80,11 +80,15 @@ def decode(source: Path, receipt: dict, output: Path, memory_limit: str = "4GB")
             "quote='\"', null_padding=true, all_varchar=true)",
             [str(csv_path), names],
         )
-        rows, extra = con.execute(
-            f"SELECT count(*), count(*) FILTER (WHERE coalesce(c{len(SOURCE_COLUMNS)}, '') <> '') FROM src"
+        last = len(SOURCE_COLUMNS) - 1  # precyzja: the last named column, always filled
+        rows, extra, short = con.execute(
+            f"SELECT count(*), count(*) FILTER (WHERE coalesce(c{last + 1}, '') <> ''), "
+            f"count(*) FILTER (WHERE c{last} IS NULL) FROM src"
         ).fetchone()
         if extra:
             raise DbwDecodeError(f"{extra} rows have more fields than the header names")
+        if short:
+            raise DbwDecodeError(f"{short} rows have fewer fields than the header names")
         if not rows:
             raise DbwDecodeError("the CSV has no rows")
         target = str(output).replace("'", "''")
@@ -94,6 +98,8 @@ def decode(source: Path, receipt: dict, output: Path, memory_limit: str = "4GB")
             f"TO '{target}' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 1000000)",
             [receipt["entity"], receipt["version_token"], ingested, receipt["sha256"]],
         )
+    except (duckdb.InvalidInputException, duckdb.ConversionException) as exc:  # the file itself
+        raise DbwDecodeError(f"CSV cannot be read: {str(exc)[:400]}") from exc
     except duckdb.Error as exc:
         raise RuntimeError(f"DBW decode could not run: {str(exc)[:400]}") from exc  # retried, not rejected
     finally:
