@@ -103,7 +103,8 @@ def _initial(p, tokens: list[str]) -> int:
             api_end = time.monotonic() + api_minutes * 60
             api_left = lambda: str(max((api_end - time.monotonic()) / 60, 1))  # noqa: E731
             step_base = Bdl.shared().requests
-            api_rest = lambda: str(max(3000 - (Bdl.shared().requests - step_base), 0))  # noqa: E731
+            # never 0: refresh reads --max-requests 0 as "no cap"
+            api_rest = lambda: str(max(3000 - (Bdl.shared().requests - step_base), 1))  # noqa: E731
             step(
                 "api_incremental",
                 lambda: refresh.main(
