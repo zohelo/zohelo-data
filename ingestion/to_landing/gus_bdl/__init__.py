@@ -88,7 +88,11 @@ def _initial(p, tokens: list[str]) -> int:
     if first:
         step("packages", lambda: web_packages.main(budget_minutes=min(60.0, left() * 0.25)))
         # at most one API step per 12 h window of the key: the time of the last one is kept
-        if api_list and left() > 30 and _api_window_open():
+        try:
+            window = _api_window_open()
+        except Exception as exc:  # the control file unreadable: skip the API step this run
+            window, outcome["api"] = False, f"skipped: {type(exc).__name__}"
+        if api_list and left() > 30 and window:
             api_minutes = min(150.0, left() * 0.5)
             # ≤3,000 requests, plus ~400 for the rest of the two runs in a 12 h window: under 5,000
             step(
