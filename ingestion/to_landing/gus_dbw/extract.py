@@ -1,0 +1,301 @@
+#!/usr/bin/env python3
+"""GUS DBW (Dziedzinowe Bazy Wiedzy) Landing: the website's bulk ZIP files.
+
+Route (docs/sources.md, GUS DBW): the DBW website publishes every indicator as bulk CSV ZIP
+files, one per indicator × cross-section × presentation × periodicity (large ones also per
+year), listed with their last update date by the website's own application endpoints:
+
+  /api_app/wsk/getIndicatorsTree               every area → group → indicator
+  /api_app/getAggregatesById?id=<n>&czy_pl=true  an indicator's cross-sections: name, unit,
+                                                  years, last update (YYYY-MM-DD), its ZIP files
+  /bulk_new/<file>.zip                          the ZIP (one semicolon CSV)
+
+That is a bulk feature, so it is the route (extraction order: bulk first). The API
+(api-dbw.stat.gov.pl, 5,000 requests per 12 h) stays for dictionaries.
+
+Entity = one ZIP file (its name without .zip, e.g. ``1000_156_93_4_pl``); version = the last
+update date of its cross-section (``YYYYMMDDT000000Z``). Layout (docs/landing.md):
+``01_landing/gus_dbw/snapshot/data/<entity>/<version>__<ingested>.zip`` + receipt.
+
+Modes:
+  inspect  website inventory vs Landing (current / stale / missing); no downloads
+  load     download missing and stale files (unchanged bytes are not written again)
+  verify   every receipt has its data file (in Landing or in the Archive)
+
+Polite access: one request at a time with a pause, retries with backoff on 429/5xx, an
+identifying User-Agent.
+"""
+
+from __future__ import annotations
+
+import argparse
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
+from hashlib import sha256
+import json
+import os
+import re
+import time
+from typing import Any
+
+import requests
+
+from ingestion.common.r2 import archive_key, archived, get_with_backoff, req, s3
+from ingestion.common.report import annotate, step_summary
+
+SOURCE = "gus_dbw"
+PREFIX = "01_landing/gus_dbw/snapshot/data/"
+WEB = "https://dbw.stat.gov.pl"
+PAUSE_SECONDS = 0.3
+USER_AGENT = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
+FILE_RE = re.compile(r"^[0-9]+(_[0-9]+)+_pl\.zip$")
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def get(session: requests.Session, address: str, **params: Any) -> requests.Response:
+    for attempt in range(6):
+        try:
+            response = session.get(address, params=params or None, timeout=180)
+        except (requests.ConnectionError, requests.Timeout):
+            response = None
+        if response is not None and response.status_code == 200:
+            return response
+        if response is not None and response.status_code not in (429, 500, 502, 503, 504):
+            raise RuntimeError(f"DBW website {response.status_code} for {address}: {response.text[:200]}")
+        time.sleep(min(60, 5 * 2**attempt))
+    raise RuntimeError(f"DBW website kept failing: {address}")
+
+
+def indicators(tree: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Every indicator of the tree (id, name, path of area and group names)."""
+    out, stack = [], [(node, []) for node in tree]
+    while stack:
+        node, path = stack.pop()
+        if node.get("type") == "INDICATOR" and node.get("indicator_id") is not None:
+            out.append({"indicator_id": int(node["indicator_id"]), "name": node.get("name"), "path": path})
+        for child in node.get("children") or []:
+            stack.append((child, [*path, node.get("name")]))
+    unique = {i["indicator_id"]: i for i in out}  # an indicator can sit under several groups
+    return sorted(unique.values(), key=lambda i: i["indicator_id"])
+
+
+def files_of(indicator: dict[str, Any], body: dict[str, Any]) -> list[dict[str, Any]]:
+    """The ZIP files of one indicator with their cross-section's facts and last update."""
+    out = []
+    for row in (body.get("data") or {}).get("table", {}).get("rows") or []:
+        values = [c.get("value") for c in row if isinstance(c, dict) and "value" in c]
+        section = next((c.get("section_id") for c in row if isinstance(c, dict) and "section_id" in c), None)
+        updated = next((v for v in values if isinstance(v, str) and DATE_RE.fullmatch(v)), None)
+        for cell in row:
+            for f in (cell.get("files") if isinstance(cell, dict) else None) or []:
+                name = f.get("filename") or ""
+                if not FILE_RE.fullmatch(name) or not updated:
+                    continue
+                out.append(
+                    {
+                        "entity": name[: -len(".zip")],
+                        "file": name,
+                        "indicator_id": indicator["indicator_id"],
+                        "indicator_name": indicator["name"],
+                        "section_id": section,
+                        "section_name": values[1] if len(values) > 1 else None,
+                        "periodicity": values[2] if len(values) > 2 else None,
+                        "unit": values[3] if len(values) > 3 else None,
+                        "years": values[4] if len(values) > 4 else None,
+                        "updated": updated,
+                        "version": updated.replace("-", "") + "T000000Z",
+                    }
+                )
+    return out
+
+
+def inventory(session: requests.Session, only: set[int] | None, deadline: float) -> tuple[list[dict], dict]:
+    """(files listed by the website, counts). The tree is one request; each indicator one more."""
+    tree = get(session, f"{WEB}/api_app/wsk/getIndicatorsTree").json()
+    found, stats = [], Counter()
+    for ind in indicators(tree):
+        if only and ind["indicator_id"] not in only:
+            continue
+        if time.monotonic() > deadline:
+            stats["indicators_not_listed_time_budget"] += 1
+            continue
+        time.sleep(PAUSE_SECONDS)
+        body = get(session, f"{WEB}/api_app/getAggregatesById", id=ind["indicator_id"], czy_pl="true").json()
+        files = files_of(ind, body)
+        stats["indicators"] += 1
+        stats["indicators_without_files"] += not files
+        found += files
+    unique = {f["entity"]: f for f in found}
+    return sorted(unique.values(), key=lambda f: f["entity"]), dict(stats)
+
+
+def landed(client, bucket: str) -> dict[str, list[dict[str, Any]]]:
+    """Receipts in Landing by entity, newest (version, ingested) last."""
+    keys = []
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=PREFIX):
+        keys += [o["Key"] for o in page.get("Contents", []) if o["Key"].endswith(".receipt.json")]
+
+    def read(key: str) -> dict[str, Any]:
+        return {**json.loads(get_with_backoff(client, bucket, key)), "receipt_key": key}
+
+    out: dict[str, list[dict[str, Any]]] = {}
+    with ThreadPoolExecutor(max_workers=8) as pool:  # R2 throttles larger bursts of reads
+        for body in pool.map(read, keys):
+            out.setdefault(body["entity"], []).append(body)
+    for rows in out.values():
+        rows.sort(key=lambda r: (r["version_token"], r["ingested_at"]))
+    return out
+
+
+def classify(files: list[dict], held: dict[str, list]) -> dict[str, list[dict]]:
+    out: dict[str, list[dict]] = {"current": [], "stale": [], "missing": []}
+    for f in files:
+        rows = held.get(f["entity"])
+        if not rows:
+            out["missing"].append(f)
+        elif rows[-1]["version_token"] < f["version"]:
+            out["stale"].append(f)
+        else:
+            out["current"].append(f)
+    return out
+
+
+def put_new(client, bucket: str, key: str, body: bytes, content_type: str) -> None:
+    """Never overwrite Landing: a key that exists is an error unless the bytes are equal."""
+    digest = sha256(body).hexdigest()
+    try:
+        head = client.head_object(Bucket=bucket, Key=key)
+        if (head.get("Metadata") or {}).get("sha256") == digest:
+            return
+        raise RuntimeError(f"Landing key exists with different bytes: {key}")
+    except client.exceptions.ClientError:
+        pass
+    client.put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type, Metadata={"sha256": digest})
+    if (client.head_object(Bucket=bucket, Key=key).get("Metadata") or {}).get("sha256") != digest:
+        raise RuntimeError(f"Landing write could not be verified: {key}")
+
+
+def run_load(client, bucket, session, todo: list[dict], held: dict[str, list], deadline: float) -> Counter:
+    outcomes: Counter = Counter()
+    code_sha = os.environ.get("GITHUB_SHA", "")
+    for f in todo:
+        if time.monotonic() > deadline:
+            outcomes["not_started_time_budget"] += 1
+            continue
+        time.sleep(PAUSE_SECONDS)
+        address = f"{WEB}/bulk_new/{f['file']}"
+        response = get(session, address)
+        body = response.content
+        if body[:2] != b"PK":
+            outcomes["not_a_zip"] += 1
+            continue
+        digest = sha256(body).hexdigest()
+        previous = (held.get(f["entity"]) or [None])[-1]
+        if previous and previous["sha256"] == digest:
+            outcomes["unchanged_bytes"] += 1  # a new date, the same file: nothing to land
+            continue
+        ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        key = f"{PREFIX}{f['entity']}/{f['version']}__{ingested}.zip"
+        put_new(client, bucket, key, body, "application/zip")
+        receipt = {
+            "schema_version": 2,
+            "kind": "gus_dbw_landing",
+            "source_id": SOURCE,
+            "entity": f["entity"],
+            "content": "snapshot",
+            "area": "data",
+            "source_kind": "dbw_bulk_zip_csv",
+            "indicator_id": f["indicator_id"],
+            "indicator_name": f["indicator_name"],
+            "section_id": f["section_id"],
+            "section_name": f["section_name"],
+            "periodicity": f["periodicity"],
+            "unit": f["unit"],
+            "years": f["years"],
+            "source_updated": f["updated"],
+            "version_token": f["version"],
+            "ingested_at": ingested,
+            "source_url": address,
+            "sha256": digest,
+            "size_bytes": len(body),
+            "object": {"bucket": bucket, "key": key},
+            "http": {
+                "content_type": response.headers.get("Content-Type"),
+                "last_modified": response.headers.get("Last-Modified"),
+                "etag": response.headers.get("ETag"),
+            },
+            "replaces_sha256": previous["sha256"] if previous else None,
+            "code_sha": code_sha,
+        }
+        put_new(
+            client,
+            bucket,
+            key[: -len(".zip")] + ".receipt.json",
+            json.dumps(receipt, ensure_ascii=False, indent=2, sort_keys=True).encode(),
+            "application/json",
+        )
+        outcomes["landed_new" if not previous else "landed_changed"] += 1
+    return outcomes
+
+
+def run_verify(client, bucket: str, held: dict[str, list]) -> dict[str, Any]:
+    present = set()
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=PREFIX):
+        present |= {o["Key"] for o in page.get("Contents", []) if not o["Key"].endswith(".receipt.json")}
+    stored = archived(client, bucket, SOURCE)
+    problems = []
+    for rows in held.values():
+        for r in rows:
+            key = r["object"]["key"]
+            if key not in present and stored.get(r["sha256"], {}).get("key") != archive_key(SOURCE, r["sha256"], key):
+                problems.append(key)
+    receipted = {r["object"]["key"] for rows in held.values() for r in rows}
+    return {
+        "receipts": sum(len(v) for v in held.values()),
+        "missing_data": len(problems),
+        "missing_sample": problems[:10],
+        "data_without_receipt": sorted(present - receipted)[:10],
+    }
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--mode", choices=("inspect", "load", "verify"), required=True)
+    parser.add_argument("--filter", default="", help="comma separated indicator ids")
+    parser.add_argument("--budget-minutes", type=float, default=300)
+    args = parser.parse_args(argv)
+    deadline = time.monotonic() + args.budget_minutes * 60
+    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    held = landed(client, bucket)
+    if args.mode == "verify":
+        summary = {"mode": "verify", **run_verify(client, bucket, held)}
+        status = 1 if summary["missing_data"] else 0
+    else:
+        only = {int(x) for x in re.split(r"[,\s]+", args.filter) if x.strip().isdigit()} or None
+        session = requests.Session()
+        session.headers.update({"User-Agent": USER_AGENT})
+        files, stats = inventory(session, only, deadline)
+        groups = classify(files, held)
+        summary = {
+            "mode": args.mode,
+            "files_listed": len(files),
+            "landed_entities": len(held),
+            **{k: len(v) for k, v in groups.items()},
+            "stale_sample": [f["entity"] for f in groups["stale"][:10]],
+            "missing_sample": [f["entity"] for f in groups["missing"][:10]],
+            **stats,
+        }
+        status = 2 if stats.get("indicators_not_listed_time_budget") else 0
+        if args.mode == "load":
+            outcomes = run_load(client, bucket, session, groups["missing"] + groups["stale"], held, deadline)
+            summary.update(outcomes)
+            status = 2 if outcomes["not_started_time_budget"] or status else 0
+    print(json.dumps(summary, sort_keys=True, default=str))
+    annotate("notice", f"gus_dbw landing {args.mode}", summary)
+    step_summary(f"## gus_dbw · landing {args.mode}\n\n```json\n{json.dumps(summary, indent=2, default=str)}\n```\n")
+    return status
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
