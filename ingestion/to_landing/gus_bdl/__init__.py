@@ -68,7 +68,7 @@ def _initial(p, tokens: list[str]) -> int:
     and Bronze/Silver must still load what landed."""
     from ingestion.common.report import annotate
     from ingestion.to_landing.gus_bdl import metadata, refresh, web_export, web_packages
-    from ingestion.to_landing.gus_bdl.api import BudgetSpent
+    from ingestion.to_landing.gus_bdl.api import Bdl, BudgetSpent
 
     budget = min(p.budget_minutes, 330)
     shard = (p.job_index, p.parallel_jobs) if p.parallel_jobs > 1 else None
@@ -102,6 +102,8 @@ def _initial(p, tokens: list[str]) -> int:
             api_minutes = min(150.0, left() * 0.5)
             api_end = time.monotonic() + api_minutes * 60
             api_left = lambda: str(max((api_end - time.monotonic()) / 60, 1))  # noqa: E731
+            step_base = Bdl.shared().requests
+            api_rest = lambda: str(max(3000 - (Bdl.shared().requests - step_base), 0))  # noqa: E731
             step(
                 "api_incremental",
                 lambda: refresh.main(
@@ -112,7 +114,7 @@ def _initial(p, tokens: list[str]) -> int:
                 step(
                     "api_initial",
                     lambda: refresh.main(
-                        ["--initial", "--only", *api_list, "--budget-minutes", api_left(), "--max-requests", "1000"]
+                        ["--initial", "--only", *api_list, "--budget-minutes", api_left(), "--max-requests", api_rest()]
                     ),
                 )
         step("variables", lambda: metadata.main(["--budget-minutes", str(min(20.0, max(left() * 0.1, 5)))]))

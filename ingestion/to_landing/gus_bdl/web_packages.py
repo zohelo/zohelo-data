@@ -31,7 +31,7 @@ from zoneinfo import ZoneInfo
 from ingestion.common.r2 import req, s3
 from ingestion.common.report import annotate, step_summary
 from ingestion.to_landing.gus_bdl import web_export as w
-from ingestion.to_landing.gus_bdl.api import Bdl
+from ingestion.to_landing.gus_bdl.api import Bdl, token
 from ingestion.to_landing.gus_bdl.inspect import landing_versions
 
 REQUEST_AGAIN_DAYS = 3
@@ -90,6 +90,8 @@ def stale_big(api: Bdl, held: dict[str, str]) -> list[dict[str, Any]]:
     for subject in tree:
         if subject["id"] in ids and subject["id"] in held:
             detail = api.get(f"/subjects/{subject['id']}", lang="pl")
+            if held[subject["id"]] >= token(api.last_update(subject["id"], detail)):
+                continue  # its newer version has landed meanwhile
             out.append({**w.entry(api, subject, parents), "subject": detail, "values": None})
     return out
 
