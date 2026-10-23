@@ -94,19 +94,25 @@ def _initial(p, tokens: list[str]) -> int:
         except Exception as exc:  # the control file unreadable: skip the API step this run
             window, outcome["api"] = False, f"skipped: {type(exc).__name__}"
         if left() > 30 and window:
-            # ≤3,000 requests per API step (one client, one counter), plus ~400 for the rest of the
-            # two runs in a 12 h window: under the key's 5,000. First the scheduled incremental
-            # refresh of subgroups already held (a third checked daily, changed ones reloaded whole
-            # through the API, owner 24 Oct), then the initial API list with what is left.
+            # Once per 12 h, ≤3,000 requests (each call counts its own and estimates a subgroup's cost
+            # before loading it), plus ~400 for the rest of the two runs in a 12 h window: under the
+            # key's 5,000. First the scheduled incremental refresh (owner, 24 Oct): a sixth of the held
+            # subgroups checked, changed ones reloaded whole if they cost ≤1,000 requests (bigger ones
+            # go to the website packages); then the initial API list.
             api_minutes = min(150.0, left() * 0.5)
             api_end = time.monotonic() + api_minutes * 60
             api_left = lambda: str(max((api_end - time.monotonic()) / 60, 1))  # noqa: E731
-            step("api_incremental", lambda: refresh.main(["--budget-minutes", api_left(), "--max-requests", "2000"]))
+            step(
+                "api_incremental",
+                lambda: refresh.main(
+                    ["--budget-minutes", api_left(), "--max-requests", "2000", "--max-subgroup-requests", "1000"]
+                ),
+            )
             if api_list:
                 step(
                     "api_initial",
                     lambda: refresh.main(
-                        ["--initial", "--only", *api_list, "--budget-minutes", api_left(), "--max-requests", "3000"]
+                        ["--initial", "--only", *api_list, "--budget-minutes", api_left(), "--max-requests", "1000"]
                     ),
                 )
         step("variables", lambda: metadata.main(["--budget-minutes", str(min(20.0, max(left() * 0.1, 5)))]))

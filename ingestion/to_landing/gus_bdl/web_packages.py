@@ -72,6 +72,28 @@ def pages(page):
         yield page.evaluate(ROWS_JS)
 
 
+def stale_big(api: Bdl, held: dict[str, str]) -> list[dict[str, Any]]:
+    """Changed subgroups too big for the API (listed by refresh.py): their packages are collected
+    and requested like missing ones; a package built before the new version is skipped."""
+    import json
+
+    from ingestion.to_landing.gus_bdl.refresh import STALE_BIG_KEY
+
+    try:
+        body = s3().get_object(Bucket=req("R2_LAKEHOUSE_BUCKET"), Key=STALE_BIG_KEY)["Body"].read()
+        ids = set(json.loads(body)["subgroups"])
+    except Exception:  # no list yet
+        return []
+    tree = w.subject_tree(api)
+    parents = {s["id"]: s["parentId"] for s in tree if not s.get("hasVariables")}
+    out = []
+    for subject in tree:
+        if subject["id"] in ids and subject["id"] in held:
+            detail = api.get(f"/subjects/{subject['id']}", lang="pl")
+            out.append({**w.entry(api, subject, parents), "subject": detail, "values": None})
+    return out
+
+
 def big_missing(api: Bdl, held: dict[str, str]) -> list[dict[str, Any]]:
     """Missing subgroups with more than MAX_INFORMATION values (they offer a package)."""
     out = []
@@ -173,7 +195,9 @@ def main(budget_minutes: float = 50) -> int:
     client, bucket = s3(), req("R2_LANDING_BUCKET")
     api = Bdl.shared()
     api.deadline = w.HARD_DEADLINE
-    wanted = {s["id"]: s for s in big_missing(api, landing_versions(client, bucket))}
+    held = landing_versions(client, bucket)
+    wanted = {s["id"]: s for s in big_missing(api, held)}
+    wanted.update({s["id"]: s for s in stale_big(api, held)})
     summary: dict[str, Any] = {
         "big_missing": len(wanted),
         "landed": [],
