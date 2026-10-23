@@ -79,7 +79,8 @@ def partition_groups(table, hashes: list[str]) -> list[tuple[dict[str, Any], lis
     for path, partition in zip(
         files.column("file_path").to_pylist(), files.column("partition").to_pylist(), strict=True
     ):
-        key = tuple(sorted((columns[k], v) for k, v in (partition or {}).items() if k in columns))
+        # a null partition value cannot scope a delete (EqualTo(col, None)); such files count as unpartitioned
+        key = tuple(sorted((columns[k], v) for k, v in (partition or {}).items() if k in columns and v is not None))
         stem = path.rsplit("/", 1)[-1].split(".", 1)[0]
         if stem in wanted:
             where.setdefault(stem, set()).add(key)
