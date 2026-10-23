@@ -18,10 +18,11 @@ from __future__ import annotations
 import contextlib
 from typing import Any
 
+import pyarrow.compute as pc
 from pyiceberg.exceptions import NoSuchTableError
 from pyiceberg.expressions import And, EqualTo, In
 
-from ingestion.common.bronze_files import SOURCE_TABLES, loaded_hashes, retry
+from ingestion.common.bronze_files import SHA_RE, SOURCE_TABLES, loaded_hashes, read_columns, retry
 from ingestion.common.r2 import catalog, landing_objects, req, s3
 
 CHUNK = 300  # raw SHA-256 values per delete commit
@@ -60,45 +61,59 @@ def superseded_rows(table, hashes: set[str]) -> int:
 
 
 def partition_groups(table, hashes: list[str]) -> list[tuple[dict[str, Any], list[str]]]:
-    """Superseded hashes grouped by the identity-partition values of the files named after them.
+    """Superseded hashes grouped by the identity-partition values of the files that hold them.
 
     A delete scoped to one partition reads and rewrites only that partition's files: an unscoped
     delete of hundreds of hashes made pyiceberg read compacted files across the whole table and
-    the runner was killed (Eurostat, 16 Oct). Hashes found only in compacted files form one group
-    without partition values."""
+    the runner was killed (Eurostat, 16 Oct). A file named after a hash holds that hash; a file
+    with another name (written by catalog compaction before it was switched off, #875) is read
+    for its raw_sha256 values, and every compacted file lies in one partition, so its hashes are
+    deleted in that partition (NBP kept one superseded file only in a compacted file, 22 Oct).
+    Hashes found in no file form one group without partition values."""
     spec, schema = table.spec(), table.schema()
     columns = {f.name: schema.find_field(f.source_id).name for f in spec.fields if str(f.transform) == "identity"}
-    wanted, where = set(hashes), {}
+    wanted: set[str] = set(hashes)
+    where: dict[str, set[tuple]] = {}
     files = table.inspect.data_files()
+    compacted = []
     for path, partition in zip(
         files.column("file_path").to_pylist(), files.column("partition").to_pylist(), strict=True
     ):
+        # a null partition value cannot scope a delete (EqualTo(col, None)); such files count as unpartitioned
+        key = tuple(sorted((columns[k], v) for k, v in (partition or {}).items() if k in columns and v is not None))
         stem = path.rsplit("/", 1)[-1].split(".", 1)[0]
         if stem in wanted:
-            where[stem] = tuple(sorted((columns[k], v) for k, v in (partition or {}).items() if k in columns))
+            where.setdefault(stem, set()).add(key)
+        elif not SHA_RE.fullmatch(stem):
+            compacted.append((path, key))
+    for path, key in compacted:
+        found = set(pc.unique(read_columns(table, path, ["raw_sha256"]).column("raw_sha256")).to_pylist())
+        for digest in found & wanted:
+            where.setdefault(digest, set()).add(key)
     groups: dict[tuple, list[str]] = {}
     for digest in hashes:
-        groups.setdefault(where.get(digest, ()), []).append(digest)
+        for key in where.get(digest) or {()}:
+            groups.setdefault(key, []).append(digest)
     return [(dict(key), sorted(group)) for key, group in groups.items()]
 
 
 def remove(cat, table_id: tuple[str, str], table, hashes: list[str]) -> int:
     """Delete the rows of these Landing files, one partition at a time, in chunks; returns the count removed.
 
-    Hashes whose partition is unknown (only in compacted files) are skipped: an unscoped delete
-    of a partitioned table reads it whole. They stay listed as superseded for a later run."""
-    removed = 0
+    Hashes found in no file of a partitioned table are skipped (an unscoped delete reads the table
+    whole); they stay listed as superseded."""
+    removed: set[str] = set()
     partitioned = bool(table.spec().fields)
     for values, group in partition_groups(table, hashes):
         if partitioned and not values:
             continue
-        removed += len(group)
+        removed.update(group)
         for start in range(0, len(group), CHUNK):
             condition = In("raw_sha256", group[start : start + CHUNK])
             for column, value in values.items():
                 condition = And(EqualTo(column, value), condition)
             retry(lambda condition=condition: cat.load_table(table_id).delete(condition), f"prune {'.'.join(table_id)}")
-    return removed
+    return len(removed)
 
 
 def prune(source: str, apply: bool) -> dict[str, Any]:
