@@ -86,6 +86,20 @@ def run():
         "no_file_bodies": samples_body,
     }
     (out / "dbw_trial.json").write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str))
+    annotate("notice", "dbw trial stats", {"stats": dict(stats), "periodicity": report["periodicity"]})
+    compact = [
+        {
+            "e": r["entity"],
+            "mb": r.get("mb"),
+            "rows": r.get("rows"),
+            "silver": r.get("silver"),
+            "tv": r.get("text_vs_value"),
+            "bad": r.get("rejected") or r.get("error"),
+        }
+        for r in results
+    ]
+    for i in range(0, len(compact), 6):
+        annotate("notice", f"dbw trial results {i}", compact[i : i + 6])
     print(
         json.dumps(
             {
