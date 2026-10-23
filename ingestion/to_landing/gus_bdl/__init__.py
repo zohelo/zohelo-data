@@ -13,6 +13,7 @@ landing.extract   metadata.py: variables of every subgroup with data, as API pag
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 import time
 
 
@@ -60,13 +61,15 @@ def _initial(p, tokens: list[str]) -> int:
 
     if first:
         step("packages", lambda: web_packages.main(budget_minutes=min(60.0, left() * 0.25)))
-        if api_list and left() > 30:
+        # the API step only in the 00:20 and 12:20 UTC runs: one per 12 h window of the key
+        api_run = datetime.now(UTC).hour in (0, 1, 12, 13)
+        if api_list and api_run and left() > 30:
             api_minutes = min(150.0, left() * 0.5)
-            # every 6 h: ~2,000 requests a run keeps 4 runs a day under the key's 5,000 per 12 h
+            # ≤3,000 requests, plus ~400 for the rest of the two runs in a 12 h window: under 5,000
             step(
                 "api",
                 lambda: refresh.main(
-                    ["--initial", "--only", *api_list, "--budget-minutes", str(api_minutes), "--max-requests", "2000"]
+                    ["--initial", "--only", *api_list, "--budget-minutes", str(api_minutes), "--max-requests", "3000"]
                 ),
             )
         step("variables", lambda: metadata.main(["--budget-minutes", str(min(20.0, max(left() * 0.1, 5)))]))

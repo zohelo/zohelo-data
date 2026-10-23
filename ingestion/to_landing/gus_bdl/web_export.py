@@ -67,8 +67,32 @@ def check_time() -> None:
         raise OutOfTime("hard time limit reached inside a subgroup")
 
 
+TREE_KEY = "_control/gus_bdl/subjects.json"  # lakehouse bucket; a control file, not source data
+TREE_DAYS = 7
+
+
+def subject_tree(api: Bdl) -> list[dict[str, Any]]:
+    """Every BDL subject (id, name, parentId, hasVariables), walked from the API at most once a
+    week and kept as a control file, so parallel jobs and repeated runs do not spend the key's
+    12 h limit on the same ~400-request walk (#899 review)."""
+    import botocore.exceptions
+
+    client, bucket = s3(), req("R2_LAKEHOUSE_BUCKET")
+    try:
+        held = json.loads(client.get_object(Bucket=bucket, Key=TREE_KEY)["Body"].read())
+        if (datetime.now(UTC) - datetime.fromisoformat(held["walked_at"])).days < TREE_DAYS:
+            return held["subjects"]
+    except (botocore.exceptions.ClientError, KeyError, ValueError):
+        pass
+    keep = ("id", "name", "parentId", "hasVariables", "levels", "years")
+    subjects = [{k: s.get(k) for k in keep} for s in api.all_subjects()]
+    body = {"walked_at": datetime.now(UTC).isoformat(), "subjects": subjects}
+    client.put_object(Bucket=bucket, Key=TREE_KEY, Body=json.dumps(body, ensure_ascii=False).encode())
+    return subjects
+
+
 def entry(api: Bdl, subject: dict[str, Any], parents: dict[str, str]) -> dict[str, Any]:
-    """A subgroup with its export URL (K/G/P numbers)."""
+    """A subgroup with its export URL (K/G/P numbers); parents maps a group to its category."""
     group = subject["parentId"]
     if group not in parents:
         parents[group] = api.get(f"/subjects/{group}", lang="pl")["parentId"]
@@ -83,8 +107,13 @@ def entry(api: Bdl, subject: dict[str, Any], parents: dict[str, str]) -> dict[st
 
 def missing_subgroups(api: Bdl, held: dict[str, str], only: list[str] | None = None) -> list[dict[str, Any]]:
     """Subgroups with no complete Landing version (only: just these, without listing every subgroup)."""
-    parents: dict[str, str] = {}
-    subjects = [api.get(f"/subjects/{sid}", lang="pl") for sid in only] if only else api.subgroups()
+    if only:
+        parents: dict[str, str] = {}
+        subjects = [api.get(f"/subjects/{sid}", lang="pl") for sid in only]
+    else:
+        tree = subject_tree(api)
+        parents = {s["id"]: s["parentId"] for s in tree if not s.get("hasVariables")}
+        subjects = [s for s in tree if s.get("hasVariables")]
     return [entry(api, subject, parents) for subject in subjects if subject["id"] not in held]
 
 

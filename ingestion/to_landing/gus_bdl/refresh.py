@@ -163,7 +163,8 @@ def main(argv=None) -> int:
         stale.append(subgroup)
         if args.dry_run:
             continue
-        if args.max_requests and api.requests >= args.max_requests:  # leave the 12 h window to later runs
+        # a cheap subgroup costs up to ~1,000 requests: start one only if it fits under the cap
+        if args.max_requests and api.requests + 1000 > args.max_requests:
             outcomes["stale_not_started_request_cap"] += 1
             continue
         if deadline - time.monotonic() < 20 * 60:  # a large subgroup can take most of an hour

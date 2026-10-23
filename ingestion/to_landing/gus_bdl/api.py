@@ -104,13 +104,17 @@ class Bdl:
     def subgroups(self) -> list[dict]:
         """Every subject with variables (P####), walking categories → groups → subgroups; walked
         once per client (~400 requests), so the steps of one run share the list."""
+        return [s for s in self.all_subjects() if s.get("hasVariables")]
+
+    def all_subjects(self) -> list[dict]:
+        """Every subject — categories, groups and subgroups — walked once per client."""
         if self._subgroups is None:
-            found, stack = [], [s["id"] for s in self.pages("/subjects", lang="pl")]
+            top = list(self.pages("/subjects", lang="pl"))
+            found, stack = list(top), [s["id"] for s in top]
             while stack:
                 parent = stack.pop()
                 for subject in self.pages("/subjects", lang="pl", **{"parent-id": parent}):
-                    if subject.get("hasVariables"):
-                        found.append(subject)
+                    found.append(subject)
                     if subject.get("children"):
                         stack.append(subject["id"])
             self._subgroups = found
