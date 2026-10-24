@@ -1,7 +1,9 @@
-{# GLEIF legal entities (LEI-CDF): one row per LEI of the newest golden copy, core attributes
-   typed. Other names, other addresses, events and validation authorities stay in Bronze
-   (bronze.gleif_lei_records, one column per CDF field). #}
+-- GLEIF legal entities (LEI-CDF): one row per LEI of the newest golden copy, core attributes
+-- typed. Other names, other addresses, events and validation authorities stay in Bronze
+-- (bronze.gleif_lei_records, one column per CDF field).
+-- Applied by the loader to ONE Bronze file; `bronze` is that file (design #875).
 select
+    entity,
     lei,
     entity_legalname as legal_name,
     nullif(entity_legalname_xmllang, '') as legal_name_language,
@@ -38,4 +40,4 @@ select
     nullif(conformityflag, '') as conformity_flag,
     source_version,
     raw_sha256
-from {{ source('gleif', 'gleif_lei_records') }}
+from bronze

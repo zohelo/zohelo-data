@@ -1,6 +1,8 @@
-{# GLEIF reporting exceptions: why an LEI reports no direct or ultimate parent, newest golden
-   copy; up to five reasons and references as published. #}
+-- GLEIF reporting exceptions: why an LEI reports no direct or ultimate parent, newest golden
+-- copy; up to five reasons and references as published.
+-- Applied by the loader to ONE Bronze file; `bronze` is that file (design #875).
 select
+    entity,
     lei,
     exception_category,
     nullif(exception_reason_1, '') as reason_1,
@@ -15,4 +17,4 @@ select
     nullif(exception_reference_5, '') as reference_5,
     source_version,
     raw_sha256
-from {{ source('gleif', 'gleif_reporting_exceptions') }}
+from bronze

@@ -1,7 +1,9 @@
-{# GLEIF relationship records (RR-CDF): one row per start LEI × end LEI × relationship type of
-   the newest golden copy (direct / ultimate accounting-consolidation parent, fund relations).
-   The first period, qualifier and quantifier are typed; the others stay in Bronze. #}
+-- GLEIF relationship records (RR-CDF): one row per start LEI × end LEI × relationship type of
+-- the newest golden copy (direct / ultimate accounting-consolidation parent, fund relations).
+-- The first period, qualifier and quantifier are typed; the others stay in Bronze.
+-- Applied by the loader to ONE Bronze file; `bronze` is that file (design #875).
 select
+    entity,
     relationship_startnode_nodeid as child_lei,
     relationship_startnode_nodeidtype as child_id_type,
     relationship_endnode_nodeid as parent_lei,
@@ -24,4 +26,4 @@ select
     nullif(registration_validationsources, '') as validation_sources,
     source_version,
     raw_sha256
-from {{ source('gleif', 'gleif_relationship_records') }}
+from bronze

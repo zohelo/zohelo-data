@@ -130,7 +130,11 @@ def download(url: str, path: Path, fmt: str) -> tuple[str, int, dict[str, str], 
         digest, size = sha256(), 0
         try:
             with requests.get(
-                url, headers={"User-Agent": USER_AGENT}, stream=True, timeout=(30, 300), allow_redirects=True
+                url,
+                headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"},  # exact bytes, true length
+                stream=True,
+                timeout=(30, 300),
+                allow_redirects=True,
             ) as response:
                 if 400 <= response.status_code < 500 and response.status_code not in RETRY_STATUSES:
                     raise PermanentError(f"download {response.status_code}: {url}")
@@ -167,7 +171,9 @@ def probe(url: str) -> tuple[requests.Response | None, str]:
     response, http = None, ""
     for attempt in range(3):
         try:
-            response = requests.head(url, headers={"User-Agent": USER_AGENT}, allow_redirects=True, timeout=60)
+            response = requests.head(
+                url, headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"}, allow_redirects=True, timeout=60
+            )
             if response.status_code in (403, 405, 501):  # some servers refuse HEAD but serve GET
                 response = requests.get(
                     url, headers={"User-Agent": USER_AGENT}, allow_redirects=True, timeout=60, stream=True

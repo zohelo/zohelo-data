@@ -1,7 +1,8 @@
-"""GLEIF Landing → Bronze activities.
+"""GLEIF Landing → Bronze → Silver activities (design #875, as Eurostat).
 
-bronze.load       load.py → bronze.gleif_lei_records, gleif_relationship_records, gleif_reporting_exceptions
-bronze.verify     ingestion/common/lineage.py --source gleif
+bronze.load       entities.py: per declared file (lei2, rr, repex), newest Landing version →
+                  its Bronze table and its Silver table (warehouse/entity/gleif_*.sql)
+bronze.verify     entities.verify: newest Landing version of each file in Bronze and Silver
 landing.archive   ingestion/common/archive.py --source gleif (move to Archive)
 archive.prune     ingestion/common/retention.py --source gleif (archive_policy.retention)
 """
@@ -10,15 +11,15 @@ from __future__ import annotations
 
 
 def _load(p) -> int:
-    from ingestion.to_bronze.gleif import load
+    from ingestion.to_bronze.gleif import entities
 
-    return load.load(p.budget_minutes)
+    return entities.main(["--minutes", f"{max(p.budget_minutes - 10, 5):.0f}"])
 
 
 def _verify(p) -> int:
-    from ingestion.common import lineage
+    from ingestion.to_bronze.gleif import entities
 
-    return lineage.main(["--source", "gleif"])
+    return entities.verify()
 
 
 def _archive(p) -> int:

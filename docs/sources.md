@@ -377,8 +377,8 @@ redirect (302) to the newest publish's ZIP and give its Last-Modified, so the sh
 `bulk_file` pattern lands each file only when its SHA-256 changed (version = Last-Modified).
 Sizes on 23 Oct 2026: lei2 3.47 M records, 506 MB ZIP / 5.0 GB CSV, 338 columns; rr 0.49 M
 records, 25 MB / 245 MB, 54 columns; repex 62 MB / 716 MB, 12 columns. Full files rather than
-the delta files: one complete state a day keeps Bronze a plain latest-only snapshot. Bronze
-keeps every CSV column as text; Silver types the core LEI, relationship and exception fields.
+the delta files: one complete state a day, each file one entity replaced whole (design #875). Bronze
+keeps every CSV column as text; Silver (`warehouse/entity/gleif_*.sql`) types the core LEI, relationship and exception fields. A rejected file leaves the previous version in place.
 
 ## GUS TERYT (territorial register)
 

@@ -205,6 +205,14 @@ sources:
   database: r2
   schema: silver
   tables:
+  - name: gleif_legal_entities
+    description: >-
+      GLEIF legal entities: one row per LEI of the newest golden copy, core LEI-CDF attributes
+      typed (names, jurisdiction, legal form, status, addresses, registration); entity = lei2.
+  - name: gleif_relationships
+    description: GLEIF relationship records, child LEI → parent LEI by relationship type, newest golden copy; entity = rr.
+  - name: gleif_reporting_exceptions
+    description: GLEIF reporting exceptions, why an LEI reports no direct or ultimate parent; entity = repex.
   - name: eurostat_observations
     description: >-
       Eurostat observations, typed: freq, unit, geo as published, time_period in SDMX format,

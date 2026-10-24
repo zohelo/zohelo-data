@@ -22,7 +22,7 @@ from typing import Any
 from ingestion.common.r2 import landing_objects, latest_snapshot, req, s3
 from ingestion.common.report import annotate
 
-SOURCES = ("gleif", "gugik_prg", "gus_teryt", "nbp", "world_bank_wdi")  # Eurostat, GUS BDL: entities.verify (#875)
+SOURCES = ("gugik_prg", "gus_teryt", "nbp", "world_bank_wdi")  # Eurostat, GUS BDL, GLEIF: entities.verify (#875)
 
 
 def summarize(name: str, landing_set: set[str], proven: set[str], meta: dict[str, dict[str, Any]]) -> dict[str, Any]:
