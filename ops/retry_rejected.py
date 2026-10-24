@@ -25,6 +25,7 @@ from ingestion.common.report import annotate
 REJECTIONS = {
     "eurostat": ("bronze", "eurostat_rejected_files"),
     "gleif": ("bronze", "gleif_rejected_files"),
+    "mf_biala_lista": ("bronze", "biala_lista_rejected_files"),
     "gus_bdl": ("bronze", "bdl_rejected_files"),
 }
 

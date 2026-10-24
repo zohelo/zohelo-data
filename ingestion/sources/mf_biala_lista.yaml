@@ -1,17 +1,38 @@
 source_system: mf_biala_lista
 description: "Ministry of Finance VAT taxpayer white list (flat file)"
 
+# Extraction strategy (docs/landing.md). Bulk feature: the MF "plik płaski", one 7z a day at
+# https://plikplaski.mf.gov.pl/pliki/<YYYYMMDD>.7z (valid for that Warsaw date; published at
+# about 22:30 Warsaw time the day before; ~250 MB, a 500 MB JSON inside). Version = Last-Modified.
 extraction:
-  initial: to_be_decided
-  production: to_be_decided
-  incremental_policy: to_be_decided
-  schedule: null
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: flat_file
+        url: "https://plikplaski.mf.gov.pl/pliki/{date}.7z"
+        url_date: Europe/Warsaw
+        format: 7z
+        version: last_modified
+  initial: bulk
+  production: snapshot                    # each file is the complete list for its day
+  incremental_policy: changed_since_last  # a new file every day
+  schedule:                               # UTC; 00:50/01:50 Warsaw, after the evening publish
+    - {cron: "50 23 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
-landing: 01_landing/mf_biala_lista/   # empty: raw files were archived after the Bronze build
+landing: 01_landing/mf_biala_lista/
 archive_folder: 05_archive/mf_biala_lista/
-bronze: []   # old-code copies retired 16 Oct (owner decision #835); rebuilt by the new solution
-silver: []
+# Retention: newest file plus 3 days of superseded ones (0.25 GB a day).
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 3}
+  prune: report
+bronze: [bronze.biala_lista_records, bronze.biala_lista_rejected_files]
+silver: [silver.biala_lista_taxpayer_hashes, silver.biala_lista_masks]
 gold: []
-legacy_tables: [bronze.biala_lista_header, bronze.biala_lista_masks, bronze.biala_lista_taxpayers, silver.biala_lista_header, silver.biala_lista_masks, silver.biala_lista_taxpayers, gold.dim_vat_header, gold.dim_vat_masks, gold.dim_vat_taxpayer_account]
+legacy_tables: [bronze.biala_lista_header, bronze.biala_lista_masks, bronze.biala_lista_taxpayers, silver.biala_lista_header, silver.biala_lista_taxpayers, gold.dim_vat_header, gold.dim_vat_masks, gold.dim_vat_taxpayer_account]
 
-activities: []   # paused; Bronze/Silver/Gold were built by retired code
+# Refresh policy for all layers (design #875): entity = the flat file; each day's file replaces
+# the entity in Bronze and both Silver tables (one file each).
+refresh: {mode: incremental, unit: file, decided: "#875"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
