@@ -31,6 +31,7 @@ from pyiceberg.transforms import IdentityTransform
 from pyiceberg.types import (
     BinaryType,
     BooleanType,
+    DateType,
     DoubleType,
     IntegerType,
     LongType,
@@ -50,6 +51,7 @@ TYPES = {
     "BLOB": BinaryType(),
     "DOUBLE": DoubleType(),
     "BOOLEAN": BooleanType(),
+    "DATE": DateType(),
 }
 THROTTLED = {"ServiceUnavailable", "SlowDown", "InternalError", "RequestTimeout", "TooManyRequests", "503", "500"}
 

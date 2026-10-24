@@ -163,8 +163,10 @@ def config_problems(config: dict) -> list[str]:
             if not files or any(not {"entity", "url"} <= set(f) for f in files):
                 problems.append(f"{source}: extraction.bulk_file.files needs entity and url for every file")
             for f in files:
-                if f.get("format", "raw") not in {"zip", "gzip", "raw"}:
-                    problems.append(f"{source}: {f.get('entity')}: format must be zip, gzip or raw")
+                if f.get("format", "raw") not in {"zip", "gzip", "7z", "raw"}:
+                    problems.append(f"{source}: {f.get('entity')}: format must be zip, gzip, 7z or raw")
+                if f.get("url_date") and "{date}" not in str(f.get("url")):
+                    problems.append(f"{source}: {f.get('entity')}: url_date needs {{date}} in the url")
                 if f.get("version", "last_modified") not in {"last_modified", "ingested"}:
                     problems.append(f"{source}: {f.get('entity')}: version must be last_modified or ingested")
         if set(cfg.get("extraction") or {}) - EXTRACTION_KEYS:

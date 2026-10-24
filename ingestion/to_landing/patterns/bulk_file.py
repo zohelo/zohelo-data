@@ -9,8 +9,9 @@ framework")::
         files:
           - entity: WDI_CSV
             url: https://databank.worldbank.org/data/download/WDI_CSV.zip
-            format: zip              # zip | gzip | raw
+            format: zip              # zip | gzip | 7z | raw
             version: last_modified   # last_modified (fallback: download time) | ingested
+            url_date: Europe/Warsaw  # optional: {date} in url = today (YYYYMMDD) in this zone
 
 Each file lands as ``01_landing/<source>/snapshot/data/<entity>/<version>__<ingested>.<ext>``
 with a receipt, only when its SHA-256 differs from the newest landed copy. The download
@@ -42,8 +43,13 @@ from ingestion.common.report import annotate, step_summary
 
 ROOT = Path(__file__).resolve().parents[3]
 USER_AGENT = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
-EXTENSIONS = {"zip": "zip", "gzip": "gz", "raw": "bin"}
-CONTENT_TYPES = {"zip": "application/zip", "gzip": "application/gzip", "raw": "application/octet-stream"}
+EXTENSIONS = {"zip": "zip", "gzip": "gz", "7z": "7z", "raw": "bin"}
+CONTENT_TYPES = {
+    "zip": "application/zip",
+    "gzip": "application/gzip",
+    "7z": "application/x-7z-compressed",
+    "raw": "application/octet-stream",
+}
 RETRIES = 4
 RETRY_STATUSES = {408, 429}  # client errors worth retrying; other 4xx fail at once
 
@@ -109,6 +115,15 @@ def server_version(headers: dict[str, str]) -> str | None:
         return None
 
 
+def url_of(spec: dict[str, Any]) -> str:
+    """The file's URL; with ``url_date``, ``{date}`` is today's date (YYYYMMDD) in that time zone."""
+    if not spec.get("url_date"):
+        return spec["url"]
+    from zoneinfo import ZoneInfo
+
+    return spec["url"].format(date=datetime.now(ZoneInfo(spec["url_date"])).strftime("%Y%m%d"))
+
+
 def check_format(path: Path, fmt: str) -> dict[str, Any]:
     """Raise when the file is not a valid instance of its declared format; return details."""
     if fmt == "zip":
@@ -117,6 +132,22 @@ def check_format(path: Path, fmt: str) -> dict[str, Any]:
             if bad:
                 raise RuntimeError(f"ZIP member failed its CRC: {bad}")
             return {"members": [(i.filename, i.file_size) for i in archive.infolist()]}
+    if fmt == "7z":  # the 7-Zip tool of the runner image tests every member's CRC
+        import shutil
+        import subprocess
+
+        tool = shutil.which("7z") or shutil.which("7za")
+        if not tool:
+            raise RuntimeError("7z is not installed")
+        try:
+            tested = subprocess.run(
+                [tool, "t", "-bd", str(path)], capture_output=True, text=True, errors="replace", timeout=1800
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError("7z test took longer than 30 minutes") from exc
+        if tested.returncode != 0:
+            raise RuntimeError(f"7z archive failed its test: {(tested.stdout + tested.stderr)[-300:]}")
+        return {}
     if fmt == "gzip":
         with gzip.open(path) as handle:
             while handle.read(8 << 20):
@@ -198,7 +229,8 @@ def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landi
     with tempfile.TemporaryDirectory(prefix=f"zohelo-{source}-") as temporary:
         path = Path(temporary) / f"file.{EXTENSIONS[fmt]}"
         started = time.monotonic()
-        digest, size, headers, final_url, detail = download(spec["url"], path, fmt)
+        url = url_of(spec)
+        digest, size, headers, final_url, detail = download(url, path, fmt)
         seconds = round(time.monotonic() - started)
         if held and held[-1]["sha256"] == digest:
             return {"entity": spec["entity"], "outcome": "unchanged", "sha256": digest, "download_seconds": seconds}
@@ -222,7 +254,7 @@ def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landi
         "version_token": version,
         "version_basis": "Last-Modified" if version != ingested else "download time",
         "ingested_at": ingested,
-        "source_url": spec["url"],
+        "source_url": url,
         "final_url": final_url,
         "sha256": digest,
         "size_bytes": size,
@@ -273,7 +305,7 @@ def main(source: str, mode: str, landing_root: str = "01_landing") -> int:
             "newest": held[-1]["version_token"] if held else None,
         }
         if mode == "inspect":
-            head, http = probe(spec["url"])
+            head, http = probe(url_of(spec))
             row["server_version"] = (server_version(dict(head.headers)) if head is not None else None) or "unknown"
             if http != "200":  # a moved or blocked URL is an error, not a missing validator
                 row.update({"state": "unreachable", "http": http})
