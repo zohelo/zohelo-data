@@ -53,7 +53,7 @@ TYPES = {
     "BOOLEAN": BooleanType(),
     "DATE": DateType(),
 }
-NETWORK_MARKERS = ("NETWORK_CONNECTION", "curlCode: 28", "Timeout was reached", "Connection reset")
+NETWORK_MARKERS = ("NETWORK_CONNECTION", "SLOW_DOWN", "curlCode: 28", "Timeout was reached", "Connection reset")
 THROTTLED = {"ServiceUnavailable", "SlowDown", "InternalError", "RequestTimeout", "TooManyRequests", "503", "500"}
 
 
