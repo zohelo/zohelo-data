@@ -78,7 +78,8 @@ def decode(source: Path, receipt: dict, output: Path, dictionary: Path, memory_l
         with zipfile.ZipFile(source) as archive:
             names = [m.filename for m in archive.infolist()]
             data = [m for m in archive.infolist() if m.filename == f"{receipt['entity']}.csv"]
-            labels = [m for m in archive.infolist() if m.filename.endswith("_Slowniki.csv")]
+            stem = receipt["entity"].removesuffix("_pl")
+            labels = [m for m in archive.infolist() if m.filename == f"{stem}_Slowniki.csv"]
             if len(data) != 1 or len(labels) != 1 or len(names) != 2:
                 raise DbwDecodeError(f"expected <entity>.csv and one *_Slowniki.csv, found {names}")
             _extract(archive, data[0], csv_path)
@@ -89,8 +90,11 @@ def decode(source: Path, receipt: dict, output: Path, dictionary: Path, memory_l
         dictionary_rows = _decode_dictionary(dict_path, receipt, dictionary, memory_limit)
     finally:
         dict_path.unlink(missing_ok=True)
-    with csv_path.open("r", encoding="utf-8-sig", errors="strict") as handle:
-        header = handle.readline().rstrip("\r\n").split(";")
+    try:
+        with csv_path.open("r", encoding="utf-8-sig", errors="strict") as handle:
+            header = handle.readline().rstrip("\r\n").split(";")
+    except UnicodeDecodeError as exc:
+        raise DbwDecodeError(f"data CSV is not UTF-8: {exc}") from exc
     if header and header[-1] == "":
         header = header[:-1]
     if header != SOURCE_COLUMNS:
@@ -145,9 +149,12 @@ def _decode_dictionary(path: Path, receipt: dict, output: Path, memory_limit: st
     import pyarrow as pa
     import pyarrow.parquet as pq
 
-    text = path.read_bytes().decode("utf-8-sig", errors="strict")
-    lines = text.split("\r\n")
-    if lines and lines[-1] == "":
+    try:
+        text = path.read_bytes().decode("utf-8-sig", errors="strict")
+    except UnicodeDecodeError as exc:
+        raise DbwDecodeError(f"dictionary CSV is not UTF-8: {exc}") from exc
+    lines = text.replace("\r\n", "\n").split("\n")
+    while lines and lines[-1] == "":
         lines.pop()
     header = lines[0].split(";") if lines else []
     if header and header[-1] == "":
@@ -157,7 +164,7 @@ def _decode_dictionary(path: Path, receipt: dict, output: Path, memory_limit: st
     rows: dict[str, list] = {name: [] for name in DICTIONARY_SOURCE}
     for number, line in enumerate(lines[1:], start=2):
         parts = line.split(";", 3)
-        if len(parts) != 4 or not parts[3].endswith(";") or "\n" in line or not parts[0] or not parts[2]:
+        if len(parts) != 4 or not parts[3].endswith(";") or "\r" in line or not parts[0] or not parts[2]:
             raise DbwDecodeError(f"dictionary line {number} is not column;dictionary;id;description;: {line[:120]}")
         description = parts[3][:-1]
         if len(description) >= 2 and description.startswith('"') and description.endswith('"'):

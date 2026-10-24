@@ -7,11 +7,15 @@ landing.verify    extract.py --mode verify    every receipt has its data file (L
 
 from __future__ import annotations
 
+BUDGET = {"inspect": 45, "load": 330, "verify": 45}  # minutes; landing.inspect/verify jobs stop at 60
+
 
 def _extract(mode: str, p) -> int:
     from ingestion.to_landing.gus_dbw import extract
 
-    return extract.main(["--mode", mode, "--filter", p.filter, "--budget-minutes", str(min(p.budget_minutes, 330))])
+    budget = min(p.budget_minutes, BUDGET[mode])
+    shard = f"{p.job_index}/{p.parallel_jobs}"
+    return extract.main(["--mode", mode, "--filter", p.filter, "--budget-minutes", str(budget), "--shard", shard])
 
 
 ACTIVITIES = {

@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
+import contextlib
 from datetime import UTC, datetime
 from hashlib import sha256
 import json
@@ -60,7 +61,7 @@ class NotFound(RuntimeError):
 class Fetched:
     """A finished response: body bytes, headers and the seconds it took."""
 
-    def __init__(self, content: bytes, headers: dict[str, str], seconds: float):
+    def __init__(self, content: bytes, headers, seconds: float):  # headers: case-insensitive mapping
         self.content, self.headers, self.seconds = content, headers, seconds
 
     def json(self) -> Any:
@@ -70,34 +71,46 @@ class Fetched:
 TIMING: Counter = Counter()  # requests, retries, seconds, slowest: reported by every mode
 
 
+DEADLINE = float("inf")  # the run's hard deadline (main sets it): no request outlives it
+
+
 def get(session: requests.Session, address: str, limit: float = 300, **params: Any) -> Fetched:
-    """GET with retries; each attempt is streamed and abandoned after ``limit`` seconds, so a
-    server that trickles bytes cannot hold the run (a 4-hour trial stalled that way, 24 Oct)."""
+    """GET with retries; each attempt is streamed in small chunks and abandoned after ``limit``
+    seconds or at the run's deadline, so a server that trickles bytes cannot hold the run (a
+    4-hour trial stalled that way, 24 Oct). Every failure is a RuntimeError (NotFound for 404)."""
     for attempt in range(6):
         started, status, text = time.monotonic(), None, ""
+        cap = min(limit, DEADLINE - started)
+        if cap <= 0:
+            raise RuntimeError(f"run deadline reached before {address}")
         try:
-            with session.get(address, params=params or None, timeout=(30, 120), stream=True) as response:
+            with session.get(address, params=params or None, timeout=(30, 60), stream=True) as response:
                 status = response.status_code
                 if status == 200:
                     chunks = []
-                    for chunk in response.iter_content(1 << 20):
+                    for chunk in response.iter_content(64 << 10):
                         chunks.append(chunk)
-                        if time.monotonic() - started > limit:
-                            raise requests.Timeout(f"slower than {limit:.0f} s")
+                        if time.monotonic() - started > cap:
+                            raise requests.Timeout(f"slower than {cap:.0f} s")
                     seconds = time.monotonic() - started
                     TIMING["requests"] += 1
                     TIMING["seconds"] += round(seconds)
                     TIMING["slowest"] = max(TIMING["slowest"], round(seconds))
-                    return Fetched(b"".join(chunks), dict(response.headers), seconds)
+                    return Fetched(b"".join(chunks), response.headers, seconds)
                 text = response.text[:200]
         except (requests.ConnectionError, requests.Timeout, requests.exceptions.ChunkedEncodingError):
             status = None
+        except requests.RequestException as exc:  # redirects, decoding: not worth a retry
+            raise RuntimeError(f"DBW website request failed for {address}: {exc}") from exc
         if status == 404:
             raise NotFound(f"DBW website 404 for {address} {params or ''}")
         if status is not None and status not in (429, 500, 502, 503, 504):
             raise RuntimeError(f"DBW website {status} for {address}: {text}")
         TIMING["retries"] += 1
-        time.sleep(min(60, 5 * 2**attempt))
+        pause = min(60, 5 * 2**attempt)
+        if time.monotonic() + pause > DEADLINE:
+            break
+        time.sleep(pause)
     raise RuntimeError(f"DBW website kept failing: {address}")
 
 
@@ -235,6 +248,9 @@ def run_load(client, bucket, session, todo: list[dict], held: dict[str, list], d
         address = f"{WEB}/bulk_new/{f['file']}"
         try:
             response = get(session, address, limit=900)
+        except NotFound:  # listed but not served: counted, no alert (as listed indicators without data)
+            outcomes["files_not_served"] += 1
+            continue
         except RuntimeError as exc:  # one file's failure is counted; the next run tries it again
             outcomes["failed_download"] += 1
             failures.append(f"{f['entity']}: {str(exc)[:120]}")
@@ -250,7 +266,6 @@ def run_load(client, bucket, session, todo: list[dict], held: dict[str, list], d
         # stale on every run); the Archive keeps the bytes once and Bronze sees the same recipe.
         ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         key = f"{PREFIX}{f['entity']}/{f['version']}__{ingested}.zip"
-        put_new(client, bucket, key, body, "application/zip")
         receipt = {
             "schema_version": 2,
             "kind": "gus_dbw_landing",
@@ -281,13 +296,24 @@ def run_load(client, bucket, session, todo: list[dict], held: dict[str, list], d
             "replaces_sha256": previous["sha256"] if previous else None,
             "code_sha": code_sha,
         }
-        put_new(
-            client,
-            bucket,
-            key[: -len(".zip")] + ".receipt.json",
-            json.dumps(receipt, ensure_ascii=False, indent=2, sort_keys=True).encode(),
-            "application/json",
-        )
+        try:  # data first, then its receipt; a failed receipt takes the data object back out
+            put_new(client, bucket, key, body, "application/zip")
+            try:
+                put_new(
+                    client,
+                    bucket,
+                    key[: -len(".zip")] + ".receipt.json",
+                    json.dumps(receipt, ensure_ascii=False, indent=2, sort_keys=True).encode(),
+                    "application/json",
+                )
+            except Exception:
+                with contextlib.suppress(Exception):
+                    client.delete_object(Bucket=bucket, Key=key)
+                raise
+        except Exception as exc:  # storage trouble for one file: counted, the next run tries again
+            outcomes["failed_write"] += 1
+            failures.append(f"{f['entity']}: write {type(exc).__name__}: {str(exc)[:100]}")
+            continue
         same = previous and previous["sha256"] == digest
         outcomes["landed_new" if not previous else "landed_same_bytes" if same else "landed_changed"] += 1
     if failures:
@@ -320,8 +346,12 @@ def main(argv=None) -> int:
     parser.add_argument("--mode", choices=("inspect", "load", "verify"), required=True)
     parser.add_argument("--filter", default="", help="comma separated indicator ids")
     parser.add_argument("--budget-minutes", type=float, default=300)
+    parser.add_argument("--shard", default="0/1", help="job i of n: downloads only its share of the files")
     args = parser.parse_args(argv)
+    global DEADLINE
     deadline = time.monotonic() + args.budget_minutes * 60
+    DEADLINE = deadline + 10 * 60  # no request outlives the budget by more than this
+    shard, shards = (int(v) for v in args.shard.split("/"))
     client, bucket = s3(), req("R2_LANDING_BUCKET")
     held = landed(client, bucket)
     if args.mode == "verify":
@@ -342,12 +372,19 @@ def main(argv=None) -> int:
             "missing_sample": [f["entity"] for f in groups["missing"][:10]],
             **stats,
         }
-        status = 2 if stats.get("indicators_not_listed_time_budget") else 0
+        # inspect only reports: an unfinished listing is a warning, never a reason to skip the extract
+        status = 2 if stats.get("indicators_not_listed_time_budget") and args.mode == "load" else 0
         if args.mode == "load":
-            outcomes = run_load(client, bucket, session, groups["missing"] + groups["stale"], held, deadline)
+            todo = [
+                f
+                for f in groups["missing"] + groups["stale"]
+                if int(sha256(f["entity"].encode()).hexdigest(), 16) % shards == shard
+            ]
+            outcomes = run_load(client, bucket, session, todo, held, deadline)
             summary.update(outcomes)
             status = 2 if outcomes["not_started_time_budget"] or status else 0
-        if stats.get("indicators_failed") or summary.get("failed_download") or summary.get("not_a_zip"):
+        failed = ("failed_download", "not_a_zip", "failed_write")
+        if stats.get("indicators_failed") or any(summary.get(k) for k in failed):
             status = 1  # the rest was done; the failed indicators or files are retried next run
     summary["timing"] = dict(TIMING)
     print(json.dumps(summary, sort_keys=True, default=str))

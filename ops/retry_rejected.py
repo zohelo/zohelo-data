@@ -27,6 +27,7 @@ REJECTIONS = {
     "gleif": ("bronze", "gleif_rejected_files"),
     "mf_biala_lista": ("bronze", "biala_lista_rejected_files"),
     "gus_bdl": ("bronze", "bdl_rejected_files"),
+    "gus_dbw": ("bronze", "dbw_rejected_files"),
 }
 
 
