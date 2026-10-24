@@ -10,7 +10,8 @@ Needs GITHUB_TOKEN with `issues: write`; reads the run context from the environm
 ``--check-jobs`` (runs with an extract step): the extract jobs continue on error so landed files
 still reach Bronze, which hides their failure from the workflow's failure(); the run's job
 conclusions are read (`actions: read`) and the alert is raised only when a job failed or was
-cancelled (a model build replaced in its queue is cancelled by design and does not count).
+cancelled (a model build replaced in its queue is cancelled by design and does not count); this
+job then exits 1, so the run concludes "failure" for the scheduler's catch-up and the tracker.
 """
 
 from __future__ import annotations
@@ -39,6 +40,9 @@ def failed_jobs(session: requests.Session, repo: str, run_id: str) -> list[str]:
             name, conclusion = job.get("name") or "", job.get("conclusion")
             if name == "notify":
                 continue
+            if conclusion is None and job.get("status") != "completed":  # not finished: never fail open
+                names.append(f"{name} (status {job.get('status')})")
+                continue
             if conclusion == "failure" or (conclusion == "cancelled" and not name.startswith(CANCELLED_BY_DESIGN)):
                 names.append(name)
         if len(jobs) < 100:
@@ -59,6 +63,7 @@ def main(argv=None) -> int:
     event = os.environ.get("GITHUB_EVENT_NAME", "")
     session = requests.Session()
     session.headers.update({"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
+    failed: list[str] = []
     if args.check_jobs:
         failed = failed_jobs(session, repo, run_id)
         if not failed:
@@ -89,7 +94,9 @@ def main(argv=None) -> int:
         )
     response.raise_for_status()
     print(response.json().get("html_url"))
-    return 0
+    # A failed extract leg continues on error, so the run would end "success" and the scheduler's
+    # catch-up would treat the slot as done: this job fails to give the run its true conclusion.
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
