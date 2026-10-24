@@ -165,6 +165,10 @@ jobs:
     needs: [plan, landing-inspect]
     if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'landing.extract') }}"
     name: "landing.extract · job ${{ matrix.job }}"
+    # A failed extract job must not keep the files that did land (and are verified) out of
+    # Bronze: one crashed shard of a parallel BDL run skipped every load (run 40005861636).
+    # The failure still alerts: notify checks the run's job conclusions.
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -325,6 +329,7 @@ jobs:
       always() && (
       failure() ||
       needs.silver-gold-build.result == 'failure' ||
+      (needs.plan.result == 'success' && contains(needs.plan.outputs.activities, 'landing.extract')) ||
       needs.scheduler.result == 'cancelled' ||
       needs.plan.result == 'cancelled' ||
       needs.landing-inspect.result == 'cancelled' ||
@@ -342,6 +347,7 @@ jobs:
     permissions:
       contents: read
       issues: write
+      actions: read
     # Least privilege: this job only needs github.token, so it blanks the workflow-level secrets.
     env:
       R2_DATA_CATALOG_TOKEN: ""
@@ -365,4 +371,4 @@ jobs:
           RUN_NAME: ${{ inputs.run }}
         run: |
           python -m pip install --quiet requests==2.32.3
-          python -m ops.notify_failure
+          python -m ops.notify_failure --check-jobs
