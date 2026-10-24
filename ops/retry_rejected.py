@@ -22,7 +22,12 @@ from pyiceberg.expressions import In
 from ingestion.common.r2 import catalog
 from ingestion.common.report import annotate
 
-REJECTIONS = {"eurostat": ("bronze", "eurostat_rejected_files"), "gus_bdl": ("bronze", "bdl_rejected_files")}
+REJECTIONS = {
+    "eurostat": ("bronze", "eurostat_rejected_files"),
+    "gleif": ("bronze", "gleif_rejected_files"),
+    "mf_biala_lista": ("bronze", "biala_lista_rejected_files"),
+    "gus_bdl": ("bronze", "bdl_rejected_files"),
+}
 
 
 def reason(error: str) -> str:
@@ -46,7 +51,8 @@ def main(argv=None) -> int:
     selected = [
         r
         for r in records
-        if not patterns or any(fnmatch.fnmatch(str(r.get("dataset_id", "")).lower(), p) for p in patterns)
+        if not patterns
+        or any(fnmatch.fnmatch(str(r.get("dataset_id") or r.get("entity") or "").lower(), p) for p in patterns)
     ]
 
     cleared = 0
@@ -61,11 +67,14 @@ def main(argv=None) -> int:
             "selected": len(selected),
             "cleared_for_retry": cleared,
             "by_dataset_family": dict(
-                Counter(re.split(r"[_$]", str(r.get("dataset_id", "?")))[0] for r in selected).most_common(15)
+                Counter(
+                    re.split(r"[_$]", str(r.get("dataset_id") or r.get("entity") or "?"))[0] for r in selected
+                ).most_common(15)
             ),
             "by_reason": dict(Counter(reason(r.get("error", "")) for r in selected).most_common(8)),
             "examples": [
-                {"dataset": r.get("dataset_id"), "error": str(r.get("error", ""))[:200]} for r in selected[:5]
+                {"dataset": r.get("dataset_id") or r.get("entity"), "error": str(r.get("error", ""))[:200]}
+                for r in selected[:5]
             ],
         },
     )

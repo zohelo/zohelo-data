@@ -35,12 +35,19 @@ sources:
   schema: bronze
   meta:
     landing: 01_landing/gleif/
-    loaded_by: retired code (ingestion/legacy/)
+    loaded_by: ingestion/to_bronze/gleif/
     config: ingestion/sources/gleif.yaml
   tables:
-  - name: gleif_lei2
+  - name: gleif_lei_records
+    description: >-
+      One row per LEI record of the newest golden copy (LEI-CDF CSV), every CSV column as text,
+      named after its header (lower case, dots → underscores), plus provenance.
   - name: gleif_relationship_records
+    description: One row per relationship record of the newest golden copy (RR-CDF CSV), columns as text.
   - name: gleif_reporting_exceptions
+    description: One row per reporting exception of the newest golden copy, columns as text.
+  - name: gleif_rejected_files
+    description: Landing files the GLEIF Bronze decoder rejected, with the reason (cleared by ops/retry_rejected).
 - name: gugik_prg
   description: GUGiK PRG — national register of boundaries (administrative and cadastral units)
   database: r2
@@ -135,12 +142,15 @@ sources:
   schema: bronze
   meta:
     landing: 01_landing/mf_biala_lista/
-    loaded_by: retired code (ingestion/legacy/)
+    loaded_by: ingestion/to_bronze/mf_biala_lista/
     config: ingestion/sources/mf_biala_lista.yaml
   tables:
-  - name: biala_lista_header
-  - name: biala_lista_masks
-  - name: biala_lista_taxpayers
+  - name: biala_lista_records
+    description: >-
+      One row per item of the newest flat file's lists (record_kind active / exempt / mask, value
+      as published, position in its list), with the header's generation date and transformation count.
+  - name: biala_lista_rejected_files
+    description: Landing files the white-list Bronze decoder rejected, with the reason (cleared by ops/retry_rejected).
 - name: nbp
   description: Narodowy Bank Polski — exchange rate tables A/B/C and gold prices (NBP Web API)
   database: r2
@@ -210,6 +220,20 @@ sources:
       GUS DBW observations, typed ids (indicator, cross-section, dimension/position pairs 1–9,
       period, presentation, year, flags) and value (decimal comma → double); one file per
       bulk file (raw_sha256 = its Landing file). Labels come from the DBW dictionaries.
+  - name: biala_lista_taxpayer_hashes
+    description: >-
+      MF VAT white list: SHA-512 hashes (date + NIP + account, hashed `transformations` times) of
+      active and exempt VAT taxpayers' accounts in the newest flat file; taxpayer_status active / exempt.
+  - name: biala_lista_masks
+    description: MF VAT white list virtual-account masks of the newest flat file.
+  - name: gleif_legal_entities
+    description: >-
+      GLEIF legal entities: one row per LEI of the newest golden copy, core LEI-CDF attributes
+      typed (names, jurisdiction, legal form, status, addresses, registration); entity = lei2.
+  - name: gleif_relationships
+    description: GLEIF relationship records, child LEI → parent LEI by relationship type, newest golden copy; entity = rr.
+  - name: gleif_reporting_exceptions
+    description: GLEIF reporting exceptions, why an LEI reports no direct or ultimate parent; entity = repex.
   - name: eurostat_observations
     description: >-
       Eurostat observations, typed: freq, unit, geo as published, time_period in SDMX format,

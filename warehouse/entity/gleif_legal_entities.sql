@@ -1,0 +1,43 @@
+-- GLEIF legal entities (LEI-CDF): one row per LEI of the newest golden copy, core attributes
+-- typed. Other names, other addresses, events and validation authorities stay in Bronze
+-- (bronze.gleif_lei_records, one column per CDF field).
+-- Applied by the loader to ONE Bronze file; `bronze` is that file (design #875).
+select
+    entity,
+    lei,
+    entity_legalname as legal_name,
+    nullif(entity_legalname_xmllang, '') as legal_name_language,
+    nullif(entity_legaljurisdiction, '') as legal_jurisdiction,
+    nullif(entity_entitycategory, '') as entity_category,
+    nullif(entity_entitysubcategory, '') as entity_subcategory,
+    nullif(entity_legalform_entitylegalformcode, '') as legal_form_code,
+    nullif(entity_legalform_otherlegalform, '') as legal_form_other,
+    nullif(entity_entitystatus, '') as entity_status,
+    try_cast(nullif(entity_entitycreationdate, '') as timestamptz) as entity_created_at,
+    try_cast(nullif(entity_entityexpirationdate, '') as timestamptz) as entity_expired_at,
+    nullif(entity_entityexpirationreason, '') as entity_expiration_reason,
+    nullif(entity_successorentity_1_successorlei, '') as successor_lei,
+    nullif(entity_registrationauthority_registrationauthorityid, '') as registration_authority_id,
+    nullif(entity_registrationauthority_registrationauthorityentityid, '') as registration_authority_entity_id,
+    nullif(entity_legaladdress_firstaddressline, '') as legal_address_line,
+    nullif(entity_legaladdress_addressnumber, '') as legal_address_number,
+    nullif(entity_legaladdress_city, '') as legal_address_city,
+    nullif(entity_legaladdress_region, '') as legal_address_region,
+    nullif(entity_legaladdress_country, '') as legal_address_country,
+    nullif(entity_legaladdress_postalcode, '') as legal_address_postal_code,
+    nullif(entity_headquartersaddress_firstaddressline, '') as hq_address_line,
+    nullif(entity_headquartersaddress_addressnumber, '') as hq_address_number,
+    nullif(entity_headquartersaddress_city, '') as hq_address_city,
+    nullif(entity_headquartersaddress_region, '') as hq_address_region,
+    nullif(entity_headquartersaddress_country, '') as hq_address_country,
+    nullif(entity_headquartersaddress_postalcode, '') as hq_address_postal_code,
+    nullif(registration_registrationstatus, '') as registration_status,
+    try_cast(nullif(registration_initialregistrationdate, '') as timestamptz) as registered_at,
+    try_cast(nullif(registration_lastupdatedate, '') as timestamptz) as registration_updated_at,
+    try_cast(nullif(registration_nextrenewaldate, '') as timestamptz) as next_renewal_at,
+    nullif(registration_managinglou, '') as managing_lou,
+    nullif(registration_validationsources, '') as validation_sources,
+    nullif(conformityflag, '') as conformity_flag,
+    source_version,
+    raw_sha256
+from bronze
