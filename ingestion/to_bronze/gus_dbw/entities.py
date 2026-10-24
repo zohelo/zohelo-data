@@ -48,8 +48,9 @@ DICTIONARY_PREFIX = "02_bronze/gus_dbw/dictionary_items/"
 SILVER_PREFIX = "03_silver/gus_dbw/observations/"
 SILVER_MODEL = "dbw_observations"
 STATS = [ENTITY, "raw_sha256"]
-COMMIT_EVERY = 500  # files
-COMMIT_SECONDS = 600
+COMMIT_EVERY = 2000  # files: each commit reads every manifest of 3 tables, so few large commits
+COMMIT_SECONDS = 1200
+CHUNK = 2000  # entities per catalog transaction (small files: a large manifest is fine)
 BIG_BYTES = 50 << 20  # Landing files above this decode alone, with the full memory limit
 SILVER_COLUMNS = [
     ("entity_id", "VARCHAR"),
@@ -293,9 +294,9 @@ def plan(
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--minutes", type=float, default=50, help="time budget; unfinished files wait for the next run")
-    parser.add_argument("--workers", type=int, default=3)
+    parser.add_argument("--workers", type=int, default=6)  # most DBW files are small: the work is waiting on R2
     parser.add_argument("--only", nargs="*", help="entity ids (trials)")
-    parser.add_argument("--memory", default="4GB", help="DuckDB memory per worker for small files")
+    parser.add_argument("--memory", default="2GB", help="DuckDB memory per worker for small files")
     parser.add_argument(
         "--silver-table", default=".".join(SILVER), help="namespace.table (the checkpoint builds beside the old table)"
     )
@@ -349,9 +350,25 @@ def main(argv=None) -> int:
         if ok:
             labels = {r[ENTITY]: [r["dictionary"]] for r in ok if r.get("dictionary")}
             if labels:  # labels with their observations: both come from the same Landing file
-                et.replace(cat, dictionary_id, ENTITY, labels, STATS, "gus-dbw-entities")
-            et.replace(cat, bronze_id, ENTITY, {r[ENTITY]: [r["bronze"]] for r in ok}, STATS, "gus-dbw-entities")
-            et.replace(cat, silver_id, ENTITY, {r[ENTITY]: [r["silver"]] for r in ok}, STATS, "gus-dbw-entities")
+                et.replace(cat, dictionary_id, ENTITY, labels, STATS, "gus-dbw-entities", chunk_size=CHUNK)
+            et.replace(
+                cat,
+                bronze_id,
+                ENTITY,
+                {r[ENTITY]: [r["bronze"]] for r in ok},
+                STATS,
+                "gus-dbw-entities",
+                chunk_size=CHUNK,
+            )
+            et.replace(
+                cat,
+                silver_id,
+                ENTITY,
+                {r[ENTITY]: [r["silver"]] for r in ok},
+                STATS,
+                "gus-dbw-entities",
+                chunk_size=CHUNK,
+            )
         bad = [r for r in pending if r["status"] == "rejected"]
         bf.record_rejections(
             cat,

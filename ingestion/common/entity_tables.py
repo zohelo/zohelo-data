@@ -57,10 +57,22 @@ def state(table, entity_column: str) -> dict[str, dict[str, Any]]:
     return dict(out)
 
 
+FOOTER_THREADS = 8  # Parquet footers read at once (R2 throttles larger bursts); they were read one by one
+
+
 def _data_files(table, uris: list[str], stats_columns: list[str]):
+    """Iceberg data-file entries from the files' Parquet footers, read in parallel; a transient
+    storage error on one footer is retried (a timeout crashed a 4,300-file DBW load, 24 Oct)."""
+    from concurrent.futures import ThreadPoolExecutor
+
     stats = {f"write.metadata.metrics.column.{c}": "full" for c in stats_columns}
     metadata = table.metadata.model_copy(update={"properties": {**table.metadata.properties, **stats}})
-    return [parquet_file_to_data_file(table.io, metadata, uri) for uri in uris]
+
+    def one(uri: str):
+        return bf.retry(lambda: parquet_file_to_data_file(table.io, metadata, uri), "parquet_footer")
+
+    with ThreadPoolExecutor(max_workers=FOOTER_THREADS) as pool:
+        return list(pool.map(one, uris))
 
 
 def replace(
@@ -70,6 +82,7 @@ def replace(
     wanted: dict[str, list[str]],
     stats_columns: list[str],
     operation: str,
+    chunk_size: int = CHUNK,
 ) -> dict[str, int]:
     """Make each entity in ``wanted`` hold exactly the given file URIs (an empty list removes it).
 
@@ -77,8 +90,8 @@ def replace(
     lost commit response, changes nothing. Returns counts of entities replaced and skipped."""
     replaced = skipped = 0
     entities = sorted(wanted)
-    for start in range(0, len(entities), CHUNK):
-        chunk = entities[start : start + CHUNK]
+    for start in range(0, len(entities), chunk_size):
+        chunk = entities[start : start + chunk_size]
         first = None
         for attempt in range(len(bf.RETRY_DELAYS) + 1):
             table = bf.retry(lambda: cat.load_table(table_id), "load_table")

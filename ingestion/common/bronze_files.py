@@ -53,6 +53,7 @@ TYPES = {
     "BOOLEAN": BooleanType(),
     "DATE": DateType(),
 }
+NETWORK_MARKERS = ("NETWORK_CONNECTION", "SLOW_DOWN", "curlCode: 28", "Timeout was reached", "Connection reset")
 THROTTLED = {"ServiceUnavailable", "SlowDown", "InternalError", "RequestTimeout", "TooManyRequests", "503", "500"}
 
 
@@ -91,6 +92,8 @@ def transient(exc: Exception | None) -> bool:
             return str(exc.response.get("Error", {}).get("Code", "")) in THROTTLED
         if isinstance(exc, requests.HTTPError):
             return exc.response is not None and exc.response.status_code in {429, 500, 502, 503, 504}
+        if isinstance(exc, OSError) and any(t in str(exc) for t in NETWORK_MARKERS):
+            return True  # pyarrow's S3 client: "AWS Error NETWORK_CONNECTION … curlCode: 28"
         exc = exc.__cause__
     return False
 
