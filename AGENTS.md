@@ -116,6 +116,10 @@ in `ingestion/sources/<source>.yaml`. Landing layout and rules: docs/landing.md.
 - A source's `activities:` list, merged to `main`, is its authorization. Claude adds
   sources and activities through pull requests under the Mandate.
 - Claude may schedule authorized activities (see Workflows and activities).
+- Standing owner permissions (24 October 2026): Claude closes an `alert` issue once the
+  cause is fixed and the source's latest run is green, with a note on the issue; Claude
+  deletes its own leftover work branches (`test/*`, `dev/*`, and others the owner names)
+  through Ops `branch_cleanup` (report first, then `--apply`).
 
 ## Autonomy
 
@@ -150,7 +154,8 @@ owner decision is needed; keep reports short.
   except changes to AGENTS.md.
 - **The owner merges** changes to AGENTS.md and pull requests that touch the "Ask the
   owner first" items. The PR description says which group it belongs to.
-- Merged branches are deleted (repository setting); delete leftovers manually.
+- Merged branches are deleted (repository setting); leftover `test/*` and `dev/*` branches
+  are deleted with Ops `branch_cleanup`. Dev trials reuse one `test/<topic>` branch.
 - No new workflow files; edits to the four workflows are allowed.
 - The `check` job is the only CI; do not restore removed tests, test workflows or
   historical task queues.
