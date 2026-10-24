@@ -1,16 +1,34 @@
 source_system: gus_dbw
-description: GUS DBW indicators
+description: GUS Dziedzinowe Bazy Wiedzy (DBW) indicators from the website bulk files (dbw.stat.gov.pl)
 
+# Extraction strategy (docs/landing.md): source bulk feature. The DBW website publishes every
+# indicator × cross-section × presentation × periodicity as one ZIP (one semicolon CSV) with its
+# last-update date in the indicator listing (api_app/getAggregatesById); no account, no VPN.
 extraction:
-  initial: to_be_decided
-  production: to_be_decided
-  incremental_policy: to_be_decided
-  schedule: null
+  initial: bulk                          # every bulk file of every indicator
+  production: snapshot                   # every file is a complete version of its entity
+  incremental_policy: changed_since_last # listing "last update" vs Landing version
+  # UTC; files changed since the last run (DBW updates during Warsaw working days)
+  schedule:
+    - {cron: "40 3 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/gus_dbw/
-bronze: []   # old-code copies retired 16 Oct (owner decision #835); rebuilt by the new solution
-silver: []
+# Landing → Archive as Eurostat: Bronze-loaded files are moved (copy, verify, delete).
+# Retention: newest version of every entity plus anything ingested in the last 90 days.
+# 01_landing/gus_dbw/native/ and _control/ hold the old pipeline's files, kept (owner, 21 Oct).
+archive_policy:
+  move: true
+  without_bronze: []
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+# Observations: one file per bulk file in Bronze and in Silver, replaced whole (design #875).
+bronze: [bronze.dbw_observations, bronze.dbw_dictionary_items, bronze.dbw_rejected_files]
+silver: [silver.dbw_observations]
 gold: []
-legacy_tables: [bronze.dbw_observations, bronze.dbw_dictionaries, bronze.dbw_indicators, bronze.dbw_metadata, silver.dbw_dictionaries, silver.dbw_indicators, silver.dbw_metadata, silver.dbw_observations, gold.dim_dbw_dictionary, gold.dim_dbw_indicator, gold.dim_dbw_metadata, gold.fact_dbw_observations]
+legacy_tables: [bronze.dbw_dictionaries, bronze.dbw_indicators, bronze.dbw_metadata, silver.dbw_dictionaries, silver.dbw_indicators, silver.dbw_metadata, gold.dim_dbw_dictionary, gold.dim_dbw_indicator, gold.dim_dbw_metadata, gold.fact_dbw_observations]
 
-activities: []   # paused; legacy code in ingestion/legacy/
+# Refresh policy for all layers (design #875): a new file version replaces that file's entity
+# in Bronze, Silver and Gold; nothing else is rewritten.
+refresh: {mode: incremental, unit: file, decided: "#875"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

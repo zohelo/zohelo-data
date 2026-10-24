@@ -16,6 +16,8 @@ import requests
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 CONTENT_ADDRESSED_RE = re.compile(r"^(raw|response)-([0-9a-f]{64})\.bin$")
 SNAPSHOT = "snapshot/"
+# Landing folders of retired pipelines kept by the owner (21 Oct 2026): not this layout, never moved.
+KEPT_OLD_FOLDERS = {"gus_dbw": ("native/", "_control/")}
 
 
 def req(name: str) -> str:
@@ -133,6 +135,8 @@ def landing_objects(client, bucket: str, source: str) -> dict[str, dict[str, Any
             if size <= 0 or key.endswith("/"):
                 continue
             rest = key[len(prefix) :]
+            if rest.startswith(KEPT_OLD_FOLDERS.get(source, ())):
+                continue
             if rest.startswith(SNAPSHOT):
                 if key.endswith(".receipt.json"):
                     receipt_keys.append(key)

@@ -97,18 +97,25 @@ sources:
   - name: bdl_rejected_files
     description: Landing files the BDL Bronze decoder rejected, with the reason (cleared by ops/retry_rejected).
 - name: gus_dbw
-  description: GUS DBW indicators
+  description: GUS DBW (Dziedzinowe Bazy Wiedzy) indicators, website bulk files
   database: r2
   schema: bronze
   meta:
     landing: 01_landing/gus_dbw/
-    loaded_by: retired code (ingestion/legacy/)
+    loaded_by: ingestion/to_bronze/gus_dbw/
     config: ingestion/sources/gus_dbw.yaml
   tables:
   - name: dbw_observations
-  - name: dbw_dictionaries
-  - name: dbw_indicators
-  - name: dbw_metadata
+    description: >-
+      One row per CSV row of a DBW bulk file (indicator × cross-section × presentation ×
+      periodicity), newest Landing version of every file, one file per entity (design #875);
+      partitioned by entity_id. All source columns as text (wartosc keeps its decimal comma).
+  - name: dbw_dictionary_items
+    description: >-
+      The labels file of each DBW bulk ZIP (*_Slowniki.csv): one row per id the file uses
+      (column, dictionary, element id, description as published), newest version per entity_id.
+  - name: dbw_rejected_files
+    description: Landing files the DBW Bronze decoder rejected, with the reason (cleared by ops/retry_rejected).
 - name: gus_teryt
   description: GUS TERYT — territorial register (TERC, SIMC, ULIC, WMRODZ)
   database: r2
@@ -208,6 +215,11 @@ sources:
   database: r2
   schema: silver
   tables:
+  - name: dbw_observations
+    description: >-
+      GUS DBW observations, typed ids (indicator, cross-section, dimension/position pairs 1–9,
+      period, presentation, year, flags) and value (decimal comma → double); one file per
+      bulk file (raw_sha256 = its Landing file). Labels come from the DBW dictionaries.
   - name: biala_lista_taxpayer_hashes
     description: >-
       MF VAT white list: SHA-512 hashes (date + NIP + account, hashed `transformations` times) of

@@ -20,6 +20,7 @@ researched route yet.
 | Eurostat | [`inventory?type=data&lang=en`](https://ec.europa.eu/eurostat/api/dissemination/files/inventory?type=data&lang=en) | use each inventory row's exact TSV/CSV/SDMX URL; canonical full TSV pattern is `https://ec.europa.eu/eurostat/api/dissemination/sdmx/3.0/data/dataflow/ESTAT/{CODE}/1.0?format=tsv` | one dataflow; async key if returned; constrained partitions only after `413` |
 | GUS BDL | paginated `/variables` plus subject, unit, locality and dictionary resources at `https://bdl.stat.gov.pl/api/v1` | `/data/by-variable/{variable-id}` with no `year` filter, page through all result units | one API page |
 | NBP public statistics | the Statistics and Payment System navigation pages and every official downloadable attachment they link | API for exchange rates/gold; page-linked XLS/XLSX/CSV/XML/ZIP/PDF distributions for the rest | one API date window or one attachment |
+| GUS DBW | indicator tree `https://dbw.stat.gov.pl/api_app/wsk/getIndicatorsTree` and each indicator's `api_app/getAggregatesById?id={id}&czy_pl=true` (bulk files with last-update date) | `https://dbw.stat.gov.pl/bulk_new/{file}.zip`, one semicolon CSV per indicator × cross-section × presentation × periodicity | one bulk file |
 
 HTTP byte-range support is not promised in the reviewed provider documentation for
 any of these routes. A downloader may use ranges only after verifying `206 Partial
@@ -261,6 +262,20 @@ Primary evidence:
 
 - [Official English BDL API guide](https://api.stat.gov.pl/Home/BdlApi?lang=en)
 - [BDL v1 OpenAPI](https://bdl.stat.gov.pl/api/v1/swagger/doc/swagger.json)
+
+## GUS Dziedzinowe Bazy Wiedzy (DBW)
+
+**Extraction (24 Oct 2026).** The DBW website publishes every indicator as bulk ZIP files
+(one per cross-section × presentation × periodicity, some also per year), each with one
+semicolon CSV of ids (`id_zmienna;id_przekroj;id_wymiar_1;id_pozycja_1;…;id_okres;
+id_sposob_prezentacji_miara;id_daty;id_brak_wartosci;id_tajnosci;id_flaga;wartosc;precyzja`).
+The indicator listing (`getAggregatesById`) gives each file with its last-update date, so
+entity = file stem (e.g. `1000_156_93_4_pl`), version = that date, and a daily run lands
+only files whose date is newer than Landing (`ingestion/to_landing/gus_dbw/extract.py`).
+Each ZIP also holds `<id>_Slowniki.csv`, the labels of every id it uses, loaded as `bronze.dbw_dictionary_items` (parsed line by line: GUS leaves quotes inside the descriptions undoubled). No account, no key, no VPN. Bronze keeps the CSV as text; Silver
+(`warehouse/entity/dbw_observations.sql`) types the ids and the value (decimal comma).
+Labels of the ids come from the DBW dictionaries, loaded later into Gold. The old
+pipeline's `01_landing/gus_dbw/native/` and `_control/` stay as they are (owner, 21 Oct).
 
 ## Narodowy Bank Polski public statistics
 
