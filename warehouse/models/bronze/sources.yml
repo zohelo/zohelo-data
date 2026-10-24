@@ -35,12 +35,19 @@ sources:
   schema: bronze
   meta:
     landing: 01_landing/gleif/
-    loaded_by: retired code (ingestion/legacy/)
+    loaded_by: ingestion/to_bronze/gleif/
     config: ingestion/sources/gleif.yaml
   tables:
-  - name: gleif_lei2
+  - name: gleif_lei_records
+    description: >-
+      One row per LEI record of the newest golden copy (LEI-CDF CSV), every CSV column as text,
+      named after its header (lower case, dots → underscores), plus provenance.
   - name: gleif_relationship_records
+    description: One row per relationship record of the newest golden copy (RR-CDF CSV), columns as text.
   - name: gleif_reporting_exceptions
+    description: One row per reporting exception of the newest golden copy, columns as text.
+  - name: gleif_rejected_files
+    description: Landing files the GLEIF Bronze decoder rejected, with the reason (cleared by ops/retry_rejected).
 - name: gugik_prg
   description: GUGiK PRG — national register of boundaries (administrative and cadastral units)
   database: r2

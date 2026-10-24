@@ -1,17 +1,48 @@
 source_system: gleif
 description: "GLEIF — LEI records, relationships and reporting exceptions (golden copy files)"
 
+# Extraction strategy (docs/landing.md). Bulk feature: the GLEIF golden copy, published three
+# times a day (00:00, 08:00, 16:00 UTC; the files are ready ~1.5 h later). The stable
+# "latest" URLs redirect to the newest publish; version = Last-Modified; a file lands only
+# when its SHA-256 changed. Full files, not the deltas: one complete state per day.
 extraction:
-  initial: to_be_decided
-  production: to_be_decided
-  incremental_policy: to_be_decided
-  schedule: null
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: lei2              # LEI-CDF 3.1: ~3.5 M records, ~0.5 GB ZIP (5 GB CSV)
+        url: https://goldencopy.gleif.org/api/v2/golden-copies/publishes/lei2/latest.csv
+        format: zip
+        version: last_modified
+      - entity: rr                # relationship records (RR-CDF 2.1)
+        url: https://goldencopy.gleif.org/api/v2/golden-copies/publishes/rr/latest.csv
+        format: zip
+        version: last_modified
+      - entity: repex             # reporting exceptions
+        url: https://goldencopy.gleif.org/api/v2/golden-copies/publishes/repex/latest.csv
+        format: zip
+        version: last_modified
+  initial: bulk
+  production: snapshot                    # each file is the complete current state
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule:                               # UTC; daily, after the 08:00 UTC publish
+    - {cron: "50 10 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
-landing: 01_landing/gleif/   # empty: raw files were archived after the Bronze build
+landing: 01_landing/gleif/
 archive_folder: 05_archive/gleif/
-bronze: []   # old-code copies retired 16 Oct (owner decision #835); rebuilt by the new solution
-silver: []
+# Retention: newest version plus 14 days of superseded ones (0.6 GB a day).
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 14}
+  prune: report
+bronze: [bronze.gleif_lei_records, bronze.gleif_relationship_records, bronze.gleif_reporting_exceptions,
+         bronze.gleif_rejected_files]
+silver: [silver.gleif_legal_entities, silver.gleif_relationships, silver.gleif_reporting_exceptions]
 gold: []
-legacy_tables: [bronze.gleif_lei2, bronze.gleif_relationship_records, bronze.gleif_reporting_exceptions, silver.gleif_lei2, silver.gleif_relationship_records, silver.gleif_reporting_exceptions, gold.dim_corporate_entity, gold.fact_corporate_relationships, gold.fact_corporate_reporting_exceptions]
+legacy_tables: [bronze.gleif_lei2, silver.gleif_lei2, silver.gleif_relationship_records,
+                gold.dim_corporate_entity, gold.fact_corporate_relationships, gold.fact_corporate_reporting_exceptions]
 
-activities: []   # paused; Bronze/Silver/Gold were built by retired code
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy (#875): each file is the complete state; a new file replaces its table's rows.
+refresh: {mode: full, decided: "#875"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

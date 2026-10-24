@@ -1,0 +1,25 @@
+version: 2
+models:
+  - name: gleif_legal_entities
+    description: GLEIF legal entities — one row per LEI of the newest golden copy, core LEI-CDF attributes typed.
+    columns:
+      - name: lei
+        tests: [not_null, unique]
+      - name: legal_name
+        tests: [not_null]
+  - name: gleif_relationships
+    description: GLEIF relationship records — child LEI → parent LEI by relationship type, newest golden copy.
+    columns:
+      - name: child_lei
+        tests: [not_null]
+      - name: parent_lei
+        tests: [not_null]
+      - name: relationship_type
+        tests: [not_null]
+  - name: gleif_reporting_exceptions
+    description: GLEIF reporting exceptions — why an LEI reports no direct or ultimate parent, newest golden copy.
+    columns:
+      - name: lei
+        tests: [not_null]
+      - name: exception_category
+        tests: [not_null]
