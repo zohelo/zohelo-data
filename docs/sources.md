@@ -272,7 +272,7 @@ id_sposob_prezentacji_miara;id_daty;id_brak_wartosci;id_tajnosci;id_flaga;wartos
 The indicator listing (`getAggregatesById`) gives each file with its last-update date, so
 entity = file stem (e.g. `1000_156_93_4_pl`), version = that date, and a daily run lands
 only files whose date is newer than Landing (`ingestion/to_landing/gus_dbw/extract.py`).
-No account, no key, no VPN. Bronze keeps the CSV as text; Silver
+Each ZIP also holds `<id>_Slowniki.csv`, the labels of every id it uses, loaded as `bronze.dbw_dictionary_items` (parsed line by line: GUS leaves quotes inside the descriptions undoubled). No account, no key, no VPN. Bronze keeps the CSV as text; Silver
 (`warehouse/entity/dbw_observations.sql`) types the ids and the value (decimal comma).
 Labels of the ids come from the DBW dictionaries, loaded later into Gold. The old
 pipeline's `01_landing/gus_dbw/native/` and `_control/` stay as they are (owner, 21 Oct).
