@@ -29,7 +29,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true", help="delete; without it, only report")
     parser.add_argument("--min-age-hours", type=float, default=48)
-    parser.add_argument("--also", nargs="*", default=[], help="other branch names the owner approved")
+    parser.add_argument("--also", nargs="*", action="extend", default=[], help="other branch names the owner approved")
     args = parser.parse_args(argv)
     repo, token = os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_TOKEN"]
     session = requests.Session()
@@ -46,15 +46,22 @@ def main(argv=None) -> int:
                 return
             page += 1
 
-    open_heads = {p["head"]["ref"] for p in pages("pulls?state=open") if p["head"]["repo"]["full_name"] == repo}
+    in_use = set()  # heads of open pull requests from this repository, and every open PR's base
+    for pr in pages("pulls?state=open"):
+        if (pr["head"].get("repo") or {}).get("full_name") == repo:
+            in_use.add(pr["head"]["ref"])
+        in_use.add(pr["base"]["ref"])
     now = datetime.now(UTC)
-    report: dict = {"apply": args.apply, "deleted": [], "would_delete": [], "kept": []}
+    report: dict = {"apply": args.apply, "deleted": [], "would_delete": [], "kept": [], "failed": []}
     for branch in pages("branches"):
         name = branch["name"]
         if name in PROTECTED or not (name.startswith(PREFIXES) or name in args.also):
             continue
-        if name in open_heads:
+        if name in in_use:
             report["kept"].append([name, "open pull request"])
+            continue
+        if branch.get("protected"):
+            report["kept"].append([name, "protected"])
             continue
         commit = session.get(f"{API}/repos/{repo}/commits/{branch['commit']['sha']}", timeout=30)
         commit.raise_for_status()
@@ -67,10 +74,11 @@ def main(argv=None) -> int:
             report["would_delete"].append(name)
             continue
         deleted = session.delete(f"{API}/repos/{repo}/git/refs/heads/{quote(name, safe='/')}", timeout=30)
-        if deleted.status_code not in (204, 404):
-            deleted.raise_for_status()
-        report["deleted"].append(name)
-    annotate("notice", "branch cleanup", report)
+        if deleted.status_code in (204, 404):
+            report["deleted"].append(name)
+        else:  # e.g. a ruleset blocks it: recorded, the others go on
+            report["failed"].append([name, deleted.status_code, deleted.text[:120]])
+    annotate("warning" if report["failed"] else "notice", "branch cleanup", report)
     step_summary("## ops · branch_cleanup\n\n" + "\n".join(f"- {k}: {v}" for k, v in report.items()) + "\n")
     return 0
 
