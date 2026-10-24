@@ -15,7 +15,7 @@ and labels are Silver and Gold rules.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
 import zipfile
@@ -136,42 +136,47 @@ def decode(source: Path, receipt: dict, output: Path, dictionary: Path, memory_l
 
 
 def _decode_dictionary(path: Path, receipt: dict, output: Path, memory_limit: str) -> int:
-    """The labels CSV → Parquet (text as published); returns its row count."""
-    with path.open("r", encoding="utf-8-sig", errors="strict") as handle:
-        header = handle.readline().rstrip("\r\n").split(";")
+    """The labels CSV → Parquet (text as published); returns its row count.
+
+    Not read as CSV: GUS writes quotes inside the quoted description without doubling them
+    (``"664.4 - Szkło typu "float" i ..."``, 24 Oct 2026). Every line is
+    ``column;dictionary;id;"description";``, so the description is the rest of the line, its
+    outer quotes removed and inner ones kept."""
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    text = path.read_bytes().decode("utf-8-sig", errors="strict")
+    lines = text.split("\r\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+    header = lines[0].split(";") if lines else []
     if header and header[-1] == "":
         header = header[:-1]
     if header != DICTIONARY_SOURCE:
         raise DbwDecodeError(f"unexpected DBW dictionary header: {header}")
-    names = {f"c{i}": "VARCHAR" for i in range(len(DICTIONARY_SOURCE) + 1)}
-    select = ", ".join(f"c{i} AS {name}" for i, name in enumerate(DICTIONARY_SOURCE))
-    ingested = datetime.strptime(receipt["ingested_at"], "%Y%m%dT%H%M%SZ").isoformat() + "+00:00"
-    con = duckdb.connect()
-    try:
-        con.execute(f"SET memory_limit = '{memory_limit}'")
-        try:
-            con.execute(
-                "CREATE TABLE src AS SELECT * FROM read_csv(?, delim=';', header=false, skip=1, columns=?, "
-                "quote='\"', escape='\"', null_padding=true, all_varchar=true, strict_mode=true)",
-                [str(path), names],
-            )
-        except (duckdb.InvalidInputException, duckdb.ConversionException) as exc:
-            raise DbwDecodeError(f"dictionary CSV cannot be read: {str(exc)[:300]}") from exc
-        rows, extra, empty = con.execute(
-            f"SELECT count(*), count(*) FILTER (WHERE coalesce(c{len(DICTIONARY_SOURCE)}, '') <> ''), "
-            "count(*) FILTER (WHERE c0 IS NULL OR c2 IS NULL) FROM src"
-        ).fetchone()
-        if extra or empty or not rows:
-            raise DbwDecodeError(f"dictionary CSV: {extra} rows with extra fields, {empty} without column or id")
-        target = str(output).replace("'", "''")
-        con.execute(
-            f"COPY (SELECT ? AS entity_id, ? AS source_version, CAST(? AS TIMESTAMPTZ) AS ingested_at, "
-            f"? AS raw_sha256, CAST(row_number() OVER () AS BIGINT) AS source_row_number, {select} FROM src) "
-            f"TO '{target}' (FORMAT PARQUET, COMPRESSION ZSTD)",
-            [receipt["entity"], receipt["version_token"], ingested, receipt["sha256"]],
-        )
-    except duckdb.Error as exc:
-        raise RuntimeError(f"DBW dictionary decode could not run: {str(exc)[:300]}") from exc
-    finally:
-        con.close()
-    return int(rows)
+    rows: dict[str, list] = {name: [] for name in DICTIONARY_SOURCE}
+    for number, line in enumerate(lines[1:], start=2):
+        parts = line.split(";", 3)
+        if len(parts) != 4 or not parts[3].endswith(";") or "\n" in line or not parts[0] or not parts[2]:
+            raise DbwDecodeError(f"dictionary line {number} is not column;dictionary;id;description;: {line[:120]}")
+        description = parts[3][:-1]
+        if len(description) >= 2 and description.startswith('"') and description.endswith('"'):
+            description = description[1:-1]
+        for name, value in zip(DICTIONARY_SOURCE, [*parts[:3], description], strict=True):
+            rows[name].append(value if value != "" else None)
+    if not rows["id_elementu"]:
+        raise DbwDecodeError("the dictionary CSV has no rows")
+    count = len(rows["id_elementu"])
+    ingested = datetime.strptime(receipt["ingested_at"], "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
+    table = pa.table(
+        {
+            "entity_id": pa.array([receipt["entity"]] * count, pa.string()),
+            "source_version": pa.array([receipt["version_token"]] * count, pa.string()),
+            "ingested_at": pa.array([ingested] * count, pa.timestamp("us", tz="UTC")),
+            "raw_sha256": pa.array([receipt["sha256"]] * count, pa.string()),
+            "source_row_number": pa.array(range(1, count + 1), pa.int64()),
+            **{name: pa.array(values, pa.string()) for name, values in rows.items()},
+        }
+    )
+    pq.write_table(table, output, compression="zstd")
+    return count
