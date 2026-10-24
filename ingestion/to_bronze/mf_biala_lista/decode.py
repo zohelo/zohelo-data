@@ -53,7 +53,16 @@ def decode(raw: Path, receipt: dict, output: Path, memory_limit: str = "8GB") ->
         raise RuntimeError("7z is not installed")
     folder = output.parent / "unpacked"
     folder.mkdir()
-    done = subprocess.run([tool, "x", "-bd", "-y", f"-o{folder}", str(raw)], capture_output=True, text=True)
+    try:
+        done = subprocess.run(
+            [tool, "x", "-bd", "-y", f"-o{folder}", str(raw)],
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=1800,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("7z took longer than 30 minutes to unpack") from exc
     if done.returncode != 0:
         raise WhiteListDecodeError(f"7z cannot unpack the file: {(done.stdout + done.stderr)[-300:]}")
     raw.unlink()

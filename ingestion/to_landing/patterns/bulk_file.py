@@ -139,8 +139,13 @@ def check_format(path: Path, fmt: str) -> dict[str, Any]:
         tool = shutil.which("7z") or shutil.which("7za")
         if not tool:
             raise RuntimeError("7z is not installed")
-        tested = subprocess.run([tool, "t", "-bd", str(path)], capture_output=True, text=True, timeout=1800)
-        if tested.returncode != 0 or "Everything is Ok" not in tested.stdout:
+        try:
+            tested = subprocess.run(
+                [tool, "t", "-bd", str(path)], capture_output=True, text=True, errors="replace", timeout=1800
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError("7z test took longer than 30 minutes") from exc
+        if tested.returncode != 0:
             raise RuntimeError(f"7z archive failed its test: {(tested.stdout + tested.stderr)[-300:]}")
         return {}
     if fmt == "gzip":

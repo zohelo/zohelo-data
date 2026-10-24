@@ -101,8 +101,9 @@ def run(cat, client, lake: str, landing: str, refused: set[str], out: dict) -> d
     bronze, b_state = held(cat, BRONZE_ID)
     silver = {m: held(cat, ("silver", m)) for m in SILVER}
     need_bronze = b_state.get(NAME, {}).get("recipes") != {sha}
-    need_silver = need_bronze or any(s.get(NAME, {}).get("recipes") != {f"{sha}.{digest}"} for _, s in silver.values())
-    if not need_silver:
+    # Per model: a Silver file a table already references is never rebuilt (its bytes would differ).
+    todo = [m for m, (_, s) in silver.items() if need_bronze or s.get(NAME, {}).get("recipes") != {f"{sha}.{digest}"}]
+    if not todo:
         out["current"] = True
         return None
     rejection = {
@@ -125,7 +126,8 @@ def run(cat, client, lake: str, landing: str, refused: set[str], out: dict) -> d
         else:
             source = next(iter(b_state[NAME]["paths"]))
         files = {}
-        for model, (not_null, key) in SILVER.items():
+        for model in todo:
+            not_null, key = SILVER[model]
             path = work / f"{model}.parquet"
             try:
                 report = entity.apply(
@@ -142,7 +144,9 @@ def run(cat, client, lake: str, landing: str, refused: set[str], out: dict) -> d
                 return {**rejection, "raw_sha256": f"{sha}.{digest}", "error": f"silver {model}: {exc}"[:1000]}
             columns = table_columns(path)
             table = silver[model][0]
-            if table is not None and [f.name for f in table.schema().fields] != [c for c, _ in columns]:
+            if table is not None and [(f.name, str(f.field_type)) for f in table.schema().fields] != [
+                (c, str(bf.TYPES[k])) for c, k in columns
+            ]:
                 raise RuntimeError(f"silver.{model}: the model's columns differ from the table")
             files[model] = (path, columns, report["rows"])
         # Every check passed: create missing tables, upload, then replace each table's entity.
