@@ -33,7 +33,7 @@ def run(out):
         tool = out["7z"] or out["7za"]
         out["list"] = subprocess.run([tool, "l", str(path)], capture_output=True, text=True).stdout[-1500:]
         subprocess.run([tool, "x", "-o" + tmp, str(path)], capture_output=True, check=True)
-        files = [p for p in Path(tmp).iterdir() if p.name != "f.7z"]
+        files = sorted((p for p in Path(tmp).iterdir() if p.name != "f.7z"), key=lambda p: not p.name.endswith(".json"))
         out["files"] = [(p.name, p.stat().st_size) for p in files]
         with files[0].open("rb") as h:
             head = h.read(1500)
