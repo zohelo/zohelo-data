@@ -212,11 +212,6 @@ def run_entity(cat, client, lake: str, landing: str, name: str, refused: set[str
                 _, columns = decode(raw, receipt, local_bronze, expected)
             except GleifDecodeError as exc:
                 return {**rejection, "error": f"decoder: {exc}"[:1000]}
-            if bronze is None:
-                schema = [(ENTITY, "VARCHAR")] + [(c, "VARCHAR") for c in columns] + PROVENANCE
-                bronze = bf.retry(lambda: bf.ensure_table(cat, bronze_id, schema, ENTITY), "create_table")
-                et.configure(bronze_id)
-            bronze_uri = bf.upload(client, lake, bronze_key, local_bronze, sha)
         else:
             bronze_uri = next(iter(b_state[name]["paths"]))
         silver_file = work / "silver.parquet"
@@ -232,10 +227,21 @@ def run_entity(cat, client, lake: str, landing: str, name: str, refused: set[str
             )
         except entity.EntityModelError as exc:  # verdict of this model on this file: <sha>.<model>
             return {**rejection, "raw_sha256": f"{sha}.{digest}", "error": f"silver: {exc}"[:1000]}
+        columns_silver = silver_columns(silver_file)
         if silver is None:
-            columns_silver = silver_columns(silver_file)
             bf.retry(lambda: bf.ensure_table(cat, silver_id, columns_silver, ENTITY), "create_table")
             et.configure(silver_id)
+        elif [(f.name, str(f.field_type)) for f in silver.schema().fields] != [
+            (n, str(bf.TYPES[k])) for n, k in columns_silver
+        ]:  # a changed model needs a deliberate table migration; nothing is uploaded
+            raise RuntimeError(f"{'.'.join(silver_id)}: the model's columns differ from the table")
+        # Uploads only after both files passed: a rejection leaves no unreferenced object.
+        if need_bronze:
+            if bronze is None:
+                schema = [(ENTITY, "VARCHAR")] + [(c, "VARCHAR") for c in columns] + PROVENANCE
+                bf.retry(lambda: bf.ensure_table(cat, bronze_id, schema, ENTITY), "create_table")
+                et.configure(bronze_id)
+            bronze_uri = bf.upload(client, lake, bronze_key, local_bronze, sha)
         silver_uri = bf.upload(client, lake, silver_key, silver_file, sha)
         stats = [ENTITY, "raw_sha256"]
         # Bronze and Silver are replaced together only once both files exist: a rejection keeps
@@ -263,19 +269,26 @@ def main(argv=None) -> int:
     lake, landing = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
     refused = bf.rejected_hashes(cat, REJECTED_ID)
     out: dict[str, Any] = {"loaded": [], "current": [], "rejected": [], "rejected_before": [], "not_started": []}
+    out["failed"] = []
     rejected = []
-    for spec in bulk_file.declaration(SOURCE):
-        name = spec["entity"]
-        if time.monotonic() > deadline:
-            out["not_started"].append(name)
-            continue
-        row = run_entity(cat, client, lake, landing, name, refused, out)
-        if row:
-            rejected.append(row)
-            out["rejected"].append([name, row["error"][:300]])
-    bf.record_rejections(cat, REJECTED_ID, rejected)
-    status = 2 if out["not_started"] else 0
-    level = "warning" if rejected or out["rejected_before"] or status else "notice"
+    try:
+        for spec in bulk_file.declaration(SOURCE):
+            name = spec["entity"]
+            if time.monotonic() > deadline:
+                out["not_started"].append(name)
+                continue
+            try:
+                row = run_entity(cat, client, lake, landing, name, refused, out)
+            except Exception as exc:  # not a verdict on the data: the next run tries again
+                out["failed"].append([name, f"{type(exc).__name__}: {str(exc)[:300]}"])
+                continue
+            if row:
+                rejected.append(row)
+                out["rejected"].append([name, row["error"][:300]])
+    finally:
+        bf.record_rejections(cat, REJECTED_ID, rejected)
+    status = 1 if out["failed"] else 2 if out["not_started"] else 0
+    level = "error" if out["failed"] else "warning" if rejected or out["rejected_before"] or status else "notice"
     annotate(level, "gleif entities", out)
     step_summary(f"## gleif · Landing → Bronze → Silver\n\n```json\n{json.dumps(out, indent=2)}\n```\n")
     print(json.dumps(out, default=str))
