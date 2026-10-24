@@ -57,10 +57,22 @@ def state(table, entity_column: str) -> dict[str, dict[str, Any]]:
     return dict(out)
 
 
+FOOTER_THREADS = 16  # Parquet footers read at once: a commit of 500 small files read them one by one
+
+
 def _data_files(table, uris: list[str], stats_columns: list[str]):
+    """Iceberg data-file entries from the files' Parquet footers, read in parallel; a transient
+    storage error on one footer is retried (a timeout crashed a 4,300-file DBW load, 24 Oct)."""
+    from concurrent.futures import ThreadPoolExecutor
+
     stats = {f"write.metadata.metrics.column.{c}": "full" for c in stats_columns}
     metadata = table.metadata.model_copy(update={"properties": {**table.metadata.properties, **stats}})
-    return [parquet_file_to_data_file(table.io, metadata, uri) for uri in uris]
+
+    def one(uri: str):
+        return bf.retry(lambda: parquet_file_to_data_file(table.io, metadata, uri), "parquet_footer")
+
+    with ThreadPoolExecutor(max_workers=FOOTER_THREADS) as pool:
+        return list(pool.map(one, uris))
 
 
 def replace(

@@ -293,9 +293,9 @@ def plan(
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--minutes", type=float, default=50, help="time budget; unfinished files wait for the next run")
-    parser.add_argument("--workers", type=int, default=3)
+    parser.add_argument("--workers", type=int, default=6)  # most DBW files are small: the work is waiting on R2
     parser.add_argument("--only", nargs="*", help="entity ids (trials)")
-    parser.add_argument("--memory", default="4GB", help="DuckDB memory per worker for small files")
+    parser.add_argument("--memory", default="2GB", help="DuckDB memory per worker for small files")
     parser.add_argument(
         "--silver-table", default=".".join(SILVER), help="namespace.table (the checkpoint builds beside the old table)"
     )
