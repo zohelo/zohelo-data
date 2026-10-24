@@ -57,18 +57,46 @@ class NotFound(RuntimeError):
     """404: the website lists an indicator or file it does not serve."""
 
 
-def get(session: requests.Session, address: str, **params: Any) -> requests.Response:
+class Fetched:
+    """A finished response: body bytes, headers and the seconds it took."""
+
+    def __init__(self, content: bytes, headers: dict[str, str], seconds: float):
+        self.content, self.headers, self.seconds = content, headers, seconds
+
+    def json(self) -> Any:
+        return json.loads(self.content)
+
+
+TIMING: Counter = Counter()  # requests, retries, seconds, slowest: reported by every mode
+
+
+def get(session: requests.Session, address: str, limit: float = 300, **params: Any) -> Fetched:
+    """GET with retries; each attempt is streamed and abandoned after ``limit`` seconds, so a
+    server that trickles bytes cannot hold the run (a 4-hour trial stalled that way, 24 Oct)."""
     for attempt in range(6):
+        started, status, text = time.monotonic(), None, ""
         try:
-            response = session.get(address, params=params or None, timeout=180)
-        except (requests.ConnectionError, requests.Timeout):
-            response = None
-        if response is not None and response.status_code == 200:
-            return response
-        if response is not None and response.status_code == 404:
+            with session.get(address, params=params or None, timeout=(30, 120), stream=True) as response:
+                status = response.status_code
+                if status == 200:
+                    chunks = []
+                    for chunk in response.iter_content(1 << 20):
+                        chunks.append(chunk)
+                        if time.monotonic() - started > limit:
+                            raise requests.Timeout(f"slower than {limit:.0f} s")
+                    seconds = time.monotonic() - started
+                    TIMING["requests"] += 1
+                    TIMING["seconds"] += round(seconds)
+                    TIMING["slowest"] = max(TIMING["slowest"], round(seconds))
+                    return Fetched(b"".join(chunks), dict(response.headers), seconds)
+                text = response.text[:200]
+        except (requests.ConnectionError, requests.Timeout, requests.exceptions.ChunkedEncodingError):
+            status = None
+        if status == 404:
             raise NotFound(f"DBW website 404 for {address} {params or ''}")
-        if response is not None and response.status_code not in (429, 500, 502, 503, 504):
-            raise RuntimeError(f"DBW website {response.status_code} for {address}: {response.text[:200]}")
+        if status is not None and status not in (429, 500, 502, 503, 504):
+            raise RuntimeError(f"DBW website {status} for {address}: {text}")
+        TIMING["retries"] += 1
         time.sleep(min(60, 5 * 2**attempt))
     raise RuntimeError(f"DBW website kept failing: {address}")
 
@@ -206,7 +234,7 @@ def run_load(client, bucket, session, todo: list[dict], held: dict[str, list], d
         time.sleep(PAUSE_SECONDS)
         address = f"{WEB}/bulk_new/{f['file']}"
         try:
-            response = get(session, address)
+            response = get(session, address, limit=900)
         except RuntimeError as exc:  # one file's failure is counted; the next run tries it again
             outcomes["failed_download"] += 1
             failures.append(f"{f['entity']}: {str(exc)[:120]}")
@@ -321,6 +349,7 @@ def main(argv=None) -> int:
             status = 2 if outcomes["not_started_time_budget"] or status else 0
         if stats.get("indicators_failed") or summary.get("failed_download") or summary.get("not_a_zip"):
             status = 1  # the rest was done; the failed indicators or files are retried next run
+    summary["timing"] = dict(TIMING)
     print(json.dumps(summary, sort_keys=True, default=str))
     annotate("error" if status == 1 else "notice", f"gus_dbw landing {args.mode}", summary)
     step_summary(f"## gus_dbw · landing {args.mode}\n\n```json\n{json.dumps(summary, indent=2, default=str)}\n```\n")
