@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   ops:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && inputs.script != 'branch_cleanup'
     name: "ops · ${{ inputs.script }}"
     runs-on: ubuntu-24.04
     timeout-minutes: 350
@@ -105,3 +105,32 @@ jobs:
           path: /tmp/ops-output
           if-no-files-found: ignore
           retention-days: 7
+
+  # The only Ops task that writes to the repository: it deletes leftover work branches
+  # (ops/branch_cleanup.py; owner approval 24 Oct 2026), so it alone gets contents: write.
+  branch-cleanup:
+    if: github.ref == 'refs/heads/main' && inputs.script == 'branch_cleanup'
+    name: "ops · branch_cleanup"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version-file: .python-version
+      - name: ops/branch_cleanup.py
+        env:
+          PYTHONPATH: .
+          GITHUB_TOKEN: ${{ github.token }}
+          ARGS: ${{ inputs.args }}
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet requests
+          ARGS="${ARGS//—/--}"
+          ARGS="${ARGS//–/--}"
+          read -ra argv <<< "$ARGS"
+          python -m ops.branch_cleanup "${argv[@]}"
