@@ -18,8 +18,9 @@ update date of its cross-section (``YYYYMMDDT000000Z``). Layout (docs/landing.md
 ``01_landing/gus_dbw/snapshot/data/<entity>/<version>__<ingested>.zip`` + receipt.
 
 Modes:
-  inspect  website inventory vs Landing (current / stale / missing); no downloads
-  load     download missing and stale files (unchanged bytes are not written again)
+  inspect  last listings (cached) vs Landing (current / stale / missing); one website request
+  load     renew listings older than 20 h (oldest first, at most half the budget), then download
+           missing and stale files
   verify   every receipt has its data file (in Landing or in the Archive)
 
 Polite access: one request at a time with a pause, retries with backoff on 429/5xx, an
@@ -157,30 +158,79 @@ def files_of(indicator: dict[str, Any], body: dict[str, Any]) -> list[dict[str, 
     return out
 
 
-def inventory(session: requests.Session, only: set[int] | None, deadline: float) -> tuple[list[dict], dict]:
-    """(files listed by the website, counts). The tree is one request; each indicator one more."""
+INVENTORY_KEY = "_control/gus_dbw/inventory.json"  # lakehouse bucket: each indicator's last listing
+FRESH_HOURS = 20  # a listing younger than this is reused: one listing of every indicator a day
+
+
+def read_inventory(client) -> dict[str, Any]:
+    try:
+        body = client.get_object(Bucket=req("R2_LAKEHOUSE_BUCKET"), Key=INVENTORY_KEY)["Body"].read()
+    except client.exceptions.NoSuchKey:
+        return {"indicators": {}}
+    return json.loads(body)
+
+
+def write_inventory(client, cache: dict[str, Any]) -> None:
+    body = json.dumps(cache, ensure_ascii=False, separators=(",", ":")).encode()
+    client.put_object(Bucket=req("R2_LAKEHOUSE_BUCKET"), Key=INVENTORY_KEY, Body=body, ContentType="application/json")
+
+
+def inventory(
+    session: requests.Session,
+    only: set[int] | None,
+    deadline: float,
+    cache: dict[str, Any] | None = None,
+    fresh_hours: float = FRESH_HOURS,
+    save=None,
+) -> tuple[list[dict], dict]:
+    """(files listed by the website, counts). The tree is one request; each indicator one more,
+    unless ``cache`` holds a listing of it younger than ``fresh_hours`` (the website takes 2-5 s
+    an indicator: ~1,550 indicators are 1-2 h). The oldest listings are renewed first, so a
+    listing cut by the deadline continues with the rest next run. ``save(cache)`` is called every
+    100 renewed listings."""
+    cache = cache if cache is not None else {"indicators": {}}
+    held = cache.setdefault("indicators", {})
     tree = get(session, f"{WEB}/api_app/wsk/getIndicatorsTree").json()
     found, stats = [], Counter()
-    for ind in indicators(tree):
-        if only and ind["indicator_id"] not in only:
+    now = datetime.now(UTC)
+    todo = [i for i in indicators(tree) if not only or i["indicator_id"] in only]
+    todo.sort(key=lambda i: (held.get(str(i["indicator_id"])) or {}).get("listed_at", ""))
+    renewed = 0
+    for ind in todo:
+        entry = held.get(str(ind["indicator_id"]))
+        age = (now - datetime.fromisoformat(entry["listed_at"])).total_seconds() / 3600 if entry else None
+        if entry and age is not None and age < fresh_hours:
+            stats["indicators_from_cache"] += 1
+            found += entry["files"]
             continue
         if time.monotonic() > deadline:
             stats["indicators_not_listed_time_budget"] += 1
+            if entry:  # an older listing still says what exists; its files are not lost
+                found += entry["files"]
             continue
         time.sleep(PAUSE_SECONDS)
         try:
             body = get(session, f"{WEB}/api_app/getAggregatesById", id=ind["indicator_id"], czy_pl="true").json()
         except NotFound:  # in the tree, but nothing published for it (seen 24 Oct 2026)
             stats["indicators_not_found"] += 1
+            held[str(ind["indicator_id"])] = {"listed_at": datetime.now(UTC).isoformat(), "files": []}
             continue
         except (RuntimeError, ValueError) as exc:  # one indicator's failure is counted; the run goes on
             stats["indicators_failed"] += 1
             stats.setdefault("indicators_failed_sample", []).append(f"{ind['indicator_id']}: {str(exc)[:120]}")
+            if entry:
+                found += entry["files"]
             continue
         files = files_of(ind, body)
+        held[str(ind["indicator_id"])] = {"listed_at": datetime.now(UTC).isoformat(), "files": files}
         stats["indicators"] += 1
         stats["indicators_without_files"] += not files
         found += files
+        renewed += 1
+        if save and renewed % 100 == 0:
+            save(cache)
+    if save and renewed:
+        save(cache)
     unique: dict[str, dict] = {}
     for f in found:  # a file listed twice keeps its newest date
         if f["entity"] not in unique or f["version"] > unique[f["entity"]]["version"]:
@@ -361,7 +411,12 @@ def main(argv=None) -> int:
         only = {int(x) for x in re.split(r"[,\s]+", args.filter) if x.strip().isdigit()} or None
         session = requests.Session()
         session.headers.update({"User-Agent": USER_AGENT})
-        files, stats = inventory(session, only, deadline)
+        cache = read_inventory(client)
+        if args.mode == "inspect" or shard:  # from the last listings: only load job 0 lists the website
+            files, stats = inventory(session, only, deadline, cache, fresh_hours=float("inf"))
+        else:  # listing gets at most half of the budget; downloads get the rest
+            listing_deadline = min(deadline, time.monotonic() + args.budget_minutes * 30)
+            files, stats = inventory(session, only, listing_deadline, cache, save=lambda c: write_inventory(client, c))
         groups = classify(files, held)
         summary = {
             "mode": args.mode,
@@ -373,7 +428,7 @@ def main(argv=None) -> int:
             **stats,
         }
         # inspect only reports: an unfinished listing is a warning, never a reason to skip the extract
-        status = 2 if stats.get("indicators_not_listed_time_budget") and args.mode == "load" else 0
+        status = 0  # a listing cut by its budget continues next run (oldest listings first)
         if args.mode == "load":
             todo = [
                 f
@@ -384,7 +439,7 @@ def main(argv=None) -> int:
             summary.update(outcomes)
             status = 2 if outcomes["not_started_time_budget"] or status else 0
         failed = ("failed_download", "not_a_zip", "failed_write")
-        if stats.get("indicators_failed") or any(summary.get(k) for k in failed):
+        if args.mode == "load" and (stats.get("indicators_failed") or any(summary.get(k) for k in failed)):
             status = 1  # the rest was done; the failed indicators or files are retried next run
     summary["timing"] = dict(TIMING)
     print(json.dumps(summary, sort_keys=True, default=str))
