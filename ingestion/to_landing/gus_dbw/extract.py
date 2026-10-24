@@ -182,6 +182,7 @@ def inventory(
     cache: dict[str, Any] | None = None,
     fresh_hours: float = FRESH_HOURS,
     save=None,
+    cache_only: bool = False,
 ) -> tuple[list[dict], dict]:
     """(files listed by the website, counts). The tree is one request; each indicator one more,
     unless ``cache`` holds a listing of it younger than ``fresh_hours`` (the website takes 2-5 s
@@ -203,6 +204,11 @@ def inventory(
             stats["indicators_from_cache"] += 1
             found += entry["files"]
             continue
+        if cache_only:  # inspect and shard jobs never list the website
+            stats["indicators_not_listed_yet"] += 1
+            continue
+        if age is not None and age > 48:
+            stats["indicators_listing_older_than_48h"] += 1
         if time.monotonic() > deadline:
             stats["indicators_not_listed_time_budget"] += 1
             if entry:  # an older listing still says what exists; its files are not lost
@@ -413,7 +419,7 @@ def main(argv=None) -> int:
         session.headers.update({"User-Agent": USER_AGENT})
         cache = read_inventory(client)
         if args.mode == "inspect" or shard:  # from the last listings: only load job 0 lists the website
-            files, stats = inventory(session, only, deadline, cache, fresh_hours=float("inf"))
+            files, stats = inventory(session, only, deadline, cache, fresh_hours=float("inf"), cache_only=True)
         else:  # listing gets at most half of the budget; downloads get the rest
             listing_deadline = min(deadline, time.monotonic() + args.budget_minutes * 30)
             files, stats = inventory(session, only, listing_deadline, cache, save=lambda c: write_inventory(client, c))
@@ -428,7 +434,9 @@ def main(argv=None) -> int:
             **stats,
         }
         # inspect only reports: an unfinished listing is a warning, never a reason to skip the extract
-        status = 0  # a listing cut by its budget continues next run (oldest listings first)
+        # a listing cut by its budget continues next run (oldest listings first); one that falls
+        # two days behind is a warning the owner sees (exit 2)
+        status = 2 if args.mode == "load" and stats.get("indicators_listing_older_than_48h") else 0
         if args.mode == "load":
             todo = [
                 f
