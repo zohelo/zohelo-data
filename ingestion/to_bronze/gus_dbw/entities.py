@@ -36,13 +36,15 @@ from ingestion.common import bronze_files as bf
 from ingestion.common import entity_tables as et
 from ingestion.common.r2 import catalog, req, s3
 from ingestion.common.report import annotate
-from ingestion.to_bronze.gus_dbw.decode import BRONZE_COLUMNS, DbwDecodeError, decode
+from ingestion.to_bronze.gus_dbw.decode import BRONZE_COLUMNS, DICTIONARY_COLUMNS, DbwDecodeError, decode
 
 ENTITY = "entity_id"
 BRONZE = ("bronze", "dbw_observations")
 SILVER = ("silver", "dbw_observations")
 REJECTED = ("bronze", "dbw_rejected_files")
+DICTIONARY = ("bronze", "dbw_dictionary_items")
 BRONZE_PREFIX = "02_bronze/gus_dbw/observations/"
+DICTIONARY_PREFIX = "02_bronze/gus_dbw/dictionary_items/"
 SILVER_PREFIX = "03_silver/gus_dbw/observations/"
 SILVER_MODEL = "dbw_observations"
 STATS = [ENTITY, "raw_sha256"]
@@ -160,7 +162,9 @@ def work(
     bucket, landing_bucket = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
     ds, sha = item[ENTITY], item["raw_sha256"]
     bronze_key = f"{paths['bronze']}{ds}/{sha}.parquet"
+    dictionary_key = f"{paths['dictionary']}{ds}/{sha}.parquet"
     found_key = f"{paths.get('bronze_found', paths['bronze'])}{ds}/{sha}.parquet"
+    found_dictionary = f"{paths.get('dictionary_found', paths['dictionary'])}{ds}/{sha}.parquet"
     silver_key = f"{paths['silver']}{ds}/{sha}.{digest}.parquet"
     out: dict[str, Any] = {
         ENTITY: ds,
@@ -173,21 +177,27 @@ def work(
     try:
         local_bronze = None
         if need_bronze:
-            if _existing_bronze(client, bucket, found_key, sha):
+            if _existing_bronze(client, bucket, found_key, sha) and _existing_bronze(
+                client, bucket, found_dictionary, sha
+            ):
                 out["bronze"] = f"s3://{bucket}/{found_key}"
+                out["dictionary"] = f"s3://{bucket}/{found_dictionary}"
                 out["bronze_action"] = "registered"
             else:
                 raw, local_bronze = work_dir / "data.zip", work_dir / "bronze.parquet"
+                local_dictionary = work_dir / "dictionary.parquet"
                 if shutil.disk_usage(work_dir).free < item["size"] * 20 + (2 << 30):
                     raise RuntimeError("runner disk headroom is insufficient for DBW decode")
                 bf.download(client, landing_bucket, "gus_dbw", item["data_key"], sha, item["size"], raw)
                 try:
-                    decode(raw, item["receipt"], local_bronze, memory_limit=memory)
+                    labels = decode(raw, item["receipt"], local_bronze, local_dictionary, memory_limit=memory)
                 except DbwDecodeError as exc:  # verdict on the file: keyed by its SHA-256
                     out.update(status="rejected", error=f"decoder: {exc}"[:1000])
                     return out
                 raw.unlink()
                 bf.upload(client, bucket, bronze_key, local_bronze, sha)
+                out["dictionary"] = bf.upload(client, bucket, dictionary_key, local_dictionary, sha)
+                out["dictionary_rows"] = labels["dictionary_rows"]
                 out["bronze_action"] = "decoded"
         silver = work_dir / "silver.parquet"
         try:
@@ -232,17 +242,20 @@ def plan(
     bronze_id=BRONZE,
     rejected_id=REJECTED,
     create: bool = True,
+    dictionary_id=DICTIONARY,
 ) -> dict[str, Any]:
     """What each entity needs: Bronze (new Landing version) and/or Silver (new Bronze or model).
     ``create=False`` (checks): reads only, never creates a table."""
     if create:
         bronze = bf.retry(lambda: bf.ensure_table(cat, bronze_id, list(BRONZE_COLUMNS), ENTITY), "bronze_table")
         silver = bf.retry(lambda: bf.ensure_table(cat, silver_id, SILVER_COLUMNS, ENTITY), "silver_table")
+        labels = bf.retry(lambda: bf.ensure_table(cat, dictionary_id, list(DICTIONARY_COLUMNS), ENTITY), "dict_table")
     else:
         bronze = bf.retry(lambda: cat.load_table(bronze_id), "bronze_table")
         silver = bf.retry(lambda: cat.load_table(silver_id), "silver_table")
+        labels = bf.retry(lambda: cat.load_table(dictionary_id), "dict_table")
     refused = refused_keys(cat, rejected_id, create)
-    b_state, s_state = et.state(bronze, ENTITY), et.state(silver, ENTITY)
+    b_state, s_state, d_state = et.state(bronze, ENTITY), et.state(silver, ENTITY), et.state(labels, ENTITY)
     latest = landing_candidates(client, req("R2_LANDING_BUCKET"))
     if only:
         latest = [c for c in latest if c[ENTITY] in only]
@@ -253,7 +266,8 @@ def plan(
             rejected.append(ds)
             continue
         expected[ds], expected_silver[ds] = sha, f"{sha}.{digest}"
-        need_bronze = b_state.get(ds, {}).get("recipes") != {sha}
+        # Bronze = the observations and the labels of one Landing file, decoded together
+        need_bronze = b_state.get(ds, {}).get("recipes") != {sha} or d_state.get(ds, {}).get("recipes") != {sha}
         need_silver = need_bronze or s_state.get(ds, {}).get("recipes") != {f"{sha}.{digest}"}
         redo = need_silver and not need_bronze  # Silver recomputed from unchanged Bronze (model change)
         if redo:
@@ -272,6 +286,7 @@ def plan(
         "redo_rows": redo_rows,
         "bronze": b_state,
         "silver": s_state,
+        "dictionary": d_state,
     }
 
 
@@ -287,21 +302,37 @@ def main(argv=None) -> int:
     parser.add_argument("--trial", default="", help="scratch namespace and prefix (Dev trials): writes only there")
     args = parser.parse_args(argv)
     silver_id = tuple(args.silver_table.split(".", 1))
-    bronze_id, rejected_id = BRONZE, REJECTED
-    paths = {"bronze": BRONZE_PREFIX, "silver": SILVER_PREFIX}
+    bronze_id, rejected_id, dictionary_id = BRONZE, REJECTED, DICTIONARY
+    paths = {"bronze": BRONZE_PREFIX, "silver": SILVER_PREFIX, "dictionary": DICTIONARY_PREFIX}
     if args.trial:
-        bronze_id, silver_id, rejected_id = (
+        bronze_id, silver_id, rejected_id, dictionary_id = (
             (args.trial, "bronze_" + BRONZE[1]),
             (args.trial, "silver_" + SILVER[1]),
             (args.trial, REJECTED[1]),
+            (args.trial, "bronze_" + DICTIONARY[1]),
         )
-        paths = {"bronze": f"{args.trial}/bronze/", "silver": f"{args.trial}/silver/", "bronze_found": BRONZE_PREFIX}
+        paths = {
+            "bronze": f"{args.trial}/bronze/",
+            "silver": f"{args.trial}/silver/",
+            "dictionary": f"{args.trial}/dictionary/",
+            "bronze_found": BRONZE_PREFIX,
+            "dictionary_found": DICTIONARY_PREFIX,
+        }
     started = time.monotonic()
     deadline = started + args.minutes * 60
     cat, client = bf.retry(catalog, "catalog"), s3()
     digest = model_digest()
-    p = plan(cat, client, digest, set(args.only) if args.only else None, silver_id, bronze_id, rejected_id)
-    for table_id in (bronze_id, silver_id):
+    p = plan(
+        cat,
+        client,
+        digest,
+        set(args.only) if args.only else None,
+        silver_id,
+        bronze_id,
+        rejected_id,
+        dictionary_id=dictionary_id,
+    )
+    for table_id in (bronze_id, silver_id, dictionary_id):
         et.configure(table_id)
     todo = sorted(p["todo"], key=lambda c: c["size"])
     totals: dict[str, Any] = {"bronze_decoded": 0, "bronze_registered": 0, "silver_written": 0, "rows": 0}
@@ -316,6 +347,9 @@ def main(argv=None) -> int:
         nonlocal pending, last_commit
         ok = [r for r in pending if r["status"] == "ok"]
         if ok:
+            labels = {r[ENTITY]: [r["dictionary"]] for r in ok if r.get("dictionary")}
+            if labels:  # labels with their observations: both come from the same Landing file
+                et.replace(cat, dictionary_id, ENTITY, labels, STATS, "gus-dbw-entities")
             et.replace(cat, bronze_id, ENTITY, {r[ENTITY]: [r["bronze"]] for r in ok}, STATS, "gus-dbw-entities")
             et.replace(cat, silver_id, ENTITY, {r[ENTITY]: [r["silver"]] for r in ok}, STATS, "gus-dbw-entities")
         bad = [r for r in pending if r["status"] == "rejected"]
@@ -421,6 +455,9 @@ def completeness_report() -> dict[str, Any]:
     cat, client = bf.retry(catalog, "catalog"), s3()
     p = plan(cat, client, model_digest(), None, create=False)
     report = et.completeness(p["expected"], p["bronze"], p["silver"], p["expected_silver"])
+    report["dictionary_missing"] = sum(
+        p["dictionary"].get(e, {}).get("recipes") != {sha} for e, sha in p["expected"].items()
+    )
     report["rejected_count"] = len(p["rejected"])
     report["rejected_latest"] = sorted(p["rejected"])[:20]
     report["minutes"] = round((time.monotonic() - started) / 60, 1)

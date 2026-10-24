@@ -103,6 +103,10 @@ sources:
       One row per CSV row of a DBW bulk file (indicator × cross-section × presentation ×
       periodicity), newest Landing version of every file, one file per entity (design #875);
       partitioned by entity_id. All source columns as text (wartosc keeps its decimal comma).
+  - name: dbw_dictionary_items
+    description: >-
+      The labels file of each DBW bulk ZIP (*_Slowniki.csv): one row per id the file uses
+      (column, dictionary, element id, description as published), newest version per entity_id.
   - name: dbw_rejected_files
     description: Landing files the DBW Bronze decoder rejected, with the reason (cleared by ops/retry_rejected).
 - name: gus_teryt

@@ -41,7 +41,7 @@ def run():
     inds = x.indicators(tree)
     progress["indicators_total"] = len(inds)
     random.seed(7)
-    sample = {i["indicator_id"] for i in random.sample(inds, min(300, len(inds)))}
+    sample = {i["indicator_id"] for i in random.sample(inds, min(150, len(inds)))}
     progress["stage"] = "inventory"
     files, stats = x.inventory(s, sample, time.monotonic() + 25 * 60)
     stats = dict(stats, files=len(files), periodicity=Counter(f["periodicity"] for f in files).most_common(6))
@@ -53,7 +53,7 @@ def run():
     progress["stage"] = "decode"
     results = []
     with tempfile.TemporaryDirectory() as tmp:
-        for f in random.sample(files, min(20, len(files))):
+        for f in random.sample(files, min(28, len(files))):
             if time.monotonic() - START > 45 * 60:
                 break
             r = {"e": f["entity"]}
@@ -70,7 +70,9 @@ def run():
                 r["mb"] = round(len(body) / 1e6, 2)
                 out = Path(tmp) / "b.parquet"
                 out.unlink(missing_ok=True)
-                r["rows"] = decode(p, rec, out)["rows"]
+                res = decode(p, rec, out, Path(tmp) / "d.parquet")
+                (Path(tmp) / "d.parquet").unlink(missing_ok=True)
+                r["rows"], r["dict"] = res["rows"], res["dictionary_rows"]
                 con = duckdb.connect()
                 con.execute(f"create view bronze as select * from '{out}'")
                 sql = Path("warehouse/entity/dbw_observations.sql").read_text()

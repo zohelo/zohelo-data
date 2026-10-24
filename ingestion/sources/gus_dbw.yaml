@@ -22,7 +22,7 @@ archive_policy:
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
 # Observations: one file per bulk file in Bronze and in Silver, replaced whole (design #875).
-bronze: [bronze.dbw_observations, bronze.dbw_rejected_files]
+bronze: [bronze.dbw_observations, bronze.dbw_dictionary_items, bronze.dbw_rejected_files]
 silver: [silver.dbw_observations]
 gold: []
 legacy_tables: [bronze.dbw_dictionaries, bronze.dbw_indicators, bronze.dbw_metadata, silver.dbw_dictionaries, silver.dbw_indicators, silver.dbw_metadata, gold.dim_dbw_dictionary, gold.dim_dbw_indicator, gold.dim_dbw_metadata, gold.fact_dbw_observations]
