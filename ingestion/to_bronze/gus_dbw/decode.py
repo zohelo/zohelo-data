@@ -164,7 +164,13 @@ def _decode_dictionary(path: Path, receipt: dict, output: Path, memory_limit: st
     rows: dict[str, list] = {name: [] for name in DICTIONARY_SOURCE}
     for number, line in enumerate(lines[1:], start=2):
         parts = line.split(";", 3)
-        if len(parts) != 4 or not parts[3].endswith(";") or "\r" in line or not parts[0] or not parts[2]:
+        # a bare CR inside a quoted description is published as such (seen 24 Oct: "GR288618 - … \r")
+        # and kept; a CR anywhere else could join two records into one line, so it is rejected
+        rest = parts[3] if len(parts) == 4 else ""
+        cr_ok = "\r" not in rest or (rest.startswith('"') and rest.endswith('";') and ";\r" not in rest)
+        if len(parts) != 4 or not rest.endswith(";") or "\r" in "".join(parts[:3]) or not cr_ok:
+            raise DbwDecodeError(f"dictionary line {number} is not column;dictionary;id;description;: {line[:120]}")
+        if not parts[0] or not parts[2]:
             raise DbwDecodeError(f"dictionary line {number} is not column;dictionary;id;description;: {line[:120]}")
         description = parts[3][:-1]
         if len(description) >= 2 and description.startswith('"') and description.endswith('"'):
