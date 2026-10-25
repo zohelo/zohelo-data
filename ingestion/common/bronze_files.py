@@ -156,6 +156,9 @@ def loaded_hashes(table) -> set[str]:
         if SHA_RE.fullmatch(stem):
             hashes.add(stem)
             continue
+        if SHA_RE.fullmatch(stem.split(".", 1)[0]):  # <sha>.<part> files of one Landing file (OpenData)
+            hashes.add(stem.split(".", 1)[0])
+            continue
         column = read_columns(table, path, ["raw_sha256"]).column("raw_sha256")
         hashes.update(h for h in pc.unique(column).to_pylist() if h)
     return hashes
