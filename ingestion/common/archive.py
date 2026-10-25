@@ -73,6 +73,9 @@ def verified(client, bucket: str, key: str, digest: str, size: int) -> bool:
     return observed.hexdigest() == digest and length == size
 
 
+SINGLE_COPY_LIMIT = 5 * 1024**3  # S3/R2 CopyObject limit
+
+
 def ensure_archive(client, bucket: str, source: str, item: dict[str, Any]) -> str:
     """Write (or reuse) the verified Archive copy; returns 'reused' or 'copied'."""
     target = archive_key(source, item["sha256"], item["key"])
@@ -84,13 +87,24 @@ def ensure_archive(client, bucket: str, source: str, item: dict[str, Any]) -> st
     except client.exceptions.ClientError:
         pass
     metadata = {"source-sha256": item["sha256"], "source-size": str(item["size"]), "source-key": item["key"][-900:]}
-    if target.endswith(".bin"):  # managed copy: multipart above 5 GB (OpenData's 21 GB snapshot)
-        client.copy(
-            {"Bucket": bucket, "Key": item["key"]},
-            bucket,
-            target,
-            ExtraArgs={"MetadataDirective": "REPLACE", "Metadata": metadata, "ContentType": "application/octet-stream"},
+    if target.endswith(".bin") and int(item["size"]) <= SINGLE_COPY_LIMIT:
+        client.copy_object(
+            Bucket=bucket,
+            Key=target,
+            CopySource={"Bucket": bucket, "Key": item["key"]},
+            MetadataDirective="REPLACE",
+            Metadata=metadata,
+            ContentType="application/octet-stream",
         )
+    elif target.endswith(".bin"):  # above 5 GB: through the runner's disk (R2 rejected a multipart copy)
+        with tempfile.TemporaryDirectory(prefix="zohelo-archive-") as tmp:
+            path = f"{tmp}/object.bin"
+            with open(path, "wb") as handle:
+                for block in raw_chunks(client, bucket, item["key"]):
+                    handle.write(block)
+            client.upload_file(
+                path, bucket, target, ExtraArgs={"Metadata": metadata, "ContentType": "application/octet-stream"}
+            )
     else:
         import zstandard
 

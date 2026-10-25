@@ -74,8 +74,8 @@ def landed(client, bucket: str) -> list[dict[str, Any]]:
     return sorted(rows, key=lambda r: (r["version_token"], r["ingested_at"]))
 
 
-def adopt(client, bucket: str, item: dict[str, Any]) -> tuple[str, int, str] | None:
-    """The snapshot already in R2 (Drive-era copy), read once inside R2 for its SHA-256 and MD5;
+def adopt(client, bucket: str, item: dict[str, Any], path: Path) -> tuple[str, int, str] | None:
+    """The snapshot already in R2 (Drive-era copy), read once to ``path`` for its SHA-256 and MD5;
     returns (sha256, size, source key) when it is byte-identical to the bucket's file, else None.
     Saves downloading 21 GB from the publisher again."""
     from ingestion.common.r2 import raw_chunks
@@ -87,11 +87,14 @@ def adopt(client, bucket: str, item: dict[str, Any]) -> tuple[str, int, str] | N
     if head["ContentLength"] != int(item["size"]) or not item["name"].endswith(OLD_COPY.rsplit("/", 1)[1]):
         return None
     digest, check, size = sha256(), md5(), 0
-    for block in raw_chunks(client, bucket, OLD_COPY):
-        digest.update(block)
-        check.update(block)
-        size += len(block)
+    with path.open("wb") as handle:
+        for block in raw_chunks(client, bucket, OLD_COPY):
+            digest.update(block)
+            check.update(block)
+            size += len(block)
+            handle.write(block)
     if size != int(item["size"]) or base64.b64encode(check.digest()).decode() != item["md5Hash"]:
+        path.unlink()
         return None
     return digest.hexdigest(), size, OLD_COPY
 
@@ -100,21 +103,20 @@ def load(client, bucket: str, session: requests.Session, item: dict[str, Any], h
     url = DOWNLOAD + item["name"]
     version = version_of(item)
     started = time.monotonic()
-    adopted = adopt(client, bucket, item)
-    if adopted:  # server-side copy inside R2 into the agreed layout; nothing downloaded
-        sha, size, origin = adopted
-        ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-        key = f"{PREFIX}{version}__{ingested}.zip"
-        client.copy(
-            {"Bucket": bucket, "Key": origin},
-            bucket,
-            key,
-            ExtraArgs={"MetadataDirective": "REPLACE", "Metadata": {"sha256": sha}, "ContentType": "application/zip"},
-        )
-        head = client.head_object(Bucket=bucket, Key=key)
-        if head["ContentLength"] != size or (head.get("Metadata") or {}).get("sha256") != sha:
-            raise RuntimeError(f"Landing copy could not be verified: {key}")
-        return write_receipt(client, bucket, item, url, version, ingested, sha, size, key, held, started, origin)
+    with tempfile.TemporaryDirectory(prefix="zohelo-opendata-") as tmp:  # R2 multipart copy failed
+        path = Path(tmp) / "snapshot.zip"
+        adopted = adopt(client, bucket, item, path)
+        if adopted:  # the identical R2 copy, uploaded again from the runner's disk; nothing downloaded
+            sha, size, origin = adopted
+            ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+            key = f"{PREFIX}{version}__{ingested}.zip"
+            client.upload_file(
+                str(path), bucket, key, ExtraArgs={"ContentType": "application/zip", "Metadata": {"sha256": sha}}
+            )
+            head = client.head_object(Bucket=bucket, Key=key)
+            if head["ContentLength"] != size or (head.get("Metadata") or {}).get("sha256") != sha:
+                raise RuntimeError(f"Landing copy could not be verified: {key}")
+            return write_receipt(client, bucket, item, url, version, ingested, sha, size, key, held, started, origin)
     with tempfile.TemporaryDirectory(prefix="zohelo-opendata-") as tmp:
         path = Path(tmp) / "snapshot.zip"
         digest, check, size = sha256(), md5(), 0
