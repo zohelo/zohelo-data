@@ -1,6 +1,7 @@
 """Eurostat Landing activities (code in extract.py).
 
-landing.inspect   extract.py --mode inspect   provider inventory vs Landing, no downloads; writes _control/eurostat/catalogue.json (gold.coverage)
+landing.inspect   extract.py --mode inspect   provider inventory vs Landing, no downloads;
+                                              writes _control/eurostat/catalogue.json (gold.coverage)
 landing.extract   extract.py --mode load      download new or changed datasets (hash-sliced jobs)
 landing.verify    extract.py --mode verify    Landing integrity and remaining gaps
 

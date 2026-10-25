@@ -332,6 +332,7 @@ def main(argv=None) -> int:
     # gold.coverage is written by every verify: it would make a stale dbt Gold build look fresh
     gold_rows = [tables[n] for n in shared_gold if n in tables and n != "gold.coverage"]
     gold_written = max((t["written"] for t in gold_rows if t["written"]), default=None)
+    gold_declared = len([n for n in shared_gold if n != "gold.coverage"])
     build = newest("Pipeline · platform · silver/gold: build")
     extra_snapshots = sum(max(0, t["snapshots"] - 1) for t in tables.values())
     register = yaml.safe_load((ROOT / "ingestion" / "register.yaml").read_text()).get("sources", [])
@@ -362,7 +363,7 @@ def main(argv=None) -> int:
         "",
         "## Platform",
         "",
-        f"- **Shared Gold** ({len(gold_rows)}/{len([n for n in shared_gold if n != 'gold.coverage'])} tables): last written {day(gold_written)}.",
+        f"- **Shared Gold** ({len(gold_rows)}/{gold_declared} tables): last written {day(gold_written)}.",
         f"- **Latest Silver/Gold build:** {run_mark(build)}",
         f"- **Data catalog file** `{CATALOG_KEY}`: written {day(catalog_written)}.",
         f"- **Catalog tables:** {len(tables)} — current {len(classes['current'])}, "
