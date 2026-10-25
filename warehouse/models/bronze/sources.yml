@@ -172,17 +172,20 @@ sources:
   - name: nbp_exchange_rates_table_c
   - name: nbp_gold_prices
 - name: opendata_org
-  description: OpenData organizations, people and locations bulk ZIP
+  description: OpenData.org (BrightQuery) organizations, people and locations — Senzing-ready snapshot
   database: r2
   schema: bronze
   meta:
     landing: 01_landing/opendata_org/
-    loaded_by: retired code (ingestion/legacy/)
+    loaded_by: ingestion/to_bronze/opendata_org/
     config: ingestion/sources/opendata_org.yaml
   tables:
-  - name: opendata_org_organizations
-  - name: opendata_org_people
-  - name: opendata_org_locations
+  - name: opendata_records
+    description: >-
+      One row per Senzing record of the newest snapshot, one file per member of the ZIP
+      (entity = folder.file); DATA_SOURCE, RECORD_ID, bq_dataset and FEATURES (JSON text) as published.
+  - name: opendata_rejected_files
+    description: Snapshot members the OpenData Bronze decoder or Silver models rejected (cleared by ops/retry_rejected).
 - name: world_bank_wdi
   description: World Bank WDI bulk CSV archive and API responses
   database: r2
@@ -226,6 +229,12 @@ sources:
       active and exempt VAT taxpayers' accounts in the newest flat file; taxpayer_status active / exempt.
   - name: biala_lista_masks
     description: MF VAT white list virtual-account masks of the newest flat file.
+  - name: opendata_organizations
+    description: OpenData.org organizations (BrightQuery COMPANY records), name, address, coordinates, BQ id, Placekey.
+  - name: opendata_people
+    description: OpenData.org people linked to businesses (PEOPLE_BUSINESS records), name, role, company BQ id. Personal data.
+  - name: opendata_locations
+    description: OpenData.org locations of organizations (LOCATION records), address, coordinates, company BQ id.
   - name: gleif_legal_entities
     description: >-
       GLEIF legal entities: one row per LEI of the newest golden copy, core LEI-CDF attributes

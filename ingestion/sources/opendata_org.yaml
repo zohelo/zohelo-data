@@ -1,16 +1,33 @@
 source_system: opendata_org
-description: OpenData organizations, people and locations bulk ZIP
+description: OpenData.org (BrightQuery) organizations, people and locations — Senzing-ready snapshot
 
+# Extraction strategy (docs/landing.md): source bulk feature. BrightQuery publishes OpenData.org
+# snapshots in the public GCS bucket bq-public-datastore (opendata/ODO-SENZING-<date>/full/*.zip,
+# ~21 GB, 2,496 newline-delimited Senzing JSON files). The bucket listing gives size, MD5 and
+# update time; a run lands the newest full snapshot only when it is newer. Owner decision 25 Oct
+# 2026 (#906): keep the source and run it through the whole process. Licence not stated by the
+# publisher; person records (business contacts) included.
 extraction:
-  initial: to_be_decided
-  production: to_be_decided
-  incremental_policy: to_be_decided
-  schedule: null
+  initial: bulk
+  production: snapshot                    # each ZIP is the complete dataset
+  incremental_policy: changed_since_last  # bucket update time vs Landing
+  schedule:                               # UTC; weekly check (snapshots appear every few months)
+    - {cron: "10 4 * * 0", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/opendata_org/
-bronze: []   # old-code copies retired 16 Oct (owner decision #835); rebuilt by the new solution
-silver: []
+# 01_landing/opendata_org/ODO_SENZING_20260305.zip and landing-snapshot.json are the Drive-era
+# copy (Sept 2026), kept as they are; the new layout holds its own verified copy.
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 30}
+  prune: report
+bronze: [bronze.opendata_records, bronze.opendata_rejected_files]
+silver: [silver.opendata_organizations, silver.opendata_people, silver.opendata_locations]
 gold: []
 legacy_tables: [bronze.opendata_org_organizations, bronze.opendata_org_people, bronze.opendata_org_locations, silver.opendata_org_locations, silver.opendata_org_organizations, silver.opendata_org_people, gold.dim_opendata_location, gold.dim_opendata_organization, gold.dim_opendata_person]
 
-activities: []   # paused
+# Refresh policy (design #875): entity = one member file of the snapshot; a new snapshot
+# replaces each member's file in Bronze and Silver.
+refresh: {mode: incremental, unit: file, decided: "#875"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

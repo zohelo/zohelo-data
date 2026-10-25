@@ -84,14 +84,12 @@ def ensure_archive(client, bucket: str, source: str, item: dict[str, Any]) -> st
     except client.exceptions.ClientError:
         pass
     metadata = {"source-sha256": item["sha256"], "source-size": str(item["size"]), "source-key": item["key"][-900:]}
-    if target.endswith(".bin"):
-        client.copy_object(
-            Bucket=bucket,
-            Key=target,
-            CopySource={"Bucket": bucket, "Key": item["key"]},
-            MetadataDirective="REPLACE",
-            Metadata=metadata,
-            ContentType="application/octet-stream",
+    if target.endswith(".bin"):  # managed copy: multipart above 5 GB (OpenData's 21 GB snapshot)
+        client.copy(
+            {"Bucket": bucket, "Key": item["key"]},
+            bucket,
+            target,
+            ExtraArgs={"MetadataDirective": "REPLACE", "Metadata": metadata, "ContentType": "application/octet-stream"},
         )
     else:
         import zstandard
