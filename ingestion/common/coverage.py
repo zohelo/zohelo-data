@@ -10,6 +10,7 @@ file of a bulk source…) or that the platform holds, with its versions, its lay
   rejected                the decoder or the Silver model rejected the newest version
   published without data  the source lists it, with no values
   excluded                published, but outside the platform's scope (reason says why)
+  no longer published     held by the platform, but the source's full catalogue no longer lists it
 
 Each source's ``bronze.verify`` writes its own rows after its run (one file per source, replaced
 whole: entity_tables), so the table is current after every pipeline run of that source. Built
@@ -55,6 +56,7 @@ def rows(
     without_data: set[str] | None = None,
     reasons: dict[str, str] | None = None,
     excluded: dict[str, str] | None = None,
+    catalogue_complete: bool = False,
 ) -> list[dict[str, Any]]:
     """Coverage rows of one source.
 
@@ -63,7 +65,9 @@ def rows(
     ``expected_silver``: block -> recipe of its newest landed version in Bronze / Silver (as for
     entity_tables.completeness); ``bronze`` / ``silver``: entity_tables.state of the tables;
     ``landed`` / ``published``: block -> version token; ``rejected`` / ``without_data``: blocks;
-    ``excluded``: block -> why it is outside the scope (a block landed anyway is reported as held)."""
+    ``excluded``: block -> why it is outside the scope (a block landed anyway is reported as held);
+    ``catalogue_complete``: the catalogue is the source's whole list, so a held block missing from
+    it is ``no longer published`` (the platform keeps its data: policy #822 decides deletions)."""
     landed, published, reasons = landed or {}, published or {}, dict(reasons or {})
     rejected, without_data, excluded = rejected or set(), without_data or set(), excluded or {}
     now = datetime.now(UTC)
@@ -81,6 +85,8 @@ def rows(
             reasons.setdefault(block, excluded[block])
         elif block not in expected:
             status = "waiting"
+        elif catalogue_complete and catalogue and block not in catalogue:
+            status = "no longer published"
         elif not in_silver:
             status = "loading"
         elif published.get(block) and landed.get(block) and published[block] > landed[block]:

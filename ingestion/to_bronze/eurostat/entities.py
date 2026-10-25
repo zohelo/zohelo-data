@@ -464,6 +464,7 @@ def coverage_rows(p: dict[str, Any]) -> list[dict[str, Any]]:
         published=published,
         rejected=set(p["rejected"]),
         excluded=excluded,
+        catalogue_complete=bool(datasets),
     )
 
 
