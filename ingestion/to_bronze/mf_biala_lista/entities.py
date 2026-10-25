@@ -224,7 +224,7 @@ def verify() -> int:
     silver = {NAME: {"recipes": {f"{sha}.{digest}"}, "rows": silver_rows}} if in_silver else {}
     coverage.publish(
         SOURCE,
-        coverage.rows(
+        lambda: coverage.rows(
             SOURCE,
             {NAME: NAME},
             {NAME: sha},

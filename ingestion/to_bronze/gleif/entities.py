@@ -328,7 +328,7 @@ def verify() -> int:
     rejected = {n for n, r in report.items() if r["rejected"]}
     coverage.publish(
         SOURCE,
-        coverage.rows(
+        lambda: coverage.rows(
             SOURCE,
             {n: n for n in FILES},
             cov["expected"],

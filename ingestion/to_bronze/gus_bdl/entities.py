@@ -480,11 +480,13 @@ def verify(min_pct: float = 99.0) -> int:
     report = completeness_report(p)
     failed = report["bronze_pct"] < min_pct or report["silver_pct"] < min_pct or report["entities_with_several_files"]
     annotate("error" if failed else "notice", "gus_bdl completeness (Landing → Bronze → Silver)", report)
-    publish_coverage(p)
+    from ingestion.common import coverage
+
+    coverage.publish("gus_bdl", lambda: coverage_rows(p))
     return 1 if failed else 0
 
 
-def publish_coverage(p: dict[str, Any]) -> None:
+def coverage_rows(p: dict[str, Any]) -> list[dict[str, Any]]:
     """gold.coverage rows: every BDL subgroup with variables (the subjects tree) vs Landing and the tables."""
     from ingestion.common import coverage
     from ingestion.to_landing.gus_bdl.web_export import TREE_KEY
@@ -494,19 +496,16 @@ def publish_coverage(p: dict[str, Any]) -> None:
         names = {s["id"]: s.get("name") for s in tree["subjects"] if s.get("hasVariables")}
     except Exception:  # no tree yet: the landed subgroups are the list
         names = {}
-    coverage.publish(
+    return coverage.rows(
         "gus_bdl",
-        coverage.rows(
-            "gus_bdl",
-            names,
-            p["expected"],
-            p["expected_silver"],
-            p["bronze"],
-            p["silver"],
-            landed=p["landed"],
-            rejected=set(p["rejected"]),
-            without_data=set(p["no_data"]),
-        ),
+        names,
+        p["expected"],
+        p["expected_silver"],
+        p["bronze"],
+        p["silver"],
+        landed=p["landed"],
+        rejected=set(p["rejected"]),
+        without_data=set(p["no_data"]),
     )
 
 

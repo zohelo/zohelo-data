@@ -423,7 +423,7 @@ def verify() -> int:
     version = str(receipt["version_token"])
     coverage.publish(
         "opendata_org",
-        coverage.rows(
+        lambda: coverage.rows(
             "opendata_org",
             cov["names"],
             cov["expected"],

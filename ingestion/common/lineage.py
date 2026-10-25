@@ -131,7 +131,9 @@ def main(argv=None) -> int:
     report_duplicates(args.source)
     from ingestion.common import coverage
 
-    coverage.publish(args.source, coverage.lineage_rows(args.source, meta, latest_snapshot(meta), loaded, rejected))
+    coverage.publish(
+        args.source, lambda: coverage.lineage_rows(args.source, meta, latest_snapshot(meta), loaded, rejected)
+    )
     return 0 if passed_latest else 1
 
 

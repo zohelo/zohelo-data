@@ -492,11 +492,13 @@ def verify(min_pct: float = 99.0) -> int:
     report = completeness_report(p)
     failed = report["bronze_pct"] < min_pct or report["silver_pct"] < min_pct or report["entities_with_several_files"]
     annotate("error" if failed else "notice", "gus_dbw completeness (Landing → Bronze → Silver)", report)
-    publish_coverage(p)
+    from ingestion.common import coverage
+
+    coverage.publish("gus_dbw", lambda: coverage_rows(p))
     return 1 if failed else 0
 
 
-def publish_coverage(p: dict[str, Any]) -> None:
+def coverage_rows(p: dict[str, Any]) -> list[dict[str, Any]]:
     """gold.coverage rows: every bulk file of the last website listing vs Landing and the tables."""
     from ingestion.common import coverage
     from ingestion.to_landing.gus_dbw.extract import read_inventory
@@ -506,19 +508,16 @@ def publish_coverage(p: dict[str, Any]) -> None:
         for f in entry.get("files") or []:
             names[f["entity"]] = f"{f['indicator_name']} — {f.get('section_name') or ''} ({f.get('periodicity') or ''})"
             published[f["entity"]] = max(published.get(f["entity"], ""), f["version"])
-    coverage.publish(
+    return coverage.rows(
         "gus_dbw",
-        coverage.rows(
-            "gus_dbw",
-            names,
-            p["expected"],
-            p["expected_silver"],
-            p["bronze"],
-            p["silver"],
-            landed=p["landed"],
-            published=published,
-            rejected=set(p["rejected"]),
-        ),
+        names,
+        p["expected"],
+        p["expected_silver"],
+        p["bronze"],
+        p["silver"],
+        landed=p["landed"],
+        published=published,
+        rejected=set(p["rejected"]),
     )
 
 

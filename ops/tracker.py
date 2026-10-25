@@ -329,7 +329,8 @@ def main(argv=None) -> int:
                 cells[stage] = f"{cells[stage]} {marks}".strip()
         rows.append((source, cells))
 
-    gold_rows = [tables[n] for n in shared_gold if n in tables]
+    # gold.coverage is written by every verify: it would make a stale dbt Gold build look fresh
+    gold_rows = [tables[n] for n in shared_gold if n in tables and n != "gold.coverage"]
     gold_written = max((t["written"] for t in gold_rows if t["written"]), default=None)
     build = newest("Pipeline · platform · silver/gold: build")
     extra_snapshots = sum(max(0, t["snapshots"] - 1) for t in tables.values())

@@ -9,6 +9,7 @@ file of a bulk source…) or that the platform holds, with its versions, its lay
   waiting                 published by the source, not landed yet
   rejected                the decoder or the Silver model rejected the newest version
   published without data  the source lists it, with no values
+  excluded                published, but outside the platform's scope (reason says why)
 
 Each source's ``bronze.verify`` writes its own rows after its run (one file per source, replaced
 whole: entity_tables), so the table is current after every pipeline run of that source. Built
@@ -17,9 +18,9 @@ from the source's catalogue and table metadata only, never from the data.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from hashlib import sha256
-import json
 from pathlib import Path
 import tempfile
 from typing import Any
@@ -53,6 +54,7 @@ def rows(
     rejected: set[str] | None = None,
     without_data: set[str] | None = None,
     reasons: dict[str, str] | None = None,
+    excluded: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Coverage rows of one source.
 
@@ -60,18 +62,23 @@ def rows(
     source has no catalogue: then the landed blocks are the list); ``expected`` /
     ``expected_silver``: block -> recipe of its newest landed version in Bronze / Silver (as for
     entity_tables.completeness); ``bronze`` / ``silver``: entity_tables.state of the tables;
-    ``landed`` / ``published``: block -> version token; ``rejected`` / ``without_data``: blocks."""
-    landed, published, reasons = landed or {}, published or {}, reasons or {}
-    rejected, without_data = rejected or set(), without_data or set()
+    ``landed`` / ``published``: block -> version token; ``rejected`` / ``without_data``: blocks;
+    ``excluded``: block -> why it is outside the scope (a block landed anyway is reported as held)."""
+    landed, published, reasons = landed or {}, published or {}, dict(reasons or {})
+    rejected, without_data, excluded = rejected or set(), without_data or set(), excluded or {}
     now = datetime.now(UTC)
     out = []
-    for block in sorted(set(catalogue) | set(expected) | rejected | without_data):
+    blocks = set(catalogue) | set(expected) | rejected | without_data | set(excluded)
+    for block in sorted(b for b in blocks if b):
         in_bronze = block in expected and bronze.get(block, {}).get("recipes") == {expected[block]}
         in_silver = in_bronze and silver.get(block, {}).get("recipes") == {expected_silver.get(block)}
         if block in without_data:
             status = "published without data"
         elif block in rejected:
             status = "rejected"
+        elif block in excluded and block not in expected:
+            status = "excluded"
+            reasons.setdefault(block, excluded[block])
         elif block not in expected:
             status = "waiting"
         elif not in_silver:
@@ -103,20 +110,32 @@ def lineage_rows(
 ) -> list[dict[str, Any]]:
     """Coverage rows of a lineage source (NBP, WDI, TERYT, PRG): one per Landing entity, its
     newest version against Bronze. Their Silver models rebuild whole from Bronze, so the Silver
-    columns stay empty (not tracked per file) and ``loaded`` means in Bronze."""
+    columns stay empty (not tracked per file) and ``loaded`` means in Bronze.
+
+    The newest version is chosen per snapshot path, as ``r2.latest_snapshot`` does: identical
+    bytes can sit under several entities, so one digest can be the newest of more than one."""
+    del latest  # recomputed per path below (the digest set alone loses the entity)
+    newest: dict[str, tuple[tuple[str, str], str, dict[str, Any]]] = {}
+    for digest, item in meta.items():
+        for path in item.get("snapshot_paths", []):
+            if path["area"] != "data":
+                continue
+            order = (path["version"], path["ingested"])
+            if path["entity"] not in newest or order > newest[path["entity"]][0]:
+                newest[path["entity"]] = (order, digest, path)
     now = datetime.now(UTC)
     out = []
-    for digest in sorted(latest, key=lambda d: str(meta[d].get("entity"))):
-        item = meta[digest]
+    for entity in sorted(newest, key=str):
+        (version, _), digest, path = newest[entity]
         in_bronze = digest in loaded
         status = "loaded" if in_bronze else "rejected" if digest in rejected else "loading"
         out.append(
             {
                 "source": source,
-                "block_id": str(item.get("entity") or item["key"]),
-                "block_name": item["key"].rsplit("/", 1)[-1],
+                "block_id": str(entity),
+                "block_name": str(path.get("key") or meta[digest]["key"]).rsplit("/", 1)[-1],
                 "published_version": None,
-                "landed_version": item.get("version"),
+                "landed_version": version,
                 "in_bronze": in_bronze,
                 "in_silver": None,
                 "silver_rows": None,
@@ -149,18 +168,20 @@ def write(source: str, records: list[dict[str, Any]]) -> dict[str, Any]:
         ]
     )
     table = pa.Table.from_pylist(records, schema=schema)
-    digest = sha256(
-        json.dumps(
-            [{k: v for k, v in r.items() if k != "checked_at"} for r in records], default=str, sort_keys=True
-        ).encode()
-        + datetime.now(UTC).strftime("%Y%m%dT%H").encode()
-    ).hexdigest()
+    from pyiceberg.exceptions import NoSuchTableError
+
     cat, client = bf.retry(catalog, "catalog"), s3()
-    bf.retry(lambda: bf.ensure_table(cat, TABLE, COLUMNS, "source"), "coverage_table")
-    et.configure(TABLE)
+    try:
+        bf.retry(lambda: cat.load_table(TABLE), "coverage_table")
+    except NoSuchTableError:  # first write: create and configure once, not on every verify
+        bf.retry(lambda: bf.ensure_table(cat, TABLE, COLUMNS, "source"), "coverage_table")
+        et.configure(TABLE)
     with tempfile.TemporaryDirectory(prefix="coverage-") as tmp:
         path = Path(tmp) / "coverage.parquet"
         pq.write_table(table, path, compression="zstd")
+        # named by the bytes written (checked_at included): a rerun never overwrites a file the
+        # table already references, and the same bytes are the same object
+        digest = sha256(path.read_bytes()).hexdigest()
         uri = bf.upload(client, req("R2_LAKEHOUSE_BUCKET"), f"{PREFIX}{source}/{digest}.parquet", path, digest)
     et.replace(cat, TABLE, "source", {source: [uri]}, ["source"], "coverage")
     counts: dict[str, int] = {}
@@ -169,11 +190,12 @@ def write(source: str, records: list[dict[str, Any]]) -> dict[str, Any]:
     return {"blocks": len(records), **dict(sorted(counts.items()))}
 
 
-def publish(source: str, records: list[dict[str, Any]]) -> None:
-    """Write the rows and annotate the counts; a failure is reported, never fails the verify."""
+def publish(source: str, build: Callable[[], list[dict[str, Any]]]) -> None:
+    """Build the rows (``build``: reads the catalogue, calls ``rows``), write them and annotate the
+    counts. Any failure, in building or writing, is a warning: it never fails the verify."""
     from ingestion.common.report import annotate
 
     try:
-        annotate("notice", f"{source} coverage", write(source, records))
+        annotate("notice", f"{source} coverage", write(source, build()))
     except Exception as exc:  # coverage is a report: it must not turn a passed verify into a failure
         annotate("warning", f"{source} coverage not written", {"error": f"{type(exc).__name__}: {str(exc)[:300]}"})
