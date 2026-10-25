@@ -450,7 +450,7 @@ def coverage_rows(p: dict[str, Any]) -> list[dict[str, Any]]:
     # the inventory as the last landing.inspect read it: every data distribution, its version, scope
     body = s3().get_object(Bucket=req("R2_LAKEHOUSE_BUCKET"), Key=CATALOGUE_KEY)["Body"].read()
     datasets = json.loads(body)["datasets"]
-    names = {code: d.get("title") for code, d in datasets.items() if not d.get("excluded")}
+    names = {code: d.get("title") for code, d in datasets.items()}
     published = {code: d["token"] for code, d in datasets.items() if not d.get("excluded") and d.get("token")}
     excluded = {code: d["excluded"] for code, d in datasets.items() if d.get("excluded")}
     return coverage.rows(

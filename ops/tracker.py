@@ -362,7 +362,7 @@ def main(argv=None) -> int:
         "",
         "## Platform",
         "",
-        f"- **Shared Gold** ({len(gold_rows)}/{len(shared_gold)} tables): last written {day(gold_written)}.",
+        f"- **Shared Gold** ({len(gold_rows)}/{len([n for n in shared_gold if n != 'gold.coverage'])} tables): last written {day(gold_written)}.",
         f"- **Latest Silver/Gold build:** {run_mark(build)}",
         f"- **Data catalog file** `{CATALOG_KEY}`: written {day(catalog_written)}.",
         f"- **Catalog tables:** {len(tables)} — current {len(classes['current'])}, "
