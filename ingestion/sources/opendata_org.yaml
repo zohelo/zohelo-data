@@ -11,8 +11,8 @@ extraction:
   initial: bulk
   production: snapshot                    # each ZIP is the complete dataset
   incremental_policy: changed_since_last  # bucket update time vs Landing
-  schedule:                               # UTC; weekly check (snapshots appear every few months)
-    - {cron: "10 4 * * 0", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule:                               # UTC; monthly (owner, 25 Oct 2026): the 1st, 05:10 Warsaw (winter)
+    - {cron: "10 4 1 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/opendata_org/
 # 01_landing/opendata_org/ODO_SENZING_20260305.zip and landing-snapshot.json are the Drive-era
@@ -26,8 +26,9 @@ silver: [silver.opendata_organizations, silver.opendata_people, silver.opendata_
 gold: []
 legacy_tables: [bronze.opendata_org_organizations, bronze.opendata_org_people, bronze.opendata_org_locations, silver.opendata_org_locations, silver.opendata_org_organizations, silver.opendata_org_people, gold.dim_opendata_location, gold.dim_opendata_organization, gold.dim_opendata_person]
 
-# Refresh policy (design #875): entity = one member file of the snapshot; a new snapshot
-# replaces each member's file in Bronze and Silver.
+# Refresh policy (design #875): entity = one member file of the snapshot. Each snapshot is a full
+# dataset, so a new one replaces every member's file in Bronze and Silver (a full refresh, done
+# file by file so a run cut by its budget resumes); without a new snapshot nothing is rewritten.
 refresh: {mode: incremental, unit: file, decided: "#875"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
