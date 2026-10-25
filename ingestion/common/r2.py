@@ -325,21 +325,25 @@ def raw_chunks(client, bucket: str, key: str, chunk: int = 8 << 20):
             body.close()
         return
     import botocore.exceptions
-    import urllib3.exceptions
 
     broken = (
+        botocore.exceptions.IncompleteReadError,  # the server closed early, cleanly
         botocore.exceptions.ReadTimeoutError,
         botocore.exceptions.ConnectionError,
         botocore.exceptions.ResponseStreamingError,
-        urllib3.exceptions.ProtocolError,
-        urllib3.exceptions.ReadTimeoutError,
         ConnectionError,
         TimeoutError,
     )
-    offset, resumes = 0, 0
+    offset, resumes, etag, size = 0, 0, None, None
     while True:
-        extra = {"Range": f"bytes={offset}-"} if offset else {}
-        body = client.get_object(Bucket=bucket, Key=key, **extra)["Body"]
+        extra = {"Range": f"bytes={offset}-", "IfMatch": etag} if offset else {}
+        if size is not None and offset >= size:  # the break came after the last byte
+            return
+        response = client.get_object(Bucket=bucket, Key=key, **extra)
+        if not offset:
+            etag, size = response.get("ETag"), response.get("ContentLength")
+        body = response["Body"]
+        failed = False
         try:
             while block := body.read(chunk):
                 offset += len(block)
@@ -349,6 +353,8 @@ def raw_chunks(client, bucket: str, key: str, chunk: int = 8 << 20):
             resumes += 1
             if resumes > RESUMES:
                 raise
-            time.sleep(min(60, 5 * resumes))
+            failed = True
         finally:
             body.close()
+        if failed:
+            time.sleep(min(60, 5 * resumes))
