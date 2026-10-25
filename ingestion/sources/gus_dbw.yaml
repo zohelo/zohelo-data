@@ -8,11 +8,10 @@ extraction:
   initial: bulk                          # every bulk file of every indicator
   production: snapshot                   # every file is a complete version of its entity
   incremental_policy: changed_since_last # listing "last update" vs Landing version
-  # UTC; every 6 h. Each indicator is listed once a day (a listing is reused for 20 h, as the
-  # website takes 2-5 s an indicator); the other runs download what is still missing, so the
-  # initial ~21,000 files arrive over a few runs without listing the website again.
+  # UTC; daily 04:40 (05:40 Warsaw in winter). The initial load is done (25 Oct 2026); a run
+  # renews each indicator's listing and lands only files whose last-update date is newer.
   schedule:
-    - {cron: "40 3,9,15,21 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+    - {cron: "40 4 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/gus_dbw/
 # Landing → Archive as Eurostat: Bronze-loaded files are moved (copy, verify, delete).
