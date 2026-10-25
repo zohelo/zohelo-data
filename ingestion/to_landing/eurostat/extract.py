@@ -1099,7 +1099,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.mode == "inspect" or (args.mode == "load" and args.job_index == 0):
             try:
                 stats["catalogue_written"] = write_catalogue(inventory_body)
-            except Exception as exc:  # coverage input only: never fails the inspect
+            except Exception as exc:  # coverage input only: never fails the inspect or the extract
                 annotate("warning", "eurostat catalogue not written", {"error": f"{type(exc).__name__}: {exc}"[:300]})
         total = counts(items)
         summary = {
