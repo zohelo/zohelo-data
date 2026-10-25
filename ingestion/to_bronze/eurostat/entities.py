@@ -242,9 +242,10 @@ def plan(
     latest = landing_candidates(client, req("R2_LANDING_BUCKET"))
     if only:
         latest = [c for c in latest if c[ENTITY] in only]
-    todo, expected, expected_silver, rejected, redo_rows = [], {}, {}, [], 0
+    todo, expected, expected_silver, rejected, redo_rows, landed = [], {}, {}, [], 0, {}
     for c in latest:
         ds, sha = c[ENTITY], c["raw_sha256"]
+        landed[ds] = c["order"][0]
         if sha in refused or f"{sha}.{digest}" in refused:
             rejected.append(ds)
             continue
@@ -268,6 +269,7 @@ def plan(
         "redo_rows": redo_rows,
         "bronze": b_state,
         "silver": s_state,
+        "landed": landed,
     }
 
 
@@ -413,11 +415,13 @@ def main(argv=None) -> int:
     return 0 if left == 0 else 2
 
 
-def completeness_report() -> dict[str, Any]:
+def completeness_report(plan_out: dict[str, Any] | None = None) -> dict[str, Any]:
     """Landing → Bronze → Silver completeness per dataset, from table metadata only (R5, #875)."""
     started = time.monotonic()
     cat, client = bf.retry(catalog, "catalog"), s3()
     p = plan(cat, client, model_digest(), None, create=False)
+    if plan_out is not None:
+        plan_out.update(p)
     report = et.completeness(p["expected"], p["bronze"], p["silver"], p["expected_silver"])
     report["rejected_count"] = len(p["rejected"])
     report["rejected_latest"] = sorted(p["rejected"])[:20]
@@ -428,10 +432,39 @@ def completeness_report() -> dict[str, Any]:
 def verify(min_pct: float = 99.0) -> int:
     """bronze.verify: fails when a layer is below ``min_pct`` complete against the layer below or a
     dataset holds more than one file (design #875). Rejected datasets are listed, not counted."""
-    report = completeness_report()
+    p: dict[str, Any] = {}
+    report = completeness_report(p)
     failed = report["bronze_pct"] < min_pct or report["silver_pct"] < min_pct or report["entities_with_several_files"]
     annotate("error" if failed else "notice", "eurostat completeness (Landing → Bronze → Silver)", report)
+    publish_coverage(p)
     return 1 if failed else 0
+
+
+def publish_coverage(p: dict[str, Any]) -> None:
+    """gold.coverage rows: every dataflow Eurostat publishes (silver.eurostat_dataflows) vs the tables."""
+    from ingestion.common import coverage
+
+    try:
+        flows = bf.retry(catalog, "catalog").load_table(("silver", "eurostat_dataflows"))
+        names = {
+            r["dataset_id"]: r["name_en"]
+            for r in flows.scan(selected_fields=("dataset_id", "name_en")).to_arrow().to_pylist()
+        }
+    except Exception:  # no catalogue yet: the landed datasets are the list
+        names = {}
+    coverage.publish(
+        "eurostat",
+        coverage.rows(
+            "eurostat",
+            names,
+            p["expected"],
+            p["expected_silver"],
+            p["bronze"],
+            p["silver"],
+            landed=p["landed"],
+            rejected=set(p["rejected"]),
+        ),
+    )
 
 
 if __name__ == "__main__":

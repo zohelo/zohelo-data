@@ -301,8 +301,10 @@ def verify() -> int:
     landing = req("R2_LANDING_BUCKET")
     refused = bf.rejected_hashes(cat, REJECTED_ID)
     report, failed = {}, False
+    cov: dict[str, dict[str, Any]] = {"expected": {}, "expected_silver": {}, "bronze": {}, "silver": {}, "landed": {}}
     for name, (bronze_name, silver_name, _, _) in FILES.items():
-        sha = bulk_file.newest(client, landing, SOURCE, name)["sha256"]
+        newest = bulk_file.newest(client, landing, SOURCE, name)
+        sha = newest["sha256"]
         digest = model_digest(silver_name)
         _, b_state = held(cat, ("bronze", bronze_name))
         _, s_state = held(cat, ("silver", silver_name))
@@ -317,7 +319,26 @@ def verify() -> int:
             "silver_rows": s_state.get(name, {}).get("rows"),
         }
         failed |= not (b_ok and s_ok) and not rejected
+        cov["expected"][name], cov["expected_silver"][name] = sha, f"{sha}.{digest}"
+        cov["bronze"][name], cov["silver"][name] = b_state.get(name, {}), s_state.get(name, {})
+        cov["landed"][name] = str(newest.get("version_token") or "")
     annotate("error" if failed else "notice", "gleif completeness (Landing → Bronze → Silver)", report)
+    from ingestion.common import coverage
+
+    rejected = {n for n, r in report.items() if r["rejected"]}
+    coverage.publish(
+        SOURCE,
+        coverage.rows(
+            SOURCE,
+            {n: n for n in FILES},
+            cov["expected"],
+            cov["expected_silver"],
+            cov["bronze"],
+            cov["silver"],
+            landed=cov["landed"],
+            rejected=rejected,
+        ),
+    )
     return 1 if failed else 0
 
 

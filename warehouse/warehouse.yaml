@@ -14,7 +14,8 @@ rate_limit_retry_threads: 2     # fewer parallel catalog calls than the build's 
 
 # Shared Gold built by the dbt project (conformed dimensions and facts across sources).
 gold: [gold.dim_date, gold.dim_period, gold.dim_currency, gold.dim_geography, gold.dim_indicator,
-       gold.fact_observation, gold.fact_fx_rate, gold.fact_gold_price]
+       gold.fact_observation, gold.fact_fx_rate, gold.fact_gold_price,
+       gold.coverage]   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
 
 # Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
 # below ~1M rows are rebuilt in full; #868). repo_check fails on a model missing here or a ceiling

@@ -203,15 +203,38 @@ def main(argv=None) -> int:
 
 def verify() -> int:
     client, cat = s3(), bf.retry(catalog, "catalog")
-    sha = bulk_file.newest(client, req("R2_LANDING_BUCKET"), SOURCE, NAME)["sha256"]
+    newest = bulk_file.newest(client, req("R2_LANDING_BUCKET"), SOURCE, NAME)
+    sha = newest["sha256"]
     digest = model_digest(SILVER)
     refused = bf.rejected_hashes(cat, REJECTED_ID)
-    report = {"bronze": held(cat, BRONZE_ID)[1].get(NAME, {}).get("recipes") == {sha}}
+    b_state = held(cat, BRONZE_ID)[1].get(NAME, {})
+    report = {"bronze": b_state.get("recipes") == {sha}}
+    silver_rows = 0
     for model in SILVER:
-        report[model] = held(cat, ("silver", model))[1].get(NAME, {}).get("recipes") == {f"{sha}.{digest}"}
+        s_state = held(cat, ("silver", model))[1].get(NAME, {})
+        report[model] = s_state.get("recipes") == {f"{sha}.{digest}"}
+        silver_rows += s_state.get("rows") or 0
     report["rejected"] = sha in refused or f"{sha}.{digest}" in refused
     failed = not all(v for k, v in report.items() if k != "rejected") and not report["rejected"]
     annotate("error" if failed else "notice", "mf_biala_lista completeness (Landing → Bronze → Silver)", report)
+    from ingestion.common import coverage
+
+    # one block (the daily flat file) feeding several Silver models: in Silver when all of them hold it
+    in_silver = all(report[m] for m in SILVER)
+    silver = {NAME: {"recipes": {f"{sha}.{digest}"}, "rows": silver_rows}} if in_silver else {}
+    coverage.publish(
+        SOURCE,
+        coverage.rows(
+            SOURCE,
+            {NAME: NAME},
+            {NAME: sha},
+            {NAME: f"{sha}.{digest}"},
+            {NAME: b_state},
+            silver,
+            landed={NAME: str(newest.get("version_token") or "")},
+            rejected={NAME} if report["rejected"] else set(),
+        ),
+    )
     return 1 if failed else 0
 
 
