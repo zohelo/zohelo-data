@@ -464,7 +464,8 @@ def coverage_rows(p: dict[str, Any]) -> list[dict[str, Any]]:
         published=published,
         rejected=set(p["rejected"]),
         excluded=excluded,
-        catalogue_complete=bool(datasets),
+        # a truncated inventory must not turn held datasets into "no longer published"
+        catalogue_complete=len(datasets) >= 0.9 * len(p["expected"]),
     )
 
 

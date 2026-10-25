@@ -1094,7 +1094,9 @@ def main(argv: list[str] | None = None) -> int:
 
         landing = load_landing_state(r2)
         items, stats = plan_items(inventory_body, landing, args.parallel_jobs, patterns)
-        if not patterns and args.mode == "inspect":
+        # the whole inventory, whatever the filter: the catalogue is never older than what lands
+        # (one writer per run: inspect, or job 0 of the extract)
+        if args.mode == "inspect" or (args.mode == "load" and args.job_index == 0):
             try:
                 stats["catalogue_written"] = write_catalogue(inventory_body)
             except Exception as exc:  # coverage input only: never fails the inspect
