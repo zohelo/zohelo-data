@@ -443,11 +443,11 @@ def verify(min_pct: float = 99.0) -> int:
 
 
 def coverage_rows(p: dict[str, Any]) -> list[dict[str, Any]]:
-    """gold.coverage rows: every data distribution of the Eurostat inventory vs Landing and the tables."""
+    """gold.coverage rows: every dataset of the Eurostat inventory vs Landing and the tables."""
     from ingestion.common import coverage
     from ingestion.to_landing.eurostat.extract import CATALOGUE_KEY
 
-    # the inventory as the last landing.inspect read it: every data distribution, its version, scope
+    # the inventory as the last landing.inspect read it: every dataset, its version, scope
     body = s3().get_object(Bucket=req("R2_LAKEHOUSE_BUCKET"), Key=CATALOGUE_KEY)["Body"].read()
     datasets = json.loads(body)["datasets"]
     names = {code: d.get("title") for code, d in datasets.items()}

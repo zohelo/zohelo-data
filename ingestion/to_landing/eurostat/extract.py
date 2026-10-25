@@ -991,24 +991,17 @@ CATALOGUE_KEY = "_control/eurostat/catalogue.json"  # lakehouse bucket: read by 
 
 
 def write_catalogue(inventory_body: bytes) -> int:
-    """Every data distribution of the inventory with its version and, when outside the scope,
-    why (Comext, other kinds): the published side of gold.coverage. Best effort: a failure is
+    """Every dataset of the inventory with its version and, when outside the scope, why
+    (Comext): the published side of gold.coverage. Best effort: a failure is
     a warning, the extract goes on."""
     from ingestion.common.r2 import req, s3
 
     catalogue: dict[str, dict[str, str | None]] = {}
     for spec in distributions_from_inventory("data", inventory_body):
+        if spec["kind"] != "eurostat_tsv_gzip":
+            continue  # a dataset's structure file (CODE::__structure__), not a block of its own
         code = spec["dataset_id"]
-        excluded = (
-            "not a TSV data distribution"
-            if spec["kind"] != "eurostat_tsv_gzip"
-            else "Comext (DS-*): outside the scope"
-            if code.upper().startswith("DS-")
-            else None
-        )
-        held = catalogue.get(code)
-        if held and held["excluded"] is None and excluded:  # a TSV distribution of the code wins
-            continue
+        excluded = "Comext (DS-*): outside the scope" if code.upper().startswith("DS-") else None
         catalogue[code] = {
             "title": (spec.get("catalogue_metadata") or {}).get("title") or "",
             "token": version_token(spec.get("version") or ""),
