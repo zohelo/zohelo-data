@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures.process import BrokenProcessPool
 from hashlib import sha256
 import json
 import os
@@ -76,9 +77,10 @@ def model_digest(model: str) -> str:
     return sha256((MODEL_DIR / f"{model}.sql").read_bytes()).hexdigest()[:12]
 
 
-def members(zip_path: Path) -> list[dict[str, Any]]:
+def members(zip_file) -> list[dict[str, Any]]:
+    """The JSON members of a snapshot ZIP (a path or an open seekable file)."""
     out = []
-    with zipfile.ZipFile(zip_path) as archive:
+    with zipfile.ZipFile(zip_file) as archive:
         for info in archive.infolist():
             if not info.filename.endswith(".json") or info.file_size == 0:
                 continue
@@ -97,28 +99,42 @@ def members(zip_path: Path) -> list[dict[str, Any]]:
     return out
 
 
-def work(m: dict[str, Any], zip_path: str, receipt: dict[str, Any], digests: dict[str, str], tmp_root: str) -> dict:
-    """One member: Bronze file and its Silver file, uploaded (not yet registered). Worker process."""
-    import duckdb
+KEYS = ["DATA_SOURCE", "RECORD_ID", "bq_dataset", "FEATURES"]
 
-    from warehouse import entity
+
+def work(m: dict[str, Any], zip_path: str, receipt: dict[str, Any], digests: dict[str, str], tmp_root: str) -> dict:
+    """One member: its Bronze file (decoded, or the registered one when only Silver is due) and its
+    Silver file, uploaded but not yet registered. Worker process. A registered Bronze file is never
+    written again (new bytes under a registered name would not match the table's metadata)."""
+    import duckdb
 
     client, lake = s3(), req("R2_LAKEHOUSE_BUCKET")
     sha, model = receipt["sha256"], MODELS[m["folder"]]
     recipe = f"{sha}.{m['crc']}"
-    out = {"entity": m["entity"], "recipe": recipe, "model": model, "member": m["member"]}
+    out = {"entity": m["entity"], "recipe": recipe, "model": model, "member": m["member"], "rows": 0}
     work_dir = Path(tempfile.mkdtemp(prefix="opendata-", dir=tmp_root))
     try:
+        if m.get("bronze_uri"):  # Bronze is current: Silver only, from the registered file
+            out["bronze"] = m["bronze_uri"]
+            return _silver(out, m, m["bronze_uri"], None, sha, model, recipe, digests, work_dir, client, lake)
         raw = work_dir / "member.json"
         with zipfile.ZipFile(zip_path) as archive, archive.open(m["member"]) as src, raw.open("wb") as dst:
             shutil.copyfileobj(src, dst, 16 << 20)
         bronze = work_dir / "bronze.parquet"
+        source = str(raw).replace("'", "''")
+        target = str(bronze).replace("'", "''")
+        known = "[" + ", ".join(f"'{k}'" for k in KEYS) + "]"
         con = duckdb.connect()
         try:
             con.execute("SET memory_limit = '3GB'")
             con.execute(f"SET temp_directory = '{work_dir}'")
-            source = str(raw).replace("'", "''")
-            target = str(bronze).replace("'", "''")
+            other = con.execute(
+                f"SELECT count(*) FROM read_ndjson_objects('{source}', maximum_object_size=67108864) "
+                f"WHERE NOT list_has_all({known}, json_keys(json))"
+            ).fetchone()[0]
+            if other:  # Bronze keeps every published key: a new one needs the decoder changed first
+                out.update(status="rejected", error=f"decoder: {other} records carry keys beyond {KEYS}")
+                return out
             con.execute(
                 f"COPY (SELECT ? AS entity, DATA_SOURCE AS data_source, RECORD_ID AS record_id, bq_dataset, "
                 f"CAST(FEATURES AS VARCHAR) AS features, ? AS raw_sha256, ? AS source_version, ? AS member, "
@@ -138,32 +154,39 @@ def work(m: dict[str, Any], zip_path: str, receipt: dict[str, Any], digests: dic
         if not rows:
             out.update(status="rejected", error="decoder: the member has no records")
             return out
-        silver = work_dir / "silver.parquet"
-        try:
-            report = entity.apply(
-                model,
-                str(bronze),
-                silver,
-                not_null=("entity", "record_id"),
-                memory_limit="3GB",
-                temp_directory=str(work_dir),
-            )
-        except entity.EntityModelError as exc:
-            out.update(status="rejected", error=f"silver: {exc}"[:1000], recipe=f"{recipe}.{digests[model]}")
-            return out
-        out["bronze"] = bf.upload(
-            client, lake, f"02_bronze/{SOURCE}/records/{m['entity']}/{recipe}.parquet", bronze, sha
-        )
-        out["silver"] = bf.upload(
-            client, lake, f"03_silver/{SOURCE}/{model}/{m['entity']}/{recipe}.{digests[model]}.parquet", silver, sha
-        )
-        import pyarrow.parquet as pq
-
-        out["silver_schema"] = [(f.name, str(f.type)) for f in pq.read_schema(silver)]
-        out.update(status="ok", rows=int(rows), silver_rows=report["rows"])
-        return out
+        out["rows"] = int(rows)
+        return _silver(out, m, str(bronze), bronze, sha, model, recipe, digests, work_dir, client, lake)
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
+
+
+def _silver(out, m, bronze_source, local_bronze, sha, model, recipe, digests, work_dir, client, lake) -> dict:
+    """Silver file from a Bronze file (local, or registered in R2); uploads Bronze only when it is new."""
+    import pyarrow.parquet as pq
+
+    from warehouse import entity
+
+    silver = work_dir / "silver.parquet"
+    try:
+        report = entity.apply(
+            model,
+            bronze_source,
+            silver,
+            not_null=("entity", "record_id"),
+            memory_limit="3GB",
+            temp_directory=str(work_dir),
+        )
+    except (entity.EntityModelError, entity.EntityRunError) as exc:  # a verdict on this file and model
+        out.update(status="rejected", error=f"silver: {exc}"[:1000], recipe=f"{recipe}.{digests[model]}")
+        return out
+    out["silver_schema"] = [(f.name, str(f.type)) for f in pq.read_schema(silver)]
+    if local_bronze is not None:
+        key = f"02_bronze/{SOURCE}/records/{m['entity']}/{recipe}.parquet"
+        out["bronze"] = bf.upload(client, lake, key, local_bronze, sha)
+    key = f"03_silver/{SOURCE}/{model}/{m['entity']}/{recipe}.{digests[model]}.parquet"
+    out["silver"] = bf.upload(client, lake, key, silver, sha)
+    out.update(status="ok", silver_rows=report["rows"])
+    return out
 
 
 def table_columns(schema: list[tuple[str, str]]) -> list[tuple[str, str]]:
@@ -216,17 +239,22 @@ def main(argv=None) -> int:
             silver_recipe = f"{recipe}.{digests[model]}"
             if recipe in refused or silver_recipe in refused:
                 continue
-            need = b_state.get(m["entity"], {}).get("recipes") != {recipe} or silver_state[model].get(
-                m["entity"], {}
-            ).get("recipes") != {silver_recipe}
-            if need:
+            if b_state.get(m["entity"], {}).get("recipes") != {recipe}:
                 todo.append(m)
+            elif silver_state[model].get(m["entity"], {}).get("recipes") != {silver_recipe}:
+                todo.append({**m, "bronze_uri": b_state[m["entity"]]["paths"][0]})
         out["members"], out["todo"] = len(listing), len(todo)
         pending: list[dict[str, Any]] = []
 
         def commit() -> None:
             nonlocal pending
             ok = [r for r in pending if r["status"] == "ok"]
+            for r in ok:  # a Silver table's columns are fixed by its first file; a changed model fails loudly
+                table = silver_tables[r["model"]]
+                if table is not None and [(f.name, str(f.field_type)) for f in table.schema().fields] != [
+                    (c, str(bf.TYPES[k])) for c, k in table_columns(r["silver_schema"])
+                ]:
+                    raise RuntimeError(f"silver.{r['model']}: the model's columns differ from the table")
             if ok:
                 et.replace(cat, BRONZE, ENTITY, {r["entity"]: [r["bronze"]] for r in ok}, STATS, "opendata-entities")
                 for model in MODELS.values():
@@ -267,23 +295,29 @@ def main(argv=None) -> int:
             out["rejected"] += [[r["entity"], r["error"][:200]] for r in bad]
             pending = []
 
-        with ProcessPoolExecutor(max_workers=args.workers) as pool:
-            running = {}
-            queue = list(todo)
-            while queue or running:
-                while queue and len(running) < args.workers and time.monotonic() < deadline:
-                    m = queue.pop(0)
-                    running[pool.submit(work, m, str(zip_path), receipt, digests, tmp_root)] = m
-                if not running:
-                    break
-                done = next(as_completed(running))
-                m = running.pop(done)
-                try:
-                    pending.append(done.result())
-                except Exception as exc:  # not a verdict on the data: retried next run
-                    out["failed"].append([m["entity"], f"{type(exc).__name__}: {str(exc)[:200]}"])
-                if len(pending) >= COMMIT_EVERY:
-                    commit()
+        queue = list(todo)
+        try:
+            with ProcessPoolExecutor(max_workers=args.workers) as pool:
+                running = {}
+                while queue or running:
+                    while queue and len(running) < args.workers and time.monotonic() < deadline:
+                        m = queue.pop(0)
+                        running[pool.submit(work, m, str(zip_path), receipt, digests, tmp_root)] = m
+                    if not running:
+                        break
+                    done = next(as_completed(running))
+                    m = running.pop(done)
+                    try:
+                        pending.append(done.result())
+                    except BrokenProcessPool:
+                        raise
+                    except Exception as exc:  # not a verdict on the data: retried next run
+                        out["failed"].append([m["entity"], f"{type(exc).__name__}: {str(exc)[:200]}"])
+                    if len(pending) >= COMMIT_EVERY:
+                        commit()
+        except BrokenProcessPool as exc:  # a worker was killed (memory): keep what finished, stop
+            out["failed"].append(["worker pool", f"BrokenProcessPool: {str(exc)[:200]}"])
+        finally:
             commit()
         out["remaining"] = len(queue)
     out["minutes"] = round((time.monotonic() - started) / 60, 1)
@@ -296,26 +330,67 @@ def main(argv=None) -> int:
     return status
 
 
+def snapshot_members(client, bucket: str, receipt: dict[str, Any]) -> list[dict[str, Any]]:
+    """The members of a Landing snapshot from its ZIP directory (ranged reads of a few MB)."""
+    import s3fs
+
+    from ingestion.common.r2 import archive_key
+
+    key = receipt["object"]["key"]
+    try:
+        client.head_object(Bucket=bucket, Key=key)
+    except client.exceptions.ClientError:
+        key = archive_key(SOURCE, receipt["sha256"], key)
+    fs = s3fs.S3FileSystem(
+        key=req("CLOUDFLARE_R2_ACCESS_KEY_ID"),
+        secret=req("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
+        client_kwargs={"endpoint_url": req("R2_S3_ENDPOINT")},
+    )
+    with fs.open(f"{bucket}/{key}", "rb", block_size=8 << 20) as handle:
+        return members(handle)
+
+
 def verify() -> int:
-    """Every member of the newest snapshot is in Bronze and its Silver table, or rejected (metadata only)."""
+    """Every member of the newest snapshot (from its ZIP directory) is current in Bronze and its
+    Silver table, or rejected for this snapshot; table state from metadata, not the data."""
     client, cat = s3(), bf.retry(catalog, "catalog")
-    held = landed(client, req("R2_LANDING_BUCKET"))
-    sha = held[-1]["sha256"] if held else None
+    bucket = req("R2_LANDING_BUCKET")
+    held = landed(client, bucket)
+    if not held:
+        annotate("error", "opendata_org completeness (Landing → Bronze → Silver)", {"snapshot": None})
+        return 1
+    receipt = held[-1]
+    sha = receipt["sha256"]
+    listing = snapshot_members(client, bucket, receipt)
+    digests = {model: model_digest(model) for model in MODELS.values()}
+    refused = bf.rejected_hashes(cat, REJECTED)
     b_state = et.state(bf.retry(lambda: cat.load_table(BRONZE), "bronze_table"), ENTITY)
-    report: dict[str, Any] = {"snapshot": held[-1]["version_token"] if held else None}
-    current = {e for e, s in b_state.items() if any(r.startswith(f"{sha}.") for r in s["recipes"])}
-    report["bronze_members_current"] = len(current)
-    report["bronze_members_other"] = len(b_state) - len(current)
-    report["bronze_rows"] = sum(s["rows"] for s in b_state.values())
+    s_states = {}
     for model in MODELS.values():
         try:
-            s_state = et.state(cat.load_table(("silver", model)), ENTITY)
+            s_states[model] = et.state(cat.load_table(("silver", model)), ENTITY)
         except NoSuchTableError:
-            s_state = {}
-        report[model] = {"members": len(s_state), "rows": sum(s["rows"] for s in s_state.values())}
-    report["rejected"] = len(bf.rejected_hashes(cat, REJECTED))
-    silver_members = sum(report[m]["members"] for m in MODELS.values())
-    failed = report["bronze_members_other"] > 0 or silver_members + report["rejected"] < len(current)
+            s_states[model] = {}
+    counts = {"members": len(listing), "complete": 0, "rejected": 0, "bronze_missing": 0, "silver_missing": 0}
+    for m in listing:
+        recipe, model = f"{sha}.{m['crc']}", MODELS[m["folder"]]
+        if recipe in refused or f"{recipe}.{digests[model]}" in refused:
+            counts["rejected"] += 1
+        elif b_state.get(m["entity"], {}).get("recipes") != {recipe}:
+            counts["bronze_missing"] += 1
+        elif s_states[model].get(m["entity"], {}).get("recipes") != {f"{recipe}.{digests[model]}"}:
+            counts["silver_missing"] += 1
+        else:
+            counts["complete"] += 1
+    names = {m["entity"] for m in listing}
+    report = {
+        "snapshot": receipt["version_token"],
+        **counts,
+        "bronze_rows": sum(s["rows"] for e, s in b_state.items() if e in names),
+        "entities_not_in_snapshot": len(set(b_state) - names),
+        **{model: sum(s["rows"] for s in st.values()) for model, st in s_states.items()},
+    }
+    failed = counts["bronze_missing"] or counts["silver_missing"]
     annotate("error" if failed else "notice", "opendata_org completeness (Landing → Bronze → Silver)", report)
     return 1 if failed else 0
 
