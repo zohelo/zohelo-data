@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import PurePosixPath
 import re
+import time
 from typing import Any
 
 import boto3
@@ -16,6 +17,7 @@ import requests
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 CONTENT_ADDRESSED_RE = re.compile(r"^(raw|response)-([0-9a-f]{64})\.bin$")
 SNAPSHOT = "snapshot/"
+RESUMES = 20  # ranged re-reads of one broken object stream
 # Landing folders of retired pipelines kept by the owner (21 Oct 2026): not this layout, never moved.
 KEPT_OLD_FOLDERS = {
     "gus_dbw": ("native/", "_control/"),
@@ -306,17 +308,47 @@ def archived(client, bucket: str, source: str) -> dict[str, dict[str, Any]]:
 
 
 def raw_chunks(client, bucket: str, key: str, chunk: int = 8 << 20):
-    """Yield the original bytes of a Landing or Archive object (zstd archive copies decompressed)."""
-    body = client.get_object(Bucket=bucket, Key=key)["Body"]
-    try:
-        if key.endswith(".zst"):
+    """Yield the original bytes of a Landing or Archive object (zstd archive copies decompressed).
+
+    A plain object read that breaks (read timeout, dropped connection) resumes from the byte it
+    reached with a ranged GET, up to RESUMES times: a single 21 GB stream (OpenData) cannot be
+    expected to survive in one piece."""
+    if key.endswith(".zst"):
+        body = client.get_object(Bucket=bucket, Key=key)["Body"]
+        try:
             import zstandard
 
             reader = zstandard.ZstdDecompressor().stream_reader(body)
             while block := reader.read(chunk):
                 yield block
-        else:
+        finally:
+            body.close()
+        return
+    import botocore.exceptions
+    import urllib3.exceptions
+
+    broken = (
+        botocore.exceptions.ReadTimeoutError,
+        botocore.exceptions.ConnectionError,
+        botocore.exceptions.ResponseStreamingError,
+        urllib3.exceptions.ProtocolError,
+        urllib3.exceptions.ReadTimeoutError,
+        ConnectionError,
+        TimeoutError,
+    )
+    offset, resumes = 0, 0
+    while True:
+        extra = {"Range": f"bytes={offset}-"} if offset else {}
+        body = client.get_object(Bucket=bucket, Key=key, **extra)["Body"]
+        try:
             while block := body.read(chunk):
+                offset += len(block)
                 yield block
-    finally:
-        body.close()
+            return
+        except broken:
+            resumes += 1
+            if resumes > RESUMES:
+                raise
+            time.sleep(min(60, 5 * resumes))
+        finally:
+            body.close()
