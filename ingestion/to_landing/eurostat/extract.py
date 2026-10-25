@@ -987,6 +987,38 @@ def plan_items(
     return items, stats
 
 
+CATALOGUE_KEY = "_control/eurostat/catalogue.json"  # lakehouse bucket: read by gold.coverage
+
+
+def write_catalogue(inventory_body: bytes) -> int:
+    """Every data distribution of the inventory with its version and, when outside the scope,
+    why (Comext, other kinds): the published side of gold.coverage. Best effort: a failure is
+    a warning, the extract goes on."""
+    from ingestion.common.r2 import req, s3
+
+    catalogue: dict[str, dict[str, str | None]] = {}
+    for spec in distributions_from_inventory("data", inventory_body):
+        code = spec["dataset_id"]
+        excluded = (
+            "not a TSV data distribution"
+            if spec["kind"] != "eurostat_tsv_gzip"
+            else "Comext (DS-*): outside the scope"
+            if code.upper().startswith("DS-")
+            else None
+        )
+        held = catalogue.get(code)
+        if held and held["excluded"] is None and excluded:  # a TSV distribution of the code wins
+            continue
+        catalogue[code] = {
+            "title": (spec.get("catalogue_metadata") or {}).get("title") or "",
+            "token": version_token(spec.get("version") or ""),
+            "excluded": excluded,
+        }
+    body = json.dumps({"written_at": utc_now(), "datasets": catalogue}, ensure_ascii=False).encode()
+    s3().put_object(Bucket=req("R2_LAKEHOUSE_BUCKET"), Key=CATALOGUE_KEY, Body=body, ContentType="application/json")
+    return len(catalogue)
+
+
 def counts(items: list[dict]) -> dict[str, int]:
     result = {status: 0 for status in STATUSES}
     for row in items:
@@ -1069,6 +1101,11 @@ def main(argv: list[str] | None = None) -> int:
 
         landing = load_landing_state(r2)
         items, stats = plan_items(inventory_body, landing, args.parallel_jobs, patterns)
+        if not patterns and args.mode == "inspect":
+            try:
+                stats["catalogue_written"] = write_catalogue(inventory_body)
+            except Exception as exc:  # coverage input only: never fails the inspect
+                annotate("warning", "eurostat catalogue not written", {"error": f"{type(exc).__name__}: {exc}"[:300]})
         total = counts(items)
         summary = {
             "mode": args.mode,

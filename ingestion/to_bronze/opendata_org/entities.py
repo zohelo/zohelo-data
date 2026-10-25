@@ -392,9 +392,15 @@ def verify() -> int:
         except NoSuchTableError:
             s_states[model] = {}
     counts = {"members": len(listing), "complete": 0, "rejected": 0, "bronze_missing": 0, "silver_missing": 0}
+    cov: dict[str, dict[str, Any]] = {"expected": {}, "expected_silver": {}, "silver": {}, "names": {}}
+    rejected: set[str] = set()
     for m in listing:
         recipe, model = f"{sha}.{m['crc']}", MODELS[m["folder"]]
+        cov["expected"][m["entity"]], cov["expected_silver"][m["entity"]] = recipe, f"{recipe}.{digests[model]}"
+        cov["silver"][m["entity"]] = s_states[model].get(m["entity"], {})
+        cov["names"][m["entity"]] = f"{m['folder']} → silver.{model}"
         if recipe in refused or f"{recipe}.{digests[model]}" in refused:
+            rejected.add(m["entity"])
             counts["rejected"] += 1
         elif b_state.get(m["entity"], {}).get("recipes") != {recipe}:
             counts["bronze_missing"] += 1
@@ -412,6 +418,22 @@ def verify() -> int:
     }
     failed = counts["bronze_missing"] or counts["silver_missing"]
     annotate("error" if failed else "notice", "opendata_org completeness (Landing → Bronze → Silver)", report)
+    from ingestion.common import coverage
+
+    version = str(receipt["version_token"])
+    coverage.publish(
+        "opendata_org",
+        lambda: coverage.rows(
+            "opendata_org",
+            cov["names"],
+            cov["expected"],
+            cov["expected_silver"],
+            b_state,
+            cov["silver"],
+            landed=dict.fromkeys(cov["expected"], version),
+            rejected=rejected,
+        ),
+    )
     return 1 if failed else 0
 
 

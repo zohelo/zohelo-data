@@ -314,6 +314,7 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, cr
         "todo": todo,
         "expected": expected,
         "expected_silver": expected_silver,
+        "landed": {sg: max(p["version_token"] for p in parts) for sg, parts in groups.items()},
         "subgroups": len(groups),
         "rejected": rejected,
         "no_data": no_data,
@@ -458,11 +459,13 @@ def main(argv=None) -> int:
     return 0 if left == 0 else 2
 
 
-def completeness_report() -> dict[str, Any]:
+def completeness_report(plan_out: dict[str, Any] | None = None) -> dict[str, Any]:
     """Landing → Bronze → Silver completeness per subgroup, from table metadata only (R5, #875)."""
     started = time.monotonic()
     cat, client = bf.retry(catalog, "catalog"), s3()
     p = plan(cat, client, {"bronze": BRONZE, "silver": SILVER, "rejected": REJECTED}, None, create=False)
+    if plan_out is not None:
+        plan_out.update(p)
     report = et.completeness(p["expected"], p["bronze"], p["silver"], p["expected_silver"])
     report["rejected_count"] = len(p["rejected"])
     report["rejected_subgroups"] = sorted(p["rejected"])[:20]
@@ -473,10 +476,37 @@ def completeness_report() -> dict[str, Any]:
 
 def verify(min_pct: float = 99.0) -> int:
     """bronze.verify: fails when a layer is below ``min_pct`` complete or a subgroup holds several files (#875)."""
-    report = completeness_report()
+    p: dict[str, Any] = {}
+    report = completeness_report(p)
     failed = report["bronze_pct"] < min_pct or report["silver_pct"] < min_pct or report["entities_with_several_files"]
     annotate("error" if failed else "notice", "gus_bdl completeness (Landing → Bronze → Silver)", report)
+    from ingestion.common import coverage
+
+    coverage.publish("gus_bdl", lambda: coverage_rows(p))
     return 1 if failed else 0
+
+
+def coverage_rows(p: dict[str, Any]) -> list[dict[str, Any]]:
+    """gold.coverage rows: every BDL subgroup with variables (the subjects tree) vs Landing and the tables."""
+    from ingestion.common import coverage
+    from ingestion.to_landing.gus_bdl.web_export import TREE_KEY
+
+    try:
+        tree = json.loads(s3().get_object(Bucket=req("R2_LAKEHOUSE_BUCKET"), Key=TREE_KEY)["Body"].read())
+        names = {s["id"]: s.get("name") for s in tree["subjects"] if s.get("hasVariables")}
+    except Exception:  # no tree yet: the landed subgroups are the list
+        names = {}
+    return coverage.rows(
+        "gus_bdl",
+        names,
+        p["expected"],
+        p["expected_silver"],
+        p["bronze"],
+        p["silver"],
+        landed=p["landed"],
+        rejected=set(p["rejected"]),
+        without_data=set(p["no_data"]),
+    )
 
 
 def proven() -> set[str]:
