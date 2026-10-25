@@ -176,7 +176,13 @@ def _silver(out, m, bronze_source, local_bronze, sha, model, recipe, digests, wo
             memory_limit="3GB",
             temp_directory=str(work_dir),
         )
-    except (entity.EntityModelError, entity.EntityRunError) as exc:  # a verdict on this file and model
+    except entity.EntityRunError as exc:
+        text = str(exc)
+        if any(t in text for t in (*bf.NETWORK_MARKERS, "HTTP", "Out of Memory", "No space", "IO Error")):
+            raise  # storage, network or runner trouble: the next run tries again
+        out.update(status="rejected", error=f"silver: {exc}"[:1000], recipe=f"{recipe}.{digests[model]}")
+        return out
+    except entity.EntityModelError as exc:  # a verdict on this file and model
         out.update(status="rejected", error=f"silver: {exc}"[:1000], recipe=f"{recipe}.{digests[model]}")
         return out
     out["silver_schema"] = [(f.name, str(f.type)) for f in pq.read_schema(silver)]
@@ -186,6 +192,7 @@ def _silver(out, m, bronze_source, local_bronze, sha, model, recipe, digests, wo
     key = f"03_silver/{SOURCE}/{model}/{m['entity']}/{recipe}.{digests[model]}.parquet"
     out["silver"] = bf.upload(client, lake, key, silver, sha)
     out.update(status="ok", silver_rows=report["rows"])
+    out["rows"] = out["rows"] or report["rows"]
     return out
 
 
@@ -248,13 +255,22 @@ def main(argv=None) -> int:
 
         def commit() -> None:
             nonlocal pending
-            ok = [r for r in pending if r["status"] == "ok"]
-            for r in ok:  # a Silver table's columns are fixed by its first file; a changed model fails loudly
+            batch, pending = pending, []
+            ok = []
+            first: dict[str, list] = {}
+            for r in (r for r in batch if r["status"] == "ok"):
+                # a Silver table's columns are fixed by its first file; a file that differs is not registered
                 table = silver_tables[r["model"]]
-                if table is not None and [(f.name, str(f.field_type)) for f in table.schema().fields] != [
-                    (c, str(bf.TYPES[k])) for c, k in table_columns(r["silver_schema"])
-                ]:
-                    raise RuntimeError(f"silver.{r['model']}: the model's columns differ from the table")
+                columns = table_columns(r["silver_schema"])
+                held = (
+                    [(f.name, str(f.field_type)) for f in table.schema().fields]
+                    if table is not None
+                    else first.setdefault(r["model"], [(c, str(bf.TYPES[k])) for c, k in columns])
+                )
+                if held != [(c, str(bf.TYPES[k])) for c, k in columns]:
+                    out["failed"].append([r["entity"], f"silver.{r['model']}: columns differ from the table"])
+                    continue
+                ok.append(r)
             if ok:
                 et.replace(cat, BRONZE, ENTITY, {r["entity"]: [r["bronze"]] for r in ok}, STATS, "opendata-entities")
                 for model in MODELS.values():
@@ -277,7 +293,7 @@ def main(argv=None) -> int:
                     )
                 out["loaded"] += len(ok)
                 out["rows"] += sum(r["rows"] for r in ok)
-            bad = [r for r in pending if r["status"] == "rejected"]
+            bad = [r for r in batch if r["status"] == "rejected"]
             bf.record_rejections(
                 cat,
                 REJECTED,
@@ -293,12 +309,11 @@ def main(argv=None) -> int:
                 ],
             )
             out["rejected"] += [[r["entity"], r["error"][:200]] for r in bad]
-            pending = []
 
         queue = list(todo)
+        running: dict = {}
         try:
             with ProcessPoolExecutor(max_workers=args.workers) as pool:
-                running = {}
                 while queue or running:
                     while queue and len(running) < args.workers and time.monotonic() < deadline:
                         m = queue.pop(0)
@@ -317,6 +332,11 @@ def main(argv=None) -> int:
                         commit()
         except BrokenProcessPool as exc:  # a worker was killed (memory): keep what finished, stop
             out["failed"].append(["worker pool", f"BrokenProcessPool: {str(exc)[:200]}"])
+            for future, m in running.items():
+                if future.done() and not future.exception():
+                    pending.append(future.result())
+                else:
+                    queue.append(m)
         finally:
             commit()
         out["remaining"] = len(queue)

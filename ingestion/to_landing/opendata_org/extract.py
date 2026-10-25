@@ -40,6 +40,7 @@ PREFIX = f"01_landing/{SOURCE}/snapshot/data/{ENTITY}/"
 LISTING = "https://storage.googleapis.com/storage/v1/b/bq-public-datastore/o"
 DOWNLOAD = "https://storage.googleapis.com/bq-public-datastore/"
 FULL_RE = re.compile(r"^opendata/ODO-SENZING-[^/]+/full/[^/]+\.zip$")
+OLD_COPY = f"01_landing/{SOURCE}/ODO_SENZING_20260305.zip"  # Drive-era copy of the 5 Mar 2026 snapshot
 USER_AGENT = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
 
 
@@ -73,12 +74,50 @@ def landed(client, bucket: str) -> list[dict[str, Any]]:
     return sorted(rows, key=lambda r: (r["version_token"], r["ingested_at"]))
 
 
+def adopt(client, bucket: str, item: dict[str, Any]) -> tuple[str, int, str] | None:
+    """The snapshot already in R2 (Drive-era copy), read once inside R2 for its SHA-256 and MD5;
+    returns (sha256, size, source key) when it is byte-identical to the bucket's file, else None.
+    Saves downloading 21 GB from the publisher again."""
+    from ingestion.common.r2 import raw_chunks
+
+    try:
+        head = client.head_object(Bucket=bucket, Key=OLD_COPY)
+    except client.exceptions.ClientError:
+        return None
+    if head["ContentLength"] != int(item["size"]) or not item["name"].endswith(OLD_COPY.rsplit("/", 1)[1]):
+        return None
+    digest, check, size = sha256(), md5(), 0
+    for block in raw_chunks(client, bucket, OLD_COPY):
+        digest.update(block)
+        check.update(block)
+        size += len(block)
+    if size != int(item["size"]) or base64.b64encode(check.digest()).decode() != item["md5Hash"]:
+        return None
+    return digest.hexdigest(), size, OLD_COPY
+
+
 def load(client, bucket: str, session: requests.Session, item: dict[str, Any], held: list[dict]) -> dict[str, Any]:
     url = DOWNLOAD + item["name"]
     version = version_of(item)
+    started = time.monotonic()
+    adopted = adopt(client, bucket, item)
+    if adopted:  # server-side copy inside R2 into the agreed layout; nothing downloaded
+        sha, size, origin = adopted
+        ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        key = f"{PREFIX}{version}__{ingested}.zip"
+        client.copy(
+            {"Bucket": bucket, "Key": origin},
+            bucket,
+            key,
+            ExtraArgs={"MetadataDirective": "REPLACE", "Metadata": {"sha256": sha}, "ContentType": "application/zip"},
+        )
+        head = client.head_object(Bucket=bucket, Key=key)
+        if head["ContentLength"] != size or (head.get("Metadata") or {}).get("sha256") != sha:
+            raise RuntimeError(f"Landing copy could not be verified: {key}")
+        return write_receipt(client, bucket, item, url, version, ingested, sha, size, key, held, started, origin)
     with tempfile.TemporaryDirectory(prefix="zohelo-opendata-") as tmp:
         path = Path(tmp) / "snapshot.zip"
-        digest, check, size, started = sha256(), md5(), 0, time.monotonic()
+        digest, check, size = sha256(), md5(), 0
         for attempt in range(4):
             try:
                 digest, check, size = sha256(), md5(), 0
@@ -98,7 +137,6 @@ def load(client, bucket: str, session: requests.Session, item: dict[str, Any], h
         if size != int(item["size"]) or base64.b64encode(check.digest()).decode() != item["md5Hash"]:
             raise RuntimeError(f"download does not match the bucket's size/MD5: {item['name']}")
         sha = digest.hexdigest()
-        previous = held[-1] if held else None
         ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         key = f"{PREFIX}{version}__{ingested}.zip"
         client.upload_file(
@@ -107,6 +145,11 @@ def load(client, bucket: str, session: requests.Session, item: dict[str, Any], h
         head = client.head_object(Bucket=bucket, Key=key)
         if head["ContentLength"] != size or (head.get("Metadata") or {}).get("sha256") != sha:
             raise RuntimeError(f"Landing write could not be verified: {key}")
+    return write_receipt(client, bucket, item, url, version, ingested, sha, size, key, held, started, None)
+
+
+def write_receipt(client, bucket, item, url, version, ingested, sha, size, key, held, started, origin) -> dict:
+    previous = held[-1] if held else None
     receipt = {
         "schema_version": 2,
         "kind": f"{SOURCE}_landing",
@@ -125,6 +168,7 @@ def load(client, bucket: str, session: requests.Session, item: dict[str, Any], h
         "size_bytes": size,
         "object": {"bucket": bucket, "key": key},
         "replaces_sha256": previous["sha256"] if previous else None,
+        "copied_from": origin,  # the R2 copy that was byte-identical to the bucket's file (MD5 checked)
         "code_sha": os.environ.get("GITHUB_SHA", ""),
     }
     client.put_object(
@@ -133,7 +177,12 @@ def load(client, bucket: str, session: requests.Session, item: dict[str, Any], h
         ContentType="application/json",
         Body=json.dumps(receipt, indent=2, sort_keys=True).encode(),
     )
-    return {"landed": item["name"], "gb": round(size / 1e9, 2), "minutes": round((time.monotonic() - started) / 60, 1)}
+    return {
+        "landed": item["name"],
+        "gb": round(size / 1e9, 2),
+        "from": origin or "publisher bucket",
+        "minutes": round((time.monotonic() - started) / 60, 1),
+    }
 
 
 def main(argv=None) -> int:
