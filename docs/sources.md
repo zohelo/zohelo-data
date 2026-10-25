@@ -419,8 +419,8 @@ time (no account). The ZIP holds 2,496 newline-delimited Senzing JSON files: Org
 (86 M organizations, 101 M business contacts, 142 M locations, per the publisher). The publisher
 states no licence; the data includes names of people (business contacts, LinkedIn URLs).
 Entity = one member file; Bronze keeps the records as published, Silver
-(`warehouse/entity/opendata_*.sql`) takes the main Senzing features per record type. A weekly
-run checks the bucket; a new snapshot is ~21 GB.
+(`warehouse/entity/opendata_*.sql`) takes the main Senzing features per record type. A monthly
+run (owner, 25 Oct 2026) checks the bucket; a new snapshot (~21 GB) replaces all files.
 
 ## GUS TERYT (territorial register)
 
