@@ -253,3 +253,11 @@ sources:
       GUS BDL observations, typed, one row per unit (code + name: the export gives the Górnośląsko-Zagłębiowska Metropolia the code of ŚLĄSKIE) × dimensions × year of each subgroup's newest
       complete download (overlapping parts: identical rows collapse, an empty value gives way to a
       published one; conflicting values reject the subgroup); variable_id from bdl_variables.
+- name: gold_coverage
+  description: >-
+    gold.coverage, written by each source's bronze.verify (ingestion/common/coverage.py): one row
+    per block a source publishes or the platform holds, with its coverage status.
+  database: r2
+  schema: gold
+  tables:
+  - name: coverage

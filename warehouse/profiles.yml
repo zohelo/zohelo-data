@@ -42,3 +42,9 @@ zohelo:
     trial:
       <<: *r2
       schema: zz_dbt_trial
+    # Gold PoC trial: the poc models go to the scratch namespace zz_dev_poc, their inputs are read
+    # from the real silver/gold namespaces (macros/generate_schema_name.sql). Only ever run with
+    # --select poc (dev/poc_trial.py): any other model selected would be written to its real namespace.
+    poc_trial:
+      <<: *r2
+      schema: zz_dev_poc

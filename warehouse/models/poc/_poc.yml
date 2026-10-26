@@ -1,0 +1,105 @@
+version: 2
+# Gold dimensional model, proof of concept (docs/gold-poc.md, design draft 2). Namespace poc.
+# Natural string keys; facts split by frequency; dim_series carries the breakdowns.
+models:
+  - name: poc_dim_calendar
+    description: Conformed calendar at day grain (gold.dim_date + period labels and period-start flags); date_key is the date.
+    columns:
+      - name: date_key
+        tests: [not_null, unique]
+  - name: poc_dim_geography
+    description: >-
+      Geography keyed by area: one row per area with the codes each source uses as attributes
+      (iso2, nuts_code, terc_code, bdl_unit_id, wb_code); Polish hierarchy country → makroregion →
+      województwo → region → podregion → powiat → gmina; special members _T, _Z, _X.
+    columns:
+      - name: geography_key
+        tests: [not_null, unique]
+      - name: level_name
+        tests: [not_null]
+  - name: poc_map_geography
+    description: Every source geography code → geography_key (unmatched → _X, matched = false).
+    columns:
+      - name: source_code
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_geography'), field: geography_key}}}]
+  - name: poc_dim_unit
+    description: Units of measure as the sources name them, with a conformed unit where known.
+    columns:
+      - name: unit_key
+        tests: [not_null, unique]
+  - name: poc_dim_frequency
+    columns:
+      - name: frequency
+        tests: [not_null, unique]
+  - name: poc_dim_source
+    columns:
+      - name: source_system
+        tests: [not_null, unique]
+  - name: poc_dim_observation_status
+    columns:
+      - name: observation_status_key
+        tests: [not_null, unique]
+  - name: poc_dim_measure
+    description: >-
+      The measure catalogue: activated measures (from the build stages) and every other block the
+      sources publish or hold (from gold.coverage) with its status.
+    columns:
+      - name: measure_key
+        tests: [not_null, unique]
+      - name: status
+        tests: [not_null]
+  - name: poc_measure_dimensions
+    description: Which dimensions each activated measure offers (geography levels, time, breakdowns with members).
+    columns:
+      - name: measure_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_measure'), field: measure_key}}}]
+  - name: poc_dim_series
+    description: One row per time series (measure × geography × breakdown); the conformed breakdown keys as columns.
+    columns:
+      - name: series_key
+        tests: [not_null, unique]
+      - name: measure_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_measure'), field: measure_key}}}]
+      - name: geography_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_geography'), field: geography_key}}}]
+  - name: poc_fact_annual
+    description: One row per series × year; date_key = 1 January.
+    columns:
+      - name: series_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_series'), field: series_key}}}]
+      - name: date_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_calendar'), field: date_key}}}]
+      - name: value
+        tests: [not_null]
+      - name: observation_status_key
+        tests: [{relationships: {arguments: {to: ref('poc_dim_observation_status'), field: observation_status_key}}}]
+  - name: poc_fact_monthly
+    description: One row per series × month; date_key = first day of the month.
+    columns:
+      - name: series_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_series'), field: series_key}}}]
+      - name: date_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_calendar'), field: date_key}}}]
+      - name: value
+        tests: [not_null]
+  - name: poc_fact_daily
+    description: One row per series × day.
+    columns:
+      - name: series_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_series'), field: series_key}}}]
+      - name: date_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_calendar'), field: date_key}}}]
+      - name: value
+        tests: [not_null]
+  - name: poc_dim_concept
+    columns:
+      - name: concept_key
+        tests: [not_null, unique]
+  - name: poc_concept_measures
+    columns:
+      - name: measure_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_measure'), field: measure_key}}}]
+  - name: poc_build_check
+    description: Per activated block — rows, series, unmatched geography, dates, flags; read after every build.

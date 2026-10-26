@@ -17,3 +17,5 @@ models:
       +schema: silver
     gold:
       +schema: gold
+    poc:    # Gold dimensional model proof of concept (docs/gold-poc.md); tables aliased without the poc_ prefix
+      +schema: poc
