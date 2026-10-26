@@ -121,7 +121,9 @@ bdl_terc as (  -- the 7-digit codes of the web export
 dbw_names as (
     select distinct upper(trim(opis)) as source_code
     from {{ source('gus_dbw', 'dbw_dictionary_items') }}
-    where lower(nazwa_kolumny) like 'id_pozycja_%'
+    where
+        lower(nazwa_kolumny) like 'id_pozycja_%'
+        and regexp_replace(entity_id, '_[0-9]{4}_pl$', '') in (select b.block_id from ({{ poc_dbw_blocks() }}) as b)
 ),
 
 dbw as (

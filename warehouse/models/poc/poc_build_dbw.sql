@@ -18,6 +18,7 @@ dict as (
         id_elementu as element_id,
         any_value(opis) as label
     from {{ source('gus_dbw', 'dbw_dictionary_items') }}
+    where regexp_replace(entity_id, '_[0-9]{4}_pl$', '') in (select b.block_id from blocks as b)  -- activated files only
     group by entity_id, lower(nazwa_kolumny), id_elementu
 ),
 
