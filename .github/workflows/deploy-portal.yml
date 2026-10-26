@@ -44,9 +44,9 @@ jobs:
           cache-dependency-path: portal/app/package-lock.json
       - name: Deploy the private R2 read API
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          PORTAL_ALLOWED_GOOGLE_EMAIL: ${{ secrets.PORTAL_ALLOWED_GOOGLE_EMAIL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.PLATFORM_DEPLOY_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.PLATFORM_ACCOUNT_ID }}
+          PORTAL_ALLOWED_GOOGLE_EMAIL: ${{ secrets.PORTAL_SIGNIN_ALLOWED_EMAILS }}
         run: |
           set -euo pipefail
           output="$(npx --yes wrangler@latest deploy --config portal/worker/wrangler.toml 2>&1)"
