@@ -28,7 +28,7 @@ silver as (
         o.*,
         regexp_replace(o.entity_id, '_[0-9]{4}_pl$', '') as block_id,
         row_number() over () as rid
-    from {{ source('silver_entities', 'dbw_observations') }} as o
+    from {{ ref('poc_src_dbw') }} as o
     where
         o.value is not null
         and regexp_replace(o.entity_id, '_[0-9]{4}_pl$', '') in (select b.block_id from blocks as b)

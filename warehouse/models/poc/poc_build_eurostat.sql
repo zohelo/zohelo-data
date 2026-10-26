@@ -50,7 +50,7 @@ silver as (
         coalesce(m.measure_dims, []) as measure_dims,
         string_split(o.breakdown_dimensions, ',') as dim_list,
         string_split(o.breakdown_codes, ',') as code_list
-    from {{ source('silver_entities', 'eurostat_observations') }} as o
+    from {{ ref('poc_src_eurostat') }} as o
     inner join blocks as b on o.dataset_id = b.dataset_id and o.freq_code = b.freq_code
     left join mdims as m on o.dataset_id = m.dataset_id
     where o.value is not null
