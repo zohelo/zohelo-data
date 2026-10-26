@@ -88,9 +88,16 @@ def main(argv=None) -> int:
     except Exception as exc:  # the check table may be missing after a failed build
         annotate("warning", "poc check not read", {"error": f"{type(exc).__name__}: {str(exc)[:300]}"})
     if args.drop:
+        dropped, failed = [], {}
         for ident in cat.list_tables(NAMESPACE):
-            cat.drop_table(ident)
-        annotate("notice", "poc trial dropped", {"namespace": NAMESPACE})
+            try:
+                cat.drop_table(ident)
+                dropped.append(ident[-1])
+            except Exception as exc:  # report, keep going: a scratch table left behind is not a failure
+                failed[ident[-1]] = f"{type(exc).__name__}: {str(exc)[:120]}"
+        annotate(
+            "notice" if not failed else "warning", "poc trial dropped", {"dropped": len(dropped), "failed": failed}
+        )
     return 0
 
 
