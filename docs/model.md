@@ -9,6 +9,10 @@ not yet modelled.
 
 ## Built (October 2026)
 
+A proof of concept of the full dimensional model (design draft 2: series grain, facts by
+frequency, measure catalogue, concepts, metrics tables) is built from samples of every cube
+source in the namespace `poc`: [docs/gold-poc.md](gold-poc.md).
+
 | Gold table | Content |
 |---|---|
 | `dim_date` | calendar 1900–2100, ISO weeks, Polish statutory holidays and working days from 1990; MetricFlow time spine |

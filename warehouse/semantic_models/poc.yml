@@ -1,0 +1,108 @@
+# MetricFlow semantic layer of the Gold PoC (docs/gold-poc.md): one semantic model per concept
+# metrics table, one metric per concept. A metric is only meaningful at one geography level and
+# one frequency: filter geography_level and frequency in the query (or the view already did).
+semantic_models:
+  - name: poc_population
+    description: Population, total series only, every source side by side (poc.metrics_population).
+    model: ref('poc_metrics_population')
+    defaults: {agg_time_dimension: period_start}
+    entities:
+      - {name: population_row, type: primary, expr: "series_key || '|' || date_key"}
+      - {name: poc_series, type: foreign, expr: series_key}
+      - {name: poc_geography, type: foreign, expr: geography_key}
+    dimensions:
+      - {name: period_start, type: time, expr: date_key, type_params: {time_granularity: day}}
+      - {name: source_system, type: categorical}
+      - {name: geography_name, type: categorical}
+      - {name: geography_level, type: categorical}
+      - {name: definition, type: categorical}
+      - {name: frequency, type: categorical}
+    measures:
+      - {name: population_value, agg: sum, expr: value}
+      - {name: population_points, agg: count, expr: value}
+
+  - name: poc_gdp
+    description: GDP at current prices, in the source's currency (poc.metrics_gdp_current_prices).
+    model: ref('poc_metrics_gdp_current_prices')
+    defaults: {agg_time_dimension: period_start}
+    entities:
+      - {name: gdp_row, type: primary, expr: "series_key || '|' || date_key"}
+      - {name: poc_geography, type: foreign, expr: geography_key}
+    dimensions:
+      - {name: period_start, type: time, expr: date_key, type_params: {time_granularity: day}}
+      - {name: source_system, type: categorical}
+      - {name: geography_name, type: categorical}
+      - {name: geography_level, type: categorical}
+      - {name: unit, type: categorical}
+    measures:
+      - {name: gdp_value, agg: sum, expr: value}
+
+  - name: poc_unemployment
+    description: Unemployment rate (LFS), % of the labour force (poc.metrics_unemployment_rate).
+    model: ref('poc_metrics_unemployment_rate')
+    defaults: {agg_time_dimension: period_start}
+    entities:
+      - {name: unemployment_row, type: primary, expr: "series_key || '|' || date_key"}
+      - {name: poc_geography, type: foreign, expr: geography_key}
+    dimensions:
+      - {name: period_start, type: time, expr: date_key, type_params: {time_granularity: day}}
+      - {name: source_system, type: categorical}
+      - {name: geography_name, type: categorical}
+      - {name: geography_level, type: categorical}
+      - {name: frequency, type: categorical}
+    measures:
+      - {name: unemployment_rate_avg, agg: average, expr: value}
+
+  - name: poc_inflation
+    description: Consumer price inflation, annual rate of change in % (poc.metrics_inflation).
+    model: ref('poc_metrics_inflation')
+    defaults: {agg_time_dimension: period_start}
+    entities:
+      - {name: inflation_row, type: primary, expr: "series_key || '|' || date_key"}
+      - {name: poc_geography, type: foreign, expr: geography_key}
+    dimensions:
+      - {name: period_start, type: time, expr: date_key, type_params: {time_granularity: day}}
+      - {name: source_system, type: categorical}
+      - {name: geography_name, type: categorical}
+      - {name: frequency, type: categorical}
+    measures:
+      - {name: inflation_avg, agg: average, expr: value}
+
+  - name: poc_fx
+    description: NBP table A mid rate, PLN per 1 unit of the currency (poc.metrics_fx_rate).
+    model: ref('poc_metrics_fx_rate')
+    defaults: {agg_time_dimension: period_start}
+    entities:
+      - {name: fx_row, type: primary, expr: "series_key || '|' || date_key"}
+    dimensions:
+      - {name: period_start, type: time, expr: date_key, type_params: {time_granularity: day}}
+      - {name: fx_currency, type: categorical, expr: "json_extract_string(breakdown_json, '$.currency')"}
+    measures:
+      - {name: fx_rate_avg, agg: average, expr: value}
+
+metrics:
+  - name: poc_population
+    label: Population (PoC)
+    description: Population of the selected areas; sum over areas of ONE geography level, one source, one definition.
+    type: simple
+    type_params: {measure: population_value}
+  - name: poc_gdp_current_prices
+    label: GDP, current prices (PoC)
+    description: GDP in the source's currency unit; one source at a time.
+    type: simple
+    type_params: {measure: gdp_value}
+  - name: poc_unemployment_rate
+    label: Unemployment rate, LFS (PoC)
+    description: Average of the rate over the chosen period; one frequency and one level at a time.
+    type: simple
+    type_params: {measure: unemployment_rate_avg}
+  - name: poc_inflation
+    label: Inflation, consumer prices (PoC)
+    description: Average annual rate of change over the chosen period.
+    type: simple
+    type_params: {measure: inflation_avg}
+  - name: poc_fx_mid_rate
+    label: Exchange rate, NBP mid (PoC)
+    description: Average NBP table A mid rate over the chosen period, PLN per 1 unit of the currency.
+    type: simple
+    type_params: {measure: fx_rate_avg}
