@@ -7,6 +7,7 @@ with used as (
         any_value(unit_name) as unit_name,
         list(distinct source_system) as sources
     from ({{ poc_observations() }})
+    where unit_code <> '_Z'  -- the special member is added below
     group by unit_code
 )
 
