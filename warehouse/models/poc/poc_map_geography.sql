@@ -72,7 +72,18 @@ bdl as (
         u.unit_id as source_code,
         case
             when u.level = 0 then 'PL'
-            when u.level = 1 then coalesce('NUTS:' || n1.nuts_code, '_X')
+            when u.level = 1
+                then
+                    case
+                        when upper(u.name) like '%MAZOWIECKIE%' then 'TERC:14'
+                        when upper(u.name) like '%POŁUDNIOWO-ZACHODNI%' then 'NUTS:PL5'
+                        when upper(u.name) like '%PÓŁNOCNO-ZACHODNI%' then 'NUTS:PL4'
+                        when upper(u.name) like '%POŁUDNIOWY%' then 'NUTS:PL2'
+                        when upper(u.name) like '%PÓŁNOCNY%' then 'NUTS:PL6'
+                        when upper(u.name) like '%CENTRALNY%' then 'NUTS:PL7'
+                        when upper(u.name) like '%WSCHODNI%' then 'NUTS:PL8'
+                        else '_X'
+                    end
             when u.level = 2 then coalesce('TERC:' || w.terc_code, '_X')
             when u.level = 3 and upper(u.name) like '%WARSZAWSKI STO%' then 'NUTS:PL91'
             when u.level = 3 and upper(u.name) like '%MAZOWIECKI REGIONALNY%' then 'NUTS:PL92'
@@ -83,7 +94,6 @@ bdl as (
             else '_X'
         end as geography_key
     from bdl_units as u
-    left join nuts_pl as n1 on n1.level_name = 'makroregion' and upper(n1.name_pl) = upper(u.name)
     left join terc_woj as w on w.name_u = upper(u.name) and u.level = 2
     left join terc_woj as w3 on w3.name_u = upper(regexp_replace(u.name, '^(?i)region ', '')) and u.level = 3
     left join terc_pow as p
@@ -113,15 +123,22 @@ bdl_terc as (  -- the 7-digit zero-padded codes of the web export, generated fro
         'gus_bdl' as source_system,
         '0000000' as source_code,
         'PL' as geography_key
+    union all
+    -- a gmina whose type digit changed since (2 → 3 when a village got town rights): the current unit
+    select
+        'gus_bdl' as source_system,
+        substr(terc_code, 1, 6) || t.digit as source_code,
+        'TERC:' || terc_code as geography_key
+    from {{ ref('teryt_terc') }}
+    cross join (select unnest(['1', '2', '3']) as digit) as t
+    where unit_level = 'gmina' and gmina_type_code in ('1', '2', '3') and t.digit <> gmina_type_code
 ),
 
 -- DBW cross-section positions are territory names; matched by name (upper) to Polish areas.
-dbw_names as (
+dbw_names as (  -- position labels of the activated DBW blocks (extracted dictionaries)
     select distinct upper(trim(opis)) as source_code
-    from {{ source('gus_dbw', 'dbw_dictionary_items') }}
-    where
-        lower(nazwa_kolumny) like 'id_pozycja_%'
-        and regexp_replace(entity_id, '_[0-9]{4}_pl$', '') in (select b.block_id from ({{ poc_dbw_blocks() }}) as b)
+    from {{ ref('poc_src_dbw_dictionary') }}
+    where lower(nazwa_kolumny) like 'id_pozycja_%'
 ),
 
 dbw as (
@@ -130,6 +147,7 @@ dbw as (
         d.source_code,
         coalesce(
             case when d.source_code = 'POLSKA' then 'PL' end,
+            case when d.source_code like 'MAKROREGION WOJEW%MAZOWIECKIE' then 'TERC:14' end,
             g_woj.geography_key,
             g_nuts.geography_key,
             g_pod.geography_key,
@@ -137,11 +155,12 @@ dbw as (
         ) as geography_key
     from dbw_names as d
     left join geo as g_woj
-        on g_woj.level_name = 'wojewodztwo' and upper(g_woj.name_pl) = d.source_code
+        on g_woj.level_name = 'wojewodztwo' and upper(g_woj.name_pl) = regexp_replace(d.source_code, '^REGION ', '')
     left join geo as g_nuts
         on
             g_nuts.level_name in ('makroregion', 'region')
-            and upper(g_nuts.name_pl) = regexp_replace(d.source_code, '^(MAKROREGION|REGION) ', '')
+            and regexp_replace(upper(g_nuts.name_pl), '^(MAKROREGION|REGION) ', '')
+            = regexp_replace(d.source_code, '^(MAKROREGION|REGION) ', '')
     left join geo as g_pod
         on
             g_pod.level_name = 'podregion'

@@ -1,9 +1,9 @@
 {{ config(alias='build_bdl') }}
 {# Gold PoC build stage: sampled GUS BDL subgroups as observations in the common shape.
    Coarse measure rule (to refine per domain in v1): measure = subgroup × measure unit × the
-   first label (n1) when no variable of the subgroup has n1 = "ogółem" (then n1 names what is
-   measured: "urodzenia żywe", "ludność na 1 km2"); the other labels are breakdowns; a series
-   is total when every breakdown label is "ogółem".
+   label positions where no variable of the subgroup says "ogółem" (those name what is
+   measured: "urodzenia żywe", "ludność na 1 km2", "mieszkania"); the other positions are
+   breakdowns; a series is total when every breakdown label is "ogółem".
    Sample: years from 2010, units down to powiat (gmina for Ludność from 2015 and for
    Powierzchnia / Gęstość zaludnienia). #}
 with blocks as ({{ poc_bdl_blocks() }}),
@@ -22,12 +22,15 @@ units as (
 
 variables as (select * from {{ ref('bdl_variables') }}),
 
-n1_rule as (  -- n1 is measure-defining when the subgroup has no "ogółem" among its n1 labels
+label_rule as (  -- a label position names what is measured when no variable of the subgroup has "ogółem" there
     select
         subgroup_id,
-        bool_and(lower(n1) <> 'ogółem') as n1_defines_measure
+        bool_and(lower(cast(n1 as varchar)) <> 'ogółem') filter (where n1 is not null) as m1,
+        bool_and(lower(cast(n2 as varchar)) <> 'ogółem') filter (where n2 is not null) as m2,
+        bool_and(lower(cast(n3 as varchar)) <> 'ogółem') filter (where n3 is not null) as m3,
+        bool_and(lower(cast(n4 as varchar)) <> 'ogółem') filter (where n4 is not null) as m4,
+        bool_and(lower(cast(n5 as varchar)) <> 'ogółem') filter (where n5 is not null) as m5
     from variables
-    where n1 is not null
     group by subgroup_id
 ),
 
@@ -42,12 +45,26 @@ silver as (
         v.n3,
         v.n4,
         v.n5,
-        coalesce(r.n1_defines_measure, false) as n1_defines_measure,
-        case when coalesce(r.n1_defines_measure, false) then cast(v.n1 as varchar) end as measure_label,
+        array_to_string(
+            list_filter(
+                [
+                    case when coalesce(r.m1, false) then cast(v.n1 as varchar) end,
+                    case when coalesce(r.m2, false) then cast(v.n2 as varchar) end,
+                    case when coalesce(r.m3, false) then cast(v.n3 as varchar) end,
+                    case when coalesce(r.m4, false) then cast(v.n4 as varchar) end,
+                    case when coalesce(r.m5, false) then cast(v.n5 as varchar) end
+                ],
+                x -> x is not null
+            ),
+            ' / '
+        ) as measure_label,
         list_filter(
             [
-                case when coalesce(r.n1_defines_measure, false) then null else cast(v.n1 as varchar) end,
-                cast(v.n2 as varchar), cast(v.n3 as varchar), cast(v.n4 as varchar), cast(v.n5 as varchar)
+                case when coalesce(r.m1, false) then null else cast(v.n1 as varchar) end,
+                case when coalesce(r.m2, false) then null else cast(v.n2 as varchar) end,
+                case when coalesce(r.m3, false) then null else cast(v.n3 as varchar) end,
+                case when coalesce(r.m4, false) then null else cast(v.n4 as varchar) end,
+                case when coalesce(r.m5, false) then null else cast(v.n5 as varchar) end
             ],
             x -> x is not null
         ) as labels
@@ -55,7 +72,7 @@ silver as (
     inner join blocks as b on o.subgroup_id = b.subgroup_id
     left join units as u on o.unit_code = u.unit_id
     left join variables as v on o.subgroup_id = v.subgroup_id and o.variable_id = v.variable_id
-    left join n1_rule as r on o.subgroup_id = r.subgroup_id
+    left join label_rule as r on o.subgroup_id = r.subgroup_id
     where o.value is not null and o.year >= 2010
 ),
 
@@ -82,9 +99,12 @@ select
     || k.subgroup_id
     || ':'
     || coalesce(k.measure_unit, '-')
-    || coalesce(':' || k.measure_label, '') as measure_key,
-    k.block_name || coalesce(' — ' || k.measure_label, '') || ' — ' || coalesce(k.measure_unit, '-') as measure_name,
-    coalesce(k.measure_unit, '-') || coalesce(':' || k.measure_label, '') as measure_codes,
+    || coalesce(':' || nullif(k.measure_label, ''), '') as measure_key,
+    k.block_name
+    || coalesce(' — ' || nullif(k.measure_label, ''), '')
+    || ' — '
+    || coalesce(k.measure_unit, '-') as measure_name,
+    coalesce(k.measure_unit, '-') || coalesce(':' || nullif(k.measure_label, ''), '') as measure_codes,
     coalesce(k.measure_unit, '-') as unit_code,
     coalesce(k.measure_unit, '-') as unit_name,
     k.unit_code as geography_source_code,

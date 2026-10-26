@@ -51,8 +51,8 @@ silver as (
         string_split(o.breakdown_dimensions, ',') as dim_list,
         string_split(o.breakdown_codes, ',') as code_list
     from {{ ref('poc_src_eurostat') }} as o
-    inner join blocks as b on o.dataset_id = b.dataset_id and o.freq_code = b.freq_code
-    left join mdims as m on o.dataset_id = m.dataset_id
+    inner join blocks as b on upper(o.dataset_id) = b.dataset_id and o.freq_code = b.freq_code
+    left join mdims as m on upper(o.dataset_id) = m.dataset_id
     where o.value is not null
 ),
 
@@ -72,16 +72,16 @@ kept as (  -- the PoC sample: small, with breakdowns where they matter (sex), on
     select *
     from sampled
     where
-        case dataset_id
-            when 'demo_pjan' then age_code = 'TOTAL'
-            when 'demo_r_pjanaggr3' then age_code = 'TOTAL' and length(geo_code) <= 4
-            when 'demo_gind' then true
-            when 'nama_10_gdp' then unit_code in ('CP_MEUR', 'CLV_PCH_PRE') and na_item_code = 'B1GQ'
-            when 'nama_10_pc' then unit_code = 'CP_EUR_HAB' and na_item_code = 'B1GQ'
-            when 'une_rt_a' then unit_code = 'PC_ACT' and age_code = 'Y15-74'
-            when 'une_rt_m' then unit_code = 'PC_ACT' and age_code = 'Y15-74' and s_adj_code = 'SA'
-            when 'prc_hicp_manr' then unit_code = 'RCH_A' and coicop_code = 'CP00'
-            when 'lfsi_emp_a' then unit_code = 'PC_POP' and age_code = 'Y20-64' and indic_em_code = 'EMP_LFS'
+        case upper(dataset_id)
+            when 'DEMO_PJAN' then age_code = 'TOTAL'
+            when 'DEMO_R_PJANAGGR3' then age_code = 'TOTAL' and length(geo_code) <= 4
+            when 'DEMO_GIND' then true
+            when 'NAMA_10_GDP' then unit_code in ('CP_MEUR', 'CLV_PCH_PRE') and na_item_code = 'B1GQ'
+            when 'NAMA_10_PC' then unit_code = 'CP_EUR_HAB' and na_item_code = 'B1GQ'
+            when 'UNE_RT_A' then unit_code = 'PC_ACT' and age_code = 'Y15-74'
+            when 'UNE_RT_M' then unit_code = 'PC_ACT' and age_code = 'Y15-74' and s_adj_code = 'SA'
+            when 'PRC_HICP_MANR' then unit_code = 'RCH_A' and coicop_code = 'CP00'
+            when 'LFSI_EMP_A' then unit_code = 'PC_POP' and age_code = 'Y20-64' and indic_em_code = 'EMP_LFS'
             else false
         end
 ),
@@ -156,10 +156,10 @@ measure_names as (  -- names of the measure-defining codes, from the dataset's c
 
 select
     'eurostat' as source_system,
-    s.dataset_id as block_id,
+    upper(s.dataset_id) as block_id,
     s.block_name,
     'eurostat:'
-    || s.dataset_id
+    || upper(s.dataset_id)
     || ':'
     || s.unit_code
     || case when s.measure_codes = '' then '' else ':' || s.measure_codes end

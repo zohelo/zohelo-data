@@ -17,9 +17,7 @@ dict as (
         lower(nazwa_kolumny) as column_name,
         id_elementu as element_id,
         any_value(opis) as label
-    from {{ source('gus_dbw', 'dbw_dictionary_items') }}
-    -- activated files only
-    where regexp_replace(entity_id, '_[0-9]{4}_pl$', '') in (select b.block_id from blocks as b)
+    from {{ ref('poc_src_dbw_dictionary') }}
     group by entity_id, lower(nazwa_kolumny), id_elementu
 ),
 
@@ -130,6 +128,7 @@ shaped as (
         coalesce(i.label, 'indicator ' || s.indicator_id) as indicator_name,
         coalesce(m.label, 'presentation ' || s.presentation_id) as presentation_name,
         pe.label as period_name,
+        cf.label as confidentiality_name,
         r.geography_key,
         r.geography_source_code,
         r.breakdown_json,
@@ -166,6 +165,12 @@ shaped as (
     left join
         dict as pe
         on s.entity_id = pe.entity_id and pe.column_name = 'id_okres' and pe.element_id = cast(s.period_id as varchar)
+    left join
+        dict as cf
+        on
+            s.entity_id = cf.entity_id
+            and cf.column_name = 'id_tajnosci'
+            and cf.element_id = cast(s.confidentiality_id as varchar)
 )
 
 select
@@ -179,7 +184,7 @@ select
     presentation_name as unit_name,
     geography_source_code,
     coalesce(geography_key, '_X') as geography_key,
-    freq_code as frequency,
+    case when date_key is null then 'X' else freq_code end as frequency,  -- X: period label not placed on the calendar
     date_key,
     coalesce(period_name || ' ', '') || year as period_label,
     coalesce(breakdown_json, '{}') as breakdown_json,
@@ -188,11 +193,12 @@ select
     is_total,
     value,
     case
-        when confidentiality_id is not null and confidentiality_id <> 0 then 'confidential'
+        when
+            lower(coalesce(confidentiality_name, '')) like '%tajn%' and lower(confidentiality_name) not like '%nie%'
+            then 'confidential'
         when flag_id is not null and flag_id <> 0 then 'flagged'
         else 'ok'
     end as observation_status_key,
     source_version,
     raw_sha256
 from shaped
-where date_key is not null

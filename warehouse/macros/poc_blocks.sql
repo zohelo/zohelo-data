@@ -5,15 +5,15 @@
 {% macro poc_eurostat_blocks() %}
     select * from (
         values
-        ('demo_pjan', 'Population on 1 January', 'A', 'TOTAL,T'),
-        ('demo_r_pjanaggr3', 'Population on 1 January by NUTS 3 region', 'A', 'TOTAL,T'),
-        ('demo_gind', 'Population change: demographic balance and crude rates', 'A', ''),
-        ('nama_10_gdp', 'GDP and main components', 'A', ''),
-        ('nama_10_pc', 'Main GDP aggregates per capita', 'A', ''),
-        ('une_rt_a', 'Unemployment by sex and age, annual', 'A', 'Y15-74,T'),
-        ('une_rt_m', 'Unemployment by sex and age, monthly', 'M', 'Y15-74,SA,T'),
-        ('prc_hicp_manr', 'HICP, monthly annual rate of change', 'M', 'CP00'),
-        ('lfsi_emp_a', 'Employment and activity by sex and age, annual', 'A', 'Y20-64,T')
+        ('DEMO_PJAN', 'Population on 1 January', 'A', 'TOTAL,T'),
+        ('DEMO_R_PJANAGGR3', 'Population on 1 January by NUTS 3 region', 'A', 'TOTAL,T'),
+        ('DEMO_GIND', 'Population change: demographic balance and crude rates', 'A', ''),
+        ('NAMA_10_GDP', 'GDP and main components', 'A', ''),
+        ('NAMA_10_PC', 'Main GDP aggregates per capita', 'A', ''),
+        ('UNE_RT_A', 'Unemployment by sex and age, annual', 'A', 'Y15-74,T'),
+        ('UNE_RT_M', 'Unemployment by sex and age, monthly', 'M', 'Y15-74,SA,T'),
+        ('PRC_HICP_MANR', 'HICP, monthly annual rate of change', 'M', 'CP00'),
+        ('LFSI_EMP_A', 'Employment and activity by sex and age, annual', 'A', 'Y20-64,T')
     ) as t (dataset_id, block_name, freq_code, total_breakdown)
 {% endmacro %}
 
@@ -21,10 +21,10 @@
 {% macro poc_eurostat_measure_dims() %}
     select * from (
         values
-        ('demo_gind', 'indic_de'),
-        ('nama_10_gdp', 'na_item'),
-        ('nama_10_pc', 'na_item'),
-        ('lfsi_emp_a', 'indic_em')
+        ('DEMO_GIND', 'indic_de'),
+        ('NAMA_10_GDP', 'na_item'),
+        ('NAMA_10_PC', 'na_item'),
+        ('LFSI_EMP_A', 'indic_em')
     ) as t (dataset_id, dimension_id)
 {% endmacro %}
 
@@ -105,31 +105,31 @@
 {% macro poc_concepts() %}
     select * from (
         values
-        ('population', 'Population', 'Ludność', 'persons', 'eurostat', 'eurostat:demo_pjan:NR', 'on 1 January'),
-        ('population', 'Population', 'Ludność', 'persons', 'eurostat', 'eurostat:demo_r_pjanaggr3:NR', 'on 1 January, NUTS'),
+        ('population', 'Population', 'Ludność', 'persons', 'eurostat', 'eurostat:DEMO_PJAN:NR', 'on 1 January'),
+        ('population', 'Population', 'Ludność', 'persons', 'eurostat', 'eurostat:DEMO_R_PJANAGGR3:NR', 'on 1 January, NUTS'),
         ('population', 'Population', 'Ludność', 'persons', 'world_bank_wdi', 'world_bank_wdi:SP.POP.TOTL', 'mid-year'),
         ('population', 'Population', 'Ludność', 'persons', 'gus_bdl', 'gus_bdl:P2137:osoba', 'on 31 December'),
         ('population', 'Population', 'Ludność', 'persons', 'gus_dbw', 'gus_dbw:581_57_93_4:%', 'on 31 December'),
-        ('gdp_current_prices', 'GDP, current prices', 'PKB w cenach bieżących', 'million, source currency', 'eurostat', 'eurostat:nama_10_gdp:CP_MEUR:B1GQ', 'million EUR'),
+        ('gdp_current_prices', 'GDP, current prices', 'PKB w cenach bieżących', 'million, source currency', 'eurostat', 'eurostat:NAMA_10_GDP:CP_MEUR:B1GQ', 'million EUR'),
         ('gdp_current_prices', 'GDP, current prices', 'PKB w cenach bieżących', 'million, source currency', 'world_bank_wdi', 'world_bank_wdi:NY.GDP.MKTP.CD', 'current US$'),
-        ('gdp_per_capita', 'GDP per capita', 'PKB na 1 mieszkańca', 'per person', 'eurostat', 'eurostat:nama_10_pc:CP_EUR_HAB:B1GQ', 'EUR per inhabitant'),
+        ('gdp_per_capita', 'GDP per capita', 'PKB na 1 mieszkańca', 'per person', 'eurostat', 'eurostat:NAMA_10_PC:CP_EUR_HAB:B1GQ', 'EUR per inhabitant'),
         ('gdp_per_capita', 'GDP per capita', 'PKB na 1 mieszkańca', 'per person', 'world_bank_wdi', 'world_bank_wdi:NY.GDP.PCAP.CD', 'current US$'),
-        ('gdp_volume_growth', 'GDP volume growth', 'Dynamika realna PKB', '%', 'eurostat', 'eurostat:nama_10_gdp:CLV_PCH_PRE:B1GQ', 'chain-linked volumes, % change on previous period'),
+        ('gdp_volume_growth', 'GDP volume growth', 'Dynamika realna PKB', '%', 'eurostat', 'eurostat:NAMA_10_GDP:CLV_PCH_PRE:B1GQ', 'chain-linked volumes, % change on previous period'),
         ('gdp_volume_growth', 'GDP volume growth', 'Dynamika realna PKB', '%', 'world_bank_wdi', 'world_bank_wdi:NY.GDP.MKTP.KD.ZG', 'annual %'),
-        ('inflation', 'Inflation, consumer prices', 'Inflacja (ceny konsumpcyjne)', '%', 'eurostat', 'eurostat:prc_hicp_manr:RCH_A', 'HICP, annual rate of change, monthly'),
+        ('inflation', 'Inflation, consumer prices', 'Inflacja (ceny konsumpcyjne)', '%', 'eurostat', 'eurostat:PRC_HICP_MANR:RCH_A', 'HICP, annual rate of change, monthly'),
         ('inflation', 'Inflation, consumer prices', 'Inflacja (ceny konsumpcyjne)', '%', 'world_bank_wdi', 'world_bank_wdi:FP.CPI.TOTL.ZG', 'CPI, annual %'),
-        ('unemployment_rate', 'Unemployment rate (LFS)', 'Stopa bezrobocia (BAEL)', '% of labour force', 'eurostat', 'eurostat:une_rt_a:PC_ACT', 'annual, 15-74'),
-        ('unemployment_rate', 'Unemployment rate (LFS)', 'Stopa bezrobocia (BAEL)', '% of labour force', 'eurostat', 'eurostat:une_rt_m:PC_ACT', 'monthly, seasonally adjusted, 15-74'),
+        ('unemployment_rate', 'Unemployment rate (LFS)', 'Stopa bezrobocia (BAEL)', '% of labour force', 'eurostat', 'eurostat:UNE_RT_A:PC_ACT', 'annual, 15-74'),
+        ('unemployment_rate', 'Unemployment rate (LFS)', 'Stopa bezrobocia (BAEL)', '% of labour force', 'eurostat', 'eurostat:UNE_RT_M:PC_ACT', 'monthly, seasonally adjusted, 15-74'),
         ('unemployment_rate', 'Unemployment rate (LFS)', 'Stopa bezrobocia (BAEL)', '% of labour force', 'world_bank_wdi', 'world_bank_wdi:SL.UEM.TOTL.ZS', 'ILO modelled estimate'),
         ('registered_unemployment_rate', 'Registered unemployment rate', 'Stopa bezrobocia rejestrowanego', '%', 'gus_bdl', 'gus_bdl:P2392:%', 'registered, end of year'),
-        ('employment_rate', 'Employment rate', 'Wskaźnik zatrudnienia', '% of population', 'eurostat', 'eurostat:lfsi_emp_a:PC_POP:EMP_LFS', '20-64'),
+        ('employment_rate', 'Employment rate', 'Wskaźnik zatrudnienia', '% of population', 'eurostat', 'eurostat:LFSI_EMP_A:PC_POP:EMP_LFS', '20-64'),
         ('employment_rate', 'Employment rate', 'Wskaźnik zatrudnienia', '% of population', 'world_bank_wdi', 'world_bank_wdi:SL.EMP.TOTL.SP.ZS', '15+, ILO modelled'),
         ('life_expectancy', 'Life expectancy at birth', 'Przeciętne trwanie życia', 'years', 'world_bank_wdi', 'world_bank_wdi:SP.DYN.LE00.IN', 'total'),
-        ('net_migration', 'Net migration', 'Saldo migracji', 'persons', 'eurostat', 'eurostat:demo_gind:CNMIGRAT', 'incl. statistical adjustment'),
+        ('net_migration', 'Net migration', 'Saldo migracji', 'persons', 'eurostat', 'eurostat:DEMO_GIND:CNMIGRAT', 'incl. statistical adjustment'),
         ('net_migration', 'Net migration', 'Saldo migracji', 'persons', 'world_bank_wdi', 'world_bank_wdi:SM.POP.NETM', ''),
-        ('live_births', 'Live births', 'Urodzenia żywe', 'persons', 'eurostat', 'eurostat:demo_gind:LBIRTH', ''),
+        ('live_births', 'Live births', 'Urodzenia żywe', 'persons', 'eurostat', 'eurostat:DEMO_GIND:LBIRTH', ''),
         ('live_births', 'Live births', 'Urodzenia żywe', 'persons', 'gus_bdl', 'gus_bdl:P1873:%', ''),
-        ('deaths', 'Deaths', 'Zgony', 'persons', 'eurostat', 'eurostat:demo_gind:DEATH', ''),
+        ('deaths', 'Deaths', 'Zgony', 'persons', 'eurostat', 'eurostat:DEMO_GIND:DEATH', ''),
         ('average_gross_wage', 'Average monthly gross wage', 'Przeciętne miesięczne wynagrodzenie brutto', 'PLN', 'gus_bdl', 'gus_bdl:P2497:%', ''),
         ('dwellings_completed', 'Dwellings completed', 'Mieszkania oddane do użytkowania', 'dwellings', 'gus_bdl', 'gus_bdl:P3824:%', ''),
         ('area', 'Area', 'Powierzchnia', 'km²', 'gus_bdl', 'gus_bdl:P1410:%', 'ha in the source'),

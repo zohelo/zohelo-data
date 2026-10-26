@@ -105,5 +105,7 @@ models:
     description: Extraction stage (Python model) — the activated Eurostat datasets' Silver rows, read from their files only.
   - name: poc_src_dbw
     description: Extraction stage (Python model) — the activated DBW blocks' Silver rows, read from their files only.
+  - name: poc_src_dbw_dictionary
+    description: Extraction stage (Python model) — the label dictionaries of the activated DBW blocks' files.
   - name: poc_build_check
     description: Per activated block — rows, series, unmatched geography, dates, flags; read after every build.

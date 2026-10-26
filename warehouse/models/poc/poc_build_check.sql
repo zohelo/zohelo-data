@@ -11,6 +11,8 @@ select
     count(*) filter (where geography_key = '_X') as rows_geography_unmatched,
     (list(distinct geography_source_code) filter (where geography_key = '_X'))[1:10] as unmatched_sample,
     count(*) filter (where is_total) as rows_total_series,
+    count(*) filter (where frequency = 'X') as rows_period_unplaced,
+    (list(distinct period_label) filter (where frequency = 'X'))[1:6] as unplaced_period_sample,
     min(date_key) as first_date,
     max(date_key) as last_date,
     list(distinct frequency) as frequencies,
