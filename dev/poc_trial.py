@@ -1,5 +1,6 @@
 """Gold PoC trial: dbt build of the poc models against real Silver, written to the scratch
-namespace zz_dev_poc (target poc_trial), then the build check and row counts as annotations.
+namespace zz_dev_poc (target prod with the poc folder's schema set to the scratch namespace;
+only the poc folder is ever selected here), then the build check and row counts as annotations.
 Pass --drop to remove the scratch tables afterwards."""
 
 from __future__ import annotations
@@ -29,7 +30,18 @@ def main(argv=None) -> int:
     if not args.skip_build:
         started = time.monotonic()
         run = subprocess.run(
-            ["dbt", "build", "--target", "poc_trial", "--select", args.select, "--threads", "2"],
+            [
+                "dbt",
+                "build",
+                "--target",
+                "prod",
+                "--select",
+                args.select,
+                "--threads",
+                "2",
+                "--vars",
+                f"{{poc_schema: {NAMESPACE}}}",
+            ],
             cwd=ROOT / "warehouse",
             env=env,
             capture_output=True,

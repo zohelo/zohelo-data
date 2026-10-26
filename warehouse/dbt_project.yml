@@ -17,5 +17,6 @@ models:
       +schema: silver
     gold:
       +schema: gold
-    poc:    # Gold dimensional model proof of concept (docs/gold-poc.md); tables aliased without the poc_ prefix
-      +schema: poc
+    poc:    # Gold dimensional model proof of concept (docs/gold-poc.md); tables aliased without the poc_ prefix.
+      # A trial sets poc_schema to a zz_dev_ scratch namespace and selects only this folder (dev/poc_trial.py).
+      +schema: "{{ var('poc_schema', 'poc') }}"
