@@ -94,6 +94,8 @@ kept as (
             and upper(unit_name) not like '%WARSZAWSKI STO%'
             and upper(unit_name) not like '%MAZOWIECKI REGIONALNY%'
         )
+        -- the "makroregion województwo mazowieckie" (level 1) is the voivodeship itself (level 2)
+        and not (unit_level = 1 and upper(unit_name) like '%MAZOWIECKIE%')
         and case subgroup_id
             when 'P2137'
                 then
@@ -102,6 +104,16 @@ kept as (
             when 'P1410' then year >= 2015
             else unit_level <= 5
         end
+),
+
+deduplicated as (  -- one row per series × year, newest version first: a subgroup can hold the same
+    -- rows from both channels (web export and API; Silver finding #868)
+    select *
+    from kept
+    qualify row_number() over (
+        partition by subgroup_id, measure_unit, measure_label, labels, unit_code, year
+        order by source_version desc, channel
+    ) = 1
 )
 
 select
@@ -143,5 +155,5 @@ select
     case when k.value_conflict then 'conflicting_values' else 'ok' end as observation_status_key,
     k.source_version,
     k.raw_sha256
-from kept as k
+from deduplicated as k
 left join geo_map as g on k.unit_code = g.source_code

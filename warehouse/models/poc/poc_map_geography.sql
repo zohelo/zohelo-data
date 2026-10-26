@@ -166,8 +166,8 @@ dbw as (
     left join geo as g_pod
         on
             g_pod.level_name = 'podregion'
-            and regexp_replace(upper(g_pod.name_pl), '^PODREGION ', '')
-            = regexp_replace(d.source_code, '^PODREGION ', '')
+            and regexp_replace(regexp_replace(upper(g_pod.name_pl), '^PODREGION ', ''), '^(M\. ST\. |M\. |MIASTO )', '')
+            = regexp_replace(regexp_replace(d.source_code, '^PODREGION ', ''), '^(M\. ST\. |M\. |MIASTO )', '')
 ),
 
 wdi as (

@@ -149,7 +149,10 @@
     union all select * from {{ ref('poc_build_nbp') }}
 {% endmacro %}
 
-{# series_key: measure × geography × breakdown codes, readable. #}
+{# series_key: measure × geography × breakdown codes, readable; an unmatched area keeps its source code so
+   two unmatched units never share a series. #}
 {% macro poc_series_key() %}
-    measure_key || '|' || geography_key || '|' || breakdown_json
+    measure_key || '|' || geography_key
+    || case when geography_key = '_X' then ':' || coalesce(geography_source_code, '') else '' end
+    || '|' || breakdown_json
 {% endmacro %}
