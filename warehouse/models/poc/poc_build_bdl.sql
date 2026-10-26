@@ -92,14 +92,14 @@ select
     'A' as frequency,
     make_date(k.year, 1, 1) as date_key,
     cast(k.year as varchar) as period_label,
-    to_json(map(
+    cast(to_json(map(
         list_transform(generate_series(1, len(k.labels)), i -> 'n' || i),
         k.labels
-    )) as breakdown_json,
-    to_json(map(
+    )) as varchar) as breakdown_json,
+    cast(to_json(map(
         list_transform(generate_series(1, len(k.labels)), i -> 'n' || i),
         k.labels
-    )) as breakdown_label_json,
+    )) as varchar) as breakdown_label_json,
     case
         when list_contains(list_transform(k.labels, x -> lower(x)), 'mężczyźni') then 'M'
         when list_contains(list_transform(k.labels, x -> lower(x)), 'kobiety') then 'F'

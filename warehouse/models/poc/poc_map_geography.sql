@@ -102,19 +102,17 @@ bdl as (
             and g.gmina_type_code = substr(u.unit_id, 12, 1)
 ),
 
-bdl_terc as (  -- the 7-digit codes of the web export
-    select distinct
+bdl_terc as (  -- the 7-digit zero-padded codes of the web export, generated from TERYT
+    select
         'gus_bdl' as source_system,
-        o.unit_code as source_code,
-        case
-            when o.unit_code = '0000000' then 'PL'
-            when regexp_matches(o.unit_code, '^[0-9]{2}00000$') then 'TERC:' || substr(o.unit_code, 1, 2)
-            when regexp_matches(o.unit_code, '^[0-9]{4}000$') then 'TERC:' || substr(o.unit_code, 1, 4)
-            when regexp_matches(o.unit_code, '^[0-9]{7}$') then 'TERC:' || o.unit_code
-            else '_X'
-        end as geography_key
-    from {{ source('silver_entities', 'bdl_observations') }} as o
-    where o.unit_code_scheme = 'TERC' and o.subgroup_id in (select b.subgroup_id from ({{ poc_bdl_blocks() }}) as b)
+        rpad(terc_code, 7, '0') as source_code,
+        'TERC:' || terc_code as geography_key
+    from {{ ref('teryt_terc') }}
+    union all
+    select
+        'gus_bdl',
+        '0000000',
+        'PL'
 ),
 
 -- DBW cross-section positions are territory names; matched by name (upper) to Polish areas.
@@ -162,10 +160,10 @@ wdi as (
 )
 
 select
-    source_system,
-    source_code,
-    geography_key,
-    geography_key <> '_X' as matched
+    m.source_system,
+    m.source_code,
+    coalesce(g.geography_key, '_X') as geography_key,
+    g.geography_key is not null as matched
 from (
     select * from eurostat
     union all
@@ -176,5 +174,7 @@ from (
     select * from dbw
     union all
     select * from wdi
-) as mapped
-qualify row_number() over (partition by source_system, source_code order by geography_key) = 1
+) as m
+left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
+where m.source_code is not null
+qualify row_number() over (partition by m.source_system, m.source_code order by g.geography_key nulls last) = 1

@@ -18,7 +18,8 @@ dict as (
         id_elementu as element_id,
         any_value(opis) as label
     from {{ source('gus_dbw', 'dbw_dictionary_items') }}
-    where regexp_replace(entity_id, '_[0-9]{4}_pl$', '') in (select b.block_id from blocks as b)  -- activated files only
+    -- activated files only
+    where regexp_replace(entity_id, '_[0-9]{4}_pl$', '') in (select b.block_id from blocks as b)
     group by entity_id, lower(nazwa_kolumny), id_elementu
 ),
 
@@ -108,10 +109,10 @@ per_row as (
         l.rid,
         max(case when l.k = t.k then coalesce(l.geography_key, '_X') end) as geography_key,
         max(case when l.k = t.k then l.pos_label end) as geography_source_code,
-        to_json(map(
+        cast(to_json(map(
             list(l.dim_name order by l.k) filter (where t.k is null or l.k <> t.k),
             list(l.pos_label order by l.k) filter (where t.k is null or l.k <> t.k)
-        )) as breakdown_json,
+        )) as varchar) as breakdown_json,
         bool_and(lower(l.pos_label) in ('ogółem', 'razem')) filter (where t.k is null or l.k <> t.k) as all_total,
         count(*) filter (where t.k is null or l.k <> t.k) as breakdowns,
         bool_or(lower(l.pos_label) = 'mężczyźni') as is_men,

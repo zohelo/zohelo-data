@@ -98,7 +98,11 @@ shaped as (
     select
         s.*,
         array_to_string(list_transform(s.measure_pairs, x -> x[2]), ':') as measure_codes,
-        to_json(map(list_transform(s.breakdown_pairs, x -> x[1]), list_transform(s.breakdown_pairs, x -> x[2])))
+        cast(
+            to_json(
+                map(list_transform(s.breakdown_pairs, x -> x[1]), list_transform(s.breakdown_pairs, x -> x[2]))
+            ) as varchar
+        )
             as breakdown_json,
         case
             when s.total_breakdown = '' then len(s.breakdown_pairs) = 0
