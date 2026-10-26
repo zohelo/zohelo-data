@@ -59,8 +59,10 @@ the code of Śląskie — a row whose unit name disagrees with its id's name is 
 unmatched unit of its own; about 1,700 BDL unit ids (mostly gmina parts, 12-character ids) and
 a few DBW city podregions do not map by name (`map_geography.matched = false`,
 `build_check.rows_geography_unmatched`) — v1 uses the GUS KTS–TERYT table; two activated
-blocks yielded no rows in the trials (BDL P2137 Ludność, Eurostat UNE_RT_M) — `build_check`
-shows them with their catalogue status.
+blocks yielded no rows in the trials — `build_check` shows them with their catalogue status:
+BDL P2137 Ludność is `waiting` (not landed yet, the BDL fill is running) and Eurostat UNE_RT_M
+is loaded but its sample filter (unit `PC_ACT`, age `Y15-74`) matched nothing: check the
+dataset's codes before relying on the monthly unemployment concept member.
 
 ## How to build
 
@@ -69,7 +71,7 @@ shows them with their catalogue status.
   `dev/` never lives on main; `--drop` removes the scratch tables). It runs the prod target
   with the dbt var `poc_schema: zz_dev_poc` (the poc folder's schema, `dbt_project.yml`) and
   `--select poc`, so the PoC is written to the scratch namespace and reads the real Silver and
-  Gold tables. The last trial (run 40317023927, 26 Oct) built the 30 models in 3.6 minutes with every test passing.
+  Gold tables. The last trial (run 40319860060, 26 Oct) built the 30 models in 3.5 minutes with every test passing.
 - **Big Silver tables are read by Python models** (`poc_src_eurostat.py`, `poc_src_dbw.py`,
   `poc_src_dbw_dictionary.py`): the planner lists the activated blocks' files from the
   Iceberg metadata and DuckDB streams only those; the dbt SQL path scanned every file of
