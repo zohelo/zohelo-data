@@ -80,12 +80,14 @@ def main(argv=None) -> int:
         counts[ident[-1]] = int((snap.summary or {}).get("total-records", -1)) if snap else 0
     annotate("notice", "poc trial rows", counts)
     try:
-        check = cat.load_table((NAMESPACE, "poc_build_check")).scan().to_arrow().to_pylist()
+        grain = cat.load_table((NAMESPACE, "grain_check")).scan().to_arrow().to_pylist()
+        annotate("notice" if not grain else "warning", "poc grain check (duplicates)", grain[:8])
+        check = cat.load_table((NAMESPACE, "build_check")).scan().to_arrow().to_pylist()
         rows = [{k: (v if not isinstance(v, list) else v[:6]) for k, v in r.items()} for r in check]
         for i in range(0, len(rows), 6):
             annotate("notice", f"poc build check {i // 6 + 1}", rows[i : i + 6])
         unmatched = (
-            cat.load_table((NAMESPACE, "poc_map_geography"))
+            cat.load_table((NAMESPACE, "map_geography"))
             .scan(selected_fields=("source_system", "matched"))
             .to_arrow()
             .to_pylist()
@@ -97,8 +99,6 @@ def main(argv=None) -> int:
             by[k][0] += 1
             by[k][1] += 0 if r["matched"] else 1
         annotate("notice", "poc geography mapping (codes, unmatched)", by)
-        grain = cat.load_table((NAMESPACE, "poc_grain_check")).scan().to_arrow().to_pylist()
-        annotate("notice" if not grain else "warning", "poc grain check (duplicates)", grain[:8])
     except Exception as exc:  # the check table may be missing after a failed build
         annotate("warning", "poc check not read", {"error": f"{type(exc).__name__}: {str(exc)[:300]}"})
     if args.drop:
