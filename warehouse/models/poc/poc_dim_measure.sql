@@ -29,16 +29,31 @@ activated_blocks as (
     from built
 ),
 
-coverage as (
+coverage as (  -- the other blocks, one row per block: DBW files collapse to their block, ids compared case-free
     select
-        c.source as source_system,
+        c.source_system,
         c.block_id,
-        c.block_name,
-        c.status,
-        c.silver_rows
-    from {{ source('gold_coverage', 'coverage') }} as c
-    left join activated_blocks as a on c.source = a.source_system and c.block_id = a.block_id
-    where a.block_id is null and c.source in ('eurostat', 'gus_bdl', 'gus_dbw', 'world_bank_wdi', 'nbp')
+        any_value(c.block_name) as block_name,
+        min(c.status) as status,
+        sum(c.silver_rows) as silver_rows
+    from (
+        select
+            source as source_system,
+            case
+                when source = 'gus_dbw' then regexp_replace(block_id, '_[0-9]{4}_pl$', '')
+                when source = 'eurostat' then upper(block_id)
+                else block_id
+            end as block_id,
+            case when source = 'gus_dbw' then regexp_replace(block_name, ' \\([0-9]{4}\\)$', '') else block_name end
+                as block_name,
+            status,
+            silver_rows
+        from {{ source('gold_coverage', 'coverage') }}
+        where source in ('eurostat', 'gus_bdl', 'gus_dbw', 'world_bank_wdi', 'nbp')
+    ) as c
+    left join activated_blocks as a on c.source_system = a.source_system and c.block_id = a.block_id
+    where a.block_id is null
+    group by c.source_system, c.block_id
 )
 
 select

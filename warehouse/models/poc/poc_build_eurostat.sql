@@ -149,7 +149,7 @@ measure_names as (  -- names of the measure-defining codes, from the dataset's c
             generate_subscripts(measure_pairs, 1) as pos
         from shaped
     ) as p
-    left join dims as d on p.dataset_id = d.dataset_id and d.dimension_id = p.pair[1]
+    left join dims as d on upper(p.dataset_id) = upper(d.dataset_id) and d.dimension_id = p.pair[1]
     left join codes as c on d.codelist_id = c.codelist_id and c.code = p.pair[2]
     group by p.dataset_id, p.measure_codes
 )
@@ -187,6 +187,6 @@ select
     s.raw_sha256
 from shaped as s
 left join geo_map as g on s.geo_code = g.source_code
-left join flows as f on s.dataset_id = f.dataset_id
+left join flows as f on upper(s.dataset_id) = upper(f.dataset_id)
 left join measure_names as n on s.dataset_id = n.dataset_id and s.measure_codes = n.measure_codes
 where s.date_key is not null

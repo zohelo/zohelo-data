@@ -38,13 +38,17 @@ def planned_files(table_name, row_filter):
         token=os.environ["R2_DATA_CATALOG_TOKEN"],
     )
     scan = cat.load_table(table_name).scan(row_filter=row_filter)
-    return [task.file.file_path for task in scan.plan_files()]
+    tasks = list(scan.plan_files())
+    if any(task.delete_files for task in tasks):  # the files are read directly: deletes would be ignored
+        raise RuntimeError(f"{table_name}: delete files present; read through the catalog instead")
+    return [task.file.file_path for task in tasks]
 
 
 def model(dbt, con):
     import os
 
     dbt.config(materialized="table")
+    dbt.source("silver_entities", "eurostat_observations")  # declares the input (changed-only build)
     rule = " or ".join(f"(upper(dataset_id) = '{d}' and freq_code = '{f}' and ({k}))" for d, (f, k) in DATASETS.items())
     where = f"({rule}) and value is not null"
     if "R2_CATALOG_URI" not in os.environ:  # local harness: the fake source table
@@ -55,5 +59,5 @@ def model(dbt, con):
     files = planned_files(("silver", "eurostat_observations"), In("dataset_id", ids))
     if not files:
         return con.query(f"select {COLUMNS} from r2.silver.eurostat_observations where false")
-    paths = ", ".join(f"'{p}'" for p in files)
+    paths = ", ".join("'" + p.replace("'", "''") + "'" for p in files)
     return con.query(f"select {COLUMNS} from read_parquet([{paths}]) where {where}")

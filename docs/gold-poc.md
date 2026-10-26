@@ -54,17 +54,22 @@ NBP measure = table × rate type with the currency as breakdown.
 - **Trial against real Silver, scratch namespace** `zz_dev_poc`: Dev workflow, script
   `poc_trial` on a branch (`dev/poc_trial.py` in the history of branch `feat/gold-poc`, PR #923;
   `dev/` never lives on main; `--drop` removes the scratch tables). Target `poc_trial`
-  (profiles.yml) writes only the poc folder to the scratch schema and reads everything else
-  from the real namespaces — never run it with another `--select`. The last trial built the
-  29 models in 3 minutes.
+  (profiles.yml + a branch of `generate_schema_name`) wrote only the poc folder to the scratch
+  schema and read everything else from the real namespaces; both were removed at merge because
+  any other `--select` on that target would write to a real namespace. Re-add them on a branch
+  for a trial. The last trial built the 29 models in 3.5 minutes.
 - **Big Silver tables are read by Python models** (`poc_src_eurostat.py`, `poc_src_dbw.py`,
   `poc_src_dbw_dictionary.py`): the planner lists the activated blocks' files from the
   Iceberg metadata and DuckDB streams only those; the dbt SQL path scanned every file of
   `silver.eurostat_observations` (19 bn rows) and never finished. This is the per-block
   builder of v1 in its simplest form.
 - **Production** (`poc` namespace): Pipeline run "silver/gold: build models", source
-  `platform`, filter `poc`. The scheduled build rebuilds the PoC when its inputs change, like
-  any model. Annotations show the row ceilings; `poc.build_check` the data quality.
+  `platform`, filter `poc`. The scheduled build rebuilds the PoC when its inputs change
+  (the Python models declare theirs with `dbt.source`), like any model; because
+  `gold.coverage` changes on every source run and `silver.bdl_observations` on every BDL
+  run, expect the PoC (3–4 minutes) in most daily builds. Annotations show the row
+  ceilings; `poc.build_check` the data quality; `tests/poc_fact_grain.sql` fails on a
+  duplicate series × period.
 - **Local** (no credentials): fake Silver in DuckDB from the column lists of the models; see
   the harness in the session that built the PoC (`dbt build --select poc` on a local profile).
 

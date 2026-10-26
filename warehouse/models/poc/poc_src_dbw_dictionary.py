@@ -19,13 +19,17 @@ def planned_files(table_name, row_filter):
         token=os.environ["R2_DATA_CATALOG_TOKEN"],
     )
     scan = cat.load_table(table_name).scan(row_filter=row_filter)
-    return [task.file.file_path for task in scan.plan_files()]
+    tasks = list(scan.plan_files())
+    if any(task.delete_files for task in tasks):  # the files are read directly: deletes would be ignored
+        raise RuntimeError(f"{table_name}: delete files present; read through the catalog instead")
+    return [task.file.file_path for task in tasks]
 
 
 def model(dbt, con):
     import os
 
     dbt.config(materialized="table")
+    dbt.source("gus_dbw", "dbw_dictionary_items")  # declares the input (changed-only build)
     prefix = " or ".join(f"starts_with(entity_id, '{b}_')" for b in BLOCKS)
     columns = "entity_id, nazwa_kolumny, nazwa_slownika, id_elementu, opis"
     if "R2_CATALOG_URI" not in os.environ:  # local harness: the fake source table
@@ -36,5 +40,5 @@ def model(dbt, con):
     files = planned_files(("bronze", "dbw_dictionary_items"), Or(*filters) if len(filters) > 1 else filters[0])
     if not files:
         return con.query(f"select {columns} from r2.bronze.dbw_dictionary_items where false")
-    paths = ", ".join(f"'{p}'" for p in files)
+    paths = ", ".join("'" + p.replace("'", "''") + "'" for p in files)
     return con.query(f"select {columns} from read_parquet([{paths}]) where {prefix}")

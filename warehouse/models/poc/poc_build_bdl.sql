@@ -38,7 +38,15 @@ silver as (
         o.*,
         b.block_name,
         b.subject_path,
-        coalesce(u.level, case when o.unit_code_scheme = 'TERC' then 6 end) as unit_level,
+        coalesce(
+            u.level,
+            case  -- a 7-digit web-export code: 0000000 Polska, WW00000 województwo, WWPP000 powiat, else gmina
+                when o.unit_code = '0000000' then 0
+                when regexp_matches(o.unit_code, '^[0-9]{2}00000$') then 2
+                when regexp_matches(o.unit_code, '^[0-9]{4}000$') then 5
+                else 6
+            end
+        ) as unit_level,
         v.n1,
         v.n2,
         v.n3,
@@ -79,7 +87,14 @@ kept as (
     select *
     from silver
     where
-        case subgroup_id
+        -- a BDL "region" (level 3) that is a whole województwo duplicates the level-2 unit; only
+        -- Mazowieckie's two NUTS 2 regions are areas of their own
+        not (
+            unit_level = 3
+            and upper(unit_name) not like '%WARSZAWSKI STO%'
+            and upper(unit_name) not like '%MAZOWIECKI REGIONALNY%'
+        )
+        and case subgroup_id
             when 'P2137'
                 then
                     (unit_level <= 5 or year >= 2015)

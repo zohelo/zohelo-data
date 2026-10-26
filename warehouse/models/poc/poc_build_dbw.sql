@@ -25,7 +25,11 @@ silver as (
     select
         o.*,
         regexp_replace(o.entity_id, '_[0-9]{4}_pl$', '') as block_id,
-        row_number() over () as rid
+        hash(
+            o.entity_id, o.indicator_id, o.section_id, o.period_id, o.presentation_id, o.year,
+            o.position_1_id, o.position_2_id, o.position_3_id, o.position_4_id, o.position_5_id,
+            o.position_6_id, o.position_7_id, o.position_8_id, o.position_9_id
+        ) as rid
     from {{ ref('poc_src_dbw') }} as o
     where
         o.value is not null
