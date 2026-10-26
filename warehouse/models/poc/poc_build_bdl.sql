@@ -4,8 +4,7 @@
    label positions where no variable of the subgroup says "ogółem" (those name what is
    measured: "urodzenia żywe", "ludność na 1 km2", "mieszkania"); the other positions are
    breakdowns; a series is total when every breakdown label is "ogółem".
-   Sample: years from 2010, units down to powiat (gmina for Ludność from 2015 and for
-   Powierzchnia / Gęstość zaludnienia). #}
+   Sample: years from 2010, units down to powiat (gmina for Ludność and Powierzchnia from 2015). #}
 with blocks as ({{ poc_bdl_blocks() }}),
 
 geo_map as (
@@ -85,8 +84,7 @@ kept as (
                 then
                     (unit_level <= 5 or year >= 2015)
                     and len(list_filter(labels, x -> lower(x) not in ('ogółem', 'mężczyźni', 'kobiety'))) = 0
-            when 'P1410' then true
-            when 'P2425' then true
+            when 'P1410' then year >= 2015
             else unit_level <= 5
         end
 )

@@ -44,8 +44,8 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   wdi_indicators: {rows: 10000}  # 1,498
   wdi_observations: {rows: 12000000, exception: "#870"}  # 9,045,734; rebuilt weekly with WDI
   # Gold PoC (docs/gold-poc.md): small samples of every source, rebuilt in full
-  poc_build_bdl: {rows: 600000}
-  poc_src_eurostat: {rows: 1000000}
+  poc_build_bdl: {rows: 800000}
+  poc_src_eurostat: {rows: 300000}
   poc_src_dbw: {rows: 1000000}
   poc_src_dbw_dictionary: {rows: 200000}
   poc_build_check: {rows: 1000}
@@ -58,18 +58,18 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_dim_concept: {rows: 1000}
   poc_dim_frequency: {rows: 1000}
   poc_dim_geography: {rows: 120000}
-  poc_dim_measure: {rows: 30000}
+  poc_dim_measure: {rows: 40000}
   poc_dim_observation_status: {rows: 1000}
-  poc_dim_series: {rows: 300000}
+  poc_dim_series: {rows: 100000}
   poc_dim_source: {rows: 1000}
   poc_dim_unit: {rows: 1000}
   poc_fact_annual: {rows: 1000000}
   poc_fact_daily: {rows: 600000}
-  poc_fact_monthly: {rows: 300000}
+  poc_fact_monthly: {rows: 50000}
   poc_map_geography: {rows: 150000}
   poc_measure_dimensions: {rows: 5000}
   poc_metrics_fx_rate: {rows: 600000}
-  poc_metrics_gdp_current_prices: {rows: 50000}
-  poc_metrics_inflation: {rows: 50000}
-  poc_metrics_population: {rows: 300000}
-  poc_metrics_unemployment_rate: {rows: 100000}
+  poc_metrics_gdp_current_prices: {rows: 30000}
+  poc_metrics_inflation: {rows: 40000}
+  poc_metrics_population: {rows: 60000}
+  poc_metrics_unemployment_rate: {rows: 20000}

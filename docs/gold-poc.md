@@ -38,7 +38,7 @@ v1 may switch to 64-bit hashes (design decision 4).
 | Source | Blocks | Sample rule |
 |---|---|---|
 | Eurostat | demo_pjan, demo_r_pjanaggr3, demo_gind, nama_10_gdp, nama_10_pc, une_rt_a, une_rt_m, prc_hicp_manr, lfsi_emp_a | one unit per concept, age totals, NUTS ≤ 2; all sexes (`poc_build_eurostat.sql` `kept`) |
-| GUS BDL | P2137 Ludność, P1873 Ruch naturalny, P2425 Gęstość, P2392 Stopa bezrobocia rej., P2497 Wynagrodzenia, P3824 Mieszkania, P1410 Powierzchnia | years ≥ 2010, units to powiat (gmina for P1410, P2425 and P2137 from 2015) |
+| GUS BDL | P2137 Ludność, P1873 Ruch naturalny, P2425 Gęstość, P2392 Stopa bezrobocia rej., P2497 Wynagrodzenia, P3824 Mieszkania, P1410 Powierzchnia | years ≥ 2010, units to powiat (gmina for P2137 and P1410 from 2015) |
 | GUS DBW | 581_57_93_4 Ludność (annual, by macroregion/region/podregion, sex, age), 581_16_2_1 Ludność (monthly, Poland) | all files of the block |
 | World Bank | 10 indicators of the concepts | all economies, all years |
 | NBP | table A mid, table C bid/ask, gold | all |
@@ -52,9 +52,16 @@ NBP measure = table × rate type with the currency as breakdown.
 ## How to build
 
 - **Trial against real Silver, scratch namespace** `zz_dev_poc`: Dev workflow, script
-  `poc_trial` on a branch (`dev/poc_trial.py`; `--drop` removes the scratch tables). Target
-  `poc_trial` (profiles.yml) writes only the poc folder to the scratch schema and reads
-  everything else from the real namespaces — never run it with another `--select`.
+  `poc_trial` on a branch (`dev/poc_trial.py` in the history of branch `feat/gold-poc`, PR #923;
+  `dev/` never lives on main; `--drop` removes the scratch tables). Target `poc_trial`
+  (profiles.yml) writes only the poc folder to the scratch schema and reads everything else
+  from the real namespaces — never run it with another `--select`. The last trial built the
+  29 models in 3 minutes.
+- **Big Silver tables are read by Python models** (`poc_src_eurostat.py`, `poc_src_dbw.py`,
+  `poc_src_dbw_dictionary.py`): the planner lists the activated blocks' files from the
+  Iceberg metadata and DuckDB streams only those; the dbt SQL path scanned every file of
+  `silver.eurostat_observations` (19 bn rows) and never finished. This is the per-block
+  builder of v1 in its simplest form.
 - **Production** (`poc` namespace): Pipeline run "silver/gold: build models", source
   `platform`, filter `poc`. The scheduled build rebuilds the PoC when its inputs change, like
   any model. Annotations show the row ceilings; `poc.build_check` the data quality.
