@@ -79,7 +79,7 @@ kept as (  -- the PoC sample: small, with breakdowns where they matter (sex), on
             when 'NAMA_10_GDP' then unit_code in ('CP_MEUR', 'CLV_PCH_PRE') and na_item_code = 'B1GQ'
             when 'NAMA_10_PC' then unit_code = 'CP_EUR_HAB' and na_item_code = 'B1GQ'
             when 'UNE_RT_A' then unit_code = 'PC_ACT' and age_code = 'Y15-74'
-            when 'UNE_RT_M' then unit_code = 'PC_ACT' and age_code = 'Y15-74' and s_adj_code = 'SA'
+            when 'UNE_RT_M' then unit_code = 'PC_ACT' and age_code = 'Y15-74'
             when 'PRC_HICP_MANR' then unit_code = 'RCH_A' and coicop_code = 'CP00'
             when 'LFSI_EMP_A' then unit_code = 'PC_POP' and age_code = 'Y20-64' and indic_em_code = 'EMP_LFS'
             else false
@@ -131,7 +131,7 @@ shaped as (
                     )
             when 'D' then cast(s.time_period as date)
         end as date_key,
-        coalesce(cu.name_en, s.unit_code) as unit_name
+        coalesce(cu.name_en, s.unit_code, 'as named by the measure') as unit_name
     from split as s
     left join codes as cu on cu.codelist_id = 'UNIT' and s.unit_code = cu.code
 ),
@@ -161,13 +161,13 @@ select
     'eurostat:'
     || upper(s.dataset_id)
     || ':'
-    || s.unit_code
+    || coalesce(s.unit_code, '_Z')
     || case when s.measure_codes = '' then '' else ':' || s.measure_codes end
         as measure_key,
     coalesce(f.name_en, s.block_name) || ' — ' || s.unit_name || coalesce(' — ' || n.codes_name, '') as measure_name,
     s.measure_codes,
-    s.unit_code,
-    s.unit_name,
+    coalesce(s.unit_code, '_Z') as unit_code,
+    coalesce(s.unit_name, 'as named by the measure') as unit_name,
     s.geo_code as geography_source_code,
     coalesce(g.geography_key, '_X') as geography_key,
     s.freq_code as frequency,

@@ -140,13 +140,19 @@ shaped as (
             when b.freq_code = 'M' then
                 make_date(
                     s.year,
-                    case lower(trim(pe.label))
-                        when 'styczeń' then 1 when 'luty' then 2 when 'marzec' then 3 when 'kwiecień' then 4
-                        when 'maj' then 5 when 'czerwiec' then 6 when 'lipiec' then 7 when 'sierpień' then 8
-                        when 'wrzesień' then 9 when 'październik' then 10 when 'listopad' then 11 when
-                            'grudzień'
-                            then 12
-                        else try_cast(regexp_extract(pe.label, '([0-9]{1,2})', 1) as integer)
+                    case
+                        when lower(pe.label) like '%styczeń%' or lower(pe.label) like '%stycze%' then 1
+                        when lower(pe.label) like '%luty%' or lower(pe.label) like '%lutego%' then 2
+                        when lower(pe.label) like '%marzec%' or lower(pe.label) like '%marca%' then 3
+                        when lower(pe.label) like '%kwiecień%' or lower(pe.label) like '%kwietnia%' then 4
+                        when lower(pe.label) like '%maj%' then 5
+                        when lower(pe.label) like '%czerwiec%' or lower(pe.label) like '%czerwca%' then 6
+                        when lower(pe.label) like '%lipiec%' or lower(pe.label) like '%lipca%' then 7
+                        when lower(pe.label) like '%sierpień%' or lower(pe.label) like '%sierpnia%' then 8
+                        when lower(pe.label) like '%wrzesień%' or lower(pe.label) like '%września%' then 9
+                        when lower(pe.label) like '%październik%' or lower(pe.label) like '%października%' then 10
+                        when lower(pe.label) like '%listopad%' then 11
+                        when lower(pe.label) like '%grudzień%' or lower(pe.label) like '%grudnia%' then 12
                     end,
                     1
                 )
