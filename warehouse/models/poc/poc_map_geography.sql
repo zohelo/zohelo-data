@@ -112,6 +112,8 @@ bdl as (
             and g.gmina_type_code = substr(u.unit_id, 12, 1)
 ),
 
+type_digits as (select unnest(['1', '2', '3']) as digit),
+
 bdl_terc as (  -- the 7-digit zero-padded codes of the web export, generated from TERYT
     select
         'gus_bdl' as source_system,
@@ -127,11 +129,11 @@ bdl_terc as (  -- the 7-digit zero-padded codes of the web export, generated fro
     -- a gmina whose type digit changed since (2 → 3 when a village got town rights): the current unit
     select
         'gus_bdl' as source_system,
-        substr(terc_code, 1, 6) || t.digit as source_code,
-        'TERC:' || terc_code as geography_key
-    from {{ ref('teryt_terc') }}
-    cross join (select unnest(['1', '2', '3']) as digit) as t
-    where unit_level = 'gmina' and gmina_type_code in ('1', '2', '3') and t.digit <> gmina_type_code
+        substr(g.terc_code, 1, 6) || t.digit as source_code,
+        'TERC:' || g.terc_code as geography_key
+    from {{ ref('teryt_terc') }} as g
+    cross join type_digits as t
+    where g.unit_level = 'gmina' and g.gmina_type_code in ('1', '2', '3') and t.digit <> g.gmina_type_code
 ),
 
 -- DBW cross-section positions are territory names; matched by name (upper) to Polish areas.
