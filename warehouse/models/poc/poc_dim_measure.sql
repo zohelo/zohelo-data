@@ -40,11 +40,11 @@ coverage as (  -- the other blocks, one row per block: DBW files collapse to the
         select
             source as source_system,
             case
-                when source = 'gus_dbw' then regexp_replace(block_id, '_[0-9]{4}_pl$', '')
+                when source = 'gus_dbw' then regexp_replace(block_id, '(_[0-9]{4})?_pl$', '')
                 when source = 'eurostat' then upper(block_id)
                 else block_id
             end as block_id,
-            case when source = 'gus_dbw' then regexp_replace(block_name, ' \\([0-9]{4}\\)$', '') else block_name end
+            case when source = 'gus_dbw' then regexp_replace(block_name, ' \([0-9]{4}\)$', '') else block_name end
                 as block_name,
             status,
             silver_rows

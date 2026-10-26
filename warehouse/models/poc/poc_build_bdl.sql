@@ -4,7 +4,7 @@
    label positions where no variable of the subgroup says "ogółem" (those name what is
    measured: "urodzenia żywe", "ludność na 1 km2", "mieszkania"); the other positions are
    breakdowns; a series is total when every breakdown label is "ogółem".
-   Sample: years from 2010, units down to powiat (gmina for Ludność and Powierzchnia from 2015). #}
+   Sample: years from 2010, units down to powiat (gmina for Ludność from 2015). #}
 with blocks as ({{ poc_bdl_blocks() }}),
 
 geo_map as (
@@ -15,7 +15,8 @@ geo_map as (
 units as (
     select
         unit_id,
-        level
+        level,
+        name as unit_name_of_id
     from {{ ref('bdl_units') }}
 ),
 
@@ -38,6 +39,7 @@ silver as (
         o.*,
         b.block_name,
         b.subject_path,
+        u.unit_name_of_id,
         coalesce(
             u.level,
             case  -- a 7-digit web-export code: 0000000 Polska, WW00000 województwo, WWPP000 powiat, else gmina
@@ -101,7 +103,6 @@ kept as (
                 then
                     (unit_level <= 5 or year >= 2015)
                     and len(list_filter(labels, x -> lower(x) not in ('ogółem', 'mężczyźni', 'kobiety'))) = 0
-            when 'P1410' then year >= 2015
             else unit_level <= 5
         end
 ),
@@ -109,7 +110,12 @@ kept as (
 mapped as (
     select
         k.*,
-        coalesce(g.geography_key, '_X') as geography_key
+        -- a row whose unit name disagrees with the name of its id is another unit under a borrowed code
+        -- (the web export gives the Górnośląsko-Zagłębiowska Metropolia the code of Śląskie): unmatched
+        case
+            when k.unit_name_of_id is not null and upper(trim(k.unit_name_of_id)) <> upper(trim(k.unit_name)) then '_X'
+            else coalesce(g.geography_key, '_X')
+        end as geography_key
     from kept as k
     left join geo_map as g on k.unit_code = g.source_code
 ),
@@ -119,7 +125,10 @@ deduplicated as (  -- one row per series × area × year: a subgroup can hold th
     select *
     from mapped
     qualify row_number() over (
-        partition by subgroup_id, measure_unit, measure_label, labels, geography_key, year
+        partition by
+            subgroup_id, measure_unit, measure_label, labels,
+            case when geography_key = '_X' then '_X:' || unit_code else geography_key end,  -- the series identity
+            year
         order by case when channel = 'api' then 0 else 1 end, source_version desc, unit_code asc
     ) = 1
 )

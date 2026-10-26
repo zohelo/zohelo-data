@@ -28,7 +28,7 @@ def planned_files(table_name, row_filter):
 def model(dbt, con):
     import os
 
-    dbt.config(materialized="table")
+    dbt.config(materialized="table", alias="src_dbw_dictionary")
     dbt.source("gus_dbw", "dbw_dictionary_items")  # declares the input (changed-only build)
     prefix = " or ".join(f"starts_with(entity_id, '{b}_')" for b in BLOCKS)
     columns = "entity_id, nazwa_kolumny, nazwa_slownika, id_elementu, opis"

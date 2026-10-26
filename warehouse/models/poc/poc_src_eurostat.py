@@ -47,7 +47,7 @@ def planned_files(table_name, row_filter):
 def model(dbt, con):
     import os
 
-    dbt.config(materialized="table")
+    dbt.config(materialized="table", alias="src_eurostat")
     dbt.source("silver_entities", "eurostat_observations")  # declares the input (changed-only build)
     rule = " or ".join(f"(upper(dataset_id) = '{d}' and freq_code = '{f}' and ({k}))" for d, (f, k) in DATASETS.items())
     where = f"({rule}) and value is not null"

@@ -27,7 +27,7 @@ def planned_files(table_name, row_filter):
 def model(dbt, con):
     import os
 
-    dbt.config(materialized="table")
+    dbt.config(materialized="table", alias="src_dbw")
     dbt.source("silver_entities", "dbw_observations")  # declares the input (changed-only build)
     prefix = " or ".join(f"starts_with(entity_id, '{b}_')" for b in BLOCKS)
     where = f"({prefix}) and value is not null"

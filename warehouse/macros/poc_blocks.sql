@@ -156,3 +156,22 @@
     || case when geography_key = '_X' then ':' || coalesce(geography_source_code, '') else '' end
     || '|' || breakdown_json
 {% endmacro %}
+
+{# Every activated block of every source: the list build_check reports against, so a block that
+   yields no rows (not in Silver yet, or filtered out) is visible. #}
+{% macro poc_activated_blocks() %}
+    select 'eurostat' as source_system, dataset_id as block_id, block_name from ({{ poc_eurostat_blocks() }})
+    union all
+    select 'gus_bdl', subgroup_id, block_name from ({{ poc_bdl_blocks() }})
+    union all
+    select 'gus_dbw', block_id, block_name from ({{ poc_dbw_blocks() }})
+    union all
+    select 'world_bank_wdi', indicator_code, indicator_code from ({{ poc_wdi_blocks() }})
+    union all
+    select * from (
+        values
+        ('nbp', 'fx_A', 'NBP exchange rates, table A'),
+        ('nbp', 'fx_C', 'NBP exchange rates, table C'),
+        ('nbp', 'gold', 'NBP gold fixings')
+    ) as t (source_system, block_id, block_name)
+{% endmacro %}
