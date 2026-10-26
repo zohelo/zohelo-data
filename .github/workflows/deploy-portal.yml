@@ -1,14 +1,17 @@
 name: Deploy portal
 
+# The data portal (data.zohelo.com) on Cloudflare Pages: the app (portal/app) and its R2 read API
+# (portal/worker, served as a Pages Function under /api), behind Cloudflare Access.
+# Push to main deploys production and keeps data.zohelo.com pointed at it; a manual run on a
+# branch deploys a preview <branch>.zohelo-data.pages.dev. Data jobs (portal index) run in
+# Pipeline (source platform · serving: refresh portal index).
 on:
   push:
     branches: [main]
-    # Only the deployed application: the portal app and the R2 read Worker.
-    # Data jobs (portal index) run in Pipeline (source platform · serving: refresh portal index);
-    # changes to this workflow file are checked with a manual run.
     paths:
       - 'portal/app/**'
       - 'portal/worker/**'
+      - 'portal/cloudflare_setup.py'
       - '.node-version'
   workflow_dispatch:
 
@@ -16,24 +19,25 @@ permissions:
   contents: read
 
 concurrency:
-  group: zohelo-portal
+  group: zohelo-portal-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
-  build:
-    if: github.ref == 'refs/heads/main'
+  deploy:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    permissions:
-      contents: read
-      pages: read
+    env:
+      # zohelo organisation credentials, mapped to the names the tools read.
+      CLOUDFLARE_API_TOKEN: ${{ secrets.PLATFORM_DEPLOY_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.PLATFORM_ACCOUNT_ID }}
+      PORTAL_SIGNIN_ALLOWED_EMAILS: ${{ secrets.PORTAL_SIGNIN_ALLOWED_EMAILS }}
+      STORAGE_LANDING_BUCKET_NAME: ${{ vars.STORAGE_LANDING_BUCKET_NAME }}
+      STORAGE_LAKEHOUSE_BUCKET_NAME: ${{ vars.STORAGE_LAKEHOUSE_BUCKET_NAME }}
+      BRANCH: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - name: Read Pages configuration
-        id: pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6.0.0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version-file: .python-version
@@ -42,68 +46,45 @@ jobs:
           node-version-file: .node-version
           cache: npm
           cache-dependency-path: portal/app/package-lock.json
-      - name: Deploy the private R2 read API
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.PLATFORM_DEPLOY_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.PLATFORM_ACCOUNT_ID }}
-          PORTAL_ALLOWED_GOOGLE_EMAIL: ${{ secrets.PORTAL_SIGNIN_ALLOWED_EMAILS }}
-        run: |
-          set -euo pipefail
-          output="$(npx --yes wrangler@latest deploy --config portal/worker/wrangler.toml 2>&1)"
-          printf '%s\n' "$output"
-          api_url="$(printf '%s\n' "$output" | grep -Eo 'https://[^[:space:]]+\.workers\.dev' | tail -1)"
-          test -n "$api_url"
-          echo "DUCK_UI_R2_API_BASE=${api_url%/}" >> "$GITHUB_ENV"
-          printf '%s' "$PORTAL_ALLOWED_GOOGLE_EMAIL" | npx --yes wrangler@latest secret put ALLOWED_GOOGLE_EMAIL --config portal/worker/wrangler.toml
-          openssl rand -hex 32 | npx --yes wrangler@latest secret put DOWNLOAD_SIGNING_KEY --config portal/worker/wrangler.toml
       - name: Install portal dependencies
         working-directory: portal/app
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Build the portal
         working-directory: portal/app
         env:
-          DUCK_UI_BASEPATH: ${{ steps.pages.outputs.base_path }}/
-          DUCK_UI_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
-          DUCK_UI_R2_API_BASE: ${{ env.DUCK_UI_R2_API_BASE }}
+          DUCK_UI_BASEPATH: /
+          DUCK_UI_R2_API_BASE: /api
         run: npm run build
       - name: Write the build identity
         run: |
-          python - <<'PYCODE'
-          import json, os
-          from pathlib import Path
-          Path('portal/app/dist/portal-build.json').write_text(json.dumps({
-              'git_commit': os.environ['GITHUB_SHA'],
-              'data_source': 'cloudflare-r2',
-          }) + '\n')
-          PYCODE
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
-        with:
-          path: portal/app/dist
-
-  deploy:
-    if: github.ref == 'refs/heads/main'
-    needs: build
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346  # v5.0.1
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Confirm the deployed build identity
-        env:
-          PORTAL_ORIGIN: ${{ steps.deployment.outputs.page_url }}
-          EXPECTED_GIT_COMMIT: ${{ github.sha }}
+          printf '{"git_commit": "%s", "data_source": "cloudflare-r2"}\n' "$GITHUB_SHA" > portal/app/dist/portal-build.json
+      - name: Cloudflare setup (Pages project, Access, domain on main)
         run: |
-          python portal/verify_build.py \
-            --origin "$PORTAL_ORIGIN" \
-            --expected-git-commit "$EXPECTED_GIT_COMMIT"
+          python -m pip install --quiet requests
+          if [ "$BRANCH" = main ]; then python portal/cloudflare_setup.py --switch-dns; else python portal/cloudflare_setup.py; fi
+      - name: Deploy
+        working-directory: portal/app
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.43.0 pages deploy dist --project-name zohelo-data --branch "$BRANCH" --commit-dirty=true | tee /tmp/deploy.log
+          url=$(grep -Eo 'https://[a-z0-9.-]+\.pages\.dev' /tmp/deploy.log | tail -1)
+          echo "::notice title=deployed::$url"
+      - name: Sign-in is enforced
+        run: |
+          set -euo pipefail
+          sleep 20
+          preview="$(echo "$BRANCH" | tr '/_.' '---' | tr 'A-Z' 'a-z').zohelo-data.pages.dev"
+          for host in zohelo-data.pages.dev "$preview"; do
+            out=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "https://$host/api/health")
+            case "$out" in
+              30?\ *cloudflareaccess.com*) echo "::notice title=access $host::redirects to sign-in" ;;
+              *) echo "::error title=access $host::not protected: $out"; exit 1 ;;
+            esac
+          done
+          if [ "$BRANCH" = main ]; then
+            out=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' https://data.zohelo.com/ || true)
+            case "$out" in
+              30?\ *cloudflareaccess.com*) echo "::notice title=access data.zohelo.com::redirects to sign-in" ;;
+              *) echo "::warning title=access data.zohelo.com::not yet answering through Pages ($out); the certificate can take a few minutes" ;;
+            esac
+          fi

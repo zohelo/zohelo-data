@@ -1,9 +1,10 @@
 # Portal app
 
 The internal portal at [data.zohelo.com](https://data.zohelo.com/): an R2 file
-explorer and a browser DuckDB SQL workspace (React, TypeScript, Vite). It reads
-private R2 through the Worker in `../worker/` and uses Google sign-in for identity
-only. Deployed by the **Deploy portal** workflow.
+explorer and a browser DuckDB SQL workspace (React, TypeScript, Vite), on Cloudflare
+Pages behind Cloudflare Access. It reads private R2 through the API in `../worker/`,
+served on the same origin under `/api` (`functions/api/`). Deployed by the **Deploy
+portal** workflow; `../cloudflare_setup.py` keeps the Pages project, Access and DNS in shape.
 
 ```bash
 npm ci --ignore-scripts --no-audit --no-fund

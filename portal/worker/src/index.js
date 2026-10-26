@@ -1,18 +1,25 @@
-const FOLDER = "application/vnd.google-apps.folder";
+// The portal's read API over R2, served as a Cloudflare Pages Function under /api on the
+// portal's own origin (app/functions/api/[[path]].js). Cloudflare Access signs users in before
+// any request reaches it; authorize() still checks the signed-in email against the allowed list.
+const FOLDER = "application/vnd.google-apps.folder";  // folder type the app's file browser expects
 const INDEX_CURRENT = "_portal_index/v1/current.json";
 // Published by warehouse/catalog.py after each production model build.
 const CATALOG_CURRENT = "_portal_catalog/v1/catalog.json";
-const ORIGINS = new Set([
-  "https://data.zohelo.com",
-  "https://rutkala.github.io",
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-]);
+const PREFIX = "/api";
+const DEV_ORIGINS = new Set(["http://localhost:5173", "http://127.0.0.1:5173"]);
 
 let currentCache = null;
 const shardCache = new Map();
-const authCache = new Map();
 
+function allowedOrigin(origin) {
+  if (DEV_ORIGINS.has(origin)) return true;
+  try {
+    const host=new URL(origin).hostname;
+    return host==="data.zohelo.com" || host==="zohelo-data.pages.dev" || host.endsWith(".zohelo-data.pages.dev");
+  } catch {
+    return false;
+  }
+}
 function cors(origin) {
   const h = new Headers({
     "access-control-allow-headers": "Authorization, Content-Type, Range",
@@ -20,7 +27,7 @@ function cors(origin) {
     "access-control-expose-headers": "Content-Length, Content-Range, ETag, Accept-Ranges",
     "vary": "Origin",
   });
-  if (origin && ORIGINS.has(origin)) h.set("access-control-allow-origin", origin);
+  if (origin && allowedOrigin(origin)) h.set("access-control-allow-origin", origin);
   return h;
 }
 function json(value, status, origin) {
@@ -29,28 +36,13 @@ function json(value, status, origin) {
   h.set("cache-control", "no-store");
   return new Response(JSON.stringify(value), { status, headers: h });
 }
-async function authorize(request, env) {
-  const header = request.headers.get("authorization") || "";
-  if (!header.startsWith("Bearer ")) return { ok:false, status:401, message:"Sign in required." };
-  const token = header.slice(7).trim();
-  if (!token) return { ok:false, status:401, message:"Sign in required." };
-  const cached = authCache.get(token);
-  if (cached && cached.expires > Date.now()) return cached.result;
-  const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { headers:{ Authorization:"Bearer "+token } });
-  if (!r.ok) {
-    const result={ok:false,status:401,message:"Portal authorization expired. Sign in again."};
-    authCache.set(token,{expires:Date.now()+15000,result});
-    return result;
-  }
-  const info=await r.json();
-  const email=typeof info.email==="string"?info.email.toLowerCase():"";
-  const allowed=(env.ALLOWED_GOOGLE_EMAIL||"").trim().toLowerCase();
-  const result=email&&allowed&&email===allowed
-    ? {ok:true,status:200,message:"ok"}
-    : {ok:false,status:403,message:"This Google account is not authorized for the Zohelo data portal."};
-  authCache.set(token,{expires:Date.now()+300000,result});
-  if (authCache.size>100) authCache.delete(authCache.keys().next().value);
-  return result;
+function authorize(request, env) {
+  const email=(request.headers.get("cf-access-authenticated-user-email")||"").trim().toLowerCase();
+  if (!email) return { ok:false, status:401, message:"Sign in required." };
+  const allowed=(env.PORTAL_SIGNIN_ALLOWED_EMAILS||"").split(",").map(e=>e.trim().toLowerCase()).filter(Boolean);
+  return allowed.includes(email)
+    ? { ok:true, status:200, message:"ok" }
+    : { ok:false, status:403, message:"This account is not authorized for the Zohelo data portal." };
 }
 async function shardName(value) {
   const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));
@@ -163,7 +155,7 @@ async function issueObjectUrl(request,env,id,mode) {
   const expires=Math.floor(Date.now()/1000)+180;
   const signature=await signObjectUrl(env,id,mode,expires);
   const url=new URL(request.url);
-  url.pathname="/r2/object/"+encodeURIComponent(id);
+  url.pathname=PREFIX+"/r2/object/"+encodeURIComponent(id);
   url.search="";
   url.searchParams.set("mode",mode);
   url.searchParams.set("expires",String(expires));
@@ -220,10 +212,11 @@ async function media(request,env,record,origin,mode="open") {
 export default {
   async fetch(request,env) {
     const origin=request.headers.get("origin")||"";
-    if (origin && !ORIGINS.has(origin)) return new Response("Origin not allowed",{status:403});
+    if (origin && !allowedOrigin(origin)) return new Response("Origin not allowed",{status:403});
     if (request.method==="OPTIONS") return new Response(null,{status:204,headers:cors(origin)});
     if (!["GET","HEAD"].includes(request.method)) return json({error:{status:"METHOD_NOT_ALLOWED"}},405,origin);
     const unsignedUrl=new URL(request.url);
+    if (unsignedUrl.pathname.startsWith(PREFIX+"/")) unsignedUrl.pathname=unsignedUrl.pathname.slice(PREFIX.length);
     const direct=/^\/r2\/object\/([^/]+)$/.exec(unsignedUrl.pathname);
     if (direct) {
       const id=decodeURIComponent(direct[1]);
@@ -237,10 +230,10 @@ export default {
       if (!record) return json({error:{status:"NOT_FOUND",message:"File ID is not present in the R2 migration index."}},404,origin);
       return media(request,env,record,origin,mode);
     }
-    const auth=await authorize(request,env);
+    const auth=authorize(request,env);
     if (!auth.ok) return json({error:{status:auth.status===401?"UNAUTHENTICATED":"PERMISSION_DENIED",message:auth.message}},auth.status,origin);
     try {
-      const url=new URL(request.url);
+      const url=unsignedUrl;
       if (url.pathname==="/health") return json({ok:true,storage:"cloudflare-r2"},200,origin);
       if (url.pathname==="/drive/v3/files") return json(await listFiles(url,env),200,origin);
       if (url.pathname==="/drive/v3/catalog") {
