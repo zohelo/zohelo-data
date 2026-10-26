@@ -110,9 +110,9 @@ bdl_terc as (  -- the 7-digit zero-padded codes of the web export, generated fro
     from {{ ref('teryt_terc') }}
     union all
     select
-        'gus_bdl',
-        '0000000',
-        'PL'
+        'gus_bdl' as source_system,
+        '0000000' as source_code,
+        'PL' as geography_key
 ),
 
 -- DBW cross-section positions are territory names; matched by name (upper) to Polish areas.

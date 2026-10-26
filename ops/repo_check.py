@@ -196,14 +196,14 @@ EXCEPTION = re.compile(r"^#\d+$")
 
 
 def full_rebuild(files: list[Path]) -> list[str]:
-    """Every dbt model that is not incremental (the project default is a full-rebuild table)
+    """Every dbt model, SQL or Python, that is not incremental (the project default is a full-rebuild table)
     has a row ceiling in warehouse/warehouse.yaml `full_rebuild`; a ceiling above 1M rows
     names the issue that makes it incremental or records the owner's exception (#868)."""
     declared = yaml.safe_load((ROOT / "warehouse/warehouse.yaml").read_text()).get("full_rebuild") or {}
     models = {
         f.stem: INCREMENTAL.search((ROOT / f).read_text()) is not None
         for f in files
-        if f.parts[:2] == ("warehouse", "models") and f.suffix == ".sql" and (ROOT / f).exists()
+        if f.parts[:2] == ("warehouse", "models") and f.suffix in (".sql", ".py") and (ROOT / f).exists()
     }
     problems = [
         f"warehouse.yaml full_rebuild: model {name} is not incremental and has no row ceiling"
