@@ -13,20 +13,8 @@ from ingestion.common import bronze_files as bf
 from ingestion.common.r2 import catalog, req, s3
 from ingestion.common.report import annotate
 
-BDL_PATTERNS = [
-    r"^ludność wg płci i wieku",
-    r"^stan ludności",
-    r"^urodzenia",
-    r"^zgony",
-    r"^ruch naturalny",
-    r"^bezrobotni zarejestrowani",
-    r"^stopa bezrobocia rejestrowanego",
-    r"^przeciętne miesięczne wynagrodzenia brutto",
-    r"^mieszkania oddane do użytkowania",
-    r"^powierzchnia",
-    r"^podmioty wg",
-    r"^gęstość zaludnienia",
-]
+BDL_PATTERNS = [r"^ludność", r"^stan ludności"]  # within LUDNOŚĆ / STAN LUDNOŚCI (the rest found in run 1)
+BDL_KNOWN = ["P2392", "P2497", "P3824", "P1410", "P1873", "P2425"]
 DBW_PATTERNS = [
     r"^ludność",
     r"^stopa bezrobocia",
@@ -61,7 +49,11 @@ def main() -> int:
 
     bdl = []
     for s in tree["subjects"]:
-        if s.get("hasVariables") and any(re.search(p, s["name"].lower()) for p in BDL_PATTERNS):
+        if (
+            s.get("hasVariables")
+            and any(re.search(p, s["name"].lower()) for p in BDL_PATTERNS)
+            and "STAN LUDNO" in path(s)
+        ):
             bdl.append(
                 {
                     "id": s["id"],
@@ -71,7 +63,7 @@ def main() -> int:
                     "levels": s.get("levels"),
                 }
             )
-    for i in range(0, len(bdl), 12):
+    for i in range(0, min(len(bdl), 24), 12):
         annotate("notice", f"bdl candidates {i // 12 + 1}", bdl[i : i + 12])
 
     inv = json.loads(client.get_object(Bucket=bucket, Key="_control/gus_dbw/inventory.json")["Body"].read())
@@ -107,7 +99,7 @@ def main() -> int:
         "per_dataset": rows.group_by("dataset_id").aggregate([("freq_code", "count")]).to_pylist(),
     }
     annotate("notice", "pyiceberg block read", timing)
-    sg = [b["id"] for b in bdl][:6]
+    sg = BDL_KNOWN
     t = time.monotonic()
     table = cat.load_table(("silver", "bdl_observations"))
     scan = table.scan(row_filter=In("subgroup_id", sg), selected_fields=("subgroup_id", "unit_code_scheme"))
