@@ -40,7 +40,7 @@ v1 may switch to 64-bit hashes (design decision 4).
 | Source | Blocks | Sample rule |
 |---|---|---|
 | Eurostat | demo_pjan, demo_r_pjanaggr3, demo_gind, nama_10_gdp, nama_10_pc, une_rt_a, une_rt_m, prc_hicp_manr, lfsi_emp_a | one unit per concept, age totals, NUTS ≤ 2; all sexes (`poc_build_eurostat.sql` `kept`) |
-| GUS BDL | P2137 Ludność, P1873 Ruch naturalny, P2425 Gęstość, P2392 Stopa bezrobocia rej., P2497 Wynagrodzenia, P3824 Mieszkania, P1410 Powierzchnia | years ≥ 2010, units to powiat (gmina for P2137 and P1410 from 2015) |
+| GUS BDL | P2137 Ludność, P1873 Ruch naturalny, P2425 Gęstość, P2392 Stopa bezrobocia rej., P2497 Wynagrodzenia, P3824 Mieszkania, P1410 Powierzchnia | years ≥ 2010, units to powiat (gmina for P2137 from 2015) |
 | GUS DBW | 581_57_93_4 Ludność (annual, by macroregion/region/podregion, sex, age), 581_16_2_1 Ludność (monthly, Poland) | all files of the block |
 | World Bank | 10 indicators of the concepts | all economies, all years |
 | NBP | table A mid, table C bid/ask, gold | all |

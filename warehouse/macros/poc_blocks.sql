@@ -166,7 +166,7 @@
     union all
     select 'gus_dbw', block_id, block_name from ({{ poc_dbw_blocks() }})
     union all
-    select 'world_bank_wdi', indicator_code, indicator_code from ({{ poc_wdi_blocks() }})
+    select 'world_bank_wdi', indicator_code, 'WDI ' || indicator_code from ({{ poc_wdi_blocks() }})
     union all
     select * from (
         values
