@@ -16,7 +16,7 @@ rate_limit_retry_threads: 2     # fewer parallel catalog calls than the build's 
 gold: [gold.dim_date, gold.dim_period, gold.dim_currency, gold.dim_geography, gold.dim_indicator,
        gold.fact_observation, gold.fact_fx_rate, gold.fact_gold_price,
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
-       poc.build_bdl, poc.src_eurostat, poc.src_dbw, poc.src_dbw_dictionary, poc.build_check, poc.build_dbw, poc.build_eurostat, poc.build_nbp, poc.build_wdi, poc.concept_measures, poc.dim_calendar, poc.dim_concept, poc.dim_frequency, poc.dim_geography, poc.dim_measure, poc.dim_observation_status, poc.dim_series, poc.dim_source, poc.dim_unit, poc.fact_annual, poc.fact_daily, poc.fact_monthly, poc.map_geography, poc.measure_dimensions, poc.metrics_fx_rate, poc.metrics_gdp_current_prices, poc.metrics_inflation, poc.metrics_population, poc.metrics_unemployment_rate]   # Gold PoC (docs/gold-poc.md)
+       poc.build_bdl, poc.src_eurostat, poc.src_dbw, poc.src_dbw_dictionary, poc.build_check, poc.grain_check, poc.build_dbw, poc.build_eurostat, poc.build_nbp, poc.build_wdi, poc.concept_measures, poc.dim_calendar, poc.dim_concept, poc.dim_frequency, poc.dim_geography, poc.dim_measure, poc.dim_observation_status, poc.dim_series, poc.dim_source, poc.dim_unit, poc.fact_annual, poc.fact_daily, poc.fact_monthly, poc.map_geography, poc.measure_dimensions, poc.metrics_fx_rate, poc.metrics_gdp_current_prices, poc.metrics_inflation, poc.metrics_population, poc.metrics_unemployment_rate]   # Gold PoC (docs/gold-poc.md)
 
 # Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
 # below ~1M rows are rebuilt in full; #868). repo_check fails on a model missing here or a ceiling
@@ -49,6 +49,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_src_dbw: {rows: 1000000}
   poc_src_dbw_dictionary: {rows: 200000}
   poc_build_check: {rows: 1000}
+  poc_grain_check: {rows: 10000}
   poc_build_dbw: {rows: 400000}
   poc_build_eurostat: {rows: 600000}
   poc_build_nbp: {rows: 600000}

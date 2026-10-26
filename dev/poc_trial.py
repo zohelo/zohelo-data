@@ -97,6 +97,8 @@ def main(argv=None) -> int:
             by[k][0] += 1
             by[k][1] += 0 if r["matched"] else 1
         annotate("notice", "poc geography mapping (codes, unmatched)", by)
+        grain = cat.load_table((NAMESPACE, "poc_grain_check")).scan().to_arrow().to_pylist()
+        annotate("notice" if not grain else "warning", "poc grain check (duplicates)", grain[:8])
     except Exception as exc:  # the check table may be missing after a failed build
         annotate("warning", "poc check not read", {"error": f"{type(exc).__name__}: {str(exc)[:300]}"})
     if args.drop:
