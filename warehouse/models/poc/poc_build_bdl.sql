@@ -106,13 +106,21 @@ kept as (
         end
 ),
 
-deduplicated as (  -- one row per series × year, newest version first: a subgroup can hold the same
-    -- rows from both channels (web export and API; Silver finding #868)
+mapped as (
+    select
+        k.*,
+        coalesce(g.geography_key, '_X') as geography_key
+    from kept as k
+    left join geo_map as g on k.unit_code = g.source_code
+),
+
+deduplicated as (  -- one row per series × area × year: a subgroup can hold the same series under its
+    -- website code and its API id (Silver finding #868); the API row wins, then the newest version
     select *
-    from kept
+    from mapped
     qualify row_number() over (
-        partition by subgroup_id, measure_unit, measure_label, labels, unit_code, year
-        order by source_version desc, channel
+        partition by subgroup_id, measure_unit, measure_label, labels, geography_key, year
+        order by case when channel = 'api' then 0 else 1 end, source_version desc, unit_code asc
     ) = 1
 )
 
@@ -133,7 +141,7 @@ select
     coalesce(k.measure_unit, '-') as unit_code,
     coalesce(k.measure_unit, '-') as unit_name,
     k.unit_code as geography_source_code,
-    coalesce(g.geography_key, '_X') as geography_key,
+    k.geography_key,
     'A' as frequency,
     make_date(k.year, 1, 1) as date_key,
     cast(k.year as varchar) as period_label,
@@ -156,4 +164,3 @@ select
     k.source_version,
     k.raw_sha256
 from deduplicated as k
-left join geo_map as g on k.unit_code = g.source_code
