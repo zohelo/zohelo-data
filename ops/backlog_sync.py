@@ -42,6 +42,7 @@ class Plan:
 
     def __init__(self) -> None:
         self.errors: list[str] = []
+        self.warnings: list[str] = []
         self.keys: dict[str, str] = {}
         self.areas: dict[str, set[str]] = {}  # root -> area keys
         self.roots: dict[str, str] = {}  # root -> key prefix
@@ -201,7 +202,7 @@ def check_task(plan: Plan, root: str, file: str, deliverable_key: str, repo: str
     plan.pending.append((file, key, repo, [e for e in task_files if isinstance(e, dict)]))
 
 
-def finish(plan: Plan) -> None:
+def finish(plan: Plan, strict: bool = False) -> None:
     repo_roots = {PREFIXES[prefix]: Path(root) for root, prefix in plan.roots.items()}
     for file, key, repo, entries in plan.pending:
         if repo not in repo_roots:
@@ -216,7 +217,13 @@ def finish(plan: Plan) -> None:
                 parents = {path, *(str(p) for p in Path(path).parents if str(p) != ".")}
                 if any((repo, parent) in plan.created for parent in parents):
                     continue
-                plan.error(file, key, f"{op} path {path} does not exist in {repo}")
+                # A merged PR removes or moves paths before its Task is marked done in the YAML,
+                # so in repo_check (not strict) a missing path is a warning, never a red PR.
+                message = f"{op} path {path} does not exist in {repo}"
+                if strict:
+                    plan.error(file, key, message)
+                else:
+                    plan.warnings.append(f"warning: {file}: {key}: {message}")
     loaded = set(plan.roots.values())
     for file, key, dep in plan.depends:
         prefix = dep.split("/")[0]
@@ -224,13 +231,15 @@ def finish(plan: Plan) -> None:
             plan.error(file, key, f"depends_on {dep} is unknown")
 
 
-def validate(roots: list[Path]) -> int:
+def validate(roots: list[Path], strict: bool = False) -> int:
     plan = Plan()
     for root in roots:
         load(plan, root)
     for root, file, epic in plan.epics:
         check_epic(plan, root, file, epic)
-    finish(plan)
+    finish(plan, strict)
+    for warning in plan.warnings:
+        print(warning)
     for error in plan.errors:
         print(error)
     if plan.errors:
@@ -245,8 +254,11 @@ def main() -> int:
     modes = parser.add_subparsers(dest="mode", required=True)
     check = modes.add_parser("validate", help="check the backlog files")
     check.add_argument("--root", action="append", type=Path, help="repository root (repeatable; default: this one)")
+    check.add_argument(
+        "--strict", action="store_true", help="missing edit/delete paths are errors (backlog sync), not warnings"
+    )
     args = parser.parse_args()
-    return validate([r.resolve() for r in args.root] if args.root else [ROOT])
+    return validate([r.resolve() for r in args.root] if args.root else [ROOT], args.strict)
 
 
 if __name__ == "__main__":
