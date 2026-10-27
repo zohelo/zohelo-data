@@ -8,6 +8,7 @@ dbt parse and the secret scan run as their own steps of the job.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -293,6 +294,18 @@ def register(files: list[Path]) -> list[str]:
     return problems
 
 
+def backlog() -> list[str]:
+    """The backlog files in .github/backlog/ pass ops/backlog_sync.py validate (docs/backlog.md)."""
+    result = subprocess.run(
+        [sys.executable, "-m", "ops.backlog_sync", "validate"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PYTHONPATH": str(ROOT)},
+    )
+    return [] if result.returncode == 0 else result.stdout.strip().splitlines()[-40:] or [result.stderr.strip()[-500:]]
+
+
 def main() -> int:
     files = tracked()
     checks = {
@@ -305,6 +318,7 @@ def main() -> int:
         "sqlfluff": sqlfluff,
         "configuration": lambda: configuration(files),
         "scheduler imports": scheduler_imports,
+        "backlog": backlog,
     }
     failed = 0
     for name, check in checks.items():
