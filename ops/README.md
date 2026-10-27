@@ -26,21 +26,21 @@ same policy to those.
 | `tracker` | Data availability tracker: per source × layer (Landing, Bronze, Silver, Gold, semantic layer, catalog, portal) what exists, from the declarations, dbt models, R2, the catalog and the latest build; open issues labelled `source:<id>` + `layer:<layer>` appear in their cell; catalog tables classified current / old-code copy / legacy / leftover. Args: `--issue <n>` replaces that issue's body (the pinned tracker issue) | `--issue`: rewrites the tracker issue body |
 | `retire_tables` | Catalog tables today's code does not write (tracker classes legacy, leftover, old-code copy), owner decision #835. Without args: list with rows and GB. `--apply --expect <n>`: purge (or drop) them, only if exactly n candidates are found | `--apply`: removes those tables |
 | `latest_only` | Latest version only in Bronze (policy #822/#845): per source and Bronze table, Landing files held, superseded (not the latest version of their entity per the receipts), their rows, unknown files (kept). Args: `--source <id> …`, `--apply` removes the superseded rows. Every `bronze.load` of a source declaring `bronze_latest_only: true` runs the same prune after loading (gugik_prg, gus_teryt, nbp, world_bank_wdi; Eurostat and GUS BDL replace whole entities instead, #875) | `--apply`: deletes superseded rows |
-| `scheduler_trigger` | The external clock of the Pipeline scheduler (#802): Cloudflare Worker `zohelo-scheduler` (`ops/scheduler_worker/`) whose Cron Trigger (`17,47 * * * *`) dispatches Pipeline `platform` · `scheduler: dispatch due runs`, because GitHub's own schedule fires only a fraction of its slots. Args: `status` (default: Cron Triggers, whether the Worker's token is set), `deploy`, `pause`, `resume` | `deploy`/`pause`/`resume`: the Worker and its Cron Triggers |
+| `scheduler_trigger` | The external clock of the Pipeline scheduler (#802): Cloudflare Worker `zohelo-scheduler` (`ops/scheduler_worker/`) whose Cron Trigger (`17,47 * * * *`) dispatches Pipeline `platform` · `scheduler: dispatch due runs`, because GitHub's own schedule fires only a fraction of its slots. Args: `status` (default: Cron Triggers, whether the Worker's app credentials are set), `deploy`, `pause`, `resume` | `deploy`/`pause`/`resume`: the Worker and its Cron Triggers |
 | `bronze_dedupe` | Removes the second copies of Landing files from one Bronze table (#815): rows of the files the table holds twice are replaced by one copy of each distinct row, in one overwrite. The owner approves exact counts, given as arguments; the script stops without writing if the table differs, and after `--apply` checks the row count and that nothing is doubled any more. Args: `<namespace.table> --hashes N --remove N --rows N [--apply]` | with `--apply`: rows of that table (owner approval of the exact counts) |
 | `branch_cleanup` | Leftover work branches: `test/*`, `dev/*` and any named with `--also`, without an open pull request and older than `--min-age-hours` (48). Reports by default; `--apply` deletes. Runs in its own job with `contents: write` (owner approval 24 Oct 2026). Args: `[--also NAME …] [--min-age-hours N] [--apply]` | with `--apply`: branches |
 | `retry_rejected` | Bronze rejections (`bronze.eurostat_rejected_files`) grouped by reason and dataset family; with `--apply` deletes the matching rows so the next `bronze: load` retries them (the table history keeps them). Args: `--source eurostat [--dataset GLOB …] [--apply]` | with `--apply`: rows of the rejections table |
 | `restore_from_archive` | Receipts in Landing whose data file is gone; with `--apply` copies the Archive file back and verifies its SHA-256. Args: `--source eurostat [--dataset GLOB …] [--apply]` | with `--apply`: adds Landing files, never overwrites |
 
-**Scheduler clock runbook.** First setup: Ops `script=scheduler_trigger args=deploy`; the
-owner creates the fine-grained token (the organisation must allow fine-grained tokens and may
-have to approve it) and adds it to the Worker as secret `GITHUB_TOKEN`; `args=status` then
-shows `token_set: true`, and Worker dispatches appear within 30 minutes. Pause: Ops `script=scheduler_trigger args=pause` (GitHub's own
+**Scheduler clock runbook.** Setup or credential change: Ops `script=scheduler_trigger args=deploy`
+(code, Cron Triggers, and the Worker secrets APP_ID / APP_PRIVATE_KEY from the organisation
+variable `ORG_BOT_APP_ID` and secret `ORG_BOT_PRIVATE_KEY`); `args=status` then shows
+`app_credentials_set: true`. The Worker dispatches as the organisation's GitHub App
+(zohelo-automation, installation token limited to this repository with Actions: write), so no
+personal token is involved and nothing expires. Pause: Ops `script=scheduler_trigger args=pause` (GitHub's own
 schedule keeps running as the backup; a later `deploy` restores the Cron Triggers). Resume:
-`args=resume`. The Worker's only secret, `GITHUB_TOKEN` (fine-grained, this repository,
-Actions: read and write), is set by the owner in the Cloudflare dashboard and never passes
-through the repository; when it expires, dispatches fail with HTTP 401 and the 07:00
-operations session sees the scheduler run count drop. Scheduler runs started by the Worker
+`args=resume`. A failed dispatch shows in the Worker's Cron events and as a drop in scheduler
+runs. Scheduler runs started by the Worker
 are workflow dispatches named `Pipeline · platform · scheduler: dispatch due runs`.
 
 Rules: one file per script (a script's deployable assets may sit in a folder of its own, like `scheduler_worker/`), `snake_case.py`, runnable as `python -m ops.<name>`. Write
