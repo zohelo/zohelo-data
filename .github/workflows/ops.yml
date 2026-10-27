@@ -115,9 +115,10 @@ jobs:
           private-key: ${{ secrets.ORG_BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           # this repository only; backlog_sync plans and syncs the issues of all three repositories
-          repositories: ${{ needs.resolve.outputs.script == 'backlog_sync' && 'zohelo-data,zohelo-bi,zohelo' || github.event.repository.name }}
+          # project setup: no repositories filter (an owner-level token, as organisation issue types need)
+          repositories: ${{ (needs.resolve.outputs.script == 'project' && startsWith(needs.resolve.outputs.args, 'setup') && ' ') || (needs.resolve.outputs.script == 'backlog_sync' && 'zohelo-data,zohelo-bi,zohelo') || github.event.repository.name }}
           # write only for the modes that change the board
-          permission-organization-projects: ${{ (startsWith(needs.resolve.outputs.args, 'status') || (needs.resolve.outputs.script == 'backlog_sync' && startsWith(needs.resolve.outputs.args, 'apply'))) && 'write' || 'read' }}
+          permission-organization-projects: ${{ (startsWith(needs.resolve.outputs.args, 'status') || (needs.resolve.outputs.script == 'project' && startsWith(needs.resolve.outputs.args, 'setup')) || (needs.resolve.outputs.script == 'backlog_sync' && startsWith(needs.resolve.outputs.args, 'apply'))) && 'write' || 'read' }}
           # project: reads the Work log comment; tracker: replaces the tracker issue's body;
           # backlog_sync: reads the issues for plan, writes them for apply
           permission-issues: ${{ (needs.resolve.outputs.script == 'tracker' || (needs.resolve.outputs.script == 'backlog_sync' && startsWith(needs.resolve.outputs.args, 'apply'))) && 'write' || 'read' }}
