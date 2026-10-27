@@ -53,9 +53,21 @@ jobs:
       - name: Install dependencies
         run: python -m pip install --require-hashes -r requirements.txt
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
-        if: inputs.script == 'scheduler_trigger'
+        if: inputs.script == 'scheduler_trigger' || inputs.script == 'check_credentials'
         with:
           node-version-file: .node-version
+      # check_credentials: proves the app can mint an installation token (row 'org app').
+      - name: App token
+        id: app
+        if: inputs.script == 'check_credentials'
+        continue-on-error: true  # a failed mint becomes a failed row, the other rows still run
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        with:
+          client-id: ${{ vars.ORG_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.ORG_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: zohelo-data
+          permission-metadata: read
       # Token of the zohelo-automation GitHub App for the Projects board (ops/project.py).
       - name: Project token
         id: project
@@ -94,6 +106,8 @@ jobs:
       - name: "ops/${{ inputs.script }}.py"
         env:
           GH_PROJECT_TOKEN: ${{ steps.project.outputs.token }}
+          # check_credentials: the app installation token it probes (blank for other scripts).
+          APP_TOKEN: ${{ steps.app.outputs.token }}
           # The Workers deploy token, for scheduler_trigger and check_credentials only (blank for other scripts).
           PLATFORM_DEPLOY_TOKEN: ${{ (inputs.script == 'scheduler_trigger' || inputs.script == 'check_credentials') && secrets.PLATFORM_DEPLOY_TOKEN || '' }}
           # Credentials that check_credentials probes (blank for other scripts).
@@ -101,9 +115,10 @@ jobs:
           STORAGE_LAKEHOUSE_READ_SECRET_KEY: ${{ inputs.script == 'check_credentials' && secrets.STORAGE_LAKEHOUSE_READ_SECRET_KEY || '' }}
           STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN: ${{ inputs.script == 'check_credentials' && secrets.STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN || '' }}
           SOURCE_GUS_BDL_API_KEY: ${{ inputs.script == 'check_credentials' && secrets.SOURCE_GUS_BDL_API_KEY || '' }}
-          # The org bot app credentials the scheduler Worker dispatches with (scheduler_trigger deploy only).
-          ORG_BOT_CLIENT_ID: ${{ inputs.script == 'scheduler_trigger' && vars.ORG_BOT_CLIENT_ID || '' }}
-          ORG_BOT_PRIVATE_KEY: ${{ inputs.script == 'scheduler_trigger' && secrets.ORG_BOT_PRIVATE_KEY || '' }}
+          # The org bot app credentials the scheduler Worker dispatches with (scheduler_trigger deploy,
+          # and check_credentials, which runs the Worker's token code).
+          ORG_BOT_CLIENT_ID: ${{ (inputs.script == 'scheduler_trigger' || inputs.script == 'check_credentials') && vars.ORG_BOT_CLIENT_ID || '' }}
+          ORG_BOT_PRIVATE_KEY: ${{ (inputs.script == 'scheduler_trigger' || inputs.script == 'check_credentials') && secrets.ORG_BOT_PRIVATE_KEY || '' }}
           SCRIPT: ${{ inputs.script }}
           ARGS: ${{ inputs.args }}
         run: |
