@@ -1,13 +1,14 @@
 /** Strict, source-scoped Landing snapshot resolution for browser readers. */
-import { DRIVE_ROOT } from "./auth";
+import { LAKEHOUSE_ROOT } from "./auth";
 import {
-  fetchDriveFileBuffer,
+  fetchObjectBuffer,
   findFoldersByName,
   findNamedFilesInFolder,
   findNamedFilesInFolderById,
-  isGoogleDriveAuthError,
-} from "./driveApi";
-import { POINTER_MAX_BYTES, DriveDownloadBudget, sha256Hex } from "./releaseCatalog";
+  isPortalAuthError,
+  FOLDER_MIME_TYPE,
+} from "./api";
+import { POINTER_MAX_BYTES, DownloadBudget, sha256Hex } from "./releaseCatalog";
 import type {
   BronzeCampaignSourceId,
   BulkLandingSourceId,
@@ -148,7 +149,7 @@ const bronzeColumnsForSource = (sourceId: BronzeCampaignSourceId) => {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const SHA256_RE = /^[0-9a-f]{64}$/;
 const CODE_SHA_RE = /^[0-9a-f]{40}$/;
-const DRIVE_ID_RE = /^[A-Za-z0-9_-]{1,255}$/;
+const OBJECT_ID_RE = /^[A-Za-z0-9_-]{1,255}$/;
 const PARQUET_NAME_RE =
   /^(fragment-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|(?:[a-z0-9]+-)*[0-9a-f]{64})|br_[A-Za-z0-9_-]+)\.parquet$/;
 const LANDING_MANIFEST_MAX_BYTES = 1024 * 1024;
@@ -276,9 +277,9 @@ const requiredSha256 = (value: unknown, field: string): string => {
   return digest;
 };
 
-const requiredDriveId = (value: unknown, field: string): string => {
+const requiredObjectId = (value: unknown, field: string): string => {
   const id = requiredString(value, field);
-  if (!DRIVE_ID_RE.test(id)) throw new Error(`Landing metadata has invalid ${field}.`);
+  if (!OBJECT_ID_RE.test(id)) throw new Error(`Landing metadata has invalid ${field}.`);
   return id;
 };
 
@@ -310,7 +311,7 @@ async function downloadExact(
   maximum: number,
   label: string,
   token: string,
-  budget: DriveDownloadBudget
+  budget: DownloadBudget
 ): Promise<Uint8Array> {
   if (
     declaredSize === undefined ||
@@ -321,10 +322,10 @@ async function downloadExact(
     throw new Error(`${label} is missing a safe declared size.`);
   }
   budget.reserve(declaredSize, label);
-  const bytes = await fetchDriveFileBuffer(id, token, declaredSize);
+  const bytes = await fetchObjectBuffer(id, token, declaredSize);
   budget.consume(bytes.byteLength, label);
   if (bytes.byteLength !== declaredSize) {
-    throw new Error(`${label} size does not match its Drive metadata.`);
+    throw new Error(`${label} size does not match its R2 index metadata.`);
   }
   return bytes;
 }
@@ -350,7 +351,7 @@ function parsePointer(bytes: Uint8Array, sourceId: LandingSourceId): LandingSnap
     format_version: 1,
     source_id: sourceId,
     snapshot_id: snapshotId,
-    manifest_file_id: requiredDriveId(raw.manifest_file_id, "manifest_file_id"),
+    manifest_file_id: requiredObjectId(raw.manifest_file_id, "manifest_file_id"),
     manifest_file_name: manifestFileName,
     manifest_sha256: requiredSha256(raw.manifest_sha256, "manifest_sha256"),
     manifest_size_bytes: manifestSize,
@@ -376,7 +377,7 @@ function parseFile(
     throw new Error(`Landing file '${name}' exceeds the ${Math.round(maxBytes / (1024 * 1024))} MiB publication limit.`);
   }
   return {
-    id: requiredDriveId(raw.id, "file.id"),
+    id: requiredObjectId(raw.id, "file.id"),
     name,
     size,
     sha256: requiredSha256(raw.sha256, "file.sha256"),
@@ -579,7 +580,7 @@ export function parseRetainedBronzeManifest(
     throw new Error("Retained DBW indicator index descriptor is invalid.");
   }
   const indicatorIndex = {
-    id: requiredDriveId(raw.indicator_index.id, "indicator_index.id"),
+    id: requiredObjectId(raw.indicator_index.id, "indicator_index.id"),
     name: requiredString(raw.indicator_index.name, "indicator_index.name"),
     size: requiredInteger(raw.indicator_index.size, "indicator_index.size", false),
     sha256: requiredSha256(raw.indicator_index.sha256, "indicator_index.sha256"),
@@ -726,7 +727,7 @@ async function resolveSource(
   sourceId: LandingSourceId,
   campaignsFolderId: string,
   token: string,
-  budget: DriveDownloadBudget
+  budget: DownloadBudget
 ): Promise<LandingSnapshotResolution | null> {
   const sourceFolders = await findFoldersByName(sourceId, campaignsFolderId, token);
   if (sourceFolders.length === 0) return null;
@@ -741,7 +742,7 @@ async function resolveSource(
   if (pointerFiles.length === 0) return null;
   if (
     pointerFiles.length !== 1 ||
-    pointerFiles[0].mimeType === "application/vnd.google-apps.folder"
+    pointerFiles[0].mimeType === FOLDER_MIME_TYPE
   ) {
     throw new Error("current-landing.json is ambiguous or not a file.");
   }
@@ -803,14 +804,14 @@ const issuesForAll = (message: string): LandingCatalogIssue[] =>
  */
 export async function resolveLandingCatalog(
   token: string,
-  budget: DriveDownloadBudget
+  budget: DownloadBudget
 ): Promise<LandingCatalogResolution> {
-  const roots = await findFoldersByName(DRIVE_ROOT, "root", token);
+  const roots = await findFoldersByName(LAKEHOUSE_ROOT, "root", token);
   if (roots.length === 0) {
-    throw new Error(`Master Lakehouse folder '${DRIVE_ROOT}' not found in the R2 portal index.`);
+    throw new Error(`Master Lakehouse folder '${LAKEHOUSE_ROOT}' not found in the R2 portal index.`);
   }
   if (roots.length !== 1) {
-    throw new Error(`Master Lakehouse folder '${DRIVE_ROOT}' is ambiguous in the R2 portal index.`);
+    throw new Error(`Master Lakehouse folder '${LAKEHOUSE_ROOT}' is ambiguous in the R2 portal index.`);
   }
   const controls = await findFoldersByName("06_control", roots[0].id, token);
   if (controls.length === 0) return { snapshots: [], issues: [], fingerprint: "none" };
@@ -840,7 +841,7 @@ export async function resolveLandingCatalog(
       const snapshot = await resolveSource(sourceId, campaigns[0].id, token, budget);
       if (snapshot) snapshots.push(snapshot);
     } catch (error) {
-      if (isGoogleDriveAuthError(error)) throw error;
+      if (isPortalAuthError(error)) throw error;
       issues.push({
         source_id: sourceId,
         message: error instanceof Error ? error.message : "Unknown Landing metadata error.",

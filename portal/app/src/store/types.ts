@@ -9,17 +9,16 @@ import type { SharedCapability } from "@/services/collaboration/capabilities/cap
 import type { ForkTableProgress } from "@/services/collaboration/fork";
 import type { Dashboard } from "@/services/dashboard/types";
 import type {
-  GoogleDriveAuthState,
+  PortalAuthState,
   LandingCatalogResolution,
-  SourceInventoryResolution,
   LakehouseLayer,
   ReleaseCatalogResolution,
-} from "@/services/googleDrive/types";
+} from "@/services/lakehouse/types";
 import type {
   NativeLandingFile,
   NativeLandingFolder,
   NativeMetadataProgress,
-} from "@/services/googleDrive/nativeLandingCatalog";
+} from "@/services/lakehouse/nativeLandingCatalog";
 
 //
 // Global Window type augmentation
@@ -38,7 +37,6 @@ declare global {
       DUCK_UI_ALLOW_UNSIGNED_EXTENSIONS: boolean;
       DUCK_UI_DUCKDB_WASM_USE_CDN?: boolean;
       DUCK_UI_DUCKDB_WASM_BASE_URL?: string;
-      DUCK_UI_GOOGLE_CLIENT_ID?: string;
     };
   }
 }
@@ -631,16 +629,13 @@ export interface SessionSlice {
   endLiveSession: () => Promise<void>;
 }
 
-export interface GoogleDriveSlice {
-  googleAuth: GoogleDriveAuthState;
+export interface LakehouseSlice {
+  portalAuth: PortalAuthState;
   lakehouseCatalog: LakehouseLayer[];
   /** Pinned immutable release, or legacy when no pointer exists. */
   lakehouseRelease: ReleaseCatalogResolution | null;
   /** Independently pinned source Landing snapshots and source-specific metadata errors. */
   lakehouseLanding: LandingCatalogResolution | null;
-  /** Read-only physical file inventory; it never creates queryable relations. */
-  lakehouseSourceInventory: SourceInventoryResolution | null;
-  isSourceInventoryLoading: boolean;
   /** Physical native files, independent of published DuckDB datasets. */
   nativeLandingRoot: NativeLandingFolder | null;
   nativeLandingFolders: Record<string, NativeLandingFolder>;
@@ -651,7 +646,6 @@ export interface GoogleDriveSlice {
   nativeLandingLoading: boolean;
   nativeLandingError: string | null;
   nativeLandingSelected: string | null;
-  nativeLandingLinks: { fileId: string; open: string | null; download: string | null } | null;
   nativeLandingActionError: string | null;
   nativeMetadataTables: Record<string, string>;
   nativeMetadataLoading: string | null;
@@ -662,16 +656,11 @@ export interface GoogleDriveSlice {
   activeLakehouseDataset: string | null;
   activeLakehouseLayer: string | null;
 
-  signInWithGoogle: (promptConsent?: boolean) => Promise<boolean>;
-  setManualGoogleToken: (token: string) => Promise<boolean>;
-  disconnectGoogleDrive: () => void;
+  /** Re-checks the Cloudflare Access session (after an expired or refused API call). */
+  signIn: () => Promise<boolean>;
   refreshLakehouseCatalog: () => Promise<void>;
   refreshNativeLanding: () => Promise<void>;
   loadNativeLandingFolder: (folderId: string) => Promise<void>;
-  verifyNativeLandingFile: (
-    folderId: string,
-    fileId: string
-  ) => Promise<{ open: string | null; download: string | null } | null>;
   previewNativeLandingFile: (folderId: string, fileId: string) => Promise<string | null>;
   loadNativeMetadataTable: (folderId: string) => Promise<string | null>;
   cancelNativeMetadataScan: () => void;
@@ -707,4 +696,4 @@ export type DuckStoreState = DuckdbSlice &
   ProfileSlice &
   SessionSlice &
   DashboardSlice &
-  GoogleDriveSlice;
+  LakehouseSlice;

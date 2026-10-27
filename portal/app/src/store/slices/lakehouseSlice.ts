@@ -3,20 +3,19 @@ import { toast } from "sonner";
 import { asLocalDuckSession } from "@/services/engine";
 import { sqlEscapeIdentifier } from "@/lib/sqlSanitize";
 import { listOwnedNativeMetadataTables } from "@/lib/nativeMetadataOwnership";
-import { nameBronzeDataset, type BronzeSourceKey } from "@/services/googleDrive/bronzeNames";
-import type { PublishedViewIdentity } from "@/services/googleDrive/lakehouseBridge";
+import { nameBronzeDataset, type BronzeSourceKey } from "@/services/lakehouse/bronzeNames";
+import type { PublishedViewIdentity } from "@/services/lakehouse/lakehouseBridge";
 import {
-  clearStoredToken,
   clearStoredTokenIfCurrent,
   createDefaultLakehouseTree,
-  createDriveDownloadBudget,
+  createDownloadBudget,
   getStoredToken,
   listDataFilesInFolder,
   listSubfolders,
   loadFileIntoDuckDB,
   loadTableIntoDuckDB,
   loadTablesIntoDuckDB,
-  requestGoogleAccessToken,
+  requestAccessSession,
   resolveLandingCatalog,
   resolvePublishedTableReferences,
   resolveLayerFolderId,
@@ -24,24 +23,20 @@ import {
   resolveNativeLandingRoot,
   listNativeFolder,
   isNativeFolder,
-  freshNativeFile,
-  nativeDriveLink,
   previewNativeFile,
   disposeAllNativePreviews,
   nativeMetadataNames,
   scanNativeSourceMetadata,
   publishNativeMetadata,
-  isGoogleDriveAuthError,
-  setStoredToken,
+  isPortalAuthError,
   type LakehouseLayer,
   type LakehouseTable,
   type LandingCatalogResolution,
   type LandingSourceId,
   type PublishedDataset,
-  type NativeLandingFile,
   type ReleaseCatalogResolution,
-} from "@/services/googleDrive";
-import type { DuckStoreState, GoogleDriveSlice } from "../types";
+} from "@/services/lakehouse";
+import type { DuckStoreState, LakehouseSlice } from "../types";
 
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : "Unknown error");
 const releaseMessage = (release: Extract<ReleaseCatalogResolution, { kind: "release" }>) => {
@@ -216,13 +211,13 @@ const landingStatus = (landing: LandingCatalogResolution) => {
   return `Published SQL catalogue error — ${errors}. `;
 };
 
-const handleDriveAuthFailure = (
+const clearSignInAfterAuthFailure = (
   set: (state: Partial<DuckStoreState>) => void,
   get: () => DuckStoreState,
   token: string,
   error: unknown
 ): boolean => {
-  if (!isGoogleDriveAuthError(error) || get().googleAuth.token !== token) return false;
+  if (!isPortalAuthError(error) || get().portalAuth.token !== token) return false;
   clearStoredTokenIfCurrent(token);
   void disposeAllNativePreviews().catch(() => {
     set({
@@ -231,12 +226,11 @@ const handleDriveAuthFailure = (
     });
   });
   set({
-    googleAuth: { token: null, isAuthenticated: false, authSource: "none", error: error.message },
+    portalAuth: { token: null, isAuthenticated: false, authSource: "none", error: error.message },
     lakehouseStatusMessage: "Portal authorization expired or was denied. Sign in again.",
     nativeLandingRoot: null,
     nativeLandingFolders: {},
     nativeLandingChildren: {},
-    nativeLandingLinks: null,
     nativeLandingSelected: null,
     nativeLandingActionError: null,
     nativeMetadataTables: {},
@@ -249,7 +243,7 @@ const handleDriveAuthFailure = (
 };
 
 async function loadTableFiles(table: LakehouseTable, token: string): Promise<LakehouseTable> {
-  if (!table.id) throw new Error(`Dataset '${table.name}' has no Drive folder.`);
+  if (!table.id) throw new Error(`Dataset '${table.name}' has no R2 folder.`);
   const files = await listDataFilesInFolder(table.id, token);
   return {
     ...table,
@@ -343,11 +337,11 @@ function mergeLandingIntoTree(
   });
 }
 
-export const createGoogleDriveSlice: StateCreator<
+export const createLakehouseSlice: StateCreator<
   DuckStoreState,
   [["zustand/devtools", never]],
   [],
-  GoogleDriveSlice
+  LakehouseSlice
 > = (set, get) => {
   let refreshGeneration = 0;
   let nativeGeneration = 0;
@@ -365,7 +359,7 @@ export const createGoogleDriveSlice: StateCreator<
   const loadedLandingFingerprints = new WeakMap<object, Map<LandingSourceId, string>>();
   const ownedPublishedViews = new WeakMap<object, Map<string, PublishedViewIdentity>>();
   const loadedLandingViews = new WeakMap<object, Map<LandingSourceId, Set<string>>>();
-  const downloadBudgets = new WeakMap<object, ReturnType<typeof createDriveDownloadBudget>>();
+  const downloadBudgets = new WeakMap<object, ReturnType<typeof createDownloadBudget>>();
   const metadataRelations = new WeakMap<object, Set<string>>();
   let metadataInFlight: Promise<unknown> | null = null;
   let metadataCleanup: Promise<void> | null = null;
@@ -402,7 +396,7 @@ export const createGoogleDriveSlice: StateCreator<
   };
   const handleAuthFailure = (token: string, error: unknown): boolean => {
     const session = get().currentSession;
-    const handled = handleDriveAuthFailure(set, get, token, error);
+    const handled = clearSignInAfterAuthFailure(set, get, token, error);
     if (handled) {
       const db = asLocalDuckSession(session)?.local.db;
       if (db) ownedPublishedViews.delete(db);
@@ -421,7 +415,7 @@ export const createGoogleDriveSlice: StateCreator<
   const loadMetadataUntracked = async (folderId: string): Promise<string | null> => {
     if (get().nativeMetadataLoading)
       throw new Error("A Landing source metadata scan is already running.");
-    const token = get().googleAuth.token;
+    const token = get().portalAuth.token;
     const root = get().nativeLandingRoot;
     const folder = get().nativeLandingFolders[folderId];
     const tableName = get().nativeMetadataTables[folderId];
@@ -439,7 +433,7 @@ export const createGoogleDriveSlice: StateCreator<
     const current = () =>
       generation === nativeGeneration &&
       sequence === nativeMetadataSequence &&
-      get().googleAuth.token === token &&
+      get().portalAuth.token === token &&
       get().nativeLandingRoot === root &&
       get().currentSession === session;
     const names = metadataRelations.get(local.db);
@@ -478,7 +472,7 @@ export const createGoogleDriveSlice: StateCreator<
       if (!current()) return null;
       if (current())
         set({
-          lakehouseStatusMessage: `Scanned ${rows.length} original file(s) across ${folderCount} folders (${listPages} Drive list pages) for ${folder.name}. Query ${target}.`,
+          lakehouseStatusMessage: `Scanned ${rows.length} original file(s) across ${folderCount} folders (${listPages} R2 index pages) for ${folder.name}. Query ${target}.`,
         });
       return current() ? target : null;
     } catch (error) {
@@ -509,7 +503,7 @@ export const createGoogleDriveSlice: StateCreator<
   const budgetForEngine = (db: object) => {
     let budget = downloadBudgets.get(db);
     if (!budget) {
-      budget = createDriveDownloadBudget();
+      budget = createDownloadBudget();
       downloadBudgets.set(db, budget);
     }
     return budget;
@@ -586,7 +580,7 @@ export const createGoogleDriveSlice: StateCreator<
     if (busy) return null;
     const session = get().currentSession;
     const local = asLocalDuckSession(session)?.local;
-    const token = get().googleAuth.token;
+    const token = get().portalAuth.token;
     const source = get().lakehouseRelease;
     const landing = get().lakehouseLanding;
     const table = get()
@@ -597,7 +591,7 @@ export const createGoogleDriveSlice: StateCreator<
     const label = file?.name ?? tableName;
     const current = () =>
       get().currentSession === session &&
-      get().googleAuth.token === token &&
+      get().portalAuth.token === token &&
       get().lakehouseRelease === source &&
       get().lakehouseLanding === landing;
     if (!local) {
@@ -610,7 +604,7 @@ export const createGoogleDriveSlice: StateCreator<
     busy = true;
     set({
       isLakehouseLoading: true,
-      lakehouseStatusMessage: `Loading '${label}' from Google Drive...`,
+      lakehouseStatusMessage: `Loading '${label}' from R2...`,
     });
     try {
       if ((tableName === "gus_dbw_observations" || tableName === "br_dbw_observations") &&
@@ -662,7 +656,7 @@ export const createGoogleDriveSlice: StateCreator<
           const loaded = await loadTablesIntoDuckDB(local.db, local.connection, [{
             datasetName: tableName, tableFolderId: table.id, files: table.children, layerName,
           }], token ?? "", budgetForEngine(local.db), async () => {
-            if (!current()) throw new Error("Google Drive session changed before the selected view could be published.");
+            if (!current()) throw new Error("The sign-in changed before the selected view could be published.");
             if (existed && !await isOwnedPublishedView(
               local.db, local.connection, layerName, tableName))
               throw new Error(`Published relation '${tableName}' changed during loading. Start a fresh DuckDB session before retrying.`);
@@ -673,7 +667,7 @@ export const createGoogleDriveSlice: StateCreator<
               if (now.toArray().length)
                 throw new Error(`Published relation '${tableName}' was created during loading. Start a fresh DuckDB session before retrying.`);
             }
-            if (!current()) throw new Error("Google Drive session changed before the selected view could be published.");
+            if (!current()) throw new Error("The sign-in changed before the selected view could be published.");
           });
           identity = loaded.identities[0];
           queryTarget = `${sqlEscapeIdentifier(layerName)}.${sqlEscapeIdentifier(tableName)}`;
@@ -727,12 +721,12 @@ export const createGoogleDriveSlice: StateCreator<
     if (busy) return null;
     const session = get().currentSession;
     const local = asLocalDuckSession(session)?.local;
-    const token = get().googleAuth.token;
+    const token = get().portalAuth.token;
     const source = get().lakehouseRelease;
     const landing = get().lakehouseLanding;
     const current = () =>
       get().currentSession === session &&
-      get().googleAuth.token === token &&
+      get().portalAuth.token === token &&
       get().lakehouseRelease === source &&
       get().lakehouseLanding === landing;
     if (!local) {
@@ -743,13 +737,13 @@ export const createGoogleDriveSlice: StateCreator<
       return null;
     }
     if (!token) {
-      set({ lakehouseStatusMessage: "Sign in to Google Drive before preparing a SQL query." });
+      set({ lakehouseStatusMessage: "Sign in before preparing a SQL query." });
       return null;
     }
     if (source?.kind !== "release" && (landing?.snapshots.length ?? 0) === 0) {
       set({
         lakehouseStatusMessage:
-          "Refresh the Google Drive lakehouse to pin a release before preparing a multi-table query.",
+          "Refresh the R2 lakehouse to pin a release before preparing a multi-table query.",
       });
       return null;
     }
@@ -792,7 +786,7 @@ export const createGoogleDriveSlice: StateCreator<
     busy = true;
     set({
       isLakehouseLoading: true,
-      lakehouseStatusMessage: `Loading ${selections.length} selected dataset(s) from Google Drive...`,
+      lakehouseStatusMessage: `Loading ${selections.length} selected dataset(s) from R2...`,
     });
     try {
       const loaded = await loadTablesIntoDuckDB(
@@ -804,7 +798,7 @@ export const createGoogleDriveSlice: StateCreator<
         async () => {
           if (!current()) {
             throw new Error(
-              "Google Drive session changed before the selected tables could be prepared."
+              "The sign-in changed before the selected tables could be prepared."
             );
           }
           const named = selections.filter((table) => requiresPublishedViewIdentity(
@@ -822,7 +816,7 @@ export const createGoogleDriveSlice: StateCreator<
                 throw new Error(`Published relation '${table.datasetName}' already exists in this local session. Start a fresh DuckDB session to load the pinned release.`);
             }
           }
-          if (!current()) throw new Error("Google Drive session changed before SQL views could be published.");
+          if (!current()) throw new Error("The sign-in changed before SQL views could be published.");
         }
       );
       // Views may exist on the old engine if a session or token changed while a
@@ -875,7 +869,7 @@ export const createGoogleDriveSlice: StateCreator<
     const session = get().currentSession;
     const local = asLocalDuckSession(session)?.local;
     if (local && metadataCleanupDb === local.db) await metadataCleanup;
-    const token = get().googleAuth.token;
+    const token = get().portalAuth.token;
     const source = get().lakehouseRelease;
     const landing = get().lakehouseLanding;
     const metadataGeneration = nativeGeneration;
@@ -896,7 +890,7 @@ export const createGoogleDriveSlice: StateCreator<
     if (!local || datasets.length === 0) return;
     const current = () =>
       get().currentSession === session &&
-      get().googleAuth.token === token &&
+      get().portalAuth.token === token &&
       get().lakehouseRelease === source &&
       get().lakehouseLanding === landing;
     let acquired = false;
@@ -904,11 +898,11 @@ export const createGoogleDriveSlice: StateCreator<
       const referenced = await resolvePublishedTableReferences(local.connection, sql, datasets);
       if (
         get().currentSession !== session ||
-        get().googleAuth.token !== token ||
+        get().portalAuth.token !== token ||
         metadataGeneration !== nativeGeneration ||
         get().nativeLandingRoot !== metadataRoot
       )
-        throw new Error("Google Drive session changed before SQL dependencies could be resolved.");
+        throw new Error("The sign-in changed before SQL dependencies could be resolved.");
       if (referenced.length === 0) return;
       for (const table of referenced.filter(
         (item) => item.layerName === "01_landing" && metadataNames.has(item.datasetName)
@@ -923,13 +917,13 @@ export const createGoogleDriveSlice: StateCreator<
       if (publishedReferences.length === 0) return;
       if (busy)
         throw new Error(
-          "Google Drive is already loading data. Wait for it to finish, then run the query again."
+          "The R2 lakehouse is already loading data. Wait for it to finish, then run the query again."
         );
       busy = true;
       acquired = true;
       if (!current())
         throw new Error(
-          "Google Drive publication changed before SQL dependencies could be resolved."
+          "The R2 publication changed before SQL dependencies could be resolved."
         );
       if (
         publishedReferences.some(
@@ -992,7 +986,7 @@ export const createGoogleDriveSlice: StateCreator<
         !existing.has(tableKey(table.layerName.toLowerCase(), table.datasetName.toLowerCase())));
       if (pending.length === 0) return;
       if (!token)
-        throw new Error("Sign in to Google Drive before querying published release data.");
+        throw new Error("Sign in before querying published release data.");
 
       const label = pending.map((table) => `${table.layerName}.${table.datasetName}`).join(", ");
       set({
@@ -1013,7 +1007,7 @@ export const createGoogleDriveSlice: StateCreator<
         async () => {
           if (!current()) {
             throw new Error(
-              "Google Drive session changed before the referenced tables could be loaded."
+              "The sign-in changed before the referenced tables could be loaded."
             );
           }
           const now = await local.connection.query(
@@ -1024,11 +1018,11 @@ export const createGoogleDriveSlice: StateCreator<
           if (pending.some((table) => occupied.has(
             tableKey(table.layerName.toLowerCase(), table.datasetName.toLowerCase()))))
             throw new Error("A published SQL relation was created during loading. Start a fresh DuckDB session before retrying.");
-          if (!current()) throw new Error("Google Drive session changed before SQL views could be published.");
+          if (!current()) throw new Error("The sign-in changed before SQL views could be published.");
         }
       );
       if (!current()) {
-        throw new Error("Google Drive session changed before the query could run.");
+        throw new Error("The sign-in changed before the query could run.");
       }
       for (let index = 0; index < pending.length; index++) {
         const table = pending[index];
@@ -1065,50 +1059,47 @@ export const createGoogleDriveSlice: StateCreator<
 
   const token = getStoredToken();
   return {
-    googleAuth: {
+    portalAuth: {
       token,
       isAuthenticated: !!token,
-      authSource: token ? "google_identity" : "none",
+      authSource: token ? "access" : "none",
       error: null,
     },
     lakehouseCatalog: createDefaultLakehouseTree(),
     lakehouseRelease: null,
     lakehouseLanding: null,
-    lakehouseSourceInventory: null,
-    isSourceInventoryLoading: false,
     nativeLandingRoot: null,
     nativeLandingFolders: {},
     nativeLandingChildren: {},
     nativeLandingLoading: false,
     nativeLandingError: null,
     nativeLandingSelected: null,
-    nativeLandingLinks: null,
     nativeLandingActionError: null,
     nativeMetadataTables: {},
     nativeMetadataLoading: null,
     nativeMetadataProgress: null,
     nativeMetadataError: null,
     isLakehouseLoading: false,
-    lakehouseStatusMessage: "Sign in to browse Google Drive datasets.",
+    lakehouseStatusMessage: "Sign in to browse the R2 lakehouse.",
     activeLakehouseDataset: null,
     activeLakehouseLayer: null,
 
-    signInWithGoogle: async (promptConsent = false) => {
+    signIn: async () => {
       try {
         set({
           isLakehouseLoading: true,
-          lakehouseStatusMessage: "Requesting Google Sign-In authorization...",
+          lakehouseStatusMessage: "Checking the sign-in…",
         });
-        const nextToken = await requestGoogleAccessToken({ promptConsent });
+        const nextToken = await requestAccessSession();
         const db = asLocalDuckSession(get().currentSession)?.local.db;
         if (db) ownedPublishedViews.delete(db);
         nativeGeneration += 1;
         abortMetadataScan();
         set({
-          googleAuth: {
+          portalAuth: {
             token: nextToken,
             isAuthenticated: true,
-            authSource: "google_identity",
+            authSource: "access",
             error: null,
           },
         });
@@ -1116,7 +1107,7 @@ export const createGoogleDriveSlice: StateCreator<
         return true;
       } catch (error) {
         const message = messageOf(error);
-        set({ lakehouseStatusMessage: `Google Drive connection error: ${message}` });
+        set({ lakehouseStatusMessage: `Sign-in error: ${message}` });
         toast.error(message);
         return false;
       } finally {
@@ -1124,77 +1115,8 @@ export const createGoogleDriveSlice: StateCreator<
       }
     },
 
-    setManualGoogleToken: async (nextToken) => {
-      const trimmed = nextToken.trim();
-      if (!trimmed) {
-        toast.error("Please enter a valid Google OAuth token");
-        return false;
-      }
-      setStoredToken(trimmed);
-      const db = asLocalDuckSession(get().currentSession)?.local.db;
-      if (db) ownedPublishedViews.delete(db);
-      nativeGeneration += 1;
-      abortMetadataScan();
-      set({
-        googleAuth: { token: trimmed, isAuthenticated: true, authSource: "manual", error: null },
-      });
-      try {
-        await get().refreshLakehouseCatalog();
-        return true;
-      } catch {
-        return false;
-      }
-    },
-
-    disconnectGoogleDrive: () => {
-      const db = asLocalDuckSession(get().currentSession)?.local.db;
-      if (db) ownedPublishedViews.delete(db);
-      nativeGeneration += 1;
-      abortMetadataScan();
-      nativeActionSequence += 1;
-      const oldSession = get().currentSession;
-      void beginMetadataCleanup(oldSession).catch(() => {
-        set({
-          lakehouseStatusMessage:
-            "Could not remove local Landing metadata tables. Start a fresh DuckDB session.",
-        });
-      });
-      void disposeAllNativePreviews().catch(() => {
-        set({
-          lakehouseStatusMessage:
-            "Could not remove a local native preview. Start a fresh DuckDB session.",
-        });
-      });
-      refreshGeneration += 1;
-      clearStoredToken();
-      set({
-        googleAuth: { token: null, isAuthenticated: false, authSource: "none", error: null },
-        lakehouseCatalog: createDefaultLakehouseTree(),
-        lakehouseRelease: null,
-        lakehouseLanding: null,
-        lakehouseSourceInventory: null,
-        isSourceInventoryLoading: false,
-        nativeLandingRoot: null,
-        nativeLandingFolders: {},
-        nativeLandingChildren: {},
-        nativeLandingLoading: false,
-        nativeLandingError: null,
-        nativeLandingSelected: null,
-        nativeLandingLinks: null,
-        nativeLandingActionError: null,
-        nativeMetadataTables: {},
-        nativeMetadataLoading: null,
-        nativeMetadataProgress: null,
-        nativeMetadataError: null,
-        activeLakehouseDataset: null,
-        activeLakehouseLayer: null,
-        isLakehouseLoading: false,
-        lakehouseStatusMessage: "Disconnected from Google Drive.",
-      });
-    },
-
     refreshNativeLanding: async () => {
-      const token = get().googleAuth.token;
+      const token = get().portalAuth.token;
       const generation = ++nativeGeneration;
       abortMetadataScan();
       nativeActionSequence += 1;
@@ -1204,8 +1126,7 @@ export const createGoogleDriveSlice: StateCreator<
         nativeLandingFolders: {},
         nativeLandingChildren: {},
         nativeLandingSelected: null,
-        nativeLandingLinks: null,
-        nativeLandingActionError: null,
+            nativeLandingActionError: null,
         nativeLandingError: null,
         nativeLandingLoading: !!token,
         nativeMetadataTables: {},
@@ -1224,7 +1145,7 @@ export const createGoogleDriveSlice: StateCreator<
         return;
       }
       if (!token) return;
-      const current = () => generation === nativeGeneration && get().googleAuth.token === token;
+      const current = () => generation === nativeGeneration && get().portalAuth.token === token;
       try {
         await disposeAllNativePreviews();
         if (!current()) return;
@@ -1244,7 +1165,7 @@ export const createGoogleDriveSlice: StateCreator<
     },
 
     loadNativeLandingFolder: async (folderId) => {
-      const token = get().googleAuth.token;
+      const token = get().portalAuth.token;
       const root = get().nativeLandingRoot;
       const folders = get().nativeLandingFolders;
       const folder = folders[folderId];
@@ -1252,7 +1173,7 @@ export const createGoogleDriveSlice: StateCreator<
       if (!token || !root || !folder || get().nativeLandingChildren[folderId]?.loading) return;
       const current = () =>
         generation === nativeGeneration &&
-        get().googleAuth.token === token &&
+        get().portalAuth.token === token &&
         get().nativeLandingRoot === root;
       set({
         nativeLandingChildren: {
@@ -1294,69 +1215,9 @@ export const createGoogleDriveSlice: StateCreator<
       }
     },
 
-    verifyNativeLandingFile: async (folderId, fileId) => {
-      const token = get().googleAuth.token;
-      const root = get().nativeLandingRoot;
-      const folderState = get().nativeLandingChildren[folderId];
-      const selected: NativeLandingFile | undefined = folderState?.loaded
-        ? folderState.files.find((file) => file.id === fileId)
-        : undefined;
-      const generation = nativeGeneration;
-      const sequence = ++nativeActionSequence;
-      if (!token || !root || !selected) return null;
-      const current = () =>
-        generation === nativeGeneration &&
-        sequence === nativeActionSequence &&
-        get().googleAuth.token === token &&
-        get().nativeLandingRoot === root;
-      set({
-        nativeLandingSelected: fileId,
-        nativeLandingLinks: null,
-        nativeLandingActionError: null,
-      });
-      try {
-        const fresh = await freshNativeFile(
-          selected,
-          get().nativeLandingFolders,
-          root.id,
-          token,
-          current
-        );
-        if (!current()) return null;
-        const links = {
-          open: (() => {
-            try {
-              return nativeDriveLink(fresh, token, "open");
-            } catch {
-              return null;
-            }
-          })(),
-          download:
-            fresh.capabilities?.canDownload === true
-              ? (() => {
-                  try {
-                    return nativeDriveLink(fresh, token, "download");
-                  } catch {
-                    return null;
-                  }
-                })()
-              : null,
-        };
-        if (!links.open && !links.download)
-          throw new Error("Drive did not provide a safe link for this file.");
-        set({ nativeLandingLinks: { fileId, ...links } });
-        return links;
-      } catch (error) {
-        if (!current()) return null;
-        handleAuthFailure(token, error);
-        if (current()) set({ nativeLandingActionError: messageOf(error) });
-        return null;
-      }
-    },
-
     previewNativeLandingFile: async (folderId, fileId) => {
       const sequence = ++nativeActionSequence;
-      const token = get().googleAuth.token;
+      const token = get().portalAuth.token;
       const root = get().nativeLandingRoot;
       const selected = get().nativeLandingChildren[folderId]?.files.find(
         (file) => file.id === fileId
@@ -1375,7 +1236,7 @@ export const createGoogleDriveSlice: StateCreator<
       const current = () =>
         generation === nativeGeneration &&
         sequence === nativeActionSequence &&
-        get().googleAuth.token === token &&
+        get().portalAuth.token === token &&
         get().nativeLandingRoot === root &&
         get().currentSession === session;
       set({ nativeLandingSelected: fileId, nativeLandingActionError: null });
@@ -1419,27 +1280,27 @@ export const createGoogleDriveSlice: StateCreator<
     refreshLakehouseCatalog: async () => {
       // Independent physical browsing must begin even if a publication pointer
       // is missing, malformed, or the published catalogue refuses to resolve.
-      if (get().googleAuth.token) void get().refreshNativeLanding();
+      if (get().portalAuth.token) void get().refreshNativeLanding();
       if (busy) return;
-      const activeToken = get().googleAuth.token;
+      const activeToken = get().portalAuth.token;
       const activeSession = get().currentSession;
       if (!activeToken) {
-        set({ lakehouseStatusMessage: "Sign in to browse Google Drive datasets." });
+        set({ lakehouseStatusMessage: "Sign in to browse the R2 lakehouse." });
         return;
       }
       busy = true;
       const activeGeneration = ++refreshGeneration;
       set({
         isLakehouseLoading: true,
-        lakehouseStatusMessage: "Resolving the Google Drive release...",
+        lakehouseStatusMessage: "Resolving the R2 release...",
       });
       try {
         // This is the only pointer resolution path. Layer toggles use the pinned result.
         const local = asLocalDuckSession(activeSession)?.local;
-        const budget = local ? budgetForEngine(local.db) : createDriveDownloadBudget();
+        const budget = local ? budgetForEngine(local.db) : createDownloadBudget();
         const release = await resolveReleaseCatalog(activeToken, budget);
         const landing = await resolveLandingCatalog(activeToken, budget);
-        if (get().googleAuth.token !== activeToken || get().currentSession !== activeSession)
+        if (get().portalAuth.token !== activeToken || get().currentSession !== activeSession)
           return;
         const candidateFingerprint = releaseFingerprint(release);
         const loadedReleaseFingerprint = local
@@ -1508,7 +1369,7 @@ export const createGoogleDriveSlice: StateCreator<
             }
           }
         }
-        if (get().googleAuth.token !== activeToken || get().currentSession !== activeSession)
+        if (get().portalAuth.token !== activeToken || get().currentSession !== activeSession)
           return;
         const compatibilityStatus = landingStatus(landing);
         if (release.kind === "release") {
@@ -1527,7 +1388,7 @@ export const createGoogleDriveSlice: StateCreator<
                 : { ...layer, id: null, loaded: false, children: [] }
             );
           }
-          if (get().googleAuth.token !== activeToken) return;
+          if (get().portalAuth.token !== activeToken) return;
           set({
             lakehouseCatalog: mergeLandingIntoTree(tree, landing),
             lakehouseRelease: release,
@@ -1537,7 +1398,7 @@ export const createGoogleDriveSlice: StateCreator<
         }
       } catch (error) {
         const authFailure = handleAuthFailure(activeToken, error);
-        if (get().googleAuth.token === activeToken && get().currentSession === activeSession) {
+        if (get().portalAuth.token === activeToken && get().currentSession === activeSession) {
           const message = authFailure
             ? "Portal authorization expired or was denied. Sign in again."
             : `Catalog refresh error: ${messageOf(error)}`;
@@ -1563,7 +1424,7 @@ export const createGoogleDriveSlice: StateCreator<
           ),
         });
       replace();
-      const activeToken = get().googleAuth.token;
+      const activeToken = get().portalAuth.token;
       if (
         get().lakehouseRelease?.kind === "release" ||
         !updated.expanded ||
@@ -1575,14 +1436,14 @@ export const createGoogleDriveSlice: StateCreator<
       set({ isLakehouseLoading: true, lakehouseStatusMessage: `Loading '${layerName}'...` });
       try {
         updated = await loadLayer(updated, activeToken);
-        if (get().googleAuth.token !== activeToken) return;
+        if (get().portalAuth.token !== activeToken) return;
         replace();
         set({
           lakehouseStatusMessage: `Found ${updated.children.length} legacy/unversioned dataset(s) in '${layerName}'.`,
         });
       } catch (error) {
         const authFailure = handleAuthFailure(activeToken, error);
-        if (get().googleAuth.token === activeToken) {
+        if (get().portalAuth.token === activeToken) {
           set({
             lakehouseStatusMessage: authFailure
               ? "Portal authorization expired or was denied. Sign in again."
@@ -1616,7 +1477,7 @@ export const createGoogleDriveSlice: StateCreator<
           ),
         });
       replace();
-      const activeToken = get().googleAuth.token;
+      const activeToken = get().portalAuth.token;
       if (
         get().lakehouseRelease?.kind === "release" ||
         !updated.expanded ||
@@ -1631,14 +1492,14 @@ export const createGoogleDriveSlice: StateCreator<
       });
       try {
         updated = await loadTableFiles(updated, activeToken);
-        if (get().googleAuth.token !== activeToken) return;
+        if (get().portalAuth.token !== activeToken) return;
         replace();
         set({
           lakehouseStatusMessage: `Found ${updated.children.length} legacy/unversioned file(s) in '${tableName}'.`,
         });
       } catch (error) {
         const authFailure = handleAuthFailure(activeToken, error);
-        if (get().googleAuth.token === activeToken) {
+        if (get().portalAuth.token === activeToken) {
           set({
             lakehouseStatusMessage: authFailure
               ? "Portal authorization expired or was denied. Sign in again."

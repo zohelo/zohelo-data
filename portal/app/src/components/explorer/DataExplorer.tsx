@@ -225,7 +225,7 @@ export default function DataExplorer({ onSqlAction }: DataExplorerProps) {
 
       <CardContent className="p-2 h-[calc(100%-60px)] overflow-y-auto">
         <div className="space-y-4">
-          {/* Google Drive Lakehouse Section */}
+          {/* R2 lakehouse */}
           <LakehouseExplorer onSqlAction={onSqlAction} />
 
           {/* Databases Section */}

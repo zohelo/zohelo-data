@@ -18,7 +18,6 @@ import ProfileEditor from "./ProfileEditor";
 import ProfileAvatar from "./ProfileAvatar";
 
 import Logo from "/logo.png";
-import PlatformInfoLinks from "@/components/PlatformInfoLinks";
 
 interface ProfilePickerProps {
   profiles: Profile[];
@@ -119,7 +118,6 @@ export default function ProfilePicker({
           Profiles are stored locally on your device. Zohelo-data runs in your browser; optional
           connections such as Cloudflare R2 or remote services can send data when you enable them.
         </p>
-        <PlatformInfoLinks className="text-xs text-muted-foreground" />
       </div>
 
       {selectedProfile && (
@@ -142,7 +140,6 @@ export default function ProfilePicker({
             onSave={handleCreate}
             onCancel={() => setShowCreateDialog(false)}
           />
-          <PlatformInfoLinks className="text-xs text-muted-foreground pt-2" />
         </DialogContent>
       </Dialog>
     </div>

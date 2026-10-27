@@ -155,17 +155,16 @@ export const createDuckdbSlice: StateCreator<
       await get().fetchDatabasesAndTablesInfo();
     }
 
-    // Trigger Google Sign-In / Lakehouse Catalog initialization in background
+    // Load the lakehouse catalogue in the background (the Access session is the sign-in).
     setTimeout(() => {
       const state = get();
-      if (state.googleAuth.token) {
+      if (state.portalAuth.token) {
         state.refreshLakehouseCatalog().catch((err) => {
           console.warn("[DuckDB] Auto-refresh lakehouse catalog failed:", err);
         });
       } else {
-        // Attempt initial Google sign-in prompt
-        state.signInWithGoogle(false).catch((err) => {
-          console.info("[DuckDB] Initial Google sign-in deferred:", err);
+        state.signIn().catch((err) => {
+          console.info("[DuckDB] Initial sign-in check deferred:", err);
         });
       }
     }, 100);

@@ -3,7 +3,7 @@
  * served by the portal worker at /drive/v3/catalog.
  */
 import { getStoredToken } from "./auth";
-import { driveRequest } from "./driveApi";
+import { apiRequest, apiUrl } from "./api";
 
 export interface CatalogColumn {
   name: string;
@@ -61,6 +61,6 @@ export interface DataCatalog {
 export const fetchDataCatalog = async (signal?: AbortSignal): Promise<DataCatalog> => {
   const token = getStoredToken();
   if (!token) throw new Error("Sign in to read the data catalog.");
-  const response = await driveRequest("https://www.googleapis.com/drive/v3/catalog", token, signal);
+  const response = await apiRequest(apiUrl("/drive/v3/catalog"), token, signal);
   return (await response.json()) as DataCatalog;
 };

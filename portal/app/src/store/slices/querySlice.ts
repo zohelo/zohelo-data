@@ -79,7 +79,7 @@ export const createQuerySlice: StateCreator<
       const session = get().currentSession;
       if (!session) throw new Error("No active connection");
 
-      // A pinned Drive release is a lazy local source. Resolve its SQL
+      // A pinned R2 release is a lazy local source. Resolve its SQL
       // dependencies before constructing the execution so the statement below
       // remains the single query submission for every engine type.
       await get().preparePublishedTablesForQuery(query);

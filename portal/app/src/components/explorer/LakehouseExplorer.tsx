@@ -10,9 +10,7 @@ import {
   Folder,
   FileSpreadsheet,
   RefreshCw,
-  Key,
   LogIn,
-  LogOut,
   Layers,
   Table as TableIcon,
   EllipsisVertical,
@@ -20,7 +18,6 @@ import {
 import { useDuckStore } from "@/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { qualifyTable } from "@/lib/sqlSanitize";
 import { setSqlRelationDragData } from "@/lib/sqlTableActions";
 import { TableActions } from "./TableActions";
@@ -31,7 +28,7 @@ import {
   NATIVE_PREVIEW_LIMIT_BYTES,
   resolveLayerFolderId,
   type NativeLandingFile,
-} from "@/services/googleDrive";
+} from "@/services/lakehouse";
 import {
   decodeR2ExplorerTabState,
   encodeR2ExplorerTabState,
@@ -57,7 +54,7 @@ const sourceLabels: Record<string, string> = {
 };
 
 export default function LakehouseExplorer({ onSqlAction }: LakehouseExplorerProps) {
-  const googleAuth = useDuckStore((s) => s.googleAuth);
+  const portalAuth = useDuckStore((s) => s.portalAuth);
   const lakehouseCatalog = useDuckStore((s) => s.lakehouseCatalog);
   const lakehouseLanding = useDuckStore((s) => s.lakehouseLanding);
   const isLakehouseLoading = useDuckStore((s) => s.isLakehouseLoading);
@@ -68,7 +65,6 @@ export default function LakehouseExplorer({ onSqlAction }: LakehouseExplorerProp
   const nativeLoading = useDuckStore((s) => s.nativeLandingLoading);
   const nativeError = useDuckStore((s) => s.nativeLandingError);
   const nativeSelected = useDuckStore((s) => s.nativeLandingSelected);
-  const nativeLinks = useDuckStore((s) => s.nativeLandingLinks);
   const nativeActionError = useDuckStore((s) => s.nativeLandingActionError);
   const nativeMetadataTables = useDuckStore((s) => s.nativeMetadataTables);
   const nativeMetadataLoading = useDuckStore((s) => s.nativeMetadataLoading);
@@ -80,9 +76,7 @@ export default function LakehouseExplorer({ onSqlAction }: LakehouseExplorerProp
   const previewNativeFile = useDuckStore((s) => s.previewNativeLandingFile);
   const refreshNative = useDuckStore((s) => s.refreshNativeLanding);
 
-  const signInWithGoogle = useDuckStore((s) => s.signInWithGoogle);
-  const setManualGoogleToken = useDuckStore((s) => s.setManualGoogleToken);
-  const disconnectGoogleDrive = useDuckStore((s) => s.disconnectGoogleDrive);
+  const signIn = useDuckStore((s) => s.signIn);
   const refreshLakehouseCatalog = useDuckStore((s) => s.refreshLakehouseCatalog);
   const toggleLakehouseLayer = useDuckStore((s) => s.toggleLakehouseLayer);
   const toggleLakehouseTable = useDuckStore((s) => s.toggleLakehouseTable);
@@ -94,8 +88,6 @@ export default function LakehouseExplorer({ onSqlAction }: LakehouseExplorerProp
   const setActiveTab = useDuckStore((s) => s.setActiveTab);
   const executeQuery = useDuckStore((s) => s.executeQuery);
 
-  const [manualToken, setManualToken] = useState("");
-  const [popoverOpen, setPopoverOpen] = useState(false);
   const [popupBlocked, setPopupBlocked] = useState(false);
   const [unavailableAction, setUnavailableAction] = useState<string | null>(null);
   const [nativeOpen, setNativeOpen] = useState(true);
@@ -146,15 +138,6 @@ export default function LakehouseExplorer({ onSqlAction }: LakehouseExplorerProp
     return `${value.toFixed(value >= 10 ? 1 : 2)} ${unit}`;
   };
 
-  const handleApplyManualToken = async () => {
-    if (!manualToken.trim()) return;
-    const ok = await setManualGoogleToken(manualToken.trim());
-    if (ok) {
-      setManualToken("");
-      setPopoverOpen(false);
-    }
-  };
-
   const openPreview = async (target: string | null, title: string) => {
     if (!target) return;
     const sql = `SELECT * FROM ${target} LIMIT 50;`;
@@ -196,9 +179,9 @@ export default function LakehouseExplorer({ onSqlAction }: LakehouseExplorerProp
   };
 
   const openLayerExplorer = async (layerName: string, title: string, knownId?: string | null) => {
-    if (!googleAuth.token) return;
+    if (!portalAuth.token) return;
     try {
-      const id = knownId || (await resolveLayerFolderId(layerName, googleAuth.token));
+      const id = knownId || (await resolveLayerFolderId(layerName, portalAuth.token));
       if (!id) return;
       openExplorerTab([{ id, name: layerName, path: layerName }], title);
     } catch (error) {
@@ -216,8 +199,8 @@ export default function LakehouseExplorer({ onSqlAction }: LakehouseExplorerProp
     }
     tab.opener = null;
     try {
-      if (!googleAuth.token) throw new Error("Sign in before reading private R2 data.");
-      const url = await getR2ObjectUrl(file.id, googleAuth.token, action);
+      if (!portalAuth.token) throw new Error("Sign in before reading private R2 data.");
+      const url = await getR2ObjectUrl(file.id, portalAuth.token, action);
       tab.location.replace(url);
     } catch (error) {
       tab.close();
@@ -491,7 +474,7 @@ export default function LakehouseExplorer({ onSqlAction }: LakehouseExplorerProp
                         this file.
                       </div>
                     )}
-                    {selected && nativeLinks?.fileId === file.id && popupBlocked && (
+                    {detailsOpen && popupBlocked && (
                       <p className="text-muted-foreground">Allow popups and retry to open the R2 object.</p>
                     )}
                   </div>
@@ -692,76 +675,17 @@ export default function LakehouseExplorer({ onSqlAction }: LakehouseExplorerProp
             />
           </Button>
 
-          {/* Manual Token Popover */}
-          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                title="Set manual Google identity token"
-              >
-                <Key className="h-3.5 w-3.5" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-3" align="end">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-medium">
-                  <Key className="h-3.5 w-3.5 text-amber-500" />
-                  <span>Manual Google identity token</span>
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Paste a temporary Google OAuth 2.0 access token to authorize this private R2 portal.
-                </p>
-                <Input
-                  type="password"
-                  placeholder="ya29.a0AfH6..."
-                  value={manualToken}
-                  onChange={(e) => setManualToken(e.target.value)}
-                  className="h-8 text-xs font-mono"
-                />
-                <div className="flex justify-end gap-2 pt-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs"
-                    onClick={() => setPopoverOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white"
-                    onClick={handleApplyManualToken}
-                  >
-                    Apply Token
-                  </Button>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          {/* Auth Action */}
-          {googleAuth.isAuthenticated ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-destructive"
-              onClick={disconnectGoogleDrive}
-              title="Sign out of portal"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-            </Button>
-          ) : (
+          {/* Sign-in is the Cloudflare Access session; shown only after an expired or refused call. */}
+          {!portalAuth.isAuthenticated && (
             <Button
               variant="outline"
               size="sm"
               className="h-7 text-[11px] px-2 border-amber-500/40 text-amber-500 hover:bg-amber-500/10 gap-1"
-              onClick={() => signInWithGoogle(true)}
+              onClick={() => signIn()}
               disabled={isLakehouseLoading}
             >
               <LogIn className="h-3 w-3" />
-              Sign in
+              Sign in again
             </Button>
           )}
         </div>
@@ -769,7 +693,7 @@ export default function LakehouseExplorer({ onSqlAction }: LakehouseExplorerProp
 
       {/* Lakehouse Medallion Layers Tree */}
       <div className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5 text-xs">
-        {googleAuth.isAuthenticated && (
+        {portalAuth.isAuthenticated && (
           <section aria-label="Landing" className="mb-1 min-w-0">
             <div className="flex items-center gap-1 px-1.5 font-medium">
               <button

@@ -1,11 +1,12 @@
 /** Immutable NBP release resolution for browser readers. */
-import { DRIVE_ROOT } from "./auth";
+import { LAKEHOUSE_ROOT } from "./auth";
 import {
-  fetchDriveFileBuffer,
+  fetchObjectBuffer,
   findFoldersByName,
   findNamedFilesInFolder,
   findNamedFilesInFolderById,
-} from "./driveApi";
+  FOLDER_MIME_TYPE,
+} from "./api";
 import type {
   BdlPlatformReleaseManifest,
   DbwPlatformReleaseManifest,
@@ -26,7 +27,7 @@ import type {
   WdiPlatformReleaseManifest,
 } from "./types";
 
-export const DRIVE_DOWNLOAD_LIMIT_BYTES = 512 * 1024 * 1024;
+export const DOWNLOAD_LIMIT_BYTES = 512 * 1024 * 1024;
 export const POINTER_MAX_BYTES = 64 * 1024;
 export const MANIFEST_MAX_BYTES = 4 * 1024 * 1024;
 export const BUSINESS_CATALOGUE_MAX_BYTES = 4 * 1024 * 1024;
@@ -144,18 +145,18 @@ const V2_REQUIRED_ARTIFACTS = new Set([
   "business-catalog.json",
 ]);
 
-export class DriveDownloadBudget {
+export class DownloadBudget {
   private planned = 0;
   private consumed = 0;
 
   reserve(bytes: number, label: string) {
     if (!Number.isSafeInteger(bytes) || bytes < 0) {
-      throw new Error(`Drive did not provide a valid size for ${label}.`);
+      throw new Error(`The R2 index did not provide a valid size for ${label}.`);
     }
-    if (bytes > DRIVE_DOWNLOAD_LIMIT_BYTES) {
+    if (bytes > DOWNLOAD_LIMIT_BYTES) {
       throw new Error(`${label} exceeds the per-file download limit of 512 MiB.`);
     }
-    if (this.planned + bytes > DRIVE_DOWNLOAD_LIMIT_BYTES) {
+    if (this.planned + bytes > DOWNLOAD_LIMIT_BYTES) {
       throw new Error(
         "The selected release exceeds the 512 MiB browser download limit for this session."
       );
@@ -164,12 +165,12 @@ export class DriveDownloadBudget {
   }
 
   consume(bytes: number, label: string) {
-    if (!Number.isSafeInteger(bytes) || bytes < 0 || bytes > DRIVE_DOWNLOAD_LIMIT_BYTES) {
+    if (!Number.isSafeInteger(bytes) || bytes < 0 || bytes > DOWNLOAD_LIMIT_BYTES) {
       throw new Error(`${label} exceeded the per-file download limit of 512 MiB.`);
     }
-    if (this.consumed + bytes > DRIVE_DOWNLOAD_LIMIT_BYTES) {
+    if (this.consumed + bytes > DOWNLOAD_LIMIT_BYTES) {
       throw new Error(
-        "Drive downloads exceeded the 512 MiB browser download limit for this session."
+        "R2 downloads exceeded the 512 MiB browser download limit for this session."
       );
     }
     this.consumed += bytes;
@@ -180,7 +181,7 @@ export class DriveDownloadBudget {
   }
 }
 
-export const createDriveDownloadBudget = () => new DriveDownloadBudget();
+export const createDownloadBudget = () => new DownloadBudget();
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -207,7 +208,7 @@ const asNonNegativeInteger = (value: unknown, field: string) => {
   return value as number;
 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const DRIVE_ID_RE = /^[A-Za-z0-9_-]{1,255}$/;
+const OBJECT_ID_RE = /^[A-Za-z0-9_-]{1,255}$/;
 const CODE_SHA_RE = /^[0-9a-f]{40}$/;
 const TABLE_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]{0,199}$/;
 const asCanonicalUuid = (value: unknown, field: string) => {
@@ -215,9 +216,9 @@ const asCanonicalUuid = (value: unknown, field: string) => {
   if (!UUID_RE.test(id)) throw new Error(`Release metadata has invalid ${field}.`);
   return id;
 };
-const asDriveId = (value: unknown, field: string) => {
+const asObjectId = (value: unknown, field: string) => {
   const id = asNonEmptyString(value, field);
-  if (!DRIVE_ID_RE.test(id)) throw new Error(`Release metadata has invalid ${field}.`);
+  if (!OBJECT_ID_RE.test(id)) throw new Error(`Release metadata has invalid ${field}.`);
   return id;
 };
 const asIsoDate = (value: unknown, field: string) => {
@@ -265,12 +266,12 @@ function parsePointer(bytes: Uint8Array): ReleasePointer {
   const pointer: ReleasePointer = {
     format_version: 1,
     release_id: asCanonicalUuid(raw.release_id, "release_id"),
-    manifest_file_id: asDriveId(raw.manifest_file_id, "manifest_file_id"),
+    manifest_file_id: asObjectId(raw.manifest_file_id, "manifest_file_id"),
     manifest_sha256: asSha256(raw.manifest_sha256, "manifest_sha256"),
     updated_at_utc: asNonEmptyString(raw.updated_at_utc, "updated_at_utc"),
   };
   if (raw.previous_manifest_file_id !== undefined) {
-    pointer.previous_manifest_file_id = asDriveId(
+    pointer.previous_manifest_file_id = asObjectId(
       raw.previous_manifest_file_id,
       "previous_manifest_file_id"
     );
@@ -281,7 +282,7 @@ function parsePointer(bytes: Uint8Array): ReleasePointer {
 function parseFile(raw: unknown, datasetId: string, layer: ReleaseLayer): LakehouseFile {
   if (!isRecord(raw)) throw new Error(`Release manifest has invalid file for '${datasetId}'.`);
   return {
-    id: asDriveId(raw.id, "file.id"),
+    id: asObjectId(raw.id, "file.id"),
     name: asNonEmptyString(raw.name, "file.name"),
     size: asPositiveInteger(raw.size, "file.size"),
     sha256: asSha256(raw.sha256, "file.sha256"),
@@ -417,7 +418,7 @@ function parseDataset(
 function parseArtifact(raw: unknown): ReleaseArtifact {
   if (!isRecord(raw)) throw new Error("The selected release manifest has an invalid artifact.");
   return {
-    id: asDriveId(raw.id, "artifact.id"),
+    id: asObjectId(raw.id, "artifact.id"),
     name: asNonEmptyString(raw.name, "artifact.name"),
     size: asPositiveInteger(raw.size, "artifact.size"),
     sha256: asSha256(raw.sha256, "artifact.sha256"),
@@ -713,16 +714,16 @@ async function downloadExact(
   maxBytes: number,
   label: string,
   token: string,
-  budget: DriveDownloadBudget
+  budget: DownloadBudget
 ) {
   if (declaredSize === undefined || declaredSize > maxBytes) {
     throw new Error(`${label} is missing a safe declared size.`);
   }
   budget.reserve(declaredSize, label);
-  const bytes = await fetchDriveFileBuffer(id, token, declaredSize);
+  const bytes = await fetchObjectBuffer(id, token, declaredSize);
   budget.consume(bytes.byteLength, label);
   if (bytes.byteLength !== declaredSize) {
-    throw new Error(`${label} size does not match its Drive metadata.`);
+    throw new Error(`${label} size does not match its R2 index metadata.`);
   }
   return bytes;
 }
@@ -731,7 +732,7 @@ async function resolveSingleRelease(
   pointerFile: { id: string; name: string; size?: number },
   pointerLabel: string,
   token: string,
-  budget: DriveDownloadBudget
+  budget: DownloadBudget
 ): Promise<SingleReleaseResolution> {
   const pointerBytes = await downloadExact(
     pointerFile.id,
@@ -785,14 +786,14 @@ async function resolveSingleRelease(
 
 export async function resolveReleaseCatalog(
   token: string,
-  budget: DriveDownloadBudget
+  budget: DownloadBudget
 ): Promise<ReleaseCatalogResolution> {
-  const roots = await findFoldersByName(DRIVE_ROOT, "root", token);
+  const roots = await findFoldersByName(LAKEHOUSE_ROOT, "root", token);
   if (roots.length === 0) {
-    throw new Error(`Master Lakehouse folder '${DRIVE_ROOT}' not found in the R2 portal index.`);
+    throw new Error(`Master Lakehouse folder '${LAKEHOUSE_ROOT}' not found in the R2 portal index.`);
   }
   if (roots.length !== 1) {
-    throw new Error(`Master Lakehouse folder '${DRIVE_ROOT}' is ambiguous in the R2 portal index.`);
+    throw new Error(`Master Lakehouse folder '${LAKEHOUSE_ROOT}' is ambiguous in the R2 portal index.`);
   }
   const rootId = roots[0].id;
   // 1. Canonical layout under releases/
@@ -821,7 +822,7 @@ export async function resolveReleaseCatalog(
     if (
       pointerFiles.length > 1 ||
       (pointerFiles.length === 1 &&
-        pointerFiles[0].mimeType === "application/vnd.google-apps.folder")
+        pointerFiles[0].mimeType === FOLDER_MIME_TYPE)
     ) {
       throw new Error(
         "releases/" +
@@ -836,7 +837,7 @@ export async function resolveReleaseCatalog(
     if (
       pointerFiles.length > 1 ||
       (pointerFiles.length === 1 &&
-        pointerFiles[0].mimeType === "application/vnd.google-apps.folder")
+        pointerFiles[0].mimeType === FOLDER_MIME_TYPE)
     ) {
       throw new Error(
         "current-release.json is ambiguous or not a file; refusing to select a release."
@@ -861,7 +862,7 @@ export async function resolveReleaseCatalog(
     if (
       pointerFiles.length > 1 ||
       (pointerFiles.length === 1 &&
-        pointerFiles[0].mimeType === "application/vnd.google-apps.folder")
+        pointerFiles[0].mimeType === FOLDER_MIME_TYPE)
     ) {
       throw new Error(
         folderName +
@@ -956,7 +957,7 @@ export async function resolveReleaseCatalog(
         "Established source '" +
           sourceName +
           "' has no discoverable current-release.json; " +
-          "the Drive layout may be moving or incomplete."
+          "the R2 layout may be moving or incomplete."
       );
     }
   }

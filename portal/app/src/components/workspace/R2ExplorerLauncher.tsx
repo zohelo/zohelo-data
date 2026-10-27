@@ -3,18 +3,18 @@ import { Folder, Maximize2 } from "lucide-react";
 import { useDuckStore } from "@/store";
 import { Button } from "@/components/ui/button";
 import {
-  DRIVE_ROOT,
+  FOLDER_MIME_TYPE,
+  LAKEHOUSE_ROOT,
   findFolderIdByName,
   listNativeChildrenPage,
-  type DriveFileMetadata,
-} from "@/services/googleDrive";
+  type LakehouseEntry,
+} from "@/services/lakehouse";
 import {
   decodeR2ExplorerTabState,
   encodeR2ExplorerTabState,
   type R2ExplorerCrumb,
 } from "@/lib/r2ExplorerTabs";
 
-const FOLDER_MIME = "application/vnd.google-apps.folder";
 const visibleLayers = new Set(["01_landing", "02_bronze", "03_silver", "04_gold", "05_archive"]);
 const labels: Record<string, string> = {
   "01_landing": "Landing",
@@ -25,12 +25,12 @@ const labels: Record<string, string> = {
 };
 
 export default function R2ExplorerLauncher() {
-  const googleAuth = useDuckStore((state) => state.googleAuth);
-  const signInWithGoogle = useDuckStore((state) => state.signInWithGoogle);
+  const portalAuth = useDuckStore((state) => state.portalAuth);
+  const signIn = useDuckStore((state) => state.signIn);
   const createTab = useDuckStore((state) => state.createTab);
   const tabs = useDuckStore((state) => state.tabs);
   const setActiveTab = useDuckStore((state) => state.setActiveTab);
-  const [folders, setFolders] = useState<DriveFileMetadata[]>([]);
+  const [folders, setFolders] = useState<LakehouseEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const openExplorer = (crumbs: R2ExplorerCrumb[], title: string) => {
@@ -48,18 +48,18 @@ export default function R2ExplorerLauncher() {
   };
 
   useEffect(() => {
-    if (!googleAuth.token) return;
+    if (!portalAuth.token) return;
     let cancelled = false;
     (async () => {
       try {
         setError(null);
-        const rootId = await findFolderIdByName(DRIVE_ROOT, "root", googleAuth.token!);
+        const rootId = await findFolderIdByName(LAKEHOUSE_ROOT, "root", portalAuth.token!);
         if (!rootId) throw new Error("R2 lakehouse root was not found.");
-        const page = await listNativeChildrenPage(rootId, googleAuth.token!);
+        const page = await listNativeChildrenPage(rootId, portalAuth.token!);
         if (!cancelled) {
           setFolders(
             page.files.filter(
-              (entry) => entry.mimeType === FOLDER_MIME && visibleLayers.has(entry.name)
+              (entry) => entry.mimeType === FOLDER_MIME_TYPE && visibleLayers.has(entry.name)
             )
           );
         }
@@ -70,7 +70,7 @@ export default function R2ExplorerLauncher() {
     return () => {
       cancelled = true;
     };
-  }, [googleAuth.token]);
+  }, [portalAuth.token]);
 
   return (
     <section className="rounded-lg border bg-card p-5" aria-label="R2 lakehouse">
@@ -85,16 +85,16 @@ export default function R2ExplorerLauncher() {
           variant="outline"
           size="sm"
           onClick={() => openExplorer([], "R2 Explorer")}
-          disabled={!googleAuth.isAuthenticated}
+          disabled={!portalAuth.isAuthenticated}
         >
           <Maximize2 className="mr-2 h-4 w-4" />
           Open explorer
         </Button>
       </div>
 
-      {!googleAuth.isAuthenticated ? (
-        <Button className="mt-4" onClick={() => signInWithGoogle(true)}>
-          Sign in to browse
+      {!portalAuth.isAuthenticated ? (
+        <Button className="mt-4" onClick={() => signIn()}>
+          Sign in again to browse
         </Button>
       ) : (
         <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
