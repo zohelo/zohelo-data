@@ -5,7 +5,9 @@ Per registered source (ingestion/sources/*.yaml): Landing and Archive files, byt
 latest write; Bronze / Silver / Gold tables with rows, data files, bytes, snapshot count
 and oldest snapshot age (from Iceberg metadata, no data scan). Also storage per bucket
 and top folder, Landing/Archive folders and Iceberg tables that no source claims, and
-registered tables that do not exist. Fails fast when credentials or the catalog are broken.
+registered tables that do not exist. Every catalog namespace is read (bronze / silver / gold,
+`poc`, scratch); a namespace that no declaration names and any `zz_dev_` scratch namespace or
+folder left behind are warnings (report only). Fails fast when credentials or the catalog are broken.
 
 Output: annotations (totals, tables with more than one snapshot, sources), the job
 summary, and the full JSON in $OPS_OUTPUT_DIR. Args: --source <id> ... to limit the per-source part.
@@ -14,7 +16,8 @@ summary, and the full JSON in $OPS_OUTPUT_DIR. Args: --source <id> ... to limit 
 from __future__ import annotations
 
 import argparse
-from collections import defaultdict
+from collections import Counter, defaultdict
+from collections.abc import Iterable
 import fnmatch
 import json
 import os
@@ -28,9 +31,11 @@ import yaml
 from ingestion.common.bronze_files import retry
 from ingestion.common.r2 import catalog, req, s3, sources
 from ingestion.common.report import annotate, step_summary
+from ops.orphan_files import namespaces
 
 ROOT = Path(__file__).resolve().parents[1]
 LAYERS = ("bronze", "silver", "gold")
+SCRATCH = "zz_dev_"  # Dev branch runs write only here and remove it (AGENTS.md); anything left is reported
 # R2 Standard storage (docs/operating.md): first 10 GB-month free per account, then
 # $0.015 per GB-month. Operations are not estimated here. A warning is raised above
 # COST_WARNING_USD so the owner hears about it before an invoice does.
@@ -63,11 +68,13 @@ def manifest_totals(table, snapshot) -> tuple[int, int]:
 
 
 def tables(cat) -> dict[str, dict[str, Any]]:
+    """Every table of every catalog namespace ("<namespace>.<table>"), from metadata only."""
     out = {}
     now_ms = time.time() * 1000
-    for layer in LAYERS:
-        for identifier in cat.list_tables(layer):
-            name = f"{layer}.{identifier[-1]}"
+    for namespace in namespaces(cat):
+        listed = retry(lambda namespace=namespace: cat.list_tables(namespace), f"list {'.'.join(namespace)}")
+        for identifier in listed:
+            name = ".".join(identifier)
             table = retry(lambda identifier=identifier: cat.load_table(identifier), f"load {name}")
             snapshot = table.current_snapshot()
             oldest_ms = min((s.timestamp_ms for s in table.metadata.snapshots), default=now_ms)
@@ -85,6 +92,37 @@ def tables(cat) -> dict[str, dict[str, Any]]:
                 "oldest_snapshot_hours": max(0.0, round((now_ms - oldest_ms) / 3.6e6, 1)),
             }
     return out
+
+
+def namespace_check(spaces: Iterable[str], found: Iterable[str], declared: Iterable[str], paths: Iterable[str]) -> dict:
+    """Tables per namespace, namespaces no declared table lives in, and zz_dev_ scratch
+    namespaces and storage folders left behind (report only; nothing is removed)."""
+    per_namespace = Counter(name.rsplit(".", 1)[0] for name in found)
+    for space in spaces:
+        per_namespace.setdefault(space, 0)
+    known = set(LAYERS) | {name.rsplit(".", 1)[0] for name in declared}
+    return {
+        "tables_per_namespace": dict(sorted(per_namespace.items())),
+        "undeclared_namespaces": sorted(n for n in per_namespace if n not in known),
+        "scratch_namespaces": sorted(n for n in per_namespace if any(p.startswith(SCRATCH) for p in n.split("."))),
+        "scratch_folders": sorted(f for f in paths if any(p.startswith(SCRATCH) for p in f.split("/"))),
+    }
+
+
+def warn_namespaces(check: dict, tool: str) -> None:
+    """A notice listing every namespace with its table count; warnings for undeclared
+    namespaces and scratch left behind."""
+    annotate("notice", f"{tool}: namespaces", check["tables_per_namespace"])
+    if check["undeclared_namespaces"]:
+        names = check["undeclared_namespaces"]
+        counts = {n: check["tables_per_namespace"][n] for n in names[:30]}
+        annotate("warning", f"{tool}: undeclared namespaces", {"namespaces": counts, "count": len(names)})
+    if check["scratch_namespaces"] or check["scratch_folders"]:
+        annotate(
+            "warning",
+            f"{tool}: {SCRATCH} scratch left behind",
+            {"namespaces": check["scratch_namespaces"][:30], "folders": check["scratch_folders"][:30]},
+        )
 
 
 def gb(value: int) -> float:
@@ -106,6 +144,7 @@ def main(argv=None) -> int:
         lakehouse_bucket: folders(client, lakehouse_bucket, "", 1),
     }
     found = tables(cat)
+    spaces = [".".join(ns) for ns in namespaces(cat)]
 
     claimed_tables, claimed_landing, report = set(), set(), {}
     for source, config in registry.items():
@@ -140,6 +179,9 @@ def main(argv=None) -> int:
     legacy_found = sorted(n for n in found if n not in claimed_tables and any(fnmatch.fnmatch(n, g) for g in legacy))
     claimed_tables.update(legacy_found)
     unclaimed_tables = sorted(set(found) - claimed_tables)
+    paths = [f"{bucket}/{name}" for bucket, tops in buckets.items() for name in tops]
+    paths += [*landing, *archive]
+    namespace_report = namespace_check(spaces, found, claimed_tables, paths)
     unclaimed_landing = sorted(set(landing) - claimed_landing)
     totals = {
         "buckets_gb": {bucket: gb(sum(f["bytes"] for f in tops.values())) for bucket, tops in buckets.items()},
@@ -149,6 +191,7 @@ def main(argv=None) -> int:
             for name, info in sorted(tops.items())
         },
         "iceberg_tables": len(found),
+        "tables_per_namespace": namespace_report["tables_per_namespace"],
         "iceberg_rows": sum(t["rows"] for t in found.values()),
         "iceberg_snapshots": sum(t["snapshots"] for t in found.values()),
         "unclaimed_tables": unclaimed_tables[:30],
@@ -169,6 +212,7 @@ def main(argv=None) -> int:
         "usd_per_month": round(max(0.0, stored_gb - FREE_GB) * USD_PER_GB_MONTH, 2),
     }
     annotate("notice", "inventory totals", totals)
+    warn_namespaces(namespace_report, "inventory")
 
     # Tables holding more than one snapshot, most snapshots first (list last, fitted to one annotation).
     extra = sorted(
@@ -237,6 +281,7 @@ def main(argv=None) -> int:
         json.dumps(
             {
                 "totals": totals,
+                "namespaces": namespace_report,
                 "sources": report,
                 "tables": found,
                 "buckets": buckets,

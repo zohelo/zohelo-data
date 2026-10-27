@@ -11,7 +11,9 @@ A cell is ✅ only when every declared table exists. Open GitHub issues labelled
 Every catalog table is classified: current (declared and written by today's code), copy
 (pass-through copy or old-code table of a source that is not on today's code yet), legacy
 (written by retired code, `legacy_tables` in the declaration) or leftover (dbt temp/backup,
-or claimed by nobody). Nothing is changed in R2 or the catalog.
+or claimed by nobody) in bronze / silver / gold, and every table of a `zz_dev_` scratch
+namespace; tables of other namespaces (`poc`) are current when declared, else other.
+Namespaces no declaration names and `zz_dev_` scratch left behind are warnings. Nothing is changed in R2 or the catalog.
 
 Args: --issue <number> (the tracker issue whose body is replaced; without it the page is only
 printed and kept in $OPS_OUTPUT_DIR). Needs the R2 credentials of the Ops workflow and, for the
@@ -37,7 +39,8 @@ import yaml
 from ingestion.common.bronze_files import retry
 from ingestion.common.r2 import catalog, get_with_backoff, req, s3, sources
 from ingestion.common.report import annotate, step_summary
-from ops.platform_inventory import folders
+from ops.orphan_files import namespaces
+from ops.platform_inventory import SCRATCH, folders, namespace_check, warn_namespaces
 
 ROOT = Path(__file__).resolve().parents[1]
 REST = "https://api.github.com"
@@ -67,15 +70,16 @@ def completeness_cell(report: dict[str, Any], layer: str, against: str) -> str:
 
 
 def table_facts(cat) -> dict[str, dict[str, Any]]:
-    """Rows, snapshot count and last write of every Iceberg table (metadata only, no scan)."""
+    """Rows, snapshot count and last write of every Iceberg table of every namespace (metadata only)."""
     out = {}
-    for layer in LAYERS:
-        for identifier in retry(lambda layer=layer: cat.list_tables(layer), f"list {layer}"):
+    for namespace in namespaces(cat):
+        label = ".".join(namespace)
+        for identifier in retry(lambda namespace=namespace: cat.list_tables(namespace), f"list {label}"):
             table = retry(lambda identifier=identifier: cat.load_table(identifier), f"load {identifier}")
             snapshot = table.current_snapshot()
             summary = snapshot.summary if snapshot is not None and snapshot.summary is not None else {}
             written = datetime.fromtimestamp(snapshot.timestamp_ms / 1000, UTC) if snapshot else None
-            out[f"{layer}.{identifier[-1]}"] = {
+            out[".".join(identifier)] = {
                 "rows": int(summary.get("total-records") or 0),
                 "snapshots": len(table.metadata.snapshots),
                 "written": written,
@@ -178,12 +182,18 @@ def issue_marks(found: list[dict[str, Any]]) -> str:
 
 
 def classify(name: str, registry: dict[str, dict[str, Any]], shared_gold: list[str]) -> tuple[str, str | None]:
-    """(class, source) of a catalog table: current, copy, legacy or leftover."""
+    """(class, source) of a catalog table: current, copy, legacy, leftover (also any table of a
+    `zz_dev_` scratch namespace), or other (a table outside bronze / silver / gold that nothing
+    declares; reported, never retired)."""
+    layer = name.rsplit(".", 1)[0]
+    if any(part.startswith(SCRATCH) for part in layer.split(".")):
+        return "leftover", None
+    if layer not in LAYERS:
+        return ("current", "platform") if name in shared_gold else ("other", None)
     if TEMP.search(name):
         return "leftover", None
     if name in shared_gold:
         return "current", "platform"
-    layer = name.split(".")[0]
     for source, config in registry.items():  # declared tables first: legacy globs may be broad
         if name in (config.get(layer) or []):
             built = layer == "bronze" and "bronze.load" in (config.get("activities") or [])
@@ -213,7 +223,12 @@ def main(argv=None) -> int:
     landing_bucket, lakehouse_bucket = req("STORAGE_LANDING_BUCKET_NAME"), req("STORAGE_LAKEHOUSE_BUCKET_NAME")
     landing = folders(client, landing_bucket, "01_landing/", 2)
     archive = folders(client, landing_bucket, "05_archive/", 2)
-    tables = table_facts(catalog())
+    cat = catalog()
+    tables = table_facts(cat)
+    declared = shared_gold + [n for c in registry.values() for layer in LAYERS for n in c.get(layer) or []]
+    paths = [*landing, *archive]
+    namespace_report = namespace_check([".".join(ns) for ns in namespaces(cat)], tables, declared, paths)
+    warn_namespaces(namespace_report, "tracker")
     try:
         catalog_doc = json.loads(get_with_backoff(client, lakehouse_bucket, CATALOG_KEY))
         catalog_written = client.head_object(Bucket=lakehouse_bucket, Key=CATALOG_KEY)["LastModified"]
@@ -357,6 +372,12 @@ def main(argv=None) -> int:
     ]
     for source, cells in rows:
         lines.append(f"| **{source}** | " + " | ".join(cells[s] for s in STAGES) + " |")
+    ns = namespace_report
+    namespaces_line = "- **Namespaces:** " + ", ".join(f"{n} {c}" for n, c in ns["tables_per_namespace"].items())
+    if ns["undeclared_namespaces"]:
+        namespaces_line += " — ⚠️ undeclared: " + ", ".join(ns["undeclared_namespaces"])
+    if ns["scratch_namespaces"] or ns["scratch_folders"]:
+        namespaces_line += " — ⚠️ scratch left: " + ", ".join(ns["scratch_namespaces"] + ns["scratch_folders"])
     lines += [
         "",
         f"Plus **{not_onboarded} researched sources** in `ingestion/register.yaml` that are not onboarded yet.",
@@ -368,7 +389,8 @@ def main(argv=None) -> int:
         f"- **Data catalog file** `{CATALOG_KEY}`: written {day(catalog_written)}.",
         f"- **Catalog tables:** {len(tables)} — current {len(classes['current'])}, "
         f"old-code copies {len(classes['copy'])}, legacy {len(classes['legacy'])}, "
-        f"leftovers {len(classes['leftover'])}.",
+        f"leftovers {len(classes['leftover'])}, other namespaces {len(classes['other'])}.",
+        namespaces_line,
         f"- **Table history:** {extra_snapshots} snapshots beyond the current one (policy #822: 0).",
         "",
         "## Tables to retire (legacy and leftovers)",
@@ -395,6 +417,7 @@ def main(argv=None) -> int:
         {
             "sources": len(rows),
             "tables": {k: len(v) for k, v in classes.items()},
+            "namespaces": namespace_report["tables_per_namespace"],
             "extra_snapshots": extra_snapshots,
             "build": build["conclusion"] if build else None,
             "issue": args.issue,
