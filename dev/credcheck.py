@@ -81,7 +81,19 @@ def bdl_web() -> str:
     return "signed in"
 
 
+def dbt_debug() -> str:
+    import subprocess
+
+    r = subprocess.run(
+        ["dbt", "debug", "--profiles-dir", ".", "--target", "prod"], cwd="warehouse", capture_output=True, text=True
+    )
+    if r.returncode != 0:
+        raise RuntimeError(r.stdout[-400:])
+    return "connection ok"
+
+
 def main() -> None:
+    check("dbt profile with the new names", dbt_debug)
     check("storage write: landing bucket", lambda: storage(req("STORAGE_LANDING_BUCKET_NAME")))
     check("storage write: lakehouse bucket", lambda: storage(req("STORAGE_LAKEHOUSE_BUCKET_NAME")))
     check("catalog write token: Iceberg table", iceberg)
