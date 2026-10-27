@@ -57,6 +57,7 @@ def notice(title: str, message: str) -> None:
 
 
 def pages_project(emails: list[str]) -> None:
+    team_domain = cf("GET", f"{A}/access/organizations")["auth_domain"]
     runtime = {
         "compatibility_date": "2026-09-30",
         "r2_buckets": {
@@ -66,6 +67,8 @@ def pages_project(emails: list[str]) -> None:
         "env_vars": {
             "PORTAL_SIGNIN_ALLOWED_EMAILS": {"type": "secret_text", "value": ",".join(emails)},
             "DOWNLOAD_SIGNING_KEY": {"type": "secret_text", "value": secrets.token_hex(32)},
+            # The API verifies Access tokens against this team's public keys.
+            "ACCESS_TEAM_DOMAIN": {"type": "plain_text", "value": team_domain},
         },
     }
     if cf("GET", f"{A}/pages/projects/{PROJECT}", allow_404=True) is None:

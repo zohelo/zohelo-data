@@ -40,7 +40,13 @@ export const requestGoogleAccessToken = async (_options?: { promptConsent?: bool
   if (signedOut) {
     signedOut = false;
     const probe = await fetch("/api/health", { redirect: "manual" }).catch(() => null);
+    if (probe && (probe.status === 401 || probe.status === 403)) {
+      const body = (await probe.json().catch(() => null)) as { error?: { message?: string } } | null;
+      signedOut = true;
+      throw new Error(body?.error?.message ?? `Sign-in refused (HTTP ${probe.status}).`);
+    }
     if (!probe || !probe.ok) {
+      // The Access session has expired (the API answers with a redirect to sign in): reload.
       window.location.reload();
       throw new Error("Renewing the sign-in…");
     }
