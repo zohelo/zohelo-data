@@ -106,19 +106,29 @@ jobs:
           repositories: zohelo-data
           permission-metadata: read
       # Token of the zohelo-automation GitHub App for the Projects board (ops/project.py).
+      # project setup creates organisation issue types and project fields. The action has no input for
+      # the organisation "Issue types" permission and any permission-* input narrows the token, so this
+      # step asks for none: the token carries the app installation's own permissions, for setup only.
+      - name: Setup token
+        id: setup
+        if: needs.resolve.outputs.script == 'project' && startsWith(needs.resolve.outputs.args, 'setup')
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        with:
+          client-id: ${{ vars.ORG_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.ORG_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
       - name: Project token
         id: project
-        if: needs.resolve.outputs.script == 'project' || needs.resolve.outputs.script == 'tracker' || needs.resolve.outputs.script == 'backlog_sync'
+        if: (needs.resolve.outputs.script == 'project' && !startsWith(needs.resolve.outputs.args, 'setup')) || needs.resolve.outputs.script == 'tracker' || needs.resolve.outputs.script == 'backlog_sync'
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
         with:
           client-id: ${{ vars.ORG_BOT_CLIENT_ID }}  # the app's Client ID (organisation variable)
           private-key: ${{ secrets.ORG_BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           # this repository only; backlog_sync plans and syncs the issues of all three repositories
-          # project setup: no repositories filter (an owner-level token, as organisation issue types need)
-          repositories: ${{ (needs.resolve.outputs.script == 'project' && startsWith(needs.resolve.outputs.args, 'setup') && ' ') || (needs.resolve.outputs.script == 'backlog_sync' && 'zohelo-data,zohelo-bi,zohelo') || github.event.repository.name }}
+          repositories: ${{ needs.resolve.outputs.script == 'backlog_sync' && 'zohelo-data,zohelo-bi,zohelo' || github.event.repository.name }}
           # write only for the modes that change the board
-          permission-organization-projects: ${{ (startsWith(needs.resolve.outputs.args, 'status') || (needs.resolve.outputs.script == 'project' && startsWith(needs.resolve.outputs.args, 'setup')) || (needs.resolve.outputs.script == 'backlog_sync' && startsWith(needs.resolve.outputs.args, 'apply'))) && 'write' || 'read' }}
+          permission-organization-projects: ${{ (startsWith(needs.resolve.outputs.args, 'status') || (needs.resolve.outputs.script == 'backlog_sync' && startsWith(needs.resolve.outputs.args, 'apply'))) && 'write' || 'read' }}
           # project: reads the Work log comment; tracker: replaces the tracker issue's body;
           # backlog_sync: reads the issues for plan, writes them for apply
           permission-issues: ${{ (needs.resolve.outputs.script == 'tracker' || (needs.resolve.outputs.script == 'backlog_sync' && startsWith(needs.resolve.outputs.args, 'apply'))) && 'write' || 'read' }}
@@ -143,7 +153,7 @@ jobs:
           persist-credentials: false
       - name: "ops/${{ needs.resolve.outputs.script }}.py"
         env:
-          GH_PROJECT_TOKEN: ${{ steps.project.outputs.token }}
+          GH_PROJECT_TOKEN: ${{ steps.setup.outputs.token || steps.project.outputs.token }}
           # check_credentials: the app installation token it probes (blank for other scripts).
           APP_TOKEN: ${{ steps.app.outputs.token }}
           # The Workers deploy token, for scheduler_trigger and check_credentials only (blank for other scripts).
