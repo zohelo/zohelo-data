@@ -68,7 +68,7 @@ jobs:
         working-directory: portal/app
         run: |
           set -euo pipefail
-          npx --yes wrangler@4.43.0 pages deploy dist --project-name zohelo-data --branch "$BRANCH" --commit-dirty=true | tee /tmp/deploy.log
+          npx --yes wrangler@4.146.0 pages deploy dist --project-name zohelo-data --branch "$BRANCH" --commit-dirty=true | tee /tmp/deploy.log
           url=$(grep -Eo 'https://[a-z0-9.-]+\.pages\.dev' /tmp/deploy.log | tail -1)
           echo "::notice title=deployed::$url"
       - name: Sign-in is enforced
