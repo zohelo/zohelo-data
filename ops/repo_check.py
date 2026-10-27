@@ -77,8 +77,12 @@ def tracked() -> list[Path]:
     return [Path(line) for line in out.stdout.splitlines()]
 
 
+TEXT_SUFFIXES = {".md", ".py", ".yml", ".yaml", ".sql", ".toml", ".json", ".js", ".ts", ".tsx", ".txt", ".in"}
+CONFLICT_MARKER = re.compile(r"^(<{7} |>{7} |={7}$)", re.MULTILINE)
+
+
 def repository(files: list[Path]) -> list[str]:
-    """Root allowlist, no dev/, the four workflows, file size, type and emptiness."""
+    """Root allowlist, no dev/, the workflows, file size, type, emptiness and merge-conflict markers."""
     problems = [f"root: {name} is not allowed" for name in sorted({f.parts[0] for f in files} - ROOT_ALLOWED)]
     if any(f.parts[0] == "dev" for f in files):
         problems.append("dev/ must be deleted before merge")
@@ -97,6 +101,10 @@ def repository(files: list[Path]) -> list[str]:
             problems.append(f"{f}: {f.suffix} files are not committed")
         if f.name.startswith(".env") and f.name != ".env.example":
             problems.append(f"{f}: environment files are not committed (only .env.example)")
+        if f.suffix.lower() in TEXT_SUFFIXES:
+            text = (ROOT / f).read_text(encoding="utf-8", errors="replace")
+            if CONFLICT_MARKER.search(text):
+                problems.append(f"{f}: merge-conflict markers")
     return problems
 
 
