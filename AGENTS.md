@@ -46,7 +46,7 @@ instead of adding a new one.
 
 ## Workflows and activities
 
-Exactly five workflows (owner direction, 12 October 2026):
+Exactly five workflows (owner direction, 12 October 2026; branch cleanup added 27 October):
 
 1. **Pipeline** (`pipeline.yml`) — the fixed dataflow, one job per activity
    (docs/operating.md). Runs only from `main`. Change it only when the dataflow
@@ -60,7 +60,7 @@ Exactly five workflows (owner direction, 12 October 2026):
    script removes, unless the owner approved a one-off production change.
 4. **Deploy portal** (`deploy-portal.yml`) — portal build and deploy.
 5. **Branch cleanup** (`branch-cleanup.yml`) — deletes merged branches on merge and in a
-   Monday sweep (owner decision 27 Oct).
+   Monday sweep (owner decision 27 Oct); the same file runs in zohelo and zohelo-bi.
 
 Shared Pipeline job steps are in `.github/actions/activity/`.
 
@@ -131,7 +131,7 @@ in `ingestion/sources/<source>.yaml`. Landing layout and rules: docs/landing.md.
 ## Autonomy
 
 Work the [playbook](docs/playbook.md) without asking: research sources, write code,
-run Dev branch runs, open and merge pull requests, run and rerun Pipeline and Ops
+run Dev branch runs, open pull requests (the owner merges), run and rerun Pipeline and Ops
 activities, add sources, activities, schedules and retention policies, change the
 model and the docs, and fix defects on the way. Follow up with scheduled sessions
 instead of waiting in a conversation.
@@ -160,11 +160,9 @@ owner decision is needed; keep reports short.
   (`dev.yml`: compile, lint, configuration consistency, repository rules; no
   credentials, no committed tests).
 - The owner merges pull requests; squash merges only.
-- **The owner merges** changes to AGENTS.md and pull requests that touch the "Ask the
-  owner first" items. The PR description says which group it belongs to.
 - Merged branches are deleted by `branch-cleanup.yml`; leftover `test/*` and `dev/*` branches
   are deleted with Ops `branch_cleanup`. Dev trials reuse one `test/<topic>` branch.
-- No new workflow files; edits to the four workflows are allowed.
+- No new workflow files without an owner decision; edits to the five workflows are allowed.
 - The `check` job is the only CI; do not restore removed tests, test workflows or
   historical task queues.
 
