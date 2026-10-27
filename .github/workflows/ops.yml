@@ -62,7 +62,10 @@ jobs:
         if: inputs.script == 'project' || inputs.script == 'tracker'
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
         with:
-          app-id: ${{ vars.ORG_BOT_APP_ID }}
+          # The app's Client ID (organisation variable ORG_BOT_CLIENT_ID); the numeric App ID is the
+          # deprecated fallback while that variable does not exist.
+          client-id: ${{ vars.ORG_BOT_CLIENT_ID }}
+          app-id: ${{ vars.ORG_BOT_CLIENT_ID == '' && vars.ORG_BOT_APP_ID || '' }}
           private-key: ${{ secrets.ORG_BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}  # this repository only
