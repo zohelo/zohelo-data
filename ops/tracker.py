@@ -197,7 +197,13 @@ def classify(name: str, registry: dict[str, dict[str, Any]], shared_gold: list[s
     for source, config in registry.items():  # declared tables first: legacy globs may be broad
         if name in (config.get(layer) or []):
             built = layer == "bronze" and "bronze.load" in (config.get("activities") or [])
-            modelled = layer == "silver" and (ROOT / "warehouse" / "models" / "silver" / source).is_dir()
+            modelled = layer == "silver" and (
+                (ROOT / "warehouse" / "models" / "silver" / source).is_dir()
+                or (
+                    "bronze.load" in (config.get("activities") or [])
+                    and (ROOT / "warehouse" / "entity" / f"{name.split('.', 1)[1]}.sql").is_file()
+                )
+            )  # Silver written during bronze.load by warehouse/entity/<table>.sql (design #875) is current
             return ("current" if built or modelled else "copy"), source
     for source, config in registry.items():
         if any(fnmatch.fnmatch(name, g) for g in config.get("legacy_tables") or []):
@@ -305,6 +311,12 @@ def main(argv=None) -> int:
         silver = list(config.get("silver") or [])
         if source in silver_models and silver:
             cells["silver"] = measured(silver, f"modelled ({len(silver_models[source])} dbt)")
+        elif (
+            silver
+            and "bronze.load" in acts
+            and all((ROOT / "warehouse" / "entity" / f"{n.split('.', 1)[1]}.sql").is_file() for n in silver)
+        ):
+            cells["silver"] = measured(silver, "entity model (written by bronze.load)")
         elif silver:
             cells["silver"] = measured(silver, "🟨 old-code copy, not modelled")
         else:
