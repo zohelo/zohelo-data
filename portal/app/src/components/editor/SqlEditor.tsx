@@ -5,7 +5,6 @@ import {
   Lightbulb,
   Command,
   Edit,
-  Share2,
   Bookmark,
   ListTree,
   TableProperties,
@@ -27,8 +26,6 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import FloatingActionButton from "@/components/common/FloatingActionButton";
-import { ShareDialog } from "@/components/share/ShareDialog";
-import type { EditorTab } from "@/store/types";
 import SaveQueryDialog from "@/components/saved-queries/SaveQueryDialog";
 import { bindCollaborativeEditor, type CollaborativeBinding } from "./collaborativeBinding";
 import { getCollaboration } from "@/store/slices/sessionSlice";
@@ -64,8 +61,6 @@ const SqlEditor: React.FC<SqlEditorProps> = ({ tabId, title, className }) => {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [explainOpen, setExplainOpen] = useState(false);
   const [explainText, setExplainText] = useState("");
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [shareTab, setShareTab] = useState<EditorTab | null>(null);
   const [createViewOpen, setCreateViewOpen] = useState(false);
   const [createViewSql, setCreateViewSql] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -246,29 +241,6 @@ const SqlEditor: React.FC<SqlEditorProps> = ({ tabId, title, className }) => {
     }
   };
 
-  const handleShareQuery = () => {
-    const editor = editorInstanceRef.current?.editor;
-    if (!editor) return;
-
-    const query = editor.getValue().trim();
-    if (!query) {
-      toast.error("No query to share");
-      return;
-    }
-
-    // Capture the live editor content plus the tab's current chart config.
-    setShareTab({
-      id: tabId,
-      title: currentTitle || currentTab?.title || "Shared Query",
-      type: "sql",
-      content: query,
-      chartConfig: currentTab?.chartConfig,
-      // Carry the result so the share dialog can offer its columns as embed filters.
-      result: currentTab?.result ?? null,
-    });
-    setShareDialogOpen(true);
-  };
-
   return (
     <div className={cn("flex flex-col h-full relative", className)}>
       {/* Header */}
@@ -354,18 +326,6 @@ const SqlEditor: React.FC<SqlEditorProps> = ({ tabId, title, className }) => {
               </Tooltip>
             </TooltipProvider>
           </div>
-          <TooltipProvider>
-            <Tooltip delayDuration={200}>
-              <TooltipTrigger asChild>
-                <Button onClick={handleShareQuery} variant="ghost" size="icon" className="h-9 w-9">
-                  <Share2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Share query &amp; chart</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
           <TooltipProvider>
             <Tooltip delayDuration={200}>
               <TooltipTrigger asChild>
@@ -472,8 +432,6 @@ const SqlEditor: React.FC<SqlEditorProps> = ({ tabId, title, className }) => {
         onOpenChange={setExplainOpen}
         explainText={explainText}
       />
-
-      <ShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} tab={shareTab} />
     </div>
   );
 };

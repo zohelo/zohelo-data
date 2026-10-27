@@ -4,7 +4,6 @@ import { Tabs, TabsList, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Plus, XSquareIcon, Loader2, Terminal, BookOpen, FolderOpen } from "lucide-react";
-import { useQueryFromURL } from "@/hooks/useQueryFromURL";
 import { useWorkspaceViewFromURL } from "@/hooks/useWorkspaceViewFromURL";
 import {
   DndContext,
@@ -90,8 +89,6 @@ export default function WorkspaceTabs() {
     }
   }, [isInitialized, initialize]);
 
-  // Handle loading query from URL parameters
-  useQueryFromURL();
   useWorkspaceViewFromURL();
 
   const sensors = useSensors(

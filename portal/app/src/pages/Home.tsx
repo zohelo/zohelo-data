@@ -7,7 +7,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Button } from "@/components/ui/button";
 import WorkspaceTabs from "@/components/workspace/WorkspaceTabs";
 import CommandPalette from "@/components/command-palette/CommandPalette";
-import { DeepLinkLoader } from "@/components/share/DeepLinkLoader";
 import JoinSessionDialog from "@/components/collaboration/JoinSessionDialog";
 import DashboardShareLoader from "@/components/dashboard/DashboardShareLoader";
 
@@ -28,7 +27,6 @@ export default function Home() {
     <div className="h-screen w-full flex overflow-hidden">
       <CommandPalette />
       {/* Global dialogs stay outside the single, breakpoint-stable workspace. */}
-      <DeepLinkLoader />
       {/* Also mounted once: an invite link must not open two dialogs. */}
       <JoinSessionDialog />
       <DashboardShareLoader />

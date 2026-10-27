@@ -1,5 +1,5 @@
 import "./index.css";
-import { StrictMode, useEffect, useRef, useState, lazy } from "react";
+import { StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import { Suspense } from "react";
@@ -16,14 +16,6 @@ import { cleanupOrphanedStorage } from "@/services/persistence/cleanup";
 import { listProfiles } from "@/services/persistence/repositories/profileRepository";
 import ProfilePicker from "@/components/profile/ProfilePicker";
 import type { Profile } from "@/store/types";
-
-// Chrome-free embed viewer — loaded only on the /embed route.
-const EmbedView = lazy(() => import("@/pages/EmbedView"));
-
-/** True when the current path is the chrome-free embed viewer. */
-function isEmbedPath(): boolean {
-  return /\/embed\/?$/.test(window.location.pathname);
-}
 
 interface LoadingScreenProps {
   message: string;
@@ -186,10 +178,6 @@ const App = () => {
       <div className="flex-1 overflow-hidden">
         <Routes>
           <Route path="/" element={<Home />} />
-          {/* Crawlable share links (/a/?s=…): humans land here and the analysis
-              opens via useQueryFromURL; crawlers are served an OG card by the
-              edge function on the marketing host. */}
-          <Route path="/a" element={<Home />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
@@ -218,23 +206,6 @@ if ("caches" in window) {
 const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("Failed to find root element");
 
-// The embed viewer is a public, profile-free widget: it boots the DuckDB engine
-// but skips ProfileBootstrap (no picker, no persistence, no autosave) and the
-// router (it reads the share payload straight from the URL).
-const EmbedRoot = () => (
-  <StrictMode>
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <AppInitializer>
-        <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-          <Suspense fallback={<LoadingScreen message="Loading analysis" />}>
-            <EmbedView />
-          </Suspense>
-        </ThemeProvider>
-      </AppInitializer>
-    </ErrorBoundary>
-  </StrictMode>
-);
-
 // Vite's relative asset base is not a router path: React Router interprets
 // "./" as "/./" and renders a blank page. Explicit subpath bases still apply.
 const routerBasename = import.meta.env.BASE_URL === "./" ? "/" : import.meta.env.BASE_URL;
@@ -258,4 +229,4 @@ const FullApp = () => (
 );
 
 // Production render
-createRoot(rootElement).render(isEmbedPath() ? <EmbedRoot /> : <FullApp />);
+createRoot(rootElement).render(<FullApp />);
