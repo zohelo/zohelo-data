@@ -9,9 +9,12 @@
 sources:
 - id: GL-001
   name: Eurostat Database and dissemination APIs
+  short_name: Eurostat
   provider: Eurostat
   source_system: eurostat
   status: silver
+  family: A
+  kpi: true
   section: global-public
   geography: multicountry-Europe
   provider_type: international-public
@@ -51,8 +54,11 @@ sources:
     - https://ec.europa.eu/eurostat/web/main/help/copyright-notice
 - id: GL-002
   name: Comext international trade in goods database
+  short_name: Eurostat Comext
   provider: Eurostat
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: multicountry-Europe
   provider_type: international-public
@@ -92,8 +98,11 @@ sources:
     - https://ec.europa.eu/eurostat/web/main/help/copyright-notice
 - id: GL-003
   name: OECD Data Explorer and SDMX API
+  short_name: OECD Data Explorer
   provider: OECD
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -130,8 +139,11 @@ sources:
     - https://www.oecd.org/en/about/terms-conditions.html
 - id: GL-004
   name: Programme for International Student Assessment (PISA) databases
+  short_name: OECD PISA
   provider: OECD
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -172,9 +184,12 @@ sources:
     - https://www.oecd.org/en/about/terms-conditions.html
 - id: GL-005
   name: World Development Indicators (WDI)
+  short_name: World Bank WDI
   provider: World Bank
   source_system: world_bank_wdi
   status: silver
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -214,8 +229,11 @@ sources:
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
 - id: GL-006
   name: Global Economic Monitor (GEM)
+  short_name: World Bank GEM
   provider: World Bank
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -254,8 +272,11 @@ sources:
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
 - id: GL-007
   name: International Debt Statistics (IDS)
+  short_name: World Bank IDS
   provider: World Bank
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -294,8 +315,11 @@ sources:
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
 - id: GL-008
   name: Worldwide Governance Indicators (WGI)
+  short_name: World Bank WGI
   provider: World Bank
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -334,8 +358,11 @@ sources:
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
 - id: GL-009
   name: Global Findex Database
+  short_name: World Bank Global Findex
   provider: World Bank
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -375,8 +402,11 @@ sources:
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
 - id: GL-010
   name: Enterprise Surveys
+  short_name: World Bank Enterprise Surveys
   provider: World Bank
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -415,8 +445,11 @@ sources:
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
 - id: GL-011
   name: International Comparison Program (ICP)
+  short_name: World Bank ICP
   provider: World Bank
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -455,8 +488,11 @@ sources:
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
 - id: GL-012
   name: World Economic Outlook (WEO) Database
+  short_name: IMF WEO
   provider: International Monetary Fund
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -498,8 +534,11 @@ sources:
     - https://www.imf.org/en/about/copyright-and-terms
 - id: GL-013
   name: International Financial Statistics (IFS)
+  short_name: IMF IFS
   provider: International Monetary Fund
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -540,8 +579,11 @@ sources:
     - https://www.imf.org/en/about/copyright-and-terms
 - id: GL-014
   name: Direction of Trade Statistics (DOTS)
+  short_name: IMF DOTS
   provider: International Monetary Fund
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -582,8 +624,11 @@ sources:
     - https://www.imf.org/en/about/copyright-and-terms
 - id: GL-015
   name: BIS Data Portal
+  short_name: BIS Data Portal
   provider: Bank for International Settlements
   status: registered
+  family: C
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -621,8 +666,11 @@ sources:
     references: ['https://data.bis.org/', 'https://data.bis.org/bulkdownload', 'https://data.bis.org/help/legal']
 - id: GL-016
   name: ECB Data Portal
+  short_name: ECB Data Portal
   provider: European Central Bank
   status: registered
+  family: C
+  kpi: true
   section: global-public
   geography: multicountry-Europe
   provider_type: international-public
@@ -661,8 +709,11 @@ sources:
     - https://www.ecb.europa.eu/services/using-our-site/disclaimer/html/index.en.html
 - id: GL-017
   name: UNdata
+  short_name: UNdata
   provider: United Nations Statistics Division
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -702,8 +753,11 @@ sources:
     - https://www.un.org/en/about-us/terms-of-use
 - id: GL-018
   name: Global SDG Indicators Database and API
+  short_name: UN SDG Indicators
   provider: United Nations Statistics Division
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -741,8 +795,11 @@ sources:
     references: ['https://unstats.un.org/SDGAPI/swagger/', 'https://unstats.un.org/sdgs/dataportal']
 - id: GL-019
   name: UN Comtrade
+  short_name: UN Comtrade
   provider: United Nations Statistics Division
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -783,8 +840,11 @@ sources:
     - https://comtradeapi.un.org/swagger/index.html
 - id: GL-020
   name: WTO Stats
+  short_name: WTO Stats
   provider: World Trade Organization
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -824,8 +884,11 @@ sources:
     - https://www.wto.org/english/res_e/statis_e/statis_e.htm
 - id: GL-021
   name: UNCTAD Data Hub
+  short_name: UNCTAD Data Hub
   provider: UN Trade and Development (UNCTAD)
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -862,8 +925,11 @@ sources:
     - https://unctadstat.unctad.org/EN/IndicatorsExplained.html
 - id: GL-022
   name: FAOSTAT
+  short_name: FAOSTAT
   provider: Food and Agriculture Organization of the United Nations
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -902,8 +968,11 @@ sources:
     - https://www.fao.org/contact-us/terms/en/
 - id: GL-023
   name: ILOSTAT
+  short_name: ILOSTAT
   provider: International Labour Organization
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -940,8 +1009,11 @@ sources:
     - https://ilostat.ilo.org/resources/sdmx-tools/
 - id: GL-024
   name: Global Health Observatory (GHO) OData API
+  short_name: WHO GHO
   provider: World Health Organization
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -981,8 +1053,11 @@ sources:
     - https://data.who.int/about/data/terms-and-conditions
 - id: GL-025
   name: WHO Data platform (data.who.int) datasets
+  short_name: WHO data.who.int
   provider: World Health Organization
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1022,8 +1097,11 @@ sources:
     - https://data.who.int/about/data/terms-and-conditions
 - id: GL-026
   name: UIS Data Browser
+  short_name: UNESCO UIS
   provider: UNESCO Institute for Statistics
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1061,8 +1139,11 @@ sources:
     references: ['https://databrowser.uis.unesco.org/', 'https://www.unesco.org/en/open-access']
 - id: GL-027
   name: UNICEF Data Warehouse Explorer and SDMX API
+  short_name: UNICEF Data Warehouse
   provider: United Nations Children’s Fund
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1101,8 +1182,11 @@ sources:
     - https://data.unicef.org/sdmx-api-documentation/
 - id: GL-028
   name: Human Development Data Center
+  short_name: UNDP Human Development
   provider: United Nations Development Programme
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1139,8 +1223,11 @@ sources:
     references: ['https://hdr.undp.org/data-center', 'https://hdr.undp.org/terms-use']
 - id: GL-029
   name: Refugee Data Finder / Refugee Statistics API
+  short_name: UNHCR Refugee Statistics
   provider: United Nations High Commissioner for Refugees
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1179,8 +1266,11 @@ sources:
     - https://data.unhcr.org/en/situations/ukraine
 - id: GL-030
   name: Global Migration Data Portal
+  short_name: IOM Migration Data Portal
   provider: International Organization for Migration
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1217,8 +1307,11 @@ sources:
     - https://www.migrationdataportal.org/terms-use
 - id: GL-031
   name: ITU DataHub
+  short_name: ITU DataHub
   provider: International Telecommunication Union
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1255,8 +1348,11 @@ sources:
     - https://www.itu.int/en/about/Pages/terms-of-use.aspx
 - id: GL-032
   name: IP Statistics Data Center
+  short_name: WIPO IP Statistics
   provider: World Intellectual Property Organization
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1295,8 +1391,11 @@ sources:
     - https://www.wipo.int/en/web/terms-of-use
 - id: GL-033
   name: UNODC Data Portal
+  short_name: UNODC Data Portal
   provider: United Nations Office on Drugs and Crime
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1335,8 +1434,11 @@ sources:
     references: ['https://data.unodc.org/']
 - id: GL-034
   name: IEA Data Explorer
+  short_name: IEA Data Explorer
   provider: International Energy Agency
   status: registered
+  family: G
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1377,8 +1479,11 @@ sources:
     - https://www.iea.org/terms
 - id: GL-035
   name: IRENASTAT / Statistics Time Series
+  short_name: IRENASTAT
   provider: International Renewable Energy Agency
   status: registered
+  family: G
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1415,8 +1520,11 @@ sources:
     - https://www.irena.org/Data/View-data-by-topic/Capacity-and-Generation/Statistics-Time-Series
 - id: GL-036
   name: Climate Data Store (CDS)
+  short_name: Copernicus Climate Data Store
   provider: Copernicus Climate Change Service / ECMWF
   status: registered
+  family: G
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1456,8 +1564,11 @@ sources:
     - https://www.ecmwf.int/en/terms-use
 - id: GL-037
   name: EEA Datahub
+  short_name: EEA Datahub
   provider: European Environment Agency
   status: registered
+  family: G
+  kpi: true
   section: global-public
   geography: multicountry-Europe
   provider_type: international-public
@@ -1498,8 +1609,11 @@ sources:
     - https://www.eea.europa.eu/en/legal-notice
 - id: GL-038
   name: UNECE Data Portal
+  short_name: UNECE Data Portal
   provider: United Nations Economic Commission for Europe
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: multicountry-Europe
   provider_type: international-public
@@ -1537,8 +1651,11 @@ sources:
     references: ['https://w3.unece.org/PXWeb/en']
 - id: GL-039
   name: World Population Prospects
+  short_name: UN World Population Prospects
   provider: United Nations Department of Economic and Social Affairs, Population Division
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1577,8 +1694,11 @@ sources:
     - https://data.un.org/Handlers/ExplorerHandler.ashx?t=sources
 - id: GL-040
   name: UNIDO Statistics Data Portal / INDSTAT
+  short_name: UNIDO INDSTAT
   provider: United Nations Industrial Development Organization
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1615,9 +1735,12 @@ sources:
     - https://data.un.org/Handlers/ExplorerHandler.ashx?t=sources
 - id: PLS-001
   name: Bank Danych Lokalnych (BDL)
+  short_name: GUS BDL
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   source_system: gus_bdl
   status: silver
+  family: B
+  kpi: true
   section: poland-social
   geography: local-to-national Poland
   provider_type: national-public
@@ -1654,9 +1777,12 @@ sources:
     references: ['https://api.stat.gov.pl/Home/BdlApi']
 - id: PLS-002
   name: Dziedzinowe Bazy Wiedzy (DBW) API
+  short_name: GUS DBW
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   source_system: gus_dbw
   status: bronze
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland with territorial and classification breakdowns
   provider_type: national-public
@@ -1697,8 +1823,11 @@ sources:
     - https://stat.gov.pl/en/news/api-to-the-knowledge-databases%2C86%2C1.html
 - id: PLS-003
   name: STRATEG indicators and API
+  short_name: GUS STRATEG
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and regional Poland; selected EU comparisons
   provider_type: national-public
@@ -1735,8 +1864,11 @@ sources:
     - https://api.stat.gov.pl/Home/Index?lang=en
 - id: PLS-004
   name: GUS thematic publications with downloadable statistical tables
+  short_name: GUS publication tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and regional Poland
   provider_type: national-public
@@ -1775,8 +1907,11 @@ sources:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2024-r-%2C1%2C22.html
 - id: PLS-005
   name: Narodowy Spis Powszechny Ludności i Mieszkań 2021 (NSP 2021) results
+  short_name: GUS NSP 2021
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland to fine census geographies, table-dependent
   provider_type: national-public
@@ -1816,8 +1951,11 @@ sources:
     - https://stat.gov.pl/spisy-powszechne/nsp-2021/
 - id: PLS-006
   name: Powszechny Spis Rolny 2020 (PSR 2020) results
+  short_name: GUS PSR 2020
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland to local agricultural geographies, table-dependent
   provider_type: national-public
@@ -1855,9 +1993,12 @@ sources:
     - https://stat.gov.pl/spisy-powszechne/powszechny-spis-rolny-2020/
 - id: PLS-007
   name: Krajowy Rejestr Urzędowy Podziału Terytorialnego Kraju (TERYT)
+  short_name: GUS TERYT
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   source_system: gus_teryt
   status: silver
+  family: E
+  kpi: false
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -1895,8 +2036,11 @@ sources:
     - https://api.stat.gov.pl/Home/TerytApi?lang=en
 - id: PLS-008
   name: BIR1 – Internet Database of REGON API
+  short_name: GUS REGON BIR1
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: E
+  kpi: false
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -1932,8 +2076,11 @@ sources:
     references: ['https://api.stat.gov.pl/Home/RegonApi']
 - id: PLS-009
   name: Portal Statystyczny ZUS
+  short_name: ZUS statistical portal
   provider: Zakład Ubezpieczeń Społecznych (ZUS)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and voivodeships, table-dependent
   provider_type: national-public
@@ -1975,8 +2122,11 @@ sources:
     - https://psz.zus.pl/kategorie/ubezpieczeni/ubezpieczenia-emerytalne-i-rentowe
 - id: PLS-010
   name: Rocznik Statystyczny Ubezpieczeń Społecznych
+  short_name: ZUS social insurance yearbook
   provider: Zakład Ubezpieczeń Społecznych (ZUS)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and regional breakdowns, edition-dependent
   provider_type: national-public
@@ -2013,8 +2163,11 @@ sources:
     - https://www.zus.pl/baza-wiedzy/statystyka/rocznik-statystyczny-ubezpieczen-spolecznych
 - id: PLS-011
   name: Podstawowe dane statystyczne KRUS
+  short_name: KRUS statistics
   provider: Kasa Rolniczego Ubezpieczenia Społecznego (KRUS)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; regional detail varies
   provider_type: national-public
@@ -2049,8 +2202,11 @@ sources:
     - https://www.gov.pl/web/krus/podstawowe-dane-statystyczne-z-zakresu-swiadczeniobiorcow
 - id: PLS-012
   name: API Statystyki NFZ – Świadczenia
+  short_name: "NFZ statistics: services"
   provider: Narodowy Fundusz Zdrowia (NFZ)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; provider/clinical group tables
   provider_type: national-public
@@ -2089,8 +2245,11 @@ sources:
     - https://api.nfz.gov.pl/app-stat-api-jgp/terms
 - id: PLS-013
   name: API Statystyki NFZ – Refundacja apteczna
+  short_name: "NFZ statistics: pharmacy refunds"
   provider: Narodowy Fundusz Zdrowia (NFZ)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -2125,8 +2284,11 @@ sources:
     references: ['https://api.nfz.gov.pl/app-stat-api-ra/']
 - id: PLS-014
   name: API Umowy NFZ
+  short_name: NFZ contracts
   provider: Narodowy Fundusz Zdrowia (NFZ)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; NFZ branch and provider
   provider_type: national-public
@@ -2165,8 +2327,11 @@ sources:
     - https://api.nfz.gov.pl/app-umw-api/terms
 - id: PLS-015
   name: API Terminy Leczenia / Informator o Terminach Leczenia
+  short_name: NFZ waiting times
   provider: Narodowy Fundusz Zdrowia (NFZ)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; service location
   provider_type: national-public
@@ -2203,8 +2368,11 @@ sources:
     - https://api.nfz.gov.pl/app-itl-api/terms
 - id: PLS-016
   name: e-zdrowie w liczbach dashboards
+  short_name: CeZ e-health in numbers
   provider: Centrum e-Zdrowia (CeZ)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; some voivodeship/powiat breakdowns
   provider_type: national-public
@@ -2239,8 +2407,11 @@ sources:
     - https://ezdrowie.gov.pl/portal/home/badania-i-dane
 - id: PLS-017
   name: Biuletyn Statystyczny ochrony zdrowia
+  short_name: MZ health statistics bulletin
   provider: Ministerstwo Zdrowia / Centrum e-Zdrowia
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and voivodeships, table-dependent
   provider_type: national-public
@@ -2275,8 +2446,11 @@ sources:
     - https://ezdrowie.gov.pl/portal/home/badania-i-dane
 - id: PLS-018
   name: Raport – Stan Sanitarny Kraju
+  short_name: GIS sanitary state report
   provider: Główny Inspektorat Sanitarny (GIS)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -2312,8 +2486,11 @@ sources:
     - https://www.gov.pl/web/gis/raport---stan-sanitarny-kraju
 - id: PLS-019
   name: Biuletyny, meldunki i informacje epidemiologiczne (EPIMELD)
+  short_name: NIZP-PZH epidemiology bulletins
   provider: Narodowy Instytut Zdrowia Publicznego PZH – PIB (NIZP PZH)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and voivodeships, publication-dependent
   provider_type: national-public
@@ -2350,8 +2527,11 @@ sources:
     - https://wwwold.pzh.gov.pl/oldpage/epimeld/index_p.html
 - id: PLS-020
   name: Rejestr Podmiotów Wykonujących Działalność Leczniczą (RPWDL)
+  short_name: RPWDL healthcare providers
   provider: Minister Zdrowia / Centrum e-Zdrowia
   status: registered
+  family: E
+  kpi: false
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -2390,8 +2570,11 @@ sources:
     references: ['https://rpwdl.ezdrowie.gov.pl/']
 - id: PLS-021
   name: Rejestr Szkół i Placówek Oświatowych (RSPO) API and search
+  short_name: RSPO schools register
   provider: Ministerstwo Edukacji Narodowej / System Informacji Oświatowej
   status: registered
+  family: E
+  kpi: false
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -2429,8 +2612,11 @@ sources:
     references: ['https://api.rspo.gov.pl/', 'https://rspo.gov.pl/institutions']
 - id: PLS-022
   name: SIO public and archival education statistics
+  short_name: SIO education statistics
   provider: Centrum Informatyczne Edukacji / Ministerstwo Edukacji Narodowej
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and regional Poland, table-dependent
   provider_type: national-public
@@ -2468,8 +2654,11 @@ sources:
     - https://cie.gov.pl/archiwalne-dane-statystyczne/
 - id: PLS-023
   name: RAD-on public data and POL-on APIs
+  short_name: RAD-on / POL-on
   provider: Ośrodek Przetwarzania Informacji – Państwowy Instytut Badawczy (OPI PIB)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -2509,8 +2698,11 @@ sources:
     - https://radon.nauka.gov.pl/pomoc/tag/api/page/2/
 - id: PLS-024
   name: Ogólnopolski system monitorowania Ekonomicznych Losów Absolwentów (ELA)
+  short_name: ELA graduate outcomes
   provider: Ministerstwo Nauki i Szkolnictwa Wyższego / OPI PIB
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; institution and field of study
   provider_type: national-public
@@ -2548,8 +2740,11 @@ sources:
     references: ['https://ela.nauka.gov.pl/pl']
 - id: PLS-025
   name: National examination results and reports
+  short_name: CKE exam results
   provider: Centralna Komisja Egzaminacyjna (CKE)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; school-location categories and regions, release-dependent
   provider_type: national-public
@@ -2585,8 +2780,11 @@ sources:
     - https://cke.gov.pl/egzamin-osmoklasisty/wyniki/
 - id: PLS-026
   name: Ewidencja zabytków nieruchomych / heritage monument datasets
+  short_name: NID heritage register
   provider: Narodowy Instytut Dziedzictwa (NID)
   status: registered
+  family: E
+  kpi: false
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -2625,8 +2823,11 @@ sources:
     references: ['https://dane.gov.pl/pl/dataset/2627']
 - id: PLS-027
   name: Kultura i dziedzictwo narodowe – annual tables
+  short_name: GUS culture tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and voivodeships
   provider_type: national-public
@@ -2661,8 +2862,11 @@ sources:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/kultura-i-dziedzictwo-narodowe-w-2023-roku%2C2%2C21.html
 - id: PLS-028
   name: Uczestnictwo ludności w kulturze
+  short_name: GUS cultural participation
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; demographic breakdowns
   provider_type: national-public
@@ -2700,8 +2904,11 @@ sources:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/uczestnictwo-ludnosci-w-kulturze-w-2024-r-%2C6%2C4.html
 - id: PLS-029
   name: Registered unemployment and labour-office vacancy statistics
+  short_name: MRPiPS registered unemployment
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej / Public Employment Services
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland, voivodeship and powiat, table-dependent
   provider_type: national-public
@@ -2739,8 +2946,11 @@ sources:
     references: ['https://psz.praca.gov.pl/', 'https://barometrzawodow.pl/']
 - id: PLS-030
   name: Barometr Zawodów
+  short_name: Barometr Zawodów
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej / regional labour offices
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: powiat, voivodeship and Poland
   provider_type: national-public
@@ -2777,8 +2987,11 @@ sources:
     - https://barometrzawodow.pl/
 - id: PLS-031
   name: Social assistance and family-support statistical reports
+  short_name: MRPiPS social assistance
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and voivodeships, report-dependent
   provider_type: national-public
@@ -2815,8 +3028,11 @@ sources:
     - https://www.gov.pl/web/rodzina/sprawozdawczosc
 - id: PLS-032
   name: Zintegrowany System Rolniczej Informacji Rynkowej (ZSRIR)
+  short_name: MRiRW ZSRIR market information
   provider: Ministerstwo Rolnictwa i Rozwoju Wsi
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and macroregions/markets, commodity-dependent
   provider_type: national-public
@@ -2856,8 +3072,11 @@ sources:
     - https://dane.gov.pl/pl/dataset/1022%2Czintegrowany-system-rolniczej-informacji-rynkowej-biuletyny-informacyjne-rynek-pasz
 - id: PLS-033
   name: Weekly agricultural market situation reports
+  short_name: KOWR agricultural markets
   provider: Krajowy Ośrodek Wsparcia Rolnictwa (KOWR)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -2893,8 +3112,11 @@ sources:
     references: ['https://www.gov.pl/web/kowr/Rynek-zboz', 'https://www.gov.pl/web/kowr/Rynek-miesa']
 - id: PLS-034
   name: Programme implementation and payment statistics
+  short_name: ARiMR payment statistics
   provider: Agencja Restrukturyzacji i Modernizacji Rolnictwa (ARiMR)
   status: registered
+  family: D
+  kpi: true
   section: poland-social
   geography: Poland and regional Poland, programme-dependent
   provider_type: national-public
@@ -2936,8 +3158,11 @@ sources:
     references: ['https://www.gov.pl/web/arimr']
 - id: PLS-035
   name: Turystyka – annual accommodation-establishment tables
+  short_name: GUS tourism tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and voivodeships/powiats, table-dependent
   provider_type: national-public
@@ -2978,9 +3203,12 @@ sources:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2025-r-%2C1%2C23.html
 - id: PLG-001
   name: NBP Web API — exchange rates and gold prices
+  short_name: NBP exchange rates and gold
   provider: Narodowy Bank Polski (NBP)
   source_system: nbp
   status: silver
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3016,8 +3244,11 @@ sources:
     references: ['https://api.nbp.pl/en.html']
 - id: PLG-002
   name: Balance of payments statistics
+  short_name: NBP balance of payments
   provider: Narodowy Bank Polski (NBP)
   status: registered
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3056,8 +3287,11 @@ sources:
     - https://nbp.pl/en/statistic-and-financial-reporting/calendar/
 - id: PLG-003
   name: International investment position and external statistics
+  short_name: NBP investment position
   provider: Narodowy Bank Polski (NBP)
   status: registered
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3095,8 +3329,11 @@ sources:
     - https://nbp.pl/en/statistic-and-financial-reporting/
 - id: PLG-004
   name: Monetary aggregates
+  short_name: NBP monetary aggregates
   provider: Narodowy Bank Polski (NBP)
   status: registered
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3133,8 +3370,11 @@ sources:
     - https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/
 - id: PLG-005
   name: Banking and MFI balance-sheet statistics
+  short_name: NBP banking statistics
   provider: Narodowy Bank Polski (NBP)
   status: registered
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3170,8 +3410,11 @@ sources:
     - https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/
 - id: PLG-006
   name: Interest-rate statistics
+  short_name: NBP interest rates
   provider: Narodowy Bank Polski (NBP)
   status: registered
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3209,8 +3452,11 @@ sources:
     - https://nbp.pl/en/statistic-and-financial-reporting/basic-charts/
 - id: PLG-007
   name: State budget acts and execution publications
+  short_name: MF state budget
   provider: Ministry of Finance
   status: registered
+  family: D
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3248,8 +3494,11 @@ sources:
     - https://www.gov.pl/web/finanse/sprawozdania-operatywne-miesieczne
 - id: PLG-008
   name: Treasury debt time series and monthly bulletin
+  short_name: MF Treasury debt
   provider: Ministry of Finance
   status: registered
+  family: D
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3288,8 +3537,11 @@ sources:
     - https://www.gov.pl/attachment/cdea605f-3278-4a55-af7b-0162d548ea0f
 - id: PLG-009
   name: Public finance sector debt statistics
+  short_name: MF public debt
   provider: Ministry of Finance
   status: registered
+  family: D
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3326,8 +3578,11 @@ sources:
     - https://www.gov.pl/web/finanse/zadluzenie-sektora-finansow-publicznych
 - id: PLG-010
   name: Local-government budget reports (sprawozdania budżetowe JST)
+  short_name: MF local-government budgets
   provider: Ministry of Finance
   status: registered
+  family: D
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3365,9 +3620,12 @@ sources:
     - https://www.gov.pl/web/finanse/sprawozdania-budzetowe
 - id: PLG-011
   name: VAT taxpayer list and API
+  short_name: MF VAT white list
   provider: Head of the National Revenue Administration / Ministry of Finance
   source_system: mf_biala_lista
   status: bronze
+  family: E
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3406,8 +3664,11 @@ sources:
     - https://www.gov.pl/web/kas/api-wykazu-podatnikow-vat
 - id: PLG-012
   name: Open KRS API (API Rejestrów Sądowych)
+  short_name: KRS open API
   provider: Ministry of Justice
   status: registered
+  family: E
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3446,8 +3707,11 @@ sources:
     - https://dane.gov.pl/en/dataset/27606%2Capi-krajowego-rejestru-sadowego-api-krs
 - id: PLG-013
   name: Repository of Financial Documents (RDF) viewer
+  short_name: KRS financial documents (RDF)
   provider: Ministry of Justice
   status: registered
+  family: I
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3485,8 +3749,11 @@ sources:
     references: ['https://rdf-przegladarka.ms.gov.pl/']
 - id: PLG-014
   name: CEIDG and Biznes.gov.pl Data Warehouse/API
+  short_name: CEIDG
   provider: Ministry of Economic Development and Technology
   status: registered
+  family: E
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3526,8 +3793,11 @@ sources:
     - https://pliki.biznes.gov.pl/akademia/Hurtownia_danych/HD%20CEIDG%20-%20API%20v2%20Hurtowni%20Danych%20-%20Dokumentacja%20dla%20integrator%C3%B3w%20v3.1.pdf
 - id: PLG-015
   name: Central Register of Beneficial Owners (CRBR)
+  short_name: CRBR beneficial owners
   provider: Ministry of Finance
   status: registered
+  family: E
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3565,8 +3835,11 @@ sources:
     references: ['https://www.podatki.gov.pl/crbr/']
 - id: PLG-016
   name: Supervised-entity registers and search
+  short_name: KNF supervised entities
   provider: Polish Financial Supervision Authority (KNF)
   status: registered
+  family: E
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3603,8 +3876,11 @@ sources:
     references: ['https://www.knf.gov.pl/podmioty']
 - id: PLG-017
   name: Banking-sector data and sector information
+  short_name: KNF banking sector data
   provider: Polish Financial Supervision Authority (KNF)
   status: registered
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3642,8 +3918,11 @@ sources:
     - https://www.knf.gov.pl/dla_rynku/Informacje_sektorowe
 - id: PLG-018
   name: Insurance, pension and other financial-sector information
+  short_name: KNF insurance and pensions data
   provider: Polish Financial Supervision Authority (KNF)
   status: registered
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3681,8 +3960,11 @@ sources:
     - https://www.knf.gov.pl/dla_rynku/Informacje_sektorowe
 - id: PLG-019
   name: KNF Public Warning List
+  short_name: KNF public warning list
   provider: Polish Financial Supervision Authority (KNF)
   status: registered
+  family: E
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3719,8 +4001,11 @@ sources:
     - https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne
 - id: PLG-020
   name: Database of decisions of the President of UOKiK
+  short_name: UOKiK decisions
   provider: Office of Competition and Consumer Protection (UOKiK)
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3758,8 +4043,11 @@ sources:
     - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf
 - id: PLG-021
   name: Concentration decisions and notifications
+  short_name: UOKiK concentration decisions
   provider: Office of Competition and Consumer Protection (UOKiK)
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3795,8 +4083,11 @@ sources:
     references: ['https://uokik.gov.pl/koncentracje']
 - id: PLG-022
   name: e-Zamówienia / BZP read API
+  short_name: e-Zamówienia BZP
   provider: Public Procurement Office (UZP)
   status: registered
+  family: D
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3834,8 +4125,11 @@ sources:
     - https://ezamowienia.gov.pl/pl/integracja/
 - id: PLG-023
   name: TED Search API and Open Data — Poland-filtered notices
+  short_name: TED notices (Poland)
   provider: Publications Office of the European Union
   status: registered
+  family: D
+  kpi: true
   section: poland-governance
   geography: multicountry-Europe
   provider_type: international-public
@@ -3873,8 +4167,11 @@ sources:
     - https://docs.ted.europa.eu/api/latest/index.html
 - id: PLG-024
   name: Sejm API
+  short_name: Sejm API
   provider: Chancellery of the Sejm
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3911,8 +4208,11 @@ sources:
     references: ['https://api.sejm.gov.pl/sejm.html', 'https://api.sejm.gov.pl/']
 - id: PLG-025
   name: Senate legislative process, sittings, votes and members
+  short_name: Senate data
   provider: Chancellery of the Senate
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3950,8 +4250,11 @@ sources:
     - https://www.senat.gov.pl/prace/posiedzenia/
 - id: PLG-026
   name: ELI Poland — Dziennik Ustaw and Monitor Polski
+  short_name: ELI Dziennik Ustaw
   provider: Government Legislation Centre (RCL) / Chancellery of the Sejm
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3988,8 +4291,11 @@ sources:
     references: ['https://eli.gov.pl/', 'https://api.sejm.gov.pl/eli_pl.html']
 - id: PLG-027
   name: ISAP — Internet System of Legal Acts archive
+  short_name: ISAP legal acts
   provider: Chancellery of the Sejm
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4027,8 +4333,11 @@ sources:
     - https://isap.sejm.gov.pl/
 - id: PLG-028
   name: NIK audit-results database
+  short_name: NIK audit results
   provider: Supreme Audit Office (NIK)
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4066,8 +4375,11 @@ sources:
     - https://www.nik.gov.pl/kontrole/wyniki-kontroli-nik/
 - id: PLG-029
   name: Election and referendum results data service
+  short_name: PKW election results
   provider: National Electoral Commission (PKW) / National Electoral Office (KBW)
   status: registered
+  family: F
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4104,8 +4416,11 @@ sources:
     references: ['https://pkw.gov.pl/', 'https://prezydent2025.pkw.gov.pl/']
 - id: PLG-030
   name: dane.gov.pl open-data catalogue and API
+  short_name: dane.gov.pl
   provider: Chancellery of the Prime Minister
   status: registered
+  family: J
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4141,8 +4456,11 @@ sources:
     references: ['https://api.dane.gov.pl/doc/', 'https://dane.gov.pl/pl']
 - id: PLG-031
   name: Justice system statistical database (ISWS)
+  short_name: ISWS justice statistics
   provider: Ministry of Justice
   status: registered
+  family: F
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4180,8 +4498,11 @@ sources:
     - https://isws.ms.gov.pl/pl/baza-statystyczna/
 - id: PLG-032
   name: Prison statistics
+  short_name: Prison Service statistics
   provider: Prison Service (Służba Więzienna)
   status: registered
+  family: F
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4220,8 +4541,11 @@ sources:
     - https://sw.gov.pl/strona/statystyka-roczna
 - id: PLG-033
   name: Police Statistics portal
+  short_name: Police statistics
   provider: Polish Police Headquarters
   status: registered
+  family: F
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4258,8 +4582,11 @@ sources:
     references: ['https://statystyka.policja.pl/']
 - id: PLG-034
   name: Government Legislative Process portal (RPL), including consultations
+  short_name: RCL legislative process (RPL)
   provider: Government Legislation Centre (RCL)
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4295,9 +4622,12 @@ sources:
     references: ['https://legislacja.rcl.gov.pl/']
 - id: PL-ENV-001
   name: Państwowy Rejestr Granic (PRG)
+  short_name: GUGiK PRG
   provider: Główny Urząd Geodezji i Kartografii (GUGiK)
   source_system: gugik_prg
   status: silver
+  family: E
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4336,8 +4666,11 @@ sources:
     - https://www.geoportal.gov.pl/pl/dane/
 - id: PL-ENV-002
   name: Państwowy Rejestr Nazw Geograficznych (PRNG)
+  short_name: GUGiK PRNG
   provider: GUGiK
   status: registered
+  family: E
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4374,8 +4707,11 @@ sources:
     - https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl
 - id: PL-ENV-003
   name: Baza Danych Obiektów Topograficznych BDOT10k
+  short_name: GUGiK BDOT10k
   provider: GUGiK
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4411,8 +4747,11 @@ sources:
     - https://www.geoportal.gov.pl/pl/dane/baza-danych-obiektow-topograficznych-bdot10k/
 - id: PL-ENV-004
   name: Ortofotomapa (ORTO)
+  short_name: GUGiK orthophoto
   provider: GUGiK
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4448,8 +4787,11 @@ sources:
     - https://www.geoportal.gov.pl/pl/dane/ortofotomapa-orto/
 - id: PL-ENV-005
   name: NMT, NMPT and airborne laser-scanning elevation products
+  short_name: GUGiK elevation (NMT)
   provider: GUGiK
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4487,8 +4829,11 @@ sources:
     - https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl
 - id: PL-ENV-006
   name: Krajowa Integracja Ewidencji Gruntów i Budynków (KI EGiB) aggregate WFS
+  short_name: GUGiK KI EGiB
   provider: GUGiK with county cadastral authorities
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4524,8 +4869,11 @@ sources:
     - https://www.geoportal.gov.pl/pl/dane/ewidencja-gruntow-i-budynkow-egib/
 - id: PL-ENV-007
   name: Krajowa Integracja Numeracji Adresowej / PRG address services
+  short_name: GUGiK address points
   provider: GUGiK and municipalities
   status: registered
+  family: E
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4561,8 +4909,11 @@ sources:
     - https://www.gov.pl/web/gugik/nowy-adres-uslug-dotyczacych-numeracji-porzadkowej
 - id: PL-ENV-008
   name: 'Public Data API: synoptic, hydrological, meteorological and warning feeds'
+  short_name: IMGW public data API
   provider: Instytut Meteorologii i Gospodarki Wodnej–PIB (IMGW-PIB)
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4598,8 +4949,11 @@ sources:
     references: ['https://danepubliczne.imgw.pl/apiinfo']
 - id: PL-ENV-009
   name: Public observational file archive
+  short_name: IMGW observation archive
   provider: IMGW-PIB
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4638,8 +4992,11 @@ sources:
     - https://danepubliczne.imgw.pl/data/dane_pomiarowo_obserwacyjne/dane_hydrologiczne/
 - id: PL-ENV-010
   name: Portal Jakości Powietrza API
+  short_name: GIOŚ air quality
   provider: Główny Inspektorat Ochrony Środowiska (GIOŚ)
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4675,8 +5032,11 @@ sources:
     - https://powietrze.gios.gov.pl/pjp/content/api
 - id: PL-ENV-011
   name: Surface-water monitoring results (Państwowy Monitoring Środowiska)
+  short_name: GIOŚ surface water
   provider: GIOŚ
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4715,8 +5075,11 @@ sources:
     - https://www.gov.pl/web/gios/monitoring-jakosci-wod
 - id: PL-ENV-012
   name: Groundwater monitoring results (Monitoring Jakości Wód Podziemnych)
+  short_name: GIOŚ groundwater
   provider: GIOŚ / Państwowy Instytut Geologiczny–PIB
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4753,8 +5116,11 @@ sources:
     - https://www.pgi.gov.pl/psh/dane-hydrogeologiczne-psh/947-bazy-danych-hydrogeologiczne/8887-bazy-danych-monitoring-wod-podziemnych.html
 - id: PL-ENV-013
   name: Hydroportal / water-management spatial data
+  short_name: Wody Polskie Hydroportal
   provider: Państwowe Gospodarstwo Wodne Wody Polskie
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4790,8 +5156,11 @@ sources:
     - https://www.gov.pl/web/wody-polskie/udostepnianie-danych-z-systemu-informacyjnego-gospodarowania-wodami
 - id: PL-ENV-014
   name: 'Central Geological Database: boreholes (CBDG Otwory)'
+  short_name: PIG-PIB boreholes
   provider: Państwowy Instytut Geologiczny–PIB (PIG-PIB)
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4828,8 +5197,11 @@ sources:
     - https://www.pgi.gov.pl/dane-geologiczne/geologiczne-bazy-danych.html
 - id: PL-ENV-015
   name: MIDAS mineral deposits and mining areas database
+  short_name: PIG-PIB MIDAS deposits
   provider: PIG-PIB
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4864,8 +5236,11 @@ sources:
     references: ['https://www.pgi.gov.pl/midas.html', 'https://midas-app.pgi.gov.pl/']
 - id: PL-ENV-016
   name: Mapa Hydrogeologiczna Polski (MHP) data
+  short_name: PIG-PIB hydrogeological map
   provider: PIG-PIB / Państwowa Służba Hydrogeologiczna
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4901,8 +5276,11 @@ sources:
     - https://www.pgi.gov.pl/psh/dane-hydrogeologiczne-psh/947-bazy-danych-hydrogeologiczne/8888-dane-hydrogeologiczne-mhp.html
 - id: PL-ENV-017
   name: CRFOP and BDZP nature-protection spatial services
+  short_name: GDOŚ nature protection
   provider: Generalna Dyrekcja Ochrony Środowiska (GDOŚ)
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4938,8 +5316,11 @@ sources:
     - https://www.gov.pl/web/gdos/dostep-do-danych-geoprzestrzennych
 - id: PL-ENV-018
   name: Bank Danych o Lasach (BDL) OGC services
+  short_name: Lasy Państwowe forest data
   provider: Lasy Państwowe
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4976,8 +5357,11 @@ sources:
     - https://www9.bdl.lasy.gov.pl/portal/uslugi-ogc?v=1
 - id: PL-ENV-019
   name: PSE Reports API v2 and market/system reports
+  short_name: PSE reports
   provider: Polskie Sieci Elektroenergetyczne (PSE)
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5014,8 +5398,11 @@ sources:
     - https://www.pse.pl/-/najwazniejsze-dane-o-pracy-systemu-elektroenergetycznego-i-rynku-bilansujacego-w-nowej-odslonie
 - id: PL-ENV-020
   name: Energy price indicators and small-renewable-installation reports
+  short_name: URE energy prices
   provider: Urząd Regulacji Energetyki (URE)
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5053,8 +5440,11 @@ sources:
     - https://www.ure.gov.pl/pl/urzad/informacje-ogolne/aktualnosci/12642,Male-instalacje-OZE-w-2024-r.html
 - id: PL-ENV-021
   name: Gas transmission transparency data
+  short_name: GAZ-SYSTEM transparency
   provider: Operator Gazociągów Przesyłowych GAZ-SYSTEM S.A.
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5090,8 +5480,11 @@ sources:
     - https://www.gaz-system.pl/en/for-customers/market-information/data-transparency.html
 - id: PL-ENV-022
   name: Generalny Pomiar Ruchu (GPR)
+  short_name: GDDKiA traffic census (GPR)
   provider: Generalna Dyrekcja Dróg Krajowych i Autostrad (GDDKiA)
   status: registered
+  family: H
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5127,8 +5520,11 @@ sources:
     - https://www.gov.pl/web/gddkia/generalny-pomiar-ruchu-20202021
 - id: PL-ENV-023
   name: Road programme and infrastructure downloads (RPBDK/MOP)
+  short_name: GDDKiA road downloads
   provider: GDDKiA
   status: registered
+  family: H
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5164,8 +5560,11 @@ sources:
     - https://www.gov.pl/web/gddkia/dane-do-pobrania
 - id: PL-ENV-024
   name: CEPiK public API
+  short_name: CEPiK
   provider: Ministerstwo Cyfryzacji / Centralna Ewidencja Pojazdów i Kierowców
   status: registered
+  family: H
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5203,8 +5602,11 @@ sources:
     - https://api.cepik.gov.pl/doc
 - id: PL-ENV-025
   name: Rail Data Portal (Dane UTK)
+  short_name: UTK rail data
   provider: Urząd Transportu Kolejowego (UTK)
   status: registered
+  family: H
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5243,8 +5645,11 @@ sources:
     - https://utk.gov.pl/pl/raporty-i-analizy/analizy-i-monitoring/statystyka-przewozow-pa
 - id: PL-ENV-026
   name: Airport traffic statistics
+  short_name: ULC airport traffic
   provider: Urząd Lotnictwa Cywilnego (ULC)
   status: registered
+  family: H
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5281,8 +5686,11 @@ sources:
     - https://ulc.gov.pl/statystyki-analizy/statystyki-ruch-krajowy
 - id: PL-ENV-027
   name: Port of Gdańsk cargo and traffic statistics releases
+  short_name: Port of Gdańsk statistics
   provider: Zarząd Morskiego Portu Gdańsk S.A.
   status: registered
+  family: H
+  kpi: true
   section: poland-environment
   geography: Port Gdańsk, Poland
   provider_type: subnational-public
@@ -5319,8 +5727,11 @@ sources:
     - https://www.portgdansk.pl/wydarzenia/rekordowe-przeladunki-w-porcie-gdansk-mocny-polmetek-2026-roku/
 - id: PL-ENV-028
   name: Warsaw open-data portal and public-transport feeds
+  short_name: Warsaw open data and GTFS
   provider: Miasto Stołeczne Warszawa / Warszawski Transport Publiczny
   status: registered
+  family: H
+  kpi: false
   section: poland-environment
   geography: Warsaw, Poland
   provider_type: subnational-public
@@ -5358,8 +5769,11 @@ sources:
     - https://um.warszawa.pl/-/dane-po-warszawsku
 - id: PL-ENV-029
   name: Gdańsk Open Data and GTFS/GTFS-Realtime feeds
+  short_name: Gdańsk open data and GTFS
   provider: Gmina Miasta Gdańska / TRISTAR
   status: registered
+  family: H
+  kpi: false
   section: poland-environment
   geography: Gdańsk, Poland
   provider_type: subnational-public
@@ -5398,8 +5812,11 @@ sources:
     - https://ckan.multimediagdansk.pl/dataset/tristar/resource/30e783e4-2bec-4a7d-bb22-ee3e3b26ca96
 - id: PL-ENV-030
   name: Poznań GTFS and GTFS-Realtime open data
+  short_name: Poznań GTFS
   provider: Zarząd Transportu Miejskiego w Poznaniu / Miasto Poznań
   status: registered
+  family: H
+  kpi: false
   section: poland-environment
   geography: Poznań service area, Poland
   provider_type: subnational-public
@@ -5436,8 +5853,11 @@ sources:
     - https://www.ztm.poznan.pl/otwarte-dane/dokumentacja/
 - id: PL-ENV-031
   name: Kraków KMK GTFS and GTFS-Realtime feeds
+  short_name: Kraków GTFS
   provider: Zarząd Transportu Publicznego w Krakowie / Miasto Kraków
   status: registered
+  family: H
+  kpi: false
   section: poland-environment
   geography: Kraków metropolitan service area, Poland
   provider_type: subnational-public
@@ -5475,8 +5895,11 @@ sources:
     - https://otwartedane.um.krakow.pl/zbiory-danych/komunikacja-miejska-w-krakowie-kmk
 - id: PL-ENV-032
   name: Wrocław Open Data public-transport schedules and vehicle positions
+  short_name: Wrocław transport open data
   provider: Gmina Wrocław / Centrum Usług Informatycznych
   status: registered
+  family: H
+  kpi: false
   section: poland-environment
   geography: Wrocław, Poland
   provider_type: subnational-public
@@ -5514,8 +5937,11 @@ sources:
     - https://dane.gov.pl/en/dataset/80/resource/1823,rozklad-jazdy-transportu-publicznego-gtfs
 - id: PL-ENV-033
   name: Rejestr Wniosków, Decyzji i Zgłoszeń (RWDZ) public search and API
+  short_name: GUNB RWDZ building register
   provider: Główny Urząd Nadzoru Budowlanego (GUNB)
   status: registered
+  family: H
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5552,8 +5978,11 @@ sources:
     - https://dev.wyszukiwarka.gunb.gov.pl/docs
 - id: PL-ENV-034
   name: internet.gov.pl broadband coverage database and UKE market aggregates
+  short_name: internet.gov.pl broadband
   provider: Ministerstwo Cyfryzacji / Instytut Łączności–PIB; UKE for market reports
   status: registered
+  family: B
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5592,8 +6021,11 @@ sources:
     - https://www.uke.gov.pl/akt/raport-o-stanie-rynku-komunikacji-elektronicznej-w-2025-roku,670.html
 - id: PL-ENV-035
   name: Rejestr Urbanistyczny
+  short_name: Rejestr Urbanistyczny
   provider: Ministerstwo Rozwoju i Technologii / GUGiK / local planning authorities
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5636,8 +6068,11 @@ sources:
     - https://www.gov.pl/web/zagospodarowanieprzestrzenne/rejestr-urbanistyczny-uruchomiony
 - id: CD-001
   name: Marketstack Stock Data API
+  short_name: Marketstack
   provider: APILayer / Idera
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -5675,8 +6110,11 @@ sources:
     - https://www.ideracorp.com/legal/APILayer
 - id: CD-002
   name: Alpha Vantage Market Data APIs
+  short_name: Alpha Vantage
   provider: Alpha Vantage
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -5714,8 +6152,11 @@ sources:
     - https://www.alphavantage.co/terms_of_service/
 - id: CD-003
   name: Financial Modeling Prep API
+  short_name: Financial Modeling Prep
   provider: Financial Modeling Prep
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -5753,8 +6194,11 @@ sources:
     - https://site.financialmodelingprep.com/insights/platform/can-you-use-fmp-data-in-a-public-app-website-or-client-dashboard
 - id: CD-004
   name: Nasdaq Data Link
+  short_name: Nasdaq Data Link
   provider: Nasdaq
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -5794,8 +6238,11 @@ sources:
     - https://docs.data.nasdaq.com/docs/large-table-download
 - id: CD-005
   name: GPW Market Data
+  short_name: GPW market data
   provider: Warsaw Stock Exchange (GPW)
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: commercial
@@ -5830,8 +6277,11 @@ sources:
     references: ['https://www.gpw.pl/market-data']
 - id: CD-006
   name: Electronic Information Transmission System (ESPI)
+  short_name: KNF ESPI
   provider: Polish Financial Supervision Authority (KNF)
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: national-public
@@ -5868,8 +6318,11 @@ sources:
     - https://www.knf.gov.pl/dla_konsumenta/kampanie_informacyjne/obowiazki_emitentow
 - id: CD-007
   name: Electronic Information Base (EBI)
+  short_name: GPW EBI
   provider: Warsaw Stock Exchange (GPW)
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: commercial
@@ -5905,8 +6358,11 @@ sources:
     - https://www.gpw.pl/ebi
 - id: CD-008
   name: PAP Biznes ESPI/EBI dissemination portal
+  short_name: PAP Biznes ESPI/EBI
   provider: Polish Press Agency (PAP)
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: commercial
@@ -5943,8 +6399,11 @@ sources:
     references: ['https://biznes.pap.pl/espi', 'https://biznes.pap.pl/']
 - id: CD-009
   name: Stooq historical quotations
+  short_name: Stooq quotations
   provider: Stooq
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -5978,8 +6437,11 @@ sources:
     references: ['https://stooq.pl/q/d/?s=aapl.us', 'https://stooq.pl/t/?i=10']
 - id: CD-010
   name: TGE Market Data
+  short_name: TGE market data
   provider: Towarowa Giełda Energii (TGE)
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: commercial
@@ -6015,8 +6477,11 @@ sources:
     - https://tge.pl/pub/TGE/polityka%20danych/2022_01_01_EN_Polityka_dotycz_ca.1.pdf
 - id: CD-011
   name: GPW Benchmark index and reference-rate data
+  short_name: GPW Benchmark
   provider: GPW Benchmark
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: commercial
@@ -6053,8 +6518,11 @@ sources:
     - https://www.gpwbenchmark.pl/en-dokumentacja
 - id: CD-012
   name: EDGAR APIs, bulk data and filing archives
+  short_name: SEC EDGAR
   provider: U.S. Securities and Exchange Commission
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: United States
   provider_type: national-public
@@ -6092,8 +6560,11 @@ sources:
     - https://www.sec.gov/about/developer-resources
 - id: CD-013
   name: ESEF annual financial reports via national OAMs
+  short_name: ESEF annual reports
   provider: EU national Officially Appointed Mechanisms
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: multicountry-Europe
   provider_type: international-public
@@ -6131,8 +6602,11 @@ sources:
     - https://www.esma.europa.eu/sites/default/files/library/esma32-60-254_esef_reporting_manual.pdf
 - id: CD-014
   name: Companies House Public Data, Document and Streaming APIs
+  short_name: Companies House
   provider: UK Companies House
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: United Kingdom
   provider_type: national-public
@@ -6171,9 +6645,12 @@ sources:
     - https://developer.company-information.service.gov.uk/
 - id: CD-015
   name: Global LEI Index, GLEIF API and Golden Copy/Delta Files
+  short_name: GLEIF
   provider: Global Legal Entity Identifier Foundation
   source_system: gleif
   status: bronze
+  family: E
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: international-public
@@ -6209,8 +6686,11 @@ sources:
     - https://www.gleif.org/en/lei-data/gleif-api
 - id: CD-016
   name: OpenCorporates REST and Reconciliation APIs
+  short_name: OpenCorporates
   provider: OpenCorporates
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -6246,8 +6726,11 @@ sources:
     - https://opencorporates.com/legal-information/enterprise-api-terms-of-service/
 - id: CD-017
   name: YouTube Data API v3
+  short_name: YouTube Data API
   provider: YouTube / Google
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -6286,8 +6769,11 @@ sources:
     - https://developers.google.com/youtube/terms/api-services-terms-of-service
 - id: CD-018
   name: Meta Content Library and API
+  short_name: Meta Content Library
   provider: Meta
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: multicountry
   provider_type: commercial
@@ -6323,8 +6809,11 @@ sources:
     - https://about.fb.com/news/2023/11/new-tools-to-support-independent-research/
 - id: CD-019
   name: Instagram API
+  short_name: Instagram API
   provider: Meta
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -6361,8 +6850,11 @@ sources:
     - https://developers.facebook.com/docs/instagram-platform/reference/instagram-media
 - id: CD-020
   name: X API v2
+  short_name: X API
   provider: X Corp.
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -6399,8 +6891,11 @@ sources:
     - https://docs.x.com/x-api/posts/search/introduction
 - id: CD-021
   name: LinkedIn Community Management API
+  short_name: LinkedIn API
   provider: LinkedIn / Microsoft
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -6436,8 +6931,11 @@ sources:
     - https://learn.microsoft.com/en-us/linkedin/marketing/community-management-app-review
 - id: CD-022
   name: Reddit Data API
+  short_name: Reddit Data API
   provider: Reddit
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -6474,8 +6972,11 @@ sources:
     - https://redditinc.com/policies/data-api-terms
 - id: CD-023
   name: TikTok Research API
+  short_name: TikTok Research API
   provider: TikTok
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: multicountry
   provider_type: commercial
@@ -6510,8 +7011,11 @@ sources:
     - https://developers.tiktok.com/products/research-api/
 - id: CD-024
   name: TikTok Commercial Content API
+  short_name: TikTok Commercial Content API
   provider: TikTok
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: multicountry-Europe
   provider_type: commercial
@@ -6549,8 +7053,11 @@ sources:
     - https://developers.tiktok.com/products/commercial-content-api/
 - id: CD-025
   name: Wikimedia MediaWiki Action APIs and dumps
+  short_name: Wikimedia
   provider: Wikimedia Foundation and project communities
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
@@ -6586,8 +7093,11 @@ sources:
     - https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use
 - id: CD-026
   name: Wikidata data access
+  short_name: Wikidata
   provider: Wikidata community / Wikimedia Foundation
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
@@ -6624,8 +7134,11 @@ sources:
     - https://www.wikidata.org/wiki/Wikidata:Copyright
 - id: CD-027
   name: OpenStreetMap Planet, history and replication diffs
+  short_name: OpenStreetMap
   provider: OpenStreetMap contributors and OpenStreetMap Foundation
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
@@ -6663,8 +7176,11 @@ sources:
     - https://www.openstreetmap.org/copyright
 - id: CD-028
   name: OpenAlex
+  short_name: OpenAlex
   provider: OurResearch
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
@@ -6700,8 +7216,11 @@ sources:
     references: ['https://help.openalex.org/', 'https://openalex.org/']
 - id: CD-029
   name: Crossref REST API
+  short_name: Crossref
   provider: Crossref
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
@@ -6738,8 +7257,11 @@ sources:
     - https://www.crossref.org/documentation/retrieve-metadata/rest-api/
 - id: CD-030
   name: GDELT 2.0 Event Database and Global Knowledge Graph
+  short_name: GDELT
   provider: GDELT Project
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
@@ -6776,8 +7298,11 @@ sources:
     - https://blog.gdeltproject.org/gdelt-2-0-our-global-world-in-realtime/
 - id: CD-031
   name: Our World in Data Chart Data API
+  short_name: Our World in Data
   provider: Global Change Data Lab
   status: registered
+  family: J
+  kpi: true
   section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
@@ -6811,8 +7336,11 @@ sources:
     references: ['https://ourworldindata.org/faqs']
 - id: CD-032
   name: Allegro REST API
+  short_name: Allegro API
   provider: Allegro
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: multicountry-Europe
   provider_type: commercial
@@ -6854,8 +7382,11 @@ sources:
     - https://github.com/allegro/allegro-api/issues/4213
 - id: CD-033
   name: Dane Otodom dashboards and reports
+  short_name: Otodom reports
   provider: Otodom / OLX Group
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: commercial
@@ -6893,8 +7424,11 @@ sources:
     - https://www.otodom.pl/wiadomosci/dane/aktualne-dane/
 - id: CD-034
   name: Raport Rynkowy OTOMOTO
+  short_name: OTOMOTO market report
   provider: OTOMOTO / OLX Group
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: commercial
@@ -6936,8 +7470,11 @@ sources:
     - https://www.otomoto.pl/news/otomoto-insights-2025-podsumowanie
 - id: EX-001
   name: Industrial-property statistical APIs
+  short_name: UPRP industrial-property statistics
   provider: Patent Office of the Republic of Poland (UPRP)
   status: registered
+  family: B
+  kpi: true
   section: additional
   geography: Poland
   provider_type: national-public
@@ -6973,8 +7510,11 @@ sources:
     - https://uprp.gov.pl/pl/o-urzedzie/statystyki/api-do-statystyk
 - id: EX-002
   name: e-Wyszukiwarka industrial-property search
+  short_name: UPRP e-Wyszukiwarka
   provider: Patent Office of the Republic of Poland (UPRP)
   status: registered
+  family: E
+  kpi: false
   section: additional
   geography: Poland
   provider_type: national-public
@@ -7010,8 +7550,11 @@ sources:
     - https://uprp.gov.pl/pl/uslugi-online/e-wyszukiwarka
 - id: EX-003
   name: Fire-service intervention statistics and current casualty summaries
+  short_name: PSP fire-service statistics
   provider: Headquarters of the State Fire Service (KG PSP)
   status: registered
+  family: F
+  kpi: true
   section: additional
   geography: Poland
   provider_type: national-public
@@ -7049,8 +7592,11 @@ sources:
     - https://www.gov.pl/web/kgpsp/ofiary-polska
 - id: EX-004
   name: Open Patent Services (OPS)
+  short_name: EPO Open Patent Services
   provider: European Patent Organisation (EPO)
   status: registered
+  family: J
+  kpi: false
   section: additional
   geography: multicountry
   provider_type: international-public
@@ -7088,9 +7634,12 @@ sources:
     - https://www.epo.org/en/service-support/ordering/terms-and-conditions/ops-terms-and-conditions
 - id: EX-005
   name: OpenData organizations, people and locations (bulk ZIP)
+  short_name: OpenData organisations
   provider: OpenData
   source_system: opendata_org
   status: bronze
+  family: E
+  kpi: false
   section: additional
   geography: Poland
   provider_type: unknown

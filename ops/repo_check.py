@@ -291,6 +291,7 @@ STATUSES = {
     "parked",
 }
 FAMILIES = set("ABCDEFGHIJK")
+REQUIRED = ("family", "kpi", "short_name")
 
 
 def register(files: list[Path]) -> list[str]:
@@ -301,16 +302,17 @@ def register(files: list[Path]) -> list[str]:
     problems += [
         f"register: {e.get('id')}: status {e.get('status')!r}" for e in entries if e.get("status") not in STATUSES
     ]
+    problems += [f"register: {e.get('id')}: missing {f}" for e in entries for f in REQUIRED if f not in e]
     problems += [
-        f"register: {e.get('id')}: family {e['family']!r}" for e in entries if e.get("family", "A") not in FAMILIES
+        f"register: {e.get('id')}: family {e.get('family')!r}" for e in entries if e.get("family") not in FAMILIES
     ]
     problems += [
-        f"register: {e.get('id')}: kpi {e['kpi']!r}" for e in entries if not isinstance(e.get("kpi", True), bool)
+        f"register: {e.get('id')}: kpi {e.get('kpi')!r}" for e in entries if not isinstance(e.get("kpi"), bool)
     ]
     problems += [
-        f"register: {e.get('id')}: short_name {e['short_name']!r}"
+        f"register: {e.get('id')}: short_name {e.get('short_name')!r}"
         for e in entries
-        if "short_name" in e and not (isinstance(e["short_name"], str) and len(e["short_name"]) <= 40)
+        if "short_name" in e and not (isinstance(e["short_name"], str) and 0 < len(e["short_name"]) <= 40)
     ]
     linked = {e["source_system"] for e in entries if e.get("source_system")}
     declared = {f.stem for f in files if f.parent == Path("ingestion/sources") and f.suffix == ".yaml"}
