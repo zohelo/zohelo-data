@@ -13,6 +13,7 @@ Decisions that bind implementers; read this first, after AGENTS.md.
 | O7 | 2026-10-27 | Org secrets | Org secrets stay visible to all public repos (A-10 only on the owner's request). | owner |
 | O8 | 2026-10-27 | Standing permission | Standing permission: Claude closes pull requests and issues, deletes merged branches, and creates, edits and closes issues and project items in the zohelo organisation without asking; Claude dispatches Ops runs with --apply or --delete only for a Task whose Epic cites an owner decision; otherwise the run is an owner action. | owner |
 | O9 | 2026-10-27 | Shared repo and branches | No .github or other shared repo; merged branches are deleted by branch-cleanup.yml. | owner |
+| O10 | 2026-10-27 | Merging | Claude and the agents it dispatches merge pull requests once their checks pass (squash). | owner |
 | D1 | 2026-10-27 | Bootstrap | Bootstrap issues by REST until the first sync. | architect |
 | D2 | 2026-10-27 | Destructive runs | Destructive Ops runs only for Tasks citing an owner decision. | architect |
 | D3 | 2026-10-27 | Design package | @zohelo/design ships as a GitHub Release tarball. | architect |
