@@ -13,6 +13,8 @@ sources:
   provider: Eurostat
   source_system: eurostat
   status: silver
+  family: A
+  kpi: true
   section: global-public
   geography: multicountry-Europe
   provider_type: international-public
@@ -55,6 +57,8 @@ sources:
   short_name: Eurostat Comext
   provider: Eurostat
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: multicountry-Europe
   provider_type: international-public
@@ -97,6 +101,8 @@ sources:
   short_name: OECD Data Explorer
   provider: OECD
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -136,6 +142,8 @@ sources:
   short_name: OECD PISA
   provider: OECD
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -180,6 +188,8 @@ sources:
   provider: World Bank
   source_system: world_bank_wdi
   status: silver
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -222,6 +232,8 @@ sources:
   short_name: World Bank GEM
   provider: World Bank
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -263,6 +275,8 @@ sources:
   short_name: World Bank IDS
   provider: World Bank
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -304,6 +318,8 @@ sources:
   short_name: World Bank WGI
   provider: World Bank
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -345,6 +361,8 @@ sources:
   short_name: World Bank Global Findex
   provider: World Bank
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -387,6 +405,8 @@ sources:
   short_name: World Bank Enterprise Surveys
   provider: World Bank
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -428,6 +448,8 @@ sources:
   short_name: World Bank ICP
   provider: World Bank
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -469,6 +491,8 @@ sources:
   short_name: IMF WEO
   provider: International Monetary Fund
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -513,6 +537,8 @@ sources:
   short_name: IMF IFS
   provider: International Monetary Fund
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -556,6 +582,8 @@ sources:
   short_name: IMF DOTS
   provider: International Monetary Fund
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -599,6 +627,8 @@ sources:
   short_name: BIS Data Portal
   provider: Bank for International Settlements
   status: registered
+  family: C
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -639,6 +669,8 @@ sources:
   short_name: ECB Data Portal
   provider: European Central Bank
   status: registered
+  family: C
+  kpi: true
   section: global-public
   geography: multicountry-Europe
   provider_type: international-public
@@ -680,6 +712,8 @@ sources:
   short_name: UNdata
   provider: United Nations Statistics Division
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -722,6 +756,8 @@ sources:
   short_name: UN SDG Indicators
   provider: United Nations Statistics Division
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -762,6 +798,8 @@ sources:
   short_name: UN Comtrade
   provider: United Nations Statistics Division
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -805,6 +843,8 @@ sources:
   short_name: WTO Stats
   provider: World Trade Organization
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -847,6 +887,8 @@ sources:
   short_name: UNCTAD Data Hub
   provider: UN Trade and Development (UNCTAD)
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -886,6 +928,8 @@ sources:
   short_name: FAOSTAT
   provider: Food and Agriculture Organization of the United Nations
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -927,6 +971,8 @@ sources:
   short_name: ILOSTAT
   provider: International Labour Organization
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -966,6 +1012,8 @@ sources:
   short_name: WHO GHO
   provider: World Health Organization
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1008,6 +1056,8 @@ sources:
   short_name: WHO data.who.int
   provider: World Health Organization
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1050,6 +1100,8 @@ sources:
   short_name: UNESCO UIS
   provider: UNESCO Institute for Statistics
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1090,6 +1142,8 @@ sources:
   short_name: UNICEF Data Warehouse
   provider: United Nations Children’s Fund
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1131,6 +1185,8 @@ sources:
   short_name: UNDP Human Development
   provider: United Nations Development Programme
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1170,6 +1226,8 @@ sources:
   short_name: UNHCR Refugee Statistics
   provider: United Nations High Commissioner for Refugees
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1211,6 +1269,8 @@ sources:
   short_name: IOM Migration Data Portal
   provider: International Organization for Migration
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1250,6 +1310,8 @@ sources:
   short_name: ITU DataHub
   provider: International Telecommunication Union
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1289,6 +1351,8 @@ sources:
   short_name: WIPO IP Statistics
   provider: World Intellectual Property Organization
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1330,6 +1394,8 @@ sources:
   short_name: UNODC Data Portal
   provider: United Nations Office on Drugs and Crime
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1371,6 +1437,8 @@ sources:
   short_name: IEA Data Explorer
   provider: International Energy Agency
   status: registered
+  family: G
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1414,6 +1482,8 @@ sources:
   short_name: IRENASTAT
   provider: International Renewable Energy Agency
   status: registered
+  family: G
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1453,6 +1523,8 @@ sources:
   short_name: Copernicus Climate Data Store
   provider: Copernicus Climate Change Service / ECMWF
   status: registered
+  family: G
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1495,6 +1567,8 @@ sources:
   short_name: EEA Datahub
   provider: European Environment Agency
   status: registered
+  family: G
+  kpi: true
   section: global-public
   geography: multicountry-Europe
   provider_type: international-public
@@ -1538,6 +1612,8 @@ sources:
   short_name: UNECE Data Portal
   provider: United Nations Economic Commission for Europe
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: multicountry-Europe
   provider_type: international-public
@@ -1578,6 +1654,8 @@ sources:
   short_name: UN World Population Prospects
   provider: United Nations Department of Economic and Social Affairs, Population Division
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1619,6 +1697,8 @@ sources:
   short_name: UNIDO INDSTAT
   provider: United Nations Industrial Development Organization
   status: registered
+  family: A
+  kpi: true
   section: global-public
   geography: worldwide
   provider_type: international-public
@@ -1659,6 +1739,8 @@ sources:
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   source_system: gus_bdl
   status: silver
+  family: B
+  kpi: true
   section: poland-social
   geography: local-to-national Poland
   provider_type: national-public
@@ -1699,6 +1781,8 @@ sources:
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   source_system: gus_dbw
   status: bronze
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland with territorial and classification breakdowns
   provider_type: national-public
@@ -1742,6 +1826,8 @@ sources:
   short_name: GUS STRATEG
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and regional Poland; selected EU comparisons
   provider_type: national-public
@@ -1781,6 +1867,8 @@ sources:
   short_name: GUS publication tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and regional Poland
   provider_type: national-public
@@ -1822,6 +1910,8 @@ sources:
   short_name: GUS NSP 2021
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland to fine census geographies, table-dependent
   provider_type: national-public
@@ -1864,6 +1954,8 @@ sources:
   short_name: GUS PSR 2020
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland to local agricultural geographies, table-dependent
   provider_type: national-public
@@ -1905,6 +1997,8 @@ sources:
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   source_system: gus_teryt
   status: silver
+  family: E
+  kpi: false
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -1945,6 +2039,8 @@ sources:
   short_name: GUS REGON BIR1
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: E
+  kpi: false
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -1983,6 +2079,8 @@ sources:
   short_name: ZUS statistical portal
   provider: Zakład Ubezpieczeń Społecznych (ZUS)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and voivodeships, table-dependent
   provider_type: national-public
@@ -2027,6 +2125,8 @@ sources:
   short_name: ZUS social insurance yearbook
   provider: Zakład Ubezpieczeń Społecznych (ZUS)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and regional breakdowns, edition-dependent
   provider_type: national-public
@@ -2066,6 +2166,8 @@ sources:
   short_name: KRUS statistics
   provider: Kasa Rolniczego Ubezpieczenia Społecznego (KRUS)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; regional detail varies
   provider_type: national-public
@@ -2103,6 +2205,8 @@ sources:
   short_name: "NFZ statistics: services"
   provider: Narodowy Fundusz Zdrowia (NFZ)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; provider/clinical group tables
   provider_type: national-public
@@ -2144,6 +2248,8 @@ sources:
   short_name: "NFZ statistics: pharmacy refunds"
   provider: Narodowy Fundusz Zdrowia (NFZ)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -2181,6 +2287,8 @@ sources:
   short_name: NFZ contracts
   provider: Narodowy Fundusz Zdrowia (NFZ)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; NFZ branch and provider
   provider_type: national-public
@@ -2222,6 +2330,8 @@ sources:
   short_name: NFZ waiting times
   provider: Narodowy Fundusz Zdrowia (NFZ)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; service location
   provider_type: national-public
@@ -2261,6 +2371,8 @@ sources:
   short_name: CeZ e-health in numbers
   provider: Centrum e-Zdrowia (CeZ)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; some voivodeship/powiat breakdowns
   provider_type: national-public
@@ -2298,6 +2410,8 @@ sources:
   short_name: MZ health statistics bulletin
   provider: Ministerstwo Zdrowia / Centrum e-Zdrowia
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and voivodeships, table-dependent
   provider_type: national-public
@@ -2335,6 +2449,8 @@ sources:
   short_name: GIS sanitary state report
   provider: Główny Inspektorat Sanitarny (GIS)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -2373,6 +2489,8 @@ sources:
   short_name: NIZP-PZH epidemiology bulletins
   provider: Narodowy Instytut Zdrowia Publicznego PZH – PIB (NIZP PZH)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and voivodeships, publication-dependent
   provider_type: national-public
@@ -2412,6 +2530,8 @@ sources:
   short_name: RPWDL healthcare providers
   provider: Minister Zdrowia / Centrum e-Zdrowia
   status: registered
+  family: E
+  kpi: false
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -2453,6 +2573,8 @@ sources:
   short_name: RSPO schools register
   provider: Ministerstwo Edukacji Narodowej / System Informacji Oświatowej
   status: registered
+  family: E
+  kpi: false
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -2493,6 +2615,8 @@ sources:
   short_name: SIO education statistics
   provider: Centrum Informatyczne Edukacji / Ministerstwo Edukacji Narodowej
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and regional Poland, table-dependent
   provider_type: national-public
@@ -2533,6 +2657,8 @@ sources:
   short_name: RAD-on / POL-on
   provider: Ośrodek Przetwarzania Informacji – Państwowy Instytut Badawczy (OPI PIB)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -2575,6 +2701,8 @@ sources:
   short_name: ELA graduate outcomes
   provider: Ministerstwo Nauki i Szkolnictwa Wyższego / OPI PIB
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; institution and field of study
   provider_type: national-public
@@ -2615,6 +2743,8 @@ sources:
   short_name: CKE exam results
   provider: Centralna Komisja Egzaminacyjna (CKE)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; school-location categories and regions, release-dependent
   provider_type: national-public
@@ -2653,6 +2783,8 @@ sources:
   short_name: NID heritage register
   provider: Narodowy Instytut Dziedzictwa (NID)
   status: registered
+  family: E
+  kpi: false
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -2694,6 +2826,8 @@ sources:
   short_name: GUS culture tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and voivodeships
   provider_type: national-public
@@ -2731,6 +2865,8 @@ sources:
   short_name: GUS cultural participation
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland; demographic breakdowns
   provider_type: national-public
@@ -2771,6 +2907,8 @@ sources:
   short_name: MRPiPS registered unemployment
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej / Public Employment Services
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland, voivodeship and powiat, table-dependent
   provider_type: national-public
@@ -2811,6 +2949,8 @@ sources:
   short_name: Barometr Zawodów
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej / regional labour offices
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: powiat, voivodeship and Poland
   provider_type: national-public
@@ -2850,6 +2990,8 @@ sources:
   short_name: MRPiPS social assistance
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and voivodeships, report-dependent
   provider_type: national-public
@@ -2889,6 +3031,8 @@ sources:
   short_name: MRiRW ZSRIR market information
   provider: Ministerstwo Rolnictwa i Rozwoju Wsi
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and macroregions/markets, commodity-dependent
   provider_type: national-public
@@ -2931,6 +3075,8 @@ sources:
   short_name: KOWR agricultural markets
   provider: Krajowy Ośrodek Wsparcia Rolnictwa (KOWR)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland
   provider_type: national-public
@@ -2969,6 +3115,8 @@ sources:
   short_name: ARiMR payment statistics
   provider: Agencja Restrukturyzacji i Modernizacji Rolnictwa (ARiMR)
   status: registered
+  family: D
+  kpi: true
   section: poland-social
   geography: Poland and regional Poland, programme-dependent
   provider_type: national-public
@@ -3013,6 +3161,8 @@ sources:
   short_name: GUS tourism tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   status: registered
+  family: B
+  kpi: true
   section: poland-social
   geography: Poland and voivodeships/powiats, table-dependent
   provider_type: national-public
@@ -3057,6 +3207,8 @@ sources:
   provider: Narodowy Bank Polski (NBP)
   source_system: nbp
   status: silver
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3095,6 +3247,8 @@ sources:
   short_name: NBP balance of payments
   provider: Narodowy Bank Polski (NBP)
   status: registered
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3136,6 +3290,8 @@ sources:
   short_name: NBP investment position
   provider: Narodowy Bank Polski (NBP)
   status: registered
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3176,6 +3332,8 @@ sources:
   short_name: NBP monetary aggregates
   provider: Narodowy Bank Polski (NBP)
   status: registered
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3215,6 +3373,8 @@ sources:
   short_name: NBP banking statistics
   provider: Narodowy Bank Polski (NBP)
   status: registered
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3253,6 +3413,8 @@ sources:
   short_name: NBP interest rates
   provider: Narodowy Bank Polski (NBP)
   status: registered
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3293,6 +3455,8 @@ sources:
   short_name: MF state budget
   provider: Ministry of Finance
   status: registered
+  family: D
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3333,6 +3497,8 @@ sources:
   short_name: MF Treasury debt
   provider: Ministry of Finance
   status: registered
+  family: D
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3374,6 +3540,8 @@ sources:
   short_name: MF public debt
   provider: Ministry of Finance
   status: registered
+  family: D
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3413,6 +3581,8 @@ sources:
   short_name: MF local-government budgets
   provider: Ministry of Finance
   status: registered
+  family: D
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3454,6 +3624,8 @@ sources:
   provider: Head of the National Revenue Administration / Ministry of Finance
   source_system: mf_biala_lista
   status: bronze
+  family: E
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3495,6 +3667,8 @@ sources:
   short_name: KRS open API
   provider: Ministry of Justice
   status: registered
+  family: E
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3536,6 +3710,8 @@ sources:
   short_name: KRS financial documents (RDF)
   provider: Ministry of Justice
   status: registered
+  family: I
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3576,6 +3752,8 @@ sources:
   short_name: CEIDG
   provider: Ministry of Economic Development and Technology
   status: registered
+  family: E
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3618,6 +3796,8 @@ sources:
   short_name: CRBR beneficial owners
   provider: Ministry of Finance
   status: registered
+  family: E
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3658,6 +3838,8 @@ sources:
   short_name: KNF supervised entities
   provider: Polish Financial Supervision Authority (KNF)
   status: registered
+  family: E
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3697,6 +3879,8 @@ sources:
   short_name: KNF banking sector data
   provider: Polish Financial Supervision Authority (KNF)
   status: registered
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3737,6 +3921,8 @@ sources:
   short_name: KNF insurance and pensions data
   provider: Polish Financial Supervision Authority (KNF)
   status: registered
+  family: C
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3777,6 +3963,8 @@ sources:
   short_name: KNF public warning list
   provider: Polish Financial Supervision Authority (KNF)
   status: registered
+  family: E
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3816,6 +4004,8 @@ sources:
   short_name: UOKiK decisions
   provider: Office of Competition and Consumer Protection (UOKiK)
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3856,6 +4046,8 @@ sources:
   short_name: UOKiK concentration decisions
   provider: Office of Competition and Consumer Protection (UOKiK)
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3894,6 +4086,8 @@ sources:
   short_name: e-Zamówienia BZP
   provider: Public Procurement Office (UZP)
   status: registered
+  family: D
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -3934,6 +4128,8 @@ sources:
   short_name: TED notices (Poland)
   provider: Publications Office of the European Union
   status: registered
+  family: D
+  kpi: true
   section: poland-governance
   geography: multicountry-Europe
   provider_type: international-public
@@ -3974,6 +4170,8 @@ sources:
   short_name: Sejm API
   provider: Chancellery of the Sejm
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4013,6 +4211,8 @@ sources:
   short_name: Senate data
   provider: Chancellery of the Senate
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4053,6 +4253,8 @@ sources:
   short_name: ELI Dziennik Ustaw
   provider: Government Legislation Centre (RCL) / Chancellery of the Sejm
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4092,6 +4294,8 @@ sources:
   short_name: ISAP legal acts
   provider: Chancellery of the Sejm
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4132,6 +4336,8 @@ sources:
   short_name: NIK audit results
   provider: Supreme Audit Office (NIK)
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4172,6 +4378,8 @@ sources:
   short_name: PKW election results
   provider: National Electoral Commission (PKW) / National Electoral Office (KBW)
   status: registered
+  family: F
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4211,6 +4419,8 @@ sources:
   short_name: dane.gov.pl
   provider: Chancellery of the Prime Minister
   status: registered
+  family: J
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4249,6 +4459,8 @@ sources:
   short_name: ISWS justice statistics
   provider: Ministry of Justice
   status: registered
+  family: F
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4289,6 +4501,8 @@ sources:
   short_name: Prison Service statistics
   provider: Prison Service (Służba Więzienna)
   status: registered
+  family: F
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4330,6 +4544,8 @@ sources:
   short_name: Police statistics
   provider: Polish Police Headquarters
   status: registered
+  family: F
+  kpi: true
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4369,6 +4585,8 @@ sources:
   short_name: RCL legislative process (RPL)
   provider: Government Legislation Centre (RCL)
   status: registered
+  family: F
+  kpi: false
   section: poland-governance
   geography: Poland
   provider_type: national-public
@@ -4408,6 +4626,8 @@ sources:
   provider: Główny Urząd Geodezji i Kartografii (GUGiK)
   source_system: gugik_prg
   status: silver
+  family: E
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4449,6 +4669,8 @@ sources:
   short_name: GUGiK PRNG
   provider: GUGiK
   status: registered
+  family: E
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4488,6 +4710,8 @@ sources:
   short_name: GUGiK BDOT10k
   provider: GUGiK
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4526,6 +4750,8 @@ sources:
   short_name: GUGiK orthophoto
   provider: GUGiK
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4564,6 +4790,8 @@ sources:
   short_name: GUGiK elevation (NMT)
   provider: GUGiK
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4604,6 +4832,8 @@ sources:
   short_name: GUGiK KI EGiB
   provider: GUGiK with county cadastral authorities
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4642,6 +4872,8 @@ sources:
   short_name: GUGiK address points
   provider: GUGiK and municipalities
   status: registered
+  family: E
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4680,6 +4912,8 @@ sources:
   short_name: IMGW public data API
   provider: Instytut Meteorologii i Gospodarki Wodnej–PIB (IMGW-PIB)
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4718,6 +4952,8 @@ sources:
   short_name: IMGW observation archive
   provider: IMGW-PIB
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4759,6 +4995,8 @@ sources:
   short_name: GIOŚ air quality
   provider: Główny Inspektorat Ochrony Środowiska (GIOŚ)
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4797,6 +5035,8 @@ sources:
   short_name: GIOŚ surface water
   provider: GIOŚ
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4838,6 +5078,8 @@ sources:
   short_name: GIOŚ groundwater
   provider: GIOŚ / Państwowy Instytut Geologiczny–PIB
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4877,6 +5119,8 @@ sources:
   short_name: Wody Polskie Hydroportal
   provider: Państwowe Gospodarstwo Wodne Wody Polskie
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4915,6 +5159,8 @@ sources:
   short_name: PIG-PIB boreholes
   provider: Państwowy Instytut Geologiczny–PIB (PIG-PIB)
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4954,6 +5200,8 @@ sources:
   short_name: PIG-PIB MIDAS deposits
   provider: PIG-PIB
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -4991,6 +5239,8 @@ sources:
   short_name: PIG-PIB hydrogeological map
   provider: PIG-PIB / Państwowa Służba Hydrogeologiczna
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5029,6 +5279,8 @@ sources:
   short_name: GDOŚ nature protection
   provider: Generalna Dyrekcja Ochrony Środowiska (GDOŚ)
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5067,6 +5319,8 @@ sources:
   short_name: Lasy Państwowe forest data
   provider: Lasy Państwowe
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5106,6 +5360,8 @@ sources:
   short_name: PSE reports
   provider: Polskie Sieci Elektroenergetyczne (PSE)
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5145,6 +5401,8 @@ sources:
   short_name: URE energy prices
   provider: Urząd Regulacji Energetyki (URE)
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5185,6 +5443,8 @@ sources:
   short_name: GAZ-SYSTEM transparency
   provider: Operator Gazociągów Przesyłowych GAZ-SYSTEM S.A.
   status: registered
+  family: G
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5223,6 +5483,8 @@ sources:
   short_name: GDDKiA traffic census (GPR)
   provider: Generalna Dyrekcja Dróg Krajowych i Autostrad (GDDKiA)
   status: registered
+  family: H
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5261,6 +5523,8 @@ sources:
   short_name: GDDKiA road downloads
   provider: GDDKiA
   status: registered
+  family: H
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5299,6 +5563,8 @@ sources:
   short_name: CEPiK
   provider: Ministerstwo Cyfryzacji / Centralna Ewidencja Pojazdów i Kierowców
   status: registered
+  family: H
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5339,6 +5605,8 @@ sources:
   short_name: UTK rail data
   provider: Urząd Transportu Kolejowego (UTK)
   status: registered
+  family: H
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5380,6 +5648,8 @@ sources:
   short_name: ULC airport traffic
   provider: Urząd Lotnictwa Cywilnego (ULC)
   status: registered
+  family: H
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5419,6 +5689,8 @@ sources:
   short_name: Port of Gdańsk statistics
   provider: Zarząd Morskiego Portu Gdańsk S.A.
   status: registered
+  family: H
+  kpi: true
   section: poland-environment
   geography: Port Gdańsk, Poland
   provider_type: subnational-public
@@ -5458,6 +5730,8 @@ sources:
   short_name: Warsaw open data and GTFS
   provider: Miasto Stołeczne Warszawa / Warszawski Transport Publiczny
   status: registered
+  family: H
+  kpi: false
   section: poland-environment
   geography: Warsaw, Poland
   provider_type: subnational-public
@@ -5498,6 +5772,8 @@ sources:
   short_name: Gdańsk open data and GTFS
   provider: Gmina Miasta Gdańska / TRISTAR
   status: registered
+  family: H
+  kpi: false
   section: poland-environment
   geography: Gdańsk, Poland
   provider_type: subnational-public
@@ -5539,6 +5815,8 @@ sources:
   short_name: Poznań GTFS
   provider: Zarząd Transportu Miejskiego w Poznaniu / Miasto Poznań
   status: registered
+  family: H
+  kpi: false
   section: poland-environment
   geography: Poznań service area, Poland
   provider_type: subnational-public
@@ -5578,6 +5856,8 @@ sources:
   short_name: Kraków GTFS
   provider: Zarząd Transportu Publicznego w Krakowie / Miasto Kraków
   status: registered
+  family: H
+  kpi: false
   section: poland-environment
   geography: Kraków metropolitan service area, Poland
   provider_type: subnational-public
@@ -5618,6 +5898,8 @@ sources:
   short_name: Wrocław transport open data
   provider: Gmina Wrocław / Centrum Usług Informatycznych
   status: registered
+  family: H
+  kpi: false
   section: poland-environment
   geography: Wrocław, Poland
   provider_type: subnational-public
@@ -5658,6 +5940,8 @@ sources:
   short_name: GUNB RWDZ building register
   provider: Główny Urząd Nadzoru Budowlanego (GUNB)
   status: registered
+  family: H
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5697,6 +5981,8 @@ sources:
   short_name: internet.gov.pl broadband
   provider: Ministerstwo Cyfryzacji / Instytut Łączności–PIB; UKE for market reports
   status: registered
+  family: B
+  kpi: true
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5738,6 +6024,8 @@ sources:
   short_name: Rejestr Urbanistyczny
   provider: Ministerstwo Rozwoju i Technologii / GUGiK / local planning authorities
   status: registered
+  family: G
+  kpi: false
   section: poland-environment
   geography: Poland
   provider_type: national-public
@@ -5783,6 +6071,8 @@ sources:
   short_name: Marketstack
   provider: APILayer / Idera
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -5823,6 +6113,8 @@ sources:
   short_name: Alpha Vantage
   provider: Alpha Vantage
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -5863,6 +6155,8 @@ sources:
   short_name: Financial Modeling Prep
   provider: Financial Modeling Prep
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -5903,6 +6197,8 @@ sources:
   short_name: Nasdaq Data Link
   provider: Nasdaq
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -5945,6 +6241,8 @@ sources:
   short_name: GPW market data
   provider: Warsaw Stock Exchange (GPW)
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: commercial
@@ -5982,6 +6280,8 @@ sources:
   short_name: KNF ESPI
   provider: Polish Financial Supervision Authority (KNF)
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: national-public
@@ -6021,6 +6321,8 @@ sources:
   short_name: GPW EBI
   provider: Warsaw Stock Exchange (GPW)
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: commercial
@@ -6059,6 +6361,8 @@ sources:
   short_name: PAP Biznes ESPI/EBI
   provider: Polish Press Agency (PAP)
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: commercial
@@ -6098,6 +6402,8 @@ sources:
   short_name: Stooq quotations
   provider: Stooq
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -6134,6 +6440,8 @@ sources:
   short_name: TGE market data
   provider: Towarowa Giełda Energii (TGE)
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: commercial
@@ -6172,6 +6480,8 @@ sources:
   short_name: GPW Benchmark
   provider: GPW Benchmark
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: commercial
@@ -6211,6 +6521,8 @@ sources:
   short_name: SEC EDGAR
   provider: U.S. Securities and Exchange Commission
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: United States
   provider_type: national-public
@@ -6251,6 +6563,8 @@ sources:
   short_name: ESEF annual reports
   provider: EU national Officially Appointed Mechanisms
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: multicountry-Europe
   provider_type: international-public
@@ -6291,6 +6605,8 @@ sources:
   short_name: Companies House
   provider: UK Companies House
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: United Kingdom
   provider_type: national-public
@@ -6333,6 +6649,8 @@ sources:
   provider: Global Legal Entity Identifier Foundation
   source_system: gleif
   status: bronze
+  family: E
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: international-public
@@ -6371,6 +6689,8 @@ sources:
   short_name: OpenCorporates
   provider: OpenCorporates
   status: registered
+  family: I
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -6409,6 +6729,8 @@ sources:
   short_name: YouTube Data API
   provider: YouTube / Google
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -6450,6 +6772,8 @@ sources:
   short_name: Meta Content Library
   provider: Meta
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: multicountry
   provider_type: commercial
@@ -6488,6 +6812,8 @@ sources:
   short_name: Instagram API
   provider: Meta
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -6527,6 +6853,8 @@ sources:
   short_name: X API
   provider: X Corp.
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -6566,6 +6894,8 @@ sources:
   short_name: LinkedIn API
   provider: LinkedIn / Microsoft
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -6604,6 +6934,8 @@ sources:
   short_name: Reddit Data API
   provider: Reddit
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
@@ -6643,6 +6975,8 @@ sources:
   short_name: TikTok Research API
   provider: TikTok
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: multicountry
   provider_type: commercial
@@ -6680,6 +7014,8 @@ sources:
   short_name: TikTok Commercial Content API
   provider: TikTok
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: multicountry-Europe
   provider_type: commercial
@@ -6720,6 +7056,8 @@ sources:
   short_name: Wikimedia
   provider: Wikimedia Foundation and project communities
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
@@ -6758,6 +7096,8 @@ sources:
   short_name: Wikidata
   provider: Wikidata community / Wikimedia Foundation
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
@@ -6797,6 +7137,8 @@ sources:
   short_name: OpenStreetMap
   provider: OpenStreetMap contributors and OpenStreetMap Foundation
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
@@ -6837,6 +7179,8 @@ sources:
   short_name: OpenAlex
   provider: OurResearch
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
@@ -6875,6 +7219,8 @@ sources:
   short_name: Crossref
   provider: Crossref
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
@@ -6914,6 +7260,8 @@ sources:
   short_name: GDELT
   provider: GDELT Project
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
@@ -6953,6 +7301,8 @@ sources:
   short_name: Our World in Data
   provider: Global Change Data Lab
   status: registered
+  family: J
+  kpi: true
   section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
@@ -6989,6 +7339,8 @@ sources:
   short_name: Allegro API
   provider: Allegro
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: multicountry-Europe
   provider_type: commercial
@@ -7033,6 +7385,8 @@ sources:
   short_name: Otodom reports
   provider: Otodom / OLX Group
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: commercial
@@ -7073,6 +7427,8 @@ sources:
   short_name: OTOMOTO market report
   provider: OTOMOTO / OLX Group
   status: registered
+  family: J
+  kpi: false
   section: commercial-disclosures
   geography: Poland
   provider_type: commercial
@@ -7117,6 +7473,8 @@ sources:
   short_name: UPRP industrial-property statistics
   provider: Patent Office of the Republic of Poland (UPRP)
   status: registered
+  family: B
+  kpi: true
   section: additional
   geography: Poland
   provider_type: national-public
@@ -7155,6 +7513,8 @@ sources:
   short_name: UPRP e-Wyszukiwarka
   provider: Patent Office of the Republic of Poland (UPRP)
   status: registered
+  family: E
+  kpi: false
   section: additional
   geography: Poland
   provider_type: national-public
@@ -7193,6 +7553,8 @@ sources:
   short_name: PSP fire-service statistics
   provider: Headquarters of the State Fire Service (KG PSP)
   status: registered
+  family: F
+  kpi: true
   section: additional
   geography: Poland
   provider_type: national-public
@@ -7233,6 +7595,8 @@ sources:
   short_name: EPO Open Patent Services
   provider: European Patent Organisation (EPO)
   status: registered
+  family: J
+  kpi: false
   section: additional
   geography: multicountry
   provider_type: international-public
@@ -7274,6 +7638,8 @@ sources:
   provider: OpenData
   source_system: opendata_org
   status: bronze
+  family: E
+  kpi: false
   section: additional
   geography: Poland
   provider_type: unknown
