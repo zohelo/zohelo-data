@@ -123,15 +123,15 @@ in `ingestion/sources/<source>.yaml`. Landing layout and rules: docs/landing.md.
   deletes its own leftover work branches (`test/*`, `dev/*`, and others the owner names)
   through Ops `branch_cleanup` (report first, then `--apply`).
 - Standing owner permissions (27 October 2026): Claude closes pull requests and issues,
-  deletes merged branches, and creates, edits and closes issues and project items in the
-  zohelo organisation without asking.
+  deletes merged branches, creates, edits and closes issues and project items, and merges
+  pull requests whose checks pass in the zohelo organisation without asking.
 - Claude dispatches Ops runs with `--apply` or `--delete` only for a Task whose Epic cites
   an owner decision; otherwise the run is an owner action.
 
 ## Autonomy
 
 Work the [playbook](docs/playbook.md) without asking: research sources, write code,
-run Dev branch runs, open pull requests (the owner merges), run and rerun Pipeline and Ops
+run Dev branch runs, open and merge pull requests, run and rerun Pipeline and Ops
 activities, add sources, activities, schedules and retention policies, change the
 model and the docs, and fix defects on the way. Follow up with scheduled sessions
 instead of waiting in a conversation.
@@ -159,7 +159,8 @@ owner decision is needed; keep reports short.
 - Changes reach `main` only through a pull request that passes the `check` job
   (`dev.yml`: compile, lint, configuration consistency, repository rules; no
   credentials, no committed tests).
-- The owner merges pull requests; squash merges only.
+- Claude, or an agent Claude dispatched, merges a pull request once its checks pass (owner
+  approval 27 October 2026, 16:55); squash merges only.
 - Merged branches are deleted by `branch-cleanup.yml`; leftover `test/*` and `dev/*` branches
   are deleted with Ops `branch_cleanup`. Dev trials reuse one `test/<topic>` branch.
 - No new workflow files without an owner decision; edits to the five workflows are allowed.
