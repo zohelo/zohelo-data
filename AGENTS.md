@@ -59,6 +59,8 @@ Exactly four workflows (owner direction, 12 October 2026):
    Writes only to scratch locations (`zz_dev_*` namespaces or prefixes) that the same
    script removes, unless the owner approved a one-off production change.
 4. **Deploy portal** (`deploy-portal.yml`) — portal build and deploy.
+5. **Branch cleanup** (`branch-cleanup.yml`) — deletes merged branches (on merge, weekly
+   sweep); the same file runs in zohelo and zohelo-bi.
 
 Shared Pipeline job steps are in `.github/actions/activity/`.
 
