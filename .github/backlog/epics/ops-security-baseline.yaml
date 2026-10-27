@@ -171,7 +171,8 @@ deliverables:
     type: Task
     title: Remove ingestion/legacy, warehouse/passthrough and GEMINI.md
     effort: M
-    state: open
+    state: done
+    done_by: https://github.com/zohelo/zohelo-data/pull/935
     contract: true
     context: 'The old GUS adapters and the pass-through promote (retired 16 Oct, #835) stay on main and mislead
       agents. Git history keeps them. The pass-through promote job in pipeline.yml goes too.'
@@ -197,8 +198,6 @@ deliverables:
       expect: all checks ok
     out_of_scope:
     - legacy_tables entries in source YAMLs (they name catalog tables); AGENTS.md (Task bootstrap/agents-rule)
-    notes:
-    - 'In progress: PR #935 (branch chore/remove-legacy)'
 - key: data/ops/security-baseline/repo-rules
   title: Repository rules and policies
   done_when:
