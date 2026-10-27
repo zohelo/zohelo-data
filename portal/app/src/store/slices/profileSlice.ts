@@ -11,10 +11,6 @@ import {
 import { getConnections } from "@/services/persistence/repositories/connectionRepository";
 import { getHistory } from "@/services/persistence/repositories/queryHistoryRepository";
 import { loadWorkspace } from "@/services/persistence/repositories/workspaceRepository";
-import {
-  getProviderConfigs,
-  getConversations,
-} from "@/services/persistence/repositories/aiConfigRepository";
 import { getSettingsByCategory } from "@/services/persistence/repositories/settingsRepository";
 import {
   generateEncryptionKey,
@@ -30,9 +26,6 @@ import type {
   EditorTab,
   ConnectionProvider,
   QueryHistoryItem,
-  AIProviderType,
-  ProviderConfigs,
-  DuckBrainMessage,
 } from "../types";
 
 const VERIFY_TOKEN_PLAINTEXT = "duck-ui-profile-verify";
@@ -114,8 +107,6 @@ export const createProfileSlice: StateCreator<
         // dropped rather than rendered as a mystery blank.
         const validTypes = new Set([
           "sql",
-          "notebook",
-          "dashboard",
           "home",
           "connections",
           "settings",
@@ -166,83 +157,6 @@ export const createProfileSlice: StateCreator<
         ...(h.error ? { error: h.error } : {}),
       }));
       set({ queryHistory });
-    }
-
-    // Dashboards, so a restored dashboard tab has something to render rather
-    // than reporting that it no longer exists.
-    await get().loadDashboards(profileId);
-
-    // Load AI provider configs
-    const aiConfigs = await getProviderConfigs(profileId, cryptoKey);
-    if (aiConfigs.length > 0) {
-      const providerConfigs: ProviderConfigs = {};
-      let aiProvider: AIProviderType = "openai-compatible";
-
-      for (const cfg of aiConfigs) {
-        const config = cfg.config as Record<string, string>;
-        if (cfg.provider === "openai") {
-          providerConfigs.openai = {
-            apiKey: cfg.apiKey ?? "",
-            modelId: config.modelId ?? "gpt-5-mini",
-          };
-          if (cfg.apiKey) aiProvider = "openai";
-        } else if (cfg.provider === "anthropic") {
-          providerConfigs.anthropic = {
-            apiKey: cfg.apiKey ?? "",
-            modelId: config.modelId ?? "claude-sonnet-5",
-          };
-          if (cfg.apiKey) aiProvider = "anthropic";
-        } else if (cfg.provider === "openai-compatible") {
-          providerConfigs["openai-compatible"] = {
-            baseUrl: config.baseUrl ?? "",
-            modelId: config.modelId ?? "",
-            apiKey: cfg.apiKey ?? undefined,
-          };
-          if (config.baseUrl) aiProvider = "openai-compatible";
-        }
-      }
-
-      if (!providerConfigs["openai-compatible"]?.baseUrl) {
-        providerConfigs["openai-compatible"] = {
-          baseUrl: "http://localhost:11434/v1",
-          modelId: providerConfigs["openai-compatible"]?.modelId ?? "",
-        };
-      }
-
-      set((state) => ({
-        duckBrain: {
-          ...state.duckBrain,
-          providerConfigs,
-          aiProvider,
-        },
-      }));
-    }
-
-    // Load AI conversations (most recent)
-    const conversations = await getConversations(profileId);
-    if (conversations.length > 0) {
-      try {
-        const messages = JSON.parse(conversations[0].messages);
-        if (Array.isArray(messages) && messages.length > 0) {
-          set((state) => ({
-            duckBrain: {
-              ...state.duckBrain,
-              messages: messages.map((m: Record<string, unknown>) => ({
-                id: String(m.id ?? ""),
-                role: (m.role as "user" | "assistant") ?? "user",
-                content: String(m.content ?? ""),
-                timestamp: new Date((m.timestamp as string) ?? Date.now()),
-                ...(m.sql ? { sql: String(m.sql) } : {}),
-                ...(m.queryResult
-                  ? { queryResult: m.queryResult as DuckBrainMessage["queryResult"] }
-                  : {}),
-              })),
-            },
-          }));
-        }
-      } catch {
-        // Invalid messages JSON
-      }
     }
 
     // Load theme setting

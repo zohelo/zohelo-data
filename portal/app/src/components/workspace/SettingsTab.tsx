@@ -36,7 +36,6 @@ import {
 } from "@/store/slices/querySlice";
 import { toast } from "sonner";
 import ProfileEditor from "@/components/profile/ProfileEditor";
-import AISettings from "@/components/workspace/AISettings";
 import ProfileAvatar from "@/components/profile/ProfileAvatar";
 import PasswordDialog from "@/components/profile/PasswordDialog";
 import type { Profile } from "@/store/types";
@@ -221,14 +220,10 @@ export default function SettingsTab() {
           <Tabs defaultValue="profile">
             <TabsList className="mb-6">
               <TabsTrigger value="profile">Profile</TabsTrigger>
-              <TabsTrigger value="ai">AI</TabsTrigger>
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="performance">Performance</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="ai" className="mt-0 space-y-6">
-              <AISettings />
-            </TabsContent>
 
             <TabsContent value="profile" className="mt-0 space-y-6">
               {/* Edit Current Profile */}
@@ -294,7 +289,7 @@ export default function SettingsTab() {
                       <AlertDialogTitle>Delete Profile</AlertDialogTitle>
                       <AlertDialogDescription>
                         This will permanently delete &quot;{currentProfile?.name}&quot; and all
-                        associated data including saved connections, query history, and AI
+                        associated data including saved connections and query history
                         configurations. This action cannot be undone.
                       </AlertDialogDescription>
                     </AlertDialogHeader>

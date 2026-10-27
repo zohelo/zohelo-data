@@ -22,7 +22,6 @@ export type {
   FlightWebConnectionConfig,
   HttpAuthMode,
   OpfsConnectionConfig,
-  PeerConnectionConfig,
   QuackConnectionConfig,
   QueryBatchEvent,
   QueryChunk,
@@ -83,13 +82,6 @@ export {
 export { builtInWasmConnection, WASM_CONNECTION_ID, wasmDriver } from "./drivers/wasmDriver";
 export { opfsDriver } from "./drivers/opfsDriver";
 export { httpDuckDriver } from "./drivers/httpDuckDriver";
-export {
-  peerDriver,
-  PeerSession,
-  PEER_CAPABILITIES,
-  registerPeerSession,
-  unregisterPeerSession,
-} from "./drivers/peerDriver";
 
 export {
   catalogToDatabaseInfo,

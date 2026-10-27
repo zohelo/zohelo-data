@@ -9,7 +9,6 @@ import {
   GripVertical,
   Cable,
   Settings,
-  BookOpen,
   ClipboardList,
   FolderOpen,
 } from "lucide-react";
@@ -99,8 +98,6 @@ const SortableTab = React.memo(function SortableTab({ tab, isActive }: SortableT
               <Home className="h-4 w-4" />
             ) : tab.type === "sql" ? (
               <Terminal className="h-4 w-4" />
-            ) : tab.type === "notebook" ? (
-              <BookOpen className="h-4 w-4" />
             ) : tab.type === "connections" ? (
               <Cable className="h-4 w-4" />
             ) : tab.type === "settings" ? (

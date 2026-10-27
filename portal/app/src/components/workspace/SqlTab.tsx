@@ -1,5 +1,5 @@
 // src/components/workspace/SqlTab.tsx
-import React, { useState } from "react";
+import React from "react";
 import { useDuckStore } from "@/store";
 import SqlEditor from "@/components/editor/SqlEditor";
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from "@/components/ui/resizable";
@@ -11,18 +11,13 @@ import {
   Table,
   BarChart3,
   AlertTriangle,
-  Sparkles,
   Loader2,
   Scissors,
-  LayoutDashboard,
 } from "lucide-react";
-import AddToDashboardDialog from "@/components/dashboard/AddToDashboardDialog";
-import { isNumericColumn } from "@/lib/chartDataTransform";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "../ui/skeleton";
 import { ErrorBoundary, FallbackProps } from "react-error-boundary";
-import { toast } from "sonner";
 
 const TableErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => (
   <div className="h-full flex items-center justify-center p-4">
@@ -52,28 +47,7 @@ const SqlTab: React.FC<SqlTabProps> = ({ tabId }) => {
   const progress = useDuckStore((s) => s.queryProgress[tabId]);
   const cancelQuery = useDuckStore((s) => s.cancelQuery);
   const updateTabChartConfig = useDuckStore((s) => s.updateTabChartConfig);
-  const generateSQL = useDuckStore((s) => s.generateSQL);
-  const updateTabQuery = useDuckStore((s) => s.updateTabQuery);
-  const [isFixing, setIsFixing] = useState(false);
-  const [addToDashboardOpen, setAddToDashboardOpen] = useState(false);
   const currentTab = tabs.find((tab) => tab.id === tabId);
-
-  const handleFixWithBrain = async () => {
-    if (!currentTab || typeof currentTab.content !== "string" || !currentTab.result?.error) return;
-    setIsFixing(true);
-    try {
-      const { buildFixQueryRequest } = await import("@/lib/duckBrain");
-      const fixed = await generateSQL(
-        buildFixQueryRequest(currentTab.content, currentTab.result.error)
-      );
-      if (fixed) {
-        updateTabQuery(tabId, fixed);
-        toast.success("Duck Brain suggested a fix — review it and run again");
-      }
-    } finally {
-      setIsFixing(false);
-    }
-  };
 
   const renderResults = () => {
     if (!currentTab || currentTab.type !== "sql") {
@@ -160,14 +134,6 @@ const SqlTab: React.FC<SqlTabProps> = ({ tabId }) => {
             <AlertTitle>Query Error</AlertTitle>
             <AlertDescription>{currentTab.result.error}</AlertDescription>
           </Alert>
-          <Button size="sm" variant="outline" onClick={handleFixWithBrain} disabled={isFixing}>
-            {isFixing ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Sparkles className="w-4 h-4 mr-2" />
-            )}
-            {isFixing ? "Duck Brain is thinking…" : "Fix with Duck Brain"}
-          </Button>
         </div>
       );
     }
@@ -214,16 +180,6 @@ const SqlTab: React.FC<SqlTabProps> = ({ tabId }) => {
             <BarChart3 className="h-3.5 w-3.5" />
             Charts
           </TabsTrigger>
-
-          <Button
-            size="sm"
-            variant="ghost"
-            className="ml-auto h-6 gap-1.5 px-2 text-xs"
-            onClick={() => setAddToDashboardOpen(true)}
-          >
-            <LayoutDashboard className="h-3.5 w-3.5" />
-            Add to dashboard
-          </Button>
         </TabsList>
       </Tabs>
     );
@@ -233,21 +189,8 @@ const SqlTab: React.FC<SqlTabProps> = ({ tabId }) => {
     return null;
   }
 
-  const currentSql = typeof currentTab.content === "string" ? currentTab.content : "";
-
   return (
     <div className="h-full">
-      <AddToDashboardDialog
-        open={addToDashboardOpen}
-        onOpenChange={setAddToDashboardOpen}
-        sql={currentSql}
-        title={currentTab.title}
-        chartConfig={currentTab.chartConfig}
-        columns={currentTab.result?.columns.map((name) => ({
-          name,
-          numeric: isNumericColumn(currentTab.result?.data ?? [], name),
-        }))}
-      />
       <ResizablePanelGroup direction="horizontal">
         {/* Main Editor + Results Panel */}
         <ResizablePanel defaultSize={100} minSize={50}>

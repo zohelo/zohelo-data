@@ -27,18 +27,17 @@ import type { RecordBatch, Schema as ArrowSchema } from "apache-arrow";
 /**
  * Every execution target Duck-UI knows about, including reservations.
  *
- * `peer`, `quack` and `flight-web` are declared here on purpose: the union is
+ * `quack` and `flight-web` are declared here on purpose: the union is
  * the single place that has to change when a transport lands, and declaring
  * them now keeps `switch` statements honest via exhaustiveness checking.
  */
-export type ConnectionKind = "wasm" | "opfs" | "duck-http" | "peer" | "quack" | "flight-web";
+export type ConnectionKind = "wasm" | "opfs" | "duck-http" | "quack" | "flight-web";
 
 /**
  * Where a connection definition came from. Mirrors the legacy `environment`
- * field. `SESSION` marks one granted by a live peer — never persisted, and
- * gone the moment the grant is withdrawn.
+ * field.
  */
-export type ConnectionOrigin = "APP" | "ENV" | "BUILT_IN" | "SESSION";
+export type ConnectionOrigin = "APP" | "ENV" | "BUILT_IN";
 
 /** How a `duck-http` endpoint authenticates. */
 export type HttpAuthMode = "none" | "password" | "api_key";
@@ -66,18 +65,6 @@ export interface DuckHttpConnectionConfig {
   user?: string;
 }
 
-/**
- * Execution routed through another participant's browser over WebRTC.
- * Reserved for Phase 3 — no driver implements this yet.
- */
-export interface PeerConnectionConfig {
-  kind: "peer";
-  /** Peer that owns the capability and will run the SQL. */
-  peerId: string;
-  /** Capability granted by that peer. Never contains credentials. */
-  capabilityId: string;
-}
-
 /** Reserved: DuckDB 2.x over the Quack wire protocol. Not implemented. */
 export interface QuackConnectionConfig {
   kind: "quack";
@@ -99,7 +86,6 @@ export type ConnectionConfig =
   | WasmConnectionConfig
   | OpfsConnectionConfig
   | DuckHttpConnectionConfig
-  | PeerConnectionConfig
   | QuackConnectionConfig
   | FlightWebConnectionConfig;
 

@@ -1,5 +1,5 @@
 import "./index.css";
-import { StrictMode, useEffect, useRef, useState, lazy } from "react";
+import { StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import { Suspense } from "react";
@@ -16,14 +16,6 @@ import { cleanupOrphanedStorage } from "@/services/persistence/cleanup";
 import { listProfiles } from "@/services/persistence/repositories/profileRepository";
 import ProfilePicker from "@/components/profile/ProfilePicker";
 import type { Profile } from "@/store/types";
-
-// Chrome-free embed viewer — loaded only on the /embed route.
-const EmbedView = lazy(() => import("@/pages/EmbedView"));
-
-/** True when the current path is the chrome-free embed viewer. */
-function isEmbedPath(): boolean {
-  return /\/embed\/?$/.test(window.location.pathname);
-}
 
 interface LoadingScreenProps {
   message: string;
@@ -133,7 +125,6 @@ const ProfileBootstrap = ({ children }: { children: React.ReactNode }) => {
           }}
           onCreateProfile={async (name, password, avatarEmoji) => {
             const id = await createProfile(name, password, avatarEmoji);
-            await migrateFromLocalStorage(id);
             await loadProfile(id, password);
             startAutoSave();
             setReady(true);
@@ -147,120 +138,6 @@ const ProfileBootstrap = ({ children }: { children: React.ReactNode }) => {
 
   return children;
 };
-
-/**
- * Migrate existing localStorage state to the system database.
- * One-time operation on first boot after the profile system is introduced.
- */
-async function migrateFromLocalStorage(profileId: string): Promise<void> {
-  if (localStorage.getItem("duck-ui-migrated") === "true") return;
-
-  const raw = localStorage.getItem("duck-ui-storage");
-  if (!raw) {
-    localStorage.setItem("duck-ui-migrated", "true");
-    return;
-  }
-
-  try {
-    const parsed = JSON.parse(raw);
-    const state = parsed.state ?? parsed;
-
-    const { saveWorkspace } =
-      await import("@/services/persistence/repositories/workspaceRepository");
-    const { addHistoryEntry } =
-      await import("@/services/persistence/repositories/queryHistoryRepository");
-    const { saveProviderConfig, saveConversation } =
-      await import("@/services/persistence/repositories/aiConfigRepository");
-    const { setSetting } = await import("@/services/persistence/repositories/settingsRepository");
-    const { saveConnection } =
-      await import("@/services/persistence/repositories/connectionRepository");
-    const { loadKeyForProfile } = await import("@/services/persistence/crypto");
-
-    // Load the encryption key for this profile
-    const keyData = await loadKeyForProfile(profileId);
-    const cryptoKey = keyData?.key ?? null;
-
-    // Migrate connections
-    const connections = state.connectionList?.connections ?? [];
-    for (const conn of connections) {
-      if (!conn.id || conn.scope === "WASM") continue;
-      const config: Record<string, unknown> = {
-        host: conn.host,
-        port: conn.port,
-        database: conn.database,
-        path: conn.path,
-        authMode: conn.authMode,
-      };
-      const credentials: Record<string, unknown> = {};
-      if (conn.password) credentials.password = conn.password;
-      if (conn.apiKey) credentials.apiKey = conn.apiKey;
-
-      await saveConnection(
-        profileId,
-        {
-          name: conn.name ?? "Untitled",
-          scope: conn.scope ?? "External",
-          config,
-          credentials: Object.keys(credentials).length > 0 ? credentials : undefined,
-          environment: conn.environment ?? "APP",
-        },
-        cryptoKey
-      );
-    }
-
-    // Migrate query history
-    for (const item of state.queryHistory ?? []) {
-      await addHistoryEntry(profileId, item.query, {
-        error: item.error,
-      });
-    }
-
-    // Migrate workspace state (tabs)
-    if (state.tabs) {
-      const tabsJson = JSON.stringify(
-        state.tabs.map((t: Record<string, unknown>) => ({ ...t, result: undefined }))
-      );
-      await saveWorkspace(profileId, {
-        tabs: tabsJson,
-        activeTabId: (state.activeTabId as string) ?? null,
-        currentConnectionId:
-          ((state.currentConnection as Record<string, unknown>)?.id as string) ?? null,
-        currentDatabase: (state.currentDatabase as string) ?? null,
-      });
-    }
-
-    // Migrate AI provider configs
-    const providerConfigs = state.duckBrain?.providerConfigs ?? {};
-    for (const [provider, config] of Object.entries(providerConfigs)) {
-      if (!config) continue;
-      const cfg = config as Record<string, string>;
-      const apiKey = cfg.apiKey ?? null;
-      const safeConfig: Record<string, unknown> = { modelId: cfg.modelId };
-      if (cfg.baseUrl) safeConfig.baseUrl = cfg.baseUrl;
-      await saveProviderConfig(profileId, provider, safeConfig, apiKey, cryptoKey);
-    }
-
-    // Migrate AI messages
-    if (state.duckBrain?.messages?.length) {
-      await saveConversation(profileId, state.duckBrain.messages, {
-        title: "Migrated conversation",
-        provider: state.duckBrain.aiProvider,
-      });
-    }
-
-    // Migrate theme
-    const theme = localStorage.getItem("vite-ui-theme");
-    if (theme) {
-      await setSetting(profileId, "theme", "mode", JSON.stringify(theme));
-    }
-
-    console.info("[Migration] Successfully migrated localStorage data to system DB");
-  } catch (error) {
-    console.warn("[Migration] Failed to migrate localStorage:", error);
-  }
-
-  localStorage.setItem("duck-ui-migrated", "true");
-}
 
 const AppInitializer = ({ children }: AppInitializerProps) => {
   const initialize = useDuckStore((s) => s.initialize);
@@ -301,10 +178,6 @@ const App = () => {
       <div className="flex-1 overflow-hidden">
         <Routes>
           <Route path="/" element={<Home />} />
-          {/* Crawlable share links (/a/?s=…): humans land here and the analysis
-              opens via useQueryFromURL; crawlers are served an OG card by the
-              edge function on the marketing host. */}
-          <Route path="/a" element={<Home />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
@@ -312,44 +185,26 @@ const App = () => {
   );
 };
 
-// After a deploy, the auto-updating service worker purges the previous
-// build's precache; a mid-session lazy chunk load would then 404. Reload once
-// when a NEW worker replaces an existing one — the 2s-debounced workspace
-// auto-save makes this nearly lossless. The first-ever install also fires
-// controllerchange (clientsClaim), and reloading there would loop.
+// The portal used to install a service worker (PWA). It is gone: unregister any worker a
+// previous visit installed and drop its caches, so old builds and sign-in state never stick.
+// public/sw.js does the same for browsers still running the old worker.
 if ("serviceWorker" in navigator) {
-  let hadController = !!navigator.serviceWorker.controller;
-  let reloadingForNewVersion = false;
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (!hadController) {
-      hadController = true;
-      return;
-    }
-    if (reloadingForNewVersion) return;
-    reloadingForNewVersion = true;
-    window.location.reload();
-  });
+  void navigator.serviceWorker
+    .getRegistrations()
+    .then((registrations) => Promise.all(registrations.map((r) => r.unregister())))
+    .catch(() => undefined);
+}
+const isRetiredCache = (name: string) =>
+  /^(workbox-|duckui-|duckdb-extensions$|jsdelivr-cdn$|webllm)/.test(name);
+if ("caches" in window) {
+  void caches
+    .keys()
+    .then((keys) => Promise.all(keys.filter(isRetiredCache).map((key) => caches.delete(key))))
+    .catch(() => undefined);
 }
 
 const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("Failed to find root element");
-
-// The embed viewer is a public, profile-free widget: it boots the DuckDB engine
-// but skips ProfileBootstrap (no picker, no persistence, no autosave) and the
-// router (it reads the share payload straight from the URL).
-const EmbedRoot = () => (
-  <StrictMode>
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <AppInitializer>
-        <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-          <Suspense fallback={<LoadingScreen message="Loading analysis" />}>
-            <EmbedView />
-          </Suspense>
-        </ThemeProvider>
-      </AppInitializer>
-    </ErrorBoundary>
-  </StrictMode>
-);
 
 // Vite's relative asset base is not a router path: React Router interprets
 // "./" as "/./" and renders a blank page. Explicit subpath bases still apply.
@@ -374,4 +229,4 @@ const FullApp = () => (
 );
 
 // Production render
-createRoot(rootElement).render(isEmbedPath() ? <EmbedRoot /> : <FullApp />);
+createRoot(rootElement).render(<FullApp />);

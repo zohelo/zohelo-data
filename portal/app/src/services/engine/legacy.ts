@@ -29,8 +29,6 @@ export const scopeToKind = (scope: string | undefined): ConnectionKind => {
       return "opfs";
     case "External":
       return "duck-http";
-    case "Peer":
-      return "peer";
     default:
       return "duck-http";
   }
@@ -49,8 +47,6 @@ export const kindToScope = (kind: ConnectionKind): string => {
       return "OPFS";
     case "duck-http":
       return "External";
-    case "peer":
-      return "Peer";
     default:
       return kind;
   }
@@ -85,10 +81,6 @@ export const toConnectionDefinition = (
       return { id, name, origin, config: { kind: "wasm" } };
     case "opfs":
       return { id, name, origin, config: { kind: "opfs", path: provider.path ?? "" } };
-    case "peer":
-      // The live session already registered the runtime handle under this id;
-      // the driver looks it up rather than reconstructing anything.
-      return { id, name, origin, config: { kind: "peer", peerId: id, capabilityId: id } };
     default:
       return {
         id,

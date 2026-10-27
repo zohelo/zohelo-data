@@ -45,9 +45,6 @@ export const currentDatabaseLabel = (provider: ConnectionProvider): string => {
       return provider.path?.replace(/\.db$/, "") || "opfs";
     case "External":
       return provider.database || "external";
-    case "Peer":
-      // Named for what it is, so the UI never implies the data is local.
-      return "shared";
     default:
       return "memory";
   }

@@ -5,17 +5,10 @@ import { createConnectionSlice } from "./slices/connectionSlice";
 import { createQuerySlice } from "./slices/querySlice";
 import { createSchemaSlice } from "./slices/schemaSlice";
 import { createTabSlice } from "./slices/tabSlice";
-import { createDuckBrainSlice } from "./slices/duckBrainSlice";
 import { createFileSystemSlice } from "./slices/fileSystemSlice";
 import { createProfileSlice } from "./slices/profileSlice";
-import { createSessionSlice } from "./slices/sessionSlice";
-import { createDashboardSlice } from "./slices/dashboardSlice";
 import { createLakehouseSlice } from "./slices/lakehouseSlice";
 import { saveWorkspace } from "@/services/persistence/repositories/workspaceRepository";
-import {
-  saveProviderConfig,
-  saveConversation,
-} from "@/services/persistence/repositories/aiConfigRepository";
 import { isSystemDbInitialized } from "@/services/persistence/systemDb";
 import type { DuckStoreState } from "./types";
 
@@ -28,11 +21,8 @@ const storeCreator: StateCreator<DuckStoreState, [["zustand/devtools", never]]> 
   ...createQuerySlice(...a),
   ...createSchemaSlice(...a),
   ...createTabSlice(...a),
-  ...createDuckBrainSlice(...a),
   ...createFileSystemSlice(...a),
   ...createProfileSlice(...a),
-  ...createSessionSlice(...a),
-  ...createDashboardSlice(...a),
   ...createLakehouseSlice(...a),
 });
 
@@ -44,29 +34,13 @@ export const useDuckStore = create<DuckStoreState>()(
 
 let saveTimer: ReturnType<typeof setTimeout>;
 let lastSavedTabs: string | undefined;
-let lastSavedAiProvider: string | undefined;
-let lastSavedMessages: number | undefined;
-
 async function persistWorkspaceState(state: DuckStoreState): Promise<void> {
-  const { currentProfileId, encryptionKey, isProfileLoaded } = state;
+  const { currentProfileId, isProfileLoaded } = state;
   if (!currentProfileId || !isProfileLoaded || !isSystemDbInitialized()) return;
 
   try {
     // Save workspace (tabs, active tab, current DB)
-    const tabsJson = JSON.stringify(
-      state.tabs.map((tab) => {
-        if (tab.type === "notebook" && typeof tab.content === "string") {
-          try {
-            const cells = JSON.parse(tab.content) as Array<Record<string, unknown>>;
-            const cleanCells = cells.map((c) => ({ ...c, result: undefined }));
-            return { ...tab, result: undefined, content: JSON.stringify(cleanCells) };
-          } catch {
-            return { ...tab, result: undefined };
-          }
-        }
-        return { ...tab, result: undefined };
-      })
-    );
+    const tabsJson = JSON.stringify(state.tabs.map((tab) => ({ ...tab, result: undefined })));
     if (tabsJson !== lastSavedTabs) {
       await saveWorkspace(currentProfileId, {
         tabs: tabsJson,
@@ -77,39 +51,6 @@ async function persistWorkspaceState(state: DuckStoreState): Promise<void> {
       lastSavedTabs = tabsJson;
     }
 
-    // Save AI provider configs when changed
-    const currentProvider = state.duckBrain.aiProvider;
-    if (currentProvider !== lastSavedAiProvider) {
-      const configs = state.duckBrain.providerConfigs;
-      for (const [provider, config] of Object.entries(configs)) {
-        if (config) {
-          const apiKey = "apiKey" in config ? (config.apiKey as string) : null;
-          const safeConfig: Record<string, unknown> = {
-            modelId: (config as Record<string, unknown>).modelId,
-          };
-          if ("baseUrl" in config) safeConfig.baseUrl = config.baseUrl;
-          await saveProviderConfig(
-            currentProfileId,
-            provider,
-            safeConfig,
-            apiKey ?? null,
-            encryptionKey
-          );
-        }
-      }
-      lastSavedAiProvider = currentProvider;
-    }
-
-    // Save AI messages when changed
-    const messageCount = state.duckBrain.messages.length;
-    if (messageCount !== lastSavedMessages && messageCount > 0) {
-      await saveConversation(currentProfileId, state.duckBrain.messages, {
-        id: `${currentProfileId}-default`,
-        title: "Default conversation",
-        provider: state.duckBrain.aiProvider,
-      });
-      lastSavedMessages = messageCount;
-    }
   } catch (error) {
     console.warn("[AutoSave] Failed to persist state:", error);
   }

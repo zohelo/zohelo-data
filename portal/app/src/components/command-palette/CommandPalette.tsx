@@ -15,7 +15,6 @@ import {
   Terminal,
   Home,
   Cable,
-  Brain,
   Settings,
   Sun,
   Moon,
@@ -40,7 +39,6 @@ export default function CommandPalette() {
   const activeTabId = useDuckStore((s) => s.activeTabId);
   const createTab = useDuckStore((s) => s.createTab);
   const setActiveTab = useDuckStore((s) => s.setActiveTab);
-  const toggleBrainPanel = useDuckStore((s) => s.toggleBrainPanel);
   const databases = useDuckStore((s) => s.databases);
   const connectionList = useDuckStore((s) => s.connectionList);
   const currentConnection = useDuckStore((s) => s.currentConnection);
@@ -124,17 +122,6 @@ export default function CommandPalette() {
             <CommandItem onSelect={() => openOrFocusTab("settings", "Settings")}>
               <Settings className="mr-2 h-4 w-4" />
               Settings
-            </CommandItem>
-          )}
-          {!ui.hideBrain && (
-            <CommandItem
-              onSelect={() => {
-                toggleBrainPanel();
-                setOpen(false);
-              }}
-            >
-              <Brain className="mr-2 h-4 w-4" />
-              Toggle AI Panel
             </CommandItem>
           )}
           <CommandItem

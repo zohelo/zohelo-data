@@ -22,7 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Database, Edit2, ExternalLink, InfoIcon, Radio, Trash2 } from "lucide-react";
+import { Database, Edit2, ExternalLink, InfoIcon, Trash2 } from "lucide-react";
 
 interface ConnectionsListProps {
   connections: ConnectionProvider[];
@@ -40,8 +40,6 @@ const readOnlyReason = (connection: ConnectionProvider): string | null => {
       return "Configured via environment variables — cannot be edited or deleted.";
     case "BUILT_IN":
       return "Built-in connection — cannot be edited or deleted.";
-    case "SESSION":
-      return "Granted by a live session. It disappears when the session ends.";
     default:
       return null;
   }
@@ -49,7 +47,6 @@ const readOnlyReason = (connection: ConnectionProvider): string | null => {
 
 const scopeIcon = (scope: ConnectionProvider["scope"]) => {
   if (scope === "WASM" || scope === "OPFS") return <Database size={16} />;
-  if (scope === "Peer") return <Radio size={16} className="text-amber-500" />;
   return <ExternalLink size={16} />;
 };
 
