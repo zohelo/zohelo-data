@@ -6,7 +6,6 @@ import {
   Command,
   Edit,
   Share2,
-  Brain,
   Bookmark,
   ListTree,
   TableProperties,
@@ -51,8 +50,6 @@ const SqlEditor: React.FC<SqlEditorProps> = ({ tabId, title, className }) => {
   const cancelQuery = useDuckStore((s) => s.cancelQuery);
   const isExecuting = useDuckStore((s) => !!s.executingTabs[tabId]);
   const updateTabTitle = useDuckStore((s) => s.updateTabTitle);
-  const toggleBrainPanel = useDuckStore((s) => s.toggleBrainPanel);
-  const duckBrain = useDuckStore((s) => s.duckBrain);
   const currentProfileId = useDuckStore((s) => s.currentProfileId);
   const currentSession = useDuckStore((s) => s.currentSession);
   const sessionStatus = useDuckStore((s) => s.session.status);
@@ -384,23 +381,6 @@ const SqlEditor: React.FC<SqlEditorProps> = ({ tabId, title, className }) => {
               </TooltipTrigger>
               <TooltipContent side="bottom">
                 <p>Save Query</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip delayDuration={200}>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={toggleBrainPanel}
-                  variant={duckBrain.isPanelOpen ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-9 w-9"
-                >
-                  <Brain className={cn("h-4 w-4", duckBrain.isPanelOpen && "text-primary")} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>{duckBrain.isPanelOpen ? "Close Duck Brain" : "Open Duck Brain"}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

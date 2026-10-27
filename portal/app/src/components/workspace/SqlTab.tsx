@@ -11,7 +11,6 @@ import {
   Table,
   BarChart3,
   AlertTriangle,
-  Sparkles,
   Loader2,
   Scissors,
   LayoutDashboard,
@@ -22,7 +21,6 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "../ui/skeleton";
 import { ErrorBoundary, FallbackProps } from "react-error-boundary";
-import { toast } from "sonner";
 
 const TableErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => (
   <div className="h-full flex items-center justify-center p-4">
@@ -52,28 +50,8 @@ const SqlTab: React.FC<SqlTabProps> = ({ tabId }) => {
   const progress = useDuckStore((s) => s.queryProgress[tabId]);
   const cancelQuery = useDuckStore((s) => s.cancelQuery);
   const updateTabChartConfig = useDuckStore((s) => s.updateTabChartConfig);
-  const generateSQL = useDuckStore((s) => s.generateSQL);
-  const updateTabQuery = useDuckStore((s) => s.updateTabQuery);
-  const [isFixing, setIsFixing] = useState(false);
   const [addToDashboardOpen, setAddToDashboardOpen] = useState(false);
   const currentTab = tabs.find((tab) => tab.id === tabId);
-
-  const handleFixWithBrain = async () => {
-    if (!currentTab || typeof currentTab.content !== "string" || !currentTab.result?.error) return;
-    setIsFixing(true);
-    try {
-      const { buildFixQueryRequest } = await import("@/lib/duckBrain");
-      const fixed = await generateSQL(
-        buildFixQueryRequest(currentTab.content, currentTab.result.error)
-      );
-      if (fixed) {
-        updateTabQuery(tabId, fixed);
-        toast.success("Duck Brain suggested a fix — review it and run again");
-      }
-    } finally {
-      setIsFixing(false);
-    }
-  };
 
   const renderResults = () => {
     if (!currentTab || currentTab.type !== "sql") {
@@ -160,14 +138,6 @@ const SqlTab: React.FC<SqlTabProps> = ({ tabId }) => {
             <AlertTitle>Query Error</AlertTitle>
             <AlertDescription>{currentTab.result.error}</AlertDescription>
           </Alert>
-          <Button size="sm" variant="outline" onClick={handleFixWithBrain} disabled={isFixing}>
-            {isFixing ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Sparkles className="w-4 h-4 mr-2" />
-            )}
-            {isFixing ? "Duck Brain is thinking…" : "Fix with Duck Brain"}
-          </Button>
         </div>
       );
     }

@@ -37,7 +37,6 @@ export interface UiConfigInput {
   hideConnections?: boolean;
   hideSettings?: boolean;
   hideImport?: boolean;
-  hideBrain?: boolean;
   /** Hide destructive affordances (e.g. "Delete Table"). */
   readOnly?: boolean;
 }
@@ -48,7 +47,6 @@ export interface UiConfig {
   hideConnections: boolean;
   hideSettings: boolean;
   hideImport: boolean;
-  hideBrain: boolean;
   readOnly: boolean;
 }
 
@@ -66,7 +64,6 @@ const resolveUiConfig = (input?: UiConfigInput): UiConfig => {
     hideConnections: withKioskDefault(input?.hideConnections),
     hideSettings: withKioskDefault(input?.hideSettings),
     hideImport: withKioskDefault(input?.hideImport),
-    hideBrain: withKioskDefault(input?.hideBrain),
     readOnly: withKioskDefault(input?.readOnly),
   };
 };

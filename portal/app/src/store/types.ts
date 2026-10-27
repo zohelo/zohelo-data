@@ -170,38 +170,10 @@ export interface QueryHistoryItem {
   error?: string;
 }
 
-export interface QueryResultArtifact {
-  status: "pending" | "running" | "success" | "error";
-  data?: QueryResult;
-  error?: string;
-  executedAt?: Date;
-}
-
 export interface ExternalQueryResponse {
   meta: Array<{ name: string; type: string }>;
   data: unknown[][];
   rows?: number;
-}
-
-//
-// AI Provider Types
-//
-
-export type AIProviderType = "webllm" | "openai" | "anthropic" | "openai-compatible";
-
-export interface ProviderConfigs {
-  openai?: { apiKey: string; modelId: string };
-  anthropic?: { apiKey: string; modelId: string };
-  "openai-compatible"?: { baseUrl: string; modelId: string; apiKey?: string };
-}
-
-export interface DuckBrainMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-  sql?: string;
-  queryResult?: QueryResultArtifact;
 }
 
 //
@@ -460,40 +432,6 @@ export interface TabSlice {
   toggleNotebookCellType: (tabId: string, cellId: string) => void;
 }
 
-export interface DuckBrainSlice {
-  duckBrain: {
-    modelStatus: "idle" | "checking" | "downloading" | "loading" | "ready" | "error";
-    downloadProgress: number;
-    downloadStatus: string;
-    isWebGPUSupported: boolean | null;
-    currentModel: string | null;
-    error: string | null;
-    messages: DuckBrainMessage[];
-    isGenerating: boolean;
-    streamingContent: string;
-    isPanelOpen: boolean;
-    aiProvider: AIProviderType;
-    providerConfigs: ProviderConfigs;
-  };
-
-  initializeDuckBrain: (modelId?: string) => Promise<void>;
-  generateSQL: (naturalLanguage: string) => Promise<string | null>;
-  toggleBrainPanel: () => void;
-  abortGeneration: () => void;
-  clearBrainMessages: () => void;
-  addBrainMessage: (message: Omit<DuckBrainMessage, "id" | "timestamp">) => void;
-  setStreamingContent: (content: string) => void;
-  setIsGenerating: (isGenerating: boolean) => void;
-  executeQueryInChat: (messageId: string, sql: string) => Promise<QueryResult | null>;
-  updateMessageQueryResult: (messageId: string, queryResult: QueryResultArtifact) => void;
-  setAIProvider: (provider: AIProviderType) => void;
-  updateProviderConfig: (
-    provider: "openai" | "anthropic" | "openai-compatible",
-    config: { apiKey?: string; modelId: string; baseUrl?: string }
-  ) => void;
-  initializeExternalProvider: () => Promise<void>;
-}
-
 export interface FileSystemSlice {
   mountedFolders: MountedFolderInfo[];
   isFileSystemSupported: boolean;
@@ -691,7 +629,6 @@ export type DuckStoreState = DuckdbSlice &
   QuerySlice &
   SchemaSlice &
   TabSlice &
-  DuckBrainSlice &
   FileSystemSlice &
   ProfileSlice &
   SessionSlice &
