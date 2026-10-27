@@ -48,10 +48,7 @@ export default function R2ExplorerLauncher() {
   };
 
   useEffect(() => {
-    if (!googleAuth.token) {
-      setFolders([]);
-      return;
-    }
+    if (!googleAuth.token) return;
     let cancelled = false;
     (async () => {
       try {
