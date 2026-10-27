@@ -11,8 +11,10 @@ Modes:
   status <issue> [STATUS]    post the newest comment of <issue> (the weekly Work log) as a status update of
                              project 1; STATUS is ON_TRACK (default), AT_RISK, OFF_TRACK, COMPLETE or INACTIVE
   setup [--apply]            make the organisation ready for the backlog engine: issue types Area, Epic, Deliverable,
-                             project 1 renamed to 'zohelo portfolio', fields Product, Phase, Effort and Sprint; without
-                             --apply it only reports what is missing (the second run with --apply reports nothing)
+                             project 1 renamed to 'zohelo portfolio', fields Product, Phase, Effort, Priority and
+                             Sprint, and the options of Priority (P1-P3) and Effort (S-M-L) set to exactly these (old
+                             names reported); without --apply it only reports what is missing (the second run with
+                             --apply reports nothing)
 """
 
 from __future__ import annotations
@@ -47,8 +49,22 @@ query($org: String!, $n: Int!) {
   organization(login: $org) {
     projectV2(number: $n) {
       id title
-      fields(first: 50) { nodes { __typename ... on ProjectV2FieldCommon { name dataType } } }
+      fields(first: 50) {
+        nodes {
+          __typename
+          ... on ProjectV2FieldCommon { id name dataType }
+          ... on ProjectV2SingleSelectField { options { name } }
+        }
+      }
     }
+  }
+}
+"""
+
+UPDATE_OPTIONS = """
+mutation($field: ID!, $options: [ProjectV2SingleSelectFieldOptionInput!]) {
+  updateProjectV2Field(input: {fieldId: $field, singleSelectOptions: $options}) {
+    projectV2Field { ... on ProjectV2SingleSelectField { id name options { name } } }
   }
 }
 """
@@ -153,7 +169,9 @@ SELECT_FIELDS = {
     "Product": ["zohelo-data", "zohelo-bi", "zohelo.com"],
     "Phase": ["0 Clean & harden", "1 Production release", "2 Demo warehouse", "3 Remaining sources", "Run"],
     "Effort": ["S", "M", "L"],
+    "Priority": ["P1", "P2", "P3"],
 }
+REPLACE_OPTIONS = ("Priority", "Effort")  # fields of the board's GitHub template whose options are replaced (#1041)
 COLORS = ["BLUE", "GREEN", "YELLOW", "ORANGE", "PURPLE", "PINK"]
 SPRINT_COUNT = 12  # weekly iterations created up front; more are added in the UI
 
@@ -196,16 +214,22 @@ def setup(token: str, org: str, argv: list[str]) -> int:
         if apply:
             graphql(token, RENAME, {"project": project["id"], "title": PROJECT_TITLE})
 
-    existing = {f["name"] for f in project["fields"]["nodes"]}
+    existing = {f["name"]: f for f in project["fields"]["nodes"]}
     for name, options in SELECT_FIELDS.items():
+        inputs = [
+            {"name": option, "color": COLORS[i % len(COLORS)], "description": ""} for i, option in enumerate(options)
+        ]
         if name in existing:
+            old = [o["name"] for o in existing[name].get("options") or []]
+            if name not in REPLACE_OPTIONS or old == options or "options" not in existing[name]:
+                continue
+            # The template's own Priority / Effort options differ; values set under them are lost (accepted, #1041).
+            (created if apply else missing).append(f"field {name} options {old} -> {options}")
+            if apply:
+                graphql(token, UPDATE_OPTIONS, {"field": existing[name]["id"], "options": inputs})
             continue
         (created if apply else missing).append(f"field {name}")
         if apply:
-            inputs = [
-                {"name": option, "color": COLORS[i % len(COLORS)], "description": ""}
-                for i, option in enumerate(options)
-            ]
             graphql(token, CREATE_SELECT, {"project": project["id"], "name": name, "options": inputs})
     if "Sprint" not in existing:
         (created if apply else missing).append("field Sprint")
