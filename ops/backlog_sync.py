@@ -9,7 +9,9 @@ Mode `pr-check` (pull_request event, GITHUB_TOKEN) passes when the PR body close
 Modes `plan` and `apply [--root DIR ...]` compare the nodes with the issues of zohelo-data, zohelo-bi and zohelo
 (matched by the key in the first body line). plan only reads GitHub and reports the counts per repo as annotations;
 apply creates, updates, re-parents and closes issues and puts them on project 1 with Product, Phase, Priority,
-Effort and Target date (at most 400 writes per run). The token comes from
+Effort and Target date (at most 400 writes per run). Mode `migrate [--apply]` migrates the old issues of
+`.github/backlog/migration.yaml` (adopt: key marker, title, type and parent, old body below the notes marker;
+close: comment and not_planned); without --apply it only counts; reruns skip what is done. The token comes from
 GH_PROJECT_TOKEN, GITHUB_TOKEN or GH_TOKEN.
 """
 
@@ -628,20 +630,25 @@ class Github:
         return result
 
 
+def list_issues(api: Github, repo: str):
+    """Every issue (not pull request) of a repo, page by page."""
+    page = 1
+    while True:
+        items = api.read(f"/repos/{ORG}/{repo}/issues?state=all&per_page=100&page={page}") or []
+        yield from (item for item in items if "pull_request" not in item)
+        if len(items) < 100:
+            break
+        page += 1
+
+
 def index_issues(api: Github, repos: list[str]) -> dict[str, dict]:
     """key -> issue (with its repo) from the first body line of every issue of the repos."""
     found: dict[str, dict] = {}
     for repo in repos:
-        page = 1
-        while True:
-            items = api.read(f"/repos/{ORG}/{repo}/issues?state=all&per_page=100&page={page}") or []
-            for item in items:
-                match = KEY_LINE.match((item.get("body") or "").split("\n", 1)[0])
-                if "pull_request" not in item and match:
-                    found.setdefault(match.group(1), {**item, "repo": repo})
-            if len(items) < 100:
-                break
-            page += 1
+        for item in list_issues(api, repo):
+            match = KEY_LINE.match((item.get("body") or "").split("\n", 1)[0])
+            if match:
+                found.setdefault(match.group(1), {**item, "repo": repo})
     return found
 
 
@@ -947,6 +954,141 @@ def run_sync(roots: list[Path], apply: bool) -> int:
     return 0
 
 
+def issue_ref(issue: dict | None, repo: str) -> int | str | None:
+    if not issue:
+        return None
+    return issue["number"] if issue["repo"] == repo else f"{ORG}/{issue['repo']}#{issue['number']}"
+
+
+def current_parent(api: Github, repo: str, issue: dict) -> tuple[int | None, str]:
+    """(number, repo) of the sub-issue parent of an issue."""
+    found = api.read(f"/repos/{ORG}/{repo}/issues/{issue['number']}/parent") if issue["number"] else None
+    return (found or {}).get("number"), (found or {}).get("repository_url", "").split("/")[-1]
+
+
+def set_parent(api: Github, repo: str, child: dict, parent: dict) -> None:
+    """Make parent the sub-issue parent of child unless it is."""
+    if current_parent(api, repo, child) != (parent["number"], parent["repo"]):
+        api.write(
+            "POST",
+            f"/repos/{ORG}/{parent['repo']}/issues/{parent['number']}/sub_issues",
+            {"sub_issue_id": child["id"], "replace_parent": True},
+        )
+
+
+def run_migrate(roots: list[Path], apply: bool) -> int:
+    """Migrate the old issues listed in .github/backlog/migration.yaml (Task data/backlog/engine/migration/apply).
+
+    adopt: the issue gets the rendered head (key marker first, then title and type) with its old body below the
+    notes marker, and its parent when that issue exists; `apply` sets the rest (labels, fields, missing parents).
+    An adopted alert (type Bug) carries no key: its entry key is its source Epic, which becomes its parent.
+    close: comment the replacement and close as not planned.
+    Issues that already carry the key (or are closed) are skipped, so a rerun continues where the write limit
+    stopped; nothing is written without --apply."""
+    import yaml
+
+    from ingestion.common.report import annotate
+
+    plan = build(roots)
+    for error in plan.errors:
+        print(error)
+    if plan.errors:
+        return 1
+    token = os.environ.get("GH_PROJECT_TOKEN") or os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if not token:
+        print("error: no GitHub token (GH_PROJECT_TOKEN, GITHUB_TOKEN or GH_TOKEN)", file=sys.stderr)
+        return 2
+    path = roots[0] / ".github" / "backlog" / "migration.yaml"
+    entries = (yaml.safe_load(path.read_text()) or {}).get("issues") or [] if path.exists() else []
+    repo = PREFIXES["data"]  # the old issues all live in zohelo-data
+    api = Github(token, dry=not apply)
+    old = {i["number"]: {**i, "repo": repo} for i in list_issues(api, repo)}
+    issues = index_issues(api, list(PREFIXES.values()))
+    first = {"Epic": 0, "Deliverable": 1}  # parents before children; alerts last
+    todo: list[tuple[str, dict, dict]] = []
+    problems: list[str] = []
+    migrated = 0
+    for entry in sorted(entries, key=lambda e: first.get(str(e.get("type")), 2)):
+        action, key = entry.get("action"), str(entry.get("key"))
+        if action not in ("adopt", "close"):
+            continue
+        issue = old.get(entry["issue"])
+        if issue is None:
+            problems.append(f"#{entry['issue']} not found")
+        elif action == "close":
+            if issue["state"] == "open":
+                todo.append(("close", entry, issue))
+            else:
+                migrated += 1
+        elif entry["type"] == "Bug":
+            epic = issues.get(key)
+            same = epic is not None and current_parent(api, repo, issue) == (epic["number"], epic["repo"])
+            if (issue.get("type") or {}).get("name") == "Bug" and same:
+                migrated += 1
+            else:
+                todo.append(("bug", entry, issue))
+        elif KEY_LINE.match((issue.get("body") or "").split("\n", 1)[0]):
+            migrated += 1
+        elif key not in plan.nodes:
+            problems.append(f"#{entry['issue']}: {key} is not in the backlog files")
+        elif key in issues:
+            problems.append(f"#{entry['issue']}: {key} is already held by #{issues[key]['number']}")
+        else:
+            todo.append(("adopt", entry, issue))
+    remaining = len(todo)
+    done = {"adopted": 0, "alerts typed": 0, "closed": 0}
+    try:
+        for action, entry, issue in todo:
+            base = f"/repos/{ORG}/{repo}/issues/{issue['number']}"
+            if action == "close":
+                replacement = issues.get(str(entry["replacement"]))
+                shown = f"`{entry['replacement']}`" + (f" (#{replacement['number']})" if replacement else "")
+                api.write(
+                    "POST", base + "/comments", {"body": f"Closed by the backlog migration: superseded by {shown}."}
+                )
+                api.write("PATCH", base, {"state": "closed", "state_reason": "not_planned"})
+                done["closed"] += 1
+            elif action == "bug":
+                epic = issues.get(str(entry["key"]))
+                if epic is None:
+                    problems.append(f"#{issue['number']}: source Epic {entry['key']} has no issue yet")
+                    continue
+                if (issue.get("type") or {}).get("name") != "Bug":
+                    api.write("PATCH", base, {"type": "Bug"})
+                set_parent(api, repo, issue, epic)
+                done["alerts typed"] += 1
+            else:
+                key = str(entry["key"])
+                kind, node = plan.nodes[key]
+                parent = parent_key(kind, node)
+                parent_issue = issues.get(parent) if parent else None
+                want = render(node, kind, issue_ref(parent_issue, repo), repo, False)
+                body = (
+                    want["body"].split(NOTES_MARKER)[0] + NOTES_MARKER + "\n\n" + (issue.get("body") or "").strip("\n")
+                )
+                api.write("PATCH", base, {"title": want["title"], "type": want["type"], "body": body + "\n"})
+                issues[key] = {**issue, "body": body}
+                if parent_issue is not None:
+                    set_parent(api, repo, issue, parent_issue)
+                done["adopted"] += 1
+            remaining -= 1
+    except Stop:
+        annotate("warning", "backlog_sync stopped", {"writes": WRITE_LIMIT, "note": "limit reached; rerun continues"})
+    if apply:
+        result = dict(done)
+    else:
+        result = {
+            "to adopt": sum(a == "adopt" for a, _, _ in todo),
+            "alerts to type": sum(a == "bug" for a, _, _ in todo),
+            "to close": sum(a == "close" for a, _, _ in todo),
+        }
+    result |= {"already migrated": migrated, "remaining": remaining if apply else len(todo)}
+    annotate("notice", f"backlog_sync migrate {'apply' if apply else 'plan'}", result)
+    if problems:
+        annotate("warning", "backlog_sync migrate skipped", sorted(set(problems))[:40])
+    return 0
+
+
 def completed_comment(node: dict, kind: str) -> str:
     if kind == "Task":
         return f"Done by {node['done_by']}"
@@ -973,6 +1115,13 @@ def main() -> int:
     show_mode.add_argument("key")
     show_mode.add_argument("--root", action="append", type=Path, help="repository root (repeatable; default: this one)")
     modes.add_parser("pr-check", help="check that the pull request closes an open Task or Bug")
+    migrate = modes.add_parser(
+        "migrate", help="adopt and close the old issues of migration.yaml (plan without --apply)"
+    )
+    migrate.add_argument("--apply", action="store_true", help="write (at most 400 writes per run; rerun continues)")
+    migrate.add_argument(
+        "--root", action="append", type=Path, help="repository root (repeatable; default: this one and _repos/*)"
+    )
     for name in ("plan", "apply"):
         sync_mode = modes.add_parser(
             name,
@@ -985,9 +1134,11 @@ def main() -> int:
     if args.mode == "pr-check":
         return pr_check()
     roots = [r.resolve() for r in args.root] if args.root else [ROOT]
-    if args.mode in ("plan", "apply"):
+    if args.mode in ("plan", "apply", "migrate"):
         if not args.root:
             roots += [d for d in (ROOT / "_repos" / "zohelo-bi", ROOT / "_repos" / "zohelo") if d.is_dir()]
+        if args.mode == "migrate":
+            return run_migrate(roots, args.apply)
         return run_sync(roots, args.mode == "apply")
     return validate(roots, args.strict) if args.mode == "validate" else show(roots, args.key)
 
