@@ -95,7 +95,7 @@ def set_app_secrets() -> list[str]:
     done = []
     for name, value in (("APP_ID", req("ORG_BOT_APP_ID")), ("APP_PRIVATE_KEY", req("ORG_BOT_PRIVATE_KEY"))):
         status, body = cloudflare("PUT", "secrets", {"name": name, "text": value, "type": "secret_text"})
-        if status != 200:
+        if status not in (200, 201):
             raise RuntimeError(f"setting {name} failed: HTTP {status} {body['errors']}")
         done.append(name)
     status, _ = cloudflare("DELETE", "secrets/GITHUB_TOKEN")
