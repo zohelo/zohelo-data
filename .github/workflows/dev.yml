@@ -8,7 +8,9 @@ name: Dev · branch runs
 #
 # The `check` job runs on every pull request without credentials: compile, lint,
 # configuration consistency and repository rules. It is the required status check for
-# auto-merge (AGENTS.md, "Branches and pull requests").
+# auto-merge (AGENTS.md, "Branches and pull requests"). The `check-portal` job runs on every
+# pull request too and, when the pull request changes portal/app, installs, lints, type-checks
+# and builds the portal; otherwise it passes without work, so it can be a required check.
 
 on:
   pull_request:
@@ -71,6 +73,55 @@ jobs:
           grep " $file\$" checksums.txt | sha256sum -c -
           tar -xzf "$file" gitleaks
           ./gitleaks git --no-banner --redact --log-opts="origin/$BASE_REF..HEAD" .
+
+  check-portal:
+    if: github.event_name == 'pull_request'
+    name: check-portal
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: portal/app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Changes in portal/app
+        id: changes
+        working-directory: .
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet "origin/$BASE_REF...HEAD" -- portal/app; then
+            echo "portal=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=check-portal::no changes in portal/app"
+          else
+            echo "portal=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        if: steps.changes.outputs.portal == 'true'
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: portal/app/package-lock.json
+      - name: Install
+        if: steps.changes.outputs.portal == 'true'
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Lint
+        if: steps.changes.outputs.portal == 'true'
+        run: npm run lint
+      - name: Typecheck
+        if: steps.changes.outputs.portal == 'true'
+        run: npm run typecheck
+      - name: Build
+        if: steps.changes.outputs.portal == 'true'
+        env:
+          DUCK_UI_BASEPATH: /
+          DUCK_UI_R2_API_BASE: /api
+          DUCK_UI_DUCKDB_WASM_CDN_ONLY: "true"
+        run: npm run build
 
   dev:
     if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'

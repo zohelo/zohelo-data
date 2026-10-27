@@ -68,6 +68,16 @@ const fetchAllChildren = async (folderId: string, token: string) => {
   });
 };
 
+const fetchLocation = async (
+  token: string,
+  folder?: { id: string; crumbs: R2ExplorerCrumb[] }
+): Promise<{ entries: DriveFileMetadata[]; crumbs: R2ExplorerCrumb[] }> => {
+  if (folder) return { entries: await fetchAllChildren(folder.id, token), crumbs: folder.crumbs };
+  const rootId = await findFolderIdByName(DRIVE_ROOT, "root", token);
+  if (!rootId) throw new Error("R2 lakehouse root was not found.");
+  return { entries: await fetchAllChildren(rootId, token), crumbs: [] };
+};
+
 interface R2LakehouseBrowserProps {
   initialCrumbs?: readonly R2ExplorerCrumb[];
 }
@@ -80,7 +90,7 @@ export default function R2LakehouseBrowser({
 
   const [crumbs, setCrumbs] = useState<R2ExplorerCrumb[]>([]);
   const [entries, setEntries] = useState<DriveFileMetadata[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
 
@@ -95,48 +105,49 @@ export default function R2LakehouseBrowser({
     return entries.filter((entry) => entry.name.toLocaleLowerCase().includes(needle));
   }, [entries, filter]);
 
-  const loadFolder = async (folderId: string, nextCrumbs: R2ExplorerCrumb[]) => {
+  const showLocation = (location: { entries: DriveFileMetadata[]; crumbs: R2ExplorerCrumb[] }) => {
+    setEntries(location.entries);
+    setCrumbs(location.crumbs);
+    setFilter("");
+  };
+
+  const showError = (err: unknown) => setError(err instanceof Error ? err.message : String(err));
+
+  const load = async (folder?: { id: string; crumbs: R2ExplorerCrumb[] }) => {
     if (!googleAuth.token) return;
     setLoading(true);
     setError(null);
     try {
-      setEntries(await fetchAllChildren(folderId, googleAuth.token));
-      setCrumbs(nextCrumbs);
-      setFilter("");
+      showLocation(await fetchLocation(googleAuth.token, folder));
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      showError(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadRoot = async () => {
-    if (!googleAuth.token) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const rootId = await findFolderIdByName(DRIVE_ROOT, "root", googleAuth.token);
-      if (!rootId) throw new Error("R2 lakehouse root was not found.");
-      setEntries(await fetchAllChildren(rootId, googleAuth.token));
-      setCrumbs([]);
-      setFilter("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadFolder = (folderId: string, nextCrumbs: R2ExplorerCrumb[]) =>
+    load({ id: folderId, crumbs: nextCrumbs });
+  const loadRoot = () => load();
 
   useEffect(() => {
-    if (!googleAuth.token) {
-      setCrumbs([]);
-      setEntries([]);
-      setError(null);
-      return;
-    }
+    // Signed out renders the sign-in screen; the next sign-in reloads the location.
+    if (!googleAuth.token) return;
     const requested = initialCrumbs[initialCrumbs.length - 1];
-    if (requested) void loadFolder(requested.id, [...initialCrumbs]);
-    else void loadRoot();
+    let cancelled = false;
+    fetchLocation(googleAuth.token, requested ? { id: requested.id, crumbs: [...initialCrumbs] } : undefined)
+      .then((location) => {
+        if (!cancelled) showLocation(location);
+      })
+      .catch((err) => {
+        if (!cancelled) showError(err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
     // initialKey deliberately represents the immutable tab location.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [googleAuth.token, initialKey]);
