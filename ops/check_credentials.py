@@ -137,7 +137,7 @@ def catalog_path(token: str) -> str:
 
 def variables_section() -> None:
     for name in VARIABLES:
-        row("variables", name, "set", env(name) or "MISSING")
+        row("variables", name, "set", "set" if env(name) else "MISSING")
     for name in SECRETS:
         row("variables", name, "set", "set" if env(name) else "MISSING")
 
@@ -147,7 +147,7 @@ def deploy_section() -> None:
     headers = bearer(env("PLATFORM_DEPLOY_TOKEN"))
 
     def verify() -> str:
-        response = http("GET", "https://api.cloudflare.com/client/v4/user/tokens/verify", headers=headers)
+        response = http("GET", f"{account}/tokens/verify", headers=headers)  # Account API token
         status = (response.json().get("result") or {}).get("status", "") if response.ok else ""
         return f"{response.status_code} {status}".strip()
 
