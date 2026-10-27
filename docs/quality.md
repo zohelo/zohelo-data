@@ -24,11 +24,11 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 
 | Rule | Check |
 |---|---|
-| Root contains only: `.github/`, `docs/`, `ingestion/`, `ops/`, `portal/`, `warehouse/`, `run.py`, `requirements.txt`, `pyproject.toml` (tool settings), `README.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.gitignore`, `.gitattributes`, `.python-version`, `.node-version` | [auto] allowlist |
+| Root contains only: `.github/`, `docs/`, `ingestion/`, `ops/`, `portal/`, `warehouse/`, `run.py`, `requirements.txt`, `pyproject.toml` (tool settings), `README.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.gitignore`, `.gitleaks.toml`, `.gitattributes`, `.python-version`, `.node-version` | [auto] allowlist |
 | No empty files except `__init__.py` | [auto] |
 | No file above 1 MB; no data, outputs, notebooks, archives or credentials committed | [auto] |
 | No `dev/` on `main`; no status/audit/log files in the repo (status lives in project docs) | [auto] |
-| No secrets in code or history | [auto] gitleaks |
+| No secrets in code or history | [auto] gitleaks (`.gitleaks.toml`: default rules + historic false positives) |
 | Names follow AGENTS.md (activities `<stage>.<verb>`, sources by `source_system`, snake_case files) | [review] |
 
 ## 3. Python (engine layer)

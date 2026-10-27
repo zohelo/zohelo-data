@@ -1,0 +1,16 @@
+# gitleaks settings for the `check` job's secret scan (docs/quality.md §2): the default rules,
+# plus an allowlist for historic false positives in files deleted long ago, so a full-history
+# scan reports only real findings. Add a path only after confirming the hit is not a secret.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Historic false positives (audit 27 Oct 2026, D-17)"
+paths = [
+  # fake service-account private_key of a deleted unit test (commits 1c33f4a0, 08e3dc47)
+  '''^tests/test_storage_manager\.py$''',
+  # deleted source research inventory: API documentation text matched as keys
+  '''^docs/source-research/source-inventory\.json$''',
+  # dbt build output (ignored by git), when scanning a working tree
+  '''^warehouse/target/''',
+]

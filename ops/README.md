@@ -15,7 +15,7 @@ same policy to those.
 | Script | Purpose | Writes |
 |---|---|---|
 | `platform_inventory` | Per source: Landing / Archive files, GB and latest write; Bronze / Silver / Gold tables, rows, files, GB (from the snapshot summary, or the manifests when a writer left the totals out); total snapshots. Storage per bucket and folder with a monthly cost estimate (R2 Standard beyond the 10 GB free tier; warning above $2); tables and Landing folders no source claims; registered tables that do not exist. Doubles as the connectivity check. Args: `--source <id> …` | nothing |
-| `landing_objects` | What is stored in Landing: per prefix (ending in `/`) object count, MB, key groups and a sample; with `--peek` the first bytes (gzip decoded) and most frequent XML tags of up to `--limit` objects; a key peeks that object. Use when a source changes format or Bronze rejects files. Args: `PREFIX_OR_KEY … [--peek] [--limit 3]` | nothing |
+| `landing_objects` | What is stored in Landing: per prefix (ending in `/`) object count, MB, key groups and a sample; with `--peek` the first bytes (gzip decoded) and most frequent XML tags of up to `--limit` objects; a key peeks that object (an argument that is not a key is listed as a prefix; no match is a warning). Use when a source changes format or Bronze rejects files. Args: `PREFIX_OR_KEY … [--peek] [--limit 3]` | nothing |
 | `catalog_maintenance` | R2 Data Catalog settings: compaction and snapshot expiration, with their values. `--apply` sets snapshot expiration to the data policy (#822): keep 1 snapshot, expire older ones after 1 h (the catalog's hourly maintenance does the expiring), and compaction off (#875: it renamed the files whose names record what is loaded); fails if the catalog reports other values afterwards. | with `--apply`: the catalog's maintenance settings |
 | `expire_snapshots` | Snapshots the catalog's maintenance leaves on idle tables (policy #822, #820): per Bronze / Silver / Gold table, snapshots older than 1 h that are not the current snapshot or a branch/tag head; one annotation, most first. `--apply` expires them (one commit per table); unreferenced files then go with `orphan_files --delete`. | with `--apply`: table metadata (snapshot list) |
 | `repo_check` | The [auto] rules of `docs/quality.md`: root allowlist, no `dev/`, the four workflows with SHA-pinned actions, file size/type, compile, ruff check and format, yamllint, sqlfluff on the dbt models (pinned version installed on demand), configuration and schedules. Run by the `check` job on every pull request (no credentials); run it locally before pushing: `python -m ops.repo_check`. | nothing |
@@ -42,6 +42,13 @@ schedule keeps running as the backup; a later `deploy` restores the Cron Trigger
 `args=resume`. A failed dispatch shows in the Worker's Cron events and as a drop in scheduler
 runs. Scheduler runs started by the Worker
 are workflow dispatches named `Pipeline · platform · scheduler: dispatch due runs`.
+
+**Key rotation runbook.** Before rotating storage or catalog keys (organisation secrets
+`STORAGE_*`), pause the scheduler: Ops `script=scheduler_trigger args=pause`; rotate; check
+with one manual run (e.g. Ops `platform_inventory`); then `args=resume`. GitHub's backup
+schedule still fires while paused, so a run may fail with `Unauthorized` inside the window
+and open an `alert` issue: close it with the note "rotation window" once that source's next
+run is green.
 
 Rules: one file per script (a script's deployable assets may sit in a folder of its own, like `scheduler_worker/`), `snake_case.py`, runnable as `python -m ops.<name>`. Write
 output files to `$OPS_OUTPUT_DIR` (kept 7 days as a run artifact) and publish results as
