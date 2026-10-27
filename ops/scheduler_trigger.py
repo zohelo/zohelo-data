@@ -4,8 +4,8 @@
 GitHub's `schedule` trigger fires only a fraction of its slots. The Worker in
 ops/scheduler_worker/ dispatches the Pipeline run "scheduler: dispatch due runs" on its own
 Cron Trigger; the scheduler's catch-up window makes missed or repeated firings harmless.
-The Worker dispatches as the organisation's GitHub App: `deploy` sets its secrets APP_ID and
-APP_PRIVATE_KEY from the organisation variable ORG_BOT_APP_ID and secret ORG_BOT_PRIVATE_KEY
+The Worker dispatches as the organisation's GitHub App: `deploy` sets its secrets APP_CLIENT_ID and
+APP_PRIVATE_KEY from the organisation variable ORG_BOT_CLIENT_ID and secret ORG_BOT_PRIVATE_KEY
 (and removes the former personal-token secret GITHUB_TOKEN).
 
 Modes (one argument):
@@ -94,13 +94,14 @@ def deploy() -> list[str]:
 def set_app_secrets() -> list[str]:
     """Put the GitHub App credentials on the Worker; drop the old personal token if present."""
     done = []
-    for name, value in (("APP_ID", req("ORG_BOT_APP_ID")), ("APP_PRIVATE_KEY", req("ORG_BOT_PRIVATE_KEY"))):
+    for name, value in (("APP_CLIENT_ID", req("ORG_BOT_CLIENT_ID")), ("APP_PRIVATE_KEY", req("ORG_BOT_PRIVATE_KEY"))):
         status, body = cloudflare("PUT", "secrets", {"name": name, "text": value, "type": "secret_text"})
         if status not in (200, 201):
             raise RuntimeError(f"setting {name} failed: HTTP {status} {body['errors']}")
         done.append(name)
-    status, _ = cloudflare("DELETE", "secrets/GITHUB_TOKEN")
-    done.append(f"GITHUB_TOKEN removed (HTTP {status})")
+    for old in ("APP_ID", "GITHUB_TOKEN"):  # replaced by APP_CLIENT_ID / the app
+        status, _ = cloudflare("DELETE", f"secrets/{old}")
+        done.append(f"{old} removed (HTTP {status})")
     return done
 
 
@@ -123,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
         out["schedules"] = {"status": status, **body}
         secrets_status, secrets = cloudflare("GET", "secrets")
         names = [s.get("name") for s in secrets["result"] or []]
-        out["app_credentials_set"] = {"APP_ID", "APP_PRIVATE_KEY"} <= set(names)
+        out["app_credentials_set"] = {"APP_CLIENT_ID", "APP_PRIVATE_KEY"} <= set(names)
         out["old_personal_token_present"] = "GITHUB_TOKEN" in names
         failed = status != 200 or secrets_status != 200 or ("put" in out and out["put"][0] != 200)
     except (RuntimeError, requests.RequestException) as exc:
