@@ -110,7 +110,9 @@ def namespace_check(spaces: Iterable[str], found: Iterable[str], declared: Itera
 
 
 def warn_namespaces(check: dict, tool: str) -> None:
-    """Warning annotations for undeclared namespaces and scratch left behind."""
+    """A notice listing every namespace with its table count; warnings for undeclared
+    namespaces and scratch left behind."""
+    annotate("notice", f"{tool}: namespaces", check["tables_per_namespace"])
     if check["undeclared_namespaces"]:
         names = check["undeclared_namespaces"]
         counts = {n: check["tables_per_namespace"][n] for n in names[:30]}

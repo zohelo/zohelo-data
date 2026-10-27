@@ -11,9 +11,9 @@ A cell is ✅ only when every declared table exists. Open GitHub issues labelled
 Every catalog table is classified: current (declared and written by today's code), copy
 (pass-through copy or old-code table of a source that is not on today's code yet), legacy
 (written by retired code, `legacy_tables` in the declaration) or leftover (dbt temp/backup,
-or claimed by nobody) in bronze / silver / gold; tables of other namespaces (`poc`, scratch)
-are current when declared, else other. Namespaces no declaration names and `zz_dev_` scratch
-left behind are warnings. Nothing is changed in R2 or the catalog.
+or claimed by nobody) in bronze / silver / gold, and every table of a `zz_dev_` scratch
+namespace; tables of other namespaces (`poc`) are current when declared, else other.
+Namespaces no declaration names and `zz_dev_` scratch left behind are warnings. Nothing is changed in R2 or the catalog.
 
 Args: --issue <number> (the tracker issue whose body is replaced; without it the page is only
 printed and kept in $OPS_OUTPUT_DIR). Needs the R2 credentials of the Ops workflow and, for the
@@ -40,7 +40,7 @@ from ingestion.common.bronze_files import retry
 from ingestion.common.r2 import catalog, get_with_backoff, req, s3, sources
 from ingestion.common.report import annotate, step_summary
 from ops.orphan_files import namespaces
-from ops.platform_inventory import folders, namespace_check, warn_namespaces
+from ops.platform_inventory import SCRATCH, folders, namespace_check, warn_namespaces
 
 ROOT = Path(__file__).resolve().parents[1]
 REST = "https://api.github.com"
@@ -182,9 +182,12 @@ def issue_marks(found: list[dict[str, Any]]) -> str:
 
 
 def classify(name: str, registry: dict[str, dict[str, Any]], shared_gold: list[str]) -> tuple[str, str | None]:
-    """(class, source) of a catalog table: current, copy, legacy, leftover, or other (a table
-    outside bronze / silver / gold that nothing declares; reported, never retired)."""
+    """(class, source) of a catalog table: current, copy, legacy, leftover (also any table of a
+    `zz_dev_` scratch namespace), or other (a table outside bronze / silver / gold that nothing
+    declares; reported, never retired)."""
     layer = name.rsplit(".", 1)[0]
+    if any(part.startswith(SCRATCH) for part in layer.split(".")):
+        return "leftover", None
     if layer not in LAYERS:
         return ("current", "platform") if name in shared_gold else ("other", None)
     if TEMP.search(name):
