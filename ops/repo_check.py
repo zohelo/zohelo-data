@@ -277,7 +277,20 @@ def scheduler_imports() -> list[str]:
     return [f"run.py schedule --check fails without {sorted(blocked)}: {result.stderr.strip().splitlines()[-1:]}"]
 
 
-STATUSES = {"registered", "landing", "bronze", "silver"}
+STATUSES = {
+    "registered",
+    "reviewing",
+    "approved",
+    "landing",
+    "bronze",
+    "silver",
+    "gold",
+    "semantic",
+    "published",
+    "done",
+    "parked",
+}
+FAMILIES = set("ABCDEFGHIJK")
 
 
 def register(files: list[Path]) -> list[str]:
@@ -287,6 +300,17 @@ def register(files: list[Path]) -> list[str]:
     problems += [f"register: duplicate id {i}" for i in sorted({i for i in ids if ids.count(i) > 1})]
     problems += [
         f"register: {e.get('id')}: status {e.get('status')!r}" for e in entries if e.get("status") not in STATUSES
+    ]
+    problems += [
+        f"register: {e.get('id')}: family {e['family']!r}" for e in entries if e.get("family", "A") not in FAMILIES
+    ]
+    problems += [
+        f"register: {e.get('id')}: kpi {e['kpi']!r}" for e in entries if not isinstance(e.get("kpi", True), bool)
+    ]
+    problems += [
+        f"register: {e.get('id')}: short_name {e['short_name']!r}"
+        for e in entries
+        if "short_name" in e and not (isinstance(e["short_name"], str) and len(e["short_name"]) <= 40)
     ]
     linked = {e["source_system"] for e in entries if e.get("source_system")}
     declared = {f.stem for f in files if f.parent == Path("ingestion/sources") and f.suffix == ".yaml"}
