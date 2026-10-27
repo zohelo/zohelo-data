@@ -1,6 +1,7 @@
 # Source register: every candidate data source, researched with the same fields.
-# One entry per source; `status` says how far it has come (registered → landing → bronze →
-# silver); `source_system` links an onboarded source to ingestion/sources/<source_system>.yaml.
+# One entry per source; `status` says how far it has come (registered → reviewing → approved →
+# landing → bronze → silver → gold → semantic → published → done; parked = stopped);
+# `family`, `short_name` and `kpi` follow .github/backlog/assets/register-fields.md; `source_system` links an onboarded source to ingestion/sources/<source_system>.yaml.
 # Seeded 14 Oct 2026 from the September 2026 source research (182 sources) plus one onboarded
 # source not in that research (EX-005); `access.kind` of onboarded sources follows their declaration; maintained by hand
 # and by the refinement sessions. Backlog: each entry is a work package under
