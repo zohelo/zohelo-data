@@ -27,6 +27,7 @@ EFFORTS = {"S", "M", "L"}
 FILE_OPS = {"edit", "create", "delete"}
 BANNED = re.compile(r"(?<!\w)(investigate|consider|as needed|etc\.)(?!\w)", re.IGNORECASE)
 MAX_TASK_BYTES = 3000
+REGISTER = "ingestion/register.yaml"
 EPIC_FIELDS = ["key", "area", "title", "phase", "priority", "why", "outcome", "in_scope", "out_of_scope", "done_when"]
 TASK_FIELDS = [
     "key",
@@ -59,6 +60,7 @@ class Plan:
         self.nodes: dict[str, tuple[str, dict]] = {}  # key -> (kind, node with inherited fields)
         self.stages: dict[str, int] = {}  # stage key -> number, from stages.yaml
         self.pending: list[tuple[str, str, str, list[dict]]] = []  # edit/delete paths to check
+        self.sources = {"file": 0, "generated": 0, "no_family": []}  # register entries by how their Epic is made
 
     def error(self, file: str, key: str, message: str) -> None:
         self.errors.append(f"{file}: {key}: {message}")
@@ -138,6 +140,96 @@ def load(plan: Plan, root: Path) -> None:
             plan.epics.append((str(root), str(path), epic))
         elif epic is not None:
             plan.error(str(path), "-", "an epic file must be a mapping")
+    if (base / "stages.yaml").exists() and (root / REGISTER).exists():
+        load_sources(plan, root, read)
+
+
+def fill(text: object, values: dict[str, str]) -> object:
+    """Replace the {placeholders} of stages.yaml in a string, leaving every other brace as written."""
+    if isinstance(text, str):
+        return re.sub(r"\{(\w+)\}", lambda m: values.get(m.group(1), m.group(0)), text)
+    if isinstance(text, list):
+        return [fill(item, values) for item in text]
+    if isinstance(text, dict):
+        return {k: fill(v, values) for k, v in text.items()}
+    return text
+
+
+def source_epic(entry: dict, stages: list[dict]) -> dict:
+    """The Epic of a register entry without a hand-written file: stage 1 with its Tasks, stage 2 as a stub."""
+    ident = str(entry["id"])
+    low = ident.lower()
+    key = f"data/src-{low}"
+    short = str(entry.get("short_name") or str(entry.get("name", ident))[:40])
+    values = {
+        "id": ident,
+        "id_lower": low,
+        "short_name": short,
+        "source_system": str(entry.get("source_system") or low),
+        "family_area": f"data/src-{str(entry['family']).lower()}",
+        "register_file": REGISTER,
+    }
+    deliverables = []
+    for stage in stages:
+        if stage.get("n") not in (1, 2):
+            continue
+        item = {
+            "key": f"{key}/{stage['key']}",
+            "title": fill(stage["title"], values),
+            "repo": stage.get("repo", "zohelo-data"),
+            "done_when": fill(stage["done_when"], values),
+        }
+        if stage["n"] == 1:
+            tasks = []
+            for template in stage.get("tasks") or []:
+                task = fill({k: v for k, v in template.items() if k != "key"}, values)
+                task = {"key": f"{item['key']}/{template['key']}", "type": "Task", "state": "open", **task}
+                task["depends_on"] = [f"{item['key']}/{dep}" for dep in task.get("depends_on") or []]
+                tasks.append(task)
+            item["tasks"] = tasks
+        else:
+            item["todo"] = [
+                f"Tasks are rendered when stage 1 ({key}/review) is done and the register status is approved"
+            ]
+        deliverables.append(item)
+    return {
+        "key": key,
+        "area": values["family_area"],
+        "title": f"{short} [{ident}]",
+        "phase": 3,
+        "priority": "P3",
+        "why": f"{entry.get('name', ident)} ({entry.get('provider', 'unknown provider')}) is a register candidate.",
+        "outcome": "The source is reviewed, then onboarded through the standard stages or parked with the reason.",
+        "in_scope": [
+            "Stages 1 and 2 of the source template (stages.yaml); later stages follow when the predecessor is done"
+        ],
+        "out_of_scope": ["Other sources of the same provider"],
+        "done_when": [
+            f"Every Deliverable of this Epic is closed; register entry {ident} is approved and landed, or parked"
+        ],
+        "depends_on": [],
+        "decisions": [],
+        "deliverables": deliverables,
+    }
+
+
+def load_sources(plan: Plan, root: Path, read) -> None:
+    """Add a generated Epic for every register entry that has no epics/src-<id lower>.yaml (docs/backlog.md §3)."""
+    register = read(root / REGISTER)
+    stages = read(root / ".github" / "backlog" / "stages.yaml")
+    entries = (register or {}).get("sources") if isinstance(register, dict) else None
+    if not entries or not isinstance(stages, dict):
+        return
+    files = {p.stem for p in (root / ".github" / "backlog" / "epics").glob("src-*.yaml")}
+    for entry in entries:
+        ident = str(entry.get("id", "?"))
+        if f"src-{ident.lower()}" in files:
+            plan.sources["file"] += 1
+        elif not entry.get("family"):
+            plan.sources["no_family"].append(ident)
+        else:
+            plan.sources["generated"] += 1
+            plan.epics.append((str(root), f"{REGISTER} (generated)", source_epic(entry, stages.get("stages") or [])))
 
 
 def check_epic(plan: Plan, root: str, file: str, epic: dict) -> None:
@@ -395,6 +487,12 @@ def validate(roots: list[Path], strict: bool = False) -> int:
     if plan.errors:
         return 1
     c = plan.counts
+    found = plan.sources
+    if found["no_family"]:
+        print(f"warning: register entries without family, no Epic generated: {', '.join(found['no_family'])}")
+    print(f"file sources: {found['file']}")
+    print(f"generated sources: {found['generated']}")
+    print(f"register entries without family: {len(found['no_family'])}")
     print(f"ok: {c['areas']} areas, {c['epics']} epics, {c['deliverables']} deliverables, {c['tasks']} tasks")
     return 0
 
