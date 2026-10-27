@@ -32,6 +32,7 @@ ROOT_ALLOWED = {
     "CLAUDE.md",
     "GEMINI.md",
     ".gitignore",
+    ".gitleaks.toml",
     ".gitattributes",
     ".python-version",
     ".node-version",

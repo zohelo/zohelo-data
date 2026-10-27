@@ -4,7 +4,8 @@
 Use it when a source changes format or a Bronze load rejects files: it shows what is
 actually stored. A prefix argument (ending in "/") lists object counts, size and key
 groups under it; with --peek it also shows the first bytes and the most frequent XML
-tags of up to --limit objects. A key argument peeks that one object.
+tags of up to --limit objects. A key argument peeks that one object; an argument that is
+not a key is listed as a prefix, and one that matches nothing is reported as a warning.
 Args: PREFIX_OR_KEY ... [--peek] [--limit 3]
 """
 
@@ -14,6 +15,8 @@ import argparse
 from collections import Counter
 import re
 import zlib
+
+from botocore.exceptions import ClientError
 
 from ingestion.common.r2 import req, s3
 from ingestion.common.report import annotate
@@ -71,7 +74,14 @@ def main(argv: list[str] | None = None) -> int:
         else:
             targets = [path]
         for key in targets:
-            annotate("notice", f"peek {key[-60:]}", peek(client, bucket, key))
+            try:
+                annotate("notice", f"peek {key[-60:]}", peek(client, bucket, key))
+            except ClientError as exc:
+                if exc.response.get("Error", {}).get("Code") not in ("NoSuchKey", "404"):
+                    raise
+                summary, _ = summarize(client, bucket, key)  # not a key: list it as a prefix
+                level = "notice" if summary["objects"] else "warning"
+                annotate(level, f"objects {key} (not a key)", summary)
     return 0
 
 
