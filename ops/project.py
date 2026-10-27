@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Read and update the organisation's GitHub Projects board through GraphQL.
 
-Runs in the Ops workflow with a token of the `zohelo-automation` GitHub App (PROJECT_APP_ID as a
-variable or secret, secret PROJECT_APP_KEY; the workflow mints GH_PROJECT_TOKEN). Projects
+Runs in the Ops workflow with a token of the `zohelo-automation` GitHub App (organisation
+variable ORG_BOT_CLIENT_ID, secret ORG_BOT_PRIVATE_KEY; the workflow mints GH_PROJECT_TOKEN). Projects
 live at organisation level and are reachable only through GraphQL, which neither the
 workflow's GITHUB_TOKEN nor an AI session can use.
 

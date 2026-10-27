@@ -5,9 +5,9 @@
 // instead. The scheduler's catch-up window (ingestion/common/scheduler.py) makes a missed
 // or repeated firing harmless. Deployed and paused with `ops/scheduler_trigger.py`.
 //
-// Identity: the organisation's GitHub App (zohelo-automation). Secrets APP_ID and
+// Identity: the organisation's GitHub App (zohelo-automation). Secrets APP_CLIENT_ID and
 // APP_PRIVATE_KEY are set on the Worker by `scheduler_trigger.py deploy` from the
-// organisation variable ORG_BOT_APP_ID and secret ORG_BOT_PRIVATE_KEY. Each firing signs a
+// organisation variable ORG_BOT_CLIENT_ID and secret ORG_BOT_PRIVATE_KEY. Each firing signs a
 // short JWT, exchanges it for an installation token limited to this repository with
 // "Actions: write", and dispatches. No personal token is involved.
 
@@ -54,7 +54,7 @@ async function appJwt(env) {
   );
   const now = Math.floor(Date.now() / 1000);
   const enc = (o) => base64url(new TextEncoder().encode(JSON.stringify(o)));
-  const unsigned = `${enc({ alg: "RS256", typ: "JWT" })}.${enc({ iat: now - 60, exp: now + 540, iss: String(env.APP_ID) })}`;
+  const unsigned = `${enc({ alg: "RS256", typ: "JWT" })}.${enc({ iat: now - 60, exp: now + 540, iss: String(env.APP_CLIENT_ID) })}`;
   const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(unsigned));
   return `${unsigned}.${base64url(new Uint8Array(signature))}`;
 }
