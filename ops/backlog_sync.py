@@ -259,7 +259,7 @@ def finish(plan: Plan, strict: bool = False) -> None:
     loaded = set(plan.roots.values())
     for file, key, dep in plan.depends:
         prefix = dep.split("/")[0]
-        if dep not in plan.keys and not (prefix in {"bi", "com"} and prefix not in loaded):
+        if dep not in plan.keys and prefix in loaded:  # other repos are checked by the sync (all roots)
             plan.error(file, key, f"depends_on {dep} is unknown")
 
 
