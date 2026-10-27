@@ -802,11 +802,17 @@ class Board:
                 continue
             value, shown = resolved
             self.to_set += 1
-            if item["id"]:
-                self.mutate(
-                    SET_FIELD,
-                    {"project": self.project, "item": item["id"], "field": self.fields[name]["id"], "value": value},
-                )
+            if item["id"] and f"issue field {name} (not set)" not in self.skipped:
+                try:
+                    self.mutate(
+                        SET_FIELD,
+                        {"project": self.project, "item": item["id"], "field": self.fields[name]["id"], "value": value},
+                    )
+                except RuntimeError as exc:
+                    if "Issue field values cannot be updated" not in str(exc):
+                        raise
+                    self.skipped.add(f"issue field {name} (not set)")  # GitHub issue field, not a project field
+                    continue
                 item["values"][name] = shown
 
 
