@@ -1,0 +1,35 @@
+key: data/ingestion/release-scheduling
+area: data/ingestion
+title: Release-aware scheduling
+phase: 1
+priority: P2
+target: 2027-01-15
+why: >-
+  Sources publish on known calendars; polling them on fixed crons wastes runs and delays news. The
+  public site's "what changed" feed and the release calendar need runs aligned to publications.
+outcome: >-
+  Each KPI source runs shortly after its publisher's release times, steady-state schedules replace
+  initial-load schedules, and the release calendar seed feeds the catalogue.
+in_scope:
+  - release-time schedules per source; steady-state schedules after initial loads
+  - release_calendar seed for the five KPI sources
+out_of_scope:
+  - BDL steady state and WDI archive decisions (source Epics data/src-pls-001, data/src-gl-005)
+done_when:
+  - every KPI source declaration has a schedule tied to its release pattern with the reason in a comment
+  - warehouse/seeds/release_calendar.csv lists the next 3 months of releases for the five KPI sources
+depends_on: [data/src-pls-001]
+deliverables:
+  - key: data/ingestion/release-scheduling/schedules
+    title: Schedules follow publications
+    done_when:
+      - schedule comments name the release pattern; no source polls more than twice its release frequency
+    todo:
+      - "Per source: document release pattern (Eurostat twice daily, NBP table A ~12:00 Warsaw business days, GUS calendar) and set crons"
+      - "Scheduler: support date-specific runs from the release calendar (design first)"
+  - key: data/ingestion/release-scheduling/calendar
+    title: Release calendar seed
+    done_when:
+      - release_calendar.csv built into gold.release_calendar
+    todo:
+      - "Collect release calendars (GUS harmonogram, Eurostat release calendar, NBP) into release_calendar.csv"

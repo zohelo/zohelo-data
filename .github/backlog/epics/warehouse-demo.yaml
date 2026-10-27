@@ -1,0 +1,44 @@
+key: data/warehouse/demo
+area: data/warehouse
+title: Demo warehouse (sample enterprise data)
+phase: 2
+priority: P2
+target: 2027-03-12
+why: >-
+  The owner's analyst portfolio needs realistic enterprise data (sales, finance, HR, supply chain,
+  CRM) on the same engine, without mixing it into the public KPI catalogue.
+outcome: >-
+  Family K datasets (AdventureWorks DW, WideWorldImporters DW, Northwind, Chinook, TPC-H SF1,
+  synthetic ERP/CRM/SME ledgers) land in demo_* namespaces with their own Gold models and manifest.
+in_scope:
+  - demo ingestion through the normal Landing → Bronze → Silver flow into demo_* namespaces
+  - demo Gold models and manifest_demo.json
+  - synthetic generators with Polish identifiers (NIP, TERYT, PKD)
+out_of_scope:
+  - re-publishing non-MIT vendor data as files (dashboards only)
+done_when:
+  - demo_bronze, demo_silver, demo_gold namespaces built by scheduled runs
+  - manifest_demo.json published; public catalogue contains no demo KPI
+depends_on: [data/warehouse/gold-v1, data/published/published-v1]
+decisions: ["program plan §3.3: demo data in demo_* namespaces; assumption 10: never in the public catalogue"]
+deliverables:
+  - key: data/warehouse/demo/namespaces
+    title: Demo namespaces and conventions
+    done_when:
+      - inventory, tracker and retire rules know demo_*; docs/architecture.md describes them
+    todo:
+      - "Declare demo namespaces in warehouse.yaml; inventory flags them as declared"
+  - key: data/warehouse/demo/ingestion
+    title: Demo sources ingested
+    depends_on: [data/warehouse/demo/namespaces]
+    done_when:
+      - each family K source has a declaration and lands into 01_landing/demo_<name>/
+    todo:
+      - "One source Epic per dataset under data/src-k (generated from the register once entries exist)"
+  - key: data/warehouse/demo/models
+    title: Demo Gold models and manifest
+    depends_on: [data/warehouse/demo/ingestion]
+    done_when:
+      - demo_gold stars for sales, finance, HR, supply chain, CRM, SME accounting; manifest_demo.json
+    todo:
+      - "Model per subject area; generate manifest_demo.json in catalog.py"

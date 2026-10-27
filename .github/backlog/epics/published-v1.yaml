@@ -1,0 +1,112 @@
+key: data/published/published-v1
+area: data/published
+title: Published layer v1
+phase: 1
+priority: P1
+target: 2027-01-08
+why: >-
+  Public pages must not query the lakehouse at runtime. Small derived files (catalogue, per-KPI
+  extracts, geometry, change feed) rebuilt after every Gold build give both portals fast, cheap,
+  consistent reads.
+outcome: >-
+  06_published/v1/ holds catalog, manifest, kpi/<key>/latest.json and series.parquet, geo files and
+  feed/changes.json + calendar.ics, rebuilt whole by gold.publish; contract tests compare with Gold.
+in_scope:
+  - the published contract (docs/published.md, JSON Schemas, fixtures), written first so consumers can build against it
+  - activity gold.publish after silver_gold.build; warehouse/publish.py is the only writer of every Published file
+  - contract tests (values equal Gold, schema stable)
+  - retire _portal_catalog/v1
+out_of_scope:
+  - site and bi code reading the files (their Epics)
+done_when:
+  - every scheduled Gold build is followed by a green gold.publish
+  - contract test passes for every published KPI (latest value equals Gold)
+  - _portal_catalog/ prefix deleted
+decisions:
+  - "D5 (architect 27 Oct): producer writes the contract first; unit_key everywhere; geo levels country, voivodeship, powiat, gmina, nuts1, nuts2; publish.py is the sole writer, catalog.py only builds the manifest object"
+  - "Contract files live next to the code that writes them: warehouse/published/ (schemas, fixtures); consumers copy fixtures, never edit them"
+deliverables:
+  - key: data/published/published-v1/contract
+    title: Published contract written
+    done_when:
+      - docs/published.md defines every path, field, size limit and the versioning rule
+      - warehouse/published/schemas/*.schema.json and fixtures exist and repo_check validates fixtures against schemas
+    tasks:
+      - key: data/published/published-v1/contract/doc
+        type: Task
+        title: Write the published-layer contract (docs/published.md)
+        effort: S
+        state: open
+        contract: true
+        context: >-
+          zohelo-bi and zohelo.com will read small files from 06_published/v1/ in the lakehouse bucket
+          (program plan §3.5) and build against this contract before the files exist. The architect fixed
+          every path, field and limit in .github/backlog/assets/published-contract.md; this Task turns it
+          into the repo's contract document without changing any name.
+        files:
+          - create: docs/published.md
+          - edit: docs/architecture.md
+        steps:
+          - "Create docs/published.md with the sections of the assets file in the same order: Rules, catalog/catalog.json, catalog/<table>.parquet, manifest.json, kpi/<kpi_key>/latest.json, kpi/<kpi_key>/series.parquet, geo/<level>.geojson, feed, Size limits."
+          - "Under each path write a Markdown table with columns field, type, required, meaning; one row per field listed in the assets file (nested arrays as 'kpis[].kpi_key' rows); types string, number, integer, boolean, array, object, date."
+          - "Copy every key name exactly (unit_key, geography_key, geo levels country, voivodeship, powiat, gmina, nuts1, nuts2)."
+          - "docs/architecture.md: add one line linking docs/published.md where the layers are listed."
+        acceptance:
+          - every field of the assets file appears once in a table with the same name
+        verify:
+          - run: grep -c "^## " docs/published.md
+            expect: "9"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [code that writes the files (Deliverable publish), JSON Schemas (next Task)]
+      - key: data/published/published-v1/contract/schemas
+        type: Task
+        title: Add JSON Schemas and fixtures for the published contract
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/contract/doc]
+        context: >-
+          Consumers (zohelo-bi, zohelo.com) copy these fixtures into their tests, so the files must match
+          docs/published.md exactly. No JSON Schema library is installed in zohelo-data; repo_check gets a
+          small built-in check (required keys and JSON types of each schema's properties), enough to keep
+          fixtures and schemas in step.
+        files:
+          - create: warehouse/published/schemas/catalog.schema.json
+          - create: warehouse/published/schemas/manifest.schema.json
+          - create: warehouse/published/schemas/kpi_latest.schema.json
+          - create: warehouse/published/schemas/feed_changes.schema.json
+          - create: warehouse/published/fixtures/catalog/catalog.json
+          - create: warehouse/published/fixtures/manifest.json
+          - create: warehouse/published/fixtures/kpi/unemployment_rate/latest.json
+          - create: warehouse/published/fixtures/feed/changes.json
+          - create: warehouse/published/fixtures/geo/voivodeship.geojson
+          - create: warehouse/published/README.md
+          - edit: ops/repo_check.py
+        steps:
+          - "Write one JSON Schema (draft 2020-12) per JSON path of docs/published.md with `required` lists and `type` for every property, `additionalProperties: true` (additive changes allowed)."
+          - "Fixtures: catalog.json with the 5 published KPIs (population, gdp_current_prices, inflation, unemployment_rate, fx_rate) using keys from warehouse/seeds/*.csv; manifest.json with the same 5 metrics; latest.json for unemployment_rate with 2 values (PL country, TERC:12 voivodeship); changes.json with 2 items; voivodeship.geojson with one simplified square Feature for TERC:12 (Małopolskie). Values are illustrative and say so in generated_at '2026-01-01T00:00:00Z'."
+          - "README.md: 'Contract of 06_published/v1 — see docs/published.md. Consumers copy fixtures; change schemas only with a contract-labelled PR.'"
+          - "ops/repo_check.py: add check `published contract`: for each fixture JSON file, load the schema with the matching name and check every required key exists and every present property's JSON type matches (recursing into objects and array items). Register it in the checks list like the other checks."
+        acceptance:
+          - repo_check shows 'ok   published contract'; removing a required key from a fixture makes it fail
+        verify:
+          - run: python -m ops.repo_check
+            expect: "'ok   published contract' and all other checks ok"
+        out_of_scope: [series.parquet and catalog parquet fixtures (written by publish.py tests later)]
+  - key: data/published/published-v1/publish
+    title: gold.publish activity
+    depends_on: [data/published/published-v1/contract, data/metadata/catalogue-v1, data/metadata/semantic-manifest/generate]
+    done_when:
+      - warehouse.yaml lists gold.publish; Pipeline runs it after the build; files present
+    todo:
+      - "warehouse/publish.py (sole writer): catalog.json + parquet, manifest.json (object built by warehouse/catalog.py), kpi extracts, geo (simplified from PRG), feed"
+      - "Add activity to warehouse.yaml and pipeline.yml job order (after silver-gold-build)"
+      - "Delete _portal_catalog/v1 writer and objects after both portals switch"
+  - key: data/published/published-v1/tests
+    title: Contract tests
+    depends_on: [data/published/published-v1/publish]
+    done_when:
+      - gold.publish fails when a published value differs from Gold or a schema field is missing
+    todo:
+      - "Post-publish check comparing latest.json values with Gold for every KPI"

@@ -1,0 +1,40 @@
+key: data/metadata/semantic-manifest
+area: data/metadata
+title: Generated semantic manifest
+phase: 1
+priority: P1
+target: 2026-12-18
+why: >-
+  zohelo-bi carries a hand-written manifest of 5 metrics that drifts from the warehouse. The
+  metric definitions already exist as dbt semantic models; generating the manifest from them keeps
+  one definition per metric.
+outcome: >-
+  warehouse/catalog.py builds the manifest object (metric → table, unit, dimensions, defaults) from
+  the semantic models; warehouse/publish.py writes it as 06_published/v1/manifest.json after every
+  build (decision D5: publish.py is the sole writer); zohelo-bi loads it instead of its own copy.
+in_scope:
+  - manifest generation in warehouse/catalog.py (A-24)
+  - semantic models for every published KPI
+out_of_scope:
+  - bi loader code (zohelo-bi Epic)
+done_when:
+  - 06_published/v1/manifest.json lists every published KPI with table, unit and dimensions
+  - zohelo-bi packages/semantic has no hand-written metric list
+depends_on: [data/metadata/catalogue-v1, data/warehouse/gold-v1, data/published/published-v1/contract]
+decisions: ["D5: publish.py is the sole writer of manifest.json; catalog.py builds the object"]
+deliverables:
+  - key: data/metadata/semantic-manifest/generate
+    title: Manifest generated from semantic models
+    done_when:
+      - catalog.py returns the manifest object matching warehouse/published/schemas/manifest.schema.json; publish.py writes it
+    todo:
+      - "catalog.py: function building the manifest object from target/semantic_manifest.json + dim_kpi, validated against the manifest fixture (schema from data/published/published-v1/contract/schemas)"
+      - "Semantic models (semantic_models/gold.yml) for each published KPI's metrics table"
+  - key: data/metadata/semantic-manifest/bi-adoption
+    title: zohelo-bi reads the generated manifest
+    repo: zohelo-bi
+    depends_on: [data/metadata/semantic-manifest/generate]
+    done_when:
+      - packages/semantic exports types + loader only
+    todo:
+      - "Tracked in zohelo-bi Epic bi/platform/published-loader"

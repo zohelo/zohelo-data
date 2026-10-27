@@ -1,0 +1,139 @@
+key: data/portal/trim
+area: data/portal
+title: "Portal trim: Google removal, Duck-UI extras, CI gate"
+phase: 0
+priority: P1
+target: 2026-11-21
+why: >-
+  data.zohelo.com is a Duck-UI fork that still ships a Google Drive client, Google sign-in text, an AI
+  assistant, PWA and collaboration features nobody uses, and portal changes reach main without any
+  build check. Unused code is attack surface and slows every later change.
+outcome: >-
+  The portal is a file explorer plus SQL workspace over the lakehouse, with no Google code, and every
+  portal change is linted, type-checked and built before merge.
+in_scope:
+  - check-portal job in dev.yml (A-06)
+  - remove Google Drive client and Google sign-in UI; module renamed services/lakehouse (A-05)
+  - remove Duck Brain, PWA service worker, husky/lint-staged, notebooks, collaboration, boilerplate pages (A-17)
+out_of_scope:
+  - new catalogue/lineage/runs pages (phase 1 Epic data/portal/catalogue-pages)
+  - design system adoption (phase 1 Epic data/portal/design-shell)
+done_when:
+  - "`git grep -i google -- portal/app/src` returns nothing"
+  - check-portal is a required status check on main (owner setting, Task data/ops/security-baseline/repo-rules/repo-settings)
+  - "`npx knip` in portal/app reports no unused files or dependencies"
+  - Deploy portal green and owner sign-in still works
+deliverables:
+  - key: data/portal/trim/ci-gate
+    title: Portal changes checked on pull requests
+    done_when:
+      - check-portal job runs lint, typecheck, build on PRs touching portal/app; required on main by Task data/ops/security-baseline/repo-rules/repo-settings
+    tasks:
+      - key: data/portal/trim/ci-gate/check-portal
+        type: Task
+        title: Add check-portal job to dev.yml
+        effort: S
+        state: open
+        contract: true
+        context: >-
+          dev.yml's check job covers Python only; portal/app changes deploy on push to main untested.
+          A workflow-level paths filter would leave the check missing on other PRs and block a required check.
+        files:
+          - edit: .github/workflows/dev.yml
+          - edit: portal/app/src/components/workspace/R2ExplorerLauncher.tsx
+          - edit: portal/app/src/components/workspace/R2LakehouseBrowser.tsx
+        steps:
+          - "New job check-portal on pull_request: detect changes under portal/app/ with `git diff --name-only origin/$BASE_REF...HEAD`; without changes print a notice and exit 0."
+          - "With changes: setup-node (.node-version, npm cache), `npm ci --ignore-scripts`, `npm run lint`, `npm run typecheck`, `npm run build` with the same build env as deploy-portal.yml."
+          - "Fix the lint errors the job finds today, which are in exactly two files: portal/app/src/components/workspace/R2ExplorerLauncher.tsx and R2LakehouseBrowser.tsx; if lint reports errors in any other file, stop and comment the list on this Task."
+        acceptance:
+          - a PR touching portal/app runs all four steps; other PRs pass with a notice
+        verify:
+          - workflow: Dev · branch runs check-portal on the PR
+            expect: green
+        out_of_scope: [making it required (Task data/ops/security-baseline/repo-rules/repo-settings)]
+        notes: ["In progress: PR #937 (branch chore/portal-check-job)"]
+  - key: data/portal/trim/google
+    title: No Google code in the portal
+    depends_on: [data/portal/trim/ci-gate]
+    done_when:
+      - Google Drive client, Google sign-in UI and DUCK_UI_GOOGLE_CLIENT_ID gone; module is services/lakehouse
+    tasks:
+      - key: data/portal/trim/google/lakehouse-client
+        type: Task
+        title: Remove the Google Drive client and Google sign-in
+        effort: L
+        state: open
+        context: >-
+          portal/app/src/services/googleDrive/ now only wraps the Access-protected /api; its names and the
+          sign-in texts still say Google, and a Google client id env var remains.
+        files:
+          - edit: portal/app/src/services
+          - edit: portal/app/src/store/slices
+          - edit: portal/app/vite.config.ts
+        steps:
+          - Rename services/googleDrive/ → services/lakehouse/ (driveApi.ts → api.ts) and googleDriveSlice → lakehouseSlice; update imports.
+          - Delete Google sign-in components, texts and DUCK_UI_GOOGLE_CLIENT_ID handling.
+          - Run npm run lint, typecheck, build in portal/app.
+        acceptance:
+          - "`git grep -i google -- portal/app/src` returns nothing"
+        verify:
+          - run: cd portal/app && npm ci --ignore-scripts && npm run lint && npm run typecheck && npm run build
+            expect: all succeed
+          - workflow: Deploy portal (preview on the branch)
+            expect: preview loads behind Access; /api/health shows signed_in_as
+        out_of_scope: [UI redesign]
+        notes: ["In progress: PR #943 (stacked on #937)"]
+        depends_on: [data/portal/trim/ci-gate/check-portal]
+  - key: data/portal/trim/duck-ui
+    title: Duck-UI fork trimmed to explorer and SQL
+    depends_on: [data/portal/trim/google]
+    done_when:
+      - Duck Brain, PWA, husky, notebooks, collaboration and boilerplate pages removed; knip clean
+    tasks:
+      - key: data/portal/trim/duck-ui/remove-extras
+        type: Task
+        title: Remove Duck Brain, PWA, husky and unused Duck-UI features
+        effort: L
+        state: open
+        context: >-
+          The fork ships an LLM assistant (WebLLM, OpenAI, Anthropic), a PWA service worker, husky and
+          lint-staged, and notebook/collaboration/boilerplate features the owner does not use (owner
+          scope: explorer + SQL workspace only).
+        files:
+          - edit: portal/app/package.json
+          - edit: portal/app/src
+          - edit: portal/app/vite.config.ts
+        steps:
+          - One commit per feature removed (Duck Brain; service worker + vite PWA plugin; husky + lint-staged; notebooks; collaboration; boilerplate pages).
+          - Remove the packages each feature used from package.json and regenerate package-lock.json with npm install.
+          - Run lint, typecheck, build after every commit.
+        acceptance:
+          - explorer and SQL workspace work on the preview; bundle smaller than before (quote both sizes in the PR)
+        verify:
+          - run: cd portal/app && npm ci --ignore-scripts && npm run lint && npm run typecheck && npm run build
+            expect: all succeed
+          - workflow: Deploy portal (preview)
+            expect: page loads, a SQL query on silver.nbp_fx_rates returns rows
+        out_of_scope: [the catalog component (kept for phase 1)]
+        notes: ["In progress: branch chore/portal-trim (no PR yet); its PR body must say Closes #<this>"]
+      - key: data/portal/trim/duck-ui/knip
+        type: Task
+        title: Remove unused files and dependencies reported by knip
+        effort: M
+        state: open
+        depends_on: [data/portal/trim/duck-ui/remove-extras]
+        context: After the feature removals, dead modules and packages remain; knip finds them.
+        files:
+          - edit: portal/app/package.json
+          - edit: portal/app/src
+        steps:
+          - Run `npx knip@5 --reporter compact` in portal/app.
+          - Delete every unused file and export it reports; remove unused dependencies; npm install.
+          - Repeat until knip reports nothing; run lint, typecheck, build.
+        acceptance:
+          - knip reports no unused files, exports or dependencies
+        verify:
+          - run: cd portal/app && npx knip@5
+            expect: no issues
+        out_of_scope: [adding knip to CI]

@@ -1,0 +1,178 @@
+key: data/src-plg-001
+area: data/src-c
+title: NBP [PLG-001]
+phase: 1
+priority: P1
+target: '2027-01-29'
+why: NBP publishes the official PLN exchange rates (tables A, B, C) and gold prices. They feed the prices-and-money
+  dashboard and the markets section of zohelo.com, which replaced the dropped Finnhub quotes (owner decision 3,
+  27 Oct).
+outcome: NBP rates are modelled and, once NBP confirms reuse terms, shown publicly in bi and on zohelo.com.
+in_scope:
+- Stages 1–11 of the source template (stages.yaml)
+out_of_scope:
+- Other sources of the same provider
+- Paid access tiers
+done_when:
+- Every Deliverable of this Epic is closed (11/11)
+- 14 consecutive days of green scheduled runs
+depends_on: []
+decisions: []
+deliverables:
+- key: data/src-plg-001/review
+  title: NBP · Source review
+  done_when:
+  - Register entry has every field filled; licence.notes gives the terms URL and the attribution sentence; obsolete
+    blockers removed
+  tasks:
+  - key: data/src-plg-001/review/ask-nbp
+    type: Task
+    title: Ask NBP to confirm the reuse terms of its rates
+    effort: S
+    state: open
+    contract: false
+    owner_action: Send the e-mail text from this issue's notes from your address to the contact on https://nbp.pl/kontakt/
+      ; when NBP replies, paste the reply as a comment here and close this issue (10 min, then wait for NBP).
+    verify_only: true
+    context: 'Owner decision 14 Oct 2026: NBP data stays internal until NBP confirms that its exchange rates and
+      gold prices may be shown on a public website with attribution. Only the owner can write to NBP as the data
+      user. The drafted e-mail is the claude.ai project doc claude/nbp-licence-email.md; Claude pastes its text
+      into this issue''s notes section when the issue is created, so the owner needs nothing else.'
+    files: []
+    steps:
+    - 'Owner: send the e-mail (text in this issue), keep the reply.'
+    - 'Owner: paste NBP''s reply as a comment and close this issue.'
+    acceptance:
+    - The reply is quoted in a comment on this issue
+    verify:
+    - run: gh issue view <this issue> --comments
+      expect: a comment quoting NBP's reply
+    out_of_scope:
+    - Changing the register (Task data/src-plg-001/review/register)
+    notes:
+    - The waiting time is NBP's; the implementer Task stays blocked until this closes.
+  - key: data/src-plg-001/review/register
+    type: Task
+    title: Complete the register review of NBP
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    context: 'The register entry PLG-001 in ingestion/register.yaml is the source of truth for licence and public
+      display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
+      URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
+      read: https://api.nbp.pl/en.html.'
+    files:
+    - edit: ingestion/register.yaml
+    steps:
+    - Read NBP's answer in the closing comment of Task data/src-plg-001/review/ask-nbp.
+    - 'Write licence.notes: ''Terms: NBP reply of <date> (<summary of what is allowed: publication on a website,
+      integration, commercial use, attribution form>). Attribution: "Źródło: NBP" / "Source: Narodowy Bank Polski".'''
+    - Set licence.status open-conditional if publication is allowed, restricted if not; remove blocker 'Confirm
+      NBP reuse terms.'
+    - If publication is not allowed, comment here so the architect re-plans stages 10–11 (they stay internal, owner
+      decision 14 Oct).
+    acceptance:
+    - licence.notes of PLG-001 contains a terms URL and a sentence starting 'Attribution:'
+    - research.blockers of PLG-001 lists only open problems (or is empty)
+    - python -m ops.repo_check passes
+    verify:
+    - run: python -m ops.repo_check
+      expect: exit code 0
+    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
+        if s['id']=='PLG-001'])"
+      expect: notes include the terms URL and 'Attribution:'
+    out_of_scope:
+    - Other register entries
+    - Code or source declaration changes
+    - The kpi field (set only by data/ingestion/register-restructure/fields/family-kpi)
+    depends_on:
+    - data/src-plg-001/review/ask-nbp
+    notes:
+    - 'Owner decision 14 Oct 2026: NBP data stays internal (models, metrics) and off public pages until NBP confirms
+      reuse terms. Stages 10–11 are blocked by this Task.'
+- key: data/src-plg-001/development
+  title: NBP · Development
+  done_when:
+  - Source declaration and Landing code exist on main; a full load was trialled before production
+  state: done
+  notes:
+  - 'Evidence: ingestion/sources/nbp.yaml, ingestion/to_landing/nbp/extract.py, ingestion/to_bronze/nbp/load.py'
+- key: data/src-plg-001/ingestion
+  title: NBP · Ingestion (Landing)
+  done_when:
+  - 'First production load complete (landing.inspect: missing 0); landing.verify and landing.archive green'
+  state: done
+  notes:
+  - 'Evidence: activities landing.extract/verify/archive; green full dataflow https://github.com/zohelo/zohelo-data/actions/runs/40498787102'
+- key: data/src-plg-001/schedule
+  title: NBP · Schedule
+  done_when:
+  - Full dataflow scheduled; last 3 runs green, newest dispatched by the scheduler; no open alert issue
+  state: done
+  notes:
+  - 'Evidence: cron ''30 11 * * 1-5''; full dataflow green on 23, 26 and 27 Oct; green full dataflow https://github.com/zohelo/zohelo-data/actions/runs/40498787102'
+- key: data/src-plg-001/bronze
+  title: NBP · Bronze
+  done_when:
+  - Declared Bronze tables exist; bronze.verify green; latest version only
+  state: done
+  notes:
+  - 'Evidence: bronze.nbp_observations; bronze_latest_only: true; green full dataflow https://github.com/zohelo/zohelo-data/actions/runs/40498787102'
+- key: data/src-plg-001/silver
+  title: NBP · Silver
+  done_when:
+  - Declared Silver tables written by today's code (dbt model or warehouse/entity/*.sql) with tests/checks and descriptions
+  state: done
+  notes:
+  - 'Evidence: warehouse/models/silver/nbp/ (nbp_fx_rates, nbp_gold_fixings)'
+- key: data/src-plg-001/gold
+  title: NBP · Gold
+  done_when:
+  - Observations in Gold v1 facts joined to conformed dimensions with no unmatched keys; measures in the catalogue
+    tables
+  depends_on:
+  - data/warehouse/gold-v1
+  notes:
+  - gold.fact_fx_rate, gold.fact_gold_price and gold.dim_currency already read NBP Silver; v1 folds them into the
+    conformed model.
+  todo:
+  - Gold v1 builder Tasks (block list, geography mapping, build-check row) are written when Epic data/warehouse/gold-v1
+    is done
+- key: data/src-plg-001/semantic
+  title: NBP · Semantic
+  done_when:
+  - KPIs in warehouse/seeds/kpi.csv (PL/EN, unit, frequency, licence, domain); metrics in the generated manifest;
+    lineage in the catalogue
+  depends_on:
+  - data/metadata/catalogue-v1
+  todo:
+  - kpi.csv rows, domain mapping and manifest check are written when Epic data/metadata/catalogue-v1 is done
+- key: data/src-plg-001/portal-release
+  title: NBP · Data portal release
+  done_when:
+  - 'data.zohelo.com source page: register summary, tables per layer with rows and last write, freshness, last scheduled
+    run'
+  depends_on:
+  - data/portal/catalogue-pages
+  todo:
+  - Check the source page on data.zohelo.com and fix missing metadata, once Epic data/portal/catalogue-pages is
+    done
+- key: data/src-plg-001/bi-release
+  title: NBP · zohelo-bi release
+  repo: zohelo-bi
+  done_when:
+  - KPIs in the bi catalogue and explorer; at least one dashboard tile uses one; bi smoke covers it
+  depends_on:
+  - data/src-plg-001/review/register
+  todo:
+  - Catalogue rows, explorer dimensions and a dashboard tile, written when zohelo-bi v1 reads the published layer
+- key: data/src-plg-001/com-release
+  title: NBP · zohelo.com release
+  repo: zohelo
+  done_when:
+  - KPIs on zohelo.com indicator pages and section with real values, attribution and a link to bi
+  depends_on:
+  - data/src-plg-001/review/register
+  todo:
+  - Indicator pages and section content, written when zohelo.com v1 reads the published layer

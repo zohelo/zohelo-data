@@ -1,0 +1,177 @@
+key: data/src-gl-001
+area: data/src-a
+title: Eurostat [GL-001]
+phase: 1
+priority: P1
+target: '2027-01-29'
+why: 'Eurostat is the main European comparison source: GDP, prices, labour and population for every EU country and
+  NUTS region. Most bi and zohelo.com comparisons of Poland with its neighbours come from it.'
+outcome: Eurostat KPIs are in the catalogue, the explorer and on zohelo.com, refreshed twice a day without manual
+  work.
+in_scope:
+- Stages 1–11 of the source template (stages.yaml)
+out_of_scope:
+- Other sources of the same provider
+- Paid access tiers
+done_when:
+- Every Deliverable of this Epic is closed (11/11)
+- 14 consecutive days of green scheduled runs
+depends_on: []
+decisions: []
+deliverables:
+- key: data/src-gl-001/review
+  title: Eurostat · Source review
+  done_when:
+  - Register entry has every field filled; licence.notes gives the terms URL and the attribution sentence; obsolete
+    blockers removed
+  tasks:
+  - key: data/src-gl-001/review/register
+    type: Task
+    title: Complete the register review of Eurostat
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    context: 'The register entry GL-001 in ingestion/register.yaml is the source of truth for licence and public
+      display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
+      URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
+      read: https://ec.europa.eu/eurostat/web/main/help/copyright-notice.'
+    files:
+    - edit: ingestion/register.yaml
+    steps:
+    - 'Open https://ec.europa.eu/eurostat/web/main/help/copyright-notice and copy the reuse conditions: attribution,
+      indication of changes, the disclaimer text, and the exceptions (third-party data, non-EU/EFTA/candidate data,
+      Comext/DS-*).'
+    - 'Rewrite licence.notes as: ''Terms: <URL>. Attribution: "Source: Eurostat" plus the dataset code. Modifications
+      must be indicated. Exceptions: <list>. Disclaimer: <text>.'''
+    - 'Replace blocker ''Confirm dataset-level third-party rights'' with ''Third-party data flagged in a dataset''s
+      metadata is not published (check at stage 11)'' only if no general answer exists on the page; remove ''Define
+      vintage retention'' (decided: latest version only, policy #822/#845).'
+    acceptance:
+    - licence.notes of GL-001 contains a terms URL and a sentence starting 'Attribution:'
+    - research.blockers of GL-001 lists only open problems (or is empty)
+    - python -m ops.repo_check passes
+    verify:
+    - run: python -m ops.repo_check
+      expect: exit code 0
+    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
+        if s['id']=='GL-001'])"
+      expect: notes include the terms URL and 'Attribution:'
+    out_of_scope:
+    - Other register entries
+    - Code or source declaration changes
+    - The kpi field (set only by data/ingestion/register-restructure/fields/family-kpi)
+- key: data/src-gl-001/development
+  title: Eurostat · Development
+  done_when:
+  - Source declaration and Landing code exist on main; a full load was trialled before production
+  state: done
+  notes:
+  - 'Evidence: ingestion/sources/eurostat.yaml, ingestion/to_landing/eurostat/, ingestion/to_bronze/eurostat/'
+- key: data/src-gl-001/ingestion
+  title: Eurostat · Ingestion (Landing)
+  done_when:
+  - 'First production load complete (landing.inspect: missing 0); landing.verify and landing.archive green'
+  state: done
+  notes:
+  - 'Evidence: activities landing.extract/verify/archive in ingestion/sources/eurostat.yaml; green full dataflow
+    https://github.com/zohelo/zohelo-data/actions/runs/40491208071'
+- key: data/src-gl-001/schedule
+  title: Eurostat · Schedule
+  done_when:
+  - Full dataflow scheduled; last 3 runs green, newest dispatched by the scheduler; no open alert issue
+  tasks:
+  - key: data/src-gl-001/schedule/observe
+    type: Task
+    title: Confirm green scheduled Eurostat runs
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    verify_only: true
+    context: 'Verification only; closes with a comment, no PR. Rule D11 (daily source): 3 green scheduler-started
+      full-dataflow runs within 7 days; manual dispatches do not count. The run of 26 Oct 22:47 UTC failed during
+      the key-rotation window (alert #926, closed by the Operations fixes Epic, A-21); runs before and after are
+      green.'
+    files: []
+    steps:
+    - 'List the scheduler-started runs: since=$(date -u -d ''-7 days'' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
+      --jq ''.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]") and
+      (.display_title|test("· eurostat · full")))|"\(.conclusion) \(.created_at) \(.html_url)"''; done | head -3'
+    - If it prints 3 lines starting with success, comment them here and close this issue.
+    - 'If an alert issue ''Pipeline failed: eurostat · …'' is open and the runs are green, close it with the same
+      comment (standing permission, AGENTS.md).'
+    - If fewer runs exist yet, comment the count and the next due date and keep this Task open.
+    - 'If a run failed, open a Bug under this Deliverable titled ''Pipeline failed: <source> · <step>'' quoting
+      the failing annotation, and keep this Task open.'
+    acceptance:
+    - 'A comment lists the run URLs meeting the rule: 3 green scheduler-started full-dataflow runs within 7 days'
+    - No open alert issue for eurostat
+    verify:
+    - run: since=$(date -u -d '-7 days' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
+        --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]")
+        and (.display_title|test("· eurostat · full")))|"\(.conclusion) \(.created_at) \(.html_url)"'; done | head
+        -3
+      expect: 3 lines starting with success
+    out_of_scope:
+    - Code changes
+    - Changing the schedule
+    - Counting manual dispatches
+- key: data/src-gl-001/bronze
+  title: Eurostat · Bronze
+  done_when:
+  - Declared Bronze tables exist; bronze.verify green; latest version only
+  state: done
+  notes:
+  - 'Evidence: bronze.eurostat_observations (entity tables, #875); bronze.verify in activities; green full dataflow
+    https://github.com/zohelo/zohelo-data/actions/runs/40491208071'
+- key: data/src-gl-001/silver
+  title: Eurostat · Silver
+  done_when:
+  - Declared Silver tables written by today's code (dbt model or warehouse/entity/*.sql) with tests/checks and descriptions
+  state: done
+  notes:
+  - 'Evidence: warehouse/models/silver/eurostat/ (codes, dataflows, dimensions) and warehouse/entity/eurostat_observations.sql'
+- key: data/src-gl-001/gold
+  title: Eurostat · Gold
+  done_when:
+  - Observations in Gold v1 facts joined to conformed dimensions with no unmatched keys; measures in the catalogue
+    tables
+  depends_on:
+  - data/warehouse/gold-v1
+  todo:
+  - Gold v1 builder Tasks (block list, geography mapping, build-check row) are written when Epic data/warehouse/gold-v1
+    is done
+- key: data/src-gl-001/semantic
+  title: Eurostat · Semantic
+  done_when:
+  - KPIs in warehouse/seeds/kpi.csv (PL/EN, unit, frequency, licence, domain); metrics in the generated manifest;
+    lineage in the catalogue
+  depends_on:
+  - data/metadata/catalogue-v1
+  todo:
+  - kpi.csv rows, domain mapping and manifest check are written when Epic data/metadata/catalogue-v1 is done
+- key: data/src-gl-001/portal-release
+  title: Eurostat · Data portal release
+  done_when:
+  - 'data.zohelo.com source page: register summary, tables per layer with rows and last write, freshness, last scheduled
+    run'
+  depends_on:
+  - data/portal/catalogue-pages
+  todo:
+  - Check the source page on data.zohelo.com and fix missing metadata, once Epic data/portal/catalogue-pages is
+    done
+- key: data/src-gl-001/bi-release
+  title: Eurostat · zohelo-bi release
+  repo: zohelo-bi
+  done_when:
+  - KPIs in the bi catalogue and explorer; at least one dashboard tile uses one; bi smoke covers it
+  todo:
+  - Catalogue rows, explorer dimensions and a dashboard tile, written when zohelo-bi v1 reads the published layer
+- key: data/src-gl-001/com-release
+  title: Eurostat · zohelo.com release
+  repo: zohelo
+  done_when:
+  - KPIs on zohelo.com indicator pages and section with real values, attribution and a link to bi
+  todo:
+  - Indicator pages and section content, written when zohelo.com v1 reads the published layer

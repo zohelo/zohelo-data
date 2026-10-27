@@ -1,0 +1,34 @@
+key: data/ops/quality-audit
+area: data/ops
+title: Silver and Gold data-quality audit
+phase: 1
+priority: P2
+target: 2027-01-15
+why: >-
+  A wrong number on a public page is the top risk of the program. Before release, an independent
+  review must check that Silver and Gold reproduce the sources' published values.
+outcome: >-
+  An audit compares a sample of published KPI values with the publishers' own sites, records
+  findings as Bugs and fixes them before the phase 1 exit.
+in_scope:
+  - sample of ≥ 3 values per published KPI against the publisher (A-35, phase 1 part)
+  - checks for duplicated series, unit and scale errors, unmatched geography
+out_of_scope:
+  - portal/API security audit (phase 2 gate, zohelo-bi Epic)
+done_when:
+  - audit record lists every published KPI with matched/unmatched samples; all mismatches closed as Bugs
+depends_on: [data/metadata/catalogue-v1]
+deliverables:
+  - key: data/ops/quality-audit/audit
+    title: Independent value audit
+    done_when:
+      - audit table committed in docs/quality.md (method + summary only) and Bugs filed
+    todo:
+      - "Audit run by a separate reviewer session with no access to the build code's assumptions"
+      - "One Bug per mismatch under the KPI's source Epic"
+  - key: data/ops/quality-audit/checks
+    title: Automated quality checks in the build
+    done_when:
+      - dbt tests for grain, units and value ranges on every metrics table
+    todo:
+      - "Range and unit tests per KPI from kpi.csv (min/max plausible)"

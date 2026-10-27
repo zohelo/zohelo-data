@@ -1,0 +1,26 @@
+key: data/portal/design-shell
+area: data/portal
+title: Design shell adoption
+phase: 1
+priority: P3
+target: 2027-01-22
+why: >-
+  The three products must look like one portfolio. The data portal still uses Duck-UI's own look.
+outcome: >-
+  The data portal's shell (header, navigation, colours, type) uses @zohelo/design tokens and
+  components from a pinned GitHub Release tarball of zohelo/zohelo (architect D3).
+in_scope:
+  - tokens and fonts from @zohelo/design; header and navigation components
+out_of_scope:
+  - restyling the SQL editor internals
+done_when:
+  - portal/app depends on @zohelo/design by its release tarball URL (design-v1.x); no local colour tokens remain in the shell
+depends_on: [com/design/design-v1, data/portal/trim]
+deliverables:
+  - key: data/portal/design-shell/adopt
+    title: Portal shell on the design system
+    done_when:
+      - shell components replaced; dark mode follows tokens
+    todo:
+      - "Add @zohelo/design by its GitHub Release tarball URL; replace index.css tokens"
+      - "Replace header/navigation with design components"

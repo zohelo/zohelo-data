@@ -1,0 +1,86 @@
+# zohelo-data Areas, in display order (SPEC §4). Source family Areas parent the source Epics,
+# which are generated from ingestion/register.yaml and .github/backlog/stages.yaml; platform
+# Areas parent the Epics in epics/*.yaml.
+areas:
+  - key: data/src-a
+    title: Sources · A International statistics
+    purpose: >-
+      International statistical producers (Eurostat, World Bank, OECD, IMF, UN agencies): broad
+      multi-domain indicators by country and region.
+  - key: data/src-b
+    title: Sources · B Polish official statistics
+    purpose: >-
+      GUS and other Polish official statistics producers: the Polish indicators down to voivodeship,
+      powiat and gmina.
+  - key: data/src-c
+    title: Sources · C Central banks & supervisors
+    purpose: >-
+      NBP, ECB, BIS, KNF and peers: exchange rates, interest rates, money and financial-sector data.
+  - key: data/src-d
+    title: Sources · D Public finance & procurement
+    purpose: >-
+      Budgets, public debt, local-government finance and public procurement (MF, TED, UZP).
+  - key: data/src-e
+    title: Sources · E Registers & reference data
+    purpose: >-
+      Registers of entities and reference geography (TERYT, PRG, GLEIF, KRS, VAT white list):
+      the keys other sources join to; they feed dimensions, not KPIs.
+  - key: data/src-f
+    title: Sources · F Law, politics & justice
+    purpose: >-
+      Legislation, parliaments, elections, courts and public institutions' activity.
+  - key: data/src-g
+    title: Sources · G Environment, energy & geospatial
+    purpose: >-
+      Air, water, climate, energy systems and geospatial layers (GIOŚ, IMGW, PSE, URE, GUGiK).
+  - key: data/src-h
+    title: Sources · H Transport & mobility
+    purpose: >-
+      Roads, rail, aviation, ports, vehicle registers and public-transport feeds.
+  - key: data/src-i
+    title: Sources · I Markets & corporate disclosures
+    purpose: >-
+      Stock exchange, commodity markets and company disclosures; onboarded only with a licence that
+      allows public display.
+  - key: data/src-j
+    title: Sources · J Platforms, media & knowledge
+    purpose: >-
+      Platform, media and open-knowledge sources (Wikimedia, GDELT, OpenAlex); terms checked per source.
+  - key: data/src-k
+    title: Sources · K Demo & training data
+    purpose: >-
+      Sample enterprise datasets (AdventureWorks, WideWorldImporters, synthetic ERP/CRM) in a separate
+      demo warehouse for the analyst portfolio; never in the public KPI catalogue.
+  - key: data/ingestion
+    title: Platform · Ingestion framework
+    purpose: >-
+      The shared code and rules that move a source into Landing and Bronze: register, declarations,
+      extraction patterns, scheduler.
+  - key: data/warehouse
+    title: Platform · Warehouse
+    purpose: >-
+      Silver and Gold modelled with dbt: the dimensional model every KPI is computed from.
+  - key: data/metadata
+    title: Platform · Metadata & semantic
+    purpose: >-
+      The one metadata catalogue (sources, datasets, KPIs, dimensions, domains) and the semantic
+      manifest both portals read.
+  - key: data/published
+    title: Platform · Published layer
+    purpose: >-
+      Small derived files for the web (`06_published/v1/`): catalogue, per-KPI extracts, geometry,
+      change feed; rebuilt whole after every Gold build.
+  - key: data/portal
+    title: Platform · Data portal
+    purpose: >-
+      data.zohelo.com: file explorer, SQL workspace, catalogue, lineage and runs pages for the owner.
+  - key: data/ops
+    title: Platform · Operations & quality
+    purpose: >-
+      Keeps the platform running unattended and safe: repository rules, security, clean storage,
+      credentials, alerts, monitoring and data quality.
+  - key: data/backlog
+    title: Platform · Backlog engine
+    purpose: >-
+      The generated backlog: YAML plan files, the sync engine, the portfolio project and the rules
+      that tie every pull request to an issue.

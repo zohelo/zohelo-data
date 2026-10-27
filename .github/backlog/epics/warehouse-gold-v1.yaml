@@ -1,0 +1,180 @@
+key: data/warehouse/gold-v1
+area: data/warehouse
+title: Gold v1 (PoC folded into gold)
+phase: 1
+priority: P1
+target: 2026-12-11
+why: >-
+  Every KPI on bi.zohelo.com and zohelo.com must come from one production dimensional model. Today the
+  useful model is the PoC in namespace `poc`, next to an older v0 star in `gold` that nobody reads,
+  and geography is matched by name.
+outcome: >-
+  Namespace `gold` holds one star (calendar, geography, measures, series, annual/monthly/daily facts,
+  metrics tables) built from the five KPI sources; `poc` and the v0 tables are gone.
+in_scope:
+  - decisions for v1 recorded in docs/model.md
+  - fold poc → gold, delete v0 models and tables (A-23)
+  - geography mapping through the GUS KTS–TERYT table and NUTS 3 ↔ podregion
+  - dimensions/*.yaml → seeds (with Epic data/metadata/catalogue-v1)
+out_of_scope:
+  - the metadata catalogue tables (Epic data/metadata/catalogue-v1)
+  - the published layer (Epic data/published/published-v1)
+done_when:
+  - "catalog namespaces: no `poc`; `gold` has no v0 table (fact_observation, fact_fx_rate, fact_gold_price, dim_indicator, dim_period)"
+  - "gold.build_check: rows_geography_unmatched = 0 for every activated block"
+  - tests/fact_grain passes in the scheduled build 7 days in a row
+  - zohelo-bi reads gold.* and its deploy smoke passes (bi/platform/published-loader/gold-switch)
+depends_on: [data/ops/r2-cleanup]
+decisions:
+  - "Gold design draft 2 (owner doc) and docs/gold-poc.md open points; decided in data/warehouse/gold-v1/decisions"
+  - "D6 expand/contract cut-over: gold.* written, bi switches, then poc.* retired"
+  - "Deviation from plan A-23 (architect, 27 Oct): warehouse/entity/*.sql are kept — they are per-entity Silver models used by warehouse/entity.py, not Gold; row for docs/decisions.md"
+
+deliverables:
+  - key: data/warehouse/gold-v1/decisions
+    title: Gold v1 decisions recorded
+    done_when:
+      - docs/model.md has a "Gold v1" section answering the open points of docs/gold-poc.md
+    tasks:
+      - key: data/warehouse/gold-v1/decisions/record
+        type: Task
+        title: Record the Gold v1 decisions in docs/model.md
+        effort: S
+        state: open
+        contract: true
+        context: >-
+          docs/gold-poc.md ends with open points for v1. Implementers must not re-decide them; this Task
+          writes the architect's decisions so the fold Tasks are mechanical.
+        files:
+          - edit: docs/model.md
+          - edit: docs/gold-poc.md
+        steps:
+          - "Add section '## Gold v1 (decided 27 Oct 2026)' to docs/model.md with these decisions, one line each:"
+          - "1 Namespace gold; PoC tables keep their names without the poc_ prefix; v0 models dim_date, dim_period, dim_currency, dim_geography, dim_indicator, fact_observation, fact_fx_rate, fact_gold_price are deleted (dim_calendar replaces dim_date, PoC dim_geography replaces v0)."
+          - "2 Keys stay natural strings (geography_key, measure_key, series_key as in the PoC); no hash keys in v1."
+          - "3 Geography: GUS KTS–TERYT correspondence for BDL ids, NUTS 3 ↔ podregion for DBW; name matching only as a reported fallback."
+          - "4 Measure rules per source stay as in the PoC for v1; per-domain refinements are new Tasks."
+          - "5 Facts: annual, monthly, daily; quarterly added with the first quarterly KPI."
+          - "6 Rows without a value are not loaded; status flags kept."
+          - "7 warehouse/entity/*.sql stay: they are per-entity Silver models applied by warehouse/entity.py (design #875), not Gold (deviation from plan A-23, logged in docs/decisions.md)."
+
+          - "docs/gold-poc.md: first line 'Superseded by docs/model.md § Gold v1 after the fold'."
+        acceptance:
+          - section exists with the 7 decisions verbatim
+        verify:
+          - run: git diff origin/main -- docs/model.md docs/gold-poc.md
+            expect: only the section and the line above added
+        out_of_scope: [code changes]
+  - key: data/warehouse/gold-v1/fold
+    title: PoC folded into gold
+    depends_on: [data/warehouse/gold-v1/decisions]
+    done_when:
+      - models/poc moved to models/gold; v0 models deleted; build green; poc and v0 tables retired
+    tasks:
+      - key: data/warehouse/gold-v1/fold/trial
+        type: Task
+        title: Dev-trial the folded Gold on the cut-over branch
+        effort: M
+        state: open
+        verify_only: true
+        context: >-
+          models/poc holds 30 models (27 SQL, 3 Python) that become Gold v1; models/gold holds 8 v0 models
+          nobody reads. Before main changes, the folded project must build from real Silver into a scratch
+          namespace. The trial script lives in dev/ on the branch only and is never merged (repo_check
+          rejects dev/); this Task closes with a comment linking the green Dev run, then the cut-over Task
+          continues on the same branch.
+        files: []
+        steps:
+          - "Branch feat/<cutover issue>-gold-v1. git mv warehouse/models/poc/* warehouse/models/gold/ (file names keep the poc_ prefix; aliases already drop it); merge _poc.yml into _gold.yml, delete _poc.yml."
+          - "Delete the v0 models dim_date, dim_period, dim_currency, dim_geography, dim_indicator, fact_observation, fact_fx_rate, fact_gold_price (.sql) and their _gold.yml entries."
+          - "dbt_project.yml: remove the poc: block; the gold folder schema becomes \"{{ var('gold_schema', 'gold') }}\"."
+          - "Create dev/gold_v1_trial.py: warehouse.build.main(select='gold', target='prod', variables={'gold_schema': 'zz_dev_gold_v1'}); annotate model and test counts; with --drop it drops every table in zz_dev_gold_v1 and the namespace."
+          - "Run Dev · branch runs, script gold_v1_trial; then again with --drop. Comment both run URLs here and close."
+        acceptance:
+          - "trial annotated 30 models and every test ok; the scratch namespace was dropped"
+        verify:
+          - workflow: Dev · branch runs, script gold_v1_trial, on the branch
+            expect: "notice 'models ok 30, tests ok', then 'dropped zz_dev_gold_v1'"
+        out_of_scope: [merging (cut-over Task), dropping production tables]
+      - key: data/warehouse/gold-v1/fold/cutover
+        type: Task
+        title: Cut over to Gold v1 on main (no table dropped)
+        effort: L
+        state: open
+        contract: true
+        depends_on: [data/warehouse/gold-v1/fold/trial]
+        context: >-
+          Continues the trial branch. Expand/contract (decision D6): after this merge the build writes gold.*
+          and stops writing poc.*, but no table is dropped, so zohelo-bi keeps reading the last poc.* tables
+          until it switches (bi/platform/published-loader/gold-switch); the retire Task drops them later.
+        files:
+          - edit: warehouse/dbt_project.yml
+          - edit: warehouse/models/gold/_gold.yml
+          - delete: warehouse/models/poc/
+          - delete: warehouse/models/gold/dim_date.sql
+          - edit: warehouse/warehouse.yaml
+          - edit: warehouse/semantic_models/poc.yml
+          - delete: warehouse/semantic_models/fx_and_gold.yml
+          - delete: warehouse/semantic_models/observations.yml
+          - edit: warehouse/tests/poc_fact_grain.sql
+          - edit: ingestion/sources/nbp.yaml
+          - edit: ingestion/sources/gus_teryt.yaml
+          - edit: ingestion/sources/gugik_prg.yaml
+          - edit: docs/model.md
+        steps:
+          - "warehouse.yaml gold: replace poc.<x> by gold.<x>; drop the 8 v0 names; full_rebuild: drop the v0 keys (keep poc_* keys, they are model names)."
+          - "git mv semantic_models/poc.yml semantic_models/gold.yml and replace schema poc by gold inside; delete fx_and_gold.yml and observations.yml."
+          - "git mv tests/poc_fact_grain.sql tests/fact_grain.sql (refs unchanged)."
+          - "Update comments naming v0 tables in nbp.yaml, gus_teryt.yaml, gugik_prg.yaml; docs/model.md 'Built' lists the gold v1 tables."
+          - "Delete dev/, open the PR; after merge dispatch Pipeline source platform, run \"silver/gold: build models\", filter gold."
+        acceptance:
+          - "`git grep -n 'poc\\.' -- warehouse ingestion portal` returns nothing"
+          - "no table is dropped (poc.* still listed by platform_inventory)"
+          - the dispatched gold build is green
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: "Pipeline platform \"silver/gold: build models\" filter gold"
+            expect: success; gold.build_check present
+        out_of_scope: [dropping tables (retire Task); zohelo-bi changes (bi/platform/published-loader/gold-switch)]
+        notes: ["Changed lines are mostly renames and deletions; the 400-line limit counts additions."]
+      - key: data/warehouse/gold-v1/fold/retire
+        type: Task
+        title: Retire the poc namespace and the v0 gold tables
+        effort: S
+        state: open
+        verify_only: true
+        depends_on: [data/warehouse/gold-v1/fold/cutover, bi/platform/published-loader/gold-switch/namespace]
+        decisions: ["D2: destructive Ops runs need a recorded decision; this one is the Gold v1 plan (A-23, owner-approved phases 27 Oct)"]
+        context: >-
+          After zohelo-bi reads gold.* (bi/platform/published-loader/gold-switch), the poc tables and the
+          v0 gold tables are written and read by no code; retire_tables classifies them leftover.
+        files: []
+        steps:
+          - Run Ops retire_tables (list mode); the candidates must be only tables in namespace poc plus the 8 v0 gold tables (fact_observation, fact_fx_rate, fact_gold_price, dim_indicator, dim_period, dim_date, dim_currency, dim_geography from the v0 build). Stop and comment if any other table is listed.
+          - Run Ops retire_tables `--apply --expect <listed count>`.
+          - Run Ops orphan_files `--delete`; then platform_inventory.
+        acceptance:
+          - inventory lists no poc namespace and none of the 8 v0 tables
+        verify:
+          - workflow: Ops platform_inventory
+            expect: no namespace poc
+        out_of_scope: [Silver tables]
+  - key: data/warehouse/gold-v1/geography
+    title: Geography matched by code tables
+    depends_on: [data/warehouse/gold-v1/fold]
+    done_when:
+      - gold.map_geography uses KTS–TERYT and NUTS 3 ↔ podregion; build_check unmatched = 0
+    todo:
+      - "Land the GUS KTS–TERYT correspondence table (new source declaration in data/src-b family or seed) and the NUTS 3 ↔ podregion table"
+      - "Replace name matching in poc_map_geography.sql with the code tables; keep name match as reported fallback"
+      - "Resolve the Mazowieckie macroregion/voivodeship and GZM code cases listed in docs/gold-poc.md"
+  - key: data/warehouse/gold-v1/coverage
+    title: Gold covers the first 40 KPIs
+    depends_on: [data/warehouse/gold-v1/fold]
+    done_when:
+      - every KPI in warehouse/seeds/kpi.csv with status published has rows in its metrics table
+    todo:
+      - "Activate the blocks the 40 KPIs need in macros/poc_blocks.sql (list comes from kpi.csv, Epic data/metadata/catalogue-v1)"
+      - "Make fact_annual/monthly incremental per block before BDL and Eurostat volumes grow (policy #822)"
+      - "Conformed sex and age dimensions (dim_sex, dim_age) from warehouse/dimensions"

@@ -1,0 +1,278 @@
+key: data/src-gl-005
+area: data/src-a
+title: World Bank WDI [GL-005]
+phase: 1
+priority: P1
+target: '2027-01-29'
+why: 'WDI gives long annual series for every country (1960–today): GDP, population, trade, health. It is the global
+  comparison layer behind country rankings in bi and on zohelo.com.'
+outcome: WDI KPIs are in the catalogue and explorer, refreshed weekly, with only the current archive kept.
+in_scope:
+- Stages 1–11 of the source template (stages.yaml)
+out_of_scope:
+- Other sources of the same provider
+- Paid access tiers
+done_when:
+- Every Deliverable of this Epic is closed (11/11)
+- 14 consecutive days of green scheduled runs
+depends_on: []
+decisions:
+- 'D2: the legacy WDI Landing objects are deleted only after the owner answers ''approved'' on Task data/src-gl-005/ingestion/legacy-landing;
+  owner decision 2 (27 Oct) does not cover them'
+deliverables:
+- key: data/src-gl-005/review
+  title: World Bank WDI · Source review
+  done_when:
+  - Register entry has every field filled; licence.notes gives the terms URL and the attribution sentence; obsolete
+    blockers removed
+  tasks:
+  - key: data/src-gl-005/review/register
+    type: Task
+    title: Complete the register review of World Bank WDI
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    context: 'The register entry GL-005 in ingestion/register.yaml is the source of truth for licence and public
+      display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
+      URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
+      read: https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators, https://datacatalog.worldbank.org/public-licenses?fragment=cc.'
+    files:
+    - edit: ingestion/register.yaml
+    steps:
+    - Open https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators and confirm the
+      dataset licence (docs/sources.md records Creative Commons Attribution 4.0).
+    - 'Set licence.status: open-conditional and licence.notes: ''Terms: CC BY 4.0, <catalog URL>. Attribution: "Source:
+      World Bank, World Development Indicators" plus the indicator code. Indicate changes.'''
+    - Remove blocker 'Capture licence from current catalog record'; keep 'Decide specialist-source precedence by
+      indicator' (a catalogue v1 question).
+    acceptance:
+    - licence.notes of GL-005 contains a terms URL and a sentence starting 'Attribution:'
+    - research.blockers of GL-005 lists only open problems (or is empty)
+    - python -m ops.repo_check passes
+    verify:
+    - run: python -m ops.repo_check
+      expect: exit code 0
+    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
+        if s['id']=='GL-005'])"
+      expect: notes include the terms URL and 'Attribution:'
+    out_of_scope:
+    - Other register entries
+    - Code or source declaration changes
+    - The kpi field (set only by data/ingestion/register-restructure/fields/family-kpi)
+- key: data/src-gl-005/development
+  title: World Bank WDI · Development
+  done_when:
+  - Source declaration and Landing code exist on main; a full load was trialled before production
+  state: done
+  notes:
+  - 'Evidence: ingestion/sources/world_bank_wdi.yaml (extraction.kind bulk_file), ingestion/to_bronze/world_bank_wdi/load.py'
+- key: data/src-gl-005/ingestion
+  title: World Bank WDI · Ingestion (Landing)
+  done_when:
+  - 'First production load complete (landing.inspect: missing 0); landing.verify and landing.archive green'
+  notes:
+  - First production load done (green run https://github.com/zohelo/zohelo-data/actions/runs/40446148186); open
+    items are clean-up only (A-28).
+  tasks:
+  - key: data/src-gl-005/ingestion/legacy-landing
+    type: Task
+    title: Get approval to delete the legacy WDI Landing objects
+    effort: S
+    state: open
+    contract: false
+    owner_action: Reply 'approved' (or 'no') on this issue to the listed object count and GB; ≤ 2 min.
+    context: ingestion/sources/world_bank_wdi.yaml says the legacy Landing objects (one content-addressed bulk ZIP
+      and 3,518 API responses from the retired code) stay 'until the new Bronze is verified'. The new Bronze (bronze.wdi_bulk_observations)
+      is verified and scheduled. These objects have no Archive copy, so deleting them needs the owner's approval
+      (AGENTS.md 'Ask the owner first'); owner decision 2 of 27 Oct covered only opendata_org and gus_dbw.
+    files:
+    - edit: ingestion/sources/world_bank_wdi.yaml
+    steps:
+    - Dispatch Ops · ad-hoc, script landing_objects, args `01_landing/world_bank_wdi/`.
+    - From the annotation, separate the current layout (keys under snapshot/data/WDI_CSV/) from everything else
+      (legacy); note the legacy key groups, count and MB.
+    - 'Comment on this issue: ''Legacy WDI Landing: <n> objects, <MB> MB, key groups <…>; no Archive copy; the current
+      archive is <key>. Approve deletion?'' and add label owner:decision.'
+    - 'After ''approved'': open a PR that changes the yaml comment to ''legacy Landing objects approved for deletion
+      <date>, #<this issue>''; the deletion itself is Task data/src-gl-005/ingestion/legacy-delete.'
+    acceptance:
+    - The issue has the listing comment and the owner's answer
+    - PR merged with the yaml comment updated
+    verify:
+    - workflow: Ops · ad-hoc (ops.yml), script landing_objects, args 01_landing/world_bank_wdi/
+      expect: annotation lists the key groups and counts
+    out_of_scope:
+    - Deleting anything (Task data/src-gl-005/ingestion/legacy-delete)
+    - Legacy catalog tables (retire_tables, R2 clean-up Epic)
+  - key: data/src-gl-005/ingestion/legacy-delete
+    type: Task
+    title: Delete the approved legacy WDI Landing objects
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    context: After the owner approved deletion on Task data/src-gl-005/ingestion/legacy-landing, the objects are
+      removed with Ops retired_landing (created by data/ops/r2-cleanup/retired-landing/script). That script deletes
+      only the KEPT_OLD_FOLDERS entries; this Task adds a repeatable `--prefix` option so it can delete exactly
+      the approved WDI key groups with the same safety checks (current layout not empty, --expect counts).
+    files:
+    - edit: ops/retired_landing.py
+    - edit: ops/README.md
+    - edit: ingestion/sources/world_bank_wdi.yaml
+    steps:
+    - 'ops/retired_landing.py: add `--prefix` (repeatable, each must start with 01_landing/); when given, list only
+      those prefixes instead of KEPT_OLD_FOLDERS and zz_dev_ prefixes. Keep the safety check: the source named in
+      each prefix must still have objects outside the given prefixes or in 05_archive/<source>/; `--apply` still
+      needs --expect-objects and --expect-gb.'
+    - 'ops/README.md: document --prefix in the retired_landing row.'
+    - Merge; then run Ops retired_landing with one `--prefix 01_landing/world_bank_wdi/<group>/` per approved key
+      group from the legacy-landing comment; check the counts equal the approved ones.
+    - Run it again with `--apply --expect-objects <N> --expect-gb <G>`; then Ops landing_objects 01_landing/world_bank_wdi/
+      shows only snapshot/data/WDI_CSV/.
+    - 'Second small PR or same branch before merge: remove the ''legacy Landing objects …'' comment from world_bank_wdi.yaml
+      (replace by ''legacy objects deleted <date>, run <URL>'').'
+    acceptance:
+    - apply run green with counts equal to the approval comment
+    - landing_objects lists no legacy WDI keys
+    verify:
+    - run: python -m ops.repo_check
+      expect: all checks ok
+    - workflow: Ops · ad-hoc, script landing_objects, args 01_landing/world_bank_wdi/
+      expect: only keys under snapshot/data/WDI_CSV/
+    out_of_scope:
+    - Archive objects
+    - Other sources
+    depends_on:
+    - data/src-gl-005/ingestion/legacy-landing
+    - data/ops/r2-cleanup/retired-landing/script
+  - key: data/src-gl-005/ingestion/archive-prune
+    type: Task
+    title: Switch WDI Archive retention from report to delete
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    context: 'world_bank_wdi.yaml has archive_policy.prune: report, so archive.prune only reports what retention
+      {keep_latest: 1, keep_days: 90} would remove. Program plan A-28: after the initial load, a reviewed report
+      allows switching to delete, which is inside the configured policy (no owner approval).'
+    files:
+    - edit: ingestion/sources/world_bank_wdi.yaml
+    steps:
+    - 'Dispatch Pipeline: source world_bank_wdi, run ''archive: apply retention''.'
+    - 'Read the annotation: it must list only Archive versions of WDI_CSV that are not the newest and older than
+      90 days (or nothing).'
+    - If it lists the newest version or anything outside 05_archive/world_bank_wdi/, stop and comment the annotation
+      here; do not change the yaml.
+    - 'Otherwise change `prune: report` to `prune: delete` and add a comment ''# report reviewed <date>, run <URL>''.'
+    acceptance:
+    - The PR links the reviewed report run
+    - PYTHONPATH=. python run.py schedule --check passes
+    verify:
+    - run: PYTHONPATH=. python run.py schedule --check
+      expect: exit code 0
+    - workflow: 'Pipeline · world_bank_wdi · archive: apply retention (after merge)'
+      expect: green; annotation reports deleted versions = the reviewed list
+    out_of_scope:
+    - Other sources' archive policies
+- key: data/src-gl-005/schedule
+  title: World Bank WDI · Schedule
+  done_when:
+  - Full dataflow scheduled; last 3 runs green, newest dispatched by the scheduler; no open alert issue
+  tasks:
+  - key: data/src-gl-005/schedule/observe
+    type: Task
+    title: Confirm green scheduled World Bank WDI runs
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    verify_only: true
+    context: 'Verification only; closes with a comment, no PR. Rule D11 (weekly source): 3 green scheduler-started
+      full-dataflow runs within 21 days; manual dispatches do not count. Weekly schedule (Tuesday 03:20 UTC); only
+      one scheduled run is visible so far.'
+    files: []
+    steps:
+    - 'List the scheduler-started runs: since=$(date -u -d ''-21 days'' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
+      --jq ''.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]") and
+      (.display_title|test("· world_bank_wdi · full")))|"\(.conclusion) \(.created_at) \(.html_url)"''; done | head
+      -3'
+    - If it prints 3 lines starting with success, comment them here and close this issue.
+    - 'If an alert issue ''Pipeline failed: world_bank_wdi · …'' is open and the runs are green, close it with the
+      same comment (standing permission, AGENTS.md).'
+    - If fewer runs exist yet, comment the count and the next due date and keep this Task open.
+    - 'If a run failed, open a Bug under this Deliverable titled ''Pipeline failed: <source> · <step>'' quoting
+      the failing annotation, and keep this Task open.'
+    acceptance:
+    - 'A comment lists the run URLs meeting the rule: 3 green scheduler-started full-dataflow runs within 21 days'
+    - No open alert issue for world_bank_wdi
+    verify:
+    - run: since=$(date -u -d '-21 days' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
+        --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]")
+        and (.display_title|test("· world_bank_wdi · full")))|"\(.conclusion) \(.created_at) \(.html_url)"'; done
+        | head -3
+      expect: 3 lines starting with success
+    out_of_scope:
+    - Code changes
+    - Changing the schedule
+    - Counting manual dispatches
+- key: data/src-gl-005/bronze
+  title: World Bank WDI · Bronze
+  done_when:
+  - Declared Bronze tables exist; bronze.verify green; latest version only
+  state: done
+  notes:
+  - 'Evidence: bronze.wdi_bulk_observations, bronze.wdi_bulk_metadata; bronze_latest_only: true; green full dataflow
+    https://github.com/zohelo/zohelo-data/actions/runs/40446148186'
+- key: data/src-gl-005/silver
+  title: World Bank WDI · Silver
+  done_when:
+  - Declared Silver tables written by today's code (dbt model or warehouse/entity/*.sql) with tests/checks and descriptions
+  state: done
+  notes:
+  - 'Evidence: warehouse/models/silver/world_bank_wdi/ (wdi_observations, wdi_countries, wdi_indicators)'
+- key: data/src-gl-005/gold
+  title: World Bank WDI · Gold
+  done_when:
+  - Observations in Gold v1 facts joined to conformed dimensions with no unmatched keys; measures in the catalogue
+    tables
+  depends_on:
+  - data/warehouse/gold-v1
+  notes:
+  - gold.fact_observation and gold.dim_indicator already read WDI Silver (warehouse/models/gold/); v1 replaces them.
+  todo:
+  - Gold v1 builder Tasks (block list, geography mapping, build-check row) are written when Epic data/warehouse/gold-v1
+    is done
+- key: data/src-gl-005/semantic
+  title: World Bank WDI · Semantic
+  done_when:
+  - KPIs in warehouse/seeds/kpi.csv (PL/EN, unit, frequency, licence, domain); metrics in the generated manifest;
+    lineage in the catalogue
+  depends_on:
+  - data/metadata/catalogue-v1
+  todo:
+  - kpi.csv rows, domain mapping and manifest check are written when Epic data/metadata/catalogue-v1 is done
+- key: data/src-gl-005/portal-release
+  title: World Bank WDI · Data portal release
+  done_when:
+  - 'data.zohelo.com source page: register summary, tables per layer with rows and last write, freshness, last scheduled
+    run'
+  depends_on:
+  - data/portal/catalogue-pages
+  todo:
+  - Check the source page on data.zohelo.com and fix missing metadata, once Epic data/portal/catalogue-pages is
+    done
+- key: data/src-gl-005/bi-release
+  title: World Bank WDI · zohelo-bi release
+  repo: zohelo-bi
+  done_when:
+  - KPIs in the bi catalogue and explorer; at least one dashboard tile uses one; bi smoke covers it
+  todo:
+  - Catalogue rows, explorer dimensions and a dashboard tile, written when zohelo-bi v1 reads the published layer
+- key: data/src-gl-005/com-release
+  title: World Bank WDI · zohelo.com release
+  repo: zohelo
+  done_when:
+  - KPIs on zohelo.com indicator pages and section with real values, attribution and a link to bi
+  todo:
+  - Indicator pages and section content, written when zohelo.com v1 reads the published layer
