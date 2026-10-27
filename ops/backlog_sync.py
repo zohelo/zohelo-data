@@ -6,6 +6,10 @@ Mode `validate [--root DIR ...]` loads areas.yaml, stages.yaml and epics/*.yaml 
 (default: the repository root), prints `file: key: message` per error and exits 1 on any error.
 Mode `render KEY [--root DIR ...]` prints the title, labels and body of the issue for one node (docs/backlog.md §5).
 Mode `pr-check` (pull_request event, GITHUB_TOKEN) passes when the PR body closes an open Task or Bug.
+Modes `plan` and `apply [--root DIR ...]` compare the nodes with the issues of zohelo-data, zohelo-bi and zohelo
+(matched by the key in the first body line). plan only reads GitHub and reports the counts per repo as annotations;
+apply creates, updates, re-parents and closes issues (at most 400 writes per run). The token comes from
+GH_PROJECT_TOKEN, GITHUB_TOKEN or GH_TOKEN.
 """
 
 from __future__ import annotations
@@ -16,6 +20,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -387,7 +392,7 @@ def file_line(entry: object) -> str:
 def render(
     node: dict,
     kind: str,
-    parent_number: int | None = None,
+    parent_number: int | str | None = None,
     issue_repo: str | None = None,
     owner_action_due: bool = False,
 ) -> dict:
@@ -398,7 +403,9 @@ def render(
     node's repo); owner_action_due is set by the sync when every depends_on item of the Task is closed."""
     repo = node.get("repo") or PREFIXES.get(str(node["key"]).split("/")[0], "")
     issue_repo = issue_repo or repo
-    parent = f"#{parent_number}" if parent_number else str(node["key"]).rsplit("/", 1)[0]
+    parent = str(node["key"]).rsplit("/", 1)[0]
+    if parent_number:
+        parent = parent_number if isinstance(parent_number, str) else f"#{parent_number}"
     facts = [f"**Phase:** {node['phase']}"] if "phase" in node else []
     if kind == "Task":
         facts = [f"**Parent:** {parent}", f"**Effort:** {node['effort']}", *facts]
@@ -559,6 +566,262 @@ def pr_check() -> int:
     return 1
 
 
+# --- sync: plan and apply (docs/backlog.md §1) ---------------------------------------------------------------
+
+REST = "https://api.github.com"
+ORG = "zohelo"
+KEY_LINE = re.compile(r"^<!-- zohelo:key=(\S+) -->")
+NOTES_PREFIX = "<!-- zohelo:notes"
+LAYERS = ("Area", "Epic", "Deliverable", "Task")
+WRITE_LIMIT = 400
+OWNER_ACTION_LIMIT = 3
+
+
+class Stop(Exception):
+    """The write limit of one run is reached; a rerun continues."""
+
+
+class Github:
+    """The few GitHub REST calls of the sync. With dry set, writes are counted and not sent."""
+
+    def __init__(self, token: str, dry: bool) -> None:
+        import requests
+
+        self.http = requests.Session()
+        self.http.headers.update(
+            {
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            }
+        )
+        self.dry = dry
+        self.writes = 0
+
+    def call(self, method: str, path: str, body: dict | None = None, ok: tuple[int, ...] = (200, 201, 204)):
+        for attempt in range(4):
+            response = self.http.request(method, REST + path, json=body, timeout=60)
+            if response.status_code in (429, 502, 503) or (
+                response.status_code == 403 and "retry-after" in response.headers
+            ):
+                time.sleep(min(int(response.headers.get("retry-after", 2 ** (attempt + 1))), 60))
+                continue
+            break
+        if response.status_code == 404 and method == "GET":
+            return None
+        if response.status_code not in ok:
+            raise RuntimeError(f"{method} {path}: HTTP {response.status_code} {response.text[:200]}")
+        return response.json() if response.content else {}
+
+    def read(self, path: str):
+        return self.call("GET", path)
+
+    def write(self, method: str, path: str, body: dict | None = None):
+        if self.dry:
+            return {"id": 0, "number": 0}
+        if self.writes >= WRITE_LIMIT:
+            raise Stop
+        self.writes += 1
+        result = self.call(method, path, body)
+        time.sleep(1)
+        return result
+
+
+def index_issues(api: Github, repos: list[str]) -> dict[str, dict]:
+    """key -> issue (with its repo) from the first body line of every issue of the repos."""
+    found: dict[str, dict] = {}
+    for repo in repos:
+        page = 1
+        while True:
+            items = api.read(f"/repos/{ORG}/{repo}/issues?state=all&per_page=100&page={page}") or []
+            for item in items:
+                match = KEY_LINE.match((item.get("body") or "").split("\n", 1)[0])
+                if "pull_request" not in item and match:
+                    found.setdefault(match.group(1), {**item, "repo": repo})
+            if len(items) < 100:
+                break
+            page += 1
+    return found
+
+
+def unadopted(root: Path, issues: dict[str, dict]) -> list[str]:
+    """Keys that migration.yaml adopts for an old issue that carries no key marker yet."""
+    import yaml
+
+    path = root / ".github" / "backlog" / "migration.yaml"
+    if not path.exists():
+        return []
+    entries = (yaml.safe_load(path.read_text()) or {}).get("issues") or []
+    return [
+        str(e["key"]) for e in entries if e.get("action") == "adopt" and e.get("key") and str(e["key"]) not in issues
+    ]
+
+
+def parent_key(kind: str, node: dict) -> str | None:
+    if kind == "Area":
+        return None
+    return str(node["area"]) if kind == "Epic" else str(node["key"]).rsplit("/", 1)[0]
+
+
+def managed(label: str) -> bool:
+    return label in {"contract", "owner:action", "verify-only"} or label.startswith(("source:", "stage:"))
+
+
+def split_notes(body: str) -> tuple[str, str]:
+    """The sync's part of an issue body and the free text from the notes marker on (kept as it is)."""
+    lines = body.split("\n")
+    for number, line in enumerate(lines):
+        if line.startswith(NOTES_PREFIX):
+            return "\n".join(lines[:number]), "\n".join(lines[number:])
+    return "\n".join(lines[:1]), NOTES_MARKER + "\n\n" + "\n".join(lines[1:]).strip("\n")
+
+
+def run_sync(roots: list[Path], apply: bool) -> int:
+    from ingestion.common.report import annotate
+
+    plan = build(roots)
+    for error in plan.errors:
+        print(error)
+    if plan.errors:
+        return 1
+    token = os.environ.get("GH_PROJECT_TOKEN") or os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if not token:
+        print("error: no GitHub token (GH_PROJECT_TOKEN, GITHUB_TOKEN or GH_TOKEN)", file=sys.stderr)
+        return 2
+    api = Github(token, dry=not apply)
+    loaded = {PREFIXES[prefix] for prefix in plan.roots.values()}
+    issues = index_issues(api, list(PREFIXES.values()))
+    blocked = [k for k in unadopted(roots[0], issues) if k in plan.nodes]
+    verb = "refused" if apply else "plan blocked"
+    if blocked:
+        annotate(
+            "error",
+            f"backlog_sync {verb}",
+            {"adopt keys without a marked issue": sorted(set(blocked))[:40], "count": len(set(blocked))},
+        )
+        if apply:
+            return 1
+    nodes = sorted(plan.nodes.items(), key=lambda item: LAYERS.index(item[1][0]))
+    counts = {repo: {"create": 0, "update": 0, "reparent": 0, "close": 0} for repo in PREFIXES.values()}
+    owner_open = sum(
+        1 for i in issues.values() if i["state"] == "open" and any(n["name"] == "owner:action" for n in i["labels"])
+    )
+    try:
+        for key, (kind, node) in nodes:
+            repo = node["repo"]
+            if repo not in loaded:
+                continue
+            parent = parent_key(kind, node)
+            parent_issue = issues.get(parent) if parent else None
+            ref = None
+            if parent_issue:
+                ref = (
+                    parent_issue["number"]
+                    if parent_issue["repo"] == repo
+                    else f"{ORG}/{parent_issue['repo']}#{parent_issue['number']}"
+                )
+            due = bool(node.get("depends_on")) and all(
+                issues.get(str(d), {}).get("state") == "closed" for d in node["depends_on"]
+            )
+            want = render(node, kind, ref, repo, due)
+            existing = issues.get(key)
+            finished = node.get("state") == "done" and kind in ("Task", "Deliverable")
+            if existing is None:
+                counts[repo]["create"] += 1
+                created = api.write(
+                    "POST",
+                    f"/repos/{ORG}/{repo}/issues",
+                    {"title": want["title"], "body": want["body"], "labels": want["labels"], "type": want["type"]},
+                )
+                existing = issues[key] = {
+                    **created,
+                    "repo": repo,
+                    "state": "open",
+                    "labels": [{"name": n} for n in want["labels"]],
+                }
+                owner_open += "owner:action" in want["labels"]
+                if finished:
+                    close_issue(api, counts, repo, existing, completed_comment(node, kind), "completed")
+            else:
+                head, tail = split_notes(existing.get("body") or "")
+                have = [item["name"] for item in existing["labels"]]
+                labels = [name for name in have if not managed(name)] + want["labels"]
+                current_type = (existing.get("type") or {}).get("name")
+                if (head.rstrip(), existing["title"], sorted(have), current_type) != (
+                    want["body"].split(NOTES_MARKER)[0].rstrip(),
+                    want["title"],
+                    sorted(labels),
+                    want["type"],
+                ):
+                    counts[repo]["update"] += 1
+                    api.write(
+                        "PATCH",
+                        f"/repos/{ORG}/{repo}/issues/{existing['number']}",
+                        {
+                            "title": want["title"],
+                            "labels": labels,
+                            "type": want["type"],
+                            "body": want["body"].split(NOTES_MARKER)[0] + tail,
+                        },
+                    )
+                    owner_open += ("owner:action" in labels) - ("owner:action" in have)
+                if finished and existing["state"] == "open":
+                    close_issue(api, counts, repo, existing, completed_comment(node, kind), "completed")
+            if parent_issue is not None:
+                current = (
+                    api.read(f"/repos/{ORG}/{repo}/issues/{existing['number']}/parent") if existing["number"] else None
+                )
+                if (current or {}).get("number") != parent_issue["number"] or (current or {}).get(
+                    "repository_url", ""
+                ).split("/")[-1] != parent_issue["repo"]:
+                    counts[repo]["reparent"] += 1
+                    api.write(
+                        "POST",
+                        f"/repos/{ORG}/{parent_issue['repo']}/issues/{parent_issue['number']}/sub_issues",
+                        {"sub_issue_id": existing["id"], "replace_parent": True},
+                    )
+        for key, issue in issues.items():
+            if key not in plan.nodes and issue["state"] == "open" and issue["repo"] in loaded:
+                close_issue(api, counts, issue["repo"], issue, "Removed from the plan", "not_planned")
+    except Stop:
+        annotate("warning", "backlog_sync stopped", {"writes": WRITE_LIMIT, "note": "limit reached; rerun continues"})
+    labels = (
+        ("created", "updated", "reparented", "closed")
+        if apply
+        else ("to create", "to update", "to reparent", "to close")
+    )
+    for repo, found in counts.items():
+        if repo in loaded:
+            annotate(
+                "notice",
+                f"backlog_sync {'apply' if apply else 'plan'} {repo}",
+                dict(zip(labels, found.values(), strict=True)),
+            )
+        else:
+            annotate("notice", f"backlog_sync {repo}", {"skipped": "root not present"})
+    if owner_open > OWNER_ACTION_LIMIT:
+        annotate(
+            "warning",
+            "backlog_sync owner actions",
+            {"open owner:action issues": owner_open, "limit": OWNER_ACTION_LIMIT},
+        )
+    return 0
+
+
+def completed_comment(node: dict, kind: str) -> str:
+    if kind == "Task":
+        return f"Done by {node['done_by']}"
+    return "Done. Evidence:\n" + "\n".join(f"> {n}" for n in node.get("notes") or [])
+
+
+def close_issue(api: Github, counts: dict, repo: str, issue: dict, comment: str, reason: str) -> None:
+    counts[repo]["close"] += 1
+    base = f"/repos/{ORG}/{repo}/issues/{issue['number']}"
+    api.write("POST", base + "/comments", {"body": comment})
+    api.write("PATCH", base, {"state": "closed", "state_reason": reason})
+    issue["state"] = "closed"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     modes = parser.add_subparsers(dest="mode", required=True)
@@ -571,10 +834,22 @@ def main() -> int:
     show_mode.add_argument("key")
     show_mode.add_argument("--root", action="append", type=Path, help="repository root (repeatable; default: this one)")
     modes.add_parser("pr-check", help="check that the pull request closes an open Task or Bug")
+    for name in ("plan", "apply"):
+        sync_mode = modes.add_parser(
+            name,
+            help="compare the backlog files with the issues" + (" and write" if name == "apply" else ", read-only"),
+        )
+        sync_mode.add_argument(
+            "--root", action="append", type=Path, help="repository root (repeatable; default: this one and _repos/*)"
+        )
     args = parser.parse_args()
     if args.mode == "pr-check":
         return pr_check()
     roots = [r.resolve() for r in args.root] if args.root else [ROOT]
+    if args.mode in ("plan", "apply"):
+        if not args.root:
+            roots += [d for d in (ROOT / "_repos" / "zohelo-bi", ROOT / "_repos" / "zohelo") if d.is_dir()]
+        return run_sync(roots, args.mode == "apply")
     return validate(roots, args.strict) if args.mode == "validate" else show(roots, args.key)
 
 
