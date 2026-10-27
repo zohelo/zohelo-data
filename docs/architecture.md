@@ -59,5 +59,6 @@ published as pass-through copies of Bronze (`warehouse/passthrough/`) until mode
 ## Security
 
 - R2 writer credentials live only in GitHub secrets; the browser never receives
-  them. The portal reads private R2 through its Worker with signed short-lived URLs
-  and uses Google sign-in for identity only.
+  them. The portal (Cloudflare Pages) reads private R2 through its API (a Pages
+  Function with R2 bindings) with signed short-lived URLs; Cloudflare Access signs
+  users in (one-time PIN to the allowed emails) before anything loads.

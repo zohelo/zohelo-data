@@ -60,7 +60,7 @@ FORBIDDEN_SUFFIXES = {
 MAX_BYTES = 1_000_000
 USES_LINE = re.compile(r"^\s*-?\s*uses:")
 PINNED_ACTION = re.compile(r"uses:\s*(\./\S+|[\w./-]+@[0-9a-f]{40}\s+#\s*v\S+)")
-PYTHON_PATHS = ["ingestion", "ops", "warehouse", "run.py", "portal/publish_index.py"]
+PYTHON_PATHS = ["ingestion", "ops", "warehouse", "run.py", "portal/publish_index.py", "portal/cloudflare_setup.py"]
 # Long description lines are prose for the reader; they are not wrapped.
 YAMLLINT = (
     "{extends: default, ignore: [portal/app/node_modules/], rules: {line-length: disable, "

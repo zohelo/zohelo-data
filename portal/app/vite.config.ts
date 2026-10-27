@@ -12,13 +12,13 @@ import { VitePWA } from 'vite-plugin-pwa';
 // AI providers). No 'unsafe-inline' for scripts — env.js is a real file.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' blob: 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://accounts.google.com https://apis.google.com",
+  "script-src 'self' blob: 'wasm-unsafe-eval' https://cdn.jsdelivr.net",
   "worker-src 'self' blob:",
-  "style-src 'self' 'unsafe-inline' https://accounts.google.com",
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https: http: data: blob: https://accounts.google.com https://www.googleapis.com",
-  "frame-src 'self' https://accounts.google.com",
+  "connect-src 'self' https: http: data: blob:",
+  "frame-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -38,14 +38,6 @@ export default defineConfig(({ mode }) => {
     if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
       processEnvValues[`import.meta.env.${key}`] = JSON.stringify(env[key]);
     }
-  }
-
-  // Codespaces exposes GOOGLE_OAUTH_CLIENT_ID. Only this public identifier may
-  // cross into the browser; the client secret and refresh token remain private.
-  const googleClientId = env.DUCK_UI_GOOGLE_CLIENT_ID?.trim()
-    || process.env.GOOGLE_OAUTH_CLIENT_ID?.trim();
-  if (googleClientId) {
-    processEnvValues['import.meta.env.DUCK_UI_GOOGLE_CLIENT_ID'] = JSON.stringify(googleClientId);
   }
 
   return {
@@ -98,6 +90,7 @@ export default defineConfig(({ mode }) => {
             /\/(about|privacy|terms)\.html$/,
             /\/portal-build\.json(?:\?.*)?$/,
             /\/docs(?:\/|$)/,
+            /\/api\//,
           ],
           runtimeCaching: [
             {
