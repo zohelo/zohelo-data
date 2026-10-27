@@ -138,10 +138,10 @@ def configure(table_id: tuple[str, str]) -> dict[str, Any]:
     for attempt in range(4):
         try:
             url = (
-                f"https://api.cloudflare.com/client/v4/accounts/{req('CLOUDFLARE_ACCOUNT_ID')}/r2-catalog/"
-                f"{req('R2_LAKEHOUSE_BUCKET')}/namespaces/{table_id[0]}/tables/{table_id[1]}/maintenance-configs"
+                f"https://api.cloudflare.com/client/v4/accounts/{req('PLATFORM_ACCOUNT_ID')}/r2-catalog/"
+                f"{req('STORAGE_LAKEHOUSE_BUCKET_NAME')}/namespaces/{table_id[0]}/tables/{table_id[1]}/maintenance-configs"
             )
-            headers = {"Authorization": f"Bearer {req('R2_DATA_CATALOG_TOKEN')}"}
+            headers = {"Authorization": f"Bearer {req('STORAGE_LAKEHOUSE_CATALOG_WRITE_TOKEN')}"}
             body = {"compaction": {"state": "disabled"}, "snapshot_expiration": SNAPSHOT_POLICY}
             response = requests.post(url, headers=headers, json=body, timeout=60)
             if response.status_code == 200:

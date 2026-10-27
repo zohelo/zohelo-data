@@ -96,7 +96,7 @@ def main(argv=None) -> int:
     parser.add_argument("--source", nargs="*", default=None)
     args = parser.parse_args(argv)
     client, cat = s3(), catalog()
-    landing_bucket, lakehouse_bucket = req("R2_LANDING_BUCKET"), req("R2_LAKEHOUSE_BUCKET")
+    landing_bucket, lakehouse_bucket = req("STORAGE_LANDING_BUCKET_NAME"), req("STORAGE_LAKEHOUSE_BUCKET_NAME")
     registry = sources()
 
     landing = folders(client, landing_bucket, "01_landing/", 2)

@@ -46,8 +46,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--apply", action="store_true", help="set snapshot expiration (#822) and compaction off (#875)")
     args = parser.parse_args(argv)
 
-    base = API.format(account=req("CLOUDFLARE_ACCOUNT_ID"), bucket=req("R2_LAKEHOUSE_BUCKET"))
-    headers = {"Authorization": f"Bearer {req('R2_DATA_CATALOG_TOKEN')}"}
+    base = API.format(account=req("PLATFORM_ACCOUNT_ID"), bucket=req("STORAGE_LAKEHOUSE_BUCKET_NAME"))
+    headers = {"Authorization": f"Bearer {req('STORAGE_LAKEHOUSE_CATALOG_WRITE_TOKEN')}"}
     out: dict = {}
     if args.apply:
         out["update"] = call(

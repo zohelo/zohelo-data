@@ -85,14 +85,14 @@ def add_record(ids, parents, identity, meta, extra=None):
 
 
 def main():
-    lakehouse = required("R2_LAKEHOUSE_BUCKET")
-    landing = required("R2_LANDING_BUCKET")
+    lakehouse = required("STORAGE_LAKEHOUSE_BUCKET_NAME")
+    landing = required("STORAGE_LANDING_BUCKET_NAME")
     s3 = boto3.client(
         "s3",
-        endpoint_url=required("R2_S3_ENDPOINT").rstrip("/"),
+        endpoint_url=required("STORAGE_ENDPOINT_URL").rstrip("/"),
         region_name="auto",
-        aws_access_key_id=required("CLOUDFLARE_R2_ACCESS_KEY_ID"),
-        aws_secret_access_key=required("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
+        aws_access_key_id=required("STORAGE_WRITE_ACCESS_KEY"),
+        aws_secret_access_key=required("STORAGE_WRITE_SECRET_KEY"),
         config=Config(signature_version="s3v4", retries={"max_attempts": 8, "mode": "standard"}),
     )
 

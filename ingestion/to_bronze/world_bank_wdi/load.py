@@ -131,7 +131,7 @@ def decode(zip_path: Path, receipt: dict[str, Any], workdir: Path) -> tuple[Path
 
 def load(budget_minutes: float) -> int:
     client, cat = s3(), bf.retry(catalog, "catalog")
-    lake, landing_bucket = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
+    lake, landing_bucket = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
     for table_id, columns in ((OBS_ID, OBS_COLUMNS), (META_ID, META_COLUMNS)):
         bf.retry(lambda t=table_id, c=columns: bf.ensure_table(cat, t, c, "entity"), "table")
     done = bf.loaded_hashes(cat.load_table(OBS_ID)) | bf.rejected_hashes(cat, REJECTED_ID)

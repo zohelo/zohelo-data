@@ -160,7 +160,7 @@ def work(
     from warehouse import entity
 
     client = s3()
-    bucket, landing_bucket = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
+    bucket, landing_bucket = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
     ds, sha = item[ENTITY], item["raw_sha256"]
     bronze_key = f"{paths['bronze']}{ds}/{sha}.parquet"
     dictionary_key = f"{paths['dictionary']}{ds}/{sha}.parquet"
@@ -257,7 +257,7 @@ def plan(
         labels = bf.retry(lambda: cat.load_table(dictionary_id), "dict_table")
     refused = refused_keys(cat, rejected_id, create)
     b_state, s_state, d_state = et.state(bronze, ENTITY), et.state(silver, ENTITY), et.state(labels, ENTITY)
-    latest = landing_candidates(client, req("R2_LANDING_BUCKET"))
+    latest = landing_candidates(client, req("STORAGE_LANDING_BUCKET_NAME"))
     if only:
         latest = [c for c in latest if c[ENTITY] in only]
     todo, expected, expected_silver, rejected, redo_rows, landed = [], {}, {}, [], 0, {}

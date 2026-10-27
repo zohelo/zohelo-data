@@ -191,7 +191,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--mode", choices=("inspect", "load", "verify"), required=True)
     args = parser.parse_args(argv)
-    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     held = landed(client, bucket)
     summary: dict[str, Any] = {
         "mode": args.mode,

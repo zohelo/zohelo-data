@@ -133,7 +133,7 @@ def publish() -> dict[str, Any]:
     catalog = build()
     body = json.dumps(catalog, ensure_ascii=False, indent=1).encode()
     s3().put_object(
-        Bucket=req("R2_LAKEHOUSE_BUCKET"),
+        Bucket=req("STORAGE_LAKEHOUSE_BUCKET_NAME"),
         Key=CATALOG_KEY,
         Body=body,
         ContentType="application/json",

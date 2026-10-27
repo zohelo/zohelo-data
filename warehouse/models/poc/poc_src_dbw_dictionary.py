@@ -14,9 +14,9 @@ def planned_files(table_name, row_filter):
 
     cat = RestCatalog(
         name="zohelo",
-        warehouse=os.environ["R2_WAREHOUSE"],
-        uri=os.environ["R2_CATALOG_URI"],
-        token=os.environ["R2_DATA_CATALOG_TOKEN"],
+        warehouse=os.environ["STORAGE_LAKEHOUSE_CATALOG_NAME"],
+        uri=os.environ["STORAGE_LAKEHOUSE_CATALOG_URL"],
+        token=os.environ["STORAGE_LAKEHOUSE_CATALOG_WRITE_TOKEN"],
     )
     scan = cat.load_table(table_name).scan(row_filter=row_filter)
     tasks = list(scan.plan_files())
@@ -32,7 +32,7 @@ def model(dbt, con):
     dbt.source("gus_dbw", "dbw_dictionary_items")  # declares the input (changed-only build)
     prefix = " or ".join(f"starts_with(entity_id, '{b}_')" for b in BLOCKS)
     columns = "entity_id, nazwa_kolumny, nazwa_slownika, id_elementu, opis"
-    if "R2_CATALOG_URI" not in os.environ:  # local harness: the fake source table
+    if "STORAGE_LAKEHOUSE_CATALOG_URL" not in os.environ:  # local harness: the fake source table
         return con.query(f"select {columns} from r2.bronze.dbw_dictionary_items where {prefix}")
     from pyiceberg.expressions import Or, StartsWith
 

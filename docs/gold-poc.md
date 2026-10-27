@@ -100,7 +100,7 @@ are the blocks the owner can activate next.
 metric per concept. For Power BI the metrics tables are the fact tables and `dim_calendar`,
 `dim_geography`, `dim_source` the shared dimensions; `dim_measure` + `measure_dimensions` is
 the explorer's catalogue. Fabric can reach the Iceberg Parquet files through an S3-compatible
-shortcut to the R2 bucket (`R2_WAREHOUSE` path, namespace `poc`).
+shortcut to the R2 bucket (`STORAGE_LAKEHOUSE_CATALOG_NAME` path, namespace `poc`).
 
 ## Open points for v1 (design decisions 1–8 in the design doc)
 

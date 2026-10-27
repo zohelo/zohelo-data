@@ -2,8 +2,8 @@
 
 BDL has no bulk download; the website's subgroup export ("CSV – tablica relacyjna" ZIP)
 is the agreed workaround (owner decision 13 Oct 2026). One browser, one route, one
-subgroup at a time with a pause, no IP rotation; login with GUS_BDL_WEB_EMAIL /
-GUS_BDL_WEB_PASSWORD. Routes per subgroup (export() has the rule): the website's background
+subgroup at a time with a pause, no IP rotation; login with SOURCE_GUS_BDL_WEB_LOGIN /
+SOURCE_GUS_BDL_WEB_PASSWORD. Routes per subgroup (export() has the rule): the website's background
 package of the whole subgroup above MAX_INFORMATION values; otherwise the result table of
 all territories; when the site cannot build it, territory parts per layout (part i of n in
 the receipt, landed as they download, so a run resumes). Above MAX_INFORMATION without the
@@ -77,7 +77,7 @@ def subject_tree(api: Bdl) -> list[dict[str, Any]]:
     12 h limit on the same ~400-request walk (#899 review)."""
     import botocore.exceptions
 
-    client, bucket = s3(), req("R2_LAKEHOUSE_BUCKET")
+    client, bucket = s3(), req("STORAGE_LAKEHOUSE_BUCKET_NAME")
     try:
         held = json.loads(client.get_object(Bucket=bucket, Key=TREE_KEY)["Body"].read())
         if (datetime.now(UTC) - datetime.fromisoformat(held["walked_at"])).days < TREE_DAYS:
@@ -662,7 +662,7 @@ def main(
     started = time.monotonic()
     deadline = started + budget_minutes * 60
     HARD_DEADLINE = deadline + HARD_MARGIN_SECONDS
-    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     api = Bdl.shared()
     api.deadline = HARD_DEADLINE
     held = landing_versions(client, bucket)
@@ -688,7 +688,7 @@ def main(
         browser = pw.chromium.launch(headless=True)
         page = browser.new_context(accept_downloads=True, locale="pl-PL").new_page()
         page.set_default_timeout(120_000)
-        login(page, req("GUS_BDL_WEB_EMAIL"), req("GUS_BDL_WEB_PASSWORD"))
+        login(page, req("SOURCE_GUS_BDL_WEB_LOGIN"), req("SOURCE_GUS_BDL_WEB_PASSWORD"))
         for subgroup in todo:
             if time.monotonic() > deadline:
                 break

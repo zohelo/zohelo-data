@@ -5,7 +5,7 @@ description: "GUS Local Data Bank (BDL) — subgroup exports (website) and API r
 # entity = subgroup (P####), version = its lastUpdate (BDL API /subjects/{id}).
 # No bulk feature; bulk workaround = the website's subgroup export ("CSV – tablica
 # relacyjna" ZIP), one browser, one route, no IP rotation. Changed subgroups are refreshed
-# whole through the API (key GUS_BDL_API_KEY), so every version is a complete snapshot
+# whole through the API (key SOURCE_GUS_BDL_API_KEY), so every version is a complete snapshot
 # and the newest version per subgroup wins, whichever channel it came from.
 extraction:
   initial: web_export                   # September 2026 exports + missing subgroups

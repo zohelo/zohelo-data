@@ -74,7 +74,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     if args.delete and args.min_age_hours < MIN_DELETE_AGE_HOURS:
         parser.error(f"--delete needs --min-age-hours >= {MIN_DELETE_AGE_HOURS}")
-    client, bucket = s3(), req("R2_LAKEHOUSE_BUCKET")
+    client, bucket = s3(), req("STORAGE_LAKEHOUSE_BUCKET_NAME")
     keys, folders = referenced_files(catalog())
     cutoff = datetime.now(UTC) - timedelta(hours=args.min_age_hours)
 

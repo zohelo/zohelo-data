@@ -102,7 +102,7 @@ The pattern names are the register's `access.kind` values (one vocabulary):
   windows (per second and longer windows, e.g. BDL 100/15 min, 1,000/12 h), declared
   in YAML.
 - Auth by reference only: the YAML names an environment variable (`auth: {header:
-  X-ClientId, env: GUS_BDL_API_KEY}`), never a value.
+  X-ClientId, env: SOURCE_GUS_BDL_API_KEY}`), never a value.
 - Streaming to disk and multipart upload for large files (WDI ~270 MB, PRG ~377 MB),
   integrity check by format (ZIP test, gzip, XML parse), verified upload.
 - Layout and receipts: one **core** receipt (schema_version 3: source, entity, area

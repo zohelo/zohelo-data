@@ -85,7 +85,7 @@ def download(url: str, path: Path) -> tuple[str, int, dict[str, str]]:
 
 
 def main() -> int:
-    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     results: dict[str, Any] = {}
     for entity, url in MESSAGES.items():
         held = newest_sha(client, bucket, entity)

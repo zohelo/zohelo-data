@@ -108,7 +108,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
 
     client = s3()
-    bucket = req("R2_LANDING_BUCKET")
+    bucket = req("STORAGE_LANDING_BUCKET_NAME")
     meta = landing_objects(client, bucket, args.source)
     held, rejected = bronze_hashes(args.source)
     passed_latest, report_latest = check_latest_only(meta, held)

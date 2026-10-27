@@ -150,7 +150,7 @@ def work(task: dict[str, Any], paths: dict[str, str], memory: str, tmp_root: str
     from warehouse import entity
 
     client = s3()
-    bucket, landing = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
+    bucket, landing = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
     sg, rcp = task[ENTITY], task["recipe"]
     out: dict[str, Any] = {ENTITY: sg, "recipe": rcp, "status": "ok"}
     work_dir = Path(tempfile.mkdtemp(prefix="bdl-", dir=tmp_root))
@@ -267,7 +267,7 @@ def plan(cat, client, ids: dict[str, tuple[str, str]], only: set[str] | None, cr
     without_data = empty_keys(cat, ids["rejected"])
     b_state, s_state = et.state(bronze, ENTITY), et.state(silver, ENTITY)
     groups: dict[str, list[dict]] = defaultdict(list)
-    for part in candidates(client, req("R2_LANDING_BUCKET")):
+    for part in candidates(client, req("STORAGE_LANDING_BUCKET_NAME")):
         groups[part["subgroup_id"]].append(part)
     if only:
         groups = {k: v for k, v in groups.items() if k in only}
@@ -492,7 +492,7 @@ def coverage_rows(p: dict[str, Any]) -> list[dict[str, Any]]:
     from ingestion.to_landing.gus_bdl.web_export import TREE_KEY
 
     try:
-        tree = json.loads(s3().get_object(Bucket=req("R2_LAKEHOUSE_BUCKET"), Key=TREE_KEY)["Body"].read())
+        tree = json.loads(s3().get_object(Bucket=req("STORAGE_LAKEHOUSE_BUCKET_NAME"), Key=TREE_KEY)["Body"].read())
         names = {s["id"]: s.get("name") for s in tree["subjects"] if s.get("hasVariables")}
     except Exception:  # no tree yet: the landed subgroups are the list
         names = {}
@@ -514,7 +514,7 @@ def proven() -> set[str]:
     cat, client = bf.retry(catalog, "catalog"), s3()
     held = et.state(bf.retry(lambda: cat.load_table(BRONZE), "bronze"), ENTITY)
     groups: dict[str, list[dict]] = defaultdict(list)
-    for part in candidates(client, req("R2_LANDING_BUCKET")):
+    for part in candidates(client, req("STORAGE_LANDING_BUCKET_NAME")):
         groups[part["subgroup_id"]].append(part)
     return {
         p["sha256"] for sg, parts in groups.items() if held.get(sg, {}).get("recipes") == {recipe(parts)} for p in parts

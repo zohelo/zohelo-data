@@ -62,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--peek", action="store_true")
     parser.add_argument("--limit", type=int, default=3)
     args = parser.parse_args(argv)
-    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     for path in args.paths:
         if path.endswith("/"):
             summary, keys = summarize(client, bucket, path)

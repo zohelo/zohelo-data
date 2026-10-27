@@ -31,7 +31,7 @@ def main(argv=None) -> int:
     parser.add_argument("--dataset", nargs="*", default=[])
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args(argv)
-    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     prefix = f"01_landing/{args.source}/snapshot/"
     patterns = [p.lower() for p in args.dataset]
 

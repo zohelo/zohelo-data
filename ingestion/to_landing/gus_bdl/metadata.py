@@ -121,7 +121,7 @@ def main(argv=None) -> int:
     parser.add_argument("--budget-minutes", type=float, default=300)
     args = parser.parse_args(argv)
     deadline = time.monotonic() + args.budget_minutes * 60
-    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     patterns = [p.strip().lower() for p in args.filter.replace(",", " ").split() if p.strip()]
     data_versions = landing_versions(client, bucket)
     held = {} if args.dry_run else landed_variable_versions(client, bucket)
