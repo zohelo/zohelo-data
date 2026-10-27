@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import pkg from './package.json';
 import tailwindcss from '@tailwindcss/vite';
-import { VitePWA } from 'vite-plugin-pwa';
 
 // Applied by `vite preview`. Production hosting supplies matching headers.
 // Not applied to `vite dev`, whose HMR needs inline scripts.
@@ -45,104 +44,6 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
-      VitePWA({
-        registerType: 'autoUpdate',
-        includeAssets: ['logo.png', 'logo-padding.png', 'logo-192.png', 'badge.svg'],
-        manifest: {
-          name: 'Zohelo Data Portal',
-          short_name: 'Zohelo Data',
-          description:
-            'Explore the Zohelo Data catalogue and query published releases.',
-          theme_color: '#0a0a0a',
-          background_color: '#0a0a0a',
-          display: 'standalone',
-          start_url: '.',
-          icons: [
-            { src: 'logo-192.png', sizes: '192x192', type: 'image/png' },
-            { src: 'logo-padding.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-            { src: 'logo-padding.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-          ],
-        },
-        workbox: {
-          // Precache the app shell and matching dbt docs. Precaching every chunk pushed ~29MB
-          // to first-time visitors (Monaco language chunks, exceljs, both
-          // DuckDB workers). Hashed /assets/* chunks, the WASM binaries, and
-          // AI models are all cached at runtime on first use instead — after
-          // one session the app works fully offline.
-          globPatterns: [
-            'index.html',
-            'registerSW.js',
-            'manifest.webmanifest',
-            '*.{svg,png,ico}',
-            'docs/**/*.{html,json}',
-            'assets/index-*.{js,css}',
-          ],
-          globIgnores: ['**/env.js'],
-          maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
-          navigateFallback: 'index.html',
-          // Build identity, docs and the API are never answered with the app shell.
-          navigateFallbackDenylist: [
-            /\/portal-build\.json(?:\?.*)?$/,
-            /\/docs(?:\/|$)/,
-            /\/api\//,
-          ],
-          runtimeCaching: [
-            {
-              // Hashed build chunks (immutable filenames) — cached as the
-              // app lazily loads them, replacing the old eager precache.
-              urlPattern: /\/assets\/.+\.(js|css)$/,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'duckui-chunks',
-                expiration: { maxEntries: 300 },
-                cacheableResponse: { statuses: [0, 200] },
-              },
-            },
-            {
-              // Same-origin WASM (DuckDB engine bundles)
-              urlPattern: /\.wasm$/,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'duckui-wasm',
-                expiration: { maxEntries: 12 },
-                cacheableResponse: { statuses: [0, 200] },
-              },
-            },
-            {
-              urlPattern: /^https:\/\/(community-)?extensions\.duckdb\.org\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'duckdb-extensions',
-                expiration: { maxEntries: 60 },
-                cacheableResponse: { statuses: [0, 200] },
-              },
-            },
-            {
-              // StaleWhileRevalidate (not CacheFirst): this route caches
-              // opaque no-cors responses, so a poisoned/failed entry must be
-              // able to self-heal from the network.
-              urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*/i,
-              handler: 'StaleWhileRevalidate',
-              options: {
-                cacheName: 'jsdelivr-cdn',
-                expiration: { maxEntries: 40, maxAgeSeconds: 7 * 24 * 60 * 60 },
-                cacheableResponse: { statuses: [0, 200] },
-              },
-            },
-            {
-              // Runtime config: fresh from the server when online, last-seen
-              // value when offline (env.js is excluded from the precache).
-              urlPattern: /\/env\.js$/,
-              handler: 'NetworkFirst',
-              options: {
-                cacheName: 'duckui-env',
-                expiration: { maxEntries: 1 },
-                cacheableResponse: { statuses: [0, 200] },
-              },
-            },
-          ],
-        },
-      }),
     ],
     server: {
       headers: {

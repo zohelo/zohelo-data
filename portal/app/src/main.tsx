@@ -312,23 +312,22 @@ const App = () => {
   );
 };
 
-// After a deploy, the auto-updating service worker purges the previous
-// build's precache; a mid-session lazy chunk load would then 404. Reload once
-// when a NEW worker replaces an existing one — the 2s-debounced workspace
-// auto-save makes this nearly lossless. The first-ever install also fires
-// controllerchange (clientsClaim), and reloading there would loop.
+// The portal used to install a service worker (PWA). It is gone: unregister any worker a
+// previous visit installed and drop its caches, so old builds and sign-in state never stick.
+// public/sw.js does the same for browsers still running the old worker.
 if ("serviceWorker" in navigator) {
-  let hadController = !!navigator.serviceWorker.controller;
-  let reloadingForNewVersion = false;
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (!hadController) {
-      hadController = true;
-      return;
-    }
-    if (reloadingForNewVersion) return;
-    reloadingForNewVersion = true;
-    window.location.reload();
-  });
+  void navigator.serviceWorker
+    .getRegistrations()
+    .then((registrations) => Promise.all(registrations.map((r) => r.unregister())))
+    .catch(() => undefined);
+}
+const isRetiredCache = (name: string) =>
+  /^(workbox-|duckui-|duckdb-extensions$|jsdelivr-cdn$|webllm)/.test(name);
+if ("caches" in window) {
+  void caches
+    .keys()
+    .then((keys) => Promise.all(keys.filter(isRetiredCache).map((key) => caches.delete(key))))
+    .catch(() => undefined);
 }
 
 const rootElement = document.getElementById("root");
