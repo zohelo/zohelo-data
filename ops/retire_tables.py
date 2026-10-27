@@ -12,7 +12,8 @@ list that changed since the owner's approval is refused. Tables are purged (the 
 their files); files left behind are removed by `ops/orphan_files --delete --max-share <x>`.
 
 After dropping, every now-empty namespace starting with `zz_dev_` (scratch from trials) is dropped
-too; the list run reports which would go. Args: --apply, --expect <n>.
+too; the list run reports which would go. Args: --apply, --expect <n>, --class legacy|leftover|copy
+(repeatable; limits the candidates, e.g. scratch leftovers before a decision on copies).
 """
 
 from __future__ import annotations
@@ -51,12 +52,12 @@ def drop_empty_scratch(cat, dropping: set[str]) -> list[str]:
     return dropped
 
 
-def candidates(found: dict[str, dict[str, Any]]) -> list[str]:
-    """Catalog tables classified legacy, leftover or old-code copy, sorted."""
+def candidates(found: dict[str, dict[str, Any]], classes: tuple[str, ...] = RETIRED) -> list[str]:
+    """Catalog tables classified legacy, leftover or old-code copy (or only `classes`), sorted."""
     registry = sources()
     platform = yaml.safe_load((ROOT / "warehouse" / "warehouse.yaml").read_text()) or {}
     shared_gold = list(platform.get("gold") or [])
-    return sorted(n for n in found if classify(n, registry, shared_gold)[0] in RETIRED)
+    return sorted(n for n in found if classify(n, registry, shared_gold)[0] in classes)
 
 
 def report(title: str, names: list[str], found: dict[str, dict[str, Any]]) -> None:
@@ -88,10 +89,11 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--expect", type=int, default=None)
+    parser.add_argument("--class", dest="classes", action="append", choices=RETIRED, help="limit to these classes")
     args = parser.parse_args(argv)
     cat = catalog()
     found = tables(cat)
-    names = candidates(found)
+    names = candidates(found, tuple(args.classes or RETIRED))
     report("retire candidates", names, found)
     if not args.apply:
         annotate("notice", "scratch namespaces to drop", {"namespaces": drop_empty_scratch(cat, set(names))})
