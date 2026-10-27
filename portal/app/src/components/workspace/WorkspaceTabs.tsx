@@ -3,7 +3,7 @@ import { useMemo, useEffect, lazy, Suspense } from "react";
 import { Tabs, TabsList, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Plus, XSquareIcon, Loader2, Terminal, BookOpen, FolderOpen } from "lucide-react";
+import { Plus, XSquareIcon, Loader2, Terminal, FolderOpen } from "lucide-react";
 import { useWorkspaceViewFromURL } from "@/hooks/useWorkspaceViewFromURL";
 import {
   DndContext,
@@ -59,7 +59,6 @@ const TabErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => (
 
 const HomeTab = lazy(() => import("@/components/workspace/HomeTab"));
 const SqlTab = lazy(() => import("@/components/workspace/SqlTab"));
-const NotebookTab = lazy(() => import("@/components/notebook/NotebookTab"));
 const ConnectionsTab = lazy(() => import("@/components/workspace/ConnectionsTab"));
 const SettingsTab = lazy(() => import("@/components/workspace/SettingsTab"));
 const ReviewDecisionsTab = lazy(() => import("@/components/workspace/ReviewDecisionsTab"));
@@ -119,10 +118,6 @@ export default function WorkspaceTabs() {
     createTab("sql", "");
   };
 
-  const addNewNotebookTab = () => {
-    createTab("notebook");
-  };
-
   const addNewExplorerTab = () => {
     createTab("explorer", "", "R2 Explorer");
   };
@@ -150,10 +145,6 @@ export default function WorkspaceTabs() {
               <DropdownMenuItem onClick={addNewCodeTab}>
                 <Terminal className="h-4 w-4 mr-2" />
                 SQL Tab
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={addNewNotebookTab}>
-                <BookOpen className="h-4 w-4 mr-2" />
-                Notebook
               </DropdownMenuItem>
               <DropdownMenuItem onClick={addNewExplorerTab}>
                 <FolderOpen className="h-4 w-4 mr-2" />
@@ -188,10 +179,6 @@ export default function WorkspaceTabs() {
                   <Terminal className="h-4 w-4 mr-2" />
                   New SQL Tab
                 </ContextMenuItem>
-                <ContextMenuItem onClick={addNewNotebookTab}>
-                  <BookOpen className="h-4 w-4 mr-2" />
-                  New Notebook
-                </ContextMenuItem>
                 <ContextMenuItem onClick={addNewExplorerTab}>
                   <FolderOpen className="h-4 w-4 mr-2" />
                   New R2 Explorer
@@ -218,8 +205,6 @@ export default function WorkspaceTabs() {
                     <HomeTab />
                   ) : tab.type === "sql" ? (
                     <SqlTab tabId={tab.id} />
-                  ) : tab.type === "notebook" ? (
-                    <NotebookTab tabId={tab.id} />
                   ) : tab.type === "connections" ? (
                     <ConnectionsTab />
                   ) : tab.type === "settings" ? (

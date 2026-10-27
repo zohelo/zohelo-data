@@ -107,7 +107,6 @@ export const createProfileSlice: StateCreator<
         // dropped rather than rendered as a mystery blank.
         const validTypes = new Set([
           "sql",
-          "notebook",
           "home",
           "connections",
           "settings",
