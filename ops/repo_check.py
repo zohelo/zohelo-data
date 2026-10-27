@@ -25,6 +25,7 @@ ROOT_ALLOWED = {
     "portal",
     "warehouse",
     "run.py",
+    "requirements.in",
     "requirements.txt",
     "pyproject.toml",
     "README.md",
@@ -245,7 +246,7 @@ def scheduler_worker(dispatch_run: str) -> list[str]:
     return problems
 
 
-SCHEDULER_PACKAGES = {"pyyaml", "requests"}  # what the scheduler job in pipeline.yml installs
+SCHEDULER_PACKAGES = {"pyyaml", "requests"}  # direct requirements `run.py schedule` may import
 IMPORT_NAMES = {"dbt-core": "dbt", "dbt-duckdb": "dbt"}
 BLOCKER = """
 import runpy, sys
@@ -261,7 +262,7 @@ runpy.run_path("run.py", run_name="__main__")
 
 def scheduler_imports() -> list[str]:
     """`run.py schedule` works with only the packages the scheduler job installs (#788 broke it)."""
-    names = [re.split(r"[=<>\[ ]", line.strip())[0] for line in (ROOT / "requirements.txt").read_text().splitlines()]
+    names = [re.split(r"[=<>\[ ]", line.strip())[0] for line in (ROOT / "requirements.in").read_text().splitlines()]
     blocked = {IMPORT_NAMES.get(n, n) for n in names if n and not n.startswith("#") and n not in SCHEDULER_PACKAGES}
     result = subprocess.run(
         [sys.executable, "-c", f"BLOCKED = {sorted(blocked)!r}\n{BLOCKER}"],

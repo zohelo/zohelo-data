@@ -100,7 +100,7 @@ jobs:
           PYTHONPATH: .
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          python -m pip install --quiet pyyaml requests
+          python -m pip install --quiet --require-hashes -r requirements.txt
           python run.py schedule
   plan:
     # Production data runs only from main; experiments use Dev · branch runs.
@@ -138,7 +138,7 @@ jobs:
           if [ -n "$FILTER" ] && ! printf '%s' "$FILTER" | grep -Eq '^[A-Za-z0-9_.$*?, -]*$'; then
             echo "filter may contain only codes, globs, commas and spaces" >&2; exit 2
           fi
-          python -m pip install --quiet pyyaml
+          python -m pip install --quiet --require-hashes -r requirements.txt
           plan="$(python run.py plan --source "$SOURCE" --run "$RUN" --parallel-jobs "$PARALLEL_JOBS")"
           echo "$plan"
           echo "activities=$(jq -c .activities <<<"$plan")" >> "$GITHUB_OUTPUT"
@@ -354,5 +354,5 @@ jobs:
           RUN_SOURCE: ${{ inputs.source }}
           RUN_NAME: ${{ inputs.run }}
         run: |
-          python -m pip install --quiet requests==2.32.3
+          python -m pip install --quiet --require-hashes -r requirements.txt
           python -m ops.notify_failure --check-jobs

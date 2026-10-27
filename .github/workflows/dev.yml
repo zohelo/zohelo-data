@@ -46,7 +46,9 @@ jobs:
         with:
           python-version-file: .python-version
       - name: Install
-        run: python -m pip install -r requirements.txt ruff==0.16.8 yamllint==1.38.0
+        run: |
+          python -m pip install --require-hashes -r requirements.txt
+          python -m pip install ruff==0.16.8 yamllint==1.38.0
       - name: Quality rules (docs/quality.md)
         env:
           PYTHONPATH: .
@@ -154,7 +156,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - name: Install dependencies
-        run: python -m pip install -r requirements.txt
+        run: python -m pip install --require-hashes -r requirements.txt
       - name: "dev/${{ inputs.script }}.py"
         env:
           SCRIPT: ${{ inputs.script }}
