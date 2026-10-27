@@ -1,0 +1,4038 @@
+# Migration map of the old zohelo-data issues (backlog Task data/backlog/engine/migration/map, #973).
+# One entry per issue: action adopt (issue becomes `key`; `type` is the issue type it gets), close (with the
+# `replacement` key) or keep (already carries its key). Alerts adopt as Bug under their source Epic key.
+# Consumed by data/backlog/engine/migration/apply; removed by data/backlog/engine/migration/cleanup.
+issues:
+- issue: 2
+  title: Ingestion source folder
+  state: closed
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 4
+  title: 'fix(ingestion): Implement exponential backoff for Google Drive API uploads'
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/security-baseline/retired-code
+  reason: superseded by data/ops/security-baseline/retired-code
+- issue: 6
+  title: 'feat(ci): Split GitHub Actions into daily incremental and manual historical pipelines'
+  state: closed
+  action: close
+  key: null
+  replacement: data/ingestion/release-scheduling/schedules
+  reason: superseded by data/ingestion/release-scheduling/schedules
+- issue: 8
+  title: Updating the Daily Pipeline for Easier Testing
+  state: closed
+  action: close
+  key: null
+  replacement: data/ingestion/release-scheduling/schedules
+  reason: superseded by data/ingestion/release-scheduling/schedules
+- issue: 10
+  title: Resilient Extraction Loop & Status Dashboard
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/status-freshness/status-json
+  reason: superseded by data/ops/status-freshness/status-json
+- issue: 12
+  title: The Bronze Layer
+  state: closed
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 15
+  title: Fix Folder Routing & Archive Partitioning
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/security-baseline/retired-code
+  reason: superseded by data/ops/security-baseline/retired-code
+- issue: 16
+  title: Build the ADF-Style Orchestrator
+  state: closed
+  action: close
+  key: null
+  replacement: data/ingestion/release-scheduling/schedules
+  reason: superseded by data/ingestion/release-scheduling/schedules
+- issue: 19
+  title: Unified Data Portal (Catalog, Lineage & All-Layer SQL Console)
+  state: closed
+  action: close
+  key: null
+  replacement: data/portal/catalogue-pages/catalogue
+  reason: superseded by data/portal/catalogue-pages/catalogue
+- issue: 21
+  title: One-Click Google Login
+  state: closed
+  action: close
+  key: null
+  replacement: data/portal/trim/google
+  reason: superseded by data/portal/trim/google
+- issue: 23
+  title: Fix Parquet File Discovery in Subfolders & Clean Up Console 404 Errors
+  state: closed
+  action: close
+  key: null
+  replacement: data/portal/catalogue-pages/catalogue
+  reason: superseded by data/portal/catalogue-pages/catalogue
+- issue: 25
+  title: Implement Silver Layer dbt Transformation Pipeline
+  state: closed
+  action: close
+  key: null
+  replacement: data/src-plg-001/silver
+  reason: superseded by data/src-plg-001/silver
+- issue: 27
+  title: Make Silver Layer Pipeline Dynamic for All NBP Tables
+  state: closed
+  action: close
+  key: null
+  replacement: data/src-plg-001/silver
+  reason: superseded by data/src-plg-001/silver
+- issue: 29
+  title: Upgrade Portal to Support Folder-Level Table Querying (Databricks/Fabric Style)
+  state: closed
+  action: close
+  key: null
+  replacement: data/portal/catalogue-pages/catalogue
+  reason: superseded by data/portal/catalogue-pages/catalogue
+- issue: 31
+  title: Upgrade Portal to Support Folder-Level Table Querying (Databricks/Fabric Style)
+  state: closed
+  action: close
+  key: null
+  replacement: data/portal/catalogue-pages/catalogue
+  reason: superseded by data/portal/catalogue-pages/catalogue
+- issue: 36
+  title: duck-ui issue with google authentication
+  state: closed
+  action: close
+  key: null
+  replacement: data/portal/trim/google
+  reason: superseded by data/portal/trim/google
+- issue: 39
+  title: Google OAuth reference issue
+  state: closed
+  action: close
+  key: null
+  replacement: data/portal/trim/google
+  reason: superseded by data/portal/trim/google
+- issue: 44
+  title: update of codespace devcontainer
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/security-baseline/repo-rules
+  reason: superseded by data/ops/security-baseline/repo-rules
+- issue: 94
+  title: Audit and clarify Google Drive structure — AGY / Gemini 3.8 Flash
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/security-baseline/retired-code
+  reason: superseded by data/ops/security-baseline/retired-code
+- issue: 100
+  title: Consolidate Drive releases, ingestion control and current-layer navigation
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/security-baseline/retired-code
+  reason: superseded by data/ops/security-baseline/retired-code
+- issue: 130
+  title: '[Roadmap] Autonomous Multi-Source Data Platform Execution Plan'
+  state: closed
+  action: close
+  key: null
+  replacement: data/backlog/engine/migration
+  reason: superseded by data/backlog/engine/migration
+- issue: 131
+  title: '[GUS BDL] Complete WebUI Bulk Landing & Launch Decoupled Bronze Pipeline'
+  state: closed
+  action: close
+  key: null
+  replacement: data/src-pls-001/ingestion
+  reason: superseded by data/src-pls-001/ingestion
+- issue: 132
+  title: '[GUS DBW] Complete Bronze Layer Observation Partitions & Build Conformed Silver Layer'
+  state: closed
+  action: close
+  key: null
+  replacement: data/src-pls-002/ingestion
+  reason: superseded by data/src-pls-002/ingestion
+- issue: 133
+  title: '[World Bank WDI] Complete Bulk Archive Ingestion & Vectorized Bronze Pipeline'
+  state: closed
+  action: close
+  key: null
+  replacement: data/src-gl-005/ingestion
+  reason: superseded by data/src-gl-005/ingestion
+- issue: 134
+  title: '[Eurostat] Bulk Download Facility Ingestion & Decoupled Bronze Pipeline'
+  state: closed
+  action: close
+  key: null
+  replacement: data/src-gl-001/ingestion
+  reason: superseded by data/src-gl-001/ingestion
+- issue: 135
+  title: '[Orchestration] Multi-Source Sequential Stage Orchestrator & Production Validation'
+  state: closed
+  action: close
+  key: null
+  replacement: data/ingestion/release-scheduling/schedules
+  reason: superseded by data/ingestion/release-scheduling/schedules
+- issue: 295
+  title: Bronze loaders share one verified helper set
+  state: closed
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 296
+  title: Source YAML is the single source of truth
+  state: closed
+  action: close
+  key: null
+  replacement: data/ingestion/register-restructure/fields
+  reason: superseded by data/ingestion/register-restructure/fields
+- issue: 297
+  title: Failures are never silent
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/operations-fixes/alerts
+  reason: superseded by data/ops/operations-fixes/alerts
+- issue: 298
+  title: Every pull request passes automatic quality checks
+  state: closed
+  action: close
+  key: null
+  replacement: data/backlog/engine/rules
+  reason: superseded by data/backlog/engine/rules
+- issue: 299
+  title: An independent reviewer approves every pull request
+  state: closed
+  action: close
+  key: null
+  replacement: data/backlog/engine/rules
+  reason: superseded by data/backlog/engine/rules
+- issue: 300
+  title: Read-only checks live on main as ops tools
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/operations-fixes/watch
+  reason: superseded by data/ops/operations-fixes/watch
+- issue: 301
+  title: Owner Desk in the review layout
+  state: closed
+  action: close
+  key: null
+  replacement: data/backlog/engine/project
+  reason: superseded by data/backlog/engine/project
+- issue: 302
+  title: Eurostat clean layer complete
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-001/silver
+  reason: superseded by data/src-gl-001/silver
+- issue: 303
+  title: 'GUS BDL complete: the 334 missing subgroups'
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-001/ingestion
+  reason: superseded by data/src-pls-001/ingestion
+- issue: 304
+  title: GUS DBW rebuilt on the current pattern
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-002/silver
+  reason: superseded by data/src-pls-002/silver
+- issue: 307
+  title: zohelo-data
+  state: open
+  action: close
+  key: null
+  reason: Initiative replaced by the Areas in areas.yaml
+  replacement: data/backlog
+- issue: 308
+  title: Ingestion → Landing
+  state: open
+  action: close
+  key: null
+  reason: Product bucket replaced by Area
+  replacement: data/ingestion
+- issue: 309
+  title: Semantic layer
+  state: open
+  action: close
+  key: null
+  reason: Product bucket replaced by Area
+  replacement: data/metadata
+- issue: 310
+  title: Data catalog
+  state: open
+  action: close
+  key: null
+  reason: Product bucket replaced by Area
+  replacement: data/metadata
+- issue: 311
+  title: Portal
+  state: open
+  action: close
+  key: null
+  reason: Product bucket replaced by Area
+  replacement: data/portal
+- issue: 312
+  title: Infrastructure
+  state: open
+  action: close
+  key: null
+  reason: Product bucket replaced by Area
+  replacement: data/ops
+- issue: 313
+  title: Operations
+  state: open
+  action: close
+  key: null
+  reason: Product bucket replaced by Area
+  replacement: data/ops
+- issue: 314
+  title: Self-improvement
+  state: open
+  action: close
+  key: null
+  reason: Product bucket replaced by Area
+  replacement: data/ops
+- issue: 315
+  title: Project management
+  state: open
+  action: close
+  key: null
+  reason: Product bucket replaced by Area
+  replacement: data/backlog
+- issue: 316
+  title: Eurostat Database and dissemination APIs (Eurostat) [GL-001]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-001
+  reason: 'register work package of GL-001: its source Epic'
+- issue: 317
+  title: Bank Danych Lokalnych (BDL) (Główny Urząd Statystyczny (GUS / Statistics Poland)) [PLS-001]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-001
+  reason: 'register work package of PLS-001: its source Epic'
+- issue: 318
+  title: Dziedzinowe Bazy Wiedzy (DBW) API (Główny Urząd Statystyczny (GUS / Statistics Poland)) [PLS-002]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-002
+  reason: 'register work package of PLS-002: its source Epic'
+- issue: 319
+  title: NBP Web API — exchange rates and gold prices (Narodowy Bank Polski (NBP)) [PLG-001]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-001
+  reason: 'register work package of PLG-001: its source Epic'
+- issue: 320
+  title: World Development Indicators (WDI) (World Bank) [GL-005]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-005
+  reason: 'register work package of GL-005: its source Epic'
+- issue: 321
+  title: Krajowy Rejestr Urzędowy Podziału Terytorialnego Kraju (TERYT) (Główny Urząd Statystyczny (GUS / Statistics Poland)) [PLS-007]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-007
+  reason: 'register work package of PLS-007: its source Epic'
+- issue: 322
+  title: Państwowy Rejestr Granic (PRG) (Główny Urząd Geodezji i Kartografii (GUGiK)) [PL-ENV-001]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-001
+  reason: 'register work package of PL-ENV-001: its source Epic'
+- issue: 323
+  title: Global LEI Index, GLEIF API and Golden Copy/Delta Files (Global Legal Entity Identifier Foundation) [CD-015]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-015
+  reason: 'register work package of CD-015: its source Epic'
+- issue: 324
+  title: VAT taxpayer list and API (Head of the National Revenue Administration / Ministry of Finance) [PLG-011]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-011
+  reason: 'register work package of PLG-011: its source Epic'
+- issue: 325
+  title: OpenData organizations, people and locations (bulk ZIP)
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-ex-005
+  reason: 'register work package of EX-005: its source Epic'
+- issue: 334
+  title: Warehouse
+  state: closed
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/fold
+  reason: superseded by data/warehouse/gold-v1/fold
+- issue: 335
+  title: Landing → Bronze
+  state: open
+  action: close
+  key: null
+  reason: Product bucket replaced by Area
+  replacement: data/ingestion
+- issue: 336
+  title: Silver
+  state: open
+  action: close
+  key: null
+  reason: Product bucket replaced by Area
+  replacement: data/warehouse
+- issue: 337
+  title: Gold
+  state: open
+  action: close
+  key: null
+  reason: Product bucket replaced by Area
+  replacement: data/warehouse
+- issue: 339
+  title: Hourly scheduler proven to fire
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/operations-fixes/watch
+  reason: superseded by data/ops/operations-fixes/watch
+- issue: 340
+  title: Failed runs are visible without anyone watching
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/operations-fixes/watch
+  reason: superseded by data/ops/operations-fixes/watch
+- issue: 341
+  title: First Monday weekly plan (19 Oct)
+  state: open
+  action: close
+  key: null
+  reason: weekly-plan diary
+  replacement: null
+- issue: 342
+  title: Session types in the scheduled prompt
+  state: closed
+  action: close
+  key: null
+  replacement: data/backlog/engine/bootstrap
+  reason: superseded by data/backlog/engine/bootstrap
+- issue: 343
+  title: Retire the 10 unclaimed tables and 4 old NBP Landing folders
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/retired-landing
+  reason: superseded by data/ops/r2-cleanup/retired-landing
+- issue: 344
+  title: 'R2 Data Catalog folder: remove files of dropped tables (≈ tens of GB)'
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/orphans
+  reason: superseded by data/ops/r2-cleanup/orphans
+- issue: 345
+  title: dbt models pass sqlfluff; sqlfluff in the check
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/quality-audit/checks
+  reason: superseded by data/ops/quality-audit/checks
+- issue: 346
+  title: 'BDL website export: trial on 2 subgroups'
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-001/development
+  reason: superseded by data/src-pls-001/development
+- issue: 351
+  title: Object storage (Cloudflare R2)
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/inventory
+  reason: superseded by data/ops/r2-cleanup/inventory
+- issue: 352
+  title: Lakehouse catalog (R2 Data Catalog, Iceberg)
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/orphans
+  reason: superseded by data/ops/r2-cleanup/orphans
+- issue: 353
+  title: Compute and orchestration (GitHub Actions)
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/operations-fixes/watch
+  reason: superseded by data/ops/operations-fixes/watch
+- issue: 354
+  title: Source control and backlog (GitHub)
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/security-baseline/repo-rules
+  reason: superseded by data/ops/security-baseline/repo-rules
+- issue: 355
+  title: Query and modelling engine (DuckDB, dbt)
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/security-baseline/dependencies
+  reason: superseded by data/ops/security-baseline/dependencies
+- issue: 356
+  title: Web hosting (Cloudflare)
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/org-platform-move/portal-pages
+  reason: superseded by data/ops/org-platform-move/portal-pages
+- issue: 357
+  title: Security and secrets
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/security-baseline/exit-check
+  reason: superseded by data/ops/security-baseline/exit-check
+- issue: 358
+  title: Cost and usage
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/usage-monitoring/script
+  reason: superseded by data/ops/usage-monitoring/script
+- issue: 359
+  title: Source register
+  state: closed
+  action: close
+  key: null
+  replacement: data/ingestion/register-restructure/fields
+  reason: superseded by data/ingestion/register-restructure/fields
+- issue: 360
+  title: Common ingestion framework
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 361
+  title: Problem sources
+  state: open
+  action: close
+  key: null
+  replacement: data/ingestion/register-restructure/fields
+  reason: superseded by data/ingestion/register-restructure/fields
+- issue: 362
+  title: Common Bronze loader
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 363
+  title: Standard cleaning macros
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 364
+  title: Dimensional model study
+  state: closed
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 365
+  title: Conformed dimensions
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 366
+  title: Facts by domain
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 367
+  title: Semantic layer framework
+  state: open
+  action: close
+  key: null
+  replacement: data/metadata/semantic-manifest/generate
+  reason: superseded by data/metadata/semantic-manifest/generate
+- issue: 368
+  title: Metrics by domain
+  state: open
+  action: close
+  key: null
+  replacement: data/metadata/catalogue-v1/kpis-40
+  reason: superseded by data/metadata/catalogue-v1/kpis-40
+- issue: 369
+  title: Descriptions and licences
+  state: open
+  action: close
+  key: null
+  replacement: data/metadata/catalogue-v1/models
+  reason: superseded by data/metadata/catalogue-v1/models
+- issue: 370
+  title: Lineage
+  state: open
+  action: close
+  key: null
+  replacement: data/portal/catalogue-pages/lineage
+  reason: superseded by data/portal/catalogue-pages/lineage
+- issue: 371
+  title: Portal application
+  state: open
+  action: close
+  key: null
+  replacement: data/portal/catalogue-pages/catalogue
+  reason: superseded by data/portal/catalogue-pages/catalogue
+- issue: 372
+  title: Source publishing
+  state: open
+  action: close
+  key: null
+  replacement: data/portal/catalogue-pages/catalogue
+  reason: superseded by data/portal/catalogue-pages/catalogue
+- issue: 373
+  title: Scheduling
+  state: open
+  action: close
+  key: null
+  replacement: data/ingestion/release-scheduling/schedules
+  reason: superseded by data/ingestion/release-scheduling/schedules
+- issue: 374
+  title: Monitoring and alerts
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/operations-fixes/watch
+  reason: superseded by data/ops/operations-fixes/watch
+- issue: 375
+  title: Operational tools and runbooks
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/operations-fixes/alerts
+  reason: superseded by data/ops/operations-fixes/alerts
+- issue: 376
+  title: Storage and retention operations
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/orphans
+  reason: superseded by data/ops/r2-cleanup/orphans
+- issue: 377
+  title: Quality rules and automatic checks
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/quality-audit/checks
+  reason: superseded by data/ops/quality-audit/checks
+- issue: 378
+  title: Independent review
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/rules
+  reason: superseded by data/backlog/engine/rules
+- issue: 379
+  title: Lessons log
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/bootstrap
+  reason: superseded by data/backlog/engine/bootstrap
+- issue: 380
+  title: Audits
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/quality-audit/audit
+  reason: superseded by data/ops/quality-audit/audit
+- issue: 381
+  title: Backlog and cadence
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/bootstrap
+  reason: superseded by data/backlog/engine/bootstrap
+- issue: 382
+  title: Owner Desk
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/project
+  reason: superseded by data/backlog/engine/project
+- issue: 383
+  title: Weekly, monthly and quarterly reviews
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/bootstrap
+  reason: superseded by data/backlog/engine/bootstrap
+- issue: 384
+  title: 'Sources: International and EU sources'
+  state: open
+  action: close
+  key: null
+  reason: register-section bucket replaced by source Epics under the family Area
+  replacement: data/src-a
+- issue: 385
+  title: 'Sources: Poland: society, health, education'
+  state: open
+  action: close
+  key: null
+  reason: register-section bucket replaced by source Epics under the family Area
+  replacement: data/src-b
+- issue: 386
+  title: 'Sources: Poland: economy, finance, governance'
+  state: open
+  action: close
+  key: null
+  reason: register-section bucket replaced by source Epics under the family Area
+  replacement: data/src-b
+- issue: 387
+  title: 'Sources: Poland: geography, environment, transport, energy'
+  state: open
+  action: close
+  key: null
+  reason: register-section bucket replaced by source Epics under the family Area
+  replacement: data/src-g
+- issue: 388
+  title: 'Sources: Markets, companies, platforms and research sources'
+  state: open
+  action: close
+  key: null
+  reason: register-section bucket replaced by source Epics under the family Area
+  replacement: data/src-i
+- issue: 389
+  title: 'Sources: Additional sources'
+  state: open
+  action: close
+  key: null
+  reason: register-section bucket replaced by source Epics under the family Areas
+  replacement: data/ingestion
+- issue: 390
+  title: Comext international trade in goods database (Eurostat) [GL-002]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-002
+  reason: 'register work package of GL-002: its source Epic'
+- issue: 391
+  title: OECD Data Explorer and SDMX API (OECD) [GL-003]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-003
+  reason: 'register work package of GL-003: its source Epic'
+- issue: 392
+  title: Programme for International Student Assessment (PISA) databases (OECD) [GL-004]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-004
+  reason: 'register work package of GL-004: its source Epic'
+- issue: 393
+  title: Global Economic Monitor (GEM) (World Bank) [GL-006]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-006
+  reason: 'register work package of GL-006: its source Epic'
+- issue: 394
+  title: International Debt Statistics (IDS) (World Bank) [GL-007]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-007
+  reason: 'register work package of GL-007: its source Epic'
+- issue: 395
+  title: Worldwide Governance Indicators (WGI) (World Bank) [GL-008]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-008
+  reason: 'register work package of GL-008: its source Epic'
+- issue: 396
+  title: Global Findex Database (World Bank) [GL-009]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-009
+  reason: 'register work package of GL-009: its source Epic'
+- issue: 397
+  title: Enterprise Surveys (World Bank) [GL-010]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-010
+  reason: 'register work package of GL-010: its source Epic'
+- issue: 398
+  title: International Comparison Program (ICP) (World Bank) [GL-011]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-011
+  reason: 'register work package of GL-011: its source Epic'
+- issue: 399
+  title: World Economic Outlook (WEO) Database (International Monetary Fund) [GL-012]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-012
+  reason: 'register work package of GL-012: its source Epic'
+- issue: 400
+  title: International Financial Statistics (IFS) (International Monetary Fund) [GL-013]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-013
+  reason: 'register work package of GL-013: its source Epic'
+- issue: 401
+  title: Direction of Trade Statistics (DOTS) (International Monetary Fund) [GL-014]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-014
+  reason: 'register work package of GL-014: its source Epic'
+- issue: 402
+  title: BIS Data Portal (Bank for International Settlements) [GL-015]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-015
+  reason: 'register work package of GL-015: its source Epic'
+- issue: 403
+  title: ECB Data Portal (European Central Bank) [GL-016]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-016
+  reason: 'register work package of GL-016: its source Epic'
+- issue: 404
+  title: UNdata (United Nations Statistics Division) [GL-017]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-017
+  reason: 'register work package of GL-017: its source Epic'
+- issue: 405
+  title: Global SDG Indicators Database and API (United Nations Statistics Division) [GL-018]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-018
+  reason: 'register work package of GL-018: its source Epic'
+- issue: 406
+  title: UN Comtrade (United Nations Statistics Division) [GL-019]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-019
+  reason: 'register work package of GL-019: its source Epic'
+- issue: 407
+  title: WTO Stats (World Trade Organization) [GL-020]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-020
+  reason: 'register work package of GL-020: its source Epic'
+- issue: 408
+  title: UNCTAD Data Hub (UN Trade and Development (UNCTAD)) [GL-021]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-021
+  reason: 'register work package of GL-021: its source Epic'
+- issue: 409
+  title: FAOSTAT (Food and Agriculture Organization of the United Nations) [GL-022]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-022
+  reason: 'register work package of GL-022: its source Epic'
+- issue: 410
+  title: ILOSTAT (International Labour Organization) [GL-023]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-023
+  reason: 'register work package of GL-023: its source Epic'
+- issue: 411
+  title: Global Health Observatory (GHO) OData API (World Health Organization) [GL-024]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-024
+  reason: 'register work package of GL-024: its source Epic'
+- issue: 412
+  title: WHO Data platform (data.who.int) datasets (World Health Organization) [GL-025]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-025
+  reason: 'register work package of GL-025: its source Epic'
+- issue: 413
+  title: UIS Data Browser (UNESCO Institute for Statistics) [GL-026]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-026
+  reason: 'register work package of GL-026: its source Epic'
+- issue: 414
+  title: UNICEF Data Warehouse Explorer and SDMX API (United Nations Children’s Fund) [GL-027]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-027
+  reason: 'register work package of GL-027: its source Epic'
+- issue: 415
+  title: Human Development Data Center (United Nations Development Programme) [GL-028]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-028
+  reason: 'register work package of GL-028: its source Epic'
+- issue: 416
+  title: Refugee Data Finder / Refugee Statistics API (United Nations High Commissioner for Refugees) [GL-029]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-029
+  reason: 'register work package of GL-029: its source Epic'
+- issue: 417
+  title: Global Migration Data Portal (International Organization for Migration) [GL-030]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-030
+  reason: 'register work package of GL-030: its source Epic'
+- issue: 418
+  title: ITU DataHub (International Telecommunication Union) [GL-031]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-031
+  reason: 'register work package of GL-031: its source Epic'
+- issue: 419
+  title: IP Statistics Data Center (World Intellectual Property Organization) [GL-032]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-032
+  reason: 'register work package of GL-032: its source Epic'
+- issue: 420
+  title: UNODC Data Portal (United Nations Office on Drugs and Crime) [GL-033]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-033
+  reason: 'register work package of GL-033: its source Epic'
+- issue: 421
+  title: IEA Data Explorer (International Energy Agency) [GL-034]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-034
+  reason: 'register work package of GL-034: its source Epic'
+- issue: 422
+  title: IRENASTAT / Statistics Time Series (International Renewable Energy Agency) [GL-035]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-035
+  reason: 'register work package of GL-035: its source Epic'
+- issue: 423
+  title: Climate Data Store (CDS) (Copernicus Climate Change Service / ECMWF) [GL-036]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-036
+  reason: 'register work package of GL-036: its source Epic'
+- issue: 424
+  title: EEA Datahub (European Environment Agency) [GL-037]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-037
+  reason: 'register work package of GL-037: its source Epic'
+- issue: 425
+  title: UNECE Data Portal (United Nations Economic Commission for Europe) [GL-038]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-038
+  reason: 'register work package of GL-038: its source Epic'
+- issue: 426
+  title: World Population Prospects (United Nations Department of Economic and Social Affairs, Population Division) [GL-039]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-039
+  reason: 'register work package of GL-039: its source Epic'
+- issue: 427
+  title: UNIDO Statistics Data Portal / INDSTAT (United Nations Industrial Development Organization) [GL-040]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-gl-040
+  reason: 'register work package of GL-040: its source Epic'
+- issue: 428
+  title: STRATEG indicators and API (Główny Urząd Statystyczny (GUS / Statistics Poland)) [PLS-003]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-003
+  reason: 'register work package of PLS-003: its source Epic'
+- issue: 429
+  title: GUS thematic publications with downloadable statistical tables (Główny Urząd Statystyczny (GUS / Statistics Poland)) [PLS-004]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-004
+  reason: 'register work package of PLS-004: its source Epic'
+- issue: 430
+  title: Narodowy Spis Powszechny Ludności i Mieszkań 2021 (NSP 2021) results (Główny Urząd Statystyczny (GUS / Statistics Poland)) [PLS-005]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-005
+  reason: 'register work package of PLS-005: its source Epic'
+- issue: 431
+  title: Powszechny Spis Rolny 2020 (PSR 2020) results (Główny Urząd Statystyczny (GUS / Statistics Poland)) [PLS-006]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-006
+  reason: 'register work package of PLS-006: its source Epic'
+- issue: 432
+  title: BIR1 – Internet Database of REGON API (Główny Urząd Statystyczny (GUS / Statistics Poland)) [PLS-008]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-008
+  reason: 'register work package of PLS-008: its source Epic'
+- issue: 433
+  title: Portal Statystyczny ZUS (Zakład Ubezpieczeń Społecznych (ZUS)) [PLS-009]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-009
+  reason: 'register work package of PLS-009: its source Epic'
+- issue: 434
+  title: Rocznik Statystyczny Ubezpieczeń Społecznych (Zakład Ubezpieczeń Społecznych (ZUS)) [PLS-010]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-010
+  reason: 'register work package of PLS-010: its source Epic'
+- issue: 435
+  title: Podstawowe dane statystyczne KRUS (Kasa Rolniczego Ubezpieczenia Społecznego (KRUS)) [PLS-011]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-011
+  reason: 'register work package of PLS-011: its source Epic'
+- issue: 436
+  title: API Statystyki NFZ – Świadczenia (Narodowy Fundusz Zdrowia (NFZ)) [PLS-012]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-012
+  reason: 'register work package of PLS-012: its source Epic'
+- issue: 437
+  title: API Statystyki NFZ – Refundacja apteczna (Narodowy Fundusz Zdrowia (NFZ)) [PLS-013]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-013
+  reason: 'register work package of PLS-013: its source Epic'
+- issue: 438
+  title: API Umowy NFZ (Narodowy Fundusz Zdrowia (NFZ)) [PLS-014]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-014
+  reason: 'register work package of PLS-014: its source Epic'
+- issue: 439
+  title: API Terminy Leczenia / Informator o Terminach Leczenia (Narodowy Fundusz Zdrowia (NFZ)) [PLS-015]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-015
+  reason: 'register work package of PLS-015: its source Epic'
+- issue: 440
+  title: e-zdrowie w liczbach dashboards (Centrum e-Zdrowia (CeZ)) [PLS-016]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-016
+  reason: 'register work package of PLS-016: its source Epic'
+- issue: 441
+  title: Biuletyn Statystyczny ochrony zdrowia (Ministerstwo Zdrowia / Centrum e-Zdrowia) [PLS-017]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-017
+  reason: 'register work package of PLS-017: its source Epic'
+- issue: 442
+  title: Raport – Stan Sanitarny Kraju (Główny Inspektorat Sanitarny (GIS)) [PLS-018]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-018
+  reason: 'register work package of PLS-018: its source Epic'
+- issue: 443
+  title: Biuletyny, meldunki i informacje epidemiologiczne (EPIMELD) (Narodowy Instytut Zdrowia Publicznego PZH – PIB (NIZP PZH)) [PLS-019]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-019
+  reason: 'register work package of PLS-019: its source Epic'
+- issue: 444
+  title: Rejestr Podmiotów Wykonujących Działalność Leczniczą (RPWDL) (Minister Zdrowia / Centrum e-Zdrowia) [PLS-020]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-020
+  reason: 'register work package of PLS-020: its source Epic'
+- issue: 445
+  title: Rejestr Szkół i Placówek Oświatowych (RSPO) API and search (Ministerstwo Edukacji Narodowej / System Informacji Oświatowej) [PLS-021]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-021
+  reason: 'register work package of PLS-021: its source Epic'
+- issue: 446
+  title: SIO public and archival education statistics (Centrum Informatyczne Edukacji / Ministerstwo Edukacji Narodowej) [PLS-022]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-022
+  reason: 'register work package of PLS-022: its source Epic'
+- issue: 447
+  title: RAD-on public data and POL-on APIs (Ośrodek Przetwarzania Informacji – Państwowy Instytut Badawczy (OPI PIB)) [PLS-023]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-023
+  reason: 'register work package of PLS-023: its source Epic'
+- issue: 448
+  title: Ogólnopolski system monitorowania Ekonomicznych Losów Absolwentów (ELA) (Ministerstwo Nauki i Szkolnictwa Wyższego / OPI PIB) [PLS-024]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-024
+  reason: 'register work package of PLS-024: its source Epic'
+- issue: 449
+  title: National examination results and reports (Centralna Komisja Egzaminacyjna (CKE)) [PLS-025]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-025
+  reason: 'register work package of PLS-025: its source Epic'
+- issue: 450
+  title: Ewidencja zabytków nieruchomych / heritage monument datasets (Narodowy Instytut Dziedzictwa (NID)) [PLS-026]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-026
+  reason: 'register work package of PLS-026: its source Epic'
+- issue: 451
+  title: Kultura i dziedzictwo narodowe – annual tables (Główny Urząd Statystyczny (GUS / Statistics Poland)) [PLS-027]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-027
+  reason: 'register work package of PLS-027: its source Epic'
+- issue: 452
+  title: Uczestnictwo ludności w kulturze (Główny Urząd Statystyczny (GUS / Statistics Poland)) [PLS-028]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-028
+  reason: 'register work package of PLS-028: its source Epic'
+- issue: 453
+  title: Registered unemployment and labour-office vacancy statistics (Ministerstwo Rodziny, Pracy i Polityki Społecznej / Public Employment Services)
+    [PLS-029]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-029
+  reason: 'register work package of PLS-029: its source Epic'
+- issue: 454
+  title: Barometr Zawodów (Ministerstwo Rodziny, Pracy i Polityki Społecznej / regional labour offices) [PLS-030]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-030
+  reason: 'register work package of PLS-030: its source Epic'
+- issue: 455
+  title: Social assistance and family-support statistical reports (Ministerstwo Rodziny, Pracy i Polityki Społecznej) [PLS-031]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-031
+  reason: 'register work package of PLS-031: its source Epic'
+- issue: 456
+  title: Zintegrowany System Rolniczej Informacji Rynkowej (ZSRIR) (Ministerstwo Rolnictwa i Rozwoju Wsi) [PLS-032]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-032
+  reason: 'register work package of PLS-032: its source Epic'
+- issue: 457
+  title: Weekly agricultural market situation reports (Krajowy Ośrodek Wsparcia Rolnictwa (KOWR)) [PLS-033]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-033
+  reason: 'register work package of PLS-033: its source Epic'
+- issue: 458
+  title: Programme implementation and payment statistics (Agencja Restrukturyzacji i Modernizacji Rolnictwa (ARiMR)) [PLS-034]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-034
+  reason: 'register work package of PLS-034: its source Epic'
+- issue: 459
+  title: Turystyka – annual accommodation-establishment tables (Główny Urząd Statystyczny (GUS / Statistics Poland)) [PLS-035]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pls-035
+  reason: 'register work package of PLS-035: its source Epic'
+- issue: 460
+  title: Balance of payments statistics (Narodowy Bank Polski (NBP)) [PLG-002]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-002
+  reason: 'register work package of PLG-002: its source Epic'
+- issue: 461
+  title: International investment position and external statistics (Narodowy Bank Polski (NBP)) [PLG-003]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-003
+  reason: 'register work package of PLG-003: its source Epic'
+- issue: 462
+  title: Monetary aggregates (Narodowy Bank Polski (NBP)) [PLG-004]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-004
+  reason: 'register work package of PLG-004: its source Epic'
+- issue: 463
+  title: Banking and MFI balance-sheet statistics (Narodowy Bank Polski (NBP)) [PLG-005]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-005
+  reason: 'register work package of PLG-005: its source Epic'
+- issue: 464
+  title: Interest-rate statistics (Narodowy Bank Polski (NBP)) [PLG-006]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-006
+  reason: 'register work package of PLG-006: its source Epic'
+- issue: 465
+  title: State budget acts and execution publications (Ministry of Finance) [PLG-007]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-007
+  reason: 'register work package of PLG-007: its source Epic'
+- issue: 466
+  title: Treasury debt time series and monthly bulletin (Ministry of Finance) [PLG-008]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-008
+  reason: 'register work package of PLG-008: its source Epic'
+- issue: 467
+  title: Public finance sector debt statistics (Ministry of Finance) [PLG-009]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-009
+  reason: 'register work package of PLG-009: its source Epic'
+- issue: 468
+  title: Local-government budget reports (sprawozdania budżetowe JST) (Ministry of Finance) [PLG-010]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-010
+  reason: 'register work package of PLG-010: its source Epic'
+- issue: 469
+  title: Open KRS API (API Rejestrów Sądowych) (Ministry of Justice) [PLG-012]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-012
+  reason: 'register work package of PLG-012: its source Epic'
+- issue: 470
+  title: Repository of Financial Documents (RDF) viewer (Ministry of Justice) [PLG-013]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-013
+  reason: 'register work package of PLG-013: its source Epic'
+- issue: 471
+  title: CEIDG and Biznes.gov.pl Data Warehouse/API (Ministry of Economic Development and Technology) [PLG-014]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-014
+  reason: 'register work package of PLG-014: its source Epic'
+- issue: 472
+  title: Central Register of Beneficial Owners (CRBR) (Ministry of Finance) [PLG-015]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-015
+  reason: 'register work package of PLG-015: its source Epic'
+- issue: 473
+  title: Supervised-entity registers and search (Polish Financial Supervision Authority (KNF)) [PLG-016]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-016
+  reason: 'register work package of PLG-016: its source Epic'
+- issue: 474
+  title: Banking-sector data and sector information (Polish Financial Supervision Authority (KNF)) [PLG-017]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-017
+  reason: 'register work package of PLG-017: its source Epic'
+- issue: 475
+  title: Insurance, pension and other financial-sector information (Polish Financial Supervision Authority (KNF)) [PLG-018]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-018
+  reason: 'register work package of PLG-018: its source Epic'
+- issue: 476
+  title: KNF Public Warning List (Polish Financial Supervision Authority (KNF)) [PLG-019]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-019
+  reason: 'register work package of PLG-019: its source Epic'
+- issue: 477
+  title: Database of decisions of the President of UOKiK (Office of Competition and Consumer Protection (UOKiK)) [PLG-020]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-020
+  reason: 'register work package of PLG-020: its source Epic'
+- issue: 478
+  title: Concentration decisions and notifications (Office of Competition and Consumer Protection (UOKiK)) [PLG-021]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-021
+  reason: 'register work package of PLG-021: its source Epic'
+- issue: 479
+  title: e-Zamówienia / BZP read API (Public Procurement Office (UZP)) [PLG-022]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-022
+  reason: 'register work package of PLG-022: its source Epic'
+- issue: 480
+  title: TED Search API and Open Data — Poland-filtered notices (Publications Office of the European Union) [PLG-023]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-023
+  reason: 'register work package of PLG-023: its source Epic'
+- issue: 481
+  title: Sejm API (Chancellery of the Sejm) [PLG-024]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-024
+  reason: 'register work package of PLG-024: its source Epic'
+- issue: 482
+  title: Senate legislative process, sittings, votes and members (Chancellery of the Senate) [PLG-025]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-025
+  reason: 'register work package of PLG-025: its source Epic'
+- issue: 483
+  title: ELI Poland — Dziennik Ustaw and Monitor Polski (Government Legislation Centre (RCL) / Chancellery of the Sejm) [PLG-026]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-026
+  reason: 'register work package of PLG-026: its source Epic'
+- issue: 484
+  title: ISAP — Internet System of Legal Acts archive (Chancellery of the Sejm) [PLG-027]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-027
+  reason: 'register work package of PLG-027: its source Epic'
+- issue: 485
+  title: NIK audit-results database (Supreme Audit Office (NIK)) [PLG-028]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-028
+  reason: 'register work package of PLG-028: its source Epic'
+- issue: 486
+  title: Election and referendum results data service (National Electoral Commission (PKW) / National Electoral Office (KBW)) [PLG-029]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-029
+  reason: 'register work package of PLG-029: its source Epic'
+- issue: 487
+  title: dane.gov.pl open-data catalogue and API (Chancellery of the Prime Minister) [PLG-030]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-030
+  reason: 'register work package of PLG-030: its source Epic'
+- issue: 488
+  title: Justice system statistical database (ISWS) (Ministry of Justice) [PLG-031]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-031
+  reason: 'register work package of PLG-031: its source Epic'
+- issue: 489
+  title: Prison statistics (Prison Service (Służba Więzienna)) [PLG-032]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-032
+  reason: 'register work package of PLG-032: its source Epic'
+- issue: 490
+  title: Police Statistics portal (Polish Police Headquarters) [PLG-033]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-033
+  reason: 'register work package of PLG-033: its source Epic'
+- issue: 491
+  title: Government Legislative Process portal (RPL), including consultations (Government Legislation Centre (RCL)) [PLG-034]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-plg-034
+  reason: 'register work package of PLG-034: its source Epic'
+- issue: 492
+  title: Państwowy Rejestr Nazw Geograficznych (PRNG) (GUGiK) [PL-ENV-002]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-002
+  reason: 'register work package of PL-ENV-002: its source Epic'
+- issue: 493
+  title: Baza Danych Obiektów Topograficznych BDOT10k (GUGiK) [PL-ENV-003]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-003
+  reason: 'register work package of PL-ENV-003: its source Epic'
+- issue: 494
+  title: Ortofotomapa (ORTO) (GUGiK) [PL-ENV-004]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-004
+  reason: 'register work package of PL-ENV-004: its source Epic'
+- issue: 495
+  title: NMT, NMPT and airborne laser-scanning elevation products (GUGiK) [PL-ENV-005]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-005
+  reason: 'register work package of PL-ENV-005: its source Epic'
+- issue: 496
+  title: Krajowa Integracja Ewidencji Gruntów i Budynków (KI EGiB) aggregate WFS (GUGiK with county cadastral authorities) [PL-ENV-006]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-006
+  reason: 'register work package of PL-ENV-006: its source Epic'
+- issue: 497
+  title: Krajowa Integracja Numeracji Adresowej / PRG address services (GUGiK and municipalities) [PL-ENV-007]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-007
+  reason: 'register work package of PL-ENV-007: its source Epic'
+- issue: 498
+  title: 'Public Data API: synoptic, hydrological, meteorological and warning feeds (Instytut Meteorologii i Gospodarki Wodnej–PIB (IMGW-PIB))
+    [PL-ENV-008]'
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-008
+  reason: 'register work package of PL-ENV-008: its source Epic'
+- issue: 499
+  title: Public observational file archive (IMGW-PIB) [PL-ENV-009]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-009
+  reason: 'register work package of PL-ENV-009: its source Epic'
+- issue: 500
+  title: Portal Jakości Powietrza API (Główny Inspektorat Ochrony Środowiska (GIOŚ)) [PL-ENV-010]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-010
+  reason: 'register work package of PL-ENV-010: its source Epic'
+- issue: 501
+  title: Surface-water monitoring results (Państwowy Monitoring Środowiska) (GIOŚ) [PL-ENV-011]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-011
+  reason: 'register work package of PL-ENV-011: its source Epic'
+- issue: 502
+  title: Groundwater monitoring results (Monitoring Jakości Wód Podziemnych) (GIOŚ / Państwowy Instytut Geologiczny–PIB) [PL-ENV-012]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-012
+  reason: 'register work package of PL-ENV-012: its source Epic'
+- issue: 503
+  title: Hydroportal / water-management spatial data (Państwowe Gospodarstwo Wodne Wody Polskie) [PL-ENV-013]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-013
+  reason: 'register work package of PL-ENV-013: its source Epic'
+- issue: 504
+  title: 'Central Geological Database: boreholes (CBDG Otwory) (Państwowy Instytut Geologiczny–PIB (PIG-PIB)) [PL-ENV-014]'
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-014
+  reason: 'register work package of PL-ENV-014: its source Epic'
+- issue: 505
+  title: MIDAS mineral deposits and mining areas database (PIG-PIB) [PL-ENV-015]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-015
+  reason: 'register work package of PL-ENV-015: its source Epic'
+- issue: 506
+  title: Mapa Hydrogeologiczna Polski (MHP) data (PIG-PIB / Państwowa Służba Hydrogeologiczna) [PL-ENV-016]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-016
+  reason: 'register work package of PL-ENV-016: its source Epic'
+- issue: 507
+  title: CRFOP and BDZP nature-protection spatial services (Generalna Dyrekcja Ochrony Środowiska (GDOŚ)) [PL-ENV-017]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-017
+  reason: 'register work package of PL-ENV-017: its source Epic'
+- issue: 508
+  title: Bank Danych o Lasach (BDL) OGC services (Lasy Państwowe) [PL-ENV-018]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-018
+  reason: 'register work package of PL-ENV-018: its source Epic'
+- issue: 509
+  title: PSE Reports API v2 and market/system reports (Polskie Sieci Elektroenergetyczne (PSE)) [PL-ENV-019]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-019
+  reason: 'register work package of PL-ENV-019: its source Epic'
+- issue: 510
+  title: Energy price indicators and small-renewable-installation reports (Urząd Regulacji Energetyki (URE)) [PL-ENV-020]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-020
+  reason: 'register work package of PL-ENV-020: its source Epic'
+- issue: 511
+  title: Gas transmission transparency data (Operator Gazociągów Przesyłowych GAZ-SYSTEM S.A.) [PL-ENV-021]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-021
+  reason: 'register work package of PL-ENV-021: its source Epic'
+- issue: 512
+  title: Generalny Pomiar Ruchu (GPR) (Generalna Dyrekcja Dróg Krajowych i Autostrad (GDDKiA)) [PL-ENV-022]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-022
+  reason: 'register work package of PL-ENV-022: its source Epic'
+- issue: 513
+  title: Road programme and infrastructure downloads (RPBDK/MOP) (GDDKiA) [PL-ENV-023]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-023
+  reason: 'register work package of PL-ENV-023: its source Epic'
+- issue: 514
+  title: CEPiK public API (Ministerstwo Cyfryzacji / Centralna Ewidencja Pojazdów i Kierowców) [PL-ENV-024]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-024
+  reason: 'register work package of PL-ENV-024: its source Epic'
+- issue: 515
+  title: Rail Data Portal (Dane UTK) (Urząd Transportu Kolejowego (UTK)) [PL-ENV-025]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-025
+  reason: 'register work package of PL-ENV-025: its source Epic'
+- issue: 516
+  title: Airport traffic statistics (Urząd Lotnictwa Cywilnego (ULC)) [PL-ENV-026]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-026
+  reason: 'register work package of PL-ENV-026: its source Epic'
+- issue: 517
+  title: Port of Gdańsk cargo and traffic statistics releases (Zarząd Morskiego Portu Gdańsk S.A.) [PL-ENV-027]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-027
+  reason: 'register work package of PL-ENV-027: its source Epic'
+- issue: 518
+  title: Warsaw open-data portal and public-transport feeds (Miasto Stołeczne Warszawa / Warszawski Transport Publiczny) [PL-ENV-028]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-028
+  reason: 'register work package of PL-ENV-028: its source Epic'
+- issue: 519
+  title: Gdańsk Open Data and GTFS/GTFS-Realtime feeds (Gmina Miasta Gdańska / TRISTAR) [PL-ENV-029]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-029
+  reason: 'register work package of PL-ENV-029: its source Epic'
+- issue: 520
+  title: Poznań GTFS and GTFS-Realtime open data (Zarząd Transportu Miejskiego w Poznaniu / Miasto Poznań) [PL-ENV-030]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-030
+  reason: 'register work package of PL-ENV-030: its source Epic'
+- issue: 521
+  title: Kraków KMK GTFS and GTFS-Realtime feeds (Zarząd Transportu Publicznego w Krakowie / Miasto Kraków) [PL-ENV-031]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-031
+  reason: 'register work package of PL-ENV-031: its source Epic'
+- issue: 522
+  title: Wrocław Open Data public-transport schedules and vehicle positions (Gmina Wrocław / Centrum Usług Informatycznych) [PL-ENV-032]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-032
+  reason: 'register work package of PL-ENV-032: its source Epic'
+- issue: 523
+  title: Rejestr Wniosków, Decyzji i Zgłoszeń (RWDZ) public search and API (Główny Urząd Nadzoru Budowlanego (GUNB)) [PL-ENV-033]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-033
+  reason: 'register work package of PL-ENV-033: its source Epic'
+- issue: 524
+  title: internet.gov.pl broadband coverage database and UKE market aggregates (Ministerstwo Cyfryzacji / Instytut Łączności–PIB; UKE for market
+    reports) [PL-ENV-034]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-034
+  reason: 'register work package of PL-ENV-034: its source Epic'
+- issue: 525
+  title: Rejestr Urbanistyczny (Ministerstwo Rozwoju i Technologii / GUGiK / local planning authorities) [PL-ENV-035]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-pl-env-035
+  reason: 'register work package of PL-ENV-035: its source Epic'
+- issue: 526
+  title: Marketstack Stock Data API (APILayer / Idera) [CD-001]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-001
+  reason: 'register work package of CD-001: its source Epic'
+- issue: 527
+  title: Alpha Vantage Market Data APIs (Alpha Vantage) [CD-002]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-002
+  reason: 'register work package of CD-002: its source Epic'
+- issue: 528
+  title: Financial Modeling Prep API (Financial Modeling Prep) [CD-003]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-003
+  reason: 'register work package of CD-003: its source Epic'
+- issue: 529
+  title: Nasdaq Data Link (Nasdaq) [CD-004]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-004
+  reason: 'register work package of CD-004: its source Epic'
+- issue: 530
+  title: GPW Market Data (Warsaw Stock Exchange (GPW)) [CD-005]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-005
+  reason: 'register work package of CD-005: its source Epic'
+- issue: 531
+  title: Electronic Information Transmission System (ESPI) (Polish Financial Supervision Authority (KNF)) [CD-006]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-006
+  reason: 'register work package of CD-006: its source Epic'
+- issue: 532
+  title: Electronic Information Base (EBI) (Warsaw Stock Exchange (GPW)) [CD-007]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-007
+  reason: 'register work package of CD-007: its source Epic'
+- issue: 533
+  title: PAP Biznes ESPI/EBI dissemination portal (Polish Press Agency (PAP)) [CD-008]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-008
+  reason: 'register work package of CD-008: its source Epic'
+- issue: 534
+  title: Stooq historical quotations (Stooq) [CD-009]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-009
+  reason: 'register work package of CD-009: its source Epic'
+- issue: 535
+  title: TGE Market Data (Towarowa Giełda Energii (TGE)) [CD-010]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-010
+  reason: 'register work package of CD-010: its source Epic'
+- issue: 536
+  title: GPW Benchmark index and reference-rate data (GPW Benchmark) [CD-011]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-011
+  reason: 'register work package of CD-011: its source Epic'
+- issue: 537
+  title: EDGAR APIs, bulk data and filing archives (U.S. Securities and Exchange Commission) [CD-012]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-012
+  reason: 'register work package of CD-012: its source Epic'
+- issue: 538
+  title: ESEF annual financial reports via national OAMs (EU national Officially Appointed Mechanisms) [CD-013]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-013
+  reason: 'register work package of CD-013: its source Epic'
+- issue: 539
+  title: Companies House Public Data, Document and Streaming APIs (UK Companies House) [CD-014]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-014
+  reason: 'register work package of CD-014: its source Epic'
+- issue: 540
+  title: OpenCorporates REST and Reconciliation APIs (OpenCorporates) [CD-016]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-016
+  reason: 'register work package of CD-016: its source Epic'
+- issue: 541
+  title: YouTube Data API v3 (YouTube / Google) [CD-017]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-017
+  reason: 'register work package of CD-017: its source Epic'
+- issue: 542
+  title: Meta Content Library and API (Meta) [CD-018]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-018
+  reason: 'register work package of CD-018: its source Epic'
+- issue: 543
+  title: Instagram API (Meta) [CD-019]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-019
+  reason: 'register work package of CD-019: its source Epic'
+- issue: 544
+  title: X API v2 (X Corp.) [CD-020]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-020
+  reason: 'register work package of CD-020: its source Epic'
+- issue: 545
+  title: LinkedIn Community Management API (LinkedIn / Microsoft) [CD-021]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-021
+  reason: 'register work package of CD-021: its source Epic'
+- issue: 546
+  title: Reddit Data API (Reddit) [CD-022]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-022
+  reason: 'register work package of CD-022: its source Epic'
+- issue: 547
+  title: TikTok Research API (TikTok) [CD-023]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-023
+  reason: 'register work package of CD-023: its source Epic'
+- issue: 548
+  title: TikTok Commercial Content API (TikTok) [CD-024]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-024
+  reason: 'register work package of CD-024: its source Epic'
+- issue: 549
+  title: Wikimedia MediaWiki Action APIs and dumps (Wikimedia Foundation and project communities) [CD-025]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-025
+  reason: 'register work package of CD-025: its source Epic'
+- issue: 550
+  title: Wikidata data access (Wikidata community / Wikimedia Foundation) [CD-026]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-026
+  reason: 'register work package of CD-026: its source Epic'
+- issue: 551
+  title: OpenStreetMap Planet, history and replication diffs (OpenStreetMap contributors and OpenStreetMap Foundation) [CD-027]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-027
+  reason: 'register work package of CD-027: its source Epic'
+- issue: 552
+  title: OpenAlex (OurResearch) [CD-028]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-028
+  reason: 'register work package of CD-028: its source Epic'
+- issue: 553
+  title: Crossref REST API (Crossref) [CD-029]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-029
+  reason: 'register work package of CD-029: its source Epic'
+- issue: 554
+  title: GDELT 2.0 Event Database and Global Knowledge Graph (GDELT Project) [CD-030]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-030
+  reason: 'register work package of CD-030: its source Epic'
+- issue: 555
+  title: Our World in Data Chart Data API (Global Change Data Lab) [CD-031]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-031
+  reason: 'register work package of CD-031: its source Epic'
+- issue: 556
+  title: Allegro REST API (Allegro) [CD-032]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-032
+  reason: 'register work package of CD-032: its source Epic'
+- issue: 557
+  title: Dane Otodom dashboards and reports (Otodom / OLX Group) [CD-033]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-033
+  reason: 'register work package of CD-033: its source Epic'
+- issue: 558
+  title: Raport Rynkowy OTOMOTO (OTOMOTO / OLX Group) [CD-034]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-cd-034
+  reason: 'register work package of CD-034: its source Epic'
+- issue: 559
+  title: Industrial-property statistical APIs (Patent Office of the Republic of Poland (UPRP)) [EX-001]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-ex-001
+  reason: 'register work package of EX-001: its source Epic'
+- issue: 560
+  title: e-Wyszukiwarka industrial-property search (Patent Office of the Republic of Poland (UPRP)) [EX-002]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-ex-002
+  reason: 'register work package of EX-002: its source Epic'
+- issue: 561
+  title: Fire-service intervention statistics and current casualty summaries (Headquarters of the State Fire Service (KG PSP)) [EX-003]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-ex-003
+  reason: 'register work package of EX-003: its source Epic'
+- issue: 562
+  title: Open Patent Services (OPS) (European Patent Organisation (EPO)) [EX-004]
+  state: open
+  action: adopt
+  type: Epic
+  key: data/src-ex-004
+  reason: 'register work package of EX-004: its source Epic'
+- issue: 563
+  title: Eurostat → Bronze [GL-001]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-gl-001/bronze
+  reason: stage Deliverable bronze of GL-001
+- issue: 564
+  title: Eurostat → Silver [GL-001]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-gl-001/silver
+  reason: stage Deliverable silver of GL-001
+- issue: 565
+  title: GUS BDL → Bronze [PLS-001]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-pls-001/bronze
+  reason: stage Deliverable bronze of PLS-001
+- issue: 566
+  title: GUS BDL → Silver [PLS-001]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-pls-001/silver
+  reason: stage Deliverable silver of PLS-001
+- issue: 567
+  title: GUS DBW → Bronze [PLS-002]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-pls-002/bronze
+  reason: stage Deliverable bronze of PLS-002
+- issue: 568
+  title: GUS DBW → Silver [PLS-002]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-pls-002/silver
+  reason: stage Deliverable silver of PLS-002
+- issue: 569
+  title: NBP → Bronze [PLG-001]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-plg-001/bronze
+  reason: stage Deliverable bronze of PLG-001
+- issue: 570
+  title: NBP → Silver [PLG-001]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-plg-001/silver
+  reason: stage Deliverable silver of PLG-001
+- issue: 571
+  title: World Bank WDI → Bronze [GL-005]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-gl-005/bronze
+  reason: stage Deliverable bronze of GL-005
+- issue: 572
+  title: World Bank WDI → Silver [GL-005]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-gl-005/silver
+  reason: stage Deliverable silver of GL-005
+- issue: 573
+  title: GUS TERYT → Bronze [PLS-007]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-pls-007/bronze
+  reason: stage Deliverable bronze of PLS-007
+- issue: 574
+  title: GUS TERYT → Silver [PLS-007]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-pls-007/silver
+  reason: stage Deliverable silver of PLS-007
+- issue: 575
+  title: GUGiK PRG → Bronze [PL-ENV-001]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-pl-env-001/bronze
+  reason: stage Deliverable bronze of PL-ENV-001
+- issue: 576
+  title: GUGiK PRG → Silver [PL-ENV-001]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-pl-env-001/silver
+  reason: stage Deliverable silver of PL-ENV-001
+- issue: 577
+  title: GLEIF → Bronze [CD-015]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-cd-015/bronze
+  reason: stage Deliverable bronze of CD-015
+- issue: 578
+  title: GLEIF → Silver [CD-015]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-cd-015/silver
+  reason: stage Deliverable silver of CD-015
+- issue: 579
+  title: MF biała lista → Bronze [PLG-011]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-plg-011/bronze
+  reason: stage Deliverable bronze of PLG-011
+- issue: 580
+  title: MF biała lista → Silver [PLG-011]
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-plg-011/silver
+  reason: stage Deliverable silver of PLG-011
+- issue: 581
+  title: OpenData organizations → Bronze
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-ex-005/bronze
+  reason: stage Deliverable bronze of EX-005
+- issue: 582
+  title: OpenData organizations → Silver
+  state: open
+  action: adopt
+  type: Deliverable
+  key: data/src-ex-005/silver
+  reason: stage Deliverable silver of EX-005
+- issue: 588
+  title: Bucket and folder layout documented
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/inventory
+  reason: superseded by data/ops/r2-cleanup/inventory
+- issue: 589
+  title: Retention declared for every folder
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/orphans
+  reason: superseded by data/ops/r2-cleanup/orphans
+- issue: 590
+  title: Weekly storage and cost report
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/inventory
+  reason: superseded by data/ops/r2-cleanup/inventory
+- issue: 591
+  title: Namespace conventions and trial clean-up
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/scratch
+  reason: superseded by data/ops/r2-cleanup/scratch
+- issue: 592
+  title: Table maintenance verified weekly
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/orphans
+  reason: superseded by data/ops/r2-cleanup/orphans
+- issue: 593
+  title: Send the NBP data-reuse e-mail
+  state: open
+  action: close
+  key: null
+  replacement: data/src-plg-001/review
+  reason: superseded by data/src-plg-001/review
+- issue: 594
+  title: Iceberg table property standard
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/orphans
+  reason: superseded by data/ops/r2-cleanup/orphans
+- issue: 595
+  title: Workflow guide
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/security-baseline/dependencies
+  reason: superseded by data/ops/security-baseline/dependencies
+- issue: 596
+  title: Pinned actions update policy
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/security-baseline/dependencies
+  reason: superseded by data/ops/security-baseline/dependencies
+- issue: 597
+  title: Runner limits documented
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/operations-fixes/watch
+  reason: superseded by data/ops/operations-fixes/watch
+- issue: 598
+  title: Branch protection and required check
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/security-baseline/repo-rules
+  reason: superseded by data/ops/security-baseline/repo-rules
+- issue: 599
+  title: Backlog conventions
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/bootstrap
+  reason: superseded by data/backlog/engine/bootstrap
+- issue: 600
+  title: Labels and owner buckets
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/bootstrap
+  reason: superseded by data/backlog/engine/bootstrap
+- issue: 601
+  title: Version pinning and upgrade path
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/security-baseline/dependencies
+  reason: superseded by data/ops/security-baseline/dependencies
+- issue: 602
+  title: dbt project conventions
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/decisions
+  reason: superseded by data/warehouse/gold-v1/decisions
+- issue: 603
+  title: Build performance limits
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/decisions
+  reason: superseded by data/warehouse/gold-v1/decisions
+- issue: 604
+  title: Domain and DNS documented
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/org-platform-move/portal-pages
+  reason: superseded by data/ops/org-platform-move/portal-pages
+- issue: 605
+  title: Portal deploy pipeline
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/org-platform-move/portal-pages
+  reason: superseded by data/ops/org-platform-move/portal-pages
+- issue: 606
+  title: Worker configuration
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/org-platform-move/scheduler-app
+  reason: superseded by data/ops/org-platform-move/scheduler-app
+- issue: 607
+  title: Secrets inventory and least privilege
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/credentials/check
+  reason: superseded by data/ops/credentials/check
+- issue: 608
+  title: Secret scanning on every PR
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/security-baseline/repo-rules
+  reason: superseded by data/ops/security-baseline/repo-rules
+- issue: 609
+  title: Quarterly access review
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/credentials/check
+  reason: superseded by data/ops/credentials/check
+- issue: 610
+  title: Infrastructure cost report
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/usage-monitoring/script
+  reason: superseded by data/ops/usage-monitoring/script
+- issue: 611
+  title: Claude usage tracking
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/usage-monitoring/script
+  reason: superseded by data/ops/usage-monitoring/script
+- issue: 612
+  title: Pattern catalogue
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 613
+  title: Bulk-file extractor
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 614
+  title: Paged REST API extractor
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 615
+  title: SDMX extractor
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 616
+  title: Website export extractor
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 617
+  title: Receipts and archive standard
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 618
+  title: Licence questions
+  state: open
+  action: close
+  key: null
+  replacement: data/ingestion/register-restructure/fields
+  reason: superseded by data/ingestion/register-restructure/fields
+- issue: 619
+  title: Login and CAPTCHA sources
+  state: open
+  action: close
+  key: null
+  replacement: data/ingestion/register-restructure/fields
+  reason: superseded by data/ingestion/register-restructure/fields
+- issue: 620
+  title: Rate-limited sources
+  state: open
+  action: close
+  key: null
+  replacement: data/ingestion/register-restructure/fields
+  reason: superseded by data/ingestion/register-restructure/fields
+- issue: 621
+  title: Loader [GL-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-001/bronze
+  reason: superseded by data/src-gl-001/bronze
+- issue: 622
+  title: Verification [GL-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-001/bronze
+  reason: superseded by data/src-gl-001/bronze
+- issue: 623
+  title: Archive policy [GL-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-001/ingestion
+  reason: superseded by data/src-gl-001/ingestion
+- issue: 624
+  title: Analysis [GL-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-001/silver
+  reason: superseded by data/src-gl-001/silver
+- issue: 625
+  title: Proposed schema [GL-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-001/silver
+  reason: superseded by data/src-gl-001/silver
+- issue: 626
+  title: dbt models [GL-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-001/silver
+  reason: superseded by data/src-gl-001/silver
+- issue: 627
+  title: Tests [GL-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-001/silver
+  reason: superseded by data/src-gl-001/silver
+- issue: 628
+  title: Loader [PLS-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-001/bronze
+  reason: superseded by data/src-pls-001/bronze
+- issue: 629
+  title: Verification [PLS-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-001/bronze
+  reason: superseded by data/src-pls-001/bronze
+- issue: 630
+  title: Archive policy [PLS-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-001/ingestion
+  reason: superseded by data/src-pls-001/ingestion
+- issue: 631
+  title: Analysis [PLS-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-001/silver
+  reason: superseded by data/src-pls-001/silver
+- issue: 632
+  title: Proposed schema [PLS-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-001/silver
+  reason: superseded by data/src-pls-001/silver
+- issue: 633
+  title: dbt models [PLS-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-001/silver
+  reason: superseded by data/src-pls-001/silver
+- issue: 634
+  title: Tests [PLS-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-001/silver
+  reason: superseded by data/src-pls-001/silver
+- issue: 635
+  title: Loader [PLS-002]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-002/bronze
+  reason: superseded by data/src-pls-002/bronze
+- issue: 636
+  title: Verification [PLS-002]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-002/bronze
+  reason: superseded by data/src-pls-002/bronze
+- issue: 637
+  title: Archive policy [PLS-002]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-002/ingestion
+  reason: superseded by data/src-pls-002/ingestion
+- issue: 638
+  title: Analysis [PLS-002]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-002/silver
+  reason: superseded by data/src-pls-002/silver
+- issue: 639
+  title: Proposed schema [PLS-002]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-002/silver
+  reason: superseded by data/src-pls-002/silver
+- issue: 640
+  title: dbt models [PLS-002]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-002/silver
+  reason: superseded by data/src-pls-002/silver
+- issue: 641
+  title: Tests [PLS-002]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-002/silver
+  reason: superseded by data/src-pls-002/silver
+- issue: 642
+  title: Loader [PLG-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-plg-001/bronze
+  reason: superseded by data/src-plg-001/bronze
+- issue: 643
+  title: Verification [PLG-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-plg-001/bronze
+  reason: superseded by data/src-plg-001/bronze
+- issue: 644
+  title: Archive policy [PLG-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-plg-001/ingestion
+  reason: superseded by data/src-plg-001/ingestion
+- issue: 645
+  title: Analysis [PLG-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-plg-001/silver
+  reason: superseded by data/src-plg-001/silver
+- issue: 646
+  title: Proposed schema [PLG-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-plg-001/silver
+  reason: superseded by data/src-plg-001/silver
+- issue: 647
+  title: dbt models [PLG-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-plg-001/silver
+  reason: superseded by data/src-plg-001/silver
+- issue: 648
+  title: Tests [PLG-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-plg-001/silver
+  reason: superseded by data/src-plg-001/silver
+- issue: 649
+  title: Work log 2026-W42 (14–18 Oct)
+  state: closed
+  action: close
+  key: null
+  reason: work-log diary
+  replacement: null
+- issue: 650
+  title: Loader [GL-005]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-005/bronze
+  reason: superseded by data/src-gl-005/bronze
+- issue: 651
+  title: Verification [GL-005]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-005/bronze
+  reason: superseded by data/src-gl-005/bronze
+- issue: 652
+  title: Archive policy [GL-005]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-005/ingestion
+  reason: superseded by data/src-gl-005/ingestion
+- issue: 653
+  title: Analysis [GL-005]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-005/silver
+  reason: superseded by data/src-gl-005/silver
+- issue: 654
+  title: 'Pipeline failed: opendata_org · landing: extract'
+  state: closed
+  action: adopt
+  type: Bug
+  key: data/src-ex-005
+  reason: alert adopted as Bug under the Epic of source opendata_org (EX-005)
+- issue: 655
+  title: Proposed schema [GL-005]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-005/silver
+  reason: superseded by data/src-gl-005/silver
+- issue: 656
+  title: dbt models [GL-005]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-005/silver
+  reason: superseded by data/src-gl-005/silver
+- issue: 657
+  title: Tests [GL-005]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-005/silver
+  reason: superseded by data/src-gl-005/silver
+- issue: 658
+  title: Loader [PLS-007]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-007/bronze
+  reason: superseded by data/src-pls-007/bronze
+- issue: 659
+  title: Verification [PLS-007]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-007/bronze
+  reason: superseded by data/src-pls-007/bronze
+- issue: 660
+  title: Archive policy [PLS-007]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-007/ingestion
+  reason: superseded by data/src-pls-007/ingestion
+- issue: 661
+  title: Analysis [PLS-007]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-007/silver
+  reason: superseded by data/src-pls-007/silver
+- issue: 662
+  title: Proposed schema [PLS-007]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-007/silver
+  reason: superseded by data/src-pls-007/silver
+- issue: 663
+  title: dbt models [PLS-007]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-007/silver
+  reason: superseded by data/src-pls-007/silver
+- issue: 664
+  title: Tests [PLS-007]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-007/silver
+  reason: superseded by data/src-pls-007/silver
+- issue: 665
+  title: Loader [PL-ENV-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pl-env-001/bronze
+  reason: superseded by data/src-pl-env-001/bronze
+- issue: 666
+  title: Verification [PL-ENV-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pl-env-001/bronze
+  reason: superseded by data/src-pl-env-001/bronze
+- issue: 667
+  title: Archive policy [PL-ENV-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pl-env-001/ingestion
+  reason: superseded by data/src-pl-env-001/ingestion
+- issue: 668
+  title: Analysis [PL-ENV-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pl-env-001/silver
+  reason: superseded by data/src-pl-env-001/silver
+- issue: 669
+  title: Proposed schema [PL-ENV-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pl-env-001/silver
+  reason: superseded by data/src-pl-env-001/silver
+- issue: 670
+  title: dbt models [PL-ENV-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pl-env-001/silver
+  reason: superseded by data/src-pl-env-001/silver
+- issue: 671
+  title: Tests [PL-ENV-001]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pl-env-001/silver
+  reason: superseded by data/src-pl-env-001/silver
+- issue: 672
+  title: Loader [CD-015]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-cd-015/bronze
+  reason: superseded by data/src-cd-015/bronze
+- issue: 673
+  title: Verification [CD-015]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-cd-015/bronze
+  reason: superseded by data/src-cd-015/bronze
+- issue: 674
+  title: Archive policy [CD-015]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-cd-015/ingestion
+  reason: superseded by data/src-cd-015/ingestion
+- issue: 675
+  title: Analysis [CD-015]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-cd-015/silver
+  reason: superseded by data/src-cd-015/silver
+- issue: 676
+  title: Proposed schema [CD-015]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-cd-015/silver
+  reason: superseded by data/src-cd-015/silver
+- issue: 677
+  title: dbt models [CD-015]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-cd-015/silver
+  reason: superseded by data/src-cd-015/silver
+- issue: 678
+  title: Tests [CD-015]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-cd-015/silver
+  reason: superseded by data/src-cd-015/silver
+- issue: 679
+  title: Loader [PLG-011]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-plg-011/bronze
+  reason: superseded by data/src-plg-011/bronze
+- issue: 680
+  title: Verification [PLG-011]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-plg-011/bronze
+  reason: superseded by data/src-plg-011/bronze
+- issue: 681
+  title: Archive policy [PLG-011]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-plg-011/ingestion
+  reason: superseded by data/src-plg-011/ingestion
+- issue: 682
+  title: Analysis [PLG-011]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-plg-011/silver
+  reason: superseded by data/src-plg-011/silver
+- issue: 683
+  title: Proposed schema [PLG-011]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-plg-011/silver
+  reason: superseded by data/src-plg-011/silver
+- issue: 684
+  title: dbt models [PLG-011]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-plg-011/silver
+  reason: superseded by data/src-plg-011/silver
+- issue: 685
+  title: Tests [PLG-011]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-plg-011/silver
+  reason: superseded by data/src-plg-011/silver
+- issue: 686
+  title: Loader [opendata]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-ex-005/bronze
+  reason: superseded by data/src-ex-005/bronze
+- issue: 687
+  title: Verification [opendata]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-ex-005/bronze
+  reason: superseded by data/src-ex-005/bronze
+- issue: 688
+  title: Archive policy [opendata]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-ex-005/ingestion
+  reason: superseded by data/src-ex-005/ingestion
+- issue: 689
+  title: Analysis [opendata]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-ex-005/silver
+  reason: superseded by data/src-ex-005/silver
+- issue: 690
+  title: Proposed schema [opendata]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-ex-005/silver
+  reason: superseded by data/src-ex-005/silver
+- issue: 691
+  title: dbt models [opendata]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-ex-005/silver
+  reason: superseded by data/src-ex-005/silver
+- issue: 692
+  title: Tests [opendata]
+  state: open
+  action: close
+  key: null
+  replacement: data/src-ex-005/silver
+  reason: superseded by data/src-ex-005/silver
+- issue: 693
+  title: Shared verified helpers
+  state: closed
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 694
+  title: Rejections and retry
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 695
+  title: Lineage checks
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 696
+  title: Format decoders
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 697
+  title: Typing and casting
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 698
+  title: Deduplication and newest version
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 699
+  title: Code normalisation
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 700
+  title: Status flags
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 701
+  title: 'Dimension: activity'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 702
+  title: 'Dimension: address'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/entity-event/entity
+  reason: superseded by data/warehouse/entity-event/entity
+- issue: 703
+  title: 'Dimension: age'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 704
+  title: 'Dimension: breakdown'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 705
+  title: 'Dimension: calendar'
+  state: closed
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 706
+  title: 'Dimension: commodity'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 707
+  title: 'Dimension: consumption_purpose'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 708
+  title: 'Dimension: currency'
+  state: closed
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 709
+  title: 'Dimension: dataset'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 710
+  title: 'Dimension: disease'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 711
+  title: 'Dimension: document'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/entity-event/entity
+  reason: superseded by data/warehouse/entity-event/entity
+- issue: 713
+  title: 'Dimension: domain'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 714
+  title: 'Dimension: education'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 715
+  title: 'Dimension: facility'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/entity-event/entity
+  reason: superseded by data/warehouse/entity-event/entity
+- issue: 716
+  title: 'Dimension: frequency'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 717
+  title: 'Dimension: geography'
+  state: closed
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/geography
+  reason: superseded by data/warehouse/gold-v1/geography
+- issue: 718
+  title: 'Dimension: government_function'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 719
+  title: 'Dimension: identifier_scheme'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 720
+  title: 'Dimension: indicator'
+  state: closed
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 721
+  title: 'Dimension: institution'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/entity-event/entity
+  reason: superseded by data/warehouse/entity-event/entity
+- issue: 722
+  title: 'Dimension: institutional_sector'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 723
+  title: 'Dimension: market'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 724
+  title: 'Dimension: monitoring_site'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 725
+  title: 'Dimension: observation_status'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 726
+  title: 'Dimension: occupation'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 727
+  title: 'Dimension: organisation'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/entity-event/entity
+  reason: superseded by data/warehouse/entity-event/entity
+- issue: 728
+  title: 'Dimension: period'
+  state: closed
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 729
+  title: 'Dimension: person'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/entity-event/entity
+  reason: superseded by data/warehouse/entity-event/entity
+- issue: 730
+  title: 'Dimension: political_actor'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/entity-event/entity
+  reason: superseded by data/warehouse/entity-event/entity
+- issue: 731
+  title: 'Dimension: price_base'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 732
+  title: 'Dimension: product'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 733
+  title: 'Dimension: seasonal_adjustment'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 734
+  title: 'Dimension: security'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/entity-event/entity
+  reason: superseded by data/warehouse/entity-event/entity
+- issue: 735
+  title: 'Dimension: sex'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 736
+  title: 'Dimension: source'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 737
+  title: 'Dimension: spatial_feature'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 738
+  title: 'Dimension: trade_product'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 739
+  title: 'Dimension: transport_route'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 740
+  title: 'Dimension: transport_stop'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 741
+  title: 'Dimension: unit'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 742
+  title: 'Dimension: urbanisation'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 743
+  title: 'Facts: Prices and exchange rates'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 744
+  title: 'Facts: Labour market'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 745
+  title: 'Facts: Population and demography'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 746
+  title: 'Facts: National accounts and output'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 747
+  title: 'Facts: International trade'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 748
+  title: 'Facts: Public finance'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 749
+  title: 'Facts: Regional statistics (BDL)'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 750
+  title: 'Facts: Business and entities'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/entity-event/entity
+  reason: superseded by data/warehouse/entity-event/entity
+- issue: 751
+  title: 'Facts: Environment and energy'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 752
+  title: 'Facts: Health and education'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 753
+  title: Tool choice
+  state: open
+  action: close
+  key: null
+  replacement: data/metadata/semantic-manifest/generate
+  reason: superseded by data/metadata/semantic-manifest/generate
+- issue: 754
+  title: Metric conventions
+  state: open
+  action: close
+  key: null
+  replacement: data/metadata/semantic-manifest/generate
+  reason: superseded by data/metadata/semantic-manifest/generate
+- issue: 755
+  title: 'Metrics: Prices and exchange rates'
+  state: open
+  action: close
+  key: null
+  replacement: data/metadata/catalogue-v1/kpis-40
+  reason: superseded by data/metadata/catalogue-v1/kpis-40
+- issue: 756
+  title: 'Metrics: Labour market'
+  state: open
+  action: close
+  key: null
+  replacement: data/metadata/catalogue-v1/kpis-40
+  reason: superseded by data/metadata/catalogue-v1/kpis-40
+- issue: 757
+  title: 'Metrics: Population'
+  state: open
+  action: close
+  key: null
+  replacement: data/metadata/catalogue-v1/kpis-40
+  reason: superseded by data/metadata/catalogue-v1/kpis-40
+- issue: 758
+  title: 'Metrics: Economy and output'
+  state: open
+  action: close
+  key: null
+  replacement: data/metadata/catalogue-v1/kpis-40
+  reason: superseded by data/metadata/catalogue-v1/kpis-40
+- issue: 759
+  title: 'Metrics: Regional Poland'
+  state: open
+  action: close
+  key: null
+  replacement: data/metadata/catalogue-v1/kpis-40
+  reason: superseded by data/metadata/catalogue-v1/kpis-40
+- issue: 760
+  title: Table descriptions
+  state: open
+  action: close
+  key: null
+  replacement: data/metadata/catalogue-v1/models
+  reason: superseded by data/metadata/catalogue-v1/models
+- issue: 761
+  title: Column descriptions
+  state: open
+  action: close
+  key: null
+  replacement: data/metadata/catalogue-v1/models
+  reason: superseded by data/metadata/catalogue-v1/models
+- issue: 762
+  title: Licences per source
+  state: open
+  action: close
+  key: null
+  replacement: data/metadata/catalogue-v1/models
+  reason: superseded by data/metadata/catalogue-v1/models
+- issue: 763
+  title: Lineage capture
+  state: open
+  action: close
+  key: null
+  replacement: data/portal/catalogue-pages/lineage
+  reason: superseded by data/portal/catalogue-pages/lineage
+- issue: 764
+  title: Lineage browsing
+  state: open
+  action: close
+  key: null
+  replacement: data/portal/catalogue-pages/lineage
+  reason: superseded by data/portal/catalogue-pages/lineage
+- issue: 765
+  title: Catalog browsing
+  state: open
+  action: close
+  key: null
+  replacement: data/portal/catalogue-pages/catalogue
+  reason: superseded by data/portal/catalogue-pages/catalogue
+- issue: 766
+  title: Search
+  state: open
+  action: close
+  key: null
+  replacement: data/portal/catalogue-pages/catalogue
+  reason: superseded by data/portal/catalogue-pages/catalogue
+- issue: 767
+  title: Freshness and row counts
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/status-freshness/status-json
+  reason: superseded by data/ops/status-freshness/status-json
+- issue: 768
+  title: Source page template
+  state: open
+  action: close
+  key: null
+  replacement: data/portal/catalogue-pages/catalogue
+  reason: superseded by data/portal/catalogue-pages/catalogue
+- issue: 769
+  title: Runbooks for recurring situations
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/operations-fixes/alerts
+  reason: superseded by data/ops/operations-fixes/alerts
+- issue: 770
+  title: Retention policy per source
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/orphans
+  reason: superseded by data/ops/r2-cleanup/orphans
+- issue: 771
+  title: Passthrough copies retired
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/security-baseline/retired-code
+  reason: superseded by data/ops/security-baseline/retired-code
+- issue: 772
+  title: Weekly lessons review
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/bootstrap
+  reason: superseded by data/backlog/engine/bootstrap
+- issue: 773
+  title: Monthly full-repo audit
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/quality-audit/audit
+  reason: superseded by data/ops/quality-audit/audit
+- issue: 774
+  title: Quality audit 14 Oct findings
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/quality-audit/audit
+  reason: superseded by data/ops/quality-audit/audit
+- issue: 775
+  title: Sprint rhythm
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/bootstrap
+  reason: superseded by data/backlog/engine/bootstrap
+- issue: 776
+  title: Owner work in GitHub
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/bootstrap
+  reason: superseded by data/backlog/engine/bootstrap
+- issue: 777
+  title: 'BDL website export: first package landed in scratch'
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-001/ingestion
+  reason: superseded by data/src-pls-001/ingestion
+- issue: 778
+  title: 'Eurostat: sliced load for the two oversized datasets'
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-001/ingestion
+  reason: superseded by data/src-gl-001/ingestion
+- issue: 779
+  title: Scheduler fires twice an hour for 24 h
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/operations-fixes/watch
+  reason: superseded by data/ops/operations-fixes/watch
+- issue: 780
+  title: Alert issue opened by a real failure
+  state: closed
+  action: close
+  key: null
+  replacement: data/backlog/engine/rules
+  reason: superseded by data/backlog/engine/rules
+- issue: 781
+  title: Design the common ingestion framework
+  state: closed
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 782
+  title: 'Bulk-file extractor: WDI and TERYT on shared code'
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/sync
+  reason: superseded by data/backlog/engine/sync
+- issue: 783
+  title: 'GUS DBW: review and ingestion plan'
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-002/review
+  reason: superseded by data/src-pls-002/review
+- issue: 784
+  title: Retention declared for all 10 onboarded sources
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/orphans
+  reason: superseded by data/ops/r2-cleanup/orphans
+- issue: 785
+  title: Monday plan 19 Oct
+  state: open
+  action: close
+  key: null
+  reason: weekly-plan diary
+  replacement: null
+- issue: 786
+  title: Work off quality-audit findings (batch 1)
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/quality-audit/audit
+  reason: superseded by data/ops/quality-audit/audit
+- issue: 787
+  title: Owner view on the board
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/project
+  reason: superseded by data/backlog/engine/project
+- issue: 789
+  title: 'Pipeline failed: platform · silver/gold: build models'
+  state: closed
+  action: close
+  key: null
+  replacement: data/backlog/engine/rules
+  reason: 'superseded by data/backlog/engine/rules (alert of ''platform'', not a source: alerts get a parent through notify_failure)'
+- issue: 795
+  title: Usage screenshot, Friday 16 Oct ~12:00
+  state: closed
+  action: close
+  key: null
+  reason: usage screenshot, no work
+  replacement: null
+- issue: 796
+  title: 'Pipeline failed: scheduler · schedule'
+  state: closed
+  action: close
+  key: null
+  replacement: data/backlog/engine/rules
+  reason: 'superseded by data/backlog/engine/rules (alert of ''scheduler'', not a source: alerts get a parent through notify_failure)'
+- issue: 802
+  title: 'Scheduler fires reliably: external cron trigger next to GitHub''s schedule'
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/operations-fixes/watch
+  reason: superseded by data/ops/operations-fixes/watch
+- issue: 803
+  title: NBP Bronze holds every row twice; FX grain not unique
+  state: closed
+  action: close
+  key: null
+  replacement: data/src-plg-001/bronze
+  reason: superseded by data/src-plg-001/bronze
+- issue: 807
+  title: Approve and set up the scheduler clock token (#802)
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/operations-fixes/watch
+  reason: superseded by data/ops/operations-fixes/watch
+- issue: 815
+  title: Approve the Bronze duplicate clean-up (NBP 440,457 rows, BDL 2 rows)
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/orphans
+  reason: superseded by data/ops/r2-cleanup/orphans
+- issue: 816
+  title: Silver/Gold builds are killed after 50–90 min with no report (exit 143)
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/operations-fixes/watch
+  reason: superseded by data/ops/operations-fixes/watch
+- issue: 817
+  title: 'Board: sync Status from issue state'
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/project
+  reason: superseded by data/backlog/engine/project
+- issue: 818
+  title: 'Board: Sprint iteration field filled from milestones'
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/project
+  reason: superseded by data/backlog/engine/project
+- issue: 819
+  title: 'Board: README and short description'
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/project
+  reason: superseded by data/backlog/engine/project
+- issue: 820
+  title: 'Catalog: snapshot expiration declared and run'
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/orphans
+  reason: superseded by data/ops/r2-cleanup/orphans
+- issue: 822
+  title: 'Policy: no Iceberg table history; incremental-only scheduled builds (owner decision 16 Oct)'
+  state: open
+  action: close
+  key: null
+  replacement: data/backlog/engine/bootstrap
+  reason: superseded by data/backlog/engine/bootstrap
+- issue: 829
+  title: Silver/Gold build fails on the catalog's rate limit (HTTP 429)
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/operations-fixes/watch
+  reason: superseded by data/ops/operations-fixes/watch
+- issue: 833
+  title: Data availability tracker (sources × layers)
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/inventory
+  reason: superseded by data/ops/r2-cleanup/inventory
+- issue: 835
+  title: Retire legacy, leftover and old-code tables from the catalog
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/orphans
+  reason: superseded by data/ops/r2-cleanup/orphans
+- issue: 836
+  title: 'Old-code sources (GLEIF, GUS DBW, MF biała lista, OpenData orgs): kept, revisit in the Gold model (owner decision 19 Oct)'
+  state: open
+  action: close
+  key: null
+  reason: decision tracked in the Epics of the four old-code sources
+  replacement: data/src-cd-015, data/src-pls-002, data/src-plg-011, data/src-ex-005
+- issue: 837
+  title: 'Owner tickets: intake forms and triage in every session'
+  state: open
+  action: close
+  key: null
+  reason: owner tickets are triaged into the backlog YAML (docs/backlog.md principle 1)
+  replacement: data/backlog
+- issue: 839
+  title: Missed weekly/monthly runs are never caught up (WDI's Tuesday run did not happen)
+  state: closed
+  action: close
+  key: null
+  replacement: data/ingestion/release-scheduling/schedules
+  reason: superseded by data/ingestion/release-scheduling/schedules
+- issue: 840
+  title: Eurostat into shared Gold
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-001/gold
+  reason: superseded by data/src-gl-001/gold
+- issue: 841
+  title: Portal shows tables per layer, not only raw files
+  state: open
+  action: close
+  key: null
+  replacement: data/portal/catalogue-pages/catalogue
+  reason: superseded by data/portal/catalogue-pages/catalogue
+- issue: 842
+  title: 'Core data platform to green: plan and focus (critical)'
+  state: open
+  action: close
+  key: null
+  reason: plan and focus replaced by the backlog
+  replacement: data/backlog
+- issue: 843
+  title: 'Pipeline failed: gus_teryt · landing → bronze (all steps)'
+  state: closed
+  action: adopt
+  type: Bug
+  key: data/src-pls-007
+  reason: alert adopted as Bug under the Epic of source gus_teryt (PLS-007)
+- issue: 845
+  title: 'Latest version only in Bronze, Silver and Gold: remove superseded versions (policy #822)'
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/orphans
+  reason: superseded by data/ops/r2-cleanup/orphans
+- issue: 851
+  title: 'Pipeline failed: eurostat · landing → bronze (all steps)'
+  state: closed
+  action: adopt
+  type: Bug
+  key: data/src-gl-001
+  reason: alert adopted as Bug under the Epic of source eurostat (GL-001)
+- issue: 856
+  title: 'TERYT: SIMC_Statystyczny is now generate-on-demand on eTERYT'
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-007/ingestion
+  reason: superseded by data/src-pls-007/ingestion
+- issue: 857
+  title: Work log 2026-W43 (19–25 Oct)
+  state: open
+  action: close
+  key: null
+  reason: work-log diary
+  replacement: null
+- issue: 858
+  title: 'Weekly plan 2026-W43 (19–25 Oct): your OK'
+  state: closed
+  action: close
+  key: null
+  reason: weekly-plan diary
+  replacement: null
+- issue: 860
+  title: 'Pipeline failed: gugik_prg · landing → bronze (all steps)'
+  state: closed
+  action: adopt
+  type: Bug
+  key: data/src-pl-env-001
+  reason: alert adopted as Bug under the Epic of source gugik_prg (PL-ENV-001)
+- issue: 865
+  title: 'Owner action: run the orphan-file clean-up (21.3 GB, #820)'
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/retired-landing
+  reason: superseded by data/ops/r2-cleanup/retired-landing
+- issue: 868
+  title: 'Guard: every full-rebuild Silver/Gold model declared with a row ceiling (#822 step 3)'
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 870
+  title: Make gold.fact_observation and silver.wdi_observations incremental (#822 step 5)
+  state: open
+  action: close
+  key: null
+  replacement: data/warehouse/gold-v1/coverage
+  reason: superseded by data/warehouse/gold-v1/coverage
+- issue: 871
+  title: 'Daily snapshot expiry: catalog leaves old snapshots on some tables (#820 follow-up)'
+  state: open
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/orphans
+  reason: superseded by data/ops/r2-cleanup/orphans
+- issue: 875
+  title: 'Checkpoint: one planned rebuild of Eurostat and BDL (Bronze + Silver) instead of patching — your OK'
+  state: open
+  action: close
+  key: null
+  replacement: data/src-gl-001/silver
+  reason: superseded by data/src-gl-001/silver
+- issue: 876
+  title: 'ops/retry_rejected: support GUS BDL and Silver-model rejections (<recipe>.<model> keys)'
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-001/bronze
+  reason: superseded by data/src-pls-001/bronze
+- issue: 877
+  title: 'Pipeline failed: gus_bdl · landing: inspect'
+  state: closed
+  action: adopt
+  type: Bug
+  key: data/src-pls-001
+  reason: alert adopted as Bug under the Epic of source gus_bdl (PLS-001)
+- issue: 879
+  title: 'Owner action (≈3 min): delete the 22.8 GB the retired Eurostat/BDL tables left behind (#875)'
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/retired-landing
+  reason: superseded by data/ops/r2-cleanup/retired-landing
+- issue: 880
+  title: 'Pipeline failed: gus_bdl · archive: move Bronze-loaded Landing'
+  state: closed
+  action: adopt
+  type: Bug
+  key: data/src-pls-001
+  reason: alert adopted as Bug under the Epic of source gus_bdl (PLS-001)
+- issue: 881
+  title: 'Owner decision: delete the legacy GUS BDL Landing folders web_bulk/ and responses/ (2.26 GB)'
+  state: closed
+  action: close
+  key: null
+  replacement: data/ops/r2-cleanup/retired-landing
+  reason: superseded by data/ops/r2-cleanup/retired-landing
+- issue: 884
+  title: 'Pipeline failed: nbp · full dataflow: landing → bronze → silver → gold → portal'
+  state: closed
+  action: adopt
+  type: Bug
+  key: data/src-plg-001
+  reason: alert adopted as Bug under the Epic of source nbp (PLG-001)
+- issue: 886
+  title: 'Pipeline failed: gus_bdl · landing: extract'
+  state: closed
+  action: adopt
+  type: Bug
+  key: data/src-pls-001
+  reason: alert adopted as Bug under the Epic of source gus_bdl (PLS-001)
+- issue: 889
+  title: 'BDL: route for the 455 subgroups the website cannot export (owner decision)'
+  state: open
+  action: close
+  key: null
+  replacement: data/src-pls-001/ingestion
+  reason: superseded by data/src-pls-001/ingestion
+- issue: 893
+  title: 'Pipeline failed: nbp · full dataflow: landing → bronze → silver → gold → portal'
+  state: closed
+  action: adopt
+  type: Bug
+  key: data/src-plg-001
+  reason: alert adopted as Bug under the Epic of source nbp (PLG-001)
+- issue: 894
+  title: 'Pipeline failed: nbp · full dataflow: landing → bronze → silver → gold → portal'
+  state: closed
+  action: adopt
+  type: Bug
+  key: data/src-plg-001
+  reason: alert adopted as Bug under the Epic of source nbp (PLG-001)
+- issue: 895
+  title: 'Pipeline failed: gus_bdl · landing: extract'
+  state: closed
+  action: adopt
+  type: Bug
+  key: data/src-pls-001
+  reason: alert adopted as Bug under the Epic of source gus_bdl (PLS-001)
+- issue: 902
+  title: 'Pipeline failed: gus_bdl · full dataflow: landing → bronze → silver → gold → portal'
+  state: closed
+  action: adopt
+  type: Bug
+  key: data/src-pls-001
+  reason: alert adopted as Bug under the Epic of source gus_bdl (PLS-001)
+- issue: 906
+  title: 'OpenData (opendata_org): keep, rebuild or retire? — person records, licence unresolved'
+  state: open
+  action: close
+  key: null
+  replacement: data/src-ex-005/review
+  reason: superseded by data/src-ex-005/review
+- issue: 909
+  title: 'Pipeline failed: gus_dbw · full dataflow: landing → bronze → silver → gold → portal'
+  state: closed
+  action: adopt
+  type: Bug
+  key: data/src-pls-002
+  reason: alert adopted as Bug under the Epic of source gus_dbw (PLS-002)
+- issue: 918
+  title: 'Pipeline failed: opendata_org · full dataflow: landing → bronze → silver → gold → portal'
+  state: closed
+  action: adopt
+  type: Bug
+  key: data/src-ex-005
+  reason: alert adopted as Bug under the Epic of source opendata_org (EX-005)
+- issue: 923
+  title: 'Pipeline failed: gus_dbw · full dataflow: landing → bronze → silver → gold → portal'
+  state: open
+  action: adopt
+  type: Bug
+  key: data/src-pls-002
+  reason: alert adopted as Bug under the Epic of source gus_dbw (PLS-002)
+- issue: 925
+  title: 'Pipeline failed: gus_bdl · full dataflow: landing → bronze → silver → gold → portal'
+  state: open
+  action: adopt
+  type: Bug
+  key: data/src-pls-001
+  reason: alert adopted as Bug under the Epic of source gus_bdl (PLS-001)
+- issue: 926
+  title: 'Pipeline failed: eurostat · full dataflow: landing → bronze → silver → gold → portal'
+  state: open
+  action: adopt
+  type: Bug
+  key: data/src-gl-001
+  reason: alert adopted as Bug under the Epic of source eurostat (GL-001)
+- issue: 945
+  title: Delete merged branches automatically
+  state: closed
+  action: keep
+  key: data/ops/security-baseline/repo-rules/branch-cleanup
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 947
+  title: Write the key-rotation runbook (pause the scheduler first)
+  state: closed
+  action: keep
+  key: data/ops/operations-fixes/alerts/rotation-runbook
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 948
+  title: landing_objects tolerates a missing key; gitleaks allowlist
+  state: closed
+  action: keep
+  key: data/ops/security-baseline/repo-rules/landing-objects-gitleaks
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 949
+  title: Add check-portal job to dev.yml
+  state: closed
+  action: keep
+  key: data/portal/trim/ci-gate/check-portal
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 950
+  title: Remove the Google Drive client and Google sign-in
+  state: closed
+  action: keep
+  key: data/portal/trim/google/lakehouse-client
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 951
+  title: Pin wrangler 4.150.0 in every deploy; add Dependabot config
+  state: closed
+  action: keep
+  key: data/ops/security-baseline/dependencies/wrangler-dependabot
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 952
+  title: Remove ingestion/legacy, warehouse/passthrough and GEMINI.md
+  state: closed
+  action: keep
+  key: data/ops/security-baseline/retired-code/remove-legacy
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 953
+  title: Inventory and tracker read every catalog namespace
+  state: open
+  action: keep
+  key: data/ops/r2-cleanup/inventory/all-namespaces
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 954
+  title: Exclude failing DBW indicator 814 with a reason
+  state: open
+  action: keep
+  key: data/src-pls-002/schedule/exclude-814
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 955
+  title: Remove Duck Brain, PWA, husky and unused Duck-UI features
+  state: open
+  action: keep
+  key: data/portal/trim/duck-ui/remove-extras
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 956
+  title: Commit the backlog spec and zohelo-data backlog files
+  state: closed
+  action: keep
+  key: data/backlog/engine/files/spec-and-files
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 958
+  title: Prove pyarrow 23.0.1 in a Dev trial before its Dependabot PR merges
+  state: closed
+  action: keep
+  key: data/ops/security-baseline/dependencies/pyarrow-23
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 959
+  title: Hash-lock Python dependencies with pip-tools
+  state: open
+  action: keep
+  key: data/ops/security-baseline/dependencies/python-lock
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 961
+  title: 'AGENTS.md: backlog in GitHub, PR closes a Task, standing permissions'
+  state: open
+  action: keep
+  key: data/backlog/engine/bootstrap/agents-rule
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 962
+  title: Start docs/decisions.md with the 27 Oct decisions
+  state: open
+  action: keep
+  key: data/backlog/engine/bootstrap/decision-log
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 963
+  title: Link every open pull request to its Task issue
+  state: closed
+  action: keep
+  key: data/backlog/engine/bootstrap/link-open-prs
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 964
+  title: Add backlog_sync validate (schema rules of docs/backlog.md)
+  state: open
+  action: keep
+  key: data/backlog/engine/files/validator
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 965
+  title: Add backlog_sync render (issue title, body, labels, fields)
+  state: open
+  action: keep
+  key: data/backlog/engine/files/render
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 966
+  title: Ask the owner to extend the zohelo-automation app permissions
+  state: open
+  action: keep
+  key: data/backlog/engine/project/app-permissions
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 967
+  title: Add project setup mode (issue types, fields, rename)
+  state: open
+  action: keep
+  key: data/backlog/engine/project/setup-mode
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 968
+  title: Ask the owner to create the six project views
+  state: open
+  action: keep
+  key: data/backlog/engine/project/views
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 969
+  title: Generate source Epics from the register and stages.yaml
+  state: open
+  action: keep
+  key: data/backlog/engine/sync/generate-sources
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 970
+  title: Add backlog_sync plan and apply (issues, types, parents)
+  state: open
+  action: keep
+  key: data/backlog/engine/sync/plan-apply
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 971
+  title: backlog_sync adds issues to the project and sets fields
+  state: open
+  action: keep
+  key: data/backlog/engine/sync/project-items
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 972
+  title: Wire backlog_sync into Ops for the three repos
+  state: open
+  action: keep
+  key: data/backlog/engine/sync/workflow
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 973
+  title: Write the migration map of the 550 old issues
+  state: open
+  action: keep
+  key: data/backlog/engine/migration/map
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 975
+  title: Apply the migration, then the first backlog_sync apply
+  state: open
+  action: keep
+  key: data/backlog/engine/migration/apply
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 976
+  title: Remove the migration map and schedule the weekly sync
+  state: open
+  action: keep
+  key: data/backlog/engine/migration/cleanup
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 977
+  title: Add backlog_sync pr-check and run it in dev.yml check
+  state: open
+  action: keep
+  key: data/backlog/engine/rules/pr-check
+  reason: already adopted (carries a zohelo:key marker)
+- issue: 978
+  title: notify_failure re-opens the last alert and sets its parent
+  state: open
+  action: keep
+  key: data/backlog/engine/rules/alerts
+  reason: already adopted (carries a zohelo:key marker)
