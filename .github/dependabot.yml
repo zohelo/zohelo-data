@@ -1,0 +1,19 @@
+# Dependency updates (docs/quality.md §3, §6): weekly, one grouped pull request per ecosystem.
+# Security updates are raised as soon as an advisory is published, outside the schedule.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories: ["/", "/.github/actions/activity"]
+    schedule: {interval: weekly, day: monday}
+    groups:
+      actions: {patterns: ["*"]}
+  - package-ecosystem: pip
+    directory: "/"
+    schedule: {interval: weekly, day: monday}
+    groups:
+      python: {patterns: ["*"]}
+  - package-ecosystem: npm
+    directory: "/portal/app"
+    schedule: {interval: weekly, day: monday}
+    groups:
+      portal-app: {patterns: ["*"]}
