@@ -10,7 +10,7 @@ the platform is in production: every source in every layer, modelled and schedul
 problem sources researched and, if no route exists, parked for the owner; the portal
 reflects R2; storage and retention optimized for every source; the dimensional model,
 the semantic layer and a catalog of dimensions, KPIs and lineage complete. Claude plans
-the work (backlog in the claude.ai project `zohelo-data`, not in the repository), uses
+the work (backlog: GitHub issues generated from .github/backlog/, rules in docs/backlog.md; decisions in docs/decisions.md), uses
 agents and scheduled sessions, and asks the owner only for the decisions listed under
 "Ask the owner first".
 
@@ -46,7 +46,7 @@ instead of adding a new one.
 
 ## Workflows and activities
 
-Exactly four workflows (owner direction, 12 October 2026):
+Exactly five workflows (owner direction, 12 October 2026; branch cleanup added 27 October):
 
 1. **Pipeline** (`pipeline.yml`) — the fixed dataflow, one job per activity
    (docs/operating.md). Runs only from `main`. Change it only when the dataflow
@@ -59,8 +59,8 @@ Exactly four workflows (owner direction, 12 October 2026):
    Writes only to scratch locations (`zz_dev_*` namespaces or prefixes) that the same
    script removes, unless the owner approved a one-off production change.
 4. **Deploy portal** (`deploy-portal.yml`) — portal build and deploy.
-5. **Branch cleanup** (`branch-cleanup.yml`) — deletes merged branches (on merge, weekly
-   sweep); the same file runs in zohelo and zohelo-bi.
+5. **Branch cleanup** (`branch-cleanup.yml`) — deletes merged branches on merge and in a
+   Monday sweep (owner decision 27 Oct); the same file runs in zohelo and zohelo-bi.
 
 Shared Pipeline job steps are in `.github/actions/activity/`.
 
@@ -122,6 +122,11 @@ in `ingestion/sources/<source>.yaml`. Landing layout and rules: docs/landing.md.
   cause is fixed and the source's latest run is green, with a note on the issue; Claude
   deletes its own leftover work branches (`test/*`, `dev/*`, and others the owner names)
   through Ops `branch_cleanup` (report first, then `--apply`).
+- Standing owner permissions (27 October 2026): Claude closes pull requests and issues,
+  deletes merged branches, creates, edits and closes issues and project items, and merges
+  pull requests whose checks pass in the zohelo organisation without asking.
+- Claude dispatches Ops runs with `--apply` or `--delete` only for a Task whose Epic cites
+  an owner decision; otherwise the run is an owner action.
 
 ## Autonomy
 
@@ -147,18 +152,18 @@ owner decision is needed; keep reports short.
 
 ## Branches and pull requests
 
-- Develop on a feature branch `<type>/<short-topic>` (`feat`, `fix`, `docs`,
-  `chore`); never commit directly to `main`.
+- Develop on a feature branch `<type>/<issue-number>-<topic>` (`feat`, `fix`, `chore`,
+  `docs`); never commit directly to `main`.
+- Every PR body says `Closes #<open Task or Bug>` (`Closes zohelo/<repo>#<n>` across
+  repos); the check fails otherwise; Dependabot is exempt.
 - Changes reach `main` only through a pull request that passes the `check` job
   (`dev.yml`: compile, lint, configuration consistency, repository rules; no
   credentials, no committed tests).
-- **Claude merges** with auto-merge after `check` passes: everything under the Mandate
-  except changes to AGENTS.md.
-- **The owner merges** changes to AGENTS.md and pull requests that touch the "Ask the
-  owner first" items. The PR description says which group it belongs to.
-- Merged branches are deleted (repository setting); leftover `test/*` and `dev/*` branches
+- Claude, or an agent Claude dispatched, merges a pull request once its checks pass (owner
+  approval 27 October 2026, 16:55); squash merges only.
+- Merged branches are deleted by `branch-cleanup.yml`; leftover `test/*` and `dev/*` branches
   are deleted with Ops `branch_cleanup`. Dev trials reuse one `test/<topic>` branch.
-- No new workflow files; edits to the four workflows are allowed.
+- No new workflow files without an owner decision; edits to the five workflows are allowed.
 - The `check` job is the only CI; do not restore removed tests, test workflows or
   historical task queues.
 
