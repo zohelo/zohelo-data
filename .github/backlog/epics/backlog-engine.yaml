@@ -1,0 +1,751 @@
+key: data/backlog/engine
+area: data/backlog
+title: Backlog engine and migration
+phase: 0
+priority: P1
+target: 2026-11-28
+why: The owner needs to see progress of three products in one place and every pull request tied to a planned item.
+  Today 550 issues sit in one repo, 93 % are empty stubs, two products have no backlog and nothing links PRs to
+  plan items. A plan written as files and rendered into GitHub by a script stays complete, reviewable and cheap
+  to maintain.
+outcome: The backlog of all three repos is generated from `.github/backlog/` files into typed GitHub issues on the
+  "zohelo portfolio" project; every PR closes a Task or Bug; the 550 old issues are migrated.
+in_scope:
+- AGENTS.md rules and the decision log first, so every later PR follows them
+- backlog files in the three repos, validator, renderer, sync engine (ops/backlog_sync.py) and its Ops wiring
+- 'project setup: issue types, fields, views, rename'
+- migration of the 550 zohelo-data issues
+- PR-link check and backlog validation in all three repos; alert de-duplication and parenting
+out_of_scope:
+- writing the backlog content itself (done by the architect in the backlog files)
+- weekly planning sessions
+done_when:
+- 'Ops backlog_sync apply: 0 errors; plan right after shows 0 changes'
+- project "zohelo portfolio" shows 0 open issues without a parent (Areas excepted) and 0 untyped
+- 'a PR without "Closes #<open Task/Bug>" fails check in zohelo-data, zohelo-bi and zohelo'
+- AGENTS.md says the backlog lives in GitHub, generated from .github/backlog/
+decisions:
+- 'owner 27 Oct #1: phases and order approved'
+- 'owner 27 Oct: every PR is connected to an issue; backlog detailed enough for a less capable model'
+- 'owner 27 Oct 13:17: Claude may close PRs and issues, delete merged branches, create/edit/close issues and project
+  items in the zohelo org'
+- 'architect D1 (bootstrap): until the first sync, Claude creates each Task issue by REST with its key marker; the
+  migration adopts them'
+- 'architect D2: Claude dispatches destructive Ops runs only for Tasks whose Epic cites an owner decision'
+- 'architect D10: branches <type>/<issue-number>-<topic>; D13: docs/decisions.md in zohelo-data; D14: cross-repo
+  Tasks under a Deliverable with repo:'
+deliverables:
+- key: data/backlog/engine/bootstrap
+  title: Rules and decision log in place
+  done_when:
+  - AGENTS.md carries the backlog, PR-link, merge, branch and standing-permission rules
+  - docs/decisions.md lists the 27 Oct owner decisions and the architect decisions D1–D15
+  - every open PR in the three repos links its Task issue
+  tasks:
+  - key: data/backlog/engine/bootstrap/agents-rule
+    type: Task
+    title: 'AGENTS.md: backlog in GitHub, PR closes a Task, standing permissions'
+    effort: S
+    state: open
+    contract: true
+    context: AGENTS.md still says the backlog is in the claude.ai project, that there are exactly four workflows,
+      that Claude merges with auto-merge, that branches are `<type>/<short-topic>` and that merged branches are
+      deleted by a repository setting. In practice the owner merges every PR, branch-cleanup.yml is the fifth workflow
+      and the owner gave standing permissions on 27 Oct. AGENTS.md changes are merged by the owner.
+    files:
+    - edit: AGENTS.md
+    steps:
+    - 'Mandate: replace ''(backlog in the claude.ai project zohelo-data, not in the repository)'' with ''(backlog:
+      GitHub issues generated from .github/backlog/, rules in docs/backlog.md; decisions in docs/decisions.md)''.'
+    - 'Workflows: ''Exactly four workflows'' → ''Exactly five workflows''; add item 5 Branch cleanup (branch-cleanup.yml):
+      deletes merged branches on merge and in a Monday sweep (owner decision 27 Oct).'
+    - 'Branches and pull requests: branch name `<type>/<issue-number>-<topic>` (feat, fix, chore, docs); ''Every
+      PR body says Closes #<open Task or Bug> (Closes zohelo/<repo>#<n> across repos); the check fails otherwise;
+      Dependabot is exempt.''; replace the ''Claude merges with auto-merge'' bullet with ''The owner merges pull
+      requests; squash merges only.''; replace ''Merged branches are deleted (repository setting)'' with ''Merged
+      branches are deleted by branch-cleanup.yml''.'
+    - 'Standing owner permissions: add ''(27 October 2026) Claude closes pull requests and issues, deletes merged
+      branches, and creates, edits and closes issues and project items in the zohelo organisation without asking.''
+      and ''Claude dispatches Ops runs with --apply or --delete only for a Task whose Epic cites an owner decision;
+      otherwise the run is an owner action.'''
+    - PR body says "owner merges (AGENTS.md)".
+    acceptance:
+    - the four changes above are present; no other AGENTS.md line changed
+    verify:
+    - run: git diff origin/main -- AGENTS.md
+      expect: only the lines named in the steps changed
+    - run: python -m ops.repo_check
+      expect: all checks ok
+    out_of_scope:
+    - other AGENTS.md sections
+    - docs/backlog.md (Task files/spec-and-files)
+  - key: data/backlog/engine/bootstrap/decision-log
+    type: Task
+    title: Start docs/decisions.md with the 27 Oct decisions
+    effort: S
+    state: open
+    context: Decisions made in chat exist only in the claude.ai project; implementers cannot read them. The program
+      plan (D0.8) asks for one decision log that implementers read first.
+    files:
+    - create: docs/decisions.md
+    - edit: README.md
+    steps:
+    - 'Create docs/decisions.md: one-line purpose, then a table `| id | date | question | decision | by |`.'
+    - 'Rows O1–O6 (owner, 27 Oct): O1 phases 0–3 approved; O2 delete ≈30 GB duplicate/old-pipeline raw data; O3
+      Finnhub removed, markets use ECB/NBP/World Bank open data; O4 no code licence, all rights reserved; O5 analyst
+      portfolio under the owner''s name; O6 zohelo-bi sign-in only at v1.'
+    - 'Rows O7–O9 (owner, 27 Oct): O7 org secrets stay visible to all public repos (A-10 only on the owner''s request);
+      O8 standing permission (text as in AGENTS.md); O9 no .github or other shared repo, merged branches deleted
+      by branch-cleanup.yml.'
+    - 'Rows D1–D15 (architect, 27 Oct), one line each: D1 bootstrap issues by REST until the first sync; D2 destructive
+      Ops runs only for Tasks citing an owner decision; D3 @zohelo/design ships as a GitHub Release tarball; D4
+      chart code moves to zohelo first, pivot/transforms stay in zohelo-bi packages/semantic; D5 published-layer
+      contract written by zohelo-data first, unit_key, geo/<level>.geojson, gold.publish sole writer; D6 Gold v1
+      cut-over expand/contract; D7 bi reads the lakehouse with read-only credentials; D8 at most 3 open owner actions;
+      D9 branch-cleanup.yml only; D10 branches <type>/<issue-number>-<topic>; D11 verify-only label and run-count
+      rules; D12 implementers never read claude.ai docs; D13 this log; D14 cross-repo Tasks under a Deliverable
+      with repo:; D15 secrets scope only on the owner''s request.'
+    - 'README.md: add decisions to the docs/ tree line and a link to docs/decisions.md in the "See the source playbook"
+      sentence.'
+    acceptance:
+    - docs/decisions.md has rows O1–O9 and D1–D15, each one line
+    verify:
+    - run: grep -c '^| [OD][0-9]' docs/decisions.md
+      expect: '24'
+    out_of_scope:
+    - decisions of earlier months
+  - key: data/backlog/engine/bootstrap/link-open-prs
+    type: Task
+    verify_only: true
+    title: Link every open pull request to its Task issue
+    effort: S
+    state: open
+    context: 'Pull requests opened before the backlog existed (zohelo-data #935–#937, #943, #944, #946; zohelo-bi
+      #12, #14; zohelo #10, #12) have no `Closes` line. Until the first sync, Claude creates their Task issues by
+      REST (D1) so the migration later adopts them by key.'
+    files: []
+    steps:
+    - 'For each open non-Dependabot PR: find its Task in .github/backlog (notes say ''In progress: PR #n''); if
+      no issue carries `<!-- zohelo:key=<task key> -->`, create one: POST /repos/zohelo/<repo>/issues with title,
+      type Task, body rendered from the Task (render mode once it exists; until then the SPEC §5 layout by hand).'
+    - 'Edit the PR body: PATCH /repos/zohelo/<repo>/pulls/<n> with the old body plus a first line `Closes #<issue>`.'
+    - Comment on the issue with the PR link.
+    acceptance:
+    - every open non-Dependabot PR in the three repos has a Closes line to an open Task issue with a key marker
+    verify:
+    - run: 'for r in zohelo-data zohelo-bi zohelo; do gh api "repos/zohelo/$r/pulls?state=open" --jq ''.[] | select(.user.login
+        != "dependabot[bot]") | "\(.number) \(.body | test("(?i)closes #[0-9]+"))"''; done'
+      expect: every line ends with true
+    out_of_scope:
+    - Dependabot PRs; closed PRs (recorded as done Tasks in the files)
+- key: data/backlog/engine/files
+  title: Backlog files, validator and renderer
+  depends_on:
+  - data/backlog/engine/bootstrap
+  done_when:
+  - '`python -m ops.backlog_sync validate` passes on zohelo-data''s files and repo_check runs it'
+  - '`render KEY` prints the issue body of SPEC §5 for any key'
+  tasks:
+  - key: data/backlog/engine/files/spec-and-files
+    type: Task
+    title: Commit the backlog spec and zohelo-data backlog files
+    effort: S
+    state: open
+    contract: true
+    context: The spec (layers, YAML schema, rendered issue, labels) and the drafted files exist only in the architect's
+      workspace. They become the source of truth in the repo. The architect hands the files over with the PR description
+      of this Task (attached as the branch content).
+    files:
+    - create: docs/backlog.md
+    - create: .github/backlog/areas.yaml
+    - create: .github/backlog/stages.yaml
+    - create: .github/backlog/epics/
+    - create: .github/backlog/assets/
+    steps:
+    - Copy the spec text into docs/backlog.md (title "Backlog"); link docs/decisions.md from its first paragraph.
+    - Copy the architect's areas.yaml, stages.yaml and epics/*.yaml unchanged into .github/backlog/.
+    - Run `python -m ops.repo_check`; wrap yamllint findings with YAML folded scalars, change no content.
+    acceptance:
+    - repo_check green; files identical in content to the drafts
+    verify:
+    - run: python -m ops.repo_check
+      expect: all checks ok
+    out_of_scope:
+    - validator code; zohelo-bi and zohelo files (Deliverables files-bi
+    - files-com)
+    notes:
+    - Claude (architect session) opens this PR from its drafts and SPEC.md; implementer sessions do not have the
+      drafts.
+  - key: data/backlog/engine/files/validator
+    type: Task
+    title: Add backlog_sync validate (schema rules of docs/backlog.md)
+    effort: L
+    state: open
+    depends_on:
+    - data/backlog/engine/files/spec-and-files
+    context: The files need machine checks so a broken or vague plan never reaches GitHub. The validator runs in
+      zohelo-bi and zohelo too, so it uses only the standard library and pyyaml.
+    files:
+    - create: ops/backlog_sync.py
+    - edit: ops/repo_check.py
+    - edit: ops/README.md
+    steps:
+    - 'ops/backlog_sync.py with argparse modes; this Task adds `validate [--root DIR ...]` (default: repo root).
+      Imports at module top: stdlib only; import yaml inside the modes that need it.'
+    - Load areas.yaml, stages.yaml (if present) and epics/*.yaml under <root>/.github/backlog/ for every root.
+    - 'Errors: duplicate key; key not prefixed data/, bi/ or com/; child key not starting with parent key + ''/'';
+      Epic area not in that repo''s areas.yaml; missing required field (docs/backlog.md §4); phase not in 0,1,2,3,run;
+      priority not P1–P3; effort not S/M/L; Task state done without done_by; Deliverable state done without notes;
+      title > 70 (Task) or > 60 (others); depends_on key unknown in the loaded set (bi/ and com/ keys allowed when
+      their root is not loaded).'
+    - 'Task errors (open Tasks only): files entry not edit/create/delete; edit/delete path missing in the Task''s
+      repo (Deliverable repo:, else key prefix) — only checked when that repo is a loaded root, and accepted when
+      any loaded Task creates the path or a parent folder of it; verify_only Task with an edit/create/delete entry;
+      a word from the banned-words list of docs/backlog.md §4 in steps (whole-word, case-insensitive); empty acceptance,
+      verify or out_of_scope; rendered body > 3000 bytes (len(yaml.dump(task)) until render exists).'
+    - 'Print `file: key: message` per error; exit 1 on any error; on success print `ok: N areas, N epics, N deliverables,
+      N tasks`.'
+    - 'repo_check.py: add check ''backlog'' that runs validate on the repo root.'
+    acceptance:
+    - validate passes on the committed files
+    - removing `verify` from one Task makes validate print that key and exit 1
+    verify:
+    - run: python -m ops.backlog_sync validate
+      expect: 'ok: N areas, N epics, N deliverables, N tasks'
+    - run: python -m ops.repo_check
+      expect: all checks ok, including backlog
+    out_of_scope:
+    - GitHub calls
+  - key: data/backlog/engine/files/render
+    type: Task
+    title: Add backlog_sync render (issue title, body, labels, fields)
+    effort: M
+    depends_on:
+    - data/backlog/engine/files/validator
+    state: open
+    context: Each node becomes an issue body exactly as docs/backlog.md §5 shows; the sync and the validator's 3
+      KB rule use the same renderer.
+    files:
+    - edit: ops/backlog_sync.py
+    steps:
+    - render(node, kind, parent_number=None, issue_repo=None) -> {title, body, labels, type, fields}; first body
+      line `<!-- zohelo:key=<key> -->`; last line `<!-- zohelo:notes — everything below is free text and is never
+      overwritten by the sync -->`.
+    - 'Area/Epic/Deliverable bodies: purpose or why/outcome/scope/done_when as sections; Deliverable done_when as
+      checkboxes.'
+    - 'Task ''How to deliver'' section: branch `<type>/<number>-<topic>`; `Closes #<n>` when the PR repo equals
+      the issue repo, else `Closes zohelo/<issue repo>#<n>`.'
+    - 'Labels: contract → `contract`; owner_action → `owner:action` (only when every depends_on item is closed;
+      the sync passes that flag); verify_only → `verify-only`; source Epics and stages → `source:<id lower>`, `stage:<n>-<name>`.'
+    - 'fields: Product (zohelo-data / zohelo-bi / zohelo.com from the node''s repo), Phase, Priority, Effort, Target
+      date.'
+    - Mode `render KEY [--root DIR ...]` prints title, labels and body; the validator now uses len(body.encode())
+      for the 3 KB rule.
+    acceptance:
+    - render of a Task shows every section of docs/backlog.md §5 in order
+    - a verify_only Task gets the label verify-only
+    verify:
+    - run: python -m ops.backlog_sync render data/backlog/engine/files/render
+      expect: body starting with the key marker and ending with the notes marker
+    out_of_scope:
+    - creating issues
+- key: data/backlog/engine/files-bi
+  title: zohelo-bi backlog files committed
+  repo: zohelo-bi
+  depends_on:
+  - data/backlog/engine/files
+  done_when:
+  - zohelo-bi/.github/backlog/ holds areas.yaml and epics/*.yaml identical to the architect's drafts
+  tasks:
+  - key: data/backlog/engine/files-bi/commit
+    type: Task
+    title: Commit the zohelo-bi backlog files
+    effort: S
+    state: open
+    context: The sync and the zohelo-bi validation step read zohelo-bi/.github/backlog/; the architect's drafts
+      exist only in the architect's workspace and are handed over as the branch content of this Task.
+    files:
+    - create: .github/backlog/areas.yaml
+    - create: .github/backlog/epics/
+    steps:
+    - Copy the architect's zohelo-bi areas.yaml and epics/*.yaml unchanged into .github/backlog/.
+    - 'Run the zohelo-data validator against this checkout: `python3 <zohelo-data checkout>/ops/backlog_sync.py
+      validate --root .` (pip install pyyaml==6.0.3 first).'
+    - Run `bun install --frozen-lockfile && bun run check` to confirm nothing else is affected.
+    acceptance:
+    - validate prints ok for zohelo-bi; check workflow green
+    verify:
+    - run: python3 ../zohelo-data/ops/backlog_sync.py validate --root .
+      expect: 'ok: 5 areas, …'
+    out_of_scope:
+    - check.yml changes (Deliverable rules-bi)
+    notes:
+    - Claude (architect session) opens this PR from its drafts; implementer sessions do not have the drafts.
+    - Claude (architect session) opens this PR from its drafts and SPEC.md; implementer sessions do not have the
+      drafts.
+- key: data/backlog/engine/files-com
+  title: zohelo backlog files committed
+  repo: zohelo
+  depends_on:
+  - data/backlog/engine/files
+  done_when:
+  - zohelo/.github/backlog/ holds areas.yaml and epics/*.yaml identical to the architect's drafts
+  tasks:
+  - key: data/backlog/engine/files-com/commit
+    type: Task
+    title: Commit the zohelo backlog files
+    effort: S
+    state: open
+    context: The sync and the zohelo validation step read zohelo/.github/backlog/; the architect's drafts exist
+      only in the architect's workspace and are handed over as the branch content of this Task.
+    files:
+    - create: .github/backlog/areas.yaml
+    - create: .github/backlog/epics/
+    steps:
+    - Copy the architect's zohelo areas.yaml and epics/*.yaml unchanged into .github/backlog/.
+    - Run `python3 <zohelo-data checkout>/ops/backlog_sync.py validate --root .` (pip install pyyaml==6.0.3 first).
+    - Run `bun install --frozen-lockfile && bun run lint && bun run build`.
+    acceptance:
+    - validate prints ok for zohelo; check workflow green
+    verify:
+    - run: python3 ../zohelo-data/ops/backlog_sync.py validate --root .
+      expect: 'ok: 4 areas, …'
+    out_of_scope:
+    - check.yml changes (Deliverable rules-com)
+    notes:
+    - Claude (architect session) opens this PR from its drafts; implementer sessions do not have the drafts.
+    - Claude (architect session) opens this PR from its drafts and SPEC.md; implementer sessions do not have the
+      drafts.
+- key: data/backlog/engine/project
+  title: Portfolio project ready
+  done_when:
+  - org issue types Area, Epic, Deliverable exist; project 1 renamed "zohelo portfolio" with fields Product, Phase,
+    Effort, Sprint and six views
+  tasks:
+  - key: data/backlog/engine/project/app-permissions
+    type: Task
+    verify_only: true
+    title: Ask the owner to extend the zohelo-automation app permissions
+    effort: S
+    state: open
+    owner_action: 'github.com/organizations/zohelo/settings/apps/zohelo-automation → Permissions: Repository → Issues:
+      Read and write; Organization → Issue types: Read and write; Organization → Projects: Read and write → Save;
+      then Install App → zohelo → accept the new permissions and make sure zohelo-data, zohelo-bi and zohelo are
+      selected (5 min).'
+    context: backlog_sync writes issues in three repos, creates org issue types and edits project 1; the app today
+      has Actions write and Projects read/write on zohelo-data only.
+    files: []
+    steps:
+    - Wait until the owner confirms; then run Ops project with args inspect.
+    - Close this Task with a comment linking that run.
+    acceptance:
+    - owner confirmed; Ops project inspect green
+    verify:
+    - workflow: Ops project args inspect
+      expect: project 1 listed
+    out_of_scope:
+    - private key rotation
+  - key: data/backlog/engine/project/setup-mode
+    type: Task
+    title: Add project setup mode (issue types, fields, rename)
+    effort: M
+    state: open
+    contract: true
+    depends_on:
+    - data/backlog/engine/project/app-permissions
+    context: ops/project.py already runs GraphQL with the app token. Org issue types are REST (GET/POST /orgs/zohelo/issue-types);
+      fields and the rename are GraphQL.
+    files:
+    - edit: ops/project.py
+    - edit: .github/workflows/ops.yml
+    - edit: ops/README.md
+    steps:
+    - 'New mode `setup [--apply]`: create missing issue types Area, Epic, Deliverable (keep Task, Bug); report Initiative,
+      Product, Work package as to retire (never delete them here).'
+    - Rename project 1 to 'zohelo portfolio' (updateProjectV2 title).
+    - 'createProjectV2Field when missing: Product (zohelo-data, zohelo-bi, zohelo.com), Phase (0 Clean & harden,
+      1 Production release, 2 Demo warehouse, 3 Remaining sources, Run), Effort (S, M, L); Sprint as ITERATION,
+      1 week, start Monday; if the API rejects the iteration field, annotate ''create Sprint in the UI'' and continue.'
+    - Without --apply only report; annotate created items.
+    - 'ops.yml token step: when inputs.args starts with ''setup'', request permission-organization-projects write
+      and an owner-level token (no repositories filter).'
+    acceptance:
+    - second run reports nothing to create
+    verify:
+    - workflow: Ops project args "setup --apply"
+      expect: notices for created types/fields; rerun shows none
+    out_of_scope:
+    - views (GitHub has no API for them)
+  - key: data/backlog/engine/project/views
+    type: Task
+    verify_only: true
+    title: Ask the owner to create the six project views
+    effort: S
+    state: open
+    depends_on:
+    - data/backlog/engine/project/setup-mode
+    owner_action: 'Project "zohelo portfolio" → New view, six times: 1 Portfolio (table, filter type:Epic, group
+      Product); 2 Sources by stage (board, filter label:stage, group Parent issue); 3 This sprint (board, filter
+      sprint:@current); 4 Owner desk (table, filter label:owner:action,owner:decision,ticket is:open); 5 Roadmap
+      (roadmap, type:Epic, date Target date); 6 Alerts (table, label:alert is:open). Delete the five template views
+      (10 min).'
+    context: GitHub has no API for project views.
+    files: []
+    steps:
+    - Wait until the owner confirms; then run Ops project with args inspect and close this Task with a comment linking
+      that run.
+    acceptance:
+    - inspect lists exactly the six views
+    verify:
+    - workflow: Ops project args inspect
+      expect: views Portfolio, Sources by stage, This sprint, Owner desk, Roadmap, Alerts
+    out_of_scope:
+    - project README
+- key: data/backlog/engine/sync
+  title: Sync engine plans issues for all three repos
+  depends_on:
+  - data/backlog/engine/files
+  - data/backlog/engine/files-bi
+  - data/backlog/engine/files-com
+  - data/backlog/engine/project
+  done_when:
+  - Ops backlog_sync plan lists every node of the three repos and the source Epics generated from the register;
+    no write happens before the migration
+  tasks:
+  - key: data/backlog/engine/sync/generate-sources
+    type: Task
+    title: Generate source Epics from the register and stages.yaml
+    effort: M
+    state: open
+    depends_on:
+    - data/backlog/engine/files/validator
+    - data/backlog/engine/files/render
+    context: Ten Phase 1 sources have hand-written Epic files (epics/src-<id>.yaml). The other ~173 register entries
+      get their Epic, stage-1 Deliverable and a stage-2 stub from stages.yaml at sync time (lazy generation); migration
+      and alert parenting need those keys.
+    files:
+    - edit: ops/backlog_sync.py
+    steps:
+    - 'load_sources(root): read ingestion/register.yaml (or ingestion/register/*.yaml once split); for each entry
+      without epics/src-<id lower>.yaml build an Epic node: key data/src-<id lower>, area data/src-<family letter>
+      (register `family`; entries without family go to a warning list, not to the plan), title `<short_name or name[:50]>
+      [<id>]`, phase 3, priority P3.'
+    - 'Its Deliverables come from stages.yaml: stage 1 (review) with the template Tasks filled with {id}, {short_name},
+      {source_system}; stage 2 as a Deliverable with only its done_when and a todo line.'
+    - validate and plan include generated nodes; render shows them like file nodes; a generated key that collides
+      with a file key is an error.
+    - Annotate counts (file sources, generated sources, entries without family).
+    acceptance:
+    - plan lists one Epic per register entry; the ten file sources keep their file content
+    verify:
+    - run: python -m ops.backlog_sync validate
+      expect: 'ok, with "generated sources: N" equal to register entries minus 10'
+    out_of_scope:
+    - writing register fields (Epic data/ingestion/register-restructure)
+  - key: data/backlog/engine/sync/plan-apply
+    type: Task
+    title: Add backlog_sync plan and apply (issues, types, parents)
+    effort: L
+    state: open
+    depends_on:
+    - data/backlog/engine/files/validator
+    - data/backlog/engine/sync/generate-sources
+    context: The files become issues. Keys in the first body line identify issues across runs; the text below the
+      notes marker belongs to people and is never touched. apply must not run before the migration (it would duplicate
+      keys old issues are about to receive).
+    files:
+    - edit: ops/backlog_sync.py
+    - edit: ops/README.md
+    steps:
+    - 'Modes `plan` (default) and `apply`; roots: zohelo-data, plus `_repos/zohelo-bi` and `_repos/zohelo` when
+      present; repo of a node = Deliverable repo:, Task repo:, else key prefix.'
+    - 'Index existing issues: GET /repos/zohelo/<repo>/issues?state=all&per_page=100 (paged by the page parameter,
+      skip pull_request) for the three repos; map key → issue from the first body line.'
+    - Refuse (error, nothing written) to create a key listed as `adopt` in .github/backlog/migration.yaml while
+      that file exists and the old issue has no key marker yet.
+    - 'Create missing: POST issues with title, body, labels, type; Tasks with state done are created then closed
+      (completed) with comment ''Done by <done_by>''; done Deliverables are created then closed with a comment quoting
+      their notes; verify_only Tasks stay open until closed with an evidence comment.'
+    - 'Update: title, labels, type and the body above the notes marker when they differ; keep the notes part.'
+    - 'Parent: POST /repos/zohelo/<parent repo>/issues/<parent number>/sub_issues {sub_issue_id: <child id>, replace_parent:
+      true} when the current parent (GET …/parent) differs.'
+    - 'Key gone from the files: close with state_reason not_planned and comment ''Removed from the plan''; never
+      delete.'
+    - 'Order Areas, Epics, Deliverables, Tasks; sleep 1 s between writes; stop after 400 writes and say so (rerun
+      continues). Annotations: counts created/updated/reparented/closed; warning when open owner:action issues >
+      3.'
+    acceptance:
+    - plan writes nothing and lists the counts per repo
+    - apply refuses while migration.yaml has unadopted keys
+    verify:
+    - workflow: Ops backlog_sync args plan
+      expect: notice "to create" per repo for data, bi and com; no writes
+    out_of_scope:
+    - project fields (next Task); migration of old issues
+  - key: data/backlog/engine/sync/project-items
+    type: Task
+    title: backlog_sync adds issues to the project and sets fields
+    effort: M
+    state: open
+    depends_on:
+    - data/backlog/engine/files/validator
+    - data/backlog/engine/sync/plan-apply
+    - data/backlog/engine/project/setup-mode
+    context: Product, Phase, Priority, Effort and Target date come from the files, never set by hand.
+    files:
+    - edit: ops/backlog_sync.py
+    steps:
+    - Reuse ops.project.graphql() and project_id(); read field and option ids once per run.
+    - 'For each synced issue (apply mode): addProjectV2ItemById (idempotent), then updateProjectV2ItemFieldValue
+      for each field whose value differs.'
+    - In plan mode count the field changes without writing; annotate the count.
+    acceptance:
+    - every synced issue is on project 1 with Product and Phase set
+    verify:
+    - workflow: Ops backlog_sync args plan
+      expect: 'notice "project items: N to add, M fields to set"'
+    out_of_scope:
+    - Status and Sprint (automation and planning)
+  - key: data/backlog/engine/sync/workflow
+    type: Task
+    title: Wire backlog_sync into Ops for the three repos
+    effort: S
+    state: open
+    contract: true
+    depends_on:
+    - data/backlog/engine/sync/plan-apply
+    context: The sync runs from Ops with the app token for the three repos; the weekly schedule is added after the
+      migration (Task migration/schedule).
+    files:
+    - edit: .github/workflows/ops.yml
+    steps:
+    - 'When the script is backlog_sync: actions/checkout zohelo/zohelo-bi and zohelo/zohelo (ref main, persist-credentials
+      false, SHA-pinned like the existing checkout) into _repos/<name>.'
+    - App token step also for backlog_sync with repositories `zohelo-data,zohelo-bi,zohelo`, permission-issues write,
+      permission-organization-projects write; pass it as GH_PROJECT_TOKEN.
+    acceptance:
+    - a manual run reaches all three repos
+    verify:
+    - workflow: Ops backlog_sync args plan
+      expect: notice listing nodes per repo for data, bi and com
+    out_of_scope:
+    - schedules; other scripts' tokens
+- key: data/backlog/engine/migration
+  title: 550 old issues migrated, then the first apply
+  depends_on:
+  - data/backlog/engine/sync
+  done_when:
+  - every old issue is adopted (has a key) or closed with a pointer; old labels and sprint milestones gone
+  - first backlog_sync apply done; plan right after shows 0 changes; weekly schedule active
+  tasks:
+  - key: data/backlog/engine/migration/map
+    type: Task
+    title: Write the migration map of the 550 old issues
+    effort: L
+    state: open
+    context: 'Program plan §7.3 lists the steps: 182 register work packages become source Epics, #563–#582 become
+      stage Deliverables 5–6, stubs become Tasks or close, diary/duplicate issues close. Issues Claude created by
+      REST before the first sync (D1) already carry a key marker.'
+    files:
+    - create: .github/backlog/migration.yaml
+    steps:
+    - 'On the branch only, write dev/migration_map.py (deleted before the merge): read all issues of zohelo-data
+      (REST, paged) and the backlog files incl. generated sources; output one entry per issue {issue, action: adopt|close|keep,
+      key, reason, replacement}.'
+    - 'Rules in order: body starts with a key marker → keep (already adopted); title ending [<register id>] → adopt
+      as that source''s Epic key; #563–#582 → that source''s bronze/silver stage key; #307, the 11 Products, #384–#389,
+      #836, #649, #857, #858, #795, #341, #785, #842, #837 → close with pointer; alerts → adopt as Bug under the
+      source Epic; a title equal to a Task title → adopt as that Task; else close ''superseded by <deliverable key>''.'
+    - Run it with the Dev workflow on the branch; commit the output as .github/backlog/migration.yaml; delete dev/.
+    acceptance:
+    - one entry per existing issue, each issue once; every adopt key exists in the plan
+    verify:
+    - run: python -c "import yaml;m=yaml.safe_load(open('.github/backlog/migration.yaml'));print(len(m['issues']))"
+      expect: equals the number of issues (≈ 560)
+    out_of_scope:
+    - GitHub writes
+  - key: data/backlog/engine/migration/apply
+    type: Task
+    title: Apply the migration, then the first backlog_sync apply
+    effort: L
+    state: open
+    depends_on:
+    - data/backlog/engine/files/validator
+    - data/backlog/engine/migration/map
+    - data/backlog/engine/sync/project-items
+    context: Adopting keeps issue numbers and research bodies; it only adds the key and moves them.
+    files:
+    - edit: ops/backlog_sync.py
+    - edit: ops/README.md
+    steps:
+    - 'Mode `migrate [--apply]`: adopt = insert the key line at the top of the body (old body goes below the notes
+      marker), set type, title and parent from the files; close = comment the replacement and close not_planned.'
+    - 'Labels: delete area:*, status:*, priority:*, tracker, enhancement, bug from the three repos; close milestones
+      ''Sprint 2026-W42'' and ''Sprint 2026-W43''.'
+    - 'After merge (owner decision 27 Oct #1 approves the migration): Ops backlog_sync `migrate`, read the annotation,
+      `migrate --apply` until 0 remain, then `apply` until 0 remain, then `plan`.'
+    acceptance:
+    - project shows 0 untyped and 0 orphan open issues; plan shows 0 changes
+    verify:
+    - workflow: Ops backlog_sync args plan
+      expect: 0 to create, 0 to update, 0 to close
+    out_of_scope:
+    - deleting issue types Initiative/Product/Work package (owner
+    - UI)
+  - key: data/backlog/engine/migration/cleanup
+    type: Task
+    title: Remove the migration map and schedule the weekly sync
+    effort: S
+    state: open
+    contract: true
+    depends_on:
+    - data/backlog/engine/migration/map
+    - data/backlog/engine/migration/apply
+    - data/ops/r2-cleanup/orphans/schedule
+    context: The map is only needed once; afterwards the sync keeps GitHub equal to the files every Monday.
+    files:
+    - delete: .github/backlog/migration.yaml
+    - edit: .github/workflows/ops.yml
+    - edit: ops/README.md
+    steps:
+    - Delete .github/backlog/migration.yaml.
+    - 'ops.yml: add cron ''0 5 * * 1'' under on.schedule and a row to the schedule table: ''0 5 * * 1'' → script
+      backlog_sync, args apply.'
+    - Document the schedule in ops/README.md.
+    acceptance:
+    - the Monday run applies with 0 errors
+    verify:
+    - workflow: next Monday's scheduled Ops run
+      expect: '''ops · backlog_sync'' green'
+    out_of_scope:
+    - other schedules
+- key: data/backlog/engine/rules
+  title: Every PR tied to a Task; alerts in the tree
+  depends_on:
+  - data/backlog/engine/migration
+  done_when:
+  - PR check fails without a linked open Task/Bug in zohelo-data; alerts re-open and have a parent
+  tasks:
+  - key: data/backlog/engine/rules/pr-check
+    type: Task
+    title: Add backlog_sync pr-check and run it in dev.yml check
+    effort: M
+    state: open
+    contract: true
+    depends_on:
+    - data/backlog/engine/files/validator
+    - data/backlog/engine/files/render
+    context: 'Owner rule: each PR is connected to an issue. Dependabot PRs are exempt (they come from the weekly
+      security process, not the plan). verify_only Tasks close by comment, not by PR.'
+    files:
+    - edit: ops/backlog_sync.py
+    - edit: .github/workflows/dev.yml
+    - edit: ops/README.md
+    steps:
+    - 'Mode `pr-check` (stdlib only): read $GITHUB_EVENT_PATH; skip with a notice when the PR author is dependabot[bot].'
+    - Find `(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved) (#N|zohelo/<repo>#N|https://github.com/zohelo/<repo>/issues/N)`
+      in the body (case-insensitive).
+    - 'For each: GET the issue with urllib and GITHUB_TOKEN; pass when one is open, its type.name is Task or Bug
+      and it has no label verify-only. Else exit 1 with ''Link an open Task or Bug: add Closes #<n> to the PR body,
+      then re-run this check''.'
+    - 'dev.yml check job: step ''Linked task'' running `python -m ops.backlog_sync pr-check` with GITHUB_TOKEN;
+      job permissions add issues: read, pull-requests: read.'
+    acceptance:
+    - a PR without a link fails; with Closes
+    verify:
+    - workflow: Dev check on this PR (its body links this Task)
+      expect: 'Linked task: ok #<n>'
+    out_of_scope:
+    - zohelo-bi and zohelo (Deliverables rules-bi
+    - rules-com)
+  - key: data/backlog/engine/rules/alerts
+    type: Bug
+    title: notify_failure re-opens the last alert and sets its parent
+    effort: M
+    state: open
+    depends_on:
+    - data/backlog/engine/sync/generate-sources
+    context: 'A closed alert is never re-used, so repeated failures open duplicates (#925 ↔ #902, #923 ↔ #909);
+      alerts carry label area:ops (deleted by the migration) and have no parent, so they never roll up to their
+      source.'
+    files:
+    - edit: ops/notify_failure.py
+    steps:
+    - Search issues labelled alert with the same title (state=all); if the newest is closed less than 14 days ago,
+      re-open it and comment; else create.
+    - Create with labels [alert] and type Bug; drop area:ops.
+    - 'Parent: register entry with source_system == RUN_SOURCE → Epic key data/src-<id lower>; find the issue whose
+      body starts with that key marker; add the alert as its sub-issue; skip quietly when not found (source ''scheduler''
+      has none).'
+    acceptance:
+    - a second failure within 14 days re-opens the old alert instead of creating one
+    verify:
+    - run: python -m ops.repo_check
+      expect: all checks ok
+    - workflow: next failing Pipeline run
+      expect: alert re-opened or created with a parent
+    out_of_scope:
+    - alert wording; pipeline.yml (permissions already sufficient)
+- key: data/backlog/engine/rules-bi
+  title: zohelo-bi checks PR links and backlog files
+  repo: zohelo-bi
+  depends_on:
+  - data/backlog/engine/rules
+  - data/backlog/engine/files-bi
+  done_when:
+  - zohelo-bi check fails a PR without a linked open Task/Bug and a PR breaking a backlog file
+  tasks:
+  - key: data/backlog/engine/rules-bi/check
+    type: Task
+    title: Linked-task check and backlog validation in check.yml
+    effort: S
+    state: open
+    contract: true
+    context: Same rule as zohelo-data. The script lives in zohelo-data; the check fetches it at a pinned commit
+      so a change in zohelo-data cannot alter zohelo-bi's check without a PR here.
+    files:
+    - edit: .github/workflows/check.yml
+    steps:
+    - 'New steps before Install: actions/setup-python (SHA-pinned, python 3.12); actions/checkout of repository
+      zohelo/zohelo-data at the 40-char commit SHA of zohelo-data main that contains pr-check, `sparse-checkout:
+      ops/backlog_sync.py`, path `_zd`, persist-credentials false; comment ''# update when backlog_sync.py changes''.'
+    - 'Step ''Linked task'': `python3 _zd/ops/backlog_sync.py pr-check` with GITHUB_TOKEN.'
+    - 'Step ''Backlog files'': `pip install pyyaml==6.0.3 && python3 _zd/ops/backlog_sync.py validate --root .`.'
+    - Add job permissions issues read, pull-requests read.
+    acceptance:
+    - a PR without a link fails; a PR with Closes
+    verify:
+    - workflow: Check on this PR (body links this Task)
+      expect: 'Linked task: ok; validate: ok'
+    out_of_scope:
+    - bi build steps
+- key: data/backlog/engine/rules-com
+  title: zohelo checks PR links and backlog files
+  repo: zohelo
+  depends_on:
+  - data/backlog/engine/rules
+  - data/backlog/engine/files-com
+  done_when:
+  - zohelo check fails a PR without a linked open Task/Bug and a PR breaking a backlog file
+  tasks:
+  - key: data/backlog/engine/rules-com/check
+    type: Task
+    title: Linked-task check and backlog validation in check.yml
+    effort: S
+    state: open
+    contract: true
+    context: Same rule as zohelo-data and zohelo-bi. The script lives in zohelo-data; the check fetches it at a
+      pinned commit.
+    files:
+    - edit: .github/workflows/check.yml
+    steps:
+    - Same three steps as zohelo-bi's check.yml (setup-python, sparse checkout of zohelo/zohelo-data ops/backlog_sync.py
+      at the same pinned SHA into _zd, 'Linked task', 'Backlog files'), placed before Install.
+    - Add job permissions issues read, pull-requests read.
+    acceptance:
+    - a PR without a link fails; a PR with Closes
+    verify:
+    - workflow: Check on this PR (body links this Task)
+      expect: 'Linked task: ok; validate: ok'
+    out_of_scope:
+    - site build steps

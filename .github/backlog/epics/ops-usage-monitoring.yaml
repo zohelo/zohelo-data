@@ -1,0 +1,26 @@
+key: data/ops/usage-monitoring
+area: data/ops
+title: Usage and quota monitoring
+phase: 1
+priority: P3
+target: 2027-01-29
+why: >-
+  The platform must stay inside free tiers; R2 operations, Workers requests and Pages files can hit
+  limits before storage cost shows it.
+outcome: >-
+  A monthly Ops run reports R2 Class A/B operations, Workers requests, Pages file counts and Access
+  users against their free limits, with warnings at 70 %.
+in_scope:
+  - Ops script reading Cloudflare GraphQL analytics (needs an Analytics:Read scope) (A-34)
+out_of_scope:
+  - paid plans
+done_when:
+  - monthly scheduled Ops run annotates each quota with % of the free limit
+deliverables:
+  - key: data/ops/usage-monitoring/script
+    title: Monthly usage report
+    done_when:
+      - ops/usage_report.py runs monthly from ops.yml
+    todo:
+      - "Owner action: add Account Analytics Read to PLATFORM_DEPLOY_TOKEN (exact steps when the Task is written)"
+      - "ops/usage_report.py with the Cloudflare GraphQL Analytics API; schedule monthly"

@@ -1,0 +1,154 @@
+key: data/src-pls-007
+area: data/src-e
+title: GUS TERYT [PLS-007]
+phase: 1
+priority: P2
+target: '2027-01-29'
+why: TERYT is the official list of Polish territorial units and localities. Every regional number is placed on the
+  map through its codes, so it is the backbone of the geography dimension.
+outcome: TERYT is loaded weekly, feeds the conformed geography dimension and is browsable on data.zohelo.com.
+in_scope:
+- Stages 1–7 and 9 of the source template (stages.yaml)
+out_of_scope:
+- Other sources of the same provider
+- Paid access tiers
+- 'KPIs, zohelo-bi and zohelo.com releases (reference/entity source, kpi: false)'
+done_when:
+- Every Deliverable of this Epic is closed (8/8)
+- 14 consecutive days of green scheduled runs
+depends_on: []
+decisions: []
+deliverables:
+- key: data/src-pls-007/review
+  title: GUS TERYT · Source review
+  done_when:
+  - Register entry has every field filled; licence.notes gives the terms URL and the attribution sentence; obsolete
+    blockers removed
+  tasks:
+  - key: data/src-pls-007/review/register
+    type: Task
+    title: Complete the register review of GUS TERYT
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    context: 'The register entry PLS-007 in ingestion/register.yaml is the source of truth for licence and public
+      display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
+      URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
+      read: https://eteryt.stat.gov.pl/eteryt/rejestr_teryt/udostepnianie_danych/baza_teryt/baza_teryt.aspx.'
+    files:
+    - edit: ingestion/register.yaml
+    steps:
+    - Open https://eteryt.stat.gov.pl/eteryt/rejestr_teryt/udostepnianie_danych/baza_teryt/baza_teryt.aspx and the
+      'Warunki korzystania' / regulations page it links; find whether downloaded TERYT files may be republished
+      and with what attribution.
+    - 'Write licence.notes: ''Terms: <URL>. Republication: <allowed|not stated>. Attribution: "Źródło: GUS, TERYT"''.
+      Set status open-conditional if republication with attribution is allowed; keep unresolved otherwise and comment
+      here (codes in our own dimension are used internally either way).'
+    - Remove blockers 'Obtain SOAP credentials after approval' (the route is the public file download) and 'Verify
+      retention/cadence' (weekly full load, latest only).
+    - Set status silver if it says less.
+    acceptance:
+    - licence.notes of PLS-007 contains a terms URL and a sentence starting 'Attribution:'
+    - research.blockers of PLS-007 lists only open problems (or is empty)
+    - python -m ops.repo_check passes
+    verify:
+    - run: python -m ops.repo_check
+      expect: exit code 0
+    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
+        if s['id']=='PLS-007'])"
+      expect: notes include the terms URL and 'Attribution:'
+    out_of_scope:
+    - Other register entries
+    - Code or source declaration changes
+    - The kpi field (set only by data/ingestion/register-restructure/fields/family-kpi)
+- key: data/src-pls-007/development
+  title: GUS TERYT · Development
+  done_when:
+  - Source declaration and Landing code exist on main; a full load was trialled before production
+  state: done
+  notes:
+  - 'Evidence: ingestion/sources/gus_teryt.yaml, ingestion/to_landing/gus_teryt/, ingestion/to_bronze/gus_teryt/load.py'
+- key: data/src-pls-007/ingestion
+  title: GUS TERYT · Ingestion (Landing)
+  done_when:
+  - 'First production load complete (landing.inspect: missing 0); landing.verify and landing.archive green'
+  state: done
+  notes:
+  - 'Evidence: activities landing.extract/verify/archive; green full dataflow https://github.com/zohelo/zohelo-data/actions/runs/40258391436'
+- key: data/src-pls-007/schedule
+  title: GUS TERYT · Schedule
+  done_when:
+  - Full dataflow scheduled; last 3 runs green, newest dispatched by the scheduler; no open alert issue
+  tasks:
+  - key: data/src-pls-007/schedule/observe
+    type: Task
+    title: Confirm green scheduled GUS TERYT runs
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    verify_only: true
+    context: 'Verification only; closes with a comment, no PR. Rule D11 (weekly source): 3 green scheduler-started
+      full-dataflow runs within 21 days; manual dispatches do not count. Weekly schedule (Monday 02:10 UTC); one
+      scheduled green run visible (26 Oct).'
+    files: []
+    steps:
+    - 'List the scheduler-started runs: since=$(date -u -d ''-21 days'' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
+      --jq ''.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]") and
+      (.display_title|test("· gus_teryt · full")))|"\(.conclusion) \(.created_at) \(.html_url)"''; done | head -3'
+    - If it prints 3 lines starting with success, comment them here and close this issue.
+    - 'If an alert issue ''Pipeline failed: gus_teryt · …'' is open and the runs are green, close it with the same
+      comment (standing permission, AGENTS.md).'
+    - If fewer runs exist yet, comment the count and the next due date and keep this Task open.
+    - 'If a run failed, open a Bug under this Deliverable titled ''Pipeline failed: <source> · <step>'' quoting
+      the failing annotation, and keep this Task open.'
+    acceptance:
+    - 'A comment lists the run URLs meeting the rule: 3 green scheduler-started full-dataflow runs within 21 days'
+    - No open alert issue for gus_teryt
+    verify:
+    - run: since=$(date -u -d '-21 days' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
+        --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]")
+        and (.display_title|test("· gus_teryt · full")))|"\(.conclusion) \(.created_at) \(.html_url)"'; done | head
+        -3
+      expect: 3 lines starting with success
+    out_of_scope:
+    - Code changes
+    - Changing the schedule
+    - Counting manual dispatches
+- key: data/src-pls-007/bronze
+  title: GUS TERYT · Bronze
+  done_when:
+  - Declared Bronze tables exist; bronze.verify green; latest version only
+  state: done
+  notes:
+  - 'Evidence: bronze.teryt_records; bronze_latest_only: true; green full dataflow https://github.com/zohelo/zohelo-data/actions/runs/40258391436'
+- key: data/src-pls-007/silver
+  title: GUS TERYT · Silver
+  done_when:
+  - Declared Silver tables written by today's code (dbt model or warehouse/entity/*.sql) with tests/checks and descriptions
+  state: done
+  notes:
+  - 'Evidence: warehouse/models/silver/gus_teryt/ (teryt_terc, teryt_simc)'
+- key: data/src-pls-007/gold
+  title: GUS TERYT · Gold
+  done_when:
+  - Observations in Gold v1 facts joined to conformed dimensions with no unmatched keys; measures in the catalogue
+    tables
+  depends_on:
+  - data/warehouse/gold-v1
+  notes:
+  - Feeds gold.dim_geography today (warehouse/models/gold/dim_geography.sql); Gold v1 rebuilds it.
+  todo:
+  - Gold v1 builder Tasks (block list, geography mapping, build-check row) are written when Epic data/warehouse/gold-v1
+    is done
+- key: data/src-pls-007/portal-release
+  title: GUS TERYT · Data portal release
+  done_when:
+  - 'data.zohelo.com source page: register summary, tables per layer with rows and last write, freshness, last scheduled
+    run'
+  depends_on:
+  - data/portal/catalogue-pages
+  todo:
+  - Check the source page on data.zohelo.com and fix missing metadata, once Epic data/portal/catalogue-pages is
+    done

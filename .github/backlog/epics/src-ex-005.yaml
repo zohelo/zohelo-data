@@ -1,0 +1,148 @@
+key: data/src-ex-005
+area: data/src-e
+title: OpenData orgs [EX-005]
+phase: 1
+priority: P3
+target: '2027-01-29'
+why: 'OpenData.org (BrightQuery) gives a large open list of organisations, people and locations. The owner kept
+  it (decision #906, 25 Oct) for entity matching experiments.'
+outcome: The monthly snapshot is loaded once (no duplicate copies), modelled in Silver and browsable on the private
+  data.zohelo.com only.
+in_scope:
+- Stages 1–6 and 9 of the source template (stages.yaml)
+out_of_scope:
+- Other sources of the same provider
+- Paid access tiers
+- 'KPIs, zohelo-bi and zohelo.com releases (reference/entity source, kpi: false)'
+done_when:
+- Every Deliverable of this Epic is closed (7/7)
+- 14 consecutive days of green scheduled runs
+depends_on: []
+decisions: []
+deliverables:
+- key: data/src-ex-005/review
+  title: OpenData orgs · Source review
+  done_when:
+  - Register entry has every field filled; licence.notes gives the terms URL and the attribution sentence; obsolete
+    blockers removed
+  tasks:
+  - key: data/src-ex-005/review/register
+    type: Task
+    title: Complete the register review of OpenData orgs
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    context: 'The register entry EX-005 in ingestion/register.yaml is the source of truth for licence and public
+      display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
+      URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
+      read: https://www.opendata.org/.'
+    files:
+    - edit: ingestion/register.yaml
+    steps:
+    - Search the publisher pages (opendata.org and BrightQuery's OpenData pages) for a licence; record the URL found
+      or 'no licence published'.
+    - 'Write licence.notes: ''Terms: <URL or none published>. Owner decision #906 (25 Oct 2026): keep and process;
+      private use only (data.zohelo.com) — no public display while no licence is published. Person records (business
+      contacts) included: never published.'' Keep status unresolved.'
+    - 'Replace research.blockers with [''No published licence: public display not allowed'', ''Person data: privacy
+      review before any publication''].'
+    - Set status silver.
+    acceptance:
+    - licence.notes of EX-005 contains a terms URL and a sentence starting 'Attribution:'
+    - research.blockers of EX-005 lists only open problems (or is empty)
+    - python -m ops.repo_check passes
+    verify:
+    - run: python -m ops.repo_check
+      expect: exit code 0
+    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
+        if s['id']=='EX-005'])"
+      expect: notes include the terms URL and 'Attribution:'
+    out_of_scope:
+    - Other register entries
+    - Code or source declaration changes
+    - The kpi field (set only by data/ingestion/register-restructure/fields/family-kpi)
+    notes:
+    - 'Stage 9 (data.zohelo.com) is allowed: that portal is private to the allowed e-mails.'
+- key: data/src-ex-005/development
+  title: OpenData orgs · Development
+  done_when:
+  - Source declaration and Landing code exist on main; a full load was trialled before production
+  state: done
+  notes:
+  - 'Evidence: ingestion/sources/opendata_org.yaml, ingestion/to_landing/opendata_org/extract.py, ingestion/to_bronze/opendata_org/'
+- key: data/src-ex-005/ingestion
+  title: OpenData orgs · Ingestion (Landing)
+  done_when:
+  - 'First production load complete (landing.inspect: missing 0); landing.verify and landing.archive green'
+  state: done
+  notes:
+  - 'Evidence: activities landing.extract/verify/archive; the Drive-era Landing copy is removed by the R2 clean-up
+    Epic (A-08); green full dataflow https://github.com/zohelo/zohelo-data/actions/runs/40187774846'
+- key: data/src-ex-005/schedule
+  title: OpenData orgs · Schedule
+  done_when:
+  - Full dataflow scheduled; last 3 runs green, newest dispatched by the scheduler; no open alert issue
+  tasks:
+  - key: data/src-ex-005/schedule/observe
+    type: Task
+    title: Confirm green scheduled OpenData orgs runs
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    verify_only: true
+    context: 'Verification only; closes with a comment, no PR. Rule D11 (monthly source): 2 green scheduler-started
+      full-dataflow runs within 62 days (or 1 plus the next due date); manual dispatches do not count. Monthly schedule
+      (1st, 04:10 UTC); green run on 25 Oct after two failures (manual).'
+    files: []
+    steps:
+    - 'List the scheduler-started runs: since=$(date -u -d ''-62 days'' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
+      --jq ''.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]") and
+      (.display_title|test("· opendata_org · full")))|"\(.conclusion) \(.created_at) \(.html_url)"''; done | head
+      -2'
+    - If it prints 2 lines starting with success, comment them here and close this issue. If only 1 exists, comment
+      it with the next due date from the schedule and close.
+    - 'If an alert issue ''Pipeline failed: opendata_org · …'' is open and the runs are green, close it with the
+      same comment (standing permission, AGENTS.md).'
+    - If fewer runs exist yet, comment the count and the next due date and keep this Task open.
+    - 'If a run failed, open a Bug under this Deliverable titled ''Pipeline failed: <source> · <step>'' quoting
+      the failing annotation, and keep this Task open.'
+    acceptance:
+    - 'A comment lists the run URLs meeting the rule: 2 green scheduler-started full-dataflow runs within 62 days
+      (or 1 plus the next due date)'
+    - No open alert issue for opendata_org
+    verify:
+    - run: since=$(date -u -d '-62 days' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
+        --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]")
+        and (.display_title|test("· opendata_org · full")))|"\(.conclusion) \(.created_at) \(.html_url)"'; done
+        | head -2
+      expect: 2 lines starting with success
+    out_of_scope:
+    - Code changes
+    - Changing the schedule
+    - Counting manual dispatches
+- key: data/src-ex-005/bronze
+  title: OpenData orgs · Bronze
+  done_when:
+  - Declared Bronze tables exist; bronze.verify green; latest version only
+  state: done
+  notes:
+  - 'Evidence: bronze.opendata_records; green full dataflow https://github.com/zohelo/zohelo-data/actions/runs/40187774846'
+- key: data/src-ex-005/silver
+  title: OpenData orgs · Silver
+  done_when:
+  - Declared Silver tables written by today's code (dbt model or warehouse/entity/*.sql) with tests/checks and descriptions
+  state: done
+  notes:
+  - 'Evidence: warehouse/entity/opendata_organizations.sql, opendata_people.sql, opendata_locations.sql'
+- key: data/src-ex-005/portal-release
+  title: OpenData orgs · Data portal release
+  done_when:
+  - 'data.zohelo.com source page: register summary, tables per layer with rows and last write, freshness, last scheduled
+    run'
+  depends_on:
+  - data/portal/catalogue-pages
+  todo:
+  - Check the source page on data.zohelo.com and fix missing metadata, once Epic data/portal/catalogue-pages is
+    done

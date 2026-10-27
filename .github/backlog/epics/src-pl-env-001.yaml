@@ -1,0 +1,153 @@
+key: data/src-pl-env-001
+area: data/src-e
+title: GUGiK PRG [PL-ENV-001]
+phase: 1
+priority: P2
+target: '2027-01-29'
+why: PRG gives the official boundaries of Polish administrative units. Maps in bi and zohelo.com and area-based
+  rates (per km²) need it.
+outcome: PRG is loaded monthly, its areas feed the geography dimension and simplified geometry for maps.
+in_scope:
+- Stages 1–7 and 9 of the source template (stages.yaml)
+out_of_scope:
+- Other sources of the same provider
+- Paid access tiers
+- 'KPIs, zohelo-bi and zohelo.com releases (reference/entity source, kpi: false)'
+done_when:
+- Every Deliverable of this Epic is closed (8/8)
+- 14 consecutive days of green scheduled runs
+depends_on: []
+decisions: []
+deliverables:
+- key: data/src-pl-env-001/review
+  title: GUGiK PRG · Source review
+  done_when:
+  - Register entry has every field filled; licence.notes gives the terms URL and the attribution sentence; obsolete
+    blockers removed
+  tasks:
+  - key: data/src-pl-env-001/review/register
+    type: Task
+    title: Complete the register review of GUGiK PRG
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    context: 'The register entry PL-ENV-001 in ingestion/register.yaml is the source of truth for licence and public
+      display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
+      URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
+      read: https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl,
+      https://www.geoportal.gov.pl/pl/dane/.'
+    files:
+    - edit: ingestion/register.yaml
+    steps:
+    - Open https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl and
+      the licence notice inside a downloaded PRG package description on geoportal.gov.pl; record the reuse terms
+      and required attribution.
+    - 'Write licence.notes: ''Terms: <URL>. Attribution: "Źródło: GUGiK, PRG" (or the wording the notice requires).'''
+    - Replace the blocker with only what is still open (formats, archive depth and identifiers are known from ingestion/sources/gugik_prg.yaml).
+    acceptance:
+    - licence.notes of PL-ENV-001 contains a terms URL and a sentence starting 'Attribution:'
+    - research.blockers of PL-ENV-001 lists only open problems (or is empty)
+    - python -m ops.repo_check passes
+    verify:
+    - run: python -m ops.repo_check
+      expect: exit code 0
+    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
+        if s['id']=='PL-ENV-001'])"
+      expect: notes include the terms URL and 'Attribution:'
+    out_of_scope:
+    - Other register entries
+    - Code or source declaration changes
+    - The kpi field (set only by data/ingestion/register-restructure/fields/family-kpi)
+- key: data/src-pl-env-001/development
+  title: GUGiK PRG · Development
+  done_when:
+  - Source declaration and Landing code exist on main; a full load was trialled before production
+  state: done
+  notes:
+  - 'Evidence: ingestion/sources/gugik_prg.yaml, ingestion/to_bronze/gugik_prg/load.py'
+- key: data/src-pl-env-001/ingestion
+  title: GUGiK PRG · Ingestion (Landing)
+  done_when:
+  - 'First production load complete (landing.inspect: missing 0); landing.verify and landing.archive green'
+  state: done
+  notes:
+  - 'Evidence: activities landing.extract/verify/archive; green full dataflow https://github.com/zohelo/zohelo-data/actions/runs/39812819906'
+- key: data/src-pl-env-001/schedule
+  title: GUGiK PRG · Schedule
+  done_when:
+  - Full dataflow scheduled; last 3 runs green, newest dispatched by the scheduler; no open alert issue
+  tasks:
+  - key: data/src-pl-env-001/schedule/observe
+    type: Task
+    title: Confirm green scheduled GUGiK PRG runs
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    verify_only: true
+    context: 'Verification only; closes with a comment, no PR. Rule D11 (monthly source): 2 green scheduler-started
+      full-dataflow runs within 62 days (or 1 plus the next due date); manual dispatches do not count. Monthly schedule
+      (3rd, 02:40 UTC); last green run 22 Oct (manual).'
+    files: []
+    steps:
+    - 'List the scheduler-started runs: since=$(date -u -d ''-62 days'' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
+      --jq ''.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]") and
+      (.display_title|test("· gugik_prg · full")))|"\(.conclusion) \(.created_at) \(.html_url)"''; done | head -2'
+    - If it prints 2 lines starting with success, comment them here and close this issue. If only 1 exists, comment
+      it with the next due date from the schedule and close.
+    - 'If an alert issue ''Pipeline failed: gugik_prg · …'' is open and the runs are green, close it with the same
+      comment (standing permission, AGENTS.md).'
+    - If fewer runs exist yet, comment the count and the next due date and keep this Task open.
+    - 'If a run failed, open a Bug under this Deliverable titled ''Pipeline failed: <source> · <step>'' quoting
+      the failing annotation, and keep this Task open.'
+    acceptance:
+    - 'A comment lists the run URLs meeting the rule: 2 green scheduler-started full-dataflow runs within 62 days
+      (or 1 plus the next due date)'
+    - No open alert issue for gugik_prg
+    verify:
+    - run: since=$(date -u -d '-62 days' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
+        --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]")
+        and (.display_title|test("· gugik_prg · full")))|"\(.conclusion) \(.created_at) \(.html_url)"'; done | head
+        -2
+      expect: 2 lines starting with success
+    out_of_scope:
+    - Code changes
+    - Changing the schedule
+    - Counting manual dispatches
+- key: data/src-pl-env-001/bronze
+  title: GUGiK PRG · Bronze
+  done_when:
+  - Declared Bronze tables exist; bronze.verify green; latest version only
+  state: done
+  notes:
+  - 'Evidence: bronze.prg_boundaries; bronze_latest_only: true; green full dataflow https://github.com/zohelo/zohelo-data/actions/runs/39812819906'
+- key: data/src-pl-env-001/silver
+  title: GUGiK PRG · Silver
+  done_when:
+  - Declared Silver tables written by today's code (dbt model or warehouse/entity/*.sql) with tests/checks and descriptions
+  state: done
+  notes:
+  - 'Evidence: warehouse/models/silver/gugik_prg/prg_units.sql'
+- key: data/src-pl-env-001/gold
+  title: GUGiK PRG · Gold
+  done_when:
+  - Observations in Gold v1 facts joined to conformed dimensions with no unmatched keys; measures in the catalogue
+    tables
+  depends_on:
+  - data/warehouse/gold-v1
+  notes:
+  - Areas feed gold.dim_geography today; Gold v1 and the published geometry (geo/<level>.geojson) use it.
+  todo:
+  - Gold v1 builder Tasks (block list, geography mapping, build-check row) are written when Epic data/warehouse/gold-v1
+    is done
+- key: data/src-pl-env-001/portal-release
+  title: GUGiK PRG · Data portal release
+  done_when:
+  - 'data.zohelo.com source page: register summary, tables per layer with rows and last write, freshness, last scheduled
+    run'
+  depends_on:
+  - data/portal/catalogue-pages
+  todo:
+  - Check the source page on data.zohelo.com and fix missing metadata, once Epic data/portal/catalogue-pages is
+    done

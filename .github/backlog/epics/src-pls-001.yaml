@@ -1,0 +1,263 @@
+key: data/src-pls-001
+area: data/src-b
+title: GUS BDL [PLS-001]
+phase: 1
+priority: P1
+target: '2027-01-29'
+why: 'BDL is the Polish regional statistics bank: thousands of variables down to powiat and gmina. It is the source
+  of every regional profile and voivodeship comparison on zohelo.com and in bi.'
+outcome: All BDL subgroups are loaded once and refreshed daily through the API; BDL KPIs are in the catalogue, explorer
+  and regional pages.
+in_scope:
+- Stages 1–11 of the source template (stages.yaml)
+out_of_scope:
+- Other sources of the same provider
+- Paid access tiers
+done_when:
+- Every Deliverable of this Epic is closed (11/11)
+- 14 consecutive days of green scheduled runs
+depends_on: []
+decisions: []
+deliverables:
+- key: data/src-pls-001/review
+  title: GUS BDL · Source review
+  done_when:
+  - Register entry has every field filled; licence.notes gives the terms URL and the attribution sentence; obsolete
+    blockers removed
+  tasks:
+  - key: data/src-pls-001/review/register
+    type: Task
+    title: Complete the register review of GUS BDL
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    context: 'The register entry PLS-001 in ingestion/register.yaml is the source of truth for licence and public
+      display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
+      URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
+      read: https://api.stat.gov.pl/Home/BdlApi.'
+    files:
+    - edit: ingestion/register.yaml
+    steps:
+    - Open https://api.stat.gov.pl/Home/BdlApi and the GUS terms page it links; confirm CC BY 4.0.
+    - 'Set licence.notes: ''Terms: CC BY 4.0, <URL>. Attribution: "Źródło: GUS, Bank Danych Lokalnych" / "Source:
+      Statistics Poland, Local Data Bank" plus the variable id.'''
+    - Remove blocker 'Confirm attribution wording in product UI'; keep 'Design a territory-vintage policy' (Gold
+      v1 geography question).
+    acceptance:
+    - licence.notes of PLS-001 contains a terms URL and a sentence starting 'Attribution:'
+    - research.blockers of PLS-001 lists only open problems (or is empty)
+    - python -m ops.repo_check passes
+    verify:
+    - run: python -m ops.repo_check
+      expect: exit code 0
+    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
+        if s['id']=='PLS-001'])"
+      expect: notes include the terms URL and 'Attribution:'
+    out_of_scope:
+    - Other register entries
+    - Code or source declaration changes
+    - The kpi field (set only by data/ingestion/register-restructure/fields/family-kpi)
+- key: data/src-pls-001/development
+  title: GUS BDL · Development
+  done_when:
+  - Source declaration and Landing code exist on main; a full load was trialled before production
+  state: done
+  notes:
+  - 'Evidence: ingestion/sources/gus_bdl.yaml, ingestion/to_landing/gus_bdl/, ingestion/to_bronze/gus_bdl/'
+- key: data/src-pls-001/ingestion
+  title: GUS BDL · Ingestion (Landing)
+  done_when:
+  - 'First production load complete (landing.inspect: missing 0); landing.verify and landing.archive green'
+  notes:
+  - 'Initial load in progress (owner decisions #889): website export + API, every 6 h, 3 parallel sessions.'
+  tasks:
+  - key: data/src-pls-001/ingestion/steady-extract
+    type: Task
+    title: Run the BDL API refresh in the steady-state extract
+    effort: M
+    state: open
+    contract: false
+    owner_action: null
+    context: 'ingestion/to_landing/gus_bdl/__init__.py `_extract`: with filter ''initial'' it runs the whole initial
+      load (_initial), whose step 2 is the incremental API refresh (refresh.py) of changed subgroups. With an empty
+      filter it runs only metadata.py (variables), so after the initial load ends no run would refresh changed subgroups.
+      Steady state (owner decision 13 Oct): the API refreshes changed subgroups daily (a third of them checked a
+      day, refresh.py docstring), then variables of new versions.'
+    files:
+    - edit: ingestion/to_landing/gus_bdl/__init__.py
+    - edit: ingestion/sources/gus_bdl.yaml
+    - edit: docs/landing.md
+    steps:
+    - Read refresh.py `main` argparse to see the accepted arguments (no --initial / --only = the incremental refresh
+      of held subgroups).
+    - 'In `_extract`, add a branch for the token ''refresh'': call refresh.main([''--budget-minutes'', str(budget
+      * 0.7)]) with budget = min(p.budget_minutes, 330), then metadata.main([''--filter'', '''', ''--budget-minutes'',
+      str(remaining, at least 10)]); return the first non-zero status.'
+    - Update the module docstring line for landing.extract with the 'refresh' token.
+    - Add the token to the comment above `activities:` in gus_bdl.yaml and one line to the BDL section of docs/landing.md.
+    - Do not change the schedule in this Task.
+    acceptance:
+    - filter 'refresh' runs the API refresh and then variables; other filters behave as before
+    - ruff and repo_check pass
+    verify:
+    - run: python -m ops.repo_check
+      expect: exit code 0
+    - workflow: 'Pipeline · gus_bdl · landing: extract, filter refresh (after merge)'
+      expect: green; annotation from refresh.py with checked/refreshed subgroup counts
+    out_of_scope:
+    - The initial-load code path
+    - Website export code
+    - Changing API budgets in api.py
+  - key: data/src-pls-001/ingestion/initial-complete
+    type: Task
+    title: Confirm the BDL initial load is complete
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    verify_only: true
+    context: 'Verification only; closes with a comment, no PR. The initial load (owner decisions #889) runs every
+      6 h with 3 parallel website sessions until every subgroup with data is in Landing.'
+    files: []
+    steps:
+    - 'Dispatch Pipeline: source gus_bdl, run ''landing: inspect'', empty filter (weekly until done).'
+    - 'Read the annotation: subgroups current / stale / missing.'
+    - When missing is 0, comment the run URL and counts here and close this issue; otherwise comment the counts
+      and the trend since the last check and keep it open.
+    acceptance:
+    - 'A landing: inspect annotation shows missing 0, linked in a comment'
+    verify:
+    - workflow: 'Pipeline · gus_bdl · landing: inspect'
+      expect: 'annotation: missing 0'
+    out_of_scope:
+    - Changing parallel_jobs or the initial filter
+- key: data/src-pls-001/schedule
+  title: GUS BDL · Schedule
+  done_when:
+  - Full dataflow scheduled; last 3 runs green, newest dispatched by the scheduler; no open alert issue
+  tasks:
+  - key: data/src-pls-001/schedule/steady-schedule
+    type: Task
+    title: Switch BDL to the steady-state daily schedule
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    context: 'gus_bdl.yaml schedules the initial load: cron ''20 0,6,12,18 * * *'', parallel_jobs 3, filter ''initial
+      P4624 …'' (program plan A-27). Once the initial load is complete, one daily refresh run is enough and polite.'
+    files:
+    - edit: ingestion/sources/gus_bdl.yaml
+    steps:
+    - 'Replace the schedule entry with `- {cron: "20 2 * * *", run: "full dataflow: landing → bronze → silver →
+      gold → portal", filter: "refresh"}` (no parallel_jobs).'
+    - 'Replace the ''Initial load (owner decision #889…)'' comment with: ''Steady state since <date>: daily API
+      refresh of changed subgroups (refresh.py), then variables; initial load completed <date>, #<initial-complete
+      issue>.'''
+    - Set extraction.initial comment to 'done <date>'.
+    - Run PYTHONPATH=. python run.py schedule --check.
+    acceptance:
+    - One daily schedule entry with filter refresh; schedule --check passes
+    verify:
+    - run: PYTHONPATH=. python run.py schedule --check
+      expect: exit code 0
+    out_of_scope:
+    - Removing the initial-load code (kept for re-loads)
+    depends_on:
+    - data/src-pls-001/ingestion/steady-extract
+    - data/src-pls-001/ingestion/initial-complete
+  - key: data/src-pls-001/schedule/observe
+    type: Task
+    title: Confirm green scheduled GUS BDL runs
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    verify_only: true
+    context: 'Verification only; closes with a comment, no PR. Rule D11 (daily source): 3 green scheduler-started
+      full-dataflow runs within 7 days; manual dispatches do not count. Runs of 26 Oct 12:47 and 18:47 failed (alert
+      #925, closed by the Operations fixes Epic, A-21). Observe after the steady-state schedule is merged.'
+    files: []
+    steps:
+    - 'List the scheduler-started runs: since=$(date -u -d ''-7 days'' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
+      --jq ''.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]") and
+      (.display_title|test("· gus_bdl · full")))|"\(.conclusion) \(.created_at) \(.html_url)"''; done | head -3'
+    - If it prints 3 lines starting with success, comment them here and close this issue.
+    - 'If an alert issue ''Pipeline failed: gus_bdl · …'' is open and the runs are green, close it with the same
+      comment (standing permission, AGENTS.md).'
+    - If fewer runs exist yet, comment the count and the next due date and keep this Task open.
+    - 'If a run failed, open a Bug under this Deliverable titled ''Pipeline failed: <source> · <step>'' quoting
+      the failing annotation, and keep this Task open.'
+    acceptance:
+    - 'A comment lists the run URLs meeting the rule: 3 green scheduler-started full-dataflow runs within 7 days'
+    - No open alert issue for gus_bdl
+    verify:
+    - run: since=$(date -u -d '-7 days' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
+        --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]")
+        and (.display_title|test("· gus_bdl · full")))|"\(.conclusion) \(.created_at) \(.html_url)"'; done | head
+        -3
+      expect: 3 lines starting with success
+    out_of_scope:
+    - Code changes
+    - Changing the schedule
+    - Counting manual dispatches
+    depends_on:
+    - data/src-pls-001/schedule/steady-schedule
+- key: data/src-pls-001/bronze
+  title: GUS BDL · Bronze
+  done_when:
+  - Declared Bronze tables exist; bronze.verify green; latest version only
+  state: done
+  notes:
+  - 'Evidence: bronze.bdl_observations (entity tables, #875), metadata tables; bronze.verify in activities; green
+    full dataflow https://github.com/zohelo/zohelo-data/actions/runs/40428643759'
+- key: data/src-pls-001/silver
+  title: GUS BDL · Silver
+  done_when:
+  - Declared Silver tables written by today's code (dbt model or warehouse/entity/*.sql) with tests/checks and descriptions
+  state: done
+  notes:
+  - 'Evidence: warehouse/entity/bdl_observations.sql; warehouse/models/silver/gus_bdl/ (bdl_variables, bdl_units)'
+- key: data/src-pls-001/gold
+  title: GUS BDL · Gold
+  done_when:
+  - Observations in Gold v1 facts joined to conformed dimensions with no unmatched keys; measures in the catalogue
+    tables
+  depends_on:
+  - data/warehouse/gold-v1
+  todo:
+  - Gold v1 builder Tasks (block list, geography mapping, build-check row) are written when Epic data/warehouse/gold-v1
+    is done
+- key: data/src-pls-001/semantic
+  title: GUS BDL · Semantic
+  done_when:
+  - KPIs in warehouse/seeds/kpi.csv (PL/EN, unit, frequency, licence, domain); metrics in the generated manifest;
+    lineage in the catalogue
+  depends_on:
+  - data/metadata/catalogue-v1
+  todo:
+  - kpi.csv rows, domain mapping and manifest check are written when Epic data/metadata/catalogue-v1 is done
+- key: data/src-pls-001/portal-release
+  title: GUS BDL · Data portal release
+  done_when:
+  - 'data.zohelo.com source page: register summary, tables per layer with rows and last write, freshness, last scheduled
+    run'
+  depends_on:
+  - data/portal/catalogue-pages
+  todo:
+  - Check the source page on data.zohelo.com and fix missing metadata, once Epic data/portal/catalogue-pages is
+    done
+- key: data/src-pls-001/bi-release
+  title: GUS BDL · zohelo-bi release
+  repo: zohelo-bi
+  done_when:
+  - KPIs in the bi catalogue and explorer; at least one dashboard tile uses one; bi smoke covers it
+  todo:
+  - Catalogue rows, explorer dimensions and a dashboard tile, written when zohelo-bi v1 reads the published layer
+- key: data/src-pls-001/com-release
+  title: GUS BDL · zohelo.com release
+  repo: zohelo
+  done_when:
+  - KPIs on zohelo.com indicator pages and section with real values, attribution and a link to bi
+  todo:
+  - Indicator pages and section content, written when zohelo.com v1 reads the published layer

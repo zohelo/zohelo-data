@@ -1,0 +1,180 @@
+key: data/ops/org-platform-move
+area: data/ops
+title: Organisation credentials and Cloudflare move
+phase: 0
+priority: P1
+why: >-
+  Credentials lived in two repositories under personal names, the portal ran on Google with Google
+  sign-in, and the scheduler used a personal token. Moving everything to the zohelo organisation and
+  Cloudflare removes personal dependencies and the retired Google stack.
+outcome: >-
+  Every workflow reads organisation-level credentials with generic names; the data portal runs on
+  Cloudflare Pages behind Access; the scheduler Worker dispatches as the organisation's GitHub App.
+in_scope:
+  - organisation secrets and variables, code reading them by name
+  - data portal on Cloudflare Pages behind Access, identity from the Access token
+  - scheduler Worker identity through the zohelo-automation app (Client ID)
+out_of_scope:
+  - scoping secrets to selected repositories (Epic data/ops/credentials)
+done_when:
+  - Check credentials passes for every credential
+  - data.zohelo.com redirects to Cloudflare Access and the API answers signed-in users
+  - scheduler dispatches by zohelo-automation[bot] succeed
+decisions: ["owner 26-27 Oct: all credentials at organisation level; Google removed from the stack"]
+deliverables:
+  - key: data/ops/org-platform-move/credentials
+    title: Organisation credentials read by name
+    done_when:
+      - workflows and code read the organisation names; no repository secrets remain
+    tasks:
+      - key: data/ops/org-platform-move/credentials/org-names
+        type: Task
+        title: Read credentials from organisation secrets and variables
+        effort: M
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/927
+        context: Workflows read repository secrets with old names; the owner moved all credentials to the org.
+        files:
+          - edit: .github/workflows/pipeline.yml
+          - edit: .github/workflows/ops.yml
+          - edit: .github/workflows/dev.yml
+        steps:
+          - Map every workflow env entry to the organisation name.
+        acceptance:
+          - no workflow references a repository-only secret
+        verify:
+          - workflow: Pipeline and Ops runs after the merge
+            expect: green
+        out_of_scope: ["renaming code variables (done in #932)"]
+      - key: data/ops/org-platform-move/credentials/code-names
+        type: Task
+        title: Code reads the organisation names directly
+        effort: M
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/932
+        context: "After #927 the workflows mapped org names to old variable names; the code now uses the org names."
+        files:
+          - edit: ingestion/common/r2.py
+        steps:
+          - Rename every environment variable read in code to its organisation name (57 files).
+        acceptance:
+          - grep for the old names returns nothing
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [credential values]
+  - key: data/ops/org-platform-move/portal-pages
+    title: Data portal on Cloudflare Pages behind Access
+    done_when:
+      - data.zohelo.com served by Pages project zohelo-data behind Access; API verifies the Access JWT
+    tasks:
+      - key: data/ops/org-platform-move/portal-pages/pages
+        type: Task
+        title: Deploy the data portal to Cloudflare Pages behind Access
+        effort: L
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/928
+        context: The portal ran with Google sign-in; it moves to Pages with Access one-time PIN.
+        files:
+          - edit: portal/cloudflare_setup.py
+          - edit: .github/workflows/deploy-portal.yml
+        steps:
+          - Create the Pages project and Access app from portal/cloudflare_setup.py.
+        acceptance:
+          - data.zohelo.com redirects to Access
+        verify:
+          - workflow: Deploy portal on main
+            expect: green, smoke passes
+        out_of_scope: [removing Google client code (A-05)]
+      - key: data/ops/org-platform-move/portal-pages/access-identity
+        type: Task
+        title: Verify the Access token when the identity header is absent
+        effort: S
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/929
+        context: Pages Functions do not receive Cf-Access-Authenticated-User-Email; the API verifies the JWT.
+        files:
+          - edit: portal/worker/src/index.js
+        steps:
+          - Verify Cf-Access-Jwt-Assertion or CF_Authorization RS256 against the team certs.
+        acceptance:
+          - /api/health shows signed_in_as for a signed-in user
+        verify:
+          - workflow: Deploy portal, then owner sign-in
+            expect: owner confirmed sign-in works
+        out_of_scope: [service tokens]
+  - key: data/ops/org-platform-move/scheduler-app
+    title: Scheduler Worker dispatches as the org app
+    done_when:
+      - Worker signs with the app Client ID; dispatches by zohelo-automation[bot] succeed
+    tasks:
+      - key: data/ops/org-platform-move/scheduler-app/worker-app
+        type: Task
+        title: Scheduler Worker dispatches as the org GitHub App
+        effort: M
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/930
+        context: The Worker used a personal token that expires.
+        files:
+          - edit: ops/scheduler_worker/src/index.js
+          - edit: ops/scheduler_trigger.py
+        steps:
+          - Sign an app JWT in the Worker, exchange for an installation token, dispatch.
+        acceptance:
+          - dispatches show zohelo-automation[bot] as actor
+        verify:
+          - workflow: Ops scheduler_trigger status
+            expect: app_credentials_set true
+        out_of_scope: [GitHub's own schedule backup]
+      - key: data/ops/org-platform-move/scheduler-app/secret-201
+        type: Bug
+        title: Accept HTTP 201 when setting Worker secrets
+        effort: S
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/931
+        context: scheduler_trigger deploy treated 201 Created as a failure.
+        files:
+          - edit: ops/scheduler_trigger.py
+        steps:
+          - Accept 200 and 201.
+        acceptance:
+          - deploy succeeds when secrets are new
+        verify:
+          - workflow: Ops scheduler_trigger deploy
+            expect: green
+        out_of_scope: [other status codes]
+      - key: data/ops/org-platform-move/scheduler-app/token-client-id
+        type: Task
+        title: App token action uses the Client ID only
+        effort: S
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/933
+        context: create-github-app-token v3 deprecates app-id; the organisation variable ORG_BOT_CLIENT_ID exists.
+        files:
+          - edit: .github/workflows/ops.yml
+        steps:
+          - Pass client-id instead of app-id to actions/create-github-app-token.
+        acceptance:
+          - no app-id input in any workflow
+        verify:
+          - workflow: Ops project inspect after the merge
+            expect: green, no deprecation warning
+        out_of_scope: [the scheduler Worker (next Task)]
+      - key: data/ops/org-platform-move/scheduler-app/client-id
+        type: Task
+        title: Scheduler signs with the app's Client ID
+        effort: S
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/934
+        context: "create-github-app-token v3 deprecates app-id; ORG_BOT_APP_ID was deleted (#933, #934)."
+        files:
+          - edit: .github/workflows/ops.yml
+          - edit: ops/scheduler_worker/src/index.js
+        steps:
+          - Worker JWT iss = Client ID; scheduler_trigger sets APP_CLIENT_ID.
+        acceptance:
+          - no workflow or code reads ORG_BOT_APP_ID
+        verify:
+          - workflow: scheduled dispatch after the variable was deleted
+            expect: green (09:47 UTC 27 Oct)
+        out_of_scope: [private key rotation]

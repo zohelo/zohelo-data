@@ -1,0 +1,107 @@
+key: data/src-plg-011
+area: data/src-e
+title: MF VAT white list [PLG-011]
+phase: 1
+priority: P3
+target: '2027-01-29'
+why: The VAT white list confirms which Polish businesses are active VAT payers. It supports company verification
+  and entity matching with KRS and GLEIF later.
+outcome: The daily flat file is loaded, kept 3 days back, modelled in Silver as hashes and masks, and browsable
+  on data.zohelo.com.
+in_scope:
+- Stages 1–6 and 9 of the source template (stages.yaml)
+out_of_scope:
+- Other sources of the same provider
+- Paid access tiers
+- 'KPIs, zohelo-bi and zohelo.com releases (reference/entity source, kpi: false)'
+done_when:
+- Every Deliverable of this Epic is closed (7/7)
+- 14 consecutive days of green scheduled runs
+depends_on: []
+decisions: []
+deliverables:
+- key: data/src-plg-011/review
+  title: MF VAT white list · Source review
+  done_when:
+  - Register entry has every field filled; licence.notes gives the terms URL and the attribution sentence; obsolete
+    blockers removed
+  tasks:
+  - key: data/src-plg-011/review/register
+    type: Task
+    title: Complete the register review of MF VAT white list
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    context: 'The register entry PLG-011 in ingestion/register.yaml is the source of truth for licence and public
+      display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
+      URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
+      read: https://www.gov.pl/web/kas/api-wykazu-podatnikow-vat, https://www.podatki.gov.pl/wykaz-podatnikow-vat-wyszukiwarka.'
+    files:
+    - edit: ingestion/register.yaml
+    steps:
+    - Open https://www.gov.pl/web/kas/api-wykazu-podatnikow-vat and the flat-file description at https://www.podatki.gov.pl/wykaz-podatnikow-vat-wyszukiwarka;
+      record the reuse terms of the flat file.
+    - 'Write licence.notes: ''Terms: <URL>. The flat file holds SHA-512 hashes of NIP+account, not readable data;
+      republication: <allowed|not stated>. Attribution: "Źródło: Ministerstwo Finansów, Wykaz podatników VAT".'''
+    - Replace the blocker with only what is still open.
+    - Set status silver.
+    acceptance:
+    - licence.notes of PLG-011 contains a terms URL and a sentence starting 'Attribution:'
+    - research.blockers of PLG-011 lists only open problems (or is empty)
+    - python -m ops.repo_check passes
+    verify:
+    - run: python -m ops.repo_check
+      expect: exit code 0
+    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
+        if s['id']=='PLG-011'])"
+      expect: notes include the terms URL and 'Attribution:'
+    out_of_scope:
+    - Other register entries
+    - Code or source declaration changes
+    - The kpi field (set only by data/ingestion/register-restructure/fields/family-kpi)
+- key: data/src-plg-011/development
+  title: MF VAT white list · Development
+  done_when:
+  - Source declaration and Landing code exist on main; a full load was trialled before production
+  state: done
+  notes:
+  - 'Evidence: ingestion/sources/mf_biala_lista.yaml (extraction.kind bulk_file), ingestion/to_bronze/mf_biala_lista/'
+- key: data/src-plg-011/ingestion
+  title: MF VAT white list · Ingestion (Landing)
+  done_when:
+  - 'First production load complete (landing.inspect: missing 0); landing.verify and landing.archive green'
+  state: done
+  notes:
+  - 'Evidence: activities landing.extract/verify/archive; green full dataflow https://github.com/zohelo/zohelo-data/actions/runs/40462451132'
+- key: data/src-plg-011/schedule
+  title: MF VAT white list · Schedule
+  done_when:
+  - Full dataflow scheduled; last 3 runs green, newest dispatched by the scheduler; no open alert issue
+  state: done
+  notes:
+  - 'Evidence: 23:50 and 05:50 UTC daily; full dataflow green 25–27 Oct; green full dataflow https://github.com/zohelo/zohelo-data/actions/runs/40462451132'
+- key: data/src-plg-011/bronze
+  title: MF VAT white list · Bronze
+  done_when:
+  - Declared Bronze tables exist; bronze.verify green; latest version only
+  state: done
+  notes:
+  - 'Evidence: bronze.biala_lista_records; green full dataflow https://github.com/zohelo/zohelo-data/actions/runs/40462451132'
+- key: data/src-plg-011/silver
+  title: MF VAT white list · Silver
+  done_when:
+  - Declared Silver tables written by today's code (dbt model or warehouse/entity/*.sql) with tests/checks and descriptions
+  state: done
+  notes:
+  - 'Evidence: warehouse/entity/biala_lista_taxpayer_hashes.sql, biala_lista_masks.sql'
+- key: data/src-plg-011/portal-release
+  title: MF VAT white list · Data portal release
+  done_when:
+  - 'data.zohelo.com source page: register summary, tables per layer with rows and last write, freshness, last scheduled
+    run'
+  depends_on:
+  - data/portal/catalogue-pages
+  todo:
+  - Check the source page on data.zohelo.com and fix missing metadata, once Epic data/portal/catalogue-pages is
+    done

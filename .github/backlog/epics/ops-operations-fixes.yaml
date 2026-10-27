@@ -1,0 +1,129 @@
+key: data/ops/operations-fixes
+area: data/ops
+title: Operations fixes
+phase: 0
+priority: P1
+target: 2026-11-14
+why: >-
+  Production needs 14 days of green scheduled runs. Today three alerts from the credential rotation and
+  the DBW indicator stay open, key rotation has no written procedure, and nothing notices when the
+  external scheduler clock stops.
+outcome: >-
+  Scheduled runs are green unless something new breaks; open alerts mean real problems; key rotation
+  follows a runbook; a stopped scheduler raises an alert within a day; the tracker reports weekly.
+in_scope:
+  - close rotation-window alerts, key-rotation runbook, daily scheduler heartbeat (A-21)
+  - weekly tracker run (A-29 schedule part)
+out_of_scope:
+  - "GUS DBW indicator 814 (A-16), BDL steady state (A-27), WDI archive (A-28): source Epics data/src-pls-002, data/src-pls-001, data/src-gl-005"
+  - alert de-duplication and parenting (Epic data/backlog/engine)
+done_when:
+  - "no open alert issue older than 2 days without a comment naming the cause"
+  - a scheduler heartbeat runs daily and fails when fewer than 40 dispatches happened in 24 h
+  - the tracker runs every Monday from the Ops schedule
+decisions:
+  - "AGENTS.md: Claude may close an alert once the cause is fixed and the source's latest run is green; Claude may add schedule triggers to ops.yml for standing tasks"
+deliverables:
+  - key: data/ops/operations-fixes/alerts
+    title: Alerts reflect real problems
+    done_when:
+      - "#923, #925, #926 closed with a cause note; rotation runbook in ops/README.md"
+    tasks:
+      - key: data/ops/operations-fixes/alerts/rotation-runbook
+        type: Task
+        title: Write the key-rotation runbook (pause the scheduler first)
+        effort: S
+        state: open
+        context: >-
+          The 26 Oct credential rotation failed the scheduled runs of gus_bdl and eurostat (#925, #926)
+          because the scheduler kept dispatching with stale secrets. ops/README.md has a scheduler clock
+          runbook but no rotation steps.
+        files:
+          - edit: ops/README.md
+        steps:
+          - "Under the 'Scheduler clock runbook' paragraph add 'Key rotation': 1 Ops scheduler_trigger args pause; 2 rotate the secret in the organisation settings; 3 Ops check_credentials (once it exists; until then zohelo-bi Check credentials); 4 Ops scheduler_trigger args deploy (re-sets Worker secrets) then args resume; 5 close any alert raised in the window with the cause 'rotation window'."
+        acceptance:
+          - the five steps are in ops/README.md
+        verify:
+          - run: grep -n "Key rotation" ops/README.md
+            expect: one heading line
+        out_of_scope: [automating rotation]
+        notes: ["In progress: delivered by PR #944 together with security-baseline/repo-rules/landing-objects-gitleaks"]
+      - key: data/ops/operations-fixes/alerts/close-rotation
+        type: Task
+        verify_only: true
+        title: Close the rotation-window alerts and the DBW alert
+        effort: S
+        state: open
+        depends_on: [data/src-pls-002/schedule/exclude-814]
+        context: >-
+          #925 (gus_bdl) and #926 (eurostat) failed on 26 Oct during the credential rotation; #923 is the
+          DBW indicator 814 failure, fixed by the exclusion Task. AGENTS.md lets Claude close an alert
+          once the cause is fixed and the source's latest run is green.
+        files: []
+        steps:
+          - "For each source read its latest scheduled Pipeline run: `gh api 'repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100'` and pick the newest run whose display_title names the source."
+          - "Green: comment 'Cause: <rotation window 26 Oct | indicator 814, fixed by #<PR>>. Latest run <link> green.' and close the issue."
+          - Not green: leave it open and comment the latest failing annotation.
+        acceptance:
+          - each closed alert has the cause comment with a green run link
+        verify:
+          - run: gh api 'repos/zohelo/zohelo-data/issues?labels=alert&state=open' --jq '[.[].number]'
+            expect: "[] (or only alerts with a failure newer than 26 Oct)"
+        out_of_scope: [changing notify_failure]
+  - key: data/ops/operations-fixes/watch
+    title: Scheduler and tracker watched on a schedule
+    depends_on: [data/ops/r2-cleanup/orphans]
+    done_when:
+      - heartbeat daily and tracker weekly run from the Ops schedule table
+    tasks:
+      - key: data/ops/operations-fixes/watch/heartbeat
+        type: Task
+        title: Daily scheduler heartbeat raises an alert when dispatches stop
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/ops/r2-cleanup/orphans/schedule]
+        context: >-
+          The Worker zohelo-scheduler fires at :17 and :47 (48 dispatches a day). If it stops (secret
+          rotation, Cloudflare change) nothing tells the owner. ops.yml has a schedule table (added by the
+          orphan schedule Task) that maps each cron to a script and args.
+        files:
+          - edit: ops/scheduler_trigger.py
+          - edit: .github/workflows/ops.yml
+          - edit: ops/README.md
+        steps:
+          - "scheduler_trigger.py: new mode `heartbeat`: count pipeline.yml runs created in the last 24 h whose display_title contains 'scheduler: dispatch due runs' and whose triggering_actor.login is 'zohelo-automation[bot]' (GET /repos/{repo}/actions/workflows/pipeline.yml/runs?created=>=<ISO>&per_page=100, page parameter until a short page; GITHUB_TOKEN); notice with the count; exit 1 when < 40."
+          - "ops.yml: add cron '5 6 * * *' under on.schedule and a schedule-table row '5 6 * * *' → script scheduler_trigger, args heartbeat."
+          - "ops.yml: step `if: failure() && github.event_name == 'schedule'` runs `python -m ops.notify_failure` with RUN_SOURCE=scheduler and RUN_NAME=heartbeat; the ops job gets issues: write and actions: read."
+          - Document the mode in ops/README.md.
+        acceptance:
+          - "a heartbeat with < 40 dispatches opens \"Pipeline failed: scheduler · heartbeat\""
+        verify:
+          - workflow: Ops scheduler_trigger args heartbeat (manual)
+            expect: "notice \"dispatches in 24 h: ~48\", green"
+        out_of_scope: [changing the Worker cron]
+      - key: data/ops/operations-fixes/watch/tracker-schedule
+        type: Task
+        title: Run the tracker every Monday from the Ops schedule
+        effort: S
+        state: open
+        contract: true
+        depends_on: [data/ops/r2-cleanup/orphans/schedule]
+        context: >-
+          ops/tracker.py classifies tables and sources (legacy, copy, current) but runs only by hand, so
+          regressions show up late (A-29). Narrative goes to project status updates, not to an issue.
+        files:
+          - edit: .github/workflows/ops.yml
+          - edit: ops/README.md
+        steps:
+          - "ops.yml: add cron '40 5 * * 1' under on.schedule and a schedule-table row '40 5 * * 1' → script tracker, args '' (annotation only)."
+          - Document the schedule under tracker in ops/README.md.
+        acceptance:
+          - a Monday run of 'ops · tracker' appears without manual dispatch
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: next Monday's scheduled Ops run
+            expect: "'ops · tracker' green"
+        out_of_scope: [tracker classification changes]

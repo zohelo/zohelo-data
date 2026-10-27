@@ -1,0 +1,404 @@
+# The 11-stage template of a source Epic (SPEC.md §2–4; program plan §7.1; backlog audit §3.4).
+#
+# Every register entry (ingestion/register.yaml, later ingestion/register/*.yaml) is one source Epic "{short_name} [{id}]" under its
+# family Area (data/src-a … data/src-k). Phase 1 source Epics (the 10 onboarded sources) are written
+# by hand in epics/src-<id>.yaml because most of their stages are already done; the other ~173
+# registered sources are generated lazily by ops/backlog_sync.py from the register and this file:
+#   status registered|reviewing  → stage 1 (+ stage 2 as a todo stub)
+#   status approved              → stages 2–11 (or 2–9, see kpi below) with their standard Tasks
+#                                   rendered from the templates here; a stage's Tasks are rendered
+#                                   when its predecessor stage is done.
+# Placeholders: {id} register id (GL-001), {id_lower} (gl-001), {source_system} (eurostat),
+# {short_name} (Eurostat), {family_area} (data/src-a), {register_file} = the file holding entry {id}
+# (ingestion/register.yaml until Epic data/ingestion/register-restructure splits it, then
+# ingestion/register/<provider>.yaml; the sync resolves it when rendering).
+# {window} / {needed} come from the source's schedule cadence (rule D11): daily → 7 days / 3 runs,
+# weekly → 21 days / 3 runs, monthly → 62 days / 2 runs (or 1 run plus the next due date in the comment).
+# Keys: data/src-{id_lower}/<stage key>/<task>.
+#
+# kpi rule: a register entry with `kpi: false` (reference and entity sources: registers,
+# boundaries, company lists) gets stages 1–6 and 9 only. Stage 7 is added for it only when a Gold
+# model reads its Silver tables (e.g. TERYT and PRG → gold.dim_geography); stages 8, 10 and 11 are
+# never generated for it. Entity/event Gold models for registers are Phase 3 Epics.
+#
+# Verification Tasks (`verify_only: true`: stage 2 "dev-trial", stage 4 "observe", stage 5 "verify")
+# change no code on main: they close with a comment that links the evidence (run URLs, annotation
+# text), not with a PR, and carry the label verify-only. Every other Task is one PR.
+#
+# Shared facts every Task may rely on:
+# - The session cannot reach Cloudflare. Cloud effects are checked through Pipeline / Ops / Dev runs
+#   and their annotations: `gh api repos/zohelo/zohelo-data/check-runs/<job id>/annotations`.
+# - Scheduled run list (REST; no --paginate, the session proxy rejects its follow-up URLs):
+#   since=$(date -u -d '-{window} days' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since" --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]") and (.display_title|test("· {source_system} · full")))|"\(.conclusion) \(.created_at) \(.html_url)"'; done | head -{needed}
+#   Only runs started by the scheduler (zohelo-automation[bot]) or a GitHub schedule count; manual dispatches do not.
+# - PR check: the `check` job of dev.yml runs `python -m ops.repo_check` and `dbt parse`; run
+#   `python -m ops.repo_check` and `PYTHONPATH=. python run.py schedule --check` locally first.
+# - A Pipeline run never starts by a merge; dispatch: Actions → Pipeline → source + run (+ filter).
+
+stages:
+  - n: 1
+    key: review
+    title: "{short_name} · Source review"
+    repo: zohelo-data
+    predecessor: null
+    done_when:
+      - "Register entry {id} in {register_file} has every field filled (access, licence, updates, ingestion, modelling, research)"
+      - "licence.status is open-conditional, dataset-specific or restricted with notes that state the attribution text and any public-display limit; unresolved only with an owner decision recorded in licence.notes"
+      - "Register status is approved (onboard) or parked (with the reason in research.blockers)"
+    tasks:
+      - key: licence
+        title: "Record public reuse terms for {short_name}"
+        effort: S
+        context: >-
+          zohelo.com and bi.zohelo.com publish source data. Each published number needs the source's
+          attribution text and any limit on public or commercial display. Today the register entry {id}
+          may only say "open-conditional" or "unresolved" without the exact terms.
+        files:
+          - edit: "{register_file}"
+        steps:
+          - "Open the URLs in the entry's access.endpoint and research.references; find the provider's terms of use / copyright page."
+          - "Write into licence.notes: licence name or terms page URL, the exact attribution sentence to show, whether commercial reuse and modification are allowed, any disclaimer that must be shown."
+          - "Set licence.status: open-conditional when reuse with attribution is allowed; restricted when public display is not allowed; unresolved only if no terms exist (then add an owner:decision note to the Epic issue)."
+          - "Remove resolved items from research.blockers."
+        acceptance:
+          - "licence.notes of {id} names the terms URL and an attribution sentence"
+          - "python -m ops.repo_check passes"
+        verify:
+          - run: python -m ops.repo_check
+            expect: exit code 0
+        out_of_scope: ["Changing any other register entry", "Code changes"]
+      - key: decide
+        title: "Approve or park {short_name} in the register"
+        effort: S
+        context: >-
+          A source is onboarded only after its route, licence and grain are known. The register status
+          moves registered → approved (or parked), which tells the backlog sync to generate stages 2–11.
+        files:
+          - edit: "{register_file}"
+        steps:
+          - "Check the entry has access.kind, access.endpoint, licence (after the licence Task), updates, ingestion.identifiers and modelling.notes."
+          - "Set status: approved when a bulk feature or a tested API route exists and the licence allows our use; set status: parked otherwise and write the reason as the first research.blockers item."
+          - "kpi is a required field set when the entry was registered (rule in .github/backlog/assets/register-fields.md); change it only if this review proves it wrong, with the reason in the PR body."
+        acceptance:
+          - "{id} status is approved or parked"
+        verify:
+          - run: python -m ops.repo_check
+            expect: exit code 0
+        out_of_scope: ["Writing ingestion/sources/{source_system}.yaml (stage 2)"]
+        depends_on: [licence]
+        notes:
+          - "Rendered only after data/ingestion/register-restructure/fields/funnel is merged (repo_check accepts approved/parked from then on)."
+
+  - n: 2
+    key: development
+    title: "{short_name} · Development"
+    repo: zohelo-data
+    predecessor: review
+    done_when:
+      - "ingestion/sources/{source_system}.yaml exists with extraction, landing, archive_policy, bronze, silver, refresh and activities"
+      - "Landing code exists: ingestion/to_landing/{source_system}/ or extraction.kind of a shared pattern in ingestion/to_landing/patterns/"
+      - "A Dev branch run landed a full load into a zz_dev_ scratch prefix and removed it"
+    tasks:
+      - key: declaration
+        title: "Declare {short_name} in ingestion/sources"
+        effort: M
+        context: >-
+          Every source is declared once in ingestion/sources/<source_system>.yaml (docs/operating.md
+          "Source declarations"); code derives table lists from it. Copy the shape of
+          ingestion/sources/world_bank_wdi.yaml (bulk file) or ingestion/sources/gus_dbw.yaml (own extractor).
+        files:
+          - create: ingestion/sources/{source_system}.yaml
+          - edit: "{register_file}"
+          - edit: .github/workflows/pipeline.yml
+          - edit: docs/sources.md
+        steps:
+          - "Create the YAML with source_system, description, extraction (initial, production, incremental_policy, schedule: [] for now), landing: 01_landing/{source_system}/, archive_policy {move: true, retention: {keep_latest: 1, keep_days: 90}, prune: report}, bronze/silver/gold lists, refresh, activities: [landing.inspect, landing.extract, landing.verify]."
+          - "If the source is one or a few files at fixed URLs, use extraction.kind: bulk_file as in world_bank_wdi.yaml and write no extractor."
+          - "Add `source_system: {source_system}` to register entry {id}."
+          - "Add {source_system} to the `source` options list of pipeline.yml (workflow_dispatch inputs)."
+          - "Add a section for the source to docs/sources.md: route, entity, version, restart unit."
+        acceptance:
+          - "PYTHONPATH=. python run.py schedule --check passes"
+          - "PYTHONPATH=. python run.py plan --source {source_system} --run 'landing: inspect' prints the activity list"
+        verify:
+          - run: 'PYTHONPATH=. python run.py plan --source {source_system} --run "landing: inspect"'
+            expect: JSON with landing.inspect
+          - run: python -m ops.repo_check
+            expect: exit code 0
+        out_of_scope: ["bronze.load in activities (stage 5)", "a schedule entry (stage 4)"]
+      - key: extractor
+        title: "Write the Landing extractor for {short_name}"
+        effort: L
+        context: >-
+          Landing rules: docs/landing.md and docs/playbook.md §2 — exact source bytes, receipt after the
+          file, never overwrite, resumable, time-budgeted, layout
+          01_landing/<source>/<snapshot|delta>/<data|metadata>/<entity>/<version>__<ingested>.<ext>.
+          Reference implementations: ingestion/to_landing/gus_dbw/extract.py and ingestion/to_landing/nbp/extract.py.
+          Skip this Task when the declaration uses a shared pattern (extraction.kind).
+        files:
+          - create: ingestion/to_landing/{source_system}/__init__.py
+          - create: ingestion/to_landing/{source_system}/extract.py
+        steps:
+          - "Copy the structure of ingestion/to_landing/gus_dbw/: __init__.py exposes ACTIVITIES = {'landing.inspect': …, 'landing.extract': …, 'landing.verify': …}."
+          - "inspect: list the source's entities and versions, compare with Landing receipts, annotate counts current/stale/missing, write nothing."
+          - "extract: download missing then stale entities into the layout above, write the receipt (sha256, bytes, url, version, ingested_at) after the file, stop cleanly at the time budget."
+          - "verify: every receipt has its file in Landing or 05_archive/{source_system}/."
+        acceptance:
+          - "ruff and repo_check pass; no credentials in code; retries are bounded and have timeouts"
+          - "Task dev-trial is closed with a green Dev run on this branch before the PR merges; the PR has no dev/ folder"
+        verify:
+          - run: python -m ops.repo_check
+            expect: exit code 0
+        out_of_scope: ["Bronze decoding", "writing outside 01_landing/{source_system}/"]
+        depends_on: [declaration]
+      - key: dev-trial
+        title: "Dev-trial a full {short_name} load into scratch"
+        effort: M
+        verify_only: true
+        context: >-
+          Proves the extractor against the real source without touching production. The trial script
+          lives in dev/ on the extractor's branch only and is never merged (repo_check rejects dev/,
+          AGENTS.md "Workflows"). This Task closes with a comment linking the green Dev run; the extractor
+          PR is merged only after that.
+        files: []
+        steps:
+          - "On the extractor's branch write dev/{source_system}_trial.py that runs inspect + extract with Landing root zz_dev_{source_system}/ and then deletes that prefix."
+          - "Dispatch Actions → Dev · branch runs on that branch with script {source_system}_trial."
+          - "Read the annotations; push extractor fixes to the same branch until the run lands every entity and cleans up."
+          - "Comment the green run URL here and close; then delete dev/ from the branch so the extractor PR can merge."
+        acceptance:
+          - "The Dev run is green; its annotation reports entity count and bytes; the zz_dev prefix is gone"
+        verify:
+          - workflow: Dev · branch runs (dev.yml), script {source_system}_trial, on the extractor branch
+            expect: green run; annotation with entity count
+        out_of_scope: ["Production Landing writes", "Merging anything (the extractor Task's PR carries the code)"]
+        depends_on: [declaration]
+
+  - n: 3
+    key: ingestion
+    title: "{short_name} · Ingestion (Landing)"
+    repo: zohelo-data
+    predecessor: development
+    done_when:
+      - "The first production load is complete: landing.inspect reports missing 0"
+      - "landing.verify is green; receipts and Archive copies verified (landing.archive green)"
+    tasks:
+      - key: production-load
+        title: "Run the first production load of {short_name}"
+        effort: S
+        context: >-
+          The activities list in the source YAML, merged to main, is the authorization to write
+          production Landing (AGENTS.md "Authorizations").
+        files:
+          - edit: ingestion/sources/{source_system}.yaml
+        steps:
+          - "Add landing.extract and landing.verify to activities (if missing); merge the PR."
+          - "Dispatch Pipeline: source {source_system}, run 'landing: extract'; repeat until 'landing: inspect' annotates missing 0."
+          - "Dispatch 'landing: verify' and record the run URL in this issue."
+        acceptance:
+          - "landing.inspect annotation shows missing 0; landing.verify run green"
+        verify:
+          - workflow: 'Pipeline · {source_system} · landing: inspect'
+            expect: annotation with missing 0
+        out_of_scope: ["Bronze (stage 5)"]
+
+  - n: 4
+    key: schedule
+    title: "{short_name} · Schedule"
+    repo: zohelo-data
+    predecessor: ingestion
+    done_when:
+      - "extraction.schedule in ingestion/sources/{source_system}.yaml runs the full dataflow at a polite, release-aware time"
+      - "The last 3 runs of that full dataflow are green, the newest of them dispatched by the scheduler (manual dispatches of the same run count for weekly/monthly schedules)"
+      - "No open alert issue for {source_system}"
+    tasks:
+      - key: add-schedule
+        title: "Schedule the {short_name} full dataflow"
+        effort: S
+        context: >-
+          Schedules are declared under extraction.schedule (cron in UTC + run + optional filter) and
+          dispatched by `python run.py schedule` (docs/operating.md). Pick a time after the source's usual
+          publication (register field `updates`) and away from the minutes other sources already use
+          (grep 'cron:' ingestion/sources/*.yaml warehouse/warehouse.yaml).
+        files:
+          - edit: ingestion/sources/{source_system}.yaml
+        steps:
+          - "Add `- {cron: \"<m> <h> <dom> <mon> <dow>\", run: \"full dataflow: landing → bronze → silver → gold → portal\"}` under extraction.schedule with a comment giving the reason for the time."
+          - "Run PYTHONPATH=. python run.py schedule --check."
+        acceptance:
+          - "schedule --check passes; the cron minute is not used by another source at the same hour"
+        verify:
+          - run: PYTHONPATH=. python run.py schedule --check
+            expect: exit code 0
+        out_of_scope: ["Changing other sources' schedules"]
+      - key: observe
+        title: "Confirm green scheduled {short_name} runs"
+        effort: S
+        verify_only: true
+        context: >-
+          Verification only; closes with a comment, no PR. Rule D11: only runs started by the scheduler
+          count; {needed} green full-dataflow runs within the last {window} days (monthly sources: 2, or
+          1 plus the next due date).
+        files: []
+        steps:
+          - "Run the scheduled run list command from the header of stages.yaml with {window} and {needed} filled in."
+          - "If it prints {needed} lines starting with success, comment them here and close the issue; close any open alert issue 'Pipeline failed: {source_system} · …' with the same comment (standing permission, AGENTS.md)."
+          - "If fewer runs exist yet, comment the count and the next due date from the schedule and keep the Task open."
+          - "If a run failed, open a Bug under this Deliverable titled 'Pipeline failed: {source_system} · <step>' quoting the failing annotation, and keep this Task open."
+        acceptance:
+          - "A comment lists {needed} green scheduler-started run URLs within {window} days"
+          - "No open alert issue for {source_system}"
+        verify:
+          - run: the scheduled run list command (header) with {window} and {needed}
+            expect: "{needed} lines starting with success"
+        out_of_scope: ["Code changes", "Counting manual dispatches"]
+        depends_on: [add-schedule]
+
+  - n: 5
+    key: bronze
+    title: "{short_name} · Bronze"
+    repo: zohelo-data
+    predecessor: ingestion
+    done_when:
+      - "The Bronze tables declared in ingestion/sources/{source_system}.yaml exist, one Parquet file per Landing file"
+      - "bronze.verify is green: every Landing file is in Bronze or rejected with a reason; zero unexplained rejections"
+      - "Latest version only: bronze_latest_only: true or entity tables (refresh.mode incremental)"
+    tasks:
+      - key: loader
+        title: "Write the Bronze loader for {short_name}"
+        effort: L
+        context: >-
+          Bronze rules: docs/playbook.md §3 — source-shaped, values as text, provenance = Landing SHA-256
+          + version + ingestion time, one Parquet file per Landing file, rejections to
+          bronze.{source_system}_rejected_files. Small sources: copy ingestion/to_bronze/nbp/load.py;
+          big sources (refresh.mode incremental): copy ingestion/to_bronze/gus_dbw/ (decode.py + entities.py).
+        files:
+          - create: ingestion/to_bronze/{source_system}/__init__.py
+          - create: ingestion/to_bronze/{source_system}/load.py
+          - edit: ingestion/sources/{source_system}.yaml
+        steps:
+          - "Implement decode(body, receipt) → pyarrow.Table and load(budget_minutes) following the reference file."
+          - "Declare bronze: [bronze.<table>, bronze.{source_system}_rejected_files], refresh and (small sources) bronze_latest_only: true."
+          - "Add bronze.load, bronze.verify, landing.archive, archive.prune to activities."
+          - "Dev-trial the loader into a zz_dev_ namespace with a dev/ script (deleted before merge)."
+        acceptance:
+          - "Dev run green with rows and rejected-file counts in the annotation; repo_check passes"
+        verify:
+          - workflow: Dev · branch runs (dev.yml), the loader trial script
+            expect: green; rejected files 0 or each with a reason
+        out_of_scope: ["Silver typing (stage 6)"]
+      - key: verify
+        title: "Load and verify {short_name} Bronze in production"
+        effort: S
+        verify_only: true
+        context: Verification only after the loader is merged; closes with a comment, no PR.
+        files: []
+        steps:
+          - "Dispatch Pipeline {source_system} 'bronze: load', then 'bronze: verify', then 'archive: move Bronze-loaded Landing'."
+          - "Comment the three run URLs and the verify annotation; close."
+        acceptance:
+          - "bronze.verify annotation: 0 files missing from Bronze, 0 unexplained rejections"
+        verify:
+          - workflow: 'Pipeline · {source_system} · bronze: verify'
+            expect: green
+        out_of_scope: ["Code changes"]
+        depends_on: [loader]
+
+  - n: 6
+    key: silver
+    title: "{short_name} · Silver"
+    repo: zohelo-data
+    predecessor: bronze
+    done_when:
+      - "Every Silver table declared in the source YAML is written by today's code: a dbt model in warehouse/models/silver/{source_system}/ or a per-entity model warehouse/entity/<table>.sql"
+      - "dbt tests (or the entity model's checks: same_rows, not-null, unique_key) pass in the last build"
+      - "Each table is described: a dbt _{source_system}.yml description or the entity SQL header comment"
+    tasks:
+      - key: models
+        title: "Model {short_name} Silver tables"
+        effort: L
+        context: >-
+          Silver = typed, normalised source data. Small sources: dbt models in
+          warehouse/models/silver/{source_system}/ (copy warehouse/models/silver/nbp/), listed in
+          warehouse/warehouse.yaml full_rebuild with a row ceiling below 1M (policy #822). Big sources
+          (entity tables): one warehouse/entity/<table>.sql applied per Bronze file by warehouse/entity.py
+          (copy warehouse/entity/dbw_observations.sql).
+        files:
+          - create: warehouse/models/silver/{source_system}/_{source_system}.yml
+          - create: warehouse/models/silver/{source_system}/<table>.sql
+          - edit: warehouse/models/bronze/sources.yml
+          - edit: warehouse/warehouse.yaml
+          - edit: ingestion/sources/{source_system}.yaml
+        steps:
+          - "Add the Bronze table to warehouse/models/bronze/sources.yml."
+          - "Write one model per Silver table with typed columns (dates as date, values as double, codes as text) and a description per table and key column."
+          - "Add not_null and unique tests on the grain columns in the yml."
+          - "Add the model to full_rebuild in warehouse.yaml with rows: ceiling (measure in a Dev run)."
+          - "List the tables under silver: in the source YAML."
+        acceptance:
+          - "cd warehouse && dbt parse --profiles-dir . --target prod --no-partial-parse succeeds"
+          - "repo_check passes (sqlfluff, full_rebuild rule)"
+        verify:
+          - run: cd warehouse && dbt parse --profiles-dir . --target prod --no-partial-parse
+            expect: exit code 0
+          - workflow: 'Pipeline · platform · silver/gold: build models, filter <model names>'
+            expect: green, tests pass
+        out_of_scope: ["Gold models (stage 7)"]
+
+  - n: 7
+    key: gold
+    title: "{short_name} · Gold"
+    repo: zohelo-data
+    predecessor: silver
+    depends_on_epics: [data/warehouse/gold-v1]
+    done_when:
+      - "The source's observations are in the Gold v1 fact tables, joined to the conformed dimensions (geography, time, unit, sex/age where present) with no unmatched keys"
+      - "Its measures have rows in the metadata catalogue tables (dim_measure / kpi_measure)"
+    todo:
+      - "Tasks are rendered from the Gold v1 builder pattern once Epic data/warehouse/gold-v1 is done (block list entry, geography mapping, build check row)"
+
+  - n: 8
+    key: semantic
+    title: "{short_name} · Semantic"
+    repo: zohelo-data
+    predecessor: gold
+    kpi_only: true
+    depends_on_epics: [data/metadata/catalogue-v1]
+    done_when:
+      - "Every KPI fed by the source is a row in warehouse/seeds/kpi.csv with PL/EN names, unit, frequency, licence and primary domain subgroup"
+      - "Its metrics appear in the generated semantic manifest with their dimensions; lineage source → table → KPI is in the catalogue"
+    todo:
+      - "Tasks are rendered from the catalogue v1 pattern (kpi.csv rows, domain mapping, manifest check) once Epic data/metadata/catalogue-v1 is done"
+
+  - n: 9
+    key: portal-release
+    title: "{short_name} · Data portal release"
+    repo: zohelo-data
+    predecessor: silver
+    depends_on_epics: [data/portal/catalogue-pages]
+    done_when:
+      - "data.zohelo.com shows a source page for {source_system}: register summary, tables per layer with rows and last write, freshness and the last scheduled run"
+    todo:
+      - "Tasks are rendered once the portal's catalogue/lineage/runs pages exist (Epic data/portal/catalogue-pages): check the source page renders, fix missing metadata"
+
+  - n: 10
+    key: bi-release
+    title: "{short_name} · zohelo-bi release"
+    repo: zohelo-bi
+    predecessor: semantic
+    kpi_only: true
+    done_when:
+      - "The source's KPIs are in the bi catalogue and explorer with their dimensions; at least one dashboard tile uses one of them; the bi smoke test covers that tile"
+    todo:
+      - "Tasks are rendered when zohelo-bi v1 (catalogue, explorer, dashboards) reads the published layer"
+
+  - n: 11
+    key: com-release
+    title: "{short_name} · zohelo.com release"
+    repo: zohelo
+    predecessor: bi-release
+    kpi_only: true
+    done_when:
+      - "The source's KPIs appear on zohelo.com (indicator pages and the relevant section) with real values, the attribution text from the register and a link to bi"
+    todo:
+      - "Tasks are rendered when zohelo.com v1 indicator pages read the published layer"

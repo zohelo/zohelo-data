@@ -1,0 +1,36 @@
+key: data/warehouse/entity-event
+area: data/warehouse
+title: Gold entity and event models
+phase: 3
+priority: P2
+target: 2027-05-28
+why: >-
+  Registers (companies, LEIs, taxpayers) and event sources (laws, court cases, procurement notices)
+  are not time series; phase 3 families E, F and H need entity and event models before they reach
+  the portals.
+outcome: >-
+  Gold holds SCD2 entity dimensions with an identifier cross-reference and event facts, so register
+  and event sources can be published like KPI sources.
+in_scope:
+  - entity model (organisation, person-role, location) with identifier_scheme cross-reference
+  - event fact pattern (event date, entity keys, type)
+out_of_scope:
+  - onboarding the phase 3 sources themselves (their source Epics)
+done_when:
+  - GLEIF, MF biała lista and OpenData orgs feed gold entity dimensions with a working identifier cross-reference
+  - one event source modelled end to end as the template
+depends_on: [data/warehouse/gold-v1]
+deliverables:
+  - key: data/warehouse/entity-event/entity
+    title: Entity dimensions
+    done_when:
+      - dim_organisation (SCD2) and identifier cross-reference built from the three register sources
+    todo:
+      - "Design record from warehouse/dimensions entity YAMLs (architect)"
+  - key: data/warehouse/entity-event/event
+    title: Event fact template
+    depends_on: [data/warehouse/entity-event/entity]
+    done_when:
+      - one event source modelled with the template and documented
+    todo:
+      - "Choose the template source (architect) and write the event fact pattern"

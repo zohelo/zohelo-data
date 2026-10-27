@@ -1,0 +1,35 @@
+key: data/ops/status-freshness
+area: data/ops
+title: Status page and freshness
+phase: 1
+priority: P2
+target: 2027-01-22
+why: >-
+  Visitors and the owner must see whether data is current. Every public number needs a date, and a
+  failing source should show as late, not silently stale.
+outcome: >-
+  A /status view lists each source's last successful load, next expected update and lag; freshness
+  is published and used by both portals.
+in_scope:
+  - freshness rows in the published catalogue; status JSON for zohelo.com /status
+  - 14-day green gate measurement for the phase 1 exit
+out_of_scope:
+  - paging or external uptime monitoring
+done_when:
+  - 06_published/v1/status.json lists every onboarded source with last_loaded_at, next_expected_at, lag_days
+  - an Ops run reports "green days in a row" per source for the phase exit
+depends_on: [data/metadata/catalogue-v1, data/published/published-v1]
+deliverables:
+  - key: data/ops/status-freshness/status-json
+    title: Status file published
+    done_when:
+      - gold.publish writes status.json from gold.freshness
+    todo:
+      - "Expected next update per source from its schedule; lag rule per frequency"
+      - "Write status.json in gold.publish"
+  - key: data/ops/status-freshness/green-gate
+    title: 14-day green gate report
+    done_when:
+      - tracker (or a new mode) annotates consecutive green scheduled days per source
+    todo:
+      - "Extend ops/tracker.py to count consecutive green scheduled runs per source from the Actions API"

@@ -1,0 +1,112 @@
+key: data/ingestion/register-restructure
+area: data/ingestion
+title: "Register restructure: families, funnel, short names"
+phase: 1
+priority: P1
+target: 2026-12-04
+why: >-
+  The register drives the backlog (source Epics) and the catalogue (dim_source). It still groups
+  sources by an old research section, its status stops at silver, and 87 names are too long for a
+  title. The backlog funnel (approved, parked, published) and the kpi flag need a home.
+outcome: >-
+  Every register entry has family, short_name, domains, kpi and a status from the full funnel;
+  the file is split per provider so changes stay small.
+in_scope:
+  - status funnel registered → reviewing → approved → landing → bronze → silver → gold → semantic → published → done | parked
+  - fields family (A–K), short_name (≤ 40), kpi (true/false) with values fixed in .github/backlog/assets/register-fields.md; domains (12-domain keys); drop section (A-26)
+  - split into ingestion/register/<provider>.yaml
+out_of_scope:
+  - researching new sources
+done_when:
+  - repo_check accepts the full funnel and requires family, short_name, kpi on every entry
+  - ingestion/register.yaml replaced by ingestion/register/*.yaml with the same 183 ids
+decisions: ["D12: family, short_name and kpi values in .github/backlog/assets/register-fields.md (architect, 27 Oct)", "kpi is set only by fields/family-kpi; source review Tasks do not change it"]
+deliverables:
+  - key: data/ingestion/register-restructure/fields
+    title: Funnel statuses and new fields
+    done_when:
+      - every entry has family, short_name, kpi; statuses from the funnel; repo_check enforces it
+    tasks:
+      - key: data/ingestion/register-restructure/fields/funnel
+        type: Task
+        title: Accept the full status funnel and validate the new fields
+        effort: S
+        state: open
+        contract: true
+        context: >-
+          ops/repo_check.py register() accepts only the statuses registered, landing, bronze, silver. The
+          backlog generates source stages from status and stops reference sources at stage 9 when
+          kpi is false. This Task only widens the rules; the data is added by the next two Tasks, so the
+          new fields are optional here and become required in the short-name Task.
+        files:
+          - edit: ops/repo_check.py
+          - edit: ingestion/register.yaml
+          - edit: docs/sources.md
+        steps:
+          - "repo_check.py: allowed statuses registered, reviewing, approved, landing, bronze, silver, gold, semantic, published, done, parked. When present: family must be one of A–K, kpi a boolean, short_name a string of ≤ 40 characters."
+          - "register.yaml header comment: replace 'registered → landing → bronze → silver' by the full funnel and say that family, short_name, kpi follow .github/backlog/assets/register-fields.md."
+          - "docs/sources.md: a table status → meaning: registered (researched), reviewing (stage 1 in progress), approved (cleared to build), landing, bronze, silver, gold, semantic (stage reached), published (in the portals), done (stage 11/9 complete), parked (stopped, reason in the entry)."
+        acceptance:
+          - repo_check green on the unchanged entries; an entry with family Z fails it (try locally, then revert)
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [adding field values (next Tasks), the domains field, splitting the file]
+      - key: data/ingestion/register-restructure/fields/family-kpi
+        type: Task
+        title: Add family and kpi to every register entry
+        effort: S
+        state: open
+        depends_on: [data/ingestion/register-restructure/fields/funnel]
+        context: >-
+          Each source belongs to one family (A–K, how it is ingested and licensed) and is either a KPI
+          source or a reference/register source. The architect assigned both for all 183 entries in
+          .github/backlog/assets/register-fields.md; this is the only place kpi is set (source review
+          Tasks do not touch it).
+        files:
+          - edit: ingestion/register.yaml
+        steps:
+          - "For every entry, insert `family: <X>` and `kpi: <true|false>` directly after the `status:` line, with the values of its id in register-fields.md."
+          - "Do this with a short script that edits lines (not yaml.dump, which would reflow the file); do not commit the script."
+        acceptance:
+          - 183 entries each with family and kpi equal to the assets table; no other line changed
+        verify:
+          - run: python -c "import yaml;e=yaml.safe_load(open('ingestion/register.yaml'))['sources'];r=[[c.strip() for c in l.strip().strip('|').split('|')] for l in open('.github/backlog/assets/register-fields.md') if l.startswith('| ') and '-' in l.split('|')[1]];t={c[0]:c for c in r};print(len(e),all(x['family']==t[x['id']][1] and str(x['kpi']).lower()==t[x['id']][3] for x in e))"
+            expect: 183 True
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [short_name, domains]
+      - key: data/ingestion/register-restructure/fields/short-name
+        type: Task
+        title: Add short_name to every entry and require the new fields
+        effort: S
+        state: open
+        contract: true
+        depends_on: [data/ingestion/register-restructure/fields/family-kpi]
+        context: >-
+          87 register names are too long for issue titles and catalogue labels. short_name (≤ 40
+          characters) is fixed for all 183 entries in .github/backlog/assets/register-fields.md. After
+          this Task every entry has the three fields, so repo_check makes them required.
+        files:
+          - edit: ingestion/register.yaml
+          - edit: ops/repo_check.py
+        steps:
+          - "Insert `short_name: <value>` after the `name:` line of every entry, value from register-fields.md (quote it if it contains ':' or starts with a special character)."
+          - "repo_check.py: family, kpi and short_name are now required on every entry (error message names the id)."
+        acceptance:
+          - 183 entries with short_name equal to the table; repo_check fails if any of the three fields is removed
+        verify:
+          - run: python -c "import yaml;e=yaml.safe_load(open('ingestion/register.yaml'))['sources'];r=[[c.strip() for c in l.strip().strip('|').split('|')] for l in open('.github/backlog/assets/register-fields.md') if l.startswith('| ') and '-' in l.split('|')[1]];t={c[0]:c for c in r};print(len(e),all(x['short_name']==t[x['id']][2] for x in e))"
+            expect: 183 True
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [domains, splitting the file]
+  - key: data/ingestion/register-restructure/split
+    title: Register split per provider
+    depends_on: [data/ingestion/register-restructure/fields]
+    done_when:
+      - ingestion/register/<provider>.yaml files hold all 183 entries; every reader updated; section removed
+    todo:
+      - "domains: list of the 12 domain keys per entry (from the inventory's free-text domains)"
+      - "Split into ingestion/register/<provider>.yaml; update readers (repo_check, tracker, run.py, catalog) to load the folder"
+      - "Remove section; update docs/sources.md"

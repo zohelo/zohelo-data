@@ -1,0 +1,42 @@
+key: data/portal/catalogue-pages
+area: data/portal
+title: Catalogue, lineage and runs pages
+phase: 1
+priority: P2
+target: 2027-01-15
+why: >-
+  The owner and agents need to see in data.zohelo.com which sources, tables and KPIs exist, where
+  each comes from and whether the last runs were green, without reading workflow logs.
+outcome: >-
+  The data portal has a catalogue page (sources, datasets, tables per layer, KPIs), a lineage view per
+  table and a runs page with the latest Pipeline results per source.
+in_scope:
+  - pages reading 06_published/v1/catalog and the run annotations summary
+  - source page per register entry (stage 9 "data portal release" of every source)
+out_of_scope:
+  - SQL workspace changes
+done_when:
+  - every onboarded source has a page with its tables per layer and freshness
+  - the runs page shows the last 10 runs per source with links
+depends_on: [data/portal/trim, data/published/published-v1]
+deliverables:
+  - key: data/portal/catalogue-pages/catalogue
+    title: Catalogue and source pages
+    done_when:
+      - /catalogue and /sources/<id> pages render from the published catalogue
+    todo:
+      - "Route and page components reading /api/catalog (worker) from 06_published/v1/catalog"
+      - "Source page template used by stage-9 Deliverables of every source"
+  - key: data/portal/catalogue-pages/lineage
+    title: Lineage view
+    done_when:
+      - each table shows upstream and downstream from catalog lineage lists
+    todo:
+      - "Lineage graph component from catalog.json upstream lists"
+  - key: data/portal/catalogue-pages/runs
+    title: Runs page
+    done_when:
+      - latest runs per source from a runs.json written by the Pipeline notify/report step
+    todo:
+      - "Pipeline writes 06_published/v1/runs.json (source, run, conclusion, time, link) — design first"
+      - "Runs page component"

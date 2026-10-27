@@ -1,0 +1,216 @@
+key: data/src-pls-002
+area: data/src-b
+title: GUS DBW [PLS-002]
+phase: 1
+priority: P1
+target: '2027-01-29'
+why: DBW (Dziedzinowe Bazy Wiedzy) holds GUS's thematic indicators (labour market, prices, demography) with ready
+  cross-sections. It complements BDL with national monthly and quarterly series.
+outcome: DBW runs green daily with known failures excluded, and its indicators reach the catalogue, explorer and
+  zohelo.com.
+in_scope:
+- Stages 1–11 of the source template (stages.yaml)
+out_of_scope:
+- Other sources of the same provider
+- Paid access tiers
+done_when:
+- Every Deliverable of this Epic is closed (11/11)
+- 14 consecutive days of green scheduled runs
+depends_on: []
+decisions: []
+deliverables:
+- key: data/src-pls-002/review
+  title: GUS DBW · Source review
+  done_when:
+  - Register entry has every field filled; licence.notes gives the terms URL and the attribution sentence; obsolete
+    blockers removed
+  tasks:
+  - key: data/src-pls-002/review/register
+    type: Task
+    title: Complete the register review of GUS DBW
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    context: 'The register entry PLS-002 in ingestion/register.yaml is the source of truth for licence and public
+      display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
+      URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
+      read: https://api.stat.gov.pl/Home/DBWApi?lang=en.'
+    files:
+    - edit: ingestion/register.yaml
+    steps:
+    - Open https://api.stat.gov.pl/Home/DBWApi?lang=en and the GUS terms page; confirm CC BY 4.0.
+    - 'Set licence.notes: ''Terms: CC BY 4.0, <URL>. Attribution: "Źródło: GUS, Dziedzinowe Bazy Wiedzy" / "Source:
+      Statistics Poland, DBW" plus the indicator id.'''
+    - Remove blockers 'Confirm production-key process' and 'Document per-endpoint pagination/limits' (the route
+      is the website bulk files, no key); keep 'Validate territorial code semantics'.
+    - 'Set status: silver (silver.dbw_observations exists).'
+    acceptance:
+    - licence.notes of PLS-002 contains a terms URL and a sentence starting 'Attribution:'
+    - research.blockers of PLS-002 lists only open problems (or is empty)
+    - python -m ops.repo_check passes
+    verify:
+    - run: python -m ops.repo_check
+      expect: exit code 0
+    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
+        if s['id']=='PLS-002'])"
+      expect: notes include the terms URL and 'Attribution:'
+    out_of_scope:
+    - Other register entries
+    - Code or source declaration changes
+    - The kpi field (set only by data/ingestion/register-restructure/fields/family-kpi)
+- key: data/src-pls-002/development
+  title: GUS DBW · Development
+  done_when:
+  - Source declaration and Landing code exist on main; a full load was trialled before production
+  state: done
+  notes:
+  - 'Evidence: ingestion/sources/gus_dbw.yaml, ingestion/to_landing/gus_dbw/extract.py, ingestion/to_bronze/gus_dbw/'
+- key: data/src-pls-002/ingestion
+  title: GUS DBW · Ingestion (Landing)
+  done_when:
+  - 'First production load complete (landing.inspect: missing 0); landing.verify and landing.archive green'
+  state: done
+  notes:
+  - 'Evidence: initial load done 25 Oct 2026 (comment in ingestion/sources/gus_dbw.yaml); green full dataflow https://github.com/zohelo/zohelo-data/actions/runs/40182117551'
+- key: data/src-pls-002/schedule
+  title: GUS DBW · Schedule
+  done_when:
+  - Full dataflow scheduled; last 3 runs green, newest dispatched by the scheduler; no open alert issue
+  tasks:
+  - key: data/src-pls-002/schedule/exclude-814
+    type: Task
+    title: Exclude failing DBW indicator 814 with a reason
+    effort: M
+    state: open
+    contract: false
+    owner_action: null
+    context: 'DBW indicator 814: getAggregatesById keeps failing after retries, so every daily gus_dbw run fails
+      (alert #923; runs 40108597301, 40270885956, 40451693942). Program plan A-16: mark it excluded with a reason
+      in the source YAML so the run is green, and alert only on new failures.'
+    files:
+    - edit: ingestion/sources/gus_dbw.yaml
+    - edit: ingestion/to_landing/gus_dbw/extract.py
+    - edit: run.py
+    - edit: docs/landing.md
+    steps:
+    - 'Add under extraction: `excluded: [{id: 814, reason: "…runs 40108597301, 40270885956, 40451693942", issue:
+      "#923"}]` with a comment that removing an entry retries the indicator.'
+    - In extract.py, skip listed ids before calling getAggregatesById, count them as indicators_excluded in the
+      annotation; any other failing indicator still fails the run.
+    - Teach run.py's declaration check (schedule --check) the new optional key `extraction.excluded` (list of {id,
+      reason, issue}).
+    - Document the key in the DBW part of docs/landing.md.
+    - Remove any dev/ trial script before merge.
+    acceptance:
+    - schedule --check passes and rejects an excluded entry without reason
+    - The next scheduled gus_dbw run is green with indicators_excluded 1
+    verify:
+    - run: PYTHONPATH=. python run.py schedule --check
+      expect: exit code 0
+    - workflow: Pipeline · gus_dbw · full dataflow (scheduled, after merge)
+      expect: 'green; annotation indicators_excluded: 1'
+    out_of_scope:
+    - Retrying 814 through another route
+    - Other DBW indicators
+    notes:
+    - Phase 0 work (plan A-16) kept in this source Epic; Phase 0 Deliverables depend on this Task key only, not
+      on the Phase 1 Deliverable.
+    - 'In progress: branch fix/dbw-excluded-indicator (Phase 0 engine-hygiene agent). When its PR exists, add ''Closes
+      #<this issue>'' to the PR body instead of opening a second PR.'
+  - key: data/src-pls-002/schedule/observe
+    type: Task
+    title: Confirm green scheduled GUS DBW runs
+    effort: S
+    state: open
+    contract: false
+    owner_action: null
+    verify_only: true
+    context: 'Verification only; closes with a comment, no PR. Rule D11 (daily source): 3 green scheduler-started
+      full-dataflow runs within 7 days; manual dispatches do not count. Daily 04:40 UTC; runs of 26 and 27 Oct failed
+      on indicator 814 (alert #923).'
+    files: []
+    steps:
+    - 'List the scheduler-started runs: since=$(date -u -d ''-7 days'' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
+      --jq ''.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]") and
+      (.display_title|test("· gus_dbw · full")))|"\(.conclusion) \(.created_at) \(.html_url)"''; done | head -3'
+    - If it prints 3 lines starting with success, comment them here and close this issue.
+    - 'If an alert issue ''Pipeline failed: gus_dbw · …'' is open and the runs are green, close it with the same
+      comment (standing permission, AGENTS.md).'
+    - If fewer runs exist yet, comment the count and the next due date and keep this Task open.
+    - 'If a run failed, open a Bug under this Deliverable titled ''Pipeline failed: <source> · <step>'' quoting
+      the failing annotation, and keep this Task open.'
+    acceptance:
+    - 'A comment lists the run URLs meeting the rule: 3 green scheduler-started full-dataflow runs within 7 days'
+    - No open alert issue for gus_dbw
+    verify:
+    - run: since=$(date -u -d '-7 days' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
+        --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]")
+        and (.display_title|test("· gus_dbw · full")))|"\(.conclusion) \(.created_at) \(.html_url)"'; done | head
+        -3
+      expect: 3 lines starting with success
+    out_of_scope:
+    - Code changes
+    - Changing the schedule
+    - Counting manual dispatches
+    depends_on:
+    - data/src-pls-002/schedule/exclude-814
+- key: data/src-pls-002/bronze
+  title: GUS DBW · Bronze
+  done_when:
+  - Declared Bronze tables exist; bronze.verify green; latest version only
+  state: done
+  notes:
+  - 'Evidence: bronze.dbw_observations, bronze.dbw_dictionary_items; bronze.verify in activities; green full dataflow
+    https://github.com/zohelo/zohelo-data/actions/runs/40182117551'
+- key: data/src-pls-002/silver
+  title: GUS DBW · Silver
+  done_when:
+  - Declared Silver tables written by today's code (dbt model or warehouse/entity/*.sql) with tests/checks and descriptions
+  state: done
+  notes:
+  - 'Evidence: warehouse/entity/dbw_observations.sql (silver.dbw_observations); register status still says bronze
+    — corrected by the review Task'
+- key: data/src-pls-002/gold
+  title: GUS DBW · Gold
+  done_when:
+  - Observations in Gold v1 facts joined to conformed dimensions with no unmatched keys; measures in the catalogue
+    tables
+  depends_on:
+  - data/warehouse/gold-v1
+  todo:
+  - Gold v1 builder Tasks (block list, geography mapping, build-check row) are written when Epic data/warehouse/gold-v1
+    is done
+- key: data/src-pls-002/semantic
+  title: GUS DBW · Semantic
+  done_when:
+  - KPIs in warehouse/seeds/kpi.csv (PL/EN, unit, frequency, licence, domain); metrics in the generated manifest;
+    lineage in the catalogue
+  depends_on:
+  - data/metadata/catalogue-v1
+  todo:
+  - kpi.csv rows, domain mapping and manifest check are written when Epic data/metadata/catalogue-v1 is done
+- key: data/src-pls-002/portal-release
+  title: GUS DBW · Data portal release
+  done_when:
+  - 'data.zohelo.com source page: register summary, tables per layer with rows and last write, freshness, last scheduled
+    run'
+  depends_on:
+  - data/portal/catalogue-pages
+  todo:
+  - Check the source page on data.zohelo.com and fix missing metadata, once Epic data/portal/catalogue-pages is
+    done
+- key: data/src-pls-002/bi-release
+  title: GUS DBW · zohelo-bi release
+  repo: zohelo-bi
+  done_when:
+  - KPIs in the bi catalogue and explorer; at least one dashboard tile uses one; bi smoke covers it
+  todo:
+  - Catalogue rows, explorer dimensions and a dashboard tile, written when zohelo-bi v1 reads the published layer
+- key: data/src-pls-002/com-release
+  title: GUS DBW · zohelo.com release
+  repo: zohelo
+  done_when:
+  - KPIs on zohelo.com indicator pages and section with real values, attribution and a link to bi
+  todo:
+  - Indicator pages and section content, written when zohelo.com v1 reads the published layer

@@ -1,0 +1,156 @@
+key: data/metadata/catalogue-v1
+area: data/metadata
+title: Metadata catalogue v1
+phase: 1
+priority: P1
+target: 2026-12-18
+why: >-
+  bi's catalogue, explorer and dashboards and zohelo.com's indicator pages must read one list of KPIs,
+  domains, sources and dimensions. Today the bi catalogue is a list of dataset names, the domain
+  taxonomy is a YAML no code reads, and KPI definitions sit inside a dbt macro.
+outcome: >-
+  Gold holds the catalogue tables of program plan §3.4 built from owner-readable seeds; at least 40
+  published KPIs with PL/EN names, one primary subgroup, units, licences and available dimensions.
+in_scope:
+  - seeds kpi.csv, kpi_measure.csv, unit.csv, domain.csv, domain_source_theme.csv, frequency.csv, licence.csv
+  - dbt models dim_source, dim_dataset, dim_kpi, kpi_measure, kpi_dimension, dim_dimension, dim_member, dim_domain, map_domain_source_theme, freshness
+  - domain mapping for the five KPI sources
+out_of_scope:
+  - export to 06_published (Epic data/published/published-v1)
+  - release_calendar (phase 2)
+done_when:
+  - "`dbt build --select catalogue` green in the scheduled build"
+  - gold.dim_kpi has ≥ 40 rows with status published, each with name_pl, name_en, subgroup_key, unit_key, licence
+  - every published KPI has ≥ 1 kpi_dimension row for geography and time
+  - warehouse/dimensions/domain.yaml deleted (replaced by seeds)
+depends_on: [data/warehouse/gold-v1]
+decisions: ["design 27 Oct §3.3–3.4: entities, 12 domains on CSA 2.1, natural string keys", "D5: unit_key is the unit column name everywhere", "D12: seed values in .github/backlog/assets/catalogue-seeds.md"]
+deliverables:
+  - key: data/metadata/catalogue-v1/seeds
+    title: Catalogue seeds in the repo
+    done_when:
+      - warehouse/seeds/ holds frequency.csv, domain.csv, unit.csv, kpi.csv, kpi_measure.csv; dbt builds them into gold
+    tasks:
+      - key: data/metadata/catalogue-v1/seeds/enable-seeds
+        type: Task
+        title: Enable dbt seeds in the warehouse project
+        effort: M
+        state: open
+        contract: true
+        context: >-
+          Runs after Gold v1. Today dbt_project.yml has no seed-paths, repo_check forbids every .csv, and
+          warehouse/changed.py plans only resource_type "model", so a seed would never be rebuilt.
+        files:
+          - edit: warehouse/dbt_project.yml
+          - edit: ops/repo_check.py
+          - edit: warehouse/changed.py
+          - create: warehouse/seeds/frequency.csv
+          - edit: warehouse/warehouse.yaml
+          - edit: warehouse/README.md
+        steps:
+          - "dbt_project.yml: add `seed-paths: [\"seeds\"]` and a `seeds:` block for project zohelo with `+database: r2` and `+schema: \"{{ var('gold_schema', 'gold') }}\"` (the same var the gold folder uses after the Gold v1 fold)."
+          - "ops/repo_check.py repository(): skip the FORBIDDEN_SUFFIXES problem for a .csv file whose path starts with warehouse/seeds/ (all other .csv files stay forbidden)."
+          - "warehouse/changed.py models(): accept resource_type in (\"model\", \"seed\"); a seed's fingerprint uses its checksum like a model; in `parents` keep ids starting with (\"model.\", \"source.\", \"seed.\"). Effect: editing a seed rebuilds the seed and the models that ref it, nothing else."
+          - "Create warehouse/seeds/frequency.csv: header frequency_key,name_en,name_pl,periods_per_year; rows A,annual,roczna,1 · S,half-yearly,półroczna,2 · Q,quarterly,kwartalna,4 · M,monthly,miesięczna,12 · W,weekly,tygodniowa,52 · D,daily,dzienna,365 · B,business daily,dni robocze,250."
+          - "warehouse.yaml gold list: add gold.frequency. README: add the line 'seeds/ = owner-readable code lists, built into gold'."
+          - "On the branch create dev/seeds_trial.py: run warehouse.build.main(select='frequency', target='prod', variables={'gold_schema': 'zz_dev_seeds'}) and annotate the row count; with --drop it drops zz_dev_seeds. Run it in the Dev workflow, then with --drop; delete dev/ before the PR."
+        acceptance:
+          - "repo_check passes with warehouse/seeds/frequency.csv and fails a .csv elsewhere (try locally, then remove)"
+          - "changed.py plans the seed: a local `python -c` call of changed.models(changed.manifest()) lists seed.zohelo.frequency"
+          - Dev trial created 7 rows and dropped the scratch namespace
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: Dev · branch runs, script seeds_trial, on the branch
+            expect: "notice 'seed frequency: 7 rows', then 'dropped zz_dev_seeds'"
+        out_of_scope: [other seeds, catalogue models]
+      - key: data/metadata/catalogue-v1/seeds/domain
+        type: Task
+        title: Seed the 12-domain taxonomy (domain.csv)
+        effort: S
+        state: open
+        contract: true
+        depends_on: [data/metadata/catalogue-v1/seeds/enable-seeds]
+        context: >-
+          The catalogue navigates by 12 plain-language domains with groups on top of UN CSA 2.1 (design
+          27 Oct §3.4). warehouse/dimensions/domain.yaml holds CSA codes only and no code reads it. The
+          architect wrote every row in .github/backlog/assets/catalogue-seeds.md.
+        files:
+          - create: warehouse/seeds/domain.csv
+          - delete: warehouse/dimensions/domain.yaml
+          - edit: warehouse/dimensions/README.md
+          - edit: warehouse/warehouse.yaml
+        steps:
+          - "Create warehouse/seeds/domain.csv with header domain_key,level,parent_key,name_en,name_pl,csa_code,sort and exactly the 79 rows of the domain.csv table in .github/backlog/assets/catalogue-seeds.md (empty parent_key for domains); quote fields containing commas."
+          - "Delete warehouse/dimensions/domain.yaml; in warehouse/dimensions/README.md replace its line by 'domains: warehouse/seeds/domain.csv'."
+          - "warehouse/catalog.py reads warehouse/dimensions/*.yaml by glob; run `python -c \"import warehouse.catalog\"` to confirm it still imports."
+          - "warehouse.yaml gold list: add gold.domain."
+        acceptance:
+          - 12 domain, 61 group and 6 subgroup rows; keys unique; every parent_key exists
+        verify:
+          - run: python -c "import csv,collections as c;r=list(csv.DictReader(open('warehouse/seeds/domain.csv',encoding='utf-8')));k={x['domain_key'] for x in r};print(dict(c.Counter(x['level'] for x in r)),len(k)==len(r),all(x['parent_key'] in k for x in r if x['parent_key']))"
+            expect: "{'domain': 12, 'group': 61, 'subgroup': 6} True True"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [source theme mapping (Deliverable domain-mapping)]
+      - key: data/metadata/catalogue-v1/seeds/kpi
+        type: Task
+        title: Seed KPIs and units from the PoC concepts
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/metadata/catalogue-v1/seeds/domain]
+        context: >-
+          KPI definitions live in the VALUES list of macro poc_concepts in warehouse/macros/poc_blocks.sql
+          (concept_key, name_en, name_pl, unit, source_system, measure_key_pattern, definition). The
+          catalogue needs them as seeds; units become unit_key codes. All values to use are in
+          .github/backlog/assets/catalogue-seeds.md (unit.csv table, unit text mapping, kpi subgroup table).
+        files:
+          - create: warehouse/seeds/kpi.csv
+          - create: warehouse/seeds/kpi_measure.csv
+          - create: warehouse/seeds/unit.csv
+          - edit: warehouse/macros/poc_blocks.sql
+          - edit: warehouse/warehouse.yaml
+        steps:
+          - "unit.csv: the 13 rows of the unit.csv table in the assets file."
+          - "kpi.csv header kpi_key,name_en,name_pl,unit_key,subgroup_key,frequency_default,status,definition_en: one row per distinct concept_key in poc_concepts (18); unit_key via the mapping in the assets file; subgroup_key and status from the kpi table there; frequency_default A, except inflation M and fx_rate, gold_price D; definition_en empty."
+          - "kpi_measure.csv header kpi_key,source_system,measure_key_pattern,definition,priority: one row per VALUES row of poc_concepts (32), same order; priority 1 for the first row of each concept, then 2, 3…"
+          - "poc_concepts: replace the VALUES list by a select joining ref('kpi_measure') to ref('kpi') and ref('unit') that returns concept_key, name_en, name_pl, unit (unit.name_en), source_system, measure_key_pattern, definition in that order, ordered by kpi_key, priority."
+          - "warehouse.yaml gold list: add gold.kpi, gold.kpi_measure, gold.unit."
+          - "On the branch create dev/kpi_seed_trial.py building `--select unit kpi kpi_measure poc_dim_concept` into zz_dev_kpi (gold_schema var) and annotating the dim_concept row count next to the production gold table's count; --drop removes zz_dev_kpi. Run it, then --drop; delete dev/ before the PR."
+        acceptance:
+          - "kpi.csv 18 rows, kpi_measure.csv 32 rows, unit.csv 13 rows; every unit_key and subgroup_key exists in unit.csv / domain.csv"
+          - dim_concept row count in the trial equals production
+        verify:
+          - workflow: Dev · branch runs, script kpi_seed_trial, on the branch
+            expect: "notice 'dim_concept rows: <n> trial = <n> prod'"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [new KPIs (Deliverable kpis-40), definitions text]
+  - key: data/metadata/catalogue-v1/models
+    title: Catalogue tables built in gold
+    depends_on: [data/metadata/catalogue-v1/seeds]
+    done_when:
+      - the §3.4 entities exist as dbt models with tests (unique keys, not null names)
+    todo:
+      - "dim_source from ingestion/register.yaml (a Python model or a generated seed) with licence_key"
+      - "dim_dataset from gold.coverage + Silver metadata; dim_measure from the PoC dim_measure"
+      - "dim_dimension, dim_member, kpi_dimension from measure_dimensions and dim_series"
+      - "licence.csv seed from register licence fields; dim_licence (unit.csv already exists from seeds/kpi)"
+      - "freshness from gold.coverage (checked_at, loaded_at, lag_days)"
+  - key: data/metadata/catalogue-v1/domain-mapping
+    title: Source themes mapped to domains
+    depends_on: [data/metadata/catalogue-v1/seeds]
+    done_when:
+      - domain_source_theme.csv maps every native theme node of Eurostat, WDI, BDL, DBW and NBP to one subgroup
+    todo:
+      - "Load native theme inventories (Eurostat TOC, WDI topics, BDL K/G/P, DBW dziedziny) into a draft CSV with a dev script"
+      - "Assign default subgroups (architect review), commit domain_source_theme.csv; model map_domain_source_theme"
+  - key: data/metadata/catalogue-v1/kpis-40
+    title: 40 KPIs published across ≥ 8 domains
+    depends_on: [data/metadata/catalogue-v1/models, data/warehouse/gold-v1/coverage]
+    done_when:
+      - gold.dim_kpi has ≥ 40 published KPIs in ≥ 8 domains, each with data
+    todo:
+      - "KPI list (architect): 40 rows chosen from the five sources, written to kpi.csv as draft"
+      - "Activate blocks and publish KPIs in batches of 10 (one Task per batch)"

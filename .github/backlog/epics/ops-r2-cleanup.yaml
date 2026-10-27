@@ -1,0 +1,194 @@
+key: data/ops/r2-cleanup
+area: data/ops
+title: R2 clean-up
+phase: 0
+priority: P1
+target: 2026-11-21
+why: >-
+  About 30 GB of R2 holds duplicate or retired raw data, scratch namespaces from trials and files no
+  table references. Storage beyond 10 GB is paid, and leftovers make every inventory harder to read.
+outcome: >-
+  R2 holds only what a table, a receipt or an Archive policy references; scratch never survives a
+  trial; orphan files are removed every week without a person.
+in_scope:
+  - delete the Drive-era opendata_org Landing copy and gus_dbw native/ and _control/ (A-08, A-12)
+  - drop zz_dev_* namespaces and prefixes (A-14)
+  - inventory and tracker read every namespace (A-15)
+  - weekly orphan clean-up schedule (A-13); old-code copies retired (A-29)
+out_of_scope:
+  - Archive retention changes; any production table written by today's code
+done_when:
+  - "Ops platform_inventory: no KEPT_OLD_FOLDERS objects, 0 zz_dev_* namespaces or prefixes, 0 undeclared namespaces"
+  - storage total at least 25 GB lower than the 27 Oct inventory
+  - orphan_files runs on its own every Monday and its annotation shows ≤ 1 GB orphans
+decisions: ["owner 27 Oct #2: delete the ≈30 GB duplicate and old-pipeline raw data", "#835 retire tables today's code does not write"]
+deliverables:
+  - key: data/ops/r2-cleanup/inventory
+    title: Inventory sees every namespace
+    done_when:
+      - platform_inventory and tracker list every catalog namespace and warn on zz_dev_* and undeclared ones
+    tasks:
+      - key: data/ops/r2-cleanup/inventory/all-namespaces
+        type: Task
+        title: Inventory and tracker read every catalog namespace
+        effort: M
+        state: open
+        context: >-
+          ops/platform_inventory.py tables() and ops/tracker.py read fixed namespaces, so poc, zz_dev_*
+          and future demo_* tables are invisible to the inventory and to retire_tables.
+        files:
+          - edit: ops/platform_inventory.py
+          - edit: ops/tracker.py
+          - edit: ops/README.md
+        steps:
+          - "tables(): list namespaces with catalog.list_namespaces() instead of a fixed list."
+          - Warning annotation for each zz_dev_* namespace and each namespace no declaration or warehouse.yaml names.
+          - Tracker classifies zz_dev_* tables as leftover.
+          - Trial with a dev/ script on the branch; delete dev/ before the merge.
+        acceptance:
+          - inventory annotation lists poc and any zz_dev_* namespace
+        verify:
+          - workflow: Ops platform_inventory (after merge)
+            expect: notice "namespaces" listing bronze, silver, gold, poc; warnings for zz_dev_*
+        out_of_scope: [deleting anything]
+        notes: ["In progress: branch feat/inventory-all-namespaces (no PR yet)"]
+  - key: data/ops/r2-cleanup/retired-landing
+    title: Retired Landing folders deleted
+    depends_on: [data/ops/r2-cleanup/inventory]
+    done_when:
+      - KEPT_OLD_FOLDERS removed from ingestion/common/r2.py; inventory shows none of those objects
+    tasks:
+      - key: data/ops/r2-cleanup/retired-landing/script
+        type: Task
+        title: Add Ops script retired_landing (report, then delete with counts)
+        effort: M
+        state: open
+        context: >-
+          ingestion/common/r2.py KEPT_OLD_FOLDERS keeps gus_dbw native/ and _control/ (≈8.5 GB) and the
+          opendata_org Drive-era copy ODO_SENZING_20260305.zip + landing-snapshot.json (21.38 GB). No Ops
+          script deletes Landing objects. The owner approved the deletion (decision 2).
+        files:
+          - create: ops/retired_landing.py
+          - edit: ops/README.md
+        steps:
+          - "Read KEPT_OLD_FOLDERS from ingestion.common.r2; for each source list objects under 01_landing/<source>/<entry> with s3().list_objects_v2 (paged) in STORAGE_LANDING_BUCKET_NAME."
+          - Also list every top-level prefix of both buckets starting with zz_dev_.
+          - "Annotate per group: object count, GB, newest LastModified."
+          - "Safety: for each source also count objects of its current layout (01_landing/<source>/ minus the kept entries, plus 05_archive/<source>/); refuse to delete a source whose count is 0."
+          - "`--apply --expect-objects N --expect-gb G`: delete in batches of 1000 with delete_objects only when the found totals equal N and round(GB,2) == G; re-list and fail if anything remains."
+          - Add the script row to the ops/README.md table.
+        acceptance:
+          - without --apply nothing is written; mismatched counts stop without deleting
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: Ops retired_landing (no args, after merge)
+            expect: annotations with counts for gus_dbw, opendata_org and zz_dev_ prefixes
+        out_of_scope: [Archive objects; catalog tables]
+      - key: data/ops/r2-cleanup/retired-landing/apply
+        type: Task
+        title: Delete the retired Landing folders and remove the exemption
+        effort: S
+        state: open
+        depends_on: [data/ops/r2-cleanup/retired-landing/script]
+        context: Runs the approved deletion and removes the code that kept the folders.
+        files:
+          - edit: ingestion/common/r2.py
+        steps:
+          - "Runs by Claude through Ops dispatch: owner decision 27 Oct #2 approves this deletion (architect D2)."
+          - Run Ops retired_landing without args; copy the totals from the annotation.
+          - Run Ops retired_landing with `--apply --expect-objects <N> --expect-gb <G>` from that annotation.
+          - In ingestion/common/r2.py delete KEPT_OLD_FOLDERS and its use at the `rest.startswith(...)` check; keep behaviour for all other keys.
+          - Run Ops platform_inventory and quote its storage totals in the PR body.
+        acceptance:
+          - apply run green; r2.py has no KEPT_OLD_FOLDERS
+        verify:
+          - workflow: Ops platform_inventory
+            expect: no object under 01_landing/gus_dbw/native/, _control/ or the two opendata files
+        out_of_scope: [opendata_org current snapshot files]
+  - key: data/ops/r2-cleanup/scratch
+    title: Scratch namespaces dropped
+    depends_on: [data/ops/r2-cleanup/inventory]
+    done_when:
+      - inventory reports 0 zz_dev_* namespaces; retire_tables can drop scratch on demand
+    tasks:
+      - key: data/ops/r2-cleanup/scratch/retire-scratch
+        type: Task
+        title: retire_tables drops zz_dev_* namespaces
+        effort: S
+        state: open
+        context: >-
+          zz_dev_checkpoint, zz_dev_bdl and zz_dev_poc remain from trials. retire_tables drops tables the
+          tracker classifies legacy/leftover/copy; after the inventory task zz_dev_* tables are leftover.
+        files:
+          - edit: ops/retire_tables.py
+          - edit: ops/README.md
+        steps:
+          - After dropping, drop every now-empty namespace starting with zz_dev_ (catalog.drop_namespace).
+          - Annotate the namespaces dropped.
+          - "After merge, Claude runs (owner decision 27 Oct #2 covers scratch, architect D2): Ops retire_tables (list), then `--apply --expect <n>` with n from the list."
+          - Run Ops orphan_files with `--delete` to remove the dropped tables' files.
+        acceptance:
+          - platform_inventory shows no zz_dev_* namespace
+        verify:
+          - workflow: Ops platform_inventory
+            expect: no warning "zz_dev"
+        out_of_scope: [namespaces not starting with zz_dev_]
+  - key: data/ops/r2-cleanup/orphans
+    title: Orphans and old-code copies removed on a schedule
+    done_when:
+      - ops.yml runs orphan_files --delete every Monday; tracker shows 0 old-code copies
+    tasks:
+      - key: data/ops/r2-cleanup/orphans/schedule
+        type: Task
+        title: Add an Ops schedule table and run orphan_files weekly
+        effort: M
+        state: open
+        contract: true
+        context: >-
+          ops.yml is dispatch-only; orphan files re-accumulate after every failed commit or dropped table
+          (A-13). Later Tasks add more schedules (heartbeat, tracker, backlog_sync), so the schedule must
+          map each cron to its own script and args; a fallback like `inputs.script || 'orphan_files'` would
+          run orphan_files on every schedule. AGENTS.md allows schedule triggers on ops.yml for standing tasks.
+        files:
+          - edit: .github/workflows/ops.yml
+          - edit: ops/README.md
+        steps:
+          - "Add `schedule: - cron: '20 5 * * 1'` under `on:`."
+          - "New first job `resolve` (ubuntu-24.04, timeout 2): outputs script and args. workflow_dispatch → inputs.script and inputs.args. schedule → a bash `case \"$CRON\" in` table with CRON=${{ github.event.schedule }}; row `'20 5 * * 1') script=orphan_files; args='--delete --min-age-hours 48' ;;`; unknown cron → error and exit 1. Comment above the case: 'Schedule table: one row per cron; add a cron under on.schedule and a row here.'"
+          - "Job ops: `needs: resolve`; replace every inputs.script / inputs.args in it (job if, name, token step if, script step env, artifact name) by needs.resolve.outputs.script / .args. Job branch-cleanup: keep `inputs.script == 'branch_cleanup'` and add `github.event_name == 'workflow_dispatch'`."
+          - "Workflow concurrency group: `zohelo-ops-${{ inputs.script || github.event.schedule }}`."
+          - "Keep `github.ref == 'refs/heads/main'` in both job conditions."
+          - Document the schedule table and the orphan_files row in ops/README.md.
+        acceptance:
+          - manual dispatch behaves as before; a scheduled run executes orphan_files with --delete --min-age-hours 48
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: Ops orphan_files (manual, no args, after merge)
+            expect: green report-only run as before
+          - workflow: next Monday's scheduled Ops run
+            expect: "'ops · orphan_files' green with a deleted-count annotation"
+        out_of_scope: [--max-share change (stays 0.5); other schedules (their own Tasks)]
+      - key: data/ops/r2-cleanup/orphans/old-code-copies
+        type: Task
+        verify_only: true
+        title: Retire the tracker's old-code copy tables
+        effort: S
+        state: open
+        depends_on: [data/ops/r2-cleanup/inventory/all-namespaces]
+        context: >-
+          The tracker classifies 9 catalog tables as old-code copies (pass-through copies of sources not
+          on today's code). Decision #835 retires tables today's code does not write.
+        files: []
+        steps:
+          - Run Ops tracker without args; record the "copy" tables from its annotation.
+          - "For each: if a current table of the same source exists in the declaration's bronze/silver lists, it is retired; otherwise comment the list on this issue and stop (owner decision)."
+          - Run Ops retire_tables (list); check the copies are among the candidates; run `--apply --expect <n>`.
+          - Run Ops orphan_files `--delete`.
+        acceptance:
+          - tracker summary shows "old-code copies 0"
+        verify:
+          - workflow: Ops tracker
+            expect: notice with "old-code copies 0"
+        out_of_scope: [current tables; Landing files]

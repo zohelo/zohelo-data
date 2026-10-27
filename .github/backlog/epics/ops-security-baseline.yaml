@@ -1,0 +1,378 @@
+key: data/ops/security-baseline
+area: data/ops
+title: Repo hygiene and security baseline
+phase: 0
+priority: P1
+target: 2026-11-14
+why: The engine repo deploys with a vulnerable wrangler (GHSA-36p8-mvp6-cv38), installs Python packages without
+  hashes, and still carries retired code that misleads every reader and agent. A public repo with production credentials
+  must be patched and lean before production release.
+outcome: No high vulnerability in any dependency, every install reproducible from a lock, no retired code on main,
+  merge settings, security policy and copyright notice in their final state, and a measured Phase 0 security exit.
+in_scope:
+- wrangler, npm and pip dependency patches and Dependabot configuration (A-01, A-02)
+- hashed Python lock (A-07)
+- removal of ingestion/legacy, warehouse/passthrough, GEMINI.md (A-18)
+- landing_objects robustness, gitleaks allowlist, squash-only merges (A-33)
+- branch-cleanup workflow (owner decision 27 Oct), SECURITY.md, copyright notice (A-32)
+- Phase 0 supply-chain re-check (A-35, Phase 0 part)
+out_of_scope:
+- data portal code (Epic data/portal/trim)
+- credential checks (Epic data/ops/credentials)
+done_when:
+- '`pip-audit -r requirements.txt` and `npm audit --omit=dev` in portal/app report no high or critical'
+- every Python install in .github uses `--require-hashes` (check tools excepted)
+- '`git ls-tree origin/main` shows no ingestion/legacy, warehouse/passthrough, GEMINI.md'
+- zohelo-data allows squash merges only and requires check and check-portal on main
+decisions:
+- 'owner 27 Oct: security settings applied at organisation level (secret scanning, push protection, Dependabot)'
+- 'owner 27 Oct #4: no code licence; all rights reserved'
+- 'owner 27 Oct 13:29: merged branches are deleted by branch-cleanup.yml in each repo; no shared repo'
+- 'architect: wrangler pinned to 4.150.0 in all three repos'
+deliverables:
+- key: data/ops/security-baseline/dependencies
+  title: Dependencies patched and watched
+  done_when:
+  - every wrangler call pins 4.150.0; Dependabot covers actions, pip and portal npm; pyarrow 23.0.1 on main; first
+    Dependabot PRs resolved
+  tasks:
+  - key: data/ops/security-baseline/dependencies/wrangler-dependabot
+    type: Task
+    title: Pin wrangler 4.150.0 in every deploy; add Dependabot config
+    effort: S
+    state: open
+    contract: true
+    context: 'deploy-portal.yml runs `npx --yes wrangler@4.43.0` (vulnerable, fixed in 4.59.1); ops/scheduler_trigger.py
+      pins 4.146.0; zohelo and zohelo-bi use 4.150.0. No dependabot.yml exists. PR #936 already adds dependabot.yml
+      and pins 4.146.0 in deploy-portal.yml.'
+    files:
+    - edit: .github/workflows/deploy-portal.yml
+    - edit: ops/scheduler_trigger.py
+    - create: .github/dependabot.yml
+    steps:
+    - On branch chore/dependency-pins (PR
+    - 'Keep .github/dependabot.yml from #936: ecosystems github-actions (/ and /.github/actions/activity), pip (/),
+      npm (/portal/app); weekly; minor+patch grouped; ignore version-update:semver-major.'
+    - Run `python -m ops.repo_check`.
+    acceptance:
+    - '`git grep -n ''wrangler@'' .github ops` shows only 4.150.0'
+    - dependabot.yml lists the three ecosystems with semver-major ignored
+    verify:
+    - run: python -m ops.repo_check
+      expect: all checks ok
+    - workflow: Deploy portal (manual run on the branch)
+      expect: preview deployed
+    out_of_scope:
+    - npm package bumps inside portal/app (Task dependabot-triage)
+    notes:
+    - 'In progress: PR #936 (branch chore/dependency-pins); add Closes #<this> to its body (bootstrap/link-open-prs)'
+  - key: data/ops/security-baseline/dependencies/pyarrow-23
+    type: Task
+    verify_only: true
+    title: Prove pyarrow 23.0.1 in a Dev trial before its Dependabot PR merges
+    effort: M
+    state: open
+    context: 'requirements.txt pins pyarrow==20.0.0; Dependabot PR #938 bumps it to 23.0.1 (security fix). pyiceberg
+      0.12.0, duckdb 1.5.5 and pandas 3.0.5 read and write Arrow, so a real round trip must pass before the owner
+      merges #938. The trial script lives only on a test branch.'
+    files: []
+    steps:
+    - Create branch test/pyarrow-23 from main; set pyarrow==23.0.1 in requirements.txt.
+    - 'Add dev/pyarrow_trial.py on that branch: load the catalog with ingestion.common.r2.catalog(); scan silver.nbp_fx_rates
+      to Arrow (limit 100000); create namespace zz_dev_pyarrow; write the table there; read it back; compare row
+      counts; drop table and namespace; annotate with ingestion.common.report.annotate.'
+    - Run Dev · branch runs on test/pyarrow-23, script pyarrow_trial.
+    - 'Green: comment the run link on PR #938 and on this Task, tell the owner #938 is ready to merge; red: comment
+      the failing annotation and stop.'
+    - Delete test/pyarrow-23 with Ops branch_cleanup `--apply` (AGENTS.md allows it for test/*).
+    acceptance:
+    - Dev run green with equal row counts; zz_dev_pyarrow no longer exists
+    verify:
+    - workflow: Dev · branch runs, script pyarrow_trial, branch test/pyarrow-23
+      expect: notice "rows equal" and "dropped zz_dev_pyarrow"
+    out_of_scope:
+    - bumping duckdb
+    - pandas or pyiceberg
+  - key: data/ops/security-baseline/dependencies/python-lock
+    type: Task
+    title: Hash-lock Python dependencies with pip-tools
+    effort: M
+    state: open
+    contract: true
+    depends_on:
+    - data/ops/security-baseline/dependencies/pyarrow-23
+    context: 'requirements.txt has unpinned boto3, requests, pyyaml, s3fs, zstandard and no hashes; installs are
+      not reproducible. Inline installs in pipeline.yml, ops.yml and deploy-portal.yml add pyyaml/requests without
+      pins. repo_check allows only listed root files. Start after PR #938 (pyarrow 23.0.1) is merged so the lock
+      carries it.'
+    files:
+    - create: requirements.in
+    - edit: requirements.txt
+    - edit: ops/repo_check.py
+    - edit: .github/actions/activity/action.yml
+    - edit: .github/workflows/dev.yml
+    - edit: .github/workflows/ops.yml
+    - edit: .github/workflows/pipeline.yml
+    - edit: .github/workflows/deploy-portal.yml
+    - edit: docs/quality.md
+    steps:
+    - Move today's requirements.txt lines to requirements.in (keep its header comment).
+    - Run `pip install pip-tools==7.5.1 && pip-compile --generate-hashes --strip-extras -o requirements.txt requirements.in`
+      with the Python of .python-version.
+    - Add "requirements.in" to ROOT_ALLOWED in ops/repo_check.py.
+    - Change every `pip install -r requirements.txt` to `pip install --require-hashes -r requirements.txt`.
+    - Replace inline `pip install --quiet pyyaml requests` lines with `pip install --require-hashes -r requirements.txt`.
+    - 'dev.yml check job: install ruff and yamllint in a separate command without hashes (tools, not runtime).'
+    - 'docs/quality.md: one line: change requirements.in, then re-run pip-compile.'
+    acceptance:
+    - every requirement in requirements.txt has == and --hash lines
+    - no pip install in .github without --require-hashes except the check tools
+    verify:
+    - run: python -m ops.repo_check
+      expect: all checks ok
+    - workflow: Ops platform_inventory (after merge)
+      expect: green
+    out_of_scope:
+    - upgrading versions while locking
+  - key: data/ops/security-baseline/dependencies/dependabot-triage
+    type: Task
+    verify_only: true
+    title: Triage the first Dependabot pull requests for portal npm
+    effort: S
+    state: open
+    depends_on:
+    - data/ops/security-baseline/dependencies/wrangler-dependabot
+    - data/portal/trim/google/lakehouse-client
+    context: 'Dependabot opened #939 zod, #940 fast-uri, #941 dompurify and #942 serialize-javascript for portal/app
+      before the portal trim landed. Some packages disappear with the trim; the rest are security patches the owner
+      merges.'
+    files: []
+    steps:
+    - 'For each PR: if its package is no longer in portal/app/package.json on main, close it with the comment ''Package
+      removed by the portal trim''.'
+    - 'Otherwise: comment @dependabot rebase; when check and check-portal are green, list the PR for the owner in
+      this Task''s closing comment as ready to merge.'
+    - Close this Task with the list of closed and ready PRs.
+    acceptance:
+    - none of
+    verify:
+    - run: gh api 'repos/zohelo/zohelo-data/pulls?state=open' --jq '[.[] | select(.user.login=="dependabot[bot]")
+        | .number]'
+      expect: only PRs listed as ready in the closing comment
+    out_of_scope:
+    - major version upgrades
+- key: data/ops/security-baseline/retired-code
+  title: Retired code removed from main
+  done_when:
+  - ingestion/legacy, warehouse/passthrough and GEMINI.md deleted; README and docs/quality.md describe the real
+    tree
+  tasks:
+  - key: data/ops/security-baseline/retired-code/remove-legacy
+    type: Task
+    title: Remove ingestion/legacy, warehouse/passthrough and GEMINI.md
+    effort: M
+    state: open
+    contract: true
+    context: 'The old GUS adapters and the pass-through promote (retired 16 Oct, #835) stay on main and mislead
+      agents. Git history keeps them. The pass-through promote job in pipeline.yml goes too.'
+    files:
+    - delete: ingestion/legacy/
+    - delete: warehouse/passthrough/
+    - delete: GEMINI.md
+    - edit: ops/repo_check.py
+    - edit: pyproject.toml
+    - edit: .github/workflows/pipeline.yml
+    - edit: README.md
+    - edit: docs/quality.md
+    steps:
+    - Delete the three paths.
+    - Remove GEMINI.md from ROOT_ALLOWED in ops/repo_check.py and ingestion/legacy from ruff extend-exclude in pyproject.toml.
+    - 'pipeline.yml: remove the ''silver/gold: promote'' run option and the silver-gold-promote job; silver-gold-build
+      needs [plan, archive-prune].'
+    - Remove phantom folders from README.md; update docs/quality.md references.
+    acceptance:
+    - '`git grep -n ''legacy\|passthrough'' -- '':!docs/sources.md''` shows no code reference'
+    verify:
+    - run: python -m ops.repo_check
+      expect: all checks ok
+    out_of_scope:
+    - legacy_tables entries in source YAMLs (they name catalog tables); AGENTS.md (Task bootstrap/agents-rule)
+    notes:
+    - 'In progress: PR #935 (branch chore/remove-legacy)'
+- key: data/ops/security-baseline/repo-rules
+  title: Repository rules and policies
+  done_when:
+  - landing_objects never exits without an annotation; gitleaks allowlist committed; squash-only merges and required
+    checks set; merged branches deleted automatically; SECURITY.md and copyright notice present
+  tasks:
+  - key: data/ops/security-baseline/repo-rules/landing-objects-gitleaks
+    type: Task
+    title: landing_objects tolerates a missing key; gitleaks allowlist
+    effort: S
+    state: open
+    context: Ops landing_objects run 40493156772 exited 1 without an annotation on a prefix without "/"; gitleaks
+      reports historic false positives on every full scan.
+    files:
+    - edit: ops/landing_objects.py
+    - create: .gitleaks.toml
+    - edit: ops/repo_check.py
+    - edit: docs/quality.md
+    steps:
+    - Treat an argument that is not an existing key as a prefix; no match is a warning annotation, exit 0.
+    - 'Add .gitleaks.toml: [extend] useDefault = true; [allowlist] paths exactly ''^tests/test_storage_manager\.py$''
+      (deleted unit test, fake key), ''^docs/source-research/source-inventory\.json$'' (deleted research inventory),
+      ''^warehouse/target/'' (dbt output, ignored by git).'
+    - Add ".gitleaks.toml" to ROOT_ALLOWED in ops/repo_check.py.
+    - 'docs/quality.md §2: one line naming .gitleaks.toml and the rule ''add a path only after confirming the hit
+      is not a secret''.'
+    acceptance:
+    - a missing key gives a warning annotation and exit 0
+    - gitleaks full-history scan in the check job reports no finding
+    verify:
+    - run: python -m ops.repo_check
+      expect: all checks ok
+    - workflow: Ops landing_objects args "01_landing/nbp" (after merge)
+      expect: listing, exit 0
+    out_of_scope:
+    - rewriting git history; key-rotation runbook (Task operations-fixes/alerts/rotation-runbook)
+    notes:
+    - 'In progress: PR #944 (branch fix/ops-landing-objects); the same PR also delivers operations-fixes/alerts/rotation-runbook
+      and must close both issues'
+  - key: data/ops/security-baseline/repo-rules/repo-settings
+    type: Task
+    verify_only: true
+    title: Ask the owner for squash-only merges and required checks
+    effort: S
+    state: open
+    depends_on:
+    - data/portal/trim/ci-gate/check-portal
+    owner_action: 'github.com/zohelo/zohelo-data → Settings → General → Pull Requests: untick "Allow merge commits"
+      and "Allow rebase merging", keep "Allow squash merging". Then Settings → Rules → Rulesets → "main" → Require
+      status checks → Add checks "check" and "check-portal" → Save (4 min).'
+    context: All three merge methods are allowed (history should be one commit per PR, A-33, D-14) and the new check-portal
+      job is not required yet, so a failing portal build could still be merged.
+    files: []
+    steps:
+    - Wait until the owner confirms.
+    - Run both verify commands and close this Task with their output.
+    acceptance:
+    - allow_merge_commit and allow_rebase_merge are false
+    - the main ruleset requires check and check-portal
+    verify:
+    - run: gh api repos/zohelo/zohelo-data --jq '[.allow_merge_commit,.allow_rebase_merge,.allow_squash_merge]'
+      expect: '[false,false,true]'
+    - run: gh api repos/zohelo/zohelo-data/rules/branches/main --jq '[.[].parameters.required_status_checks[]?.context]'
+      expect: contains "check" and "check-portal"
+    out_of_scope:
+    - zohelo and zohelo-bi settings
+  - key: data/ops/security-baseline/repo-rules/branch-cleanup
+    type: Task
+    title: Delete merged branches with a branch-cleanup workflow
+    effort: S
+    state: open
+    contract: true
+    context: 'Merged branches pile up and Claude sessions cannot delete branches through their GitHub proxy. Owner
+      decision 27 Oct 13:29: a workflow branch-cleanup.yml deletes them (replaces the "Automatically delete head
+      branches" setting). zohelo and zohelo-bi carry the identical file in their own Tasks.'
+    files:
+    - create: .github/workflows/branch-cleanup.yml
+    - edit: ops/repo_check.py
+    - edit: docs/operating.md
+    steps:
+    - 'On pull_request closed and merged (same-repo head): delete the head branch if it still points at the PR''s
+      head commit.'
+    - 'Weekly (Monday 04:23 UTC) and on manual run: delete every branch whose tip is the head of a merged PR and
+      that has no open PR; never main, open-PR branches or branches with newer commits.'
+    - 'Use only github.token with contents: write and pull-requests: read; timeout 5 minutes.'
+    - Add branch-cleanup.yml to WORKFLOWS in ops/repo_check.py; add a row to the workflow table in docs/operating.md.
+    acceptance:
+    - a merged PR's branch disappears within a minute; the manual run reports each deleted branch
+    verify:
+    - workflow: Branch cleanup, manual run on main after merge
+      expect: notices "branch deleted" and "sweep N"
+    out_of_scope:
+    - test/* and dev/* leftovers (Ops branch_cleanup stays); AGENTS.md (Task bootstrap/agents-rule)
+    notes:
+    - 'In progress: issue #945, PR #946 (branch chore/branch-cleanup)'
+  - key: data/ops/security-baseline/repo-rules/security-policy
+    type: Task
+    title: Add a security policy (SECURITY.md)
+    effort: S
+    state: open
+    context: The repo is public and holds deploy workflows; there is no way documented to report a vulnerability
+      privately. GitHub reads .github/SECURITY.md, so no new root file is needed. The same text goes into zohelo
+      and zohelo-bi (their own Tasks).
+    files:
+    - create: .github/SECURITY.md
+    steps:
+    - 'Create .github/SECURITY.md with exactly these sections: ''# Security policy''; ''## Supported versions''
+      — ''Only the main branch is supported. Everything this repository builds or deploys comes from main.''; ''##
+      Reporting a vulnerability'' — ''Use GitHub private vulnerability reporting: open the Security tab of this
+      repository → Report a vulnerability. Do not open a public issue.''; ''## Response'' — ''Reports are acknowledged
+      within 7 days.''; ''## Scope'' — ''This repository and anything it builds or deploys.'''
+    - Run `python -m ops.repo_check`.
+    acceptance:
+    - .github/SECURITY.md text matches the zohelo and zohelo-bi copies exactly
+    - the repository Security tab shows the policy
+    verify:
+    - run: for r in zohelo zohelo-bi zohelo-data; do gh api repos/zohelo/$r/contents/.github/SECURITY.md --jq .sha;
+        done | sort -u | wc -l
+      expect: 1 (once all three are merged)
+    out_of_scope:
+    - enabling private vulnerability reporting (organisation setting
+    - already on with the security configuration)
+  - key: data/ops/security-baseline/repo-rules/copyright
+    type: Task
+    title: Add the copyright notice to README.md
+    effort: S
+    state: open
+    context: 'Owner decision 27 Oct #4: no code licence, all rights reserved; zohelo and zohelo-bi already carry
+      the notice. A README section avoids a new root file.'
+    files:
+    - edit: README.md
+    steps:
+    - 'Append a section ''## Copyright'' with exactly: ''Copyright © 2026 Radosław Utkała. All rights reserved.
+      Source data remain under their providers'' terms (see ingestion/register.yaml).'''
+    acceptance:
+    - README.md ends with the Copyright section
+    verify:
+    - run: grep -n "All rights reserved" README.md
+      expect: one line
+    out_of_scope:
+    - LICENSE file
+- key: data/ops/security-baseline/exit-check
+  title: Phase 0 security exit measured
+  depends_on:
+  - data/ops/security-baseline/dependencies
+  - data/ops/security-baseline/retired-code
+  - data/ops/security-baseline/repo-rules
+  - data/portal/trim/duck-ui
+  done_when:
+  - one comment on this Deliverable lists audit results of the three repos with run links, all without high or critical
+    findings
+  tasks:
+  - key: data/ops/security-baseline/exit-check/supply-chain
+    type: Task
+    verify_only: true
+    title: Re-check the supply chain of all three repos for the Phase 0 exit
+    effort: S
+    state: open
+    context: The program plan's Phase 0 exit requires bun audit, npm audit and pip-audit without high findings after
+      the pins and patches (A-35, Phase 0 part).
+    files: []
+    steps:
+    - 'zohelo-data, in a fresh clone of main: `pip install pip-audit==2.9.0 && pip-audit -r requirements.txt` and
+      `cd portal/app && npm ci --ignore-scripts && npm audit --omit=dev --audit-level=high`.'
+    - 'zohelo-bi and zohelo: `bun install --frozen-lockfile && bun audit --audit-level=high` in a fresh clone of
+      main.'
+    - 'Check every workflow `uses:` line is SHA-pinned: `git grep -nE ''uses: [^.].*@'' .github | grep -vE ''@[0-9a-f]{40}''`
+      returns nothing in each repo.'
+    - Comment the outputs (summary lines only) on this Task; open a Bug under the right Epic for every high or critical
+      finding; close this Task when none remains.
+    acceptance:
+    - no high or critical advisory in any of the three repos; no unpinned action
+    verify:
+    - run: pip-audit -r requirements.txt
+      expect: No known vulnerabilities found (or only low/moderate)
+    out_of_scope:
+    - moderate and low advisories (Dependabot handles them)

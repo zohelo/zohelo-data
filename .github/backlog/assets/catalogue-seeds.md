@@ -1,0 +1,139 @@
+# Catalogue seed values (architect, 27 Oct 2026)
+
+Source for the seed Tasks of Epic `data/metadata/catalogue-v1`. Copy the tables into the CSV seeds as written;
+do not rename keys. Taxonomy: UN CSA 2.1 underneath, 12 plain-language domains on top (design 27 Oct §3.4).
+
+## domain.csv — columns domain_key,level,parent_key,name_en,name_pl,csa_code,sort
+
+| domain_key | level | parent_key | name_en | name_pl | csa_code | sort |
+|---|---|---|---|---|---|---|
+| economy | domain | | Economy | Gospodarka | 201 | 1 |
+| economy.national_accounts | group | economy | National accounts & GDP | Rachunki narodowe i PKB | 201 | 1 |
+| economy.business_cycle | group | economy | Business cycle & short-term indicators | Koniunktura i wskaźniki krótkookresowe | 201 | 2 |
+| economy.prices | group | economy | Prices & inflation | Ceny i inflacja | 205 | 3 |
+| economy.investment | group | economy | Investment & capital | Inwestycje i kapitał | 201 | 4 |
+| economy.trade_bop | group | economy | Trade & balance of payments | Handel zagraniczny i bilans płatniczy | 204 | 5 |
+| finance | domain | | Finance | Finanse | 20306 | 2 |
+| finance.public_finance | group | finance | Public finance & debt | Finanse publiczne i dług | 201 | 1 |
+| finance.money_banking | group | finance | Money, banking & interest rates | Pieniądz, banki i stopy procentowe | 20306 | 2 |
+| finance.fx_gold | group | finance | Exchange rates & gold | Kursy walut i złoto | 20306 | 3 |
+| finance.capital_markets | group | finance | Capital markets | Rynki kapitałowe | 20306 | 4 |
+| finance.insurance_pensions | group | finance | Insurance & pensions | Ubezpieczenia i emerytury | 20306 | 5 |
+| finance.local_government | group | finance | Local-government finance | Finanse samorządów | 201 | 6 |
+| business | domain | | Business & industry | Biznes i przemysł | 202 | 3 |
+| business.enterprises | group | business | Enterprises & registers | Przedsiębiorstwa i rejestry | 202 | 1 |
+| business.industry_construction | group | business | Industry & construction | Przemysł i budownictwo | 20303 | 2 |
+| business.trade_services | group | business | Trade & services | Handel i usługi | 20307 | 3 |
+| business.agriculture | group | business | Agriculture, forestry & fishing | Rolnictwo, leśnictwo i rybactwo | 20301 | 4 |
+| business.tourism | group | business | Tourism | Turystyka | 20305 | 5 |
+| business.finances | group | business | Business finances | Finanse przedsiębiorstw | 202 | 6 |
+| labour | domain | | Labour & income | Praca i dochody | 103 | 4 |
+| labour.employment | group | labour | Employment & unemployment | Zatrudnienie i bezrobocie | 103 | 1 |
+| labour.wages | group | labour | Wages & labour costs | Wynagrodzenia i koszty pracy | 103 | 2 |
+| labour.income_living | group | labour | Income & living conditions | Dochody i warunki życia | 106 | 3 |
+| labour.social_protection | group | labour | Social protection & benefits | Zabezpieczenie społeczne i świadczenia | 107 | 4 |
+| population | domain | | Population | Ludność | 101 | 5 |
+| population.stock | group | population | Population stock & structure | Stan i struktura ludności | 101 | 1 |
+| population.vital | group | population | Births, deaths & life expectancy | Urodzenia, zgony i trwanie życia | 101 | 2 |
+| population.migration | group | population | Migration | Migracje | 102 | 3 |
+| population.households | group | population | Families & households | Rodziny i gospodarstwa domowe | 101 | 4 |
+| population.census | group | population | Census | Spisy powszechne | 101 | 5 |
+| health | domain | | Health | Zdrowie | 105 | 6 |
+| health.status | group | health | Health status | Stan zdrowia | 105 | 1 |
+| health.system | group | health | Healthcare system & NFZ | Ochrona zdrowia i NFZ | 105 | 2 |
+| health.public_health | group | health | Public health & epidemiology | Zdrowie publiczne i epidemiologia | 105 | 3 |
+| health.pharma | group | health | Pharmaceuticals & reimbursement | Leki i refundacja | 105 | 4 |
+| education | domain | | Education & science | Edukacja i nauka | 104 | 7 |
+| education.school | group | education | Pre-school & school | Wychowanie przedszkolne i szkoły | 104 | 1 |
+| education.higher | group | education | Higher education | Szkolnictwo wyższe | 104 | 2 |
+| education.exams | group | education | Exams & outcomes | Egzaminy i wyniki | 104 | 3 |
+| education.science | group | education | Science, R&D & patents | Nauka, B+R i patenty | 206 | 4 |
+| education.skills | group | education | Skills & lifelong learning | Umiejętności i kształcenie ustawiczne | 104 | 5 |
+| society | domain | | Society & culture | Społeczeństwo i kultura | 109 | 8 |
+| society.culture | group | society | Culture & heritage | Kultura i dziedzictwo | 109 | 1 |
+| society.media | group | society | Media | Media | 109 | 2 |
+| society.sport | group | society | Sport & recreation | Sport i rekreacja | 109 | 3 |
+| society.time_use | group | society | Time use & quality of life | Czas wolny i jakość życia | 110 | 4 |
+| society.civil | group | society | Civil society & social economy | Społeczeństwo obywatelskie i ekonomia społeczna | 510 | 5 |
+| housing | domain | | Housing & territory | Mieszkania i terytorium | 108 | 9 |
+| housing.housing | group | housing | Housing & real estate | Mieszkania i nieruchomości | 108 | 1 |
+| housing.municipal | group | housing | Municipal infrastructure | Infrastruktura komunalna | 108 | 2 |
+| housing.land | group | housing | Land, planning & buildings | Grunty, planowanie i budynki | 507 | 3 |
+| housing.territory | group | housing | Territorial division & geography | Podział terytorialny i geografia | 507 | 4 |
+| housing.regions | group | housing | Cities & regions | Miasta i regiony | 507 | 5 |
+| environment | domain | | Environment & energy | Środowisko i energia | 301 | 10 |
+| environment.condition | group | environment | Environmental condition & air/water quality | Stan środowiska, powietrze i woda | 301 | 1 |
+| environment.climate | group | environment | Climate & weather | Klimat i pogoda | 506 | 2 |
+| environment.waste | group | environment | Waste & circular economy | Odpady i gospodarka o obiegu zamkniętym | 509 | 3 |
+| environment.energy | group | environment | Energy supply & markets | Energia i rynki energii | 20302 | 4 |
+| environment.resources | group | environment | Natural resources & forestry | Zasoby naturalne i lasy | 305 | 5 |
+| transport | domain | | Transport & digital | Transport i cyfryzacja | 20304 | 11 |
+| transport.modes | group | transport | Road, rail, air & sea | Transport drogowy, kolejowy, lotniczy i morski | 20304 | 1 |
+| transport.vehicles | group | transport | Vehicles & road safety | Pojazdy i bezpieczeństwo drogowe | 20304 | 2 |
+| transport.public_transport | group | transport | Public transport & mobility | Transport publiczny i mobilność | 20304 | 3 |
+| transport.telecom | group | transport | Telecom & internet | Telekomunikacja i internet | 508 | 4 |
+| transport.digital | group | transport | Digital society & e-government | Społeczeństwo cyfrowe i e-administracja | 508 | 5 |
+| state | domain | | State, law & safety | Państwo, prawo i bezpieczeństwo | 401 | 12 |
+| state.government | group | state | Government & parliament | Rząd i parlament | 401 | 1 |
+| state.elections | group | state | Elections & participation | Wybory i partycypacja | 401 | 2 |
+| state.justice | group | state | Justice & courts | Wymiar sprawiedliwości i sądy | 403 | 3 |
+| state.crime | group | state | Crime & public safety | Przestępczość i bezpieczeństwo publiczne | 40801 | 4 |
+| state.procurement | group | state | Public procurement | Zamówienia publiczne | 401 | 5 |
+| state.administration | group | state | Administration, audit & openness | Administracja, kontrola i jawność | 401 | 6 |
+| economy.national_accounts.gdp | subgroup | economy.national_accounts | GDP | PKB | 201 | 1 |
+| economy.prices.consumer_prices | subgroup | economy.prices | Consumer prices | Ceny konsumpcyjne | 205 | 1 |
+| labour.employment.lfs | subgroup | labour.employment | Labour force survey | Badanie aktywności ekonomicznej ludności (BAEL) | 103 | 1 |
+| labour.employment.registered_unemployment | subgroup | labour.employment | Registered unemployment | Bezrobocie rejestrowane | 103 | 2 |
+| population.stock.population | subgroup | population.stock | Population | Ludność | 101 | 1 |
+| finance.fx_gold.exchange_rates | subgroup | finance.fx_gold | Exchange rates | Kursy walut | 20306 | 1 |
+
+Counts: 12 domain rows, 61 group rows, 6 subgroup rows.
+
+## unit.csv — columns unit_key,symbol,name_en,name_pl,is_rate
+
+| unit_key | symbol | name_en | name_pl | is_rate |
+|---|---|---|---|---|
+| persons | os. | persons | osoby | false |
+| mln_ncu | mln | million, source currency | mln, waluta źródła | false |
+| ncu_per_person | /os. | source currency per person | waluta źródła na osobę | false |
+| pct | % | per cent | procent | true |
+| pct_labour_force | % | % of labour force | % aktywnych zawodowo | true |
+| pct_population | % | % of population | % ludności | true |
+| years | lata | years | lata | false |
+| pln | zł | Polish zloty | złoty | false |
+| dwellings | mieszk. | dwellings | mieszkania | false |
+| km2 | km² | square kilometres | kilometry kwadratowe | false |
+| persons_per_km2 | os./km² | persons per km² | osoby na km² | true |
+| pln_per_unit | zł | PLN per currency unit | zł za jednostkę waluty | true |
+| pln_per_gram | zł/g | PLN per gram | zł za gram | true |
+
+Mapping from the `unit` text in `poc_concepts` (warehouse/macros/poc_blocks.sql): persons→persons;
+'million, source currency'→mln_ncu; 'per person'→ncu_per_person; '%'→pct; '% of labour force'→pct_labour_force;
+'% of population'→pct_population; years→years; PLN→pln; dwellings→dwellings; km²→km2;
+'persons per km²'→persons_per_km2; 'PLN per unit'→pln_per_unit; 'PLN per gram'→pln_per_gram.
+
+## kpi.csv subgroup_key and status per PoC concept
+
+| concept_key | subgroup_key | status |
+|---|---|---|
+| population | population.stock.population | published |
+| gdp_current_prices | economy.national_accounts.gdp | published |
+| gdp_per_capita | economy.national_accounts.gdp | draft |
+| gdp_volume_growth | economy.national_accounts.gdp | draft |
+| inflation | economy.prices.consumer_prices | published |
+| unemployment_rate | labour.employment.lfs | published |
+| registered_unemployment_rate | labour.employment.registered_unemployment | draft |
+| employment_rate | labour.employment.lfs | draft |
+| life_expectancy | population.vital | draft |
+| net_migration | population.migration | draft |
+| live_births | population.vital | draft |
+| deaths | population.vital | draft |
+| average_gross_wage | labour.wages | draft |
+| dwellings_completed | business.industry_construction | draft |
+| area | housing.territory | draft |
+| population_density | population.stock.population | draft |
+| fx_rate | finance.fx_gold.exchange_rates | published |
+| gold_price | finance.fx_gold | draft |
+
+`published` = the five metrics zohelo-bi shows today (population, gdp_current_prices, inflation,
+unemployment_rate, fx_rate).
