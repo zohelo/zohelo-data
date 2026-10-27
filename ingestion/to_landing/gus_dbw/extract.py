@@ -43,7 +43,7 @@ from typing import Any
 
 import requests
 
-from ingestion.common.r2 import archive_key, archived, get_with_backoff, req, s3
+from ingestion.common.r2 import archive_key, archived, get_with_backoff, req, s3, sources
 from ingestion.common.report import annotate, step_summary
 
 SOURCE = "gus_dbw"
@@ -162,6 +162,12 @@ INVENTORY_KEY = "_control/gus_dbw/inventory.json"  # lakehouse bucket: each indi
 FRESH_HOURS = 20  # a listing younger than this is reused: one listing of every indicator a day
 
 
+def excluded() -> dict[int, str]:
+    """Indicators skipped with a reason (extraction.excluded in ingestion/sources/gus_dbw.yaml)."""
+    items = ((sources().get(SOURCE) or {}).get("extraction") or {}).get("excluded") or []
+    return {int(item["id"]): item["reason"] for item in items}
+
+
 def read_inventory(client) -> dict[str, Any]:
     try:
         body = client.get_object(Bucket=req("STORAGE_LAKEHOUSE_BUCKET_NAME"), Key=INVENTORY_KEY)["Body"].read()
@@ -196,11 +202,17 @@ def inventory(
     tree = get(session, f"{WEB}/api_app/wsk/getIndicatorsTree").json()
     found, stats = [], Counter()
     now = datetime.now(UTC)
+    skip = excluded()
     todo = [i for i in indicators(tree) if not only or i["indicator_id"] in only]
     todo.sort(key=lambda i: (held.get(str(i["indicator_id"])) or {}).get("listed_at", ""))
     renewed = 0
     for ind in todo:
         entry = held.get(str(ind["indicator_id"]))
+        if ind["indicator_id"] in skip:  # declared as not served: not requested, not a failure
+            stats["indicators_excluded"] += 1
+            if entry:  # its last listing still says what Landing holds
+                found += entry["files"]
+            continue
         age = (now - datetime.fromisoformat(entry["listed_at"])).total_seconds() / 3600 if entry else None
         if entry and age is not None and age < fresh_hours:
             stats["indicators_from_cache"] += 1

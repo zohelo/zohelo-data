@@ -126,7 +126,7 @@ SOURCE_KEYS = {
     "legacy_tables",
     "activities",
 }
-EXTRACTION_KEYS = {"initial", "production", "incremental_policy", "schedule", "kind", "bulk_file"}
+EXTRACTION_KEYS = {"initial", "production", "incremental_policy", "schedule", "kind", "bulk_file", "excluded"}
 KINDS = {"bulk_file"}  # implemented shared patterns (docs/landing.md, common ingestion framework)
 
 
@@ -157,6 +157,9 @@ def config_problems(config: dict) -> list[str]:
                     problems.append(f"{source}: {f.get('entity')}: url_date needs {{date}} in the url")
                 if f.get("version", "last_modified") not in {"last_modified", "ingested"}:
                     problems.append(f"{source}: {f.get('entity')}: version must be last_modified or ingested")
+        for item in (cfg.get("extraction") or {}).get("excluded") or []:
+            if not isinstance(item, dict) or item.get("id") is None or not item.get("reason"):
+                problems.append(f"{source}: extraction.excluded entries need an id and a reason: {item}")
         if set(cfg.get("extraction") or {}) - EXTRACTION_KEYS:
             problems.append(f"{source}: unknown extraction keys {sorted(set(cfg['extraction']) - EXTRACTION_KEYS)}")
         for layer in ("bronze", "silver", "gold"):
