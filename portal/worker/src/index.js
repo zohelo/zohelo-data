@@ -271,6 +271,11 @@ export default {
       if (!record) return json({error:{status:"NOT_FOUND",message:"File ID is not present in the R2 migration index."}},404,origin);
       return media(request,env,record,origin,mode);
     }
+    if (unsignedUrl.pathname==="/health") {
+      // Diagnostic, no data: what the API sees of the caller's sign-in.
+      const who=await accessEmail(request,env);
+      return json({ok:true,storage:"cloudflare-r2",build:"access-jwt-v2",signed_in_as:who.email||null,how:who.why},200,origin);
+    }
     const auth=await authorize(request,env);
     if (!auth.ok) return json({error:{status:auth.status===401?"UNAUTHENTICATED":"PERMISSION_DENIED",message:auth.message}},auth.status,origin);
     try {
