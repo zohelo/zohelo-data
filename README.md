@@ -19,7 +19,7 @@ portal/              serving: app/ (portal), worker/ (R2 read API), portal index
 .github/workflows/   Pipeline, Ops · ad-hoc, Dev · branch runs, Deploy portal
 run.py               entry point for every Pipeline activity
 ops/                 standing operational tasks (dev/ exists only on feature branches)
-docs/                architecture, landing, operating, sources
+docs/                architecture, landing, operating, sources, decisions
 ```
 
 ## Storage
@@ -32,4 +32,4 @@ zohelo-lakehouse-prod   Iceberg bronze / silver / gold (R2 Data Catalog)
 ```
 
 See the [source playbook](docs/playbook.md), [architecture](docs/architecture.md), [landing](docs/landing.md),
-[operating](docs/operating.md) and [sources](docs/sources.md).
+[operating](docs/operating.md), [sources](docs/sources.md) and [decisions](docs/decisions.md).
