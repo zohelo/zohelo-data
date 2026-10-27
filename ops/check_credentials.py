@@ -5,7 +5,8 @@ Proves that every organisation variable and secret this repository uses reaches 
 works against its service: variables present; deploy token verify and Pages project list;
 storage write keys put and delete zz_dev_credcheck/probe.txt in the Landing bucket; lakehouse
 read keys list 02_bronze/; catalog read token GET /v1/config and /namespaces; catalog write
-token GET /v1/config; GOV BDL key GET one variable. Port of the check in zohelo-bi.
+token GET /v1/config; GUS BDL key GET one variable; org app installation token GET the repository; the scheduler
+Worker's own token code mints a token (run with node). Port of the check in zohelo-bi.
 
 Rows are (section, name, expected, actual). Variables are printed, secrets only as presence
 and HTTP status codes; error rows quote the last error line (at most 120 characters, secret
@@ -16,7 +17,11 @@ differs from its expected value.
 from __future__ import annotations
 
 import os
+from pathlib import Path
+import re
+import subprocess
 import sys
+import tempfile
 from typing import Any
 
 import boto3
@@ -34,6 +39,7 @@ VARIABLES = (
     "STORAGE_LAKEHOUSE_BUCKET_NAME",
     "STORAGE_LAKEHOUSE_CATALOG_URL",
     "STORAGE_LAKEHOUSE_CATALOG_NAME",
+    "ORG_BOT_CLIENT_ID",
 )
 SECRETS = (
     "PLATFORM_DEPLOY_TOKEN",
@@ -44,6 +50,8 @@ SECRETS = (
     "STORAGE_LAKEHOUSE_CATALOG_WRITE_TOKEN",
     "STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN",
     "SOURCE_GUS_BDL_API_KEY",
+    "ORG_BOT_PRIVATE_KEY",
+    "APP_TOKEN",
 )
 
 Row = tuple[str, str, str, str]
@@ -190,12 +198,64 @@ def bdl_section() -> None:
     attempt("bdl", "GUS BDL API key: GET one variable", "200", variable)
 
 
+WORKER = Path(__file__).resolve().parent / "scheduler_worker" / "src" / "index.js"
+# Imports the Worker's token code exactly as zohelo-bi's check does and mints an installation token.
+SNIPPET = """\
+const { installationToken } = await import(process.argv[2]);
+const env = {
+  APP_CLIENT_ID: process.env.ORG_BOT_CLIENT_ID,
+  APP_PRIVATE_KEY: process.env.ORG_BOT_PRIVATE_KEY,
+  GITHUB_REPOSITORY: process.env.GITHUB_REPOSITORY,
+};
+try {
+  await installationToken(env);
+  console.log("ok");
+} catch (e) {
+  console.log("failed: " + String(e.message).slice(0, 200));
+}
+"""
+
+
+def app_section() -> None:
+    def org_app() -> str:
+        response = http(
+            "GET",
+            "https://api.github.com/repos/zohelo/zohelo-data",
+            headers={**bearer(env("APP_TOKEN")), "Accept": "application/vnd.github+json"},
+        )
+        return str(response.status_code)
+
+    def worker_token() -> str:
+        work = Path(env("RUNNER_TEMP") or tempfile.gettempdir())
+        copy = work / "scheduler_worker_check.mjs"
+        source = re.sub(r"^export default", "export const worker =", WORKER.read_text(), flags=re.M)
+        copy.write_text(source + "\nexport { installationToken };\n")
+        snippet = work / "scheduler_worker_check_run.mjs"
+        snippet.write_text(SNIPPET)
+        wanted = ("PATH", "HOME", "RUNNER_TEMP", "ORG_BOT_CLIENT_ID", "ORG_BOT_PRIVATE_KEY")
+        environment = {k: os.environ[k] for k in wanted if k in os.environ}
+        environment["GITHUB_REPOSITORY"] = "zohelo/zohelo-data"
+        done = subprocess.run(
+            ["node", str(snippet), copy.as_uri()],
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+        return clean(done.stdout or done.stderr or f"node exit {done.returncode}")
+
+    attempt("app", "org app", "200", org_app)
+    attempt("app", "scheduler Worker token", "ok", worker_token)
+
+
 SECTIONS = (
     ("variables", variables_section),
     ("deploy token", deploy_section),
     ("storage", storage_section),
     ("catalog", catalog_section),
     ("bdl", bdl_section),
+    ("app", app_section),
 )
 
 
