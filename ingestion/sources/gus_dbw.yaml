@@ -12,6 +12,11 @@ extraction:
   # renews each indicator's listing and lands only files whose last-update date is newer.
   schedule:
     - {cron: "40 4 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  # Indicators the website cannot serve, skipped with a reason (counted as indicators_excluded),
+  # so a known failure does not fail every run; any other failing indicator still fails the run
+  # and alerts. Remove an entry to try the indicator again.
+  excluded:
+    - {id: 814, reason: "getAggregatesById keeps failing after retries on every daily run (runs 40108597301, 40270885956, 40451693942)", issue: "#923"}
 
 landing: 01_landing/gus_dbw/
 # Landing → Archive as Eurostat: Bronze-loaded files are moved (copy, verify, delete).

@@ -22,6 +22,7 @@ After the initial load, choose the production load per source:
 | `production` | `snapshot` — each file is a complete copy of an entity (dataset, table); `delta` — each file holds only new or changed rows |
 | `incremental_policy` | `changed_since_last` — compare the source catalogue with Landing and fetch only missing or changed entities; `append_only` — fetch only records after the last one; `full_refresh` — fetch everything each run |
 | `schedule` | `null` (manual) until the owner approves one; daily is the target where the source refreshes that often |
+| `excluded` | optional list of `{id, reason, issue}`: entities the source cannot serve, skipped and counted with their reason so a known failure does not fail every run; a new failure still fails the run (implemented for GUS DBW indicators) |
 
 ## Layout
 
