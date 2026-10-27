@@ -35,7 +35,7 @@ runs:
         cache-dependency-path: requirements.txt
     - name: Install dependencies
       shell: bash
-      run: python -m pip install -r requirements.txt
+      run: python -m pip install --require-hashes -r requirements.txt
     - name: ${{ inputs.source }} · ${{ inputs.activity }}
       shell: bash
       env:

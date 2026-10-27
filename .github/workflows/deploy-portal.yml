@@ -62,7 +62,7 @@ jobs:
           printf '{"git_commit": "%s", "data_source": "cloudflare-r2"}\n' "$GITHUB_SHA" > portal/app/dist/portal-build.json
       - name: Cloudflare setup (Pages project, Access, domain on main)
         run: |
-          python -m pip install --quiet requests
+          python -m pip install --quiet --require-hashes -r requirements.txt
           if [ "$BRANCH" = main ]; then python portal/cloudflare_setup.py --switch-dns; else python portal/cloudflare_setup.py; fi
       - name: Deploy
         working-directory: portal/app

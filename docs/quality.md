@@ -24,7 +24,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 
 | Rule | Check |
 |---|---|
-| Root contains only: `.github/`, `docs/`, `ingestion/`, `ops/`, `portal/`, `warehouse/`, `run.py`, `requirements.txt`, `pyproject.toml` (tool settings), `README.md`, `AGENTS.md`, `CLAUDE.md`, `.gitignore`, `.gitleaks.toml`, `.gitattributes`, `.python-version`, `.node-version` | [auto] allowlist |
+| Root contains only: `.github/`, `docs/`, `ingestion/`, `ops/`, `portal/`, `warehouse/`, `run.py`, `requirements.in`, `requirements.txt`, `pyproject.toml` (tool settings), `README.md`, `AGENTS.md`, `CLAUDE.md`, `.gitignore`, `.gitleaks.toml`, `.gitattributes`, `.python-version`, `.node-version` | [auto] allowlist |
 | No empty files except `__init__.py` | [auto] |
 | No file above 1 MB; no data, outputs, notebooks, archives or credentials committed | [auto] |
 | No `dev/` on `main`; no status/audit/log files in the repo (status lives in project docs) | [auto] |
@@ -41,6 +41,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 | Configuration comes from declarations or environment variables, never hard-coded bucket names, keys or paths | [review] |
 | Network access is polite: user agent, timeouts, retries with backoff, rate limits per source | [review] |
 | No new dependency without a reason in the PR; versions pinned for data libraries | [review] |
+| Dependencies: change `requirements.in`, then re-run `pip-compile --generate-hashes --strip-extras -o requirements.txt requirements.in` (pip-tools 7.5.1, Python of `.python-version`); workflows install with `--require-hashes` | [review] |
 | Retired code is deleted, not kept on `main`; git history keeps it | [review] |
 
 ## 4. SQL and dbt (declarative layer)
