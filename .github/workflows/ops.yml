@@ -94,8 +94,13 @@ jobs:
       - name: "ops/${{ inputs.script }}.py"
         env:
           GH_PROJECT_TOKEN: ${{ steps.project.outputs.token }}
-          # The Workers deploy token, for scheduler_trigger only (blank for other scripts).
-          PLATFORM_DEPLOY_TOKEN: ${{ inputs.script == 'scheduler_trigger' && secrets.PLATFORM_DEPLOY_TOKEN || '' }}
+          # The Workers deploy token, for scheduler_trigger and check_credentials only (blank for other scripts).
+          PLATFORM_DEPLOY_TOKEN: ${{ (inputs.script == 'scheduler_trigger' || inputs.script == 'check_credentials') && secrets.PLATFORM_DEPLOY_TOKEN || '' }}
+          # Credentials that check_credentials probes (blank for other scripts).
+          STORAGE_LAKEHOUSE_READ_ACCESS_KEY: ${{ inputs.script == 'check_credentials' && secrets.STORAGE_LAKEHOUSE_READ_ACCESS_KEY || '' }}
+          STORAGE_LAKEHOUSE_READ_SECRET_KEY: ${{ inputs.script == 'check_credentials' && secrets.STORAGE_LAKEHOUSE_READ_SECRET_KEY || '' }}
+          STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN: ${{ inputs.script == 'check_credentials' && secrets.STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN || '' }}
+          SOURCE_GUS_BDL_API_KEY: ${{ inputs.script == 'check_credentials' && secrets.SOURCE_GUS_BDL_API_KEY || '' }}
           # The org bot app credentials the scheduler Worker dispatches with (scheduler_trigger deploy only).
           ORG_BOT_CLIENT_ID: ${{ inputs.script == 'scheduler_trigger' && vars.ORG_BOT_CLIENT_ID || '' }}
           ORG_BOT_PRIVATE_KEY: ${{ inputs.script == 'scheduler_trigger' && secrets.ORG_BOT_PRIVATE_KEY || '' }}
