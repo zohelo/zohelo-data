@@ -33,3 +33,7 @@ zohelo-lakehouse-prod   Iceberg bronze / silver / gold (R2 Data Catalog)
 
 See the [source playbook](docs/playbook.md), [architecture](docs/architecture.md), [landing](docs/landing.md),
 [operating](docs/operating.md), [sources](docs/sources.md) and [decisions](docs/decisions.md).
+
+## Copyright
+
+Copyright © 2026 Radosław Utkała. All rights reserved. Source data remain under their providers' terms (see ingestion/register.yaml).
