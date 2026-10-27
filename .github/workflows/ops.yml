@@ -8,6 +8,7 @@ name: Ops · ad-hoc
 on:
   schedule:
     - cron: '20 5 * * 1'
+    - cron: '7,27,47 * * * *'  # temporary: first backlog sync (removed by migration/cleanup)
   workflow_dispatch:
     inputs:
       script:
@@ -51,6 +52,7 @@ jobs:
             # Schedule table: one row per cron; add a cron under on.schedule and a row here.
             case "$CRON" in
               '20 5 * * 1') script=orphan_files; args='--delete --min-age-hours 48' ;;
+              '7,27,47 * * * *') script=backlog_sync; args='apply' ;;
               *) echo "::error title=ops schedule::no schedule table row for cron '$CRON'" >&2; exit 1 ;;
             esac
           fi
