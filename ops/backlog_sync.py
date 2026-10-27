@@ -8,7 +8,8 @@ Mode `render KEY [--root DIR ...]` prints the title, labels and body of the issu
 Mode `pr-check` (pull_request event, GITHUB_TOKEN) passes when the PR body closes an open Task or Bug.
 Modes `plan` and `apply [--root DIR ...]` compare the nodes with the issues of zohelo-data, zohelo-bi and zohelo
 (matched by the key in the first body line). plan only reads GitHub and reports the counts per repo as annotations;
-apply creates, updates, re-parents and closes issues (at most 400 writes per run). The token comes from
+apply creates, updates, re-parents and closes issues and puts them on project 1 with Product, Phase, Priority,
+Effort and Target date (at most 400 writes per run). The token comes from
 GH_PROJECT_TOKEN, GITHUB_TOKEN or GH_TOKEN.
 """
 
@@ -657,6 +658,134 @@ def unadopted(root: Path, issues: dict[str, dict]) -> list[str]:
     ]
 
 
+BOARD_QUERY = """
+query($project: ID!, $after: String) {
+  node(id: $project) {
+    ... on ProjectV2 {
+      fields(first: 50) {
+        nodes {
+          __typename
+          ... on ProjectV2FieldCommon { id name dataType }
+          ... on ProjectV2SingleSelectField { options { id name } }
+        }
+      }
+      items(first: 100, after: $after) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id
+          content { ... on Issue { id } }
+          fieldValues(first: 30) {
+            nodes {
+              ... on ProjectV2ItemFieldSingleSelectValue { name field { ... on ProjectV2FieldCommon { name } } }
+              ... on ProjectV2ItemFieldDateValue { date field { ... on ProjectV2FieldCommon { name } } }
+              ... on ProjectV2ItemFieldTextValue { text field { ... on ProjectV2FieldCommon { name } } }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
+ADD_ITEM = """
+mutation($project: ID!, $content: ID!) {
+  addProjectV2ItemById(input: {projectId: $project, contentId: $content}) { item { id } }
+}
+"""
+
+SET_FIELD = """
+mutation($project: ID!, $item: ID!, $field: ID!, $value: ProjectV2FieldValue!) {
+  updateProjectV2ItemFieldValue(input: {projectId: $project, itemId: $item, fieldId: $field, value: $value}) {
+    projectV2Item { id }
+  }
+}
+"""
+
+
+class Board:
+    """Project 1: its fields and items, read once; adds the synced issues and sets Product, Phase, Priority, Effort
+    and Target date from the files (Status and Sprint belong to automation and planning)."""
+
+    def __init__(self, api: Github, token: str, org: str) -> None:
+        from ops import project
+
+        self.api = api
+        self.token = token
+        self.graphql = project.graphql
+        self.project = project.project_id(token, org)
+        self.fields: dict[str, dict] = {}
+        self.items: dict[str, dict] = {}  # issue node id -> {id, values}
+        self.to_add = 0
+        self.to_set = 0
+        self.skipped: set[str] = set()
+        after = None
+        while True:
+            data = self.graphql(token, BOARD_QUERY, {"project": self.project, "after": after})["node"]
+            for field in data["fields"]["nodes"]:
+                self.fields.setdefault(field["name"], field)
+            for item in data["items"]["nodes"]:
+                content = (item.get("content") or {}).get("id")
+                if not content:
+                    continue
+                values = {}
+                for value in item["fieldValues"]["nodes"]:
+                    name = (value.get("field") or {}).get("name")
+                    if name:
+                        values[name] = value.get("name") or value.get("date") or value.get("text")
+                self.items[content] = {"id": item["id"], "values": values}
+            if not data["items"]["pageInfo"]["hasNextPage"]:
+                break
+            after = data["items"]["pageInfo"]["endCursor"]
+
+    def value(self, name: str, wanted: str) -> tuple[dict, str] | None:
+        """(ProjectV2FieldValue input, value shown) of a field; None when the field or option is missing."""
+        field = self.fields.get(name)
+        if field is None:
+            self.skipped.add(f"field {name}")
+            return None
+        if field["dataType"] == "SINGLE_SELECT":
+            for option in field["options"]:
+                if option["name"] == wanted or option["name"].split(" ", 1)[0].lower() == wanted.lower():
+                    return {"singleSelectOptionId": option["id"]}, option["name"]
+            self.skipped.add(f"option {name}={wanted}")
+            return None
+        return ({"date": wanted} if field["dataType"] == "DATE" else {"text": wanted}), wanted
+
+    def mutate(self, query: str, variables: dict) -> dict:
+        if self.api.dry:
+            return {}
+        if self.api.writes >= WRITE_LIMIT:
+            raise Stop
+        self.api.writes += 1
+        result = self.graphql(self.token, query, variables)
+        time.sleep(1)
+        return result
+
+    def sync(self, issue: dict, fields: dict[str, str]) -> None:
+        """Add the issue to the project (idempotent) and set the fields whose value differs."""
+        node_id = issue.get("node_id")
+        item = self.items.get(node_id) if node_id else None
+        if item is None:
+            self.to_add += 1
+            added = self.mutate(ADD_ITEM, {"project": self.project, "content": node_id}) if node_id else {}
+            item = {"id": added.get("addProjectV2ItemById", {}).get("item", {}).get("id"), "values": {}}
+            if node_id:
+                self.items[node_id] = item
+        for name, wanted in fields.items():
+            resolved = self.value(name, wanted)
+            if resolved is None or item["values"].get(name) == resolved[1]:
+                continue
+            value, shown = resolved
+            self.to_set += 1
+            if item["id"]:
+                self.mutate(
+                    SET_FIELD,
+                    {"project": self.project, "item": item["id"], "field": self.fields[name]["id"], "value": value},
+                )
+                item["values"][name] = shown
+
+
 def parent_key(kind: str, node: dict) -> str | None:
     if kind == "Area":
         return None
@@ -701,6 +830,7 @@ def run_sync(roots: list[Path], apply: bool) -> int:
         )
         if apply:
             return 1
+    board = Board(api, token, ORG)
     nodes = sorted(plan.nodes.items(), key=lambda item: LAYERS.index(item[1][0]))
     counts = {repo: {"create": 0, "update": 0, "reparent": 0, "close": 0} for repo in PREFIXES.values()}
     owner_open = sum(
@@ -767,6 +897,7 @@ def run_sync(roots: list[Path], apply: bool) -> int:
                     owner_open += ("owner:action" in labels) - ("owner:action" in have)
                 if finished and existing["state"] == "open":
                     close_issue(api, counts, repo, existing, completed_comment(node, kind), "completed")
+            board.sync(existing, want["fields"])
             if parent_issue is not None:
                 current = (
                     api.read(f"/repos/{ORG}/{repo}/issues/{existing['number']}/parent") if existing["number"] else None
@@ -785,6 +916,14 @@ def run_sync(roots: list[Path], apply: bool) -> int:
                 close_issue(api, counts, issue["repo"], issue, "Removed from the plan", "not_planned")
     except Stop:
         annotate("warning", "backlog_sync stopped", {"writes": WRITE_LIMIT, "note": "limit reached; rerun continues"})
+    annotate(
+        "notice",
+        f"backlog_sync project {'apply' if apply else 'plan'}",
+        f"project items: {board.to_add} {'added' if apply else 'to add'}, "
+        f"{board.to_set} fields {'set' if apply else 'to set'}",
+    )
+    if board.skipped:
+        annotate("warning", "backlog_sync project fields missing", sorted(board.skipped))
     labels = (
         ("created", "updated", "reparented", "closed")
         if apply
