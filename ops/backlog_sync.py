@@ -5,14 +5,19 @@ Standard library plus pyyaml only, because the validator also runs in zohelo-bi 
 Mode `validate [--root DIR ...]` loads areas.yaml, stages.yaml and epics/*.yaml of every root
 (default: the repository root), prints `file: key: message` per error and exits 1 on any error.
 Mode `render KEY [--root DIR ...]` prints the title, labels and body of the issue for one node (docs/backlog.md §5).
+Mode `pr-check` (pull_request event, GITHUB_TOKEN) passes when the PR body closes an open Task or Bug.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
+import os
 from pathlib import Path
 import re
 import sys
+import urllib.error
+import urllib.request
 
 ROOT = Path(__file__).resolve().parent.parent
 PREFIXES = {"data": "zohelo-data", "bi": "zohelo-bi", "com": "zohelo"}
@@ -410,6 +415,52 @@ def show(roots: list[Path], key: str) -> int:
     return 0
 
 
+LINK = re.compile(
+    r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+"
+    r"(?:(?:https://github\.com/)?(?P<repo>zohelo/[\w.-]+)(?:/issues/|#)|#)(?P<num>\d+)\b",
+    re.IGNORECASE,
+)
+LINK_HELP = "Link an open Task or Bug: add Closes #<n> to the PR body, then re-run this check"
+
+
+def fetch_issue(repo: str, number: str, token: str) -> dict | None:
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{repo}/issues/{number}",
+        headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return json.load(response)
+    except urllib.error.HTTPError as err:
+        print(f"{repo}#{number}: GitHub answered {err.code}", file=sys.stderr)
+        return None
+
+
+def pr_check() -> int:
+    """Every pull request closes an open Task or Bug (docs/backlog.md rule 2); Dependabot is exempt."""
+    with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as handle:
+        pull = json.load(handle).get("pull_request") or {}
+    if pull.get("user", {}).get("login") == "dependabot[bot]":
+        print("::notice title=Linked task::skipped, Dependabot pull request")
+        return 0
+    here = os.environ.get("GITHUB_REPOSITORY", "")
+    token = os.environ.get("GITHUB_TOKEN", "")
+    for match in LINK.finditer(pull.get("body") or ""):
+        repo, number = match.group("repo") or here, match.group("num")
+        issue = fetch_issue(repo, number, token)
+        if not issue or "pull_request" in issue or issue.get("state") != "open":
+            continue
+        if (issue.get("type") or {}).get("name") not in {"Task", "Bug"}:
+            continue
+        if any(label.get("name") == "verify-only" for label in issue.get("labels", [])):
+            continue
+        print(f"Linked task: ok #{number}")
+        return 0
+    print(f"::error title=Linked task::{LINK_HELP}")
+    print(LINK_HELP, file=sys.stderr)
+    return 1
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     modes = parser.add_subparsers(dest="mode", required=True)
@@ -421,7 +472,10 @@ def main() -> int:
     show_mode = modes.add_parser("render", help="print the issue title, labels and body of one node")
     show_mode.add_argument("key")
     show_mode.add_argument("--root", action="append", type=Path, help="repository root (repeatable; default: this one)")
+    modes.add_parser("pr-check", help="check that the pull request closes an open Task or Bug")
     args = parser.parse_args()
+    if args.mode == "pr-check":
+        return pr_check()
     roots = [r.resolve() for r in args.root] if args.root else [ROOT]
     return validate(roots, args.strict) if args.mode == "validate" else show(roots, args.key)
 
