@@ -76,6 +76,9 @@ jobs:
           GH_PROJECT_TOKEN: ${{ steps.project.outputs.token }}
           # The Workers deploy token, for scheduler_trigger only (blank for other scripts).
           CLOUDFLARE_API_TOKEN: ${{ inputs.script == 'scheduler_trigger' && secrets.PLATFORM_DEPLOY_TOKEN || '' }}
+          # The org bot app credentials the scheduler Worker dispatches with (scheduler_trigger deploy only).
+          ORG_BOT_APP_ID: ${{ inputs.script == 'scheduler_trigger' && vars.ORG_BOT_APP_ID || '' }}
+          ORG_BOT_PRIVATE_KEY: ${{ inputs.script == 'scheduler_trigger' && secrets.ORG_BOT_PRIVATE_KEY || '' }}
           SCRIPT: ${{ inputs.script }}
           ARGS: ${{ inputs.args }}
         run: |

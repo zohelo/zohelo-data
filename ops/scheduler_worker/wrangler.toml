@@ -1,6 +1,6 @@
 # External clock for the Pipeline scheduler (#802); deploy, pause and resume with
-# `ops/scheduler_trigger.py` (Ops · ad-hoc, script scheduler_trigger). The secret
-# GITHUB_TOKEN is set by the owner in the Cloudflare dashboard (src/index.js); deploys keep it.
+# `ops/scheduler_trigger.py` (Ops · ad-hoc, script scheduler_trigger). It dispatches as the
+# organisation's GitHub App; `deploy` sets the secrets APP_ID and APP_PRIVATE_KEY (src/index.js).
 name = "zohelo-scheduler"
 main = "src/index.js"
 compatibility_date = "2026-09-30"

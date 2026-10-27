@@ -4,12 +4,13 @@
 GitHub's `schedule` trigger fires only a fraction of its slots. The Worker in
 ops/scheduler_worker/ dispatches the Pipeline run "scheduler: dispatch due runs" on its own
 Cron Trigger; the scheduler's catch-up window makes missed or repeated firings harmless.
-The Worker's secret GITHUB_TOKEN (fine-grained, this repository, Actions read/write) is set
-by the owner in the Cloudflare dashboard; this script only reports whether it is there.
+The Worker dispatches as the organisation's GitHub App: `deploy` sets its secrets APP_ID and
+APP_PRIVATE_KEY from the organisation variable ORG_BOT_APP_ID and secret ORG_BOT_PRIVATE_KEY
+(and removes the former personal-token secret GITHUB_TOKEN).
 
 Modes (one argument):
-  status   the Worker's Cron Triggers and whether its token is set (default; read-only)
-  deploy   deploy the Worker (code, variables, Cron Triggers; its secret is kept)
+  status   the Worker's Cron Triggers and whether its app credentials are set (default; read-only)
+  deploy   deploy the Worker (code, variables, Cron Triggers) and set its app credentials
   pause    remove the Cron Triggers (the Worker stays deployed; GitHub's schedule remains;
            a later `deploy` turns them back on)
   resume   restore the Cron Triggers from wrangler.toml
@@ -49,7 +50,7 @@ WRANGLER_SECRETS = ("CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID")
 API = "https://api.cloudflare.com/client/v4/accounts/{account}/workers/scripts/{script}/{part}"
 
 
-def cloudflare(method: str, part: str, body: list | None = None) -> tuple[int, dict]:
+def cloudflare(method: str, part: str, body: list | dict | None = None) -> tuple[int, dict]:
     """Call the Workers API for this Worker's `schedules` or `secrets`."""
     worker = tomllib.loads(CONFIG.read_text())["name"]
     response = requests.request(
@@ -89,6 +90,19 @@ def deploy() -> list[str]:
     return [line.strip() for line in result.stdout.splitlines() if "Version ID" in line or "schedule" in line]
 
 
+def set_app_secrets() -> list[str]:
+    """Put the GitHub App credentials on the Worker; drop the old personal token if present."""
+    done = []
+    for name, value in (("APP_ID", req("ORG_BOT_APP_ID")), ("APP_PRIVATE_KEY", req("ORG_BOT_PRIVATE_KEY"))):
+        status, body = cloudflare("PUT", "secrets", {"name": name, "text": value, "type": "secret_text"})
+        if status != 200:
+            raise RuntimeError(f"setting {name} failed: HTTP {status} {body['errors']}")
+        done.append(name)
+    status, _ = cloudflare("DELETE", "secrets/GITHUB_TOKEN")
+    done.append(f"GITHUB_TOKEN removed (HTTP {status})")
+    return done
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     mode = argv[0] if argv else "status"
@@ -96,6 +110,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if mode == "deploy":
             out["deployed"] = deploy()
+            out["secrets"] = set_app_secrets()
         elif mode == "pause":
             out["put"] = cloudflare("PUT", "schedules", [])
         elif mode == "resume":
@@ -107,7 +122,8 @@ def main(argv: list[str] | None = None) -> int:
         out["schedules"] = {"status": status, **body}
         secrets_status, secrets = cloudflare("GET", "secrets")
         names = [s.get("name") for s in secrets["result"] or []]
-        out["token_set"] = "GITHUB_TOKEN" in names
+        out["app_credentials_set"] = {"APP_ID", "APP_PRIVATE_KEY"} <= set(names)
+        out["old_personal_token_present"] = "GITHUB_TOKEN" in names
         failed = status != 200 or secrets_status != 200 or ("put" in out and out["put"][0] != 200)
     except (RuntimeError, requests.RequestException) as exc:
         out["error"], failed = str(exc), True
