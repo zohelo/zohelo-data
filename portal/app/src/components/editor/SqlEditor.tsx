@@ -27,8 +27,6 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import FloatingActionButton from "@/components/common/FloatingActionButton";
 import SaveQueryDialog from "@/components/saved-queries/SaveQueryDialog";
-import { bindCollaborativeEditor, type CollaborativeBinding } from "./collaborativeBinding";
-import { getCollaboration } from "@/store/slices/sessionSlice";
 import { ExplainPlanViewer } from "@/components/workspace/ExplainPlanViewer";
 
 interface SqlEditorProps {
@@ -40,7 +38,6 @@ interface SqlEditorProps {
 const SqlEditor: React.FC<SqlEditorProps> = ({ tabId, title, className }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const editorInstanceRef = useRef<EditorInstance | null>(null);
-  const bindingRef = useRef<CollaborativeBinding | null>(null);
   const { theme } = useTheme();
   const tabs = useDuckStore((s) => s.tabs);
   const executeQuery = useDuckStore((s) => s.executeQuery);
@@ -49,7 +46,6 @@ const SqlEditor: React.FC<SqlEditorProps> = ({ tabId, title, className }) => {
   const updateTabTitle = useDuckStore((s) => s.updateTabTitle);
   const currentProfileId = useDuckStore((s) => s.currentProfileId);
   const currentSession = useDuckStore((s) => s.currentSession);
-  const sessionStatus = useDuckStore((s) => s.session.status);
   const monacoConfig = useMonacoConfig(theme);
 
   const currentTab = tabs.find((tab) => tab.id === tabId);
@@ -125,43 +121,8 @@ const SqlEditor: React.FC<SqlEditorProps> = ({ tabId, title, className }) => {
     };
   }, [tabId, monacoConfig, stableExecuteCallback]); // Keep stableExecuteCallback
 
-  // Collaborative binding — attaches only while a session is live, so a solo
-  // Duck-UI pays nothing for it.
-  useEffect(() => {
-    if (sessionStatus !== "connected") return;
-
-    const editor = editorInstanceRef.current?.editor;
-    const model = editor?.getModel();
-    const collaboration = getCollaboration();
-    if (!editor || !model || !collaboration) return;
-
-    // The tab must exist in shared state before it can be bound; a tab created
-    // locally mid-session would otherwise never reach the other person.
-    collaboration.document.addTab({ id: tabId, title, type: "sql" }, model.getValue());
-    const text = collaboration.document.textFor(tabId);
-    if (!text) return;
-
-    const binding = bindCollaborativeEditor({
-      text,
-      model,
-      editor,
-      presence: collaboration.presence,
-      tabId,
-    });
-    bindingRef.current = binding;
-
-    return () => {
-      binding.destroy();
-      bindingRef.current = null;
-    };
-  }, [tabId, title, sessionStatus]);
-
   // Content sync effect
   useEffect(() => {
-    // Skipped while collaborating: the shared document is the source of truth,
-    // and a setValue here would clobber concurrent remote edits.
-    if (bindingRef.current) return;
-
     const editor = editorInstanceRef.current?.editor;
     if (editor && currentContent !== editor.getValue()) {
       const position = editor.getPosition();

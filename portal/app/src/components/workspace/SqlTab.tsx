@@ -1,5 +1,5 @@
 // src/components/workspace/SqlTab.tsx
-import React, { useState } from "react";
+import React from "react";
 import { useDuckStore } from "@/store";
 import SqlEditor from "@/components/editor/SqlEditor";
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from "@/components/ui/resizable";
@@ -13,10 +13,7 @@ import {
   AlertTriangle,
   Loader2,
   Scissors,
-  LayoutDashboard,
 } from "lucide-react";
-import AddToDashboardDialog from "@/components/dashboard/AddToDashboardDialog";
-import { isNumericColumn } from "@/lib/chartDataTransform";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "../ui/skeleton";
@@ -50,7 +47,6 @@ const SqlTab: React.FC<SqlTabProps> = ({ tabId }) => {
   const progress = useDuckStore((s) => s.queryProgress[tabId]);
   const cancelQuery = useDuckStore((s) => s.cancelQuery);
   const updateTabChartConfig = useDuckStore((s) => s.updateTabChartConfig);
-  const [addToDashboardOpen, setAddToDashboardOpen] = useState(false);
   const currentTab = tabs.find((tab) => tab.id === tabId);
 
   const renderResults = () => {
@@ -184,16 +180,6 @@ const SqlTab: React.FC<SqlTabProps> = ({ tabId }) => {
             <BarChart3 className="h-3.5 w-3.5" />
             Charts
           </TabsTrigger>
-
-          <Button
-            size="sm"
-            variant="ghost"
-            className="ml-auto h-6 gap-1.5 px-2 text-xs"
-            onClick={() => setAddToDashboardOpen(true)}
-          >
-            <LayoutDashboard className="h-3.5 w-3.5" />
-            Add to dashboard
-          </Button>
         </TabsList>
       </Tabs>
     );
@@ -203,21 +189,8 @@ const SqlTab: React.FC<SqlTabProps> = ({ tabId }) => {
     return null;
   }
 
-  const currentSql = typeof currentTab.content === "string" ? currentTab.content : "";
-
   return (
     <div className="h-full">
-      <AddToDashboardDialog
-        open={addToDashboardOpen}
-        onOpenChange={setAddToDashboardOpen}
-        sql={currentSql}
-        title={currentTab.title}
-        chartConfig={currentTab.chartConfig}
-        columns={currentTab.result?.columns.map((name) => ({
-          name,
-          numeric: isNumericColumn(currentTab.result?.data ?? [], name),
-        }))}
-      />
       <ResizablePanelGroup direction="horizontal">
         {/* Main Editor + Results Panel */}
         <ResizablePanel defaultSize={100} minSize={50}>

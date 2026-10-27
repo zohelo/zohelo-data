@@ -108,7 +108,6 @@ export const createProfileSlice: StateCreator<
         const validTypes = new Set([
           "sql",
           "notebook",
-          "dashboard",
           "home",
           "connections",
           "settings",
@@ -160,10 +159,6 @@ export const createProfileSlice: StateCreator<
       }));
       set({ queryHistory });
     }
-
-    // Dashboards, so a restored dashboard tab has something to render rather
-    // than reporting that it no longer exists.
-    await get().loadDashboards(profileId);
 
     // Load theme setting
     const themeSettings = await getSettingsByCategory(profileId, "theme");

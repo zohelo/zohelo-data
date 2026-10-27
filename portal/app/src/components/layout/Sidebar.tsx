@@ -79,9 +79,6 @@ export default function Sidebar({ isExplorerOpen, onToggleExplorer }: SidebarPro
         return "text-blue-500";
       case "OPFS":
         return "text-purple-500";
-      // Hosted by another participant — amber matches the live-session accent.
-      case "Peer":
-        return "text-amber-500";
       default:
         return "text-gray-500";
     }

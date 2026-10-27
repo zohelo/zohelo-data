@@ -1,14 +1,6 @@
 import * as duckdb from "@duckdb/duckdb-wasm";
 import type { DataSession, SessionCapabilities } from "@/services/engine/types";
 import type {
-  Participant,
-  SessionStatus,
-  ShareSelection,
-} from "@/services/collaboration/liveSession";
-import type { SharedCapability } from "@/services/collaboration/capabilities/capability";
-import type { ForkTableProgress } from "@/services/collaboration/fork";
-import type { Dashboard } from "@/services/dashboard/types";
-import type {
   PortalAuthState,
   LandingCatalogResolution,
   LakehouseLayer,
@@ -45,14 +37,11 @@ declare global {
 // Connection Types
 //
 
-/** Where a connection came from. "SESSION" ones are granted by a live peer. */
-export type ConnectionEnvironment = "APP" | "ENV" | "BUILT_IN" | "SESSION";
+/** Where a connection came from. */
+export type ConnectionEnvironment = "APP" | "ENV" | "BUILT_IN";
 
-/**
- * Legacy connection kind. "Peer" only ever appears on a session-granted
- * connection, which is never persisted — it exists for as long as the grant.
- */
-export type ConnectionScope = "WASM" | "External" | "OPFS" | "Peer";
+/** Connection kind. */
+export type ConnectionScope = "WASM" | "External" | "OPFS";
 
 export interface CurrentConnection {
   environment: ConnectionEnvironment;
@@ -192,7 +181,7 @@ export interface MountedFolderInfo {
 //
 
 export type EditorTabType =
-  "sql" | "notebook" | "dashboard" | "home" | "connections" | "settings" | "review" | "explorer";
+  "sql" | "notebook" | "home" | "connections" | "settings" | "review" | "explorer";
 
 export interface NotebookCell {
   id: string;
@@ -472,101 +461,6 @@ export interface ProfileSlice {
   bumpSavedQueriesVersion: () => void;
 }
 
-//
-// Dashboards
-//
-
-export interface DashboardSlice {
-  dashboards: Dashboard[];
-  isDashboardEditing: boolean;
-
-  loadDashboards: (profileId?: string) => Promise<void>;
-  createDashboard: (name: string) => Promise<Dashboard | null>;
-  updateDashboard: (dashboard: Dashboard) => Promise<void>;
-  deleteDashboard: (id: string) => Promise<void>;
-  duplicateDashboard: (id: string) => Promise<Dashboard | null>;
-  setDashboardEditing: (editing: boolean) => void;
-
-  /** Appends a named SQL fence plus a component tag to a dashboard document. */
-  appendQueryToDashboard: (options: {
-    dashboardId: string;
-    kind: "chart" | "table" | "metric";
-    title: string;
-    sql: string;
-    chartConfig?: ChartConfig;
-    /** Result columns, for picking sensible x/y in the generated tag. */
-    columns?: { name: string; numeric: boolean }[];
-  }) => Promise<void>;
-
-  /** Focuses a dashboard's tab, opening one if needed. Returns its tab id. */
-  openDashboardTab: (dashboardId: string, name: string) => string | undefined;
-  /** The dashboards list slide-over. Store-driven so Home and the rail share it. */
-  isDashboardsPanelOpen: boolean;
-  setDashboardsPanelOpen: (open: boolean) => void;
-  runDashboard: (dashboardId: string, force?: boolean) => Promise<void>;
-}
-
-//
-// Live session
-//
-
-export type SessionRole = "host" | "guest";
-
-/** What the UI renders about a live session. Never the session itself. */
-export interface SessionProjection {
-  role: SessionRole | null;
-  status: SessionStatus;
-  sessionName: string;
-  hostName: string;
-  /** Host only: the link to send. */
-  inviteUrl: string | null;
-  inviteCode: string | null;
-  /** Guest only: the code to send back. */
-  answerCode: string | null;
-  participants: Participant[];
-  sharedCapabilities: SharedCapability[];
-  isWebRtcSupported: boolean;
-  error: string | null;
-}
-
-export interface SessionSlice {
-  session: SessionProjection;
-
-  listShareableTables: () => Promise<ShareSelection[]>;
-  startLiveSession: (options: {
-    sessionName: string;
-    shared: ShareSelection[];
-    /** Share everything on the connection, including tables added later. */
-    shareAll?: boolean;
-    maxResultRows?: number;
-  }) => Promise<void>;
-  acceptGuestCode: (code: string) => Promise<void>;
-  /** Host: mints a fresh single-use invite for one more person. */
-  inviteAnotherGuest: () => Promise<void>;
-  /** Host: disconnects one participant. */
-  removeParticipant: (peerId: string) => Promise<void>;
-  joinLiveSession: (inviteCode: string) => Promise<void>;
-  syncSessionConnections: (capabilities: SharedCapability[]) => void;
-  /** Adopts co-edited dashboards from the shared document into local state. */
-  adoptSharedDashboards: () => void;
-  /** Adopts shared notebook state (whole-document, last-writer-wins). */
-  adoptSharedNotebooks: () => void;
-  /** Reconciles local tabs with the shared workspace document. */
-  projectSharedTabs: () => void;
-  /** Subscribes the tab list to shared-document changes. */
-  watchSharedWorkspace: () => void;
-  revokeCapability: (capabilityId: string) => Promise<void>;
-  /** Copies shared tables into this browser's own engine. Guest side of Fork. */
-  forkCapability: (
-    capabilityId: string,
-    tables: string[],
-    onProgress?: (progress: ForkTableProgress) => void,
-    /** Where the copies land. Defaults to the in-memory engine; an OPFS connection makes them survive the browser closing. */
-    targetConnectionId?: string
-  ) => Promise<ForkTableProgress[]>;
-  endLiveSession: () => Promise<void>;
-}
-
 export interface LakehouseSlice {
   portalAuth: PortalAuthState;
   lakehouseCatalog: LakehouseLayer[];
@@ -631,6 +525,4 @@ export type DuckStoreState = DuckdbSlice &
   TabSlice &
   FileSystemSlice &
   ProfileSlice &
-  SessionSlice &
-  DashboardSlice &
   LakehouseSlice;

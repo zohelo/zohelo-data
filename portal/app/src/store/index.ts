@@ -7,8 +7,6 @@ import { createSchemaSlice } from "./slices/schemaSlice";
 import { createTabSlice } from "./slices/tabSlice";
 import { createFileSystemSlice } from "./slices/fileSystemSlice";
 import { createProfileSlice } from "./slices/profileSlice";
-import { createSessionSlice } from "./slices/sessionSlice";
-import { createDashboardSlice } from "./slices/dashboardSlice";
 import { createLakehouseSlice } from "./slices/lakehouseSlice";
 import { saveWorkspace } from "@/services/persistence/repositories/workspaceRepository";
 import { isSystemDbInitialized } from "@/services/persistence/systemDb";
@@ -25,8 +23,6 @@ const storeCreator: StateCreator<DuckStoreState, [["zustand/devtools", never]]> 
   ...createTabSlice(...a),
   ...createFileSystemSlice(...a),
   ...createProfileSlice(...a),
-  ...createSessionSlice(...a),
-  ...createDashboardSlice(...a),
   ...createLakehouseSlice(...a),
 });
 

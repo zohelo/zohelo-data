@@ -13,7 +13,6 @@
 
 import { httpDuckDriver } from "./drivers/httpDuckDriver";
 import { opfsDriver } from "./drivers/opfsDriver";
-import { peerDriver } from "./drivers/peerDriver";
 import { wasmDriver } from "./drivers/wasmDriver";
 import type {
   ConnectionDefinition,
@@ -33,7 +32,6 @@ export const registerDriver = (driver: DataDriver): void => {
 registerDriver(wasmDriver as DataDriver);
 registerDriver(opfsDriver as DataDriver);
 registerDriver(httpDuckDriver as DataDriver);
-registerDriver(peerDriver as DataDriver);
 
 /** Human-readable names for the kinds no driver implements yet. */
 const NOT_IMPLEMENTED: Partial<Record<ConnectionKind, string>> = {
