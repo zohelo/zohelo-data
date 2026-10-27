@@ -6,7 +6,7 @@ duckdb==1.5.5
 pandas==3.0.5
 pyarrow==23.0.1
 pyiceberg==0.12.0
-s3fs
+s3fs>=2025.1  # without a floor the resolver picks s3fs 0.4.2 (2019) to fit the newest boto3
 dbt-core==1.12.5
 dbt-duckdb==1.11.0
 zstandard
