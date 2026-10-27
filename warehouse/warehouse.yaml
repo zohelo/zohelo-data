@@ -1,7 +1,6 @@
 # Warehouse activities the Pipeline may run (source "platform"); owner authorization.
-#   silver_gold.promote   Bronze → Silver → Gold pass-through (passthrough/), until the SQL project
 #   silver_gold.build     dbt build of the SQL project (models/), optional --select from the run filter
-activities: [silver_gold.build]   # silver_gold.promote retired 16 Oct (#835); code kept until the new solution replaces it
+activities: [silver_gold.build]
 # Declared schedules (UTC), dispatched by run.py schedule: models daily after the source
 # loads. Eurostat and BDL observations are not dbt models: their loaders write Silver (#875).
 schedule:

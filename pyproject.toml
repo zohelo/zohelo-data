@@ -3,7 +3,7 @@
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-extend-exclude = ["ingestion/legacy", "portal/app", "portal/worker"]
+extend-exclude = ["portal/app", "portal/worker"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]

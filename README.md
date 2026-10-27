@@ -14,7 +14,6 @@ ingestion/           source → Landing → Bronze (Python)
   to_landing/        <source>/: extract to Landing; patterns/: shared code named by extraction.kind
   to_bronze/         <source>/: load Landing into Bronze
   common/            reporting, lineage, archive
-  legacy/            retired code, kept until each source is rebuilt
 warehouse/           Bronze → Silver → Gold, dimensional model, semantic layer; warehouse.yaml
 portal/              serving: app/ (portal), worker/ (R2 read API), portal index; portal.yaml
 .github/workflows/   Pipeline, Ops · ad-hoc, Dev · branch runs, Deploy portal

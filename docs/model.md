@@ -4,8 +4,7 @@ How Gold is modelled (owner decisions, 13 October 2026). Dimension definitions l
 code in [warehouse/dimensions/](../warehouse/dimensions/README.md), one YAML file per
 dimension, with the source mappings and a coverage table over the 182-source inventory.
 The dbt project in `warehouse/models/` builds Silver and Gold (Pipeline `platform`,
-"silver/gold: build models"); `warehouse/passthrough/` still copies the Bronze of sources
-not yet modelled.
+"silver/gold: build models"); sources not yet modelled are in Bronze only.
 
 ## Built (October 2026)
 

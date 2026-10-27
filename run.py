@@ -10,7 +10,7 @@ implemented and authorized:
   implemented  ingestion/to_landing/<source>/__init__.py (landing.inspect/extract/verify), or the
                shared pattern named by extraction.kind (bulk_file: ingestion/to_landing/patterns/)
                ingestion/to_bronze/<source>/__init__.py (bronze.*, landing.archive)
-               PLATFORM_ACTIVITIES below (silver_gold.promote/build, serving.refresh_index)
+               PLATFORM_ACTIVITIES below (silver_gold.build, serving.refresh_index)
   authorized   ingestion/sources/<source>.yaml "activities";
                warehouse/warehouse.yaml and portal/portal.yaml for platform activities
 Activities are idempotent, so a scheduled run and a manual run are the same thing and a
@@ -42,7 +42,6 @@ ORDER = (
     "bronze.verify",
     "landing.archive",
     "archive.prune",
-    "silver_gold.promote",
     "silver_gold.build",
     "serving.refresh_index",
 )
@@ -51,7 +50,6 @@ WRITES = {
     "bronze.load",
     "landing.archive",
     "archive.prune",
-    "silver_gold.promote",
     "silver_gold.build",
 }
 
@@ -73,7 +71,6 @@ RUNS = {
         "archive.prune",
         "silver_gold.build",
     ],
-    "silver/gold: promote": ["silver_gold.promote"],
     "silver/gold: build models": ["silver_gold.build"],
     "serving: refresh portal index": ["serving.refresh_index"],
 }
@@ -89,14 +86,6 @@ class Params:
     budget_minutes: float = 300.0
 
 
-def _promote(p: Params) -> int:
-    from warehouse.passthrough import promote, zero_copy
-
-    promote.main()
-    zero_copy.main()
-    return 0
-
-
 def _refresh_index(p: Params) -> int:
     from portal import publish_index
 
@@ -110,7 +99,6 @@ def _build(p: Params) -> int:
 
 
 PLATFORM_ACTIVITIES = {
-    "silver_gold.promote": _promote,
     "silver_gold.build": _build,
     "serving.refresh_index": _refresh_index,
 }
