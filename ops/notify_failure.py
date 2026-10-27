@@ -2,9 +2,12 @@
 """Open (or update) a GitHub issue when a Pipeline run fails, so failures reach the owner.
 
 Run by the Pipeline workflow's `notify` job when any job of the run failed or was
-cancelled. One open issue per source and run type ("Pipeline failed: <source> · <run>"),
-labelled `alert`: a repeated failure adds a comment instead of a new issue; closing the
-issue after the fix re-arms the alert. GitHub e-mails the owner about new issues and comments.
+cancelled. One alert per source and run type ("Pipeline failed: <source> · <run>"), labelled `alert`
+(type Bug): a repeated failure comments on the open alert, or re-opens the newest alert of that title
+when it was closed less than 14 days ago; only otherwise a new one is created. The alert is made a
+sub-issue of its source Epic (register entry with source_system == RUN_SOURCE -> Epic key
+`data/src-<id lower>`); when there is no such Epic issue (source `scheduler`, or the backlog sync has
+not created it yet) the alert stays without a parent. GitHub e-mails the owner about new issues and comments.
 Needs GITHUB_TOKEN with `issues: write`; reads the run context from the environment.
 
 ``--check-jobs`` (runs with an extract step): the extract jobs continue on error so landed files
@@ -17,14 +20,19 @@ job then exits 1, so the run concludes "failure" for the scheduler's catch-up an
 from __future__ import annotations
 
 import argparse
+from datetime import UTC, datetime, timedelta
 import os
+from pathlib import Path
 import sys
 
 import requests
+import yaml
 
 API = "https://api.github.com"
 LABEL = "alert"
 CANCELLED_BY_DESIGN = ("silver_gold.build",)
+REOPEN_DAYS = 14
+REGISTER = Path(__file__).resolve().parent.parent / "ingestion" / "register.yaml"
 
 
 def failed_jobs(session: requests.Session, repo: str, run_id: str) -> list[str]:
@@ -48,6 +56,88 @@ def failed_jobs(session: requests.Session, repo: str, run_id: str) -> list[str]:
         if len(jobs) < 100:
             return names
         page += 1
+
+
+def newest_alert(session: requests.Session, repo: str, title: str) -> dict | None:
+    """The newest issue labelled `alert` with exactly this title, open or closed (None when there is none)."""
+    page = 1
+    while True:
+        response = session.get(
+            f"{API}/repos/{repo}/issues",
+            params={
+                "labels": LABEL,
+                "state": "all",
+                "sort": "created",
+                "direction": "desc",
+                "per_page": 100,
+                "page": page,
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+        items = response.json()
+        for item in items:
+            if item["title"] == title and "pull_request" not in item:
+                return item
+        if len(items) < 100:
+            return None
+        page += 1
+
+
+def recently_closed(issue: dict, now: datetime | None = None) -> bool:
+    """True when the issue was closed less than REOPEN_DAYS days ago."""
+    closed = issue.get("closed_at")
+    if not closed:
+        return False
+    closed_at = datetime.fromisoformat(closed.replace("Z", "+00:00"))
+    return (now or datetime.now(UTC)) - closed_at < timedelta(days=REOPEN_DAYS)
+
+
+def epic_key(source: str, register: Path = REGISTER) -> str | None:
+    """Backlog key of the source's Epic: the register entry whose source_system is `source` -> data/src-<id lower>."""
+    entries = (yaml.safe_load(register.read_text()) or {}).get("sources") or []
+    for entry in entries:
+        if entry.get("source_system") == source and entry.get("id"):
+            return f"data/src-{str(entry['id']).lower()}"
+    return None
+
+
+def find_epic(session: requests.Session, repo: str, key: str) -> dict | None:
+    """The issue whose body starts with the backlog key marker, or None."""
+    marker = f"<!-- zohelo:key={key} -->"
+    page = 1
+    while True:
+        response = session.get(
+            f"{API}/repos/{repo}/issues",
+            params={"state": "all", "type": "Epic", "per_page": 100, "page": page},
+            timeout=30,
+        )
+        response.raise_for_status()
+        items = response.json()
+        for item in items:
+            if "pull_request" not in item and (item.get("body") or "").split("\n", 1)[0].strip() == marker:
+                return item
+        if len(items) < 100:
+            return None
+        page += 1
+
+
+def link_to_epic(session: requests.Session, repo: str, alert: dict, source: str) -> None:
+    """Add the alert as a sub-issue of its source Epic; skip quietly when there is no Epic issue.
+
+    A failure here never hides the alert itself: it is reported as a warning only."""
+    try:
+        key = epic_key(source)
+        epic = find_epic(session, repo, key) if key else None
+        if not epic:
+            return
+        response = session.post(
+            f"{API}/repos/{repo}/issues/{epic['number']}/sub_issues", json={"sub_issue_id": alert["id"]}, timeout=30
+        )
+        if response.status_code != 422:  # 422: already a sub-issue of an Epic
+            response.raise_for_status()
+    except (requests.RequestException, OSError, ValueError, yaml.YAMLError) as error:
+        print(f"::warning::alert not linked to its Epic: {error}", file=sys.stderr)
 
 
 def main(argv=None) -> int:
@@ -76,22 +166,27 @@ def main(argv=None) -> int:
         f"Run {link} ({event}) failed or was cancelled. The job annotations on the run page say which activity and why."
     )
 
-    found = session.get(
-        f"{API}/repos/{repo}/issues", params={"labels": LABEL, "state": "open", "per_page": 100}, timeout=30
-    )
-    found.raise_for_status()
-    existing = [i for i in found.json() if i["title"] == title and "pull_request" not in i]
-    if existing:
-        number = existing[0]["number"]
-        response = session.post(
-            f"{API}/repos/{repo}/issues/{number}/comments",
-            json={"body": f"Failed or cancelled again: {link}"},
-            timeout=30,
+    previous = newest_alert(session, repo, title)
+    again = f"Failed or cancelled again: {link}"
+    if previous and previous["state"] == "open":
+        number = previous["number"]
+        response = session.post(f"{API}/repos/{repo}/issues/{number}/comments", json={"body": again}, timeout=30)
+    elif previous and recently_closed(previous):
+        number = previous["number"]
+        reopened = session.patch(
+            f"{API}/repos/{repo}/issues/{number}", json={"state": "open", "state_reason": "reopened"}, timeout=30
         )
+        reopened.raise_for_status()
+        response = session.post(f"{API}/repos/{repo}/issues/{number}/comments", json={"body": again}, timeout=30)
+        link_to_epic(session, repo, previous, source)
     else:
         response = session.post(
-            f"{API}/repos/{repo}/issues", json={"title": title, "body": body, "labels": [LABEL, "area:ops"]}, timeout=30
+            f"{API}/repos/{repo}/issues",
+            json={"title": title, "body": body, "labels": [LABEL], "type": "Bug"},
+            timeout=30,
         )
+        response.raise_for_status()
+        link_to_epic(session, repo, response.json(), source)
     response.raise_for_status()
     print(response.json().get("html_url"))
     # A failed extract leg continues on error, so the run would end "success" and the scheduler's
