@@ -2,7 +2,7 @@
 
 Scripts here are run by the **Ops · ad-hoc** workflow (`ops.yml`) from `main`: defined
 tasks the owner may want to run again from time to time. One script per run, with the
-R2 credentials, by manual dispatch. Scripts that change anything do so only with an
+R2 credentials, by manual dispatch or by a row of the schedule table below. Scripts that change anything do so only with an
 explicit flag (`--apply`, `--delete`); without it they only report.
 
 Not for experiments, trials or one-off fixes: those are `dev/` scripts on a feature
@@ -23,7 +23,7 @@ same policy to those.
 | `check_credentials` | Whether each organisation variable and secret reaches the job and works: variables present; deploy token verify and Pages project list; storage write keys put and delete `zz_dev_credcheck/probe.txt` in Landing; lakehouse read keys list `02_bronze/`; catalog read token `/v1/config` and namespaces; catalog write token `/v1/config`; GUS BDL key; org app token and the scheduler Worker's token code; negative probes (lakehouse read keys cannot put or list Landing, the catalog read token cannot create a namespace; a probe that succeeds is removed and the row fails) and the deploy token's R2 access as an informational row. Rows (section, check, expected, actual) in the job summary, one annotation per section; variables are printed, secrets only as presence and HTTP codes; exits 1 when any row differs. Replaces the check in zohelo-bi. | the probe object, removed again |
 | `runner_resources` | Run by the activity action (`.github/actions/activity`, not by ops.yml): `sample` records free disk and memory every 30 s in the background and publishes live annotations while the activity runs (a notice every 25 min for the first 100 min, a warning when free memory or disk first falls below a threshold), which survive a runner that is shut down as a whole; `report`, only when the activity failed or was cancelled, annotates the lowest values, the last ten minutes and the kernel's out-of-memory lines (runs killed from outside, exit 143/137, leave no annotation of their own). | nothing |
 | `notify_failure` | Run by the Pipeline workflow's `notify` job (not by ops.yml), on a failed or cancelled run: opens an `alert` Bug "Pipeline failed: <source> · <run>" with the run link as a sub-issue of its source Epic (none found: no parent), comments on the open one, or re-opens the newest one closed less than 14 days ago. | GitHub issues |
-| `orphan_files` | Parquet files under `02_bronze/`, `03_silver/`, `04_gold/` and `__r2_data_catalog/` that no snapshot of any table references, including folders of dropped tables (R2 maintenance never removes them). Args: `--min-age-hours 48`, `--delete`, `--max-share 0.5` (raise only for an approved clean-up, #835) | with `--delete`: removes those files |
+| `orphan_files` | Parquet files under `02_bronze/`, `03_silver/`, `04_gold/` and `__r2_data_catalog/` that no snapshot of any table references, including folders of dropped tables (R2 maintenance never removes them). Args: `--min-age-hours 48`, `--delete`, `--max-share 0.5` (raise only for an approved clean-up, #835). Scheduled: Mondays 05:20 UTC with `--delete --min-age-hours 48` (schedule table below) | with `--delete`: removes those files |
 | `project` | The organisation's Projects board through GraphQL, with a token of the `zohelo-automation` GitHub App (organisation variable `ORG_BOT_CLIENT_ID`, secret `ORG_BOT_PRIVATE_KEY`). Args: `inspect` (projects, fields, options, iterations, views); `status <issue> [ON_TRACK\|AT_RISK\|OFF_TRACK\|COMPLETE\|INACTIVE]` posts the newest comment by the owner or an org member on the Work log issue as a status update of project 1 | `status`: adds a project status update |
 | `tracker` | Data availability tracker: per source × layer (Landing, Bronze, Silver, Gold, semantic layer, catalog, portal) what exists, from the declarations, dbt models, R2, the catalog and the latest build; open issues labelled `source:<id>` + `layer:<layer>` appear in their cell; catalog tables classified current / old-code copy / legacy / leftover. Args: `--issue <n>` replaces that issue's body (the pinned tracker issue) | `--issue`: rewrites the tracker issue body |
 | `retire_tables` | Catalog tables today's code does not write (tracker classes legacy, leftover, old-code copy), owner decision #835. Without args: list with rows and GB. `--apply --expect <n>`: purge (or drop) them, only if exactly n candidates are found, then drop every now-empty `zz_dev_*` namespace (the list run names the ones that would go) | `--apply`: removes those tables |
@@ -52,6 +52,14 @@ with one manual run (e.g. Ops `platform_inventory`); then `args=resume`. GitHub'
 schedule still fires while paused, so a run may fail with `Unauthorized` inside the window
 and open an `alert` issue: close it with the note "rotation window" once that source's next
 run is green.
+
+**Schedule table.** `ops.yml` also runs on `schedule`. Its first job `resolve` picks the script and
+arguments: for a manual dispatch the inputs, for a scheduled run the row of a `case "$CRON"` table that
+matches the cron (an unknown cron fails the run, so no schedule can silently run another schedule's
+script). To schedule a script, add the cron under `on.schedule` and a row to that table; the concurrency
+group is `zohelo-ops-<script or cron>`. Rows: `20 5 * * 1` (Mondays 05:20 UTC) runs `orphan_files --delete
+--min-age-hours 48` (orphans re-accumulate after failed commits and dropped tables; `--max-share` stays 0.5).
+Scheduled runs are never `branch_cleanup` (its job runs on manual dispatch only).
 
 Rules: one file per script (a script's deployable assets may sit in a folder of its own, like `scheduler_worker/`), `snake_case.py`, runnable as `python -m ops.<name>`. Write
 output files to `$OPS_OUTPUT_DIR` (kept 7 days as a run artifact) and publish results as

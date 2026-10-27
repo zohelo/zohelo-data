@@ -2,9 +2,12 @@ name: Ops · ad-hoc
 
 # Standing operational tasks from ops/: defined scripts the owner may run again from
 # time to time (inventories, checks). Not part of the dataflow, not for experiments
-# (those use Dev · branch runs). Runs only from main. Manual dispatch only.
+# (those use Dev · branch runs). Runs only from main. Manual dispatch, plus the schedule table
+# in the resolve job (ops/README.md).
 
 on:
+  schedule:
+    - cron: '20 5 * * 1'
   workflow_dispatch:
     inputs:
       script:
@@ -19,13 +22,47 @@ permissions:
   contents: read
 
 concurrency:
-  group: zohelo-ops-${{ inputs.script }}
+  group: zohelo-ops-${{ inputs.script || github.event.schedule }}
   cancel-in-progress: false
 
 jobs:
+  # Which script and arguments this run executes: the dispatch inputs, or the row of the
+  # schedule table for the cron that fired.
+  resolve:
+    name: resolve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    outputs:
+      script: ${{ steps.pick.outputs.script }}
+      args: ${{ steps.pick.outputs.args }}
+    steps:
+      - id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          CRON: ${{ github.event.schedule }}
+          INPUT_SCRIPT: ${{ inputs.script }}
+          INPUT_ARGS: ${{ inputs.args }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = workflow_dispatch ]; then
+            script=$INPUT_SCRIPT
+            args=$INPUT_ARGS
+          else
+            # Schedule table: one row per cron; add a cron under on.schedule and a row here.
+            case "$CRON" in
+              '20 5 * * 1') script=orphan_files; args='--delete --min-age-hours 48' ;;
+              *) echo "::error title=ops schedule::no schedule table row for cron '$CRON'" >&2; exit 1 ;;
+            esac
+          fi
+          args=${args//$'\r'/}
+          args=${args//$'\n'/ }
+          echo "script=$script" >> "$GITHUB_OUTPUT"
+          echo "args=$args" >> "$GITHUB_OUTPUT"
+
   ops:
-    if: github.ref == 'refs/heads/main' && inputs.script != 'branch_cleanup'
-    name: "ops · ${{ inputs.script }}"
+    needs: resolve
+    if: github.ref == 'refs/heads/main' && needs.resolve.outputs.script != 'branch_cleanup'
+    name: "ops · ${{ needs.resolve.outputs.script }}"
     runs-on: ubuntu-24.04
     timeout-minutes: 350
     env:
@@ -53,13 +90,13 @@ jobs:
       - name: Install dependencies
         run: python -m pip install --require-hashes -r requirements.txt
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
-        if: inputs.script == 'scheduler_trigger' || inputs.script == 'check_credentials'
+        if: needs.resolve.outputs.script == 'scheduler_trigger' || needs.resolve.outputs.script == 'check_credentials'
         with:
           node-version-file: .node-version
       # check_credentials: proves the app can mint an installation token (row 'org app').
       - name: App token
         id: app
-        if: inputs.script == 'check_credentials'
+        if: needs.resolve.outputs.script == 'check_credentials'
         continue-on-error: true  # a failed mint becomes a failed row, the other rows still run
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
         with:
@@ -71,24 +108,24 @@ jobs:
       # Token of the zohelo-automation GitHub App for the Projects board (ops/project.py).
       - name: Project token
         id: project
-        if: inputs.script == 'project' || inputs.script == 'tracker' || inputs.script == 'backlog_sync'
+        if: needs.resolve.outputs.script == 'project' || needs.resolve.outputs.script == 'tracker' || needs.resolve.outputs.script == 'backlog_sync'
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
         with:
           client-id: ${{ vars.ORG_BOT_CLIENT_ID }}  # the app's Client ID (organisation variable)
           private-key: ${{ secrets.ORG_BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           # this repository only; backlog_sync plans and syncs the issues of all three repositories
-          repositories: ${{ inputs.script == 'backlog_sync' && 'zohelo-data,zohelo-bi,zohelo' || github.event.repository.name }}
+          repositories: ${{ needs.resolve.outputs.script == 'backlog_sync' && 'zohelo-data,zohelo-bi,zohelo' || github.event.repository.name }}
           # write only for the modes that change the board
-          permission-organization-projects: ${{ (startsWith(inputs.args, 'status') || (inputs.script == 'backlog_sync' && startsWith(inputs.args, 'apply'))) && 'write' || 'read' }}
+          permission-organization-projects: ${{ (startsWith(needs.resolve.outputs.args, 'status') || (needs.resolve.outputs.script == 'backlog_sync' && startsWith(needs.resolve.outputs.args, 'apply'))) && 'write' || 'read' }}
           # project: reads the Work log comment; tracker: replaces the tracker issue's body;
           # backlog_sync: reads the issues for plan, writes them for apply
-          permission-issues: ${{ (inputs.script == 'tracker' || (inputs.script == 'backlog_sync' && startsWith(inputs.args, 'apply'))) && 'write' || 'read' }}
+          permission-issues: ${{ (needs.resolve.outputs.script == 'tracker' || (needs.resolve.outputs.script == 'backlog_sync' && startsWith(needs.resolve.outputs.args, 'apply'))) && 'write' || 'read' }}
           permission-contents: read  # backlog_sync: checkout of zohelo-bi and zohelo
           permission-actions: read  # tracker: the latest Silver/Gold build
       # backlog_sync reads .github/backlog of the other two repositories (ops/backlog_sync.py, _repos/*).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        if: inputs.script == 'backlog_sync'
+        if: needs.resolve.outputs.script == 'backlog_sync'
         with:
           repository: zohelo/zohelo-bi
           ref: main
@@ -96,31 +133,31 @@ jobs:
           token: ${{ steps.project.outputs.token }}
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        if: inputs.script == 'backlog_sync'
+        if: needs.resolve.outputs.script == 'backlog_sync'
         with:
           repository: zohelo/zohelo
           ref: main
           path: _repos/zohelo
           token: ${{ steps.project.outputs.token }}
           persist-credentials: false
-      - name: "ops/${{ inputs.script }}.py"
+      - name: "ops/${{ needs.resolve.outputs.script }}.py"
         env:
           GH_PROJECT_TOKEN: ${{ steps.project.outputs.token }}
           # check_credentials: the app installation token it probes (blank for other scripts).
           APP_TOKEN: ${{ steps.app.outputs.token }}
           # The Workers deploy token, for scheduler_trigger and check_credentials only (blank for other scripts).
-          PLATFORM_DEPLOY_TOKEN: ${{ (inputs.script == 'scheduler_trigger' || inputs.script == 'check_credentials') && secrets.PLATFORM_DEPLOY_TOKEN || '' }}
+          PLATFORM_DEPLOY_TOKEN: ${{ (needs.resolve.outputs.script == 'scheduler_trigger' || needs.resolve.outputs.script == 'check_credentials') && secrets.PLATFORM_DEPLOY_TOKEN || '' }}
           # Credentials that check_credentials probes (blank for other scripts).
-          STORAGE_LAKEHOUSE_READ_ACCESS_KEY: ${{ inputs.script == 'check_credentials' && secrets.STORAGE_LAKEHOUSE_READ_ACCESS_KEY || '' }}
-          STORAGE_LAKEHOUSE_READ_SECRET_KEY: ${{ inputs.script == 'check_credentials' && secrets.STORAGE_LAKEHOUSE_READ_SECRET_KEY || '' }}
-          STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN: ${{ inputs.script == 'check_credentials' && secrets.STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN || '' }}
-          SOURCE_GUS_BDL_API_KEY: ${{ inputs.script == 'check_credentials' && secrets.SOURCE_GUS_BDL_API_KEY || '' }}
+          STORAGE_LAKEHOUSE_READ_ACCESS_KEY: ${{ needs.resolve.outputs.script == 'check_credentials' && secrets.STORAGE_LAKEHOUSE_READ_ACCESS_KEY || '' }}
+          STORAGE_LAKEHOUSE_READ_SECRET_KEY: ${{ needs.resolve.outputs.script == 'check_credentials' && secrets.STORAGE_LAKEHOUSE_READ_SECRET_KEY || '' }}
+          STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN: ${{ needs.resolve.outputs.script == 'check_credentials' && secrets.STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN || '' }}
+          SOURCE_GUS_BDL_API_KEY: ${{ needs.resolve.outputs.script == 'check_credentials' && secrets.SOURCE_GUS_BDL_API_KEY || '' }}
           # The org bot app credentials the scheduler Worker dispatches with (scheduler_trigger deploy,
           # and check_credentials, which runs the Worker's token code).
-          ORG_BOT_CLIENT_ID: ${{ (inputs.script == 'scheduler_trigger' || inputs.script == 'check_credentials') && vars.ORG_BOT_CLIENT_ID || '' }}
-          ORG_BOT_PRIVATE_KEY: ${{ (inputs.script == 'scheduler_trigger' || inputs.script == 'check_credentials') && secrets.ORG_BOT_PRIVATE_KEY || '' }}
-          SCRIPT: ${{ inputs.script }}
-          ARGS: ${{ inputs.args }}
+          ORG_BOT_CLIENT_ID: ${{ (needs.resolve.outputs.script == 'scheduler_trigger' || needs.resolve.outputs.script == 'check_credentials') && vars.ORG_BOT_CLIENT_ID || '' }}
+          ORG_BOT_PRIVATE_KEY: ${{ (needs.resolve.outputs.script == 'scheduler_trigger' || needs.resolve.outputs.script == 'check_credentials') && secrets.ORG_BOT_PRIVATE_KEY || '' }}
+          SCRIPT: ${{ needs.resolve.outputs.script }}
+          ARGS: ${{ needs.resolve.outputs.args }}
         run: |
           set -euo pipefail
           if ! printf '%s' "$SCRIPT" | grep -Eq '^[a-z0-9_]+$' || [ ! -f "ops/$SCRIPT.py" ]; then
@@ -144,7 +181,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
-          name: ops-${{ inputs.script }}-${{ github.run_id }}
+          name: ops-${{ needs.resolve.outputs.script }}-${{ github.run_id }}
           path: /tmp/ops-output
           if-no-files-found: ignore
           retention-days: 7
@@ -152,7 +189,7 @@ jobs:
   # The only Ops task that writes to the repository: it deletes leftover work branches
   # (ops/branch_cleanup.py; owner approval 24 Oct 2026), so it alone gets contents: write.
   branch-cleanup:
-    if: github.ref == 'refs/heads/main' && inputs.script == 'branch_cleanup'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.script == 'branch_cleanup'
     name: "ops · branch_cleanup"
     runs-on: ubuntu-24.04
     timeout-minutes: 10
