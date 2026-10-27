@@ -131,7 +131,7 @@ def read_raw(client, bucket: str, receipt: dict[str, Any]) -> bytes:
 def load(budget_minutes: float) -> int:
     deadline = time.monotonic() + budget_minutes * 60
     client, cat = s3(), bf.retry(catalog, "catalog")
-    lake, landing_bucket = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
+    lake, landing_bucket = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
     bf.retry(lambda: bf.ensure_table(cat, TABLE_ID, COLUMNS, "entity"), "load_table")
     table = cat.load_table(TABLE_ID)
     done = bf.loaded_hashes(table) | bf.rejected_hashes(cat, REJECTED_ID)

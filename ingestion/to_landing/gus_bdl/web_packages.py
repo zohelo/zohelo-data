@@ -80,7 +80,7 @@ def stale_big(api: Bdl, held: dict[str, str]) -> list[dict[str, Any]]:
     from ingestion.to_landing.gus_bdl.refresh import STALE_BIG_KEY
 
     try:
-        body = s3().get_object(Bucket=req("R2_LAKEHOUSE_BUCKET"), Key=STALE_BIG_KEY)["Body"].read()
+        body = s3().get_object(Bucket=req("STORAGE_LAKEHOUSE_BUCKET_NAME"), Key=STALE_BIG_KEY)["Body"].read()
         ids = set(json.loads(body)["subgroups"])
     except Exception:  # no list yet
         return []
@@ -194,7 +194,7 @@ def main(budget_minutes: float = 50) -> int:
     started = time.monotonic()
     deadline = started + budget_minutes * 60
     w.HARD_DEADLINE = deadline + w.HARD_MARGIN_SECONDS
-    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     api = Bdl.shared()
     api.deadline = w.HARD_DEADLINE
     held = landing_versions(client, bucket)
@@ -218,7 +218,7 @@ def main(budget_minutes: float = 50) -> int:
         browser = pw.chromium.launch(headless=True)
         page = browser.new_context(accept_downloads=True, locale="pl-PL").new_page()
         page.set_default_timeout(120_000)
-        w.login(page, req("GUS_BDL_WEB_EMAIL"), req("GUS_BDL_WEB_PASSWORD"))
+        w.login(page, req("SOURCE_GUS_BDL_WEB_LOGIN"), req("SOURCE_GUS_BDL_WEB_PASSWORD"))
         try:
             recent = collect(page, client, bucket, api, wanted, Path(tmp), summary, deadline)
             todo = [s for sid, s in wanted.items() if sid not in summary["landed_ids"]]

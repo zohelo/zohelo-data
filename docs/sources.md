@@ -247,7 +247,7 @@ retain `lastUpdate`, descriptions, dimensions, units, aggregates, attributes,
 precision and formatted values.
 
 The official anonymous limits are 5 requests/second, 100/15 minutes, 1,000/12 hours,
-and 10,000/seven days; with a registered key (`X-ClientId`, secret `GUS_BDL_API_KEY`)
+and 10,000/seven days; with a registered key (`X-ClientId`, secret `SOURCE_GUS_BDL_API_KEY`)
 10/s, 500/15 min, 5,000/12 h and 50,000/7 days. Response headers `X-Rate-Limit-Limit`,
 `X-Rate-Limit-Remaining`, and `X-Rate-Limit-Reset` may require a slower rate. A
 complete run is necessarily multi-cycle: the known minimum already exceeds 534,000

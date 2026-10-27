@@ -39,10 +39,10 @@ def _connect(memory_limit: str, temp_directory: str | None) -> duckdb.DuckDBPyCo
 
 def _remote(con: duckdb.DuckDBPyConnection) -> None:
     con.execute("INSTALL httpfs; LOAD httpfs")
-    endpoint = req("R2_S3_ENDPOINT").replace("https://", "").rstrip("/")
+    endpoint = req("STORAGE_ENDPOINT_URL").replace("https://", "").rstrip("/")
     con.execute(
         "CREATE SECRET r2 (TYPE s3, KEY_ID ?, SECRET ?, ENDPOINT ?, REGION 'auto', URL_STYLE 'path')",
-        [req("CLOUDFLARE_R2_ACCESS_KEY_ID"), req("CLOUDFLARE_R2_SECRET_ACCESS_KEY"), endpoint],
+        [req("STORAGE_WRITE_ACCESS_KEY"), req("STORAGE_WRITE_SECRET_KEY"), endpoint],
     )
 
 

@@ -49,7 +49,7 @@ def landing_versions(client, bucket: str) -> dict[str, str]:
 def main(patterns: list[str] | None = None, budget_minutes: float = 50) -> int:
     """Stops checking after budget_minutes (the Pipeline job has 60) and exits 2."""
     deadline = time.monotonic() + budget_minutes * 60
-    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     held = landing_versions(client, bucket)
     api = Bdl()
     subgroups = [

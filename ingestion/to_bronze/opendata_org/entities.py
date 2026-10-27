@@ -108,7 +108,7 @@ def work(m: dict[str, Any], zip_path: str, receipt: dict[str, Any], digests: dic
     written again (new bytes under a registered name would not match the table's metadata)."""
     import duckdb
 
-    client, lake = s3(), req("R2_LAKEHOUSE_BUCKET")
+    client, lake = s3(), req("STORAGE_LAKEHOUSE_BUCKET_NAME")
     sha, model = receipt["sha256"], MODELS[m["folder"]]
     recipe = f"{sha}.{m['crc']}"
     out = {"entity": m["entity"], "recipe": recipe, "model": model, "member": m["member"], "rows": 0}
@@ -214,7 +214,7 @@ def main(argv=None) -> int:
     started = time.monotonic()
     deadline = started + args.minutes * 60
     client, cat = s3(), bf.retry(catalog, "catalog")
-    landing_bucket = req("R2_LANDING_BUCKET")
+    landing_bucket = req("STORAGE_LANDING_BUCKET_NAME")
     held = landed(client, landing_bucket)
     if not held:
         raise RuntimeError("no OpenData snapshot in Landing")
@@ -362,9 +362,9 @@ def snapshot_members(client, bucket: str, receipt: dict[str, Any]) -> list[dict[
     except client.exceptions.ClientError:
         key = archive_key(SOURCE, receipt["sha256"], key)
     fs = s3fs.S3FileSystem(
-        key=req("CLOUDFLARE_R2_ACCESS_KEY_ID"),
-        secret=req("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
-        client_kwargs={"endpoint_url": req("R2_S3_ENDPOINT")},
+        key=req("STORAGE_WRITE_ACCESS_KEY"),
+        secret=req("STORAGE_WRITE_SECRET_KEY"),
+        client_kwargs={"endpoint_url": req("STORAGE_ENDPOINT_URL")},
     )
     with fs.open(f"{bucket}/{key}", "rb", block_size=8 << 20) as handle:
         return members(handle)
@@ -374,7 +374,7 @@ def verify() -> int:
     """Every member of the newest snapshot (from its ZIP directory) is current in Bronze and its
     Silver table, or rejected for this snapshot; table state from metadata, not the data."""
     client, cat = s3(), bf.retry(catalog, "catalog")
-    bucket = req("R2_LANDING_BUCKET")
+    bucket = req("STORAGE_LANDING_BUCKET_NAME")
     held = landed(client, bucket)
     if not held:
         annotate("error", "opendata_org completeness (Landing → Bronze → Silver)", {"snapshot": None})

@@ -173,7 +173,7 @@ def main(argv=None) -> int:
     parser.add_argument("--minutes", type=float, default=60)
     parser.parse_args(argv)
     client, cat = s3(), bf.retry(catalog, "catalog")
-    lake, landing = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
+    lake, landing = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
     out: dict[str, Any] = {
         "loaded": None,
         "current": False,
@@ -203,7 +203,7 @@ def main(argv=None) -> int:
 
 def verify() -> int:
     client, cat = s3(), bf.retry(catalog, "catalog")
-    newest = bulk_file.newest(client, req("R2_LANDING_BUCKET"), SOURCE, NAME)
+    newest = bulk_file.newest(client, req("STORAGE_LANDING_BUCKET_NAME"), SOURCE, NAME)
     sha = newest["sha256"]
     digest = model_digest(SILVER)
     refused = bf.rejected_hashes(cat, REJECTED_ID)

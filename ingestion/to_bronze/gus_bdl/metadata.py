@@ -113,7 +113,7 @@ def rows_for(receipt: dict[str, Any], body: bytes) -> list[dict[str, Any]]:
 
 def load() -> dict[str, Any]:
     client, cat = s3(), bf.retry(catalog, "catalog")
-    lake, landing = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
+    lake, landing = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
     tables = {"variables": (VARIABLES_ID, VARIABLE_COLUMNS, "subgroup_id"), "units": (UNITS_ID, UNIT_COLUMNS, "entity")}
     done: set[str] = bf.rejected_hashes(cat, REJECTED_ID)
     for table_id, columns, partition in tables.values():

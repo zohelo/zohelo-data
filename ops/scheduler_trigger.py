@@ -46,7 +46,8 @@ WRANGLER_ENV = (
     "NODE_EXTRA_CA_CERTS",
     "SSL_CERT_FILE",
 )
-WRANGLER_SECRETS = ("CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID")
+# wrangler reads its credentials under its own names; the job holds the organisation names.
+WRANGLER_SECRETS = {"CLOUDFLARE_API_TOKEN": "PLATFORM_DEPLOY_TOKEN", "CLOUDFLARE_ACCOUNT_ID": "PLATFORM_ACCOUNT_ID"}
 API = "https://api.cloudflare.com/client/v4/accounts/{account}/workers/scripts/{script}/{part}"
 
 
@@ -55,8 +56,8 @@ def cloudflare(method: str, part: str, body: list | dict | None = None) -> tuple
     worker = tomllib.loads(CONFIG.read_text())["name"]
     response = requests.request(
         method,
-        API.format(account=req("CLOUDFLARE_ACCOUNT_ID"), script=worker, part=part),
-        headers={"Authorization": f"Bearer {req('CLOUDFLARE_API_TOKEN')}"},
+        API.format(account=req("PLATFORM_ACCOUNT_ID"), script=worker, part=part),
+        headers={"Authorization": f"Bearer {req('PLATFORM_DEPLOY_TOKEN')}"},
         json=body,
         timeout=30,
     )
@@ -70,7 +71,7 @@ def cloudflare(method: str, part: str, body: list | dict | None = None) -> tuple
 def wrangler_env() -> dict[str, str]:
     """The environment for wrangler: the allowlist above plus the Cloudflare credentials."""
     env = {name: os.environ[name] for name in WRANGLER_ENV if name in os.environ}
-    return env | {name: req(name) for name in WRANGLER_SECRETS}
+    return env | {tool: req(org) for tool, org in WRANGLER_SECRETS.items()}
 
 
 def deploy() -> list[str]:

@@ -126,7 +126,7 @@ def decode(zip_path: Path, receipt: dict[str, Any], output: Path) -> dict[str, i
 
 def load(budget_minutes: float) -> int:
     client, cat = s3(), bf.retry(catalog, "catalog")
-    lake, landing_bucket = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
+    lake, landing_bucket = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
     bf.retry(lambda: bf.ensure_table(cat, TABLE_ID, COLUMNS, "entity"), "load_table")
     done = bf.loaded_hashes(cat.load_table(TABLE_ID)) | bf.rejected_hashes(cat, REJECTED_ID)
     receipt = bulk_file.newest(client, landing_bucket, "gugik_prg", bulk_file.single_entity("gugik_prg"))

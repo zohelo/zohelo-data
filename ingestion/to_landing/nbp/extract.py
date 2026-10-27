@@ -230,7 +230,7 @@ def main(argv=None) -> int:
     parser.add_argument("--filter", default="", help="comma separated tables (A,B,C,GOLD)")
     parser.add_argument("--budget-minutes", type=float, default=300)
     args = parser.parse_args(argv)
-    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     today = datetime.now(UTC).date()
     tables = {t.strip().upper() for t in args.filter.split(",") if t.strip()}
     items = [i for i in expected(today) if not tables or i["table"] in tables]

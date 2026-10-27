@@ -39,7 +39,7 @@ def _api_window_open() -> bool:
 
     from ingestion.common.r2 import req, s3
 
-    client, bucket = s3(), req("R2_LAKEHOUSE_BUCKET")
+    client, bucket = s3(), req("STORAGE_LAKEHOUSE_BUCKET_NAME")
     now = datetime.now(UTC)
     try:
         last = datetime.fromisoformat(

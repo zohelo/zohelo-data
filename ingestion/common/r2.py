@@ -35,10 +35,10 @@ def req(name: str) -> str:
 def s3():
     return boto3.client(
         "s3",
-        endpoint_url=req("R2_S3_ENDPOINT").rstrip("/"),
+        endpoint_url=req("STORAGE_ENDPOINT_URL").rstrip("/"),
         region_name="auto",
-        aws_access_key_id=req("CLOUDFLARE_R2_ACCESS_KEY_ID"),
-        aws_secret_access_key=req("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
+        aws_access_key_id=req("STORAGE_WRITE_ACCESS_KEY"),
+        aws_secret_access_key=req("STORAGE_WRITE_SECRET_KEY"),
         config=Config(signature_version="s3v4", retries={"max_attempts": 8, "mode": "standard"}),
     )
 
@@ -47,13 +47,16 @@ def sql(query: str) -> list[dict[str, Any]]:
     """Run one R2 SQL query and return its rows as dicts."""
     url = (
         f"https://api.sql.cloudflarestorage.com/api/v1/accounts/"
-        f"{req('CLOUDFLARE_ACCOUNT_ID')}/r2-sql/query/{req('R2_LAKEHOUSE_BUCKET')}"
+        f"{req('PLATFORM_ACCOUNT_ID')}/r2-sql/query/{req('STORAGE_LAKEHOUSE_BUCKET_NAME')}"
     )
     response = requests.post(
         url,
         json={"query": query},
         timeout=180,
-        headers={"Authorization": f"Bearer {req('R2_DATA_CATALOG_TOKEN')}", "Content-Type": "application/json"},
+        headers={
+            "Authorization": f"Bearer {req('STORAGE_LAKEHOUSE_CATALOG_WRITE_TOKEN')}",
+            "Content-Type": "application/json",
+        },
     )
     if response.status_code != 200:
         raise RuntimeError(f"R2 SQL {response.status_code}: {response.text[:500]}")
@@ -252,13 +255,13 @@ def catalog():
         try:
             cat = RestCatalog(
                 name="zohelo",
-                warehouse=req("R2_WAREHOUSE"),
-                uri=req("R2_CATALOG_URI"),
-                token=req("R2_DATA_CATALOG_TOKEN"),
+                warehouse=req("STORAGE_LAKEHOUSE_CATALOG_NAME"),
+                uri=req("STORAGE_LAKEHOUSE_CATALOG_URL"),
+                token=req("STORAGE_LAKEHOUSE_CATALOG_WRITE_TOKEN"),
                 **{
-                    "s3.access-key-id": req("CLOUDFLARE_R2_ACCESS_KEY_ID"),
-                    "s3.secret-access-key": req("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
-                    "s3.endpoint": req("R2_S3_ENDPOINT"),
+                    "s3.access-key-id": req("STORAGE_WRITE_ACCESS_KEY"),
+                    "s3.secret-access-key": req("STORAGE_WRITE_SECRET_KEY"),
+                    "s3.endpoint": req("STORAGE_ENDPOINT_URL"),
                     "s3.region": "auto",
                 },
             )

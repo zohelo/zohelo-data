@@ -266,7 +266,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     deadline = time.monotonic() + args.minutes * 60
     client, cat = s3(), bf.retry(catalog, "catalog")
-    lake, landing = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
+    lake, landing = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
     refused = bf.rejected_hashes(cat, REJECTED_ID)
     out: dict[str, Any] = {"loaded": [], "current": [], "rejected": [], "rejected_before": [], "not_started": []}
     out["failed"] = []
@@ -298,7 +298,7 @@ def main(argv=None) -> int:
 def verify() -> int:
     """Each declared file: its newest Landing version is in Bronze and Silver, or rejected."""
     client, cat = s3(), bf.retry(catalog, "catalog")
-    landing = req("R2_LANDING_BUCKET")
+    landing = req("STORAGE_LANDING_BUCKET_NAME")
     refused = bf.rejected_hashes(cat, REJECTED_ID)
     report, failed = {}, False
     cov: dict[str, dict[str, Any]] = {"expected": {}, "expected_silver": {}, "bronze": {}, "silver": {}, "landed": {}}

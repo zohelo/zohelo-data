@@ -82,7 +82,7 @@ def main(argv=None) -> int:
         return 0
     keep_latest, keep_days = int(retention.get("keep_latest", 1)), float(retention.get("keep_days", 90))
     apply = policy.get("prune") == "delete"
-    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     now = datetime.now(UTC)
 
     meta = landing_objects(client, bucket, args.source)

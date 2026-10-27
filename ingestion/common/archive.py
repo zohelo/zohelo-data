@@ -134,7 +134,7 @@ def main(argv=None) -> int:
     policy = (sources().get(args.source) or {}).get("archive_policy") or {}
     move = bool(policy.get("move"))
     without_bronze = set(policy.get("without_bronze") or [])
-    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
 
     meta = landing_objects(client, bucket, args.source)
     proven = proven_for(args.source, meta)

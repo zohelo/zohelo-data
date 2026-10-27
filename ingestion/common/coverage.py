@@ -188,7 +188,9 @@ def write(source: str, records: list[dict[str, Any]]) -> dict[str, Any]:
         # named by the bytes written (checked_at included): a rerun never overwrites a file the
         # table already references, and the same bytes are the same object
         digest = sha256(path.read_bytes()).hexdigest()
-        uri = bf.upload(client, req("R2_LAKEHOUSE_BUCKET"), f"{PREFIX}{source}/{digest}.parquet", path, digest)
+        uri = bf.upload(
+            client, req("STORAGE_LAKEHOUSE_BUCKET_NAME"), f"{PREFIX}{source}/{digest}.parquet", path, digest
+        )
     et.replace(cat, TABLE, "source", {source: [uri]}, ["source"], "coverage")
     counts: dict[str, int] = {}
     for r in records:

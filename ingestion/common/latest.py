@@ -118,7 +118,7 @@ def remove(cat, table_id: tuple[str, str], table, hashes: list[str]) -> int:
 
 def prune(source: str, apply: bool) -> dict[str, Any]:
     """Per Bronze table of the source: files held, superseded, unknown; with apply, delete the superseded rows."""
-    meta = landing_objects(s3(), req("R2_LANDING_BUCKET"), source)
+    meta = landing_objects(s3(), req("STORAGE_LANDING_BUCKET_NAME"), source)
     # Only snapshot-layout files can be superseded; content-addressed files of the earlier layout
     # have no entity or version, so they are kept and reported.
     known = {d for d, item in meta.items() if item.get("snapshot_paths")}

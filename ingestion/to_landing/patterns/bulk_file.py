@@ -290,7 +290,7 @@ def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landi
 
 def main(source: str, mode: str, landing_root: str = "01_landing") -> int:
     """Run one mode for every declared file of a bulk_file source; exit 1 on missing data."""
-    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     results, status = [], 0
     stored = archived(client, bucket, source) if mode == "verify" else {}
     for spec in declaration(source):

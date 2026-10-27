@@ -210,7 +210,7 @@ def main(argv=None) -> int:
     parser.add_argument("--mode", choices=("inspect", "load", "verify"), required=True)
     parser.add_argument("--filter", default="", help="comma separated entities, e.g. TERC_Urzedowy")
     args = parser.parse_args(argv)
-    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     wanted = {e.strip() for e in args.filter.split(",") if e.strip()}
     unknown = wanted - set(CONTROLS)
     if unknown:

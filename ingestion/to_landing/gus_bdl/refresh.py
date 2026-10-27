@@ -73,7 +73,7 @@ def estimated_requests(api: Bdl, subgroup: str, subject: dict[str, Any]) -> int:
 def note_stale_big(changed: list[str], current: list[str]) -> None:
     """Keep the list of changed subgroups too big for the API (web_packages requests their
     packages); subgroups found current again leave the list."""
-    client, bucket = s3(), req("R2_LAKEHOUSE_BUCKET")
+    client, bucket = s3(), req("STORAGE_LAKEHOUSE_BUCKET_NAME")
     try:
         held = set(json.loads(client.get_object(Bucket=bucket, Key=STALE_BIG_KEY)["Body"].read())["subgroups"])
     except Exception:  # first time, or unreadable: start a new list
@@ -169,7 +169,7 @@ def main(argv=None) -> int:
     )
     args = parser.parse_args(argv)
     deadline = time.monotonic() + args.budget_minutes * 60
-    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     held = landing_versions(client, bucket)
     check = sorted(args.only) if args.only else todays_share(sorted(held))
     api, outcomes, refreshed, stale, without_data, gone = Bdl.shared(), Counter(), [], [], [], []

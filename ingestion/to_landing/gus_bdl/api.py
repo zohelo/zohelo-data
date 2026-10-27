@@ -1,6 +1,6 @@
 """Polite client for the BDL API (https://bdl.stat.gov.pl/api/v1).
 
-Uses the registered key (env GUS_BDL_API_KEY, header X-ClientId) and stays below its
+Uses the registered key (env SOURCE_GUS_BDL_API_KEY, header X-ClientId) and stays below its
 limits (10/s, 500/15 min, 5,000/12 h, 50,000/7 days) with a local budget; a 429 waits for
 the reset the server reports. One client per process; never parallel.
 """
@@ -38,7 +38,7 @@ class Bdl:
 
     def __init__(self, key: str | None = None):
         self.session = requests.Session()
-        key = key if key is not None else os.environ.get("GUS_BDL_API_KEY", "")
+        key = key if key is not None else os.environ.get("SOURCE_GUS_BDL_API_KEY", "")
         if key:
             self.session.headers["X-ClientId"] = key
         self.session.headers["Accept"] = "application/json"

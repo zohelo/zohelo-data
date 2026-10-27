@@ -4,8 +4,8 @@ import { createReadStream } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-const email = process.env.GUS_BDL_WEB_EMAIL || '';
-const password = process.env.GUS_BDL_WEB_PASSWORD || '';
+const email = process.env.SOURCE_GUS_BDL_WEB_LOGIN || '';
+const password = process.env.SOURCE_GUS_BDL_WEB_PASSWORD || '';
 const subgroupId = process.env.BDL_BULK_SUBGROUP_ID || '';
 const subgroupName = process.env.BDL_BULK_SUBGROUP_NAME || subgroupId;
 const subgroupUrl = process.env.BDL_BULK_URL || '';

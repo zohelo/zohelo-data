@@ -164,7 +164,7 @@ FRESH_HOURS = 20  # a listing younger than this is reused: one listing of every 
 
 def read_inventory(client) -> dict[str, Any]:
     try:
-        body = client.get_object(Bucket=req("R2_LAKEHOUSE_BUCKET"), Key=INVENTORY_KEY)["Body"].read()
+        body = client.get_object(Bucket=req("STORAGE_LAKEHOUSE_BUCKET_NAME"), Key=INVENTORY_KEY)["Body"].read()
     except client.exceptions.NoSuchKey:
         return {"indicators": {}}
     return json.loads(body)
@@ -172,7 +172,9 @@ def read_inventory(client) -> dict[str, Any]:
 
 def write_inventory(client, cache: dict[str, Any]) -> None:
     body = json.dumps(cache, ensure_ascii=False, separators=(",", ":")).encode()
-    client.put_object(Bucket=req("R2_LAKEHOUSE_BUCKET"), Key=INVENTORY_KEY, Body=body, ContentType="application/json")
+    client.put_object(
+        Bucket=req("STORAGE_LAKEHOUSE_BUCKET_NAME"), Key=INVENTORY_KEY, Body=body, ContentType="application/json"
+    )
 
 
 def inventory(
@@ -408,7 +410,7 @@ def main(argv=None) -> int:
     deadline = time.monotonic() + args.budget_minutes * 60
     DEADLINE = deadline + 10 * 60  # no request outlives the budget by more than this
     shard, shards = (int(v) for v in args.shard.split("/"))
-    client, bucket = s3(), req("R2_LANDING_BUCKET")
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     held = landed(client, bucket)
     if args.mode == "verify":
         summary = {"mode": "verify", **run_verify(client, bucket, held)}

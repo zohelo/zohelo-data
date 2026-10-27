@@ -141,7 +141,7 @@ def work(
     from warehouse import entity
 
     client = s3()
-    bucket, landing_bucket = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
+    bucket, landing_bucket = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
     ds, sha = item[ENTITY], item["raw_sha256"]
     bronze_key = f"{paths['bronze']}{ds}/{sha}.parquet"
     found_key = f"{paths.get('bronze_found', paths['bronze'])}{ds}/{sha}.parquet"
@@ -239,7 +239,7 @@ def plan(
         silver = bf.retry(lambda: cat.load_table(silver_id), "silver_table")
     refused = refused_keys(cat, rejected_id, create)
     b_state, s_state = et.state(bronze, ENTITY), et.state(silver, ENTITY)
-    latest = landing_candidates(client, req("R2_LANDING_BUCKET"))
+    latest = landing_candidates(client, req("STORAGE_LANDING_BUCKET_NAME"))
     if only:
         latest = [c for c in latest if c[ENTITY] in only]
     todo, expected, expected_silver, rejected, redo_rows, landed = [], {}, {}, [], 0, {}
@@ -448,7 +448,7 @@ def coverage_rows(p: dict[str, Any]) -> list[dict[str, Any]]:
     from ingestion.to_landing.eurostat.extract import CATALOGUE_KEY
 
     # the inventory as the last landing.inspect read it: every dataset, its version, scope
-    body = s3().get_object(Bucket=req("R2_LAKEHOUSE_BUCKET"), Key=CATALOGUE_KEY)["Body"].read()
+    body = s3().get_object(Bucket=req("STORAGE_LAKEHOUSE_BUCKET_NAME"), Key=CATALOGUE_KEY)["Body"].read()
     datasets = json.loads(body)["datasets"]
     names = {code: d.get("title") for code, d in datasets.items()}
     published = {code: d["token"] for code, d in datasets.items() if not d.get("excluded") and d.get("token")}

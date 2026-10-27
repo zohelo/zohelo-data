@@ -190,7 +190,7 @@ def arrow_schema() -> pa.Schema:
 def load(budget_minutes: float = 120) -> dict[str, Any]:
     started = datetime.now(UTC)
     client, cat = s3(), bf.retry(catalog, "catalog")
-    lake, landing = req("R2_LAKEHOUSE_BUCKET"), req("R2_LANDING_BUCKET")
+    lake, landing = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
     table = bf.retry(lambda: bf.ensure_table(cat, TABLE_ID, COLUMNS, "dataset_id"), "table")
     done = bf.loaded_hashes(table) | bf.rejected_hashes(cat, REJECTED_ID)
     keys = []

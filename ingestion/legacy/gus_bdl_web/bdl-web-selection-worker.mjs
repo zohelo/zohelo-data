@@ -7,8 +7,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 const input = JSON.parse(await fs.readFile(process.env.BDL_WEB_TASK_PATH, 'utf8'));
-const email = process.env.GUS_BDL_WEB_EMAIL || '';
-const password = process.env.GUS_BDL_WEB_PASSWORD || '';
+const email = process.env.SOURCE_GUS_BDL_WEB_LOGIN || '';
+const password = process.env.SOURCE_GUS_BDL_WEB_PASSWORD || '';
 const out = path.resolve(process.env.BDL_BULK_OUT_DIR);
 const scope = input.scope;
 if (!email || !password || !/^P\d+$/.test(input.subgroup_id) ||
