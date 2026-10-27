@@ -6,7 +6,9 @@ works against its service: variables present; deploy token verify and Pages proj
 storage write keys put and delete zz_dev_credcheck/probe.txt in the Landing bucket; lakehouse
 read keys list 02_bronze/; catalog read token GET /v1/config and /namespaces; catalog write
 token GET /v1/config; GUS BDL key GET one variable; org app installation token GET the repository; the scheduler
-Worker's own token code mints a token (run with node). Port of the check in zohelo-bi.
+Worker's own token code mints a token (run with node). Negative probes: read-only keys must
+not write (a probe that succeeds is removed, then the row fails); the deploy token's R2 access is
+shown, never fails. Port of the check in zohelo-bi.
 
 Rows are (section, name, expected, actual). Variables are printed, secrets only as presence
 and HTTP status codes; error rows quote the last error line (at most 120 characters, secret
@@ -26,12 +28,15 @@ from typing import Any
 
 import boto3
 from botocore.config import Config
+from botocore.exceptions import ClientError
 import requests
 
 from ingestion.common.report import annotate, step_summary
 
 TIMEOUT = 30
 PROBE_KEY = "zz_dev_credcheck/probe.txt"
+SCRATCH_NAMESPACE = "zz_dev_credcheck"
+INFO = "informational"  # expected value of rows that are shown but never fail the run
 VARIABLES = (
     "PLATFORM_ACCOUNT_ID",
     "STORAGE_ENDPOINT_URL",
@@ -103,6 +108,33 @@ def s3_client(access_key: str, secret_key: str):
     )
 
 
+def writer():
+    return s3_client(env("STORAGE_WRITE_ACCESS_KEY"), env("STORAGE_WRITE_SECRET_KEY"))
+
+
+def reader():
+    return s3_client(env("STORAGE_LAKEHOUSE_READ_ACCESS_KEY"), env("STORAGE_LAKEHOUSE_READ_SECRET_KEY"))
+
+
+def catalog_base() -> str:
+    return env("STORAGE_LAKEHOUSE_CATALOG_URL").rstrip("/")
+
+
+def catalog_path(token: str) -> str:
+    """`/v1[/<prefix>]` of the warehouse, from GET /v1/config."""
+    response = http(
+        "GET",
+        f"{catalog_base()}/v1/config",
+        params={"warehouse": env("STORAGE_LAKEHOUSE_CATALOG_NAME")},
+        headers=bearer(token),
+    )
+    prefix = ""
+    if response.ok:
+        body = response.json()
+        prefix = (body.get("overrides") or {}).get("prefix") or (body.get("defaults") or {}).get("prefix") or ""
+    return f"/v1/{prefix}" if prefix else "/v1"
+
+
 def variables_section() -> None:
     for name in VARIABLES:
         row("variables", name, "set", env(name) or "MISSING")
@@ -130,12 +162,6 @@ def deploy_section() -> None:
 def storage_section() -> None:
     landing, lakehouse = env("STORAGE_LANDING_BUCKET_NAME"), env("STORAGE_LAKEHOUSE_BUCKET_NAME")
 
-    def writer():
-        return s3_client(env("STORAGE_WRITE_ACCESS_KEY"), env("STORAGE_WRITE_SECRET_KEY"))
-
-    def reader():
-        return s3_client(env("STORAGE_LAKEHOUSE_READ_ACCESS_KEY"), env("STORAGE_LAKEHOUSE_READ_SECRET_KEY"))
-
     def put() -> str:
         writer().put_object(Bucket=landing, Key=PROBE_KEY, Body=b"check")
         return "ok"
@@ -162,13 +188,7 @@ def catalog_section() -> None:
 
     def read_namespaces() -> str:
         token = env("STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN")
-        response = config(token)
-        prefix = ""
-        if response.ok:
-            body = response.json()
-            prefix = (body.get("overrides") or {}).get("prefix") or (body.get("defaults") or {}).get("prefix") or ""
-        path = f"/{prefix}" if prefix else ""
-        return str(http("GET", f"{base}/v1{path}/namespaces", headers=bearer(token)).status_code)
+        return str(http("GET", f"{base}{catalog_path(token)}/namespaces", headers=bearer(token)).status_code)
 
     attempt(
         "catalog",
@@ -249,6 +269,62 @@ def app_section() -> None:
     attempt("app", "scheduler Worker token", "ok", worker_token)
 
 
+def denied_section() -> None:
+    """Read-only credentials must fail to write; a probe that succeeds is cleaned up, then reported."""
+    landing, lakehouse = env("STORAGE_LANDING_BUCKET_NAME"), env("STORAGE_LAKEHOUSE_BUCKET_NAME")
+
+    def s3_denied(call, undo) -> str:
+        try:
+            call()
+        except ClientError as exc:
+            code = str(exc.response.get("Error", {}).get("Code", ""))
+            status = exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+            if code in ("AccessDenied", "Forbidden", "403") or status == 403:
+                return "denied"
+            return f"error: {clean(str(exc))}"
+        try:
+            undo()
+            return "allowed (probe removed)"
+        except Exception as exc:
+            return f"allowed (probe NOT removed: {clean(str(exc))})"
+
+    def put_lakehouse() -> str:
+        return s3_denied(
+            lambda: reader().put_object(Bucket=lakehouse, Key=PROBE_KEY, Body=b"check"),
+            lambda: writer().delete_object(Bucket=lakehouse, Key=PROBE_KEY),
+        )
+
+    def list_landing() -> str:
+        # a successful listing creates nothing, so there is nothing to undo
+        return s3_denied(lambda: reader().list_objects_v2(Bucket=landing, MaxKeys=1), lambda: None)
+
+    def create_namespace() -> str:
+        read, write = env("STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN"), env("STORAGE_LAKEHOUSE_CATALOG_WRITE_TOKEN")
+        path = catalog_path(read)
+        response = http(
+            "POST", f"{catalog_base()}{path}/namespaces", json={"namespace": [SCRATCH_NAMESPACE]}, headers=bearer(read)
+        )
+        if response.status_code in (401, 403):
+            return str(response.status_code)
+        if response.ok:
+            removed = http("DELETE", f"{catalog_base()}{path}/namespaces/{SCRATCH_NAMESPACE}", headers=bearer(write))
+            return f"{response.status_code} (namespace removed: {removed.status_code})"
+        return str(response.status_code)
+
+    def r2_buckets() -> str:
+        response = http(
+            "GET",
+            f"https://api.cloudflare.com/client/v4/accounts/{env('PLATFORM_ACCOUNT_ID')}/r2/buckets",
+            headers=bearer(env("PLATFORM_DEPLOY_TOKEN")),
+        )
+        return "allowed" if response.ok else "denied"
+
+    attempt("denied", "read keys: put in lakehouse", "denied", put_lakehouse)
+    attempt("denied", "read keys: list landing", "denied", list_landing)
+    attempt("denied", "catalog read token: create namespace", "403", create_namespace)
+    attempt("denied", "deploy token: list R2 buckets (informational)", INFO, r2_buckets)
+
+
 SECTIONS = (
     ("variables", variables_section),
     ("deploy token", deploy_section),
@@ -256,19 +332,25 @@ SECTIONS = (
     ("catalog", catalog_section),
     ("bdl", bdl_section),
     ("app", app_section),
+    ("denied", denied_section),
 )
 
 
 def report() -> int:
-    failed = [r for r in rows if r[2] != r[3]]
+    failed = [r for r in rows if r[2] not in (INFO, r[3])]
     lines = ["## Credentials check", "", "| Section | Check | Expected | Actual | Result |", "|---|---|---|---|---|"]
     for section, name, expected, actual in rows:
-        result = "as expected" if expected == actual else "DIFFERS"
+        if expected == INFO:
+            result = "informational"
+        elif expected == actual:
+            result = "as expected (denied)" if actual in ("denied", "403") else "as expected"
+        else:
+            result = "DIFFERS"
         lines.append(f"| {section} | {name} | {expected} | {actual.replace('|', '/')} | {result} |")
     step_summary("\n".join(lines))
     for section, _ in SECTIONS:
         part = [{"check": n, "expected": e, "actual": a} for s, n, e, a in rows if s == section]
-        bad = [p for p in part if p["expected"] != p["actual"]]
+        bad = [p for p in part if p["expected"] not in (INFO, p["actual"])]
         annotate("error" if bad else "notice", f"credentials: {section}", bad or part)
     print(f"{len(rows) - len(failed)} of {len(rows)} rows as expected")
     return 1 if failed else 0
