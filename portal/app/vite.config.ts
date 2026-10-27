@@ -12,13 +12,13 @@ import { VitePWA } from 'vite-plugin-pwa';
 // AI providers). No 'unsafe-inline' for scripts — env.js is a real file.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' blob: 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://accounts.google.com https://apis.google.com",
+  "script-src 'self' blob: 'wasm-unsafe-eval' https://cdn.jsdelivr.net",
   "worker-src 'self' blob:",
-  "style-src 'self' 'unsafe-inline' https://accounts.google.com",
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https: http: data: blob: https://accounts.google.com https://www.googleapis.com",
-  "frame-src 'self' https://accounts.google.com",
+  "connect-src 'self' https: http: data: blob:",
+  "frame-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

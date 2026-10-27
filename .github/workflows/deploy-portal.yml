@@ -54,6 +54,8 @@ jobs:
         env:
           DUCK_UI_BASEPATH: /
           DUCK_UI_R2_API_BASE: /api
+          # The DuckDB engines (36-41 MB) exceed the 25 MB Pages file limit: load them from jsDelivr.
+          DUCK_UI_DUCKDB_WASM_CDN_ONLY: "true"
         run: npm run build
       - name: Write the build identity
         run: |
