@@ -1,11 +1,11 @@
-/** Load real Drive files into a disposable DuckDB session. */
+/** Load R2 objects into a disposable DuckDB session. */
 import type * as duckdb from "@duckdb/duckdb-wasm";
 import { sqlEscapeIdentifier, sqlEscapeString } from "@/lib/sqlSanitize";
-import { fetchDriveFileBuffer, listDataFilesInFolder } from "./driveApi";
+import { fetchObjectBuffer, listDataFilesInFolder } from "./api";
 import {
-  DRIVE_DOWNLOAD_LIMIT_BYTES,
-  DriveDownloadBudget,
-  createDriveDownloadBudget,
+  DOWNLOAD_LIMIT_BYTES,
+  DownloadBudget,
+  createDownloadBudget,
   sha256Hex,
 } from "./releaseCatalog";
 import type { LakehouseFile } from "./types";
@@ -26,12 +26,12 @@ export interface PublishedViewIdentity {
 
 // File registrations belong to an engine, never to the application globally.
 const registeredFiles = new WeakMap<duckdb.AsyncDuckDB, Set<string>>();
-const defaultDownloadBudgets = new WeakMap<duckdb.AsyncDuckDB, DriveDownloadBudget>();
+const defaultDownloadBudgets = new WeakMap<duckdb.AsyncDuckDB, DownloadBudget>();
 
 const budgetFor = (db: duckdb.AsyncDuckDB) => {
   let budget = defaultDownloadBudgets.get(db);
   if (!budget) {
-    budget = createDriveDownloadBudget();
+    budget = createDownloadBudget();
     defaultDownloadBudgets.set(db, budget);
   }
   return budget;
@@ -63,13 +63,13 @@ async function registerFile(
   db: duckdb.AsyncDuckDB,
   file: LakehouseFile,
   token: string,
-  downloadBudget: DriveDownloadBudget
+  downloadBudget: DownloadBudget
 ) {
   if (!token) throw new Error("Sign in before loading Cloudflare R2 data.");
   if (!file.id || file.id === "demo_file" || !file.name) {
-    throw new Error("The catalog entry does not identify a real Drive file.");
+    throw new Error("The catalog entry does not identify an R2 object.");
   }
-  // The digest is part of the cache identity. A reused Drive ID with different
+  // The digest is part of the cache identity. A reused object ID with different
   // declared release bytes must be downloaded and verified again.
   const path = `/r2/${pathPart(file.id)}/${pathPart(file.sha256 ?? "legacy")}/${pathPart(file.name)}`;
   let registered = registeredFiles.get(db);
@@ -79,10 +79,10 @@ async function registerFile(
   }
   if (!registered.has(path)) {
     if (file.size !== undefined) downloadBudget.reserve(file.size, file.name);
-    const bytes = await fetchDriveFileBuffer(
+    const bytes = await fetchObjectBuffer(
       file.id,
       token,
-      file.size ?? DRIVE_DOWNLOAD_LIMIT_BYTES
+      file.size ?? DOWNLOAD_LIMIT_BYTES
     );
     downloadBudget.consume(bytes.byteLength, file.name);
     if (file.size !== undefined && bytes.byteLength !== file.size) {
@@ -184,7 +184,7 @@ export const loadTableIntoDuckDB = async (
   existingFiles: LakehouseFile[],
   token: string,
   layerName: string,
-  downloadBudget?: DriveDownloadBudget
+  downloadBudget?: DownloadBudget
 ): Promise<{ loadedFiles: string[]; queryTarget: string; identity: PublishedViewIdentity }> => {
   if (!token) throw new Error("Sign in before loading Cloudflare R2 data.");
   const files = await filesForTable(
@@ -207,7 +207,7 @@ export const loadTablesIntoDuckDB = async (
   conn: duckdb.AsyncDuckDBConnection,
   tables: readonly LakehouseTableLoad[],
   token: string,
-  downloadBudget?: DriveDownloadBudget,
+  downloadBudget?: DownloadBudget,
   beforePublish?: () => void | Promise<void>
 ): Promise<{ loadedFiles: string[]; queryTargets: string[]; identities: PublishedViewIdentity[] }> => {
   if (!token) throw new Error("Sign in before loading Cloudflare R2 data.");
@@ -243,7 +243,7 @@ export const loadFileIntoDuckDB = async (
   tableName: string,
   file: LakehouseFile,
   token: string,
-  downloadBudget?: DriveDownloadBudget,
+  downloadBudget?: DownloadBudget,
   beforePublish?: () => void | Promise<void>
 ): Promise<{ filePath: string; queryTarget: string; identity: PublishedViewIdentity }> => {
   const filePath = await registerFile(db, file, token, downloadBudget ?? budgetFor(db));

@@ -1,5 +1,5 @@
 /**
- * Types for Google Drive Lakehouse Integration
+ * Types for the R2 lakehouse catalogue and the portal sign-in state.
  */
 
 export interface LakehouseFile {
@@ -34,40 +34,12 @@ export interface LakehouseLayer {
   children: LakehouseTable[];
 }
 
-export interface GoogleDriveAuthState {
+export interface PortalAuthState {
   token: string | null;
   isAuthenticated: boolean;
-  authSource: "google_identity" | "manual" | "none";
+  /** "access": signed in through the Cloudflare Access session. */
+  authSource: "access" | "none";
   error: string | null;
-}
-
-export interface GoogleOAuthTokenResponse {
-  access_token: string;
-  expires_in?: number;
-  scope?: string;
-  token_type?: string;
-  error?: string;
-}
-
-export interface GoogleTokenClient {
-  requestAccessToken: (options?: { prompt?: string }) => void;
-}
-
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        oauth2: {
-          initTokenClient: (config: {
-            client_id: string;
-            scope: string;
-            callback: (response: GoogleOAuthTokenResponse) => void;
-            error_callback?: (error: unknown) => void;
-          }) => GoogleTokenClient;
-        };
-      };
-    };
-  }
 }
 
 export interface ReleasePointer {
@@ -304,35 +276,6 @@ export interface LandingCatalogResolution {
   snapshots: LandingSnapshotResolution[];
   issues: LandingCatalogIssue[];
   fingerprint: string;
-}
-
-export type SourceInventoryId =
-  "gus_bdl_web" | "gus_dbw" | "gus_teryt" | "gugik_prg" | "gleif" | "mf_biala_lista" | "imgw_pib";
-
-export interface SourceInventoryStage {
-  stage: "Landing" | "Bronze";
-  basis: "observed_drive_metadata" | "mutable_checkpoint";
-  file_count: number;
-  byte_count: number;
-  latest_modified_time: string | null;
-  selection_complete_count?: number;
-  selection_total_count?: number;
-}
-
-export interface SourceInventoryEntry {
-  source_id: SourceInventoryId;
-  label: string;
-  state: "retained" | "in_progress" | "updating" | "absent" | "error";
-  fetched_at: string;
-  stages: SourceInventoryStage[];
-  message?: string;
-  error?: string;
-}
-
-export interface SourceInventoryResolution {
-  entries: SourceInventoryEntry[];
-  drive_api_pages: number;
-  error?: string;
 }
 
 /** The relation details shared by NBP releases and independent Landing snapshots. */

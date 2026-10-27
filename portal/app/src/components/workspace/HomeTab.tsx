@@ -12,7 +12,6 @@ import {
   getSavedQueries,
   type SavedQuery,
 } from "@/services/persistence/repositories/savedQueryRepository";
-import PlatformInfoLinks from "@/components/PlatformInfoLinks";
 import { useTheme } from "@/components/theme/theme-provider";
 import R2ExplorerLauncher from "@/components/workspace/R2ExplorerLauncher";
 
@@ -176,8 +175,6 @@ const HomeTab = () => {
             )}
           </TabsContent>
         </Tabs>
-
-        <PlatformInfoLinks className="mt-auto text-xs text-muted-foreground" />
       </div>
     </div>
   );

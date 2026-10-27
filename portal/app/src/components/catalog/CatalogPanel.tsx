@@ -7,7 +7,7 @@ import {
   type CatalogSource,
   type CatalogTable,
   type DataCatalog,
-} from "@/services/googleDrive/dataCatalog";
+} from "@/services/lakehouse/dataCatalog";
 
 type Section = "metrics" | "tables" | "dimensions" | "sources";
 

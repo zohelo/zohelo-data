@@ -14,15 +14,15 @@ import { useDuckStore } from "@/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  DRIVE_ROOT,
+  FOLDER_MIME_TYPE,
+  LAKEHOUSE_ROOT,
   findFolderIdByName,
   getR2ObjectUrl,
   listNativeChildrenPage,
-  type DriveFileMetadata,
-} from "@/services/googleDrive";
+  type LakehouseEntry,
+} from "@/services/lakehouse";
 import type { R2ExplorerCrumb } from "@/lib/r2ExplorerTabs";
 
-const FOLDER_MIME = "application/vnd.google-apps.folder";
 
 const layerLabels: Record<string, string> = {
   "01_landing": "Landing",
@@ -53,7 +53,7 @@ const bucketForPath = (path: string) => {
 };
 
 const fetchAllChildren = async (folderId: string, token: string) => {
-  const files: DriveFileMetadata[] = [];
+  const files: LakehouseEntry[] = [];
   let pageToken: string | undefined;
   do {
     const page = await listNativeChildrenPage(folderId, token, pageToken);
@@ -61,8 +61,8 @@ const fetchAllChildren = async (folderId: string, token: string) => {
     pageToken = page.nextPageToken ?? undefined;
   } while (pageToken);
   return files.sort((left, right) => {
-    const leftFolder = left.mimeType === FOLDER_MIME ? 0 : 1;
-    const rightFolder = right.mimeType === FOLDER_MIME ? 0 : 1;
+    const leftFolder = left.mimeType === FOLDER_MIME_TYPE ? 0 : 1;
+    const rightFolder = right.mimeType === FOLDER_MIME_TYPE ? 0 : 1;
     if (leftFolder !== rightFolder) return leftFolder - rightFolder;
     return left.name.localeCompare(right.name);
   });
@@ -71,9 +71,9 @@ const fetchAllChildren = async (folderId: string, token: string) => {
 const fetchLocation = async (
   token: string,
   folder?: { id: string; crumbs: R2ExplorerCrumb[] }
-): Promise<{ entries: DriveFileMetadata[]; crumbs: R2ExplorerCrumb[] }> => {
+): Promise<{ entries: LakehouseEntry[]; crumbs: R2ExplorerCrumb[] }> => {
   if (folder) return { entries: await fetchAllChildren(folder.id, token), crumbs: folder.crumbs };
-  const rootId = await findFolderIdByName(DRIVE_ROOT, "root", token);
+  const rootId = await findFolderIdByName(LAKEHOUSE_ROOT, "root", token);
   if (!rootId) throw new Error("R2 lakehouse root was not found.");
   return { entries: await fetchAllChildren(rootId, token), crumbs: [] };
 };
@@ -85,11 +85,11 @@ interface R2LakehouseBrowserProps {
 export default function R2LakehouseBrowser({
   initialCrumbs = [],
 }: R2LakehouseBrowserProps) {
-  const googleAuth = useDuckStore((state) => state.googleAuth);
-  const signInWithGoogle = useDuckStore((state) => state.signInWithGoogle);
+  const portalAuth = useDuckStore((state) => state.portalAuth);
+  const signIn = useDuckStore((state) => state.signIn);
 
   const [crumbs, setCrumbs] = useState<R2ExplorerCrumb[]>([]);
-  const [entries, setEntries] = useState<DriveFileMetadata[]>([]);
+  const [entries, setEntries] = useState<LakehouseEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
@@ -105,7 +105,7 @@ export default function R2LakehouseBrowser({
     return entries.filter((entry) => entry.name.toLocaleLowerCase().includes(needle));
   }, [entries, filter]);
 
-  const showLocation = (location: { entries: DriveFileMetadata[]; crumbs: R2ExplorerCrumb[] }) => {
+  const showLocation = (location: { entries: LakehouseEntry[]; crumbs: R2ExplorerCrumb[] }) => {
     setEntries(location.entries);
     setCrumbs(location.crumbs);
     setFilter("");
@@ -114,11 +114,11 @@ export default function R2LakehouseBrowser({
   const showError = (err: unknown) => setError(err instanceof Error ? err.message : String(err));
 
   const load = async (folder?: { id: string; crumbs: R2ExplorerCrumb[] }) => {
-    if (!googleAuth.token) return;
+    if (!portalAuth.token) return;
     setLoading(true);
     setError(null);
     try {
-      showLocation(await fetchLocation(googleAuth.token, folder));
+      showLocation(await fetchLocation(portalAuth.token, folder));
     } catch (err) {
       showError(err);
     } finally {
@@ -132,10 +132,10 @@ export default function R2LakehouseBrowser({
 
   useEffect(() => {
     // Signed out renders the sign-in screen; the next sign-in reloads the location.
-    if (!googleAuth.token) return;
+    if (!portalAuth.token) return;
     const requested = initialCrumbs[initialCrumbs.length - 1];
     let cancelled = false;
-    fetchLocation(googleAuth.token, requested ? { id: requested.id, crumbs: [...initialCrumbs] } : undefined)
+    fetchLocation(portalAuth.token, requested ? { id: requested.id, crumbs: [...initialCrumbs] } : undefined)
       .then((location) => {
         if (!cancelled) showLocation(location);
       })
@@ -150,10 +150,10 @@ export default function R2LakehouseBrowser({
     };
     // initialKey deliberately represents the immutable tab location.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [googleAuth.token, initialKey]);
+  }, [portalAuth.token, initialKey]);
 
-  const openFolder = (entry: DriveFileMetadata) => {
-    if (entry.mimeType !== FOLDER_MIME) return;
+  const openFolder = (entry: LakehouseEntry) => {
+    if (entry.mimeType !== FOLDER_MIME_TYPE) return;
     const path = currentPath ? `${currentPath}/${entry.name}` : entry.name;
     const crumb: R2ExplorerCrumb = { id: entry.id, name: entry.name, path };
     void loadFolder(entry.id, [...crumbs, crumb]);
@@ -165,20 +165,20 @@ export default function R2LakehouseBrowser({
     void loadFolder(crumb.id, crumbs.slice(0, index + 1));
   };
 
-  const openObject = async (entry: DriveFileMetadata, mode: "open" | "download") => {
-    if (!googleAuth.token) return;
+  const openObject = async (entry: LakehouseEntry, mode: "open" | "download") => {
+    if (!portalAuth.token) return;
     const tab = window.open("about:blank", "_blank");
     if (!tab) return;
     tab.opener = null;
     try {
-      tab.location.replace(await getR2ObjectUrl(entry.id, googleAuth.token, mode));
+      tab.location.replace(await getR2ObjectUrl(entry.id, portalAuth.token, mode));
     } catch (err) {
       tab.close();
       setError(err instanceof Error ? err.message : String(err));
     }
   };
 
-  if (!googleAuth.isAuthenticated) {
+  if (!portalAuth.isAuthenticated) {
     return (
       <div className="flex h-full items-center justify-center p-8">
         <div className="max-w-md rounded-lg border bg-card p-6 text-center">
@@ -187,8 +187,8 @@ export default function R2LakehouseBrowser({
           <p className="mt-1 text-sm text-muted-foreground">
             Sign in to browse the private Cloudflare R2 lakehouse.
           </p>
-          <Button className="mt-4" onClick={() => signInWithGoogle(true)}>
-            Sign in
+          <Button className="mt-4" onClick={() => signIn()}>
+            Sign in again
           </Button>
         </div>
       </div>
@@ -219,7 +219,7 @@ export default function R2LakehouseBrowser({
             type="button"
             className="rounded px-1.5 py-1 hover:bg-muted"
             onClick={() => void loadRoot()}
-            title={DRIVE_ROOT}
+            title={LAKEHOUSE_ROOT}
           >
             <Home className="h-4 w-4" />
           </button>
@@ -294,7 +294,7 @@ export default function R2LakehouseBrowser({
         ) : (
           <div className="divide-y">
             {visibleEntries.map((entry) => {
-              const folder = entry.mimeType === FOLDER_MIME;
+              const folder = entry.mimeType === FOLDER_MIME_TYPE;
               const logicalPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
               const bucket = bucketForPath(logicalPath);
               return (

@@ -71,10 +71,6 @@ export default defineConfig(({ mode }) => {
           // one session the app works fully offline.
           globPatterns: [
             'index.html',
-            'about.html',
-            'privacy.html',
-            'terms.html',
-            'platform-info.css',
             'registerSW.js',
             'manifest.webmanifest',
             '*.{svg,png,ico}',
@@ -84,10 +80,8 @@ export default defineConfig(({ mode }) => {
           globIgnores: ['**/env.js'],
           maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
           navigateFallback: 'index.html',
-          // Public OAuth information must stay accessible without booting the
-          // workspace, including when a previous visit installed the worker.
+          // Build identity, docs and the API are never answered with the app shell.
           navigateFallbackDenylist: [
-            /\/(about|privacy|terms)\.html$/,
             /\/portal-build\.json(?:\?.*)?$/,
             /\/docs(?:\/|$)/,
             /\/api\//,

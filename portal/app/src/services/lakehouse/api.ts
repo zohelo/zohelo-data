@@ -1,29 +1,30 @@
 /**
- * R2-backed compatibility client for the existing Lakehouse catalogue code.
- * Google Identity supplies authentication only; no runtime data read falls back to Drive.
+ * Client for the portal's R2 read API (portal/worker, served at DUCK_UI_R2_API_BASE).
+ * The API keeps a files-style contract: `/drive/v3/files` lists and reads objects, with
+ * folders marked by FOLDER_MIME_TYPE. Sign-in is the Cloudflare Access session (auth.ts).
  */
-import { DRIVE_ROOT, isStoredTokenExpired, LAKEHOUSE_LAYERS } from "./auth";
+import { LAKEHOUSE_ROOT, isStoredTokenExpired, LAKEHOUSE_LAYERS } from "./auth";
 import type { LakehouseLayer } from "./types";
 
-export class GoogleDriveAuthError extends Error {
+export class PortalAuthError extends Error {
   readonly status = 401;
 
   constructor(message: string) {
     super(message);
-    this.name = "GoogleDriveAuthError";
+    this.name = "PortalAuthError";
   }
 }
 
 /** Preserve the existing error text while allowing scanner-only bounded retries. */
-export class GoogleDriveApiError extends Error {
+export class PortalApiError extends Error {
   constructor(message: string, readonly status: number, readonly reason: string | null) {
     super(message);
-    this.name = "GoogleDriveApiError";
+    this.name = "PortalApiError";
   }
 }
 
-export const isGoogleDriveAuthError = (error: unknown): error is GoogleDriveAuthError =>
-  error instanceof GoogleDriveAuthError;
+export const isPortalAuthError = (error: unknown): error is PortalAuthError =>
+  error instanceof PortalAuthError;
 
 const r2ApiBase = (): string => {
   const value = import.meta.env.DUCK_UI_R2_API_BASE?.trim().replace(/\/+$/, "");
@@ -31,19 +32,23 @@ const r2ApiBase = (): string => {
   return value;
 };
 
-const r2PortalUrl = (url: string): string => {
-  const source = new URL(url);
-  if (source.origin !== "https://www.googleapis.com" || !source.pathname.startsWith("/drive/v3/")) {
-    throw new Error("The portal blocked a non-R2 data request.");
-  }
-  return `${r2ApiBase()}${source.pathname}${source.search}`;
-};
+/** Absolute URL of a path on the portal API, e.g. `/drive/v3/files`. */
+export const apiUrl = (path: string): URL =>
+  new URL(`${r2ApiBase()}${path}`, window.location.origin);
 
-export const driveRequest = async (url: string, token: string, signal?: AbortSignal): Promise<Response> => {
+/** Folder entries' type in the portal API (a value kept from its first client; see portal/worker). */
+export const FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
+
+const filesUrl = (fileId?: string): URL =>
+  apiUrl(fileId === undefined ? "/drive/v3/files" : `/drive/v3/files/${encodeURIComponent(fileId)}`);
+
+export const apiRequest = async (url: string | URL, token: string, signal?: AbortSignal): Promise<Response> => {
   if (!token) throw new Error("No portal authentication token available");
-  if (isStoredTokenExpired(token)) throw new GoogleDriveAuthError("Portal authorization expired. Sign in again.");
+  if (isStoredTokenExpired(token)) throw new PortalAuthError("Portal authorization expired. Sign in again.");
+  const target = new URL(url, window.location.origin);
+  if (!target.href.startsWith(apiUrl("/").href)) throw new Error("The portal blocked a non-R2 data request.");
 
-  const response = await fetch(r2PortalUrl(url), {
+  const response = await fetch(target, {
     signal,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -53,7 +58,7 @@ export const driveRequest = async (url: string, token: string, signal?: AbortSig
   if (!response.ok) {
     const errorBody = await response.text().catch(() => "");
     if (response.status === 401) {
-      throw new GoogleDriveAuthError("Portal authorization expired or was denied. Sign in again.");
+      throw new PortalAuthError("Portal authorization expired or was denied. Sign in again.");
     }
     let reason: string | null = null;
     try {
@@ -61,7 +66,7 @@ export const driveRequest = async (url: string, token: string, signal?: AbortSig
       const value = parsed?.error?.errors?.[0]?.reason ?? parsed?.error?.status;
       if (typeof value === "string") reason = value;
     } catch { /* Non-JSON errors retain the existing message. */ }
-    throw new GoogleDriveApiError(
+    throw new PortalApiError(
       `Cloudflare R2 portal API error (${response.status}): ${errorBody || response.statusText}`,
       response.status, reason
     );
@@ -75,22 +80,21 @@ export const getR2ObjectUrl = async (
   token: string,
   mode: "open" | "download"
 ): Promise<string> => {
-  const url = new URL(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`);
+  const url = filesUrl(fileId);
   url.searchParams.set("alt", "r2-url");
   url.searchParams.set("mode", mode);
-  const payload = await (await driveRequest(url.toString(), token)).json();
+  const payload = await (await apiRequest(url, token)).json();
   if (!payload || typeof payload.url !== "string") {
     throw new Error("R2 portal did not return a download URL.");
   }
-  const target = new URL(payload.url);
-  const api = new URL(r2ApiBase());
-  if (target.origin !== api.origin || !target.pathname.startsWith("/r2/object/")) {
+  const target = new URL(payload.url, window.location.origin);
+  if (!target.href.startsWith(apiUrl("/r2/object/").href)) {
     throw new Error("R2 portal returned an unexpected download URL.");
   }
   return target.toString();
 };
 
-export interface DriveFileMetadata {
+export interface LakehouseEntry {
   id: string;
   name: string;
   mimeType?: string;
@@ -102,14 +106,11 @@ export interface DriveFileMetadata {
   sha256Checksum?: string;
   parents?: string[];
   trashed?: boolean;
-  webViewLink?: string;
-  webContentLink?: string;
   capabilities?: { canDownload?: boolean };
-  shortcutDetails?: { targetId?: string; targetMimeType?: string };
 }
 
 const NATIVE_FIELDS =
-  "id,name,mimeType,size,createdTime,modifiedTime,version,md5Checksum,sha256Checksum,parents,trashed,webViewLink,webContentLink,capabilities(canDownload),shortcutDetails(targetId,targetMimeType)";
+  "id,name,mimeType,size,createdTime,modifiedTime,version,md5Checksum,sha256Checksum,parents,trashed,capabilities(canDownload)";
 
 export const NATIVE_METADATA_PARENT_BATCH = 100;
 export const NATIVE_METADATA_PLAN_URL_LIMIT = 6000;
@@ -117,11 +118,11 @@ export const NATIVE_METADATA_URL_LIMIT = 7800;
 export class NativeMetadataUrlTooLongError extends Error {}
 const NATIVE_METADATA_FOLDER_FIELDS = "id,name,mimeType,parents,trashed,version,modifiedTime";
 const NATIVE_METADATA_FILE_FIELDS =
-  "id,name,mimeType,size,createdTime,modifiedTime,parents,trashed,webViewLink,sha256Checksum";
+  "id,name,mimeType,size,createdTime,modifiedTime,parents,trashed,sha256Checksum";
 
 const nativeMetadata = (
-  item: DriveFileMetadata & { size?: string | number }
-): DriveFileMetadata => {
+  item: LakehouseEntry & { size?: string | number }
+): LakehouseEntry => {
   if (!item || typeof item.id !== "string" || typeof item.name !== "string") {
     throw new Error("R2 portal index returned invalid native file metadata.");
   }
@@ -137,14 +138,14 @@ export const listNativeChildrenPage = async (
   folderId: string,
   token: string,
   pageToken?: string
-): Promise<{ files: DriveFileMetadata[]; nextPageToken: string | null }> => {
+): Promise<{ files: LakehouseEntry[]; nextPageToken: string | null }> => {
   const query = `'${folderId.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}' in parents and trashed=false`;
-  const url = new URL("https://www.googleapis.com/drive/v3/files");
+  const url = filesUrl();
   url.searchParams.set("q", query);
   url.searchParams.set("fields", `nextPageToken,files(${NATIVE_FIELDS})`);
   url.searchParams.set("pageSize", "1000");
   if (pageToken) url.searchParams.set("pageToken", pageToken);
-  const payload = await (await driveRequest(url.toString(), token)).json();
+  const payload = await (await apiRequest(url.toString(), token)).json();
   if (
     !Array.isArray(payload?.files) ||
     (payload.nextPageToken !== undefined && typeof payload.nextPageToken !== "string")
@@ -162,8 +163,8 @@ export const buildNativeMetadataBatchUrl = (
     throw new Error("Invalid Landing metadata parent batch.");
   const parents = parentIds.map((id) => `'${id.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}' in parents`).join(" or ");
   const mime = kind === "folders" ? "=" : "!=";
-  const q = `(${parents}) and mimeType ${mime} 'application/vnd.google-apps.folder' and trashed=false`;
-  const url = new URL("https://www.googleapis.com/drive/v3/files");
+  const q = `(${parents}) and mimeType ${mime} '${FOLDER_MIME_TYPE}' and trashed=false`;
+  const url = filesUrl();
   url.searchParams.set("q", q);
   const fields = kind === "folders" ? NATIVE_METADATA_FOLDER_FIELDS : NATIVE_METADATA_FILE_FIELDS;
   url.searchParams.set("fields", `nextPageToken,incompleteSearch,files(${fields})`);
@@ -172,7 +173,7 @@ export const buildNativeMetadataBatchUrl = (
   const encoded = url.toString();
   if (encoded.length > NATIVE_METADATA_URL_LIMIT)
     throw new NativeMetadataUrlTooLongError(
-      "Drive metadata request URL exceeds the 7800-character limit. No incomplete table was published."
+      "Landing metadata request URL exceeds the 7800-character limit. No incomplete table was published."
     );
   return encoded;
 };
@@ -198,10 +199,10 @@ const scannerPage = async (
   try {
     for (let attempt = 0; attempt < 4; attempt++) {
       if (active.aborted) throw abortError();
-      try { return await (await driveRequest(url, token, active)).json() as NativeMetadataPagePayload; }
+      try { return await (await apiRequest(url, token, active)).json() as NativeMetadataPagePayload; }
       catch (error) {
         if (active.aborted) throw abortError();
-        const transient = error instanceof GoogleDriveApiError && (
+        const transient = error instanceof PortalApiError && (
           error.status === 429 || error.status >= 500 ||
           (error.status === 403 && ["rateLimitExceeded", "userRateLimitExceeded",
             "RATE_LIMIT_EXCEEDED"].includes(error.reason ?? ""))
@@ -226,7 +227,7 @@ const scannerPage = async (
 export const listNativeMetadataBatchPage = async (
   parentIds: readonly string[], kind: "folders" | "files", token: string, pageToken?: string,
   signal?: AbortSignal
-): Promise<{ files: DriveFileMetadata[]; nextPageToken: string | null }> => {
+): Promise<{ files: LakehouseEntry[]; nextPageToken: string | null }> => {
   const url = buildNativeMetadataBatchUrl(parentIds, kind, pageToken);
   const payload = await scannerPage(url, token, signal);
   if (payload?.incompleteSearch === true) throw new Error("R2 portal index returned an incomplete Landing metadata search.");
@@ -237,14 +238,15 @@ export const listNativeMetadataBatchPage = async (
   return { files: payload.files.map(nativeMetadata), nextPageToken: payload.nextPageToken || null };
 };
 
-/** Fresh metadata by ID, including current parent and original Drive-managed links. */
+/** Fresh metadata by ID, including the current parent. */
 export const getNativeFileMetadata = async (
   fileId: string,
   token: string,
   signal?: AbortSignal
-): Promise<DriveFileMetadata> => {
-  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=${encodeURIComponent(NATIVE_FIELDS)}`;
-  return nativeMetadata(await (await driveRequest(url, token, signal)).json());
+): Promise<LakehouseEntry> => {
+  const url = filesUrl(fileId);
+  url.searchParams.set("fields", NATIVE_FIELDS);
+  return nativeMetadata(await (await apiRequest(url, token, signal)).json());
 };
 
 const listFilesForQuery = async (
@@ -252,16 +254,17 @@ const listFilesForQuery = async (
   token: string,
   onPage?: () => void,
   signal?: AbortSignal
-): Promise<DriveFileMetadata[]> => {
-  const files: DriveFileMetadata[] = [];
+): Promise<LakehouseEntry[]> => {
+  const files: LakehouseEntry[] = [];
   let pageToken: string | null = null;
   do {
-    let url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
-      query
-    )}&fields=files(id,name,mimeType,size,modifiedTime,version,md5Checksum,sha256Checksum),nextPageToken&pageSize=1000`;
-    if (pageToken) url += `&pageToken=${encodeURIComponent(pageToken)}`;
+    const url = filesUrl();
+    url.searchParams.set("q", query);
+    url.searchParams.set("fields", "files(id,name,mimeType,size,modifiedTime,version,md5Checksum,sha256Checksum),nextPageToken");
+    url.searchParams.set("pageSize", "1000");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
     onPage?.();
-    const response = await driveRequest(url, token, signal);
+    const response = await apiRequest(url, token, signal);
     const payload = await response.json();
     for (const item of payload.files || []) {
       files.push({
@@ -290,7 +293,7 @@ export const findFoldersByName = async (
   if (name.includes("'"))
     throw new Error("Folder names containing single quotes are not supported.");
   const query = [
-    `mimeType='application/vnd.google-apps.folder'`,
+    `mimeType='${FOLDER_MIME_TYPE}'`,
     `name='${name}'`,
     `'${parentId}' in parents`,
     "trashed=false",
@@ -306,7 +309,7 @@ export const findNamedFilesInFolder = async (
   parentId: string,
   token: string,
   onPage?: () => void
-): Promise<DriveFileMetadata[]> => {
+): Promise<LakehouseEntry[]> => {
   if (name.includes("'")) throw new Error("File names containing single quotes are not supported.");
   const query = [`name='${name}'`, `'${parentId}' in parents`, "trashed=false"].join(" and ");
   return listFilesForQuery(query, token, onPage);
@@ -316,14 +319,13 @@ export const findNamedFilesInFolder = async (
 export const findNamedFilesInFolderById = async (
   fileId: string,
   token: string
-): Promise<DriveFileMetadata | null> => {
-  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(
-    fileId
-  )}?fields=id,name,mimeType,size,modifiedTime,version,md5Checksum,sha256Checksum`;
+): Promise<LakehouseEntry | null> => {
+  const url = filesUrl(fileId);
+  url.searchParams.set("fields", "id,name,mimeType,size,modifiedTime,version,md5Checksum,sha256Checksum");
   try {
-    const response = await driveRequest(url, token);
+    const response = await apiRequest(url, token);
     const item = await response.json();
-    if (!item?.id || item.mimeType === "application/vnd.google-apps.folder") return null;
+    if (!item?.id || item.mimeType === FOLDER_MIME_TYPE) return null;
     return {
       id: item.id,
       name: item.name,
@@ -335,7 +337,7 @@ export const findNamedFilesInFolderById = async (
       sha256Checksum: item.sha256Checksum,
     };
   } catch (error) {
-    if (error instanceof GoogleDriveApiError && error.status === 404) return null;
+    if (error instanceof PortalApiError && error.status === 404) return null;
     throw error;
   }
 };
@@ -344,17 +346,18 @@ export const listFolderChildrenMetadata = async (
   folderId: string,
   token: string,
   onPage?: () => void
-): Promise<DriveFileMetadata[]> => {
-  const files: DriveFileMetadata[] = [];
+): Promise<LakehouseEntry[]> => {
+  const files: LakehouseEntry[] = [];
   let pageToken: string | null = null;
   do {
     const query = `'${folderId}' in parents and trashed=false`;
-    let url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
-      query
-    )}&fields=files(id,name,mimeType,size,modifiedTime,version,md5Checksum,sha256Checksum),nextPageToken&pageSize=1000`;
-    if (pageToken) url += `&pageToken=${encodeURIComponent(pageToken)}`;
+    const url = filesUrl();
+    url.searchParams.set("q", query);
+    url.searchParams.set("fields", "files(id,name,mimeType,size,modifiedTime,version,md5Checksum,sha256Checksum),nextPageToken");
+    url.searchParams.set("pageSize", "1000");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
     onPage?.();
-    const response = await driveRequest(url, token);
+    const response = await apiRequest(url, token);
     const payload = await response.json();
     for (const item of payload.files || []) {
       files.push({
@@ -390,9 +393,9 @@ export const resolveLayerFolderId = async (
   layerName: string,
   token: string
 ): Promise<string | null> => {
-  const rootId = await findFolderIdByName(DRIVE_ROOT, "root", token);
+  const rootId = await findFolderIdByName(LAKEHOUSE_ROOT, "root", token);
   if (!rootId) {
-    throw new Error(`Master Lakehouse folder '${DRIVE_ROOT}' not found in Google Drive root.`);
+    throw new Error(`Master Lakehouse folder '${LAKEHOUSE_ROOT}' not found in the R2 lakehouse.`);
   }
   return findFolderIdByName(layerName, rootId, token);
 };
@@ -405,14 +408,13 @@ export const listSubfolders = async (
   let pageToken: string | null = null;
 
   do {
-    const query = `'${folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
-    let url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
-      query
-    )}&fields=files(id,name),nextPageToken&pageSize=200`;
-    if (pageToken) {
-      url += `&pageToken=${encodeURIComponent(pageToken)}`;
-    }
-    const response = await driveRequest(url, token);
+    const query = `'${folderId}' in parents and mimeType='${FOLDER_MIME_TYPE}' and trashed=false`;
+    const url = filesUrl();
+    url.searchParams.set("q", query);
+    url.searchParams.set("fields", "files(id,name),nextPageToken");
+    url.searchParams.set("pageSize", "200");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+    const response = await apiRequest(url, token);
     const payload = await response.json();
     for (const item of payload.files || []) {
       folders.push({ id: item.id, name: item.name });
@@ -432,16 +434,15 @@ export const listDataFilesInFolder = async (
 
   do {
     const query = `'${folderId}' in parents and trashed=false`;
-    let url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
-      query
-    )}&fields=files(id,name,mimeType,size),nextPageToken&pageSize=200`;
-    if (pageToken) {
-      url += `&pageToken=${encodeURIComponent(pageToken)}`;
-    }
-    const response = await driveRequest(url, token);
+    const url = filesUrl();
+    url.searchParams.set("q", query);
+    url.searchParams.set("fields", "files(id,name,mimeType,size),nextPageToken");
+    url.searchParams.set("pageSize", "200");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+    const response = await apiRequest(url, token);
     const payload = await response.json();
     for (const item of payload.files || []) {
-      if (item.mimeType !== "application/vnd.google-apps.folder") {
+      if (item.mimeType !== FOLDER_MIME_TYPE) {
         const lc = item.name.toLowerCase();
         if (
           lc.endsWith(".parquet") ||
@@ -464,13 +465,14 @@ export const listDataFilesInFolder = async (
   return files;
 };
 
-export const fetchDriveFileBuffer = async (
+export const fetchObjectBuffer = async (
   fileId: string,
   token: string,
   maxBytes?: number
 ): Promise<Uint8Array> => {
-  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`;
-  const response = await driveRequest(url, token);
+  const url = filesUrl(fileId);
+  url.searchParams.set("alt", "media");
+  const response = await apiRequest(url, token);
   const length = response.headers.get("content-length");
   if (maxBytes !== undefined && length && Number(length) > maxBytes) {
     throw new Error(`R2 download exceeds its declared ${maxBytes} byte limit.`);

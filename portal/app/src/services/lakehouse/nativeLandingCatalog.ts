@@ -3,9 +3,10 @@ import type * as duckdb from "@duckdb/duckdb-wasm";
 import { runQuery, type LocalDuckSession } from "@/services/engine";
 import { sqlEscapeIdentifier, sqlEscapeString } from "@/lib/sqlSanitize";
 import { NATIVE_METADATA_COMMENT } from "@/lib/nativeMetadataOwnership";
-import { DRIVE_ROOT } from "./auth";
+import { LAKEHOUSE_ROOT } from "./auth";
 import {
-  fetchDriveFileBuffer,
+  fetchObjectBuffer,
+  FOLDER_MIME_TYPE,
   buildNativeMetadataBatchUrl,
   findFoldersByName,
   getNativeFileMetadata,
@@ -14,22 +15,21 @@ import {
   NATIVE_METADATA_PARENT_BATCH,
   NATIVE_METADATA_PLAN_URL_LIMIT,
   NativeMetadataUrlTooLongError,
-  type DriveFileMetadata,
-} from "./driveApi";
-import { DriveDownloadBudget, sha256Hex } from "./releaseCatalog";
+  type LakehouseEntry,
+} from "./api";
+import { DownloadBudget, sha256Hex } from "./releaseCatalog";
 
-export const NATIVE_FOLDER_MIME = "application/vnd.google-apps.folder";
-export const NATIVE_SHORTCUT_MIME = "application/vnd.google-apps.shortcut";
+export const NATIVE_FOLDER_MIME = FOLDER_MIME_TYPE;
 export const NATIVE_PREVIEW_LIMIT_BYTES = 8 * 1024 * 1024;
 export const NATIVE_METADATA_MAX_FILES = 100000;
 export const NATIVE_METADATA_MAX_FOLDERS = 20000;
-export type NativeLandingFile = DriveFileMetadata & { parentId: string };
+export type NativeLandingFile = LakehouseEntry & { parentId: string };
 export type NativeLandingFolder = NativeLandingFile & { mimeType: typeof NATIVE_FOLDER_MIME };
 
 export const isNativeFolder = (file: NativeLandingFile): file is NativeLandingFolder =>
   file.mimeType === NATIVE_FOLDER_MIME;
 
-/** A stable, SQL-safe relation name. Duplicate Drive folder names stay distinct. */
+/** A stable, SQL-safe relation name. Duplicate folder names stay distinct. */
 export function nativeMetadataNames(folders: readonly NativeLandingFolder[]): Map<string, string> {
   const bases = folders
     .map((folder) => ({ folder, base: `${folder.name}_files` }))
@@ -61,7 +61,6 @@ export interface NativeMetadataRow {
   created_at_utc: string | null;
   modified_at_utc: string | null;
   metadata_refreshed_at_utc: string;
-  drive_url: string | null;
   sha256_checksum: string | null;
 }
 
@@ -73,7 +72,7 @@ export interface NativeMetadataProgress {
   startedAtMs: number;
 }
 
-export { NATIVE_METADATA_PARENT_BATCH } from "./driveApi";
+export { NATIVE_METADATA_PARENT_BATCH } from "./api";
 export const NATIVE_METADATA_WORKERS = 8;
 
 const parentBatches = (ids: readonly string[], kind: "folders" | "files"): string[][] => {
@@ -93,9 +92,9 @@ const parentBatches = (ids: readonly string[], kind: "folders" | "files"): strin
       batches.push(batch);
       batch = [id];
       if (!fits(batch))
-        throw new Error("Drive folder ID exceeds the Landing metadata query budget.");
+        throw new Error("Folder ID exceeds the Landing metadata query budget.");
     } else if (tooLong)
-      throw new Error("Drive folder ID exceeds the Landing metadata query budget.");
+      throw new Error("Folder ID exceeds the Landing metadata query budget.");
     else batch = candidate;
   }
   if (batch.length) batches.push(batch);
@@ -140,7 +139,7 @@ export async function scanNativeSourceMetadata(
   };
   /** Eight workers, complete pagination per batch, globally unique IDs per phase. */
   const collect = async (parentIds: readonly string[], kind: "folders" | "files",
-    handle: (item: DriveFileMetadata, parentId: string) => void) => {
+    handle: (item: LakehouseEntry, parentId: string) => void) => {
     const batches = parentBatches(parentIds, kind);
     const seenIds = new Set<string>();
     let cursor = 0;
@@ -159,13 +158,13 @@ export async function scanNativeSourceMetadata(
           for (const item of page.files) {
             if (item.trashed || item.parents?.length !== 1 || !requested.has(item.parents[0]) ||
                 seenIds.has(item.id) || (kind === "folders") !== (item.mimeType === NATIVE_FOLDER_MIME))
-              throw new Error("Drive returned changed, duplicated or out-of-scope Landing metadata.");
+              throw new Error("The R2 index returned changed, duplicated or out-of-scope Landing metadata.");
             seenIds.add(item.id);
             handle(item, item.parents[0]);
           }
           report();
           next = page.nextPageToken;
-          if (next && tokens.has(next)) throw new Error("Drive repeated a Landing metadata page token.");
+          if (next && tokens.has(next)) throw new Error("The R2 index repeated a Landing metadata page token.");
           if (next) tokens.add(next);
         } while (next);
       }
@@ -200,14 +199,13 @@ export async function scanNativeSourceMetadata(
       if (folders.has(item.id) || files.has(item.id))
         throw new Error("Landing file appears twice in the source tree.");
       files.add(item.id);
-      if (item.mimeType === NATIVE_SHORTCUT_MIME) return;
       if (rows.length >= NATIVE_METADATA_MAX_FILES)
         throw new Error(`Source exceeds the ${NATIVE_METADATA_MAX_FILES}-file metadata scan limit.`);
       rows.push({ file_id: item.id, source_folder_id: source.id, source_folder: source.name,
         relative_path: `${prefixes.get(parentId)}${item.name}`, file_name: item.name,
         parent_folder_id: parentId, size_bytes: item.size ?? null, mime_type: item.mimeType ?? null,
         created_at_utc: item.createdTime ?? null, modified_at_utc: item.modifiedTime ?? null,
-        metadata_refreshed_at_utc: scanned, drive_url: safeDriveLink(item.webViewLink, token),
+        metadata_refreshed_at_utc: scanned,
         sha256_checksum: item.sha256Checksum ?? null });
       progress.files = rows.length;
     });
@@ -249,7 +247,6 @@ const metadataColumns = [
   "created_at_utc",
   "modified_at_utc",
   "metadata_refreshed_at_utc",
-  "drive_url",
   "sha256_checksum",
 ] as const;
 const metadataLiteral = (value: string | number | null) =>
@@ -276,7 +273,7 @@ export async function publishNativeMetadata(
     file_id VARCHAR, source_folder_id VARCHAR, source_folder VARCHAR, relative_path VARCHAR,
     file_name VARCHAR, parent_folder_id VARCHAR, size_bytes BIGINT, mime_type VARCHAR,
     created_at_utc TIMESTAMP, modified_at_utc TIMESTAMP, metadata_refreshed_at_utc TIMESTAMP,
-    drive_url VARCHAR, sha256_checksum VARCHAR
+    sha256_checksum VARCHAR
   );`
   );
   try {
@@ -311,8 +308,8 @@ export async function publishNativeMetadata(
 }
 
 export async function resolveNativeLandingRoot(token: string): Promise<NativeLandingFolder> {
-  const projects = await findFoldersByName(DRIVE_ROOT, "root", token);
-  if (projects.length !== 1) throw new Error(`Project folder '${DRIVE_ROOT}' must be unambiguous.`);
+  const projects = await findFoldersByName(LAKEHOUSE_ROOT, "root", token);
+  if (projects.length !== 1) throw new Error(`Project folder '${LAKEHOUSE_ROOT}' must be unambiguous.`);
   const roots = await findFoldersByName("01_landing", projects[0].id, token);
   if (roots.length !== 1)
     throw new Error("Native Landing folder '01_landing' must be unambiguous.");
@@ -351,7 +348,7 @@ export async function listNativeFolder(
       result.push({ ...file, parentId: folder.id });
     }
     next = page.nextPageToken;
-    if (next && seenPages.has(next)) throw new Error("Drive repeated a native folder page token.");
+    if (next && seenPages.has(next)) throw new Error("The R2 index repeated a native folder page token.");
     if (next) seenPages.add(next);
   } while (next);
   await verifyNativeFolder(folder, folders, rootId, token, isCurrent);
@@ -389,34 +386,9 @@ async function verifyProjectParent(
   isCurrent: () => boolean,
   signal?: AbortSignal
 ): Promise<void> {
-  const matches = await findFoldersByName(DRIVE_ROOT, "root", token, undefined, signal);
+  const matches = await findFoldersByName(LAKEHOUSE_ROOT, "root", token, undefined, signal);
   if (!isCurrent() || matches.length !== 1 || matches[0].id !== projectId) {
     throw new Error("Native Landing project location changed. Refresh before browsing it.");
-  }
-}
-
-export function safeDriveLink(link: string | undefined, token: string): string | null {
-  if (!link) return null;
-  try {
-    const url = new URL(link);
-    if (
-      url.protocol !== "https:" ||
-      url.username ||
-      url.password ||
-      url.port ||
-      !["drive.google.com", "drive.usercontent.google.com", "docs.google.com"].includes(
-        url.hostname
-      ) ||
-      (token && decodeURIComponent(url.toString()).includes(token))
-    )
-      return null;
-    for (const name of url.searchParams.keys()) {
-      if (/^(?:access_token|oauth_token|id_token|token|code|key|authorization)$/i.test(name))
-        return null;
-    }
-    return url.toString();
-  } catch {
-    return null;
   }
 }
 
@@ -478,23 +450,6 @@ export async function freshNativeFile(
   return { ...fresh, parentId: selected.parentId };
 }
 
-export function nativeDriveLink(
-  file: NativeLandingFile,
-  token: string,
-  action: "open" | "download"
-): string {
-  if (action === "download") {
-    if (file.capabilities?.canDownload !== true)
-      throw new Error("Drive does not permit this file to be downloaded.");
-    const download = safeDriveLink(file.webContentLink, token);
-    if (!download) throw new Error("Drive did not provide a safe managed download link.");
-    return download;
-  }
-  const returned = safeDriveLink(file.webViewLink, token);
-  if (returned) return returned;
-  throw new Error("Drive did not provide a safe view link.");
-}
-
 export type NativePreviewFormat = "csv" | "json" | "jsonl" | "parquet";
 const activeNativePreviews = new WeakMap<
   object,
@@ -552,7 +507,6 @@ export async function disposeAllNativePreviews(): Promise<void> {
 export function nativePreviewFormat(file: NativeLandingFile): NativePreviewFormat | null {
   if (
     file.mimeType === NATIVE_FOLDER_MIME ||
-    file.mimeType === NATIVE_SHORTCUT_MIME ||
     file.capabilities?.canDownload !== true ||
     !file.size ||
     file.size > NATIVE_PREVIEW_LIMIT_BYTES ||
@@ -577,7 +531,7 @@ export async function previewNativeFile(
   rootId: string,
   token: string,
   isCurrent: () => boolean,
-  budget: DriveDownloadBudget
+  budget: DownloadBudget
 ): Promise<string> {
   const db = session.local.db;
   if (!session.isOpen || typeof session.onClose !== "function")
@@ -586,17 +540,17 @@ export async function previewNativeFile(
   const format = nativePreviewFormat(before);
   if (!format)
     throw new Error(
-      "Preview requires a supported file of at most 8 MiB with a verifiable Drive SHA-256. Open in Drive instead."
+      "Preview requires a supported file of at most 8 MiB with a verifiable SHA-256. Open it from R2 instead."
     );
   budget.reserve(before.size!, before.name);
-  const bytes = await fetchDriveFileBuffer(before.id, token, NATIVE_PREVIEW_LIMIT_BYTES);
+  const bytes = await fetchObjectBuffer(before.id, token, NATIVE_PREVIEW_LIMIT_BYTES);
   if (!isCurrent()) throw new Error("Native Landing preview was superseded.");
   budget.consume(bytes.byteLength, before.name);
   if (
     bytes.byteLength !== before.size ||
     (await sha256Hex(bytes)).toLowerCase() !== before.sha256Checksum!.toLowerCase()
   ) {
-    throw new Error("Native Landing bytes do not match Drive metadata.");
+    throw new Error("Native Landing bytes do not match the R2 index metadata.");
   }
   const after = await freshNativeFile(selected, folders, rootId, token, isCurrent);
   if (

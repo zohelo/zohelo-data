@@ -4,7 +4,7 @@
  * The app keeps its token-based flow, with a fixed token that only means "signed in through Access".
  */
 
-export const DRIVE_ROOT = "zohelo-data";
+export const LAKEHOUSE_ROOT = "zohelo-data";
 export const LAKEHOUSE_LAYERS = [
   "01_landing",
   "02_bronze",
@@ -21,10 +21,6 @@ export const getStoredToken = (): string | null => (signedOut ? null : ACCESS_SE
 
 export const isStoredTokenExpired = (_token: string): boolean => false;
 
-export const setStoredToken = (_token: string | null, _expiresAt?: number): void => {
-  signedOut = false;
-};
-
 export const clearStoredToken = (): void => {
   signedOut = true;
 };
@@ -36,7 +32,7 @@ export const clearStoredTokenIfCurrent = (token: string): boolean => {
 };
 
 /** "Sign in": the Access session already exists; a reload renews it if it has expired. */
-export const requestGoogleAccessToken = async (_options?: { promptConsent?: boolean }): Promise<string> => {
+export const requestAccessSession = async (): Promise<string> => {
   if (signedOut) {
     signedOut = false;
     const probe = await fetch("/api/health", { redirect: "manual" }).catch(() => null);

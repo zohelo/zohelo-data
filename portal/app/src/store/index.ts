@@ -10,7 +10,7 @@ import { createFileSystemSlice } from "./slices/fileSystemSlice";
 import { createProfileSlice } from "./slices/profileSlice";
 import { createSessionSlice } from "./slices/sessionSlice";
 import { createDashboardSlice } from "./slices/dashboardSlice";
-import { createGoogleDriveSlice } from "./slices/googleDriveSlice";
+import { createLakehouseSlice } from "./slices/lakehouseSlice";
 import { saveWorkspace } from "@/services/persistence/repositories/workspaceRepository";
 import {
   saveProviderConfig,
@@ -33,7 +33,7 @@ const storeCreator: StateCreator<DuckStoreState, [["zustand/devtools", never]]> 
   ...createProfileSlice(...a),
   ...createSessionSlice(...a),
   ...createDashboardSlice(...a),
-  ...createGoogleDriveSlice(...a),
+  ...createLakehouseSlice(...a),
 });
 
 export const useDuckStore = create<DuckStoreState>()(
