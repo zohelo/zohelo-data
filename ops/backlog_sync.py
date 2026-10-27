@@ -695,6 +695,14 @@ query($project: ID!, $after: String) {
 }
 """
 
+ITEM_OF_ISSUE = """
+query($issue: ID!) {
+  node(id: $issue) {
+    ... on Issue { projectItems(first: 20, includeArchived: true) { nodes { id project { id } } } }
+  }
+}
+"""
+
 ADD_ITEM = """
 mutation($project: ID!, $content: ID!) {
   addProjectV2ItemById(input: {projectId: $project, contentId: $content}) { item { id } }
@@ -775,8 +783,17 @@ class Board:
         item = self.items.get(node_id) if node_id else None
         if item is None:
             self.to_add += 1
-            added = self.mutate(ADD_ITEM, {"project": self.project, "content": node_id}) if node_id else {}
-            item = {"id": added.get("addProjectV2ItemById", {}).get("item", {}).get("id"), "values": {}}
+            try:
+                added = self.mutate(ADD_ITEM, {"project": self.project, "content": node_id}) if node_id else {}
+                item_id = added.get("addProjectV2ItemById", {}).get("item", {}).get("id")
+            except RuntimeError as exc:
+                if "already exists" not in str(exc):
+                    raise
+                # An archived item is not in BOARD_QUERY's list; find it through the issue.
+                self.to_add -= 1
+                found = self.graphql(self.token, ITEM_OF_ISSUE, {"issue": node_id})["node"]["projectItems"]["nodes"]
+                item_id = next((n["id"] for n in found if n["project"]["id"] == self.project), None)
+            item = {"id": item_id, "values": {}}
             if node_id:
                 self.items[node_id] = item
         for name, wanted in fields.items():
