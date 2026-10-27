@@ -59,18 +59,38 @@ jobs:
       # Token of the zohelo-automation GitHub App for the Projects board (ops/project.py).
       - name: Project token
         id: project
-        if: inputs.script == 'project' || inputs.script == 'tracker'
+        if: inputs.script == 'project' || inputs.script == 'tracker' || inputs.script == 'backlog_sync'
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
         with:
           client-id: ${{ vars.ORG_BOT_CLIENT_ID }}  # the app's Client ID (organisation variable)
           private-key: ${{ secrets.ORG_BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}  # this repository only
+          # this repository only; backlog_sync plans and syncs the issues of all three repositories
+          repositories: ${{ inputs.script == 'backlog_sync' && 'zohelo-data,zohelo-bi,zohelo' || github.event.repository.name }}
           # write only for the modes that change the board
-          permission-organization-projects: ${{ startsWith(inputs.args, 'status') && 'write' || 'read' }}
-          # project: reads the Work log comment; tracker: replaces the tracker issue's body
-          permission-issues: ${{ inputs.script == 'tracker' && 'write' || 'read' }}
+          permission-organization-projects: ${{ (startsWith(inputs.args, 'status') || (inputs.script == 'backlog_sync' && startsWith(inputs.args, 'apply'))) && 'write' || 'read' }}
+          # project: reads the Work log comment; tracker: replaces the tracker issue's body;
+          # backlog_sync: reads the issues for plan, writes them for apply
+          permission-issues: ${{ (inputs.script == 'tracker' || (inputs.script == 'backlog_sync' && startsWith(inputs.args, 'apply'))) && 'write' || 'read' }}
+          permission-contents: read  # backlog_sync: checkout of zohelo-bi and zohelo
           permission-actions: read  # tracker: the latest Silver/Gold build
+      # backlog_sync reads .github/backlog of the other two repositories (ops/backlog_sync.py, _repos/*).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        if: inputs.script == 'backlog_sync'
+        with:
+          repository: zohelo/zohelo-bi
+          ref: main
+          path: _repos/zohelo-bi
+          token: ${{ steps.project.outputs.token }}
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        if: inputs.script == 'backlog_sync'
+        with:
+          repository: zohelo/zohelo
+          ref: main
+          path: _repos/zohelo
+          token: ${{ steps.project.outputs.token }}
+          persist-credentials: false
       - name: "ops/${{ inputs.script }}.py"
         env:
           GH_PROJECT_TOKEN: ${{ steps.project.outputs.token }}
