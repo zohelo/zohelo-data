@@ -10,10 +10,14 @@ updates:
   - package-ecosystem: pip
     directory: "/"
     schedule: {interval: weekly, day: monday}
+    ignore:  # majors are upgraded deliberately; security updates are unaffected
+      - {dependency-name: "*", update-types: ["version-update:semver-major"]}
     groups:
-      python: {patterns: ["*"]}
+      python: {patterns: ["*"], update-types: [minor, patch]}
   - package-ecosystem: npm
     directory: "/portal/app"
     schedule: {interval: weekly, day: monday}
+    ignore:  # majors are upgraded deliberately; security updates are unaffected
+      - {dependency-name: "*", update-types: ["version-update:semver-major"]}
     groups:
-      portal-app: {patterns: ["*"]}
+      portal-app: {patterns: ["*"], update-types: [minor, patch]}
