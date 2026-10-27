@@ -34,7 +34,6 @@ on:
           - "archive: move Bronze-loaded Landing"
           - "archive: apply retention"
           - "full dataflow: landing → bronze → silver → gold → portal"
-          - "silver/gold: promote"
           - "silver/gold: build models"
           - "serving: refresh portal index"
           - "scheduler: dispatch due runs"
@@ -268,23 +267,8 @@ jobs:
           source: ${{ inputs.source }}
           activity: archive.prune
 
-  silver-gold-promote:
-    needs: [plan, archive-prune]
-    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'silver_gold.promote') }}"
-    name: silver_gold.promote
-    runs-on: ubuntu-24.04
-    timeout-minutes: 120
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/activity
-        with:
-          source: ${{ inputs.source }}
-          activity: silver_gold.promote
-
   silver-gold-build:
-    needs: [plan, silver-gold-promote]
+    needs: [plan, archive-prune]
     if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'silver_gold.build') }}"
     name: silver_gold.build
     # One model build at a time across all sources (each source's full dataflow ends with one, #878).
@@ -323,7 +307,7 @@ jobs:
     # A failed or cancelled run opens (or comments on) an `alert` issue, so the owner gets an
     # e-mail. Cancelled counts: a job killed from outside (exit 143) ends as cancelled.
     needs: [scheduler, plan, landing-inspect, landing-extract, landing-verify, bronze-load, bronze-verify,
-            landing-archive, archive-prune, silver-gold-promote, silver-gold-build, serving-refresh-index]
+            landing-archive, archive-prune, silver-gold-build, serving-refresh-index]
     # A model build replaced in its queue by a newer one (concurrency zohelo-pipeline-build) ends as
     # cancelled by design and is not an alert; a failed build is (#878 review).
     if: >-
@@ -340,7 +324,6 @@ jobs:
       needs.bronze-verify.result == 'cancelled' ||
       needs.landing-archive.result == 'cancelled' ||
       needs.archive-prune.result == 'cancelled' ||
-      needs.silver-gold-promote.result == 'cancelled' ||
       needs.serving-refresh-index.result == 'cancelled')
     name: notify
     runs-on: ubuntu-24.04

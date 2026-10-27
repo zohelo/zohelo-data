@@ -30,7 +30,6 @@ ROOT_ALLOWED = {
     "README.md",
     "AGENTS.md",
     "CLAUDE.md",
-    "GEMINI.md",
     ".gitignore",
     ".gitleaks.toml",
     ".gitattributes",

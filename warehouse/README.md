@@ -11,7 +11,9 @@ models/gold/                      conformed dimensions and facts
 models/poc/                       Gold dimensional model proof of concept, namespace poc (docs/gold-poc.md)
 semantic_models/                  MetricFlow semantic models and metrics
 dimensions/                       dimension registry (definitions-as-code, draft; docs/model.md)
-macros/  seeds/  snapshots/  analyses/
+macros/, tests/                   shared macros; singular data tests
+entity/, entity.py                per-entity Silver SQL applied by the Eurostat and BDL loaders
+build.py, changed.py, catalog.py  build engine: changed-only build, catalog publication
 warehouse.yaml                    activities the Pipeline may run
 ```
 
@@ -58,9 +60,9 @@ incremental, or when a ceiling above 1M names no `exception:` issue. After a pro
 and reports them as `row_ceilings` in the build annotation: above the ceiling the
 annotation is a warning; above twice the ceiling the build fails.
 
-Target `trial` writes every model to the scratch namespace `zz_dbt_trial`. Sources not
-yet modelled (GUS DBW, dane.gov.pl, GLEIF, MF Biała Lista) are still published by
-`passthrough/` as copies / zero-copy references of Bronze (`silver_gold.promote`).
+Target `trial` writes every model to the scratch namespace `zz_dbt_trial`. Sources without
+Silver models (GUS DBW, dane.gov.pl, GLEIF, MF Biała Lista) exist only in Bronze until they
+are modelled; the retired pass-through copies (#835) are in git history.
 
 Eurostat and GUS BDL observations are not dbt models. Their loaders write Silver per entity
 (design #875): `warehouse/entity/<table>.sql` is applied to each dataset / subgroup right after

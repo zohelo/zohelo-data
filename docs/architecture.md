@@ -12,7 +12,7 @@ decision.
 | Source configuration | `ingestion/sources/<source_system>.yaml` (extraction strategy, authorized activities) | — |
 | Source → Landing | `ingestion/to_landing/<source_system>/`, or the shared pattern named by `extraction.kind` (`ingestion/to_landing/patterns/`) | `zohelo-landing-prod/01_landing/` |
 | Landing → Bronze | `ingestion/to_bronze/<source_system>/` | Iceberg `bronze`, `05_archive/` |
-| Shared ingestion code | `ingestion/common/` (R2 access, Bronze file helpers, reporting, lineage, archive, retention, scheduler); retired code `ingestion/legacy/` | — |
+| Shared ingestion code | `ingestion/common/` (R2 access, Bronze file helpers, reporting, lineage, archive, retention, scheduler) | — |
 | Bronze → Silver → Gold, dimensional model, semantic layer | `warehouse/` (`warehouse.yaml`) | Iceberg `silver`, `gold` |
 | Data catalog and lineage | generated from `warehouse/`, shown in the portal | — |
 | Serving | `portal/` (`app/` portal, `worker/` R2 read API, `publish_index.py`, `portal.yaml`) | `_portal_index/` |
@@ -43,8 +43,9 @@ rules in [landing.md](landing.md); per-source routes in [sources.md](sources.md)
 
 Today's Silver and Gold: the dbt project in `warehouse/models/` builds them for NBP,
 TERYT, PRG, World Bank WDI, Eurostat and GUS BDL (see [model.md](model.md), "Built").
-Sources not yet rebuilt (GUS DBW, dane.gov.pl, GLEIF, MF Biała Lista) are still
-published as pass-through copies of Bronze (`warehouse/passthrough/`) until modelled.
+Sources not yet rebuilt (GUS DBW, dane.gov.pl, GLEIF, MF Biała Lista) are in Bronze only
+until modelled; the pass-through copies of the retired `silver_gold.promote` (#835) are
+removed with Ops `retire_tables`.
 
 ## Tools
 
