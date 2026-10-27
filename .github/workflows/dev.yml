@@ -37,6 +37,10 @@ jobs:
     name: check
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -49,6 +53,10 @@ jobs:
         run: |
           python -m pip install --require-hashes -r requirements.txt
           python -m pip install ruff==0.16.8 yamllint==1.38.0
+      - name: Linked task
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python -m ops.backlog_sync pr-check
       - name: Quality rules (docs/quality.md)
         env:
           PYTHONPATH: .
