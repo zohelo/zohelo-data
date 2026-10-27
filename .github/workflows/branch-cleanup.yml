@@ -1,0 +1,58 @@
+name: Branch cleanup
+
+# Deletes a pull request's branch when the pull request is merged, and once a week sweeps any
+# branch whose last commit is the head of a merged pull request and that has no open pull request.
+# A branch with commits added after the merge, main, and branches of open pull requests are never
+# touched. Replaces GitHub's "Automatically delete head branches" setting (owner, 27 Oct 2026).
+
+on:
+  pull_request:
+    types: [closed]
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: branch-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    if: github.event_name != 'pull_request' || (github.event.pull_request.merged && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Delete merged branches
+        run: |
+          set -euo pipefail
+          delete() {
+            if gh api -X DELETE "repos/$REPO/git/refs/heads/$1" >/dev/null; then
+              echo "::notice title=branch deleted::$1"
+            else
+              echo "::warning title=branch not deleted::$1"
+            fi
+          }
+          if [ -n "$HEAD_REF" ]; then
+            tip=$(gh api "repos/$REPO/branches/$HEAD_REF" --jq .commit.sha 2>/dev/null || true)
+            if [ "$HEAD_REF" != main ] && [ "$tip" = "$HEAD_SHA" ]; then delete "$HEAD_REF"; else echo "::notice title=kept::$HEAD_REF (gone, main, or has newer commits)"; fi
+            exit 0
+          fi
+          open=$(gh api "repos/$REPO/pulls?state=open&per_page=100" --paginate --jq '.[].head.ref')
+          merged=$(gh api "repos/$REPO/pulls?state=closed&per_page=100" --paginate \
+            --jq '.[] | select(.merged_at != null and .head.repo.full_name == $ENV.REPO) | "\(.head.ref) \(.head.sha)"')
+          count=0
+          while read -r name sha; do
+            [ "$name" = main ] && continue
+            grep -qxF -- "$name" <<<"$open" && continue
+            if grep -qxF -- "$name $sha" <<<"$merged"; then delete "$name"; count=$((count + 1)); fi
+          done < <(gh api "repos/$REPO/branches?per_page=100" --paginate --jq '.[] | "\(.name) \(.commit.sha)"')
+          echo "::notice title=sweep::$count merged branch(es) deleted"

@@ -8,6 +8,7 @@
 | **Ops · ad-hoc** (`ops.yml`) | one standing task from `ops/` | manual, `main` only |
 | **Dev · branch runs** (`dev.yml`) | one `dev/` script on a feature branch (trials, tests); deleted before merge | manual, never `main` |
 | **Deploy portal** (`deploy-portal.yml`) | build and deploy `portal/app` and `portal/worker` | push to `main` changing them, or manual |
+| **Branch cleanup** (`branch-cleanup.yml`) | deletes a merged pull request's branch; weekly sweep of merged branches | pull request merged, Monday, or manual |
 
 ## Activities
 

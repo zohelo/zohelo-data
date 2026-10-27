@@ -36,7 +36,7 @@ ROOT_ALLOWED = {
     ".python-version",
     ".node-version",
 }
-WORKFLOWS = ["deploy-portal.yml", "dev.yml", "ops.yml", "pipeline.yml"]
+WORKFLOWS = ["branch-cleanup.yml", "deploy-portal.yml", "dev.yml", "ops.yml", "pipeline.yml"]
 FORBIDDEN_SUFFIXES = {
     ".parquet",
     ".ipynb",
