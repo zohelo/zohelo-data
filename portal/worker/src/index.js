@@ -44,32 +44,42 @@ function b64urlJson(part) {
   return JSON.parse(new TextDecoder().decode(fromBase64Url(part)));
 }
 async function accessEmail(request, env) {
+  // Returns {email, why}: why says what was missing when there is no email (shown on 401).
   const direct=(request.headers.get("cf-access-authenticated-user-email")||"").trim().toLowerCase();
-  if (direct) return direct;
+  if (direct) return {email:direct, why:"identity header"};
   const cookie=/(?:^|;\s*)CF_Authorization=([^;]+)/.exec(request.headers.get("cookie")||"");
-  const token=request.headers.get("cf-access-jwt-assertion")||(cookie?cookie[1]:"");
+  const fromHeader=request.headers.get("cf-access-jwt-assertion")||"";
+  const token=fromHeader||(cookie?cookie[1]:"");
   const team=(env.ACCESS_TEAM_DOMAIN||"").trim();
-  if (!token || !team) return "";
-  const parts=token.split(".");
-  if (parts.length!==3) return "";
-  const header=b64urlJson(parts[0]);
-  const payload=b64urlJson(parts[1]);
-  if (!accessKeys || accessKeys.expires<Date.now()) {
-    const r=await fetch("https://"+team+"/cdn-cgi/access/certs");
-    if (!r.ok) return "";
-    accessKeys={expires:Date.now()+3600000,keys:(await r.json()).keys||[]};
+  const seen="identity header: no; token header: "+(fromHeader?"yes":"no")+"; cookie: "+(cookie?"yes":"no")+"; team domain: "+(team||"not set");
+  if (!token) return {email:"", why:"no Access token ("+seen+")"};
+  if (!team) return {email:"", why:"team domain not configured ("+seen+")"};
+  try {
+    const parts=token.split(".");
+    if (parts.length!==3) return {email:"", why:"malformed token ("+seen+")"};
+    const header=b64urlJson(parts[0]);
+    const payload=b64urlJson(parts[1]);
+    if (!accessKeys || accessKeys.expires<Date.now()) {
+      const r=await fetch("https://"+team+"/cdn-cgi/access/certs");
+      if (!r.ok) return {email:"", why:"cannot read Access keys: HTTP "+r.status};
+      accessKeys={expires:Date.now()+3600000,keys:(await r.json()).keys||[]};
+    }
+    const jwk=accessKeys.keys.find(k=>k.kid===header.kid);
+    if (!jwk) return {email:"", why:"unknown token key "+header.kid};
+    const key=await crypto.subtle.importKey("jwk",{kty:jwk.kty,n:jwk.n,e:jwk.e,alg:"RS256",ext:true},{name:"RSASSA-PKCS1-v1_5",hash:"SHA-256"},false,["verify"]);
+    const valid=await crypto.subtle.verify("RSASSA-PKCS1-v1_5",key,fromBase64Url(parts[2]),new TextEncoder().encode(parts[0]+"."+parts[1]));
+    if (!valid) return {email:"", why:"token signature invalid"};
+    if (!payload.exp || payload.exp*1000<Date.now()) return {email:"", why:"token expired"};
+    if (payload.iss && payload.iss!=="https://"+team) return {email:"", why:"token issuer "+payload.iss+" is not https://"+team};
+    const email=typeof payload.email==="string"?payload.email.toLowerCase():"";
+    return {email, why:email?"token":"token has no email"};
+  } catch (error) {
+    return {email:"", why:"token check failed: "+(error instanceof Error?error.message:String(error))};
   }
-  const jwk=accessKeys.keys.find(k=>k.kid===header.kid);
-  if (!jwk) return "";
-  const key=await crypto.subtle.importKey("jwk",jwk,{name:"RSASSA-PKCS1-v1_5",hash:"SHA-256"},false,["verify"]);
-  const valid=await crypto.subtle.verify("RSASSA-PKCS1-v1_5",key,fromBase64Url(parts[2]),new TextEncoder().encode(parts[0]+"."+parts[1]));
-  if (!valid || !payload.exp || payload.exp*1000<Date.now()) return "";
-  if (payload.iss && payload.iss!=="https://"+team) return "";
-  return typeof payload.email==="string"?payload.email.toLowerCase():"";
 }
 async function authorize(request, env) {
-  const email=await accessEmail(request, env);
-  if (!email) return { ok:false, status:401, message:"Sign in required." };
+  const {email, why}=await accessEmail(request, env);
+  if (!email) return { ok:false, status:401, message:"Sign in required: "+why+"." };
   const allowed=(env.PORTAL_SIGNIN_ALLOWED_EMAILS||"").split(",").map(e=>e.trim().toLowerCase()).filter(Boolean);
   return allowed.includes(email)
     ? { ok:true, status:200, message:"ok" }
