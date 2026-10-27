@@ -30,7 +30,7 @@ from ingestion.common.r2 import req
 from ingestion.common.report import annotate
 
 CONFIG = Path(__file__).resolve().parent / "scheduler_worker" / "wrangler.toml"
-WRANGLER = ["npx", "--yes", "wrangler@4.146.0"]
+WRANGLER = ["npx", "--yes", "wrangler@4.150.0"]
 # wrangler and its unpinned npm dependencies see only what they need, never the job's
 # lakehouse or GitHub credentials (quality review 16 Oct).
 WRANGLER_ENV = (
