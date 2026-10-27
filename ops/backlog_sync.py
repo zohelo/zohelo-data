@@ -1143,5 +1143,17 @@ def main() -> int:
     return validate(roots, args.strict) if args.mode == "validate" else show(roots, args.key)
 
 
+def run() -> int:
+    """main() with an uncaught failure published as an error annotation (job logs are not readable by AI sessions)."""
+    try:
+        return main()
+    except Exception as exc:
+        if os.environ.get("GITHUB_ACTIONS"):
+            from ingestion.common.report import annotate
+
+            annotate("error", "backlog_sync failed", {"error": type(exc).__name__, "detail": str(exc)[:3000]})
+        raise
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run())
