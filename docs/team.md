@@ -30,6 +30,16 @@ its backlog and its own Developer at once: one zohelo-<product>, one Developer. 
   `Domain: <domain>.` Schedules are only a safety net. Overlapping runs of one member split the work through the claim
   labels (`in-progress` for Tasks, `reviewing` for PRs). Do not start a member only to acknowledge something, and start
   the same member at most 3 times in one run.
+- **One run per member at a time.** Before every `fire_trigger`, call `list_triggers` and read that member's
+  `last_run`: when its status is `PENDING` (a run is in progress) and `fired_at` is less than 3 hours ago, do not start
+  it. Post the hand-over comment only; the running run or the next one reads it from the issue or PR. A second run of
+  a busy member only re-reads the same queue, skips it through the claim labels and spends the shared usage limit and
+  GitHub's content-creation rate limit (28 Oct: up to six Architect and four Product Owner runs at once, Developer runs
+  stopped on USAGE_LIMIT_REACHED, and runs were blocked by GitHub's secondary rate limit).
+- **GitHub's content limit is shared.** All members write as one account, and GitHub blocks it from creating issues,
+  comments and PRs for a while when too much is written per hour (403 "secondary rate limit"). Write one comment where
+  one is enough (no acknowledgements, no repeated owner questions). On that 403, stop writing, retry once after 15
+  minutes, and if it is still blocked end the run with the summary as the final message only; the next run posts it.
 - **GitHub is the shared memory.** Work lives in issues and PRs; hand-overs are comments on the issue or PR they are
   about, plus a start message. Three standing issues in zohelo-data: **Team log** #2073 (every member ends its run by
   posting its summary there), **Product inbox** #2074 (proposals to the Product Owner, one comment each), **Weekly
