@@ -2261,7 +2261,7 @@ sources:
   name: Portal Statystyczny ZUS
   short_name: ZUS statistical portal
   provider: Zakład Ubezpieczeń Społecznych (ZUS)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland and voivodeships, table-dependent
