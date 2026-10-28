@@ -127,8 +127,12 @@ sources:
     limits: Rate limiting is documented, but no numeric threshold was published on the opened page.
   licence:
     status: open-conditional
-    notes: Commercial use is permitted with attribution unless dataset metadata identifies additional or third-party
-      restrictions.
+    notes: 'Terms: OECD Terms and Conditions (updated 15 Mar 2024),
+      https://www.oecd.org/en/about/terms-conditions.html, section on Data: users may extract, download, copy,
+      adapt, print, distribute, share and embed Data for any purpose, commercial use and modification included,
+      subject to restrictions stated for a dataset and to third-party rights (the OECD does not warrant it owns
+      all Data). Attribution: "OECD (<year>), <dataset name>, OECD Data Explorer, <DOI or URL> (accessed on
+      <date>)" or the citation given with the dataset.'
   updates: Series schedules vary. New dataflow versions may make non-backward-compatible structural changes.
   ingestion:
     history: Snapshot selected dataflows, structures, codelists and attributes by version.
@@ -141,7 +145,10 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Dataset-level rights scan, Coverage matrix beyond OECD membership, Handle versioned structure breaks]
+    blockers:
+    - 'Dataset-level rights scan (third-party restrictions in dataset metadata)'
+    - 'Coverage matrix beyond OECD membership'
+    - 'Handle versioned structure breaks'
     references:
     - https://www.oecd.org/en/data/insights/data-explainers/2024/09/api.html
     - https://www.oecd.org/en/about/terms-conditions.html
