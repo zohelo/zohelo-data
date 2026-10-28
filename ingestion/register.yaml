@@ -929,7 +929,12 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: unresolved
-    notes: Confirm WTO data-specific terms, attribution and third-party ownership before commercial redistribution.
+    notes: 'No terms found for the WTO Stats portal or its API (28 Oct 2026): https://www.wto.org/english/res_e/statis_e/statis_e.htm
+      and https://apiportal.wto.org/ ("free"; footer "Copyright and permissions" page not retrievable) state no licence.
+      The only explicit WTO data terms found are for a different product (Tariff and Trade Data, https://ttd.wto.org/docs/Terms_of_Use_WTO_Tariff_and_Trade_Data.pdf:
+      non-commercial use, WTO acknowledged as source, user disclaimer, mass downloads prohibited without permission).
+      Owner decision needed (noted on the Epic issue). Attribution if allowed: "Source: World Trade Organization, WTO
+      Stats".'
   updates: Release calendars and revisions vary; no common cadence found.
   ingestion:
     history: Snapshot named datasets with metadata and classifications.
@@ -943,12 +948,14 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Locate current official API documentation
-    - Resolve reuse terms
-    - Confirm dataset lineage
+    - 'Reuse terms unresolved: no published terms for WTO Stats; related WTO data terms are non-commercial (owner decision)'
+    - 'Locate current official API documentation'
+    - 'Confirm dataset lineage'
     references:
     - https://timeseries.wto.org/
     - https://www.wto.org/english/res_e/statis_e/statis_e.htm
+    - https://apiportal.wto.org/
+    - https://ttd.wto.org/docs/Terms_of_Use_WTO_Tariff_and_Trade_Data.pdf
 - id: GL-021
   name: UNCTAD Data Hub
   short_name: UNCTAD Data Hub
