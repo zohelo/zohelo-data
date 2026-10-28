@@ -25,12 +25,12 @@ select
     status_code,
     array_to_string(list_filter(
         list_zip(string_split(series_dimensions, ','), string_split(series_key, ',')),
-        x -> x[1] not in ('freq', 'unit', 'geo')
-    ).apply(x -> x[1]), ',') as breakdown_dimensions,
+        lambda x: x[1] not in ('freq', 'unit', 'geo')
+    ).apply(lambda x: x[1]), ',') as breakdown_dimensions,
     array_to_string(list_filter(
         list_zip(string_split(series_dimensions, ','), string_split(series_key, ',')),
-        x -> x[1] not in ('freq', 'unit', 'geo')
-    ).apply(x -> x[2]), ',') as breakdown_codes,
+        lambda x: x[1] not in ('freq', 'unit', 'geo')
+    ).apply(lambda x: x[2]), ',') as breakdown_codes,
     raw_sha256,
     source_version
 from bronze

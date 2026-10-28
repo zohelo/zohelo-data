@@ -63,7 +63,7 @@ silver as (
                     case when coalesce(r.m4, false) then cast(v.n4 as varchar) end,
                     case when coalesce(r.m5, false) then cast(v.n5 as varchar) end
                 ],
-                x -> x is not null
+                lambda x: x is not null  -- noqa: RF02
             ),
             ' / '
         ) as measure_label,
@@ -75,7 +75,7 @@ silver as (
                 case when coalesce(r.m4, false) then null else cast(v.n4 as varchar) end,
                 case when coalesce(r.m5, false) then null else cast(v.n5 as varchar) end
             ],
-            x -> x is not null
+            lambda x: x is not null  -- noqa: RF02
         ) as labels
     from {{ source('silver_entities', 'bdl_observations') }} as o
     inner join blocks as b on o.subgroup_id = b.subgroup_id
@@ -102,7 +102,7 @@ kept as (
             when 'P2137'
                 then
                     (unit_level <= 5 or year >= 2015)
-                    and len(list_filter(labels, x -> lower(x) not in ('ogółem', 'mężczyźni', 'kobiety'))) = 0
+                    and len(list_filter(labels, lambda x: lower(x) not in ('ogółem', 'mężczyźni', 'kobiety'))) = 0
             else unit_level <= 5
         end
 ),
@@ -155,19 +155,19 @@ select
     make_date(k.year, 1, 1) as date_key,
     cast(k.year as varchar) as period_label,
     cast(to_json(map(
-        list_transform(generate_series(1, len(k.labels)), i -> 'n' || i),
+        list_transform(generate_series(1, len(k.labels)), lambda i: 'n' || i),  -- noqa: RF03
         k.labels
     )) as varchar) as breakdown_json,
     cast(to_json(map(
-        list_transform(generate_series(1, len(k.labels)), i -> 'n' || i),
+        list_transform(generate_series(1, len(k.labels)), lambda i: 'n' || i),  -- noqa: RF03
         k.labels
     )) as varchar) as breakdown_label_json,
     case
-        when list_contains(list_transform(k.labels, x -> lower(x)), 'mężczyźni') then 'M'
-        when list_contains(list_transform(k.labels, x -> lower(x)), 'kobiety') then 'F'
-        when list_contains(list_transform(k.labels, x -> lower(x)), 'ogółem') then 'T'
+        when list_contains(list_transform(k.labels, lambda x: lower(x)), 'mężczyźni') then 'M'  -- noqa: RF03
+        when list_contains(list_transform(k.labels, lambda x: lower(x)), 'kobiety') then 'F'  -- noqa: RF03
+        when list_contains(list_transform(k.labels, lambda x: lower(x)), 'ogółem') then 'T'  -- noqa: RF03
     end as sex_code,
-    len(list_filter(k.labels, x -> lower(x) <> 'ogółem')) = 0 as is_total,
+    len(list_filter(k.labels, lambda x: lower(x) <> 'ogółem')) = 0 as is_total,  -- noqa: RF03
     k.value,
     case when k.value_conflict then 'conflicting_values' else 'ok' end as observation_status_key,
     k.source_version,
