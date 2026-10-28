@@ -1,33 +1,33 @@
-kpi_key,source_system,measure_key_pattern,definition,priority
-population,eurostat,eurostat:DEMO_PJAN:NR,on 1 January,1
-population,eurostat,eurostat:DEMO_R_PJANAGGR3:NR,"on 1 January, NUTS",2
-population,world_bank_wdi,world_bank_wdi:SP.POP.TOTL,mid-year,3
-population,gus_bdl,gus_bdl:P2137:osoba,on 31 December,4
-population,gus_dbw,gus_dbw:581_57_93_4:%,on 31 December,5
-gdp_current_prices,eurostat,eurostat:NAMA_10_GDP:CP_MEUR:B1GQ,million EUR,1
-gdp_current_prices,world_bank_wdi,world_bank_wdi:NY.GDP.MKTP.CD,current US$,2
-gdp_per_capita,eurostat,eurostat:NAMA_10_PC:CP_EUR_HAB:B1GQ,EUR per inhabitant,1
-gdp_per_capita,world_bank_wdi,world_bank_wdi:NY.GDP.PCAP.CD,current US$,2
-gdp_volume_growth,eurostat,eurostat:NAMA_10_GDP:CLV_PCH_PRE:B1GQ,"chain-linked volumes, % change on previous period",1
-gdp_volume_growth,world_bank_wdi,world_bank_wdi:NY.GDP.MKTP.KD.ZG,annual %,2
-inflation,eurostat,eurostat:PRC_HICP_MANR:RCH_A,"HICP, annual rate of change, monthly",1
-inflation,world_bank_wdi,world_bank_wdi:FP.CPI.TOTL.ZG,"CPI, annual %",2
-unemployment_rate,eurostat,eurostat:UNE_RT_A:PC_ACT,"annual, 15-74",1
-unemployment_rate,eurostat,eurostat:UNE_RT_M:PC_ACT,"monthly, seasonally adjusted, 15-74",2
-unemployment_rate,world_bank_wdi,world_bank_wdi:SL.UEM.TOTL.ZS,ILO modelled estimate,3
-registered_unemployment_rate,gus_bdl,gus_bdl:P2392:%,"registered, end of year",1
-employment_rate,eurostat,eurostat:LFSI_EMP_A:PC_POP:EMP_LFS,20-64,1
-employment_rate,world_bank_wdi,world_bank_wdi:SL.EMP.TOTL.SP.ZS,"15+, ILO modelled",2
-life_expectancy,world_bank_wdi,world_bank_wdi:SP.DYN.LE00.IN,total,1
-net_migration,eurostat,eurostat:DEMO_GIND:%:CNMIGRAT,incl. statistical adjustment,1
-net_migration,world_bank_wdi,world_bank_wdi:SM.POP.NETM,,2
-live_births,eurostat,eurostat:DEMO_GIND:%:LBIRTH,,1
-live_births,gus_bdl,gus_bdl:P1873:%,,2
-deaths,eurostat,eurostat:DEMO_GIND:%:DEATH,,1
-average_gross_wage,gus_bdl,gus_bdl:P2497:%,,1
-dwellings_completed,gus_bdl,gus_bdl:P3824:%,,1
-area,gus_bdl,gus_bdl:P1410:%,ha in the source,1
-area,world_bank_wdi,world_bank_wdi:AG.LND.TOTL.K2,land area,2
-population_density,gus_bdl,gus_bdl:P2425:%,,1
-fx_rate,nbp,nbp:fx:A:mid,"NBP table A, mid",1
-gold_price,nbp,nbp:gold:price,"NBP fixing, 1000 fineness",1
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+population,eurostat,eurostat:DEMO_PJAN:NR,on 1 January,1,
+population,eurostat,eurostat:DEMO_R_PJANAGGR3:NR,"on 1 January, NUTS",2,
+population,world_bank_wdi,world_bank_wdi:SP.POP.TOTL,mid-year,3,
+population,gus_bdl,gus_bdl:P2137:osoba,on 31 December,4,
+population,gus_dbw,gus_dbw:581_57_93_4:%,on 31 December,5,
+gdp_current_prices,eurostat,eurostat:NAMA_10_GDP:CP_MEUR:B1GQ,million EUR,1,mln_eur
+gdp_current_prices,world_bank_wdi,world_bank_wdi:NY.GDP.MKTP.CD,current US$,2,usd
+gdp_per_capita,eurostat,eurostat:NAMA_10_PC:CP_EUR_HAB:B1GQ,EUR per inhabitant,1,eur_per_person
+gdp_per_capita,world_bank_wdi,world_bank_wdi:NY.GDP.PCAP.CD,current US$,2,usd_per_person
+gdp_volume_growth,eurostat,eurostat:NAMA_10_GDP:CLV_PCH_PRE:B1GQ,"chain-linked volumes, % change on previous period",1,
+gdp_volume_growth,world_bank_wdi,world_bank_wdi:NY.GDP.MKTP.KD.ZG,annual %,2,
+inflation,eurostat,eurostat:PRC_HICP_MANR:RCH_A,"HICP, annual rate of change, monthly",1,
+inflation,world_bank_wdi,world_bank_wdi:FP.CPI.TOTL.ZG,"CPI, annual %",2,
+unemployment_rate,eurostat,eurostat:UNE_RT_A:PC_ACT,"annual, 15-74",1,
+unemployment_rate,eurostat,eurostat:UNE_RT_M:PC_ACT,"monthly, seasonally adjusted, 15-74",2,
+unemployment_rate,world_bank_wdi,world_bank_wdi:SL.UEM.TOTL.ZS,ILO modelled estimate,3,
+registered_unemployment_rate,gus_bdl,gus_bdl:P2392:%,"registered, end of year",1,
+employment_rate,eurostat,eurostat:LFSI_EMP_A:PC_POP:EMP_LFS,20-64,1,
+employment_rate,world_bank_wdi,world_bank_wdi:SL.EMP.TOTL.SP.ZS,"15+, ILO modelled",2,
+life_expectancy,world_bank_wdi,world_bank_wdi:SP.DYN.LE00.IN,total,1,
+net_migration,eurostat,eurostat:DEMO_GIND:%:CNMIGRAT,incl. statistical adjustment,1,
+net_migration,world_bank_wdi,world_bank_wdi:SM.POP.NETM,,2,
+live_births,eurostat,eurostat:DEMO_GIND:%:LBIRTH,,1,
+live_births,gus_bdl,gus_bdl:P1873:%,,2,
+deaths,eurostat,eurostat:DEMO_GIND:%:DEATH,,1,
+average_gross_wage,gus_bdl,gus_bdl:P2497:%,,1,
+dwellings_completed,gus_bdl,gus_bdl:P3824:%,,1,
+area,gus_bdl,gus_bdl:P1410:%,ha in the source,1,
+area,world_bank_wdi,world_bank_wdi:AG.LND.TOTL.K2,land area,2,
+population_density,gus_bdl,gus_bdl:P2425:%,,1,
+fx_rate,nbp,nbp:fx:A:mid,"NBP table A, mid",1,
+gold_price,nbp,nbp:gold:price,"NBP fixing, 1000 fineness",1,

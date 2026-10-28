@@ -79,6 +79,7 @@ def kpi_latest(
             "source_system": pa.array([m["source_system"] for m in measures], pa.string()),
             "measure_key_pattern": pa.array([m["measure_key_pattern"] for m in measures], pa.string()),
             "priority": pa.array([int(m["priority"]) for m in measures], pa.int64()),
+            "unit_key": pa.array([m.get("unit_key") or unit_key for m in measures], pa.string()),
         }
     )
     ranks = pa.table({"frequency": list(FREQ_RANK), "freq_rank": list(FREQ_RANK.values())})
@@ -97,7 +98,11 @@ def kpi_latest(
                 select min(m.priority) from measures m
                 where m.kpi_key = ? and m.source_system = k.source_system
                     and k.measure_key like m.measure_key_pattern
-            ), 999) as priority
+            ), 999) as priority, coalesce((
+                select arg_min(m.unit_key, m.priority) from measures m
+                where m.kpi_key = ? and m.source_system = k.source_system
+                    and k.measure_key like m.measure_key_pattern
+            ), ?) as value_unit_key
             from kept k
         ),
         series as (
@@ -114,16 +119,26 @@ def kpi_latest(
         ),
         ranked as (
             select p.source_system, p.geography_key, p.geography_level, p.date_key, p.frequency,
-                p.value, p.observation_status_key,
+                p.value, p.observation_status_key, p.value_unit_key,
                 row_number() over (partition by p.source_system, p.geography_key order by p.date_key desc) as n
             from prioritised p join chosen c using (source_system, geography_key, measure_key, frequency)
         )
         select * from ranked where n <= 2
         order by source_system, geography_key, n
         """,
-        [list(LEVELS), kpi_key],
+        [list(LEVELS), kpi_key, kpi_key, unit_key],
     ).fetchall()
-    columns = ["source_system", "geography_key", "geography_level", "date_key", "frequency", "value", "status", "n"]
+    columns = [
+        "source_system",
+        "geography_key",
+        "geography_level",
+        "date_key",
+        "frequency",
+        "value",
+        "status",
+        "unit",
+        "n",
+    ]
     latest: dict[tuple[str, str], dict[str, Any]] = {}
     for row in (dict(zip(columns, r, strict=True)) for r in rows):
         key = (row["source_system"], row["geography_key"])
@@ -134,6 +149,7 @@ def kpi_latest(
                 "geography_level": LEVELS[row["geography_level"]],
                 "period": period_label(row["date_key"], row["frequency"]),
                 "value": float(row["value"]),
+                "unit_key": row["unit"],
                 "flags": [] if row["status"] in (None, "ok") else [row["status"]],
                 "checked_at": checked_at.get(row["source_system"], generated_at),
             }

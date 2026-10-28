@@ -105,6 +105,7 @@ One Parquet file per Gold catalogue table, with that table's columns.
 | values[].geography_level | string | yes | `country` or `voivodeship` |
 | values[].period | string | yes | latest period |
 | values[].value | number | yes | value in that period |
+| values[].unit_key | string | optional | unit of this value (key in `catalog/unit`); always written, may differ from the KPI's `unit_key` when sources publish the measure in different currencies or scales |
 | values[].previous_period | string | optional | the period before |
 | values[].previous_value | number | optional | value in the period before |
 | values[].flags | array | yes | status flags of the value |
@@ -114,7 +115,8 @@ One Parquet file per Gold catalogue table, with that table's columns.
 (and not geography `_X`) count; each row gets the priority of its source's measure in `kpi_measure.csv` (999 when
 none matches); per source and geography one series is kept, the one with the finest frequency, then the best
 priority, then the lowest measure key; its newest period gives `period` and `value`, the period before gives
-`previous_period` and `previous_value` (left out when there is none). `fx_rate` is skipped: it has one value per
+`previous_period` and `previous_value` (left out when there is none); `unit_key` is the chosen series' unit from
+`kpi_measure.csv` `unit_key`, or the KPI's unit when that is empty (#2148). `fx_rate` is skipped: it has one value per
 currency and latest.json has no currency field.
 
 ## kpi/<kpi_key>/series.parquet
