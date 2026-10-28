@@ -1401,7 +1401,7 @@ sources:
   name: Global Migration Data Portal
   short_name: IOM Migration Data Portal
   provider: International Organization for Migration
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -1437,6 +1437,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
+    - 'Parked: IOM terms forbid redistribution and derivatives without written permission; use the upstream sources'
     - 'Redistribution and derivatives need IOM written permission; use upstream sources'
     - 'No stable API/bulk interface identified'
     references:
