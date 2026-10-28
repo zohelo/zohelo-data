@@ -811,7 +811,7 @@ sources:
   name: Global SDG Indicators Database and API
   short_name: UN SDG Indicators
   provider: United Nations Statistics Division
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -849,6 +849,8 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
+    - 'Parked: reuse terms unresolved (no database licence; UN website terms are non-commercial); owner decision noted
+      on the Epic'
     - 'Reuse terms unresolved: no database licence; UN website terms are non-commercial (owner decision)'
     - 'Open current API guide beyond Swagger shell'
     - 'Map global versus national SDG series'
