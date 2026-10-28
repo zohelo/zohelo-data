@@ -14,6 +14,8 @@ Decisions that bind implementers; read this first, after AGENTS.md.
 | O8 | 2026-10-27 | Standing permission | Standing permission: Claude closes pull requests and issues, deletes merged branches, and creates, edits and closes issues and project items in the zohelo organisation without asking; Claude dispatches Ops runs with --apply or --delete only for a Task whose Epic cites an owner decision; otherwise the run is an owner action. | owner |
 | O9 | 2026-10-27 | Shared repo and branches | No .github or other shared repo; merged branches are deleted by branch-cleanup.yml. | owner |
 | O10 | 2026-10-27 | Merging | Claude and the agents it dispatches merge pull requests once their checks pass (squash). | owner |
+| O11 | 2026-10-28 | Development cadence | Four implementer lanes (platform, sources, zohelo-bi, zohelo.com) and an architect lane run as scheduled sessions every 3 hours 07–22 Warsaw time; the architect reviews and merges; see docs/lanes.md. | owner |
+| O12 | 2026-10-27 | Entity-model Silver | The 9 Silver tables written by warehouse/entity/*.sql are current and kept (tracker fixed, #1036). | owner |
 | D1 | 2026-10-27 | Bootstrap | Bootstrap issues by REST until the first sync. | architect |
 | D2 | 2026-10-27 | Destructive runs | Destructive Ops runs only for Tasks citing an owner decision. | architect |
 | D3 | 2026-10-27 | Design package | @zohelo/design ships as a GitHub Release tarball. | architect |
