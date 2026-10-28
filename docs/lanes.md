@@ -11,27 +11,37 @@ session starts fresh: it reads `AGENTS.md`, `docs/decisions.md`, `docs/backlog.m
 | 2 Sources | `data/src-` | zohelo-data (stage 10 in zohelo-bi, stage 11 in zohelo) |
 | 3 zohelo-bi | `bi/` | zohelo-bi |
 | 4 zohelo.com | `com/` | zohelo |
-| Architect | reviews and merges every open PR; writes Tasks; runs the sync; weekly status | all |
+| Architect | triggered by the lanes: reviews and merges every open PR; writes Tasks; runs the sync; weekly status | all |
 
 ## Implementer session (lanes 1–4)
 
 1. **Pick.** List open issues of type Task or Bug in the lane's repos (`gh api 'repos/zohelo/<repo>/issues?state=open&type=Task&per_page=100&page=N'`,
    loop pages yourself). Keep those whose key starts with the lane's prefixes. Skip: label `in-progress` set less than
-   4 hours ago (another run owns it), label `owner:action`, Tasks whose `depends_on` (read it in `.github/backlog/epics/*.yaml`
-   of the repo, by key) are not all closed, and Tasks with an open PR that says `Closes #<n>`. Order: phase, then priority
+   4 hours ago (another run owns it), label `owner:action`, Tasks with an open PR that says `Closes #<n>`, and Tasks
+   whose `depends_on` (read it in `.github/backlog/epics/*.yaml` of the repo, by key) are not all closed — except when
+   every unclosed dependency has an open PR from this lane: then the Task is pickable as a stacked Task (step 4). Order: phase, then priority
    of the Epic (P1 first), then issue number.
 2. **Claim.** Add label `in-progress` and a comment `claimed by <lane> run <UTC time>`.
 3. **Deliver** exactly as the issue's "How to deliver" says: worktree from `origin/main`, branch `<type>/<n>-<topic>`,
    repo checks, the issue's Verify, one PR with `Closes #<n>` first. Verify-only Tasks: no PR; close with a comment
    linking the evidence run. Destructive Ops runs only as AGENTS.md allows.
-4. **Never merge your own PR**; the architect merges. You may start the next Task while PRs wait. A Task that depends on
-   your unmerged PR waits.
-5. **Stuck?** If a step is impossible as written or needs a decision, comment on the issue, remove `in-progress`, add
+4. **Never merge your own PR**; the architect merges. Keep working while PRs wait. A stacked Task branches from the
+   dependency's PR branch (not main); its PR targets `main` and has `Depends on #<PR>` under `Closes #<n>`. Stack at
+   most 3 deep. When a dependency has merged (squash), rebase the stacked branch with
+   `git rebase --onto origin/main <old dependency head>` and force-push with lease.
+5. **Trigger the architect** after every 5 PRs and at the end of the run: fire the scheduled task "zohelo architect ·
+   review, merge, plan" (fire_trigger, id in the session prompt) with the text `Review lane <n>: PRs <list>`. If firing
+   is refused, say so in the summary.
+6. **Stuck?** If a step is impossible as written or needs a decision, comment on the issue, remove `in-progress`, add
    label `design:question`, and take the next Task. Never improvise around the issue.
-6. **Repeat** until 6 Tasks are done, about 3 hours have passed, or nothing in the lane is pickable. Then remove
+7. **Repeat**, aiming for 10–20 PRs per run, until about 3 hours have passed or nothing in the lane is pickable. Then remove
    `in-progress` from anything you did not finish, and end with a summary: PRs opened, Tasks closed, questions raised.
 
 ## Architect session
+
+Triggered by the lanes (and once a week, Monday 08:23 Warsaw, for the weekly status). Several triggers can overlap:
+before reviewing a PR add label `reviewing` to it and skip PRs that already carry it (added less than 1 hour ago);
+remove the label when done.
 
 1. **Review and merge** every open non-Dependabot PR in the three repos, oldest first: compare the diff with its issue's
    Steps, Acceptance and Out of scope; read the check results. Merge (squash) when checks pass and the review finds no
