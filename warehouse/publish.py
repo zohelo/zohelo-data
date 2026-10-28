@@ -36,6 +36,10 @@ CATALOG_TABLES = {
     "dim_licence": "licence",
     "freshness": "freshness",
 }
+# silver.prg_units unit_level → geo/<level>.geojson level; simplification tolerance in degrees (about 350–550 m).
+GEO = {"kraj": "country", "wojewodztwo": "voivodeship"}
+GEO_TOLERANCE = 0.005
+GEO_LIMIT = 2_000_000  # bytes, docs/published.md size limits
 # Gold geography_level → contract level of series.parquet (Polish NUTS 1 = makroregion, NUTS 2 = region).
 SERIES_LEVELS = {
     "country": "country",
@@ -254,6 +258,82 @@ def catalog_tables(cat, client, prefix: str, namespace: str) -> dict[str, Any]:
     return {"written": written, "missing": missing}
 
 
+def _round(coordinates):
+    if isinstance(coordinates, (int, float)):
+        return round(coordinates, 4)
+    return [_round(c) for c in coordinates]
+
+
+def features(shapes: list[dict], names: dict[str, dict], level: str) -> dict[str, Any]:
+    """FeatureCollection of one level from PRG shapes and Gold names; pure (no R2)."""
+    collection = []
+    for shape in sorted(shapes, key=lambda s: s["geography_key"]):
+        key = shape["geography_key"]
+        if key not in names:
+            raise ValueError(f"geo: {key} has no name in gold.dim_geography")
+        name = names[key]
+        properties = {
+            "geography_key": key,
+            "name_pl": name["name_pl"],
+            "name_en": name["name_en"] or name["name_pl"],
+            "level": level,
+        }
+        if level != "country":
+            properties["parent_key"] = "PL"
+        geometry = {"type": shape["geometry"]["type"], "coordinates": _round(shape["geometry"]["coordinates"])}
+        collection.append({"type": "Feature", "properties": properties, "geometry": geometry})
+    return {"type": "FeatureCollection", "features": collection}
+
+
+def geo(cat, client, prefix: str) -> dict[str, int]:
+    """Write geo/country.geojson and geo/voivodeship.geojson from silver.prg_units and gold.dim_geography."""
+    from pyiceberg.expressions import In
+
+    units = (
+        cat.load_table(("silver", "prg_units"))
+        .scan(row_filter=In("unit_level", list(GEO)), selected_fields=("unit_level", "teryt_code", "geometry_wkb"))
+        .to_arrow()
+    )
+    names = {
+        row["geography_key"]: row
+        for row in cat.load_table(("gold", "dim_geography"))
+        .scan(
+            row_filter=In("level_name", ["country", "wojewodztwo"]),
+            selected_fields=("geography_key", "name_pl", "name_en"),
+        )
+        .to_arrow()
+        .to_pylist()
+    }
+    con = duckdb.connect()
+    con.sql("INSTALL spatial; LOAD spatial;")
+    con.register("units", units)
+    rows = con.sql(
+        """
+        select unit_level,
+            case when unit_level = 'kraj' then 'PL' else 'TERC:' || teryt_code end as geography_key,
+            ST_AsGeoJSON(ST_SimplifyPreserveTopology(ST_GeomFromWKB(geometry_wkb), ?)) as geometry
+        from units
+        """,
+        params=[GEO_TOLERANCE],
+    ).fetchall()
+    shapes: dict[str, list[dict]] = {level: [] for level in GEO.values()}
+    seen: set[str] = set()
+    for unit_level, key, geometry in rows:
+        if key in seen:
+            raise ValueError(f"geo: {key} occurs twice in silver.prg_units")
+        seen.add(key)
+        shapes[GEO[unit_level]].append({"geography_key": key, "geometry": json.loads(geometry)})
+    counts = {level: len(items) for level, items in shapes.items()}
+    if counts != {"country": 1, "voivodeship": 16}:
+        raise ValueError(f"geo: expected 1 country and 16 voivodeships, found {counts}")
+    for level, items in shapes.items():
+        body = json.dumps(features(items, names, level), ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        if len(body) > GEO_LIMIT:
+            raise ValueError(f"geo/{level}.geojson is {len(body)} bytes, over {GEO_LIMIT}")
+        put(client, prefix + f"geo/{level}.geojson", body, "application/geo+json")
+    return counts
+
+
 def checked(coverage: pa.Table) -> dict[str, str]:
     """Per source of gold.coverage, when it was last checked."""
     result: dict[str, str] = {}
@@ -306,5 +386,6 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     result = {"written": written, "skipped": sorted(SKIP), "missing": missing}
     result["series"] = series
     result["catalog_tables"] = catalog_tables(cat, client, prefix, namespace)
+    result["geo"] = geo(cat, client, prefix)
     annotate("notice", "gold.publish: latest", result)
     return result
