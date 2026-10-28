@@ -15,13 +15,9 @@ const getCdnBundles = (runtimeEnv: Partial<NonNullable<Window["env"]>>): duckdb.
   const baseUrl = configuredBaseUrl.replace(/\/+$/, "");
 
   return {
-    mvp: {
-      mainModule: `${baseUrl}/duckdb-mvp.wasm`,
-      mainWorker: `${baseUrl}/duckdb-browser-mvp.worker.js`,
-    },
-    eh: {
-      mainModule: `${baseUrl}/duckdb-eh.wasm`,
-      mainWorker: `${baseUrl}/duckdb-browser-eh.worker.js`,
+    base: {
+      mainModule: `${baseUrl}/duckdb-base.wasm`,
+      mainWorker: `${baseUrl}/duckdb-browser-base.worker.js`,
     },
   };
 };
@@ -35,19 +31,13 @@ export const resolveDuckdbBundles: () => Promise<duckdb.DuckDBBundles> =
         const getLocalBundles = async (): Promise<duckdb.DuckDBBundles> => {
           if (!localBundlesPromise) {
             localBundlesPromise = Promise.all([
-              import("@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url"),
-              import("@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url"),
-              import("@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url"),
-              import("@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url"),
+              import("@duckdb/duckdb-wasm/dist/duckdb-base.wasm?url"),
+              import("@duckdb/duckdb-wasm/dist/duckdb-browser-base.worker.js?url"),
             ])
-              .then(([duckdbWasm, mvpWorker, duckdbWasmEh, ehWorker]) => ({
-                mvp: {
+              .then(([duckdbWasm, baseWorker]) => ({
+                base: {
                   mainModule: duckdbWasm.default,
-                  mainWorker: mvpWorker.default,
-                },
-                eh: {
-                  mainModule: duckdbWasmEh.default,
-                  mainWorker: ehWorker.default,
+                  mainWorker: baseWorker.default,
                 },
               }))
               .catch((error) => {
