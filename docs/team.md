@@ -160,9 +160,13 @@ review a write against the shared GitHub limit).
    issue's Steps, Acceptance and Out of scope; read the check results. Post the review first as a pull-request review,
    not an issue comment (`gh api repos/zohelo/<repo>/pulls/<n>/reviews -f event=COMMENT -f body='Reviewed against
    #<issue>: <acceptance items checked>; checks <result>'`; APPROVE is not possible, all members share one account), so
-   the PR carries a recorded review before the merge call; then merge (squash) when checks pass and
-   the review finds no problem; otherwise comment the exact change needed on the PR and label the issue
-   `changes-requested`. Update mechanically conflicting PRs yourself (merge main in, shared rules). PRs from the
+   the PR carries a recorded review before the merge call. Review every PR yourself in the run that merges it (add
+   `-f commit_id=<head sha>` to the review) — never merge on another run's review, and never merge a PR your own run
+   wrote (another Architect run or the owner merges those). Then merge exactly the reviewed commit when checks pass and
+   the review finds no problem (`gh api -X PUT repos/zohelo/<repo>/pulls/<n>/merge -f merge_method=squash -f sha=<head sha>`;
+   a push after your review makes it fail, and you review again); otherwise comment the exact change needed on the PR
+   and label the issue `changes-requested`. If the session refuses a merge, review the PR once more from its diff and
+   retry once; if it is refused again, list it in the Team log for the owner (owner 28 Oct: every ready PR gets merged). Update mechanically conflicting PRs yourself (merge main in, shared rules). PRs from the
    Product Owner (backlog), the Coach (rules) and the Domain expert (domain files) are reviewed the same way; a Coach PR that removes a check or lowers a
    quality bar needs an owner decision and is sent back otherwise.
 2. **Report back.** For each Developer whose PRs you reviewed: if its last run is still running (list_triggers), do
