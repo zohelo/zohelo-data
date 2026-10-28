@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 from datetime import UTC, date, datetime
+import io
 import json
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,18 @@ LEVELS = {"country": "country", "wojewodztwo": "voivodeship"}  # Gold geography_
 FREQ_RANK = {"D": 1, "B": 2, "W": 3, "M": 4, "Q": 5, "S": 6, "A": 7}
 SKIP = {"fx_rate": "one value per currency; latest.json has no currency field"}
 LATEST_LIMIT = 100_000  # bytes, docs/published.md size limits (D22)
+SERIES_LIMIT = 20_000_000  # bytes, docs/published.md size limits
+# Gold geography_level → contract level of series.parquet (Polish NUTS 1 = makroregion, NUTS 2 = region).
+SERIES_LEVELS = {
+    "country": "country",
+    "wojewodztwo": "voivodeship",
+    "powiat": "powiat",
+    "gmina": "gmina",
+    "makroregion": "nuts1",
+    "region": "nuts2",
+    "nuts1": "nuts1",
+    "nuts2": "nuts2",
+}
 
 
 def gold(cat, namespace: str, name: str) -> pa.Table:
@@ -51,14 +64,14 @@ def period_label(date_key: date, frequency: str) -> str:
     return date_key.strftime("%Y-%m-%d")
 
 
-def put(client, key: str, body: bytes) -> int:
+def put(client, key: str, body: bytes, content_type: str = "application/json") -> int:
     from ingestion.common.r2 import req
 
     client.put_object(
         Bucket=req("STORAGE_LAKEHOUSE_BUCKET_NAME"),
         Key=key,
         Body=body,
-        ContentType="application/json",
+        ContentType=content_type,
         CacheControl="no-cache",
     )
     return len(body)
@@ -147,6 +160,71 @@ def kpi_latest(
     return {"kpi_key": kpi_key, "unit_key": unit_key, "generated_at": generated_at, "values": values}
 
 
+def parquet(table: pa.Table) -> bytes:
+    import pyarrow.parquet as pq
+
+    buffer = io.BytesIO()
+    pq.write_table(table, buffer, compression="zstd")
+    return buffer.getvalue()
+
+
+def kpi_series(metrics: pa.Table, kpi_key: str, unit_key: str) -> pa.Table:
+    """series.parquet of one KPI from its gold.metrics_<kpi_key> rows; pure (no R2)."""
+    levels = pa.table({"gold_level": list(SERIES_LEVELS), "contract_level": list(SERIES_LEVELS.values())})
+    con = duckdb.connect()
+    con.register("metrics", metrics)
+    con.register("levels", levels)
+    con.sql(
+        """
+        create temp table kept as
+        select m.*, coalesce(l.contract_level, m.geography_level, '_Z') as series_level
+        from metrics m left join levels l on m.geography_level = l.gold_level
+        where m.value is not null and m.geography_key <> '_X'
+            and (m.geography_key = '_Z' or l.contract_level is not null)
+        """
+    )
+    keys = sorted(
+        row[0]
+        for row in con.sql(
+            "select distinct unnest(json_keys(breakdown_json)) from kept where breakdown_json is not null"
+        ).fetchall()
+    )
+    dims = []
+    for key in keys:
+        path = "$." + json.dumps(key)
+        distinct = con.sql(
+            "select count(distinct coalesce(json_extract_string(breakdown_json, ?), '_T')) from kept", params=[path]
+        ).fetchall()[0][0]
+        if distinct > 1:
+            column = "dim_" + "".join(c if c in "abcdefghijklmnopqrstuvwxyz0123456789_" else "_" for c in key.lower())
+            dims.append((path, column))
+    dim_sql = "".join(
+        f", coalesce(json_extract_string(breakdown_json, ${i + 3}), '_T') as {column}"
+        for i, (_, column) in enumerate(dims)
+    )
+    return con.sql(
+        f"""
+        select $1 as kpi_key, source_system as source_key, measure_key, geography_key,
+            series_level as geography_level,
+            case frequency
+                when 'A' then strftime(date_key, '%Y')
+                when 'S' then strftime(date_key, '%Y') || '-H' || (case when month(date_key) <= 6 then 1 else 2 end)
+                when 'Q' then strftime(date_key, '%Y') || '-Q' || quarter(date_key)
+                when 'M' then strftime(date_key, '%Y-%m')
+                else strftime(date_key, '%Y-%m-%d')
+            end as period,
+            cast(date_key as date) as period_start, frequency, cast(value as double) as value,
+            $2 as unit_key,
+            case when observation_status_key is null or observation_status_key = 'ok' then ''
+                else observation_status_key end as flags
+            {dim_sql}
+        from kept
+        order by source_key, measure_key, geography_key, period_start
+        """,
+        params=[kpi_key, unit_key, *[path for path, _ in dims]],
+    ).to_arrow_table()
+
+
 def checked(coverage: pa.Table) -> dict[str, str]:
     """Per source of gold.coverage, when it was last checked."""
     result: dict[str, str] = {}
@@ -172,14 +250,23 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     checked_at = checked(gold(cat, "gold", "coverage"))
     written: dict[str, int] = {}
     missing: list[str] = []
+    series: dict[str, int] = {}
     for kpi in seed("kpi"):
         kpi_key = kpi["kpi_key"]
-        if kpi["status"] != "published" or kpi_key in SKIP:
+        if kpi["status"] != "published":
             continue
         try:
             metrics = gold(cat, namespace, f"metrics_{kpi_key}")
         except NoSuchTableError:
             missing.append(kpi_key)
+            continue
+        table = kpi_series(metrics, kpi_key, kpi["unit_key"])
+        data = parquet(table)
+        if len(data) > SERIES_LIMIT:
+            raise ValueError(f"kpi/{kpi_key}/series.parquet is {len(data)} bytes, over {SERIES_LIMIT}")
+        put(client, prefix + f"kpi/{kpi_key}/series.parquet", data, "application/vnd.apache.parquet")
+        series[kpi_key] = table.num_rows
+        if kpi_key in SKIP:
             continue
         latest = kpi_latest(metrics, measures, checked_at, kpi_key, kpi["unit_key"], generated_at)
         body = json.dumps(latest, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -188,5 +275,6 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
         put(client, prefix + f"kpi/{kpi_key}/latest.json", body)
         written[kpi_key] = len(latest["values"])
     result = {"written": written, "skipped": sorted(SKIP), "missing": missing}
+    result["series"] = series
     annotate("notice", "gold.publish: latest", result)
     return result

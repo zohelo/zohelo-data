@@ -134,6 +134,13 @@ currency and latest.json has no currency field.
 | flags | string | yes | status flags |
 | dim_<dimension_key> | string | yes | one column per extra dimension; `'_T'` = total |
 
+`warehouse/publish.py` `kpi_series()` writes it from `gold.metrics_<kpi_key>` for every published KPI (`fx_rate`
+included): rows with a value, not geography `_X`, either not geographic (geography `_Z`, e.g. exchange rates) or at
+a level the contract names (Gold `wojewodztwo` → `voivodeship`, `makroregion` → `nuts1`, `region` → `nuts2`;
+`country`, `powiat`, `gmina`, `nuts1`, `nuts2` as they are). Every breakdown key of the kept rows that takes more
+than one value (a row without the key counts as `'_T'`) becomes a column `dim_<key>` (lower case, other characters
+→ `_`); a key with one value is not a dimension.
+
 ## geo/<level>.geojson
 
 `level` ∈ `country`, `voivodeship`, `powiat`, `gmina`, `nuts1`, `nuts2`. A GeoJSON FeatureCollection
