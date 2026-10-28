@@ -1857,8 +1857,8 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: Verify the 2024 Revision data licence and attribution; UNdata mirror does not establish separate rights.
+    status: open-conditional
+    notes: 'Terms: CC BY 3.0 IGO (http://creativecommons.org/licenses/by/3.0/igo/); WPP 2024 data are "made available under a Creative Commons license CC BY 3.0 IGO" (https://environmentdashboard.org/sources/un-wpp-2024, quoting the producer): copy, redistribute and adapt, also commercially, with attribution; no UN emblem or implied endorsement. Attribution: "United Nations, Department of Economic and Social Affairs, Population Division (2024). World Population Prospects 2024, Online Edition. CC BY 3.0 IGO."'
   updates: Revision-based releases recalculate historical estimates and projection variants.
   ingestion:
     history: Load complete revision files and metadata; retain each revision.
@@ -1872,11 +1872,13 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Open current download licence
-    - Confirm file schema and revision archive
+    - 'Confirm the licence statement on population.un.org/wpp (the page could not be read in this review)'
+    - 'Confirm file schema and revision archive'
     references:
     - https://population.un.org/wpp/
     - https://data.un.org/Handlers/ExplorerHandler.ashx?t=sources
+    - https://environmentdashboard.org/sources/un-wpp-2024
+    - https://www.un.org/development/desa/pd/node/4327
 - id: GL-040
   name: UNIDO Statistics Data Portal / INDSTAT
   short_name: UNIDO INDSTAT
