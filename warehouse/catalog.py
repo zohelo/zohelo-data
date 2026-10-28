@@ -9,6 +9,7 @@ descriptions, lineage as upstream lists).
 
 from __future__ import annotations
 
+import csv
 from datetime import UTC, datetime
 import json
 from pathlib import Path
@@ -140,3 +141,46 @@ def publish() -> dict[str, Any]:
         CacheControl="no-cache",
     )
     return {"key": CATALOG_KEY, "bytes": len(body), **catalog["counts"]}
+
+
+def manifest_object(semantic: dict, kpis: list[dict], generated_at: str) -> dict:
+    """manifest.json object (docs/published.md): one metric per published KPI with a semantic model."""
+    models = {}
+    for model in semantic.get("semantic_models", []):
+        alias = (model.get("node_relation") or {}).get("alias") or ""
+        models[alias.removeprefix("poc_")] = model
+    metrics = []
+    for kpi in kpis:
+        model = models.get(f"metrics_{kpi['kpi_key']}")
+        if kpi.get("status") != "published" or model is None:
+            continue
+        agg_time = (model.get("defaults") or {}).get("agg_time_dimension")
+        time_column = next(
+            (d.get("expr") or d["name"] for d in model.get("dimensions", []) if d["name"] == agg_time), None
+        )
+        dimensions = [
+            {"dimension_key": "geography", "column": e.get("expr") or e["name"]}
+            for e in model.get("entities", [])
+            if e["name"] == "poc_geography"
+        ]
+        metrics.append(
+            {
+                "kpi_key": kpi["kpi_key"],
+                "table": f"gold.metrics_{kpi['kpi_key']}",
+                "unit_key": kpi["unit_key"],
+                "frequency": kpi["frequency_default"],
+                "time_column": time_column,
+                "value_column": "value",
+                "source_column": "source_system",
+                "dimensions": dimensions,
+            }
+        )
+    return {"version": 1, "generated_at": generated_at, "metrics": metrics}
+
+
+def manifest() -> dict:
+    """Build the manifest object from dbt's semantic manifest and kpi.csv; writes nothing."""
+    semantic = json.loads((PROJECT / "target" / "semantic_manifest.json").read_text())
+    with (PROJECT / "seeds" / "kpi.csv").open(encoding="utf-8", newline="") as f:
+        kpis = list(csv.DictReader(f))
+    return manifest_object(semantic, kpis, datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"))
