@@ -969,7 +969,7 @@ sources:
   name: FAOSTAT
   short_name: FAOSTAT
   provider: Food and Agriculture Organization of the United Nations
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
