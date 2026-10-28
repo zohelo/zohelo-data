@@ -1805,8 +1805,7 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: restricted
-    notes: Do not onboard until the selected INDSTAT product licence explicitly permits intended commercial reuse
-      and redistribution.
+    notes: 'Terms: UNIDO Statistics Portal Terms and Conditions https://stat.unido.org/content/legal/Terms%20and%20Conditions: all material is UNIDO intellectual property; data may be used in publications with credit to UNIDO, but "secondary data dissemination" rights are granted only to users that have licensed a database with this option. Public display of INDSTAT data on zohelo.com or bi.zohelo.com is therefore not allowed without such a licence. Data provided "as is" and "as available", no warranty. Attribution: "Source: UNIDO, <database> (<edition>), https://stat.unido.org/."'
   updates: Annual editions and national revisions; no public CDC or common schedule established.
   ingestion:
     history: Only ingest licensed named edition, metadata and ISIC version.
@@ -1819,10 +1818,13 @@ sources:
     priority: conditional
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Determine product entitlement and price, Resolve commercial rights, Obtain ISIC concordances]
+    blockers:
+    - 'Public display needs a UNIDO database licence with the secondary-dissemination option (price unknown)'
+    - 'Obtain ISIC concordances'
     references:
     - https://stat.unido.org/
     - https://data.un.org/Handlers/ExplorerHandler.ashx?t=sources
+    - https://stat.unido.org/content/legal/Terms%20and%20Conditions
 - id: PLS-001
   name: Bank Danych Lokalnych (BDL)
   short_name: GUS BDL
