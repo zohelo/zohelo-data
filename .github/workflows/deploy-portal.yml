@@ -26,6 +26,8 @@ jobs:
   deploy:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    permissions:
+      contents: write  # the Release after a production deploy (last step)
     env:
       # zohelo organisation credentials, mapped to the names the tools read.
       CLOUDFLARE_API_TOKEN: ${{ secrets.PLATFORM_DEPLOY_TOKEN }}
@@ -90,3 +92,10 @@ jobs:
               *) echo "::warning title=access data.zohelo.com::not yet answering through Pages ($out); the certificate can take a few minutes" ;;
             esac
           fi
+      - name: Release (production deploys only)
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "portal-$(date -u +%Y%m%d-%H%M)" --target "$GITHUB_SHA" --title "data.zohelo.com $(date -u +%Y-%m-%d)" --generate-notes
