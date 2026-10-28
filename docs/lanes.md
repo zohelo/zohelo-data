@@ -7,7 +7,7 @@ session starts fresh: it reads `AGENTS.md`, `docs/decisions.md`, `docs/backlog.m
 
 | Lane | Owns (issue key prefixes, see `<!-- zohelo:key=... -->` in each issue) | Repo of the work |
 |---|---|---|
-| 1 Platform & ops | `data/ops/`, `data/portal/`, `data/backlog/`, `data/warehouse/`, `data/metadata/`, `data/published/`, `data/ingestion/` | zohelo-data |
+| 1 Platform & ops | `data/ops/`, `data/portal/`, `data/backlog/`, `data/warehouse/`, `data/metadata/`, `data/published/`, `data/ingestion/`; also open issues labelled `security-alert` (no key) in zohelo-data, zohelo-bi and zohelo | zohelo-data (security-alert Bugs: the alert's repo) |
 | 2 Sources | `data/src-` | zohelo-data (stage 10 in zohelo-bi, stage 11 in zohelo) |
 | 3 zohelo-bi | `bi/` | zohelo-bi |
 | 4 zohelo.com | `com/` | zohelo |
@@ -24,6 +24,8 @@ session starts fresh: it reads `AGENTS.md`, `docs/decisions.md`, `docs/backlog.m
    whose `depends_on` (read it in `.github/backlog/epics/*.yaml` of the repo, by key) are not all closed — except when
    every unclosed dependency has an open PR from this lane: then the Task is pickable as a stacked Task (step 4). Order: phase, then priority
    of the Epic (P1 first), then issue number.
+   Lane 1 picks open `security-alert` Bugs of all three repos (`gh api 'repos/zohelo/<repo>/issues?state=open&labels=security-alert'`)
+   first, critical and high severity (from the title) before the others, then the keyed Tasks.
 2. **Claim.** Add label `in-progress` and a comment `claimed by <lane> run <UTC time>`.
 3. **Deliver** exactly as the issue's "How to deliver" says: worktree from `origin/main`, branch `<type>/<n>-<topic>`,
    repo checks, the issue's Verify, one PR with `Closes #<n>` first. Verify-only Tasks: no PR; close with a comment
