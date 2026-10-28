@@ -31,8 +31,15 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: Commercial reuse with attribution; exceptions for third-party and non-EU/EFTA/candidate data. Disclose
-      modifications and include the required disclaimer.
+    notes: 'Terms: https://ec.europa.eu/eurostat/web/main/help/copyright-notice (Commission Decision 2011/833/EU;
+      CC BY 4.0 for EU-owned content). Attribution: "Source: Eurostat" plus the dataset code. Commercial and
+      non-commercial reuse and modification are allowed; modifications must be indicated. Exceptions (non-commercial
+      reuse only): data identified as belonging to sources other than Eurostat; publications co-owned by other
+      organisations; data for countries other than EU, EFTA and official acceding/candidate countries (remove before
+      commercial reuse); Swiss and Liechtenstein trade data from 1995 and Austrian CN8 trade data (Comext, DS-*, out of
+      scope); third-party material such as photos, and logos and trademarks, are not covered. Disclaimer: modified or
+      translated content must carry a disclaimer that Eurostat is not responsible for the changes (page wording for
+      translations: "The translation is the sole responsibility of the author or authors of the translation.").'
   updates: Portal checks for data/structure changes twice daily; frequency varies; prior versions are not retained.
   ingestion:
     history: Snapshot dataflows and structures; preserve received-at and raw hash.
@@ -46,9 +53,7 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers:
-    - Confirm dataset-level third-party rights
-    - Define vintage retention
+    blockers: []
     references:
     - https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction
     - https://ec.europa.eu/eurostat/web/main/help/copyright-notice
@@ -205,9 +210,9 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: World Bank requires the specific Data Catalog licence to govern dataset/API reuse; generic site terms
-      do not establish blanket commercial rights.
+    status: open-conditional
+    notes: 'Terms: CC BY 4.0, https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators.
+      Attribution: "Source: World Bank, World Development Indicators" plus the indicator code. Indicate changes.'
   updates: Bulk files are revised whenever WDI updates; source-series frequencies and revisions vary.
   ingestion:
     history: Load full bulk data and metadata; retain download vintage.
@@ -222,7 +227,6 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Capture licence from current catalog record
     - Decide specialist-source precedence by indicator
     references:
     - https://datatopics.worldbank.org/world-development-indicators/
@@ -1757,7 +1761,9 @@ sources:
     limits: 'Anonymous: 5/s, 100/15m, 1,000/12h, 10,000/7d; registered: 10/s, 500/15m, 5,000/12h, 50,000/7d.'
   licence:
     status: open-conditional
-    notes: GUS explicitly applies CC BY 4.0 to BDL API data; preserve attribution and source metadata.
+    notes: 'Terms: CC BY 4.0, https://api.stat.gov.pl/Home/BdlApi (licence text https://creativecommons.org/licenses/by/4.0/).
+      Attribution: "Źródło: GUS, Bank Danych Lokalnych" / "Source: Statistics Poland, Local Data Bank" plus the variable
+      id.'
   updates: Continually expanded, updated and corrected.
   ingestion:
     history: Snapshot metadata and all selected observations by variable or unit; retain attributes.
@@ -1773,7 +1779,6 @@ sources:
     connection: not-tested
     blockers:
     - Design a territory-vintage policy
-    - Confirm attribution wording in product UI
     references: ['https://api.stat.gov.pl/Home/BdlApi']
 - id: PLS-002
   name: Dziedzinowe Bazy Wiedzy (DBW) API
