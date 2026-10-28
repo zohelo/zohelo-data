@@ -1684,7 +1684,7 @@ sources:
   name: Climate Data Store (CDS)
   short_name: Copernicus Climate Data Store
   provider: Copernicus Climate Change Service / ECMWF
-  status: registered
+  status: approved
   family: G
   kpi: true
   geography: worldwide
