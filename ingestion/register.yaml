@@ -1304,7 +1304,7 @@ sources:
   name: Human Development Data Center
   short_name: UNDP Human Development
   provider: United Nations Development Programme
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
