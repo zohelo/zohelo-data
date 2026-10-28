@@ -15,12 +15,14 @@ a trailing newline. Rows below give the values of each file (`-` = key left out)
 |---|---|---|---|---|---|---|---|---|---|
 | population (persons) | eurostat | PL | country | 2025 | 36620000 | persons | 2024 | 36750000 | [] |
 | population (persons) | gus_bdl | TERC:12 | voivodeship | 2024 | 3430000 | persons | 2023 | 3440000 | [] |
+| population (persons) | gus_bdl | TERC:14 | voivodeship | 2024 | 5510000 | persons | 2023 | 5500000 | [] |
 | gdp_current_prices (mln_ncu) | eurostat | PL | country | 2024 | 845000 | mln_eur | 2023 | 750000 | ["p"] |
 | gdp_current_prices (mln_ncu) | world_bank_wdi | PL | country | 2024 | 914700000000 | usd | - | - | [] |
 | inflation (pct) | eurostat | PL | country | 2026-09 | 2.9 | pct | 2026-08 | 3.0 | [] |
 | inflation (pct) | world_bank_wdi | PL | country | 2025 | 3.6 | pct | - | - | [] |
 
-Periods are strings ("2025"), values numbers.
+Periods are strings ("2025"), values numbers. zohelo copies these files into fixtures/published/ (zohelo#235), so the
+values here are the ones both repos use.
 
 ## Check in ops/repo_check.py published_contract()
 
