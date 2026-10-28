@@ -1678,8 +1678,13 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: EEA-owned material is CC BY and commercially reusable with acknowledgement and undistorted meaning; item-specific
-      and third-party conditions override.
+    notes: 'Terms: CC BY 4.0, EEA legal notice https://www.eea.europa.eu/en/legal-notice: material the EEA holds
+      rights to may be re-used without prior permission, free of charge, for commercial or non-commercial purposes
+      (reproduction, adaptation, distribution), provided the EEA is acknowledged as the original source in each copy
+      and the original meaning is not distorted; data with a copyright mark or other item-specific conditions and
+      third-party content follow their own terms; EEA logo only with consent; no liability, data may be incomplete
+      or out of date, not the official opinion of the EEA. Attribution: "Source: European Environment Agency (EEA),
+      <dataset title>, <download date>."'
   updates: Datasets follow legislation/reporting cycles; revisions and update cadence are item-specific.
   ingestion:
     history: Archive exact dataset release, metadata, rights owner and spatial schema.
@@ -1695,7 +1700,7 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Dataset-level rights scan
+    - Dataset-level rights scan (item-specific and third-party conditions override CC BY)
     - Inventory APIs/services per chosen dataset
     references:
     - https://www.eea.europa.eu/en/datahub
