@@ -160,9 +160,141 @@ deliverables:
           - run: python -m ops.repo_check
             expect: all checks ok
         out_of_scope: [series.parquet, catalog, manifest, geo, feed, warehouse.yaml activity, pipeline.yml]
+      - key: data/published/published-v1/publish/series
+        type: Task
+        title: Write kpi/<kpi_key>/series.parquet from Gold (warehouse/publish.py)
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/publish/kpi-latest]
+        context: >-
+          series.parquet (docs/published.md) has no writer; publish.py writes only latest.json. Rules:
+          .github/backlog/assets/publish-writers.md, sections 'Writers added after latest.json' and 'kpi/…/series.parquet'.
+        files:
+          - edit: warehouse/publish.py
+          - edit: docs/published.md
+        steps:
+          - "publish.py: add SERIES_LEVELS, parquet() and kpi_series() as the assets sections say; add the content_type keyword to put() if it is missing."
+          - "main(): read the metrics table of every published KPI (fx_rate too), keep the SKIP check for latest.json only, put each series.parquet and add the 'series' key to the annotated dict."
+          - "docs/published.md, under the series.parquet table: rules 1–2 in plain words."
+          - "dev/publish_series_trial.py: main(prefix='zz_dev_published/v1/'); annotate notice 'fx_rate series' with the columns and rows of zz_dev_published/v1/kpi/fx_rate/series.parquet; delete every object under zz_dev_published/, annotate 'deleted <n>'. Run in Dev; delete dev/ before the PR."
+        acceptance:
+          - "the local verify prints the expected line"
+          - "trial: five series ≤ 20 MB each; fx_rate has dim_currency; objects deleted; ruff and repo_check pass"
+        verify:
+          - run: "python -c \"import json,datetime as d,pyarrow as pa;from warehouse.publish import kpi_series;u=json.dumps({'currency':'USD'});e=json.dumps({'currency':'EUR'});t=pa.table({'source_system':['nbp']*3+['eurostat'],'measure_key':['m']*4,'geography_key':['_Z','_Z','_Z','TERC:12'],'geography_level':[None,None,None,'wojewodztwo'],'date_key':[d.date(2025,3,14),d.date(2025,3,14),d.date(2025,3,13),d.date(2025,1,1)],'frequency':['D','D','D','Q'],'value':[4.0,3.9,4.1,1.0],'observation_status_key':['ok','ok',None,'provisional'],'breakdown_json':[u,e,u,'{}']});s=kpi_series(t,'fx_rate','pln');print(s.num_rows,s.column_names[-1],sorted(set(s.column('period').to_pylist())),s.column('flags').to_pylist(),s.schema.field('period_start').type)\""
+            expect: "4 dim_currency ['2025-03-13', '2025-03-14', '2025-Q1'] ['provisional', '', '', ''] date32[day]"
+          - workflow: Dev · branch runs, script publish_series_trial, on the branch
+            expect: "notice 'gold.publish: latest' with series rows for 5 KPIs; 'fx_rate series' lists dim_currency; 'deleted <n>'"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [latest.json rules, catalog files, manifest, geo, warehouse.yaml and pipeline.yml]
+        notes: ["Another writer Task may have added its line to main() first: keep both lines."]
+      - key: data/published/published-v1/publish/catalog-tables
+        type: Task
+        title: Write the catalogue tables as catalog/<table>.parquet
+        effort: S
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/publish/kpi-latest]
+        context: >-
+          docs/published.md lists eight catalog/<table>.parquet files (dim_kpi … freshness) that the portals
+          read for the catalogue; nothing writes them. Most already exist as Gold seeds or models; freshness is
+          not built yet and is reported as missing. Rules: .github/backlog/assets/publish-writers.md, sections
+          'Writers added after latest.json' and 'catalog/<table>.parquet'.
+        files:
+          - edit: warehouse/publish.py
+          - edit: docs/published.md
+        steps:
+          - "publish.py: add CATALOG_TABLES and catalog_tables() as the assets section says; add parquet() and put()'s content_type keyword if they are missing."
+          - "main(): add the 'catalog_tables' key to the annotated dict with catalog_tables(cat, client, prefix, namespace)."
+          - "docs/published.md, under the catalog/<table>.parquet table: one sentence naming the Gold table behind each file and that a file whose table is not built yet is left out and reported."
+          - "dev/publish_catalog_trial.py: annotate notice 'catalog_tables' with catalog_tables(catalog(), s3(), 'zz_dev_published/v1/', 'gold') and the size of each object under zz_dev_published/v1/catalog/, then delete every object under zz_dev_published/ and annotate notice 'deleted <n>'. Run in Dev; delete dev/ before the PR."
+        acceptance:
+          - "the local verify prints 2 8 licence"
+          - "trial: 7 files written, missing ['freshness'], then deleted"
+          - "ruff and repo_check pass"
+        verify:
+          - run: "python -c \"import io,pyarrow as pa,pyarrow.parquet as pq;from warehouse.publish import parquet,CATALOG_TABLES as c;print(pq.read_table(io.BytesIO(parquet(pa.table({'a':[1,2]})))).num_rows,len(c),c['dim_licence'])\""
+            expect: "2 8 licence"
+          - workflow: Dev · branch runs, script publish_catalog_trial, on the branch
+            expect: "notice 'catalog_tables' with written dim_kpi, kpi_measure, kpi_dimension, dim_domain, dim_unit, dim_source, dim_licence and missing ['freshness']; then 'deleted 7'"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [catalog/catalog.json, gold.freshness, the seeds and models themselves]
+        notes: ["Another writer Task may have added its line to main() first: keep both lines.", "If the trial reports more missing tables than freshness, comment the annotation on the issue and stop."]
+      - key: data/published/published-v1/publish/geo
+        type: Task
+        title: Write geo/country.geojson and geo/voivodeship.geojson from PRG
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/publish/kpi-latest]
+        context: >-
+          Maps in both portals need simplified boundaries (docs/published.md geo/<level>.geojson). silver.prg_units
+          holds the PRG units with WKB geometry in geographic ETRS89; gold.dim_geography holds the keys and names.
+          This Task writes the two smallest levels; powiat, gmina and NUTS follow later. Rules:
+          .github/backlog/assets/publish-writers.md, sections 'Writers added after latest.json' and 'geo/…'.
+        files:
+          - edit: warehouse/publish.py
+          - edit: docs/published.md
+        steps:
+          - "publish.py: add GEO, GEO_TOLERANCE, features() and geo() as the assets section says; add put()'s content_type keyword if it is missing."
+          - "main(): add the 'geo' key to the annotated dict with geo(cat, client, prefix)."
+          - "docs/published.md, under the geo table: one sentence saying country and voivodeship are written today (simplified at 0.005°, coordinates rounded to 4 decimals) and the other levels later."
+          - "dev/publish_geo_trial.py: call geo(catalog(), s3(), 'zz_dev_published/v1/'), read both files back and annotate notice 'geo' with {level: [features, bytes, min lon, max lon, min lat, max lat]}, then delete every object under zz_dev_published/ and annotate notice 'deleted <n>'. Run in Dev; delete dev/ before the PR."
+        acceptance:
+          - "the local verify prints [19.1235, 49.5] Małopolskie PL"
+          - "trial: country 1 and voivodeship 16 features, each file ≤ 2 MB, longitudes 14–24.2 and latitudes 49–55"
+          - "ruff and repo_check pass"
+        verify:
+          - run: "python -c \"from warehouse.publish import features as f;r=f([{'geography_key':'TERC:12','geometry':{'type':'Polygon','coordinates':[[[19.123456,49.5],[21,49.5],[21,50.5],[19.123456,49.5]]]}}],{'TERC:12':{'name_pl':'Małopolskie','name_en':None}},'voivodeship');p=r['features'][0];print(p['geometry']['coordinates'][0][0],p['properties']['name_en'],p['properties']['parent_key'])\""
+            expect: "[19.1235, 49.5] Małopolskie PL"
+          - workflow: Dev · branch runs, script publish_geo_trial, on the branch
+            expect: "notice 'geo' with country 1 and voivodeship 16, coordinates inside Poland; then 'deleted 2'"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [powiat, gmina, nuts1 and nuts2 files, silver.prg_units, gold.dim_geography]
+        notes: ["Another writer Task may have added its line to main() first: keep both lines.", "If a file is over 2 MB or coordinates fall outside Poland, comment the annotation on the issue and stop."]
+      - key: data/published/published-v1/publish/activity
+        type: Task
+        title: Run gold.publish after every model build (run.py, pipeline.yml)
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/publish/kpi-latest]
+        context: >-
+          warehouse/publish.py main() writes 06_published/v1/ but no activity runs it; it must run after every
+          silver_gold.build and on its own. Changes: .github/backlog/assets/publish-writers.md, section
+          'gold.publish activity'.
+        files:
+          - edit: run.py
+          - edit: warehouse/warehouse.yaml
+          - edit: .github/workflows/pipeline.yml
+          - edit: ops/notify_failure.py
+          - edit: docs/operating.md
+        steps:
+          - "run.py: items 1–2 of the assets section."
+          - "warehouse.yaml: item 3."
+          - "pipeline.yml: item 4 and the job of the assets section."
+          - "notify_failure.py: item 5. docs/operating.md: item 6."
+        acceptance:
+          - "the plan commands print the expected activities; schedule --check reports no problem"
+          - "repo_check passes (notify needs every job)"
+        verify:
+          - run: "PYTHONPATH=. python run.py plan --source platform --run 'gold: publish'"
+            expect: "{\"activities\": [\"gold.publish\"], \"extract_matrix\": [0]}"
+          - run: "PYTHONPATH=. python run.py plan --source nbp --run 'full dataflow: landing → bronze → silver → gold → portal'"
+            expect: "activities end with silver_gold.build, gold.publish, serving.refresh_index"
+          - run: PYTHONPATH=. python run.py schedule --check
+            expect: "problems []"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: "Pipeline (pipeline.yml) on main after the merge (architect), source platform, run 'gold: publish'"
+            expect: "job gold.publish green with notice 'gold.publish: latest'"
+        out_of_scope: [publish.py writers, the scheduler, the portal index]
     todo:
-      - "warehouse/publish.py (sole writer): catalog.json + parquet, manifest.json (object built by warehouse/catalog.py), kpi series.parquet, geo (simplified from PRG), feed"
-      - "Add activity to warehouse.yaml and pipeline.yml job order (after silver-gold-build)"
+      - "catalog/catalog.json: waits for the loaded_at decision (catalogue-v1 freshness todo); geo powiat, gmina, nuts1, nuts2 (needs a size trial); feed/changes.json and calendar.ics"
       - "Delete _portal_catalog/v1 writer and objects after both portals switch"
   - key: data/published/published-v1/tests
     title: Contract tests
@@ -170,6 +302,36 @@ deliverables:
     done_when:
       - gold.publish fails when a published value differs from Gold or a schema field is missing
     tasks:
+      - key: data/published/published-v1/tests/schema-check
+        type: Task
+        title: Check every published JSON against its schema before writing
+        effort: S
+        state: open
+        contract: true
+        depends_on: [data/metadata/semantic-manifest/generate/manifest-json]
+        context: >-
+          gold.publish must fail when a published file misses a schema field (this Deliverable's done_when).
+          The schemas are warehouse/published/schemas/*.schema.json; ops/repo_check.py _schema_problems(value,
+          schema, where) already checks required keys and JSON types (it validates the fixtures). publish.py
+          writes latest.json and manifest.json without that check today.
+        files:
+          - edit: warehouse/publish.py
+          - edit: docs/published.md
+        steps:
+          - "publish.py: SCHEMAS = Path(__file__).resolve().parent / 'published' / 'schemas'; checked(obj: dict, schema: str) -> dict imports _schema_problems from ops.repo_check inside the function, runs it with the parsed SCHEMAS / f'{schema}.schema.json' (utf-8) and '$', raises ValueError(f'{schema}: {problems[:5]}') when there is a problem, else returns obj."
+          - "Pass every latest.json object through checked(obj, 'kpi_latest') and the manifest object through checked(obj, 'manifest') before json.dumps."
+          - "docs/published.md, Rules: new bullet 'gold.publish checks every JSON file against its schema in warehouse/published/schemas/ before writing it and fails on a problem.'"
+        acceptance:
+          - "the first verify fails with the ValueError shown; the second prints 5"
+          - "ruff and repo_check pass"
+        verify:
+          - run: "python -c \"from warehouse.publish import checked;checked({'kpi_key':'x'},'kpi_latest')\""
+            expect: "ValueError: kpi_latest: [\"$: missing required key 'unit_key'\", \"$: missing required key 'generated_at'\", \"$: missing required key 'values'\"]"
+          - run: "python -c \"import json;from warehouse.publish import checked;print(len(checked(json.load(open('warehouse/published/fixtures/manifest.json')),'manifest')['metrics']))\""
+            expect: "5"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [the schemas and fixtures, value checks against Gold (next Task)]
       - key: data/published/published-v1/tests/key-patterns
         type: Task
         title: Add key and timestamp patterns to the published schemas

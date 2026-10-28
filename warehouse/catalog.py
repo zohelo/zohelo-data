@@ -4,7 +4,8 @@ Built after each ``silver_gold.build`` from dbt's own artifacts (target/manifest
 target/semantic_manifest.json, written by the build) and the dimension registry
 (warehouse/dimensions/*.yaml); no data is queried. Published to the lakehouse bucket at
 ``_portal_catalog/v1/catalog.json`` for the portal and for AI agents (stable keys, plain
-descriptions, lineage as upstream lists).
+descriptions, lineage as upstream lists). Only the Pipeline workflow on ``main`` publishes it;
+any other run (a Dev branch trial, a local build) skips the write (#2106).
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from __future__ import annotations
 import csv
 from datetime import UTC, datetime
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -128,9 +130,20 @@ def build() -> dict[str, Any]:
     }
 
 
+def publish_skipped() -> str | None:
+    """Why this run must not write the production catalog, or None on the Pipeline workflow on main."""
+    ref, workflow = os.environ.get("GITHUB_REF_NAME", ""), os.environ.get("GITHUB_WORKFLOW", "")
+    if ref == "main" and workflow == "Pipeline":
+        return None
+    return f"not the Pipeline on main (ref={ref or '-'}, workflow={workflow or '-'})"
+
+
 def publish() -> dict[str, Any]:
     from ingestion.common.r2 import req, s3
 
+    skipped = publish_skipped()
+    if skipped:
+        return {"key": CATALOG_KEY, "skipped": skipped}
     catalog = build()
     body = json.dumps(catalog, ensure_ascii=False, indent=1).encode()
     s3().put_object(

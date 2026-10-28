@@ -1,0 +1,7 @@
+sex_key,name_en,name_pl,sort
+_T,total,ogółem,1
+F,female,kobiety,2
+M,male,mężczyźni,3
+_O,other,inna,4
+_U,unknown,nieznana,5
+_Z,not applicable,nie dotyczy,6

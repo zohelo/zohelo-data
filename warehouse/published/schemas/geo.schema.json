@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zohelo.com/schemas/published/v1/geo.schema.json",
+  "title": "06_published/v1/geo/<level>.geojson",
+  "type": "object",
+  "required": ["type", "features"],
+  "properties": {
+    "type": {"type": "string"},
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "properties", "geometry"],
+        "properties": {
+          "type": {"type": "string"},
+          "properties": {
+            "type": "object",
+            "required": ["geography_key", "name_pl", "name_en", "level"],
+            "properties": {
+              "geography_key": {"type": "string"},
+              "name_pl": {"type": "string"},
+              "name_en": {"type": "string"},
+              "level": {"type": "string"},
+              "parent_key": {"type": "string"}
+            },
+            "additionalProperties": true
+          },
+          "geometry": {
+            "type": "object",
+            "required": ["type", "coordinates"],
+            "properties": {
+              "type": {"type": "string"},
+              "coordinates": {"type": "array"}
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}
