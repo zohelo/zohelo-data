@@ -35,39 +35,6 @@ export const formatNumberWithSuffix = (value: number): string => {
 };
 
 /**
- * Format a number as percentage
- * @param value - The number to format (0-1 or 0-100)
- * @param isDecimal - Whether the value is in decimal form (0-1)
- * @returns Formatted percentage string (e.g., 45.67%)
- */
-export const formatPercentage = (value: number, isDecimal: boolean = true): string => {
-  if (typeof value !== "number" || isNaN(value)) return "0%";
-
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-    style: "percent",
-  }).format(isDecimal ? value : value / 100);
-};
-
-/**
- * Format a number as currency
- * @param value - The number to format
- * @param currency - Currency code (default: USD)
- * @returns Formatted currency string (e.g., $1,234.56)
- */
-export const formatCurrency = (value: number, currency: string = "USD"): string => {
-  if (typeof value !== "number" || isNaN(value)) return "$0.00";
-
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-};
-
-/**
  * Shorten X-axis labels for better display
  * @param value - The label value
  * @param maxLength - Maximum length before truncation
@@ -80,33 +47,3 @@ export const shortenLabel = (value: string, maxLength: number = 15): string => {
 
   return `${value.substring(0, maxLength)}...`;
 };
-
-/**
- * Calculate optimal tick count based on data size
- * @param dataLength - Number of data points
- * @returns Optimal number of ticks
- */
-export const calculateTickCount = (dataLength: number): number => {
-  if (dataLength <= 5) return dataLength;
-  if (dataLength <= 10) return 5;
-  if (dataLength <= 20) return 7;
-  return 10;
-};
-
-/**
- * Generate gradient definitions for charts
- * @param id - Unique gradient ID
- * @param color - Base color
- * @returns Gradient definition object
- */
-export const createGradient = (id: string, color: string) => ({
-  id,
-  x1: "0",
-  y1: "0",
-  x2: "0",
-  y2: "1",
-  stops: [
-    { offset: "5%", stopColor: color, stopOpacity: 0.8 },
-    { offset: "95%", stopColor: color, stopOpacity: 0.1 },
-  ],
-});

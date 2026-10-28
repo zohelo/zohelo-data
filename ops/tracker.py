@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import argparse
 from collections import defaultdict
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import fnmatch
 from importlib import import_module
 import json
@@ -136,6 +136,74 @@ def runs(token: str, repo: str) -> list[dict[str, Any]]:
     return out
 
 
+SCHEDULER_ACTOR = "github-actions[bot]"  # the scheduler dispatches with the workflow token (decision D18)
+
+
+def scheduled_runs(token: str, repo: str, days: int = 30) -> list[dict[str, Any]]:
+    """Finished scheduled Pipeline runs of the last ``days`` days: event ``schedule`` or dispatched by
+    the scheduler (triggering actor github-actions[bot], decision D18)."""
+    since = (datetime.now(UTC) - timedelta(days=days)).strftime("%Y-%m-%d")
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+    out: list[dict[str, Any]] = []
+    page = 1
+    while True:
+        response = requests.get(
+            f"{REST}/repos/{repo}/actions/workflows/pipeline.yml/runs",
+            headers=headers,
+            params={"status": "completed", "created": f">={since}", "per_page": 100, "page": page},
+            timeout=60,
+        )
+        response.raise_for_status()
+        batch = response.json().get("workflow_runs", [])
+        out += [
+            r
+            for r in batch
+            if r.get("event") == "schedule" or (r.get("triggering_actor") or {}).get("login") == SCHEDULER_ACTOR
+        ]
+        if len(batch) < 100:
+            return out
+        page += 1
+
+
+def green_days(found: list[dict[str, Any]], ids: list[str]) -> dict[str, dict[str, Any]]:
+    """Per source: green scheduled days in a row, newest first, until the first red day (a day with a
+    run that concluded failure or timed_out); the last red day; the number of days with runs."""
+    out = {}
+    for source in ids:
+        prefix = f"Pipeline · {source} · "
+        by_day: dict[str, bool] = {}
+        for r in found:
+            if (r.get("display_title") or "").startswith(prefix):
+                date = r["created_at"][:10]
+                red = r.get("conclusion") in ("failure", "timed_out")
+                by_day[date] = by_day.get(date, False) or red
+        streak, last_red = 0, None
+        for date in sorted(by_day, reverse=True):
+            if by_day[date]:
+                last_red = date
+                break
+            streak += 1
+        out[source] = {"green_days": streak, "last_red": last_red, "days_with_runs": len(by_day)}
+    return out
+
+
+def green_days_report(token: str, repo: str) -> int:
+    """--green-days: the scheduled-run streak per scheduled source (no R2, no issue)."""
+    if not token:
+        raise RuntimeError("--green-days needs GH_PROJECT_TOKEN")
+    ids = [s for s, cfg in sources().items() if (cfg.get("extraction") or {}).get("schedule")]
+    result = green_days(scheduled_runs(token, repo), ids)
+    lines = ["| source | green days | last red day | days with runs |", "|---|---:|---|---:|"]
+    lines += [
+        f"| {s} | {v['green_days']} | {v['last_red'] or '—'} | {v['days_with_runs']} |" for s, v in result.items()
+    ]
+    table = "\n".join(lines)
+    print(table)
+    step_summary("## tracker · green days (scheduled runs, 30 days)\n\n" + table + "\n")
+    annotate("notice", "tracker: green days", {s: v["green_days"] for s, v in result.items()})
+    return 0
+
+
 def run_mark(run: dict[str, Any] | None, since: str = "") -> str:
     """✅ / 🔴 / ⚪ and the date of a finished run."""
     if not run:
@@ -215,8 +283,11 @@ def main(argv=None) -> int:
     """Measure, build the page, publish it (annotation summary, step summary, tracker issue)."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--issue", type=int, default=None)
+    parser.add_argument("--green-days", action="store_true", help="only the scheduled-run streak per source (no R2)")
     args = parser.parse_args(argv)
     token, repo = os.environ.get("GH_PROJECT_TOKEN", ""), os.environ.get("GITHUB_REPOSITORY", "zohelo/zohelo-data")
+    if args.green_days:
+        return green_days_report(token, repo)
     now = datetime.now(UTC)
 
     registry = sources()

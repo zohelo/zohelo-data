@@ -1,7 +1,7 @@
 import { isUsingOpfs, getSystemConnection, sqlQuote } from "../systemDb";
-import { fallbackPut, fallbackGet, fallbackGetAll, fallbackDelete } from "../fallback";
+import { fallbackPut, fallbackGet, fallbackGetAll } from "../fallback";
 
-export interface SettingRecord {
+interface SettingRecord {
   profile_id: string;
   category: string;
   key: string;
@@ -71,20 +71,5 @@ export async function getSettingsByCategory(
       }
     }
     return settings;
-  }
-}
-
-export async function deleteSetting(
-  profileId: string,
-  category: string,
-  key: string
-): Promise<void> {
-  if (isUsingOpfs()) {
-    const conn = getSystemConnection();
-    await conn.query(
-      `DELETE FROM settings WHERE profile_id = ${sqlQuote(profileId)} AND category = ${sqlQuote(category)} AND key = ${sqlQuote(key)}`
-    );
-  } else {
-    await fallbackDelete("settings", [profileId, category, key]);
   }
 }

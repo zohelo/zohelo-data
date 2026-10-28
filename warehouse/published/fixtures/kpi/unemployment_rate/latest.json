@@ -1,0 +1,27 @@
+{
+  "kpi_key": "unemployment_rate",
+  "unit_key": "pct_labour_force",
+  "generated_at": "2026-01-01T00:00:00Z",
+  "values": [
+    {
+      "source_key": "eurostat",
+      "geography_key": "PL",
+      "geography_level": "country",
+      "period": "2025",
+      "value": 3.2,
+      "previous_period": "2024",
+      "previous_value": 2.9,
+      "flags": [],
+      "checked_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "source_key": "eurostat",
+      "geography_key": "TERC:12",
+      "geography_level": "voivodeship",
+      "period": "2025",
+      "value": 2.6,
+      "flags": ["p"],
+      "checked_at": "2026-01-01T00:00:00Z"
+    }
+  ]
+}

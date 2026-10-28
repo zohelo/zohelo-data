@@ -64,6 +64,7 @@ twice-hourly schedule, which drops many events (#802), and on a dispatch of run
 and a long gap between scheduler runs is checked in full. A weekly or monthly schedule whose
 latest slot has no successful run since is dispatched again, at most twice per slot (#839);
 `python run.py schedule --check` validates the declarations.
+`python run.py schedule --next` prints each scheduled source's next run (UTC), the basis of next_expected_at in status.json.
 
 ## Source declarations
 

@@ -44,7 +44,7 @@ export const validateConnection = (
 const MAX_STAGE_BYTES = 100 * 1024 * 1024;
 
 /** Derives the virtual filename a staged URL is registered under. */
-export const stagedFileName = (url: string): string => {
+const stagedFileName = (url: string): string => {
   // Strip the scheme first, so a degenerate URL can never leave "https:" behind.
   const path = url
     .split("?")[0]

@@ -103,41 +103,19 @@
 {# Cross-source concepts: which measures mean the same thing. measure_key patterns are LIKE
    patterns against poc dim_measure.measure_key. #}
 {% macro poc_concepts() %}
-    select * from (
-        values
-        ('population', 'Population', 'Ludność', 'persons', 'eurostat', 'eurostat:DEMO_PJAN:NR', 'on 1 January'),
-        ('population', 'Population', 'Ludność', 'persons', 'eurostat', 'eurostat:DEMO_R_PJANAGGR3:NR', 'on 1 January, NUTS'),
-        ('population', 'Population', 'Ludność', 'persons', 'world_bank_wdi', 'world_bank_wdi:SP.POP.TOTL', 'mid-year'),
-        ('population', 'Population', 'Ludność', 'persons', 'gus_bdl', 'gus_bdl:P2137:osoba', 'on 31 December'),
-        ('population', 'Population', 'Ludność', 'persons', 'gus_dbw', 'gus_dbw:581_57_93_4:%', 'on 31 December'),
-        ('gdp_current_prices', 'GDP, current prices', 'PKB w cenach bieżących', 'million, source currency', 'eurostat', 'eurostat:NAMA_10_GDP:CP_MEUR:B1GQ', 'million EUR'),
-        ('gdp_current_prices', 'GDP, current prices', 'PKB w cenach bieżących', 'million, source currency', 'world_bank_wdi', 'world_bank_wdi:NY.GDP.MKTP.CD', 'current US$'),
-        ('gdp_per_capita', 'GDP per capita', 'PKB na 1 mieszkańca', 'per person', 'eurostat', 'eurostat:NAMA_10_PC:CP_EUR_HAB:B1GQ', 'EUR per inhabitant'),
-        ('gdp_per_capita', 'GDP per capita', 'PKB na 1 mieszkańca', 'per person', 'world_bank_wdi', 'world_bank_wdi:NY.GDP.PCAP.CD', 'current US$'),
-        ('gdp_volume_growth', 'GDP volume growth', 'Dynamika realna PKB', '%', 'eurostat', 'eurostat:NAMA_10_GDP:CLV_PCH_PRE:B1GQ', 'chain-linked volumes, % change on previous period'),
-        ('gdp_volume_growth', 'GDP volume growth', 'Dynamika realna PKB', '%', 'world_bank_wdi', 'world_bank_wdi:NY.GDP.MKTP.KD.ZG', 'annual %'),
-        ('inflation', 'Inflation, consumer prices', 'Inflacja (ceny konsumpcyjne)', '%', 'eurostat', 'eurostat:PRC_HICP_MANR:RCH_A', 'HICP, annual rate of change, monthly'),
-        ('inflation', 'Inflation, consumer prices', 'Inflacja (ceny konsumpcyjne)', '%', 'world_bank_wdi', 'world_bank_wdi:FP.CPI.TOTL.ZG', 'CPI, annual %'),
-        ('unemployment_rate', 'Unemployment rate (LFS)', 'Stopa bezrobocia (BAEL)', '% of labour force', 'eurostat', 'eurostat:UNE_RT_A:PC_ACT', 'annual, 15-74'),
-        ('unemployment_rate', 'Unemployment rate (LFS)', 'Stopa bezrobocia (BAEL)', '% of labour force', 'eurostat', 'eurostat:UNE_RT_M:PC_ACT', 'monthly, seasonally adjusted, 15-74'),
-        ('unemployment_rate', 'Unemployment rate (LFS)', 'Stopa bezrobocia (BAEL)', '% of labour force', 'world_bank_wdi', 'world_bank_wdi:SL.UEM.TOTL.ZS', 'ILO modelled estimate'),
-        ('registered_unemployment_rate', 'Registered unemployment rate', 'Stopa bezrobocia rejestrowanego', '%', 'gus_bdl', 'gus_bdl:P2392:%', 'registered, end of year'),
-        ('employment_rate', 'Employment rate', 'Wskaźnik zatrudnienia', '% of population', 'eurostat', 'eurostat:LFSI_EMP_A:PC_POP:EMP_LFS', '20-64'),
-        ('employment_rate', 'Employment rate', 'Wskaźnik zatrudnienia', '% of population', 'world_bank_wdi', 'world_bank_wdi:SL.EMP.TOTL.SP.ZS', '15+, ILO modelled'),
-        ('life_expectancy', 'Life expectancy at birth', 'Przeciętne trwanie życia', 'years', 'world_bank_wdi', 'world_bank_wdi:SP.DYN.LE00.IN', 'total'),
-        ('net_migration', 'Net migration', 'Saldo migracji', 'persons', 'eurostat', 'eurostat:DEMO_GIND:%:CNMIGRAT', 'incl. statistical adjustment'),
-        ('net_migration', 'Net migration', 'Saldo migracji', 'persons', 'world_bank_wdi', 'world_bank_wdi:SM.POP.NETM', ''),
-        ('live_births', 'Live births', 'Urodzenia żywe', 'persons', 'eurostat', 'eurostat:DEMO_GIND:%:LBIRTH', ''),
-        ('live_births', 'Live births', 'Urodzenia żywe', 'persons', 'gus_bdl', 'gus_bdl:P1873:%', ''),
-        ('deaths', 'Deaths', 'Zgony', 'persons', 'eurostat', 'eurostat:DEMO_GIND:%:DEATH', ''),
-        ('average_gross_wage', 'Average monthly gross wage', 'Przeciętne miesięczne wynagrodzenie brutto', 'PLN', 'gus_bdl', 'gus_bdl:P2497:%', ''),
-        ('dwellings_completed', 'Dwellings completed', 'Mieszkania oddane do użytkowania', 'dwellings', 'gus_bdl', 'gus_bdl:P3824:%', ''),
-        ('area', 'Area', 'Powierzchnia', 'km²', 'gus_bdl', 'gus_bdl:P1410:%', 'ha in the source'),
-        ('area', 'Area', 'Powierzchnia', 'km²', 'world_bank_wdi', 'world_bank_wdi:AG.LND.TOTL.K2', 'land area'),
-        ('population_density', 'Population density', 'Gęstość zaludnienia', 'persons per km²', 'gus_bdl', 'gus_bdl:P2425:%', ''),
-        ('fx_rate', 'Exchange rate to PLN', 'Kurs waluty w PLN', 'PLN per unit', 'nbp', 'nbp:fx:A:mid', 'NBP table A, mid'),
-        ('gold_price', 'Gold price', 'Cena złota', 'PLN per gram', 'nbp', 'nbp:gold:price', 'NBP fixing, 1000 fineness')
-    ) as t (concept_key, name_en, name_pl, unit, source_system, measure_key_pattern, definition)
+    {# KPI definitions are seeds (warehouse/seeds/kpi.csv, kpi_measure.csv, unit.csv). #}
+    select
+        k.kpi_key as concept_key,
+        k.name_en,
+        k.name_pl,
+        u.name_en as unit,
+        m.source_system,
+        m.measure_key_pattern,
+        m.definition
+    from {{ ref('kpi_measure') }} as m
+    inner join {{ ref('kpi') }} as k on m.kpi_key = k.kpi_key
+    inner join {{ ref('unit') }} as u on k.unit_key = u.unit_key
+    order by k.kpi_key, m.priority
 {% endmacro %}
 
 {# All PoC observations in the common shape (the build stages of the five sources). #}

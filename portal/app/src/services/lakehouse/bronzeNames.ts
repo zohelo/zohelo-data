@@ -13,7 +13,7 @@ const SOURCE_PREFIX: Record<BronzeSourceKey, string> = {
 };
 
 /** The source key is pinned by a validated release or snapshot, never guessed from a file name. */
-export const canonicalBronzeName = (name: string, source: BronzeSourceKey): string => {
+const canonicalBronzeName = (name: string, source: BronzeSourceKey): string => {
   const sourcePrefix = SOURCE_PREFIX[source];
   if (name.startsWith(`${source}_`)) return name;
   const unprefixed = name.startsWith("br_") ? name.slice(3) : name;
@@ -23,7 +23,7 @@ export const canonicalBronzeName = (name: string, source: BronzeSourceKey): stri
     ? unprefixed.slice(sourcePrefix.length) : unprefixed}`;
 };
 
-export interface NamedBronzeDataset {
+interface NamedBronzeDataset {
   dataset: PublishedDataset;
   legacyName: string | null;
 }

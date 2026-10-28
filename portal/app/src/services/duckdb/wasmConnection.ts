@@ -175,7 +175,7 @@ const buildAttachOptions = (dbConfig: EmbeddedDatabase, readOnlyDefault: boolean
  * - Bundled files (e.g. `sales.db` sitting in public/databases/) are fetched,
  *   registered in DuckDB's virtual FS, then attached.
  */
-export const loadEmbeddedDatabases = async (
+const loadEmbeddedDatabases = async (
   db: duckdb.AsyncDuckDB,
   connection: duckdb.AsyncDuckDBConnection
 ): Promise<void> => {

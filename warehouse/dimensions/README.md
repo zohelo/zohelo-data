@@ -5,6 +5,8 @@ design is in [docs/model.md](../../docs/model.md). Status: **draft for owner rev
 nothing here is built yet and no code reads these files; dbt models will be generated
 from or checked against them when Gold is modelled.
 
+domains: warehouse/seeds/domain.csv
+
 ## File format
 
 | Field | Meaning |
