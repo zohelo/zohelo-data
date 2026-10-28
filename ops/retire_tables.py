@@ -57,7 +57,8 @@ def candidates(found: dict[str, dict[str, Any]], classes: tuple[str, ...] = RETI
     registry = sources()
     platform = yaml.safe_load((ROOT / "warehouse" / "warehouse.yaml").read_text()) or {}
     shared_gold = list(platform.get("gold") or [])
-    return sorted(n for n in found if classify(n, registry, shared_gold)[0] in classes)
+    demo_namespaces = platform.get("demo_namespaces") or []
+    return sorted(n for n in found if classify(n, registry, shared_gold, demo_namespaces=demo_namespaces)[0] in classes)
 
 
 def report(title: str, names: list[str], found: dict[str, dict[str, Any]]) -> None:

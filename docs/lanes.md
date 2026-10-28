@@ -43,7 +43,8 @@ session starts fresh: it reads `AGENTS.md`, `docs/decisions.md`, `docs/backlog.m
 6. **Stuck?** If a step is impossible as written or needs a decision, comment on the issue, remove `in-progress`, add
    label `design:question`, and take the next Task. Never improvise around the issue.
 7. **Repeat**, aiming for 10–20 PRs per run, until about 3 hours have passed or nothing in the lane is pickable. Before ending, wait up to
-   30 minutes for the architect to finish reviewing your open PRs (check every 5 minutes) and handle every result as in
+   10 minutes for the architect to finish reviewing your open PRs (check every 5 minutes; anything later comes back as a
+   new lane run started by the architect) and handle every result as in
    step 5a; then remove `in-progress` from anything you did not finish, and end with a summary: PRs opened, Tasks closed, questions raised.
 
 ## Architect session
@@ -57,6 +58,11 @@ remove the label when done.
    checks <result>`), then merge (squash) when checks pass and the review finds no
    problem; otherwise comment the exact change needed on the PR and label the issue `changes-requested` (the lane fixes
    it next run). Rebase conflicting PRs when the fix is mechanical.
+1a. **Report back to the lane.** When the reviews a lane asked for are done, tell that lane the result: look up the
+   lane's scheduled task (list_triggers; ids in the session prompt). If its last run is still running, do nothing more —
+   the running lane reads the results from its PRs (Implementer step 5a). If no run of that lane is active, start one
+   (fire_trigger) with the text `Review results: merged <repo>#<n>, …; changes requested <repo>#<n> (<one-line reason>), …`;
+   that run does the rework first (Implementer step 0) and then continues with new Tasks.
 2. **Dependabot**: merge green minor/patch PRs; close PRs made redundant; failing ones become a Bug Task in lane 1.
 3. **Questions**: answer `design:question` issues from the plan and `docs/decisions.md`; record new decisions there;
    anything that is the owner's call goes to the weekly status (max 3 open owner items).
