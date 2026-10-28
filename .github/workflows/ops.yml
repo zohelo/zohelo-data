@@ -9,6 +9,7 @@ on:
   schedule:
     - cron: '20 5 * * 1'
     - cron: '0 5 * * 1'
+    - cron: '30 5 * * 1'
     - cron: '40 5 * * 1'
     - cron: '5 6 * * *'
   workflow_dispatch:
@@ -55,6 +56,7 @@ jobs:
             case "$CRON" in
               '20 5 * * 1') script=orphan_files; args='--delete --min-age-hours 48' ;;
               '0 5 * * 1') script=backlog_sync; args='apply' ;;
+              '30 5 * * 1') script=security_alerts; args='apply' ;;
               '40 5 * * 1') script=tracker; args='' ;;
               '5 6 * * *') script=scheduler_trigger; args='heartbeat' ;;
               *) echo "::error title=ops schedule::no schedule table row for cron '$CRON'" >&2; exit 1 ;;
@@ -145,6 +147,18 @@ jobs:
           permission-contents: read  # backlog_sync: checkout of zohelo-bi and zohelo
           permission-actions: read  # tracker: the latest Silver/Gold build
       # backlog_sync reads .github/backlog of the other two repositories (ops/backlog_sync.py, _repos/*).
+      - name: Security alerts token
+        id: security
+        if: needs.resolve.outputs.script == 'security_alerts'
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        with:
+          client-id: ${{ vars.ORG_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.ORG_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: zohelo-data,zohelo-bi,zohelo
+          permission-issues: ${{ startsWith(needs.resolve.outputs.args, 'apply') && 'write' || 'read' }}
+          permission-vulnerability-alerts: read
+          permission-security-events: read
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         if: needs.resolve.outputs.script == 'backlog_sync'
         with:
@@ -163,7 +177,7 @@ jobs:
           persist-credentials: false
       - name: "ops/${{ needs.resolve.outputs.script }}.py"
         env:
-          GH_PROJECT_TOKEN: ${{ steps.setup.outputs.token || steps.project.outputs.token }}
+          GH_PROJECT_TOKEN: ${{ steps.setup.outputs.token || steps.project.outputs.token || steps.security.outputs.token }}
           # check_credentials: the app installation token it probes (blank for other scripts).
           APP_TOKEN: ${{ steps.app.outputs.token }}
           # The Workers deploy token, for scheduler_trigger and check_credentials only (blank for other scripts).
