@@ -233,9 +233,37 @@ deliverables:
           - workflow: Dev · branch runs, script kpi_dimension_trial, on the branch
             expect: "notice 'kpi_dimension: <n> rows', every published KPI lists geography and time; then 'dropped zz_dev_kpi_dimension'"
         out_of_scope: [dim_dimension and dim_member, the poc_* models, publish.py]
+      - key: data/metadata/catalogue-v1/models/dimension-inventory
+        type: Task
+        title: Report the dimensions and units of the published KPIs' measures
+        effort: S
+        state: open
+        contract: false
+        verify_only: true
+        context: >-
+          The architect writes dim_dimension, dim_member and the unit checks of the quality Epic from what prod
+          Gold holds today: which dimension keys, members and units the published KPIs' measures have. Tables:
+          gold.concept_measures (concept_key = kpi_key, measure_key, source_system), gold.measure_dimensions
+          (measure_key, dimension, members, member_count, has_unmatched), gold.dim_measure (measure_key, unit_key).
+          Verify-only: nothing is merged.
+        files: []
+        steps:
+          - "Branch test/<this issue number>-catalogue-inventory from origin/main; this Task has no PR."
+          - "dev/catalogue_inventory.py: read the three tables with ingestion.common.r2 catalog() (load_table(...).scan().to_arrow()); published = kpi_key of the warehouse/seeds/kpi.csv rows with status published, in file order."
+          - "For each published KPI: annotate notice f'inventory: {kpi_key}' with {measure_key: {source: source_system, unit: unit_key, dims: {dimension: [member_count, first 6 members]}}} of its measures."
+          - "Then annotate notice 'inventory: breakdowns' with {dimension: first 20 sorted distinct members} over those measures for every dimension other than geography and time, and write the full result (all members) as JSON to $DEV_OUTPUT_DIR/catalogue_inventory.json."
+          - "Push the branch and run Dev · branch runs with script catalogue_inventory."
+          - "Comment on this issue: the run URL and the six annotation messages verbatim (gh api repos/zohelo/zohelo-data/check-runs/<job id>/annotations); then close the issue. Leave the branch (Ops branch_cleanup removes test/ branches)."
+        acceptance:
+          - "six notices: one per published KPI and 'inventory: breakdowns'; no error"
+          - "the closing comment holds all six messages"
+        verify:
+          - workflow: Dev · branch runs, script catalogue_inventory, on test/<n>-catalogue-inventory
+            expect: "notices 'inventory: population', 'inventory: gdp_current_prices', 'inventory: inflation', 'inventory: unemployment_rate', 'inventory: fx_rate', 'inventory: breakdowns'"
+        out_of_scope: [any change on main, writing dim_dimension or dim_member, unit tests]
     todo:
       - "dim_dataset: native theme path, frequency_keys and PL/EN names from Silver metadata; dim_measure from the PoC dim_measure"
-      - "dim_dimension, dim_member from measure_dimensions and dim_series"
+      - "dim_dimension, dim_member: written by the architect from the report of models/dimension-inventory"
       - "freshness from gold.coverage (checked_at, loaded_at, lag_days): needs a decision on where loaded_at comes from (gold.coverage has no load time)"
   - key: data/metadata/catalogue-v1/domain-mapping
     title: Source themes mapped to domains
