@@ -1257,7 +1257,7 @@ sources:
   name: UNICEF Data Warehouse Explorer and SDMX API
   short_name: UNICEF Data Warehouse
   provider: United Nations Children’s Fund
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -1294,6 +1294,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Parked: reuse terms unresolved (no data licence; UNICEF site terms are personal/educational use only); owner
+      decision noted on the Epic'
     - 'Reuse terms unresolved: no data licence; UNICEF site terms are personal/educational use only (owner decision)'
     - 'Avoid labels-only CSV as exchange key'
     references:
