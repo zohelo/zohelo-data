@@ -29,8 +29,9 @@
 # - The session cannot reach Cloudflare. Cloud effects are checked through Pipeline / Ops / Dev runs
 #   and their annotations: `gh api repos/zohelo/zohelo-data/check-runs/<job id>/annotations`.
 # - Scheduled run list (REST; no --paginate, the session proxy rejects its follow-up URLs):
-#   since=$(date -u -d '-{window} days' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since" --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]") and (.display_title|test("· {source_system} · full")))|"\(.conclusion) \(.created_at) \(.html_url)"'; done | head -{needed}
-#   Only runs started by the scheduler (zohelo-automation[bot]) or a GitHub schedule count; manual dispatches do not.
+#   since=$(date -u -d '-{window} days' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since" --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="github-actions[bot]") and (.display_title|test("· {source_system} · full")))|"\(.conclusion) \(.created_at) \(.html_url)"'; done | head -{needed}
+#   Only runs started by the scheduler count: it dispatches them with the workflow token, so they show event
+#   workflow_dispatch and triggering actor github-actions[bot] (D18); GitHub schedule runs count too; manual dispatches do not.
 # - PR check: the `check` job of dev.yml runs `python -m ops.repo_check` and `dbt parse`; run
 #   `python -m ops.repo_check` and `PYTHONPATH=. python run.py schedule --check` locally first.
 # - A Pipeline run never starts by a merge; dispatch: Actions → Pipeline → source + run (+ filter).

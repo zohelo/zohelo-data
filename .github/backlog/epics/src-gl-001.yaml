@@ -96,7 +96,7 @@ deliverables:
     files: []
     steps:
     - 'List the scheduler-started runs: since=$(date -u -d ''-7 days'' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
-      --jq ''.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]") and
+      --jq ''.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="github-actions[bot]") and
       (.display_title|test("· eurostat · full")))|"\(.conclusion) \(.created_at) \(.html_url)"''; done | head -3'
     - If it prints 3 lines starting with success, comment them here and close this issue.
     - 'If an alert issue ''Pipeline failed: eurostat · …'' is open and the runs are green, close it with the same
@@ -109,7 +109,7 @@ deliverables:
     - No open alert issue for eurostat
     verify:
     - run: since=$(date -u -d '-7 days' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
-        --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]")
+        --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="github-actions[bot]")
         and (.display_title|test("· eurostat · full")))|"\(.conclusion) \(.created_at) \(.html_url)"'; done | head
         -3
       expect: 3 lines starting with success

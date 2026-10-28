@@ -98,7 +98,7 @@ deliverables:
     files: []
     steps:
     - 'List the scheduler-started runs: since=$(date -u -d ''-62 days'' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
-      --jq ''.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]") and
+      --jq ''.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="github-actions[bot]") and
       (.display_title|test("· opendata_org · full")))|"\(.conclusion) \(.created_at) \(.html_url)"''; done | head
       -2'
     - If it prints 2 lines starting with success, comment them here and close this issue. If only 1 exists, comment
@@ -114,7 +114,7 @@ deliverables:
     - No open alert issue for opendata_org
     verify:
     - run: since=$(date -u -d '-62 days' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
-        --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]")
+        --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="github-actions[bot]")
         and (.display_title|test("· opendata_org · full")))|"\(.conclusion) \(.created_at) \(.html_url)"'; done
         | head -2
       expect: 2 lines starting with success
