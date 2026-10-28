@@ -1883,7 +1883,7 @@ sources:
   name: UNIDO Statistics Data Portal / INDSTAT
   short_name: UNIDO INDSTAT
   provider: United Nations Industrial Development Organization
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -1915,6 +1915,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
+    - 'Parked: licence restricted (UNIDO terms grant secondary data dissemination only with a licensed database; public display needs that paid licence)'
     - 'Public display needs a UNIDO database licence with the secondary-dissemination option (price unknown)'
     - 'Obtain ISIC concordances'
     references:
