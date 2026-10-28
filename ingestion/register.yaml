@@ -7533,7 +7533,7 @@ sources:
   short_name: OpenData organisations
   provider: OpenData
   source_system: opendata_org
-  status: bronze
+  status: silver
   family: E
   kpi: false
   geography: Poland
@@ -7551,7 +7551,10 @@ sources:
     limits: unknown
   licence:
     status: unresolved
-    notes: Not yet researched; contains person records — review before any publication.
+    notes: 'Terms: CDLA-Permissive-2.0, https://opendata.org/terms/ (section 8). Attribution: "Source: OpenData.org
+      (BrightQuery), CDLA-Permissive-2.0". Owner decision #906 (25 Oct 2026): keep and process; private use
+      only (data.zohelo.com) until the owner approves public display. Person records (business contacts)
+      included: never published.'
   updates: Not yet researched.
   ingestion:
     history: Bulk ZIP snapshot (legacy loader).
@@ -7565,5 +7568,7 @@ sources:
     evidence: none
     connection: tested
     blockers:
-    - Research provider, licence and access; person data needs a privacy review.
-    references: []
+    - 'Public display: owner decision pending (licence found 28 Oct 2026; archive provenance unconfirmed)'
+    - 'Person data: privacy review before any publication'
+    references:
+    - https://opendata.org/terms/
