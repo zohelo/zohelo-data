@@ -105,7 +105,8 @@
   "homepage": "https://data.zohelo.com/",
   "overrides": {
     "picomatch": "^4.0.4",
-    "flatted": "^3.4.2"
+    "flatted": "^3.4.2",
+    "dompurify": "^3.4.17"
   },
   "knip": {
     "entry": [
