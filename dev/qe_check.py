@@ -5,7 +5,6 @@ Reads 06_published/v1/ from R2 (GET only) and public pages/APIs; writes nothing.
 
 from __future__ import annotations
 
-import io
 import json
 import os
 import re
@@ -160,72 +159,46 @@ def provider(kpi: str, source: str, period: str):
 
 
 def numbers() -> None:
-    import pyarrow.parquet as pq
+    from ingestion.common.r2 import catalog
+    from warehouse import publish as pub
 
-    from ingestion.common.r2 import s3
-
-    client = s3()
-    bucket = os.environ["STORAGE_LAKEHOUSE_BUCKET_NAME"]
-    prefix = "06_published/v1/"
-
-    keys = []
-    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix="06_published/"):
-        keys += [f"{o['Key']} {o['Size']} {o['LastModified']:%Y-%m-%dT%H:%M}" for o in page.get("Contents", [])]
-    annotate("notice", "published keys", {"n": len(keys), "keys": [k.replace("06_published/", "") for k in keys][:60]})
-
-    def read(key: str) -> bytes:
-        return client.get_object(Bucket=bucket, Key=prefix + key)["Body"].read()
-
-    try:
-        catalog = json.loads(read("catalog/catalog.json"))
-    except client.exceptions.NoSuchKey:
-        catalog = {"generated_at": "MISSING catalog/catalog.json", "kpis": []}
-    units = {k["kpi_key"]: (k["unit_key"], k.get("last_period"), k.get("source_keys")) for k in catalog["kpis"]
-             if k["kpi_key"] in ("population", "gdp_current_prices", "inflation", "unemployment_rate", "fx_rate")}
-    annotate("notice", "catalog kpis", {"generated_at": catalog["generated_at"], "n": len(catalog["kpis"]), "kpis": units})
+    cat = catalog()
+    measures = pub.seed("kpi_measure")
+    checked_at = pub.checked(pub.gold(cat, "gold", "coverage"))
     rows = []
     for kpi in ("population", "gdp_current_prices", "inflation", "unemployment_rate"):
-        try:
-            latest = json.loads(read(f"kpi/{kpi}/latest.json"))
-        except client.exceptions.NoSuchKey:
-            rows.append({"kpi": kpi, "missing": "latest.json"})
-            continue
-        country = [v for v in latest["values"] if v["geography_level"] == "country"]
+        unit = next(k["unit_key"] for k in pub.seed("kpi") if k["kpi_key"] == kpi)
+        metrics = pub.gold(cat, "gold", f"metrics_{kpi}")
+        latest = pub.kpi_latest(metrics, measures, checked_at, kpi, unit, "now")
+        country = [v for v in latest["values"] if v["geography_key"] == "PL"]
         voiv = [v for v in latest["values"] if v["geography_level"] == "voivodeship"]
         for v in country:
-            if v["geography_key"] != "PL":
-                continue
-            prov = provider(kpi, v["source_key"], v["period"])
-            rows.append({"kpi": kpi, "unit": latest["unit_key"], "src": v["source_key"], "period": v["period"],
-                         "zohelo": v["value"], "provider": prov, "prev": [v.get("previous_period"), v.get("previous_value")]})
-        if voiv:
-            by_src: dict[str, list] = {}
-            for v in voiv:
-                by_src.setdefault(v["source_key"], []).append(v)
-            rows.append({"kpi": kpi, "voivodeship": {s: {"n": len(x), "periods": sorted({y["period"] for y in x}),
-                                                         "sum": round(sum(y["value"] for y in x), 2),
-                                                         "sample": [x[0]["geography_key"], x[0]["value"]]}
-                                                      for s, x in by_src.items()}})
-        rows.append({"kpi": kpi, "countries": len(country), "generated_at": latest["generated_at"]})
-    for i in range(0, len(rows), 6):
-        annotate("notice", f"numbers {i // 6 + 1}", rows[i:i + 6])
+            rows.append({"kpi": kpi, "unit": unit, "src": v["source_key"], "period": v["period"],
+                         "zohelo": v["value"], "provider": provider(kpi, v["source_key"], v["period"]),
+                         "prev": [v.get("previous_period"), v.get("previous_value")]})
+        by_src: dict[str, list] = {}
+        for v in voiv:
+            by_src.setdefault(v["source_key"], []).append(v)
+        rows.append({"kpi": kpi, "metrics_columns": metrics.column_names[:20],
+                     "voivodeship": {s: {"n": len(x), "periods": sorted({y["period"] for y in x})[-3:],
+                                         "sum": round(sum(y["value"] for y in x), 2)} for s, x in by_src.items()}})
+    for i in range(0, len(rows), 5):
+        annotate("notice", f"numbers {i // 5 + 1}", rows[i:i + 5])
 
-    try:
-        table = pq.read_table(io.BytesIO(read("kpi/fx_rate/series.parquet")))
-    except client.exceptions.NoSuchKey:
-        annotate("warning", "numbers fx", "kpi/fx_rate/series.parquet missing")
-        return
-    cols = table.column_names
-    df = table.to_pylist()
-    cur_col = next((c for c in cols if c.startswith("dim_") and "curr" in c), None)
-    out = {"columns": cols, "rows": len(df)}
-    if cur_col:
+    fx = pub.gold(cat, "gold", "metrics_fx_rate")
+    cols = fx.column_names
+    out = {"columns": cols, "rows": fx.num_rows}
+    cur = next((c for c in cols if "currency" in c), None)
+    tcol = next((c for c in cols if c in ("date_key", "period_start", "period", "date")), None)
+    if cur and tcol:
+        import pyarrow.compute as pc
         for code in ("EUR", "USD", "CHF"):
-            sel = [r for r in df if str(r[cur_col]).upper() == code]
-            if sel:
-                last = max(sel, key=lambda r: r["period"])
-                out[code] = {"period": last["period"], "zohelo": last["value"], "unit": last["unit_key"],
-                             "nbp": nbp(code, last["period"])}
+            t = fx.filter(pc.equal(pc.utf8_upper(pc.cast(fx[cur], "string")), code))
+            if t.num_rows:
+                rows_ = t.to_pylist()
+                last = max(rows_, key=lambda r: str(r[tcol]))
+                day = str(last[tcol])[:10]
+                out[code] = {"day": day, "row": {k: str(v) for k, v in last.items()}, "nbp": nbp(code, day)}
     annotate("notice", "numbers fx", out)
 
 
