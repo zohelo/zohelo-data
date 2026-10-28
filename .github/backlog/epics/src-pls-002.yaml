@@ -34,14 +34,17 @@ deliverables:
     owner_action: null
     context: 'The register entry PLS-002 in ingestion/register.yaml is the source of truth for licence and public
       display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
-      URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
-      read: https://api.stat.gov.pl/Home/DBWApi?lang=en.'
+      URL and the exact attribution sentence, and research.blockers must list only open problems. The terms were
+      checked on 28 Oct 2026 (decision D23 in docs/decisions.md); this Task only writes them down.'
     files:
     - edit: ingestion/register.yaml
     steps:
-    - Open https://api.stat.gov.pl/Home/DBWApi?lang=en and the GUS terms page; confirm CC BY 4.0.
-    - 'Set licence.notes: ''Terms: CC BY 4.0, <URL>. Attribution: "Źródło: GUS, Dziedzinowe Bazy Wiedzy" / "Source:
-      Statistics Poland, DBW" plus the indicator id.'''
+    - 'Terms are settled (architect, 28 Oct, decision D23): the DBW API page states no licence; https://stat.gov.pl/copyright
+      allows copying and own analyses provided the source is given, with no named licence. Do not claim CC BY 4.0.'
+    - 'Set licence.notes to exactly: ''Terms: https://stat.gov.pl/copyright (GUS allows copying and own analyses
+      provided the source is given; no named licence — the DBW API page states none, CC BY 4.0 is stated only for
+      BDL; commercial reuse not addressed, ask api-dbw@stat.gov.pl if needed). Attribution: "Źródło: GUS, Dziedzinowe
+      Bazy Wiedzy" / "Source: Statistics Poland, DBW" plus the indicator id.'''
     - Remove blockers 'Confirm production-key process' and 'Document per-endpoint pagination/limits' (the route
       is the website bulk files, no key); keep 'Validate territorial code semantics'.
     - 'Set status: silver (silver.dbw_observations exists).'
