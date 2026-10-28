@@ -429,6 +429,27 @@ def _schema_problems(value: object, schema: dict, where: str) -> list[str]:
     return problems
 
 
+def semantic_models() -> list[str]:
+    """Every published KPI of warehouse/seeds/kpi.csv has a metrics model and a semantic model on it."""
+    semantic = yaml.safe_load((ROOT / "warehouse" / "semantic_models" / "gold.yml").read_text(encoding="utf-8"))
+    models = set()
+    for entry in semantic.get("semantic_models") or []:
+        match = re.fullmatch(r"ref\('(?:poc_)?metrics_(\w+)'\)", str(entry.get("model", "")).strip())
+        if match:
+            models.add(match.group(1))
+    problems = []
+    with open(ROOT / "warehouse" / "seeds" / "kpi.csv", newline="", encoding="utf-8") as handle:
+        for row in csv.DictReader(handle):
+            if row["status"] != "published":
+                continue
+            k = row["kpi_key"]
+            if k not in models:
+                problems.append(f"semantic models: published KPI {k} has no semantic model on metrics_{k}")
+            if not (ROOT / "warehouse" / "models" / "gold" / f"poc_metrics_{k}.sql").exists():
+                problems.append(f"semantic models: published KPI {k} has no warehouse/models/gold/poc_metrics_{k}.sql")
+    return problems
+
+
 def main() -> int:
     files = tracked()
     checks = {
@@ -443,6 +464,7 @@ def main() -> int:
         "scheduler imports": scheduler_imports,
         "backlog": backlog,
         "published contract": published_contract,
+        "semantic models": semantic_models,
     }
     failed = 0
     for name, check in checks.items():
