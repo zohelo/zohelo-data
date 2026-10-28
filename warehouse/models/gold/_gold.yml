@@ -56,6 +56,8 @@ models:
     columns:
       - name: measure_key
         tests: [not_null, unique]
+      - name: dataset_key
+        tests: [not_null]
       - name: status
         tests: [not_null]
   - name: poc_measure_dimensions
