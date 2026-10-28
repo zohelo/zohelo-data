@@ -45,7 +45,7 @@ After the fixture loop (add `import ast` to the standard-library import block, s
         latest = fixtures / "kpi" / str(key) / "latest.json"
         if key in skip:
             if latest.exists():
-                problems.append(f"kpi/{key}/latest.json: {key!r} is in publish.SKIP and has no latest.json (D26)")
+                problems.append(f"kpi/{key}/latest.json: {key!r} is in publish.SKIP and must have no latest.json (D26)")
         elif not latest.exists():
             problems.append(f"kpi/{key}/latest.json: missing for published KPI {key!r} (D26)")
         elif (found := json.loads(latest.read_text(encoding="utf-8")).get("kpi_key")) != key:
