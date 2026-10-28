@@ -30,7 +30,7 @@ import yaml
 
 API = "https://api.github.com"
 LABEL = "alert"
-CANCELLED_BY_DESIGN = ("silver_gold.build",)
+CANCELLED_BY_DESIGN = ("silver_gold.build", "gold.publish")
 REOPEN_DAYS = 14
 REGISTER = Path(__file__).resolve().parent.parent / "ingestion" / "register.yaml"
 
