@@ -31,3 +31,5 @@ Decisions that bind implementers; read this first, after AGENTS.md.
 | D13 | 2026-10-27 | Decision log | This log is the one decision log implementers read first. | architect |
 | D14 | 2026-10-27 | Cross-repo Tasks | Cross-repo Tasks sit under a Deliverable with repo:. | architect |
 | D15 | 2026-10-27 | Secrets scope | Secrets scope changes only on the owner's request. | architect |
+| D16 | 2026-10-28 | Formatter scope | Repo formatters (Prettier in zohelo-bi and zohelo) ignore `.github/backlog/`: backlog YAML keeps the layout of docs/backlog.md in all three repos. | architect |
+| D17 | 2026-10-28 | Backlog-refill PRs | A PR that only writes Tasks into `.github/backlog/` closes a one-off Task issue "Architect: write the next lane Tasks (<date>)" created by REST without a key marker (the PR check needs an open Task); the sync does not manage it. | architect |

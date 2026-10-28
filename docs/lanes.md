@@ -57,7 +57,7 @@ remove the label when done.
 2. **Dependabot**: merge green minor/patch PRs; close PRs made redundant; failing ones become a Bug Task in lane 1.
 3. **Questions**: answer `design:question` issues from the plan and `docs/decisions.md`; record new decisions there;
    anything that is the owner's call goes to the weekly status (max 3 open owner items).
-4. **Tasks**: when a lane has fewer than 5 pickable Tasks, write the next Tasks into `.github/backlog/` (spec:
+4. **Tasks**: when a lane has fewer than 10 pickable Tasks, write the next Tasks into `.github/backlog/` (spec:
    `docs/backlog.md`) from the Deliverables' `todo` lines, open a PR, merge it, and run Ops `backlog_sync apply`.
 5. **Weekly (Monday run)**: status update for the owner — merged PRs per lane, Epics' progress, risks, ≤ 3 decisions.
 
