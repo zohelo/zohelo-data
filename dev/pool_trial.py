@@ -56,6 +56,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--start-method", default="fork")
     parser.add_argument("--workers", default="2")
+    parser.add_argument("--minutes", default="150")  # above 60: the big-file hour is kept back from small files
     args = parser.parse_args()
     code = 1
     try:
@@ -68,7 +69,7 @@ def main() -> int:
                 "--workers",
                 args.workers,
                 "--minutes",
-                "60",
+                args.minutes,
                 "--start-method",
                 args.start_method,
             ]
