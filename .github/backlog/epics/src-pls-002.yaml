@@ -193,6 +193,7 @@ deliverables:
   - data/metadata/catalogue-v1
   todo:
   - 'GUS CPI (economy proposal, #2074): find the monthly CPI series (total, same month of previous year = 100) in DBW Bronze and record its measure key, so `inflation` can switch to GUS CPI'
+  - 'GUS monthly labour series (labour proposals, #2074): find in DBW Bronze the monthly average gross wage and employment in the enterprise sector (more than 9 employees) and the monthly registered unemployment rate (Poland and voivodeships), record their measure keys and coverage; they feed `real_wage_growth` and the page "Two unemployment rates" (LFS vs registered, marker at the 1 June 2025 labour-market act)'
   - kpi.csv rows, domain mapping and manifest check are written when Epic data/metadata/catalogue-v1 is done
 - key: data/src-pls-002/portal-release
   title: GUS DBW · Data portal release
