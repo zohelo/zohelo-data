@@ -1167,8 +1167,11 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: Unless stated otherwise datasets are CC BY 4.0 with required metadata citation, no de-anonymization/misrepresentation,
-      no endorsement, and third-party exclusions.
+    notes: 'Terms: CC BY 4.0 plus WHO additional terms, https://data.who.int/redirect-pages/footer/learn-more/terms-and-conditions
+      ("Terms and conditions for WHO datasets"): attribution as indicated in each dataset''s metadata; do not falsify
+      or misrepresent; do not de-anonymise; no use of the WHO name or emblem and no implied endorsement; provided without
+      warranty; WHO may change or discontinue datasets. Attribution: per dataset metadata, default "Source: World Health
+      Organization, <dataset>, data.who.int, accessed <date>".'
   updates: WHO can modify or discontinue datasets or access methods; schedules are dataset-specific.
   ingestion:
     history: Archive dataset, metadata, citation and terms/version.
@@ -1183,11 +1186,12 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Build GHO-to-new-platform crosswalk
-    - Check per-dataset licence exceptions and change notices
+    - 'Build GHO-to-new-platform crosswalk'
+    - 'Check per-dataset licence exceptions and change notices'
     references:
     - https://data.who.int/
     - https://data.who.int/about/data/terms-and-conditions
+    - https://data.who.int/redirect-pages/footer/learn-more/terms-and-conditions
 - id: GL-026
   name: UIS Data Browser
   short_name: UNESCO UIS
