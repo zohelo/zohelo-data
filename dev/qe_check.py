@@ -168,16 +168,28 @@ def numbers() -> None:
     bucket = os.environ["STORAGE_LAKEHOUSE_BUCKET_NAME"]
     prefix = "06_published/v1/"
 
+    keys = []
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix="06_published/"):
+        keys += [f"{o['Key']} {o['Size']} {o['LastModified']:%Y-%m-%dT%H:%M}" for o in page.get("Contents", [])]
+    annotate("notice", "published keys", {"n": len(keys), "keys": [k.replace("06_published/", "") for k in keys][:60]})
+
     def read(key: str) -> bytes:
         return client.get_object(Bucket=bucket, Key=prefix + key)["Body"].read()
 
-    catalog = json.loads(read("catalog/catalog.json"))
+    try:
+        catalog = json.loads(read("catalog/catalog.json"))
+    except client.exceptions.NoSuchKey:
+        catalog = {"generated_at": "MISSING catalog/catalog.json", "kpis": []}
     units = {k["kpi_key"]: (k["unit_key"], k.get("last_period"), k.get("source_keys")) for k in catalog["kpis"]
              if k["kpi_key"] in ("population", "gdp_current_prices", "inflation", "unemployment_rate", "fx_rate")}
     annotate("notice", "catalog kpis", {"generated_at": catalog["generated_at"], "n": len(catalog["kpis"]), "kpis": units})
     rows = []
     for kpi in ("population", "gdp_current_prices", "inflation", "unemployment_rate"):
-        latest = json.loads(read(f"kpi/{kpi}/latest.json"))
+        try:
+            latest = json.loads(read(f"kpi/{kpi}/latest.json"))
+        except client.exceptions.NoSuchKey:
+            rows.append({"kpi": kpi, "missing": "latest.json"})
+            continue
         country = [v for v in latest["values"] if v["geography_level"] == "country"]
         voiv = [v for v in latest["values"] if v["geography_level"] == "voivodeship"]
         for v in country:
@@ -198,7 +210,11 @@ def numbers() -> None:
     for i in range(0, len(rows), 6):
         annotate("notice", f"numbers {i // 6 + 1}", rows[i:i + 6])
 
-    table = pq.read_table(io.BytesIO(read("kpi/fx_rate/series.parquet")))
+    try:
+        table = pq.read_table(io.BytesIO(read("kpi/fx_rate/series.parquet")))
+    except client.exceptions.NoSuchKey:
+        annotate("warning", "numbers fx", "kpi/fx_rate/series.parquet missing")
+        return
     cols = table.column_names
     df = table.to_pylist()
     cur_col = next((c for c in cols if c.startswith("dim_") and "curr" in c), None)
