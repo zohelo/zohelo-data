@@ -1368,8 +1368,11 @@ sources:
     limits: Default page size 100 is documented; maximum and rate quota are unknown.
   licence:
     status: open-conditional
-    notes: Confirm the Refugee Data Finder licence; related Operational Data Portal datasets default to CC BY 4.0
-      unless indicated.
+    notes: 'Terms: CC BY 4.0 plus supplemental terms, https://www.unhcr.org/terms-use-datasets ("licensed under a Creative
+      Commons Attribution International License 4.0"): UNHCR APIs may be used to access the datasets; include the URL
+      of these terms when sharing; no implied endorsement; third-party datasets flagged in metadata may need their provider''s
+      consent; UNHCR may change or discontinue datasets and APIs. Attribution: "Source: UNHCR Refugee Population Statistics
+      Database" with credit to UNHCR''s data providers.'
   updates: Annual and other releases can revise history; methodology page governs definitions.
   ingestion:
     history: Load endpoints by year/resource plus lookups and footnotes.
@@ -1383,10 +1386,13 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Confirm exact product licence, Guard against API default aggregation]
+    blockers:
+    - 'Guard against API default aggregation'
+    - 'Exclude third-party datasets flagged in metadata'
     references:
     - https://api.unhcr.org/docs/refugee-statistics.html
     - https://data.unhcr.org/en/situations/ukraine
+    - https://www.unhcr.org/terms-use-datasets
 - id: GL-030
   name: Global Migration Data Portal
   short_name: IOM Migration Data Portal
