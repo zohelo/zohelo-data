@@ -2117,7 +2117,11 @@ sources:
     limits: Unknown.
   licence:
     status: open-conditional
-    notes: GUS CC BY 4.0 likely applies to portal data, but census-file scope should be confirmed per download.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+      licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+      summaries or reworked text. Attribution: "Źródło: GUS, Powszechny Spis Rolny 2020" / "Source: Statistics Poland,
+      Agricultural Census 2020".'
   updates: Decennial census release with corrections/thematic additions.
   ingestion:
     history: Load all chosen aggregate tables with source files and notes.
@@ -2132,10 +2136,11 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Verify downloadable catalogue and licence
+    - Verify downloadable catalogue
     - Document confidentiality symbols
     references:
     - https://stat.gov.pl/spisy-powszechne/powszechny-spis-rolny-2020/
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-007
   name: Krajowy Rejestr Urzędowy Podziału Terytorialnego Kraju (TERYT)
   short_name: GUS TERYT
