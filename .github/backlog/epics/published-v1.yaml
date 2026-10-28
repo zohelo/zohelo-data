@@ -124,6 +124,41 @@ deliverables:
           - run: python -m ops.repo_check
             expect: all checks ok
         out_of_scope: [the geo fixture's content, size-limit checks, publish.py]
+      - key: data/published/published-v1/contract/latest-fixtures
+        type: Task
+        title: Add latest.json fixtures for every published KPI and check them
+        effort: S
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/contract/geo-schema]
+        context: >-
+          Decision D26 (docs/decisions.md): every KPI with status `published` has kpi/<kpi_key>/latest.json
+          except the KPIs gold.publish skips (`SKIP` in warehouse/publish.py, today fx_rate), and the fixture
+          sets follow the same rule. warehouse/published/fixtures/catalog/catalog.json lists five published
+          KPIs, but only kpi/unemployment_rate/latest.json exists, so consumers that build against the
+          fixtures (zohelo, zohelo-bi) cannot test population, gdp_current_prices or inflation.
+        files:
+          - create: warehouse/published/fixtures/kpi/population/latest.json
+          - create: warehouse/published/fixtures/kpi/gdp_current_prices/latest.json
+          - create: warehouse/published/fixtures/kpi/inflation/latest.json
+          - edit: ops/repo_check.py
+          - edit: warehouse/published/README.md
+        steps:
+          - "Create the three latest.json files exactly as the table of .github/backlog/assets/latest-fixtures.md, section 'Fixture files', says (layout of the unemployment_rate fixture)."
+          - "ops/repo_check.py published_contract(): add the code and the docstring sentence of the assets section 'Check in ops/repo_check.py published_contract()', as written."
+          - "warehouse/published/README.md: the sentence of the same section."
+        acceptance:
+          - "repo_check prints 'ok   published contract' with the three new fixtures"
+          - "deleting fixtures/kpi/inflation/latest.json fails the check with the D26 message; adding a fixtures/kpi/fx_rate/latest.json fails it too (try, revert)"
+        verify:
+          - run: "python -c \"from ops.repo_check import published_contract as c;print(c())\""
+            expect: "[]"
+          - run: "python -c \"import pathlib;print(sorted(p.parent.name for p in pathlib.Path('warehouse/published/fixtures/kpi').glob('*/latest.json')))\""
+            expect: "['gdp_current_prices', 'inflation', 'population', 'unemployment_rate']"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [warehouse/publish.py and SKIP, the schemas, zohelo and zohelo-bi copies of the fixtures (their Tasks, zohelo#235)]
+        notes: ["If #2187 (per-value unit_key in the schema) is not merged yet, keep the unit_key fields anyway: the schema allows additional properties."]
   - key: data/published/published-v1/publish
     title: gold.publish activity
     depends_on: [data/published/published-v1/contract, data/metadata/catalogue-v1, data/metadata/semantic-manifest/generate]
