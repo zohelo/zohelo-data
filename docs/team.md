@@ -95,7 +95,9 @@ its backlog and its own Developer at once: one zohelo-<product>, one Developer. 
 ## Architect
 
 Started by the Developers (and Monday 08:23 as a safety net for PRs nobody asked about). Before reviewing a PR add
-label `reviewing` and skip PRs that already carry it (added less than 1 hour ago); remove it when done.
+label `reviewing` and skip PRs that already carry it (added less than 1 hour ago); remove it when done. Before ending,
+list the open PRs again and review those that arrived during the run: members do not start an Architect that is
+already running, so the running run is the one that must see their PRs.
 
 1. **Review and merge** every open non-Dependabot PR in all zohelo repos (the ones named in the start message first,
    then the rest, oldest first; a stacked PR after its dependency, rebased onto main first): compare the diff with its
