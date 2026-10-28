@@ -34,6 +34,15 @@ def main(argv: list[str]) -> int:
             body = client.get_object(Bucket=bucket, Key=f"{PREFIX}v1/kpi/{kpi_key}/latest.json")["Body"].read()
             pl[kpi_key] = '"geography_key":"PL"' in body.decode("utf-8")
         annotate("notice", "latest files with PL", pl)
+    except Exception as exc:
+        import traceback
+
+        annotate(
+            "error",
+            f"trial failed: {type(exc).__name__}",
+            {"error": str(exc)[:1500], "tb": traceback.format_exc()[-1500:]},
+        )
+        raise
     finally:
         annotate("notice", f"deleted {cleanup()}", {"prefix": PREFIX})
     return 0
