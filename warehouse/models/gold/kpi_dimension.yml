@@ -1,0 +1,11 @@
+version: 2
+models:
+  - name: kpi_dimension
+    description: Catalogue - the dimensions each KPI offers, per measure and source, with members and date range.
+    columns:
+      - name: kpi_key
+        tests: [not_null, {relationships: {arguments: {to: ref('kpi'), field: kpi_key}}}]
+      - name: dimension_key
+        tests: [not_null]
+      - name: measure_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_measure'), field: measure_key}}}]

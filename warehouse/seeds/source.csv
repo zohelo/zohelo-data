@@ -1,0 +1,11 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+eurostat,GL-001,Eurostat,Eurostat,European Commission,cube,dataset,international-public,eurostat_reuse,https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction
+gus_bdl,PLS-001,GUS Bank Danych Lokalnych,GUS Local Data Bank,GUS,cube,subgroup,national-public,cc_by_4_0_gus,https://api.stat.gov.pl/Home/BdlApi
+gus_dbw,PLS-002,GUS Dziedzinowe Bazy Wiedzy,GUS Knowledge Databases,GUS,cube,file (indicator × section × presentation × periodicity × year),national-public,cc_by_4_0_gus,https://api.stat.gov.pl/Home/DBWApi?lang=en
+world_bank_wdi,GL-005,World Bank WDI,World Bank World Development Indicators,World Bank,cube,indicator,international-public,cc_by_4_0_world_bank,https://datatopics.worldbank.org/world-development-indicators/
+nbp,PLG-001,NBP kursy walut i cena złota,NBP exchange rates and gold price,Narodowy Bank Polski,cube,table,national-public,unresolved,https://api.nbp.pl/en.html
+gleif,CD-015,GLEIF,GLEIF LEI golden copy,GLEIF,registry,file,international-public,cc0_gleif,https://www.gleif.org/en/lei-data/access-and-use-lei-data
+opendata_org,EX-005,OpenData ODO Senzing,"OpenData organisations, people, locations",OpenData,registry,snapshot member,unknown,unresolved,
+mf_biala_lista,PLG-011,MF biała lista VAT,MF VAT white list (flat file),Ministerstwo Finansów,lookup,file,national-public,mf_flat_file,https://www.podatki.gov.pl/wykaz-podatnikow-vat-wyszukiwarka
+gus_teryt,PLS-007,GUS TERYT,GUS TERYT register,GUS,reference,file,national-public,open_data_act_teryt,https://eteryt.stat.gov.pl/eteryt/rejestr_teryt/udostepnianie_danych/baza_teryt/baza_teryt.aspx
+gugik_prg,PL-ENV-001,GUGiK PRG,GUGiK state register of boundaries,GUGiK,reference,file,national-public,free_use_prg,https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl

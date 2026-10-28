@@ -1,0 +1,9 @@
+licence_key,name,url,attribution_text,commercial_ok,share_alike
+eurostat_reuse,"Eurostat reuse policy (Commission Decision 2011/833/EU, CC BY 4.0)",https://ec.europa.eu/eurostat/web/main/help/copyright-notice,Source: Eurostat,true,false
+cc_by_4_0_world_bank,CC BY 4.0 (World Bank),https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators,"Source: World Bank, World Development Indicators",true,false
+cc_by_4_0_gus,CC BY 4.0 (GUS),https://creativecommons.org/licenses/by/4.0/,Źródło: GUS / Source: Statistics Poland,true,false
+open_data_act_teryt,Open Data Act re-use (GUS TERYT),https://eteryt.stat.gov.pl/eTeryt/rejestr_teryt/udostepnianie_danych/formy_i_zasady_udostepniania/formy_i_zasady_udostepniania.aspx,"Źródło: GUS, TERYT",true,false
+free_use_prg,Free use (GUGiK PRG),https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/,"Źródło: GUGiK, PRG",true,false
+cc0_gleif,CC0 1.0 (GLEIF),https://www.gleif.org/en/meta/lei-data-terms-of-use,Source: GLEIF,true,false
+mf_flat_file,MF VAT list flat file (republication not stated),https://www.podatki.gov.pl/vat/bezpieczna-transakcja/wykaz-podatnikow-vat/plik-plaski/,"Źródło: Ministerstwo Finansów, Wykaz podatników VAT",false,false
+unresolved,Terms not established,https://github.com/zohelo/zohelo-data/blob/main/ingestion/register.yaml,Source: see the source register,false,false

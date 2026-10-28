@@ -233,9 +233,73 @@ deliverables:
           - workflow: Dev · branch runs, script kpi_dimension_trial, on the branch
             expect: "notice 'kpi_dimension: <n> rows', every published KPI lists geography and time; then 'dropped zz_dev_kpi_dimension'"
         out_of_scope: [dim_dimension and dim_member, the poc_* models, publish.py]
+      - key: data/metadata/catalogue-v1/models/measure-dataset-key
+        type: Task
+        title: Add dataset_key to gold.dim_measure
+        effort: S
+        state: open
+        contract: true
+        depends_on: [data/warehouse/gold-v1/fold/cutover]
+        context: >-
+          The catalogue links each measure to its dataset (program plan §3.4: dim_measure.dataset_key).
+          gold.dim_dataset (Task models/dim-dataset) keys a dataset as source || ':' || block_id with the
+          block ids normalised like the `coverage` CTE of warehouse/models/gold/poc_dim_measure.sql. That
+          model (gold.dim_measure) already has source_system and the normalised block_id in both branches
+          of its final union, but no dataset_key.
+        files:
+          - edit: warehouse/models/gold/poc_dim_measure.sql
+          - edit: warehouse/models/gold/_gold.yml
+        steps:
+          - "poc_dim_measure.sql, first select of the final union: add `b.source_system || ':' || b.block_id as dataset_key,` right after `b.measure_key,`."
+          - "Second select (from coverage): add `source_system || ':' || block_id as dataset_key,` right after the measure_key line, so the column is second in both selects."
+          - "Header comment: add 'dataset_key = source_system:block_id, the key of gold.dim_dataset.'"
+          - "_gold.yml, poc_dim_measure columns: `- name: dataset_key` with tests [not_null]."
+          - "Dev trial dev/measure_dataset_key_trial.py modelled on dev/seeds_trial.py of commit b62f65e (`gh api 'repos/zohelo/zohelo-data/contents/dev/seeds_trial.py?ref=b62f65e' --jq .content | base64 -d`): namespace zz_dev_measure_dataset_key; select 'gold' plus every seed name (warehouse/seeds/*.csv without .csv); annotate notice 'dim_measure dataset_key' with rows, rows with null dataset_key, distinct dataset_key per source_system, and the dataset_key of the first measure_key starting 'eurostat:UNE_RT_A'; --drop as there. Run, then --drop; delete dev/ before the PR."
+        acceptance:
+          - "trial: build exit 0; 0 null dataset_key; the UNE_RT_A sample is 'eurostat:UNE_RT_A'"
+          - sqlfluff and repo_check pass
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: Dev · branch runs, script measure_dataset_key_trial, on the branch
+            expect: "notice 'dim_measure dataset_key' with 0 null and sample eurostat:UNE_RT_A; then 'dropped zz_dev_measure_dataset_key'"
+        out_of_scope:
+          - a relationships test to dim_dataset (after models/dim-dataset merges)
+          - names, units and other dim_measure columns; dim_dataset.sql
+      - key: data/metadata/catalogue-v1/models/dim-dimension
+        type: Task
+        title: Build gold.dim_dimension from measure_dimensions and a seed
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/warehouse/gold-v1/fold/cutover]
+        context: >-
+          The catalogue lists every axis a KPI can be cut by. gold.measure_dimensions has a row per measure
+          and dimension: geography, time and each breakdown_json key (e.g. BDL n1–n5, NBP currency).
+          Conformed axes get names from a seed; others are source_specific, named by key.
+        files:
+          - create: warehouse/seeds/dimension.csv
+          - create: warehouse/models/gold/dim_dimension.sql
+          - create: warehouse/models/gold/dim_dimension.yml
+          - edit: warehouse/warehouse.yaml
+        steps:
+          - "dimension.csv, header dimension_key,name_en,name_pl,kind,standard; rows, one per line: geography,Geography,Geografia,conformed,TERYT/NUTS · time,Time,Czas,conformed,SDMX CL_FREQ · sex,Sex,Płeć,conformed,SDMX CL_SEX · age,Age,Wiek,conformed,SDMX CL_AGE · currency,Currency,Waluta,conformed,ISO 4217."
+          - "dim_dimension.sql (no config): CTE used = dimension as dimension_key, count(distinct measure_key) as measure_count from ref('poc_measure_dimensions') grouped by dimension; ref('dimension') d full outer join used u on dimension_key; select coalesce(d.dimension_key, u.dimension_key) as dimension_key, coalesce(d.name_en, u.dimension_key) as name_en, the same for name_pl, coalesce(d.kind, 'source_specific') as kind, d.standard, coalesce(u.measure_count, 0) as measure_count."
+          - "dim_dimension.yml: version 2; tests dimension_key [not_null, unique], name_en [not_null], name_pl [not_null], kind [not_null, {accepted_values: {arguments: {values: [conformed, entity, source_specific]}}}]."
+          - "warehouse.yaml: gold list, new line before the gold.build_bdl line: `gold.dimension, gold.dim_dimension,  # catalogue: axes`; full_rebuild, last entry: `dim_dimension: {rows: 1000}`."
+          - "Dev trial dev/dim_dimension_trial.py modelled on dev/seeds_trial.py of commit b62f65e (`gh api 'repos/zohelo/zohelo-data/contents/dev/seeds_trial.py?ref=b62f65e' --jq .content | base64 -d`): namespace zz_dev_dim_dimension; select 'gold' plus every seed name; notice 'dim_dimension' with the keys per kind; --drop as there. Run, then --drop; delete dev/ before the PR."
+        acceptance:
+          - "trial: exit 0; 5 conformed rows; geography, time measure_count > 0"
+          - sqlfluff and repo_check pass
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: Dev · branch runs, script dim_dimension_trial, on the branch
+            expect: "notice 'dim_dimension' with 5 conformed keys; then 'dropped zz_dev_dim_dimension'"
+        out_of_scope: [dim_member, mapping source keys to conformed axes]
     todo:
-      - "dim_dataset: native theme path, frequency_keys and PL/EN names from Silver metadata; dim_measure from the PoC dim_measure"
-      - "dim_dimension, dim_member from measure_dimensions and dim_series"
+      - "dim_dataset: native theme path, frequency_keys and PL/EN names from Silver metadata; dim_measure: relationships test dataset_key → dim_dataset, PL/EN names"
+      - "dim_member from dim_geography, dim_frequency, the sex seed and dim_series breakdowns (PL/EN naming rule for source labels needed)"
       - "freshness from gold.coverage (checked_at, loaded_at, lag_days): needs a decision on where loaded_at comes from (gold.coverage has no load time)"
   - key: data/metadata/catalogue-v1/domain-mapping
     title: Source themes mapped to domains
