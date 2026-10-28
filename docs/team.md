@@ -9,19 +9,50 @@ this file, so it is versioned and reviewed like code. Every run is a fresh sessi
 
 | Member | Owns | Scheduled run (Warsaw, safety net) | Started on demand by | Task id |
 |---|---|---|---|---|
-| Developer 1 · platform & ops | zohelo-data keys `data/ops/`, `data/portal/`, `data/backlog/`, `data/warehouse/`, `data/metadata/`, `data/published/`, `data/ingestion/`; Bugs labelled `security-alert` or `dev:1` | every 3 h, 06:53–21:53 | Architect (rework), Product Owner (new Tasks), Operator | `trig_01TnzQi8jHKMhTakv79cDEaS` |
-| Developer 2 · sources | zohelo-data keys `data/src-` (stage 10 Tasks in zohelo-bi, stage 11 in zohelo); Bugs labelled `dev:2` | every 3 h, 06:41–21:41 | Architect, Product Owner | `trig_01NQuzMh63cCssNVY3hfAKLP` |
-| Developer 3 · zohelo-bi | zohelo-bi keys `bi/`; Bugs labelled `dev:3` | every 3 h, 06:47–21:47 | Architect, Product Owner | `trig_01SrGpTv67qtwoKSkZ4YBicS` |
-| Developer 4 · zohelo.com | zohelo keys `com/` except `com/portfolio/`; Bugs labelled `dev:4` | every 3 h, 06:35–21:35 | Architect, Product Owner | `trig_011hb5Q5fiHnprAvE74iKGuD` |
+| Developer 1 · platform & ops | zohelo-data keys `data/ops/`, `data/portal/`, `data/backlog/`, `data/warehouse/`, `data/metadata/`, `data/published/`, `data/ingestion/`; Bugs labelled `security-alert` or `dev:1` | sprint starts 07:15, 12:15, 17:15 | Architect (rework), Product Owner (new Tasks), Operator | `trig_01TnzQi8jHKMhTakv79cDEaS` |
+| Developer 2 · sources | zohelo-data keys `data/src-` (stage 10 Tasks in zohelo-bi, stage 11 in zohelo); Bugs labelled `dev:2` | sprint starts 07:17, 12:17, 17:17 | Architect, Product Owner | `trig_01NQuzMh63cCssNVY3hfAKLP` |
+| Developer 3 · zohelo-bi | zohelo-bi keys `bi/`; Bugs labelled `dev:3` | sprint starts 07:19, 12:19, 17:19 | Architect, Product Owner | `trig_01SrGpTv67qtwoKSkZ4YBicS` |
+| Developer 4 · zohelo.com | zohelo keys `com/` except `com/portfolio/`; Bugs labelled `dev:4` | sprint starts 07:21, 12:21, 17:21 | Architect, Product Owner | `trig_011hb5Q5fiHnprAvE74iKGuD` |
 | Architect | technical review and merge of every PR; technical decisions; Dependabot | Monday 08:23 | Developers (after PRs), any member with a technical question | `trig_019bmahzvR8YMvG7HjT9Nf5r` |
-| Product Owner | portfolio, roadmap, backlogs of all products, Task writing, discovery of new products, weekly status, the owner's decision queue | daily 07:17 | Developers (running low), any member with a proposal, the owner | `trig_01HZEbtHVYZ7LyUG4xTtYU3r` |
-| Quality Engineer | is the released product correct and usable | daily 19:12 | Architect (after merges), any member that suspects a defect | `trig_017T2fPybm24E1eEf5b1fSR1` |
+| Product Owner | portfolio, roadmap, backlogs of all products, Task writing, discovery of new products, weekly status, the owner's decision queue | sprint plan 07:02, 12:02, 17:02; sprint close 11:17, 16:17, 21:17 (`trig_01Hu7UjK6bsYyqhYNvQ6sCTk`) | Developers (running low), any member with a proposal, the owner | `trig_01HZEbtHVYZ7LyUG4xTtYU3r` |
+| Quality Engineer | is the released product correct and usable | sprint check 10:45, 15:45, 20:45 | Architect (after merges), any member that suspects a defect | `trig_017T2fPybm24E1eEf5b1fSR1` |
 | Operator | pipelines, schedules, storage and cost, credentials, alerts | daily 06:08 | any member that sees a failed or missing run | `trig_014VYfixNpfkRYGrFPDxAhsH` |
 | Domain expert | business correctness per domain, domain knowledge files, analysis ideas | Wednesday 10:13 | Product Owner, Developers, Quality Engineer (message names the domain) | `trig_01TVEZvqnfdPP2xhFo8fhJN1` |
 | Coach | how the team works: playbooks, templates, checks | Friday 19:23 | any member that hits the same problem twice | `trig_01UydDs7w6FBkrH3m9hZsv4j` |
 
 New products: when the owner approves a product brief (Product Owner, discovery track), the product gets its repo,
 its backlog and its own Developer at once: one zohelo-<product>, one Developer. The Product Owner adds the row here.
+
+## Sprints
+
+Owner decision 28 Oct (O15): the team works in sprints that match the 5-hour usage window, three a day (Warsaw):
+**S1 07:00–12:00, S2 12:00–17:00, S3 17:00–22:00**. Deploys stay continuous: every merge still goes to production.
+A sprint ends with one release document for all of zohelo and a project status update.
+
+| Time in the sprint | What happens | Who |
+|---|---|---|
+| T+0:00 | **Plan**: sprint issue, one sprint goal, sprint Tasks labelled `sprint` | Product Owner (scheduled) |
+| T+0:15 | **Build** starts: sprint Tasks first, then the normal order | Developers (scheduled) |
+| T+3:30 | **Cut-off**: no new Tasks; finish, rework and get open PRs merged | Developers, Architect |
+| T+3:45 | **Sprint check** of the goal on the live products | Quality Engineer (scheduled) |
+| T+4:15 | **Close**: release document, project status, retro trigger | Product Owner (scheduled, sprint close) |
+
+- **Sprint plan** (Product Owner): open the zohelo-data issue `Sprint <yyyy-mm-dd> S<n>` (type Task, no key, label
+  `sprint`) with: the goal (one sentence the owner can check: a page, a table, a number, or a named Phase-0 platform
+  outcome), the Tasks in scope (each labelled `sprint`, sized to finish by T+3:30 with the Developers available), and
+  the previous sprint's carry-over. Agree the technical scope with the Architect when the goal crosses repos. Only
+  start a Developer on demand when its scheduled sprint run will not come (e.g. a product Developer without a schedule).
+- **Usage**: no member can see the remaining usage. A run stopped on the limit (scheduled-task history,
+  `USAGE_LIMIT_REACHED`) is a sprint finding: the Coach adjusts sprint size (number of Tasks, Developers per sprint) so
+  the team finishes before the limit, and records it in this section.
+- **Sprint close** (Product Owner): remove `sprint` from unfinished Tasks and list them as carry-over; create the
+  release document as a GitHub Release in zohelo-data, tag `zohelo-<yyyymmdd>-s<n>` on main, title
+  `zohelo <yyyy-mm-dd> S<n>`, notes: goal met or not (evidence), what changed per product in owner language (zohelo.com,
+  bi.zohelo.com, data.zohelo.com, data platform, sources) with links to that sprint's per-repo Releases and PRs, Bugs
+  found, carry-over, next sprint's proposed goal; post the same summary as the last comment of the sprint issue and
+  publish it as the project status update with Ops `project` args `status <sprint issue> ON_TRACK|AT_RISK|OFF_TRACK`;
+  close the sprint issue; start the Coach when the sprint had PRs sent back twice, refused actions, failed runs or a
+  usage-limit stop.
 
 ## Shared rules
 
@@ -82,7 +113,8 @@ its backlog and its own Developer at once: one zohelo-<product>, one Developer. 
 7. **Stuck?** If a step is impossible as written or needs a decision, comment on the issue, remove `in-progress`, add
    label `design:question`, start the Architect (technical) or the Product Owner (scope, priority), and take the next
    Task. Never improvise around the issue. Fewer than 3 pickable Tasks left → start the Product Owner.
-8. **Repeat**, aiming for 10–20 PRs per run, until about 3 hours have passed or nothing is pickable. Before ending, wait
+8. **Repeat**, aiming for 10–20 PRs per run, sprint Tasks (label `sprint`) before all others, until the sprint cut-off
+   (T+3:30, see Sprints) or nothing is pickable. Before ending, wait
    up to 10 minutes for the Architect to finish reviewing your open PRs (check every 5 minutes) and handle every result
    as in step 6; then remove `in-progress` from anything you did not finish, and post the summary.
 
@@ -117,7 +149,8 @@ label `reviewing` and skip PRs that already carry it (added less than 1 hour ago
 Owns what the team builds and why, for the whole portfolio. Two tracks, kept apart on purpose: delivery work for the
 products in production, and discovery for new products, which never takes Developer time until the owner approves.
 
-**Every run** (daily 07:17, and whenever started):
+**Every run** (the sprint plan run at 07:02, 12:02, 17:02, and whenever started) — the sprint plan (see Sprints) comes
+first in a scheduled run; the sprint close has its own scheduled task and does only "Sprint close":
 1. **Inbox.** Handle the start message; then new comments on Product inbox #2074, owner tickets (label `ticket`) and
    scope `design:question` issues. Each gets an answer: backlog work, a brief, or why not.
 2. **Keep every Developer fed.** Each Developer has at least 10 pickable Tasks. Write the next Tasks into the repo's
@@ -150,7 +183,8 @@ Never: merges, writes product code, publishes anything outside the repos, or sta
 
 Owns "is the released product correct and usable": reviews the running product, not diffs.
 
-**When started after merges, and in the daily run:**
+**When started after merges, and in the sprint check (T+3:45):** in the sprint check, first verify the sprint goal on
+the live products and comment the result on the sprint issue; then:
 1. Check what changed since the last check (Releases of zohelo, zohelo-bi, data portal; merged PRs in the start
    message): the pages they affect on zohelo.com, bi.zohelo.com and data.zohelo.com load, show data, have no broken
    links or empty charts, work in PL and EN. Read pages with WebFetch; anything that needs a browser or a number check
