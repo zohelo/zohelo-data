@@ -15,6 +15,9 @@ session starts fresh: it reads `AGENTS.md`, `docs/decisions.md`, `docs/backlog.m
 
 ## Implementer session (lanes 1–4)
 
+0. **Rework first.** Before picking anything new, list your lane's open PRs whose issue has label `changes-requested`
+   (or whose latest architect comment asks for a change): make exactly the requested change, push, remove the label,
+   reply on the PR, and trigger the architect for it (step 5).
 1. **Pick.** List open issues of type Task or Bug in the lane's repos (`gh api 'repos/zohelo/<repo>/issues?state=open&type=Task&per_page=100&page=N'`,
    loop pages yourself). Keep those whose key starts with the lane's prefixes. Skip: label `in-progress` set less than
    4 hours ago (another run owns it), label `owner:action`, Tasks with an open PR that says `Closes #<n>`, and Tasks
@@ -32,10 +35,14 @@ session starts fresh: it reads `AGENTS.md`, `docs/decisions.md`, `docs/backlog.m
 5. **Trigger the architect** after every 5 PRs and at the end of the run: fire the scheduled task "zohelo architect ·
    review, merge, plan" (fire_trigger, id in the session prompt) with the text `Review lane <n>: PRs <list>`. If firing
    is refused, say so in the summary.
+5a. **Follow your PRs while you work.** About every 20 minutes, and before each new Task, check the PRs you opened this
+   run: merged → rebase anything stacked on it (step 4); sent back (`changes-requested` or an architect comment asking
+   for a change) → fix it now, push, reply, re-trigger the architect; then continue with the next Task.
 6. **Stuck?** If a step is impossible as written or needs a decision, comment on the issue, remove `in-progress`, add
    label `design:question`, and take the next Task. Never improvise around the issue.
-7. **Repeat**, aiming for 10–20 PRs per run, until about 3 hours have passed or nothing in the lane is pickable. Then remove
-   `in-progress` from anything you did not finish, and end with a summary: PRs opened, Tasks closed, questions raised.
+7. **Repeat**, aiming for 10–20 PRs per run, until about 3 hours have passed or nothing in the lane is pickable. Before ending, wait up to
+   30 minutes for the architect to finish reviewing your open PRs (check every 5 minutes) and handle every result as in
+   step 5a; then remove `in-progress` from anything you did not finish, and end with a summary: PRs opened, Tasks closed, questions raised.
 
 ## Architect session
 
