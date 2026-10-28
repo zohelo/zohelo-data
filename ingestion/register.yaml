@@ -6502,7 +6502,7 @@ sources:
   short_name: GLEIF
   provider: Global Legal Entity Identifier Foundation
   source_system: gleif
-  status: bronze
+  status: silver
   family: E
   kpi: false
   geography: worldwide
@@ -6520,7 +6520,9 @@ sources:
     limits: No numerical limit relied on.
   licence:
     status: open-conditional
-    notes: GLEIF describes the pool as open; implement its LEI Data Terms and preserve source/status fields.
+    notes: 'Terms: CC0 1.0, https://www.gleif.org/en/meta/lei-data-terms-of-use (section II.3; section IV: claim no rights
+      in LEIs, access only through the Access Service, imply no GLEIF endorsement, no GLEIF logo). Attribution: "Source:
+      GLEIF" (not required under CC0).'
   updates: Issuers report daily; Golden Copy and delta files publish three times daily.
   ingestion:
     history: 'PROPOSAL: seed Golden Copy/concatenated files and certified mappings.'
@@ -6533,10 +6535,11 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Review LEI Data Terms, Select Golden Copy formats, Handle relationship exceptions]
+    blockers: []
     references:
     - https://www.gleif.org/en/lei-data/access-and-use-lei-data
     - https://www.gleif.org/en/lei-data/gleif-api
+    - https://www.gleif.org/en/meta/lei-data-terms-of-use
 - id: CD-016
   name: OpenCorporates REST and Reconciliation APIs
   short_name: OpenCorporates
