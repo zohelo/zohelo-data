@@ -1501,9 +1501,13 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: open-conditional
-    notes: WIPO generally applies CC BY 4.0 to new online content, with attribution and change indication, but exceptions
-      and third-party content require item review.
+    status: restricted
+    notes: 'Terms: WIPO IP Statistics Data Center conditions of use https://www.wipo.int/en/web/ip-statistics/about:
+      "By using WIPO''s statistical data, users agree not to republish or commercially re-sell WIPO''s statistical
+      datasets"; written work using the data must cite the source. The site-wide CC BY 4.0 policy (https://www.wipo.int/en/web/terms-of-use)
+      does not override these dataset-specific conditions. Public display of the data on zohelo.com or bi.zohelo.com
+      is not allowed without WIPO''s written permission; internal analysis only. Data accuracy remains the reporting
+      offices'' responsibility; no warranty. Attribution: "Source: WIPO Statistics Database, <download date>."'
   updates: Annual reporting from IP offices; later surveys may revise historical figures.
   ingestion:
     history: Archive downloads, glossary and classification/concordance version.
@@ -1517,11 +1521,12 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm Data Center item-specific licence
+    - 'Public display needs WIPO''s written permission (datasets may not be republished or re-sold)'
     - Document download format stability
     references:
     - https://www.wipo.int/en/web/ip-statistics
     - https://www.wipo.int/en/web/terms-of-use
+    - https://www.wipo.int/en/web/ip-statistics/about
 - id: GL-033
   name: UNODC Data Portal
   short_name: UNODC Data Portal
