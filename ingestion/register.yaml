@@ -514,8 +514,13 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: Statistical-data reuse is allowed with attribution and transformation disclosure, but IMF asks potential
-      commercial reusers to request permission; third-party products may differ.
+    notes: 'Terms: https://www.imf.org/en/about/copyright-and-terms (Data section): download, extract, copy, create
+      derivative works, publish and distribute Data with attribution; do not alter Data in a way that affects
+      its nature or accuracy and state any material transformation with the citation; sellers must tell buyers
+      the Data is free from the IMF; potential commercial reuse via copyright@imf.org; bulk download by
+      automated means needs explicit IMF permission; third-party material needs its holder''s permission;
+      provided as is. Attribution: "Source: International Monetary Fund, World Economic Outlook Database, <link
+      to the dataset>".'
   updates: Published twice yearly, April and October; vintages change estimates, forecasts and groups.
   ingestion:
     history: Load every retained vintage, appendix and historical-forecast package.
@@ -530,8 +535,9 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Resolve API account and production status
-    - Seek/record IMF response for intended commercial reuse
+    - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
+    - 'Resolve API account and production status'
+    - 'Seek/record IMF response for intended commercial reuse'
     references:
     - https://data.imf.org/en/datasets/IMF.RES%3AWEO
     - https://data.imf.org/en/Resource-Pages/IMF-API
