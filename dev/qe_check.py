@@ -15,8 +15,9 @@ from ingestion.common.report import annotate
 
 UA = {"User-Agent": "zohelo-quality-check/1.0 (+https://zohelo.com)"}
 PAGES = ["/", "/en", "/changes", "/en/changes", "/calendar.ics", "/rss.xml", "/en/rss.xml", "/portfolio", "/en/portfolio",
-         "/robots.txt", "/sitemap.xml"]
-TEXT = ("/", "/changes", "/en/changes")
+         "/robots.txt", "/sitemap.xml", "/indicators", "/en/indicators", "/indicators/unemployment_rate",
+         "/en/indicators/unemployment_rate", "/indicators/fx_rate", "/regions", "/en/regions", "/sources", "/en/sources"]
+TEXT = ("/", "/changes", "/indicators/unemployment_rate", "/regions", "/sources")
 
 
 def get(url: str, timeout: int = 30) -> tuple[int, bytes, str]:
@@ -254,7 +255,9 @@ def fresh() -> None:
 
 
 def main() -> None:
-    for fn in (site,):
+    import sys
+    fns = {"site": site, "numbers": numbers, "fresh": fresh}
+    for fn in [fns[a] for a in (sys.argv[1:] or ["site"])]:
         try:
             fn()
         except Exception as e:  # noqa: BLE001
