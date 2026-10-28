@@ -338,7 +338,7 @@ sources:
   name: Worldwide Governance Indicators (WGI)
   short_name: World Bank WGI
   provider: World Bank
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
