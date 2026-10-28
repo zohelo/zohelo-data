@@ -355,9 +355,12 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Verify the licence on the exact catalog/download record; World Bank generic terms incorporate dataset-specific
-      terms and limit other materials.
+    status: open-conditional
+    notes: 'Terms: CC BY 4.0, https://datacatalog.worldbank.org/search/dataset/0038026 ("This dataset is licensed under
+      Creative Commons Attribution 4.0"; World Bank dataset terms https://www.worldbank.org/ext/en/legal/terms-conditions/datasets):
+      copy, modify and distribute for any purpose including commercial use; indicate changes; provided as is (the World
+      Bank disclaims all warranties). Attribution: "Source: The World Bank, Worldwide Governance Indicators (Kaufmann,
+      Kraay and Mastruzzi)". Indicate changes.'
   updates: Annual release can revise historical estimates because the model and sources change.
   ingestion:
     history: Archive complete named releases with metadata and vintage.
@@ -371,11 +374,12 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Open exact catalog licence
-    - Confirm stable machine-download contract
+    - 'Confirm stable machine-download contract'
     references:
     - https://www.worldbank.org/en/publication/worldwide-governance-indicators
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
+    - https://datacatalog.worldbank.org/search/dataset/0038026
+    - https://www.worldbank.org/ext/en/legal/terms-conditions/datasets
 - id: GL-009
   name: Global Findex Database
   short_name: World Bank Global Findex
