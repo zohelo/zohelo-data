@@ -1533,7 +1533,7 @@ sources:
   name: IEA Data Explorer
   short_name: IEA Data Explorer
   provider: International Energy Agency
-  status: registered
+  status: parked
   family: G
   kpi: true
   geography: worldwide
@@ -1574,6 +1574,8 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
+    - 'Parked: licence restricted (IEA datasets and data explorers are Non-CC Material: no sharing, only insubstantial
+      amounts; public display needs a separate, possibly paid IEA licence)'
     - Public display needs a separate IEA licence (rights@iea.org; Non-CC Material terms allow only insubstantial amounts)
     - Confirm download/API entitlement
     references:
