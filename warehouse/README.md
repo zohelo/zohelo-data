@@ -8,7 +8,6 @@ dbt_project.yml, profiles.yml     project and connection (credentials from env v
 models/bronze/sources.yml         Bronze tables as dbt sources (built by ingestion/to_bronze)
 models/silver/<source_system>/    typed, cleaned, conformed source tables
 models/gold/                      conformed dimensions and facts
-models/poc/                       Gold dimensional model proof of concept, namespace poc (docs/gold-poc.md)
 semantic_models/                  MetricFlow semantic models and metrics
 seeds/                            seeds/ = owner-readable code lists, built into gold
 dimensions/                       dimension registry (definitions-as-code, draft; docs/model.md)

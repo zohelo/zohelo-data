@@ -21,7 +21,7 @@ archive_policy:
   prune: report
 bronze: [bronze.nbp_observations, bronze.nbp_rejected_files]
 silver: [silver.nbp_fx_rates, silver.nbp_gold_fixings]
-gold: []                              # fact_fx_rate, fact_gold_price, dim_currency (warehouse/warehouse.yaml)
+gold: []                              # Gold v1: build_nbp → fact_daily, metrics_fx_rate (warehouse/warehouse.yaml)
 # Tables of retired code still in the catalog, replaced by the tables above (globs allowed).
 legacy_tables: [bronze.nbp_exchange_rates_table_*, bronze.nbp_gold_prices, silver.nbp_exchange_rates*,
                 silver.nbp_gold_prices, gold.fact_fx_quotes, gold.fact_gold_prices]

@@ -1,5 +1,5 @@
 version: 2
-# Gold v1 (docs/model.md; formerly the proof of concept, docs/gold-poc.md). Namespace gold.
+# Gold v1 (docs/model.md), formerly the proof of concept. Namespace gold.
 # Natural string keys; facts split by frequency; dim_series carries the breakdowns.
 models:
   - name: dim_date

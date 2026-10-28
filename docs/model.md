@@ -8,25 +8,29 @@ The dbt project in `warehouse/models/` builds Silver and Gold (Pipeline `platfor
 
 ## Built (October 2026)
 
-A proof of concept of the full dimensional model (design draft 2: series grain, facts by
-frequency, measure catalogue, concepts, metrics tables) is built from samples of every cube
-source in the namespace `poc`: [docs/gold-poc.md](gold-poc.md).
+Gold v1 (cut over 28 Oct 2026, expand/contract D6): the former proof of concept (design draft 2:
+series grain, facts by frequency, measure catalogue, concepts, metrics tables; history in
+[docs/gold-poc.md](gold-poc.md)) is built from `warehouse/models/gold/` into the namespace
+`gold`. Model files keep the `poc_` prefix; the tables are named by their aliases. The v0
+tables and the `poc` namespace stay until the retire Task drops them.
 
 | Gold table | Content |
 |---|---|
 | `dim_date` | calendar 1900–2100, ISO weeks, Polish statutory holidays and working days from 1990; MetricFlow time spine |
-| `dim_period` | SDMX TIME_PERIOD A/S/Q/M/W/D 1900–2100 with start/end day; `_Z`, `_T` |
-| `dim_geography` | schemes TERC (Polska → województwo → powiat → gmina → część gminy), SIMC localities, WB economies and aggregates; PRG areas; `_T`, `_Z`, `_X` |
-| `dim_currency` | currencies quoted by NBP + PLN; `_Z`, `_X` |
-| `dim_indicator` | WDI indicators |
-| `fact_observation` | WDI annual observations (indicator × geography × period) |
-| `fact_fx_rate`, `fact_gold_price` | NBP exchange rates (mid/bid/ask) and gold price |
+| `dim_calendar` | `dim_date` at day grain with period labels and period-start flags; `date_key` is the date |
+| `dim_geography`, `map_geography` | geography keyed by area (`PL`, `TERC:<code>`, `NUTS:<code>`) with each source's codes as attributes; every source geography code → `geography_key` |
+| `dim_unit`, `dim_frequency`, `dim_source`, `dim_observation_status` | conformed units, frequencies, sources and observation flags |
+| `dim_measure`, `measure_dimensions`, `dim_series` | measure catalogue, the dimensions each measure offers, one row per series (measure × geography × breakdown) |
+| `fact_annual`, `fact_monthly`, `fact_daily` | observations per series and year / month / day |
+| `dim_concept`, `concept_measures` | cross-source concepts (KPIs) and their measures |
+| `metrics_population`, `metrics_gdp_current_prices`, `metrics_inflation`, `metrics_unemployment_rate`, `metrics_fx_rate` | the published metrics |
+| `src_eurostat`, `src_dbw`, `src_dbw_dictionary`, `build_eurostat`, `build_bdl`, `build_dbw`, `build_wdi`, `build_nbp` | extraction and build stages per source |
+| `build_check`, `grain_check` | per activated block rows, series, unmatched geography; fact grain check |
 | `coverage` | one row per block a source publishes (Eurostat dataset, BDL subgroup, DBW file, GLEIF/MF file, OpenData member, Landing entity of NBP/WDI/TERYT/PRG): published and landed version, in Bronze, in Silver, Silver rows, status `loaded` / `loading` / `outdated` / `waiting` / `rejected` / `published without data` / `excluded` / `no longer published` (Eurostat: held, but gone from the inventory). Not dbt: each source's `bronze.verify` replaces its own rows from catalogue and table metadata (`ingestion/common/coverage.py`). `excluded` marks a published block outside the scope (Eurostat Comext datasets, from `_control/eurostat/catalogue.json`, rewritten from the whole inventory by every `landing.inspect` and `landing.extract`). A verify that stops before its checks (no snapshot, no Landing file) leaves the previous rows; `checked_at` shows their age. Tells a block that is not offered apart from a block not loaded yet |
 
-Metrics (MetricFlow, `warehouse/semantic_models/`): NBP rates and gold price; WDI
-population, GDP, GDP per capita, inflation, unemployment, life expectancy; observation
-count. A machine-readable catalog of every table, column, test, lineage edge, metric and
-registry dimension is published after each build (`warehouse/catalog.py`) and shown in the
+Metrics (MetricFlow, `warehouse/semantic_models/gold.yml`): population, GDP at current prices,
+unemployment rate, inflation and NBP exchange rates over the Gold v1 metrics tables.
+A machine-readable catalog of every table, column, test, lineage edge, metric and registry dimension is published after each build (`warehouse/catalog.py`) and shown in the
 portal.
 
 ## Three kinds of dimensions
