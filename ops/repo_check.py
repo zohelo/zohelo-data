@@ -371,6 +371,7 @@ PUBLISHED_SCHEMAS = {
     "manifest.json": "manifest",
     "kpi/*/latest.json": "kpi_latest",
     "feed/changes.json": "feed_changes",
+    "geo/*.geojson": "geo",
 }
 JSON_TYPES = {
     "string": lambda v: isinstance(v, str),
@@ -384,22 +385,27 @@ JSON_TYPES = {
 
 
 def published_contract() -> list[str]:
-    """Each fixture of the published layer (docs/published.md) has every required key of its schema,
-    and every present property has the schema's JSON type (recursing into objects and array items)."""
+    """Each JSON or GeoJSON fixture of the published layer (docs/published.md) has every required key of
+    its schema, and every present property has the schema's JSON type (recursing into objects and array
+    items); every feature of a GeoJSON fixture has the level named by the file."""
     import json
 
     fixtures = PUBLISHED / "fixtures"
     problems = []
-    for fixture in sorted(fixtures.rglob("*.json")):
+    for fixture in sorted([*fixtures.rglob("*.json"), *fixtures.rglob("*.geojson")]):
         rel = fixture.relative_to(fixtures)
         name = next((n for pattern, n in PUBLISHED_SCHEMAS.items() if rel.match(pattern)), None)
         if name is None:
             problems.append(f"{rel}: no schema in PUBLISHED_SCHEMAS")
             continue
         schema = json.loads((PUBLISHED / "schemas" / f"{name}.schema.json").read_text(encoding="utf-8"))
-        problems += [
-            f"{rel}: {p}" for p in _schema_problems(json.loads(fixture.read_text(encoding="utf-8")), schema, "$")
-        ]
+        data = json.loads(fixture.read_text(encoding="utf-8"))
+        problems += [f"{rel}: {p}" for p in _schema_problems(data, schema, "$")]
+        if fixture.suffix == ".geojson":
+            for i, feature in enumerate(data.get("features") or []):
+                level = ((feature or {}).get("properties") or {}).get("level")
+                if level != fixture.stem:
+                    problems.append(f"{rel}: feature {i} level {level!r} is not {fixture.stem!r}")
     return problems
 
 
