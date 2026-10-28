@@ -106,7 +106,35 @@ deliverables:
     depends_on: [data/ingestion/register-restructure/fields]
     done_when:
       - ingestion/register/<provider>.yaml files hold all 183 entries; every reader updated; section removed
+    tasks:
+      - key: data/ingestion/register-restructure/split/drop-section
+        type: Task
+        title: Remove the section field from the source register
+        effort: S
+        state: open
+        context: >-
+          Every entry of ingestion/register.yaml has a `section:` line (global-public, poland-social, …),
+          left over from the September research layout (A-26). It always matches the id prefix (GL, PLS,
+          PL-ENV, PLG, CD, EX) and no code reads it (repo_check, backlog_sync, tracker and notify_failure
+          use id, status, family, kpi, short_name, source_system). Source review PRs edit the same file in
+          parallel, so the change must be exactly the 183 one-line deletions.
+        files:
+          - edit: ingestion/register.yaml
+          - edit: docs/sources.md
+        steps:
+          - "Delete every line that matches exactly `^  section: ` in ingestion/register.yaml with `sed -i '/^  section: /d' ingestion/register.yaml`; change nothing else in the file."
+          - "docs/sources.md first paragraph: after '(table below)' add the sentence 'The id prefix (GL, PLS, PL-ENV, PLG, CD, EX) groups the entries.'"
+        acceptance:
+          - "git diff --stat shows ingestion/register.yaml with 183 deletions and 0 insertions"
+          - "repo_check passes"
+        verify:
+          - run: python -c "import yaml;e=yaml.safe_load(open('ingestion/register.yaml'))['sources'];print(len(e),sum('section' in x for x in e))"
+            expect: "183 0"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope:
+          - splitting the file (waits until the source review Tasks no longer edit register.yaml)
+          - the domains field
     todo:
       - "domains: list of the 12 domain keys per entry (from the inventory's free-text domains)"
-      - "Split into ingestion/register/<provider>.yaml; update readers (repo_check, tracker, run.py, catalog) to load the folder"
-      - "Remove section; update docs/sources.md"
+      - "Split into ingestion/register/<provider>.yaml; update readers (repo_check, tracker, run.py, catalog) to load the folder — after the stage-1 review Tasks of lane 2 stop editing register.yaml"

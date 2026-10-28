@@ -95,7 +95,7 @@ deliverables:
     files: []
     steps:
     - 'List the scheduler-started runs: since=$(date -u -d ''-21 days'' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
-      --jq ''.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]") and
+      --jq ''.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="github-actions[bot]") and
       (.display_title|test("· gus_teryt · full")))|"\(.conclusion) \(.created_at) \(.html_url)"''; done | head -3'
     - If it prints 3 lines starting with success, comment them here and close this issue.
     - 'If an alert issue ''Pipeline failed: gus_teryt · …'' is open and the runs are green, close it with the same
@@ -108,7 +108,7 @@ deliverables:
     - No open alert issue for gus_teryt
     verify:
     - run: since=$(date -u -d '-21 days' +%F); for p in 1 2 3 4 5; do gh api "repos/zohelo/zohelo-data/actions/workflows/pipeline.yml/runs?per_page=100&page=$p&created=>=$since"
-        --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="zohelo-automation[bot]")
+        --jq '.workflow_runs[]|select((.event=="schedule" or .triggering_actor.login=="github-actions[bot]")
         and (.display_title|test("· gus_teryt · full")))|"\(.conclusion) \(.created_at) \(.html_url)"'; done | head
         -3
       expect: 3 lines starting with success
