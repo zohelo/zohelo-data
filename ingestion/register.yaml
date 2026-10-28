@@ -205,9 +205,9 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: World Bank requires the specific Data Catalog licence to govern dataset/API reuse; generic site terms
-      do not establish blanket commercial rights.
+    status: open-conditional
+    notes: 'Terms: CC BY 4.0, https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators.
+      Attribution: "Source: World Bank, World Development Indicators" plus the indicator code. Indicate changes.'
   updates: Bulk files are revised whenever WDI updates; source-series frequencies and revisions vary.
   ingestion:
     history: Load full bulk data and metadata; retain download vintage.
@@ -222,7 +222,6 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Capture licence from current catalog record
     - Decide specialist-source precedence by indicator
     references:
     - https://datatopics.worldbank.org/world-development-indicators/
