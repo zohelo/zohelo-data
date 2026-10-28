@@ -2,7 +2,8 @@
 {# Gold PoC: the measure catalogue. Activated measures come from the build stages (one row
    per measure of each activated block); every other block each source publishes or holds
    comes from gold.coverage with its status, so a block the source does not offer is
-   visible as a measure not offered, not as missing data. #}
+   visible as a measure not offered, not as missing data.
+   dataset_key = source_system:block_id, the key of gold.dim_dataset. #}
 with built as (
     select
         measure_key,
@@ -58,6 +59,7 @@ coverage as (  -- the other blocks, one row per block: DBW files collapse to the
 
 select
     b.measure_key,
+    b.source_system || ':' || b.block_id as dataset_key,
     b.source_system,
     b.block_id,
     b.block_name,
@@ -77,6 +79,7 @@ from built as b
 union all
 select
     source_system || ':' || block_id as measure_key,
+    source_system || ':' || block_id as dataset_key,
     source_system,
     block_id,
     block_name,
