@@ -1579,8 +1579,15 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: restricted
-    notes: IEA terms and product licences are restrictive/dataset-specific; do not assume public charts or free
-      files may be commercially redistributed.
+    notes: 'Terms: IEA Terms of Use https://www.iea.org/terms: CC BY 4.0 covers IEA text, reports and standalone figures,
+      but not standalone datasets, data explorers and databases, which fall under the Terms of Use for Non-CC Material
+      https://www.iea.org/terms/terms-of-use-for-non-cc-material: no sharing or enabling access to the material; only
+      insubstantial amounts in own public work (more than five numerical data points only as graphics or aggregates,
+      never downloadable); no substitutable derived database; no commercial advantage, financial-decision use or
+      sale; anything else needs a rights request to rights@iea.org (separate licence, possibly paid). Public display
+      in zohelo explorers is not allowed. No IEA endorsement may be implied. Attribution (aggregated or graphical
+      data): "Based on IEA data from IEA (<year>) <database title>, https://www.iea.org/data-and-statistics, All rights
+      reserved; as modified by <legal entity>."'
   updates: Annual/monthly schedules and revisions vary by product.
   ingestion:
     history: Onboard only a specifically licensed product/release; archive its terms and methodology.
@@ -1595,12 +1602,12 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Identify eligible free datasets
-    - Legal review for commercial redistribution
+    - Public display needs a separate IEA licence (rights@iea.org; Non-CC Material terms allow only insubstantial amounts)
     - Confirm download/API entitlement
     references:
     - https://www.iea.org/data-and-statistics/data-tools
     - https://www.iea.org/terms
+    - https://www.iea.org/terms/terms-of-use-for-non-cc-material
 - id: GL-035
   name: IRENASTAT / Statistics Time Series
   short_name: IRENASTAT
