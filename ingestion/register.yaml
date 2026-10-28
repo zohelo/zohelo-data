@@ -2266,8 +2266,12 @@ sources:
       10,000/hour, 200/min, 4/s.'
   licence:
     status: restricted
-    notes: Public-field commercial access is allowed; redistribution is undocumented. A legal-reviewed allowlist
-      is required.
+    notes: 'Terms: none published. The BIR1 page https://api.stat.gov.pl/Home/RegonApi says the service and data are free of
+      charge and open to public bodies and commercial entities (production user key on request to regon_bir@stat.gov.pl
+      with IP addresses and expected monthly volume); it states no licence and does not address republication. Records
+      of natural persons running a business are personal data (GDPR), so record-level public display is not allowed
+      without a legal and privacy review; aggregates only. Attribution: "Źródło: GUS, rejestr REGON (BIR1)" / "Source:
+      Statistics Poland, REGON register (BIR1)".'
   updates: Live register; history undocumented.
   ingestion:
     history: Seed an approved entity list after key approval.
@@ -2280,8 +2284,13 @@ sources:
     priority: conditional
     evidence: documented
     connection: not-tested
-    blockers: [Obtain an access token; legal and privacy review, Define field allowlist]
-    references: ['https://api.stat.gov.pl/Home/RegonApi']
+    blockers:
+    - Obtain a production user key (regon_bir@stat.gov.pl)
+    - 'Legal and privacy review: republication not addressed; natural-person records are personal data'
+    - Define field allowlist
+    references:
+    - https://api.stat.gov.pl/Home/RegonApi
+    - https://api.stat.gov.pl/Home/RegonApi?lang=en
 - id: PLS-009
   name: Portal Statystyczny ZUS
   short_name: ZUS statistical portal
