@@ -282,6 +282,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
+          # The newest main, not the run's start commit: a full dataflow can reach this job hours after
+          # it started, and building with that older code overwrote Gold v1 tables (#2201).
+          ref: main
       - uses: ./.github/actions/activity
         with:
           source: ${{ inputs.source }}
@@ -298,6 +301,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
+          # The newest main, not the run's start commit: a full dataflow can reach this job hours after
+          # it started, and building with that older code overwrote Gold v1 tables (#2201).
+          ref: main
       - uses: ./.github/actions/activity
         with:
           source: ${{ inputs.source }}
