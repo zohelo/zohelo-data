@@ -956,9 +956,12 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Table-level terms can mandate dataset-specific citation; general commercial/redistribution permission
-      was not established.
+    status: open-conditional
+    notes: 'Terms: CC BY 3.0 IGO, https://unctadstat.unctad.org/EN/About.html ("All materials provided on this website
+      are copyrighted under the Creative Commons Attribution 3.0 IGO license"; data and metadata "may be copied freely,
+      duplicated and further distributed" provided the Data Hub is cited): commercial reuse and adaptation allowed under
+      the licence; third-party series may carry their own terms (check per table). Attribution: "Source: United Nations
+      Trade and Development (UNCTAD) Data Hub, unctadstat.unctad.org".'
   updates: Table-specific updates and revisions; indicator-explainer documents carry methodology.
   ingestion:
     history: Archive named table export, metadata and terms.
@@ -971,10 +974,13 @@ sources:
     priority: review-next
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Resolve reuse per selected table, Confirm machine-download stability]
+    blockers:
+    - 'Check third-party terms per selected table'
+    - 'Confirm machine-download stability'
     references:
     - https://unctadstat.unctad.org/
     - https://unctadstat.unctad.org/EN/IndicatorsExplained.html
+    - https://unctadstat.unctad.org/EN/About.html
 - id: GL-022
   name: FAOSTAT
   short_name: FAOSTAT
@@ -997,8 +1003,11 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: Statistical databases use FAO Open Data Licensing Policy and database terms, not generic website terms;
-      third-party components require clearance.
+    notes: 'Terms: CC BY 4.0, FAO Statistical Database Terms of Use https://www.fao.org/contact-us/terms/db-terms-of-use
+      (unless a dataset''s metadata says otherwise): access, download, copy, adapt and re-disseminate; do not use datasets
+      for or with the promotion of a commercial enterprise; do not imply FAO endorsement; do not misrepresent the data;
+      third-party datasets need their provider''s consent; provided without warranty. Attribution (required format):
+      "FAO. <year of last update>. FAOSTAT: <dataset>. Accessed on <DD Month YYYY>. <URL>. Licence: CC-BY-4.0."'
   updates: Domain release calendars and revisions vary; production and balance histories can be revised.
   ingestion:
     history: Load domain bulk packages, metadata and flags by release.
@@ -1012,11 +1021,12 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Review statistical database terms directly
-    - Confirm current API contract
+    - 'Confirm current API contract'
+    - 'Exclude third-party datasets that need provider consent'
     references:
     - https://www.fao.org/faostat/en/
     - https://www.fao.org/contact-us/terms/en/
+    - https://www.fao.org/contact-us/terms/db-terms-of-use
 - id: GL-023
   name: ILOSTAT
   short_name: ILOSTAT
