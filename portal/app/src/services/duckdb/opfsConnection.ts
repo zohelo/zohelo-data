@@ -4,7 +4,7 @@ import { createDuckdbWorker, resolveDuckdbBundles } from "./wasmConnection";
 import type { ConnectionProvider } from "@/store/types";
 
 // OPFS connection tracking to prevent concurrent access
-export const opfsActivePaths = new Set<string>();
+const opfsActivePaths = new Set<string>();
 
 /** Normalize an OPFS path: strip leading slash, ensure .db extension. */
 function normalizeOpfsPath(path: string): string {

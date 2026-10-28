@@ -6,7 +6,7 @@
 import { LAKEHOUSE_ROOT, isStoredTokenExpired, LAKEHOUSE_LAYERS } from "./auth";
 import type { LakehouseLayer } from "./types";
 
-export class PortalAuthError extends Error {
+class PortalAuthError extends Error {
   readonly status = 401;
 
   constructor(message: string) {
@@ -16,7 +16,7 @@ export class PortalAuthError extends Error {
 }
 
 /** Preserve the existing error text while allowing scanner-only bounded retries. */
-export class PortalApiError extends Error {
+class PortalApiError extends Error {
   constructor(message: string, readonly status: number, readonly reason: string | null) {
     super(message);
     this.name = "PortalApiError";
@@ -114,7 +114,7 @@ const NATIVE_FIELDS =
 
 export const NATIVE_METADATA_PARENT_BATCH = 100;
 export const NATIVE_METADATA_PLAN_URL_LIMIT = 6000;
-export const NATIVE_METADATA_URL_LIMIT = 7800;
+const NATIVE_METADATA_URL_LIMIT = 7800;
 export class NativeMetadataUrlTooLongError extends Error {}
 const NATIVE_METADATA_FOLDER_FIELDS = "id,name,mimeType,parents,trashed,version,modifiedTime";
 const NATIVE_METADATA_FILE_FIELDS =
@@ -340,40 +340,6 @@ export const findNamedFilesInFolderById = async (
     if (error instanceof PortalApiError && error.status === 404) return null;
     throw error;
   }
-};
-
-export const listFolderChildrenMetadata = async (
-  folderId: string,
-  token: string,
-  onPage?: () => void
-): Promise<LakehouseEntry[]> => {
-  const files: LakehouseEntry[] = [];
-  let pageToken: string | null = null;
-  do {
-    const query = `'${folderId}' in parents and trashed=false`;
-    const url = filesUrl();
-    url.searchParams.set("q", query);
-    url.searchParams.set("fields", "files(id,name,mimeType,size,modifiedTime,version,md5Checksum,sha256Checksum),nextPageToken");
-    url.searchParams.set("pageSize", "1000");
-    if (pageToken) url.searchParams.set("pageToken", pageToken);
-    onPage?.();
-    const response = await apiRequest(url, token);
-    const payload = await response.json();
-    for (const item of payload.files || []) {
-      files.push({
-        id: item.id,
-        name: item.name,
-        mimeType: item.mimeType,
-        size: item.size === undefined ? undefined : Number(item.size),
-        modifiedTime: item.modifiedTime,
-        version: item.version,
-        md5Checksum: item.md5Checksum,
-        sha256Checksum: item.sha256Checksum,
-      });
-    }
-    pageToken = payload.nextPageToken || null;
-  } while (pageToken);
-  return files;
 };
 
 export const findFolderIdByName = async (

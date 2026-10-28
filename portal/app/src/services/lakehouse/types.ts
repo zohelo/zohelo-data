@@ -73,7 +73,7 @@ export interface ReleaseArtifact {
   sha256: string;
 }
 
-export interface ReleaseManifestBase {
+interface ReleaseManifestBase {
   release_id: string;
   status: "validated";
   code_sha: string;

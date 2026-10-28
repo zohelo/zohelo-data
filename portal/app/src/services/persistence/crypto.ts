@@ -201,12 +201,12 @@ export async function decrypt(encoded: string, key: CryptoKey): Promise<string> 
 
 // ─── Key export / import (for IndexedDB storage) ────────────────────────────
 
-export async function exportKey(key: CryptoKey): Promise<string> {
+async function exportKey(key: CryptoKey): Promise<string> {
   const raw = await crypto.subtle.exportKey("raw", key);
   return uint8ArrayToBase64(new Uint8Array(raw));
 }
 
-export async function importKey(exported: string): Promise<CryptoKey> {
+async function importKey(exported: string): Promise<CryptoKey> {
   const raw = base64ToUint8Array(exported);
   return crypto.subtle.importKey(
     "raw",

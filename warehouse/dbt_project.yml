@@ -3,6 +3,7 @@ version: "1.0.0"
 profile: zohelo
 
 model-paths: ["models", "semantic_models"]
+seed-paths: ["seeds"]
 macro-paths: ["macros"]
 clean-targets: ["target", "dbt_packages"]
 
@@ -20,3 +21,9 @@ models:
     poc:    # Gold dimensional model proof of concept (docs/gold-poc.md); tables aliased without the poc_ prefix.
       # A trial sets poc_schema to a zz_dev_ scratch namespace and selects only this folder (docs/gold-poc.md).
       +schema: "{{ var('poc_schema', 'poc') }}"
+
+# Seeds: owner-readable code lists (warehouse/seeds/*.csv), built into the Gold namespace.
+seeds:
+  zohelo:
+    +database: r2
+    +schema: "{{ var('gold_schema', 'gold') }}"

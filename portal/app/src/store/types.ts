@@ -1,5 +1,5 @@
 import * as duckdb from "@duckdb/duckdb-wasm";
-import type { DataSession, SessionCapabilities } from "@/services/engine/types";
+import type { DataSession } from "@/services/engine/types";
 import type {
   PortalAuthState,
   LandingCatalogResolution,
@@ -76,12 +76,6 @@ export interface ConnectionProvider {
 export interface ConnectionList {
   connections: ConnectionProvider[];
 }
-
-/**
- * Capabilities of the active session, or every flag off when nothing is
- * connected. UI code should branch on these rather than on a connection kind.
- */
-export type ActiveCapabilities = SessionCapabilities;
 
 //
 // Database & Table Types
@@ -203,7 +197,7 @@ export type ChartType =
 
 export type AggregationType = "sum" | "avg" | "count" | "min" | "max" | "none";
 export type SortOrder = "asc" | "desc" | "none";
-export type AxisScale = "linear" | "log";
+type AxisScale = "linear" | "log";
 
 export interface SeriesConfig {
   column: string;

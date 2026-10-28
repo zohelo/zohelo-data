@@ -24,7 +24,7 @@ import type {
 
 const drivers = new Map<ConnectionKind, DataDriver>();
 
-export const registerDriver = (driver: DataDriver): void => {
+const registerDriver = (driver: DataDriver): void => {
   drivers.set(driver.kind, driver);
 };
 
@@ -39,25 +39,12 @@ const NOT_IMPLEMENTED: Partial<Record<ConnectionKind, string>> = {
   "flight-web": "Flight SQL connections are not available in this build.",
 };
 
-export const getDriver = <K extends ConnectionKind>(kind: K): DataDriver<K> => {
+const getDriver = <K extends ConnectionKind>(kind: K): DataDriver<K> => {
   const driver = drivers.get(kind);
   if (!driver) {
     throw new Error(NOT_IMPLEMENTED[kind] ?? `No driver registered for connection kind "${kind}".`);
   }
   return driver as unknown as DataDriver<K>;
-};
-
-export const hasDriver = (kind: ConnectionKind): boolean => drivers.has(kind);
-
-/** Whether this browser can actually host a given kind right now. */
-export const isKindAvailable = async (kind: ConnectionKind): Promise<boolean> => {
-  const driver = drivers.get(kind);
-  if (!driver) return false;
-  try {
-    return await driver.isAvailable();
-  } catch {
-    return false;
-  }
 };
 
 //

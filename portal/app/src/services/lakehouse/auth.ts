@@ -13,7 +13,7 @@ export const LAKEHOUSE_LAYERS = [
   "05_archive",
 ] as const;
 
-export const ACCESS_SESSION_TOKEN = "cloudflare-access";
+const ACCESS_SESSION_TOKEN = "cloudflare-access";
 
 let signedOut = false;
 
@@ -21,7 +21,7 @@ export const getStoredToken = (): string | null => (signedOut ? null : ACCESS_SE
 
 export const isStoredTokenExpired = (_token: string): boolean => false;
 
-export const clearStoredToken = (): void => {
+const clearStoredToken = (): void => {
   signedOut = true;
 };
 

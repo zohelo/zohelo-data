@@ -2,7 +2,7 @@ import { generateUUID } from "@/lib/utils";
 import { isUsingOpfs, getSystemConnection, sqlQuote } from "../systemDb";
 import { fallbackPut, fallbackGet, fallbackGetAll, fallbackDelete } from "../fallback";
 
-export interface Profile {
+interface Profile {
   id: string;
   name: string;
   avatar_emoji: string;

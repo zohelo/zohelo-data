@@ -22,12 +22,6 @@ export function generateUUID(): string {
   });
 }
 
-export const genTabId = () => {
-  const timestamp = Date.now().toString();
-  const randomStr = Math.random().toString(36).substring(2);
-  return timestamp + randomStr.slice(0, 26 - timestamp.length);
-};
-
 export const formatBytes = (bytes: number, decimals = 2) => {
   if (bytes === 0) return "0 Bytes";
   const k = 1024;
