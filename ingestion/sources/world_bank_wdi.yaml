@@ -16,7 +16,7 @@ extraction:
   initial: bulk
   production: snapshot                  # each archive is the complete database
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
-  schedule:                             # UTC; weekly check, unchanged bytes are skipped
+  schedule: # UTC; release: WDI is updated a few times a year on no fixed date; weekly check (Tuesday 03:20), unchanged bytes are skipped
     - {cron: "20 3 * * 2", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/world_bank_wdi/
