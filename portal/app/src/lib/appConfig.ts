@@ -31,7 +31,7 @@ export interface EmbeddedDatabase {
 }
 
 /** Raw `ui` block as it appears in the manifest (all fields optional). */
-export interface UiConfigInput {
+interface UiConfigInput {
   /** Master switch. When true, every `hide*`/`readOnly` flag defaults to true. */
   kiosk?: boolean;
   hideConnections?: boolean;
@@ -42,7 +42,7 @@ export interface UiConfigInput {
 }
 
 /** Resolved UI config with every flag concrete. */
-export interface UiConfig {
+interface UiConfig {
   kiosk: boolean;
   hideConnections: boolean;
   hideSettings: boolean;

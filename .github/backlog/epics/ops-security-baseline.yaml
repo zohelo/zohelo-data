@@ -161,6 +161,82 @@ deliverables:
       expect: only PRs listed as ready in the closing comment
     out_of_scope:
     - major version upgrades
+  - key: data/ops/security-baseline/dependencies/portal-group-build
+    type: Bug
+    title: Fix the portal build for the portal-app group bump (monaco 0.57)
+    effort: S
+    state: open
+    context: 'Dependabot PR #1013 bumps 38 portal/app packages; check-portal fails at the Build step. Reproduced by the
+      architect (28 Oct): monaco-editor 0.57.0 maps its package exports "./*" to "./esm/vs/*.js", so the import
+      "monaco-editor/esm/vs/editor/editor.worker?worker" in src/components/editor/monacoConfig.ts no longer resolves.
+      With the import changed to "monaco-editor/editor/editor.worker?worker", lint, typecheck and build pass and
+      dist/assets holds editor.worker-*.js. Dependabot cannot change code, so this Task lands the same bump plus the fix
+      in its own PR; Dependabot then closes #1013 by itself.'
+    files:
+    - edit: portal/app/package.json
+    - edit: portal/app/package-lock.json
+    - edit: portal/app/src/components/editor/monacoConfig.ts
+    steps:
+    - 'git fetch origin dependabot/npm_and_yarn/portal/app/portal-app-a669ec1d9a; on your branch from main run `git
+      checkout FETCH_HEAD -- portal/app/package.json portal/app/package-lock.json`.'
+    - In portal/app run `npm install --ignore-scripts --no-audit --no-fund` (reconciles the lock if main changed since
+      the Dependabot PR); keep the resulting package-lock.json.
+    - 'monacoConfig.ts line 7: replace `monaco-editor/esm/vs/editor/editor.worker?worker` with
+      `monaco-editor/editor/editor.worker?worker`.'
+    - In portal/app run `npm run lint`, `npm run typecheck` and `DUCK_UI_BASEPATH=/ DUCK_UI_R2_API_BASE=/api
+      DUCK_UI_DUCKDB_WASM_CDN_ONLY=true npm run build`.
+    - 'PR body: `Closes #<this>` and a line `Supersedes #1013`.'
+    acceptance:
+    - 'package.json versions equal those of Dependabot PR #1013'
+    - check-portal green on the PR (Lint, Typecheck, Build)
+    - only the three listed files change
+    verify:
+    - run: cd portal/app && npm ci --ignore-scripts --no-audit --no-fund && npm run lint && npm run typecheck && DUCK_UI_BASEPATH=/
+        DUCK_UI_R2_API_BASE=/api DUCK_UI_DUCKDB_WASM_CDN_ONLY=true npm run build && ls dist/assets | grep editor.worker
+      expect: exit 0 and one editor.worker-*.js file listed
+    - workflow: check-portal on the PR
+      expect: green
+    out_of_scope:
+    - '@duckdb/duckdb-wasm (Task duckdb-wasm-bundles)'
+    - lint warnings that are not errors
+    - major version upgrades
+  - key: data/ops/security-baseline/dependencies/duckdb-wasm-bundles
+    type: Bug
+    title: Adopt the duckdb-wasm dev110 bundle names in the portal
+    effort: S
+    state: open
+    context: 'Dependabot PR #1014 bumps @duckdb/duckdb-wasm 1.33.1-dev64.0 → 1.33.1-dev110.0; check-portal fails at
+      Typecheck. In dev110 the type DuckDBBundles has `base` (required) and `threads` (optional) instead of `mvp` and
+      `eh`, and dist/ ships duckdb-base.wasm and duckdb-browser-base.worker.js (no mvp/eh files).
+      src/services/duckdb/wasmConnection.ts still builds {mvp, eh}. Reproduced and fixed locally by the architect
+      (28 Oct): with the change below, typecheck, lint and build pass.'
+    files:
+    - edit: portal/app/package.json
+    - edit: portal/app/package-lock.json
+    - edit: portal/app/src/services/duckdb/wasmConnection.ts
+    steps:
+    - In portal/app on your branch from main run `npm install --save-exact --ignore-scripts --no-audit --no-fund
+      @duckdb/duckdb-wasm@1.33.1-dev110.0`.
+    - 'wasmConnection.ts getCdnBundles(): replace the `mvp` and `eh` objects by one object `base: {mainModule:
+      `${baseUrl}/duckdb-base.wasm`, mainWorker: `${baseUrl}/duckdb-browser-base.worker.js`}`.'
+    - 'wasmConnection.ts getLocalBundles(): import only "@duckdb/duckdb-wasm/dist/duckdb-base.wasm?url" and
+      "@duckdb/duckdb-wasm/dist/duckdb-browser-base.worker.js?url"; the .then returns `{base: {mainModule:
+      duckdbWasm.default, mainWorker: baseWorker.default}}`. Leave the rest of the file unchanged.'
+    - In portal/app run `npm run lint`, `npm run typecheck` and `DUCK_UI_BASEPATH=/ DUCK_UI_R2_API_BASE=/api
+      DUCK_UI_DUCKDB_WASM_CDN_ONLY=true npm run build`.
+    - 'PR body: `Closes #<this>` and a line `Supersedes #1014`.'
+    acceptance:
+    - '`git grep -n "mvp\|duckdb-eh\|browser-eh" portal/app/src` finds nothing'
+    - check-portal green on the PR
+    verify:
+    - run: cd portal/app && npm ci --ignore-scripts --no-audit --no-fund && npm run typecheck && npm run lint && DUCK_UI_BASEPATH=/
+        DUCK_UI_R2_API_BASE=/api DUCK_UI_DUCKDB_WASM_CDN_ONLY=true npm run build
+      expect: exit 0
+    - workflow: Deploy portal, manual run on the branch
+      expect: green; preview <branch>.zohelo-data.pages.dev deployed
+    out_of_scope:
+    - the threads bundle (cross-origin isolation is not set up)
+    - other portal dependencies (Task portal-group-build)
 - key: data/ops/security-baseline/retired-code
   title: Retired code removed from main
   done_when:

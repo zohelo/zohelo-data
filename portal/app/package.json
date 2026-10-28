@@ -16,6 +16,7 @@
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@duckdb/duckdb-wasm": "1.33.1-dev64.0",
     "@hookform/resolvers": "^5.9.1",
     "@radix-ui/react-alert-dialog": "^1.1.23",
@@ -62,13 +63,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
-    "@playwright/test": "^1.62.1",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^5.2.0",
-    "baseline-browser-mapping": "^2.11.15",
-    "esbuild": "^0.25.12",
     "eslint": "^9.39.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.4.26",
@@ -108,5 +106,13 @@
   "overrides": {
     "picomatch": "^4.0.4",
     "flatted": "^3.4.2"
+  },
+  "knip": {
+    "entry": [
+      "functions/**/*.js",
+      "public/env.js",
+      "public/sw.js",
+      "src/types/*.d.ts"
+    ]
   }
 }

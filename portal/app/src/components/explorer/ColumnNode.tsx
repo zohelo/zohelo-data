@@ -348,5 +348,3 @@ export const ColumnNode: React.FC<ColumnNodeProps> = ({
     </div>
   );
 };
-
-export default ColumnNode;
