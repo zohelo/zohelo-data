@@ -873,7 +873,7 @@ sources:
   name: UN Comtrade
   short_name: UN Comtrade
   provider: United Nations Statistics Division
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -910,6 +910,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
+    - 'Parked: UN Comtrade licence forbids redistribution and publication without written UNSD permission'
     - 'Redistribution and publication need written UNSD permission (licence agreement s.5)'
     - 'Document current API tiers/quotas'
     - 'Design classification concordances'
