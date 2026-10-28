@@ -1225,9 +1225,12 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: UNESCO publication open-access policy does not by itself prove the licence of every UIS dataset; verify
-      Data Browser terms.
+    status: open-conditional
+    notes: 'Terms: CC BY-SA 4.0, https://databrowser.uis.unesco.org/terms-and-conditions ("The work of the UIS is licensed
+      under the Creative Commons Attribution-ShareAlike 4.0 International license"): share and reproduce without charge;
+      adaptations must carry the same licence (ShareAlike); no implied endorsement or affiliation; logo use needs permission.
+      Attribution: "Source: UNESCO Institute for Statistics (UIS), <complete URL>, <date of extraction>" ("Adapted from"
+      when changed).'
   updates: Release labels are displayed by domain; revision policy and earlier vintages are unresolved.
   ingestion:
     history: Download data and metadata by release/domain; archive glossary and flags.
@@ -1241,10 +1244,13 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Open exact Data Browser terms
-    - Confirm stable API availability and identifiers
-    - Retain release vintages
-    references: ['https://databrowser.uis.unesco.org/', 'https://www.unesco.org/en/open-access']
+    - 'ShareAlike: published derivatives of UIS data must be released under CC BY-SA 4.0'
+    - 'Confirm stable API availability and identifiers'
+    - 'Retain release vintages'
+    references:
+    - https://databrowser.uis.unesco.org/
+    - https://www.unesco.org/en/open-access
+    - https://databrowser.uis.unesco.org/terms-and-conditions
 - id: GL-027
   name: UNICEF Data Warehouse Explorer and SDMX API
   short_name: UNICEF Data Warehouse
