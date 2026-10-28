@@ -426,9 +426,12 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Verify the licence on the exact catalog/download record; World Bank generic terms incorporate dataset-specific
-      terms and limit other materials.
+    status: restricted
+    notes: 'Terms: https://www.enterprisesurveys.org/en/citing-the-data — microdata only through a Data Portal login
+      under the signed Data Access Protocol; downloaded datasets may not be passed to third parties (no public
+      redistribution); no open licence is stated; reuse terms of the published economy/topic indicators are not
+      stated. Attribution: "Source: World Bank Enterprise Surveys, www.enterprisesurveys.org" with the dataset
+      name and publication date.'
   updates: Country survey releases are episodic; panel and expanded files appear separately.
   ingestion:
     history: Archive complete named releases with metadata and vintage.
@@ -442,8 +445,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Review registration and microdata terms
-    - Apply disclosure and survey-weight rules
+    - 'Microdata may not be redistributed; reuse terms of the published indicators are not stated'
+    - 'Apply disclosure and survey-weight rules'
     references:
     - https://www.enterprisesurveys.org/en/enterprisesurveys
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
