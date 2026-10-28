@@ -294,6 +294,38 @@ deliverables:
         out_of_scope:
           - a relationships test to dim_dataset (after models/dim-dataset merges)
           - names, units and other dim_measure columns; dim_dataset.sql
+      - key: data/metadata/catalogue-v1/models/sex-axis-alias
+        type: Task
+        title: Map the GUS DBW axis Płeć onto the conformed sex dimension
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/metadata/catalogue-v1/models/dim-dimension, data/warehouse/gold-v1/coverage/sex]
+        context: >-
+          Today gold.dim_dimension lists the DBW axis `Płeć` as source_specific next to the conformed `sex`,
+          with Polish labels as members, and DBW totals get sex_key `_Z`. Target: a seed maps a source axis to
+          a conformed axis; a `sex` axis lists dim_series.sex_key codes (M, F, _T) as members.
+        files:
+          - create: warehouse/seeds/dimension_alias.csv
+          - edit: warehouse/seeds/_seeds.yml
+          - edit: warehouse/models/gold/poc_measure_dimensions.sql
+          - edit: warehouse/models/gold/poc_build_dbw.sql
+          - edit: warehouse/warehouse.yaml
+        steps:
+          - "dimension_alias.csv: header `source_system,source_dimension,dimension_key`; row `gus_dbw,Płeć,sex`. _seeds.yml: seed dimension_alias, dimension_key tests [not_null, relationships to ref('dimension') dimension_key] in the form of source.licence_key."
+          - "poc_build_dbw.sql: per_row adds `bool_or(lower(l.dim_name) = 'płeć' and lower(l.pos_label) in ('ogółem', 'razem')) as is_sex_total`; shaped adds `when r.is_sex_total then 'T'` after the is_women branch of sex_code."
+          - "poc_measure_dimensions.sql, CTE breakdowns: the inner select also takes source_system and sex_key; left join ref('dimension_alias') a on source_system and key = a.source_dimension; dimension = coalesce(a.dimension_key, key); for dimension 'sex' members = list(distinct sex_key order by sex_key), member_count = count(distinct sex_key), else unchanged; group by measure_key and that dimension."
+          - "warehouse.yaml gold list: `gold.dimension, gold.dimension_alias, gold.dim_dimension,  # catalogue: axes`."
+          - "dev/sex_axis_trial.py modelled on dev/seeds_trial.py of commit b62f65e: namespace zz_dev_sex_axis, select 'gold' plus every seed; notice 'sex axis' with build_exit, source_specific keys of dim_dimension and the distinct members of measure_dimensions rows with dimension 'sex'; --drop. Run, --drop, delete dev/."
+        acceptance:
+          - "`Płeć` is not a dim_dimension key; sex members ⊆ {M, F, _T}"
+          - sqlfluff and repo_check pass
+        verify:
+          - run: PYTHONPATH=. python -m ops.repo_check
+            expect: all checks ok
+          - workflow: Dev · branch runs, script sex_axis_trial, on the branch
+            expect: "notice 'sex axis': build_exit 0, no Płeć, members only M, F, _T; then 'dropped zz_dev_sex_axis'"
+        out_of_scope: [axes Grupy wieku and Charakter miejscowości, BDL n1–n5, dim_member]
       - key: data/metadata/catalogue-v1/models/dim-dimension
         type: Task
         title: Build gold.dim_dimension from measure_dimensions and a seed
@@ -328,6 +360,7 @@ deliverables:
     todo:
       - "dim_dataset: native theme path, frequency_keys and PL/EN names from Silver metadata; dim_measure: relationships test dataset_key → dim_dataset, PL/EN names"
       - "dim_member from dim_geography, dim_frequency, the sex seed and dim_series breakdowns (PL/EN naming rule for source labels needed)"
+      - "DBW axes Grupy wieku (→ age, needs a label → CL_AGE code mapping) and Charakter miejscowości (no conformed axis yet; urbanisation needs a Domain expert review) stay source_specific"
       - "freshness from gold.coverage (checked_at, loaded_at, lag_days): needs a decision on where loaded_at comes from (gold.coverage has no load time)"
   - key: data/metadata/catalogue-v1/domain-mapping
     title: Source themes mapped to domains
