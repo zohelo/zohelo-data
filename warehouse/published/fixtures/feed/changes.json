@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-01-01T00:00:00Z",
+  "items": [
+    {
+      "at": "2026-01-01T00:00:00Z",
+      "source_key": "eurostat",
+      "dataset_key": "une_rt_a",
+      "kpi_keys": [
+        "unemployment_rate"
+      ],
+      "title_pl": "Eurostat: zaktualizowano stopę bezrobocia (przykład)",
+      "title_en": "Eurostat: unemployment rate updated (illustrative)",
+      "kind": "data_update"
+    },
+    {
+      "at": "2026-01-01T00:00:00Z",
+      "source_key": "nbp",
+      "dataset_key": "fx_a",
+      "kpi_keys": [
+        "fx_rate"
+      ],
+      "title_pl": "NBP: nowa tabela kursów A (przykład)",
+      "title_en": "NBP: new table A of exchange rates (illustrative)",
+      "kind": "data_update"
+    }
+  ]
+}

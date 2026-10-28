@@ -1,0 +1,359 @@
+{
+  "version": 1,
+  "generated_at": "2026-01-01T00:00:00Z",
+  "kpis": [
+    {
+      "kpi_key": "population",
+      "name_pl": "Ludność",
+      "name_en": "Population",
+      "unit_key": "persons",
+      "frequency_default": "A",
+      "subgroup_key": "population.stock.population",
+      "domain_path": [
+        "population",
+        "population.stock",
+        "population.stock.population"
+      ],
+      "source_keys": [
+        "eurostat",
+        "world_bank_wdi",
+        "gus_bdl"
+      ],
+      "geo_levels": [
+        "country",
+        "voivodeship"
+      ],
+      "first_period": "1990",
+      "last_period": "2025",
+      "dimensions": [],
+      "loaded_at": "2026-01-01T00:00:00Z",
+      "status": "published"
+    },
+    {
+      "kpi_key": "gdp_current_prices",
+      "name_pl": "PKB w cenach bieżących",
+      "name_en": "GDP, current prices",
+      "unit_key": "mln_ncu",
+      "frequency_default": "A",
+      "subgroup_key": "economy.national_accounts.gdp",
+      "domain_path": [
+        "economy",
+        "economy.national_accounts",
+        "economy.national_accounts.gdp"
+      ],
+      "source_keys": [
+        "eurostat",
+        "world_bank_wdi"
+      ],
+      "geo_levels": [
+        "country"
+      ],
+      "first_period": "1995",
+      "last_period": "2024",
+      "dimensions": [],
+      "loaded_at": "2026-01-01T00:00:00Z",
+      "status": "published"
+    },
+    {
+      "kpi_key": "inflation",
+      "name_pl": "Inflacja (ceny konsumpcyjne)",
+      "name_en": "Inflation, consumer prices",
+      "unit_key": "pct",
+      "frequency_default": "M",
+      "subgroup_key": "economy.prices.consumer_prices",
+      "domain_path": [
+        "economy",
+        "economy.prices",
+        "economy.prices.consumer_prices"
+      ],
+      "source_keys": [
+        "eurostat",
+        "world_bank_wdi"
+      ],
+      "geo_levels": [
+        "country"
+      ],
+      "first_period": "1997-01",
+      "last_period": "2026-09",
+      "dimensions": [],
+      "loaded_at": "2026-01-01T00:00:00Z",
+      "status": "published"
+    },
+    {
+      "kpi_key": "unemployment_rate",
+      "name_pl": "Stopa bezrobocia (BAEL)",
+      "name_en": "Unemployment rate (LFS)",
+      "unit_key": "pct_labour_force",
+      "frequency_default": "A",
+      "subgroup_key": "labour.employment.lfs",
+      "domain_path": [
+        "labour",
+        "labour.employment",
+        "labour.employment.lfs"
+      ],
+      "source_keys": [
+        "eurostat",
+        "world_bank_wdi"
+      ],
+      "geo_levels": [
+        "country",
+        "voivodeship"
+      ],
+      "first_period": "2000",
+      "last_period": "2025",
+      "dimensions": [],
+      "loaded_at": "2026-01-01T00:00:00Z",
+      "status": "published"
+    },
+    {
+      "kpi_key": "fx_rate",
+      "name_pl": "Kurs waluty w PLN",
+      "name_en": "Exchange rate to PLN",
+      "unit_key": "pln_per_unit",
+      "frequency_default": "D",
+      "subgroup_key": "finance.fx_gold.exchange_rates",
+      "domain_path": [
+        "finance",
+        "finance.fx_gold",
+        "finance.fx_gold.exchange_rates"
+      ],
+      "source_keys": [
+        "nbp"
+      ],
+      "geo_levels": [
+        "country"
+      ],
+      "first_period": "2002-01-02",
+      "last_period": "2026-10-27",
+      "dimensions": [
+        {
+          "dimension_key": "currency",
+          "member_count": 33,
+          "levels": [
+            "currency"
+          ]
+        }
+      ],
+      "loaded_at": "2026-01-01T00:00:00Z",
+      "status": "published"
+    }
+  ],
+  "domains": [
+    {
+      "domain_key": "population",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "Population",
+      "name_pl": "Ludność",
+      "csa_code": "101",
+      "sort": 5
+    },
+    {
+      "domain_key": "population.stock",
+      "level": "group",
+      "parent_key": "population",
+      "name_en": "Population stock & structure",
+      "name_pl": "Stan i struktura ludności",
+      "csa_code": "101",
+      "sort": 1
+    },
+    {
+      "domain_key": "population.stock.population",
+      "level": "subgroup",
+      "parent_key": "population.stock",
+      "name_en": "Population",
+      "name_pl": "Ludność",
+      "csa_code": "101",
+      "sort": 1
+    },
+    {
+      "domain_key": "economy",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "Economy",
+      "name_pl": "Gospodarka",
+      "csa_code": "201",
+      "sort": 1
+    },
+    {
+      "domain_key": "economy.national_accounts",
+      "level": "group",
+      "parent_key": "economy",
+      "name_en": "National accounts & GDP",
+      "name_pl": "Rachunki narodowe i PKB",
+      "csa_code": "201",
+      "sort": 1
+    },
+    {
+      "domain_key": "economy.national_accounts.gdp",
+      "level": "subgroup",
+      "parent_key": "economy.national_accounts",
+      "name_en": "GDP",
+      "name_pl": "PKB",
+      "csa_code": "201",
+      "sort": 1
+    },
+    {
+      "domain_key": "economy.prices",
+      "level": "group",
+      "parent_key": "economy",
+      "name_en": "Prices & inflation",
+      "name_pl": "Ceny i inflacja",
+      "csa_code": "205",
+      "sort": 3
+    },
+    {
+      "domain_key": "economy.prices.consumer_prices",
+      "level": "subgroup",
+      "parent_key": "economy.prices",
+      "name_en": "Consumer prices",
+      "name_pl": "Ceny konsumpcyjne",
+      "csa_code": "205",
+      "sort": 1
+    },
+    {
+      "domain_key": "labour",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "Labour & income",
+      "name_pl": "Praca i dochody",
+      "csa_code": "103",
+      "sort": 4
+    },
+    {
+      "domain_key": "labour.employment",
+      "level": "group",
+      "parent_key": "labour",
+      "name_en": "Employment & unemployment",
+      "name_pl": "Zatrudnienie i bezrobocie",
+      "csa_code": "103",
+      "sort": 1
+    },
+    {
+      "domain_key": "labour.employment.lfs",
+      "level": "subgroup",
+      "parent_key": "labour.employment",
+      "name_en": "Labour force survey",
+      "name_pl": "Badanie aktywności ekonomicznej ludności (BAEL)",
+      "csa_code": "103",
+      "sort": 1
+    },
+    {
+      "domain_key": "finance",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "Finance",
+      "name_pl": "Finanse",
+      "csa_code": "20306",
+      "sort": 2
+    },
+    {
+      "domain_key": "finance.fx_gold",
+      "level": "group",
+      "parent_key": "finance",
+      "name_en": "Exchange rates & gold",
+      "name_pl": "Kursy walut i złoto",
+      "csa_code": "20306",
+      "sort": 3
+    },
+    {
+      "domain_key": "finance.fx_gold.exchange_rates",
+      "level": "subgroup",
+      "parent_key": "finance.fx_gold",
+      "name_en": "Exchange rates",
+      "name_pl": "Kursy walut",
+      "csa_code": "20306",
+      "sort": 1
+    }
+  ],
+  "units": [
+    {
+      "unit_key": "persons",
+      "symbol": "os.",
+      "name_en": "persons",
+      "name_pl": "osoby",
+      "is_rate": false
+    },
+    {
+      "unit_key": "mln_ncu",
+      "symbol": "mln",
+      "name_en": "million, source currency",
+      "name_pl": "mln, waluta źródła",
+      "is_rate": false
+    },
+    {
+      "unit_key": "pct",
+      "symbol": "%",
+      "name_en": "per cent",
+      "name_pl": "procent",
+      "is_rate": true
+    },
+    {
+      "unit_key": "pct_labour_force",
+      "symbol": "%",
+      "name_en": "% of labour force",
+      "name_pl": "% aktywnych zawodowo",
+      "is_rate": true
+    },
+    {
+      "unit_key": "pln_per_unit",
+      "symbol": "zł",
+      "name_en": "PLN per currency unit",
+      "name_pl": "zł za jednostkę waluty",
+      "is_rate": true
+    }
+  ],
+  "sources": [
+    {
+      "source_key": "eurostat",
+      "name_pl": "Eurostat",
+      "name_en": "Eurostat",
+      "licence_key": "cc_by_4_0",
+      "register_id": "GL-001"
+    },
+    {
+      "source_key": "world_bank_wdi",
+      "name_pl": "Bank Światowy – WDI",
+      "name_en": "World Bank – WDI",
+      "licence_key": "cc_by_4_0",
+      "register_id": "GL-005"
+    },
+    {
+      "source_key": "gus_bdl",
+      "name_pl": "GUS – Bank Danych Lokalnych",
+      "name_en": "Statistics Poland – Local Data Bank",
+      "licence_key": "gus_terms",
+      "register_id": "PLS-001"
+    },
+    {
+      "source_key": "nbp",
+      "name_pl": "Narodowy Bank Polski",
+      "name_en": "National Bank of Poland",
+      "licence_key": "nbp_terms",
+      "register_id": "PLG-001"
+    }
+  ],
+  "licences": [
+    {
+      "licence_key": "cc_by_4_0",
+      "name": "Creative Commons Attribution 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/",
+      "attribution_text": "Source: <publisher> (illustrative)",
+      "commercial_ok": true
+    },
+    {
+      "licence_key": "gus_terms",
+      "name": "GUS terms of use (illustrative)",
+      "url": "https://example.invalid/gus",
+      "attribution_text": "Źródło: GUS (illustrative)",
+      "commercial_ok": true
+    },
+    {
+      "licence_key": "nbp_terms",
+      "name": "NBP terms of use (illustrative)",
+      "url": "https://example.invalid/nbp",
+      "attribution_text": "Źródło: NBP (illustrative)",
+      "commercial_ok": true
+    }
+  ]
+}

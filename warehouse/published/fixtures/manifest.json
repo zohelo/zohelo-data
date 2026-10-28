@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "generated_at": "2026-01-01T00:00:00Z",
+  "metrics": [
+    {
+      "kpi_key": "population",
+      "table": "gold.metrics_population",
+      "unit_key": "persons",
+      "frequency": "A",
+      "time_column": "period",
+      "value_column": "value",
+      "source_column": "source_system",
+      "dimensions": [
+        {
+          "dimension_key": "geography",
+          "column": "geography_key"
+        }
+      ]
+    },
+    {
+      "kpi_key": "gdp_current_prices",
+      "table": "gold.metrics_gdp_current_prices",
+      "unit_key": "mln_ncu",
+      "frequency": "A",
+      "time_column": "period",
+      "value_column": "value",
+      "source_column": "source_system",
+      "dimensions": [
+        {
+          "dimension_key": "geography",
+          "column": "geography_key"
+        }
+      ]
+    },
+    {
+      "kpi_key": "inflation",
+      "table": "gold.metrics_inflation",
+      "unit_key": "pct",
+      "frequency": "M",
+      "time_column": "period",
+      "value_column": "value",
+      "source_column": "source_system",
+      "dimensions": [
+        {
+          "dimension_key": "geography",
+          "column": "geography_key"
+        }
+      ]
+    },
+    {
+      "kpi_key": "unemployment_rate",
+      "table": "gold.metrics_unemployment_rate",
+      "unit_key": "pct_labour_force",
+      "frequency": "A",
+      "time_column": "period",
+      "value_column": "value",
+      "source_column": "source_system",
+      "dimensions": [
+        {
+          "dimension_key": "geography",
+          "column": "geography_key"
+        }
+      ]
+    },
+    {
+      "kpi_key": "fx_rate",
+      "table": "gold.metrics_fx_rate",
+      "unit_key": "pln_per_unit",
+      "frequency": "D",
+      "time_column": "period",
+      "value_column": "value",
+      "source_column": "source_system",
+      "dimensions": [
+        {
+          "dimension_key": "geography",
+          "column": "geography_key"
+        },
+        {
+          "dimension_key": "currency",
+          "column": "currency_code"
+        }
+      ],
+      "default_filters": {
+        "currency_code": "EUR"
+      }
+    }
+  ]
+}
