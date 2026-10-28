@@ -774,7 +774,7 @@ sources:
   name: UNdata
   short_name: UNdata
   provider: United Nations Statistics Division
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
