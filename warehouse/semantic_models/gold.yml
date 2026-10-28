@@ -1,9 +1,9 @@
-# MetricFlow semantic layer of the Gold PoC (docs/gold-poc.md): one semantic model per concept
+# MetricFlow semantic layer of Gold v1 (docs/model.md): one semantic model per concept
 # metrics table, one metric per concept. A metric is only meaningful at one geography level and
 # one frequency: filter geography_level and frequency in the query (or the view already did).
 semantic_models:
   - name: poc_population
-    description: Population, total series only, every source side by side (poc.metrics_population).
+    description: Population, total series only, every source side by side (gold.metrics_population).
     model: ref('poc_metrics_population')
     defaults: {agg_time_dimension: period_start}
     entities:
@@ -22,7 +22,7 @@ semantic_models:
       - {name: population_points, agg: count, expr: value}
 
   - name: poc_gdp
-    description: GDP at current prices, in the source's currency (poc.metrics_gdp_current_prices).
+    description: GDP at current prices, in the source's currency (gold.metrics_gdp_current_prices).
     model: ref('poc_metrics_gdp_current_prices')
     defaults: {agg_time_dimension: period_start}
     entities:
@@ -38,7 +38,7 @@ semantic_models:
       - {name: gdp_value, agg: sum, expr: value}
 
   - name: poc_unemployment
-    description: Unemployment rate (LFS), % of the labour force (poc.metrics_unemployment_rate).
+    description: Unemployment rate (LFS), % of the labour force (gold.metrics_unemployment_rate).
     model: ref('poc_metrics_unemployment_rate')
     defaults: {agg_time_dimension: period_start}
     entities:
@@ -54,7 +54,7 @@ semantic_models:
       - {name: unemployment_rate_avg, agg: average, expr: value}
 
   - name: poc_inflation
-    description: Consumer price inflation, annual rate of change in % (poc.metrics_inflation).
+    description: Consumer price inflation, annual rate of change in % (gold.metrics_inflation).
     model: ref('poc_metrics_inflation')
     defaults: {agg_time_dimension: period_start}
     entities:
@@ -69,7 +69,7 @@ semantic_models:
       - {name: inflation_avg, agg: average, expr: value}
 
   - name: poc_fx
-    description: NBP table A mid rate, PLN per 1 unit of the currency (poc.metrics_fx_rate).
+    description: NBP table A mid rate, PLN per 1 unit of the currency (gold.metrics_fx_rate).
     model: ref('poc_metrics_fx_rate')
     defaults: {agg_time_dimension: period_start}
     entities:
