@@ -10,6 +10,7 @@ on:
     - cron: '20 5 * * 1'
     - cron: '0 5 * * 1'
     - cron: '40 5 * * 1'
+    - cron: '5 6 * * *'
   workflow_dispatch:
     inputs:
       script:
@@ -55,6 +56,7 @@ jobs:
               '20 5 * * 1') script=orphan_files; args='--delete --min-age-hours 48' ;;
               '0 5 * * 1') script=backlog_sync; args='apply' ;;
               '40 5 * * 1') script=tracker; args='' ;;
+              '5 6 * * *') script=scheduler_trigger; args='heartbeat' ;;
               *) echo "::error title=ops schedule::no schedule table row for cron '$CRON'" >&2; exit 1 ;;
             esac
           fi
@@ -69,6 +71,10 @@ jobs:
     name: "ops · ${{ needs.resolve.outputs.script }}"
     runs-on: ubuntu-24.04
     timeout-minutes: 350
+    permissions:
+      contents: read
+      issues: write  # notify_failure: alert issue when a scheduled run fails
+      actions: read  # scheduler_trigger heartbeat: counts Pipeline runs
     env:
       PYTHONPATH: .
       OPS_OUTPUT_DIR: /tmp/ops-output
@@ -171,6 +177,8 @@ jobs:
           # and check_credentials, which runs the Worker's token code).
           ORG_BOT_CLIENT_ID: ${{ (needs.resolve.outputs.script == 'scheduler_trigger' || needs.resolve.outputs.script == 'check_credentials') && vars.ORG_BOT_CLIENT_ID || '' }}
           ORG_BOT_PRIVATE_KEY: ${{ (needs.resolve.outputs.script == 'scheduler_trigger' || needs.resolve.outputs.script == 'check_credentials') && secrets.ORG_BOT_PRIVATE_KEY || '' }}
+          # scheduler_trigger heartbeat reads the Pipeline runs (blank for other scripts).
+          GITHUB_TOKEN: ${{ needs.resolve.outputs.script == 'scheduler_trigger' && github.token || '' }}
           SCRIPT: ${{ needs.resolve.outputs.script }}
           ARGS: ${{ needs.resolve.outputs.args }}
         run: |
@@ -192,6 +200,14 @@ jobs:
             echo "::error title=ops arguments not accepted::${SCRIPT} ${safe} (see the script's options)"
           fi
           exit "$status"
+      # A failed scheduled heartbeat opens (or updates) the alert issue "Pipeline failed: scheduler · heartbeat".
+      - name: Open or update the alert issue
+        if: failure() && github.event_name == 'schedule' && needs.resolve.outputs.args == 'heartbeat'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RUN_SOURCE: scheduler
+          RUN_NAME: heartbeat
+        run: python -m ops.notify_failure
       - name: Keep script output files
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
