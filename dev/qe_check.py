@@ -202,8 +202,45 @@ def numbers() -> None:
     annotate("notice", "numbers fx", out)
 
 
+def fresh() -> None:
+    import pyarrow.compute as pc
+
+    from ingestion.common.r2 import catalog
+    from warehouse import publish as pub
+
+    cat = catalog()
+    out = {}
+    for ds, q in (("prc_hicp_manr", "unit=RCH_A&coicop=CP00"), ("une_rt_m", "unit=PC_ACT&s_adj=SA&age=Y15-74&sex=T"),
+                  ("une_rt_a", "unit=PC_ACT&age=Y15-74&sex=T"), ("demo_pjan", "age=TOTAL&sex=T&unit=NR"),
+                  ("nama_10_gdp", "unit=CP_MEUR&na_item=B1GQ")):
+        d = jget(f"https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/{ds}?geo=PL&{q}&lastTimePeriod=2")
+        if "_status" in d:
+            out[ds] = d
+            continue
+        times = list(d["dimension"]["time"]["category"]["index"].keys())
+        out[ds] = {"provider_last": times, "values": d.get("value"), "updated": d.get("updated")}
+    for kpi in ("inflation", "unemployment_rate", "population", "gdp_current_prices"):
+        m = pub.gold(cat, "gold", f"metrics_{kpi}")
+        m = m.filter(pc.equal(m["geography_key"], "PL"))
+        per = {}
+        for r in m.select(["source_system", "measure_key", "frequency", "date_key", "unit"]).to_pylist():
+            k = f"{r['source_system']}|{r['measure_key']}|{r['frequency']}|{r['unit']}"
+            per[k] = max(per.get(k, ""), str(r["date_key"]))
+        out[f"gold_{kpi}"] = per
+    annotate("notice", "freshness", out)
+    fx = pub.gold(cat, "gold", "metrics_fx_rate")
+    last = pc.max(fx["date_key"]).as_py()
+    t = fx.filter(pc.equal(fx["date_key"], last)).select(["measure_key", "breakdown_json", "date_key", "value", "unit"]).to_pylist()
+    pick = [r for r in t if any(c in str(r["breakdown_json"]) for c in ('"EUR"', '"USD"', '"CHF"'))][:6]
+    day = str(last)[:10]
+    annotate("notice", "fx", {"day": day, "rows": [{k: str(v) for k, v in r.items()} for r in pick],
+                              "nbp": {c: nbp(c, day) for c in ("EUR", "USD", "CHF")},
+                              "nbp_today": jget("https://api.nbp.pl/api/exchangerates/tables/a/?format=json")[0].get("effectiveDate")
+                              if isinstance(jget("https://api.nbp.pl/api/exchangerates/tables/a/?format=json"), list) else None})
+
+
 def main() -> None:
-    for fn in (site, numbers):
+    for fn in (fresh,):
         try:
             fn()
         except Exception as e:  # noqa: BLE001
