@@ -2076,7 +2076,11 @@ sources:
     limits: No API quota; bulk archive crawling limits unknown.
   licence:
     status: open-conditional
-    notes: GUS portal footer states CC BY 4.0; verify embedded third-party material and preserve release attribution.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+      licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+      summaries or reworked text. Tables embedding third-party data keep their owners'' terms. Attribution: "Źródło:
+      GUS, <publication title> (<year>)" / "Source: Statistics Poland, <publication title> (<year>)".'
   updates: Release-calendar driven; corrections may replace files.
   ingestion:
     history: Backfill a curated whitelist of publication families and retain original files/checksums.
@@ -2092,10 +2096,11 @@ sources:
     connection: not-tested
     blockers:
     - Choose publication-family whitelist
-    - Confirm footer licence scope for each release
+    - 'Check each chosen publication for embedded third-party material (owners'' terms apply)'
     references:
     - https://stat.gov.pl/obszary-tematyczne/
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2024-r-%2C1%2C22.html
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-005
   name: Narodowy Spis Powszechny Ludności i Mieszkań 2021 (NSP 2021) results
   short_name: GUS NSP 2021
