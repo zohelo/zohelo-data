@@ -16,7 +16,7 @@ extraction:
   # cheapest subgroups through the API (12 h key limit), variables, then the small subgroups
   # from the website (territory parts) with the rest of the time; Bronze/Silver load what
   # landed in the same run (landing.extract "initial", ingestion/to_landing/gus_bdl/__init__.py).
-  schedule:
+  schedule: # UTC; initial load every 6 hours (owner #889); release: GUS updates subgroups through the year, no fixed calendar; steady state in Epic data/src-pls-001
     - {cron: "20 0,6,12,18 * * *", run: "full dataflow: landing → bronze → silver → gold → portal", parallel_jobs: 3, filter: "initial P4624 P3804 P4058 P3433 P3475 P2324 P4481 P4482 P2183 P2184 P4064 P4352 P3799 P3770 P3573 P2323 P3548 P2343 P3476 P2422 P2329 P2474 P1792 P4479 P4480 P4469 P4484 P4486 P4539 P4353 P3871 P2655 P3434 P1636 P3458 P2383 P4565 P1729 P1854 P2172 P2010 P4466 P4472 P4474 P2471 P3798 P2992 P2993 P3298 P2841 P2505 P1747 P2420 P1754 P1604 P3607 P1746 P1852 P4465 P4471 P4473 P4468 P4483 P4485 P4363 P1633 P3179 P3474 P1722 P1849 P1476 P1838 P3944 P1880 P2162 P2423 P2433 P2441 P3541 P2185 P2850 P1736 P1748 P3542 P2180 P2507 P2914 P4051 P2492 P4470 P4477 P4478 P2746 P2431 P1723 P1463 P1487 P3544 P2418 P2430 P2013 P1342 P3439"}
 
 landing: 01_landing/gus_bdl/
