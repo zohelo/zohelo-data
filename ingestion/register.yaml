@@ -664,7 +664,7 @@ sources:
   name: BIS Data Portal
   short_name: BIS Data Portal
   provider: Bank for International Settlements
-  status: registered
+  status: approved
   family: C
   kpi: true
   geography: worldwide
