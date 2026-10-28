@@ -235,7 +235,7 @@ sources:
   name: Global Economic Monitor (GEM)
   short_name: World Bank GEM
   provider: World Bank
-  status: registered
+  status: approved
   family: A
   kpi: true
   section: global-public
