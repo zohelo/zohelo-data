@@ -1,0 +1,8 @@
+frequency_key,name_en,name_pl,periods_per_year
+A,annual,roczna,1
+S,half-yearly,półroczna,2
+Q,quarterly,kwartalna,4
+M,monthly,miesięczna,12
+W,weekly,tygodniowa,52
+D,daily,dzienna,365
+B,business daily,dni robocze,250
