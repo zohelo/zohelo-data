@@ -1,6 +1,7 @@
 # Warehouse activities the Pipeline may run (source "platform"); owner authorization.
 #   silver_gold.build     dbt build of the SQL project (models/), optional --select from the run filter
-activities: [silver_gold.build]
+#   gold.publish          writes 06_published/v1/ from Gold (warehouse/publish.py)
+activities: [silver_gold.build, gold.publish]
 # Declared schedules (UTC), dispatched by run.py schedule: models daily after the source
 # loads. Eurostat and BDL observations are not dbt models: their loaders write Silver (#875).
 schedule:

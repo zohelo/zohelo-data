@@ -56,6 +56,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 | Model header comment: what it is, grain, source | [review] |
 | Gold facts join conformed dimensions through keys; no source-specific codes in Gold keys without a scheme prefix | [review] |
 | Metrics declared in `semantic_models/` with description and filter | [review] |
+| Every KPI with status `published` in `warehouse/seeds/kpi.csv` has a metrics model and a semantic model on it | [auto] repo_check `semantic models` |
 
 ## 5. YAML and declarations
 

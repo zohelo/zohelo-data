@@ -35,6 +35,7 @@ on:
           - "archive: apply retention"
           - "full dataflow: landing → bronze → silver → gold → portal"
           - "silver/gold: build models"
+          - "gold: publish"
           - "serving: refresh portal index"
           - "scheduler: dispatch due runs"
       filter:
@@ -282,14 +283,39 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
+          # The newest main, not the run's start commit: a full dataflow can reach this job hours after
+          # it started, and building with that older code overwrote Gold v1 tables (#2201).
+          ref: main
       - uses: ./.github/actions/activity
         with:
           source: ${{ inputs.source }}
           activity: silver_gold.build
           filter: ${{ inputs.filter }}
 
-  serving-refresh-index:
+  gold-publish:
     needs: [plan, silver-gold-build]
+    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'gold.publish') }}"
+    name: gold.publish
+    # warehouse/publish.py is the only writer of 06_published/v1/ (docs/published.md): one at a time; a newer
+    # queued publish replaces an older queued one (cancelled by design, not an alert).
+    concurrency:
+      group: zohelo-pipeline-publish
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          # The newest main, not the run's start commit (#2201, PR #2202).
+          ref: main
+      - uses: ./.github/actions/activity
+        with:
+          source: ${{ inputs.source }}
+          activity: gold.publish
+
+  serving-refresh-index:
+    needs: [plan, gold-publish]
     if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'serving.refresh_index') }}"
     name: serving.refresh_index
     runs-on: ubuntu-24.04
@@ -298,6 +324,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
+          # The newest main, not the run's start commit: a full dataflow can reach this job hours after
+          # it started, and building with that older code overwrote Gold v1 tables (#2201).
+          ref: main
       - uses: ./.github/actions/activity
         with:
           source: ${{ inputs.source }}
@@ -307,7 +336,7 @@ jobs:
     # A failed or cancelled run opens (or comments on) an `alert` issue, so the owner gets an
     # e-mail. Cancelled counts: a job killed from outside (exit 143) ends as cancelled.
     needs: [scheduler, plan, landing-inspect, landing-extract, landing-verify, bronze-load, bronze-verify,
-            landing-archive, archive-prune, silver-gold-build, serving-refresh-index]
+            landing-archive, archive-prune, silver-gold-build, gold-publish, serving-refresh-index]
     # A model build replaced in its queue by a newer one (concurrency zohelo-pipeline-build) ends as
     # cancelled by design and is not an alert; a failed build is (#878 review).
     if: >-

@@ -124,6 +124,41 @@ deliverables:
           - run: python -m ops.repo_check
             expect: all checks ok
         out_of_scope: [the geo fixture's content, size-limit checks, publish.py]
+      - key: data/published/published-v1/contract/latest-fixtures
+        type: Task
+        title: Add latest.json fixtures for every published KPI and check them
+        effort: S
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/contract/geo-schema]
+        context: >-
+          Decision D26 (docs/decisions.md): every KPI with status `published` has kpi/<kpi_key>/latest.json
+          except the KPIs gold.publish skips (`SKIP` in warehouse/publish.py, today fx_rate), and the fixture
+          sets follow the same rule. warehouse/published/fixtures/catalog/catalog.json lists five published
+          KPIs, but only kpi/unemployment_rate/latest.json exists, so consumers that build against the
+          fixtures (zohelo, zohelo-bi) cannot test population, gdp_current_prices or inflation.
+        files:
+          - create: warehouse/published/fixtures/kpi/population/latest.json
+          - create: warehouse/published/fixtures/kpi/gdp_current_prices/latest.json
+          - create: warehouse/published/fixtures/kpi/inflation/latest.json
+          - edit: ops/repo_check.py
+          - edit: warehouse/published/README.md
+        steps:
+          - "Create the three latest.json files exactly as the table of .github/backlog/assets/latest-fixtures.md, section 'Fixture files', says (layout of the unemployment_rate fixture)."
+          - "ops/repo_check.py published_contract(): add the code and the docstring sentence of the assets section 'Check in ops/repo_check.py published_contract()', as written."
+          - "warehouse/published/README.md: the sentence of the same section."
+        acceptance:
+          - "repo_check prints 'ok   published contract' with the three new fixtures"
+          - "deleting fixtures/kpi/inflation/latest.json fails the check with the D26 message; adding a fixtures/kpi/fx_rate/latest.json fails it too (try, revert)"
+        verify:
+          - run: "python -c \"from ops.repo_check import published_contract as c;print(c())\""
+            expect: "[]"
+          - run: "python -c \"import pathlib;print(sorted(p.parent.name for p in pathlib.Path('warehouse/published/fixtures/kpi').glob('*/latest.json')))\""
+            expect: "['gdp_current_prices', 'inflation', 'population', 'unemployment_rate']"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [warehouse/publish.py and SKIP, the schemas, zohelo and zohelo-bi copies of the fixtures (their Tasks, zohelo#235)]
+        notes: ["If #2187 (per-value unit_key in the schema) is not merged yet, keep the unit_key fields anyway: the schema allows additional properties."]
   - key: data/published/published-v1/publish
     title: gold.publish activity
     depends_on: [data/published/published-v1/contract, data/metadata/catalogue-v1, data/metadata/semantic-manifest/generate]
@@ -293,8 +328,42 @@ deliverables:
           - workflow: "Pipeline (pipeline.yml) on main after the merge (architect), source platform, run 'gold: publish'"
             expect: "job gold.publish green with notice 'gold.publish: latest'"
         out_of_scope: [publish.py writers, the scheduler, the portal index]
+      - key: data/published/published-v1/publish/calendar-ics
+        type: Task
+        title: Write feed/calendar.ics (no events yet) in gold.publish
+        effort: S
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/publish/kpi-latest]
+        context: >-
+          docs/published.md, feed/calendar.ics: one VEVENT per release_calendar row, zero events until that
+          table exists. None exists yet, so gold.publish writes a valid calendar without events that consumers
+          can subscribe to now. Writers follow .github/backlog/assets/publish-writers.md, section 'Writers added
+          after latest.json'.
+        files:
+          - edit: warehouse/publish.py
+          - edit: docs/published.md
+        steps:
+          - "publish.py: CALENDAR_LINES = [\"BEGIN:VCALENDAR\", \"VERSION:2.0\", \"PRODID:-//zohelo//gold.publish//EN\", \"CALSCALE:GREGORIAN\", \"X-WR-CALNAME:zohelo release calendar\", \"END:VCALENDAR\"]."
+          - "calendar_ics() -> str with the docstring 'feed/calendar.ics: no events until release_calendar exists (docs/published.md).', returning \"\\r\\n\".join(CALENDAR_LINES) + \"\\r\\n\"."
+          - "calendar(client, prefix: str) -> int: put(client, prefix + \"feed/calendar.ics\", calendar_ics().encode(\"utf-8\"), content_type=\"text/calendar; charset=utf-8\") and return 0 (events written). Add put()'s content_type keyword if it is missing."
+          - "main(): add the key \"calendar\" to the annotated dict with calendar(client, prefix)."
+          - "docs/published.md, after the calendar.ics sentence: 'gold.publish writes it today without events (PRODID `-//zohelo//gold.publish//EN`).'"
+          - "dev/publish_calendar_trial.py: calendar(s3(), 'zz_dev_published/v1/'); head_object of zz_dev_published/v1/feed/calendar.ics; annotate notice 'calendar.ics' with its ContentLength and ContentType; delete every object under zz_dev_published/ and annotate notice 'deleted <n>'. Run in Dev; delete dev/ before the PR."
+        acceptance:
+          - "the local verify prints the six lines, an empty last item and False"
+          - "trial: ContentType text/calendar; charset=utf-8, 139 bytes; then deleted 1"
+          - ruff and repo_check pass
+        verify:
+          - run: "python -c \"from warehouse.publish import calendar_ics as c;s=c();print(s.split(chr(13)+chr(10)),'VEVENT' in s)\""
+            expect: "['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//zohelo//gold.publish//EN', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:zohelo release calendar', 'END:VCALENDAR', ''] False"
+          - workflow: Dev · branch runs, script publish_calendar_trial, on the branch
+            expect: "notice 'calendar.ics' with ContentType text/calendar; charset=utf-8; then 'deleted 1'"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [a release_calendar table or seed, VEVENT rows, feed/changes.json, the gold.publish activity]
     todo:
-      - "catalog/catalog.json: waits for the loaded_at decision (catalogue-v1 freshness todo); geo powiat, gmina, nuts1, nuts2 (needs a size trial); feed/changes.json and calendar.ics"
+      - "catalog/catalog.json: waits for the loaded_at decision (catalogue-v1 freshness todo); geo powiat, gmina, nuts1, nuts2 (needs a size trial); feed/changes.json"
       - "Delete _portal_catalog/v1 writer and objects after both portals switch"
   - key: data/published/published-v1/tests
     title: Contract tests
@@ -318,20 +387,22 @@ deliverables:
           - edit: warehouse/publish.py
           - edit: docs/published.md
         steps:
-          - "publish.py: SCHEMAS = Path(__file__).resolve().parent / 'published' / 'schemas'; checked(obj: dict, schema: str) -> dict imports _schema_problems from ops.repo_check inside the function, runs it with the parsed SCHEMAS / f'{schema}.schema.json' (utf-8) and '$', raises ValueError(f'{schema}: {problems[:5]}') when there is a problem, else returns obj."
-          - "Pass every latest.json object through checked(obj, 'kpi_latest') and the manifest object through checked(obj, 'manifest') before json.dumps."
+          - "publish.py: SCHEMAS = Path(__file__).resolve().parent / 'published' / 'schemas'; schema_checked(obj: dict, schema: str) -> dict imports _schema_problems from ops.repo_check inside the function, runs it with the parsed SCHEMAS / f'{schema}.schema.json' (utf-8) and '$', raises ValueError(f'{schema}: {problems[:5]}') when there is a problem, else returns obj."
+          - "Pass every latest.json object through schema_checked(obj, 'kpi_latest') and the manifest object through schema_checked(obj, 'manifest') before json.dumps."
           - "docs/published.md, Rules: new bullet 'gold.publish checks every JSON file against its schema in warehouse/published/schemas/ before writing it and fails on a problem.'"
         acceptance:
           - "the first verify fails with the ValueError shown; the second prints 5"
           - "ruff and repo_check pass"
         verify:
-          - run: "python -c \"from warehouse.publish import checked;checked({'kpi_key':'x'},'kpi_latest')\""
+          - run: "python -c \"from warehouse.publish import schema_checked;schema_checked({'kpi_key':'x'},'kpi_latest')\""
             expect: "ValueError: kpi_latest: [\"$: missing required key 'unit_key'\", \"$: missing required key 'generated_at'\", \"$: missing required key 'values'\"]"
-          - run: "python -c \"import json;from warehouse.publish import checked;print(len(checked(json.load(open('warehouse/published/fixtures/manifest.json')),'manifest')['metrics']))\""
+          - run: "python -c \"import json;from warehouse.publish import schema_checked;print(len(schema_checked(json.load(open('warehouse/published/fixtures/manifest.json')),'manifest')['metrics']))\""
             expect: "5"
           - run: python -m ops.repo_check
             expect: all checks ok
-        out_of_scope: [the schemas and fixtures, value checks against Gold (next Task)]
+        out_of_scope: [the schemas and fixtures, value checks against Gold (Task tests/latest-vs-gold)]
+        notes:
+          - "publish.py already has checked(coverage) for checked_at; the schema function is schema_checked so main() keeps working."
       - key: data/published/published-v1/tests/key-patterns
         type: Task
         title: Add key and timestamp patterns to the published schemas
@@ -370,6 +441,35 @@ deliverables:
           - fixtures (they already match)
           - zohelo-bi validators (lane 3)
           - "dataset_key format: Gold uses eurostat:UNE_RT_A, the feed fixture une_rt_a (architect question)"
+      - key: data/published/published-v1/tests/latest-vs-gold
+        type: Task
+        title: Fail gold.publish when a latest.json value is not in Gold
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/publish/kpi-latest]
+        context: >-
+          Deliverable done_when: gold.publish fails when a published value differs from Gold. Today
+          warehouse/publish.py main() writes each kpi/<kpi_key>/latest.json and never reads it back.
+        files:
+          - edit: warehouse/publish.py
+          - edit: docs/published.md
+        steps:
+          - "publish.py: compare_latest(latest, metrics: pa.Table) -> list[str] (pure): index metrics rows (to_pylist) with geography_level in LEVELS and value not None by (source_system, geography_key, period_label(date_key, frequency)) → set of float(value)."
+          - "For each v in latest['values'] check (period, value) and, if present, (previous_period, previous_value); a value not in the set of (source_key, geography_key, period) adds f\"{kpi_key} {source_key} {geography_key} {period}: {value} not in Gold\"."
+          - "get(client, key) -> bytes: like put() (req imported inside), client.get_object(Bucket=req('STORAGE_LAKEHOUSE_BUCKET_NAME'), Key=key)['Body'].read()."
+          - "main(): problems = [] before the loop; after each put of latest.json, problems += compare_latest(json.loads(get(client, <same key>)), metrics). After the loop, if problems: annotate error 'gold.publish: latest.json differs from Gold' {count, first: problems[:20]} and raise ValueError(f'{len(problems)} latest.json values differ from Gold'). Result dict gets 'differences': 0."
+          - "docs/published.md, under the latest.json paragraph: 'gold.publish reads each file back and fails when a value is not in Gold.'"
+          - "dev/publish_compare_trial.py: main(prefix='zz_dev_published/v1/'), then delete everything under zz_dev_published/, annotate 'deleted <n>'; delete dev/ before the PR."
+        acceptance:
+          - "a correct latest.json gives no problem, a changed value one; trial: differences 0, 4 KPIs written"
+        verify:
+          - run: "python -c \"import datetime as d,pyarrow as pa;from warehouse.publish import kpi_latest as k,compare_latest as c;t=pa.table({'source_system':['e']*2,'measure_key':['m']*2,'geography_key':['PL']*2,'geography_level':['country']*2,'date_key':[d.date(2025,1,1),d.date(2024,1,1)],'frequency':['A']*2,'value':[3.2,2.9],'observation_status_key':['ok']*2});r=k(t,[],{},'u','pct','2026-01-01T00:00:00Z');a=c(r,t);r['values'][0]['previous_value']=3.0;print(a,c(r,t))\""
+            expect: "[] ['u e PL 2024: 3.0 not in Gold']"
+          - workflow: Dev · branch runs, script publish_compare_trial, on the branch
+            expect: "differences 0; then 'deleted <n>'"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [kpi_latest's rules, schema checks]
     todo:
-      - "Post-publish check comparing latest.json values with Gold for every KPI"
       - "zohelo-bi validators mirror the schema patterns of key-patterns (decision D24; bi lane)"

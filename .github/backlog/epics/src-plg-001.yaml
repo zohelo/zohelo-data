@@ -148,6 +148,7 @@ deliverables:
   - data/metadata/catalogue-v1
   todo:
   - kpi.csv rows, domain mapping and manifest check are written when Epic data/metadata/catalogue-v1 is done
+  - 'NBP policy rates (finance proposal, #2074): KPI `nbp_reference_rate` with lombard, deposit and rediscount as measures, from the NBP interest-rates archive file (one small file, polite to fetch daily); needs a Landing activity for that file first (Developer 2)'
 - key: data/src-plg-001/portal-release
   title: NBP · Data portal release
   done_when:
@@ -176,3 +177,4 @@ deliverables:
   - data/src-plg-001/review/register
   todo:
   - Indicator pages and section content, written when zohelo.com v1 reads the published layer
+  - 'Home "Polish benchmarks" panel (finance proposal, #2074): EUR/PLN, USD/PLN, CHF/PLN, GBP/PLN from `fx_rate` with the NBP table number and date and the change vs the previous table; drop the illustrative WIBOR 3M; the NBP reference rate once its KPI exists'

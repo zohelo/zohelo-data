@@ -357,8 +357,35 @@ deliverables:
           - workflow: Dev · branch runs, script dim_dimension_trial, on the branch
             expect: "notice 'dim_dimension' with 5 conformed keys; then 'dropped zz_dev_dim_dimension'"
         out_of_scope: [dim_member, mapping source keys to conformed axes]
+      - key: data/metadata/catalogue-v1/models/measure-dataset-test
+        type: Task
+        title: Test that every dim_measure dataset_key exists in dim_dataset
+        effort: S
+        state: open
+        contract: false
+        depends_on: [data/metadata/catalogue-v1/models/measure-dataset-key]
+        context: >-
+          Task models/measure-dataset-key adds dataset_key (source_system:block_id) to gold.dim_measure
+          (warehouse/models/gold/poc_dim_measure.sql) with a not_null test in warehouse/models/gold/_gold.yml.
+          gold.dim_dataset (dim_dataset.sql, dataset_key unique) normalises block ids the same way, so every
+          measure's dataset must be a row there; nothing checks it, and the catalogue joins measures to datasets
+          on this key.
+        files:
+          - edit: warehouse/models/gold/_gold.yml
+        steps:
+          - "_gold.yml, poc_dim_measure column dataset_key: tests [not_null, {relationships: {arguments: {to: ref('dim_dataset'), field: dataset_key}}}] (the form used in kpi_dimension.yml)."
+          - "dev/measure_dataset_test_trial.py modelled on dev/seeds_trial.py of commit b62f65e (`gh api 'repos/zohelo/zohelo-data/contents/dev/seeds_trial.py?ref=b62f65e' --jq .content | base64 -d`): namespace zz_dev_measure_dataset_test; select 'gold' plus every seed name (warehouse/seeds/*.csv without .csv); annotate notice 'dim_measure dataset_key in dim_dataset' with status and failures of the result whose unique_id starts with 'test.zohelo.relationships_poc_dim_measure_dataset_key' in warehouse/target/run_results.json; --drop as there. Run, then --drop; delete dev/ before the PR. If the status is not pass, comment the annotation on this issue and stop (docs/team.md, Developer step 7)."
+        acceptance:
+          - "trial: build exit 0; the relationships test passes with 0 failures"
+          - repo_check passes
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: Dev · branch runs, script measure_dataset_test_trial, on the branch
+            expect: "notice 'dim_measure dataset_key in dim_dataset' status pass, failures 0; then 'dropped zz_dev_measure_dataset_test'"
+        out_of_scope: [poc_dim_measure.sql and dim_dataset.sql, PL/EN names of measures and datasets]
     todo:
-      - "dim_dataset: native theme path, frequency_keys and PL/EN names from Silver metadata; dim_measure: relationships test dataset_key → dim_dataset, PL/EN names"
+      - "dim_dataset: native theme path, frequency_keys and PL/EN names from Silver metadata; dim_measure: PL/EN names"
       - "dim_member from dim_geography, dim_frequency, the sex seed and dim_series breakdowns (PL/EN naming rule for source labels needed)"
       - "DBW axes Grupy wieku (→ age, needs a label → CL_AGE code mapping) and Charakter miejscowości (no conformed axis yet; urbanisation needs a Domain expert review) stay source_specific"
       - "freshness from gold.coverage (checked_at, loaded_at, lag_days): needs a decision on where loaded_at comes from (gold.coverage has no load time)"
@@ -378,3 +405,7 @@ deliverables:
     todo:
       - "KPI list (architect): 40 rows chosen from the five sources, written to kpi.csv as draft"
       - "Activate blocks and publish KPIs in batches of 10 (one Task per batch)"
+      - "Domain expert proposals (economy, zohelo-data#2074 and docs/domains/economy.md), to go into the KPI batches: `inflation` becomes GUS CPI monthly (same month of previous year = 100, rate = index − 100) once the GUS series is found; new `inflation_hicp` (eurostat PRC_HICP_MANR RCH_A, labelled HICP); WDI annual-average CPI leaves `inflation`"
+      - "GDP (economy, #2074): `gdp_current_prices` in million PLN (eurostat NAMA_10_GDP CP_MNAC; EUR and WDI as their own measures or KPIs, Bug #2148); new `gdp_growth_quarterly` (NAMQ_10_GDP CLV_PCH_SM y/y headline, CLV_PCH_PRE on SCA q/q); new `gdp_per_capita_pps` (GDP per capita in PPS, EU27 = 100)"
+      - "Public finance (finance, #2074 and docs/domains/finance.md): `gov_deficit_pct_gdp` and `gov_debt_pct_gdp` (eurostat GOV_10DD_EDPT1, general government S13, % of GDP; named EDP/Maastricht debt, not the Polish state public debt) and `long_term_yield` (IRT_LT_MCBY_M, 10-year Maastricht yield); data already in Bronze"
+      - "Labour (labour, #2074 and docs/domains/labour.md): new `real_wage_growth` (% y/y = GUS monthly enterprise-sector nominal wage index / GUS CPI index × 100 − 100; needs the DBW wage series and `inflation` as GUS CPI); `average_gross_wage` pinned to one BDL measure (P2497) and `live_births` to one (P1873) before either is published"

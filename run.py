@@ -11,7 +11,7 @@ implemented and authorized:
   implemented  ingestion/to_landing/<source>/__init__.py (landing.inspect/extract/verify), or the
                shared pattern named by extraction.kind (bulk_file: ingestion/to_landing/patterns/)
                ingestion/to_bronze/<source>/__init__.py (bronze.*, landing.archive)
-               PLATFORM_ACTIVITIES below (silver_gold.build, serving.refresh_index)
+               PLATFORM_ACTIVITIES below (silver_gold.build, gold.publish, serving.refresh_index)
   authorized   ingestion/sources/<source>.yaml "activities";
                warehouse/warehouse.yaml and portal/portal.yaml for platform activities
 Activities are idempotent, so a scheduled run and a manual run are the same thing and a
@@ -44,6 +44,7 @@ ORDER = (
     "landing.archive",
     "archive.prune",
     "silver_gold.build",
+    "gold.publish",
     "serving.refresh_index",
 )
 WRITES = {
@@ -52,6 +53,7 @@ WRITES = {
     "landing.archive",
     "archive.prune",
     "silver_gold.build",
+    "gold.publish",
 }
 
 RUNS = {
@@ -71,8 +73,10 @@ RUNS = {
         "landing.archive",
         "archive.prune",
         "silver_gold.build",
+        "gold.publish",
     ],
-    "silver/gold: build models": ["silver_gold.build"],
+    "silver/gold: build models": ["silver_gold.build", "gold.publish"],
+    "gold: publish": ["gold.publish"],
     "serving: refresh portal index": ["serving.refresh_index"],
 }
 
@@ -93,6 +97,13 @@ def _refresh_index(p: Params) -> int:
     return publish_index.main() or 0
 
 
+def _publish(p: Params) -> int:
+    from warehouse import publish
+
+    publish.main()
+    return 0
+
+
 def _build(p: Params) -> int:
     from warehouse import build
 
@@ -101,6 +112,7 @@ def _build(p: Params) -> int:
 
 PLATFORM_ACTIVITIES = {
     "silver_gold.build": _build,
+    "gold.publish": _publish,
     "serving.refresh_index": _refresh_index,
 }
 
@@ -248,8 +260,9 @@ def plan(source: str, run: str, config: dict) -> list[str]:
     # changed into Silver/Gold and the semantic layer, then the portal index. The model build is
     # a platform activity, authorized in warehouse/warehouse.yaml.
     full = source != "platform" and run.startswith("full dataflow")
-    if full and "silver_gold.build" not in authorized(config, "platform"):
-        activities.remove("silver_gold.build")
+    for platform_activity in ("silver_gold.build", "gold.publish"):
+        if full and platform_activity not in authorized(config, "platform"):
+            activities.remove(platform_activity)
     if full:  # a source's full dataflow is the steps that source has (GUS BDL: no landing.verify, archive.prune yet)
         activities = [a for a in activities if a in PLATFORM_ACTIVITIES or a in authorized(config, source)]
     platform_run = all(a in PLATFORM_ACTIVITIES for a in activities)

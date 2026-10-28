@@ -9,6 +9,7 @@
       "geography_level": "country",
       "period": "2025",
       "value": 3.2,
+      "unit_key": "pct_labour_force",
       "previous_period": "2024",
       "previous_value": 2.9,
       "flags": [],
@@ -20,6 +21,7 @@
       "geography_level": "voivodeship",
       "period": "2025",
       "value": 2.6,
+      "unit_key": "pct_labour_force",
       "flags": ["p"],
       "checked_at": "2026-01-01T00:00:00Z"
     }
