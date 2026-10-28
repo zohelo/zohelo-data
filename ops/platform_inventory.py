@@ -94,13 +94,21 @@ def tables(cat) -> dict[str, dict[str, Any]]:
     return out
 
 
-def namespace_check(spaces: Iterable[str], found: Iterable[str], declared: Iterable[str], paths: Iterable[str]) -> dict:
-    """Tables per namespace, namespaces no declared table lives in, and zz_dev_ scratch
-    namespaces and storage folders left behind (report only; nothing is removed)."""
+def namespace_check(
+    spaces: Iterable[str],
+    found: Iterable[str],
+    declared: Iterable[str],
+    paths: Iterable[str],
+    *,
+    declared_namespaces: Iterable[str] = (),
+) -> dict:
+    """Tables per namespace, namespaces no declared table lives in (bronze/silver/gold and
+    `declared_namespaces` are always declared), and zz_dev_ scratch namespaces and storage
+    folders left behind (report only; nothing is removed)."""
     per_namespace = Counter(name.rsplit(".", 1)[0] for name in found)
     for space in spaces:
         per_namespace.setdefault(space, 0)
-    known = set(LAYERS) | {name.rsplit(".", 1)[0] for name in declared}
+    known = set(LAYERS) | set(declared_namespaces) | {name.rsplit(".", 1)[0] for name in declared}
     return {
         "tables_per_namespace": dict(sorted(per_namespace.items())),
         "undeclared_namespaces": sorted(n for n in per_namespace if n not in known),
@@ -181,7 +189,9 @@ def main(argv=None) -> int:
     unclaimed_tables = sorted(set(found) - claimed_tables)
     paths = [f"{bucket}/{name}" for bucket, tops in buckets.items() for name in tops]
     paths += [*landing, *archive]
-    namespace_report = namespace_check(spaces, found, claimed_tables, paths)
+    namespace_report = namespace_check(
+        spaces, found, claimed_tables, paths, declared_namespaces=platform.get("demo_namespaces") or []
+    )
     unclaimed_landing = sorted(set(landing) - claimed_landing)
     totals = {
         "buckets_gb": {bucket: gb(sum(f["bytes"] for f in tops.values())) for bucket, tops in buckets.items()},
