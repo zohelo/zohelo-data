@@ -162,7 +162,7 @@ DTSTART = `release_at`, URL); zero events until that table exists.
 | file | limit |
 |---|---|
 | catalog/catalog.json | ≤ 2 MB gzip |
-| kpi/<kpi_key>/latest.json | ≤ 20 kB |
+| kpi/<kpi_key>/latest.json | ≤ 100 kB |
 | feed/changes.json | ≤ 200 kB |
 | kpi/<kpi_key>/series.parquet | ≤ 20 MB |
 | geo/<level>.geojson | ≤ 2 MB (gmina ≤ 8 MB) |
