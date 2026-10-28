@@ -24,6 +24,18 @@ FREQ_RANK = {"D": 1, "B": 2, "W": 3, "M": 4, "Q": 5, "S": 6, "A": 7}
 SKIP = {"fx_rate": "one value per currency; latest.json has no currency field"}
 LATEST_LIMIT = 100_000  # bytes, docs/published.md size limits (D22)
 SERIES_LIMIT = 20_000_000  # bytes, docs/published.md size limits
+# Contract file catalog/<name>.parquet → Gold table (seeds kpi, kpi_measure, domain, unit, licence; models
+# kpi_dimension, dim_source; freshness is not built yet).
+CATALOG_TABLES = {
+    "dim_kpi": "kpi",
+    "kpi_measure": "kpi_measure",
+    "kpi_dimension": "kpi_dimension",
+    "dim_domain": "domain",
+    "dim_unit": "unit",
+    "dim_source": "dim_source",
+    "dim_licence": "licence",
+    "freshness": "freshness",
+}
 # Gold geography_level → contract level of series.parquet (Polish NUTS 1 = makroregion, NUTS 2 = region).
 SERIES_LEVELS = {
     "country": "country",
@@ -241,6 +253,23 @@ def kpi_series(metrics: pa.Table, kpi_key: str, unit_key: str) -> pa.Table:
     ).to_arrow_table()
 
 
+def catalog_tables(cat, client, prefix: str, namespace: str) -> dict[str, Any]:
+    """Write catalog/<name>.parquet for every CATALOG_TABLES entry whose Gold table exists."""
+    from pyiceberg.exceptions import NoSuchTableError
+
+    written: dict[str, int] = {}
+    missing: list[str] = []
+    for name, table_name in CATALOG_TABLES.items():
+        try:
+            table = gold(cat, namespace, table_name)
+        except NoSuchTableError:
+            missing.append(name)
+            continue
+        put(client, prefix + f"catalog/{name}.parquet", parquet(table), "application/vnd.apache.parquet")
+        written[name] = table.num_rows
+    return {"written": written, "missing": missing}
+
+
 def checked(coverage: pa.Table) -> dict[str, str]:
     """Per source of gold.coverage, when it was last checked."""
     result: dict[str, str] = {}
@@ -303,6 +332,7 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
         written[kpi_key] = len(latest["values"])
     result = {"written": written, "skipped": sorted(SKIP), "missing": missing}
     result["series"] = series
+    result["catalog_tables"] = catalog_tables(cat, client, prefix, namespace)
     result["manifest"] = manifest_json(client, prefix)
     annotate("notice", "gold.publish: latest", result)
     return result

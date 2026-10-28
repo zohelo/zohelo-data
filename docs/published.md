@@ -71,6 +71,11 @@ One Parquet file per Gold catalogue table, with that table's columns.
 | dim_licence | object | yes | `catalog/dim_licence.parquet`: the licences |
 | freshness | object | yes | `catalog/freshness.parquet`: load freshness per source and KPI |
 
+`warehouse/publish.py` `catalog_tables()` writes each file from its Gold table: dim_kpi ← `gold.kpi`, kpi_measure ←
+`gold.kpi_measure`, kpi_dimension ← `gold.kpi_dimension`, dim_domain ← `gold.domain`, dim_unit ← `gold.unit`,
+dim_source ← `gold.dim_source`, dim_licence ← `gold.licence`, freshness ← `gold.freshness`; a file whose table is
+not built yet is left out and reported as `missing` in the `gold.publish` annotation.
+
 ## manifest.json
 
 | field | type | required | meaning |
