@@ -59,7 +59,7 @@ matches the cron (an unknown cron fails the run, so no schedule can silently run
 script). To schedule a script, add the cron under `on.schedule` and a row to that table; the concurrency
 group is `zohelo-ops-<script or cron>`. Rows: `20 5 * * 1` (Mondays 05:20 UTC) runs `orphan_files --delete
 --min-age-hours 48` (orphans re-accumulate after failed commits and dropped tables; `--max-share` stays 0.5).
-Temporary row `7,27,47 * * * *` runs `backlog_sync apply` until the first backlog sync shows 0 changes in `plan` (removed by the migration/cleanup Task).
+Row `0 5 * * 1` (Mondays 05:00 UTC) runs `backlog_sync apply`: GitHub issues and the project follow the `.github/backlog/` files of the three repositories.
 Scheduled runs are never `branch_cleanup` (its job runs on manual dispatch only).
 
 Rules: one file per script (a script's deployable assets may sit in a folder of its own, like `scheduler_worker/`), `snake_case.py`, runnable as `python -m ops.<name>`. Write
