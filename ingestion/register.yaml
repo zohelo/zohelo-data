@@ -1273,9 +1273,12 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: open-conditional
-    notes: The API page states downloaded datasets are CC BY 3.0 IGO; other site content defaults to CC BY-NC 3.0
-      IGO. Preserve dataset licence and attribution.
+    status: unresolved
+    notes: 'No data licence found (28 Oct 2026): data.unicef.org/open-data and the SDMX API documentation state none;
+      the only terms found are the UNICEF site terms https://www.unicef.org/legal ("provided ... for personal use and
+      educational purposes only"; reproduction of more than a de minimis portion needs UNICEF''s express prior written
+      permission). Owner decision needed (noted on the Epic issue): ask UNICEF (data@unicef.org) for written reuse terms,
+      or treat as restricted. Attribution if allowed: "Source: UNICEF, UNICEF Data Warehouse, <dataset>".'
   updates: No common release cadence documented; dataflow versions and source updates can change data.
   ingestion:
     history: Snapshot dataflows, DSDs, codelists and full data with version.
@@ -1289,10 +1292,12 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm licence at each downloaded dataset
-    - Avoid labels-only CSV as exchange key
+    - 'Reuse terms unresolved: no data licence; UNICEF site terms are personal/educational use only (owner decision)'
+    - 'Avoid labels-only CSV as exchange key'
     references:
     - https://data.unicef.org/sdmx-api-documentation/
+    - https://www.unicef.org/legal
+    - https://data.unicef.org/open-data/
 - id: GL-028
   name: Human Development Data Center
   short_name: UNDP Human Development
