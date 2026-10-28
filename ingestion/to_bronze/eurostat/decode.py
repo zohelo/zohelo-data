@@ -87,7 +87,7 @@ def decode_landing_distribution(
             # memory stays bounded by DuckDB's streaming operators.
             con.execute(
                 "CREATE TABLE src AS SELECT "
-                "list_transform(string_split(c0, ','), x -> trim(x)) AS parts, * EXCLUDE (c0) "
+                "list_transform(string_split(c0, ','), lambda x: trim(x)) AS parts, * EXCLUDE (c0) "
                 "FROM read_csv(?, auto_detect = false, delim = '\t', quote = '', escape = '', "
                 "comment = '', header = false, skip = 1, columns = ?, nullstr = ?, strict_mode = true, "
                 "null_padding = false, parallel = false, compression = 'gzip', max_line_size = 8000000)",
