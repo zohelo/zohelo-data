@@ -6691,6 +6691,7 @@ sources:
     references:
     - https://www.gleif.org/en/lei-data/access-and-use-lei-data
     - https://www.gleif.org/en/lei-data/gleif-api
+    - https://www.gleif.org/en/meta/lei-data-terms-of-use
 - id: CD-016
   name: OpenCorporates REST and Reconciliation APIs
   short_name: OpenCorporates
