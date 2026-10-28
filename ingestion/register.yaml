@@ -60,7 +60,7 @@ sources:
   name: Comext international trade in goods database
   short_name: Eurostat Comext
   provider: Eurostat
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: multicountry-Europe
@@ -99,6 +99,7 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Out of scope: AGENTS.md excludes Eurostat Comext (DS-*) from the Eurostat authorization; reopen only on an owner decision.'
     - 'Commercial display: drop the excepted reporters and declarations first'
     - 'Plan commodity-classification bridges'
     references:
