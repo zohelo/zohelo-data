@@ -4649,8 +4649,9 @@ sources:
     limits: Unknown; no numeric quota was confirmed.
   licence:
     status: open-conditional
-    notes: GUGiK lists PRG among data downloadable free without an application; verify attribution and package notices
-      before redistribution.
+    notes: 'Terms: https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/ ("Dane PRG są dostępne bezpłatnie
+      i do dowolnego wykorzystania"; legal basis: Council of Ministers regulation of 16 July 2021 on the PRG, Dz.U. 2021
+      poz. 1373; no named licence and no required wording on the page). Attribution: "Źródło: GUGiK, PRG".'
   updates: Updated official register; release cadence not confirmed.
   ingestion:
     history: 'PROPOSAL: capture available dated releases with source metadata.'
@@ -4665,10 +4666,12 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm package formats, license notice, archive depth, and stable identifiers.
+    - Read the licence notice inside a downloaded PRG package (not readable from the agent session); the PRG page
+      states no conditions.
     references:
     - https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl
     - https://www.geoportal.gov.pl/pl/dane/
+    - https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/
 - id: PL-ENV-002
   name: Państwowy Rejestr Nazw Geograficznych (PRNG)
   short_name: GUGiK PRNG
