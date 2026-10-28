@@ -1083,9 +1083,11 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Public access is documented at catalog level; confirm ILOSTAT-specific licence, commercial reuse and
-      attribution before onboarding.
+    status: open-conditional
+    notes: 'Terms: CC BY 4.0 for ILOSTAT databases and datasets with their metadata published on or after 3 May 2023,
+      ILO Rights and permissions https://www.ilo.org/node/9321 (earlier releases carry no Creative Commons licence automatically;
+      ILO-only microdata excluded): reproduce, distribute and adapt for any purpose; do not use the ILO emblem; no endorsement.
+      Attribution: "Source: ILO, ILOSTAT, <dataset>, https://ilostat.ilo.org/data/".'
   updates: National submissions and modeled estimates follow series-specific releases and can revise history.
   ingestion:
     history: Snapshot bulk files, dictionaries, notes and classifications.
@@ -1098,10 +1100,14 @@ sources:
     priority: review-first
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Open current bulk/API guide, Resolve licence, Separate modeled and reported series]
+    blockers:
+    - 'Load only releases published on or after 3 May 2023 (CC BY 4.0 cut-off)'
+    - 'Open current bulk/API guide'
+    - 'Separate modeled and reported series'
     references:
     - https://ilostat.ilo.org/
     - https://ilostat.ilo.org/resources/sdmx-tools/
+    - https://www.ilo.org/node/9321
 - id: GL-024
   name: Global Health Observatory (GHO) OData API
   short_name: WHO GHO
