@@ -1798,7 +1798,7 @@ sources:
   name: UNECE Data Portal
   short_name: UNECE Data Portal
   provider: United Nations Economic Commission for Europe
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: multicountry-Europe
