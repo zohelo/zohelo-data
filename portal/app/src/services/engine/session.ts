@@ -118,5 +118,3 @@ export const catalogSnapshot = (databases: CatalogDatabase[]): CatalogSnapshot =
   databases,
   capturedAt: new Date().toISOString(),
 });
-
-export const EMPTY_CATALOG: () => CatalogSnapshot = () => catalogSnapshot([]);

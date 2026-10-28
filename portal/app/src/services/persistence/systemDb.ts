@@ -12,7 +12,7 @@
 import type { AsyncDuckDBConnection } from "@duckdb/duckdb-wasm";
 
 /** Escape a string value for safe use in SQL single-quoted literals */
-export function sqlEscape(value: string): string {
+function sqlEscape(value: string): string {
   return value.replace(/'/g, "''");
 }
 
@@ -21,30 +21,9 @@ export function sqlQuote(value: string): string {
   return `'${sqlEscape(value)}'`;
 }
 
-/** Escape and double-quote an identifier (table name, column name, etc.) */
-export function sqlIdentifier(name: string): string {
-  return `"${name.replace(/"/g, '""')}"`;
-}
-
 // Singleton state
 let initialized = false;
 let initPromise: Promise<void> | null = null;
-
-/**
- * Check whether OPFS is available in this browser.
- * Used by connection code to determine if OPFS connections are possible.
- */
-export async function isOpfsAvailable(): Promise<boolean> {
-  try {
-    const root = await navigator.storage.getDirectory();
-    const testName = ".duck-ui-opfs-test";
-    await root.getFileHandle(testName, { create: true });
-    await root.removeEntry(testName);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Initialize the system database. Sets up IndexedDB persistence.
@@ -84,12 +63,4 @@ export function isUsingOpfs(): boolean {
  */
 export function isSystemDbInitialized(): boolean {
   return initialized;
-}
-
-/**
- * Close the system database connection. No-op since system DB uses IndexedDB.
- */
-export async function closeSystemDb(): Promise<void> {
-  initialized = false;
-  initPromise = null;
 }

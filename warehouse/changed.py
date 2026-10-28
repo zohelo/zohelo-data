@@ -78,15 +78,18 @@ def shared_digest() -> str:
 
 
 def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    """unique_id → name, namespace, table, parents (unique ids of models and sources), fingerprint."""
+    """unique_id → name, namespace, table, parents (unique ids of models, seeds and sources), fingerprint.
+    Seeds are planned like models: their checksum is the CSV's, so an edited seed rebuilds itself
+    and the models that ref it."""
     shared = shared_digest()
     nodes = {**meta["nodes"], **meta["sources"]}
     out = {}
     for uid, node in meta["nodes"].items():
-        if node.get("resource_type") != "model":
+        if node.get("resource_type") not in ("model", "seed"):
             continue
         # Parents' resolved relations: repointing a source or ref to another table is a change.
-        parents = sorted(".".join(relation(nodes[p])) for p in node["depends_on"]["nodes"] if p in nodes)
+        upstream = node.get("depends_on", {}).get("nodes", [])  # a seed lists none
+        parents = sorted(".".join(relation(nodes[p])) for p in upstream if p in nodes)
         code = json.dumps(
             [shared, node["checksum"]["checksum"], node.get("config", {}), parents], sort_keys=True, default=str
         )
@@ -94,7 +97,7 @@ def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
             "name": node["name"],
             "namespace": relation(node)[0],
             "table": relation(node)[1],
-            "parents": [p for p in node["depends_on"]["nodes"] if p.startswith(("model.", "source."))],
+            "parents": [p for p in upstream if p.startswith(("model.", "source.", "seed."))],
             "fingerprint": hashlib.sha256(code.encode()).hexdigest()[:32],
             "incremental": node.get("config", {}).get("materialized") == "incremental",
         }
@@ -202,7 +205,7 @@ def record(cat, meta: dict[str, Any], results: Iterable[dict[str, Any]], started
     built = [
         r["unique_id"].split(".")[-1]
         for r in results
-        if r["unique_id"].startswith("model.") and r["status"] == "success"
+        if r["unique_id"].startswith(("model.", "seed.")) and r["status"] == "success"
     ]
     recorded, failed = 0, []
     for name in built:
