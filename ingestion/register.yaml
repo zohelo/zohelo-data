@@ -616,7 +616,7 @@ sources:
   name: Direction of Trade Statistics (DOTS)
   short_name: IMF DOTS
   provider: International Monetary Fund
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -654,6 +654,8 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
+    - 'Parked: IMF terms prohibit bulk download by automated technology without explicit permission (https://www.imf.org/en/about/copyright-and-terms);
+      owner to request it from copyright@imf.org'
     - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
     - 'Inventory current dataflows and coverage'
     - 'Resolve API account status'
