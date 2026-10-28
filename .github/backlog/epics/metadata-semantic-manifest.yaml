@@ -118,6 +118,31 @@ deliverables:
           - run: python -m ops.repo_check
             expect: "'ok   semantic models' and all other checks ok"
         out_of_scope: [semantic_models/gold.yml, kpi.csv, warehouse/catalog.py]
+      - key: data/metadata/semantic-manifest/generate/level-frequency
+        type: Task
+        title: Add the missing geography_level and frequency semantic dimensions
+        effort: S
+        state: open
+        contract: false
+        context: >-
+          warehouse/semantic_models/gold.yml says a metric is meaningful only at one geography level and one
+          frequency, so queries filter geography_level and frequency. Every metrics table has both columns
+          (macros/poc_metrics.sql), but semantic model poc_inflation has no geography_level dimension and poc_gdp
+          no frequency dimension, so MetricFlow queries on those two KPIs cannot filter them. poc_fx has neither
+          on purpose (no geography, daily rates only).
+        files:
+          - edit: warehouse/semantic_models/gold.yml
+        steps:
+          - "poc_gdp, dimensions: after the line `- {name: unit, type: categorical}` add `- {name: frequency, type: categorical}` (same indentation)."
+          - "poc_inflation, dimensions: after the line `- {name: geography_name, type: categorical}` add `- {name: geography_level, type: categorical}`."
+        acceptance:
+          - "dbt parse passes; every semantic model except poc_fx has both dimensions"
+        verify:
+          - run: "cd warehouse && STORAGE_LAKEHOUSE_CATALOG_WRITE_TOKEN=check STORAGE_WRITE_ACCESS_KEY=check STORAGE_WRITE_SECRET_KEY=check STORAGE_ENDPOINT_URL=https://check.invalid STORAGE_LAKEHOUSE_CATALOG_NAME=check STORAGE_LAKEHOUSE_CATALOG_URL=https://check.invalid dbt parse --profiles-dir . --target prod --no-partial-parse && cd .. && python -c \"import json;s=json.load(open('warehouse/target/semantic_manifest.json'));print({m['name']:sorted(d['name'] for d in m['dimensions'] if d['name'] in ('geography_level','frequency')) for m in s['semantic_models']})\""
+            expect: "{'poc_population': ['frequency', 'geography_level'], 'poc_gdp': ['frequency', 'geography_level'], 'poc_unemployment': ['frequency', 'geography_level'], 'poc_inflation': ['frequency', 'geography_level'], 'poc_fx': []}"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [measures and metrics, poc_fx, warehouse/catalog.py manifest_object]
   - key: data/metadata/semantic-manifest/bi-adoption
     title: zohelo-bi reads the generated manifest
     repo: zohelo-bi

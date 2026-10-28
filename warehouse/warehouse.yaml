@@ -1,6 +1,7 @@
 # Warehouse activities the Pipeline may run (source "platform"); owner authorization.
 #   silver_gold.build     dbt build of the SQL project (models/), optional --select from the run filter
-activities: [silver_gold.build]
+#   gold.publish          writes 06_published/v1/ from Gold (warehouse/publish.py)
+activities: [silver_gold.build, gold.publish]
 # Declared schedules (UTC), dispatched by run.py schedule: models daily after the source
 # loads. Eurostat and BDL observations are not dbt models: their loaders write Silver (#875).
 schedule:
@@ -16,6 +17,7 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.domain,  # seed warehouse/seeds/domain.csv
        gold.kpi_dimension,  # catalogue: dimensions per KPI and measure
        gold.kpi, gold.kpi_measure, gold.unit,  # seeds warehouse/seeds/kpi.csv, kpi_measure.csv, unit.csv
+       gold.sex,  # seed warehouse/seeds/sex.csv (SDMX CL_SEX)
        gold.licence, gold.source,  # seeds warehouse/seeds/licence.csv, source.csv
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)

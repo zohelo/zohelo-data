@@ -1066,7 +1066,7 @@ sources:
   name: ILOSTAT
   short_name: ILOSTAT
   provider: International Labour Organization
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
@@ -1112,7 +1112,7 @@ sources:
   name: Global Health Observatory (GHO) OData API
   short_name: WHO GHO
   provider: World Health Organization
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -1150,6 +1150,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Parked: GHO terms allow use for public health purposes only and forbid alteration without WHO written authorization;
+      the same indicators come from data.who.int (GL-025, CC BY 4.0)'
     - 'Prefer data.who.int (GL-025, CC BY 4.0) for overlapping series; GHO terms forbid alteration without WHO authorization'
     - 'Confirm legacy GHO deprecation plan'
     - 'Map overlap with data.who.int datasets'
@@ -1161,7 +1163,7 @@ sources:
   name: WHO Data platform (data.who.int) datasets
   short_name: WHO data.who.int
   provider: World Health Organization
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
@@ -1179,8 +1181,11 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: Unless stated otherwise datasets are CC BY 4.0 with required metadata citation, no de-anonymization/misrepresentation,
-      no endorsement, and third-party exclusions.
+    notes: 'Terms: CC BY 4.0 plus WHO additional terms, https://data.who.int/redirect-pages/footer/learn-more/terms-and-conditions
+      ("Terms and conditions for WHO datasets"): attribution as indicated in each dataset''s metadata; do not falsify
+      or misrepresent; do not de-anonymise; no use of the WHO name or emblem and no implied endorsement; provided without
+      warranty; WHO may change or discontinue datasets. Attribution: per dataset metadata, default "Source: World Health
+      Organization, <dataset>, data.who.int, accessed <date>".'
   updates: WHO can modify or discontinue datasets or access methods; schedules are dataset-specific.
   ingestion:
     history: Archive dataset, metadata, citation and terms/version.
@@ -1195,16 +1200,17 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Build GHO-to-new-platform crosswalk
-    - Check per-dataset licence exceptions and change notices
+    - 'Build GHO-to-new-platform crosswalk'
+    - 'Check per-dataset licence exceptions and change notices'
     references:
     - https://data.who.int/
     - https://data.who.int/about/data/terms-and-conditions
+    - https://data.who.int/redirect-pages/footer/learn-more/terms-and-conditions
 - id: GL-026
   name: UIS Data Browser
   short_name: UNESCO UIS
   provider: UNESCO Institute for Statistics
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
@@ -1221,9 +1227,12 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: UNESCO publication open-access policy does not by itself prove the licence of every UIS dataset; verify
-      Data Browser terms.
+    status: open-conditional
+    notes: 'Terms: CC BY-SA 4.0, https://databrowser.uis.unesco.org/terms-and-conditions ("The work of the UIS is licensed
+      under the Creative Commons Attribution-ShareAlike 4.0 International license"): share and reproduce without charge;
+      adaptations must carry the same licence (ShareAlike); no implied endorsement or affiliation; logo use needs permission.
+      Attribution: "Source: UNESCO Institute for Statistics (UIS), <complete URL>, <date of extraction>" ("Adapted from"
+      when changed).'
   updates: Release labels are displayed by domain; revision policy and earlier vintages are unresolved.
   ingestion:
     history: Download data and metadata by release/domain; archive glossary and flags.
@@ -1237,15 +1246,18 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Open exact Data Browser terms
-    - Confirm stable API availability and identifiers
-    - Retain release vintages
-    references: ['https://databrowser.uis.unesco.org/', 'https://www.unesco.org/en/open-access']
+    - 'ShareAlike: published derivatives of UIS data must be released under CC BY-SA 4.0'
+    - 'Confirm stable API availability and identifiers'
+    - 'Retain release vintages'
+    references:
+    - https://databrowser.uis.unesco.org/
+    - https://www.unesco.org/en/open-access
+    - https://databrowser.uis.unesco.org/terms-and-conditions
 - id: GL-027
   name: UNICEF Data Warehouse Explorer and SDMX API
   short_name: UNICEF Data Warehouse
   provider: United Nations Children’s Fund
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -1263,9 +1275,12 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: open-conditional
-    notes: The API page states downloaded datasets are CC BY 3.0 IGO; other site content defaults to CC BY-NC 3.0
-      IGO. Preserve dataset licence and attribution.
+    status: unresolved
+    notes: 'No data licence found (28 Oct 2026): data.unicef.org/open-data and the SDMX API documentation state none;
+      the only terms found are the UNICEF site terms https://www.unicef.org/legal ("provided ... for personal use and
+      educational purposes only"; reproduction of more than a de minimis portion needs UNICEF''s express prior written
+      permission). Owner decision needed (noted on the Epic issue): ask UNICEF (data@unicef.org) for written reuse terms,
+      or treat as restricted. Attribution if allowed: "Source: UNICEF, UNICEF Data Warehouse, <dataset>".'
   updates: No common release cadence documented; dataflow versions and source updates can change data.
   ingestion:
     history: Snapshot dataflows, DSDs, codelists and full data with version.
@@ -1279,15 +1294,19 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm licence at each downloaded dataset
-    - Avoid labels-only CSV as exchange key
+    - 'Parked: reuse terms unresolved (no data licence; UNICEF site terms are personal/educational use only); owner
+      decision noted on the Epic'
+    - 'Reuse terms unresolved: no data licence; UNICEF site terms are personal/educational use only (owner decision)'
+    - 'Avoid labels-only CSV as exchange key'
     references:
     - https://data.unicef.org/sdmx-api-documentation/
+    - https://www.unicef.org/legal
+    - https://data.unicef.org/open-data/
 - id: GL-028
   name: Human Development Data Center
   short_name: UNDP Human Development
   provider: United Nations Development Programme
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
@@ -1306,7 +1325,11 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: CC BY 3.0 IGO permits commercial adaptation/share with credit, licence link and change indication.
+    notes: 'Terms: CC BY 3.0 IGO, https://hdr.undp.org/en/content/copyright-and-terms-use ("All materials provided on
+      this website are copyrighted under the Creative Commons Attribution 3.0 IGO license"): adapt for any purpose,
+      even commercially; give credit, link the licence, indicate changes; provided without warranty; interpretation
+      is the reader''s responsibility. Attribution: "Source: UNDP Human Development Reports, Human Development Data
+      Center, https://hdr.undp.org/data-center (CC BY 3.0 IGO)".'
   updates: Entire HDI values/rankings time series is recalculated yearly using current methodology/data.
   ingestion:
     history: Archive every annual release and technical notes.
@@ -1320,14 +1343,17 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Enforce vintage-aware comparisons
-    - Check licences of externally sourced components
-    references: ['https://hdr.undp.org/data-center', 'https://hdr.undp.org/terms-use']
+    - 'Enforce vintage-aware comparisons'
+    - 'Check licences of externally sourced components'
+    references:
+    - https://hdr.undp.org/data-center
+    - https://hdr.undp.org/terms-use
+    - https://hdr.undp.org/en/content/copyright-and-terms-use
 - id: GL-029
   name: Refugee Data Finder / Refugee Statistics API
   short_name: UNHCR Refugee Statistics
   provider: United Nations High Commissioner for Refugees
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
@@ -1346,8 +1372,11 @@ sources:
     limits: Default page size 100 is documented; maximum and rate quota are unknown.
   licence:
     status: open-conditional
-    notes: Confirm the Refugee Data Finder licence; related Operational Data Portal datasets default to CC BY 4.0
-      unless indicated.
+    notes: 'Terms: CC BY 4.0 plus supplemental terms, https://www.unhcr.org/terms-use-datasets ("licensed under a Creative
+      Commons Attribution International License 4.0"): UNHCR APIs may be used to access the datasets; include the URL
+      of these terms when sharing; no implied endorsement; third-party datasets flagged in metadata may need their provider''s
+      consent; UNHCR may change or discontinue datasets and APIs. Attribution: "Source: UNHCR Refugee Population Statistics
+      Database" with credit to UNHCR''s data providers.'
   updates: Annual and other releases can revise history; methodology page governs definitions.
   ingestion:
     history: Load endpoints by year/resource plus lookups and footnotes.
@@ -1361,15 +1390,18 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Confirm exact product licence, Guard against API default aggregation]
+    blockers:
+    - 'Guard against API default aggregation'
+    - 'Exclude third-party datasets flagged in metadata'
     references:
     - https://api.unhcr.org/docs/refugee-statistics.html
     - https://data.unhcr.org/en/situations/ukraine
+    - https://www.unhcr.org/terms-use-datasets
 - id: GL-030
   name: Global Migration Data Portal
   short_name: IOM Migration Data Portal
   provider: International Organization for Migration
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -1387,8 +1419,11 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: restricted
-    notes: Portal terms prohibit treating access as blanket data rights; source datasets and contributors need separate
-      permission review.
+    notes: 'Terms: https://migrationdataportal.org/terms-use (no named licence; "All materials are copyright of the
+      International Organization for Migration, unless otherwise stated"): personal, non-commercial use only; no derivative
+      works; extraction, reproduction and distribution need IOM''s prior written permission; third-party materials need
+      their owner''s permission; provided without warranty. Public display is not allowed without permission; use the
+      upstream sources instead. Attribution if permitted: "Source: IOM Migration Data Portal, https://www.migrationdataportal.org/".'
   updates: Indicators/pages update irregularly; no machine-readable release contract found.
   ingestion:
     history: Use primarily as discovery metadata; onboard original source instead where available.
@@ -1401,15 +1436,19 @@ sources:
     priority: conditional
     evidence: catalogue-only
     connection: not-tested
-    blockers: [No stable API/bulk interface identified, Resolve rights at each upstream source]
+    blockers:
+    - 'Parked: IOM terms forbid redistribution and derivatives without written permission; use the upstream sources'
+    - 'Redistribution and derivatives need IOM written permission; use upstream sources'
+    - 'No stable API/bulk interface identified'
     references:
     - https://www.migrationdataportal.org/
     - https://www.migrationdataportal.org/terms-use
+    - https://migrationdataportal.org/terms-use
 - id: GL-031
   name: ITU DataHub
   short_name: ITU DataHub
   provider: International Telecommunication Union
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
@@ -1426,9 +1465,12 @@ sources:
     cost: mixed
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: ITU website terms do not establish rights for DataHub statistical downloads; verify subscription and
-      reuse conditions by dataset.
+    status: open-conditional
+    notes: 'Terms: CC BY-NC-SA 3.0 IGO, https://datahub.itu.int/about ("the Data is licensed to the public through a
+      Creative Commons Attribution-Non-Commercial-ShareAlike 3.0 IGO license"): copy, redistribute and adapt for non-commercial
+      purposes only; adaptations under the same licence; no ITU name/logo or implied endorsement; third-party data under
+      its owners'' terms; no warranty. The paid WTID was discontinued; all ICT indicators are free on the DataHub (https://www.itu.int/pub/D-IND-WTID.OL-2023).
+      Attribution: "International Telecommunication Union, ITU DataHub, https://datahub.itu.int/, accessed <date>".'
   updates: Annual and other indicator updates; no portal-wide revision contract found.
   ingestion:
     history: Only load explicitly downloadable/licensed tables with metadata.
@@ -1441,15 +1483,19 @@ sources:
     priority: review-next
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Clarify free versus paid downloads, Resolve reuse rights, Confirm API availability]
+    blockers:
+    - 'NonCommercial + ShareAlike: only non-commercial display; derivatives under CC BY-NC-SA 3.0 IGO'
+    - 'Confirm API availability'
     references:
     - https://datahub.itu.int/
     - https://www.itu.int/en/about/Pages/terms-of-use.aspx
+    - https://datahub.itu.int/about
+    - https://www.itu.int/pub/D-IND-WTID.OL-2023
 - id: GL-032
   name: IP Statistics Data Center
   short_name: WIPO IP Statistics
   provider: World Intellectual Property Organization
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -1466,9 +1512,13 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: open-conditional
-    notes: WIPO generally applies CC BY 4.0 to new online content, with attribution and change indication, but exceptions
-      and third-party content require item review.
+    status: restricted
+    notes: 'Terms: WIPO IP Statistics Data Center conditions of use https://www.wipo.int/en/web/ip-statistics/about:
+      "By using WIPO''s statistical data, users agree not to republish or commercially re-sell WIPO''s statistical
+      datasets"; written work using the data must cite the source. The site-wide CC BY 4.0 policy (https://www.wipo.int/en/web/terms-of-use)
+      does not override these dataset-specific conditions. Public display of the data on zohelo.com or bi.zohelo.com
+      is not allowed without WIPO''s written permission; internal analysis only. Data accuracy remains the reporting
+      offices'' responsibility; no warranty. Attribution: "Source: WIPO Statistics Database, <download date>."'
   updates: Annual reporting from IP offices; later surveys may revise historical figures.
   ingestion:
     history: Archive downloads, glossary and classification/concordance version.
@@ -1482,16 +1532,19 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm Data Center item-specific licence
+    - 'Parked: licence restricted (WIPO conditions of use forbid republishing or re-selling the statistical datasets;
+      public display needs WIPO''s written permission)'
+    - 'Public display needs WIPO''s written permission (datasets may not be republished or re-sold)'
     - Document download format stability
     references:
     - https://www.wipo.int/en/web/ip-statistics
     - https://www.wipo.int/en/web/terms-of-use
+    - https://www.wipo.int/en/web/ip-statistics/about
 - id: GL-033
   name: UNODC Data Portal
   short_name: UNODC Data Portal
   provider: United Nations Office on Drugs and Crime
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -1508,9 +1561,12 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: No dataset-specific commercial redistribution licence was established from opened pages; verify each
-      download.
+    status: restricted
+    notes: 'Terms: UNODC Legal Notice https://www.unodc.org/unodc/legal.html (applies to UNODC sites; no open licence
+      found for data.unodc.org): materials may be downloaded and copied for the user''s personal, non-commercial use
+      only; no right to resell or redistribute them or to create derivative works; provided "as is", without warranty
+      of accuracy or completeness. Public display on zohelo.com or bi.zohelo.com needs UNODC''s written permission;
+      internal analysis only. Attribution: "Source: UNODC, dataUNODC (data.unodc.org), <download date>."'
   updates: Collection rounds and revisions vary; no common release schedule found.
   ingestion:
     history: Archive topic export, definitions, questionnaire/source and release date.
@@ -1525,15 +1581,19 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Resolve dataset licence
+    - 'Parked: licence restricted (UNODC Legal Notice allows personal, non-commercial use only, no redistribution;
+      public display needs UNODC''s written permission)'
+    - Public display needs UNODC's written permission (Legal Notice allows personal, non-commercial use only)
     - Confirm stable bulk/API access
     - Profile missingness and definition breaks
-    references: ['https://data.unodc.org/']
+    references:
+    - https://data.unodc.org/
+    - https://www.unodc.org/unodc/legal.html
 - id: GL-034
   name: IEA Data Explorer
   short_name: IEA Data Explorer
   provider: International Energy Agency
-  status: registered
+  status: parked
   family: G
   kpi: true
   geography: worldwide
@@ -1551,8 +1611,15 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: restricted
-    notes: IEA terms and product licences are restrictive/dataset-specific; do not assume public charts or free
-      files may be commercially redistributed.
+    notes: 'Terms: IEA Terms of Use https://www.iea.org/terms: CC BY 4.0 covers IEA text, reports and standalone figures,
+      but not standalone datasets, data explorers and databases, which fall under the Terms of Use for Non-CC Material
+      https://www.iea.org/terms/terms-of-use-for-non-cc-material: no sharing or enabling access to the material; only
+      insubstantial amounts in own public work (more than five numerical data points only as graphics or aggregates,
+      never downloadable); no substitutable derived database; no commercial advantage, financial-decision use or
+      sale; anything else needs a rights request to rights@iea.org (separate licence, possibly paid). Public display
+      in zohelo explorers is not allowed. No IEA endorsement may be implied. Attribution (aggregated or graphical
+      data): "Based on IEA data from IEA (<year>) <database title>, https://www.iea.org/data-and-statistics, All rights
+      reserved; as modified by <legal entity>."'
   updates: Annual/monthly schedules and revisions vary by product.
   ingestion:
     history: Onboard only a specifically licensed product/release; archive its terms and methodology.
@@ -1567,17 +1634,19 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Identify eligible free datasets
-    - Legal review for commercial redistribution
+    - 'Parked: licence restricted (IEA datasets and data explorers are Non-CC Material: no sharing, only insubstantial
+      amounts; public display needs a separate, possibly paid IEA licence)'
+    - Public display needs a separate IEA licence (rights@iea.org; Non-CC Material terms allow only insubstantial amounts)
     - Confirm download/API entitlement
     references:
     - https://www.iea.org/data-and-statistics/data-tools
     - https://www.iea.org/terms
+    - https://www.iea.org/terms/terms-of-use-for-non-cc-material
 - id: GL-035
   name: IRENASTAT / Statistics Time Series
   short_name: IRENASTAT
   provider: International Renewable Energy Agency
-  status: registered
+  status: parked
   family: G
   kpi: true
   geography: worldwide
@@ -1594,8 +1663,14 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: Confirm IRENA data licence, attribution and redistribution terms on each export.
+    status: open-conditional
+    notes: 'Terms: IRENA Terms and Conditions https://www.irena.org/terms-and-conditions (section 4.1): content may be
+      freely accessed, copied, shared, downloaded and reproduced for non-commercial purposes with appropriate attribution
+      to IRENA; any other use (commercial use included) needs IRENA''s prior written permission (info@irena.org);
+      no use of the IRENA logo, no implied endorsement; do not attempt to disaggregate data or statistics generated
+      through IRENA''s platforms and tools (2.1(viii)); third-party content has its own terms; provided "as is", without
+      warranty, may be out of date. Attribution: "Source: IRENA (<year>), IRENASTAT Online Data Query Tool, <download
+      date>."'
   updates: Annual statistics releases with possible historical revisions.
   ingestion:
     history: Archive full release and technology classification.
@@ -1609,15 +1684,18 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Resolve licence
+    - 'Parked: IRENA terms allow non-commercial reuse only (commercial use needs written permission, as for GL-018 and
+      GL-020) and no machine-readable export or API route is confirmed'
+    - 'Commercial use needs IRENA''s prior written permission (terms allow non-commercial reuse only)'
     - Confirm machine-readable export/API and release archive
     references:
     - https://www.irena.org/Data/View-data-by-topic/Capacity-and-Generation/Statistics-Time-Series
+    - https://www.irena.org/terms-and-conditions
 - id: GL-036
   name: Climate Data Store (CDS)
   short_name: Copernicus Climate Data Store
   provider: Copernicus Climate Change Service / ECMWF
-  status: registered
+  status: approved
   family: G
   kpi: true
   geography: worldwide
@@ -1635,9 +1713,15 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Each dataset has terms; public ECMWF site content may be CC BY 4.0 only when no separate notice applies.
-      Store accepted licence per dataset.
+    status: open-conditional
+    notes: 'Terms: CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ for Copernicus Products in the Climate Data
+      Store since 2 July 2025 (ECMWF announcement https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464,
+      replacing the Licence to Use Copernicus Products): reuse, modification and commercial use allowed with attribution
+      and indication of changes; non-Copernicus datasets in the CDS keep their own licence, shown on each dataset
+      page and accepted per dataset with the personal token. Disclaimer to show: neither the European Commission
+      nor ECMWF is responsible for any use made of the information. Attribution: "Generated using Copernicus Climate
+      Change Service information <year>" ("Contains modified Copernicus Climate Change Service information <year>"
+      when modified), plus the dataset''s citation from its References section.'
   updates: Datasets can be corrected or extended; schedules vary.
   ingestion:
     history: Chunk by dataset/variable/time/grid with manifest and licence snapshot.
@@ -1651,16 +1735,21 @@ sources:
     priority: specialist
     evidence: documented
     connection: not-tested
-    blockers: [Account/token workflow, Per-dataset terms registry, Large-volume cost/storage design, Monitor corrections]
+    blockers:
+    - Account/token workflow
+    - Record each chosen dataset's licence (non-Copernicus datasets keep their own) and accept it with the token
+    - Large-volume cost/storage design
+    - Monitor corrections
     references:
     - https://cds.climate.copernicus.eu/
     - https://cds.climate.copernicus.eu/how-to-api
     - https://www.ecmwf.int/en/terms-use
+    - https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464
 - id: GL-037
   name: EEA Datahub
   short_name: EEA Datahub
   provider: European Environment Agency
-  status: registered
+  status: approved
   family: G
   kpi: true
   geography: multicountry-Europe
@@ -1678,8 +1767,13 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: EEA-owned material is CC BY and commercially reusable with acknowledgement and undistorted meaning; item-specific
-      and third-party conditions override.
+    notes: 'Terms: CC BY 4.0, EEA legal notice https://www.eea.europa.eu/en/legal-notice: material the EEA holds
+      rights to may be re-used without prior permission, free of charge, for commercial or non-commercial purposes
+      (reproduction, adaptation, distribution), provided the EEA is acknowledged as the original source in each copy
+      and the original meaning is not distorted; data with a copyright mark or other item-specific conditions and
+      third-party content follow their own terms; EEA logo only with consent; no liability, data may be incomplete
+      or out of date, not the official opinion of the EEA. Attribution: "Source: European Environment Agency (EEA),
+      <dataset title>, <download date>."'
   updates: Datasets follow legislation/reporting cycles; revisions and update cadence are item-specific.
   ingestion:
     history: Archive exact dataset release, metadata, rights owner and spatial schema.
@@ -1695,7 +1789,7 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Dataset-level rights scan
+    - Dataset-level rights scan (item-specific and third-party conditions override CC BY)
     - Inventory APIs/services per chosen dataset
     references:
     - https://www.eea.europa.eu/en/datahub
@@ -1704,7 +1798,7 @@ sources:
   name: UNECE Data Portal
   short_name: UNECE Data Portal
   provider: United Nations Economic Commission for Europe
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: multicountry-Europe
@@ -1721,9 +1815,8 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: Free access is explicit, but commercial redistribution terms were not established; review table/source
-      rights.
+    status: open-conditional
+    notes: 'Terms: UNECE Statistical Database copyright notice https://w3.unece.org/PXWeb/Static/Copyright_notice.html: "The data in the UNECE Statistical Database are available free of charge. Users are free to copy, reproduce and redistribute the data for both commercial and non-commercial purposes, provided UNECE is acknowledged as the source." Disclaimer: "UNECE does not take any responsibility for the use of the data." Attribution: "Source: UNECE Statistical Database."'
   updates: Economic indicators carried a 2026 restructuring notice; table schedules and discontinuations vary.
   ingestion:
     history: Snapshot PXWeb table, metadata and source.
@@ -1737,15 +1830,16 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Resolve reuse rights
-    - Track database restructuring and discontinued series
-    - Confirm PXWeb API contract
-    references: ['https://w3.unece.org/PXWeb/en']
+    - 'Track database restructuring and discontinued series'
+    - 'Confirm PXWeb API contract'
+    references:
+    - https://w3.unece.org/PXWeb/en
+    - https://w3.unece.org/PXWeb/Static/Copyright_notice.html
 - id: GL-039
   name: World Population Prospects
   short_name: UN World Population Prospects
   provider: United Nations Department of Economic and Social Affairs, Population Division
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
@@ -1763,8 +1857,8 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: Verify the 2024 Revision data licence and attribution; UNdata mirror does not establish separate rights.
+    status: open-conditional
+    notes: 'Terms: CC BY 3.0 IGO (http://creativecommons.org/licenses/by/3.0/igo/); WPP 2024 data are "made available under a Creative Commons license CC BY 3.0 IGO" (https://environmentdashboard.org/sources/un-wpp-2024, quoting the producer): copy, redistribute and adapt, also commercially, with attribution; no UN emblem or implied endorsement. Attribution: "United Nations, Department of Economic and Social Affairs, Population Division (2024). World Population Prospects 2024, Online Edition. CC BY 3.0 IGO."'
   updates: Revision-based releases recalculate historical estimates and projection variants.
   ingestion:
     history: Load complete revision files and metadata; retain each revision.
@@ -1778,11 +1872,13 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Open current download licence
-    - Confirm file schema and revision archive
+    - 'Confirm the licence statement on population.un.org/wpp (the page could not be read in this review)'
+    - 'Confirm file schema and revision archive'
     references:
     - https://population.un.org/wpp/
     - https://data.un.org/Handlers/ExplorerHandler.ashx?t=sources
+    - https://environmentdashboard.org/sources/un-wpp-2024
+    - https://www.un.org/development/desa/pd/node/4327
 - id: GL-040
   name: UNIDO Statistics Data Portal / INDSTAT
   short_name: UNIDO INDSTAT
@@ -1936,9 +2032,13 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No product-specific reuse statement was verified; do not inherit BDL licensing merely because GUS owns
-      both.
+    status: open-conditional
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+      licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+      summaries or reworked text. The STRATEG API page (https://api.stat.gov.pl/Home/StrategApi?lang=en) states no
+      licence, only "Copyright Statistics Poland" and quotas (anonymous 5 req/s, 100/15 min; with key 10 req/s, 500/15
+      min). Attribution: "Źródło: GUS, STRATEG" / "Source: Statistics Poland, STRATEG" plus the indicator id.'
   updates: Indicator-dependent and revision-prone; no universal schedule verified.
   ingestion:
     history: Snapshot indicator catalogue, metadata and full selected histories.
@@ -1951,10 +2051,14 @@ sources:
     priority: review-next
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Open current API method documentation, Verify reuse terms and quotas]
+    blockers:
+    - Open current API method documentation (https://strateg.stat.gov.pl/apidocs/?lang=en)
+    - Commercial reuse not addressed by GUS terms (ask GUS if needed)
     references:
     - https://strateg.stat.gov.pl/
     - https://api.stat.gov.pl/Home/Index?lang=en
+    - https://api.stat.gov.pl/Home/StrategApi?lang=en
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-004
   name: GUS thematic publications with downloadable statistical tables
   short_name: GUS publication tables
@@ -1977,7 +2081,11 @@ sources:
     limits: No API quota; bulk archive crawling limits unknown.
   licence:
     status: open-conditional
-    notes: GUS portal footer states CC BY 4.0; verify embedded third-party material and preserve release attribution.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+      licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+      summaries or reworked text. Tables embedding third-party data keep their owners'' terms. Attribution: "Źródło:
+      GUS, <publication title> (<year>)" / "Source: Statistics Poland, <publication title> (<year>)".'
   updates: Release-calendar driven; corrections may replace files.
   ingestion:
     history: Backfill a curated whitelist of publication families and retain original files/checksums.
@@ -1993,10 +2101,11 @@ sources:
     connection: not-tested
     blockers:
     - Choose publication-family whitelist
-    - Confirm footer licence scope for each release
+    - 'Check each chosen publication for embedded third-party material (owners'' terms apply)'
     references:
     - https://stat.gov.pl/obszary-tematyczne/
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2024-r-%2C1%2C22.html
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-005
   name: Narodowy Spis Powszechny Ludności i Mieszkań 2021 (NSP 2021) results
   short_name: GUS NSP 2021
@@ -2019,7 +2128,12 @@ sources:
     limits: Download limits unknown.
   licence:
     status: open-conditional
-    notes: GUS portal licensing is CC BY 4.0, but confirm each census download and any statistical-disclosure constraints.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+      licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+      summaries or reworked text. Census tables are published already disclosure-controlled; keep GUS confidentiality
+      symbols as published. Attribution: "Źródło: GUS, Narodowy Spis Powszechny Ludności i Mieszkań 2021" / "Source:
+      Statistics Poland, National Population and Housing Census 2021".'
   updates: Census release is periodic with later thematic releases/corrections, not a live feed.
   ingestion:
     history: Load published aggregate tables and release metadata once; version corrections.
@@ -2036,10 +2150,10 @@ sources:
     connection: not-tested
     blockers:
     - Inventory exact downloadable table families
-    - Verify census-specific reuse notice
     - Define small-cell handling
     references:
     - https://stat.gov.pl/spisy-powszechne/nsp-2021/
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-006
   name: Powszechny Spis Rolny 2020 (PSR 2020) results
   short_name: GUS PSR 2020
@@ -2062,7 +2176,11 @@ sources:
     limits: Unknown.
   licence:
     status: open-conditional
-    notes: GUS CC BY 4.0 likely applies to portal data, but census-file scope should be confirmed per download.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+      licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+      summaries or reworked text. Attribution: "Źródło: GUS, Powszechny Spis Rolny 2020" / "Source: Statistics Poland,
+      Agricultural Census 2020".'
   updates: Decennial census release with corrections/thematic additions.
   ingestion:
     history: Load all chosen aggregate tables with source files and notes.
@@ -2077,10 +2195,11 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Verify downloadable catalogue and licence
+    - Verify downloadable catalogue
     - Document confidentiality symbols
     references:
     - https://stat.gov.pl/spisy-powszechne/powszechny-spis-rolny-2020/
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-007
   name: Krajowy Rejestr Urzędowy Podziału Terytorialnego Kraju (TERYT)
   short_name: GUS TERYT
@@ -2150,8 +2269,12 @@ sources:
       10,000/hour, 200/min, 4/s.'
   licence:
     status: restricted
-    notes: Public-field commercial access is allowed; redistribution is undocumented. A legal-reviewed allowlist
-      is required.
+    notes: 'Terms: none published. The BIR1 page https://api.stat.gov.pl/Home/RegonApi says the service and data are free of
+      charge and open to public bodies and commercial entities (production user key on request to regon_bir@stat.gov.pl
+      with IP addresses and expected monthly volume); it states no licence and does not address republication. Records
+      of natural persons running a business are personal data (GDPR), so record-level public display is not allowed
+      without a legal and privacy review; aggregates only. Attribution: "Źródło: GUS, rejestr REGON (BIR1)" / "Source:
+      Statistics Poland, REGON register (BIR1)".'
   updates: Live register; history undocumented.
   ingestion:
     history: Seed an approved entity list after key approval.
@@ -2164,13 +2287,18 @@ sources:
     priority: conditional
     evidence: documented
     connection: not-tested
-    blockers: [Obtain an access token; legal and privacy review, Define field allowlist]
-    references: ['https://api.stat.gov.pl/Home/RegonApi']
+    blockers:
+    - Obtain a production user key (regon_bir@stat.gov.pl)
+    - 'Legal and privacy review: republication not addressed; natural-person records are personal data'
+    - Define field allowlist
+    references:
+    - https://api.stat.gov.pl/Home/RegonApi
+    - https://api.stat.gov.pl/Home/RegonApi?lang=en
 - id: PLS-009
   name: Portal Statystyczny ZUS
   short_name: ZUS statistical portal
   provider: Zakład Ubezpieczeń Społecznych (ZUS)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland and voivodeships, table-dependent
@@ -2188,9 +2316,16 @@ sources:
     cost: free
     limits: No API; automated-download limits unknown.
   licence:
-    status: unresolved
-    notes: No explicit dataset reuse licence was verified on the portal pages; public viewing/download does not
-      settle commercial redistribution.
+    status: open-conditional
+    notes: 'Terms: ZUS re-use terms
+      https://www.zus.pl/web/biuletyn-informacji-publicznej/obsluga-klienta/ogolne-zasady-zalatwiania-spraw/ponowne-wykorzystywanie-informacji-sektora-publicznego:
+      everyone may re-use, without a request and free of charge, public sector information that ZUS publishes (the page
+      names its BIP and dane.gov.pl; the statistical portal and yearbooks are ZUS public information under the same
+      regime), for commercial or non-commercial purposes; the re-user must give the source, the date the information was
+      created and the date it was obtained, say whether it is used in whole or in part, and disclose any processing; ZUS
+      is not liable for processed information. No named licence. psz.zus.pl itself shows no separate terms. Attribution:
+      "Źródło: ZUS, Portal Statystyczny ZUS (psz.zus.pl), dane z <data wytworzenia>, pobrane <data pobrania>" / "Source:
+      ZUS Statistical Portal, data of <date>, retrieved <date>"; mark processed figures as processed.'
   updates: Portal says it is systematically supplied with current data; topic cadence varies, including monthly
     series.
   ingestion:
@@ -2207,15 +2342,16 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Resolve reuse/redistribution rights, Choose stable topic families, Assess workbook schema drift]
+    blockers: [Choose stable topic families, Assess workbook schema drift]
     references:
     - https://psz.zus.pl/
     - https://psz.zus.pl/kategorie/ubezpieczeni/ubezpieczenia-emerytalne-i-rentowe
+    - https://www.zus.pl/web/biuletyn-informacji-publicznej/obsluga-klienta/ogolne-zasady-zalatwiania-spraw/ponowne-wykorzystywanie-informacji-sektora-publicznego
 - id: PLS-010
   name: Rocznik Statystyczny Ubezpieczeń Społecznych
   short_name: ZUS social insurance yearbook
   provider: Zakład Ubezpieczeń Społecznych (ZUS)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland and regional breakdowns, edition-dependent
@@ -2232,8 +2368,16 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit redistribution licence verified.
+    status: open-conditional
+    notes: 'Terms: ZUS re-use terms
+      https://www.zus.pl/web/biuletyn-informacji-publicznej/obsluga-klienta/ogolne-zasady-zalatwiania-spraw/ponowne-wykorzystywanie-informacji-sektora-publicznego:
+      everyone may re-use, without a request and free of charge, public sector information that ZUS publishes (the page
+      names its BIP and dane.gov.pl; the statistical portal and yearbooks are ZUS public information under the same
+      regime), for commercial or non-commercial purposes; the re-user must give the source, the date the information was
+      created and the date it was obtained, say whether it is used in whole or in part, and disclose any processing; ZUS
+      is not liable for processed information. No named licence. Attribution: "Źródło: ZUS, Rocznik Statystyczny
+      Ubezpieczeń Społecznych <rok>, pobrane <data>" / "Source: ZUS, Social Insurance Statistical Yearbook <year>,
+      retrieved <date>"; mark processed figures as processed.'
   updates: Periodically issued yearbook; revisions and schedule unknown.
   ingestion:
     history: Load available editions and deduplicate repeated historical tables by edition/reference year.
@@ -2248,9 +2392,9 @@ sources:
     connection: not-tested
     blockers:
     - Verify downloadable formats and earliest edition
-    - Resolve reuse terms
     references:
     - https://www.zus.pl/baza-wiedzy/statystyka/rocznik-statystyczny-ubezpieczen-spolecznych
+    - https://www.zus.pl/web/biuletyn-informacji-publicznej/obsluga-klienta/ogolne-zasady-zalatwiania-spraw/ponowne-wykorzystywanie-informacji-sektora-publicznego
 - id: PLS-011
   name: Podstawowe dane statystyczne KRUS
   short_name: KRUS statistics

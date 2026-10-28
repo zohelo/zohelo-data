@@ -25,13 +25,14 @@ whose YAML sets `extraction.kind` (for example `bulk_file`) runs the shared patt
 | `bronze.verify` | `ingestion/common/lineage.py` | every Landing file is in Bronze or rejected with a reason; verifies one version per entity in Bronze (fails on breach); Landing files a Bronze table holds twice (warning) |
 | `landing.archive` | `ingestion/common/archive.py` | move Bronze-loaded Landing files to Archive (copy, verify SHA-256, delete from Landing; receipt stays) |
 | `archive.prune` | `ingestion/common/retention.py` | apply the source's Archive retention (`archive_policy` in its config) |
-| `silver_gold.build` | `warehouse/build.py` | platform: dbt build of `warehouse/models/` (filter = model names; empty = only models whose inputs or code changed, `fqn:*` = all); publishes the data catalog |
+| `silver_gold.build` | `warehouse/build.py` | platform: dbt build of `warehouse/models/` (filter = model names; empty = only models whose inputs or code changed, `fqn:*` = all); publishes the data catalog (only the Pipeline on `main`; Dev trials skip it) |
+| `gold.publish` | `warehouse/publish.py` | platform: rewrites 06_published/v1/ from Gold (docs/published.md) |
 | `serving.refresh_index` | `portal/publish_index.py` | platform: rebuild the portal file index |
 
 A Pipeline run is one activity or a source's `full dataflow: landing → bronze → silver → gold → portal`
 (owner direction 20 Oct, #875): Landing, Bronze (entity sources write Silver with Bronze), archive,
 then the changed-only model build (Silver/Gold models, semantic layer, data catalog), then the
-portal index. Scheduled source runs are full dataflow runs. The portal index refresh is added
+published files (gold.publish), then the portal index. Scheduled source runs are full dataflow runs. The portal index refresh is added
 automatically after writing activities. An activity runs only when
 it is implemented and listed under `activities:` in `ingestion/sources/<source>.yaml`
 (platform activities: `warehouse/warehouse.yaml`, `portal/portal.yaml`). Activities are idempotent and resume from durable
@@ -55,6 +56,21 @@ Production reads and writes need the R2 credentials, which exist only in GitHub
 Actions. There is no repository test suite; the `check` job in `dev.yml` runs on every
 pull request (compile, lint, YAML, configuration consistency, dbt parse) and must pass
 before merge. Quality rules: [quality.md](quality.md).
+
+### Dev trials
+
+A Dev trial is one `dev/<name>_trial.py` on the feature branch, run with the Dev workflow. Every trial:
+
+- writes only to a scratch namespace or prefix named `zz_dev_<branch topic>` and drops it at the end, also on failure
+  (`try`/`finally`);
+- never calls a production publisher directly: `warehouse/catalog.py publish()`, `gold.publish`
+  (`warehouse/publish.py`) or anything else that writes `_portal_catalog/`, `06_published/` or a production namespace.
+  `catalog.publish()` skips itself outside the Pipeline on `main` (#2112); other writers have no such guard, so a trial
+  checks every write target it adds;
+- reports what it wrote (namespace, tables, counts) as annotations, and the PR body cites the trial run id.
+
+Do not copy an older trial script from branch history without checking it against this list: `dev/seeds_trial.py`
+(commit b62f65e) rewrote the production catalog from a branch (#2106).
 
 Schedules are declared under `schedule:` in each source's YAML and in
 `warehouse/warehouse.yaml` (cron in UTC + run + optional filter). The Pipeline's
