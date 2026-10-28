@@ -1551,8 +1551,7 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: restricted
-    notes: IEA terms and product licences are restrictive/dataset-specific; do not assume public charts or free
-      files may be commercially redistributed.
+    notes: 'Terms: IEA Terms of Use for Non-CC Material https://www.iea.org/terms/terms-of-use-for-non-cc-material and usage and rights https://www.iea.org/help-centre/usage-and-rights. Data in the IEA data explorers and paid products is non-CC material: public use only of insubstantial amounts, occasionally and not for commercial advantage; at most five raw data points may be offered for download; no redistribution of whole datasets; derived products need a licence agreement (compliance@iea.org, possibly a fee). Free datasets such as the World Energy Outlook free dataset are CC BY-NC-SA 4.0 IGO (non-commercial; derivatives under the same licence). Attribution for numerical data: "Based on IEA data from IEA (<year>) <database title>, <URL>. All rights reserved; as modified by zohelo." Public display of explorer data on zohelo.com or bi.zohelo.com is not allowed without an IEA licence.'
   updates: Annual/monthly schedules and revisions vary by product.
   ingestion:
     history: Onboard only a specifically licensed product/release; archive its terms and methodology.
@@ -1567,12 +1566,15 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Identify eligible free datasets
-    - Legal review for commercial redistribution
-    - Confirm download/API entitlement
+    - 'Public display of IEA explorer data needs an IEA licence (non-CC material: insubstantial, non-commercial use only)'
+    - 'Free datasets are CC BY-NC-SA 4.0 IGO: non-commercial display only, derivatives under the same licence'
+    - 'Confirm download/API entitlement'
     references:
     - https://www.iea.org/data-and-statistics/data-tools
     - https://www.iea.org/terms
+    - https://www.iea.org/terms/terms-of-use-for-non-cc-material
+    - https://www.iea.org/help-centre/usage-and-rights
+    - https://www.iea.org/data-and-statistics/data-product/world-energy-outlook-2025-free-dataset
 - id: GL-035
   name: IRENASTAT / Statistics Time Series
   short_name: IRENASTAT
