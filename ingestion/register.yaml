@@ -422,7 +422,7 @@ sources:
   name: Enterprise Surveys
   short_name: World Bank Enterprise Surveys
   provider: World Bank
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -458,6 +458,7 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Parked: microdata licence forbids redistribution; indicator reuse terms not stated'
     - 'Microdata may not be redistributed; reuse terms of the published indicators are not stated'
     - 'Apply disclosure and survey-weight rules'
     references:
