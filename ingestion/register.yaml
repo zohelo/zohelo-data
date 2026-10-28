@@ -78,8 +78,12 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: Attribution required; commercial exceptions include Swiss/Liechtenstein-declared trade since 1995 and
-      Austrian CN8; third-party and geographic exclusions also apply.
+    notes: 'Terms: CC BY 4.0, https://ec.europa.eu/eurostat/help/copyright-notice (re-use for commercial or
+      non-commercial purposes if the source is acknowledged and changes are indicated; modified or translated
+      content must state the changes and carry a disclaimer of Eurostat non-responsibility). Comext exceptions:
+      Swiss- and Liechtenstein-declared trade since 1995 and Austrian-declared CN8 data may not be sold; data
+      for countries outside the EU, EFTA and candidate countries may not be reused commercially. Attribution:
+      "Source: Eurostat (Comext)".'
   updates: Detailed trade is compiled monthly; revisions and confidential/suppressed cells require flags.
   ingestion:
     history: Partition full extracts by dataset and period; archive codelists and raw vintages.
@@ -94,7 +98,9 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Resolve non-EU source rights by table, Plan commodity-classification bridges]
+    blockers:
+    - 'Commercial display: drop the excepted reporters and declarations first'
+    - 'Plan commodity-classification bridges'
     references:
     - https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction
     - https://ec.europa.eu/eurostat/data/database
@@ -121,8 +127,12 @@ sources:
     limits: Rate limiting is documented, but no numeric threshold was published on the opened page.
   licence:
     status: open-conditional
-    notes: Commercial use is permitted with attribution unless dataset metadata identifies additional or third-party
-      restrictions.
+    notes: 'Terms: OECD Terms and Conditions (updated 15 Mar 2024),
+      https://www.oecd.org/en/about/terms-conditions.html, section on Data: users may extract, download, copy,
+      adapt, print, distribute, share and embed Data for any purpose, commercial use and modification included,
+      subject to restrictions stated for a dataset and to third-party rights (the OECD does not warrant it owns
+      all Data). Attribution: "OECD (<year>), <dataset name>, OECD Data Explorer, <DOI or URL> (accessed on
+      <date>)" or the citation given with the dataset.'
   updates: Series schedules vary. New dataflow versions may make non-backward-compatible structural changes.
   ingestion:
     history: Snapshot selected dataflows, structures, codelists and attributes by version.
@@ -135,7 +145,10 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Dataset-level rights scan, Coverage matrix beyond OECD membership, Handle versioned structure breaks]
+    blockers:
+    - 'Dataset-level rights scan (third-party restrictions in dataset metadata)'
+    - 'Coverage matrix beyond OECD membership'
+    - 'Handle versioned structure breaks'
     references:
     - https://www.oecd.org/en/data/insights/data-explainers/2024/09/api.html
     - https://www.oecd.org/en/about/terms-conditions.html
@@ -161,8 +174,12 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: OECD data terms permit reuse unless file metadata says otherwise; verify microdata and third-party instrument
-      rights per cycle.
+    notes: 'Terms: OECD Terms and Conditions (updated 15 Mar 2024),
+      https://www.oecd.org/en/about/terms-conditions.html: PISA Data falls under the Data terms (extract, copy,
+      adapt, distribute and embed for any purpose, commercial use and modification included, subject to dataset
+      and third-party restrictions); other PISA content (reports, instruments) is CC BY-NC-SA 3.0 IGO and needs
+      the OECD disclaimer when adapted or translated. Attribution: "OECD (<year>), PISA <cycle> Database, <DOI
+      or URL> (accessed on <date>)" or the citation given with the file.'
   updates: Released by assessment cycle; corrections or later files are not documented as a stable revision feed.
   ingestion:
     history: Archive each cycle, codebooks, questionnaires and technical report.
@@ -178,8 +195,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm per-cycle file licences
-    - Implement complex-survey methodology before publishing estimates
+    - 'Confirm per-cycle file licences (third-party restrictions in file metadata)'
+    - 'Implement complex-survey methodology before publishing estimates'
     references:
     - https://www.oecd.org/en/about/programmes/pisa/pisa-data.html
     - https://www.oecd.org/en/about/terms-conditions.html
@@ -230,7 +247,7 @@ sources:
   name: Global Economic Monitor (GEM)
   short_name: World Bank GEM
   provider: World Bank
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
@@ -247,9 +264,13 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Verify the licence on the exact catalog/download record; World Bank generic terms incorporate dataset-specific
-      terms and limit other materials.
+    status: open-conditional
+    notes: 'Terms: CC BY 4.0 per the Data Catalog record
+      https://datacatalog.worldbank.org/infrastructure-data/search/dataset/0037798/Global-Economic-Monitor
+      (Public) and the World Bank Terms of Use for Datasets
+      https://www.worldbank.org/ext/en/legal/terms-conditions/datasets; commercial reuse and modification
+      allowed; do not imply World Bank endorsement or use its name or logo; third-party conditions, where any,
+      are in the indicator metadata. Attribution: "The World Bank: Global Economic Monitor: <data source>".'
   updates: Frequent series updates and revisions; no product-wide schedule established.
   ingestion:
     history: Archive complete named releases with metadata and vintage.
@@ -263,8 +284,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Open exact catalog licence
-    - Confirm stable machine-download contract
+    - 'Confirm stable machine-download contract'
     references:
     - https://databank.worldbank.org/source/global-economic-monitor-(gem)
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -272,7 +292,7 @@ sources:
   name: International Debt Statistics (IDS)
   short_name: World Bank IDS
   provider: World Bank
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
@@ -289,9 +309,13 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Verify the licence on the exact catalog/download record; World Bank generic terms incorporate dataset-specific
-      terms and limit other materials.
+    status: open-conditional
+    notes: 'Terms: CC BY 4.0 per the Data Catalog record
+      https://datacatalog.worldbank.org/search/dataset/0038015/international-debt-statistics (Public) and the
+      World Bank Terms of Use for Datasets https://www.worldbank.org/ext/en/legal/terms-conditions/datasets;
+      commercial reuse and modification allowed; do not imply World Bank endorsement or use its name or logo;
+      third-party conditions, where any, are in the indicator metadata. Attribution: "The World Bank:
+      International Debt Statistics: <data source>".'
   updates: Annual publication with revisions to historical debt stocks and flows.
   ingestion:
     history: Archive complete named releases with metadata and vintage.
@@ -305,8 +329,7 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Open exact catalog licence
-    - Confirm stable machine-download contract
+    - 'Confirm stable machine-download contract'
     references:
     - https://www.worldbank.org/en/programs/debt-statistics/ids
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -416,9 +439,12 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Verify the licence on the exact catalog/download record; World Bank generic terms incorporate dataset-specific
-      terms and limit other materials.
+    status: restricted
+    notes: 'Terms: https://www.enterprisesurveys.org/en/citing-the-data — microdata only through a Data Portal login
+      under the signed Data Access Protocol; downloaded datasets may not be passed to third parties (no public
+      redistribution); no open licence is stated; reuse terms of the published economy/topic indicators are not
+      stated. Attribution: "Source: World Bank Enterprise Surveys, www.enterprisesurveys.org" with the dataset
+      name and publication date.'
   updates: Country survey releases are episodic; panel and expanded files appear separately.
   ingestion:
     history: Archive complete named releases with metadata and vintage.
@@ -432,8 +458,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Review registration and microdata terms
-    - Apply disclosure and survey-weight rules
+    - 'Microdata may not be redistributed; reuse terms of the published indicators are not stated'
+    - 'Apply disclosure and survey-weight rules'
     references:
     - https://www.enterprisesurveys.org/en/enterprisesurveys
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -441,7 +467,7 @@ sources:
   name: International Comparison Program (ICP)
   short_name: World Bank ICP
   provider: World Bank
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
@@ -458,9 +484,14 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Verify the licence on the exact catalog/download record; World Bank generic terms incorporate dataset-specific
-      terms and limit other materials.
+    status: open-conditional
+    notes: 'Terms: CC BY 4.0 per the Data Catalog record
+      https://datacatalog.worldbank.org/search/dataset/0066092/international-comparison-program-2021 (Public)
+      and the World Bank Terms of Use for Datasets
+      https://www.worldbank.org/ext/en/legal/terms-conditions/datasets; commercial reuse and modification
+      allowed; do not imply World Bank endorsement or use its name or logo; third-party conditions, where any,
+      are in the indicator metadata. Attribution: "The World Bank: International Comparison Program: <data
+      source>".'
   updates: Round-based benchmark releases with revisions; extrapolated PPP series are separate products.
   ingestion:
     history: Archive complete named releases with metadata and vintage.
@@ -474,8 +505,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Open exact catalog licence
-    - Confirm stable machine-download contract
+    - 'Confirm stable machine-download contract'
     references:
     - https://www.worldbank.org/en/research/brief/international-comparison-program
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -502,8 +532,13 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: Statistical-data reuse is allowed with attribution and transformation disclosure, but IMF asks potential
-      commercial reusers to request permission; third-party products may differ.
+    notes: 'Terms: https://www.imf.org/en/about/copyright-and-terms (Data section): download, extract, copy, create
+      derivative works, publish and distribute Data with attribution; do not alter Data in a way that affects
+      its nature or accuracy and state any material transformation with the citation; sellers must tell buyers
+      the Data is free from the IMF; potential commercial reuse via copyright@imf.org; bulk download by
+      automated means needs explicit IMF permission; third-party material needs its holder''s permission;
+      provided as is. Attribution: "Source: International Monetary Fund, World Economic Outlook Database, <link
+      to the dataset>".'
   updates: Published twice yearly, April and October; vintages change estimates, forecasts and groups.
   ingestion:
     history: Load every retained vintage, appendix and historical-forecast package.
@@ -518,8 +553,9 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Resolve API account and production status
-    - Seek/record IMF response for intended commercial reuse
+    - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
+    - 'Resolve API account and production status'
+    - 'Seek/record IMF response for intended commercial reuse'
     references:
     - https://data.imf.org/en/datasets/IMF.RES%3AWEO
     - https://data.imf.org/en/Resource-Pages/IMF-API
@@ -546,8 +582,13 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: IMF statistical-data terms cover this family, require attribution and transformation disclosure, and
-      direct potential commercial reuse to permission request.
+    notes: 'Terms: https://www.imf.org/en/about/copyright-and-terms (Data section): download, extract, copy, create
+      derivative works, publish and distribute Data with attribution; do not alter Data in a way that affects
+      its nature or accuracy and state any material transformation with the citation; sellers must tell buyers
+      the Data is free from the IMF; potential commercial reuse via copyright@imf.org; bulk download by
+      automated means needs explicit IMF permission; third-party material needs its holder''s permission;
+      provided as is. Attribution: "Source: International Monetary Fund, International Financial Statistics,
+      <link to the dataset>".'
   updates: Observation frequency and revisions are series-specific; no single schedule documented on opened pages.
   ingestion:
     history: Snapshot full selected dataflows with structures and vintage timestamp.
@@ -561,9 +602,10 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Inventory current dataflows and coverage
-    - Resolve API account status
-    - Seek/record commercial-reuse permission
+    - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
+    - 'Inventory current dataflows and coverage'
+    - 'Resolve API account status'
+    - 'Seek/record commercial-reuse permission'
     references:
     - https://data.imf.org/
     - https://data.imf.org/en/Resource-Pages/IMF-API
@@ -590,8 +632,13 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: IMF statistical-data terms cover this family, require attribution and transformation disclosure, and
-      direct potential commercial reuse to permission request.
+    notes: 'Terms: https://www.imf.org/en/about/copyright-and-terms (Data section): download, extract, copy, create
+      derivative works, publish and distribute Data with attribution; do not alter Data in a way that affects
+      its nature or accuracy and state any material transformation with the citation; sellers must tell buyers
+      the Data is free from the IMF; potential commercial reuse via copyright@imf.org; bulk download by
+      automated means needs explicit IMF permission; third-party material needs its holder''s permission;
+      provided as is. Attribution: "Source: International Monetary Fund, Direction of Trade Statistics, <link
+      to the dataset>".'
   updates: Observation frequency and revisions are series-specific; no single schedule documented on opened pages.
   ingestion:
     history: Snapshot full selected dataflows with structures and vintage timestamp.
@@ -605,9 +652,10 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Inventory current dataflows and coverage
-    - Resolve API account status
-    - Seek/record commercial-reuse permission
+    - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
+    - 'Inventory current dataflows and coverage'
+    - 'Resolve API account status'
+    - 'Seek/record commercial-reuse permission'
     references:
     - https://data.imf.org/
     - https://data.imf.org/en/Resource-Pages/IMF-API
@@ -616,7 +664,7 @@ sources:
   name: BIS Data Portal
   short_name: BIS Data Portal
   provider: Bank for International Settlements
-  status: registered
+  status: approved
   family: C
   kpi: true
   geography: worldwide
@@ -635,8 +683,11 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: Use is unrestricted with attribution, but a commercial product may not add a separate charge because
-      BIS statistics are included; no other use is permitted.
+    notes: 'Terms: https://www.bis.org/about/legal/permitted-use-statistics — use of BIS statistics is unrestricted
+      provided the BIS is cited as the source and their inclusion causes no additional charge to subscribers or
+      other users; no other use is permissible; translations must state they are not official BIS translations;
+      no warranty of accuracy and no investment advice (disclaimer to show); the APIs may not be modified or
+      redistributed. Attribution: "Source: BIS statistics (Bank for International Settlements)".'
   updates: Topic release dates vary; bulk files are dated and history may revise.
   ingestion:
     history: Load full topic packages with structures and release date.
@@ -657,7 +708,7 @@ sources:
   name: ECB Data Portal
   short_name: ECB Data Portal
   provider: European Central Bank
-  status: registered
+  status: approved
   family: C
   kpi: true
   geography: multicountry-Europe
@@ -676,8 +727,12 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: ECB information may be reused with accurate reproduction and citation. Sold documents must tell buyers
-      it is freely available; transformations must be disclosed.
+    notes: 'Terms:
+      https://www.ecb.europa.eu/stats/ecb_statistics/governance_and_quality_framework/html/usage_policy.en.html
+      — ESCB statistics are provided free of charge irrespective of commercial or non-commercial use, provided
+      the source is quoted, the statistics (including metadata) are not modified, and the ECB and NCB
+      disclaimers are respected; third-party data needs prior permission from the originator; no right to
+      confidential data. Attribution: "Source: ECB statistics".'
   updates: Release and revision cadence is dataflow-specific; API page was unavailable during review.
   ingestion:
     history: Snapshot dataflow structures and complete selected series.
@@ -690,7 +745,9 @@ sources:
     priority: review-first
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Re-open current API documentation, Identify third-party series exceptions]
+    blockers:
+    - 'Re-open current API documentation'
+    - 'Identify third-party series exceptions (prior permission needed)'
     references:
     - https://data.ecb.europa.eu/
     - https://data.ecb.europa.eu/help/api/overview
@@ -3547,7 +3604,7 @@ sources:
   short_name: MF VAT white list
   provider: Head of the National Revenue Administration / Ministry of Finance
   source_system: mf_biala_lista
-  status: bronze
+  status: silver
   family: E
   kpi: false
   geography: Poland
@@ -3565,7 +3622,10 @@ sources:
     limits: Unknown.
   licence:
     status: open-conditional
-    notes: Tax portal content is free to use; confirm database/account redistribution rules.
+    notes: 'Terms: https://www.podatki.gov.pl/vat/bezpieczna-transakcja/wykaz-podatnikow-vat/plik-plaski/ (Ministry of
+      Finance flat file, https://plikplaski.mf.gov.pl/pliki/<YYYYMMDD>.7z, published daily with the public VAT taxpayer
+      list). The flat file holds SHA-512 hashes of NIP+account, not readable data; republication: not stated. Attribution:
+      "Źródło: Ministerstwo Finansów, Wykaz podatników VAT".'
   updates: Daily point-in-time status; API page versions are not record CDC.
   ingestion:
     history: 'PROPOSAL: prefer the documented official flat file for authorised bulk snapshots; use API/HTML only
@@ -3581,10 +3641,11 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Review current API limits, flat-file licence and redistribution.
+    - 'Flat-file reuse terms are not stated: confirm before any public display beyond aggregate counts.'
     references:
     - https://www.podatki.gov.pl/wykaz-podatnikow-vat-wyszukiwarka
     - https://www.gov.pl/web/kas/api-wykazu-podatnikow-vat
+    - https://www.podatki.gov.pl/vat/bezpieczna-transakcja/wykaz-podatnikow-vat/plik-plaski/
 - id: PLG-012
   name: Open KRS API (API Rejestrów Sądowych)
   short_name: KRS open API
