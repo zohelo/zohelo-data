@@ -28,6 +28,7 @@ from concurrent.futures.process import BrokenProcessPool
 from datetime import UTC, datetime
 from hashlib import sha256
 import json
+import multiprocessing
 import os
 from pathlib import Path
 import shutil
@@ -206,6 +207,39 @@ def work(
         out["seconds"] = round(time.monotonic() - started, 1)
 
 
+class WorkerDied(RuntimeError):
+    """A worker process ended without a result (killed by a signal, or exited)."""
+
+
+def _work_child(conn, args: tuple) -> None:
+    try:
+        conn.send(("ok", work(*args)))
+    except BaseException as exc:  # reported by the parent as this dataset's failure
+        conn.send(("error", f"{type(exc).__name__}: {exc}"))
+    finally:
+        conn.close()
+
+
+def work_alone(context, args: tuple) -> dict[str, Any]:
+    """``work`` in its own process: a kill fails this dataset only, and the error names the exit code
+    (negative = the signal, e.g. -9 SIGKILL from the kernel OOM killer, -11 SIGSEGV)."""
+    receive, send = context.Pipe(duplex=False)
+    process = context.Process(target=_work_child, args=(send, args), daemon=True)
+    process.start()
+    send.close()
+    try:
+        kind, value = receive.recv()
+    except EOFError:
+        process.join()
+        raise WorkerDied(f"worker process ended without a result, exit code {process.exitcode}") from None
+    finally:
+        receive.close()
+    process.join()
+    if kind == "error":
+        raise RuntimeError(value)
+    return value
+
+
 def refused_keys(cat, rejected_id: tuple[str, str], create: bool) -> set[str]:
     """Keys recorded as rejected: Landing SHA-256 (decoder) or <sha>.<model> (Silver model)."""
     from pyiceberg.exceptions import NoSuchTableError
@@ -285,6 +319,12 @@ def main(argv=None) -> int:
         "--silver-table", default=".".join(SILVER), help="namespace.table (the checkpoint builds beside the old table)"
     )
     parser.add_argument("--trial", default="", help="scratch namespace and prefix (Dev trials): writes only there")
+    parser.add_argument(
+        "--start-method",
+        choices=("fork", "forkserver", "spawn"),
+        default="fork",
+        help="how worker processes start (multiprocessing start method)",
+    )
     args = parser.parse_args(argv)
     silver_id = tuple(args.silver_table.split(".", 1))
     bronze_id, rejected_id = BRONZE, REJECTED
@@ -298,6 +338,7 @@ def main(argv=None) -> int:
         paths = {"bronze": f"{args.trial}/bronze/", "silver": f"{args.trial}/silver/", "bronze_found": BRONZE_PREFIX}
     started = time.monotonic()
     deadline = started + args.minutes * 60
+    context = multiprocessing.get_context(args.start_method)
     cat, client = bf.retry(catalog, "catalog"), s3()
     digest = model_digest()
     p = plan(cat, client, digest, set(args.only) if args.only else None, silver_id, bronze_id, rejected_id)
@@ -359,7 +400,7 @@ def main(argv=None) -> int:
     queue = list(small)
     while queue and time.monotonic() < deadline - (3600 if serial else 0):
         broken = False
-        with ProcessPoolExecutor(max_workers=args.workers) as pool:
+        with ProcessPoolExecutor(max_workers=args.workers, mp_context=context) as pool:
             running: dict = {}
             while (queue or running) and not broken:
                 # the serial phase (big files, retries) keeps its hour; small files stop before it
@@ -388,11 +429,10 @@ def main(argv=None) -> int:
     for c in serial:  # each in its own one-worker pool: a kill fails that dataset only
         if time.monotonic() + (3600 if c["size"] > BIG_BYTES else 300) > deadline:
             continue  # a smaller one may still fit
-        with ProcessPoolExecutor(max_workers=1) as alone:
-            try:
-                account(alone.submit(work, c, c["need_bronze"], digest, "10GB", tmp_root, paths).result())
-            except Exception as exc:
-                account(failure(c, exc))
+        try:
+            account(work_alone(context, (c, c["need_bronze"], digest, "10GB", tmp_root, paths)))
+        except Exception as exc:
+            account(failure(c, exc))
         commit()
     left = len(todo) - totals["silver_written"] - len(rejected_now)
     summary = {
