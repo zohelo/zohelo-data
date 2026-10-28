@@ -14,6 +14,7 @@ rate_limit_retry_threads: 2     # fewer parallel catalog calls than the build's 
 # Shared Gold built by the dbt project (conformed dimensions and facts across sources).
 gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.domain,  # seed warehouse/seeds/domain.csv
+       gold.kpi_dimension,  # catalogue: dimensions per KPI and measure
        gold.kpi, gold.kpi_measure, gold.unit,  # seeds warehouse/seeds/kpi.csv, kpi_measure.csv, unit.csv
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_wdi, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate]   # Gold v1 (warehouse/models/gold, docs/model.md)
@@ -62,6 +63,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_fact_monthly: {rows: 50000}
   poc_map_geography: {rows: 150000}
   poc_measure_dimensions: {rows: 5000}
+  kpi_dimension: {rows: 10000}
   poc_metrics_fx_rate: {rows: 600000}
   poc_metrics_gdp_current_prices: {rows: 30000}
   poc_metrics_inflation: {rows: 40000}
