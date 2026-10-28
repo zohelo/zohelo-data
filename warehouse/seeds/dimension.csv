@@ -1,0 +1,6 @@
+dimension_key,name_en,name_pl,kind,standard
+geography,Geography,Geografia,conformed,TERYT/NUTS
+time,Time,Czas,conformed,SDMX CL_FREQ
+sex,Sex,Płeć,conformed,SDMX CL_SEX
+age,Age,Wiek,conformed,SDMX CL_AGE
+currency,Currency,Waluta,conformed,ISO 4217
