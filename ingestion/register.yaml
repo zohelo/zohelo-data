@@ -954,9 +954,12 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Table-level terms can mandate dataset-specific citation; general commercial/redistribution permission
-      was not established.
+    status: open-conditional
+    notes: 'Terms: CC BY 3.0 IGO, https://unctadstat.unctad.org/EN/About.html ("All materials provided on this website
+      are copyrighted under the Creative Commons Attribution 3.0 IGO license"; data and metadata "may be copied freely,
+      duplicated and further distributed" provided the Data Hub is cited): commercial reuse and adaptation allowed under
+      the licence; third-party series may carry their own terms (check per table). Attribution: "Source: United Nations
+      Trade and Development (UNCTAD) Data Hub, unctadstat.unctad.org".'
   updates: Table-specific updates and revisions; indicator-explainer documents carry methodology.
   ingestion:
     history: Archive named table export, metadata and terms.
@@ -969,10 +972,13 @@ sources:
     priority: review-next
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Resolve reuse per selected table, Confirm machine-download stability]
+    blockers:
+    - 'Check third-party terms per selected table'
+    - 'Confirm machine-download stability'
     references:
     - https://unctadstat.unctad.org/
     - https://unctadstat.unctad.org/EN/IndicatorsExplained.html
+    - https://unctadstat.unctad.org/EN/About.html
 - id: GL-022
   name: FAOSTAT
   short_name: FAOSTAT
