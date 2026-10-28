@@ -122,6 +122,33 @@ def site() -> None:
               "www": get("https://www.zohelo.com/")[0]})
 
 
+def bi() -> None:
+    base = "https://bi.zohelo.com"
+    out = {}
+    broken = []
+    for path in ("/", "/explore", "/en/explore", "/en", "/dashboards", "/catalog.json", "/no-such-page-qe"):
+        status, body, final = get(base + path)
+        info = {"status": status, "bytes": len(body), "final": final}
+        if b"<html" in body[:2000].lower():
+            p = Page()
+            p.feed(body.decode("utf-8", "replace"))
+            info.update(lang=p.lang, title=p.title.strip(), h1=p.h1, imgs=p.imgs, img_no_alt=p.img_no_alt,
+                        links=sorted(p.links)[:15], text=" | ".join(p.text)[:400])
+            for href in sorted(p.assets):
+                url = href if href.startswith("http") else base + (href if href.startswith("/") else "/" + href)
+                st, b, _ = get(url)
+                if st != 200:
+                    broken.append(f"{path} -> {href}: {st}")
+                elif url.endswith(".js"):
+                    info.setdefault("js_kb", 0)
+                    info["js_kb"] += len(b) // 1024
+        out[path] = info
+    items = list(out.items())
+    for i in range(0, len(items), 3):
+        annotate("notice", f"bi {i // 3 + 1}", dict(items[i:i + 3]))
+    annotate("warning" if broken else "notice", "bi assets", {"broken": broken})
+
+
 def jget(url: str):
     status, body, _ = get(url, 60)
     if status != 200:
@@ -256,7 +283,7 @@ def fresh() -> None:
 
 def main() -> None:
     import sys
-    fns = {"site": site, "numbers": numbers, "fresh": fresh}
+    fns = {"bi": bi, "site": site, "numbers": numbers, "fresh": fresh}
     for fn in [fns[a] for a in (sys.argv[1:] or ["site"])]:
         try:
             fn()
