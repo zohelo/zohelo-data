@@ -2323,8 +2323,16 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit redistribution licence verified.
+    status: open-conditional
+    notes: 'Terms: ZUS re-use terms
+      https://www.zus.pl/web/biuletyn-informacji-publicznej/obsluga-klienta/ogolne-zasady-zalatwiania-spraw/ponowne-wykorzystywanie-informacji-sektora-publicznego:
+      everyone may re-use, without a request and free of charge, public sector information that ZUS publishes (the page
+      names its BIP and dane.gov.pl; the statistical portal and yearbooks are ZUS public information under the same
+      regime), for commercial or non-commercial purposes; the re-user must give the source, the date the information was
+      created and the date it was obtained, say whether it is used in whole or in part, and disclose any processing; ZUS
+      is not liable for processed information. No named licence. Attribution: "Źródło: ZUS, Rocznik Statystyczny
+      Ubezpieczeń Społecznych <rok>, pobrane <data>" / "Source: ZUS, Social Insurance Statistical Yearbook <year>,
+      retrieved <date>"; mark processed figures as processed.'
   updates: Periodically issued yearbook; revisions and schedule unknown.
   ingestion:
     history: Load available editions and deduplicate repeated historical tables by edition/reference year.
@@ -2339,9 +2347,9 @@ sources:
     connection: not-tested
     blockers:
     - Verify downloadable formats and earliest edition
-    - Resolve reuse terms
     references:
     - https://www.zus.pl/baza-wiedzy/statystyka/rocznik-statystyczny-ubezpieczen-spolecznych
+    - https://www.zus.pl/web/biuletyn-informacji-publicznej/obsluga-klienta/ogolne-zasady-zalatwiania-spraw/ponowne-wykorzystywanie-informacji-sektora-publicznego
 - id: PLS-011
   name: Podstawowe dane statystyczne KRUS
   short_name: KRUS statistics
