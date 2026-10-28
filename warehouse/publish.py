@@ -174,6 +174,17 @@ def checked(coverage: pa.Table) -> dict[str, str]:
     return result
 
 
+def manifest_json(client, prefix: str) -> int:
+    """Write manifest.json under prefix after a fresh dbt parse; returns its number of metrics."""
+    from warehouse import catalog, changed
+
+    changed.manifest("prod")
+    obj = catalog.manifest()
+    body = json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode()
+    put(client, prefix + "manifest.json", body)
+    return len(obj["metrics"])
+
+
 def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     """Write kpi/<kpi_key>/latest.json for every published KPI under prefix."""
     from pyiceberg.exceptions import NoSuchTableError
@@ -204,5 +215,6 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
         put(client, prefix + f"kpi/{kpi_key}/latest.json", body)
         written[kpi_key] = len(latest["values"])
     result = {"written": written, "skipped": sorted(SKIP), "missing": missing}
+    result["manifest"] = manifest_json(client, prefix)
     annotate("notice", "gold.publish: latest", result)
     return result
