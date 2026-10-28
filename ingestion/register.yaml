@@ -2123,7 +2123,12 @@ sources:
     limits: Download limits unknown.
   licence:
     status: open-conditional
-    notes: GUS portal licensing is CC BY 4.0, but confirm each census download and any statistical-disclosure constraints.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+      licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+      summaries or reworked text. Census tables are published already disclosure-controlled; keep GUS confidentiality
+      symbols as published. Attribution: "Źródło: GUS, Narodowy Spis Powszechny Ludności i Mieszkań 2021" / "Source:
+      Statistics Poland, National Population and Housing Census 2021".'
   updates: Census release is periodic with later thematic releases/corrections, not a live feed.
   ingestion:
     history: Load published aggregate tables and release metadata once; version corrections.
@@ -2140,10 +2145,10 @@ sources:
     connection: not-tested
     blockers:
     - Inventory exact downloadable table families
-    - Verify census-specific reuse notice
     - Define small-cell handling
     references:
     - https://stat.gov.pl/spisy-powszechne/nsp-2021/
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-006
   name: Powszechny Spis Rolny 2020 (PSR 2020) results
   short_name: GUS PSR 2020
