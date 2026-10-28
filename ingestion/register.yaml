@@ -2062,7 +2062,7 @@ sources:
   name: GUS thematic publications with downloadable statistical tables
   short_name: GUS publication tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland and regional Poland
