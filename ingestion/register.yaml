@@ -80,8 +80,12 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: Attribution required; commercial exceptions include Swiss/Liechtenstein-declared trade since 1995 and
-      Austrian CN8; third-party and geographic exclusions also apply.
+    notes: 'Terms: CC BY 4.0, https://ec.europa.eu/eurostat/help/copyright-notice (re-use for commercial or
+      non-commercial purposes if the source is acknowledged and changes are indicated; modified or translated
+      content must state the changes and carry a disclaimer of Eurostat non-responsibility). Comext exceptions:
+      Swiss- and Liechtenstein-declared trade since 1995 and Austrian-declared CN8 data may not be sold; data
+      for countries outside the EU, EFTA and candidate countries may not be reused commercially. Attribution:
+      "Source: Eurostat (Comext)".'
   updates: Detailed trade is compiled monthly; revisions and confidential/suppressed cells require flags.
   ingestion:
     history: Partition full extracts by dataset and period; archive codelists and raw vintages.
@@ -96,7 +100,9 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Resolve non-EU source rights by table, Plan commodity-classification bridges]
+    blockers:
+    - 'Commercial display: drop the excepted reporters and declarations first'
+    - 'Plan commodity-classification bridges'
     references:
     - https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction
     - https://ec.europa.eu/eurostat/data/database
