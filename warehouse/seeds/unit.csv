@@ -12,3 +12,7 @@ km2,km²,square kilometres,kilometry kwadratowe,false
 persons_per_km2,os./km²,persons per km²,osoby na km²,true
 pln_per_unit,zł,PLN per currency unit,zł za jednostkę waluty,true
 pln_per_gram,zł/g,PLN per gram,zł za gram,true
+mln_eur,mln EUR,million euro,mln euro,false
+usd,USD,US dollars,dolary amerykańskie,false
+eur_per_person,EUR/os.,euro per person,euro na osobę,false
+usd_per_person,USD/os.,US dollars per person,dolary amerykańskie na osobę,false

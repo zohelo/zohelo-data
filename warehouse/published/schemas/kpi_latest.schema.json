@@ -19,6 +19,7 @@
           "geography_level": {"type": "string"},
           "period": {"type": "string"},
           "value": {"type": "number"},
+          "unit_key": {"type": "string", "pattern": "^[a-z0-9_]+$"},
           "previous_period": {"type": "string"},
           "previous_value": {"type": "number"},
           "flags": {"type": "array", "items": {"type": "string"}},
