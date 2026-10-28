@@ -29,6 +29,11 @@ def main() -> int:
             lons, lats = [p[0] for p in xy], [p[1] for p in xy]
             result[level] = [len(features), len(body), min(lons), max(lons), min(lats), max(lats)]
         annotate("notice", "geo", result)
+    except Exception:
+        import traceback
+
+        annotate("error", "geo trial failed", {"traceback": traceback.format_exc()[-3000:]})
+        raise
     finally:
         keys = [
             o["Key"]
