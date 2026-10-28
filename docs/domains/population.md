@@ -118,7 +118,7 @@ Pages must say which population and which date, e.g. "Ludność, 31 XII 2025, de
 
 - `population` mixes two definitions and three reference dates under one KPI: Eurostat usual residence (1 Jan),
   GUS national definition (31 Dec) and WDI mid-year, with GUS 31 Dec *Y* and Eurostat 1 Jan *Y+1* labelled as
-  different years (Bug filed in this run, see the Team log). Same class as #2184 for labour.
+  different years (#2209). Same class as #2184 for labour.
 - `life_expectancy` has only WDI (both sexes, model-based); GUS life tables or Eurostat `demo_mlexpec` by sex are
   the reference for Poland.
 - `net_migration` sources (Eurostat residual, UN model) differ in concept; no GUS measure. Needs a caveat on every
