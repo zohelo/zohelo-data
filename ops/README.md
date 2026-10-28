@@ -33,6 +33,7 @@ same policy to those.
 | `bronze_dedupe` | Removes the second copies of Landing files from one Bronze table (#815): rows of the files the table holds twice are replaced by one copy of each distinct row, in one overwrite. The owner approves exact counts, given as arguments; the script stops without writing if the table differs, and after `--apply` checks the row count and that nothing is doubled any more. Args: `<namespace.table> --hashes N --remove N --rows N [--apply]` | with `--apply`: rows of that table (owner approval of the exact counts) |
 | `branch_cleanup` | Leftover work branches: `test/*`, `dev/*` and any named with `--also`, without an open pull request and older than `--min-age-hours` (48). Reports by default; `--apply` deletes. Runs in its own job with `contents: write` (owner approval 24 Oct 2026). Args: `[--also NAME …] [--min-age-hours N] [--apply]` | with `--apply`: branches |
 | `retry_rejected` | Bronze rejections (`bronze.eurostat_rejected_files`) grouped by reason and dataset family; with `--apply` deletes the matching rows so the next `bronze: load` retries them (the table history keeps them). Args: `--source eurostat [--dataset GLOB …] [--apply]` | with `--apply`: rows of the rejections table |
+| `release_notes` | Weekly Release of the engine: creates Release `engine-<ISO year>-W<week>` on `main` with GitHub's generated notes since the previous `engine-*` Release (the pull requests merged since then); annotates `no changes` and creates nothing when none was merged, `exists` when this week's Release is already there. Runs in its own job `release-notes` with `contents: write` (no other Ops script gets it). Scheduled Mondays 05:50 UTC (schedule table below). No args | a GitHub Release and its tag |
 | `restore_from_archive` | Receipts in Landing whose data file is gone; with `--apply` copies the Archive file back and verifies its SHA-256. Args: `--source eurostat [--dataset GLOB …] [--apply]` | with `--apply`: adds Landing files, never overwrites |
 
 **Scheduler clock runbook.** Setup or credential change: Ops `script=scheduler_trigger args=deploy`
@@ -62,6 +63,7 @@ group is `zohelo-ops-<script or cron>`. Rows: `20 5 * * 1` (Mondays 05:20 UTC) r
 Row `0 5 * * 1` (Mondays 05:00 UTC) runs `backlog_sync apply`: GitHub issues and the project follow the `.github/backlog/` files of the three repositories.
 Row `40 5 * * 1` (Mondays 05:40 UTC) runs `tracker` without arguments: the classification lands in the run's
 annotations only (no issue is rewritten), so regressions show up weekly.
+Row `50 5 * * 1` (Mondays 05:50 UTC) runs `release_notes`: the week's engine Release (job `release-notes`).
 Row `5 6 * * *` (daily 06:05 UTC) runs `scheduler_trigger heartbeat`: fewer than 40 Worker dispatches (of 48 a day)
 in the last 24 h fail the run, and the run then opens or updates the alert issue "Pipeline failed: scheduler · heartbeat"
 (`ops.notify_failure`), so a stopped Worker reaches the owner.
