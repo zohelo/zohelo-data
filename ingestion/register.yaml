@@ -1149,7 +1149,7 @@ sources:
   name: WHO Data platform (data.who.int) datasets
   short_name: WHO data.who.int
   provider: World Health Organization
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
