@@ -3,7 +3,8 @@
     python run.py plan --source eurostat --run "full dataflow: landing → bronze → silver → gold → portal"
     python run.py activity --source eurostat --activity landing.extract [--filter ...]
     python run.py schedule [--check]    start the declared runs that are due (scheduled trigger, twice an hour);
-                                        --check validates the source declarations and schedules
+                                        --check validates the source declarations and schedules;
+                                        --next prints each scheduled source's next run (UTC)
 
 A run is an ordered list of activities (RUNS). An activity is allowed only when it is
 implemented and authorized:
@@ -287,12 +288,19 @@ def main(argv: list[str] | None = None) -> int:
     p_act.add_argument("--budget-minutes", type=float, default=300.0)
     p_sched = sub.add_parser("schedule", help="dispatch the declared runs that are due")
     p_sched.add_argument("--check", action="store_true", help="only validate the declared schedules")
+    p_sched.add_argument("--next", action="store_true", help="print each source's next scheduled run")
     args = parser.parse_args(argv)
     config = load_config()
 
     if args.command == "schedule":
         from ingestion.common import scheduler
 
+        if args.next:
+            from datetime import UTC, datetime
+
+            now = datetime.now(UTC)
+            print(json.dumps({"now": now.strftime("%Y-%m-%dT%H:%MZ"), "next": scheduler.next_runs(config, now)}))
+            return 0
         if args.check:
             problems = config_problems(config) + scheduler.validate(config, plan)
             print(json.dumps({"schedules": len(scheduler.entries(config)), "problems": problems}))

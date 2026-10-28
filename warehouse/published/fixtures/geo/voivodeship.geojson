@@ -1,0 +1,19 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "geography_key": "TERC:12",
+        "name_pl": "Małopolskie",
+        "name_en": "Lesser Poland",
+        "level": "voivodeship",
+        "parent_key": "PL"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[19.0, 49.5], [21.0, 49.5], [21.0, 50.5], [19.0, 50.5], [19.0, 49.5]]]
+      }
+    }
+  ]
+}

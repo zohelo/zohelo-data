@@ -342,6 +342,62 @@ def backlog() -> list[str]:
     return [] if result.returncode == 0 else result.stdout.strip().splitlines()[-40:] or [result.stderr.strip()[-500:]]
 
 
+PUBLISHED = ROOT / "warehouse" / "published"
+# Fixture path pattern (relative to warehouse/published/fixtures) → schema name in warehouse/published/schemas.
+PUBLISHED_SCHEMAS = {
+    "catalog/catalog.json": "catalog",
+    "manifest.json": "manifest",
+    "kpi/*/latest.json": "kpi_latest",
+    "feed/changes.json": "feed_changes",
+}
+JSON_TYPES = {
+    "string": lambda v: isinstance(v, str),
+    "integer": lambda v: isinstance(v, int) and not isinstance(v, bool),
+    "number": lambda v: isinstance(v, (int, float)) and not isinstance(v, bool),
+    "boolean": lambda v: isinstance(v, bool),
+    "array": lambda v: isinstance(v, list),
+    "object": lambda v: isinstance(v, dict),
+    "null": lambda v: v is None,
+}
+
+
+def published_contract() -> list[str]:
+    """Each fixture of the published layer (docs/published.md) has every required key of its schema,
+    and every present property has the schema's JSON type (recursing into objects and array items)."""
+    import json
+
+    fixtures = PUBLISHED / "fixtures"
+    problems = []
+    for fixture in sorted(fixtures.rglob("*.json")):
+        rel = fixture.relative_to(fixtures)
+        name = next((n for pattern, n in PUBLISHED_SCHEMAS.items() if rel.match(pattern)), None)
+        if name is None:
+            problems.append(f"{rel}: no schema in PUBLISHED_SCHEMAS")
+            continue
+        schema = json.loads((PUBLISHED / "schemas" / f"{name}.schema.json").read_text(encoding="utf-8"))
+        problems += [
+            f"{rel}: {p}" for p in _schema_problems(json.loads(fixture.read_text(encoding="utf-8")), schema, "$")
+        ]
+    return problems
+
+
+def _schema_problems(value: object, schema: dict, where: str) -> list[str]:
+    types = schema.get("type")
+    types = [types] if isinstance(types, str) else types or []
+    if types and not any(JSON_TYPES[t](value) for t in types):
+        return [f"{where}: expected {'|'.join(types)}, got {type(value).__name__}"]
+    problems = []
+    if isinstance(value, dict):
+        problems += [f"{where}: missing required key {k!r}" for k in schema.get("required", []) if k not in value]
+        for key, sub in schema.get("properties", {}).items():
+            if key in value:
+                problems += _schema_problems(value[key], sub, f"{where}.{key}")
+    if isinstance(value, list) and "items" in schema:
+        for i, item in enumerate(value):
+            problems += _schema_problems(item, schema["items"], f"{where}[{i}]")
+    return problems
+
+
 def main() -> int:
     files = tracked()
     checks = {
@@ -355,6 +411,7 @@ def main() -> int:
         "configuration": lambda: configuration(files),
         "scheduler imports": scheduler_imports,
         "backlog": backlog,
+        "published contract": published_contract,
     }
     failed = 0
     for name, check in checks.items():
