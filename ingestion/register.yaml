@@ -1635,7 +1635,7 @@ sources:
   name: IRENASTAT / Statistics Time Series
   short_name: IRENASTAT
   provider: International Renewable Energy Agency
-  status: registered
+  status: parked
   family: G
   kpi: true
   geography: worldwide
@@ -1673,6 +1673,8 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
+    - 'Parked: IRENA terms allow non-commercial reuse only (commercial use needs written permission, as for GL-018 and
+      GL-020) and no machine-readable export or API route is confirmed'
     - 'Commercial use needs IRENA''s prior written permission (terms allow non-commercial reuse only)'
     - Confirm machine-readable export/API and release archive
     references:
