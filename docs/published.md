@@ -56,6 +56,15 @@ strings in ISO 8601 UTC.
 | licences[].attribution_text | string | yes | attribution to show with the data |
 | licences[].commercial_ok | boolean | yes | commercial use allowed |
 
+`warehouse/publish.py` writes it (`kpi_entry`, `catalog_json`) with one `kpis` entry per published KPI that has a
+`gold.metrics_<kpi_key>` table, computed from that KPI's series.parquet rows: `source_keys` and `geo_levels`
+(non-geographic `_Z` rows count as `country`) as they occur, `first_period`/`last_period` from the rows of
+`frequency_default` (all rows when there are none), `dimensions` from the `dim_*` columns (`member_count` without
+`'_T'`; `levels` empty until dimension levels exist), `domain_path` by walking `domain.csv` parents of
+`subgroup_key`. `loaded_at` is the newest `gold.coverage` `checked_at` of the KPI's sources (the `generated_at` when
+none) until `gold.freshness` exists. `domains`, `units`, `sources` and `licences` are the seeds with booleans and
+`sort` typed and an empty `parent_key` as null.
+
 ## catalog/<table>.parquet
 
 One Parquet file per Gold catalogue table, with that table's columns.
@@ -179,6 +188,7 @@ with simplified coordinates; each Feature has these properties:
 
 `calendar.ics`: iCalendar, one VEVENT per `release_calendar` row (SUMMARY = `title_pl`,
 DTSTART = `release_at`, URL); zero events until that table exists.
+gold.publish writes it today without events (PRODID `-//zohelo//gold.publish//EN`).
 
 ## Size limits
 

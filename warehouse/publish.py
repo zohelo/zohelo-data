@@ -1,8 +1,9 @@
 """gold.publish: the sole writer of the published layer ``06_published/v1/`` (decision D5).
 
 Reads Gold tables from the R2 Data Catalog and the KPI seeds in the repository and writes the
-files described in docs/published.md (schemas in warehouse/published/schemas/). Today it writes
-``kpi/<kpi_key>/latest.json``; the other files follow in later Tasks.
+files described in docs/published.md (schemas in warehouse/published/schemas/): ``catalog/catalog.json``,
+``catalog/<table>.parquet``, ``manifest.json`` and ``kpi/<kpi_key>/latest.json`` / ``series.parquet``; geo and feed
+follow in later Tasks.
 """
 
 from __future__ import annotations
@@ -26,6 +27,14 @@ LATEST_LIMIT = 100_000  # bytes, docs/published.md size limits (D22)
 SERIES_LIMIT = 20_000_000  # bytes, docs/published.md size limits
 # Contract file catalog/<name>.parquet → Gold table (seeds kpi, kpi_measure, domain, unit, licence; models
 # kpi_dimension, dim_source; freshness is not built yet).
+CALENDAR_LINES = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//zohelo//gold.publish//EN",
+    "CALSCALE:GREGORIAN",
+    "X-WR-CALNAME:zohelo release calendar",
+    "END:VCALENDAR",
+]
 CATALOG_TABLES = {
     "dim_kpi": "kpi",
     "kpi_measure": "kpi_measure",
@@ -270,6 +279,78 @@ def catalog_tables(cat, client, prefix: str, namespace: str) -> dict[str, Any]:
     return {"written": written, "missing": missing}
 
 
+def kpi_entry(
+    kpi: dict[str, str], series: pa.Table, domains: dict[str, dict], checked_at: dict[str, str], generated_at: str
+) -> dict[str, Any]:
+    """One catalog.json kpis[] entry from the KPI's seed row and its series.parquet table; pure (no R2)."""
+    rows = series.select(["source_key", "geography_level", "period", "period_start", "frequency"]).to_pylist()
+    default = [r for r in rows if r["frequency"] == kpi["frequency_default"]] or rows
+    ordered = sorted(default, key=lambda r: r["period_start"])
+    path: list[str] = []
+    key: str | None = kpi["subgroup_key"]
+    while key:
+        path.insert(0, key)
+        key = (domains.get(key) or {}).get("parent_key") or None
+    sources = sorted({r["source_key"] for r in rows})
+    dimensions = []
+    for column in series.column_names:
+        if column.startswith("dim_"):
+            members = {v for v in series.column(column).to_pylist() if v not in (None, "_T")}
+            dimensions.append({"dimension_key": column[4:], "member_count": len(members), "levels": []})
+    stamps = [checked_at[s] for s in sources if s in checked_at]
+    return {
+        "kpi_key": kpi["kpi_key"],
+        "name_pl": kpi["name_pl"],
+        "name_en": kpi["name_en"],
+        "unit_key": kpi["unit_key"],
+        "frequency_default": kpi["frequency_default"],
+        "subgroup_key": kpi["subgroup_key"],
+        "domain_path": path,
+        "source_keys": sources,
+        "geo_levels": sorted({r["geography_level"] for r in rows if r["geography_level"] != "_Z"} or {"country"}),
+        "first_period": ordered[0]["period"] if ordered else "",
+        "last_period": ordered[-1]["period"] if ordered else "",
+        "dimensions": dimensions,
+        "loaded_at": max(stamps) if stamps else generated_at,
+        "status": kpi["status"],
+    }
+
+
+def catalog_json(entries: list[dict[str, Any]], generated_at: str) -> dict[str, Any]:
+    """catalog/catalog.json from the KPI entries and the seeds domain, unit, source, licence; pure (no R2)."""
+    domains = [{**d, "parent_key": d["parent_key"] or None, "sort": int(d["sort"])} for d in seed("domain")]
+    units = [{**u, "is_rate": u["is_rate"] == "true"} for u in seed("unit")]
+    licences = [
+        {**lic, "commercial_ok": lic["commercial_ok"] == "true", "share_alike": lic.get("share_alike") == "true"}
+        for lic in seed("licence")
+    ]
+    return {
+        "version": 1,
+        "generated_at": generated_at,
+        "kpis": entries,
+        "domains": domains,
+        "units": units,
+        "sources": seed("source"),
+        "licences": licences,
+    }
+
+
+def calendar_ics() -> str:
+    """feed/calendar.ics: no events until release_calendar exists (docs/published.md)."""
+    return "\r\n".join(CALENDAR_LINES) + "\r\n"
+
+
+def calendar(client, prefix: str) -> int:
+    """Write feed/calendar.ics under prefix; returns the number of events written."""
+    put(
+        client,
+        prefix + "feed/calendar.ics",
+        calendar_ics().encode("utf-8"),
+        content_type="text/calendar; charset=utf-8",
+    )
+    return 0
+
+
 def checked(coverage: pa.Table) -> dict[str, str]:
     """Per source of gold.coverage, when it was last checked."""
     result: dict[str, str] = {}
@@ -307,6 +388,8 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     written: dict[str, int] = {}
     missing: list[str] = []
     series: dict[str, int] = {}
+    entries: list[dict[str, Any]] = []
+    domains = {d["domain_key"]: d for d in seed("domain")}
     for kpi in seed("kpi"):
         kpi_key = kpi["kpi_key"]
         if kpi["status"] != "published":
@@ -322,6 +405,7 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
             raise ValueError(f"kpi/{kpi_key}/series.parquet is {len(data)} bytes, over {SERIES_LIMIT}")
         put(client, prefix + f"kpi/{kpi_key}/series.parquet", data, "application/vnd.apache.parquet")
         series[kpi_key] = table.num_rows
+        entries.append(kpi_entry(kpi, table, domains, checked_at, generated_at))
         if kpi_key in SKIP:
             continue
         latest = kpi_latest(metrics, measures, checked_at, kpi_key, kpi["unit_key"], generated_at)
@@ -333,6 +417,9 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     result = {"written": written, "skipped": sorted(SKIP), "missing": missing}
     result["series"] = series
     result["catalog_tables"] = catalog_tables(cat, client, prefix, namespace)
+    body = json.dumps(catalog_json(entries, generated_at), ensure_ascii=False, separators=(",", ":")).encode()
+    result["catalog_json"] = {"kpis": len(entries), "bytes": put(client, prefix + "catalog/catalog.json", body)}
     result["manifest"] = manifest_json(client, prefix)
+    result["calendar"] = calendar(client, prefix)
     annotate("notice", "gold.publish: latest", result)
     return result
