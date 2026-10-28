@@ -1066,7 +1066,7 @@ sources:
   name: ILOSTAT
   short_name: ILOSTAT
   provider: International Labour Organization
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
