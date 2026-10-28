@@ -2020,8 +2020,11 @@ sources:
     cost: free
     limits: API quotas unknown.
   licence:
-    status: unresolved
-    notes: Commercial service eligibility is documented, but no redistribution licence was found.
+    status: open-conditional
+    notes: 'Terms: https://eteryt.stat.gov.pl/eTeryt/rejestr_teryt/udostepnianie_danych/formy_i_zasady_udostepniania/formy_i_zasady_udostepniania.aspx
+      ("Rejestr terytorialny TERYT jest jawny", data "udostępniane są bezpłatnie wszystkim użytkownikom"; re-use under art.
+      18 of the Open Data Act of 11 Aug 2021, Dz.U. 2023 poz. 1524, with art. 49a of the Public Statistics Act; no named
+      licence and no required wording on the page). Republication: allowed. Attribution: "Źródło: GUS, TERYT".'
   updates: Full and update files are published; cadence and retention need verification.
   ingestion:
     history: Load earliest available full snapshot, then all official change files in order.
@@ -2035,10 +2038,11 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Verify retention/cadence, Obtain SOAP credentials after approval, Resolve redistribution terms]
+    blockers: []
     references:
     - https://eteryt.stat.gov.pl/eteryt/rejestr_teryt/udostepnianie_danych/baza_teryt/baza_teryt.aspx?contrast=default
     - https://api.stat.gov.pl/Home/TerytApi?lang=en
+    - https://eteryt.stat.gov.pl/eTeryt/rejestr_teryt/udostepnianie_danych/formy_i_zasady_udostepniania/formy_i_zasady_udostepniania.aspx
 - id: PLS-008
   name: BIR1 – Internet Database of REGON API
   short_name: GUS REGON BIR1
