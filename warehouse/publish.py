@@ -27,6 +27,14 @@ LATEST_LIMIT = 100_000  # bytes, docs/published.md size limits (D22)
 SERIES_LIMIT = 20_000_000  # bytes, docs/published.md size limits
 # Contract file catalog/<name>.parquet → Gold table (seeds kpi, kpi_measure, domain, unit, licence; models
 # kpi_dimension, dim_source; freshness is not built yet).
+CALENDAR_LINES = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//zohelo//gold.publish//EN",
+    "CALSCALE:GREGORIAN",
+    "X-WR-CALNAME:zohelo release calendar",
+    "END:VCALENDAR",
+]
 CATALOG_TABLES = {
     "dim_kpi": "kpi",
     "kpi_measure": "kpi_measure",
@@ -327,6 +335,22 @@ def catalog_json(entries: list[dict[str, Any]], generated_at: str) -> dict[str, 
     }
 
 
+def calendar_ics() -> str:
+    """feed/calendar.ics: no events until release_calendar exists (docs/published.md)."""
+    return "\r\n".join(CALENDAR_LINES) + "\r\n"
+
+
+def calendar(client, prefix: str) -> int:
+    """Write feed/calendar.ics under prefix; returns the number of events written."""
+    put(
+        client,
+        prefix + "feed/calendar.ics",
+        calendar_ics().encode("utf-8"),
+        content_type="text/calendar; charset=utf-8",
+    )
+    return 0
+
+
 def checked(coverage: pa.Table) -> dict[str, str]:
     """Per source of gold.coverage, when it was last checked."""
     result: dict[str, str] = {}
@@ -396,5 +420,6 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     body = json.dumps(catalog_json(entries, generated_at), ensure_ascii=False, separators=(",", ":")).encode()
     result["catalog_json"] = {"kpis": len(entries), "bytes": put(client, prefix + "catalog/catalog.json", body)}
     result["manifest"] = manifest_json(client, prefix)
+    result["calendar"] = calendar(client, prefix)
     annotate("notice", "gold.publish: latest", result)
     return result

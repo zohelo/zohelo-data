@@ -188,6 +188,7 @@ with simplified coordinates; each Feature has these properties:
 
 `calendar.ics`: iCalendar, one VEVENT per `release_calendar` row (SUMMARY = `title_pl`,
 DTSTART = `release_at`, URL); zero events until that table exists.
+gold.publish writes it today without events (PRODID `-//zohelo//gold.publish//EN`).
 
 ## Size limits
 
