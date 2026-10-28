@@ -1179,8 +1179,11 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: Unless stated otherwise datasets are CC BY 4.0 with required metadata citation, no de-anonymization/misrepresentation,
-      no endorsement, and third-party exclusions.
+    notes: 'Terms: CC BY 4.0 plus WHO additional terms, https://data.who.int/redirect-pages/footer/learn-more/terms-and-conditions
+      ("Terms and conditions for WHO datasets"): attribution as indicated in each dataset''s metadata; do not falsify
+      or misrepresent; do not de-anonymise; no use of the WHO name or emblem and no implied endorsement; provided without
+      warranty; WHO may change or discontinue datasets. Attribution: per dataset metadata, default "Source: World Health
+      Organization, <dataset>, data.who.int, accessed <date>".'
   updates: WHO can modify or discontinue datasets or access methods; schedules are dataset-specific.
   ingestion:
     history: Archive dataset, metadata, citation and terms/version.
@@ -1195,11 +1198,12 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Build GHO-to-new-platform crosswalk
-    - Check per-dataset licence exceptions and change notices
+    - 'Build GHO-to-new-platform crosswalk'
+    - 'Check per-dataset licence exceptions and change notices'
     references:
     - https://data.who.int/
     - https://data.who.int/about/data/terms-and-conditions
+    - https://data.who.int/redirect-pages/footer/learn-more/terms-and-conditions
 - id: GL-026
   name: UIS Data Browser
   short_name: UNESCO UIS
@@ -1221,9 +1225,12 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: UNESCO publication open-access policy does not by itself prove the licence of every UIS dataset; verify
-      Data Browser terms.
+    status: open-conditional
+    notes: 'Terms: CC BY-SA 4.0, https://databrowser.uis.unesco.org/terms-and-conditions ("The work of the UIS is licensed
+      under the Creative Commons Attribution-ShareAlike 4.0 International license"): share and reproduce without charge;
+      adaptations must carry the same licence (ShareAlike); no implied endorsement or affiliation; logo use needs permission.
+      Attribution: "Source: UNESCO Institute for Statistics (UIS), <complete URL>, <date of extraction>" ("Adapted from"
+      when changed).'
   updates: Release labels are displayed by domain; revision policy and earlier vintages are unresolved.
   ingestion:
     history: Download data and metadata by release/domain; archive glossary and flags.
@@ -1237,10 +1244,13 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Open exact Data Browser terms
-    - Confirm stable API availability and identifiers
-    - Retain release vintages
-    references: ['https://databrowser.uis.unesco.org/', 'https://www.unesco.org/en/open-access']
+    - 'ShareAlike: published derivatives of UIS data must be released under CC BY-SA 4.0'
+    - 'Confirm stable API availability and identifiers'
+    - 'Retain release vintages'
+    references:
+    - https://databrowser.uis.unesco.org/
+    - https://www.unesco.org/en/open-access
+    - https://databrowser.uis.unesco.org/terms-and-conditions
 - id: GL-027
   name: UNICEF Data Warehouse Explorer and SDMX API
   short_name: UNICEF Data Warehouse
@@ -1263,9 +1273,12 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: open-conditional
-    notes: The API page states downloaded datasets are CC BY 3.0 IGO; other site content defaults to CC BY-NC 3.0
-      IGO. Preserve dataset licence and attribution.
+    status: unresolved
+    notes: 'No data licence found (28 Oct 2026): data.unicef.org/open-data and the SDMX API documentation state none;
+      the only terms found are the UNICEF site terms https://www.unicef.org/legal ("provided ... for personal use and
+      educational purposes only"; reproduction of more than a de minimis portion needs UNICEF''s express prior written
+      permission). Owner decision needed (noted on the Epic issue): ask UNICEF (data@unicef.org) for written reuse terms,
+      or treat as restricted. Attribution if allowed: "Source: UNICEF, UNICEF Data Warehouse, <dataset>".'
   updates: No common release cadence documented; dataflow versions and source updates can change data.
   ingestion:
     history: Snapshot dataflows, DSDs, codelists and full data with version.
@@ -1279,10 +1292,12 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm licence at each downloaded dataset
-    - Avoid labels-only CSV as exchange key
+    - 'Reuse terms unresolved: no data licence; UNICEF site terms are personal/educational use only (owner decision)'
+    - 'Avoid labels-only CSV as exchange key'
     references:
     - https://data.unicef.org/sdmx-api-documentation/
+    - https://www.unicef.org/legal
+    - https://data.unicef.org/open-data/
 - id: GL-028
   name: Human Development Data Center
   short_name: UNDP Human Development
@@ -1306,7 +1321,11 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: CC BY 3.0 IGO permits commercial adaptation/share with credit, licence link and change indication.
+    notes: 'Terms: CC BY 3.0 IGO, https://hdr.undp.org/en/content/copyright-and-terms-use ("All materials provided on
+      this website are copyrighted under the Creative Commons Attribution 3.0 IGO license"): adapt for any purpose,
+      even commercially; give credit, link the licence, indicate changes; provided without warranty; interpretation
+      is the reader''s responsibility. Attribution: "Source: UNDP Human Development Reports, Human Development Data
+      Center, https://hdr.undp.org/data-center (CC BY 3.0 IGO)".'
   updates: Entire HDI values/rankings time series is recalculated yearly using current methodology/data.
   ingestion:
     history: Archive every annual release and technical notes.
@@ -1320,9 +1339,12 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Enforce vintage-aware comparisons
-    - Check licences of externally sourced components
-    references: ['https://hdr.undp.org/data-center', 'https://hdr.undp.org/terms-use']
+    - 'Enforce vintage-aware comparisons'
+    - 'Check licences of externally sourced components'
+    references:
+    - https://hdr.undp.org/data-center
+    - https://hdr.undp.org/terms-use
+    - https://hdr.undp.org/en/content/copyright-and-terms-use
 - id: GL-029
   name: Refugee Data Finder / Refugee Statistics API
   short_name: UNHCR Refugee Statistics
@@ -1346,8 +1368,11 @@ sources:
     limits: Default page size 100 is documented; maximum and rate quota are unknown.
   licence:
     status: open-conditional
-    notes: Confirm the Refugee Data Finder licence; related Operational Data Portal datasets default to CC BY 4.0
-      unless indicated.
+    notes: 'Terms: CC BY 4.0 plus supplemental terms, https://www.unhcr.org/terms-use-datasets ("licensed under a Creative
+      Commons Attribution International License 4.0"): UNHCR APIs may be used to access the datasets; include the URL
+      of these terms when sharing; no implied endorsement; third-party datasets flagged in metadata may need their provider''s
+      consent; UNHCR may change or discontinue datasets and APIs. Attribution: "Source: UNHCR Refugee Population Statistics
+      Database" with credit to UNHCR''s data providers.'
   updates: Annual and other releases can revise history; methodology page governs definitions.
   ingestion:
     history: Load endpoints by year/resource plus lookups and footnotes.
@@ -1361,10 +1386,13 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Confirm exact product licence, Guard against API default aggregation]
+    blockers:
+    - 'Guard against API default aggregation'
+    - 'Exclude third-party datasets flagged in metadata'
     references:
     - https://api.unhcr.org/docs/refugee-statistics.html
     - https://data.unhcr.org/en/situations/ukraine
+    - https://www.unhcr.org/terms-use-datasets
 - id: GL-030
   name: Global Migration Data Portal
   short_name: IOM Migration Data Portal
@@ -1551,8 +1579,15 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: restricted
-    notes: IEA terms and product licences are restrictive/dataset-specific; do not assume public charts or free
-      files may be commercially redistributed.
+    notes: 'Terms: IEA Terms of Use https://www.iea.org/terms: CC BY 4.0 covers IEA text, reports and standalone figures,
+      but not standalone datasets, data explorers and databases, which fall under the Terms of Use for Non-CC Material
+      https://www.iea.org/terms/terms-of-use-for-non-cc-material: no sharing or enabling access to the material; only
+      insubstantial amounts in own public work (more than five numerical data points only as graphics or aggregates,
+      never downloadable); no substitutable derived database; no commercial advantage, financial-decision use or
+      sale; anything else needs a rights request to rights@iea.org (separate licence, possibly paid). Public display
+      in zohelo explorers is not allowed. No IEA endorsement may be implied. Attribution (aggregated or graphical
+      data): "Based on IEA data from IEA (<year>) <database title>, https://www.iea.org/data-and-statistics, All rights
+      reserved; as modified by <legal entity>."'
   updates: Annual/monthly schedules and revisions vary by product.
   ingestion:
     history: Onboard only a specifically licensed product/release; archive its terms and methodology.
@@ -1567,12 +1602,12 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Identify eligible free datasets
-    - Legal review for commercial redistribution
+    - Public display needs a separate IEA licence (rights@iea.org; Non-CC Material terms allow only insubstantial amounts)
     - Confirm download/API entitlement
     references:
     - https://www.iea.org/data-and-statistics/data-tools
     - https://www.iea.org/terms
+    - https://www.iea.org/terms/terms-of-use-for-non-cc-material
 - id: GL-035
   name: IRENASTAT / Statistics Time Series
   short_name: IRENASTAT
@@ -1594,8 +1629,14 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: Confirm IRENA data licence, attribution and redistribution terms on each export.
+    status: open-conditional
+    notes: 'Terms: IRENA Terms and Conditions https://www.irena.org/terms-and-conditions (section 4.1): content may be
+      freely accessed, copied, shared, downloaded and reproduced for non-commercial purposes with appropriate attribution
+      to IRENA; any other use (commercial use included) needs IRENA''s prior written permission (info@irena.org);
+      no use of the IRENA logo, no implied endorsement; do not attempt to disaggregate data or statistics generated
+      through IRENA''s platforms and tools (2.1(viii)); third-party content has its own terms; provided "as is", without
+      warranty, may be out of date. Attribution: "Source: IRENA (<year>), IRENASTAT Online Data Query Tool, <download
+      date>."'
   updates: Annual statistics releases with possible historical revisions.
   ingestion:
     history: Archive full release and technology classification.
@@ -1609,10 +1650,11 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Resolve licence
+    - 'Commercial use needs IRENA''s prior written permission (terms allow non-commercial reuse only)'
     - Confirm machine-readable export/API and release archive
     references:
     - https://www.irena.org/Data/View-data-by-topic/Capacity-and-Generation/Statistics-Time-Series
+    - https://www.irena.org/terms-and-conditions
 - id: GL-036
   name: Climate Data Store (CDS)
   short_name: Copernicus Climate Data Store
@@ -1689,8 +1731,13 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: EEA-owned material is CC BY and commercially reusable with acknowledgement and undistorted meaning; item-specific
-      and third-party conditions override.
+    notes: 'Terms: CC BY 4.0, EEA legal notice https://www.eea.europa.eu/en/legal-notice: material the EEA holds
+      rights to may be re-used without prior permission, free of charge, for commercial or non-commercial purposes
+      (reproduction, adaptation, distribution), provided the EEA is acknowledged as the original source in each copy
+      and the original meaning is not distorted; data with a copyright mark or other item-specific conditions and
+      third-party content follow their own terms; EEA logo only with consent; no liability, data may be incomplete
+      or out of date, not the official opinion of the EEA. Attribution: "Source: European Environment Agency (EEA),
+      <dataset title>, <download date>."'
   updates: Datasets follow legislation/reporting cycles; revisions and update cadence are item-specific.
   ingestion:
     history: Archive exact dataset release, metadata, rights owner and spatial schema.
@@ -1706,7 +1753,7 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Dataset-level rights scan
+    - Dataset-level rights scan (item-specific and third-party conditions override CC BY)
     - Inventory APIs/services per chosen dataset
     references:
     - https://www.eea.europa.eu/en/datahub
