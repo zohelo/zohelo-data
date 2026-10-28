@@ -136,7 +136,11 @@ A sprint ends with one release document for all of zohelo and a project status u
 Started by the Developers (and Monday 08:23 as a safety net for PRs nobody asked about). Before reviewing a PR add
 label `reviewing` and skip PRs that already carry it (added less than 1 hour ago); remove it when done. Before ending,
 list the open PRs again and review those that arrived during the run: members do not start an Architect that is
-already running, so the running run is the one that must see their PRs.
+already running, so the running run is the one that must see their PRs. Review each PR head once: when the PR's
+current head commit already has an Architect review that finds no problem (posted after that commit), do not review
+or comment again; only merge it, or leave it when the merge is refused. Review again only after a new push, and post
+one consultation per brief (28 Oct: zohelo-bi#181 was reviewed 5 times, zohelo-data#2157 and #2158 4 times each, each
+review a write against the shared GitHub limit).
 
 1. **Review and merge** every open non-Dependabot PR in all zohelo repos (the ones named in the start message first,
    then the rest, oldest first; a stacked PR after its dependency, rebased onto main first): compare the diff with its
