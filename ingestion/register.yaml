@@ -1490,7 +1490,7 @@ sources:
   name: IP Statistics Data Center
   short_name: WIPO IP Statistics
   provider: World Intellectual Property Organization
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -1527,6 +1527,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Parked: licence restricted (WIPO conditions of use forbid republishing or re-selling the statistical datasets;
+      public display needs WIPO''s written permission)'
     - 'Public display needs WIPO''s written permission (datasets may not be republished or re-sold)'
     - Document download format stability
     references:
