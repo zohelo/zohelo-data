@@ -401,9 +401,13 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Verify the licence on the exact catalog/download record; World Bank generic terms incorporate dataset-specific
-      terms and limit other materials.
+    status: open-conditional
+    notes: 'Terms: CC BY 4.0 for the country-level indicators, https://datacatalog.worldbank.org/search/dataset/0039935
+      ("This dataset is licensed under Creative Commons Attribution 4.0"; World Bank dataset terms https://www.worldbank.org/ext/en/legal/terms-conditions/datasets):
+      copy, modify and distribute for any purpose including commercial use; indicate changes; provided as is. Microdata
+      (https://microdata.worldbank.org/catalog/global-findex) are under the Research Data License: no redistribution
+      or sale, research use only — never ingested or published. Attribution: "Source: The World Bank, Global Findex
+      Database (Demirgüç-Kunt, Klapper, Singer, Ansar)". Indicate changes.'
   updates: Periodic survey waves, not annual; later releases may revise indicators.
   ingestion:
     history: Archive complete named releases with metadata and vintage.
@@ -418,11 +422,13 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Open exact catalog licence
-    - Confirm stable machine-download contract
+    - 'Confirm stable machine-download contract'
+    - 'Use country-level indicators only; microdata may not be redistributed'
     references:
     - https://www.worldbank.org/en/publication/globalfindex
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
+    - https://datacatalog.worldbank.org/search/dataset/0039935
+    - https://www.worldbank.org/ext/en/legal/terms-conditions/datasets
 - id: GL-010
   name: Enterprise Surveys
   short_name: World Bank Enterprise Surveys
