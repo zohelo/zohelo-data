@@ -88,6 +88,8 @@ One Parquet file per Gold catalogue table, with that table's columns.
 | metrics[].dimensions[].column | string | yes | column in the table |
 | metrics[].default_filters | object | optional | column → value applied by default |
 
+`warehouse/catalog.py` `manifest()` builds this object from the dbt semantic models and `kpi.csv`; a published KPI without a semantic model is left out.
+
 ## kpi/<kpi_key>/latest.json
 
 | field | type | required | meaning |
@@ -167,7 +169,7 @@ DTSTART = `release_at`, URL); zero events until that table exists.
 | file | limit |
 |---|---|
 | catalog/catalog.json | ≤ 2 MB gzip |
-| kpi/<kpi_key>/latest.json | ≤ 20 kB |
+| kpi/<kpi_key>/latest.json | ≤ 100 kB |
 | feed/changes.json | ≤ 200 kB |
 | kpi/<kpi_key>/series.parquet | ≤ 20 MB |
 | geo/<level>.geojson | ≤ 2 MB (gmina ≤ 8 MB) |

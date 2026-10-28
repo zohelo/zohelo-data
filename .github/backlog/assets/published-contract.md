@@ -47,4 +47,4 @@ calendar.ics: iCalendar, one VEVENT per release_calendar row (summary = title_pl
 
 ## Size limits
 
-catalog.json ≤ 2 MB gzip · latest.json ≤ 20 kB · changes.json ≤ 200 kB · series.parquet ≤ 20 MB · geo files ≤ 2 MB (gmina ≤ 8 MB).
+catalog.json ≤ 2 MB gzip · latest.json ≤ 100 kB · changes.json ≤ 200 kB · series.parquet ≤ 20 MB · geo files ≤ 2 MB (gmina ≤ 8 MB).
