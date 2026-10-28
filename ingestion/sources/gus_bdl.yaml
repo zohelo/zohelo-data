@@ -37,5 +37,6 @@ gold: []
 refresh: {mode: incremental, unit: subgroup, decided: "#875"}
 
 # landing.extract = API metadata (variables, units); with "web" in the filter: website export of
-# subgroups missing from Landing (web_export.py). The API data refresh follows.
+# subgroups missing from Landing (web_export.py); with "refresh": the steady-state API refresh of
+# changed held subgroups (refresh.py, today's share), then variables of new versions.
 activities: [landing.inspect, landing.extract, bronze.load, bronze.verify, landing.archive]
