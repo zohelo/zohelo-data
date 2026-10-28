@@ -481,9 +481,14 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Verify the licence on the exact catalog/download record; World Bank generic terms incorporate dataset-specific
-      terms and limit other materials.
+    status: open-conditional
+    notes: 'Terms: CC BY 4.0 per the Data Catalog record
+      https://datacatalog.worldbank.org/search/dataset/0066092/international-comparison-program-2021 (Public)
+      and the World Bank Terms of Use for Datasets
+      https://www.worldbank.org/ext/en/legal/terms-conditions/datasets; commercial reuse and modification
+      allowed; do not imply World Bank endorsement or use its name or logo; third-party conditions, where any,
+      are in the indicator metadata. Attribution: "The World Bank: International Comparison Program: <data
+      source>".'
   updates: Round-based benchmark releases with revisions; extrapolated PPP series are separate products.
   ingestion:
     history: Archive complete named releases with metadata and vintage.
@@ -497,8 +502,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Open exact catalog licence
-    - Confirm stable machine-download contract
+    - 'Confirm stable machine-download contract'
     references:
     - https://www.worldbank.org/en/research/brief/international-comparison-program
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
