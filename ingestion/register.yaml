@@ -886,7 +886,7 @@ sources:
   name: WTO Stats
   short_name: WTO Stats
   provider: World Trade Organization
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -924,6 +924,8 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
+    - 'Parked: reuse terms unresolved (no published WTO Stats terms; related WTO data terms are non-commercial); owner
+      decision noted on the Epic'
     - 'Reuse terms unresolved: no published terms for WTO Stats; related WTO data terms are non-commercial (owner decision)'
     - 'Locate current official API documentation'
     - 'Confirm dataset lineage'
