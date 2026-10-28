@@ -22,7 +22,7 @@ import type {
   RetainedBronzeIndicator,
 } from "./types";
 
-export const LANDING_SOURCE_IDS = [
+const LANDING_SOURCE_IDS = [
   "world_bank_wdi",
   "gus_bdl",
   "eurostat",
@@ -554,7 +554,7 @@ function parseDbwFile(raw: unknown, tableName: string, originalName?: string): L
   return parseFile(raw, tableName, "02_bronze", LANDING_FILE_MAX_BYTES, originalName);
 }
 
-export function parseRetainedBronzeManifest(
+function parseRetainedBronzeManifest(
   raw: unknown,
   pointer: LandingSnapshotPointer
 ): LandingSnapshotManifest {
@@ -653,7 +653,7 @@ export function parseRetainedBronzeManifest(
   };
 }
 
-export function parseRetainedIndicatorIndex(
+function parseRetainedIndicatorIndex(
   bytes: Uint8Array,
   manifest: Extract<LandingSnapshotManifest, { kind: "retained_bronze_snapshot" }>
 ): RetainedBronzeIndicator[] {

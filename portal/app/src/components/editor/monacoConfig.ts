@@ -4,7 +4,7 @@ import { useDuckStore } from "@/store";
 import { useMemo } from "react";
 import type { editor } from "monaco-editor";
 import { toast } from "sonner";
-import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
+import editorWorker from "monaco-editor/editor/editor.worker?worker";
 import { format } from "sql-formatter";
 import { sqlEscapeString } from "@/lib/sqlSanitize";
 
@@ -267,7 +267,3 @@ monaco.languages.registerCompletionItemProvider("sql", {
 });
 
 // Export everything needed
-export default {
-  createEditor,
-  useMonacoConfig,
-};

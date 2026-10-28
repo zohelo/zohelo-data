@@ -3,13 +3,13 @@ import { selectQueryForReferenceResolution } from "@/lib/createViewSql";
 import { sqlEscapeString } from "@/lib/sqlSanitize";
 import type { PublishedDataset } from "./types";
 
-export interface DuckDbSqlParser {
+interface DuckDbSqlParser {
   query(
     sql: string
   ): Promise<{ getChildAt(index: number): { get(index: number): unknown } | null }>;
 }
 
-export interface PublishedTableReference {
+interface PublishedTableReference {
   datasetName: string;
   layerName: PublishedDataset["layer"];
   files: PublishedDataset["files"];

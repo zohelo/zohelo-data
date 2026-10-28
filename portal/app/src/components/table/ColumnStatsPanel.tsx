@@ -279,5 +279,3 @@ export const ColumnStatsPanel: React.FC<ColumnStatsPanelProps> = ({
     </Card>
   );
 };
-
-export default ColumnStatsPanel;

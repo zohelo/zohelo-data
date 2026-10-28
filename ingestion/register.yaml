@@ -15,7 +15,6 @@ sources:
   status: silver
   family: A
   kpi: true
-  section: global-public
   geography: multicountry-Europe
   provider_type: international-public
   domains: [economy, population, labour, trade, health, education, environment]
@@ -64,7 +63,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: multicountry-Europe
   provider_type: international-public
   domains: [trade, goods, production]
@@ -80,8 +78,12 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: Attribution required; commercial exceptions include Swiss/Liechtenstein-declared trade since 1995 and
-      Austrian CN8; third-party and geographic exclusions also apply.
+    notes: 'Terms: CC BY 4.0, https://ec.europa.eu/eurostat/help/copyright-notice (re-use for commercial or
+      non-commercial purposes if the source is acknowledged and changes are indicated; modified or translated
+      content must state the changes and carry a disclaimer of Eurostat non-responsibility). Comext exceptions:
+      Swiss- and Liechtenstein-declared trade since 1995 and Austrian-declared CN8 data may not be sold; data
+      for countries outside the EU, EFTA and candidate countries may not be reused commercially. Attribution:
+      "Source: Eurostat (Comext)".'
   updates: Detailed trade is compiled monthly; revisions and confidential/suppressed cells require flags.
   ingestion:
     history: Partition full extracts by dataset and period; archive codelists and raw vintages.
@@ -96,7 +98,9 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Resolve non-EU source rights by table, Plan commodity-classification bridges]
+    blockers:
+    - 'Commercial display: drop the excepted reporters and declarations first'
+    - 'Plan commodity-classification bridges'
     references:
     - https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction
     - https://ec.europa.eu/eurostat/data/database
@@ -108,7 +112,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [economy, tax, trade, labour, health, education, environment, regional]
@@ -124,8 +127,12 @@ sources:
     limits: Rate limiting is documented, but no numeric threshold was published on the opened page.
   licence:
     status: open-conditional
-    notes: Commercial use is permitted with attribution unless dataset metadata identifies additional or third-party
-      restrictions.
+    notes: 'Terms: OECD Terms and Conditions (updated 15 Mar 2024),
+      https://www.oecd.org/en/about/terms-conditions.html, section on Data: users may extract, download, copy,
+      adapt, print, distribute, share and embed Data for any purpose, commercial use and modification included,
+      subject to restrictions stated for a dataset and to third-party rights (the OECD does not warrant it owns
+      all Data). Attribution: "OECD (<year>), <dataset name>, OECD Data Explorer, <DOI or URL> (accessed on
+      <date>)" or the citation given with the dataset.'
   updates: Series schedules vary. New dataflow versions may make non-backward-compatible structural changes.
   ingestion:
     history: Snapshot selected dataflows, structures, codelists and attributes by version.
@@ -138,7 +145,10 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Dataset-level rights scan, Coverage matrix beyond OECD membership, Handle versioned structure breaks]
+    blockers:
+    - 'Dataset-level rights scan (third-party restrictions in dataset metadata)'
+    - 'Coverage matrix beyond OECD membership'
+    - 'Handle versioned structure breaks'
     references:
     - https://www.oecd.org/en/data/insights/data-explainers/2024/09/api.html
     - https://www.oecd.org/en/about/terms-conditions.html
@@ -149,7 +159,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [education, skills, survey]
@@ -165,8 +174,12 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: OECD data terms permit reuse unless file metadata says otherwise; verify microdata and third-party instrument
-      rights per cycle.
+    notes: 'Terms: OECD Terms and Conditions (updated 15 Mar 2024),
+      https://www.oecd.org/en/about/terms-conditions.html: PISA Data falls under the Data terms (extract, copy,
+      adapt, distribute and embed for any purpose, commercial use and modification included, subject to dataset
+      and third-party restrictions); other PISA content (reports, instruments) is CC BY-NC-SA 3.0 IGO and needs
+      the OECD disclaimer when adapted or translated. Attribution: "OECD (<year>), PISA <cycle> Database, <DOI
+      or URL> (accessed on <date>)" or the citation given with the file.'
   updates: Released by assessment cycle; corrections or later files are not documented as a stable revision feed.
   ingestion:
     history: Archive each cycle, codebooks, questionnaires and technical report.
@@ -182,8 +195,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm per-cycle file licences
-    - Implement complex-survey methodology before publishing estimates
+    - 'Confirm per-cycle file licences (third-party restrictions in file metadata)'
+    - 'Implement complex-survey methodology before publishing estimates'
     references:
     - https://www.oecd.org/en/about/programmes/pisa/pisa-data.html
     - https://www.oecd.org/en/about/terms-conditions.html
@@ -195,7 +208,6 @@ sources:
   status: silver
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [development, economy, population, health, education, environment]
@@ -235,10 +247,9 @@ sources:
   name: Global Economic Monitor (GEM)
   short_name: World Bank GEM
   provider: World Bank
-  status: registered
+  status: approved
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [macroeconomy, markets]
@@ -253,9 +264,13 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Verify the licence on the exact catalog/download record; World Bank generic terms incorporate dataset-specific
-      terms and limit other materials.
+    status: open-conditional
+    notes: 'Terms: CC BY 4.0 per the Data Catalog record
+      https://datacatalog.worldbank.org/infrastructure-data/search/dataset/0037798/Global-Economic-Monitor
+      (Public) and the World Bank Terms of Use for Datasets
+      https://www.worldbank.org/ext/en/legal/terms-conditions/datasets; commercial reuse and modification
+      allowed; do not imply World Bank endorsement or use its name or logo; third-party conditions, where any,
+      are in the indicator metadata. Attribution: "The World Bank: Global Economic Monitor: <data source>".'
   updates: Frequent series updates and revisions; no product-wide schedule established.
   ingestion:
     history: Archive complete named releases with metadata and vintage.
@@ -269,8 +284,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Open exact catalog licence
-    - Confirm stable machine-download contract
+    - 'Confirm stable machine-download contract'
     references:
     - https://databank.worldbank.org/source/global-economic-monitor-(gem)
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -278,10 +292,9 @@ sources:
   name: International Debt Statistics (IDS)
   short_name: World Bank IDS
   provider: World Bank
-  status: registered
+  status: approved
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [debt, development-finance]
@@ -296,9 +309,13 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Verify the licence on the exact catalog/download record; World Bank generic terms incorporate dataset-specific
-      terms and limit other materials.
+    status: open-conditional
+    notes: 'Terms: CC BY 4.0 per the Data Catalog record
+      https://datacatalog.worldbank.org/search/dataset/0038015/international-debt-statistics (Public) and the
+      World Bank Terms of Use for Datasets https://www.worldbank.org/ext/en/legal/terms-conditions/datasets;
+      commercial reuse and modification allowed; do not imply World Bank endorsement or use its name or logo;
+      third-party conditions, where any, are in the indicator metadata. Attribution: "The World Bank:
+      International Debt Statistics: <data source>".'
   updates: Annual publication with revisions to historical debt stocks and flows.
   ingestion:
     history: Archive complete named releases with metadata and vintage.
@@ -312,8 +329,7 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Open exact catalog licence
-    - Confirm stable machine-download contract
+    - 'Confirm stable machine-download contract'
     references:
     - https://www.worldbank.org/en/programs/debt-statistics/ids
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -324,7 +340,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [governance, institutions]
@@ -367,7 +382,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [financial-inclusion, digital-connectivity, survey]
@@ -411,7 +425,6 @@ sources:
   status: parked
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [enterprise, business-climate, survey]
@@ -455,10 +468,9 @@ sources:
   name: International Comparison Program (ICP)
   short_name: World Bank ICP
   provider: World Bank
-  status: registered
+  status: approved
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [prices, purchasing-power, national-accounts]
@@ -473,9 +485,14 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Verify the licence on the exact catalog/download record; World Bank generic terms incorporate dataset-specific
-      terms and limit other materials.
+    status: open-conditional
+    notes: 'Terms: CC BY 4.0 per the Data Catalog record
+      https://datacatalog.worldbank.org/search/dataset/0066092/international-comparison-program-2021 (Public)
+      and the World Bank Terms of Use for Datasets
+      https://www.worldbank.org/ext/en/legal/terms-conditions/datasets; commercial reuse and modification
+      allowed; do not imply World Bank endorsement or use its name or logo; third-party conditions, where any,
+      are in the indicator metadata. Attribution: "The World Bank: International Comparison Program: <data
+      source>".'
   updates: Round-based benchmark releases with revisions; extrapolated PPP series are separate products.
   ingestion:
     history: Archive complete named releases with metadata and vintage.
@@ -489,8 +506,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Open exact catalog licence
-    - Confirm stable machine-download contract
+    - 'Confirm stable machine-download contract'
     references:
     - https://www.worldbank.org/en/research/brief/international-comparison-program
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -501,7 +517,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [macroeconomy, forecasts, fiscal]
@@ -518,8 +533,13 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: Statistical-data reuse is allowed with attribution and transformation disclosure, but IMF asks potential
-      commercial reusers to request permission; third-party products may differ.
+    notes: 'Terms: https://www.imf.org/en/about/copyright-and-terms (Data section): download, extract, copy, create
+      derivative works, publish and distribute Data with attribution; do not alter Data in a way that affects
+      its nature or accuracy and state any material transformation with the citation; sellers must tell buyers
+      the Data is free from the IMF; potential commercial reuse via copyright@imf.org; bulk download by
+      automated means needs explicit IMF permission; third-party material needs its holder''s permission;
+      provided as is. Attribution: "Source: International Monetary Fund, World Economic Outlook Database, <link
+      to the dataset>".'
   updates: Published twice yearly, April and October; vintages change estimates, forecasts and groups.
   ingestion:
     history: Load every retained vintage, appendix and historical-forecast package.
@@ -534,8 +554,9 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Resolve API account and production status
-    - Seek/record IMF response for intended commercial reuse
+    - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
+    - 'Resolve API account and production status'
+    - 'Seek/record IMF response for intended commercial reuse'
     references:
     - https://data.imf.org/en/datasets/IMF.RES%3AWEO
     - https://data.imf.org/en/Resource-Pages/IMF-API
@@ -547,7 +568,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [macroeconomy, money, prices, exchange-rates]
@@ -563,8 +583,13 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: IMF statistical-data terms cover this family, require attribution and transformation disclosure, and
-      direct potential commercial reuse to permission request.
+    notes: 'Terms: https://www.imf.org/en/about/copyright-and-terms (Data section): download, extract, copy, create
+      derivative works, publish and distribute Data with attribution; do not alter Data in a way that affects
+      its nature or accuracy and state any material transformation with the citation; sellers must tell buyers
+      the Data is free from the IMF; potential commercial reuse via copyright@imf.org; bulk download by
+      automated means needs explicit IMF permission; third-party material needs its holder''s permission;
+      provided as is. Attribution: "Source: International Monetary Fund, International Financial Statistics,
+      <link to the dataset>".'
   updates: Observation frequency and revisions are series-specific; no single schedule documented on opened pages.
   ingestion:
     history: Snapshot full selected dataflows with structures and vintage timestamp.
@@ -578,9 +603,10 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Inventory current dataflows and coverage
-    - Resolve API account status
-    - Seek/record commercial-reuse permission
+    - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
+    - 'Inventory current dataflows and coverage'
+    - 'Resolve API account status'
+    - 'Seek/record commercial-reuse permission'
     references:
     - https://data.imf.org/
     - https://data.imf.org/en/Resource-Pages/IMF-API
@@ -592,7 +618,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [trade, bilateral-trade]
@@ -608,8 +633,13 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: IMF statistical-data terms cover this family, require attribution and transformation disclosure, and
-      direct potential commercial reuse to permission request.
+    notes: 'Terms: https://www.imf.org/en/about/copyright-and-terms (Data section): download, extract, copy, create
+      derivative works, publish and distribute Data with attribution; do not alter Data in a way that affects
+      its nature or accuracy and state any material transformation with the citation; sellers must tell buyers
+      the Data is free from the IMF; potential commercial reuse via copyright@imf.org; bulk download by
+      automated means needs explicit IMF permission; third-party material needs its holder''s permission;
+      provided as is. Attribution: "Source: International Monetary Fund, Direction of Trade Statistics, <link
+      to the dataset>".'
   updates: Observation frequency and revisions are series-specific; no single schedule documented on opened pages.
   ingestion:
     history: Snapshot full selected dataflows with structures and vintage timestamp.
@@ -623,9 +653,10 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Inventory current dataflows and coverage
-    - Resolve API account status
-    - Seek/record commercial-reuse permission
+    - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
+    - 'Inventory current dataflows and coverage'
+    - 'Resolve API account status'
+    - 'Seek/record commercial-reuse permission'
     references:
     - https://data.imf.org/
     - https://data.imf.org/en/Resource-Pages/IMF-API
@@ -634,10 +665,9 @@ sources:
   name: BIS Data Portal
   short_name: BIS Data Portal
   provider: Bank for International Settlements
-  status: registered
+  status: approved
   family: C
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [banking, credit, debt, derivatives, payments, prices, exchange-rates]
@@ -654,8 +684,11 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: Use is unrestricted with attribution, but a commercial product may not add a separate charge because
-      BIS statistics are included; no other use is permitted.
+    notes: 'Terms: https://www.bis.org/about/legal/permitted-use-statistics — use of BIS statistics is unrestricted
+      provided the BIS is cited as the source and their inclusion causes no additional charge to subscribers or
+      other users; no other use is permissible; translations must state they are not official BIS translations;
+      no warranty of accuracy and no investment advice (disclaimer to show); the APIs may not be modified or
+      redistributed. Attribution: "Source: BIS statistics (Bank for International Settlements)".'
   updates: Topic release dates vary; bulk files are dated and history may revise.
   ingestion:
     history: Load full topic packages with structures and release date.
@@ -676,10 +709,9 @@ sources:
   name: ECB Data Portal
   short_name: ECB Data Portal
   provider: European Central Bank
-  status: registered
+  status: approved
   family: C
   kpi: true
-  section: global-public
   geography: multicountry-Europe
   provider_type: international-public
   domains: [money, banking, prices, payments, exchange-rates, financial-markets]
@@ -696,8 +728,12 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: ECB information may be reused with accurate reproduction and citation. Sold documents must tell buyers
-      it is freely available; transformations must be disclosed.
+    notes: 'Terms:
+      https://www.ecb.europa.eu/stats/ecb_statistics/governance_and_quality_framework/html/usage_policy.en.html
+      — ESCB statistics are provided free of charge irrespective of commercial or non-commercial use, provided
+      the source is quoted, the statistics (including metadata) are not modified, and the ECB and NCB
+      disclaimers are respected; third-party data needs prior permission from the originator; no right to
+      confidential data. Attribution: "Source: ECB statistics".'
   updates: Release and revision cadence is dataflow-specific; API page was unavailable during review.
   ingestion:
     history: Snapshot dataflow structures and complete selected series.
@@ -710,7 +746,9 @@ sources:
     priority: review-first
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Re-open current API documentation, Identify third-party series exceptions]
+    blockers:
+    - 'Re-open current API documentation'
+    - 'Identify third-party series exceptions (prior permission needed)'
     references:
     - https://data.ecb.europa.eu/
     - https://data.ecb.europa.eu/help/api/overview
@@ -722,7 +760,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [population, national-accounts, energy, environment, trade, health]
@@ -766,7 +803,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [sustainable-development, population, economy, health, environment]
@@ -808,7 +844,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [trade, goods, services]
@@ -853,7 +888,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [trade, tariffs, services]
@@ -897,7 +931,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [trade, investment, shipping, development, digital-economy]
@@ -938,7 +971,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [agriculture, food, forestry, emissions, prices, trade]
@@ -981,7 +1013,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [labour, employment, earnings, social-protection]
@@ -1022,7 +1053,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [health, mortality, disease, health-systems]
@@ -1066,7 +1096,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [health, mortality, disease, health-systems]
@@ -1110,7 +1139,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [education, science, culture, demography]
@@ -1152,7 +1180,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [children, women, health, education, nutrition, poverty]
@@ -1195,7 +1222,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [human-development, inequality, gender, poverty]
@@ -1236,7 +1262,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [forced-displacement, asylum, statelessness]
@@ -1279,7 +1304,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [migration, remittances, displacement, policy]
@@ -1320,7 +1344,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [telecommunications, digital-connectivity, prices, infrastructure]
@@ -1361,7 +1384,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [patents, trademarks, industrial-designs, innovation]
@@ -1404,7 +1426,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [crime, justice, drugs, prisons, trafficking]
@@ -1447,7 +1468,6 @@ sources:
   status: registered
   family: G
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [energy, emissions, prices, balances]
@@ -1492,7 +1512,6 @@ sources:
   status: registered
   family: G
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [renewable-energy, capacity, generation]
@@ -1533,7 +1552,6 @@ sources:
   status: registered
   family: G
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [climate, weather, reanalysis, projections]
@@ -1577,7 +1595,6 @@ sources:
   status: registered
   family: G
   kpi: true
-  section: global-public
   geography: multicountry-Europe
   provider_type: international-public
   domains: [environment, climate, pollution, biodiversity, water]
@@ -1622,7 +1639,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: multicountry-Europe
   provider_type: international-public
   domains: [economy, gender, transport, forestry, sustainable-development]
@@ -1664,7 +1680,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [population, fertility, mortality, migration, projections]
@@ -1707,7 +1722,6 @@ sources:
   status: registered
   family: A
   kpi: true
-  section: global-public
   geography: worldwide
   provider_type: international-public
   domains: [manufacturing, industry, employment, production]
@@ -1749,7 +1763,6 @@ sources:
   status: silver
   family: B
   kpi: true
-  section: poland-social
   geography: local-to-national Poland
   provider_type: national-public
   domains: [official statistics, society, economy]
@@ -1792,7 +1805,6 @@ sources:
   status: bronze
   family: B
   kpi: true
-  section: poland-social
   geography: Poland with territorial and classification breakdowns
   provider_type: national-public
   domains: [economy, society, environment, agriculture, culture]
@@ -1837,7 +1849,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland and regional Poland; selected EU comparisons
   provider_type: national-public
   domains: [sustainable development, public policy, regional development]
@@ -1878,7 +1889,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland and regional Poland
   provider_type: national-public
   domains: [official statistics, demography, social conditions, health, education, culture, agriculture, tourism]
@@ -1921,7 +1931,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland to fine census geographies, table-dependent
   provider_type: national-public
   domains: [population census, demography, housing, migration, households]
@@ -1965,7 +1974,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland to local agricultural geographies, table-dependent
   provider_type: national-public
   domains: [agricultural census, farms, land use, livestock]
@@ -2008,7 +2016,6 @@ sources:
   status: silver
   family: E
   kpi: false
-  section: poland-social
   geography: Poland
   provider_type: national-public
   domains: [reference data, administrative geography]
@@ -2024,8 +2031,11 @@ sources:
     cost: free
     limits: API quotas unknown.
   licence:
-    status: unresolved
-    notes: Commercial service eligibility is documented, but no redistribution licence was found.
+    status: open-conditional
+    notes: 'Terms: https://eteryt.stat.gov.pl/eTeryt/rejestr_teryt/udostepnianie_danych/formy_i_zasady_udostepniania/formy_i_zasady_udostepniania.aspx
+      ("Rejestr terytorialny TERYT jest jawny", data "udostępniane są bezpłatnie wszystkim użytkownikom"; re-use under art.
+      18 of the Open Data Act of 11 Aug 2021, Dz.U. 2023 poz. 1524, with art. 49a of the Public Statistics Act; no named
+      licence and no required wording on the page). Republication: allowed. Attribution: "Źródło: GUS, TERYT".'
   updates: Full and update files are published; cadence and retention need verification.
   ingestion:
     history: Load earliest available full snapshot, then all official change files in order.
@@ -2039,10 +2049,11 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Verify retention/cadence, Obtain SOAP credentials after approval, Resolve redistribution terms]
+    blockers: []
     references:
     - https://eteryt.stat.gov.pl/eteryt/rejestr_teryt/udostepnianie_danych/baza_teryt/baza_teryt.aspx?contrast=default
     - https://api.stat.gov.pl/Home/TerytApi?lang=en
+    - https://eteryt.stat.gov.pl/eTeryt/rejestr_teryt/udostepnianie_danych/formy_i_zasady_udostepniania/formy_i_zasady_udostepniania.aspx
 - id: PLS-008
   name: BIR1 – Internet Database of REGON API
   short_name: GUS REGON BIR1
@@ -2050,7 +2061,6 @@ sources:
   status: registered
   family: E
   kpi: false
-  section: poland-social
   geography: Poland
   provider_type: national-public
   domains: [organization register]
@@ -2090,7 +2100,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland and voivodeships, table-dependent
   provider_type: national-public
   domains: [social insurance, pensions, benefits, sickness absence, contributors]
@@ -2136,7 +2145,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland and regional breakdowns, edition-dependent
   provider_type: national-public
   domains: [social insurance, pensions, benefits, contributions]
@@ -2177,7 +2185,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland; regional detail varies
   provider_type: national-public
   domains: [farm social insurance, pensions, benefits, accidents]
@@ -2216,7 +2223,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland; provider/clinical group tables
   provider_type: national-public
   domains: [healthcare utilization, hospitalizations, diagnoses, procedures]
@@ -2259,7 +2265,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland
   provider_type: national-public
   domains: [pharmaceutical reimbursement, prescriptions, medicines]
@@ -2298,7 +2303,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland; NFZ branch and provider
   provider_type: national-public
   domains: [healthcare contracts, providers, public spending]
@@ -2341,7 +2345,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland; service location
   provider_type: national-public
   domains: [waiting times, healthcare access, providers]
@@ -2382,7 +2385,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland; some voivodeship/powiat breakdowns
   provider_type: national-public
   domains: [digital health, e-prescriptions, e-referrals, medical events, preventive care]
@@ -2421,7 +2423,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland and voivodeships, table-dependent
   provider_type: national-public
   domains: [health system, morbidity, hospitals, health workforce]
@@ -2460,7 +2461,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland
   provider_type: national-public
   domains: [public health, sanitary inspection, food safety, environmental health]
@@ -2500,7 +2500,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland and voivodeships, publication-dependent
   provider_type: national-public
   domains: [infectious disease surveillance, vaccination, HIV/AIDS, influenza]
@@ -2541,7 +2540,6 @@ sources:
   status: registered
   family: E
   kpi: false
-  section: poland-social
   geography: Poland
   provider_type: national-public
   domains: [healthcare facilities, provider register]
@@ -2584,7 +2582,6 @@ sources:
   status: registered
   family: E
   kpi: false
-  section: poland-social
   geography: Poland
   provider_type: national-public
   domains: [schools, education institutions, reference data]
@@ -2626,7 +2623,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland and regional Poland, table-dependent
   provider_type: national-public
   domains: [students, teachers, graduates, special education, preschool]
@@ -2668,7 +2664,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland
   provider_type: national-public
   domains: [higher education, science, research institutions, research outputs]
@@ -2712,7 +2707,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland; institution and field of study
   provider_type: national-public
   domains: [graduate outcomes, earnings, employment, higher education]
@@ -2754,7 +2748,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland; school-location categories and regions, release-dependent
   provider_type: national-public
   domains: [education outcomes, examinations]
@@ -2794,7 +2787,6 @@ sources:
   status: registered
   family: E
   kpi: false
-  section: poland-social
   geography: Poland
   provider_type: national-public
   domains: [cultural heritage, monuments, historic buildings]
@@ -2837,7 +2829,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland and voivodeships
   provider_type: national-public
   domains: [culture, heritage, museums, libraries, performing arts]
@@ -2876,7 +2867,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland; demographic breakdowns
   provider_type: national-public
   domains: [cultural participation, household survey, media use]
@@ -2918,7 +2908,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland, voivodeship and powiat, table-dependent
   provider_type: national-public
   domains: [registered unemployment, job vacancies, employment services]
@@ -2960,7 +2949,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: powiat, voivodeship and Poland
   provider_type: national-public
   domains: [occupational shortage forecast, labour demand, vacancies]
@@ -3001,7 +2989,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland and voivodeships, report-dependent
   provider_type: national-public
   domains: [social assistance, family benefits, care services, poverty policy]
@@ -3042,7 +3029,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland and macroregions/markets, commodity-dependent
   provider_type: national-public
   domains: [agricultural prices, agricultural markets, food markets]
@@ -3086,7 +3072,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland
   provider_type: national-public
   domains: [grain markets, meat markets, agricultural prices, trade]
@@ -3126,7 +3111,6 @@ sources:
   status: registered
   family: D
   kpi: true
-  section: poland-social
   geography: Poland and regional Poland, programme-dependent
   provider_type: national-public
   domains: [agricultural support, CAP payments, rural development]
@@ -3172,7 +3156,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-social
   geography: Poland and voivodeships/powiats, table-dependent
   provider_type: national-public
   domains: [tourism, accommodation, occupancy]
@@ -3218,7 +3201,6 @@ sources:
   status: silver
   family: C
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [foreign exchange, commodities]
@@ -3258,7 +3240,6 @@ sources:
   status: registered
   family: C
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [macroeconomics, external sector]
@@ -3301,7 +3282,6 @@ sources:
   status: registered
   family: C
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [macroeconomics, external sector, investment]
@@ -3343,7 +3323,6 @@ sources:
   status: registered
   family: C
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [money, banking]
@@ -3384,7 +3363,6 @@ sources:
   status: registered
   family: C
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [banking, financial institutions]
@@ -3424,7 +3402,6 @@ sources:
   status: registered
   family: C
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [interest rates, banking]
@@ -3466,7 +3443,6 @@ sources:
   status: registered
   family: D
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [public finance, budget]
@@ -3508,7 +3484,6 @@ sources:
   status: registered
   family: D
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [public debt, public finance]
@@ -3551,7 +3526,6 @@ sources:
   status: registered
   family: D
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [public debt, public finance]
@@ -3592,7 +3566,6 @@ sources:
   status: registered
   family: D
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [local government finance, budget]
@@ -3632,10 +3605,9 @@ sources:
   short_name: MF VAT white list
   provider: Head of the National Revenue Administration / Ministry of Finance
   source_system: mf_biala_lista
-  status: bronze
+  status: silver
   family: E
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [tax, business registry, payments]
@@ -3651,7 +3623,10 @@ sources:
     limits: Unknown.
   licence:
     status: open-conditional
-    notes: Tax portal content is free to use; confirm database/account redistribution rules.
+    notes: 'Terms: https://www.podatki.gov.pl/vat/bezpieczna-transakcja/wykaz-podatnikow-vat/plik-plaski/ (Ministry of
+      Finance flat file, https://plikplaski.mf.gov.pl/pliki/<YYYYMMDD>.7z, published daily with the public VAT taxpayer
+      list). The flat file holds SHA-512 hashes of NIP+account, not readable data; republication: not stated. Attribution:
+      "Źródło: Ministerstwo Finansów, Wykaz podatników VAT".'
   updates: Daily point-in-time status; API page versions are not record CDC.
   ingestion:
     history: 'PROPOSAL: prefer the documented official flat file for authorised bulk snapshots; use API/HTML only
@@ -3667,10 +3642,11 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Review current API limits, flat-file licence and redistribution.
+    - 'Flat-file reuse terms are not stated: confirm before any public display beyond aggregate counts.'
     references:
     - https://www.podatki.gov.pl/wykaz-podatnikow-vat-wyszukiwarka
     - https://www.gov.pl/web/kas/api-wykazu-podatnikow-vat
+    - https://www.podatki.gov.pl/vat/bezpieczna-transakcja/wykaz-podatnikow-vat/plik-plaski/
 - id: PLG-012
   name: Open KRS API (API Rejestrów Sądowych)
   short_name: KRS open API
@@ -3678,7 +3654,6 @@ sources:
   status: registered
   family: E
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [business registry, governance]
@@ -3721,7 +3696,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [company filings, financial statements]
@@ -3763,7 +3737,6 @@ sources:
   status: registered
   family: E
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [business registry, entrepreneurship]
@@ -3807,7 +3780,6 @@ sources:
   status: registered
   family: E
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [beneficial ownership, business registry, anti-money laundering]
@@ -3849,7 +3821,6 @@ sources:
   status: registered
   family: E
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [financial regulation, business registry]
@@ -3890,7 +3861,6 @@ sources:
   status: registered
   family: C
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [banking, prudential statistics]
@@ -3932,7 +3902,6 @@ sources:
   status: registered
   family: C
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [insurance, pensions, financial services]
@@ -3974,7 +3943,6 @@ sources:
   status: registered
   family: E
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [financial regulation, enforcement]
@@ -4015,7 +3983,6 @@ sources:
   status: registered
   family: F
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [competition, consumer protection, enforcement]
@@ -4057,7 +4024,6 @@ sources:
   status: registered
   family: F
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [merger control, competition]
@@ -4097,7 +4063,6 @@ sources:
   status: registered
   family: D
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [public procurement]
@@ -4139,7 +4104,6 @@ sources:
   status: registered
   family: D
   kpi: true
-  section: poland-governance
   geography: multicountry-Europe
   provider_type: international-public
   domains: [public procurement]
@@ -4181,7 +4145,6 @@ sources:
   status: registered
   family: F
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [parliament, legislation, elections]
@@ -4222,7 +4185,6 @@ sources:
   status: registered
   family: F
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [parliament, legislation]
@@ -4264,7 +4226,6 @@ sources:
   status: registered
   family: F
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [law, official gazette]
@@ -4305,7 +4266,6 @@ sources:
   status: registered
   family: F
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [law, official gazette]
@@ -4347,7 +4307,6 @@ sources:
   status: registered
   family: F
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [public audit, government performance]
@@ -4389,7 +4348,6 @@ sources:
   status: registered
   family: F
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [elections]
@@ -4430,7 +4388,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [open data, data catalog]
@@ -4470,7 +4427,6 @@ sources:
   status: registered
   family: F
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [courts, justice statistics]
@@ -4512,7 +4468,6 @@ sources:
   status: registered
   family: F
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [corrections, justice statistics]
@@ -4555,7 +4510,6 @@ sources:
   status: registered
   family: F
   kpi: true
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [crime, public safety]
@@ -4596,7 +4550,6 @@ sources:
   status: registered
   family: F
   kpi: false
-  section: poland-governance
   geography: Poland
   provider_type: national-public
   domains: [legislation, public consultation]
@@ -4637,7 +4590,6 @@ sources:
   status: silver
   family: E
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [administrative geography, geospatial]
@@ -4653,8 +4605,9 @@ sources:
     limits: Unknown; no numeric quota was confirmed.
   licence:
     status: open-conditional
-    notes: GUGiK lists PRG among data downloadable free without an application; verify attribution and package notices
-      before redistribution.
+    notes: 'Terms: https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/ ("Dane PRG są dostępne bezpłatnie
+      i do dowolnego wykorzystania"; legal basis: Council of Ministers regulation of 16 July 2021 on the PRG, Dz.U. 2021
+      poz. 1373; no named licence and no required wording on the page). Attribution: "Źródło: GUGiK, PRG".'
   updates: Updated official register; release cadence not confirmed.
   ingestion:
     history: 'PROPOSAL: capture available dated releases with source metadata.'
@@ -4669,10 +4622,12 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm package formats, license notice, archive depth, and stable identifiers.
+    - Read the licence notice inside a downloaded PRG package (not readable from the agent session); the PRG page
+      states no conditions.
     references:
     - https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl
     - https://www.geoportal.gov.pl/pl/dane/
+    - https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/
 - id: PL-ENV-002
   name: Państwowy Rejestr Nazw Geograficznych (PRNG)
   short_name: GUGiK PRNG
@@ -4680,7 +4635,6 @@ sources:
   status: registered
   family: E
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [geographical names, geospatial]
@@ -4721,7 +4675,6 @@ sources:
   status: registered
   family: G
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [topography, buildings, transport, land cover]
@@ -4761,7 +4714,6 @@ sources:
   status: registered
   family: G
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [imagery, land cover, geospatial]
@@ -4801,7 +4753,6 @@ sources:
   status: registered
   family: G
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [elevation, lidar, geospatial]
@@ -4843,7 +4794,6 @@ sources:
   status: registered
   family: G
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [cadastre, parcels, buildings]
@@ -4883,7 +4833,6 @@ sources:
   status: registered
   family: E
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [addresses, geospatial]
@@ -4923,7 +4872,6 @@ sources:
   status: registered
   family: G
   kpi: true
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [weather, hydrology, warnings]
@@ -4963,7 +4911,6 @@ sources:
   status: registered
   family: G
   kpi: true
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [weather, hydrology]
@@ -5006,7 +4953,6 @@ sources:
   status: registered
   family: G
   kpi: true
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [air quality, environment]
@@ -5046,7 +4992,6 @@ sources:
   status: registered
   family: G
   kpi: true
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [water quality, environment]
@@ -5089,7 +5034,6 @@ sources:
   status: registered
   family: G
   kpi: true
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [groundwater, water quality]
@@ -5130,7 +5074,6 @@ sources:
   status: registered
   family: G
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [water management, flood risk, drought]
@@ -5170,7 +5113,6 @@ sources:
   status: registered
   family: G
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [geology, boreholes]
@@ -5211,7 +5153,6 @@ sources:
   status: registered
   family: G
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [minerals, mining, geology]
@@ -5250,7 +5191,6 @@ sources:
   status: registered
   family: G
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [hydrogeology, groundwater]
@@ -5290,7 +5230,6 @@ sources:
   status: registered
   family: G
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [protected areas, biodiversity, habitats]
@@ -5330,7 +5269,6 @@ sources:
   status: registered
   family: G
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [forestry, land cover, recreation]
@@ -5371,7 +5309,6 @@ sources:
   status: registered
   family: G
   kpi: true
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [electricity, power system, balancing market]
@@ -5412,7 +5349,6 @@ sources:
   status: registered
   family: G
   kpi: true
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [electricity prices, renewable energy, regulation]
@@ -5454,7 +5390,6 @@ sources:
   status: registered
   family: G
   kpi: true
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [natural gas, transmission infrastructure, operations]
@@ -5494,7 +5429,6 @@ sources:
   status: registered
   family: H
   kpi: true
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [road traffic, transport]
@@ -5534,7 +5468,6 @@ sources:
   status: registered
   family: H
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [road infrastructure, investment]
@@ -5574,7 +5507,6 @@ sources:
   status: registered
   family: H
   kpi: true
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [vehicles, transport]
@@ -5616,7 +5548,6 @@ sources:
   status: registered
   family: H
   kpi: true
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [rail transport, passenger traffic, freight traffic]
@@ -5659,7 +5590,6 @@ sources:
   status: registered
   family: H
   kpi: true
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [aviation, passenger traffic, airports]
@@ -5700,7 +5630,6 @@ sources:
   status: registered
   family: H
   kpi: true
-  section: poland-environment
   geography: Port Gdańsk, Poland
   provider_type: subnational-public
   domains: [maritime transport, cargo, ports]
@@ -5741,7 +5670,6 @@ sources:
   status: registered
   family: H
   kpi: false
-  section: poland-environment
   geography: Warsaw, Poland
   provider_type: subnational-public
   domains: [municipal open data, public transport]
@@ -5783,7 +5711,6 @@ sources:
   status: registered
   family: H
   kpi: false
-  section: poland-environment
   geography: Gdańsk, Poland
   provider_type: subnational-public
   domains: [municipal open data, public transport]
@@ -5826,7 +5753,6 @@ sources:
   status: registered
   family: H
   kpi: false
-  section: poland-environment
   geography: Poznań service area, Poland
   provider_type: subnational-public
   domains: [public transport, municipal open data]
@@ -5867,7 +5793,6 @@ sources:
   status: registered
   family: H
   kpi: false
-  section: poland-environment
   geography: Kraków metropolitan service area, Poland
   provider_type: subnational-public
   domains: [public transport, municipal open data]
@@ -5909,7 +5834,6 @@ sources:
   status: registered
   family: H
   kpi: false
-  section: poland-environment
   geography: Wrocław, Poland
   provider_type: subnational-public
   domains: [public transport, municipal open data]
@@ -5951,7 +5875,6 @@ sources:
   status: registered
   family: H
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [construction permits, buildings, planning]
@@ -5992,7 +5915,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [broadband, telecommunications, digital infrastructure]
@@ -6035,7 +5957,6 @@ sources:
   status: registered
   family: G
   kpi: false
-  section: poland-environment
   geography: Poland
   provider_type: national-public
   domains: [spatial planning, land use]
@@ -6082,7 +6003,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
   domains: [financial-markets, corporate-filings]
@@ -6124,7 +6044,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
   domains: [financial-markets, macroeconomics]
@@ -6166,7 +6085,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
   domains: [financial-markets, company-fundamentals, corporate-filings]
@@ -6208,7 +6126,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
   domains: [financial-markets, economics, alternative-data]
@@ -6252,7 +6169,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: commercial-disclosures
   geography: Poland
   provider_type: commercial
   domains: [financial-markets]
@@ -6291,7 +6207,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: commercial-disclosures
   geography: Poland
   provider_type: national-public
   domains: [corporate-filings, financial-markets]
@@ -6332,7 +6247,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: commercial-disclosures
   geography: Poland
   provider_type: commercial
   domains: [corporate-filings, financial-markets]
@@ -6372,7 +6286,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: commercial-disclosures
   geography: Poland
   provider_type: commercial
   domains: [corporate-filings, business-news]
@@ -6413,7 +6326,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
   domains: [financial-markets]
@@ -6451,7 +6363,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: commercial-disclosures
   geography: Poland
   provider_type: commercial
   domains: [energy-markets, financial-markets, commodities]
@@ -6491,7 +6402,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: commercial-disclosures
   geography: Poland
   provider_type: commercial
   domains: [financial-markets, interest-rates]
@@ -6532,7 +6442,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: commercial-disclosures
   geography: United States
   provider_type: national-public
   domains: [corporate-filings, company-fundamentals]
@@ -6574,7 +6483,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: commercial-disclosures
   geography: multicountry-Europe
   provider_type: international-public
   domains: [corporate-filings, company-fundamentals]
@@ -6616,7 +6524,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: commercial-disclosures
   geography: United Kingdom
   provider_type: national-public
   domains: [business-register, corporate-filings]
@@ -6657,10 +6564,9 @@ sources:
   short_name: GLEIF
   provider: Global Legal Entity Identifier Foundation
   source_system: gleif
-  status: bronze
+  status: silver
   family: E
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: international-public
   domains: [business-register, entity-resolution, financial-markets]
@@ -6676,7 +6582,9 @@ sources:
     limits: No numerical limit relied on.
   licence:
     status: open-conditional
-    notes: GLEIF describes the pool as open; implement its LEI Data Terms and preserve source/status fields.
+    notes: 'Terms: CC0 1.0, https://www.gleif.org/en/meta/lei-data-terms-of-use (section II.3; section IV: claim no rights
+      in LEIs, access only through the Access Service, imply no GLEIF endorsement, no GLEIF logo). Attribution: "Source:
+      GLEIF" (not required under CC0).'
   updates: Issuers report daily; Golden Copy and delta files publish three times daily.
   ingestion:
     history: 'PROPOSAL: seed Golden Copy/concatenated files and certified mappings.'
@@ -6689,10 +6597,11 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Review LEI Data Terms, Select Golden Copy formats, Handle relationship exceptions]
+    blockers: []
     references:
     - https://www.gleif.org/en/lei-data/access-and-use-lei-data
     - https://www.gleif.org/en/lei-data/gleif-api
+    - https://www.gleif.org/en/meta/lei-data-terms-of-use
 - id: CD-016
   name: OpenCorporates REST and Reconciliation APIs
   short_name: OpenCorporates
@@ -6700,7 +6609,6 @@ sources:
   status: registered
   family: I
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
   domains: [business-register, entity-resolution, corporate-filings]
@@ -6740,7 +6648,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
   domains: [online-video, social-media]
@@ -6783,7 +6690,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: multicountry
   provider_type: commercial
   domains: [social-media, research]
@@ -6823,7 +6729,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
   domains: [social-media, marketing]
@@ -6864,7 +6769,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
   domains: [social-media]
@@ -6905,7 +6809,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
   domains: [professional-social-media, marketing]
@@ -6945,7 +6848,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: commercial
   domains: [social-media, discussion]
@@ -6986,7 +6888,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: multicountry
   provider_type: commercial
   domains: [social-media, research]
@@ -7025,7 +6926,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: multicountry-Europe
   provider_type: commercial
   domains: [digital-advertising, social-media]
@@ -7067,7 +6967,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
   domains: [encyclopedic-knowledge, media, language]
@@ -7107,7 +7006,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
   domains: [knowledge-graph, entity-resolution]
@@ -7148,7 +7046,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
   domains: [geospatial, transport, places]
@@ -7190,7 +7087,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
   domains: [scholarly-communications, entity-resolution]
@@ -7230,7 +7126,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
   domains: [scholarly-communications, identifier-registry]
@@ -7271,7 +7166,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
   domains: [news-events, media-monitoring]
@@ -7312,7 +7206,6 @@ sources:
   status: registered
   family: J
   kpi: true
-  section: commercial-disclosures
   geography: worldwide
   provider_type: community-academic
   domains: [global-development, health, environment, economics]
@@ -7350,7 +7243,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: multicountry-Europe
   provider_type: commercial
   domains: [e-commerce]
@@ -7396,7 +7288,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: Poland
   provider_type: commercial
   domains: [housing-market]
@@ -7438,7 +7329,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: commercial-disclosures
   geography: Poland
   provider_type: commercial
   domains: [automotive-market]
@@ -7484,7 +7374,6 @@ sources:
   status: registered
   family: B
   kpi: true
-  section: additional
   geography: Poland
   provider_type: national-public
   domains: [innovation, intellectual-property]
@@ -7524,7 +7413,6 @@ sources:
   status: registered
   family: E
   kpi: false
-  section: additional
   geography: Poland
   provider_type: national-public
   domains: [innovation, intellectual-property]
@@ -7564,7 +7452,6 @@ sources:
   status: registered
   family: F
   kpi: true
-  section: additional
   geography: Poland
   provider_type: national-public
   domains: [public-safety, emergency-services]
@@ -7606,7 +7493,6 @@ sources:
   status: registered
   family: J
   kpi: false
-  section: additional
   geography: multicountry
   provider_type: international-public
   domains: [innovation, intellectual-property]
@@ -7649,7 +7535,6 @@ sources:
   status: bronze
   family: E
   kpi: false
-  section: additional
   geography: Poland
   provider_type: unknown
   domains: [organizations]

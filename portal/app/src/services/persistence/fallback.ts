@@ -137,14 +137,3 @@ export async function fallbackDelete(store: StoreName, key: IDBValidKey): Promis
     request.onsuccess = () => resolve();
   });
 }
-
-export async function fallbackClear(store: StoreName): Promise<void> {
-  const db = await openFallbackDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(store, "readwrite");
-    const os = tx.objectStore(store);
-    const request = os.clear();
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
-  });
-}

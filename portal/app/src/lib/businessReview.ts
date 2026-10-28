@@ -1,12 +1,12 @@
 /** Owner review proposals. Selections are drafts, never executable approvals. */
-export const BUSINESS_REVIEW_VERSION = "2026-09-07.1";
-export const NBP_REVIEW_CHOICES = [
+const BUSINESS_REVIEW_VERSION = "2026-09-07.1";
+const NBP_REVIEW_CHOICES = [
   { id: "published", label: "Published daily values first (recommended)" },
   { id: "spread", label: "Daily values and the Table C bid–ask spread" },
   { id: "different", label: "I have a different use case" },
 ] as const;
 
-export const SOURCE_REVIEW_CHOICES = [
+const SOURCE_REVIEW_CHOICES = [
   { id: "eurostat", label: "Eurostat" },
   { id: "wdi", label: "World Bank WDI" },
   { id: "undecided", label: "Another source or still exploring" },
@@ -20,7 +20,7 @@ export interface BusinessReviewDraft {
   sourceNotes: string;
 }
 
-export const emptyReviewDraft = (): BusinessReviewDraft => ({
+const emptyReviewDraft = (): BusinessReviewDraft => ({
   version: BUSINESS_REVIEW_VERSION,
   nbpChoice: "",
   nbpNotes: "",

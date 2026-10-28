@@ -21,8 +21,8 @@ import { DownloadBudget, sha256Hex } from "./releaseCatalog";
 
 export const NATIVE_FOLDER_MIME = FOLDER_MIME_TYPE;
 export const NATIVE_PREVIEW_LIMIT_BYTES = 8 * 1024 * 1024;
-export const NATIVE_METADATA_MAX_FILES = 100000;
-export const NATIVE_METADATA_MAX_FOLDERS = 20000;
+const NATIVE_METADATA_MAX_FILES = 100000;
+const NATIVE_METADATA_MAX_FOLDERS = 20000;
 export type NativeLandingFile = LakehouseEntry & { parentId: string };
 export type NativeLandingFolder = NativeLandingFile & { mimeType: typeof NATIVE_FOLDER_MIME };
 
@@ -49,7 +49,7 @@ export function nativeMetadataNames(folders: readonly NativeLandingFolder[]): Ma
   );
 }
 
-export interface NativeMetadataRow {
+interface NativeMetadataRow {
   file_id: string;
   source_folder_id: string;
   source_folder: string;
@@ -72,8 +72,8 @@ export interface NativeMetadataProgress {
   startedAtMs: number;
 }
 
-export { NATIVE_METADATA_PARENT_BATCH } from "./api";
-export const NATIVE_METADATA_WORKERS = 8;
+;
+const NATIVE_METADATA_WORKERS = 8;
 
 const parentBatches = (ids: readonly string[], kind: "folders" | "files"): string[][] => {
   const batches: string[][] = [];
@@ -393,7 +393,7 @@ async function verifyProjectParent(
 }
 
 /** Re-read every ancestor, including the selected file, before any action. */
-export async function freshNativeFile(
+async function freshNativeFile(
   selected: NativeLandingFile,
   folders: Readonly<Record<string, NativeLandingFolder>>,
   landingRootId: string,
@@ -450,7 +450,7 @@ export async function freshNativeFile(
   return { ...fresh, parentId: selected.parentId };
 }
 
-export type NativePreviewFormat = "csv" | "json" | "jsonl" | "parquet";
+type NativePreviewFormat = "csv" | "json" | "jsonl" | "parquet";
 const activeNativePreviews = new WeakMap<
   object,
   { path: string; view: string; session: LocalDuckSession; unsubscribe: () => void }
@@ -467,7 +467,7 @@ const runNativeDdl = async (session: LocalDuckSession, sql: string) => {
   const result = await runQuery(session, sql);
   if (result.error) throw new Error(result.error);
 };
-export function disposeNativePreview(db: duckdb.AsyncDuckDB): Promise<void> {
+function disposeNativePreview(db: duckdb.AsyncDuckDB): Promise<void> {
   const pending = pendingNativeDisposals.get(db);
   if (pending) return pending;
   const active = activeNativePreviews.get(db);

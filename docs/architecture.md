@@ -40,6 +40,7 @@ rules in [landing.md](landing.md); per-source routes in [sources.md](sources.md)
   at their true grain. Statistical observations stay long; facts are consolidated
   only when grain, measure, unit, frequency and population agree.
 - **Semantic layer** — metric definitions on Gold.
+- **Published** — small files under `06_published/v1/` that zohelo-bi and zohelo.com read; contract in [published.md](published.md).
 
 Today's Silver and Gold: the dbt project in `warehouse/models/` builds them for NBP,
 TERYT, PRG, World Bank WDI, Eurostat and GUS BDL (see [model.md](model.md), "Built").

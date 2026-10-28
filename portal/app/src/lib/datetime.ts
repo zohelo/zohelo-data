@@ -17,9 +17,3 @@ export const formatTimestampUTC = (date: Date): string => {
   if (timePart.endsWith(".000")) timePart = timePart.slice(0, 8);
   return `${datePart} ${timePart}`;
 };
-
-/** "YYYY-MM-DD" in UTC. */
-export const formatDateUTC = (date: Date): string => {
-  if (Number.isNaN(date.getTime())) return "Invalid Date";
-  return date.toISOString().slice(0, 10);
-};

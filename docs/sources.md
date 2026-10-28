@@ -4,7 +4,7 @@ All candidate sources (about 180) are listed in the source register
 `ingestion/register.yaml`: one entry per source with the same fields (provider, access
 kind, endpoint, interfaces, auth, limits, licence status, update behaviour, history and
 incremental load approach, identifiers, research priority and blockers) and a `status`
-(table below). An onboarded source links to its declaration
+(table below). The id prefix (GL, PLS, PL-ENV, PLG, CD, EX) groups the entries. An onboarded source links to its declaration
 via `source_system`. This page details the routes of the onboarded sources.
 
 | status | meaning |
