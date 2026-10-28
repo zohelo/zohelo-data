@@ -2099,7 +2099,7 @@ sources:
   name: Powszechny Spis Rolny 2020 (PSR 2020) results
   short_name: GUS PSR 2020
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland to local agricultural geographies, table-dependent
