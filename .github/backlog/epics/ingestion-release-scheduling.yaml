@@ -24,8 +24,46 @@ deliverables:
     title: Schedules follow publications
     done_when:
       - schedule comments name the release pattern; no source polls more than twice its release frequency
+    tasks:
+      - key: data/ingestion/release-scheduling/schedules/release-comments
+        type: Task
+        title: Name each KPI source's release pattern in its schedule comment
+        effort: S
+        state: open
+        context: >-
+          The five KPI sources' schedules live in ingestion/sources/<source>.yaml under extraction.schedule
+          (UTC crons). Eurostat, GUS BDL and GUS DBW have no comment on the `schedule:` line; NBP and WDI
+          say when they run but not when the publisher releases. This Task writes the release pattern next
+          to each schedule; no cron changes.
+        files:
+          - edit: ingestion/sources/eurostat.yaml
+          - edit: ingestion/sources/nbp.yaml
+          - edit: ingestion/sources/gus_dbw.yaml
+          - edit: ingestion/sources/gus_bdl.yaml
+          - edit: ingestion/sources/world_bank_wdi.yaml
+        steps:
+          - "In each file set the comment of the `  schedule:` line (one space before #, replacing any comment there) to exactly:"
+          - "eurostat: `# UTC; release: database updated twice a day, 11:00 and 23:00 CET; runs 30 min after (90 min in summer time)`"
+          - "nbp: `# UTC; release: table A business days 11:45–12:15 Warsaw, table C 07:45–08:15; runs 13:30 Warsaw (summer), 12:30 (winter)`"
+          - "gus_dbw: `# UTC; release: no fixed calendar, indicators change on GUS publication dates; daily check 05:40 Warsaw (winter), 06:40 (summer)`"
+          - "gus_bdl: `# UTC; initial load every 6 hours (owner #889); release: GUS updates subgroups through the year, no fixed calendar; steady state in Epic data/src-pls-001`"
+          - "world_bank_wdi: `# UTC; release: WDI is updated a few times a year on no fixed date; weekly check (Tuesday 03:20), unchanged bytes are skipped`"
+          - "Change nothing else; the `- {cron: ...}` lines stay byte for byte."
+        acceptance:
+          - "each of the five files has exactly one `release:` comment on its `schedule:` line"
+          - no cron, run, filter or parallel_jobs value changed
+        verify:
+          - run: 'grep -c "^  schedule: .*# UTC;.*release:" ingestion/sources/eurostat.yaml ingestion/sources/nbp.yaml ingestion/sources/gus_dbw.yaml ingestion/sources/gus_bdl.yaml ingestion/sources/world_bank_wdi.yaml'
+            expect: "1 for each file"
+          - run: 'git diff -U0 origin/main -- ingestion/sources | grep -c "cron:"'
+            expect: "0"
+          - run: PYTHONPATH=. python run.py schedule --check
+            expect: exit 0
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [cron changes, other sources, the release calendar seed]
     todo:
-      - "Per source: document release pattern (Eurostat twice daily, NBP table A ~12:00 Warsaw business days, GUS calendar) and set crons"
+      - "Per source: tighten crons to the release patterns of release-comments where they allow fewer runs (GUS sources after the release calendar)"
       - "Scheduler: support date-specific runs from the release calendar (design first)"
   - key: data/ingestion/release-scheduling/calendar
     title: Release calendar seed

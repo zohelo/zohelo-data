@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 from collections import defaultdict
+from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 import fnmatch
 from importlib import import_module
@@ -249,13 +250,21 @@ def issue_marks(found: list[dict[str, Any]]) -> str:
     return " ".join(marks)
 
 
-def classify(name: str, registry: dict[str, dict[str, Any]], shared_gold: list[str]) -> tuple[str, str | None]:
+def classify(
+    name: str,
+    registry: dict[str, dict[str, Any]],
+    shared_gold: list[str],
+    *,
+    demo_namespaces: Iterable[str] = (),
+) -> tuple[str, str | None]:
     """(class, source) of a catalog table: current, copy, legacy, leftover (also any table of a
-    `zz_dev_` scratch namespace), or other (a table outside bronze / silver / gold that nothing
-    declares; reported, never retired)."""
+    `zz_dev_` scratch namespace), current/demo (a table of a declared demo namespace), or other
+    (a table outside bronze / silver / gold that nothing declares; reported, never retired)."""
     layer = name.rsplit(".", 1)[0]
     if any(part.startswith(SCRATCH) for part in layer.split(".")):
         return "leftover", None
+    if layer in demo_namespaces:
+        return "current", "demo"
     if layer not in LAYERS:
         return ("current", "platform") if name in shared_gold else ("other", None)
     if TEMP.search(name):
@@ -304,7 +313,10 @@ def main(argv=None) -> int:
     tables = table_facts(cat)
     declared = shared_gold + [n for c in registry.values() for layer in LAYERS for n in c.get(layer) or []]
     paths = [*landing, *archive]
-    namespace_report = namespace_check([".".join(ns) for ns in namespaces(cat)], tables, declared, paths)
+    demo_namespaces = platform.get("demo_namespaces") or []
+    namespace_report = namespace_check(
+        [".".join(ns) for ns in namespaces(cat)], tables, declared, paths, declared_namespaces=demo_namespaces
+    )
     warn_namespaces(namespace_report, "tracker")
     try:
         catalog_doc = json.loads(get_with_backoff(client, lakehouse_bucket, CATALOG_KEY))
@@ -332,7 +344,7 @@ def main(argv=None) -> int:
 
     classes: dict[str, list[str]] = defaultdict(list)
     for name in sorted(tables):
-        classes[classify(name, registry, shared_gold)[0]].append(name)
+        classes[classify(name, registry, shared_gold, demo_namespaces=demo_namespaces)[0]].append(name)
 
     def measured(names: list[str], label: str) -> str:
         """'<✅|⚠️> label · n/m tables · rows · last write' for declared tables, ✅ only if all exist."""

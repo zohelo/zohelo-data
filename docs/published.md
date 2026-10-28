@@ -88,6 +88,8 @@ One Parquet file per Gold catalogue table, with that table's columns.
 | metrics[].dimensions[].column | string | yes | column in the table |
 | metrics[].default_filters | object | optional | column → value applied by default |
 
+`warehouse/catalog.py` `manifest()` builds this object from the dbt semantic models and `kpi.csv`; a published KPI without a semantic model is left out.
+
 ## kpi/<kpi_key>/latest.json
 
 | field | type | required | meaning |
@@ -105,6 +107,13 @@ One Parquet file per Gold catalogue table, with that table's columns.
 | values[].previous_value | number | optional | value in the period before |
 | values[].flags | array | yes | status flags of the value |
 | values[].checked_at | string | yes | when the source was last checked (ISO 8601 UTC) |
+
+`warehouse/publish.py` writes it from `gold.metrics_<kpi_key>`: only country and voivodeship rows with a value
+(and not geography `_X`) count; each row gets the priority of its source's measure in `kpi_measure.csv` (999 when
+none matches); per source and geography one series is kept, the one with the finest frequency, then the best
+priority, then the lowest measure key; its newest period gives `period` and `value`, the period before gives
+`previous_period` and `previous_value` (left out when there is none). `fx_rate` is skipped: it has one value per
+currency and latest.json has no currency field.
 
 ## kpi/<kpi_key>/series.parquet
 
@@ -160,7 +169,7 @@ DTSTART = `release_at`, URL); zero events until that table exists.
 | file | limit |
 |---|---|
 | catalog/catalog.json | ≤ 2 MB gzip |
-| kpi/<kpi_key>/latest.json | ≤ 20 kB |
+| kpi/<kpi_key>/latest.json | ≤ 100 kB |
 | feed/changes.json | ≤ 200 kB |
 | kpi/<kpi_key>/series.parquet | ≤ 20 MB |
 | geo/<level>.geojson | ≤ 2 MB (gmina ≤ 8 MB) |
