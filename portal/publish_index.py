@@ -3,6 +3,11 @@
 
 The portal is internal and reflects live R2 state. No Google Drive inventory,
 release pointer, or publication manifest is consulted.
+
+Tables the R2 Data Catalog places in its default location (``__r2_data_catalog/<uuid>/...``,
+every dbt-built Silver and Gold table) are shown under their layer folder by table name
+(``04_gold/<table>/...``); downloads still use the real key (#2179). The catalog's own
+folder is otherwise not listed.
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -20,11 +25,47 @@ INDEX_ROOT = "_portal_index/v1/"
 CURRENT_KEY = INDEX_ROOT + "current.json"
 FOLDER = "application/vnd.google-apps.folder"
 ROOT_ID = "r2-root-zohelo-data"
+CATALOG_PREFIX = "__r2_data_catalog/"
 EXCLUDED_LAKEHOUSE_PREFIXES = (
-    "__r2_data_catalog/",
+    CATALOG_PREFIX,
     "_portal_index/",
     "_portal_catalog/",
 )
+# Catalog namespaces shown in the portal and the layer folder their tables appear in.
+NAMESPACE_LAYERS = {"bronze": "02_bronze", "silver": "03_silver", "gold": "04_gold"}
+
+
+def catalog_folders():
+    """Bucket key prefix of every catalog-located table in a shown namespace → its display folder."""
+    from urllib.parse import urlsplit
+
+    from ingestion.common.bronze_files import retry
+    from ingestion.common.r2 import catalog
+
+    cat = catalog()
+    folders = {}
+    for namespace, layer in NAMESPACE_LAYERS.items():
+        identifiers = retry(lambda namespace=namespace: cat.list_tables(namespace), f"list {namespace}")
+        for identifier in identifiers:
+            table = retry(lambda identifier=identifier: cat.load_table(identifier), f"load {identifier}")
+            location = urlsplit(table.location()).path.strip("/") + "/"
+            if location.startswith(CATALOG_PREFIX):
+                folders[location] = f"{layer}/{identifier[-1]}/"
+    return folders
+
+
+def display_key(bucket, lakehouse, key, folders):
+    """The path an object is shown at, or None when it is not shown."""
+    if bucket != lakehouse:
+        return key
+    if key.startswith(CATALOG_PREFIX):
+        for location, folder in folders.items():
+            if key.startswith(location):
+                return folder + key[len(location) :]
+        return None
+    if any(key.startswith(p) for p in EXCLUDED_LAKEHOUSE_PREFIXES):
+        return None
+    return key
 
 
 def required(name):
@@ -96,6 +137,7 @@ def main():
         config=Config(signature_version="s3v4", retries={"max_attempts": 8, "mode": "standard"}),
     )
 
+    table_folders = catalog_folders()
     live = []
     folders = set()
     digest = hashlib.sha256()
@@ -107,14 +149,15 @@ def main():
         for page in paginator.paginate(Bucket=bucket):
             for item in page.get("Contents", []):
                 key = str(item["Key"])
-                if bucket == lakehouse and any(key.startswith(p) for p in EXCLUDED_LAKEHOUSE_PREFIXES):
+                shown = display_key(bucket, lakehouse, key, table_folders)
+                if shown is None:
                     continue
                 if key.endswith("/") and int(item.get("Size", 0)) == 0:
-                    parts = [p for p in key.strip("/").split("/") if p]
+                    parts = [p for p in shown.strip("/").split("/") if p]
                     for i in range(1, len(parts) + 1):
                         folders.add("/".join(parts[:i]))
                     continue
-                parts = [p for p in key.split("/") if p]
+                parts = [p for p in shown.split("/") if p]
                 if not parts:
                     continue
                 for i in range(1, len(parts)):
@@ -122,10 +165,10 @@ def main():
                 size = int(item.get("Size", 0))
                 modified = iso(item.get("LastModified"))
                 etag = str(item.get("ETag", "")).strip('"')
-                live.append((bucket, key, size, modified, etag))
+                live.append((bucket, key, shown, size, modified, etag))
                 source_files += 1
                 source_bytes += size
-                digest.update(f"{bucket}\0{key}\0{size}\0{modified}\0{etag}\n".encode())
+                digest.update(f"{bucket}\0{key}\0{shown}\0{size}\0{modified}\0{etag}\n".encode())
 
     source_inventory_sha256 = digest.hexdigest()
     source_run = source_inventory_sha256[:24]
@@ -171,8 +214,8 @@ def main():
         }
         add_record(ids, parents, identity, meta)
 
-    for bucket, key, size, modified, etag in live:
-        path = key.strip("/")
+    for bucket, key, shown, size, modified, etag in live:
+        path = shown.strip("/")
         parent = parent_path(path)
         identity = object_id(bucket, key)
         meta = {
