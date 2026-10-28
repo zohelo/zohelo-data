@@ -2,25 +2,17 @@ version: 2
 # Gold v1 (docs/model.md), formerly the proof of concept. Namespace gold.
 # Natural string keys; facts split by frequency; dim_series carries the breakdowns.
 models:
-  - name: dim_date
-    time_spine:
+  - name: poc_dim_calendar
+    time_spine:   # the MetricFlow time spine (decision D19: dim_date's SQL lives here)
       standard_granularity_column: calendar_date
     description: >-
-      Conformed calendar (warehouse/dimensions/calendar.yaml), one row per day 1900–2100
-      plus special members 0 (not applicable) and -1 (unknown). date_key = yyyymmdd.
-      Polish holiday and working-day flags from 1990 (rule-based, empty before).
+      Conformed calendar at day grain, 1900–2100: ISO weeks, Polish statutory holidays and working
+      days from 1990, period labels and period-start flags; date_key is the date.
     columns:
       - name: date_key
         tests: [not_null, unique]
       - name: calendar_date
         granularity: day
-      - name: member_type
-        tests: [{accepted_values: {arguments: {values: ['day', 'not_applicable', 'unknown']}}}]
-  - name: poc_dim_calendar
-    description: Conformed calendar at day grain (gold.dim_date + period labels and period-start flags); date_key is the date.
-    columns:
-      - name: date_key
-        tests: [not_null, unique]
   - name: poc_dim_geography
     description: >-
       Geography keyed by area: one row per area with the codes each source uses as attributes

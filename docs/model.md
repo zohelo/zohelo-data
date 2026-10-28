@@ -16,8 +16,7 @@ tables and the `poc` namespace stay until the retire Task drops them.
 
 | Gold table | Content |
 |---|---|
-| `dim_date` | calendar 1900–2100, ISO weeks, Polish statutory holidays and working days from 1990; MetricFlow time spine |
-| `dim_calendar` | `dim_date` at day grain with period labels and period-start flags; `date_key` is the date |
+| `dim_calendar` | calendar 1900–2100 at day grain, ISO weeks, Polish statutory holidays and working days from 1990, period labels and period-start flags; `date_key` is the date (decision D19: no separate `dim_date`) |
 | `dim_geography`, `map_geography` | geography keyed by area (`PL`, `TERC:<code>`, `NUTS:<code>`) with each source's codes as attributes; every source geography code → `geography_key` |
 | `dim_unit`, `dim_frequency`, `dim_source`, `dim_observation_status` | conformed units, frequencies, sources and observation flags |
 | `dim_measure`, `measure_dimensions`, `dim_series` | measure catalogue, the dimensions each measure offers, one row per series (measure × geography × breakdown) |
@@ -100,7 +99,7 @@ topics, BDL K/G/P, DBW areas) map through crosswalks.
 
 ## Time
 
-- `dim_date` (built): one row per day; date roles on facts (effective, publication, as-of).
+- `dim_calendar` (built; holds the former `dim_date`, D19): one row per day; date roles on facts (effective, publication, as-of).
 - `dim_period`: SDMX TIME_PERIOD (YYYY, YYYY-Qn, YYYY-MM, YYYY-Www, YYYY-MM-DD …) with
   frequency, start and end day. Annual values are never expanded to days.
 - `bridge_period_day` links each period to its days for filtering and alignment.
