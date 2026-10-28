@@ -1991,9 +1991,13 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No product-specific reuse statement was verified; do not inherit BDL licensing merely because GUS owns
-      both.
+    status: open-conditional
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+      licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+      summaries or reworked text. The STRATEG API page (https://api.stat.gov.pl/Home/StrategApi?lang=en) states no
+      licence, only "Copyright Statistics Poland" and quotas (anonymous 5 req/s, 100/15 min; with key 10 req/s, 500/15
+      min). Attribution: "Źródło: GUS, STRATEG" / "Source: Statistics Poland, STRATEG" plus the indicator id.'
   updates: Indicator-dependent and revision-prone; no universal schedule verified.
   ingestion:
     history: Snapshot indicator catalogue, metadata and full selected histories.
@@ -2006,10 +2010,14 @@ sources:
     priority: review-next
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Open current API method documentation, Verify reuse terms and quotas]
+    blockers:
+    - Open current API method documentation (https://strateg.stat.gov.pl/apidocs/?lang=en)
+    - Commercial reuse not addressed by GUS terms (ask GUS if needed)
     references:
     - https://strateg.stat.gov.pl/
     - https://api.stat.gov.pl/Home/Index?lang=en
+    - https://api.stat.gov.pl/Home/StrategApi?lang=en
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-004
   name: GUS thematic publications with downloadable statistical tables
   short_name: GUS publication tables
