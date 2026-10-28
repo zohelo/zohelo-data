@@ -9,6 +9,7 @@ on:
   schedule:
     - cron: '20 5 * * 1'
     - cron: '0 5 * * 1'
+    - cron: '40 5 * * 1'
   workflow_dispatch:
     inputs:
       script:
@@ -53,6 +54,7 @@ jobs:
             case "$CRON" in
               '20 5 * * 1') script=orphan_files; args='--delete --min-age-hours 48' ;;
               '0 5 * * 1') script=backlog_sync; args='apply' ;;
+              '40 5 * * 1') script=tracker; args='' ;;
               *) echo "::error title=ops schedule::no schedule table row for cron '$CRON'" >&2; exit 1 ;;
             esac
           fi
