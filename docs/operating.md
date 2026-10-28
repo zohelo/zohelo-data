@@ -25,7 +25,7 @@ whose YAML sets `extraction.kind` (for example `bulk_file`) runs the shared patt
 | `bronze.verify` | `ingestion/common/lineage.py` | every Landing file is in Bronze or rejected with a reason; verifies one version per entity in Bronze (fails on breach); Landing files a Bronze table holds twice (warning) |
 | `landing.archive` | `ingestion/common/archive.py` | move Bronze-loaded Landing files to Archive (copy, verify SHA-256, delete from Landing; receipt stays) |
 | `archive.prune` | `ingestion/common/retention.py` | apply the source's Archive retention (`archive_policy` in its config) |
-| `silver_gold.build` | `warehouse/build.py` | platform: dbt build of `warehouse/models/` (filter = model names; empty = only models whose inputs or code changed, `fqn:*` = all); publishes the data catalog |
+| `silver_gold.build` | `warehouse/build.py` | platform: dbt build of `warehouse/models/` (filter = model names; empty = only models whose inputs or code changed, `fqn:*` = all); publishes the data catalog (only the Pipeline on `main`; Dev trials skip it) |
 | `serving.refresh_index` | `portal/publish_index.py` | platform: rebuild the portal file index |
 
 A Pipeline run is one activity or a source's `full dataflow: landing → bronze → silver → gold → portal`
