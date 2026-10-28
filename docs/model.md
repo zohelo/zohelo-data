@@ -126,3 +126,13 @@ HS/CN/SITC/BEC; ESA 2010 sectors; COFOG; ICD-10/11.
    it (109.01 Media, 109.02 Sport); everything else maps to CSA codes.
 
 Other open points are listed per dimension (`open_questions`) and marked `unverified`.
+
+## Gold v1 (decided 27 Oct 2026)
+
+1. Namespace gold; PoC tables keep their names without the poc_ prefix; v0 models dim_date, dim_period, dim_currency, dim_geography, dim_indicator, fact_observation, fact_fx_rate, fact_gold_price are deleted (dim_calendar replaces dim_date, PoC dim_geography replaces v0).
+2. Keys stay natural strings (geography_key, measure_key, series_key as in the PoC); no hash keys in v1.
+3. Geography: GUS KTS–TERYT correspondence for BDL ids, NUTS 3 ↔ podregion for DBW; name matching only as a reported fallback.
+4. Measure rules per source stay as in the PoC for v1; per-domain refinements are new Tasks.
+5. Facts: annual, monthly, daily; quarterly added with the first quarterly KPI.
+6. Rows without a value are not loaded; status flags kept.
+7. warehouse/entity/*.sql stay: they are per-entity Silver models applied by warehouse/entity.py (design #875), not Gold (deviation from plan A-23, logged in docs/decisions.md).
