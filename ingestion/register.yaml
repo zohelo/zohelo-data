@@ -1294,7 +1294,11 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: CC BY 3.0 IGO permits commercial adaptation/share with credit, licence link and change indication.
+    notes: 'Terms: CC BY 3.0 IGO, https://hdr.undp.org/en/content/copyright-and-terms-use ("All materials provided on
+      this website are copyrighted under the Creative Commons Attribution 3.0 IGO license"): adapt for any purpose,
+      even commercially; give credit, link the licence, indicate changes; provided without warranty; interpretation
+      is the reader''s responsibility. Attribution: "Source: UNDP Human Development Reports, Human Development Data
+      Center, https://hdr.undp.org/data-center (CC BY 3.0 IGO)".'
   updates: Entire HDI values/rankings time series is recalculated yearly using current methodology/data.
   ingestion:
     history: Archive every annual release and technical notes.
@@ -1308,9 +1312,12 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Enforce vintage-aware comparisons
-    - Check licences of externally sourced components
-    references: ['https://hdr.undp.org/data-center', 'https://hdr.undp.org/terms-use']
+    - 'Enforce vintage-aware comparisons'
+    - 'Check licences of externally sourced components'
+    references:
+    - https://hdr.undp.org/data-center
+    - https://hdr.undp.org/terms-use
+    - https://hdr.undp.org/en/content/copyright-and-terms-use
 - id: GL-029
   name: Refugee Data Finder / Refugee Statistics API
   short_name: UNHCR Refugee Statistics
