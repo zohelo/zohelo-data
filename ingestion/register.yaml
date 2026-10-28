@@ -1757,7 +1757,9 @@ sources:
     limits: 'Anonymous: 5/s, 100/15m, 1,000/12h, 10,000/7d; registered: 10/s, 500/15m, 5,000/12h, 50,000/7d.'
   licence:
     status: open-conditional
-    notes: GUS explicitly applies CC BY 4.0 to BDL API data; preserve attribution and source metadata.
+    notes: 'Terms: CC BY 4.0, https://api.stat.gov.pl/Home/BdlApi (licence text https://creativecommons.org/licenses/by/4.0/).
+      Attribution: "Źródło: GUS, Bank Danych Lokalnych" / "Source: Statistics Poland, Local Data Bank" plus the variable
+      id.'
   updates: Continually expanded, updated and corrected.
   ingestion:
     history: Snapshot metadata and all selected observations by variable or unit; retain attributes.
@@ -1773,7 +1775,6 @@ sources:
     connection: not-tested
     blockers:
     - Design a territory-vintage policy
-    - Confirm attribution wording in product UI
     references: ['https://api.stat.gov.pl/Home/BdlApi']
 - id: PLS-002
   name: Dziedzinowe Bazy Wiedzy (DBW) API
