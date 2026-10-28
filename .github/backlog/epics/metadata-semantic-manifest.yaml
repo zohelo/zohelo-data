@@ -27,8 +27,38 @@ deliverables:
     title: Manifest generated from semantic models
     done_when:
       - catalog.py returns the manifest object matching warehouse/published/schemas/manifest.schema.json; publish.py writes it
+    tasks:
+      - key: data/metadata/semantic-manifest/generate/manifest-object
+        type: Task
+        title: Build the published manifest object in warehouse/catalog.py
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/contract/schemas, data/metadata/catalogue-v1/seeds/kpi]
+        context: >-
+          manifest.json (docs/published.md, schema warehouse/published/schemas/manifest.schema.json) lists one
+          metric per published KPI; catalog.py builds the object from the dbt semantic models and kpi.csv,
+          publish.py writes it later (D5). The rules are in .github/backlog/assets/publish-writers.md,
+          section 'manifest object'.
+        files:
+          - edit: warehouse/catalog.py
+          - edit: docs/published.md
+        steps:
+          - "catalog.py: add manifest_object and manifest exactly as the assets section says (import csv)."
+          - "docs/published.md under the manifest.json table: one sentence saying warehouse/catalog.py manifest() builds it from the semantic models and that KPIs without one are left out."
+          - "dev/manifest_trial.py: subprocess `dbt parse --target prod --project-dir warehouse --profiles-dir warehouse`, then annotate notice 'manifest' with {kpi_key: dimensions} of manifest(). Run in Dev; delete dev/ before the PR."
+        acceptance:
+          - "the local verify prints 1 metric, time column date_key, column geography_key, no schema problem"
+          - "trial lists population, gdp_current_prices, inflation, unemployment_rate, fx_rate (fx_rate with dimensions [])"
+        verify:
+          - run: "python -c \"import json;from warehouse.catalog import manifest_object as m;from ops.repo_check import _schema_problems as p;s={'semantic_models':[{'node_relation':{'alias':'metrics_population'},'defaults':{'agg_time_dimension':'period_start'},'dimensions':[{'name':'period_start','expr':'date_key'}],'entities':[{'name':'poc_geography','expr':'geography_key'}]}]};k=[{'kpi_key':'population','unit_key':'persons','frequency_default':'A','status':'published'}];r=m(s,k,'2026-01-01T00:00:00Z');x=r['metrics'][0];print(len(r['metrics']),x['time_column'],x['dimensions'][0]['column'],p(r,json.load(open('warehouse/published/schemas/manifest.schema.json')),'$'))\""
+            expect: "1 date_key geography_key []"
+          - workflow: Dev · branch runs, script manifest_trial, on the branch
+            expect: "notice 'manifest' with the 5 published KPIs"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [writing manifest.json (publish.py), semantic_models/gold.yml, catalog.build and publish]
     todo:
-      - "catalog.py: function building the manifest object from target/semantic_manifest.json + dim_kpi, validated against the manifest fixture (schema from data/published/published-v1/contract/schemas)"
       - "Semantic models (semantic_models/gold.yml) for each published KPI's metrics table"
   - key: data/metadata/semantic-manifest/bi-adoption
     title: zohelo-bi reads the generated manifest

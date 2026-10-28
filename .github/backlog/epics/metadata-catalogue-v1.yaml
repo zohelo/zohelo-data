@@ -132,12 +132,111 @@ deliverables:
     depends_on: [data/metadata/catalogue-v1/seeds]
     done_when:
       - the §3.4 entities exist as dbt models with tests (unique keys, not null names)
+    tasks:
+      - key: data/metadata/catalogue-v1/models/licence-source
+        type: Task
+        title: Seed licences and sources; add licence and register id to dim_source
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/metadata/catalogue-v1/seeds/kpi]
+        context: >-
+          warehouse/models/gold/poc_dim_source.sql (gold.dim_source) is a VALUES list of the 10 sources without
+          licence or register id; catalog.json needs both and licences[] (docs/published.md). The rows of
+          both seeds are in .github/backlog/assets/catalogue-seeds.md (tables licence.csv, source.csv).
+        files:
+          - create: warehouse/seeds/licence.csv
+          - create: warehouse/seeds/source.csv
+          - create: warehouse/seeds/_seeds.yml
+          - edit: warehouse/models/gold/poc_dim_source.sql
+          - edit: warehouse/models/gold/_gold.yml
+          - edit: warehouse/warehouse.yaml
+          - edit: ops/repo_check.py
+        steps:
+          - "Create licence.csv (8 rows) and source.csv (10 rows) exactly as the two tables of the assets file."
+          - "poc_dim_source.sql: keep the config; replace the VALUES query by `select source_key as source_system, name_pl, name_en, publisher, family, block_kind, register_id, provider_type, licence_key, url from {{ ref('source') }}`."
+          - "_seeds.yml (version: 2, seeds:): licence.licence_key tests [not_null, unique]; source.source_key and source.register_id tests [not_null, unique]; source.licence_key a relationships test to ref('licence') field licence_key (syntax as in _gold.yml)."
+          - "_gold.yml poc_dim_source: column register_id, tests [not_null, unique]."
+          - "warehouse.yaml gold list: new line after the gold.unit line: `gold.licence, gold.source,  # seeds warehouse/seeds/licence.csv, source.csv`."
+          - "ops/repo_check.py register(): read both CSVs (csv.DictReader); a problem when a source.csv register_id is not the register entry whose source_system is its source_key, when a register source_system has no row, or a licence_key is not in licence.csv."
+          - "Dev trial: dev/catalogue_seeds_trial.py modelled on `git show b62f65e:dev/seeds_trial.py`: namespace zz_dev_licence_source, select 'licence source poc_dim_source', annotate notice 'rows: licence <n>, source <n>, dim_source <n>'; --drop as there. Run, then --drop; delete dev/ before the PR."
+        acceptance:
+          - "licence.csv 8 rows, source.csv 10 rows, keys as in the assets file"
+          - "repo_check fails when a register_id is changed to GL-002 (try, revert)"
+          - "trial: 8, 10 and 10 rows; tests pass"
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: Dev · branch runs, script catalogue_seeds_trial, on the branch
+            expect: "notice 'rows: licence 8, source 10, dim_source 10', then 'dropped zz_dev_licence_source'"
+        out_of_scope: [ingestion/register.yaml, other catalogue models]
+      - key: data/metadata/catalogue-v1/models/dim-dataset
+        type: Task
+        title: Build gold.dim_dataset from gold.coverage
+        effort: S
+        state: open
+        contract: true
+        depends_on: [data/warehouse/gold-v1/fold/cutover]
+        context: >-
+          The catalogue lists datasets (blocks a source publishes, key like eurostat:UNE_RT_A; program plan
+          §3.4). gold.coverage (dbt source gold_coverage.coverage, written by ingestion/common/coverage.py)
+          has one row per block and source with status, versions and checked_at; DBW has one row per
+          yearly file. The `coverage` CTE of warehouse/models/gold/poc_dim_measure.sql already normalises
+          block ids for five sources; dim_dataset uses the same rules for every source.
+        files:
+          - create: warehouse/models/gold/dim_dataset.sql
+          - create: warehouse/models/gold/dim_dataset.yml
+          - edit: warehouse/warehouse.yaml
+        steps:
+          - "dim_dataset.sql (no config): from source('gold_coverage', 'coverage'), normalise block_id and block_name with the two CASE expressions of the poc_dim_measure `coverage` CTE, without its source filter; group by source and the normalised block_id."
+          - "Columns: source || ':' || block_id as dataset_key, source as source_key, block_id as code, any_value(block_name) as name, min(status) as status, max(published_version) as published_version, max(landed_version) as landed_version, bool_and(in_bronze) as in_bronze, sum(silver_rows) as silver_rows, count(*) as files, max(checked_at) as checked_at."
+          - "dim_dataset.yml: version 2, model dim_dataset with a one-line description; tests dataset_key [not_null, unique], source_key [not_null], status [not_null]."
+          - "warehouse.yaml: gold list, new line after the gold.coverage line: `gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)`; full_rebuild, last entry: `dim_dataset: {rows: 40000}`."
+          - "Dev trial: dev/dim_dataset_trial.py modelled on `git show b62f65e:dev/seeds_trial.py`: namespace zz_dev_dim_dataset, select 'dim_dataset', annotate notice 'dim_dataset: <n> rows' with the row count per source_key; --drop. Run, then --drop; delete dev/ before the PR."
+        acceptance:
+          - "tests pass in the trial; every source of gold.coverage has rows; total ≤ 40,000"
+          - "sqlfluff and repo_check pass"
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: Dev · branch runs, script dim_dataset_trial, on the branch
+            expect: "notice 'dim_dataset: <n> rows' with counts for eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp; then 'dropped zz_dev_dim_dataset'"
+        out_of_scope: [poc_dim_measure.sql, names in two languages and native themes (later Task), freshness]
+      - key: data/metadata/catalogue-v1/models/kpi-dimension
+        type: Task
+        title: Build gold.kpi_dimension from the KPIs' measures
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/warehouse/gold-v1/fold/cutover, data/metadata/catalogue-v1/seeds/kpi]
+        context: >-
+          catalog.json needs each KPI's dimensions (docs/published.md kpis[].dimensions, geo_levels). Gold
+          already has which measures belong to a KPI (poc_concept_measures: concept_key = kpi_key,
+          measure_key, source_system), which dimensions a measure offers (poc_measure_dimensions: measure_key,
+          dimension, members, member_count, has_unmatched; dimension 'geography' lists level names, 'time'
+          lists frequencies) and each measure's range (poc_dim_measure.first_date, last_date).
+        files:
+          - create: warehouse/models/gold/kpi_dimension.sql
+          - create: warehouse/models/gold/kpi_dimension.yml
+          - edit: warehouse/warehouse.yaml
+        steps:
+          - "kpi_dimension.sql (no config): from ref('poc_concept_measures') cm inner join ref('poc_measure_dimensions') md on measure_key inner join ref('poc_dim_measure') m on measure_key; select cm.concept_key as kpi_key, md.dimension as dimension_key, cm.measure_key, cm.source_system, md.members, md.member_count, md.has_unmatched, m.first_date, m.last_date."
+          - "kpi_dimension.yml: version 2; tests kpi_key [not_null, relationships to ref('kpi') field kpi_key], dimension_key [not_null], measure_key [not_null, relationships to ref('poc_dim_measure') field measure_key]."
+          - "warehouse.yaml: gold list, new line after the gold.domain line: `gold.kpi_dimension,  # catalogue: dimensions per KPI and measure`; full_rebuild, after poc_measure_dimensions: `kpi_dimension: {rows: 10000}`."
+          - "Dev trial: dev/kpi_dimension_trial.py modelled on `git show b62f65e:dev/seeds_trial.py`: namespace zz_dev_kpi_dimension; select 'gold' plus every seed name (file names in warehouse/seeds/ without .csv); annotate notice 'kpi_dimension: <n> rows' with, per kpi of kpi.csv with status published, the list of its dimension_keys; --drop. Run, then --drop; delete dev/ before the PR."
+        acceptance:
+          - "each published KPI (population, gdp_current_prices, inflation, unemployment_rate, fx_rate) has rows for geography and time"
+          - "all tests pass in the trial; rows ≤ 10,000; repo_check passes"
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: Dev · branch runs, script kpi_dimension_trial, on the branch
+            expect: "notice 'kpi_dimension: <n> rows', every published KPI lists geography and time; then 'dropped zz_dev_kpi_dimension'"
+        out_of_scope: [dim_dimension and dim_member, the poc_* models, publish.py]
     todo:
-      - "dim_source from ingestion/register.yaml (a Python model or a generated seed) with licence_key"
-      - "dim_dataset from gold.coverage + Silver metadata; dim_measure from the PoC dim_measure"
-      - "dim_dimension, dim_member, kpi_dimension from measure_dimensions and dim_series"
-      - "licence.csv seed from register licence fields; dim_licence (unit.csv already exists from seeds/kpi)"
-      - "freshness from gold.coverage (checked_at, loaded_at, lag_days)"
+      - "dim_dataset: native theme path, frequency_keys and PL/EN names from Silver metadata; dim_measure from the PoC dim_measure"
+      - "dim_dimension, dim_member from measure_dimensions and dim_series"
+      - "freshness from gold.coverage (checked_at, loaded_at, lag_days): needs a decision on where loaded_at comes from (gold.coverage has no load time)"
   - key: data/metadata/catalogue-v1/domain-mapping
     title: Source themes mapped to domains
     depends_on: [data/metadata/catalogue-v1/seeds]

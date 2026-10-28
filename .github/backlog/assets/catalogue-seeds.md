@@ -137,3 +137,39 @@ Mapping from the `unit` text in `poc_concepts` (warehouse/macros/poc_blocks.sql)
 
 `published` = the five metrics zohelo-bi shows today (population, gdp_current_prices, inflation,
 unemployment_rate, fx_rate).
+
+## licence.csv — columns licence_key,name,url,attribution_text,commercial_ok,share_alike
+
+From the `licence.notes` of the onboarded register entries (architect, 28 Oct 2026). One row per distinct terms;
+attribution is the publisher's own wording. `unresolved` = terms not established (no commercial reuse claimed).
+
+| licence_key | name | url | attribution_text | commercial_ok | share_alike |
+|---|---|---|---|---|---|
+| eurostat_reuse | Eurostat reuse policy (Commission Decision 2011/833/EU, CC BY 4.0) | https://ec.europa.eu/eurostat/web/main/help/copyright-notice | Source: Eurostat | true | false |
+| cc_by_4_0_world_bank | CC BY 4.0 (World Bank) | https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators | Source: World Bank, World Development Indicators | true | false |
+| cc_by_4_0_gus | CC BY 4.0 (GUS) | https://creativecommons.org/licenses/by/4.0/ | Źródło: GUS / Source: Statistics Poland | true | false |
+| open_data_act_teryt | Open Data Act re-use (GUS TERYT) | https://eteryt.stat.gov.pl/eTeryt/rejestr_teryt/udostepnianie_danych/formy_i_zasady_udostepniania/formy_i_zasady_udostepniania.aspx | Źródło: GUS, TERYT | true | false |
+| free_use_prg | Free use (GUGiK PRG) | https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/ | Źródło: GUGiK, PRG | true | false |
+| cc0_gleif | CC0 1.0 (GLEIF) | https://www.gleif.org/en/meta/lei-data-terms-of-use | Source: GLEIF | true | false |
+| mf_flat_file | MF VAT list flat file (republication not stated) | https://www.podatki.gov.pl/vat/bezpieczna-transakcja/wykaz-podatnikow-vat/plik-plaski/ | Źródło: Ministerstwo Finansów, Wykaz podatników VAT | false | false |
+| unresolved | Terms not established | https://github.com/zohelo/zohelo-data/blob/main/ingestion/register.yaml | Source: see the source register | false | false |
+
+## source.csv — columns source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+
+The ten onboarded sources (`source_system` in ingestion/register.yaml). name_pl … block_kind are today's values of
+`warehouse/models/gold/poc_dim_source.sql`; register_id, provider_type and url (`access.endpoint`) from the register.
+
+| source_key | register_id | name_pl | name_en | publisher | family | block_kind | provider_type | licence_key | url |
+|---|---|---|---|---|---|---|---|---|---|
+| eurostat | GL-001 | Eurostat | Eurostat | European Commission | cube | dataset | international-public | eurostat_reuse | https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction |
+| gus_bdl | PLS-001 | GUS Bank Danych Lokalnych | GUS Local Data Bank | GUS | cube | subgroup | national-public | cc_by_4_0_gus | https://api.stat.gov.pl/Home/BdlApi |
+| gus_dbw | PLS-002 | GUS Dziedzinowe Bazy Wiedzy | GUS Knowledge Databases | GUS | cube | file (indicator × section × presentation × periodicity × year) | national-public | cc_by_4_0_gus | https://api.stat.gov.pl/Home/DBWApi?lang=en |
+| world_bank_wdi | GL-005 | World Bank WDI | World Bank World Development Indicators | World Bank | cube | indicator | international-public | cc_by_4_0_world_bank | https://datatopics.worldbank.org/world-development-indicators/ |
+| nbp | PLG-001 | NBP kursy walut i cena złota | NBP exchange rates and gold price | Narodowy Bank Polski | cube | table | national-public | unresolved | https://api.nbp.pl/en.html |
+| gleif | CD-015 | GLEIF | GLEIF LEI golden copy | GLEIF | registry | file | international-public | cc0_gleif | https://www.gleif.org/en/lei-data/access-and-use-lei-data |
+| opendata_org | EX-005 | OpenData ODO Senzing | OpenData organisations, people, locations | OpenData | registry | snapshot member | unknown | unresolved | |
+| mf_biala_lista | PLG-011 | MF biała lista VAT | MF VAT white list (flat file) | Ministerstwo Finansów | lookup | file | national-public | mf_flat_file | https://www.podatki.gov.pl/wykaz-podatnikow-vat-wyszukiwarka |
+| gus_teryt | PLS-007 | GUS TERYT | GUS TERYT register | GUS | reference | file | national-public | open_data_act_teryt | https://eteryt.stat.gov.pl/eteryt/rejestr_teryt/udostepnianie_danych/baza_teryt/baza_teryt.aspx |
+| gugik_prg | PL-ENV-001 | GUGiK PRG | GUGiK state register of boundaries | GUGiK | reference | file | national-public | free_use_prg | https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl |
+
+Quote CSV fields that contain a comma (several names, the gus_dbw block_kind). opendata_org has an empty url.

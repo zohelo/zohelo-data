@@ -26,8 +26,41 @@ deliverables:
     title: Demo namespaces and conventions
     done_when:
       - inventory, tracker and retire rules know demo_*; docs/architecture.md describes them
-    todo:
-      - "Declare demo namespaces in warehouse.yaml; inventory flags them as declared"
+    tasks:
+      - key: data/warehouse/demo/namespaces/declare
+        type: Task
+        title: Declare the demo namespaces for inventory, tracker and retire
+        effort: S
+        state: open
+        contract: false
+        context: >-
+          Demo data will live in catalog namespaces demo_bronze, demo_silver, demo_gold (program plan §3.3).
+          Today ops/platform_inventory.py namespace_check() calls a namespace undeclared unless it is
+          bronze/silver/gold or holds a declared table, and ops/tracker.py classify() calls every table outside
+          those three 'other' (ops/retire_tables.py candidates() uses classify). The namespaces must be declared
+          once, in warehouse/warehouse.yaml, and read by these scripts.
+        files:
+          - edit: warehouse/warehouse.yaml
+          - edit: ops/platform_inventory.py
+          - edit: ops/tracker.py
+          - edit: ops/retire_tables.py
+          - edit: docs/architecture.md
+        steps:
+          - "warehouse.yaml, after the gold list: `demo_namespaces: [demo_bronze, demo_silver, demo_gold]  # phase 2 demo warehouse (program plan §3.3); never in the public catalogue`."
+          - "platform_inventory.namespace_check(): new keyword parameter declared_namespaces: Iterable[str] = (), added to `known`; main() passes platform.get('demo_namespaces') or [] (platform is already loaded there)."
+          - "tracker.classify(): new keyword parameter demo_namespaces: Iterable[str] = (); a table whose namespace is in it returns ('current', 'demo') before the LAYERS check. main(): pass platform.get('demo_namespaces') or [] to namespace_check (declared_namespaces=) and to classify."
+          - "retire_tables.candidates(): pass platform.get('demo_namespaces') or [] to classify, so demo tables are never candidates."
+          - "docs/architecture.md, after the Published bullet: '- **Demo** (phase 2) — sample enterprise data in namespaces demo_bronze, demo_silver, demo_gold (warehouse.yaml demo_namespaces); never in the public catalogue.'"
+        acceptance:
+          - "namespace_check reports a declared demo namespace neither undeclared nor scratch"
+          - "classify('demo_gold.x', {}, [], demo_namespaces=['demo_gold']) is ('current', 'demo')"
+          - "ruff and repo_check pass"
+        verify:
+          - run: "python -c \"from ops.platform_inventory import namespace_check as n;from ops.tracker import classify as c;r=n(['demo_gold','zz_dev_a'],[],[],[],declared_namespaces=['demo_gold']);print(r['undeclared_namespaces'],c('demo_gold.x',{},[],demo_namespaces=['demo_gold']))\""
+            expect: "['zz_dev_a'] ('current', 'demo')"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [creating the namespaces, demo sources and models, ops/orphan_files.py]
   - key: data/warehouse/demo/ingestion
     title: Demo sources ingested
     depends_on: [data/warehouse/demo/namespaces]

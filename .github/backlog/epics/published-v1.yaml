@@ -99,8 +99,39 @@ deliverables:
     depends_on: [data/published/published-v1/contract, data/metadata/catalogue-v1, data/metadata/semantic-manifest/generate]
     done_when:
       - warehouse.yaml lists gold.publish; Pipeline runs it after the build; files present
+    tasks:
+      - key: data/published/published-v1/publish/kpi-latest
+        type: Task
+        title: Write kpi/<kpi_key>/latest.json from Gold (warehouse/publish.py)
+        effort: L
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/contract/schemas]
+        context: >-
+          06_published/v1/kpi/<kpi_key>/latest.json (docs/published.md, schema kpi_latest.schema.json) has
+          no writer. warehouse/publish.py becomes the only writer of 06_published/ (D5); the architect wrote
+          its shared parts and the latest.json rules in .github/backlog/assets/publish-writers.md.
+        files:
+          - create: warehouse/publish.py
+          - edit: docs/published.md
+        steps:
+          - "Create warehouse/publish.py with a module docstring (gold.publish, sole writer, docs/published.md) and every item of the assets file's section 'Shared parts', as written."
+          - "Add kpi_latest, checked and main exactly as the section 'kpi/<kpi_key>/latest.json' of the assets file says."
+          - "docs/published.md, under the latest.json table: one paragraph with rules 1–4 of the assets file in plain words and the fx_rate skip."
+          - "dev/publish_latest_trial.py: call main(prefix='zz_dev_published/v1/') (reads prod Gold), then delete every object under zz_dev_published/ and annotate notice 'deleted <n>'. Run it in Dev; delete dev/ before the PR."
+        acceptance:
+          - "the local verify prints 2 values, previous_period 2024 and no schema problem"
+          - "trial: 4 files written (population, gdp_current_prices, inflation, unemployment_rate), each with PL, then removed"
+        verify:
+          - run: "python -c \"import json,datetime as d,pyarrow as pa;from warehouse.publish import kpi_latest;from ops.repo_check import _schema_problems as p;t=pa.table({'source_system':['eurostat']*3,'measure_key':['m']*3,'geography_key':['PL','PL','TERC:12'],'geography_level':['country','country','wojewodztwo'],'date_key':[d.date(2025,1,1),d.date(2024,1,1),d.date(2025,1,1)],'frequency':['A']*3,'value':[3.2,2.9,2.6],'observation_status_key':['ok','ok','provisional']});r=kpi_latest(t,[],{},'unemployment_rate','pct_labour_force','2026-01-01T00:00:00Z');print(len(r['values']),r['values'][0]['previous_period'],p(r,json.load(open('warehouse/published/schemas/kpi_latest.schema.json')),'$'))\""
+            expect: "2 2024 []"
+          - workflow: Dev · branch runs, script publish_latest_trial, on the branch
+            expect: "notice 'gold.publish: latest' with 4 KPIs written, skipped fx_rate, missing []; then the deleted count"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [series.parquet, catalog, manifest, geo, feed, warehouse.yaml activity, pipeline.yml]
     todo:
-      - "warehouse/publish.py (sole writer): catalog.json + parquet, manifest.json (object built by warehouse/catalog.py), kpi extracts, geo (simplified from PRG), feed"
+      - "warehouse/publish.py (sole writer): catalog.json + parquet, manifest.json (object built by warehouse/catalog.py), kpi series.parquet, geo (simplified from PRG), feed"
       - "Add activity to warehouse.yaml and pipeline.yml job order (after silver-gold-build)"
       - "Delete _portal_catalog/v1 writer and objects after both portals switch"
   - key: data/published/published-v1/tests
