@@ -1677,9 +1677,15 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Each dataset has terms; public ECMWF site content may be CC BY 4.0 only when no separate notice applies.
-      Store accepted licence per dataset.
+    status: open-conditional
+    notes: 'Terms: CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ for Copernicus Products in the Climate Data
+      Store since 2 July 2025 (ECMWF announcement https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464,
+      replacing the Licence to Use Copernicus Products): reuse, modification and commercial use allowed with attribution
+      and indication of changes; non-Copernicus datasets in the CDS keep their own licence, shown on each dataset
+      page and accepted per dataset with the personal token. Disclaimer to show: neither the European Commission
+      nor ECMWF is responsible for any use made of the information. Attribution: "Generated using Copernicus Climate
+      Change Service information <year>" ("Contains modified Copernicus Climate Change Service information <year>"
+      when modified), plus the dataset''s citation from its References section.'
   updates: Datasets can be corrected or extended; schedules vary.
   ingestion:
     history: Chunk by dataset/variable/time/grid with manifest and licence snapshot.
@@ -1693,11 +1699,16 @@ sources:
     priority: specialist
     evidence: documented
     connection: not-tested
-    blockers: [Account/token workflow, Per-dataset terms registry, Large-volume cost/storage design, Monitor corrections]
+    blockers:
+    - Account/token workflow
+    - Record each chosen dataset's licence (non-Copernicus datasets keep their own) and accept it with the token
+    - Large-volume cost/storage design
+    - Monitor corrections
     references:
     - https://cds.climate.copernicus.eu/
     - https://cds.climate.copernicus.eu/how-to-api
     - https://www.ecmwf.int/en/terms-use
+    - https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464
 - id: GL-037
   name: EEA Datahub
   short_name: EEA Datahub
