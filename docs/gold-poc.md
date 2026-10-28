@@ -1,3 +1,5 @@
+Superseded by docs/model.md § Gold v1 after the fold
+
 # Gold dimensional model — proof of concept
 
 Status: **PoC under owner review** (October 2026). Design: the owner's doc "Gold dimensional

@@ -39,7 +39,7 @@ export const toCurrentConnection = (provider: ConnectionProvider): CurrentConnec
 });
 
 /** The catalog name shown in the UI for a connection. */
-export const currentDatabaseLabel = (provider: ConnectionProvider): string => {
+const currentDatabaseLabel = (provider: ConnectionProvider): string => {
   switch (provider.scope) {
     case "OPFS":
       return provider.path?.replace(/\.db$/, "") || "opfs";

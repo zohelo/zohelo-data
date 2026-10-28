@@ -10,7 +10,7 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#039;");
 }
 
-export interface TooltipPluginOptions {
+interface TooltipPluginOptions {
   stacked?: boolean;
 }
 

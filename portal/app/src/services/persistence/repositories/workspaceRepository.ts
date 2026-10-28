@@ -1,7 +1,7 @@
 import { isUsingOpfs, getSystemConnection, sqlQuote } from "../systemDb";
 import { fallbackPut, fallbackGet } from "../fallback";
 
-export interface WorkspaceState {
+interface WorkspaceState {
   profile_id: string;
   tabs: string; // JSON array
   active_tab_id: string | null;

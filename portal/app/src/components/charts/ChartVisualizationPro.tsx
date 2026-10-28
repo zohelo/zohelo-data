@@ -298,7 +298,7 @@ function ChartLegend({
 
 // ── Main Component ───────────────────────────────────────────────────────────
 
-export const ChartVisualizationPro: React.FC<ChartVisualizationProProps> = ({
+const ChartVisualizationPro: React.FC<ChartVisualizationProProps> = ({
   result,
   chartConfig,
   onConfigChange,

@@ -24,6 +24,9 @@ After the initial load, choose the production load per source:
 | `schedule` | `null` (manual) until the owner approves one; daily is the target where the source refreshes that often |
 | `excluded` | optional list of `{id, reason, issue}`: entities the source cannot serve, skipped and counted with their reason so a known failure does not fail every run; a new failure still fails the run (implemented for GUS DBW indicators) |
 
+GUS BDL steady state: `landing.extract` with filter `refresh` checks today's share of the held
+subgroups against the API, reloads changed ones whole, then lands the variables of new versions.
+
 ## Layout
 
 ```

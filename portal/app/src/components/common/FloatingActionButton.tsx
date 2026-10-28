@@ -11,7 +11,7 @@ interface FloatingActionButtonProps {
   variant?: "default" | "outline" | "secondary";
 }
 
-export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
+const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   onClick,
   icon: Icon,
   label,

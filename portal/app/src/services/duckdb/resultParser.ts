@@ -158,7 +158,7 @@ const MAX_SAFE = 9007199254740991n; // Number.MAX_SAFE_INTEGER
  * complement) as the unscaled BigInt. Covers Decimal128 (4 words) and
  * Decimal256 (8 words). Exported for tests.
  */
-export const decimalWordsToBigInt = (words: Uint32Array | Int32Array): bigint => {
+const decimalWordsToBigInt = (words: Uint32Array | Int32Array): bigint => {
   let unscaled = 0n;
   for (let i = words.length - 1; i >= 0; i--) {
     unscaled = (unscaled << 32n) | BigInt(words[i] >>> 0);
@@ -175,7 +175,7 @@ export const decimalWordsToBigInt = (words: Uint32Array | Int32Array): bigint =>
  * exactly representable, otherwise a lossless decimal string (DuckDB decimals
  * go up to 38 digits — far past 2^53). Exported for tests.
  */
-export const formatDecimal = (unscaled: bigint, scale: number): number | string => {
+const formatDecimal = (unscaled: bigint, scale: number): number | string => {
   const negative = unscaled < 0n;
   const abs = negative ? -unscaled : unscaled;
   let text: string;
@@ -209,7 +209,7 @@ const decimalCellToJs = (value: unknown, scale: number): number | string | null 
  * millis; formatting through local time shifts it a day west of UTC (#15), so
  * this goes through the UTC getters. Exported for tests.
  */
-export const dateCellToIso = (value: unknown): string | null => {
+const dateCellToIso = (value: unknown): string | null => {
   if (value === null || value === undefined) return null;
   const ms = value instanceof Date ? value.getTime() : Number(value);
   if (!Number.isFinite(ms)) return String(value);
@@ -217,7 +217,7 @@ export const dateCellToIso = (value: unknown): string | null => {
 };
 
 /** TIME columns → "HH:MM:SS[.ffffff]". Exported for tests. */
-export const timeCellToString = (value: unknown, unit: TimeUnit): string | null => {
+const timeCellToString = (value: unknown, unit: TimeUnit): string | null => {
   if (value === null || value === undefined) return null;
   const raw = typeof value === "bigint" ? value : BigInt(Math.trunc(Number(value)));
   const perSecond =

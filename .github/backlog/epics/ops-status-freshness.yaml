@@ -24,12 +24,74 @@ deliverables:
     title: Status file published
     done_when:
       - gold.publish writes status.json from gold.freshness
+    tasks:
+      - key: data/ops/status-freshness/status-json/next-expected
+        type: Task
+        title: Compute each source's next scheduled run from its crons
+        effort: S
+        state: open
+        context: >-
+          status.json needs next_expected_at per source. The schedules are declared in
+          ingestion/sources/<source>.yaml under extraction.schedule (UTC crons, e.g. nbp
+          "30 11 * * 1-5"). ingestion/common/scheduler.py already parses crons (parse, matches) and
+          finds the latest slot backwards (last_slot, CATCH_UP_DAYS = 32); nothing finds the next slot.
+          run.py `schedule --check` validates schedules and prints JSON.
+        files:
+          - edit: ingestion/common/scheduler.py
+          - edit: run.py
+          - edit: docs/operating.md
+        steps:
+          - "scheduler.py: add next_slot(cron: str, start: datetime) -> datetime | None, the earliest cron minute strictly after start within CATCH_UP_DAYS, written as the mirror of last_slot (days forward, hours and minutes ascending, seconds and microseconds zeroed)."
+          - "scheduler.py: add next_runs(config: dict, now: datetime) -> dict[str, str]: for every source in config['sources'] with at least one extraction.schedule entry, the minimum next_slot over its entries as ISO 8601 UTC with 'Z' (format '%Y-%m-%dT%H:%MZ'); sources without a schedule are left out; source 'platform' is left out; keys sorted."
+          - "run.py: `schedule` gets the flag --next (help 'print each source's next scheduled run'); with it print json.dumps({'now': <now ISO, same format>, 'next': next_runs(config, now)}) and return 0, before the --check branch; now = datetime.now(UTC)."
+          - "docs/operating.md: one sentence where `run.py schedule --check` is described: '`python run.py schedule --next` prints each scheduled source's next run (UTC), the basis of next_expected_at in status.json.'"
+        acceptance:
+          - "every source with a schedule appears once; each value is later than now and at most 32 days ahead"
+          - "for nbp the value is a weekday at 11:30Z"
+          - "ruff and repo_check pass"
+        verify:
+          - run: PYTHONPATH=. python run.py schedule --next
+            expect: "JSON with 'now' and 'next'; next.nbp ends with 'T11:30Z' and falls on Monday–Friday"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope:
+          - lag rules and status.json itself (next Task, after the published layer)
+          - changing any schedule
     todo:
-      - "Expected next update per source from its schedule; lag rule per frequency"
-      - "Write status.json in gold.publish"
+      - "Lag rule per frequency (late = now > next_expected_at + one period of the source's release frequency)"
+      - "Write status.json in gold.publish (after data/published/published-v1/publish)"
   - key: data/ops/status-freshness/green-gate
     title: 14-day green gate report
     done_when:
       - tracker (or a new mode) annotates consecutive green scheduled days per source
-    todo:
-      - "Extend ops/tracker.py to count consecutive green scheduled runs per source from the Actions API"
+    tasks:
+      - key: data/ops/status-freshness/green-gate/green-days
+        type: Task
+        title: Report green scheduled days in a row per source (tracker --green-days)
+        effort: M
+        state: open
+        context: >-
+          Phase 1 exit: every onboarded source green on 14 scheduled days in a row. Scheduled source runs
+          are Pipeline runs with triggering_actor.login "github-actions[bot]" and display_title
+          "Pipeline · <source> · <run>". ops/tracker.py needs R2 for its page; the Ops job already passes
+          GH_PROJECT_TOKEN (actions: read) to tracker.
+        files:
+          - edit: ops/tracker.py
+          - edit: ops/README.md
+        steps:
+          - "tracker.py: scheduled_runs(token, repo, days=30): Pipeline runs (workflows/pipeline.yml/runs, status=completed, created='>=<date 30 days ago>', per_page=100, paged until a short page) whose triggering_actor.login is 'github-actions[bot]'."
+          - "tracker.py: green_days(found, ids) -> dict: per id, runs whose display_title starts with f'Pipeline · {id} · ', grouped by created_at[:10]; a day is red if any run concluded failure or timed_out, else green; count green days newest first until the first red day. Value {'green_days': n, 'last_red': date or None, 'days_with_runs': n}."
+          - "main(): flag --green-days runs before any R2 or catalog call: ids = sources() keys with a non-empty extraction.schedule; print a Markdown table (source, green days, last red day, days with runs) and step_summary it; annotate notice 'tracker: green days' {id: green_days}; return 0. No GH_PROJECT_TOKEN: raise RuntimeError."
+          - "ops/README.md tracker row: add '`--green-days`: only the scheduled-run streak per source (no R2), for the phase 1 exit (14 days)'."
+        acceptance:
+          - "--green-days needs no R2 credentials and writes no issue"
+          - "a source with no scheduled run in 30 days shows 0 green days and 0 days with runs"
+          - "ruff and repo_check pass"
+        verify:
+          - run: "python -c \"from ops.tracker import green_days as g;r=[{'display_title':'Pipeline · nbp · x','created_at':d,'conclusion':c} for d,c in [('2026-10-28T11:30Z','success'),('2026-10-27T11:30Z','success'),('2026-10-26T11:30Z','failure')]];print(g(r,['nbp','eurostat']))\""
+            expect: "nbp green_days 2, last_red 2026-10-26; eurostat green_days 0"
+          - workflow: Ops (ops.yml), script tracker, args --green-days
+            expect: "green; notice 'tracker: green days' with one entry per scheduled source"
+        out_of_scope:
+          - the tracker page and issue (unchanged)
+          - scheduling --green-days (decided when the phase exit is near)

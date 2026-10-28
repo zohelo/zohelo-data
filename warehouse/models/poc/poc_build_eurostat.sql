@@ -89,25 +89,28 @@ kept as (  -- the PoC sample: small, with breakdowns where they matter (sex), on
 split as (
     select
         *,
-        list_filter(list_zip(dim_list, code_list), x -> list_contains(measure_dims, x[1])) as measure_pairs,
-        list_filter(list_zip(dim_list, code_list), x -> not list_contains(measure_dims, x[1])) as breakdown_pairs
+        list_filter(list_zip(dim_list, code_list), lambda x: list_contains(measure_dims, x[1])) as measure_pairs,
+        list_filter(list_zip(dim_list, code_list), lambda x: not list_contains(measure_dims, x[1])) as breakdown_pairs
     from kept
 ),
 
 shaped as (
     select
         s.*,
-        array_to_string(list_transform(s.measure_pairs, x -> x[2]), ':') as measure_codes,
+        array_to_string(list_transform(s.measure_pairs, lambda x: x[2]), ':') as measure_codes,  -- noqa: RF02
         cast(
             to_json(
-                map(list_transform(s.breakdown_pairs, x -> x[1]), list_transform(s.breakdown_pairs, x -> x[2]))
+                map(
+                    list_transform(s.breakdown_pairs, lambda x: x[1]),  -- noqa: RF02
+                    list_transform(s.breakdown_pairs, lambda x: x[2])  -- noqa: RF02
+                )
             ) as varchar
         )
             as breakdown_json,
         case
             when s.total_breakdown = '' then len(s.breakdown_pairs) = 0
             else
-                list_sort(list_transform(s.breakdown_pairs, x -> x[2]))
+                list_sort(list_transform(s.breakdown_pairs, lambda x: x[2]))  -- noqa: RF02
                 = list_sort(string_split(s.total_breakdown, ','))
         end as is_total,
         case s.freq_code
