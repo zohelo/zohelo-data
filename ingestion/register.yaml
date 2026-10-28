@@ -519,7 +519,7 @@ sources:
   name: World Economic Outlook (WEO) Database
   short_name: IMF WEO
   provider: International Monetary Fund
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -559,6 +559,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Parked: IMF terms prohibit bulk download by automated technology without explicit permission (https://www.imf.org/en/about/copyright-and-terms);
+      owner to request it from copyright@imf.org'
     - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
     - 'Resolve API account and production status'
     - 'Seek/record IMF response for intended commercial reuse'
