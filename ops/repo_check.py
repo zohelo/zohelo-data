@@ -8,6 +8,7 @@ dbt parse and the secret scan run as their own steps of the job.
 
 from __future__ import annotations
 
+import csv
 import os
 from pathlib import Path
 import re
@@ -327,6 +328,27 @@ def register(files: list[Path]) -> list[str]:
     declared = {f.stem for f in files if f.parent == Path("ingestion/sources") and f.suffix == ".yaml"}
     problems += [f"register: source_system {s} has no ingestion/sources/{s}.yaml" for s in sorted(linked - declared)]
     problems += [f"register: ingestion/sources/{s}.yaml is not in the register" for s in sorted(declared - linked)]
+    seeds = ROOT / "warehouse" / "seeds"
+    with open(seeds / "licence.csv", newline="", encoding="utf-8") as f:
+        licences = {r["licence_key"] for r in csv.DictReader(f)}
+    with open(seeds / "source.csv", newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    by_system = {e["source_system"]: e.get("id") for e in entries if e.get("source_system")}
+    problems += [
+        f"register: source.csv {r['source_key']}: register_id {r['register_id']}"
+        f" is not {by_system.get(r['source_key'])}"
+        for r in rows
+        if by_system.get(r["source_key"]) != r["register_id"]
+    ]
+    problems += [
+        f"register: source_system {s} has no row in source.csv"
+        for s in sorted(linked - {r["source_key"] for r in rows})
+    ]
+    problems += [
+        f"register: source.csv {r['source_key']}: licence_key {r['licence_key']} is not in licence.csv"
+        for r in rows
+        if r["licence_key"] not in licences
+    ]
     return problems
 
 
