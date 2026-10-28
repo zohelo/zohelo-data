@@ -56,6 +56,21 @@ Actions. There is no repository test suite; the `check` job in `dev.yml` runs on
 pull request (compile, lint, YAML, configuration consistency, dbt parse) and must pass
 before merge. Quality rules: [quality.md](quality.md).
 
+### Dev trials
+
+A Dev trial is one `dev/<name>_trial.py` on the feature branch, run with the Dev workflow. Every trial:
+
+- writes only to a scratch namespace or prefix named `zz_dev_<branch topic>` and drops it at the end, also on failure
+  (`try`/`finally`);
+- never calls a production publisher directly: `warehouse/catalog.py publish()`, `gold.publish`
+  (`warehouse/publish.py`) or anything else that writes `_portal_catalog/`, `06_published/` or a production namespace.
+  `catalog.publish()` skips itself outside the Pipeline on `main` (#2112); other writers have no such guard, so a trial
+  checks every write target it adds;
+- reports what it wrote (namespace, tables, counts) as annotations, and the PR body cites the trial run id.
+
+Do not copy an older trial script from branch history without checking it against this list: `dev/seeds_trial.py`
+(commit b62f65e) rewrote the production catalog from a branch (#2106).
+
 Schedules are declared under `schedule:` in each source's YAML and in
 `warehouse/warehouse.yaml` (cron in UTC + run + optional filter). The Pipeline's
 `scheduler` job (`python run.py schedule`) starts the runs that are due. It runs on GitHub's
