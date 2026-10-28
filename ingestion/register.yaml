@@ -1635,9 +1635,8 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Each dataset has terms; public ECMWF site content may be CC BY 4.0 only when no separate notice applies.
-      Store accepted licence per dataset.
+    status: open-conditional
+    notes: 'Terms: since 2 July 2025 the Licence to use Copernicus Products in the CDS is replaced by CC BY 4.0 (https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464); commercial reuse and modification allowed. Each datasets References section gives its citation; a dataset with its own licence keeps it (check the dataset page before onboarding). Attribution (https://confluence.ecmwf.int/spaces/CKB/pages/197704114): "Generated using Copernicus Climate Change Service information <year>" ("Contains modified Copernicus Climate Change Service information <year>" when changed). Disclaimer: "Neither the European Commission nor ECMWF is responsible for any use that may be made of the Copernicus information or data it contains."'
   updates: Datasets can be corrected or extended; schedules vary.
   ingestion:
     history: Chunk by dataset/variable/time/grid with manifest and licence snapshot.
@@ -1651,11 +1650,16 @@ sources:
     priority: specialist
     evidence: documented
     connection: not-tested
-    blockers: [Account/token workflow, Per-dataset terms registry, Large-volume cost/storage design, Monitor corrections]
+    blockers:
+    - 'Account/token workflow'
+    - 'Large-volume cost/storage design'
+    - 'Monitor corrections'
     references:
     - https://cds.climate.copernicus.eu/
     - https://cds.climate.copernicus.eu/how-to-api
     - https://www.ecmwf.int/en/terms-use
+    - https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464
+    - https://confluence.ecmwf.int/spaces/CKB/pages/197704114/How+to+acknowledge+and+cite+a+Climate+Data+Store+CDS+catalogue+entry+and+the+data+published+as+part+of+it
 - id: GL-037
   name: EEA Datahub
   short_name: EEA Datahub
