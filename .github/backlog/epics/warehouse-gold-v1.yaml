@@ -86,9 +86,10 @@ deliverables:
         files: []
         steps:
           - "Branch feat/<cutover issue>-gold-v1. git mv warehouse/models/poc/* warehouse/models/gold/ (file names keep the poc_ prefix; aliases already drop it); merge _poc.yml into _gold.yml, delete _poc.yml."
-          - "Delete the v0 models dim_date, dim_period, dim_currency, dim_geography, dim_indicator, fact_observation, fact_fx_rate, fact_gold_price (.sql) and their _gold.yml entries."
+          - "Fold dim_date into the calendar (decision D19): in warehouse/models/gold/poc_dim_calendar.sql keep the config line and comment, then put the body of warehouse/models/gold/dim_date.sql in front of its select as CTEs: the CTEs days, easter, holidays, holiday_days unchanged, plus a last CTE `dim_date as (<dim_date.sql's final select, both union all members included>)`; replace `from {{ ref('dim_date') }}` by `from dim_date`. No other change to either query."
+          - "Delete the v0 models dim_date, dim_period, dim_currency, dim_geography, dim_indicator, fact_observation, fact_fx_rate, fact_gold_price (.sql) and their _gold.yml entries; delete warehouse/semantic_models/fx_and_gold.yml and warehouse/semantic_models/observations.yml (they ref the deleted v0 models, so dbt parse fails while they exist)."
           - "dbt_project.yml: remove the poc: block; the gold folder schema becomes \"{{ var('gold_schema', 'gold') }}\"."
-          - "Create dev/gold_v1_trial.py: warehouse.build.main(select='gold', target='prod', variables={'gold_schema': 'zz_dev_gold_v1'}); annotate model and test counts; with --drop it drops every table in zz_dev_gold_v1 and the namespace."
+          - "Create dev/gold_v1_trial.py: warehouse.build.main(select='gold resource_type:seed', target='prod', variables={'gold_schema': 'zz_dev_gold_v1'}) (seeds, if any are on main, build into the same scratch namespace because gold models ref them); annotate the model count (models only, not seeds) and the test count; with --drop it drops every table in zz_dev_gold_v1 and the namespace."
           - "Run Dev · branch runs, script gold_v1_trial; then again with --drop. Comment both run URLs here and close."
         acceptance:
           - "trial annotated 30 models and every test ok; the scratch namespace was dropped"
@@ -123,7 +124,7 @@ deliverables:
           - edit: docs/model.md
         steps:
           - "warehouse.yaml gold: replace poc.<x> by gold.<x>; drop the 8 v0 names; full_rebuild: drop the v0 keys (keep poc_* keys, they are model names)."
-          - "git mv semantic_models/poc.yml semantic_models/gold.yml and replace schema poc by gold inside; delete fx_and_gold.yml and observations.yml."
+          - "git mv semantic_models/poc.yml semantic_models/gold.yml and replace schema poc by gold inside (fx_and_gold.yml, observations.yml and models/gold/dim_date.sql were already deleted on this branch by the trial)."
           - "git mv tests/poc_fact_grain.sql tests/fact_grain.sql (refs unchanged)."
           - "Update comments naming v0 tables in nbp.yaml, gus_teryt.yaml, gugik_prg.yaml; docs/model.md 'Built' lists the gold v1 tables."
           - "Delete dev/, open the PR; after merge dispatch Pipeline source platform, run \"silver/gold: build models\", filter gold."
