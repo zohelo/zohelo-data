@@ -80,7 +80,10 @@ A sprint ends with one release document for all of zohelo and a project status u
 - Permissions recorded in AGENTS.md and `docs/decisions.md` (O8, O10) apply; destructive Ops runs only as AGENTS.md
   allows. Anything published outside the repos under the zohelo name (social posts, accounts, ads, mail, anything that
   costs money) is an owner action. If the session refuses an action, report it in the summary instead of working
-  around it.
+  around it. A refused action is not retried on the same item in this run; never work around it. Post the review
+  and the merge as separate, sequential calls (never in one parallel batch or one shell command). Name each refusal
+  once under "Refused" in the summary with the exact message; the owner question about it is collected by the Coach,
+  so do not repeat it under open questions.
 - Every PR closes an open Task or Bug (`Closes #<n>`); a PR that only changes docs or backlog files may close a one-off
   Task issue created by REST without a key marker (D17).
 - Commits end with `Co-Authored-By:` and `Claude-Session:` lines as the session's attribution instructions say.
@@ -137,8 +140,10 @@ already running, so the running run is the one that must see their PRs.
 
 1. **Review and merge** every open non-Dependabot PR in all zohelo repos (the ones named in the start message first,
    then the rest, oldest first; a stacked PR after its dependency, rebased onto main first): compare the diff with its
-   issue's Steps, Acceptance and Out of scope; read the check results. Post a review comment first
-   (`Reviewed against #<issue>: <acceptance items checked>; checks <result>`), then merge (squash) when checks pass and
+   issue's Steps, Acceptance and Out of scope; read the check results. Post the review first as a pull-request review,
+   not an issue comment (`gh api repos/zohelo/<repo>/pulls/<n>/reviews -f event=COMMENT -f body='Reviewed against
+   #<issue>: <acceptance items checked>; checks <result>'`; APPROVE is not possible, all members share one account), so
+   the PR carries a recorded review before the merge call; then merge (squash) when checks pass and
    the review finds no problem; otherwise comment the exact change needed on the PR and label the issue
    `changes-requested`. Rebase mechanically conflicting PRs yourself. PRs from the Product Owner (backlog), the Coach
    (rules) and the Domain expert (domain files) are reviewed the same way; a Coach PR that removes a check or lowers a
