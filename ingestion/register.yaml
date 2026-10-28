@@ -708,7 +708,7 @@ sources:
   name: ECB Data Portal
   short_name: ECB Data Portal
   provider: European Central Bank
-  status: registered
+  status: approved
   family: C
   kpi: true
   geography: multicountry-Europe
