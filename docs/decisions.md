@@ -14,7 +14,7 @@ Decisions that bind implementers; read this first, after AGENTS.md.
 | O8 | 2026-10-27 | Standing permission | Standing permission: Claude closes pull requests and issues, deletes merged branches, and creates, edits and closes issues and project items in the zohelo organisation without asking; Claude dispatches Ops runs with --apply or --delete only for a Task whose Epic cites an owner decision; otherwise the run is an owner action. | owner |
 | O9 | 2026-10-27 | Shared repo and branches | No .github or other shared repo; merged branches are deleted by branch-cleanup.yml. | owner |
 | O10 | 2026-10-27 | Merging | Claude and the agents it dispatches merge pull requests once their checks pass (squash). | owner |
-| O11 | 2026-10-28 | Development cadence | Four implementer lanes (platform, sources, zohelo-bi, zohelo.com) and an architect lane run as scheduled sessions every 3 hours 07–22 Warsaw time; the architect reviews and merges; see docs/lanes.md. | owner |
+| O11 | 2026-10-28 | Development cadence | Four implementer lanes (platform, sources, zohelo-bi, zohelo.com) and an architect lane run as scheduled sessions every 3 hours 07–22 Warsaw time, each run aiming for 10–20 PRs (stacking on its own open PRs); the lanes trigger the architect, which reviews and merges (plus a Monday run for the weekly status); see docs/lanes.md. | owner |
 | O12 | 2026-10-27 | Entity-model Silver | The 9 Silver tables written by warehouse/entity/*.sql are current and kept (tracker fixed, #1036). | owner |
 | D1 | 2026-10-27 | Bootstrap | Bootstrap issues by REST until the first sync. | architect |
 | D2 | 2026-10-27 | Destructive runs | Destructive Ops runs only for Tasks citing an owner decision. | architect |
@@ -31,3 +31,6 @@ Decisions that bind implementers; read this first, after AGENTS.md.
 | D13 | 2026-10-27 | Decision log | This log is the one decision log implementers read first. | architect |
 | D14 | 2026-10-27 | Cross-repo Tasks | Cross-repo Tasks sit under a Deliverable with repo:. | architect |
 | D15 | 2026-10-27 | Secrets scope | Secrets scope changes only on the owner's request. | architect |
+| D16 | 2026-10-28 | Formatter scope | Repo formatters (Prettier in zohelo-bi and zohelo) ignore `.github/backlog/`: backlog YAML keeps the layout of docs/backlog.md in all three repos. | architect |
+| D17 | 2026-10-28 | Backlog-refill PRs | A PR that only writes Tasks into `.github/backlog/` closes a one-off Task issue "Architect: write the next lane Tasks (<date>)" created by REST without a key marker (the PR check needs an open Task); the sync does not manage it. | architect |
+| D18 | 2026-10-28 | Scheduled-run filter | A scheduled source run is a Pipeline run with event `schedule`, or event `workflow_dispatch` with triggering actor `github-actions[bot]` (the scheduler dispatches with the workflow token); the scheduler's own runs are `zohelo-automation[bot]`; the owner's login means manual. Observe Tasks (D11) count only scheduled runs. | architect |

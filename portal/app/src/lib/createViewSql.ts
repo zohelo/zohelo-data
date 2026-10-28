@@ -181,14 +181,6 @@ const queryBodyStart = (statement: SingleStatement): number | null => {
   return tokens[cursor].start;
 };
 
-/** Return the SELECT/WITH body of one ordinary CREATE VIEW statement. */
-export const extractCreateViewQuery = (sql: string): string | null => {
-  const statement = readSingleStatement(sql);
-  if (!statement) return null;
-  const start = queryBodyStart(statement);
-  return start === null ? null : statement.sql.slice(start);
-};
-
 const leadingKeyword = (sql: string): string | null => {
   let index = 0;
   while (index < sql.length) {

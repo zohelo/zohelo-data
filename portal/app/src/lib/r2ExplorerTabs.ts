@@ -31,8 +31,3 @@ export const decodeR2ExplorerTabState = (
     return { version: 1, crumbs: [] };
   }
 };
-
-export const r2ExplorerTitle = (crumbs: readonly R2ExplorerCrumb[]): string => {
-  const current = crumbs[crumbs.length - 1];
-  return current ? current.name.replace(/^0\d_/, "") : "R2 Explorer";
-};

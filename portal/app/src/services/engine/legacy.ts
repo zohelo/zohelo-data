@@ -18,10 +18,8 @@ import type {
   HttpAuthMode,
 } from "./types";
 
-export type LegacyScope = "WASM" | "External" | "OPFS";
-
 /** Legacy scope → engine kind. Unknown scopes fall back to the HTTP driver. */
-export const scopeToKind = (scope: string | undefined): ConnectionKind => {
+const scopeToKind = (scope: string | undefined): ConnectionKind => {
   switch (scope) {
     case "WASM":
       return "wasm";
@@ -31,24 +29,6 @@ export const scopeToKind = (scope: string | undefined): ConnectionKind => {
       return "duck-http";
     default:
       return "duck-http";
-  }
-};
-
-/**
- * Engine kind → legacy scope, for the persistence rows and UI badges that
- * still read `scope`. Kinds with no legacy equivalent keep their own name;
- * they cannot appear until their driver ships.
- */
-export const kindToScope = (kind: ConnectionKind): string => {
-  switch (kind) {
-    case "wasm":
-      return "WASM";
-    case "opfs":
-      return "OPFS";
-    case "duck-http":
-      return "External";
-    default:
-      return kind;
   }
 };
 

@@ -97,7 +97,8 @@ def repository(files: list[Path]) -> list[str]:
             problems.append(f"{f}: {size:,} bytes is above 1 MB")
         if size == 0 and f.name != "__init__.py":
             problems.append(f"{f}: empty file")
-        if f.suffix.lower() in FORBIDDEN_SUFFIXES:
+        seed = f.suffix.lower() == ".csv" and f.as_posix().startswith("warehouse/seeds/")  # dbt seeds (code lists)
+        if f.suffix.lower() in FORBIDDEN_SUFFIXES and not seed:
             problems.append(f"{f}: {f.suffix} files are not committed")
         if f.name.startswith(".env") and f.name != ".env.example":
             problems.append(f"{f}: environment files are not committed (only .env.example)")

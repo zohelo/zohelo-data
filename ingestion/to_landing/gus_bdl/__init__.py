@@ -8,7 +8,9 @@ landing.extract   metadata.py: variables of every subgroup with data, as API pag
                   exports subgroups that need territory parts); "web packages" runs
                   web_packages.py: collect ready whole-subgroup packages, request missing ones;
                   "api P#### …" runs refresh.py --initial for the listed subgroups (#889), then
-                  metadata.py for them; "initial [P#### …]" runs the whole initial load (_initial)
+                  metadata.py for them; "initial [P#### …]" runs the whole initial load (_initial);
+                  "refresh" runs the steady-state load: refresh.py (API refresh of changed held
+                  subgroups, today's share), then metadata.py (variables of new versions)
 """
 
 from __future__ import annotations
@@ -143,6 +145,15 @@ def _extract(p) -> int:
     tokens = [x for x in (p.filter or "").replace(",", " ").split() if x]
     if "initial" in tokens:
         return _initial(p, tokens)
+    if "refresh" in tokens:  # steady state (owner, 13 Oct): changed subgroups through the API, then variables
+        from ingestion.to_landing.gus_bdl import metadata, refresh
+
+        budget = min(p.budget_minutes, 330)
+        started = time.monotonic()
+        status = refresh.main(["--budget-minutes", str(budget * 0.7)])
+        left = max(budget - (time.monotonic() - started) / 60, 10)
+        meta = metadata.main(["--filter", "", "--budget-minutes", str(left)])
+        return status or meta
     if "api" in tokens:  # owner decision #889: the listed subgroups through the API, then their variables
         from ingestion.to_landing.gus_bdl import metadata, refresh
 

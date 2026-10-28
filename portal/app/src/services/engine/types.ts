@@ -43,19 +43,19 @@ export type ConnectionOrigin = "APP" | "ENV" | "BUILT_IN";
 export type HttpAuthMode = "none" | "password" | "api_key";
 
 /** In-tab DuckDB-WASM, in-memory. One per app instance. */
-export interface WasmConnectionConfig {
+interface WasmConnectionConfig {
   kind: "wasm";
 }
 
 /** In-tab DuckDB-WASM backed by a persistent OPFS file. */
-export interface OpfsConnectionConfig {
+interface OpfsConnectionConfig {
   kind: "opfs";
   /** OPFS path, e.g. `analytics.db`. Normalized by the driver. */
   path: string;
 }
 
 /** A DuckDB `httpserver` endpoint reached over HTTP(S). */
-export interface DuckHttpConnectionConfig {
+interface DuckHttpConnectionConfig {
   kind: "duck-http";
   host: string;
   port?: number;
@@ -66,7 +66,7 @@ export interface DuckHttpConnectionConfig {
 }
 
 /** Reserved: DuckDB 2.x over the Quack wire protocol. Not implemented. */
-export interface QuackConnectionConfig {
+interface QuackConnectionConfig {
   kind: "quack";
   url: string;
   database?: string;
@@ -77,12 +77,12 @@ export interface QuackConnectionConfig {
  * Ordinary Arrow Flight SQL is NOT reachable from a browser — see
  * docs/architecture/execution.md. Not implemented.
  */
-export interface FlightWebConnectionConfig {
+interface FlightWebConnectionConfig {
   kind: "flight-web";
   url: string;
 }
 
-export type ConnectionConfig =
+type ConnectionConfig =
   | WasmConnectionConfig
   | OpfsConnectionConfig
   | DuckHttpConnectionConfig
@@ -285,7 +285,7 @@ export interface QueryExecution {
 // Catalog
 //
 
-export interface CatalogColumn {
+interface CatalogColumn {
   name: string;
   type: string;
   nullable: boolean;

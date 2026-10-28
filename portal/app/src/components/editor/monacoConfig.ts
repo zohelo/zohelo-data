@@ -267,7 +267,3 @@ monaco.languages.registerCompletionItemProvider("sql", {
 });
 
 // Export everything needed
-export default {
-  createEditor,
-  useMonacoConfig,
-};

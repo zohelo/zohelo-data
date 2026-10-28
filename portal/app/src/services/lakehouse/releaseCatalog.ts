@@ -29,8 +29,8 @@ import type {
 
 export const DOWNLOAD_LIMIT_BYTES = 512 * 1024 * 1024;
 export const POINTER_MAX_BYTES = 64 * 1024;
-export const MANIFEST_MAX_BYTES = 4 * 1024 * 1024;
-export const BUSINESS_CATALOGUE_MAX_BYTES = 4 * 1024 * 1024;
+const MANIFEST_MAX_BYTES = 4 * 1024 * 1024;
+const BUSINESS_CATALOGUE_MAX_BYTES = 4 * 1024 * 1024;
 
 const V1_DATASETS = [
   "nbp_exchange_rates_table_a",
@@ -57,7 +57,7 @@ const V2_DATASETS: Record<string, ReleaseLayer> = {
 };
 const V2_NULL_DATE_DATASETS = new Set(["dim_currency", "dim_source_table", "dim_commodity"]);
 
-export const BDL_DATASETS: Record<string, ReleaseLayer> = {
+const BDL_DATASETS: Record<string, ReleaseLayer> = {
   bronze_bdl_variables: "02_bronze",
   bronze_bdl_subjects: "02_bronze",
   bronze_bdl_units: "02_bronze",
@@ -77,7 +77,7 @@ export const BDL_DATASETS: Record<string, ReleaseLayer> = {
   fact_bdl_observations: "04_gold",
   mart_bdl_coverage: "04_gold",
 };
-export const DBW_DATASETS: Record<string, ReleaseLayer> = {
+const DBW_DATASETS: Record<string, ReleaseLayer> = {
   bronze_dbw_dictionaries: "02_bronze",
   bronze_dbw_indicators: "02_bronze",
   bronze_dbw_metadata: "02_bronze",
@@ -90,12 +90,12 @@ export const DBW_DATASETS: Record<string, ReleaseLayer> = {
   fact_dbw_observations: "04_gold",
   mart_dbw_coverage: "04_gold",
 };
-export const BDL_DATED_DATASETS = new Set([
+const BDL_DATED_DATASETS = new Set([
   "dim_bdl_period",
   "fact_bdl_observations",
   "mart_bdl_coverage",
 ]);
-export const WDI_DATASETS: Record<string, ReleaseLayer> = {
+const WDI_DATASETS: Record<string, ReleaseLayer> = {
   bronze_wdi_country: "02_bronze",
   bronze_wdi_country_series: "02_bronze",
   bronze_wdi_data: "02_bronze",
@@ -111,13 +111,13 @@ export const WDI_DATASETS: Record<string, ReleaseLayer> = {
   fact_wdi_observations: "04_gold",
   mart_wdi_coverage: "04_gold",
 };
-export const WDI_DATED_DATASETS = new Set([
+const WDI_DATED_DATASETS = new Set([
   "wdi_observations",
   "dim_wdi_year",
   "fact_wdi_observations",
   "mart_wdi_coverage",
 ]);
-export const EUROSTAT_DATASETS: Record<string, ReleaseLayer> = {
+const EUROSTAT_DATASETS: Record<string, ReleaseLayer> = {
   bronze_eurostat_observations: "02_bronze",
   eurostat_observation_revisions: "03_silver",
   eurostat_observations: "03_silver",
@@ -127,7 +127,7 @@ export const EUROSTAT_DATASETS: Record<string, ReleaseLayer> = {
   fact_eurostat_observations: "04_gold",
   mart_eurostat_coverage: "04_gold",
 };
-export const EUROSTAT_DATED_DATASETS = new Set([
+const EUROSTAT_DATED_DATASETS = new Set([
   "dim_eurostat_period",
   "fact_eurostat_observations",
   "mart_eurostat_coverage",

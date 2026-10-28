@@ -16,7 +16,7 @@ select
     n3,
     n4,
     n5,
-    to_json(list_filter([n1, n2, n3, n4, n5], x -> x is not null))::varchar as dimension_key,
+    to_json(list_filter([n1, n2, n3, n4, n5], lambda x: x is not null))::varchar as dimension_key,
     try_cast(level as integer) as level,
     measure_unit_id,
     measure_unit_name,
