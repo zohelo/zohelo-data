@@ -30,5 +30,36 @@ deliverables:
     title: Automated quality checks in the build
     done_when:
       - dbt tests for grain, units and value ranges on every metrics table
+    tasks:
+      - key: data/ops/quality-audit/checks/value-ranges
+        type: Task
+        title: Fail the build on implausible values in the metrics tables
+        effort: M
+        state: open
+        contract: false
+        depends_on: [data/warehouse/gold-v1/fold/cutover]
+        context: >-
+          The five metrics tables (models poc_metrics_population, poc_metrics_gdp_current_prices,
+          poc_metrics_inflation, poc_metrics_unemployment_rate, poc_metrics_fx_rate; columns concept_key,
+          source_system, measure_key, geography_key, date_key, value) have no value check, so a unit or scale
+          error (×1000) would reach the portals. Singular dbt tests live in warehouse/tests/ (as fact_grain.sql)
+          and run in every build that rebuilds their models.
+        files:
+          - create: warehouse/tests/metrics_value_range.sql
+        steps:
+          - "Header comment: bounds catch unit and scale errors, not small mistakes; change a bound only with the publisher's own value as evidence, cited in a comment."
+          - "CTE bounds: VALUES (concept_key, source_system, value_min, value_max): population eurostat 0, 1e9 · population world_bank_wdi 0, 1e10 · population gus_bdl 0, 5e7 · population gus_dbw 0, 5e7 · gdp_current_prices eurostat 0, 3e7 · gdp_current_prices world_bank_wdi 0, 3e14 · inflation eurostat -100, 3000 · inflation world_bank_wdi -100, 100000 · unemployment_rate eurostat 0, 60 · unemployment_rate world_bank_wdi 0, 60 · fx_rate nbp 0, 100000."
+          - "CTE metrics: union all of concept_key, source_system, measure_key, geography_key, date_key, value from ref() of the five models."
+          - "Select the metrics rows left joined to bounds on concept_key and source_system where value < value_min or value > value_max or value_min is null (a KPI × source without a bound fails, so a new source gets one here), with value_min and value_max."
+          - "dev/value_range_trial.py: subprocess `dbt test --select metrics_value_range --target prod --project-dir warehouse --profiles-dir warehouse` (reads prod Gold, writes nothing), then annotate notice 'metrics_value_range' with status and failures of the result in warehouse/target/run_results.json. Run in Dev; delete dev/ before the PR. If the status is not pass, comment the annotation on the issue and stop."
+        acceptance:
+          - "the trial reports status pass with 0 failures"
+          - "sqlfluff and repo_check pass"
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: Dev · branch runs, script value_range_trial, on the branch
+            expect: "notice 'metrics_value_range' status pass, failures 0"
+        out_of_scope: [kpi.csv and other seeds, the metrics models, unit checks]
     todo:
-      - "Range and unit tests per KPI from kpi.csv (min/max plausible)"
+      - "Unit tests per KPI: each metrics row's source unit is the one its kpi_measure pattern expects (expected units to be listed by the architect)"
