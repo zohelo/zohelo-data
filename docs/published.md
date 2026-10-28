@@ -108,6 +108,13 @@ One Parquet file per Gold catalogue table, with that table's columns.
 | values[].flags | array | yes | status flags of the value |
 | values[].checked_at | string | yes | when the source was last checked (ISO 8601 UTC) |
 
+`warehouse/publish.py` writes it from `gold.metrics_<kpi_key>`: only country and voivodeship rows with a value
+(and not geography `_X`) count; each row gets the priority of its source's measure in `kpi_measure.csv` (999 when
+none matches); per source and geography one series is kept, the one with the finest frequency, then the best
+priority, then the lowest measure key; its newest period gives `period` and `value`, the period before gives
+`previous_period` and `previous_value` (left out when there is none). `fx_rate` is skipped: it has one value per
+currency and latest.json has no currency field.
+
 ## kpi/<kpi_key>/series.parquet
 
 | field | type | required | meaning |
