@@ -46,17 +46,20 @@ class Api:
         return self.http.get(REST + path, timeout=60)
 
     def pages(self, path: str) -> list[dict]:
-        items, page = [], 1
-        while True:
-            sep = "&" if "?" in path else "?"
-            response = self.get(f"{path}{sep}per_page=100&page={page}")
+        """All items of a listing, following the `Link: rel="next"` header.
+
+        The Dependabot alerts endpoint is cursor-paginated and rejects `page=` (#2114); following the link works
+        for every listing used here.
+        """
+        sep = "&" if "?" in path else "?"
+        url, items = f"{REST}{path}{sep}per_page=100", []
+        while url:
+            response = self.http.get(url, timeout=60)
             if response.status_code != 200:
                 raise PermissionError(f"GET {path}: HTTP {response.status_code} {response.text[:300]}")
-            batch = response.json()
-            items += batch
-            if len(batch) < 100:
-                return items
-            page += 1
+            items += response.json()
+            url = response.links.get("next", {}).get("url")
+        return items
 
     def write(self, method: str, path: str, body: dict) -> dict:
         if not self.apply:
