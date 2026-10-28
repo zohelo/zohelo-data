@@ -1,0 +1,14 @@
+unit_key,symbol,name_en,name_pl,is_rate
+persons,os.,persons,osoby,false
+mln_ncu,mln,"million, source currency","mln, waluta źródła",false
+ncu_per_person,/os.,source currency per person,waluta źródła na osobę,false
+pct,%,per cent,procent,true
+pct_labour_force,%,% of labour force,% aktywnych zawodowo,true
+pct_population,%,% of population,% ludności,true
+years,lata,years,lata,false
+pln,zł,Polish zloty,złoty,false
+dwellings,mieszk.,dwellings,mieszkania,false
+km2,km²,square kilometres,kilometry kwadratowe,false
+persons_per_km2,os./km²,persons per km²,osoby na km²,true
+pln_per_unit,zł,PLN per currency unit,zł za jednostkę waluty,true
+pln_per_gram,zł/g,PLN per gram,zł za gram,true
