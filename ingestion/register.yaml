@@ -1192,7 +1192,7 @@ sources:
   name: UIS Data Browser
   short_name: UNESCO UIS
   provider: UNESCO Institute for Statistics
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
