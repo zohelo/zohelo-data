@@ -219,10 +219,10 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  # The only Ops task that writes to the repository: it deletes leftover work branches
-  # (ops/branch_cleanup.py; owner approval 24 Oct 2026), so it alone gets contents: write.
+  # The two Ops tasks that write to the repository get contents: write, each in its own job:
+  # branch_cleanup deletes leftover work branches (ops/branch_cleanup.py; owner approval 24 Oct 2026),
+  # release_notes creates the weekly engine Release (ops/release_notes.py).
   release-notes:
-    # Its own job: the only Ops script whose token may write contents (Releases).
     needs: resolve
     if: github.ref == 'refs/heads/main' && needs.resolve.outputs.script == 'release_notes'
     name: "ops · release_notes"
