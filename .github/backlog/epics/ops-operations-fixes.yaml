@@ -14,7 +14,6 @@ outcome: >-
 in_scope:
   - close rotation-window alerts, key-rotation runbook, daily scheduler heartbeat (A-21)
   - weekly tracker run (A-29 schedule part)
-  - Dev trial builds that write production (AGENTS.md: Dev runs write only to scratch locations)
 out_of_scope:
   - "GUS DBW indicator 814 (A-16), BDL steady state (A-27), WDI archive (A-28): source Epics data/src-pls-002, data/src-pls-001, data/src-gl-005"
   - alert de-duplication and parenting (Epic data/backlog/engine)
@@ -128,39 +127,3 @@ deliverables:
           - workflow: next Monday's scheduled Ops run
             expect: "'ops · tracker' green"
         out_of_scope: [tracker classification changes]
-  - key: data/ops/operations-fixes/trials
-    title: Dev trials leave production untouched
-    done_when:
-      - "a Gold trial build (dbt var gold_schema set) does not publish _portal_catalog/v1/catalog.json"
-    tasks:
-      - key: data/ops/operations-fixes/trials/catalog-publish
-        type: Bug
-        title: Stop Dev trial builds from republishing the production catalog
-        effort: S
-        state: open
-        contract: false
-        context: >-
-          Gold trials (Dev workflow) call warehouse.build.main(..., target="prod", variables={"gold_schema":
-          "zz_dev_<topic>"}), writing Gold to a scratch namespace. warehouse/build.py then runs
-          warehouse.catalog.publish() after every passing prod build, so each trial rewrites the production
-          _portal_catalog/v1/catalog.json from the branch's manifest (trials of #2064, #2065). The next prod
-          build rewrites it; no clean-up needed.
-        files:
-          - edit: warehouse/build.py
-          - edit: warehouse/dbt_project.yml
-          - edit: warehouse/README.md
-        steps:
-          - "build.py: publishes_catalog(target: str, variables: dict | None) -> bool, docstring 'Only a prod build into the real namespaces publishes the data catalog.', returning target == \"prod\" and not (variables or {}).get(\"gold_schema\")."
-          - "build_once(): replace `if returncode == 0 and target == \"prod\":` (the catalog block before the annotate call) by `if returncode == 0 and publishes_catalog(target, variables):` and add `elif returncode == 0 and target == \"prod\":` setting summary[\"catalog\"] = f\"skipped: gold_schema {variables['gold_schema']}\"."
-          - "changed_only(): in the no-change branch call data_catalog.publish() only when publishes_catalog(target, variables); otherwise published = f\"skipped: gold_schema {variables['gold_schema']}\"."
-          - "dbt_project.yml: replace the comment line `# (target \"trial\" writes everything to its own scratch namespace instead).` by `# (target \"trial\" writes everything to zz_dbt_trial; a Gold trial on target prod sets the var gold_schema).`"
-          - "warehouse/README.md, after 'Target `trial` writes every model to the scratch namespace `zz_dbt_trial`.' add: 'A Gold trial on target prod sets the dbt var `gold_schema` to a `zz_dev_` namespace; build.py then does not publish the data catalog.'"
-        acceptance:
-          - "the first verify prints two annotations: the first with \"catalog\":\"skipped: gold_schema zz_dev_x\", the second with \"catalog\":{\"key\":\"published\"}"
-          - ruff and repo_check pass
-        verify:
-          - run: "PYTHONPATH=. python -c \"import warehouse.build as b, warehouse.catalog as c; b._dbt=lambda cmd:(0,[],''); c.publish=lambda:{'key':'published'}; b.build_once(['x'],'prod',{'gold_schema':'zz_dev_x'}); b.build_once(['x'],'prod',{})\""
-            expect: "line 1 contains \"catalog\":\"skipped: gold_schema zz_dev_x\"; line 2 contains \"catalog\":{\"key\":\"published\"}"
-          - run: python -m ops.repo_check
-            expect: all checks ok
-        out_of_scope: [warehouse/catalog.py, retiring _portal_catalog/v1]
