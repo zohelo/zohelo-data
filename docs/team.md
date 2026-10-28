@@ -175,6 +175,11 @@ first in a scheduled run; the sprint close has its own scheduled task and does o
    open a PR closing a one-off Task issue (D17), start the Architect for it, and after the merge dispatch Ops
    `backlog_sync apply` on zohelo-data main; then start the Developers that were low. New KPI definitions, indicator
    pages and dashboard specs are agreed with the Domain expert of that domain before the Task is written.
+   Before writing, list the repo's open PRs and their files (`gh api 'repos/zohelo/<repo>/pulls?state=open'`, then
+   `pulls/<n>/files`): when an open PR already changes `.github/backlog/` for the same Developer, Epic or brief, do not
+   open a second one. Add your Tasks to that PR's branch only if it is yours from this run; otherwise count its Tasks as
+   coming and leave a comment on it with what is still missing. (28 Oct: zohelo#217 duplicated the brief in #210, and
+   zohelo#220 duplicated the fetch-script Tasks in #221.)
 3. **Roadmap.** The roadmap is the backlog itself: Epic `phase`, `priority` and `target` in `.github/backlog/`. Keep
    targets realistic from the merge rate; when an Epic slips, move its target and say so in the Weekly status.
 4. **Improve what exists.** Each run, look at one product with fresh eyes (live pages via WebFetch, the Quality
