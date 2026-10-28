@@ -7570,3 +7570,4 @@ sources:
     - 'Public display: owner decision pending (licence found 28 Oct 2026; archive provenance unconfirmed)'
     - 'Person data: privacy review before any publication'
     references:
+    - https://opendata.org/terms/
