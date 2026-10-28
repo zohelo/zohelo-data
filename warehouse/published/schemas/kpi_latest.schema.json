@@ -3,66 +3,26 @@
   "$id": "https://zohelo.com/schemas/published/v1/kpi_latest.schema.json",
   "title": "06_published/v1/kpi/<kpi_key>/latest.json",
   "type": "object",
-  "required": [
-    "kpi_key",
-    "unit_key",
-    "generated_at",
-    "values"
-  ],
+  "required": ["kpi_key", "unit_key", "generated_at", "values"],
   "properties": {
-    "kpi_key": {
-      "type": "string"
-    },
-    "unit_key": {
-      "type": "string"
-    },
-    "generated_at": {
-      "type": "string"
-    },
+    "kpi_key": {"type": "string"},
+    "unit_key": {"type": "string"},
+    "generated_at": {"type": "string"},
     "values": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "source_key",
-          "geography_key",
-          "geography_level",
-          "period",
-          "value",
-          "flags",
-          "checked_at"
-        ],
+        "required": ["source_key", "geography_key", "geography_level", "period", "value", "flags", "checked_at"],
         "properties": {
-          "source_key": {
-            "type": "string"
-          },
-          "geography_key": {
-            "type": "string"
-          },
-          "geography_level": {
-            "type": "string"
-          },
-          "period": {
-            "type": "string"
-          },
-          "value": {
-            "type": "number"
-          },
-          "previous_period": {
-            "type": "string"
-          },
-          "previous_value": {
-            "type": "number"
-          },
-          "flags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "checked_at": {
-            "type": "string"
-          }
+          "source_key": {"type": "string"},
+          "geography_key": {"type": "string"},
+          "geography_level": {"type": "string"},
+          "period": {"type": "string"},
+          "value": {"type": "number"},
+          "previous_period": {"type": "string"},
+          "previous_value": {"type": "number"},
+          "flags": {"type": "array", "items": {"type": "string"}},
+          "checked_at": {"type": "string"}
         },
         "additionalProperties": true
       }

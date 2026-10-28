@@ -3,117 +3,45 @@
   "$id": "https://zohelo.com/schemas/published/v1/catalog.schema.json",
   "title": "06_published/v1/catalog/catalog.json",
   "type": "object",
-  "required": [
-    "version",
-    "generated_at",
-    "kpis",
-    "domains",
-    "units",
-    "sources",
-    "licences"
-  ],
+  "required": ["version", "generated_at", "kpis", "domains", "units", "sources", "licences"],
   "properties": {
-    "version": {
-      "type": "integer"
-    },
-    "generated_at": {
-      "type": "string"
-    },
+    "version": {"type": "integer"},
+    "generated_at": {"type": "string"},
     "kpis": {
       "type": "array",
       "items": {
         "type": "object",
         "required": [
-          "kpi_key",
-          "name_pl",
-          "name_en",
-          "unit_key",
-          "frequency_default",
-          "subgroup_key",
-          "domain_path",
-          "source_keys",
-          "geo_levels",
-          "first_period",
-          "last_period",
-          "dimensions",
-          "loaded_at",
-          "status"
+          "kpi_key", "name_pl", "name_en", "unit_key", "frequency_default", "subgroup_key", "domain_path",
+          "source_keys", "geo_levels", "first_period", "last_period", "dimensions", "loaded_at", "status"
         ],
         "properties": {
-          "kpi_key": {
-            "type": "string"
-          },
-          "name_pl": {
-            "type": "string"
-          },
-          "name_en": {
-            "type": "string"
-          },
-          "unit_key": {
-            "type": "string"
-          },
-          "frequency_default": {
-            "type": "string"
-          },
-          "subgroup_key": {
-            "type": "string"
-          },
-          "domain_path": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "source_keys": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "geo_levels": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "first_period": {
-            "type": "string"
-          },
-          "last_period": {
-            "type": "string"
-          },
+          "kpi_key": {"type": "string"},
+          "name_pl": {"type": "string"},
+          "name_en": {"type": "string"},
+          "unit_key": {"type": "string"},
+          "frequency_default": {"type": "string"},
+          "subgroup_key": {"type": "string"},
+          "domain_path": {"type": "array", "items": {"type": "string"}},
+          "source_keys": {"type": "array", "items": {"type": "string"}},
+          "geo_levels": {"type": "array", "items": {"type": "string"}},
+          "first_period": {"type": "string"},
+          "last_period": {"type": "string"},
           "dimensions": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "dimension_key",
-                "member_count",
-                "levels"
-              ],
+              "required": ["dimension_key", "member_count", "levels"],
               "properties": {
-                "dimension_key": {
-                  "type": "string"
-                },
-                "member_count": {
-                  "type": "integer"
-                },
-                "levels": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                }
+                "dimension_key": {"type": "string"},
+                "member_count": {"type": "integer"},
+                "levels": {"type": "array", "items": {"type": "string"}}
               },
               "additionalProperties": true
             }
           },
-          "loaded_at": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          }
+          "loaded_at": {"type": "string"},
+          "status": {"type": "string"}
         },
         "additionalProperties": true
       }
@@ -122,40 +50,15 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "domain_key",
-          "level",
-          "parent_key",
-          "name_en",
-          "name_pl",
-          "csa_code",
-          "sort"
-        ],
+        "required": ["domain_key", "level", "parent_key", "name_en", "name_pl", "csa_code", "sort"],
         "properties": {
-          "domain_key": {
-            "type": "string"
-          },
-          "level": {
-            "type": "string"
-          },
-          "parent_key": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "name_en": {
-            "type": "string"
-          },
-          "name_pl": {
-            "type": "string"
-          },
-          "csa_code": {
-            "type": "string"
-          },
-          "sort": {
-            "type": "integer"
-          }
+          "domain_key": {"type": "string"},
+          "level": {"type": "string"},
+          "parent_key": {"type": ["string", "null"]},
+          "name_en": {"type": "string"},
+          "name_pl": {"type": "string"},
+          "csa_code": {"type": "string"},
+          "sort": {"type": "integer"}
         },
         "additionalProperties": true
       }
@@ -164,29 +67,13 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "unit_key",
-          "symbol",
-          "name_en",
-          "name_pl",
-          "is_rate"
-        ],
+        "required": ["unit_key", "symbol", "name_en", "name_pl", "is_rate"],
         "properties": {
-          "unit_key": {
-            "type": "string"
-          },
-          "symbol": {
-            "type": "string"
-          },
-          "name_en": {
-            "type": "string"
-          },
-          "name_pl": {
-            "type": "string"
-          },
-          "is_rate": {
-            "type": "boolean"
-          }
+          "unit_key": {"type": "string"},
+          "symbol": {"type": "string"},
+          "name_en": {"type": "string"},
+          "name_pl": {"type": "string"},
+          "is_rate": {"type": "boolean"}
         },
         "additionalProperties": true
       }
@@ -195,29 +82,13 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "source_key",
-          "name_pl",
-          "name_en",
-          "licence_key",
-          "register_id"
-        ],
+        "required": ["source_key", "name_pl", "name_en", "licence_key", "register_id"],
         "properties": {
-          "source_key": {
-            "type": "string"
-          },
-          "name_pl": {
-            "type": "string"
-          },
-          "name_en": {
-            "type": "string"
-          },
-          "licence_key": {
-            "type": "string"
-          },
-          "register_id": {
-            "type": "string"
-          }
+          "source_key": {"type": "string"},
+          "name_pl": {"type": "string"},
+          "name_en": {"type": "string"},
+          "licence_key": {"type": "string"},
+          "register_id": {"type": "string"}
         },
         "additionalProperties": true
       }
@@ -226,29 +97,13 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "licence_key",
-          "name",
-          "url",
-          "attribution_text",
-          "commercial_ok"
-        ],
+        "required": ["licence_key", "name", "url", "attribution_text", "commercial_ok"],
         "properties": {
-          "licence_key": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "url": {
-            "type": "string"
-          },
-          "attribution_text": {
-            "type": "string"
-          },
-          "commercial_ok": {
-            "type": "boolean"
-          }
+          "licence_key": {"type": "string"},
+          "name": {"type": "string"},
+          "url": {"type": "string"},
+          "attribution_text": {"type": "string"},
+          "commercial_ok": {"type": "boolean"}
         },
         "additionalProperties": true
       }

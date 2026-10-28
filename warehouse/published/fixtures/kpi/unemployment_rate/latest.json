@@ -20,9 +20,7 @@
       "geography_level": "voivodeship",
       "period": "2025",
       "value": 2.6,
-      "flags": [
-        "p"
-      ],
+      "flags": ["p"],
       "checked_at": "2026-01-01T00:00:00Z"
     }
   ]

@@ -3,52 +3,22 @@
   "$id": "https://zohelo.com/schemas/published/v1/feed_changes.schema.json",
   "title": "06_published/v1/feed/changes.json",
   "type": "object",
-  "required": [
-    "generated_at",
-    "items"
-  ],
+  "required": ["generated_at", "items"],
   "properties": {
-    "generated_at": {
-      "type": "string"
-    },
+    "generated_at": {"type": "string"},
     "items": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "at",
-          "source_key",
-          "dataset_key",
-          "kpi_keys",
-          "title_pl",
-          "title_en",
-          "kind"
-        ],
+        "required": ["at", "source_key", "dataset_key", "kpi_keys", "title_pl", "title_en", "kind"],
         "properties": {
-          "at": {
-            "type": "string"
-          },
-          "source_key": {
-            "type": "string"
-          },
-          "dataset_key": {
-            "type": "string"
-          },
-          "kpi_keys": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "title_pl": {
-            "type": "string"
-          },
-          "title_en": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "string"
-          }
+          "at": {"type": "string"},
+          "source_key": {"type": "string"},
+          "dataset_key": {"type": "string"},
+          "kpi_keys": {"type": "array", "items": {"type": "string"}},
+          "title_pl": {"type": "string"},
+          "title_en": {"type": "string"},
+          "kind": {"type": "string"}
         },
         "additionalProperties": true
       }

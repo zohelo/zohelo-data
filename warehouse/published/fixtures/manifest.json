@@ -10,12 +10,7 @@
       "time_column": "period",
       "value_column": "value",
       "source_column": "source_system",
-      "dimensions": [
-        {
-          "dimension_key": "geography",
-          "column": "geography_key"
-        }
-      ]
+      "dimensions": [{"dimension_key": "geography", "column": "geography_key"}]
     },
     {
       "kpi_key": "gdp_current_prices",
@@ -25,12 +20,7 @@
       "time_column": "period",
       "value_column": "value",
       "source_column": "source_system",
-      "dimensions": [
-        {
-          "dimension_key": "geography",
-          "column": "geography_key"
-        }
-      ]
+      "dimensions": [{"dimension_key": "geography", "column": "geography_key"}]
     },
     {
       "kpi_key": "inflation",
@@ -40,12 +30,7 @@
       "time_column": "period",
       "value_column": "value",
       "source_column": "source_system",
-      "dimensions": [
-        {
-          "dimension_key": "geography",
-          "column": "geography_key"
-        }
-      ]
+      "dimensions": [{"dimension_key": "geography", "column": "geography_key"}]
     },
     {
       "kpi_key": "unemployment_rate",
@@ -55,12 +40,7 @@
       "time_column": "period",
       "value_column": "value",
       "source_column": "source_system",
-      "dimensions": [
-        {
-          "dimension_key": "geography",
-          "column": "geography_key"
-        }
-      ]
+      "dimensions": [{"dimension_key": "geography", "column": "geography_key"}]
     },
     {
       "kpi_key": "fx_rate",
@@ -71,18 +51,10 @@
       "value_column": "value",
       "source_column": "source_system",
       "dimensions": [
-        {
-          "dimension_key": "geography",
-          "column": "geography_key"
-        },
-        {
-          "dimension_key": "currency",
-          "column": "currency_code"
-        }
+        {"dimension_key": "geography", "column": "geography_key"},
+        {"dimension_key": "currency", "column": "currency_code"}
       ],
-      "default_filters": {
-        "currency_code": "EUR"
-      }
+      "default_filters": {"currency_code": "EUR"}
     }
   ]
 }

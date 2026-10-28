@@ -9,20 +9,9 @@
       "unit_key": "persons",
       "frequency_default": "A",
       "subgroup_key": "population.stock.population",
-      "domain_path": [
-        "population",
-        "population.stock",
-        "population.stock.population"
-      ],
-      "source_keys": [
-        "eurostat",
-        "world_bank_wdi",
-        "gus_bdl"
-      ],
-      "geo_levels": [
-        "country",
-        "voivodeship"
-      ],
+      "domain_path": ["population", "population.stock", "population.stock.population"],
+      "source_keys": ["eurostat", "world_bank_wdi", "gus_bdl"],
+      "geo_levels": ["country", "voivodeship"],
       "first_period": "1990",
       "last_period": "2025",
       "dimensions": [],
@@ -36,18 +25,9 @@
       "unit_key": "mln_ncu",
       "frequency_default": "A",
       "subgroup_key": "economy.national_accounts.gdp",
-      "domain_path": [
-        "economy",
-        "economy.national_accounts",
-        "economy.national_accounts.gdp"
-      ],
-      "source_keys": [
-        "eurostat",
-        "world_bank_wdi"
-      ],
-      "geo_levels": [
-        "country"
-      ],
+      "domain_path": ["economy", "economy.national_accounts", "economy.national_accounts.gdp"],
+      "source_keys": ["eurostat", "world_bank_wdi"],
+      "geo_levels": ["country"],
       "first_period": "1995",
       "last_period": "2024",
       "dimensions": [],
@@ -61,18 +41,9 @@
       "unit_key": "pct",
       "frequency_default": "M",
       "subgroup_key": "economy.prices.consumer_prices",
-      "domain_path": [
-        "economy",
-        "economy.prices",
-        "economy.prices.consumer_prices"
-      ],
-      "source_keys": [
-        "eurostat",
-        "world_bank_wdi"
-      ],
-      "geo_levels": [
-        "country"
-      ],
+      "domain_path": ["economy", "economy.prices", "economy.prices.consumer_prices"],
+      "source_keys": ["eurostat", "world_bank_wdi"],
+      "geo_levels": ["country"],
       "first_period": "1997-01",
       "last_period": "2026-09",
       "dimensions": [],
@@ -86,19 +57,9 @@
       "unit_key": "pct_labour_force",
       "frequency_default": "A",
       "subgroup_key": "labour.employment.lfs",
-      "domain_path": [
-        "labour",
-        "labour.employment",
-        "labour.employment.lfs"
-      ],
-      "source_keys": [
-        "eurostat",
-        "world_bank_wdi"
-      ],
-      "geo_levels": [
-        "country",
-        "voivodeship"
-      ],
+      "domain_path": ["labour", "labour.employment", "labour.employment.lfs"],
+      "source_keys": ["eurostat", "world_bank_wdi"],
+      "geo_levels": ["country", "voivodeship"],
       "first_period": "2000",
       "last_period": "2025",
       "dimensions": [],
@@ -112,28 +73,12 @@
       "unit_key": "pln_per_unit",
       "frequency_default": "D",
       "subgroup_key": "finance.fx_gold.exchange_rates",
-      "domain_path": [
-        "finance",
-        "finance.fx_gold",
-        "finance.fx_gold.exchange_rates"
-      ],
-      "source_keys": [
-        "nbp"
-      ],
-      "geo_levels": [
-        "country"
-      ],
+      "domain_path": ["finance", "finance.fx_gold", "finance.fx_gold.exchange_rates"],
+      "source_keys": ["nbp"],
+      "geo_levels": ["country"],
       "first_period": "2002-01-02",
       "last_period": "2026-10-27",
-      "dimensions": [
-        {
-          "dimension_key": "currency",
-          "member_count": 33,
-          "levels": [
-            "currency"
-          ]
-        }
-      ],
+      "dimensions": [{"dimension_key": "currency", "member_count": 33, "levels": ["currency"]}],
       "loaded_at": "2026-01-01T00:00:00Z",
       "status": "published"
     }
@@ -267,13 +212,7 @@
     }
   ],
   "units": [
-    {
-      "unit_key": "persons",
-      "symbol": "os.",
-      "name_en": "persons",
-      "name_pl": "osoby",
-      "is_rate": false
-    },
+    {"unit_key": "persons", "symbol": "os.", "name_en": "persons", "name_pl": "osoby", "is_rate": false},
     {
       "unit_key": "mln_ncu",
       "symbol": "mln",
@@ -281,13 +220,7 @@
       "name_pl": "mln, waluta źródła",
       "is_rate": false
     },
-    {
-      "unit_key": "pct",
-      "symbol": "%",
-      "name_en": "per cent",
-      "name_pl": "procent",
-      "is_rate": true
-    },
+    {"unit_key": "pct", "symbol": "%", "name_en": "per cent", "name_pl": "procent", "is_rate": true},
     {
       "unit_key": "pct_labour_force",
       "symbol": "%",

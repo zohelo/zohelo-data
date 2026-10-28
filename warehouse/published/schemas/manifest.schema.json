@@ -3,76 +3,35 @@
   "$id": "https://zohelo.com/schemas/published/v1/manifest.schema.json",
   "title": "06_published/v1/manifest.json",
   "type": "object",
-  "required": [
-    "version",
-    "generated_at",
-    "metrics"
-  ],
+  "required": ["version", "generated_at", "metrics"],
   "properties": {
-    "version": {
-      "type": "integer"
-    },
-    "generated_at": {
-      "type": "string"
-    },
+    "version": {"type": "integer"},
+    "generated_at": {"type": "string"},
     "metrics": {
       "type": "array",
       "items": {
         "type": "object",
         "required": [
-          "kpi_key",
-          "table",
-          "unit_key",
-          "frequency",
-          "time_column",
-          "value_column",
-          "source_column",
-          "dimensions"
+          "kpi_key", "table", "unit_key", "frequency", "time_column", "value_column", "source_column", "dimensions"
         ],
         "properties": {
-          "kpi_key": {
-            "type": "string"
-          },
-          "table": {
-            "type": "string"
-          },
-          "unit_key": {
-            "type": "string"
-          },
-          "frequency": {
-            "type": "string"
-          },
-          "time_column": {
-            "type": "string"
-          },
-          "value_column": {
-            "type": "string"
-          },
-          "source_column": {
-            "type": "string"
-          },
+          "kpi_key": {"type": "string"},
+          "table": {"type": "string"},
+          "unit_key": {"type": "string"},
+          "frequency": {"type": "string"},
+          "time_column": {"type": "string"},
+          "value_column": {"type": "string"},
+          "source_column": {"type": "string"},
           "dimensions": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "dimension_key",
-                "column"
-              ],
-              "properties": {
-                "dimension_key": {
-                  "type": "string"
-                },
-                "column": {
-                  "type": "string"
-                }
-              },
+              "required": ["dimension_key", "column"],
+              "properties": {"dimension_key": {"type": "string"}, "column": {"type": "string"}},
               "additionalProperties": true
             }
           },
-          "default_filters": {
-            "type": "object"
-          }
+          "default_filters": {"type": "object"}
         },
         "additionalProperties": true
       }
