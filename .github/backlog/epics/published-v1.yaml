@@ -370,6 +370,40 @@ deliverables:
           - fixtures (they already match)
           - zohelo-bi validators (lane 3)
           - "dataset_key format: Gold uses eurostat:UNE_RT_A, the feed fixture une_rt_a (architect question)"
+      - key: data/published/published-v1/tests/fixtures-complete
+        type: Task
+        title: Add the missing latest.json fixtures and check that none is missing
+        effort: S
+        state: open
+        contract: true
+        context: >-
+          D26 (zohelo-data#2190): every published KPI has kpi/<kpi_key>/latest.json except SKIP in
+          warehouse/publish.py (fx_rate); fixtures follow the rule, values may be synthetic. The catalog
+          fixture lists population, gdp_current_prices, inflation, unemployment_rate and fx_rate as published,
+          but only unemployment_rate has a latest.json fixture, and repo_check never notices a missing one.
+        files:
+          - create: warehouse/published/fixtures/kpi/population/latest.json
+          - create: warehouse/published/fixtures/kpi/gdp_current_prices/latest.json
+          - create: warehouse/published/fixtures/kpi/inflation/latest.json
+          - edit: ops/repo_check.py
+          - edit: warehouse/published/README.md
+        steps:
+          - "Copy fixtures/kpi/unemployment_rate/latest.json as on main (every key, same timestamps) into the 3 new files; set kpi_key, and unit_key (top level and in values if present) to the catalog fixture's unit_key: persons, mln_ncu, pct."
+          - "Values, all source_key eurostat, flags []: population PL country 2025 36497495 (previous 2024 36620970) and TERC:12 voivodeship 2025 3409847; gdp_current_prices PL country 2024 3631583.4 (previous 2023 3404008.3); inflation PL country 2026-09 3.1 (previous 2026-08 3.0)."
+          - "repo_check.py: skipped_kpis() -> set[str] parses warehouse/publish.py with ast (no import) and returns the keys of ast.literal_eval of the module-level SKIP value."
+          - "published_contract(): after the loop, for every catalog fixture kpis[] item with status 'published', kpi_key not in skipped_kpis() and no fixtures/kpi/<kpi_key>/latest.json, add f\"kpi/{key}/latest.json: missing (published, not in SKIP; D26)\"; one docstring sentence on it."
+          - "warehouse/published/README.md, fixtures: 'Every published KPI of the catalog fixture has kpi/<kpi_key>/latest.json except SKIP in warehouse/publish.py (D26); repo_check fails otherwise.'"
+        acceptance:
+          - "latest.json fixtures exist for the 4 published KPIs outside SKIP, none for fx_rate"
+          - "deleting kpi/population/latest.json fails 'published contract' with 'kpi/population/latest.json: missing' (try, revert)"
+        verify:
+          - run: "python -c \"from ops.repo_check import skipped_kpis as s;print(sorted(s()))\""
+            expect: "['fx_rate']"
+          - run: "python -c \"from ops.repo_check import published_contract as c;print(c())\""
+            expect: "[]"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [publish.py and its SKIP list, the JSON Schemas, zohelo and zohelo-bi fixture copies]
     todo:
       - "Post-publish check comparing latest.json values with Gold for every KPI"
       - "zohelo-bi validators mirror the schema patterns of key-patterns (decision D24; bi lane)"
