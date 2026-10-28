@@ -1548,9 +1548,12 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: No dataset-specific commercial redistribution licence was established from opened pages; verify each
-      download.
+    status: restricted
+    notes: 'Terms: UNODC Legal Notice https://www.unodc.org/unodc/legal.html (applies to UNODC sites; no open licence
+      found for data.unodc.org): materials may be downloaded and copied for the user''s personal, non-commercial use
+      only; no right to resell or redistribute them or to create derivative works; provided "as is", without warranty
+      of accuracy or completeness. Public display on zohelo.com or bi.zohelo.com needs UNODC''s written permission;
+      internal analysis only. Attribution: "Source: UNODC, dataUNODC (data.unodc.org), <download date>."'
   updates: Collection rounds and revisions vary; no common release schedule found.
   ingestion:
     history: Archive topic export, definitions, questionnaire/source and release date.
@@ -1565,10 +1568,12 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Resolve dataset licence
+    - Public display needs UNODC's written permission (Legal Notice allows personal, non-commercial use only)
     - Confirm stable bulk/API access
     - Profile missingness and definition breaks
-    references: ['https://data.unodc.org/']
+    references:
+    - https://data.unodc.org/
+    - https://www.unodc.org/unodc/legal.html
 - id: GL-034
   name: IEA Data Explorer
   short_name: IEA Data Explorer
