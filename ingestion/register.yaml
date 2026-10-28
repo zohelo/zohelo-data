@@ -2222,7 +2222,7 @@ sources:
   name: BIR1 – Internet Database of REGON API
   short_name: GUS REGON BIR1
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: registered
+  status: parked
   family: E
   kpi: false
   geography: Poland
@@ -2260,6 +2260,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Parked: licence restricted (no published reuse terms; REGON records of natural persons are personal data, so
+      public display needs a legal and privacy review first)'
     - Obtain a production user key (regon_bir@stat.gov.pl)
     - 'Legal and privacy review: republication not addressed; natural-person records are personal data'
     - Define field allowlist
