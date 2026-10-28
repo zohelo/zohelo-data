@@ -1537,7 +1537,7 @@ sources:
   name: UNODC Data Portal
   short_name: UNODC Data Portal
   provider: United Nations Office on Drugs and Crime
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -1574,6 +1574,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Parked: licence restricted (UNODC Legal Notice allows personal, non-commercial use only, no redistribution;
+      public display needs UNODC''s written permission)'
     - Public display needs UNODC's written permission (Legal Notice allows personal, non-commercial use only)
     - Confirm stable bulk/API access
     - Profile missingness and definition breaks
