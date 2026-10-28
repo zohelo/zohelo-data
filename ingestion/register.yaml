@@ -1678,8 +1678,7 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: EEA-owned material is CC BY and commercially reusable with acknowledgement and undistorted meaning; item-specific
-      and third-party conditions override.
+    notes: 'Terms: EEA legal notice https://www.eea.europa.eu/en/legal-notice: EEA-owned content is CC BY 4.0, reusable free of charge for commercial or non-commercial purposes, provided the EEA is acknowledged as the original source in each copy and the original meaning is not distorted. Third-party content and items carrying a copyright mark or specific conditions are excluded (check the item notice). Disclaimer: the EEA accepts no responsibility or liability for the information; it does not necessarily reflect the official opinion of the EEA or other EU bodies. Attribution: "Source: European Environment Agency (EEA), <dataset title>, <URL>; modified by zohelo."'
   updates: Datasets follow legislation/reporting cycles; revisions and update cadence are item-specific.
   ingestion:
     history: Archive exact dataset release, metadata, rights owner and spatial schema.
@@ -1695,11 +1694,12 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Dataset-level rights scan
-    - Inventory APIs/services per chosen dataset
+    - 'Dataset-level rights scan (third-party and item-specific conditions)'
+    - 'Inventory APIs/services per chosen dataset'
     references:
     - https://www.eea.europa.eu/en/datahub
     - https://www.eea.europa.eu/en/legal-notice
+    - https://www.eea.europa.eu/en/about/contact-us/faqs/can-i-use-eea-content-in-my-work-or-in-my-organisations-products
 - id: GL-038
   name: UNECE Data Portal
   short_name: UNECE Data Portal
