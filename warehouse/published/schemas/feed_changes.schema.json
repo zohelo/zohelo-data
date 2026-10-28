@@ -5,17 +5,17 @@
   "type": "object",
   "required": ["generated_at", "items"],
   "properties": {
-    "generated_at": {"type": "string"},
+    "generated_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$"},
     "items": {
       "type": "array",
       "items": {
         "type": "object",
         "required": ["at", "source_key", "dataset_key", "kpi_keys", "title_pl", "title_en", "kind"],
         "properties": {
-          "at": {"type": "string"},
-          "source_key": {"type": "string"},
+          "at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$"},
+          "source_key": {"type": "string", "pattern": "^[a-z0-9_]+$"},
           "dataset_key": {"type": "string"},
-          "kpi_keys": {"type": "array", "items": {"type": "string"}},
+          "kpi_keys": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}},
           "title_pl": {"type": "string"},
           "title_en": {"type": "string"},
           "kind": {"type": "string"}

@@ -13,6 +13,8 @@ strings in ISO 8601 UTC.
   v2 alongside v1.
 - Keys: `geography_key` as in Gold (`'PL'`, `'TERC:<code>'`, `'NUTS:<code>'`); `kpi_key` =
   `concept_key` (e.g. `unemployment_rate`); `unit_key` from `warehouse/seeds/unit.csv`.
+- Formats: keys match `^[a-z0-9_]+$`, domain keys dot-separated segments of that form, timestamps
+  `YYYY-MM-DDTHH:MM[:SS[.f]]Z`; the schemas declare them as `pattern` (D24).
 - All fields below are required unless marked optional.
 
 ## catalog/catalog.json

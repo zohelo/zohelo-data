@@ -6,7 +6,7 @@
   "required": ["version", "generated_at", "kpis", "domains", "units", "sources", "licences"],
   "properties": {
     "version": {"type": "integer"},
-    "generated_at": {"type": "string"},
+    "generated_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$"},
     "kpis": {
       "type": "array",
       "items": {
@@ -16,14 +16,14 @@
           "source_keys", "geo_levels", "first_period", "last_period", "dimensions", "loaded_at", "status"
         ],
         "properties": {
-          "kpi_key": {"type": "string"},
+          "kpi_key": {"type": "string", "pattern": "^[a-z0-9_]+$"},
           "name_pl": {"type": "string"},
           "name_en": {"type": "string"},
-          "unit_key": {"type": "string"},
+          "unit_key": {"type": "string", "pattern": "^[a-z0-9_]+$"},
           "frequency_default": {"type": "string"},
-          "subgroup_key": {"type": "string"},
-          "domain_path": {"type": "array", "items": {"type": "string"}},
-          "source_keys": {"type": "array", "items": {"type": "string"}},
+          "subgroup_key": {"type": "string", "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)*$"},
+          "domain_path": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)*$"}},
+          "source_keys": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}},
           "geo_levels": {"type": "array", "items": {"type": "string"}},
           "first_period": {"type": "string"},
           "last_period": {"type": "string"},
@@ -33,14 +33,14 @@
               "type": "object",
               "required": ["dimension_key", "member_count", "levels"],
               "properties": {
-                "dimension_key": {"type": "string"},
+                "dimension_key": {"type": "string", "pattern": "^[a-z0-9_]+$"},
                 "member_count": {"type": "integer"},
                 "levels": {"type": "array", "items": {"type": "string"}}
               },
               "additionalProperties": true
             }
           },
-          "loaded_at": {"type": "string"},
+          "loaded_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$"},
           "status": {"type": "string"}
         },
         "additionalProperties": true
@@ -52,9 +52,9 @@
         "type": "object",
         "required": ["domain_key", "level", "parent_key", "name_en", "name_pl", "csa_code", "sort"],
         "properties": {
-          "domain_key": {"type": "string"},
+          "domain_key": {"type": "string", "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)*$"},
           "level": {"type": "string"},
-          "parent_key": {"type": ["string", "null"]},
+          "parent_key": {"type": ["string", "null"], "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)*$"},
           "name_en": {"type": "string"},
           "name_pl": {"type": "string"},
           "csa_code": {"type": "string"},
@@ -69,7 +69,7 @@
         "type": "object",
         "required": ["unit_key", "symbol", "name_en", "name_pl", "is_rate"],
         "properties": {
-          "unit_key": {"type": "string"},
+          "unit_key": {"type": "string", "pattern": "^[a-z0-9_]+$"},
           "symbol": {"type": "string"},
           "name_en": {"type": "string"},
           "name_pl": {"type": "string"},
@@ -84,10 +84,10 @@
         "type": "object",
         "required": ["source_key", "name_pl", "name_en", "licence_key", "register_id"],
         "properties": {
-          "source_key": {"type": "string"},
+          "source_key": {"type": "string", "pattern": "^[a-z0-9_]+$"},
           "name_pl": {"type": "string"},
           "name_en": {"type": "string"},
-          "licence_key": {"type": "string"},
+          "licence_key": {"type": "string", "pattern": "^[a-z0-9_]+$"},
           "register_id": {"type": "string"}
         },
         "additionalProperties": true
@@ -99,7 +99,7 @@
         "type": "object",
         "required": ["licence_key", "name", "url", "attribution_text", "commercial_ok"],
         "properties": {
-          "licence_key": {"type": "string"},
+          "licence_key": {"type": "string", "pattern": "^[a-z0-9_]+$"},
           "name": {"type": "string"},
           "url": {"type": "string"},
           "attribution_text": {"type": "string"},

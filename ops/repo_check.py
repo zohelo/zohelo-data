@@ -409,6 +409,9 @@ def _schema_problems(value: object, schema: dict, where: str) -> list[str]:
     if types and not any(JSON_TYPES[t](value) for t in types):
         return [f"{where}: expected {'|'.join(types)}, got {type(value).__name__}"]
     problems = []
+    pattern = schema.get("pattern")
+    if isinstance(value, str) and pattern and re.search(pattern, value) is None:
+        problems.append(f"{where}: {value!r} does not match {pattern}")
     if isinstance(value, dict):
         problems += [f"{where}: missing required key {k!r}" for k in schema.get("required", []) if k not in value]
         for key, sub in schema.get("properties", {}).items():
