@@ -792,9 +792,13 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: UN site terms are not enough to grant rights in every contributing database; preserve source and check
-      each mart.
+    status: open-conditional
+    notes: 'Terms: https://data.un.org/Host.aspx?Content=UNdataUse (UNdata Conditions of Use): all data and metadata
+      are free of charge and may be reused provided UNdata is cited as the reference; no named licence; commercial reuse
+      and modification not addressed; data supplied as in the source database, accuracy not guaranteed, use at the user''s
+      sole risk. The UN website terms (https://www.un.org/en/about-us/terms-of-use, personal non-commercial use) cover
+      the UN site, not the UNdata conditions above. Each mart''s source agency may set its own terms. Attribution: "Source:
+      UNdata (data.un.org), <source database / agency>".'
   updates: Update/revision behavior is mart-specific and poorly exposed in the opened catalog.
   ingestion:
     history: Use only named maintained marts; archive export plus source label and date.
@@ -808,11 +812,12 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Assess whether each mart is current
-    - Resolve source-level terms and stable download contract
+    - 'Assess whether each mart is current'
+    - 'Check the source agency terms of each selected mart; confirm stable download contract'
     references:
     - https://data.un.org/Handlers/ExplorerHandler.ashx?t=sources
     - https://www.un.org/en/about-us/terms-of-use
+    - https://data.un.org/Host.aspx?Content=UNdataUse
 - id: GL-018
   name: Global SDG Indicators Database and API
   short_name: UN SDG Indicators
