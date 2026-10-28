@@ -14,7 +14,7 @@ from html.parser import HTMLParser
 from ingestion.common.report import annotate
 
 UA = {"User-Agent": "zohelo-quality-check/1.0 (+https://zohelo.com)"}
-PAGES = ["/", "/portfolio", "/design", "/en", "/en/portfolio", "/en/design", "/robots.txt", "/sitemap.xml"]
+PAGES = ["/", "/rss.xml", "/en/rss.xml", "/portfolio", "/design", "/en", "/en/portfolio", "/en/design", "/robots.txt", "/sitemap.xml"]
 
 
 def get(url: str, timeout: int = 30) -> tuple[int, bytes, str]:
@@ -240,7 +240,7 @@ def fresh() -> None:
 
 
 def main() -> None:
-    for fn in (fresh,):
+    for fn in (site,):
         try:
             fn()
         except Exception as e:  # noqa: BLE001
