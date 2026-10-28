@@ -21,7 +21,7 @@ PREFIX = "06_published/v1/"
 LEVELS = {"country": "country", "wojewodztwo": "voivodeship"}  # Gold geography_level → contract level
 FREQ_RANK = {"D": 1, "B": 2, "W": 3, "M": 4, "Q": 5, "S": 6, "A": 7}
 SKIP = {"fx_rate": "one value per currency; latest.json has no currency field"}
-LATEST_LIMIT = 20_000  # bytes, docs/published.md size limits
+LATEST_LIMIT = 100_000  # bytes, docs/published.md size limits (D22)
 
 
 def gold(cat, namespace: str, name: str) -> pa.Table:
