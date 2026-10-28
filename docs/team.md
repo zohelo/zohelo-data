@@ -45,6 +45,11 @@ A sprint ends with one release document for all of zohelo and a project status u
 - **Usage**: no member can see the remaining usage. A run stopped on the limit (scheduled-task history,
   `USAGE_LIMIT_REACHED`) is a sprint finding: the Coach adjusts sprint size (number of Tasks, Developers per sprint) so
   the team finishes before the limit, and records it in this section.
+  - 28 Oct S2: Developers 1 and 2 stopped on the limit at 14:43 and 14:58 UTC (Developers 3 and 4 too, per their
+    entries); nothing ran from 13:47 to 16:54 UTC. Cause: overlapping runs (up to six Architect and four Product Owner
+    runs at once) and starts for work already done, not sprint size. Measures: one run per member (shared rules) and
+    start messages as pointers (shared rules). Sprint size unchanged; if a sprint under these rules still stops on the
+    limit, the next lever is fewer Developers per sprint (Developers 3 and 4 alternate sprints).
 - **Sprint close** (Product Owner): remove `sprint` from unfinished Tasks and list them as carry-over; create the
   release document as a GitHub Release in zohelo-data, tag `zohelo-<yyyymmdd>-s<n>` on main, title
   `zohelo <yyyy-mm-dd> S<n>`, notes: goal met or not (evidence), what changed per product in owner language (zohelo.com,
@@ -71,6 +76,10 @@ A sprint ends with one release document for all of zohelo and a project status u
   comments and PRs for a while when too much is written per hour (403 "secondary rate limit"). Write one comment where
   one is enough (no acknowledgements, no repeated owner questions). On that 403, stop writing, retry once after 15
   minutes, and if it is still blocked end the run with the summary as the final message only; the next run posts it.
+- **A start message is a pointer, not the state.** It was true when it was sent; a parallel or earlier run may have
+  handled it since (28 Oct: about 17 runs found their request already merged, taken or answered). Re-read the linked
+  issues and PRs first and act only on what is still open. A run that finds nothing to do writes nothing except a
+  one-line Team log entry (`<member> · <trigger>: nothing to do (<why>)`) and starts nobody.
 - **GitHub is the shared memory.** Work lives in issues and PRs; hand-overs are comments on the issue or PR they are
   about, plus a start message. Three standing issues in zohelo-data: **Team log** #2073 (every member ends its run by
   posting its summary there), **Product inbox** #2074 (proposals to the Product Owner, one comment each), **Weekly
