@@ -6,7 +6,7 @@ export interface SqlInsertEventDetail {
   tabId: string;
 }
 
-export function dispatchSqlInsert(detail: SqlInsertEventDetail): void {
+function dispatchSqlInsert(detail: SqlInsertEventDetail): void {
   document.dispatchEvent(new CustomEvent<SqlInsertEventDetail>(SQL_INSERT_EVENT, { detail }));
 }
 

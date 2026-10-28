@@ -6,7 +6,7 @@
 import type { QueryResult } from "@/store";
 import type { DataTransform, AggregationType, SeriesConfig } from "@/store";
 
-export type TransformedData = Record<string, unknown>[];
+type TransformedData = Record<string, unknown>[];
 
 /**
  * Check if a column contains numeric values
@@ -29,7 +29,7 @@ export const isNumericColumn = (data: Record<string, unknown>[], column: string)
 /**
  * Check if a column contains date/time values
  */
-export const isDateColumn = (data: Record<string, unknown>[], column: string): boolean => {
+const isDateColumn = (data: Record<string, unknown>[], column: string): boolean => {
   if (data.length === 0) return false;
 
   const value = data[0][column];
@@ -45,7 +45,7 @@ export const isDateColumn = (data: Record<string, unknown>[], column: string): b
 /**
  * Aggregate values based on aggregation type
  */
-export const aggregate = (values: unknown[], aggregationType: AggregationType): number => {
+const aggregate = (values: unknown[], aggregationType: AggregationType): number => {
   const numericValues = values.map((v) => Number(v)).filter((v) => !isNaN(v));
 
   if (numericValues.length === 0) return 0;
@@ -70,7 +70,7 @@ export const aggregate = (values: unknown[], aggregationType: AggregationType): 
 /**
  * Group data by a column and aggregate values
  */
-export const groupByColumn = (
+const groupByColumn = (
   data: Record<string, unknown>[],
   groupByColumn: string,
   valueColumn: string,
@@ -105,7 +105,7 @@ export const groupByColumn = (
 /**
  * Sort data by column
  */
-export const sortData = (
+const sortData = (
   data: TransformedData,
   sortBy: string,
   sortOrder: "asc" | "desc"
@@ -125,7 +125,7 @@ export const sortData = (
 /**
  * Limit data to top/bottom N rows
  */
-export const limitData = (data: TransformedData, limit: number): TransformedData => {
+const limitData = (data: TransformedData, limit: number): TransformedData => {
   return data.slice(0, Math.max(1, limit));
 };
 
@@ -209,144 +209,4 @@ export const suggestChartTypes = (
   }
 
   return suggestions.length > 0 ? suggestions : ["bar"];
-};
-
-/**
- * Detect recommended aggregations for a column
- */
-export const suggestAggregations = (result: QueryResult, column: string): AggregationType[] => {
-  if (isNumericColumn(result.data, column)) {
-    return ["sum", "avg", "count", "min", "max"];
-  }
-  return ["count"];
-};
-
-/**
- * Generate a color palette based on number of series
- */
-export const generateColorPalette = (count: number): string[] => {
-  const baseColors = [
-    "#D99B43", // Gold
-    "#8B5CF6", // Purple
-    "#3B82F6", // Blue
-    "#10B981", // Green
-    "#F59E0B", // Amber
-    "#EF4444", // Red
-    "#EC4899", // Pink
-    "#6366F1", // Indigo
-    "#14B8A6", // Teal
-    "#F97316", // Orange
-    "#A855F7", // Violet
-    "#06B6D4", // Cyan
-  ];
-
-  if (count <= baseColors.length) {
-    return baseColors.slice(0, count);
-  }
-
-  // Generate more colors by interpolating
-  const colors = [...baseColors];
-  while (colors.length < count) {
-    const baseColor = baseColors[colors.length % baseColors.length];
-    colors.push(adjustColorBrightness(baseColor, (colors.length % 3) * 20 - 20));
-  }
-
-  return colors;
-};
-
-/**
- * Adjust color brightness
- */
-function adjustColorBrightness(hex: string, percent: number): string {
-  // Remove # if present
-  hex = hex.replace("#", "");
-
-  // Parse RGB
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-
-  // Adjust brightness
-  const adjust = (value: number) => {
-    const adjusted = value + (value * percent) / 100;
-    return Math.max(0, Math.min(255, Math.round(adjusted)));
-  };
-
-  // Convert back to hex
-  const toHex = (value: number) => value.toString(16).padStart(2, "0");
-
-  return `#${toHex(adjust(r))}${toHex(adjust(g))}${toHex(adjust(b))}`;
-}
-
-/**
- * Format value for display in charts
- */
-export const formatChartValue = (value: unknown, format?: string): string => {
-  if (value === null || value === undefined) return "";
-
-  if (typeof value === "number") {
-    if (format === "percent") {
-      return `${(value * 100).toFixed(2)}%`;
-    }
-    if (format === "currency") {
-      return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-      }).format(value);
-    }
-    if (format === "compact") {
-      return new Intl.NumberFormat("en-US", {
-        notation: "compact",
-        compactDisplay: "short",
-      }).format(value);
-    }
-    // Default number formatting
-    return new Intl.NumberFormat("en-US", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(value);
-  }
-
-  if (value instanceof Date) {
-    return value.toLocaleDateString();
-  }
-
-  return String(value);
-};
-
-/**
- * Calculate statistical metrics for box plots
- */
-export const calculateBoxPlotStats = (
-  data: number[]
-): {
-  min: number;
-  q1: number;
-  median: number;
-  q3: number;
-  max: number;
-  outliers: number[];
-} => {
-  const sorted = [...data].sort((a, b) => a - b);
-  const n = sorted.length;
-
-  const q1 = sorted[Math.floor(n * 0.25)];
-  const median = sorted[Math.floor(n * 0.5)];
-  const q3 = sorted[Math.floor(n * 0.75)];
-  const iqr = q3 - q1;
-
-  const lowerFence = q1 - 1.5 * iqr;
-  const upperFence = q3 + 1.5 * iqr;
-
-  const outliers = sorted.filter((v) => v < lowerFence || v > upperFence);
-  const filteredData = sorted.filter((v) => v >= lowerFence && v <= upperFence);
-
-  return {
-    min: filteredData[0] || sorted[0],
-    q1,
-    median,
-    q3,
-    max: filteredData[filteredData.length - 1] || sorted[n - 1],
-    outliers,
-  };
 };

@@ -10,7 +10,7 @@ import {
 } from "./releaseCatalog";
 import type { LakehouseFile } from "./types";
 
-export interface LakehouseTableLoad {
+interface LakehouseTableLoad {
   datasetName: string;
   tableFolderId: string | null;
   files: LakehouseFile[];

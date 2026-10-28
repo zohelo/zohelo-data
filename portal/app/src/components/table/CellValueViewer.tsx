@@ -189,5 +189,3 @@ export const CellValueViewer: React.FC<CellValueViewerProps> = ({
     </Card>
   );
 };
-
-export default CellValueViewer;

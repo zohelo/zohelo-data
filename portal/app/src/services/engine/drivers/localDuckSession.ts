@@ -34,7 +34,7 @@ import type {
   SessionCapabilities,
 } from "../types";
 
-export interface LocalDuckSessionOptions {
+interface LocalDuckSessionOptions {
   connectionId: string;
   kind: Extract<ConnectionKind, "wasm" | "opfs">;
   db: duckdb.AsyncDuckDB;
@@ -194,4 +194,4 @@ export const terminateLocalEngine = async (
 };
 
 /** Re-exported so drivers do not each import duckdb just for the access mode. */
-export { duckdb };
+;

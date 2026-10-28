@@ -34,9 +34,9 @@ export interface ProducerContext {
   readonly signal: AbortSignal;
 }
 
-export type ChunkProducer = (context: ProducerContext) => AsyncIterable<ProducedItem>;
+type ChunkProducer = (context: ProducerContext) => AsyncIterable<ProducedItem>;
 
-export interface CreateExecutionOptions {
+interface CreateExecutionOptions {
   id?: string;
   sql: string;
   produce: ChunkProducer;
@@ -65,7 +65,7 @@ const isAbortLike = (error: unknown): boolean =>
   (error instanceof Error && /query cancelled/i.test(error.message));
 
 /** Normalizes anything a driver can throw into a presentable error. */
-export const toQueryErrorInfo = (error: unknown, cancelled: boolean): QueryErrorInfo => {
+const toQueryErrorInfo = (error: unknown, cancelled: boolean): QueryErrorInfo => {
   if (cancelled || isAbortLike(error)) {
     return { message: "Query cancelled", cancelled: true };
   }
@@ -219,7 +219,7 @@ const sliceChunk = (chunk: QueryChunk, limit: number): QueryChunk => {
 //
 
 /** Everything a materialized execution produced. */
-export interface CollectedExecution {
+interface CollectedExecution {
   schema: QueryResultSchema | null;
   batches: RecordBatch[];
   rows: Record<string, unknown>[];
@@ -230,13 +230,13 @@ export interface CollectedExecution {
 }
 
 /** What a caller learns about a query while it is still running. */
-export interface ExecutionProgress {
+interface ExecutionProgress {
   rows: number;
   batches: number;
   elapsedMs: number;
 }
 
-export interface CollectOptions {
+interface CollectOptions {
   /**
    * Called as batches arrive. Throttled — a query producing thousands of small
    * batches must not schedule thousands of React renders.
@@ -337,7 +337,7 @@ export const collectExecution = async (
  * blob decoding). Row results are already plain JS and pass through with the
  * types the server reported.
  */
-export const materializeExecution = async (execution: QueryExecution): Promise<QueryResult> =>
+const materializeExecution = async (execution: QueryExecution): Promise<QueryResult> =>
   materializeCollected(await collectExecution(execution));
 
 /** The materialization step on its own, for callers that already collected. */
