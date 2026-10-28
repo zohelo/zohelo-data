@@ -1629,8 +1629,14 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: Confirm IRENA data licence, attribution and redistribution terms on each export.
+    status: open-conditional
+    notes: 'Terms: IRENA Terms and Conditions https://www.irena.org/terms-and-conditions (section 4.1): content may be
+      freely accessed, copied, shared, downloaded and reproduced for non-commercial purposes with appropriate attribution
+      to IRENA; any other use (commercial use included) needs IRENA''s prior written permission (info@irena.org);
+      no use of the IRENA logo, no implied endorsement; do not attempt to disaggregate data or statistics generated
+      through IRENA''s platforms and tools (2.1(viii)); third-party content has its own terms; provided "as is", without
+      warranty, may be out of date. Attribution: "Source: IRENA (<year>), IRENASTAT Online Data Query Tool, <download
+      date>."'
   updates: Annual statistics releases with possible historical revisions.
   ingestion:
     history: Archive full release and technology classification.
@@ -1644,10 +1650,11 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Resolve licence
+    - 'Commercial use needs IRENA''s prior written permission (terms allow non-commercial reuse only)'
     - Confirm machine-readable export/API and release archive
     references:
     - https://www.irena.org/Data/View-data-by-topic/Capacity-and-Generation/Statistics-Time-Series
+    - https://www.irena.org/terms-and-conditions
 - id: GL-036
   name: Climate Data Store (CDS)
   short_name: Copernicus Climate Data Store
