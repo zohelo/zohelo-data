@@ -61,7 +61,11 @@ its backlog and its own Developer at once: one zohelo-<product>, one Developer. 
    all closed — except when every unclosed dependency has an open PR of yours: then the Task is pickable as a stacked
    Task (step 4). Order: Bugs first (Developer 1: `security-alert` Bugs of all three repos, critical and high severity
    from the title before the others), then phase, then priority of the Epic (P1 first), then issue number.
-2. **Claim.** Add label `in-progress` and a comment `claimed by <member> run <UTC time>`.
+2. **Claim** only the Task you start now (one at a time; stacked Tasks too): add label `in-progress` and a comment
+   `claimed by <member> run <UTC time>`. Then re-read the issue's comments: if another run claimed it earlier (less than
+   4 hours ago), the earliest claim wins — delete your claim comment, leave the label, and pick the next Task. Runs of
+   the same member can overlap (a run started on demand, or a stopped run that the owner continued, which keeps the
+   instructions it started with), so never assume you are alone.
 3. **Deliver** exactly as the issue's "How to deliver" says: worktree from `origin/main`, branch `<type>/<n>-<topic>`,
    repo checks (zohelo-data `PYTHONPATH=. python -m ops.repo_check`; zohelo-bi `bun install --frozen-lockfile && bun run check`;
    zohelo `bun install --frozen-lockfile && bun run lint && bun run build`), the issue's Verify, one PR with

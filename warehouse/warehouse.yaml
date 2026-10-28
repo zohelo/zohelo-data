@@ -16,6 +16,7 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.domain,  # seed warehouse/seeds/domain.csv
        gold.kpi_dimension,  # catalogue: dimensions per KPI and measure
        gold.kpi, gold.kpi_measure, gold.unit,  # seeds warehouse/seeds/kpi.csv, kpi_measure.csv, unit.csv
+       gold.sex,  # seed warehouse/seeds/sex.csv (SDMX CL_SEX)
        gold.licence, gold.source,  # seeds warehouse/seeds/licence.csv, source.csv
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)
