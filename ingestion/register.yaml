@@ -3547,7 +3547,7 @@ sources:
   short_name: MF VAT white list
   provider: Head of the National Revenue Administration / Ministry of Finance
   source_system: mf_biala_lista
-  status: bronze
+  status: silver
   family: E
   kpi: false
   geography: Poland
@@ -3565,7 +3565,10 @@ sources:
     limits: Unknown.
   licence:
     status: open-conditional
-    notes: Tax portal content is free to use; confirm database/account redistribution rules.
+    notes: 'Terms: https://www.podatki.gov.pl/vat/bezpieczna-transakcja/wykaz-podatnikow-vat/plik-plaski/ (Ministry of
+      Finance flat file, https://plikplaski.mf.gov.pl/pliki/<YYYYMMDD>.7z, published daily with the public VAT taxpayer
+      list). The flat file holds SHA-512 hashes of NIP+account, not readable data; republication: not stated. Attribution:
+      "Źródło: Ministerstwo Finansów, Wykaz podatników VAT".'
   updates: Daily point-in-time status; API page versions are not record CDC.
   ingestion:
     history: 'PROPOSAL: prefer the documented official flat file for authorised bulk snapshots; use API/HTML only
@@ -3581,10 +3584,11 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Review current API limits, flat-file licence and redistribution.
+    - 'Flat-file reuse terms are not stated: confirm before any public display beyond aggregate counts.'
     references:
     - https://www.podatki.gov.pl/wykaz-podatnikow-vat-wyszukiwarka
     - https://www.gov.pl/web/kas/api-wykazu-podatnikow-vat
+    - https://www.podatki.gov.pl/vat/bezpieczna-transakcja/wykaz-podatnikow-vat/plik-plaski/
 - id: PLG-012
   name: Open KRS API (API Rejestrów Sądowych)
   short_name: KRS open API
