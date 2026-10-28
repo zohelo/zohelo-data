@@ -519,7 +519,7 @@ sources:
   name: World Economic Outlook (WEO) Database
   short_name: IMF WEO
   provider: International Monetary Fund
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -559,6 +559,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Parked: IMF terms prohibit bulk download by automated technology without explicit permission (https://www.imf.org/en/about/copyright-and-terms);
+      owner to request it from copyright@imf.org'
     - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
     - 'Resolve API account and production status'
     - 'Seek/record IMF response for intended commercial reuse'
@@ -570,7 +572,7 @@ sources:
   name: International Financial Statistics (IFS)
   short_name: IMF IFS
   provider: International Monetary Fund
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -608,6 +610,8 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
+    - 'Parked: IMF terms prohibit bulk download by automated technology without explicit permission (https://www.imf.org/en/about/copyright-and-terms);
+      owner to request it from copyright@imf.org'
     - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
     - 'Inventory current dataflows and coverage'
     - 'Resolve API account status'
@@ -620,7 +624,7 @@ sources:
   name: Direction of Trade Statistics (DOTS)
   short_name: IMF DOTS
   provider: International Monetary Fund
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -658,6 +662,8 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
+    - 'Parked: IMF terms prohibit bulk download by automated technology without explicit permission (https://www.imf.org/en/about/copyright-and-terms);
+      owner to request it from copyright@imf.org'
     - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
     - 'Inventory current dataflows and coverage'
     - 'Resolve API account status'
@@ -805,7 +811,7 @@ sources:
   name: Global SDG Indicators Database and API
   short_name: UN SDG Indicators
   provider: United Nations Statistics Division
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -823,7 +829,12 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: unresolved
-    notes: Confirm the database/API licence and any custodian-agency restrictions before redistribution.
+    notes: 'No data-specific terms found (28 Oct 2026): the SDG data portal and SDG API pages (https://unstats.un.org/sdgs/dataportal,
+      https://unstats.un.org/SDGAPI/swagger/) state no licence or reuse terms; their footer links only the UN website
+      terms (https://www.un.org/en/about-us/terms-of-use: personal, non-commercial use; no redistribution or derivative
+      works), which are website terms, not database terms. Many series come from custodian agencies with their own terms.
+      Owner decision needed (noted on the Epic issue): ask UNSD (statistics@un.org) or treat as restricted. Attribution
+      if allowed: "Source: UN DESA, Global SDG Indicators Database, https://unstats.un.org/sdgs/dataportal".'
   updates: Custodian submissions and global releases revise past observations; cadence varies by series.
   ingestion:
     history: Snapshot global release, data structures, codelists and metadata.
@@ -838,10 +849,15 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Open current API guide beyond Swagger shell
-    - Resolve reuse terms
-    - Map global versus national SDG series
-    references: ['https://unstats.un.org/SDGAPI/swagger/', 'https://unstats.un.org/sdgs/dataportal']
+    - 'Parked: reuse terms unresolved (no database licence; UN website terms are non-commercial); owner decision noted
+      on the Epic'
+    - 'Reuse terms unresolved: no database licence; UN website terms are non-commercial (owner decision)'
+    - 'Open current API guide beyond Swagger shell'
+    - 'Map global versus national SDG series'
+    references:
+    - https://unstats.un.org/SDGAPI/swagger/
+    - https://unstats.un.org/sdgs/dataportal
+    - https://www.un.org/en/about-us/terms-of-use
 - id: GL-019
   name: UN Comtrade
   short_name: UN Comtrade
@@ -864,9 +880,12 @@ sources:
     cost: mixed
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Free access does not establish redistribution rights; review UN Comtrade terms and plan level for commercial
-      use.
+    status: restricted
+    notes: 'Terms: UN Comtrade licence agreement, https://comtrade.un.org/licenseagreement.html (s.5: "any copying,
+      automated browsing or downloading, redistribution, publication, or commercial exploitation" needs prior written
+      permission from the Director of the UN Statistics Division; s.6 provided "as is"); Comtrade+ (comtradeplus.un.org)
+      shows no separate terms. Public display is not allowed without that permission. Attribution if permitted: "Source:
+      United Nations, UN Comtrade Database (comtradeplus.un.org)"; keep authorship and copyright notices.'
   updates: Reporter revisions and classification changes occur; monthly/annual observations differ.
   ingestion:
     history: Bulk by period/classification where licensed; archive raw release metadata.
@@ -880,12 +899,13 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Document current API tiers/quotas
-    - Resolve commercial redistribution terms
-    - Design classification concordances
+    - 'Redistribution and publication need written UNSD permission (licence agreement s.5)'
+    - 'Document current API tiers/quotas'
+    - 'Design classification concordances'
     references:
     - https://comtradeplus.un.org/
     - https://comtradeapi.un.org/swagger/index.html
+    - https://comtrade.un.org/licenseagreement.html
 - id: GL-020
   name: WTO Stats
   short_name: WTO Stats
@@ -909,7 +929,12 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: unresolved
-    notes: Confirm WTO data-specific terms, attribution and third-party ownership before commercial redistribution.
+    notes: 'No terms found for the WTO Stats portal or its API (28 Oct 2026): https://www.wto.org/english/res_e/statis_e/statis_e.htm
+      and https://apiportal.wto.org/ ("free"; footer "Copyright and permissions" page not retrievable) state no licence.
+      The only explicit WTO data terms found are for a different product (Tariff and Trade Data, https://ttd.wto.org/docs/Terms_of_Use_WTO_Tariff_and_Trade_Data.pdf:
+      non-commercial use, WTO acknowledged as source, user disclaimer, mass downloads prohibited without permission).
+      Owner decision needed (noted on the Epic issue). Attribution if allowed: "Source: World Trade Organization, WTO
+      Stats".'
   updates: Release calendars and revisions vary; no common cadence found.
   ingestion:
     history: Snapshot named datasets with metadata and classifications.
@@ -923,12 +948,14 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Locate current official API documentation
-    - Resolve reuse terms
-    - Confirm dataset lineage
+    - 'Reuse terms unresolved: no published terms for WTO Stats; related WTO data terms are non-commercial (owner decision)'
+    - 'Locate current official API documentation'
+    - 'Confirm dataset lineage'
     references:
     - https://timeseries.wto.org/
     - https://www.wto.org/english/res_e/statis_e/statis_e.htm
+    - https://apiportal.wto.org/
+    - https://ttd.wto.org/docs/Terms_of_Use_WTO_Tariff_and_Trade_Data.pdf
 - id: GL-021
   name: UNCTAD Data Hub
   short_name: UNCTAD Data Hub
@@ -950,9 +977,12 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Table-level terms can mandate dataset-specific citation; general commercial/redistribution permission
-      was not established.
+    status: open-conditional
+    notes: 'Terms: CC BY 3.0 IGO, https://unctadstat.unctad.org/EN/About.html ("All materials provided on this website
+      are copyrighted under the Creative Commons Attribution 3.0 IGO license"; data and metadata "may be copied freely,
+      duplicated and further distributed" provided the Data Hub is cited): commercial reuse and adaptation allowed under
+      the licence; third-party series may carry their own terms (check per table). Attribution: "Source: United Nations
+      Trade and Development (UNCTAD) Data Hub, unctadstat.unctad.org".'
   updates: Table-specific updates and revisions; indicator-explainer documents carry methodology.
   ingestion:
     history: Archive named table export, metadata and terms.
@@ -965,10 +995,13 @@ sources:
     priority: review-next
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Resolve reuse per selected table, Confirm machine-download stability]
+    blockers:
+    - 'Check third-party terms per selected table'
+    - 'Confirm machine-download stability'
     references:
     - https://unctadstat.unctad.org/
     - https://unctadstat.unctad.org/EN/IndicatorsExplained.html
+    - https://unctadstat.unctad.org/EN/About.html
 - id: GL-022
   name: FAOSTAT
   short_name: FAOSTAT
@@ -991,8 +1024,11 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: Statistical databases use FAO Open Data Licensing Policy and database terms, not generic website terms;
-      third-party components require clearance.
+    notes: 'Terms: CC BY 4.0, FAO Statistical Database Terms of Use https://www.fao.org/contact-us/terms/db-terms-of-use
+      (unless a dataset''s metadata says otherwise): access, download, copy, adapt and re-disseminate; do not use datasets
+      for or with the promotion of a commercial enterprise; do not imply FAO endorsement; do not misrepresent the data;
+      third-party datasets need their provider''s consent; provided without warranty. Attribution (required format):
+      "FAO. <year of last update>. FAOSTAT: <dataset>. Accessed on <DD Month YYYY>. <URL>. Licence: CC-BY-4.0."'
   updates: Domain release calendars and revisions vary; production and balance histories can be revised.
   ingestion:
     history: Load domain bulk packages, metadata and flags by release.
@@ -1006,11 +1042,12 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Review statistical database terms directly
-    - Confirm current API contract
+    - 'Confirm current API contract'
+    - 'Exclude third-party datasets that need provider consent'
     references:
     - https://www.fao.org/faostat/en/
     - https://www.fao.org/contact-us/terms/en/
+    - https://www.fao.org/contact-us/terms/db-terms-of-use
 - id: GL-023
   name: ILOSTAT
   short_name: ILOSTAT
