@@ -1112,7 +1112,7 @@ sources:
   name: Global Health Observatory (GHO) OData API
   short_name: WHO GHO
   provider: World Health Organization
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -1150,6 +1150,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Parked: GHO terms allow use for public health purposes only and forbid alteration without WHO written authorization;
+      the same indicators come from data.who.int (GL-025, CC BY 4.0)'
     - 'Prefer data.who.int (GL-025, CC BY 4.0) for overlapping series; GHO terms forbid alteration without WHO authorization'
     - 'Confirm legacy GHO deprecation plan'
     - 'Map overlap with data.who.int datasets'
