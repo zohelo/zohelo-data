@@ -1415,8 +1415,11 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: restricted
-    notes: Portal terms prohibit treating access as blanket data rights; source datasets and contributors need separate
-      permission review.
+    notes: 'Terms: https://migrationdataportal.org/terms-use (no named licence; "All materials are copyright of the
+      International Organization for Migration, unless otherwise stated"): personal, non-commercial use only; no derivative
+      works; extraction, reproduction and distribution need IOM''s prior written permission; third-party materials need
+      their owner''s permission; provided without warranty. Public display is not allowed without permission; use the
+      upstream sources instead. Attribution if permitted: "Source: IOM Migration Data Portal, https://www.migrationdataportal.org/".'
   updates: Indicators/pages update irregularly; no machine-readable release contract found.
   ingestion:
     history: Use primarily as discovery metadata; onboard original source instead where available.
@@ -1429,10 +1432,13 @@ sources:
     priority: conditional
     evidence: catalogue-only
     connection: not-tested
-    blockers: [No stable API/bulk interface identified, Resolve rights at each upstream source]
+    blockers:
+    - 'Redistribution and derivatives need IOM written permission; use upstream sources'
+    - 'No stable API/bulk interface identified'
     references:
     - https://www.migrationdataportal.org/
     - https://www.migrationdataportal.org/terms-use
+    - https://migrationdataportal.org/terms-use
 - id: GL-031
   name: ITU DataHub
   short_name: ITU DataHub
