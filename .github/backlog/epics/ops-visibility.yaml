@@ -76,13 +76,13 @@ deliverables:
         context: >-
           Lanes pick issues by key prefix; alert Bugs have no key, so the playbook must name them.
         files:
-          - edit: docs/lanes.md
+          - edit: docs/team.md
         steps:
           - "In the lanes table, lane 1 also owns open issues labelled `security-alert` in zohelo-data, zohelo-bi and zohelo; in Implementer step 1, these are picked first (critical and high before others)."
         acceptance:
-          - docs/lanes.md names security-alert Bugs as lane 1 work, picked first
+          - docs/team.md names security-alert Bugs as lane 1 work, picked first
         verify:
-          - run: grep -n "security-alert" docs/lanes.md
+          - run: grep -n "security-alert" docs/team.md
             expect: the table row and the pick rule
         out_of_scope:
           - changes to other lanes

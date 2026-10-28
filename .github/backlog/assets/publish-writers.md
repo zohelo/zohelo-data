@@ -44,7 +44,7 @@ geography_level, date_key, frequency, value, observation_status_key).
 `main(prefix=PREFIX, namespace="gold") -> dict`: generated_at = iso(now); for every kpi.csv row with status
 `published` and not in SKIP, read `<namespace>.metrics_<kpi_key>` (NoSuchTableError → the key goes to
 `missing`), build kpi_latest with `seed("kpi_measure")` and `checked(gold(cat, "gold", "coverage"))`, encode with
-`json.dumps(..., ensure_ascii=False, separators=(",", ":"))`, raise ValueError when the body exceeds 20,000 bytes
+`json.dumps(..., ensure_ascii=False, separators=(",", ":"))`, raise ValueError when the body exceeds 100,000 bytes
 (contract size limit), put it at `prefix + f"kpi/{kpi_key}/latest.json"`. Annotate notice
 `gold.publish: latest` with `{"written": {kpi_key: number of values}, "skipped": sorted(SKIP), "missing": [...]}`
 (ingestion.common.report.annotate) and return the same dict. No `__main__` block and no activity entry: a later

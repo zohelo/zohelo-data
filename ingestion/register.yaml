@@ -401,9 +401,13 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: Verify the licence on the exact catalog/download record; World Bank generic terms incorporate dataset-specific
-      terms and limit other materials.
+    status: open-conditional
+    notes: 'Terms: CC BY 4.0 for the country-level indicators, https://datacatalog.worldbank.org/search/dataset/0039935
+      ("This dataset is licensed under Creative Commons Attribution 4.0"; World Bank dataset terms https://www.worldbank.org/ext/en/legal/terms-conditions/datasets):
+      copy, modify and distribute for any purpose including commercial use; indicate changes; provided as is. Microdata
+      (https://microdata.worldbank.org/catalog/global-findex) are under the Research Data License: no redistribution
+      or sale, research use only — never ingested or published. Attribution: "Source: The World Bank, Global Findex
+      Database (Demirgüç-Kunt, Klapper, Singer, Ansar)". Indicate changes.'
   updates: Periodic survey waves, not annual; later releases may revise indicators.
   ingestion:
     history: Archive complete named releases with metadata and vintage.
@@ -418,11 +422,13 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Open exact catalog licence
-    - Confirm stable machine-download contract
+    - 'Confirm stable machine-download contract'
+    - 'Use country-level indicators only; microdata may not be redistributed'
     references:
     - https://www.worldbank.org/en/publication/globalfindex
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
+    - https://datacatalog.worldbank.org/search/dataset/0039935
+    - https://www.worldbank.org/ext/en/legal/terms-conditions/datasets
 - id: GL-010
   name: Enterprise Surveys
   short_name: World Bank Enterprise Surveys
@@ -786,9 +792,13 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: UN site terms are not enough to grant rights in every contributing database; preserve source and check
-      each mart.
+    status: open-conditional
+    notes: 'Terms: https://data.un.org/Host.aspx?Content=UNdataUse (UNdata Conditions of Use): all data and metadata
+      are free of charge and may be reused provided UNdata is cited as the reference; no named licence; commercial reuse
+      and modification not addressed; data supplied as in the source database, accuracy not guaranteed, use at the user''s
+      sole risk. The UN website terms (https://www.un.org/en/about-us/terms-of-use, personal non-commercial use) cover
+      the UN site, not the UNdata conditions above. Each mart''s source agency may set its own terms. Attribution: "Source:
+      UNdata (data.un.org), <source database / agency>".'
   updates: Update/revision behavior is mart-specific and poorly exposed in the opened catalog.
   ingestion:
     history: Use only named maintained marts; archive export plus source label and date.
@@ -802,11 +812,12 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Assess whether each mart is current
-    - Resolve source-level terms and stable download contract
+    - 'Assess whether each mart is current'
+    - 'Check the source agency terms of each selected mart; confirm stable download contract'
     references:
     - https://data.un.org/Handlers/ExplorerHandler.ashx?t=sources
     - https://www.un.org/en/about-us/terms-of-use
+    - https://data.un.org/Host.aspx?Content=UNdataUse
 - id: GL-018
   name: Global SDG Indicators Database and API
   short_name: UN SDG Indicators
@@ -862,7 +873,7 @@ sources:
   name: UN Comtrade
   short_name: UN Comtrade
   provider: United Nations Statistics Division
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -899,6 +910,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
+    - 'Parked: UN Comtrade licence forbids redistribution and publication without written UNSD permission'
     - 'Redistribution and publication need written UNSD permission (licence agreement s.5)'
     - 'Document current API tiers/quotas'
     - 'Design classification concordances'
@@ -910,7 +922,7 @@ sources:
   name: WTO Stats
   short_name: WTO Stats
   provider: World Trade Organization
-  status: registered
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -948,6 +960,8 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
+    - 'Parked: reuse terms unresolved (no published WTO Stats terms; related WTO data terms are non-commercial); owner
+      decision noted on the Epic'
     - 'Reuse terms unresolved: no published terms for WTO Stats; related WTO data terms are non-commercial (owner decision)'
     - 'Locate current official API documentation'
     - 'Confirm dataset lineage'
@@ -960,7 +974,7 @@ sources:
   name: UNCTAD Data Hub
   short_name: UNCTAD Data Hub
   provider: UN Trade and Development (UNCTAD)
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
@@ -1006,7 +1020,7 @@ sources:
   name: FAOSTAT
   short_name: FAOSTAT
   provider: Food and Agriculture Organization of the United Nations
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide

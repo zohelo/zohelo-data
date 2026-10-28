@@ -94,6 +94,36 @@ deliverables:
           - run: python -m ops.repo_check
             expect: "'ok   published contract' and all other checks ok"
         out_of_scope: [series.parquet and catalog parquet fixtures (written by publish.py tests later)]
+      - key: data/published/published-v1/contract/geo-schema
+        type: Task
+        title: Validate the geo fixture against a GeoJSON schema
+        effort: S
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/contract/schemas]
+        context: >-
+          The Deliverable needs repo_check to validate every fixture against a schema. Today
+          ops/repo_check.py published_contract() reads only fixtures/**/*.json, so
+          warehouse/published/fixtures/geo/voivodeship.geojson (docs/published.md, geo/<level>.geojson)
+          is never checked and has no schema.
+        files:
+          - create: warehouse/published/schemas/geo.schema.json
+          - edit: ops/repo_check.py
+          - edit: warehouse/published/README.md
+        steps:
+          - "geo.schema.json, same header style as kpi_latest.schema.json ($id .../geo.schema.json, title '06_published/v1/geo/<level>.geojson'): object, required [type, features]; type string; features array of objects with required [type, properties, geometry]; type string; properties object with required [geography_key, name_pl, name_en, level], those four and parent_key typed string; geometry object with required [type, coordinates], type string, coordinates array. additionalProperties true on every object."
+          - "repo_check.py PUBLISHED_SCHEMAS: add \"geo/*.geojson\": \"geo\"."
+          - "published_contract(): loop over sorted([*fixtures.rglob('*.json'), *fixtures.rglob('*.geojson')]); for a .geojson fixture also add f\"{rel}: feature {i} level {level!r} is not {fixture.stem!r}\" for every feature whose properties.level differs from the file stem. Mention GeoJSON in the docstring."
+          - "README.md: `schemas/` line reads 'one JSON Schema (draft 2020-12) per JSON or GeoJSON file of the contract'."
+        acceptance:
+          - "repo_check prints 'ok   published contract'"
+          - "removing name_en from the geo fixture, or setting its level to 'powiat', fails the check (try, revert)"
+        verify:
+          - run: "python -c \"from ops.repo_check import published_contract as c;print(c())\""
+            expect: "[]"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [the geo fixture's content, size-limit checks, publish.py]
   - key: data/published/published-v1/publish
     title: gold.publish activity
     depends_on: [data/published/published-v1/contract, data/metadata/catalogue-v1, data/metadata/semantic-manifest/generate]
@@ -302,5 +332,44 @@ deliverables:
           - run: python -m ops.repo_check
             expect: all checks ok
         out_of_scope: [the schemas and fixtures, value checks against Gold (next Task)]
+      - key: data/published/published-v1/tests/key-patterns
+        type: Task
+        title: Add key and timestamp patterns to the published schemas
+        effort: S
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/contract/schemas]
+        context: >-
+          Decision D24: the schemas in warehouse/published/schemas/ own the format of keys and timestamps;
+          consumers validate only what they declare. Today they declare types only, and
+          ops/repo_check.py _schema_problems ignores `pattern`. Domain keys contain dots
+          (economy.prices), so hierarchy keys get their own pattern.
+        files:
+          - edit: ops/repo_check.py
+          - edit: warehouse/published/schemas/catalog.schema.json
+          - edit: warehouse/published/schemas/manifest.schema.json
+          - edit: warehouse/published/schemas/kpi_latest.schema.json
+          - edit: warehouse/published/schemas/feed_changes.schema.json
+          - edit: docs/published.md
+        steps:
+          - "repo_check.py _schema_problems: after the type check, when value is a str and the schema has `pattern` and re.search(pattern, value) is None, add the problem f\"{where}: {value!r} does not match {pattern}\"."
+          - "Schemas: add `\"pattern\": \"^[a-z0-9_]+$\"` to every kpi_key, unit_key, source_key, licence_key and dimension_key property, and to the items of kpis[].source_keys and items[].kpi_keys."
+          - "Add pattern `^[a-z0-9_]+(\\.[a-z0-9_]+)*$` to kpis[].subgroup_key, the items of kpis[].domain_path, domains[].domain_key and domains[].parent_key (null stays allowed by its type)."
+          - "Add pattern `^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$` to every generated_at, kpis[].loaded_at, values[].checked_at and items[].at."
+          - "No pattern on geography_key, dataset_key, periods or names."
+          - "docs/published.md, Rules: new bullet 'Formats: keys match `^[a-z0-9_]+$`, domain keys dot-separated segments of that form, timestamps `YYYY-MM-DDTHH:MM[:SS[.f]]Z`; the schemas declare them as `pattern` (D24).'"
+        acceptance:
+          - repo_check passes with the fixtures unchanged
+          - "a fixture kpi_key 'Unemployment-Rate' or generated_at '2026-01-01 00:00' fails 'published contract' (try, revert)"
+        verify:
+          - run: "python -c \"import json;from ops.repo_check import _schema_problems as p;s=json.load(open('warehouse/published/schemas/kpi_latest.schema.json'));f=json.load(open('warehouse/published/fixtures/kpi/unemployment_rate/latest.json'));f['kpi_key']='Unemployment-Rate';f['generated_at']='2026-01-01 00:00';print(len(p(f,s,'$')))\""
+            expect: "2"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope:
+          - fixtures (they already match)
+          - zohelo-bi validators (lane 3)
+          - "dataset_key format: Gold uses eurostat:UNE_RT_A, the feed fixture une_rt_a (architect question)"
     todo:
       - "Post-publish check comparing latest.json values with Gold for every KPI"
+      - "zohelo-bi validators mirror the schema patterns of key-patterns (decision D24; bi lane)"

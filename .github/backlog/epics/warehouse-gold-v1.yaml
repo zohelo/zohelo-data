@@ -178,40 +178,38 @@ deliverables:
     tasks:
       - key: data/warehouse/gold-v1/coverage/sex
         type: Task
-        title: Seed the conformed sex dimension and key dim_series to it
-        effort: M
+        title: Seed the sex code list and map source totals to _T in dim_series
+        effort: S
         state: open
-        contract: true
+        depends_on: [data/warehouse/gold-v1/fold/cutover]
         context: >-
-          warehouse/dimensions/sex.yaml defines sex per SDMX CL_SEX (F, M, _O other, _U unknown; specials _T
-          total, _Z not applicable). Today warehouse/models/gold/poc_dim_series.sql (gold.dim_series) writes
-          sex_key = coalesce(any_value(sex_code), '_Z'); the build models emit 'F', 'M', 'T' or null, so no
-          table lists the codes and 'T' is not the registry's '_T'. No code in zohelo-data reads sex_key.
+          docs/model.md: conformed dimensions use the SDMX special members, and source totals (T, ogółem) map
+          to _T. warehouse/dimensions/sex.yaml lists the CL_SEX members. Today the build stages emit sex_code
+          T, F, M or null, and warehouse/models/gold/poc_dim_series.sql (gold.dim_series) stores
+          coalesce(sex_code, '_Z') as sex_key, so totals appear as 'T' and no code list exists.
         files:
           - create: warehouse/seeds/sex.csv
-          - edit: warehouse/seeds/_seeds.yml
           - edit: warehouse/models/gold/poc_dim_series.sql
           - edit: warehouse/models/gold/_gold.yml
           - edit: warehouse/warehouse.yaml
-          - edit: warehouse/dimensions/sex.yaml
         steps:
-          - "sex.csv: header sex_key,name_en,name_pl,sort; rows _T,total,ogółem,1 · F,female,kobiety,2 · M,male,mężczyźni,3 · _O,other,inna,4 · _U,unknown,nieznana,5 · _Z,not applicable,nie dotyczy,6."
-          - "_seeds.yml: seed sex, column sex_key tests [not_null, unique]."
-          - "poc_dim_series.sql: replace the sex_key line by `case any_value(sex_code) when 'T' then '_T' when 'F' then 'F' when 'M' then 'M' else '_Z' end as sex_key`; header comment: sex_key is the CL_SEX code of seed sex.csv (T → _T, none → _Z)."
-          - "_gold.yml poc_dim_series: column sex_key, tests [not_null, {relationships: {arguments: {to: ref('sex'), field: sex_key}}}]."
-          - "warehouse.yaml gold list, after the gold.licence, gold.source line: `gold.sex,  # seed warehouse/seeds/sex.csv (SDMX CL_SEX)`."
-          - "sex.yaml mapping_notes: add 'Gold: seed warehouse/seeds/sex.csv (gold.sex); gold.dim_series.sex_key maps T to _T and no sex to _Z.'"
-          - "Dev trial dev/sex_trial.py modelled on dev/seeds_trial.py of commit b62f65e (git fetch origin b62f65e377560f11c45af1f24a49ae0afc13dbb1, then git show b62f65e:dev/seeds_trial.py): namespace zz_dev_sex; select 'gold' plus every seed name (warehouse/seeds/*.csv without .csv); annotate notice 'sex: <n> rows' with the zz_dev_sex.dim_series row count per sex_key; --drop as there. Run, then --drop; delete dev/ before the PR."
+          - "sex.csv, header sex_key,name_en,name_pl,sort and rows: _T,total,ogółem,1 · F,female,kobiety,2 · M,male,mężczyźni,3 · _O,other,inna,4 · _U,unknown,nieznana,5 · _Z,not applicable,nie dotyczy,6 (one row per line)."
+          - "poc_dim_series.sql: replace `coalesce(any_value(sex_code), '_Z') as sex_key` by `case any_value(sex_code) when 'T' then '_T' else coalesce(any_value(sex_code), '_Z') end as sex_key`; add 'source totals T become _T (docs/model.md)' to the header comment."
+          - "_gold.yml, poc_dim_series columns: `- name: sex_key` with tests [not_null, {relationships: {arguments: {to: ref('sex'), field: sex_key}}}]."
+          - "warehouse.yaml gold list: new line after the gold.kpi line: `gold.sex,  # seed warehouse/seeds/sex.csv (SDMX CL_SEX)`."
+          - "Dev trial dev/sex_trial.py modelled on dev/seeds_trial.py of commit b62f65e (`gh api 'repos/zohelo/zohelo-data/contents/dev/seeds_trial.py?ref=b62f65e' --jq .content | base64 -d`): namespace zz_dev_sex; select 'gold' plus every seed name (warehouse/seeds/*.csv without .csv); annotate notice 'dim_series sex_key' with the row count per sex_key of table dim_series; --drop as there. Run, then --drop; delete dev/ before the PR."
         acceptance:
-          - "trial: sex 6 rows; dim_series sex_key only _T, F, M, _Z; all tests pass"
-          - "sqlfluff and repo_check pass"
+          - "trial: build exit 0 (relationships test passes); sex_key values only among _T, F, M, _Z; no 'T'"
+          - sqlfluff and repo_check pass
         verify:
           - run: python -m ops.repo_check
             expect: all checks ok
           - workflow: Dev · branch runs, script sex_trial, on the branch
-            expect: "notice 'sex: 6 rows' with counts for _T, F, M and _Z only; then 'dropped zz_dev_sex'"
-        out_of_scope: [dim_age, breakdown_json, the build and metrics models, other warehouse/dimensions files]
+            expect: "notice 'dim_series sex_key' with counts for _T, F, M, _Z only; then 'dropped zz_dev_sex'"
+        out_of_scope:
+          - "null sex_code stays _Z (series not broken down by sex → _T needs per-measure rules, later)"
+          - fact and metrics models, breakdown_json, dim_age
     todo:
       - "Activate the blocks the 40 KPIs need in macros/poc_blocks.sql (list comes from kpi.csv, Epic data/metadata/catalogue-v1)"
       - "Make fact_annual/monthly incremental per block before BDL and Eurostat volumes grow (policy #822)"
-      - "Conformed age dimension (dim_age) from warehouse/dimensions/age.yaml (sex: Task coverage/sex)"
+      - "Conformed age dimension (dim_age) from warehouse/dimensions/age.yaml"
