@@ -310,9 +310,32 @@ def fresh() -> None:
                               if isinstance(jget("https://api.nbp.pl/api/exchangerates/tables/a/?format=json"), list) else None})
 
 
+def portal() -> None:
+    base = "https://data.zohelo.com"
+    out = {}
+    for path in ("/", "/index.html", "/catalog.json", "/no-such-page-qe"):
+        status, body, final = get(base + path)
+        info = {"status": status, "bytes": len(body), "final": final}
+        if b"<html" in body[:3000].lower():
+            p = Page()
+            p.feed(body.decode("utf-8", "replace"))
+            info.update(lang=p.lang, title=p.title.strip(), h1=p.h1, links=sorted(p.links)[:25],
+                        text=" | ".join(p.text)[:1500])
+            bad = []
+            for href in sorted(p.assets | {x for x in p.links if not x.startswith(("http", "mailto:", "#"))}):
+                url = href if href.startswith("http") else base + (href if href.startswith("/") else "/" + href)
+                st = get(url)[0]
+                if st != 200:
+                    bad.append(f"{href}: {st}")
+            info["broken"] = bad[:20]
+        else:
+            info["head"] = body[:300].decode("utf-8", "replace")
+        annotate("notice", f"portal {path}", info)
+
+
 def main() -> None:
     import sys
-    fns = {"browser": browser, "bi": bi, "site": site, "numbers": numbers, "fresh": fresh}
+    fns = {"portal": portal, "browser": browser, "bi": bi, "site": site, "numbers": numbers, "fresh": fresh}
     for fn in [fns[a] for a in (sys.argv[1:] or ["site"])]:
         try:
             fn()
