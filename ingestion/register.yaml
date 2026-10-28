@@ -819,7 +819,12 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: unresolved
-    notes: Confirm the database/API licence and any custodian-agency restrictions before redistribution.
+    notes: 'No data-specific terms found (28 Oct 2026): the SDG data portal and SDG API pages (https://unstats.un.org/sdgs/dataportal,
+      https://unstats.un.org/SDGAPI/swagger/) state no licence or reuse terms; their footer links only the UN website
+      terms (https://www.un.org/en/about-us/terms-of-use: personal, non-commercial use; no redistribution or derivative
+      works), which are website terms, not database terms. Many series come from custodian agencies with their own terms.
+      Owner decision needed (noted on the Epic issue): ask UNSD (statistics@un.org) or treat as restricted. Attribution
+      if allowed: "Source: UN DESA, Global SDG Indicators Database, https://unstats.un.org/sdgs/dataportal".'
   updates: Custodian submissions and global releases revise past observations; cadence varies by series.
   ingestion:
     history: Snapshot global release, data structures, codelists and metadata.
@@ -834,10 +839,13 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Open current API guide beyond Swagger shell
-    - Resolve reuse terms
-    - Map global versus national SDG series
-    references: ['https://unstats.un.org/SDGAPI/swagger/', 'https://unstats.un.org/sdgs/dataportal']
+    - 'Reuse terms unresolved: no database licence; UN website terms are non-commercial (owner decision)'
+    - 'Open current API guide beyond Swagger shell'
+    - 'Map global versus national SDG series'
+    references:
+    - https://unstats.un.org/SDGAPI/swagger/
+    - https://unstats.un.org/sdgs/dataportal
+    - https://www.un.org/en/about-us/terms-of-use
 - id: GL-019
   name: UN Comtrade
   short_name: UN Comtrade
