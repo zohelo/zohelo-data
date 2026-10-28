@@ -15,14 +15,24 @@ NAMESPACE = "zz_dev_sex_axis"
 def main(argv: list[str]) -> int:
     cat = catalog()
     if "--drop" in argv:
-        dropped = []
+        import time
+
+        dropped, errors = [], []
         if (NAMESPACE,) in [tuple(n) for n in cat.list_namespaces()]:
             for ident in cat.list_tables(NAMESPACE):
-                cat.purge_table(ident)
-                dropped.append(".".join(ident))
-            cat.drop_namespace(NAMESPACE)
-        annotate("notice", f"dropped {NAMESPACE}", {"tables": dropped})
-        return 0
+                for attempt in range(4):
+                    try:
+                        cat.purge_table(ident)
+                        dropped.append(".".join(ident))
+                        break
+                    except Exception as exc:  # rate limit: wait and retry, then report
+                        if attempt == 3:
+                            errors.append(f"{'.'.join(ident)}: {exc!r}"[:200])
+                        time.sleep(20 * (attempt + 1))
+            if not errors:
+                cat.drop_namespace(NAMESPACE)
+        annotate("notice" if not errors else "error", f"dropped {NAMESPACE}", {"tables": dropped, "errors": errors})
+        return 0 if not errors else 1
     seeds = sorted(p.stem for p in Path("warehouse/seeds").glob("*.csv"))
     code = build.main(select=" ".join(["gold", *seeds]), target="prod", variables={"gold_schema": NAMESPACE})
     result: dict = {"build_exit": code}
