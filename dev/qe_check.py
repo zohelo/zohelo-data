@@ -14,7 +14,9 @@ from html.parser import HTMLParser
 from ingestion.common.report import annotate
 
 UA = {"User-Agent": "zohelo-quality-check/1.0 (+https://zohelo.com)"}
-PAGES = ["/", "/rss.xml", "/en/rss.xml", "/portfolio", "/design", "/en", "/en/portfolio", "/en/design", "/robots.txt", "/sitemap.xml"]
+PAGES = ["/", "/en", "/changes", "/en/changes", "/calendar.ics", "/rss.xml", "/en/rss.xml", "/portfolio", "/en/portfolio",
+         "/robots.txt", "/sitemap.xml"]
+TEXT = ("/", "/changes", "/en/changes")
 
 
 def get(url: str, timeout: int = 30) -> tuple[int, bytes, str]:
@@ -40,9 +42,13 @@ class Page(HTMLParser):
         self.imgs = 0
         self.h1 = 0
         self.hreflang: list[str] = []
+        self.text: list[str] = []
+        self._skip = 0
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
+        if tag in ("script", "style"):
+            self._skip += 1
         if tag == "html":
             self.lang = a.get("lang")
         elif tag == "title":
@@ -66,10 +72,14 @@ class Page(HTMLParser):
             self.assets.add(a["src"])
 
     def handle_endtag(self, tag):
+        if tag in ("script", "style"):
+            self._skip = max(0, self._skip - 1)
         if tag == "title":
             self._t = False
 
     def handle_data(self, data):
+        if not self._skip and data.strip():
+            self.text.append(data.strip())
         if self._t:
             self.title += data
 
@@ -82,7 +92,7 @@ def site() -> None:
     for path in PAGES:
         status, body, final = get(base + path)
         info = {"status": status, "bytes": len(body), "final": final}
-        if path.endswith((".txt", ".xml")):
+        if path.endswith((".txt", ".xml", ".ics")):
             info["head"] = body[:200].decode("utf-8", "replace")
             if path == "/sitemap.xml":
                 info["locs"] = re.findall(r"<loc>([^<]+)</loc>", body.decode("utf-8", "replace"))[:20]
@@ -90,7 +100,9 @@ def site() -> None:
             p = Page()
             p.feed(body.decode("utf-8", "replace"))
             info.update(lang=p.lang, title=p.title.strip(), h1=p.h1, imgs=p.imgs, img_no_alt=p.img_no_alt,
-                        hreflang=p.hreflang, links=sorted(p.links)[:30])
+                        hreflang=p.hreflang, links=sorted(p.links)[:12])
+            if path in TEXT:
+                annotate("notice", f"text {path}", " | ".join(p.text)[:3800])
             for href in sorted(p.links | p.assets):
                 if href.startswith(("mailto:", "#", "tel:")):
                     continue
@@ -101,7 +113,9 @@ def site() -> None:
                         broken.append(f"{path} -> {href}: {checked[url]}")
         pages[path] = info
     status, _, _ = get(base + "/no-such-page-qe")
-    annotate("notice", "site pages", pages)
+    items = list(pages.items())
+    for i in range(0, len(items), 3):
+        annotate("notice", f"pages {i // 3 + 1}", dict(items[i:i + 3]))
     annotate("warning" if broken else "notice", "site links",
              {"checked": len(checked), "broken": broken, "404_page_status": status,
               "www": get("https://www.zohelo.com/")[0]})
