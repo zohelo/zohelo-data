@@ -88,6 +88,8 @@ One Parquet file per Gold catalogue table, with that table's columns.
 | metrics[].dimensions[].column | string | yes | column in the table |
 | metrics[].default_filters | object | optional | column → value applied by default |
 
+`warehouse/catalog.py` `manifest()` builds this object from the dbt semantic models and `kpi.csv`; a published KPI without a semantic model is left out.
+
 ## kpi/<kpi_key>/latest.json
 
 | field | type | required | meaning |

@@ -23,7 +23,7 @@ landing: 01_landing/world_bank_wdi/
 archive_policy:
   move: true
   retention: {keep_latest: 1, keep_days: 90}
-  prune: report
+  prune: delete   # report reviewed 2026-10-28, run https://github.com/zohelo/zohelo-data/actions/runs/40446148186/job/122000035035
 bronze: [bronze.wdi_bulk_observations, bronze.wdi_bulk_metadata, bronze.wdi_rejected_files]
 silver: [silver.wdi_observations, silver.wdi_countries, silver.wdi_indicators]
 gold: []                              # WDI in Gold: shared models (warehouse/warehouse.yaml)
