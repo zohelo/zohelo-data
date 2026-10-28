@@ -650,8 +650,11 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: Use is unrestricted with attribution, but a commercial product may not add a separate charge because
-      BIS statistics are included; no other use is permitted.
+    notes: 'Terms: https://www.bis.org/about/legal/permitted-use-statistics — use of BIS statistics is unrestricted
+      provided the BIS is cited as the source and their inclusion causes no additional charge to subscribers or
+      other users; no other use is permissible; translations must state they are not official BIS translations;
+      no warranty of accuracy and no investment advice (disclaimer to show); the APIs may not be modified or
+      redistributed. Attribution: "Source: BIS statistics (Bank for International Settlements)".'
   updates: Topic release dates vary; bulk files are dated and history may revise.
   ingestion:
     history: Load full topic packages with structures and release date.
