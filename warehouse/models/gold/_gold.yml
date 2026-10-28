@@ -1,4 +1,6 @@
 version: 2
+# Gold v1 (docs/model.md; formerly the proof of concept, docs/gold-poc.md). Namespace gold.
+# Natural string keys; facts split by frequency; dim_series carries the breakdowns.
 models:
   - name: dim_date
     time_spine:
@@ -14,69 +16,110 @@ models:
         granularity: day
       - name: member_type
         tests: [{accepted_values: {arguments: {values: ['day', 'not_applicable', 'unknown']}}}]
-  - name: dim_currency
-    description: >-
-      Conformed currency, v1 from NBP quotations (code, latest Polish name, NBP tables,
-      first/last quote) plus PLN and special members _Z (not monetary) and _X (other).
-    columns:
-      - name: currency_code
-        tests: [not_null, unique]
-  - name: fact_fx_rate
-    description: >-
-      Exchange rates: PLN per 1 unit of currency_code, by date, rate type (mid/bid/ask)
-      and source table (NBP A/B/C). Keys: date_key → dim_date, currency_code → dim_currency.
+  - name: poc_dim_calendar
+    description: Conformed calendar at day grain (gold.dim_date + period labels and period-start flags); date_key is the date.
     columns:
       - name: date_key
-        tests: [not_null, {relationships: {arguments: {to: ref('dim_date'), field: date_key}}}]
-      - name: currency_code
-        tests: [not_null, {relationships: {arguments: {to: ref('dim_currency'), field: currency_code}}}]
-      - name: rate
+        tests: [not_null, unique]
+  - name: poc_dim_geography
+    description: >-
+      Geography keyed by area: one row per area with the codes each source uses as attributes
+      (iso2, nuts_code, terc_code, bdl_unit_id, wb_code); Polish hierarchy country → makroregion →
+      województwo → region → podregion → powiat → gmina; special members _T, _Z, _X.
+    columns:
+      - name: geography_key
+        tests: [not_null, unique]
+      - name: level_name
         tests: [not_null]
-  - name: dim_period
-    description: >-
-      Conformed reference period (warehouse/dimensions/period.yaml): SDMX TIME_PERIOD
-      values 1900–2100 for A, S, Q, M, W (ISO) and D with start/end day; special members
-      _Z (not applicable) and _T (all periods). period_key = time_period.
+  - name: poc_map_geography
+    description: Every source geography code → geography_key (unmatched → _X, matched = false).
     columns:
-      - name: period_key
-        tests: [not_null, unique]
-      - name: frequency_code
-        tests: [{accepted_values: {arguments: {values: ['A', 'S', 'Q', 'M', 'W', 'D', '_Z', '_T']}}}]
-  - name: dim_geography
-    description: >-
-      Conformed geography, v1 with the TERYT schemes: TERC (Polska → województwo → powiat →
-      gmina → część gminy for RODZ 4/5/8/9) and SIMC localities (level 5), vintage = TERYT
-      catalogue state date; flattened ancestors l0–l4; area_ha / area_km2 for TERC units from
-      PRG (country area includes internal and territorial waters); special members _T, _Z,
-      _X. geography_key = scheme:code:vintage.
-    columns:
+      - name: source_code
+        tests: [not_null]
       - name: geography_key
-        tests: [not_null, unique]
-      - name: l3_code
-        description: The gmina (TERC, RODZ 1–3) a member belongs to; derived for gmina parts and localities.
-        tests: [{relationships: {arguments: {to: ref('teryt_terc'), field: terc_code}}}]
-  - name: fact_gold_price
-    description: NBP gold price, PLN per gram of 1000-fineness gold, one row per date (date_key → dim_date).
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_geography'), field: geography_key}}}]
+  - name: poc_dim_unit
+    description: Units of measure as the sources name them, with a conformed unit where known.
     columns:
+      - name: unit_key
+        tests: [not_null, unique]
+  - name: poc_dim_frequency
+    columns:
+      - name: frequency
+        tests: [not_null, unique]
+  - name: poc_dim_source
+    columns:
+      - name: source_system
+        tests: [not_null, unique]
+  - name: poc_dim_observation_status
+    columns:
+      - name: observation_status_key
+        tests: [not_null, unique]
+  - name: poc_dim_measure
+    description: >-
+      The measure catalogue: activated measures (from the build stages) and every other block the
+      sources publish or hold (from gold.coverage) with its status.
+    columns:
+      - name: measure_key
+        tests: [not_null, unique]
+      - name: status
+        tests: [not_null]
+  - name: poc_measure_dimensions
+    description: Which dimensions each activated measure offers (geography levels, time, breakdowns with members).
+    columns:
+      - name: measure_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_measure'), field: measure_key}}}]
+  - name: poc_dim_series
+    description: One row per time series (measure × geography × breakdown); the conformed breakdown keys as columns.
+    columns:
+      - name: series_key
+        tests: [not_null, unique]
+      - name: measure_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_measure'), field: measure_key}}}]
+      - name: geography_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_geography'), field: geography_key}}}]
+  - name: poc_fact_annual
+    description: One row per series × year; date_key = 1 January.
+    columns:
+      - name: series_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_series'), field: series_key}}}]
       - name: date_key
-        tests: [not_null, unique, {relationships: {arguments: {to: ref('dim_date'), field: date_key}}}]
-  - name: dim_indicator
-    description: >-
-      Indicator catalogue, v1 with the World Bank WDI indicators (code, English name, topic,
-      unit, periodicity, definitions, source, licence). indicator_key = source_system:code.
-    columns:
-      - name: indicator_key
-        tests: [not_null, unique]
-  - name: fact_observation
-    description: >-
-      Statistical observations at their true grain (indicator × reference area × reference
-      period, one value, source-tagged); v1 holds World Bank WDI annual values.
-    columns:
-      - name: indicator_key
-        tests: [not_null, {relationships: {arguments: {to: ref('dim_indicator'), field: indicator_key}}}]
-      - name: geography_key
-        tests: [not_null, {relationships: {arguments: {to: ref('dim_geography'), field: geography_key}}}]
-      - name: period_key
-        tests: [not_null, {relationships: {arguments: {to: ref('dim_period'), field: period_key}}}]
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_calendar'), field: date_key}}}]
       - name: value
         tests: [not_null]
+      - name: observation_status_key
+        tests: [{relationships: {arguments: {to: ref('poc_dim_observation_status'), field: observation_status_key}}}]
+  - name: poc_fact_monthly
+    description: One row per series × month; date_key = first day of the month.
+    columns:
+      - name: series_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_series'), field: series_key}}}]
+      - name: date_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_calendar'), field: date_key}}}]
+      - name: value
+        tests: [not_null]
+  - name: poc_fact_daily
+    description: One row per series × day.
+    columns:
+      - name: series_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_series'), field: series_key}}}]
+      - name: date_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_calendar'), field: date_key}}}]
+      - name: value
+        tests: [not_null]
+  - name: poc_dim_concept
+    columns:
+      - name: concept_key
+        tests: [not_null, unique]
+  - name: poc_concept_measures
+    columns:
+      - name: measure_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_measure'), field: measure_key}}}]
+  - name: poc_src_eurostat
+    description: Extraction stage (Python model) — the activated Eurostat datasets' Silver rows, read from their files only.
+  - name: poc_src_dbw
+    description: Extraction stage (Python model) — the activated DBW blocks' Silver rows, read from their files only.
+  - name: poc_src_dbw_dictionary
+    description: Extraction stage (Python model) — the label dictionaries of the activated DBW blocks' files.
+  - name: poc_build_check
+    description: Per activated block — rows, series, unmatched geography, dates, flags; read after every build.

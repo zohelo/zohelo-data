@@ -16,11 +16,9 @@ models:
     +materialized: table
     silver:
       +schema: silver
-    gold:
-      +schema: gold
-    poc:    # Gold dimensional model proof of concept (docs/gold-poc.md); tables aliased without the poc_ prefix.
-      # A trial sets poc_schema to a zz_dev_ scratch namespace and selects only this folder (docs/gold-poc.md).
-      +schema: "{{ var('poc_schema', 'poc') }}"
+    gold:   # Gold v1 (docs/model.md); file names keep the poc_ prefix, aliases drop it.
+      # A trial sets gold_schema to a zz_dev_ scratch namespace and selects only this folder.
+      +schema: "{{ var('gold_schema', 'gold') }}"
 
 # Seeds: owner-readable code lists (warehouse/seeds/*.csv), built into the Gold namespace.
 seeds:
