@@ -32,7 +32,13 @@ def main() -> int:
     except Exception:
         import traceback
 
-        annotate("error", "geo trial failed", {"traceback": traceback.format_exc()[-3000:]})
+        annotate("error", "geo trial failed", {"traceback": traceback.format_exc()[-1500:]})
+        from pyiceberg.expressions import EqualTo
+
+        t = catalog().load_table(("gold", "dim_geography"))
+        pl = t.scan(row_filter=EqualTo("geography_key", "PL")).to_arrow().to_pylist()
+        levels = t.scan(selected_fields=("level_name",)).to_arrow().column("level_name").value_counts().to_pylist()
+        annotate("notice", "geo debug", {"pl": [{k: str(v) for k, v in r.items()} for r in pl][:2], "levels": levels})
         raise
     finally:
         keys = [
