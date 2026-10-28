@@ -1858,7 +1858,7 @@ sources:
   short_name: GUS DBW
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
   source_system: gus_dbw
-  status: bronze
+  status: silver
   family: B
   kpi: true
   geography: Poland with territorial and classification breakdowns
@@ -1877,7 +1877,10 @@ sources:
     limits: Unknown from opened documentation; resolve before batch ingestion.
   licence:
     status: open-conditional
-    notes: The DBW API site states CC BY 4.0; retain table metadata and attribution.
+    notes: 'Terms: https://stat.gov.pl/copyright (GUS allows copying and own analyses provided the source is given;
+      no named licence — the DBW API page states none, CC BY 4.0 is stated only for BDL; commercial reuse not addressed,
+      ask api-dbw@stat.gov.pl if needed). Attribution: "Źródło: GUS, Dziedzinowe Bazy Wiedzy" / "Source: Statistics
+      Poland, DBW" plus the indicator id.'
   updates: Scope is continually developed; refresh/revision timing is table-specific.
   ingestion:
     history: Enumerate dictionaries/tables, then snapshot selected full histories.
@@ -1892,12 +1895,11 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm production-key process
-    - Document per-endpoint pagination/limits
-    - Validate territorial code semantics
+    - 'Validate territorial code semantics'
     references:
     - https://api.stat.gov.pl/Home/DBWApi?lang=en
     - https://stat.gov.pl/en/news/api-to-the-knowledge-databases%2C86%2C1.html
+    - https://stat.gov.pl/copyright
 - id: PLS-003
   name: STRATEG indicators and API
   short_name: GUS STRATEG
