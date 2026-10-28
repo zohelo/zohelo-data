@@ -2014,7 +2014,7 @@ sources:
   name: STRATEG indicators and API
   short_name: GUS STRATEG
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland and regional Poland; selected EU comparisons
