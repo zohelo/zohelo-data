@@ -1815,9 +1815,8 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: Free access is explicit, but commercial redistribution terms were not established; review table/source
-      rights.
+    status: open-conditional
+    notes: 'Terms: UNECE Statistical Database copyright notice https://w3.unece.org/PXWeb/Static/Copyright_notice.html: "The data in the UNECE Statistical Database are available free of charge. Users are free to copy, reproduce and redistribute the data for both commercial and non-commercial purposes, provided UNECE is acknowledged as the source." Disclaimer: "UNECE does not take any responsibility for the use of the data." Attribution: "Source: UNECE Statistical Database."'
   updates: Economic indicators carried a 2026 restructuring notice; table schedules and discontinuations vary.
   ingestion:
     history: Snapshot PXWeb table, metadata and source.
@@ -1831,10 +1830,11 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Resolve reuse rights
-    - Track database restructuring and discontinued series
-    - Confirm PXWeb API contract
-    references: ['https://w3.unece.org/PXWeb/en']
+    - 'Track database restructuring and discontinued series'
+    - 'Confirm PXWeb API contract'
+    references:
+    - https://w3.unece.org/PXWeb/en
+    - https://w3.unece.org/PXWeb/Static/Copyright_notice.html
 - id: GL-039
   name: World Population Prospects
   short_name: UN World Population Prospects
