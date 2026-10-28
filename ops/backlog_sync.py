@@ -944,6 +944,7 @@ def run_sync(roots: list[Path], apply: bool) -> int:
         for key, issue in issues.items():
             if key not in plan.nodes and issue["state"] == "open" and issue["repo"] in loaded:
                 close_issue(api, counts, issue["repo"], issue, "Removed from the plan", "not_planned")
+        roll_up(api, counts, plan, issues, loaded)
     except Stop:
         annotate("warning", "backlog_sync stopped", {"writes": WRITE_LIMIT, "note": "limit reached; rerun continues"})
     annotate(
@@ -1116,6 +1117,29 @@ def completed_comment(node: dict, kind: str) -> str:
     if kind == "Task":
         return f"Done by {node['done_by']}"
     return "Done. Evidence:\n" + "\n".join(f"> {n}" for n in node.get("notes") or [])
+
+
+def roll_up(api: Github, counts: dict, plan: Plan, issues: dict[str, dict], loaded: set[str]) -> None:
+    """Close open Deliverables whose Tasks are all closed (and that have no todo lines), then open Epics whose
+    Deliverables are all closed, so progress shows on the board. Areas never close; the sync never reopens."""
+    children: dict[str, list[str]] = {}
+    for key, (kind, node) in plan.nodes.items():
+        parent = parent_key(kind, node)
+        if parent:
+            children.setdefault(parent, []).append(key)
+    for layer in ("Deliverable", "Epic"):
+        for key, (kind, node) in plan.nodes.items():
+            issue = issues.get(key)
+            if kind != layer or not issue or issue["state"] != "open" or node["repo"] not in loaded:
+                continue
+            kids = children.get(key, [])
+            if not kids or node.get("todo") or any(plan.nodes[k][1].get("todo") for k in kids):
+                continue
+            if any(issues.get(k, {}).get("state") != "closed" for k in kids):
+                continue
+            done_when = "\n".join(f"> {line}" for line in node.get("done_when") or [])
+            comment = f"Every sub-issue is closed ({len(kids)}), so this {layer} is complete.\nDone when:\n{done_when}"
+            close_issue(api, counts, node["repo"], issue, comment, "completed")
 
 
 def close_issue(api: Github, counts: dict, repo: str, issue: dict, comment: str, reason: str) -> None:
