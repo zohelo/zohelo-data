@@ -149,6 +149,35 @@ def bi() -> None:
     annotate("warning" if broken else "notice", "bi assets", {"broken": broken})
 
 
+def browser() -> None:
+    import shutil
+    import subprocess
+
+    chrome = shutil.which("google-chrome") or shutil.which("chromium") or shutil.which("chromium-browser")
+    if not chrome:
+        annotate("error", "browser", "no chrome on runner")
+        return
+    paths = ["/explore?lang=pl", "/explore?lang=en", "/d/labour-market?lang=pl", "/d/labour-market?lang=en",
+             "/d/population?lang=pl", "/d/prices-money?lang=pl", "/d/regional-comparison?lang=pl",
+             "/d/poland-overview?lang=en"]
+    for path in paths:
+        try:
+            dom = subprocess.run([chrome, "--headless=new", "--no-sandbox", "--disable-gpu", "--virtual-time-budget=20000",
+                                  "--dump-dom", "https://bi.zohelo.com" + path], capture_output=True, text=True,
+                                 timeout=90).stdout
+        except Exception as e:  # noqa: BLE001
+            annotate("error", f"browser {path}", repr(e)[:500])
+            continue
+        p = Page()
+        p.feed(dom)
+        text = " | ".join(p.text)
+        info = {"bytes": len(dom), "lang": p.lang, "title": p.title.strip(), "h1": p.h1,
+                "svg": dom.count("<svg"), "canvas": dom.count("<canvas"), "img_no_alt": p.img_no_alt,
+                "bad": [w for w in ("NaN", "undefined", "null", "Error", "Błąd", "[object") if w in text],
+                "text": text[:2600]}
+        annotate("notice", f"browser {path}", info)
+
+
 def jget(url: str):
     status, body, _ = get(url, 60)
     if status != 200:
@@ -283,7 +312,7 @@ def fresh() -> None:
 
 def main() -> None:
     import sys
-    fns = {"bi": bi, "site": site, "numbers": numbers, "fresh": fresh}
+    fns = {"browser": browser, "bi": bi, "site": site, "numbers": numbers, "fresh": fresh}
     for fn in [fns[a] for a in (sys.argv[1:] or ["site"])]:
         try:
             fn()
