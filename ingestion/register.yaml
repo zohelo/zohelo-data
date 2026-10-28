@@ -2350,7 +2350,7 @@ sources:
   name: Rocznik Statystyczny Ubezpieczeń Społecznych
   short_name: ZUS social insurance yearbook
   provider: Zakład Ubezpieczeń Społecznych (ZUS)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland and regional breakdowns, edition-dependent
