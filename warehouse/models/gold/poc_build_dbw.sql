@@ -118,7 +118,8 @@ per_row as (
         bool_and(lower(l.pos_label) in ('ogółem', 'razem')) filter (where t.k is null or l.k <> t.k) as all_total,
         count(*) filter (where t.k is null or l.k <> t.k) as breakdowns,
         bool_or(lower(l.pos_label) = 'mężczyźni') as is_men,
-        bool_or(lower(l.pos_label) = 'kobiety') as is_women
+        bool_or(lower(l.pos_label) = 'kobiety') as is_women,
+        bool_or(lower(l.dim_name) = 'płeć' and lower(l.pos_label) in ('ogółem', 'razem')) as is_sex_total
     from long as l
     left join territory_dim as t on l.block_id = t.block_id and l.k = t.k
     group by l.rid
@@ -138,7 +139,7 @@ shaped as (
         r.breakdown_json,
         coalesce(r.all_total, true) as is_total,
         r.breakdowns,
-        case when r.is_men then 'M' when r.is_women then 'F' end as sex_code,
+        case when r.is_men then 'M' when r.is_women then 'F' when r.is_sex_total then 'T' end as sex_code,
         case
             when b.freq_code = 'A' then make_date(s.year, 1, 1)
             when b.freq_code = 'M' then

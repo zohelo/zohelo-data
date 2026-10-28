@@ -34,22 +34,33 @@ time_dim as (
 
 breakdowns as (
     select
-        measure_key,
-        key as dimension,
-        list(
-            distinct json_extract_string(breakdown_json, '$.' || key)
-            order by json_extract_string(breakdown_json, '$.' || key)
-        ) as members,
-        count(distinct json_extract_string(breakdown_json, '$.' || key)) as member_count,
+        keyed.measure_key,
+        coalesce(a.dimension_key, keyed.key) as dimension,
+        case
+            when coalesce(a.dimension_key, keyed.key) = 'sex'
+                then list(distinct keyed.sex_key order by keyed.sex_key)
+            else list(
+                distinct json_extract_string(keyed.breakdown_json, '$.' || keyed.key)
+                order by json_extract_string(keyed.breakdown_json, '$.' || keyed.key)
+            )
+        end as members,
+        case
+            when coalesce(a.dimension_key, keyed.key) = 'sex' then count(distinct keyed.sex_key)
+            else count(distinct json_extract_string(keyed.breakdown_json, '$.' || keyed.key))
+        end as member_count,
         false as has_unmatched
     from (
         select
             measure_key,
+            source_system,
+            sex_key,
             breakdown_json,
             unnest(json_keys(breakdown_json)) as key
         from series
     ) as keyed
-    group by measure_key, key
+    left join {{ ref('dimension_alias') }} as a
+        on keyed.source_system = a.source_system and keyed.key = a.source_dimension
+    group by keyed.measure_key, coalesce(a.dimension_key, keyed.key)
 )
 
 select
