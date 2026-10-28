@@ -1738,7 +1738,7 @@ sources:
   name: EEA Datahub
   short_name: EEA Datahub
   provider: European Environment Agency
-  status: registered
+  status: approved
   family: G
   kpi: true
   geography: multicountry-Europe
