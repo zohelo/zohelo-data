@@ -2279,9 +2279,16 @@ sources:
     cost: free
     limits: No API; automated-download limits unknown.
   licence:
-    status: unresolved
-    notes: No explicit dataset reuse licence was verified on the portal pages; public viewing/download does not
-      settle commercial redistribution.
+    status: open-conditional
+    notes: 'Terms: ZUS re-use terms
+      https://www.zus.pl/web/biuletyn-informacji-publicznej/obsluga-klienta/ogolne-zasady-zalatwiania-spraw/ponowne-wykorzystywanie-informacji-sektora-publicznego:
+      everyone may re-use, without a request and free of charge, public sector information that ZUS publishes (the page
+      names its BIP and dane.gov.pl; the statistical portal and yearbooks are ZUS public information under the same
+      regime), for commercial or non-commercial purposes; the re-user must give the source, the date the information was
+      created and the date it was obtained, say whether it is used in whole or in part, and disclose any processing; ZUS
+      is not liable for processed information. No named licence. psz.zus.pl itself shows no separate terms. Attribution:
+      "Źródło: ZUS, Portal Statystyczny ZUS (psz.zus.pl), dane z <data wytworzenia>, pobrane <data pobrania>" / "Source:
+      ZUS Statistical Portal, data of <date>, retrieved <date>"; mark processed figures as processed.'
   updates: Portal says it is systematically supplied with current data; topic cadence varies, including monthly
     series.
   ingestion:
@@ -2298,10 +2305,11 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Resolve reuse/redistribution rights, Choose stable topic families, Assess workbook schema drift]
+    blockers: [Choose stable topic families, Assess workbook schema drift]
     references:
     - https://psz.zus.pl/
     - https://psz.zus.pl/kategorie/ubezpieczeni/ubezpieczenia-emerytalne-i-rentowe
+    - https://www.zus.pl/web/biuletyn-informacji-publicznej/obsluga-klienta/ogolne-zasady-zalatwiania-spraw/ponowne-wykorzystywanie-informacji-sektora-publicznego
 - id: PLS-010
   name: Rocznik Statystyczny Ubezpieczeń Społecznych
   short_name: ZUS social insurance yearbook
