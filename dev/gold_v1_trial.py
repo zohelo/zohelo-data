@@ -17,12 +17,22 @@ NAMESPACE = "zz_dev_gold_v1"
 def main(argv: list[str]) -> int:
     cat = catalog()
     if "--drop" in argv:
-        dropped = []
-        if (NAMESPACE,) in [tuple(n) for n in cat.list_namespaces()]:
-            for ident in cat.list_tables(NAMESPACE):
-                cat.purge_table(ident)
-                dropped.append(".".join(ident))
-            cat.drop_namespace(NAMESPACE)
+        dropped, errors = [], []
+        try:
+            if (NAMESPACE,) in [tuple(n) for n in cat.list_namespaces()]:
+                for ident in cat.list_tables(NAMESPACE):
+                    try:
+                        cat.purge_table(ident)
+                        dropped.append(".".join(ident))
+                    except Exception as exc:  # report and continue; a rerun retries
+                        errors.append(f"{'.'.join(ident)}: {type(exc).__name__}: {str(exc)[:200]}")
+                if not errors:
+                    cat.drop_namespace(NAMESPACE)
+        except Exception as exc:
+            errors.append(f"{type(exc).__name__}: {str(exc)[:300]}")
+        if errors:
+            annotate("error", f"drop {NAMESPACE} incomplete", {"tables dropped": len(dropped), "errors": errors[:10]})
+            return 1
         annotate("notice", f"dropped {NAMESPACE}", {"tables": len(dropped)})
         return 0
     # A trial must not republish the production data catalogue from a branch.
