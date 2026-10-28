@@ -692,8 +692,12 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: ECB information may be reused with accurate reproduction and citation. Sold documents must tell buyers
-      it is freely available; transformations must be disclosed.
+    notes: 'Terms:
+      https://www.ecb.europa.eu/stats/ecb_statistics/governance_and_quality_framework/html/usage_policy.en.html
+      — ESCB statistics are provided free of charge irrespective of commercial or non-commercial use, provided
+      the source is quoted, the statistics (including metadata) are not modified, and the ECB and NCB
+      disclaimers are respected; third-party data needs prior permission from the originator; no right to
+      confidential data. Attribution: "Source: ECB statistics".'
   updates: Release and revision cadence is dataflow-specific; API page was unavailable during review.
   ingestion:
     history: Snapshot dataflow structures and complete selected series.
@@ -706,7 +710,9 @@ sources:
     priority: review-first
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Re-open current API documentation, Identify third-party series exceptions]
+    blockers:
+    - 'Re-open current API documentation'
+    - 'Identify third-party series exceptions (prior permission needed)'
     references:
     - https://data.ecb.europa.eu/
     - https://data.ecb.europa.eu/help/api/overview
