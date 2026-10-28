@@ -1397,7 +1397,7 @@ sources:
   name: ITU DataHub
   short_name: ITU DataHub
   provider: International Telecommunication Union
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
