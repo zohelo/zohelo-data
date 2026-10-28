@@ -559,8 +559,13 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: IMF statistical-data terms cover this family, require attribution and transformation disclosure, and
-      direct potential commercial reuse to permission request.
+    notes: 'Terms: https://www.imf.org/en/about/copyright-and-terms (Data section): download, extract, copy, create
+      derivative works, publish and distribute Data with attribution; do not alter Data in a way that affects
+      its nature or accuracy and state any material transformation with the citation; sellers must tell buyers
+      the Data is free from the IMF; potential commercial reuse via copyright@imf.org; bulk download by
+      automated means needs explicit IMF permission; third-party material needs its holder''s permission;
+      provided as is. Attribution: "Source: International Monetary Fund, International Financial Statistics,
+      <link to the dataset>".'
   updates: Observation frequency and revisions are series-specific; no single schedule documented on opened pages.
   ingestion:
     history: Snapshot full selected dataflows with structures and vintage timestamp.
@@ -574,9 +579,10 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Inventory current dataflows and coverage
-    - Resolve API account status
-    - Seek/record commercial-reuse permission
+    - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
+    - 'Inventory current dataflows and coverage'
+    - 'Resolve API account status'
+    - 'Seek/record commercial-reuse permission'
     references:
     - https://data.imf.org/
     - https://data.imf.org/en/Resource-Pages/IMF-API
