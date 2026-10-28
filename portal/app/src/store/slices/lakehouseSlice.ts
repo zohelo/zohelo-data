@@ -60,7 +60,7 @@ const releaseFingerprint = (release: ReleaseCatalogResolution | null) => {
   return release.fingerprint;
 };
 
-export const landingDatasets = (landing: LandingCatalogResolution | null): PublishedDataset[] =>
+const landingDatasets = (landing: LandingCatalogResolution | null): PublishedDataset[] =>
   (landing?.snapshots ?? []).flatMap(({ manifest }) => {
     if (manifest.kind !== "retained_bronze_snapshot")
       return [

@@ -2,7 +2,7 @@ import { generateUUID } from "@/lib/utils";
 import { isUsingOpfs, getSystemConnection, sqlQuote } from "../systemDb";
 import { fallbackPut, fallbackGetAll, fallbackDelete } from "../fallback";
 
-export interface HistoryEntry {
+interface HistoryEntry {
   id: string;
   profile_id: string;
   connection_id: string | null;
@@ -93,18 +93,5 @@ export async function clearHistory(profileId: string): Promise<void> {
     for (const item of toDelete) {
       await fallbackDelete("query_history", item.id);
     }
-  }
-}
-
-export async function getHistoryCount(profileId: string): Promise<number> {
-  if (isUsingOpfs()) {
-    const conn = getSystemConnection();
-    const result = await conn.query(
-      `SELECT COUNT(*) as cnt FROM query_history WHERE profile_id = ${sqlQuote(profileId)}`
-    );
-    return Number(result.toArray()[0]?.toJSON().cnt ?? 0);
-  } else {
-    const all = (await fallbackGetAll("query_history")) as HistoryEntry[];
-    return all.filter((r) => r.profile_id === profileId).length;
   }
 }

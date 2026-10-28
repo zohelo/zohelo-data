@@ -3,7 +3,7 @@ import { isUsingOpfs, getSystemConnection, sqlQuote } from "../systemDb";
 import { encrypt, decrypt } from "../crypto";
 import { fallbackPut, fallbackGetAll, fallbackDelete } from "../fallback";
 
-export interface SavedConnection {
+interface SavedConnection {
   id: string;
   profile_id: string;
   name: string;
@@ -14,7 +14,7 @@ export interface SavedConnection {
   created_at: string;
 }
 
-export interface ConnectionInput {
+interface ConnectionInput {
   name: string;
   scope: string;
   config: Record<string, unknown>;

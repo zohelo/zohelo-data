@@ -25,7 +25,7 @@ export interface FolderEntry {
 
 export type FSEntry = FileEntry | FolderEntry;
 
-export interface MountedFolder {
+interface MountedFolder {
   id: string;
   name: string;
   handle: FileSystemDirectoryHandle;
@@ -82,7 +82,7 @@ async function openDatabase(): Promise<IDBDatabase> {
 /**
  * Verify read permission for a directory handle
  */
-export async function verifyPermission(
+async function verifyPermission(
   handle: FileSystemDirectoryHandle,
   mode: "read" | "readwrite" = "read"
 ): Promise<boolean> {
