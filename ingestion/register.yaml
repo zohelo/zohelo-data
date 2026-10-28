@@ -1745,7 +1745,7 @@ sources:
   name: World Population Prospects
   short_name: UN World Population Prospects
   provider: United Nations Department of Economic and Social Affairs, Population Division
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
