@@ -208,6 +208,31 @@ def last_slot(cron: str, end: datetime) -> datetime | None:
     return None
 
 
+def next_slot(cron: str, start: datetime) -> datetime | None:
+    """The earliest cron minute strictly after ``start`` within CATCH_UP_DAYS (mirror of last_slot)."""
+    fields = parse(cron)
+    day = start.replace(second=0, microsecond=0)
+    for forward in range(CATCH_UP_DAYS + 1):
+        date = day + timedelta(days=forward)
+        for hour in sorted(fields[1]):
+            for minute in sorted(fields[0]):
+                when = date.replace(hour=hour, minute=minute)
+                if when > start and matches(fields, when):
+                    return when
+    return None
+
+
+def next_runs(config: dict, now: datetime) -> dict[str, str]:
+    """Per scheduled source (not platform), its next scheduled run as ISO 8601 UTC ('%Y-%m-%dT%H:%MZ')."""
+    out = {}
+    for source, cfg in config["sources"].items():
+        slots = [next_slot(item["cron"], now) for item in (cfg.get("extraction") or {}).get("schedule") or []]
+        slots = [s for s in slots if s is not None]
+        if slots:
+            out[source] = min(slots).strftime("%Y-%m-%dT%H:%MZ")
+    return dict(sorted(out.items()))
+
+
 def pipeline_runs(repo: str, token: str, since: datetime, until: datetime) -> dict[str, list[dict]]:
     """Dispatched Pipeline runs created from ``since``'s day to ``until``'s day, by run name.
 
