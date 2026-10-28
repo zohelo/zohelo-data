@@ -109,7 +109,7 @@ sources:
   name: OECD Data Explorer and SDMX API
   short_name: OECD Data Explorer
   provider: OECD
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
