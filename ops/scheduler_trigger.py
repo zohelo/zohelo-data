@@ -14,10 +14,14 @@ Modes (one argument):
   pause    remove the Cron Triggers (the Worker stays deployed; GitHub's schedule remains;
            a later `deploy` turns them back on)
   resume   restore the Cron Triggers from wrangler.toml
+  heartbeat count the Worker's dispatches in the last 24 h (Pipeline runs "scheduler: dispatch due
+           runs" started by the org app); exit 1 below HEARTBEAT_MIN, so the scheduled Ops run opens
+           an alert when the Worker stops (needs GITHUB_TOKEN with actions: read; read-only)
 """
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 import os
 from pathlib import Path
 import subprocess
@@ -48,6 +52,11 @@ WRANGLER_ENV = (
 )
 # wrangler reads its credentials under its own names; the job holds the organisation names.
 WRANGLER_SECRETS = {"CLOUDFLARE_API_TOKEN": "PLATFORM_DEPLOY_TOKEN", "CLOUDFLARE_ACCOUNT_ID": "PLATFORM_ACCOUNT_ID"}
+# heartbeat: the Worker fires at :17 and :47 (48 dispatches a day); below this something stopped it.
+HEARTBEAT_MIN = 40
+HEARTBEAT_TITLE = "scheduler: dispatch due runs"
+HEARTBEAT_ACTOR = "zohelo-automation[bot]"
+GITHUB_API = "https://api.github.com"
 API = "https://api.cloudflare.com/client/v4/accounts/{account}/workers/scripts/{script}/{part}"
 
 
@@ -105,9 +114,51 @@ def set_app_secrets() -> list[str]:
     return done
 
 
+def heartbeat_count(now: datetime | None = None) -> int:
+    """Pipeline runs created in the last 24 h that the Worker dispatched (title and actor match)."""
+    since = ((now or datetime.now(UTC)) - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    repo = os.environ.get("GITHUB_REPOSITORY") or "zohelo/zohelo-data"
+    session = requests.Session()
+    session.headers.update({"Authorization": f"Bearer {req('GITHUB_TOKEN')}", "Accept": "application/vnd.github+json"})
+    count, page = 0, 1
+    while True:
+        response = session.get(
+            f"{GITHUB_API}/repos/{repo}/actions/workflows/pipeline.yml/runs",
+            params={"created": f">={since}", "per_page": 100, "page": page},
+            timeout=30,
+        )
+        response.raise_for_status()
+        runs = response.json().get("workflow_runs") or []
+        count += sum(
+            1
+            for run in runs
+            if HEARTBEAT_TITLE in (run.get("display_title") or "")
+            and (run.get("triggering_actor") or {}).get("login") == HEARTBEAT_ACTOR
+        )
+        if len(runs) < 100:
+            return count
+        page += 1
+
+
+def heartbeat() -> int:
+    """Notice with the 24 h dispatch count; exit 1 (an alert on a scheduled run) when it is too low."""
+    try:
+        count = heartbeat_count()
+    except (RuntimeError, requests.RequestException) as exc:
+        annotate("error", "scheduler heartbeat", {"error": str(exc)})
+        return 1
+    low = count < HEARTBEAT_MIN
+    annotate(
+        "error" if low else "notice", "scheduler heartbeat", {"dispatches in 24 h": count, "minimum": HEARTBEAT_MIN}
+    )
+    return 1 if low else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     mode = argv[0] if argv else "status"
+    if mode == "heartbeat":
+        return heartbeat()
     out: dict = {"mode": mode}
     try:
         if mode == "deploy":
@@ -119,7 +170,7 @@ def main(argv: list[str] | None = None) -> int:
             crons = tomllib.loads(CONFIG.read_text())["triggers"]["crons"]
             out["put"] = cloudflare("PUT", "schedules", [{"cron": c} for c in crons])
         elif mode != "status":
-            raise RuntimeError(f"unknown mode {mode!r} (status, deploy, pause, resume)")
+            raise RuntimeError(f"unknown mode {mode!r} (status, deploy, pause, resume, heartbeat)")
         status, body = cloudflare("GET", "schedules")
         out["schedules"] = {"status": status, **body}
         secrets_status, secrets = cloudflare("GET", "secrets")
