@@ -72,6 +72,8 @@ models:
         tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_measure'), field: measure_key}}}]
       - name: geography_key
         tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_geography'), field: geography_key}}}]
+      - name: sex_key
+        tests: [not_null, {relationships: {arguments: {to: ref('sex'), field: sex_key}}}]
   - name: poc_fact_annual
     description: One row per series × year; date_key = 1 January.
     columns:
