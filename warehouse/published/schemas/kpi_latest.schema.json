@@ -5,16 +5,16 @@
   "type": "object",
   "required": ["kpi_key", "unit_key", "generated_at", "values"],
   "properties": {
-    "kpi_key": {"type": "string"},
-    "unit_key": {"type": "string"},
-    "generated_at": {"type": "string"},
+    "kpi_key": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+    "unit_key": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+    "generated_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$"},
     "values": {
       "type": "array",
       "items": {
         "type": "object",
         "required": ["source_key", "geography_key", "geography_level", "period", "value", "flags", "checked_at"],
         "properties": {
-          "source_key": {"type": "string"},
+          "source_key": {"type": "string", "pattern": "^[a-z0-9_]+$"},
           "geography_key": {"type": "string"},
           "geography_level": {"type": "string"},
           "period": {"type": "string"},
@@ -22,7 +22,7 @@
           "previous_period": {"type": "string"},
           "previous_value": {"type": "number"},
           "flags": {"type": "array", "items": {"type": "string"}},
-          "checked_at": {"type": "string"}
+          "checked_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$"}
         },
         "additionalProperties": true
       }

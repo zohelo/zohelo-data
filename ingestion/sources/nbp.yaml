@@ -9,7 +9,7 @@ extraction:
   initial: api                          # tested route: 356 quarter requests, one at a time
   production: snapshot                  # each file is the complete quarter as published
   incremental_policy: changed_since_last  # open quarters re-fetched; unchanged bytes skipped
-  schedule:                             # UTC; weekdays 13:30 Warsaw (summer), after table A/C
+  schedule: # UTC; release: table A business days 11:45–12:15 Warsaw, table C 07:45–08:15; runs 13:30 Warsaw (summer), 12:30 (winter)
     - {cron: "30 11 * * 1-5", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/nbp/

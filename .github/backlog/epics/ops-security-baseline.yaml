@@ -237,6 +237,39 @@ deliverables:
     out_of_scope:
     - the threads bundle (cross-origin isolation is not set up)
     - other portal dependencies (Task portal-group-build)
+  - key: data/ops/security-baseline/dependencies/dompurify-override
+    type: Bug
+    title: Override dompurify to 3.4.17 in the portal (monaco-editor pin)
+    effort: S
+    state: open
+    context: 'Bugs #1996 and #1958 (found by the supply-chain re-check #1567): `npm audit --omit=dev
+      --audit-level=high` in portal/app reports dompurify <=3.4.16 (high, GHSA-v2wj-7wpq-c8vv and more). Today
+      package-lock.json has dompurify 3.4.15, pulled in only by monaco-editor 0.57.0, which pins it, so Dependabot
+      and `npm audit fix` cannot raise it. zod is already 4.6.7 (fixed). The architect tried the override below on
+      main (28 Oct): the lock changes dompurify only, and audit then reports 4 moderate findings and no high.'
+    files:
+    - edit: portal/app/package.json
+    - edit: portal/app/package-lock.json
+    steps:
+    - 'portal/app/package.json "overrides": add `"dompurify": "^3.4.17"` after the "flatted" entry; change nothing
+      else.'
+    - In portal/app run `npm install --ignore-scripts --no-audit --no-fund`; package-lock.json must change only the
+      dompurify entry (version, resolved, integrity).
+    - In portal/app run `npm run lint`, `npm run typecheck` and `DUCK_UI_BASEPATH=/ DUCK_UI_R2_API_BASE=/api
+      DUCK_UI_DUCKDB_WASM_CDN_ONLY=true npm run build`.
+    - 'PR body: `Closes #<this>`.'
+    acceptance:
+    - package-lock.json resolves node_modules/dompurify to 3.4.17 or later
+    - '`npm audit --omit=dev --audit-level=high` in portal/app exits 0'
+    - check-portal green on the PR
+    verify:
+    - run: cd portal/app && npm ci --ignore-scripts --no-audit --no-fund && npm audit --omit=dev --audit-level=high
+      expect: exit 0; no dompurify finding
+    - run: cd portal/app && npm run typecheck && npm run lint
+      expect: exit 0
+    out_of_scope:
+    - the moderate findings (uuid via exceljs, postcss-selector-parser; Dependabot)
+    - upgrading monaco-editor
 - key: data/ops/security-baseline/retired-code
   title: Retired code removed from main
   done_when:
