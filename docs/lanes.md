@@ -53,7 +53,8 @@ before reviewing a PR add label `reviewing` to it and skip PRs that already carr
 remove the label when done.
 
 1. **Review and merge** every open non-Dependabot PR in the three repos, oldest first: compare the diff with its issue's
-   Steps, Acceptance and Out of scope; read the check results. Merge (squash) when checks pass and the review finds no
+   Steps, Acceptance and Out of scope; read the check results. Post a review comment first (`Reviewed against #<issue>: <acceptance items checked>;
+   checks <result>`), then merge (squash) when checks pass and the review finds no
    problem; otherwise comment the exact change needed on the PR and label the issue `changes-requested` (the lane fixes
    it next run). Rebase conflicting PRs when the fix is mechanical.
 2. **Dependabot**: merge green minor/patch PRs; close PRs made redundant; failing ones become a Bug Task in lane 1.
