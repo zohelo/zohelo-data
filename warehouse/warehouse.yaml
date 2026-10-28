@@ -20,7 +20,7 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.licence, gold.source,  # seeds warehouse/seeds/licence.csv, source.csv
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)
-       gold.dimension, gold.dim_dimension,  # catalogue: axes
+       gold.dimension, gold.dimension_alias, gold.dim_dimension,  # catalogue: axes
        gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_wdi, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate]   # Gold v1 (warehouse/models/gold, docs/model.md)
 demo_namespaces: [demo_bronze, demo_silver, demo_gold]  # phase 2 demo warehouse (program plan §3.3); never in the public catalogue
 

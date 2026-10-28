@@ -13,3 +13,7 @@ seeds:
         tests: [not_null, unique]
       - name: licence_key
         tests: [{relationships: {arguments: {to: ref('licence'), field: licence_key}}}]
+  - name: dimension_alias
+    columns:
+      - name: dimension_key
+        tests: [not_null, {relationships: {arguments: {to: ref('dimension'), field: dimension_key}}}]
