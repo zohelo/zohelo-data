@@ -39,14 +39,10 @@ def main(argv: list[str]) -> int:
     per_source: dict[str, set] = {}
     for r in t:
         per_source.setdefault(r["source_system"], set()).add(r["dataset_key"])
-    sample = next(
-        (
-            r["dataset_key"]
-            for r in sorted(t, key=lambda r: r["measure_key"])
-            if r["measure_key"].startswith("eurostat:UNE_RT_A")
-        ),
-        None,
-    )
+    ordered = sorted(t, key=lambda r: r["measure_key"])
+    first_prefix = next((r for r in ordered if r["measure_key"].startswith("eurostat:UNE_RT_A")), None)
+    block = next((r for r in ordered if r["source_system"] == "eurostat" and r["block_id"] == "UNE_RT_A"), None)
+    sample = block["dataset_key"] if block else None
     ok = nulls == 0 and sample == "eurostat:UNE_RT_A"
     annotate(
         "notice" if ok else "error",
@@ -57,6 +53,8 @@ def main(argv: list[str]) -> int:
             "null_dataset_key": nulls,
             "distinct_dataset_key": {k: len(v) for k, v in sorted(per_source.items())},
             "une_rt_a_sample": sample,
+            "une_rt_a_measure_key": block["measure_key"] if block else None,
+            "first_prefix_match": [first_prefix["measure_key"], first_prefix["dataset_key"]] if first_prefix else None,
         },
     )
     return 0 if ok else 1
