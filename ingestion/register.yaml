@@ -1123,9 +1123,13 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: dataset-specific
-    notes: GHO terms should be checked separately from newer data.who.int terms; third-party credited data may require
-      permission.
+    status: open-conditional
+    notes: 'Terms: WHO terms for data compilations, https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions
+      (no named licence): royalty-free right to use, reproduce and extract the datasets for public health purposes only;
+      not for or with the promotion of a commercial enterprise; no alteration beyond minor style changes without WHO
+      written authorization; third-party data excluded; provided without warranty. Attribution: "WHO, <title of dataset>,
+      <year>, accessed <date>" plus credit to the reporting countries. The same indicators on data.who.int (GL-025)
+      are CC BY 4.0 — prefer that route.'
   updates: Indicator revisions are possible; no platform-wide schedule documented.
   ingestion:
     history: Snapshot indicator catalog, dimensions and all selected observations.
@@ -1140,11 +1144,13 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm legacy GHO terms and deprecation plan
-    - Map overlap with data.who.int datasets
+    - 'Prefer data.who.int (GL-025, CC BY 4.0) for overlapping series; GHO terms forbid alteration without WHO authorization'
+    - 'Confirm legacy GHO deprecation plan'
+    - 'Map overlap with data.who.int datasets'
     references:
     - https://www.who.int/data/gho/info/gho-odata-api
     - https://data.who.int/about/data/terms-and-conditions
+    - https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions
 - id: GL-025
   name: WHO Data platform (data.who.int) datasets
   short_name: WHO data.who.int
