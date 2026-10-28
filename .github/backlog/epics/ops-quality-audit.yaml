@@ -13,6 +13,7 @@ outcome: >-
 in_scope:
   - sample of ≥ 3 values per published KPI against the publisher (A-35, phase 1 part)
   - checks for duplicated series, unit and scale errors, unmatched geography
+  - "[review] rules of docs/quality.md that a script can check, moved into ops/repo_check.py"
 out_of_scope:
   - portal/API security audit (phase 2 gate, zohelo-bi Epic)
 done_when:
@@ -61,5 +62,134 @@ deliverables:
           - workflow: Dev · branch runs, script value_range_trial, on the branch
             expect: "notice 'metrics_value_range' status pass, failures 0"
         out_of_scope: [kpi.csv and other seeds, the metrics models, unit checks]
+      - key: data/ops/quality-audit/checks/metrics-grain
+        type: Task
+        title: Fail the build on duplicate rows or an empty metrics table
+        effort: S
+        state: open
+        contract: false
+        context: >-
+          latest.json (warehouse/publish.py kpi_latest) reads the two newest rows of one series per source ×
+          geography: two total series of one measure and area make it pick a row at random; an empty metrics
+          table publishes nothing. tests/fact_grain.sql checks the facts only. The five metrics models
+          (poc_metrics_<kpi_key> for population, gdp_current_prices, inflation, unemployment_rate, fx_rate;
+          macros/poc_metrics.sql) have columns concept_key, source_system, measure_key, geography_key,
+          frequency, date_key, breakdown_json. fx_rate has one series per currency (breakdown_json).
+        files:
+          - create: warehouse/tests/metrics_grain.sql
+          - create: warehouse/tests/metrics_not_empty.sql
+        steps:
+          - "metrics_grain.sql, -- header as in tests/metrics_value_range.sql: one row per KPI × source × measure × geography × frequency × period (fx_rate also per currency). CTE metrics: union all of those seven columns from ref() of the five models."
+          - "Final select from metrics: concept_key, source_system, measure_key, geography_key, frequency, date_key, `case when concept_key = 'fx_rate' then breakdown_json end as breakdown`, `count(*) as rows_per_key`; `group by all`; `having count(*) > 1`."
+          - "metrics_not_empty.sql, header: every published KPI's metrics table has rows. CTE counts: union all of `select '<kpi_key>' as concept_key, count(*) as metric_rows from {{ ref('poc_metrics_<kpi_key>') }}` for the five KPIs; select concept_key, metric_rows from counts where metric_rows = 0."
+          - "dev/metrics_tests_trial.py: subprocess `dbt test --select metrics_grain metrics_not_empty --target prod --project-dir warehouse --profiles-dir warehouse` (reads prod Gold, writes nothing), then annotate notice 'metrics tests' with {unique_id: [status, failures]} of the results in warehouse/target/run_results.json. Run in Dev; delete dev/ before the PR. If a status is not pass, comment the annotation on this issue and stop (docs/team.md, Developer step 7)."
+        acceptance:
+          - "trial: both tests status pass, failures 0"
+          - repo_check passes
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: Dev · branch runs, script metrics_tests_trial, on the branch
+            expect: "notice 'metrics tests': metrics_grain and metrics_not_empty both pass with 0 failures"
+        out_of_scope: [the metrics models, fact_grain.sql, metrics_value_range.sql]
     todo:
       - "Unit tests per KPI: each metrics row's source unit is the one its kpi_measure pattern expects (the architect lists the expected units from the report of data/metadata/catalogue-v1/models/dimension-inventory)"
+  - key: data/ops/quality-audit/code-rules
+    title: Review rules checked by repo_check
+    done_when:
+      - "docs/quality.md marks model headers, semantic descriptions, module docstrings, workflow permissions and hashed pip installs [auto]; ops/repo_check.py enforces them"
+    tasks:
+      - key: data/ops/quality-audit/code-rules/sql-headers
+        type: Task
+        title: Check model header comments and semantic descriptions in repo_check
+        effort: S
+        state: open
+        contract: false
+        context: >-
+          docs/quality.md §4 asks for a header comment in every dbt model and a description on every semantic
+          model and metric ([review] only). Today kpi_dimension.sql and dim_dimension.sql start straight with
+          SQL; every other model starts with a {# … #} or -- comment after an optional config line.
+        files:
+          - edit: ops/repo_check.py
+          - edit: warehouse/models/gold/kpi_dimension.sql
+          - edit: warehouse/models/gold/dim_dimension.sql
+          - edit: docs/quality.md
+          - edit: ops/README.md
+        steps:
+          - "repo_check.py: CONFIG_LINE = re.compile(r\"^\\s*\\{\\{\\s*config\\(.*\\)\\s*\\}\\}\\s*$\"); model_headers(files: list[Path]) -> list[str], docstring 'Every dbt model starts with a header comment; every semantic model and metric has a description (docs/quality.md §4).'"
+          - "For each tracked .sql under warehouse/models/: drop blank lines and CONFIG_LINE lines; if nothing is left or the first line, stripped, starts with neither '{#' nor '--', add f\"{f}: no header comment before the SQL\"."
+          - "Each tracked .yml under warehouse/semantic_models/: every semantic_models or metrics item with a missing or blank description adds f\"{f}: {item.get('name')} has no description\"."
+          - "main(): entry \"model headers\": lambda: model_headers(files), right after \"sqlfluff\"."
+          - "kpi_dimension.sql, first line: {# Catalogue: the dimensions each KPI offers, one row per KPI × dimension × measure; from concept_measures, measure_dimensions and dim_measure. #}"
+          - "dim_dimension.sql, first line: {# Catalogue: one row per dimension a measure can be cut by; names from the dimension seed, measure_count from measure_dimensions. #}"
+          - "docs/quality.md §4: the check of rows 'Model header comment…' and 'Metrics declared in `semantic_models/`…' becomes '[auto] repo_check `model headers` (presence); content [review]'."
+          - "ops/README.md, repo_check row: after 'sqlfluff on the dbt models (pinned version installed on demand),' add ' model headers and semantic descriptions,'."
+        acceptance:
+          - "removing the header of kpi_dimension.sql or the description of poc_fx fails 'model headers' (try, revert)"
+        verify:
+          - run: "PYTHONPATH=. python -c \"from ops.repo_check import model_headers, tracked; print(model_headers(tracked()))\""
+            expect: "[]"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [what a header says, Python and workflow rules]
+        notes: ["Other code-rules Tasks edit the same ops/README.md row: keep every addition when rebasing."]
+      - key: data/ops/quality-audit/code-rules/module-docstrings
+        type: Task
+        title: Check that every Python module has a docstring in repo_check
+        effort: S
+        state: open
+        contract: false
+        context: >-
+          docs/quality.md §3: modules have a docstring saying what they do in the dataflow, today [review] only.
+          Every tracked .py file except __init__.py has one, so the check passes from the start and keeps it so.
+        files:
+          - edit: ops/repo_check.py
+          - edit: docs/quality.md
+          - edit: ops/README.md
+        steps:
+          - "repo_check.py: import ast; module_docstrings(files: list[Path]) -> list[str], docstring 'Every Python module except __init__.py has a module docstring (docs/quality.md §3).': for each tracked .py file not named __init__.py, ast.parse its text (utf-8); when ast.get_docstring(tree) is None add f\"{f}: no module docstring\"."
+          - "main(): entry \"module docstrings\": lambda: module_docstrings(files), right after \"compile\"."
+          - "docs/quality.md §3: split row 'Public functions have type hints and a one-line docstring; modules a docstring saying what they do in the dataflow' into '| Modules have a docstring saying what they do in the dataflow | [auto] repo_check `module docstrings` (presence); content [review] |' and '| Public functions have type hints and a one-line docstring | [review] |'."
+          - "ops/README.md, repo_check row: after 'compile,' add ' module docstrings,'."
+        acceptance:
+          - "removing the module docstring of ops/release_notes.py fails 'module docstrings' (try, revert)"
+          - "repo_check prints 'ok   module docstrings'"
+        verify:
+          - run: "PYTHONPATH=. python -c \"from ops.repo_check import module_docstrings, tracked; print(module_docstrings(tracked()))\""
+            expect: "[]"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [function docstrings and type hints (208 public functions lack a docstring)]
+        notes:
+          - "Other code-rules Tasks edit the same ops/README.md row: keep every addition when rebasing."
+      - key: data/ops/quality-audit/code-rules/workflow-rules
+        type: Task
+        title: Check workflow permissions and hashed pip installs in repo_check
+        effort: S
+        state: open
+        contract: false
+        context: >-
+          docs/quality.md keeps two workflow rules [review] only: least-privilege `permissions:` and installs with
+          --require-hashes. Today every workflow has top-level permissions, none uses write-all or read-all, and
+          every pip install in .github/ uses --require-hashes except dev.yml's pinned check tools (ruff==0.16.8
+          yamllint==1.38.0). quality.md and ops/README.md still say "four workflows"; there are five.
+        files:
+          - edit: ops/repo_check.py
+          - edit: docs/quality.md
+          - edit: ops/README.md
+        steps:
+          - "repo_check.py: PIP_INSTALL = re.compile(r\"pip3? install\\s+(.*)\"). In workflows(), in the existing loop over lines: when PIP_INSTALL matches and '--require-hashes' is not in the line, take the words of group(1) not starting with '-'; when there is none or one has no '==', add f\"{f}:{number}: pip install without --require-hashes or == pins\"."
+          - "workflows(): for each tracked file under .github/workflows/ (yaml.safe_load): no top-level 'permissions' adds f\"{f}: no workflow-level permissions\"; the workflow's or a job's permissions equal to 'write-all' or 'read-all' adds f\"{f}: {scope} permissions {value}\" (scope 'workflow' or the job id). Mention both rules in its docstring."
+          - "docs/quality.md: after the §3 Dependencies row add '| Every `pip install` in `.github/` uses `--require-hashes` or pins each package with `==` | [auto] repo_check `workflows` |'. §6: 'four workflows' → 'five workflows'; row 'Least privilege `permissions:` per workflow and job' becomes '| Every workflow declares `permissions:`; none uses `write-all` or `read-all` | [auto] repo_check `workflows` |' plus '| Least privilege `permissions:` per job | [review] |'. Enforcement 1: 'four workflows' → 'five workflows'."
+          - "ops/README.md, repo_check row: 'the four workflows with SHA-pinned actions' → 'the five workflows with SHA-pinned actions, permissions and hashed pip installs'."
+        acceptance:
+          - "each fails 'workflows' (try, revert): job permissions write-all in dev.yml; --require-hashes removed from .github/actions/activity/action.yml"
+          - "repo_check prints 'ok   workflows'"
+        verify:
+          - run: "PYTHONPATH=. python -c \"from ops.repo_check import workflows, tracked; print(workflows(tracked()))\""
+            expect: "[]"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [the workflow files, per-job least privilege (review)]
+        notes:
+          - "Other code-rules Tasks edit the same ops/README.md row: keep every addition when rebasing."

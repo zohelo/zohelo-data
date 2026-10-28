@@ -1798,7 +1798,7 @@ sources:
   name: UNECE Data Portal
   short_name: UNECE Data Portal
   provider: United Nations Economic Commission for Europe
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: multicountry-Europe
@@ -1815,9 +1815,8 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: Free access is explicit, but commercial redistribution terms were not established; review table/source
-      rights.
+    status: open-conditional
+    notes: 'Terms: UNECE Statistical Database copyright notice https://w3.unece.org/PXWeb/Static/Copyright_notice.html: "The data in the UNECE Statistical Database are available free of charge. Users are free to copy, reproduce and redistribute the data for both commercial and non-commercial purposes, provided UNECE is acknowledged as the source." Disclaimer: "UNECE does not take any responsibility for the use of the data." Attribution: "Source: UNECE Statistical Database."'
   updates: Economic indicators carried a 2026 restructuring notice; table schedules and discontinuations vary.
   ingestion:
     history: Snapshot PXWeb table, metadata and source.
@@ -1831,15 +1830,16 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Resolve reuse rights
-    - Track database restructuring and discontinued series
-    - Confirm PXWeb API contract
-    references: ['https://w3.unece.org/PXWeb/en']
+    - 'Track database restructuring and discontinued series'
+    - 'Confirm PXWeb API contract'
+    references:
+    - https://w3.unece.org/PXWeb/en
+    - https://w3.unece.org/PXWeb/Static/Copyright_notice.html
 - id: GL-039
   name: World Population Prospects
   short_name: UN World Population Prospects
   provider: United Nations Department of Economic and Social Affairs, Population Division
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
@@ -1857,8 +1857,8 @@ sources:
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: Verify the 2024 Revision data licence and attribution; UNdata mirror does not establish separate rights.
+    status: open-conditional
+    notes: 'Terms: CC BY 3.0 IGO (http://creativecommons.org/licenses/by/3.0/igo/); WPP 2024 data are "made available under a Creative Commons license CC BY 3.0 IGO" (https://environmentdashboard.org/sources/un-wpp-2024, quoting the producer): copy, redistribute and adapt, also commercially, with attribution; no UN emblem or implied endorsement. Attribution: "United Nations, Department of Economic and Social Affairs, Population Division (2024). World Population Prospects 2024, Online Edition. CC BY 3.0 IGO."'
   updates: Revision-based releases recalculate historical estimates and projection variants.
   ingestion:
     history: Load complete revision files and metadata; retain each revision.
@@ -1872,11 +1872,13 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Open current download licence
-    - Confirm file schema and revision archive
+    - 'Confirm the licence statement on population.un.org/wpp (the page could not be read in this review)'
+    - 'Confirm file schema and revision archive'
     references:
     - https://population.un.org/wpp/
     - https://data.un.org/Handlers/ExplorerHandler.ashx?t=sources
+    - https://environmentdashboard.org/sources/un-wpp-2024
+    - https://www.un.org/development/desa/pd/node/4327
 - id: GL-040
   name: UNIDO Statistics Data Portal / INDSTAT
   short_name: UNIDO INDSTAT
@@ -1899,8 +1901,7 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: restricted
-    notes: Do not onboard until the selected INDSTAT product licence explicitly permits intended commercial reuse
-      and redistribution.
+    notes: 'Terms: UNIDO Statistics Portal Terms and Conditions https://stat.unido.org/content/legal/Terms%20and%20Conditions: all material is UNIDO intellectual property; data may be used in publications with credit to UNIDO, but "secondary data dissemination" rights are granted only to users that have licensed a database with this option. Public display of INDSTAT data on zohelo.com or bi.zohelo.com is therefore not allowed without such a licence. Data provided "as is" and "as available", no warranty. Attribution: "Source: UNIDO, <database> (<edition>), https://stat.unido.org/."'
   updates: Annual editions and national revisions; no public CDC or common schedule established.
   ingestion:
     history: Only ingest licensed named edition, metadata and ISIC version.
@@ -1913,10 +1914,13 @@ sources:
     priority: conditional
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Determine product entitlement and price, Resolve commercial rights, Obtain ISIC concordances]
+    blockers:
+    - 'Public display needs a UNIDO database licence with the secondary-dissemination option (price unknown)'
+    - 'Obtain ISIC concordances'
     references:
     - https://stat.unido.org/
     - https://data.un.org/Handlers/ExplorerHandler.ashx?t=sources
+    - https://stat.unido.org/content/legal/Terms%20and%20Conditions
 - id: PLS-001
   name: Bank Danych Lokalnych (BDL)
   short_name: GUS BDL
@@ -2027,9 +2031,13 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No product-specific reuse statement was verified; do not inherit BDL licensing merely because GUS owns
-      both.
+    status: open-conditional
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+      licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+      summaries or reworked text. The STRATEG API page (https://api.stat.gov.pl/Home/StrategApi?lang=en) states no
+      licence, only "Copyright Statistics Poland" and quotas (anonymous 5 req/s, 100/15 min; with key 10 req/s, 500/15
+      min). Attribution: "Źródło: GUS, STRATEG" / "Source: Statistics Poland, STRATEG" plus the indicator id.'
   updates: Indicator-dependent and revision-prone; no universal schedule verified.
   ingestion:
     history: Snapshot indicator catalogue, metadata and full selected histories.
@@ -2042,10 +2050,14 @@ sources:
     priority: review-next
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Open current API method documentation, Verify reuse terms and quotas]
+    blockers:
+    - Open current API method documentation (https://strateg.stat.gov.pl/apidocs/?lang=en)
+    - Commercial reuse not addressed by GUS terms (ask GUS if needed)
     references:
     - https://strateg.stat.gov.pl/
     - https://api.stat.gov.pl/Home/Index?lang=en
+    - https://api.stat.gov.pl/Home/StrategApi?lang=en
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-004
   name: GUS thematic publications with downloadable statistical tables
   short_name: GUS publication tables
@@ -2068,7 +2080,11 @@ sources:
     limits: No API quota; bulk archive crawling limits unknown.
   licence:
     status: open-conditional
-    notes: GUS portal footer states CC BY 4.0; verify embedded third-party material and preserve release attribution.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+      licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+      summaries or reworked text. Tables embedding third-party data keep their owners'' terms. Attribution: "Źródło:
+      GUS, <publication title> (<year>)" / "Source: Statistics Poland, <publication title> (<year>)".'
   updates: Release-calendar driven; corrections may replace files.
   ingestion:
     history: Backfill a curated whitelist of publication families and retain original files/checksums.
@@ -2084,10 +2100,11 @@ sources:
     connection: not-tested
     blockers:
     - Choose publication-family whitelist
-    - Confirm footer licence scope for each release
+    - 'Check each chosen publication for embedded third-party material (owners'' terms apply)'
     references:
     - https://stat.gov.pl/obszary-tematyczne/
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2024-r-%2C1%2C22.html
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-005
   name: Narodowy Spis Powszechny Ludności i Mieszkań 2021 (NSP 2021) results
   short_name: GUS NSP 2021
@@ -2110,7 +2127,12 @@ sources:
     limits: Download limits unknown.
   licence:
     status: open-conditional
-    notes: GUS portal licensing is CC BY 4.0, but confirm each census download and any statistical-disclosure constraints.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+      licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+      summaries or reworked text. Census tables are published already disclosure-controlled; keep GUS confidentiality
+      symbols as published. Attribution: "Źródło: GUS, Narodowy Spis Powszechny Ludności i Mieszkań 2021" / "Source:
+      Statistics Poland, National Population and Housing Census 2021".'
   updates: Census release is periodic with later thematic releases/corrections, not a live feed.
   ingestion:
     history: Load published aggregate tables and release metadata once; version corrections.
@@ -2127,10 +2149,10 @@ sources:
     connection: not-tested
     blockers:
     - Inventory exact downloadable table families
-    - Verify census-specific reuse notice
     - Define small-cell handling
     references:
     - https://stat.gov.pl/spisy-powszechne/nsp-2021/
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-006
   name: Powszechny Spis Rolny 2020 (PSR 2020) results
   short_name: GUS PSR 2020
@@ -2153,7 +2175,11 @@ sources:
     limits: Unknown.
   licence:
     status: open-conditional
-    notes: GUS CC BY 4.0 likely applies to portal data, but census-file scope should be confirmed per download.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+      licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+      summaries or reworked text. Attribution: "Źródło: GUS, Powszechny Spis Rolny 2020" / "Source: Statistics Poland,
+      Agricultural Census 2020".'
   updates: Decennial census release with corrections/thematic additions.
   ingestion:
     history: Load all chosen aggregate tables with source files and notes.
@@ -2168,10 +2194,11 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Verify downloadable catalogue and licence
+    - Verify downloadable catalogue
     - Document confidentiality symbols
     references:
     - https://stat.gov.pl/spisy-powszechne/powszechny-spis-rolny-2020/
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-007
   name: Krajowy Rejestr Urzędowy Podziału Terytorialnego Kraju (TERYT)
   short_name: GUS TERYT
@@ -2272,7 +2299,7 @@ sources:
   name: Portal Statystyczny ZUS
   short_name: ZUS statistical portal
   provider: Zakład Ubezpieczeń Społecznych (ZUS)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland and voivodeships, table-dependent
@@ -2290,9 +2317,16 @@ sources:
     cost: free
     limits: No API; automated-download limits unknown.
   licence:
-    status: unresolved
-    notes: No explicit dataset reuse licence was verified on the portal pages; public viewing/download does not
-      settle commercial redistribution.
+    status: open-conditional
+    notes: 'Terms: ZUS re-use terms
+      https://www.zus.pl/web/biuletyn-informacji-publicznej/obsluga-klienta/ogolne-zasady-zalatwiania-spraw/ponowne-wykorzystywanie-informacji-sektora-publicznego:
+      everyone may re-use, without a request and free of charge, public sector information that ZUS publishes (the page
+      names its BIP and dane.gov.pl; the statistical portal and yearbooks are ZUS public information under the same
+      regime), for commercial or non-commercial purposes; the re-user must give the source, the date the information was
+      created and the date it was obtained, say whether it is used in whole or in part, and disclose any processing; ZUS
+      is not liable for processed information. No named licence. psz.zus.pl itself shows no separate terms. Attribution:
+      "Źródło: ZUS, Portal Statystyczny ZUS (psz.zus.pl), dane z <data wytworzenia>, pobrane <data pobrania>" / "Source:
+      ZUS Statistical Portal, data of <date>, retrieved <date>"; mark processed figures as processed.'
   updates: Portal says it is systematically supplied with current data; topic cadence varies, including monthly
     series.
   ingestion:
@@ -2309,15 +2343,16 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Resolve reuse/redistribution rights, Choose stable topic families, Assess workbook schema drift]
+    blockers: [Choose stable topic families, Assess workbook schema drift]
     references:
     - https://psz.zus.pl/
     - https://psz.zus.pl/kategorie/ubezpieczeni/ubezpieczenia-emerytalne-i-rentowe
+    - https://www.zus.pl/web/biuletyn-informacji-publicznej/obsluga-klienta/ogolne-zasady-zalatwiania-spraw/ponowne-wykorzystywanie-informacji-sektora-publicznego
 - id: PLS-010
   name: Rocznik Statystyczny Ubezpieczeń Społecznych
   short_name: ZUS social insurance yearbook
   provider: Zakład Ubezpieczeń Społecznych (ZUS)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland and regional breakdowns, edition-dependent
@@ -2334,8 +2369,16 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit redistribution licence verified.
+    status: open-conditional
+    notes: 'Terms: ZUS re-use terms
+      https://www.zus.pl/web/biuletyn-informacji-publicznej/obsluga-klienta/ogolne-zasady-zalatwiania-spraw/ponowne-wykorzystywanie-informacji-sektora-publicznego:
+      everyone may re-use, without a request and free of charge, public sector information that ZUS publishes (the page
+      names its BIP and dane.gov.pl; the statistical portal and yearbooks are ZUS public information under the same
+      regime), for commercial or non-commercial purposes; the re-user must give the source, the date the information was
+      created and the date it was obtained, say whether it is used in whole or in part, and disclose any processing; ZUS
+      is not liable for processed information. No named licence. Attribution: "Źródło: ZUS, Rocznik Statystyczny
+      Ubezpieczeń Społecznych <rok>, pobrane <data>" / "Source: ZUS, Social Insurance Statistical Yearbook <year>,
+      retrieved <date>"; mark processed figures as processed.'
   updates: Periodically issued yearbook; revisions and schedule unknown.
   ingestion:
     history: Load available editions and deduplicate repeated historical tables by edition/reference year.
@@ -2350,9 +2393,9 @@ sources:
     connection: not-tested
     blockers:
     - Verify downloadable formats and earliest edition
-    - Resolve reuse terms
     references:
     - https://www.zus.pl/baza-wiedzy/statystyka/rocznik-statystyczny-ubezpieczen-spolecznych
+    - https://www.zus.pl/web/biuletyn-informacji-publicznej/obsluga-klienta/ogolne-zasady-zalatwiania-spraw/ponowne-wykorzystywanie-informacji-sektora-publicznego
 - id: PLS-011
   name: Podstawowe dane statystyczne KRUS
   short_name: KRUS statistics
