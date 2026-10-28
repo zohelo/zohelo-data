@@ -1414,9 +1414,12 @@ sources:
     cost: mixed
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
-    status: unresolved
-    notes: ITU website terms do not establish rights for DataHub statistical downloads; verify subscription and
-      reuse conditions by dataset.
+    status: open-conditional
+    notes: 'Terms: CC BY-NC-SA 3.0 IGO, https://datahub.itu.int/about ("the Data is licensed to the public through a
+      Creative Commons Attribution-Non-Commercial-ShareAlike 3.0 IGO license"): copy, redistribute and adapt for non-commercial
+      purposes only; adaptations under the same licence; no ITU name/logo or implied endorsement; third-party data under
+      its owners'' terms; no warranty. The paid WTID was discontinued; all ICT indicators are free on the DataHub (https://www.itu.int/pub/D-IND-WTID.OL-2023).
+      Attribution: "International Telecommunication Union, ITU DataHub, https://datahub.itu.int/, accessed <date>".'
   updates: Annual and other indicator updates; no portal-wide revision contract found.
   ingestion:
     history: Only load explicitly downloadable/licensed tables with metadata.
@@ -1429,10 +1432,14 @@ sources:
     priority: review-next
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Clarify free versus paid downloads, Resolve reuse rights, Confirm API availability]
+    blockers:
+    - 'NonCommercial + ShareAlike: only non-commercial display; derivatives under CC BY-NC-SA 3.0 IGO'
+    - 'Confirm API availability'
     references:
     - https://datahub.itu.int/
     - https://www.itu.int/en/about/Pages/terms-of-use.aspx
+    - https://datahub.itu.int/about
+    - https://www.itu.int/pub/D-IND-WTID.OL-2023
 - id: GL-032
   name: IP Statistics Data Center
   short_name: WIPO IP Statistics
