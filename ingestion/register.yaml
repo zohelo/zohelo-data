@@ -929,7 +929,7 @@ sources:
   name: UNCTAD Data Hub
   short_name: UNCTAD Data Hub
   provider: UN Trade and Development (UNCTAD)
-  status: registered
+  status: approved
   family: A
   kpi: true
   geography: worldwide
