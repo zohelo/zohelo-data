@@ -58,8 +58,66 @@ deliverables:
           - run: python -m ops.repo_check
             expect: all checks ok
         out_of_scope: [writing manifest.json (publish.py), semantic_models/gold.yml, catalog.build and publish]
-    todo:
-      - "Semantic models (semantic_models/gold.yml) for each published KPI's metrics table"
+      - key: data/metadata/semantic-manifest/generate/manifest-json
+        type: Task
+        title: Write manifest.json in gold.publish (warehouse/publish.py)
+        effort: S
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/publish/kpi-latest]
+        context: >-
+          warehouse/catalog.py manifest() builds the manifest object from target/semantic_manifest.json and
+          kpi.csv, but nothing writes 06_published/v1/manifest.json. The gold.publish job starts from a fresh
+          checkout without target/; warehouse/changed.py manifest('prod') runs `dbt parse --no-partial-parse`,
+          which writes target/ including semantic_manifest.json. Shared rules: .github/backlog/assets/
+          publish-writers.md, section 'Writers added after latest.json' (key "manifest").
+        files:
+          - edit: warehouse/publish.py
+          - edit: docs/published.md
+        steps:
+          - "publish.py: manifest_json(client, prefix) -> int: from warehouse import catalog, changed; changed.manifest('prod'); obj = catalog.manifest(); body = json.dumps(obj, ensure_ascii=False, separators=(',', ':')).encode(); put(client, prefix + 'manifest.json', body); return len(obj['metrics'])."
+          - "main(): add the 'manifest' key to the annotated dict with manifest_json(client, prefix)."
+          - "docs/published.md: extend the sentence under the manifest.json table: gold.publish writes it after a fresh dbt parse."
+          - "dev/publish_manifest_trial.py: n = manifest_json(s3(), 'zz_dev_published/v1/'); read the object back and annotate notice 'manifest.json' with {metrics: n, kpis: [kpi_key …], bytes}; delete every object under zz_dev_published/ and annotate notice 'deleted <n>'. Run in Dev; delete dev/ before the PR."
+        acceptance:
+          - "trial: 5 metrics (population, gdp_current_prices, inflation, unemployment_rate, fx_rate), then deleted"
+          - "ruff and repo_check pass"
+        verify:
+          - run: "python -c \"import inspect;from warehouse.publish import manifest_json as m;print(list(inspect.signature(m).parameters))\""
+            expect: "['client', 'prefix']"
+          - workflow: Dev · branch runs, script publish_manifest_trial, on the branch
+            expect: "notice 'manifest.json' with 5 metrics; then 'deleted 1'"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [catalog.manifest_object rules, semantic_models/gold.yml, catalog.publish (_portal_catalog)]
+        notes: ["Another writer Task may have added its line to main() first: keep both lines."]
+      - key: data/metadata/semantic-manifest/generate/model-check
+        type: Task
+        title: Fail repo_check when a published KPI has no semantic model
+        effort: S
+        state: open
+        contract: false
+        context: >-
+          manifest() leaves out a published KPI whose metrics table has no semantic model, so zohelo-bi would
+          silently lose it. Today all five published KPIs of warehouse/seeds/kpi.csv have a model in
+          warehouse/semantic_models/gold.yml (model: ref('poc_metrics_<kpi_key>')); nothing checks it when the
+          next KPIs are published.
+        files:
+          - edit: ops/repo_check.py
+          - edit: docs/quality.md
+        steps:
+          - "repo_check.py: semantic_models() -> list[str] with a one-line docstring: models = the <k> of every semantic_models entry of warehouse/semantic_models/gold.yml whose model, stripped, fullmatches r\"ref\\('(?:poc_)?metrics_(\\w+)'\\)\"; for every kpi.csv row (csv.DictReader, utf-8) with status published: problem 'semantic models: published KPI <k> has no semantic model on metrics_<k>' when <k> is not in models, and 'semantic models: published KPI <k> has no warehouse/models/gold/poc_metrics_<k>.sql' when that file is missing."
+          - "main(): checks entry \"semantic models\": semantic_models after \"published contract\"."
+          - "docs/quality.md section 4, after the 'Metrics declared in semantic_models/' row: | Every KPI with status `published` in `warehouse/seeds/kpi.csv` has a metrics model and a semantic model on it | [auto] repo_check `semantic models` |"
+        acceptance:
+          - "passes today; setting gdp_per_capita to published in kpi.csv gives both problems (try, revert)"
+          - "ruff and repo_check pass"
+        verify:
+          - run: "python -c \"from ops.repo_check import semantic_models as s;print(s())\""
+            expect: "[]"
+          - run: python -m ops.repo_check
+            expect: "'ok   semantic models' and all other checks ok"
+        out_of_scope: [semantic_models/gold.yml, kpi.csv, warehouse/catalog.py]
   - key: data/metadata/semantic-manifest/bi-adoption
     title: zohelo-bi reads the generated manifest
     repo: zohelo-bi

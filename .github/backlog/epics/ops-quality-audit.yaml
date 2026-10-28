@@ -62,4 +62,4 @@ deliverables:
             expect: "notice 'metrics_value_range' status pass, failures 0"
         out_of_scope: [kpi.csv and other seeds, the metrics models, unit checks]
     todo:
-      - "Unit tests per KPI: each metrics row's source unit is the one its kpi_measure pattern expects (expected units to be listed by the architect)"
+      - "Unit tests per KPI: each metrics row's source unit is the one its kpi_measure pattern expects (the architect lists the expected units from the report of data/metadata/catalogue-v1/models/dimension-inventory)"
