@@ -10,6 +10,7 @@ models/silver/<source_system>/    typed, cleaned, conformed source tables
 models/gold/                      conformed dimensions and facts
 models/poc/                       Gold dimensional model proof of concept, namespace poc (docs/gold-poc.md)
 semantic_models/                  MetricFlow semantic models and metrics
+seeds/                            seeds/ = owner-readable code lists, built into gold
 dimensions/                       dimension registry (definitions-as-code, draft; docs/model.md)
 macros/, tests/                   shared macros; singular data tests
 entity/, entity.py                per-entity Silver SQL applied by the Eurostat and BDL loaders
