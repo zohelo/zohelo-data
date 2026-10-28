@@ -165,8 +165,12 @@ sources:
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
   licence:
     status: open-conditional
-    notes: OECD data terms permit reuse unless file metadata says otherwise; verify microdata and third-party instrument
-      rights per cycle.
+    notes: 'Terms: OECD Terms and Conditions (updated 15 Mar 2024),
+      https://www.oecd.org/en/about/terms-conditions.html: PISA Data falls under the Data terms (extract, copy,
+      adapt, distribute and embed for any purpose, commercial use and modification included, subject to dataset
+      and third-party restrictions); other PISA content (reports, instruments) is CC BY-NC-SA 3.0 IGO and needs
+      the OECD disclaimer when adapted or translated. Attribution: "OECD (<year>), PISA <cycle> Database, <DOI
+      or URL> (accessed on <date>)" or the citation given with the file.'
   updates: Released by assessment cycle; corrections or later files are not documented as a stable revision feed.
   ingestion:
     history: Archive each cycle, codebooks, questionnaires and technical report.
@@ -182,8 +186,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm per-cycle file licences
-    - Implement complex-survey methodology before publishing estimates
+    - 'Confirm per-cycle file licences (third-party restrictions in file metadata)'
+    - 'Implement complex-survey methodology before publishing estimates'
     references:
     - https://www.oecd.org/en/about/programmes/pisa/pisa-data.html
     - https://www.oecd.org/en/about/terms-conditions.html
