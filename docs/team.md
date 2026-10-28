@@ -75,6 +75,10 @@ A sprint ends with one release document for all of zohelo and a project status u
   about, plus a start message. Three standing issues in zohelo-data: **Team log** #2073 (every member ends its run by
   posting its summary there), **Product inbox** #2074 (proposals to the Product Owner, one comment each), **Weekly
   status** #2075 (the Product Owner's Monday status).
+- **Never force-push** (the session refuses it as "Git Destructive"; 7 refusals on 28 Oct). A branch that needs main
+  is updated by merging main into it: `gh api -X PUT repos/zohelo/<repo>/pulls/<n>/update-branch`, or, when that
+  conflicts, `git merge origin/main`, resolve, and a normal push. "Rebase" in this file means this update; the squash
+  merge drops the merge commits. A commit already pushed is fixed by a new commit, not an amend.
 - **Bugs** found by any member are filed in the repo of the defect, type Bug, no key marker, label `dev:<n>` of the
   Developer who owns that area, body: what was seen, where (URL, file, run), expected, how to reproduce.
 - Permissions recorded in AGENTS.md and `docs/decisions.md` (O8, O10) apply; destructive Ops runs only as AGENTS.md
@@ -115,11 +119,11 @@ A sprint ends with one release document for all of zohelo and a project status u
    zohelo BI, zohelo Data.
 4. **Never merge your own PR**; the Architect merges. Keep working while PRs wait. A stacked Task branches from the
    dependency's PR branch (not main); its PR targets `main` and has `Depends on #<PR>` under `Closes #<n>`. Stack at
-   most 3 deep. When a dependency has merged (squash), rebase the stacked branch with
-   `git rebase --onto origin/main <old dependency head>` and force-push with lease.
+   most 3 deep. When a dependency has merged (squash), update the stacked PR by merging main into it (shared rules,
+   "Never force-push"); its diff against main then shows only its own change.
 5. **Start the Architect** after every 5 PRs and at the end of the run, with the text `From Developer <n>: review PRs <list>`.
 6. **Follow your PRs while you work.** About every 20 minutes, and before each new Task, check the PRs you opened this
-   run: merged → rebase anything stacked on it (step 4); sent back → fix it now, push, reply, start the Architect again.
+   run: merged → update anything stacked on it (step 4); sent back → fix it now, push, reply, start the Architect again.
 7. **Stuck?** If a step is impossible as written or needs a decision, comment on the issue, remove `in-progress`, add
    label `design:question`, start the Architect (technical) or the Product Owner (scope, priority), and take the next
    Task. Never improvise around the issue. Fewer than 3 pickable Tasks left → start the Product Owner.
@@ -140,8 +144,8 @@ already running, so the running run is the one that must see their PRs.
    issue's Steps, Acceptance and Out of scope; read the check results. Post a review comment first
    (`Reviewed against #<issue>: <acceptance items checked>; checks <result>`), then merge (squash) when checks pass and
    the review finds no problem; otherwise comment the exact change needed on the PR and label the issue
-   `changes-requested`. Rebase mechanically conflicting PRs yourself. PRs from the Product Owner (backlog), the Coach
-   (rules) and the Domain expert (domain files) are reviewed the same way; a Coach PR that removes a check or lowers a
+   `changes-requested`. Update mechanically conflicting PRs yourself (merge main in, shared rules). PRs from the
+   Product Owner (backlog), the Coach (rules) and the Domain expert (domain files) are reviewed the same way; a Coach PR that removes a check or lowers a
    quality bar needs an owner decision and is sent back otherwise.
 2. **Report back.** For each Developer whose PRs you reviewed: if its last run is still running (list_triggers), do
    nothing more; it reads the results from its PRs. Otherwise start it with
