@@ -32,7 +32,7 @@ def main(argv: list[str]) -> int:
     annotate(
         "notice" if ok else "error",
         f"rows: licence {rows.get('licence')}, source {rows.get('source')}, dim_source {rows.get('dim_source')}",
-        {"build_exit": code},
+        {"build_exit": code, "rows": rows},
     )
     return 0 if ok else 1
 
