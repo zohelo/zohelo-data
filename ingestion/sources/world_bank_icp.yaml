@@ -25,4 +25,4 @@ gold: []
 
 refresh: {mode: full}
 
-activities: []   # landing.inspect, landing.extract, landing.verify arrive with the extractor (#2386)
+activities: [landing.inspect, landing.extract, landing.verify]
