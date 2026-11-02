@@ -481,6 +481,7 @@ sources:
   name: International Comparison Program (ICP)
   short_name: World Bank ICP
   provider: World Bank
+  source_system: world_bank_icp
   status: approved
   family: A
   kpi: true
