@@ -74,7 +74,8 @@ async function accessEmail(request, env) {
     const email=typeof payload.email==="string"?payload.email.toLowerCase():"";
     return {email, why:email?"token":"token has no email"};
   } catch (error) {
-    return {email:"", why:"token check failed: "+(error instanceof Error?error.message:String(error))};
+    console.error("token check failed", error);
+    return {email:"", why:"token check failed"};
   }
 }
 async function authorize(request, env) {
@@ -299,7 +300,8 @@ export default {
       }
       return json(record.meta,200,origin);
     } catch (error) {
-      return json({error:{status:"INTERNAL",message:error instanceof Error?error.message:String(error)}},500,origin);
+      console.error("request failed", error);
+      return json({error:{status:"INTERNAL",message:"Internal error."}},500,origin);
     }
   }
 };
