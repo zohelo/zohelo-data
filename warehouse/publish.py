@@ -368,20 +368,47 @@ def catalog_json(entries: list[dict[str, Any]], generated_at: str) -> dict[str, 
     }
 
 
-def calendar_ics() -> str:
-    """feed/calendar.ics: no events until release_calendar exists (docs/published.md)."""
-    return "\r\n".join(CALENDAR_LINES) + "\r\n"
+def ics_text(value: str) -> str:
+    """RFC 5545 TEXT: a backslash before every backslash, semicolon and comma (backslashes first)."""
+    return value.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,")
 
 
-def calendar(client, prefix: str) -> int:
+def ics_time(stamp: str) -> str:
+    """'2026-11-09T11:15:00Z' → '20261109T111500Z'."""
+    return stamp.replace("-", "").replace(":", "")
+
+
+def calendar_ics(rows: list[dict[str, str]] | None = None, stamp: str = "") -> str:
+    """feed/calendar.ics: one VEVENT per release_calendar row (docs/published.md)."""
+    events = []
+    for row in sorted(rows or [], key=lambda r: (r["release_at"], r["source_key"], r["kpi_key"])):
+        start = ics_time(row["release_at"])
+        events += [
+            "BEGIN:VEVENT",
+            f"UID:{start}-{row['source_key']}-{row['kpi_key']}@zohelo.com",
+            f"DTSTAMP:{ics_time(stamp)}",
+            f"DTSTART:{start}",
+            f"SUMMARY:{ics_text(row['title_pl'])}",
+            f"URL:{row['url']}",
+            "END:VEVENT",
+        ]
+    lines = CALENDAR_LINES[:-1] + events + CALENDAR_LINES[-1:]
+    for line in lines:
+        if len(line.encode("utf-8")) > 75:
+            raise ValueError(f"calendar.ics line over 75 bytes: {line}")
+    return "\r\n".join(lines) + "\r\n"
+
+
+def calendar(client, prefix: str, stamp: str) -> int:
     """Write feed/calendar.ics under prefix; returns the number of events written."""
+    rows = seed("release_calendar")
     put(
         client,
         prefix + "feed/calendar.ics",
-        calendar_ics().encode("utf-8"),
+        calendar_ics(rows, stamp).encode("utf-8"),
         content_type="text/calendar; charset=utf-8",
     )
-    return 0
+    return len(rows)
 
 
 def _round(coordinates):
@@ -550,7 +577,7 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     body = json.dumps(catalog_json(entries, generated_at), ensure_ascii=False, separators=(",", ":")).encode()
     result["catalog_json"] = {"kpis": len(entries), "bytes": put(client, prefix + "catalog/catalog.json", body)}
     result["manifest"] = manifest_json(client, prefix)
-    result["calendar"] = calendar(client, prefix)
+    result["calendar"] = calendar(client, prefix, generated_at)
     result["geo"] = geo(cat, client, prefix)
     annotate("notice", "gold.publish: latest", result)
     return result
