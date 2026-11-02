@@ -123,9 +123,9 @@ function unescapeQuery(value) {
 }
 async function listFiles(url,env) {
   const q=url.searchParams.get("q")||"";
-  const parentIds=[...q.matchAll(/'((?:\\.|[^'])+)' in parents/g)].map(m=>unescapeQuery(m[1]));
+  const parentIds=[...q.matchAll(/'((?:\\.|[^'\\])+)' in parents/g)].map(m=>unescapeQuery(m[1]));
   if (!parentIds.length) return {files:[],incompleteSearch:false};
-  const nameMatch=q.match(/name='((?:\\.|[^'])*)'/);
+  const nameMatch=q.match(/name='((?:\\.|[^'\\])*)'/);
   const wantedName=nameMatch?unescapeQuery(nameMatch[1]):null;
   const wantsFolder=/mimeType\s*=\s*'application\/vnd\.google-apps\.folder'/.test(q);
   const excludesFolder=/mimeType\s*!=\s*'application\/vnd\.google-apps\.folder'/.test(q);
