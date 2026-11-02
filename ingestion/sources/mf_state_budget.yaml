@@ -17,7 +17,7 @@ extraction:
         url_from:
           page: https://www.gov.pl/web/finanse/sprawozdania-miesieczne-2026
           pattern: /attachment/
-          pick: first
+          pick: first   # Dev trial #2342: 1st link = newest xlsx (Sprawozdanie_operatywne_za_<months>_<year>.xlsx), 2nd = its PDF
         format: raw
         version: last_modified     # the response's Last-Modified; download time when absent
   initial: bulk

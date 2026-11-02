@@ -3808,6 +3808,7 @@ sources:
   name: State budget acts and execution publications
   short_name: MF state budget
   provider: Ministry of Finance
+  source_system: mf_state_budget
   status: approved
   family: D
   kpi: true

@@ -8,5 +8,6 @@ gleif,CD-015,GLEIF,GLEIF LEI golden copy,GLEIF,registry,file,international-publi
 opendata_org,EX-005,OpenData ODO Senzing,"OpenData organisations, people, locations",OpenData,registry,snapshot member,unknown,unresolved,
 mf_biala_lista,PLG-011,MF biała lista VAT,MF VAT white list (flat file),Ministerstwo Finansów,lookup,file,national-public,mf_flat_file,https://www.podatki.gov.pl/wykaz-podatnikow-vat-wyszukiwarka
 mf_treasury_debt,PLG-008,MF szeregi czasowe długu Skarbu Państwa,MF State Treasury debt time series,Ministerstwo Finansów,cube,file,national-public,gov_pl_terms,https://www.gov.pl/web/finanse/szeregiczasowe
+mf_state_budget,PLG-007,MF sprawozdania z wykonania budżetu państwa,MF state budget execution reports,Ministerstwo Finansów,cube,file,national-public,gov_pl_terms,https://www.gov.pl/web/finanse/budzet-panstwa
 gus_teryt,PLS-007,GUS TERYT,GUS TERYT register,GUS,reference,file,national-public,open_data_act_teryt,https://eteryt.stat.gov.pl/eteryt/rejestr_teryt/udostepnianie_danych/baza_teryt/baza_teryt.aspx
 gugik_prg,PL-ENV-001,GUGiK PRG,GUGiK state register of boundaries,GUGiK,reference,file,national-public,free_use_prg,https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl
