@@ -1,0 +1,114 @@
+key: data/src-plg-009
+area: data/src-d
+title: MF public debt [PLG-009]
+phase: 2
+priority: P2
+target: '2026-12-18'
+why: Public finance sector debt (national and EU methodology) is the headline fiscal-sustainability indicator for Poland,
+  published quarterly by the Ministry of Finance with revisions.
+outcome: The public-debt workbook is declared as a bulk_file source and trialled into scratch from GitHub Actions.
+in_scope:
+- Stages 1–2 of the source template (stages.yaml); later stages are written when stage 2 is done
+out_of_scope:
+- Other sources of the same provider
+- Bronze, Silver and KPIs (later stages)
+done_when:
+- Every Deliverable of this Epic is closed; register entry PLG-009 is landed
+depends_on: []
+decisions:
+- 'owner 28 Oct #2230: an approved source gets its full stage Epic'
+deliverables:
+- key: data/src-plg-009/review
+  title: MF public debt · Source review
+  done_when:
+  - Register entry PLG-009 has licence.notes with the terms URL and attribution; status approved
+  state: done
+  notes:
+  - 'Evidence: licence #1754, register decision #1755 (ingestion/register.yaml status approved)'
+- key: data/src-plg-009/development
+  title: MF public debt · Development
+  done_when:
+  - ingestion/sources/mf_public_debt.yaml exists with extraction (bulk_file), landing, archive_policy, refresh and activities
+  - A Dev branch run landed a full load into a zz_dev_ scratch prefix and removed it
+  tasks:
+  - key: data/src-plg-009/development/declaration
+    type: Task
+    title: Declare MF public debt in ingestion/sources
+    effort: M
+    state: open
+    contract: true
+    owner_action: null
+    verify_only: false
+    context: 'Register entry PLG-009 is approved. It becomes a source through one declaration using the shared bulk_file pattern,
+      so no extractor is written.  URLs come from the register review; the Dev trial Task proves them from Actions. Schedule
+      (stage 4) comes later: quarterly releases.'
+    files:
+    - create: ingestion/sources/mf_public_debt.yaml
+    - edit: ingestion/register.yaml
+    - edit: .github/workflows/pipeline.yml
+    - edit: docs/sources.md
+    steps:
+    - 'Create ingestion/sources/mf_public_debt.yaml in the shape of ingestion/sources/world_bank_wdi.yaml: description "Ministry
+      of Finance public finance sector debt (XLSX, quarterly)", extraction.kind bulk_file with the file below, initial bulk,
+      production snapshot, incremental_policy changed_since_last, schedule [], landing 01_landing/mf_public_debt/, archive_policy
+      as WDI with prune: report, bronze/silver/gold [], refresh {mode: full}, activities [landing.inspect, landing.extract,
+      landing.verify].'
+    - 'Files under extraction.bulk_file.files: one file: entity public_debt, url_from {page: "https://www.gov.pl/web/finanse/zadluzenie-sektora-finansow-publicznych",
+      pattern: "/attachment/"}, format raw, version last_modified. When the page links more than one workbook (national and
+      EU methodology), declare one entity per workbook (public_debt_national, public_debt_eu) with pick first/last as the
+      Dev trial''s link list shows.'
+    - 'Add `source_system: mf_public_debt` to register entry PLG-009 in ingestion/register.yaml.'
+    - Add mf_public_debt to the `source` options list of the workflow_dispatch inputs in .github/workflows/pipeline.yml (alphabetical
+      place).
+    - 'docs/sources.md: a `mf_public_debt` section like world_bank_wdi''s (route, entity, version, restart unit).'
+    - 'Run `PYTHONPATH=. python run.py schedule --check` and `PYTHONPATH=. python run.py plan --source mf_public_debt --run
+      "landing: inspect"`.'
+    acceptance:
+    - run.py schedule --check passes
+    - register entry PLG-009 has source_system mf_public_debt
+    verify:
+    - run: 'PYTHONPATH=. python run.py plan --source mf_public_debt --run "landing: inspect"'
+      expect: JSON with landing.inspect
+    - run: python -m ops.repo_check
+      expect: exit code 0
+    out_of_scope:
+    - bronze.load and Bronze tables (stage 5)
+    - a schedule entry (stage 4)
+    - Other register entries
+    depends_on:
+    - data/src-plg-008/development/page-links
+  - key: data/src-plg-009/development/dev-trial
+    type: Task
+    title: Dev-trial a full MF public debt load into scratch
+    effort: M
+    state: open
+    contract: false
+    owner_action: null
+    verify_only: true
+    context: Proves the declaration against the real source from GitHub Actions without touching production (the session cannot
+      reach the provider or Cloudflare). The trial script lives in dev/ on the declaration's branch only and is never merged
+      (repo_check rejects dev/). This Task closes with a comment linking the green Dev run; the declaration PR merges only
+      after that.
+    files: []
+    steps:
+    - 'On the declaration''s branch write dev/mf_public_debt_trial.py that calls ingestion.to_landing.patterns.bulk_file.main(''mf_public_debt'',
+      ''inspect'', landing_root=''zz_dev_mf_public_debt''), then main(''mf_public_debt'', ''load'', landing_root=''zz_dev_mf_public_debt''),
+      then main(''mf_public_debt'', ''verify'', landing_root=''zz_dev_mf_public_debt''), and finally deletes every object
+      under zz_dev_mf_public_debt/ (copy the clean-up loop of an existing Dev trial in git history: `git log --all --oneline
+      -- ''dev/*_trial.py'' | head`).'
+    - Dispatch Actions → Dev · branch runs on that branch with script mf_public_debt_trial.
+    - Read the run's annotations (`gh api repos/zohelo/zohelo-data/check-runs/<job id>/annotations`); when a URL or the link
+      pattern fails, fix the declaration on the same branch and dispatch again.
+    - Comment the green run URL, the landed file names, sizes and versions on this issue and close it; delete dev/ from the
+      branch so the declaration PR can merge.
+    acceptance:
+    - The Dev run is green; its annotation lists every declared entity with bytes and a version
+    - No object is left under zz_dev_mf_public_debt/ (the run's last annotation says so)
+    verify:
+    - workflow: Dev · branch runs (dev.yml), script mf_public_debt_trial, on the declaration branch
+      expect: green run; annotation with entity count and bytes
+    out_of_scope:
+    - Production Landing writes
+    - Merging anything (the declaration PR carries the change)
+    depends_on:
+    - data/src-plg-009/development/declaration

@@ -1,0 +1,109 @@
+key: data/src-gl-039
+area: data/src-a
+title: UN World Population Prospects [GL-039]
+phase: 2
+priority: P2
+target: '2026-12-18'
+why: UN World Population Prospects is the global reference for population estimates and projections (CC BY 3.0 IGO). It gives
+  zohelo population projections for Poland and comparison countries that no Polish source offers.
+outcome: The WPP 2024 demographic-indicators CSV is declared as a bulk_file source and trialled into scratch from GitHub Actions.
+in_scope:
+- Stages 1–2 of the source template (stages.yaml); later stages are written when stage 2 is done
+out_of_scope:
+- Other sources of the same provider
+- Bronze, Silver and KPIs (later stages)
+done_when:
+- Every Deliverable of this Epic is closed; register entry GL-039 is landed
+depends_on: []
+decisions:
+- 'owner 28 Oct #2230: an approved source gets its full stage Epic'
+deliverables:
+- key: data/src-gl-039/review
+  title: UN World Population Prospects · Source review
+  done_when:
+  - Register entry GL-039 has licence.notes with the terms URL and attribution; status approved
+  state: done
+  notes:
+  - 'Evidence: licence #1671, register decision #1672 (ingestion/register.yaml status approved)'
+- key: data/src-gl-039/development
+  title: UN World Population Prospects · Development
+  done_when:
+  - ingestion/sources/un_wpp.yaml exists with extraction (bulk_file), landing, archive_policy, refresh and activities
+  - A Dev branch run landed a full load into a zz_dev_ scratch prefix and removed it
+  tasks:
+  - key: data/src-gl-039/development/declaration
+    type: Task
+    title: Declare UN World Population Prospects in ingestion/sources
+    effort: M
+    state: open
+    contract: true
+    owner_action: null
+    verify_only: false
+    context: 'Register entry GL-039 is approved. It becomes a source through one declaration using the shared bulk_file pattern,
+      so no extractor is written. The file has a fixed URL per revision, so it needs no url_from. URLs come from the register
+      review; the Dev trial Task proves them from Actions. Schedule (stage 4) comes later: WPP is revised every two years.'
+    files:
+    - create: ingestion/sources/un_wpp.yaml
+    - edit: ingestion/register.yaml
+    - edit: .github/workflows/pipeline.yml
+    - edit: docs/sources.md
+    steps:
+    - 'Create ingestion/sources/un_wpp.yaml in the shape of ingestion/sources/world_bank_wdi.yaml: description "UN World Population
+      Prospects 2024, demographic indicators (CSV, gzip)", extraction.kind bulk_file with the file below, initial bulk, production
+      snapshot, incremental_policy changed_since_last, schedule [], landing 01_landing/un_wpp/, archive_policy as WDI with
+      prune: report, bronze/silver/gold [], refresh {mode: full}, activities [landing.inspect, landing.extract, landing.verify].'
+    - 'Files under extraction.bulk_file.files: one file: entity demographic_indicators_medium, url "https://population.un.org/wpp/assets/Excel%20Files/1_Indicator%20(Standard)/CSV_FILES/WPP2024_Demographic_Indicators_Medium.csv.gz",
+      format gzip, version last_modified. If the Dev trial gets 404, it annotates the links of https://population.un.org/wpp/downloads?folder=Standard%20Projections&group=CSV%20format;
+      take the Demographic_Indicators_Medium .csv.gz URL from that list.'
+    - 'Add `source_system: un_wpp` to register entry GL-039 in ingestion/register.yaml.'
+    - Add un_wpp to the `source` options list of the workflow_dispatch inputs in .github/workflows/pipeline.yml (alphabetical
+      place).
+    - 'docs/sources.md: a `un_wpp` section like world_bank_wdi''s (route, entity, version, restart unit).'
+    - 'Run `PYTHONPATH=. python run.py schedule --check` and `PYTHONPATH=. python run.py plan --source un_wpp --run "landing:
+      inspect"`.'
+    acceptance:
+    - run.py schedule --check passes
+    - register entry GL-039 has source_system un_wpp
+    verify:
+    - run: 'PYTHONPATH=. python run.py plan --source un_wpp --run "landing: inspect"'
+      expect: JSON with landing.inspect
+    - run: python -m ops.repo_check
+      expect: exit code 0
+    out_of_scope:
+    - bronze.load and Bronze tables (stage 5)
+    - a schedule entry (stage 4)
+    - Other register entries
+  - key: data/src-gl-039/development/dev-trial
+    type: Task
+    title: Dev-trial a full UN World Population Prospects load into scratch
+    effort: M
+    state: open
+    contract: false
+    owner_action: null
+    verify_only: true
+    context: Proves the declaration against the real source from GitHub Actions without touching production (the session cannot
+      reach the provider or Cloudflare). The trial script lives in dev/ on the declaration's branch only and is never merged
+      (repo_check rejects dev/). This Task closes with a comment linking the green Dev run; the declaration PR merges only
+      after that.
+    files: []
+    steps:
+    - 'On the declaration''s branch write dev/un_wpp_trial.py that calls ingestion.to_landing.patterns.bulk_file.main(''un_wpp'',
+      ''inspect'', landing_root=''zz_dev_un_wpp''), then main(''un_wpp'', ''load'', landing_root=''zz_dev_un_wpp''), then
+      main(''un_wpp'', ''verify'', landing_root=''zz_dev_un_wpp''), and finally deletes every object under zz_dev_un_wpp/
+      (copy the clean-up loop of an existing Dev trial in git history: `git log --all --oneline -- ''dev/*_trial.py'' | head`).'
+    - Dispatch Actions → Dev · branch runs on that branch with script un_wpp_trial.
+    - Read the run's annotations (`gh api repos/zohelo/zohelo-data/check-runs/<job id>/annotations`); when a URL or the link
+      pattern fails, fix the declaration on the same branch and dispatch again.
+    - Comment the green run URL, the landed file names, sizes and versions on this issue and close it; delete dev/ from the
+      branch so the declaration PR can merge.
+    acceptance:
+    - The Dev run is green; its annotation lists every declared entity with bytes and a version
+    - No object is left under zz_dev_un_wpp/ (the run's last annotation says so)
+    verify:
+    - workflow: Dev · branch runs (dev.yml), script un_wpp_trial, on the declaration branch
+      expect: green run; annotation with entity count and bytes
+    out_of_scope:
+    - Production Landing writes
+    - Merging anything (the declaration PR carries the change)
+    depends_on:
+    - data/src-gl-039/development/declaration
