@@ -452,8 +452,41 @@ deliverables:
           - workflow: Dev · branch runs, script geo_size_trial, on test/<n>-geo-size
             expect: "notices 'geo size: powiat' (about 380 features) and 'geo size: gmina' (about 2,477 features)"
         out_of_scope: [any change on main, writing geo files, nuts1 and nuts2]
+      - key: data/published/published-v1/publish/geo-powiat-gmina
+        type: Task
+        title: Write geo/powiat.geojson and geo/gmina.geojson from PRG
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/publish/geo-size-trial]
+        context: >-
+          Maps need powiat and gmina boundaries; warehouse/publish.py geo() writes only country and voivodeship
+          (one GEO_LIMIT, parent_key always 'PL'). Trial #2327 at 0.005°: powiat 380 features, 0.64 MB; gmina 2,479,
+          1.83 MB; all keys in gold.dim_geography, whose parent_key column holds each unit's parent.
+        files:
+          - edit: warehouse/publish.py
+          - edit: docs/published.md
+        steps:
+          - "publish.py: add 'powiat': 'powiat' and 'gmina': 'gmina' to GEO; replace GEO_LIMIT by GEO_LIMITS (gmina 8_000_000, the other three 2_000_000)."
+          - "geo(): dim_geography level_name In country, wojewodztwo, powiat, gmina, also selecting parent_key; expected counts add powiat 380, gmina 2479; size check GEO_LIMITS[level]."
+          - "features(): parent_key 'PL' for voivodeship (unchanged), name['parent_key'] for powiat and gmina; ValueError naming the key when it is empty."
+          - "docs/published.md, sentence under the geo table: geo() writes country, voivodeship, powiat and gmina (names and parents from gold.dim_geography); nuts1 and nuts2 follow later."
+          - "dev/publish_geo_trial.py: geo(catalog(), s3(), 'zz_dev_published/v1/'); notice 'geo' with {level: [features, bytes, first parent_key]}; delete zz_dev_published/ and notice 'deleted <n>'. Run in Dev; delete dev/ before the PR."
+        acceptance:
+          - "the local verify prints TERC:1261 TERC:12"
+          - "trial: country 1, voivodeship 16, powiat 380, gmina 2479; gmina ≤ 8 MB, the others ≤ 2 MB; then deleted 4"
+          - ruff and repo_check pass
+        verify:
+          - run: "python -c \"from warehouse.publish import features as f;r=f([{'geography_key':'TERC:1261','geometry':{'type':'Point','coordinates':[19.9,50.06]}}],{'TERC:1261':{'name_pl':'Kraków','name_en':None,'parent_key':'TERC:12'}},'powiat');p=r['features'][0]['properties'];print(p['geography_key'],p['parent_key'])\""
+            expect: "TERC:1261 TERC:12"
+          - workflow: Dev · branch runs, script publish_geo_trial, on the branch
+            expect: "notice 'geo' with country 1, voivodeship 16, powiat 380, gmina 2479; then 'deleted 4'"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [nuts1 and nuts2 files, GEO_TOLERANCE, silver.prg_units, gold.dim_geography, the published fixtures, both portals]
+        notes: ["If a count differs from 380 or 2479 in the trial, comment the annotation on the issue and stop (PRG may have changed units on 1 January)."]
     todo:
-      - "geo powiat and gmina writer (tolerance from the report of Task geo-size-trial); geo nuts1, nuts2; feed/changes.json (waits for the loaded_at decision, catalogue-v1 freshness todo)"
+      - "geo nuts1, nuts2; feed/changes.json (waits for the loaded_at decision, catalogue-v1 freshness todo)"
       - "Delete _portal_catalog/v1 writer and objects after both portals switch"
   - key: data/published/published-v1/tests
     title: Contract tests
