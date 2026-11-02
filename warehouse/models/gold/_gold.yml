@@ -57,7 +57,7 @@ models:
       - name: measure_key
         tests: [not_null, unique]
       - name: dataset_key
-        tests: [not_null]
+        tests: [not_null, {relationships: {arguments: {to: ref('dim_dataset'), field: dataset_key}}}]
       - name: status
         tests: [not_null]
   - name: poc_measure_dimensions
