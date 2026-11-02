@@ -69,6 +69,8 @@ of zohelo and a project status update.
   bi.zohelo.com, data.zohelo.com, data platform, sources) with links to that sprint's per-repo Releases and PRs, Bugs
   found, carry-over, next sprint's proposed goal; post the same summary as the last comment of the sprint issue and
   publish it as the project status update with Ops `project` args `status <sprint issue> ON_TRACK|AT_RISK|OFF_TRACK`;
+  if creating the Release is refused (HTTP 403 "not permitted for this session type", S1 2 Nov), that comment on the
+  sprint issue is the release document: say so in it, create no tag, and do not retry the Release in later closes;
   close the sprint issue; start the Coach when the sprint had PRs sent back twice, refused actions, failed runs or a
   usage-limit stop.
 
@@ -135,7 +137,12 @@ sees the result and may veto, but is not asked to choose.
 - Permissions recorded in AGENTS.md and `docs/decisions.md` (O8, O10) apply; destructive Ops runs only as AGENTS.md
   allows. Anything published outside the repos under the zohelo name (social posts, accounts, ads, mail, anything that
   costs money) is an owner action. If the session refuses an action, report it in the summary instead of working
-  around it. A refused action is not retried on the same item in this run; never work around it. Post the review
+  around it. A refused action is not retried on the same item in this run; never work around it. A refusal other
+  than a merge or a `fire_trigger` (closing or commenting, editing the charter, releases, Ops deletes) is not retried
+  by any later run on the same item either, once a Team log entry since the last owner reply reports it: write
+  `still refused, see <link to the first report>` under Refused and nothing else about it (2 Nov: closing zohelo#327
+  and #315–#317 was refused for four runs of two members, each re-posting the same owner request). Merges and
+  starts are refused intermittently, so they keep the Architect's retry rule and one try per run. Post the review
   and the merge as separate, sequential calls (never in one parallel batch or one shell command). Name each refusal
   once under "Refused" in the summary with the exact message; the owner question about it is collected by the Coach,
   so do not repeat it under open questions.
