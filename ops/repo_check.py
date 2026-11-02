@@ -21,6 +21,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 ROOT_ALLOWED = {
+    ".claude",
     ".github",
     "docs",
     "ingestion",

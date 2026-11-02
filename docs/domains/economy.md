@@ -93,7 +93,7 @@ labelled with their own names (HICP, BAEL), never as the Polish headline.
 
 Card and chart rules that reviews check:
 - A card says name + measure (r/r, realnie), value, period in words, change (p.p. for rates, % for levels) with the
-  comparison named, colour by meaning (inflation and unemployment up = bad; FX neutral), one benchmark (NBP band,
+  comparison named, colour by meaning (inflation by distance to the target, see below; unemployment up = bad; FX neutral), one benchmark (NBP band,
   EU27, year ago), source, the source's release date and the next release. Our load date is not a release date.
 - Chart of the day = the newest release, not the largest change. Ranking by relative change of `value` vs
   `previous_value` (zohelo#28, 28 Oct) let annual LFS unemployment 2025 (2.9 → 3.2 = "+10.3 %") beat monthly HICP,
@@ -107,6 +107,8 @@ Card and chart rules that reviews check:
   the data and the band.
 - Freshness: show the latest published period, flash and provisional included and labelled; headline slots only for
   series no older than 3 months (M), 6 months (Q), 18 months (A).
+- Working checklist for reviews: `.claude/skills/domain-economy/SKILL.md` (definitions, comparison norms, calendar,
+  pitfalls, chart rules); this file keeps the reasoning and sources.
 
 ## 5. Release calendar
 
