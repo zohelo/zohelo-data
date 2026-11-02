@@ -9,28 +9,41 @@ this file, so it is versioned and reviewed like code. Every run is a fresh sessi
 
 | Member | Owns | Scheduled run (Warsaw, safety net) | Started on demand by | Task id |
 |---|---|---|---|---|
-| Developer 1 · platform & ops | zohelo-data keys `data/ops/`, `data/portal/`, `data/backlog/`, `data/warehouse/`, `data/metadata/`, `data/published/`, `data/ingestion/`; Bugs labelled `security-alert` or `dev:1` | Mon–Wed sprint starts 06:15, 11:15, 16:15, 21:15 | Architect (rework), Product Owner (new Tasks), Operator | `trig_0197YDf9bDZSDVhbRHLf2n3a` |
-| Developer 2 · sources | zohelo-data keys `data/src-` (stage 10 Tasks in zohelo-bi, stage 11 in zohelo); Bugs labelled `dev:2` | Mon–Wed sprint starts 06:17, 11:17, 16:17, 21:17 | Architect, Product Owner | `trig_01VbKQKehRuDrzshTVrt4dX5` |
-| Developer 3 · zohelo-bi | zohelo-bi keys `bi/`; Bugs labelled `dev:3` | Mon–Wed sprint starts 06:19, 11:19, 16:19, 21:19 | Architect, Product Owner | `trig_01VZbQZ6cw1YTSXcKcskLTvA` |
-| Developer 4 · zohelo.com | zohelo keys `com/` except `com/portfolio/`, and `bi/` keys in the zohelo repo (shared design visuals); Bugs labelled `dev:4` | Mon–Wed sprint starts 06:21, 11:21, 16:21, 21:21 | Architect, Product Owner | `trig_01Ane4nBMKps3Hs8fN8fPjsK` |
+| Developer 1 · platform & ops | zohelo-data keys `data/ops/`, `data/portal/`, `data/backlog/`, `data/warehouse/`, `data/metadata/`, `data/published/`, `data/ingestion/`; Bugs labelled `security-alert` or `dev:1` | each sprint start + 0:15 (Sprints) | Architect (rework), Product Owner (new Tasks), Operator | `trig_0197YDf9bDZSDVhbRHLf2n3a` |
+| Developer 2 · sources | zohelo-data keys `data/src-` (stage 10 Tasks in zohelo-bi, stage 11 in zohelo); Bugs labelled `dev:2` | each sprint start + 0:17 (Sprints) | Architect, Product Owner | `trig_01VbKQKehRuDrzshTVrt4dX5` |
+| Developer 3 · zohelo-bi | zohelo-bi keys `bi/`; Bugs labelled `dev:3` | each sprint start + 0:19 (Sprints) | Architect, Product Owner | `trig_01VZbQZ6cw1YTSXcKcskLTvA` |
+| Developer 4 · zohelo.com | zohelo keys `com/` except `com/portfolio/`, and `bi/` keys in the zohelo repo (shared design visuals); Bugs labelled `dev:4` | each sprint start + 0:21 (Sprints) | Architect, Product Owner | `trig_01Ane4nBMKps3Hs8fN8fPjsK` |
 | Architect | technical review and merge of every PR; technical decisions; Dependabot | Monday 08:23 | Developers (after PRs), any member with a technical question | `trig_01391TnR25xB5GBUFmCMWtTG` |
-| Product Owner | portfolio, roadmap, backlogs of all products, Task writing, discovery of new products, weekly status, the owner's decision queue | Mon–Wed sprint plan 06:02, 11:02, 16:02, 21:02; sprint close 10:17, 15:17, 20:17 (`trig_018RMqxHqrm8DqsJxXbykhhF`) and 01:17 Tue–Thu for S4 (`trig_01DzRXVD4z5hxGXHLM32EW25`) | Developers (running low), any member with a proposal, the owner | `trig_012KX5SgeSxFa2EivXxPaZ2X` |
-| Quality Engineer | is the released product correct and usable | Mon–Wed 09:45, 14:45, 19:45 (before each sprint close); the sprint close also starts it | Product Owner (sprint close), Architect (after merges), any member that suspects a defect | `trig_012DPNBxXyCUREkE4UiALBeQ` |
+| Product Owner | portfolio, roadmap, backlogs of all products, Task writing, discovery of new products, weekly status, the owner's decision queue | sprint boundary (close, then plan) at each sprint start + 0:02: Monday this task, Tuesday `trig_018RMqxHqrm8DqsJxXbykhhF`, Wednesday `trig_01DzRXVD4z5hxGXHLM32EW25` | Developers (running low), any member with a proposal, the owner | `trig_012KX5SgeSxFa2EivXxPaZ2X` |
+| Quality Engineer | is the released product correct and usable | each sprint start + 4:00 (sprint check); the sprint close also starts it | Product Owner (sprint close), Architect (after merges), any member that suspects a defect | `trig_012DPNBxXyCUREkE4UiALBeQ` |
 | Operator | pipelines, schedules, storage and cost, credentials, alerts | daily 02:43 | any member that sees a failed or missing run | `trig_01GjEm3rD8SbyGR3c1HmRKG2` |
 | Domain expert | business correctness per domain, domain knowledge files, analysis ideas | Monday 06:33 | Product Owner, Developers, Quality Engineer (message names the domain) | `trig_01Mwpo6r6D2qxh6Hed3kDxog` |
-| Coach | how the team works: playbooks, templates, checks | Tue–Thu 02:13 (after each sprint day) | any member that hits the same problem twice | `trig_01PtkexUDnj96BGy6pZsG1WD` |
-| Designer | UX/UI of every product: design research, prototypes, the design system, visual review of every UI change | Mon–Wed sprint starts 06:23, 11:23, 16:23, 21:23 | Developers (UI PRs), Product Owner, Quality Engineer | `trig_011qicTYyp5tWF3GjUYWJ5DH` |
+| Coach | how the team works: playbooks, templates, checks | Tue–Thu night, after each sprint day | any member that hits the same problem twice | `trig_01PtkexUDnj96BGy6pZsG1WD` |
+| Designer | UX/UI of every product: design research, prototypes, the design system, visual review of every UI change | each sprint start + 0:23 (Sprints) | Developers (UI PRs), Product Owner, Quality Engineer | `trig_011qicTYyp5tWF3GjUYWJ5DH` |
 
 New products: when the owner approves a product brief (Product Owner, discovery track), the product gets its repo,
 its backlog and its own Developer at once: one zohelo-<product>, one Developer. The Product Owner adds the row here.
 
 ## Sprints
 
-Owner decisions 28 Oct (O15) and 2 Nov (O16), redesigned 2 Nov on the owner's request: the team works in sprints that
-match Claude's 5-hour usage window. Sprints run **Monday to Wednesday only**, four a day (Warsaw): **S1 06:00–11:00,
-S2 11:00–16:00, S3 16:00–21:00, S4 21:00–02:00**. The night hours **02:00–06:00** are for operations and the
-retrospective. Thursday to Sunday have no sprints, so the owner has nothing to follow then. If the weekly limit runs out
-before Wednesday's S4, the remaining sprints do not start. Deploys stay continuous: every merge goes to production.
+Owner decisions 28 Oct (O15), 2 Nov (O16) and 2 Nov 15:55 (O19): the team works in sprints that are **back-to-back
+5-hour windows aligned to the owner's usage windows**, **Monday to Wednesday only** (Warsaw):
+
+| Day | Sprint starts | |
+|---|---|---|
+| Monday | 08:30, 13:30, 18:30, 23:30 | |
+| Tuesday | 04:30, 09:30, 14:30, 19:30 | |
+| Wednesday | 00:30, 05:30, 10:30, 15:30, 20:30 | the last sprint ends Thursday 01:30 |
+
+Each sprint lasts **exactly 5 hours** (T+0:00 to T+5:00); the **cut-off for new PRs is T+4:30**. The sprint issue is
+named `Sprint <yyyy-mm-dd> S<n>`, numbered in order of the day's starts (Wednesday's 00:30 sprint is S1 of
+Wednesday). Thursday to Sunday have no sprints, so the owner has nothing to follow then. If the weekly limit runs out
+before Wednesday's last sprint, the remaining sprints do not start. Deploys stay continuous: every merge goes to
+production. (2 Nov S3 ran 16:00–18:30 as a short sprint to move onto this calendar.)
+
+**UX/UI is the top priority** (owner, 2 Nov 15:55): every sprint plan has a design goal for each of zohelo.com,
+bi.zohelo.com and data.zohelo.com, the Designer is started first, and UI Tasks follow the Design process below. The
+Designer and Developer 4 run on the Fable 5.1 model.
 
 This is Scrum adapted to a team of fresh sessions: the **sprint issue** is the sprint backlog and board, the **close**
 is the sprint review, the **Coach's night run** is the retrospective, and the **velocity table** on each closed sprint
@@ -43,13 +56,16 @@ alone; on-demand starts are a bonus. Runs in a sprint (live scheduled tasks):
 
 | Time in the sprint | Run | What it does |
 |---|---|---|
-| T+0:02 | Product Owner · sprint plan | read the previous close, adapt, plan this sprint |
+| T+0:02 | Product Owner · sprint boundary | close of the sprint that just ended, then the plan of this one; starts the Designer first |
 | T+0:15 – T+0:23 | Developers 1–4, Designer | build: sprint Tasks, then stretch, then the normal order |
-| T+3:30 | — | **cut-off**: no new Tasks; finish, rework, get open PRs merged |
-| T+3:45 | Quality Engineer (S1–S3) | sprint check: goals on the live products |
-| T+4:17 | Product Owner · sprint close | sprint review, velocity, release document, project status |
-| 02:13 (Tue–Thu) | Coach | nightly retrospective of the day's sprints |
+| T+4:00 | Quality Engineer | sprint check: goals on the live products |
+| T+4:30 | — | **cut-off**: no new PRs; finish, rework, get open PRs merged |
+| T+5:02 | Product Owner · next boundary | sprint review, velocity, release document, project status (Thu 01:32: close only) |
+| night (Tue–Thu) | Coach | retrospective of the day's sprints |
 | 02:43 (daily) | Operator | pipelines, schedules, storage, alerts |
+
+The Product Owner's boundary runs are `trig_012KX5SgeSxFa2EivXxPaZ2X` (Monday), `trig_018RMqxHqrm8DqsJxXbykhhF`
+(Tuesday) and `trig_01DzRXVD4z5hxGXHLM32EW25` (Wednesday; its 20:32 run arranges the Thu 01:30 close).
 
 ### Sprint plan (Product Owner, T+0:02)
 
@@ -84,7 +100,7 @@ alone; on-demand starts are a bonus. Runs in a sprint (live scheduled tasks):
   a Developer with **8 or more open PRs not yet reviewed** on their current head starts no new Task. It does rework,
   updates stacks and follows its PRs, and notes the review queue on the sprint issue once. Unreviewed work is not done
   work, and a long queue turns every send-back into a rebase chain.
-- **Cut-off at T+3:30**: no new Tasks; the rest of the window is for rework, review and merge, so done work is merged
+- **Cut-off at T+4:30**: no new PRs; the rest of the window is for rework, review and merge, so done work is merged
   before the close.
 
 ### Definition of done
@@ -97,9 +113,9 @@ alone; on-demand starts are a bonus. Runs in a sprint (live scheduled tasks):
   with evidence when no sprint check came).
 - **Sprint done**: release document, velocity table, project status, sprint issue closed.
 
-### Sprint close = sprint review (Product Owner, T+4:17)
+### Sprint close = sprint review (Product Owner, at the next boundary, T+5:02)
 
-1. Start the Quality Engineer with `From Product Owner: sprint check of <sprint issue>` unless its T+3:45 run already
+1. Start the Quality Engineer with `From Product Owner: sprint check of <sprint issue>` unless its T+4:00 run already
    commented, and wait up to 20 minutes for its result comment on the sprint issue (no result → say so).
 2. **Velocity table** in the close comment, one row per member: `planned` (committed), `stretch planned`, `done`
    (Definition of done), `stretch done`, `carried`, `PRs open`, `outcome` (all done early / mid-Task / between Tasks /
@@ -119,15 +135,15 @@ alone; on-demand starts are a bonus. Runs in a sprint (live scheduled tasks):
 
 The **review** asks *what did we build, and does it meet the goals*; it is for the owner and does not change rules.
 
-### Nightly retrospective (Coach, 02:13 Tue–Thu)
+### Nightly retrospective (Coach, Tue–Thu night)
 
-The **retrospective** asks *how did we work*: it covers the day's four sprints (the run on Tuesday covers Monday, and so
-on). Inputs: the four velocity tables, PRs sent back and why, refused actions, usage-limit and failed runs, start
+The **retrospective** asks *how did we work*: it covers the day's sprints (the run on Tuesday covers Monday, and so
+on). Inputs: the day's velocity tables, PRs sent back and why, refused actions, usage-limit and failed runs, start
 messages that went unanswered, Bugs found after merge. Output:
 - at most **3 changes** a night, each to the recurring cause (twice or more) where it lives: this file, `docs/backlog.md`,
   `AGENTS.md`, `ops/repo_check.py`, or an unclear Task. One PR each, closing a one-off Task (D17).
 - a **retro comment** on the last sprint issue of the day: keep / change / try, and the velocity trend per member (3 sprints).
-- one Team log entry. Changes merged before 06:00 apply from S1.
+- one Team log entry. Changes merged before the next sprint start apply from it.
 
 ### Usage
 
@@ -262,7 +278,7 @@ sees the result and may veto, but is not asked to choose.
    label `design:question`, start the Architect (technical) or the Product Owner (scope, priority), and take the next
    Task. Never improvise around the issue. Fewer than 3 pickable Tasks left → start the Product Owner.
 8. **Repeat**, aiming for 10–20 PRs per run, sprint Tasks (label `sprint`) before all others, until the sprint cut-off
-   (T+3:30, see Sprints) or nothing is pickable. Before ending, wait
+   (T+4:30, see Sprints) or nothing is pickable. Before ending, wait
    up to 10 minutes for the Architect to finish reviewing your open PRs (check every 5 minutes) and handle every result
    as in step 6; then remove `in-progress` from anything you did not finish, and post the summary.
 
@@ -311,8 +327,8 @@ review a write against the shared GitHub limit).
 Owns what the team builds and why, for the whole portfolio. Two tracks, kept apart on purpose: delivery work for the
 products in production, and discovery for new products, which never takes Developer time until the owner approves.
 
-**Every run** (the sprint plan run at 06:02, 11:02, 16:02, 21:02 Mon–Wed, and whenever started) — the sprint plan (see Sprints) comes
-first in a scheduled run; the sprint close has its own scheduled task and does only "Sprint close":
+**Every run** (the sprint boundary run at each sprint start + 0:02, and whenever started) — the sprint close of the sprint
+that ended, then the plan of the one that starts (see Sprints), come first in a scheduled run:
 1. **Inbox.** Handle the start message; then new comments on Product inbox #2074, owner tickets (label `ticket`) and
    scope `design:question` issues. Each gets an answer: backlog work, a brief, or why not.
 2. **Keep every Developer fed.** Each Developer has at least 10 pickable Tasks. Write the next Tasks into the repo's
@@ -430,7 +446,7 @@ Never: merges, ships prototypes, or changes data; a design decision is recorded 
 
 Owns how the team works. A team of fresh sessions does not learn by itself; the Coach makes it learn.
 
-**Scheduled run (Tue–Thu 02:13, after each sprint day), and when started:**
+**Scheduled run (Tue–Thu night, after each sprint day), and when started:**
 1. Read everything since the previous Coach entry on Team log #2073: the log, PRs sent back and why, `design:question` issues, failed checks, refused
    actions, Bugs the Quality Engineer found after merge, start messages that went unanswered.
 2. Find recurring causes (the same mistake twice or more) and fix them where they live: this file, `docs/backlog.md`
