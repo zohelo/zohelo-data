@@ -133,8 +133,9 @@ def put_new(client, bucket: str, key: str, body: bytes, content_type: str) -> No
         if (head.get("Metadata") or {}).get("sha256") == digest:
             return
         raise RuntimeError(f"Landing key exists with different bytes: {key}")
-    except client.exceptions.ClientError:
-        pass
+    except client.exceptions.ClientError as exc:  # only "not found" means free to write
+        if exc.response.get("Error", {}).get("Code") not in ("404", "NoSuchKey", "NotFound"):
+            raise
     client.put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type, Metadata={"sha256": digest})
     if (client.head_object(Bucket=bucket, Key=key).get("Metadata") or {}).get("sha256") != digest:
         raise RuntimeError(f"Landing write could not be verified: {key}")
