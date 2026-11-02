@@ -3404,9 +3404,15 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit reuse licence verified. Public beneficiary names, if separately published by legal obligation,
-      are out of initial aggregate scope.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+      https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+      (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+      attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+      consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+      The report files carry no licence of their own. Aggregate statistics only; personal beneficiary data stay out
+      of scope. Attribution: "Źródło: ARiMR, <report title> (<date>)" / "Source: Agency for Restructuring and
+      Modernisation of Agriculture (ARiMR), <report title> (<date>)".'
   updates: Campaign/programme-dependent; frequent operational updates for some schemes.
   ingestion:
     history: Curate aggregate statistics only after identifying stable named report families.
@@ -3423,10 +3429,11 @@ sources:
     connection: not-tested
     blockers:
     - Locate canonical aggregate statistics index
-    - Resolve reuse rights
     - Exclude personal beneficiary records
     - Document cumulative-status semantics
-    references: ['https://www.gov.pl/web/arimr']
+    references:
+    - https://www.gov.pl/web/arimr
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-035
   name: Turystyka – annual accommodation-establishment tables
   short_name: GUS tourism tables
