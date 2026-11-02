@@ -166,8 +166,13 @@ sees the result and may veto, but is not asked to choose.
    the same member can overlap (a run started on demand, or a stopped run that the owner continued, which keeps the
    instructions it started with), so never assume you are alone.
 3. **Deliver** exactly as the issue's "How to deliver" says: worktree from `origin/main`, branch `<type>/<n>-<topic>`,
-   repo checks (zohelo-data `PYTHONPATH=. python -m ops.repo_check`; zohelo-bi `bun install --frozen-lockfile && bun run check`;
-   zohelo `bun install --frozen-lockfile && bun run lint && bun run build`), the issue's Verify, one PR with
+   repo checks — every step the repo's `check` workflow runs, in full, even when the Task's Verify lists fewer
+   (zohelo-data `PYTHONPATH=. python -m ops.repo_check`; zohelo-bi `bun install --frozen-lockfile && bun run lint &&
+   bun run format:check && bun run check && bun run test && bun run build`; zohelo `bun install --frozen-lockfile &&
+   bun run lint && bun test && bun run build`; when a workflow gains a step, run that too) — and never reformat lines
+   the Task does not change (format only the files you touched, `bunx prettier --write <files>`, never
+   `bun run format` over the repo; 2 Nov: zohelo-bi#269 and #270 failed `format:check`, zohelo#328 reformatted
+   App.tsx wholesale, all three sent back), then the issue's Verify, one PR with
    `Closes #<n>` first (`Closes zohelo/<repo>#<n>` across repos). Verify-only Tasks: no PR; close with a comment
    linking the evidence run. A PR that changes anything users see (pages, components, charts, styles) gets label
    `ui`, lists the routes and states it changes (desktop and mobile, PL and EN), and starts the Designer with
