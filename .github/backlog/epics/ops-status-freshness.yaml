@@ -57,64 +57,9 @@ deliverables:
         out_of_scope:
           - lag rules and status.json itself (next Task, after the published layer)
           - changing any schedule
-      - key: data/ops/status-freshness/status-json/contract
-        type: Task
-        title: Add status.json to the published contract (doc, schema, fixture)
-        effort: S
-        state: open
-        contract: true
-        context: >-
-          This Epic's done_when needs 06_published/v1/status.json (each source's last_loaded_at, next_expected_at,
-          lag_days); docs/published.md has no such file and D5 puts the contract first. repo_check checks each
-          fixture against the schema PUBLISHED_SCHEMAS names.
-        files:
-          - create: warehouse/published/schemas/status.schema.json
-          - create: warehouse/published/fixtures/status.json
-          - edit: ops/repo_check.py
-          - edit: docs/published.md
-        steps:
-          - "status.schema.json, laid out like feed_changes.schema.json: object, required [version, generated_at, sources]; version integer; generated_at string with the timestamp pattern of feed_changes; sources array of objects, required [source_key, name_pl, name_en, last_loaded_at, next_expected_at, lag_days]: source_key string pattern ^[a-z0-9_]+$; name_pl, name_en string; last_loaded_at and next_expected_at type [string, null] with the timestamp pattern; lag_days type [integer, null]."
-          - "fixtures/status.json: version 1, generated_at 2026-01-01T00:00:00Z, three sources: eurostat (Eurostat/Eurostat, 2025-12-31T22:45:00Z, 2026-01-01T10:30Z, 0), nbp (NBP kursy walut i cena złota / NBP exchange rates and gold price, 2025-12-31T11:40:00Z, 2026-01-02T11:30Z, 0), gleif (GLEIF / GLEIF LEI golden copy, null, null, null)."
-          - "repo_check.py PUBLISHED_SCHEMAS: add \"status.json\": \"status\" after the manifest entry."
-          - "docs/published.md: section `## status.json` before `## Size limits` with a field table; meanings: sources = one per row of warehouse/seeds/source.csv; last_loaded_at = newest gold.coverage checked_at of the source (as catalog.json loaded_at), null when none; next_expected_at = next run from `python run.py schedule --next`, null without a schedule; lag_days = whole days from last_loaded_at to generated_at, null without it. Size limits row `status.json | ≤ 50 kB`."
-        acceptance:
-          - "repo_check passes; the second verify prints 2"
-        verify:
-          - run: python -m ops.repo_check
-            expect: all checks ok
-          - run: "python -c \"import json;from ops.repo_check import _schema_problems as p;s=json.load(open('warehouse/published/schemas/status.schema.json'));f=json.load(open('warehouse/published/fixtures/status.json'));f['sources'][0]['lag_days']='1';f['sources'][0]['next_expected_at']='2026-01-02 11:30';print(len(p(f,s,'$')))\""
-            expect: "2"
-        out_of_scope: [warehouse/publish.py (Task status-json/writer), a late flag]
-      - key: data/ops/status-freshness/status-json/writer
-        type: Task
-        title: Write status.json in gold.publish
-        effort: M
-        state: open
-        contract: true
-        depends_on: [data/ops/status-freshness/status-json/contract]
-        context: >-
-          docs/published.md section status.json (Task contract) defines the file; nothing writes it. publish.py has
-          checked(coverage) (checked_at per source, '%Y-%m-%dT%H:%M:%SZ'), seed(), schema_checked() and put();
-          scheduler.next_runs(run.load_config(), now) gives the next runs.
-        files:
-          - edit: warehouse/publish.py
-        steps:
-          - "publish.py: STATUS_LIMIT = 50_000 next to LATEST_LIMIT; add ``status.json`` to the module docstring."
-          - "status_json(sources: list[dict[str, str]], checked_at: dict[str, str], next_at: dict[str, str], generated_at: str) -> dict (pure, one-line docstring): one entry per sources row, in order, with source_key, name_pl, name_en, last_loaded_at = checked_at.get(key), next_expected_at = next_at.get(key), lag_days = (generated - loaded).days with both parsed by '%Y-%m-%dT%H:%M:%SZ', None when not loaded; returns {'version': 1, 'generated_at': generated_at, 'sources': entries}."
-          - "main(), after the catalog_json lines: import scheduler (from ingestion.common) and run inside main; next_at = scheduler.next_runs(run.load_config(), datetime.now(UTC)); obj = schema_checked(status_json(seed('source'), checked_at, next_at, generated_at), 'status'); body = json.dumps(obj, ensure_ascii=False, separators=(',', ':')).encode(); raise ValueError when len(body) > STATUS_LIMIT; result['status'] = {'sources': len(obj['sources']), 'bytes': put(client, prefix + 'status.json', body)}."
-          - "dev/publish_status_trial.py: build the object as main() does, put it to zz_dev_published/v1/status.json, annotate notice 'status.json' with get() of it; in finally delete it and annotate 'deleted 1'. Run in Dev; delete dev/ before the PR."
-        acceptance:
-          - "trial: 10 sources, nbp with next_expected_at; ruff and repo_check pass"
-        verify:
-          - run: "python -c \"from warehouse.publish import status_json as s;r=s([{'source_key':'nbp','name_pl':'N','name_en':'N'},{'source_key':'gleif','name_pl':'G','name_en':'G'}],{'nbp':'2026-11-01T11:40:00Z'},{'nbp':'2026-11-03T11:30Z'},'2026-11-03T08:00:00Z');print([(v['source_key'],v['lag_days'],v['next_expected_at']) for v in r['sources']])\""
-            expect: "[('nbp', 1, '2026-11-03T11:30Z'), ('gleif', None, None)]"
-          - workflow: Dev · branch runs, script publish_status_trial, on the branch
-            expect: "notice 'status.json' with 10 sources; then 'deleted 1'"
-          - run: python -m ops.repo_check
-            expect: all checks ok
-        out_of_scope: [the contract, a late flag, schedules, the /status page]
     todo:
-      - "Late flag in status.json: a lag rule per release frequency needs a definition (the old rule 'now > next_expected_at + one period' never fires, since next_expected_at is the next scheduled run)"
+      - "Lag rule per frequency (late = now > next_expected_at + one period of the source's release frequency)"
+      - "Write status.json in gold.publish (after data/published/published-v1/publish)"
   - key: data/ops/status-freshness/green-gate
     title: 14-day green gate report
     done_when:

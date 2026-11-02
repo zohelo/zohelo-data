@@ -12,6 +12,11 @@ framework")::
             format: zip              # zip | gzip | 7z | raw
             version: last_modified   # last_modified (fallback: download time) | ingested
             url_date: Europe/Warsaw  # optional: {date} in url = today (YYYYMMDD) in this zone
+          - entity: treasury_debt_series   # a file whose URL changes per release
+            url_from:                # instead of url: find the link on a stable page
+              page: https://www.gov.pl/web/finanse/szeregiczasowe
+              pattern: /attachment/  # re.search on each <a href>, made absolute against the page
+              pick: first            # first (default) | last matching link, in page order
 
 Each file lands as ``01_landing/<source>/snapshot/data/<entity>/<version>__<ingested>.<ext>``
 with a receipt, only when its SHA-256 differs from the newest landed copy. The download
@@ -27,12 +32,15 @@ from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 import gzip
 from hashlib import sha256
+from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path
+import re
 import tempfile
 import time
 from typing import Any
+from urllib.parse import urljoin
 import zipfile
 
 import requests
@@ -122,6 +130,62 @@ def url_of(spec: dict[str, Any]) -> str:
     from zoneinfo import ZoneInfo
 
     return spec["url"].format(date=datetime.now(ZoneInfo(spec["url_date"])).strftime("%Y%m%d"))
+
+
+class _Links(HTMLParser):
+    """Collects the href of every <a> tag, in page order."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.hrefs: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "a":
+            self.hrefs += [value for name, value in attrs if name == "href" and value]
+
+
+def links_matching(html: str, page_url: str, pattern: str) -> list[str]:
+    """Absolute URLs of the page's <a href> links that match ``pattern`` (re.search), in page order, without repeats."""
+    parser = _Links()
+    parser.feed(html)
+    parser.close()
+    found: list[str] = []
+    for href in parser.hrefs:
+        url = urljoin(page_url, href.strip())
+        if re.search(pattern, url) and url not in found:
+            found.append(url)
+    return found
+
+
+def page_links(spec: dict[str, Any]) -> list[str]:
+    """Every link on ``url_from.page`` matching ``url_from.pattern``, with retries like download()."""
+    page, pattern = spec["url_from"]["page"], spec["url_from"]["pattern"]
+    for attempt in range(RETRIES):
+        try:
+            response = requests.get(page, headers={"User-Agent": USER_AGENT}, timeout=30, allow_redirects=True)
+            if 400 <= response.status_code < 500 and response.status_code not in RETRY_STATUSES:
+                raise PermanentError(f"page {response.status_code}: {page}")
+            if response.status_code != 200:
+                raise RuntimeError(f"page {response.status_code}")
+            return links_matching(response.text, response.url, pattern)
+        except PermanentError:
+            raise
+        except (requests.RequestException, RuntimeError) as exc:
+            if attempt == RETRIES - 1:
+                raise
+            print(json.dumps({"status": "retry", "url": page, "error": str(exc)[:200]}), flush=True)
+            time.sleep(60 * (attempt + 1))
+    raise RuntimeError("unreachable")
+
+
+def resolve_url(spec: dict[str, Any], links: list[str] | None = None) -> str:
+    """The file's URL: from ``url_from`` (the first or last matching link on a stable page), else url_of(spec)."""
+    if not spec.get("url_from"):
+        return url_of(spec)
+    links = page_links(spec) if links is None else links
+    if not links:
+        raise PermanentError(f"no link matches {spec['url_from']['pattern']!r} on {spec['url_from']['page']}")
+    return links[-1] if spec["url_from"].get("pick", "first") == "last" else links[0]
 
 
 def check_format(path: Path, fmt: str) -> dict[str, Any]:
@@ -229,7 +293,7 @@ def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landi
     with tempfile.TemporaryDirectory(prefix=f"zohelo-{source}-") as temporary:
         path = Path(temporary) / f"file.{EXTENSIONS[fmt]}"
         started = time.monotonic()
-        url = url_of(spec)
+        url = resolve_url(spec)
         digest, size, headers, final_url, detail = download(url, path, fmt)
         seconds = round(time.monotonic() - started)
         if held and held[-1]["sha256"] == digest:
@@ -305,7 +369,18 @@ def main(source: str, mode: str, landing_root: str = "01_landing") -> int:
             "newest": held[-1]["version_token"] if held else None,
         }
         if mode == "inspect":
-            head, http = probe(url_of(spec))
+            try:
+                links = page_links(spec) if spec.get("url_from") else None
+                url = resolve_url(spec, links)
+            except (PermanentError, requests.RequestException, RuntimeError) as exc:
+                row.update({"state": "unreachable", "http": str(exc)[:200]})
+                results.append(row)
+                status = 1
+                continue
+            if links is not None:
+                row["page_links"] = links[:10]  # every match (first 10), to choose url_from.pick
+            row["url"] = url
+            head, http = probe(url)
             row["server_version"] = (server_version(dict(head.headers)) if head is not None else None) or "unknown"
             if http != "200":  # a moved or blocked URL is an error, not a missing validator
                 row.update({"state": "unreachable", "http": http})

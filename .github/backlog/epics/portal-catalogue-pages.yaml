@@ -24,37 +24,8 @@ deliverables:
     title: Catalogue and source pages
     done_when:
       - /catalogue and /sources/<id> pages render from the published catalogue
-    tasks:
-      - key: data/portal/catalogue-pages/catalogue/published-api
-        type: Task
-        title: Serve the published files read-only at /api/published/v1/
-        effort: S
-        state: open
-        contract: false
-        context: >-
-          Catalogue and status pages will read 06_published/v1/ through the portal's R2 read API,
-          portal/worker/src/index.js (Pages Function under /api, binding LAKEHOUSE), which today serves the file
-          index and /drive/v3/catalog only. Read-only route; no page changes (no Designer review).
-        files:
-          - edit: portal/worker/src/index.js
-          - edit: docs/published.md
-        steps:
-          - "index.js, after `const PREFIX`: a comment line, `const PUBLISHED_PREFIX = \"06_published/v1/\";` and PUBLISHED_PATH = /^(catalog\\/catalog\\.json|catalog\\/[a-z_]+\\.parquet|manifest\\.json|status\\.json|kpi\\/[a-z0-9_]+\\/(latest\\.json|series\\.parquet)|geo\\/[a-z0-9]+\\.geojson|feed\\/(changes\\.json|calendar\\.ics))$/."
-          - "In fetch(), inside the try after the /drive/v3/catalog block (so authorize() has run): when url.pathname starts with \"/published/v1/\", path = the rest; object = PUBLISHED_PATH.test(path) ? await env.LAKEHOUSE.get(PUBLISHED_PREFIX + path) : null; no object → json 404 {error: {status: \"NOT_FOUND\", message: \"No published file at this path.\"}}; else headers cors(origin), object.writeHttpMetadata(h), etag object.httpEtag, cache-control no-store, and return the body (null for HEAD) with status 200."
-          - "docs/published.md, Rules: new bullet 'The data portal serves these files read-only, after sign-in, at `/api/published/v1/<path>` (portal/worker/src/index.js).'"
-        acceptance:
-          - "the local verify prints 200 404 404 401"
-          - "no other route changes; the route never lists or writes objects"
-        verify:
-          - run: node --check portal/worker/src/index.js
-            expect: exit 0
-          - run: "node --input-type=module -e \"import api from './portal/worker/src/index.js';const env={PORTAL_SIGNIN_ALLOWED_EMAILS:'a@b.c',LAKEHOUSE:{get:async k=>k==='06_published/v1/kpi/population/latest.json'?{body:'{}',httpEtag:'e',writeHttpMetadata:h=>h.set('content-type','application/json')}:null}};const go=(p,m)=>api.fetch(new Request('https://data.zohelo.com/api/published/v1/'+p,{headers:m?{'cf-access-authenticated-user-email':m}:{}}),env).then(r=>r.status);console.log(await go('kpi/population/latest.json','a@b.c'),await go('kpi/x/latest.json','a@b.c'),await go('other.txt','a@b.c'),await go('kpi/population/latest.json'))\""
-            expect: "200 404 404 401"
-          - workflow: Deploy portal (deploy-portal.yml) on main after the merge
-            expect: green
-        out_of_scope: [portal/app pages and services, the /drive/v3/catalog route, _portal_catalog]
     todo:
-      - "Route and page components reading /api/published/v1/catalog/catalog.json (after published-api; design process and Designer review, O17)"
+      - "Route and page components reading /api/catalog (worker) from 06_published/v1/catalog"
       - "Source page template used by stage-9 Deliverables of every source"
   - key: data/portal/catalogue-pages/lineage
     title: Lineage view

@@ -2401,7 +2401,7 @@ sources:
   name: Podstawowe dane statystyczne KRUS
   short_name: KRUS statistics
   provider: Kasa Rolniczego Ubezpieczenia Społecznego (KRUS)
-  status: approved
+  status: registered
   family: B
   kpi: true
   geography: Poland; regional detail varies
@@ -2437,14 +2437,10 @@ sources:
     priority: review-next
     evidence: documented
     connection: not-tested
-    blockers:
-    - 'Inventory file history and geography: the quarterly "Kwartalna Informacja Statystyczna" attachments on gov.pl
-      (Q3 and Q4 2025 read) carry 51 tables, regional ones by voivodeship; confirm which tables also ship as XLSX
-      before choosing PDF table extraction'
+    blockers: [Inventory file history and geography]
     references:
     - https://www.gov.pl/web/krus/podstawowe-dane-statystyczne-z-zakresu-swiadczeniobiorcow
     - https://www.gov.pl/web/gov/prawa-autorskie
-    - https://www.gov.pl/attachment/657d4965-e3c5-4d36-a321-32650b7df31d
 - id: PLS-012
   name: API Statystyki NFZ – Świadczenia
   short_name: "NFZ statistics: services"
@@ -2465,20 +2461,11 @@ sources:
     interfaces: [REST API, JSON, XML, Swagger]
     auth: Public API; no key described in opened documentation.
     cost: free
-    limits: '10 requests/second per IP (terms v1.1, section III).'
+    limits: 10 requests/second per IP in product terms.
   licence:
-    status: open-conditional
-    notes: 'Terms: API regulations (Regulamin) of "API Statystyki NFZ - Świadczenia" v1.1,
-      https://api.nfz.gov.pl/app-stat-api-jgp/terms (section II): users must state the source by giving the address
-      https://api.nfz.gov.pl/; the user may not modify the data ("Niedozwolone jest modyfikowanie danych przez
-      Usługobiorcę"); no use for software that breaks the law or third-party rights, misleads users or acts
-      maliciously; no overloading (10 requests/second per IP); NFZ may block users for breaches and may change the
-      API and its terms. No licence name and no clause on commercial reuse (footer: Copyright © Narodowy Fundusz
-      Zdrowia, Open Data logo linking to dane.gov.pl); public display of the published values is allowed with
-      attribution. Show values as published; any figure we derive (rates, sums, shares) is labelled as a zohelo
-      calculation. Disclaimer: use is at the user''s own risk, NFZ is not liable for lost profits. Attribution:
-      "Źródło: Narodowy Fundusz Zdrowia, API Statystyki NFZ – Świadczenia (https://api.nfz.gov.pl/)" / "Source:
-      National Health Fund (NFZ), NFZ Statistics API – Services (https://api.nfz.gov.pl/)".'
+    status: restricted
+    notes: Terms require source attribution to api.nfz.gov.pl, prohibit modifying data and prohibit overload. Commercial
+      redistribution needs legal interpretation of the no-modification clause.
   updates: Table releases; schedule and revision policy unknown.
   ingestion:
     history: Enumerate table index and available years, then snapshot complete chosen tables.
@@ -2492,10 +2479,7 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers:
-    - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived
-      values; published values are shown unchanged'
-    - 'Enumerate history'
+    blockers: [Legal review of no-modification term, Enumerate history, Confirm current API version]
     references:
     - https://api.nfz.gov.pl/app-stat-api-jgp/
     - https://api.nfz.gov.pl/app-stat-api-jgp/terms
@@ -2518,20 +2502,11 @@ sources:
     interfaces: [REST API, JSON, XML, Swagger]
     auth: Public API; no key indicated on root documentation.
     cost: free
-    limits: '10 requests/second per IP (terms v1.0, section III).'
+    limits: Unknown until product terms are reviewed.
   licence:
-    status: open-conditional
-    notes: 'Terms: API regulations (Regulamin) of "API Statystyki NFZ - Refundacja Apteczna" v1.0,
-      https://api.nfz.gov.pl/app-stat-api-ra/terms (section II): users must state the source by giving the address
-      https://api.nfz.gov.pl/; the user may not modify the data ("Niedozwolone jest modyfikowanie danych przez
-      Usługobiorcę"); no use for software that breaks the law or third-party rights, misleads users or acts
-      maliciously; no overloading (10 requests/second per IP); NFZ may block users for breaches and may change the
-      API and its terms. No licence name and no clause on commercial reuse; public display of the published values
-      is allowed with attribution. Show values as published; any figure we derive (rates, sums, shares) is labelled
-      as a zohelo calculation. Disclaimer: use is at the user''s own risk, NFZ is not liable for lost profits.
-      Attribution: "Źródło: Narodowy Fundusz Zdrowia, API Statystyki NFZ – Refundacja Apteczna
-      (https://api.nfz.gov.pl/)" / "Source: National Health Fund (NFZ), NFZ Statistics API – Pharmacy Refunds
-      (https://api.nfz.gov.pl/)".'
+    status: unresolved
+    notes: This API’s product terms were not opened. Related NFZ terms cannot be assumed to apply; commercial redistribution
+      remains unresolved.
   updates: Release schedule and revision policy unknown.
   ingestion:
     history: Enumerate table index/years and snapshot selected aggregates.
@@ -2544,14 +2519,8 @@ sources:
     priority: review-next
     evidence: documented
     connection: not-tested
-    blockers:
-    - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived
-      values; published values are shown unchanged'
-    - 'Enumerate dimensions/history'
-    - 'Resolve medicine-code crosswalks'
-    references:
-    - https://api.nfz.gov.pl/app-stat-api-ra/
-    - https://api.nfz.gov.pl/app-stat-api-ra/terms
+    blockers: [Open product-specific terms, Enumerate dimensions/history, Resolve medicine-code crosswalks]
+    references: ['https://api.nfz.gov.pl/app-stat-api-ra/']
 - id: PLS-014
   name: API Umowy NFZ
   short_name: NFZ contracts
@@ -2572,19 +2541,11 @@ sources:
     interfaces: [REST API, JSON, XML, Swagger]
     auth: Public API; no key specified.
     cost: free
-    limits: '10 requests/second per IP (terms v1.2, section III).'
+    limits: 10 requests/second per IP.
   licence:
-    status: open-conditional
-    notes: 'Terms: API regulations (Regulamin) of "API Umowy NFZ" v1.2, https://api.nfz.gov.pl/app-umw-api/terms (section
-      II): users must state the source by giving the address https://api.nfz.gov.pl/; the user may not modify the
-      data ("Niedozwolone jest modyfikowanie danych przez Usługobiorcę"); no use for software that breaks the law or
-      third-party rights, misleads users or acts maliciously; no overloading (10 requests/second per IP); NFZ may
-      block users for breaches and may change the API and its terms. No licence name and no clause on commercial
-      reuse; public display of the published values is allowed with attribution. Show values as published; any
-      figure we derive (rates, sums, shares) is labelled as a zohelo calculation. Disclaimer: use is at the user''s
-      own risk, NFZ is not liable for lost profits. Attribution: "Źródło: Narodowy Fundusz Zdrowia, API Umowy NFZ
-      (https://api.nfz.gov.pl/)" / "Source: National Health Fund (NFZ), NFZ Contracts API
-      (https://api.nfz.gov.pl/)".'
+    status: restricted
+    notes: Terms require attribution, prohibit modification, overload and misleading uses; obtain legal interpretation
+      before normalized redistribution.
   updates: Live contract database; update/revision cadence unknown.
   ingestion:
     history: Enumerate available years then snapshot agreements, plans, months, providers and dictionaries.
@@ -2598,11 +2559,7 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers:
-    - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived
-      values; published values are shown unchanged'
-    - 'Determine robust provider linkage'
-    - 'Document amendment semantics'
+    blockers: [Legal review of no-modification term, Determine robust provider linkage, Document amendment semantics]
     references:
     - https://api.nfz.gov.pl/app-umw-api/
     - https://api.nfz.gov.pl/app-umw-api/terms
@@ -2625,20 +2582,11 @@ sources:
     interfaces: [REST API, JSON, XML, Swagger]
     auth: Public data API; no key described.
     cost: free
-    limits: '10 requests/second per IP (terms v1.3, section III; v1.3 is the version the documentation page names on 2 Nov
-      2026).'
+    limits: 'v1.3 terms: 10 requests/second per IP; confirm v1.4.'
   licence:
-    status: open-conditional
-    notes: 'Terms: API regulations (Regulamin) of "API Terminy Leczenia" v1.3, https://api.nfz.gov.pl/app-itl-api/terms
-      (section II): users must state the source by giving the address https://api.nfz.gov.pl/; the user may not
-      modify the data ("Niedozwolone jest modyfikowanie danych przez Usługobiorcę"); no use for software that breaks
-      the law or third-party rights, misleads users or acts maliciously; no overloading (10 requests/second per IP);
-      NFZ may block users for breaches and may change the API and its terms. No licence name and no clause on
-      commercial reuse; public display of the published values is allowed with attribution. Show values as
-      published; any figure we derive (rates, sums, shares) is labelled as a zohelo calculation. Disclaimer: use is
-      at the user''s own risk, NFZ is not liable for lost profits. Attribution: "Źródło: Narodowy Fundusz Zdrowia,
-      API Terminy Leczenia (https://api.nfz.gov.pl/)" / "Source: National Health Fund (NFZ), NFZ Waiting Times API
-      (https://api.nfz.gov.pl/)".'
+    status: unresolved
+    notes: Legacy v1.3 terms require attribution and prohibit modification/overload; check applicability to current
+      v1.4.
   updates: Availability changes frequently; month-end counts coexist with point-in-time first dates.
   ingestion:
     history: Begin dated snapshots after onboarding; no historical backfill claim.
@@ -2651,11 +2599,7 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers:
-    - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived
-      values; published values are shown unchanged'
-    - 'Define snapshot cadence'
-    - 'Resolve provider/place identity'
+    blockers: [Open and assess v1.4 docs/terms, Define snapshot cadence, Resolve provider/place identity]
     references:
     - https://api.nfz.gov.pl/app-itl-api/
     - https://api.nfz.gov.pl/app-itl-api/terms
@@ -2739,7 +2683,7 @@ sources:
   name: Raport – Stan Sanitarny Kraju
   short_name: GIS sanitary state report
   provider: Główny Inspektorat Sanitarny (GIS)
-  status: parked
+  status: registered
   family: B
   kpi: true
   geography: Poland
@@ -2779,10 +2723,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - 'Parked: no structured bulk files; the annual report is narrative HTML/PDF and figures would need page-level
-      PDF extraction, which is not tested (re-open if GIS publishes tables as XLSX/CSV)'
-    - 'Inventory report archive'
-    - 'Assess structured-data availability'
+    - Inventory report archive
+    - Assess structured-data availability
     references:
     - https://www.gov.pl/web/gis/raport---stan-sanitarny-kraju
     - https://www.gov.pl/web/gov/prawa-autorskie
@@ -3077,7 +3019,7 @@ sources:
   name: Ewidencja zabytków nieruchomych / heritage monument datasets
   short_name: NID heritage register
   provider: Narodowy Instytut Dziedzictwa (NID)
-  status: approved
+  status: registered
   family: E
   kpi: false
   geography: Poland
@@ -3129,7 +3071,7 @@ sources:
   name: Kultura i dziedzictwo narodowe – annual tables
   short_name: GUS culture tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: approved
+  status: registered
   family: B
   kpi: true
   geography: Poland and voivodeships
@@ -3174,7 +3116,7 @@ sources:
   name: Uczestnictwo ludności w kulturze
   short_name: GUS cultural participation
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: approved
+  status: registered
   family: B
   kpi: true
   geography: Poland; demographic breakdowns
@@ -3221,7 +3163,7 @@ sources:
   name: Registered unemployment and labour-office vacancy statistics
   short_name: MRPiPS registered unemployment
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej / Public Employment Services
-  status: approved
+  status: registered
   family: B
   kpi: true
   geography: Poland, voivodeship and powiat, table-dependent
@@ -3308,7 +3250,7 @@ sources:
   name: Social assistance and family-support statistical reports
   short_name: MRPiPS social assistance
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej
-  status: approved
+  status: registered
   family: B
   kpi: true
   geography: Poland and voivodeships, report-dependent
@@ -3358,7 +3300,7 @@ sources:
   name: Zintegrowany System Rolniczej Informacji Rynkowej (ZSRIR)
   short_name: MRiRW ZSRIR market information
   provider: Ministerstwo Rolnictwa i Rozwoju Wsi
-  status: approved
+  status: registered
   family: B
   kpi: true
   geography: Poland and macroregions/markets, commodity-dependent
@@ -3409,7 +3351,7 @@ sources:
   name: Weekly agricultural market situation reports
   short_name: KOWR agricultural markets
   provider: Krajowy Ośrodek Wsparcia Rolnictwa (KOWR)
-  status: parked
+  status: registered
   family: B
   kpi: true
   geography: Poland
@@ -3450,11 +3392,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - 'Parked: no structured bulk files; the weekly KOWR market pages are HTML/PDF reports whose tables come from
-      other providers (e.g. ZSRIR, PLS-032), and PDF extraction is not tested (re-open if KOWR publishes its own
-      tables as XLSX/CSV)'
-    - 'Identify upstream source per table'
-    - 'Assess PDF extraction stability'
+    - Identify upstream source per table
+    - Assess PDF extraction stability
     references:
     - https://www.gov.pl/web/kowr/Rynek-zboz
     - https://www.gov.pl/web/kowr/Rynek-miesa
@@ -3463,7 +3402,7 @@ sources:
   name: Programme implementation and payment statistics
   short_name: ARiMR payment statistics
   provider: Agencja Restrukturyzacji i Modernizacji Rolnictwa (ARiMR)
-  status: approved
+  status: registered
   family: D
   kpi: true
   geography: Poland and regional Poland, programme-dependent
@@ -3515,7 +3454,7 @@ sources:
   name: Turystyka – annual accommodation-establishment tables
   short_name: GUS tourism tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: approved
+  status: registered
   family: B
   kpi: true
   geography: Poland and voivodeships/powiats, table-dependent
@@ -3808,7 +3747,7 @@ sources:
   name: State budget acts and execution publications
   short_name: MF state budget
   provider: Ministry of Finance
-  status: approved
+  status: registered
   family: D
   kpi: true
   geography: Poland
@@ -3849,7 +3788,7 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - 'Map attachment schemas.'
+    - Map attachment schemas and licences.
     references:
     - https://www.gov.pl/web/finanse/budzet-panstwa
     - https://www.gov.pl/web/finanse/sprawozdania-operatywne-miesieczne
@@ -3858,7 +3797,7 @@ sources:
   name: Treasury debt time series and monthly bulletin
   short_name: MF Treasury debt
   provider: Ministry of Finance
-  status: approved
+  status: registered
   family: D
   kpi: true
   geography: Poland
@@ -3899,7 +3838,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - 'Confirm workbook schema and revisions.'
+    - Confirm workbook schema, revisions and licence.
     references:
     - https://www.gov.pl/web/finanse/szeregiczasowe
     - https://www.gov.pl/attachment/cdea605f-3278-4a55-af7b-0162d548ea0f
@@ -3908,7 +3847,7 @@ sources:
   name: Public finance sector debt statistics
   short_name: MF public debt
   provider: Ministry of Finance
-  status: approved
+  status: registered
   family: D
   kpi: true
   geography: Poland
@@ -3957,7 +3896,7 @@ sources:
   name: Local-government budget reports (sprawozdania budżetowe JST)
   short_name: MF local-government budgets
   provider: Ministry of Finance
-  status: approved
+  status: registered
   family: D
   kpi: true
   geography: Poland
@@ -3998,7 +3937,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - 'Inspect formats, identifiers and corrections.'
+    - Inspect formats, identifiers, corrections and licence.
     references:
     - https://www.gov.pl/web/finanse/sprawozdania-budzetowe
     - https://www.gov.pl/web/gov/prawa-autorskie

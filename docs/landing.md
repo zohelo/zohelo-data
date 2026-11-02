@@ -140,7 +140,18 @@ extraction:
         url: https://databank.worldbank.org/data/download/WDI_CSV.zip
         format: zip
         version: last_modified       # last_modified | ingested (download time); later: etag, hook
+      - entity: treasury_debt_series   # the file's URL changes per release (gov.pl attachments)
+        url_from:                    # instead of url: the link is found on a stable page at run time
+          page: https://www.gov.pl/web/finanse/szeregiczasowe
+          pattern: /attachment/      # re.search on each <a href>, made absolute against the page URL
+          pick: first                # first (default) | last matching link, in page order
+        format: raw
 ```
+
+A file declares either `url` or `url_from`. With `url_from`, `landing: inspect` lists the
+matching links (first 10) and the chosen URL per entity, a page without a match is an
+error, and the receipt's `source_url` is the resolved URL. JavaScript-rendered pages are
+not supported (no browser in the pipeline).
 
 ```yaml
 extraction:

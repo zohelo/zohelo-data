@@ -161,9 +161,20 @@ def config_problems(config: dict) -> list[str]:
             problems.append(f"{source}: extraction.kind {kind!r} is not an implemented pattern {sorted(KINDS)}")
         if kind == "bulk_file":
             files = ((cfg["extraction"].get("bulk_file") or {}).get("files")) or []
-            if not files or any(not {"entity", "url"} <= set(f) for f in files):
-                problems.append(f"{source}: extraction.bulk_file.files needs entity and url for every file")
+            if not files or any("entity" not in f or ("url" in f) == ("url_from" in f) for f in files):
+                problems.append(
+                    f"{source}: extraction.bulk_file.files needs entity and either url or url_from for every file"
+                )
             for f in files:
+                url_from = f.get("url_from")
+                if url_from is not None and (
+                    not isinstance(url_from, dict)
+                    or not {"page", "pattern"} <= set(url_from)
+                    or url_from.get("pick", "first") not in {"first", "last"}
+                ):
+                    problems.append(
+                        f"{source}: {f.get('entity')}: url_from needs page and pattern (pick: first or last)"
+                    )
                 if f.get("format", "raw") not in {"zip", "gzip", "7z", "raw"}:
                     problems.append(f"{source}: {f.get('entity')}: format must be zip, gzip, 7z or raw")
                 if f.get("url_date") and "{date}" not in str(f.get("url")):

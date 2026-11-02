@@ -13,7 +13,7 @@ a trailing newline. Rows below give the values of each file (`-` = key left out)
 
 | file (kpi_key, unit_key) | source_key | geography_key | geography_level | period | value | unit_key | previous_period | previous_value | flags |
 |---|---|---|---|---|---|---|---|---|---|
-| population (persons) | gus_bdl | PL | country | 2024 | 37490000 | persons | 2023 | 37640000 | [] |
+| population (persons) | eurostat | PL | country | 2025 | 36620000 | persons | 2024 | 36750000 | [] |
 | population (persons) | gus_bdl | TERC:12 | voivodeship | 2024 | 3430000 | persons | 2023 | 3440000 | [] |
 | population (persons) | gus_bdl | TERC:14 | voivodeship | 2024 | 5510000 | persons | 2023 | 5500000 | [] |
 | gdp_current_prices (mln_ncu) | eurostat | PL | country | 2024 | 845000 | mln_eur | 2023 | 750000 | ["p"] |
