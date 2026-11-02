@@ -44,6 +44,11 @@ zohelo-data only:
   stages.yaml                # the 11-stage source template (source Epics are generated from the register)
 ```
 
+Source Epics are generated from `ingestion/register.yaml` for every entry without its own `epics/src-<id>.yaml`,
+by register status (owner, 28 Oct, #2230): `registered` or `reviewing` → only the stage-1 review Deliverable and its
+Tasks; `approved` and later → stage 1 and the stage-2 stub, as before (a hand-written file carries the full stages);
+`parked` → no Epic, so the sync closes its open issues as not planned. Keys do not change with the status.
+
 Keys are stable lower-case slugs, unique across the org, prefixed by repo: `data/…`, `bi/…`, `com/…`.
 A Deliverable key is `<epic-key>/<slug>`; a Task key `<deliverable-key>/<slug>`. Keys never change after an
 issue exists (the issue carries `<!-- zohelo:key=… -->`); renaming a title is fine.

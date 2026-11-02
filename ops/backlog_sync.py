@@ -68,7 +68,8 @@ class Plan:
         self.nodes: dict[str, tuple[str, dict]] = {}  # key -> (kind, node with inherited fields)
         self.stages: dict[str, int] = {}  # stage key -> number, from stages.yaml
         self.pending: list[tuple[str, str, str, list[dict]]] = []  # edit/delete paths to check
-        self.sources = {"file": 0, "generated": 0, "no_family": []}  # register entries by how their Epic is made
+        # register entries by how their Epic is made (parked: none, docs/backlog.md §3)
+        self.sources = {"file": 0, "generated": 0, "parked": 0, "no_family": []}
 
     def error(self, file: str, key: str, message: str) -> None:
         self.errors.append(f"{file}: {key}: {message}")
@@ -163,8 +164,12 @@ def fill(text: object, values: dict[str, str]) -> object:
     return text
 
 
+REVIEW_ONLY = {"registered", "reviewing"}  # register statuses whose Epic holds only the stage-1 review
+
+
 def source_epic(entry: dict, stages: list[dict]) -> dict:
-    """The Epic of a register entry without a hand-written file: stage 1 with its Tasks, stage 2 as a stub."""
+    """The Epic of a register entry without a hand-written file: stage 1 with its Tasks, and stage 2 as a stub
+    once the entry is approved or later (registered and reviewing entries get stage 1 only)."""
     ident = str(entry["id"])
     low = ident.lower()
     key = f"data/src-{low}"
@@ -177,9 +182,10 @@ def source_epic(entry: dict, stages: list[dict]) -> dict:
         "family_area": f"data/src-{str(entry['family']).lower()}",
         "register_file": REGISTER,
     }
+    last_stage = 1 if str(entry.get("status") or "registered") in REVIEW_ONLY else 2
     deliverables = []
     for stage in stages:
-        if stage.get("n") not in (1, 2):
+        if stage.get("n") not in range(1, last_stage + 1):
             continue
         item = {
             "key": f"{key}/{stage['key']}",
@@ -222,7 +228,8 @@ def source_epic(entry: dict, stages: list[dict]) -> dict:
 
 
 def load_sources(plan: Plan, root: Path, read) -> None:
-    """Add a generated Epic for every register entry that has no epics/src-<id lower>.yaml (docs/backlog.md §3)."""
+    """Add a generated Epic for every register entry that has no epics/src-<id lower>.yaml and is not parked
+    (docs/backlog.md §3); the sync closes the issues of a parked entry as not planned."""
     register = read(root / REGISTER)
     stages = read(root / ".github" / "backlog" / "stages.yaml")
     entries = (register or {}).get("sources") if isinstance(register, dict) else None
@@ -233,6 +240,8 @@ def load_sources(plan: Plan, root: Path, read) -> None:
         ident = str(entry.get("id", "?"))
         if f"src-{ident.lower()}" in files:
             plan.sources["file"] += 1
+        elif str(entry.get("status")) == "parked":
+            plan.sources["parked"] += 1
         elif not entry.get("family"):
             plan.sources["no_family"].append(ident)
         else:
@@ -502,6 +511,7 @@ def validate(roots: list[Path], strict: bool = False) -> int:
         print(f"warning: register entries without family, no Epic generated: {', '.join(found['no_family'])}")
     print(f"file sources: {found['file']}")
     print(f"generated sources: {found['generated']}")
+    print(f"parked sources (no Epic): {found['parked']}")
     print(f"register entries without family: {len(found['no_family'])}")
     print(f"ok: {c['areas']} areas, {c['epics']} epics, {c['deliverables']} deliverables, {c['tasks']} tasks")
     return 0
