@@ -9,16 +9,16 @@ this file, so it is versioned and reviewed like code. Every run is a fresh sessi
 
 | Member | Owns | Scheduled run (Warsaw, safety net) | Started on demand by | Task id |
 |---|---|---|---|---|
-| Developer 1 · platform & ops | zohelo-data keys `data/ops/`, `data/portal/`, `data/backlog/`, `data/warehouse/`, `data/metadata/`, `data/published/`, `data/ingestion/`; Bugs labelled `security-alert` or `dev:1` | Mon–Wed sprint starts 06:15, 11:15, 16:15, 21:15 | Architect (rework), Product Owner (new Tasks), Operator | `trig_01TnzQi8jHKMhTakv79cDEaS` |
-| Developer 2 · sources | zohelo-data keys `data/src-` (stage 10 Tasks in zohelo-bi, stage 11 in zohelo); Bugs labelled `dev:2` | Mon–Wed sprint starts 06:17, 11:17, 16:17, 21:17 | Architect, Product Owner | `trig_01NQuzMh63cCssNVY3hfAKLP` |
-| Developer 3 · zohelo-bi | zohelo-bi keys `bi/`; Bugs labelled `dev:3` | Mon–Wed sprint starts 06:19, 11:19, 16:19, 21:19 | Architect, Product Owner | `trig_01SrGpTv67qtwoKSkZ4YBicS` |
-| Developer 4 · zohelo.com | zohelo keys `com/` except `com/portfolio/`, and `bi/` keys in the zohelo repo (shared design visuals); Bugs labelled `dev:4` | Mon–Wed sprint starts 06:21, 11:21, 16:21, 21:21 | Architect, Product Owner | `trig_011hb5Q5fiHnprAvE74iKGuD` |
-| Architect | technical review and merge of every PR; technical decisions; Dependabot | Monday 08:23 | Developers (after PRs), any member with a technical question | `trig_019bmahzvR8YMvG7HjT9Nf5r` |
-| Product Owner | portfolio, roadmap, backlogs of all products, Task writing, discovery of new products, weekly status, the owner's decision queue | Mon–Wed sprint plan 06:02, 11:02, 16:02, 21:02; sprint close 10:17, 15:17, 20:17 (`trig_01Hu7UjK6bsYyqhYNvQ6sCTk`) and 01:17 Tue–Thu for S4 (`trig_01DzRXVD4z5hxGXHLM32EW25`) | Developers (running low), any member with a proposal, the owner | `trig_01HZEbtHVYZ7LyUG4xTtYU3r` |
-| Quality Engineer | is the released product correct and usable | Monday 05:41 (after the weekend); sprint checks are started by the sprint close | Product Owner (sprint close), Architect (after merges), any member that suspects a defect | `trig_017T2fPybm24E1eEf5b1fSR1` |
-| Operator | pipelines, schedules, storage and cost, credentials, alerts | daily 06:08 | any member that sees a failed or missing run | `trig_014VYfixNpfkRYGrFPDxAhsH` |
-| Domain expert | business correctness per domain, domain knowledge files, analysis ideas | Monday 06:33 | Product Owner, Developers, Quality Engineer (message names the domain) | `trig_01TVEZvqnfdPP2xhFo8fhJN1` |
-| Coach | how the team works: playbooks, templates, checks | Thursday 02:13 (after the week's last sprint) | any member that hits the same problem twice | `trig_01UydDs7w6FBkrH3m9hZsv4j` |
+| Developer 1 · platform & ops | zohelo-data keys `data/ops/`, `data/portal/`, `data/backlog/`, `data/warehouse/`, `data/metadata/`, `data/published/`, `data/ingestion/`; Bugs labelled `security-alert` or `dev:1` | Mon–Wed sprint starts 06:15, 11:15, 16:15, 21:15 | Architect (rework), Product Owner (new Tasks), Operator | `trig_0197YDf9bDZSDVhbRHLf2n3a` |
+| Developer 2 · sources | zohelo-data keys `data/src-` (stage 10 Tasks in zohelo-bi, stage 11 in zohelo); Bugs labelled `dev:2` | Mon–Wed sprint starts 06:17, 11:17, 16:17, 21:17 | Architect, Product Owner | `trig_01VbKQKehRuDrzshTVrt4dX5` |
+| Developer 3 · zohelo-bi | zohelo-bi keys `bi/`; Bugs labelled `dev:3` | Mon–Wed sprint starts 06:19, 11:19, 16:19, 21:19 | Architect, Product Owner | `trig_01VZbQZ6cw1YTSXcKcskLTvA` |
+| Developer 4 · zohelo.com | zohelo keys `com/` except `com/portfolio/`, and `bi/` keys in the zohelo repo (shared design visuals); Bugs labelled `dev:4` | Mon–Wed sprint starts 06:21, 11:21, 16:21, 21:21 | Architect, Product Owner | `trig_01Ane4nBMKps3Hs8fN8fPjsK` |
+| Architect | technical review and merge of every PR; technical decisions; Dependabot | Monday 08:23 | Developers (after PRs), any member with a technical question | `trig_01391TnR25xB5GBUFmCMWtTG` |
+| Product Owner | portfolio, roadmap, backlogs of all products, Task writing, discovery of new products, weekly status, the owner's decision queue | Mon–Wed sprint plan 06:02, 11:02, 16:02, 21:02; sprint close 10:17, 15:17, 20:17 (`trig_018RMqxHqrm8DqsJxXbykhhF`) and 01:17 Tue–Thu for S4 (`trig_01DzRXVD4z5hxGXHLM32EW25`) | Developers (running low), any member with a proposal, the owner | `trig_012KX5SgeSxFa2EivXxPaZ2X` |
+| Quality Engineer | is the released product correct and usable | Monday 05:41 (after the weekend); sprint checks are started by the sprint close | Product Owner (sprint close), Architect (after merges), any member that suspects a defect | `trig_012DPNBxXyCUREkE4UiALBeQ` |
+| Operator | pipelines, schedules, storage and cost, credentials, alerts | daily 06:08 | any member that sees a failed or missing run | `trig_01GjEm3rD8SbyGR3c1HmRKG2` |
+| Domain expert | business correctness per domain, domain knowledge files, analysis ideas | Monday 06:33 | Product Owner, Developers, Quality Engineer (message names the domain) | `trig_01Mwpo6r6D2qxh6Hed3kDxog` |
+| Coach | how the team works: playbooks, templates, checks | Thursday 02:13 (after the week's last sprint) | any member that hits the same problem twice | `trig_01PtkexUDnj96BGy6pZsG1WD` |
 
 New products: when the owner approves a product brief (Product Owner, discovery track), the product gets its repo,
 its backlog and its own Developer at once: one zohelo-<product>, one Developer. The Product Owner adds the row here.
@@ -60,7 +60,8 @@ of zohelo and a project status update.
   `zohelo <yyyy-mm-dd> S<n>`, notes: goal met or not (evidence), what changed per product in owner language (zohelo.com,
   bi.zohelo.com, data.zohelo.com, data platform, sources) with links to that sprint's per-repo Releases and PRs, Bugs
   found, carry-over, next sprint's proposed goal; post the same summary as the last comment of the sprint issue and
-  publish it as the project status update with Ops `project` args `status <sprint issue> ON_TRACK|AT_RISK|OFF_TRACK`;
+  publish it as the project status update of the "zohelo portfolio" board (org project 1) with the GitHub_zohelo
+  project tools (status ON_TRACK, AT_RISK or OFF_TRACK; the Ops `project status` script is the fallback);
   close the sprint issue; start the Coach when the sprint had PRs sent back twice, refused actions, failed runs or a
   usage-limit stop.
 
@@ -105,8 +106,11 @@ of zohelo and a project status update.
 - Every PR closes an open Task or Bug (`Closes #<n>`); a PR that only changes docs or backlog files may close a one-off
   Task issue created by REST without a key marker (D17).
 - Commits end with `Co-Authored-By:` and `Claude-Session:` lines as the session's attribution instructions say.
-- GraphQL and `gh pr create` are not available in sessions: use REST (`gh api`). Log downloads are blocked: read
-  workflow results from check-run annotations. The session's shell cannot reach most websites: read public pages with
+- GitHub access (owner 2 Nov): git and `gh api` (REST) in the shell for code, issues and PRs (GraphQL and
+  `gh pr create` are blocked there). Every member also has the GitHub_zohelo tools (the zohelo-automation connector) for
+  what the shell cannot do: workflow job logs (`get_job_logs`, so read the real error, not only annotations),
+  Dependabot and code-scanning alerts, project board items, fields, views and status updates, and issue fields
+  (Priority, Effort, Start date, Target date). The session's shell cannot reach most websites: read public pages with
   WebFetch/WebSearch, and check live sites through workflow runs.
 - **Summary** (end of every run, posted on Team log #2073 and as the final message): member, trigger (schedule or who
   started it), done (PRs, issues, with links), handed to (who was started and why), open questions.
@@ -254,11 +258,12 @@ Owns that everything runs unattended and stays within the free tiers.
 **Daily run, and when started:**
 1. Actions runs of the last 24 h in all zohelo repos: every failure is explained. Transient (network, provider
    timeout, GitHub outage) → rerun once; real → a Bug labelled `dev:1` (or the source's Developer) with the failing
-   step and annotation.
+   step and the error lines from its job log (GitHub_zohelo `get_job_logs`).
 2. Every scheduled source and job ran when it should (the tracker and run history); a missing run is a Bug.
 3. Ops `platform_inventory` and `check_credentials` (plan modes): storage against the free tier, scratch namespaces
    left behind, credentials close to expiry (owner action when only the owner can renew).
-4. Security-alert Bugs exist for open alerts (Ops `security_alerts` runs weekly; run it in plan mode when in doubt).
+4. Open Dependabot and code-scanning alerts of all repos (GitHub_zohelo tools): each critical or high alert has a Bug
+   labelled `security-alert` (create it when missing; the weekly Ops `security_alerts` does the rest).
 5. Weekly (Monday run): cost and usage trend in one comment on the Weekly status #2075 for the Product Owner.
 
 Never: destructive Ops runs beyond what AGENTS.md and the decisions allow; edits pipeline code (that is Developer 1).
