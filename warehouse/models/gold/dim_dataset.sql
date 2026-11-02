@@ -1,7 +1,8 @@
 {# Catalogue: one row per dataset (a block a source publishes or the platform holds), from
    gold.coverage. Block ids are normalised as in poc_dim_measure: DBW yearly files collapse to
    their block, Eurostat ids are compared upper-case. Eurostat names come from
-   silver.eurostat_dataflows (name_en), since coverage has none. #}
+   silver.eurostat_dataflows (name_en), since coverage has none. A name that is empty or a
+   Landing file name (<ts>Z__<ts>Z.<ext>) becomes '<source name_en> · <code>' from the source seed. #}
 with coverage as (
     select
         source,
@@ -44,13 +45,29 @@ datasets as (
         max(checked_at) as checked_at
     from coverage
     group by source, block_id
+),
+
+named as (
+    select
+        d.*,
+        case when d.source_key = 'eurostat' then coalesce(nullif(d.name, ''), f.name_en) else d.name end
+            as source_name
+    from datasets as d
+    left join dataflows as f on d.source_key = 'eurostat' and d.code = f.code
 )
 
 select
     d.dataset_key,
     d.source_key,
     d.code,
-    case when d.source_key = 'eurostat' then coalesce(nullif(d.name, ''), f.name_en) else d.name end as name,
+    case
+        when
+            d.source_name is null
+            or d.source_name = ''
+            or regexp_matches(d.source_name, '^[0-9]{8}T[0-9]{6}Z__[0-9]{8}T[0-9]{6}Z\.[a-z]+$')
+            then s.name_en || ' · ' || d.code
+        else d.source_name
+    end as name,
     d.status,
     d.published_version,
     d.landed_version,
@@ -58,5 +75,5 @@ select
     d.silver_rows,
     d.files,
     d.checked_at
-from datasets as d
-left join dataflows as f on d.source_key = 'eurostat' and d.code = f.code
+from named as d
+left join {{ ref('source') }} as s on d.source_key = s.source_key
