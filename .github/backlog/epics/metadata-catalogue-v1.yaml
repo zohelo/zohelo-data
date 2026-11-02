@@ -409,3 +409,35 @@ deliverables:
       - "GDP (economy, #2074): `gdp_current_prices` in million PLN (eurostat NAMA_10_GDP CP_MNAC; EUR and WDI as their own measures or KPIs, Bug #2148); new `gdp_growth_quarterly` (NAMQ_10_GDP CLV_PCH_SM y/y headline, CLV_PCH_PRE on SCA q/q); new `gdp_per_capita_pps` (GDP per capita in PPS, EU27 = 100)"
       - "Public finance (finance, #2074 and docs/domains/finance.md): `gov_deficit_pct_gdp` and `gov_debt_pct_gdp` (eurostat GOV_10DD_EDPT1, general government S13, % of GDP; named EDP/Maastricht debt, not the Polish state public debt) and `long_term_yield` (IRT_LT_MCBY_M, 10-year Maastricht yield); data already in Bronze"
       - "Labour (labour, #2074 and docs/domains/labour.md): new `real_wage_growth` (% y/y = GUS monthly enterprise-sector nominal wage index / GUS CPI index × 100 − 100; needs the DBW wage series and `inflation` as GUS CPI); `average_gross_wage` pinned to one BDL measure (P2497) and `live_births` to one (P1873) before either is published"
+    tasks:
+      - key: data/metadata/catalogue-v1/kpis-40/dwellings-housing
+        type: Task
+        title: Move dwellings_completed to the housing subgroup
+        effort: S
+        state: open
+        contract: true
+        context: >-
+          Today warehouse/seeds/kpi.csv puts the draft KPI dwellings_completed (gus_bdl:P3824) in subgroup
+          business.industry_construction. It is a housing-supply indicator: GUS publishes it under
+          "Budownictwo mieszkaniowe", and users and housing analyses look for it under Housing. The Domain
+          expert (business) proposed the move on Product inbox #2074 and the Product Owner accepted it. The KPI is
+          still draft, so no page or link moves. Target: subgroup_key housing.housing (it exists in
+          warehouse/seeds/domain.csv).
+        files:
+          - edit: warehouse/seeds/kpi.csv
+          - edit: .github/backlog/assets/catalogue-seeds.md
+        steps:
+          - "warehouse/seeds/kpi.csv, row dwellings_completed: change subgroup_key from business.industry_construction to housing.housing. Change nothing else in the row or the file."
+          - ".github/backlog/assets/catalogue-seeds.md, kpi subgroup table, row dwellings_completed: change business.industry_construction to housing.housing."
+          - "Run `grep -n 'dwellings_completed' warehouse/seeds/kpi.csv .github/backlog/assets/catalogue-seeds.md` and check both lines show housing.housing."
+        acceptance:
+          - "kpi.csv row dwellings_completed has subgroup_key housing.housing; every other row of kpi.csv is unchanged"
+          - "the assets table row matches kpi.csv"
+        verify:
+          - run: "grep -c 'dwellings_completed,.*,housing.housing,' warehouse/seeds/kpi.csv"
+            expect: "1"
+          - run: PYTHONPATH=. python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope:
+          - "docs/domains/business.md (the Domain expert updates its own file)"
+          - "kpi_measure.csv, the KPI status (stays draft) and any other KPI"
