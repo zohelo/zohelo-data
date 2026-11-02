@@ -3395,7 +3395,11 @@ sources:
     limits: No API quota.
   licence:
     status: open-conditional
-    notes: GUS portal CC BY 4.0; retain attribution, definitions and confidentiality markers.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no
+      named licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for
+      users'' summaries or reworked text. Tables embedding third-party data keep their owners'' terms. Attribution:
+      "Źródło: GUS, Turystyka w <year> r." / "Source: Statistics Poland, Tourism in <year>".'
   updates: Annual publication, with separate short-period accommodation releases elsewhere.
   ingestion:
     history: Backfill annual XLSX ZIP editions and retain PDFs for methodology.
@@ -3408,10 +3412,12 @@ sources:
     priority: review-next
     evidence: documented
     connection: not-tested
-    blockers: [Map workbook schema across editions, Confirm licensing per historical file]
+    blockers:
+    - Map workbook schema across editions
     references:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2024-r-%2C1%2C22.html
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2025-r-%2C1%2C23.html
+    - https://stat.gov.pl/en/copyright/
 - id: PLG-001
   name: NBP Web API — exchange rates and gold prices
   short_name: NBP exchange rates and gold
