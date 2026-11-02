@@ -98,6 +98,13 @@ Card and chart rules that reviews check:
 - Chart of the day = the newest release, not the largest change. Ranking by relative change of `value` vs
   `previous_value` (zohelo#28, 28 Oct) let annual LFS unemployment 2025 (2.9 → 3.2 = "+10.3 %") beat monthly HICP,
   and dropping provisional rows dropped the newest releases (zohelo#410).
+- Number format (content standard, 2 Nov): `2,9%` / `2.9%` without a space, as GUS and NBP write it; rate changes
+  `−0,1 p.p.` / `−0.1 pp` with a space; minus U+2212; any space next to a symbol is non-breaking (U+00A0). One
+  formatter for PL and EN.
+- The NBP band (1,5–3,5%) is defined for CPI GUS. While HICP stands in, every band on an HICP chart or card carries
+  "Cel NBP dotyczy inflacji CPI (GUS); HICP to zbliżona, ale inna miara". Inflation colour follows the distance to
+  the target, not the sign (a fall below 1,5% is not good news). Target-band charts set the y domain to cover both
+  the data and the band.
 - Freshness: show the latest published period, flash and provisional included and labelled; headline slots only for
   series no older than 3 months (M), 6 months (Q), 18 months (A).
 
