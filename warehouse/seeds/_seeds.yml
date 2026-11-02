@@ -13,6 +13,15 @@ seeds:
         tests: [not_null, unique]
       - name: licence_key
         tests: [{relationships: {arguments: {to: ref('licence'), field: licence_key}}}]
+  - name: release_calendar
+    config: {column_types: {release_at: varchar}}
+    columns:
+      - name: release_at
+        tests: [not_null]
+      - name: source_key
+        tests: [not_null, {relationships: {arguments: {to: ref('source'), field: source_key}}}]
+      - name: kpi_key
+        tests: [{relationships: {arguments: {to: ref('kpi'), field: kpi_key}}}]
   - name: dimension_alias
     columns:
       - name: dimension_key
