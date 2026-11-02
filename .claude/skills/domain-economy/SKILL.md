@@ -12,7 +12,8 @@ number reaches users. Core principle: **a macro number is only meaningful with i
 vintage** — "inflacja 2,9%" is wrong if it is HICP, a December y/y shown as the annual average, or a flash called
 final.
 
-The long-form memory, sources and open points stay in `docs/domains/economy.md`; this skill is the working checklist.
+`docs/domains/economy.md` is the source of truth (reasoning, sources, open points); this skill is the checklist
+derived from it. A rule changes there first and is mirrored here in the same PR.
 Neighbours: rates, FX, public debt → `docs/domains/finance.md`; wages, unemployment → `docs/domains/labour.md`.
 
 ## When to use
@@ -122,9 +123,11 @@ Freshness for headline slots: M ≤ 3 months, Q ≤ 6 months, A ≤ 18 months ol
 1. Read the item, `docs/domains/economy.md` and the KPI rows in `warehouse/seeds/kpi.csv`.
 2. Check the definition against the producer (concept, unit, frequency, SA, real/nominal, base, breaks, vintage).
 3. Walk the Pitfalls table and the chart rules; spot-check two numbers against the producer's release.
-4. Run `data:validate-data` on any number shown to users (magnitude, continuity, units, period alignment).
-5. Answer on the issue/PR: `Domain review (economy): approved` or the exact changes, each with the rule and a source
-   link. List `Skills used:` in the comment.
+4. Validate any number shown to users with the `data:validate-data` skill when it is installed; otherwise do its
+   checks by hand (magnitude, continuity, units, period alignment, provisional flags) and say so.
+5. **Domain expert only:** answer on the issue/PR with `Domain review (economy): approved` or the exact changes,
+   each with the rule and a source link, and list `Skills used:`. Other members who load this skill use it to check
+   their own work and never post a domain approval (all members write as one account).
 
 ## Common mistakes
 

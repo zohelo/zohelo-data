@@ -25,7 +25,7 @@ industry and construction output by enterprise are `business`. Stories about the
 |---|---|---|---|---|---|
 | GDP, current prices | Gross domestic product at market prices (ESA 2010, B1GQ) | million EUR (Eurostat), US$ (WDI) | A | `eurostat:NAMA_10_GDP:CP_MEUR:B1GQ`, `world_bank_wdi:NY.GDP.MKTP.CD` | Size of the economy. In EUR or USD it moves with the exchange rate, so a rise is not growth. Poland's own headline is in PLN (Eurostat `CP_MNAC`). |
 | GDP volume growth | % change of chain-linked volumes on the previous year | % | A | `eurostat:NAMA_10_GDP:CLV_PCH_PRE:B1GQ`, WDI `NY.GDP.MKTP.KD.ZG` | Real growth. Poland's long-run trend is roughly 3–4 % a year; 2020 was the only post-1991 contraction. Below 2 % is weak for Poland, above 5 % is a boom. |
-| GDP per capita | GDP ÷ average population | EUR, US$ per person | A | `eurostat:NAMA_10_PC:CP_EUR_HAB:B1GQ`, WDI `NY.GDP.PCAP.CD` | For living-standard comparisons professionals use **PPS, EU27 = 100** (Eurostat `NAMA_10_PC`, unit `CP_PPS_EU27_2020_HAB`, or `prc_ppp_ind` volume index), not EUR at market rates. |
+| GDP per capita | GDP ÷ average population | EUR, US$ per person | A | `eurostat:NAMA_10_PC:CP_EUR_HAB:B1GQ`, WDI `NY.GDP.PCAP.CD` | For living-standard comparisons professionals use **PPS, EU27 = 100** (volume index `prc_ppp_ind` `VI_PPS_EU27_2020_HAB`, table `tec00114`; `nama_10_pc` `CP_PPS_EU27_2020_HAB` is the PPS level per head, divide by EU27_2020 for the index; [Eurostat](https://ec.europa.eu/eurostat/databrowser/view/tec00114/default/table)), not EUR at market rates. |
 | Inflation (headline) | In Poland: **CPI** of GUS, y/y change of the consumer price index, same month of the previous year = 100 | % | M | not loaded yet; we publish **HICP** `eurostat:PRC_HICP_MANR:RCH_A` and WDI `FP.CPI.TOTL.ZG` (CPI, annual average) | The NBP inflation target is **2.5 % ± 1 pp for CPI** ([NBP](https://nbp.pl/wp-content/uploads/2022/09/cel-polityki-pienieznej.pdf)). Inside the band is "on target"; the 2023 peak was in double digits. |
 | Core inflation | CPI excluding food and energy (NBP publishes four core measures) | % | M | not loaded | What the Monetary Policy Council (RPP) watches for persistent pressure. Headline minus core ≈ the food and energy effect. |
 
@@ -48,8 +48,8 @@ GDP per capita in PPS.
 - **Index bases.** GUS publishes the CPI as an index (e.g. 104.3 = +4.3 %) against several bases: same month of the
   previous year = 100, previous month = 100, December of the previous year = 100, and annual average. The rate is the
   index minus 100 only for the y/y base. HICP index levels were rebased to **2025 = 100 from January 2026** together
-  with ECOICOP version 2 (same Eurostat metadata); rates are unaffected, but index levels stored before and after
-  the rebasing cannot be mixed.
+  with ECOICOP version 2, from the January 2026 data published in February 2026 ([Eurostat HICP](https://ec.europa.eu/eurostat/web/hicp/information-data));
+  rates are unaffected, but index levels and sub-index (category) codes stored before and after cannot be mixed.
 - **Real vs nominal.** Current-price GDP grows with prices; growth claims use chain-linked volumes (`CLV_*`).
   Chain-linked levels are not additive (components do not sum to the total) — compute contributions from the
   published contribution series, not by adding levels.
@@ -59,6 +59,8 @@ GDP per capita in PPS.
 - **Seasonal adjustment.** GUS headline quarterly GDP growth is y/y on not seasonally adjusted data; q/q growth is
   only meaningful on seasonally (and calendar) adjusted data. Monthly industry and retail data swing with working
   days; y/y comparisons need the calendar-adjusted series or a caveat.
+- **Recession.** One negative quarter is not a recession; the usual convention ("technical recession") is two
+  consecutive falls of real GDP q/q, seasonally and calendar adjusted, and it is a convention, not an official dating.
 - **Revisions.** GDP goes flash → preliminary → revised over about two years, plus benchmark revisions every five
   years or so. Eurostat flags provisional values `p` and estimates `e`; show the flag, and never call a flash value
   final. HICP is generally not revised.
@@ -93,22 +95,24 @@ labelled with their own names (HICP, BAEL), never as the Polish headline.
 
 Card and chart rules that reviews check:
 - A card says name + measure (r/r, realnie), value, period in words, change (p.p. for rates, % for levels) with the
-  comparison named, colour by meaning (inflation by distance to the target, see below; unemployment up = bad; FX neutral), one benchmark (NBP band,
-  EU27, year ago), source, the source's release date and the next release. Our load date is not a release date.
+  comparison named (a y/y rate compares with the previous period's y/y: "−0,1 p.p. vs sierpień"), colour by meaning (inflation by distance to the target, see below; unemployment up = bad; FX
+  neutral), one benchmark (NBP band, EU27, year ago), source, the source's release date and the next release. Our load date is not a release date.
 - Chart of the day = the newest release, not the largest change. Ranking by relative change of `value` vs
   `previous_value` (zohelo#28, 28 Oct) let annual LFS unemployment 2025 (2.9 → 3.2 = "+10.3 %") beat monthly HICP,
   and dropping provisional rows dropped the newest releases (zohelo#410).
-- Number format (content standard, 2 Nov): `2,9%` / `2.9%` without a space, as GUS and NBP write it; rate changes
-  `−0,1 p.p.` / `−0.1 pp` with a space; minus U+2212; any space next to a symbol is non-breaking (U+00A0). One
-  formatter for PL and EN.
+- Number format (content standard, 2 Nov): `%` sticks to the number (`2,9%` / `2.9%`, as GUS and NBP write it);
+  every other unit is separated by a non-breaking space U+00A0 (`−0,1 p.p.`, `−0.1 pp`, `1 234 mln zł`); minus
+  U+2212; one formatter for PL and EN.
 - The NBP band (1,5–3,5%) is defined for CPI GUS. While HICP stands in, every band on an HICP chart or card carries
   "Cel NBP dotyczy inflacji CPI (GUS); HICP to zbliżona, ale inna miara". Inflation colour follows the distance to
-  the target, not the sign (a fall below 1,5% is not good news). Target-band charts set the y domain to cover both
+  the target, never the direction: inside 1,5–3,5% on target; outside on either side a warning (a fall below 1,5%
+  is not good news); more than 1 p.p. outside an alert; colour always paired with a word ("w celu", "powyżej
+  celu"); the Designer picks the palette. Target-band charts set the y domain to cover both
   the data and the band.
 - Freshness: show the latest published period, flash and provisional included and labelled; headline slots only for
   series no older than 3 months (M), 6 months (Q), 18 months (A).
-- Working checklist for reviews: `.claude/skills/domain-economy/SKILL.md` (definitions, comparison norms, calendar,
-  pitfalls, chart rules); this file keeps the reasoning and sources.
+- The skill `.claude/skills/domain-economy/SKILL.md` is the working checklist derived from this file; this file is
+  the source of truth. Change a rule here first, then mirror it in the skill in the same PR.
 
 ## 5. Release calendar
 
@@ -121,9 +125,14 @@ Typical timing; check exact days against the GUS release calendar
 | CPI flash estimate | GUS | last working day of the reference month |
 | CPI final (with divisions) | GUS | around the 15th of the following month |
 | Core inflation | NBP | the working day after the GUS final CPI |
+| HICP flash (euro area) | Eurostat | last working day of the reference month or the first days after |
 | HICP (all EU countries) | Eurostat | about 15–18 days after the reference month |
-| GDP flash (quarterly, y/y NSA and q/q SA) | GUS | about 45 days after the quarter |
-| GDP preliminary with components | GUS | end of the second month after the quarter |
+| PPI, sold output of industry, enterprise wages | GUS | about the 18th–21st of the following month |
+| Retail sales | GUS | about the 22nd–24th of the following month |
+| Current account (monthly BoP) | NBP | about the middle of the second month after |
+| OECD composite leading indicator | OECD | monthly, about the second week |
+| GDP flash (quarterly, y/y NSA and q/q SA) | GUS | about 45 days after the quarter (13th–15th of the second month; Q3 2025 on 13 Nov 2025) |
+| GDP preliminary with components | GUS | end of the second month after the quarter or the first working days of the third (Q3 2025 on 1 Dec 2025) |
 | Annual GDP preliminary estimate | GUS | end of January for the previous year |
 | Annual national accounts (`nama_10_*`) | Eurostat | updated after each quarterly transmission |
 | WDI | World Bank | several updates a year; annual data lag 6–12 months |
