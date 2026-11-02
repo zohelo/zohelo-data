@@ -39,8 +39,13 @@ def main() -> None:
             {"s": source},
         ).fetchone()
         first = con.execute(
-            "select n.code, n.name from new_t n join today_t t using (dataset_key)"
+            "select n.code, t.name, n.name from new_t n join today_t t using (dataset_key)"
             " where n.source_key = ? and n.name is distinct from t.name order by n.code limit 3",
+            [source],
+        ).fetchall()
+        old_names = con.execute(
+            "select coalesce(t.name, '<null>'), count(*) from new_t n join today_t t using (dataset_key)"
+            " where n.source_key = ? and n.name is distinct from t.name group by 1 order by 2 desc limit 3",
             [source],
         ).fetchall()
         result[source] = {
@@ -50,6 +55,7 @@ def main() -> None:
             "empty_name": empty,
             "changed": changed,
             "first_changed": [list(r) for r in first],
+            "today_names_changed": [list(r) for r in old_names],
         }
     annotate("notice", "file names", result)
 
