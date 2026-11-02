@@ -2401,7 +2401,7 @@ sources:
   name: Podstawowe dane statystyczne KRUS
   short_name: KRUS statistics
   provider: Kasa Rolniczego Ubezpieczenia Społecznego (KRUS)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland; regional detail varies
@@ -2437,10 +2437,14 @@ sources:
     priority: review-next
     evidence: documented
     connection: not-tested
-    blockers: [Inventory file history and geography]
+    blockers:
+    - 'Inventory file history and geography: the quarterly "Kwartalna Informacja Statystyczna" attachments on gov.pl
+      (Q3 and Q4 2025 read) carry 51 tables, regional ones by voivodeship; confirm which tables also ship as XLSX
+      before choosing PDF table extraction'
     references:
     - https://www.gov.pl/web/krus/podstawowe-dane-statystyczne-z-zakresu-swiadczeniobiorcow
     - https://www.gov.pl/web/gov/prawa-autorskie
+    - https://www.gov.pl/attachment/657d4965-e3c5-4d36-a321-32650b7df31d
 - id: PLS-012
   name: API Statystyki NFZ – Świadczenia
   short_name: "NFZ statistics: services"
