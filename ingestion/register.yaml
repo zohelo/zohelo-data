@@ -2683,7 +2683,7 @@ sources:
   name: Raport – Stan Sanitarny Kraju
   short_name: GIS sanitary state report
   provider: Główny Inspektorat Sanitarny (GIS)
-  status: registered
+  status: parked
   family: B
   kpi: true
   geography: Poland
@@ -2723,8 +2723,10 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Inventory report archive
-    - Assess structured-data availability
+    - 'Parked: no structured bulk files; the annual report is narrative HTML/PDF and figures would need page-level
+      PDF extraction, which is not tested (re-open if GIS publishes tables as XLSX/CSV)'
+    - 'Inventory report archive'
+    - 'Assess structured-data availability'
     references:
     - https://www.gov.pl/web/gis/raport---stan-sanitarny-kraju
     - https://www.gov.pl/web/gov/prawa-autorskie
