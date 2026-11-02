@@ -24,6 +24,8 @@ a trailing newline. Rows below give the values of each file (`-` = key left out)
 | gdp_volume_growth (pct) | world_bank_wdi | PL | country | 2024 | 2.9 | pct | 2023 | 0.2 | [] |
 | inflation (pct) | eurostat | PL | country | 2026-09 | 2.9 | pct | 2026-08 | 3.0 | [] |
 | inflation (pct) | world_bank_wdi | PL | country | 2025 | 3.6 | pct | - | - | [] |
+| unemployment_rate (pct_labour_force) | eurostat | PL | country | 2025 | 3.2 | pct_labour_force | 2024 | 2.9 | [] |
+| unemployment_rate (pct_labour_force) | world_bank_wdi | PL | country | 2024 | 2.9 | pct_labour_force | - | - | [] |
 
 Periods are strings ("2025"), values numbers. zohelo copies these files into fixtures/published/ (zohelo#235), so the
 values here are the ones both repos use.

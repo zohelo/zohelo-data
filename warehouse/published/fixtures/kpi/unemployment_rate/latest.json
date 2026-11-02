@@ -16,13 +16,13 @@
       "checked_at": "2026-01-01T00:00:00Z"
     },
     {
-      "source_key": "eurostat",
-      "geography_key": "TERC:12",
-      "geography_level": "voivodeship",
-      "period": "2025",
-      "value": 2.6,
+      "source_key": "world_bank_wdi",
+      "geography_key": "PL",
+      "geography_level": "country",
+      "period": "2024",
+      "value": 2.9,
       "unit_key": "pct_labour_force",
-      "flags": ["p"],
+      "flags": [],
       "checked_at": "2026-01-01T00:00:00Z"
     }
   ]
