@@ -20,6 +20,21 @@ def objects(client, bucket: str) -> list[dict]:
 def main() -> int:
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     codes = {}
+    spec = bulk_file.declaration("mf_treasury_debt")[0]
+    heads = []
+    for link in bulk_file.page_links(spec):
+        head, http = bulk_file.probe(link)
+        h = dict(head.headers) if head is not None else {}
+        heads.append(
+            {
+                "url": link,
+                "http": http,
+                "type": h.get("Content-Type"),
+                "disposition": h.get("Content-Disposition"),
+                "bytes": h.get("Content-Length"),
+            }
+        )
+    annotate("notice", "mf_treasury_debt page links", {"links": heads})
     try:
         for mode in ("inspect", "load", "verify"):
             codes[mode] = bulk_file.main("mf_treasury_debt", mode, landing_root=ROOT)
