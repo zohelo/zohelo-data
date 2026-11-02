@@ -3913,8 +3913,15 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: dataset-specific
-    notes: Downloadable files are public; database/attachment rights need review.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+      https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+      (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+      attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+      consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+      The XLSX/PDF attachments carry no licence of their own; an attachment marked with other terms keeps them.
+      Attribution: "Źródło: Ministerstwo Finansów, Sprawozdania budżetowe jednostek samorządu terytorialnego
+      (<period>)" / "Source: Ministry of Finance, local-government budget reports (<period>)".'
   updates: Monthly, quarterly or annual by report form; corrections may replace submissions.
   ingestion:
     history: 'PROPOSAL: load the published JST databases by report form and year, using 2018–2026 sections plus
@@ -3933,6 +3940,7 @@ sources:
     - Inspect formats, identifiers, corrections and licence.
     references:
     - https://www.gov.pl/web/finanse/sprawozdania-budzetowe
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLG-011
   name: VAT taxpayer list and API
   short_name: MF VAT white list
