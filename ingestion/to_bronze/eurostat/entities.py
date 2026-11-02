@@ -31,6 +31,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import tempfile
 import time
 from typing import Any
@@ -351,8 +352,9 @@ def main(argv=None) -> int:
         else:
             rejected_now.append(result[ENTITY])
 
-    def failure(c: dict[str, Any], exc: BaseException) -> dict[str, Any]:
-        return {ENTITY: c[ENTITY], "status": "failed", "error": f"{type(exc).__name__}: {exc}"}
+    def failure(c: dict[str, Any], exc: BaseException, cause: str = "") -> dict[str, Any]:
+        prefix = f"{cause}; " if cause else ""
+        return {ENTITY: c[ENTITY], "status": "failed", "error": f"{prefix}{type(exc).__name__}: {exc}"}
 
     small = [c for c in todo if c["size"] <= BIG_BYTES]
     serial = [c for c in todo if c["size"] > BIG_BYTES]  # alone, with the runner's full memory
@@ -389,8 +391,12 @@ def main(argv=None) -> int:
         if time.monotonic() + (3600 if c["size"] > BIG_BYTES else 300) > deadline:
             continue  # a smaller one may still fit
         with ProcessPoolExecutor(max_workers=1) as alone:
+            future = alone.submit(work, c, c["need_bronze"], digest, "10GB", tmp_root, paths)
+            workers = list((alone._processes or {}).values())  # kept to read the exit code if it dies (#2183)
             try:
-                account(alone.submit(work, c, c["need_bronze"], digest, "10GB", tmp_root, paths).result())
+                account(future.result())
+            except BrokenProcessPool as exc:
+                account(failure(c, exc, worker_exit(workers)))
             except Exception as exc:
                 account(failure(c, exc))
         commit()
@@ -413,6 +419,24 @@ def main(argv=None) -> int:
     print(json.dumps(summary, sort_keys=True), flush=True)
     annotate("notice" if left == 0 and not rejected_now else "warning", "eurostat entities", summary)
     return 0 if left == 0 else 2
+
+
+def worker_exit(workers: list[Any]) -> str:
+    """The exit code or signal of a dead pool worker, e.g. 'worker exit signal SIGKILL' (#2183)."""
+    codes = []
+    for w in workers:
+        w.join(timeout=5)
+        code = w.exitcode
+        if code is None:
+            codes.append("worker still running")
+        elif code < 0:
+            try:
+                codes.append(f"worker exit signal {signal.Signals(-code).name}")
+            except ValueError:
+                codes.append(f"worker exit signal {-code}")
+        else:
+            codes.append(f"worker exit code {code}")
+    return ", ".join(codes) or "worker exit unknown"
 
 
 def completeness_report(plan_out: dict[str, Any] | None = None) -> dict[str, Any]:
