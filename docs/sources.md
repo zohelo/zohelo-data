@@ -536,6 +536,15 @@ SHA-256 changed), so a new edition is picked up without a code change. Restart u
 file. Licence CC BY 4.0 for the country-level indicators only (register GL-009); the
 individual-level microdata (Research Data License) is out of scope. Bronze, Silver and a
 schedule are later stages.
+## World Bank Worldwide Governance Indicators (WGI)
+
+**Extraction (2 Nov 2026).** DataBank publishes WGI as a bulk CSV ZIP on a stable URL, the same
+route as WDI (`https://databank.worldbank.org/data/download/WGI_CSV.zip`). The declaration
+`world_bank_wgi.yaml` lands it through the shared `bulk_file` pattern as entity `WGI_CSV`
+(version = Last-Modified, download time when absent; written only when the SHA-256 changed).
+Restart unit: the whole file (one download). Licence CC BY 4.0 (register GL-008), attribution
+"Source: World Bank, Worldwide Governance Indicators". WGI is revised once a year. Bronze, Silver
+and a schedule are later stages.
 
 ## ECB Data Portal
 
