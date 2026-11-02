@@ -14,7 +14,7 @@ extraction:
         url_from:
           page: https://www.gov.pl/web/finanse/szeregiczasowe
           pattern: /attachment/
-          pick: last    # Dev trial #2347: 1st link = Zadluzenie_Skarbu_Panstwa.xlsx (PLG-008), 2nd = Dlug_publiczny_<q>.xlsx
+          pick: last    # Dev trial #2347: 2nd link = Dlug_publiczny_<q>.xlsx (1st is PLG-008)
         format: raw
         version: last_modified     # the response's Last-Modified; download time when absent
   initial: bulk
