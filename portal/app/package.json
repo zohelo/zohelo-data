@@ -38,7 +38,7 @@
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-table": "^8.21.3",
-    "@tanstack/react-virtual": "^3.14.22",
+    "@tanstack/react-virtual": "^3.14.24",
     "apache-arrow": "^17.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
