@@ -15,10 +15,10 @@ this file, so it is versioned and reviewed like code. Every run is a fresh sessi
 | Developer 4 · zohelo.com | zohelo keys `com/` except `com/portfolio/`, and `bi/` keys in the zohelo repo (shared design visuals); Bugs labelled `dev:4` | Mon–Wed sprint starts 06:21, 11:21, 16:21, 21:21 | Architect, Product Owner | `trig_01Ane4nBMKps3Hs8fN8fPjsK` |
 | Architect | technical review and merge of every PR; technical decisions; Dependabot | Monday 08:23 | Developers (after PRs), any member with a technical question | `trig_01391TnR25xB5GBUFmCMWtTG` |
 | Product Owner | portfolio, roadmap, backlogs of all products, Task writing, discovery of new products, weekly status, the owner's decision queue | Mon–Wed sprint plan 06:02, 11:02, 16:02, 21:02; sprint close 10:17, 15:17, 20:17 (`trig_018RMqxHqrm8DqsJxXbykhhF`) and 01:17 Tue–Thu for S4 (`trig_01DzRXVD4z5hxGXHLM32EW25`) | Developers (running low), any member with a proposal, the owner | `trig_012KX5SgeSxFa2EivXxPaZ2X` |
-| Quality Engineer | is the released product correct and usable | Monday 05:41 (after the weekend); sprint checks are started by the sprint close | Product Owner (sprint close), Architect (after merges), any member that suspects a defect | `trig_012DPNBxXyCUREkE4UiALBeQ` |
-| Operator | pipelines, schedules, storage and cost, credentials, alerts | daily 06:08 | any member that sees a failed or missing run | `trig_01GjEm3rD8SbyGR3c1HmRKG2` |
+| Quality Engineer | is the released product correct and usable | Mon–Wed 09:45, 14:45, 19:45 (before each sprint close); the sprint close also starts it | Product Owner (sprint close), Architect (after merges), any member that suspects a defect | `trig_012DPNBxXyCUREkE4UiALBeQ` |
+| Operator | pipelines, schedules, storage and cost, credentials, alerts | daily 02:43 | any member that sees a failed or missing run | `trig_01GjEm3rD8SbyGR3c1HmRKG2` |
 | Domain expert | business correctness per domain, domain knowledge files, analysis ideas | Monday 06:33 | Product Owner, Developers, Quality Engineer (message names the domain) | `trig_01Mwpo6r6D2qxh6Hed3kDxog` |
-| Coach | how the team works: playbooks, templates, checks | Thursday 02:13 (after the week's last sprint) | any member that hits the same problem twice | `trig_01PtkexUDnj96BGy6pZsG1WD` |
+| Coach | how the team works: playbooks, templates, checks | Tue–Thu 02:13 (after each sprint day) | any member that hits the same problem twice | `trig_01PtkexUDnj96BGy6pZsG1WD` |
 | Designer | UX/UI of every product: design research, prototypes, the design system, visual review of every UI change | Mon–Wed sprint starts 06:23, 11:23, 16:23, 21:23 | Developers (UI PRs), Product Owner, Quality Engineer | `trig_011qicTYyp5tWF3GjUYWJ5DH` |
 
 New products: when the owner approves a product brief (Product Owner, discovery track), the product gets its repo,
@@ -358,8 +358,8 @@ Never: merges, ships prototypes, or changes data; a design decision is recorded 
 
 Owns how the team works. A team of fresh sessions does not learn by itself; the Coach makes it learn.
 
-**Weekly run (Friday), and when started:**
-1. Read the last week: Team log #2073, PRs sent back and why, `design:question` issues, failed checks, refused
+**Scheduled run (Tue–Thu 02:13, after each sprint day), and when started:**
+1. Read everything since the previous Coach entry on Team log #2073: the log, PRs sent back and why, `design:question` issues, failed checks, refused
    actions, Bugs the Quality Engineer found after merge, start messages that went unanswered.
 2. Find recurring causes (the same mistake twice or more) and fix them where they live: this file, `docs/backlog.md`
    (Task template), `AGENTS.md`, `ops/repo_check.py` rules, or unclear open Tasks (comment, or a backlog PR via the
