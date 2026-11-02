@@ -450,6 +450,30 @@ def semantic_models() -> list[str]:
     return problems
 
 
+CONFIG_LINE = re.compile(r"^\s*\{\{\s*config\(.*\)\s*\}\}\s*$")
+
+
+def model_headers(files: list[Path]) -> list[str]:
+    """Every dbt model starts with a header comment; every semantic model and metric has a description
+    (docs/quality.md §4)."""
+    problems = []
+    for f in files:
+        if f.suffix == ".sql" and f.parts[:2] == ("warehouse", "models"):
+            lines = [
+                line
+                for line in (ROOT / f).read_text(encoding="utf-8").splitlines()
+                if line.strip() and not CONFIG_LINE.match(line)
+            ]
+            if not lines or not lines[0].strip().startswith(("{#", "--")):
+                problems.append(f"{f}: no header comment before the SQL")
+        elif f.suffix == ".yml" and f.parts[:2] == ("warehouse", "semantic_models"):
+            spec = yaml.safe_load((ROOT / f).read_text(encoding="utf-8")) or {}
+            for item in [*(spec.get("semantic_models") or []), *(spec.get("metrics") or [])]:
+                if not str(item.get("description") or "").strip():
+                    problems.append(f"{f}: {item.get('name')} has no description")
+    return problems
+
+
 def main() -> int:
     files = tracked()
     checks = {
@@ -460,6 +484,7 @@ def main() -> int:
         "ruff format": lambda: tool(["ruff", "format", "--check", *PYTHON_PATHS]),
         "yamllint": lambda: tool(["yamllint", "-s", "-d", YAMLLINT, "ingestion", "warehouse", "portal", ".github"]),
         "sqlfluff": sqlfluff,
+        "model headers": lambda: model_headers(files),
         "configuration": lambda: configuration(files),
         "scheduler imports": scheduler_imports,
         "backlog": backlog,
