@@ -599,9 +599,9 @@ monthly number of beneficiaries and the average monthly benefit in PLN: pensions
 pensions in all, old-age pensions, disability pensions (of which accident), family pensions,
 parental supplementary benefits and benefits for civilian blind war victims. The declaration
 `krus.yaml` finds the link on the page (`url_from`, the page's only `/attachment/` link) and lands
-it through the shared `bulk_file` pattern as entity `swiadczenia_kwartalne`. Version:
-Last-Modified, written only when the SHA-256 changed; each version is the whole series to date
-(`snapshot`). Older versions can hold quarters that a later file drops if KRUS shortens the window,
+it through the shared `bulk_file` pattern as entity `swiadczenia_kwartalne`. The server sent no
+Last-Modified in the trial, so the version is the download time and a file is written only when
+its SHA-256 changed; each version is the whole series to date (`snapshot`). Older versions can hold quarters that a later file drops if KRUS shortens the window,
 so `prune` stays `report`. Restart unit: the file. Not declared: the quarterly statistical
 information PDFs (51 tables), which have no stable listing page. Terms: gov.pl, official materials
 free to use (register PLS-011). Bronze, Silver and a schedule are later stages.
