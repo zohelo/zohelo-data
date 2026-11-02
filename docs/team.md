@@ -458,6 +458,18 @@ that ended, then the plan of the one that starts (see Sprints), come first in a 
    a Developer scheduled task is created with the standard short instruction, and its row is added to the Members table.
 7. **Monday:** the Weekly status on #2075 — merged PRs per Developer, Epic and roadmap progress (on track / slipping),
    risks, discovery progress, at most 3 decisions needed from the owner.
+8. **Project and Owner desk (every boundary; owner, 2 Nov 18:46).** The GitHub project "zohelo portfolio" (org
+   project 1) is the Product Owner's main tool. Keep its views current with the GitHub_zohelo project tools:
+   Portfolio, Roadmap, This sprint, Sources by stage, Alerts, Owner desk, one view per product, Design and
+   Team & portfolio. Make sure every sprint item is on the project with Status (In progress / In review / Done),
+   Priority, Product and Sprint set. Then rewrite the body of Owner desk #2445 so it lists every open item that
+   waits for the owner across the three repos (`owner:action`, `owner:decision`, and owner questions in sprint
+   issues, #2074 and #2073). Give each item a link, the exact reply or clicks, the time it takes and what it
+   blocks. Put the fastest unblocking item first and remove answered ones. Never give the owner work the team can
+   do itself.
+9. **Issue routing (Monday).** Product work belongs to the repo that ships it (docs/backlog.md). Team, sprint and
+   owner issues live in zohelo-data. Count the open issues by kind per repo, transfer misplaced product issues, and
+   post the counts and moves in one comment on Team log #2073.
 
 Never: merges, writes product code, publishes anything outside the repos, or starts delivery of an unapproved product.
 
