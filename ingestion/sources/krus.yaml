@@ -1,17 +1,17 @@
 source_system: krus
-description: KRUS basic benefit statistics — the quarterly XLSX of pensions and benefits paid (gov.pl)
+description: KRUS basic benefit statistics — the XLSX series of pensions and benefits paid, quarterly since 2020 (gov.pl)
 
 # Extraction strategy (docs/landing.md). Bulk feature: KRUS publishes its basic beneficiary
-# statistics as one XLSX per quarter ("Świadczenia emerytalno-rentowe wypłacone przez KRUS za
-# <n> kwartał <rok>", about 20 kB) on a stable gov.pl page. The page carries only the newest quarter
-# and the attachment URL changes each quarter, so the link is found on the page (url_from; Dev
-# probes #2468: one attachment, XLSX, with Last-Modified). Entity = the quarterly file; version =
-# Last-Modified, written only when the SHA-256 changed; each new quarter lands as a new version.
-# Restart unit: the file. Every version is a different quarter, so the raw is unique: `prune` stays
-# `report` and the retention must be removed before any `delete` (docs/landing.md, delta sources).
-# The quarterly statistical information PDFs (51 tables) have no stable listing page and are not
-# declared. gov.pl terms: official materials free to use (register PLS-011). A schedule (stage 4)
-# comes after the Dev trial.
+# statistics as one XLSX (about 20 kB) on a stable gov.pl page; the attachment URL changes with each
+# update, so the link is found on the page (url_from; Dev probes #2468: one attachment, XLSX). The
+# file is a rolling series, not one quarter (Dev trial #2468: sheet `Świadczenia`, A1:U62, quarterly
+# columns from I quarter 2020 plus yearly totals; average monthly beneficiaries and average monthly
+# benefit in PLN by benefit type). Entity = the file; version = Last-Modified, written only when the
+# SHA-256 changed; each version is the whole series to date (snapshot). Restart unit: the file.
+# `prune` stays `report`: if KRUS shortens the window, older versions hold quarters the newest file
+# drops. The quarterly statistical information PDFs (51 tables) have no stable listing page and are
+# not declared. gov.pl terms: official materials free to use (register PLS-011). A schedule
+# (stage 4) comes after the Dev trial.
 extraction:
   kind: bulk_file
   bulk_file:
@@ -24,7 +24,7 @@ extraction:
         format: raw                # XLSX, kept as exact bytes
         version: last_modified
   initial: bulk
-  production: delta                     # each file is one new quarter
+  production: snapshot                  # each file is the whole series since 2020
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
   schedule: []
 
@@ -32,7 +32,7 @@ landing: 01_landing/krus/
 archive_policy:
   move: true
   retention: {keep_latest: 1, keep_days: 90}
-  prune: report   # never delete: every version is a different quarter
+  prune: report   # older versions may hold quarters a later file drops
 bronze: []
 silver: []
 gold: []

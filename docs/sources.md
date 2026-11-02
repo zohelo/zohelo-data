@@ -546,18 +546,20 @@ Restart unit: the whole file (one download). Licence CC BY 4.0 (register GL-008)
 "Source: World Bank, Worldwide Governance Indicators". WGI is revised once a year. Bronze, Silver
 and a schedule are later stages.
 
-## KRUS basic benefit statistics
+## UNCTAD Data Hub (UNCTADstat)
 
-**Extraction (2 Nov 2026).** KRUS publishes its basic beneficiary statistics on a stable gov.pl
-page as one XLSX per quarter ("Świadczenia emerytalno-rentowe wypłacone przez KRUS za <n> kwartał
-<rok>", about 20 kB). The page carries only the newest quarter, and the attachment URL changes each
-quarter. The declaration `krus.yaml` therefore finds the link on the page (`url_from`, the page's only
-`/attachment/` link) and lands it through the shared `bulk_file` pattern as entity
-`swiadczenia_kwartalne`. Version: Last-Modified, written only when the SHA-256 changed. Each new
-quarter lands as a new version, so the raw is unique per version: `prune` stays `report`, and the
-retention must be removed before any `delete`. Restart unit: the file. Not declared: the quarterly
-statistical information PDFs (51 tables), which have no stable listing page. Terms: gov.pl, official
-materials free to use (register PLS-011). Bronze, Silver and a schedule are later stages.
+**Extraction (2 Nov 2026).** Every Data Hub table has a bulk file: one 7z archive with the whole
+table as CSV, at a stable URL per report code
+(`https://unctadstat-api.unctad.org/bulkdownload/US.PLSCI/US_PLSCI`). The declaration `unctad.yaml`
+lands nine tables through the shared `bulk_file` pattern, one entity per table: FDI flows and
+stocks, merchandise trade, services trade by category, digitally deliverable services, monthly
+commodity prices, liner shipping connectivity, merchant fleet, seaborne trade and port calls (about
+14 MB compressed in all). Tables that other sources already cover (GDP, population, CPI, exchange
+rates) and the large creative-economy and bilateral-services tables are not declared. The server
+sends no Last-Modified, so the version is the download time and a file is written only when its
+SHA-256 changed. Restart unit: one table. Licence CC BY 3.0 IGO (register GL-021), attribution
+"Source: United Nations Trade and Development (UNCTAD) Data Hub, unctadstat.unctad.org"; tables
+with third-party series keep their own terms. Bronze, Silver and a schedule are later stages.
 
 ## ECB Data Portal
 
@@ -573,3 +575,33 @@ observations with their attributes. Re-use under the ECB statistics usage policy
 GL-016): free, also commercial, attribution "Source: ECB statistics", statistics not modified.
 The queries are proven from Actions by the Dev trial (#2393); an `updatedAfter` delta, Bronze,
 Silver and a schedule are later stages.
+
+## World Bank International Comparison Program (ICP)
+
+**Extraction (2 Nov 2026).** ICP has no bulk feature: DataBank publishes no bulk file for it
+(`ICP_CSV.zip` and `ICP_2021_CSV.zip` return 404) and the ICP pages link only DataBank views. The
+route is the World Bank API v2, source 90 (ICP 2021), tested for a full load by a Dev probe:
+48 series, 1,182,384 observations, about 380 MB of JSON at 50,000 records per page. The
+declaration `world_bank_icp.yaml` uses its own extractor (`ingestion/to_landing/world_bank_icp/`):
+entity = one series for every economy and year
+(`/v2/sources/90/country/all/series/<id>/time/all?format=json&per_page=50000`, one file per
+page when a series is larger), version = the source's `lastupdated` date, so a series is
+downloaded again only when the World Bank updates ICP. Restart unit: one series. Licence CC BY
+4.0 (register GL-011). Bronze, Silver and a schedule are later stages.
+
+## KRUS basic benefit statistics
+
+**Extraction (2 Nov 2026).** KRUS publishes its basic beneficiary statistics on a stable gov.pl
+page as one XLSX (about 20 kB) whose attachment URL changes with each update. The file is a
+rolling series, not one quarter: the Dev trial (#2468) found one sheet `Świadczenia` (A1:U62) with
+quarterly columns from I quarter 2020 to the newest quarter and yearly totals, for the average
+monthly number of beneficiaries and the average monthly benefit in PLN: pensions and disability
+pensions in all, old-age pensions, disability pensions (of which accident), family pensions,
+parental supplementary benefits and benefits for civilian blind war victims. The declaration
+`krus.yaml` finds the link on the page (`url_from`, the page's only `/attachment/` link) and lands
+it through the shared `bulk_file` pattern as entity `swiadczenia_kwartalne`. Version:
+Last-Modified, written only when the SHA-256 changed; each version is the whole series to date
+(`snapshot`). Older versions can hold quarters that a later file drops if KRUS shortens the window,
+so `prune` stays `report`. Restart unit: the file. Not declared: the quarterly statistical
+information PDFs (51 tables), which have no stable listing page. Terms: gov.pl, official materials
+free to use (register PLS-011). Bronze, Silver and a schedule are later stages.

@@ -18,8 +18,14 @@ a trailing newline. Rows below give the values of each file (`-` = key left out)
 | population (persons) | gus_bdl | TERC:14 | voivodeship | 2024 | 5510000 | persons | 2023 | 5500000 | [] |
 | gdp_current_prices (mln_ncu) | eurostat | PL | country | 2024 | 845000 | mln_eur | 2023 | 750000 | ["p"] |
 | gdp_current_prices (mln_ncu) | world_bank_wdi | PL | country | 2024 | 914700000000 | usd | - | - | [] |
+| gdp_per_capita (ncu_per_person) | eurostat | PL | country | 2024 | 21000 | eur_per_person | 2023 | 19500 | [] |
+| gdp_per_capita (ncu_per_person) | world_bank_wdi | PL | country | 2024 | 25000 | usd_per_person | - | - | [] |
+| gdp_volume_growth (pct) | eurostat | PL | country | 2024 | 2.9 | pct | 2023 | 0.2 | [] |
+| gdp_volume_growth (pct) | world_bank_wdi | PL | country | 2024 | 2.9 | pct | 2023 | 0.2 | [] |
 | inflation (pct) | eurostat | PL | country | 2026-09 | 2.9 | pct | 2026-08 | 3.0 | [] |
 | inflation (pct) | world_bank_wdi | PL | country | 2025 | 3.6 | pct | - | - | [] |
+| unemployment_rate (pct_labour_force) | eurostat | PL | country | 2025 | 3.2 | pct_labour_force | 2024 | 2.9 | [] |
+| unemployment_rate (pct_labour_force) | world_bank_wdi | PL | country | 2024 | 2.9 | pct_labour_force | - | - | [] |
 
 Periods are strings ("2025"), values numbers. zohelo copies these files into fixtures/published/ (zohelo#235), so the
 values here are the ones both repos use.
