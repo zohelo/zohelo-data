@@ -193,6 +193,33 @@ deliverables:
         out_of_scope:
           - "warehouse/publish.py, seeds and models (PR #2247)"
           - The zohelo copy fixtures/published/kpi/population/latest.json and the zohelo-bi copies (their own Tasks)
+      - key: data/published/published-v1/contract/unemployment-fixture
+        type: Task
+        title: Drop the Eurostat voivodeship value from the unemployment fixture
+        effort: S
+        state: open
+        contract: true
+        context: >-
+          warehouse/published/fixtures/kpi/unemployment_rate/latest.json shows a Eurostat value for TERC:12
+          (voivodeship), but the KPI's Eurostat measure UNE_RT_A is national only, so gold.publish can never write
+          such a value. The Domain expert (labour) flagged it in docs/domains/labour.md, open points. Readers that
+          copy the fixture (zohelo#235) would build a voivodeship view that the live file never feeds. Target: the
+          two sources the KPI has, both national: eurostat and world_bank_wdi at PL.
+        files:
+          - edit: warehouse/published/fixtures/kpi/unemployment_rate/latest.json
+          - edit: .github/backlog/assets/latest-fixtures.md
+        steps:
+          - "latest.json: replace the second values entry (eurostat, TERC:12) by {source_key world_bank_wdi, geography_key PL, geography_level country, period '2024', value 2.9, unit_key pct_labour_force, flags [], checked_at '2026-01-01T00:00:00Z'} (no previous_period or previous_value). Keep the layout and key order of the file."
+          - "latest-fixtures.md, Fixture files table (it has no unemployment_rate rows today): after the inflation rows add | unemployment_rate (pct_labour_force) | eurostat | PL | country | 2025 | 3.2 | pct_labour_force | 2024 | 2.9 | [] | and | unemployment_rate (pct_labour_force) | world_bank_wdi | PL | country | 2024 | 2.9 | pct_labour_force | - | - | [] |."
+        acceptance:
+          - "no voivodeship value in fixtures/kpi/unemployment_rate/latest.json; sources eurostat and world_bank_wdi"
+          - "repo_check prints 'ok   published contract'"
+        verify:
+          - run: "python -c \"import json;d=json.load(open('warehouse/published/fixtures/kpi/unemployment_rate/latest.json'));print(sorted((v['source_key'],v['geography_level']) for v in d['values']))\""
+            expect: "[('eurostat', 'country'), ('world_bank_wdi', 'country')]"
+          - run: PYTHONPATH=. python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [the catalog.json entry, warehouse/publish.py, the zohelo and zohelo-bi copies (their own Tasks), docs/domains/labour.md]
   - key: data/published/published-v1/publish
     title: gold.publish activity
     depends_on: [data/published/published-v1/contract, data/metadata/catalogue-v1, data/metadata/semantic-manifest/generate]
