@@ -1,6 +1,8 @@
-"""Dev trial for #2318: build the release_calendar seed (with source, kpi) into zz_dev_release_calendar, then drop it."""
+"""Dev trial for #2318: build the release_calendar seed (with its parents) into zz_dev_release_calendar; drop it."""
 
 from __future__ import annotations
+
+import os
 
 from ingestion.common.r2 import catalog
 from ingestion.common.report import annotate
@@ -22,7 +24,9 @@ def drop(cat) -> list[str]:
 def main() -> int:
     cat = catalog()
     try:
-        code = build.main(select="release_calendar source kpi", target="prod", variables={"gold_schema": NAMESPACE})
+        os.environ["DBT_INDIRECT_SELECTION"] = "cautious"  # skip tests of unselected tables (kpi_dimension)
+        select = "release_calendar source kpi licence"
+        code = build.main(select=select, target="prod", variables={"gold_schema": NAMESPACE})
         rows = arrow_type = None
         if code == 0:
             table = cat.load_table((NAMESPACE, "release_calendar")).scan().to_arrow()
