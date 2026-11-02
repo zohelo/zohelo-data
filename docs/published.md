@@ -194,7 +194,7 @@ in `gold.dim_geography`, simplified at 0.005° with coordinates rounded to 4 dec
 
 `calendar.ics`: iCalendar, one VEVENT per `release_calendar` row (SUMMARY = `title_pl`,
 DTSTART = `release_at`, URL); zero events until that table exists.
-gold.publish writes it today without events (PRODID `-//zohelo//gold.publish//EN`).
+gold.publish writes one event per row of warehouse/seeds/release_calendar.csv (UID `<release_at>-<source_key>-<kpi_key>@zohelo.com`, PRODID `-//zohelo//gold.publish//EN`).
 
 ## status.json
 
