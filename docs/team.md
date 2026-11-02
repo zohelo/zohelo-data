@@ -36,16 +36,23 @@ of zohelo and a project status update.
 
 | Time in the sprint | What happens | Who |
 |---|---|---|
-| T+0:00 | **Plan**: sprint issue, one sprint goal, sprint Tasks labelled `sprint` | Product Owner (scheduled) |
+| T+0:00 | **Plan**: sprint issue, one goal per product or stream, a sprint backlog per member, Tasks labelled `sprint` | Product Owner (scheduled) |
 | T+0:15 | **Build** starts: sprint Tasks first, then the normal order | Developers (scheduled) |
 | T+3:30 | **Cut-off**: no new Tasks; finish, rework and get open PRs merged | Developers, Architect |
 | T+4:15 | **Close**: start the Quality Engineer's sprint check, then the release document, project status, retro trigger | Product Owner (scheduled, sprint close) |
 
-- **Sprint plan** (Product Owner): open the zohelo-data issue `Sprint <yyyy-mm-dd> S<n>` (type Task, no key, label
-  `sprint`) with: the goal (one sentence the owner can check: a page, a table, a number, or a named Phase-0 platform
-  outcome), the Tasks in scope (each labelled `sprint`, sized to finish by T+3:30 with the Developers available), and
-  the previous sprint's carry-over. Agree the technical scope with the Architect when the goal crosses repos. Only
-  start a Developer on demand when its scheduled sprint run will not come (e.g. a product Developer without a schedule).
+- **Sprint plan** (Product Owner; owner direction 2 Nov: a sprint covers the whole team and all products): open the
+  zohelo-data issue `Sprint <yyyy-mm-dd> S<n>` (type Task, no key, label `sprint`) with:
+  - **Goals**: one checkable goal per product or stream — zohelo.com, bi.zohelo.com, data platform and data.zohelo.com,
+    sources, design, and team/process when relevant — each with an owner (the member who delivers it) and a check the
+    owner can do (a page, a table, a number, or a named platform outcome).
+  - **Sprint backlog per member**, sized to fill the window to the cut-off (T+3:30): Developers about 10–20 Tasks each
+    (labelled `sprint`, pickable or stacked on their own sprint Tasks); Designer, Architect and Domain expert items
+    (design steps, reviews, decisions, domain reviews). When a Developer has too few pickable Tasks, write them first
+    (Product Owner step 2) and list them as coming with the backlog PR.
+  - The previous sprint's carry-over.
+  Agree the technical scope with the Architect when a goal crosses repos. After the plan, start every Developer whose
+  run is not active (one run per member); note a refused start in the sprint issue.
 - **Usage**: no member can see the remaining usage. A run stopped on the limit (scheduled-task history,
   `USAGE_LIMIT_REACHED`) is a sprint finding: the Coach adjusts sprint size (number of Tasks, Developers per sprint) so
   the team finishes before the limit, and records it in this section.
@@ -58,7 +65,7 @@ of zohelo and a project status update.
   <sprint issue>` and wait up to 20 minutes for its result comment on the sprint issue (no result → say so in the
   release document); then remove `sprint` from unfinished Tasks and list them as carry-over; create the
   release document as a GitHub Release in zohelo-data, tag `zohelo-<yyyymmdd>-s<n>` on main, title
-  `zohelo <yyyy-mm-dd> S<n>`, notes: goal met or not (evidence), what changed per product in owner language (zohelo.com,
+  `zohelo <yyyy-mm-dd> S<n>`, notes: goal by goal, met or not (evidence), what changed per product in owner language (zohelo.com,
   bi.zohelo.com, data.zohelo.com, data platform, sources) with links to that sprint's per-repo Releases and PRs, Bugs
   found, carry-over, next sprint's proposed goal; post the same summary as the last comment of the sprint issue and
   publish it as the project status update with Ops `project` args `status <sprint issue> ON_TRACK|AT_RISK|OFF_TRACK`;
