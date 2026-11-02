@@ -546,6 +546,26 @@ Restart unit: the whole file (one download). Licence CC BY 4.0 (register GL-008)
 "Source: World Bank, Worldwide Governance Indicators". WGI is revised once a year. Bronze, Silver
 and a schedule are later stages.
 
+## UNdata (UN Statistics Division)
+
+**Extraction (2 Nov 2026).** UNdata's legacy data-mart download handler is gone (404), and the
+site root now serves a new front end. What remains is the UNdata SDMX web service under
+`https://data.un.org/legacy/ws/rest/`, with 15 dataflows. It returns a whole dataflow as one CSV at a
+fixed URL (`data/<flow>/all?format=csv`), so the declaration `undata.yaml` lands each selected
+dataflow through the shared `bulk_file` pattern as one entity. Three dataflows are declared, the
+databases UNSD compiles itself: `NA_MAIN` (national accounts main aggregates, about 160 MB),
+`DF_UNDATA_ENERGY` (Energy Statistics Database, about 135 MB) and `DF_SEEA_AEA` (SEEA air emission
+accounts, about 13 MB). Not declared:
+- mirrors of other sources (WDI, UNESCO UIS, UNFCCC, MDG/SDG);
+- the derived energy balances and SEEA energy flows;
+- the 430 MB institutional-sector accounts.
+
+The server sends no Last-Modified, so the version is the download time, and a file is written only
+when its SHA-256 changed. Restart unit: one dataflow. If the legacy path moves, `landing.inspect`
+fails on the 4xx. Terms: UNdata conditions of use (reuse with UNdata cited; commercial reuse not
+addressed; register GL-017). Attribution: "Source: UNdata (data.un.org), United Nations Statistics
+Division". Bronze, Silver and a schedule are later stages.
+
 ## ECB Data Portal
 
 **Extraction (2 Nov 2026).** The ECB Data Portal has no bulk archive per dataflow, but its SDMX

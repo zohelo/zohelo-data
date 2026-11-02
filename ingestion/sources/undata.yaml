@@ -1,0 +1,48 @@
+source_system: undata
+description: UNdata (UN Statistics Division) — full SDMX dataflows as CSV, one file per selected UNSD database
+
+# Extraction strategy (docs/landing.md). UNdata's legacy data-mart download handler is gone (404 on
+# 2 Nov 2026) and the site root now serves a new front end; what remains is the UNdata SDMX web
+# service under /legacy/ws/rest/ with 15 dataflows (Dev probes #2394). It serves a whole dataflow as
+# one CSV at a fixed URL (`data/<flow>/all?format=csv`, 13–430 MB, 4–130 s), so each selected
+# dataflow is a bulk file: entity = one dataflow, restart unit = one dataflow. The server sends no
+# Last-Modified, so version = download time and a file is written only when its SHA-256 changed.
+# Selection (register: model by contributing mart, avoid mirrors): the databases UNSD compiles
+# itself — national accounts main aggregates, the Energy Statistics Database and SEEA air emission
+# accounts. Mirrors (WDI, UNESCO UIS, UNFCCC, MDG/SDG), the derived energy balances, SEEA energy
+# flows and the 430 MB institutional-sector accounts are not declared. If the legacy path moves,
+# landing.inspect fails on the 4xx. UNdata conditions of use: reuse with UNdata cited (register GL-017).
+# A schedule (stage 4) comes after the Dev trial (#2396).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: NA_MAIN            # UNSD national accounts main aggregates (about 160 MB)
+        url: https://data.un.org/legacy/ws/rest/data/NA_MAIN/all?format=csv
+        format: raw
+        version: last_modified     # no Last-Modified from the server: download time
+      - entity: DF_UNDATA_ENERGY   # UNSD Energy Statistics Database (about 135 MB)
+        url: https://data.un.org/legacy/ws/rest/data/DF_UNDATA_ENERGY/all?format=csv
+        format: raw
+        version: last_modified
+      - entity: DF_SEEA_AEA        # SEEA air emission accounts (about 13 MB)
+        url: https://data.un.org/legacy/ws/rest/data/DF_SEEA_AEA/all?format=csv
+        format: raw
+        version: last_modified
+  initial: bulk
+  production: snapshot                  # each file is the complete dataflow
+  incremental_policy: changed_since_last  # SHA-256 (no Last-Modified from the server)
+  schedule: []
+
+landing: 01_landing/undata/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: []
+silver: []
+gold: []
+
+refresh: {mode: full}
+
+activities: [landing.inspect, landing.extract, landing.verify]
