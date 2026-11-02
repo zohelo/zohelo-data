@@ -74,7 +74,8 @@ async function accessEmail(request, env) {
     const email=typeof payload.email==="string"?payload.email.toLowerCase():"";
     return {email, why:email?"token":"token has no email"};
   } catch (error) {
-    return {email:"", why:"token check failed: "+(error instanceof Error?error.message:String(error))};
+    console.error("token check failed", error);
+    return {email:"", why:"token check failed"};
   }
 }
 async function authorize(request, env) {
@@ -123,9 +124,9 @@ function unescapeQuery(value) {
 }
 async function listFiles(url,env) {
   const q=url.searchParams.get("q")||"";
-  const parentIds=[...q.matchAll(/'((?:\\.|[^'])+)' in parents/g)].map(m=>unescapeQuery(m[1]));
+  const parentIds=[...q.matchAll(/'((?:\\.|[^'\\])+)' in parents/g)].map(m=>unescapeQuery(m[1]));
   if (!parentIds.length) return {files:[],incompleteSearch:false};
-  const nameMatch=q.match(/name='((?:\\.|[^'])*)'/);
+  const nameMatch=q.match(/name='((?:\\.|[^'\\])*)'/);
   const wantedName=nameMatch?unescapeQuery(nameMatch[1]):null;
   const wantsFolder=/mimeType\s*=\s*'application\/vnd\.google-apps\.folder'/.test(q);
   const excludesFolder=/mimeType\s*!=\s*'application\/vnd\.google-apps\.folder'/.test(q);
@@ -299,7 +300,8 @@ export default {
       }
       return json(record.meta,200,origin);
     } catch (error) {
-      return json({error:{status:"INTERNAL",message:error instanceof Error?error.message:String(error)}},500,origin);
+      console.error("request failed", error);
+      return json({error:{status:"INTERNAL",message:"Internal error."}},500,origin);
     }
   }
 };

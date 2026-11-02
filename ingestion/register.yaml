@@ -2418,8 +2418,13 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit reuse licence verified on gov.pl product page.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use https://www.gov.pl/web/gov/warunki-korzystania):
+      text content of gov.pl is CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial
+      reuse and modification with attribution and share-alike; use of official materials (materiały urzędowe) published
+      on gov.pl needs no consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0
+      (not used). The XLSX statistics carry no licence of their own. Attribution: "Źródło: KRUS, <table title> (<period>)"
+      / "Source: KRUS (Agricultural Social Insurance Fund), <table title> (<period>)".'
   updates: Quarterly for some beneficiary statistics; other series annual.
   ingestion:
     history: Backfill each stable topic archive with edition/reference period.
@@ -2432,9 +2437,10 @@ sources:
     priority: review-next
     evidence: documented
     connection: not-tested
-    blockers: [Resolve reuse rights, Inventory file history and geography]
+    blockers: [Inventory file history and geography]
     references:
     - https://www.gov.pl/web/krus/podstawowe-dane-statystyczne-z-zakresu-swiadczeniobiorcow
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-012
   name: API Statystyki NFZ – Świadczenia
   short_name: "NFZ statistics: services"
@@ -2694,8 +2700,15 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit dataset reuse licence verified on gov.pl page.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+      https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+      (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+      attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+      consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+      The report files carry no licence of their own. Attribution: "Źródło: Główny Inspektorat Sanitarny, Stan
+      sanitarny kraju (<year>)" / "Source: Chief Sanitary Inspectorate (GIS), Sanitary state of the country
+      (<year>)".'
   updates: Annual; source materials come from regional/local inspectorates.
   ingestion:
     history: Load available annual reports and hand-curated stable tables.
@@ -2709,9 +2722,12 @@ sources:
     priority: specialist
     evidence: documented
     connection: not-tested
-    blockers: [Inventory report archive, Resolve reuse terms, Assess structured-data availability]
+    blockers:
+    - Inventory report archive
+    - Assess structured-data availability
     references:
     - https://www.gov.pl/web/gis/raport---stan-sanitarny-kraju
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-019
   name: Biuletyny, meldunki i informacje epidemiologiczne (EPIMELD)
   short_name: NIZP-PZH epidemiology bulletins
@@ -3063,7 +3079,12 @@ sources:
     limits: No API quota.
   licence:
     status: open-conditional
-    notes: GUS portal CC BY 4.0; preserve attribution and workbook footnotes.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no
+      named licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for
+      users'' summaries or reworked text. Tables embedding third-party data keep their owners'' terms. Attribution:
+      "Źródło: GUS, Kultura i dziedzictwo narodowe w <year> roku" / "Source: Statistics Poland, Culture and national
+      heritage in <year>".'
   updates: Annual; release may include corrected files.
   ingestion:
     history: Backfill structured workbooks by edition and retain raw ZIP/PDF.
@@ -3076,9 +3097,11 @@ sources:
     priority: review-next
     evidence: documented
     connection: not-tested
-    blockers: [Confirm licence notice on each edition, Map stable sheets across editions]
+    blockers:
+    - Map stable sheets across editions
     references:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/kultura-i-dziedzictwo-narodowe-w-2023-roku%2C2%2C21.html
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-028
   name: Uczestnictwo ludności w kulturze
   short_name: GUS cultural participation

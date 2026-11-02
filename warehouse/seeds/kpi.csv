@@ -1,5 +1,6 @@
 kpi_key,name_en,name_pl,unit_key,subgroup_key,frequency_default,status,definition_en
 population,Population,Ludność,persons,population.stock.population,A,published,
+population_usual_residence,"Population (usual residence, 1 January)",Ludność rezydująca (1 stycznia),persons,population.stock.population,A,draft,
 gdp_current_prices,"GDP, current prices",PKB w cenach bieżących,mln_ncu,economy.national_accounts.gdp,A,published,
 gdp_per_capita,GDP per capita,PKB na 1 mieszkańca,ncu_per_person,economy.national_accounts.gdp,A,draft,
 gdp_volume_growth,GDP volume growth,Dynamika realna PKB,pct,economy.national_accounts.gdp,A,draft,

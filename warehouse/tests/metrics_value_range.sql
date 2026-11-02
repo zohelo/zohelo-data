@@ -4,8 +4,6 @@
 -- A KPI × source without a bound fails, so a new source gets one here.
 with bounds (concept_key, source_system, value_min, value_max) as (
     values
-    ('population', 'eurostat', 0, 1e9),
-    ('population', 'world_bank_wdi', 0, 1e10),
     ('population', 'gus_bdl', 0, 5e7),
     ('population', 'gus_dbw', 0, 5e7),
     ('gdp_current_prices', 'eurostat', 0, 3e7),
