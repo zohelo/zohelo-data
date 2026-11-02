@@ -2,9 +2,11 @@ source_system: mf_state_budget
 description: Ministry of Finance monthly state budget execution (XLSX)
 
 # Extraction strategy (docs/landing.md). Bulk feature: the Ministry of Finance's monthly state
-# budget execution report ("sprawozdania operatywne miesięczne"), linked from a stable gov.pl page
-# (gov.pl terms, register PLG-007). Each release is a new https://www.gov.pl/attachment/<uuid>, so
-# the link is found on the page at run time (url_from; the newest month is listed first).
+# budget execution report (year to date, cumulative), linked from the per-year gov.pl page
+# "sprawozdania-miesieczne-<year>" in xlsx/pdf pairs, newest first (gov.pl terms, register PLG-007).
+# Each release is a new https://www.gov.pl/attachment/<uuid>, so the link is found on the page at
+# run time (url_from, pick first = the newest xlsx). The page name changes each January (a later
+# Task handles the rollover).
 # Version = Last-Modified; written only when the SHA-256 changed. A schedule (stage 4) comes
 # after the Dev trial.
 extraction:
@@ -13,13 +15,13 @@ extraction:
     files:
       - entity: budget_execution_monthly
         url_from:
-          page: https://www.gov.pl/web/finanse/sprawozdania-operatywne-miesieczne
+          page: https://www.gov.pl/web/finanse/sprawozdania-miesieczne-2026
           pattern: /attachment/
           pick: first
         format: raw
         version: last_modified     # the response's Last-Modified; download time when absent
   initial: bulk
-  production: snapshot                  # each report holds the year to date
+  production: snapshot                  # each report is cumulative year to date
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
   schedule: []
 

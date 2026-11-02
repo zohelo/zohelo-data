@@ -35,12 +35,6 @@ def main() -> int:
             }
         )
     annotate("notice", "mf_state_budget page links", {"links": heads})
-    import requests
-
-    page = spec["url_from"]["page"]
-    resp = requests.get(page, headers={"User-Agent": bulk_file.USER_AGENT}, timeout=30)
-    every = bulk_file.links_matching(resp.text, resp.url, r"finanse|attachment|\.xlsx?$|\.zip$")
-    annotate("notice", "mf_state_budget page", {"status": resp.status_code, "final": resp.url, "links": every[:60]})
     try:
         for mode in ("inspect", "load", "verify"):
             codes[mode] = bulk_file.main("mf_state_budget", mode, landing_root=ROOT)
@@ -49,7 +43,17 @@ def main() -> int:
             for o in objects(client, bucket)
             if not o["Key"].endswith(".receipt.json")
         ]
-        annotate("notice", "mf_state_budget trial landed", {"codes": codes, "entities": len(landed), "files": landed})
+        first = b""
+        for o in objects(client, bucket):
+            if not o["Key"].endswith(".receipt.json"):
+                first = client.get_object(Bucket=bucket, Key=o["Key"], Range="bytes=0-3")["Body"].read()
+        ok = first[:2] == b"PK"
+        annotate(
+            "notice" if ok else "error",
+            "mf_state_budget trial landed",
+            {"codes": codes, "entities": len(landed), "files": landed, "first_bytes": first.hex()},
+        )
+        codes["xlsx_check"] = 0 if ok else 1
     finally:
         keys = [o["Key"] for o in objects(client, bucket)]
         for start in range(0, len(keys), 1000):
