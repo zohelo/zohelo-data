@@ -3,6 +3,9 @@ zz_dev_krus/ Landing prefix, report the landed files, then delete every object u
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 from ingestion.common.r2 import req, s3
 from ingestion.common.report import annotate
 from ingestion.to_landing.patterns import bulk_file
@@ -28,6 +31,11 @@ def main() -> int:
             for o in objects(client, bucket)
             if not o["Key"].endswith(".receipt.json")
         ]
+        out = Path(os.environ.get("DEV_OUTPUT_DIR", "/tmp/dev-output"))
+        out.mkdir(parents=True, exist_ok=True)
+        for item in landed:
+            body = client.get_object(Bucket=bucket, Key=item["key"])["Body"].read()
+            (out / Path(item["key"]).name).with_suffix(".xlsx").write_bytes(body)
         annotate("notice", "krus trial landed", {"codes": codes, "entities": len(landed), "files": landed})
     finally:
         keys = [o["Key"] for o in objects(client, bucket)]
