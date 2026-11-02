@@ -3409,7 +3409,7 @@ sources:
   name: Weekly agricultural market situation reports
   short_name: KOWR agricultural markets
   provider: Krajowy Ośrodek Wsparcia Rolnictwa (KOWR)
-  status: registered
+  status: parked
   family: B
   kpi: true
   geography: Poland
@@ -3450,8 +3450,11 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Identify upstream source per table
-    - Assess PDF extraction stability
+    - 'Parked: no structured bulk files; the weekly KOWR market pages are HTML/PDF reports whose tables come from
+      other providers (e.g. ZSRIR, PLS-032), and PDF extraction is not tested (re-open if KOWR publishes its own
+      tables as XLSX/CSV)'
+    - 'Identify upstream source per table'
+    - 'Assess PDF extraction stability'
     references:
     - https://www.gov.pl/web/kowr/Rynek-zboz
     - https://www.gov.pl/web/kowr/Rynek-miesa
