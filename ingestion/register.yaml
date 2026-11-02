@@ -3222,8 +3222,15 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit reuse licence verified; aggregate-only scope.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+      https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+      (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+      attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+      consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+      The report files carry no licence of their own. Attribution: "Źródło: Ministerstwo Rodziny, Pracy i Polityki
+      Społecznej, <report title> (<year>)" / "Source: Ministry of Family, Labour and Social Policy, <report title>
+      (<year>)".'
   updates: Usually annual reporting, programme-dependent.
   ingestion:
     history: Curate named stable report families; backfill files and retain form definitions.
@@ -3237,10 +3244,13 @@ sources:
     priority: specialist
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Select named report families, Resolve reuse rights, Map legislative breaks]
+    blockers:
+    - Select named report families
+    - Map legislative breaks
     references:
     - https://www.gov.pl/web/rodzina/analizy-i-raporty
     - https://www.gov.pl/web/rodzina/sprawozdawczosc
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-032
   name: Zintegrowany System Rolniczej Informacji Rynkowej (ZSRIR)
   short_name: MRiRW ZSRIR market information
