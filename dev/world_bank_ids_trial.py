@@ -27,8 +27,16 @@ def profile(body: bytes) -> None:
     """Annotate each CSV member: size, columns, rows, distinct values of the first columns, year range."""
     book = zipfile.ZipFile(io.BytesIO(body))
     for info in book.infolist():
+        try:
+            member(book, info)
+        except Exception as exc:  # noqa: BLE001 - dev profile: report and continue
+            annotate("warning", f"{SOURCE} profile {info.filename}", {"bytes": info.file_size, "error": repr(exc)[:300]})
+
+
+def member(book: zipfile.ZipFile, info: zipfile.ZipInfo) -> None:
+    if True:
         with book.open(info) as raw:
-            reader = csv.reader(io.TextIOWrapper(raw, encoding="utf-8-sig", newline=""))
+            reader = csv.reader(io.TextIOWrapper(raw, encoding="utf-8-sig", errors="replace", newline=""))
             header = next(reader, [])
             rows, distinct, empty = 0, [set() for _ in header[:4]], 0
             years = [h for h in header if h.strip()[:4].isdigit()]
