@@ -150,7 +150,7 @@ gold.publish reads each file back and fails when a value is not in Gold.
 | period_start | date | yes | first day of the period |
 | frequency | string | yes | frequency |
 | value | number | yes | value (Parquet double) |
-| unit_key | string | yes | unit |
+| unit_key | string | yes | unit of this row (key in `catalog/unit`): its measure's `kpi_measure.csv` `unit_key`, or the KPI's unit when that is empty (#2449) |
 | flags | string | yes | status flags |
 | dim_<dimension_key> | string | yes | one column per extra dimension; `'_T'` = total |
 
@@ -174,8 +174,9 @@ with simplified coordinates; each Feature has these properties:
 | level | string | yes | the file's level |
 | parent_key | string | optional for country | geography_key of the parent unit |
 
-`warehouse/publish.py` `geo()` writes `country` and `voivodeship` today, from `silver.prg_units` (PRG) and the names
-in `gold.dim_geography`, simplified at 0.005° with coordinates rounded to 4 decimals; the other levels follow later.
+`warehouse/publish.py` `geo()` writes `country`, `voivodeship`, `powiat` and `gmina`, from `silver.prg_units` (PRG)
+and the names and parents in `gold.dim_geography`, simplified at 0.005° with coordinates rounded to 4 decimals;
+`nuts1` and `nuts2` follow later.
 
 ## feed/changes.json and feed/calendar.ics
 

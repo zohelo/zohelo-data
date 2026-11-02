@@ -727,6 +727,7 @@ sources:
   name: ECB Data Portal
   short_name: ECB Data Portal
   provider: European Central Bank
+  source_system: ecb
   status: approved
   family: C
   kpi: true

@@ -1,6 +1,8 @@
 {# Gold PoC metrics view of one concept: every measure of the concept at its native grain,
    total series only, one row per source × area × period, with the geography and calendar
-   attributes a chart needs. Materialised as a table (the catalog holds no views). #}
+   attributes a chart needs. Rows of an unmatched area (`_X`) are left out: two unmatched units
+   would share one row key (#2307); build_check and the metrics_geography_unmatched warning count
+   them. Materialised as a table (the catalog holds no views). #}
 {% macro poc_concept_metrics(concept_key) %}
 with members as (
     select cm.measure_key, cm.definition, cm.source_system
@@ -39,5 +41,5 @@ inner join {{ ref('poc_dim_series') }} as s on s.series_key = f.series_key
 inner join {{ ref('poc_dim_measure') }} as m on m.measure_key = f.measure_key
 left join {{ ref('poc_dim_geography') }} as g on g.geography_key = f.geography_key
 left join {{ ref('poc_dim_calendar') }} as c on c.date_key = f.date_key
-where s.is_total
+where s.is_total and f.geography_key <> '_X'
 {% endmacro %}

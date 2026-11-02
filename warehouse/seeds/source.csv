@@ -14,3 +14,4 @@ gus_teryt,PLS-007,GUS TERYT,GUS TERYT register,GUS,reference,file,national-publi
 gugik_prg,PL-ENV-001,GUGiK PRG,GUGiK state register of boundaries,GUGiK,reference,file,national-public,free_use_prg,https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl
 un_wpp,GL-039,ONZ World Population Prospects,UN World Population Prospects,"United Nations, Population Division",cube,file,international-public,cc_by_3_0_igo_un_wpp,https://population.un.org/wpp/
 world_bank_wgi,GL-008,Bank Światowy WGI,World Bank Worldwide Governance Indicators,World Bank,cube,file,international-public,cc_by_4_0_world_bank_wgi,https://www.worldbank.org/en/publication/worldwide-governance-indicators
+ecb,GL-016,EBC Data Portal,ECB Data Portal,European Central Bank,cube,file,international-public,ecb_statistics_reuse,https://data.ecb.europa.eu/
