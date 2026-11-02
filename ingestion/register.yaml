@@ -3764,8 +3764,15 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: dataset-specific
-    notes: Gov.pl text is CC BY-SA 4.0; attachments require individual review.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+      https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+      (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+      attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+      consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+      The XLSX/PDF attachments carry no licence of their own; an attachment marked with other terms keeps them.
+      Attribution: "Źródło: Ministerstwo Finansów, <report title> (<period>)" / "Source: Ministry of Finance,
+      <report title> (<period>)".'
   updates: Monthly reports and annual acts; page modification time is not an observation date.
   ingestion:
     history: 'PROPOSAL: load annual budget acts and the documented monthly execution files from 2018 onward; use
@@ -3780,10 +3787,12 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Map attachment schemas and licences.]
+    blockers:
+    - Map attachment schemas and licences.
     references:
     - https://www.gov.pl/web/finanse/budzet-panstwa
     - https://www.gov.pl/web/finanse/sprawozdania-operatywne-miesieczne
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLG-008
   name: Treasury debt time series and monthly bulletin
   short_name: MF Treasury debt
