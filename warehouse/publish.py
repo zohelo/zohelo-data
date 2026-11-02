@@ -19,6 +19,7 @@ import duckdb
 import pyarrow as pa
 
 PROJECT = Path(__file__).resolve().parent
+SCHEMAS = Path(__file__).resolve().parent / "published" / "schemas"
 PREFIX = "06_published/v1/"
 LEVELS = {"country": "country", "wojewodztwo": "voivodeship"}  # Gold geography_level → contract level
 FREQ_RANK = {"D": 1, "B": 2, "W": 3, "M": 4, "Q": 5, "S": 6, "A": 7}
@@ -442,12 +443,24 @@ def checked(coverage: pa.Table) -> dict[str, str]:
     return result
 
 
+def schema_checked(obj: dict, schema: str) -> dict:
+    """obj unchanged when it has every required key and JSON type of published/schemas/<schema>.schema.json;
+    ValueError otherwise (docs/published.md, D27)."""
+    from ops.repo_check import _schema_problems
+
+    spec = json.loads((SCHEMAS / f"{schema}.schema.json").read_text(encoding="utf-8"))
+    problems = _schema_problems(obj, spec, "$")
+    if problems:
+        raise ValueError(f"{schema}: {problems[:5]}")
+    return obj
+
+
 def manifest_json(client, prefix: str) -> int:
     """Write manifest.json under prefix after a fresh dbt parse; returns its number of metrics."""
     from warehouse import catalog, changed
 
     changed.manifest("prod")
-    obj = catalog.manifest()
+    obj = schema_checked(catalog.manifest(), "manifest")
     body = json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode()
     put(client, prefix + "manifest.json", body)
     return len(obj["metrics"])
@@ -488,7 +501,9 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
         entries.append(kpi_entry(kpi, table, domains, checked_at, generated_at))
         if kpi_key in SKIP:
             continue
-        latest = kpi_latest(metrics, measures, checked_at, kpi_key, kpi["unit_key"], generated_at)
+        latest = schema_checked(
+            kpi_latest(metrics, measures, checked_at, kpi_key, kpi["unit_key"], generated_at), "kpi_latest"
+        )
         body = json.dumps(latest, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         if len(body) > LATEST_LIMIT:
             raise ValueError(f"kpi/{kpi_key}/latest.json is {len(body)} bytes, over {LATEST_LIMIT}")
