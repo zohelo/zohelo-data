@@ -3353,8 +3353,15 @@ sources:
     cost: free
     limits: No API; download limits unknown.
   licence:
-    status: unresolved
-    notes: No explicit reuse licence verified.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+      https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+      (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+      attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+      consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+      The report files carry no licence of their own. Tables that KOWR takes from other sources (e.g. GUS, MRiRW,
+      EU) keep their owners'' terms. Attribution: "Źródło: KOWR, <report title> (<date>)" / "Source: National
+      Support Centre for Agriculture (KOWR), <report title> (<date>)".'
   updates: Weekly for grain and meat pages; report files may be revised/replaced.
   ingestion:
     history: Backfill PDFs for selected commodities; retain report-period metadata.
@@ -3368,8 +3375,13 @@ sources:
     priority: review-next
     evidence: documented
     connection: not-tested
-    blockers: [Resolve reuse rights, Identify upstream source per table, Assess PDF extraction stability]
-    references: ['https://www.gov.pl/web/kowr/Rynek-zboz', 'https://www.gov.pl/web/kowr/Rynek-miesa']
+    blockers:
+    - Identify upstream source per table
+    - Assess PDF extraction stability
+    references:
+    - https://www.gov.pl/web/kowr/Rynek-zboz
+    - https://www.gov.pl/web/kowr/Rynek-miesa
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-034
   name: Programme implementation and payment statistics
   short_name: ARiMR payment statistics
