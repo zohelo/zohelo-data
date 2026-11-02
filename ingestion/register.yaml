@@ -3858,7 +3858,7 @@ sources:
   name: Treasury debt time series and monthly bulletin
   short_name: MF Treasury debt
   provider: Ministry of Finance
-  status: registered
+  status: approved
   family: D
   kpi: true
   geography: Poland
@@ -3899,7 +3899,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Confirm workbook schema, revisions and licence.
+    - 'Confirm workbook schema and revisions.'
     references:
     - https://www.gov.pl/web/finanse/szeregiczasowe
     - https://www.gov.pl/attachment/cdea605f-3278-4a55-af7b-0162d548ea0f
