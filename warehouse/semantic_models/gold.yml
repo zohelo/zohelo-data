@@ -34,6 +34,7 @@ semantic_models:
       - {name: geography_name, type: categorical}
       - {name: geography_level, type: categorical}
       - {name: unit, type: categorical}
+      - {name: frequency, type: categorical}
     measures:
       - {name: gdp_value, agg: sum, expr: value}
 
@@ -64,6 +65,7 @@ semantic_models:
       - {name: period_start, type: time, expr: date_key, type_params: {time_granularity: day}}
       - {name: source_system, type: categorical}
       - {name: geography_name, type: categorical}
+      - {name: geography_level, type: categorical}
       - {name: frequency, type: categorical}
     measures:
       - {name: inflation_avg, agg: average, expr: value}
