@@ -24,7 +24,7 @@ def main() -> int:
     heads = []
     for link in bulk_file.page_links(spec):
         head, http = bulk_file.probe(link)
-        h = dict(head.headers) if head is not None else {}
+        h = head.headers if head is not None else {}
         heads.append(
             {
                 "url": link,
