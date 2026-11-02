@@ -19,14 +19,14 @@ sql = re.sub(r"\{#.*?#\}", "", sql, flags=re.S)
 sql = sql.replace("{{ source('gold_coverage', 'coverage') }}", "coverage_src")
 sql = sql.replace("{{ ref('eurostat_dataflows') }}", "eurostat_dataflows")
 con.execute(f"create table result as {sql}")
-rows = con.sql("select count(*) from result").fetchone()[0]
+rows = con.sql("select count(*) from result").fetchall()[0][0]
 before = con.sql(
     "select count(*) from (select source, case when source = 'gus_dbw' then regexp_replace(block_id, "
     "'(_[0-9]{4})?_pl$', '') when source = 'eurostat' then upper(block_id) else block_id end "
     "from coverage_src group by all)"
-).fetchone()[0]
+).fetchall()[0][0]
 EMPTY = "count(*) filter (where name is null or name = '')"
-eu = con.sql(f"select count(*), {EMPTY} from result where source_key = 'eurostat'").fetchone()
+eu = con.sql(f"select count(*), {EMPTY} from result where source_key = 'eurostat'").fetchall()[0]
 first = con.sql(
     "select code, name from result where source_key = 'eurostat' and name <> '' order by code limit 3"
 ).fetchall()
