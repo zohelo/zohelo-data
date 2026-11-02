@@ -35,6 +35,38 @@
       "status": "published"
     },
     {
+      "kpi_key": "gdp_per_capita",
+      "name_pl": "PKB na 1 mieszkańca",
+      "name_en": "GDP per capita",
+      "unit_key": "ncu_per_person",
+      "frequency_default": "A",
+      "subgroup_key": "economy.national_accounts.gdp",
+      "domain_path": ["economy", "economy.national_accounts", "economy.national_accounts.gdp"],
+      "source_keys": ["eurostat", "world_bank_wdi"],
+      "geo_levels": ["country"],
+      "first_period": "1990",
+      "last_period": "2024",
+      "dimensions": [],
+      "loaded_at": "2026-01-01T00:00:00Z",
+      "status": "published"
+    },
+    {
+      "kpi_key": "gdp_volume_growth",
+      "name_pl": "Dynamika realna PKB",
+      "name_en": "GDP volume growth",
+      "unit_key": "pct",
+      "frequency_default": "A",
+      "subgroup_key": "economy.national_accounts.gdp",
+      "domain_path": ["economy", "economy.national_accounts", "economy.national_accounts.gdp"],
+      "source_keys": ["eurostat", "world_bank_wdi"],
+      "geo_levels": ["country"],
+      "first_period": "1990",
+      "last_period": "2024",
+      "dimensions": [],
+      "loaded_at": "2026-01-01T00:00:00Z",
+      "status": "published"
+    },
+    {
       "kpi_key": "inflation",
       "name_pl": "Inflacja (ceny konsumpcyjne)",
       "name_en": "Inflation, consumer prices",

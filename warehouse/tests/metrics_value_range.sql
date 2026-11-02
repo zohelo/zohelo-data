@@ -12,7 +12,11 @@ with bounds (concept_key, source_system, value_min, value_max) as (
     ('inflation', 'world_bank_wdi', -100, 100000),
     ('unemployment_rate', 'eurostat', 0, 60),
     ('unemployment_rate', 'world_bank_wdi', 0, 60),
-    ('fx_rate', 'nbp', 0, 100000)
+    ('fx_rate', 'nbp', 0, 100000),
+    ('gdp_per_capita', 'eurostat', 0, 2e5),
+    ('gdp_per_capita', 'world_bank_wdi', 0, 5e5),
+    ('gdp_volume_growth', 'eurostat', -50, 100),
+    ('gdp_volume_growth', 'world_bank_wdi', -100, 200)
 ),
 
 metrics as (
@@ -60,6 +64,24 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_fx_rate') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_gdp_per_capita') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_gdp_volume_growth') }}
 )
 
 select

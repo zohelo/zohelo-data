@@ -82,6 +82,38 @@ semantic_models:
     measures:
       - {name: fx_rate_avg, agg: average, expr: value}
 
+  - name: poc_gdp_per_capita
+    description: GDP per capita (gold.metrics_gdp_per_capita).
+    model: ref('poc_metrics_gdp_per_capita')
+    defaults: {agg_time_dimension: period_start}
+    entities:
+      - {name: gdp_per_capita_row, type: primary, expr: "series_key || '|' || date_key"}
+      - {name: poc_geography, type: foreign, expr: geography_key}
+    dimensions:
+      - {name: period_start, type: time, expr: date_key, type_params: {time_granularity: day}}
+      - {name: source_system, type: categorical}
+      - {name: geography_name, type: categorical}
+      - {name: geography_level, type: categorical}
+      - {name: frequency, type: categorical}
+    measures:
+      - {name: gdp_per_capita_avg, agg: average, expr: value}
+
+  - name: poc_gdp_volume_growth
+    description: GDP volume growth (gold.metrics_gdp_volume_growth).
+    model: ref('poc_metrics_gdp_volume_growth')
+    defaults: {agg_time_dimension: period_start}
+    entities:
+      - {name: gdp_volume_growth_row, type: primary, expr: "series_key || '|' || date_key"}
+      - {name: poc_geography, type: foreign, expr: geography_key}
+    dimensions:
+      - {name: period_start, type: time, expr: date_key, type_params: {time_granularity: day}}
+      - {name: source_system, type: categorical}
+      - {name: geography_name, type: categorical}
+      - {name: geography_level, type: categorical}
+      - {name: frequency, type: categorical}
+    measures:
+      - {name: gdp_volume_growth_avg, agg: average, expr: value}
+
 metrics:
   - name: poc_population
     label: Population (PoC)
@@ -108,3 +140,13 @@ metrics:
     description: Average NBP table A mid rate over the chosen period, PLN per 1 unit of the currency.
     type: simple
     type_params: {measure: fx_rate_avg}
+  - name: poc_gdp_per_capita
+    label: GDP per capita
+    description: Average GDP per capita over the chosen period and areas, of ONE source and ONE geography level.
+    type: simple
+    type_params: {measure: gdp_per_capita_avg}
+  - name: poc_gdp_volume_growth
+    label: GDP volume growth
+    description: Average real GDP growth rate over the chosen period and areas, of ONE source and ONE geography level.
+    type: simple
+    type_params: {measure: gdp_volume_growth_avg}
