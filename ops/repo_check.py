@@ -110,8 +110,13 @@ def repository(files: list[Path]) -> list[str]:
     return problems
 
 
+PIP_INSTALL = re.compile(r"pip3? install\s+(.*)")
+
+
 def workflows(files: list[Path]) -> list[str]:
-    """Every action in workflows and local actions is pinned by a full commit SHA with a version comment."""
+    """Every action in workflows and local actions is pinned by a full commit SHA with a version comment;
+    every pip install there uses --require-hashes or pins each package with ==; every workflow declares
+    workflow-level permissions, and neither the workflow nor a job uses write-all or read-all."""
     problems = []
     for f in files:
         if f.parts[:2] != (".github", "workflows") and not (
@@ -121,6 +126,20 @@ def workflows(files: list[Path]) -> list[str]:
         for number, line in enumerate((ROOT / f).read_text().splitlines(), 1):
             if USES_LINE.match(line) and not PINNED_ACTION.search(line):
                 problems.append(f"{f}:{number}: action not pinned by SHA with a version comment")
+            pip = PIP_INSTALL.search(line)
+            if pip and "--require-hashes" not in line:
+                packages = [word for word in pip.group(1).split() if not word.startswith("-")]
+                if not packages or any("==" not in word for word in packages):
+                    problems.append(f"{f}:{number}: pip install without --require-hashes or == pins")
+        if f.parts[:2] == (".github", "workflows"):
+            workflow = yaml.safe_load((ROOT / f).read_text()) or {}
+            if "permissions" not in workflow:
+                problems.append(f"{f}: no workflow-level permissions")
+            scopes = [("workflow", workflow.get("permissions"))]
+            scopes += [(job, (spec or {}).get("permissions")) for job, spec in (workflow.get("jobs") or {}).items()]
+            for scope, value in scopes:
+                if value in ("write-all", "read-all"):
+                    problems.append(f"{f}: {scope} permissions {value}")
     return problems + alert_job()
 
 

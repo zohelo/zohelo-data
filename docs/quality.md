@@ -42,6 +42,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 | Network access is polite: user agent, timeouts, retries with backoff, rate limits per source | [review] |
 | No new dependency without a reason in the PR; versions pinned for data libraries | [review] |
 | Dependencies: change `requirements.in`, then re-run `pip-compile --generate-hashes --strip-extras -o requirements.txt requirements.in` (pip-tools 7.5.1, Python of `.python-version`); workflows install with `--require-hashes` | [review] |
+| Every `pip install` in `.github/` uses `--require-hashes` or pins each package with `==` | [auto] repo_check `workflows` |
 | Retired code is deleted, not kept on `main`; git history keeps it | [review] |
 
 ## 4. SQL and dbt (declarative layer)
@@ -71,8 +72,9 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 
 | Rule | Check |
 |---|---|
-| Exactly the four workflows; actions pinned by full SHA with version comment; `runs-on` pinned | [auto] |
-| Least privilege `permissions:` per workflow and job | [review] |
+| Exactly the five workflows; actions pinned by full SHA with version comment; `runs-on` pinned | [auto] |
+| Every workflow declares `permissions:`; none uses `write-all` or `read-all` | [auto] repo_check `workflows` |
+| Least privilege `permissions:` per job | [review] |
 | The Pipeline's `notify` job needs every other job and blanks every workflow-level secret | [auto] repo_check `workflows` |
 | Workflow changes, like all changes, merge after the `check` job and the independent review pass (owner authorization, 14 Oct 2026) | process |
 
@@ -88,7 +90,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 
 1. `check` job on every pull request (from the owner's `dev.yml` change; until then the
    job runs compile, pyflakes, YAML parse, configuration, dbt parse): `python -m ops.repo_check` (root allowlist and file
-   rules, no `dev/`, four workflows with pinned actions, compile, ruff check + format,
+   rules, no `dev/`, five workflows with pinned actions, compile, ruff check + format,
    yamllint, configuration and schedules), `dbt parse`, and a gitleaks secret scan.
    Rule changes are made in `ops/repo_check.py` and `pyproject.toml`, not in the workflow.
 2. sqlfluff on the dbt models is part of `ops/repo_check` (14 Oct).
