@@ -6,4 +6,5 @@ open_data_act_teryt,Open Data Act re-use (GUS TERYT),https://eteryt.stat.gov.pl/
 free_use_prg,Free use (GUGiK PRG),https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/,"Źródło: GUGiK, PRG",true,false
 cc0_gleif,CC0 1.0 (GLEIF),https://www.gleif.org/en/meta/lei-data-terms-of-use,Source: GLEIF,true,false
 mf_flat_file,MF VAT list flat file (republication not stated),https://www.podatki.gov.pl/vat/bezpieczna-transakcja/wykaz-podatnikow-vat/plik-plaski/,"Źródło: Ministerstwo Finansów, Wykaz podatników VAT",false,false
+cc_by_3_0_igo_un_wpp,CC BY 3.0 IGO (UN World Population Prospects),http://creativecommons.org/licenses/by/3.0/igo/,"Source: United Nations, Department of Economic and Social Affairs, Population Division (2024). World Population Prospects 2024, Online Edition.",true,false
 unresolved,Terms not established,https://github.com/zohelo/zohelo-data/blob/main/ingestion/register.yaml,Source: see the source register,false,false
