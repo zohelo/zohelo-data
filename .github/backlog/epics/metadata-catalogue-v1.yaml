@@ -384,11 +384,66 @@ deliverables:
           - workflow: Dev · branch runs, script measure_dataset_test_trial, on the branch
             expect: "notice 'dim_measure dataset_key in dim_dataset' status pass, failures 0; then 'dropped zz_dev_measure_dataset_test'"
         out_of_scope: [poc_dim_measure.sql and dim_dataset.sql, PL/EN names of measures and datasets]
+      - key: data/metadata/catalogue-v1/models/dataset-names-inventory
+        type: Task
+        title: Report dataset names per source and their Silver name matches
+        effort: S
+        state: open
+        contract: false
+        verify_only: true
+        context: >-
+          gold.dim_dataset (warehouse/models/gold/dim_dataset.sql) has one `name` per dataset, taken from
+          gold.coverage block_name, in whatever language the source uses; the catalogue needs name_pl and name_en.
+          Candidate English names: silver.eurostat_dataflows (dataset_id, name_en) and silver.wdi_indicators
+          (indicator_code, indicator_name). The naming Task is written from this report. Verify-only: nothing is
+          merged.
+        files: []
+        steps:
+          - "Branch test/<this issue number>-dataset-names from origin/main; this Task has no PR."
+          - "dev/dataset_names_inventory.py: read gold.dim_dataset (dataset_key, source_key, code, name), silver.eurostat_dataflows (dataset_id, name_en) and silver.wdi_indicators (indicator_code, indicator_name) with ingestion.common.r2 catalog() (load_table(...).scan().to_arrow()); write nothing."
+          - "Per source_key annotate notice f'dataset names: {source_key}' with rows, rows with a null or empty name and the first 5 (code, name) by code."
+          - "Add to the eurostat notice: codes equal to an upper(dataset_id) of eurostat_dataflows, how many of them have name ≠ name_en, and 3 such (code, name, name_en). Add to the world_bank_wdi notice: codes equal to an indicator_code."
+          - "Push the branch and run Dev · branch runs with script dataset_names_inventory."
+          - "Comment on this issue: the run URL and every annotation verbatim; then close the issue. Leave the branch."
+        acceptance:
+          - "one notice per source_key of gold.dim_dataset; no error"
+          - the closing comment holds all notices
+        verify:
+          - workflow: Dev · branch runs, script dataset_names_inventory, on test/<n>-dataset-names
+            expect: "notices 'dataset names: eurostat', 'dataset names: gus_bdl', 'dataset names: gus_dbw', 'dataset names: nbp', 'dataset names: world_bank_wdi' and one per other source in gold.coverage"
+        out_of_scope: [any change on main, adding name columns to dim_dataset or dim_measure]
+      - key: data/metadata/catalogue-v1/models/loaded-at-evidence
+        type: Task
+        title: Report coverage checks and Bronze commit times per source
+        effort: S
+        state: open
+        contract: false
+        verify_only: true
+        context: >-
+          catalog.json loaded_at and status.json last_loaded_at use the newest gold.coverage checked_at, which is
+          when bronze.verify last ran, not when new data arrived. gold.freshness and feed/changes.json wait for a
+          decision on where loaded_at comes from. This report gives the architect the facts: per source, the coverage
+          times and the newest Iceberg snapshot of its Bronze tables. Verify-only: nothing is merged.
+        files: []
+        steps:
+          - "Branch test/<this issue number>-loaded-at from origin/main; this Task has no PR."
+          - "dev/loaded_at_evidence.py: read gold.coverage (source, status, checked_at) with ingestion.common.r2 catalog(); per source: max checked_at, rows, rows with status loaded."
+          - "Load warehouse/models/bronze/sources.yml with yaml; per source entry (its name is the source_system) and each of its tables: cat.load_table(('bronze', table)).current_snapshot(); keep timestamp_ms as ISO UTC; a missing table (NoSuchTableError) or None snapshot is skipped and counted."
+          - "Annotate notice f'loaded_at: {source}' with coverage_checked_at, coverage_rows, loaded_rows, bronze_newest_snapshot, bronze_tables_found, bronze_tables_missing; then notice 'loaded_at: gold metrics' with the current snapshot time of gold.metrics_<kpi_key> for each kpi.csv row with status published. Write nothing."
+          - "Push the branch and run Dev · branch runs with script loaded_at_evidence."
+          - "Comment on this issue: the run URL and every annotation verbatim; then close the issue. Leave the branch."
+        acceptance:
+          - "one notice per source of sources.yml plus 'loaded_at: gold metrics'; no error"
+          - the closing comment holds all notices
+        verify:
+          - workflow: Dev · branch runs, script loaded_at_evidence, on test/<n>-loaded-at
+            expect: "notices 'loaded_at: eurostat', 'loaded_at: nbp' … and 'loaded_at: gold metrics' with 5 tables"
+        out_of_scope: [any change on main, deciding loaded_at, gold.freshness]
     todo:
-      - "dim_dataset: native theme path, frequency_keys and PL/EN names from Silver metadata; dim_measure: PL/EN names"
+      - "dim_dataset: native theme path, frequency_keys and PL/EN names from Silver metadata; dim_measure: PL/EN names (rules from the report of Task dataset-names-inventory)"
       - "dim_member from dim_geography, dim_frequency, the sex seed and dim_series breakdowns (PL/EN naming rule for source labels needed)"
       - "DBW axes Grupy wieku (→ age, needs a label → CL_AGE code mapping) and Charakter miejscowości (no conformed axis yet; urbanisation needs a Domain expert review) stay source_specific"
-      - "freshness from gold.coverage (checked_at, loaded_at, lag_days): needs a decision on where loaded_at comes from (gold.coverage has no load time)"
+      - "freshness from gold.coverage (checked_at, loaded_at, lag_days): needs a decision on where loaded_at comes from (gold.coverage has no load time; evidence from Task loaded-at-evidence)"
   - key: data/metadata/catalogue-v1/domain-mapping
     title: Source themes mapped to domains
     depends_on: [data/metadata/catalogue-v1/seeds]

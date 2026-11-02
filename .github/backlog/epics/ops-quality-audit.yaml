@@ -98,6 +98,7 @@ deliverables:
     title: Review rules checked by repo_check
     done_when:
       - "docs/quality.md marks model headers, semantic descriptions, module docstrings, workflow permissions and hashed pip installs [auto]; ops/repo_check.py enforces them"
+      - "repo_check fails when warehouse.yaml `gold` misses a Gold model or seed or lists a table dbt does not build"
     tasks:
       - key: data/ops/quality-audit/code-rules/sql-headers
         type: Task
@@ -193,3 +194,34 @@ deliverables:
         out_of_scope: [the workflow files, per-job least privilege (review)]
         notes:
           - "Other code-rules Tasks edit the same ops/README.md row: keep every addition when rebasing."
+      - key: data/ops/quality-audit/code-rules/gold-list
+        type: Task
+        title: Check that warehouse.yaml lists exactly the Gold tables dbt builds
+        effort: S
+        state: open
+        contract: false
+        context: >-
+          warehouse/warehouse.yaml `gold:` is the list of shared Gold tables; ops/retire_tables.py,
+          ops/platform_inventory.py and ops/tracker.py treat a Gold table missing from it as unclaimed (a retire
+          candidate). Each new model or seed Task adds its line by hand and nothing checks it. Today the list holds
+          every Gold model by its table name (config alias, e.g. poc_dim_source.sql → gold.dim_source, else the file
+          name), every seed (warehouse/seeds/*.csv) and gold.coverage (written by ingestion/common/coverage.py),
+          and nothing else.
+        files:
+          - edit: ops/repo_check.py
+          - edit: docs/quality.md
+        steps:
+          - "repo_check.py: GOLD_ALIAS = re.compile(r\"alias\\s*=\\s*['\\\"]([a-z0-9_]+)['\\\"]\"); NOT_DBT_GOLD = {\"gold.coverage\"} with a comment naming ingestion/common/coverage.py."
+          - "gold_list(files: list[Path]) -> list[str], docstring 'warehouse.yaml `gold` lists every Gold model (by alias) and seed of the dbt project plus gold.coverage, and nothing else (ops/retire_tables.py retires unlisted Gold tables).': built = 'gold.' + alias (GOLD_ALIAS in the file text, else the stem) for each tracked .sql/.py under warehouse/models/gold/, plus 'gold.' + stem of each tracked warehouse/seeds/*.csv; listed = the yaml `gold` list."
+          - "Problems, sorted: f\"warehouse.yaml gold: {name} is built by the dbt project but not listed\" for built − listed; f\"warehouse.yaml gold: {name} is not a Gold model or seed\" for listed − built − NOT_DBT_GOLD."
+          - "configuration(): problems += gold_list(files) right after full_rebuild(files)."
+          - "docs/quality.md §4, after the full_rebuild row: '| `warehouse.yaml` `gold` lists every Gold model (by alias) and seed, plus `gold.coverage`, and nothing else | [auto] repo_check `configuration` |'."
+        acceptance:
+          - "removing `gold.sex,` from warehouse.yaml fails 'configuration' with 'gold.sex is built by the dbt project but not listed' (try, revert)"
+          - "adding gold.nothing to the list fails with 'gold.nothing is not a Gold model or seed' (try, revert)"
+        verify:
+          - run: "PYTHONPATH=. python -c \"from ops.repo_check import gold_list, tracked; print(gold_list(tracked()))\""
+            expect: "[]"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [warehouse.yaml itself, retire_tables and tracker classification, Silver models]
