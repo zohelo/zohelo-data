@@ -2461,11 +2461,20 @@ sources:
     interfaces: [REST API, JSON, XML, Swagger]
     auth: Public API; no key described in opened documentation.
     cost: free
-    limits: 10 requests/second per IP in product terms.
+    limits: '10 requests/second per IP (terms v1.1, section III).'
   licence:
-    status: restricted
-    notes: Terms require source attribution to api.nfz.gov.pl, prohibit modifying data and prohibit overload. Commercial
-      redistribution needs legal interpretation of the no-modification clause.
+    status: open-conditional
+    notes: 'Terms: API regulations (Regulamin) of "API Statystyki NFZ - Świadczenia" v1.1,
+      https://api.nfz.gov.pl/app-stat-api-jgp/terms (section II): users must state the source by giving the address
+      https://api.nfz.gov.pl/; the user may not modify the data ("Niedozwolone jest modyfikowanie danych przez
+      Usługobiorcę"); no use for software that breaks the law or third-party rights, misleads users or acts
+      maliciously; no overloading (10 requests/second per IP); NFZ may block users for breaches and may change the
+      API and its terms. No licence name and no clause on commercial reuse (footer: Copyright © Narodowy Fundusz
+      Zdrowia, Open Data logo linking to dane.gov.pl); public display of the published values is allowed with
+      attribution. Show values as published; any figure we derive (rates, sums, shares) is labelled as a zohelo
+      calculation. Disclaimer: use is at the user''s own risk, NFZ is not liable for lost profits. Attribution:
+      "Źródło: Narodowy Fundusz Zdrowia, API Statystyki NFZ – Świadczenia (https://api.nfz.gov.pl/)" / "Source:
+      National Health Fund (NFZ), NFZ Statistics API – Services (https://api.nfz.gov.pl/)".'
   updates: Table releases; schedule and revision policy unknown.
   ingestion:
     history: Enumerate table index and available years, then snapshot complete chosen tables.
@@ -2479,7 +2488,10 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Legal review of no-modification term, Enumerate history, Confirm current API version]
+    blockers:
+    - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived
+      values; published values are shown unchanged'
+    - 'Enumerate history'
     references:
     - https://api.nfz.gov.pl/app-stat-api-jgp/
     - https://api.nfz.gov.pl/app-stat-api-jgp/terms
