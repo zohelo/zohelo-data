@@ -1,0 +1,29 @@
+{
+  "kpi_key": "gdp_current_prices",
+  "unit_key": "mln_ncu",
+  "generated_at": "2026-01-01T00:00:00Z",
+  "values": [
+    {
+      "source_key": "eurostat",
+      "geography_key": "PL",
+      "geography_level": "country",
+      "period": "2024",
+      "value": 845000,
+      "unit_key": "mln_eur",
+      "previous_period": "2023",
+      "previous_value": 750000,
+      "flags": ["p"],
+      "checked_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "source_key": "world_bank_wdi",
+      "geography_key": "PL",
+      "geography_level": "country",
+      "period": "2024",
+      "value": 914700000000,
+      "unit_key": "usd",
+      "flags": [],
+      "checked_at": "2026-01-01T00:00:00Z"
+    }
+  ]
+}

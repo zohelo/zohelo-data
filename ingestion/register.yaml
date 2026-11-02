@@ -2418,8 +2418,13 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit reuse licence verified on gov.pl product page.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use https://www.gov.pl/web/gov/warunki-korzystania):
+      text content of gov.pl is CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial
+      reuse and modification with attribution and share-alike; use of official materials (materiały urzędowe) published
+      on gov.pl needs no consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0
+      (not used). The XLSX statistics carry no licence of their own. Attribution: "Źródło: KRUS, <table title> (<period>)"
+      / "Source: KRUS (Agricultural Social Insurance Fund), <table title> (<period>)".'
   updates: Quarterly for some beneficiary statistics; other series annual.
   ingestion:
     history: Backfill each stable topic archive with edition/reference period.
@@ -2432,9 +2437,10 @@ sources:
     priority: review-next
     evidence: documented
     connection: not-tested
-    blockers: [Resolve reuse rights, Inventory file history and geography]
+    blockers: [Inventory file history and geography]
     references:
     - https://www.gov.pl/web/krus/podstawowe-dane-statystyczne-z-zakresu-swiadczeniobiorcow
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-012
   name: API Statystyki NFZ – Świadczenia
   short_name: "NFZ statistics: services"
@@ -2694,8 +2700,15 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit dataset reuse licence verified on gov.pl page.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+      https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+      (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+      attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+      consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+      The report files carry no licence of their own. Attribution: "Źródło: Główny Inspektorat Sanitarny, Stan
+      sanitarny kraju (<year>)" / "Source: Chief Sanitary Inspectorate (GIS), Sanitary state of the country
+      (<year>)".'
   updates: Annual; source materials come from regional/local inspectorates.
   ingestion:
     history: Load available annual reports and hand-curated stable tables.
@@ -2709,9 +2722,12 @@ sources:
     priority: specialist
     evidence: documented
     connection: not-tested
-    blockers: [Inventory report archive, Resolve reuse terms, Assess structured-data availability]
+    blockers:
+    - Inventory report archive
+    - Assess structured-data availability
     references:
     - https://www.gov.pl/web/gis/raport---stan-sanitarny-kraju
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-019
   name: Biuletyny, meldunki i informacje epidemiologiczne (EPIMELD)
   short_name: NIZP-PZH epidemiology bulletins
@@ -3063,7 +3079,12 @@ sources:
     limits: No API quota.
   licence:
     status: open-conditional
-    notes: GUS portal CC BY 4.0; preserve attribution and workbook footnotes.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no
+      named licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for
+      users'' summaries or reworked text. Tables embedding third-party data keep their owners'' terms. Attribution:
+      "Źródło: GUS, Kultura i dziedzictwo narodowe w <year> roku" / "Source: Statistics Poland, Culture and national
+      heritage in <year>".'
   updates: Annual; release may include corrected files.
   ingestion:
     history: Backfill structured workbooks by edition and retain raw ZIP/PDF.
@@ -3076,9 +3097,11 @@ sources:
     priority: review-next
     evidence: documented
     connection: not-tested
-    blockers: [Confirm licence notice on each edition, Map stable sheets across editions]
+    blockers:
+    - Map stable sheets across editions
     references:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/kultura-i-dziedzictwo-narodowe-w-2023-roku%2C2%2C21.html
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-028
   name: Uczestnictwo ludności w kulturze
   short_name: GUS cultural participation
@@ -3101,7 +3124,12 @@ sources:
     limits: No API quota.
   licence:
     status: open-conditional
-    notes: GUS portal CC BY 4.0; retain precision estimates and disclosure notes.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no
+      named licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for
+      users'' summaries or reworked text. Tables embedding third-party data keep their owners'' terms. Attribution:
+      "Źródło: GUS, Uczestnictwo ludności w kulturze w <year> r." / "Source: Statistics Poland, Participation of the
+      population in culture in <year>".'
   updates: Periodic, not annual; revision policy unknown.
   ingestion:
     history: Load each survey edition with methodology and precision workbook.
@@ -3120,6 +3148,7 @@ sources:
     - Verify comparability across questionnaire changes
     references:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/uczestnictwo-ludnosci-w-kulturze-w-2024-r-%2C6%2C4.html
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-029
   name: Registered unemployment and labour-office vacancy statistics
   short_name: MRPiPS registered unemployment
@@ -3141,8 +3170,13 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit reuse licence verified.
+    status: open-conditional
+    notes: 'Terms: footer of the Publiczne Służby Zatrudnienia portal https://psz.praca.gov.pl/: "Wszystkie treści
+      publikowane w serwisie są udostępniane na licencji Creative Commons Uznanie Autorstwa 3.0 Polska, o ile nie
+      jest to stwierdzone inaczej" (CC BY 3.0 PL, https://creativecommons.org/licenses/by/3.0/pl/), which allows
+      commercial reuse and modification with attribution; a file marked with other terms keeps them. Attribution:
+      "Źródło: MRPiPS / Publiczne Służby Zatrudnienia, <table title> (<month>), CC BY 3.0 PL" / "Source: Ministry of
+      Family, Labour and Social Policy / Public Employment Services, <table title> (<month>), CC BY 3.0 PL".'
   updates: Monthly preliminary/final releases and annual summaries.
   ingestion:
     history: Backfill stable monthly workbooks after locating canonical archive.
@@ -3158,9 +3192,10 @@ sources:
     connection: not-tested
     blockers:
     - Locate canonical current archive and file schema
-    - Resolve reuse rights
     - Document vacancy and occupation definitions
-    references: ['https://psz.praca.gov.pl/', 'https://barometrzawodow.pl/']
+    references:
+    - https://psz.praca.gov.pl/
+    - https://barometrzawodow.pl/
 - id: PLS-030
   name: Barometr Zawodów
   short_name: Barometr Zawodów
@@ -3222,8 +3257,15 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit reuse licence verified; aggregate-only scope.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+      https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+      (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+      attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+      consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+      The report files carry no licence of their own. Attribution: "Źródło: Ministerstwo Rodziny, Pracy i Polityki
+      Społecznej, <report title> (<year>)" / "Source: Ministry of Family, Labour and Social Policy, <report title>
+      (<year>)".'
   updates: Usually annual reporting, programme-dependent.
   ingestion:
     history: Curate named stable report families; backfill files and retain form definitions.
@@ -3237,10 +3279,13 @@ sources:
     priority: specialist
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Select named report families, Resolve reuse rights, Map legislative breaks]
+    blockers:
+    - Select named report families
+    - Map legislative breaks
     references:
     - https://www.gov.pl/web/rodzina/analizy-i-raporty
     - https://www.gov.pl/web/rodzina/sprawozdawczosc
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-032
   name: Zintegrowany System Rolniczej Informacji Rynkowej (ZSRIR)
   short_name: MRiRW ZSRIR market information
@@ -3263,8 +3308,15 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit commercial reuse licence verified.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+      https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+      (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+      attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+      consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+      The report files carry no licence of their own. Copies on dane.gov.pl follow that dataset''s own reuse
+      conditions. Attribution: "Źródło: MRiRW, Zintegrowany System Rolniczej Informacji Rynkowej (<bulletin, date>)"
+      / "Source: Ministry of Agriculture and Rural Development, ZSRIR (<bulletin, date>)".'
   updates: Weekly for major meat/grain market reports; monthly for some feed/other bulletins.
   ingestion:
     history: Backfill commodity-specific bulletins only where structured tables are stable.
@@ -3284,6 +3336,7 @@ sources:
     references:
     - https://www.gov.pl/web/rolnictwo/biuletyny-informacyjne
     - https://dane.gov.pl/pl/dataset/1022%2Czintegrowany-system-rolniczej-informacji-rynkowej-biuletyny-informacyjne-rynek-pasz
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-033
   name: Weekly agricultural market situation reports
   short_name: KOWR agricultural markets
@@ -3306,8 +3359,15 @@ sources:
     cost: free
     limits: No API; download limits unknown.
   licence:
-    status: unresolved
-    notes: No explicit reuse licence verified.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+      https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+      (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+      attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+      consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+      The report files carry no licence of their own. Tables that KOWR takes from other sources (e.g. GUS, MRiRW,
+      EU) keep their owners'' terms. Attribution: "Źródło: KOWR, <report title> (<date>)" / "Source: National
+      Support Centre for Agriculture (KOWR), <report title> (<date>)".'
   updates: Weekly for grain and meat pages; report files may be revised/replaced.
   ingestion:
     history: Backfill PDFs for selected commodities; retain report-period metadata.
@@ -3321,8 +3381,13 @@ sources:
     priority: review-next
     evidence: documented
     connection: not-tested
-    blockers: [Resolve reuse rights, Identify upstream source per table, Assess PDF extraction stability]
-    references: ['https://www.gov.pl/web/kowr/Rynek-zboz', 'https://www.gov.pl/web/kowr/Rynek-miesa']
+    blockers:
+    - Identify upstream source per table
+    - Assess PDF extraction stability
+    references:
+    - https://www.gov.pl/web/kowr/Rynek-zboz
+    - https://www.gov.pl/web/kowr/Rynek-miesa
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-034
   name: Programme implementation and payment statistics
   short_name: ARiMR payment statistics
@@ -3345,9 +3410,15 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit reuse licence verified. Public beneficiary names, if separately published by legal obligation,
-      are out of initial aggregate scope.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+      https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+      (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+      attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+      consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+      The report files carry no licence of their own. Aggregate statistics only; personal beneficiary data stay out
+      of scope. Attribution: "Źródło: ARiMR, <report title> (<date>)" / "Source: Agency for Restructuring and
+      Modernisation of Agriculture (ARiMR), <report title> (<date>)".'
   updates: Campaign/programme-dependent; frequent operational updates for some schemes.
   ingestion:
     history: Curate aggregate statistics only after identifying stable named report families.
@@ -3364,10 +3435,11 @@ sources:
     connection: not-tested
     blockers:
     - Locate canonical aggregate statistics index
-    - Resolve reuse rights
     - Exclude personal beneficiary records
     - Document cumulative-status semantics
-    references: ['https://www.gov.pl/web/arimr']
+    references:
+    - https://www.gov.pl/web/arimr
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-035
   name: Turystyka – annual accommodation-establishment tables
   short_name: GUS tourism tables
@@ -3395,7 +3467,11 @@ sources:
     limits: No API quota.
   licence:
     status: open-conditional
-    notes: GUS portal CC BY 4.0; retain attribution, definitions and confidentiality markers.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no
+      named licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for
+      users'' summaries or reworked text. Tables embedding third-party data keep their owners'' terms. Attribution:
+      "Źródło: GUS, Turystyka w <year> r." / "Source: Statistics Poland, Tourism in <year>".'
   updates: Annual publication, with separate short-period accommodation releases elsewhere.
   ingestion:
     history: Backfill annual XLSX ZIP editions and retain PDFs for methodology.
@@ -3408,10 +3484,12 @@ sources:
     priority: review-next
     evidence: documented
     connection: not-tested
-    blockers: [Map workbook schema across editions, Confirm licensing per historical file]
+    blockers:
+    - Map workbook schema across editions
     references:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2024-r-%2C1%2C22.html
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2025-r-%2C1%2C23.html
+    - https://stat.gov.pl/en/copyright/
 - id: PLG-001
   name: NBP Web API — exchange rates and gold prices
   short_name: NBP exchange rates and gold

@@ -37,7 +37,8 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 |---|---|
 | Compiles; ruff lint clean with rule sets E, F, W, I, B, UP, SIM, RUF (settings in `pyproject.toml`) | [auto] |
 | ruff format (line length 120) | [auto] |
-| Public functions have type hints and a one-line docstring; modules a docstring saying what they do in the dataflow | [review] |
+| Modules have a docstring saying what they do in the dataflow | [auto] repo_check `module docstrings` (presence); content [review] |
+| Public functions have type hints and a one-line docstring | [review] |
 | Configuration comes from declarations or environment variables, never hard-coded bucket names, keys or paths | [review] |
 | Network access is polite: user agent, timeouts, retries with backoff, rate limits per source | [review] |
 | No new dependency without a reason in the PR; versions pinned for data libraries | [review] |
