@@ -523,3 +523,16 @@ only when the SHA-256 changed, after the gzip check). Restart unit: the whole fi
 download). Licence CC BY 3.0 IGO (register GL-039). The URL is from the register review and is
 proven from Actions by the Dev trial; a new revision (every two years) means a new URL in the
 declaration. Bronze, Silver and a schedule are later stages.
+
+## World Bank Global Findex Database
+
+**Extraction (2 Nov 2026).** The country-level Global Findex database is one CSV per edition
+(2025: `GlobalFindexDatabase2025.csv` on thedocs.worldbank.org), linked from the stable page
+`https://www.worldbank.org/en/publication/globalfindex/download-data`. The declaration
+`world_bank_findex.yaml` finds the link on that page (`url_from`, pattern
+`GlobalFindexDatabase<year>.csv`) and lands it through the shared `bulk_file` pattern as entity
+`findex_country` (version = Last-Modified, download time when absent; written only when the
+SHA-256 changed), so a new edition is picked up without a code change. Restart unit: the whole
+file. Licence CC BY 4.0 for the country-level indicators only (register GL-009); the
+individual-level microdata (Research Data License) is out of scope. Bronze, Silver and a
+schedule are later stages.

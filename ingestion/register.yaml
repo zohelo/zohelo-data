@@ -384,6 +384,7 @@ sources:
   name: Global Findex Database
   short_name: World Bank Global Findex
   provider: World Bank
+  source_system: world_bank_findex
   status: approved
   family: A
   kpi: true
