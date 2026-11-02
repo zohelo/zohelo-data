@@ -500,3 +500,14 @@ poz. 1373); updated yearly (state 1 January) with corrections. WFS
 
 Bronze `bronze.prg_boundaries`: one row per feature of every layer, attributes as text,
 geometry as WKB in the source CRS with the `.prj` text (60,367 features, ~434 MB Parquet); any reprojection is a Silver rule.
+
+## UN World Population Prospects (WPP)
+
+**Extraction (2 Nov 2026).** The UN Population Division publishes each WPP revision as fixed
+files; the declaration `un_wpp.yaml` lands the 2024 revision's "Demographic Indicators, medium
+variant" CSV (gzip) through the shared `bulk_file` pattern as entity
+`demographic_indicators_medium` (version = Last-Modified, download time when absent; written
+only when the SHA-256 changed, after the gzip check). Restart unit: the whole file (one
+download). Licence CC BY 3.0 IGO (register GL-039). The URL is from the register review and is
+proven from Actions by the Dev trial; a new revision (every two years) means a new URL in the
+declaration. Bronze, Silver and a schedule are later stages.

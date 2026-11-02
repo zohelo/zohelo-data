@@ -1,0 +1,32 @@
+source_system: un_wpp
+description: UN World Population Prospects 2024, demographic indicators (CSV, gzip)
+
+# Extraction strategy (docs/landing.md). Bulk feature: the WPP 2024 "Demographic Indicators,
+# medium variant" CSV (gzip) on the Population Division's fixed per-revision URL (CC BY 3.0 IGO,
+# register GL-039). Version = Last-Modified; written only when the SHA-256 changed. WPP is
+# revised every two years; a schedule (stage 4) comes after the Dev trial.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: demographic_indicators_medium
+        url: "https://population.un.org/wpp/assets/Excel%20Files/1_Indicator%20(Standard)/CSV_FILES/WPP2024_Demographic_Indicators_Medium.csv.gz"
+        format: gzip
+        version: last_modified     # the response's Last-Modified; download time when absent
+  initial: bulk
+  production: snapshot                  # each file is the complete revision
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: []
+
+landing: 01_landing/un_wpp/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: []
+silver: []
+gold: []
+
+refresh: {mode: full}
+
+activities: [landing.inspect, landing.extract, landing.verify]

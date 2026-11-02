@@ -168,8 +168,8 @@ REVIEW_ONLY = {"registered", "reviewing"}  # register statuses whose Epic holds 
 
 
 def source_epic(entry: dict, stages: list[dict]) -> dict:
-    """The Epic of a register entry without a hand-written file: stage 1 with its Tasks, and stage 2 as a stub
-    once the entry is approved or later (registered and reviewing entries get stage 1 only)."""
+    """The Epic of a register entry without a hand-written file: stage 1 with its Tasks, and stage 2 with its Tasks
+    once the entry is approved or later (registered and reviewing entries get stage 1 only; owner #2230, Bug #2337)."""
     ident = str(entry["id"])
     low = ident.lower()
     key = f"data/src-{low}"
@@ -178,7 +178,8 @@ def source_epic(entry: dict, stages: list[dict]) -> dict:
         "id": ident,
         "id_lower": low,
         "short_name": short,
-        "source_system": str(entry.get("source_system") or low),
+        # an importable fallback until the stage-2 declaration Task adds source_system to the register (#2337)
+        "source_system": str(entry.get("source_system") or low.replace("-", "_")),
         "family_area": f"data/src-{str(entry['family']).lower()}",
         "register_file": REGISTER,
     }
@@ -193,18 +194,13 @@ def source_epic(entry: dict, stages: list[dict]) -> dict:
             "repo": stage.get("repo", "zohelo-data"),
             "done_when": fill(stage["done_when"], values),
         }
-        if stage["n"] == 1:
-            tasks = []
-            for template in stage.get("tasks") or []:
-                task = fill({k: v for k, v in template.items() if k != "key"}, values)
-                task = {"key": f"{item['key']}/{template['key']}", "type": "Task", "state": "open", **task}
-                task["depends_on"] = [f"{item['key']}/{dep}" for dep in task.get("depends_on") or []]
-                tasks.append(task)
-            item["tasks"] = tasks
-        else:
-            item["todo"] = [
-                f"Tasks are rendered when stage 1 ({key}/review) is done and the register status is approved"
-            ]
+        tasks = []
+        for template in stage.get("tasks") or []:
+            task = fill({k: v for k, v in template.items() if k != "key"}, values)
+            task = {"key": f"{item['key']}/{template['key']}", "type": "Task", "state": "open", **task}
+            task["depends_on"] = [f"{item['key']}/{dep}" for dep in task.get("depends_on") or []]
+            tasks.append(task)
+        item["tasks"] = tasks
         deliverables.append(item)
     return {
         "key": key,

@@ -219,6 +219,7 @@ def configuration(files: list[Path]) -> list[str]:
     problems += scheduler.validate(config, run.plan)
     problems += scheduler_worker(scheduler.DISPATCH_RUN)
     problems += full_rebuild(files)
+    problems += gold_list(files)
     return problems
 
 
@@ -254,6 +255,28 @@ def full_rebuild(files: list[Path]) -> list[str]:
         elif rows > POLICY_ROWS and not EXCEPTION.match(str(entry.get("exception", ""))):
             problems.append(f'warehouse.yaml full_rebuild: {name} ceiling {rows:,} > 1M needs exception: "#<issue>"')
     return problems
+
+
+GOLD_ALIAS = re.compile(r"alias\s*=\s*['\"]([a-z0-9_]+)['\"]")
+NOT_DBT_GOLD = {"gold.coverage"}  # written by each source's bronze.verify (ingestion/common/coverage.py), not dbt
+
+
+def gold_list(files: list[Path]) -> list[str]:
+    """warehouse.yaml `gold` lists every Gold model (by alias) and seed of the dbt project plus gold.coverage, and
+    nothing else (ops/retire_tables.py retires unlisted Gold tables)."""
+    built = set()
+    for f in files:
+        if not (ROOT / f).exists():
+            continue
+        if f.parts[:3] == ("warehouse", "models", "gold") and f.suffix in (".sql", ".py"):
+            alias = GOLD_ALIAS.search((ROOT / f).read_text())
+            built.add("gold." + (alias.group(1) if alias else f.stem))
+        elif f.parent == Path("warehouse/seeds") and f.suffix == ".csv":
+            built.add("gold." + f.stem)
+    listed = set(yaml.safe_load((ROOT / "warehouse/warehouse.yaml").read_text()).get("gold") or [])
+    problems = [f"warehouse.yaml gold: {name} is built by the dbt project but not listed" for name in built - listed]
+    problems += [f"warehouse.yaml gold: {name} is not a Gold model or seed" for name in listed - built - NOT_DBT_GOLD]
+    return sorted(problems)
 
 
 SCHEDULER_WORKER = Path("ops/scheduler_worker/wrangler.toml")
@@ -389,6 +412,7 @@ PUBLISHED = ROOT / "warehouse" / "published"
 PUBLISHED_SCHEMAS = {
     "catalog/catalog.json": "catalog",
     "manifest.json": "manifest",
+    "status.json": "status",
     "kpi/*/latest.json": "kpi_latest",
     "feed/changes.json": "feed_changes",
     "geo/*.geojson": "geo",

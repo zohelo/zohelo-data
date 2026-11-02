@@ -11,3 +11,4 @@ mf_treasury_debt,PLG-008,MF szeregi czasowe długu Skarbu Państwa,MF State Trea
 mf_state_budget,PLG-007,MF sprawozdania z wykonania budżetu państwa,MF state budget execution reports,Ministerstwo Finansów,cube,file,national-public,gov_pl_terms,https://www.gov.pl/web/finanse/budzet-panstwa
 gus_teryt,PLS-007,GUS TERYT,GUS TERYT register,GUS,reference,file,national-public,open_data_act_teryt,https://eteryt.stat.gov.pl/eteryt/rejestr_teryt/udostepnianie_danych/baza_teryt/baza_teryt.aspx
 gugik_prg,PL-ENV-001,GUGiK PRG,GUGiK state register of boundaries,GUGiK,reference,file,national-public,free_use_prg,https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl
+un_wpp,GL-039,ONZ World Population Prospects,UN World Population Prospects,"United Nations, Population Division",cube,file,international-public,cc_by_3_0_igo_un_wpp,https://population.un.org/wpp/

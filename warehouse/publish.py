@@ -3,7 +3,7 @@
 Reads Gold tables from the R2 Data Catalog and the KPI seeds in the repository and writes the
 files described in docs/published.md (schemas in warehouse/published/schemas/): ``catalog/catalog.json``,
 ``catalog/<table>.parquet``, ``manifest.json``, ``kpi/<kpi_key>/latest.json`` / ``series.parquet``,
-``feed/calendar.ics`` and ``geo/country.geojson`` / ``geo/voivodeship.geojson``.
+``feed/calendar.ics``, ``status.json`` and ``geo/country.geojson`` / ``geo/voivodeship.geojson``.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ LEVELS = {"country": "country", "wojewodztwo": "voivodeship"}  # Gold geography_
 FREQ_RANK = {"D": 1, "B": 2, "W": 3, "M": 4, "Q": 5, "S": 6, "A": 7}
 SKIP = {"fx_rate": "one value per currency; latest.json has no currency field"}
 LATEST_LIMIT = 100_000  # bytes, docs/published.md size limits (D22)
+STATUS_LIMIT = 50_000  # bytes, docs/published.md size limits
 SERIES_LIMIT = 20_000_000  # bytes, docs/published.md size limits
 # Contract file catalog/<name>.parquet → Gold table (seeds kpi, kpi_measure, domain, unit, licence; models
 # kpi_dimension, dim_source; freshness is not built yet).
@@ -368,20 +369,72 @@ def catalog_json(entries: list[dict[str, Any]], generated_at: str) -> dict[str, 
     }
 
 
-def calendar_ics() -> str:
-    """feed/calendar.ics: no events until release_calendar exists (docs/published.md)."""
-    return "\r\n".join(CALENDAR_LINES) + "\r\n"
+def status_json(
+    sources: list[dict[str, str]], checked_at: dict[str, str], next_at: dict[str, str], generated_at: str
+) -> dict[str, Any]:
+    """status.json: per source its last load, next expected run and lag in whole days (docs/published.md)."""
+    generated = datetime.strptime(generated_at, "%Y-%m-%dT%H:%M:%SZ")
+    entries = []
+    for row in sources:
+        key = row["source_key"]
+        loaded_at = checked_at.get(key)
+        lag = None
+        if loaded_at is not None:
+            lag = (generated - datetime.strptime(loaded_at, "%Y-%m-%dT%H:%M:%SZ")).days
+        entries.append(
+            {
+                "source_key": key,
+                "name_pl": row["name_pl"],
+                "name_en": row["name_en"],
+                "last_loaded_at": loaded_at,
+                "next_expected_at": next_at.get(key),
+                "lag_days": lag,
+            }
+        )
+    return {"version": 1, "generated_at": generated_at, "sources": entries}
 
 
-def calendar(client, prefix: str) -> int:
+def ics_text(value: str) -> str:
+    """RFC 5545 TEXT: a backslash before every backslash, semicolon and comma (backslashes first)."""
+    return value.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,")
+
+
+def ics_time(stamp: str) -> str:
+    """'2026-11-09T11:15:00Z' → '20261109T111500Z'."""
+    return stamp.replace("-", "").replace(":", "")
+
+
+def calendar_ics(rows: list[dict[str, str]] | None = None, stamp: str = "") -> str:
+    """feed/calendar.ics: one VEVENT per release_calendar row (docs/published.md)."""
+    events = []
+    for row in sorted(rows or [], key=lambda r: (r["release_at"], r["source_key"], r["kpi_key"])):
+        start = ics_time(row["release_at"])
+        events += [
+            "BEGIN:VEVENT",
+            f"UID:{start}-{row['source_key']}-{row['kpi_key']}@zohelo.com",
+            f"DTSTAMP:{ics_time(stamp)}",
+            f"DTSTART:{start}",
+            f"SUMMARY:{ics_text(row['title_pl'])}",
+            f"URL:{row['url']}",
+            "END:VEVENT",
+        ]
+    lines = CALENDAR_LINES[:-1] + events + CALENDAR_LINES[-1:]
+    for line in lines:
+        if len(line.encode("utf-8")) > 75:
+            raise ValueError(f"calendar.ics line over 75 bytes: {line}")
+    return "\r\n".join(lines) + "\r\n"
+
+
+def calendar(client, prefix: str, stamp: str) -> int:
     """Write feed/calendar.ics under prefix; returns the number of events written."""
+    rows = seed("release_calendar")
     put(
         client,
         prefix + "feed/calendar.ics",
-        calendar_ics().encode("utf-8"),
+        calendar_ics(rows, stamp).encode("utf-8"),
         content_type="text/calendar; charset=utf-8",
     )
-    return 0
+    return len(rows)
 
 
 def _round(coordinates):
@@ -549,8 +602,17 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     result["catalog_tables"] = catalog_tables(cat, client, prefix, namespace)
     body = json.dumps(catalog_json(entries, generated_at), ensure_ascii=False, separators=(",", ":")).encode()
     result["catalog_json"] = {"kpis": len(entries), "bytes": put(client, prefix + "catalog/catalog.json", body)}
+    from ingestion.common import scheduler
+    import run
+
+    next_at = scheduler.next_runs(run.load_config(), datetime.now(UTC))
+    status = schema_checked(status_json(seed("source"), checked_at, next_at, generated_at), "status")
+    body = json.dumps(status, ensure_ascii=False, separators=(",", ":")).encode()
+    if len(body) > STATUS_LIMIT:
+        raise ValueError(f"status.json is {len(body)} bytes, over {STATUS_LIMIT}")
+    result["status"] = {"sources": len(status["sources"]), "bytes": put(client, prefix + "status.json", body)}
     result["manifest"] = manifest_json(client, prefix)
-    result["calendar"] = calendar(client, prefix)
+    result["calendar"] = calendar(client, prefix, generated_at)
     result["geo"] = geo(cat, client, prefix)
     annotate("notice", "gold.publish: latest", result)
     return result
