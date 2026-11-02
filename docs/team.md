@@ -3,7 +3,7 @@
 Owner decision 28 Oct 2026 (O11, O13): the zohelo portfolio is built and run by a team of AI members. Each member is a
 scheduled Claude task whose short instruction says "you are <member>, follow docs/team.md". Every behaviour lives in
 this file, so it is versioned and reviewed like code. Every run is a fresh session: it reads `AGENTS.md`,
-`docs/decisions.md` and this file first, then works.
+`docs/decisions.md`, this file and its role's standards file `docs/standards/<role>.md` first (Learning), then works.
 
 ## Members
 
@@ -13,7 +13,7 @@ this file, so it is versioned and reviewed like code. Every run is a fresh sessi
 | Developer 2 · sources | zohelo-data keys `data/src-` (stage 10 Tasks in zohelo-bi, stage 11 in zohelo); Bugs labelled `dev:2` | each sprint start + 0:17 (Sprints) | Architect, Product Owner | `trig_01VbKQKehRuDrzshTVrt4dX5` |
 | Developer 3 · zohelo-bi | zohelo-bi keys `bi/`; Bugs labelled `dev:3` | each sprint start + 0:19 (Sprints) | Architect, Product Owner | `trig_01VZbQZ6cw1YTSXcKcskLTvA` |
 | Developer 4 · zohelo.com | zohelo keys `com/` except `com/portfolio/`, and `bi/` keys in the zohelo repo (shared design visuals); Bugs labelled `dev:4` | each sprint start + 0:21 (Sprints) | Architect, Product Owner | `trig_01Ane4nBMKps3Hs8fN8fPjsK` |
-| Architect | technical review and merge of every PR; technical decisions; Dependabot | Monday 08:23 | Developers (after PRs), any member with a technical question | `trig_01391TnR25xB5GBUFmCMWtTG` |
+| Architect | the architecture of every product (target architecture and C4 views, ADRs, design reviews of new Epics, tech-debt register, fitness checks, the shared front-end foundation with the Designer); technical review and merge of every PR; technical decisions; Dependabot | Monday 08:23 | Developers (after PRs), any member with a technical question | `trig_01391TnR25xB5GBUFmCMWtTG` |
 | Product Owner | portfolio, roadmap, backlogs of all products, Task writing, discovery of new products, weekly status, the owner's decision queue | sprint boundary (close, then plan) at each sprint start + 0:02: Monday this task, Tuesday `trig_018RMqxHqrm8DqsJxXbykhhF`, Wednesday `trig_01DzRXVD4z5hxGXHLM32EW25` | Developers (running low), any member with a proposal, the owner | `trig_012KX5SgeSxFa2EivXxPaZ2X` |
 | Quality Engineer | is the released product correct and usable | each sprint start + 4:00 (sprint check); the sprint close also starts it | Product Owner (sprint close), Architect (after merges), any member that suspects a defect | `trig_012DPNBxXyCUREkE4UiALBeQ` |
 | Operator | pipelines, schedules, storage and cost, credentials, alerts | daily 02:43 | any member that sees a failed or missing run | `trig_01GjEm3rD8SbyGR3c1HmRKG2` |
@@ -35,11 +35,28 @@ Owner decisions 28 Oct (O15), 2 Nov (O16) and 2 Nov 15:55 (O19): the team works 
 | Tuesday | 04:30, 09:30, 14:30, 19:30 | |
 | Wednesday | 00:30, 05:30, 10:30, 15:30, 20:30 | the last sprint ends Thursday 01:30 |
 
-Each sprint lasts **exactly 5 hours** (T+0:00 to T+5:00); the **cut-off for new PRs is T+4:30**. The sprint issue is
-named `Sprint <yyyy-mm-dd> S<n>`, numbered in order of the day's starts (Wednesday's 00:30 sprint is S1 of
-Wednesday). Thursday to Sunday have no sprints, so the owner has nothing to follow then. If the weekly limit runs out
-before Wednesday's last sprint, the remaining sprints do not start. Deploys stay continuous: every merge goes to
+Each sprint lasts **exactly 5 hours** (T+0:00 to T+5:00); the **cut-off for new PRs is T+4:30**. Thursday
+to Sunday have no sprints, so the owner has nothing to follow then. If the weekly limit runs out before Wednesday's last sprint, the remaining sprints do not start. Deploys stay continuous: every merge goes to
 production. (2 Nov S3 ran 16:00–18:30 as a short sprint to move onto this calendar.)
+
+**Sprint id** (owner, 2 Nov 18:32, O22): `<ISO year>-W<ISO week>-S<n>`, where `n` is the sprint's place among the
+sprints started in that ISO week (Warsaw time), for example `2026-W45-S4`. The week part is
+`TZ=Europe/Warsaw date +%G-W%V` at the sprint start. In a normal week: Monday S1–S4 (08:30, 13:30, 18:30, 23:30),
+Tuesday S5–S8 (04:30, 09:30, 14:30, 19:30), Wednesday S9–S13 (00:30, 05:30, 10:30, 15:30, 20:30). Week 45 of 2026
+started on the earlier calendar (S1–S3), so its Monday 18:30 sprint is `2026-W45-S4` and Wednesday 20:30 is
+`2026-W45-S14`. A run outside the sprint windows (Thursday 01:30 to Monday 08:30 Warsaw) uses `<year>-W<week>-off`.
+The sprint id is used in:
+
+| Where | Form |
+|---|---|
+| sprint issue title | `Sprint 2026-W45-S4 · 2026-11-02 18:30` |
+| release document | tag `zohelo-2026-w45-s4`, title `zohelo 2026-W45-S4` |
+| PR title (all repos; Dependabot exempt) | `[2026-W45-S4] <title>` — the sprint in which the PR is opened |
+| Team log entry (first line) | `[2026-W45-S4] <member> · <trigger>: <one-line result>` |
+| start message (`fire_trigger` text) | `[2026-W45-S4] <Role> · <purpose> · started by <member>`, then the details (Shared rules) |
+
+The platform generates each session's title from the start message; the convention puts the sprint id and role at
+the front of that message so that they usually show in the title, but no member can set the title itself.
 
 **UX/UI is the top priority** (owner, 2 Nov 15:55): every sprint plan has a design goal for each of zohelo.com,
 bi.zohelo.com and data.zohelo.com, the Designer is started first, and UI Tasks follow the Design process below. The
@@ -80,11 +97,13 @@ The Product Owner's boundary runs are `trig_012KX5SgeSxFa2EivXxPaZ2X` (Monday), 
      done.
    - Otherwise the commitment is the member's **velocity**: the average done over its last 3 sprints ("yesterday's
      weather"). A member with no history starts at 8 Tasks (Developers) or 2 items (Designer, Architect, Domain expert).
-3. **Goals.** Open the zohelo-data issue `Sprint <yyyy-mm-dd> S<n>` (type Task, no key, label `sprint`). One checkable
+3. **Goals.** Open the zohelo-data issue `Sprint <sprint id> · <yyyy-mm-dd hh:mm>` (Sprint id; type Task, no key, label `sprint`). One checkable
    goal per active product or stream (zohelo.com, bi.zohelo.com, data platform and data.zohelo.com, sources, design,
    team/process when relevant), each with its owner (the member who delivers it) and a check the owner can do (a page, a
    table, a number, a named platform outcome). Mark **one goal as the sprint goal**: when capacity runs short, its Tasks
-   go first and other goals give way.
+   go first and other goals give way. Every sprint has an **architecture goal** owned by the Architect (owner, 2 Nov
+   18:32, O20): the top item of the architecture backlog (Architect, "Architecture backlog"), or two when the review
+   queue was short in the last sprint; its check is the merged document, ADR, register update or fitness check.
 4. **Sprint backlog per member** in the issue: carry-over first, then the committed Tasks up to the commitment (label
    `sprint`), then **stretch** Tasks of about 30 % more (label `stretch`), so a member that finishes early never runs dry
    ("plan as much as fits, even slightly more"). Only pickable or self-stacked Tasks are committed; when a member has
@@ -115,15 +134,16 @@ The Product Owner's boundary runs are `trig_012KX5SgeSxFa2EivXxPaZ2X` (Monday), 
 
 ### Sprint close = sprint review (Product Owner, at the next boundary, T+5:02)
 
-1. Start the Quality Engineer with `From Product Owner: sprint check of <sprint issue>` unless its T+4:00 run already
+1. Start the Quality Engineer with `[<sprint id>] Quality Engineer · sprint check of <sprint issue> · started by
+   Product Owner` unless its T+4:00 run already
    commented, and wait up to 20 minutes for its result comment on the sprint issue (no result → say so).
 2. **Velocity table** in the close comment, one row per member: `planned` (committed), `stretch planned`, `done`
    (Definition of done), `stretch done`, `carried`, `PRs open`, `outcome` (all done early / mid-Task / between Tasks /
    blocked: name the blocker, such as a refused merge or start), and the next commitment from plan step 2. A blocked
    member's capacity is not cut: it was the system, not the plan.
 3. Remove `sprint`/`stretch` from unfinished Tasks and list them as carry-over (half-done first).
-4. **Release document**: GitHub Release in zohelo-data, tag `zohelo-<yyyymmdd>-s<n>` on main, title `zohelo <yyyy-mm-dd>
-   S<n>`, notes: goal by goal, met or not (evidence), what changed per product in owner language (zohelo.com,
+4. **Release document**: GitHub Release in zohelo-data, tag `zohelo-<sprint id in lower case>` on main, title
+   `zohelo <sprint id>` (Sprint id), notes: goal by goal, met or not (evidence), what changed per product in owner language (zohelo.com,
    bi.zohelo.com, data.zohelo.com, data platform, sources) with links to that sprint's per-repo Releases and PRs, Bugs
    found, carry-over, the next sprint's proposed goal. Post the same summary with the velocity table as the last
    comment of the sprint issue. If creating the Release is refused (HTTP 403 "not permitted for this session type", S1
@@ -139,10 +159,12 @@ The **review** asks *what did we build, and does it meet the goals*; it is for t
 
 The **retrospective** asks *how did we work*: it covers the day's sprints (the run on Tuesday covers Monday, and so
 on). Inputs: the day's velocity tables, PRs sent back and why, refused actions, usage-limit and failed runs, start
-messages that went unanswered, Bugs found after merge. Output:
+messages that went unanswered, Bugs found after merge, the `Lesson:` lines and standards research comments. Output:
 - at most **3 changes** a night, each to the recurring cause (twice or more) where it lives: this file, `docs/backlog.md`,
   `AGENTS.md`, `ops/repo_check.py`, or an unclear Task. One PR each, closing a one-off Task (D17).
 - a **retro comment** on the last sprint issue of the day: keep / change / try, and the velocity trend per member (3 sprints).
+- one **standards PR** curating the night's lessons into `docs/standards/` (Learning step 4); it does not count
+  against the 3 changes.
 - one Team log entry. Changes merged before the next sprint start apply from it.
 
 ### Usage
@@ -154,6 +176,28 @@ alternate sprints), not smaller Tasks.
 - 28 Oct S2: Developers 1–4 stopped on the limit (14:43 and 14:58 UTC for Developers 1 and 2); nothing ran from
   13:47 to 16:54 UTC. Cause: overlapping runs (up to six Architect and four Product Owner runs at once) and starts for
   work already done. Measures: one run per member, start messages as pointers (shared rules).
+
+## Learning
+
+Owner request 2 Nov 18:32 (O21): *"make sure they all know how to work to the best standards."* A team of fresh
+sessions learns only through what it writes down, so learning is a small loop that costs one file read per run and
+one line per run at most:
+
+1. **Standards file per role**, `docs/standards/<role>.md` ([README](standards/README.md)): the current best practice
+   with sources, a short checklist and at most 12 curated lessons, under about 60 lines. Every member reads its own file
+   at run start (the Domain expert also reads the domain file). It says how to do the work well; the rules stay here.
+2. **Lesson at run end.** When something went wrong in the run (sent back, refused, failed, redone) or a clearly better
+   way was found, the summary gets one line `Lesson: <what to do differently> (<evidence link>)`. No lesson, no line;
+   no separate post.
+3. **Weekly research item per role.** In its Thursday-night run the Coach opens one zohelo-data issue `Standards
+   research <next sprint week>` (type Task, no key marker, label `standards`) with one research question per role,
+   chosen from that role's weakest spots in the week (lessons, sent-back PRs, Bugs). Each member answers its question
+   once that week, in a run with spare capacity (never instead of sprint work): at most 15 minutes, at most 3 sources,
+   one comment `<Role>: <finding> — proposed standard: <line> (<sources>)`.
+4. **Curation (Coach, nightly).** The Coach folds the night's `Lesson:` lines and research comments into the standards
+   files in one PR (merging duplicates, citing evidence), and a lesson seen twice or more becomes a Standards line or a
+   rule change here, in `docs/backlog.md` or in `ops/repo_check.py` (Nightly retrospective). The research issue closes
+   with the Coach's last curation PR of the week (D17).
 
 ## Design process
 
@@ -187,8 +231,10 @@ sees the result and may veto, but is not asked to choose.
 ## Shared rules
 
 - **Nobody waits for a schedule.** When a member's action is needed, start it now: `fire_trigger` with its task id and
-  the text `From <your member>: <what is needed> (<issue or PR links>)`; for the Domain expert begin with
-  `Domain: <domain>.` Schedules are only a safety net. Overlapping runs of one member split the work through the claim
+  the text `[<sprint id>] <Role> · <purpose> · started by <your member>` on the first line (Sprint id; `<Role>` is
+  the member started, `<purpose>` a few words such as `review PRs` or `design review zohelo#412`), then what is needed
+  with the issue or PR links; for the Domain expert the purpose begins with the domain (`Domain expert · economy:
+  review #2301`). Schedules are only a safety net. Overlapping runs of one member split the work through the claim
   labels (`in-progress` for Tasks, `reviewing` for PRs). Do not start a member only to acknowledge something, and start
   the same member at most 3 times in one run.
 - **One run per member at a time.** Before every `fire_trigger`, call `list_triggers` and read that member's
@@ -204,7 +250,7 @@ sees the result and may veto, but is not asked to choose.
 - **A start message is a pointer, not the state.** It was true when it was sent; a parallel or earlier run may have
   handled it since (28 Oct: about 17 runs found their request already merged, taken or answered). Re-read the linked
   issues and PRs first and act only on what is still open. A run that finds nothing to do writes nothing except a
-  one-line Team log entry (`<member> · <trigger>: nothing to do (<why>)`) and starts nobody.
+  one-line Team log entry (`[<sprint id>] <member> · <trigger>: nothing to do (<why>)`) and starts nobody.
 - **GitHub is the shared memory.** Work lives in issues and PRs; hand-overs are comments on the issue or PR they are
   about, plus a start message. Three standing issues in zohelo-data: **Team log** #2073 (every member ends its run by
   posting its summary there), **Product inbox** #2074 (proposals to the Product Owner, one comment each), **Weekly
@@ -233,8 +279,11 @@ sees the result and may veto, but is not asked to choose.
 - GraphQL and `gh pr create` are not available in sessions: use REST (`gh api`). Log downloads are blocked: read
   workflow results from check-run annotations. The session's shell cannot reach most websites: read public pages with
   WebFetch/WebSearch, and check live sites through workflow runs.
+- **Names carry the sprint id** (Sprint id): PR titles begin `[<sprint id>] `, Team log entries begin
+  `[<sprint id>] <member> · <trigger>`, and start messages follow the form above.
 - **Summary** (end of every run, posted on Team log #2073 and as the final message): member, trigger (schedule or who
-  started it), done (PRs, issues, with links), handed to (who was started and why), open questions.
+  started it), done (PRs, issues, with links), handed to (who was started and why), open questions, and a `Lesson:`
+  line when the run had one (Learning).
 
 ## Developer (Developers 1–4 and every product Developer)
 
@@ -264,14 +313,14 @@ sees the result and may veto, but is not asked to choose.
    `Closes #<n>` first (`Closes zohelo/<repo>#<n>` across repos). Verify-only Tasks: no PR; close with a comment
    linking the evidence run. A PR that changes anything users see (pages, components, charts, styles) gets label
    `ui`, lists the routes and states it changes (desktop and mobile, PL and EN), and starts the Designer with
-   `From Developer <n>: design review <repo>#<PR>`; build UI from the Designer's spec when the Task links one.
+   `[<sprint id>] Designer · design review <repo>#<PR> · started by Developer <n>`; build UI from the Designer's spec when the Task links one.
    Brand (owner 27 Oct): zohelo — "Polska w danych / Poland in data"; products zohelo,
    zohelo BI, zohelo Data.
 4. **Never merge your own PR**; the Architect merges. Keep working while PRs wait. A stacked Task branches from the
    dependency's PR branch (not main); its PR targets `main` and has `Depends on #<PR>` under `Closes #<n>`. Stack at
    most 3 deep. When a dependency has merged (squash), update the stacked PR by merging main into it (shared rules,
    "Never force-push"); its diff against main then shows only its own change.
-5. **Start the Architect** after every 5 PRs and at the end of the run, with the text `From Developer <n>: review PRs <list>`.
+5. **Start the Architect** after every 5 PRs and at the end of the run, with the text `[<sprint id>] Architect · review PRs <list> · started by Developer <n>`.
 6. **Follow your PRs while you work.** About every 20 minutes, and before each new Task, check the PRs you opened this
    run: merged → update anything stacked on it (step 4); sent back → fix it now, push, reply, start the Architect again.
 7. **Stuck?** If a step is impossible as written or needs a decision, comment on the issue, remove `in-progress`, add
@@ -283,6 +332,54 @@ sees the result and may veto, but is not asked to choose.
    as in step 6; then remove `in-progress` from anything you did not finish, and post the summary.
 
 ## Architect
+
+Owns the architecture of the portfolio and the technical quality of every change: **architecture** decides where the
+products go, **review** keeps each change on that path (owner, 2 Nov 18:32, O20: "where is the architecture job, more
+design?"). Think as a senior solution architect for a small data platform: decisions written down with their
+trade-offs, views that a newcomer can read, properties checked by machines instead of by memory.
+
+**Run order (reviews are bounded).** 1. Review and merge (below) the PRs named in the start message and then the
+oldest open ones, **at most 10 PR reviews**. 2. **One architecture step**: one concrete output on the top claimed item
+of the architecture backlog (a view, an ADR, a design review, a register update, a fitness check), claimed with label
+`in-progress` like a Task. 3. The rest of the review queue. 4. Before ending, the re-listing below. After the sprint
+cut-off (T+4:30) step 2 waits for the next run, so ready work is merged before the close.
+
+### Architecture backlog
+
+Issues in zohelo-data, type Task, label `architecture`, no key marker, created by REST (as D17), title
+`Architecture: <item>`, ranked by `priority:*` labels. The Architect keeps at least 3 open and ranks them; the Product
+Owner takes the top one into every sprint plan as the architecture goal; a docs PR closes the item. When fewer than 3
+are open, the next one is the first missing piece below.
+
+1. **Target architecture and C4 views** per product, `docs/architecture/<product>.md` in zohelo-data (`zohelo-data`,
+   `zohelo-bi`, `zohelo-com`): current state, target state and the gap, with C4 level 1 (system context) and level 2
+   (containers) as Mermaid diagrams that GitHub renders (`C4Context`/`C4Container`, or `flowchart` when those render
+   poorly); level 3 (components) only where it helps a Developer. `docs/architecture.md` stays the zohelo-data overview
+   and links the views. The gap becomes Epics proposed to the Product Owner on Product inbox #2074.
+2. **ADRs.** `docs/decisions.md` stays the one decision log (D13). A significant choice — costly to reverse, crossing
+   repos, changing a published contract, the stack or a non-functional property — also gets an ADR,
+   `docs/architecture/adr/D<n>-<slug>.md` (Nygard form: status, context, decision, consequences, alternatives
+   considered), linked from its row. Small choices stay a row.
+3. **Design review of new Epics** before Developers start. When a backlog PR adds an Epic, or a Task that changes a
+   published contract, schema, API, workflow or package boundary, the Architect's review of that PR begins
+   `Architecture review:` and checks: interfaces and data contracts (keys, schemas, versioning, sole writer, readers),
+   non-functional requirements (performance, size, cost within the free tiers, security, accessibility with the
+   Designer), failure and rollback, and fit with the target architecture. It merges only when they pass; this adds no
+   gate for Developers, because unmerged Tasks are not pickable.
+4. **Tech-debt register**: issues labelled `tech-debt` in the repo of the debt (type Task, no key marker; any member
+   files one when it sees debt, instead of fixing it off-Task). Body: what and where, interest (cost of keeping it),
+   cost to fix, risk; `priority:*` from interest × risk. The Architect re-ranks it in its Monday run and hands the top
+   items to the Product Owner as Tasks. No register file (AGENTS.md: no status files).
+5. **Fitness checks**: each architecture property that matters (page weight and bundle size, published JSON sizes
+   (D22), Gold row counts (D28), Iceberg file sizes, storage against the free tier, secrets and dependency alerts,
+   accessibility) gets an automated check with a threshold — an `[auto]` rule in `ops/repo_check.py` or the repo's
+   `check` steps, else a recurring Ops or Pipeline activity read from annotations. Each product view lists its fitness
+   checks (property, threshold, where it runs). New checks come as Tasks; failing ones as Bugs.
+6. **Shared front-end foundation**, with the Designer: the architecture of `@zohelo/design` (D3) — tokens, components,
+   chart style, the shared header and footer, package boundaries, versioning and how zohelo, zohelo-bi and the data
+   portal consume it (D21, D25) — so the design system is built once for three products.
+
+### Review
 
 Started by the Developers (and Monday 08:23 as a safety net for PRs nobody asked about). Before reviewing a PR add
 label `reviewing` and skip PRs that already carry it (added less than 1 hour ago); remove it when done. Before ending,
@@ -311,10 +408,12 @@ review a write against the shared GitHub limit).
    quality bar needs an owner decision and is sent back otherwise.
 2. **Report back.** For each Developer whose PRs you reviewed: if its last run is still running (list_triggers), do
    nothing more; it reads the results from its PRs. Otherwise start it with
-   `From Architect: merged <repo>#<n>, …; changes requested <repo>#<n> (<one-line reason>), …` when something was sent
+   `[<sprint id>] Developer <n> · review results · started by Architect` and the lines `merged <repo>#<n>, …;
+   changes requested <repo>#<n> (<one-line reason>), …` when something was sent
    back or stacked work is unblocked.
 3. **Hand to quality.** When this run merged anything that deploys (zohelo, zohelo-bi, `portal/`, `warehouse/`
-   publish), start the Quality Engineer with `From Architect: merged <list>; check after the deploy`.
+   publish), start the Quality Engineer with `[<sprint id>] Quality Engineer · check after the deploy · started by Architect`
+   and the merged list.
 4. **Dependabot**: merge green minor/patch PRs; close PRs made redundant; failing ones become a Bug labelled `dev:<n>`.
 5. **Technical questions**: answer `design:question` issues that are technical from the plan and `docs/decisions.md`;
    record new decisions there (id D<n>); scope or priority questions go to the Product Owner; owner-only calls go to the
@@ -402,7 +501,7 @@ Never: destructive Ops runs beyond what AGENTS.md and the decisions allow; edits
 
 ## Domain expert
 
-One member that acts for one domain per run: the start message begins `Domain: <domain>.` Domains follow
+One member that acts for one domain per run: the start message's purpose begins with the domain (`[<sprint id>] Domain expert · <domain>: …`). Domains follow
 `warehouse/seeds/domain.csv`; each active domain has a knowledge file `docs/domains/<domain>.md`
 (see `docs/domains/README.md`), which the expert builds and improves on every run, so expertise accumulates instead of
 starting from nothing. Think and judge as a senior practitioner of the domain (economist, financial analyst,
@@ -452,7 +551,9 @@ Owns how the team works. A team of fresh sessions does not learn by itself; the 
 2. Find recurring causes (the same mistake twice or more) and fix them where they live: this file, `docs/backlog.md`
    (Task template), `AGENTS.md`, `ops/repo_check.py` rules, or unclear open Tasks (comment, or a backlog PR via the
    Product Owner). One PR per fix, closing a one-off Task issue (D17); start the Architect for review.
-3. Post on Team log #2073: what changed and why, with the evidence.
+3. **Curate the standards** (Learning step 4): one PR a night at most; Thursday night also opens next week's
+   `Standards research` issue (Learning step 3).
+4. Post on Team log #2073: what changed and why, with the evidence.
 
 Never: edits scheduled tasks (their instructions only point here), removes a check or lowers a quality bar without an
 owner decision, or changes product code.
