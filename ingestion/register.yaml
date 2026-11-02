@@ -3019,7 +3019,7 @@ sources:
   name: Ewidencja zabytków nieruchomych / heritage monument datasets
   short_name: NID heritage register
   provider: Narodowy Instytut Dziedzictwa (NID)
-  status: registered
+  status: approved
   family: E
   kpi: false
   geography: Poland
