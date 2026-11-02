@@ -18,6 +18,7 @@ strings in ISO 8601 UTC.
 - All fields below are required unless marked optional.
 - gold.publish checks every JSON file against its schema in warehouse/published/schemas/ before writing it and fails
   on a problem.
+- The data portal serves these files read-only, after sign-in, at `/api/published/v1/<path>` (portal/worker/src/index.js).
 
 ## catalog/catalog.json
 
