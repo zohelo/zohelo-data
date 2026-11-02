@@ -461,15 +461,17 @@ that ended, then the plan of the one that starts (see Sprints), come first in a 
 8. **Project and Owner desk (every boundary; owner, 2 Nov 18:46).** The GitHub project "zohelo portfolio" (org
    project 1) is the Product Owner's main tool. Keep its views current with the GitHub_zohelo project tools:
    Portfolio, Roadmap, This sprint, Sources by stage, Alerts, Owner desk, one view per product, Design and
-   Team & portfolio. Make sure every sprint item is on the project with Status (In progress / In review / Done),
-   Priority, Product and Sprint set. Then rewrite the body of Owner desk #2445 so it lists every open item that
+   Team & portfolio; a missing view is created by the Product Owner (`create_project_view`). Make sure every sprint item is on the project with Status (In progress / In review / Done),
+   Priority, Product and Sprint set. Then, when an owner item has changed, rewrite the body of Owner desk #2445 (one write, not one per boundary) so it lists every open item that
    waits for the owner across the three repos (`owner:action`, `owner:decision`, and owner questions in sprint
    issues, #2074 and #2073). Give each item a link, the exact reply or clicks, the time it takes and what it
    blocks. Put the fastest unblocking item first and remove answered ones. Never give the owner work the team can
    do itself.
 9. **Issue routing (Monday).** Product work belongs to the repo that ships it (docs/backlog.md). Team, sprint and
-   owner issues live in zohelo-data. Count the open issues by kind per repo, transfer misplaced product issues, and
-   post the counts and moves in one comment on Team log #2073.
+   owner issues live in zohelo-data. Count the open issues by kind per repo, transfer misplaced issues that have no key marker
+   (a keyed issue in the wrong repo is moved by moving its node to `.github/backlog/` of the right repo in a backlog
+   PR; the sync then closes the old issue and creates the new one), and post the counts and moves in one comment on
+   Team log #2073.
 
 Never: merges, writes product code, publishes anything outside the repos, or starts delivery of an unapproved product.
 
