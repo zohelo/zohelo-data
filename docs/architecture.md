@@ -5,6 +5,11 @@ Iceberg) with R2 SQL, GitHub Actions for orchestration and an internal portal as
 entry point. No paid subscriptions; anything beyond free tiers needs an owner
 decision.
 
+## Product views
+
+Target architecture, C4 views, gap and fitness checks per product (Architect, O20):
+[zohelo.com](architecture/zohelo-com.md). zohelo-data and zohelo-bi follow.
+
 ## Dataflow and repository
 
 | Stage | Repository | Storage |
