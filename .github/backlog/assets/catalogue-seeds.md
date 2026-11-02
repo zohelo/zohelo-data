@@ -118,8 +118,8 @@ Mapping from the `unit` text in `poc_concepts` (warehouse/macros/poc_blocks.sql)
 |---|---|---|
 | population | population.stock.population | published |
 | gdp_current_prices | economy.national_accounts.gdp | published |
-| gdp_per_capita | economy.national_accounts.gdp | draft |
-| gdp_volume_growth | economy.national_accounts.gdp | draft |
+| gdp_per_capita | economy.national_accounts.gdp | published |
+| gdp_volume_growth | economy.national_accounts.gdp | published |
 | inflation | economy.prices.consumer_prices | published |
 | unemployment_rate | labour.employment.lfs | published |
 | registered_unemployment_rate | labour.employment.registered_unemployment | draft |

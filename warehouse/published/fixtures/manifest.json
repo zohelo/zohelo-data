@@ -23,6 +23,26 @@
       "dimensions": [{"dimension_key": "geography", "column": "geography_key"}]
     },
     {
+      "kpi_key": "gdp_per_capita",
+      "table": "gold.metrics_gdp_per_capita",
+      "unit_key": "ncu_per_person",
+      "frequency": "A",
+      "time_column": "period",
+      "value_column": "value",
+      "source_column": "source_system",
+      "dimensions": [{"dimension_key": "geography", "column": "geography_key"}]
+    },
+    {
+      "kpi_key": "gdp_volume_growth",
+      "table": "gold.metrics_gdp_volume_growth",
+      "unit_key": "pct",
+      "frequency": "A",
+      "time_column": "period",
+      "value_column": "value",
+      "source_column": "source_system",
+      "dimensions": [{"dimension_key": "geography", "column": "geography_key"}]
+    },
+    {
       "kpi_key": "inflation",
       "table": "gold.metrics_inflation",
       "unit_key": "pct",
