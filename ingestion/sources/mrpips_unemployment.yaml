@@ -1,0 +1,35 @@
+source_system: mrpips_unemployment
+description: Public Employment Services monthly registered unemployment (XLSX)
+
+# Extraction strategy (docs/landing.md). Bulk feature: the monthly registered-unemployment
+# workbook of the Public Employment Services portal (psz.praca.gov.pl, CC BY, register PLS-029),
+# linked from its statistics page; the file URL changes per release, so the link is found on the
+# page at run time (url_from). Version = Last-Modified; written only when the SHA-256 changed.
+# A schedule (stage 4) comes after the Dev trial.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: unemployment_monthly
+        url_from:
+          page: https://psz.praca.gov.pl/web/urzad-pracy/rynek-pracy/statystyki-i-analizy/bezrobocie-rejestrowane
+          pattern: "\\.xlsx?$"
+        format: raw
+        version: last_modified     # the response's Last-Modified; download time when absent
+  initial: bulk
+  production: snapshot                  # each workbook holds the month's tables
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: []
+
+landing: 01_landing/mrpips_unemployment/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: []
+silver: []
+gold: []
+
+refresh: {mode: full}
+
+activities: [landing.inspect, landing.extract, landing.verify]
