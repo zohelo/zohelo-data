@@ -3717,8 +3717,15 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: dataset-specific
-    notes: Gov.pl text terms do not settle attachment rights.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+      https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+      (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+      attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+      consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+      The XLSX/PDF attachments carry no licence of their own; an attachment marked with other terms keeps them.
+      Attribution: "Źródło: Ministerstwo Finansów, Zadłużenie Skarbu Państwa – szeregi czasowe (<month>)" / "Source:
+      Ministry of Finance, State Treasury debt time series (<month>)".'
   updates: Monthly; preliminary and final values may differ.
   ingestion:
     history: 'PROPOSAL: load the official Treasury-debt time-series workbook, then retain each monthly bulletin
@@ -3738,6 +3745,7 @@ sources:
     references:
     - https://www.gov.pl/web/finanse/szeregiczasowe
     - https://www.gov.pl/attachment/cdea605f-3278-4a55-af7b-0162d548ea0f
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLG-009
   name: Public finance sector debt statistics
   short_name: MF public debt
