@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import sys
+import time
 
 from ingestion.common.r2 import catalog
 from ingestion.common.report import annotate
@@ -20,9 +21,17 @@ def main(argv: list[str]) -> int:
     if "--drop" in argv:
         dropped = []
         if (NAMESPACE,) in [tuple(n) for n in cat.list_namespaces()]:
+            from pyiceberg.exceptions import TooManyRequestsError
+
             for ident in cat.list_tables(NAMESPACE):
-                cat.purge_table(ident)
+                for attempt in range(10):  # the catalog limits write requests; pace and retry
+                    try:
+                        cat.purge_table(ident)
+                        break
+                    except TooManyRequestsError:
+                        time.sleep(30 * (attempt + 1))
                 dropped.append(".".join(ident))
+                time.sleep(2)
             cat.drop_namespace(NAMESPACE)
         annotate("notice", f"dropped {NAMESPACE}", {"tables": dropped})
         return 0
