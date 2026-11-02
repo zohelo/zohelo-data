@@ -174,8 +174,9 @@ with simplified coordinates; each Feature has these properties:
 | level | string | yes | the file's level |
 | parent_key | string | optional for country | geography_key of the parent unit |
 
-`warehouse/publish.py` `geo()` writes `country` and `voivodeship` today, from `silver.prg_units` (PRG) and the names
-in `gold.dim_geography`, simplified at 0.005° with coordinates rounded to 4 decimals; the other levels follow later.
+`warehouse/publish.py` `geo()` writes `country`, `voivodeship`, `powiat` and `gmina`, from `silver.prg_units` (PRG)
+and the names and parents in `gold.dim_geography`, simplified at 0.005° with coordinates rounded to 4 decimals;
+`nuts1` and `nuts2` follow later.
 
 ## feed/changes.json and feed/calendar.ics
 
