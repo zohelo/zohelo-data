@@ -3141,8 +3141,13 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit reuse licence verified.
+    status: open-conditional
+    notes: 'Terms: footer of the Publiczne Służby Zatrudnienia portal https://psz.praca.gov.pl/: "Wszystkie treści
+      publikowane w serwisie są udostępniane na licencji Creative Commons Uznanie Autorstwa 3.0 Polska, o ile nie
+      jest to stwierdzone inaczej" (CC BY 3.0 PL, https://creativecommons.org/licenses/by/3.0/pl/), which allows
+      commercial reuse and modification with attribution; a file marked with other terms keeps them. Attribution:
+      "Źródło: MRPiPS / Publiczne Służby Zatrudnienia, <table title> (<month>), CC BY 3.0 PL" / "Source: Ministry of
+      Family, Labour and Social Policy / Public Employment Services, <table title> (<month>), CC BY 3.0 PL".'
   updates: Monthly preliminary/final releases and annual summaries.
   ingestion:
     history: Backfill stable monthly workbooks after locating canonical archive.
@@ -3158,9 +3163,10 @@ sources:
     connection: not-tested
     blockers:
     - Locate canonical current archive and file schema
-    - Resolve reuse rights
     - Document vacancy and occupation definitions
-    references: ['https://psz.praca.gov.pl/', 'https://barometrzawodow.pl/']
+    references:
+    - https://psz.praca.gov.pl/
+    - https://barometrzawodow.pl/
 - id: PLS-030
   name: Barometr Zawodów
   short_name: Barometr Zawodów
