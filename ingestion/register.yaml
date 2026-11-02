@@ -3079,7 +3079,12 @@ sources:
     limits: No API quota.
   licence:
     status: open-conditional
-    notes: GUS portal CC BY 4.0; preserve attribution and workbook footnotes.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no
+      named licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for
+      users'' summaries or reworked text. Tables embedding third-party data keep their owners'' terms. Attribution:
+      "Źródło: GUS, Kultura i dziedzictwo narodowe w <year> roku" / "Source: Statistics Poland, Culture and national
+      heritage in <year>".'
   updates: Annual; release may include corrected files.
   ingestion:
     history: Backfill structured workbooks by edition and retain raw ZIP/PDF.
@@ -3092,9 +3097,11 @@ sources:
     priority: review-next
     evidence: documented
     connection: not-tested
-    blockers: [Confirm licence notice on each edition, Map stable sheets across editions]
+    blockers:
+    - Map stable sheets across editions
     references:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/kultura-i-dziedzictwo-narodowe-w-2023-roku%2C2%2C21.html
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-028
   name: Uczestnictwo ludności w kulturze
   short_name: GUS cultural participation
