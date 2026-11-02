@@ -3116,7 +3116,7 @@ sources:
   name: Uczestnictwo ludności w kulturze
   short_name: GUS cultural participation
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland; demographic breakdowns
