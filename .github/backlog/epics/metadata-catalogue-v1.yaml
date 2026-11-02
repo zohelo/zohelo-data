@@ -439,8 +439,41 @@ deliverables:
           - workflow: Dev · branch runs, script loaded_at_evidence, on test/<n>-loaded-at
             expect: "notices 'loaded_at: eurostat', 'loaded_at: nbp' … and 'loaded_at: gold metrics' with 5 tables"
         out_of_scope: [any change on main, deciding loaded_at, gold.freshness]
+      - key: data/metadata/catalogue-v1/models/eurostat-dataset-names
+        type: Task
+        title: Name the Eurostat datasets in dim_dataset from their dataflows
+        effort: S
+        state: open
+        contract: false
+        depends_on: [data/metadata/catalogue-v1/models/dataset-names-inventory]
+        context: >-
+          gold.dim_dataset (warehouse/models/gold/dim_dataset.sql) takes `name` from gold.coverage block_name. The
+          report of Task dataset-names-inventory (#2319, run 41448082258) found the name empty for all 8,170
+          eurostat datasets, while 8,146 of their codes equal upper(dataset_id) of silver.eurostat_dataflows, which
+          has the English name (name_en). Today the catalogue shows 8,170 Eurostat datasets without a name.
+        files:
+          - edit: warehouse/models/gold/dim_dataset.sql
+          - edit: warehouse/models/gold/dim_dataset.yml
+        steps:
+          - "dim_dataset.sql: add a CTE `dataflows as (select upper(dataset_id) as code, any_value(name_en) as name_en from {{ ref('eurostat_dataflows') }} group by 1)`."
+          - "Turn the final select into a CTE `datasets` (unchanged), then `select d.* replace (case when d.source_key = 'eurostat' then coalesce(nullif(d.name, ''), f.name_en) else d.name end as name) from datasets as d left join dataflows as f on d.source_key = 'eurostat' and d.code = f.code`."
+          - "Extend the header comment: 'Eurostat names come from silver.eurostat_dataflows (name_en), since coverage has none.'"
+          - "dim_dataset.yml, column `name`: description 'Dataset name as the source publishes it; Eurostat: the dataflow name_en.' (no test)."
+          - "dev/eurostat_names_trial.py: run the new SELECT with duckdb over gold.coverage and silver.eurostat_dataflows read with ingestion.common.r2 catalog() (load_table(...).scan().to_arrow(), registered under the source names), and annotate notice 'eurostat names' with {rows, empty_name, first 3 (code, name)} for source_key eurostat and rows for all sources. Write nothing. Run in Dev; delete dev/ before the PR."
+        acceptance:
+          - "trial: eurostat rows 8170 (± new datasets), empty_name ≤ 30; total rows equal to today's dim_dataset row count"
+          - "no other source's name changes"
+          - ruff and repo_check pass
+        verify:
+          - workflow: Dev · branch runs, script eurostat_names_trial, on the branch
+            expect: "notice 'eurostat names' with empty_name ≤ 30 and names like 'Agricultural labour input statistics - absolute figures (thousand annual work units)'"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: "Pipeline, the next scheduled 'silver/gold: build models' run after the merge"
+            expect: green, dim_dataset built
+        out_of_scope: [name_pl, other sources' names, dim_measure names, catalog.json fields]
     todo:
-      - "dim_dataset: native theme path, frequency_keys and PL/EN names from Silver metadata; dim_measure: PL/EN names (rules from the report of Task dataset-names-inventory)"
+      - "dim_dataset: native theme path, frequency_keys and PL/EN names from Silver metadata (Eurostat name_en done by Task eurostat-dataset-names; nbp, gus_teryt and gugik_prg carry Landing file names, gus_dbw has 8 empty names); dim_measure: PL/EN names"
       - "dim_member from dim_geography, dim_frequency, the sex seed and dim_series breakdowns (PL/EN naming rule for source labels needed)"
       - "DBW axes Grupy wieku (→ age, needs a label → CL_AGE code mapping) and Charakter miejscowości (no conformed axis yet; urbanisation needs a Domain expert review) stay source_specific"
       - "freshness from gold.coverage (checked_at, loaded_at, lag_days): needs a decision on where loaded_at comes from (gold.coverage has no load time; evidence from Task loaded-at-evidence)"
