@@ -2541,11 +2541,19 @@ sources:
     interfaces: [REST API, JSON, XML, Swagger]
     auth: Public API; no key specified.
     cost: free
-    limits: 10 requests/second per IP.
+    limits: '10 requests/second per IP (terms v1.2, section III).'
   licence:
-    status: restricted
-    notes: Terms require attribution, prohibit modification, overload and misleading uses; obtain legal interpretation
-      before normalized redistribution.
+    status: open-conditional
+    notes: 'Terms: API regulations (Regulamin) of "API Umowy NFZ" v1.2, https://api.nfz.gov.pl/app-umw-api/terms (section
+      II): users must state the source by giving the address https://api.nfz.gov.pl/; the user may not modify the
+      data ("Niedozwolone jest modyfikowanie danych przez Usługobiorcę"); no use for software that breaks the law or
+      third-party rights, misleads users or acts maliciously; no overloading (10 requests/second per IP); NFZ may
+      block users for breaches and may change the API and its terms. No licence name and no clause on commercial
+      reuse; public display of the published values is allowed with attribution. Show values as published; any
+      figure we derive (rates, sums, shares) is labelled as a zohelo calculation. Disclaimer: use is at the user''s
+      own risk, NFZ is not liable for lost profits. Attribution: "Źródło: Narodowy Fundusz Zdrowia, API Umowy NFZ
+      (https://api.nfz.gov.pl/)" / "Source: National Health Fund (NFZ), NFZ Contracts API
+      (https://api.nfz.gov.pl/)".'
   updates: Live contract database; update/revision cadence unknown.
   ingestion:
     history: Enumerate available years then snapshot agreements, plans, months, providers and dictionaries.
@@ -2559,7 +2567,11 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Legal review of no-modification term, Determine robust provider linkage, Document amendment semantics]
+    blockers:
+    - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived
+      values; published values are shown unchanged'
+    - 'Determine robust provider linkage'
+    - 'Document amendment semantics'
     references:
     - https://api.nfz.gov.pl/app-umw-api/
     - https://api.nfz.gov.pl/app-umw-api/terms
