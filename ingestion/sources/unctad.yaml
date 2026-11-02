@@ -1,0 +1,70 @@
+source_system: unctad
+description: UNCTAD Data Hub (UNCTADstat) — bulk CSV file (7z) per selected table
+
+# Extraction strategy (docs/landing.md). Bulk feature: every Data Hub table has a "Download bulk"
+# file, one 7z archive holding the whole table as CSV, at a stable URL per report code
+# (https://unctadstat-api.unctad.org/bulkdownload/<code>/<code with _>; Dev probes #2397). The server
+# sends no Last-Modified, so version = download time and a file is written only when its SHA-256
+# changed. Entity = one table; restart unit = one table. Selection (#2397): the tables where UNCTAD
+# is the primary compiler (FDI, trade in goods and services, digital services, commodity prices,
+# maritime); GDP, population, CPI and exchange rates are left to WDI, WPP, ECB and NBP, and the
+# large creative-economy and bilateral-services tables (335 MB and 86 MB compressed) are out until a
+# model needs them. CC BY 3.0 IGO (register GL-021). A schedule (stage 4) comes after the Dev trial
+# (#2399).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: US_FdiFlowsStock   # FDI inflows and outflows, stocks
+        url: https://unctadstat-api.unctad.org/bulkdownload/US.FdiFlowsStock/US_FdiFlowsStock
+        format: 7z
+        version: last_modified
+      - entity: US_TradeMerchTotal   # merchandise trade, total
+        url: https://unctadstat-api.unctad.org/bulkdownload/US.TradeMerchTotal/US_TradeMerchTotal
+        format: 7z
+        version: last_modified
+      - entity: US_TradeServCatTotal   # services trade by category
+        url: https://unctadstat-api.unctad.org/bulkdownload/US.TradeServCatTotal/US_TradeServCatTotal
+        format: 7z
+        version: last_modified
+      - entity: US_DigitallyDeliverableServices   # digitally deliverable services trade
+        url: https://unctadstat-api.unctad.org/bulkdownload/US.DigitallyDeliverableServices/US_DigitallyDeliverableServices
+        format: 7z
+        version: last_modified
+      - entity: US_CommodityPrice_M   # free market commodity prices, monthly
+        url: https://unctadstat-api.unctad.org/bulkdownload/US.CommodityPrice_M/US_CommodityPrice_M
+        format: 7z
+        version: last_modified
+      - entity: US_PLSCI   # port liner shipping connectivity index
+        url: https://unctadstat-api.unctad.org/bulkdownload/US.PLSCI/US_PLSCI
+        format: 7z
+        version: last_modified
+      - entity: US_MerchantFleet   # merchant fleet
+        url: https://unctadstat-api.unctad.org/bulkdownload/US.MerchantFleet/US_MerchantFleet
+        format: 7z
+        version: last_modified
+      - entity: US_SeaborneTrade   # seaborne trade
+        url: https://unctadstat-api.unctad.org/bulkdownload/US.SeaborneTrade/US_SeaborneTrade
+        format: 7z
+        version: last_modified
+      - entity: US_PortCalls   # port calls and time in port
+        url: https://unctadstat-api.unctad.org/bulkdownload/US.PortCalls/US_PortCalls
+        format: 7z
+        version: last_modified
+  initial: bulk
+  production: snapshot                  # each archive is the complete table
+  incremental_policy: changed_since_last  # SHA-256 (no Last-Modified from the server)
+  schedule: []
+
+landing: 01_landing/unctad/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: []
+silver: []
+gold: []
+
+refresh: {mode: full}
+
+activities: [landing.inspect, landing.extract, landing.verify]

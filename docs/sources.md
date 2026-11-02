@@ -546,6 +546,21 @@ Restart unit: the whole file (one download). Licence CC BY 4.0 (register GL-008)
 "Source: World Bank, Worldwide Governance Indicators". WGI is revised once a year. Bronze, Silver
 and a schedule are later stages.
 
+## UNCTAD Data Hub (UNCTADstat)
+
+**Extraction (2 Nov 2026).** Every Data Hub table has a bulk file: one 7z archive with the whole
+table as CSV, at a stable URL per report code
+(`https://unctadstat-api.unctad.org/bulkdownload/US.PLSCI/US_PLSCI`). The declaration `unctad.yaml`
+lands nine tables through the shared `bulk_file` pattern, one entity per table: FDI flows and
+stocks, merchandise trade, services trade by category, digitally deliverable services, monthly
+commodity prices, liner shipping connectivity, merchant fleet, seaborne trade and port calls (about
+14 MB compressed in all). Tables that other sources already cover (GDP, population, CPI, exchange
+rates) and the large creative-economy and bilateral-services tables are not declared. The server
+sends no Last-Modified, so the version is the download time and a file is written only when its
+SHA-256 changed. Restart unit: one table. Licence CC BY 3.0 IGO (register GL-021), attribution
+"Source: United Nations Trade and Development (UNCTAD) Data Hub, unctadstat.unctad.org"; tables
+with third-party series keep their own terms. Bronze, Silver and a schedule are later stages.
+
 ## ECB Data Portal
 
 **Extraction (2 Nov 2026).** The ECB Data Portal has no bulk archive per dataflow, but its SDMX

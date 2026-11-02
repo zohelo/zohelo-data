@@ -15,4 +15,5 @@ gugik_prg,PL-ENV-001,GUGiK PRG,GUGiK state register of boundaries,GUGiK,referenc
 un_wpp,GL-039,ONZ World Population Prospects,UN World Population Prospects,"United Nations, Population Division",cube,file,international-public,cc_by_3_0_igo_un_wpp,https://population.un.org/wpp/
 world_bank_findex,GL-009,Bank Światowy Global Findex,World Bank Global Findex Database,World Bank,cube,file,international-public,cc_by_4_0_world_bank_findex,https://www.worldbank.org/en/publication/globalfindex
 world_bank_wgi,GL-008,Bank Światowy WGI,World Bank Worldwide Governance Indicators,World Bank,cube,file,international-public,cc_by_4_0_world_bank_wgi,https://www.worldbank.org/en/publication/worldwide-governance-indicators
+unctad,GL-021,UNCTAD Data Hub,UNCTAD Data Hub (UNCTADstat),UN Trade and Development (UNCTAD),cube,file,international-public,cc_by_3_0_igo_unctad,https://unctadstat.unctad.org/
 ecb,GL-016,EBC Data Portal,ECB Data Portal,European Central Bank,cube,file,international-public,ecb_statistics_reuse,https://data.ecb.europa.eu/
