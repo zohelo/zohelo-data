@@ -3463,7 +3463,7 @@ sources:
   name: Programme implementation and payment statistics
   short_name: ARiMR payment statistics
   provider: Agencja Restrukturyzacji i Modernizacji Rolnictwa (ARiMR)
-  status: registered
+  status: approved
   family: D
   kpi: true
   geography: Poland and regional Poland, programme-dependent
