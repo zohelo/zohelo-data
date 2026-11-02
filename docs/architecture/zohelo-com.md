@@ -86,15 +86,19 @@ flowchart TB
    schema validation of G3. Today the site shows the published layer of the last merge to zohelo `main`: a fix in
    the data (for example zohelo-data#2449) reaches readers only with the next unrelated merge.
 2. **Light pages, charts on demand.** Every page is readable without JavaScript (numbers in HTML, D25); the chart
-   code loads only where a chart is visible: the home page and every page without a visible chart stay within the
-   no-chart budget, and chart pages within the chart budget below. Vega
-   remains the chart engine until a measured alternative is lighter at equal function; any switch is an ADR.
+   code loads only when a chart is in view. Today the home page imports both `SeriesChart.client` and
+   `MapChoropleth.client` statically (`src/routes/home.tsx`), so the Vega chunk is in its initial scripts. Target:
+   no route has the chart chunk in its initial scripts or `modulepreload` links; pages without a chart stay within the
+   no-chart budget, chart pages within the chart budget below. Vega remains the chart engine until a measured
+   alternative is lighter at equal function; any switch is an ADR.
 3. **One front-end foundation for three products.** `@zohelo/design` is the single source of tokens, components,
    formats and chart style for zohelo.com, zohelo-bi and the data portal, versioned and released from this repo;
    dark mode arrives with token adoption (D21). Architecture backlog item 6, zohelo-data#2448.
 4. **Contract-driven reads.** The site reads only what docs/published.md declares, validates it at build time against
-   the published JSON Schemas (as zohelo-bi does, D24), and its fixtures follow the same rules (D26), so a contract
-   change fails a PR check, not the production pre-render.
+   the published JSON Schemas (as zohelo-bi does, D24), and its fixtures follow the same rules (D26). zohelo's PR
+   checks run on its own copy in `fixtures/published/`, so a contract change in zohelo-data reaches zohelo only when
+   that copy and the schemas are updated; a check that the copy matches the zohelo-data schemas at a pinned commit
+   (fitness checks) makes the drift visible in a zohelo PR instead of in the production pre-render.
 5. **Properties checked by machine** (fitness checks below), each in the `check` workflow or the deploy.
 
 ## Gap
@@ -103,8 +107,8 @@ Order: G3 before G1 (an automatic deploy must never ship published JSON that no 
 
 | # | Gap | Proposed work | Size |
 |---|---|---|---|
-| G1 | No rebuild after `gold.publish`; site data is as old as the last zohelo merge | ADR first (it crosses repos and adds a write path): which token may dispatch zohelo `deploy.yml` (zohelo-automation app, `actions: write` on zohelo only), deploys per day against the Cloudflare Pages build and deploy limits (at most one per publish, coalesced by the deploy concurrency group), and failure and rollback (a failed deploy leaves the previous deployment live; rollback = redeploy the previous Release). Then the Epic: after a green `gold.publish`, dispatch the deploy on `main` and link the publish run in its summary. Depends on G3 | ADR + S–M, crosses repos |
-| G2 | No page-weight or bundle budget; the Vega chunk, the largest asset, loads on the home page | Epic: a build-time budget check (below) in `check.yml`; then decide whether the home page's chart of the day loads the chart chunk only when scrolled into view | S + M |
+| G1 | No rebuild after `gold.publish`; site data is as old as the last zohelo merge | ADR first, weighing two routes: (a) zohelo-data dispatches zohelo `deploy.yml` after a green `gold.publish` (a new cross-repo write path: zohelo-automation app, `actions: write` on zohelo only), or (b) a scheduled zohelo deploy that pulls the published layer and deploys only when the catalog's `generated_at` changed (no new write path, freshness bounded by the schedule). Either way: deploys per day against the Cloudflare Pages limits (at most one per publish, coalesced by the deploy concurrency group), and failure and rollback. Note: `deploy.yml` checks that the site answers only after `wrangler pages deploy` made the build live, so a bad build is live until rolled back; rollback is Cloudflare Pages' rollback to the previous deployment (rebuilding an older Release would fetch today's published data again). Depends on G3 | ADR + S–M |
+| G2 | No page-weight or bundle budget; the Vega chunk, the largest asset, loads on the home page | Epic: a build-time budget check (below) in `check.yml`; then load the home page's two charts (chart of the day, map) through a dynamic import when in view | S + M |
 | G3 | The site does not validate published JSON against the zohelo-data schemas | Task: build-time schema validation in `fetch-published.ts` (mirror of zohelo-bi, D24) | S |
 | G4 | Light theme forced (D21); components still use literal classes in places | Covered by the Designer's design-system work and zohelo-data#2448 | — |
 | G5 | No accessibility check in CI | Epic with the Designer: an automated axe pass over the pre-rendered pages, zero serious or critical findings | M |
@@ -113,15 +117,19 @@ The Epics for G1, G2, G3 and G5 are proposed to the Product Owner on Product inb
 
 ## Fitness checks
 
-| Property | Threshold | Where it runs | Today |
+Thresholds marked *proposed* are decided by the Epic that builds the check (or its ADR), and then recorded as a row in
+docs/decisions.md.
+
+| Property | Threshold | Where it runs | Exists |
 |---|---|---|---|
-| JS + CSS a page without a chart loads (gzip) | ≤ 200 kB; target: the home page is in this class (Vega chunk loaded only when its chart is in view) | `check.yml`, new budget step over `build/client` (G2), which prints every page's value | none |
-| JS + CSS a chart page loads (gzip) | start at ≤ 500 kB, then a ratchet: after each merge the threshold is lowered to the measured value plus 5 %, never raised without an ADR | same step (G2) | none |
-| Chart chunk only on pages that render a chart | the Vega chunk is not referenced by `/`, `/sources`, `/indicators`, `/portfolio`, `/changes` | same step (G2) | none |
-| Download files | ≤ 200 kB each (`DOWNLOAD_LIMIT`) | `scripts/downloads.ts` in every build | yes |
+| JS + CSS a page without a chart loads (gzip) | ≤ 200 kB | `check.yml`, new budget step over `build/client` (G2), which prints every page's value | no |
+| JS + CSS a chart page loads (gzip) | *proposed*: ≤ 500 kB, kept in a budget file in zohelo; the step fails above it and asks the PR to lower it when every chart page is more than 10 % under | same step (G2) | no |
+| Chart chunk loads on demand | the Vega chunk is in no route's initial scripts or `modulepreload` links (all routes, not a list) | same step (G2) | no |
+| Download files | ≤ 200 kB each (`DOWNLOAD_LIMIT`); today larger files are skipped silently — the step must annotate or fail instead | `scripts/downloads.ts` in every build | cap only |
 | Published files read | `latest.json` ≤ 100 kB (D22); series and geo limits of docs/published.md | `gold.publish` in zohelo-data | yes (writer side) |
-| Published JSON matches the contract | valid against `kpi_latest.schema.json` and the other published schemas | `fetch-published.ts` (G3) | fixtures only |
-| `main` never ships fixture numbers | deploy fails without the read key | `deploy.yml` (`--require`) | yes |
+| Published JSON matches the contract | valid against `kpi_latest.schema.json` and the other published schemas, for the fetched layer and for `fixtures/published/` | `fetch-published.ts` (G3) and `check.yml` | no |
+| Fixture copy follows the contract | zohelo's schema copies match zohelo-data's at a pinned commit | `check.yml` (G3) | no |
+| `main` never ships fixture numbers | deploy fails without the read key | `deploy.yml` (`--require`; `bun run build` fetches again without it, so the guarantee rests on the deploy step) | yes |
 | Workflow actions pinned to a commit | every `uses:` pinned | `check.yml`, `scripts/check-pins.sh` | yes |
-| Accessibility | no serious or critical axe findings on pre-rendered pages | `check.yml` (G5) | none |
-| Data freshness on the live site | site data no older than the last green `gold.publish` plus one deploy | deploy after publish (G1), Quality Engineer sprint check | none |
+| Accessibility | no serious or critical axe-core findings on pre-rendered pages | `check.yml` (G5, zohelo-data#2499) | no |
+| Data freshness on the live site | the deployed catalog's `generated_at` equals the newest green `gold.publish` within one deploy cycle | the build writes `generated_at` into the site; a recurring Ops check compares it with the last publish (G1) | no |
