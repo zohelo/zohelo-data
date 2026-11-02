@@ -1,0 +1,32 @@
+source_system: world_bank_ids
+description: World Bank International Debt Statistics — DataBank bulk CSV archive (data + metadata)
+
+# Extraction strategy (docs/landing.md). Bulk feature: the IDS CSV ZIP on DataBank's stable bulk
+# download URL (the same route as WDI_CSV and WGI_CSV; CC BY 4.0, register GL-007). Version =
+# Last-Modified; written only when the SHA-256 changed. IDS is published once a year (December)
+# with occasional revisions; a schedule (stage 4) comes after the Dev trial (#2378).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: IDS_CSV
+        url: https://databank.worldbank.org/data/download/IDS_CSV.zip
+        format: zip
+        version: last_modified     # the response's Last-Modified; download time when absent
+  initial: bulk
+  production: snapshot                  # each archive is the complete database
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: []
+
+landing: 01_landing/world_bank_ids/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: []
+silver: []
+gold: []
+
+refresh: {mode: full}
+
+activities: [landing.inspect, landing.extract, landing.verify]

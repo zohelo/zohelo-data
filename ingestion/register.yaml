@@ -293,6 +293,7 @@ sources:
   name: International Debt Statistics (IDS)
   short_name: World Bank IDS
   provider: World Bank
+  source_system: world_bank_ids
   status: approved
   family: A
   kpi: true

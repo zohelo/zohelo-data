@@ -588,3 +588,13 @@ entity = one series for every economy and year
 page when a series is larger), version = the source's `lastupdated` date, so a series is
 downloaded again only when the World Bank updates ICP. Restart unit: one series. Licence CC BY
 4.0 (register GL-011). Bronze, Silver and a schedule are later stages.
+
+## World Bank International Debt Statistics (IDS)
+
+**Extraction (3 Nov 2026).** DataBank publishes IDS as a bulk CSV ZIP on a stable URL, the same
+route as WDI and WGI (`https://databank.worldbank.org/data/download/IDS_CSV.zip`). The declaration
+`world_bank_ids.yaml` lands it through the shared `bulk_file` pattern as entity `IDS_CSV`
+(version = Last-Modified, download time when absent; written only when the SHA-256 changed).
+Restart unit: the whole file (one download). Licence CC BY 4.0 (register GL-007), attribution
+"Source: World Bank, International Debt Statistics". IDS is published once a year in December.
+Bronze, Silver and a schedule are later stages.
