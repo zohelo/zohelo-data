@@ -3,7 +3,10 @@ zz_dev_krus/ Landing prefix, report the landed files, then delete every object u
 
 from __future__ import annotations
 
+import io
 import os
+import re
+import zipfile
 from pathlib import Path
 
 from ingestion.common.r2 import req, s3
@@ -18,6 +21,22 @@ def objects(client, bucket: str) -> list[dict]:
     for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=f"{ROOT}/"):
         found += page.get("Contents", [])
     return found
+
+
+def profile(body: bytes) -> dict:
+    """Shape of the XLSX with the standard library: sheets, used ranges, cell counts, the first strings."""
+    book = zipfile.ZipFile(io.BytesIO(body))
+    names = re.findall(r'<sheet [^>]*name="([^"]+)"', book.read("xl/workbook.xml").decode())
+    strings = re.findall(r"<t[^>]*>([^<]*)</t>", book.read("xl/sharedStrings.xml").decode()) if "xl/sharedStrings.xml" in book.namelist() else []
+    sheets = []
+    for i, name in enumerate(names, 1):
+        xml = book.read(f"xl/worksheets/sheet{i}.xml").decode()
+        dim = re.search(r'<dimension ref="([^"]+)"', xml)
+        values = re.findall(r'<c r="[A-Z]+\d+"(?: [^>]*)?>(?:<f>[^<]*</f>)?<v>([^<]*)</v>', xml)
+        numeric = [v for v in values if re.fullmatch(r"-?\d+(\.\d+)?(E-?\d+)?", v)]
+        sheets.append({"name": name, "range": dim.group(1) if dim else None, "cells": len(values),
+                       "rows": len(re.findall(r"<row ", xml)), "merged": len(re.findall(r"<mergeCell ", xml))})
+    return {"sheets": sheets, "strings": len(strings), "first_strings": [x[:80] for x in strings[:40]]}
 
 
 def main() -> int:
@@ -36,6 +55,7 @@ def main() -> int:
         for item in landed:
             body = client.get_object(Bucket=bucket, Key=item["key"])["Body"].read()
             (out / Path(item["key"]).name).with_suffix(".xlsx").write_bytes(body)
+            annotate("notice", "krus trial profile", profile(body))
         annotate("notice", "krus trial landed", {"codes": codes, "entities": len(landed), "files": landed})
     finally:
         keys = [o["Key"] for o in objects(client, bucket)]
