@@ -82,6 +82,25 @@ GDP per capita in PPS.
 | Real wages | wage growth deflated by CPI | `average_gross_wage` (labour) and CPI |
 | Regional | GDP per capita by voivodeship as % of the national average | regional GDP (not loaded) |
 
+### Headline set and page content (content audit, 2 Nov 2026)
+
+What zohelo pages put first for Poland, in order: CPI y/y with the NBP band; core inflation; NBP reference rate and
+real rate; real GDP y/y (quarterly); registered unemployment (monthly); enterprise-sector wages, nominal and real;
+industrial output; retail sales at constant prices; EUR/PLN; 10-year yield and spread to the Bund; EDP deficit and
+debt; GDP per capita in PPS (EU27 = 100). Until the GUS/NBP series are loaded, the Eurostat stand-ins are HICP
+(`prc_hicp_manr`), `une_rt_m`, `namq_10_gdp`, `sts_inpr_m`, `sts_trtu_m`, `irt_lt_mcby_m`, `gov_10dd_edpt1`, always
+labelled with their own names (HICP, BAEL), never as the Polish headline.
+
+Card and chart rules that reviews check:
+- A card says name + measure (r/r, realnie), value, period in words, change (p.p. for rates, % for levels) with the
+  comparison named, colour by meaning (inflation and unemployment up = bad; FX neutral), one benchmark (NBP band,
+  EU27, year ago), source, the source's release date and the next release. Our load date is not a release date.
+- Chart of the day = the newest release, not the largest change. Ranking by relative change of `value` vs
+  `previous_value` (zohelo#28, 28 Oct) let annual LFS unemployment 2025 (2.9 → 3.2 = "+10.3 %") beat monthly HICP,
+  and dropping provisional rows dropped the newest releases (zohelo#410).
+- Freshness: show the latest published period, flash and provisional included and labelled; headline slots only for
+  series no older than 3 months (M), 6 months (Q), 18 months (A).
+
 ## 5. Release calendar
 
 Typical timing; check exact days against the GUS release calendar
@@ -118,4 +137,8 @@ Pages must say the reference period and the publication date, e.g. "CPI, Septemb
   headline (proposal on Product inbox #2074).
 - Release days in § 5 are typical timings; stat.gov.pl calendar pages could not be read from agent sessions
   (robots). Confirm them when a calendar source is loaded.
-- Live economy pages (data.zohelo.com, zohelo.com) were not reviewed on 28 Oct: the session could not fetch them.
+- Live pages cannot be read from agent sessions (egress blocks zohelo.com and bi.zohelo.com; WebFetch needs the URL
+  in the start message). Review local builds of `main`; fixtures are synthetic, so number checks go to the QE.
+- `warehouse/seeds/release_calendar.csv` holds only NBP table A; HICP, LFS and GDP release rows are needed for
+  "next release" and the chart-of-the-day rule (Product inbox #2074, 2 Nov).
+- The catalogue has no `higher_is` or benchmark fields; zohelo#411 keeps them in a site-level map for now.
