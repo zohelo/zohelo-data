@@ -12,7 +12,8 @@ def rows(cat, namespace: str, table: str, fields: tuple[str, ...]) -> list[dict]
     return cat.load_table((namespace, table)).scan(selected_fields=fields).to_arrow().to_pylist()
 
 
-def main() -> None:
+def main(only: set[str]) -> None:
+    """only: sources to annotate (GitHub keeps at most 10 notices per step); empty = all."""
     cat = catalog()
     datasets = rows(cat, "gold", "dim_dataset", ("dataset_key", "source_key", "code", "name"))
     flows = {
@@ -23,7 +24,10 @@ def main() -> None:
     by_source: dict[str, list[dict]] = defaultdict(list)
     for row in datasets:
         by_source[row["source_key"]].append(row)
+    annotate("notice", "dataset names: sources", {k: len(v) for k, v in sorted(by_source.items())})
     for source, items in sorted(by_source.items()):
+        if only and source not in only:
+            continue
         items.sort(key=lambda r: str(r["code"]))
         data = {
             "rows": len(items),
@@ -42,4 +46,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    main(set(sys.argv[1:]))
