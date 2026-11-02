@@ -1,0 +1,47 @@
+source_system: ecb
+description: ECB Data Portal — selected dataflows as SDMX CSV (exchange rates, key rates, €STR, HICP)
+
+# Extraction strategy (docs/landing.md). The ECB Data Portal has no bulk archive per dataflow; its
+# SDMX REST API returns a whole selection in one response, so each entity is one fixed API query
+# (format=csvdata, every series of the selection, full history) landed through the shared
+# bulk_file pattern: one request per entity and run, written only when the SHA-256 changed.
+# Re-use under the ECB statistics usage policy (register GL-016): free, also commercial, with
+# "Source: ECB statistics", statistics not modified. The queries are proven from Actions by the
+# Dev trial (#2393); a schedule (stage 4) comes after it.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: exr_daily        # euro foreign exchange reference rates, every currency, daily
+        url: "https://data-api.ecb.europa.eu/service/data/EXR/D..EUR.SP00.A?format=csvdata"
+        format: raw
+        version: last_modified     # the response's Last-Modified; download time when absent
+      - entity: fm_key_rates     # key ECB interest rates (MRO, deposit facility, marginal lending)
+        url: "https://data-api.ecb.europa.eu/service/data/FM/B.U2.EUR.4F.KR..LEV?format=csvdata"
+        format: raw
+        version: last_modified
+      - entity: est_estr         # euro short-term rate (€STR), volume-weighted trimmed mean
+        url: "https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2X2A25.WT?format=csvdata"
+        format: raw
+        version: last_modified
+      - entity: icp_annual_rate  # HICP all items, annual rate of change, every area, monthly
+        url: "https://data-api.ecb.europa.eu/service/data/ICP/M..N.000000.4.ANR?format=csvdata"
+        format: raw
+        version: last_modified
+  initial: bulk
+  production: snapshot                  # each response is the complete history of its selection
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: []
+
+landing: 01_landing/ecb/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: []
+silver: []
+gold: []
+
+refresh: {mode: full}
+
+activities: [landing.inspect, landing.extract, landing.verify]

@@ -48,9 +48,14 @@ CATALOG_TABLES = {
     "freshness": "freshness",
 }
 # silver.prg_units unit_level → geo/<level>.geojson level; simplification tolerance in degrees (about 350–550 m).
-GEO = {"kraj": "country", "wojewodztwo": "voivodeship"}
+GEO = {"kraj": "country", "wojewodztwo": "voivodeship", "powiat": "powiat", "gmina": "gmina"}
 GEO_TOLERANCE = 0.005
-GEO_LIMIT = 2_000_000  # bytes, docs/published.md size limits
+GEO_LIMITS = {  # bytes, docs/published.md size limits
+    "country": 2_000_000,
+    "voivodeship": 2_000_000,
+    "powiat": 2_000_000,
+    "gmina": 8_000_000,
+}
 # Gold geography_level → contract level of series.parquet (Polish NUTS 1 = makroregion, NUTS 2 = region).
 SERIES_LEVELS = {
     "country": "country",
@@ -239,12 +244,25 @@ def parquet(table: pa.Table) -> bytes:
     return buffer.getvalue()
 
 
-def kpi_series(metrics: pa.Table, kpi_key: str, unit_key: str) -> pa.Table:
-    """series.parquet of one KPI from its gold.metrics_<kpi_key> rows; pure (no R2)."""
+def kpi_series(metrics: pa.Table, measures: list[dict], kpi_key: str, unit_key: str) -> pa.Table:
+    """series.parquet of one KPI from its gold.metrics_<kpi_key> rows; pure (no R2).
+
+    Each row's unit_key is its measure's unit from kpi_measure (as in kpi_latest), else the KPI's unit.
+    """
     levels = pa.table({"gold_level": list(SERIES_LEVELS), "contract_level": list(SERIES_LEVELS.values())})
+    own = [m for m in measures if m["kpi_key"] == kpi_key]
+    measure_rows = pa.table(
+        {
+            "source_system": pa.array([m["source_system"] for m in own], pa.string()),
+            "measure_key_pattern": pa.array([m["measure_key_pattern"] for m in own], pa.string()),
+            "priority": pa.array([int(m["priority"]) for m in own], pa.int64()),
+            "unit_key": pa.array([m.get("unit_key") or unit_key for m in own], pa.string()),
+        }
+    )
     con = duckdb.connect()
     con.register("metrics", metrics)
     con.register("levels", levels)
+    con.register("measures", measure_rows)
     con.sql(
         """
         create temp table kept as
@@ -285,7 +303,10 @@ def kpi_series(metrics: pa.Table, kpi_key: str, unit_key: str) -> pa.Table:
                 else strftime(date_key, '%Y-%m-%d')
             end as period,
             cast(date_key as date) as period_start, frequency, cast(value as double) as value,
-            $2 as unit_key,
+            coalesce((
+                select arg_min(u.unit_key, u.priority) from measures u
+                where u.source_system = kept.source_system and kept.measure_key like u.measure_key_pattern
+            ), $2) as unit_key,
             case when observation_status_key is null or observation_status_key = 'ok' then ''
                 else observation_status_key end as flags
             {dim_sql}
@@ -457,15 +478,19 @@ def features(shapes: list[dict], names: dict[str, dict], level: str) -> dict[str
             "name_en": name["name_en"] or name["name_pl"],
             "level": level,
         }
-        if level != "country":
+        if level == "voivodeship":
             properties["parent_key"] = "PL"
+        elif level != "country":
+            if not name.get("parent_key"):
+                raise ValueError(f"geo: {key} has no parent_key in gold.dim_geography")
+            properties["parent_key"] = name["parent_key"]
         geometry = {"type": shape["geometry"]["type"], "coordinates": _round(shape["geometry"]["coordinates"])}
         collection.append({"type": "Feature", "properties": properties, "geometry": geometry})
     return {"type": "FeatureCollection", "features": collection}
 
 
 def geo(cat, client, prefix: str) -> dict[str, int]:
-    """Write geo/country.geojson and geo/voivodeship.geojson from silver.prg_units and gold.dim_geography."""
+    """Write geo/<level>.geojson (country, voivodeship, powiat, gmina) from silver.prg_units and gold.dim_geography."""
     from pyiceberg.expressions import In
 
     units = (
@@ -477,8 +502,8 @@ def geo(cat, client, prefix: str) -> dict[str, int]:
         row["geography_key"]: row
         for row in cat.load_table(("gold", "dim_geography"))
         .scan(
-            row_filter=In("level_name", ["country", "wojewodztwo"]),
-            selected_fields=("geography_key", "name_pl", "name_en"),
+            row_filter=In("level_name", ["country", "wojewodztwo", "powiat", "gmina"]),
+            selected_fields=("geography_key", "name_pl", "name_en", "parent_key"),
         )
         .to_arrow()
         .to_pylist()
@@ -503,12 +528,13 @@ def geo(cat, client, prefix: str) -> dict[str, int]:
         seen.add(key)
         shapes[GEO[unit_level]].append({"geography_key": key, "geometry": json.loads(geometry)})
     counts = {level: len(items) for level, items in shapes.items()}
-    if counts != {"country": 1, "voivodeship": 16}:
-        raise ValueError(f"geo: expected 1 country and 16 voivodeships, found {counts}")
+    expected = {"country": 1, "voivodeship": 16, "powiat": 380, "gmina": 2479}
+    if counts != expected:
+        raise ValueError(f"geo: expected {expected}, found {counts}")
     for level, items in shapes.items():
         body = json.dumps(features(items, names, level), ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-        if len(body) > GEO_LIMIT:
-            raise ValueError(f"geo/{level}.geojson is {len(body)} bytes, over {GEO_LIMIT}")
+        if len(body) > GEO_LIMITS[level]:
+            raise ValueError(f"geo/{level}.geojson is {len(body)} bytes, over {GEO_LIMITS[level]}")
         put(client, prefix + f"geo/{level}.geojson", body, "application/geo+json")
     return counts
 
@@ -574,7 +600,7 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
         except NoSuchTableError:
             missing.append(kpi_key)
             continue
-        table = kpi_series(metrics, kpi_key, kpi["unit_key"])
+        table = kpi_series(metrics, measures, kpi_key, kpi["unit_key"])
         data = parquet(table)
         if len(data) > SERIES_LIMIT:
             raise ValueError(f"kpi/{kpi_key}/series.parquet is {len(data)} bytes, over {SERIES_LIMIT}")

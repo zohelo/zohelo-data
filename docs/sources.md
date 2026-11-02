@@ -536,3 +536,18 @@ SHA-256 changed), so a new edition is picked up without a code change. Restart u
 file. Licence CC BY 4.0 for the country-level indicators only (register GL-009); the
 individual-level microdata (Research Data License) is out of scope. Bronze, Silver and a
 schedule are later stages.
+
+## ECB Data Portal
+
+**Extraction (2 Nov 2026).** The ECB Data Portal has no bulk archive per dataflow, but its SDMX
+REST API (`https://data-api.ecb.europa.eu/service/data/<flow>/<key>?format=csvdata`) returns a
+whole selection, every series with its full history, in one response. The declaration `ecb.yaml`
+lands four fixed selections through the shared `bulk_file` pattern, one request per entity and
+run: `exr_daily` (EXR, euro reference rates of every currency), `fm_key_rates` (FM, key ECB
+interest rates), `est_estr` (EST, €STR) and `icp_annual_rate` (ICP, HICP annual rate, every area).
+Version = Last-Modified, download time when absent; written only when the SHA-256 changed.
+Restart unit: one entity (one request). Entity: the selection, one file of SDMX CSV
+observations with their attributes. Re-use under the ECB statistics usage policy (register
+GL-016): free, also commercial, attribution "Source: ECB statistics", statistics not modified.
+The queries are proven from Actions by the Dev trial (#2393); an `updatedAfter` delta, Bronze,
+Silver and a schedule are later stages.
