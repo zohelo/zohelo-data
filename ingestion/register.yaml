@@ -3221,7 +3221,7 @@ sources:
   name: Registered unemployment and labour-office vacancy statistics
   short_name: MRPiPS registered unemployment
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej / Public Employment Services
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland, voivodeship and powiat, table-dependent
