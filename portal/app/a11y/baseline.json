@@ -1,0 +1,16 @@
+{
+  "known": [
+    {
+      "page": "/",
+      "rule": "button-name",
+      "impact": "critical",
+      "bug": "zohelo-data#2536"
+    },
+    {
+      "page": "/",
+      "rule": "color-contrast",
+      "impact": "serious",
+      "bug": "zohelo-data#2536"
+    }
+  ]
+}
