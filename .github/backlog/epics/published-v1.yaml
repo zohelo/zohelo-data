@@ -159,6 +159,40 @@ deliverables:
             expect: all checks ok
         out_of_scope: [warehouse/publish.py and SKIP, the schemas, zohelo and zohelo-bi copies of the fixtures (their Tasks, zohelo#235)]
         notes: ["If #2187 (per-value unit_key in the schema) is not merged yet, keep the unit_key fields anyway: the schema allows additional properties."]
+      - key: data/published/published-v1/contract/population-gus-fixture
+        type: Task
+        title: Make the population fixtures GUS-only
+        effort: S
+        state: open
+        contract: true
+        depends_on: [data/published/published-v1/contract/latest-fixtures]
+        context: >-
+          Bug #2209 (PR #2247) makes `population` the GUS national-definition KPI only (gus_bdl P2137,
+          gus_dbw 581_57_93_4; 31 December); Eurostat and WDI populations move to another KPI. The fixtures
+          still show the old mix: warehouse/published/fixtures/kpi/population/latest.json (from Task
+          latest-fixtures, PR #2248) has a `eurostat` PL country row, and catalog/catalog.json lists population
+          with source_keys [eurostat, world_bank_wdi, gus_bdl]. Fixture values are illustrative (D26), but
+          consumers copy them, so they must show the agreed concept. Start only when #2247 and #2248 are
+          merged; otherwise comment here and stop.
+        files:
+          - edit: .github/backlog/assets/latest-fixtures.md
+          - edit: warehouse/published/fixtures/kpi/population/latest.json
+          - edit: warehouse/published/fixtures/catalog/catalog.json
+        steps:
+          - "latest-fixtures.md, table 'Fixture files': the population row with source eurostat becomes: | population (persons) | gus_bdl | PL | country | 2024 | 37490000 | persons | 2023 | 37640000 | [] |"
+          - "population/latest.json: the first values entry gets source_key 'gus_bdl', period '2024', value 37490000, previous_period '2023', previous_value 37640000; geography_key 'PL', geography_level 'country', unit_key, flags and checked_at stay. The two voivodeship rows stay."
+          - "catalog/catalog.json: kpis[] entry population: source_keys ['gus_bdl']; nothing else changes."
+        acceptance:
+          - "no 'eurostat' or 'world_bank_wdi' in fixtures/kpi/population/latest.json or in the population entry of catalog.json"
+          - "repo_check prints 'ok   published contract'"
+        verify:
+          - run: "python -c \"import json;d=json.load(open('warehouse/published/fixtures/kpi/population/latest.json'));print(sorted({v['source_key'] for v in d['values']}))\""
+            expect: "['gus_bdl']"
+          - run: PYTHONPATH=. python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope:
+          - "warehouse/publish.py, seeds and models (PR #2247)"
+          - The zohelo copy fixtures/published/kpi/population/latest.json and the zohelo-bi copies (their own Tasks)
   - key: data/published/published-v1/publish
     title: gold.publish activity
     depends_on: [data/published/published-v1/contract, data/metadata/catalogue-v1, data/metadata/semantic-manifest/generate]
