@@ -18,6 +18,7 @@ strings in ISO 8601 UTC.
 - All fields below are required unless marked optional.
 - gold.publish checks every JSON file against its schema in warehouse/published/schemas/ before writing it and fails
   on a problem.
+- The data portal serves these files read-only, after sign-in, at `/api/published/v1/<path>` (portal/worker/src/index.js).
 
 ## catalog/catalog.json
 
@@ -194,7 +195,21 @@ in `gold.dim_geography`, simplified at 0.005° with coordinates rounded to 4 dec
 
 `calendar.ics`: iCalendar, one VEVENT per `release_calendar` row (SUMMARY = `title_pl`,
 DTSTART = `release_at`, URL); zero events until that table exists.
-gold.publish writes it today without events (PRODID `-//zohelo//gold.publish//EN`).
+gold.publish writes one event per row of warehouse/seeds/release_calendar.csv (UID `<release_at>-<source_key>-<kpi_key>@zohelo.com`, PRODID `-//zohelo//gold.publish//EN`).
+
+## status.json
+
+| field | type | required | meaning |
+|---|---|---|---|
+| version | integer | yes | contract version, `1` |
+| generated_at | string | yes | when the file was written (ISO 8601 UTC) |
+| sources | array | yes | one entry per row of `warehouse/seeds/source.csv` |
+| sources[].source_key | string | yes | source |
+| sources[].name_pl | string | yes | Polish name |
+| sources[].name_en | string | yes | English name |
+| sources[].last_loaded_at | string or null | yes | newest `gold.coverage` `checked_at` of the source (as catalog.json `loaded_at`); null when none |
+| sources[].next_expected_at | string or null | yes | next run from `python run.py schedule --next`; null without a schedule |
+| sources[].lag_days | integer or null | yes | whole days from `last_loaded_at` to `generated_at`; null without `last_loaded_at` |
 
 ## Size limits
 
@@ -203,5 +218,6 @@ gold.publish writes it today without events (PRODID `-//zohelo//gold.publish//EN
 | catalog/catalog.json | ≤ 2 MB gzip |
 | kpi/<kpi_key>/latest.json | ≤ 100 kB |
 | feed/changes.json | ≤ 200 kB |
+| status.json | ≤ 50 kB |
 | kpi/<kpi_key>/series.parquet | ≤ 20 MB |
 | geo/<level>.geojson | ≤ 2 MB (gmina ≤ 8 MB) |
