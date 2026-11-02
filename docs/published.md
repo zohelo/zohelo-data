@@ -150,7 +150,7 @@ gold.publish reads each file back and fails when a value is not in Gold.
 | period_start | date | yes | first day of the period |
 | frequency | string | yes | frequency |
 | value | number | yes | value (Parquet double) |
-| unit_key | string | yes | unit |
+| unit_key | string | yes | unit of this row (key in `catalog/unit`): its measure's `kpi_measure.csv` `unit_key`, or the KPI's unit when that is empty (#2449) |
 | flags | string | yes | status flags |
 | dim_<dimension_key> | string | yes | one column per extra dimension; `'_T'` = total |
 
