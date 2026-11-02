@@ -3808,7 +3808,7 @@ sources:
   name: State budget acts and execution publications
   short_name: MF state budget
   provider: Ministry of Finance
-  status: registered
+  status: approved
   family: D
   kpi: true
   geography: Poland
@@ -3849,7 +3849,7 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Map attachment schemas and licences.
+    - 'Map attachment schemas.'
     references:
     - https://www.gov.pl/web/finanse/budzet-panstwa
     - https://www.gov.pl/web/finanse/sprawozdania-operatywne-miesieczne
