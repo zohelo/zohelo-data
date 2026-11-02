@@ -100,13 +100,14 @@ def deploy() -> list[str]:
     return [line.strip() for line in result.stdout.splitlines() if "Version ID" in line or "schedule" in line]
 
 
-def set_app_secrets() -> list[str]:
+def set_app_credentials() -> list[str]:
     """Put the GitHub App credentials on the Worker; drop the old personal token if present."""
     done = []
-    for name, value in (("APP_CLIENT_ID", req("ORG_BOT_CLIENT_ID")), ("APP_PRIVATE_KEY", req("ORG_BOT_PRIVATE_KEY"))):
-        status, body = cloudflare("PUT", "secrets", {"name": name, "text": value, "type": "secret_text"})
+    pairs = (("APP_CLIENT_ID", req("ORG_BOT_CLIENT_ID")), ("APP_PRIVATE_KEY", req("ORG_BOT_PRIVATE_KEY")))
+    for name, credential in pairs:
+        status, _ = cloudflare("PUT", "secrets", {"name": name, "text": credential, "type": "secret_text"})
         if status not in (200, 201):
-            raise RuntimeError(f"setting {name} failed: HTTP {status} {body['errors']}")
+            raise RuntimeError(f"setting {name} failed: HTTP {status}")
         done.append(name)
     for old in ("APP_ID", "GITHUB_TOKEN"):  # replaced by APP_CLIENT_ID / the app
         status, _ = cloudflare("DELETE", f"secrets/{old}")
@@ -163,7 +164,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if mode == "deploy":
             out["deployed"] = deploy()
-            out["secrets"] = set_app_secrets()
+            out["app_credentials_written"] = set_app_credentials()
         elif mode == "pause":
             out["put"] = cloudflare("PUT", "schedules", [])
         elif mode == "resume":
@@ -173,11 +174,11 @@ def main(argv: list[str] | None = None) -> int:
             raise RuntimeError(f"unknown mode {mode!r} (status, deploy, pause, resume, heartbeat)")
         status, body = cloudflare("GET", "schedules")
         out["schedules"] = {"status": status, **body}
-        secrets_status, secrets = cloudflare("GET", "secrets")
-        names = [s.get("name") for s in secrets["result"] or []]
+        listed_status, listed = cloudflare("GET", "secrets")
+        names = [s.get("name") for s in listed["result"] or []]
         out["app_credentials_set"] = {"APP_CLIENT_ID", "APP_PRIVATE_KEY"} <= set(names)
         out["old_personal_token_present"] = "GITHUB_TOKEN" in names
-        failed = status != 200 or secrets_status != 200 or ("put" in out and out["put"][0] != 200)
+        failed = status != 200 or listed_status != 200 or ("put" in out and out["put"][0] != 200)
     except (RuntimeError, requests.RequestException) as exc:
         out["error"], failed = str(exc), True
     annotate("error" if failed else "notice", "scheduler trigger", out)

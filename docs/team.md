@@ -15,10 +15,10 @@ this file, so it is versioned and reviewed like code. Every run is a fresh sessi
 | Developer 4 · zohelo.com | zohelo keys `com/` except `com/portfolio/`, and `bi/` keys in the zohelo repo (shared design visuals); Bugs labelled `dev:4` | Mon–Wed sprint starts 06:21, 11:21, 16:21, 21:21 | Architect, Product Owner | `trig_01Ane4nBMKps3Hs8fN8fPjsK` |
 | Architect | technical review and merge of every PR; technical decisions; Dependabot | Monday 08:23 | Developers (after PRs), any member with a technical question | `trig_01391TnR25xB5GBUFmCMWtTG` |
 | Product Owner | portfolio, roadmap, backlogs of all products, Task writing, discovery of new products, weekly status, the owner's decision queue | Mon–Wed sprint plan 06:02, 11:02, 16:02, 21:02; sprint close 10:17, 15:17, 20:17 (`trig_018RMqxHqrm8DqsJxXbykhhF`) and 01:17 Tue–Thu for S4 (`trig_01DzRXVD4z5hxGXHLM32EW25`) | Developers (running low), any member with a proposal, the owner | `trig_012KX5SgeSxFa2EivXxPaZ2X` |
-| Quality Engineer | is the released product correct and usable | Monday 05:41 (after the weekend); sprint checks are started by the sprint close | Product Owner (sprint close), Architect (after merges), any member that suspects a defect | `trig_012DPNBxXyCUREkE4UiALBeQ` |
-| Operator | pipelines, schedules, storage and cost, credentials, alerts | daily 06:08 | any member that sees a failed or missing run | `trig_01GjEm3rD8SbyGR3c1HmRKG2` |
+| Quality Engineer | is the released product correct and usable | Mon–Wed 09:45, 14:45, 19:45 (before each sprint close); the sprint close also starts it | Product Owner (sprint close), Architect (after merges), any member that suspects a defect | `trig_012DPNBxXyCUREkE4UiALBeQ` |
+| Operator | pipelines, schedules, storage and cost, credentials, alerts | daily 02:43 | any member that sees a failed or missing run | `trig_01GjEm3rD8SbyGR3c1HmRKG2` |
 | Domain expert | business correctness per domain, domain knowledge files, analysis ideas | Monday 06:33 | Product Owner, Developers, Quality Engineer (message names the domain) | `trig_01Mwpo6r6D2qxh6Hed3kDxog` |
-| Coach | how the team works: playbooks, templates, checks | Thursday 02:13 (after the week's last sprint) | any member that hits the same problem twice | `trig_01PtkexUDnj96BGy6pZsG1WD` |
+| Coach | how the team works: playbooks, templates, checks | Tue–Thu 02:13 (after each sprint day) | any member that hits the same problem twice | `trig_01PtkexUDnj96BGy6pZsG1WD` |
 | Designer | UX/UI of every product: design research, prototypes, the design system, visual review of every UI change | Mon–Wed sprint starts 06:23, 11:23, 16:23, 21:23 | Developers (UI PRs), Product Owner, Quality Engineer | `trig_011qicTYyp5tWF3GjUYWJ5DH` |
 
 New products: when the owner approves a product brief (Product Owner, discovery track), the product gets its repo,
@@ -26,44 +26,118 @@ its backlog and its own Developer at once: one zohelo-<product>, one Developer. 
 
 ## Sprints
 
-Owner decisions 28 Oct (O15) and 2 Nov (O16): the team works in sprints that match Claude's 5-hour usage window, and
-plans for that window, not for the weekly limit. Sprints run **Monday to Wednesday only**, four a day (Warsaw):
-**S1 06:00–11:00, S2 11:00–16:00, S3 16:00–21:00, S4 21:00–02:00**. The aim is to use the week's usage in these three
-days; Thursday to Sunday have no sprints (only the Operator's daily check and the Coach's Thursday retro), so the owner
-has nothing to follow then. If the weekly limit runs out before Wednesday's S4, the remaining sprints simply do not
-start. Deploys stay continuous: every merge still goes to production. A sprint ends with one release document for all
-of zohelo and a project status update.
+Owner decisions 28 Oct (O15) and 2 Nov (O16), redesigned 2 Nov on the owner's request: the team works in sprints that
+match Claude's 5-hour usage window. Sprints run **Monday to Wednesday only**, four a day (Warsaw): **S1 06:00–11:00,
+S2 11:00–16:00, S3 16:00–21:00, S4 21:00–02:00**. The night hours **02:00–06:00** are for operations and the
+retrospective. Thursday to Sunday have no sprints, so the owner has nothing to follow then. If the weekly limit runs out
+before Wednesday's S4, the remaining sprints do not start. Deploys stay continuous: every merge goes to production.
 
-| Time in the sprint | What happens | Who |
+This is Scrum adapted to a team of fresh sessions: the **sprint issue** is the sprint backlog and board, the **close**
+is the sprint review, the **Coach's night run** is the retrospective, and the **velocity table** on each closed sprint
+issue is the team's memory of how much fits. There is no daily scrum: Team log entries and the sprint issue carry the
+state between runs.
+
+**Start signals.** A member starting another member (`fire_trigger`) is sometimes refused in scheduled runs (2 Nov:
+about 12 refusals), so the **scheduled runs below are the reliable start signal**, and a sprint must work with them
+alone; on-demand starts are a bonus. Runs in a sprint (live scheduled tasks):
+
+| Time in the sprint | Run | What it does |
 |---|---|---|
-| T+0:00 | **Plan**: sprint issue, one sprint goal, sprint Tasks labelled `sprint` | Product Owner (scheduled) |
-| T+0:15 | **Build** starts: sprint Tasks first, then the normal order | Developers (scheduled) |
-| T+3:30 | **Cut-off**: no new Tasks; finish, rework and get open PRs merged | Developers, Architect |
-| T+4:15 | **Close**: start the Quality Engineer's sprint check, then the release document, project status, retro trigger | Product Owner (scheduled, sprint close) |
+| T+0:02 | Product Owner · sprint plan | read the previous close, adapt, plan this sprint |
+| T+0:15 – T+0:23 | Developers 1–4, Designer | build: sprint Tasks, then stretch, then the normal order |
+| T+3:30 | — | **cut-off**: no new Tasks; finish, rework, get open PRs merged |
+| T+3:45 | Quality Engineer (S1–S3) | sprint check: goals on the live products |
+| T+4:17 | Product Owner · sprint close | sprint review, velocity, release document, project status |
+| 02:13 (Tue–Thu) | Coach | nightly retrospective of the day's sprints |
+| 02:43 (daily) | Operator | pipelines, schedules, storage, alerts |
 
-- **Sprint plan** (Product Owner): open the zohelo-data issue `Sprint <yyyy-mm-dd> S<n>` (type Task, no key, label
-  `sprint`) with: the goal (one sentence the owner can check: a page, a table, a number, or a named Phase-0 platform
-  outcome), the Tasks in scope (each labelled `sprint`, sized to finish by T+3:30 with the Developers available), and
-  the previous sprint's carry-over. Agree the technical scope with the Architect when the goal crosses repos. Only
-  start a Developer on demand when its scheduled sprint run will not come (e.g. a product Developer without a schedule).
-- **Usage**: no member can see the remaining usage. A run stopped on the limit (scheduled-task history,
-  `USAGE_LIMIT_REACHED`) is a sprint finding: the Coach adjusts sprint size (number of Tasks, Developers per sprint) so
-  the team finishes before the limit, and records it in this section.
-  - 28 Oct S2: Developers 1 and 2 stopped on the limit at 14:43 and 14:58 UTC (Developers 3 and 4 too, per their
-    entries); nothing ran from 13:47 to 16:54 UTC. Cause: overlapping runs (up to six Architect and four Product Owner
-    runs at once) and starts for work already done, not sprint size. Measures: one run per member (shared rules) and
-    start messages as pointers (shared rules). Sprint size unchanged; if a sprint under these rules still stops on the
-    limit, the next lever is fewer Developers per sprint (Developers 3 and 4 alternate sprints).
-- **Sprint close** (Product Owner): first start the Quality Engineer with `From Product Owner: sprint check of
-  <sprint issue>` and wait up to 20 minutes for its result comment on the sprint issue (no result → say so in the
-  release document); then remove `sprint` from unfinished Tasks and list them as carry-over; create the
-  release document as a GitHub Release in zohelo-data, tag `zohelo-<yyyymmdd>-s<n>` on main, title
-  `zohelo <yyyy-mm-dd> S<n>`, notes: goal met or not (evidence), what changed per product in owner language (zohelo.com,
-  bi.zohelo.com, data.zohelo.com, data platform, sources) with links to that sprint's per-repo Releases and PRs, Bugs
-  found, carry-over, next sprint's proposed goal; post the same summary as the last comment of the sprint issue and
-  publish it as the project status update with Ops `project` args `status <sprint issue> ON_TRACK|AT_RISK|OFF_TRACK`;
-  close the sprint issue; start the Coach when the sprint had PRs sent back twice, refused actions, failed runs or a
-  usage-limit stop.
+### Sprint plan (Product Owner, T+0:02)
+
+1. **Inspect.** Read the previous sprint's close comment (velocity table) and re-check its open items: Tasks closed and
+   PRs merged since the close count for that sprint (amend its table in one edit, not a new comment).
+2. **Adapt capacity per member** from the previous sprint's outcome (the close records which one applied):
+   - **All done before the cut-off** (committed and stretch done, or nothing left to pick): next commitment = done + 25 %
+     (at least +2 Tasks).
+   - **Stopped mid-Task** (run ended on the usage limit, an error or the cut-off with a claimed Task without a PR): that
+     Task is first in the next sprint, and the commitment = done − 25 %.
+   - **Stopped between Tasks** (Tasks left unstarted, nothing half-done): move the rest to the next sprint, commitment =
+     done.
+   - Otherwise the commitment is the member's **velocity**: the average done over its last 3 sprints ("yesterday's
+     weather"). A member with no history starts at 8 Tasks (Developers) or 2 items (Designer, Architect, Domain expert).
+3. **Goals.** Open the zohelo-data issue `Sprint <yyyy-mm-dd> S<n>` (type Task, no key, label `sprint`). One checkable
+   goal per active product or stream (zohelo.com, bi.zohelo.com, data platform and data.zohelo.com, sources, design,
+   team/process when relevant), each with its owner (the member who delivers it) and a check the owner can do (a page, a
+   table, a number, a named platform outcome). Mark **one goal as the sprint goal**: when capacity runs short, its Tasks
+   go first and other goals give way.
+4. **Sprint backlog per member** in the issue: carry-over first, then the committed Tasks up to the commitment (label
+   `sprint`), then **stretch** Tasks of about 30 % more (label `stretch`), so a member that finishes early never runs dry
+   ("plan as much as fits, even slightly more"). Only pickable or self-stacked Tasks are committed; when a member has
+   too few, write them first (Product Owner step 2) and list them as coming with the backlog PR. Agree the technical
+   scope with the Architect when a goal crosses repos.
+5. **Start** every member whose run is not active (one run per member). A refused start is noted once in the sprint
+   issue; the member's scheduled run at T+0:15 picks the sprint up anyway.
+
+### During the sprint
+
+- **Pick order** (Developers, Designer): rework of own PRs, then `sprint` Tasks, then `stretch`, then the normal order.
+- **WIP limits.** One claimed Task without a PR per member at a time (Developer step 2); stacks at most 3 deep (step 4);
+  a Developer with **8 or more open PRs not yet reviewed** on their current head starts no new Task. It does rework,
+  updates stacks and follows its PRs, and notes the review queue on the sprint issue once. Unreviewed work is not done
+  work, and a long queue turns every send-back into a rebase chain.
+- **Cut-off at T+3:30**: no new Tasks; the rest of the window is for rework, review and merge, so done work is merged
+  before the close.
+
+### Definition of done
+
+- **Task done**: its PR is merged (Architect review on the merged head, checks green, Designer `Design review:
+  approved` for `ui`), the issue is closed, the deploy run after the merge is green where the change deploys, and the
+  issue's Verify evidence is linked on the issue. Verify-only Tasks: closed with the evidence run. An open PR, however
+  ready, is **not done**: it is carry-over and keeps its PR.
+- **Goal met**: its check passes on the live product (the Quality Engineer's sprint check, or the close's own check
+  with evidence when no sprint check came).
+- **Sprint done**: release document, velocity table, project status, sprint issue closed.
+
+### Sprint close = sprint review (Product Owner, T+4:17)
+
+1. Start the Quality Engineer with `From Product Owner: sprint check of <sprint issue>` unless its T+3:45 run already
+   commented, and wait up to 20 minutes for its result comment on the sprint issue (no result → say so).
+2. **Velocity table** in the close comment, one row per member: `planned` (committed), `stretch planned`, `done`
+   (Definition of done), `stretch done`, `carried`, `PRs open`, `outcome` (all done early / mid-Task / between Tasks /
+   blocked: name the blocker, such as a refused merge or start), and the next commitment from plan step 2. A blocked
+   member's capacity is not cut: it was the system, not the plan.
+3. Remove `sprint`/`stretch` from unfinished Tasks and list them as carry-over (half-done first).
+4. **Release document**: GitHub Release in zohelo-data, tag `zohelo-<yyyymmdd>-s<n>` on main, title `zohelo <yyyy-mm-dd>
+   S<n>`, notes: goal by goal, met or not (evidence), what changed per product in owner language (zohelo.com,
+   bi.zohelo.com, data.zohelo.com, data platform, sources) with links to that sprint's per-repo Releases and PRs, Bugs
+   found, carry-over, the next sprint's proposed goal. Post the same summary with the velocity table as the last
+   comment of the sprint issue. If creating the Release is refused (HTTP 403 "not permitted for this session type", S1
+   2 Nov), that comment is the release document: say so in it, create no tag, and do not retry the Release in later
+   closes.
+5. Publish the project status update with Ops `project` args `status <sprint issue> ON_TRACK|AT_RISK|OFF_TRACK`
+   (sprint goal met → ON_TRACK; other goals missed → AT_RISK; sprint goal missed → OFF_TRACK), then close the sprint
+   issue.
+
+The **review** asks *what did we build, and does it meet the goals*; it is for the owner and does not change rules.
+
+### Nightly retrospective (Coach, 02:13 Tue–Thu)
+
+The **retrospective** asks *how did we work*: it covers the day's four sprints (the run on Tuesday covers Monday, and so
+on). Inputs: the four velocity tables, PRs sent back and why, refused actions, usage-limit and failed runs, start
+messages that went unanswered, Bugs found after merge. Output:
+- at most **3 changes** a night, each to the recurring cause (twice or more) where it lives: this file, `docs/backlog.md`,
+  `AGENTS.md`, `ops/repo_check.py`, or an unclear Task. One PR each, closing a one-off Task (D17).
+- a **retro comment** on the last sprint issue of the day: keep / change / try, and the velocity trend per member (3 sprints).
+- one Team log entry. Changes merged before 06:00 apply from S1.
+
+### Usage
+
+No member can see the remaining usage. A run stopped on the limit (scheduled-task history, `USAGE_LIMIT_REACHED`) is
+recorded as `mid-Task` in the velocity table, and plan step 2 shrinks that member's next commitment. The retro
+looks across members: when several stop in one sprint, the lever is fewer runs per sprint (Developers 3 and 4
+alternate sprints), not smaller Tasks.
+- 28 Oct S2: Developers 1–4 stopped on the limit (14:43 and 14:58 UTC for Developers 1 and 2); nothing ran from
+  13:47 to 16:54 UTC. Cause: overlapping runs (up to six Architect and four Product Owner runs at once) and starts for
+  work already done. Measures: one run per member, start messages as pointers (shared rules).
 
 ## Design process
 
@@ -128,7 +202,12 @@ sees the result and may veto, but is not asked to choose.
 - Permissions recorded in AGENTS.md and `docs/decisions.md` (O8, O10) apply; destructive Ops runs only as AGENTS.md
   allows. Anything published outside the repos under the zohelo name (social posts, accounts, ads, mail, anything that
   costs money) is an owner action. If the session refuses an action, report it in the summary instead of working
-  around it. A refused action is not retried on the same item in this run; never work around it. Post the review
+  around it. A refused action is not retried on the same item in this run; never work around it. A refusal other
+  than a merge or a `fire_trigger` (closing or commenting, editing the charter, releases, Ops deletes) is not retried
+  by any later run on the same item either, once a Team log entry since the last owner reply reports it: write
+  `still refused, see <link to the first report>` under Refused and nothing else about it (2 Nov: closing zohelo#327
+  and #315–#317 was refused for four runs of two members, each re-posting the same owner request). Merges and
+  starts are refused intermittently, so they keep the Architect's retry rule and one try per run. Post the review
   and the merge as separate, sequential calls (never in one parallel batch or one shell command). Name each refusal
   once under "Refused" in the summary with the exact message; the owner question about it is collected by the Coach,
   so do not repeat it under open questions.
@@ -159,8 +238,13 @@ sees the result and may veto, but is not asked to choose.
    the same member can overlap (a run started on demand, or a stopped run that the owner continued, which keeps the
    instructions it started with), so never assume you are alone.
 3. **Deliver** exactly as the issue's "How to deliver" says: worktree from `origin/main`, branch `<type>/<n>-<topic>`,
-   repo checks (zohelo-data `PYTHONPATH=. python -m ops.repo_check`; zohelo-bi `bun install --frozen-lockfile && bun run check`;
-   zohelo `bun install --frozen-lockfile && bun run lint && bun run build`), the issue's Verify, one PR with
+   repo checks — every step the repo's `check` workflow runs, in full, even when the Task's Verify lists fewer
+   (zohelo-data `PYTHONPATH=. python -m ops.repo_check`; zohelo-bi `bun install --frozen-lockfile && bun run lint &&
+   bun run format:check && bun run check && bun run test && bun run build`; zohelo `bun install --frozen-lockfile &&
+   bun run lint && bun test && bun run build`; when a workflow gains a step, run that too) — and never reformat lines
+   the Task does not change (format only the files you touched, `bunx prettier --write <files>`, never
+   `bun run format` over the repo; 2 Nov: zohelo-bi#269 and #270 failed `format:check`, zohelo#328 reformatted
+   App.tsx wholesale, all three sent back), then the issue's Verify, one PR with
    `Closes #<n>` first (`Closes zohelo/<repo>#<n>` across repos). Verify-only Tasks: no PR; close with a comment
    linking the evidence run. A PR that changes anything users see (pages, components, charts, styles) gets label
    `ui`, lists the routes and states it changes (desktop and mobile, PL and EN), and starts the Designer with
@@ -346,8 +430,8 @@ Never: merges, ships prototypes, or changes data; a design decision is recorded 
 
 Owns how the team works. A team of fresh sessions does not learn by itself; the Coach makes it learn.
 
-**Weekly run (Friday), and when started:**
-1. Read the last week: Team log #2073, PRs sent back and why, `design:question` issues, failed checks, refused
+**Scheduled run (Tue–Thu 02:13, after each sprint day), and when started:**
+1. Read everything since the previous Coach entry on Team log #2073: the log, PRs sent back and why, `design:question` issues, failed checks, refused
    actions, Bugs the Quality Engineer found after merge, start messages that went unanswered.
 2. Find recurring causes (the same mistake twice or more) and fix them where they live: this file, `docs/backlog.md`
    (Task template), `AGENTS.md`, `ops/repo_check.py` rules, or unclear open Tasks (comment, or a backlog PR via the

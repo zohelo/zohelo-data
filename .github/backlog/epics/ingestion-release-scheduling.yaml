@@ -69,5 +69,36 @@ deliverables:
     title: Release calendar seed
     done_when:
       - release_calendar.csv built into gold.release_calendar
+    tasks:
+      - key: data/ingestion/release-scheduling/calendar/nbp-seed
+        type: Task
+        title: Seed release_calendar.csv with the NBP table A releases
+        effort: S
+        state: open
+        contract: true
+        context: >-
+          feed/calendar.ics needs a release calendar; none exists. NBP table A (KPI fx_rate) comes every Polish
+          business day by 12:15 Warsaw (11:15Z in winter). Seed rows 9 Nov 2026 – 29 Jan 2027; other publishers
+          later. dataset_key nbp:fx_A as in gold.dim_measure.
+        files:
+          - create: warehouse/seeds/release_calendar.csv
+          - edit: warehouse/seeds/_seeds.yml
+          - edit: warehouse/warehouse.yaml
+        steps:
+          - "release_calendar.csv: header `release_at,source_key,dataset_key,kpi_key,title_pl,title_en,url`, then the 55 lines printed by: python -c \"import datetime as d;h={'2026-11-11','2026-12-24','2026-12-25','2027-01-01','2027-01-06'};D=[d.date(2026,11,9)+d.timedelta(i) for i in range(82)];print(chr(10).join(f'{x}T11:15:00Z,nbp,nbp:fx_A,fx_rate,NBP: tabela A kursów średnich walut,NBP: table A of average exchange rates,https://api.nbp.pl/en.html' for x in D if x.weekday()<5 and str(x) not in h))\""
+          - "_seeds.yml: seed release_calendar, `config: {column_types: {release_at: varchar}}`; tests release_at [not_null]; source_key [not_null, relationships to ref('source') field source_key]; kpi_key [relationships to ref('kpi') field kpi_key], in the form of source.licence_key."
+          - "warehouse.yaml gold list, after the gold.licence line: `gold.release_calendar,  # seed release_calendar.csv`."
+          - "dev/release_calendar_trial.py like seeds_trial.py (notes), Dev trial rules of docs/operating.md: namespace zz_dev_release_calendar, select 'release_calendar source kpi'; notice 'release_calendar' with build_exit, rows and the Arrow type of release_at; drop the namespace in finally. Run; delete dev/ before the PR."
+        acceptance:
+          - "55 rows, none on 11 Nov, 24–25 Dec, 1 or 6 Jan; trial build_exit 0, release_at string"
+        verify:
+          - run: "python -c \"import csv;r=list(csv.DictReader(open('warehouse/seeds/release_calendar.csv',encoding='utf-8')));print(len(r),r[0]['release_at'],r[-1]['release_at'])\""
+            expect: "55 2026-11-09T11:15:00Z 2027-01-29T11:15:00Z"
+          - workflow: Dev · branch runs, script release_calendar_trial, on the branch
+            expect: "notice 'release_calendar' build_exit 0, rows 55; then the drop"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [other publishers' dates, calendar.ics events (Task calendar-events), schedules]
+        notes: ["seeds_trial.py: gh api 'repos/zohelo/zohelo-data/contents/dev/seeds_trial.py?ref=b62f65e' --jq .content | base64 -d"]
     todo:
-      - "Collect release calendars (GUS harmonogram, Eurostat release calendar, NBP) into release_calendar.csv"
+      - "Add GUS (harmonogram), Eurostat (release calendar), DBW and WDI release dates to release_calendar.csv after nbp-seed (needs each publisher's calendar URL and format first)"
