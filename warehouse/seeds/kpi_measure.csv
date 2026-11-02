@@ -1,9 +1,8 @@
 kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
-population,eurostat,eurostat:DEMO_PJAN:NR,on 1 January,1,
-population,eurostat,eurostat:DEMO_R_PJANAGGR3:NR,"on 1 January, NUTS",2,
-population,world_bank_wdi,world_bank_wdi:SP.POP.TOTL,mid-year,3,
-population,gus_bdl,gus_bdl:P2137:osoba,on 31 December,4,
-population,gus_dbw,gus_dbw:581_57_93_4:%,on 31 December,5,
+population_usual_residence,eurostat,eurostat:DEMO_PJAN:NR,on 1 January,1,
+population_usual_residence,eurostat,eurostat:DEMO_R_PJANAGGR3:NR,"on 1 January, NUTS",2,
+population,gus_bdl,gus_bdl:P2137:osoba,on 31 December,1,
+population,gus_dbw,gus_dbw:581_57_93_4:%,on 31 December,2,
 gdp_current_prices,eurostat,eurostat:NAMA_10_GDP:CP_MEUR:B1GQ,million EUR,1,mln_eur
 gdp_current_prices,world_bank_wdi,world_bank_wdi:NY.GDP.MKTP.CD,current US$,2,usd
 gdp_per_capita,eurostat,eurostat:NAMA_10_PC:CP_EUR_HAB:B1GQ,EUR per inhabitant,1,eur_per_person
