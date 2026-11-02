@@ -389,6 +389,7 @@ PUBLISHED = ROOT / "warehouse" / "published"
 PUBLISHED_SCHEMAS = {
     "catalog/catalog.json": "catalog",
     "manifest.json": "manifest",
+    "status.json": "status",
     "kpi/*/latest.json": "kpi_latest",
     "feed/changes.json": "feed_changes",
     "geo/*.geojson": "geo",
