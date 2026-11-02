@@ -114,6 +114,38 @@ semantic_models:
     measures:
       - {name: gdp_volume_growth_avg, agg: average, expr: value}
 
+  - name: poc_deaths
+    description: Deaths (gold.metrics_deaths).
+    model: ref('poc_metrics_deaths')
+    defaults: {agg_time_dimension: period_start}
+    entities:
+      - {name: deaths_row, type: primary, expr: "series_key || '|' || date_key"}
+      - {name: poc_geography, type: foreign, expr: geography_key}
+    dimensions:
+      - {name: period_start, type: time, expr: date_key, type_params: {time_granularity: day}}
+      - {name: source_system, type: categorical}
+      - {name: geography_name, type: categorical}
+      - {name: geography_level, type: categorical}
+      - {name: frequency, type: categorical}
+    measures:
+      - {name: deaths_sum, agg: sum, expr: value}
+
+  - name: poc_employment_rate
+    description: Employment rate (gold.metrics_employment_rate).
+    model: ref('poc_metrics_employment_rate')
+    defaults: {agg_time_dimension: period_start}
+    entities:
+      - {name: employment_rate_row, type: primary, expr: "series_key || '|' || date_key"}
+      - {name: poc_geography, type: foreign, expr: geography_key}
+    dimensions:
+      - {name: period_start, type: time, expr: date_key, type_params: {time_granularity: day}}
+      - {name: source_system, type: categorical}
+      - {name: geography_name, type: categorical}
+      - {name: geography_level, type: categorical}
+      - {name: frequency, type: categorical}
+    measures:
+      - {name: employment_rate_avg, agg: average, expr: value}
+
 metrics:
   - name: poc_population
     label: Population (PoC)
@@ -150,3 +182,13 @@ metrics:
     description: Average real GDP growth rate over the chosen period and areas, of ONE source and ONE geography level.
     type: simple
     type_params: {measure: gdp_volume_growth_avg}
+  - name: poc_deaths
+    label: Deaths
+    description: Deaths in the selected areas; sum over areas and periods of ONE source and ONE geography level.
+    type: simple
+    type_params: {measure: deaths_sum}
+  - name: poc_employment_rate
+    label: Employment rate
+    description: Average employment rate over the chosen period and areas, of ONE source and ONE geography level.
+    type: simple
+    type_params: {measure: employment_rate_avg}

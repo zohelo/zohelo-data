@@ -123,11 +123,11 @@ Mapping from the `unit` text in `poc_concepts` (warehouse/macros/poc_blocks.sql)
 | inflation | economy.prices.consumer_prices | published |
 | unemployment_rate | labour.employment.lfs | published |
 | registered_unemployment_rate | labour.employment.registered_unemployment | draft |
-| employment_rate | labour.employment.lfs | draft |
+| employment_rate | labour.employment.lfs | published |
 | life_expectancy | population.vital | draft |
 | net_migration | population.migration | draft |
 | live_births | population.vital | draft |
-| deaths | population.vital | draft |
+| deaths | population.vital | published |
 | average_gross_wage | labour.wages | draft |
 | dwellings_completed | housing.housing | draft |
 | area | housing.territory | draft |

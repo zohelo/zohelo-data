@@ -99,6 +99,38 @@
       "status": "published"
     },
     {
+      "kpi_key": "deaths",
+      "name_pl": "Zgony",
+      "name_en": "Deaths",
+      "unit_key": "persons",
+      "frequency_default": "A",
+      "subgroup_key": "population.vital",
+      "domain_path": ["population", "population.vital"],
+      "source_keys": ["eurostat"],
+      "geo_levels": ["country"],
+      "first_period": "1990",
+      "last_period": "2024",
+      "dimensions": [],
+      "loaded_at": "2026-01-01T00:00:00Z",
+      "status": "published"
+    },
+    {
+      "kpi_key": "employment_rate",
+      "name_pl": "Wskaźnik zatrudnienia",
+      "name_en": "Employment rate",
+      "unit_key": "pct_population",
+      "frequency_default": "A",
+      "subgroup_key": "labour.employment.lfs",
+      "domain_path": ["labour", "labour.employment", "labour.employment.lfs"],
+      "source_keys": ["eurostat"],
+      "geo_levels": ["country"],
+      "first_period": "1990",
+      "last_period": "2024",
+      "dimensions": [],
+      "loaded_at": "2026-01-01T00:00:00Z",
+      "status": "published"
+    },
+    {
       "kpi_key": "fx_rate",
       "name_pl": "Kurs waluty w PLN",
       "name_en": "Exchange rate to PLN",
