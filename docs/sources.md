@@ -444,6 +444,18 @@ shared `bulk_file` pattern as entity `public_debt` (`url_from`, pattern `/attach
 only when the SHA-256 changed. Restart unit: the workbook. Terms: gov.pl (register PLG-009). Bronze,
 Silver and a schedule are later stages.
 
+## MF state budget execution (monthly)
+
+**Extraction (2 Nov 2026).** The Ministry of Finance publishes the monthly operational report on
+state budget execution (cumulative, year to date) on per-year pages
+`https://www.gov.pl/web/finanse/sprawozdania-miesieczne-<year>`, as xlsx/pdf pairs, newest first;
+each release is a new `https://www.gov.pl/attachment/<uuid>`. The declaration `mf_state_budget.yaml`
+lands the newest xlsx through the shared `bulk_file` pattern as entity `budget_execution_monthly`
+(`url_from`, pattern `/attachment/`, `pick: first`). Version = Last-Modified (download time when
+absent); written only when the SHA-256 changed. Restart unit: the workbook. The page name changes
+each January (rollover is a later Task). Terms: gov.pl (register PLG-007). Bronze, Silver and a
+schedule are later stages.
+
 ## OpenData.org (BrightQuery)
 
 **Extraction (owner decision 25 Oct 2026, #906: keep and run through the whole process).**
