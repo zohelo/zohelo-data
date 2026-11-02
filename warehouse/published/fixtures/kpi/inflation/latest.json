@@ -1,0 +1,29 @@
+{
+  "kpi_key": "inflation",
+  "unit_key": "pct",
+  "generated_at": "2026-01-01T00:00:00Z",
+  "values": [
+    {
+      "source_key": "eurostat",
+      "geography_key": "PL",
+      "geography_level": "country",
+      "period": "2026-09",
+      "value": 2.9,
+      "unit_key": "pct",
+      "previous_period": "2026-08",
+      "previous_value": 3.0,
+      "flags": [],
+      "checked_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "source_key": "world_bank_wdi",
+      "geography_key": "PL",
+      "geography_level": "country",
+      "period": "2025",
+      "value": 3.6,
+      "unit_key": "pct",
+      "flags": [],
+      "checked_at": "2026-01-01T00:00:00Z"
+    }
+  ]
+}
