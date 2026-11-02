@@ -16,6 +16,8 @@ strings in ISO 8601 UTC.
 - Formats: keys match `^[a-z0-9_]+$`, domain keys dot-separated segments of that form, timestamps
   `YYYY-MM-DDTHH:MM[:SS[.f]]Z`; the schemas declare them as `pattern` (D24).
 - All fields below are required unless marked optional.
+- gold.publish checks every JSON file against its schema in warehouse/published/schemas/ before writing it and fails
+  on a problem.
 
 ## catalog/catalog.json
 
