@@ -3302,8 +3302,15 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit commercial reuse licence verified.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+      https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+      (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+      attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+      consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+      The report files carry no licence of their own. Copies on dane.gov.pl follow that dataset''s own reuse
+      conditions. Attribution: "Źródło: MRiRW, Zintegrowany System Rolniczej Informacji Rynkowej (<bulletin, date>)"
+      / "Source: Ministry of Agriculture and Rural Development, ZSRIR (<bulletin, date>)".'
   updates: Weekly for major meat/grain market reports; monthly for some feed/other bulletins.
   ingestion:
     history: Backfill commodity-specific bulletins only where structured tables are stable.
@@ -3323,6 +3330,7 @@ sources:
     references:
     - https://www.gov.pl/web/rolnictwo/biuletyny-informacyjne
     - https://dane.gov.pl/pl/dataset/1022%2Czintegrowany-system-rolniczej-informacji-rynkowej-biuletyny-informacyjne-rynek-pasz
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-033
   name: Weekly agricultural market situation reports
   short_name: KOWR agricultural markets
