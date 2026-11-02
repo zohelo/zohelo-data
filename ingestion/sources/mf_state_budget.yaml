@@ -1,0 +1,37 @@
+source_system: mf_state_budget
+description: Ministry of Finance monthly state budget execution (XLSX)
+
+# Extraction strategy (docs/landing.md). Bulk feature: the Ministry of Finance's monthly state
+# budget execution report ("sprawozdania operatywne miesięczne"), linked from a stable gov.pl page
+# (gov.pl terms, register PLG-007). Each release is a new https://www.gov.pl/attachment/<uuid>, so
+# the link is found on the page at run time (url_from; the newest month is listed first).
+# Version = Last-Modified; written only when the SHA-256 changed. A schedule (stage 4) comes
+# after the Dev trial.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: budget_execution_monthly
+        url_from:
+          page: https://www.gov.pl/web/finanse/sprawozdania-operatywne-miesieczne
+          pattern: /attachment/
+          pick: first
+        format: raw
+        version: last_modified     # the response's Last-Modified; download time when absent
+  initial: bulk
+  production: snapshot                  # each report holds the year to date
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: []
+
+landing: 01_landing/mf_state_budget/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: []
+silver: []
+gold: []
+
+refresh: {mode: full}
+
+activities: [landing.inspect, landing.extract, landing.verify]
