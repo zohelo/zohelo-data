@@ -10,7 +10,7 @@
       "frequency_default": "A",
       "subgroup_key": "population.stock.population",
       "domain_path": ["population", "population.stock", "population.stock.population"],
-      "source_keys": ["eurostat", "world_bank_wdi", "gus_bdl"],
+      "source_keys": ["gus_bdl"],
       "geo_levels": ["country", "voivodeship"],
       "first_period": "1990",
       "last_period": "2025",
