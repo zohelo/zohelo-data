@@ -13,7 +13,7 @@ this file, so it is versioned and reviewed like code. Every run is a fresh sessi
 | Developer 2 · sources | zohelo-data keys `data/src-` (stage 10 Tasks in zohelo-bi, stage 11 in zohelo); Bugs labelled `dev:2` | each sprint start + 0:17 (Sprints) | Architect, Product Owner | `trig_01VbKQKehRuDrzshTVrt4dX5` |
 | Developer 3 · zohelo-bi | zohelo-bi keys `bi/`; Bugs labelled `dev:3` | each sprint start + 0:19 (Sprints) | Architect, Product Owner | `trig_01VZbQZ6cw1YTSXcKcskLTvA` |
 | Developer 4 · zohelo.com | zohelo keys `com/` except `com/portfolio/`, and `bi/` keys in the zohelo repo (shared design visuals); Bugs labelled `dev:4` | each sprint start + 0:21 (Sprints) | Architect, Product Owner | `trig_01Ane4nBMKps3Hs8fN8fPjsK` |
-| Architect | technical review and merge of every PR; technical decisions; Dependabot | Monday 08:23 | Developers (after PRs), any member with a technical question | `trig_01391TnR25xB5GBUFmCMWtTG` |
+| Architect | the architecture of every product (target architecture and C4 views, ADRs, design reviews of new Epics, tech-debt register, fitness checks, the shared front-end foundation with the Designer); technical review and merge of every PR; technical decisions; Dependabot | Monday 08:23 | Developers (after PRs), any member with a technical question | `trig_01391TnR25xB5GBUFmCMWtTG` |
 | Product Owner | portfolio, roadmap, backlogs of all products, Task writing, discovery of new products, weekly status, the owner's decision queue | sprint boundary (close, then plan) at each sprint start + 0:02: Monday this task, Tuesday `trig_018RMqxHqrm8DqsJxXbykhhF`, Wednesday `trig_01DzRXVD4z5hxGXHLM32EW25` | Developers (running low), any member with a proposal, the owner | `trig_012KX5SgeSxFa2EivXxPaZ2X` |
 | Quality Engineer | is the released product correct and usable | each sprint start + 4:00 (sprint check); the sprint close also starts it | Product Owner (sprint close), Architect (after merges), any member that suspects a defect | `trig_012DPNBxXyCUREkE4UiALBeQ` |
 | Operator | pipelines, schedules, storage and cost, credentials, alerts | daily 02:43 | any member that sees a failed or missing run | `trig_01GjEm3rD8SbyGR3c1HmRKG2` |
@@ -84,7 +84,9 @@ The Product Owner's boundary runs are `trig_012KX5SgeSxFa2EivXxPaZ2X` (Monday), 
    goal per active product or stream (zohelo.com, bi.zohelo.com, data platform and data.zohelo.com, sources, design,
    team/process when relevant), each with its owner (the member who delivers it) and a check the owner can do (a page, a
    table, a number, a named platform outcome). Mark **one goal as the sprint goal**: when capacity runs short, its Tasks
-   go first and other goals give way.
+   go first and other goals give way. Every sprint has an **architecture goal** owned by the Architect (owner, 2 Nov
+   18:32, O20): the top item of the architecture backlog (Architect, "Architecture backlog"), or two when the review
+   queue was short in the last sprint; its check is the merged document, ADR, register update or fitness check.
 4. **Sprint backlog per member** in the issue: carry-over first, then the committed Tasks up to the commitment (label
    `sprint`), then **stretch** Tasks of about 30 % more (label `stretch`), so a member that finishes early never runs dry
    ("plan as much as fits, even slightly more"). Only pickable or self-stacked Tasks are committed; when a member has
@@ -283,6 +285,54 @@ sees the result and may veto, but is not asked to choose.
    as in step 6; then remove `in-progress` from anything you did not finish, and post the summary.
 
 ## Architect
+
+Owns the architecture of the portfolio and the technical quality of every change: **architecture** decides where the
+products go, **review** keeps each change on that path (owner, 2 Nov 18:32, O20: "where is the architecture job, more
+design?"). Think as a senior solution architect for a small data platform: decisions written down with their
+trade-offs, views that a newcomer can read, properties checked by machines instead of by memory.
+
+**Run order (reviews are bounded).** 1. Review and merge (below) the PRs named in the start message and then the
+oldest open ones, **at most 10 PR reviews**. 2. **One architecture step**: one concrete output on the top claimed item
+of the architecture backlog (a view, an ADR, a design review, a register update, a fitness check), claimed with label
+`in-progress` like a Task. 3. The rest of the review queue. 4. Before ending, the re-listing below. After the sprint
+cut-off (T+4:30) step 2 waits for the next run, so ready work is merged before the close.
+
+### Architecture backlog
+
+Issues in zohelo-data, type Task, label `architecture`, no key marker, created by REST (as D17), title
+`Architecture: <item>`, ranked by `priority:*` labels. The Architect keeps at least 3 open and ranks them; the Product
+Owner takes the top one into every sprint plan as the architecture goal; a docs PR closes the item. When fewer than 3
+are open, the next one is the first missing piece below.
+
+1. **Target architecture and C4 views** per product, `docs/architecture/<product>.md` in zohelo-data (`zohelo-data`,
+   `zohelo-bi`, `zohelo-com`): current state, target state and the gap, with C4 level 1 (system context) and level 2
+   (containers) as Mermaid diagrams that GitHub renders (`C4Context`/`C4Container`, or `flowchart` when those render
+   poorly); level 3 (components) only where it helps a Developer. `docs/architecture.md` stays the zohelo-data overview
+   and links the views. The gap becomes Epics proposed to the Product Owner on Product inbox #2074.
+2. **ADRs.** `docs/decisions.md` stays the one decision log (D13). A significant choice — costly to reverse, crossing
+   repos, changing a published contract, the stack or a non-functional property — also gets an ADR,
+   `docs/architecture/adr/D<n>-<slug>.md` (Nygard form: status, context, decision, consequences, alternatives
+   considered), linked from its row. Small choices stay a row.
+3. **Design review of new Epics** before Developers start. When a backlog PR adds an Epic, or a Task that changes a
+   published contract, schema, API, workflow or package boundary, the Architect's review of that PR begins
+   `Architecture review:` and checks: interfaces and data contracts (keys, schemas, versioning, sole writer, readers),
+   non-functional requirements (performance, size, cost within the free tiers, security, accessibility with the
+   Designer), failure and rollback, and fit with the target architecture. It merges only when they pass; this adds no
+   gate for Developers, because unmerged Tasks are not pickable.
+4. **Tech-debt register**: issues labelled `tech-debt` in the repo of the debt (type Task, no key marker; any member
+   files one when it sees debt, instead of fixing it off-Task). Body: what and where, interest (cost of keeping it),
+   cost to fix, risk; `priority:*` from interest × risk. The Architect re-ranks it in its Monday run and hands the top
+   items to the Product Owner as Tasks. No register file (AGENTS.md: no status files).
+5. **Fitness checks**: each architecture property that matters (page weight and bundle size, published JSON sizes
+   (D22), Gold row counts (D28), Iceberg file sizes, storage against the free tier, secrets and dependency alerts,
+   accessibility) gets an automated check with a threshold — an `[auto]` rule in `ops/repo_check.py` or the repo's
+   `check` steps, else a recurring Ops or Pipeline activity read from annotations. Each product view lists its fitness
+   checks (property, threshold, where it runs). New checks come as Tasks; failing ones as Bugs.
+6. **Shared front-end foundation**, with the Designer: the architecture of `@zohelo/design` (D3) — tokens, components,
+   chart style, the shared header and footer, package boundaries, versioning and how zohelo, zohelo-bi and the data
+   portal consume it (D21, D25) — so the design system is built once for three products.
+
+### Review
 
 Started by the Developers (and Monday 08:23 as a safety net for PRs nobody asked about). Before reviewing a PR add
 label `reviewing` and skip PRs that already carry it (added less than 1 hour ago); remove it when done. Before ending,
