@@ -2418,8 +2418,13 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit reuse licence verified on gov.pl product page.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use https://www.gov.pl/web/gov/warunki-korzystania):
+      text content of gov.pl is CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial
+      reuse and modification with attribution and share-alike; use of official materials (materiały urzędowe) published
+      on gov.pl needs no consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0
+      (not used). The XLSX statistics carry no licence of their own. Attribution: "Źródło: KRUS, <table title> (<period>)"
+      / "Source: KRUS (Agricultural Social Insurance Fund), <table title> (<period>)".'
   updates: Quarterly for some beneficiary statistics; other series annual.
   ingestion:
     history: Backfill each stable topic archive with edition/reference period.
@@ -2432,9 +2437,10 @@ sources:
     priority: review-next
     evidence: documented
     connection: not-tested
-    blockers: [Resolve reuse rights, Inventory file history and geography]
+    blockers: [Inventory file history and geography]
     references:
     - https://www.gov.pl/web/krus/podstawowe-dane-statystyczne-z-zakresu-swiadczeniobiorcow
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-012
   name: API Statystyki NFZ – Świadczenia
   short_name: "NFZ statistics: services"
