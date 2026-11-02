@@ -3101,7 +3101,12 @@ sources:
     limits: No API quota.
   licence:
     status: open-conditional
-    notes: GUS portal CC BY 4.0; retain precision estimates and disclosure notes.
+    notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+      and printing data and pages, including own changes and summaries, on condition that the source is given; no
+      named licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for
+      users'' summaries or reworked text. Tables embedding third-party data keep their owners'' terms. Attribution:
+      "Źródło: GUS, Uczestnictwo ludności w kulturze w <year> r." / "Source: Statistics Poland, Participation of the
+      population in culture in <year>".'
   updates: Periodic, not annual; revision policy unknown.
   ingestion:
     history: Load each survey edition with methodology and precision workbook.
@@ -3120,6 +3125,7 @@ sources:
     - Verify comparability across questionnaire changes
     references:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/uczestnictwo-ludnosci-w-kulturze-w-2024-r-%2C6%2C4.html
+    - https://stat.gov.pl/en/copyright/
 - id: PLS-029
   name: Registered unemployment and labour-office vacancy statistics
   short_name: MRPiPS registered unemployment
