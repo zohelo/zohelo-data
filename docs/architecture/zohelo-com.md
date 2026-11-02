@@ -5,12 +5,12 @@ The public brand site ("Polska w danych / Poland in data") in the repository
 state, target state, the gap, and the fitness checks that keep the site on the target. The platform overview is
 [../architecture.md](../architecture.md); the published contract it reads is [../published.md](../published.md).
 
-## Current state (zohelo main, 2 November 2026)
+## Current state
 
 - **Static, pre-rendered site.** React Router 7 in framework mode with `ssr: false` and `prerender()`
   (`react-router.config.ts`): every page in `src/site.config.ts` in Polish (`/…`) and English (`/en/…`), one page per
   published KPI (`/indicators/<kpi_key>`), per voivodeship (`/regions/…`) and per portfolio case study, plus 404.
-  56 URLs in the sitemap on the fixture layer. No server code at request time, no Pages Functions.
+  No server code at request time, no Pages Functions.
 - **Data at build time only.** `scripts/fetch-published.ts` copies `06_published/v1/` (catalog, `kpi/*/latest.json`,
   `kpi/*/series.parquet`, `geo/*.geojson`, `feed/*`) with the read-only lakehouse key (D7, O7) into `.published/`
   before the build; without the key it copies `fixtures/published/` (PR checks), and on `main` it fails instead
@@ -26,9 +26,9 @@ state, target state, the gap, and the fitness checks that keep the site on the t
 - **Hosting.** Cloudflare Pages project `zohelo` (zohelo.com, www.zohelo.com), deployed by `deploy.yml` on every
   push to `main` (setup as code in `scripts/cloudflare-setup.ts`, a smoke check for "Polska w danych", a GitHub
   Release per production deploy); a manual run on a branch deploys a preview. Public, no sign-in.
-- **Measured weight** (fixture build of main, gzip, JS + CSS a page loads): pages without a chart about 160 kB
-  (`entry.client` 69 kB, router chunk 44 kB, `root.css` 41 kB); pages with a chart about 460 kB, of which the Vega
-  chunk is 294 kB (855 kB raw). The home page loads the chart chunk (chart of the day).
+- **Page weight.** Pages without a chart load the client entry, the router chunk and the root stylesheet; pages
+  with a chart also load the Vega chunk, which is the largest asset. The home page loads it (chart of the day).
+  Measured values belong to the page-weight check (Fitness checks), which reports them on every run.
 
 ### System context (C4 level 1)
 
@@ -82,11 +82,12 @@ flowchart TB
 ## Target state
 
 1. **Fresh without a code change.** A successful `gold.publish` in zohelo-data rebuilds and deploys the site, so
-   published numbers reach zohelo.com within one pipeline cycle. Today the site shows the published layer of the
-   last merge to zohelo `main`: a fix in the data (for example zohelo-data#2449, merged 2 Nov) reaches readers only
-   with the next unrelated merge.
+   published numbers reach zohelo.com within one pipeline cycle, and only after the published JSON passed the
+   schema validation of G3. Today the site shows the published layer of the last merge to zohelo `main`: a fix in
+   the data (for example zohelo-data#2449) reaches readers only with the next unrelated merge.
 2. **Light pages, charts on demand.** Every page is readable without JavaScript (numbers in HTML, D25); the chart
-   code loads only where a chart is visible, and a chart page stays within the page-weight budget below. Vega
+   code loads only where a chart is visible: the home page and every page without a visible chart stay within the
+   no-chart budget, and chart pages within the chart budget below. Vega
    remains the chart engine until a measured alternative is lighter at equal function; any switch is an ADR.
 3. **One front-end foundation for three products.** `@zohelo/design` is the single source of tokens, components,
    formats and chart style for zohelo.com, zohelo-bi and the data portal, versioned and released from this repo;
@@ -98,10 +99,12 @@ flowchart TB
 
 ## Gap
 
+Order: G3 before G1 (an automatic deploy must never ship published JSON that no check validated), then G2 and G5.
+
 | # | Gap | Proposed work | Size |
 |---|---|---|---|
-| G1 | No rebuild after `gold.publish`; site data is as old as the last zohelo merge | Epic: after a green `gold.publish`, dispatch zohelo `deploy.yml` on `main` (the zohelo-automation app token; `workflow_dispatch` already exists), with the publish run linked in the deploy summary | S–M, crosses repos |
-| G2 | No page-weight or bundle budget; the Vega chunk (294 kB gz) loads on the home page | Epic: a build-time budget check (below) in `check.yml`; then decide whether the home page's chart of the day loads the chart chunk only when scrolled into view | S + M |
+| G1 | No rebuild after `gold.publish`; site data is as old as the last zohelo merge | ADR first (it crosses repos and adds a write path): which token may dispatch zohelo `deploy.yml` (zohelo-automation app, `actions: write` on zohelo only), deploys per day against the Cloudflare Pages build and deploy limits (at most one per publish, coalesced by the deploy concurrency group), and failure and rollback (a failed deploy leaves the previous deployment live; rollback = redeploy the previous Release). Then the Epic: after a green `gold.publish`, dispatch the deploy on `main` and link the publish run in its summary. Depends on G3 | ADR + S–M, crosses repos |
+| G2 | No page-weight or bundle budget; the Vega chunk, the largest asset, loads on the home page | Epic: a build-time budget check (below) in `check.yml`; then decide whether the home page's chart of the day loads the chart chunk only when scrolled into view | S + M |
 | G3 | The site does not validate published JSON against the zohelo-data schemas | Task: build-time schema validation in `fetch-published.ts` (mirror of zohelo-bi, D24) | S |
 | G4 | Light theme forced (D21); components still use literal classes in places | Covered by the Designer's design-system work and zohelo-data#2448 | — |
 | G5 | No accessibility check in CI | Epic with the Designer: an automated axe pass over the pre-rendered pages, zero serious or critical findings | M |
@@ -112,9 +115,9 @@ The Epics for G1, G2, G3 and G5 are proposed to the Product Owner on Product inb
 
 | Property | Threshold | Where it runs | Today |
 |---|---|---|---|
-| JS + CSS a page without a chart loads (gzip) | ≤ 200 kB | `check.yml`, new budget step over `build/client` (G2) | none (measured 160 kB) |
-| JS + CSS a chart page loads (gzip) | ≤ 500 kB | same step (G2) | none (measured 460 kB) |
-| Chart chunk only on pages that render a chart | the Vega chunk is not referenced by `/sources`, `/indicators`, `/portfolio`, `/changes` | same step (G2) | none |
+| JS + CSS a page without a chart loads (gzip) | ≤ 200 kB; target: the home page is in this class (Vega chunk loaded only when its chart is in view) | `check.yml`, new budget step over `build/client` (G2), which prints every page's value | none |
+| JS + CSS a chart page loads (gzip) | start at ≤ 500 kB, then a ratchet: after each merge the threshold is lowered to the measured value plus 5 %, never raised without an ADR | same step (G2) | none |
+| Chart chunk only on pages that render a chart | the Vega chunk is not referenced by `/`, `/sources`, `/indicators`, `/portfolio`, `/changes` | same step (G2) | none |
 | Download files | ≤ 200 kB each (`DOWNLOAD_LIMIT`) | `scripts/downloads.ts` in every build | yes |
 | Published files read | `latest.json` ≤ 100 kB (D22); series and geo limits of docs/published.md | `gold.publish` in zohelo-data | yes (writer side) |
 | Published JSON matches the contract | valid against `kpi_latest.schema.json` and the other published schemas | `fetch-published.ts` (G3) | fixtures only |
