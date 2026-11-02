@@ -16,7 +16,9 @@ with bounds (concept_key, source_system, value_min, value_max) as (
     ('gdp_per_capita', 'eurostat', 0, 2e5),
     ('gdp_per_capita', 'world_bank_wdi', 0, 5e5),
     ('gdp_volume_growth', 'eurostat', -50, 100),
-    ('gdp_volume_growth', 'world_bank_wdi', -100, 200)
+    ('gdp_volume_growth', 'world_bank_wdi', -100, 200),
+    ('deaths', 'eurostat', 0, 1e7),
+    ('employment_rate', 'eurostat', 0, 100)
 ),
 
 metrics as (
@@ -82,6 +84,24 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_gdp_volume_growth') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_deaths') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_employment_rate') }}
 )
 
 select

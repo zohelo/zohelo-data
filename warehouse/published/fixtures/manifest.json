@@ -63,6 +63,26 @@
       "dimensions": [{"dimension_key": "geography", "column": "geography_key"}]
     },
     {
+      "kpi_key": "deaths",
+      "table": "gold.metrics_deaths",
+      "unit_key": "persons",
+      "frequency": "A",
+      "time_column": "period",
+      "value_column": "value",
+      "source_column": "source_system",
+      "dimensions": [{"dimension_key": "geography", "column": "geography_key"}]
+    },
+    {
+      "kpi_key": "employment_rate",
+      "table": "gold.metrics_employment_rate",
+      "unit_key": "pct_population",
+      "frequency": "A",
+      "time_column": "period",
+      "value_column": "value",
+      "source_column": "source_system",
+      "dimensions": [{"dimension_key": "geography", "column": "geography_key"}]
+    },
+    {
       "kpi_key": "fx_rate",
       "table": "gold.metrics_fx_rate",
       "unit_key": "pln_per_unit",
