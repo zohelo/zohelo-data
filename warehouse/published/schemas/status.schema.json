@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zohelo.com/schemas/published/v1/status.schema.json",
+  "title": "06_published/v1/status.json",
+  "type": "object",
+  "required": ["version", "generated_at", "sources"],
+  "properties": {
+    "version": {"type": "integer"},
+    "generated_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$"},
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source_key", "name_pl", "name_en", "last_loaded_at", "next_expected_at", "lag_days"],
+        "properties": {
+          "source_key": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+          "name_pl": {"type": "string"},
+          "name_en": {"type": "string"},
+          "last_loaded_at": {"type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$"},
+          "next_expected_at": {"type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$"},
+          "lag_days": {"type": ["integer", "null"]}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}
