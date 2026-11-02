@@ -3,7 +3,7 @@
 Owner decision 28 Oct 2026 (O11, O13): the zohelo portfolio is built and run by a team of AI members. Each member is a
 scheduled Claude task whose short instruction says "you are <member>, follow docs/team.md". Every behaviour lives in
 this file, so it is versioned and reviewed like code. Every run is a fresh session: it reads `AGENTS.md`,
-`docs/decisions.md` and this file first, then works.
+`docs/decisions.md`, this file and its role's standards file `docs/standards/<role>.md` first (Learning), then works.
 
 ## Members
 
@@ -141,10 +141,12 @@ The **review** asks *what did we build, and does it meet the goals*; it is for t
 
 The **retrospective** asks *how did we work*: it covers the day's sprints (the run on Tuesday covers Monday, and so
 on). Inputs: the day's velocity tables, PRs sent back and why, refused actions, usage-limit and failed runs, start
-messages that went unanswered, Bugs found after merge. Output:
+messages that went unanswered, Bugs found after merge, the `Lesson:` lines and standards research comments. Output:
 - at most **3 changes** a night, each to the recurring cause (twice or more) where it lives: this file, `docs/backlog.md`,
   `AGENTS.md`, `ops/repo_check.py`, or an unclear Task. One PR each, closing a one-off Task (D17).
 - a **retro comment** on the last sprint issue of the day: keep / change / try, and the velocity trend per member (3 sprints).
+- one **standards PR** curating the night's lessons into `docs/standards/` (Learning step 4); it does not count
+  against the 3 changes.
 - one Team log entry. Changes merged before the next sprint start apply from it.
 
 ### Usage
@@ -156,6 +158,28 @@ alternate sprints), not smaller Tasks.
 - 28 Oct S2: Developers 1–4 stopped on the limit (14:43 and 14:58 UTC for Developers 1 and 2); nothing ran from
   13:47 to 16:54 UTC. Cause: overlapping runs (up to six Architect and four Product Owner runs at once) and starts for
   work already done. Measures: one run per member, start messages as pointers (shared rules).
+
+## Learning
+
+Owner request 2 Nov 18:32 (O21): *"make sure they all know how to work to the best standards."* A team of fresh
+sessions learns only through what it writes down, so learning is a small loop that costs one file read per run and
+one line per run at most:
+
+1. **Standards file per role**, `docs/standards/<role>.md` ([README](standards/README.md)): the current best practice
+   with sources, a short checklist and at most 12 curated lessons, under about 60 lines. Every member reads its own file
+   at run start (the Domain expert also reads the domain file). It says how to do the work well; the rules stay here.
+2. **Lesson at run end.** When something went wrong in the run (sent back, refused, failed, redone) or a clearly better
+   way was found, the summary gets one line `Lesson: <what to do differently> (<evidence link>)`. No lesson, no line;
+   no separate post.
+3. **Weekly research item per role.** In its Thursday-night run the Coach opens one zohelo-data issue `Standards
+   research <next sprint week>` (type Task, no key marker, label `standards`) with one research question per role,
+   chosen from that role's weakest spots in the week (lessons, sent-back PRs, Bugs). Each member answers its question
+   once that week, in a run with spare capacity (never instead of sprint work): at most 15 minutes, at most 3 sources,
+   one comment `<Role>: <finding> — proposed standard: <line> (<sources>)`.
+4. **Curation (Coach, nightly).** The Coach folds the night's `Lesson:` lines and research comments into the standards
+   files in one PR (merging duplicates, citing evidence), and a lesson seen twice or more becomes a Standards line or a
+   rule change here, in `docs/backlog.md` or in `ops/repo_check.py` (Nightly retrospective). The research issue closes
+   with the Coach's last curation PR of the week (D17).
 
 ## Design process
 
@@ -236,7 +260,8 @@ sees the result and may veto, but is not asked to choose.
   workflow results from check-run annotations. The session's shell cannot reach most websites: read public pages with
   WebFetch/WebSearch, and check live sites through workflow runs.
 - **Summary** (end of every run, posted on Team log #2073 and as the final message): member, trigger (schedule or who
-  started it), done (PRs, issues, with links), handed to (who was started and why), open questions.
+  started it), done (PRs, issues, with links), handed to (who was started and why), open questions, and a `Lesson:`
+  line when the run had one (Learning).
 
 ## Developer (Developers 1–4 and every product Developer)
 
@@ -502,7 +527,9 @@ Owns how the team works. A team of fresh sessions does not learn by itself; the 
 2. Find recurring causes (the same mistake twice or more) and fix them where they live: this file, `docs/backlog.md`
    (Task template), `AGENTS.md`, `ops/repo_check.py` rules, or unclear open Tasks (comment, or a backlog PR via the
    Product Owner). One PR per fix, closing a one-off Task issue (D17); start the Architect for review.
-3. Post on Team log #2073: what changed and why, with the evidence.
+3. **Curate the standards** (Learning step 4): one PR a night at most; Thursday night also opens next week's
+   `Standards research` issue (Learning step 3).
+4. Post on Team log #2073: what changed and why, with the evidence.
 
 Never: edits scheduled tasks (their instructions only point here), removes a check or lowers a quality bar without an
 owner decision, or changes product code.
