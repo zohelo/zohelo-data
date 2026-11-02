@@ -129,7 +129,7 @@ Mapping from the `unit` text in `poc_concepts` (warehouse/macros/poc_blocks.sql)
 | live_births | population.vital | draft |
 | deaths | population.vital | draft |
 | average_gross_wage | labour.wages | draft |
-| dwellings_completed | business.industry_construction | draft |
+| dwellings_completed | housing.housing | draft |
 | area | housing.territory | draft |
 | population_density | population.stock.population | draft |
 | fx_rate | finance.fx_gold.exchange_rates | published |
