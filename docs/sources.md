@@ -421,6 +421,17 @@ a NIP + account pair is checked by hashing it the published number of times. The
 `bulk_file` pattern lands the day's file (`url_date: Europe/Warsaw`, format `7z`, tested with
 the runner's 7-Zip); Bronze keeps the list items as published, Silver splits hashes and masks.
 
+## MF State Treasury debt (time series)
+
+**Extraction (2 Nov 2026).** The Ministry of Finance publishes the State Treasury debt time
+series as an XLSX workbook linked from the stable page `https://www.gov.pl/web/finanse/szeregiczasowe`;
+each release is a new `https://www.gov.pl/attachment/<uuid>`. The declaration
+`mf_treasury_debt.yaml` lands it through the shared `bulk_file` pattern as entity
+`treasury_debt_series`, finding the link on the page at run time (`url_from`, pattern
+`/attachment/`; `landing: inspect` lists every match). Version = Last-Modified (download time
+when absent); written only when the SHA-256 changed. Restart unit: the whole workbook. Terms:
+gov.pl (register PLG-008). Bronze, Silver and a schedule are later stages.
+
 ## OpenData.org (BrightQuery)
 
 **Extraction (owner decision 25 Oct 2026, #906: keep and run through the whole process).**

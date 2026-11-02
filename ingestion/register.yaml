@@ -3859,6 +3859,7 @@ sources:
   name: Treasury debt time series and monthly bulletin
   short_name: MF Treasury debt
   provider: Ministry of Finance
+  source_system: mf_treasury_debt
   status: approved
   family: D
   kpi: true

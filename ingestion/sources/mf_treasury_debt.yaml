@@ -1,0 +1,36 @@
+source_system: mf_treasury_debt
+description: Ministry of Finance State Treasury debt time series (XLSX)
+
+# Extraction strategy (docs/landing.md). Bulk feature: the Ministry of Finance's State Treasury
+# debt time-series workbook, linked from the stable page "Szeregi czasowe" on gov.pl (gov.pl
+# terms, register PLG-008). Each release is a new https://www.gov.pl/attachment/<uuid>, so the
+# link is found on the page at run time (url_from). Version = Last-Modified; written only when
+# the SHA-256 changed. Monthly series; a schedule (stage 4) comes after the Dev trial.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: treasury_debt_series
+        url_from:
+          page: https://www.gov.pl/web/finanse/szeregiczasowe
+          pattern: /attachment/
+          pick: first   # Dev trial #2345: 1st link = Zadluzenie_Skarbu_Panstwa.xlsx, 2nd = Dlug_publiczny_<q>.xlsx
+        format: raw
+        version: last_modified     # the response's Last-Modified; download time when absent
+  initial: bulk
+  production: snapshot                  # each workbook holds the complete series
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: []
+
+landing: 01_landing/mf_treasury_debt/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: []
+silver: []
+gold: []
+
+refresh: {mode: full}
+
+activities: [landing.inspect, landing.extract, landing.verify]
