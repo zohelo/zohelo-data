@@ -3037,9 +3037,15 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: The opened catalogue describes the dataset but product-specific commercial redistribution terms were
-      not verified. Addresses may identify private property; avoid owner/person fields.
+    status: open-conditional
+    notes: 'Terms: dane.gov.pl dataset 2627 ''Ewidencja zabytków nieruchomych'' (provider Narodowy Instytut Dziedzictwa,
+      https://dane.gov.pl/pl/dataset/2627, API https://api.dane.gov.pl/1.4/datasets/2627): licence CC BY 4.0
+      (https://creativecommons.org/licenses/by/4.0/), default dane.gov.pl CC 4.0 condition, which allows commercial
+      reuse and modification with attribution; the custom condition only names the origin (register cards of the
+      Voivodeship Monument Conservators). Updated quarterly. Addresses may identify private property; avoid
+      owner/person fields. Attribution: "Źródło: Narodowy Instytut Dziedzictwa, Ewidencja zabytków nieruchomych,
+      dane.gov.pl (<date>), CC BY 4.0" / "Source: National Heritage Institute (NID), register of immovable
+      monuments, dane.gov.pl (<date>), CC BY 4.0".'
   updates: Ongoing official inventory; cadence/history unknown.
   ingestion:
     history: Snapshot official bulk files after licence and format review.
@@ -3055,8 +3061,12 @@ sources:
     priority: review-next
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Open NID-native download/metadata page, Verify licence and update policy, Define safe address fields]
-    references: ['https://dane.gov.pl/pl/dataset/2627']
+    blockers:
+    - Open NID-native download/metadata page
+    - Define safe address fields
+    references:
+    - https://dane.gov.pl/pl/dataset/2627
+    - https://api.dane.gov.pl/1.4/datasets/2627
 - id: PLS-027
   name: Kultura i dziedzictwo narodowe – annual tables
   short_name: GUS culture tables
