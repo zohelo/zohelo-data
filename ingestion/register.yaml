@@ -2694,8 +2694,15 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: unresolved
-    notes: No explicit dataset reuse licence verified on gov.pl page.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+      https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+      (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+      attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+      consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+      The report files carry no licence of their own. Attribution: "Źródło: Główny Inspektorat Sanitarny, Stan
+      sanitarny kraju (<year>)" / "Source: Chief Sanitary Inspectorate (GIS), Sanitary state of the country
+      (<year>)".'
   updates: Annual; source materials come from regional/local inspectorates.
   ingestion:
     history: Load available annual reports and hand-curated stable tables.
@@ -2709,9 +2716,12 @@ sources:
     priority: specialist
     evidence: documented
     connection: not-tested
-    blockers: [Inventory report archive, Resolve reuse terms, Assess structured-data availability]
+    blockers:
+    - Inventory report archive
+    - Assess structured-data availability
     references:
     - https://www.gov.pl/web/gis/raport---stan-sanitarny-kraju
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-019
   name: Biuletyny, meldunki i informacje epidemiologiczne (EPIMELD)
   short_name: NIZP-PZH epidemiology bulletins
