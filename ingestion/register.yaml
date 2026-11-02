@@ -3129,7 +3129,7 @@ sources:
   name: Kultura i dziedzictwo narodowe – annual tables
   short_name: GUS culture tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland and voivodeships
