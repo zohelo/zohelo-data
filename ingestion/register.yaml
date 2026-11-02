@@ -3864,8 +3864,15 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: dataset-specific
-    notes: File-level reuse terms need confirmation.
+    status: open-conditional
+    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+      https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+      (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+      attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+      consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+      The XLSX/PDF attachments carry no licence of their own; an attachment marked with other terms keeps them.
+      Attribution: "Źródło: Ministerstwo Finansów, Zadłużenie sektora finansów publicznych (<period>)" / "Source:
+      Ministry of Finance, Public finance sector debt (<period>)".'
   updates: Quarterly with revisions; national and EU methodologies can coexist.
   ingestion:
     history: 'PROPOSAL: backfill each public-sector-debt workbook separately by national/EDP methodology and consolidation
@@ -3880,9 +3887,11 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Document consolidation and breaks.]
+    blockers:
+    - Document consolidation and breaks.
     references:
     - https://www.gov.pl/web/finanse/zadluzenie-sektora-finansow-publicznych
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLG-010
   name: Local-government budget reports (sprawozdania budżetowe JST)
   short_name: MF local-government budgets
