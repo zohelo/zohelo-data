@@ -2502,11 +2502,20 @@ sources:
     interfaces: [REST API, JSON, XML, Swagger]
     auth: Public API; no key indicated on root documentation.
     cost: free
-    limits: Unknown until product terms are reviewed.
+    limits: '10 requests/second per IP (terms v1.0, section III).'
   licence:
-    status: unresolved
-    notes: This API’s product terms were not opened. Related NFZ terms cannot be assumed to apply; commercial redistribution
-      remains unresolved.
+    status: open-conditional
+    notes: 'Terms: API regulations (Regulamin) of "API Statystyki NFZ - Refundacja Apteczna" v1.0,
+      https://api.nfz.gov.pl/app-stat-api-ra/terms (section II): users must state the source by giving the address
+      https://api.nfz.gov.pl/; the user may not modify the data ("Niedozwolone jest modyfikowanie danych przez
+      Usługobiorcę"); no use for software that breaks the law or third-party rights, misleads users or acts
+      maliciously; no overloading (10 requests/second per IP); NFZ may block users for breaches and may change the
+      API and its terms. No licence name and no clause on commercial reuse; public display of the published values
+      is allowed with attribution. Show values as published; any figure we derive (rates, sums, shares) is labelled
+      as a zohelo calculation. Disclaimer: use is at the user''s own risk, NFZ is not liable for lost profits.
+      Attribution: "Źródło: Narodowy Fundusz Zdrowia, API Statystyki NFZ – Refundacja Apteczna
+      (https://api.nfz.gov.pl/)" / "Source: National Health Fund (NFZ), NFZ Statistics API – Pharmacy Refunds
+      (https://api.nfz.gov.pl/)".'
   updates: Release schedule and revision policy unknown.
   ingestion:
     history: Enumerate table index/years and snapshot selected aggregates.
@@ -2519,8 +2528,14 @@ sources:
     priority: review-next
     evidence: documented
     connection: not-tested
-    blockers: [Open product-specific terms, Enumerate dimensions/history, Resolve medicine-code crosswalks]
-    references: ['https://api.nfz.gov.pl/app-stat-api-ra/']
+    blockers:
+    - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived
+      values; published values are shown unchanged'
+    - 'Enumerate dimensions/history'
+    - 'Resolve medicine-code crosswalks'
+    references:
+    - https://api.nfz.gov.pl/app-stat-api-ra/
+    - https://api.nfz.gov.pl/app-stat-api-ra/terms
 - id: PLS-014
   name: API Umowy NFZ
   short_name: NFZ contracts
