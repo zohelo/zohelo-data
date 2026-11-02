@@ -1,0 +1,38 @@
+source_system: world_bank_findex
+description: World Bank Global Findex Database — country-level indicators (CSV)
+
+# Extraction strategy (docs/landing.md). Bulk feature: the country-level Global Findex database is
+# one CSV file per edition, linked from the publication's stable "download data" page; the file URL
+# changes per edition (GlobalFindexDatabase<year>.csv), so it is found on that page (url_from).
+# Only the country-level indicators are CC BY 4.0 (register GL-009); the individual-level microdata
+# (Research Data License, no redistribution) is out of scope. Version = Last-Modified; written only
+# when the SHA-256 changed. Editions come every three to four years; a schedule (stage 4) comes
+# after the Dev trial (#2384).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: findex_country
+        url_from:
+          page: https://www.worldbank.org/en/publication/globalfindex/download-data
+          pattern: 'GlobalFindexDatabase[0-9]{4}\.csv$'
+          pick: first
+        format: raw
+        version: last_modified     # the response's Last-Modified; download time when absent
+  initial: bulk
+  production: snapshot                  # each file is the complete edition (with earlier waves)
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: []
+
+landing: 01_landing/world_bank_findex/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: []
+silver: []
+gold: []
+
+refresh: {mode: full}
+
+activities: [landing.inspect, landing.extract, landing.verify]
