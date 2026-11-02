@@ -472,6 +472,37 @@ deliverables:
           - workflow: "Pipeline, the next scheduled 'silver/gold: build models' run after the merge"
             expect: green, dim_dataset built
         out_of_scope: [name_pl, other sources' names, dim_measure names, catalog.json fields]
+      - key: data/metadata/catalogue-v1/models/file-dataset-names
+        type: Task
+        title: Replace Landing file names and empty names in dim_dataset
+        effort: S
+        state: open
+        contract: false
+        depends_on: [data/metadata/catalogue-v1/models/eurostat-dataset-names]
+        context: >-
+          The report of Task dataset-names-inventory (#2319, run 41448082258) found that gold.dim_dataset names
+          some datasets by their Landing file: nbp (356, e.g. A_2002Q1 → '20020329T000000Z__20261013T195502Z.json'),
+          gus_teryt (8), gugik_prg (1) and world_bank_wdi (1, WDI_CSV → a .zip name), and that 8 gus_dbw datasets
+          have an empty name. The catalogue shows these strings to users. Target: such a name becomes
+          '<source name_en> · <code>' from the source seed (e.g. 'NBP exchange rates and gold price · A_2002Q1').
+        files:
+          - edit: warehouse/models/gold/dim_dataset.sql
+          - edit: warehouse/models/gold/dim_dataset.yml
+        steps:
+          - "dim_dataset.sql, after the Eurostat name rule of Task eurostat-dataset-names: left join {{ ref('source') }} as s on s.source_key = d.source_key and set name = s.name_en || ' · ' || d.code when name is null, '' or matches regexp '^[0-9]{8}T[0-9]{6}Z__[0-9]{8}T[0-9]{6}Z\\.[a-z]+$'; any other name stays as it is."
+          - "Header comment: one sentence on the rule."
+          - "dim_dataset.yml, column name: add 'Landing file names and empty names become <source name_en> · <code>.' to the description; add a not_null test."
+          - "dev/file_names_trial.py: run the new SELECT with duckdb over gold.coverage, silver.eurostat_dataflows and warehouse/seeds/source.csv (read with ingestion.common.r2 catalog() and csv), annotate notice 'file names' with {rows per source_key, file_like (names still matching the regexp), empty_name, first 3 changed (code, name)}. Write nothing. Run in Dev; delete dev/ before the PR."
+        acceptance:
+          - "trial: file_like 0 and empty_name 0 for every source; rows per source equal to today's"
+          - "names of gus_bdl, gus_dbw (non-empty), opendata_org, gleif, mf_biala_lista and eurostat unchanged"
+          - ruff, sqlfluff and repo_check pass
+        verify:
+          - workflow: Dev · branch runs, script file_names_trial, on the branch
+            expect: "notice 'file names' with file_like 0 and empty_name 0"
+          - run: PYTHONPATH=. python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [warehouse/seeds/source.csv, name_pl, gold.coverage writers, catalog.json fields]
     todo:
       - "dim_dataset: native theme path, frequency_keys and PL/EN names from Silver metadata (Eurostat name_en done by Task eurostat-dataset-names; nbp, gus_teryt and gugik_prg carry Landing file names, gus_dbw has 8 empty names); dim_measure: PL/EN names"
       - "dim_member from dim_geography, dim_frequency, the sex seed and dim_series breakdowns (PL/EN naming rule for source labels needed)"
@@ -496,7 +527,7 @@ deliverables:
       - "Domain expert proposals (economy, zohelo-data#2074 and docs/domains/economy.md), to go into the KPI batches: `inflation` becomes GUS CPI monthly (same month of previous year = 100, rate = index − 100) once the GUS series is found; new `inflation_hicp` (eurostat PRC_HICP_MANR RCH_A, labelled HICP); WDI annual-average CPI leaves `inflation`"
       - "GDP (economy, #2074): `gdp_current_prices` in million PLN (eurostat NAMA_10_GDP CP_MNAC; EUR and WDI as their own measures or KPIs, Bug #2148); new `gdp_growth_quarterly` (NAMQ_10_GDP CLV_PCH_SM y/y headline, CLV_PCH_PRE on SCA q/q); new `gdp_per_capita_pps` (GDP per capita in PPS, EU27 = 100)"
       - "Public finance (finance, #2074 and docs/domains/finance.md): `gov_deficit_pct_gdp` and `gov_debt_pct_gdp` (eurostat GOV_10DD_EDPT1, general government S13, % of GDP; named EDP/Maastricht debt, not the Polish state public debt) and `long_term_yield` (IRT_LT_MCBY_M, 10-year Maastricht yield); data already in Bronze"
-      - "Labour (labour, #2074 and docs/domains/labour.md): new `real_wage_growth` (% y/y = GUS monthly enterprise-sector nominal wage index / GUS CPI index × 100 − 100; needs the DBW wage series and `inflation` as GUS CPI); `average_gross_wage` pinned to one BDL measure (P2497) and `live_births` to one (P1873) before either is published"
+      - "Labour (labour, #2074 and docs/domains/labour.md): new `real_wage_growth` (% y/y = GUS monthly enterprise-sector nominal wage index / GUS CPI index × 100 − 100; needs the DBW wage series and `inflation` as GUS CPI) (the P2497 and P1873 pins are Task pin-bdl-measures)"
     tasks:
       - key: data/metadata/catalogue-v1/kpis-40/dwellings-housing
         type: Task
@@ -529,3 +560,201 @@ deliverables:
         out_of_scope:
           - "docs/domains/business.md (the Domain expert updates its own file)"
           - "kpi_measure.csv, the KPI status (stays draft) and any other KPI"
+      - key: data/metadata/catalogue-v1/kpis-40/pin-bdl-measures
+        type: Task
+        title: Pin the GUS BDL measures of four draft KPIs by a number check
+        effort: S
+        state: open
+        contract: false
+        context: >-
+          warehouse/seeds/kpi_measure.csv maps four draft KPIs to a whole GUS BDL subgroup with a trailing `%`:
+          population_density `gus_bdl:P2425:%`, live_births `gus_bdl:P1873:%`, average_gross_wage `gus_bdl:P2497:%`,
+          dwellings_completed `gus_bdl:P3824:%`. A BDL measure_key is `gus_bdl:<subgroup>:<unit>[:<label>]`
+          (poc_build_bdl.sql), so a pattern can catch several measures (P1873: births, deaths, natural change). The
+          Domain expert asked for one pinned measure per KPI, checked against GUS numbers, before publishing
+          (docs/domains/, open points). GUS 2023, Poland: about 120 persons per km², 272,451 live births, 7,155.48 zł
+          average gross wage, about 220,400 dwellings completed.
+        files:
+          - edit: warehouse/seeds/kpi_measure.csv
+        steps:
+          - "dev/bdl_pin_trial.py: read gold.dim_measure, gold.dim_series, gold.fact_annual with ingestion.common.r2 catalog() (load_table(...).scan().to_arrow()) into duckdb. Per subgroup P2425, P1873, P2497, P3824: every measure_key LIKE 'gus_bdl:<id>:%', its measure_name and its total-series (is_total) value at geography_key 'PL', date_key 2023-01-01; one notice 'bdl pin <id>' with [[measure_key, measure_name, value], …]. Writes nothing. Run in Dev; delete dev/ before the PR."
+          - "Choose per subgroup the single measure whose 2023 value lies in this range: P2425 115–130; P1873 260,000–285,000; P2497 6,900–7,400; P3824 200,000–240,000."
+          - "kpi_measure.csv: replace measure_key_pattern of the rows (population_density, gus_bdl), (live_births, gus_bdl), (average_gross_wage, gus_bdl), (dwellings_completed, gus_bdl) by the chosen measure_key, exactly as the trial printed it. Change nothing else."
+        acceptance:
+          - "the four rows hold full measure keys with no `%`; every other row of kpi_measure.csv is unchanged"
+          - "the PR body quotes the four notices and the chosen keys"
+          - repo_check passes
+        verify:
+          - workflow: Dev · branch runs, script bdl_pin_trial, on the branch
+            expect: "notices 'bdl pin P2425', 'bdl pin P1873', 'bdl pin P2497', 'bdl pin P3824', each with exactly one measure in its range"
+          - run: "grep -c 'gus_bdl:P\\(2425\\|1873\\|2497\\|3824\\):%' warehouse/seeds/kpi_measure.csv"
+            expect: "0"
+          - run: PYTHONPATH=. python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [kpi.csv and the KPI status (stays draft), P2392 and P1410, the eurostat and WDI rows, docs/domains/]
+        notes: ["None or several measures in a range: comment the notice here, add design:question, stop."]
+      - key: data/metadata/catalogue-v1/kpis-40/publish-gdp-pair
+        type: Task
+        title: Publish the KPIs gdp_per_capita and gdp_volume_growth
+        effort: M
+        state: open
+        contract: true
+        context: >-
+          zohelo publishes 5 KPIs. gdp_per_capita (eurostat NAMA_10_PC CP_EUR_HAB, WDI NY.GDP.PCAP.CD) and
+          gdp_volume_growth (eurostat NAMA_10_GDP CLV_PCH_PRE, WDI NY.GDP.MKTP.KD.ZG) are draft, while their blocks are
+          active, so gold.concept_measures holds their measures; units are per measure in kpi_measure.csv. The
+          economy domain file has no open point on either.
+        files:
+          - create: warehouse/models/gold/poc_metrics_gdp_per_capita.sql
+          - create: warehouse/models/gold/poc_metrics_gdp_volume_growth.sql
+          - create: warehouse/published/fixtures/kpi/gdp_per_capita/latest.json
+          - create: warehouse/published/fixtures/kpi/gdp_volume_growth/latest.json
+          - edit: warehouse/warehouse.yaml
+          - edit: warehouse/semantic_models/gold.yml
+          - edit: warehouse/tests/metrics_value_range.sql
+          - edit: warehouse/seeds/kpi.csv
+          - edit: .github/backlog/assets/catalogue-seeds.md
+          - edit: .github/backlog/assets/latest-fixtures.md
+          - edit: warehouse/published/fixtures/catalog/catalog.json
+          - edit: warehouse/published/fixtures/manifest.json
+          - edit: docs/model.md
+        steps:
+          - "Follow .github/backlog/assets/publish-kpi.md, steps 1–9, for gdp_per_capita and gdp_volume_growth."
+          - "Semantic measures gdp_per_capita_avg and gdp_volume_growth_avg (agg average). Bounds ('gdp_per_capita','eurostat',0,2e5), ('gdp_per_capita','world_bank_wdi',0,5e5), ('gdp_volume_growth','eurostat',-50,100), ('gdp_volume_growth','world_bank_wdi',-100,200)."
+          - "Fixtures: source_keys [eurostat, world_bank_wdi], geo_levels [country]; latest PL, period 2024, previous 2023: gdp_per_capita eurostat 21,000 eur_per_person (prev 19,500); WDI 25,000 usd_per_person; gdp_volume_growth eurostat 2.9 (prev 0.2), WDI 2.9 (prev 0.2) pct."
+          - "Trial dev/publish_gdp_pair_trial.py as in publish-kpi.md; set the ceilings from it."
+        acceptance:
+          - "trial: rows for eurostat and world_bank_wdi of both KPIs; ceilings set from it"
+          - "repo_check passes (fixtures, semantic models)"
+        verify:
+          - workflow: Dev · branch runs, script publish_gdp_pair_trial, on the branch
+            expect: "notice 'metrics rows' with eurostat and world_bank_wdi > 0 for both KPIs"
+          - run: PYTHONPATH=. python -m ops.repo_check
+            expect: all checks ok
+          - workflow: "Pipeline, next 'gold: publish' after the merge"
+            expect: "green; the publish annotation lists gdp_per_capita and gdp_volume_growth under written"
+        out_of_scope: ["gdp_current_prices and Bug #2148", kpi_measure.csv, warehouse/publish.py, block activation, the zohelo and zohelo-bi fixtures]
+      - key: data/metadata/catalogue-v1/kpis-40/publish-deaths-employment
+        type: Task
+        title: Publish the KPIs deaths and employment_rate
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/metadata/catalogue-v1/kpis-40/publish-gdp-pair]
+        context: >-
+          deaths (eurostat DEMO_GIND DEATH) and employment_rate (eurostat LFSI_EMP_A PC_POP EMP_LFS, ages 20–64) are
+          draft with active blocks and one source each. The WDI 15+ rate is the separate KPI employment_rate_15plus,
+          which settles the labour open point (docs/domains/labour.md). Stacked on publish-gdp-pair because both
+          edit the same files.
+        files:
+          - create: warehouse/models/gold/poc_metrics_deaths.sql
+          - create: warehouse/models/gold/poc_metrics_employment_rate.sql
+          - create: warehouse/published/fixtures/kpi/deaths/latest.json
+          - create: warehouse/published/fixtures/kpi/employment_rate/latest.json
+          - edit: warehouse/warehouse.yaml
+          - edit: warehouse/semantic_models/gold.yml
+          - edit: warehouse/tests/metrics_value_range.sql
+          - edit: warehouse/seeds/kpi.csv
+          - edit: .github/backlog/assets/catalogue-seeds.md
+          - edit: .github/backlog/assets/latest-fixtures.md
+          - edit: warehouse/published/fixtures/catalog/catalog.json
+          - edit: warehouse/published/fixtures/manifest.json
+          - edit: docs/model.md
+        steps:
+          - "Follow .github/backlog/assets/publish-kpi.md, steps 1–9, for deaths and employment_rate."
+          - "Semantic measures deaths_sum (agg sum) and employment_rate_avg (agg average). Bounds ('deaths','eurostat',0,1e7), ('employment_rate','eurostat',0,100)."
+          - "Fixtures: source_keys [eurostat], geo_levels [country]; latest PL 2024 (prev 2023): deaths 409,000 persons (prev 409,500); employment_rate 78.5 pct_population (prev 77.9)."
+          - "Trial dev/publish_deaths_employment_trial.py as in publish-kpi.md; set the ceilings from it."
+        acceptance:
+          - "trial: eurostat rows for both KPIs; ceilings set from it"
+          - "repo_check passes (fixtures, semantic models)"
+        verify:
+          - workflow: Dev · branch runs, script publish_deaths_employment_trial, on the branch
+            expect: "notice 'metrics rows' with eurostat > 0 for deaths and employment_rate"
+          - run: PYTHONPATH=. python -m ops.repo_check
+            expect: all checks ok
+          - workflow: "Pipeline, next 'gold: publish' after the merge"
+            expect: "green; the publish annotation lists deaths and employment_rate under written"
+        out_of_scope: [employment_rate_15plus, kpi_measure.csv, warehouse/publish.py, the zohelo and zohelo-bi fixtures]
+      - key: data/metadata/catalogue-v1/kpis-40/publish-density-births
+        type: Task
+        title: Publish the KPIs population_density and live_births
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/metadata/catalogue-v1/kpis-40/pin-bdl-measures, data/metadata/catalogue-v1/kpis-40/publish-deaths-employment]
+        context: >-
+          population_density (GUS BDL P2425) and live_births (eurostat DEMO_GIND LBIRTH, GUS BDL P1873) are draft;
+          Task pin-bdl-measures pins their BDL rows to one measure each. latest.json carries country and voivodeship
+          values. Stacked on publish-deaths-employment (same files).
+        files:
+          - create: warehouse/models/gold/poc_metrics_population_density.sql
+          - create: warehouse/models/gold/poc_metrics_live_births.sql
+          - create: warehouse/published/fixtures/kpi/population_density/latest.json
+          - create: warehouse/published/fixtures/kpi/live_births/latest.json
+          - edit: warehouse/warehouse.yaml
+          - edit: warehouse/semantic_models/gold.yml
+          - edit: warehouse/tests/metrics_value_range.sql
+          - edit: warehouse/seeds/kpi.csv
+          - edit: .github/backlog/assets/catalogue-seeds.md
+          - edit: .github/backlog/assets/latest-fixtures.md
+          - edit: warehouse/published/fixtures/catalog/catalog.json
+          - edit: warehouse/published/fixtures/manifest.json
+          - edit: docs/model.md
+        steps:
+          - "Follow .github/backlog/assets/publish-kpi.md, steps 1–9, for population_density and live_births."
+          - "Semantic measures population_density_avg (agg average) and live_births_sum (agg sum). Bounds ('population_density','gus_bdl',0,1e5), ('live_births','eurostat',0,1e7), ('live_births','gus_bdl',0,1e6)."
+          - "Fixtures: geo_levels [country, voivodeship]; source_keys [gus_bdl] and [eurostat, gus_bdl]; latest 2024 (prev 2023): density gus_bdl PL 120 (prev 121), TERC:12 223 (prev 224) persons_per_km2; births eurostat PL 252,000 (prev 272,500), gus_bdl PL 252,000 (prev 272,451), TERC:12 30,000 (prev 32,000) persons."
+          - "Trial dev/publish_density_births_trial.py as in publish-kpi.md; set the ceilings from it."
+        acceptance:
+          - "trial: gus_bdl rows for both KPIs and eurostat rows for live_births; ceilings set from it"
+          - "repo_check passes (fixtures, semantic models)"
+        verify:
+          - workflow: Dev · branch runs, script publish_density_births_trial, on the branch
+            expect: "notice 'metrics rows' with gus_bdl > 0 for both KPIs and eurostat > 0 for live_births"
+          - run: PYTHONPATH=. python -m ops.repo_check
+            expect: all checks ok
+          - workflow: "Pipeline, next 'gold: publish' after the merge"
+            expect: "green; the publish annotation lists population_density and live_births under written"
+        out_of_scope: [kpi_measure.csv, warehouse/publish.py, gmina-level density, the zohelo and zohelo-bi fixtures]
+      - key: data/metadata/catalogue-v1/kpis-40/publish-wage-dwellings
+        type: Task
+        title: Publish the KPIs average_gross_wage and dwellings_completed
+        effort: M
+        state: open
+        contract: true
+        depends_on: [data/metadata/catalogue-v1/kpis-40/pin-bdl-measures, data/metadata/catalogue-v1/kpis-40/publish-density-births]
+        context: >-
+          average_gross_wage (GUS BDL P2497, unit pln) and dwellings_completed (GUS BDL P3824, subgroup
+          housing.housing) are draft; Task pin-bdl-measures pins both to one measure, checked against GUS numbers.
+          Stacked on publish-density-births because both edit the same files.
+        files:
+          - create: warehouse/models/gold/poc_metrics_average_gross_wage.sql
+          - create: warehouse/models/gold/poc_metrics_dwellings_completed.sql
+          - create: warehouse/published/fixtures/kpi/average_gross_wage/latest.json
+          - create: warehouse/published/fixtures/kpi/dwellings_completed/latest.json
+          - edit: warehouse/warehouse.yaml
+          - edit: warehouse/semantic_models/gold.yml
+          - edit: warehouse/tests/metrics_value_range.sql
+          - edit: warehouse/seeds/kpi.csv
+          - edit: .github/backlog/assets/catalogue-seeds.md
+          - edit: .github/backlog/assets/latest-fixtures.md
+          - edit: warehouse/published/fixtures/catalog/catalog.json
+          - edit: warehouse/published/fixtures/manifest.json
+          - edit: docs/model.md
+        steps:
+          - "Follow .github/backlog/assets/publish-kpi.md, steps 1–9, for average_gross_wage and dwellings_completed."
+          - "Semantic measures average_gross_wage_avg (agg average) and dwellings_completed_sum (agg sum). Bounds ('average_gross_wage','gus_bdl',0,1e5), ('dwellings_completed','gus_bdl',0,1e6)."
+          - "Fixtures: source_keys [gus_bdl], geo_levels [country, voivodeship]; latest 2024 (prev 2023): wage PL 8,180 (prev 7,155), TERC:12 7,900 (prev 6,900) pln; dwellings PL 199,000 (prev 220,400), TERC:12 24,000 (prev 26,000) dwellings."
+          - "Trial dev/publish_wage_dwellings_trial.py as in publish-kpi.md; set the ceilings from it."
+        acceptance:
+          - "trial: gus_bdl rows for both KPIs; ceilings set from it"
+          - "repo_check passes (fixtures, semantic models)"
+        verify:
+          - workflow: Dev · branch runs, script publish_wage_dwellings_trial, on the branch
+            expect: "notice 'metrics rows' with gus_bdl > 0 for both KPIs"
+          - run: PYTHONPATH=. python -m ops.repo_check
+            expect: all checks ok
+          - workflow: "Pipeline, next 'gold: publish' after the merge"
+            expect: "green; the publish annotation lists average_gross_wage and dwellings_completed under written"
+        out_of_scope: [kpi_measure.csv, warehouse/publish.py, real_wage_growth, the zohelo and zohelo-bi fixtures]
