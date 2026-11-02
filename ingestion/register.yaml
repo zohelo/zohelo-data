@@ -3308,7 +3308,7 @@ sources:
   name: Social assistance and family-support statistical reports
   short_name: MRPiPS social assistance
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland and voivodeships, report-dependent
