@@ -3,7 +3,7 @@
 Reads Gold tables from the R2 Data Catalog and the KPI seeds in the repository and writes the
 files described in docs/published.md (schemas in warehouse/published/schemas/): ``catalog/catalog.json``,
 ``catalog/<table>.parquet``, ``manifest.json``, ``kpi/<kpi_key>/latest.json`` / ``series.parquet``,
-``feed/calendar.ics`` and ``geo/country.geojson`` / ``geo/voivodeship.geojson``.
+``feed/calendar.ics``, ``status.json`` and ``geo/country.geojson`` / ``geo/voivodeship.geojson``.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ LEVELS = {"country": "country", "wojewodztwo": "voivodeship"}  # Gold geography_
 FREQ_RANK = {"D": 1, "B": 2, "W": 3, "M": 4, "Q": 5, "S": 6, "A": 7}
 SKIP = {"fx_rate": "one value per currency; latest.json has no currency field"}
 LATEST_LIMIT = 100_000  # bytes, docs/published.md size limits (D22)
+STATUS_LIMIT = 50_000  # bytes, docs/published.md size limits
 SERIES_LIMIT = 20_000_000  # bytes, docs/published.md size limits
 # Contract file catalog/<name>.parquet → Gold table (seeds kpi, kpi_measure, domain, unit, licence; models
 # kpi_dimension, dim_source; freshness is not built yet).
@@ -368,6 +369,31 @@ def catalog_json(entries: list[dict[str, Any]], generated_at: str) -> dict[str, 
     }
 
 
+def status_json(
+    sources: list[dict[str, str]], checked_at: dict[str, str], next_at: dict[str, str], generated_at: str
+) -> dict[str, Any]:
+    """status.json: per source its last load, next expected run and lag in whole days (docs/published.md)."""
+    generated = datetime.strptime(generated_at, "%Y-%m-%dT%H:%M:%SZ")
+    entries = []
+    for row in sources:
+        key = row["source_key"]
+        loaded_at = checked_at.get(key)
+        lag = None
+        if loaded_at is not None:
+            lag = (generated - datetime.strptime(loaded_at, "%Y-%m-%dT%H:%M:%SZ")).days
+        entries.append(
+            {
+                "source_key": key,
+                "name_pl": row["name_pl"],
+                "name_en": row["name_en"],
+                "last_loaded_at": loaded_at,
+                "next_expected_at": next_at.get(key),
+                "lag_days": lag,
+            }
+        )
+    return {"version": 1, "generated_at": generated_at, "sources": entries}
+
+
 def ics_text(value: str) -> str:
     """RFC 5545 TEXT: a backslash before every backslash, semicolon and comma (backslashes first)."""
     return value.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,")
@@ -576,6 +602,15 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     result["catalog_tables"] = catalog_tables(cat, client, prefix, namespace)
     body = json.dumps(catalog_json(entries, generated_at), ensure_ascii=False, separators=(",", ":")).encode()
     result["catalog_json"] = {"kpis": len(entries), "bytes": put(client, prefix + "catalog/catalog.json", body)}
+    from ingestion.common import scheduler
+    import run
+
+    next_at = scheduler.next_runs(run.load_config(), datetime.now(UTC))
+    status = schema_checked(status_json(seed("source"), checked_at, next_at, generated_at), "status")
+    body = json.dumps(status, ensure_ascii=False, separators=(",", ":")).encode()
+    if len(body) > STATUS_LIMIT:
+        raise ValueError(f"status.json is {len(body)} bytes, over {STATUS_LIMIT}")
+    result["status"] = {"sources": len(status["sources"]), "bytes": put(client, prefix + "status.json", body)}
     result["manifest"] = manifest_json(client, prefix)
     result["calendar"] = calendar(client, prefix, generated_at)
     result["geo"] = geo(cat, client, prefix)
