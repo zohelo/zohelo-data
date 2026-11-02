@@ -396,8 +396,64 @@ deliverables:
           - run: python -m ops.repo_check
             expect: all checks ok
         out_of_scope: [a release_calendar table or seed, VEVENT rows, feed/changes.json, the gold.publish activity]
+      - key: data/published/published-v1/publish/calendar-events
+        type: Task
+        title: Write one calendar.ics event per release_calendar.csv row
+        effort: S
+        state: open
+        contract: true
+        depends_on: [data/ingestion/release-scheduling/calendar/nbp-seed]
+        context: >-
+          docs/published.md: calendar.ics has one VEVENT per release_calendar row. publish.py calendar_ics() writes
+          no events today. Task nbp-seed adds warehouse/seeds/release_calendar.csv (release_at
+          '%Y-%m-%dT%H:%M:%SZ', source_key, kpi_key, title_pl, url …), read with seed().
+        files:
+          - edit: warehouse/publish.py
+          - edit: docs/published.md
+        steps:
+          - "publish.py: ics_text(value: str) -> str puts a backslash before every backslash, semicolon and comma (backslashes first; RFC 5545 TEXT); ics_time(stamp: str) -> str removes '-' and ':' ('2026-11-09T11:15:00Z' → '20261109T111500Z')."
+          - "calendar_ics(rows: list[dict[str, str]] | None = None, stamp: str = '') -> str: per row sorted by (release_at, source_key, kpi_key) the lines BEGIN:VEVENT, UID:<ics_time(release_at)>-<source_key>-<kpi_key>@zohelo.com, DTSTAMP:<ics_time(stamp)>, DTSTART:<ics_time(release_at)>, SUMMARY:<ics_text(title_pl)>, URL:<url>, END:VEVENT, inserted before END:VCALENDAR; ValueError naming any line over 75 bytes UTF-8; CRLF-joined as today."
+          - "calendar(client, prefix: str, stamp: str) -> int: rows = seed('release_calendar'); put as today with calendar_ics(rows, stamp); return len(rows). main(): calendar(client, prefix, generated_at)."
+          - "docs/published.md: replace 'gold.publish writes it today without events (PRODID …).' by 'gold.publish writes one event per row of warehouse/seeds/release_calendar.csv (UID `<release_at>-<source_key>-<kpi_key>@zohelo.com`, PRODID `-//zohelo//gold.publish//EN`).'"
+        acceptance:
+          - "calendar_ics(seed('release_calendar'), '2026-11-02T00:00:00Z') has 55 events; ruff and repo_check pass"
+        verify:
+          - run: "python -c \"from warehouse.publish import calendar_ics as c;s=c([{'release_at':'2026-11-09T11:15:00Z','source_key':'nbp','kpi_key':'fx_rate','title_pl':'NBP: tabela A, kursy','url':'https://api.nbp.pl/en.html'}],'2026-11-02T13:00:00Z');print(s.count('BEGIN:VEVENT'),'DTSTART:20261109T111500Z' in s,s.count(chr(92)+','),c().count('VEVENT'))\""
+            expect: "1 True 1 0"
+          - run: python -m ops.repo_check
+            expect: all checks ok
+          - workflow: "Pipeline, the next scheduled 'silver/gold: build models' run after the merge"
+            expect: "notice 'gold.publish: latest' with calendar 55"
+        out_of_scope: [release_calendar.csv rows, feed/changes.json]
+      - key: data/published/published-v1/publish/geo-size-trial
+        type: Task
+        title: Measure powiat and gmina GeoJSON sizes per simplification tolerance
+        effort: S
+        state: open
+        contract: false
+        verify_only: true
+        context: >-
+          docs/published.md allows geo/<level>.geojson up to 2 MB (gmina 8 MB). warehouse/publish.py geo() writes
+          only country and voivodeship (silver.prg_units, ST_SimplifyPreserveTopology at GEO_TOLERANCE 0.005°,
+          keys 'TERC:' || teryt_code, names from gold.dim_geography). Before a writer Task for powiat and gmina,
+          the sizes per tolerance and the key matches must be known. Verify-only: nothing is merged.
+        files: []
+        steps:
+          - "Branch test/<this issue number>-geo-size from origin/main; this Task has no PR."
+          - "dev/geo_size_trial.py: read silver.prg_units (unit_level in powiat, gmina; teryt_code, geometry_wkb) and the geography_key, name_pl of gold.dim_geography rows with level_name in powiat, gmina, as geo() does; write nothing to R2."
+          - "Per level and tolerance 0.002, 0.005, 0.01, 0.02: geometries simplified as in geo(), a FeatureCollection with properties geography_key, name_pl (empty when unmatched), name_en = name_pl, level, coordinates rounded with publish._round; body = json.dumps(…, ensure_ascii=False, separators=(',', ':')).encode()."
+          - "Annotate notice f'geo size: {level}' with features, unmatched (keys not in dim_geography), first 5 unmatched keys and {tolerance: [bytes, gzip bytes]}."
+          - "Push the branch and run Dev · branch runs with script geo_size_trial."
+          - "Comment on this issue: the run URL and both annotations verbatim; then close the issue. Leave the branch."
+        acceptance:
+          - "two notices, powiat and gmina, each with four tolerances; no error"
+          - the closing comment holds both
+        verify:
+          - workflow: Dev · branch runs, script geo_size_trial, on test/<n>-geo-size
+            expect: "notices 'geo size: powiat' (about 380 features) and 'geo size: gmina' (about 2,477 features)"
+        out_of_scope: [any change on main, writing geo files, nuts1 and nuts2]
     todo:
-      - "catalog/catalog.json: waits for the loaded_at decision (catalogue-v1 freshness todo); geo powiat, gmina, nuts1, nuts2 (needs a size trial); feed/changes.json"
+      - "geo powiat and gmina writer (tolerance from the report of Task geo-size-trial); geo nuts1, nuts2; feed/changes.json (waits for the loaded_at decision, catalogue-v1 freshness todo)"
       - "Delete _portal_catalog/v1 writer and objects after both portals switch"
   - key: data/published/published-v1/tests
     title: Contract tests
