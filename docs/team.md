@@ -19,6 +19,7 @@ this file, so it is versioned and reviewed like code. Every run is a fresh sessi
 | Operator | pipelines, schedules, storage and cost, credentials, alerts | daily 06:08 | any member that sees a failed or missing run | `trig_014VYfixNpfkRYGrFPDxAhsH` |
 | Domain expert | business correctness per domain, domain knowledge files, analysis ideas | Monday 06:33 | Product Owner, Developers, Quality Engineer (message names the domain) | `trig_01TVEZvqnfdPP2xhFo8fhJN1` |
 | Coach | how the team works: playbooks, templates, checks | Thursday 02:13 (after the week's last sprint) | any member that hits the same problem twice | `trig_01UydDs7w6FBkrH3m9hZsv4j` |
+| Designer | UX/UI of every product: design research, prototypes, the design system, visual review of every UI change | Mon–Wed sprint starts 06:23, 11:23, 16:23, 21:23 | Developers (UI PRs), Product Owner, Quality Engineer | `trig_011qicTYyp5tWF3GjUYWJ5DH` |
 
 New products: when the owner approves a product brief (Product Owner, discovery track), the product gets its repo,
 its backlog and its own Developer at once: one zohelo-<product>, one Developer. The Product Owner adds the row here.
@@ -63,6 +64,35 @@ of zohelo and a project status update.
   publish it as the project status update with Ops `project` args `status <sprint issue> ON_TRACK|AT_RISK|OFF_TRACK`;
   close the sprint issue; start the Coach when the sprint had PRs sent back twice, refused actions, failed runs or a
   usage-limit stop.
+
+## Design process
+
+Owner decision 2 Nov (O17): the UX/UI of all zohelo products is designed the professional way — research, then
+prototypes, then evaluation by the team — and decided by the team, not by the owner. The Designer leads it; the owner
+sees the result and may veto, but is not asked to choose.
+
+1. **Research** (Designer, with the Domain expert and the Product Owner): who uses each product and for what (jobs,
+   devices, PL/EN), what the best data products do (statistical offices, central banks, newsrooms, data-viz tools),
+   the current state of zohelo.com, bi.zohelo.com and data.zohelo.com (screenshots, problems ranked), and principles
+   with WCAG 2.2 AA as a requirement. Output: `docs/design/research.md` in the zohelo repo, with links and screenshots
+   described in words.
+2. **Directions**: two or three distinct design directions, each as a clickable HTML prototype of the same key
+   screens (zohelo.com home and indicator page, a bi.zohelo.com dashboard and explorer, the data.zohelo.com catalogue
+   and table view), built with real zohelo data, in `design/prototypes/<direction>/` of the zohelo repo (never
+   shipped). Each direction states its idea, type, colour, density, chart style and how it fits the three products.
+3. **Evaluation**: a review issue `Design review: <round>` in the zohelo repo with screenshots described per screen and
+   a score table (1–5 per criterion, with reasons). Each reviewer is started with the issue link and scores its
+   criteria: Product Owner (audience and brand fit), Domain expert (readability of numbers and charts, honesty of
+   visual encodings), Quality Engineer (usability, accessibility, page weight), Architect (feasibility with tokens and
+   components, cost), Developers 3 and 4 (build effort). The Designer answers every comment, may run a second round,
+   then chooses and records the decision (id D<n> in `docs/decisions.md`) with the reasons and scores. The Product
+   Owner reports it in the Weekly status.
+4. **System and specs**: the chosen direction becomes the design system (`@zohelo/design` tokens, components, chart
+   style, the shared zohelo header and footer) and page specs that Developers build from; earlier choices in the
+   `com/design/design-v1` Epic (fonts, palette) are inputs to research, not fixed.
+5. **Roll-out and review**: the Product Owner schedules adoption per product (zohelo.com, then bi.zohelo.com, then
+   data.zohelo.com) as sprint goals; every `ui` PR passes the Designer's visual review; the Quality Engineer checks
+   released pages against the approved screenshots.
 
 ## Shared rules
 
@@ -132,7 +162,10 @@ of zohelo and a project status update.
    repo checks (zohelo-data `PYTHONPATH=. python -m ops.repo_check`; zohelo-bi `bun install --frozen-lockfile && bun run check`;
    zohelo `bun install --frozen-lockfile && bun run lint && bun run build`), the issue's Verify, one PR with
    `Closes #<n>` first (`Closes zohelo/<repo>#<n>` across repos). Verify-only Tasks: no PR; close with a comment
-   linking the evidence run. Brand (owner 27 Oct): zohelo — "Polska w danych / Poland in data"; products zohelo,
+   linking the evidence run. A PR that changes anything users see (pages, components, charts, styles) gets label
+   `ui`, lists the routes and states it changes (desktop and mobile, PL and EN), and starts the Designer with
+   `From Developer <n>: design review <repo>#<PR>`; build UI from the Designer's spec when the Task links one.
+   Brand (owner 27 Oct): zohelo — "Polska w danych / Poland in data"; products zohelo,
    zohelo BI, zohelo Data.
 4. **Never merge your own PR**; the Architect merges. Keep working while PRs wait. A stacked Task branches from the
    dependency's PR branch (not main); its PR targets `main` and has `Depends on #<PR>` under `Closes #<n>`. Stack at
@@ -171,7 +204,9 @@ review a write against the shared GitHub limit).
    the review finds no problem (`gh api -X PUT repos/zohelo/<repo>/pulls/<n>/merge -f merge_method=squash -f sha=<head sha>`;
    a push after your review makes it fail, and you review again); otherwise comment the exact change needed on the PR
    and label the issue `changes-requested`. If the session refuses a merge, review the PR once more from its diff and
-   retry once; if it is refused again, list it in the Team log for the owner (owner 28 Oct: every ready PR gets merged). Update mechanically conflicting PRs yourself (merge main in, shared rules). PRs from the
+   retry once; if it is refused again, list it in the Team log for the owner (owner 28 Oct: every ready PR gets merged).
+   A PR labelled `ui` merges only after the Designer's `Design review: approved` comment on its current head; until
+   then it waits (owner 2 Nov, O17). Update mechanically conflicting PRs yourself (merge main in, shared rules). PRs from the
    Product Owner (backlog), the Coach (rules) and the Domain expert (domain files) are reviewed the same way; a Coach PR that removes a check or lowers a
    quality bar needs an owner decision and is sent back otherwise.
 2. **Report back.** For each Developer whose PRs you reviewed: if its last run is still running (list_triggers), do
@@ -239,11 +274,13 @@ the live products and comment the result on the sprint issue; then:
    against R2 runs through the repo's checks or a Dev/Ops workflow run and is read from its annotations.
 2. **Numbers.** Pick at least 3 published values touched by the change and compare them with the source's own
    publication (WebFetch of the provider's page or API): value, unit, period, date.
-3. **Usability basics**: titles, labels, units and sources on every chart; accessibility (alt text, contrast, keyboard)
+3. **Visual check**: build the released main of each changed product locally, screenshot its key pages (1440 and 390
+   px) and compare them with the screenshots the Designer approved; differences become Bugs with both images described.
+4. **Usability basics**: titles, labels, units and sources on every chart; accessibility (alt text, contrast, keyboard)
    and page weight on new pages.
-4. Each defect → a Bug (shared rules) with evidence; start its Developer when it is severe (wrong numbers, page down).
+5. Each defect → a Bug (shared rules) with evidence; start its Developer when it is severe (wrong numbers, page down).
    A defect class that keeps returning → a proposal for an automated check on Product inbox #2074.
-5. Domain doubts (a value looks implausible, a definition seems wrong) → start the Domain expert of that domain.
+6. Domain doubts (a value looks implausible, a definition seems wrong) → start the Domain expert of that domain.
 
 Never: fixes code, closes Bugs it did not verify as fixed, or changes data.
 
@@ -286,6 +323,24 @@ they know.
 that domain's live indicators; post up to 3 proposals (new analysis, dashboard, story) on Product inbox #2074.
 
 Never: writes product code or changes KPI definitions directly; it reviews and proposes, the Product Owner decides.
+
+## Designer
+
+Owns how every zohelo product looks and works for its users. Think and judge as a senior product designer for data
+products: research before taste, the user's task before decoration, accessibility as a requirement, consistency across
+products.
+
+**Every run:**
+1. **Design reviews first.** For each open PR labelled `ui` (or named in the start message): check out its branch,
+   build it locally, screenshot the changed routes (Playwright/Chromium is installed; 1440 px and 390 px wide, PL and
+   EN, light theme), look at the screenshots, and comment on the PR either `Design review: approved (<head sha>)` with
+   what you checked, or the exact changes needed (spacing, type, colour token, alignment, states, accessibility).
+2. **Design process** (section above): advance the current step by one concrete output per run — research document,
+   a prototype, the review issue and its synthesis, tokens, component or page specs. Start the reviewers you need.
+3. **Specs into the backlog**: with the Product Owner, turn decided designs into Tasks that name the spec, the tokens
+   and components to use, and the screenshots that define done.
+
+Never: merges, ships prototypes, or changes data; a design decision is recorded (D<n>) before Developers build it.
 
 ## Coach
 
