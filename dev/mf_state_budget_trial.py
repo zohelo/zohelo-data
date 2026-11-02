@@ -35,6 +35,12 @@ def main() -> int:
             }
         )
     annotate("notice", "mf_state_budget page links", {"links": heads})
+    import requests
+
+    page = spec["url_from"]["page"]
+    resp = requests.get(page, headers={"User-Agent": bulk_file.USER_AGENT}, timeout=30)
+    every = bulk_file.links_matching(resp.text, resp.url, r"finanse|attachment|\.xlsx?$|\.zip$")
+    annotate("notice", "mf_state_budget page", {"status": resp.status_code, "final": resp.url, "links": every[:60]})
     try:
         for mode in ("inspect", "load", "verify"):
             codes[mode] = bulk_file.main("mf_state_budget", mode, landing_root=ROOT)
