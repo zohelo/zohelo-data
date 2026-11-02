@@ -3358,7 +3358,7 @@ sources:
   name: Zintegrowany System Rolniczej Informacji Rynkowej (ZSRIR)
   short_name: MRiRW ZSRIR market information
   provider: Ministerstwo Rolnictwa i Rozwoju Wsi
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland and macroregions/markets, commodity-dependent
