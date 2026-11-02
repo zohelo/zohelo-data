@@ -546,6 +546,20 @@ Restart unit: the whole file (one download). Licence CC BY 4.0 (register GL-008)
 "Source: World Bank, Worldwide Governance Indicators". WGI is revised once a year. Bronze, Silver
 and a schedule are later stages.
 
+## ZUS social insurance statistical yearbook
+
+**Extraction (2 Nov 2026).** ZUS publishes each edition of the *Rocznik Statystyczny Ubezpieczeń
+Społecznych* (three reference years) as one PDF on its yearbook page. There is no XLSX version. The
+page lists 11 Polish editions, from 1946–1985 to 2021–2023, plus an English translation of 2018–2020,
+which is left out. Each file has a fixed document URL with Last-Modified, so the declaration
+`zus_yearbook.yaml` lands every edition through the shared `bulk_file` pattern as one entity (about
+88 MB in all). Version: Last-Modified, written only when the SHA-256 changed. Restart unit: one
+edition. A new edition (every three years) is a new entry in the declaration. Editions 1999–2002 and
+2003–2005 cover the non-agricultural system only. Terms: ZUS re-use of public sector information
+(free, commercial included; give the source, the creation and retrieval dates, and mark processed
+figures; register PLS-010). The tables are read from the PDFs at Bronze (stage 5). Bronze, Silver
+and a schedule are later stages.
+
 ## ECB Data Portal
 
 **Extraction (2 Nov 2026).** The ECB Data Portal has no bulk archive per dataflow, but its SDMX

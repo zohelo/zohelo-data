@@ -1,0 +1,78 @@
+source_system: zus_yearbook
+description: ZUS Rocznik Statystyczny Ubezpieczeń Społecznych (social insurance statistical yearbook) — one PDF per edition
+
+# Extraction strategy (docs/landing.md). Bulk feature: ZUS publishes each yearbook edition (three
+# reference years, PL) as one PDF on its yearbook page; there is no XLSX or other machine-readable
+# version (Dev probe #2464: 12 files on the page's two list pages, 11 Polish editions from 1946–1985
+# to 2021–2023 plus one English 2018–2020 translation, which is left out). Every file has a fixed
+# document URL with Last-Modified, so each edition is one bulk file: entity = one edition, restart
+# unit = one edition, version = Last-Modified, written only when the SHA-256 changed (about 88 MB in
+# all). A new edition (every three years) is a new entry here. Editions 1999–2002 and 2003–2005
+# cover the non-agricultural system only. ZUS re-use terms: free re-use with the source and dates
+# given (register PLS-010). Tables are read from the PDF at Bronze (stage 5); a schedule (stage 4)
+# comes after the Dev trial.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: rocznik_2021_2023   # 7.4 MB
+        url: https://www.zus.pl/documents/10182/167642/0600_25+Rocznik+statystyczny+2021_2023.pdf/dbae306d-f987-0359-ed4d-80a4bca948bf
+        format: raw
+        version: last_modified
+      - entity: rocznik_2018_2020   # 6.3 MB
+        url: https://www.zus.pl/documents/10182/167642/Rocznik+statystyczny+ubezpiecze%C5%84+spo%C5%82ecznych+2018-2020.pdf/166ed10a-1986-4d4f-1531-3dde9a6bd8fe
+        format: raw
+        version: last_modified
+      - entity: rocznik_2015_2017   # 6.5 MB
+        url: https://www.zus.pl/documents/10182/167642/Rocznik+statystyczny+2015_2017.pdf/b1c94916-3012-c38e-fff8-abf0dfec9242
+        format: raw
+        version: last_modified
+      - entity: rocznik_2012_2014   # 1.7 MB
+        url: https://www.zus.pl/documents/10182/167642/Rocznik+statystyczny+2012_2014.pdf/04c53d63-f65d-4ef9-9588-62e0e1c1b1ec
+        format: raw
+        version: last_modified
+      - entity: rocznik_2009_2011   # 1.9 MB
+        url: https://www.zus.pl/documents/10182/167642/Rocznik+Statystyczny+Ubezpiecze%C5%84+Spo%C5%82ecznych+2009-2011.pdf/7e6fcc34-8333-4af0-b3e6-9e64ea734600
+        format: raw
+        version: last_modified
+      - entity: rocznik_2006_2008   # 4.7 MB
+        url: https://www.zus.pl/documents/10182/167642/Rocznik_statystyczny_2006-2008.pdf/888b05ab-fa1f-44a3-8b17-ef57c681f886
+        format: raw
+        version: last_modified
+      - entity: rocznik_2003_2005   # 3.7 MB
+        url: https://www.zus.pl/documents/10182/167642/Rocznik+Statystyczny2003-2005.pdf/e462ab97-ac82-4a56-a51c-eafef686d72b
+        format: raw
+        version: last_modified
+      - entity: rocznik_1999_2002   # 2.3 MB
+        url: https://www.zus.pl/documents/10182/167642/Rocznik+stat+system+pozarolniczy+1999+2002.pdf/d36c56e4-94e3-4bd2-a643-7c29b831de1f
+        format: raw
+        version: last_modified
+      - entity: informacja_1996_1998   # 20.3 MB
+        url: https://www.zus.pl/documents/10182/167642/Informacja+statystyczna+1996-1998.pdf/1d88cd99-0163-752c-ed0c-eb62204b8fa0
+        format: raw
+        version: last_modified
+      - entity: rocznik_1990_1995   # 13.6 MB
+        url: https://www.zus.pl/documents/10182/167642/Rocznik+statystyczny+1990-1995.pdf/f3ecaecb-ddf0-9cfe-2c65-8d79656118be
+        format: raw
+        version: last_modified
+      - entity: rocznik_1946_1985   # 19.8 MB
+        url: https://www.zus.pl/documents/10182/167642/0052_24+Rocznik+statystyczny+1946_1985.pdf/4c26e659-5375-5296-b5cc-1b80b15eb9fd
+        format: raw
+        version: last_modified
+  initial: bulk
+  production: snapshot                  # each file is the complete edition
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: []
+
+landing: 01_landing/zus_yearbook/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: []
+silver: []
+gold: []
+
+refresh: {mode: full}
+
+activities: [landing.inspect, landing.extract, landing.verify]

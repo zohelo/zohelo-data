@@ -2357,6 +2357,7 @@ sources:
   name: Rocznik Statystyczny Ubezpieczeń Społecznych
   short_name: ZUS social insurance yearbook
   provider: Zakład Ubezpieczeń Społecznych (ZUS)
+  source_system: zus_yearbook
   status: approved
   family: B
   kpi: true
