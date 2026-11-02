@@ -239,12 +239,25 @@ def parquet(table: pa.Table) -> bytes:
     return buffer.getvalue()
 
 
-def kpi_series(metrics: pa.Table, kpi_key: str, unit_key: str) -> pa.Table:
-    """series.parquet of one KPI from its gold.metrics_<kpi_key> rows; pure (no R2)."""
+def kpi_series(metrics: pa.Table, measures: list[dict], kpi_key: str, unit_key: str) -> pa.Table:
+    """series.parquet of one KPI from its gold.metrics_<kpi_key> rows; pure (no R2).
+
+    Each row's unit_key is its measure's unit from kpi_measure (as in kpi_latest), else the KPI's unit.
+    """
     levels = pa.table({"gold_level": list(SERIES_LEVELS), "contract_level": list(SERIES_LEVELS.values())})
+    own = [m for m in measures if m["kpi_key"] == kpi_key]
+    measure_rows = pa.table(
+        {
+            "source_system": pa.array([m["source_system"] for m in own], pa.string()),
+            "measure_key_pattern": pa.array([m["measure_key_pattern"] for m in own], pa.string()),
+            "priority": pa.array([int(m["priority"]) for m in own], pa.int64()),
+            "unit_key": pa.array([m.get("unit_key") or unit_key for m in own], pa.string()),
+        }
+    )
     con = duckdb.connect()
     con.register("metrics", metrics)
     con.register("levels", levels)
+    con.register("measures", measure_rows)
     con.sql(
         """
         create temp table kept as
@@ -285,7 +298,10 @@ def kpi_series(metrics: pa.Table, kpi_key: str, unit_key: str) -> pa.Table:
                 else strftime(date_key, '%Y-%m-%d')
             end as period,
             cast(date_key as date) as period_start, frequency, cast(value as double) as value,
-            $2 as unit_key,
+            coalesce((
+                select arg_min(u.unit_key, u.priority) from measures u
+                where u.source_system = kept.source_system and kept.measure_key like u.measure_key_pattern
+            ), $2) as unit_key,
             case when observation_status_key is null or observation_status_key = 'ok' then ''
                 else observation_status_key end as flags
             {dim_sql}
@@ -574,7 +590,7 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
         except NoSuchTableError:
             missing.append(kpi_key)
             continue
-        table = kpi_series(metrics, kpi_key, kpi["unit_key"])
+        table = kpi_series(metrics, measures, kpi_key, kpi["unit_key"])
         data = parquet(table)
         if len(data) > SERIES_LIMIT:
             raise ValueError(f"kpi/{kpi_key}/series.parquet is {len(data)} bytes, over {SERIES_LIMIT}")
