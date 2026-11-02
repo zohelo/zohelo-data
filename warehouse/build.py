@@ -180,6 +180,8 @@ def build_once(
         summary["by_status"][r["status"]] = summary["by_status"].get(r["status"], 0) + 1
         if r["status"] in FAILED:
             summary["failures"].append({"node": r["unique_id"], "message": str(r.get("message"))})
+        elif r["status"] == "warn":  # warn-severity tests: the count of the rows they found
+            summary.setdefault("warnings", []).append({"node": r["unique_id"], "rows": r.get("failures")})
     if not results:
         summary["output_tail"] = tail
     if changed_plan is not None:
