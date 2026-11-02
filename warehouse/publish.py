@@ -19,6 +19,7 @@ import duckdb
 import pyarrow as pa
 
 PROJECT = Path(__file__).resolve().parent
+SCHEMAS = Path(__file__).resolve().parent / "published" / "schemas"
 PREFIX = "06_published/v1/"
 LEVELS = {"country": "country", "wojewodztwo": "voivodeship"}  # Gold geography_level → contract level
 FREQ_RANK = {"D": 1, "B": 2, "W": 3, "M": 4, "Q": 5, "S": 6, "A": 7}
@@ -100,6 +101,34 @@ def put(client, key: str, body: bytes, content_type: str = "application/json") -
         CacheControl="no-cache",
     )
     return len(body)
+
+
+def compare_latest(latest: dict[str, Any], metrics: pa.Table) -> list[str]:
+    """Values and previous values of latest that are not in gold.metrics_<kpi_key> for their source,
+    geography and period; pure (no R2)."""
+    gold_values: dict[tuple[str, str, str], set[float]] = {}
+    for row in metrics.to_pylist():
+        if row["geography_level"] not in LEVELS or row["value"] is None:
+            continue
+        key = (row["source_system"], row["geography_key"], period_label(row["date_key"], row["frequency"]))
+        gold_values.setdefault(key, set()).add(float(row["value"]))
+    problems = []
+    for v in latest["values"]:
+        pairs = [(v["period"], v["value"])]
+        if "previous_period" in v:
+            pairs.append((v["previous_period"], v.get("previous_value")))
+        for period, value in pairs:
+            if value not in gold_values.get((v["source_key"], v["geography_key"], period), set()):
+                problems.append(
+                    f"{latest['kpi_key']} {v['source_key']} {v['geography_key']} {period}: {value} not in Gold"
+                )
+    return problems
+
+
+def get(client, key: str) -> bytes:
+    from ingestion.common.r2 import req
+
+    return client.get_object(Bucket=req("STORAGE_LAKEHOUSE_BUCKET_NAME"), Key=key)["Body"].read()
 
 
 def kpi_latest(
@@ -442,12 +471,24 @@ def checked(coverage: pa.Table) -> dict[str, str]:
     return result
 
 
+def schema_checked(obj: dict, schema: str) -> dict:
+    """obj unchanged when it has every required key and JSON type of published/schemas/<schema>.schema.json;
+    ValueError otherwise (docs/published.md, D27)."""
+    from ops.repo_check import _schema_problems
+
+    spec = json.loads((SCHEMAS / f"{schema}.schema.json").read_text(encoding="utf-8"))
+    problems = _schema_problems(obj, spec, "$")
+    if problems:
+        raise ValueError(f"{schema}: {problems[:5]}")
+    return obj
+
+
 def manifest_json(client, prefix: str) -> int:
     """Write manifest.json under prefix after a fresh dbt parse; returns its number of metrics."""
     from warehouse import catalog, changed
 
     changed.manifest("prod")
-    obj = catalog.manifest()
+    obj = schema_checked(catalog.manifest(), "manifest")
     body = json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode()
     put(client, prefix + "manifest.json", body)
     return len(obj["metrics"])
@@ -469,6 +510,7 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     missing: list[str] = []
     series: dict[str, int] = {}
     entries: list[dict[str, Any]] = []
+    problems: list[str] = []
     domains = {d["domain_key"]: d for d in seed("domain")}
     for kpi in seed("kpi"):
         kpi_key = kpi["kpi_key"]
@@ -488,13 +530,21 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
         entries.append(kpi_entry(kpi, table, domains, checked_at, generated_at))
         if kpi_key in SKIP:
             continue
-        latest = kpi_latest(metrics, measures, checked_at, kpi_key, kpi["unit_key"], generated_at)
+        latest = schema_checked(
+            kpi_latest(metrics, measures, checked_at, kpi_key, kpi["unit_key"], generated_at), "kpi_latest"
+        )
         body = json.dumps(latest, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         if len(body) > LATEST_LIMIT:
             raise ValueError(f"kpi/{kpi_key}/latest.json is {len(body)} bytes, over {LATEST_LIMIT}")
         put(client, prefix + f"kpi/{kpi_key}/latest.json", body)
+        problems += compare_latest(json.loads(get(client, prefix + f"kpi/{kpi_key}/latest.json")), metrics)
         written[kpi_key] = len(latest["values"])
-    result = {"written": written, "skipped": sorted(SKIP), "missing": missing}
+    if problems:
+        annotate(
+            "error", "gold.publish: latest.json differs from Gold", {"count": len(problems), "first": problems[:20]}
+        )
+        raise ValueError(f"{len(problems)} latest.json values differ from Gold")
+    result = {"written": written, "skipped": sorted(SKIP), "missing": missing, "differences": 0}
     result["series"] = series
     result["catalog_tables"] = catalog_tables(cat, client, prefix, namespace)
     body = json.dumps(catalog_json(entries, generated_at), ensure_ascii=False, separators=(",", ":")).encode()

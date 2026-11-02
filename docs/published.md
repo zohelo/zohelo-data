@@ -16,6 +16,8 @@ strings in ISO 8601 UTC.
 - Formats: keys match `^[a-z0-9_]+$`, domain keys dot-separated segments of that form, timestamps
   `YYYY-MM-DDTHH:MM[:SS[.f]]Z`; the schemas declare them as `pattern` (D24).
 - All fields below are required unless marked optional.
+- gold.publish checks every JSON file against its schema in warehouse/published/schemas/ before writing it and fails
+  on a problem.
 
 ## catalog/catalog.json
 
@@ -132,6 +134,7 @@ priority, then the lowest measure key; its newest period gives `period` and `val
 `previous_period` and `previous_value` (left out when there is none); `unit_key` is the chosen series' unit from
 `kpi_measure.csv` `unit_key`, or the KPI's unit when that is empty (#2148). `fx_rate` is skipped: it has one value per
 currency and latest.json has no currency field.
+gold.publish reads each file back and fails when a value is not in Gold.
 
 ## kpi/<kpi_key>/series.parquet
 
