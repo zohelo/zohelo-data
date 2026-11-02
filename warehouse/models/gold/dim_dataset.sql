@@ -22,9 +22,11 @@ with coverage as (
 ),
 
 dataflows as (
-    select upper(dataset_id) as code, any_value(name_en) as name_en
+    select
+        upper(dataset_id) as code,
+        any_value(name_en) as name_en
     from {{ ref('eurostat_dataflows') }}
-    group by 1
+    group by upper(dataset_id)
 ),
 
 datasets as (
@@ -45,8 +47,16 @@ datasets as (
 )
 
 select
-    d.* replace (
-        case when d.source_key = 'eurostat' then coalesce(nullif(d.name, ''), f.name_en) else d.name end as name
-    )
+    d.dataset_key,
+    d.source_key,
+    d.code,
+    case when d.source_key = 'eurostat' then coalesce(nullif(d.name, ''), f.name_en) else d.name end as name,
+    d.status,
+    d.published_version,
+    d.landed_version,
+    d.in_bronze,
+    d.silver_rows,
+    d.files,
+    d.checked_at
 from datasets as d
 left join dataflows as f on d.source_key = 'eurostat' and d.code = f.code
