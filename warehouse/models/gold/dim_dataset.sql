@@ -1,6 +1,7 @@
 {# Catalogue: one row per dataset (a block a source publishes or the platform holds), from
    gold.coverage. Block ids are normalised as in poc_dim_measure: DBW yearly files collapse to
-   their block, Eurostat ids are compared upper-case. #}
+   their block, Eurostat ids are compared upper-case. Eurostat names come from
+   silver.eurostat_dataflows (name_en), since coverage has none. #}
 with coverage as (
     select
         source,
@@ -18,19 +19,34 @@ with coverage as (
         silver_rows,
         checked_at
     from {{ source('gold_coverage', 'coverage') }}
+),
+
+dataflows as (
+    select upper(dataset_id) as code, any_value(name_en) as name_en
+    from {{ ref('eurostat_dataflows') }}
+    group by 1
+),
+
+datasets as (
+    select
+        source || ':' || block_id as dataset_key,
+        source as source_key,
+        block_id as code,
+        any_value(block_name) as name,
+        min(status) as status,
+        max(published_version) as published_version,
+        max(landed_version) as landed_version,
+        bool_and(in_bronze) as in_bronze,
+        sum(silver_rows) as silver_rows,
+        count(*) as files,
+        max(checked_at) as checked_at
+    from coverage
+    group by source, block_id
 )
 
 select
-    source || ':' || block_id as dataset_key,
-    source as source_key,
-    block_id as code,
-    any_value(block_name) as name,
-    min(status) as status,
-    max(published_version) as published_version,
-    max(landed_version) as landed_version,
-    bool_and(in_bronze) as in_bronze,
-    sum(silver_rows) as silver_rows,
-    count(*) as files,
-    max(checked_at) as checked_at
-from coverage
-group by source, block_id
+    d.* replace (
+        case when d.source_key = 'eurostat' then coalesce(nullif(d.name, ''), f.name_en) else d.name end as name
+    )
+from datasets as d
+left join dataflows as f on d.source_key = 'eurostat' and d.code = f.code
