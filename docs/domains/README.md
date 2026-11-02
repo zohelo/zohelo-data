@@ -35,3 +35,11 @@ Every domain file has these sections, in this order, and stays under about 15 KB
 7. **Open points** — what is still unclear, with links to issues.
 
 Facts come with a link to the primary source (statistical office, central bank, methodology note).
+
+## Domain skills
+
+Owner direction 3 Nov 2026: each active domain also gets a skill `.claude/skills/domain-<domain>/SKILL.md`, the
+working checklist derived from its domain file (indicators, comparison norms, release calendar, pitfalls, chart
+rules). The domain file stays the source of truth; a rule changes there first and is mirrored in the skill in the
+same PR. Each skill is deep-reviewed by the Domain expert of another domain before merge. Only
+`.claude/skills/<name>/SKILL.md` is tracked under `.claude/` (`ops/repo_check.py`). Today: `domain-economy`.

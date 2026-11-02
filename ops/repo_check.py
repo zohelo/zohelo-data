@@ -21,6 +21,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 ROOT_ALLOWED = {
+    ".claude",
     ".github",
     "docs",
     "ingestion",
@@ -83,11 +84,33 @@ TEXT_SUFFIXES = {".md", ".py", ".yml", ".yaml", ".sql", ".toml", ".json", ".js",
 CONFLICT_MARKER = re.compile(r"^(<{7} |>{7} |={7}$)", re.MULTILINE)
 
 
+SKILL_FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
+
+
+def claude_skills(files: list[Path]) -> list[str]:
+    """Only team skills are tracked under .claude/: each file is .claude/skills/<name>/SKILL.md with frontmatter whose
+    `name:` is <name> and which has a `description:`. Settings, hooks, agents and commands (which run or grant
+    permissions in every agent session) are never committed."""
+    problems = []
+    for f in files:
+        if len(f.parts) != 4 or f.parts[1] != "skills" or f.name != "SKILL.md":
+            problems.append(f"{f}: only .claude/skills/<name>/SKILL.md is tracked under .claude/")
+            continue
+        if not (ROOT / f).exists():  # deleted locally, not yet committed
+            continue
+        match = SKILL_FRONTMATTER.match((ROOT / f).read_text(encoding="utf-8"))
+        meta = (yaml.safe_load(match.group(1)) if match else None) or {}
+        if not isinstance(meta, dict) or meta.get("name") != f.parts[2] or not meta.get("description"):
+            problems.append(f"{f}: frontmatter needs name: {f.parts[2]} and a description")
+    return problems
+
+
 def repository(files: list[Path]) -> list[str]:
     """Root allowlist, no dev/, the workflows, file size, type, emptiness and merge-conflict markers."""
     problems = [f"root: {name} is not allowed" for name in sorted({f.parts[0] for f in files} - ROOT_ALLOWED)]
     if any(f.parts[0] == "dev" for f in files):
         problems.append("dev/ must be deleted before merge")
+    problems += claude_skills([f for f in files if f.parts[0] == ".claude"])
     workflows = sorted(f.name for f in files if f.parent == Path(".github/workflows"))
     if workflows != WORKFLOWS:
         problems.append(f"workflows must be exactly {WORKFLOWS}, found {workflows}")
