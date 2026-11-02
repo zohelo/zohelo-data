@@ -3454,7 +3454,7 @@ sources:
   name: Turystyka – annual accommodation-establishment tables
   short_name: GUS tourism tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland and voivodeships/powiats, table-dependent
