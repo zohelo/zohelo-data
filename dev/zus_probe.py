@@ -14,6 +14,14 @@ PAGE = "https://www.zus.pl/baza-wiedzy/statystyka/rocznik-statystyczny-ubezpiecz
 
 
 def main() -> int:
+    try:
+        return run()
+    except Exception as exc:  # noqa: BLE001 - probe: report any failure
+        annotate("error", "zus probe failed", f"{type(exc).__name__}: {exc}"[:500])
+        return 1
+
+
+def run() -> int:
     """Annotate every /documents/10182/167642/ link with its HEAD status, type, size and Last-Modified."""
     html = requests.get(PAGE, headers=UA, timeout=60).text
     pages = sorted(set(re.findall(r'href="([^"]*AssetPublisherPortlet_INSTANCE_\w+_cur=\d+)"', html)))
@@ -25,14 +33,18 @@ def main() -> int:
         if u not in links:
             links.append(u)
     out = []
+    annotate("notice", "zus pagination", {"pages": pages, "links": len(links)})
     for u in links:
-        h = requests.head(u, headers={**UA, "Accept-Encoding": "identity"}, timeout=60, allow_redirects=True)
-        bare = u.split("?")[0]
-        hb = requests.head(bare, headers={**UA, "Accept-Encoding": "identity"}, timeout=60, allow_redirects=True)
-        out.append({"url": u, "status": h.status_code, "type": h.headers.get("Content-Type"),
-                    "bytes": h.headers.get("Content-Length"), "lm": h.headers.get("Last-Modified"),
-                    "bare_status": hb.status_code})
-    annotate("notice", "zus pagination", {"pages": len(pages), "links": len(links)})
+        try:
+            h = requests.get(u, headers={**UA, "Accept-Encoding": "identity"}, timeout=60, stream=True)
+            h.close()
+            hb = requests.get(u.split("?")[0], headers=UA, timeout=60, stream=True)
+            hb.close()
+            out.append({"url": u, "status": h.status_code, "type": h.headers.get("Content-Type"),
+                        "bytes": h.headers.get("Content-Length"), "lm": h.headers.get("Last-Modified"),
+                        "bare_status": hb.status_code})
+        except requests.RequestException as exc:
+            out.append({"url": u, "error": str(exc)[:150]})
     for i in range(0, len(out), 4):
         annotate("notice", f"zus yearbooks {i // 4 + 1}", out[i : i + 4])
     return 0
