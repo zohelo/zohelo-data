@@ -2405,6 +2405,7 @@ sources:
   name: Podstawowe dane statystyczne KRUS
   short_name: KRUS statistics
   provider: Kasa Rolniczego Ubezpieczenia Społecznego (KRUS)
+  source_system: krus
   status: approved
   family: B
   kpi: true

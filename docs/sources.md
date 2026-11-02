@@ -546,6 +546,19 @@ Restart unit: the whole file (one download). Licence CC BY 4.0 (register GL-008)
 "Source: World Bank, Worldwide Governance Indicators". WGI is revised once a year. Bronze, Silver
 and a schedule are later stages.
 
+## KRUS basic benefit statistics
+
+**Extraction (2 Nov 2026).** KRUS publishes its basic beneficiary statistics on a stable gov.pl
+page as one XLSX per quarter ("Świadczenia emerytalno-rentowe wypłacone przez KRUS za <n> kwartał
+<rok>", about 20 kB). The page carries only the newest quarter, and the attachment URL changes each
+quarter. The declaration `krus.yaml` therefore finds the link on the page (`url_from`, the page's only
+`/attachment/` link) and lands it through the shared `bulk_file` pattern as entity
+`swiadczenia_kwartalne`. Version: Last-Modified, written only when the SHA-256 changed. Each new
+quarter lands as a new version, so the raw is unique per version: `prune` stays `report`, and the
+retention must be removed before any `delete`. Restart unit: the file. Not declared: the quarterly
+statistical information PDFs (51 tables), which have no stable listing page. Terms: gov.pl, official
+materials free to use (register PLS-011). Bronze, Silver and a schedule are later stages.
+
 ## ECB Data Portal
 
 **Extraction (2 Nov 2026).** The ECB Data Portal has no bulk archive per dataflow, but its SDMX

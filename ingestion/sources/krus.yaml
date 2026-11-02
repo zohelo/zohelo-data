@@ -1,0 +1,42 @@
+source_system: krus
+description: KRUS basic benefit statistics — the quarterly XLSX of pensions and benefits paid (gov.pl)
+
+# Extraction strategy (docs/landing.md). Bulk feature: KRUS publishes its basic beneficiary
+# statistics as one XLSX per quarter ("Świadczenia emerytalno-rentowe wypłacone przez KRUS za
+# <n> kwartał <rok>", about 20 kB) on a stable gov.pl page. The page carries only the newest quarter
+# and the attachment URL changes each quarter, so the link is found on the page (url_from; Dev
+# probes #2468: one attachment, XLSX, with Last-Modified). Entity = the quarterly file; version =
+# Last-Modified, written only when the SHA-256 changed; each new quarter lands as a new version.
+# Restart unit: the file. Every version is a different quarter, so the raw is unique: `prune` stays
+# `report` and the retention must be removed before any `delete` (docs/landing.md, delta sources).
+# The quarterly statistical information PDFs (51 tables) have no stable listing page and are not
+# declared. gov.pl terms: official materials free to use (register PLS-011). A schedule (stage 4)
+# comes after the Dev trial.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: swiadczenia_kwartalne
+        url_from:
+          page: https://www.gov.pl/web/krus/podstawowe-dane-statystyczne-z-zakresu-swiadczeniobiorcow
+          pattern: /attachment/[0-9a-f-]{36}$
+          pick: first
+        format: raw                # XLSX, kept as exact bytes
+        version: last_modified
+  initial: bulk
+  production: delta                     # each file is one new quarter
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: []
+
+landing: 01_landing/krus/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report   # never delete: every version is a different quarter
+bronze: []
+silver: []
+gold: []
+
+refresh: {mode: full}
+
+activities: [landing.inspect, landing.extract, landing.verify]
