@@ -11,4 +11,5 @@ cc_by_3_0_igo_un_wpp,CC BY 3.0 IGO (UN World Population Prospects),http://creati
 cc_by_4_0_world_bank_findex,CC BY 4.0 (World Bank Global Findex),https://datacatalog.worldbank.org/search/dataset/0039935,"Source: World Bank, Global Findex Database",true,false
 cc_by_4_0_world_bank_wgi,CC BY 4.0 (World Bank WGI),https://datacatalog.worldbank.org/search/dataset/0038026,"Source: World Bank, Worldwide Governance Indicators",true,false
 ecb_statistics_reuse,ECB statistics usage policy,https://www.ecb.europa.eu/stats/ecb_statistics/governance_and_quality_framework/html/usage_policy.en.html,Source: ECB statistics,true,false
+cc_by_4_0_world_bank_icp,CC BY 4.0 (World Bank ICP),https://datacatalog.worldbank.org/search/dataset/0066092/international-comparison-program-2021,"Source: World Bank, International Comparison Program (ICP) 2021",true,false
 unresolved,Terms not established,https://github.com/zohelo/zohelo-data/blob/main/ingestion/register.yaml,Source: see the source register,false,false

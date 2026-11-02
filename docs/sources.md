@@ -560,3 +560,16 @@ observations with their attributes. Re-use under the ECB statistics usage policy
 GL-016): free, also commercial, attribution "Source: ECB statistics", statistics not modified.
 The queries are proven from Actions by the Dev trial (#2393); an `updatedAfter` delta, Bronze,
 Silver and a schedule are later stages.
+
+## World Bank International Comparison Program (ICP)
+
+**Extraction (2 Nov 2026).** ICP has no bulk feature: DataBank publishes no bulk file for it
+(`ICP_CSV.zip` and `ICP_2021_CSV.zip` return 404) and the ICP pages link only DataBank views. The
+route is the World Bank API v2, source 90 (ICP 2021), tested for a full load by a Dev probe:
+48 series, 1,182,384 observations, about 380 MB of JSON at 50,000 records per page. The
+declaration `world_bank_icp.yaml` uses its own extractor (`ingestion/to_landing/world_bank_icp/`):
+entity = one series for every economy and year
+(`/v2/sources/90/country/all/series/<id>/time/all?format=json&per_page=50000`, one file per
+page when a series is larger), version = the source's `lastupdated` date, so a series is
+downloaded again only when the World Bank updates ICP. Restart unit: one series. Licence CC BY
+4.0 (register GL-011). Bronze, Silver and a schedule are later stages.
