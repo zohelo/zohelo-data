@@ -1,3 +1,5 @@
+{# Catalogue: the dimensions each KPI offers, one row per KPI × dimension × measure; from concept_measures,
+   measure_dimensions and dim_measure. #}
 select
     cm.concept_key as kpi_key,
     md.dimension as dimension_key,

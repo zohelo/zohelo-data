@@ -55,9 +55,9 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 | No `select *` in a Gold model's output from upstream models; import CTEs (`x as (select * from ref(...))`) and unions of the model's own CTEs are allowed | [review] |
 | Every model has a YAML entry with description, column descriptions for keys, and at least one test (`not_null`/`unique` on the grain) | [auto] |
 | A model that is not incremental (full rebuild) has a row ceiling in `warehouse.yaml` `full_rebuild`; above 1M rows only with an `exception:` issue (owner policy #822); prod builds warn above the ceiling and fail above twice it | [auto] repo_check `configuration`, `build.py` |
-| Model header comment: what it is, grain, source | [review] |
+| Model header comment: what it is, grain, source | [auto] repo_check `model headers` (presence); content [review] |
 | Gold facts join conformed dimensions through keys; no source-specific codes in Gold keys without a scheme prefix | [review] |
-| Metrics declared in `semantic_models/` with description and filter | [review] |
+| Metrics declared in `semantic_models/` with description and filter | [auto] repo_check `model headers` (presence); content [review] |
 | Every KPI with status `published` in `warehouse/seeds/kpi.csv` has a metrics model and a semantic model on it | [auto] repo_check `semantic models` |
 
 ## 5. YAML and declarations

@@ -1,3 +1,5 @@
+{# Catalogue: one row per dimension a measure can be cut by; names from the dimension seed,
+   measure_count from measure_dimensions. #}
 with used as (
     select
         dimension as dimension_key,
