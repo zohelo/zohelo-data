@@ -24,7 +24,8 @@ def snapshot_time(cat, namespace: str, table: str) -> str | None:
     return iso_ms(snapshot.timestamp_ms) if snapshot is not None else None
 
 
-def main() -> None:
+def main(only: set[str]) -> None:
+    """only: source names to annotate (GitHub keeps at most 10 notices per step); empty = all."""
     cat = catalog()
     coverage: dict[str, dict] = {}
     rows = cat.load_table(("gold", "coverage")).scan(selected_fields=("source", "status", "checked_at")).to_arrow()
@@ -40,6 +41,8 @@ def main() -> None:
         sources = yaml.safe_load(f)["sources"]
     for source in sources:
         name = source["name"]
+        if only and name not in only:
+            continue
         times, missing = [], 0
         for table in source.get("tables") or []:
             stamp = snapshot_time(cat, "bronze", table["name"])
@@ -67,4 +70,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    main(set(sys.argv[1:]))
