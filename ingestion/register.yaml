@@ -3957,7 +3957,7 @@ sources:
   name: Local-government budget reports (sprawozdania budżetowe JST)
   short_name: MF local-government budgets
   provider: Ministry of Finance
-  status: registered
+  status: approved
   family: D
   kpi: true
   geography: Poland
@@ -3998,7 +3998,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - Inspect formats, identifiers, corrections and licence.
+    - 'Inspect formats, identifiers and corrections.'
     references:
     - https://www.gov.pl/web/finanse/sprawozdania-budzetowe
     - https://www.gov.pl/web/gov/prawa-autorskie
