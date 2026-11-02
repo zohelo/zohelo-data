@@ -473,12 +473,25 @@ def semantic_models() -> list[str]:
     return problems
 
 
+def module_docstrings(files: list[Path]) -> list[str]:
+    """Every Python module except __init__.py has a module docstring (docs/quality.md §3)."""
+    problems = []
+    for f in files:
+        if f.suffix != ".py" or f.name == "__init__.py":
+            continue
+        tree = ast.parse((ROOT / f).read_text(encoding="utf-8"))
+        if ast.get_docstring(tree) is None:
+            problems.append(f"{f}: no module docstring")
+    return problems
+
+
 def main() -> int:
     files = tracked()
     checks = {
         "repository": lambda: repository(files),
         "workflows": lambda: workflows(files),
         "compile": lambda: tool([sys.executable, "-m", "compileall", "-q", *PYTHON_PATHS]),
+        "module docstrings": lambda: module_docstrings(files),
         "ruff check": lambda: tool(["ruff", "check", *PYTHON_PATHS]),
         "ruff format": lambda: tool(["ruff", "format", "--check", *PYTHON_PATHS]),
         "yamllint": lambda: tool(["yamllint", "-s", "-d", YAMLLINT, "ingestion", "warehouse", "portal", ".github"]),
