@@ -432,6 +432,18 @@ each release is a new `https://www.gov.pl/attachment/<uuid>`. The declaration
 when absent); written only when the SHA-256 changed. Restart unit: the whole workbook. Terms:
 gov.pl (register PLG-008). Bronze, Silver and a schedule are later stages.
 
+## MF public finance sector debt
+
+**Extraction (2 Nov 2026).** The Ministry of Finance publishes the quarterly public finance
+sector debt workbook (`Dlug_publiczny_<quarter>.xlsx`) as the second attachment of the stable page
+`https://www.gov.pl/web/finanse/szeregiczasowe` (the first is the Treasury debt workbook); the page
+`zadluzenie-sektora-finansow-publicznych` has only PDF reports. Each release is a new
+`https://www.gov.pl/attachment/<uuid>`. The declaration `mf_public_debt.yaml` lands it through the
+shared `bulk_file` pattern as entity `public_debt` (`url_from`, pattern `/attachment/`, `pick: last`;
+`landing: inspect` lists every match). Version = Last-Modified (download time when absent); written
+only when the SHA-256 changed. Restart unit: the workbook. Terms: gov.pl (register PLG-009). Bronze,
+Silver and a schedule are later stages.
+
 ## OpenData.org (BrightQuery)
 
 **Extraction (owner decision 25 Oct 2026, #906: keep and run through the whole process).**

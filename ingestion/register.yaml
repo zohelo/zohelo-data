@@ -3909,6 +3909,7 @@ sources:
   name: Public finance sector debt statistics
   short_name: MF public debt
   provider: Ministry of Finance
+  source_system: mf_public_debt
   status: approved
   family: D
   kpi: true

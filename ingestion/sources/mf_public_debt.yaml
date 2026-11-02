@@ -2,8 +2,8 @@ source_system: mf_public_debt
 description: Ministry of Finance public finance sector debt (XLSX, quarterly)
 
 # Extraction strategy (docs/landing.md). Bulk feature: the Ministry of Finance's public finance
-# sector debt workbook, linked from the stable page "Zadłużenie sektora finansów publicznych" on
-# gov.pl (gov.pl terms, register PLG-009). Each release is a new https://www.gov.pl/attachment/<uuid>,
+# sector debt workbook, linked from the stable page "Szeregi czasowe" on gov.pl after the Treasury
+# debt workbook (gov.pl terms, register PLG-009). Each release is a new https://www.gov.pl/attachment/<uuid>,
 # so the link is found on the page at run time (url_from). Version = Last-Modified; written only
 # when the SHA-256 changed. Quarterly series; a schedule (stage 4) comes after the Dev trial.
 extraction:
@@ -12,8 +12,9 @@ extraction:
     files:
       - entity: public_debt
         url_from:
-          page: https://www.gov.pl/web/finanse/zadluzenie-sektora-finansow-publicznych
+          page: https://www.gov.pl/web/finanse/szeregiczasowe
           pattern: /attachment/
+          pick: last    # Dev trial #2347: 1st link = Zadluzenie_Skarbu_Panstwa.xlsx (PLG-008), 2nd = Dlug_publiczny_<q>.xlsx
         format: raw
         version: last_modified     # the response's Last-Modified; download time when absent
   initial: bulk

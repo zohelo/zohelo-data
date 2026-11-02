@@ -43,7 +43,14 @@ def main() -> int:
             for o in objects(client, bucket)
             if not o["Key"].endswith(".receipt.json")
         ]
-        annotate("notice", "mf_public_debt trial landed", {"codes": codes, "entities": len(landed), "files": landed})
+        url = bulk_file.resolve_url(spec)
+        name = (bulk_file.probe(url)[0].headers.get("Content-Disposition") or "") if url else ""
+        annotate(
+            "notice" if "Dlug_publiczny" in name else "error",
+            "mf_public_debt trial landed",
+            {"codes": codes, "entities": len(landed), "files": landed, "url": url, "disposition": name},
+        )
+        codes["name_check"] = 0 if "Dlug_publiczny" in name else 1
     finally:
         keys = [o["Key"] for o in objects(client, bucket)]
         for start in range(0, len(keys), 1000):
