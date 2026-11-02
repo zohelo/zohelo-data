@@ -6,6 +6,9 @@ const INDEX_CURRENT = "_portal_index/v1/current.json";
 // Published by warehouse/catalog.py after each production model build.
 const CATALOG_CURRENT = "_portal_catalog/v1/catalog.json";
 const PREFIX = "/api";
+// The published layer (docs/published.md), served read-only after sign-in at /api/published/v1/<path>.
+const PUBLISHED_PREFIX = "06_published/v1/";
+const PUBLISHED_PATH = /^(catalog\/catalog\.json|catalog\/[a-z_]+\.parquet|manifest\.json|status\.json|kpi\/[a-z0-9_]+\/(latest\.json|series\.parquet)|geo\/[a-z0-9]+\.geojson|feed\/(changes\.json|calendar\.ics))$/;
 const DEV_ORIGINS = new Set(["http://localhost:5173", "http://127.0.0.1:5173"]);
 
 let currentCache = null;
@@ -287,6 +290,16 @@ export default {
         const catalog=await env.LAKEHOUSE.get(CATALOG_CURRENT);
         if (!catalog) return json({error:{status:"NOT_FOUND",message:"The data catalog has not been published yet."}},404,origin);
         return json(await catalog.json(),200,origin);
+      }
+      if (url.pathname.startsWith("/published/v1/")) {
+        const path=url.pathname.slice("/published/v1/".length);
+        const object=PUBLISHED_PATH.test(path)?await env.LAKEHOUSE.get(PUBLISHED_PREFIX+path):null;
+        if (!object) return json({error:{status:"NOT_FOUND",message:"No published file at this path."}},404,origin);
+        const h=cors(origin);
+        object.writeHttpMetadata(h);
+        h.set("etag",object.httpEtag);
+        h.set("cache-control","no-store");
+        return new Response(request.method==="HEAD"?null:object.body,{status:200,headers:h});
       }
       const match=/^\/drive\/v3\/files\/([^/]+)$/.exec(url.pathname);
       if (!match) return json({error:{status:"NOT_FOUND"}},404,origin);
