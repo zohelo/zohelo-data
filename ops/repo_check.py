@@ -8,6 +8,7 @@ dbt parse and the secret scan run as their own steps of the job.
 
 from __future__ import annotations
 
+import ast
 import csv
 import os
 from pathlib import Path
@@ -387,7 +388,8 @@ JSON_TYPES = {
 def published_contract() -> list[str]:
     """Each JSON or GeoJSON fixture of the published layer (docs/published.md) has every required key of
     its schema, and every present property has the schema's JSON type (recursing into objects and array
-    items); every feature of a GeoJSON fixture has the level named by the file."""
+    items); every feature of a GeoJSON fixture has the level named by the file. Every published KPI of the
+    catalog fixture outside publish.SKIP has a kpi/<kpi_key>/latest.json fixture (D26)."""
     import json
 
     fixtures = PUBLISHED / "fixtures"
@@ -406,6 +408,27 @@ def published_contract() -> list[str]:
                 level = ((feature or {}).get("properties") or {}).get("level")
                 if level != fixture.stem:
                     problems.append(f"{rel}: feature {i} level {level!r} is not {fixture.stem!r}")
+    # D26: every published KPI outside publish.SKIP has a latest.json fixture. SKIP is read with ast
+    # because warehouse.publish imports duckdb.
+    tree = ast.parse((ROOT / "warehouse" / "publish.py").read_text(encoding="utf-8"))
+    skip = next(
+        set(ast.literal_eval(node.value))
+        for node in tree.body
+        if isinstance(node, ast.Assign) and any(getattr(t, "id", None) == "SKIP" for t in node.targets)
+    )
+    catalog = json.loads((fixtures / "catalog" / "catalog.json").read_text(encoding="utf-8"))
+    for kpi in catalog.get("kpis") or []:
+        key = kpi.get("kpi_key")
+        if kpi.get("status") != "published":
+            continue
+        latest = fixtures / "kpi" / str(key) / "latest.json"
+        if key in skip:
+            if latest.exists():
+                problems.append(f"kpi/{key}/latest.json: {key!r} is in publish.SKIP and must have no latest.json (D26)")
+        elif not latest.exists():
+            problems.append(f"kpi/{key}/latest.json: missing for published KPI {key!r} (D26)")
+        elif (found := json.loads(latest.read_text(encoding="utf-8")).get("kpi_key")) != key:
+            problems.append(f"kpi/{key}/latest.json: kpi_key {found!r} is not {key!r}")
     return problems
 
 
