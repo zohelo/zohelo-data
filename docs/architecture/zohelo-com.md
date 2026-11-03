@@ -18,10 +18,10 @@ state, target state, the gap, and the fitness checks that keep the site on the t
   `scripts/` write 404, sitemap, RSS, calendar and `/downloads/` (series CSV and Parquet up to 200 kB per file).
 - **Charts are client-only.** `@zohelo/design/visuals` (Vega, Vega-Lite, vega-embed) renders only through `.client`
   modules after hydration (D25): `SeriesChart`, `MapChoropleth`, `SampleChart`. Pages ship their numbers in the HTML
-  (tiles, tables) and the chart arrives as one lazy chunk. Target (D32): static charts as build-time SVG components, no chart JavaScript.
+  (tiles, tables) and the chart arrives as one lazy chunk. Target (D32): static charts as build-time SVG components, no vega.
 - **Design system in the same repo.** `packages/design` (`@zohelo/design`, workspace package): tokens and theme CSS,
   fonts, components (`KpiTile`, `DataTable`, `SourceFooter`, …), number and date formats (`format.ts`) and the
-  Vega spec builders. zohelo-bi consumes it as a GitHub Release tarball (D3, `design-release.yml`). The site forces
+  Vega spec builders. zohelo-bi is meant to consume it as a GitHub Release tarball (D3, `design-release.yml`; not yet, D32). The site forces
   the light theme until components use token classes (D21).
 - **Hosting.** Cloudflare Pages project `zohelo` (zohelo.com, www.zohelo.com), deployed by `deploy.yml` on every
   push to `main` (setup as code in `scripts/cloudflare-setup.ts`, a smoke check for "Polska w danych", a GitHub
@@ -63,13 +63,13 @@ flowchart TB
   end
   subgraph repo["zohelo repository"]
     app["src/<br/>routes, loaders, site.config"]
-    design["packages/design<br/>@zohelo/design: tokens, components, formats, Vega specs"]
+    design["packages/design<br/>@zohelo/design: tokens, components, formats, Vega specs (today; SVG charts per D32)"]
     fixtures["fixtures/published/<br/>synthetic layer for PR checks (D26)"]
   end
   r2[("R2 lakehouse<br/>06_published/v1/")]
   pages["Cloudflare Pages · project zohelo<br/>build/client: HTML, assets, /downloads/"]
   browser(["Browser<br/>pre-rendered HTML with SVG charts (D32)"])
-  bi["zohelo-bi<br/>design tarball (D3)"]
+  bi["zohelo-bi<br/>design tarball (D3, not yet adopted)"]
 
   r2 -- "read-only key" --> fetch
   fixtures -. "without the key (PRs)" .-> fetch
@@ -87,7 +87,7 @@ flowchart TB
    schema validation of G3. Today the site shows the published layer of the last merge to zohelo `main`: a fix in
    the data (for example zohelo-data#2449) reaches readers only with the next unrelated merge.
 2. **Light pages, charts in the HTML.** Every page is readable without JavaScript (numbers in HTML); charts are
-   SVG rendered at pre-render from `@zohelo/design` components (D32), so no route loads chart JavaScript and chart
+   SVG rendered at pre-render from `@zohelo/design` components (D32), so no route loads vega; the small chart components hydrate with the route, and chart
    pages stay within the same page-weight budget as pages without a chart. Today the home page imports both
    `SeriesChart.client` and `MapChoropleth.client` (vega) statically (`src/routes/home.tsx`).
 3. **One front-end foundation for three products.** `@zohelo/design` is the single source of tokens, components,
