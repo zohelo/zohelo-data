@@ -16,6 +16,7 @@ Read at the start of every run, after AGENTS.md, docs/decisions.md and docs/team
 
 ## Checklist
 
+- Each kind of work: load its skills first (docs/team.md, Skills); end the summary with `Skills used: …`.
 - Start: sprint goals first (sprint check), then what changed since the last check.
 - Each product: PL and EN, 1440 and 390 px, empty states, links, chart labels, units and sources.
 - End: Bugs filed with evidence; `Lesson:` line in the summary when something went wrong or a better way was found.

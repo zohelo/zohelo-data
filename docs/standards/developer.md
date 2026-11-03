@@ -19,6 +19,7 @@ Read at the start of every run, after AGENTS.md, docs/decisions.md and docs/team
 
 ## Checklist
 
+- Each kind of work: load its skills first (docs/team.md, Skills); end the summary with `Skills used: …`.
 - Start: rework of own PRs first; read the Task's Steps, Acceptance, Out of scope and linked spec.
 - Before the PR: full repo check green; diff contains only the Task; `Closes #<n>` first; `ui` label and routes for
   visible changes; `kind:content` label and the changed texts and values when the PR changes what an indicator or

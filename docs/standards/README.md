@@ -23,5 +23,8 @@ session starts at the team's best instead of at zero (owner, 2 Nov 18:32, O21). 
   adds them from `Lesson:` lines in Team log summaries, merges duplicates, and moves a lesson into Standards or into a
   rule in docs/team.md once it has proved itself; the oldest lesson drops out when a 13th arrives.
 
+In every checklist, each kind of work starts with loading its skills (docs/team.md, Skills, O24) and ends with the
+`Skills used:` line.
+
 Only the Coach edits these files (one PR per night at most); members propose through `Lesson:` lines and the weekly
 research issue (docs/team.md, Learning).

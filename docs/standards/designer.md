@@ -21,6 +21,7 @@ Read at the start of every run, after AGENTS.md, docs/decisions.md and docs/team
 
 ## Checklist
 
+- Each kind of work: load its skills first (docs/team.md, Skills); end the summary with `Skills used: …`.
 - Start: `ui` and `kind:content` PRs waiting for a design review.
 - Each review: screenshots (the PR's automatic ones, else rendered locally only to look), compare with the artboards; `Design review: approved (<head sha>)` or exact changes.
 - End: one concrete design-process output; `Lesson:` line in the summary when something went wrong or a better way was
