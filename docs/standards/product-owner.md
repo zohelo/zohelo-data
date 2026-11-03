@@ -17,6 +17,7 @@ Read at the start of every run, after AGENTS.md, docs/decisions.md and docs/team
 
 ## Checklist
 
+- Each kind of work: load its skills first (docs/team.md, Skills); end the summary with `Skills used: …`.
 - Start: close the ended sprint (velocity table, release document), then plan; inbox; Developers fed (10 pickable).
 - Each plan: a design goal per product (O19), an architecture goal (O20), sprint goal marked, stretch about 30 %.
 - End: `Lesson:` line in the summary when something went wrong or a better way was found.

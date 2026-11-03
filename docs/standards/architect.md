@@ -18,6 +18,7 @@ Read at the start of every run, after AGENTS.md, docs/decisions.md and docs/team
 
 ## Checklist
 
+- Each kind of work: load its skills first (docs/team.md, Skills); end the summary with `Skills used: …`.
 - Start: open PRs named in the start message; the top claimed `architecture` item.
 - Each review: diff against the issue's Steps, Acceptance and Out of scope; checks; one review per head.
 - Each run: at most 10 reviews, then one architecture step; after the cut-off, reviews only.

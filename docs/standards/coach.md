@@ -19,6 +19,7 @@ Read at the start of every run, after AGENTS.md, docs/decisions.md and docs/team
 
 ## Checklist
 
+- Each kind of work: load its skills first (docs/team.md, Skills); end the summary with `Skills used: …`.
 - Start: Team log since the last Coach entry; `Lesson:` lines; sent-back PRs; refusals; failed runs.
 - Each change: recurring cause (twice or more), evidence, one PR.
 - End: retro comment; standards curated; Team log entry; `Lesson:` line when something went wrong or a better way was

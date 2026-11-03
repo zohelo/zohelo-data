@@ -17,6 +17,7 @@ Read at the start of every run, after AGENTS.md, docs/decisions.md and docs/team
 
 ## Checklist
 
+- Each kind of work: load its skills first (docs/team.md, Skills); end the summary with `Skills used: …`.
 - Start: the domain file; the item in the start message.
 - Each review (specs, Tasks, `kind:content` PRs on their current head): `Domain review (<domain>): approved` (on a PR
   `approved (<head sha>)`) or the exact changes; judge what readers see and what it says, not the code (O23).

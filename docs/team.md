@@ -199,6 +199,65 @@ one line per run at most:
    rule change here, in `docs/backlog.md` or in `ops/repo_check.py` (Nightly retrospective). The research issue closes
    with the Coach's last curation PR of the week (D17).
 
+## Skills
+
+Owner directions 2 Nov 19:04 and 23:55 and 3 Nov 00:00 (O24): every member does each kind of work with the plugin
+skills made for it. Load each skill with the Skill tool **when that work starts** (not all at run start), follow it,
+and name it in the run summary's `Skills used:` line. A skill missing in the session is never skipped silently: the
+member says so (`<skill> missing` in the `Skills used:` line and in the review it affects), uses the nearest available
+skill (for code review pr-review-toolkit:review-pr and engineering:code-review), and reports it once under Refused,
+with the shared "still refused, see <link>" rule for later runs; ready PRs still get merged. In unattended runs
+deep-review skips its calibration interview and states the depth it used; every review is a deep, critical review
+(owner), so the depth is at least `standard` for contract and charter PRs (team addition: `quick` only for
+backlog-only and one-row decision PRs). Community plugins that install hooks are not used (a hook runs unreviewed
+code in every session).
+
+**Mandatory skills per kind of work** (every member):
+
+| Work | Skills |
+|---|---|
+| Code review: the Architect's review of a PR that changes anything outside `docs/`, `*.md` files and `.github/backlog/` (Dependabot PRs: Architect step 4, no review-council) | review-council (all six specialists) and pr-review-toolkit (silent-failure-hunter, pr-test-analyzer, type-design-analyzer where relevant) |
+| Design, content and docs review: the Designer's and the Domain expert's reviews (they never review code), design-review rounds, domain skills, and the review of docs and backlog PRs | deep-review; for a charter or backlog PR also antiagree on the rule or plan it adopts |
+| Plan, proposal or idea before it is adopted (sprint plans, Epics, ADRs, design directions, charter changes) | antiagree |
+| UX/UI work | design (design-critique, design-system, accessibility-review, ux-copy, design-handoff), design-superpowers, data (data-visualization, create-viz), system-design-skills for structure |
+| Analytical work | data (analyze, explore-data, statistical-analysis, validate-data) and analytics-skills; **every number shown to users passes data:validate-data first** |
+| Domain work | the domain skill `.claude/skills/domain-<domain>/SKILL.md`; the Finance plugin for finance |
+
+**Each member's own skills** (owner mapping 19:04, corrected 23:55):
+
+| Member | Skills |
+|---|---|
+| Product Owner | product-management: sprint-planning, write-spec, roadmap-update, metrics-review, competitive-brief, stakeholder-update |
+| Architect | engineering: architecture, system-design, code-review, tech-debt, testing-strategy |
+| Developers | engineering: code-review (self-check before the PR), debug, testing-strategy, deploy-checklist; Developers 3 and 4 also design:design-handoff and design:accessibility-review |
+| Designer | design: design-critique, design-system, accessibility-review, ux-copy, design-handoff, research-synthesis; data: data-visualization |
+| Domain expert | data: analyze, statistical-analysis, validate-data, data-visualization; finance for the finance domain; its domain skill |
+| Quality Engineer | engineering: testing-strategy; data: validate-data; design:accessibility-review |
+| Operator | engineering: incident-response, deploy-checklist |
+
+Further plugins any member may use where they fit: design-skills, design-steward, dbt-toolkit, cloudflare, superpowers,
+system-design-skills, analytics-skills. There is no Axe, Figma or cto-toolkit plugin (removed 23:55): accessibility is checked with open-source
+axe-core (`@axe-core/playwright`), pa11y and Lighthouse in the PR checks (#2499) plus design:accessibility-review, and
+designs are Design artifacts.
+
+**Reviews name their skills.** Every review comment (Architect review, `Design review:`, `Domain review`, design-round
+scores) has a line `Skills: <skill>, …` and the findings under each skill, or says that a skill found nothing. An approval without
+them is invalid: the Architect does not merge on it and asks for the review again. The Architect's run order stays (at most 10 PR reviews before the architecture step, then
+the rest of the queue); a review whose skills cannot finish in the run is not posted, and the PR waits for the next
+run. The kind-specific review skills and gates of #2499 build on this.
+
+**Domain skills.** For economy, labour, population, housing and business no usable plugin exists, so each domain gets
+its own skill, `.claude/skills/domain-<domain>/SKILL.md` in zohelo-data, written by the Domain expert from
+`docs/domains/<domain>.md` and the producers' methodology (GUS, Eurostat/ESA 2010, NBP, OECD, ILO): indicator
+definitions, release calendars, comparison norms, known pitfalls and chart rules. Before merge it gets a deep-review in a Domain expert run for another domain. The Product Owner plans one domain
+skill per sprint, economy first. The owner may upload them as account skills.
+
+**Evidence.** Every run summary ends with `Skills used: <skill>, …` (or `Skills used: none needed (<why>)`; a
+one-line "nothing to do" entry may end with `Skills used: none needed`). In each of its runs the Coach checks the
+summaries since its last run against the work each run did and against its review comments (the line is
+self-reported; the review comments are the evidence) and reports, in the retro comment, each run that skipped a
+required skill.
+
 ## Design process
 
 Owner decision 2 Nov (O17): the UX/UI of all zohelo products is designed the professional way — research, then
@@ -285,8 +344,8 @@ sees the result and may veto, but is not asked to choose.
 - **Names carry the sprint id** (Sprint id): PR titles begin `[<sprint id>] `, Team log entries begin
   `[<sprint id>] <member> · <trigger>`, and start messages follow the form above.
 - **Summary** (end of every run, posted on Team log #2073 and as the final message): member, trigger (schedule or who
-  started it), done (PRs, issues, with links), handed to (who was started and why), open questions, and a `Lesson:`
-  line when the run had one (Learning).
+  started it), done (PRs, issues, with links), handed to (who was started and why), open questions, a `Lesson:`
+  line when the run had one (Learning), and the `Skills used:` line last (Skills).
 
 ## Developer (Developers 1–4 and every product Developer)
 
@@ -404,7 +463,7 @@ review a write against the shared GitHub limit).
    then the rest, oldest first; a stacked PR after its dependency, rebased onto main first): compare the diff with its
    issue's Steps, Acceptance and Out of scope; read the check results. Post the review first as a pull-request review,
    not an issue comment (`gh api repos/zohelo/<repo>/pulls/<n>/reviews -f event=COMMENT -f body='Reviewed against
-   #<issue>: <acceptance items checked>; checks <result>'`; APPROVE is not possible, all members share one account), so
+   #<issue>: <acceptance items checked>; checks <result>; Skills: <skills> with their findings'` (Skills); APPROVE is not possible, all members share one account), so
    the PR carries a recorded review before the merge call. Review every PR yourself in the run that merges it (add
    `-f commit_id=<head sha>` to the review) — never merge on another run's review, and never merge a PR your own run
    wrote (another Architect run or the owner merges those). Then merge exactly the reviewed commit when checks pass and
@@ -416,7 +475,7 @@ review a write against the shared GitHub limit).
    current head, and a `kind:content` PR also after `Domain review (<domain>): approved (<head sha>)`; until then it
    waits (owner 2 Nov, O17, O23). A PR that changes what an indicator or chart says but lacks `kind:content` gets the
    label from the Architect, who starts the Domain expert. Update mechanically conflicting PRs yourself (merge main in, shared rules). PRs from the
-   Product Owner (backlog), the Coach (rules) and the Domain expert (domain files) are reviewed the same way; a Coach PR that removes a check or lowers a
+   Product Owner (backlog), the Coach (rules) and the Domain expert (domain files and skills) are reviewed the same way; a Coach PR that removes a check or lowers a
    quality bar needs an owner decision and is sent back otherwise.
 2. **Report back.** For each Developer whose PRs you reviewed: if its last run is still running (list_triggers), do
    nothing more; it reads the results from its PRs. Otherwise start it with
@@ -540,7 +599,8 @@ they know.
 **When started:**
 - **Review** (KPI definition, indicator page, dashboard spec, Task about them, and every PR labelled `kind:content`
   on its current head, judged from its screenshots and its list of changed texts and values, not the code): answer on
-  the issue or PR with `Domain review (<domain>): approved` (on a PR: `approved (<head sha>)`) or the exact changes needed (definition, unit, frequency, seasonal adjustment,
+  the issue or PR with `Domain review (<domain>): approved` (on a PR: `approved (<head sha>)`) and its `Skills:` line
+  (Skills), or the exact changes needed (definition, unit, frequency, seasonal adjustment,
   real vs nominal, base year, breaks, comparability across sources).
 - **Released product check** (from the Quality Engineer): do the numbers and charts make sense to a professional?
   Problems → Bugs (shared rules).
@@ -565,7 +625,7 @@ and 390 px), page specs, and visual reviews of `ui` PRs against those artboards.
 **Every run:**
 1. **Design reviews first.** For each open PR labelled `ui` (or named in the start message): look at screenshots of
    the changed routes (1440 px and 390 px wide, PL and EN, light theme) and judge them against the approved artboards,
-   never the code. Use the PR's automatic screenshots once #2499 posts them; until then render the PR's branch locally
+   never the code, with the review skills (Skills). Use the PR's automatic screenshots once #2499 posts them; until then render the PR's branch locally
    with Playwright/Chromium only to take those screenshots. Comment on the PR either `Design review: approved (<head
    sha>)` with what you checked, or the exact visual changes needed (spacing, type, colour token, alignment, states,
    accessibility).
@@ -584,7 +644,9 @@ Owns how the team works. A team of fresh sessions does not learn by itself; the 
 
 **Scheduled run (Tue–Thu night, after each sprint day), and when started:**
 1. Read everything since the previous Coach entry on Team log #2073: the log, PRs sent back and why, `design:question` issues, failed checks, refused
-   actions, Bugs the Quality Engineer found after merge, start messages that went unanswered.
+   actions, Bugs the Quality Engineer found after merge, start messages that went unanswered, and each summary's
+   `Skills used:` line against the work the run did (Skills); runs that skipped a required skill are named in the retro
+   comment.
 2. Find recurring causes (the same mistake twice or more) and fix them where they live: this file, `docs/backlog.md`
    (Task template), `AGENTS.md`, `ops/repo_check.py` rules, or unclear open Tasks (comment, or a backlog PR via the
    Product Owner). One PR per fix, closing a one-off Task issue (D17); start the Architect for review.
