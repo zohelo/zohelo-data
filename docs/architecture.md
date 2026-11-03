@@ -8,7 +8,7 @@ decision.
 ## Product views
 
 Target architecture, C4 views, gap and fitness checks per product (Architect, O20):
-[zohelo.com](architecture/zohelo-com.md). zohelo-data and zohelo-bi follow.
+[zohelo-data](architecture/zohelo-data.md), [zohelo.com](architecture/zohelo-com.md). zohelo-bi follows.
 
 ## Dataflow and repository
 
