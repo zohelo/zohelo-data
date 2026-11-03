@@ -1,8 +1,9 @@
 # D32 · Chart rendering: build-time SVG for static charts, vega only where the reader re-configures
 
-- **Status:** accepted (2026-11-03, Architect; zohelo-data#2550). Narrows D25; condition (1) of D31.
-- **Products:** zohelo.com (all charts), zohelo-bi (dashboards and KPI pages; the explorer keeps vega), the share
-  card. data.zohelo.com has no `@zohelo/design` charts today.
+- **Status:** accepted (2026-11-03, Architect; zohelo-data#2550). Narrows D25; amends D4 for the explorer's vega
+  specs; condition (1) of D31.
+- **Products:** zohelo.com (all charts, first), the share card, zohelo-bi (dashboard, KPI and embed charts in a
+  later roll-out step; the explorer keeps vega). data.zohelo.com has no `@zohelo/design` charts today.
 
 ## Context
 
@@ -25,14 +26,19 @@ Measured on zohelo `main` (2026-11-03, `bun run build`, gzip -9):
 
 The vega chunk is the largest asset of the site and the home page loads it (zohelo.com view, G2). Today's chart
 features that the reader uses: hover tooltips with values in the page's number format (`visuals/locale.ts`;
-zohelo#423 keeps the series' decimals in them) and region names on the map. The vega layer is 572 lines in
-`packages/design/src/visuals/` (specs, theme, locale, `Chart`).
+zohelo#423 (open) keeps the series' decimals in them) and region names on the map. The vega layer in
+`packages/design/src/visuals/` is 572 lines including tests (specs, theme, locale, `Chart`; about 400 of source).
+
+**zohelo-bi today** draws every chart (dashboards, `/kpi`, `/embed`, explorer) with vega through its own
+`packages/visuals` (`SeriesChart`); neither its root nor `apps/portal` depends on `@zohelo/design`, and the explorer
+is imported statically (`apps/portal/src/App.tsx`), so the vega code is part of the app bundle. D4 moved chart code
+to zohelo first; bi has not consumed it yet.
 
 ## Decision
 
 1. **Static charts are React components in `@zohelo/design` that return plain SVG**, rendered with the page: at
-   pre-render on zohelo.com (no chart JavaScript is shipped for them), and as ordinary React on the client in
-   zohelo-bi. One component per D31 chart kind: `LineChart` (with optional `band`, `rule`, end label, small multiples),
+   pre-render on zohelo.com (no chart JavaScript is shipped for them), and, once zohelo-bi consumes
+   `@zohelo/design` (decision 6), as ordinary React on the client there. One component per D31 chart kind: `LineChart` (with optional `band`, `rule`, end label, small multiples),
    `Sparkline`, `RankingBars`, `Choropleth`. Scales, ticks, curves and the projection use the small d3 modules
    (`d3-scale`, `d3-shape`, `d3-array`, `d3-geo`, `d3-time-format`) — no hand-written scale or projection maths.
    Number and date text comes from `format.ts` only.
@@ -46,11 +52,16 @@ zohelo#423 keeps the series' decimals in them) and region names on the map. The 
    rasterises it to PNG with `@resvg/resvg-js` (WASM/native, no browser); fonts are the bundled Newsreader, Plus
    Jakarta Sans and Inter files.
 5. **Vega stays only where the reader re-configures a chart**: the zohelo-bi explorer (`packages/visuals`, pivot of
-   any KPI × dimension), loaded with a dynamic import when the explorer opens. A rich interaction that a static chart
+   any KPI × dimension). Target: loaded with a dynamic import when the explorer opens; today it is a static import
+   (a gap for the zohelo-bi view, #2565). A rich interaction that a static chart
    cannot give (brushing, zoom) is a new decision, not a quiet re-introduction of vega on zohelo.com.
-6. **Distribution unchanged (D3).** The components ship in `@zohelo/design` and reach zohelo-bi through the
-   `design-v*` Release. The `./visuals` (vega) entry point stays exported until no zohelo route imports it, then
-   moves to zohelo-bi's `packages/visuals` alone (expand/contract, D6).
+6. **Distribution (D3) and roll-out order.** The components ship in `@zohelo/design`; zohelo.com uses them first
+   (D31 step 4: tokens → `design-v*` Release → components). zohelo-bi adopts `@zohelo/design` through the `design-v*`
+   Release in a later step and then moves its dashboard, KPI and embed charts to the SVG components; until then its
+   vega charts stay, and work on them (for example zohelo-bi#347, Polish number and month formats) is the right
+   interim work. The vega spec code for the explorer lives in zohelo-bi's `packages/visuals` alone (amends D4 for
+   these specs); `@zohelo/design`'s `./visuals` entry stays exported until no zohelo route imports it, then goes
+   (expand/contract, D6).
 
 What stays of D25: pages carry their numbers in HTML; any chart that needs vega renders client-only after hydration
 and never in a route's initial scripts. What D25 no longer says: that every chart is vega.
@@ -68,6 +79,8 @@ and never in a route's initial scripts. What D25 no longer says: that every char
   `aria-label` text). The vega spec builders for these kinds are deleted after the roll-out; the explorer's stay.
 - Step 4 of the design process (D31 condition 2) can name the chart components: `LineChart`, `Sparkline`,
   `RankingBars`, `Choropleth`, `ShareCard`.
+- resvg-js reads TTF/OTF; the `@fontsource` packages ship woff/woff2, and Polish text needs latin-ext glyphs. The
+  share-card Task confirms the font files (or converts them at build) before it relies on the bundled fonts.
 - Build time grows with the number of share cards (KPIs × periods × 2 languages); resvg renders a card in
   milliseconds, so this is measured in the share-card Task, not expected to matter.
 
@@ -81,3 +94,6 @@ and never in a route's initial scripts. What D25 no longer says: that every char
 - **A lighter client library (Observable Plot, uPlot, Chart.js).** Smaller than vega but still client JavaScript
   for static pictures; Plot can render at build only through a DOM shim (jsdom) in the build. Not needed for four
   fixed chart kinds.
+- **visx (React + d3 primitives, renders SVG on the server).** Closest to this decision. Not chosen: our components
+  need only the d3 modules visx itself wraps, and visx adds its own packages and API on top of them; if the chart
+  set grows beyond the D31 kinds, visx is the first thing to reconsider.
