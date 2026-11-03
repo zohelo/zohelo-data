@@ -203,18 +203,21 @@ one line per run at most:
 
 Owner directions 2 Nov 19:04 and 23:55 and 3 Nov 00:00 (O24): every member does each kind of work with the plugin
 skills made for it. Load each skill with the Skill tool **when that work starts** (not all at run start), follow it,
-and name it in the run summary's `Skills used:` line. A skill missing in the session is written as `<skill> missing`
-in that line; other work goes on with the standards file, but a **review** whose mandatory skill is missing is not
-posted, and the gap is reported under Refused for the owner. In unattended runs, deep-review skips its calibration
-interview and states the depth it assumed (`quick` unless the item is an architecture or domain-skill change). Community plugins that
-install hooks are not used (a hook runs unreviewed code in every session).
+and name it in the run summary's `Skills used:` line. A skill missing in the session is never skipped silently: the
+member says so (`<skill> missing` in the `Skills used:` line and in the review it affects), uses the nearest available
+skill (for code review pr-review-toolkit:review-pr and engineering:code-review), and reports it once under Refused,
+with the shared "still refused, see <link>" rule for later runs; ready PRs still get merged. In unattended runs
+deep-review skips its calibration interview and states the depth it used; every review is a deep, critical review
+(owner), so the depth is at least `standard` for code, contract and charter PRs (team addition: `quick` only for
+backlog-only and one-row decision PRs). Community plugins that install hooks are not used (a hook runs unreviewed
+code in every session).
 
 **Mandatory skills per kind of work** (every member):
 
 | Work | Skills |
 |---|---|
-| Code review (a PR that changes anything outside `docs/`, `*.md` files and `.github/backlog/`) | review-council (all six specialists) and pr-review-toolkit (silent-failure-hunter, pr-test-analyzer, type-design-analyzer where relevant) |
-| Design, content and docs review (`ui`, `kind:content`, design-review rounds, domain skills, docs and backlog PRs) | deep-review; for a charter or backlog PR also antiagree on the rule or plan it adopts |
+| Code review: the Architect's review of a PR that changes anything outside `docs/`, `*.md` files and `.github/backlog/` (Dependabot PRs: Architect step 4, no review-council) | review-council (all six specialists) and pr-review-toolkit (silent-failure-hunter, pr-test-analyzer, type-design-analyzer where relevant) |
+| Design, content and docs review: the Designer's and the Domain expert's reviews (they never review code), design-review rounds, domain skills, and the review of docs and backlog PRs | deep-review; for a charter or backlog PR also antiagree on the rule or plan it adopts |
 | Plan, proposal or idea before it is adopted (sprint plans, Epics, ADRs, design directions, charter changes) | antiagree |
 | UX/UI work | design (design-critique, design-system, accessibility-review, ux-copy, design-handoff), design-superpowers, data (data-visualization, create-viz), system-design-skills for structure |
 | Analytical work | data (analyze, explore-data, statistical-analysis, validate-data) and analytics-skills; **every number shown to users passes data:validate-data first** |
@@ -233,7 +236,7 @@ install hooks are not used (a hook runs unreviewed code in every session).
 | Operator | engineering: incident-response, deploy-checklist |
 
 Further plugins any member may use where they fit: design-skills, design-steward, dbt-toolkit, cloudflare, superpowers,
-system-design-skills, analytics-skills. There is no Axe or Figma plugin: accessibility is checked with open-source
+system-design-skills, analytics-skills. There is no Axe, Figma or cto-toolkit plugin (removed 23:55): accessibility is checked with open-source
 axe-core (`@axe-core/playwright`), pa11y and Lighthouse in the PR checks (#2499) plus design:accessibility-review, and
 designs are Design artifacts.
 
@@ -249,8 +252,9 @@ its own skill, `.claude/skills/domain-<domain>/SKILL.md` in zohelo-data, written
 definitions, release calendars, comparison norms, known pitfalls and chart rules. Before merge it gets a deep-review in a Domain expert run for another domain. The Product Owner plans one domain
 skill per sprint, economy first. The owner may upload them as account skills.
 
-**Evidence.** Every run summary ends with `Skills used: <skill>, …` (or `Skills used: none needed (<why>)`). The Coach
-checks the summaries nightly against the work each run did and against its review comments (the line is
+**Evidence.** Every run summary ends with `Skills used: <skill>, …` (or `Skills used: none needed (<why>)`; a
+one-line "nothing to do" entry may end with `Skills used: none needed`). In each of its runs the Coach checks the
+summaries since its last run against the work each run did and against its review comments (the line is
 self-reported; the review comments are the evidence) and reports, in the retro comment, each run that skipped a
 required skill.
 
