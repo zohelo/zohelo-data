@@ -589,6 +589,23 @@ page when a series is larger), version = the source's `lastupdated` date, so a s
 downloaded again only when the World Bank updates ICP. Restart unit: one series. Licence CC BY
 4.0 (register GL-011). Bronze, Silver and a schedule are later stages.
 
+## KRUS basic benefit statistics
+
+**Extraction (2 Nov 2026).** KRUS publishes its basic beneficiary statistics on a stable gov.pl
+page as one XLSX (about 20 kB) whose attachment URL changes with each update. The file is a
+rolling series, not one quarter: the Dev trial (#2468) found one sheet `Świadczenia` (A1:U62) with
+quarterly columns from I quarter 2020 to the newest quarter and yearly totals, for the average
+monthly number of beneficiaries and the average monthly benefit in PLN: pensions and disability
+pensions in all, old-age pensions, disability pensions (of which accident), family pensions,
+parental supplementary benefits and benefits for civilian blind war victims. The declaration
+`krus.yaml` finds the link on the page (`url_from`, the page's only `/attachment/` link) and lands
+it through the shared `bulk_file` pattern as entity `swiadczenia_kwartalne`. The server sent no
+Last-Modified in the trial, so the version is the download time and a file is written only when
+its SHA-256 changed; each version is the whole series to date (`snapshot`). Older versions can hold quarters that a later file drops if KRUS shortens the window,
+so `prune` stays `report`. Restart unit: the file. Not declared: the quarterly statistical
+information PDFs (51 tables), which have no stable listing page. Terms: gov.pl, official materials
+free to use (register PLS-011). Bronze, Silver and a schedule are later stages.
+
 ## World Bank International Debt Statistics (IDS)
 
 **Extraction (3 Nov 2026).** DataBank publishes IDS as a bulk CSV ZIP on a stable URL, the same
@@ -596,8 +613,8 @@ route as WDI and WGI (`https://databank.worldbank.org/data/download/IDS_CSV.zip`
 `world_bank_ids.yaml` lands it through the shared `bulk_file` pattern as entity `IDS_CSV`
 (version = Last-Modified, download time when absent; written only when the SHA-256 changed).
 The Dev trial (#2378) landed 11.1 MB (Last-Modified 5 Dec 2025): `IDS_ALLCountries_Data.csv`
-(62,983 rows, 137 debtor countries and groups, 574 series, year columns 1970–2032 with
-projections, 35 % of year cells empty) and four metadata CSVs (country, series, country-series
+(62,983 rows, 137 debtor countries and groups, year columns 1970–2032 with
+projections, 35 % of year cells empty) and four metadata CSVs (country, 574 series, country-series
 and footnotes). Restart unit: the whole file (one download). Licence CC BY 4.0 (register GL-007), attribution
 "Source: World Bank, International Debt Statistics". IDS is published once a year in December.
 Bronze, Silver and a schedule are later stages.

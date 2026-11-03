@@ -13,5 +13,6 @@ cc_by_4_0_world_bank_wgi,CC BY 4.0 (World Bank WGI),https://datacatalog.worldban
 cc_by_3_0_igo_unctad,CC BY 3.0 IGO (UNCTAD Data Hub),http://creativecommons.org/licenses/by/3.0/igo/,"Source: United Nations Trade and Development (UNCTAD) Data Hub, unctadstat.unctad.org",true,false
 ecb_statistics_reuse,ECB statistics usage policy,https://www.ecb.europa.eu/stats/ecb_statistics/governance_and_quality_framework/html/usage_policy.en.html,Source: ECB statistics,true,false
 cc_by_4_0_world_bank_icp,CC BY 4.0 (World Bank ICP),https://datacatalog.worldbank.org/search/dataset/0066092/international-comparison-program-2021,"Source: World Bank, International Comparison Program (ICP) 2021",true,false
+gov_pl_terms_krus,gov.pl terms (official materials free to use; KRUS),https://www.gov.pl/web/gov/prawa-autorskie,"Źródło: KRUS / Source: KRUS (Agricultural Social Insurance Fund)",true,false
 cc_by_4_0_world_bank_ids,CC BY 4.0 (World Bank IDS),https://datacatalog.worldbank.org/search/dataset/0038015/international-debt-statistics,"Source: World Bank, International Debt Statistics",true,false
 unresolved,Terms not established,https://github.com/zohelo/zohelo-data/blob/main/ingestion/register.yaml,Source: see the source register,false,false
