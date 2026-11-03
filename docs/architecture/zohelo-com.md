@@ -18,16 +18,17 @@ state, target state, the gap, and the fitness checks that keep the site on the t
   `scripts/` write 404, sitemap, RSS, calendar and `/downloads/` (series CSV and Parquet up to 200 kB per file).
 - **Charts are client-only.** `@zohelo/design/visuals` (Vega, Vega-Lite, vega-embed) renders only through `.client`
   modules after hydration (D25): `SeriesChart`, `MapChoropleth`, `SampleChart`. Pages ship their numbers in the HTML
-  (tiles, tables) and the chart arrives as one lazy chunk.
+  (tiles, tables) and the chart arrives as one lazy chunk. Target (D32): static charts as build-time SVG components, no vega.
 - **Design system in the same repo.** `packages/design` (`@zohelo/design`, workspace package): tokens and theme CSS,
   fonts, components (`KpiTile`, `DataTable`, `SourceFooter`, …), number and date formats (`format.ts`) and the
-  Vega spec builders. zohelo-bi consumes it as a GitHub Release tarball (D3, `design-release.yml`). The site forces
+  Vega spec builders. zohelo-bi is meant to consume it as a GitHub Release tarball (D3, `design-release.yml`; not yet, D32). The site forces
   the light theme until components use token classes (D21).
 - **Hosting.** Cloudflare Pages project `zohelo` (zohelo.com, www.zohelo.com), deployed by `deploy.yml` on every
   push to `main` (setup as code in `scripts/cloudflare-setup.ts`, a smoke check for "Polska w danych", a GitHub
   Release per production deploy); a manual run on a branch deploys a preview. Public, no sign-in.
 - **Page weight.** Pages without a chart load the client entry, the router chunk and the root stylesheet; pages
   with a chart also load the Vega chunk, which is the largest asset. The home page loads it (chart of the day).
+  D32 replaces this: charts become build-time SVG and the Vega chunk leaves the site.
   Measured values belong to the page-weight check (Fitness checks), which reports them on every run.
 
 ### System context (C4 level 1)
@@ -62,13 +63,13 @@ flowchart TB
   end
   subgraph repo["zohelo repository"]
     app["src/<br/>routes, loaders, site.config"]
-    design["packages/design<br/>@zohelo/design: tokens, components, formats, Vega specs"]
+    design["packages/design<br/>@zohelo/design: tokens, components, formats, Vega specs (today; SVG charts per D32)"]
     fixtures["fixtures/published/<br/>synthetic layer for PR checks (D26)"]
   end
   r2[("R2 lakehouse<br/>06_published/v1/")]
   pages["Cloudflare Pages · project zohelo<br/>build/client: HTML, assets, /downloads/"]
-  browser(["Browser<br/>HTML first, chart chunk after hydration (D25)"])
-  bi["zohelo-bi<br/>design tarball (D3)"]
+  browser(["Browser<br/>pre-rendered HTML with SVG charts (D32)"])
+  bi["zohelo-bi<br/>design tarball (D3, not yet adopted)"]
 
   r2 -- "read-only key" --> fetch
   fixtures -. "without the key (PRs)" .-> fetch
@@ -85,12 +86,10 @@ flowchart TB
    published numbers reach zohelo.com within one pipeline cycle, and only after the published JSON passed the
    schema validation of G3. Today the site shows the published layer of the last merge to zohelo `main`: a fix in
    the data (for example zohelo-data#2449) reaches readers only with the next unrelated merge.
-2. **Light pages, charts on demand.** Every page is readable without JavaScript (numbers in HTML, D25); the chart
-   code loads only when a chart is in view. Today the home page imports both `SeriesChart.client` and
-   `MapChoropleth.client` statically (`src/routes/home.tsx`), so the Vega chunk is in its initial scripts. Target:
-   no route has the chart chunk in its initial scripts or `modulepreload` links; pages without a chart stay within the
-   no-chart budget, chart pages within the chart budget below. Vega remains the chart engine until a measured
-   alternative is lighter at equal function; any switch is an ADR.
+2. **Light pages, charts in the HTML.** Every page is readable without JavaScript (numbers in HTML); charts are
+   SVG rendered at pre-render from `@zohelo/design` components (D32), so no route loads vega; the small chart components hydrate with the route, and chart
+   pages stay within the same page-weight budget as pages without a chart. Today the home page imports both
+   `SeriesChart.client` and `MapChoropleth.client` (vega) statically (`src/routes/home.tsx`).
 3. **One front-end foundation for three products.** `@zohelo/design` is the single source of tokens, components,
    formats and chart style for zohelo.com, zohelo-bi and the data portal, versioned and released from this repo;
    dark mode arrives with token adoption (D21). Architecture backlog item 6, zohelo-data#2448.
@@ -108,7 +107,7 @@ Order: G3 before G1 (an automatic deploy must never ship published JSON that no 
 | # | Gap | Proposed work | Size |
 |---|---|---|---|
 | G1 | No rebuild after `gold.publish`; site data is as old as the last zohelo merge | ADR first, weighing two routes: (a) zohelo-data dispatches zohelo `deploy.yml` after a green `gold.publish` (a new cross-repo write path: zohelo-automation app, `actions: write` on zohelo only), or (b) a scheduled zohelo deploy that pulls the published layer and deploys only when the catalog's `generated_at` changed (no new write path, freshness bounded by the schedule). Either way: deploys per day against the Cloudflare Pages limits (at most one per publish, coalesced by the deploy concurrency group), and failure and rollback. Note: `deploy.yml` checks that the site answers only after `wrangler pages deploy` made the build live, so a bad build is live until rolled back; rollback is Cloudflare Pages' rollback to the previous deployment (rebuilding an older Release would fetch today's published data again). Depends on G3 | ADR + S–M |
-| G2 | No page-weight or bundle budget; the Vega chunk, the largest asset, loads on the home page | Epic: a build-time budget check (below) in `check.yml`; then load the home page's two charts (chart of the day, map) through a dynamic import when in view | S + M |
+| G2 | No page-weight or bundle budget; the Vega chunk, the largest asset, loads on the home page | Epic: a build-time budget check (below) in `check.yml`; then replace the vega charts with the D32 SVG components (`LineChart`, `Choropleth`, …) in the D31 step-4 roll-out, which removes the vega chunk from the site | S + M |
 | G3 | The site does not validate published JSON against the zohelo-data schemas | Task: build-time schema validation in `fetch-published.ts` (mirror of zohelo-bi, D24) | S |
 | G4 | Light theme forced (D21); components still use literal classes in places | Covered by the Designer's design-system work and zohelo-data#2448 | — |
 | G5 | No accessibility check in CI | Epic with the Designer: an automated axe pass over the pre-rendered pages, zero serious or critical findings | M |
@@ -123,8 +122,8 @@ docs/decisions.md.
 | Property | Threshold | Where it runs | Exists |
 |---|---|---|---|
 | JS + CSS a page without a chart loads (gzip) | ≤ 200 kB | `check.yml`, new budget step over `build/client` (G2), which prints every page's value | no |
-| JS + CSS a chart page loads (gzip) | *proposed*: ≤ 500 kB, kept in a budget file in zohelo; the step fails above it and asks the PR to lower it when every chart page is more than 10 % under | same step (G2) | no |
-| Chart chunk loads on demand | the Vega chunk is in no route's initial scripts or `modulepreload` links (all routes, not a list) | same step (G2) | no |
+| JS + CSS a chart page loads (gzip) | ≤ 200 kB (the no-chart budget) once the D32 SVG charts land; *proposed* ≤ 500 kB as the interim value while vega charts remain | same step (G2) | no |
+| Chart chunk loads on demand (interim, until `@zohelo/design/visuals` is gone) | the Vega chunk is in no route's initial scripts or `modulepreload` links (all routes, not a list) | same step (G2) | no |
 | Download files | ≤ 200 kB each (`DOWNLOAD_LIMIT`); today larger files are skipped silently — the step must annotate or fail instead | `scripts/downloads.ts` in every build | cap only |
 | Published files read | `latest.json` ≤ 100 kB (D22); series and geo limits of docs/published.md | `gold.publish` in zohelo-data | yes (writer side) |
 | Published JSON matches the contract | valid against `kpi_latest.schema.json` and the other published schemas, for the fetched layer and for `fixtures/published/` | `fetch-published.ts` (G3) and `check.yml` | no |
