@@ -310,9 +310,14 @@ sees the result and may veto, but is not asked to choose.
   issues and PRs first and act only on what is still open. A run that finds nothing to do writes nothing except a
   one-line Team log entry (`[<sprint id>] <member> · <trigger>: nothing to do (<why>)`) and starts nobody.
 - **GitHub is the shared memory.** Work lives in issues and PRs; hand-overs are comments on the issue or PR they are
-  about, plus a start message. Three standing issues in zohelo-data: **Team log** #2073 (every member ends its run by
+  about, plus a start message. Four standing issues in zohelo-data: **Team log** #2073 (every member ends its run by
   posting its summary there), **Product inbox** #2074 (proposals to the Product Owner, one comment each), **Weekly
-  status** #2075 (the Product Owner's Monday status).
+  status** #2075 (the Product Owner's Monday status) and **Owner desk** #2445 (everything that waits for the owner;
+  owner, 2 Nov 18:45, O25). A member that asks the owner something adds it to #2445 in the same run, in one comment
+  with the link, the exact reply or clicks, the time it takes and what it blocks, and its summary says only `owner
+  question: see #2445` instead of repeating it; questions about refusals are added by the Coach, which collects them
+  (below). The Product Owner folds these into the body when it next changes (Product Owner step 8). The caps on owner
+  items (D8, at most 3 open) still apply. Never ask the owner for work the team can do itself.
 - **Never force-push** (the session refuses it as "Git Destructive"; 7 refusals on 28 Oct). A branch that needs main
   is updated by merging main into it: `gh api -X PUT repos/zohelo/<repo>/pulls/<n>/update-branch`, or, when that
   conflicts, `git merge origin/main`, resolve, and a normal push. "Rebase" in this file means this update; the squash
