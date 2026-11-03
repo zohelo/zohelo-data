@@ -595,6 +595,9 @@ downloaded again only when the World Bank updates ICP. Restart unit: one series.
 route as WDI and WGI (`https://databank.worldbank.org/data/download/IDS_CSV.zip`). The declaration
 `world_bank_ids.yaml` lands it through the shared `bulk_file` pattern as entity `IDS_CSV`
 (version = Last-Modified, download time when absent; written only when the SHA-256 changed).
-Restart unit: the whole file (one download). Licence CC BY 4.0 (register GL-007), attribution
+The Dev trial (#2378) landed 11.1 MB (Last-Modified 5 Dec 2025): `IDS_ALLCountries_Data.csv`
+(62,983 rows, 137 debtor countries and groups, 574 series, year columns 1970–2032 with
+projections, 35 % of year cells empty) and four metadata CSVs (country, series, country-series
+and footnotes). Restart unit: the whole file (one download). Licence CC BY 4.0 (register GL-007), attribution
 "Source: World Bank, International Debt Statistics". IDS is published once a year in December.
 Bronze, Silver and a schedule are later stages.
