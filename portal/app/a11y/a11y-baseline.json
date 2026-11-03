@@ -1,0 +1,28 @@
+{
+  "known": [
+    {
+      "page": "/",
+      "width": 1440,
+      "rule": "button-name",
+      "impact": "critical",
+      "bug": "zohelo-data#2536",
+      "targets": [".w-6.h-6.hover\\:bg-accent"]
+    },
+    {
+      "page": "/",
+      "width": 1440,
+      "rule": "color-contrast",
+      "impact": "serious",
+      "bug": "zohelo-data#2536",
+      "targets": [".truncate.text-xs"]
+    },
+    {
+      "page": "/",
+      "width": 390,
+      "rule": "color-contrast",
+      "impact": "serious",
+      "bug": "zohelo-data#2536",
+      "targets": [".truncate.text-xs"]
+    }
+  ]
+}
