@@ -208,7 +208,7 @@ member says so (`<skill> missing` in the `Skills used:` line and in the review i
 skill (for code review pr-review-toolkit:review-pr and engineering:code-review), and reports it once under Refused,
 with the shared "still refused, see <link>" rule for later runs; ready PRs still get merged. In unattended runs
 deep-review skips its calibration interview and states the depth it used; every review is a deep, critical review
-(owner), so the depth is at least `standard` for code, contract and charter PRs (team addition: `quick` only for
+(owner), so the depth is at least `standard` for contract and charter PRs (team addition: `quick` only for
 backlog-only and one-row decision PRs). Community plugins that install hooks are not used (a hook runs unreviewed
 code in every session).
 
@@ -242,9 +242,9 @@ designs are Design artifacts.
 
 **Reviews name their skills.** Every review comment (Architect review, `Design review:`, `Domain review`, design-round
 scores) has a line `Skills: <skill>, …` and the findings under each skill, or says that a skill found nothing. An approval without
-them is invalid: the Architect does not merge on it and asks for the review again. The bounded counts stay (at most
-10 PR reviews per Architect run): a review whose skills cannot finish in the run is not posted, and the PR waits for
-the next run. The kind-specific review skills and gates of #2499 build on this.
+them is invalid: the Architect does not merge on it and asks for the review again. The Architect's run order stays (at most 10 PR reviews before the architecture step, then
+the rest of the queue); a review whose skills cannot finish in the run is not posted, and the PR waits for the next
+run. The kind-specific review skills and gates of #2499 build on this.
 
 **Domain skills.** For economy, labour, population, housing and business no usable plugin exists, so each domain gets
 its own skill, `.claude/skills/domain-<domain>/SKILL.md` in zohelo-data, written by the Domain expert from
