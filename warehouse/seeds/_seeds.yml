@@ -28,13 +28,19 @@ seeds:
         tests: [not_null, {relationships: {arguments: {to: ref('dimension'), field: dimension_key}}}]
   - name: kpi_v2_map
     description: >-
-      zohelo-bi first slice (published contract v2): one row per v2 KPI key with the concept that feeds it
-      (empty when none yet), the source measure, what the source offers, aggregation, polarity and status.
+      zohelo-bi first slice (published contract v2): one row per v2 KPI key and source that publishes it (O31),
+      with the concept that feeds it (empty when none yet), the source measures, what the source offers,
+      aggregation, polarity and status. tests/kpi_v2_map_keys.sql checks one row per key and source and one
+      concept per v2 key (and the reverse).
     columns:
       - name: v2_key
-        tests: [not_null, unique]
+        tests: [not_null]
+      - name: source_key
+        tests:
+          - not_null
+          - accepted_values: {arguments: {values: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, oecd]}}
       - name: concept_key
-        tests: [unique, {relationships: {arguments: {to: ref('kpi'), field: kpi_key}}}]
+        tests: [{relationships: {arguments: {to: ref('kpi'), field: kpi_key}}}]
       - name: aggregation
         tests: [not_null, {accepted_values: {arguments: {values: [sum, mean, rate, index, none]}}}]
       - name: polarity

@@ -26,7 +26,7 @@ dict as (
 silver as (
     select
         o.*,
-        regexp_replace(o.entity_id, '_[0-9]{4}_pl$', '') as block_id,
+        regexp_replace(o.entity_id, '(_[0-9]{4})?_pl$', '') as block_id,
         hash(
             o.entity_id, o.indicator_id, o.section_id, o.period_id, o.presentation_id, o.year,
             o.position_1_id, o.position_2_id, o.position_3_id, o.position_4_id, o.position_5_id,
@@ -35,7 +35,7 @@ silver as (
     from {{ ref('poc_src_dbw') }} as o
     where
         o.value is not null
-        and regexp_replace(o.entity_id, '_[0-9]{4}_pl$', '') in (select b.block_id from blocks as b)
+        and regexp_replace(o.entity_id, '(_[0-9]{4})?_pl$', '') in (select b.block_id from blocks as b)
 ),
 
 exploded as (  -- one row per observation × used dimension
@@ -117,7 +117,11 @@ per_row as (
             list(l.dim_name order by l.k) filter (where t.k is null or l.k <> t.k),
             list(l.pos_label order by l.k) filter (where t.k is null or l.k <> t.k)
         )) as varchar) as breakdown_json,
-        bool_and(lower(l.pos_label) in ('ogółem', 'razem')) filter (where t.k is null or l.k <> t.k) as all_total,
+        -- a total is "ogółem"/"razem", also behind a code ("0 - OGÓŁEM", "GR255640 - Sprzedaż detaliczna ogółem")
+        bool_and(
+            lower(l.pos_label) in ('ogółem', 'razem')
+            or regexp_matches(lower(l.pos_label), '^[0-9a-z]+ - (.* )?ogółem$')
+        ) filter (where t.k is null or l.k <> t.k) as all_total,
         count(*) filter (where t.k is null or l.k <> t.k) as breakdowns,
         bool_or(lower(l.pos_label) = 'mężczyźni') as is_men,
         bool_or(lower(l.pos_label) = 'kobiety') as is_women,

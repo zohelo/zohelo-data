@@ -99,12 +99,40 @@ kept as (  -- the PoC sample: small, with breakdowns where they matter (sex), on
             when 'EDAT_LFSE_03' then unit_code = 'PC' and age_code = 'Y25-34' and list_contains(code_list, 'ED5-8')
             when 'DEMO_FIND' then list_contains(code_list, 'TOTFERRT')
             when 'DEMO_R_FIND2' then list_contains(code_list, 'TOTFERRT')
-            when 'NAMA_10_GDP' then unit_code in ('CP_MEUR', 'CLV_PCH_PRE') and na_item_code = 'B1GQ'
+            when 'NAMA_10_GDP'
+                then
+                    (unit_code in ('CP_MEUR', 'CLV_PCH_PRE', 'CP_MNAC') and na_item_code = 'B1GQ')
+                    or (unit_code = 'PC_GDP' and na_item_code = 'P51G')
             when 'NAMA_10_PC' then unit_code = 'CP_EUR_HAB' and na_item_code = 'B1GQ'
             when 'UNE_RT_A' then unit_code = 'PC_ACT' and age_code = 'Y15-74'
-            when 'UNE_RT_M' then unit_code = 'PC_ACT' and age_code = 'Y15-74'
+            when 'UNE_RT_M' then unit_code = 'PC_ACT' and age_code in ('TOTAL', 'Y_LT25')
             when 'PRC_HICP_MINR' then unit_code = 'RCH_A' and coicop18_code = 'TOTAL'
             when 'LFSI_EMP_A' then unit_code = 'PC_POP' and age_code = 'Y20-64' and indic_em_code in ('EMP_LFS', 'ACT')
+            -- every source per KPI (O31, #2592): the series are chosen in poc_src_eurostat.py
+            when 'EI_BSIN_M_R2' then true
+            when 'EI_BSIN_Q_R2' then true
+            when 'EI_BSCO_M' then true
+            when 'EI_BSSI_M_R2' then true
+            when 'STS_INPR_M' then true
+            when 'STS_COPR_M' then true
+            when 'STS_INPP_M' then true
+            when 'STS_TRTU_M' then true
+            when 'BOP_GDP6_Q' then true
+            when 'BOP_C6_Q' then true
+            when 'BOP_FDI6_FLOW' then true
+            when 'NAMQ_10_GDP' then true
+            when 'NAMQ_10_LP_ULC' then true
+            when 'JVS_Q_NACE2' then true
+            when 'LFSI_EMP_Q' then true
+            when 'UNE_RT_Q' then true
+            when 'LFST_R_LFU3RT' then true
+            when 'UNE_LTU_A' then true
+            when 'EARN_GR_GPGR2' then true
+            when 'NAMA_10_AN6' then true
+            when 'NAMA_10_A10' then true
+            when 'ILC_DI12' then true
+            when 'NAMA_10R_2GVAGR' then true
+            when 'GOV_10A_EXP' then true
             else false
         end
 ),

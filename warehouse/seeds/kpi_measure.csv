@@ -13,7 +13,7 @@ inflation,eurostat,eurostat:PRC_HICP_MINR:RCH_A,"HICP (COICOP 2018), annual rate
 inflation,world_bank_wdi,world_bank_wdi:FP.CPI.TOTL.ZG,"CPI, annual %",2,
 unemployment_rate,eurostat,eurostat:UNE_RT_A:PC_ACT,"annual, 15-74",1,
 unemployment_rate,world_bank_wdi,world_bank_wdi:SL.UEM.TOTL.ZS,ILO modelled estimate,3,
-unemployment_rate_monthly_sa,eurostat,eurostat:UNE_RT_M:PC_ACT,"monthly, seasonally adjusted, 15-74",1,
+unemployment_rate_monthly_sa,eurostat,eurostat:UNE_RT_M:PC_ACT:TOTAL,"monthly, seasonally adjusted, 15-74",1,
 registered_unemployment_rate,gus_bdl,gus_bdl:P2392:%,"registered, end of year",1,
 employment_rate,eurostat,eurostat:LFSI_EMP_A:PC_POP:EMP_LFS,20-64,1,
 employment_rate_15plus,world_bank_wdi,world_bank_wdi:SL.EMP.TOTL.SP.ZS,"15+, ILO modelled",1,
@@ -38,7 +38,7 @@ arope_rate,eurostat,eurostat:ILC_PEPS01N:PC:TOTAL,all ages,1,
 child_arope,eurostat,eurostat:ILC_PEPS01N:PC:Y_LT18,under 18,1,
 basic_digital_skills,eurostat,eurostat:ISOC_SK_DSKL_I21:PC_IND:I_DSK2_BAB,"16-74, at least basic overall",1,
 bond_yield_10y,eurostat,eurostat:IRT_LT_MCBY_M:_Z:MCBY,EMU convergence criterion,1,
-gdp_per_capita_pps,eurostat,eurostat:NAMA_10R_2GDP:PPS_HAB_EU27_2020,"countries and NUTS 2",1,
+gdp_per_capita_pps,eurostat,eurostat:NAMA_10R_2GDP:PPS_HAB_EU27_2020,countries and NUTS 2,1,
 gerd_gdp,eurostat,eurostat:RD_E_GERDTOT:PC_GDP,all sectors,1,
 gg_debt_gdp,eurostat,eurostat:GOV_10DD_EDPT1:PC_GDP:GD,general government (S13),1,
 gg_balance_gdp,eurostat,eurostat:GOV_10DD_EDPT1:PC_GDP:B9,general government (S13),1,
@@ -52,3 +52,95 @@ reer,eurostat,eurostat:ERT_EFF_IC_M:I20:REER_IC42_CPI,"CPI-deflated, 42 partners
 tertiary_attainment,eurostat,eurostat:EDAT_LFSE_03:PC:ED5-8,"25-34, ISCED 5-8",1,
 total_fertility_rate,eurostat,eurostat:DEMO_FIND:_Z:TOTFERRT,countries,1,
 total_fertility_rate,eurostat,eurostat:DEMO_R_FIND2:NR:TOTFERRT,Polish NUTS 1 and 2,2,
+population,eurostat,eurostat:DEMO_PJAN:NR,on 1 January (usual residence),3,
+population,world_bank_wdi,world_bank_wdi:SP.POP.TOTL,midyear estimate,4,
+gdp_current_prices,eurostat,eurostat:NAMA_10_GDP:CP_MNAC:B1GQ,million national currency,3,mln_ncu
+gdp_current_prices,gus_dbw,gus_dbw:1038_16_105_4:105,"million PLN, annual",4,mln_pln
+gdp_current_prices,world_bank_wdi,world_bank_wdi:NY.GDP.MKTP.CN,current local currency units,5,ncu
+gdp_volume_growth,eurostat,eurostat:NAMQ_10_GDP:CLV_PCH_SM:B1GQ,"chain-linked volumes, % change on the same quarter of the previous year, seasonally and calendar adjusted",3,
+gdp_volume_growth,gus_dbw,gus_dbw:1038_16_389_3:389,"same quarter of the previous year = 100, constant 2020 prices (rate = value - 100)",4,index_py_100
+gdp_volume_growth,gus_dbw,gus_dbw:1038_16_92_4:92,"previous year = 100, constant prices (rate = value - 100)",5,index_py_100
+unemployment_rate,eurostat,eurostat:UNE_RT_Q:PC_ACT:Y15-74,"quarterly, 15-74, seasonally adjusted",4,
+unemployment_rate,eurostat,eurostat:LFST_R_LFU3RT:PC,"annual, 15-74, countries and NUTS 2 regions",5,
+unemployment_rate,gus_dbw,gus_dbw:1514_1360_95_3:95,"LFS (BAEL) quarterly, Poland, macroregions, voivodeships",6,
+unemployment_rate,gus_bdl,gus_bdl:P2361:%:wartość liczbowa,"LFS (BAEL) annual average, 15+, to 2020",7,
+unemployment_rate_monthly_sa,eurostat,eurostat:UNE_RT_M:PC_ACT:Y_LT25,"monthly, under 25, seasonally adjusted",9,
+registered_unemployment_rate,gus_dbw,gus_dbw:875_143_95_1:95,"registered, end of month",2,
+employment_rate,eurostat,eurostat:LFSI_EMP_Q:PC_POP:EMP_LFS,"quarterly, 20-64, seasonally adjusted",2,
+employment_rate,gus_dbw,gus_dbw:1513_1360_95_3:95,"LFS (BAEL) quarterly, 15-89",3,
+employment_rate,gus_bdl,gus_bdl:P2360:%:wartość liczbowa,"LFS (BAEL) annual average, 15+, to 2020",4,
+employment_rate,world_bank_wdi,world_bank_wdi:SL.EMP.TOTL.SP.ZS,"15+, ILO modelled estimate",5,
+activity_rate,eurostat,eurostat:LFSI_EMP_Q:PC_POP:ACT,"quarterly, 20-64, seasonally adjusted",2,
+activity_rate,gus_dbw,gus_dbw:1512_1360_95_3:95,"LFS (BAEL) quarterly, 15-89",3,
+activity_rate,gus_bdl,gus_bdl:P2359:%:wartość liczbowa,"LFS (BAEL) annual average, 15+, to 2020",4,
+activity_rate,world_bank_wdi,world_bank_wdi:SL.TLF.ACTI.ZS,"15-64, ILO modelled estimate",5,
+average_gross_wage,gus_dbw,gus_dbw:376_2_243_1:243,"enterprise sector, monthly, Poland and voivodeships",2,
+average_gross_wage,gus_dbw,gus_dbw:398_16_243_3:243,"national economy, quarterly",3,
+life_expectancy,gus_bdl,gus_bdl:P2730:lata:% / 0,"at birth, by sex (BDL has no both-sexes total)",4,
+total_fertility_rate,gus_bdl,gus_bdl:P2346:-:dzietność,Poland and voivodeships,3,
+total_fertility_rate,world_bank_wdi,world_bank_wdi:SP.DYN.TFRT.IN,births per woman,4,
+old_age_dependency,gus_bdl,gus_bdl:P2426:osoba:współczynnik obciążenia demograficznego osobami starszymi,"65+ per 100 aged 15-64, Poland and voivodeships",3,
+old_age_dependency,world_bank_wdi,world_bank_wdi:SP.POP.DPND.OL,65+ per 100 aged 15-64,4,
+gerd_gdp,world_bank_wdi,world_bank_wdi:GB.XPD.RSDV.GD.ZS,% of GDP,2,
+neet_rate,world_bank_wdi,world_bank_wdi:SL.UEM.NEET.ZS,15-24 (Eurostat: 15-29),2,
+tertiary_attainment,world_bank_wdi,world_bank_wdi:SE.TER.CUAT.BA.ZS,"25+, at least bachelor's or equivalent (Eurostat: 25-34, ISCED 5-8)",2,
+gg_balance_gdp,world_bank_wdi,world_bank_wdi:GC.NLD.TOTL.GD.ZS,"net lending (+) / net borrowing (-), GFS",2,
+ghg_emissions,world_bank_wdi,world_bank_wdi:EN.GHG.ALL.MT.CE.AR5,"total excl. LULUCF, AR5, Mt CO2e",2,mt_co2e
+reer,world_bank_wdi,world_bank_wdi:PX.REX.REER,2010 = 100 (IMF),2,index_2010_100
+gdp_per_capita_pps,world_bank_wdi,world_bank_wdi:NY.GDP.PCAP.PP.CD,"GDP per capita, PPP, current international $ (not an EU27 index)",2,ppp_usd_per_person
+cpi_annual_rate,gus_dbw,gus_dbw:305_739_5_1:5,"CPI, same month of the previous year = 100, COICOP 1999, to 2025 (rate = value - 100)",1,index_py_100
+cpi_annual_rate,gus_dbw,gus_dbw:305_1722_5_1:5,"CPI, same month of the previous year = 100, COICOP 2018, from 2026 (rate = value - 100)",2,index_py_100
+cpi_annual_rate,gus_dbw,gus_dbw:305_1721_5_3:5,"CPI by voivodeship, same quarter of the previous year = 100, from 2026",3,index_py_100
+cpi_annual_rate,gus_bdl,gus_bdl:P2955:-,"CPI by voivodeship, previous year = 100, annual, to 2025",4,index_py_100
+cpi_annual_rate,gus_bdl,gus_bdl:P2496:-:ogółem - analogiczny okres poprzedniego roku = 100,"CPI by voivodeship, same quarter of the previous year = 100, to 2025",5,index_py_100
+cpi_annual_rate,gus_bdl,gus_bdl:P4635:-:ogółem - analogiczny okres poprzedniego roku = 100,"CPI by voivodeship, same quarter of the previous year = 100, from 2026",6,index_py_100
+cpi_annual_rate,world_bank_wdi,world_bank_wdi:FP.CPI.TOTL.ZG,"CPI, annual %",7,
+real_wage_growth,gus_dbw,gus_dbw:376_16_182_1:182,"enterprise sector, monthly, same month of the previous year = 100, real",1,index_py_100
+real_wage_growth,gus_dbw,gus_dbw:398_16_182_3:182,"national economy, quarterly, same quarter of the previous year = 100, real",2,index_py_100
+nominal_wage_growth,gus_dbw,gus_dbw:376_2_184_1:184,"enterprise sector, monthly, Poland and voivodeships, same month of the previous year = 100",1,index_py_100
+nominal_wage_growth,gus_dbw,gus_dbw:398_16_184_3:184,"national economy, quarterly, same quarter of the previous year = 100",2,index_py_100
+registered_unemployed,gus_bdl,gus_bdl:P2961:osoba,"end of month, by sex, Poland and voivodeships",1,
+gdp_qoq_sa,eurostat,eurostat:NAMQ_10_GDP:CLV_PCH_PRE:B1GQ,"chain-linked volumes, % change on the previous quarter, seasonally and calendar adjusted",1,
+gdp_qoq_sa,gus_dbw,gus_dbw:1038_16_390_3:390,"previous quarter = 100, seasonally adjusted, constant 2020 prices",2,index_pp_100
+gdp_regional_growth,eurostat,eurostat:NAMA_10R_2GVAGR:PCH_PRE:B1GQ,"real growth of regional GDP, countries and NUTS 2",1,
+gdp_regional_growth,gus_bdl,"gus_bdl:P3502:-:dynamika produktu krajowego brutto ogółem, rok poprzedni=100","previous year = 100, constant prices, voivodeships",2,index_py_100
+gdp_regional_growth,gus_dbw,gus_dbw:1173_793_92_4:92,"previous year = 100, constant prices, regions",3,index_py_100
+gfcf_rate,eurostat,eurostat:NAMA_10_GDP:PC_GDP:P51G,% of GDP,1,
+gfcf_rate,world_bank_wdi,world_bank_wdi:NE.GDI.FTOT.ZS,"gross fixed capital formation, % of GDP",2,
+gfcf_growth,eurostat,eurostat:NAMQ_10_GDP:CLV_PCH_SM:P51G,"chain-linked volumes, % change on the same quarter of the previous year",1,
+gdp_contributions,eurostat,eurostat:NAMQ_10_GDP:CON_PPCH_SM:%,"household and government consumption (P3), gross capital formation (P5G), exports (P6), imports (P7)",1,
+gva_by_section,eurostat,eurostat:NAMA_10_A10:CP_MNAC:B1G,"current prices, million national currency, total",1,
+gfcf_by_asset,eurostat,eurostat:NAMA_10_AN6:CP_MNAC,"current prices, million national currency, total fixed assets",1,
+business_climate,eurostat,eurostat:EI_BSIN_M_R2:BAL:BS-ICI,"industrial confidence, seasonally adjusted",1,
+capacity_utilisation,eurostat,eurostat:EI_BSIN_Q_R2:%:BS-ICU-PC,seasonally adjusted,1,
+consumer_confidence,eurostat,eurostat:EI_BSCO_M:BAL:BS-CSMCI,seasonally adjusted,1,
+consumer_confidence,gus_dbw,gus_dbw:469_16_117_1:117,"GUS current consumer confidence indicator (BWUK), monthly",2,
+esi,eurostat,eurostat:EI_BSSI_M_R2:%:BS-ESI-I,seasonally adjusted,1,
+industrial_production,eurostat,eurostat:STS_INPR_M:PCH_SM:PRD,"NACE B-D, calendar adjusted",1,
+industrial_production,gus_dbw,gus_dbw:814_2_7_1:7,"sold production of industry, same month of the previous year = 100, constant prices, Poland and voivodeships",2,index_py_100
+construction_output,eurostat,eurostat:STS_COPR_M:PCH_SM:PRD,"NACE F, calendar adjusted",1,
+construction_output,gus_dbw,gus_dbw:392_16_223_1:223,"same month of the previous year = 100, seasonally adjusted, constant prices",2,index_py_100
+retail_sales,eurostat,eurostat:STS_TRTU_M:PCH_SM:VOL_SLS,"volume of sales, NACE G47, calendar adjusted",1,
+retail_sales,gus_dbw,gus_dbw:109_849_7_1:7,"retail sales, same month of the previous year = 100, constant prices",2,index_py_100
+ppi_annual_rate,eurostat,eurostat:STS_INPP_M:PCH_SM:PRC_PRR,"domestic market, NACE B-E36",1,
+current_account_gdp,eurostat,eurostat:BOP_GDP6_Q:PC_GDP:CA:BAL,"quarterly, not seasonally adjusted",1,
+current_account_gdp,world_bank_wdi,world_bank_wdi:BN.CAB.XOKA.GD.ZS,"annual, % of GDP",2,
+current_account_components,eurostat,eurostat:BOP_C6_Q:%:MIO_EUR:%:BAL,"current account (CA), goods (G), services (S), primary (IN1) and secondary (IN2) income, balances",1,
+fdi_inflow,eurostat,eurostat:BOP_FDI6_FLOW:%:MIO_EUR:NI:DI__D__F,"inward direct investment, net incurrence of liabilities, million EUR",1,
+fdi_inflow,world_bank_wdi,world_bank_wdi:BX.KLT.DINV.CD.WD,"net inflows, current US$",2,usd
+job_vacancy_rate,eurostat,eurostat:JVS_Q_NACE2:%:JVR,"NACE B-S, not seasonally adjusted",1,
+labour_productivity,eurostat,eurostat:NAMQ_10_LP_ULC:PCH_SM:RLPR_PER,"real labour productivity per person, seasonally adjusted",1,
+unit_labour_cost,eurostat,eurostat:NAMQ_10_LP_ULC:PCH_SM:NULC_PER,"nominal unit labour cost per person, seasonally adjusted",1,
+long_term_unemployment,eurostat,eurostat:UNE_LTU_A:PC_ACT:LTU,15-74,1,
+gender_pay_gap,eurostat,eurostat:EARN_GR_GPGR2:PC,"unadjusted, NACE B-S except O",1,
+gini,eurostat,eurostat:ILC_DI12:%:GINI_HND,EU-SILC,1,
+gini,world_bank_wdi,world_bank_wdi:SI.POV.GINI,World Bank estimate,2,
+social_spending_gdp,eurostat,eurostat:GOV_10A_EXP:PC_GDP:TE,"general government, COFOG 10, total expenditure",1,
+youth_unemployment,eurostat,eurostat:UNE_RT_Q:PC_ACT:Y15-24,"quarterly, 15-24, seasonally adjusted",1,
+youth_unemployment,eurostat,eurostat:UNE_RT_M:PC_ACT:Y_LT25,"monthly, under 25, seasonally adjusted",2,
+youth_unemployment,world_bank_wdi,world_bank_wdi:SL.UEM.1524.ZS,"15-24, ILO modelled estimate",3,
+disposable_income_pc,gus_bdl,gus_bdl:P1869:zł,"per person per month, Poland and voivodeships",1,
+pensioners,gus_bdl,gus_bdl:P2861:osoba:przeciętna liczba emerytów i rencistów ogółem,"average number, Poland and voivodeships",1,
+zus_pension_avg,gus_bdl,gus_bdl:P2860:zł:z pozarolniczego systemu ubezpieczeń społecznych emerytury,"non-agricultural system, old-age pension",1,
+investment_outlays,gus_bdl,gus_bdl:P2862:tys. zł:nakłady inwestycyjne w przedsiębiorstwach,"enterprises, current prices",1,
+vacancies_per_unemployed,gus_bdl,gus_bdl:P4334:osoba:zarejestrowani bezrobotni na 1 ofertę pracy,annual,1,

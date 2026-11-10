@@ -10,6 +10,18 @@ Keep the dataset list in step with macros/poc_blocks.sql (poc_eurostat_blocks)."
 HAS = "list_contains(string_split(breakdown_codes, ','), '{}')"
 COUNTRIES = "(length(geo_code) = 2 or geo_code = 'EU27_2020')"  # countries and the EU aggregate
 PL_REGIONS = "(geo_code like 'PL%' and length(geo_code) between 3 and 4)"  # Polish NUTS 1 and NUTS 2
+
+
+def all_of(*codes, unit=None, any_of=(), geo=COUNTRIES):
+    """Sample filter: every code in the series key, one of `any_of`, the unit, the geographies."""
+    parts = [HAS.format(c) for c in codes]
+    if any_of:
+        parts.append("(" + " or ".join(HAS.format(c) for c in any_of) + ")")
+    if unit:
+        parts.append(f"unit_code = '{unit}'")
+    return " and ".join([*parts, geo])
+
+
 DATASETS = {
     "DEMO_PJAN": ("A", HAS.format("TOTAL")),
     "DEMO_R_PJANAGGR3": ("A", HAS.format("TOTAL") + " and length(geo_code) <= 4"),
@@ -40,12 +52,46 @@ DATASETS = {
     "EDAT_LFSE_03": ("A", f"unit_code = 'PC' and {HAS.format('Y25-34')} and {HAS.format('ED5-8')} and {COUNTRIES}"),
     "DEMO_FIND": ("A", f"{HAS.format('TOTFERRT')} and {COUNTRIES}"),
     "DEMO_R_FIND2": ("A", f"{HAS.format('TOTFERRT')} and {PL_REGIONS}"),
-    "NAMA_10_GDP": ("A", "unit_code in ('CP_MEUR', 'CLV_PCH_PRE') and " + HAS.format("B1GQ")),
+    "NAMA_10_GDP": (
+        "A",
+        f"(unit_code in ('CP_MEUR', 'CLV_PCH_PRE', 'CP_MNAC') and {HAS.format('B1GQ')})"
+        f" or (unit_code = 'PC_GDP' and {HAS.format('P51G')})",
+    ),
     "NAMA_10_PC": ("A", "unit_code = 'CP_EUR_HAB' and " + HAS.format("B1GQ")),
     "UNE_RT_A": ("A", "unit_code = 'PC_ACT' and " + HAS.format("Y15-74")),
-    "UNE_RT_M": ("M", "unit_code = 'PC_ACT' and " + HAS.format("Y15-74")),
+    "UNE_RT_M": ("M", all_of("SA", unit="PC_ACT", any_of=("TOTAL", "Y_LT25"))),
     "PRC_HICP_MINR": ("M", "unit_code = 'RCH_A' and " + HAS.format("TOTAL")),
     "LFSI_EMP_A": ("A", "unit_code = 'PC_POP' and " + HAS.format("Y20-64")),
+    # zohelo-bi first slice, every source per KPI (O31, #2592); codes checked in Silver (Dev probe)
+    "EI_BSIN_M_R2": ("M", all_of("BS-ICI", "SA", unit="BAL")),
+    "EI_BSIN_Q_R2": ("Q", all_of("BS-ICU-PC", "SA")),
+    "EI_BSCO_M": ("M", all_of("BS-CSMCI", "SA", unit="BAL")),
+    "EI_BSSI_M_R2": ("M", all_of("BS-ESI-I", "SA")),
+    "STS_INPR_M": ("M", all_of("PRD", "B-D", "CA", unit="PCH_SM")),
+    "STS_COPR_M": ("M", all_of("PRD", "F", "CA", unit="PCH_SM")),
+    "STS_INPP_M": ("M", all_of("PRC_PRR", "B-E36", "NSA", unit="PCH_SM")),
+    "STS_TRTU_M": ("M", all_of("VOL_SLS", "G47", "CA", unit="PCH_SM")),
+    "BOP_GDP6_Q": ("Q", all_of("CA", "BAL", "WRL_REST", "NSA", unit="PC_GDP")),
+    "BOP_C6_Q": ("Q", all_of("MIO_EUR", "BAL", "WRL_REST", "S1", any_of=("CA", "G", "S", "IN1", "IN2"))),
+    "BOP_FDI6_FLOW": ("A", all_of("MIO_EUR", "FDI", "NI", "TOTAL", "DI__D__F", "WRL_REST")),
+    "NAMQ_10_GDP": (
+        "Q",
+        f"{HAS.format('SCA')} and {COUNTRIES} and ("
+        f"(unit_code in ('CLV_PCH_SM', 'CLV_PCH_PRE') and ({HAS.format('B1GQ')} or {HAS.format('P51G')}))"
+        f" or (unit_code = 'CON_PPCH_SM' and ({' or '.join(HAS.format(c) for c in ('P3', 'P5G', 'P6', 'P7'))})))",
+    ),
+    "NAMQ_10_LP_ULC": ("Q", all_of("SCA", unit="PCH_SM", any_of=("RLPR_PER", "NULC_PER"))),
+    "JVS_Q_NACE2": ("Q", all_of("NSA", "B-S", "TOTAL", "JVR")),
+    "LFSI_EMP_Q": ("Q", all_of("SA", "Y20-64", unit="PC_POP", any_of=("EMP_LFS", "ACT"))),
+    "UNE_RT_Q": ("Q", all_of("SA", unit="PC_ACT", any_of=("Y15-74", "Y15-24"))),
+    "LFST_R_LFU3RT": ("A", all_of("TOTAL", "T", "Y15-74", unit="PC", geo=f"({COUNTRIES} or {PL_REGIONS})")),
+    "UNE_LTU_A": ("A", all_of("LTU", "Y15-74", unit="PC_ACT")),
+    "EARN_GR_GPGR2": ("A", all_of("B-S_X_O", unit="PC")),
+    "NAMA_10_AN6": ("A", all_of("N11G", unit="CP_MNAC")),
+    "NAMA_10_A10": ("A", all_of("TOTAL", "B1G", unit="CP_MNAC")),
+    "ILC_DI12": ("A", all_of("GINI_HND", "TOTAL")),
+    "NAMA_10R_2GVAGR": ("A", all_of("B1GQ", unit="PCH_PRE", geo=f"({COUNTRIES} or {PL_REGIONS})")),
+    "GOV_10A_EXP": ("A", all_of("S13", "GF10", "TE", unit="PC_GDP")),
 }
 COLUMNS = (
     "dataset_id, freq_code, unit_code, geo_code, time_period, value, status_code, "

@@ -31,9 +31,34 @@
         ('NAMA_10_GDP', 'GDP and main components', 'A', ''),
         ('NAMA_10_PC', 'Main GDP aggregates per capita', 'A', ''),
         ('UNE_RT_A', 'Unemployment by sex and age, annual', 'A', 'Y15-74,T'),
-        ('UNE_RT_M', 'Unemployment by sex and age, monthly', 'M', 'Y15-74,SA,T'),
+        ('UNE_RT_M', 'Unemployment by sex and age, monthly', 'M', 'SA,T'),
         ('PRC_HICP_MINR', 'HICP (COICOP 2018), monthly data', 'M', 'TOTAL'),
-        ('LFSI_EMP_A', 'Employment and activity by sex and age, annual', 'A', 'Y20-64,T')
+        ('LFSI_EMP_A', 'Employment and activity by sex and age, annual', 'A', 'Y20-64,T'),
+        -- zohelo-bi first slice, every source per KPI (O31, seeds/kpi_v2_map.csv, #2592)
+        ('EI_BSIN_M_R2', 'Industry: monthly business survey data', 'M', 'SA'),
+        ('EI_BSIN_Q_R2', 'Industry: quarterly business survey data', 'Q', 'SA'),
+        ('EI_BSCO_M', 'Consumers: monthly survey data', 'M', 'SA'),
+        ('EI_BSSI_M_R2', 'Sentiment indicators, monthly', 'M', 'SA'),
+        ('STS_INPR_M', 'Production in industry, monthly', 'M', 'B-D,CA'),
+        ('STS_COPR_M', 'Production in construction, monthly', 'M', 'F,CA'),
+        ('STS_INPP_M', 'Producer prices in industry, domestic market, monthly', 'M', 'B-E36,NSA'),
+        ('STS_TRTU_M', 'Turnover and volume of sales in wholesale and retail trade, monthly', 'M', 'G47,CA'),
+        ('BOP_GDP6_Q', 'Main balance of payments and IIP components, % of GDP, quarterly', 'Q', 'NSA,WRL_REST'),
+        ('BOP_C6_Q', 'Balance of payments by country, quarterly', 'Q', 'S1,S1,WRL_REST'),
+        ('BOP_FDI6_FLOW', 'Direct investment flows by industry, annual', 'A', 'FDI,TOTAL,WRL_REST'),
+        ('NAMQ_10_GDP', 'GDP and main components, quarterly', 'Q', 'SCA'),
+        ('NAMQ_10_LP_ULC', 'Labour productivity and unit labour costs, quarterly', 'Q', 'SCA'),
+        ('JVS_Q_NACE2', 'Job vacancy statistics by NACE Rev. 2, quarterly', 'Q', 'NSA,B-S,TOTAL'),
+        ('LFSI_EMP_Q', 'Employment and activity by sex and age, quarterly', 'Q', 'SA,T,Y20-64'),
+        ('UNE_RT_Q', 'Unemployment by sex and age, quarterly', 'Q', 'SA,T'),
+        ('LFST_R_LFU3RT', 'Unemployment rates by sex, age, education and NUTS 2 region', 'A', 'TOTAL,T,Y15-74'),
+        ('UNE_LTU_A', 'Long-term unemployment by sex, annual', 'A', 'Y15-74,T'),
+        ('EARN_GR_GPGR2', 'Gender pay gap in unadjusted form', 'A', 'B-S_X_O'),
+        ('NAMA_10_AN6', 'Gross fixed capital formation by asset type', 'A', 'N11G'),
+        ('NAMA_10_A10', 'Gross value added and income by A*10 industry', 'A', 'TOTAL'),
+        ('ILC_DI12', 'Gini coefficient of equivalised disposable income', 'A', 'TOTAL'),
+        ('NAMA_10R_2GVAGR', 'Real growth rate of regional gross value added', 'A', ''),
+        ('GOV_10A_EXP', 'General government expenditure by function (COFOG)', 'A', 'S13,GF10')
     ) as t (dataset_id, block_name, freq_code, total_breakdown)
 {% endmacro %}
 
@@ -56,7 +81,34 @@
         ('ERT_EFF_IC_M', 'exch_rt'),
         ('EDAT_LFSE_03', 'isced11'),
         ('DEMO_FIND', 'indic_de'),
-        ('DEMO_R_FIND2', 'indic_de')
+        ('DEMO_R_FIND2', 'indic_de'),
+        ('UNE_RT_M', 'age'),
+        ('EI_BSIN_M_R2', 'indic'),
+        ('EI_BSIN_Q_R2', 'indic'),
+        ('EI_BSCO_M', 'indic'),
+        ('EI_BSSI_M_R2', 'indic'),
+        ('STS_INPR_M', 'indic_bt'),
+        ('STS_COPR_M', 'indic_bt'),
+        ('STS_INPP_M', 'indic_bt'),
+        ('STS_TRTU_M', 'indic_bt'),
+        ('BOP_GDP6_Q', 'bop_item'),
+        ('BOP_GDP6_Q', 'stk_flow'),
+        ('BOP_C6_Q', 'currency'),
+        ('BOP_C6_Q', 'bop_item'),
+        ('BOP_C6_Q', 'stk_flow'),
+        ('BOP_FDI6_FLOW', 'currency'),
+        ('BOP_FDI6_FLOW', 'stk_flow'),
+        ('BOP_FDI6_FLOW', 'fdi_item'),
+        ('NAMQ_10_GDP', 'na_item'),
+        ('NAMQ_10_LP_ULC', 'na_item'),
+        ('JVS_Q_NACE2', 'indic_em'),
+        ('LFSI_EMP_Q', 'indic_em'),
+        ('UNE_RT_Q', 'age'),
+        ('UNE_LTU_A', 'indic_em'),
+        ('NAMA_10_A10', 'na_item'),
+        ('ILC_DI12', 'statinfo'),
+        ('NAMA_10R_2GVAGR', 'na_item'),
+        ('GOV_10A_EXP', 'na_item')
     ) as t (dataset_id, dimension_id)
 {% endmacro %}
 
@@ -69,7 +121,24 @@
         ('P2392', 'Stopa bezrobocia rejestrowanego', 'RYNEK PRACY / BEZROBOCIE REJESTROWANE'),
         ('P2497', 'Przeciętne miesięczne wynagrodzenia brutto', 'WYNAGRODZENIA I ŚWIADCZENIA SPOŁECZNE / WYNAGRODZENIA'),
         ('P3824', 'Mieszkania oddane do użytkowania', 'PRZEMYSŁ I BUDOWNICTWO / BUDOWNICTWO MIESZKANIOWE'),
-        ('P1410', 'Powierzchnia', 'PODZIAŁ TERYTORIALNY / POWIERZCHNIA GEODEZYJNA KRAJU (DANE GUGIK)')
+        ('P1410', 'Powierzchnia', 'PODZIAŁ TERYTORIALNY / POWIERZCHNIA GEODEZYJNA KRAJU (DANE GUGIK)'),
+        -- zohelo-bi first slice, every source per KPI (O31, #2592): Poland and voivodeships only
+        ('P2955', 'Wskaźnik cen towarów i usług konsumpcyjnych (COICOP 1999, do 2025)', 'CENY / WSKAŹNIKI CEN'),
+        ('P2496', 'Wskaźnik cen towarów i usług konsumpcyjnych (COICOP 1999, kwartalne, do 2025)', 'CENY / WSKAŹNIKI CEN'),
+        ('P4635', 'Wskaźniki cen towarów i usług konsumpcyjnych (COICOP 2018, kwartalne, od 2026)', 'CENY / WSKAŹNIKI CEN'),
+        ('P2359', 'Współczynnik aktywności zawodowej (BAEL, średnioroczne)', 'RYNEK PRACY / AKTYWNOŚĆ EKONOMICZNA (BAEL)'),
+        ('P2360', 'Wskaźnik zatrudnienia (BAEL, średnioroczne)', 'RYNEK PRACY / AKTYWNOŚĆ EKONOMICZNA (BAEL)'),
+        ('P2361', 'Stopa bezrobocia (BAEL, średnioroczne)', 'RYNEK PRACY / AKTYWNOŚĆ EKONOMICZNA (BAEL)'),
+        ('P2961', 'Bezrobotni zarejestrowani wg płci (dane miesięczne)', 'RYNEK PRACY / BEZROBOCIE REJESTROWANE'),
+        ('P4334', 'Zarejestrowani bezrobotni na 1 ofertę pracy', 'RYNEK PRACY / BEZROBOCIE REJESTROWANE'),
+        ('P2730', 'Przeciętne dalsze trwanie życia', 'LUDNOŚĆ / TRWANIE ŻYCIA'),
+        ('P2346', 'Współczynnik dzietności i reprodukcji brutto', 'LUDNOŚĆ / URODZENIA I ZGONY'),
+        ('P2426', 'Wskaźniki obciążenia demograficznego', 'LUDNOŚĆ / STAN LUDNOŚCI'),
+        ('P1869', 'Przeciętny miesięczny dochód rozporządzalny na 1 osobę', 'BUDŻETY GOSPODARSTW DOMOWYCH'),
+        ('P2861', 'Emeryci i renciści', 'WYNAGRODZENIA I ŚWIADCZENIA SPOŁECZNE / EMERYTURY I RENTY'),
+        ('P2860', 'Przeciętna miesięczna emerytura i renta brutto', 'WYNAGRODZENIA I ŚWIADCZENIA SPOŁECZNE / EMERYTURY I RENTY'),
+        ('P2862', 'Nakłady inwestycyjne i wartość brutto środków trwałych', 'INWESTYCJE I ŚRODKI TRWAŁE'),
+        ('P3502', 'Produkt krajowy brutto ogółem, dynamika', 'RACHUNKI REGIONALNE / PRODUKT KRAJOWY BRUTTO')
     ) as t (subgroup_id, block_name, subject_path)
 {% endmacro %}
 
@@ -78,7 +147,30 @@
     select * from (
         values
         ('581_57_93_4', 'Ludność — makroregiony, regiony, podregiony; charakter miejscowości; płeć; grupy wieku', 'A'),
-        ('581_16_2_1', 'Ludność — Polska, dane miesięczne', 'M')
+        ('581_16_2_1', 'Ludność — Polska, dane miesięczne', 'M'),
+        -- zohelo-bi first slice, every source per KPI (O31, #2592); file stem without year
+        ('305_739_5_1', 'Wskaźniki cen towarów i usług konsumpcyjnych — analogiczny okres = 100, do 2025', 'M'),
+        ('305_1722_5_1', 'Wskaźniki cen towarów i usług konsumpcyjnych — analogiczny okres = 100, od 2026', 'M'),
+        ('305_1721_5_3', 'Wskaźniki cen towarów i usług konsumpcyjnych — województwa, kwartalne, od 2026', 'Q'),
+        ('376_2_243_1', 'Przeciętne miesięczne wynagrodzenie brutto w sektorze przedsiębiorstw [zł]', 'M'),
+        ('376_2_184_1', 'Wynagrodzenie w sektorze przedsiębiorstw — analogiczny okres = 100, nominalnie', 'M'),
+        ('376_16_182_1', 'Wynagrodzenie w sektorze przedsiębiorstw — analogiczny okres = 100, realnie', 'M'),
+        ('398_16_243_3', 'Przeciętne miesięczne wynagrodzenie brutto w gospodarce narodowej [zł]', 'Q'),
+        ('398_16_184_3', 'Wynagrodzenie w gospodarce narodowej — analogiczny okres = 100, nominalnie', 'Q'),
+        ('398_16_182_3', 'Wynagrodzenie w gospodarce narodowej — analogiczny okres = 100, realnie', 'Q'),
+        ('875_143_95_1', 'Stopa bezrobocia rejestrowanego — Polska, województwa, powiaty', 'M'),
+        ('1514_1360_95_3', 'Stopa bezrobocia - BAEL — Polska, makroregiony, województwa, regiony', 'Q'),
+        ('1513_1360_95_3', 'Wskaźnik zatrudnienia - BAEL — Polska, makroregiony, województwa, regiony', 'Q'),
+        ('1512_1360_95_3', 'Współczynnik aktywności zawodowej - BAEL — Polska, makroregiony, województwa, regiony', 'Q'),
+        ('1038_16_389_3', 'PKB — analogiczny okres = 100, ceny stałe 2020', 'Q'),
+        ('1038_16_390_3', 'PKB — okres poprzedni = 100, wyrównany sezonowo, ceny stałe 2020', 'Q'),
+        ('1038_16_92_4', 'PKB — rok poprzedni = 100, ceny stałe', 'A'),
+        ('1038_16_105_4', 'PKB — ceny bieżące [mln zł]', 'A'),
+        ('1173_793_92_4', 'PKB w ujęciu regionalnym — rok poprzedni = 100, ceny stałe', 'A'),
+        ('814_2_7_1', 'Produkcja sprzedana przemysłu — analogiczny okres = 100, ceny stałe', 'M'),
+        ('392_16_223_1', 'Produkcja budowlano-montażowa — analogiczny okres = 100, wyrównana sezonowo', 'M'),
+        ('109_849_7_1', 'Sprzedaż detaliczna towarów — analogiczny okres = 100, ceny stałe', 'M'),
+        ('469_16_117_1', 'Bieżący wskaźnik ufności konsumenckiej (BWUK)', 'M')
     ) as t (block_id, block_name, freq_code)
 {% endmacro %}
 
@@ -86,7 +178,12 @@
     select * from (
         values
         ('SP.POP.TOTL'), ('SP.DYN.LE00.IN'), ('SM.POP.NETM'), ('NY.GDP.MKTP.CD'), ('NY.GDP.PCAP.CD'),
-        ('NY.GDP.MKTP.KD.ZG'), ('FP.CPI.TOTL.ZG'), ('SL.UEM.TOTL.ZS'), ('SL.EMP.TOTL.SP.ZS'), ('AG.LND.TOTL.K2')
+        ('NY.GDP.MKTP.KD.ZG'), ('FP.CPI.TOTL.ZG'), ('SL.UEM.TOTL.ZS'), ('SL.EMP.TOTL.SP.ZS'), ('AG.LND.TOTL.K2'),
+        -- zohelo-bi first slice, every source per KPI (O31, #2592)
+        ('SL.TLF.ACTI.ZS'), ('SL.UEM.1524.ZS'), ('SL.UEM.NEET.ZS'), ('GB.XPD.RSDV.GD.ZS'), ('SP.DYN.TFRT.IN'),
+        ('SP.POP.DPND.OL'), ('SE.TER.CUAT.BA.ZS'), ('GC.NLD.TOTL.GD.ZS'), ('EN.GHG.ALL.MT.CE.AR5'),
+        ('BN.CAB.XOKA.GD.ZS'), ('BX.KLT.DINV.CD.WD'), ('SI.POV.GINI'), ('NE.GDI.FTOT.ZS'), ('PX.REX.REER'),
+        ('NY.GDP.PCAP.PP.CD'), ('NY.GDP.MKTP.CN')
     ) as t (indicator_code)
 {% endmacro %}
 
