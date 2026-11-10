@@ -110,3 +110,14 @@ seeds:
         tests: [not_null, {accepted_values: {arguments: {values: [gdelt_query, wiki_article]}}}]
       - name: value
         tests: [not_null]
+  - name: release_kpi
+    description: >-
+      Links announced releases (silver.releases) to v2 KPIs by title: publisher, RE2 pattern on the lower-case
+      title, KPI key. Eurostat releases are also linked through their dataset codes (kpi_v2_map.dataset).
+    columns:
+      - name: publisher
+        tests: [not_null, {accepted_values: {arguments: {values: [gus, eurostat, ecb]}}}]
+      - name: pattern
+        tests: [not_null]
+      - name: kpi_key
+        tests: [not_null, {relationships: {arguments: {to: ref('kpi_v2_map'), field: v2_key}}}]

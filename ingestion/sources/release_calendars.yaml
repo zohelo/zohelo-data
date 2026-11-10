@@ -1,0 +1,36 @@
+source_system: release_calendars
+description: "Official release calendars (Eurostat euro indicators, GUS kalendarium, ECB) — dates of forthcoming releases (topics, O32)"
+
+# Extraction strategy (docs/landing.md, docs/topics.md). Register TP-010…TP-014 (family J). Routes found by the Dev
+# probes 42784902820, 42785648233, 42786020672, 42789309243 (10 Nov 2026):
+# - Eurostat: the release calendar page loads its events from a JSON feed,
+#   /eurostat/o/calendars/eventsJson?start=…&end=…&isEuroindicator=true (the documented ICS address
+#   cache/RELEASE_CALENDAR/calendar_EN.ics answers 404); the JSON carries dataset codes.
+# - GUS: no machine-readable calendar (the month and year calendars are HTML and PDF); one kalendarium day page per
+#   day, 7 days back to 45 days ahead.
+# - ECB: statistical calendar and Governing Council meeting calendar, HTML (robots.txt Crawl-delay 5: 5 s apart).
+# - NBP (MPC meetings, publications) and the Ministry of Finance: parked (TP-012, TP-013): nbp.pl answers with a
+#   bot-protection page and www.gov.pl refuses connections from GitHub runners; release_calendar.csv is the fallback.
+# Files are built per run by ingestion/to_landing/release_calendars/ and landed through the shared bulk_file pattern
+# (written only when the SHA-256 changed); Bronze keeps the newest copy of each file (latest-only).
+extraction:
+  initial: api
+  production: snapshot                  # each file is the calendar as published
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; calendars change rarely; daily before the evening topics build
+    - {cron: "50 19 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/release_calendars/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 30}
+  prune: report
+bronze: [bronze.release_calendar_items, bronze.release_calendars_rejected_files]
+silver: [silver.releases]
+gold: []
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (owner decision #875): about 55 small pages; Silver rebuilt in full.
+refresh: {mode: full, decided: "#875"}
+
+activities: [landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
