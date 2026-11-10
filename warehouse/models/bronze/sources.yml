@@ -187,6 +187,36 @@ sources:
       source text (decimal comma); partitioned by entity.
   - name: nbp_interest_rates_rejected_files
     description: NBP interest-rate Landing files the Bronze decoder rejected, with the reason.
+- name: gdelt
+  description: GDELT DOC 2.0 API — daily news volume and tone per topic query (topics, O32)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gdelt/
+    loaded_by: ingestion/to_bronze/gdelt/
+    config: ingestion/sources/gdelt.yaml
+  tables:
+  - name: gdelt_timeline
+    description: >-
+      One row per timeline point of every landed copy (accumulating; copies overlap): topic, mode (volraw |
+      tone), series, date, value and norm as source text; partitioned by entity (<topic>__<mode>).
+  - name: gdelt_rejected_files
+    description: GDELT Landing files the Bronze decoder rejected, with the reason.
+- name: wikimedia_pageviews
+  description: Wikimedia pageviews REST API — daily user views of the Wikipedia articles listed per topic (topics, O32)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/wikimedia_pageviews/
+    loaded_by: ingestion/to_bronze/wikimedia_pageviews/
+    config: ingestion/sources/wikimedia_pageviews.yaml
+  tables:
+  - name: wiki_pageviews
+    description: >-
+      One row per article and day of every landed copy (accumulating; copies overlap): project, article,
+      day (YYYYMMDD), views; partitioned by entity (<lang>_<title slug>).
+  - name: wikimedia_pageviews_rejected_files
+    description: Wikimedia pageviews Landing files the Bronze decoder rejected, with the reason.
 - name: news_feeds
   description: News headline feeds (RSS/Atom) of Polish outlets — headlines and links only (topics, O32)
   database: r2

@@ -1,0 +1,36 @@
+topic_key,name_pl,name_en,description_pl,description_en,parent_key,sort,status
+inflation,Inflacja i ceny,Inflation and prices,"Tempo wzrostu cen konsumpcyjnych, drożyzna, ceny żywności","Consumer price growth, cost of living, food prices",,10,active
+interest_rates,Stopy procentowe i RPP,Interest rates and the MPC,"Decyzje Rady Polityki Pieniężnej, stopa referencyjna NBP, WIBOR","Monetary Policy Council decisions, NBP reference rate, WIBOR",,20,active
+wages,Wynagrodzenia,Wages,"Przeciętne wynagrodzenie, podwyżki, płace realne","Average wage, pay rises, real wages",,30,active
+minimum_wage,Płaca minimalna,Minimum wage,"Wysokość i zmiany płacy minimalnej","Level and changes of the minimum wage",wages,31,active
+labour_market,Rynek pracy,Labour market,"Zatrudnienie, wakaty, zwolnienia grupowe","Employment, vacancies, layoffs",,40,active
+unemployment,Bezrobocie,Unemployment,"Stopa bezrobocia rejestrowanego i BAEL, bezrobotni","Registered and LFS unemployment, the unemployed",labour_market,41,active
+zloty,Kurs złotego,The złoty exchange rate,"Kurs złotego wobec euro, dolara i franka","The złoty against the euro, dollar and franc",,50,active
+gdp_growth,PKB i wzrost gospodarczy,GDP and growth,"PKB, tempo wzrostu, recesja i spowolnienie","GDP, growth, recession and slowdown",,60,active
+public_finances,Finanse publiczne i deficyt,Public finances and the deficit,"Deficyt sektora finansów publicznych, procedura nadmiernego deficytu, Rada Fiskalna","General government deficit, excessive deficit procedure, Fiscal Council",,70,active
+public_debt,Dług publiczny,Public debt,"Dług sektora instytucji rządowych i samorządowych, obligacje skarbowe","General government debt, treasury bonds",public_finances,71,active
+credit_rating,Rating Polski,Poland's credit rating,"Oceny agencji ratingowych (Moody's, Fitch, S&P)","Ratings by Moody's, Fitch and S&P",public_finances,72,active
+state_budget,Budżet państwa,State budget,"Ustawa budżetowa, wykonanie budżetu","Budget act, budget execution",public_finances,73,active
+taxes,Podatki,Taxes,"PIT, VAT, CIT, akcyza i zmiany podatkowe","PIT, VAT, CIT, excise and tax changes",,80,active
+housing,Mieszkania i nieruchomości,Housing and property,"Ceny mieszkań, rynek mieszkaniowy, najem","Housing prices, housing market, rents",,90,active
+mortgages,Kredyty hipoteczne,Mortgages,"Kredyty mieszkaniowe, raty, frankowicze, programy dopłat","Housing loans, instalments, Swiss-franc borrowers, subsidy schemes",housing,91,active
+energy_prices,Ceny energii,Energy prices,"Ceny prądu, gazu i ciepła, taryfy URE","Electricity, gas and heating prices, regulator tariffs",,100,active
+fuel_prices,Ceny paliw,Fuel prices,"Ceny benzyny i oleju napędowego, ropa naftowa","Petrol and diesel prices, crude oil",energy_prices,101,active
+demography,Demografia,Demography,"Liczba ludności, urodzenia, dzietność, starzenie się","Population, births, fertility, ageing",,110,active
+migration,Migracje,Migration,"Imigracja, emigracja, cudzoziemcy na rynku pracy, uchodźcy","Immigration, emigration, foreign workers, refugees",,120,active
+pensions,Emerytury,Pensions,"Wysokość emerytur, waloryzacja, ZUS, wiek emerytalny","Pension levels, indexation, ZUS, retirement age",,130,active
+family_benefits,Świadczenia rodzinne,Family benefits,"800 plus, świadczenia rodzinne i socjalne","800 plus child benefit, family and social benefits",,140,active
+poverty,Ubóstwo i nierówności,Poverty and inequality,"Zagrożenie ubóstwem, wykluczenie społeczne, nierówności dochodowe","At-risk-of-poverty, social exclusion, income inequality",,150,active
+eu_funds,Fundusze UE i KPO,EU funds and the recovery plan,"Krajowy Plan Odbudowy, fundusze unijne, wypłaty z UE","National Recovery Plan, EU funds, EU payments",,160,active
+trade,Handel zagraniczny i cła,Foreign trade and tariffs,"Eksport, import, bilans handlowy, cła i wojny handlowe","Exports, imports, trade balance, tariffs and trade wars",,170,active
+us_tariffs,Cła USA,US tariffs,"Cła nakładane przez USA i ich skutki dla Polski i UE","Tariffs imposed by the US and their effect on Poland and the EU",trade,171,active
+industry,Przemysł,Industry,"Produkcja przemysłowa, PMI, fabryki","Industrial production, PMI, factories",,180,active
+construction,Budownictwo,Construction,"Produkcja budowlano-montażowa, budowy","Construction output, building",,190,active
+retail_sales,Sprzedaż detaliczna i konsumpcja,Retail sales and consumption,"Sprzedaż detaliczna, wydatki konsumentów","Retail sales, consumer spending",,200,active
+consumer_sentiment,Nastroje konsumentów,Consumer sentiment,"Koniunktura konsumencka, zaufanie konsumentów","Consumer confidence",,210,active
+business_sentiment,Koniunktura w firmach,Business sentiment,"Koniunktura gospodarcza, nastroje przedsiębiorców, wskaźniki wyprzedzające","Business climate, firms' sentiment, leading indicators",,220,active
+investment,Inwestycje,Investment,"Nakłady inwestycyjne, inwestycje firm i publiczne, inwestycje zagraniczne","Investment outlays, business and public investment, FDI",,230,active
+regional_economy,Gospodarka regionów,Regional economy,"Gospodarka województw i regionów","The economy of voivodeships and regions",,240,active
+stock_market,Giełda,Stock market,"GPW, indeksy WIG, debiuty i dywidendy","Warsaw Stock Exchange, WIG indices, IPOs and dividends",,250,active
+banking,Banki i kredyty,Banks and credit,"Sektor bankowy, kredyty, lokaty, KNF","Banking sector, loans, deposits, the financial supervisor",,260,active
+defence,Obronność i wydatki na wojsko,Defence spending,"Wydatki na obronność, zbrojenia, mobilizacja","Defence spending, armament, mobilisation",,270,active

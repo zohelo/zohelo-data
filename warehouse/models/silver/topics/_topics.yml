@@ -1,0 +1,36 @@
+version: 2
+models:
+  - name: topic_attention
+    description: >-
+      Public attention per topic and day (topics layer, O32): Wikipedia user views (all access) summed over
+      the topic's articles in seed topic_signal (wiki_article rows, pl and en), from bronze.wiki_pageviews;
+      the newest landed value per article and day wins.
+    tests:
+      - unique:
+          column_name: "topic_key || '|' || cast(day as varchar)"
+    columns:
+      - name: topic_key
+        tests: [not_null, {relationships: {arguments: {to: ref('topic'), field: topic_key}}}]
+      - name: day
+        tests: [not_null]
+      - name: views
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of one source file of the row (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: topic_volume
+    description: >-
+      News volume and tone per topic and day (topics layer, O32) from bronze.gdelt_timeline (GDELT DOC 2.0
+      API timelines of the topic's query in seed topic_signal): matching articles, all monitored articles,
+      their ratio (volume_share, the heat score's volume signal) and average tone; newest landed value per day.
+    tests:
+      - unique:
+          column_name: "topic_key || '|' || cast(day as varchar)"
+    columns:
+      - name: topic_key
+        tests: [not_null, {relationships: {arguments: {to: ref('topic'), field: topic_key}}}]
+      - name: day
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of one source file of the row (lineage to Landing/Archive).
+        tests: [not_null]

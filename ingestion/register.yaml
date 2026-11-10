@@ -7399,41 +7399,48 @@ sources:
   name: Wikimedia MediaWiki Action APIs and dumps
   short_name: Wikimedia
   provider: Wikimedia Foundation and project communities
-  status: registered
+  source_system: wikimedia_pageviews
+  current: true
+  status: silver
   family: J
   kpi: false
   geography: worldwide
   provider_type: community-academic
   domains: [encyclopedic-knowledge, media, language]
   entities: [page, revision, category, media-file, editor-account]
-  granularity: Page/revision/category and project-specific records; dumps support large-scale history.
-  coverage: Project histories and periodic dumps vary; revisions preserve change history.
+  granularity: 'Onboarded scope (topics, O32): daily user pageviews of the Wikipedia articles listed per topic
+    (warehouse/seeds/topic_signal.csv), pl and en. Pages, revisions and dumps are a later scope.'
+  coverage: Pageviews per article from July 2015; first landing 455 days back (Dev probe 42784542844, 10 Nov 2026).
   access:
-    endpoint: https://www.mediawiki.org/wiki/API:Main_page
+    endpoint: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/{project}/all-access/user/{article}/daily/{start}/{end}
     kind: api
-    interfaces: [API, bulk-files, HTML]
-    auth: Public read; bot etiquette and user-agent identification apply.
+    interfaces: [REST API, JSON, bulk-files]
+    auth: Public read; a user agent with contact information is required.
     cost: free
-    limits: Endpoint-specific limits and responsible-use policies.
+    limits: 'REST API rate limit far above our use (one request per article and day, 0.2 s apart). The hourly
+      pageview dumps are the bulk route but are about 100 GB a year for a few dozen articles.'
   licence:
-    status: open-conditional
-    notes: Text is generally CC BY-SA; media licences vary item by item, and attribution/share-alike must be preserved.
-  updates: Live APIs plus periodic dumps; revisions are append-like but suppression can occur.
+    status: open
+    notes: 'Pageview statistics are published as CC0 1.0 (Wikimedia Analytics datasets; Terms of Use
+      https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use). Article text (CC BY-SA) is never fetched.'
+  updates: Daily; views of day d are available on d+1. Past days are not revised.
   ingestion:
-    history: 'PROPOSAL: select projects/namespaces and seed dumps where scale warrants.'
-    incremental: 'PROPOSAL: recent-changes polling with periodic dump reconciliation.'
-    identifiers: Project, page ID, revision ID, namespace and language.
+    history: 455 days on the first landing per article.
+    incremental: Daily 14-day window per article; every copy loaded (accumulating Bronze), newest value per day in Silver.
+    identifiers: project + article title + day
   modelling:
-    notes: Model pages and revisions separately; keep language and licence metadata.
-    overlap: Wikidata links structured entities, but article text and media have different licences.
+    notes: Attention signal for the topics layer; views are summed over a topic's articles in silver.topic_attention.
+    overlap: None.
   research:
-    priority: review-first
+    priority: review-next
     evidence: documented
-    connection: not-tested
-    blockers: [Choose projects/namespaces, Implement attribution, Handle suppressed/deleted revisions]
+    connection: tested
+    blockers:
+    - Article titles are checked by the run (404 = renamed article, a warning).
     references:
-    - https://www.mediawiki.org/wiki/API:Main_page
+    - https://doc.wikimedia.org/generated-data-platform/aqs/analytics-api/reference/page-views.html
     - https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use
+    - https://meta.wikimedia.org/wiki/User-Agent_policy
 - id: CD-026
   name: Wikidata data access
   short_name: Wikidata
@@ -7598,42 +7605,49 @@ sources:
   name: GDELT 2.0 Event Database and Global Knowledge Graph
   short_name: GDELT
   provider: GDELT Project
-  status: registered
+  source_system: gdelt
+  current: true
+  status: silver
   family: J
   kpi: false
   geography: worldwide
   provider_type: community-academic
   domains: [news-events, media-monitoring]
   entities: [event, location, organization, person-mention, source-document]
-  granularity: Machine-coded event/mention/theme observations derived from monitored news sources.
-  coverage: GDELT 1 and 2 archives differ; GDELT 2 updates every 15 minutes and source coverage changes over time.
+  granularity: 'Onboarded scope (topics, O32): DOC 2.0 API daily timelines per topic query (matching articles,
+    all monitored articles, average tone). Event and GKG exports are a later scope.'
+  coverage: DOC API rolling window of about 3 months; history accumulates from the first landing (10 Nov 2026).
   access:
-    endpoint: https://www.gdeltproject.org/data.html
+    endpoint: https://api.gdeltproject.org/api/v2/doc/doc?query={query}&mode=timelinevolraw|timelinetone&format=json&timespan={span}
     kind: api
     interfaces: [bulk-files, API, BigQuery, CSV]
     auth: Public download/query routes.
     cost: free
-    limits: Interface-specific; BigQuery charges may apply independently.
+    limits: 'DOC API: at most one request every 5 seconds (HTTP 429 with that message); shared GitHub runner addresses
+      get 429 at first, 200 after back-off (Dev probes 42784542844, 42784946888).'
   licence:
-    status: unresolved
-    notes: Project describes data as free/open, but a precise dataset licence and source-article rights must be
-      confirmed.
-  updates: GDELT 2 publishes 15-minute updates; later corrections/reprocessing semantics need review.
+    status: open-conditional
+    notes: 'GDELT terms (https://www.gdeltproject.org/about.html#termsofuse): the datasets are available for
+      unlimited and unrestricted use for any academic, commercial or governmental purpose, with a citation of the
+      GDELT Project and a link to its website. Only counts and tone are kept, never article URLs or text.'
+  updates: The DOC API updates every 15 minutes; a day's counts settle after the day ends.
   ingestion:
-    history: 'PROPOSAL: ingest dated exports with source URLs and GDELT version.'
-    incremental: 'PROPOSAL: append interval files and periodically reconcile missing intervals.'
-    identifiers: Global event/mention IDs, source URL, event time, location codes.
+    history: 3 months on the first landing per query.
+    incremental: Daily 2-week window per query and mode; every copy loaded (accumulating Bronze), newest value per day in Silver.
+    identifiers: topic query + mode + day
   modelling:
-    notes: Model coded assertions, not verified real-world events; scores and counts need calibration.
-    overlap: Overlaps news providers and mirrors; do not sum mentions as unique events.
+    notes: Model coded assertions, not verified real-world events; the volume is used as a normalised share of all
+      monitored articles (value / norm), never summed with headline counts.
+    overlap: Overlaps the news feeds (TP-0xx); do not sum mentions as unique events.
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
-    blockers: [Confirm dataset licence, Assess source-rights exposure, Validate Poland/Polish coverage]
+    connection: tested
+    blockers:
+    - Validate Poland/Polish coverage per query (gold.topic_quality).
     references:
-    - https://www.gdeltproject.org/data.html
-    - https://blog.gdeltproject.org/gdelt-2-0-our-global-world-in-realtime/
+    - https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/
+    - https://www.gdeltproject.org/about.html#termsofuse
 - id: CD-031
   name: Our World in Data Chart Data API
   short_name: Our World in Data

@@ -1,0 +1,33 @@
+source_system: gdelt
+description: "GDELT DOC 2.0 API — daily news volume and tone per topic query (topics, O32)"
+
+# Extraction strategy (docs/landing.md, docs/topics.md). The DOC 2.0 API
+# (https://api.gdeltproject.org/api/v2/doc/doc) returns a whole daily timeline for one query in one small JSON
+# response; GDELT's bulk files (15-minute event/GKG exports) would need full-text matching of every article for
+# a few dozen queries, so the API is the route. Per gdelt_query row of warehouse/seeds/topic_signal.csv two
+# files: mode timelinevolraw (matching articles per day and all monitored articles) and timelinetone (average
+# tone); 3 months (the API's window) on the first landing, 2 weeks afterwards; built by
+# ingestion/to_landing/gdelt/ and landed through the shared bulk_file pattern. GDELT asks for at most one
+# request every 5 seconds: 6 s between requests; HTTP 429 is retried with back-off. Shared runner addresses
+# often get 429 at first (Dev probes 42784542844, 42784946888: 200 after back-off). Every copy is loaded
+# (accumulating Bronze); Silver keeps the newest value per topic and day.
+extraction:
+  initial: api
+  production: snapshot                  # each file is a complete window as served
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; daily before the news run builds the topics
+    - {cron: "30 20 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gdelt/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 30}
+  prune: report
+bronze: [bronze.gdelt_timeline, bronze.gdelt_rejected_files]
+silver: [silver.topic_volume]
+gold: []
+
+# Refresh policy for all layers (owner decision #875): some 70 small files a day; Silver rebuilt in full.
+refresh: {mode: full, decided: "#875"}
+
+activities: [landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

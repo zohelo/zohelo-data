@@ -219,16 +219,21 @@ def check_format(path: Path, fmt: str) -> dict[str, Any]:
     return {}
 
 
-def download(url: str, path: Path, fmt: str) -> tuple[str, int, dict[str, str], str, dict[str, Any]]:
-    """Stream to disk and check the format, with retries; returns (sha256, size, headers, URL, detail)."""
-    for attempt in range(RETRIES):
+def download(
+    url: str, path: Path, fmt: str, retries: int = RETRIES, read_timeout: int = 300, wait: int = 60
+) -> tuple[str, int, dict[str, str], str, dict[str, Any]]:
+    """Stream to disk and check the format, with retries; returns (sha256, size, headers, URL, detail).
+
+    A spec may shorten ``retries``, ``read_timeout`` and ``wait`` (seconds, times the attempt number) for an API
+    that answers small files fast or refuses for long stretches (GDELT)."""
+    for attempt in range(retries):
         digest, size = sha256(), 0
         try:
             with requests.get(
                 url,
                 headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"},  # exact bytes, true length
                 stream=True,
-                timeout=(30, 300),
+                timeout=(30, read_timeout),
                 allow_redirects=True,
             ) as response:
                 if 400 <= response.status_code < 500 and response.status_code not in RETRY_STATUSES:
@@ -254,10 +259,10 @@ def download(url: str, path: Path, fmt: str) -> tuple[str, int, dict[str, str], 
             gzip.BadGzipFile,
             EOFError,
         ) as exc:
-            if attempt == RETRIES - 1:
+            if attempt == retries - 1:
                 raise
             print(json.dumps({"status": "retry", "url": url, "error": str(exc)[:200]}), flush=True)
-            time.sleep(60 * (attempt + 1))
+            time.sleep(wait * (attempt + 1))
     raise RuntimeError("unreachable")
 
 
@@ -294,7 +299,8 @@ def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landi
         path = Path(temporary) / f"file.{EXTENSIONS[fmt]}"
         started = time.monotonic()
         url = resolve_url(spec)
-        digest, size, headers, final_url, detail = download(url, path, fmt)
+        limits = {k: spec[k] for k in ("retries", "read_timeout", "wait") if k in spec}
+        digest, size, headers, final_url, detail = download(url, path, fmt, **limits)
         seconds = round(time.monotonic() - started)
         if held and held[-1]["sha256"] == digest:
             return {"entity": spec["entity"], "outcome": "unchanged", "sha256": digest, "download_seconds": seconds}
@@ -352,15 +358,34 @@ def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landi
     }
 
 
-def main(source: str, mode: str, landing_root: str = "01_landing") -> int:
-    """Run one mode for every declared file of a bulk_file source; exit 1 on missing data."""
+def main(
+    source: str,
+    mode: str,
+    landing_root: str = "01_landing",
+    specs: list[dict[str, Any]] | None = None,
+    pause_seconds: float = 0.0,
+    missing_ok: bool = False,
+) -> int:
+    """Run one mode for every declared file of a bulk_file source; exit 1 on missing data.
+
+    ``specs`` replaces the declared files (sources whose files are built from a seed, to_landing/<source>/);
+    ``pause_seconds`` waits between downloads (a source's published rate limit); with ``missing_ok`` a file
+    the server refuses with a 4xx (e.g. a renamed Wikipedia article) is reported as a warning, not a failure.
+    """
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
-    results, status = [], 0
+    results, status, missing = [], 0, []
     stored = archived(client, bucket, source) if mode == "verify" else {}
-    for spec in declaration(source):
+    for n, spec in enumerate(declaration(source) if specs is None else specs):
         folder = prefix(source, spec["entity"], landing_root)
         if mode == "load":
-            results.append(load_file(client, bucket, source, spec, landing_root))
+            if n and pause_seconds:
+                time.sleep(pause_seconds)
+            try:
+                results.append(load_file(client, bucket, source, spec, landing_root))
+            except PermanentError as exc:
+                if not missing_ok:
+                    raise
+                missing.append({"entity": spec["entity"], "error": str(exc)[:200]})
             continue
         held = landed(client, bucket, folder)
         row: dict[str, Any] = {
@@ -404,6 +429,8 @@ def main(source: str, mode: str, landing_root: str = "01_landing") -> int:
             row.update({"missing_data": len(missing), "missing_sample": missing[:5]})
             status = max(status, 1 if missing else 0)
         results.append(row)
+    if missing:
+        annotate("warning", f"{source} landing {mode}: files refused", {"missing": missing})
     summary = {"source": source, "mode": mode, "files": results}
     print(json.dumps(summary, sort_keys=True))
     annotate("notice" if status == 0 else "error", f"{source} landing {mode}", summary)

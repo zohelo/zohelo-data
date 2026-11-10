@@ -30,9 +30,10 @@ the same way.
 | News volume | GDELT 2.0 DOC API (CD-030): per topic query, daily article volume and tone in Polish-language and Poland-located coverage | topic, day, volume, normalised volume, tone | daily |
 | Public attention | Wikimedia pageviews REST API (CD-025): daily views of the Polish (and English) Wikipedia articles listed per topic | article, day, views | daily |
 
-As built: source system `news_feeds` (TP-001…TP-008, one register entry per outlet; PAP parked, its feed is
-behind bot protection), feeds every 3 hours, loaded and built in the evening full dataflow (21:40 UTC); routes
-and terms in [sources.md](sources.md).
+As built (routes and terms in [sources.md](sources.md)): `news_feeds` (TP-001…TP-008, one register entry per
+outlet; PAP parked, its feed is behind bot protection), feeds every 3 hours, loaded and built in the evening full
+dataflow (21:40 UTC); `gdelt` (CD-030, 20:30 UTC, best effort: GDELT refuses shared runner addresses for long
+stretches) and `wikimedia_pageviews` (CD-025, 20:10 UTC), both built from the seed `topic_signal.csv`.
 
 **Storage.** Landing keeps exact source bytes (docs/landing.md), so a feed copy still holds the outlet's
 description snippets; Bronze and every later layer keep only title, link, outlet, language and time. The raw

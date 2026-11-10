@@ -31,9 +31,11 @@ SOURCES = (
     "oecd",
     "world_bank_wdi",
     "news_feeds",
+    "gdelt",
+    "wikimedia_pageviews",
 )
 # Accumulating sources (every landed copy stays in Bronze, docs/topics.md): no latest-only gate.
-ACCUMULATING = ("news_feeds",)
+ACCUMULATING = ("news_feeds", "gdelt", "wikimedia_pageviews")
 
 
 def summarize(name: str, landing_set: set[str], proven: set[str], meta: dict[str, dict[str, Any]]) -> dict[str, Any]:
