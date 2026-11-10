@@ -11,11 +11,13 @@ the same way.
 - **Rules, not a model, decide the ranking.** Matching headlines to topics uses keyword dictionaries; the heat
   score is a documented formula. A language model may later suggest dictionary entries or classify headlines the
   rules miss, but it never writes text that is published and never changes a score directly.
-- **Links, not content.** From news sites we keep the headline, link, outlet, language and publication time. Never
-  the article text, never an image. Headlines are shown with the outlet's name and link to the article (the press
-  publishers' right of EU directive 2019/790 art. 15, in Polish law since the 2024 copyright amendment, covers
-  more than very short extracts; a headline with a link stays within it). Only feeds the outlet publishes for syndication
-  (RSS/Atom) are read; robots.txt and each feed's terms are recorded in the register entry.
+- **Links, not content.** From news sites we keep the headline, link, outlet, language and publication time. Never the
+  article text, its description or an image: each feed is reduced to those fields before it is landed (`reduce:
+  news_feed`, owner decision of 10 Nov), so no copy with more is stored, not even in the Archive. Headlines are shown
+  with the outlet's name and link to the article (the press publishers' right of EU directive 2019/790 art. 15, in
+  Polish law since the 2024 copyright amendment, covers more than very short extracts; a headline with a link stays
+  within it). Only feeds the outlet publishes for syndication (RSS/Atom) are read; robots.txt and each feed's terms
+  are recorded in the register entry.
 - **A topic does not need data.** "Cła USA" can be hot before any KPI measures it; the portal then shows the
   headlines and says that no indicator is linked yet.
 - **Internal first.** Rankings run for at least two weeks without being shown; the owner reviews them, then the
