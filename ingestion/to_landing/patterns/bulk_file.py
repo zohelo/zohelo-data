@@ -219,16 +219,21 @@ def check_format(path: Path, fmt: str) -> dict[str, Any]:
     return {}
 
 
-def download(url: str, path: Path, fmt: str) -> tuple[str, int, dict[str, str], str, dict[str, Any]]:
-    """Stream to disk and check the format, with retries; returns (sha256, size, headers, URL, detail)."""
-    for attempt in range(RETRIES):
+def download(
+    url: str, path: Path, fmt: str, retries: int = RETRIES, read_timeout: int = 300, wait: int = 60
+) -> tuple[str, int, dict[str, str], str, dict[str, Any]]:
+    """Stream to disk and check the format, with retries; returns (sha256, size, headers, URL, detail).
+
+    A spec may shorten ``retries``, ``read_timeout`` and ``wait`` (seconds, times the attempt number) for an API
+    that answers small files fast or refuses for long stretches (GDELT)."""
+    for attempt in range(retries):
         digest, size = sha256(), 0
         try:
             with requests.get(
                 url,
                 headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"},  # exact bytes, true length
                 stream=True,
-                timeout=(30, 300),
+                timeout=(30, read_timeout),
                 allow_redirects=True,
             ) as response:
                 if 400 <= response.status_code < 500 and response.status_code not in RETRY_STATUSES:
@@ -254,10 +259,10 @@ def download(url: str, path: Path, fmt: str) -> tuple[str, int, dict[str, str], 
             gzip.BadGzipFile,
             EOFError,
         ) as exc:
-            if attempt == RETRIES - 1:
+            if attempt == retries - 1:
                 raise
             print(json.dumps({"status": "retry", "url": url, "error": str(exc)[:200]}), flush=True)
-            time.sleep(60 * (attempt + 1))
+            time.sleep(wait * (attempt + 1))
     raise RuntimeError("unreachable")
 
 
@@ -294,7 +299,8 @@ def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landi
         path = Path(temporary) / f"file.{EXTENSIONS[fmt]}"
         started = time.monotonic()
         url = resolve_url(spec)
-        digest, size, headers, final_url, detail = download(url, path, fmt)
+        limits = {k: spec[k] for k in ("retries", "read_timeout", "wait") if k in spec}
+        digest, size, headers, final_url, detail = download(url, path, fmt, **limits)
         seconds = round(time.monotonic() - started)
         if held and held[-1]["sha256"] == digest:
             return {"entity": spec["entity"], "outcome": "unchanged", "sha256": digest, "download_seconds": seconds}
