@@ -24,6 +24,7 @@ MODES = {"volraw": "timelinevolraw", "tone": "timelinetone"}
 PAUSE_SECONDS = 6
 BUDGET_SECONDS = 40 * 60
 STOP_AFTER_REFUSED = 3
+LIMITS = {"retries": 2, "read_timeout": 60, "wait": 30}  # per file: at most ~2.5 minutes when refused
 
 
 def specs(check_held: bool = True) -> list[dict]:
@@ -35,7 +36,14 @@ def specs(check_held: bool = True) -> list[dict]:
             span = "2w" if check_held and seeded.held(SOURCE, name) else "3m"
             url = f"{API}?query={quote(row['value'], safe='')}&mode={mode}&format=json&timespan={span}"
             out.append(
-                {"entity": name, "url": url, "format": "raw", "version": "ingested", "topic_key": row["topic_key"]}
+                {
+                    "entity": name,
+                    "url": url,
+                    "format": "raw",
+                    "version": "ingested",
+                    "topic_key": row["topic_key"],
+                    **LIMITS,
+                }
             )
     return seeded.unique(out)
 
