@@ -21,3 +21,16 @@ index_eu27_100,EU27=100,"index, EU27 = 100","indeks, UE27 = 100",true
 index_2020_100,2020=100,"index, 2020 = 100","indeks, 2020 = 100",true
 thousand_tonnes,tys. t,thousand tonnes,tysiące ton,false
 children_per_woman,dzieci/kobietę,children per woman,dzieci na kobietę,true
+index_py_100,py=100,"index, same period of the previous year = 100","indeks, analogiczny okres roku poprzedniego = 100",true
+index_pp_100,pp=100,"index, previous period = 100","indeks, okres poprzedni = 100",true
+index_2010_100,2010=100,"index, 2010 = 100","indeks, 2010 = 100",true
+index_lta_100,LTA=100,"index, long-term average = 100","indeks, średnia długookresowa = 100",true
+balance,saldo,balance of answers,saldo odpowiedzi,true
+pct_points,p.p.,percentage points,punkty procentowe,true
+gini_0_100,Gini,"Gini coefficient, 0-100","współczynnik Giniego, 0-100",true
+persons_per_offer,os./ofertę,persons per job offer,osoby na 1 ofertę pracy,true
+mln_pln,mln zł,million zloty,miliony złotych,false
+thousand_pln,tys. zł,thousand zloty,tysiące złotych,false
+mt_co2e,Mt CO2e,million tonnes of CO2 equivalent,miliony ton ekwiwalentu CO2,false
+ppp_usd_per_person,$ PPP/os.,PPP international dollars per person,dolary międzynarodowe PPP na osobę,false
+ncu,NCU,source currency,waluta źródła,false

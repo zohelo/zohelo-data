@@ -2,7 +2,33 @@
 file, partitioned by entity_id), planned with pyiceberg and streamed by DuckDB; see
 poc_src_eurostat.py. Keep the block list in step with macros/poc_blocks.sql (poc_dbw_blocks)."""
 
-BLOCKS = ("581_57_93_4", "581_16_2_1")
+BLOCKS = (
+    "581_57_93_4",
+    "581_16_2_1",
+    # zohelo-bi first slice, every source per KPI (O31, #2592)
+    "305_739_5_1",
+    "305_1722_5_1",
+    "305_1721_5_3",
+    "376_2_243_1",
+    "376_2_184_1",
+    "376_16_182_1",
+    "398_16_243_3",
+    "398_16_184_3",
+    "398_16_182_3",
+    "875_143_95_1",
+    "1514_1360_95_3",
+    "1513_1360_95_3",
+    "1512_1360_95_3",
+    "1038_16_389_3",
+    "1038_16_390_3",
+    "1038_16_92_4",
+    "1038_16_105_4",
+    "1173_793_92_4",
+    "814_2_7_1",
+    "392_16_223_1",
+    "109_849_7_1",
+    "469_16_117_1",
+)
 
 
 def planned_files(table_name, row_filter):

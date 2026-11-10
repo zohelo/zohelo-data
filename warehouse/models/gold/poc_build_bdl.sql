@@ -166,6 +166,23 @@ kept as (
                 then
                     (unit_level <= 5 or year >= 2015)
                     and len(list_filter(labels, lambda x: lower(x) not in ('ogółem', 'mężczyźni', 'kobiety'))) = 0
+            -- zohelo-bi first slice (O31, #2592): Poland, makroregions and voivodeships only
+            when 'P2955' then unit_level <= 2
+            when 'P2496' then unit_level <= 2
+            when 'P4635' then unit_level <= 2
+            when 'P2359' then unit_level <= 2
+            when 'P2360' then unit_level <= 2
+            when 'P2361' then unit_level <= 2
+            when 'P2961' then unit_level <= 2
+            when 'P4334' then unit_level <= 2
+            when 'P2730' then unit_level <= 2
+            when 'P2346' then unit_level <= 2
+            when 'P2426' then unit_level <= 2
+            when 'P1869' then unit_level <= 2
+            when 'P2861' then unit_level <= 2
+            when 'P2860' then unit_level <= 2
+            when 'P2862' then unit_level <= 2
+            when 'P3502' then unit_level <= 2
             else unit_level <= 5
         end
 ),
