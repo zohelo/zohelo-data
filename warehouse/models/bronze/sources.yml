@@ -187,6 +187,22 @@ sources:
       source text (decimal comma); partitioned by entity.
   - name: nbp_interest_rates_rejected_files
     description: NBP interest-rate Landing files the Bronze decoder rejected, with the reason.
+- name: oecd
+  description: OECD Data Explorer — selected dataflows as SDMX CSV (SDMX REST API)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/oecd/
+    loaded_by: ingestion/to_bronze/oecd/
+    config: ingestion/sources/oecd.yaml
+  tables:
+  - name: oecd_observations
+    description: >-
+      One row per observation of the newest copy of each selection (entity, e.g. cli), as published:
+      dataflow, series_dimensions / series_key (dimension ids and codes in file order), time_period,
+      obs_value and attribute_names / attribute_values as source text; partitioned by entity.
+  - name: oecd_rejected_files
+    description: OECD Landing files the Bronze decoder rejected, with the reason.
 - name: opendata_org
   description: OpenData.org (BrightQuery) organizations, people and locations — Senzing-ready snapshot
   database: r2
