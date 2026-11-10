@@ -81,6 +81,8 @@ def main() -> int:
     con = duckdb.connect()
     if "silver" in sys.argv[1:]:
         return silver(cat, con)
+    if "verify" in sys.argv[1:]:
+        return verify(cat, con)
     cov = cat.load_table(("gold", "coverage")).scan(
         selected_fields=("source", "block_id", "block_name", "status", "silver_rows")
     ).to_arrow()
@@ -137,6 +139,63 @@ def silver(cat, con) -> int:
             f"where ds = ? and geo_code = 'PL' and value is not null and ({rule})", [ds]).fetchone()[0]
         out[ds] = {"f": base[0], "u": base[1], "dims": codes, "hit": hit, "pl": series}
     chunks("silver", out)
+    return 0
+
+
+CHECKS = {
+    "ghg_tot": "select list(distinct split_part(breakdown_codes, ',', 2)) from o where ds = 'ENV_AIR_GGE' "
+    "and geo_code = 'PL' and unit_code = 'THS_T' and breakdown_codes like 'GHG,TOT%'",
+    "ghg_dims": "select any_value(breakdown_dimensions) from o where ds = 'ENV_AIR_GGE'",
+    "dskl": "select geo_code, count(*), max(time_period) from o where ds = 'ISOC_SK_DSKL_I21' and unit_code = 'PC_IND' "
+    "and breakdown_codes in ('IND_TOTAL,I_DSK2_BAB', 'I_DSK2_BAB,IND_TOTAL') group by 1",
+    "dskl_dims": "select any_value(breakdown_dimensions) from o where ds = 'ISOC_SK_DSKL_I21'",
+    "reer": "select unit_code, geo_code, count(*), min(time_period), max(time_period) from o where ds = 'ERT_EFF_IC_M' "
+    "and breakdown_codes = 'REER_IC42_CPI' and geo_code in ('PL', 'EU27_2020', 'DE') group by 1, 2",
+    "r2gdp_geos": "select length(geo_code), count(distinct geo_code), max(time_period) from o where ds = 'NAMA_10R_2GDP' "
+    "and unit_code = 'PPS_HAB_EU27_2020' group by 1 order by 1",
+    "r2gdp_eu": "select list(distinct geo_code) from o where ds = 'NAMA_10R_2GDP' and geo_code like 'EU%'",
+    "mlexpec_geos": "select count(distinct geo_code), list(distinct geo_code) filter (where length(geo_code) > 2) "
+    "from o where ds = 'DEMO_MLEXPEC' and breakdown_codes in ('T,Y_LT1', 'Y_LT1,T')",
+    "mlexpec_dims": "select any_value(breakdown_dimensions) from o where ds = 'DEMO_MLEXPEC'",
+    "find_geos": "select count(distinct geo_code), list(distinct geo_code) filter (where length(geo_code) > 2) "
+    "from o where ds = 'DEMO_FIND' and breakdown_codes = 'TOTFERRT'",
+    "pjanind_geos": "select count(distinct geo_code), max(time_period) from o where ds = 'DEMO_PJANIND' "
+    "and breakdown_codes = 'OLDDEP1'",
+    "r_find2_pl": "select list(distinct geo_code) from o where ds = 'DEMO_R_FIND2' and geo_code like 'PL%'",
+    "neet_eu": "select count(distinct geo_code) from o where ds = 'LFSI_NEET_A' and unit_code = 'PC_POP'",
+    "tipsii_eu": "select count(distinct geo_code), list(distinct geo_code) filter (where length(geo_code) > 2) "
+    "from o where ds = 'TIPSII10' and unit_code = 'PC_GDP'",
+    "mcby_geos": "select count(distinct geo_code), max(time_period) from o where ds = 'IRT_LT_MCBY_M'",
+    "peps_dims": "select any_value(breakdown_dimensions) from o where ds = 'ILC_PEPS01N'",
+    "edat_dims": "select any_value(breakdown_dimensions) from o where ds = 'EDAT_LFSE_03'",
+    "trng_dims": "select any_value(breakdown_dimensions) from o where ds = 'TRNG_LFSE_01'",
+    "gov_dims": "select any_value(breakdown_dimensions) from o where ds = 'GOV_10DD_EDPT1'",
+    "gerd_dims": "select any_value(breakdown_dimensions) from o where ds = 'RD_E_GERDTOT'",
+    "emp_dims": "select any_value(breakdown_dimensions) from o where ds = 'LFSI_EMP_A'",
+    "neet_dims": "select any_value(breakdown_dimensions) from o where ds = 'LFSI_NEET_A'",
+    "mlifexp_dims": "select any_value(breakdown_dimensions) from o where ds = 'DEMO_R_MLIFEXP'",
+    "eurostat_ids_case": "select list(distinct dataset_id) from o",
+}
+
+
+def verify(cat, con) -> int:
+    ids = ["ENV_AIR_GGE", "ISOC_SK_DSKL_I21", "ERT_EFF_IC_M", "NAMA_10R_2GDP", "DEMO_MLEXPEC", "DEMO_FIND",
+           "DEMO_PJANIND", "DEMO_R_FIND2", "LFSI_NEET_A", "TIPSII10", "IRT_LT_MCBY_M", "ILC_PEPS01N",
+           "EDAT_LFSE_03", "TRNG_LFSE_01", "GOV_10DD_EDPT1", "RD_E_GERDTOT", "LFSI_EMP_A", "DEMO_R_MLIFEXP"]
+    obs = cat.load_table(("silver", "eurostat_observations")).scan(
+        row_filter=In("dataset_id", [*ids, *(i.lower() for i in ids)]),
+        selected_fields=("dataset_id", "unit_code", "geo_code", "time_period", "breakdown_dimensions",
+                         "breakdown_codes"),
+    ).to_arrow()
+    con.register("obs", obs)
+    con.execute("create table o as select *, upper(dataset_id) as ds from obs")
+    out = {}
+    for name, sql in CHECKS.items():
+        try:
+            out[name] = con.execute(sql).fetchall()
+        except Exception as e:  # report and go on
+            out[name] = f"error: {e}"[:300]
+    chunks("verify", out)
     return 0
 
 
