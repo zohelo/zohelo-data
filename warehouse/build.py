@@ -5,8 +5,9 @@ filter (the scheduled run) builds only the models whose inputs or code changed s
 last build (warehouse/changed.py, owner policy #822), incremental models incrementally unless
 their code changed; "fqn:*" builds everything (incremental models incrementally). Eurostat and
 GUS BDL observations are not dbt models: their loaders write Silver per entity (design #875,
-warehouse/entity/). A build whose only failures are the catalog's rate
-limit (HTTP 429) is resumed with `dbt retry` after declared waits, with fewer threads.
+warehouse/entity/). A build whose only failures are transient catalog errors (the rate limit,
+HTTP 429, or an Iceberg commit that does not yet see a table the build just created, #2574) is
+resumed with `dbt retry` after declared waits, with fewer threads.
 Target prod writes to the silver/gold namespaces; results (models, tests, failures) are
 published per build as an annotation (GitHub keeps the first 10 per step) and in the step
 summary (all builds).
@@ -28,6 +29,7 @@ PROJECT = Path(__file__).resolve().parent
 _RETRY = yaml.safe_load((PROJECT / "warehouse.yaml").read_text())
 RATE_LIMIT_WAITS = [float(s) for s in _RETRY["rate_limit_retry_waits"]]
 RATE_LIMIT_THREADS = int(_RETRY["rate_limit_retry_threads"])
+COMMIT_RETRY_THREADS = int(_RETRY["commit_retry_threads"])
 # Owner policy #822: only small tables are rebuilt in full; each full-rebuild model has a row ceiling.
 FULL_REBUILD = _RETRY["full_rebuild"]
 
@@ -132,10 +134,24 @@ def _dbt(command: list[str]) -> tuple[int, list[dict], str]:
 FAILED = ("error", "fail", "runtime error")
 
 
-def _rate_limited_only(results: list[dict]) -> bool:
-    """True when the build failed and every failure is the catalog's HTTP 429 (rate limit)."""
-    failures = [r for r in results if r["status"] in FAILED]
-    return bool(failures) and all("HTTP 429" in str(r.get("message")) for r in failures)
+RATE_LIMITED = "HTTP 429"
+# An Iceberg commit right after a table's creation can miss it in the R2 Data Catalog ("Failed to
+# commit Iceberg transaction: Table nbp_fx_rates__dbt_tmp does not exist", #2574); a rerun of the
+# model drops the leftover __dbt_tmp/__dbt_backup and succeeds.
+COMMIT_FAILED = "Failed to commit Iceberg transaction"
+
+
+def _transient_only(results: list[dict]) -> bool:
+    """True when the build failed and every failure is transient: the catalog's HTTP 429 (rate
+    limit) or an Iceberg commit failure."""
+    failures = [str(r.get("message")) for r in results if r["status"] in FAILED]
+    return bool(failures) and all(RATE_LIMITED in m or COMMIT_FAILED in m for m in failures)
+
+
+def _retry_threads(results: list[dict]) -> int:
+    """Threads of a retry: one after a commit failure (no concurrent commits), else fewer than the build's."""
+    commit = any(r["status"] in FAILED and COMMIT_FAILED in str(r.get("message")) for r in results)
+    return COMMIT_RETRY_THREADS if commit else RATE_LIMIT_THREADS
 
 
 def build_once(
@@ -156,12 +172,13 @@ def build_once(
     latest = {r["unique_id"]: r for r in results}
     retries = []
     for wait in RATE_LIMIT_WAITS:
-        if returncode == 0 or not _rate_limited_only(list(latest.values())):
+        if returncode == 0 or not _transient_only(list(latest.values())):
             break
+        threads = _retry_threads(list(latest.values()))
         time.sleep(wait)
         retry = ["dbt", "retry", "--target", target, "--project-dir", str(PROJECT), "--profiles-dir", str(PROJECT)]
-        returncode, retried, tail = _dbt([*retry, "--threads", str(RATE_LIMIT_THREADS)])
-        retries.append({"after_seconds": wait, "nodes": len(retried), "exit_code": returncode})
+        returncode, retried, tail = _dbt([*retry, "--threads", str(threads)])
+        retries.append({"after_seconds": wait, "threads": threads, "nodes": len(retried), "exit_code": returncode})
         if not retried:
             retries[-1]["output_tail"] = tail[-600:]  # why it wrote no results (job logs are unreadable)
             break
@@ -175,7 +192,7 @@ def build_once(
         "failures": [],
     }
     if retries:
-        summary["rate_limit_retries"] = retries
+        summary["transient_retries"] = retries
     for r in results:
         summary["by_status"][r["status"]] = summary["by_status"].get(r["status"], 0) + 1
         if r["status"] in FAILED:
