@@ -153,10 +153,23 @@ def wdi(codes: list[str]) -> None:
         "where value is not null group by 1 order by 1").fetchall())
 
 
+def counts(names: list[str]) -> None:
+    out = {}
+    for n in names:
+        ns, name = n.split(".")
+        try:
+            snap = cat.load_table((ns, name)).current_snapshot()
+            out[n] = snap.summary.additional_properties.get("total-records") if snap else None
+        except Exception as e:  # report, do not fail
+            out[n] = f"error: {type(e).__name__}"
+    annotate("notice", "probe counts", out)
+    print(out, flush=True)
+
+
 def main(argv: list[str]) -> int:
     cmd, args = argv[0], argv[1:]
     {"coverage": lambda: coverage(), "eurostat": lambda: eurostat(args), "bdl": lambda: bdl(args),
-     "dbw": lambda: dbw(args), "wdi": lambda: wdi(args)}[cmd]()
+     "dbw": lambda: dbw(args), "wdi": lambda: wdi(args), "counts": lambda: counts(args)}[cmd]()
     return 0
 
 
