@@ -1,0 +1,115 @@
+topic_key,signal,value
+inflation,gdelt_query,"(inflation OR ""consumer prices"" OR ""cost of living"") sourcecountry:poland"
+inflation,wiki_article,pl:Inflacja
+inflation,wiki_article,en:Inflation
+interest_rates,gdelt_query,"(""interest rates"" OR ""interest rate"" OR ""monetary policy"" OR ""rate cut"") sourcecountry:poland"
+interest_rates,wiki_article,pl:Stopa procentowa
+interest_rates,wiki_article,pl:Rada Polityki Pieniężnej
+interest_rates,wiki_article,en:Interest rate
+wages,gdelt_query,"(wages OR salaries OR ""average salary"" OR ""pay rise"") sourcecountry:poland"
+wages,wiki_article,pl:Wynagrodzenie
+wages,wiki_article,en:Wage
+minimum_wage,gdelt_query,"""minimum wage"" sourcecountry:poland"
+minimum_wage,wiki_article,pl:Płaca minimalna
+minimum_wage,wiki_article,en:Minimum wage
+labour_market,gdelt_query,"(""labour market"" OR ""labor market"" OR employment OR layoffs) sourcecountry:poland"
+labour_market,wiki_article,pl:Rynek pracy
+labour_market,wiki_article,en:Labour economics
+unemployment,gdelt_query,(unemployment OR jobless) sourcecountry:poland
+unemployment,wiki_article,pl:Bezrobocie
+unemployment,wiki_article,en:Unemployment
+zloty,gdelt_query,"(zloty OR ""polish currency"") sourcecountry:poland"
+zloty,wiki_article,pl:Złoty
+zloty,wiki_article,en:Polish złoty
+gdp_growth,gdelt_query,"(GDP OR ""economic growth"" OR recession) sourcecountry:poland"
+gdp_growth,wiki_article,pl:Produkt krajowy brutto
+gdp_growth,wiki_article,pl:Recesja
+gdp_growth,wiki_article,en:Gross domestic product
+public_finances,gdelt_query,"(""budget deficit"" OR ""public finances"" OR ""fiscal council"") sourcecountry:poland"
+public_finances,wiki_article,pl:Deficyt budżetowy
+public_finances,wiki_article,en:Government budget balance
+public_debt,gdelt_query,"(""public debt"" OR ""government debt"" OR ""treasury bonds"") sourcecountry:poland"
+public_debt,wiki_article,pl:Dług publiczny
+public_debt,wiki_article,en:Government debt
+credit_rating,gdelt_query,"(""credit rating"" OR ""rating agency"" OR Moody's OR Fitch) sourcecountry:poland"
+credit_rating,wiki_article,pl:Rating
+credit_rating,wiki_article,en:Credit rating agency
+state_budget,gdelt_query,"(""state budget"" OR ""budget bill"") sourcecountry:poland"
+state_budget,wiki_article,pl:Budżet państwa
+state_budget,wiki_article,en:Government budget
+taxes,gdelt_query,(tax OR taxes OR VAT) sourcecountry:poland
+taxes,wiki_article,pl:Podatek
+taxes,wiki_article,pl:Podatek od towarów i usług
+taxes,wiki_article,en:Tax
+housing,gdelt_query,"(housing OR ""house prices"" OR ""property market"" OR apartments) sourcecountry:poland"
+housing,wiki_article,pl:Rynek nieruchomości
+housing,wiki_article,en:Real estate economics
+mortgages,gdelt_query,"(mortgage OR mortgages OR ""housing loans"") sourcecountry:poland"
+mortgages,wiki_article,pl:Kredyt hipoteczny
+mortgages,wiki_article,en:Mortgage loan
+energy_prices,gdelt_query,"(""energy prices"" OR ""electricity prices"" OR ""gas prices"" OR ""energy bills"") sourcecountry:poland"
+energy_prices,wiki_article,pl:Energia elektryczna
+energy_prices,wiki_article,en:Electricity pricing
+fuel_prices,gdelt_query,"(""fuel prices"" OR petrol OR diesel OR gasoline) sourcecountry:poland"
+fuel_prices,wiki_article,pl:Benzyna
+fuel_prices,wiki_article,pl:Ropa naftowa
+fuel_prices,wiki_article,en:Gasoline
+demography,gdelt_query,"(demographic OR ""birth rate"" OR fertility OR ""population decline"") sourcecountry:poland"
+demography,wiki_article,pl:Demografia Polski
+demography,wiki_article,pl:Współczynnik dzietności
+demography,wiki_article,en:Demographics of Poland
+migration,gdelt_query,(migration OR migrants OR immigration OR refugees) sourcecountry:poland
+migration,wiki_article,pl:Migracja ludności
+migration,wiki_article,en:Immigration to Poland
+pensions,gdelt_query,(pension OR pensions OR retirement) sourcecountry:poland
+pensions,wiki_article,pl:Emerytura
+pensions,wiki_article,pl:Zakład Ubezpieczeń Społecznych
+pensions,wiki_article,en:Pension
+family_benefits,gdelt_query,"(""child benefit"" OR ""800 plus"" OR ""family benefits"") sourcecountry:poland"
+family_benefits,wiki_article,pl:Rodzina 500 plus
+family_benefits,wiki_article,en:Child benefit
+poverty,gdelt_query,(poverty OR inequality) sourcecountry:poland
+poverty,wiki_article,pl:Ubóstwo
+poverty,wiki_article,en:Poverty
+eu_funds,gdelt_query,"(""EU funds"" OR ""recovery plan"" OR ""cohesion funds"") sourcecountry:poland"
+eu_funds,wiki_article,pl:Krajowy Plan Odbudowy
+eu_funds,wiki_article,en:NextGenerationEU
+trade,gdelt_query,"(exports OR imports OR ""trade balance"" OR tariffs) sourcecountry:poland"
+trade,wiki_article,pl:Handel zagraniczny
+trade,wiki_article,pl:Cło
+trade,wiki_article,en:Tariff
+us_tariffs,gdelt_query,(tariffs Trump) sourcecountry:poland
+us_tariffs,wiki_article,pl:Wojna handlowa
+us_tariffs,wiki_article,en:Tariffs in the second Trump administration
+industry,gdelt_query,"(""industrial production"" OR manufacturing OR PMI) sourcecountry:poland"
+industry,wiki_article,pl:Przemysł
+industry,wiki_article,en:Manufacturing
+construction,gdelt_query,"(""construction output"" OR ""construction industry"") sourcecountry:poland"
+construction,wiki_article,pl:Budownictwo
+construction,wiki_article,en:Construction
+retail_sales,gdelt_query,"(""retail sales"" OR ""consumer spending"") sourcecountry:poland"
+retail_sales,wiki_article,pl:Handel detaliczny
+retail_sales,wiki_article,en:Retail
+consumer_sentiment,gdelt_query,"(""consumer confidence"" OR ""consumer sentiment"") sourcecountry:poland"
+consumer_sentiment,wiki_article,pl:Konsumpcja
+consumer_sentiment,wiki_article,en:Consumer confidence index
+business_sentiment,gdelt_query,"(""business confidence"" OR ""business climate"" OR ""business sentiment"") sourcecountry:poland"
+business_sentiment,wiki_article,pl:Koniunktura gospodarcza
+business_sentiment,wiki_article,en:Business cycle
+investment,gdelt_query,"(investment OR investments OR ""foreign direct investment"") sourcecountry:poland"
+investment,wiki_article,pl:Inwestycja
+investment,wiki_article,en:Foreign direct investment
+regional_economy,gdelt_query,"(voivodeship OR ""regional economy"") sourcecountry:poland"
+regional_economy,wiki_article,pl:Województwo
+regional_economy,wiki_article,en:Voivodeships of Poland
+stock_market,gdelt_query,"(""Warsaw Stock Exchange"" OR WIG20 OR ""stock market"") sourcecountry:poland"
+stock_market,wiki_article,pl:Giełda Papierów Wartościowych w Warszawie
+stock_market,wiki_article,pl:WIG20
+stock_market,wiki_article,en:Warsaw Stock Exchange
+banking,gdelt_query,"(banks OR banking OR ""banking sector"") sourcecountry:poland"
+banking,wiki_article,pl:Bank
+banking,wiki_article,pl:Narodowy Bank Polski
+banking,wiki_article,en:Bank
+defence,gdelt_query,"(""defence spending"" OR ""defense spending"" OR military OR armed forces) sourcecountry:poland"
+defence,wiki_article,pl:Siły Zbrojne Rzeczypospolitej Polskiej
+defence,wiki_article,en:Polish Armed Forces

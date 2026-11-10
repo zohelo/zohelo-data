@@ -352,15 +352,34 @@ def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landi
     }
 
 
-def main(source: str, mode: str, landing_root: str = "01_landing") -> int:
-    """Run one mode for every declared file of a bulk_file source; exit 1 on missing data."""
+def main(
+    source: str,
+    mode: str,
+    landing_root: str = "01_landing",
+    specs: list[dict[str, Any]] | None = None,
+    pause_seconds: float = 0.0,
+    missing_ok: bool = False,
+) -> int:
+    """Run one mode for every declared file of a bulk_file source; exit 1 on missing data.
+
+    ``specs`` replaces the declared files (sources whose files are built from a seed, to_landing/<source>/);
+    ``pause_seconds`` waits between downloads (a source's published rate limit); with ``missing_ok`` a file
+    the server refuses with a 4xx (e.g. a renamed Wikipedia article) is reported as a warning, not a failure.
+    """
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
-    results, status = [], 0
+    results, status, missing = [], 0, []
     stored = archived(client, bucket, source) if mode == "verify" else {}
-    for spec in declaration(source):
+    for n, spec in enumerate(declaration(source) if specs is None else specs):
         folder = prefix(source, spec["entity"], landing_root)
         if mode == "load":
-            results.append(load_file(client, bucket, source, spec, landing_root))
+            if n and pause_seconds:
+                time.sleep(pause_seconds)
+            try:
+                results.append(load_file(client, bucket, source, spec, landing_root))
+            except PermanentError as exc:
+                if not missing_ok:
+                    raise
+                missing.append({"entity": spec["entity"], "error": str(exc)[:200]})
             continue
         held = landed(client, bucket, folder)
         row: dict[str, Any] = {
@@ -404,6 +423,8 @@ def main(source: str, mode: str, landing_root: str = "01_landing") -> int:
             row.update({"missing_data": len(missing), "missing_sample": missing[:5]})
             status = max(status, 1 if missing else 0)
         results.append(row)
+    if missing:
+        annotate("warning", f"{source} landing {mode}: files refused", {"missing": missing})
     summary = {"source": source, "mode": mode, "files": results}
     print(json.dumps(summary, sort_keys=True))
     annotate("notice" if status == 0 else "error", f"{source} landing {mode}", summary)

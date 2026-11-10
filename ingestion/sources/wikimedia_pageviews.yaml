@@ -1,0 +1,32 @@
+source_system: wikimedia_pageviews
+description: "Wikimedia pageviews REST API — daily user views of the Wikipedia articles listed per topic (topics, O32)"
+
+# Extraction strategy (docs/landing.md, docs/topics.md). The pageviews REST API
+# (https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/...) is the documented route; there is no
+# bulk file per article (the hourly dumps would be ~100 GB a year for a few dozen articles). One request per
+# article and run: 455 days on the first landing, 14 days afterwards; files built from the seed
+# warehouse/seeds/topic_signal.csv (wiki_article rows) by ingestion/to_landing/wikimedia_pageviews/, landed
+# through the shared bulk_file pattern with a 0.2 s pause (the API allows far more). Every copy is loaded
+# (accumulating Bronze); Silver keeps the newest value per article and day. A 404 (renamed article) is a
+# warning. User agent with contact (bulk_file USER_AGENT), as Wikimedia's policy asks. Proven from Actions by
+# the Dev probe 42784542844 (10 Nov 2026: pl Inflacja 466 days, en Economy_of_Poland, 404 for a missing title).
+extraction:
+  initial: api
+  production: snapshot                  # each file is a complete window as served
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; views of day d are published on d+1; daily before the news run builds the topics
+    - {cron: "10 20 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/wikimedia_pageviews/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 30}
+  prune: report
+bronze: [bronze.wiki_pageviews, bronze.wikimedia_pageviews_rejected_files]
+silver: [silver.topic_attention]
+gold: []
+
+# Refresh policy for all layers (owner decision #875): a few dozen small files a day; Silver rebuilt in full.
+refresh: {mode: full, decided: "#875"}
+
+activities: [landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

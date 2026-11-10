@@ -60,3 +60,53 @@ seeds:
         tests: [not_null, {accepted_values: {arguments: {values: [pl, en]}}}]
       - name: status
         tests: [not_null, {accepted_values: {arguments: {values: [active, parked]}}}]
+  - name: topic
+    description: >-
+      Topics the platform ranks by attention (O32, docs/topics.md): key, names and descriptions (pl/en), parent
+      topic, sort order and status (draft topics are matched but not ranked).
+    columns:
+      - name: topic_key
+        tests: [not_null, unique]
+      - name: parent_key
+        tests: [{relationships: {arguments: {to: ref('topic'), field: topic_key}}}]
+      - name: status
+        tests: [not_null, {accepted_values: {arguments: {values: [draft, active]}}}]
+  - name: topic_kpi
+    description: >-
+      KPIs (published contract v2 keys, seed kpi_v2_map) that measure each topic: role main (the KPI that
+      answers the topic) or related. tests/topic_seeds.sql checks one row per topic and KPI.
+    columns:
+      - name: topic_key
+        tests: [not_null, {relationships: {arguments: {to: ref('topic'), field: topic_key}}}]
+      - name: kpi_key
+        tests: [not_null, {relationships: {arguments: {to: ref('kpi_v2_map'), field: v2_key}}}]
+      - name: role
+        tests: [not_null, {accepted_values: {arguments: {values: [main, related]}}}]
+  - name: topic_keyword
+    description: >-
+      Headline dictionary per topic and language (docs/topics.md, Matching): pattern is an RE2 regular
+      expression on the lower-case title, anchored at a word start (stems such as inflacj, st[oó]p\pL*
+      procentow); weight 0–1; exclude cancels the row's match when it occurs (same anchoring); note explains the
+      choice. tests/topic_seeds.sql compiles every pattern.
+    config: {column_types: {weight: double}}
+    columns:
+      - name: topic_key
+        tests: [not_null, {relationships: {arguments: {to: ref('topic'), field: topic_key}}}]
+      - name: lang
+        tests: [not_null, {accepted_values: {arguments: {values: [pl, en]}}}]
+      - name: pattern
+        tests: [not_null]
+      - name: weight
+        tests: [not_null]
+  - name: topic_signal
+    description: >-
+      Attention signals per topic: gdelt_query (a GDELT DOC 2.0 API query, read by ingestion/to_landing/gdelt)
+      and wiki_article (<lang>:<Wikipedia title>, read by ingestion/to_landing/wikimedia_pageviews).
+      tests/topic_seeds.sql fails when an active topic has no signal.
+    columns:
+      - name: topic_key
+        tests: [not_null, {relationships: {arguments: {to: ref('topic'), field: topic_key}}}]
+      - name: signal
+        tests: [not_null, {accepted_values: {arguments: {values: [gdelt_query, wiki_article]}}}]
+      - name: value
+        tests: [not_null]
