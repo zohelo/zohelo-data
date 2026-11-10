@@ -259,6 +259,26 @@ def signals() -> None:
         emit(title, row)
 
 
+def gdelt() -> None:
+    gd = "https://api.gdeltproject.org/api/v2/doc/doc"
+    url = f"{gd}?query=inflacja%20sourcelang:polish&mode=timelinevolraw&format=json&timespan=3m"
+    log = []
+    for wait in (20, 30, 60, 120, 240):
+        time.sleep(wait)
+        r, err = get(url)
+        log.append({"wait": wait, "status": r.status_code if r is not None else err})
+        if r is not None and r.status_code == 200:
+            data = r.json()
+            tl = data.get("timeline") or []
+            log.append({"series": [s.get("series") for s in tl], "points": [len(s.get("data") or []) for s in tl],
+                        "first": [(s.get("data") or [{}])[0] for s in tl], "last": [(s.get("data") or [{}])[-1] for s in tl]})
+            time.sleep(10)
+            r2, _ = get(url.replace("timelinevolraw", "timelinetone").replace("3m", "1w"))
+            log.append({"tone_status": r2.status_code if r2 is not None else None, "tone_head": r2.text[:600] if r2 is not None else None})
+            break
+    emit("gdelt retry", log)
+
+
 if __name__ == "__main__":
-    {"news": news, "calendars": calendars, "signals": signals}[sys.argv[1]]()
+    {"news": news, "calendars": calendars, "signals": signals, "gdelt": gdelt}[sys.argv[1]]()
     print(json.dumps({"annotations": COUNT["n"]}))
