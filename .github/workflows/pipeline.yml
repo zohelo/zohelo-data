@@ -96,12 +96,16 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements.txt
       - name: Dispatch due runs
         env:
           PYTHONPATH: .
           GITHUB_TOKEN: ${{ github.token }}
+        # dbt-core-experimental-parser builds by downloading its wheel from GitHub releases, which
+        # fails on a GitHub 504 (#2575): the pip cache keeps the built wheel, and the install retries.
         run: |
-          python -m pip install --quiet --require-hashes -r requirements.txt
+          for attempt in 1 2 3; do python -m pip install --quiet --require-hashes -r requirements.txt && break; [ "$attempt" = 3 ] && exit 1; sleep $((attempt * 20)); done
           python run.py schedule
   plan:
     # Production data runs only from main; experiments use Dev · branch runs.
@@ -121,6 +125,8 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements.txt
       - name: Plan activities
         id: plan
         env:
@@ -139,7 +145,7 @@ jobs:
           if [ -n "$FILTER" ] && ! printf '%s' "$FILTER" | grep -Eq '^[A-Za-z0-9_.$*?, -]*$'; then
             echo "filter may contain only codes, globs, commas and spaces" >&2; exit 2
           fi
-          python -m pip install --quiet --require-hashes -r requirements.txt
+          for attempt in 1 2 3; do python -m pip install --quiet --require-hashes -r requirements.txt && break; [ "$attempt" = 3 ] && exit 1; sleep $((attempt * 20)); done
           plan="$(python run.py plan --source "$SOURCE" --run "$RUN" --parallel-jobs "$PARALLEL_JOBS")"
           echo "$plan"
           echo "activities=$(jq -c .activities <<<"$plan")" >> "$GITHUB_OUTPUT"
@@ -376,6 +382,8 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements.txt
       - name: Open or update the alert issue
         env:
           PYTHONPATH: .
@@ -383,5 +391,5 @@ jobs:
           RUN_SOURCE: ${{ inputs.source }}
           RUN_NAME: ${{ inputs.run }}
         run: |
-          python -m pip install --quiet --require-hashes -r requirements.txt
+          for attempt in 1 2 3; do python -m pip install --quiet --require-hashes -r requirements.txt && break; [ "$attempt" = 3 ] && exit 1; sleep $((attempt * 20)); done
           python -m ops.notify_failure --check-jobs
