@@ -37,7 +37,8 @@ raw_variables as (
             when regexp_matches(lower(trim(cast(n1 as varchar))), '^[1-4] kwartał$')
                 then cast(substr(trim(cast(n1 as varchar)), 1, 1) as integer)
         end as period_quarter,
-        regexp_matches(lower(trim(cast(n1 as varchar))), '^([1-4]-[1-4] kwartał|.*półrocz|styczeń-|rok$)') as period_cumulative
+        regexp_matches(lower(trim(cast(n1 as varchar))), '^([1-4]-[1-4] kwartał|.*półrocz|styczeń-|rok$)')
+            as period_cumulative
     from {{ ref('bdl_variables') }}
 ),
 
