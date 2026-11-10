@@ -3791,7 +3791,7 @@ sources:
   entities: [country, financial institution sector]
   granularity: 'Official NBP rates (reference, lombard, deposit, rediscount, discount): rate by effective date of each
     MPC change. MFI interest-rate statistics (rate by instrument, sector, maturity) are a separate later scope.'
-  coverage: Official rates from 1998-02-26 (96 changes to 2026-03-05; deposit rate in 78, discount rate from 2014);
+  coverage: Official rates from 1998-02-26 (96 changes to 2026-03-05; deposit rate from 2001-12-01, discount rate from 2010-01-01);
     Dev probe 42776278659, 10 Nov 2026.
   access:
     endpoint: https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml

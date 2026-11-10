@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """NBP interest rates bronze.load: newest Landing copy of both XML files → bronze.nbp_interest_rate_items.
 
-One row per ``<pozycja>`` (rate) or ``<odnosnik>`` (footnote) element of either file, attributes as source text (rates keep the decimal comma):
+One row per ``<pozycja>`` (rate) or ``<odnosnik>`` (footnote) element of either file, attributes as source
+text (rates keep the decimal comma):
 
   rates_archive  ``<pozycje obowiazuje_od=…>`` groups (one per MPC change since 1998-02-26) of
                  ``<pozycja id=… oprocentowanie=…/>``; effective_from = the group's date.
