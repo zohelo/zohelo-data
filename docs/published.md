@@ -333,6 +333,32 @@ As v1 (copied to v2 so zohelo-bi reads one prefix).
 
 catalog.json ≤ 1 MB gzip · latest.json ≤ 300 kB gzip · series.json ≤ 1 MB gzip each · calendar.json ≤ 50 kB.
 
+## First slice: coverage
+
+`warehouse/seeds/kpi_v2_map.csv` maps the 78 v2 keys of the slice (Polska w skrócie first, then economy and labour)
+to a concept of `kpi.csv` and a source measure: `concept_key` (empty when no concept exists yet), `source_key`,
+`dataset`, `measure_key_pattern` (as in `kpi_measure.csv`; `;` separates several), `frequency` (what the product
+shows) and `frequency_available` (what the measure has), `geographies` (`PL`, `EU` member states, `EU27`, `VOIV`
+voivodeships), `dimensions`, `aggregation`, `polarity` and `status`:
+
+- `ready`: the measure is in an activated block and a concept maps it (a `metrics_<concept>` table after the next
+  Gold build). New concepts start as `draft` in `kpi.csv` and become `published` once the build checks pass.
+- `needs-block`: the data are in Silver; a block, a sample rule or a Gold fact is missing (Gold has no quarterly or
+  half-yearly fact, and the BDL build is annual-only).
+- `needs-source`: not ingested. Where the product names GUS, NBP or OECD and Eurostat holds an equivalent, the map
+  uses Eurostat and says so in `note`.
+
+| | ready | needs-block | needs-source | total |
+|---|---|---|---|---|
+| Polska w skrócie | 25 | 3 | 3 | 31 |
+| all 78 keys | 27 | 40 | 11 | 78 |
+
+Polska w skrócie still needs a source for `cpi_annual_rate` (GUS CPI), `nbp_reference_rate` and `real_wage_growth`;
+`current_account_gdp` needs the quarterly fact, `price_m2_secondary` the BDL activation, `broadband_households` a
+current Eurostat dataset (the ingested ones end in 2021). Where the product asks for a finer frequency than the
+measure has (`unemployment_lfs`, `employment_rate`, `activity_rate`: quarterly; available: annual), the map records
+both. The `v2_key` column of `kpi.csv` is filled from `concept_key` by the v2 build task.
+
 ## Who checks what
 
 - zohelo-data: schemas, `gold.publish` reads back every number against Gold (as v1), contract tests on

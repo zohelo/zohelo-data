@@ -46,6 +46,7 @@ v1 may switch to 64-bit hashes (design decision 4).
 | GUS DBW | 581_57_93_4 Ludność (annual, by macroregion/region/podregion, sex, age), 581_16_2_1 Ludność (monthly, Poland) | all files of the block |
 | World Bank | 10 indicators of the concepts | all economies, all years |
 | NBP | table A mid, table C bid/ask, gold | all |
+| Eurostat, zohelo-bi first slice (#2584) | trng_lfse_01, ilc_peps01n, isoc_sk_dskl_i21, irt_lt_mcby_m, nama_10r_2gdp, gov_10dd_edpt1, env_air_gge, rd_e_gerdtot, demo_mlexpec, demo_r_mlifexp, lfsi_neet_a, tipsii10, demo_pjanind, demo_r_pjanind2, cei_wm011, ert_eff_ic_m, edat_lfse_03, demo_find, demo_r_find2; lfsi_emp_a also `ACT` | the measure of each slice KPI (`seeds/kpi_v2_map.csv`); countries and EU27, Polish NUTS 1–2 for the `_r_` datasets (`poc_src_eurostat.py`) |
 
 Measure rules of the PoC (to refine per domain in v1): Eurostat measure = dataset × unit × the
 dimensions named in `poc_eurostat_measure_dims` (na_item, indic_de, indic_em); BDL measure =
