@@ -3,7 +3,9 @@
    periodicity; one Landing file per year) as observations in the common shape. Labels come
    from each file's dictionary. The territorial dimension of a block is the one whose
    positions match areas most often; the other dimensions are breakdowns. Measure =
-   indicator × presentation. #}
+   indicator × presentation. Periods: annual, monthly ("miesiąc - dane miesięczne - styczeń") and
+   quarterly ("kwartał - dane kwartalne - 1 kwartał"); cumulative periods ("dane narastające") stay
+   unplaced (frequency X). #}
 with blocks as ({{ poc_dbw_blocks() }}),
 
 geo_map as (
@@ -141,7 +143,15 @@ shaped as (
         r.breakdowns,
         case when r.is_men then 'M' when r.is_women then 'F' when r.is_sex_total then 'T' end as sex_code,
         case
+            when lower(coalesce(pe.label, '')) like '%narastaj%' then null  -- cumulative periods are not placed
             when b.freq_code = 'A' then make_date(s.year, 1, 1)
+            when b.freq_code = 'Q' and regexp_matches(lower(pe.label), 'dane kwartalne - [1-4] kwarta')
+                then
+                    make_date(
+                        s.year,
+                        cast(regexp_extract(lower(pe.label), 'dane kwartalne - ([1-4]) kwarta', 1) as integer) * 3 - 2,
+                        1
+                    )
             when b.freq_code = 'M' then
                 make_date(
                     s.year,

@@ -13,6 +13,11 @@ from (
     select
         series_key,
         date_key
+    from {{ ref('poc_fact_quarterly') }}
+    union all
+    select
+        series_key,
+        date_key
     from {{ ref('poc_fact_monthly') }}
     union all
     select

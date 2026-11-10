@@ -20,7 +20,7 @@ tables and the `poc` namespace stay until the retire Task drops them.
 | `dim_geography`, `map_geography` | geography keyed by area (`PL`, `TERC:<code>`, `NUTS:<code>`) with each source's codes as attributes; every source geography code → `geography_key` |
 | `dim_unit`, `dim_frequency`, `dim_source`, `dim_observation_status` | conformed units, frequencies, sources and observation flags |
 | `dim_measure`, `measure_dimensions`, `dim_series` | measure catalogue, the dimensions each measure offers, one row per series (measure × geography × breakdown) |
-| `fact_annual`, `fact_monthly`, `fact_daily` | observations per series and year / month / day |
+| `fact_annual`, `fact_quarterly`, `fact_monthly`, `fact_daily` | observations per series and year / quarter / month / day |
 | `dim_concept`, `concept_measures` | cross-source concepts (KPIs) and their measures |
 | `metrics_population`, `metrics_gdp_current_prices`, `metrics_inflation`, `metrics_unemployment_rate`, `metrics_fx_rate`, `metrics_gdp_per_capita`, `metrics_gdp_volume_growth` | the published metrics |
 | `src_eurostat`, `src_dbw`, `src_dbw_dictionary`, `build_eurostat`, `build_bdl`, `build_dbw`, `build_wdi`, `build_nbp` | extraction and build stages per source |
@@ -136,6 +136,6 @@ Other open points are listed per dimension (`open_questions`) and marked `unveri
 2. Keys stay natural strings (geography_key, measure_key, series_key as in the PoC); no hash keys in v1.
 3. Geography: GUS KTS–TERYT correspondence for BDL ids, NUTS 3 ↔ podregion for DBW; name matching only as a reported fallback.
 4. Measure rules per source stay as in the PoC for v1; per-domain refinements are new Tasks.
-5. Facts: annual, monthly, daily; quarterly added with the first quarterly KPI.
+5. Facts: annual, quarterly, monthly, daily (`fact_quarterly` added for the zohelo-bi first slice: Eurostat, DBW and BDL quarterly series).
 6. Rows without a value are not loaded; status flags kept.
 7. warehouse/entity/*.sql stay: they are per-entity Silver models applied by warehouse/entity.py (design #875), not Gold (deviation from plan A-23, logged in docs/decisions.md).
