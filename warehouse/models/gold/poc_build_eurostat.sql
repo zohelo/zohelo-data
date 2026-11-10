@@ -48,8 +48,11 @@ silver as (
         b.block_name,
         b.total_breakdown,
         coalesce(m.measure_dims, []) as measure_dims,
-        string_split(o.breakdown_dimensions, ',') as dim_list,
-        string_split(o.breakdown_codes, ',') as code_list
+        -- a dataset without breakdowns (NAMA_10R_2GDP) has empty lists, not one empty code
+        case when coalesce(o.breakdown_dimensions, '') = '' then [] else string_split(o.breakdown_dimensions, ',') end
+            as dim_list,
+        case when coalesce(o.breakdown_codes, '') = '' then [] else string_split(o.breakdown_codes, ',') end
+            as code_list
     from {{ ref('poc_src_eurostat') }} as o
     inner join blocks as b on upper(o.dataset_id) = b.dataset_id and o.freq_code = b.freq_code
     left join mdims as m on upper(o.dataset_id) = m.dataset_id
@@ -76,12 +79,32 @@ kept as (  -- the PoC sample: small, with breakdowns where they matter (sex), on
             when 'DEMO_PJAN' then age_code = 'TOTAL'
             when 'DEMO_R_PJANAGGR3' then age_code = 'TOTAL' and length(geo_code) <= 4
             when 'DEMO_GIND' then true
+            -- zohelo-bi first slice (#2584): units, ages and totals are filtered in poc_src_eurostat.py
+            when 'TRNG_LFSE_01' then unit_code = 'PC' and age_code = 'Y25-64'
+            when 'ILC_PEPS01N' then unit_code = 'PC' and age_code in ('TOTAL', 'Y_LT18')
+            when 'ISOC_SK_DSKL_I21' then unit_code = 'PC_IND' and list_contains(code_list, 'I_DSK2_BAB')
+            when 'IRT_LT_MCBY_M' then true
+            when 'NAMA_10R_2GDP' then unit_code = 'PPS_HAB_EU27_2020'
+            when 'GOV_10DD_EDPT1' then unit_code = 'PC_GDP' and na_item_code in ('GD', 'B9')
+            when 'ENV_AIR_GGE' then unit_code = 'THS_T' and list_contains(code_list, 'GHG')
+            when 'RD_E_GERDTOT' then unit_code = 'PC_GDP'
+            when 'DEMO_MLEXPEC' then age_code = 'Y_LT1'
+            when 'DEMO_R_MLIFEXP' then age_code = 'Y_LT1'
+            when 'LFSI_NEET_A' then unit_code = 'PC_POP' and age_code = 'Y15-29'
+            when 'TIPSII10' then unit_code = 'PC_GDP'
+            when 'DEMO_PJANIND' then list_contains(code_list, 'OLDDEP1')
+            when 'DEMO_R_PJANIND2' then list_contains(code_list, 'OLDDEP1')
+            when 'CEI_WM011' then unit_code = 'PC'
+            when 'ERT_EFF_IC_M' then unit_code = 'I20' and list_contains(code_list, 'REER_IC42_CPI')
+            when 'EDAT_LFSE_03' then unit_code = 'PC' and age_code = 'Y25-34' and list_contains(code_list, 'ED5-8')
+            when 'DEMO_FIND' then list_contains(code_list, 'TOTFERRT')
+            when 'DEMO_R_FIND2' then list_contains(code_list, 'TOTFERRT')
             when 'NAMA_10_GDP' then unit_code in ('CP_MEUR', 'CLV_PCH_PRE') and na_item_code = 'B1GQ'
             when 'NAMA_10_PC' then unit_code = 'CP_EUR_HAB' and na_item_code = 'B1GQ'
             when 'UNE_RT_A' then unit_code = 'PC_ACT' and age_code = 'Y15-74'
             when 'UNE_RT_M' then unit_code = 'PC_ACT' and age_code = 'Y15-74'
             when 'PRC_HICP_MINR' then unit_code = 'RCH_A' and coicop18_code = 'TOTAL'
-            when 'LFSI_EMP_A' then unit_code = 'PC_POP' and age_code = 'Y20-64' and indic_em_code = 'EMP_LFS'
+            when 'LFSI_EMP_A' then unit_code = 'PC_POP' and age_code = 'Y20-64' and indic_em_code in ('EMP_LFS', 'ACT')
             else false
         end
 ),

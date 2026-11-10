@@ -222,3 +222,147 @@ gold.publish writes one event per row of warehouse/seeds/release_calendar.csv (U
 | status.json | ≤ 50 kB |
 | kpi/<kpi_key>/series.parquet | ≤ 20 MB |
 | geo/<level>.geojson | ≤ 2 MB (gmina ≤ 8 MB) |
+
+# Published layer contract v2 (for zohelo-bi)
+
+Owner decisions O27/O28 (2026-11-10): the zohelo-bi design template becomes zohelo-bi and the first real slice
+(Polska w skrócie, the economy and labour dashboards) is the next goal. v2 is what that product needs. It is
+written **alongside** v1 under `06_published/v2/`; v1 stays unchanged for zohelo.com until zohelo.com chooses to
+move. `gold.publish` writes both. zohelo-bi reads v2 only.
+
+Status (2026-11-10): agreed contract, not built yet. The seeds and files it names (`kpi.csv` column `v2_key`,
+`kpi_member.csv`, `schemas/v2/`, `fixtures/v2/`) are added by the implementation tasks of Stage B.
+
+## What changes against v1, and why
+
+| Need of zohelo-bi | v1 | v2 |
+|---|---|---|
+| The KPI keys of the dashboards | concept keys (`inflation`, `unemployment_rate`) | the product keys of zohelo-bi (`hicp_annual_rate`, `unemployment_lfs`); v1 keeps its keys |
+| Compare Poland with EU countries and the EU | only country and voivodeship of Poland | every EU country and the EU-27 aggregate where the source has them |
+| Breakdowns with names (sex, age, NACE, COICOP…) | dimension key and member count only | dimensions with their members, names and order |
+| Never sum an average, never index a rate | nothing | `aggregation` per KPI |
+| Green or red for a change | nothing | `polarity` per KPI |
+| Year-on-year in KPI cards, release dates | previous period only | `year_ago`, `next_release` |
+| Readable without Parquet in the browser | series as Parquet | series as compact JSON per KPI |
+
+## Rules
+
+- Prefix `06_published/v2/`; rebuilt whole by `gold.publish` after each Gold build; no history; UTF-8; ISO 8601 UTC.
+- A KPI is in v2 only with `status = published` and a `v2_key` in `warehouse/seeds/kpi.csv` (new column; empty =
+  not in v2). Many v1 concepts map to one v2 key at most; a v2 key comes from exactly one concept.
+- Keys: `kpi_key` (v2 key) `^[a-z0-9_]+$`. **Geography keys**: countries ISO 3166-1 alpha-2 (`PL`, `DE`, `CZ`;
+  Greece `EL` as Eurostat writes it), the EU aggregate `EU27` (Eurostat `EU27_2020`), Polish voivodeships
+  ISO 3166-2 (`PL-02` dolnośląskie … `PL-32` zachodniopomorskie, the TERC code after the hyphen). No NUTS codes
+  in v2 keys: NUTS `PL22` is Śląskie while TERC `22` is Pomorskie, so a bare code is ambiguous.
+- Periods: `2025` (annual), `2025-Q3` (quarterly), `2025-09` (monthly). Daily data is published as the monthly
+  mean in v2 (exchange rates); the daily series stays in v1.
+- Members: `_T` is the total of a dimension and never appears as a member; a series without a dimension key is
+  the total.
+- Every JSON file is checked against its schema in `warehouse/published/schemas/v2/` before it is written; the
+  run fails on a problem (as v1).
+
+## catalog.json
+
+| field | type | meaning |
+|---|---|---|
+| version | integer | `2` |
+| generated_at | string | when written |
+| kpis[] | array | one entry per v2 KPI |
+| kpis[].kpi_key | string | v2 key |
+| kpis[].name_pl, name_en | string | names |
+| kpis[].definition_pl, definition_en | string | one or two sentences: what is measured, how, coverage |
+| kpis[].unit_key | string | unit (see `units`) |
+| kpis[].frequency | string | `M`, `Q` or `A`: the frequency the product shows |
+| kpis[].domain_key, group_key | string | domain and group of `domain.csv` (the 12 domains of zohelo-bi) |
+| kpis[].source_keys | array | sources, the preferred first |
+| kpis[].geographies | array | geography keys with data, `PL` first |
+| kpis[].dimension_keys | array | breakdowns besides geography and source |
+| kpis[].first_period, last_period | string | range of the shown frequency |
+| kpis[].aggregation | string | `sum` (counts and money: parts add up), `mean` (averages: wages, prices per m²), `rate` (shares and rates in % or ‰), `index` (an index level), `none` (ratios such as per-capita values, nothing to combine) |
+| kpis[].polarity | string | `up` (a rise is good), `down` (a fall is good), `neutral`; set only where most readers agree (docs/model.md) |
+| kpis[].loaded_at | string | newest load of its sources |
+| kpis[].next_release | string or null | next date in `release_calendar.csv` for the KPI (`YYYY-MM-DD`) |
+| dimensions[] | array | every dimension used by a v2 KPI |
+| dimensions[].dimension_key, name_pl, name_en | string | |
+| dimensions[].members[] | array | `{ key, name_pl, name_en, sort, parent_key? }`, total excluded |
+| geographies[] | array | `{ key, name_pl, name_en, level: country \| voivodeship \| aggregate, eu: boolean }` for every key used |
+| units[] | array | `unit.csv` plus `decimals` (integer: the precision to show) |
+| domains, sources, licences | array | as v1 |
+
+## latest.json (one file for all KPIs)
+
+| field | type | meaning |
+|---|---|---|
+| version, generated_at | | as above |
+| values[] | array | one entry per KPI × geography (totals only, no breakdowns) |
+| values[].kpi_key, geography | string | |
+| values[].source_key | string | the source shown (preferred source with data for that geography) |
+| values[].period, value | string, number | newest period and value |
+| values[].previous_period, previous_value | string, number or null | the period before |
+| values[].year_ago_value | number or null | same period a year earlier (monthly and quarterly KPIs) |
+| values[].flags | array | source status flags (`p` provisional, `e` estimated, `b` break) |
+| values[].checked_at | string | when the source was last checked |
+
+## kpi/<kpi_key>/series.json
+
+Columnar to stay small; the reader filters by geography, source and members.
+
+| field | type | meaning |
+|---|---|---|
+| kpi_key, frequency, unit_key | string | |
+| periods | array | every period of the KPI, sorted |
+| series[] | array | one entry per geography × source × member combination |
+| series[].geography, source_key | string | |
+| series[].members | object | `{ dimension_key: member_key }`; `{}` = totals |
+| series[].values | array | one number or null per entry of `periods` |
+| series[].flags | object | optional, `{ period: "p" }` only where a flag exists |
+
+Size: ≤ 1 MB gzipped per KPI. A KPI whose full breakdown would exceed it publishes only the members listed for it
+in `kpi_member.csv` (new seed, the curated members a reader needs: e.g. the NACE sections, not every class).
+
+## calendar.json
+
+`{ version, generated_at, releases: [{ date, source_key, kpi_keys, title_pl, title_en, url }] }` from
+`release_calendar.csv`, dates today and later. `feed/calendar.ics` (v1) stays.
+
+## status.json
+
+As v1 (copied to v2 so zohelo-bi reads one prefix).
+
+## Size limits
+
+catalog.json ≤ 1 MB gzip · latest.json ≤ 300 kB gzip · series.json ≤ 1 MB gzip each · calendar.json ≤ 50 kB.
+
+## First slice: coverage
+
+`warehouse/seeds/kpi_v2_map.csv` maps the 78 v2 keys of the slice (Polska w skrócie first, then economy and labour)
+to a concept of `kpi.csv` and a source measure: `concept_key` (empty when no concept exists yet), `source_key`,
+`dataset`, `measure_key_pattern` (as in `kpi_measure.csv`; `;` separates several), `frequency` (what the product
+shows) and `frequency_available` (what the measure has), `geographies` (`PL`, `EU` member states, `EU27`, `VOIV`
+voivodeships), `dimensions`, `aggregation`, `polarity` and `status`:
+
+- `ready`: the measure is in an activated block and a concept maps it (a `metrics_<concept>` table after the next
+  Gold build). New concepts start as `draft` in `kpi.csv` and become `published` once the build checks pass.
+- `needs-block`: the data are in Silver; a block, a sample rule or a Gold fact is missing (Gold has no quarterly or
+  half-yearly fact, and the BDL build is annual-only).
+- `needs-source`: not ingested. Where the product names GUS, NBP or OECD and Eurostat holds an equivalent, the map
+  uses Eurostat and says so in `note`.
+
+| | ready | needs-block | needs-source | total |
+|---|---|---|---|---|
+| Polska w skrócie | 25 | 3 | 3 | 31 |
+| all 78 keys | 27 | 40 | 11 | 78 |
+
+Polska w skrócie still needs a source for `cpi_annual_rate` (GUS CPI), `nbp_reference_rate` and `real_wage_growth`;
+`current_account_gdp` needs the quarterly fact, `price_m2_secondary` the BDL activation, `broadband_households` a
+current Eurostat dataset (the ingested ones end in 2021). Where the product asks for a finer frequency than the
+measure has (`unemployment_lfs`, `employment_rate`, `activity_rate`: quarterly; available: annual), the map records
+both. The `v2_key` column of `kpi.csv` is filled from `concept_key` by the v2 build task.
+
+## Who checks what
+
+- zohelo-data: schemas, `gold.publish` reads back every number against Gold (as v1), contract tests on
+  `warehouse/published/fixtures/v2/`.
+- zohelo-bi: its live provider maps v2 one to one onto its data interface (`apps/portal/src/data/types.ts`) and
+  tests against the same fixtures (copied, not re-invented).
+- The first set of v2 KPIs is the slice in `.github/backlog/epics/published-v2.yaml`.

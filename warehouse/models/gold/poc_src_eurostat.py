@@ -8,10 +8,38 @@ Keep the dataset list in step with macros/poc_blocks.sql (poc_eurostat_blocks)."
 
 # dataset -> (frequency, the sample filter of the PoC, pushed down so the extraction stays small)
 HAS = "list_contains(string_split(breakdown_codes, ','), '{}')"
+COUNTRIES = "(length(geo_code) = 2 or geo_code = 'EU27_2020')"  # countries and the EU aggregate
+PL_REGIONS = "(geo_code like 'PL%' and length(geo_code) between 3 and 4)"  # Polish NUTS 1 and NUTS 2
 DATASETS = {
     "DEMO_PJAN": ("A", HAS.format("TOTAL")),
     "DEMO_R_PJANAGGR3": ("A", HAS.format("TOTAL") + " and length(geo_code) <= 4"),
     "DEMO_GIND": ("A", "true"),
+    # zohelo-bi first slice, Polska w skrócie (seeds/kpi_v2_map.csv, #2584)
+    "TRNG_LFSE_01": ("A", f"unit_code = 'PC' and {HAS.format('Y25-64')} and {COUNTRIES}"),
+    "ILC_PEPS01N": ("A", f"unit_code = 'PC' and ({HAS.format('TOTAL')} or {HAS.format('Y_LT18')}) and {COUNTRIES}"),
+    "ISOC_SK_DSKL_I21": (
+        "A",
+        f"unit_code = 'PC_IND' and {HAS.format('I_DSK2_BAB')} and {HAS.format('IND_TOTAL')} and {COUNTRIES}",
+    ),
+    "IRT_LT_MCBY_M": ("M", COUNTRIES),
+    "NAMA_10R_2GDP": ("A", f"unit_code = 'PPS_HAB_EU27_2020' and ({COUNTRIES} or {PL_REGIONS})"),
+    "GOV_10DD_EDPT1": (
+        "A",
+        f"unit_code = 'PC_GDP' and {HAS.format('S13')} and ({HAS.format('GD')} or {HAS.format('B9')}) and {COUNTRIES}",
+    ),
+    "ENV_AIR_GGE": ("A", f"unit_code = 'THS_T' and {HAS.format('GHG')} and {HAS.format('TOTX4_MEMO')} and {COUNTRIES}"),
+    "RD_E_GERDTOT": ("A", f"unit_code = 'PC_GDP' and {HAS.format('TOTAL')} and {COUNTRIES}"),
+    "DEMO_MLEXPEC": ("A", f"unit_code = 'YR' and {HAS.format('Y_LT1')} and {COUNTRIES}"),
+    "DEMO_R_MLIFEXP": ("A", f"unit_code = 'YR' and {HAS.format('Y_LT1')} and {PL_REGIONS}"),
+    "LFSI_NEET_A": ("A", f"unit_code = 'PC_POP' and {HAS.format('Y15-29')} and {COUNTRIES}"),
+    "TIPSII10": ("A", f"unit_code = 'PC_GDP' and {COUNTRIES}"),
+    "DEMO_PJANIND": ("A", f"{HAS.format('OLDDEP1')} and {COUNTRIES}"),
+    "DEMO_R_PJANIND2": ("A", f"{HAS.format('OLDDEP1')} and {PL_REGIONS}"),
+    "CEI_WM011": ("A", f"unit_code = 'PC' and {HAS.format('RCY')} and {COUNTRIES}"),
+    "ERT_EFF_IC_M": ("M", f"unit_code = 'I20' and {HAS.format('REER_IC42_CPI')} and {COUNTRIES}"),
+    "EDAT_LFSE_03": ("A", f"unit_code = 'PC' and {HAS.format('Y25-34')} and {HAS.format('ED5-8')} and {COUNTRIES}"),
+    "DEMO_FIND": ("A", f"{HAS.format('TOTFERRT')} and {COUNTRIES}"),
+    "DEMO_R_FIND2": ("A", f"{HAS.format('TOTFERRT')} and {PL_REGIONS}"),
     "NAMA_10_GDP": ("A", "unit_code in ('CP_MEUR', 'CLV_PCH_PRE') and " + HAS.format("B1GQ")),
     "NAMA_10_PC": ("A", "unit_code = 'CP_EUR_HAB' and " + HAS.format("B1GQ")),
     "UNE_RT_A": ("A", "unit_code = 'PC_ACT' and " + HAS.format("Y15-74")),
