@@ -1,0 +1,65 @@
+version: 2
+models:
+  - name: topic_matches
+    description: >-
+      Headlines matched to topics (O32, docs/topics.md): one row per headline × topic, with the strongest matching
+      dictionary row (pattern, weight), every row that hit (patterns) and the publication day in Warsaw.
+    tests:
+      - unique:
+          column_name: "headline_id || '|' || topic_key"
+    columns:
+      - name: headline_id
+        tests: [not_null, {relationships: {arguments: {to: ref('news_headlines'), field: headline_id}}}]
+      - name: topic_key
+        tests: [not_null, {relationships: {arguments: {to: ref('topic'), field: topic_key}}}]
+      - name: day
+        tests: [not_null]
+      - name: pattern
+        tests: [not_null]
+  - name: topic_daily
+    description: >-
+      Topic heat per day (O32): signals (news, volume, attention, tone), their robust z-scores against the topic's
+      trailing 90 days, the release bonus and the heat score; settings in warehouse.yaml `topics:`.
+    tests:
+      - unique:
+          column_name: "topic_key || '|' || cast(day as varchar)"
+    columns:
+      - name: topic_key
+        tests: [not_null, {relationships: {arguments: {to: ref('topic'), field: topic_key}}}]
+      - name: day
+        tests: [not_null]
+      - name: headlines
+        tests: [not_null]
+  - name: topic_rank
+    description: >-
+      Topic ranking per period (day, week, month, quarter, year) on the run day (O32): rank, score, matched
+      headlines, trend against the previous window and the mean z-scores behind the score.
+    tests:
+      - unique:
+          column_name: "period || '|' || cast(rank as varchar)"
+      - unique:
+          column_name: "period || '|' || topic_key"
+    columns:
+      - name: period
+        tests: [not_null, {accepted_values: {arguments: {values: [day, week, month, quarter, year]}}}]
+      - name: rank
+        tests: [not_null]
+      - name: topic_key
+        tests: [not_null, {relationships: {arguments: {to: ref('topic'), field: topic_key}}}]
+      - name: score
+        tests: [not_null]
+      - name: trend
+        tests: [not_null, {accepted_values: {arguments: {values: [up, down, flat]}}}]
+  - name: topic_quality
+    description: >-
+      Topics quality checks on the run day (O32, docs/topics.md, Quality checks): feed freshness per outlet,
+      matched share, topics without signals, stale GDELT or Wikipedia signals, unmatched headlines; status ok /
+      warn / fail. tests/topic_quality.sql fails the build on a fail row, tests/topic_quality_warn.sql warns.
+    tests:
+      - unique:
+          column_name: "check_key || '|' || subject || '|' || detail"
+    columns:
+      - name: check_key
+        tests: [not_null]
+      - name: status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, warn, fail]}}}]

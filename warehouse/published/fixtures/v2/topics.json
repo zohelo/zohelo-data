@@ -1,0 +1,291 @@
+{
+  "version": 2,
+  "generated_at": "2026-11-10T21:55:00Z",
+  "periods": {
+    "day": {
+      "window": {
+        "from": "2026-11-10",
+        "to": "2026-11-10"
+      },
+      "topics": [
+        {
+          "topic_key": "inflation",
+          "name_pl": "Inflacja i ceny",
+          "name_en": "Inflation and prices",
+          "rank": 1,
+          "heat": 2.41,
+          "trend": "up",
+          "kpi_keys": [
+            "cpi_annual_rate",
+            "hicp_annual_rate",
+            "core_inflation"
+          ],
+          "headlines": [
+            {
+              "title": "Inflacja w październiku (przykładowy nagłówek)",
+              "url": "https://www.example.com/artykul-1",
+              "outlet": "Bankier.pl",
+              "lang": "pl",
+              "published_at": "2026-11-10T08:00:00Z"
+            }
+          ],
+          "next_release": {
+            "date": "2026-11-13",
+            "source_key": "gus",
+            "title_pl": "Wskaźniki cen towarów i usług konsumpcyjnych w październiku 2026 r.",
+            "title_en": "Wskaźniki cen towarów i usług konsumpcyjnych w październiku 2026 r."
+          },
+          "signals": {
+            "news": 3.1,
+            "volume": 1.2,
+            "attention": 0.8
+          }
+        },
+        {
+          "topic_key": "us_tariffs",
+          "name_pl": "Cła USA",
+          "name_en": "US tariffs",
+          "rank": 2,
+          "heat": 1.07,
+          "trend": "flat",
+          "kpi_keys": [],
+          "headlines": [],
+          "next_release": null,
+          "signals": {
+            "news": 1.9,
+            "volume": null,
+            "attention": 0.1
+          }
+        }
+      ]
+    },
+    "week": {
+      "window": {
+        "from": "2026-11-04",
+        "to": "2026-11-10"
+      },
+      "topics": [
+        {
+          "topic_key": "inflation",
+          "name_pl": "Inflacja i ceny",
+          "name_en": "Inflation and prices",
+          "rank": 1,
+          "heat": 2.41,
+          "trend": "up",
+          "kpi_keys": [
+            "cpi_annual_rate",
+            "hicp_annual_rate",
+            "core_inflation"
+          ],
+          "headlines": [
+            {
+              "title": "Inflacja w październiku (przykładowy nagłówek)",
+              "url": "https://www.example.com/artykul-1",
+              "outlet": "Bankier.pl",
+              "lang": "pl",
+              "published_at": "2026-11-10T08:00:00Z"
+            }
+          ],
+          "next_release": {
+            "date": "2026-11-13",
+            "source_key": "gus",
+            "title_pl": "Wskaźniki cen towarów i usług konsumpcyjnych w październiku 2026 r.",
+            "title_en": "Wskaźniki cen towarów i usług konsumpcyjnych w październiku 2026 r."
+          },
+          "signals": {
+            "news": 3.1,
+            "volume": 1.2,
+            "attention": 0.8
+          }
+        },
+        {
+          "topic_key": "us_tariffs",
+          "name_pl": "Cła USA",
+          "name_en": "US tariffs",
+          "rank": 2,
+          "heat": 1.07,
+          "trend": "flat",
+          "kpi_keys": [],
+          "headlines": [],
+          "next_release": null,
+          "signals": {
+            "news": 1.9,
+            "volume": null,
+            "attention": 0.1
+          }
+        }
+      ]
+    },
+    "month": {
+      "window": {
+        "from": "2026-10-12",
+        "to": "2026-11-10"
+      },
+      "topics": [
+        {
+          "topic_key": "inflation",
+          "name_pl": "Inflacja i ceny",
+          "name_en": "Inflation and prices",
+          "rank": 1,
+          "heat": 2.41,
+          "trend": "up",
+          "kpi_keys": [
+            "cpi_annual_rate",
+            "hicp_annual_rate",
+            "core_inflation"
+          ],
+          "headlines": [
+            {
+              "title": "Inflacja w październiku (przykładowy nagłówek)",
+              "url": "https://www.example.com/artykul-1",
+              "outlet": "Bankier.pl",
+              "lang": "pl",
+              "published_at": "2026-11-10T08:00:00Z"
+            }
+          ],
+          "next_release": {
+            "date": "2026-11-13",
+            "source_key": "gus",
+            "title_pl": "Wskaźniki cen towarów i usług konsumpcyjnych w październiku 2026 r.",
+            "title_en": "Wskaźniki cen towarów i usług konsumpcyjnych w październiku 2026 r."
+          },
+          "signals": {
+            "news": 3.1,
+            "volume": 1.2,
+            "attention": 0.8
+          }
+        },
+        {
+          "topic_key": "us_tariffs",
+          "name_pl": "Cła USA",
+          "name_en": "US tariffs",
+          "rank": 2,
+          "heat": 1.07,
+          "trend": "flat",
+          "kpi_keys": [],
+          "headlines": [],
+          "next_release": null,
+          "signals": {
+            "news": 1.9,
+            "volume": null,
+            "attention": 0.1
+          }
+        }
+      ]
+    },
+    "quarter": {
+      "window": {
+        "from": "2026-08-12",
+        "to": "2026-11-10"
+      },
+      "topics": [
+        {
+          "topic_key": "inflation",
+          "name_pl": "Inflacja i ceny",
+          "name_en": "Inflation and prices",
+          "rank": 1,
+          "heat": 2.41,
+          "trend": "up",
+          "kpi_keys": [
+            "cpi_annual_rate",
+            "hicp_annual_rate",
+            "core_inflation"
+          ],
+          "headlines": [
+            {
+              "title": "Inflacja w październiku (przykładowy nagłówek)",
+              "url": "https://www.example.com/artykul-1",
+              "outlet": "Bankier.pl",
+              "lang": "pl",
+              "published_at": "2026-11-10T08:00:00Z"
+            }
+          ],
+          "next_release": {
+            "date": "2026-11-13",
+            "source_key": "gus",
+            "title_pl": "Wskaźniki cen towarów i usług konsumpcyjnych w październiku 2026 r.",
+            "title_en": "Wskaźniki cen towarów i usług konsumpcyjnych w październiku 2026 r."
+          },
+          "signals": {
+            "news": 3.1,
+            "volume": 1.2,
+            "attention": 0.8
+          }
+        },
+        {
+          "topic_key": "us_tariffs",
+          "name_pl": "Cła USA",
+          "name_en": "US tariffs",
+          "rank": 2,
+          "heat": 1.07,
+          "trend": "flat",
+          "kpi_keys": [],
+          "headlines": [],
+          "next_release": null,
+          "signals": {
+            "news": 1.9,
+            "volume": null,
+            "attention": 0.1
+          }
+        }
+      ]
+    },
+    "year": {
+      "window": {
+        "from": "2025-11-11",
+        "to": "2026-11-10"
+      },
+      "topics": [
+        {
+          "topic_key": "inflation",
+          "name_pl": "Inflacja i ceny",
+          "name_en": "Inflation and prices",
+          "rank": 1,
+          "heat": 2.41,
+          "trend": "up",
+          "kpi_keys": [
+            "cpi_annual_rate",
+            "hicp_annual_rate",
+            "core_inflation"
+          ],
+          "headlines": [
+            {
+              "title": "Inflacja w październiku (przykładowy nagłówek)",
+              "url": "https://www.example.com/artykul-1",
+              "outlet": "Bankier.pl",
+              "lang": "pl",
+              "published_at": "2026-11-10T08:00:00Z"
+            }
+          ],
+          "next_release": {
+            "date": "2026-11-13",
+            "source_key": "gus",
+            "title_pl": "Wskaźniki cen towarów i usług konsumpcyjnych w październiku 2026 r.",
+            "title_en": "Wskaźniki cen towarów i usług konsumpcyjnych w październiku 2026 r."
+          },
+          "signals": {
+            "news": 3.1,
+            "volume": 1.2,
+            "attention": 0.8
+          }
+        },
+        {
+          "topic_key": "us_tariffs",
+          "name_pl": "Cła USA",
+          "name_en": "US tariffs",
+          "rank": 2,
+          "heat": 1.07,
+          "trend": "flat",
+          "kpi_keys": [],
+          "headlines": [],
+          "next_release": null,
+          "signals": {
+            "news": 1.9,
+            "volume": null,
+            "attention": 0.1
+          }
+        }
+      ]
+    }
+  }
+}

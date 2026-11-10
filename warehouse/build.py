@@ -32,6 +32,8 @@ RATE_LIMIT_THREADS = int(_RETRY["rate_limit_retry_threads"])
 COMMIT_RETRY_THREADS = int(_RETRY["commit_retry_threads"])
 # Owner policy #822: only small tables are rebuilt in full; each full-rebuild model has a row ceiling.
 FULL_REBUILD = _RETRY["full_rebuild"]
+# Topics settings (docs/topics.md): weights, windows and thresholds, passed to every build as the dbt var `topics`.
+TOPICS = _RETRY["topics"]
 
 
 def main(select: str = "", target: str = "prod", variables: dict | None = None) -> int:
@@ -163,9 +165,8 @@ def build_once(
     command = ["dbt", "build", "--target", target, "--project-dir", str(PROJECT), "--profiles-dir", str(PROJECT)]
     if selectors:
         command += ["--select", *selectors]
-    variables = dict(variables or {})
-    if variables:
-        command += ["--vars", json.dumps(variables)]
+    variables = {"topics": TOPICS, **(variables or {})}
+    command += ["--vars", json.dumps(variables)]
     returncode, results, tail = _dbt(command)
     # `dbt retry` re-runs the failed and skipped nodes of the previous invocation with its
     # arguments and writes results for those nodes only; they replace the earlier ones.
