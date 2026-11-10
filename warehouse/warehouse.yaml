@@ -22,6 +22,8 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.sex,  # seed warehouse/seeds/sex.csv (SDMX CL_SEX)
        gold.licence, gold.source,  # seeds warehouse/seeds/licence.csv, source.csv
        gold.release_calendar,  # seed release_calendar.csv
+       gold.kpi_v2_map,  # seed kpi_v2_map.csv: zohelo-bi first slice, v2 key → concept and source (#2584)
+       gold.metrics_activity_rate, gold.metrics_adult_learning, gold.metrics_arope_rate, gold.metrics_child_arope, gold.metrics_basic_digital_skills, gold.metrics_bond_yield_10y, gold.metrics_gdp_per_capita_pps, gold.metrics_gerd_gdp, gold.metrics_gg_debt_gdp, gold.metrics_gg_balance_gdp, gold.metrics_ghg_emissions, gold.metrics_neet_rate, gold.metrics_niip_gdp, gold.metrics_old_age_dependency, gold.metrics_recycling_rate, gold.metrics_reer, gold.metrics_tertiary_attainment, gold.metrics_total_fertility_rate, gold.metrics_life_expectancy,  # metrics of the first slice (#2584), draft until checked
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)
        gold.dimension, gold.dimension_alias, gold.dim_dimension,  # catalogue: axes
@@ -68,7 +70,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_dim_unit: {rows: 1000}
   poc_fact_annual: {rows: 1500000, exception: "#2294"}  # 1,060,096 (prod, 1 Nov); until the Gold v1 cut-over (D28)
   poc_fact_daily: {rows: 600000}
-  poc_fact_monthly: {rows: 50000}
+  poc_fact_monthly: {rows: 100000}  # + ~30,000 for the first slice's monthly blocks (#2584)
   poc_map_geography: {rows: 150000}
   poc_measure_dimensions: {rows: 5000}
   kpi_dimension: {rows: 10000}
@@ -79,5 +81,24 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_unemployment_rate: {rows: 20000}
   poc_metrics_gdp_per_capita: {rows: 40000}
   poc_metrics_gdp_volume_growth: {rows: 40000}
+  poc_metrics_activity_rate: {rows: 10000}
+  poc_metrics_adult_learning: {rows: 10000}
+  poc_metrics_arope_rate: {rows: 10000}
+  poc_metrics_child_arope: {rows: 10000}
+  poc_metrics_basic_digital_skills: {rows: 10000}
+  poc_metrics_bond_yield_10y: {rows: 20000}
+  poc_metrics_gdp_per_capita_pps: {rows: 10000}
+  poc_metrics_gerd_gdp: {rows: 10000}
+  poc_metrics_gg_debt_gdp: {rows: 10000}
+  poc_metrics_gg_balance_gdp: {rows: 10000}
+  poc_metrics_ghg_emissions: {rows: 10000}
+  poc_metrics_neet_rate: {rows: 10000}
+  poc_metrics_niip_gdp: {rows: 10000}
+  poc_metrics_old_age_dependency: {rows: 10000}
+  poc_metrics_recycling_rate: {rows: 10000}
+  poc_metrics_reer: {rows: 20000}
+  poc_metrics_tertiary_attainment: {rows: 10000}
+  poc_metrics_total_fertility_rate: {rows: 10000}
+  poc_metrics_life_expectancy: {rows: 10000}
   dim_dataset: {rows: 40000}
   dim_dimension: {rows: 1000}
