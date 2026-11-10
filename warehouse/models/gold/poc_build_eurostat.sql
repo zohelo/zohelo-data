@@ -66,7 +66,7 @@ sampled as (
         code_list[list_position(dim_list, 'sex')] as sex_code_raw,
         code_list[list_position(dim_list, 's_adj')] as s_adj_code,
         code_list[list_position(dim_list, 'na_item')] as na_item_code,
-        code_list[list_position(dim_list, 'coicop')] as coicop_code,
+        code_list[list_position(dim_list, 'coicop18')] as coicop18_code,
         code_list[list_position(dim_list, 'indic_em')] as indic_em_code
     from silver
 ),
@@ -103,7 +103,7 @@ kept as (  -- the PoC sample: small, with breakdowns where they matter (sex), on
             when 'NAMA_10_PC' then unit_code = 'CP_EUR_HAB' and na_item_code = 'B1GQ'
             when 'UNE_RT_A' then unit_code = 'PC_ACT' and age_code = 'Y15-74'
             when 'UNE_RT_M' then unit_code = 'PC_ACT' and age_code = 'Y15-74'
-            when 'PRC_HICP_MANR' then unit_code = 'RCH_A' and coicop_code = 'CP00'
+            when 'PRC_HICP_MINR' then unit_code = 'RCH_A' and coicop18_code = 'TOTAL'
             when 'LFSI_EMP_A' then unit_code = 'PC_POP' and age_code = 'Y20-64' and indic_em_code in ('EMP_LFS', 'ACT')
             else false
         end

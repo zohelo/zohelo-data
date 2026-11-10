@@ -26,7 +26,7 @@ industry and construction output by enterprise are `business`. Stories about the
 | GDP, current prices | Gross domestic product at market prices (ESA 2010, B1GQ) | million EUR (Eurostat), US$ (WDI) | A | `eurostat:NAMA_10_GDP:CP_MEUR:B1GQ`, `world_bank_wdi:NY.GDP.MKTP.CD` | Size of the economy. In EUR or USD it moves with the exchange rate, so a rise is not growth. Poland's own headline is in PLN (Eurostat `CP_MNAC`). |
 | GDP volume growth | % change of chain-linked volumes on the previous year | % | A | `eurostat:NAMA_10_GDP:CLV_PCH_PRE:B1GQ`, WDI `NY.GDP.MKTP.KD.ZG` | Real growth. Poland's long-run trend is roughly 3–4 % a year; 2020 was the only post-1991 contraction. Below 2 % is weak for Poland, above 5 % is a boom. |
 | GDP per capita | GDP ÷ average population | EUR, US$ per person | A | `eurostat:NAMA_10_PC:CP_EUR_HAB:B1GQ`, WDI `NY.GDP.PCAP.CD` | For living-standard comparisons professionals use **PPS, EU27 = 100** (Eurostat `NAMA_10_PC`, unit `CP_PPS_EU27_2020_HAB`, or `prc_ppp_ind` volume index), not EUR at market rates. |
-| Inflation (headline) | In Poland: **CPI** of GUS, y/y change of the consumer price index, same month of the previous year = 100 | % | M | not loaded yet; we publish **HICP** `eurostat:PRC_HICP_MANR:RCH_A` and WDI `FP.CPI.TOTL.ZG` (CPI, annual average) | The NBP inflation target is **2.5 % ± 1 pp for CPI** ([NBP](https://nbp.pl/wp-content/uploads/2022/09/cel-polityki-pienieznej.pdf)). Inside the band is "on target"; the 2023 peak was in double digits. |
+| Inflation (headline) | In Poland: **CPI** of GUS, y/y change of the consumer price index, same month of the previous year = 100 | % | M | not loaded yet; we publish **HICP** `eurostat:PRC_HICP_MINR:RCH_A` and WDI `FP.CPI.TOTL.ZG` (CPI, annual average) | The NBP inflation target is **2.5 % ± 1 pp for CPI** ([NBP](https://nbp.pl/wp-content/uploads/2022/09/cel-polityki-pienieznej.pdf)). Inside the band is "on target"; the 2023 peak was in double digits. |
 | Core inflation | CPI excluding food and energy (NBP publishes four core measures) | % | M | not loaded | What the Monetary Policy Council (RPP) watches for persistent pressure. Headline minus core ≈ the food and energy effect. |
 
 Not yet in the platform but expected by any analyst (backlog candidates, in order of value): quarterly GDP
@@ -42,7 +42,7 @@ GDP per capita in PPS.
   national accounts ([Eurostat HICP metadata, example](https://ec.europa.eu/eurostat/cache/metadata/EN/prc_hicp_esmshi4_de.htm)).
   The two can differ by several tenths of a point and occasionally more. A Polish reader who sees "inflacja"
   expects CPI. Label HICP always as "HICP" and use it only for EU comparisons.
-- **Monthly y/y vs annual average.** `PRC_HICP_MANR` is the y/y rate of one month; WDI `FP.CPI.TOTL.ZG` is the
+- **Monthly y/y vs annual average.** `PRC_HICP_MINR` (unit `RCH_A`) is the y/y rate of one month; WDI `FP.CPI.TOTL.ZG` is the
   annual-average rate. December y/y and the annual average of the same year are different numbers. Never put them
   side by side as "the latest inflation".
 - **Index bases.** GUS publishes the CPI as an index (e.g. 104.3 = +4.3 %) against several bases: same month of the

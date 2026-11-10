@@ -44,7 +44,7 @@ DATASETS = {
     "NAMA_10_PC": ("A", "unit_code = 'CP_EUR_HAB' and " + HAS.format("B1GQ")),
     "UNE_RT_A": ("A", "unit_code = 'PC_ACT' and " + HAS.format("Y15-74")),
     "UNE_RT_M": ("M", "unit_code = 'PC_ACT' and " + HAS.format("Y15-74")),
-    "PRC_HICP_MANR": ("M", "unit_code = 'RCH_A' and " + HAS.format("CP00")),
+    "PRC_HICP_MINR": ("M", "unit_code = 'RCH_A' and " + HAS.format("TOTAL")),
     "LFSI_EMP_A": ("A", "unit_code = 'PC_POP' and " + HAS.format("Y20-64")),
 }
 COLUMNS = (

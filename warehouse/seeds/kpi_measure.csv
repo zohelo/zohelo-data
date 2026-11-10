@@ -9,7 +9,7 @@ gdp_per_capita,eurostat,eurostat:NAMA_10_PC:CP_EUR_HAB:B1GQ,EUR per inhabitant,1
 gdp_per_capita,world_bank_wdi,world_bank_wdi:NY.GDP.PCAP.CD,current US$,2,usd_per_person
 gdp_volume_growth,eurostat,eurostat:NAMA_10_GDP:CLV_PCH_PRE:B1GQ,"chain-linked volumes, % change on previous period",1,
 gdp_volume_growth,world_bank_wdi,world_bank_wdi:NY.GDP.MKTP.KD.ZG,annual %,2,
-inflation,eurostat,eurostat:PRC_HICP_MANR:RCH_A,"HICP, annual rate of change, monthly",1,
+inflation,eurostat,eurostat:PRC_HICP_MINR:RCH_A,"HICP (COICOP 2018), annual rate of change, monthly",1,
 inflation,world_bank_wdi,world_bank_wdi:FP.CPI.TOTL.ZG,"CPI, annual %",2,
 unemployment_rate,eurostat,eurostat:UNE_RT_A:PC_ACT,"annual, 15-74",1,
 unemployment_rate,world_bank_wdi,world_bank_wdi:SL.UEM.TOTL.ZS,ILO modelled estimate,3,
