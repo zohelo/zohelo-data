@@ -16,3 +16,4 @@ cc_by_4_0_world_bank_icp,CC BY 4.0 (World Bank ICP),https://datacatalog.worldban
 gov_pl_terms_krus,gov.pl terms (official materials free to use; KRUS),https://www.gov.pl/web/gov/prawa-autorskie,"Źródło: KRUS / Source: KRUS (Agricultural Social Insurance Fund)",true,false
 cc_by_4_0_world_bank_ids,CC BY 4.0 (World Bank IDS),https://datacatalog.worldbank.org/search/dataset/0038015/international-debt-statistics,"Source: World Bank, International Debt Statistics",true,false
 unresolved,Terms not established,https://github.com/zohelo/zohelo-data/blob/main/ingestion/register.yaml,Source: see the source register,false,false
+oecd_terms,OECD Terms and Conditions (Data),https://www.oecd.org/en/about/terms-conditions.html,"Source: OECD, OECD Data Explorer",true,false

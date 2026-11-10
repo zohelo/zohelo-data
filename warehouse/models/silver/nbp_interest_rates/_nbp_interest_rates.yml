@@ -1,0 +1,24 @@
+version: 2
+models:
+  - name: nbp_policy_rates
+    description: >-
+      Official NBP interest rates from bronze.nbp_interest_rate_items: one row per rate and MPC
+      change (effective_from), newest version of the archive file, history from 1998-02-26. rate_pct
+      is percent per year; valid_to is the next change of the same rate (exclusive), null while in
+      force. Rates: ref (reference rate), lom (lombard), dep (deposit, from 1998), red (rediscount of
+      bills), dys (discount of bills, from 2014). Names PL/EN from the current-rates file.
+    tests:
+      - unique:
+          column_name: "rate_code || '|' || cast(effective_from as varchar)"
+    columns:
+      - name: rate_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['ref', 'lom', 'dep', 'red', 'dys']}}}]
+      - name: name_en
+        tests: [not_null]
+      - name: effective_from
+        tests: [not_null]
+      - name: rate_pct
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the archive file (lineage to Landing/Archive).
+        tests: [not_null]

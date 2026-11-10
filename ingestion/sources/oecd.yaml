@@ -1,0 +1,39 @@
+source_system: oecd
+description: "OECD Data Explorer — selected dataflows as SDMX CSV (composite leading indicators)"
+
+# Extraction strategy (docs/landing.md). The OECD Data Explorer has no bulk file per dataflow; its SDMX
+# REST API (https://sdmx.oecd.org/public/rest/data/<agency>,<dataflow>,<version>/<key>?format=csvfile)
+# returns a whole selection, every series with its full history, in one response. Each entity is one
+# fixed query landed through the shared bulk_file pattern, one request per entity and run (the API is
+# rate limited without a published threshold), written only when the SHA-256 changed. The server's
+# Last-Modified is the structure date (2024-03-07), not the data's, so version = download time.
+# Re-use under the OECD Terms and Conditions (register GL-003). Proven from Actions by the Dev probe
+# 42776278659: cli = 240,988 observations, 57 areas, 21 MB.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: cli              # DSD_STES@DF_CLI: composite leading, business and consumer confidence indicators, all areas
+        url: "https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_CLI,/all?format=csvfile"
+        format: raw
+        version: ingested
+  initial: bulk
+  production: snapshot                  # each response is the complete history of its selection
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; release: CLI monthly, around the second week; weekly check (Wednesday 05:10), unchanged bytes skipped
+    - {cron: "10 5 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/oecd/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.oecd_observations, bronze.oecd_rejected_files]
+silver: [silver.oecd_cli]
+gold: []
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (owner decision #875): one selection of ~241,000 rows; rebuilt in full.
+refresh: {mode: full, decided: "#875"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

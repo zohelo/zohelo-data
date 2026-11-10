@@ -41,6 +41,8 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   eurostat_dimensions: {rows: 200000}  # 54,101
   nbp_fx_rates: {rows: 1000000}  # 428,392
   nbp_gold_fixings: {rows: 20000}  # 3,479
+  oecd_cli: {rows: 400000}  # 240,988 (Dev probe 42776278659)
+  nbp_policy_rates: {rows: 2000}  # 390 (Dev probe 42776278659: 96 changes since 1998)
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865
   teryt_terc: {rows: 20000}  # 4,360
