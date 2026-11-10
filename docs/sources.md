@@ -671,3 +671,26 @@ publication time (text and UTC) only, never descriptions, article text or images
 `silver.news_headlines`: deduplicated by canonical URL, then outlet + normalised title on the same day;
 400 days. Outlets: seed `news_outlet.csv`. The raw feed copies keep the outlets' descriptions; they stay
 in Landing/Archive as provenance (retention keeps what Bronze holds), see topics.md, "Storage".
+
+## GDELT DOC 2.0 API (`gdelt`, topics)
+
+**Implemented (10 Nov 2026, register CD-030; topics layer O32).** Per `gdelt_query` row of the seed
+`topic_signal.csv` (an English query with `sourcecountry:PL`; GDELT searches machine-translated coverage), two
+small JSON timelines a day from `https://api.gdeltproject.org/api/v2/doc/doc`: `mode=timelinevolraw` (matching
+articles per day and all monitored articles, `norm`) and `mode=timelinetone`; 3 months (the API's window) on the
+first landing, 2 weeks afterwards. Files are built by `ingestion/to_landing/gdelt/` from the seed and landed
+through the shared `bulk_file` pattern. GDELT allows one request every 5 seconds and refuses shared GitHub runner
+addresses for long stretches (HTTP 429, Dev probes 42784542844, 42785760450: one of six queries answered after
+back-off), so the daily run is best effort: 6 s between requests, a different first topic each day, stop after 3
+refused files in a row or 40 minutes; stale topics show in `gold.topic_quality`. Bronze `bronze.gdelt_timeline`
+(accumulating), Silver `silver.topic_volume` (newest value per topic and day; volume_share = volume / norm).
+Terms: unrestricted use with a citation of the GDELT Project and a link (gdeltproject.org/about.html).
+
+## Wikimedia pageviews (`wikimedia_pageviews`, topics)
+
+**Implemented (10 Nov 2026, register CD-025; topics layer O32).** Per `wiki_article` row of `topic_signal.csv`
+(`<lang>:<Title>`), daily user views from the pageviews REST API
+(`https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/<lang>.wikipedia.org/all-access/user/<Title>/daily/<start>/<end>`),
+455 days on the first landing, 14 days afterwards, 0.2 s apart, with the platform's user agent (Wikimedia's
+User-Agent policy). A 404 (renamed article) is a warning. Bronze `bronze.wiki_pageviews` (accumulating), Silver
+`silver.topic_attention` (views summed over a topic's articles per day). Pageview data: CC0 1.0.
