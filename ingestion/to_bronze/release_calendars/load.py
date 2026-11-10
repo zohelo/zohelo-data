@@ -72,7 +72,7 @@ def eurostat(body: bytes) -> list[dict[str, Any]]:
 
 
 class _GusList(HTMLParser):
-    """Titles and links of <h3 class="title"><a href> inside the "Publikacje GUS" tab of a day page."""
+    """Titles (and links, once published) of <h3 class="title"> inside the "Publikacje GUS" tab of a day page."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -85,8 +85,10 @@ class _GusList(HTMLParser):
             self.in_h2, self.h2 = True, ""
         elif tag == "h3" and "title" in (a.get("class") or ""):
             self.in_title = True
-        elif tag == "a" and self.in_title and self.section == "gus":
-            self.items.append({"url": a.get("href") or "", "title": ""})
+            if self.section == "gus":  # announced publications have no link until they are out
+                self.items.append({"url": "", "title": ""})
+        elif tag == "a" and self.in_title and self.section == "gus" and self.items:
+            self.items[-1]["url"] = a.get("href") or ""
 
     def handle_endtag(self, tag):
         if tag == "h2":
@@ -115,7 +117,9 @@ def gus(body: bytes, entity: str) -> list[dict[str, Any]]:
         {
             "release_date": date,
             "title": " ".join(i["title"].split()),
-            "url": i["url"] if i["url"].startswith("http") else GUS_BASE + i["url"],
+            "url": i["url"]
+            if i["url"].startswith("http")
+            else GUS_BASE + (i["url"] or f"/kalendarium/{day[6:]}-{day[4:6]}-{day[:4]}.html"),
         }
         for i in parser.items
         if i["title"].strip()

@@ -421,6 +421,7 @@ PUBLISHED_SCHEMAS = {
     "kpi/*/latest.json": "kpi_latest",
     "feed/changes.json": "feed_changes",
     "geo/*.geojson": "geo",
+    "v2/topics.json": "v2/topics",
 }
 JSON_TYPES = {
     "string": lambda v: isinstance(v, str),

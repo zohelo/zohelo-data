@@ -342,10 +342,13 @@ in `warehouse.yaml`); until then the file is not written.
 | …topics[].trend | string | `up`, `down`, `flat` against the previous window |
 | …topics[].kpi_keys | array | v2 KPI keys linked to the topic, `main` ones first; may be empty |
 | …topics[].headlines[] | array | at most 5, newest first: `{ title, url, outlet, lang, published_at }` |
-| …topics[].next_release | object or null | `{ date, source_key, title_pl, title_en }` of the next release of a main KPI |
+| …topics[].next_release | object or null | `{ date, source_key, title_pl, title_en }` of the next release of a main KPI (`source_key` = the publisher's key, e.g. `eurostat`, `gus`, `ecb`, or the seed row's source; official calendars publish the title in one language, given in both fields) |
 | …topics[].signals | object | `{ news, volume, attention }`: the z-scores behind the heat, for "why is this hot" |
 
-Size: ≤ 150 kB gzipped. Headlines are links with the outlet's name; no article text is ever in the file.
+Size: ≤ 150 kB gzipped. Headlines are links with the outlet's name; no article text is ever in the file. Schema
+`warehouse/published/schemas/v2/topics.schema.json`, fixture `warehouse/published/fixtures/v2/topics.json`. Until
+`topics.publish` is true the same document goes to the internal review copy `06_published/v1/review/topics.json`
+(not part of this contract; [topics.md](topics.md), "Internal review").
 
 ## status.json
 
