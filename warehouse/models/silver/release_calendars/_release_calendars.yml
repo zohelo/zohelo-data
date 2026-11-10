@@ -1,0 +1,22 @@
+version: 2
+models:
+  - name: releases
+    description: >-
+      Announced releases of official statistics for the topics layer (O32): Eurostat euro indicators, GUS
+      kalendarium (Publikacje GUS), ECB statistical calendar and Governing Council meetings; newest copy of each
+      calendar file; kpi_keys links a release to v2 KPIs (seed release_kpi, Eurostat dataset codes). NBP and the
+      Ministry of Finance are parked (bot protection, refused connections); the seed release_calendar.csv stays the
+      manual fallback.
+    columns:
+      - name: release_id
+        description: md5 of publisher, release date and title.
+        tests: [not_null, unique]
+      - name: publisher
+        tests: [not_null, {accepted_values: {arguments: {values: [eurostat, gus, ecb]}}}]
+      - name: release_date
+        tests: [not_null]
+      - name: title
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the calendar file (lineage to Landing/Archive).
+        tests: [not_null]

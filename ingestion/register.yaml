@@ -8355,3 +8355,209 @@ sources:
     references:
     - https://notesfrompoland.com/feed/
     - https://notesfrompoland.com/
+- id: TP-010
+  name: Eurostat euro indicators release calendar
+  short_name: Eurostat release calendar
+  provider: Eurostat
+  source_system: release_calendars
+  current: true
+  status: silver
+  family: J
+  kpi: false
+  geography: multicountry-Europe
+  provider_type: international-public
+  domains: [release-calendar, official-statistics]
+  entities: [release]
+  granularity: 'One euro-indicator release: date and time (UTC), title, reference period, dataset codes, theme.'
+  coverage: Forthcoming releases; past days of the window kept in Bronze (latest copy per page).
+  access:
+    endpoint: 'https://ec.europa.eu/eurostat/o/calendars/eventsJson?start={from}&end={to}&isEuroindicator=true'
+    kind: api
+    interfaces: [JSON (the page's event feed), HTML]
+    auth: public
+    cost: free
+    limits: 'Window 14 days back to 90 days ahead, one request per run.'
+  licence:
+    status: open
+    notes: 'Eurostat reuse policy (Commission Decision 2011/833/EU, CC BY 4.0) covers the website content; the feed is the one the public calendar page loads. The documented ICS address (cache/RELEASE_CALENDAR/calendar_EN.ics) answers 404.'
+  updates: Calendars change when dates are announced or moved.
+  ingestion:
+    history: None needed; forthcoming dates.
+    incremental: Daily re-download; written only when the SHA-256 changed.
+    identifiers: publisher + date + title
+  modelling:
+    notes: Release dates of a topic's main KPIs add to its heat (release bonus) and give topics.json next_release.
+    overlap: The manual seed release_calendar.csv; NBP and MF dates stay there while their calendars are parked.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers:
+    - Calendar layout changes reject the file (decoder checks); watch bronze.release_calendars_rejected_files.
+    references:
+    - https://ec.europa.eu/eurostat/news/euro-indicators/release-calendar
+    - https://ec.europa.eu/eurostat/web/main/help/copyright-notice
+- id: TP-011
+  name: GUS publication calendar (kalendarium)
+  short_name: GUS kalendarium
+  provider: Główny Urząd Statystyczny (GUS)
+  source_system: release_calendars
+  current: true
+  status: silver
+  family: J
+  kpi: false
+  geography: Poland
+  provider_type: national-public
+  domains: [release-calendar, official-statistics]
+  entities: [release]
+  granularity: 'One GUS publication on a day: title and link (signal releases at 09:30 Warsaw; the page gives no time).'
+  coverage: Forthcoming releases; past days of the window kept in Bronze (latest copy per page).
+  access:
+    endpoint: 'https://stat.gov.pl/kalendarium/{DD-MM-YYYY}.html'
+    kind: api
+    interfaces: [HTML, PDF]
+    auth: public
+    cost: free
+    limits: '53 day pages per run (7 back, 45 ahead), 1 second apart.'
+  licence:
+    status: open-conditional
+    notes: 'stat.gov.pl copyright terms (D23): copying and own analyses allowed with the source given. robots.txt allows the pages. No machine-readable calendar (month and year calendars are HTML and PDF).'
+  updates: Calendars change when dates are announced or moved.
+  ingestion:
+    history: None needed; forthcoming dates.
+    incremental: Daily re-download; written only when the SHA-256 changed.
+    identifiers: publisher + date + title
+  modelling:
+    notes: Release dates of a topic's main KPIs add to its heat (release bonus) and give topics.json next_release.
+    overlap: The manual seed release_calendar.csv; NBP and MF dates stay there while their calendars are parked.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers:
+    - Calendar layout changes reject the file (decoder checks); watch bronze.release_calendars_rejected_files.
+    references:
+    - https://stat.gov.pl/kalendarium/
+    - https://stat.gov.pl/copyright
+- id: TP-012
+  name: 'NBP calendars: MPC meetings and statistics publications'
+  short_name: NBP calendars
+  provider: Narodowy Bank Polski (NBP)
+  current: true
+  status: parked
+  family: J
+  kpi: false
+  geography: Poland
+  provider_type: national-public
+  domains: [release-calendar, official-statistics]
+  entities: [release]
+  granularity: 'MPC meeting dates; statistics publication dates.'
+  coverage: Forthcoming releases; past days of the window kept in Bronze (latest copy per page).
+  access:
+    endpoint: 'https://nbp.pl/polityka-pieniezna/decyzje-rpp/'
+    kind: api
+    interfaces: [HTML]
+    auth: public
+    cost: free
+    limits: 'Not landed.'
+  licence:
+    status: unresolved
+    notes: 'Not reachable: nbp.pl answers automated clients with a bot-protection page ("Pardon Our Interruption", Dev probe 42784902820); never circumvented. NBP terms as PLG-006. MPC dates stay in the manual seed release_calendar.csv.'
+  updates: Calendars change when dates are announced or moved.
+  ingestion:
+    history: None needed; forthcoming dates.
+    incremental: Daily re-download; written only when the SHA-256 changed.
+    identifiers: publisher + date + title
+  modelling:
+    notes: Release dates of a topic's main KPIs add to its heat (release bonus) and give topics.json next_release.
+    overlap: The manual seed release_calendar.csv; NBP and MF dates stay there while their calendars are parked.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers:
+    - Parked: no reachable route without circumventing bot protection or a blocked host.
+    references:
+    - https://nbp.pl/polityka-pieniezna/decyzje-rpp/
+- id: TP-013
+  name: Ministry of Finance publication calendar
+  short_name: MF calendar
+  provider: Ministerstwo Finansów
+  current: true
+  status: parked
+  family: J
+  kpi: false
+  geography: Poland
+  provider_type: national-public
+  domains: [release-calendar, official-statistics]
+  entities: [release]
+  granularity: 'Budget execution and public debt publication dates.'
+  coverage: Forthcoming releases; past days of the window kept in Bronze (latest copy per page).
+  access:
+    endpoint: 'https://www.gov.pl/web/finanse'
+    kind: api
+    interfaces: [HTML]
+    auth: public
+    cost: free
+    limits: 'Not landed.'
+  licence:
+    status: unresolved
+    notes: 'Not reachable: www.gov.pl refuses connections from GitHub runners (Dev probe 42784902820); the MF sources PLG-007/008/009 may need another route too. No machine-readable calendar found.'
+  updates: Calendars change when dates are announced or moved.
+  ingestion:
+    history: None needed; forthcoming dates.
+    incremental: Daily re-download; written only when the SHA-256 changed.
+    identifiers: publisher + date + title
+  modelling:
+    notes: Release dates of a topic's main KPIs add to its heat (release bonus) and give topics.json next_release.
+    overlap: The manual seed release_calendar.csv; NBP and MF dates stay there while their calendars are parked.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers:
+    - Parked: no reachable route without circumventing bot protection or a blocked host.
+    references:
+    - https://www.gov.pl/web/finanse
+- id: TP-014
+  name: ECB statistical calendar and Governing Council meetings
+  short_name: ECB calendars
+  provider: European Central Bank
+  source_system: release_calendars
+  current: true
+  status: silver
+  family: J
+  kpi: false
+  geography: euro area
+  provider_type: international-public
+  domains: [release-calendar, official-statistics]
+  entities: [release]
+  granularity: 'One ECB statistical release (date, time Frankfurt, title, dataset, reference period, tentative) or Council meeting.'
+  coverage: Forthcoming releases; past days of the window kept in Bronze (latest copy per page).
+  access:
+    endpoint: 'https://www.ecb.europa.eu/press/calendars/statscal/html/index.en.html'
+    kind: api
+    interfaces: [HTML]
+    auth: public
+    cost: free
+    limits: 'Two pages per run, 5 seconds apart.'
+  licence:
+    status: open-conditional
+    notes: 'ECB website copyright: reproduction allowed with the source acknowledged (https://www.ecb.europa.eu/services/disclaimer/html/index.en.html). robots.txt Crawl-delay 5 is respected.'
+  updates: Calendars change when dates are announced or moved.
+  ingestion:
+    history: None needed; forthcoming dates.
+    incremental: Daily re-download; written only when the SHA-256 changed.
+    identifiers: publisher + date + title
+  modelling:
+    notes: Release dates of a topic's main KPIs add to its heat (release bonus) and give topics.json next_release.
+    overlap: The manual seed release_calendar.csv; NBP and MF dates stay there while their calendars are parked.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers:
+    - Calendar layout changes reject the file (decoder checks); watch bronze.release_calendars_rejected_files.
+    references:
+    - https://www.ecb.europa.eu/press/calendars/statscal/html/index.en.html
+    - https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html
