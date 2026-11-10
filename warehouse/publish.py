@@ -3,13 +3,15 @@
 Reads Gold tables from the R2 Data Catalog and the KPI seeds in the repository and writes the
 files described in docs/published.md (schemas in warehouse/published/schemas/): ``catalog/catalog.json``,
 ``catalog/<table>.parquet``, ``manifest.json``, ``kpi/<kpi_key>/latest.json`` / ``series.parquet``,
-``feed/calendar.ics``, ``status.json`` and ``geo/country.geojson`` / ``geo/voivodeship.geojson``.
+``feed/calendar.ics``, ``status.json`` and ``geo/country.geojson`` / ``geo/voivodeship.geojson``; and the topics
+ranking (O32): ``06_published/v2/topics.json`` once warehouse.yaml ``topics.publish`` is true, until then only the
+internal review copy ``06_published/v1/review/topics.json`` (data portal, after sign-in) and the run's job summary.
 """
 
 from __future__ import annotations
 
 import csv
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 import io
 import json
 from pathlib import Path
@@ -25,6 +27,10 @@ LEVELS = {"country": "country", "wojewodztwo": "voivodeship"}  # Gold geography_
 FREQ_RANK = {"D": 1, "B": 2, "W": 3, "M": 4, "Q": 5, "S": 6, "A": 7}
 SKIP = {"fx_rate": "one value per currency; latest.json has no currency field"}
 LATEST_LIMIT = 100_000  # bytes, docs/published.md size limits (D22)
+TOPICS_KEY = "06_published/v2/topics.json"  # docs/published.md, "topics.json"
+TOPICS_REVIEW_KEY = "06_published/v1/review/topics.json"  # internal review (docs/topics.md, "Internal review")
+TOPICS_GZIP_LIMIT = 150_000  # bytes gzipped, docs/published.md size limits
+TOPIC_PERIODS = ("day", "week", "month", "quarter", "year")
 STATUS_LIMIT = 50_000  # bytes, docs/published.md size limits
 SERIES_LIMIT = 20_000_000  # bytes, docs/published.md size limits
 # Contract file catalog/<name>.parquet → Gold table (seeds kpi, kpi_measure, domain, unit, licence; models
@@ -573,6 +579,131 @@ def manifest_json(client, prefix: str) -> int:
     return len(obj["metrics"])
 
 
+def topics_json(con: duckdb.DuckDBPyConnection, cfg: dict[str, Any], generated_at: str) -> dict[str, Any]:
+    """topics.json (docs/published.md) from the tables topic_rank, topic, topic_kpi, topic_matches, news_outlet,
+    releases, release_calendar and kpi_v2_map of a DuckDB connection (Gold tables and seeds)."""
+    as_of = con.execute("select coalesce(max(window_to), current_date) from topic_rank").fetchone()[0]
+    kpis: dict[str, list[str]] = {}
+    for topic_key, kpi_key in con.execute(
+        "select topic_key, kpi_key from topic_kpi order by topic_key, role = 'main' desc, kpi_key"
+    ).fetchall():
+        kpis.setdefault(topic_key, []).append(kpi_key)
+    releases = con.execute(
+        """
+        with announced as (
+            select
+                release_date as day, publisher as source_key, title as title_pl, title as title_en, trim(k) as kpi_key
+            from releases, unnest(string_split(kpi_keys, ';')) as u (k)
+            where kpi_keys != ''
+            union all
+            select cast(cast(r.release_at as timestamptz) as date), r.source_key, r.title_pl, r.title_en, m.v2_key
+            from release_calendar as r inner join kpi_v2_map as m on r.kpi_key = m.concept_key
+        )
+        select t.topic_key, a.day, a.source_key, a.title_pl, a.title_en
+        from announced as a inner join topic_kpi as t on a.kpi_key = t.kpi_key and t.role = 'main'
+        where a.day >= ?
+        qualify row_number() over (partition by t.topic_key order by a.day, a.source_key, a.title_pl) = 1
+        """,
+        [as_of],
+    ).fetchall()
+    next_release = {
+        r[0]: {"date": r[1].isoformat(), "source_key": r[2], "title_pl": r[3], "title_en": r[4]} for r in releases
+    }
+    periods: dict[str, Any] = {}
+    for period in TOPIC_PERIODS:
+        days = int(cfg["periods"][period])
+        window = {
+            "from": (as_of - timedelta(days=days - 1)).isoformat(),
+            "to": as_of.isoformat(),
+        }
+        ranked = con.execute(
+            """
+            select r.topic_key, t.name_pl, t.name_en, r.rank, r.score, r.trend, r.z_news, r.z_volume, r.z_attention
+            from topic_rank as r inner join topic as t on r.topic_key = t.topic_key
+            where r.period = ? and r.rank <= ? order by r.rank
+            """,
+            [period, int(cfg["max_topics"])],
+        ).fetchall()
+        topics = []
+        for key, name_pl, name_en, rank, score, trend, z_news, z_volume, z_attention in ranked:
+            headlines = con.execute(
+                """
+                select m.title, m.url, coalesce(o.name, m.outlet_key), m.lang, m.published_at
+                from topic_matches as m left join news_outlet as o on m.outlet_key = o.outlet_key
+                where m.topic_key = ? and m.day between ? and ? and m.url like 'https://%'
+                order by m.published_at desc, m.headline_id limit ?
+                """,
+                [key, window["from"], window["to"], int(cfg["max_headlines"])],
+            ).fetchall()
+            topics.append(
+                {
+                    "topic_key": key,
+                    "name_pl": name_pl,
+                    "name_en": name_en,
+                    "rank": int(rank),
+                    "heat": round(float(score), 2),
+                    "trend": trend,
+                    "kpi_keys": kpis.get(key, []),
+                    "headlines": [
+                        {"title": t, "url": u, "outlet": o, "lang": lang, "published_at": iso(p)}
+                        for t, u, o, lang, p in headlines
+                    ],
+                    "next_release": next_release.get(key),
+                    "signals": {
+                        name: None if z is None else round(float(z), 2)
+                        for name, z in (("news", z_news), ("volume", z_volume), ("attention", z_attention))
+                    },
+                }
+            )
+        periods[period] = {"window": window, "topics": topics}
+    return schema_checked({"version": 2, "generated_at": generated_at, "periods": periods}, "v2/topics")
+
+
+def topics_review(doc: dict[str, Any]) -> str:
+    """The job-summary review of topics.json during the internal period: top topics per period with headlines."""
+    lines = [f"## Topics (internal review, {doc['generated_at']})", ""]
+    for period, block in doc["periods"].items():
+        lines += [f"### {period} ({block['window']['from']} … {block['window']['to']})", ""]
+        lines += ["| # | topic | heat | trend | z news/volume/attention | headline |", "|---|---|---|---|---|---|"]
+        for t in block["topics"]:
+            z = "/".join(
+                "–" if t["signals"][k] is None else str(t["signals"][k]) for k in ("news", "volume", "attention")
+            )
+            first = t["headlines"][0] if t["headlines"] else None
+            title = first["title"].replace("|", "\\|") if first else ""
+            headline = f"[{title}]({first['url']}) ({first['outlet']})" if first else ""
+            lines.append(f"| {t['rank']} | {t['name_pl']} | {t['heat']} | {t['trend']} | {z} | {headline} |")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def topics(cat, client, generated_at: str) -> dict[str, Any]:
+    """Write topics.json (publish on) or its internal review copy (publish off); returns sizes and top topics."""
+    import gzip
+
+    import yaml
+
+    from ingestion.common.report import step_summary
+
+    cfg = yaml.safe_load((PROJECT / "warehouse.yaml").read_text())["topics"]
+    con = duckdb.connect()
+    for name in ("topic_rank", "topic_matches"):
+        con.register(name, gold(cat, "gold", name))
+    for name in ("topic", "topic_kpi", "news_outlet", "release_calendar", "kpi_v2_map", "release_kpi"):
+        con.register(name, gold(cat, "gold", name))
+    con.register("releases", gold(cat, "silver", "releases"))
+    doc = topics_json(con, cfg, generated_at)
+    body = json.dumps(doc, ensure_ascii=False, separators=(",", ":")).encode()
+    zipped = len(gzip.compress(body))
+    if zipped > TOPICS_GZIP_LIMIT:
+        raise ValueError(f"topics.json is {zipped} bytes gzipped, over {TOPICS_GZIP_LIMIT}")
+    key = TOPICS_KEY if cfg.get("publish") else TOPICS_REVIEW_KEY
+    put(client, key, body)
+    step_summary(topics_review(doc))
+    top = {p: [t["topic_key"] for t in b["topics"][:3]] for p, b in doc["periods"].items()}
+    return {"key": key, "published": bool(cfg.get("publish")), "bytes": len(body), "gzip_bytes": zipped, "top": top}
+
+
 def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     """Write kpi/<kpi_key>/latest.json for every published KPI under prefix."""
     from pyiceberg.exceptions import NoSuchTableError
@@ -640,5 +771,7 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     result["manifest"] = manifest_json(client, prefix)
     result["calendar"] = calendar(client, prefix, generated_at)
     result["geo"] = geo(cat, client, prefix)
+    if prefix == PREFIX:  # topics: the production run only (a trial prefix writes v1 files alone)
+        result["topics"] = topics(cat, client, generated_at)
     annotate("notice", "gold.publish: latest", result)
     return result
