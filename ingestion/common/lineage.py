@@ -23,7 +23,18 @@ from ingestion.common.r2 import landing_objects, latest_snapshot, req, s3
 from ingestion.common.report import annotate
 
 # Eurostat, GUS BDL, GLEIF: entities.verify (#875)
-SOURCES = ("gugik_prg", "gus_teryt", "nbp", "nbp_interest_rates", "oecd", "world_bank_wdi")
+SOURCES = (
+    "gugik_prg",
+    "gus_teryt",
+    "nbp",
+    "nbp_interest_rates",
+    "oecd",
+    "world_bank_wdi",
+    "news_feeds",
+    "release_calendars",
+)
+# Accumulating sources (every landed copy stays in Bronze, docs/topics.md): no latest-only gate.
+ACCUMULATING = ("news_feeds",)
 
 
 def summarize(name: str, landing_set: set[str], proven: set[str], meta: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -112,7 +123,10 @@ def main(argv=None) -> int:
     bucket = req("STORAGE_LANDING_BUCKET_NAME")
     meta = landing_objects(client, bucket, args.source)
     held, rejected = bronze_hashes(args.source)
-    passed_latest, report_latest = check_latest_only(meta, held)
+    if args.source in ACCUMULATING:
+        passed_latest, report_latest = True, {"policy": "accumulating: every landed copy is kept in Bronze"}
+    else:
+        passed_latest, report_latest = check_latest_only(meta, held)
     if not passed_latest:
         annotate("error", f"{args.source} Bronze latest-only breach", report_latest)
     loaded = set().union(*held.values()) if held else set()

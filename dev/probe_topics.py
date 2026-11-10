@@ -279,6 +279,41 @@ def gdelt() -> None:
     emit("gdelt retry", log)
 
 
+def calendars2() -> None:
+    for url in ["https://ec.europa.eu/eurostat/web/main/news/release-calendar",
+                "https://ec.europa.eu/eurostat/news/euro-indicators/release-calendar",
+                "https://ec.europa.eu/eurostat/news/internet-calendar"]:
+        r, err = get(url)
+        if r is None:
+            emit("eurostat page", {"url": url, "error": err})
+            continue
+        hits = sorted(set(re.findall(r"[\"'(]([^\"'()\s]*(?:\.ics|ical|iCal|eventsJson|calendar[^\"'()\s]*\?)[^\"'()\s]*)", r.text)))[:40]
+        ctx = [r.text[max(0, m.start() - 150): m.end() + 250] for m in re.finditer(r"subscri|\.ics", r.text)][:4]
+        emit("eurostat page", {"url": url, "status": r.status_code, "final": r.url, "hits": hits, "ctx": ctx})
+        time.sleep(2)
+    r, err = get("https://stat.gov.pl/kalendarium/11-2026.html")
+    if r is not None:
+        text = r.text
+        i = text.find("12-11-2026")
+        emit("gus month html", {"len": len(text), "snip": text[i - 1500: i + 1800] if i > 0 else text[-3000:]})
+        body = re.sub(r"\s+", " ", re.sub(r"<script.*?</script>|<style.*?</style>", " ", text, flags=re.S))
+        plain = re.sub(r"<[^>]+>", " | ", body)
+        j = plain.find("Kalendarium", plain.find("Kalendarium") + 20)
+        emit("gus month text", plain[j: j + 3800])
+    time.sleep(2)
+    r, err = get("https://stat.gov.pl/kalendarium/12-11-2026.html")
+    if r is not None:
+        body = re.sub(r"\s+", " ", re.sub(r"<script.*?</script>|<style.*?</style>", " ", r.text, flags=re.S))
+        plain = re.sub(r"<[^>]+>", " | ", body)
+        j = plain.find("12.11.2026") if "12.11.2026" in plain else plain.find("Kalendarium", plain.find("Kalendarium") + 20)
+        emit("gus day text", plain[max(0, j - 200): j + 3500])
+    for url in ["https://stat.gov.pl/en/release-calendar/", "https://stat.gov.pl/kalendarz-roczny/"]:
+        r, err = get(url)
+        emit("gus other", {"url": url, "status": getattr(r, "status_code", err), "ctype": r.headers.get("Content-Type") if r is not None else None,
+                           "links": sorted(set(re.findall(r'href="([^"]*(?:kalendar|calendar|xls|pdf|ics)[^"]*)"', r.text)))[:30] if r is not None else None})
+        time.sleep(2)
+
+
 if __name__ == "__main__":
-    {"news": news, "calendars": calendars, "signals": signals, "gdelt": gdelt}[sys.argv[1]]()
+    {"news": news, "calendars": calendars, "signals": signals, "gdelt": gdelt, "calendars2": calendars2}[sys.argv[1]]()
     print(json.dumps({"annotations": COUNT["n"]}))
