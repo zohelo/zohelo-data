@@ -21,3 +21,4 @@ ecb,GL-016,EBC Data Portal,ECB Data Portal,European Central Bank,cube,file,inter
 world_bank_icp,GL-011,Bank Światowy ICP,World Bank International Comparison Program,World Bank,cube,file,international-public,cc_by_4_0_world_bank_icp,https://www.worldbank.org/en/programs/icp
 krus,PLS-011,KRUS podstawowe dane statystyczne,KRUS basic benefit statistics,KRUS,cube,file,national-public,gov_pl_terms_krus,https://www.gov.pl/web/krus/podstawowe-dane-statystyczne-z-zakresu-swiadczeniobiorcow
 world_bank_ids,GL-007,Bank Światowy IDS,World Bank International Debt Statistics,World Bank,cube,file,international-public,cc_by_4_0_world_bank_ids,https://www.worldbank.org/en/programs/debt-statistics/ids
+oecd,GL-003,OECD Data Explorer,OECD Data Explorer,OECD,cube,file,international-public,oecd_terms,https://www.oecd.org/en/data/insights/data-explainers/2024/09/api.html
