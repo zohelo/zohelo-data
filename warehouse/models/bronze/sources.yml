@@ -202,6 +202,21 @@ sources:
       tone), series, date, value and norm as source text; partitioned by entity (<topic>__<mode>).
   - name: gdelt_rejected_files
     description: GDELT Landing files the Bronze decoder rejected, with the reason.
+- name: release_calendars
+  description: Official release calendars (Eurostat euro indicators, GUS kalendarium, ECB) for the topics layer (O32)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/release_calendars/
+    loaded_by: ingestion/to_bronze/release_calendars/
+    config: ingestion/sources/release_calendars.yaml
+  tables:
+  - name: release_calendar_items
+    description: >-
+      One row per announced release of the newest copy of each calendar file: publisher, date, time, title, link,
+      reference period, dataset codes, tentative flag, item id; partitioned by entity (calendar file).
+  - name: release_calendars_rejected_files
+    description: Calendar Landing files the Bronze decoder rejected (changed layout), with the reason.
 - name: wikimedia_pageviews
   description: Wikimedia pageviews REST API — daily user views of the Wikipedia articles listed per topic (topics, O32)
   database: r2
