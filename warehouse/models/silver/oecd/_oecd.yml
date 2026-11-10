@@ -1,0 +1,27 @@
+version: 2
+models:
+  - name: oecd_cli
+    description: >-
+      OECD composite leading indicators and confidence indicators (SDMX dataflow
+      OECD.SDD.STES:DSD_STES@DF_CLI) from bronze.oecd_observations: newest version of the cli
+      selection, every area the OECD publishes (members, partners, OECD, G7, G20, EA20, EU and
+      other aggregates), monthly and quarterly. Grain: series_key × time_period. obs_value in
+      index points (UNIT_MEASURE IX) or growth rates (TRANSFORMATION GY). Poland: business and
+      consumer confidence (BCICP from 1997-07, CCICP from 2001-05). The amplitude-adjusted CLI (LI)
+      covers 22 areas only (G20 economies, G7, G20, A5M, G4E, NAFTA), not Poland, EU, EA20 or OECD
+      (Dev trial 42777288678, 10 Nov 2026).
+    tests:
+      - unique:
+          column_name: "series_key || '|' || time_period"
+    columns:
+      - name: ref_area
+        tests: [not_null]
+      - name: freq
+        tests: [not_null, {accepted_values: {arguments: {values: ['M', 'Q', 'A']}}}]
+      - name: measure
+        tests: [not_null]
+      - name: time_period
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]

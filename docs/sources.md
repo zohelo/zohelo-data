@@ -330,6 +330,22 @@ are re-fetched and written only when the bytes changed. Bronze: `bronze.nbp_obse
 add only pre-2002 history and the broader statistics below are a separate scope (not
 yet built).
 
+### Official NBP interest rates (`nbp_interest_rates`)
+
+**Implemented (10 Nov 2026, register PLG-006).** NBP publishes its official rates as two small XML
+files on fixed URLs, landed whole through the shared `bulk_file` pattern (version = Last-Modified,
+written only when the SHA-256 changed; restart unit: one file):
+`https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml` (entity `rates_archive`: every MPC
+change since 1998-02-26, `<pozycje obowiazuje_od>` groups of `<pozycja id oprocentowanie>`; ids `ref`
+reference, `lom` lombard, `dep` deposit, `red` rediscount, `dys` discount, `dep` from 2001-12-01, `dys` from 2010-01-01) and
+`https://static.nbp.pl/dane/stopy/stopy_procentowe.xml` (entity `rates_current`: the rates in force
+with PL/EN names, footnotes and required-reserve rates). The old `www.nbp.pl/xml/…` URL now redirects
+to an HTML page. Bronze: `bronze.nbp_interest_rate_items` (one row per `<pozycja>`, attributes as
+text, an unknown attribute rejects the file). Silver: `silver.nbp_policy_rates` (rate × effective
+date, `valid_to` = next change). Licence: NBP website Terms of Use (source with a link to
+www.nbp.pl); public display waits for NBP's answer like the exchange rates. MFI interest-rate
+statistics are a separate, not yet built scope.
+
 ### Broader statistics inventory and distributions
 
 Crawl only the following official navigation subtrees, follow their pagination/year
@@ -618,3 +634,21 @@ projections, 35 % of year cells empty) and four metadata CSVs (country, 574 seri
 and footnotes). Restart unit: the whole file (one download). Licence CC BY 4.0 (register GL-007), attribution
 "Source: World Bank, International Debt Statistics". IDS is published once a year in December.
 Bronze, Silver and a schedule are later stages.
+
+## OECD Data Explorer (SDMX)
+
+**Implemented (10 Nov 2026, register GL-003).** The OECD Data Explorer has no bulk file per dataflow;
+its SDMX REST API returns a whole selection with full history in one response
+(`https://sdmx.oecd.org/public/rest/data/<agency>,<dataflow>,<version>/<key>?format=csvfile`;
+structure: `…/dataflow/<agency>/<dataflow>/latest?references=datastructure`). The declaration
+`oecd.yaml` lands each selection through the shared `bulk_file` pattern, one request per entity and
+run (the API is rate limited without a published threshold). The server's Last-Modified is the
+structure date, so version = download time; a copy is written only when the SHA-256 changed. Entity
+`cli`: dataflow `OECD.SDD.STES:DSD_STES@DF_CLI` (version 4.1), all areas: 240,988 observations,
+57 areas (members, partners, OECD, G7, G20, EA20, EU), 21 MB (Dev probe 42776278659, Dev trial
+42777288678). Poland, EU, EA20 and OECD have business and consumer confidence (BCICP, CCICP); the
+amplitude-adjusted CLI (LI) exists for 22 areas only (G20 economies, G7, G20, A5M, G4E, NAFTA).
+Bronze: `bronze.oecd_observations` (generic SDMX CSV rows: series_dimensions/series_key,
+attribute_names/attribute_values, text). Silver: `silver.oecd_cli`. Terms: OECD Terms and
+Conditions (data reuse incl. commercial, with attribution; dataset-specific third-party limits are
+checked per added dataflow). Restart unit: one selection.

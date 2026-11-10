@@ -349,17 +349,18 @@ voivodeships), `dimensions`, `aggregation`, `polarity`, `status` and `note`:
   build checks pass.
 - `needs-block`: in Silver (codes checked or block named) but not activated: a member filter, a half-yearly fact, a
   derivation or a row-size decision is missing; `note` says which.
-- `needs-source`: not ingested; `note` names the register id (NBP interest rates PLG-006, NBP balance of payments
-  PLG-002, investment position PLG-003, OECD GL-003).
+- `needs-source`: not ingested; `note` names the register id (NBP balance of payments PLG-002, investment
+  position PLG-003). NBP official rates (`nbp_interest_rates`, PLG-006) and the OECD CLI (`oecd`, GL-003) reached
+  Silver on 10 Nov (#2590, #2594) and are `needs-block` until their Gold build stages exist.
 
 v2 keys by their best source status:
 
 | | ready | needs-block | needs-source | total |
 |---|---|---|---|---|
-| Polska w skrócie | 28 | 2 | 1 | 31 |
-| all 78 keys | 63 | 12 | 3 | 78 |
+| Polska w skrócie | 28 | 3 | 0 | 31 |
+| all 78 keys | 63 | 14 | 1 | 78 |
 
-Rows by source (142 rows; 31 keys have two or more ready sources):
+Rows by source (141 rows; 31 keys have two or more ready sources):
 
 | source | ready | needs-block | needs-source | rows |
 |---|---|---|---|---|
@@ -367,12 +368,13 @@ Rows by source (142 rows; 31 keys have two or more ready sources):
 | gus_bdl | 17 | 8 | 0 | 25 |
 | gus_dbw | 17 | 8 | 0 | 25 |
 | world_bank_wdi | 23 | 1 | 0 | 24 |
-| nbp | 1 | 0 | 8 | 9 |
-| oecd | 0 | 0 | 1 | 1 |
+| nbp | 1 | 0 | 6 | 7 |
+| nbp_interest_rates | 0 | 1 | 0 | 1 |
+| oecd | 0 | 1 | 0 | 1 |
 
 Gold has a quarterly fact (`fact_quarterly`), and the BDL and DBW builds place monthly and quarterly periods, so
 LFS rates, the current account, NAMQ, job vacancies and the GUS short-term series keep their frequency. Polska w
-skrócie still needs `nbp_reference_rate` (NBP PLG-006), `price_m2_secondary` (the secondary market is a breakdown
+skrócie still needs `nbp_reference_rate` (NBP PLG-006: in Silver, Gold build stage missing), `price_m2_secondary` (the secondary market is a breakdown
 member of BDL P3788/P3794 and DBW 309_485: a member filter, `kpi_member.csv`) and `broadband_households` (the
 ingested broadband datasets end in 2021). GUS indices (`… = 100`) are published as the source gives them, with the
 measure's unit; the rate is the value minus 100. The `v2_key` column of `kpi.csv` is filled from `concept_key` by

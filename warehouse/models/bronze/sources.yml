@@ -171,6 +171,38 @@ sources:
   - name: nbp_exchange_rates_table_b
   - name: nbp_exchange_rates_table_c
   - name: nbp_gold_prices
+- name: nbp_interest_rates
+  description: Narodowy Bank Polski — official NBP interest rates (archive and current XML files)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/nbp_interest_rates/
+    loaded_by: ingestion/to_bronze/nbp_interest_rates/
+    config: ingestion/sources/nbp_interest_rates.yaml
+  tables:
+  - name: nbp_interest_rate_items
+    description: >-
+      One row per <pozycja> (rate) or <odnosnik> (footnote) of the newest copy of each file (entity rates_archive: rate per MPC change
+      since 1998-02-26; rates_current: rates in force with PL/EN names and footnotes), attributes as
+      source text (decimal comma); partitioned by entity.
+  - name: nbp_interest_rates_rejected_files
+    description: NBP interest-rate Landing files the Bronze decoder rejected, with the reason.
+- name: oecd
+  description: OECD Data Explorer — selected dataflows as SDMX CSV (SDMX REST API)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/oecd/
+    loaded_by: ingestion/to_bronze/oecd/
+    config: ingestion/sources/oecd.yaml
+  tables:
+  - name: oecd_observations
+    description: >-
+      One row per observation of the newest copy of each selection (entity, e.g. cli), as published:
+      dataflow, series_dimensions / series_key (dimension ids and codes in file order), time_period,
+      obs_value and attribute_names / attribute_values as source text; partitioned by entity.
+  - name: oecd_rejected_files
+    description: OECD Landing files the Bronze decoder rejected, with the reason.
 - name: opendata_org
   description: OpenData.org (BrightQuery) organizations, people and locations — Senzing-ready snapshot
   database: r2
