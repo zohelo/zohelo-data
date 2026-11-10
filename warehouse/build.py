@@ -82,7 +82,7 @@ def _why(plan: dict) -> dict:
     for reason in plan["reasons"].values():
         kind = reason.split(":")[0]
         kinds[kind] = kinds.get(kind, 0) + 1
-    return {"unchanged": plan["unchanged"], "why": kinds}
+    return {"unchanged": plan["unchanged"], "why": kinds, "waiting": plan.get("waiting", [])}
 
 
 MAX_FAILURES_SHOWN = 8
