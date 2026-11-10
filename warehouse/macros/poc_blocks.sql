@@ -12,7 +12,7 @@
         ('NAMA_10_PC', 'Main GDP aggregates per capita', 'A', ''),
         ('UNE_RT_A', 'Unemployment by sex and age, annual', 'A', 'Y15-74,T'),
         ('UNE_RT_M', 'Unemployment by sex and age, monthly', 'M', 'Y15-74,SA,T'),
-        ('PRC_HICP_MANR', 'HICP, monthly annual rate of change', 'M', 'CP00'),
+        ('PRC_HICP_MINR', 'HICP (COICOP 2018), monthly data', 'M', 'TOTAL'),
         ('LFSI_EMP_A', 'Employment and activity by sex and age, annual', 'A', 'Y20-64,T')
     ) as t (dataset_id, block_name, freq_code, total_breakdown)
 {% endmacro %}
