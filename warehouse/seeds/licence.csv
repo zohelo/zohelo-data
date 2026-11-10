@@ -17,3 +17,4 @@ gov_pl_terms_krus,gov.pl terms (official materials free to use; KRUS),https://ww
 cc_by_4_0_world_bank_ids,CC BY 4.0 (World Bank IDS),https://datacatalog.worldbank.org/search/dataset/0038015/international-debt-statistics,"Source: World Bank, International Debt Statistics",true,false
 unresolved,Terms not established,https://github.com/zohelo/zohelo-data/blob/main/ingestion/register.yaml,Source: see the source register,false,false
 oecd_terms,OECD Terms and Conditions (Data),https://www.oecd.org/en/about/terms-conditions.html,"Source: OECD, OECD Data Explorer",true,false
+press_headline_link,"Headline and link only (press publishers' right, EU directive 2019/790 art. 15)",https://github.com/zohelo/zohelo-data/blob/main/docs/topics.md,"Source: the outlet named beside each headline (link to the article)",false,false

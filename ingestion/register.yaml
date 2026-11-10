@@ -8006,3 +8006,338 @@ sources:
     - 'Person data: privacy review before any publication'
     references:
     - https://opendata.org/terms/
+- id: TP-001
+  name: Bankier.pl news feed (RSS)
+  short_name: Bankier.pl
+  provider: Bankier.pl S.A.
+  source_system: news_feeds
+  current: true
+  status: silver
+  family: J
+  kpi: false
+  geography: Poland
+  provider_type: commercial
+  domains: [news, media-monitoring]
+  entities: [headline]
+  granularity: 'One feed item: title, link, publication time (pl). RSS 2.0, 50 items covering about a day (some older evergreen items); fields title, link, description, pubDate (RFC 822).'
+  coverage: Rolling window of the newest items; history accumulates from the first landing (10 Nov 2026).
+  access:
+    endpoint: https://www.bankier.pl/rss/wiadomosci.xml
+    kind: bulk_file
+    interfaces: [RSS, HTML]
+    auth: public
+    cost: free
+    limits: One request per feed every 3 hours (ingestion/sources/news_feeds.yaml).
+  licence:
+    status: restricted
+    notes: 'robots.txt allows the feed for any user agent (GPTBot has its own group). The RSS page lists the feeds for readers; no feed-specific licence found; the portal terms (regulamin) apply and reserve rights to the content. Use: headline and link with the outlet name only. Press publishers'' right (EU directive 2019/790 art. 15, Polish copyright act as amended 2024): a headline with a link and the outlet name; never article text or images (docs/topics.md).'
+  updates: Continuous; items roll over within hours to days.
+  ingestion:
+    history: None beyond the feed window; accumulates from the first landing.
+    incremental: Every landed copy loaded (accumulating Bronze); Silver deduplicates by canonical URL, then outlet + title.
+    identifiers: canonical URL; guid where given
+  modelling:
+    notes: Attention signal for the topics layer (O32), not statistics; kept 400 days in Silver.
+    overlap: GDELT (CD-030) counts the same coverage; never add the two.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers:
+    - Feed terms are the publisher's general terms; public display of headlines waits for the owner's review after the internal period (O32).
+    references:
+    - https://www.bankier.pl/rss/wiadomosci.xml
+    - https://www.bankier.pl/rss
+- id: TP-002
+  name: Money.pl news feed (RSS)
+  short_name: Money.pl
+  provider: Wirtualna Polska Media S.A.
+  source_system: news_feeds
+  current: true
+  status: silver
+  family: J
+  kpi: false
+  geography: Poland
+  provider_type: commercial
+  domains: [news, media-monitoring]
+  entities: [headline]
+  granularity: 'One feed item: title, link, publication time (pl). RSS 2.0, 15 items covering about 20 hours; fields title, link, guid, description, pubDate (RFC 822). /rss/main.xml redirects to the same feed.'
+  coverage: Rolling window of the newest items; history accumulates from the first landing (10 Nov 2026).
+  access:
+    endpoint: https://www.money.pl/rss/rss.xml
+    kind: bulk_file
+    interfaces: [RSS, HTML]
+    auth: public
+    cost: free
+    limits: One request per feed every 3 hours (ingestion/sources/news_feeds.yaml).
+  licence:
+    status: restricted
+    notes: 'robots.txt allows the feed for any user agent (AI crawlers have their own groups). No feed-specific licence found; Wirtualna Polska terms reserve rights to the content. Use: headline and link with the outlet name only. Press publishers'' right (EU directive 2019/790 art. 15, Polish copyright act as amended 2024): a headline with a link and the outlet name; never article text or images (docs/topics.md).'
+  updates: Continuous; items roll over within hours to days.
+  ingestion:
+    history: None beyond the feed window; accumulates from the first landing.
+    incremental: Every landed copy loaded (accumulating Bronze); Silver deduplicates by canonical URL, then outlet + title.
+    identifiers: canonical URL; guid where given
+  modelling:
+    notes: Attention signal for the topics layer (O32), not statistics; kept 400 days in Silver.
+    overlap: GDELT (CD-030) counts the same coverage; never add the two.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers:
+    - Feed terms are the publisher's general terms; public display of headlines waits for the owner's review after the internal period (O32).
+    references:
+    - https://www.money.pl/rss/rss.xml
+    - https://www.money.pl/rss/
+- id: TP-003
+  name: Business Insider Polska economy feed (RSS)
+  short_name: Business Insider Polska
+  provider: Ringier Axel Springer Polska
+  source_system: news_feeds
+  current: true
+  status: silver
+  family: J
+  kpi: false
+  geography: Poland
+  provider_type: commercial
+  domains: [news, media-monitoring]
+  entities: [headline]
+  granularity: 'One feed item: title, link, publication time (pl). RSS 2.0, 20 items covering about 3 days (the main feed /.feed rolls over in about 3 hours); fields title, link, guid, description, enclosure (image, not kept), pubDate.'
+  coverage: Rolling window of the newest items; history accumulates from the first landing (10 Nov 2026).
+  access:
+    endpoint: https://businessinsider.com.pl/gospodarka.feed
+    kind: bulk_file
+    interfaces: [RSS, HTML]
+    auth: public
+    cost: free
+    limits: One request per feed every 3 hours (ingestion/sources/news_feeds.yaml).
+  licence:
+    status: restricted
+    notes: 'robots.txt allows the feed for any user agent (some AI crawlers blocked by name). The feed is linked from the home page (rel=alternate); no feed-specific licence found; publisher terms reserve rights. Use: headline and link with the outlet name only. Press publishers'' right (EU directive 2019/790 art. 15, Polish copyright act as amended 2024): a headline with a link and the outlet name; never article text or images (docs/topics.md).'
+  updates: Continuous; items roll over within hours to days.
+  ingestion:
+    history: None beyond the feed window; accumulates from the first landing.
+    incremental: Every landed copy loaded (accumulating Bronze); Silver deduplicates by canonical URL, then outlet + title.
+    identifiers: canonical URL; guid where given
+  modelling:
+    notes: Attention signal for the topics layer (O32), not statistics; kept 400 days in Silver.
+    overlap: GDELT (CD-030) counts the same coverage; never add the two.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers:
+    - Feed terms are the publisher's general terms; public display of headlines waits for the owner's review after the internal period (O32).
+    references:
+    - https://businessinsider.com.pl/gospodarka.feed
+    - https://businessinsider.com.pl/
+- id: TP-004
+  name: Rzeczpospolita economy feed (RSS)
+  short_name: Rzeczpospolita Ekonomia
+  provider: Gremi Media S.A.
+  source_system: news_feeds
+  current: true
+  status: silver
+  family: J
+  kpi: false
+  geography: Poland
+  provider_type: commercial
+  domains: [news, media-monitoring]
+  entities: [headline]
+  granularity: 'One feed item: title, link, publication time (pl). RSS 2.0, 100 items covering about 6 days; channel copyright 2026; fields include title, link, guid (= link), description, enclosure, pay_status (not kept).'
+  coverage: Rolling window of the newest items; history accumulates from the first landing (10 Nov 2026).
+  access:
+    endpoint: https://www.rp.pl/rss/451-ekonomia
+    kind: bulk_file
+    interfaces: [RSS, HTML]
+    auth: public
+    cost: free
+    limits: One request per feed every 3 hours (ingestion/sources/news_feeds.yaml).
+  licence:
+    status: restricted
+    notes: 'robots.txt allows the feed for any user agent. Linked from the section page (rel=alternate); channel <copyright> 2026; no feed-specific licence found. Many articles are paywalled (pay_status); only headline and link are used. Press publishers'' right (EU directive 2019/790 art. 15, Polish copyright act as amended 2024): a headline with a link and the outlet name; never article text or images (docs/topics.md).'
+  updates: Continuous; items roll over within hours to days.
+  ingestion:
+    history: None beyond the feed window; accumulates from the first landing.
+    incremental: Every landed copy loaded (accumulating Bronze); Silver deduplicates by canonical URL, then outlet + title.
+    identifiers: canonical URL; guid where given
+  modelling:
+    notes: Attention signal for the topics layer (O32), not statistics; kept 400 days in Silver.
+    overlap: GDELT (CD-030) counts the same coverage; never add the two.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers:
+    - Feed terms are the publisher's general terms; public display of headlines waits for the owner's review after the internal period (O32).
+    references:
+    - https://www.rp.pl/rss/451-ekonomia
+    - https://www.rp.pl/ekonomia
+- id: TP-005
+  name: Puls Biznesu latest news feed (RSS)
+  short_name: Puls Biznesu
+  provider: Bonnier Business (Polska)
+  source_system: news_feeds
+  current: true
+  status: silver
+  family: J
+  kpi: false
+  geography: Poland
+  provider_type: commercial
+  domains: [news, media-monitoring]
+  entities: [headline]
+  granularity: 'One feed item: title, link, publication time (pl). RSS 2.0, 60 items covering about 2 days; pubDate as local Warsaw time without an offset (YYYY-MM-DD HH:MM:SS).'
+  coverage: Rolling window of the newest items; history accumulates from the first landing (10 Nov 2026).
+  access:
+    endpoint: https://www.pb.pl/rss/najnowsze.xml
+    kind: bulk_file
+    interfaces: [RSS, HTML]
+    auth: public
+    cost: free
+    limits: One request per feed every 3 hours (ingestion/sources/news_feeds.yaml).
+  licence:
+    status: restricted
+    notes: 'robots.txt allows the feed for any user agent (GPTBot has its own group). The RSS page lists the feeds and offers content licences for purchase ("ZAKUP LICENCJI"): republishing content needs a licence; headline and link with the outlet name only. Press publishers'' right (EU directive 2019/790 art. 15, Polish copyright act as amended 2024): a headline with a link and the outlet name; never article text or images (docs/topics.md).'
+  updates: Continuous; items roll over within hours to days.
+  ingestion:
+    history: None beyond the feed window; accumulates from the first landing.
+    incremental: Every landed copy loaded (accumulating Bronze); Silver deduplicates by canonical URL, then outlet + title.
+    identifiers: canonical URL; guid where given
+  modelling:
+    notes: Attention signal for the topics layer (O32), not statistics; kept 400 days in Silver.
+    overlap: GDELT (CD-030) counts the same coverage; never add the two.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers:
+    - Feed terms are the publisher's general terms; public display of headlines waits for the owner's review after the internal period (O32).
+    references:
+    - https://www.pb.pl/rss/najnowsze.xml
+    - https://www.pb.pl/rss
+- id: TP-006
+  name: Forsal news feed (Atom)
+  short_name: Forsal
+  provider: INFOR PL S.A.
+  source_system: news_feeds
+  current: true
+  status: silver
+  family: J
+  kpi: false
+  geography: Poland
+  provider_type: commercial
+  domains: [news, media-monitoring]
+  entities: [headline]
+  granularity: 'One feed item: title, link, publication time (pl). Atom, 50 entries covering under a day; updated in ISO 8601 UTC.'
+  coverage: Rolling window of the newest items; history accumulates from the first landing (10 Nov 2026).
+  access:
+    endpoint: https://forsal.pl/.feed
+    kind: bulk_file
+    interfaces: [RSS, HTML]
+    auth: public
+    cost: free
+    limits: One request per feed every 3 hours (ingestion/sources/news_feeds.yaml).
+  licence:
+    status: restricted
+    notes: 'robots.txt allows the feed. INFOR''s RSS page states no feed terms; articles carry "Materiał chroniony prawem autorskim - wszelkie prawa zastrzeżone. Dalsze rozpowszechnianie artykułu za zgodą wydawcy INFOR PL S.A." Headline and link only. Press publishers'' right (EU directive 2019/790 art. 15, Polish copyright act as amended 2024): a headline with a link and the outlet name; never article text or images (docs/topics.md).'
+  updates: Continuous; items roll over within hours to days.
+  ingestion:
+    history: None beyond the feed window; accumulates from the first landing.
+    incremental: Every landed copy loaded (accumulating Bronze); Silver deduplicates by canonical URL, then outlet + title.
+    identifiers: canonical URL; guid where given
+  modelling:
+    notes: Attention signal for the topics layer (O32), not statistics; kept 400 days in Silver.
+    overlap: GDELT (CD-030) counts the same coverage; never add the two.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers:
+    - Feed terms are the publisher's general terms; public display of headlines waits for the owner's review after the internal period (O32).
+    references:
+    - https://forsal.pl/.feed
+    - https://forsal.pl/
+- id: TP-007
+  name: PAP free news feed (RSS)
+  short_name: PAP
+  provider: Polska Agencja Prasowa S.A.
+  current: true
+  status: parked
+  family: J
+  kpi: false
+  geography: Poland
+  provider_type: commercial
+  domains: [news, media-monitoring]
+  entities: [headline]
+  granularity: 'One feed item: title, link, publication time (pl). Not reachable: www.pap.pl/rss.xml (linked from the home page) answers automated clients with an Incapsula bot-protection page ("Not found"); /biznes/rss.xml is 404 (Dev probe 42784534992, 10 Nov 2026).'
+  coverage: Rolling window of the newest items; history accumulates from the first landing (10 Nov 2026).
+  access:
+    endpoint: https://www.pap.pl/rss.xml
+    kind: bulk_file
+    interfaces: [RSS, HTML]
+    auth: public
+    cost: free
+    limits: One request per feed every 3 hours (ingestion/sources/news_feeds.yaml).
+  licence:
+    status: restricted
+    notes: 'Not assessed: the feed could not be read without circumventing bot protection, which is never done (AGENTS.md). Press publishers'' right (EU directive 2019/790 art. 15, Polish copyright act as amended 2024): a headline with a link and the outlet name; never article text or images (docs/topics.md).'
+  updates: Continuous; items roll over within hours to days.
+  ingestion:
+    history: None beyond the feed window; accumulates from the first landing.
+    incremental: Every landed copy loaded (accumulating Bronze); Silver deduplicates by canonical URL, then outlet + title.
+    identifiers: canonical URL; guid where given
+  modelling:
+    notes: Attention signal for the topics layer (O32), not statistics; kept 400 days in Silver.
+    overlap: GDELT (CD-030) counts the same coverage; never add the two.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers:
+    - PAP free feed behind bot protection; ask PAP for a syndication route (owner) or keep parked.
+    references:
+    - https://www.pap.pl/rss.xml
+    - https://www.pap.pl/
+- id: TP-008
+  name: Notes from Poland feed (RSS)
+  short_name: Notes from Poland
+  provider: Notes from Poland Foundation
+  source_system: news_feeds
+  current: true
+  status: silver
+  family: J
+  kpi: false
+  geography: Poland
+  provider_type: commercial
+  domains: [news, media-monitoring]
+  entities: [headline]
+  granularity: 'One feed item: title, link, publication time (en). WordPress RSS 2.0, 12 items covering about 4 days, English; includes full content:encoded (not kept).'
+  coverage: Rolling window of the newest items; history accumulates from the first landing (10 Nov 2026).
+  access:
+    endpoint: https://notesfrompoland.com/feed/
+    kind: bulk_file
+    interfaces: [RSS, HTML]
+    auth: public
+    cost: free
+    limits: One request per feed every 3 hours (ingestion/sources/news_feeds.yaml).
+  licence:
+    status: restricted
+    notes: 'robots.txt allows the feed. Standard WordPress feed for syndication; no feed-specific licence found. Headline and link only. Press publishers'' right (EU directive 2019/790 art. 15, Polish copyright act as amended 2024): a headline with a link and the outlet name; never article text or images (docs/topics.md).'
+  updates: Continuous; items roll over within hours to days.
+  ingestion:
+    history: None beyond the feed window; accumulates from the first landing.
+    incremental: Every landed copy loaded (accumulating Bronze); Silver deduplicates by canonical URL, then outlet + title.
+    identifiers: canonical URL; guid where given
+  modelling:
+    notes: Attention signal for the topics layer (O32), not statistics; kept 400 days in Silver.
+    overlap: GDELT (CD-030) counts the same coverage; never add the two.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers:
+    - Feed terms are the publisher's general terms; public display of headlines waits for the owner's review after the internal period (O32).
+    references:
+    - https://notesfrompoland.com/feed/
+    - https://notesfrompoland.com/

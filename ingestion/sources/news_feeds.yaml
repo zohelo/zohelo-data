@@ -1,0 +1,72 @@
+source_system: news_feeds
+description: "News headline feeds (RSS/Atom) of Polish business and general news outlets — headlines and links only (topics, O32)"
+
+# Extraction strategy (docs/landing.md, docs/topics.md). Each outlet publishes its feeds for
+# syndication; a feed is a small complete file at a fixed URL (the newest 12–100 items), landed whole
+# through the shared bulk_file pattern, written only when the SHA-256 changed. One register entry per
+# outlet (family J, TP-0xx) records robots.txt and the feed terms; `outlet` links the file to
+# warehouse/seeds/news_outlet.csv. A feed's items roll over in hours to days, so every landed copy is
+# loaded (accumulating Bronze, not latest-only) and Silver deduplicates. Bronze keeps only title, link,
+# guid, outlet, language and publication time: never descriptions, article text or images.
+# Proven from Actions by the Dev probe 42784534992 (10 Nov 2026). PAP's free feed is parked (TP-007):
+# pap.pl answers automated clients with a bot-protection page.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: bankier_wiadomosci          # 50 items, ~1 day
+        outlet: bankier
+        url: https://www.bankier.pl/rss/wiadomosci.xml
+        format: raw
+        version: ingested
+      - entity: money_najnowsze             # 15 items, ~20 hours
+        outlet: money
+        url: https://www.money.pl/rss/rss.xml
+        format: raw
+        version: ingested
+      - entity: business_insider_gospodarka  # 20 items, ~3 days (the main feed rolls over in ~3 hours)
+        outlet: business_insider
+        url: https://businessinsider.com.pl/gospodarka.feed
+        format: raw
+        version: ingested
+      - entity: rzeczpospolita_ekonomia     # 100 items, ~6 days
+        outlet: rzeczpospolita
+        url: https://www.rp.pl/rss/451-ekonomia
+        format: raw
+        version: ingested
+      - entity: puls_biznesu_najnowsze      # 60 items, ~2 days
+        outlet: puls_biznesu
+        url: https://www.pb.pl/rss/najnowsze.xml
+        format: raw
+        version: ingested
+      - entity: forsal_najnowsze            # Atom, 50 entries, under a day
+        outlet: forsal
+        url: https://forsal.pl/.feed
+        format: raw
+        version: ingested
+      - entity: notes_from_poland           # 12 items, ~4 days (English)
+        outlet: notes_from_poland
+        url: https://notesfrompoland.com/feed/
+        format: raw
+        version: ingested
+  initial: bulk
+  production: snapshot                  # each copy is the feed as served; copies accumulate in Bronze
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; feeds every 3 hours (one request per feed and run); the evening full dataflow loads every copy and builds the topics
+    - {cron: "5 0,3,6,9,12,15,18 * * *", run: "landing: extract"}
+    - {cron: "40 21 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/news_feeds/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 30}
+  prune: report
+bronze: [bronze.news_items, bronze.news_feeds_rejected_files]
+silver: [silver.news_headlines]
+gold: []
+
+# Refresh policy for all layers (owner decision #875): Bronze accumulates one small file per landed copy;
+# Silver keeps 400 days of headlines (about 150,000 rows) and is rebuilt in full.
+refresh: {mode: full, decided: "#875"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

@@ -187,6 +187,22 @@ sources:
       source text (decimal comma); partitioned by entity.
   - name: nbp_interest_rates_rejected_files
     description: NBP interest-rate Landing files the Bronze decoder rejected, with the reason.
+- name: news_feeds
+  description: News headline feeds (RSS/Atom) of Polish outlets — headlines and links only (topics, O32)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/news_feeds/
+    loaded_by: ingestion/to_bronze/news_feeds/
+    config: ingestion/sources/news_feeds.yaml
+  tables:
+  - name: news_items
+    description: >-
+      One row per feed item of every landed copy of every feed (accumulating: copies overlap): outlet, feed
+      format and language, title, link, guid, publication time as text and in UTC; partitioned by entity
+      (feed). Never descriptions, article text or images.
+  - name: news_feeds_rejected_files
+    description: News feed Landing files the Bronze decoder rejected, with the reason.
 - name: oecd
   description: OECD Data Explorer — selected dataflows as SDMX CSV (SDMX REST API)
   database: r2

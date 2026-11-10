@@ -47,3 +47,16 @@ seeds:
         tests: [not_null, {accepted_values: {arguments: {values: [up, down, neutral]}}}]
       - name: status
         tests: [not_null, {accepted_values: {arguments: {values: [ready, needs-block, needs-source]}}}]
+  - name: news_outlet
+    description: >-
+      News outlets whose feeds the topics layer reads (O32, docs/topics.md): one row per outlet with its
+      register entry (family J), display name and language; feeds per outlet in ingestion/sources/news_feeds.yaml.
+    columns:
+      - name: outlet_key
+        tests: [not_null, unique]
+      - name: register_id
+        tests: [not_null, unique]
+      - name: lang
+        tests: [not_null, {accepted_values: {arguments: {values: [pl, en]}}}]
+      - name: status
+        tests: [not_null, {accepted_values: {arguments: {values: [active, parked]}}}]

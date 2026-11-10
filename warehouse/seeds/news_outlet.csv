@@ -1,0 +1,9 @@
+outlet_key,register_id,name,lang,homepage,status
+bankier,TP-001,Bankier.pl,pl,https://www.bankier.pl/,active
+money,TP-002,Money.pl,pl,https://www.money.pl/,active
+business_insider,TP-003,Business Insider Polska,pl,https://businessinsider.com.pl/,active
+rzeczpospolita,TP-004,Rzeczpospolita,pl,https://www.rp.pl/,active
+puls_biznesu,TP-005,Puls Biznesu,pl,https://www.pb.pl/,active
+forsal,TP-006,Forsal,pl,https://forsal.pl/,active
+pap,TP-007,PAP,pl,https://www.pap.pl/,parked
+notes_from_poland,TP-008,Notes from Poland,en,https://notesfrompoland.com/,active

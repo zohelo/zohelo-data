@@ -1,0 +1,32 @@
+version: 2
+models:
+  - name: news_headlines
+    description: >-
+      News headlines for the topics layer (O32, docs/topics.md) from bronze.news_items: one row per article
+      across every landed copy of every feed, deduplicated by canonical URL, then by outlet and normalised
+      title on the same day (earliest sighting kept). Only title, link, outlet, language and time; never article text.
+      Kept 400 days after publication. published_at is the feed's time in UTC, or the first sighting when
+      the feed gives none (published_from_ingest).
+    tests:
+      - unique:
+          column_name: "outlet_key || '|' || title || '|' || cast(cast(published_at as date) as varchar)"
+    columns:
+      - name: headline_id
+        description: md5 of the canonical URL.
+        tests: [not_null, unique]
+      - name: outlet_key
+        description: Outlet (warehouse/seeds/news_outlet.csv).
+        tests: [not_null, {relationships: {arguments: {to: ref('news_outlet'), field: outlet_key}}}]
+      - name: lang
+        tests: [not_null, {accepted_values: {arguments: {values: ['pl', 'en']}}}]
+      - name: title
+        tests: [not_null]
+      - name: url
+        tests: [not_null]
+      - name: canonical_url
+        tests: [not_null, unique]
+      - name: published_at
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the feed copy the headline was first seen in (lineage to Landing/Archive).
+        tests: [not_null]

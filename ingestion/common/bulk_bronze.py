@@ -7,6 +7,11 @@ into an Arrow table with the given columns, and written as one Parquet file per 
 ``02_bronze/<source>/<folder>/<entity>/<raw_sha256>.parquet``, partitioned by ``entity``; the table's file
 list is the checkpoint. A decoder error (ValueError, KeyError) is recorded in the rejections table.
 ``landing_root``, ``namespace`` and ``lake_root`` exist for Dev trials (zz_dev_ scratch locations).
+
+Accumulating sources (news feeds, attention signals: each copy holds items the next one may not) pass
+``all_versions=True``: every landed copy not yet held is loaded, not only the newest; such a source does not
+declare ``bronze_latest_only``. ``specs`` replaces the declared files for sources whose files are built from
+a seed (``to_landing/<source>/``).
 """
 
 from __future__ import annotations
@@ -69,16 +74,18 @@ def load(
     folder: str,
     landing_root: str = "01_landing",
     lake_root: str = "02_bronze",
+    all_versions: bool = False,
+    specs: list[dict[str, Any]] | None = None,
 ) -> int:
     client, cat = s3(), bf.retry(catalog, "catalog")
     lake, landing_bucket = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
     table = bf.retry(lambda: bf.ensure_table(cat, table_id, columns, "entity"), "load_table")
     done = bf.loaded_hashes(table) | bf.rejected_hashes(cat, rejected_id)
     receipts = []
-    for spec in bulk_file.declaration(source):
+    for spec in bulk_file.declaration(source) if specs is None else specs:
         held = bulk_file.landed(client, landing_bucket, bulk_file.prefix(source, spec["entity"], landing_root))
         if held:
-            receipts.append(held[-1])
+            receipts += held if all_versions else [held[-1]]
     todo = [r for r in receipts if r["sha256"] not in done]
     totals: dict[str, Any] = {"entities_landed": len(receipts), "candidates": len(todo), "appended_files": 0}
     totals.update({"rows_added": 0, "rejected": 0})
