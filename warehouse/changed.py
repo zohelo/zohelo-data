@@ -130,7 +130,8 @@ def table_state(cat, namespace: str, table: str) -> dict[str, Any] | None:
 
 def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
     """{"select": model names to build, "reasons": name → why, "unchanged": count,
-    "full_refresh": incremental models among them to rebuild in full}."""
+    "full_refresh": incremental models among them to rebuild in full, "waiting": models left out because a
+    source table they read does not exist yet}."""
     graph = models(meta)
     relations = {uid: (m["namespace"], m["table"]) for uid, m in graph.items()}
     for uid in {p for m in graph.values() for p in m["parents"] if p.startswith("source.")}:
@@ -145,11 +146,26 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
 
     reasons: dict[str, str] = {}
     done: dict[str, bool] = {}
+    blocked: dict[str, bool] = {}
+
+    def waiting(uid: str) -> bool:
+        """True when a source table this model reads (directly or through other models) does not exist yet:
+        a newly onboarded source whose first Bronze load has not run. Building it would fail every pipeline's
+        build, so it waits and is listed under "waiting"."""
+        if uid not in blocked:
+            parents = graph[uid]["parents"]
+            blocked[uid] = any(p.startswith("source.") and state.get(p) is None for p in parents) or any(
+                p in graph and waiting(p) for p in parents
+            )
+        return blocked[uid]
 
     def stale(uid: str) -> bool:
         if uid in done:
             return done[uid]
         model, own = graph[uid], state[uid]
+        if waiting(uid):
+            done[uid] = False
+            return False
         upstream = [p for p in model["parents"] if p in graph and stale(p)]
         reason = None
         if model["name"] in EXTERNAL_MODELS:
@@ -179,8 +195,9 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
     return {
         "select": sorted(reasons),
         "reasons": reasons,
-        "unchanged": len(graph) - len(reasons),
+        "unchanged": len(graph) - len(reasons) - sum(blocked.values()),
         "full_refresh": full,
+        "waiting": sorted(graph[u]["name"] for u, b in blocked.items() if b),
     }
 
 
