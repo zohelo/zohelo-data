@@ -29,6 +29,9 @@ def write(name: str, table: pa.Table) -> None:
     con = duckdb.connect()
     con.register("t", table)
     con.execute(f"copy t to '{OUT / name}' (header, delimiter ',')")
+    print(f"=====BEGIN {name}", flush=True)
+    print((OUT / name).read_text(encoding="utf-8"), flush=True)
+    print(f"=====END {name}", flush=True)
 
 
 def scan(ns: str, name: str, row_filter, columns=None) -> pa.Table:
