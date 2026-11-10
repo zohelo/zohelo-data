@@ -12,6 +12,7 @@ framework")::
             format: zip              # zip | gzip | 7z | raw
             version: last_modified   # last_modified (fallback: download time) | ingested
             url_date: Europe/Warsaw  # optional: {date} in url = today (YYYYMMDD) in this zone
+            reduce: news_feed        # optional: land only the allowed part of the file (news: headline items)
           - entity: treasury_debt_series   # a file whose URL changes per release
             url_from:                # instead of url: find the link on a stable page
               page: https://www.gov.pl/web/finanse/szeregiczasowe
@@ -290,6 +291,56 @@ def probe(url: str) -> tuple[requests.Response | None, str]:
     return response, http
 
 
+def reducer(kind: str) -> Any:
+    """The function that keeps only the allowed part of a downloaded file (``reduce:`` in a file declaration)."""
+    if kind == "news_feed":
+        from ingestion.to_bronze.news_feeds.load import reduce_feed
+
+        return reduce_feed
+    raise ValueError(f"unknown reduce: {kind!r}")
+
+
+def reduce_file(path: Path, kind: str) -> tuple[str, int]:
+    """Rewrite the downloaded file in place with only its allowed part; returns the new (sha256, size)."""
+    body = reducer(kind)(path.read_bytes())
+    path.write_bytes(body)
+    return sha256(body).hexdigest(), len(body)
+
+
+def reduce_held(client: Any, bucket: str, source: str, spec: dict[str, Any], landing_root: str) -> int:
+    """Rewrite copies landed before ``reduce:`` was declared (still in Landing) to their allowed part, under the same
+    key, and update their receipts; a copy already reduced is left alone. Returns the number rewritten."""
+    done = 0
+    for receipt in landed(client, bucket, prefix(source, spec["entity"], landing_root)):
+        if receipt.get("detail", {}).get("reduced"):
+            continue
+        key = receipt["object"]["key"]
+        try:
+            body = client.get_object(Bucket=bucket, Key=key)["Body"].read()
+        except client.exceptions.NoSuchKey:
+            continue  # moved to the Archive already; the Archive is handled by its retention
+        reduced = reducer(spec["reduce"])(body)
+        digest = sha256(reduced).hexdigest()
+        client.put_object(
+            Bucket=bucket, Key=key, Body=reduced, ContentType=CONTENT_TYPES["raw"], Metadata={"sha256": digest}
+        )
+        receipt_key = receipt.pop("receipt_key")
+        receipt.update({"sha256": digest, "size_bytes": len(reduced), "original_sha256": receipt["sha256"]})
+        receipt["detail"] = {
+            **receipt.get("detail", {}),
+            "reduced": spec["reduce"],
+            "reduced_at": stamp(datetime.now(UTC)),
+        }
+        client.put_object(
+            Bucket=bucket,
+            Key=receipt_key,
+            ContentType="application/json",
+            Body=json.dumps(receipt, indent=2, sort_keys=True).encode(),
+        )
+        done += 1
+    return done
+
+
 def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landing_root: str) -> dict[str, Any]:
     """Download one declared file and land it with a receipt unless its bytes are unchanged."""
     fmt = spec.get("format", "raw")
@@ -301,6 +352,9 @@ def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landi
         url = resolve_url(spec)
         limits = {k: spec[k] for k in ("retries", "read_timeout", "wait") if k in spec}
         digest, size, headers, final_url, detail = download(url, path, fmt, **limits)
+        if spec.get("reduce"):
+            digest, size = reduce_file(path, spec["reduce"])
+            detail = {**detail, "reduced": spec["reduce"]}
         seconds = round(time.monotonic() - started)
         if held and held[-1]["sha256"] == digest:
             return {"entity": spec["entity"], "outcome": "unchanged", "sha256": digest, "download_seconds": seconds}
@@ -378,6 +432,10 @@ def main(
     for n, spec in enumerate(declaration(source) if specs is None else specs):
         folder = prefix(source, spec["entity"], landing_root)
         if mode == "load":
+            if spec.get("reduce"):
+                rewritten = reduce_held(client, bucket, source, spec, landing_root)
+                if rewritten:
+                    print(json.dumps({"entity": spec["entity"], "reduced_held_copies": rewritten}), flush=True)
             if n and pause_seconds:
                 time.sleep(pause_seconds)
             try:

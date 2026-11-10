@@ -106,6 +106,41 @@ def items(root: ET.Element) -> tuple[str, str | None, list[dict[str, Any]]]:
     raise ValueError(f"not RSS 2.0 or Atom: root element {root.tag!r}")
 
 
+def reduce_feed(body: bytes) -> bytes:
+    """The feed with only what the platform keeps (docs/topics.md, owner decision of 10 Nov): per item the title,
+    link, guid and publication time, and the feed's language. Descriptions, article text, images and every other
+    element are dropped before the copy is landed, so no outlet text beyond the headline is ever stored. The result
+    is a valid RSS 2.0 or Atom document that ``items`` reads the same way as the original."""
+    fmt, lang, found = items(ET.fromstring(body))
+    if fmt == "rss":
+        rss = ET.Element("rss", {"version": "2.0"})
+        channel = ET.SubElement(rss, "channel")
+        if lang:
+            ET.SubElement(channel, "language").text = lang
+        for item in found:
+            node = ET.SubElement(channel, "item")
+            for tag, key in (("title", "title"), ("link", "link"), ("guid", "guid"), ("pubDate", "published_text")):
+                if item[key] is not None:
+                    ET.SubElement(node, tag).text = item[key]
+        root = rss
+    else:
+        ET.register_namespace("", ATOM.strip("{}"))
+        root = ET.Element(f"{ATOM}feed")
+        if lang:
+            root.set("{http://www.w3.org/XML/1998/namespace}lang", lang)
+        for item in found:
+            entry = ET.SubElement(root, f"{ATOM}entry")
+            if item["title"] is not None:
+                ET.SubElement(entry, f"{ATOM}title").text = item["title"]
+            if item["link"] is not None:
+                ET.SubElement(entry, f"{ATOM}link", {"rel": "alternate", "href": item["link"]})
+            if item["guid"] is not None:
+                ET.SubElement(entry, f"{ATOM}id").text = item["guid"]
+            if item["published_text"] is not None:
+                ET.SubElement(entry, f"{ATOM}published").text = item["published_text"]
+    return ET.tostring(root, encoding="utf-8", xml_declaration=True)
+
+
 def decode(body: bytes, receipt: dict[str, Any], outlet_of: dict[str, str] | None = None) -> pa.Table:
     outlet = (outlet_of or outlets())[receipt["entity"]]
     fmt, lang, found = items(ET.fromstring(body))

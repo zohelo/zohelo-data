@@ -19,36 +19,43 @@ extraction:
         url: https://www.bankier.pl/rss/wiadomosci.xml
         format: raw
         version: ingested
+        reduce: news_feed   # land only title, link, guid, time (docs/topics.md)
       - entity: money_najnowsze             # 15 items, ~20 hours
         outlet: money
         url: https://www.money.pl/rss/rss.xml
         format: raw
         version: ingested
+        reduce: news_feed   # land only title, link, guid, time (docs/topics.md)
       - entity: business_insider_gospodarka  # 20 items, ~3 days (the main feed rolls over in ~3 hours)
         outlet: business_insider
         url: https://businessinsider.com.pl/gospodarka.feed
         format: raw
         version: ingested
+        reduce: news_feed   # land only title, link, guid, time (docs/topics.md)
       - entity: rzeczpospolita_ekonomia     # 100 items, ~6 days
         outlet: rzeczpospolita
         url: https://www.rp.pl/rss/451-ekonomia
         format: raw
         version: ingested
+        reduce: news_feed   # land only title, link, guid, time (docs/topics.md)
       - entity: puls_biznesu_najnowsze      # 60 items, ~2 days
         outlet: puls_biznesu
         url: https://www.pb.pl/rss/najnowsze.xml
         format: raw
         version: ingested
+        reduce: news_feed   # land only title, link, guid, time (docs/topics.md)
       - entity: forsal_najnowsze            # Atom, 50 entries, under a day
         outlet: forsal
         url: https://forsal.pl/.feed
         format: raw
         version: ingested
+        reduce: news_feed   # land only title, link, guid, time (docs/topics.md)
       - entity: notes_from_poland           # 12 items, ~4 days (English)
         outlet: notes_from_poland
         url: https://notesfrompoland.com/feed/
         format: raw
         version: ingested
+        reduce: news_feed   # land only title, link, guid, time (docs/topics.md)
   initial: bulk
   production: snapshot                  # each copy is the feed as served; copies accumulate in Bronze
   incremental_policy: changed_since_last  # SHA-256
