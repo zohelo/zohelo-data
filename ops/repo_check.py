@@ -376,12 +376,17 @@ def register(files: list[Path]) -> list[str]:
         licences = {r["licence_key"] for r in csv.DictReader(f)}
     with open(seeds / "source.csv", newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
-    by_system = {e["source_system"]: e.get("id") for e in entries if e.get("source_system")}
+    # One source system may serve several register entries (news feeds: one entry per outlet, docs/topics.md);
+    # source.csv names one of them.
+    by_system: dict[str, set[str]] = {}
+    for e in entries:
+        if e.get("source_system"):
+            by_system.setdefault(e["source_system"], set()).add(e.get("id"))
     problems += [
         f"register: source.csv {r['source_key']}: register_id {r['register_id']}"
-        f" is not {by_system.get(r['source_key'])}"
+        f" is not one of {sorted(by_system.get(r['source_key'], set()))}"
         for r in rows
-        if by_system.get(r["source_key"]) != r["register_id"]
+        if r["register_id"] not in by_system.get(r["source_key"], set())
     ]
     problems += [
         f"register: source_system {s} has no row in source.csv"
