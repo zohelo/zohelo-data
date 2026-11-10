@@ -13,8 +13,10 @@ Needs GITHUB_TOKEN with `issues: write`; reads the run context from the environm
 ``--check-jobs`` (runs with an extract step): the extract jobs continue on error so landed files
 still reach Bronze, which hides their failure from the workflow's failure(); the run's job
 conclusions are read (`actions: read`) and the alert is raised only when a job failed or was
-cancelled (a model build replaced in its queue is cancelled by design and does not count); this
-job then exits 1, so the run concludes "failure" for the scheduler's catch-up and the tracker.
+cancelled (a model build replaced in its queue is cancelled by design and does not count). When
+every failed job is such an extract leg, this job then exits 1, so the run concludes "failure" for
+the scheduler's catch-up and the tracker; when any other job failed, the run fails anyway and this
+job ends green once the alert is posted (#2575), so a red notify always means the alert itself failed.
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ import yaml
 API = "https://api.github.com"
 LABEL = "alert"
 CANCELLED_BY_DESIGN = ("silver_gold.build", "gold.publish")
+CONTINUE_ON_ERROR = "landing.extract"  # pipeline.yml: the extract legs continue on error
 REOPEN_DAYS = 14
 REGISTER = Path(__file__).resolve().parent.parent / "ingestion" / "register.yaml"
 
@@ -189,9 +192,14 @@ def main(argv=None) -> int:
         link_to_epic(session, repo, response.json(), source)
     response.raise_for_status()
     print(response.json().get("html_url"))
-    # A failed extract leg continues on error, so the run would end "success" and the scheduler's
-    # catch-up would treat the slot as done: this job fails to give the run its true conclusion.
-    return 1 if failed else 0
+    return 1 if hidden_failure(failed) else 0
+
+
+def hidden_failure(failed: list[str]) -> bool:
+    """True when the run would end "success" despite the failures: every failed job is an extract leg,
+    which continues on error. The scheduler's catch-up would then treat the slot as done, so this job
+    fails to give the run its true conclusion; any other failed job already fails the run."""
+    return bool(failed) and all(name.startswith(CONTINUE_ON_ERROR) for name in failed)
 
 
 if __name__ == "__main__":
