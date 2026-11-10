@@ -1,0 +1,41 @@
+source_system: nbp_interest_rates
+description: "Narodowy Bank Polski — official NBP interest rates (reference, lombard, deposit, rediscount, discount), XML files"
+
+# Extraction strategy (docs/landing.md). Bulk feature: NBP publishes the official rates as two
+# small XML files on static.nbp.pl (register PLG-006): the archive of every MPC change since
+# 1998-02-26 (rate values per effective date, ~37 kB) and the current table (rate names in
+# Polish and English, footnotes, required-reserve rates, ~3 kB). Both are complete files at fixed
+# URLs, landed through the shared bulk_file pattern; version = Last-Modified, written only when
+# the SHA-256 changed. Restart unit: one file. Proven from Actions by the Dev probe 42776278659 and the Dev trial 42777711811.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: rates_archive    # every change of the NBP rates since 1998-02-26 (ref, lom, red, dep, dys)
+        url: https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml
+        format: raw
+        version: last_modified
+      - entity: rates_current    # the rates in force, with names (PL/EN) and footnotes
+        url: https://static.nbp.pl/dane/stopy/stopy_procentowe.xml
+        format: raw
+        version: last_modified
+  initial: bulk
+  production: snapshot                  # each file is complete
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: # UTC; release: MPC decisions take effect the day after the meeting (about monthly); two small files, weekday check
+    - {cron: "40 12 * * 1-5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/nbp_interest_rates/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.nbp_interest_rate_items, bronze.nbp_interest_rates_rejected_files]
+silver: [silver.nbp_policy_rates]
+gold: []
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (owner decision #875): two files of a few hundred rows; rebuilt in full.
+refresh: {mode: full, decided: "#875"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

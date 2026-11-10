@@ -3775,43 +3775,59 @@ sources:
   name: Interest-rate statistics
   short_name: NBP interest rates
   provider: Narodowy Bank Polski (NBP)
-  status: registered
+  source_system: nbp_interest_rates
+  current: true
+  status: silver
   family: C
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [interest rates, banking]
   entities: [country, financial institution sector]
-  granularity: Rate by instrument, customer sector, maturity/fixation and period.
-  coverage: Dataset-specific; no single start date verified.
+  granularity: 'Official NBP rates (reference, lombard, deposit, rediscount, discount): rate by effective date of each
+    MPC change. MFI interest-rate statistics (rate by instrument, sector, maturity) are a separate later scope.'
+  coverage: Official rates from 1998-02-26 (96 changes to 2026-03-05; deposit rate from 2001-12-01, discount rate from 2010-01-01);
+    Dev probe 42776278659, 10 Nov 2026.
   access:
-    endpoint: https://nbp.pl/en/statistic-and-financial-reporting/basic-charts/
+    endpoint: https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml
     kind: bulk_file
-    interfaces: [HTML, XLSX, PDF]
+    interfaces: [XML, HTML, XLSX, PDF]
     auth: public download
     cost: free
-    limits: Unknown.
+    limits: 'Two small XML files (~37 kB archive, ~3 kB current); Terms of Use §5(1): automatic downloading that
+      disturbs the website may lead to a temporary IP block, so one request per file and run.'
   licence:
     status: unresolved
-    notes: Reuse terms remain unresolved.
-  updates: Monthly or policy-event observations; revisions unknown.
+    notes: 'Terms: Terms of Use of the Narodowy Bank Polski Website,
+      https://static.nbp.pl/dokumenty/regulaminy/regulamin_nbppl_en.pdf: saving files, copying pages in full or in
+      part and printouts for personal use are allowed (§1(6)); links allowed without modification or distortion of
+      the content (§1(7)); the user must state the source with a link to www.nbp.pl (§1(8)); information is for
+      informational purposes only (§4(1)). Commercial reuse, redistribution and modification are not addressed.
+      Attribution: "Źródło: NBP, www.nbp.pl" / "Source: Narodowy Bank Polski, www.nbp.pl". Unresolved under the
+      owner decision of 14 Oct 2026 (NBP data stays internal until NBP confirms reuse terms; Task
+      data/src-plg-001/review/ask-nbp, whose e-mail should name the interest rates too).'
+  updates: The archive and current files change after each MPC decision that changes a rate (effective the next day,
+    about 11 MPC meetings a year); Last-Modified 4 Mar 2026 at the probe. Past values are not revised.
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
-    identifiers: period/date + rate family + instrument + sector + maturity
+    history: Full history in the archive file; both files landed whole (bulk_file pattern).
+    incremental: Weekday re-download; written only when the SHA-256 changed.
+    identifiers: rate id (ref, lom, dep, red, dys) + effective date (obowiazuje_od)
   modelling:
-    notes: Percentages are non-additive; separate policy, new-business and stock rates.
-    overlap: May overlap ECB harmonised series.
+    notes: Percentages are non-additive; a rate holds from its effective date to the next change (step function).
+      Separate policy rates from MFI new-business and stock rates (later scope).
+    overlap: The ECB key rates (GL-016) are the euro-area counterpart; never combine.
   research:
     priority: review-next
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - Verify current landing page, history and licence.
+    - Confirm NBP reuse terms (owner, with PLG-001).
+    - MFI interest-rate statistics (nbp.pl monetary statistics) not yet researched.
     references:
-    - https://nbp.pl/en/statistic-and-financial-reporting/basic-charts/
+    - https://nbp.pl/en/monetary-policy/mpc-decisions/basic-interest-rates/
+    - https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml
+    - https://static.nbp.pl/dane/stopy/stopy_procentowe.xml
+    - https://static.nbp.pl/dokumenty/regulaminy/regulamin_nbppl_en.pdf
 - id: PLG-007
   name: State budget acts and execution publications
   short_name: MF state budget

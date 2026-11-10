@@ -4,6 +4,7 @@ gus_bdl,PLS-001,GUS Bank Danych Lokalnych,GUS Local Data Bank,GUS,cube,subgroup,
 gus_dbw,PLS-002,GUS Dziedzinowe Bazy Wiedzy,GUS Knowledge Databases,GUS,cube,file (indicator × section × presentation × periodicity × year),national-public,cc_by_4_0_gus,https://api.stat.gov.pl/Home/DBWApi?lang=en
 world_bank_wdi,GL-005,World Bank WDI,World Bank World Development Indicators,World Bank,cube,indicator,international-public,cc_by_4_0_world_bank,https://datatopics.worldbank.org/world-development-indicators/
 nbp,PLG-001,NBP kursy walut i cena złota,NBP exchange rates and gold price,Narodowy Bank Polski,cube,table,national-public,unresolved,https://api.nbp.pl/en.html
+nbp_interest_rates,PLG-006,NBP stopy procentowe,NBP interest rates,Narodowy Bank Polski,cube,file,national-public,unresolved,https://nbp.pl/en/monetary-policy/mpc-decisions/basic-interest-rates/
 gleif,CD-015,GLEIF,GLEIF LEI golden copy,GLEIF,registry,file,international-public,cc0_gleif,https://www.gleif.org/en/lei-data/access-and-use-lei-data
 opendata_org,EX-005,OpenData ODO Senzing,"OpenData organisations, people, locations",OpenData,registry,snapshot member,unknown,unresolved,
 mf_biala_lista,PLG-011,MF biała lista VAT,MF VAT white list (flat file),Ministerstwo Finansów,lookup,file,national-public,mf_flat_file,https://www.podatki.gov.pl/wykaz-podatnikow-vat-wyszukiwarka
