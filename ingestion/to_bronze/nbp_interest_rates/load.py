@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """NBP interest rates bronze.load: newest Landing copy of both XML files → bronze.nbp_interest_rate_items.
 
-One row per ``<pozycja>`` element of either file, attributes as source text (rates keep the decimal comma):
+One row per ``<pozycja>`` (rate) or ``<odnosnik>`` (footnote) element of either file, attributes as source text (rates keep the decimal comma):
 
   rates_archive  ``<pozycje obowiazuje_od=…>`` groups (one per MPC change since 1998-02-26) of
                  ``<pozycja id=… oprocentowanie=…/>``; effective_from = the group's date.
   rates_current  ``<tabela id=…>`` groups (stoproc: NBP base rates; required-reserve rates) with names
                  (nazwa PL, name EN), trend, footnote reference and the item's own obowiazuje_od, and
-                 ``<odnosniki>`` (footnote texts, odnosnik PL / note EN).
+                 ``<odnosniki>`` with ``<odnosnik id odnosnik note>`` footnotes (text PL / EN).
 
 An attribute the decoder does not know rejects the file (bronze.nbp_interest_rates_rejected_files), so a
 change of the NBP format is never loaded silently. Code shared with other small bulk sources:
@@ -59,7 +59,7 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
         if unknown:
             raise ValueError(f"unknown attributes {sorted(unknown)} on <{group.tag}>")
         for item in group:
-            if item.tag != "pozycja":
+            if item.tag not in ("pozycja", "odnosnik"):
                 raise ValueError(f"unexpected element <{item.tag}> in <{group.tag}>")
             unknown = set(item.attrib) - set(ITEM_ATTRIBUTES)
             if unknown:
@@ -83,7 +83,7 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
                 }
             )
     if not rows:
-        raise ValueError("no <pozycja> elements")
+        raise ValueError("no <pozycja> or <odnosnik> elements")
     return pa.Table.from_pylist(rows, schema=ARROW)
 
 

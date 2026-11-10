@@ -182,7 +182,7 @@ sources:
   tables:
   - name: nbp_interest_rate_items
     description: >-
-      One row per <pozycja> of the newest copy of each file (entity rates_archive: rate per MPC change
+      One row per <pozycja> (rate) or <odnosnik> (footnote) of the newest copy of each file (entity rates_archive: rate per MPC change
       since 1998-02-26; rates_current: rates in force with PL/EN names and footnotes), attributes as
       source text (decimal comma); partitioned by entity.
   - name: nbp_interest_rates_rejected_files
