@@ -33,7 +33,9 @@ the same way.
 As built (routes and terms in [sources.md](sources.md)): `news_feeds` (TP-001…TP-008, one register entry per
 outlet; PAP parked, its feed is behind bot protection), feeds every 3 hours, loaded and built in the evening full
 dataflow (21:40 UTC); `gdelt` (CD-030, 20:30 UTC, best effort: GDELT refuses shared runner addresses for long
-stretches) and `wikimedia_pageviews` (CD-025, 20:10 UTC), both built from the seed `topic_signal.csv`.
+stretches) and `wikimedia_pageviews` (CD-025, 20:10 UTC), both built from the seed `topic_signal.csv`;
+`release_calendars` (Eurostat euro indicators, GUS kalendarium, ECB; TP-010, TP-011, TP-014; 19:50 UTC). NBP and
+the Ministry of Finance calendars are parked (TP-012, TP-013: bot protection, refused connections).
 
 **Storage.** Landing keeps exact source bytes (docs/landing.md), so a feed copy still holds the outlet's
 description snippets; Bronze and every later layer keep only title, link, outlet, language and time. The raw
@@ -52,6 +54,12 @@ registered), PAP Biznes paid services (CD-008).
 | `topic_kpi.csv` | topic_key, kpi_key (v2 key), role (`main` = the KPI that answers the topic, `related`) |
 | `topic_keyword.csv` | topic_key, lang, pattern (case-insensitive, matched on word stems: `inflacj`, `drożyzn`, `stóp procentow`), weight, exclude (patterns that cancel a match) |
 | `topic_signal.csv` | topic_key, signal (`gdelt_query`, `wiki_article`), value (the GDELT query; the Wikipedia article title with language) |
+| `release_kpi.csv` | publisher, pattern (on the release title), kpi_key: links official releases to v2 KPIs (Eurostat also by dataset code) |
+
+Patterns are RE2 regular expressions on the lower-case title, anchored at a word start
+(`(^|[^\pL\pN])(pattern)`), so a stem matches every inflected form (`inflacj`, `st[oó]p\pL* procentow`); a
+pattern may end in `([^\pL]|$)` to match a whole word (`płac(a|y|e)([^\pL]|$)` keeps `płacić` out). Keywords
+of a language match only headlines in that language. `tests/topic_seeds.sql` compiles every pattern.
 
 The first set covers the zohelo-bi slice and the themes Polish economic news returns to: inflation and prices,
 interest rates and the NBP, wages, labour market, unemployment, the złoty, GDP and growth, public finances and
@@ -76,7 +84,12 @@ For each topic and day *d*, three signals are turned into robust z-scores agains
 
 `heat(d) = 0.5·z_news + 0.3·z_volume + 0.2·z_attention + release(d)`, where a missing signal drops out and the
 weights of the others are rescaled; `release(d)` = 1 on the day of an official release of one of the topic's main
-KPIs and 0.5 on the day before. Weights live in `warehouse.yaml` (`topics:` block), not in code.
+KPIs and 0.5 on the day before. Weights live in `warehouse.yaml` (`topics:` block), not in code; `warehouse/build.py`
+passes the block to every build as the dbt var `topics`. As built: the volume signal is matching articles per
+100,000 monitored (`volume_per`), so the MAD floor of 1 applies to all three signals alike; a signal gets no
+z-score with fewer than 7 observed baseline days (`min_baseline_days`); news counts 0 on days the feeds ran
+without a match; the days are Warsaw days; release days come from `silver.releases` and the seed
+`release_calendar.csv`. `gold.topic_daily` keeps 455 days (the year window plus its baseline).
 
 Ranking per period, on the day of the run:
 
@@ -104,9 +117,22 @@ the year ranking); scores are kept.
 
 `06_published/v2/topics.json`, contract in [published.md](published.md) ("topics.json").
 
+**Internal review.** While `topics.publish` is false, `gold.publish` writes the same document to
+`06_published/v1/review/topics.json` (served by the data portal after sign-in at
+`/api/published/v1/review/topics.json`) and a review table (top topics per period with their first headline and
+the z-scores behind the heat) to the job summary of the run, so each evening's Pipeline run page shows the day's
+ranking; run pages keep the history of the review period. Switching `topics.publish` to true (owner, after at
+least two weeks) writes `06_published/v2/topics.json` instead; the review copy then stays as written last and is
+removed with v1.
+
 ## Quality checks (the run fails, or warns, as stated)
 
 - every active feed delivered items in the last 48 hours (warn), none for 7 days (fail and alert),
 - matched share of headlines between 10% and 90% (warn outside),
 - every active topic has at least one signal configured (fail),
 - `topics.json` within its size limit and schema (fail).
+
+As built: `gold.topic_quality` (one row per check and subject, status ok / warn / fail);
+`tests/topic_quality.sql` fails the build on a fail row, `tests/topic_quality_warn.sql` warns; GDELT or Wikipedia
+days older than 3 days per topic are warnings (`volume_stale`, `attention_stale`); `unmatched_headlines` counts the
+last 7 days' headlines no topic matched (dictionary work); `gold.publish` checks size and schema.

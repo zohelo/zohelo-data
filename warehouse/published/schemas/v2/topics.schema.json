@@ -1,0 +1,874 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zohelo.com/schemas/published/v2/topics.schema.json",
+  "title": "06_published/v2/topics.json",
+  "type": "object",
+  "required": [
+    "version",
+    "generated_at",
+    "periods"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$"
+    },
+    "periods": {
+      "type": "object",
+      "required": [
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "year"
+      ],
+      "properties": {
+        "day": {
+          "type": "object",
+          "required": [
+            "window",
+            "topics"
+          ],
+          "properties": {
+            "window": {
+              "type": "object",
+              "required": [
+                "from",
+                "to"
+              ],
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                },
+                "to": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                }
+              },
+              "additionalProperties": true
+            },
+            "topics": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "topic_key",
+                  "name_pl",
+                  "name_en",
+                  "rank",
+                  "heat",
+                  "trend",
+                  "kpi_keys",
+                  "headlines",
+                  "next_release",
+                  "signals"
+                ],
+                "properties": {
+                  "topic_key": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_]+$"
+                  },
+                  "name_pl": {
+                    "type": "string"
+                  },
+                  "name_en": {
+                    "type": "string"
+                  },
+                  "rank": {
+                    "type": "integer"
+                  },
+                  "heat": {
+                    "type": "number"
+                  },
+                  "trend": {
+                    "type": "string",
+                    "pattern": "^(up|down|flat)$"
+                  },
+                  "kpi_keys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_]+$"
+                    }
+                  },
+                  "headlines": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "title",
+                        "url",
+                        "outlet",
+                        "lang",
+                        "published_at"
+                      ],
+                      "properties": {
+                        "title": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string",
+                          "pattern": "^https://"
+                        },
+                        "outlet": {
+                          "type": "string"
+                        },
+                        "lang": {
+                          "type": "string",
+                          "pattern": "^(pl|en)$"
+                        },
+                        "published_at": {
+                          "type": "string",
+                          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$"
+                        }
+                      },
+                      "additionalProperties": true
+                    }
+                  },
+                  "next_release": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "required": [
+                      "date",
+                      "source_key",
+                      "title_pl",
+                      "title_en"
+                    ],
+                    "properties": {
+                      "date": {
+                        "type": "string",
+                        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                      },
+                      "source_key": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9_]+$"
+                      },
+                      "title_pl": {
+                        "type": "string"
+                      },
+                      "title_en": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": true
+                  },
+                  "signals": {
+                    "type": "object",
+                    "required": [
+                      "news",
+                      "volume",
+                      "attention"
+                    ],
+                    "properties": {
+                      "news": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "volume": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "attention": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "week": {
+          "type": "object",
+          "required": [
+            "window",
+            "topics"
+          ],
+          "properties": {
+            "window": {
+              "type": "object",
+              "required": [
+                "from",
+                "to"
+              ],
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                },
+                "to": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                }
+              },
+              "additionalProperties": true
+            },
+            "topics": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "topic_key",
+                  "name_pl",
+                  "name_en",
+                  "rank",
+                  "heat",
+                  "trend",
+                  "kpi_keys",
+                  "headlines",
+                  "next_release",
+                  "signals"
+                ],
+                "properties": {
+                  "topic_key": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_]+$"
+                  },
+                  "name_pl": {
+                    "type": "string"
+                  },
+                  "name_en": {
+                    "type": "string"
+                  },
+                  "rank": {
+                    "type": "integer"
+                  },
+                  "heat": {
+                    "type": "number"
+                  },
+                  "trend": {
+                    "type": "string",
+                    "pattern": "^(up|down|flat)$"
+                  },
+                  "kpi_keys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_]+$"
+                    }
+                  },
+                  "headlines": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "title",
+                        "url",
+                        "outlet",
+                        "lang",
+                        "published_at"
+                      ],
+                      "properties": {
+                        "title": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string",
+                          "pattern": "^https://"
+                        },
+                        "outlet": {
+                          "type": "string"
+                        },
+                        "lang": {
+                          "type": "string",
+                          "pattern": "^(pl|en)$"
+                        },
+                        "published_at": {
+                          "type": "string",
+                          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$"
+                        }
+                      },
+                      "additionalProperties": true
+                    }
+                  },
+                  "next_release": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "required": [
+                      "date",
+                      "source_key",
+                      "title_pl",
+                      "title_en"
+                    ],
+                    "properties": {
+                      "date": {
+                        "type": "string",
+                        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                      },
+                      "source_key": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9_]+$"
+                      },
+                      "title_pl": {
+                        "type": "string"
+                      },
+                      "title_en": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": true
+                  },
+                  "signals": {
+                    "type": "object",
+                    "required": [
+                      "news",
+                      "volume",
+                      "attention"
+                    ],
+                    "properties": {
+                      "news": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "volume": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "attention": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "month": {
+          "type": "object",
+          "required": [
+            "window",
+            "topics"
+          ],
+          "properties": {
+            "window": {
+              "type": "object",
+              "required": [
+                "from",
+                "to"
+              ],
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                },
+                "to": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                }
+              },
+              "additionalProperties": true
+            },
+            "topics": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "topic_key",
+                  "name_pl",
+                  "name_en",
+                  "rank",
+                  "heat",
+                  "trend",
+                  "kpi_keys",
+                  "headlines",
+                  "next_release",
+                  "signals"
+                ],
+                "properties": {
+                  "topic_key": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_]+$"
+                  },
+                  "name_pl": {
+                    "type": "string"
+                  },
+                  "name_en": {
+                    "type": "string"
+                  },
+                  "rank": {
+                    "type": "integer"
+                  },
+                  "heat": {
+                    "type": "number"
+                  },
+                  "trend": {
+                    "type": "string",
+                    "pattern": "^(up|down|flat)$"
+                  },
+                  "kpi_keys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_]+$"
+                    }
+                  },
+                  "headlines": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "title",
+                        "url",
+                        "outlet",
+                        "lang",
+                        "published_at"
+                      ],
+                      "properties": {
+                        "title": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string",
+                          "pattern": "^https://"
+                        },
+                        "outlet": {
+                          "type": "string"
+                        },
+                        "lang": {
+                          "type": "string",
+                          "pattern": "^(pl|en)$"
+                        },
+                        "published_at": {
+                          "type": "string",
+                          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$"
+                        }
+                      },
+                      "additionalProperties": true
+                    }
+                  },
+                  "next_release": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "required": [
+                      "date",
+                      "source_key",
+                      "title_pl",
+                      "title_en"
+                    ],
+                    "properties": {
+                      "date": {
+                        "type": "string",
+                        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                      },
+                      "source_key": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9_]+$"
+                      },
+                      "title_pl": {
+                        "type": "string"
+                      },
+                      "title_en": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": true
+                  },
+                  "signals": {
+                    "type": "object",
+                    "required": [
+                      "news",
+                      "volume",
+                      "attention"
+                    ],
+                    "properties": {
+                      "news": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "volume": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "attention": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "quarter": {
+          "type": "object",
+          "required": [
+            "window",
+            "topics"
+          ],
+          "properties": {
+            "window": {
+              "type": "object",
+              "required": [
+                "from",
+                "to"
+              ],
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                },
+                "to": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                }
+              },
+              "additionalProperties": true
+            },
+            "topics": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "topic_key",
+                  "name_pl",
+                  "name_en",
+                  "rank",
+                  "heat",
+                  "trend",
+                  "kpi_keys",
+                  "headlines",
+                  "next_release",
+                  "signals"
+                ],
+                "properties": {
+                  "topic_key": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_]+$"
+                  },
+                  "name_pl": {
+                    "type": "string"
+                  },
+                  "name_en": {
+                    "type": "string"
+                  },
+                  "rank": {
+                    "type": "integer"
+                  },
+                  "heat": {
+                    "type": "number"
+                  },
+                  "trend": {
+                    "type": "string",
+                    "pattern": "^(up|down|flat)$"
+                  },
+                  "kpi_keys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_]+$"
+                    }
+                  },
+                  "headlines": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "title",
+                        "url",
+                        "outlet",
+                        "lang",
+                        "published_at"
+                      ],
+                      "properties": {
+                        "title": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string",
+                          "pattern": "^https://"
+                        },
+                        "outlet": {
+                          "type": "string"
+                        },
+                        "lang": {
+                          "type": "string",
+                          "pattern": "^(pl|en)$"
+                        },
+                        "published_at": {
+                          "type": "string",
+                          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$"
+                        }
+                      },
+                      "additionalProperties": true
+                    }
+                  },
+                  "next_release": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "required": [
+                      "date",
+                      "source_key",
+                      "title_pl",
+                      "title_en"
+                    ],
+                    "properties": {
+                      "date": {
+                        "type": "string",
+                        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                      },
+                      "source_key": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9_]+$"
+                      },
+                      "title_pl": {
+                        "type": "string"
+                      },
+                      "title_en": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": true
+                  },
+                  "signals": {
+                    "type": "object",
+                    "required": [
+                      "news",
+                      "volume",
+                      "attention"
+                    ],
+                    "properties": {
+                      "news": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "volume": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "attention": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "year": {
+          "type": "object",
+          "required": [
+            "window",
+            "topics"
+          ],
+          "properties": {
+            "window": {
+              "type": "object",
+              "required": [
+                "from",
+                "to"
+              ],
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                },
+                "to": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                }
+              },
+              "additionalProperties": true
+            },
+            "topics": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "topic_key",
+                  "name_pl",
+                  "name_en",
+                  "rank",
+                  "heat",
+                  "trend",
+                  "kpi_keys",
+                  "headlines",
+                  "next_release",
+                  "signals"
+                ],
+                "properties": {
+                  "topic_key": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_]+$"
+                  },
+                  "name_pl": {
+                    "type": "string"
+                  },
+                  "name_en": {
+                    "type": "string"
+                  },
+                  "rank": {
+                    "type": "integer"
+                  },
+                  "heat": {
+                    "type": "number"
+                  },
+                  "trend": {
+                    "type": "string",
+                    "pattern": "^(up|down|flat)$"
+                  },
+                  "kpi_keys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_]+$"
+                    }
+                  },
+                  "headlines": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "title",
+                        "url",
+                        "outlet",
+                        "lang",
+                        "published_at"
+                      ],
+                      "properties": {
+                        "title": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string",
+                          "pattern": "^https://"
+                        },
+                        "outlet": {
+                          "type": "string"
+                        },
+                        "lang": {
+                          "type": "string",
+                          "pattern": "^(pl|en)$"
+                        },
+                        "published_at": {
+                          "type": "string",
+                          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z$"
+                        }
+                      },
+                      "additionalProperties": true
+                    }
+                  },
+                  "next_release": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "required": [
+                      "date",
+                      "source_key",
+                      "title_pl",
+                      "title_en"
+                    ],
+                    "properties": {
+                      "date": {
+                        "type": "string",
+                        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                      },
+                      "source_key": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9_]+$"
+                      },
+                      "title_pl": {
+                        "type": "string"
+                      },
+                      "title_en": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": true
+                  },
+                  "signals": {
+                    "type": "object",
+                    "required": [
+                      "news",
+                      "volume",
+                      "attention"
+                    ],
+                    "properties": {
+                      "news": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "volume": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "attention": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}
