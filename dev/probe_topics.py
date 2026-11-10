@@ -340,6 +340,36 @@ def gdelt2() -> None:
     emit("gdelt variants", out)
 
 
+def calendars3() -> None:
+    r, err = get("https://ec.europa.eu/eurostat/news/euro-indicators/release-calendar")
+    if r is not None:
+        ctx = [r.text[max(0, m.start() - 1200): m.end() + 1200] for m in re.finditer(r"eventsJson", r.text)][:2]
+        emit("eurostat js", ctx)
+    for q in ["start=2026-11-01T00:00:00&end=2026-12-31T00:00:00", "start=2026-11-01&end=2026-12-31"]:
+        time.sleep(3)
+        url = "https://ec.europa.eu/eurostat/o/calendars/eventsJson?" + q
+        r, err = get(url)
+        row = {"url": url, "status": getattr(r, "status_code", err)}
+        if r is not None:
+            row.update({"ctype": r.headers.get("Content-Type"), "bytes": len(r.content), "head": r.text[:1500]})
+            try:
+                data = r.json()
+                row["n"] = len(data) if isinstance(data, list) else list(data)[:10]
+                row["keys"] = sorted(data[0]) if isinstance(data, list) and data else None
+            except ValueError:
+                pass
+        emit("eurostat json", row)
+    time.sleep(3)
+    r, err = get("https://stat.gov.pl/kalendarium/02-11-2026.html")
+    if r is not None:
+        t = r.text
+        i = t.find("Publikacje GUS")
+        emit("gus day html", t[i: i + 3800])
+        j = t.find("Publikacje GUS", i + 20)
+        k = t.find("list", i + 200)
+        emit("gus day html2", t[i + 3800: i + 7600])
+
+
 if __name__ == "__main__":
-    {"news": news, "calendars": calendars, "signals": signals, "gdelt": gdelt, "calendars2": calendars2, "gdelt2": gdelt2}[sys.argv[1]]()
+    {"news": news, "calendars": calendars, "signals": signals, "gdelt": gdelt, "calendars2": calendars2, "gdelt2": gdelt2, "calendars3": calendars3}[sys.argv[1]]()
     print(json.dumps({"annotations": COUNT["n"]}))
