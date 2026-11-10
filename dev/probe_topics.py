@@ -314,6 +314,32 @@ def calendars2() -> None:
         time.sleep(2)
 
 
+def gdelt2() -> None:
+    gd = "https://api.gdeltproject.org/api/v2/doc/doc"
+    queries = ["inflation sourcecountry:PL", "inflation sourcelang:polish", "inflacja", "inflacja sourcelang:pol",
+               '"interest rates" sourcecountry:poland', "(inflation OR \"consumer prices\") sourcelang:polish"]
+    out = []
+    for q in queries:
+        for mode, span in (("timelinevolraw", "3m"),):
+            url = f"{gd}?query={requests.utils.quote(q)}&mode={mode}&format=json&timespan={span}"
+            row = {"q": q, "mode": mode}
+            for wait in (12, 30, 60, 120):
+                time.sleep(wait)
+                r, err = get(url)
+                row["status"] = r.status_code if r is not None else err
+                if r is not None and r.status_code != 429:
+                    break
+            if r is not None and r.status_code == 200:
+                try:
+                    tl = (r.json() or {}).get("timeline") or []
+                    row.update({"series": [x.get("series") for x in tl], "points": [len(x.get("data") or []) for x in tl],
+                                "last": [(x.get("data") or [{}])[-1] for x in tl], "bytes": len(r.content)})
+                except ValueError:
+                    row["head"] = r.text[:200]
+            out.append(row)
+    emit("gdelt variants", out)
+
+
 if __name__ == "__main__":
-    {"news": news, "calendars": calendars, "signals": signals, "gdelt": gdelt, "calendars2": calendars2}[sys.argv[1]]()
+    {"news": news, "calendars": calendars, "signals": signals, "gdelt": gdelt, "calendars2": calendars2, "gdelt2": gdelt2}[sys.argv[1]]()
     print(json.dumps({"annotations": COUNT["n"]}))
