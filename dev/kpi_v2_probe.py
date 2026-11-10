@@ -4,7 +4,7 @@ whether the planned Eurostat filters find rows for PL and EU27_2020. Deleted bef
 import json
 
 import duckdb
-from pyiceberg.expressions import In
+from pyiceberg.expressions import And, In
 
 from ingestion.common.r2 import catalog
 from ingestion.common.report import annotate
@@ -75,8 +75,12 @@ def chunks(title: str, data: dict) -> None:
 
 
 def main() -> int:
+    import sys
+
     cat = catalog()
     con = duckdb.connect()
+    if "silver" in sys.argv[1:]:
+        return silver(cat, con)
     cov = cat.load_table(("gold", "coverage")).scan(
         selected_fields=("source", "block_id", "block_name", "status", "silver_rows")
     ).to_arrow()
@@ -98,10 +102,14 @@ def main() -> int:
     annotate("notice", "nbp ecb coverage", nbp[:150])
     stat = con.execute("select source, status, count(*) from cov group by all order by 1, 2").fetchall()
     annotate("notice", "coverage summary", stat)
+    return 0
+
+
+def silver(cat, con) -> int:
 
     spelled = [*PLANNED, *(d.lower() for d in PLANNED)]
     obs = cat.load_table(("silver", "eurostat_observations")).scan(
-        row_filter=In("dataset_id", spelled),
+        row_filter=And(In("dataset_id", spelled), In("geo_code", ["PL", "EU27_2020", "PL22", "PL91"])),
         selected_fields=("dataset_id", "freq_code", "unit_code", "geo_code", "time_period", "value",
                          "breakdown_dimensions", "breakdown_codes"),
     ).to_arrow()
@@ -118,15 +126,17 @@ def main() -> int:
             if not d:
                 continue
             vals = con.execute(
-                f"select list(distinct string_split(breakdown_codes, ',')[{i + 1}])[1:14] from o where ds = ? and geo_code = 'PL'",
+                f"select list(distinct string_split(breakdown_codes, ',')[{i + 1}])[1:10] from o where ds = ? and geo_code = 'PL'",
                 [ds]).fetchone()[0]
             codes[d] = vals
         hit = con.execute(
             f"select geo_code, count(*), max(time_period), count(distinct breakdown_codes || unit_code) from o "
             f"where ds = ? and value is not null and ({rule}) group by 1 order by 1", [ds]).fetchall()
-        out[ds] = {"f": base[0], "u": base[1], "dims": codes, "hit": hit}
-    for ds, data in out.items():
-        annotate("notice", f"silver {ds}", data)
+        series = con.execute(
+            f"select list(distinct unit_code || '|' || breakdown_codes)[1:8] from o "
+            f"where ds = ? and geo_code = 'PL' and value is not null and ({rule})", [ds]).fetchone()[0]
+        out[ds] = {"f": base[0], "u": base[1], "dims": codes, "hit": hit, "pl": series}
+    chunks("silver", out)
     return 0
 
 
