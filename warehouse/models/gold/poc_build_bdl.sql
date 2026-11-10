@@ -4,6 +4,11 @@
    label positions where no variable of the subgroup says "ogółem" (those name what is
    measured: "urodzenia żywe", "ludność na 1 km2", "mieszkania"); the other positions are
    breakdowns; a series is total when every breakdown label is "ogółem".
+   Short-term subgroups name the period in the first label ("styczeń" … "grudzień", "1 kwartał"
+   … "4 kwartał"): that label is the period, not a breakdown, and the row is monthly or quarterly;
+   a cumulative or whole-year period ("1-3 kwartały", "styczeń-maj", "półrocze", "rok") and the
+   quarters of a subgroup that also has months are left unplaced (frequency X, counted by
+   build_check).
    Sample: years from 2010, units down to powiat (gmina for Ludność from 2015). #}
 with blocks as ({{ poc_bdl_blocks() }}),
 
@@ -20,7 +25,58 @@ units as (
     from {{ ref('bdl_units') }}
 ),
 
-variables as (select * from {{ ref('bdl_variables') }}),
+raw_variables as (
+    select
+        *,
+        case lower(trim(cast(n1 as varchar)))
+            when 'styczeń' then 1 when 'luty' then 2 when 'marzec' then 3 when 'kwiecień' then 4
+            when 'maj' then 5 when 'czerwiec' then 6 when 'lipiec' then 7 when 'sierpień' then 8
+            when 'wrzesień' then 9 when 'październik' then 10 when 'listopad' then 11 when 'grudzień' then 12
+        end as period_month,
+        case
+            when regexp_matches(lower(trim(cast(n1 as varchar))), '^[1-4] kwartał$')
+                then cast(substr(trim(cast(n1 as varchar)), 1, 1) as integer)
+        end as period_quarter,
+        regexp_matches(lower(trim(cast(n1 as varchar))), '^([1-4]-[1-4] kwartał|.*półrocz|styczeń-|rok$)')
+            as period_cumulative
+    from {{ ref('bdl_variables') }}
+),
+
+periods as (
+    select
+        *,
+        period_month is not null or period_quarter is not null or coalesce(period_cumulative, false) as is_period
+    from raw_variables
+),
+
+monthly_subgroups as (  -- a subgroup with months: its quarters are averages of them, not placed
+    select
+        subgroup_id,
+        bool_or(period_month is not null) as has_month
+    from raw_variables
+    group by subgroup_id
+),
+
+variables as (  -- the period label (if any) is taken out of n1; the labels shift left
+    select
+        v.subgroup_id,
+        v.variable_id,
+        case when v.is_period then cast(v.n1 as varchar) end as period_code,
+        case
+            when not v.is_period then 'A'
+            when v.period_month is not null then 'M'
+            when v.period_quarter is not null and not s.has_month then 'Q'
+            else 'X'
+        end as period_frequency,
+        coalesce(v.period_month, (v.period_quarter - 1) * 3 + 1) as period_start_month,
+        case when v.is_period then v.n2 else v.n1 end as n1,
+        case when v.is_period then v.n3 else v.n2 end as n2,
+        case when v.is_period then v.n4 else v.n3 end as n3,
+        case when v.is_period then v.n5 else v.n4 end as n4,
+        case when v.is_period then null else v.n5 end as n5
+    from periods as v
+    inner join monthly_subgroups as s on v.subgroup_id = s.subgroup_id
+),
 
 label_rule as (  -- a label position names what is measured when no variable of the subgroup has "ogółem" there
     select
@@ -54,6 +110,13 @@ silver as (
         v.n3,
         v.n4,
         v.n5,
+        coalesce(v.period_frequency, 'A') as frequency,
+        v.period_code,
+        case coalesce(v.period_frequency, 'A')
+            when 'A' then make_date(o.year, 1, 1)
+            when 'X' then null
+            else make_date(o.year, v.period_start_month, 1)
+        end as date_key,
         array_to_string(
             list_filter(
                 [
@@ -128,7 +191,7 @@ deduplicated as (  -- one row per series × area × year: a subgroup can hold th
         partition by
             subgroup_id, measure_unit, measure_label, labels,
             case when geography_key = '_X' then '_X:' || unit_code else geography_key end,  -- the series identity
-            year
+            year, period_code
         order by case when channel = 'api' then 0 else 1 end, source_version desc, unit_code asc
     ) = 1
 )
@@ -151,9 +214,9 @@ select
     coalesce(k.measure_unit, '-') as unit_name,
     k.unit_code as geography_source_code,
     k.geography_key,
-    'A' as frequency,
-    make_date(k.year, 1, 1) as date_key,
-    cast(k.year as varchar) as period_label,
+    k.frequency,
+    k.date_key,
+    coalesce(k.period_code || ' ', '') || k.year as period_label,
     cast(to_json(map(
         list_transform(generate_series(1, len(k.labels)), lambda i: 'n' || i),  -- noqa: RF03
         k.labels
