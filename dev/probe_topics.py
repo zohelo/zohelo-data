@@ -370,6 +370,27 @@ def calendars3() -> None:
         emit("gus day html2", t[i + 3800: i + 7600])
 
 
+def calendars4() -> None:
+    base = "https://ec.europa.eu/eurostat/o/calendars/eventsJson"
+    out = []
+    for q in ["start=2026-11-01T00%3A00%3A00%2B01%3A00&end=2026-12-14T00%3A00%3A00%2B01%3A00&theme=&category=&keywords=&isEuroindicator=true&authorInclude=&authorExclude=",
+              "start=2026-11-01T00%3A00%3A00%2B01%3A00&end=2026-12-14T00%3A00%3A00%2B01%3A00&theme=&category=&keywords=&isEuroindicator=false&authorInclude=&authorExclude=",
+              "start=2026-11-01T00:00:00Z&end=2026-12-14T00:00:00Z&isEuroindicator=true",
+              "start=2026-11-01&end=2026-12-14&isEuroindicator=true&theme=&category=&keywords="]:
+        time.sleep(3)
+        r, err = get(f"{base}?{q}", )
+        row = {"q": q, "status": getattr(r, "status_code", err)}
+        if r is not None:
+            row.update({"ctype": r.headers.get("Content-Type"), "bytes": len(r.content), "head": r.text[:900]})
+        out.append(row)
+    emit("eurostat json 2", out)
+    time.sleep(3)
+    r, err = get("https://ec.europa.eu/eurostat/news/euro-indicators/release-calendar")
+    if r is not None:
+        ctx = [r.text[max(0, m.start() - 2500): m.start() + 300] for m in re.finditer(r"isEuroindicator", r.text)][:1]
+        emit("eurostat js 2", ctx)
+
+
 if __name__ == "__main__":
-    {"news": news, "calendars": calendars, "signals": signals, "gdelt": gdelt, "calendars2": calendars2, "gdelt2": gdelt2, "calendars3": calendars3}[sys.argv[1]]()
+    {"news": news, "calendars": calendars, "signals": signals, "gdelt": gdelt, "calendars2": calendars2, "gdelt2": gdelt2, "calendars3": calendars3, "calendars4": calendars4}[sys.argv[1]]()
     print(json.dumps({"annotations": COUNT["n"]}))
