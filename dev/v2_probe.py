@@ -72,7 +72,7 @@ def eurostat(ids: list[str]) -> None:
                    string_agg(distinct geo_code, ' ' order by geo_code) geos,
                    count(*) n, min(time_period) first, max(time_period) last
             from o where value is not null group by all order by all
-        """).arrow()
+        """).fetch_arrow_table()
         write(f"eurostat_{d}.csv", rows)
         short = con.sql("""
             select freq_code, unit_code, breakdown_dimensions, count(distinct breakdown_codes) series,
@@ -102,7 +102,7 @@ def bdl(subgroups: list[str]) -> None:
         from o left join v on v.subgroup_id = o.subgroup_id and v.dimension_key = o.dimension_values
         where o.value is not null
         group by all order by all
-    """).arrow()
+    """).fetch_arrow_table()
     write("bdl_" + "_".join(subgroups)[:80] + ".csv", rows)
     con.register("r", rows)
     for s in subgroups:
@@ -122,21 +122,21 @@ def dbw(prefixes: list[str]) -> None:
     con.register("d", dic)
     con.register("o", obs)
     dd = con.sql("select distinct regexp_replace(entity_id, '_[0-9]{4}_pl$|_pl$', '') block, lower(nazwa_kolumny) col, "
-                 "id_elementu, opis from d order by all").arrow()
+                 "id_elementu, opis from d order by all").fetch_arrow_table()
     write("dbw_dict_" + "_".join(prefixes)[:80] + ".csv", dd)
     summary = con.sql("""
         select regexp_replace(entity_id, '_[0-9]{4}_pl$|_pl$', '') block, indicator_id, presentation_id, period_id,
                dimension_1_id, dimension_2_id, dimension_3_id, count(*) n, min(year) first, max(year) last,
                count(distinct position_1_id) p1, count(distinct position_2_id) p2, count(distinct position_3_id) p3
         from o where value is not null group by all order by all
-    """).arrow()
+    """).fetch_arrow_table()
     write("dbw_obs_" + "_".join(prefixes)[:80] + ".csv", summary)
     sample = con.sql("""
         select regexp_replace(entity_id, '_[0-9]{4}_pl$|_pl$', '') block, year, period_id, presentation_id,
                position_1_id, position_2_id, position_3_id, value
         from o where value is not null
         qualify row_number() over (partition by block order by year desc, period_id desc) <= 40
-    """).arrow()
+    """).fetch_arrow_table()
     write("dbw_sample_" + "_".join(prefixes)[:80] + ".csv", sample)
     con.register("s", summary)
     annotate("notice", "probe dbw", con.sql("select block, count(*), sum(n), max(last) from s group by 1").fetchall())
