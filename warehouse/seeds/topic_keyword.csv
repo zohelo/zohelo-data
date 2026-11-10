@@ -43,7 +43,7 @@ zloty,pl,złotówk|złotego,1,glob|medal|wiek|strzał|środk|lwa|runa|piłk,zło
 zloty,pl,złoty([^\pL]|$),0.7,medal|glob|wiek|strzał|piłk|lew,
 zloty,pl,kurs\pL* (złot|euro|dolara|franka|walut),1,,
 zloty,pl,eur/pln|usd/pln|chf/pln|eurpln,1,,
-zloty,pl,dolar|walut,0.5,kryptowalut,
+zloty,pl,walut,0.5,kryptowalut,bare 'dolar' dropped: foreign-currency news without the złoty
 zloty,en,zloty|złoty|polish currency,1,,
 gdp_growth,pl,pkb,1,,
 gdp_growth,pl,produkt\pL* krajow\pL* brutto,1,,
