@@ -41,6 +41,11 @@ def specs(check_held: bool = True) -> list[dict]:
 
 
 def _extract(p) -> int:
+    return extract()
+
+
+def extract(landing_root: str = "01_landing", todo: list[dict] | None = None) -> int:
+    """Land the day's files, best effort (see the module docstring); always exit 0, refusals are warnings."""
     from datetime import UTC, datetime
     import time
 
@@ -50,7 +55,7 @@ def _extract(p) -> int:
     from ingestion.common.report import annotate
     from ingestion.to_landing.patterns import bulk_file
 
-    todo = specs()
+    todo = specs() if todo is None else todo
     start = datetime.now(UTC).toordinal() % max(len(todo), 1)
     todo = todo[start:] + todo[:start]  # a different first topic each day
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
@@ -63,7 +68,7 @@ def _extract(p) -> int:
         if n:
             time.sleep(PAUSE_SECONDS)
         try:
-            results.append(bulk_file.load_file(client, bucket, SOURCE, spec, "01_landing"))
+            results.append(bulk_file.load_file(client, bucket, SOURCE, spec, landing_root))
             refused_in_row = 0
         except (bulk_file.PermanentError, RuntimeError, requests.RequestException) as exc:
             refused.append({"entity": spec["entity"], "error": str(exc)[:120]})
