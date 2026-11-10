@@ -325,13 +325,36 @@ in `kpi_member.csv` (new seed, the curated members a reader needs: e.g. the NACE
 `{ version, generated_at, releases: [{ date, source_key, kpi_keys, title_pl, title_en, url }] }` from
 `release_calendar.csv`, dates today and later. `feed/calendar.ics` (v1) stays.
 
+## topics.json
+
+What is being talked about, ranked per period (owner decision O32; method in [topics.md](topics.md)). Written by
+`gold.publish` from `gold.topic_rank` once the owner has switched topics on for the portals (`topics.publish: true`
+in `warehouse.yaml`); until then the file is not written.
+
+| field | type | meaning |
+|---|---|---|
+| version, generated_at | | as above |
+| periods | object | keys `day`, `week`, `month`, `quarter`, `year` |
+| periods.<p>.window | object | `{ from, to }` dates of the window |
+| periods.<p>.topics[] | array | at most 10, ranked |
+| …topics[].topic_key, name_pl, name_en | string | |
+| …topics[].rank, heat | integer, number | rank in the period, heat score (2 decimals) |
+| …topics[].trend | string | `up`, `down`, `flat` against the previous window |
+| …topics[].kpi_keys | array | v2 KPI keys linked to the topic, `main` ones first; may be empty |
+| …topics[].headlines[] | array | at most 5, newest first: `{ title, url, outlet, lang, published_at }` |
+| …topics[].next_release | object or null | `{ date, source_key, title_pl, title_en }` of the next release of a main KPI |
+| …topics[].signals | object | `{ news, volume, attention }`: the z-scores behind the heat, for "why is this hot" |
+
+Size: ≤ 150 kB gzipped. Headlines are links with the outlet's name; no article text is ever in the file.
+
 ## status.json
 
 As v1 (copied to v2 so zohelo-bi reads one prefix).
 
 ## Size limits
 
-catalog.json ≤ 1 MB gzip · latest.json ≤ 300 kB gzip · series.json ≤ 1 MB gzip each · calendar.json ≤ 50 kB.
+catalog.json ≤ 1 MB gzip · latest.json ≤ 300 kB gzip · series.json ≤ 1 MB gzip each · calendar.json ≤ 50 kB ·
+topics.json ≤ 150 kB gzip.
 
 ## First slice: coverage
 
