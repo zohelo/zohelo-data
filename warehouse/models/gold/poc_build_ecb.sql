@@ -4,8 +4,9 @@
    currency per 1 EUR, geography not applicable `_Z`), FM ecb:FM:<rate id> (key ECB rates at their change dates),
    EST ecb:EST:WT, HICP/ICP ecb:<flow>:<item>:ANR, IRS ecb:IRS:L40 (10-year convergence yield in the country's
    currency), BSI ecb:BSI:<item>:<data type>:<suffix>. Areas: ISO two-letter countries, U2 → EUROSTAT:EA (euro
-   area, changing composition), I8 → EUROSTAT:EA19, I9 → EUROSTAT:EA20, B0/D0 → EUROSTAT:EU (EU, changing
-   composition; not EU27_2020); any other code is unmatched (`_X`). No breakdowns except the currency of a second IRS series. #}
+   area, changing composition), I8 → EUROSTAT:EA19, I9 → EUROSTAT:EA20, B6 → EUROSTAT:EU27_2020 (EU27, fixed
+   composition as of 31 January 2020), B0/D0 → EUROSTAT:EU (EU, changing composition); any other code (I10 euro
+   area 21, V5, candidate countries without a Gold area) is unmatched (`_X`). No breakdowns except the currency of a second IRS series. #}
 with blocks as ({{ poc_ecb_blocks() }}),
 
 geo as (
@@ -93,6 +94,7 @@ mapped as (
                     when 'U2' then 'EUROSTAT:EA'
                     when 'I8' then 'EUROSTAT:EA19'
                     when 'I9' then 'EUROSTAT:EA20'
+                    when 'B6' then 'EUROSTAT:EU27_2020'
                     when 'B0' then 'EUROSTAT:EU'
                     when 'D0' then 'EUROSTAT:EU'
                 end

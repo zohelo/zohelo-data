@@ -600,7 +600,7 @@ seasonally adjusted, from 1980). Bronze: `bronze.ecb_observations`, the generic 
 (all selections, typed, dimensions JSON, period_start). Gold: `gold.build_ecb` (blocks in
 `poc_ecb_blocks`: 13 EXR currencies, key rates, €STR, HICP/ICP, IRS, BSI); KPIs fx_rate (EUR/PLN),
 inflation (HICP), bond_yield_10y (IRS), m3_growth and ecb_deposit_rate. Areas: ISO two-letter countries
-(GR), U2 → EA, I8 → EA19, I9 → EA20, B0/D0 → EU (changing composition, not EU27_2020). Weekly schedule
+(GR), U2 → EA, I8 → EA19, I9 → EA20, B6 → EU27_2020 (fixed composition), B0/D0 → EU (changing composition). Weekly schedule
 (Thursday 05:40 UTC), full rebuild (D32: about 300,000 rows).
 
 ## World Bank International Comparison Program (ICP)
