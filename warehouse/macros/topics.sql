@@ -10,10 +10,12 @@
         {%- endif -%}
         {{ return(none) }}
     {%- endif -%}
+    {#- a plain set inside a for loop does not leave the loop in Jinja: walk the path with a namespace -#}
+    {%- set ns = namespace(value=value) -%}
     {%- for part in path.split('.') -%}
-        {%- set value = value[part] -%}
+        {%- set ns.value = ns.value[part] -%}
     {%- endfor -%}
-    {{ return(value) }}
+    {{ return(ns.value) }}
 {% endmacro %}
 
 {% macro topics_as_of() %}
