@@ -5,8 +5,12 @@
    positions match areas most often; the other dimensions are breakdowns. Measure =
    indicator × presentation. Periods: annual, monthly ("miesiąc - dane miesięczne - styczeń") and
    quarterly ("kwartał - dane kwartalne - 1 kwartał"); cumulative periods ("dane narastające") stay
-   unplaced (frequency X). #}
+   unplaced (frequency X), and so are the quarter-end months a monthly block repeats as quarterly
+   ("kwartał - dane miesięczne - marzec"). poc_dbw_block_rules: extra total positions, and a dimension
+   whose position names the measure (measure = indicator × presentation × that position). #}
 with blocks as ({{ poc_dbw_blocks() }}),
+
+rules as ({{ poc_dbw_block_rules() }}),
 
 geo_map as (
     select * from {{ ref('poc_map_geography') }}
@@ -120,20 +124,31 @@ per_row as (
                 when l.k = t.k then l.pos_label
             end
         ) as geography_source_code,
+        max(case when l.is_measure_dim then l.pos_label end) as measure_label,
         cast(to_json(map(
-            list(l.dim_name order by l.k) filter (where t.k is null or l.k <> t.k),
-            list(l.pos_label order by l.k) filter (where t.k is null or l.k <> t.k)
+            list(l.dim_name order by l.k) filter (where (t.k is null or l.k <> t.k) and not l.is_measure_dim),
+            list(l.pos_label order by l.k) filter (where (t.k is null or l.k <> t.k) and not l.is_measure_dim)
         )) as varchar) as breakdown_json,
-        -- a total is "ogółem"/"razem", also behind a code ("0 - OGÓŁEM", "GR255640 - Sprzedaż detaliczna ogółem")
+        -- a total is "ogółem"/"razem", also behind a code ("0 - OGÓŁEM", "GR255640 - Sprzedaż detaliczna ogółem"),
+        -- or a position the block's rules count as its total
         bool_and(
             lower(l.pos_label) in ('ogółem', 'razem')
             or regexp_matches(lower(l.pos_label), '^[0-9a-z]+ - (.* )?ogółem$')
-        ) filter (where t.k is null or l.k <> t.k) as all_total,
-        count(*) filter (where t.k is null or l.k <> t.k) as breakdowns,
+            or list_contains(l.total_labels, lower(trim(l.pos_label)))
+        ) filter (where (t.k is null or l.k <> t.k) and not l.is_measure_dim) as all_total,
+        count(*) filter (where (t.k is null or l.k <> t.k) and not l.is_measure_dim) as breakdowns,
         bool_or(lower(l.pos_label) = 'mężczyźni') as is_men,
         bool_or(lower(l.pos_label) = 'kobiety') as is_women,
         bool_or(lower(l.dim_name) = 'płeć' and lower(l.pos_label) in ('ogółem', 'razem')) as is_sex_total
-    from long as l
+    from (
+        select
+            lg.*,
+            coalesce(lower(lg.dim_name) = nullif(ru.measure_dimension, ''), false) as is_measure_dim,
+            case when coalesce(ru.total_labels, '') = '' then [] else string_split(ru.total_labels, '|') end
+                as total_labels
+        from long as lg
+        left join rules as ru on lg.block_id = ru.block_id
+    ) as l
     left join territory_dim as t on l.block_id = t.block_id and l.k = t.k
     group by l.rid
 ),
@@ -150,11 +165,13 @@ shaped as (
         r.geography_key,
         r.geography_source_code,
         r.breakdown_json,
+        r.measure_label,
         coalesce(r.all_total, true) as is_total,
         r.breakdowns,
         case when r.is_men then 'M' when r.is_women then 'F' when r.is_sex_total then 'T' end as sex_code,
         case
             when lower(coalesce(pe.label, '')) like '%narastaj%' then null  -- cumulative periods are not placed
+            when b.freq_code = 'M' and lower(pe.label) like 'kwarta%' then null  -- quarter-end repeats of months
             when b.freq_code = 'A' then make_date(s.year, 1, 1)
             when b.freq_code = 'Q' and regexp_matches(lower(pe.label), 'dane kwartalne - [1-4] kwarta')
                 then
@@ -217,7 +234,7 @@ deduplicated as (  -- one row per series × period: a block that lists both a wo
                 when coalesce(geography_key, '_X') = '_X' then '_X:' || coalesce(geography_source_code, '')
                 else geography_key
             end,
-            breakdown_json, year, period_id
+            breakdown_json, measure_label, year, period_id
         order by
             case when regexp_matches(upper(geography_source_code), '^(REGION|MAKROREGION) ') then 1 else 0 end,
             source_version desc,
@@ -229,9 +246,9 @@ select
     'gus_dbw' as source_system,
     block_id,
     block_name,
-    'gus_dbw:' || block_id || ':' || presentation_id as measure_key,
-    indicator_name || ' — ' || presentation_name as measure_name,
-    cast(presentation_id as varchar) as measure_codes,
+    'gus_dbw:' || block_id || ':' || presentation_id || coalesce(':' || measure_label, '') as measure_key,
+    indicator_name || coalesce(' — ' || measure_label, '') || ' — ' || presentation_name as measure_name,
+    cast(presentation_id as varchar) || coalesce(':' || measure_label, '') as measure_codes,
     presentation_name as unit_code,
     presentation_name as unit_name,
     geography_source_code,

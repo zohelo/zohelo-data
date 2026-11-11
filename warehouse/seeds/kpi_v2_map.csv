@@ -4,50 +4,50 @@ activity_rate,labour;poland,Q,activity_rate,gus_dbw,1512_1360_95_3,gus_dbw:1512_
 activity_rate,labour;poland,Q,activity_rate,gus_bdl,P2359,gus_bdl:P2359:%:wartość liczbowa,A,PL;VOIV,sex;age,rate,up,ready,"LFS annual average, 15+, ends 2020"
 activity_rate,labour;poland,Q,activity_rate,world_bank_wdi,SL.TLF.ACTI.ZS,world_bank_wdi:SL.TLF.ACTI.ZS,A,PL;EU;EU27,,rate,up,ready,"age 15-64, ILO modelled estimate"
 adult_learning,poland,A,adult_learning,eurostat,TRNG_LFSE_01,eurostat:TRNG_LFSE_01:PC,A,PL;EU;EU27,sex,rate,up,ready,"age 25-64, last 4 weeks"
-adult_learning,poland,A,,gus_bdl,P2656,,A,PL;VOIV,,rate,up,needs-block,BDL LFS adults in education (P2656) is in Silver; codes not probed
+adult_learning,poland,A,adult_learning,gus_bdl,P2656,gus_bdl:P2656:%:wartość liczbowa,A,PL;VOIV,,rate,up,ready,"LFS 25-64, value (not the precision indicator); ends 2020 in Silver (Dev probe 43085044303)"
 arope_rate,labour;poland,A,arope_rate,eurostat,ILC_PEPS01N,eurostat:ILC_PEPS01N:PC:TOTAL,A,PL;EU;EU27,sex,rate,down,ready,EU 2030 definition
-arope_rate,labour;poland,A,,gus_dbw,1603_1339_116_4,,A,PL;VOIV,,rate,down,needs-block,GUS EU-SILC by macroregion/region (1603_*) is in Silver; codes not probed
+arope_rate,labour;poland,A,arope_rate,gus_dbw,1603_1339_116_4,gus_dbw:1603_1339_116_4:116,A,PL;VOIV,,rate,down,ready,"EU-SILC by macroregion and NUTS 2 region, 2019-2024 (Dev probe 43085044303)"
 avg_wage,labour,M,average_gross_wage,gus_bdl,P2497,gus_bdl:P2497:%,A,PL;VOIV,,mean,up,ready,"national economy, annual"
 avg_wage,labour,M,average_gross_wage,gus_dbw,376_2_243_1;398_16_243_3,gus_dbw:376_2_243_1:243;gus_dbw:398_16_243_3:243,M;Q,PL;VOIV,,mean,up,ready,enterprise sector monthly (Poland and voivodeships); national economy quarterly
 basic_digital_skills,poland,A,basic_digital_skills,eurostat,ISOC_SK_DSKL_I21,eurostat:ISOC_SK_DSKL_I21:PC_IND:I_DSK2_BAB,A,PL;EU;EU27,,rate,up,ready,"at least basic overall skills, individuals 16-74; survey every two years"
 bond_yield_10y,poland,M,bond_yield_10y,eurostat,IRT_LT_MCBY_M,eurostat:IRT_LT_MCBY_M:_Z:MCBY,M,PL;EU,,rate,neutral,ready,EMU convergence-criterion 10-year yield
 broadband_households,poland,A,,eurostat,ISOC_CI_IT_H;ISOC_CI_IN_H,eurostat:ISOC_CI_IT_H:PC_HH:H_BBFIX,A,PL;EU;EU27,,rate,up,needs-block,"fixed broadband (ISOC_CI_IT_H, ISOC_R_BROAD_H) ends 2021 in Silver; ISOC_CI_IN_H (internet access of households, to 2025) is a different measure; choose before activating"
 broadband_households,poland,A,,world_bank_wdi,IT.NET.BBND.P2,,A,PL;EU;EU27,,rate,up,needs-block,"WDI counts fixed broadband subscriptions per 100 people, not households; in Silver, not mapped"
-broadband_households,poland,A,,gus_bdl,P3908,,A,PL;VOIV,,rate,up,needs-block,"BDL P3908 counts subscriber lines, not households"
+broadband_households,poland,A,,gus_bdl,P3908,,A,PL;VOIV,,rate,up,needs-block,"BDL P3908 counts subscriber lines (thousands, per 1000 population) and fibre/cable km by voivodeship, not households (Dev probe 43085044303)"
 business_climate,economy,M,business_climate,eurostat,EI_BSIN_M_R2,eurostat:EI_BSIN_M_R2:BAL:BS-ICI,M,PL;EU;EU27,,none,up,ready,"industrial confidence, harmonised EU survey, seasonally adjusted"
-business_climate,economy,M,,gus_dbw,184_960_267_1,,M,PL,nace,none,up,needs-block,"GUS general business climate indicator (seasonally adjusted) in Silver by NACE section only, no all-economy total"
+business_climate,economy,M,,gus_dbw,184_960_267_1,,M,PL,nace,none,up,needs-block,"GUS business climate (184_960_267_1, seasonally adjusted) has only NACE sections C, F, H, I, J, 46 and retail, no all-economy total (Dev probe 43085044303)"
 capacity_utilisation,economy,Q,capacity_utilisation,eurostat,EI_BSIN_Q_R2,eurostat:EI_BSIN_Q_R2:%:BS-ICU-PC,Q,PL;EU;EU27,,rate,neutral,ready,seasonally adjusted
 child_arope,labour;poland,A,child_arope,eurostat,ILC_PEPS01N,eurostat:ILC_PEPS01N:PC:Y_LT18,A,PL;EU;EU27,sex,rate,down,ready,age under 18
 cli_oecd,economy,M,,oecd,DSD_STES@DF_CLI,,M,PL;EU,,index,neutral,needs-block,"OECD CLI in Silver since #2594 (silver.oecd_cli, register GL-003); a Gold build stage for OECD is not added yet; no Eurostat equivalent"
 construction_output,economy,M,construction_output,eurostat,STS_COPR_M,eurostat:STS_COPR_M:PCH_SM:PRD,M,PL;EU;EU27,,rate,up,ready,"NACE F, calendar adjusted, % change on a year earlier"
 construction_output,economy,M,construction_output,gus_dbw,392_16_223_1,gus_dbw:392_16_223_1:223,M,PL,,rate,up,ready,"index, same month a year earlier = 100, seasonally adjusted (rate = value - 100)"
-construction_output,economy,M,,gus_bdl,P2721,,Q,PL;VOIV,nace,rate,up,needs-block,BDL quarterly construction output by voivodeship in Silver; not activated
+construction_output,economy,M,construction_output,gus_bdl,P2721,gus_bdl:P2721:-:wskaźnik dynamiki w cenach bieżących,A,PL;VOIV,nace,rate,up,ready,"whole-year index (rok), previous year = 100, current prices (BDL has no volume index); cumulative quarters stay unplaced (Dev probe 43085044303)"
 consumer_confidence,economy,M,consumer_confidence,eurostat,EI_BSCO_M,eurostat:EI_BSCO_M:BAL:BS-CSMCI,M,PL;EU;EU27,,none,up,ready,"harmonised EU consumer survey, seasonally adjusted"
 consumer_confidence,economy,M,consumer_confidence,gus_dbw,469_16_117_1,gus_dbw:469_16_117_1:117,M,PL,,none,up,ready,"GUS current consumer confidence indicator (BWUK), not seasonally adjusted"
-core_inflation,economy,M,,eurostat,PRC_HICP_MINR,eurostat:PRC_HICP_MINR:RCH_A,M,PL;EU;EU27,,rate,neutral,needs-block,"AP_X_NRG_FOOD (excl. energy, food, alcohol, tobacco) is in Silver; activating it needs coicop18 as a measure dimension, which renames the published inflation measure key: do it with the v2 build"
+core_inflation,economy,M,core_inflation,eurostat,PRC_HICP_MINR,eurostat:PRC_HICP_MINR:RCH_A:TOT_X_NRG_FOOD,M,PL;EU;EU27,,rate,neutral,ready,"TOT_X_NRG_FOOD (excl. energy, food, alcohol, tobacco; AP_X_NRG_FOOD is the administered-prices aggregate) as a measure of its own, so the inflation measure key is unchanged (Dev probe 43085044303)"
 core_inflation,economy,M,,nbp,,,,,,rate,neutral,needs-source,NBP core inflation measures are not in the register
 cpi_annual_rate,economy;labour;poland,M,cpi_annual_rate,gus_dbw,305_739_5_1;305_1722_5_1;305_1721_5_3,gus_dbw:305_739_5_1:5;gus_dbw:305_1722_5_1:5;gus_dbw:305_1721_5_3:5,M;Q,PL;VOIV,,rate,neutral,ready,"index, same period a year earlier = 100 (rate = value - 100); COICOP 1999 to 2025, COICOP 2018 from 2026; voivodeships quarterly from 2026"
 cpi_annual_rate,economy;labour;poland,M,cpi_annual_rate,gus_bdl,P2955;P2496;P4635,gus_bdl:P2955:-;gus_bdl:P2496:-:ogółem - analogiczny okres poprzedniego roku = 100;gus_bdl:P4635:-:ogółem - analogiczny okres poprzedniego roku = 100,A;Q,PL;VOIV,,rate,neutral,ready,index (previous year / same quarter a year earlier = 100) by voivodeship
 cpi_annual_rate,economy;labour;poland,M,cpi_annual_rate,world_bank_wdi,FP.CPI.TOTL.ZG,world_bank_wdi:FP.CPI.TOTL.ZG,A,PL;EU;EU27,,rate,neutral,ready,"CPI, annual %; EU comparison of harmonised prices is hicp_annual_rate"
-cpi_contributions,economy,M,,gus_dbw,304_1698_99_4;305_1698_5_1,,A;M,PL,coicop,sum,neutral,needs-block,"GUS CPI weights (304_*) and COICOP 2018 indices (305_1698_*) are in Silver; contributions are derived (weight x rate), no block publishes them"
+cpi_contributions,economy,M,,gus_dbw,304_1698_99_4;305_1698_5_1,,A;M,PL,coicop,sum,neutral,needs-block,"weights (304_1698_99_4, 2026 only) and COICOP 2018 indices (305_1698_5_1) are in Silver; contributions are a derivation (weight x rate), no block publishes them (Dev probe 43085044303)"
 current_account_components,economy,Q,current_account_components,eurostat,BOP_C6_Q,eurostat:BOP_C6_Q:%:MIO_EUR:%:BAL,Q,PL;EU,bop_item,sum,neutral,ready,"balances of CA, goods, services, primary and secondary income, million EUR; share of GDP to derive"
 current_account_components,economy,Q,,nbp,,,,,,sum,neutral,needs-source,NBP balance of payments: register PLG-002 (onboarding on feat/new-sources-nbp-oecd)
 current_account_gdp,economy;poland,Q,current_account_gdp,eurostat,BOP_GDP6_Q,eurostat:BOP_GDP6_Q:PC_GDP:CA:BAL,Q,PL;EU,,rate,neutral,ready,"quarterly, not seasonally adjusted"
 current_account_gdp,economy;poland,Q,current_account_gdp,world_bank_wdi,BN.CAB.XOKA.GD.ZS,world_bank_wdi:BN.CAB.XOKA.GD.ZS,A,PL;EU;EU27,,rate,neutral,ready,annual
 current_account_gdp,economy;poland,Q,,nbp,,,,,,rate,neutral,needs-source,NBP balance of payments: register PLG-002
 disposable_income_pc,labour,A,disposable_income_pc,gus_bdl,P1869,gus_bdl:P1869:zł,A,PL;VOIV,,mean,up,ready,"household budget survey, per person per month"
-employment_enterprise,labour,M,,gus_bdl,P2837,gus_bdl:P2837:%,M,PL;VOIV,nace,rate,up,needs-block,"BDL monthly in Silver (month in the first label, now placed by the build); not activated: 130k rows, needs a section filter"
+employment_enterprise,labour,M,employment_enterprise,gus_bdl,P2837,gus_bdl:P2837:osoba,M,PL;VOIV,nace,sum,up,ready,"all-sections total only (130,000 rows by NACE section otherwise), Poland and voivodeships (Dev probe 43085044303)"
 employment_rate,labour;poland,Q,employment_rate,eurostat,LFSI_EMP_A;LFSI_EMP_Q,eurostat:LFSI_EMP_A:PC_POP:EMP_LFS;eurostat:LFSI_EMP_Q:PC_POP:EMP_LFS,A;Q,PL;EU;EU27,sex,rate,up,ready,age 20-64; quarterly seasonally adjusted
 employment_rate,labour;poland,Q,employment_rate,gus_dbw,1513_1360_95_3,gus_dbw:1513_1360_95_3:95,Q,PL;VOIV,education,rate,up,ready,"LFS (BAEL), age 15-89"
 employment_rate,labour;poland,Q,employment_rate,gus_bdl,P2360,gus_bdl:P2360:%:wartość liczbowa,A,PL;VOIV,sex;age,rate,up,ready,"LFS annual average, 15+, ends 2020"
 employment_rate,labour;poland,Q,employment_rate,world_bank_wdi,SL.EMP.TOTL.SP.ZS,world_bank_wdi:SL.EMP.TOTL.SP.ZS,A,PL;EU;EU27,,rate,up,ready,"15+, ILO modelled (also concept employment_rate_15plus)"
 esi,economy,M,esi,eurostat,EI_BSSI_M_R2,eurostat:EI_BSSI_M_R2:%:BS-ESI-I,M,PL;EU;EU27,,index,up,ready,"long-term average = 100, seasonally adjusted"
 eurpln,poland,M,fx_rate,nbp,fx_A,nbp:fx:A:mid,D,PL,currency,mean,neutral,ready,EUR member of fx_rate (NBP table A); v2 publishes the monthly mean
-eurpln,poland,M,,eurostat,ERT_BIL_EUR_M,,M,PL,,mean,neutral,needs-block,Eurostat monthly euro exchange rates are in Silver (loaded); codes not probed
-exports_by_partner,economy,A,,eurostat,EXT_ST_EU27_2020SITC,,A,EU27,partner,sum,neutral,needs-block,EXT_ST_EU27_2020SITC holds only the EU27 reporter (no PL rows in Silver); a member-state trade dataset is needed (Comext DS-* is out of scope)
+eurpln,poland,M,fx_rate,eurostat,ERT_BIL_EUR_M,eurostat:ERT_BIL_EUR_M:NAC:AVG:PLN,M,PL,,mean,neutral,ready,"monthly average of the euro in zloty (statinfo AVG, currency PLN as measure codes); not an area measure: Gold _Z (Dev probe 43085044303)"
+exports_by_partner,economy,A,,eurostat,EXT_ST_EU27_2020SITC,,A,EU27,partner,sum,neutral,needs-block,EXT_ST_EU27_2020SITC holds only the EU27_2020 reporter in Silver (Dev probe 43085044303); a member-state trade dataset is needed (Comext DS-* is out of scope)
 exports_goods,economy,M,,eurostat,EXT_ST_EU27_2020SITC,,M,EU27,,sum,up,needs-block,"only the EU27 reporter in Silver, no PL rows"
-extreme_poverty,labour,A,,gus_bdl,P2713,,A,PL;VOIV,,rate,down,needs-block,BDL poverty rates by expenditure (P2713) in Silver; extreme-poverty line variable not probed
-family_benefit_recipients,labour,A,,gus_dbw,359_39_94_4,,A,PL;VOIV,,sum,neutral,needs-block,DBW family benefits (359_39_94_4) in Silver; codes not probed
+extreme_poverty,labour,A,extreme_poverty,gus_bdl,P2713,gus_bdl:P2713:%:granicy ubóstwa skrajnego,A,PL;VOIV,,rate,down,ready,expenditure below the extreme-poverty line; 2005-2019 in Silver (Dev probe 43085044303)
+family_benefit_recipients,labour,A,,gus_dbw,359_39_94_4,,A,PL;VOIV,,sum,neutral,needs-block,"DBW 359_39_94_4 counts benefits (szt.) by type down to gmina, not recipients: no measure fits the KPI (Dev probe 43085044303)"
 fdi_inflow,economy,A,fdi_inflow,eurostat,BOP_FDI6_FLOW,eurostat:BOP_FDI6_FLOW:%:MIO_EUR:NI:DI__D__F,A,PL;EU;EU27,,sum,neutral,ready,"inward direct investment, net incurrence of liabilities, million EUR"
 fdi_inflow,economy,A,fdi_inflow,world_bank_wdi,BX.KLT.DINV.CD.WD,world_bank_wdi:BX.KLT.DINV.CD.WD,A,PL;EU;EU27,,sum,neutral,ready,"net inflows, current US$"
 fdi_inflow,economy,A,,nbp,,,,,,sum,neutral,needs-source,NBP direct investment: register PLG-002/PLG-003
@@ -84,7 +84,7 @@ hicp_annual_rate,economy;poland,M,inflation,eurostat,PRC_HICP_MINR,eurostat:PRC_
 hicp_annual_rate,economy;poland,M,inflation,world_bank_wdi,FP.CPI.TOTL.ZG,world_bank_wdi:FP.CPI.TOTL.ZG,A,PL;EU;EU27,,rate,neutral,ready,"CPI (not harmonised), annual %; kept as the v1 second measure"
 industrial_production,economy,M,industrial_production,eurostat,STS_INPR_M,eurostat:STS_INPR_M:PCH_SM:PRD,M,PL;EU;EU27,,rate,up,ready,"NACE B-D, calendar adjusted"
 industrial_production,economy,M,industrial_production,gus_dbw,814_2_7_1,gus_dbw:814_2_7_1:7,M,PL;VOIV,,rate,up,ready,"index, same month a year earlier = 100, constant prices"
-industrial_production,economy,M,,gus_bdl,P2692,,Q,PL;VOIV,nace,rate,up,needs-block,BDL quarterly by voivodeship in Silver; not activated
+industrial_production,economy,M,industrial_production,gus_bdl,P2692,gus_bdl:P2692:-:przemysł ogółem / wskaźnik dynamiki w cenach stałych%,A,PL;VOIV,nace,rate,up,ready,"whole-year index (rok), previous year = 100, constant prices (one measure per price base); quarters other than Q1 are cumulative (1-3 kwartały, półrocze) and stay unplaced (Dev probe 43085044303)"
 inflation_expectations,economy,M,,nbp,,,,,,rate,neutral,needs-source,"NBP inflation-expectation survey is not in the register; the Eurostat consumer-survey price balance (EI_BSCO_M BS-PT-NY) is a balance, not a rate"
 investment_outlays,economy,A,investment_outlays,gus_bdl,P2862,gus_bdl:P2862:tys. zł:nakłady inwestycyjne w przedsiębiorstwach,A,PL;VOIV,sector,sum,up,ready,"enterprises, current prices"
 job_vacancy_rate,labour,Q,job_vacancy_rate,eurostat,JVS_Q_NACE2,eurostat:JVS_Q_NACE2:%:JVR,Q,PL;EU;EU27,nace,rate,neutral,ready,"NACE B-S, not seasonally adjusted"
@@ -93,10 +93,10 @@ life_expectancy,poland,A,life_expectancy,eurostat,DEMO_MLEXPEC;DEMO_R_MLIFEXP,eu
 life_expectancy,poland,A,life_expectancy,gus_bdl,P2730,gus_bdl:P2730:lata:% / 0,A,PL;VOIV,sex,none,up,ready,"at birth, men and women as two measures (BDL has no both-sexes value)"
 life_expectancy,poland,A,life_expectancy,world_bank_wdi,SP.DYN.LE00.IN,world_bank_wdi:SP.DYN.LE00.IN,A,PL;EU;EU27,,none,up,ready,
 long_term_unemployment,labour,A,long_term_unemployment,eurostat,UNE_LTU_A,eurostat:UNE_LTU_A:PC_ACT:LTU,A,PL;EU;EU27,sex,rate,down,ready,15-74
-long_term_unemployment,labour,A,,gus_dbw,1618_1335_95_4,,A;Q,PL,sex;age,rate,down,needs-block,GUS LFS long-term unemployment rate (1618_*) in Silver; codes not probed
-median_wage,labour,A,,gus_bdl,P4610,,M,PL;VOIV,sex,mean,up,needs-block,"BDL median gross wage (wage-distribution survey, P4610) in Silver; month labels are placed by the build; not activated (958k rows, needs a level filter)"
-median_wage,labour,A,,gus_dbw,1714_1575_243_1,,M,PL;VOIV,,mean,up,needs-block,DBW median wage (1714_*) in Silver; codes not probed
-min_wage,labour,A,,eurostat,EARN_MW_CUR,,S,PL;EU,currency,none,neutral,needs-block,half-yearly (S): Gold has no half-yearly fact
+long_term_unemployment,labour,A,long_term_unemployment,gus_dbw,1618_1335_95_4,gus_dbw:1618_1335_95_4:95,A,PL,sex;age,rate,down,ready,"15-74, 12 months or more counted as the total (rule); 2021-2025 (Dev probe 43085044303)"
+median_wage,labour,A,median_wage,gus_bdl,P4610,gus_bdl:P4610:zł:wg miejsca zamieszkania,M,PL;VOIV,sex,mean,up,ready,"by place of residence (the employer-seat basis is a second measure in Gold), Poland and voivodeships, 2024-2026 (Dev probe 43085044303)"
+median_wage,labour,A,median_wage,gus_dbw,1714_1575_243_1,gus_dbw:1714_1575_243_1:243,M,PL;VOIV,,mean,up,ready,"by place of residence (rule total), Poland and voivodeships read from 494 areas (Dev probe 43085044303)"
+min_wage,labour,A,min_wage,eurostat,EARN_MW_CUR,eurostat:EARN_MW_CUR:_Z:NAC,Q,PL;EU,currency,none,neutral,ready,"half-yearly (S): Gold places each half-year on both of its quarters (S1: Q1-Q2, S2: Q3-Q4), the level in force; national currency"
 nbp_reference_rate,poland,M,,nbp_interest_rates,,,D,PL,,none,neutral,needs-block,"NBP official rates in Silver since #2590 (silver.nbp_policy_rates, register PLG-006); a Gold build stage for them is not added yet"
 neet_rate,labour;poland,A,neet_rate,eurostat,LFSI_NEET_A,eurostat:LFSI_NEET_A:PC_POP,A,PL;EU;EU27,sex,rate,down,ready,age 15-29
 neet_rate,labour;poland,A,neet_rate,world_bank_wdi,SL.UEM.NEET.ZS,world_bank_wdi:SL.UEM.NEET.ZS,A,PL;EU;EU27,,rate,down,ready,age 15-24
@@ -112,14 +112,14 @@ population_total,poland,A,population,gus_dbw,581_57_93_4,gus_dbw:581_57_93_4:%,A
 population_total,poland,A,population,eurostat,DEMO_PJAN,eurostat:DEMO_PJAN:NR,A,PL;EU;EU27,sex,sum,neutral,ready,1 January (also concept population_usual_residence)
 population_total,poland,A,population,world_bank_wdi,SP.POP.TOTL,world_bank_wdi:SP.POP.TOTL,A,PL;EU;EU27,,sum,neutral,ready,midyear estimate
 ppi_annual_rate,economy,M,ppi_annual_rate,eurostat,STS_INPP_M,eurostat:STS_INPP_M:PCH_SM:PRC_PRR,M,PL;EU;EU27,,rate,neutral,ready,"domestic market, NACE B-E36"
-price_m2_secondary,poland,Q,,gus_bdl,P3788;P3794,gus_bdl:P3788:zł,A;Q,PL;VOIV,market,mean,neutral,needs-block,"secondary market is a breakdown member (rynek wtórny) of P3788/P3794, verified in Silver; metrics keep totals only: needs a member filter (kpi_member) before activating"
-price_m2_secondary,poland,Q,,gus_dbw,309_485_180_3,gus_dbw:309_485_180_3:180,Q,PL;VOIV,market,mean,neutral,needs-block,same: wtórny rynek nieruchomości is a breakdown member
+price_m2_secondary,poland,Q,price_m2_secondary,gus_bdl,P3794;P3788,gus_bdl:P3794:zł:rynek wtórny;gus_bdl:P3788:zł:rynek wtórny,Q;A,PL;VOIV,market,mean,neutral,ready,"the market label is measure-defining (poc_bdl_measure_positions), so the secondary market is a total series of its own (Dev probe 43085044303)"
+price_m2_secondary,poland,Q,price_m2_secondary,gus_dbw,309_485_180_3,gus_dbw:309_485_180_3:180:wtórny rynek nieruchomości,Q,PL;VOIV,market,mean,neutral,ready,"the market dimension is measure-defining (poc_dbw_block_rules), Poland and voivodeships (Dev probe 43085044303)"
 real_wage_growth,labour;poland,M,real_wage_growth,gus_dbw,376_16_182_1;398_16_182_3,gus_dbw:376_16_182_1:182;gus_dbw:398_16_182_3:182,M;Q,PL,,rate,up,ready,"index, same period a year earlier = 100, real; enterprise sector monthly, national economy quarterly"
 recycling_rate,poland,A,recycling_rate,eurostat,CEI_WM011,eurostat:CEI_WM011:PC:RCY,A,PL;EU;EU27,,rate,up,ready,municipal waste
 reer,economy;poland,M,reer,eurostat,ERT_EFF_IC_M,eurostat:ERT_EFF_IC_M:I20:REER_IC42_CPI,M,PL;EU;EU27,,index,neutral,ready,"CPI-deflated, 42 partners, 2020 = 100"
 reer,economy;poland,M,reer,world_bank_wdi,PX.REX.REER,world_bank_wdi:PX.REX.REER,A,PL;EU;EU27,,index,neutral,ready,2010 = 100 (IMF)
 registered_unemployed,labour,M,registered_unemployed,gus_bdl,P2961,gus_bdl:P2961:osoba,M,PL;VOIV,sex,sum,down,ready,end of month (month in the first label)
-registered_unemployed,labour,M,,gus_dbw,507_870_93_1,,M,PL;VOIV,sex;age,sum,down,needs-block,"DBW registered unemployed (507_*) in Silver: 0.8-2.3M rows per block with powiats, too big for the full-rebuild build"
+registered_unemployed,labour,M,registered_unemployed,gus_dbw,507_870_93_1,gus_dbw:507_870_93_1:93,M,PL;VOIV,sex;age,sum,down,ready,Poland and voivodeships only (0.8M rows with powiats); quarter-end repeats of months left out (Dev probe 43085044303)
 registered_unemployment,labour,M,registered_unemployment_rate,gus_bdl,P2392,gus_bdl:P2392:%,A,PL;VOIV,,rate,down,ready,end of year
 registered_unemployment,labour,M,registered_unemployment_rate,gus_dbw,875_143_95_1,gus_dbw:875_143_95_1:95,M,PL;VOIV,,rate,down,ready,"end of month, also powiats"
 retail_sales,economy,M,retail_sales,eurostat,STS_TRTU_M,eurostat:STS_TRTU_M:PCH_SM:VOL_SLS,M,PL;EU;EU27,,rate,up,ready,"NACE G47, volume, calendar adjusted"
