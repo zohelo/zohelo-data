@@ -180,15 +180,15 @@ wdi as (
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
 ),
 
--- OECD: countries by ISO 3166 alpha-3 (dim_geography iso3); EA20 and EU27_2020 are the Eurostat aggregates,
--- the other aggregates OECD members of dim_geography (macro poc_oecd_areas, #2738).
+-- OECD: countries by ISO 3166 alpha-3 (dim_geography iso3); EU27_2020 is the Eurostat aggregate, the other
+-- aggregates (EA20, OECD, G7 …) OECD members of dim_geography (macro poc_oecd_areas, #2738).
 oecd as (
     select distinct
         'oecd' as source_system,
         o.ref_area as source_code,
         coalesce(
             g.geography_key,
-            case o.ref_area when 'EA20' then 'EUROSTAT:EA20' when 'EU27_2020' then 'EUROSTAT:EU27_2020' end,
+            case when o.ref_area = 'EU27_2020' then 'EUROSTAT:EU27_2020' end,
             g_agg.geography_key,
             '_X'
         ) as geography_key

@@ -199,12 +199,16 @@
     ) as t (measure, adjustment, transformation, measure_name)
 {% endmacro %}
 
-{# OECD area codes that are not ISO 3166 alpha-3 countries: their names, and the Eurostat aggregate they equal. #}
+{# OECD area codes that are not ISO 3166 alpha-3 countries: their names, and the Eurostat aggregate they equal
+   (EU27_2020 only: Gold has no Eurostat EA20 member, so the OECD euro areas are OECD:<code> members). #}
 {% macro poc_oecd_areas() %}
     select * from (
         values
-        ('EA20', 'Euro area (20 countries)', 'EA20'),
         ('EU27_2020', 'European Union (27 countries from 2020)', 'EU27_2020'),
+        ('EA20', 'Euro area (20 countries)', ''),
+        ('EA19', 'Euro area (19 countries)', ''),
+        ('EU', 'European Union (OECD composite)', ''),
+        ('OECDXEA', 'OECD excluding the euro area', ''),
         ('OECD', 'OECD total', ''),
         ('OECDE', 'OECD Europe', ''),
         ('G7', 'G7', ''),
