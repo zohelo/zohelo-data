@@ -75,6 +75,16 @@ GROUPS = {
         "https://w3.unece.org/PXWeb2015/api/v1/en/STAT/30-GE",
         "https://w3.unece.org/PXWeb2015/api/v1/en/STAT/10-CountryOverviews",
     ],
+    "unece4": [
+        "https://w3.unece.org/PXWeb2015/Resources/PX/Databases/STAT/20-ME/3-MELF/40_en_MEUnRateY_r.px",
+        "https://w3.unece.org/PXWeb2015/Resources/PX/Databases/STAT/30-GE/03-WorkAndeconomy/",
+        "https://w3.unece.org/PXWeb2015/pxweb/en/STAT/STAT__20-ME__3-MELF/40_en_MEUnRateY_r.px/",
+        "https://w3.unece.org/robots.txt",
+        "https://w3.unece.org/PXWeb2015/api/v1/en/STAT/30-GE/03-WorkAndeconomy",
+        "https://w3.unece.org/PXWeb2015/api/v1/en/STAT/20-ME/4-MEPI",
+        "https://w3.unece.org/PXWeb2015/api/v1/en/STAT/20-ME/1-MEOV",
+        "https://w3.unece.org/PXWeb2015/Resources/PX/Databases/STAT/20-ME/2-MENA/01_en_MECCGDPExpPerCapY_r.px",
+    ],
     "gem": [
         "https://datacatalogapi.worldbank.org/ddhxext/DatasetView?dataset_unique_id=0037798",
         "https://databankfiles.worldbank.org/public/ddpext_download/GemDataEXTR.zip",
@@ -95,6 +105,9 @@ def head_text(data: bytes, lines: int = 6, chars: int = 1800) -> str:
 
 
 def probe(url: str) -> None:
+    import time
+
+    time.sleep(4)  # UNECE PXWeb answers 429 to bursts
     try:
         r = requests.get(url, headers={"User-Agent": UA, "Accept-Encoding": "identity"}, timeout=(30, 300))
     except requests.RequestException as exc:
