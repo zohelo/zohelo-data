@@ -1,0 +1,24 @@
+version: 2
+models:
+  - name: undata_syb_values
+    description: >-
+      UN Statistical Yearbook tables from bronze.undata_syb_values (UNdata, SYB68 edition, November 2025):
+      newest copy of each of 32 tables (population, GDP, CPI, employment, labour force and unemployment,
+      education, health, energy, CO2, trade, balance of payments, internet use, migrants …), every country
+      and M49 region. Grain: entity × area_code × year × series. Values typed (thousands separators removed);
+      value_text keeps the published text (also for non-numeric entries).
+    tests:
+      - unique:
+          column_name: "entity || '|' || area_code || '|' || year || '|' || series"
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: area_code
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: series
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]

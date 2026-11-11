@@ -279,6 +279,22 @@ sources:
       (entity = folder.file); DATA_SOURCE, RECORD_ID, bq_dataset and FEATURES (JSON text) as published.
   - name: opendata_rejected_files
     description: Snapshot members the OpenData Bronze decoder or Silver models rejected (cleared by ops/retry_rejected).
+- name: undata
+  description: UNdata — UN Statistical Yearbook tables (CSV)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/undata/
+    loaded_by: ingestion/to_bronze/undata/
+    config: ingestion/sources/undata.yaml
+  tables:
+  - name: undata_syb_values
+    description: >-
+      One row per row of the newest copy of each Statistical Yearbook table (entity, e.g. syb_1): table code
+      and title, area code (M49) and name, year, series, value, footnotes and source as published text;
+      partitioned by entity.
+  - name: undata_rejected_files
+    description: UNdata Landing files the Bronze decoder rejected, with the reason.
 - name: world_bank_wdi
   description: World Bank WDI bulk CSV archive and API responses
   database: r2
