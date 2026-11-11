@@ -163,6 +163,26 @@ def main() -> int:
                 wpp(name, base + file)
             except Exception as exc:
                 out(f"wpp {name} error", repr(exc)[:600])
+    if part == "hicp":
+        import re
+        r = get("https://data-api.ecb.europa.eu/service/dataflow/ECB")
+        out("dataflows status", [r.status_code, len(r.content)])
+        flows = re.findall(r'<str:Dataflow[^>]*id="([^"]+)"[^>]*>.*?<com:Name xml:lang="en">([^<]+)</com:Name>', r.text, re.S)
+        out("dataflows", flows)
+        for fid, _ in flows:
+            if "HICP" in fid or "ICP" in fid or "PRICE" in fid.upper():
+                st = get(f"https://data-api.ecb.europa.eu/service/dataflow/ECB/{fid}/latest?references=datastructure")
+                out(f"structure {fid}", re.findall(r'<str:Dimension [^>]*id="([^"]+)"', st.text)[:20])
+                for q in (f"{fid}/M.PL....?lastNObservations=2&format=csvdata", f"{fid}?lastNObservations=1&format=csvdata"):
+                    d = get("https://data-api.ecb.europa.eu/service/data/" + q)
+                    out(f"data {q} status", [d.status_code, len(d.content), d.headers.get("Last-Modified")])
+                    if d.status_code == 200:
+                        rows = list(csv.reader(io.StringIO(d.content.decode("utf-8-sig"), newline="")))
+                        out(f"data {q} header", rows[0])
+                        out(f"data {q} rows", len(rows) - 1)
+                        keys = sorted({row[0] for row in rows[1:]})
+                        out(f"data {q} keys sample", [k for k in keys if ".PL." in k or ".U2." in k][:80])
+                        out(f"data {q} first", rows[1:3])
     if part == "more":
         for name, query, dims in (
             ("icp_items_u2", "ICP/M.U2.N..4.ANR?lastNObservations=2&format=csvdata", ["ICP_ITEM"]),
