@@ -3,9 +3,11 @@
    report repeats every month of its year so far, cumulative from January). One row per year × month × item ×
    measure: measure 'execution_ytd' (cumulative execution January to month) or 'plan' (the budget act for the
    year, month null). Thousand zloty, as published. Items keep the report's label (item_label) and numbering
-   (item_code, e.g. 'I', 'VI.1.2'); item_key names the main lines (revenue, expenditure, balance, eu_funds_result,
-   financing, financing_domestic, financing_foreign). A month header is a column whose text is a Roman range
-   ('I', 'I - II', … 'I - XII') in a row whose column 1 is 'Wyszczególnienie'. #}
+   (item_code, e.g. 'I', '1.2'); item_key names the main lines (revenue, expenditure, balance, eu_funds_result,
+   financing, financing_domestic, financing_foreign). A block starts at a row whose column 1 is 'Wyszczególnienie';
+   a month header is a column whose text is a Roman range ('I', 'I - II', … 'I - XII') in that row or one of the
+   next two (reports up to 2021 put the months a row lower). In 2018–2019 the domestic financing line carries its
+   values on a continuation row, so financing_domestic is missing for those years. #}
 with cells as (
     select
         *,
@@ -35,7 +37,8 @@ month_columns as (
         ) as month_end,
         regexp_matches(replace(c.text, ' ', ''), '^I(?:-[IVX]+)?$') as is_month
     from cells as c
-    inner join header_rows as h on c.entity = h.entity and c.row_number = h.header_row
+    inner join header_rows as h
+        on c.entity = h.entity and c.row_number between h.header_row and h.header_row + 2
     where c.column_number >= 3
 ),
 
