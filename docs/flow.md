@@ -25,6 +25,8 @@ always with at least one agent working, and every change passes the same station
   in the same step; Ready holds at least three items.
 - **Model per station:** Fable for open-ended specs and judgement calls; Opus for building and for reviews of
   data and code; Sonnet for triage and sweeps; Haiku for mass mechanical checks.
+- **Source work** (O36) follows [playbook.md](playbook.md) with the project agents in `.claude/agents/`: `source-researcher`
+  (Sonnet) at Spec, `source-builder` (Opus) and `gold-modeller` (Fable) at Build, `data-quality-reviewer` (Opus) at Review.
 - **Evidence over claims:** a builder reports what it ran; a reviewer reads the diff, not the builder's summary.
   Nothing is "done" before Verify.
 - **Refusals stand:** a permission or safety refusal is reported, never worked around.

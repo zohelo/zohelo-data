@@ -22,6 +22,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 ROOT_ALLOWED = {
+    ".claude",  # project agents only (.claude/agents/*.md); everything else there is git-ignored
     ".github",
     "docs",
     "ingestion",
@@ -89,6 +90,9 @@ def repository(files: list[Path]) -> list[str]:
     problems = [f"root: {name} is not allowed" for name in sorted({f.parts[0] for f in files} - ROOT_ALLOWED)]
     if any(f.parts[0] == "dev" for f in files):
         problems.append("dev/ must be deleted before merge")
+    for f in files:
+        if f.parts[0] == ".claude" and not (f.parts[:2] == (".claude", "agents") and f.suffix == ".md"):
+            problems.append(f"{f}: only project agents (.claude/agents/*.md) are committed under .claude/")
     workflows = sorted(f.name for f in files if f.parent == Path(".github/workflows"))
     if workflows != WORKFLOWS:
         problems.append(f"workflows must be exactly {WORKFLOWS}, found {workflows}")
