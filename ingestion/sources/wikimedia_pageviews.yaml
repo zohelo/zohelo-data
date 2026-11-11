@@ -15,7 +15,7 @@ extraction:
   production: snapshot                  # each file is a complete window as served
   incremental_policy: changed_since_last  # SHA-256
   schedule: # UTC; views of day d are published on d+1; daily before the news run builds the topics
-    - {cron: "10 20 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+    - {cron: "10 4 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/wikimedia_pageviews/
 archive_policy:
