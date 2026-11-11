@@ -149,7 +149,10 @@ silver as (
                     case when coalesce(r.m2, false) then cast(v.n2 as varchar) end,
                     case when coalesce(r.m3, false) then cast(v.n3 as varchar) end,
                     case when coalesce(r.m4, false) then cast(v.n4 as varchar) end,
-                    case when coalesce(r.m5, false) then cast(v.n5 as varchar) end
+                    case when coalesce(r.m5, false) then cast(v.n5 as varchar) end,
+                    -- a whole-year row ("rok") of a short-term subgroup is a measure of its own: the series key has no
+                    -- frequency, so it would share 1 January with the first quarter (tests/fact_grain.sql)
+                    case when v.period_frequency = 'A' and v.period_code is not null then 'rok' end
                 ],
                 lambda x: x is not null  -- noqa: RF02
             ),

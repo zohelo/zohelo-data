@@ -513,11 +513,11 @@ v2 keys by their best source status:
 | Polska w skrócie | 29 | 2 | 0 | 31 |
 | all 78 keys | 69 | 8 | 1 | 78 |
 
-Rows by source (141 rows; 38 keys have two or more ready sources):
+Rows by source (141 rows; 37 keys have two or more ready sources):
 
 | source | ready | needs-block | needs-source | rows |
 |---|---|---|---|---|
-| eurostat | 54 | 4 | 0 | 58 |
+| eurostat | 53 | 5 | 0 | 58 |
 | gus_bdl | 24 | 1 | 0 | 25 |
 | gus_dbw | 22 | 3 | 0 | 25 |
 | world_bank_wdi | 23 | 1 | 0 | 24 |

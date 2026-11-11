@@ -13,7 +13,6 @@ with bounds (concept_key, source_system, value_min, value_max) as (
     ('unemployment_rate', 'eurostat', 0, 60),
     ('unemployment_rate', 'world_bank_wdi', 0, 60),
     ('fx_rate', 'nbp', 0, 100000),
-    ('fx_rate', 'eurostat', 0, 100000),
     ('gdp_per_capita', 'eurostat', 0, 2e5),
     ('gdp_per_capita', 'world_bank_wdi', 0, 5e5),
     ('gdp_volume_growth', 'eurostat', -50, 100),
