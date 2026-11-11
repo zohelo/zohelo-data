@@ -4,7 +4,7 @@
    unctad:<table>:<dimension codes>:<measure>, e.g. unctad:US_FdiFlowsStock:08:1:USD_MN (FDI flow, inward, US$
    million at current prices); the dimension codes are the table's own (FDI Flow 08 flow / 09 stock, Direction
    1 inward / 2 outward; trade Flow 01 imports / 02 exports; services Category S = total services). Economies by
-   UNCTAD code (M49 with UNCTAD variants: France 251), mapped in poc_map_geography (section unctad). Values as
+   UNCTAD code (M49; France 250 in the FDI and trade tables), mapped in poc_map_geography (section unctad). Values as
    published. No breakdowns. #}
 with blocks as ({{ poc_unctad_blocks() }}),
 

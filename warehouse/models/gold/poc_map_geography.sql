@@ -180,9 +180,9 @@ wdi as (
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
 ),
 
--- UNCTAD: economies by UNCTAD code (M49 with UNCTAD variants, France 251) from poc_unctad_areas: the EU27 members,
--- 3412 European Union (2020 …) = EU27_2020, 0000 World. Other economies have no ISO code in the tables (_X); the
--- build stage builds only the listed areas.
+-- UNCTAD: economies by UNCTAD code (M49; France 250 in the FDI and trade tables, 251 only in port calls) from
+-- poc_unctad_areas: the EU27 members, 3412 European Union (2020 …) = EU27_2020, 0000 World. Other economies have
+-- no ISO code in the tables (_X); the build stage builds only the listed areas.
 unctad_areas as ({{ poc_unctad_areas() }}),
 
 unctad as (

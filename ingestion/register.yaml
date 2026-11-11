@@ -999,7 +999,7 @@ sources:
     probes 43084525257, 43084992517, 11 Nov 2026): FDI flows and stocks 1990-2025 (36,950 rows), merchandise trade
     1948-2025 (46,108), services trade by category 2005-2025 (807,733), digitally deliverable services 2010-2025,
     commodity prices monthly from 1995, port liner shipping connectivity quarterly from 2006, merchant fleet from 1980,
-    seaborne trade 2000-2024, port calls 2018-2023. Economy codes M49 with UNCTAD variants (France 251); EU group 3412
+    seaborne trade 2000-2024, port calls 2018-2023. Economy codes M49 (France 250; 251 in port calls); EU group 3412
     "European Union (2020 …)".'
   access:
     endpoint: https://unctadstat-api.unctad.org/bulkdownload/
