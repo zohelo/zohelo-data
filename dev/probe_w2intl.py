@@ -125,4 +125,61 @@ def main(argv: list[str]) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    raise SystemExit(main2(sys.argv[1:]))
+
+
+BIS_FULL = {
+    "cbpol": "WS_CBPOL/M./all",
+    "eer": "WS_EER/M.../all",
+    "spp": "WS_SPP/all/all",
+    "tc": "WS_TC/all/all",
+    "credit_gap": "WS_CREDIT_GAP/all/all",
+    "dsr": "WS_DSR/all/all",
+}
+
+
+def bis_full() -> None:
+    import csv
+    from collections import Counter
+
+    for name, path in BIS_FULL.items():
+        url = f"https://stats.bis.org/api/v1/data/{path}?format=sdmx-csv"
+        r = requests.get(url, headers={"User-Agent": UA}, timeout=(30, 900))
+        out(f"bis {name}", [url, r.status_code, len(r.content)])
+        if r.status_code != 200:
+            out(f"bis {name} text", r.text[:300])
+            continue
+        rows = list(csv.reader(io.StringIO(r.content.decode("utf-8-sig"), newline="")))
+        h = rows[0]
+        t = h.index("TIME_PERIOD")
+        out(f"bis {name} header", h)
+        out(f"bis {name} rows", len(rows) - 1)
+        out(f"bis {name} empty time/value", sum(1 for x in rows[1:] if not x[t] or not x[t + 1]))
+        out(f"bis {name} bad width", sum(1 for x in rows[1:] if len(x) != len(h)))
+        out(f"bis {name} dot in dims", sum(1 for x in rows[1:] for v in x[3:t] if "." in v))
+        out(f"bis {name} pipe in attrs", sum(1 for x in rows[1:] for v in x[t + 2:] if "|" in v))
+        out(f"bis {name} non-numeric", Counter(x[t + 1] for x in rows[1:] if x[t + 1] and not x[t + 1].replace(".", "", 1).replace("-", "", 1).replace("E", "").isdigit()).most_common(5))
+        keys = Counter(tuple(x[3:t + 1]) for x in rows[1:])
+        out(f"bis {name} dup keys", sum(1 for c in keys.values() if c > 1))
+        for d in h[3:t]:
+            i = h.index(d)
+            out(f"bis {name} {d}", dict(Counter(x[i] for x in rows[1:]).most_common(70)))
+        for a in ("UNIT_MEASURE", "UNIT_MULT", "OBS_STATUS", "TIME_FORMAT"):
+            if a in h:
+                i = h.index(a)
+                out(f"bis {name} attr {a}", dict(Counter(x[i] for x in rows[1:]).most_common(10)))
+        pl = [x for x in rows[1:] if "PL" in x[3:t]]
+        out(f"bis {name} PL rows", len(pl))
+        ser: dict = {}
+        for x in pl:
+            ser.setdefault(".".join(x[3:t]), []).append(x[t])
+        for k, v in list(ser.items())[:30]:
+            out(f"bis {name} PL {k}", [len(v), min(v), max(v)])
+        out(f"bis {name} periods", [min(x[t] for x in rows[1:] if x[t]), max(x[t] for x in rows[1:] if x[t])])
+
+
+def main2(argv: list[str]) -> int:
+    if argv == ["bisfull"]:
+        bis_full()
+        return 0
+    return main(argv)
