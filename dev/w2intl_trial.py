@@ -87,12 +87,28 @@ MODELS = {
             ("versions", "select entity, source_version from bronze group by all order by 1"),
         ],
     ),
+    "unece": (
+        ["warehouse/models/silver/unece/unece_observations.sql"],
+        "unece_observations",
+        [
+            ("rows by table", "select table_id, count(*), count(distinct area_code), min(time_period), max(time_period) from silver group by 1 order by 1"),
+            ("unique", "select count(*) from (select entity, series_key, time_period from silver group by all having count(*) > 1)"),
+            ("nulls", "select count(*) from silver where entity is null or series_key is null or time_period is null or raw_sha256 is null"),
+            ("null area", "select table_id, count(*) from silver where area_code is null group by all"),
+            ("null labels", "select count(*) from silver where labels_json like '%null%'"),
+            ("non-numeric", "select count(*) from silver where obs_value is null"),
+            ("status", "select obs_status, count(*) from silver group by all"),
+            ("POL/E27 unemployment", "select table_id, area_name, labels_json, time_period, obs_value from silver where table_id like '%UnRate%' and area_code in ('616','E27') qualify row_number() over (partition by entity, series_key order by time_period desc) = 1"),
+            ("entities", "select entity, count(*) from silver group by 1 order by 1"),
+        ],
+    ),
 }
 
 
 def render(path: str, table: str) -> str:
     sql = Path(path).read_text()
     sql = re.sub(r"\{#.*?#\}", "", sql, flags=re.S)
+    sql = sql.replace("{{ source('unece', 'unece_codes') }}", "bronze_codes")
     return re.sub(r"\{\{\s*source\([^)]*\)\s*\}\}", table, sql)
 
 
@@ -104,7 +120,12 @@ def report(title: str, results: dict) -> None:
 def trial(source: str) -> None:
     sql_paths, bronze, checks = MODELS[source]
     for attempt in (1, 2):
-        status = bulk_file.main(source, "load", landing_root=SCRATCH)
+        if source == "unece":
+            from ingestion.to_landing.unece import extract
+
+            status = extract.main(["--mode", "load", "--landing-root", SCRATCH])
+        else:
+            status = bulk_file.main(source, "load", landing_root=SCRATCH)
         report(f"{source} landing load {attempt}", {"exit": status})
     loader = importlib.import_module(f"ingestion.to_bronze.{source}.load")
     for attempt in (1, 2):
@@ -117,6 +138,8 @@ def trial(source: str) -> None:
         report(f"{source} rejected", {"rows": [{k: str(v)[:300] for k, v in r.items()} for r in rows][:10]})
     con = duckdb.connect()
     con.register("bronze", cat.load_table((SCRATCH, bronze)).scan().to_arrow())
+    if source == "unece":
+        con.register("bronze_codes", cat.load_table((SCRATCH, "unece_codes")).scan().to_arrow())
     results = {"bronze_rows": con.execute("select count(*) from bronze").fetchone()[0]}
     results["bronze_files"] = con.execute("select count(distinct raw_sha256) from bronze").fetchone()[0]
     for path in sql_paths:
