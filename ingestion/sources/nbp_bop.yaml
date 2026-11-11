@@ -1,0 +1,47 @@
+source_system: nbp_bop
+description: "Narodowy Bank Polski — balance of payments (monthly, quarterly) and international investment position (quarterly), XLSX workbooks"
+
+# Extraction strategy (docs/landing.md). Bulk feature: NBP publishes the balance of payments of Poland
+# (register PLG-002) and the international investment position (PLG-003) as three complete XLSX
+# workbooks at fixed URLs on static.nbp.pl (sheets PLN, EUR, USD; items in rows, periods in columns
+# from 2004): bop_m (monthly), bop_q (quarterly), iip_q (quarterly positions). The nbp.pl pages that
+# link them refuse automated clients (HTTP 403, Dev probe 43085044303); the files themselves answer.
+# Landed through the shared bulk_file pattern; version = Last-Modified, written only when the SHA-256
+# changed. Restart unit: one file. Proven from Actions by the Dev probes 43085044303 and 43085930329.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: bop_m    # monthly balance of payments, million PLN / EUR / USD (~290 kB)
+        url: https://static.nbp.pl/dane/bilans-platniczy/bop_m.xlsx
+        format: raw
+        version: last_modified
+      - entity: bop_q    # quarterly balance of payments, million PLN / EUR / USD (~340 kB)
+        url: https://static.nbp.pl/dane/bilans-platniczy/bop_q.xlsx
+        format: raw
+        version: last_modified
+      - entity: iip_q    # quarterly international investment position, million PLN / EUR / USD (~170 kB)
+        url: https://static.nbp.pl/dane/bilans-platniczy/iip_q.xlsx
+        format: raw
+        version: last_modified
+  initial: bulk
+  production: snapshot                  # each workbook holds the complete series
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: # UTC; release: monthly BoP about six weeks after the month, quarterly BoP and IIP about three months
+    # after the quarter (NBP release calendar); three small files, checked on weekdays
+    - {cron: "50 12 * * 1-5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/nbp_bop/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.nbp_bop_cells, bronze.nbp_bop_rejected_files]
+silver: [silver.nbp_bop_observations]
+gold: [gold.build_nbp_bop]
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): three workbooks of about 60,000 values; rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2754"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
