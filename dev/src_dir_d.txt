@@ -1,0 +1,15 @@
+PLG-002	https://nbp.pl/en/statistic-and-financial-reporting/balance-of-payments/	links	xls|csv|zip|balance|payments
+PLG-003	https://nbp.pl/en/statistic-and-financial-reporting/international-investment-position/	links	xls|csv|zip|position
+PLG-004	https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/	links	xls|csv|zip|monetary|money
+PLG-005	https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/	links	bank|xls
+PLG-012	https://prs.ms.gov.pl/krs/openApi	text	OdpisAktualny|OdpisPe|limit|licenc|regulamin|zasady
+PLG-012	https://prs.ms.gov.pl/krs/openApi	links	swagger|api|regulamin|dokument|json
+PLG-014	https://dane.biznes.gov.pl/	text	token|rejestr|regulamin|licenc|API|dane otwarte|dane.gov.pl
+PLG-014	https://pliki.biznes.gov.pl/akademia/Hurtownia_danych/HD%20CEIDG%20-%20API%20v2%20Hurtowni%20Danych%20-%20Dokumentacja%20dla%20integrator%C3%B3w%20v3.1.pdf	pdf	limit|licenc|token|jwt|wykorzyst|zapyta|dziennie
+PLG-016	https://www.knf.gov.pl/podmioty	links	xls|csv|zip|rejestr|wykaz|lista
+PLG-017	https://www.knf.gov.pl/dla_rynku/Informacje_sektorowe	links	xls|csv|zip|bank|sektor|dane
+PLG-018	https://www.knf.gov.pl/dla_rynku/Informacje_sektorowe	links	ubezpiecz|emerytal|ofe|ppe|xls
+PLG-020	https://decyzje.uokik.gov.pl/bp/dec_prez.nsf	text	Decyzj|baza|licenc|wykorzyst|regulamin|pobier
+PLG-021	https://uokik.gov.pl/koncentracje	links	xls|csv|zip|decyzj|wykaz|rejestr|baza
+PLG-013	https://rdf-przegladarka.ms.gov.pl/	text	regulamin|licenc|wykorzyst|API|pobier
+PLG-019	https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne	text	licenc|wykorzyst|rejestr|lista|xls
