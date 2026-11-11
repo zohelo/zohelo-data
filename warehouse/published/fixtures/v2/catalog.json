@@ -1576,9 +1576,9 @@
     },
     {
       "licence_key": "gus_copyright",
-      "name": "GUS terms of reuse (no named licence)",
+      "name": "GUS copyright terms (source required; commercial reuse not addressed)",
       "url": "https://stat.gov.pl/copyright",
-      "attribution_text": "Źródło: GUS / Source: Statistics Poland",
+      "attribution_text": "Źródło: GUS, Dziedzinowe Bazy Wiedzy / Source: Statistics Poland, DBW",
       "commercial_ok": false,
       "share_alike": false
     },

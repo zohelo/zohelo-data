@@ -2,8 +2,8 @@ licence_key,name,url,attribution_text,commercial_ok,share_alike
 eurostat_reuse,"Eurostat reuse policy (Commission Decision 2011/833/EU, CC BY 4.0)",https://ec.europa.eu/eurostat/web/main/help/copyright-notice,Source: Eurostat,true,false
 cc_by_4_0_world_bank,CC BY 4.0 (World Bank),https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators,"Source: World Bank, World Development Indicators",true,false
 cc_by_4_0_gus,CC BY 4.0 (GUS),https://creativecommons.org/licenses/by/4.0/,Źródło: GUS / Source: Statistics Poland,true,false
+gus_copyright,GUS copyright terms (source required; commercial reuse not addressed),https://stat.gov.pl/copyright,"Źródło: GUS, Dziedzinowe Bazy Wiedzy / Source: Statistics Poland, DBW",false,false
 open_data_act_teryt,Open Data Act re-use (GUS TERYT),https://eteryt.stat.gov.pl/eTeryt/rejestr_teryt/udostepnianie_danych/formy_i_zasady_udostepniania/formy_i_zasady_udostepniania.aspx,"Źródło: GUS, TERYT",true,false
-gus_copyright,GUS terms of reuse (no named licence),https://stat.gov.pl/copyright,Źródło: GUS / Source: Statistics Poland,false,false
 free_use_prg,Free use (GUGiK PRG),https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/,"Źródło: GUGiK, PRG",true,false
 cc0_gleif,CC0 1.0 (GLEIF),https://www.gleif.org/en/meta/lei-data-terms-of-use,Source: GLEIF,true,false
 gov_pl_terms,gov.pl terms (CC BY-SA 4.0 for text; official materials free to use),https://www.gov.pl/web/gov/prawa-autorskie,"Źródło: Ministerstwo Finansów / Source: Ministry of Finance",true,true
