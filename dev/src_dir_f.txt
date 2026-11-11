@@ -1,0 +1,15 @@
+PLG-022	https://media.ezamowienia.gov.pl/pod/2023/01/Regulamin-korzystania-z-API.pdf	pdf	licenc|bezpłat|ponown|wykorzyst danych|limit|zapyta
+PLG-023	https://docs.ted.europa.eu/api/latest/search.html	text	limit|rate|page|iteration|scroll|maximum
+PLG-025	https://www.senat.gov.pl/prace/proces-legislacyjny-w-senacie/	links	wykorzystywanie|udostępnianie
+PL-ENV-002	https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-nazw-geograficznych-prng/	text	licenc|dowoln|wykorzyst|bezpłat|pobierz
+PL-ENV-003	https://www.geoportal.gov.pl/pl/dane/baza-danych-obiektow-topograficznych-bdot10k/	text	licenc|dowoln|wykorzyst|bezpłat|GB|format
+PL-ENV-004	https://www.geoportal.gov.pl/pl/dane/ortofotomapa-orto/	text	licenc|dowoln|wykorzyst|bezpłat|GB
+PL-ENV-005	https://www.geoportal.gov.pl/pl/dane/numeryczny-model-terenu-nmt/	text	licenc|dowoln|wykorzyst|bezpłat|GB
+PL-ENV-008	https://danepubliczne.imgw.pl/apiinfo	text	licenc|wykorzyst|źródło|komerc|Dane|zastrzeż
+PL-ENV-008	https://danepubliczne.imgw.pl/api/data/synop	raw	300
+PL-ENV-009	https://danepubliczne.imgw.pl/data/dane_pomiarowo_obserwacyjne/	links	dane|zip|synop|opad|hydro
+PL-ENV-010	https://powietrze.gios.gov.pl/pjp/content/api	text	licenc|źródło|wykorzyst|limit|stacj|JSON
+PL-ENV-019	https://api.raporty.pse.pl/	text	licenc|wykorzyst|api/|limit|OData|raport
+PL-ENV-024	https://www.gov.pl/web/cepik/api-dla-centralnej-ewidencji-pojazdow-i-kierowcow	text	wykorzyst|komercyj|źródł|dane|API
+PL-ENV-031	https://gtfs.ztp.krakow.pl/	links	zip|gtfs|txt
+PL-ENV-013	https://www.gov.pl/web/wody-polskie/udostepnianie-danych-z-systemu-informacyjnego-gospodarki-wodnej	text	licenc|wykorzyst|wniosek|bezpłat|pobierz
