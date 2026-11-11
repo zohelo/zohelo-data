@@ -503,8 +503,10 @@ voivodeships), `dimensions`, `aggregation`, `polarity`, `status` and `note`:
 - `needs-block`: in Silver (codes checked or block named) but not activated: a member filter, a half-yearly fact, a
   derivation or a row-size decision is missing; `note` says which.
 - `needs-source`: not ingested; `note` names the register id (NBP balance of payments PLG-002, investment
-  position PLG-003). NBP official rates (`nbp_interest_rates`, PLG-006) and the OECD CLI (`oecd`, GL-003) reached
-  Silver on 10 Nov (#2590, #2594) and are `needs-block` until their Gold build stages exist.
+  position PLG-003). The OECD CLI (`oecd`, GL-003) reached Silver on 10 Nov (#2594) and is `needs-block` until its
+  Gold build stage exists. NBP official rates (`nbp_interest_rates`, PLG-006) have the Gold build stage
+  `build_nbp_interest_rates`: Silver holds one row per MPC change, Gold places the rate in force on the last day of
+  each month (today in the current month) as a monthly observation of Poland, one measure per rate.
 
 v2 keys by their best source status:
 
@@ -522,7 +524,7 @@ Rows by source (141 rows; 37 keys have two or more ready sources):
 | gus_dbw | 22 | 3 | 0 | 25 |
 | world_bank_wdi | 23 | 1 | 0 | 24 |
 | nbp | 1 | 0 | 6 | 7 |
-| nbp_interest_rates | 0 | 1 | 0 | 1 |
+| nbp_interest_rates | 1 | 0 | 0 | 1 |
 | oecd | 0 | 1 | 0 | 1 |
 
 Gold has a quarterly fact (`fact_quarterly`), and the BDL and DBW builds place monthly and quarterly periods, so

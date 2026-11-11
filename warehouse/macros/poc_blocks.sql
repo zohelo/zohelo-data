@@ -292,13 +292,14 @@
     order by k.kpi_key, m.priority
 {% endmacro %}
 
-{# All PoC observations in the common shape (the build stages of the five sources). #}
+{# All PoC observations in the common shape (the build stages of the sources). #}
 {% macro poc_observations() %}
     select * from {{ ref('poc_build_eurostat') }}
     union all select * from {{ ref('poc_build_bdl') }}
     union all select * from {{ ref('poc_build_dbw') }}
     union all select * from {{ ref('poc_build_wdi') }}
     union all select * from {{ ref('poc_build_nbp') }}
+    union all select * from {{ ref('poc_build_nbp_interest_rates') }}
 {% endmacro %}
 
 {# series_key: measure × geography × breakdown codes, readable; an unmatched area keeps its source code so
@@ -324,6 +325,7 @@
         values
         ('nbp', 'fx_A', 'NBP exchange rates, table A'),
         ('nbp', 'fx_C', 'NBP exchange rates, table C'),
-        ('nbp', 'gold', 'NBP gold fixings')
+        ('nbp', 'gold', 'NBP gold fixings'),
+        ('nbp_interest_rates', 'policy_rates', 'NBP official interest rates')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}

@@ -159,3 +159,4 @@ price_m2_secondary,gus_dbw,gus_dbw:309_485_180_3:180:wtórny rynek nieruchomośc
 arope_rate,gus_dbw,gus_dbw:1603_1339_116_4:116,"EU-SILC, Poland, macroregions and regions",2,
 long_term_unemployment,gus_dbw,gus_dbw:1618_1335_95_4:95,"LFS, 15-74, 12 months or more",2,
 registered_unemployed,gus_dbw,gus_dbw:507_870_93_1:93,"end of month, Poland and voivodeships",2,
+nbp_reference_rate,nbp_interest_rates,nbp_interest_rates:ref,"reference rate in force at the end of the month",1,
