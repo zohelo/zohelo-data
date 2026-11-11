@@ -64,7 +64,7 @@ def main() -> int:
              "arg_max(value, date_key) value from silver where currency = 'EUR' group by all order by entity, "
              "min(source_row_number)", 500)
         annotate("notice", "nbp_bop trial", {"bronze_rows": cells.num_rows,
-                                              "silver_rows": con.sql("select count(*) from silver").fetchone()[0],
+                                              "silver_rows": con.sql("select count(*) from silver").fetchall()[0][0],
                                               "rejected": len(rejected)})
     finally:
         removed = 0
