@@ -264,6 +264,22 @@ sources:
       obs_value and attribute_names / attribute_values as source text; partitioned by entity.
   - name: oecd_rejected_files
     description: OECD Landing files the Bronze decoder rejected, with the reason.
+- name: bis
+  description: BIS Data Portal — selected SDMX dataflows as SDMX-CSV (SDMX REST API)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/bis/
+    loaded_by: ingestion/to_bronze/bis/
+    config: ingestion/sources/bis.yaml
+  tables:
+  - name: bis_observations
+    description: >-
+      One row per record of the newest copy of each selection (entity, e.g. cbpol), as published:
+      dataflow, series_dimensions / series_key (dimension ids and codes in file order), time_period,
+      obs_value and attribute_names / attribute_values as source text; partitioned by entity.
+  - name: bis_rejected_files
+    description: BIS Landing files the Bronze decoder rejected, with the reason.
 - name: opendata_org
   description: OpenData.org (BrightQuery) organizations, people and locations — Senzing-ready snapshot
   database: r2
