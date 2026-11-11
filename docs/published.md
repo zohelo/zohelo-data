@@ -230,8 +230,11 @@ Owner decisions O27/O28 (2026-11-10): the zohelo-bi design template becomes zohe
 written **alongside** v1 under `06_published/v2/`; v1 stays unchanged for zohelo.com until zohelo.com chooses to
 move. `gold.publish` writes both. zohelo-bi reads v2 only.
 
-Status (2026-11-10): agreed contract, not built yet. The seeds and files it names (`kpi.csv` column `v2_key`,
-`kpi_member.csv`, `schemas/v2/`, `fixtures/v2/`) are added by the implementation tasks of Stage B.
+Status (2026-11-11): seeds, schemas and fixtures in place; the writer (`warehouse/publish_v2.py`, behind a
+`warehouse.yaml` switch) follows in the next pull request. Schemas in `warehouse/published/schemas/v2/`,
+fixtures in `warehouse/published/fixtures/v2/` (from synthetic Gold rows; `ops.repo_check` checks them against the
+schemas and the cross-file rules of `published_v2_problems`). Seeds: `kpi_v2_map.csv` (the v2 keys),
+`kpi.csv` (`definition_pl` beside `definition_en`), `geography_v2.csv`, `unit_decimals.csv`, `kpi_member.csv`.
 
 ## What changes against v1, and why
 
@@ -248,16 +251,30 @@ Status (2026-11-10): agreed contract, not built yet. The seeds and files it name
 ## Rules
 
 - Prefix `06_published/v2/`; rebuilt whole by `gold.publish` after each Gold build; no history; UTF-8; ISO 8601 UTC.
-- A KPI is in v2 only with `status = published` and a `v2_key` in `warehouse/seeds/kpi.csv` (new column; empty =
-  not in v2). Many v1 concepts map to one v2 key at most; a v2 key comes from exactly one concept.
+- A KPI is in v2 only when its concept has `status = published` in `warehouse/seeds/kpi.csv`; its v2 key is the
+  `v2_key` of the concept's rows in `warehouse/seeds/kpi_v2_map.csv` (one place for the mapping, no `v2_key` column
+  in `kpi.csv`). A concept maps to one v2 key at most; a v2 key comes from exactly one concept. Each ready source of
+  the map is its own series (O31), restricted to the map row's `measure_key_pattern`.
 - Keys: `kpi_key` (v2 key) `^[a-z0-9_]+$`. **Geography keys**: countries ISO 3166-1 alpha-2 (`PL`, `DE`, `CZ`;
   Greece `EL` as Eurostat writes it), the EU aggregate `EU27` (Eurostat `EU27_2020`), Polish voivodeships
   ISO 3166-2 (`PL-02` dolnośląskie … `PL-32` zachodniopomorskie, the TERC code after the hyphen). No NUTS codes
   in v2 keys: NUTS `PL22` is Śląskie while TERC `22` is Pomorskie, so a bare code is ambiguous.
+  `warehouse/seeds/geography_v2.csv` lists every v2 geography (Poland, the EU-27 aggregate, the other 26 member
+  states, the 16 voivodeships) with the Gold keys it stands for (Gold `GR` → `EL`, `TERC:02` → `PL-02`,
+  `EUROSTAT:EU27_2020` and World Bank `WB:EUU` → `EU27`); Gold rows of other areas are not in v2. A non-geographic
+  Gold row (`_Z`, the NBP rates) belongs to the one geography its map row names (`PL`).
 - Periods: `2025` (annual), `2025-Q3` (quarterly), `2025-09` (monthly). Daily data is published as the monthly
   mean in v2 (exchange rates); the daily series stays in v1.
 - Members: `_T` is the total of a dimension and never appears as a member; a series without a dimension key is
-  the total.
+  the total. Gold metrics hold total series, so a breakdown key of `breakdown_json` is a dimension only where it
+  splits the rows of one measure (the NBP currency); keys are named as in v1 (`dimension_alias.csv`, else lower case).
+  Where `kpi_member.csv` lists members of a dimension for a v2 key, only those reach v2 (`eurpln` = currency `EUR`);
+  a dimension left with one member is not a dimension.
+- Units: every series and every latest value carries its own `unit_key` (the measure's `kpi_measure.csv` unit, else
+  the KPI's), because sources publish one KPI in different units (GDP in mln EUR, mln PLN and US$; GUS indices
+  `index_py_100` beside rates in %).
+- Flags: Gold observation status → letter: provisional `p`, estimated `e`, break `b`, forecast `f`, low reliability
+  `u`, definition differs `d`, not significant `n`, confidential `c`; other statuses carry no flag.
 - Every JSON file is checked against its schema in `warehouse/published/schemas/v2/` before it is written; the
   run fails on a problem (as v1).
 
@@ -289,6 +306,14 @@ Status (2026-11-10): agreed contract, not built yet. The seeds and files it name
 | units[] | array | `unit.csv` plus `decimals` (integer: the precision to show) |
 | domains, sources, licences | array | as v1 |
 
+Written from the seeds: names and `unit_key` from `kpi.csv`, definitions from its `definition_pl`/`definition_en`
+(required for a published concept with a v2 key), `frequency`, `aggregation` and `polarity` from `kpi_v2_map.csv`
+(one value per v2 key), `domain_key`/`group_key` by walking `domain.csv` up from the concept's `subgroup_key`,
+`decimals` from `unit_decimals.csv`, member names and order from `kpi_member.csv` (else `sex.csv` for sex, else the
+member key), geographies from `geography_v2.csv` (`eu`: the area is in the EU). `source_keys` are the sources with
+data, preferred first (best `kpi_measure.csv` priority of the concept, then map order). `first_period`/`last_period`
+are the ends of the KPI's `series.json` periods; a v2 KPI without any row at its frequency is left out and reported.
+
 ## latest.json (one file for all KPIs)
 
 | field | type | meaning |
@@ -297,8 +322,9 @@ Status (2026-11-10): agreed contract, not built yet. The seeds and files it name
 | values[] | array | one entry per KPI × geography (totals only, no breakdowns) |
 | values[].kpi_key, geography | string | |
 | values[].source_key | string | the source shown (preferred source with data for that geography) |
+| values[].unit_key | string | unit of the value (see Units above) |
 | values[].period, value | string, number | newest period and value |
-| values[].previous_period, previous_value | string, number or null | the period before |
+| values[].previous_period, previous_value | string, number or null | the period before with a value |
 | values[].year_ago_value | number or null | same period a year earlier (monthly and quarterly KPIs) |
 | values[].flags | array | source status flags (`p` provisional, `e` estimated, `b` break) |
 | values[].checked_at | string | when the source was last checked |
@@ -312,18 +338,28 @@ Columnar to stay small; the reader filters by geography, source and members.
 | kpi_key, frequency, unit_key | string | |
 | periods | array | every period of the KPI, sorted |
 | series[] | array | one entry per geography × source × member combination |
-| series[].geography, source_key | string | |
+| series[].geography, source_key, unit_key | string | |
 | series[].members | object | `{ dimension_key: member_key }`; `{}` = totals |
 | series[].values | array | one number or null per entry of `periods` |
 | series[].flags | object | optional, `{ period: "p" }` only where a flag exists |
 
 Size: ≤ 1 MB gzipped per KPI. A KPI whose full breakdown would exceed it publishes only the members listed for it
-in `kpi_member.csv` (new seed, the curated members a reader needs: e.g. the NACE sections, not every class).
+in `kpi_member.csv` (the curated members a reader needs: e.g. the NACE sections, not every class); `gold.publish`
+fails on a file over the limit.
+
+Only rows of the KPI's shown frequency are in the file (daily rows as the monthly mean, 6 decimals, when it is
+monthly), so a source that has the KPI only at another frequency (e.g. World Bank annual rates of a quarterly KPI)
+has no series in v2 yet. Per geography × source × members one measure is kept: the best `kpi_measure.csv` priority,
+then the lowest measure key. Two different Gold values for one period of a series fail the run (equal duplicates
+count once).
 
 ## calendar.json
 
 `{ version, generated_at, releases: [{ date, source_key, kpi_keys, title_pl, title_en, url }] }` from
-`release_calendar.csv`, dates today and later. `feed/calendar.ics` (v1) stays.
+`release_calendar.csv` (every row; `kpi_keys` = the v2 key of its concept when that KPI is in v2) and the
+`silver.releases` rows that publish a v2 KPI (`source_key` = publisher, the one title in both fields), dates today and
+later; rows of one date, source, title and URL are merged; `url` may be null. `catalog.json` `next_release` is the
+KPI's first date here. `feed/calendar.ics` (v1) stays.
 
 ## topics.json
 
@@ -352,7 +388,8 @@ Size: ≤ 150 kB gzipped. Headlines are links with the outlet's name; no article
 
 ## status.json
 
-As v1 (copied to v2 so zohelo-bi reads one prefix).
+As v1 (the same document, copied to v2 so zohelo-bi reads one prefix; schema `schemas/v2/status.schema.json` is a copy
+of v1's).
 
 ## Size limits
 
@@ -403,13 +440,14 @@ LFS rates, the current account, NAMQ, job vacancies and the GUS short-term serie
 skrócie still needs `nbp_reference_rate` (NBP PLG-006: in Silver, Gold build stage missing), `price_m2_secondary` (the secondary market is a breakdown
 member of BDL P3788/P3794 and DBW 309_485: a member filter, `kpi_member.csv`) and `broadband_households` (the
 ingested broadband datasets end in 2021). GUS indices (`… = 100`) are published as the source gives them, with the
-measure's unit; the rate is the value minus 100. The `v2_key` column of `kpi.csv` is filled from `concept_key` by
-the v2 build task.
+measure's unit; the rate is the value minus 100. The v2 key of a concept is read from this map (see Rules).
 
 ## Who checks what
 
-- zohelo-data: schemas, `gold.publish` reads back every number against Gold (as v1), contract tests on
-  `warehouse/published/fixtures/v2/`.
+- zohelo-data: schemas, `gold.publish` reads back every number of `latest.json` and `series.json` (values, previous
+  and year-ago values; monthly means recomputed from the daily rows) against Gold (as v1) and fails on a difference;
+  `ops.repo_check` checks the fixtures in `warehouse/published/fixtures/v2/` (schemas, `published_v2_problems`) and
+  the v2 seeds (`published_v2_seeds`).
 - zohelo-bi: its live provider maps v2 one to one onto its data interface (`apps/portal/src/data/types.ts`) and
   tests against the same fixtures (copied, not re-invented).
 - The first set of v2 KPIs is the slice in `.github/backlog/epics/published-v2.yaml`.

@@ -1,0 +1,566 @@
+{
+  "version": 2,
+  "generated_at": "2026-01-01T00:00:00Z",
+  "releases": [
+    {
+      "date": "2026-01-07",
+      "source_key": "eurostat",
+      "kpi_keys": [
+        "hicp_annual_rate"
+      ],
+      "title_pl": "Flash estimate euro area inflation",
+      "title_en": "Flash estimate euro area inflation",
+      "url": "https://ec.europa.eu/eurostat/news/release-calendar"
+    },
+    {
+      "date": "2026-11-09",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-11-10",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-11-12",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-11-13",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-11-16",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-11-17",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-11-18",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-11-19",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-11-20",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-11-23",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-11-24",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-11-25",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-11-26",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-11-27",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-11-30",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-01",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-02",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-03",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-04",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-07",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-08",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-09",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-10",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-11",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-14",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-15",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-16",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-17",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-18",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-21",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-22",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-23",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-28",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-29",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-30",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2026-12-31",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-04",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-05",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-07",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-08",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-11",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-12",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-13",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-14",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-15",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-18",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-19",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-20",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-21",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-22",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-25",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-26",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-27",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-28",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "date": "2027-01-29",
+      "source_key": "nbp",
+      "kpi_keys": [
+        "eurpln"
+      ],
+      "title_pl": "NBP: tabela A kursów średnich walut",
+      "title_en": "NBP: table A of average exchange rates",
+      "url": "https://api.nbp.pl/en.html"
+    }
+  ]
+}
