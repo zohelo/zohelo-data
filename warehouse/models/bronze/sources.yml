@@ -232,6 +232,22 @@ sources:
       day (YYYYMMDD), views; partitioned by entity (<lang>_<title slug>).
   - name: wikimedia_pageviews_rejected_files
     description: Wikimedia pageviews Landing files the Bronze decoder rejected, with the reason.
+- name: faostat
+  description: FAOSTAT (FAO) — bulk domain zips (All Data, Normalized)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/faostat/
+    loaded_by: ingestion/to_bronze/faostat/
+    config: ingestion/sources/faostat.yaml
+  tables:
+  - name: faostat_observations
+    description: >-
+      One row per row of the newest copy of each domain file (entity: emissions_totals, land_use), every value
+      as published text: area_code, area_code_m49, area, item_code, item, element_code, element, year_code,
+      year, source_code, source (null where the domain has none), unit, value, flag, note; partitioned by entity.
+  - name: faostat_rejected_files
+    description: FAOSTAT Landing files the Bronze decoder rejected, with the reason.
 - name: news_feeds
   description: News headline feeds (RSS/Atom) of Polish outlets — headlines and links only (topics, O32)
   database: r2

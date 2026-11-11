@@ -1032,7 +1032,8 @@ sources:
   name: FAOSTAT
   short_name: FAOSTAT
   provider: Food and Agriculture Organization of the United Nations
-  status: approved
+  source_system: faostat
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1042,15 +1043,19 @@ sources:
   granularity: Domain-specific country/item/element/year observation; trade adds reporter/partner and flow.
   coverage: Global; histories and frequencies vary by domain, often annual.
   access:
-    endpoint: https://www.fao.org/faostat/en/
-    kind: api
+    endpoint: https://bulks-faostat.fao.org/production/datasets_E.json
+    kind: bulk_file
     interfaces: [HTML, bulk-files, API]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No numeric quota published; one request per domain zip and run. The bulk catalogue
+      https://bulks-faostat.fao.org/production/datasets_E.json lists every domain zip with size, rows and DateUpdate
+      (GT 20.6 MB zip, 2,498,428 rows; RL 3.0 MB, 421,850 rows; Dev probe 43099401602, 11 Nov 2026).
   licence:
     status: open-conditional
-    notes: 'Terms: CC BY 4.0, FAO Statistical Database Terms of Use https://www.fao.org/contact-us/terms/db-terms-of-use
+    notes: 'Terms: CC BY 4.0, FAO Statistical Database Terms of Use (confirmed 11 Nov 2026, Dev probe 43099401602:
+      "all datasets disseminated through FAO corporate statistical databases ... are licensed under the Creative
+      Commons Attribution-4.0 International licence (CC BY 4.0) ... as complemented by the Terms of Use"), https://www.fao.org/contact-us/terms/db-terms-of-use
       (unless a dataset''s metadata says otherwise): access, download, copy, adapt and re-disseminate; do not use datasets
       for or with the promotion of a commercial enterprise; do not imply FAO endorsement; do not misrepresent the data;
       third-party datasets need their provider''s consent; provided without warranty. Attribution (required format):
@@ -1066,10 +1071,9 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Confirm current API contract'
-    - 'Exclude third-party datasets that need provider consent'
+    - 'Exclude third-party datasets that need provider consent (population OA is UN WPP: not landed)'
     references:
     - https://www.fao.org/faostat/en/
     - https://www.fao.org/contact-us/terms/en/
