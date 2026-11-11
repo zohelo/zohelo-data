@@ -252,10 +252,26 @@ def undata_sdmx() -> None:
                 break
 
 
+def syb_bytes() -> None:
+    from collections import Counter
+
+    for url in ("https://data.un.org/_Docs/SYB/CSV/SYB68_1_202511_Population,%20Surface%20Area%20and%20Density.csv",
+                "https://data.un.org/_Docs/SYB/CSV/SYB68_12_202511_Agricultural%20Index.csv"):
+        b = requests.get(url, headers={"User-Agent": UA}, timeout=(30, 120)).content
+        out("syb head bytes", b[:4])
+        out("syb 400-560", b[400:560])
+        out("syb non-ascii", Counter(x for x in b if x > 127).most_common(30))
+        for x in sorted({x for x in b if x > 127})[:30]:
+            i = b.index(bytes([x]))
+            out(f"syb ctx {x:#x}", b[max(0, i - 30):i + 10])
+
+
 def main2(argv: list[str]) -> int:
-    main([a for a in argv if a not in ("bisfull", "unece3", "undata3")])
+    main([a for a in argv if a not in ("bisfull", "unece3", "undata3", "sybbytes")])
     if "unece3" in argv:
         unece_tree()
+    if "sybbytes" in argv:
+        syb_bytes()
     if "undata3" in argv:
         undata_sdmx()
     if "bisfull" in argv:
