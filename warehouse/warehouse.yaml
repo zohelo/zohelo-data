@@ -85,7 +85,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   topic_rank: {rows: 1000}  # 5 periods × 35 topics
   topic_quality: {rows: 1000}
   topic_volume: {rows: 50000}  # 35 topics × days since the first landing  # topics (O32): ~150,000 headlines in 400 days (7 feeds)
-  mrpips_registered_unemployment: {rows: 150000}  # about 1,000 rows a month since 2019 (Dev trial, see the PR)
+  mrpips_registered_unemployment: {rows: 150000}  # 828 rows a month; 35,640 for 44 months (Dev trial 43092641513), ~100,000 with 2020-2023
   nbp_policy_rates: {rows: 2000}  # 390 rows, 96 archive dates since 1998 (Dev trial 42777711811)
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865

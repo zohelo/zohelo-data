@@ -28,7 +28,7 @@ from typing import Any
 
 SOURCE = "mrpips_unemployment"
 LISTING = "https://psz.praca.gov.pl/rynek-pracy/statystyki-i-analizy/bezrobocie-rejestrowane"
-FIRST_YEAR = 2019  # first year with one asset page per year (earlier years: one page per month)
+FIRST_YEAR = 2019  # first year with one asset page per year (earlier years: one page per month, .xls only)
 RECHECK = 2  # newest months downloaded again on every run (MRPiPS corrects the rate in later months)
 PAUSE = 2.0
 MONTHS = {
