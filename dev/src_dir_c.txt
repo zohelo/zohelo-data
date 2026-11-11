@@ -1,0 +1,5 @@
+PLS-020	https://ezdrowie.gov.pl/pobierz/rpwdl-2-0-instrukcja-dla-uzytkownikow-niezalogowanych	pdf	2\.3\. Pliki do pobrania \.{0}[A-Z]
+PLS-022	https://cie.gov.pl/archiwalne-dane-statystyczne/	links	upload|\.xls|\.zip|\.pdf|dane
+PLS-022	https://cie.gov.pl/archiwalne-dane-statystyczne/	full	200
+PLS-023	https://polon.nauka.gov.pl/en/public-data/	text	RAD-on|API|licen|open
+PLS-023	https://polon.nauka.gov.pl/en/public-data/	links	radon|api|dane|open
