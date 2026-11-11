@@ -1,0 +1,25 @@
+version: 2
+models:
+  - name: budget_execution
+    description: >-
+      State budget execution, table 1 of the Ministry of Finance monthly reports (newest report of each year since
+      2018): one row per year × month × item × measure. measure execution_ytd = cumulative execution from January to
+      month_end; plan = the budget act for the year (month_end null). Thousand zloty. item_key names the main lines
+      (revenue, expenditure, balance = deficit (-) / surplus (+), eu_funds_result, financing, financing_domestic,
+      financing_foreign); the other lines keep only their label and numbering.
+    tests:
+      - unique:
+          column_name: "budget_year || '|' || measure || '|' || coalesce(cast(month_end as varchar), '-') || '|' || item_label"
+    columns:
+      - name: budget_year
+        tests: [not_null]
+      - name: measure
+        tests: [not_null, {accepted_values: {arguments: {values: ['execution_ytd', 'plan']}}}]
+      - name: month_end
+        tests: [{accepted_values: {arguments: {values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}}}]
+      - name: item_label
+        tests: [not_null]
+      - name: value_thousand_pln
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

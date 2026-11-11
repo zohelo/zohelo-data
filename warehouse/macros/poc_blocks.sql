@@ -254,6 +254,7 @@
     union all select * from {{ ref('poc_build_dbw') }}
     union all select * from {{ ref('poc_build_wdi') }}
     union all select * from {{ ref('poc_build_nbp') }}
+    union all select * from {{ ref('poc_build_public_finance') }}
 {% endmacro %}
 
 {# series_key: measure × geography × breakdown codes, readable; an unmatched area keeps its source code so
@@ -279,6 +280,13 @@
         values
         ('nbp', 'fx_A', 'NBP exchange rates, table A'),
         ('nbp', 'fx_C', 'NBP exchange rates, table C'),
-        ('nbp', 'gold', 'NBP gold fixings')
+        ('nbp', 'gold', 'NBP gold fixings'),
+        ('mf_public_debt', 'debt_gdp', 'Public debt in relation to GDP (MF)'),
+        ('mf_public_debt', 'debt', 'Public debt (MF)'),
+        ('mf_public_debt', 'edp_debt', 'General government (EDP) debt by instrument (MF)'),
+        ('mf_treasury_debt', 'debt_instrument', 'State Treasury debt by instrument (MF)'),
+        ('mf_state_budget', 'execution_ytd', 'State budget execution, cumulative (MF)'),
+        ('mf_state_budget', 'plan', 'State budget act (MF)'),
+        ('krus', 'benefits', 'KRUS pensions and benefits')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}
