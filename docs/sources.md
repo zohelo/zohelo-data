@@ -359,9 +359,8 @@ nbp.pl pages that link the files answer automated clients with HTTP 403 (Dev pro
 answer. Bronze: `bronze.nbp_bop_cells` (one row per filled value cell as source text, with the item's row
 label, its block head and its section; openpyxl, pinned in requirements.txt; a workbook without the year and
 period header or with an unknown sheet is rejected). Silver: `silver.nbp_bop_observations` (workbook ×
-currency × item × period; `item_code` = slug of the English label, prefixed where it repeats). Gold: the build stage
-`build_nbp_bop` (PLN and EUR) follows once Silver exists in production (a Gold model reading a missing
-source would hold the shared facts back). The workbooks hold amounts only: the shares of GDP of the current
+currency × item × period; `item_code` = slug of the English label, prefixed where it repeats). Gold: build stage
+`build_nbp_bop` (PLN and EUR, one measure per workbook × currency × item). The workbooks hold amounts only: the shares of GDP of the current
 account and of the net position are not published there. Licence: NBP website Terms of Use, unresolved
 (internal, owner decision of 14 Oct 2026).
 
