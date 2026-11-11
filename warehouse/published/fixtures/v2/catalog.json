@@ -1257,7 +1257,7 @@
       "family": "cube",
       "block_kind": "file (indicator × section × presentation × periodicity × year)",
       "provider_type": "national-public",
-      "licence_key": "cc_by_4_0_gus",
+      "licence_key": "gus_copyright",
       "url": "https://api.stat.gov.pl/Home/DBWApi?lang=en"
     },
     {
@@ -1572,6 +1572,14 @@
       "url": "https://creativecommons.org/licenses/by/4.0/",
       "attribution_text": "Źródło: GUS / Source: Statistics Poland",
       "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "gus_copyright",
+      "name": "GUS terms of reuse (no named licence)",
+      "url": "https://stat.gov.pl/copyright",
+      "attribution_text": "Źródło: GUS / Source: Statistics Poland",
+      "commercial_ok": false,
       "share_alike": false
     },
     {
