@@ -1,0 +1,40 @@
+source_system: undp_hdr
+description: "UNDP Human Development Data Center — composite indices complete time series (HDI, GDI, GII, IHDI, PHDI and components)"
+
+# Extraction strategy (docs/landing.md). Bulk feature: the Human Development Data Center's downloads page
+# (https://hdr.undp.org/data-center/documentation-and-downloads) links one CSV with every composite index and
+# component for every country and aggregate, 1990 to the report year (HDR25: 2.0 MB). Its URL changes with
+# each report (…/2025_HDR/HDR25_Composite_indices_complete_time_series.csv), so the shared bulk_file pattern
+# finds the link on that stable page; version = the server's Last-Modified; a copy is written only when the
+# SHA-256 changed. Each report recalculates the whole series (register GL-028: vintage-aware comparison);
+# superseded reports stay in the Archive. CC BY 3.0 IGO. Proven from Actions by the Dev probe 43086552621.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: composite_indices   # HDR composite indices complete time series (wide CSV)
+        url_from:
+          page: https://hdr.undp.org/data-center/documentation-and-downloads
+          pattern: Composite_indices_complete_time_series\.csv
+        format: raw
+        version: last_modified
+  initial: bulk
+  production: snapshot                  # each file is the complete series of one report
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: # UTC; release: one Human Development Report a year (spring), occasional corrections; monthly check (3rd, 06:50)
+    - {cron: "50 6 3 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/undp_hdr/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 400}   # keep the previous report a year for vintage comparison
+  prune: report
+bronze: [bronze.undp_hdr_values, bronze.undp_hdr_rejected_files]
+silver: [silver.undp_hdr_indices]
+gold: []
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): one file of ~200,000 values a year, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #TASK"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
