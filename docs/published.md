@@ -510,25 +510,29 @@ v2 keys by their best source status:
 
 | | ready | needs-block | needs-source | total |
 |---|---|---|---|---|
-| Polska w skrócie | 28 | 3 | 0 | 31 |
-| all 78 keys | 63 | 14 | 1 | 78 |
+| Polska w skrócie | 29 | 2 | 0 | 31 |
+| all 78 keys | 69 | 8 | 1 | 78 |
 
-Rows by source (141 rows; 31 keys have two or more ready sources):
+Rows by source (141 rows; 38 keys have two or more ready sources):
 
 | source | ready | needs-block | needs-source | rows |
 |---|---|---|---|---|
-| eurostat | 51 | 7 | 0 | 58 |
-| gus_bdl | 17 | 8 | 0 | 25 |
-| gus_dbw | 17 | 8 | 0 | 25 |
+| eurostat | 54 | 4 | 0 | 58 |
+| gus_bdl | 24 | 1 | 0 | 25 |
+| gus_dbw | 22 | 3 | 0 | 25 |
 | world_bank_wdi | 23 | 1 | 0 | 24 |
 | nbp | 1 | 0 | 6 | 7 |
 | nbp_interest_rates | 0 | 1 | 0 | 1 |
 | oecd | 0 | 1 | 0 | 1 |
 
 Gold has a quarterly fact (`fact_quarterly`), and the BDL and DBW builds place monthly and quarterly periods, so
-LFS rates, the current account, NAMQ, job vacancies and the GUS short-term series keep their frequency. Polska w
-skrócie still needs `nbp_reference_rate` (NBP PLG-006: in Silver, Gold build stage missing), `price_m2_secondary` (the secondary market is a breakdown
-member of BDL P3788/P3794 and DBW 309_485: a member filter, `kpi_member.csv`) and `broadband_households` (the
+LFS rates, the current account, NAMQ, job vacancies and the GUS short-term series keep their frequency; half-years
+(Eurostat minimum wages) have their own fact, `fact_semiannual` (#2743). A label or dimension that names the measure
+although it has an "ogółem" member (the market of the dwelling prices: BDL `poc_bdl_measure_positions`, DBW
+`poc_dbw_block_rules`) makes each member a measure with its own total series, so `price_m2_secondary` reads the
+secondary market directly; DBW blocks with powiaty or gminy that the slice needs only for Poland and the voivodeships
+are filtered in `src_dbw` (`REGIONAL`). Polska w
+skrócie still needs `nbp_reference_rate` (NBP PLG-006: in Silver, Gold build stage missing), and `broadband_households` (the
 ingested broadband datasets end in 2021). GUS indices (`… = 100`) are published as the source gives them, with the
 measure's unit; the rate is the value minus 100. The v2 key of a concept is read from this map (see Rules).
 
