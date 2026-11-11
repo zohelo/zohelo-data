@@ -1,0 +1,102 @@
+{
+  "version": 2,
+  "generated_at": "2026-01-01T00:00:00Z",
+  "window_days": 45,
+  "extreme_min_periods": 12,
+  "geographies": [
+    "PL",
+    "EU27"
+  ],
+  "briefs": [
+    {
+      "kpi_key": "gdp_real_growth",
+      "geography": "PL",
+      "source_key": "eurostat",
+      "unit_key": "pct",
+      "period": "2025-Q2",
+      "value": 4.0,
+      "previous_period": "2025-Q1",
+      "previous_value": 3.7,
+      "change": 0.3,
+      "change_unit": "pp",
+      "year_ago_period": "2024-Q2",
+      "year_ago_value": 2.8,
+      "year_ago_change": 1.2,
+      "extreme": null,
+      "flags": [],
+      "released_at": "2026-01-01",
+      "released_at_source": "detected",
+      "detected_at": "2026-01-01T00:00:00Z",
+      "next_release": null
+    },
+    {
+      "kpi_key": "population_total",
+      "geography": "PL",
+      "source_key": "gus_bdl",
+      "unit_key": "persons",
+      "period": "2024",
+      "value": 37600000.0,
+      "previous_period": "2023",
+      "previous_value": 37750000.0,
+      "change": -0.397351,
+      "change_unit": "%",
+      "year_ago_period": null,
+      "year_ago_value": null,
+      "year_ago_change": null,
+      "extreme": null,
+      "flags": [],
+      "released_at": "2026-01-01",
+      "released_at_source": "detected",
+      "detected_at": "2026-01-01T00:00:00Z",
+      "next_release": null
+    },
+    {
+      "kpi_key": "hicp_annual_rate",
+      "geography": "PL",
+      "source_key": "eurostat",
+      "unit_key": "pct",
+      "period": "2025-09",
+      "value": 2.7600000000000002,
+      "previous_period": "2025-08",
+      "previous_value": 2.8800000000000003,
+      "change": -0.12,
+      "change_unit": "pp",
+      "year_ago_period": "2024-09",
+      "year_ago_value": 4.2,
+      "year_ago_change": -1.44,
+      "extreme": {
+        "kind": "lowest",
+        "since_period": null,
+        "periods": 12
+      },
+      "flags": [
+        "p"
+      ],
+      "released_at": "2025-12-19",
+      "released_at_source": "calendar",
+      "detected_at": "2026-01-01T00:00:00Z",
+      "next_release": "2026-01-07"
+    },
+    {
+      "kpi_key": "unemployment_lfs",
+      "geography": "PL",
+      "source_key": "eurostat",
+      "unit_key": "pct_labour_force",
+      "period": "2025-Q2",
+      "value": 2.65,
+      "previous_period": "2025-Q1",
+      "previous_value": 2.6999999999999997,
+      "change": -0.05,
+      "change_unit": "pp",
+      "year_ago_period": "2024-Q2",
+      "year_ago_value": 2.85,
+      "year_ago_change": -0.2,
+      "extreme": null,
+      "flags": [],
+      "released_at": "2025-12-22",
+      "released_at_source": "detected",
+      "detected_at": "2025-12-22T08:00:00Z",
+      "next_release": null
+    }
+  ]
+}

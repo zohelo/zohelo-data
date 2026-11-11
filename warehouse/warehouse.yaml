@@ -7,6 +7,10 @@ activities: [silver_gold.build, gold.publish]
 # 06_published/v2/ (warehouse/publish_v2.py) after the v1 files; v1 is unchanged and zohelo.com reads v1 only.
 # Only KPIs with status published in seeds/kpi.csv reach v2. false: v2 is not written.
 published_v2: true
+# Release briefs (docs/published.md, "briefs.json"): written with v2. A KPI × geography gets a brief when its
+# latest.json period is newer than in the previously published latest.json; the brief stays for window_days after
+# it was first detected. extreme: highest/lowest for at least extreme_min_periods observed values back.
+briefs: {window_days: 45, extreme_min_periods: 12, geographies: [PL, EU27]}
 # Declared schedules (UTC), dispatched by run.py schedule: models daily after the source
 # loads. Eurostat and BDL observations are not dbt models: their loaders write Silver (#875).
 schedule:

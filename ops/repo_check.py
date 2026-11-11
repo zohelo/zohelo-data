@@ -419,6 +419,7 @@ PUBLISHED_SCHEMAS = {  # Path.match matches from the right: v2 entries first ("s
     "v2/latest.json": "v2/latest",
     "v2/calendar.json": "v2/calendar",
     "v2/status.json": "v2/status",
+    "v2/briefs.json": "v2/briefs",
     "v2/kpi/*/series.json": "v2/series",
     "catalog/catalog.json": "catalog",
     "manifest.json": "manifest",
@@ -627,6 +628,124 @@ def published_v2_problems(files: dict[str, dict]) -> list[str]:
     for key, kpi in kpis.items():
         if kpi["next_release"] != first.get(key):
             problems.append(f"catalog.json {key}: next_release {kpi['next_release']} is not {first.get(key)}")
+    if "briefs.json" in files:
+        problems += briefs_problems(files["briefs.json"], kpis, series, files.get("latest.json", {}))
+    return problems
+
+
+def period_ordinal(period: str) -> int:
+    """A v2 period as a number that grows by one per period of its frequency ('2025' → 2025, '2025-Q3' → 8102,
+    '2025-09' → 24308)."""
+    year = int(period[:4])
+    if len(period) == 4:
+        return year
+    if period[5] == "Q":
+        return year * 4 + int(period[6]) - 1
+    return year * 12 + int(period[5:7]) - 1
+
+
+def brief_change(value: float, before: float | None, change_unit: str) -> float | None:
+    """The change of a brief against an earlier value: the difference for `pp`, the relative change in % for `%`
+    (None when the earlier value is not above zero); rounded to 6 decimals; None without an earlier value."""
+    if before is None:
+        return None
+    if change_unit == "pp":
+        return round(value - before, 6)
+    if before <= 0:
+        return None
+    return round((value - before) / before * 100, 6)
+
+
+def brief_extreme(periods: list[str], values: list[float | None], at: int, min_periods: int) -> dict | None:
+    """Whether values[at] is the highest or lowest for at least ``min_periods`` observed values back: walking back
+    from ``at``, every observed value is below it (highest) or above it (lowest) until ``since_period``, the last
+    period with a value as high (as low) or more; ``since_period`` is None when no earlier value reaches it (a record
+    over the whole series). ``periods`` counts the observed values passed. None when neither holds."""
+    value = values[at]
+    earlier = [(periods[i], values[i]) for i in range(at - 1, -1, -1) if values[i] is not None]
+    for kind, beaten in (("highest", lambda v: v < value), ("lowest", lambda v: v > value)):
+        count = 0
+        since = None
+        for period, v in earlier:
+            if not beaten(v):
+                since = period
+                break
+            count += 1
+        if count >= min_periods:
+            return {"kind": kind, "since_period": since, "periods": count}
+    return None
+
+
+def brief_change_unit(aggregation: str, unit_key: str) -> str:
+    """`pp` (the difference, in the value's unit) for rates, shares, percentage points, balances and indices against
+    the previous year or period (= 100 + a rate); `%` (relative change) for every other level."""
+    if aggregation == "rate" or unit_key.startswith("pct") or unit_key in ("balance", "index_py_100", "index_pp_100"):
+        return "pp"
+    return "%"
+
+
+def briefs_problems(briefs: dict, kpis: dict[str, dict], series: dict[str, dict], latest: dict) -> list[str]:
+    """Cross-file rules of briefs.json: each brief is one latest.json value (same source, unit, period, value and
+    previous value; year-ago value from the same series), of a geography the file allows, at most once per KPI and
+    geography; changes, the change unit and the extreme are what the numbers give (brief_change, brief_change_unit,
+    brief_extreme on the series of series.json); next_release is the catalog's; briefs are sorted newest first."""
+    problems = []
+    shown = {(v["kpi_key"], v["geography"]): v for v in latest.get("values", [])}
+    allowed = set(briefs.get("geographies", []))
+    seen = set()
+    entries = briefs.get("briefs", [])
+    order = [(b["detected_at"], b["released_at"]) for b in entries]
+    if order != sorted(order, reverse=True):
+        problems.append("briefs.json: briefs are not sorted newest first (detected_at, released_at)")
+    for b in entries:
+        where = f"briefs.json {b['kpi_key']} {b['geography']}"
+        if (b["kpi_key"], b["geography"]) in seen:
+            problems.append(f"{where}: occurs twice")
+        seen.add((b["kpi_key"], b["geography"]))
+        if b["geography"] not in allowed:
+            problems.append(f"{where}: geography not in the file's geographies")
+        v = shown.get((b["kpi_key"], b["geography"]))
+        kpi = kpis.get(b["kpi_key"])
+        doc = series.get(b["kpi_key"])
+        if v is None or kpi is None or doc is None:
+            problems.append(f"{where}: no latest.json value, catalog KPI or series.json")
+            continue
+        for field in ("source_key", "unit_key", "period", "value", "previous_period", "previous_value"):
+            if b[field] != v[field]:
+                problems.append(f"{where}: {field} {b[field]!r} is not latest.json's {v[field]!r}")
+        if b["year_ago_value"] != v["year_ago_value"]:
+            problems.append(f"{where}: year_ago_value {b['year_ago_value']} is not latest.json's {v['year_ago_value']}")
+        if b["next_release"] != kpi["next_release"]:
+            problems.append(f"{where}: next_release {b['next_release']} is not the catalog's {kpi['next_release']}")
+        unit = brief_change_unit(kpi["aggregation"], b["unit_key"])
+        if b["change_unit"] != unit:
+            problems.append(f"{where}: change_unit {b['change_unit']} is not {unit}")
+        if b["change"] != brief_change(b["value"], b["previous_value"], unit):
+            problems.append(f"{where}: change {b['change']} does not follow from the values")
+        if b["year_ago_change"] != brief_change(b["value"], b["year_ago_value"], unit):
+            problems.append(f"{where}: year_ago_change {b['year_ago_change']} does not follow from the values")
+        if b["year_ago_period"] is not None and period_ordinal(b["period"]) - period_ordinal(b["year_ago_period"]) != {
+            "M": 12,
+            "Q": 4,
+        }.get(kpi["frequency"]):
+            problems.append(f"{where}: year_ago_period {b['year_ago_period']} is not a year before {b['period']}")
+        candidates = [
+            s
+            for s in doc["series"]
+            if s["geography"] == b["geography"]
+            and s["source_key"] == b["source_key"]
+            and not s["members"]
+            and "frequency" not in s
+        ]
+        if len(candidates) != 1 or b["period"] not in doc["periods"]:
+            problems.append(f"{where}: no single total series of {b['source_key']} with period {b['period']}")
+            continue
+        at = doc["periods"].index(b["period"])
+        if candidates[0]["values"][at] != b["value"]:
+            problems.append(f"{where}: value {b['value']} is not series.json's {candidates[0]['values'][at]}")
+        expected = brief_extreme(doc["periods"], candidates[0]["values"], at, briefs.get("extreme_min_periods", 12))
+        if b["extreme"] != expected:
+            problems.append(f"{where}: extreme {b['extreme']} is not {expected}")
     return problems
 
 
