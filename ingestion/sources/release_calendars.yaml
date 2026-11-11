@@ -18,7 +18,7 @@ extraction:
   production: snapshot                  # each file is the calendar as published
   incremental_policy: changed_since_last  # SHA-256
   schedule: # UTC; calendars change rarely; daily before the evening topics build
-    - {cron: "50 19 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+    - {cron: "0 5 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/release_calendars/
 archive_policy:
