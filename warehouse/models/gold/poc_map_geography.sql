@@ -178,6 +178,27 @@ wdi as (
     from {{ ref('wdi_countries') }} as w
     left join geo as g on g.level_name = 'country' and w.iso2_code = g.iso2
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
+),
+
+-- UN WPP: locations by ISO two-letter code (countries and areas) or LocID (groups): 1551 European Union (EU: 27)
+-- = EU27_2020 (current members, fixed composition), 900 World. Other groups have no Gold area (_X); the build stage
+-- builds only the areas of poc_un_wpp_blocks.
+un_wpp as (
+    select
+        'un_wpp' as source_system,
+        coalesce(c.iso2, cast(c.loc_id as varchar)) as source_code,
+        coalesce(
+            g.geography_key,
+            case c.loc_id when 1551 then 'EUROSTAT:EU27_2020' when 900 then 'WB:WLD' end,
+            '_X'
+        ) as geography_key
+    from (
+        select distinct
+            loc_id,
+            iso2
+        from {{ ref('un_wpp_demographic_indicators') }}
+    ) as c
+    left join geo as g on g.level_name = 'country' and c.iso2 = g.geography_key
 )
 
 select
@@ -195,6 +216,8 @@ from (
     select * from dbw
     union all
     select * from wdi
+    union all
+    select * from un_wpp
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

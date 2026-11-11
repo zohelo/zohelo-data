@@ -155,6 +155,13 @@ def trial(source: str) -> None:
     sql = sql.replace("{{ ref('poc_dim_geography') }}", "geo")
     for ref, table in refs.items():
         sql = sql.replace("{{ ref('" + ref + "') }}", table)
+    if "poc_map_geography" in sql:
+        text = Path("warehouse/models/gold/poc_map_geography.sql").read_text()
+        cte = re.search(r"^" + source + r" as \((.*?)^\)", text, re.S | re.M).group(1)
+        cte = re.sub(r"\{\{\s*ref\('([a-z_0-9]+)'\)\s*\}\}", lambda m: m.group(1), cte)
+        con.execute(f"create table gmap as {cte}")
+        sql = sql.replace("{{ ref('poc_map_geography') }}", "gmap")
+        show(con, f"{source} geography map", "select geography_key = '_X', count(*) from gmap group by 1")
     con.execute(f"create table build as {sql}")
     results["gold rows"] = show(con, f"{source} gold", "select block_id, measure_key, geography_key, frequency, count(*), min(date_key), max(date_key) from build group by all order by all", 200)
     show(con, f"{source} gold grain detail", "select measure_key, geography_key, breakdown_json, count(*) from build group by measure_key, geography_key, coalesce(geography_source_code,''), breakdown_json, date_key having count(*) > 1 limit 20")

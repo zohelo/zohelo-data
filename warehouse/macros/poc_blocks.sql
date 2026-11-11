@@ -194,7 +194,7 @@
         'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' as countries
     from (
         values
-        ('TPopulation1July', 'Total population on 1 July (UN WPP)', 'persons', 'persons'),
+        ('TPopulation1July', 'Total population on 1 July (UN WPP)', 'thousand_persons', 'thousand persons'),
         ('TFR', 'Total fertility rate (UN WPP)', 'children_per_woman', 'live births per woman'),
         ('LEx', 'Life expectancy at birth, both sexes (UN WPP)', 'years', 'years'),
         ('MedianAgePop', 'Median age of the population (UN WPP)', 'years', 'years'),

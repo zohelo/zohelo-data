@@ -31,7 +31,7 @@ archive_policy:
   prune: report
 bronze: [bronze.un_wpp_rows, bronze.un_wpp_rejected_files]
 silver: [silver.un_wpp_demographic_indicators, silver.un_wpp_population_age_groups]
-gold: []
+gold: [gold.build_un_wpp, gold.metrics_population_projection]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): two files revised every two years; Silver ~84,000 rows per model; rebuilt in full.

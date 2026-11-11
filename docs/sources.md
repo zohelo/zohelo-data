@@ -548,7 +548,8 @@ generic CSV rows (`field_names` / `field_values`, text). Silver: `silver.un_wpp_
 groups summed from the five-year groups, dependency ratios; the five-year rows stay in Bronze, above the
 ~1M full-rebuild policy). Gold: `gold.build_un_wpp` for the EU27 members, the WPP group "European Union
 (EU: 27)" (LocID 1551, EU27_2020) and World; every indicator is an `:estimate` (to 2023) and a `:projection`
-(2024-2100, status forecast) measure; KPIs population, total_fertility_rate, life_expectancy,
+(2024-2100, status forecast) measure, values as published (population in thousands); areas through
+`poc_map_geography` (section `un_wpp`); KPIs population, total_fertility_rate, life_expectancy,
 old_age_dependency (estimates) and population_projection. Monthly check (3rd, 06:25 UTC), full rebuild (D32).
 
 ## World Bank Global Findex Database

@@ -32,9 +32,9 @@ select
     nullif(v[list_position(f, 'Variant')], '') as variant,
     cast(v[list_position(f, 'Time')] as integer) as year,
     cast(v[list_position(f, 'Time')] as integer) >= 2024 as is_projection,
-    {%- for c in indicators %}
-    try_cast(nullif(v[list_position(f, '{{ c }}')], '') as double) as {{ c | lower }},
-    {%- endfor %}
+    {% for c in indicators -%}
+        try_cast(nullif(v[list_position(f, '{{ c }}')], '') as double) as {{ c | lower }},
+    {% endfor -%}
     raw_sha256,
     source_version,
     ingested_at

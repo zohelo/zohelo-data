@@ -2,23 +2,21 @@
 {# Gold build stage: UN World Population Prospects 2024 (medium variant) for the areas of poc_un_wpp_blocks (EU27
    countries, the European Union (EU: 27) group → EUROSTAT:EU27_2020, World → WB:WLD), annual. Every indicator
    is two measures: un_wpp:<indicator>:estimate (1950-2023) and un_wpp:<indicator>:projection (2024-2100,
-   observation status forecast), so a projection never becomes a KPI's latest value. Population in persons
-   (published thousands × 1,000); old-age dependency (65+ per 100 aged 15-64) from the broad age groups of
-   silver.un_wpp_population_age_groups. No breakdowns. #}
+   observation status forecast), so a projection never becomes a KPI's latest value. Values as published:
+   population in thousands; old-age dependency (65+ per 100 aged 15-64) from the broad age groups of
+   silver.un_wpp_population_age_groups. Areas through poc_map_geography (section un_wpp). No breakdowns. #}
 with blocks as ({{ poc_un_wpp_blocks() }}),
 
-geo as (
-    select
-        geography_key,
-        level_name
-    from {{ ref('poc_dim_geography') }}
+geo_map as (
+    select * from {{ ref('poc_map_geography') }}
+    where source_system = 'un_wpp'
 ),
 
 areas as (
     select
         unnest(string_split(countries, ',')) as iso2,
         cast(null as integer) as loc_id
-    from (select any_value(countries) as countries from blocks)
+    from (select any_value(countries) as countries from blocks) as b
     union all
     select
         null as iso2,
@@ -39,7 +37,7 @@ indicators as (
         d.raw_sha256,
         d.source_version,
         unnest(['TPopulation1July', 'TFR', 'LEx', 'MedianAgePop']) as indicator,
-        unnest([round(d.tpopulation1july * 1000), d.tfr, d.lex, d.medianagepop]) as value
+        unnest([d.tpopulation1july, d.tfr, d.lex, d.medianagepop]) as value
     from {{ ref('un_wpp_demographic_indicators') }} as d
     inner join areas as a on d.iso2 = a.iso2 or d.loc_id = a.loc_id
     union all
@@ -63,8 +61,7 @@ shaped as (
         b.block_name,
         b.unit_code,
         b.unit_name,
-        case when i.is_projection then 'projection' else 'estimate' end as kind,
-        coalesce(i.iso2, case i.loc_id when 1551 then 'EUROSTAT:EU27_2020' when 900 then 'WB:WLD' end) as candidate_key
+        case when i.is_projection then 'projection' else 'estimate' end as kind
     from indicators as i
     inner join blocks as b on i.indicator = b.indicator
     where i.value is not null
@@ -94,4 +91,4 @@ select
     s.source_version,
     s.raw_sha256
 from shaped as s
-left join geo as g on s.candidate_key = g.geography_key
+left join geo_map as g on coalesce(s.iso2, cast(s.loc_id as varchar)) = g.source_code
