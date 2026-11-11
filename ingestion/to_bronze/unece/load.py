@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""UNECE bronze.load: newest Landing copy of every table (JSON-stat 2.0) → bronze.unece_observations, bronze.unece_codes.
+"""UNECE bronze.load: newest Landing copy of every table (JSON-stat 2.0) → bronze.unece_observations, unece_codes.
 
 Observations use the generic SDMX Bronze format of the OECD onboarding (bronze.oecd_observations): one row per
 cell with a value, ``dataflow`` = the table title, ``series_dimensions`` / ``series_key`` the non-time variable
