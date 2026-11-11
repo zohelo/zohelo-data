@@ -1,0 +1,21 @@
+PLS-015	https://apinfz.nfz.gov.pl/app-itl-api-pcus/	links	regul|terms|swagger|dokument|api
+PLS-015	https://apinfz.nfz.gov.pl/app-itl-api-pcus/terms	text	II\.|źródł|modyfik
+PLS-017	https://ezdrowie.gov.pl/portal/home/badania-i-dane/biuletyn-statystyczny	links	pdf|xls|download|pobierz|biuletyn
+PLS-017	https://ezdrowie.gov.pl/portal/home/badania-i-dane/biuletyn-statystyczny	text	Biuletyn Statystyczny Ministerstwa|cykl|publikuj|rocznik|edycj
+PLS-019	https://wwwold.pzh.gov.pl/oldpage/epimeld/2026/index_mp.html	links	.
+PLS-020	https://ezdrowie.gov.pl/pobierz/rpwdl-2-0-instrukcja-dla-uzytkownikow-niezalogowanych	pdf	pobier|eksport|API|XML|CSV|dane otwarte|wyszuk
+PLS-021	https://api.rspo.gov.pl/files/Regulamin.pdf	pdf	licenc|wykorzyst|limit|opłat|odpowiedzialn|udostęp
+PLS-021	https://api.rspo.gov.pl/v3/api-docs.yaml	raw	1500
+PLS-022	https://cie.gov.pl/archiwalne-dane-statystyczne/	text	xlsx|Dane za|rok szkolny|zestawienia
+PLS-022	https://cie.gov.pl/	text	licenc|dane otwarte|ponowne|Creative|prawa autorskie
+PLS-023	https://radon.nauka.gov.pl/pomoc/tag/api/page/2/	full	2500
+PLS-023	https://polon.nauka.gov.pl/en/?p=496004	full	2500
+PLS-023	https://radon.nauka.gov.pl/swagger-ui/index.html	head	
+PLS-024	https://ela.nauka.gov.pl/ELA10_opis_badania_20250625.pdf	pdf	licenc|udostęp|dane|wykorzyst|zbior
+PLS-024	https://ela.nauka.gov.pl/pl	raw	1500
+PLS-025	https://cke.gov.pl/egzamin-osmoklasisty/wyniki/sprawozdanie-z-egzaminu-osmoklasisty-w-2026r/	links	xls|csv|zip|pdf
+PLS-025	https://cke.gov.pl/wyniki-egzaminow/	links	xls|csv|dane|baza
+PLS-025	https://cke.gov.pl/polityka-prywatnosci/	text	licenc|prawa autorskie|wykorzyst
+PLS-030	https://barometrzawodow.pl/modul/dane-o-zawodach	links	xls|csv|pobier|download|api|dane|regulamin|licen
+PLS-030	https://barometrzawodow.pl/	text	Regulamin|Prawa autorskie|\u00a9|Copyright|Uznanie
+PLS-030	https://barometrzawodow.pl/en/module/forecasts-on-maps	links	xls|csv|pdf|download|api|data
