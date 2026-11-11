@@ -199,10 +199,10 @@ def bis_full() -> None:
 
 
 def main2(argv: list[str]) -> int:
-    if argv == ["bisfull"]:
+    main([a for a in argv if a != "bisfull"])
+    if "bisfull" in argv:
         bis_full()
-        return 0
-    return main(argv)
+    return 0
 
 
 if __name__ == "__main__":
