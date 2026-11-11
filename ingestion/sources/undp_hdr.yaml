@@ -5,9 +5,10 @@ description: "UNDP Human Development Data Center — composite indices complete 
 # (https://hdr.undp.org/data-center/documentation-and-downloads) links one CSV with every composite index and
 # component for every country and aggregate, 1990 to the report year (HDR25: 2.0 MB). Its URL changes with
 # each report (…/2025_HDR/HDR25_Composite_indices_complete_time_series.csv), so the shared bulk_file pattern
-# finds the link on that stable page; version = the server's Last-Modified; a copy is written only when the
-# SHA-256 changed. Each report recalculates the whole series (register GL-028: vintage-aware comparison);
-# superseded reports stay in the Archive. CC BY 3.0 IGO. Proven from Actions by the Dev probe 43086552621.
+# finds the link on that stable page; version = the server's Last-Modified when the download carries it (the
+# Dev trial's did not, so the download time was used); a copy is written only when the SHA-256 changed. Each report recalculates the whole series (register GL-028: vintage-aware comparison);
+# superseded reports stay in the Archive. CC BY 3.0 IGO. Proven from Actions by the Dev probe 43086552621
+# and the Dev trial 43093051337 (200,004 values, 206 areas, 40 indicators, 1990-2023).
 extraction:
   kind: bulk_file
   bulk_file:
