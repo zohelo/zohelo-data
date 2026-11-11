@@ -1,0 +1,10 @@
+CD-012	https://www.sec.gov/search-filings/edgar-application-programming-interfaces	text	10 requests|User-Agent|bulk|submissions.zip|companyfacts
+CD-012	https://www.sec.gov/about/privacy-information	text	copyright|public domain|reuse|publicly available
+CD-026	https://www.wikidata.org/wiki/Wikidata:Licensing	text	CC0|public domain
+CD-026	https://dumps.wikimedia.org/wikidatawiki/entities/	head	
+CD-027	https://www.openstreetmap.org/copyright	text	ODbL|Open Database
+CD-027	https://download.geofabrik.de/europe/poland.html	text	poland-latest|MB|GB
+CD-029	https://www.crossref.org/documentation/retrieve-metadata/rest-api/	text	license|CC0|free|polite|Public data file
+CD-028	https://help.openalex.org/hc/en-us/articles/24347048891543-Snapshot	text	CC0|licen|snapshot|GB
+CD-031	https://ourworldindata.org/faqs	text	CC BY|licen|attribution|third
+CD-013	https://www.esma.europa.eu/issuer-disclosure/electronic-reporting	text	OAM|ESEF|XBRL|filings|portal
