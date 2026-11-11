@@ -31,7 +31,7 @@ typed as (
         codes[list_position(dims, 'CURRENCY')] as currency,
         cast(to_json(map(dims, codes)) as varchar) as dimensions,
         time_period,
-        try_cast(nullif(obs_value, '') as double) as obs_value,
+        case when obs_value in ('', 'NaN') then null else try_cast(obs_value as double) end as obs_value,
         nullif(attr_values[list_position(attrs, 'OBS_STATUS')], '') as obs_status,
         coalesce(
             nullif(attr_values[list_position(attrs, 'UNIT')], ''),

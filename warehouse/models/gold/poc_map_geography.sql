@@ -180,30 +180,23 @@ wdi as (
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
 ),
 
--- ECB: ISO two-letter countries (GR, GB); ECB aggregates by code (TITLE_COMPL in silver.ecb_observations):
--- U2 euro area changing composition, I8 EA19 and I9 EA20 fixed, B6 EU27 fixed as of 31 Jan 2020, B0/D0 EU changing
--- composition. I10 (euro area 21) and V5 have no Gold area yet.
+-- ECB: ISO two-letter countries (GR, GB) and the aggregates of poc_ecb_areas (U2, I8, I9, B6, B0, D0); static
+-- codes, so Gold does not read ECB Silver here. Countries come from dim_geography's country keys.
+ecb_areas as ({{ poc_ecb_areas() }}),
+
 ecb as (
     select
         'ecb' as source_system,
-        c.ref_area as source_code,
-        coalesce(
-            g.geography_key,
-            case c.ref_area
-                when 'U2' then 'EUROSTAT:EA'
-                when 'I8' then 'EUROSTAT:EA19'
-                when 'I9' then 'EUROSTAT:EA20'
-                when 'B6' then 'EUROSTAT:EU27_2020'
-                when 'B0' then 'EUROSTAT:EU'
-                when 'D0' then 'EUROSTAT:EU'
-            end,
-            '_X'
-        ) as geography_key
-    from (
-        select distinct ref_area from {{ ref('ecb_observations') }}
-        where ref_area is not null
-    ) as c
-    left join geo as g on g.level_name = 'country' and c.ref_area = g.geography_key
+        area_code as source_code,
+        candidate_key as geography_key
+    from ecb_areas
+    union all
+    select
+        'ecb' as source_system,
+        geography_key as source_code,
+        geography_key
+    from geo
+    where level_name = 'country' and length(geography_key) = 2
 )
 
 select

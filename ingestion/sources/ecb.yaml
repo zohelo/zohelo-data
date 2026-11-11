@@ -18,6 +18,10 @@ extraction:
         url: "https://data-api.ecb.europa.eu/service/data/EXR/D..EUR.SP00.A?format=csvdata"
         format: raw
         version: last_modified     # the response's Last-Modified; download time when absent
+      - entity: exr_monthly      # euro reference rates, the ECB's own monthly averages, every currency (eurpln in v2)
+        url: "https://data-api.ecb.europa.eu/service/data/EXR/M..EUR.SP00.A?format=csvdata"
+        format: raw
+        version: last_modified
       - entity: fm_key_rates     # key ECB interest rates (MRO, deposit facility, marginal lending)
         url: "https://data-api.ecb.europa.eu/service/data/FM/B.U2.EUR.4F.KR..LEV?format=csvdata"
         format: raw
@@ -58,7 +62,8 @@ silver: [silver.ecb_observations]
 gold: [gold.build_ecb, gold.metrics_m3_growth, gold.metrics_ecb_deposit_rate]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
-# Refresh policy for all layers (D32): seven selections, about 300,000 rows in all; rebuilt in full.
+# Refresh policy for all layers (D32): eight selections; silver.ecb_observations measured at 309,647 rows without
+# exr_monthly (Dev trial 43088143150), exr_monthly adds about 13,000; rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2744"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

@@ -45,7 +45,7 @@ employment_rate,labour;poland,Q,employment_rate,world_bank_wdi,SL.EMP.TOTL.SP.ZS
 esi,economy,M,esi,eurostat,EI_BSSI_M_R2,eurostat:EI_BSSI_M_R2:%:BS-ESI-I,M,PL;EU;EU27,,index,up,ready,"long-term average = 100, seasonally adjusted"
 eurpln,poland,M,fx_rate,nbp,fx_A,nbp:fx:A:mid,D,PL,currency,mean,neutral,ready,EUR member of fx_rate (NBP table A); v2 publishes the monthly mean
 eurpln,poland,M,,eurostat,ERT_BIL_EUR_M,,M,PL,,mean,neutral,needs-block,Eurostat monthly euro exchange rates are in Silver (loaded); codes not probed
-eurpln,poland,M,fx_rate,ecb,EXR,ecb:EXR:PLN:EUR,D,PL,,mean,neutral,ready,"ECB euro reference rate (2:15 pm CET), PLN per 1 EUR; v2 publishes the monthly mean"
+eurpln,poland,M,fx_rate,ecb,EXR,ecb:EXR:M:PLN:EUR,M,PL,currency,mean,neutral,ready,"ECB euro reference rate, the ECB's own monthly average (EXR M.PLN.EUR.SP00.A), PLN per 1 EUR; breakdown currency EUR as NBP"
 exports_by_partner,economy,A,,eurostat,EXT_ST_EU27_2020SITC,,A,EU27,partner,sum,neutral,needs-block,EXT_ST_EU27_2020SITC holds only the EU27 reporter (no PL rows in Silver); a member-state trade dataset is needed (Comext DS-* is out of scope)
 exports_goods,economy,M,,eurostat,EXT_ST_EU27_2020SITC,,M,EU27,,sum,up,needs-block,"only the EU27 reporter in Silver, no PL rows"
 extreme_poverty,labour,A,,gus_bdl,P2713,,A,PL;VOIV,,rate,down,needs-block,BDL poverty rates by expenditure (P2713) in Silver; extreme-poverty line variable not probed

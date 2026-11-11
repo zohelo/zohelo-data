@@ -13,6 +13,11 @@ with bounds (concept_key, source_system, value_min, value_max) as (
     ('unemployment_rate', 'eurostat', 0, 60),
     ('unemployment_rate', 'world_bank_wdi', 0, 60),
     ('fx_rate', 'nbp', 0, 100000),
+    -- ECB (#2758): the ECB's HICP is Eurostat's HICP republished (TITLE_COMPL "Statistical Office of the European
+    -- Commission (Eurostat)"), so it takes Eurostat's bound; EUR/PLN 4.0712 on 1999-01-04 and 4.4038 on 2026-11-11
+    -- (EXR, Dev trial 43088143150), NBP's bound
+    ('inflation', 'ecb', -100, 3000),
+    ('fx_rate', 'ecb', 0, 100000),
     ('gdp_per_capita', 'eurostat', 0, 2e5),
     ('gdp_per_capita', 'world_bank_wdi', 0, 5e5),
     ('gdp_volume_growth', 'eurostat', -50, 100),
