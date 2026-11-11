@@ -1,0 +1,128 @@
+"""Read-only probe (GL-015 BIS, GL-023 ILOSTAT, GL-017 UNdata, GL-028 UNDP HDR, GL-038 UNECE, GL-006 WB GEM).
+
+Downloads public files only; writes nothing to R2. Findings are printed to the job log.
+Usage: python -m dev.probe_w2intl <group> [<group> ...]   (groups: bis ilo undata hdr unece gem, or a URL)
+"""
+
+from __future__ import annotations
+
+import gzip
+import io
+import json
+import sys
+import zipfile
+
+import requests
+
+UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
+
+GROUPS = {
+    "bis": [
+        "https://stats.bis.org/api/v1/dataflow/BIS/all/latest",
+        "https://stats.bis.org/api/v1/data/WS_CBPOL/M.PL/all?format=csv",
+        "https://stats.bis.org/api/v1/data/WS_CBPOL/M.PL/all?format=sdmx-csv",
+        "https://stats.bis.org/api/v2/data/dataflow/BIS/WS_CBPOL/1.0/M.PL?format=csv",
+        "https://stats.bis.org/api/v2/data/dataflow/BIS/WS_CBPOL/*/M.PL",
+        "https://data.bis.org/bulkdownload",
+        "https://data.bis.org/static/bulk/WS_CBPOL_csv_flat.zip",
+        "https://data.bis.org/static/bulk/WS_SPP_csv_flat.zip",
+        "https://data.bis.org/static/bulk/WS_TC_csv_flat.zip",
+        "https://data.bis.org/static/bulk/WS_EER_csv_flat.zip",
+    ],
+    "ilo": [
+        "https://rplumber.ilo.org/metadata/toc/indicator/?lang=en&format=.csv",
+        "https://rplumber.ilo.org/files/website/bulk/indicator/UNE_DEAP_SEX_AGE_RT_A.csv.gz",
+        "https://rplumber.ilo.org/files/website/bulk/indicator/UNE_DEAP_SEX_AGE_RT_Q.csv.gz",
+        "https://rplumber.ilo.org/files/website/bulk/indicator/EMP_DWAP_SEX_AGE_RT_A.csv.gz",
+        "https://sdmx.ilo.org/rest/dataflow/ILO/DF_UNE_DEAP_SEX_AGE_RT/latest",
+        "https://sdmx.ilo.org/rest/data/ILO,DF_UNE_DEAP_SEX_AGE_RT,1.0/POL..?format=csv",
+        "https://sdmx.ilo.org/rest/data/ILO,DF_UNE_DEAP_SEX_AGE_RT/POL?format=csvfile",
+    ],
+    "undata": [
+        "https://data.un.org/ws/rest/dataflow/all/all/latest",
+        "https://data.un.org/Handlers/ExplorerHandler.ashx?t=sources",
+        "https://data.un.org/Handlers/DownloadHandler.ashx?DataFilter=group_code:101&DataMartId=SNAAMA&Format=csv",
+        "https://data.un.org/Handlers/DownloadHandler.ashx?DataFilter=countryCode:616&DataMartId=POP&Format=csv",
+        "https://data.un.org/_Docs/SYB/CSV/SYB67_1_202411_Population,%20Surface%20Area%20and%20Density.csv",
+        "https://data.un.org/Default.aspx",
+    ],
+    "hdr": [
+        "https://hdr.undp.org/data-center/documentation-and-downloads",
+        "https://hdr.undp.org/sites/default/files/2025_HDR/HDR25_Composite_indices_complete_time_series.csv",
+        "https://hdr.undp.org/sites/default/files/2023-24_HDR/HDR23-24_Composite_indices_complete_time_series.csv",
+    ],
+    "unece": [
+        "https://w3.unece.org/PXWeb2015/api/v1/en/STAT",
+        "https://w3.unece.org/PXWeb/api/v1/en/STAT",
+        "https://w3.unece.org/PXWeb/en",
+        "https://data.unece.org/",
+        "https://unece.org/data",
+    ],
+    "gem": [
+        "https://datacatalogapi.worldbank.org/ddhxext/DatasetView?dataset_unique_id=0037798",
+        "https://databankfiles.worldbank.org/public/ddpext_download/GemDataEXTR.zip",
+        "https://databank.worldbank.org/data/download/GemDataEXTR.zip",
+        "https://api.worldbank.org/v2/sources/15?format=json",
+        "https://api.worldbank.org/v2/sources/15/indicators?format=json&per_page=400",
+    ],
+}
+
+
+def out(title: str, value) -> None:
+    print(f"### {title}: {value}", flush=True)
+
+
+def head_text(data: bytes, lines: int = 6, chars: int = 1800) -> str:
+    text = data[:200000].decode("utf-8-sig", errors="replace")
+    return "\n".join(text.splitlines()[:lines])[:chars]
+
+
+def probe(url: str) -> None:
+    try:
+        r = requests.get(url, headers={"User-Agent": UA}, timeout=(30, 300))
+    except requests.RequestException as exc:
+        out(url, f"ERROR {type(exc).__name__}: {exc}"[:400])
+        return
+    data = r.content
+    keep = {k: r.headers.get(k) for k in ("Content-Type", "Last-Modified", "ETag", "Content-Disposition")}
+    out(url, [r.status_code, len(data), keep])
+    if data[:2] == b"PK":
+        z = zipfile.ZipFile(io.BytesIO(data))
+        out("  zip members", [(i.filename, i.file_size) for i in z.infolist()][:30])
+        for info in z.infolist()[:3]:
+            with z.open(info) as f:
+                out(f"  head {info.filename}", "\n" + head_text(f.read(300000)))
+    elif data[:2] == b"\x1f\x8b":
+        raw = gzip.decompress(data)
+        out("  gunzip bytes", len(raw))
+        out("  head", "\n" + head_text(raw))
+        lines = raw.decode("utf-8", errors="replace").splitlines()
+        out("  lines", len(lines))
+        out("  POL lines", [ln for ln in lines if ln.startswith('"POL"') or ln.startswith("POL")][:5])
+        areas = sorted({ln.split(",")[0].strip('"') for ln in lines[1:]})
+        out("  areas", areas)
+    elif "json" in (keep["Content-Type"] or ""):
+        try:
+            out("  json", json.dumps(r.json())[:3000])
+        except ValueError:
+            out("  text", head_text(data))
+    elif "html" in (keep["Content-Type"] or ""):
+        text = data.decode("utf-8", errors="replace")
+        import re
+
+        links = sorted(set(re.findall(r'href="([^"]+\.(?:csv|zip|xlsx|px|gz)[^"]*)"', text)))
+        out("  links", links[:80])
+        out("  title", re.findall(r"<title>(.*?)</title>", text, re.S)[:1])
+    else:
+        out("  head", "\n" + head_text(data, 12, 3000))
+
+
+def main(argv: list[str]) -> int:
+    for arg in argv:
+        for url in GROUPS.get(arg, [arg]):
+            probe(url)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
