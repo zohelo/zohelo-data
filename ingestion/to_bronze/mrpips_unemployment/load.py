@@ -4,12 +4,13 @@
 One row per non-empty cell (ingestion/common/xlsx_cells.py: value as stored, sheet, row, column, number format) of
 two workbooks of the monthly ZIP "statystyki strukturalne <month> <year>":
 
-  Stopa bezrobocia rejestrowanego <MM_YYYY | MM.YYYY>.xlsx (until 2023: stopa-pow-<…>.xlsx)   registered unemployed (thousands) and registered
-        unemployment rate (%) at the end of the month for Poland, the 16 voivodeships and every powiat; columns
-        WOJ. (TERYT voivodeship code), POW. (powiat code, 00 = the voivodeship), name, thousands, rate
-  MRPiPS-01_Tablice wynikowe <…>.xlsx (MRiPS01_TABLICE_WYNIKOWE_… before), sheets TAB 1 and TAB 2   the MRPiPS-01 report: TAB 1 national inflows,
-        outflows and the end-of-month stock by category and sex; TAB 2 the end-of-month stock by category for
-        Poland and the voivodeships, in sections Ogółem / Kobiety (and others)
+  rate workbook "Stopa bezrobocia rejestrowanego <MM_YYYY | MM.YYYY>.xlsx" (until January 2023 "stopa-pow-<…>.xlsx"):
+        registered unemployed (thousands) and registered unemployment rate (%) at the end of the month for Poland,
+        the 16 voivodeships and every powiat; columns WOJ. (TERYT voivodeship code), POW. (powiat code, 00 = the
+        voivodeship), name, thousands, rate
+  report workbook "MRPiPS-01_Tablice wynikowe <…>.xlsx" (earlier "MRiPS01_TABLICE_WYNIKOWE_<…>.xlsx"), sheets TAB 1
+        and TAB 2: TAB 1 national inflows, outflows and the end-of-month stock by category and sex; TAB 2 the
+        end-of-month stock by category for Poland and the voivodeships, in sections Ogółem / Kobiety
 
 The rate workbook is required and must carry its header row (``WOJ.`` | ``POW.`` in columns A and B); a ZIP
 without it, or with a different header, is rejected (bronze.mrpips_unemployment_rejected_files), never guessed.
