@@ -95,8 +95,11 @@ def fetch(url):
 
 
 def main(argv):
-    pattern, rows, sheets = r".", 12, 2
+    pattern, rows, sheets, grep = r".", 12, 2, None
     for arg in argv:
+        if arg.startswith("grep="):
+            grep = arg[5:]
+            continue
         if arg.startswith("re="):
             pattern = arg[3:]
             continue
@@ -127,6 +130,9 @@ def main(argv):
         elif body[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1":
             print("  OLE2 (xls/doc) file")
         elif "html" in ctype:
+            if grep:
+                for m in list(re.finditer(grep, r.text))[:80]:
+                    print("  grep:", r.text[max(0, m.start() - 80): m.end() + 120].replace("\n", " "))
             p = Links()
             p.feed(r.text)
             n = 0
