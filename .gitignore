@@ -14,6 +14,7 @@ dist/
 *.duckdb
 *.duckdb.wal
 
-# Local Claude Code settings
-.claude/
+# Local Claude Code settings; the project agents in .claude/agents/ are committed
+.claude/*
+!.claude/agents/
 .duckdb_tmp/

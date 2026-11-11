@@ -1,28 +1,49 @@
 # Source playbook
 
-The path every source follows, source → Landing → Bronze → Archive → Silver → Gold →
-semantic layer → portal. Eurostat and GUS BDL are the reference implementations; the
-details live in [landing.md](landing.md), [architecture.md](architecture.md),
-[operating.md](operating.md) and [sources.md](sources.md).
+The one path every source in `ingestion/register.yaml` follows (owner decision O36: every
+non-parked source is onboarded, scheduled and modelled through Gold):
 
-## 1. Research and decide extraction
+**research → Landing → Bronze → Silver → schedule → Gold → published.**
+
+One source (or one small family) = one pull request per step group, built by the project
+agents in `.claude/agents/` (`source-researcher`, `source-builder`, `gold-modeller`,
+`data-quality-reviewer`) through the stations of [flow.md](flow.md). Copy the newest
+onboardings, do not invent: NBP interest rates (#2590), OECD (#2594), news feeds (#2601),
+GDELT and Wikimedia (#2603), release calendars (#2607); Gold activation #2585 and #2595.
+Details: [landing.md](landing.md), [operating.md](operating.md), [sources.md](sources.md),
+[model.md](model.md), [published.md](published.md), [quality.md](quality.md); the backlog
+stages are `.github/backlog/stages.yaml`.
+
+## 1. Research and decide extraction (`source-researcher`)
 
 - Read the provider's own documentation: bulk downloads, API, limits, licence, update
-  behaviour. Record the route in `docs/sources.md`.
-- Extraction order: **bulk feature → bulk workaround (owner decides) → API tested for a
-  full load**. Polite access only: documented limits, registered keys are fine, no IP
-  rotation, no parallel scraping, contact the provider when the limits are too tight.
-- Define the **entity** (the source's own unit: dataset, table, subgroup) and the
-  **version** (the source's last update of that entity).
-- Write `ingestion/sources/<source>.yaml`: `extraction` (initial, production
-  `snapshot|delta`, incremental policy, schedule `null`), tables per layer,
-  `archive_policy`, `activities`.
+  behaviour. The session's proxy refuses most hosts: check reachability with a read-only Dev
+  probe on a `test/<topic>` branch.
+- Extraction order: **bulk feature → bulk workaround → API tested for a full load → web
+  export**. A bulk workaround is Claude's decision when the terms allow it and access stays
+  polite; unclear terms go to the owner (AGENTS.md "Data sources"). A web export (a browser
+  session asking the site for files) needs an owner decision or a D row in
+  [decisions.md](decisions.md) **per source**; today only GUS BDL has one (AGENTS.md
+  "Authorizations"). Polite access only: documented limits,
+  registered keys are fine, no IP rotation, no parallel scraping, never around bot protection.
+- Define the **entity** (the source's own unit: dataset, table, file) and the **version**
+  (the source's last update of that entity; download time when the source gives none).
+- Fill every field of the register entry. **Licence:** `licence.notes` names the terms URL,
+  the exact attribution sentence, and whether commercial reuse and modification are allowed.
+  Terms not stated by the source → `licence.status: unresolved` (the source stays internal;
+  the licence gate hides it). Never claim a licence the source does not state.
+- Outcome: register `status: approved` (route and terms known, or `unresolved` and internal),
+  or `parked` with the reason as the first `research.blockers` item. A new key or account, a
+  paid tier or unclear legality is an owner question (AGENTS.md "Ask the owner first").
 
 ## 2. Landing (`ingestion/to_landing/<source>/` or the shared pattern `ingestion/to_landing/patterns/<kind>.py`)
 
+- Declare the source in `ingestion/sources/<source>.yaml` (key set: operating.md "Source
+  declarations"). Fixed URLs or one request per entity → `extraction.kind: bulk_file` and no
+  extractor code; files derived from a seed → `patterns/seeded.py`; otherwise a small module.
 - `landing.inspect`: source catalogue vs Landing → current / stale / missing; no writes.
 - `landing.extract`: missing first, then stale; exact source bytes, receipt after the
-  file, never overwrite; resumable; time-budgeted.
+  file, never overwrite; resumable; time-budgeted; unchanged bytes (same SHA-256) are skipped.
 - `landing.verify`: every receipt has its file (in Landing or Archive).
 - Layout `01_landing/<source>/<snapshot|delta>/<data|metadata>/<entity>/<version>__<ingested>[__part-<n>].<ext>`.
   Several channels for one entity (e.g. website + API) share the entity folder; the
@@ -35,7 +56,10 @@ details live in [landing.md](landing.md), [architecture.md](architecture.md),
 - One Parquet file per Landing file (`02_bronze/<source>/<entity table>/<entity>/<sha256>.parquet`),
   partitioned by entity, full column statistics computed client-side. The table's file
   list is the checkpoint; catalog compaction is off (#875), so file names stay the record
-  of what is loaded. Rejections go to `bronze.<source>_rejected_files` with the reason.
+  of what is loaded. Rejections go to `bronze.<source>_rejected_files` with the reason;
+  an unknown column, attribute or layout rejects the file, it is never guessed.
+- Small sources use the shared loader `ingestion/common/bulk_bronze.py` (newest Landing copy
+  of each declared file; `all_versions` for accumulating sources).
 - Big sources (Eurostat, GUS BDL; design #875) use **entity tables**
   (`ingestion/common/entity_tables.py`): the unit of work is one source entity version (a
   dataset, a subgroup with all parts of one download). Bronze and Silver each hold exactly
@@ -56,17 +80,111 @@ details live in [landing.md](landing.md), [architecture.md](architecture.md),
 - `archive.prune` applies `archive_policy.retention`: snapshot sources keep the newest
   version + 90 days; delta sources keep everything. First run reports only.
 
-## 5. Silver, Gold, semantic layer (`warehouse/`, dbt)
+## 5. Silver (`warehouse/models/silver/<source>/`, dbt; entity tables: `warehouse/entity/<table>.sql`)
 
-- Silver per source: newest version per entity, typed values (casts, decimal comma,
-  flags), source codes resolved to labels, channels unified.
-- Gold: conformed dimensions shared by all sources (geography with levels and vintages,
-  period, indicator, unit, source, classifications) and facts at their true grain.
-  Design: [model.md](model.md); dimension definitions: `warehouse/dimensions/`. Map the
-  source in each dimension's `used_by` before modelling it.
-- Semantic layer: MetricFlow metrics on Gold. Lineage both ways through dbt.
+- Newest version per entity, typed values (casts, decimal comma, flags), source codes
+  resolved to labels, channels unified. Source codes are kept as published; conforming to
+  shared dimensions happens in Gold.
+- `_<source>.yml`: description with grain, history range and the trial run id; a `unique`
+  test on the grain; `not_null` on every key column and on `raw_sha256`; `accepted_values`
+  on frequency and other closed code lists.
+- Also in the same PR: Bronze tables in `warehouse/models/bronze/sources.yml`, the source in
+  `ingestion/common/lineage.py`, the Pipeline `source` option, `warehouse/seeds/source.csv`
+  and `licence.csv` rows, a `docs/sources.md` section, and the register entry
+  (`source_system`, `status: built`).
+- News and other text feeds keep only headline, link, guid, publication time and language,
+  reduced before Landing; descriptions and article text are never stored, also not in
+  Landing or the Archive (O32, O33).
 
-## 6. Serving and operations
+## 6. Schedule
+
+- `extraction.schedule` in the source YAML: cron in UTC, run
+  `full dataflow: landing → bronze → silver → gold → portal`, at a polite time after the
+  source's release, with the release rhythm in a comment. No faster than the source updates.
+- Proof is the scheduler's own runs (D18), never a manual dispatch: daily 3 runs in 7 days,
+  weekly 3 in 21 days, monthly 2 in 62 days (D11). Production dispatches from a session are
+  refused; do not try.
+
+## 7. Gold (`gold-modeller`; `warehouse/models/gold/`, design in [model.md](model.md))
+
+A statistical source (`kpi: true`) enters Gold through one **build stage** model
+`poc_build_<source>.sql` (alias `build_<source>`) in the common observation shape; copy
+`poc_build_nbp.sql` (small) or `poc_build_wdi.sql` (geography). Columns, in this order:
+`source_system, block_id, block_name, measure_key, measure_name, measure_codes, unit_code,
+unit_name, geography_source_code, geography_key, frequency, date_key, period_label,
+breakdown_json, breakdown_label_json, sex_code, is_total, value, observation_status_key,
+source_version, raw_sha256`. Then:
+
+1. add the model to `poc_observations()` and its blocks to `poc_activated_blocks()` in
+   `warehouse/macros/poc_blocks.sql` (your own lines only);
+2. add its codes to `poc_map_geography.sql` (section "Shared dimensions" below);
+3. add units to `warehouse/seeds/unit.csv`, KPIs to `kpi.csv` (status `draft` until checked),
+   one `kpi_measure.csv` row per KPI × source measure, and for a KPI of the v2 map one
+   `kpi_v2_map.csv` row per v2 key × source (O31: a source is added next to the others,
+   never instead of one);
+4. list the model in `warehouse/warehouse.yaml` (`gold` and `full_rebuild` with a measured
+   ceiling) and in the source YAML `gold:`.
+
+A reference or register source (`kpi: false`) enters Gold as a dimension or entity table
+keyed by official identifiers (TERYT, LEI, NIP, REGON, KRS), never matched by name
+(model.md "Three kinds of dimensions").
+
+## 8. Published
+
+`gold.publish` writes the published layer from Gold ([published.md](published.md)); only
+KPIs with `status: published` in `kpi.csv` reach it, each source as its own series
+(`source_key`). A KPI is set to `published` only with its `poc_metrics_<kpi>.sql` model, a
+semantic model, and PL and EN name and definition. The catalogue carries each source's
+licence; a source whose licence is `unresolved` or `restricted` stays internal (the
+portals' licence gate hides it).
+
+## Quality bar per layer
+
+| Layer | Tests | Idempotent | Incremental policy | Licence |
+|---|---|---|---|---|
+| Research | `python -m ops.repo_check` passes | – | `extraction.production` (`snapshot`/`delta`) and `incremental_policy` chosen | terms URL + attribution sentence in the register, or `unresolved` |
+| Landing | Dev trial into `zz_dev_<topic>`, removed at the end; `landing.verify` green; `landing.inspect` missing 0 | a second `landing.extract` writes nothing (`unchanged`) | `changed_since_last` by default; `append_only` only for delta sources; `full_refresh` only when the source gives no version and the bytes are small | – |
+| Bronze | `bronze.verify` green; 0 unexplained rejections; row count checked against the raw file | a second `bronze.load` appends nothing | latest version only (`bronze_latest_only: true`, #822/#845); accumulating sources say so in the YAML | – |
+| Silver | grain `unique`, keys `not_null`, closed lists `accepted_values`; 0 duplicate keys and 0 null keys in the trial | a rebuild gives the same row count | `refresh.mode` judged per source (D32): `full` for a small source, `incremental` with `unit` in every layer for a big one, from its size, its update pattern and whether the source offers changed-since; `refresh.decided` cites `D32` plus the source's PR or issue. Separately, every full-rebuild dbt model has a `full_rebuild` row ceiling (#822) | `source.csv` row with `licence_key`; `licence.csv` row with the attribution text |
+| Schedule | `PYTHONPATH=. python run.py schedule --check` passes | re-run of the same slot loads nothing new | scheduled runs never rebuild a big table in full | – |
+| Gold | `build_check`: rows > 0 for every activated block, `rows_geography_unmatched` 0 or each code explained in the PR; `grain_check` empty; a new test that fails on prod is not merged (D29) | full rebuild from Silver gives the same series and row counts | build stage below 1 M rows with a ceiling; a fact model above 1 M rows is incremental with unique key `series_key, date_key` (D28) | measures carry the source's `licence_key` through `dim_source` |
+| Published | published JSON validates against `warehouse/published/schemas/`; the newest value of each new KPI × source is compared with the source's own page in the PR | `gold.publish` rewrites the same files | – | attribution text from `licence.csv`; `unresolved` and `restricted` sources stay internal |
+
+Every PR: `python -m ops.repo_check` and `dbt parse` pass; the body cites the Dev probe and
+trial run ids with counts (files, bytes, rows, history range, duplicates, nulls) and says
+what is unverified; an independent `data-quality-reviewer` run finds no blocker before
+merge (O34). Row ceilings come from a measured count, about 1.5 × the trial's rows.
+
+## What "green" and "in Gold" mean
+
+- **Green** = Landing, Bronze and Silver are complete, scheduled and running in production:
+  the first production load finished (`landing.inspect` missing 0, `bronze.verify` green),
+  Silver tests pass in the last build, the schedule is merged and the scheduler's own runs
+  meet the run count of section 6, big tables build incrementally, the licence is recorded,
+  and no `alert` issue is open for the source. A merged PR or a green Dev trial is not green.
+- **In Gold** = the source is green **and** (statistical source) its observations are in
+  `gold.fact_*` through its build stage with every geography and date key matched or
+  explained, its measures are in `dim_measure`, and each KPI it publishes has `kpi_measure`
+  (and `kpi_v2_map`) rows; or (reference source) its Gold dimension or entity table is built,
+  tested and listed in `warehouse/warehouse.yaml`. **Register status:** the build PR sets `built` (code merged, production not yet proven).
+  `silver` (= green) and `gold` (= in Gold) are set only at the Verify station of
+  [flow.md](flow.md), by the orchestrator, after the scheduler's own runs prove it.
+
+## Shared dimensions: how a new source conforms
+
+Rules of [model.md](model.md), applied in the Gold build stage. A value that fits no rule is
+reported, never forced.
+
+| Dimension | Rule |
+|---|---|
+| **Time** | `date_key` is a date at day grain = the **first day of the period** (2025 → 2025-01-01, 2025-Q3 → 2025-07-01, 2025-11 → 2025-11-01, a day → that day); it joins `dim_calendar`. `frequency` is a `frequency.csv` key (`A`, `S`, `Q`, `M`, `W`, `D`, `B`); `period_label` keeps the source's period text. Facts exist for A, Q, M and D: a source with S or W periods needs a new fact model first, it is not folded into another frequency. Annual values are never expanded to days. Stock dates (31 December, 1 January, mid-year) stay in the measure definition, not in `date_key`. |
+| **Geography** | `geography_key` is the area, not the source's code: countries ISO 3166-1 alpha-2 (`PL`; Eurostat `EL` → `GR`, `UK` → `GB`; ISO3 and World Bank codes through `dim_geography.iso3` / `wb_code`); Polish units `TERC:<7-digit code>` (województwo `WW00000`, powiat `WWPP000`, gmina `WWPPGGT`); other regions `NUTS:<code>` (a Polish NUTS 2 that equals a voivodeship maps to its `TERC:` key, `poc_nuts_pl`); aggregates keep a scheme prefix (`EUROSTAT:EU27_2020`, `WB:WLD`); no geography → `_Z`; unmatched → `_X` with `geography_source_code` kept. Add one CTE per source to `poc_map_geography.sql` mapping every source code; map by code or an official correspondence table (GUS KTS–TERYT), by name only as a reported fallback. |
+| **Units** | `unit_code` and `unit_name` as the source publishes them; a KPI's `unit_key` is a row of `unit.csv` (add missing rows; decimals in `unit_decimals.csv`). Multiplier and currency are part of the unit (`mln_ncu`), price base and seasonal adjustment belong to the measure, never to the unit. Values are stored as published: no conversion, no rescaling in Silver or the build stage. |
+| **Measure and breakdowns** | `measure_key` = `<source>:<block>:<unit>[:<measure codes>]`; everything else that splits a series goes to `breakdown_json` with source codes as published. Totals (`TOTAL`, `T`, `ogółem`) set `is_total = true`; sex goes to `sex_code` (`T`, `M`, `F`). |
+| **Domain** | Every KPI has one `subgroup_key`, the key of a group or subgroup row of `warehouse/seeds/domain.csv` (12 domains: economy, finance, business, labour, population, health, education, society, housing, environment, transport, state; groups and subgroups below them, CSA codes attached). Add a group or subgroup row only when no existing one fits, in the same PR. |
+| **Source and status** | `source_system` is the `source.csv` key; `observation_status_key` maps the source's flags to `dim_observation_status` (`ok` when the source has none); rows without a value are not loaded. |
+
+## Serving and operations
 
 - Portal index refresh after writing runs; Ops: `platform_inventory`, `orphan_files`,
   `retry_rejected`, `restore_from_archive`.
@@ -75,9 +193,12 @@ details live in [landing.md](landing.md), [architecture.md](architecture.md),
 
 ## Definition of done per source
 
-1. Extraction decision recorded; config and docs updated.
+1. Extraction decision and licence recorded; register, config and docs updated.
 2. Landing complete in the agreed layout; `landing.verify` clean.
 3. Bronze complete; `bronze.verify` shows nothing unexplained; size checked against the raw.
-4. Landing moved to Archive; retention report reviewed and switched to `delete`.
-5. Silver and Gold models with tests; metrics where useful.
-6. Portal shows the source; `platform_inventory` claims every table and folder.
+4. Landing moved to Archive; retention report reviewed and switched to `delete` (the switch
+   and any `--apply`/`--delete` Ops run only for a Task whose Epic cites an owner decision,
+   O8; otherwise it is an owner action).
+5. Silver models with tests; scheduled; the source is green.
+6. In Gold; KPIs with metrics where the source publishes KPIs.
+7. Portal shows the source; `platform_inventory` claims every table and folder.
