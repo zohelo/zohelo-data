@@ -132,7 +132,7 @@ models:
     description: >-
       Build stage — OECD business confidence (BCICP), consumer confidence (CCICP) and the composite leading
       indicator (LI), amplitude adjusted, long-term average = 100, monthly, from silver.oecd_cli; areas through
-      map_geography (ISO 3166 alpha-3 countries, EA20/EU27_2020 as Eurostat aggregates, other OECD aggregates).
+      map_geography (ISO 3166 alpha-3 countries, EU27_2020 as the Eurostat aggregate, other OECD aggregates).
     columns:
       - name: measure_key
         tests: [not_null]
