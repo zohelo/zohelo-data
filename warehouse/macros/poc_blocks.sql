@@ -59,7 +59,7 @@
         ('ILC_DI12', 'Gini coefficient of equivalised disposable income', 'A', 'TOTAL'),
         ('NAMA_10R_2GVAGR', 'Real growth rate of regional gross value added', 'A', ''),
         ('GOV_10A_EXP', 'General government expenditure by function (COFOG)', 'A', 'S13,GF10'),
-        -- slice needs-block rows (O36, #2743): half-years are placed on their two quarters (poc_build_eurostat)
+        -- slice needs-block rows (O36, #2743): half-years go to gold.fact_semiannual
         ('EARN_MW_CUR', 'Monthly minimum wages, bi-annual data', 'S', ''),
         ('ERT_BIL_EUR_M', 'Euro/ECU exchange rates, monthly data', 'M', '')
     ) as t (dataset_id, block_name, freq_code, total_breakdown)
