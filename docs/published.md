@@ -230,8 +230,8 @@ Owner decisions O27/O28 (2026-11-10): the zohelo-bi design template becomes zohe
 written **alongside** v1 under `06_published/v2/`; v1 stays unchanged for zohelo.com until zohelo.com chooses to
 move. `gold.publish` writes both. zohelo-bi reads v2 only.
 
-Status (2026-11-11): built. `warehouse/publish_v2.py` writes it after the v1 files when `published_v2: true` in
-`warehouse/warehouse.yaml` (`false` stops it; v1 is not affected). Schemas in `warehouse/published/schemas/v2/`,
+Status (2026-11-11): built (`briefs.json` added 11 Nov). `warehouse/publish_v2.py` writes it after the v1 files
+when `published_v2: true` in `warehouse/warehouse.yaml` (`false` stops it; v1 is not affected). Schemas in `warehouse/published/schemas/v2/`,
 fixtures in `warehouse/published/fixtures/v2/` (from synthetic Gold rows; World Bank annual series on the quarterly
 `gdp_real_growth` and the monthly `hicp_annual_rate`; `ops.repo_check` checks them against the
 schemas and the cross-file rules of `published_v2_problems`). Seeds: `kpi_v2_map.csv` (the v2 keys),
@@ -247,6 +247,7 @@ schemas and the cross-file rules of `published_v2_problems`). Seeds: `kpi_v2_map
 | Never sum an average, never index a rate | nothing | `aggregation` per KPI |
 | Green or red for a change | nothing | `polarity` per KPI |
 | Year-on-year in KPI cards, release dates | previous period only | `year_ago`, `next_release` |
+| A short brief when a KPI gets a new period | nothing | `briefs.json`: the facts (change, year-ago change, highest/lowest since, release dates); bi writes the sentence |
 | Readable without Parquet in the browser | series as Parquet | series as compact JSON per KPI |
 
 ## Rules
@@ -334,6 +335,9 @@ Every entry comes from one series of the KPI's shown frequency (period, previous
 series): the preferred source with a shown-frequency value for that geography, else the next such source. A series
 with its own `frequency` (see series.json) never reaches latest.json, so frequencies are never mixed in one entry; a
 geography that has only series of another frequency has no latest entry.
+A series fed by daily rows (the monthly mean of daily values, e.g. `eurpln`) skips the month of `generated_at` in
+latest.json: its mean is still incomplete (series.json keeps that month, its value changes daily until the month
+ends). So the latest value of such a KPI is the last complete month.
 
 ## kpi/<kpi_key>/series.json
 
@@ -380,6 +384,73 @@ once). A v2 KPI without any row of its shown frequency stays out of v2 even when
 later; rows of one date, source, title and URL are merged; `url` may be null. `catalog.json` `next_release` is the
 KPI's first date here. `feed/calendar.ics` (v1) stays.
 
+## briefs.json (release briefs)
+
+The facts of a short release brief for every KPI that has just got a new period, so the portal can say, for example,
+"Inflacja HICP w październiku: 3,1% r/r, o 0,3 pp mniej niż we wrześniu; najniżej od marca 2025." zohelo-data publishes
+the facts only; zohelo-bi writes the sentences (Polish and English wording, period names, number formats and
+yardsticks live there). Rules, no language model. Written with the other v2 files (`published_v2`); settings in
+`warehouse/warehouse.yaml` `briefs`: `window_days` (45), `extreme_min_periods` (12), `geographies` (`PL`, `EU27`).
+
+| field | type | meaning |
+|---|---|---|
+| version, generated_at | | as above |
+| window_days, extreme_min_periods | integer | the settings the file was written with |
+| geographies | array | the geographies that get briefs (`PL`, `EU27`) |
+| briefs[] | array | one entry per KPI × geography with a new period, newest first (`detected_at`, then `released_at`, descending) |
+| briefs[].kpi_key, geography, source_key, unit_key | string | as the KPI's latest.json value: the shown-frequency total series of the preferred source with data |
+| briefs[].period, value | string, number | the new period and its value |
+| briefs[].previous_period, previous_value | string or null, number or null | as latest.json |
+| briefs[].change | number or null | against the previous value, in `change_unit`; 6 decimals |
+| briefs[].change_unit | string | `pp`, `diff` or `%` (below) |
+| briefs[].year_ago_period, year_ago_value, year_ago_change | string or null, number or null, number or null | the same period a year earlier and its value (both set or both null: null for annual KPIs or without a value) and the change against it, as `change` |
+| briefs[].extreme | object or null | `{ kind: highest \| lowest, since_period, periods }` when the value is above (below) every observed value of at least `extreme_min_periods` periods back; `since_period` is the last period with a value as high (as low) or more, null when no earlier value reaches it (the highest/lowest of the whole series); `periods` counts the observed values passed. Nulls (gaps) are not counted |
+| briefs[].flags | array | as latest.json |
+| briefs[].released_at | string | `YYYY-MM-DD`: the release date from `silver.releases` or `release_calendar.csv` when known, else the day the new period was detected |
+| briefs[].released_at_source | string | `calendar` or `detected` (then `released_at` is the day of `detected_at`) |
+| briefs[].detected_at | string | when `gold.publish` first published the period; at most `window_days` before `generated_at` |
+| briefs[].next_release | string or null | the KPI's first `calendar.json` date after `released_at` (on a release day the release itself is not the next one) |
+| detections[] | array | writer state, not for display: `{ kpi_key, geography, period, detected_at, released_at, released_at_source }` of every period detected in the last `window_days`, one per KPI, geography and period; every brief has its entry |
+
+**Change unit** (`ops.repo_check.brief_change_unit`, one rule for writer and check): `pp`, the difference in
+percentage points, for KPIs with aggregation `rate`, units in % (`pct…`, including `pct_points`) and the indices
+`index_py_100` and `index_pp_100` (100 + a rate); `diff`, the difference in the value's own unit, for the Gini scale
+(`gini_0_100`), balances (`balance`) and any series with a negative value (signed sums that change sign, such as
+current-account components or FDI flows in mln EUR, where a relative change means nothing); `%`, the relative change
+in per cent, for every other level (counts, money, index levels such as `2020=100`, ratios), null when the previous
+value is not above zero.
+
+**What is new.** Gold keeps no load time per observation (the metrics tables are rebuilt), so "new" is read from the
+published files themselves: before writing, `gold.publish` reads the previous `latest.json` and `briefs.json` under
+`06_published/v2/`. A KPI × geography gets a brief when its `latest.json` period is later than the one in the
+previous `latest.json`, of the same frequency and from the same source (`detected_at` = now). `detections` keeps
+every period detected in the last `window_days`: a period found there keeps its `detected_at`, and a new period at or
+below a detected one keeps that detection's `detected_at` (a transient step back, P → P−1 → P, is not a second
+release). A brief stays while `detected_at` is at most `window_days` old and is replaced when a newer period arrives.
+Its numbers are recomputed from the current files on every run, so revisions show. Not a release, so no brief: a KPI
+or geography that was not in the previous `latest.json` (first publication), a revised value of the same period, a
+change of the shown source (even to one with a later period), a change of frequency. Without a previous
+`latest.json` (first run) only remembered periods remain. A previous file that is not JSON or lacks the keys read
+(`values`; `detections`) is treated as absent with a warning annotation; other storage errors (access denied) fail
+the run. `briefs.json` is written before `latest.json`, so a run that stops between the two finds the old
+`latest.json` again and detects the period once more, keeping the remembered `detected_at`.
+
+`released_at`: the newest release of the KPI by the series' publisher dated on the detection day or up to 14 days
+before it, from `silver.releases` (not tentative; its `kpi_keys` are v2 keys) and `release_calendar.csv` (concept →
+v2 key). Publishers are compared on the key before its first `_` on both sides (`gus` for `gus_bdl` and `gus_dbw`,
+`nbp` for `nbp_interest_rates`); without a match it is the detection day. A remembered `calendar` date is kept when
+its row has left `silver.releases` since.
+
+Rules checked before writing (`ops.repo_check.briefs_problems`, part of `published_v2_problems`): each brief equals
+its `latest.json` value (source, unit, period, value, previous and year-ago value, flags) and the value of its single
+total series in `series.json`; the year-ago value is that series' value of `year_ago_period`; `change`,
+`year_ago_change`, `change_unit` and `extreme` are recomputed from those files; `detected_at` within `window_days`
+and listed in `detections`; `detected` release dates are the detection day; `next_release` is the first
+`calendar.json` date after `released_at`; one brief per KPI and geography, geographies from the file's list, sorted
+newest first. `gold.publish` also reads back every value, previous and year-ago value against Gold. Schema
+`warehouse/published/schemas/v2/briefs.schema.json`, fixture `warehouse/published/fixtures/v2/briefs.json` (built
+from the synthetic Gold rows with a synthetic previous `latest.json`).
+
 ## topics.json
 
 What is being talked about, ranked per period (owner decision O32; method in [topics.md](topics.md)). Written by
@@ -413,7 +484,7 @@ of v1's).
 ## Size limits
 
 catalog.json ≤ 1 MB gzip · latest.json ≤ 300 kB gzip · series.json ≤ 1 MB gzip each · calendar.json ≤ 50 kB ·
-topics.json ≤ 150 kB gzip.
+topics.json ≤ 150 kB gzip · briefs.json ≤ 100 kB gzip.
 
 ## First slice: coverage
 
@@ -463,9 +534,9 @@ measure's unit; the rate is the value minus 100. The v2 key of a concept is read
 
 ## Who checks what
 
-- zohelo-data: schemas, `gold.publish` reads back every number of `latest.json` and `series.json` (values, previous
-  and year-ago values, series of another frequency on their own periods; monthly means recomputed from the daily
-  rows) against Gold (as v1) and fails on a difference;
+- zohelo-data: schemas, `gold.publish` reads back every number of `latest.json`, `series.json` and `briefs.json`
+  (values, previous and year-ago values, series of another frequency on their own periods; monthly means recomputed
+  from the daily rows) against Gold (as v1) and fails on a difference;
   `ops.repo_check` checks the fixtures in `warehouse/published/fixtures/v2/` (schemas, `published_v2_problems`) and
   the v2 seeds (`published_v2_seeds`).
 - zohelo-bi: its live provider maps v2 one to one onto its data interface (`apps/portal/src/data/types.ts`) and
