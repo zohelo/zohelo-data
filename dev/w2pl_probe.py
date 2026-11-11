@@ -95,8 +95,11 @@ def fetch(url):
 
 
 def main(argv):
-    pattern, rows, sheets, grep = r".", 12, 2, None
+    pattern, rows, sheets, grep, member = r".", 12, 2, None, None
     for arg in argv:
+        if arg.startswith("member="):
+            member = arg[7:]
+            continue
         if arg.startswith("grep="):
             grep = arg[5:]
             continue
@@ -110,9 +113,19 @@ def main(argv):
             sheets = int(arg[7:])
             continue
         print(f"\n===== {arg}")
+        try:
+            probe(arg, pattern, rows, sheets, grep, member)
+        except Exception as exc:  # noqa: BLE001 - probe continues
+            print("  probe error", type(exc).__name__, exc)
+        time.sleep(1)
+    return 0
+
+
+def probe(arg, pattern, rows, sheets, grep, member):
+    if True:
         r = fetch(arg)
         if r is None:
-            continue
+            return
         h = {k: r.headers.get(k) for k in ("Content-Type", "Content-Length", "Last-Modified", "Content-Disposition")}
         print(f"  status={r.status_code} final={r.url} bytes={len(r.content)} {json.dumps(h, ensure_ascii=False)}")
         body, ctype = r.content, (r.headers.get("Content-Type") or "").lower()
@@ -125,6 +138,10 @@ def main(argv):
                     for i in z.infolist()[:60]:
                         print(f"  member {i.filename} {i.file_size}")
                     print(f"  members total {len(z.infolist())}")
+                    for i in z.infolist():
+                        if member and re.search(member, i.filename) and i.filename.endswith(".xlsx"):
+                            print(f"  >>> member preview {i.filename}")
+                            xlsx_preview(z.read(i), rows, sheets)
             except Exception as exc:  # noqa: BLE001 - probe
                 print("  zip error", exc)
         elif body[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1":
@@ -146,8 +163,6 @@ def main(argv):
             print(f"  links shown {n} of {len(p.out)}")
         else:
             print("  head:", body[:3000].decode("utf-8", "replace"))
-        time.sleep(1)
-    return 0
 
 
 if __name__ == "__main__":
