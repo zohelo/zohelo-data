@@ -11,8 +11,7 @@ description: KRUS basic benefit statistics — the XLSX series of pensions and b
 # version is the whole series to date (snapshot). Restart unit: the file.
 # `prune` stays `report`: if KRUS shortens the window, older versions hold quarters the newest file
 # drops. The quarterly statistical information PDFs (51 tables) have no stable listing page and are
-# not declared. gov.pl terms: official materials free to use (register PLS-011). A schedule
-# (stage 4) comes after the Dev trial.
+# not declared. gov.pl terms: official materials free to use (register PLS-011).
 extraction:
   kind: bulk_file
   bulk_file:
@@ -27,17 +26,20 @@ extraction:
   initial: bulk
   production: snapshot                  # each file is the whole series since 2020
   incremental_policy: changed_since_last  # SHA-256 (no Last-Modified from the server)
-  schedule: []
+  schedule: # UTC; release: quarterly; weekly check
+    - {cron: "5 14 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/krus/
 archive_policy:
   move: true
   retention: {keep_latest: 1, keep_days: 90}
   prune: report   # older versions may hold quarters a later file drops
-bronze: []
-silver: []
+bronze: [bronze.krus_cells, bronze.krus_rejected_files]
+silver: [silver.krus_benefits]
 gold: []
 
-refresh: {mode: full}
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (owner decision #875): one small workbook, rebuilt in full.
+refresh: {mode: full, decided: "#875"}
 
-activities: [landing.inspect, landing.extract, landing.verify]
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

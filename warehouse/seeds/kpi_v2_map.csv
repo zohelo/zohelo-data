@@ -73,6 +73,7 @@ gfcf_growth,economy,Q,gfcf_growth,eurostat,NAMQ_10_GDP,eurostat:NAMQ_10_GDP:CLV_
 gfcf_rate,economy,A,gfcf_rate,eurostat,NAMA_10_GDP,eurostat:NAMA_10_GDP:PC_GDP:P51G,A,PL;EU;EU27,,rate,up,ready,
 gfcf_rate,economy,A,gfcf_rate,world_bank_wdi,NE.GDI.FTOT.ZS,world_bank_wdi:NE.GDI.FTOT.ZS,A,PL;EU;EU27,,rate,up,ready,
 gg_debt_gdp,poland,A,gg_debt_gdp,eurostat,GOV_10DD_EDPT1,eurostat:GOV_10DD_EDPT1:PC_GDP:GD,A,PL;EU;EU27,,rate,down,ready,"general government (S13), Maastricht debt"
+gg_debt_gdp,poland,A,gg_debt_gdp,mf_public_debt,Dlug_publiczny (Dług w relacji do PKB),mf_public_debt:debt_gdp:PC_GDP:GG,A;Q,PL,,rate,down,ready,"Ministry of Finance: general government (EDP) debt over GDP, quarterly; A = the 31 December value"
 gg_deficit_gdp,poland,A,gg_balance_gdp,eurostat,GOV_10DD_EDPT1,eurostat:GOV_10DD_EDPT1:PC_GDP:B9,A,PL;EU;EU27,,rate,up,ready,net lending (+) / net borrowing (-) of S13
 gg_deficit_gdp,poland,A,gg_balance_gdp,world_bank_wdi,GC.NLD.TOTL.GD.ZS,world_bank_wdi:GC.NLD.TOTL.GD.ZS,A,PL;EU;EU27,,rate,up,ready,GFS net lending/borrowing
 ghg_emissions,poland,A,ghg_emissions,eurostat,ENV_AIR_GGE,eurostat:ENV_AIR_GGE:THS_T:GHG,A,PL;EU;EU27,,sum,down,ready,"CO2 equivalent, excl. LULUCF, incl. international aviation"
