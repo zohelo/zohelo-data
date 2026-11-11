@@ -5,9 +5,10 @@ The three workbooks (bop_m, bop_q, iip_q) have one sheet per currency (PLN, EUR,
 in rows and periods in columns: a header row of years (each year written once over its months or quarters)
 and below it a row of period labels (I … XII, "I kw / I Q" … "IV kw / IV Q"). One Bronze row per filled
 value cell, as source text, with the item's row label and its structural context: blank rows separate
-blocks of items; a block of one row is a section heading ("Rachunek bieżący / Current account", "Ogółem
-aktywa / Assets"), the first row of a longer block is the block's head (its total), so the same label
-under two heads (equity under direct investment assets and liabilities) stays distinguishable.
+blocks of items; the first row of a block is the block's head (its total). An account or total heading
+standing alone ("Rachunek bieżący / Current account", "Ogółem aktywa / Assets", "Międzynarodowa pozycja
+inwestycyjna netto") opens a section, so the same label under two heads or sections (equity under direct
+investment assets and liabilities) stays distinguishable.
 
 A workbook without the year and period header rows, or a sheet name the decoder does not know, rejects
 the file (bronze.nbp_bop_rejected_files): a change of the NBP layout is never loaded silently. Columns to
@@ -30,12 +31,13 @@ TABLE_ID = ("bronze", "nbp_bop_cells")
 REJECTED_ID = ("bronze", "nbp_bop_rejected_files")
 SHEETS = {"PLN", "EUR", "USD", "IIP PLN", "IIP EUR", "IIP USD"}
 YEAR = re.compile(r"^(19|20)\d{2}$")
+SECTION = re.compile(r"^(rachunek|ogółem|międzynarodowa pozycja)", re.IGNORECASE)  # account and total headings
 COLUMNS = [
     ("entity", "VARCHAR"),
     ("sheet", "VARCHAR"),
     ("source_row_number", "BIGINT"),  # Excel row of the item
     ("column_number", "BIGINT"),  # Excel column of the value (1 = A)
-    ("section_label", "VARCHAR"),  # the latest one-row block above the item
+    ("section_label", "VARCHAR"),  # the latest account or total heading standing alone above the item
     ("block_label", "VARCHAR"),  # the first row of the item's block
     ("item_label", "VARCHAR"),
     ("year_text", "VARCHAR"),
@@ -88,7 +90,7 @@ def decode_sheet(name: str, rows: list[tuple], base: dict[str, Any]) -> tuple[li
 
     def flush() -> None:
         nonlocal section, block
-        if len(block_rows) == 1:
+        if len(block_rows) == 1 and SECTION.match(block_rows[0][1]):
             section = block_rows[0][1]
         head = block_rows[0][1] if block_rows else None
         for index, label in block_rows:

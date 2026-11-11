@@ -70,7 +70,8 @@ select
         else '-Q' || cast((start_month + 2) // 3 as varchar)
     end as period_label,
     trim(both '_' from case
-        when same_item = 1 or item_slug = block_slug then item_slug
+        when same_item = 1 then item_slug
+        when item_slug = block_slug then section_slug || '.' || item_slug
         when same_in_block = 1 then block_slug || '.' || item_slug
         else section_slug || '.' || block_slug || '.' || item_slug
     end) as item_code,
