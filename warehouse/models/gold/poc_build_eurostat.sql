@@ -207,17 +207,6 @@ shaped as (
     left join codes as cu on cu.codelist_id = 'UNIT' and s.unit_code = cu.code
 ),
 
-placed as (  -- Gold has no half-yearly fact: a half-year (minimum wages, the level in force) is placed on both
-    -- of its quarters (S1: Q1 and Q2, S2: Q3 and Q4), frequency Q; period_label keeps the half-year
-    select
-        * exclude (freq_code, date_key),
-        case when freq_code = 'S' then 'Q' else freq_code end as freq_code,
-        unnest(
-            case when freq_code = 'S' then [date_key, cast(date_key + interval 3 month as date)] else [date_key] end
-        ) as date_key
-    from shaped
-),
-
 measure_names as (  -- names of the measure-defining codes, from the dataset's code lists
     select
         p.dataset_id,
@@ -268,7 +257,7 @@ select
     end as observation_status_key,
     s.source_version,
     s.raw_sha256
-from placed as s
+from shaped as s
 left join geo_map as g on s.geo_code = g.source_code
 left join flows as f on upper(s.dataset_id) = upper(f.dataset_id)
 left join measure_names as n on s.dataset_id = n.dataset_id and s.measure_codes = n.measure_codes

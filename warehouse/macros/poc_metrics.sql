@@ -11,6 +11,7 @@ with members as (
 ),
 facts as (
     select * from {{ ref('poc_fact_annual') }}
+    union all select * from {{ ref('poc_fact_semiannual') }}
     union all select * from {{ ref('poc_fact_quarterly') }}
     union all select * from {{ ref('poc_fact_monthly') }}
     union all select * from {{ ref('poc_fact_daily') }}
