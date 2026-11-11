@@ -29,6 +29,7 @@ average_gross_wage,gus_bdl,gus_bdl:P2497:%,,1,
 dwellings_completed,gus_bdl,gus_bdl:P3824:%,,1,
 area,gus_bdl,gus_bdl:P1410:%,ha in the source,1,
 area,world_bank_wdi,world_bank_wdi:AG.LND.TOTL.K2,land area,2,
+area,gugik_prg,gugik_prg:units:km2:area,"state register of boundaries, edition held (daily snapshot)",3,km2
 population_density,gus_bdl,gus_bdl:P2425:%,,1,
 fx_rate,nbp,nbp:fx:A:mid,"NBP table A, mid",1,
 gold_price,nbp,nbp:gold:price,"NBP fixing, 1000 fineness",1,

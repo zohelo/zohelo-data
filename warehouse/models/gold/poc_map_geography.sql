@@ -195,6 +195,22 @@ oecd as (
     from {{ ref('oecd_cli') }} as o
     left join geo as g on g.level_name = 'country' and o.ref_area = g.iso3
     left join geo as g_agg on g_agg.geography_key = 'OECD:' || o.ref_area
+),
+
+-- TERYT TERC codes and the PRG unit codes (JPT_KOD_JE: TERC, '0' the country) are TERC keys (#2739).
+teryt_prg as (
+    select
+        'gus_teryt' as source_system,
+        terc_code as source_code,
+        'TERC:' || terc_code as geography_key
+    from {{ ref('teryt_terc') }}
+    union all
+    select distinct
+        'gugik_prg' as source_system,
+        teryt_code as source_code,
+        case when unit_level = 'kraj' then 'PL' else 'TERC:' || teryt_code end as geography_key
+    from {{ ref('prg_units') }}
+    where unit_level in ('kraj', 'wojewodztwo', 'powiat', 'gmina')
 )
 
 select
@@ -214,6 +230,8 @@ from (
     select * from wdi
     union all
     select * from oecd
+    union all
+    select * from teryt_prg
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null
