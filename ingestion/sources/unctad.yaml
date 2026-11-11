@@ -70,8 +70,10 @@ silver: [silver.unctad_fdi_flows_stock, silver.unctad_merchandise_trade, silver.
 gold: [gold.build_unctad, gold.metrics_exports_goods, gold.metrics_exports_services]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
-# Refresh policy for all layers (D32): nine tables, 1.24 million rows in all, the largest 807,733 (services by
-# category); each Silver model below the ~1M full-rebuild policy; rebuilt in full.
-refresh: {mode: full, decided: "D32 + #2757"}
+# Refresh policy for all layers (D32): nine tables, 1.24 million rows in all. Each archive is the whole table with no
+# changed-since, so a new version replaces every row and the tables are rebuilt in full when their bytes change (a few
+# times a year). The largest, services by category (807,733 rows, ~38,000 more a year), is near the #822 1M
+# full-rebuild threshold: its ceiling 1,200,000 carries the exception #2777; the other eight are below 125,000 rows.
+refresh: {mode: full, decided: "D32 + #2757, #2777"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

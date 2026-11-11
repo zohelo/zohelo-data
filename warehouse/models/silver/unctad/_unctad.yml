@@ -8,6 +8,12 @@ models:
     tests:
       - unique:
           column_name: "period || '|' || coalesce(economy, '') || '|' || dimensions"
+      - accepted_values:
+          column_name: "json_extract_string(dimensions, '$.Flow')"
+          arguments: {values: ['08', '09']}
+      - accepted_values:
+          column_name: "json_extract_string(dimensions, '$.Direction')"
+          arguments: {values: ['1', '2']}
     columns:
       - name: period
         tests: [not_null]
@@ -23,6 +29,9 @@ models:
     tests:
       - unique:
           column_name: "period || '|' || coalesce(economy, '') || '|' || dimensions"
+      - accepted_values:
+          column_name: "json_extract_string(dimensions, '$.Flow')"
+          arguments: {values: ['01', '02']}
     columns:
       - name: period
         tests: [not_null]
@@ -38,6 +47,9 @@ models:
     tests:
       - unique:
           column_name: "period || '|' || coalesce(economy, '') || '|' || dimensions"
+      - accepted_values:
+          column_name: "json_extract_string(dimensions, '$.Flow')"
+          arguments: {values: ['01', '02']}
     columns:
       - name: period
         tests: [not_null]

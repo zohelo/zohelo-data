@@ -588,8 +588,10 @@ column names contain commas), extracted with the runner's 7-Zip. Silver: one mod
 period, economy, the other dimensions and the measures (value, footnote, missing reason) as JSON maps by
 name. Gold: `gold.build_unctad` (FDI flows and stocks, merchandise and services exports and imports) for
 the EU27 members (UNCTAD codes, France 250), the group "European Union (2020 …)" (3412, EU27_2020) and
-World; KPIs fdi_inflow, exports_goods and exports_services. Weekly schedule (Tuesday 05:55 UTC), full
-rebuild (D32: the largest Silver model 807,733 rows).
+World; KPIs fdi_inflow, exports_goods and exports_services, draft until the per-table third-party terms
+(register GL-021 blocker; merchandise trade is synchronised with WTO) are checked. Weekly schedule (Tuesday
+05:55 UTC), full rebuild when a table's bytes change (D32: each archive is the whole table); the services
+table (807,733 rows) is rebuilt in full under the exception #2777 to #822.
 
 ## ECB Data Portal
 

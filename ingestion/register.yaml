@@ -1014,7 +1014,9 @@ sources:
       are copyrighted under the Creative Commons Attribution 3.0 IGO license"; data and metadata "may be copied freely,
       duplicated and further distributed" provided the Data Hub is cited): commercial reuse and adaptation allowed under
       the licence; third-party series may carry their own terms (check per table). Attribution: "Source: United Nations
-      Trade and Development (UNCTAD) Data Hub, unctadstat.unctad.org".'
+      Trade and Development (UNCTAD) Data Hub, unctadstat.unctad.org". Per-table third-party check (#2757, 11 Nov
+      2026): open, see research.blockers; until it is closed every UNCTAD KPI (exports_goods, exports_services and the
+      UNCTAD measure of fdi_inflow) stays draft in kpi.csv, so nothing from UNCTAD reaches the published layer.'
   updates: Table-specific updates and revisions; indicator-explainer documents carry methodology.
   ingestion:
     history: Archive named table export, metadata and terms.
@@ -1028,7 +1030,12 @@ sources:
     evidence: documented
     connection: tested
     blockers:
-    - 'Check third-party terms per selected table'
+    - 'Third-party terms per selected table, not yet checked (11 Nov 2026; the agent session cannot reach
+      unctadstat.unctad.org, so the per-table notes have to be read in a Dev probe or by the owner). Built tables:
+      US_TradeMerchTotal (exports_goods) is synchronised with WTO, so WTO terms may apply to its values: open;
+      US_TradeServCatTotal (exports_services): open; US_FdiFlowsStock (UNCTAD measure of fdi_inflow): open. Landed,
+      not modelled: US_DigitallyDeliverableServices, US_CommodityPrice_M, US_PLSCI, US_MerchantFleet,
+      US_SeaborneTrade, US_PortCalls: open. Until closed these KPIs stay draft (kpi.csv) and are not published.'
     references:
     - https://unctadstat.unctad.org/
     - https://unctadstat.unctad.org/EN/IndicatorsExplained.html
