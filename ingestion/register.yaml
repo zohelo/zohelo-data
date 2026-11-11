@@ -789,7 +789,8 @@ sources:
   name: UNdata
   short_name: UNdata
   provider: United Nations Statistics Division
-  status: approved
+  source_system: undata
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -800,12 +801,14 @@ sources:
   coverage: Multicountry sources including UNSD and other UN agencies; histories vary and some marts are legacy
     editions.
   access:
-    endpoint: https://data.un.org/Handlers/ExplorerHandler.ashx?t=sources
+    endpoint: https://data.un.org/Default.aspx
     kind: bulk_file
     interfaces: [HTML, download handler, legacy web service]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No numeric quota published. The legacy ExplorerHandler/DownloadHandler now return the UN System Data
+      Commons page (Dev probe 43086552621, 11 Nov 2026); the Statistical Yearbook CSV tables linked from
+      Default.aspx (SYB68, 32 tables, a few MB each) are used, one page and one file request per table and run.
   licence:
     status: open-conditional
     notes: 'Terms: https://data.un.org/Host.aspx?Content=UNdataUse (UNdata Conditions of Use): all data and metadata
@@ -825,7 +828,7 @@ sources:
   research:
     priority: conditional
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
     - 'Assess whether each mart is current'
     - 'Check the source agency terms of each selected mart; confirm stable download contract'

@@ -29,3 +29,4 @@ release_calendars,TP-010,Kalendarze publikacji statystyk,Official release calend
 bis,GL-015,BIS Data Portal,BIS Data Portal,Bank for International Settlements,cube,file,international-public,bis_terms,https://data.bis.org/
 ilostat,GL-023,ILOSTAT,ILOSTAT,International Labour Organization,cube,file,international-public,cc_by_4_0_ilo,https://ilostat.ilo.org/data/bulk/
 undp_hdr,GL-028,UNDP Human Development Data Center,UNDP Human Development Data Center,United Nations Development Programme,cube,file,international-public,cc_by_3_0_igo_undp_hdr,https://hdr.undp.org/data-center/documentation-and-downloads
+undata,GL-017,UNdata,UNdata,United Nations Statistics Division,cube,file,international-public,undata_terms,https://data.un.org/Default.aspx
