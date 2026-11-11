@@ -6,8 +6,8 @@ models:
       investment position (iip_q quarterly, PLG-003) from bronze.nbp_bop_cells: one row per workbook × currency
       (PLN, EUR, USD) × item × period of the newest version of each workbook, history from 2004. value is in
       million units of the currency; item_code is the slug of the item's English label, prefixed by its block's
-      and section's slug where the slug repeats (positions under assets and liabilities). Dev trial: see the
-      onboarding PR (#2754).
+      and section's slug where the slug repeats (positions under assets and liabilities). Dev
+      onboarding trial 43093233419 (55,332 rows: bop_m 3 x 11,424, bop_q 3 x 3,780, iip_q 3 x 3,240; 2004 to 2026-08).
     tests:
       - unique:
           column_name: "entity || '|' || currency || '|' || item_code || '|' || cast(date_key as varchar)"

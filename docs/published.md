@@ -502,8 +502,9 @@ voivodeships), `dimensions`, `aggregation`, `polarity`, `status` and `note`:
   build checks pass.
 - `needs-block`: in Silver (codes checked or block named) but not activated: a member filter, a half-yearly fact, a
   derivation or a row-size decision is missing; `note` says which.
-- `needs-source`: not ingested; `note` names the register id (NBP balance of payments PLG-002, investment
-  position PLG-003). NBP official rates (`nbp_interest_rates`, PLG-006) and the OECD CLI (`oecd`, GL-003) reached
+- `needs-source`: not ingested; `note` names the register id. The NBP balance of payments and investment
+  position (`nbp_bop`, PLG-002, PLG-003) are built to Silver (#2754) and `needs-block` until their Gold build stage
+  exists; the workbooks publish amounts only, so the shares of GDP need a derivation. NBP official rates (`nbp_interest_rates`, PLG-006) and the OECD CLI (`oecd`, GL-003) reached
   Silver on 10 Nov (#2590, #2594) and are `needs-block` until their Gold build stages exist.
 
 v2 keys by their best source status:
@@ -521,7 +522,8 @@ Rows by source (141 rows; 31 keys have two or more ready sources):
 | gus_bdl | 17 | 8 | 0 | 25 |
 | gus_dbw | 17 | 8 | 0 | 25 |
 | world_bank_wdi | 23 | 1 | 0 | 24 |
-| nbp | 1 | 0 | 6 | 7 |
+| nbp | 1 | 0 | 2 | 3 |
+| nbp_bop | 0 | 4 | 0 | 4 |
 | nbp_interest_rates | 0 | 1 | 0 | 1 |
 | oecd | 0 | 1 | 0 | 1 |
 
