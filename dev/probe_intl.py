@@ -163,6 +163,22 @@ def main() -> int:
                 wpp(name, base + file)
             except Exception as exc:
                 out(f"wpp {name} error", repr(exc)[:600])
+    if part == "more":
+        for name, query, dims in (
+            ("icp_items_u2", "ICP/M.U2.N..4.ANR?lastNObservations=2&format=csvdata", ["ICP_ITEM"]),
+            ("icp_items_pl", "ICP/M.PL.N..4.ANR?lastNObservations=2&format=csvdata", ["ICP_ITEM"]),
+            ("icp_all_xtotal", "ICP/M..N.TOTAL.4.ANR?format=csvdata", ["REF_AREA"]),
+        ):
+            try:
+                ecb(name, query, dims)
+            except Exception as exc:
+                out(f"ecb {name} error", repr(exc)[:600])
+        for code in ("US_DigitallyDeliverableServices", "US_CommodityPrice_M", "US_PLSCI", "US_MerchantFleet",
+                     "US_SeaborneTrade", "US_PortCalls"):
+            try:
+                unctad(code)
+            except Exception as exc:
+                out(f"unctad {code} error", repr(exc)[:600])
     if part in ("all", "unctad"):
         for code in ("US_FdiFlowsStock", "US_TradeMerchTotal", "US_TradeServCatTotal"):
             try:
