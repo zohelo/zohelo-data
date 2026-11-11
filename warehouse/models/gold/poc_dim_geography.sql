@@ -332,6 +332,14 @@ select
     case
         when m.level_name = 'powiat' then m.geography_key
         when m.level_name = 'gmina' then 'TERC:' || substr(m.terc_code, 1, 4)
-    end as powiat_key
+    end as powiat_key,
+    -- TERYT attributes of Polish units (#2739): unit type as TERYT names it (powiat, miasto na prawach
+    -- powiatu, gmina miejska/wiejska/miejsko-wiejska, miasto, obszar wiejski, dzielnica, delegatura), the
+    -- gmina type digit (RODZ), ISO 3166-2 for voivodeships (PL-<TERC>) and the TERYT state date.
+    t.unit_type_pl as teryt_unit_type,
+    t.gmina_type_code,
+    case when m.level_name = 'wojewodztwo' then 'PL-' || m.terc_code end as iso_3166_2,
+    t.state_date as teryt_state_date
 from members as m
+left join terc as t on m.terc_code = t.terc_code
 qualify row_number() over (partition by m.geography_key order by m.name_en) = 1
