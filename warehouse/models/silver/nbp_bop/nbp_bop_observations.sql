@@ -2,7 +2,7 @@
    iip_q): one row per workbook × currency × item × period of the newest Landing copy of each workbook. The
    period comes from the year header and the period label (roman month I-XII; "I kw / I Q" … "IV kw / IV Q");
    a label of neither form is not a period and is left out. item_en is the English half of the bilingual
-   label ("Rachunek bieżący / Current account"), else the whole label. item_code is the item's slug, prefixed
+   label ("Rachunek bieżący / Current account"; one IIP label separates the halves by spaces), else the label. item_code is the item's slug, prefixed
    by its block's and then its section's slug where the slug alone repeats within the workbook and currency
    (equity under direct investment assets and liabilities). Amounts in million units of the currency. #}
 with source_rows as (
@@ -24,7 +24,12 @@ labelled as (
         *,
         trim(regexp_replace(sheet, '^IIP ', '')) as currency,
         case entity when 'bop_m' then 'M' else 'Q' end as frequency,
-        trim(coalesce(nullif(regexp_extract(item_label, '/\s*([^/]+)$', 1), ''), item_label)) as item_en,
+        -- the English half: after " / ", else after a run of spaces ("…długoterminowe  Bonds and notes")
+        trim(coalesce(
+            nullif(regexp_extract(item_label, '/\s*([^/]+)$', 1), ''),
+            nullif(regexp_extract(item_label, '\S\s{2,}([A-Z][^ ].*)$', 1), ''),
+            item_label
+        )) as item_en,
         trim(coalesce(nullif(regexp_extract(block_label, '/\s*([^/]+)$', 1), ''), block_label)) as block_en,
         trim(coalesce(nullif(regexp_extract(section_label, '/\s*([^/]+)$', 1), ''), section_label)) as section_en,
         trim(regexp_replace(period_text, '\s+', ' ', 'g')) as period_clean
