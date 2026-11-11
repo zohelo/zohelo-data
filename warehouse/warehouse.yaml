@@ -81,6 +81,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   ilostat_observations: {rows: 1000000}
   undp_hdr_indices: {rows: 300000}  # MEASURED
   undata_syb_values: {rows: 500000}  # MEASURED
+  unece_observations: {rows: 1000000}  # MEASURED
   news_headlines: {rows: 300000}
   releases: {rows: 5000}  # about 50 announced releases a week, 60-day window
   topic_attention: {rows: 50000}  # 35 topics × 455 days

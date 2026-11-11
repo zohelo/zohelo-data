@@ -30,3 +30,4 @@ bis,GL-015,BIS Data Portal,BIS Data Portal,Bank for International Settlements,cu
 ilostat,GL-023,ILOSTAT,ILOSTAT,International Labour Organization,cube,file,international-public,cc_by_4_0_ilo,https://ilostat.ilo.org/data/bulk/
 undp_hdr,GL-028,UNDP Human Development Data Center,UNDP Human Development Data Center,United Nations Development Programme,cube,file,international-public,cc_by_3_0_igo_undp_hdr,https://hdr.undp.org/data-center/documentation-and-downloads
 undata,GL-017,UNdata,UNdata,United Nations Statistics Division,cube,file,international-public,undata_terms,https://data.un.org/Default.aspx
+unece,GL-038,UNECE Statistical Database,UNECE Statistical Database,United Nations Economic Commission for Europe,cube,table,international-public,unece_terms,https://w3.unece.org/PXWeb/en

@@ -25,3 +25,4 @@ bis_terms,BIS terms of use for statistics,https://www.bis.org/about/legal/permit
 cc_by_4_0_ilo,CC BY 4.0 (ILOSTAT),https://www.ilo.org/node/9321,"Source: ILO, ILOSTAT, https://ilostat.ilo.org/data/",true,false
 cc_by_3_0_igo_undp_hdr,CC BY 3.0 IGO (UNDP Human Development Reports),http://creativecommons.org/licenses/by/3.0/igo/,"Source: UNDP Human Development Reports, Human Development Data Center, https://hdr.undp.org/data-center (CC BY 3.0 IGO)",true,false
 undata_terms,UNdata conditions of use,https://data.un.org/Host.aspx?Content=UNdataUse,"Source: UNdata (data.un.org), UN Statistical Yearbook",false,false
+unece_terms,UNECE Statistical Database copyright notice,https://w3.unece.org/PXWeb/Static/Copyright_notice.html,Source: UNECE Statistical Database.,true,false
