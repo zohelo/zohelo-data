@@ -147,9 +147,6 @@ def main(argv: list[str]) -> int:
     return 0
 
 
-if __name__ == "__main__":
-    raise SystemExit(main2(sys.argv[1:]))
-
 
 BIS_FULL = {
     "cbpol": "WS_CBPOL/M./all",
@@ -206,3 +203,7 @@ def main2(argv: list[str]) -> int:
         bis_full()
         return 0
     return main(argv)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main2(sys.argv[1:]))
