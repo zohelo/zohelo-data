@@ -4,7 +4,8 @@
    the credit dataflows (WS_TC, WS_CREDIT_GAP, WS_DSR). Attributes are taken by name; a series attribute
    the BIS sends on a separate row without FREQ and period (WS_EER UNIT_MEASURE, WS_TC titles) fills the
    observations of that series (FREQ is the first dimension of every BIS dataflow). Values as published
-   (UNIT_MEASURE codes: 368 per cent per year, 882 index 2020 = 100, 770 % of GDP, …); 'NaN' is no value. #}
+   (UNIT_MEASURE, an attribute or in WS_SPP a dimension: 368 per cent per year, 882 index 2020 = 100, 770 % of
+   GDP, 628 index 2010 = 100, 771 y-o-y %); 'NaN' is no value (OBS_STATUS M). #}
 with source_rows as (
     select *
     from {{ source('bis', 'bis_observations') }}
@@ -48,7 +49,11 @@ select
     cast(to_json(map_from_entries(list_zip(o.dims, o.codes))) as varchar) as dimensions_json,
     o.time_period,
     try_cast(nullif(nullif(o.obs_value, ''), 'NaN') as double) as obs_value,
-    coalesce(nullif(o.attr_values[list_position(o.attrs, 'UNIT_MEASURE')], ''), s.unit_measure) as unit_measure,
+    coalesce(
+        nullif(o.attr_values[list_position(o.attrs, 'UNIT_MEASURE')], ''),
+        o.codes[list_position(o.dims, 'UNIT_MEASURE')],  -- a dimension in WS_SPP
+        s.unit_measure
+    ) as unit_measure,
     coalesce(nullif(o.attr_values[list_position(o.attrs, 'UNIT_MULT')], ''), s.unit_mult) as unit_mult,
     nullif(o.attr_values[list_position(o.attrs, 'OBS_STATUS')], '') as obs_status,
     coalesce(nullif(trim(coalesce(
