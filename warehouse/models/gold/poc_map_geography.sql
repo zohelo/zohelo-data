@@ -178,6 +178,32 @@ wdi as (
     from {{ ref('wdi_countries') }} as w
     left join geo as g on g.level_name = 'country' and w.iso2_code = g.iso2
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
+),
+
+-- ECB: ISO two-letter countries (GR, GB); ECB aggregates by code (TITLE_COMPL in silver.ecb_observations):
+-- U2 euro area changing composition, I8 EA19 and I9 EA20 fixed, B6 EU27 fixed as of 31 Jan 2020, B0/D0 EU changing
+-- composition. I10 (euro area 21) and V5 have no Gold area yet.
+ecb as (
+    select
+        'ecb' as source_system,
+        c.ref_area as source_code,
+        coalesce(
+            g.geography_key,
+            case c.ref_area
+                when 'U2' then 'EUROSTAT:EA'
+                when 'I8' then 'EUROSTAT:EA19'
+                when 'I9' then 'EUROSTAT:EA20'
+                when 'B6' then 'EUROSTAT:EU27_2020'
+                when 'B0' then 'EUROSTAT:EU'
+                when 'D0' then 'EUROSTAT:EU'
+            end,
+            '_X'
+        ) as geography_key
+    from (
+        select distinct ref_area from {{ ref('ecb_observations') }}
+        where ref_area is not null
+    ) as c
+    left join geo as g on g.level_name = 'country' and c.ref_area = g.geography_key
 )
 
 select
@@ -195,6 +221,8 @@ from (
     select * from dbw
     union all
     select * from wdi
+    union all
+    select * from ecb
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

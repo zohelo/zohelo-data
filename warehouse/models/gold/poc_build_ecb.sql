@@ -3,18 +3,10 @@
    shape. measure_key ecb:<flow>:<codes that define the measure>: EXR ecb:EXR:<currency>:EUR (units of the
    currency per 1 EUR, geography not applicable `_Z`), FM ecb:FM:<rate id> (key ECB rates at their change dates),
    EST ecb:EST:WT, HICP/ICP ecb:<flow>:<item>:ANR, IRS ecb:IRS:L40 (10-year convergence yield in the country's
-   currency), BSI ecb:BSI:<item>:<data type>:<suffix>. Areas: ISO two-letter countries, U2 → EUROSTAT:EA (euro
-   area, changing composition), I8 → EUROSTAT:EA19, I9 → EUROSTAT:EA20, B6 → EUROSTAT:EU27_2020 (EU27, fixed
-   composition as of 31 January 2020), B0/D0 → EUROSTAT:EU (EU, changing composition); any other code (I10 euro
-   area 21, V5, candidate countries without a Gold area) is unmatched (`_X`). No breakdowns except the currency of a second IRS series. #}
+   currency), BSI ecb:BSI:<item>:<data type>:<suffix>. Areas through poc_map_geography (section ecb): ISO
+   countries, U2 → EA, I8 → EA19, I9 → EA20, B6 → EU27_2020, B0/D0 → EU; FM, EST and BSI are euro area (U2).
+   No breakdowns except the currency of a second IRS series. #}
 with blocks as ({{ poc_ecb_blocks() }}),
-
-geo as (
-    select
-        geography_key,
-        level_name
-    from {{ ref('poc_dim_geography') }}
-),
 
 obs as (
     select
@@ -78,30 +70,22 @@ shaped as (
         -- IRS: an area can have series in two currencies (BG: lev and euro); the area's longest series is its total
         -- with no breakdown, any other keeps its currency as the breakdown
         dataflow <> 'IRS' or series_key = first_value(series_key) over (
-            partition by dataflow, ref_area order by series_points desc, series_key
+            partition by dataflow, ref_area order by series_points desc, series_key asc
         ) as is_total_candidate
     from obs
+),
+
+geo_map as (
+    select * from {{ ref('poc_map_geography') }}
+    where source_system = 'ecb'
 ),
 
 mapped as (
     select
         s.*,
-        case
-            when s.area_code is null then '_Z'
-            else coalesce(
-                g.geography_key,
-                case s.area_code
-                    when 'U2' then 'EUROSTAT:EA'
-                    when 'I8' then 'EUROSTAT:EA19'
-                    when 'I9' then 'EUROSTAT:EA20'
-                    when 'B6' then 'EUROSTAT:EU27_2020'
-                    when 'B0' then 'EUROSTAT:EU'
-                    when 'D0' then 'EUROSTAT:EU'
-                end
-            )
-        end as candidate_key
+        case when s.area_code is null then '_Z' else coalesce(g.geography_key, '_X') end as geography_key
     from shaped as s
-    left join geo as g on s.area_code = g.geography_key and g.level_name = 'country'
+    left join geo_map as g on s.area_code = g.source_code
 )
 
 select
@@ -114,7 +98,7 @@ select
     m.unit_code,
     m.unit_name,
     m.area_code as geography_source_code,
-    case when m.candidate_key = '_Z' then '_Z' else coalesce(g.geography_key, '_X') end as geography_key,
+    m.geography_key,
     m.frequency,
     m.period_start as date_key,
     m.time_period as period_label,
@@ -131,4 +115,3 @@ select
     m.raw_sha256
 from mapped as m
 inner join blocks as b on m.entity = b.entity
-left join geo as g on m.candidate_key = g.geography_key
