@@ -58,7 +58,10 @@
         ('NAMA_10_A10', 'Gross value added and income by A*10 industry', 'A', 'TOTAL'),
         ('ILC_DI12', 'Gini coefficient of equivalised disposable income', 'A', 'TOTAL'),
         ('NAMA_10R_2GVAGR', 'Real growth rate of regional gross value added', 'A', ''),
-        ('GOV_10A_EXP', 'General government expenditure by function (COFOG)', 'A', 'S13,GF10')
+        ('GOV_10A_EXP', 'General government expenditure by function (COFOG)', 'A', 'S13,GF10'),
+        -- slice needs-block rows (O36, #2743): half-years are placed on their two quarters (poc_build_eurostat)
+        ('EARN_MW_CUR', 'Monthly minimum wages, bi-annual data', 'S', ''),
+        ('ERT_BIL_EUR_M', 'Euro/ECU exchange rates, monthly data', 'M', '')
     ) as t (dataset_id, block_name, freq_code, total_breakdown)
 {% endmacro %}
 
@@ -108,7 +111,10 @@
         ('NAMA_10_A10', 'na_item'),
         ('ILC_DI12', 'statinfo'),
         ('NAMA_10R_2GVAGR', 'na_item'),
-        ('GOV_10A_EXP', 'na_item')
+        ('GOV_10A_EXP', 'na_item'),
+        ('EARN_MW_CUR', 'currency'),
+        ('ERT_BIL_EUR_M', 'statinfo'),
+        ('ERT_BIL_EUR_M', 'currency')
     ) as t (dataset_id, dimension_id)
 {% endmacro %}
 
@@ -138,8 +144,27 @@
         ('P2861', 'Emeryci i renciści', 'WYNAGRODZENIA I ŚWIADCZENIA SPOŁECZNE / EMERYTURY I RENTY'),
         ('P2860', 'Przeciętna miesięczna emerytura i renta brutto', 'WYNAGRODZENIA I ŚWIADCZENIA SPOŁECZNE / EMERYTURY I RENTY'),
         ('P2862', 'Nakłady inwestycyjne i wartość brutto środków trwałych', 'INWESTYCJE I ŚRODKI TRWAŁE'),
-        ('P3502', 'Produkt krajowy brutto ogółem, dynamika', 'RACHUNKI REGIONALNE / PRODUKT KRAJOWY BRUTTO')
+        ('P3502', 'Produkt krajowy brutto ogółem, dynamika', 'RACHUNKI REGIONALNE / PRODUKT KRAJOWY BRUTTO'),
+        -- slice needs-block rows (O36, #2743): Poland and voivodeships only
+        ('P2656', 'Osoby dorosłe (25-64) uczestniczące w kształceniu lub szkoleniu (BAEL, średnioroczne)', 'RYNEK PRACY / AKTYWNOŚĆ EKONOMICZNA (BAEL)'),
+        ('P2713', 'Wskaźniki zasięgu ubóstwa - % osób w gosp. dom. o wydatkach poniżej granicy ubóstwa', 'BUDŻETY GOSPODARSTW DOMOWYCH / UBÓSTWO'),
+        ('P2692', 'Produkcja sprzedana przemysłu wg PKD 2007 (dane kwartalne)', 'PRZEMYSŁ I BUDOWNICTWO / PRODUKCJA PRZEMYSŁOWA'),
+        ('P2721', 'Produkcja sprzedana budownictwa wg PKD 2007 (dane kwartalne)', 'PRZEMYSŁ I BUDOWNICTWO / BUDOWNICTWO'),
+        ('P2837', 'Pracujący w sektorze przedsiębiorstw (dane krótkookresowe)', 'RYNEK PRACY / PRACUJĄCY'),
+        ('P4610', 'Mediana wynagrodzeń miesięcznych brutto (Rozkład wynagrodzeń w gospodarce narodowej)', 'WYNAGRODZENIA I ŚWIADCZENIA SPOŁECZNE / WYNAGRODZENIA'),
+        ('P3788', 'Średnia cena za 1 m2 lokali mieszkalnych sprzedanych w ramach transakcji rynkowych', 'GOSPODARKA MIESZKANIOWA / CENY LOKALI MIESZKALNYCH'),
+        ('P3794', 'Średnia cena za 1 m2 lokali mieszkalnych sprzedanych w ramach transakcji rynkowych (kwartalne)', 'GOSPODARKA MIESZKANIOWA / CENY LOKALI MIESZKALNYCH')
     ) as t (subgroup_id, block_name, subject_path)
+{% endmacro %}
+
+{# BDL label positions (after the period label is taken out) that name the measure although some variables
+   say "ogółem" there: the market of the dwelling prices, so the secondary market is a measure of its own. #}
+{% macro poc_bdl_measure_positions() %}
+    select * from (
+        values
+        ('P3788', 1),
+        ('P3794', 1)
+    ) as t (subgroup_id, position)
 {% endmacro %}
 
 {# DBW blocks: indicator × section × presentation × periodicity; the files (one per year) share the prefix. #}
@@ -170,8 +195,28 @@
         ('814_2_7_1', 'Produkcja sprzedana przemysłu — analogiczny okres = 100, ceny stałe', 'M'),
         ('392_16_223_1', 'Produkcja budowlano-montażowa — analogiczny okres = 100, wyrównana sezonowo', 'M'),
         ('109_849_7_1', 'Sprzedaż detaliczna towarów — analogiczny okres = 100, ceny stałe', 'M'),
-        ('469_16_117_1', 'Bieżący wskaźnik ufności konsumenckiej (BWUK)', 'M')
+        ('469_16_117_1', 'Bieżący wskaźnik ufności konsumenckiej (BWUK)', 'M'),
+        -- slice needs-block rows (O36, #2743)
+        ('1603_1339_116_4', 'Odsetek osób zagrożonych ubóstwem lub wykluczeniem społecznym — makroregiony, regiony', 'A'),
+        ('1618_1335_95_4', 'Stopa bezrobocia długotrwałego - BAEL', 'A'),
+        ('1714_1575_243_1', 'Mediana wynagrodzeń miesięcznych brutto (Rozkład wynagrodzeń) [zł]', 'M'),
+        ('309_485_180_3', 'Średnie ceny za 1 m2 lokali mieszkalnych sprzedanych w ramach transakcji rynkowych [zł]', 'Q'),
+        ('507_870_93_1', 'Bezrobotni zarejestrowani — płeć, wiek', 'M')
     ) as t (block_id, block_name, freq_code)
+{% endmacro %}
+
+{# DBW block rules. regional: only Poland and voivodeships are read (poc_src_dbw.py REGIONAL, territory in
+   position 1). total_labels ('|'-separated, lower case): positions that count as the total where the block has
+   no "ogółem" (the age band and duration of the LFS long-term rate, the residence basis of the median wage).
+   measure_dimension: a dimension whose position names the measure (the market of the dwelling prices). #}
+{% macro poc_dbw_block_rules() %}
+    select * from (
+        values
+        ('1618_1335_95_4', false, 'od 15 do 74 lat|12 miesięcy i więcej', ''),
+        ('1714_1575_243_1', true, 'miejsce zamieszkania', ''),
+        ('309_485_180_3', true, '', 'rodzaj rynku nieruchomości'),
+        ('507_870_93_1', true, '', '')
+    ) as t (block_id, regional, total_labels, measure_dimension)
 {% endmacro %}
 
 {% macro poc_wdi_blocks() %}
