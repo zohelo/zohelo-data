@@ -23,3 +23,4 @@ cc0_wikimedia_pageviews,CC0 1.0 (Wikimedia pageview statistics),https://foundati
 gdelt_terms,GDELT Project terms of use (unrestricted use with citation),https://www.gdeltproject.org/about.html#termsofuse,"Source: The GDELT Project, https://www.gdeltproject.org/",true,false
 bis_terms,BIS terms of use for statistics,https://www.bis.org/about/legal/permitted-use-statistics,Source: BIS statistics (Bank for International Settlements),false,false
 cc_by_4_0_ilo,CC BY 4.0 (ILOSTAT),https://www.ilo.org/node/9321,"Source: ILO, ILOSTAT, https://ilostat.ilo.org/data/",true,false
+cc_by_3_0_igo_undp_hdr,CC BY 3.0 IGO (UNDP Human Development Reports),http://creativecommons.org/licenses/by/3.0/igo/,"Source: UNDP Human Development Reports, Human Development Data Center, https://hdr.undp.org/data-center (CC BY 3.0 IGO)",true,false

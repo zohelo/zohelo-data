@@ -1,0 +1,22 @@
+version: 2
+models:
+  - name: undp_hdr_indices
+    description: >-
+      UNDP Human Development Report composite indices from bronze.undp_hdr_values (Human Development Data
+      Center, HDR25 complete time series, CC BY 3.0 IGO): newest report, every country and aggregate (ZZ…
+      codes), indicators hdi, le, eys, mys, gnipc, gdi, gii, ihdi, phdi and components with sex variants,
+      1990 to the report's last year. Grain: iso3 × indicator × year. A new report recalculates the whole
+      series (compare within one release).
+    tests:
+      - unique:
+          column_name: "iso3 || '|' || indicator || '|' || year"
+    columns:
+      - name: iso3
+        tests: [not_null]
+      - name: indicator
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]

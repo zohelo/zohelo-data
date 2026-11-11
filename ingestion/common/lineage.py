@@ -31,6 +31,7 @@ SOURCES = (
     "oecd",
     "bis",
     "ilostat",
+    "undp_hdr",
     "world_bank_wdi",
     "news_feeds",
     "gdelt",

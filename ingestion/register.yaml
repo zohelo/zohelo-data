@@ -1324,7 +1324,8 @@ sources:
   name: Human Development Data Center
   short_name: UNDP Human Development
   provider: United Nations Development Programme
-  status: approved
+  source_system: undp_hdr
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1335,12 +1336,13 @@ sources:
   coverage: 193 countries and territories in Country Insights; index histories vary. HDI series is recalculated
     annually.
   access:
-    endpoint: https://hdr.undp.org/data-center
+    endpoint: https://hdr.undp.org/data-center/documentation-and-downloads
     kind: bulk_file
     interfaces: [HTML, bulk-files]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No numeric quota published; one page and one file request per run (HDR25 composite indices
+      CSV 2.0 MB; Dev probe 43086552621, 11 Nov 2026).
   licence:
     status: open-conditional
     notes: 'Terms: CC BY 3.0 IGO, https://hdr.undp.org/en/content/copyright-and-terms-use ("All materials provided on
@@ -1359,7 +1361,7 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
     - 'Enforce vintage-aware comparisons'
     - 'Check licences of externally sourced components'

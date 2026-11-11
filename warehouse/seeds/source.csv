@@ -28,3 +28,4 @@ gdelt,CD-030,GDELT: wolumen i wydźwięk wiadomości,GDELT news volume and tone,
 release_calendars,TP-010,Kalendarze publikacji statystyk,Official release calendars,"Eurostat, GUS, ECB",signal,file,international-public,eurostat_reuse,https://ec.europa.eu/eurostat/news/euro-indicators/release-calendar
 bis,GL-015,BIS Data Portal,BIS Data Portal,Bank for International Settlements,cube,file,international-public,bis_terms,https://data.bis.org/
 ilostat,GL-023,ILOSTAT,ILOSTAT,International Labour Organization,cube,file,international-public,cc_by_4_0_ilo,https://ilostat.ilo.org/data/bulk/
+undp_hdr,GL-028,UNDP Human Development Data Center,UNDP Human Development Data Center,United Nations Development Programme,cube,file,international-public,cc_by_3_0_igo_undp_hdr,https://hdr.undp.org/data-center/documentation-and-downloads
