@@ -5067,7 +5067,7 @@ sources:
   name: Państwowy Rejestr Nazw Geograficznych (PRNG)
   short_name: GUGiK PRNG
   provider: GUGiK
-  status: registered
+  status: approved
   family: E
   kpi: false
   geography: Poland
@@ -5078,17 +5078,22 @@ sources:
   coverage: Current national register plus world-name section; historical snapshots not confirmed.
   access:
     endpoint: https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-nazw-geograficznych-prng/
-    kind: api
-    interfaces: [WFS, WMS, bulk-files, HTML]
+    kind: bulk_file
+    interfaces: [GML, SHP, XLSX, WFS, WMS]
     auth: Public services and download.
     cost: Free download.
     limits: Unknown; no numeric quota was confirmed.
   licence:
-    status: open-conditional
-    notes: PRNG is listed among free GUGiK downloads; verify package-specific attribution.
+    status: unresolved
+    notes: 'Terms: the PRNG page https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-nazw-geograficznych-prng/ describes
+      free download of the national data but, unlike BDOT10k and NMT pages, carries no "możliwa do dowolnego wykorzystania"
+      sentence (page read 11 Nov 2026 from a GitHub runner); licence stays unresolved (internal only) until GUGiK states reuse
+      terms for PRNG.'
   updates: Register is updated; cadence unknown.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
+    history: 'Nationwide download in the geoportal "Dane do pobrania" layer "Państwowy Rejestr Nazw Geograficznych" (localities
+      and physiographic objects separately, GML, SHP, XLSX) or the WFS https://mapy.geoportal.gov.pl/wss/service/PZGiK/PRNG/WFS/GeographicalNames
+      (GML). Size: tens of MB (estimate, not measured).'
     incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
     identifiers: PRNG identifier; retain native name, language/status fields and geometry.
   modelling:
@@ -5097,17 +5102,19 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Confirm bulk format, change semantics and reuse notice.
+    - 'Licence unresolved: no reuse sentence on the PRNG page'
+    - Inspect the package notice of the downloaded file
     references:
     - https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-nazw-geograficznych-prng/
     - https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl
+    - https://mapy.geoportal.gov.pl/wss/service/PZGiK/PRNG/WFS/GeographicalNames
 - id: PL-ENV-003
   name: Baza Danych Obiektów Topograficznych BDOT10k
   short_name: GUGiK BDOT10k
   provider: GUGiK
-  status: registered
+  status: approved
   family: G
   kpi: false
   geography: Poland
@@ -5125,10 +5132,16 @@ sources:
     limits: Unknown; no numeric quota was confirmed.
   licence:
     status: open-conditional
-    notes: Official page says data are free for arbitrary use; retain source/edition and inspect package notice.
+    notes: 'Terms: https://www.geoportal.gov.pl/pl/dane/baza-danych-obiektow-topograficznych-bdot10k/ states: "Baza BDOT10k
+      jest dostępna bezpłatnie i możliwa do dowolnego wykorzystania" and that since 31 July 2020 the release of BDOT10k data
+      lets everyone use them for any purpose ("uwolnienie danych BDOT10k powoduje, że dzisiaj każdy może w łatwy sposób wykorzystywać
+      te dane do dowolnych celów") (page read 11 Nov 2026 from a GitHub runner). No licence name and no attribution wording:
+      show "Źródło: GUGiK, BDOT10k" with the edition date; commercial reuse and modification are allowed by that sentence.'
   updates: Area packages update asynchronously.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
+    history: Download from the geoportal "Dane do pobrania" layer group "Topografia" > "Baza danych obiektów topograficznych"
+      (per powiat and per voivodeship GML/SHP packages) or the WFS/WMTS services; about 60 million objects nationwide (page
+      statement); several GB zipped (estimate, not measured).
     incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
     identifiers: Native object IDs, class codes, package geography and edition.
   modelling:
@@ -5137,7 +5150,7 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
     - Confirm application schema version and archive completeness per package.
     references:
@@ -5146,7 +5159,7 @@ sources:
   name: Ortofotomapa (ORTO)
   short_name: GUGiK orthophoto
   provider: GUGiK
-  status: registered
+  status: approved
   family: G
   kpi: false
   geography: Poland
@@ -5164,10 +5177,13 @@ sources:
     limits: Unknown; no numeric quota was confirmed.
   licence:
     status: open-conditional
-    notes: Official page permits free arbitrary use; inspect individual package metadata and attribution.
+    notes: 'Terms: https://www.geoportal.gov.pl/pl/dane/ortofotomapa-orto/ states: "Ortofotomapa jest dostępna bezpłatnie
+      do pobrania i możliwa do dowolnego wykorzystania" (page read 11 Nov 2026 from a GitHub runner). No licence name or attribution
+      wording; show "Źródło: GUGiK, Ortofotomapa".'
   updates: Project/area refresh, not a single national cadence.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
+    history: 'Per-sheet GeoTIFF from the geoportal "Pobierz dane" module, WCS, or the WFS index (skorowidze) per year 1957-2026;
+      terabyte scale (estimate): stage 2 decides what to land (index and sheet metadata first).'
     incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
     identifiers: Footprint, acquisition year/date, resolution, sheet/package identifier.
   modelling:
@@ -5176,16 +5192,17 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
     - Check package-level licensing, resolutions and cloud/season metadata.
     references:
     - https://www.geoportal.gov.pl/pl/dane/ortofotomapa-orto/
+    - https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WFS/Skorowidze
 - id: PL-ENV-005
   name: NMT, NMPT and airborne laser-scanning elevation products
   short_name: GUGiK elevation (NMT)
   provider: GUGiK
-  status: registered
+  status: approved
   family: G
   kpi: false
   geography: Poland
@@ -5203,20 +5220,22 @@ sources:
     limits: Unknown; no numeric quota was confirmed.
   licence:
     status: open-conditional
-    notes: GUGiK lists NMT, NMPT and LiDAR among free downloads; verify each package notice.
+    notes: 'Terms: https://www.geoportal.gov.pl/pl/dane/numeryczny-model-terenu-nmt/ states: "Dane NMT są dostępne bezpłatnie
+      i możliwe do dowolnego wykorzystania" (page read 11 Nov 2026 from a GitHub runner). No licence name or attribution wording;
+      show "Źródło: GUGiK, NMT".'
   updates: Acquisition campaigns by area.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
+    history: 'Sheet download in the geoportal "Pobierz dane" module (NMT grid <=1 m and 5 m), WCS, WFS sheet indexes per year
+      (2000-2019 index in PL-KRON86-NH); terabyte scale (estimate): stage 2 decides the landing scope.'
     incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
     identifiers: Sheet/footprint, acquisition epoch, resolution/density and vertical reference.
   modelling:
-    notes: Preserve vertical datum and source CRS; Geoportal examples use EPSG:2180. Do not derive change without
-      epoch alignment.
+    notes: Preserve vertical datum and source CRS; Geoportal examples use EPSG:2180. Do not derive change without epoch alignment.
     overlap: Related products must not be summed; NMPT and NMT represent different surfaces.
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
     - Confirm formats, vertical datums and package coverage.
     references:
@@ -5304,7 +5323,7 @@ sources:
   name: 'Public Data API: synoptic, hydrological, meteorological and warning feeds'
   short_name: IMGW public data API
   provider: Instytut Meteorologii i Gospodarki Wodnej–PIB (IMGW-PIB)
-  status: registered
+  status: approved
   family: G
   kpi: true
   geography: Poland
@@ -5316,45 +5335,51 @@ sources:
   access:
     endpoint: https://danepubliczne.imgw.pl/apiinfo
     kind: api
-    interfaces: [REST-API, JSON, XML, CSV, HTML]
+    interfaces: [REST API, JSON, XML, CSV, HTML]
     auth: Public without documented key.
     cost: Generally free under stated reuse conditions.
-    limits: Unknown; numeric quotas were not confirmed. API protection rules are not a quota specification.
+    limits: None published on the API page.
   licence:
     status: open-conditional
-    notes: IMGW states commercial reuse is possible and requires attribution; preserve exact attribution requirement
-      during legal review.
+    notes: 'Terms: IMGW data-sharing rules ("Regulamin udostępniania danych", section on https://danepubliczne.imgw.pl/apiinfo
+      (page read 11 Nov 2026 from a GitHub runner)): "Każdemu przysługuje prawo do ponownego wykorzystania informacji sektora
+      publicznego" (everyone may re-use the public sector information), data are offered through https://danepubliczne.imgw.pl/
+      and www.meteo.imgw.pl. The existing note records that commercial reuse is possible with attribution: keep "Źródło: Instytut
+      Meteorologii i Gospodarki Wodnej - Państwowy Instytut Badawczy" and mark processed values as processed; re-read the
+      regulation attribution clause when writing the declaration.'
   updates: Observations/warnings refresh operationally; endpoint-specific cadence unknown.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
+    history: 'Current-state endpoints only (the API has no history): https://danepubliczne.imgw.pl/api/data/synop (hourly
+      synoptic, JSON; also /format/xml|csv|html), /api/data/hydro/, /api/data/meteo/, /api/data/warningsmeteo, /api/data/warningshydro,
+      product list /api/data/product. History comes from PL-ENV-009.'
+    incremental: Poll hourly and keep each response as a snapshot (the synop response is about 14 KB; checked 11 Nov 2026).
     identifiers: Station ID, parameter, observation timestamp and warning identifier.
   modelling:
     notes: Preserve quality flags; normalize time with Europe/Warsaw/UTC offset and DST evidence.
     overlap: Live API overlaps the file archive near present but is not a historical bulk substitute.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
     - Confirm endpoint schemas, retention, timestamps, quotas and attribution wording.
-    references: ['https://danepubliczne.imgw.pl/apiinfo']
+    references:
+    - https://danepubliczne.imgw.pl/apiinfo
 - id: PL-ENV-009
   name: Public observational file archive
   short_name: IMGW observation archive
   provider: IMGW-PIB
-  status: registered
+  status: approved
   family: G
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [weather, hydrology]
   entities: [station, observation file]
-  granularity: Packaged meteorological and hydrological observations arranged in daily, monthly and longer-period
-    directories.
+  granularity: Packaged meteorological and hydrological observations arranged in daily, monthly and longer-period directories.
   coverage: Dated directory archive exists; earliest year and gaps vary by series and require inventory.
   access:
-    endpoint: https://danepubliczne.imgw.pl/apiinfo
+    endpoint: https://danepubliczne.imgw.pl/data/dane_pomiarowo_obserwacyjne/
     kind: bulk_file
     interfaces: [bulk-files, ZIP, directory-index]
     auth: Public file download.
@@ -5362,20 +5387,22 @@ sources:
     limits: Unknown; no bulk-download rate policy was confirmed.
   licence:
     status: open-conditional
-    notes: IMGW reuse terms allow commercial reuse with attribution; verify whether every archive subproduct is
-      covered.
+    notes: 'Terms: same IMGW rules as PL-ENV-008 (https://danepubliczne.imgw.pl/apiinfo): "Każdemu przysługuje prawo do ponownego
+      wykorzystania informacji sektora publicznego". Attribution as in PL-ENV-008; verify the clause covers every archive
+      sub-product.'
   updates: Files appear in period-based directories; publication lag and revisions are series-specific.
   ingestion:
-    history: 'PROPOSAL: manifest directories, checksums and source timestamps before selective download.'
-    incremental: 'PROPOSAL: poll directory metadata and re-ingest changed files; not CDC.'
+    history: 'Directory listing with dane_aktynometryczne/, dane_hydrologiczne/ and dane_meteorologiczne/ (zipped per year/period;
+      also reachable as products through the API); size per directory to be listed in the dev trial (estimate: low GB in total).'
+    incremental: Re-list the directories monthly; new or replaced ZIP = new version by checksum.
     identifiers: Station list/version, period, file path and publication timestamp.
   modelling:
     notes: Separate observation time from file release; retain missing/quality codes.
     overlap: Use for backfill; reconcile overlap with live API by station/parameter/time and revision rules.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
     - Establish per-series years, format dictionaries and revision policy.
     references:
@@ -5385,7 +5412,7 @@ sources:
   name: Portal Jakości Powietrza API
   short_name: GIOŚ air quality
   provider: Główny Inspektorat Ochrony Środowiska (GIOŚ)
-  status: registered
+  status: approved
   family: G
   kpi: true
   geography: Poland
@@ -5397,16 +5424,20 @@ sources:
   access:
     endpoint: https://powietrze.gios.gov.pl/pjp/content/api
     kind: api
-    interfaces: [REST-API, JSON-LD, OpenAPI]
+    interfaces: [REST API, JSON-LD, OpenAPI]
     auth: Public API.
     cost: Free public access.
-    limits: Protective limits are referenced in OpenAPI but numeric values were not retrieved; verify before use.
+    limits: 'Per the API page: current measurement data from the last full hour to 3 days back, 1500 requests per minute;
+      air quality index 1500 per minute; station and sensor lists with their own limits (page lists "limit 2 i 1500 żądań
+      na minutę"): confirm per endpoint in the dev trial.'
   licence:
     status: open-conditional
     notes: Attribution is required. GIOŚ warns current data are unverified and may change.
   updates: Operational updates can be delayed by transmission outages and may be revised after verification.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
+    history: 'New API v1: https://api.gios.gov.pl/pjp-api/v1/rest/data/getData/{sensorId} (measurements), /aqindex/getIndex/{stationId},
+      station and sensor lists; the old /pjp-api/rest/ endpoints are withdrawn. Archive series of validated data are published
+      separately (check the GIOŚ archive pages in the dev trial).'
     incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
     identifiers: Station, sensor/parameter and observation timestamp.
   modelling:
@@ -5414,10 +5445,11 @@ sources:
     overlap: Do not mix provisional station readings with verified annual assessments without status.
   research:
     priority: review-first
-    evidence: documented
+    evidence: tested
     connection: not-tested
     blockers:
-    - Confirm retention, pagination/quota, revision flags and exact attribution.
+    - 'Current data are not validated and may change (GIOŚ): keep snapshots and mark them provisional'
+    - Find the validated-archive download route (annual files) and its terms
     references:
     - https://powietrze.gios.gov.pl/pjp/content/api
 - id: PL-ENV-011
@@ -6225,40 +6257,43 @@ sources:
   name: Kraków KMK GTFS and GTFS-Realtime feeds
   short_name: Kraków GTFS
   provider: Zarząd Transportu Publicznego w Krakowie / Miasto Kraków
-  status: registered
+  status: approved
   family: H
   kpi: false
   geography: Kraków metropolitan service area, Poland
   provider_type: subnational-public
   domains: [public transport, municipal open data]
   entities: [route, trip, stop, vehicle, alert]
-  granularity: Static GTFS ZIPs and realtime service alerts, trip updates and vehicle positions for published feed
-    groups.
+  granularity: Static GTFS ZIPs and realtime service alerts, trip updates and vehicle positions for published feed groups.
   coverage: Current feeds; no official historical archive documented.
   access:
     endpoint: https://gtfs.ztp.krakow.pl/
-    kind: web
-    interfaces: [GTFS, GTFS-Realtime, protobuf, portal]
+    kind: bulk_file
+    interfaces: [GTFS ZIP]
     auth: Public direct files and city portal listing.
     cost: Free public access.
     limits: Unknown; no numeric quota was confirmed.
   licence:
-    status: dataset-specific
-    notes: Portal terms must be checked before redistribution.
+    status: unresolved
+    notes: 'Terms: the feed page https://gtfs.ztp.krakow.pl/ lists only the three ZIP files and states no licence (page read
+      11 Nov 2026 from a GitHub runner); the Kraków open-data portal terms were not read, so the licence is unresolved (internal
+      only) until the ZTP Kraków or portal terms are quoted.'
   updates: Portal marks dataset daily; realtime files are current snapshots.
   ingestion:
-    history: 'PROPOSAL: retain dated GTFS packages if terms permit.'
-    incremental: 'PROPOSAL: poll RT snapshots with source timestamps; no CDC claim.'
+    history: 'Three static GTFS feeds at https://gtfs.ztp.krakow.pl/: GTFS_KRK_A.zip (buses), GTFS_KRK_M.zip, GTFS_KRK_T.zip
+      (trams); small (low MB, estimate). Keep each file per run: the feed has no history.'
+    incremental: Poll daily with checksum; new file = new timetable version.
     identifiers: GTFS/RT IDs, feed group, service date and entity timestamp.
   modelling:
     notes: Preserve agency/feed namespace and Europe/Warsaw service-time semantics.
     overlap: City portal aggregates the producer files; avoid duplicate ingestion.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Confirm license, feed-group meanings, horizon, limits and retention.
+    - 'Licence unresolved: no terms on the feed page; read the Kraków open-data portal terms'
+    - Add real-time GTFS-RT only if the portal terms allow
     references:
     - https://gtfs.ztp.krakow.pl/
     - https://otwartedane.um.krakow.pl/zbiory-danych/komunikacja-miejska-w-krakowie-kmk
