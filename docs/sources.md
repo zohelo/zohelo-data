@@ -626,8 +626,7 @@ Landing): one row per record with a value, the codes and labels of Country, Clas
 Time, the value as the exact JSON number text. Silver `silver.icp_observations`. 231,174 observations,
 207 economies and benchmark groups (ECB, HIB, LIB, LMB, UMB, WLD; no EU aggregate), 48 series × 17
 classifications (expenditure in LCU and US$, PPP, per capita PPP, price level index world = 100, …),
-2017–2023 (Dev trial 43085820597). Archive retention `keep_days: 0` (#2523): Bronze is the lean copy of
-~375 MB of JSON. Weekly check Thursday 02:50 UTC (two catalogue requests while unchanged).
+2017–2023 (Dev trial 43085820597). Archive retention: newest version + 90 days. Weekly check Thursday 02:50 UTC (two catalogue requests while unchanged).
 
 ## KRUS basic benefit statistics
 
@@ -664,7 +663,9 @@ area and pads some codes with spaces, which Silver trims). Silver `silver.ids_ob
 `silver.ids_series`. The November 2026 archive: 2,647,628 observations, 134 debtor economies and groups,
 577 series, counterpart WLD only, 1970–2033 with projections (Dev trial 43085820597). IDS has no Poland
 and no EU member state (debtors are low- and middle-income economies), so it publishes no KPI for the
-zohelo slice. Full rebuild above 1M rows accepted under D32 (one yearly archive; `exception: "#2736"`).
+zohelo slice. `silver.ids_observations` is rebuilt in full above the #822 1M-row ceiling under its own exception record
+(#2772: 4M ceiling; every archive revises the whole history; rebuilt on a new archive and on any change to the
+shared build fingerprint; review 15 Jan 2027).
 Weekly check Thursday 01:40 UTC.
 
 ## OECD Data Explorer (SDMX)

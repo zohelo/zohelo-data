@@ -18,7 +18,7 @@ extraction:
 landing: 01_landing/world_bank_icp/
 archive_policy:
   move: true
-  retention: {keep_latest: 1, keep_days: 0}   # #2523: ~375 MB per ICP version; Bronze is the lean copy
+  retention: {keep_latest: 1, keep_days: 90}
   prune: report
 bronze: [bronze.icp_observations, bronze.icp_rejected_files]
 silver: [silver.icp_observations]

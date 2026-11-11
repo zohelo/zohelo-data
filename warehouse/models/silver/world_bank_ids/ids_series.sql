@@ -5,7 +5,7 @@ with newest as (
     where
         source_version
         = (select max(latest.source_version) from {{ source('world_bank_ids', 'ids_metadata') }} as latest)
-        and lower(member) like '%seriesmetadata.csv'
+        and lower(member) like '%seriesmetadata.csv' and lower(member) not like '%country%'
 )
 
 select
@@ -19,5 +19,5 @@ select
     max(case when field = 'License Type' then value_text end) as license_type,
     max(raw_sha256) as raw_sha256
 from newest
-group by source_row_number
+group by member, source_row_number
 having max(case when field = 'Code' then value_text end) is not null
