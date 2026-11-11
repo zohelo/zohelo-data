@@ -24,23 +24,41 @@ with entities as (
     where legal_jurisdiction is not null
 ),
 
+geo_map as (
+    select * from {{ ref('poc_map_geography') }}
+    where source_system = 'gleif'
+),
+
+-- one row per entity and area (country, and voivodeship for Poland); legacy and current ISO 3166-2 codes of one
+-- voivodeship meet in one geography_key before counting; unmatched codes stay apart (_X with the code)
 located as (
     select
-        country_code as geo_code,
-        registration_status,
-        entity_status,
-        legal_form,
-        entity_category
-    from entities
-    union all
-    select
-        region_code as geo_code,
-        registration_status,
-        entity_status,
-        legal_form,
-        entity_category
-    from entities
-    where region_code is not null
+        coalesce(g.geography_key, '_X') as geography_key,
+        coalesce(g.geography_key, '_X:' || u.geo_code) as area_key,
+        u.geo_code,
+        u.registration_status,
+        u.entity_status,
+        u.legal_form,
+        u.entity_category
+    from (
+        select
+            country_code as geo_code,
+            registration_status,
+            entity_status,
+            legal_form,
+            entity_category
+        from entities
+        union all
+        select
+            region_code as geo_code,
+            registration_status,
+            entity_status,
+            legal_form,
+            entity_category
+        from entities
+        where region_code is not null
+    ) as u
+    left join geo_map as g on u.geo_code = g.source_code
 ),
 
 {% set dims = ['registration_status', 'entity_status', 'legal_form', 'entity_category'] %}
@@ -50,13 +68,15 @@ counted as (  -- each breakdown alone (others _T), with and without the registra
         {% set kept = (['registration_status'] if with_status else []) + cut %}
         {% if not loop.first or with_status %}union all{% endif %}
         select
-            geo_code,
+            area_key,
+            any_value(geography_key) as geography_key,
+            min(geo_code) as geo_code,
             {% for d in dims %}
                 {{ d if d in kept else "'_T'" }} as {{ d }},
             {% endfor %}
             count(*) as entities
         from located
-        group by geo_code{% for d in kept %}, {{ d }}{% endfor %}
+        group by area_key{% for d in kept %}, {{ d }}{% endfor %}
     {% endfor %}{% endfor %}
 ),
 
@@ -65,11 +85,6 @@ snapshot as (
         max(source_version) as source_version,
         any_value(raw_sha256) as raw_sha256
     from entities
-),
-
-geo_map as (
-    select * from {{ ref('poc_map_geography') }}
-    where source_system = 'gleif'
 )
 
 select
@@ -82,7 +97,7 @@ select
     'entities' as unit_code,
     'legal entities' as unit_name,
     c.geo_code as geography_source_code,
-    coalesce(g.geography_key, '_X') as geography_key,
+    c.geography_key,
     'D' as frequency,
     cast(strptime(s.source_version, '%Y%m%dT%H%M%SZ') as date) as date_key,
     cast(cast(strptime(s.source_version, '%Y%m%dT%H%M%SZ') as date) as varchar) as period_label,
@@ -98,4 +113,3 @@ select
     s.raw_sha256
 from counted as c
 cross join snapshot as s
-left join geo_map as g on c.geo_code = g.source_code
