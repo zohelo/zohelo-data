@@ -41,7 +41,7 @@ silver: [silver.budget_execution]
 gold: [gold.build_public_finance]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
-# Refresh policy for all layers (owner decision #875): one small workbook, rebuilt in full.
-refresh: {mode: full, decided: "#875"}
+# Refresh policy for all layers (D32): small workbooks (under 200,000 cells), rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2766"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
