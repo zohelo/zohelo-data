@@ -62,7 +62,9 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)
        gold.dimension, gold.dimension_alias, gold.dim_dimension,  # catalogue: axes
-       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_wdi, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth]   # Gold v1 (warehouse/models/gold, docs/model.md)
+       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_wdi, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth,
+       gold.build_wgi, gold.build_findex, gold.build_icp,  # World Bank WGI, Findex, ICP (#2736)
+       gold.metrics_wgi_voice_accountability, gold.metrics_wgi_political_stability, gold.metrics_wgi_government_effectiveness, gold.metrics_wgi_regulatory_quality, gold.metrics_wgi_rule_of_law, gold.metrics_wgi_control_of_corruption, gold.metrics_account_ownership, gold.metrics_price_level_index]   # Gold v1 (warehouse/models/gold, docs/model.md)
 demo_namespaces: [demo_bronze, demo_silver, demo_gold]  # phase 2 demo warehouse (program plan §3.3); never in the public catalogue
 
 # Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
@@ -109,6 +111,9 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_eurostat: {rows: 800000}
   poc_build_nbp: {rows: 600000}
   poc_build_wdi: {rows: 500000}  # + 16 slice indicators, all economies (#2592)
+  poc_build_wgi: {rows: 50000}  # 6 estimates x ~214 economies x 27 years (~35,000)
+  poc_build_findex: {rows: 5000}  # account_t_d, group all: ~150 economies x up to 6 waves
+  poc_build_icp: {rows: 5000}  # 2 measures x ~207 economies x 2017-2023 (~2,000)
   poc_concept_measures: {rows: 1000}
   poc_dim_calendar: {rows: 80000}
   poc_dim_concept: {rows: 1000}
@@ -191,5 +196,14 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_average_gross_wage: {rows: 20000}
   poc_metrics_employment_rate: {rows: 20000}
   poc_metrics_registered_unemployment_rate: {rows: 30000}
+  # World Bank WGI, Findex, ICP (#2736)
+  poc_metrics_wgi_voice_accountability: {rows: 10000}
+  poc_metrics_wgi_political_stability: {rows: 10000}
+  poc_metrics_wgi_government_effectiveness: {rows: 10000}
+  poc_metrics_wgi_regulatory_quality: {rows: 10000}
+  poc_metrics_wgi_rule_of_law: {rows: 10000}
+  poc_metrics_wgi_control_of_corruption: {rows: 10000}
+  poc_metrics_account_ownership: {rows: 5000}
+  poc_metrics_price_level_index: {rows: 5000}
   dim_dataset: {rows: 40000}
   dim_dimension: {rows: 1000}

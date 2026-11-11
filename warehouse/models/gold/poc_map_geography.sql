@@ -178,6 +178,42 @@ wdi as (
     from {{ ref('wdi_countries') }} as w
     left join geo as g on g.level_name = 'country' and w.iso2_code = g.iso2
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
+),
+
+-- world_bank_wgi: World Bank economy codes like WDI's, mapped through the WDI economies (#2736)
+wb_wgi as (
+    select
+        'world_bank_wgi' as source_system,
+        c.economy_code as source_code,
+        coalesce(g.geography_key, g_agg.geography_key, '_X') as geography_key
+    from (select distinct economy_code from {{ ref('wgi_observations') }}) as c
+    left join {{ ref('wdi_countries') }} as w on c.economy_code = w.economy_code
+    left join geo as g on g.level_name = 'country' and w.iso2_code = g.iso2
+    left join geo as g_agg on g_agg.geography_key = 'WB:' || c.economy_code
+),
+
+-- world_bank_findex: World Bank economy codes like WDI's, mapped through the WDI economies (#2736)
+wb_findex as (
+    select
+        'world_bank_findex' as source_system,
+        c.economy_code as source_code,
+        coalesce(g.geography_key, g_agg.geography_key, '_X') as geography_key
+    from (select distinct economy_code from {{ ref('findex_observations') }}) as c
+    left join {{ ref('wdi_countries') }} as w on c.economy_code = w.economy_code
+    left join geo as g on g.level_name = 'country' and w.iso2_code = g.iso2
+    left join geo as g_agg on g_agg.geography_key = 'WB:' || c.economy_code
+),
+
+-- world_bank_icp: World Bank economy codes like WDI's, mapped through the WDI economies (#2736)
+wb_icp as (
+    select
+        'world_bank_icp' as source_system,
+        c.economy_code as source_code,
+        coalesce(g.geography_key, g_agg.geography_key, '_X') as geography_key
+    from (select distinct economy_code from {{ ref('icp_observations') }}) as c
+    left join {{ ref('wdi_countries') }} as w on c.economy_code = w.economy_code
+    left join geo as g on g.level_name = 'country' and w.iso2_code = g.iso2
+    left join geo as g_agg on g_agg.geography_key = 'WB:' || c.economy_code
 )
 
 select
@@ -195,6 +231,12 @@ from (
     select * from dbw
     union all
     select * from wdi
+    union all
+    select * from wb_wgi
+    union all
+    select * from wb_findex
+    union all
+    select * from wb_icp
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

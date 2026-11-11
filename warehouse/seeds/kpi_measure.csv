@@ -144,3 +144,12 @@ pensioners,gus_bdl,gus_bdl:P2861:osoba:przeciętna liczba emerytów i rencistów
 zus_pension_avg,gus_bdl,gus_bdl:P2860:zł:z pozarolniczego systemu ubezpieczeń społecznych emerytury,"non-agricultural system, old-age pension",1,
 investment_outlays,gus_bdl,gus_bdl:P2862:tys. zł:nakłady inwestycyjne w przedsiębiorstwach,"enterprises, current prices",1,
 vacancies_per_unemployed,gus_bdl,gus_bdl:P4334:osoba:zarejestrowani bezrobotni na 1 ofertę pracy,annual,1,
+wgi_voice_accountability,world_bank_wgi,world_bank_wgi:GOV_WGI_VA.EST,governance estimate,1,
+wgi_political_stability,world_bank_wgi,world_bank_wgi:GOV_WGI_PV.EST,governance estimate,1,
+wgi_government_effectiveness,world_bank_wgi,world_bank_wgi:GOV_WGI_GE.EST,governance estimate,1,
+wgi_regulatory_quality,world_bank_wgi,world_bank_wgi:GOV_WGI_RQ.EST,governance estimate,1,
+wgi_rule_of_law,world_bank_wgi,world_bank_wgi:GOV_WGI_RL.EST,governance estimate,1,
+wgi_control_of_corruption,world_bank_wgi,world_bank_wgi:GOV_WGI_CC.EST,governance estimate,1,
+account_ownership,world_bank_findex,world_bank_findex:account_t_d,"age 15+, survey years",1,
+price_level_index,world_bank_icp,world_bank_icp:1000000:PX.WL,"GDP, ICP 2021 (benchmarks 2017 and 2021)",1,
+gdp_per_capita_pps,world_bank_icp,world_bank_icp:1000000:PCAP.PP,"ICP 2021 GDP per capita, PPP international $ (not an EU27 index)",3,ppp_usd_per_person
