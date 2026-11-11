@@ -230,7 +230,8 @@ deliverables:
         type: Task
         title: Write kpi/<kpi_key>/latest.json from Gold (warehouse/publish.py)
         effort: L
-        state: open
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/2071
         contract: true
         depends_on: [data/published/published-v1/contract/schemas]
         context: >-
@@ -260,7 +261,8 @@ deliverables:
         type: Task
         title: Write kpi/<kpi_key>/series.parquet from Gold (warehouse/publish.py)
         effort: M
-        state: open
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/2195
         contract: true
         depends_on: [data/published/published-v1/publish/kpi-latest]
         context: >-
@@ -290,7 +292,8 @@ deliverables:
         type: Task
         title: Write the catalogue tables as catalog/<table>.parquet
         effort: S
-        state: open
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/2199
         contract: true
         depends_on: [data/published/published-v1/publish/kpi-latest]
         context: >-
@@ -323,7 +326,8 @@ deliverables:
         type: Task
         title: Write geo/country.geojson and geo/voivodeship.geojson from PRG
         effort: M
-        state: open
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/2234
         contract: true
         depends_on: [data/published/published-v1/publish/kpi-latest]
         context: >-
@@ -356,7 +360,8 @@ deliverables:
         type: Task
         title: Run gold.publish after every model build (run.py, pipeline.yml)
         effort: M
-        state: open
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/2197
         contract: true
         depends_on: [data/published/published-v1/publish/kpi-latest]
         context: >-
@@ -393,7 +398,8 @@ deliverables:
         type: Task
         title: Write feed/calendar.ics (no events yet) in gold.publish
         effort: S
-        state: open
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/2232
         contract: true
         depends_on: [data/published/published-v1/publish/kpi-latest]
         context: >-
@@ -427,7 +433,8 @@ deliverables:
         type: Task
         title: Write one calendar.ics event per release_calendar.csv row
         effort: S
-        state: open
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/2361
         contract: true
         depends_on: [data/ingestion/release-scheduling/calendar/nbp-seed]
         context: >-
@@ -483,7 +490,8 @@ deliverables:
         type: Task
         title: Write geo/powiat.geojson and geo/gmina.geojson from PRG
         effort: M
-        state: open
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/2465
         contract: true
         depends_on: [data/published/published-v1/publish/geo-size-trial]
         context: >-

@@ -74,7 +74,8 @@ deliverables:
         type: Task
         title: Seed release_calendar.csv with the NBP table A releases
         effort: S
-        state: open
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/2360
         contract: true
         context: >-
           feed/calendar.ics needs a release calendar; none exists. NBP table A (KPI fx_rate) comes every Polish

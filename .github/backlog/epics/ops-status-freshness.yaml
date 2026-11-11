@@ -29,7 +29,8 @@ deliverables:
         type: Task
         title: Compute each source's next scheduled run from its crons
         effort: S
-        state: open
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/2000
         context: >-
           status.json needs next_expected_at per source. The schedules are declared in
           ingestion/sources/<source>.yaml under extraction.schedule (UTC crons, e.g. nbp
@@ -61,7 +62,8 @@ deliverables:
         type: Task
         title: Add status.json to the published contract (doc, schema, fixture)
         effort: S
-        state: open
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/2353
         contract: true
         context: >-
           This Epic's done_when needs 06_published/v1/status.json (each source's last_loaded_at, next_expected_at,
@@ -89,7 +91,8 @@ deliverables:
         type: Task
         title: Write status.json in gold.publish
         effort: M
-        state: open
+        state: done
+        done_by: https://github.com/zohelo/zohelo-data/pull/2355
         contract: true
         depends_on: [data/ops/status-freshness/status-json/contract]
         context: >-
