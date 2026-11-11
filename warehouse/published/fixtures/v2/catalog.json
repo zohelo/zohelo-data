@@ -65,11 +65,13 @@
       "group_key": "economy.national_accounts",
       "source_keys": [
         "eurostat",
+        "world_bank_wdi",
         "gus_dbw"
       ],
       "geographies": [
         "PL",
         "EU27",
+        "CZ",
         "DE"
       ],
       "dimension_keys": [],
@@ -91,7 +93,8 @@
       "domain_key": "economy",
       "group_key": "economy.prices",
       "source_keys": [
-        "eurostat"
+        "eurostat",
+        "world_bank_wdi"
       ],
       "geographies": [
         "PL",
@@ -180,6 +183,13 @@
       "name_pl": "Unia Europejska (27)",
       "name_en": "European Union (27)",
       "level": "aggregate",
+      "eu": true
+    },
+    {
+      "key": "CZ",
+      "name_pl": "Czechy",
+      "name_en": "Czechia",
+      "level": "country",
       "eu": true
     },
     {

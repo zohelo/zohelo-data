@@ -10,6 +10,13 @@
     "2025-Q1",
     "2025-Q2"
   ],
+  "periods_by_frequency": {
+    "A": [
+      "2022",
+      "2023",
+      "2024"
+    ]
+  },
   "series": [
     {
       "geography": "PL",
@@ -23,6 +30,18 @@
         3.4,
         3.7,
         4.0
+      ]
+    },
+    {
+      "geography": "PL",
+      "source_key": "world_bank_wdi",
+      "unit_key": "pct",
+      "members": {},
+      "frequency": "A",
+      "values": [
+        5.3,
+        4.1,
+        2.9
       ]
     },
     {
@@ -51,6 +70,30 @@
         0.9,
         1.0,
         1.1
+      ]
+    },
+    {
+      "geography": "EU27",
+      "source_key": "world_bank_wdi",
+      "unit_key": "pct",
+      "members": {},
+      "frequency": "A",
+      "values": [
+        3.5,
+        2.5,
+        1.5
+      ]
+    },
+    {
+      "geography": "CZ",
+      "source_key": "world_bank_wdi",
+      "unit_key": "pct",
+      "members": {},
+      "frequency": "A",
+      "values": [
+        2.8,
+        1.6999999999999997,
+        0.5999999999999996
       ]
     },
     {
