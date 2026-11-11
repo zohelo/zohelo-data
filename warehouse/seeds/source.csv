@@ -26,3 +26,4 @@ news_feeds,TP-001,Kanały RSS serwisów informacyjnych,News headline feeds (RSS/
 wikimedia_pageviews,CD-025,Wikimedia: odsłony artykułów,Wikimedia pageviews,Wikimedia Foundation,signal,file,community-academic,cc0_wikimedia_pageviews,https://doc.wikimedia.org/generated-data-platform/aqs/analytics-api/reference/page-views.html
 gdelt,CD-030,GDELT: wolumen i wydźwięk wiadomości,GDELT news volume and tone,GDELT Project,signal,file,community-academic,gdelt_terms,https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/
 release_calendars,TP-010,Kalendarze publikacji statystyk,Official release calendars,"Eurostat, GUS, ECB",signal,file,international-public,eurostat_reuse,https://ec.europa.eu/eurostat/news/euro-indicators/release-calendar
+ilostat,GL-023,ILOSTAT,ILOSTAT,International Labour Organization,cube,file,international-public,cc_by_4_0_ilo,https://ilostat.ilo.org/data/bulk/
