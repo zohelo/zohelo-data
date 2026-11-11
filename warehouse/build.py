@@ -82,7 +82,12 @@ def _why(plan: dict) -> dict:
     for reason in plan["reasons"].values():
         kind = reason.split(":")[0]
         kinds[kind] = kinds.get(kind, 0) + 1
-    return {"unchanged": plan["unchanged"], "why": kinds, "waiting": plan.get("waiting", [])}
+    return {
+        "unchanged": plan["unchanged"],
+        "why": kinds,
+        "waiting": plan.get("waiting", []),
+        "empty_blocks": plan.get("empty_blocks", []),  # waiting Gold blocks the facts read as zero rows
+    }
 
 
 MAX_FAILURES_SHOWN = 8

@@ -247,13 +247,48 @@
     order by k.kpi_key, m.priority
 {% endmacro %}
 
-{# All PoC observations in the common shape (the build stages of the five sources). #}
+{# The Gold blocks (build stage models) as `model:source_system`, one per line. A block model carries the tag
+   `gold_block` (ops/repo_check.py checks both lists agree): its children do not wait for it in the
+   changed-only build (warehouse/changed.py), they read it only once its table exists. #}
+{% macro poc_block_models() %}
+    poc_build_eurostat:eurostat
+    poc_build_bdl:gus_bdl
+    poc_build_dbw:gus_dbw
+    poc_build_wdi:world_bank_wdi
+    poc_build_nbp:nbp
+{% endmacro %}
+
+{# All Gold observations in the common shape: the union of the blocks whose table exists at run time (at
+   parse time every block, so dbt records each ref). A block whose table was never created (a new source whose
+   Bronze/Silver tables do not exist yet: changed.py leaves it out as waiting) contributes zero rows instead of
+   failing the union. Only "not created yet" is tolerated: a block built in this run that fails makes dbt skip
+   every model reading it, and build_check notes an absent block (poc_absent_blocks). #}
 {% macro poc_observations() %}
-    select * from {{ ref('poc_build_eurostat') }}
-    union all select * from {{ ref('poc_build_bdl') }}
-    union all select * from {{ ref('poc_build_dbw') }}
-    union all select * from {{ ref('poc_build_wdi') }}
-    union all select * from {{ ref('poc_build_nbp') }}
+    {% set ns = namespace(first=true) %}
+    {% for entry in poc_block_models().split() %}
+        {% set relation = ref(entry.split(':')[0]) %}
+        {% if not execute or load_relation(relation) is not none %}
+            {% if not ns.first %}union all {% endif %}select * from {{ relation }}
+            {% set ns.first = false %}
+        {% else %}
+            {% do log('Gold block ' ~ relation ~ ' does not exist yet: zero rows', info=true) %}
+        {% endif %}
+    {% endfor %}
+    {% if ns.first %}
+        {% do exceptions.raise_compiler_error('poc_observations: no Gold block table exists') %}
+    {% endif %}
+{% endmacro %}
+
+{# The source_system of each block whose table does not exist at run time, quoted and comma-separated
+   ('' at parse time). #}
+{% macro poc_absent_blocks() %}
+    {%- set absent = [] -%}
+    {%- for entry in poc_block_models().split() -%}
+        {%- if execute and load_relation(ref(entry.split(':')[0])) is none -%}
+            {%- do absent.append("'" ~ entry.split(':')[1] ~ "'") -%}
+        {%- endif -%}
+    {%- endfor -%}
+    {{- absent | join(', ') -}}
 {% endmacro %}
 
 {# series_key: measure × geography × breakdown codes, readable; an unmatched area keeps its source code so

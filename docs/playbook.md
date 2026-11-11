@@ -115,8 +115,13 @@ unit_name, geography_source_code, geography_key, frequency, date_key, period_lab
 breakdown_json, breakdown_label_json, sex_code, is_total, value, observation_status_key,
 source_version, raw_sha256`. Then:
 
-1. add the model to `poc_observations()` and its blocks to `poc_activated_blocks()` in
-   `warehouse/macros/poc_blocks.sql` (your own lines only);
+1. give the model the tag `gold_block` (`config(alias='build_<source>', tags=['gold_block'])`), add it
+   to `poc_block_models()` and its blocks to `poc_activated_blocks()` in
+   `warehouse/macros/poc_blocks.sql` (your own lines only; `ops.repo_check` checks the tag and the list
+   agree). The Gold PR need not wait for the source's first scheduled run: until its Bronze/Silver
+   tables exist the block waits (run summary `waiting` and `empty_blocks`, `build_check` note
+   `waiting: …`) and the facts are built from the other blocks; the first run that creates the tables
+   builds the block and the facts with it;
 2. add its codes to `poc_map_geography.sql` (section "Shared dimensions" below);
 3. add units to `warehouse/seeds/unit.csv`, KPIs to `kpi.csv` (status `draft` until checked),
    one `kpi_measure.csv` row per KPI × source measure, and for a KPI of the v2 map one

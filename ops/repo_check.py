@@ -225,6 +225,7 @@ def configuration(files: list[Path]) -> list[str]:
     problems += scheduler_worker(scheduler.DISPATCH_RUN)
     problems += full_rebuild(files)
     problems += gold_list(files)
+    problems += gold_blocks(files)
     return problems
 
 
@@ -281,6 +282,28 @@ def gold_list(files: list[Path]) -> list[str]:
     listed = set(yaml.safe_load((ROOT / "warehouse/warehouse.yaml").read_text()).get("gold") or [])
     problems = [f"warehouse.yaml gold: {name} is built by the dbt project but not listed" for name in built - listed]
     problems += [f"warehouse.yaml gold: {name} is not a Gold model or seed" for name in listed - built - NOT_DBT_GOLD]
+    return sorted(problems)
+
+
+GOLD_BLOCK_TAG = re.compile(r"tags\s*=\s*\[[^\]]*['\"]gold_block['\"]")
+GOLD_BLOCK_LIST = re.compile(r"macro poc_block_models\(\).*?endmacro", re.S)
+
+
+def gold_blocks(files: list[Path]) -> list[str]:
+    """The models tagged `gold_block` (warehouse/changed.py lets their children build while they wait) are exactly
+    the blocks poc_observations() unions (`poc_block_models()` in warehouse/macros/poc_blocks.sql)."""
+    tagged = {
+        f.stem
+        for f in files
+        if f.parts[:3] == ("warehouse", "models", "gold")
+        and f.suffix == ".sql"
+        and (ROOT / f).exists()
+        and GOLD_BLOCK_TAG.search((ROOT / f).read_text())
+    }
+    macro = GOLD_BLOCK_LIST.search((ROOT / "warehouse/macros/poc_blocks.sql").read_text())
+    listed = set(re.findall(r"^\s*(\w+):\w+\s*$", macro.group(0), re.M)) if macro else set()
+    problems = [f"poc_block_models(): {m} is tagged gold_block but not listed" for m in tagged - listed]
+    problems += [f"poc_block_models(): {m} is listed but not tagged gold_block" for m in listed - tagged]
     return sorted(problems)
 
 
