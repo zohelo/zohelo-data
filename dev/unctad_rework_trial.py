@@ -105,67 +105,79 @@ def build(con, name: str, sql: str) -> dict:
 
 
 def trial() -> None:
+    ingest = {}
     for attempt in (1, 2):
-        note(f"landing load {attempt}", {"exit": bulk_file.main("unctad", "load", landing_root=SCRATCH)})
+        ingest[f"landing {attempt}"] = bulk_file.main("unctad", "load", landing_root=SCRATCH)
     for attempt in (1, 2):
-        note(f"bronze load {attempt}", {"exit": bronze.load(0, landing_root=SCRATCH, namespace=SCRATCH)})
+        ingest[f"bronze {attempt}"] = bronze.load(0, landing_root=SCRATCH, namespace=SCRATCH)
     compile_sql()
     con = connect()
-    note("bronze rows", rows(con, f"select entity, count(*) from r2.{SCRATCH}.unctad_rows group by 1 order by 1"))
+    ingest["bronze rows"] = dict(con.execute(
+        f"select entity, count(*) from r2.{SCRATCH}.unctad_rows group by 1 order by 1").fetchall())
+    note("UNCTAD landing+bronze (exit codes; per-load detail in the loaders' own annotations)", ingest)
     runs = {}
     for attempt in (1, 2):
         runs[attempt] = {m: build(con, m, compiled(f"models/silver/unctad/{m}.sql")) for m in SILVER}
-    note("silver rows (build 1)", {m: v["rows"] for m, v in runs[1].items()})
-    note("silver rebuild identical", {"identical": runs[1] == runs[2]})
-    note("silver ranges", rows(con, " union all ".join(
-        f"select '{m}', min(period), max(period), count(*) filter (where economy is null) from {m}" for m in SILVER)))
-    note("built dimension codes", rows(con, """
-        select 'fdi', json_extract_string(dimensions, '$.Flow'), json_extract_string(dimensions, '$.Direction'),
-            count(*) from unctad_fdi_flows_stock group by all
-        union all select 'merch', json_extract_string(dimensions, '$.Flow'), null, count(*)
-            from unctad_merchandise_trade group by all
-        union all select 'services', json_extract_string(dimensions, '$.Flow'), null, count(*)
-            from unctad_services_trade group by all order by 1, 2, 3"""))
-    note("France codes", rows(con, " union all ".join(
-        f"select '{m}', economy, economy_label from (select distinct economy, economy_label from {m}) "
-        f"where economy_label ilike 'France%'" for m in SILVER[:3])))
-    tests = sorted((COMPILED / "models/silver/unctad/_unctad.yml").glob("*.sql")) + [
-        COMPILED / "tests/unctad_areas_present.sql"]
-    results = {}
+    silver = {
+        "rows": {m: v["rows"] for m, v in runs[1].items()},
+        "rebuild identical (rows + hash)": runs[1] == runs[2],
+        "range, null economy": rows(con, " union all ".join(
+            f"select '{m[7:]}', min(period), max(period), count(*) filter (where economy is null) from {m}"
+            for m in SILVER)),
+        "built dimension codes": rows(con, """
+            select 'fdi', json_extract_string(dimensions, '$.Flow'), json_extract_string(dimensions, '$.Direction'),
+                count(*) from unctad_fdi_flows_stock group by all
+            union all select 'merch', json_extract_string(dimensions, '$.Flow'), null, count(*)
+                from unctad_merchandise_trade group by all
+            union all select 'services', json_extract_string(dimensions, '$.Flow'), null, count(*)
+                from unctad_services_trade group by all order by 1, 2, 3"""),
+        "France codes": rows(con, " union all ".join(
+            f"select '{m[7:]}', economy, economy_label from (select distinct economy, economy_label from {m}) "
+            f"where economy_label ilike 'France%'" for m in SILVER[:3])),
+    }
+    tests = [*sorted((COMPILED / "models/silver/unctad/_unctad.yml").glob("*.sql")),
+             COMPILED / "tests/unctad_areas_present.sql"]
+    results, samples = {}, {}
     for path in tests:
         sql = localize(path.read_text())
         failures = con.execute(f"select count(*) from ({sql}) as t").fetchone()[0]
-        results[path.stem[:70]] = failures
+        results[path.stem[:60]] = failures
         if failures:
-            note(f"test failed {path.stem[:60]}", rows(con, f"select * from ({sql}) as t", 20), "warning")
-    note("silver tests (failures per test)", {"tests": len(results), "failing": {k: v for k, v in results.items() if v},
-                                              "all": results})
+            samples[path.stem[:40]] = rows(con, f"select * from ({sql}) as t", 8)
+    silver["tests"] = {"run": len(results), "failing": {k: v for k, v in results.items() if v}, "samples": samples}
+    note("UNCTAD silver", silver, "notice" if not samples else "warning")
     gold = {}
     for attempt in (1, 2):
         gold[attempt] = {
             "map_geography": build(con, "map_geography", compiled("models/gold/poc_map_geography.sql")),
             "build_unctad": build(con, "build_unctad", compiled("models/gold/poc_build_unctad.sql")),
         }
-    note("gold rows", {"build 1": gold[1], "rebuild identical": gold[1] == gold[2]})
-    note("map_geography unctad", rows(con, """select geography_key = '_X' as unmatched, count(*) from map_geography
-        where source_system = 'unctad' group by 1"""))
-    note("map_geography unctad listed areas", rows(con, """select source_code, geography_key from map_geography
-        where source_system = 'unctad' and geography_key <> '_X' order by 1""", 40))
     grain = build(con, "grain_check", compiled("models/gold/poc_grain_check.sql"))
-    note("grain_check (unctad)", {"rows": grain["rows"], "detail": rows(con, "select * from grain_check")})
     check = build(con, "build_check", compiled("models/gold/poc_build_check.sql"))
-    note("build_check (unctad)", {"rows": check["rows"], "detail": rows(con, """select source_system, block_id, row_count,
-        series, measures, rows_geography_unmatched, unmatched_sample, rows_total_series, rows_period_unplaced,
-        first_date, last_date, frequencies, statuses, note from build_check where source_system = 'unctad'""")})
-    note("build per measure", rows(con, """select measure_key, count(*), count(distinct geography_key), min(date_key),
-        max(date_key) from build_unctad group by 1 order by 1"""))
-    note("full-grain duplicates in build_unctad", rows(con, """select count(*) from (select measure_key, geography_key,
-        coalesce(geography_source_code, ''), breakdown_json, date_key from build_unctad group by all
-        having count(*) > 1)"""))
-    note("PL and FR latest", rows(con, """select geography_key, measure_key, date_key, value, observation_status_key
-        from build_unctad where geography_key in ('PL', 'FR')
-        qualify row_number() over (partition by geography_key, measure_key order by date_key desc) = 1
-        order by 1, 2"""))
+    out = {
+        "build_unctad rows": gold[1]["build_unctad"]["rows"],
+        "rebuild identical (rows + hash)": gold[1] == gold[2],
+        "map_geography unctad (unmatched?, n)": rows(con, """select geography_key = '_X', count(*) from map_geography
+            where source_system = 'unctad' group by 1"""),
+        "dup series_key x date_key": con.execute("""select count(*) from (select measure_key || '|' || geography_key
+            || case when geography_key = '_X' then ':' || coalesce(geography_source_code, '') else '' end
+            || '|' || breakdown_json as series_key, date_key from build_unctad group by all
+            having count(*) > 1)""").fetchone()[0],
+        "grain_check rows": grain["rows"],
+        "grain_check detail": rows(con, "select source_system, block_id, duplicate_keys from grain_check", 10),
+        "build_check (block, rows, series, measures, unmatched, total, unplaced, first, last, freq, note)": rows(
+            con, """select block_id, row_count, series, measures, rows_geography_unmatched, rows_total_series,
+            rows_period_unplaced, first_date, last_date, frequencies, note from build_check
+            where source_system = 'unctad'"""),
+        "per measure (key, rows, areas, last)": rows(con, """select replace(measure_key, 'unctad:', ''), count(*),
+            count(distinct geography_key), max(date_key) from build_unctad group by 1 order by 1"""),
+        "PL/FR latest": rows(con, """select geography_key, replace(measure_key, 'unctad:', ''), year(date_key), value
+            from build_unctad where geography_key in ('PL', 'FR')
+            and measure_key like '%USD_MN' and measure_key not like '%:09:%'
+            qualify row_number() over (partition by geography_key, measure_key order by date_key desc) = 1
+            order by 1, 2"""),
+    }
+    note("UNCTAD gold", out)
 
 
 def cleanup() -> None:
