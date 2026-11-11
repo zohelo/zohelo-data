@@ -1890,7 +1890,8 @@ sources:
     evidence: documented
     connection: tested
     blockers:
-    - 'Confirm the licence statement on population.un.org/wpp (the page could not be read in this review)'
+    - 'Confirm the licence statement on population.un.org/wpp (the page could not be read in this review); until then
+      source.csv uses licence `unresolved` (internal only, hidden by the portals'' licence gate; review of #2761)'
     - 'Revision archive: the next revision (WPP 2026) has new file URLs; the declaration changes with it'
     references:
     - https://population.un.org/wpp/
