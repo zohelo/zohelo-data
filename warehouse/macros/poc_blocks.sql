@@ -187,6 +187,21 @@
     ) as t (indicator_code)
 {% endmacro %}
 
+{# UN WPP blocks: one per indicator (gold.build_un_wpp); countries: the EU27 members built (ISO two-letter). #}
+{% macro poc_un_wpp_blocks() %}
+    select
+        *,
+        'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' as countries
+    from (
+        values
+        ('TPopulation1July', 'Total population on 1 July (UN WPP)', 'persons', 'persons'),
+        ('TFR', 'Total fertility rate (UN WPP)', 'children_per_woman', 'live births per woman'),
+        ('LEx', 'Life expectancy at birth, both sexes (UN WPP)', 'years', 'years'),
+        ('MedianAgePop', 'Median age of the population (UN WPP)', 'years', 'years'),
+        ('OldAgeDependency', 'Old-age dependency ratio, 65+ per 100 aged 15-64 (UN WPP)', 'per_100', 'per 100 persons aged 15-64')
+    ) as t (indicator, block_name, unit_code, unit_name)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -254,6 +269,7 @@
     union all select * from {{ ref('poc_build_dbw') }}
     union all select * from {{ ref('poc_build_wdi') }}
     union all select * from {{ ref('poc_build_nbp') }}
+    union all select * from {{ ref('poc_build_un_wpp') }}
 {% endmacro %}
 
 {# series_key: measure × geography × breakdown codes, readable; an unmatched area keeps its source code so
@@ -274,6 +290,8 @@
     select 'gus_dbw', block_id, block_name from ({{ poc_dbw_blocks() }})
     union all
     select 'world_bank_wdi', indicator_code, 'WDI ' || indicator_code from ({{ poc_wdi_blocks() }})
+    union all
+    select 'un_wpp', indicator, block_name from ({{ poc_un_wpp_blocks() }})
     union all
     select * from (
         values

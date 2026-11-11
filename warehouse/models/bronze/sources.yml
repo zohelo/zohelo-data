@@ -248,6 +248,21 @@ sources:
       (feed). Never descriptions, article text or images.
   - name: news_feeds_rejected_files
     description: News feed Landing files the Bronze decoder rejected, with the reason.
+- name: un_wpp
+  description: UN World Population Prospects 2024 — CSV files (gzip) of the Population Division
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/un_wpp/
+    loaded_by: ingestion/to_bronze/un_wpp/
+    config: ingestion/sources/un_wpp.yaml
+  tables:
+  - name: un_wpp_rows
+    description: >-
+      One row per data row of the newest copy of each file (entity), generic: field_names (the header,
+      comma-separated) and field_values (the row, |-separated) as source text; partitioned by entity.
+  - name: un_wpp_rejected_files
+    description: UN WPP Landing files the Bronze decoder rejected, with the reason.
 - name: oecd
   description: OECD Data Explorer — selected dataflows as SDMX CSV (SDMX REST API)
   database: r2

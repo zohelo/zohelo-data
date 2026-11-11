@@ -1852,7 +1852,8 @@ sources:
   short_name: UN World Population Prospects
   provider: United Nations Department of Economic and Social Affairs, Population Division
   source_system: un_wpp
-  status: approved
+  current: true
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1860,15 +1861,17 @@ sources:
   domains: [population, fertility, mortality, migration, projections]
   entities: [country, person-aggregate]
   granularity: Country/region/year/age/sex/variant and demographic measure.
-  coverage: Worldwide estimates and projections; current catalog points to 2024 Revision, with long historical and
-    future horizons varying by file.
+  coverage: 'Worldwide estimates and projections, 2024 Revision. Landed (Dev probe 43084932726, 11 Nov 2026): demographic
+    indicators, medium variant, 555 locations (237 countries and areas, regions, income and ad-hoc groups incl. European
+    Union (EU: 27), LocID 1551) × 1950-2100 (estimates to 2023), 84,360 rows; population by five-year age group and
+    sex, same locations and years, 1,759,905 rows.'
   access:
-    endpoint: https://population.un.org/wpp/
+    endpoint: https://population.un.org/wpp/assets/Excel%20Files/1_Indicator%20(Standard)/CSV_FILES/
     kind: bulk_file
     interfaces: [HTML, bulk-files]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No explicit numeric quota found; two static files (17 MB and 30 MB gzip), checked monthly.
   licence:
     status: open-conditional
     notes: 'Terms: CC BY 3.0 IGO (http://creativecommons.org/licenses/by/3.0/igo/); WPP 2024 data are "made available under a Creative Commons license CC BY 3.0 IGO" (https://environmentdashboard.org/sources/un-wpp-2024, quoting the producer): copy, redistribute and adapt, also commercially, with attribution; no UN emblem or implied endorsement. Attribution: "United Nations, Department of Economic and Social Affairs, Population Division (2024). World Population Prospects 2024, Online Edition. CC BY 3.0 IGO."'
@@ -1882,11 +1885,11 @@ sources:
     overlap: Overlaps WDI, UNdata and national population series; WPP estimates are modeled harmonized vintages.
   research:
     priority: review-first
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
     - 'Confirm the licence statement on population.un.org/wpp (the page could not be read in this review)'
-    - 'Confirm file schema and revision archive'
+    - 'Revision archive: the next revision (WPP 2026) has new file URLs; the declaration changes with it'
     references:
     - https://population.un.org/wpp/
     - https://data.un.org/Handlers/ExplorerHandler.ashx?t=sources

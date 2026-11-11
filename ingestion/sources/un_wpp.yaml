@@ -1,10 +1,11 @@
 source_system: un_wpp
-description: UN World Population Prospects 2024, demographic indicators (CSV, gzip)
+description: UN World Population Prospects 2024, demographic indicators and population by age (CSV, gzip)
 
 # Extraction strategy (docs/landing.md). Bulk feature: the WPP 2024 "Demographic Indicators,
 # medium variant" CSV (gzip) on the Population Division's fixed per-revision URL (CC BY 3.0 IGO,
-# register GL-039). Version = Last-Modified; written only when the SHA-256 changed. WPP is
-# revised every two years; a schedule (stage 4) comes after the Dev trial.
+# register GL-039), and the population by five-year age group file of the same folder (the dependency
+# ratios; Dev probe 43084932726: 1,759,905 rows, 30 MB gzip). Version = Last-Modified (13 Dec 2024 for
+# both); written only when the SHA-256 changed. WPP is revised every two years: a monthly check.
 extraction:
   kind: bulk_file
   bulk_file:
@@ -13,20 +14,27 @@ extraction:
         url: "https://population.un.org/wpp/assets/Excel%20Files/1_Indicator%20(Standard)/CSV_FILES/WPP2024_Demographic_Indicators_Medium.csv.gz"
         format: gzip
         version: last_modified     # the response's Last-Modified; download time when absent
+      - entity: population_by_age5_medium
+        url: "https://population.un.org/wpp/assets/Excel%20Files/1_Indicator%20(Standard)/CSV_FILES/WPP2024_PopulationByAge5GroupSex_Medium.csv.gz"
+        format: gzip
+        version: last_modified
   initial: bulk
   production: snapshot                  # each file is the complete revision
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
-  schedule: []
+  schedule: # UTC; WPP is revised every two years (2024 revision of July 2024); monthly check, unchanged bytes skipped
+    - {cron: "25 6 3 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/un_wpp/
 archive_policy:
   move: true
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
-bronze: []
-silver: []
+bronze: [bronze.un_wpp_rows, bronze.un_wpp_rejected_files]
+silver: [silver.un_wpp_demographic_indicators, silver.un_wpp_population_age_groups]
 gold: []
 
-refresh: {mode: full}
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): two files revised every two years; Silver ~84,000 rows per model; rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2752"}
 
-activities: [landing.inspect, landing.extract, landing.verify]
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
