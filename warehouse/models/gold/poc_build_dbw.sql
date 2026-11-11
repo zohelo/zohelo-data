@@ -116,7 +116,8 @@ per_row as (
         -- brzeski, ...) and would otherwise share a series (tests/fact_grain.sql)
         max(
             case
-                when l.k = t.k and l.geography_key is null then coalesce(l.pos_label, '') || ' #' || cast(l.pos_id as varchar)
+                when l.k = t.k and l.geography_key is null
+                    then coalesce(l.pos_label, '') || ' #' || cast(l.pos_id as varchar)
                 when l.k = t.k then l.pos_label
             end
         ) as geography_source_code,
