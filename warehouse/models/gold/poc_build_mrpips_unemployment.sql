@@ -4,7 +4,9 @@
    unemployed_thousands (thousand persons) and unemployment_rate (%) (both sexes; Poland, voivodeships, powiats).
    The area is the TERYT code of the rate workbook (WWPP; 0000 = Poland), mapped in poc_map_geography. #}
 with geo as (
-    select source_code, geography_key
+    select
+        source_code,
+        geography_key
     from {{ ref('poc_map_geography') }}
     where source_system = 'mrpips_unemployment'
 )
@@ -29,8 +31,10 @@ select
     s.period_date as date_key,
     strftime(s.period_date, '%Y-%m') as period_label,
     cast(to_json(map(['sex'], [s.sex_code])) as varchar) as breakdown_json,
-    cast(to_json(map(['sex'], [case s.sex_code when 'T' then 'ogółem' when 'F' then 'kobiety' else 'mężczyźni' end]))
-        as varchar) as breakdown_label_json,
+    cast(
+        to_json(map(['sex'], [case s.sex_code when 'T' then 'ogółem' when 'F' then 'kobiety' else 'mężczyźni' end]))
+        as varchar
+    ) as breakdown_label_json,
     s.sex_code,
     s.sex_code = 'T' as is_total,
     s.value,

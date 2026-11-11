@@ -50,20 +50,42 @@ rate_areas as (
     select
         *,
         lpad(woj, 2, '0') || lpad(pow, 2, '0') as area_code,
-        case when cast(woj as integer) = 0 then 'country' when cast(pow as integer) = 0 then 'voivodeship'
-            else 'powiat' end as area_level,
+        case
+            when cast(woj as integer) = 0 then 'country' when cast(pow as integer) = 0 then 'voivodeship'
+            else 'powiat'
+        end as area_level,
         upper(trim(regexp_replace(area_name, '^(Woj\.|woj\.)\s*', ''))) as name_key
     from rate_rows
     where regexp_full_match(woj, '[0-9]{1,2}') and regexp_full_match(pow, '[0-9]{1,2}')
 ),
 
 rate_values as (
-    select entity, area_code, area_level, area_name, 'unemployed_thousands' as measure_code, 'T' as sex_code,
-        try_cast(thousands_text as double) as value, 'thousand_persons' as unit_code, source_version, raw_sha256, ingested_at
+    select
+        entity,
+        area_code,
+        area_level,
+        area_name,
+        'unemployed_thousands' as measure_code,
+        'T' as sex_code,
+        try_cast(thousands_text as double) as value,
+        'thousand_persons' as unit_code,
+        source_version,
+        raw_sha256,
+        ingested_at
     from rate_areas
     union all
-    select entity, area_code, area_level, area_name, 'unemployment_rate', 'T',
-        try_cast(rate_text as double), 'pct', source_version, raw_sha256, ingested_at
+    select
+        entity,
+        area_code,
+        area_level,
+        area_name,
+        'unemployment_rate' as measure_code,
+        'T' as sex_code,
+        try_cast(rate_text as double) as value,
+        'pct' as unit_code,
+        source_version,
+        raw_sha256,
+        ingested_at
     from rate_areas
 ),
 
@@ -108,7 +130,8 @@ report_values as (
     from report_sections as s
     left join rate_areas as r
         on s.entity = r.entity and r.area_level = 'voivodeship' and upper(s.label) = r.name_key
-    where s.sex_code is not null
+    where
+        s.sex_code is not null
         and try_cast(s.col_b as double) is not null
         and (upper(s.label) = 'POLSKA' or r.area_code is not null)
 )
@@ -126,6 +149,10 @@ select
     v.source_version,
     v.raw_sha256,
     v.ingested_at
-from (select * from rate_values union all select * from report_values) as v
+from (
+    select * from rate_values
+    union all
+    select * from report_values
+) as v
 inner join months as m on v.entity = m.entity
 where v.value is not null
