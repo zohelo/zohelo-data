@@ -69,7 +69,7 @@ class Plan:
         self.stages: dict[str, int] = {}  # stage key -> number, from stages.yaml
         self.pending: list[tuple[str, str, str, list[dict]]] = []  # edit/delete paths to check
         # register entries by how their Epic is made (parked and later phases: none, docs/backlog.md §3)
-        self.sources = {"file": 0, "generated": 0, "parked": 0, "later": 0, "no_family": []}
+        self.sources = {"file": 0, "generated": 0, "parked": 0, "no_family": []}
 
     def error(self, file: str, key: str, message: str) -> None:
         self.errors.append(f"{file}: {key}: {message}")
@@ -224,9 +224,9 @@ def source_epic(entry: dict, stages: list[dict]) -> dict:
 
 
 def load_sources(plan: Plan, root: Path, read) -> None:
-    """Add a generated Epic for every register entry of the current phase (`current: true`) that has no
-    epics/src-<id lower>.yaml and is not parked (docs/backlog.md §3; owner O29, 10 Nov). The sync closes the issues of
-    every other entry as not planned; they come back with the same keys when the entry is marked current."""
+    """Add a generated Epic for every register entry that has no epics/src-<id lower>.yaml and is not parked
+    (docs/backlog.md §3; owner O36, 11 Nov: every source is onboarded, so every source keeps its issues; the sync
+    closes the issues of a parked entry as not planned)."""
     register = read(root / REGISTER)
     stages = read(root / ".github" / "backlog" / "stages.yaml")
     entries = (register or {}).get("sources") if isinstance(register, dict) else None
@@ -239,8 +239,6 @@ def load_sources(plan: Plan, root: Path, read) -> None:
             plan.sources["file"] += 1
         elif str(entry.get("status")) == "parked":
             plan.sources["parked"] += 1
-        elif entry.get("current") is not True:
-            plan.sources["later"] += 1
         elif not entry.get("family"):
             plan.sources["no_family"].append(ident)
         else:
@@ -511,7 +509,6 @@ def validate(roots: list[Path], strict: bool = False) -> int:
     print(f"file sources: {found['file']}")
     print(f"generated sources: {found['generated']}")
     print(f"parked sources (no Epic): {found['parked']}")
-    print(f"later-phase sources (no Epic until marked current): {found['later']}")
     print(f"register entries without family: {len(found['no_family'])}")
     print(f"ok: {c['areas']} areas, {c['epics']} epics, {c['deliverables']} deliverables, {c['tasks']} tasks")
     return 0

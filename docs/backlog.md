@@ -44,10 +44,9 @@ zohelo-data only:
   stages.yaml                # the 11-stage source template (source Epics are generated from the register)
 ```
 
-Source Epics are generated from `ingestion/register.yaml` only for entries of the current phase, marked
-`current: true` in the register (owner O29, 10 Nov: the 583 generated issues of sources not started were Phase 3 work
-and hid the real backlog). Entries without the mark get no Epic, so the sync closes their open issues as not planned;
-marking an entry current brings them back under the same keys. For a current entry without its own
+Source Epics are generated from `ingestion/register.yaml` for every entry that is not parked (owner O36, 11 Nov:
+data sources are the top priority and every source is onboarded through Gold, so every source keeps its issues;
+this reverses the current-phase rule of 10 Nov). For an entry without its own
 `epics/src-<id>.yaml` the Epic depends on the register status (owner, 28 Oct, #2230): `registered` or `reviewing` → only the stage-1 review Deliverable and its
 Tasks; `approved` and later → stage 1 and stage 2 with their Tasks (Bug #2337; until the stage-2 declaration Task adds
 `source_system` to the register, `{source_system}` is the id in lower case with `-` as `_`; a hand-written file carries
