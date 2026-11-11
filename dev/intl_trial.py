@@ -20,7 +20,7 @@ from ingestion.common.r2 import catalog, req, s3
 from ingestion.common.report import annotate
 from ingestion.to_landing.patterns import bulk_file
 
-SCRATCH = "zz_dev_src_intl"
+SCRATCH = "zz_dev_src_intl_" + (sys.argv[1] if len(sys.argv) > 1 else "all")  # one scratch per parallel trial
 EU = "AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK,GB,US,CH,NO".split(",")
 GEO_SQL = (
     "create table geo as select * from (select unnest(?) as geography_key, 'country' as level_name) union all "
@@ -87,6 +87,35 @@ TRIALS = {
             ("pop check", "select count(*) filter (where abs(d.tpopulation1july - a.pop_total) > 0.01 * a.pop_total) from un_wpp_demographic_indicators d join un_wpp_population_age_groups a using (loc_id, year)"),
         ],
     },
+    "unctad": {
+        "bronze": ["unctad_rows"],
+        "silver": {
+            "unctad_fdi_flows_stock": "warehouse/models/silver/unctad/unctad_fdi_flows_stock.sql",
+            "unctad_merchandise_trade": "warehouse/models/silver/unctad/unctad_merchandise_trade.sql",
+            "unctad_services_trade": "warehouse/models/silver/unctad/unctad_services_trade.sql",
+            "unctad_digital_services_trade": "warehouse/models/silver/unctad/unctad_digital_services_trade.sql",
+            "unctad_commodity_prices": "warehouse/models/silver/unctad/unctad_commodity_prices.sql",
+            "unctad_liner_shipping_connectivity": "warehouse/models/silver/unctad/unctad_liner_shipping_connectivity.sql",
+            "unctad_merchant_fleet": "warehouse/models/silver/unctad/unctad_merchant_fleet.sql",
+            "unctad_seaborne_trade": "warehouse/models/silver/unctad/unctad_seaborne_trade.sql",
+            "unctad_port_calls": "warehouse/models/silver/unctad/unctad_port_calls.sql",
+        },
+        "gold": ("warehouse/models/gold/poc_build_unctad.sql", "poc_unctad_blocks", {m: m for m in ["unctad_fdi_flows_stock", "unctad_merchandise_trade", "unctad_services_trade"]}),
+        "checks": [
+            ("bronze rows", "select entity, count(*) from bronze_unctad_rows group by 1 order by 1"),
+            ("unctad_fdi_flows_stock unique", "select count(*), (select count(*) from (select period, economy, dimensions from unctad_fdi_flows_stock group by all having count(*) > 1)), min(period), max(period) from unctad_fdi_flows_stock"),
+            ("unctad_merchandise_trade unique", "select count(*), (select count(*) from (select period, economy, dimensions from unctad_merchandise_trade group by all having count(*) > 1)), min(period), max(period) from unctad_merchandise_trade"),
+            ("unctad_services_trade unique", "select count(*), (select count(*) from (select period, economy, dimensions from unctad_services_trade group by all having count(*) > 1)), min(period), max(period) from unctad_services_trade"),
+            ("unctad_digital_services_trade unique", "select count(*), (select count(*) from (select period, economy, dimensions from unctad_digital_services_trade group by all having count(*) > 1)), min(period), max(period) from unctad_digital_services_trade"),
+            ("unctad_commodity_prices unique", "select count(*), (select count(*) from (select period, economy, dimensions from unctad_commodity_prices group by all having count(*) > 1)), min(period), max(period) from unctad_commodity_prices"),
+            ("unctad_liner_shipping_connectivity unique", "select count(*), (select count(*) from (select period, economy, dimensions from unctad_liner_shipping_connectivity group by all having count(*) > 1)), min(period), max(period) from unctad_liner_shipping_connectivity"),
+            ("unctad_merchant_fleet unique", "select count(*), (select count(*) from (select period, economy, dimensions from unctad_merchant_fleet group by all having count(*) > 1)), min(period), max(period) from unctad_merchant_fleet"),
+            ("unctad_seaborne_trade unique", "select count(*), (select count(*) from (select period, economy, dimensions from unctad_seaborne_trade group by all having count(*) > 1)), min(period), max(period) from unctad_seaborne_trade"),
+            ("unctad_port_calls unique", "select count(*), (select count(*) from (select period, economy, dimensions from unctad_port_calls group by all having count(*) > 1)), min(period), max(period) from unctad_port_calls"),
+            ("EU economies", "select distinct economy, economy_label from unctad_fdi_flows_stock where economy in ('040','056','100','191','196','203','208','233','246','250','251','276','300','348','372','380','428','440','442','470','528','616','620','642','703','705','724','752','3412','0000') order by 1"),
+            ("PL fdi", "select period, dimensions, measure_values, measure_missing from unctad_fdi_flows_stock where economy = '616' and period >= '2022' order by 1, 2"),
+        ],
+    },
 }
 
 
@@ -107,6 +136,11 @@ def trial(source: str) -> None:
         print(f"### {source} rejected {t[1]}: {arrow.to_pylist()[:5]}", flush=True)
     for name, path in spec["silver"].items():
         sql = render(path, {r"\{\{\s*source\('[a-z_]+',\s*'([a-z_]+)'\)\s*\}\}": None} if False else {})
+        if "unctad_table(" in sql:
+            from jinja2 import Environment
+
+            text = Path("warehouse/macros/unctad.sql").read_text() + sql
+            sql = Environment().from_string(text).render(source=lambda _s, t: f"bronze_{t}")
         sql = re.sub(r"\{\{\s*source\('[a-z_]+',\s*'([a-z_0-9]+)'\)\s*\}\}", lambda m: f"bronze_{m.group(1)}", sql)
         sql = re.sub(r"\{\{\s*ref\('([a-z_0-9]+)'\)\s*\}\}", lambda m: m.group(1), sql)
         con.execute(f"create table {name} as {sql}")
@@ -116,6 +150,8 @@ def trial(source: str) -> None:
     con.execute(GEO_SQL, [EU])
     path, blocks, refs = spec["gold"]
     sql = render(path, {r"\{\{\s*" + blocks + r"\(\)\s*\}\}": macro(blocks)})
+    if source == "unctad":
+        sql = sql.replace("{{ poc_unctad_areas() }}", macro("poc_unctad_areas"))
     sql = sql.replace("{{ ref('poc_dim_geography') }}", "geo")
     for ref, table in refs.items():
         sql = sql.replace("{{ ref('" + ref + "') }}", table)
