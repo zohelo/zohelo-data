@@ -279,6 +279,24 @@ sources:
       (entity = folder.file); DATA_SOURCE, RECORD_ID, bq_dataset and FEATURES (JSON text) as published.
   - name: opendata_rejected_files
     description: Snapshot members the OpenData Bronze decoder or Silver models rejected (cleared by ops/retry_rejected).
+- name: unece
+  description: UNECE Statistical Database — economic statistics, PXWeb tables as JSON-stat 2.0
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/unece/
+    loaded_by: ingestion/to_bronze/unece/
+    config: ingestion/sources/unece.yaml
+  tables:
+  - name: unece_observations
+    description: >-
+      One row per cell with a value of the newest copy of each table (entity): table title, series_dimensions /
+      series_key (variable and value codes), time_period (published label), obs_value and status as text;
+      partitioned by entity.
+  - name: unece_codes
+    description: Variable and value labels of each landed table (one row per variable × value code).
+  - name: unece_rejected_files
+    description: UNECE Landing files the Bronze decoder rejected, with the reason.
 - name: world_bank_wdi
   description: World Bank WDI bulk CSV archive and API responses
   database: r2
