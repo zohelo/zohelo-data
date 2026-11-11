@@ -29,8 +29,8 @@ from warehouse.publish import get, period_label, put, schema_checked, seed
 V2_PREFIX = "06_published/v2/"
 GZIP_LIMITS = {"catalog.json": 1_000_000, "latest.json": 300_000, "series.json": 1_000_000}  # docs/published.md
 RAW_LIMITS = {"calendar.json": 50_000, "status.json": 50_000}
-SHOWN = ("M", "Q", "A")  # frequencies a v2 KPI can show
-DAILY = ("D", "B")  # published as the monthly mean when the KPI shows M
+SHOWN = ("M", "Q", "A")  # frequencies a v2 KPI or series can have, finest first
+DAILY = ("D", "B")  # published as the monthly mean (frequency M)
 # gold.dim_observation_status → v2 flag letter (SDMX/Eurostat letters); other statuses carry no flag.
 FLAGS = {
     "provisional": "p",
@@ -134,9 +134,10 @@ def _like(value: str, pattern: str) -> bool:
 
 def gold_rows(metrics: pa.Table, entry: dict[str, Any], geo: dict[str, str]) -> list[dict[str, Any]]:
     """The rows of gold.metrics_<concept> that can reach v2: a value, a v2 geography, a ready source of the map
-    and a measure matching that source's patterns, at the shown frequency (daily rows too when it is monthly)."""
+    and a measure matching that source's patterns, at a v2 frequency (M, Q, A, or daily for the monthly mean).
+    Rows of every frequency are read: a source without the shown frequency gets a series of its own (O31)."""
     patterns = [(s, p) for s, ps in entry["sources"].items() for p in ps]
-    frequencies = [entry["frequency"], *(DAILY if entry["frequency"] == "M" else ())]
+    frequencies = [*SHOWN, *DAILY]
     con = duckdb.connect()
     con.register("metrics", metrics)
     con.register(
@@ -174,6 +175,11 @@ def _breakdown(row: dict[str, Any], aliases: dict[tuple[str, str], str]) -> dict
     return {dimension_key(row["source"], k, aliases): str(v) for k, v in raw.items() if v is not None}
 
 
+def _series_frequency(row: dict[str, Any]) -> str:
+    """The v2 frequency a gold row feeds: its own, daily rows as M (the monthly mean)."""
+    return "M" if row["frequency"] in DAILY else row["frequency"]
+
+
 def kpi_cells(
     rows: list[dict[str, Any]],
     curated: dict[str, set[str]],
@@ -183,21 +189,23 @@ def kpi_cells(
     the KPI's dimension keys; pure.
 
     Gold metrics hold total series, so a breakdown key is a dimension only where it splits the rows of one measure
-    (more than one value, a missing key counting as '_T'), e.g. the currency of the NBP rates. Where kpi_member.csv
+    at one frequency (daily counting as M; more than one value, a missing key counting as '_T'), e.g. the currency
+    of the NBP rates; a key that differs only between frequencies (seasonally adjusted quarterly, unadjusted annual
+    rows) is not a dimension, so rows of another frequency never change the shown series. Where kpi_member.csv
     lists members of a dimension, rows of other members are dropped. A dimension left with one value is not a
     dimension (members {}). Daily rows become the monthly mean per series."""
-    parsed = [(row, _breakdown(row, aliases)) for row in rows]
-    keys_by_measure: dict[str, set[str]] = defaultdict(set)
-    for row, breakdown in parsed:
-        keys_by_measure[row["measure"]].update(breakdown)
-    values_by_measure: dict[tuple[str, str], set[str]] = defaultdict(set)
-    for row, breakdown in parsed:
-        for key in keys_by_measure[row["measure"]]:
-            values_by_measure[(row["measure"], key)].add(breakdown.get(key, "_T"))
-    split = {(m, k) for (m, k), values in values_by_measure.items() if len(values) > 1}
+    parsed = [(row, _breakdown(row, aliases), _series_frequency(row)) for row in rows]
+    keys_by_measure: dict[tuple[str, str], set[str]] = defaultdict(set)
+    for row, breakdown, frequency in parsed:
+        keys_by_measure[(row["measure"], frequency)].update(breakdown)
+    values_by_measure: dict[tuple[str, str, str], set[str]] = defaultdict(set)
+    for row, breakdown, frequency in parsed:
+        for key in keys_by_measure[(row["measure"], frequency)]:
+            values_by_measure[(row["measure"], frequency, key)].add(breakdown.get(key, "_T"))
+    split = {(m, f, k) for (m, f, k), values in values_by_measure.items() if len(values) > 1}
     kept = []
-    for row, breakdown in parsed:
-        members = {k: breakdown.get(k, "_T") for (m, k) in split if m == row["measure"]}
+    for row, breakdown, frequency in parsed:
+        members = {k: breakdown.get(k, "_T") for (m, f, k) in split if (m, f) == (row["measure"], frequency)}
         if any(k in breakdown and breakdown[k] not in allowed for k, allowed in curated.items()):
             continue
         if any(k in members and members[k] not in allowed for k, allowed in curated.items()):
@@ -211,7 +219,7 @@ def kpi_cells(
     grouped: dict[tuple, list[tuple[float, str | None]]] = defaultdict(list)
     for row, members in kept:
         shown = {k: v for k, v in members.items() if k in dims and v != "_T"}
-        frequency = "M" if row["frequency"] in DAILY else row["frequency"]
+        frequency = _series_frequency(row)
         key = (
             row["source"],
             row["geography"],
@@ -231,12 +239,18 @@ def kpi_cells(
                 "geography": geography,
                 "members": members,
                 "measure": measure,
+                "frequency": "M" if daily else period_frequency(period),
                 "period": period,
                 "values": [round(sum(values) / len(values), MEAN_DIGITS)] if daily else values,
                 "flags": "".join(sorted(flags)),
             }
         )
     return cells, dims
+
+
+def period_frequency(period: str) -> str:
+    """'2025' → A, '2025-Q3' → Q, '2025-09' → M."""
+    return "A" if len(period) == 4 else "Q" if "Q" in period else "M"
 
 
 def series_json(
@@ -246,14 +260,26 @@ def series_json(
     geo_order: dict[str, int],
 ) -> tuple[dict[str, Any], list[str]]:
     """kpi/<kpi_key>/series.json of one v2 KPI from its cells, and the problems found (a period with two different
-    values in one series); pure. One series per geography × source × members: the measure with the best
-    kpi_measure.csv priority, then the lowest measure key; its unit is the measure's unit, else the KPI's."""
+    values in one series); pure. One series per geography × source × members: the KPI's shown frequency when that
+    series has it, else the finest other frequency it has (then the series carries its own ``frequency`` and follows
+    ``periods_by_frequency``); within that frequency the measure with the best kpi_measure.csv priority, then the
+    lowest measure key; its unit is the measure's unit, else the KPI's."""
     unit_key = entry["kpi"]["unit_key"]
+    shown_frequency = entry["frequency"]
     lookup = _measure_lookup(measures, entry["concept"], unit_key)
     order = source_order(entry, measures)
+    rank = {f: (f != shown_frequency, SHOWN.index(f)) for f in SHOWN}
+    frequency_of: dict[tuple, str] = {}
+    for c in cells:
+        series_key = (c["source"], c["geography"], c["members"])
+        current = frequency_of.get(series_key)
+        if current is None or rank[c["frequency"]] < rank[current]:
+            frequency_of[series_key] = c["frequency"]
     chosen: dict[tuple, str] = {}
     for c in cells:
         series_key = (c["source"], c["geography"], c["members"])
+        if c["frequency"] != frequency_of[series_key]:
+            continue
         current = chosen.get(series_key)
         candidate = (lookup(c["source"], c["measure"])[0], c["measure"])
         if current is None or candidate < (lookup(c["source"], current)[0], current):
@@ -262,7 +288,7 @@ def series_json(
     data: dict[tuple, dict[str, tuple[float, str]]] = defaultdict(dict)
     for c in cells:
         series_key = (c["source"], c["geography"], c["members"])
-        if chosen[series_key] != c["measure"]:
+        if c["frequency"] != frequency_of[series_key] or chosen[series_key] != c["measure"]:
             continue
         distinct = sorted(set(c["values"]))
         if len(distinct) > 1:
@@ -272,30 +298,47 @@ def series_json(
             )
             continue
         data[series_key][c["period"]] = (distinct[0], c["flags"])
-    periods = sorted({p for values in data.values() for p in values})
+    axes: dict[str, set[str]] = defaultdict(set)
+    for series_key, values in data.items():
+        axes[frequency_of[series_key]].update(values)
+    axis = {f: sorted(periods) for f, periods in axes.items()}
     series = []
     for series_key in sorted(data, key=lambda k: (geo_order[k[1]], order.index(k[0]), k[2])):
         source, geography, members = series_key
+        frequency = frequency_of[series_key]
+        periods = axis[frequency]
         values = data[series_key]
         entry_series: dict[str, Any] = {
             "geography": geography,
             "source_key": source,
             "unit_key": lookup(source, chosen[series_key])[1],
             "members": dict(members),
-            "values": [values[p][0] if p in values else None for p in periods],
         }
+        if frequency != shown_frequency:
+            entry_series["frequency"] = frequency
+        entry_series["values"] = [values[p][0] if p in values else None for p in periods]
         flags = {p: values[p][1] for p in periods if p in values and values[p][1]}
         if flags:
             entry_series["flags"] = flags
         series.append(entry_series)
-    doc = {
+    doc: dict[str, Any] = {
         "kpi_key": entry["kpi_key"],
-        "frequency": entry["frequency"],
+        "frequency": shown_frequency,
         "unit_key": unit_key,
-        "periods": periods,
-        "series": series,
+        "periods": axis.get(shown_frequency, []),
     }
+    others = {f: axis[f] for f in SHOWN if f in axis and f != shown_frequency}
+    if others:
+        doc["periods_by_frequency"] = others
+    doc["series"] = series
     return doc, problems
+
+
+def series_periods(doc: dict[str, Any], series: dict[str, Any]) -> list[str]:
+    """The periods a series' values follow: ``periods_by_frequency`` of its own ``frequency``, else ``periods``."""
+    if "frequency" in series:
+        return doc.get("periods_by_frequency", {}).get(series["frequency"], [])
+    return doc["periods"]
 
 
 def source_order(entry: dict[str, Any], measures: list[dict[str, str]]) -> list[str]:
@@ -319,10 +362,13 @@ def latest_values(
     series_doc: dict[str, Any], sources: list[str], checked_at: dict[str, str], generated_at: str
 ) -> list[dict[str, Any]]:
     """latest.json values[] of one v2 KPI: per geography (totals only) the preferred source with data, its newest
-    period and value, the period before with data, the value a year earlier (M and Q) and flags; pure."""
+    period and value, the period before with data, the value a year earlier (M and Q) and flags; pure. Only series
+    of the shown frequency count (a series with its own ``frequency`` never reaches latest.json): a geography
+    without a shown-frequency value of its preferred source falls back to the next source that has one, else has no
+    entry."""
     periods = series_doc["periods"]
     index = {p: i for i, p in enumerate(periods)}
-    totals = [s for s in series_doc["series"] if not s["members"]]
+    totals = [s for s in series_doc["series"] if not s["members"] and "frequency" not in s]
     result = []
     for geography in dict.fromkeys(s["geography"] for s in totals):
         candidates = [s for s in totals if s["geography"] == geography and any(v is not None for v in s["values"])]
@@ -514,7 +560,7 @@ def catalog_json(
 
 
 def gold_index(
-    rows: list[dict[str, Any]], aliases: dict[tuple[str, str], str], monthly: bool
+    rows: list[dict[str, Any]], aliases: dict[tuple[str, str], str]
 ) -> dict[tuple[str, str, str], list[tuple[dict[str, str], float]]]:
     """Read-back index straight from the gold rows: (source, v2 geography, period) → (breakdown, value) pairs, daily
     rows as the mean of each month per measure, geography and breakdown."""
@@ -522,7 +568,7 @@ def gold_index(
     days: dict[tuple, list[float]] = defaultdict(list)
     for row in rows:
         breakdown = _breakdown(row, aliases)
-        if monthly and row["frequency"] in DAILY:
+        if row["frequency"] in DAILY:
             month = row["date_key"].strftime("%Y-%m")
             frozen = tuple(sorted(breakdown.items()))
             days[(row["source"], row["geography"], month, row["measure"], row["gold_geo"], frozen)].append(row["value"])
@@ -537,10 +583,18 @@ def gold_index(
 def compare_series(
     doc: dict[str, Any], index: dict[tuple[str, str, str], list], curated: dict[str, set[str]]
 ) -> list[str]:
-    """Numbers of series.json that are not in Gold for their source, geography, period and members; pure."""
+    """Numbers of series.json that are not in Gold for their source, geography, period and members (each series on
+    its own periods: ``periods``, or ``periods_by_frequency`` of its ``frequency``); pure."""
     problems = []
     for s in doc["series"]:
-        for period, value in zip(doc["periods"], s["values"], strict=True):
+        periods = series_periods(doc, s)
+        if len(periods) != len(s["values"]):
+            problems.append(
+                f"{doc['kpi_key']} {s['source_key']} {s['geography']} {s['members']}: {len(s['values'])} values for "
+                f"{len(periods)} periods of frequency {s.get('frequency', doc['frequency'])}"
+            )
+            continue
+        for period, value in zip(periods, s["values"], strict=True):
             if value is not None and not _in_gold(
                 index, s["source_key"], s["geography"], period, s["members"], value, curated
             ):
@@ -636,9 +690,10 @@ def build(
             empty.append(entry["kpi_key"])
             continue
         files[f"kpi/{entry['kpi_key']}/series.json"] = schema_checked(doc, "v2/series")
+        dims = [d for d in dims if any(d in s["members"] for s in doc["series"])]
         for dim in dims:
             used[dim][entry["kpi_key"]] = {s["members"][dim] for s in doc["series"] if dim in s["members"]}
-        context["indexes"][entry["kpi_key"]] = gold_index(rows, aliases, entry["frequency"] == "M")
+        context["indexes"][entry["kpi_key"]] = gold_index(rows, aliases)
         context["curated"][entry["kpi_key"]] = dict(curated)
         context["frequency"][entry["kpi_key"]] = entry["frequency"]
         built.append((entry, doc, dims))

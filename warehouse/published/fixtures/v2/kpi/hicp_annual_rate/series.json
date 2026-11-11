@@ -17,6 +17,11 @@
     "2025-08",
     "2025-09"
   ],
+  "periods_by_frequency": {
+    "A": [
+      "2024"
+    ]
+  },
   "series": [
     {
       "geography": "PL",
@@ -41,6 +46,16 @@
       "flags": {
         "2025-09": "p"
       }
+    },
+    {
+      "geography": "PL",
+      "source_key": "world_bank_wdi",
+      "unit_key": "pct",
+      "members": {},
+      "frequency": "A",
+      "values": [
+        3.6
+      ]
     },
     {
       "geography": "EU27",

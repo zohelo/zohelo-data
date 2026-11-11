@@ -499,10 +499,15 @@ def published_v2_problems(files: dict[str, dict]) -> list[str]:
     """Cross-file rules of published contract v2 (docs/published.md) over the files of 06_published/v2/ by path
     (catalog.json, latest.json, calendar.json, status.json, kpi/<kpi_key>/series.json): every catalog KPI has its
     series.json and the reverse; units, geographies, sources, dimensions and members used are declared in the
-    catalog; periods are sorted, unique and of the KPI's frequency, with first_period/last_period at the ends; every
-    series has one value or null per period and at least one value; flags only on periods; latest.json has one
-    value per KPI and geography, on a period of the series; next_release is the KPI's first calendar.json date.
+    catalog; periods are sorted, unique and of the KPI's frequency, with first_period/last_period at the ends; a
+    series with its own frequency (another than the KPI's) follows periods_by_frequency of it, whose lists are
+    sorted, unique, of their frequency and each used; one series per geography × source × members; every series has
+    one value or null per period of its own and at least one value; flags only on its periods; latest.json has one
+    value per KPI and geography, taken from the shown-frequency total series of its source (period and value), never
+    from a series of another frequency; next_release is the KPI's first calendar.json date.
     gold.publish runs it before writing v2 (warehouse/publish_v2.py); the published contract check on the fixtures."""
+    import json
+
     problems = []
     for name in ("catalog.json", "latest.json", "calendar.json", "status.json"):
         if name not in files:
@@ -546,10 +551,32 @@ def published_v2_problems(files: dict[str, dict]) -> list[str]:
         problems += [f"{where}: period {p} is not {doc['frequency']}" for p in periods if not re.fullmatch(fmt, p)]
         if periods and (periods[0], periods[-1]) != (kpi["first_period"], kpi["last_period"]):
             problems.append(f"{where}: periods {periods[0]}…{periods[-1]} differ from the catalog's range")
+        others = doc.get("periods_by_frequency", {})
+        for frequency, axis in others.items():
+            at = f"{where} periods_by_frequency.{frequency}"
+            if frequency == doc["frequency"] or frequency not in PERIOD_FORMATS:
+                problems.append(f"{at}: not another frequency than {doc['frequency']} of M, Q, A")
+                continue
+            if not axis or axis != sorted(set(axis)):
+                problems.append(f"{at}: periods are empty or not sorted and unique")
+            fmt = PERIOD_FORMATS[frequency]
+            problems += [f"{at}: period {p} is not {frequency}" for p in axis if not re.fullmatch(fmt, p)]
+            if not any(s.get("frequency") == frequency for s in doc["series"]):
+                problems.append(f"{at}: no series has frequency {frequency}")
+        series_keys = set()
         for i, s in enumerate(doc["series"]):
             at = f"{where} series[{i}]"
-            if len(s["values"]) != len(periods):
-                problems.append(f"{at}: {len(s['values'])} values for {len(periods)} periods")
+            series_key = (s["geography"], s["source_key"], json.dumps(s["members"], sort_keys=True))
+            if series_key in series_keys:
+                problems.append(f"{at}: geography, source and members occur twice")
+            series_keys.add(series_key)
+            own: list[str] | None = periods
+            if "frequency" in s:
+                own = others.get(s["frequency"])
+                if own is None:
+                    problems.append(f"{at}: frequency {s['frequency']} has no periods_by_frequency")
+            if own is not None and len(s["values"]) != len(own):
+                problems.append(f"{at}: {len(s['values'])} values for {len(own)} periods")
             if all(v is None for v in s["values"]):
                 problems.append(f"{at}: no value")
             if s["geography"] not in kpi["geographies"]:
@@ -561,7 +588,8 @@ def published_v2_problems(files: dict[str, dict]) -> list[str]:
             for dim, member in s["members"].items():
                 if dim not in kpi["dimension_keys"] or member not in members.get(dim, set()):
                     problems.append(f"{at}: member {dim}={member} not declared")
-            problems += [f"{at}: flag on unknown period {p}" for p in s.get("flags", {}) if p not in periods]
+            if own is not None:
+                problems += [f"{at}: flag on unknown period {p}" for p in s.get("flags", {}) if p not in own]
     seen = set()
     for v in files.get("latest.json", {}).get("values", []):
         where = f"latest.json {v['kpi_key']} {v['geography']}"
@@ -573,8 +601,21 @@ def published_v2_problems(files: dict[str, dict]) -> list[str]:
             continue
         if v["geography"] not in kpis[v["kpi_key"]]["geographies"]:
             problems.append(f"{where}: geography not in the KPI's geographies")
-        if v["kpi_key"] in series and v["period"] not in series[v["kpi_key"]]["periods"]:
-            problems.append(f"{where}: period {v['period']} not in series.json")
+        if v["kpi_key"] in series:
+            doc = series[v["kpi_key"]]
+            if v["period"] not in doc["periods"]:
+                problems.append(f"{where}: period {v['period']} not in series.json periods")
+            else:
+                at = doc["periods"].index(v["period"])
+                shown = [
+                    s
+                    for s in doc["series"]
+                    if (s["geography"], s["source_key"]) == (v["geography"], v["source_key"])
+                    and not s["members"]
+                    and "frequency" not in s
+                ]
+                if not shown or shown[0]["values"][at] != v["value"]:
+                    problems.append(f"{where}: value is not the shown-frequency series of {v['source_key']}")
         if v["unit_key"] not in units:
             problems.append(f"{where}: unit {v['unit_key']} not in units")
     first: dict[str, str] = {}

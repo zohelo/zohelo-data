@@ -10,6 +10,13 @@
     "2025-Q1",
     "2025-Q2"
   ],
+  "periods_by_frequency": {
+    "A": [
+      "2022",
+      "2023",
+      "2024"
+    ]
+  },
   "series": [
     {
       "geography": "PL",
@@ -65,6 +72,18 @@
         3.4499999999999997,
         3.5,
         3.55
+      ]
+    },
+    {
+      "geography": "PL-14",
+      "source_key": "eurostat",
+      "unit_key": "pct_labour_force",
+      "members": {},
+      "frequency": "A",
+      "values": [
+        2.6,
+        2.5,
+        2.4
       ]
     },
     {

@@ -232,7 +232,8 @@ move. `gold.publish` writes both. zohelo-bi reads v2 only.
 
 Status (2026-11-11): built. `warehouse/publish_v2.py` writes it after the v1 files when `published_v2: true` in
 `warehouse/warehouse.yaml` (`false` stops it; v1 is not affected). Schemas in `warehouse/published/schemas/v2/`,
-fixtures in `warehouse/published/fixtures/v2/` (from synthetic Gold rows; `ops.repo_check` checks them against the
+fixtures in `warehouse/published/fixtures/v2/` (from synthetic Gold rows; World Bank annual series on the quarterly
+`gdp_real_growth` and the monthly `hicp_annual_rate`; `ops.repo_check` checks them against the
 schemas and the cross-file rules of `published_v2_problems`). Seeds: `kpi_v2_map.csv` (the v2 keys),
 `kpi.csv` (`definition_pl` beside `definition_en`), `geography_v2.csv`, `unit_decimals.csv`, `kpi_member.csv`.
 
@@ -267,7 +268,7 @@ schemas and the cross-file rules of `published_v2_problems`). Seeds: `kpi_v2_map
   mean in v2 (exchange rates); the daily series stays in v1.
 - Members: `_T` is the total of a dimension and never appears as a member; a series without a dimension key is
   the total. Gold metrics hold total series, so a breakdown key of `breakdown_json` is a dimension only where it
-  splits the rows of one measure (the NBP currency); keys are named as in v1 (`dimension_alias.csv`, else lower case).
+  splits the rows of one measure at one frequency (the NBP currency; a key that differs only between frequencies, e.g. seasonally adjusted quarterly and unadjusted annual rows, is not a dimension); keys are named as in v1 (`dimension_alias.csv`, else lower case).
   Where `kpi_member.csv` lists members of a dimension for a v2 key, only those reach v2 (`eurpln` = currency `EUR`);
   a dimension left with one member is not a dimension.
 - Units: every series and every latest value carries its own `unit_key` (the measure's `kpi_measure.csv` unit, else
@@ -310,8 +311,8 @@ Written from the seeds: names and `unit_key` from `kpi.csv`, definitions from it
 (required for a published concept with a v2 key), `frequency`, `aggregation` and `polarity` from `kpi_v2_map.csv`
 (one value per v2 key), `domain_key`/`group_key` by walking `domain.csv` up from the concept's `subgroup_key`,
 `decimals` from `unit_decimals.csv`, member names and order from `kpi_member.csv` (else `sex.csv` for sex, else the
-member key), geographies from `geography_v2.csv` (`eu`: the area is in the EU). `source_keys` are the sources with
-data, preferred first (best `kpi_measure.csv` priority of the concept, then map order). `first_period`/`last_period`
+member key), geographies from `geography_v2.csv` (`eu`: the area is in the EU). `source_keys` and `geographies` count
+every series, also those of another frequency; `source_keys` are the sources with data, preferred first (best `kpi_measure.csv` priority of the concept, then map order). `first_period`/`last_period`
 are the ends of the KPI's `series.json` periods; a v2 KPI without any row at its frequency is left out and reported.
 
 ## latest.json (one file for all KPIs)
@@ -319,7 +320,7 @@ are the ends of the KPI's `series.json` periods; a v2 KPI without any row at its
 | field | type | meaning |
 |---|---|---|
 | version, generated_at | | as above |
-| values[] | array | one entry per KPI × geography (totals only, no breakdowns) |
+| values[] | array | one entry per KPI × geography (totals only, no breakdowns), shown frequency only |
 | values[].kpi_key, geography | string | |
 | values[].source_key | string | the source shown (preferred source with data for that geography) |
 | values[].unit_key | string | unit of the value (see Units above) |
@@ -329,29 +330,47 @@ are the ends of the KPI's `series.json` periods; a v2 KPI without any row at its
 | values[].flags | array | source status flags (`p` provisional, `e` estimated, `b` break) |
 | values[].checked_at | string | when the source was last checked |
 
+Every entry comes from one series of the KPI's shown frequency (period, previous and year-ago values from the same
+series): the preferred source with a shown-frequency value for that geography, else the next such source. A series
+with its own `frequency` (see series.json) never reaches latest.json, so frequencies are never mixed in one entry; a
+geography that has only series of another frequency has no latest entry.
+
 ## kpi/<kpi_key>/series.json
 
 Columnar to stay small; the reader filters by geography, source and members.
 
 | field | type | meaning |
 |---|---|---|
-| kpi_key, frequency, unit_key | string | |
-| periods | array | every period of the KPI, sorted |
+| kpi_key, frequency, unit_key | string | `frequency`: the KPI's shown frequency (as catalog.json) |
+| periods | array | every period of the shown frequency, sorted |
+| periods_by_frequency | object | optional: `{ "A": [...], "Q": [...], "M": [...] }`, for each other frequency that a series uses, every period of it, sorted; only frequencies some series uses, never the shown one |
 | series[] | array | one entry per geography × source × member combination |
 | series[].geography, source_key, unit_key | string | |
 | series[].members | object | `{ dimension_key: member_key }`; `{}` = totals |
-| series[].values | array | one number or null per entry of `periods` |
-| series[].flags | object | optional, `{ period: "p" }` only where a flag exists |
+| series[].frequency | string | optional: `M`, `Q` or `A`, only when the series has another frequency than the KPI's |
+| series[].values | array | one number or null per entry of `periods`, or of `periods_by_frequency[frequency]` when the series has its own `frequency` |
+| series[].flags | object | optional, `{ period: "p" }` only where a flag exists, on the series' own periods |
 
 Size: ≤ 1 MB gzipped per KPI. A KPI whose full breakdown would exceed it publishes only the members listed for it
 in `kpi_member.csv` (the curated members a reader needs: e.g. the NACE sections, not every class); `gold.publish`
 fails on a file over the limit.
 
-Only rows of the KPI's shown frequency are in the file (daily rows as the monthly mean, 6 decimals, when it is
-monthly), so a source that has the KPI only at another frequency (e.g. World Bank annual rates of a quarterly KPI)
-has no series in v2 yet. Per geography × source × members one measure is kept: the best `kpi_measure.csv` priority,
-then the lowest measure key. Two different Gold values for one period of a series fail the run (equal duplicates
-count once).
+**Series of another frequency** (decision of 2026-11-11, taken by the orchestrator under the mandate, applying O31):
+a source that publishes a KPI only at another frequency than the shown one (World Bank annual rates of a quarterly
+or monthly KPI, Eurostat annual NUTS 2 rates where only the national series is quarterly) still gets its series. Per
+geography × source × members one series is kept, at the shown frequency when that series has rows of it, else at
+the finest other frequency it has (M, then Q, then A); such a series carries its own `frequency` and its values
+follow `periods_by_frequency` of that frequency. A source never has two series of one geography and members (its
+annual rows are dropped where it has the shown frequency). Reader rule: a series' periods are
+`periods_by_frequency[series.frequency]` when `frequency` is present, else `periods`. Shape: one shared axis per
+frequency, so the file stays columnar and a series adds only one optional key; per-series period lists would repeat
+the same axis in every series of a frequency.
+
+Frequencies in v2 are M, Q and A; daily rows become the monthly mean (6 decimals; frequency M); half-yearly and
+other rows are not in v2. Within the chosen frequency one measure is kept: the best `kpi_measure.csv` priority, then
+the lowest measure key. Two different Gold values for one period of a series fail the run (equal duplicates count
+once). A v2 KPI without any row of its shown frequency stays out of v2 even when other frequencies exist (catalog.json
+`first_period`/`last_period` are the shown range).
 
 ## calendar.json
 
@@ -445,7 +464,8 @@ measure's unit; the rate is the value minus 100. The v2 key of a concept is read
 ## Who checks what
 
 - zohelo-data: schemas, `gold.publish` reads back every number of `latest.json` and `series.json` (values, previous
-  and year-ago values; monthly means recomputed from the daily rows) against Gold (as v1) and fails on a difference;
+  and year-ago values, series of another frequency on their own periods; monthly means recomputed from the daily
+  rows) against Gold (as v1) and fails on a difference;
   `ops.repo_check` checks the fixtures in `warehouse/published/fixtures/v2/` (schemas, `published_v2_problems`) and
   the v2 seeds (`published_v2_seeds`).
 - zohelo-bi: its live provider maps v2 one to one onto its data interface (`apps/portal/src/data/types.ts`) and

@@ -34,6 +34,34 @@
         "pattern": "^[0-9]{4}(-Q[1-4]|-(0[1-9]|1[0-2]))?$"
       }
     },
+    "periods_by_frequency": {
+      "description": "optional: the periods of each other frequency than `frequency` that a series uses, sorted; a series with its own `frequency` has one value or null per entry of that list",
+      "type": "object",
+      "properties": {
+        "M": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+          }
+        },
+        "Q": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-Q[1-4]$"
+          }
+        },
+        "A": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9]{4}$"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "series": {
       "type": "array",
       "items": {
@@ -60,6 +88,15 @@
           },
           "members": {
             "type": "object"
+          },
+          "frequency": {
+            "description": "optional: present only when the series has another frequency than the KPI's; its values follow periods_by_frequency of that frequency",
+            "type": "string",
+            "enum": [
+              "M",
+              "Q",
+              "A"
+            ]
           },
           "values": {
             "type": "array",
