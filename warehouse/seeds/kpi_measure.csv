@@ -144,3 +144,6 @@ pensioners,gus_bdl,gus_bdl:P2861:osoba:przeciętna liczba emerytów i rencistów
 zus_pension_avg,gus_bdl,gus_bdl:P2860:zł:z pozarolniczego systemu ubezpieczeń społecznych emerytury,"non-agricultural system, old-age pension",1,
 investment_outlays,gus_bdl,gus_bdl:P2862:tys. zł:nakłady inwestycyjne w przedsiębiorstwach,"enterprises, current prices",1,
 vacancies_per_unemployed,gus_bdl,gus_bdl:P4334:osoba:zarejestrowani bezrobotni na 1 ofertę pracy,annual,1,
+business_confidence_oecd,oecd,oecd:cli:IX:BCICP:AA,"amplitude adjusted, long-term average = 100",1,index_lta_100
+consumer_confidence_oecd,oecd,oecd:cli:IX:CCICP:AA,"amplitude adjusted, long-term average = 100",1,index_lta_100
+cli_oecd,oecd,oecd:cli:IX:LI:AA,"amplitude adjusted, long-term average = 100; 22 economies and aggregates",1,index_lta_100
