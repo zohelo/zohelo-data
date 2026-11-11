@@ -25,7 +25,7 @@ def build() -> None:
     started = time.monotonic()
     run = subprocess.run(
         ["dbt", "build", "--target", "prod", "--select", "path:models/gold", "path:seeds",
-         "--exclude", "path:models/gold/topics", "--threads", "2", "--vars", f"{{gold_schema: {NS}}}"],
+         "--exclude", "path:models/gold/topics", "fact_grain", "--threads", "2", "--vars", f"{{gold_schema: {NS}}}"],
         cwd=ROOT / "warehouse", env=env, capture_output=True, text=True,
     )
     for wait in (90, 240, 480):  # catalog HTTP 429: retry the failed and skipped nodes (warehouse.yaml waits)
@@ -60,6 +60,13 @@ def checks() -> None:
         list(source_code) filter (where not matched)[1:40] from {g}.map_geography
         where source_system in {NEW} group by 1""")
     show(con, "grain_check new", f"select * from {g}.grain_check where source_system in {NEW}")
+    show(con, "fact grain by source (series_key x date_key)", f"""select source_system, count(*) from (
+        select series_key, date_key, any_value(source_system) as source_system from (
+            select series_key, date_key, source_system from {g}.fact_annual union all
+            select series_key, date_key, source_system from {g}.fact_quarterly union all
+            select series_key, date_key, source_system from {g}.fact_monthly union all
+            select series_key, date_key, source_system from {g}.fact_daily)
+        group by all having count(*) > 1) group by 1""")
     show(con, "grain_check all", f"select source_system, count(*) from {g}.grain_check group by 1")
     show(con, "dim_measure new", f"""select source_system, block_id, status, count(*), sum(series), sum(points),
         min(first_date), max(last_date) from {g}.dim_measure where source_system in {NEW}
