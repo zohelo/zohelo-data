@@ -289,9 +289,12 @@ sources:
   research:
     priority: review-next
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Confirm stable machine-download contract'
+    - 'Owner decision needed (O36 wave 2, 11 Nov 2026): the registered route is web (DataBank). Dev probe 43086111225
+      found the bulk zip GemDataEXTR.zip (databankfiles.worldbank.org, 36 xlsx workbooks) stale since 2024-03-05,
+      while the World Bank API v2 source 15 (36 indicators) was updated 2026-09-08; an API extractor like
+      world_bank_icp (source 90) would replace the web route. Not built until the owner decides.'
     references:
     - https://databank.worldbank.org/source/global-economic-monitor-(gem)
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
