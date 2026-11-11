@@ -207,16 +207,17 @@ def nbp():
             continue
         try:
             data = requests.get(url, timeout=120).content
-            wb = openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)
+            wb = openpyxl.load_workbook(io.BytesIO(data), data_only=True)
             print(f"\n##### {url} {len(data)} bytes sheets={wb.sheetnames}")
-            for ws in wb.worksheets[:6]:
-                print(f"--- sheet {ws.title} dims={ws.dimensions}")
+            for ws in wb.worksheets[:3]:
+                print(f"--- sheet {ws.title} rows={ws.max_row} cols={ws.max_column} merged={list(ws.merged_cells.ranges)[:10]}")
                 for i, row in enumerate(ws.iter_rows(values_only=True)):
-                    if i >= 70:
-                        break
-                    cells = ["" if c is None else str(c)[:28] for c in row[:14]]
-                    if any(cells):
-                        print(f"{i + 1}: " + " | ".join(cells))
+                    if i < 14:
+                        cells = ["" if c is None else str(c)[:24] for c in row]
+                        print(f"{i + 1}: " + " | ".join(cells[:12]) + " ... " + " | ".join(cells[-6:]))
+                    else:
+                        cells = ["" if c is None else str(c)[:70] for c in row[:4]]
+                        print(f"{i + 1}: " + " | ".join(cells) + f" || last={row[-1]}")
         except Exception as exc:
             print(f"XLSX {url} -> {type(exc).__name__}: {str(exc)[:200]}")
 
