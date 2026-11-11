@@ -36,6 +36,6 @@ gold: []
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one file of ~200,000 values a year, rebuilt in full.
-refresh: {mode: full, decided: "D32 + #TASK"}
+refresh: {mode: full, decided: "D32 + #2765"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
