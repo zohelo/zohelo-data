@@ -281,6 +281,6 @@
         ('nbp', 'fx_A', 'NBP exchange rates, table A'),
         ('nbp', 'fx_C', 'NBP exchange rates, table C'),
         ('nbp', 'gold', 'NBP gold fixings'),
-        ('gugik_prg', 'units', 'PRG administrative units')
+        ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}

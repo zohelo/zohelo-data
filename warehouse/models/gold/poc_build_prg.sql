@@ -6,9 +6,9 @@
    beside GUS BDL P1410 (which takes its areas from PRG on 1 January). #}
 select
     'gugik_prg' as source_system,
-    'units' as block_id,
+    'jednostki_administracyjne' as block_id,
     'PRG administrative units' as block_name,
-    'gugik_prg:units:km2:area' as measure_key,
+    'gugik_prg:jednostki_administracyjne:km2:area' as measure_key,
     'Area of the administrative unit (PRG, JPT_POWIER)' as measure_name,
     'area' as measure_codes,
     'km2' as unit_code,
