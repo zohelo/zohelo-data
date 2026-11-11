@@ -34,18 +34,25 @@ def main(argv=None) -> int:
     cat = bf.retry(catalog, "catalog")
     try:
         started = time.monotonic()
-        run = subprocess.run(
-            ["dbt", "build", "--target", "prod", "--select", *args.select.split(), "--exclude", "path:models/gold/topics",
-             "--threads", "2", "--vars", f"{{gold_schema: {NAMESPACE}}}"],
-            cwd=ROOT / "warehouse", env=env, capture_output=True, text=True,
-        )
-        print(run.stdout[-60000:])
-        results = json.loads((ROOT / "warehouse" / "target" / "run_results.json").read_text())
-        failed = [(r["unique_id"].split(".")[-1], r["status"], (r.get("message") or "")[:300])
-                  for r in results["results"] if r["status"] not in ("success", "pass")]
-        annotate("notice" if run.returncode == 0 else "error", "gold stat trial build",
-                 {"exit": run.returncode, "minutes": round((time.monotonic() - started) / 60, 1),
-                  "nodes": len(results["results"]), "failed": failed[:15]})
+        failed = []
+        for verb, sel in (("seed", ["path:seeds"]), ("run", args.select.split()), ("test", args.select.split())):
+            cmd = ["dbt", verb, "--target", "prod", "--select", *sel, "--exclude", "path:models/gold/topics",
+                   "path:tests/topic_quality.sql", "path:tests/topic_quality_warn.sql", "path:tests/topic_seeds.sql",
+                   "--threads", "2", "--vars", f"{{gold_schema: {NAMESPACE}}}"]
+            run = subprocess.run(cmd, cwd=ROOT / "warehouse", env=env, capture_output=True, text=True)
+            for wait in (60, 180, 300):  # HTTP 429 from the catalog: resume the failed nodes
+                if run.returncode == 0 or verb == "test" or "429" not in run.stdout:
+                    break
+                time.sleep(wait)
+                run = subprocess.run(["dbt", "retry", "--target", "prod", "--vars", f"{{gold_schema: {NAMESPACE}}}"],
+                                     cwd=ROOT / "warehouse", env=env, capture_output=True, text=True)
+            print(f"\n##### dbt {verb} exit {run.returncode}")
+            print(run.stdout[-40000:])
+            results = json.loads((ROOT / "warehouse" / "target" / "run_results.json").read_text())
+            failed += [(verb, r["unique_id"].split(".")[-1], r["status"], (r.get("message") or "")[:200])
+                       for r in results["results"] if r["status"] not in ("success", "pass")]
+        annotate("notice" if not failed else "warning", "gold stat trial build",
+                 {"minutes": round((time.monotonic() - started) / 60, 1), "failed": failed[:15]})
         import duckdb
 
         con = duckdb.connect()
@@ -55,7 +62,7 @@ def main(argv=None) -> int:
             counts[ident[-1]] = int((snap.summary or {}).get("total-records", -1)) if snap else 0
         print("\n=== ROWS", json.dumps(counts, sort_keys=True))
         try:
-            check = cat.load_table((NAMESPACE, "poc_build_check")).scan().to_arrow()
+            check = cat.load_table((NAMESPACE, "build_check")).scan().to_arrow()
             con.register("bc", check)
             srcs = ",".join(f"'{s}'" for s in args.sources.split(","))
             print("\n=== BUILD CHECK")
@@ -65,7 +72,7 @@ def main(argv=None) -> int:
             print("build_check not read", exc)
         for concept in [c for c in args.concepts.split(",") if c]:
             try:
-                t = cat.load_table((NAMESPACE, f"poc_metrics_{concept}")).scan().to_arrow()
+                t = cat.load_table((NAMESPACE, f"metrics_{concept}")).scan().to_arrow()
                 con.register("m", t)
                 print(f"\n=== METRICS {concept}: {t.num_rows} rows")
                 for r in con.sql(
