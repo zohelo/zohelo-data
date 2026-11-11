@@ -254,6 +254,7 @@
     union all select * from {{ ref('poc_build_dbw') }}
     union all select * from {{ ref('poc_build_wdi') }}
     union all select * from {{ ref('poc_build_nbp') }}
+    union all select * from {{ ref('poc_build_prg') }}
 {% endmacro %}
 
 {# series_key: measure × geography × breakdown codes, readable; an unmatched area keeps its source code so
@@ -279,6 +280,7 @@
         values
         ('nbp', 'fx_A', 'NBP exchange rates, table A'),
         ('nbp', 'fx_C', 'NBP exchange rates, table C'),
-        ('nbp', 'gold', 'NBP gold fixings')
+        ('nbp', 'gold', 'NBP gold fixings'),
+        ('gugik_prg', 'units', 'PRG administrative units')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}
