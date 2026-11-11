@@ -20,13 +20,19 @@ newest as (
 ),
 
 codes as (
-    select raw_sha256, dimension, code, any_value(label) as label
+    select
+        raw_sha256,
+        dimension,
+        code,
+        any_value(label) as label
     from {{ source('unece', 'unece_codes') }}
     group by all
 ),
 
 exploded as (  -- one row per cell and variable
-    select n.*, d.i
+    select
+        n.*,
+        d.i
     from newest as n, unnest(range(1, len(n.dims) + 1)) as d (i)
 ),
 
