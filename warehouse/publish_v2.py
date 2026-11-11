@@ -175,6 +175,11 @@ def _breakdown(row: dict[str, Any], aliases: dict[tuple[str, str], str]) -> dict
     return {dimension_key(row["source"], k, aliases): str(v) for k, v in raw.items() if v is not None}
 
 
+def _series_frequency(row: dict[str, Any]) -> str:
+    """The v2 frequency a gold row feeds: its own, daily rows as M (the monthly mean)."""
+    return "M" if row["frequency"] in DAILY else row["frequency"]
+
+
 def kpi_cells(
     rows: list[dict[str, Any]],
     curated: dict[str, set[str]],
@@ -184,21 +189,23 @@ def kpi_cells(
     the KPI's dimension keys; pure.
 
     Gold metrics hold total series, so a breakdown key is a dimension only where it splits the rows of one measure
-    (more than one value, a missing key counting as '_T'), e.g. the currency of the NBP rates. Where kpi_member.csv
+    at one frequency (daily counting as M; more than one value, a missing key counting as '_T'), e.g. the currency
+    of the NBP rates; a key that differs only between frequencies (seasonally adjusted quarterly, unadjusted annual
+    rows) is not a dimension, so rows of another frequency never change the shown series. Where kpi_member.csv
     lists members of a dimension, rows of other members are dropped. A dimension left with one value is not a
     dimension (members {}). Daily rows become the monthly mean per series."""
-    parsed = [(row, _breakdown(row, aliases)) for row in rows]
-    keys_by_measure: dict[str, set[str]] = defaultdict(set)
-    for row, breakdown in parsed:
-        keys_by_measure[row["measure"]].update(breakdown)
-    values_by_measure: dict[tuple[str, str], set[str]] = defaultdict(set)
-    for row, breakdown in parsed:
-        for key in keys_by_measure[row["measure"]]:
-            values_by_measure[(row["measure"], key)].add(breakdown.get(key, "_T"))
-    split = {(m, k) for (m, k), values in values_by_measure.items() if len(values) > 1}
+    parsed = [(row, _breakdown(row, aliases), _series_frequency(row)) for row in rows]
+    keys_by_measure: dict[tuple[str, str], set[str]] = defaultdict(set)
+    for row, breakdown, frequency in parsed:
+        keys_by_measure[(row["measure"], frequency)].update(breakdown)
+    values_by_measure: dict[tuple[str, str, str], set[str]] = defaultdict(set)
+    for row, breakdown, frequency in parsed:
+        for key in keys_by_measure[(row["measure"], frequency)]:
+            values_by_measure[(row["measure"], frequency, key)].add(breakdown.get(key, "_T"))
+    split = {(m, f, k) for (m, f, k), values in values_by_measure.items() if len(values) > 1}
     kept = []
-    for row, breakdown in parsed:
-        members = {k: breakdown.get(k, "_T") for (m, k) in split if m == row["measure"]}
+    for row, breakdown, frequency in parsed:
+        members = {k: breakdown.get(k, "_T") for (m, f, k) in split if (m, f) == (row["measure"], frequency)}
         if any(k in breakdown and breakdown[k] not in allowed for k, allowed in curated.items()):
             continue
         if any(k in members and members[k] not in allowed for k, allowed in curated.items()):
@@ -212,7 +219,7 @@ def kpi_cells(
     grouped: dict[tuple, list[tuple[float, str | None]]] = defaultdict(list)
     for row, members in kept:
         shown = {k: v for k, v in members.items() if k in dims and v != "_T"}
-        frequency = "M" if row["frequency"] in DAILY else row["frequency"]
+        frequency = _series_frequency(row)
         key = (
             row["source"],
             row["geography"],
@@ -580,7 +587,14 @@ def compare_series(
     its own periods: ``periods``, or ``periods_by_frequency`` of its ``frequency``); pure."""
     problems = []
     for s in doc["series"]:
-        for period, value in zip(series_periods(doc, s), s["values"], strict=True):
+        periods = series_periods(doc, s)
+        if len(periods) != len(s["values"]):
+            problems.append(
+                f"{doc['kpi_key']} {s['source_key']} {s['geography']} {s['members']}: {len(s['values'])} values for "
+                f"{len(periods)} periods of frequency {s.get('frequency', doc['frequency'])}"
+            )
+            continue
+        for period, value in zip(periods, s["values"], strict=True):
             if value is not None and not _in_gold(
                 index, s["source_key"], s["geography"], period, s["members"], value, curated
             ):

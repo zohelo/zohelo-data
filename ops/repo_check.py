@@ -570,13 +570,12 @@ def published_v2_problems(files: dict[str, dict]) -> list[str]:
             if series_key in series_keys:
                 problems.append(f"{at}: geography, source and members occur twice")
             series_keys.add(series_key)
-            own = periods
+            own: list[str] | None = periods
             if "frequency" in s:
-                if s["frequency"] not in others:
+                own = others.get(s["frequency"])
+                if own is None:
                     problems.append(f"{at}: frequency {s['frequency']} has no periods_by_frequency")
-                    continue
-                own = others[s["frequency"]]
-            if len(s["values"]) != len(own):
+            if own is not None and len(s["values"]) != len(own):
                 problems.append(f"{at}: {len(s['values'])} values for {len(own)} periods")
             if all(v is None for v in s["values"]):
                 problems.append(f"{at}: no value")
@@ -589,7 +588,8 @@ def published_v2_problems(files: dict[str, dict]) -> list[str]:
             for dim, member in s["members"].items():
                 if dim not in kpi["dimension_keys"] or member not in members.get(dim, set()):
                     problems.append(f"{at}: member {dim}={member} not declared")
-            problems += [f"{at}: flag on unknown period {p}" for p in s.get("flags", {}) if p not in own]
+            if own is not None:
+                problems += [f"{at}: flag on unknown period {p}" for p in s.get("flags", {}) if p not in own]
     seen = set()
     for v in files.get("latest.json", {}).get("values", []):
         where = f"latest.json {v['kpi_key']} {v['geography']}"

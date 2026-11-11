@@ -268,7 +268,7 @@ schemas and the cross-file rules of `published_v2_problems`). Seeds: `kpi_v2_map
   mean in v2 (exchange rates); the daily series stays in v1.
 - Members: `_T` is the total of a dimension and never appears as a member; a series without a dimension key is
   the total. Gold metrics hold total series, so a breakdown key of `breakdown_json` is a dimension only where it
-  splits the rows of one measure (the NBP currency); keys are named as in v1 (`dimension_alias.csv`, else lower case).
+  splits the rows of one measure at one frequency (the NBP currency; a key that differs only between frequencies, e.g. seasonally adjusted quarterly and unadjusted annual rows, is not a dimension); keys are named as in v1 (`dimension_alias.csv`, else lower case).
   Where `kpi_member.csv` lists members of a dimension for a v2 key, only those reach v2 (`eurpln` = currency `EUR`);
   a dimension left with one member is not a dimension.
 - Units: every series and every latest value carries its own `unit_key` (the measure's `kpi_measure.csv` unit, else
