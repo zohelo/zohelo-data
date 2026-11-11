@@ -13,14 +13,31 @@
     'Q0040Male', 'Q0040Female', 'Q0060', 'Q0060Male', 'Q0060Female', 'Q1550', 'Q1550Male', 'Q1550Female',
     'Q1560', 'Q1560Male', 'Q1560Female', 'NetMigrations', 'CNMR'
 ] -%}
-with newest as (
-    select
-        *,
-        string_split(field_names, ',') as f,
-        string_split(field_values, '|') as v
+with file_rows as (
+    select *
     from {{ source('un_wpp', 'un_wpp_rows') }}
     where entity = 'demographic_indicators_medium'
     qualify rank() over (partition by entity order by source_version desc, ingested_at desc) = 1
+),
+
+headers as (  -- one header row per file (source_row_number 1)
+    select
+        raw_sha256,
+        string_split(field_names, ',') as f
+    from file_rows
+    where source_row_number = 1
+),
+
+newest as (
+    select
+        h.f,
+        string_split(r.field_values, '|') as v,
+        r.raw_sha256,
+        r.source_version,
+        r.ingested_at
+    from file_rows as r
+    inner join headers as h on r.raw_sha256 = h.raw_sha256
+    where r.source_row_number > 1
 )
 
 select

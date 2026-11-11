@@ -16,6 +16,8 @@ models:
         tests: [not_null]
       - name: year
         tests: [not_null]
+      - name: variant
+        tests: [not_null, {accepted_values: {arguments: {values: ['Medium']}}}]
       - name: raw_sha256
         description: Landing SHA-256 of the source file (lineage to Landing/Archive).
         tests: [not_null]
@@ -35,5 +37,13 @@ models:
       - name: age_groups
         description: Five-year groups summed; 21 when the file is complete.
         tests: [not_null, {accepted_values: {arguments: {values: [21], quote: false}}}]
+      - name: pop_total
+        tests: [not_null]
+      - name: pop_0_14
+        tests: [not_null]
+      - name: pop_15_64
+        tests: [not_null]
+      - name: pop_65_plus
+        tests: [not_null]
       - name: raw_sha256
         tests: [not_null]

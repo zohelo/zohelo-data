@@ -1877,9 +1877,11 @@ sources:
     notes: 'Terms: CC BY 3.0 IGO (http://creativecommons.org/licenses/by/3.0/igo/); WPP 2024 data are "made available under a Creative Commons license CC BY 3.0 IGO" (https://environmentdashboard.org/sources/un-wpp-2024, quoting the producer): copy, redistribute and adapt, also commercially, with attribution; no UN emblem or implied endorsement. Attribution: "United Nations, Department of Economic and Social Affairs, Population Division (2024). World Population Prospects 2024, Online Edition. CC BY 3.0 IGO."'
   updates: Revision-based releases recalculate historical estimates and projection variants.
   ingestion:
-    history: Load complete revision files and metadata; retain each revision.
-    incremental: Append revision vintage; do not overwrite earlier projections.
-    identifiers: Location code + year + age + sex + variant + measure + revision.
+    history: 'Complete files of the current revision (WPP 2024); Bronze keeps the latest copy only (bronze_latest_only),
+      Archive the newest + 90 days. Earlier revisions are not kept as vintages: a new revision replaces the files
+      (new URLs in the declaration).'
+    incremental: Monthly check; a file is landed only when its SHA-256 changed, and Silver/Gold rebuild in full.
+    identifiers: Location code + year + age + sex + variant + measure.
   modelling:
     notes: Population stocks, births/deaths/migration flows and rates differ; variants must remain explicit.
     overlap: Overlaps WDI, UNdata and national population series; WPP estimates are modeled harmonized vintages.

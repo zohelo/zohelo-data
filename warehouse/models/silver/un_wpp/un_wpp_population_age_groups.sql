@@ -3,16 +3,31 @@
    thousands as published (sums of the published groups). The 1.76 million five-year rows stay in Bronze (above
    the full-rebuild policy of ~1M rows, #822); these sums are what the dependency ratios need. Dependency ratios
    per 100 persons aged 15-64: old_age (65+), child (0-14), total. Years from 2024 are projections. #}
-with newest as (
-    select
-        string_split(field_names, ',') as f,
-        string_split(field_values, '|') as v,
-        raw_sha256,
-        source_version,
-        ingested_at
+with file_rows as (
+    select *
     from {{ source('un_wpp', 'un_wpp_rows') }}
     where entity = 'population_by_age5_medium'
     qualify rank() over (partition by entity order by source_version desc, ingested_at desc) = 1
+),
+
+headers as (  -- one header row per file (source_row_number 1)
+    select
+        raw_sha256,
+        string_split(field_names, ',') as f
+    from file_rows
+    where source_row_number = 1
+),
+
+newest as (
+    select
+        h.f,
+        string_split(r.field_values, '|') as v,
+        r.raw_sha256,
+        r.source_version,
+        r.ingested_at
+    from file_rows as r
+    inner join headers as h on r.raw_sha256 = h.raw_sha256
+    where r.source_row_number > 1
 ),
 
 rows_typed as (

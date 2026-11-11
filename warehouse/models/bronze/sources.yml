@@ -259,8 +259,9 @@ sources:
   tables:
   - name: un_wpp_rows
     description: >-
-      One row per data row of the newest copy of each file (entity), generic: field_names (the header,
-      comma-separated) and field_values (the row, |-separated) as source text; partitioned by entity.
+      Generic CSV rows of the newest copy of each file (entity): one header row per file (source_row_number 1,
+      field_names = the header, comma-separated) and one row per data row (field_values, |-separated), source
+      text; partitioned by entity.
   - name: un_wpp_rejected_files
     description: UN WPP Landing files the Bronze decoder rejected, with the reason.
 - name: oecd

@@ -77,8 +77,8 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   nbp_fx_rates: {rows: 1000000}  # 428,392
   nbp_gold_fixings: {rows: 20000}  # 3,479
   oecd_cli: {rows: 400000}  # 240,988 (Dev trial 42777288678)
-  un_wpp_demographic_indicators: {rows: 150000}  # 84,360: 555 locations × 152 years (Dev probe 43084932726)
-  un_wpp_population_age_groups: {rows: 150000}  # 83,805: 555 locations × 151 years
+  un_wpp_demographic_indicators: {rows: 127000}  # 84,360: 555 locations × 152 years (Dev trial 43093304689)
+  un_wpp_population_age_groups: {rows: 126000}  # 83,805: 555 locations × 151 years (Dev trial 43093304689)
   news_headlines: {rows: 300000}
   releases: {rows: 5000}  # about 50 announced releases a week, 60-day window
   topic_attention: {rows: 50000}  # 35 topics × 455 days
@@ -104,7 +104,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_dbw: {rows: 600000}  # 312,512 (10 Nov) + ~110,000 slice blocks (#2592)
   poc_build_eurostat: {rows: 800000}
   poc_build_nbp: {rows: 600000}
-  poc_build_un_wpp: {rows: 50000}  # ~22,000: 29 areas × 151 years × 5 indicators (Dev probe 43084932726)
+  poc_build_un_wpp: {rows: 33000}  # ~21,900: 29 areas × 151 years × 5 indicators (Dev trial 43093304689)
   poc_build_wdi: {rows: 500000}  # + 16 slice indicators, all economies (#2592)
   poc_concept_measures: {rows: 1000}
   poc_dim_calendar: {rows: 80000}
