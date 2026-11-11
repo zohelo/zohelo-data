@@ -1,0 +1,27 @@
+version: 2
+models:
+  - name: nbp_bop_observations
+    description: >-
+      NBP balance of payments of Poland (bop_m monthly, bop_q quarterly, register PLG-002) and international
+      investment position (iip_q quarterly, PLG-003) from bronze.nbp_bop_cells: one row per workbook × currency
+      (PLN, EUR, USD) × item × period of the newest version of each workbook, history from 2004. value is in
+      million units of the currency; item_code is the slug of the item's English label, prefixed by its block's
+      and section's slug where the slug repeats (positions under assets and liabilities). Dev trial: see the
+      onboarding PR (#2754).
+    tests:
+      - unique:
+          column_name: "entity || '|' || currency || '|' || item_code || '|' || cast(date_key as varchar)"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: ['bop_m', 'bop_q', 'iip_q']}}}]
+      - name: currency
+        tests: [not_null, {accepted_values: {arguments: {values: ['PLN', 'EUR', 'USD']}}}]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: ['M', 'Q']}}}]
+      - name: date_key
+        tests: [not_null]
+      - name: item_code
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the workbook (lineage to Landing/Archive).
+        tests: [not_null]
