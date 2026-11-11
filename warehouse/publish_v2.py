@@ -1,0 +1,745 @@
+"""gold.publish, contract v2: the files of ``06_published/v2/`` that zohelo-bi reads (docs/published.md,
+"Published layer contract v2").
+
+``catalog.json``, ``latest.json``, ``kpi/<kpi_key>/series.json``, ``calendar.json`` and ``status.json`` (the v1
+file, copied), written by ``warehouse/publish.py`` after the v1 files when warehouse.yaml ``published_v2`` is true
+(``topics.json`` has its own writer there). The v2 KPIs are the v2 keys of ``seeds/kpi_v2_map.csv`` whose concept has
+status ``published`` in ``seeds/kpi.csv``; each ready source of the map is its own series (O31). Geography keys come
+from ``seeds/geography_v2.csv``, decimals from ``seeds/unit_decimals.csv``, curated members from
+``seeds/kpi_member.csv``. Every JSON file is checked against ``published/schemas/v2/`` and the cross-file rules of
+``ops.repo_check.published_v2_problems`` before it is written, and every number is read back against Gold.
+"""
+
+from __future__ import annotations
+
+from collections import defaultdict
+from contextlib import suppress
+from datetime import date
+import gzip
+import json
+import math
+import re
+from typing import Any
+
+import duckdb
+import pyarrow as pa
+
+from warehouse.publish import get, period_label, put, schema_checked, seed
+
+V2_PREFIX = "06_published/v2/"
+GZIP_LIMITS = {"catalog.json": 1_000_000, "latest.json": 300_000, "series.json": 1_000_000}  # docs/published.md
+RAW_LIMITS = {"calendar.json": 50_000, "status.json": 50_000}
+SHOWN = ("M", "Q", "A")  # frequencies a v2 KPI can show
+DAILY = ("D", "B")  # published as the monthly mean when the KPI shows M
+# gold.dim_observation_status → v2 flag letter (SDMX/Eurostat letters); other statuses carry no flag.
+FLAGS = {
+    "provisional": "p",
+    "estimated": "e",
+    "break": "b",
+    "forecast": "f",
+    "low_reliability": "u",
+    "definition_differs": "d",
+    "not_significant": "n",
+    "confidential": "c",
+}
+MEAN_DIGITS = 6  # monthly means of daily values are rounded to this many decimals
+
+
+def dumps(obj: Any) -> bytes:
+    return json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def v2_kpis(kpis: list[dict[str, str]], v2map: list[dict[str, str]]) -> list[dict[str, Any]]:
+    """The v2 KPIs: one entry per v2 key whose one concept has status published, with its ready sources and the
+    measure patterns of each; pure. ValueError when a v2 key has several concepts or differing frequency,
+    aggregation or polarity across its rows."""
+    by_concept = {k["kpi_key"]: k for k in kpis}
+    rows_by_key: dict[str, list[dict[str, str]]] = defaultdict(list)
+    for row in v2map:
+        rows_by_key[row["v2_key"]].append(row)
+    entries = []
+    for key, rows in sorted(rows_by_key.items()):
+        concepts = {r["concept_key"] for r in rows if r["concept_key"]}
+        if len(concepts) > 1:
+            raise ValueError(f"kpi_v2_map: {key} has several concepts {sorted(concepts)}")
+        if not concepts:
+            continue
+        concept = concepts.pop()
+        kpi = by_concept[concept]
+        if kpi["status"] != "published":
+            continue
+        fixed = {}
+        for field in ("frequency", "aggregation", "polarity"):
+            values = {r[field] for r in rows}
+            if len(values) != 1:
+                raise ValueError(f"kpi_v2_map: {key} has several {field} values {sorted(values)}")
+            fixed[field] = values.pop()
+        if fixed["frequency"] not in SHOWN:
+            raise ValueError(f"kpi_v2_map: {key} frequency {fixed['frequency']} is not one of {SHOWN}")
+        ready = [r for r in rows if r["status"] == "ready" and r["concept_key"] == concept]
+        sources = {r["source_key"]: [p for p in r["measure_key_pattern"].split(";") if p] for r in ready}
+        # A non-geographic row (Gold `_Z`, e.g. the NBP rates against the zloty) belongs to the one geography the
+        # map names for its source, when it names exactly one.
+        unplaced = {
+            r["source_key"]: r["geographies"] for r in ready if r["geographies"] and ";" not in r["geographies"]
+        }
+        entries.append(
+            {"kpi_key": key, "concept": concept, "kpi": kpi, "sources": sources, "unplaced": unplaced, **fixed}
+        )
+    return entries
+
+
+def geography_map(rows: list[dict[str, str]]) -> dict[str, str]:
+    """Gold geography_key → v2 geography key, from seeds/geography_v2.csv; pure."""
+    result = {}
+    for row in rows:
+        for gold_key in row["gold_keys"].split(";"):
+            result[gold_key] = row["geography_key"]
+    return result
+
+
+def dimension_key(source_system: str, raw: str, aliases: dict[tuple[str, str], str]) -> str:
+    """A breakdown key of breakdown_json as a v2 dimension key: dimension_alias.csv, else lower case with every
+    other character than [a-z0-9_] as '_' (as v1 series.parquet)."""
+    alias = aliases.get((source_system, raw))
+    if alias:
+        return alias
+    return "".join(c if c in "abcdefghijklmnopqrstuvwxyz0123456789_" else "_" for c in raw.lower())
+
+
+def _measure_lookup(measures: list[dict[str, str]], concept: str, unit_key: str):
+    """(source, measure_key) → (priority, unit_key) of the best kpi_measure.csv row of the concept matching the
+    measure (999 and the KPI's unit when none), as v1 kpi_latest."""
+    own = [m for m in measures if m["kpi_key"] == concept]
+    cache: dict[tuple[str, str], tuple[int, str]] = {}
+
+    def lookup(source: str, measure_key: str) -> tuple[int, str]:
+        if (source, measure_key) not in cache:
+            best: tuple[int, str] | None = None
+            for m in own:
+                if m["source_system"] == source and _like(measure_key, m["measure_key_pattern"]):
+                    candidate = (int(m["priority"]), m.get("unit_key") or unit_key)
+                    best = candidate if best is None or candidate[0] < best[0] else best
+            cache[(source, measure_key)] = best or (999, unit_key)
+        return cache[(source, measure_key)]
+
+    return lookup
+
+
+def _like(value: str, pattern: str) -> bool:
+    """SQL LIKE (``%`` any characters, ``_`` one character, case-sensitive) as DuckDB evaluates it."""
+    regex = "".join(".*" if c == "%" else "." if c == "_" else re.escape(c) for c in pattern)
+    return re.fullmatch(regex, value, flags=re.DOTALL) is not None
+
+
+def gold_rows(metrics: pa.Table, entry: dict[str, Any], geo: dict[str, str]) -> list[dict[str, Any]]:
+    """The rows of gold.metrics_<concept> that can reach v2: a value, a v2 geography, a ready source of the map
+    and a measure matching that source's patterns, at the shown frequency (daily rows too when it is monthly)."""
+    patterns = [(s, p) for s, ps in entry["sources"].items() for p in ps]
+    frequencies = [entry["frequency"], *(DAILY if entry["frequency"] == "M" else ())]
+    con = duckdb.connect()
+    con.register("metrics", metrics)
+    con.register(
+        "patterns",
+        pa.table({"source": [s for s, _ in patterns], "pattern": [p for _, p in patterns]}, schema=_PATTERNS),
+    )
+    con.register("geo", pa.table({"gold_key": list(geo), "v2_key": list(geo.values())}, schema=_GEO))
+    unplaced = entry.get("unplaced", {})
+    con.register("unplaced", pa.table({"source": list(unplaced), "v2_key": list(unplaced.values())}, schema=_UNPLACED))
+    rows = con.execute(
+        """
+        select distinct m.source_system, m.measure_key, m.geography_key, coalesce(g.v2_key, u.v2_key) as v2_key,
+            m.date_key, m.frequency, cast(m.value as double) as value, m.observation_status_key, m.breakdown_json
+        from metrics m
+        left join geo g on m.geography_key = g.gold_key
+        left join unplaced u on m.geography_key = '_Z' and m.source_system = u.source
+        where m.value is not null and m.frequency in (select unnest(?))
+            and coalesce(g.v2_key, u.v2_key) in (select v2_key from geo)
+            and exists (select 1 from patterns p where p.source = m.source_system and m.measure_key like p.pattern)
+        order by all
+        """,
+        [frequencies],
+    ).fetchall()
+    columns = ["source", "measure", "gold_geo", "geography", "date_key", "frequency", "value", "status", "breakdown"]
+    return [dict(zip(columns, r, strict=True)) for r in rows]
+
+
+_PATTERNS = pa.schema([("source", pa.string()), ("pattern", pa.string())])
+_GEO = pa.schema([("gold_key", pa.string()), ("v2_key", pa.string())])
+_UNPLACED = pa.schema([("source", pa.string()), ("v2_key", pa.string())])
+
+
+def _breakdown(row: dict[str, Any], aliases: dict[tuple[str, str], str]) -> dict[str, str]:
+    raw = json.loads(row["breakdown"]) if row["breakdown"] else {}
+    return {dimension_key(row["source"], k, aliases): str(v) for k, v in raw.items() if v is not None}
+
+
+def kpi_cells(
+    rows: list[dict[str, Any]],
+    curated: dict[str, set[str]],
+    aliases: dict[tuple[str, str], str],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Cells (source, geography, members, measure, period → value and flags) of one v2 KPI from its gold rows, and
+    the KPI's dimension keys; pure.
+
+    Gold metrics hold total series, so a breakdown key is a dimension only where it splits the rows of one measure
+    (more than one value, a missing key counting as '_T'), e.g. the currency of the NBP rates. Where kpi_member.csv
+    lists members of a dimension, rows of other members are dropped. A dimension left with one value is not a
+    dimension (members {}). Daily rows become the monthly mean per series."""
+    parsed = [(row, _breakdown(row, aliases)) for row in rows]
+    keys_by_measure: dict[str, set[str]] = defaultdict(set)
+    for row, breakdown in parsed:
+        keys_by_measure[row["measure"]].update(breakdown)
+    values_by_measure: dict[tuple[str, str], set[str]] = defaultdict(set)
+    for row, breakdown in parsed:
+        for key in keys_by_measure[row["measure"]]:
+            values_by_measure[(row["measure"], key)].add(breakdown.get(key, "_T"))
+    split = {(m, k) for (m, k), values in values_by_measure.items() if len(values) > 1}
+    kept = []
+    for row, breakdown in parsed:
+        members = {k: breakdown.get(k, "_T") for (m, k) in split if m == row["measure"]}
+        if any(k in breakdown and breakdown[k] not in allowed for k, allowed in curated.items()):
+            continue
+        if any(k in members and members[k] not in allowed for k, allowed in curated.items()):
+            continue
+        kept.append((row, members))
+    distinct: dict[str, set[str]] = defaultdict(set)
+    for _, members in kept:
+        for k, v in members.items():
+            distinct[k].add(v)
+    dims = sorted(k for k, values in distinct.items() if len(values) > 1)
+    grouped: dict[tuple, list[tuple[float, str | None]]] = defaultdict(list)
+    for row, members in kept:
+        shown = {k: v for k, v in members.items() if k in dims and v != "_T"}
+        frequency = "M" if row["frequency"] in DAILY else row["frequency"]
+        key = (
+            row["source"],
+            row["geography"],
+            tuple(sorted(shown.items())),
+            row["measure"],
+            period_label(row["date_key"], frequency),
+            row["frequency"] in DAILY,
+        )
+        grouped[key].append((row["value"], FLAGS.get(row["status"] or "")))
+    cells = []
+    for (source, geography, members, measure, period, daily), items in grouped.items():
+        flags = {f for _, f in items if f}
+        values = [v for v, _ in items]
+        cells.append(
+            {
+                "source": source,
+                "geography": geography,
+                "members": members,
+                "measure": measure,
+                "period": period,
+                "values": [round(sum(values) / len(values), MEAN_DIGITS)] if daily else values,
+                "flags": "".join(sorted(flags)),
+            }
+        )
+    return cells, dims
+
+
+def series_json(
+    entry: dict[str, Any],
+    cells: list[dict[str, Any]],
+    measures: list[dict[str, str]],
+    geo_order: dict[str, int],
+) -> tuple[dict[str, Any], list[str]]:
+    """kpi/<kpi_key>/series.json of one v2 KPI from its cells, and the problems found (a period with two different
+    values in one series); pure. One series per geography × source × members: the measure with the best
+    kpi_measure.csv priority, then the lowest measure key; its unit is the measure's unit, else the KPI's."""
+    unit_key = entry["kpi"]["unit_key"]
+    lookup = _measure_lookup(measures, entry["concept"], unit_key)
+    order = source_order(entry, measures)
+    chosen: dict[tuple, str] = {}
+    for c in cells:
+        series_key = (c["source"], c["geography"], c["members"])
+        current = chosen.get(series_key)
+        candidate = (lookup(c["source"], c["measure"])[0], c["measure"])
+        if current is None or candidate < (lookup(c["source"], current)[0], current):
+            chosen[series_key] = c["measure"]
+    problems = []
+    data: dict[tuple, dict[str, tuple[float, str]]] = defaultdict(dict)
+    for c in cells:
+        series_key = (c["source"], c["geography"], c["members"])
+        if chosen[series_key] != c["measure"]:
+            continue
+        distinct = sorted(set(c["values"]))
+        if len(distinct) > 1:
+            problems.append(
+                f"{entry['kpi_key']} {c['source']} {c['geography']} {dict(c['members'])} {c['period']}: "
+                f"several values {distinct[:3]}"
+            )
+            continue
+        data[series_key][c["period"]] = (distinct[0], c["flags"])
+    periods = sorted({p for values in data.values() for p in values})
+    series = []
+    for series_key in sorted(data, key=lambda k: (geo_order[k[1]], order.index(k[0]), k[2])):
+        source, geography, members = series_key
+        values = data[series_key]
+        entry_series: dict[str, Any] = {
+            "geography": geography,
+            "source_key": source,
+            "unit_key": lookup(source, chosen[series_key])[1],
+            "members": dict(members),
+            "values": [values[p][0] if p in values else None for p in periods],
+        }
+        flags = {p: values[p][1] for p in periods if p in values and values[p][1]}
+        if flags:
+            entry_series["flags"] = flags
+        series.append(entry_series)
+    doc = {
+        "kpi_key": entry["kpi_key"],
+        "frequency": entry["frequency"],
+        "unit_key": unit_key,
+        "periods": periods,
+        "series": series,
+    }
+    return doc, problems
+
+
+def source_order(entry: dict[str, Any], measures: list[dict[str, str]]) -> list[str]:
+    """The v2 KPI's ready sources, preferred first: best kpi_measure.csv priority of the concept, then map order."""
+    priority = {}
+    for m in measures:
+        if m["kpi_key"] == entry["concept"]:
+            priority[m["source_system"]] = min(priority.get(m["source_system"], 999), int(m["priority"]))
+    sources = list(entry["sources"])
+    return sorted(sources, key=lambda s: (priority.get(s, 999), sources.index(s)))
+
+
+def year_ago(period: str, frequency: str) -> str | None:
+    """The same period a year earlier ('2025-09' → '2024-09', '2025-Q3' → '2024-Q3'); None for annual."""
+    if frequency == "A":
+        return None
+    return f"{int(period[:4]) - 1}{period[4:]}"
+
+
+def latest_values(
+    series_doc: dict[str, Any], sources: list[str], checked_at: dict[str, str], generated_at: str
+) -> list[dict[str, Any]]:
+    """latest.json values[] of one v2 KPI: per geography (totals only) the preferred source with data, its newest
+    period and value, the period before with data, the value a year earlier (M and Q) and flags; pure."""
+    periods = series_doc["periods"]
+    index = {p: i for i, p in enumerate(periods)}
+    totals = [s for s in series_doc["series"] if not s["members"]]
+    result = []
+    for geography in dict.fromkeys(s["geography"] for s in totals):
+        candidates = [s for s in totals if s["geography"] == geography and any(v is not None for v in s["values"])]
+        if not candidates:
+            continue
+        shown = min(candidates, key=lambda s: sources.index(s["source_key"]))
+        filled = [i for i, v in enumerate(shown["values"]) if v is not None]
+        last = filled[-1]
+        previous = filled[-2] if len(filled) > 1 else None
+        ago = year_ago(periods[last], series_doc["frequency"])
+        flags = (shown.get("flags") or {}).get(periods[last], "")
+        result.append(
+            {
+                "kpi_key": series_doc["kpi_key"],
+                "geography": geography,
+                "source_key": shown["source_key"],
+                "unit_key": shown["unit_key"],
+                "period": periods[last],
+                "value": shown["values"][last],
+                "previous_period": periods[previous] if previous is not None else None,
+                "previous_value": shown["values"][previous] if previous is not None else None,
+                "year_ago_value": shown["values"][index[ago]] if ago in index else None,
+                "flags": list(flags),
+                "checked_at": checked_at.get(shown["source_key"], generated_at),
+            }
+        )
+    return result
+
+
+def releases(
+    calendar_rows: list[dict[str, str]],
+    silver_rows: list[dict[str, Any]],
+    v2_of_concept: dict[str, str],
+    v2_keys: set[str],
+    today: date,
+) -> list[dict[str, Any]]:
+    """calendar.json releases[]: every release_calendar.csv row dated today or later (kpi_keys = the v2 key of
+    its concept when that KPI is in v2) and every silver.releases row dated today or later that publishes a v2
+    KPI; rows of one date, source, title and URL are merged; pure."""
+    merged: dict[tuple, set[str]] = {}
+    for row in calendar_rows:
+        day = row["release_at"][:10]
+        key = v2_of_concept.get(row["kpi_key"])
+        merged.setdefault((day, row["source_key"], row["title_pl"], row["title_en"], row["url"] or None), set())
+        if key in v2_keys:
+            merged[(day, row["source_key"], row["title_pl"], row["title_en"], row["url"] or None)].add(key)
+    for row in silver_rows:
+        keys = {k.strip() for k in (row["kpi_keys"] or "").split(";")} & v2_keys
+        if not keys:
+            continue
+        day = row["release_date"].isoformat() if isinstance(row["release_date"], date) else str(row["release_date"])
+        merged.setdefault((day, row["publisher"], row["title"], row["title"], row["url"] or None), set()).update(keys)
+    return [
+        {"date": d, "source_key": s, "kpi_keys": sorted(k), "title_pl": tp, "title_en": te, "url": u}
+        for (d, s, tp, te, u), k in sorted(merged.items(), key=lambda i: (i[0][0], i[0][1], i[0][2]))
+        if d >= today.isoformat()
+    ]
+
+
+def _path(domains: dict[str, dict[str, str]], key: str) -> dict[str, str]:
+    levels: dict[str, str] = {}
+    current: str | None = key
+    while current:
+        row = domains.get(current) or {}
+        levels.setdefault(row.get("level", ""), current)
+        current = row.get("parent_key") or None
+    return levels
+
+
+def catalog_entry(
+    entry: dict[str, Any],
+    series_doc: dict[str, Any],
+    dims: list[str],
+    sources: list[str],
+    domains: dict[str, dict[str, str]],
+    geo_order: dict[str, int],
+    checked_at: dict[str, str],
+    next_release: str | None,
+    generated_at: str,
+) -> dict[str, Any]:
+    """One catalog.json kpis[] entry; pure."""
+    kpi = entry["kpi"]
+    levels = _path(domains, kpi["subgroup_key"])
+    with_data = {s["source_key"] for s in series_doc["series"]}
+    source_keys = [s for s in sources if s in with_data]
+    stamps = [checked_at[s] for s in source_keys if s in checked_at]
+    return {
+        "kpi_key": entry["kpi_key"],
+        "name_pl": kpi["name_pl"],
+        "name_en": kpi["name_en"],
+        "definition_pl": kpi.get("definition_pl") or "",
+        "definition_en": kpi.get("definition_en") or "",
+        "unit_key": kpi["unit_key"],
+        "frequency": entry["frequency"],
+        "domain_key": levels.get("domain", ""),
+        "group_key": levels.get("group") or levels.get("domain", ""),
+        "source_keys": source_keys,
+        "geographies": sorted({s["geography"] for s in series_doc["series"]}, key=geo_order.__getitem__),
+        "dimension_keys": dims,
+        "first_period": series_doc["periods"][0],
+        "last_period": series_doc["periods"][-1],
+        "aggregation": entry["aggregation"],
+        "polarity": entry["polarity"],
+        "loaded_at": max(stamps) if stamps else generated_at,
+        "next_release": next_release,
+    }
+
+
+def dimensions_json(
+    used: dict[str, dict[str, set[str]]],
+    dimension_rows: list[dict[str, str]],
+    member_rows: list[dict[str, str]],
+    sex_rows: list[dict[str, str]],
+) -> list[dict[str, Any]]:
+    """catalog.json dimensions[] from the members used per dimension and KPI ({dimension: {kpi_key: members}}):
+    names from dimension.csv, member names, order and parent from kpi_member.csv, else sex.csv for sex, else the
+    member key itself; pure."""
+    names = {d["dimension_key"]: d for d in dimension_rows}
+    curated = {(m["v2_key"], m["dimension_key"], m["member_key"]): m for m in member_rows}
+    sexes = {s["sex_key"]: s for s in sex_rows}
+    result = []
+    for dim in sorted(used):
+        members: dict[str, dict[str, Any]] = {}
+        for kpi_key in sorted(used[dim]):
+            for key in sorted(used[dim][kpi_key]):
+                if key in members:
+                    continue
+                row = curated.get((kpi_key, dim, key)) or (sexes.get(key) if dim == "sex" else None)
+                member: dict[str, Any] = {
+                    "key": key,
+                    "name_pl": (row or {}).get("name_pl") or key,
+                    "name_en": (row or {}).get("name_en") or key,
+                    "sort": int((row or {}).get("sort") or 0),
+                }
+                if (row or {}).get("parent_key"):
+                    member["parent_key"] = row["parent_key"]
+                members[key] = member
+        listed = sorted(members.values(), key=lambda m: (m["sort"] == 0, m["sort"], m["key"]))
+        for i, member in enumerate(listed, start=1):
+            member["sort"] = member["sort"] or i
+        name = names.get(dim) or {}
+        result.append(
+            {
+                "dimension_key": dim,
+                "name_pl": name.get("name_pl") or dim,
+                "name_en": name.get("name_en") or dim,
+                "members": listed,
+            }
+        )
+    return result
+
+
+def catalog_json(
+    kpis: list[dict[str, Any]],
+    dimensions: list[dict[str, Any]],
+    geography_rows: list[dict[str, str]],
+    v1_catalog: dict[str, Any],
+    decimals: dict[str, int],
+    generated_at: str,
+) -> dict[str, Any]:
+    """catalog.json; domains, sources and licences as v1 (``v1_catalog`` = publish.catalog_json), units as v1 plus
+    decimals (ValueError for a unit without decimals), geographies for every key a KPI uses; pure."""
+    used = {g for k in kpis for g in k["geographies"]}
+    geographies = [
+        {
+            "key": g["geography_key"],
+            "name_pl": g["name_pl"],
+            "name_en": g["name_en"],
+            "level": g["level"],
+            "eu": g["eu"] == "true",
+        }
+        for g in sorted(geography_rows, key=lambda g: int(g["sort"]))
+        if g["geography_key"] in used
+    ]
+    missing = [u["unit_key"] for u in v1_catalog["units"] if u["unit_key"] not in decimals]
+    if missing:
+        raise ValueError(f"unit_decimals.csv: no decimals for {missing}")
+    return {
+        "version": 2,
+        "generated_at": generated_at,
+        "kpis": kpis,
+        "dimensions": dimensions,
+        "geographies": geographies,
+        "units": [{**u, "decimals": decimals[u["unit_key"]]} for u in v1_catalog["units"]],
+        "domains": v1_catalog["domains"],
+        "sources": v1_catalog["sources"],
+        "licences": v1_catalog["licences"],
+    }
+
+
+def gold_index(
+    rows: list[dict[str, Any]], aliases: dict[tuple[str, str], str], monthly: bool
+) -> dict[tuple[str, str, str], list[tuple[dict[str, str], float]]]:
+    """Read-back index straight from the gold rows: (source, v2 geography, period) → (breakdown, value) pairs, daily
+    rows as the mean of each month per measure, geography and breakdown."""
+    index: dict[tuple[str, str, str], list[tuple[dict[str, str], float]]] = defaultdict(list)
+    days: dict[tuple, list[float]] = defaultdict(list)
+    for row in rows:
+        breakdown = _breakdown(row, aliases)
+        if monthly and row["frequency"] in DAILY:
+            month = row["date_key"].strftime("%Y-%m")
+            frozen = tuple(sorted(breakdown.items()))
+            days[(row["source"], row["geography"], month, row["measure"], row["gold_geo"], frozen)].append(row["value"])
+            continue
+        period = period_label(row["date_key"], row["frequency"])
+        index[(row["source"], row["geography"], period)].append((breakdown, row["value"]))
+    for (source, geography, month, _, _, frozen), values in days.items():
+        index[(source, geography, month)].append((dict(frozen), sum(values) / len(values)))
+    return index
+
+
+def compare_series(
+    doc: dict[str, Any], index: dict[tuple[str, str, str], list], curated: dict[str, set[str]]
+) -> list[str]:
+    """Numbers of series.json that are not in Gold for their source, geography, period and members; pure."""
+    problems = []
+    for s in doc["series"]:
+        for period, value in zip(doc["periods"], s["values"], strict=True):
+            if value is not None and not _in_gold(
+                index, s["source_key"], s["geography"], period, s["members"], value, curated
+            ):
+                problems.append(
+                    f"{doc['kpi_key']} {s['source_key']} {s['geography']} {s['members']} {period}: {value} not in Gold"
+                )
+    return problems
+
+
+def compare_latest(
+    latest: dict[str, Any], indexes: dict[str, dict], curated: dict[str, dict[str, set[str]]], frequency: dict[str, str]
+) -> list[str]:
+    """Values, previous values and year-ago values of latest.json that are not in Gold; pure."""
+    problems = []
+    for v in latest["values"]:
+        index = indexes[v["kpi_key"]]
+        pairs = [(v["period"], v["value"]), (v["previous_period"], v["previous_value"])]
+        pairs.append((year_ago(v["period"], frequency[v["kpi_key"]]), v["year_ago_value"]))
+        for period, value in pairs:
+            if value is None:
+                continue
+            if not _in_gold(index, v["source_key"], v["geography"], period, {}, value, curated[v["kpi_key"]]):
+                problems.append(
+                    f"latest {v['kpi_key']} {v['source_key']} {v['geography']} {period}: {value} not in Gold"
+                )
+    return problems
+
+
+def _in_gold(index, source, geography, period, members, value, curated) -> bool:
+    for breakdown, gold_value in index.get((source, geography, period), []):
+        if any(breakdown.get(k, "_T") != m for k, m in members.items()):
+            continue
+        if any(k in breakdown and breakdown[k] not in allowed for k, allowed in curated.items()):
+            continue
+        if math.isclose(gold_value, value, rel_tol=1e-9, abs_tol=10**-MEAN_DIGITS):
+            return True
+    return False
+
+
+def _sized(name: str, body: bytes) -> dict[str, int]:
+    limit_key = "series.json" if name.endswith("/series.json") else name
+    if limit_key in GZIP_LIMITS:
+        zipped = len(gzip.compress(body))
+        if zipped > GZIP_LIMITS[limit_key]:
+            raise ValueError(f"v2/{name} is {zipped} bytes gzipped, over {GZIP_LIMITS[limit_key]}")
+        return {"bytes": len(body), "gzip_bytes": zipped}
+    if len(body) > RAW_LIMITS[limit_key]:
+        raise ValueError(f"v2/{name} is {len(body)} bytes, over {RAW_LIMITS[limit_key]}")
+    return {"bytes": len(body)}
+
+
+def build(
+    metrics: dict[str, pa.Table],
+    checked_at: dict[str, str],
+    silver_releases: list[dict[str, Any]],
+    v1_catalog: dict[str, Any],
+    status: dict[str, Any],
+    generated_at: str,
+) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+    """Every v2 file (path under the v2 prefix → document) from the gold.metrics_<concept> tables of the v2 KPIs
+    (``metrics``, by concept; a concept missing there is reported as missing) and the seeds, plus the read-back
+    context; no R2. ValueError when a series has a period with two different values or a file breaks its schema,
+    the cross-file rules or its size limit."""
+    from ops.repo_check import published_v2_problems
+
+    measures = seed("kpi_measure")
+    geo_rows = seed("geography_v2")
+    geo = geography_map(geo_rows)
+    geo_order = {g["geography_key"]: int(g["sort"]) for g in geo_rows}
+    aliases = {(a["source_system"], a["source_dimension"]): a["dimension_key"] for a in seed("dimension_alias")}
+    member_rows = seed("kpi_member")
+    domains = {d["domain_key"]: d for d in seed("domain")}
+    entries = v2_kpis(seed("kpi"), seed("kpi_v2_map"))
+    v2_of_concept = {e["concept"]: e["kpi_key"] for e in entries}
+    files: dict[str, dict[str, Any]] = {}
+    missing, empty, problems = [], [], []
+    built = []
+    used: dict[str, dict[str, set[str]]] = defaultdict(dict)
+    context: dict[str, Any] = {"indexes": {}, "curated": {}, "frequency": {}, "missing": missing, "empty": empty}
+    for entry in entries:
+        if entry["concept"] not in metrics:
+            missing.append(entry["kpi_key"])
+            continue
+        curated: dict[str, set[str]] = defaultdict(set)
+        for m in member_rows:
+            if m["v2_key"] == entry["kpi_key"]:
+                curated[m["dimension_key"]].add(m["member_key"])
+        rows = gold_rows(metrics[entry["concept"]], entry, geo)
+        cells, dims = kpi_cells(rows, curated, aliases)
+        doc, found = series_json(entry, cells, measures, geo_order)
+        problems += found
+        if not doc["periods"]:
+            empty.append(entry["kpi_key"])
+            continue
+        files[f"kpi/{entry['kpi_key']}/series.json"] = schema_checked(doc, "v2/series")
+        for dim in dims:
+            used[dim][entry["kpi_key"]] = {s["members"][dim] for s in doc["series"] if dim in s["members"]}
+        context["indexes"][entry["kpi_key"]] = gold_index(rows, aliases, entry["frequency"] == "M")
+        context["curated"][entry["kpi_key"]] = dict(curated)
+        context["frequency"][entry["kpi_key"]] = entry["frequency"]
+        built.append((entry, doc, dims))
+    if problems:
+        raise ValueError(f"{len(problems)} series cells have several values in Gold: {problems[:10]}")
+    keys = {e["kpi_key"] for e, _, _ in built}
+    today = date.fromisoformat(generated_at[:10])
+    calendar = releases(seed("release_calendar"), silver_releases, v2_of_concept, keys, today)
+    next_release = {}
+    for release in calendar:
+        for key in release["kpi_keys"]:
+            next_release.setdefault(key, release["date"])
+    kpis = []
+    values = []
+    for entry, doc, dims in built:
+        sources = source_order(entry, measures)
+        kpis.append(
+            catalog_entry(
+                entry,
+                doc,
+                dims,
+                sources,
+                domains,
+                geo_order,
+                checked_at,
+                next_release.get(entry["kpi_key"]),
+                generated_at,
+            )
+        )
+        values += latest_values(doc, sources, checked_at, generated_at)
+    decimals = {u["unit_key"]: int(u["decimals"]) for u in seed("unit_decimals")}
+    dimensions = dimensions_json(used, seed("dimension"), member_rows, seed("sex"))
+    files["catalog.json"] = schema_checked(
+        catalog_json(kpis, dimensions, geo_rows, v1_catalog, decimals, generated_at), "v2/catalog"
+    )
+    files["latest.json"] = schema_checked({"version": 2, "generated_at": generated_at, "values": values}, "v2/latest")
+    files["calendar.json"] = schema_checked(
+        {"version": 2, "generated_at": generated_at, "releases": calendar}, "v2/calendar"
+    )
+    files["status.json"] = schema_checked(status, "v2/status")
+    cross = published_v2_problems(files)
+    if cross:
+        raise ValueError(f"v2 cross-file problems: {cross[:10]}")
+    for name, doc in files.items():
+        _sized(name, dumps(doc))
+    return files, context
+
+
+def read_back(files: dict[str, dict[str, Any]], context: dict[str, Any]) -> list[str]:
+    """Every number of the written series.json and latest.json files that is not in Gold; pure."""
+    problems = []
+    for name, doc in files.items():
+        if name.endswith("/series.json"):
+            problems += compare_series(doc, context["indexes"][doc["kpi_key"]], context["curated"][doc["kpi_key"]])
+    problems += compare_latest(files["latest.json"], context["indexes"], context["curated"], context["frequency"])
+    return problems
+
+
+def write(
+    cat,
+    client,
+    metrics: dict[str, pa.Table],
+    checked_at: dict[str, str],
+    v1_catalog: dict[str, Any],
+    status: dict[str, Any],
+    generated_at: str,
+    prefix: str = V2_PREFIX,
+) -> dict[str, Any]:
+    """Write every v2 file under prefix, read each back and compare its numbers with Gold; returns sizes and counts.
+
+    ``metrics`` holds the gold.metrics_<concept> tables gold.publish has already read (by concept); the others are
+    read here. silver.releases is optional (calendar.json then has the release_calendar.csv rows only)."""
+    from pyiceberg.exceptions import NoSuchTableError
+
+    from warehouse.publish import gold
+
+    tables = dict(metrics)
+    for entry in v2_kpis(seed("kpi"), seed("kpi_v2_map")):
+        if entry["concept"] not in tables:
+            with suppress(NoSuchTableError):
+                tables[entry["concept"]] = gold(cat, "gold", f"metrics_{entry['concept']}")
+    try:
+        silver_releases = gold(cat, "silver", "releases").to_pylist()
+    except NoSuchTableError:
+        silver_releases = []
+    files, context = build(tables, checked_at, silver_releases, v1_catalog, status, generated_at)
+    sizes = {}
+    for name in sorted(files, key=lambda n: (not n.startswith("kpi/"), n)):  # series first, catalog after them
+        sizes[name] = _sized(name, dumps(files[name]))
+        put(client, prefix + name, dumps(files[name]))
+    written = {name: json.loads(get(client, prefix + name)) for name in files}
+    problems = read_back(written, context)
+    if problems:
+        raise ValueError(f"{len(problems)} v2 numbers differ from Gold: {problems[:20]}")
+    return {
+        "prefix": prefix,
+        "kpis": sorted(n.split("/")[1] for n in files if n.startswith("kpi/")),
+        "missing": context["missing"],
+        "empty": context["empty"],
+        "latest_values": len(files["latest.json"]["values"]),
+        "releases": len(files["calendar.json"]["releases"]),
+        "bytes": {n: s.get("gzip_bytes", s["bytes"]) for n, s in sizes.items()},
+        "differences": 0,
+    }
