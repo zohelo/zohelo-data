@@ -654,6 +654,24 @@ attribute_names/attribute_values, text). Silver: `silver.oecd_cli`. Terms: OECD 
 Conditions (data reuse incl. commercial, with attribution; dataset-specific third-party limits are
 checked per added dataflow). Restart unit: one selection.
 
+## ILOSTAT (bulk indicator files)
+
+**Built (11 Nov 2026, register GL-023).** ILOSTAT's bulk download page
+(`https://rplumber.ilo.org/files/website/bulk/indicator.html`) links one gzip CSV per indicator and
+frequency with every country, ILO region and period (`https://rplumber.ilo.org/data/indicator/?id=<id>&format=.csv.gz`).
+`ilostat.yaml` lands five through the shared `bulk_file` pattern, one request per entity and run:
+`une_deap_sex_age_rt_a` / `_q` (unemployment rate by sex and age), `emp_dwap_sex_age_rt_a`
+(employment-to-population ratio), `eap_dwap_sex_age_rt_a` (labour force participation rate),
+`eip_neet_sex_rt_a` (youth NEET rate): 1,718,986 observations, all 27 EU countries, Poland from the
+LFS (source BA:432) 2000–2025 annual and 2000Q1–2026Q2 quarterly (Dev trial 43091444753). National
+(reported) series only; ILO modelled estimates are separate indicators. No Last-Modified, so version =
+download time; the bytes are stable between downloads, so an unchanged file is skipped. Bronze:
+`bronze.ilostat_observations` (the generic SDMX format of the OECD onboarding: dimension columns
+ref_area, source, indicator, sex, classif1 as series_key; obs_status and notes as attributes). Silver:
+`silver.ilostat_observations` (ref_area ISO alpha-3 or ILO aggregate X…, typed value, frequency from the
+entity). Refresh full (D32): a narrow table rebuilt weekly in full, ceiling exception #2753. Terms:
+CC BY 4.0 for releases from 3 May 2023, licence row `cc_by_4_0_ilo`. Restart unit: one indicator file.
+
 ## News headline feeds (`news_feeds`, topics)
 
 **Implemented (10 Nov 2026, register TP-001…TP-008, family J; topics layer O32, [topics.md](topics.md)).**
