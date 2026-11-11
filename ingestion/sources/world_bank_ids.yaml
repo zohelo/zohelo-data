@@ -4,7 +4,7 @@ description: World Bank International Debt Statistics — DataBank bulk CSV arch
 # Extraction strategy (docs/landing.md). Bulk feature: the IDS CSV ZIP on DataBank's stable bulk
 # download URL (the same route as WDI_CSV and WGI_CSV; CC BY 4.0, register GL-007). Version =
 # Last-Modified; written only when the SHA-256 changed. IDS is published once a year (December)
-# with occasional revisions; a schedule (stage 4) comes after the Dev trial (#2378).
+# with occasional revisions.
 extraction:
   kind: bulk_file
   bulk_file:
@@ -16,17 +16,20 @@ extraction:
   initial: bulk
   production: snapshot                  # each archive is the complete database
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
-  schedule: []
+  schedule: # UTC; release: IDS once a year in December, occasional revisions (last: 7 Nov 2026); weekly check (Thursday 01:40), unchanged bytes are skipped
+    - {cron: "40 1 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/world_bank_ids/
 archive_policy:
   move: true
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
-bronze: []
-silver: []
+bronze: [bronze.ids_observations, bronze.ids_metadata, bronze.ids_rejected_files]
+silver: [silver.ids_observations, silver.ids_series]
 gold: []
 
-refresh: {mode: full}
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (owner decision #875): one archive of ~12 MB; rebuilt in full when a new archive lands (about once a year).
+refresh: {mode: full, decided: "#875"}
 
-activities: [landing.inspect, landing.extract, landing.verify]
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
