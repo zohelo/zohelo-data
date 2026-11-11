@@ -6,11 +6,20 @@
    breakdowns; a series is total when every breakdown label is "ogółem".
    Short-term subgroups name the period in the first label ("styczeń" … "grudzień", "1 kwartał"
    … "4 kwartał"): that label is the period, not a breakdown, and the row is monthly or quarterly;
-   a cumulative or whole-year period ("1-3 kwartały", "styczeń-maj", "półrocze", "rok") and the
-   quarters of a subgroup that also has months are left unplaced (frequency X, counted by
-   build_check).
+   the whole year ("rok") is an annual row; a cumulative period ("1-3 kwartały", "styczeń-maj",
+   "półrocze") and the quarters of a subgroup that also has months are left unplaced (frequency X,
+   counted by build_check). poc_bdl_measure_positions names label positions that define the measure
+   although some variables say "ogółem" there (the market of the dwelling prices).
    Sample: years from 2010, units down to powiat (gmina for Ludność from 2015). #}
 with blocks as ({{ poc_bdl_blocks() }}),
+
+measure_positions as (
+    select
+        subgroup_id,
+        list(position) as positions
+    from ({{ poc_bdl_measure_positions() }})
+    group by subgroup_id
+),
 
 geo_map as (
     select * from {{ ref('poc_map_geography') }}
@@ -37,7 +46,8 @@ raw_variables as (
             when regexp_matches(lower(trim(cast(n1 as varchar))), '^[1-4] kwartał$')
                 then cast(substr(trim(cast(n1 as varchar)), 1, 1) as integer)
         end as period_quarter,
-        regexp_matches(lower(trim(cast(n1 as varchar))), '^([1-4]-[1-4] kwartał|.*półrocz|styczeń-|rok$)')
+        lower(trim(cast(n1 as varchar))) = 'rok' as period_year,
+        regexp_matches(lower(trim(cast(n1 as varchar))), '^([1-4]-[1-4] kwartał|.*półrocz|styczeń-)')
             as period_cumulative
     from {{ ref('bdl_variables') }}
 ),
@@ -45,7 +55,10 @@ raw_variables as (
 periods as (
     select
         *,
-        period_month is not null or period_quarter is not null or coalesce(period_cumulative, false) as is_period
+        period_month is not null
+        or period_quarter is not null
+        or coalesce(period_year, false)
+        or coalesce(period_cumulative, false) as is_period
     from raw_variables
 ),
 
@@ -63,7 +76,7 @@ variables as (  -- the period label (if any) is taken out of n1; the labels shif
         v.variable_id,
         case when v.is_period then cast(v.n1 as varchar) end as period_code,
         case
-            when not v.is_period then 'A'
+            when not v.is_period or v.period_year then 'A'
             when v.period_month is not null then 'M'
             when v.period_quarter is not null and not s.has_month then 'Q'
             else 'X'
@@ -78,7 +91,7 @@ variables as (  -- the period label (if any) is taken out of n1; the labels shif
     inner join monthly_subgroups as s on v.subgroup_id = s.subgroup_id
 ),
 
-label_rule as (  -- a label position names what is measured when no variable of the subgroup has "ogółem" there
+raw_label_rule as (  -- a label position names what is measured when no variable of the subgroup has "ogółem" there
     select
         subgroup_id,
         bool_and(lower(cast(n1 as varchar)) <> 'ogółem') filter (where n1 is not null) as m1,
@@ -88,6 +101,18 @@ label_rule as (  -- a label position names what is measured when no variable of 
         bool_and(lower(cast(n5 as varchar)) <> 'ogółem') filter (where n5 is not null) as m5
     from variables
     group by subgroup_id
+),
+
+label_rule as (  -- plus the positions named in poc_bdl_measure_positions
+    select
+        r.subgroup_id,
+        coalesce(r.m1, false) or coalesce(list_contains(p.positions, 1), false) as m1,
+        coalesce(r.m2, false) or coalesce(list_contains(p.positions, 2), false) as m2,
+        coalesce(r.m3, false) or coalesce(list_contains(p.positions, 3), false) as m3,
+        coalesce(r.m4, false) or coalesce(list_contains(p.positions, 4), false) as m4,
+        coalesce(r.m5, false) or coalesce(list_contains(p.positions, 5), false) as m5
+    from raw_label_rule as r
+    left join measure_positions as p on r.subgroup_id = p.subgroup_id
 ),
 
 silver as (
@@ -183,6 +208,17 @@ kept as (
             when 'P2860' then unit_level <= 2
             when 'P2862' then unit_level <= 2
             when 'P3502' then unit_level <= 2
+            -- slice needs-block rows (O36, #2743)
+            when 'P2656' then unit_level <= 2
+            when 'P2713' then unit_level <= 2
+            when 'P2692' then unit_level <= 2
+            when 'P2721' then unit_level <= 2
+            when 'P4610' then unit_level <= 2
+            when 'P3788' then unit_level <= 2
+            when 'P3794' then unit_level <= 2
+            -- 130,000 rows by NACE section: the all-sections total only
+            when 'P2837'
+                then unit_level <= 2 and len(list_filter(labels, lambda x: lower(x) <> 'ogółem')) = 0
             else unit_level <= 5
         end
 ),

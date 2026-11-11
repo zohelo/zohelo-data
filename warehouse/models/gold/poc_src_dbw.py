@@ -1,6 +1,9 @@
 """Gold PoC extraction stage: the activated GUS DBW blocks' rows (one Silver file per bulk
 file, partitioned by entity_id), planned with pyiceberg and streamed by DuckDB; see
-poc_src_eurostat.py. Keep the block list in step with macros/poc_blocks.sql (poc_dbw_blocks)."""
+poc_src_eurostat.py. Keep the block list in step with macros/poc_blocks.sql (poc_dbw_blocks).
+REGIONAL blocks (poc_dbw_block_rules: regional) hold every powiat or gmina; only their rows for Poland and the
+voivodeships (territory in position 1, named in the block's own dictionary) are read, so a block of 0.8M rows
+stays at the size the facts need."""
 
 BLOCKS = (
     "581_57_93_4",
@@ -28,7 +31,46 @@ BLOCKS = (
     "392_16_223_1",
     "109_849_7_1",
     "469_16_117_1",
+    # slice needs-block rows (O36, #2743)
+    "1603_1339_116_4",
+    "1618_1335_95_4",
+    "1714_1575_243_1",
+    "309_485_180_3",
+    "507_870_93_1",
 )
+REGIONAL = ("1714_1575_243_1", "309_485_180_3", "507_870_93_1")
+AREAS = (  # Poland and the 16 voivodeships as the DBW dictionaries name them (upper case)
+    "POLSKA",
+    "DOLNOŚLĄSKIE",
+    "KUJAWSKO-POMORSKIE",
+    "LUBELSKIE",
+    "LUBUSKIE",
+    "ŁÓDZKIE",
+    "MAŁOPOLSKIE",
+    "MAZOWIECKIE",
+    "OPOLSKIE",
+    "PODKARPACKIE",
+    "PODLASKIE",
+    "POMORSKIE",
+    "ŚLĄSKIE",
+    "ŚWIĘTOKRZYSKIE",
+    "WARMIŃSKO-MAZURSKIE",
+    "WIELKOPOLSKIE",
+    "ZACHODNIOPOMORSKIE",
+)
+
+NO_DICTIONARY = "select '' as entity_id, '' as nazwa_kolumny, '' as id_elementu, '' as opis where false"
+
+
+def regional_rule(dictionary_sql):
+    """SQL condition keeping, in REGIONAL blocks, only rows whose position 1 is Poland or a voivodeship."""
+    areas = ", ".join(f"'{a}'" for a in AREAS)
+    blocks = " or ".join(f"starts_with(entity_id, '{b}_')" for b in REGIONAL)
+    allowed = (
+        f"select entity_id as e, try_cast(id_elementu as bigint) as pos from ({dictionary_sql}) "
+        f"where lower(nazwa_kolumny) = 'id_pozycja_1' and upper(trim(opis)) in ({areas})"
+    )
+    return f"(not ({blocks}) or (entity_id, position_1_id) in (select e, pos from ({allowed})))"
 
 
 def planned_files(table_name, row_filter):
@@ -57,13 +99,18 @@ def model(dbt, con):
     dbt.source("silver_entities", "dbw_observations")  # declares the input (changed-only build)
     prefix = " or ".join(f"starts_with(entity_id, '{b}_')" for b in BLOCKS)
     where = f"({prefix}) and value is not null"
-    if "STORAGE_LAKEHOUSE_CATALOG_URL" not in os.environ:  # local harness: the fake source table
-        return con.query(f"select * from r2.silver.dbw_observations where {where}")
+    if "STORAGE_LAKEHOUSE_CATALOG_URL" not in os.environ:  # local harness: the fake source tables
+        rule = regional_rule("select * from r2.bronze.dbw_dictionary_items")
+        return con.query(f"select * from r2.silver.dbw_observations where {where} and {rule}")
     from pyiceberg.expressions import Or, StartsWith
 
+    regional = [StartsWith("entity_id", f"{b}_") for b in REGIONAL]
+    dict_files = planned_files(("bronze", "dbw_dictionary_items"), Or(*regional) if len(regional) > 1 else regional[0])
+    dict_paths = ", ".join("'" + p.replace("'", "''") + "'" for p in dict_files)
+    rule = regional_rule(f"select * from read_parquet([{dict_paths}])" if dict_files else NO_DICTIONARY)
     filters = [StartsWith("entity_id", f"{b}_") for b in BLOCKS]
     files = planned_files(("silver", "dbw_observations"), Or(*filters) if len(filters) > 1 else filters[0])
     if not files:
         return con.query("select * from r2.silver.dbw_observations where false")
     paths = ", ".join("'" + p.replace("'", "''") + "'" for p in files)
-    return con.query(f"select * from read_parquet([{paths}]) where {where}")
+    return con.query(f"select * from read_parquet([{paths}]) where {where} and {rule}")
