@@ -74,6 +74,19 @@ MODELS = {
             ("versions", "select distinct source_version, raw_sha256 from bronze"),
         ],
     ),
+    "undata": (
+        ["warehouse/models/silver/undata/undata_syb_values.sql"],
+        "undata_syb_values",
+        [
+            ("rows by entity", "select entity, table_code, count(*), count(distinct area_code), min(year), max(year), count(distinct series) from silver group by all order by 1"),
+            ("unique", "select count(*) from (select entity, area_code, year, series from silver group by all having count(*) > 1)"),
+            ("dup sample", "select entity, area_code, year, series, count(*) from silver group by all having count(*) > 1 limit 10"),
+            ("nulls", "select count(*) from silver where entity is null or area_code is null or year is null or series is null or raw_sha256 is null"),
+            ("non-numeric", "select entity, value_text, count(*) from silver where value is null group by all order by 3 desc limit 20"),
+            ("POL", "select entity, series, year, value from silver where area_code = '616' qualify row_number() over (partition by entity, series order by year desc) = 1 order by 1 limit 60"),
+            ("versions", "select entity, source_version from bronze group by all order by 1"),
+        ],
+    ),
 }
 
 
