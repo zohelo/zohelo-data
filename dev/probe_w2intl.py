@@ -198,8 +198,53 @@ def bis_full() -> None:
         out(f"bis {name} periods", [min(x[t] for x in rows[1:] if x[t]), max(x[t] for x in rows[1:] if x[t])])
 
 
+def unece_tree() -> None:
+    base = "https://w3.unece.org/PXWeb2015/api/v1/en/STAT/"
+    for path in ("20-ME/3-MELF", "20-ME/2-MENA", "20-ME/4-MEPI", "20-ME/1-MEOV", "30-GE/03-WorkAndeconomy", "30-GE/00-GenderOverView"):
+        r = requests.get(base + path, headers={"User-Agent": UA}, timeout=(30, 120))
+        out(f"unece {path}", [r.status_code, [(x.get("id"), x.get("type"), x.get("text", "").strip(), x.get("updated")) for x in (r.json() if r.ok else [])]])
+        if r.ok:
+            for x in r.json()[:2]:
+                if x.get("type") == "t":
+                    m = requests.get(base + path + "/" + x["id"], headers={"User-Agent": UA}, timeout=(30, 120))
+                    out(f"unece meta {x['id']}", json.dumps(m.json())[:2500] if m.ok else m.status_code)
+                    q = {"query": [{"code": v["code"], "selection": {"filter": "all", "values": ["*"]}} for v in m.json()["variables"]], "response": {"format": "csv"}}
+                    d = requests.post(base + path + "/" + x["id"], json=q, headers={"User-Agent": UA}, timeout=(30, 300))
+                    out(f"unece data {x['id']}", [d.status_code, len(d.content), d.headers.get("Content-Type"), d.content[:800].decode("utf-8", "replace")])
+
+
+def undata_sdmx() -> None:
+    base = "https://data.un.org/ws/rest/"
+    for flow in ("NA_MAIN", "DF_UNDATA_COUNTRYDATA"):
+        r = requests.get(base + f"dataflow/all/{flow}/latest?references=datastructure", headers={"User-Agent": UA}, timeout=(30, 120))
+        import re
+        out(f"undata {flow} dsd", re.findall(r'(?:Dimension|TimeDimension|Attribute|PrimaryMeasure) [^>]*?id="([^"]+)"', r.text)[:60])
+        out(f"undata {flow} agency", re.findall(r'<structure:Dataflow [^>]*>', r.text)[:2])
+        for q in (f"data/{flow}/all?format=csv", f"data/{flow}/all?format=csvfile"):
+            d = requests.get(base + q, headers={"User-Agent": UA}, timeout=(30, 900))
+            out(f"undata {q}", [d.status_code, len(d.content), d.headers.get("Content-Type"), d.content[:700].decode("utf-8", "replace")])
+            if d.ok and d.content[:8] == b"DATAFLOW":
+                import csv as _csv
+                rows = list(_csv.reader(io.StringIO(d.content.decode("utf-8-sig"), newline="")))
+                h = rows[0]
+                out(f"undata {flow} rows", len(rows) - 1)
+                t = h.index("TIME_PERIOD")
+                out(f"undata {flow} dot/pipe", [sum(1 for x in rows[1:] for v in x[1:t] if "." in v), sum(1 for x in rows[1:] for v in x[t + 2:] if "|" in v)])
+                from collections import Counter
+                for dname in h[1:t]:
+                    i = h.index(dname)
+                    out(f"undata {flow} {dname}", dict(Counter(x[i] for x in rows[1:]).most_common(40)))
+                pl = [x for x in rows[1:] if "616" in x[1:t] or "POL" in x[1:t] or "PL" in x[1:t]]
+                out(f"undata {flow} PL rows", [len(pl), pl[:3]])
+                break
+
+
 def main2(argv: list[str]) -> int:
-    main([a for a in argv if a != "bisfull"])
+    main([a for a in argv if a not in ("bisfull", "unece3", "undata3")])
+    if "unece3" in argv:
+        unece_tree()
+    if "undata3" in argv:
+        undata_sdmx()
     if "bisfull" in argv:
         bis_full()
     return 0
