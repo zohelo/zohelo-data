@@ -36,7 +36,7 @@ archive_policy:
   prune: report   # older versions may hold quarters a later file drops
 bronze: [bronze.krus_cells, bronze.krus_rejected_files]
 silver: [silver.krus_benefits]
-gold: []
+gold: [gold.build_public_finance]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (owner decision #875): one small workbook, rebuilt in full.

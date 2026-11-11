@@ -30,7 +30,7 @@ archive_policy:
   prune: report
 bronze: [bronze.mf_public_debt_cells, bronze.mf_public_debt_rejected_files]
 silver: [silver.public_debt]
-gold: []
+gold: [gold.build_public_finance]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (owner decision #875): one small workbook, rebuilt in full.
