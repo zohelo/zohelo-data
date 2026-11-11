@@ -6,8 +6,7 @@ description: World Bank Global Findex Database — country-level indicators (CSV
 # changes per edition (GlobalFindexDatabase<year>.csv), so it is found on that page (url_from).
 # Only the country-level indicators are CC BY 4.0 (register GL-009); the individual-level microdata
 # (Research Data License, no redistribution) is out of scope. Version = Last-Modified; written only
-# when the SHA-256 changed. Editions come every three to four years; a schedule (stage 4) comes
-# after the Dev trial (#2384).
+# when the SHA-256 changed. Editions come every three to four years.
 extraction:
   kind: bulk_file
   bulk_file:
@@ -22,17 +21,20 @@ extraction:
   initial: bulk
   production: snapshot                  # each file is the complete edition (with earlier waves)
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
-  schedule: []
+  schedule: # UTC; release: a new edition every three to four years (2025 edition, file of 22 Jun 2026); weekly check (Thursday 02:20), unchanged bytes are skipped
+    - {cron: "20 2 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/world_bank_findex/
 archive_policy:
   move: true
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
-bronze: []
-silver: []
+bronze: [bronze.findex_observations, bronze.findex_rejected_files]
+silver: [silver.findex_observations]
 gold: []
 
-refresh: {mode: full}
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (owner decision #875): one CSV of ~18 MB; rebuilt in full when a new edition lands.
+refresh: {mode: full, decided: "#875"}
 
-activities: [landing.inspect, landing.extract, landing.verify]
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
