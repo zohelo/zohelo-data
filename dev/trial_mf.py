@@ -70,16 +70,16 @@ def tests(con, name: str, folder: str) -> list:
     out = []
     for t in spec.get("tests", []):
         expr = t["unique"]["column_name"]
-        n = con.execute(f"select count(*) - count(distinct {expr}) from {name}").fetchone()[0]
+        n = con.execute(f"select count(*) - count(distinct {expr}) from {name}").fetchall()[0][0]
         out.append(("unique", n))
     for col in spec.get("columns", []):
         for t in col.get("tests", []):
             if t == "not_null":
-                out.append((f"not_null {col['name']}", con.execute(f"select count(*) from {name} where {col['name']} is null").fetchone()[0]))
+                out.append((f"not_null {col['name']}", con.execute(f"select count(*) from {name} where {col['name']} is null").fetchall()[0][0]))
             elif isinstance(t, dict) and "accepted_values" in t:
                 vals = t["accepted_values"]["arguments"]["values"]
                 lit = ", ".join(repr(v) if isinstance(v, str) else str(v) for v in vals)
-                out.append((f"accepted {col['name']}", con.execute(f"select count(*) from {name} where {col['name']} is not null and {col['name']} not in ({lit})").fetchone()[0]))
+                out.append((f"accepted {col['name']}", con.execute(f"select count(*) from {name} where {col['name']} is not null and {col['name']} not in ({lit})").fetchall()[0][0]))
     return out
 
 
