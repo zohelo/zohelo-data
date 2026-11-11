@@ -63,6 +63,8 @@ TRIALS = {
             ("hicp areas", "select ref_area, count(*), min(time_period), max(time_period) from ecb_observations where entity = 'hicp_annual_rate' group by 1 order by 1"),
             ("PL latest", "select entity, series_key, time_period, obs_value from ecb_observations where ref_area = 'PL' or currency = 'PLN' qualify row_number() over (partition by entity order by time_period desc) <= 2"),
             ("units", "select entity, unit, unit_mult, count(*) from ecb_observations group by all order by 1"),
+            ("aggregate titles", "select distinct entity, ref_area, left(title_compl, 90) from ecb_observations where ref_area in ('B0','B6','D0','I8','I9','I10','U2','V5') order by 1, 2"),
+            ("irs series per area", "select ref_area, series_key, count(*), min(time_period), max(time_period) from ecb_observations where entity = 'irs_long_term' and ref_area in (select ref_area from ecb_observations where entity = 'irs_long_term' group by 1 having count(distinct series_key) > 1) group by all order by all"),
         ],
     },
 }
@@ -99,6 +101,7 @@ def trial(source: str) -> None:
         sql = sql.replace("{{ ref('" + ref + "') }}", table)
     con.execute(f"create table build as {sql}")
     results["gold rows"] = show(con, f"{source} gold", "select block_id, measure_key, geography_key, frequency, count(*), min(date_key), max(date_key) from build group by all order by all", 200)
+    show(con, f"{source} gold grain detail", "select measure_key, geography_key, breakdown_json, count(*) from build group by measure_key, geography_key, coalesce(geography_source_code,''), breakdown_json, date_key having count(*) > 1 limit 20")
     results["gold grain"] = show(con, f"{source} gold grain", "select count(*) from (select measure_key, geography_key, coalesce(geography_source_code,''), breakdown_json, date_key from build group by all having count(*) > 1)")
     results["gold unmatched"] = show(con, f"{source} gold unmatched", "select geography_source_code, count(*) from build where geography_key = '_X' group by 1 order by 2 desc")
     results["gold PL latest"] = show(con, f"{source} gold PL", "select measure_key, date_key, value, observation_status_key from build where geography_key in ('PL', '_Z') qualify row_number() over (partition by measure_key order by date_key desc) <= 2 order by 1, 2")

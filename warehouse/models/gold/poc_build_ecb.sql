@@ -5,7 +5,7 @@
    EST ecb:EST:WT, HICP/ICP ecb:<flow>:<item>:ANR, IRS ecb:IRS:L40 (10-year convergence yield in the country's
    currency), BSI ecb:BSI:<item>:<data type>:<suffix>. Areas: ISO two-letter countries, U2 → EUROSTAT:EA (euro
    area, changing composition), I8 → EUROSTAT:EA19, I9 → EUROSTAT:EA20, B0/D0 → EUROSTAT:EU (EU, changing
-   composition; not EU27_2020); any other code is unmatched (`_X`). No breakdowns: every series is a total. #}
+   composition; not EU27_2020); any other code is unmatched (`_X`). No breakdowns except the currency of a second IRS series. #}
 with blocks as ({{ poc_ecb_blocks() }}),
 
 geo as (
@@ -23,7 +23,9 @@ obs as (
         json_extract_string(o.dimensions, '$.ICP_SUFFIX') as icp_suffix,
         json_extract_string(o.dimensions, '$.BS_ITEM') as bs_item,
         json_extract_string(o.dimensions, '$.DATA_TYPE') as bs_data_type,
-        json_extract_string(o.dimensions, '$.BS_SUFFIX') as bs_suffix
+        json_extract_string(o.dimensions, '$.BS_SUFFIX') as bs_suffix,
+        json_extract_string(o.dimensions, '$.CURRENCY_TRANS') as irs_currency,
+        count(*) over (partition by o.dataflow, o.series_key) as series_points
     from {{ ref('ecb_observations') }} as o
     inner join blocks as b on o.entity = b.entity
     where
@@ -71,7 +73,12 @@ shaped as (
             when dataflow in ('FM', 'EST', 'BSI') then coalesce(ref_area, 'U2')
             else ref_area
         end as area_code,
-        case when freq = 'B' then 'D' else freq end as frequency
+        case when freq = 'B' then 'D' else freq end as frequency,
+        -- IRS: an area can have series in two currencies (BG: lev and euro); the area's longest series is its total
+        -- with no breakdown, any other keeps its currency as the breakdown
+        dataflow <> 'IRS' or series_key = first_value(series_key) over (
+            partition by dataflow, ref_area order by series_points desc, series_key
+        ) as is_total_candidate
     from obs
 ),
 
@@ -109,10 +116,10 @@ select
     m.frequency,
     m.period_start as date_key,
     m.time_period as period_label,
-    '{}' as breakdown_json,
+    case when m.is_total_candidate then '{}' else '{"currency":"' || m.irs_currency || '"}' end as breakdown_json,
     cast(null as varchar) as breakdown_label_json,
     cast(null as varchar) as sex_code,
-    true as is_total,
+    m.is_total_candidate as is_total,
     m.obs_value as value,
     case m.obs_status
         when 'P' then 'provisional' when 'E' then 'estimated' when 'F' then 'forecast' when 'B' then 'break'
