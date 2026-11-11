@@ -144,3 +144,5 @@ pensioners,gus_bdl,gus_bdl:P2861:osoba:przeciętna liczba emerytów i rencistów
 zus_pension_avg,gus_bdl,gus_bdl:P2860:zł:z pozarolniczego systemu ubezpieczeń społecznych emerytury,"non-agricultural system, old-age pension",1,
 investment_outlays,gus_bdl,gus_bdl:P2862:tys. zł:nakłady inwestycyjne w przedsiębiorstwach,"enterprises, current prices",1,
 vacancies_per_unemployed,gus_bdl,gus_bdl:P4334:osoba:zarejestrowani bezrobotni na 1 ofertę pracy,annual,1,
+registered_unemployed,mrpips_unemployment,mrpips_unemployment:registered_unemployment:persons:unemployed_persons,"MRPiPS-01, end of month, by sex, Poland and voivodeships",2,
+registered_unemployment_rate,mrpips_unemployment,mrpips_unemployment:registered_unemployment:pct:unemployment_rate,"MRPiPS, end of month, Poland, voivodeships and powiats",3,

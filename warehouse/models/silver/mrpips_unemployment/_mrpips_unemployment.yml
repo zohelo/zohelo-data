@@ -5,7 +5,7 @@ models:
       Registered unemployment at the end of each month from MRPiPS / Publiczne Służby Zatrudnienia (register PLS-029),
       newest version of each month's "statystyki strukturalne" ZIP (bronze.mrpips_unemployment_cells). Grain:
       period_date x area_code x measure_code x sex_code. area_code = TERYT voivodeship + powiat code (WWPP; 0000 =
-      Poland, WW00 = voivodeship). Measures: unemployed_thousands (thous_persons) and unemployment_rate (pct) for
+      Poland, WW00 = voivodeship). Measures: unemployed_thousands (thousand_persons) and unemployment_rate (pct) for
       Poland, voivodeships and powiats from the rate workbook; unemployed_persons (persons, sex T/F/M) for Poland and
       voivodeships from MRPiPS-01 TAB 2. History from January 2023 (Dev trial on test/src-w2pl-probe, see the PR).
     tests:
@@ -30,7 +30,7 @@ models:
       - name: value
         tests: [not_null]
       - name: unit_code
-        tests: [not_null, {accepted_values: {arguments: {values: [thous_persons, pct, persons]}}}]
+        tests: [not_null, {accepted_values: {arguments: {values: [thousand_persons, pct, persons]}}}]
       - name: raw_sha256
         description: Landing SHA-256 of the month's ZIP (lineage to Landing/Archive).
         tests: [not_null]

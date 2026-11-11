@@ -59,7 +59,7 @@ rate_areas as (
 
 rate_values as (
     select entity, area_code, area_level, area_name, 'unemployed_thousands' as measure_code, 'T' as sex_code,
-        try_cast(thousands_text as double) as value, 'thous_persons' as unit_code, source_version, raw_sha256, ingested_at
+        try_cast(thousands_text as double) as value, 'thousand_persons' as unit_code, source_version, raw_sha256, ingested_at
     from rate_areas
     union all
     select entity, area_code, area_level, area_name, 'unemployment_rate', 'T',

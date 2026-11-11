@@ -354,3 +354,19 @@ sources:
   schema: gold
   tables:
   - name: coverage
+- name: mrpips_unemployment
+  description: MRPiPS / Publiczne Służby Zatrudnienia — registered unemployment, monthly "statystyki strukturalne" ZIPs
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mrpips_unemployment/
+    loaded_by: ingestion/to_bronze/mrpips_unemployment/
+    config: ingestion/sources/mrpips_unemployment.yaml
+  tables:
+  - name: mrpips_unemployment_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of the rate workbook and of
+      MRPiPS-01 sheets TAB 1 and TAB 2 in the newest copy of each month's ZIP (entity stat_YYYY_MM); partitioned by
+      entity.
+  - name: mrpips_unemployment_rejected_files
+    description: MRPiPS registered-unemployment Landing files the Bronze decoder rejected, with the reason.
