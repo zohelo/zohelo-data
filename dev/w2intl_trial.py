@@ -59,6 +59,21 @@ MODELS = {
             ("obs_status", "select obs_status, count(*) from silver group by all"),
         ],
     ),
+    "undp_hdr": (
+        ["warehouse/models/silver/undp_hdr/undp_hdr_indices.sql"],
+        "undp_hdr_values",
+        [
+            ("rows", "select count(*), count(distinct iso3), count(distinct indicator), min(year), max(year) from silver"),
+            ("unique", "select count(*) from (select iso3, indicator, year from silver group by all having count(*) > 1)"),
+            ("nulls", "select count(*) from silver where iso3 is null or indicator is null or year is null or raw_sha256 is null"),
+            ("non-numeric", "select column_name, count(*) from silver where value is null group by all limit 20"),
+            ("no-year columns", "select distinct column_name from bronze where not regexp_matches(column_name, '_[0-9]{4}$')"),
+            ("indicators", "select indicator, count(*), min(year), max(year) from silver group by all order by all"),
+            ("POL", "select indicator, year, value from silver where iso3 = 'POL' and indicator in ('hdi','le','hdi_rank','gnipc','gii','ihdi') qualify row_number() over (partition by indicator order by year desc) = 1"),
+            ("aggregates", "select distinct iso3, country from silver where iso3 like 'ZZ%' order by 1"),
+            ("versions", "select distinct source_version, raw_sha256 from bronze"),
+        ],
+    ),
 }
 
 
