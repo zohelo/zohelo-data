@@ -284,6 +284,8 @@
     union all select * from {{ ref('poc_build_nbp') }}
     union all select * from {{ ref('poc_build_oecd') }}
     union all select * from {{ ref('poc_build_prg') }}
+    union all select * from {{ ref('poc_build_gleif') }}
+    union all select * from {{ ref('poc_build_mf_biala_lista') }}
 {% endmacro %}
 
 {# series_key: measure × geography × breakdown codes, readable; an unmatched area keeps its source code so
@@ -311,6 +313,8 @@
         ('nbp', 'fx_C', 'NBP exchange rates, table C'),
         ('nbp', 'gold', 'NBP gold fixings'),
         ('oecd', 'cli', 'OECD composite leading indicators and confidence indicators'),
-        ('gugik_prg', 'units', 'PRG administrative units')
+        ('gugik_prg', 'units', 'PRG administrative units'),
+        ('gleif', 'lei2', 'GLEIF LEI records (golden copy)'),
+        ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}
