@@ -29,7 +29,7 @@ def one(line):
     arg = parts[3] if len(parts) > 3 else ""
     out = [f"=== {sid} {mode} {url}"]
     try:
-        r, raw, ct, txt = get(url)
+        r, raw, ct, txt = get(url, 8000000 if mode=="pdf" else 900000)
         out.append(f"status={r.status} final={r.geturl()} ctype={ct} len={r.headers.get('content-length')} lastmod={r.headers.get('last-modified')} read={len(raw)}")
         if mode == "head":
             pass
@@ -48,6 +48,23 @@ def one(line):
                 n += 1
                 if n >= 4: break
             if n == 0: out.append("  (no match)")
+        elif mode == "pdf":
+            import subprocess, tempfile, os
+            f = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False); f.write(raw); f.close()
+            try:
+                t = subprocess.run(["pdftotext", "-layout", f.name, "-"], capture_output=True, text=True, timeout=60).stdout
+            except FileNotFoundError:
+                subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pypdf"], capture_output=True)
+                from pypdf import PdfReader
+                t = "\n".join((pg.extract_text() or "") for pg in PdfReader(f.name).pages[:40])
+            t = re.sub(r"\s+", " ", t)
+            n, last = 0, -9999
+            for m in re.finditer(arg or ".", t, re.I):
+                if m.start() - last < 1000: continue
+                last = m.start()
+                out.append("  >> " + t[max(0, m.start() - 200): m.start() + 1100]); n += 1
+                if n >= 4: break
+            if n == 0: out.append("  (no match) pdf chars=%d" % len(t))
         elif mode == "links":
             n = 0
             for m in re.finditer(r'(?is)<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', txt):
