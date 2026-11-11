@@ -1,29 +1,15 @@
-fao-cat	grep	https://bulks-faostat.fao.org/production/datasets_E.json	"DatasetCode": ?"(OA|RL|GT|CP|FS|MK|QCL|EI)"
-fao-cat-raw	raw	https://bulks-faostat.fao.org/production/datasets_E.json	800
-fao-oa	zip	https://bulks-faostat.fao.org/production/Population_E_All_Data_(Normalized).zip	1500
-fao-rl	zip	https://bulks-faostat.fao.org/production/Inputs_LandUse_E_All_Data_(Normalized).zip	900
-fao-gt	zip	https://bulks-faostat.fao.org/production/Emissions_Totals_E_All_Data_(Normalized).zip	900
-fao-cp	head	https://bulks-faostat.fao.org/production/ConsumerPriceIndices_E_All_Data_(Normalized).zip
-fao-fs	head	https://bulks-faostat.fao.org/production/Food_Security_Data_E_All_Data_(Normalized).zip
-fao-terms	grep	https://www.fao.org/contact-us/terms/db-terms-of-use/en/	CC BY|Creative Commons|Attribution|commercial
-who-ind	grep	https://data.who.int/indicators	life expectancy at birth
-who-ind-links	links	https://data.who.int/indicators	/indicators/i/
-who-api	grep	https://data.who.int/api/datadot/pages	life expectancy
-who-hale	raw	https://srhdpeuwpubsa.blob.core.windows.net/whdh/DATADOT/INDICATOR/C64284D_ALL_LATEST.csv	1500
-who-le-page	grep	https://data.who.int/indicators/i/A21CFC2/90E2E48	ALL_LATEST|WHOSIS|Life expectancy
-who-js	jsgrep	https://data.who.int/indicators	https://[a-z0-9.-]+/[A-Za-z0-9/_.-]*(api|DATADOT)[A-Za-z0-9/_.{}hmBc]*
-who-gho	raw	https://ghoapi.azureedge.net/api/WHOSIS_000001?$filter=SpatialDim%20eq%20'POL'	1200
-who-terms	grep	https://data.who.int/about/data/terms-and-conditions	CC BY|Creative Commons|Attribution|commercial
-who-terms2	grep	https://data.who.int/redirect-pages/footer/learn-more/terms-and-conditions	CC BY|Creative Commons|Attribution
-uis-ver	raw	https://api.uis.unesco.org/api/public/versions/default	800
-uis-defs	grep	https://api.uis.unesco.org/api/public/definitions/indicators	GERD|attainment|Bachelor
-uis-data	raw	https://api.uis.unesco.org/api/public/data/indicators?indicator=CR.1&geoUnit=POL	1200
-uis-bulk	links	https://databrowser.uis.unesco.org/documentation/bulk	zip|bdds|csv
-uis-bulk-js	jsgrep	https://databrowser.uis.unesco.org/documentation/bulk	https://[a-z0-9.-]*uis[a-z0-9.-]*/[A-Za-z0-9/_.{}hmBc]*
-uis-res	links	https://databrowser.uis.unesco.org/resources	zip|bdds
-uis-terms	grep	https://databrowser.uis.unesco.org/terms-and-conditions	Creative Commons|ShareAlike|cite|Attribution
-uis-doc	grep	https://api.uis.unesco.org/api/public/documentation/	bdds|bulk|rate|limit|/api/public/[a-z/]+
-itu-home	jsgrep	https://datahub.itu.int/	https://[a-z0-9.-]*itu[a-z0-9.-]*/[A-Za-z0-9/_.{}hmBc]*
-itu-about	grep	https://datahub.itu.int/about	Creative Commons|licen|Non-?Commercial|ShareAlike|cite
-itu-dl	raw	https://api.datahub.itu.int/v2/data/download/byid/11624/iscollection/false	600
-itu-data	jsgrep	https://datahub.itu.int/data/?i=11624	https://[a-z0-9.-]*itu[a-z0-9.-]*/[A-Za-z0-9/_.{}hmBc]*
+uis-schema	grep	https://api.uis.unesco.org/api/public/openapi/schema.json	rate.?limit|throttl|maximum|/api/public/data/indicators|geoUnit"|100000|records
+uis-gerd	grep	https://api.uis.unesco.org/api/public/definitions/indicators	"indicatorCode":"[^"]*","name":"[^"]*(GERD|expenditure on research)[^"]*"
+uis-ea	grep	https://api.uis.unesco.org/api/public/definitions/indicators	"indicatorCode":"EA\.(5T8|6T8)\.AG25T99(\.F|\.M)?"
+uis-all-ea	raw	https://api.uis.unesco.org/api/public/data/indicators?indicator=EA.5T8.AG25T99	700
+uis-all-ea2	grep	https://api.uis.unesco.org/api/public/data/indicators?indicator=EA.5T8.AG25T99&geoUnitType=NATIONAL	"geoUnit":"POL"[^}]*"year":202[0-9]
+uis-geo	raw	https://api.uis.unesco.org/api/public/definitions/geounits	600
+uis-bulk	grep	https://databrowser.uis.unesco.org/resources/bulk	bdds/202602/[^"\\]+
+uis-sdgzip	head	https://download.uis.unesco.org/bdds/202602/SDG.zip
+uis-oprizip	head	https://download.uis.unesco.org/bdds/202602/OPRI.zip
+itu-stat	links	https://www.itu.int/en/ITU-D/Statistics/Pages/stat/default.aspx	xlsx|csv|datahub|ITU_regional|Indicators
+itu-terms	grep	https://www.itu.int/en/about/Pages/terms-of-use.aspx	Creative Commons|licen|commercial
+itu-wtid	grep	https://www.itu.int/pub/D-IND-WTID.OL-2023	free|Creative|licen|DataHub
+who-le	raw	https://srhdpeuwpubsa.blob.core.windows.net/whdh/DATADOT/INDICATOR/90E2E48_ALL_LATEST.csv	600
+who-le-pl	grep	https://srhdpeuwpubsa.blob.core.windows.net/whdh/DATADOT/INDICATOR/90E2E48_ALL_LATEST.csv	,616,COUNTRY[^\n]*
+who-le-agg	grep	https://srhdpeuwpubsa.blob.core.windows.net/whdh/DATADOT/INDICATOR/90E2E48_ALL_LATEST.csv	,(REGION|WORLDBANKINCOMEGROUP|GLOBAL|WHOREGION)[^\n]*
