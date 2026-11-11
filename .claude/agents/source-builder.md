@@ -30,6 +30,10 @@ model: opus
   `gh api repos/zohelo/zohelo-data/check-runs/<job id>/annotations`. `gh api --paginate` fails: loop with `page=`.
 - Licence: copy the terms from the register into `source.csv` (`licence_key`) and `licence.csv`; unknown terms are
   `unresolved`. Never claim a licence the source does not state.
+- Route limits: a bulk workaround only when the terms allow it; a web export (browser session) only with an
+  owner decision or a D row for that source (today GUS BDL only). Otherwise stop and report.
+- News and text feeds (O32, O33): keep only headline, link, guid, publication time and language, reduced before
+  Landing; never store descriptions or article text, also not in Landing, the Archive or a Dev scratch prefix.
 - Polite access: user agent, timeouts, bounded retries with backoff, the source's quotas; never around bot
   protection. Never print secrets, never delete data, never work around a permission refusal (report it).
 
@@ -37,7 +41,9 @@ model: opus
 
 1. **Declaration** `ingestion/sources/<source_system>.yaml`: description, `extraction` (prefer `kind: bulk_file`,
    no extractor code), `landing`, `archive_policy`, `bronze`, `silver`, `gold: []`, `bronze_latest_only`, `refresh`
-   (`mode: full` below 1 M rows, else `incremental` with `unit`), `activities`. Add `source_system` to the register
+   (judged per source, D32: `mode: full` for a small source, `incremental` with `unit` in every layer for a big
+   one, from its size, update pattern and whether the source offers changed-since; no fixed row threshold;
+   `decided: "D32, #<this source's PR or issue>"`), `activities`. Add `source_system` to the register
    entry and the source to the Pipeline `source` options.
 2. **Landing**: shared pattern, or `ingestion/to_landing/<source_system>/` exposing `landing.inspect`,
    `landing.extract`, `landing.verify`. Exact source bytes, receipt after the file, never overwrite, resumable,
@@ -55,7 +61,8 @@ model: opus
 6. **Schedule**: `extraction.schedule` with a release-aware cron in UTC and the run
    `full dataflow: landing → bronze → silver → gold → portal`.
 7. **Docs and seeds**: `docs/sources.md` section (route, entity, version, restart unit), `source.csv`,
-   `licence.csv`, `lineage.py`, register `status` moved to the layer the PR reaches.
+   `licence.csv`, `lineage.py`, register `status: built`. You never set `silver` or `gold`: the orchestrator
+   does at Verify, after the scheduler's own runs.
 
 ## Before you report (verification-before-completion)
 

@@ -192,9 +192,10 @@ def config_problems(config: dict) -> list[str]:
                 problems.append(f"{source}: {layer} lists tables of another layer: {bad}")
         refresh = cfg.get("refresh") if isinstance(cfg.get("refresh"), dict) else {}
         if "bronze.load" in (cfg.get("activities") or []):
-            # Owner decision 20 Oct (#875): every loaded source declares its refresh policy for all layers.
+            # Owner decision 20 Oct (#875): every loaded source declares its refresh policy for all layers;
+            # D32: Claude decides it per source.
             if refresh.get("mode") not in {"incremental", "full"} or not refresh.get("decided"):
-                problems.append(f"{source}: refresh needs mode (incremental|full) and decided (owner decision issue)")
+                problems.append(f"{source}: refresh needs mode (incremental|full) and decided (D32 + source PR or issue)")
             entities = Path(__file__).parent / "ingestion" / "to_bronze" / source / "entities.py"
             if refresh.get("mode") == "incremental" and (not refresh.get("unit") or not entities.exists()):
                 problems.append(

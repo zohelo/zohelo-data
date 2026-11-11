@@ -12,10 +12,11 @@ via `source_system`. This page details the routes of the onboarded sources.
 | registered | researched |
 | reviewing | stage 1 in progress |
 | approved | cleared to build |
+| built | code merged (Landing to Silver, schedule); production runs not yet proven |
 | landing | stage reached |
 | bronze | stage reached |
-| silver | stage reached |
-| gold | stage reached |
+| silver | stage reached and green: set at Verify, after the scheduler's own runs (docs/playbook.md) |
+| gold | in Gold: set at Verify, after a scheduled build |
 | semantic | stage reached |
 | published | in the portals |
 | done | stage 11 (KPI sources) or 9 (reference sources) complete |

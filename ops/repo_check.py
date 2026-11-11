@@ -91,7 +91,7 @@ def repository(files: list[Path]) -> list[str]:
     if any(f.parts[0] == "dev" for f in files):
         problems.append("dev/ must be deleted before merge")
     for f in files:
-        if f.parts[0] == ".claude" and not (f.parts[:2] == (".claude", "agents") and f.suffix == ".md"):
+        if f.parts[0] == ".claude" and not (len(f.parts) == 3 and f.parts[1] == "agents" and f.suffix == ".md"):
             problems.append(f"{f}: only project agents (.claude/agents/*.md) are committed under .claude/")
     workflows = sorted(f.name for f in files if f.parent == Path(".github/workflows"))
     if workflows != WORKFLOWS:
@@ -339,6 +339,7 @@ STATUSES = {
     "registered",
     "reviewing",
     "approved",
+    "built",
     "landing",
     "bronze",
     "silver",

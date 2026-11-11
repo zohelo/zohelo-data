@@ -19,8 +19,12 @@ stages are `.github/backlog/stages.yaml`.
 - Read the provider's own documentation: bulk downloads, API, limits, licence, update
   behaviour. The session's proxy refuses most hosts: check reachability with a read-only Dev
   probe on a `test/<topic>` branch.
-- Extraction order: **bulk feature → bulk workaround (owner decides) → API tested for a
-  full load → web (polite browser export)**. Polite access only: documented limits,
+- Extraction order: **bulk feature → bulk workaround → API tested for a full load → web
+  export**. A bulk workaround is Claude's decision when the terms allow it and access stays
+  polite; unclear terms go to the owner (AGENTS.md "Data sources"). A web export (a browser
+  session asking the site for files) needs an owner decision or a D row in
+  [decisions.md](decisions.md) **per source**; today only GUS BDL has one (AGENTS.md
+  "Authorizations"). Polite access only: documented limits,
   registered keys are fine, no IP rotation, no parallel scraping, never around bot protection.
 - Define the **entity** (the source's own unit: dataset, table, file) and the **version**
   (the source's last update of that entity; download time when the source gives none).
@@ -87,7 +91,10 @@ stages are `.github/backlog/stages.yaml`.
 - Also in the same PR: Bronze tables in `warehouse/models/bronze/sources.yml`, the source in
   `ingestion/common/lineage.py`, the Pipeline `source` option, `warehouse/seeds/source.csv`
   and `licence.csv` rows, a `docs/sources.md` section, and the register entry
-  (`source_system`, `status`).
+  (`source_system`, `status: built`).
+- News and other text feeds keep only headline, link, guid, publication time and language,
+  reduced before Landing; descriptions and article text are never stored, also not in
+  Landing or the Archive (O32, O33).
 
 ## 6. Schedule
 
@@ -138,7 +145,7 @@ portals' licence gate hides it).
 | Research | `python -m ops.repo_check` passes | – | `extraction.production` (`snapshot`/`delta`) and `incremental_policy` chosen | terms URL + attribution sentence in the register, or `unresolved` |
 | Landing | Dev trial into `zz_dev_<topic>`, removed at the end; `landing.verify` green; `landing.inspect` missing 0 | a second `landing.extract` writes nothing (`unchanged`) | `changed_since_last` by default; `append_only` only for delta sources; `full_refresh` only when the source gives no version and the bytes are small | – |
 | Bronze | `bronze.verify` green; 0 unexplained rejections; row count checked against the raw file | a second `bronze.load` appends nothing | latest version only (`bronze_latest_only: true`, #822/#845); accumulating sources say so in the YAML | – |
-| Silver | grain `unique`, keys `not_null`, closed lists `accepted_values`; 0 duplicate keys and 0 null keys in the trial | a rebuild gives the same row count | `refresh: {mode: full}` and a `full_rebuild` ceiling when below 1 M rows; above 1 M rows `mode: incremental` with `unit` in every layer (#822, #875) | `source.csv` row with `licence_key`; `licence.csv` row with the attribution text |
+| Silver | grain `unique`, keys `not_null`, closed lists `accepted_values`; 0 duplicate keys and 0 null keys in the trial | a rebuild gives the same row count | `refresh.mode` judged per source (D32): `full` for a small source, `incremental` with `unit` in every layer for a big one, from its size, its update pattern and whether the source offers changed-since; `refresh.decided` cites `D32` plus the source's PR or issue. Separately, every full-rebuild dbt model has a `full_rebuild` row ceiling (#822) | `source.csv` row with `licence_key`; `licence.csv` row with the attribution text |
 | Schedule | `PYTHONPATH=. python run.py schedule --check` passes | re-run of the same slot loads nothing new | scheduled runs never rebuild a big table in full | – |
 | Gold | `build_check`: rows > 0 for every activated block, `rows_geography_unmatched` 0 or each code explained in the PR; `grain_check` empty; a new test that fails on prod is not merged (D29) | full rebuild from Silver gives the same series and row counts | build stage below 1 M rows with a ceiling; a fact model above 1 M rows is incremental with unique key `series_key, date_key` (D28) | measures carry the source's `licence_key` through `dim_source` |
 | Published | published JSON validates against `warehouse/published/schemas/`; the newest value of each new KPI × source is compared with the source's own page in the PR | `gold.publish` rewrites the same files | – | attribution text from `licence.csv`; `unresolved` and `restricted` sources stay internal |
@@ -159,8 +166,9 @@ merge (O34). Row ceilings come from a measured count, about 1.5 × the trial's r
   `gold.fact_*` through its build stage with every geography and date key matched or
   explained, its measures are in `dim_measure`, and each KPI it publishes has `kpi_measure`
   (and `kpi_v2_map`) rows; or (reference source) its Gold dimension or entity table is built,
-  tested and listed in `warehouse/warehouse.yaml`. The register `status` is moved to the
-  layer reached (`silver`, `gold`, …) in the PR that reaches it.
+  tested and listed in `warehouse/warehouse.yaml`. **Register status:** the build PR sets `built` (code merged, production not yet proven).
+  `silver` (= green) and `gold` (= in Gold) are set only at the Verify station of
+  [flow.md](flow.md), by the orchestrator, after the scheduler's own runs prove it.
 
 ## Shared dimensions: how a new source conforms
 
@@ -188,7 +196,9 @@ reported, never forced.
 1. Extraction decision and licence recorded; register, config and docs updated.
 2. Landing complete in the agreed layout; `landing.verify` clean.
 3. Bronze complete; `bronze.verify` shows nothing unexplained; size checked against the raw.
-4. Landing moved to Archive; retention report reviewed and switched to `delete`.
+4. Landing moved to Archive; retention report reviewed and switched to `delete` (the switch
+   and any `--apply`/`--delete` Ops run only for a Task whose Epic cites an owner decision,
+   O8; otherwise it is an owner action).
 5. Silver models with tests; scheduled; the source is green.
 6. In Gold; KPIs with metrics where the source publishes KPIs.
 7. Portal shows the source; `platform_inventory` claims every table and folder.

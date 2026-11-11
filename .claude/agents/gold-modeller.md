@@ -56,7 +56,8 @@ define the measure); which source dimensions are breakdowns; frequency; how each
    measure, priority), `kpi_v2_map.csv` (one row per v2 key × source). A `poc_metrics_<kpi>.sql` model and a
    semantic model before any KPI becomes `published`.
 4. `warehouse.yaml` (`gold` list, `full_rebuild` ceiling), the source YAML `gold:`, `_gold.yml` description and
-   tests, `docs/gold-poc.md` activation table row, register `status: gold`.
+   tests, `docs/gold-poc.md` activation table row. Leave the register `status` as it is: the orchestrator sets
+   `gold` at Verify, after a scheduled production build shows the source in `build_check`.
 
 ## Verify and report
 

@@ -96,5 +96,6 @@ and runnable by a person or another AI when Claude is not available. Rules marke
    yamllint, configuration and schedules), `dbt parse`, and a gitleaks secret scan.
    Rule changes are made in `ops/repo_check.py` and `pyproject.toml`, not in the workflow.
 2. sqlfluff on the dbt models is part of `ops/repo_check` (14 Oct).
-3. Reviewer: an AI agent that did not write the change reviews every PR against this file
-   in the scheduled pass before auto-merge; a weekly quality score goes to the Owner Desk.
+3. Reviewer: an independent review agent that did not write the change reviews every PR against
+   this file before the merge (O34; source PRs: `data-quality-reviewer`, [flow.md](flow.md)
+   station 5). There are no scheduled passes and no auto-merge (O26).
