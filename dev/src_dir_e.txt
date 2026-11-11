@@ -1,0 +1,15 @@
+PLG-022	https://ezamowienia.gov.pl/pl/integracja/	text	BZP|Search|api/v1|regulamin|bez rejestracji|limit
+PLG-022	https://ezamowienia.gov.pl/pl/integracja/	links	swagger|api|integr|dokument
+PLG-023	https://docs.ted.europa.eu/api/latest/index.html	text	licen|limit|anonymous|API key|rate|bulk|search
+PLG-023	https://ted.europa.eu/en/legal-notice	text	reuse|licen|CC BY|Decision 2011
+PLG-024	https://api.sejm.gov.pl/sejm.html	text	licen|zasady|ograniczen|term|kadencj|API|ogranicz|limit
+PLG-026	https://api.sejm.gov.pl/eli.html	text	licen|zasady|ograniczen|acts|publisher|DU|limit
+PLG-029	https://wybory.gov.pl/	links	pobierz|dane|csv|xls|wyniki|download
+PLG-030	https://api.dane.gov.pl/doc	text	limit|licen|zapyta|API|Swagger|1.4
+PLG-030	https://dane.gov.pl/pl/regulamin	text	licen|CC0|CC BY|ponowne|warunki
+PLG-033	https://statystyka.policja.pl/	text	wykorzyst|licenc|źródło|zastrzeż|pobier
+PLG-031	https://isws.ms.gov.pl/pl/baza-statystyczna/	links	xls|csv|pobier|dane|statyst
+PLG-032	https://sw.gov.pl/strona/Statystyka	links	xls|csv|pdf|statyst
+PLG-028	https://www.nik.gov.pl/kontrole/wyniki-kontroli-nik/	text	wykorzyst|licenc|dane otwarte|API|pobier
+PLG-034	https://legislacja.rcl.gov.pl/	text	API|dane otwarte|licenc|pobier|wykorzyst
+PLG-025	https://www.senat.gov.pl/prace/proces-legislacyjny-w-senacie/	text	API|dane otwarte|licenc|pobier|wykorzyst
