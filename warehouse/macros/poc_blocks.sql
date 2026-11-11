@@ -187,6 +187,34 @@
     ) as t (indicator_code)
 {% endmacro %}
 
+{# OECD composite leading and confidence indicators (silver.oecd_cli, #2738): the measures Gold builds.
+   Amplitude adjusted (AA), index points, long-term average = 100. The CLI (LI) covers 22 areas, not
+   Poland or the EU; business (BCICP) and consumer (CCICP) confidence cover Poland. #}
+{% macro poc_oecd_measures() %}
+    select * from (
+        values
+        ('BCICP', 'AA', 'IX', 'Business confidence indicator (BCI), amplitude adjusted, long-term average = 100'),
+        ('CCICP', 'AA', 'IX', 'Consumer confidence indicator (CCI), amplitude adjusted, long-term average = 100'),
+        ('LI', 'AA', 'IX', 'Composite leading indicator (CLI), amplitude adjusted, long-term average = 100')
+    ) as t (measure, adjustment, transformation, measure_name)
+{% endmacro %}
+
+{# OECD area codes that are not ISO 3166 alpha-3 countries: their names, and the Eurostat aggregate they equal. #}
+{% macro poc_oecd_areas() %}
+    select * from (
+        values
+        ('EA20', 'Euro area (20 countries)', 'EA20'),
+        ('EU27_2020', 'European Union (27 countries from 2020)', 'EU27_2020'),
+        ('OECD', 'OECD total', ''),
+        ('OECDE', 'OECD Europe', ''),
+        ('G7', 'G7', ''),
+        ('G20', 'G20', ''),
+        ('A5M', 'Major five Asia economies', ''),
+        ('G4E', 'Major four European economies', ''),
+        ('NAFTA', 'NAFTA', '')
+    ) as t (ref_area, name_en, eurostat_code)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -254,6 +282,7 @@
     union all select * from {{ ref('poc_build_dbw') }}
     union all select * from {{ ref('poc_build_wdi') }}
     union all select * from {{ ref('poc_build_nbp') }}
+    union all select * from {{ ref('poc_build_oecd') }}
 {% endmacro %}
 
 {# series_key: measure × geography × breakdown codes, readable; an unmatched area keeps its source code so
@@ -279,6 +308,7 @@
         values
         ('nbp', 'fx_A', 'NBP exchange rates, table A'),
         ('nbp', 'fx_C', 'NBP exchange rates, table C'),
-        ('nbp', 'gold', 'NBP gold fixings')
+        ('nbp', 'gold', 'NBP gold fixings'),
+        ('oecd', 'cli', 'OECD composite leading indicators and confidence indicators')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}

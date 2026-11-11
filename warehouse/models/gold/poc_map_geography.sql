@@ -178,6 +178,23 @@ wdi as (
     from {{ ref('wdi_countries') }} as w
     left join geo as g on g.level_name = 'country' and w.iso2_code = g.iso2
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
+),
+
+-- OECD: countries by ISO 3166 alpha-3 (dim_geography iso3); EA20 and EU27_2020 are the Eurostat aggregates,
+-- the other aggregates OECD members of dim_geography (macro poc_oecd_areas, #2738).
+oecd as (
+    select distinct
+        'oecd' as source_system,
+        o.ref_area as source_code,
+        coalesce(
+            g.geography_key,
+            case o.ref_area when 'EA20' then 'EUROSTAT:EA20' when 'EU27_2020' then 'EUROSTAT:EU27_2020' end,
+            g_agg.geography_key,
+            '_X'
+        ) as geography_key
+    from {{ ref('oecd_cli') }} as o
+    left join geo as g on g.level_name = 'country' and o.ref_area = g.iso3
+    left join geo as g_agg on g_agg.geography_key = 'OECD:' || o.ref_area
 )
 
 select
@@ -195,6 +212,8 @@ from (
     select * from dbw
     union all
     select * from wdi
+    union all
+    select * from oecd
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

@@ -3,10 +3,12 @@
    area; the codes every source uses for it are attributes (iso2, nuts_code, terc_code,
    bdl_unit_id, wb_code), so a GUS series and a Eurostat series of Małopolskie share one key.
    Natural keys: 'PL' (country iso2), 'TERC:<code>' (Polish units), 'NUTS:<code>' (NUTS areas
-   without a TERC unit), 'BDL:<id>' (BDL podregiony), 'EUROSTAT:<code>' / 'WB:<code>'
+   without a TERC unit), 'BDL:<id>' (BDL podregiony), 'EUROSTAT:<code>' / 'WB:<code>' / 'OECD:<code>'
    (aggregates), '_T', '_Z', '_X'. Hierarchy for Poland: Polska → makroregion → województwo →
    region (only Mazowieckie splits) → podregion → powiat → gmina. #}
 with nuts_pl as ({{ poc_nuts_pl() }}),
+
+oecd_areas as ({{ poc_oecd_areas() }}),
 
 woj_makro as ({{ poc_woj_makroregion() }}),
 
@@ -43,6 +45,17 @@ wb_countries as (
         income_group
     from wdi
     where iso2_code is not null and length(iso2_code) = 2 and region is not null
+),
+
+-- OECD areas that are not countries (ISO 3166 alpha-3) nor Eurostat aggregates: OECD aggregates (#2738).
+oecd_aggregates as (
+    select distinct
+        o.ref_area,
+        coalesce(n.name_en, o.ref_area) as name_en
+    from {{ ref('oecd_cli') }} as o
+    left join oecd_areas as n on o.ref_area = n.ref_area
+    left join wb_countries as c on o.ref_area = c.iso3
+    where c.iso3 is null and coalesce(n.eurostat_code, '') = ''
 ),
 
 countries as (
@@ -240,6 +253,22 @@ aggregates as (
         true as is_aggregate
     from wdi
     where region is null or iso2_code is null or length(iso2_code) <> 2
+    union all
+    select
+        'OECD:' || ref_area as geography_key,
+        name_en,
+        null as name_pl,
+        0 as level,
+        'aggregate' as level_name,
+        null as parent_key,
+        null as iso2,
+        null as iso3,
+        null as nuts_code,
+        null as terc_code,
+        null as bdl_unit_id,
+        null as wb_code,
+        true as is_aggregate
+    from oecd_aggregates
 ),
 
 specials as (
