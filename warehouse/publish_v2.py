@@ -366,23 +366,34 @@ def year_ago(period: str, frequency: str) -> str | None:
 
 
 def latest_values(
-    series_doc: dict[str, Any], sources: list[str], checked_at: dict[str, str], generated_at: str
+    series_doc: dict[str, Any],
+    sources: list[str],
+    checked_at: dict[str, str],
+    generated_at: str,
+    daily: frozenset[tuple[str, str]] = frozenset(),
 ) -> list[dict[str, Any]]:
     """latest.json values[] of one v2 KPI: per geography (totals only) the preferred source with data, its newest
     period and value, the period before with data, the value a year earlier (M and Q) and flags; pure. Only series
     of the shown frequency count (a series with its own ``frequency`` never reaches latest.json): a geography
     without a shown-frequency value of its preferred source falls back to the next source that has one, else has no
-    entry."""
+    entry. A series fed by daily rows (``daily``: source × geography) skips the month of generated_at, whose mean
+    is still incomplete; series.json keeps it."""
     periods = series_doc["periods"]
+    current = generated_at[:7]
+
+    def filled_of(s: dict[str, Any]) -> list[int]:
+        partial = (s["source_key"], s["geography"]) in daily
+        return [i for i, v in enumerate(s["values"]) if v is not None and not (partial and periods[i] >= current)]
+
     index = {p: i for i, p in enumerate(periods)}
     totals = [s for s in series_doc["series"] if not s["members"] and "frequency" not in s]
     result = []
     for geography in dict.fromkeys(s["geography"] for s in totals):
-        candidates = [s for s in totals if s["geography"] == geography and any(v is not None for v in s["values"])]
+        candidates = [s for s in totals if s["geography"] == geography and filled_of(s)]
         if not candidates:
             continue
         shown = min(candidates, key=lambda s: sources.index(s["source_key"]))
-        filled = [i for i, v in enumerate(shown["values"]) if v is not None]
+        filled = filled_of(shown)
         last = filled[-1]
         previous = filled[-2] if len(filled) > 1 else None
         ago = year_ago(periods[last], series_doc["frequency"])
@@ -438,29 +449,35 @@ def releases(
 def past_releases(
     calendar_rows: list[dict[str, str]], silver_rows: list[dict[str, Any]], v2_of_concept: dict[str, str]
 ) -> list[tuple[str, str, str]]:
-    """(date, publisher or source key, v2 key) of every known release of a v2 KPI, past and future: the
-    release_calendar.csv rows (concept → v2 key) and the silver.releases rows (their kpi_keys are v2 keys); pure."""
+    """(date, publisher, v2 key) of every known release of a v2 KPI, past and future: the release_calendar.csv rows
+    (concept → v2 key) and the silver.releases rows that are not tentative (their kpi_keys are v2 keys); the
+    publisher is the source or publisher key before its first '_' (`gus` for `gus_bdl`); pure."""
     result = []
     for row in calendar_rows:
         if row["kpi_key"] in v2_of_concept:
-            result.append((row["release_at"][:10], row["source_key"], v2_of_concept[row["kpi_key"]]))
+            result.append((row["release_at"][:10], publisher(row["source_key"]), v2_of_concept[row["kpi_key"]]))
     for row in silver_rows:
+        if row.get("tentative"):
+            continue
         day = row["release_date"].isoformat() if isinstance(row["release_date"], date) else str(row["release_date"])
         for key in {k.strip() for k in (row["kpi_keys"] or "").split(";") if k.strip()}:
-            result.append((day[:10], row["publisher"], key))
+            result.append((day[:10], publisher(row["publisher"]), key))
     return sorted(set(result))
 
 
+def publisher(key: str) -> str:
+    """The publisher of a source or release key: its part before the first '_' (`gus_dbw` → `gus`)."""
+    return key.split("_")[0]
+
+
 def released_on(known: list[tuple[str, str, str]], kpi_key: str, source_key: str, detected: date) -> str | None:
-    """The newest release of the KPI by the series' publisher (the source key itself, or its prefix before '_':
-    `gus` for `gus_bdl`) dated on the detection day or up to RELEASE_LOOKBACK_DAYS before it; None when none."""
+    """The newest known release of the KPI by the series' publisher dated on the detection day or up to
+    RELEASE_LOOKBACK_DAYS before it; None when none."""
     first = (detected - timedelta(days=RELEASE_LOOKBACK_DAYS)).isoformat()
     days = [
         d
-        for d, publisher, key in known
-        if key == kpi_key
-        and (source_key == publisher or source_key.startswith(publisher + "_"))
-        and first <= d <= detected.isoformat()
+        for d, by, key in known
+        if key == kpi_key and by == publisher(source_key) and first <= d <= detected.isoformat()
     ]
     return max(days) if days else None
 
@@ -471,46 +488,63 @@ def briefs_json(
     kpis: dict[str, dict[str, Any]],
     previous: dict[str, dict[str, Any] | None],
     known_releases: list[tuple[str, str, str]],
+    calendar: list[dict[str, Any]],
     config: dict[str, Any],
     generated_at: str,
 ) -> dict[str, Any]:
     """briefs.json: the facts of a rule-written release brief for every latest.json value of the configured
     geographies whose period is new; pure (docs/published.md, "briefs.json").
 
-    New: the period is later than the one of the previously published latest.json (``previous["latest.json"]``) for
-    the same KPI and geography; such a brief is detected now. A brief of the previous briefs.json
-    (``previous["briefs.json"]``) for the same KPI, geography and period keeps its detected_at. A KPI or geography
-    that was not in the previous latest.json gets no brief (first publication is not a release), and without a
-    previous latest.json only carried briefs remain. A brief stays while detected_at is at most window_days old; its
-    numbers are recomputed from the current files every run (revisions included)."""
+    New: the period is later than the one of the previously published latest.json (``previous["latest.json"]``)
+    for the same KPI and geography, of the same frequency and from the same source. ``detections`` (kept in
+    briefs.json) remembers every period detected in the last window_days: a period with a detection keeps its
+    detected_at, and a new period at or below a detected one (a transient step back, P → P-1 → P) reuses that
+    detection's detected_at. A KPI or geography that was not in the previous latest.json gets no brief (first
+    publication is not a release). A brief stays while detected_at is at most window_days old; its numbers are
+    recomputed from the current files every run (revisions included). next_release is the KPI's first calendar.json
+    date after released_at."""
     from ops.repo_check import brief_change, brief_change_unit, brief_extreme, period_ordinal
 
-    now = datetime.strptime(generated_at[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=UTC)
-    oldest = now - timedelta(days=int(config["window_days"]))
+    def utc(stamp: str) -> datetime:
+        return datetime.strptime(stamp[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=UTC)
+
+    oldest = utc(generated_at) - timedelta(days=int(config["window_days"]))
     geographies = list(config["geographies"])
     before = {(v["kpi_key"], v["geography"]): v for v in (previous.get("latest.json") or {}).get("values", [])}
-    carried = {
-        (b["kpi_key"], b["geography"], b["period"]): b for b in (previous.get("briefs.json") or {}).get("briefs", [])
+    detections = {
+        (d["kpi_key"], d["geography"], d["period"]): d
+        for d in (previous.get("briefs.json") or {}).get("detections", [])
+        if utc(d["detected_at"]) >= oldest
     }
+    dates: dict[str, list[str]] = defaultdict(list)
+    for release in calendar:
+        for key in release["kpi_keys"]:
+            dates[key].append(release["date"])
     briefs = []
     for v in values:
         if v["geography"] not in geographies or v["kpi_key"] not in kpis:
             continue
         kpi = kpis[v["kpi_key"]]
-        old = carried.get((v["kpi_key"], v["geography"], v["period"]))
+        frequency = period_frequency(v["period"])
+        at_or_above = sorted(
+            (period_ordinal(p), d)
+            for (k, g, p), d in detections.items()
+            if (k, g) == (v["kpi_key"], v["geography"])
+            and period_frequency(p) == frequency
+            and period_ordinal(p) >= period_ordinal(v["period"])
+        )
+        old = detections.get((v["kpi_key"], v["geography"], v["period"]))
         last = before.get((v["kpi_key"], v["geography"]))
-        if old is not None:
-            detected_at = old["detected_at"]
-        elif (
-            last is not None
-            and len(last["period"]) == len(v["period"])
-            and period_ordinal(v["period"]) > period_ordinal(last["period"])
-        ):
-            detected_at = generated_at
-        else:
-            continue
-        if datetime.strptime(detected_at[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=UTC) < oldest:
-            continue
+        if old is None:
+            if (
+                last is None
+                or last["source_key"] != v["source_key"]
+                or period_frequency(last["period"]) != frequency
+                or period_ordinal(v["period"]) <= period_ordinal(last["period"])
+            ):
+                continue
+            old = at_or_above[0][1] if at_or_above else None
+        detected_at = old["detected_at"] if old is not None else generated_at
         doc = series_docs[v["kpi_key"]]
         shown = next(
             s
@@ -520,12 +554,22 @@ def briefs_json(
             and not s["members"]
             and "frequency" not in s
         )
-        unit = brief_change_unit(kpi["aggregation"], v["unit_key"])
+        unit = brief_change_unit(kpi["aggregation"], v["unit_key"], shown["values"])
         ago = year_ago(v["period"], kpi["frequency"]) if v["year_ago_value"] is not None else None
         released = released_on(known_releases, v["kpi_key"], v["source_key"], date.fromisoformat(detected_at[:10]))
         source = "calendar" if released else "detected"
         if released is None and old is not None and old.get("released_at_source") == "calendar":
             released, source = old["released_at"], "calendar"  # the calendar row has left silver.releases since
+        released = released or detected_at[:10]
+        later = sorted(d for d in dates.get(v["kpi_key"], []) if d > released)
+        detections[(v["kpi_key"], v["geography"], v["period"])] = {
+            "kpi_key": v["kpi_key"],
+            "geography": v["geography"],
+            "period": v["period"],
+            "detected_at": detected_at,
+            "released_at": released,
+            "released_at_source": source,
+        }
         briefs.append(
             {
                 "kpi_key": v["kpi_key"],
@@ -548,10 +592,10 @@ def briefs_json(
                     int(config["extreme_min_periods"]),
                 ),
                 "flags": v["flags"],
-                "released_at": released or detected_at[:10],
+                "released_at": released,
                 "released_at_source": source,
                 "detected_at": detected_at,
-                "next_release": kpi["next_release"],
+                "next_release": later[0] if later else None,
             }
         )
     briefs.sort(key=lambda b: (b["kpi_key"], geographies.index(b["geography"])))
@@ -563,7 +607,29 @@ def briefs_json(
         "extreme_min_periods": int(config["extreme_min_periods"]),
         "geographies": geographies,
         "briefs": briefs,
+        "detections": [detections[k] for k in sorted(detections)],
     }
+
+
+def usable_previous(previous: dict[str, dict[str, Any] | None]) -> dict[str, dict[str, Any]]:
+    """The previously published latest.json and briefs.json that have the shape briefs_json reads (a document
+    that does not is treated as absent); pure."""
+    stamp = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}")
+    needs = {
+        "latest.json": ("values", ("kpi_key", "geography", "source_key", "period")),
+        "briefs.json": ("detections", ("kpi_key", "geography", "period", "detected_at", "released_at")),
+    }
+    result = {}
+    for name, (field, keys) in needs.items():
+        doc = previous.get(name)
+        rows = doc.get(field) if isinstance(doc, dict) else None
+        if not isinstance(rows, list):
+            continue
+        if all(isinstance(r, dict) and all(isinstance(r.get(k), str) for k in keys) for r in rows) and all(
+            stamp.match(r["detected_at"]) for r in rows if "detected_at" in r
+        ):
+            result[name] = doc
+    return result
 
 
 def briefs_config() -> dict[str, Any]:
@@ -822,7 +888,14 @@ def build(
     missing, empty, problems = [], [], []
     built = []
     used: dict[str, dict[str, set[str]]] = defaultdict(dict)
-    context: dict[str, Any] = {"indexes": {}, "curated": {}, "frequency": {}, "missing": missing, "empty": empty}
+    context: dict[str, Any] = {
+        "indexes": {},
+        "curated": {},
+        "frequency": {},
+        "daily": {},
+        "missing": missing,
+        "empty": empty,
+    }
     for entry in entries:
         if entry["concept"] not in metrics:
             missing.append(entry["kpi_key"])
@@ -845,6 +918,9 @@ def build(
         context["indexes"][entry["kpi_key"]] = gold_index(rows, aliases)
         context["curated"][entry["kpi_key"]] = dict(curated)
         context["frequency"][entry["kpi_key"]] = entry["frequency"]
+        context["daily"][entry["kpi_key"]] = frozenset(
+            (r["source"], r["geography"]) for r in rows if r["frequency"] in DAILY
+        )
         built.append((entry, doc, dims))
     if problems:
         raise ValueError(f"{len(problems)} series cells have several values in Gold: {problems[:10]}")
@@ -873,7 +949,7 @@ def build(
                 generated_at,
             )
         )
-        values += latest_values(doc, sources, checked_at, generated_at)
+        values += latest_values(doc, sources, checked_at, generated_at, context["daily"][entry["kpi_key"]])
     decimals = {u["unit_key"]: int(u["decimals"]) for u in seed("unit_decimals")}
     dimensions = dimensions_json(used, seed("dimension"), member_rows, seed("sex"))
     files["catalog.json"] = schema_checked(
@@ -889,8 +965,9 @@ def build(
             values,
             {e["kpi_key"]: doc for e, doc, _ in built},
             {k["kpi_key"]: k for k in kpis},
-            previous or {},
+            usable_previous(previous or {}),
             past_releases(calendar_rows, silver_releases, v2_of_concept),
+            calendar,
             briefs_config(),
             generated_at,
         ),
@@ -946,6 +1023,11 @@ def write(
     except NoSuchTableError:
         silver_releases = []
     previous = {name: _published(client, prefix + name) for name in ("latest.json", "briefs.json")}
+    unusable = sorted(n for n, doc in previous.items() if doc is not None and n not in usable_previous(previous))
+    if unusable:
+        from ingestion.common.report import annotate
+
+        annotate("warning", "gold.publish: previous v2 file without the expected keys, treated as absent", unusable)
     files, context = build(tables, checked_at, silver_releases, v1_catalog, status, generated_at, previous)
     sizes = {}
     # series first, catalog after them; briefs.json before latest.json, whose previous copy tells what is new
@@ -970,12 +1052,22 @@ def write(
 
 
 def _published(client, key: str) -> dict[str, Any] | None:
-    """The JSON document published at key, None when there is none yet."""
+    """The JSON document published at key, None when there is none yet or it is not readable JSON (with a warning
+    annotation); other storage errors (access denied, …) fail."""
     from botocore.exceptions import ClientError
 
+    from ingestion.common.report import annotate
+
     try:
-        return json.loads(get(client, key))
+        body = get(client, key)
     except ClientError as exc:
         if str(exc.response.get("Error", {}).get("Code")) in ("404", "NoSuchKey", "NotFound"):
             return None
         raise
+    try:
+        return json.loads(body)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        annotate(
+            "warning", "gold.publish: previous v2 file not readable, treated as absent", {"key": key, "error": str(exc)}
+        )
+        return None

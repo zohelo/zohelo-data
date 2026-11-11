@@ -335,6 +335,9 @@ Every entry comes from one series of the KPI's shown frequency (period, previous
 series): the preferred source with a shown-frequency value for that geography, else the next such source. A series
 with its own `frequency` (see series.json) never reaches latest.json, so frequencies are never mixed in one entry; a
 geography that has only series of another frequency has no latest entry.
+A series fed by daily rows (the monthly mean of daily values, e.g. `eurpln`) skips the month of `generated_at` in
+latest.json: its mean is still incomplete (series.json keeps that month, its value changes daily until the month
+ends). So the latest value of such a KPI is the last complete month.
 
 ## kpi/<kpi_key>/series.json
 
@@ -399,37 +402,52 @@ yardsticks live there). Rules, no language model. Written with the other v2 file
 | briefs[].period, value | string, number | the new period and its value |
 | briefs[].previous_period, previous_value | string or null, number or null | as latest.json |
 | briefs[].change | number or null | against the previous value, in `change_unit`; 6 decimals |
-| briefs[].change_unit | string | `pp`: the difference in the value's own unit (percentage points for rates and shares in %; points for balances and the `py=100`/`pp=100` indices); `%`: the relative change in per cent (levels: counts, money, index levels, ratios) |
-| briefs[].year_ago_period, year_ago_value, year_ago_change | string or null, number or null, number or null | the same period a year earlier (monthly and quarterly KPIs; null for annual or without a value) and the change against it, as `change` |
+| briefs[].change_unit | string | `pp`, `diff` or `%` (below) |
+| briefs[].year_ago_period, year_ago_value, year_ago_change | string or null, number or null, number or null | the same period a year earlier and its value (both set or both null: null for annual KPIs or without a value) and the change against it, as `change` |
 | briefs[].extreme | object or null | `{ kind: highest \| lowest, since_period, periods }` when the value is above (below) every observed value of at least `extreme_min_periods` periods back; `since_period` is the last period with a value as high (as low) or more, null when no earlier value reaches it (the highest/lowest of the whole series); `periods` counts the observed values passed. Nulls (gaps) are not counted |
 | briefs[].flags | array | as latest.json |
 | briefs[].released_at | string | `YYYY-MM-DD`: the release date from `silver.releases` or `release_calendar.csv` when known, else the day the new period was detected |
-| briefs[].released_at_source | string | `calendar` or `detected` |
-| briefs[].detected_at | string | when `gold.publish` first published the period |
-| briefs[].next_release | string or null | the KPI's next release (catalog.json `next_release`) |
+| briefs[].released_at_source | string | `calendar` or `detected` (then `released_at` is the day of `detected_at`) |
+| briefs[].detected_at | string | when `gold.publish` first published the period; at most `window_days` before `generated_at` |
+| briefs[].next_release | string or null | the KPI's first `calendar.json` date after `released_at` (on a release day the release itself is not the next one) |
+| detections[] | array | writer state, not for display: `{ kpi_key, geography, period, detected_at, released_at, released_at_source }` of every period detected in the last `window_days`, one per KPI, geography and period; every brief has its entry |
+
+**Change unit** (`ops.repo_check.brief_change_unit`, one rule for writer and check): `pp`, the difference in
+percentage points, for KPIs with aggregation `rate`, units in % (`pct…`, including `pct_points`) and the indices
+`index_py_100` and `index_pp_100` (100 + a rate); `diff`, the difference in the value's own unit, for the Gini scale
+(`gini_0_100`), balances (`balance`) and any series with a negative value (signed sums that change sign, such as
+current-account components or FDI flows in mln EUR, where a relative change means nothing); `%`, the relative change
+in per cent, for every other level (counts, money, index levels such as `2020=100`, ratios), null when the previous
+value is not above zero.
 
 **What is new.** Gold keeps no load time per observation (the metrics tables are rebuilt), so "new" is read from the
 published files themselves: before writing, `gold.publish` reads the previous `latest.json` and `briefs.json` under
-`06_published/v2/`. A KPI × geography gets a brief when its `latest.json` period is later than the one in the previous
-`latest.json` (`detected_at` = now); a brief of the previous `briefs.json` for the same KPI, geography and period keeps
-its `detected_at`. A brief stays while `detected_at` is at most `window_days` old, and is replaced when a newer period
-arrives. Its numbers are recomputed from the current files on every run, so revisions show. Not a release, so no
-brief: a KPI or geography that was not in the previous `latest.json` (first publication), a revised value of the same
-period, a change of the shown source without a later period. Without a previous `latest.json` (first run) only
-carried briefs remain. `briefs.json` is written before `latest.json`, so a run that stops between the two finds the
-old `latest.json` again and detects the period once more, keeping the carried `detected_at`.
+`06_published/v2/`. A KPI × geography gets a brief when its `latest.json` period is later than the one in the
+previous `latest.json`, of the same frequency and from the same source (`detected_at` = now). `detections` keeps
+every period detected in the last `window_days`: a period found there keeps its `detected_at`, and a new period at or
+below a detected one keeps that detection's `detected_at` (a transient step back, P → P−1 → P, is not a second
+release). A brief stays while `detected_at` is at most `window_days` old and is replaced when a newer period arrives.
+Its numbers are recomputed from the current files on every run, so revisions show. Not a release, so no brief: a KPI
+or geography that was not in the previous `latest.json` (first publication), a revised value of the same period, a
+change of the shown source (even to one with a later period), a change of frequency. Without a previous
+`latest.json` (first run) only remembered periods remain. A previous file that is not JSON or lacks the keys read
+(`values`; `detections`) is treated as absent with a warning annotation; other storage errors (access denied) fail
+the run. `briefs.json` is written before `latest.json`, so a run that stops between the two finds the old
+`latest.json` again and detects the period once more, keeping the remembered `detected_at`.
 
-`released_at`: the newest release of the KPI by the series' publisher (the `source_key`, or its prefix before `_`:
-`gus` for `gus_bdl` and `gus_dbw`) dated on the detection day or up to 14 days before it, from `silver.releases`
-(its `kpi_keys` are v2 keys) and `release_calendar.csv` (concept → v2 key); else the detection day. A carried
-`calendar` date is kept when its row has left `silver.releases` since.
+`released_at`: the newest release of the KPI by the series' publisher dated on the detection day or up to 14 days
+before it, from `silver.releases` (not tentative; its `kpi_keys` are v2 keys) and `release_calendar.csv` (concept →
+v2 key). Publishers are compared on the key before its first `_` on both sides (`gus` for `gus_bdl` and `gus_dbw`,
+`nbp` for `nbp_interest_rates`); without a match it is the detection day. A remembered `calendar` date is kept when
+its row has left `silver.releases` since.
 
 Rules checked before writing (`ops.repo_check.briefs_problems`, part of `published_v2_problems`): each brief equals
-its `latest.json` value (source, unit, period, value, previous and year-ago value) and the value of its single total
-series in `series.json`; `change`, `year_ago_change`, `change_unit` (`brief_change_unit`: `pp` for KPIs with
-aggregation `rate` and for units `pct…`, `balance`, `index_py_100`, `index_pp_100`) and `extreme` are recomputed from
-those files; one brief per KPI and geography, geographies from the file's list, `next_release` as the catalog's,
-sorted newest first. `gold.publish` also reads back every value, previous and year-ago value against Gold. Schema
+its `latest.json` value (source, unit, period, value, previous and year-ago value, flags) and the value of its single
+total series in `series.json`; the year-ago value is that series' value of `year_ago_period`; `change`,
+`year_ago_change`, `change_unit` and `extreme` are recomputed from those files; `detected_at` within `window_days`
+and listed in `detections`; `detected` release dates are the detection day; `next_release` is the first
+`calendar.json` date after `released_at`; one brief per KPI and geography, geographies from the file's list, sorted
+newest first. `gold.publish` also reads back every value, previous and year-ago value against Gold. Schema
 `warehouse/published/schemas/v2/briefs.schema.json`, fixture `warehouse/published/fixtures/v2/briefs.json` (built
 from the synthetic Gold rows with a synthetic previous `latest.json`).
 

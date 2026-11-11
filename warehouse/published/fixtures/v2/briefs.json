@@ -98,5 +98,47 @@
       "detected_at": "2025-12-22T08:00:00Z",
       "next_release": null
     }
+  ],
+  "detections": [
+    {
+      "kpi_key": "gdp_real_growth",
+      "geography": "PL",
+      "period": "2025-Q2",
+      "detected_at": "2026-01-01T00:00:00Z",
+      "released_at": "2026-01-01",
+      "released_at_source": "detected"
+    },
+    {
+      "kpi_key": "hicp_annual_rate",
+      "geography": "EU27",
+      "period": "2024-01",
+      "detected_at": "2025-12-30T08:00:00Z",
+      "released_at": "2025-12-30",
+      "released_at_source": "detected"
+    },
+    {
+      "kpi_key": "hicp_annual_rate",
+      "geography": "PL",
+      "period": "2025-09",
+      "detected_at": "2026-01-01T00:00:00Z",
+      "released_at": "2025-12-19",
+      "released_at_source": "calendar"
+    },
+    {
+      "kpi_key": "population_total",
+      "geography": "PL",
+      "period": "2024",
+      "detected_at": "2026-01-01T00:00:00Z",
+      "released_at": "2026-01-01",
+      "released_at_source": "detected"
+    },
+    {
+      "kpi_key": "unemployment_lfs",
+      "geography": "PL",
+      "period": "2025-Q2",
+      "detected_at": "2025-12-22T08:00:00Z",
+      "released_at": "2025-12-22",
+      "released_at_source": "detected"
+    }
   ]
 }
