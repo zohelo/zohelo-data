@@ -1890,8 +1890,10 @@ sources:
     evidence: documented
     connection: tested
     blockers:
-    - 'Confirm the licence statement on population.un.org/wpp (the page could not be read in this review); until then
-      source.csv uses licence `unresolved` (internal only, hidden by the portals'' licence gate; review of #2761)'
+    - 'Confirm the licence statement on population.un.org/wpp: Dev probe 43098349843 (11 Nov 2026) found no licence text
+      on population.un.org/wpp (a JavaScript application; /terms-of-use 404), on the Data Portal about pages or on
+      un.org/development/desa/pd/node/4327 (links to the general UN Terms of Use only). Until a UN page states the
+      licence, source.csv uses licence `unresolved` (internal only, hidden by the portals'' licence gate; review of #2761)'
     - 'Revision archive: the next revision (WPP 2026) has new file URLs; the declaration changes with it'
     references:
     - https://population.un.org/wpp/
