@@ -144,3 +144,5 @@ pensioners,gus_bdl,gus_bdl:P2861:osoba:przeciętna liczba emerytów i rencistów
 zus_pension_avg,gus_bdl,gus_bdl:P2860:zł:z pozarolniczego systemu ubezpieczeń społecznych emerytury,"non-agricultural system, old-age pension",1,
 investment_outlays,gus_bdl,gus_bdl:P2862:tys. zł:nakłady inwestycyjne w przedsiębiorstwach,"enterprises, current prices",1,
 vacancies_per_unemployed,gus_bdl,gus_bdl:P4334:osoba:zarejestrowani bezrobotni na 1 ofertę pracy,annual,1,
+lei_issued,gleif,gleif:lei2:entities:ISSUED,"registration status ISSUED; PENDING_TRANSFER and PENDING_ARCHIVAL (about 0.04 %) not included",1,entities
+vat_whitelist_entries,mf_biala_lista,mf_biala_lista:flat_file:entries,"active and exempt taxpayers, entries = taxpayer × bank account",1,list_entries

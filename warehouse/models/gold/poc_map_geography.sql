@@ -178,6 +178,35 @@ wdi as (
     from {{ ref('wdi_countries') }} as w
     left join geo as g on g.level_name = 'country' and w.iso2_code = g.iso2
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
+),
+
+-- GLEIF (#2740): countries of the legal jurisdiction by ISO 3166-1 alpha-2; Polish legal-address regions by
+-- ISO 3166-2, PL-<TERC> since 2018 and the legacy letter codes still found in the golden copy.
+gleif as (
+    select
+        'gleif' as source_system,
+        g.iso2 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso2 is not null
+    union all
+    select
+        'gleif' as source_system,
+        'PL-' || terc_code as source_code,
+        'TERC:' || terc_code as geography_key
+    from {{ ref('teryt_terc') }}
+    where unit_level = 'wojewodztwo'
+    union all
+    select
+        'gleif' as source_system,
+        'PL-' || letters as source_code,
+        'TERC:' || terc_code as geography_key
+    from (
+        values
+        ('DS', '02'), ('KP', '04'), ('LU', '06'), ('LB', '08'), ('LD', '10'), ('MA', '12'), ('MZ', '14'),
+        ('OP', '16'), ('PK', '18'), ('PD', '20'), ('PM', '22'), ('SL', '24'), ('SK', '26'), ('WN', '28'),
+        ('WP', '30'), ('ZP', '32')
+    ) as t (letters, terc_code)
 )
 
 select
@@ -195,6 +224,8 @@ from (
     select * from dbw
     union all
     select * from wdi
+    union all
+    select * from gleif
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

@@ -30,7 +30,7 @@ archive_policy:
   prune: report
 bronze: [bronze.biala_lista_records, bronze.biala_lista_rejected_files]
 silver: [silver.biala_lista_taxpayer_hashes, silver.biala_lista_masks]
-gold: []
+gold: [gold.build_mf_biala_lista, gold.metrics_vat_whitelist_entries]
 legacy_tables: [bronze.biala_lista_header, bronze.biala_lista_masks, bronze.biala_lista_taxpayers, silver.biala_lista_header, silver.biala_lista_taxpayers, gold.dim_vat_header, gold.dim_vat_masks, gold.dim_vat_taxpayer_account]
 
 # Refresh policy for all layers (design #875): entity = the flat file; each day's file replaces
