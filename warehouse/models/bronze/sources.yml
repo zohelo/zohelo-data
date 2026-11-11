@@ -232,6 +232,23 @@ sources:
       day (YYYYMMDD), views; partitioned by entity (<lang>_<title slug>).
   - name: wikimedia_pageviews_rejected_files
     description: Wikimedia pageviews Landing files the Bronze decoder rejected, with the reason.
+- name: ilostat
+  description: ILOSTAT — bulk indicator files (gzip CSV, all countries)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/ilostat/
+    loaded_by: ingestion/to_bronze/ilostat/
+    config: ingestion/sources/ilostat.yaml
+  tables:
+  - name: ilostat_observations
+    description: >-
+      One row per observation of the newest copy of each indicator file (entity, e.g. une_deap_sex_age_rt_a),
+      as published: indicator, series_dimensions / series_key (ref_area, source, indicator, sex, classif1 …
+      in file order), time_period, obs_value and attribute_names / attribute_values as source text;
+      partitioned by entity.
+  - name: ilostat_rejected_files
+    description: ILOSTAT Landing files the Bronze decoder rejected, with the reason.
 - name: news_feeds
   description: News headline feeds (RSS/Atom) of Polish outlets — headlines and links only (topics, O32)
   database: r2

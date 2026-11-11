@@ -78,6 +78,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   nbp_gold_fixings: {rows: 20000}  # 3,479
   oecd_cli: {rows: 400000}  # 240,988 (Dev trial 42777288678)
   bis_observations: {rows: 560000}  # 371,000 (Dev probe 43087048719)
+  ilostat_observations: {rows: 1000000}
   news_headlines: {rows: 300000}
   releases: {rows: 5000}  # about 50 announced releases a week, 60-day window
   topic_attention: {rows: 50000}  # 35 topics × 455 days
