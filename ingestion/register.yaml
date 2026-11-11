@@ -300,7 +300,7 @@ sources:
   short_name: World Bank IDS
   provider: World Bank
   source_system: world_bank_ids
-  status: approved
+  status: silver
   family: A
   kpi: true
   geography: worldwide
@@ -335,9 +335,8 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
-    blockers:
-    - 'Confirm stable machine-download contract'
+    connection: tested
+    blockers: []
     references:
     - https://www.worldbank.org/en/programs/debt-statistics/ids
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -346,7 +345,7 @@ sources:
   short_name: World Bank WGI
   provider: World Bank
   source_system: world_bank_wgi
-  status: approved
+  status: silver
   family: A
   kpi: true
   geography: worldwide
@@ -380,9 +379,8 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
-    blockers:
-    - 'Confirm stable machine-download contract'
+    connection: tested
+    blockers: []
     references:
     - https://www.worldbank.org/en/publication/worldwide-governance-indicators
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -393,7 +391,7 @@ sources:
   short_name: World Bank Global Findex
   provider: World Bank
   source_system: world_bank_findex
-  status: approved
+  status: silver
   family: A
   kpi: true
   geography: worldwide
@@ -429,9 +427,8 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Confirm stable machine-download contract'
     - 'Use country-level indicators only; microdata may not be redistributed'
     references:
     - https://www.worldbank.org/en/publication/globalfindex
@@ -489,7 +486,7 @@ sources:
   short_name: World Bank ICP
   provider: World Bank
   source_system: world_bank_icp
-  status: approved
+  status: silver
   family: A
   kpi: true
   geography: worldwide
@@ -525,9 +522,8 @@ sources:
   research:
     priority: specialist
     evidence: catalogue-only
-    connection: not-tested
-    blockers:
-    - 'Confirm stable machine-download contract'
+    connection: tested
+    blockers: []
     references:
     - https://www.worldbank.org/en/research/brief/international-comparison-program
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
