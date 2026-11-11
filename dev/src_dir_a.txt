@@ -1,0 +1,27 @@
+PLS-012	https://api.nfz.gov.pl/app-stat-api-jgp/index-of-tables?format=json&limit=5	raw	1200
+PLS-012	https://api.nfz.gov.pl/app-stat-api-jgp/	text	Zasoby|limit 25|maksymaln
+PLS-013	https://api.nfz.gov.pl/app-stat-api-ra/index-of-tables?format=json&limit=5	raw	1200
+PLS-014	https://api.nfz.gov.pl/app-umw-api/agreements?page=1&limit=2&format=json&year=2025	raw	1500
+PLS-014	https://api.nfz.gov.pl/app-umw-api/	text	Zasoby|dostępne lata|od 20
+PLS-015	https://api.nfz.gov.pl/app-itl-api/queues?page=1&limit=2&format=json&case=1	raw	1800
+PLS-015	https://apinfz.nfz.gov.pl/app-itl-api-pcus/	head	
+PLS-015	https://api.nfz.gov.pl/app-itl-api/	text	Wersja API 1.3 jest|Standardowy mechanizm|aktualiz
+PLS-016	https://ezdrowie.gov.pl/portal/home/badania-i-dane	links	xls|csv|pdf|dane|raport|biuletyn|statystyk|liczbach
+PLS-016	https://ezdrowie.gov.pl/portal/home/badania-i-dane	text	prawa zastrzeż|Wszelkie prawa|licenc|regulamin
+PLS-019	https://wwwold.pzh.gov.pl/oldpage/epimeld/index_p.html	links	xls|csv|2026|2025
+PLS-019	https://www.pzh.gov.pl/	text	prawa|licenc|wykorzyst|Polityka
+PLS-020	https://rpwdl2.ezdrowie.gov.pl/	links	.
+PLS-020	https://rpwdl2.ezdrowie.gov.pl/	head	
+PLS-021	https://api.rspo.gov.pl/	text	Regulamin|Limit|limit|token|licenc|opłat
+PLS-021	https://api.rspo.gov.pl/	links	regulamin|dokument|instruk|swagger|wniosek
+PLS-021	https://api.dane.gov.pl/1.4/datasets?q=rejestr%20szk%C3%B3%C5%82%20i%20plac%C3%B3wek%20o%C5%9Bwiatowych&per_page=5	raw	2500
+PLS-022	https://cie.gov.pl/archiwalne-dane-statystyczne/	links	xls|zip|csv|ods|dane
+PLS-022	https://cie.gov.pl/archiwalne-dane-statystyczne/	text	licenc|wykorzyst|Creative|prawa|dane otwarte
+PLS-023	https://radon.nauka.gov.pl/api	text	licenc|limit|token|regulamin|dostęp|otwart
+PLS-023	https://radon.nauka.gov.pl/api	links	api|swagger|dokument|opendata|dane
+PLS-024	https://ela.nauka.gov.pl/pl	links	dane|pobierz|csv|xls|otwart|api|regulamin|licenc
+PLS-024	https://ela.nauka.gov.pl/pl	text	licenc|dane otwarte|pobierz|regulamin
+PLS-025	https://cke.gov.pl/egzamin-osmoklasisty/wyniki/	links	xls|csv|zip|wyniki
+PLS-025	https://cke.gov.pl/	text	licenc|prawa autorskie|wykorzyst|regulamin|Creative
+PLS-030	https://barometrzawodow.pl/	links	api|csv|xls|json|open|dane|download|pobier|regulamin|licen
+PLS-030	https://barometrzawodow.pl/	text	licenc|regulamin|prawa|Creative|API|dane otwarte
