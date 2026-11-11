@@ -58,6 +58,23 @@ GROUPS = {
         "https://data.unece.org/",
         "https://unece.org/data",
     ],
+    "ilo2": [
+        "https://rplumber.ilo.org/data/indicator/?id=UNE_DEAP_SEX_AGE_RT_A&format=.csv.gz",
+        "https://rplumber.ilo.org/data/indicator/?id=UNE_DEAP_SEX_AGE_RT_Q&ref_area=POL&format=.csv",
+        "https://rplumber.ilo.org/files/website/bulk/indicator/UNE_DEAP_SEX_AGE_RT_Q.csv.gz",
+        "https://rplumber.ilo.org/files/website/bulk/indicator.html",
+        "https://sdmx.ilo.org/rest/data/ILO,DF_UNE_DEAP_SEX_AGE_RT,1.0/POL.Q....?format=csv",
+        "https://sdmx.ilo.org/rest/data/ILO,DF_UNE_DEAP_SEX_AGE_RT,1.0/all?format=csv&startPeriod=2024",
+        "https://sdmx.ilo.org/rest/datastructure/ILO/DSD_UNE_DEAP_SEX_AGE_RT/latest",
+    ],
+    "undata2": [
+        "https://data.un.org/ws/rest/dataflow/all/all/latest",
+    ],
+    "unece2": [
+        "https://w3.unece.org/PXWeb2015/api/v1/en/STAT/20-ME",
+        "https://w3.unece.org/PXWeb2015/api/v1/en/STAT/30-GE",
+        "https://w3.unece.org/PXWeb2015/api/v1/en/STAT/10-CountryOverviews",
+    ],
     "gem": [
         "https://datacatalogapi.worldbank.org/ddhxext/DatasetView?dataset_unique_id=0037798",
         "https://databankfiles.worldbank.org/public/ddpext_download/GemDataEXTR.zip",
@@ -79,7 +96,7 @@ def head_text(data: bytes, lines: int = 6, chars: int = 1800) -> str:
 
 def probe(url: str) -> None:
     try:
-        r = requests.get(url, headers={"User-Agent": UA}, timeout=(30, 300))
+        r = requests.get(url, headers={"User-Agent": UA, "Accept-Encoding": "identity"}, timeout=(30, 300))
     except requests.RequestException as exc:
         out(url, f"ERROR {type(exc).__name__}: {exc}"[:400])
         return
@@ -101,9 +118,15 @@ def probe(url: str) -> None:
         out("  POL lines", [ln for ln in lines if ln.startswith('"POL"') or ln.startswith("POL")][:5])
         areas = sorted({ln.split(",")[0].strip('"') for ln in lines[1:]})
         out("  areas", areas)
+    elif "xml" in (keep["Content-Type"] or ""):
+        import re
+
+        text = data.decode("utf-8", errors="replace")
+        out("  xml ids", re.findall(r'(?:Dataflow|Dimension|TimeDimension)[^>]*? id="([^"]+)"', text)[:120])
+        out("  xml names", re.findall(r'<common:Name xml:lang="en">([^<]+)<', text)[:120])
     elif "json" in (keep["Content-Type"] or ""):
         try:
-            out("  json", json.dumps(r.json())[:3000])
+            out("  json", json.dumps(r.json())[:6000])
         except ValueError:
             out("  text", head_text(data))
     elif "html" in (keep["Content-Type"] or ""):
