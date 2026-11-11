@@ -11,14 +11,15 @@ description: Ministry of Finance monthly state budget execution (XLSX)
 # newest report of each year holds the whole year: one entity per year (years: budget_execution_2018
 # … _<current year>; bulk_file expand_years), and the current year's entity is optional until its
 # page lists a report. The newest report of a year is replaced in Bronze by the next (latest-only per
-# entity); the December report (I–XII, published in June of the next year) closes the year.
+# entity); the December report (I–XII, published in June of the next year) closes the year, so only the
+# current and the previous year are downloaded again (years.open: 2); older years land once.
 # Version = Last-Modified; written only when the SHA-256 changed.
 extraction:
   kind: bulk_file
   bulk_file:
     files:
       - entity: budget_execution
-        years: {from: 2018}
+        years: {from: 2018, open: 2}   # the current and the previous year are checked; older years are closed
         url_from:
           page: https://www.gov.pl/web/finanse/sprawozdania-miesieczne-{year}
           pattern: /attachment/

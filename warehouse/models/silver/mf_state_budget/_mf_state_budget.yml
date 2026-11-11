@@ -9,7 +9,7 @@ models:
       financing_foreign); the other lines keep only their label and numbering.
     tests:
       - unique:
-          column_name: "budget_year || '|' || measure || '|' || coalesce(cast(month_end as varchar), '-') || '|' || item_label"
+          column_name: "budget_year || '|' || measure || '|' || coalesce(cast(month_end as varchar), '-') || '|' || item_label || '|' || item_occurrence"
     columns:
       - name: budget_year
         tests: [not_null]
@@ -19,6 +19,11 @@ models:
         tests: [{accepted_values: {arguments: {values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}}}]
       - name: item_label
         tests: [not_null]
+      - name: item_occurrence
+        description: The n-th row with this label in its three-month block (1 unless the report repeats a label).
+        tests: [not_null]
+      - name: item_key
+        tests: [{accepted_values: {arguments: {values: ['revenue', 'expenditure', 'balance', 'eu_funds_result', 'financing', 'financing_domestic', 'financing_foreign']}}}]
       - name: value_thousand_pln
         tests: [not_null]
       - name: raw_sha256

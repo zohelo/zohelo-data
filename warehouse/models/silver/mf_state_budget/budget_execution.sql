@@ -7,7 +7,8 @@
    financing, financing_domestic, financing_foreign). A block starts at a row whose column 1 is 'Wyszczególnienie';
    a month header is a column whose text is a Roman range ('I', 'I - II', … 'I - XII') in that row or one of the
    next two (reports up to 2021 put the months a row lower). In 2018–2019 the domestic financing line carries its
-   values on a continuation row, so financing_domestic is missing for those years. #}
+   values on a continuation row, so financing_domestic is missing for those years. A label repeated within a
+   block is kept apart by item_occurrence (the grain's last key), never dropped. #}
 with cells as (
     select
         *,
@@ -70,9 +71,18 @@ coded as (
     select
         *,
         regexp_extract(item_label, '^((?:[IVX]+a?\.)|(?:[0-9]+\.\s*)+)', 1) as numbering,
-        trim(regexp_replace(item_label, '^((?:[IVX]+a?\.)|(?:[0-9]+\.\s*)+)', '')) as item_text
+        trim(regexp_replace(item_label, '^((?:[IVX]+a?\.)|(?:[0-9]+\.\s*)+)', '')) as item_text,
+        row_number() over (partition by entity, header_row, item_label order by row_number) as item_occurrence
     from labels
     where header_row is not null
+),
+
+first_blocks as (
+    select
+        entity,
+        min(header_row) as header_row
+    from header_rows
+    group by entity
 ),
 
 values_ as (
@@ -83,6 +93,7 @@ values_ as (
         l.item_label,
         l.numbering,
         l.item_text,
+        l.item_occurrence,
         m.month_end,
         c.number_value
     from coded as l
@@ -100,12 +111,14 @@ plans as (
         l.item_label,
         l.numbering,
         l.item_text,
+        l.item_occurrence,
         cast(null as integer) as month_end,
         c.number_value
     from coded as l
+    -- the plan column repeats in every three-month block: read it from the first block only
+    inner join first_blocks as f on l.entity = f.entity and l.header_row = f.header_row
     inner join cells as c on l.entity = c.entity and l.row_number = c.row_number and c.column_number = 2
     where c.cell_type = 'n' and c.number_value is not null
-    qualify row_number() over (partition by l.entity, l.item_label order by l.row_number) = 1
 ),
 
 unioned as (
@@ -153,13 +166,10 @@ select
     k.item_key,
     replace(rtrim(k.numbering, '. '), '. ', '.') as item_code,
     k.item_label,
+    k.item_occurrence,
     k.number_value as value_thousand_pln,
     n.raw_sha256,
     n.source_version,
     n.ingested_at
 from keyed as k
 inner join newest as n on k.entity = n.entity
--- a label listed twice for the same month (none today) keeps its first row
-qualify row_number() over (
-    partition by k.budget_year, k.measure, k.month_end, k.item_label order by k.row_number
-) = 1

@@ -19,7 +19,7 @@ framework")::
               pattern: /attachment/  # re.search on each <a href>, made absolute against the page
               pick: first            # first (default) | last matching link, in page order
           - entity: budget_execution       # one file per year, each on its own page
-            years: {from: 2018}      # entities budget_execution_2018 … _<current year, Warsaw>; {year} in
+            years: {from: 2018, open: 2}  # entities budget_execution_2018 … _<current year, Warsaw>; {year} in
             url_from:                # url / url_from.page is that year; the current year's file is optional
               page: https://www.gov.pl/web/finanse/sprawozdania-miesieczne-{year}
               pattern: /attachment/
@@ -85,7 +85,9 @@ def expand_years(spec: dict[str, Any], today: datetime | None = None) -> list[di
     """A file declared with ``years: {from: <year>}`` as one spec per year up to the current year (Warsaw):
     entity ``<entity>_<year>``, ``{year}`` replaced in url and url_from.page. The current year's spec is
     ``optional`` (in January its page may not exist or list a file yet): load and inspect skip it with a
-    notice instead of failing. Other specs are returned unchanged."""
+    notice instead of failing. With ``years: {from: <year>, open: <n>}`` only the newest n years are downloaded
+    again once landed; an older year is ``closed`` and load skips it while Landing holds a copy (its file no
+    longer changes; a missing copy is still downloaded). Other specs are returned unchanged."""
     if "years" not in spec:
         return [spec]
     from zoneinfo import ZoneInfo
@@ -93,8 +95,11 @@ def expand_years(spec: dict[str, Any], today: datetime | None = None) -> list[di
     current = (today or datetime.now(UTC)).astimezone(ZoneInfo("Europe/Warsaw")).year
     base = {k: v for k, v in spec.items() if k != "years"}
     out = []
+    open_years = int(spec["years"].get("open", 0))
     for year in range(int(spec["years"]["from"]), current + 1):
         one = {**base, "entity": f"{spec['entity']}_{year}", "year": year, "optional": year == current}
+        if open_years and year <= current - open_years:
+            one["closed"] = True
         if "url" in base:
             one["url"] = base["url"].replace("{year}", str(year))
         if "url_from" in base:
@@ -463,6 +468,9 @@ def main(
                 rewritten = reduce_held(client, bucket, source, spec, landing_root)
                 if rewritten:
                     print(json.dumps({"entity": spec["entity"], "reduced_held_copies": rewritten}), flush=True)
+            if spec.get("closed") and landed(client, bucket, folder):
+                results.append({"entity": spec["entity"], "outcome": "closed year, held"})
+                continue
             if n and pause_seconds:
                 time.sleep(pause_seconds)
             try:

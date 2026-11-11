@@ -3,14 +3,18 @@
    treasury_debt, budget_execution, krus_benefits), Poland only, no breakdown (the instrument, item or benefit
    is part of the measure). Blocks:
    mf_public_debt   debt_gdp      debt in relation to GDP (percent), State Treasury (SP), state public debt (PDP),
-                                  general government EDP debt (GG); quarter ends (Q) and the 31 December value (A)
+                                  general government EDP debt (GG); quarter ends (Q) and the 31 December value
+                                  (A, measure key suffix ':YE', so the annual and the first-quarter row never share
+                                  a series × date)
                     debt          the same debts in million zloty (Q)
                     edp_debt      general government (EDP) debt by ESA 2010 instrument, million zloty (Q)
    mf_treasury_debt debt_instrument  State Treasury debt by instrument, million zloty, month ends (M)
    mf_state_budget  execution_ytd    revenue, expenditure, balance and financing, cumulative from January,
-                                     thousand zloty (M; the December value as the year, A)
+                                     thousand zloty (M; the December value as the year, A, suffix ':A')
                     plan             the same lines in the budget act (A)
-   krus             benefits         average monthly beneficiaries and benefit by benefit type (Q, A) #}
+   krus             benefits         average monthly beneficiaries and benefit by benefit type (Q; A with suffix
+                                     ':A'); periods with the KRUS footnote mark (from III quarter 2025: survivors'
+                                     pensions include those paid with other pensions) have status 'break' #}
 with debt_gdp_items as (
     select * from (
         values
@@ -21,19 +25,22 @@ with debt_gdp_items as (
 ),
 
 debt_gdp as (
+    -- the sheet lists the three debts twice under one header: first in million zloty (block debt), then as a
+    -- fraction of GDP (block debt_gdp); the occurrence decides, and a row whose format disagrees is left out
     select
         'mf_public_debt' as source_system,
-        case when d.unit = 'ratio' then 'debt_gdp' else 'debt' end as block_id,
-        d.unit,
         i.code,
         i.name,
         d.period_end,
-        case when d.unit = 'ratio' then d.value * 100 else d.value end as value,
         d.source_version,
-        d.raw_sha256
+        d.raw_sha256,
+        case when d.item_occurrence = 1 then 'debt' else 'debt_gdp' end as block_id,
+        case when d.item_occurrence = 1 then d.value else d.value * 100 end as value
     from {{ ref('public_debt') }} as d
     inner join debt_gdp_items as i on d.item_label = i.item_label
-    where d.sheet_name = 'Dług w relacji do PKB'
+    where
+        d.sheet_name = 'Dług w relacji do PKB'
+        and ((d.item_occurrence = 1 and d.unit = 'mln_pln') or (d.item_occurrence = 2 and d.unit = 'ratio'))
 ),
 
 edp as (
@@ -87,9 +94,12 @@ budget as (
     select *
     from {{ ref('budget_execution') }}
     where item_key is not null
-    -- one line per key (a report repeating a main line under another label keeps its lowest-numbered row)
+    -- one line per key: a report repeating a main line keeps its first labelled row (deterministic order)
     qualify
-        row_number() over (partition by budget_year, measure, month_end, item_key order by item_code, item_label) = 1
+        row_number() over (
+            partition by budget_year, measure, month_end, item_key
+            order by item_code nulls last, item_label, item_occurrence
+        ) = 1
 ),
 
 krus as (
@@ -101,7 +111,8 @@ observations as (
         d.source_system,
         d.block_id,
         'Public debt in relation to GDP (MF)' as block_name,
-        'mf_public_debt:debt_gdp:PC_GDP:' || d.code as measure_key,
+        'mf_public_debt:debt_gdp:PC_GDP:' || d.code || case when f.frequency = 'A' then ':YE' else '' end
+            as measure_key,
         d.name || ', % of GDP' as measure_name,
         d.code as measure_codes,
         'PC_GDP' as unit_code,
@@ -117,7 +128,8 @@ observations as (
         end as period_label,
         d.value,
         d.source_version,
-        d.raw_sha256
+        d.raw_sha256,
+        'ok' as observation_status_key
     from debt_gdp as d
     cross join (values ('Q'), ('A')) as f (frequency)
     where d.block_id = 'debt_gdp' and (f.frequency = 'Q' or (month(d.period_end) = 12 and day(d.period_end) = 31))
@@ -136,7 +148,8 @@ observations as (
         year(period_end) || '-Q' || quarter(period_end) as period_label,
         value,
         source_version,
-        raw_sha256
+        raw_sha256,
+        'ok' as observation_status_key
     from debt_gdp
     where block_id = 'debt'
     union all
@@ -154,7 +167,8 @@ observations as (
         year(period_end) || '-Q' || quarter(period_end) as period_label,
         value,
         source_version,
-        raw_sha256
+        raw_sha256,
+        'ok' as observation_status_key
     from edp
     union all
     select
@@ -171,14 +185,16 @@ observations as (
         strftime(period_end, '%Y-%m') as period_label,
         value,
         source_version,
-        raw_sha256
+        raw_sha256,
+        'ok' as observation_status_key
     from treasury
     union all
     select
         'mf_state_budget' as source_system,
         'execution_ytd' as block_id,
         'State budget execution, cumulative (MF)' as block_name,
-        'mf_state_budget:execution_ytd:THS_PLN:' || b.item_key as measure_key,
+        'mf_state_budget:execution_ytd:THS_PLN:' || b.item_key || case when f.frequency = 'A' then ':A' else '' end
+            as measure_key,
         b.item_label || ', cumulative from January, thousand PLN' as measure_name,
         b.item_key as measure_codes,
         'THS_PLN' as unit_code,
@@ -189,7 +205,8 @@ observations as (
             as period_label,
         b.value_thousand_pln as value,
         b.source_version,
-        b.raw_sha256
+        b.raw_sha256,
+        'ok' as observation_status_key
     from budget as b
     cross join (values ('M'), ('A')) as f (frequency)
     where b.measure = 'execution_ytd' and (f.frequency = 'M' or b.month_end = 12)
@@ -208,7 +225,8 @@ observations as (
         cast(budget_year as varchar) as period_label,
         value_thousand_pln as value,
         source_version,
-        raw_sha256
+        raw_sha256,
+        'ok' as observation_status_key
     from budget
     where measure = 'plan'
     union all
@@ -217,7 +235,7 @@ observations as (
         'benefits' as block_id,
         'KRUS pensions and benefits' as block_name,
         'krus:benefits:' || case when measure = 'beneficiaries' then 'persons' else 'PLN' end || ':' || benefit_key
-        || ':' || measure as measure_key,
+        || ':' || measure || case when period_type = 'A' then ':A' else '' end as measure_key,
         benefit_group || coalesce(' (' || subgroup || ')', '')
         || case
             when measure = 'beneficiaries' then ', average monthly number of beneficiaries'
@@ -231,7 +249,8 @@ observations as (
         case when period_type = 'A' then cast(year as varchar) else year || '-Q' || quarter end as period_label,
         value,
         source_version,
-        raw_sha256
+        raw_sha256,
+        case when footnote is not null then 'break' else 'ok' end as observation_status_key
     from krus
 )
 
@@ -254,7 +273,7 @@ select
     cast(null as varchar) as sex_code,
     true as is_total,
     cast(value as double) as value,
-    'ok' as observation_status_key,
+    observation_status_key,
     source_version,
     raw_sha256
 from observations

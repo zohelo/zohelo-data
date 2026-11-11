@@ -18,7 +18,9 @@ models:
         tests: [not_null]
       - name: benefit_key
         description: Null when KRUS adds a benefit column the model does not know (the test then fails).
-        tests: [not_null]
+        tests:
+          - not_null
+          - accepted_values: {arguments: {values: ['all', 'old_age', 'disability', 'disability_accident', 'survivors', 'survivors_accident', 'gbrz', 'parental_supplementary', 'civilian_blind_war_victims']}}
       - name: measure
         tests: [not_null, {accepted_values: {arguments: {values: ['beneficiaries', 'avg_benefit_pln']}}}]
       - name: value
