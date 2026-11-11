@@ -38,7 +38,7 @@ archive_policy:
   prune: report
 bronze: [bronze.nbp_bop_cells, bronze.nbp_bop_rejected_files]
 silver: [silver.nbp_bop_observations]
-gold: [gold.build_nbp_bop]
+gold: []  # build_nbp_bop follows once silver.nbp_bop_observations exists in production
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): three workbooks of about 60,000 values; rebuilt in full.
