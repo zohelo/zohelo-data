@@ -144,3 +144,8 @@ pensioners,gus_bdl,gus_bdl:P2861:osoba:przeciętna liczba emerytów i rencistów
 zus_pension_avg,gus_bdl,gus_bdl:P2860:zł:z pozarolniczego systemu ubezpieczeń społecznych emerytury,"non-agricultural system, old-age pension",1,
 investment_outlays,gus_bdl,gus_bdl:P2862:tys. zł:nakłady inwestycyjne w przedsiębiorstwach,"enterprises, current prices",1,
 vacancies_per_unemployed,gus_bdl,gus_bdl:P4334:osoba:zarejestrowani bezrobotni na 1 ofertę pracy,annual,1,
+fx_rate,ecb,ecb:EXR:PLN:EUR,"ECB euro reference rate, PLN per 1 EUR",2,
+inflation,ecb,ecb:HICP:000000:ANR,"HICP (COICOP 2018), annual rate of change, ECB",3,
+bond_yield_10y,ecb,ecb:IRS:L40,"long-term interest rate for convergence purposes, ECB",2,
+m3_growth,ecb,ecb:BSI:M30:I:A,"euro area M3, annual growth rate, seasonally adjusted",1,
+ecb_deposit_rate,ecb,ecb:FM:DFR,"deposit facility rate, date of changes",1,

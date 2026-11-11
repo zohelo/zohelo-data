@@ -1,0 +1,27 @@
+version: 2
+models:
+  - name: ecb_observations
+    description: >-
+      ECB Data Portal observations (SDMX csvdata) from bronze.ecb_observations: newest version of every
+      selection of ingestion/sources/ecb.yaml (EXR euro reference rates, FM key ECB rates, EST euro short-term
+      rate, HICP annual rates, IRS long-term interest rates for convergence purposes, BSI monetary aggregates).
+      Grain: dataflow × series_key × time_period. ref_area: ISO 3166 two-letter codes for countries (GR, not
+      EL) and ECB aggregates (U2 euro area changing composition, I8/I9 fixed euro area compositions, D0 EU
+      changing composition); null for EXR and EST. currency: EXR quoted currency (units per 1 EUR).
+    tests:
+      - unique:
+          column_name: "dataflow || '|' || series_key || '|' || time_period"
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: dataflow
+        tests: [not_null]
+      - name: freq
+        tests: [not_null, {accepted_values: {arguments: {values: ['D', 'B', 'M', 'Q', 'A']}}}]
+      - name: time_period
+        tests: [not_null]
+      - name: period_start
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]

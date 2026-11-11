@@ -187,6 +187,21 @@
     ) as t (indicator_code)
 {% endmacro %}
 
+{# ECB Data Portal blocks: one per landed selection (ingestion/sources/ecb.yaml entity). currencies: the EXR
+   currencies built (EU members outside the euro area and the main world currencies); empty for other flows. #}
+{% macro poc_ecb_blocks() %}
+    select * from (
+        values
+        ('exr_daily', 'ECB euro reference exchange rates, daily', 'PLN,CZK,HUF,RON,SEK,DKK,BGN,USD,GBP,CHF,JPY,CNY,NOK'),
+        ('fm_key_rates', 'Key ECB interest rates (date of changes)', ''),
+        ('est_estr', 'Euro short-term rate (EUR STR)', ''),
+        ('icp_annual_rate', 'HICP annual rate of change (ICP, discontinued after 2025-12)', ''),
+        ('hicp_annual_rate', 'HICP annual rate of change (HICP, COICOP 2018)', ''),
+        ('irs_long_term', 'Long-term interest rates for convergence purposes (10-year)', ''),
+        ('bsi_monetary_aggregates', 'Euro area monetary aggregates M1, M2, M3', '')
+    ) as t (entity, block_name, currencies)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -254,6 +269,7 @@
     union all select * from {{ ref('poc_build_dbw') }}
     union all select * from {{ ref('poc_build_wdi') }}
     union all select * from {{ ref('poc_build_nbp') }}
+    union all select * from {{ ref('poc_build_ecb') }}
 {% endmacro %}
 
 {# series_key: measure × geography × breakdown codes, readable; an unmatched area keeps its source code so
@@ -274,6 +290,8 @@
     select 'gus_dbw', block_id, block_name from ({{ poc_dbw_blocks() }})
     union all
     select 'world_bank_wdi', indicator_code, 'WDI ' || indicator_code from ({{ poc_wdi_blocks() }})
+    union all
+    select 'ecb', entity, block_name from ({{ poc_ecb_blocks() }})
     union all
     select * from (
         values

@@ -737,7 +737,8 @@ sources:
   short_name: ECB Data Portal
   provider: European Central Bank
   source_system: ecb
-  status: approved
+  current: true
+  status: built
   family: C
   kpi: true
   geography: multicountry-Europe
@@ -746,14 +747,20 @@ sources:
   entities: [country, financial-institution-aggregate, sector]
   granularity: Series/observation through SDMX; dimensions vary by dataflow and include frequency, area, item and
     adjustment.
-  coverage: Euro area/EU plus counterpart and selected external economies; start varies by series.
+  coverage: 'Euro area/EU plus counterpart and selected external economies; start varies by series. Landed selections
+    (Dev probes 11 Nov 2026): EXR 44 currencies against the euro, daily from 1999-01-04 (266,219 rows); key ECB
+    rates (FM) from 1999 at change dates; EUR STR from 2019-10; HICP annual rate (HICP, COICOP 2018) and the
+    discontinued ICP (to 2025-12) for every EU member, the euro area (U2, I8, I9) and the EU (B0/D0); long-term
+    interest rates for convergence purposes (IRS) for every EU member incl. Poland from 2001-01; euro area
+    monetary aggregates M1-M3 (BSI) from 1980-01.'
   access:
-    endpoint: https://data.ecb.europa.eu/
+    endpoint: https://data-api.ecb.europa.eu/service/data/
     kind: api
     interfaces: [HTML, SDMX REST API, CSV]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No explicit numeric quota found; one request per selection and run, weekly. The largest selection
+      (EXR, every currency, full history) is one 57 MB response.
   licence:
     status: open-conditional
     notes: 'Terms:
@@ -772,11 +779,10 @@ sources:
     overlap: Overlaps Eurostat, BIS and national central banks; retain source and methodological basis.
   research:
     priority: review-first
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - 'Re-open current API documentation'
-    - 'Identify third-party series exceptions (prior permission needed)'
+    - 'Identify third-party series exceptions (prior permission needed) for every dataflow added'
     references:
     - https://data.ecb.europa.eu/
     - https://data.ecb.europa.eu/help/api/overview

@@ -335,6 +335,7 @@ STATUSES = {
     "registered",
     "reviewing",
     "approved",
+    "built",  # code merged, scheduled; green only after the scheduler's own runs (O36)
     "landing",
     "bronze",
     "silver",
