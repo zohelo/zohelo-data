@@ -16,7 +16,7 @@ select
     unit_name,
     case
         when unit_code in ('NR', 'osoba', 'persons', 'osoby') or lower(unit_name) like '%osob%' then 'persons'
-        when unit_code in ('PC_ACT', 'PC_POP', 'RCH_A', 'PC', '%') or unit_name like '%procent%' then 'percent'
+        when unit_code in ('PC_ACT', 'PC_POP', 'RCH_A', 'PC', '%', 'pct') or unit_name like '%procent%' then 'percent'
         when unit_code = 'CP_MEUR' then 'EUR million'
         when unit_code = 'CP_EUR_HAB' then 'EUR per inhabitant'
         when unit_code = 'CLV_PCH_PRE' then 'percent change on previous period'
