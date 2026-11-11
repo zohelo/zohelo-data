@@ -6,6 +6,8 @@ with bounds (concept_key, source_system, value_min, value_max) as (
     values
     ('population', 'gus_bdl', 0, 5e7),
     ('population', 'gus_dbw', 0, 5e7),
+    -- UN WPP (#2761): persons; World 8,091,734,930 in 2023 (WPP 2024, LocID 900, Dev trial 43093304689)
+    ('population', 'un_wpp', 0, 1.5e10),
     ('gdp_current_prices', 'eurostat', 0, 3e7),
     ('gdp_current_prices', 'world_bank_wdi', 0, 3e14),
     ('inflation', 'eurostat', -100, 3000),
