@@ -24,7 +24,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 
 | Rule | Check |
 |---|---|
-| Root contains only: `.github/`, `docs/`, `ingestion/`, `ops/`, `portal/`, `warehouse/`, `run.py`, `requirements.in`, `requirements.txt`, `pyproject.toml` (tool settings), `README.md`, `AGENTS.md`, `CLAUDE.md`, `.gitignore`, `.gitleaks.toml`, `.gitattributes`, `.python-version`, `.node-version` | [auto] allowlist |
+| Root contains only: `.claude/` (project agents, `.claude/agents/*.md`), `.github/`, `docs/`, `ingestion/`, `ops/`, `portal/`, `warehouse/`, `run.py`, `requirements.in`, `requirements.txt`, `pyproject.toml` (tool settings), `README.md`, `AGENTS.md`, `CLAUDE.md`, `.gitignore`, `.gitleaks.toml`, `.gitattributes`, `.python-version`, `.node-version` | [auto] allowlist |
 | No empty files except `__init__.py` | [auto] |
 | No file above 1 MB; no data, outputs, notebooks, archives or credentials committed | [auto] |
 | No `dev/` on `main`; no status/audit/log files in the repo (status lives in project docs) | [auto] |
@@ -96,5 +96,6 @@ and runnable by a person or another AI when Claude is not available. Rules marke
    yamllint, configuration and schedules), `dbt parse`, and a gitleaks secret scan.
    Rule changes are made in `ops/repo_check.py` and `pyproject.toml`, not in the workflow.
 2. sqlfluff on the dbt models is part of `ops/repo_check` (14 Oct).
-3. Reviewer: an AI agent that did not write the change reviews every PR against this file
-   in the scheduled pass before auto-merge; a weekly quality score goes to the Owner Desk.
+3. Reviewer: an independent review agent that did not write the change reviews every PR against
+   this file before the merge (O34; source PRs: `data-quality-reviewer`, [flow.md](flow.md)
+   station 5). There are no scheduled passes and no auto-merge (O26).

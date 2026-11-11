@@ -136,11 +136,11 @@ def trial(source: str) -> None:
         print(f"### {source} rejected {t[1]}: {arrow.to_pylist()[:5]}", flush=True)
     for name, path in spec["silver"].items():
         sql = render(path, {r"\{\{\s*source\('[a-z_]+',\s*'([a-z_]+)'\)\s*\}\}": None} if False else {})
-        if "unctad_table(" in sql:
-            from jinja2 import Environment
+        from jinja2 import Environment
 
-            text = Path("warehouse/macros/unctad.sql").read_text() + sql
-            sql = Environment().from_string(text).render(source=lambda _s, t: f"bronze_{t}")
+        macros = Path("warehouse/macros/unctad.sql")
+        text = (macros.read_text() if macros.exists() else "") + sql
+        sql = Environment().from_string(text).render(source=lambda _s, t: f"bronze_{t}", ref=lambda m: m)
         sql = re.sub(r"\{\{\s*source\('[a-z_]+',\s*'([a-z_0-9]+)'\)\s*\}\}", lambda m: f"bronze_{m.group(1)}", sql)
         sql = re.sub(r"\{\{\s*ref\('([a-z_0-9]+)'\)\s*\}\}", lambda m: m.group(1), sql)
         con.execute(f"create table {name} as {sql}")
