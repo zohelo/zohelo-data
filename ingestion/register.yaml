@@ -6435,7 +6435,7 @@ sources:
   name: Marketstack Stock Data API
   short_name: Marketstack
   provider: APILayer / Idera
-  status: registered
+  status: parked
   family: I
   kpi: false
   geography: worldwide
@@ -6443,8 +6443,8 @@ sources:
   domains: [financial-markets, corporate-filings]
   entities: [security, exchange, enterprise]
   granularity: Ticker-date bars; intraday availability, fundamentals and filings vary by plan and market.
-  coverage: 'Plan-specific: free history is short; paid tiers advertise longer history. Exchange and field coverage
-    must be sampled.'
+  coverage: 'Plan-specific: free history is short; paid tiers advertise longer history. Exchange and field coverage must be
+    sampled.'
   access:
     endpoint: https://marketstack.com/pricing
     kind: api
@@ -6454,8 +6454,9 @@ sources:
     limits: Plan-specific monthly requests; do not encode current figures before subscription selection.
   licence:
     status: restricted
-    notes: Commercial use is listed for paid tiers; source-market display and redistribution rights still require
-      contract review.
+    notes: 'Terms: https://marketstack.com/pricing (terms page not re-read in this review; the restriction is as recorded
+      at registration). Commercial use is listed for paid tiers; source-market display and redistribution rights still require
+      contract review. Not reusable for public display: stays internal.'
   updates: End-of-day or intraday/real-time by plan; corrections policy not documented on opened pages.
   ingestion:
     history: 'PROPOSAL: backfill approved tickers by bounded date windows after entitlement review.'
@@ -6468,7 +6469,12 @@ sources:
     priority: conditional
     evidence: documented
     connection: not-tested
-    blockers: [Select plan and licensed use, Verify Polish instrument coverage, Confirm redistribution/display rights]
+    blockers:
+    - 'Parked: paid commercial market-data API; the plan terms do not grant public redistribution of quotes; re-open only
+      with an agreed commercial licence'
+    - Select plan and licensed use
+    - Verify Polish instrument coverage
+    - Confirm redistribution/display rights
     references:
     - https://marketstack.com/pricing
     - https://www.ideracorp.com/legal/APILayer
@@ -6476,7 +6482,7 @@ sources:
   name: Alpha Vantage Market Data APIs
   short_name: Alpha Vantage
   provider: Alpha Vantage
-  status: registered
+  status: parked
   family: I
   kpi: false
   geography: worldwide
@@ -6484,8 +6490,7 @@ sources:
   domains: [financial-markets, macroeconomics]
   entities: [security, currency-pair, commodity, country]
   granularity: Time series and reference endpoints for equities, options, FX, crypto, commodities and economic indicators.
-  coverage: Documentation advertises long equity histories, but depth and intraday availability vary by endpoint
-    and entitlement.
+  coverage: Documentation advertises long equity histories, but depth and intraday availability vary by endpoint and entitlement.
   access:
     endpoint: https://www.alphavantage.co/documentation/
     kind: api
@@ -6495,8 +6500,9 @@ sources:
     limits: Endpoint and plan specific; omit numerical allowance until an approved plan is chosen.
   licence:
     status: restricted
-    notes: Standard terms do not establish blanket commercial redistribution rights; commercial licensing must be
-      confirmed.
+    notes: 'Terms: https://www.alphavantage.co/terms_of_service/ (terms page not re-read in this review; the restriction is
+      as recorded at registration). Standard terms do not establish blanket commercial redistribution rights; commercial licensing
+      must be confirmed. Not reusable for public display: stays internal.'
   updates: Market and macro series update at different cadences; revisions are endpoint-specific.
   ingestion:
     history: 'PROPOSAL: backfill only selected endpoint-series pairs with saved request parameters.'
@@ -6509,7 +6515,11 @@ sources:
     priority: conditional
     evidence: documented
     connection: not-tested
-    blockers: [Obtain commercial-use confirmation, Test Polish coverage, Record endpoint entitlements]
+    blockers:
+    - 'Parked: vendor API with restricted-use terms and no blanket redistribution right; re-open only with a commercial licence'
+    - Obtain commercial-use confirmation
+    - Test Polish coverage
+    - Record endpoint entitlements
     references:
     - https://www.alphavantage.co/documentation/
     - https://www.alphavantage.co/terms_of_service/
@@ -6517,7 +6527,7 @@ sources:
   name: Financial Modeling Prep API
   short_name: Financial Modeling Prep
   provider: Financial Modeling Prep
-  status: registered
+  status: parked
   family: I
   kpi: false
   geography: worldwide
@@ -6535,8 +6545,9 @@ sources:
     limits: Plan and endpoint specific; unknown until order form review.
   licence:
     status: restricted
-    notes: Default terms restrict personal plans and redistribution; public apps, client dashboards and derived
-      products require appropriate licensing.
+    notes: 'Terms: https://site.financialmodelingprep.com/terms-of-service (terms page not re-read in this review; the restriction
+      is as recorded at registration). Default terms restrict personal plans and redistribution; public apps, client dashboards
+      and derived products require appropriate licensing. Not reusable for public display: stays internal.'
   updates: Endpoint-specific market updates; fundamentals follow filings and may be restated.
   ingestion:
     history: 'PROPOSAL: licensed endpoint inventory first, then bounded historical loads.'
@@ -6549,7 +6560,11 @@ sources:
     priority: conditional
     evidence: documented
     connection: not-tested
-    blockers: [Choose commercial licence, Confirm redistribution and retention, Verify Poland coverage]
+    blockers:
+    - 'Parked: vendor API: default plans restrict redistribution and public display; re-open only with a commercial licence'
+    - Choose commercial licence
+    - Confirm redistribution and retention
+    - Verify Poland coverage
     references:
     - https://site.financialmodelingprep.com/developer/docs
     - https://site.financialmodelingprep.com/terms-of-service
@@ -6601,15 +6616,14 @@ sources:
   name: GPW Market Data
   short_name: GPW market data
   provider: Warsaw Stock Exchange (GPW)
-  status: registered
+  status: parked
   family: I
   kpi: false
   geography: Poland
   provider_type: commercial
   domains: [financial-markets]
   entities: [security, index, exchange, trade, quote]
-  granularity: Instrument trades, quotes and reference data; product depth ranges from post-trade to order-book
-    views.
+  granularity: Instrument trades, quotes and reference data; product depth ranges from post-trade to order-book views.
   coverage: Real-time, delayed and historical products; exact archive depth depends on agreement/product.
   access:
     endpoint: https://www.gpw.pl/market-data
@@ -6620,7 +6634,9 @@ sources:
     limits: Contract/product specific.
   licence:
     status: restricted
-    notes: Licences cover distribution and non-display use; even delayed commercial redistribution can be fee-bearing.
+    notes: 'Terms: https://www.gpw.pl/market-data (terms page not re-read in this review; the restriction is as recorded at
+      registration). Licences cover distribution and non-display use; even delayed commercial redistribution can be fee-bearing.
+      Not reusable for public display: stays internal.'
   updates: Real-time or delayed streams; historical publications vary.
   ingestion:
     history: 'PROPOSAL: license exact products and backfill daily reference/trade files.'
@@ -6633,8 +6649,14 @@ sources:
     priority: conditional
     evidence: documented
     connection: not-tested
-    blockers: [Obtain use/redistribution licence, Select products and history, Budget feed operations]
-    references: ['https://www.gpw.pl/market-data']
+    blockers:
+    - 'Parked: exchange market data is licensed (distribution and non-display use are fee-bearing); re-open only with a GPW
+      data licence'
+    - Obtain use/redistribution licence
+    - Select products and history
+    - Budget feed operations
+    references:
+    - https://www.gpw.pl/market-data
 - id: CD-006
   name: Electronic Information Transmission System (ESPI)
   short_name: KNF ESPI
@@ -6718,7 +6740,7 @@ sources:
   name: PAP Biznes ESPI/EBI dissemination portal
   short_name: PAP Biznes ESPI/EBI
   provider: Polish Press Agency (PAP)
-  status: registered
+  status: parked
   family: I
   kpi: false
   geography: Poland
@@ -6736,7 +6758,9 @@ sources:
     limits: No public API or bulk allowance documented.
   licence:
     status: restricted
-    notes: Treat as discovery/display unless PAP grants automated extraction and republication.
+    notes: 'Terms: https://biznes.pap.pl/espi (terms page not re-read in this review; the restriction is as recorded at registration).
+      Treat as discovery/display unless PAP grants automated extraction and republication. Not reusable for public display:
+      stays internal.'
   updates: Near publication-time display; downstream latency unknown.
   ingestion:
     history: 'PROPOSAL: use only for metadata reconciliation after permission review.'
@@ -6750,10 +6774,14 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Parked: news-agency redistribution of company announcements: display only, no automated extraction or republication
+      right; ESPI/EBI primary source is CD-006/CD-007'
     - Confirm PAP automation rights
     - Measure completeness against GPW/KNF
     - Clarify InfoStrefa legacy relationship
-    references: ['https://biznes.pap.pl/espi', 'https://biznes.pap.pl/']
+    references:
+    - https://biznes.pap.pl/espi
+    - https://biznes.pap.pl/
 - id: CD-009
   name: Stooq historical quotations
   short_name: Stooq quotations
@@ -6795,7 +6823,7 @@ sources:
   name: TGE Market Data
   short_name: TGE market data
   provider: Towarowa Giełda Energii (TGE)
-  status: registered
+  status: parked
   family: I
   kpi: false
   geography: Poland
@@ -6813,8 +6841,10 @@ sources:
     limits: Agreement and product specific.
   licence:
     status: restricted
-    notes: Real-time and many commercial/non-display or redistributed uses are licensed; delayed paid services can
-      also attract fees.
+    notes: 'Terms: https://tge.pl/pub/TGE/polityka%20danych/2022_01_01_EN_Polityka_dotyczaca_danych_rynkowych.pdf (terms page
+      not re-read in this review; the restriction is as recorded at registration). Real-time and many commercial/non-display
+      or redistributed uses are licensed; delayed paid services can also attract fees. Not reusable for public display: stays
+      internal.'
   updates: Real-time or delayed by product; selected archives are periodic.
   ingestion:
     history: 'PROPOSAL: license named information products, then load contract-day facts.'
@@ -6827,14 +6857,19 @@ sources:
     priority: specialist
     evidence: documented
     connection: not-tested
-    blockers: [Execute market-data licence, Select information products, Confirm history delivery]
+    blockers:
+    - 'Parked: exchange market data policy: real-time and redistributed uses are licensed; re-open only with a TGE data licence'
+    - Execute market-data licence
+    - Select information products
+    - Confirm history delivery
     references:
     - https://tge.pl/pub/TGE/polityka%20danych/2022_01_01_EN_Polityka_dotycz_ca.1.pdf
+    - https://tge.pl/pub/TGE/polityka%20danych/2022_01_01_EN_Polityka_dotyczaca_danych_rynkowych.pdf
 - id: CD-011
   name: GPW Benchmark index and reference-rate data
   short_name: GPW Benchmark
   provider: GPW Benchmark
-  status: registered
+  status: parked
   family: I
   kpi: false
   geography: Poland
@@ -6842,8 +6877,7 @@ sources:
   domains: [financial-markets, interest-rates]
   entities: [benchmark, index, security-basket]
   granularity: Benchmark value by tenor/date and index value/composition by effective period.
-  coverage: Website publishes current, delayed and annual historical files for selected benchmarks; series start
-    varies.
+  coverage: Website publishes current, delayed and annual historical files for selected benchmarks; series start varies.
   access:
     endpoint: https://gpwbenchmark.pl/dane_historyczne
     kind: bulk_file
@@ -6853,7 +6887,9 @@ sources:
     limits: No public API limit documented.
   licence:
     status: restricted
-    notes: Publication does not settle licensing for using a benchmark in products, contracts or commercial redistribution.
+    notes: 'Terms: https://gpwbenchmark.pl/dane_historyczne (terms page not re-read in this review; the restriction is as
+      recorded at registration). Publication does not settle licensing for using a benchmark in products, contracts or commercial
+      redistribution. Not reusable for public display: stays internal.'
   updates: Benchmark-specific fixing/publication calendar; revisions are separately reported.
   ingestion:
     history: 'PROPOSAL: load published annual files with methodology/version metadata.'
@@ -6866,7 +6902,12 @@ sources:
     priority: specialist
     evidence: documented
     connection: not-tested
-    blockers: [Review benchmark-use licence, Inventory downloadable series, Track methodology changes]
+    blockers:
+    - 'Parked: index/benchmark data: publication does not settle licensing for product use; re-open only with a GPW Benchmark
+      licence'
+    - Review benchmark-use licence
+    - Inventory downloadable series
+    - Track methodology changes
     references:
     - https://gpwbenchmark.pl/dane_historyczne
     - https://www.gpwbenchmark.pl/en-dokumentacja
@@ -6874,15 +6915,14 @@ sources:
   name: EDGAR APIs, bulk data and filing archives
   short_name: SEC EDGAR
   provider: U.S. Securities and Exchange Commission
-  status: registered
+  status: approved
   family: I
   kpi: false
   geography: United States
   provider_type: national-public
   domains: [corporate-filings, company-fundamentals]
   entities: [issuer, filing, reported-fact, security]
-  granularity: Submission/filing metadata and XBRL fact by CIK, taxonomy, unit and period; original filing documents
-    by accession.
+  granularity: Submission/filing metadata and XBRL fact by CIK, taxonomy, unit and period; original filing documents by accession.
   coverage: Filing archives span EDGAR history; structured XBRL APIs cover filings since 2009, with scope qualifications.
   access:
     endpoint: https://www.sec.gov/search-filings/edgar-application-programming-interfaces
@@ -6890,24 +6930,28 @@ sources:
     interfaces: [API, bulk-files, HTML, XBRL, JSON]
     auth: Public HTTPS, no key; identify requests and follow fair-access guidance.
     cost: free
-    limits: Current SEC developer guidance caps automated access at 10 requests/second.
+    limits: Automated access must follow the SEC privacy and security policy and developer FAQs (declare a User-Agent; SEC
+      fair-access rate limit, 10 requests per second per the FAQs, not re-read here).
   licence:
     status: open-conditional
-    notes: SEC access is public, but filer attachments can contain third-party rights and personal data; preserve
-      provenance.
+    notes: SEC access is public, but filer attachments can contain third-party rights and personal data; preserve provenance.
   updates: API JSON updates in real time; bulk ZIPs update nightly; indexes are daily/quarterly.
   ingestion:
-    history: 'PROPOSAL: seed submissions/companyfacts bulk files and filing archives by accession.'
-    incremental: 'PROPOSAL: poll submissions, ingest new accessions, and refresh recent XBRL facts.'
+    history: 'Bulk: nightly ZIPs of the JSON APIs (recompiled about 3:00 a.m. ET): companyfacts.zip (XBRL Company Facts and
+      Frames data) and submissions.zip (filing histories) under https://www.sec.gov/Archives/edgar/; per-entity JSON at https://data.sec.gov/submissions/CIK##########.json
+      and /api/xbrl/companyfacts/. Size: low GB zipped (estimate).'
+    incremental: Re-download the nightly ZIPs; the JSON APIs update during the day as filings are disseminated.
     identifiers: CIK, accession number, form, filing date; facts keyed by taxonomy/concept/unit/period/frame.
   modelling:
     notes: Keep raw filings immutable; facts require dimensional context and restatement handling.
     overlap: Upstream of FMP, Marketstack and many vendors; vendor facts must retain derivation lineage.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
-    blockers: [Define form/taxonomy scope, Implement fair-access identity, Review attachment handling]
+    evidence: tested
+    connection: tested
+    blockers:
+    - Re-read the SEC Developer FAQ for the exact fair-access limit and User-Agent rule before the declaration
+    - 'Filing attachments can hold third-party rights and personal data: ingest the structured JSON, not documents'
     references:
     - https://www.sec.gov/search-filings/edgar-application-programming-interfaces
     - https://www.sec.gov/about/developer-resources
@@ -7041,7 +7085,7 @@ sources:
   name: OpenCorporates REST and Reconciliation APIs
   short_name: OpenCorporates
   provider: OpenCorporates
-  status: registered
+  status: parked
   family: I
   kpi: false
   geography: worldwide
@@ -7059,7 +7103,9 @@ sources:
     limits: Account/plan specific; documented pagination also caps deep page traversal.
   licence:
     status: restricted
-    notes: Open-data projects may use ODbL conditions; commercial/internal/external uses need the applicable licence.
+    notes: 'Terms: https://api.opencorporates.com/documentation/API-Reference (terms page not re-read in this review; the
+      restriction is as recorded at registration). Open-data projects may use ODbL conditions; commercial/internal/external
+      uses need the applicable licence. Not reusable for public display: stays internal.'
   updates: Registry-source dependent; update timestamps are available for some records.
   ingestion:
     history: 'PROPOSAL: backfill only licensed jurisdictions/entities with provenance.'
@@ -7072,7 +7118,12 @@ sources:
     priority: conditional
     evidence: documented
     connection: not-tested
-    blockers: [Obtain appropriate licence, Confirm Poland source coverage, Define deletion/update obligations]
+    blockers:
+    - 'Parked: commercial API and database licence (ODbL share-alike for open-data projects, paid otherwise); re-open only
+      with a licence'
+    - Obtain appropriate licence
+    - Confirm Poland source coverage
+    - Define deletion/update obligations
     references:
     - https://api.opencorporates.com/documentation/API-Reference
     - https://opencorporates.com/legal-information/enterprise-api-terms-of-service/
@@ -7080,7 +7131,7 @@ sources:
   name: YouTube Data API v3
   short_name: YouTube Data API
   provider: YouTube / Google
-  status: registered
+  status: parked
   family: J
   kpi: false
   geography: worldwide
@@ -7098,10 +7149,10 @@ sources:
     limits: Quota units apply per project; avoid hard-coding current allowance.
   licence:
     status: restricted
-    notes: 'Restricted API-client licence: no audiovisual downloading; storage, refresh, display, derived-metric
-      and aggregation rules apply.'
-  updates: Live resource state; stored non-authorized data generally must be refreshed or deleted within policy
-    windows.
+    notes: 'Terms: https://developers.google.com/youtube/terms/api-services-terms-of-service (terms page not re-read in this
+      review; the restriction is as recorded at registration). Restricted API-client licence: no audiovisual downloading;
+      storage, refresh, display, derived-metric and aggregation rules apply. Not reusable for public display: stays internal.'
+  updates: Live resource state; stored non-authorized data generally must be refreshed or deleted within policy windows.
   ingestion:
     history: 'PROPOSAL: no warehouse onboarding until retention and derived-metric design passes policy review.'
     incremental: 'PROPOSAL: refresh authorized/current metadata and process deletion requests; no archive claim.'
@@ -7113,7 +7164,12 @@ sources:
     priority: conditional
     evidence: documented
     connection: not-tested
-    blockers: [Policy/legal review, Design deletion and refresh controls, Limit to approved API-client use]
+    blockers:
+    - 'Parked: YouTube API Services terms restrict storage, refresh, derived metrics and aggregation; no audiovisual download;
+      no routine bulk ingestion'
+    - Policy/legal review
+    - Design deletion and refresh controls
+    - Limit to approved API-client use
     references:
     - https://developers.google.com/youtube/v3/getting-started
     - https://developers.google.com/youtube/terms/developer-policies
@@ -7122,7 +7178,7 @@ sources:
   name: Meta Content Library and API
   short_name: Meta Content Library
   provider: Meta
-  status: registered
+  status: parked
   family: J
   kpi: false
   geography: multicountry
@@ -7130,8 +7186,7 @@ sources:
   domains: [social-media, research]
   entities: [public-page, public-group, public-event, public-post, creator-account]
   granularity: Approved research access to selected public Facebook and Instagram content and engagement fields.
-  coverage: Near-real-time library; available download scope is limited and it is not a general historical commercial
-    archive.
+  coverage: Near-real-time library; available download scope is limited and it is not a general historical commercial archive.
   access:
     endpoint: https://about.fb.com/news/2023/11/new-tools-to-support-independent-research/
     kind: api
@@ -7141,7 +7196,9 @@ sources:
     limits: Contract/workspace specific; no numerical limit relied on.
   licence:
     status: restricted
-    notes: Research-only governed access; not eligible for routine commercial product ingestion.
+    notes: 'Terms: https://about.fb.com/news/2023/11/new-tools-to-support-independent-research/ (terms page not re-read in
+      this review; the restriction is as recorded at registration). Research-only governed access; not eligible for routine
+      commercial product ingestion. Not reusable for public display: stays internal.'
   updates: Near real time, subject to platform removals and research controls.
   ingestion:
     history: 'PROPOSAL: catalogue only unless a qualifying research project is approved.'
@@ -7154,14 +7211,18 @@ sources:
     priority: specialist
     evidence: documented
     connection: not-tested
-    blockers: [Research eligibility, ICPSR approval, Institutional security/ethics review]
+    blockers:
+    - 'Parked: research-only governed access (Meta Content Library); not eligible for product ingestion'
+    - Research eligibility
+    - ICPSR approval
+    - Institutional security/ethics review
     references:
     - https://about.fb.com/news/2023/11/new-tools-to-support-independent-research/
 - id: CD-019
   name: Instagram API
   short_name: Instagram API
   provider: Meta
-  status: registered
+  status: parked
   family: J
   kpi: false
   geography: worldwide
@@ -7179,8 +7240,9 @@ sources:
     limits: Permission and app-tier specific; unknown here.
   licence:
     status: restricted
-    notes: Owner-authorized integration terms apply; authorization does not grant worldwide public-account collection
-      or redistribution.
+    notes: 'Terms: https://developers.facebook.com/docs/instagram-platform/overview (terms page not re-read in this review;
+      the restriction is as recorded at registration). Owner-authorized integration terms apply; authorization does not grant
+      worldwide public-account collection or redistribution. Not reusable for public display: stays internal.'
   updates: Account events/metrics update continuously; retention and deletion rules apply.
   ingestion:
     history: 'PROPOSAL: onboard only consenting business/creator accounts after policy review.'
@@ -7191,9 +7253,13 @@ sources:
     overlap: Overlaps Content Library only for approved research/public scope.
   research:
     priority: conditional
-    evidence: catalogue-only
+    evidence: documented
     connection: not-tested
-    blockers: [Confirm exact API variant, App review and permissions, Retention/reuse assessment]
+    blockers:
+    - 'Parked: owner-authorised integrations only; no collection of public accounts at scale'
+    - Confirm exact API variant
+    - App review and permissions
+    - Retention/reuse assessment
     references:
     - https://developers.facebook.com/docs/instagram-platform/overview
     - https://developers.facebook.com/docs/instagram-platform/reference/instagram-media
@@ -7201,7 +7267,7 @@ sources:
   name: X API v2
   short_name: X API
   provider: X Corp.
-  status: registered
+  status: parked
   family: J
   kpi: false
   geography: worldwide
@@ -7209,8 +7275,7 @@ sources:
   domains: [social-media]
   entities: [post, user, space, list, conversation]
   granularity: Post/user/conversation resources and metrics according to endpoint entitlement.
-  coverage: Recent search covers a short rolling window; full-archive search reaches platform history only on paid
-    entitlement.
+  coverage: Recent search covers a short rolling window; full-archive search reaches platform history only on paid entitlement.
   access:
     endpoint: https://docs.x.com/x-api/introduction
     kind: api
@@ -7220,7 +7285,9 @@ sources:
     limits: Pay-per-use and endpoint limits; no figures encoded.
   licence:
     status: restricted
-    notes: X Developer Agreement and product terms govern storage, display, redistribution and deletion compliance.
+    notes: 'Terms: https://docs.x.com/x-api/introduction (terms page not re-read in this review; the restriction is as recorded
+      at registration). X Developer Agreement and product terms govern storage, display, redistribution and deletion compliance.
+      Not reusable for public display: stays internal.'
   updates: Recent/search/stream behavior differs; deleted or withheld content must be handled.
   ingestion:
     history: 'PROPOSAL: approve a narrow endpoint/use case before any history purchase.'
@@ -7233,7 +7300,12 @@ sources:
     priority: conditional
     evidence: documented
     connection: not-tested
-    blockers: [Budget entitlement, Legal/policy review, Deletion-compliance design]
+    blockers:
+    - 'Parked: X Developer Agreement and paid product terms govern storage, display and redistribution; no public redistribution
+      right'
+    - Budget entitlement
+    - Legal/policy review
+    - Deletion-compliance design
     references:
     - https://docs.x.com/x-api/introduction
     - https://docs.x.com/x-api/posts/search/introduction
@@ -7241,7 +7313,7 @@ sources:
   name: LinkedIn Community Management API
   short_name: LinkedIn API
   provider: LinkedIn / Microsoft
-  status: registered
+  status: parked
   family: J
   kpi: false
   geography: worldwide
@@ -7259,7 +7331,9 @@ sources:
     limits: Product/permission specific.
   licence:
     status: restricted
-    notes: Restricted to approved use case and authorized roles; no blanket commercial redistribution right.
+    notes: 'Terms: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/ (terms page not re-read in this
+      review; the restriction is as recorded at registration). Restricted to approved use case and authorized roles; no blanket
+      commercial redistribution right. Not reusable for public display: stays internal.'
   updates: Current platform state and notifications where supported.
   ingestion:
     history: 'PROPOSAL: ingest only pages administered by consenting customers.'
@@ -7272,23 +7346,28 @@ sources:
     priority: conditional
     evidence: documented
     connection: not-tested
-    blockers: [App review, Verify page super-admin, Confirm retention/redistribution]
+    blockers:
+    - 'Parked: restricted to approved use cases and authorised roles; no public-data route'
+    - App review
+    - Verify page super-admin
+    - Confirm retention/redistribution
     references:
     - https://learn.microsoft.com/en-us/linkedin/marketing/community-management/community-management-overview
     - https://learn.microsoft.com/en-us/linkedin/marketing/community-management-app-review
+    - https://learn.microsoft.com/en-us/linkedin/marketing/community-management/
 - id: CD-022
   name: Reddit Data API
   short_name: Reddit Data API
   provider: Reddit
-  status: registered
+  status: parked
   family: J
   kpi: false
   geography: worldwide
   provider_type: commercial
   domains: [social-media, discussion]
   entities: [community, post, comment, user]
-  granularity: Approved endpoints expose Reddit resources for an app use case; scope depends on developer documentation
-    and agreement.
+  granularity: Approved endpoints expose Reddit resources for an app use case; scope depends on developer documentation and
+    agreement.
   coverage: Current API resources are not documented as a complete durable historical archive.
   access:
     endpoint: https://redditinc.com/policies/data-api-terms
@@ -7299,8 +7378,9 @@ sources:
     limits: Reddit may set and enforce limits; no number encoded.
   licence:
     status: restricted
-    notes: User content remains user-owned; default licence permits limited app display. Commercial use, excess
-      research and AI use need additional rights.
+    notes: 'Terms: https://redditinc.com/policies/data-api-terms (terms page not re-read in this review; the restriction is
+      as recorded at registration). User content remains user-owned; default licence permits limited app display. Commercial
+      use, excess research and AI use need additional rights. Not reusable for public display: stays internal.'
   updates: Platform state changes; removals and termination require deletion handling.
   ingestion:
     history: 'PROPOSAL: no commercial warehouse ingestion without separate agreement.'
@@ -7313,14 +7393,18 @@ sources:
     priority: conditional
     evidence: documented
     connection: not-tested
-    blockers: [Separate commercial agreement, Approved use case, Removal/deletion controls]
+    blockers:
+    - 'Parked: Reddit Data API terms: commercial use and research above limits need an agreement; user content stays user-owned'
+    - Separate commercial agreement
+    - Approved use case
+    - Removal/deletion controls
     references:
     - https://redditinc.com/policies/data-api-terms
 - id: CD-023
   name: TikTok Research API
   short_name: TikTok Research API
   provider: TikTok
-  status: registered
+  status: parked
   family: J
   kpi: false
   geography: multicountry
@@ -7338,7 +7422,9 @@ sources:
     limits: Approved-project limits; no figures encoded.
   licence:
     status: restricted
-    notes: Research-only and project-bound; security, ethics and platform terms restrict reuse.
+    notes: 'Terms: https://developers.tiktok.com/products/research-api/ (terms page not re-read in this review; the restriction
+      is as recorded at registration). Research-only and project-bound; security, ethics and platform terms restrict reuse.
+      Not reusable for public display: stays internal.'
   updates: Platform data updates; removals and approved access period apply.
   ingestion:
     history: 'PROPOSAL: catalogue only unless an eligible study is approved.'
@@ -7351,24 +7437,26 @@ sources:
     priority: specialist
     evidence: documented
     connection: not-tested
-    blockers: [Research eligibility, Application approval, Ethics and security plan]
+    blockers:
+    - 'Parked: research-only, project-bound access; platform terms forbid reuse for products'
+    - Research eligibility
+    - Application approval
+    - Ethics and security plan
     references:
     - https://developers.tiktok.com/products/research-api/
 - id: CD-024
   name: TikTok Commercial Content API
   short_name: TikTok Commercial Content API
   provider: TikTok
-  status: registered
+  status: parked
   family: J
   kpi: false
   geography: multicountry-Europe
   provider_type: commercial
   domains: [digital-advertising, social-media]
   entities: [advertisement, advertiser, targeting, creative]
-  granularity: Commercial-content/ad records with advertiser, creative, targeting and impression information where
-    available.
-  coverage: Official page states current data availability is EU-focused and ads remain available for a defined
-    post-run period.
+  granularity: Commercial-content/ad records with advertiser, creative, targeting and impression information where available.
+  coverage: Official page states current data availability is EU-focused and ads remain available for a defined post-run period.
   access:
     endpoint: https://developers.tiktok.com/products/commercial-content-api/
     kind: api
@@ -7378,8 +7466,9 @@ sources:
     limits: Approved-app limits; no figures encoded.
   licence:
     status: restricted
-    notes: Use is bounded by developer terms and commercial-content transparency purpose; creative rights remain
-      separate.
+    notes: 'Terms: https://developers.tiktok.com/products/commercial-content-api/ (terms page not re-read in this review;
+      the restriction is as recorded at registration). Use is bounded by developer terms and commercial-content transparency
+      purpose; creative rights remain separate. Not reusable for public display: stays internal.'
   updates: Ads appear/update with platform transparency records and have bounded retention.
   ingestion:
     history: 'PROPOSAL: backfill approved EU ads by bounded dates after terms review.'
@@ -7392,7 +7481,11 @@ sources:
     priority: review-next
     evidence: documented
     connection: not-tested
-    blockers: [Application approval, Confirm allowed commercial analytics, Design expiry handling]
+    blockers:
+    - 'Parked: bounded by developer terms for ad transparency; creative rights stay with advertisers'
+    - Application approval
+    - Confirm allowed commercial analytics
+    - Design expiry handling
     references:
     - https://developers.tiktok.com/products/commercial-content-api/
 - id: CD-025
@@ -7445,7 +7538,7 @@ sources:
   name: Wikidata data access
   short_name: Wikidata
   provider: Wikidata community / Wikimedia Foundation
-  status: registered
+  status: approved
   family: J
   kpi: false
   geography: worldwide
@@ -7463,11 +7556,15 @@ sources:
     limits: Public services have workload constraints; no numeric allowance relied on.
   licence:
     status: open-conditional
-    notes: Main structured namespaces are CC0; text outside them is CC BY-SA and external references retain their
-      own rights.
+    notes: 'Terms: https://www.wikidata.org/wiki/Wikidata:Licensing says: "All data in Wikidata has a CC0 license." and "Wikidata
+      requires a CC0 license, which is equivalent to public domain" (page read 11 Nov 2026 from a GitHub runner). No attribution
+      needed for structured data; text outside the main data namespaces is CC BY-SA and external references keep their own
+      rights; as a courtesy cite "Wikidata (CC0)".'
   updates: Live edits; dumps publish periodically and lag current state.
   ingestion:
-    history: 'PROPOSAL: seed entity dumps for chosen classes; retain statement references.'
+    history: 'Bulk dumps at https://dumps.wikimedia.org/wikidatawiki/entities/ (listing answers 200); the full JSON dump is
+      very large (tens of GB compressed, estimate): scope to the entities and properties needed (Polish places, organisations,
+      identifiers) in stage 2.'
     incremental: 'PROPOSAL: consume recent changes or scoped refreshes, then reconcile dumps.'
     identifiers: Q/P IDs plus external identifiers such as LEI, ISIN and registry IDs.
   modelling:
@@ -7475,9 +7572,12 @@ sources:
     overlap: Links Wikimedia, GLEIF, registries and OpenAlex; community assertions are not authoritative replacements.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
-    blockers: [Scope classes/properties, Set provenance quality rules, Plan dump infrastructure]
+    evidence: tested
+    connection: tested
+    blockers:
+    - Scope classes/properties
+    - Set provenance quality rules
+    - Plan dump infrastructure
     references:
     - https://www.wikidata.org/wiki/Wikidata:Data_access
     - https://www.wikidata.org/wiki/Wikidata:Copyright
@@ -7485,7 +7585,7 @@ sources:
   name: OpenStreetMap Planet, history and replication diffs
   short_name: OpenStreetMap
   provider: OpenStreetMap contributors and OpenStreetMap Foundation
-  status: registered
+  status: approved
   family: J
   kpi: false
   geography: worldwide
@@ -7493,8 +7593,7 @@ sources:
   domains: [geospatial, transport, places]
   entities: [node, way, relation, changeset]
   granularity: Tagged nodes, ways and relations; full-history files include versions and changesets.
-  coverage: Global planet and history; archive documentation points to coverage from 2006 with gaps/quality varying
-    by place.
+  coverage: Global planet and history; archive documentation points to coverage from 2006 with gaps/quality varying by place.
   access:
     endpoint: https://wiki.openstreetmap.org/wiki/Planet.osm
     kind: api
@@ -7504,11 +7603,16 @@ sources:
     limits: Operational API/tile/geocoder policies apply; planet delivery is the bulk route.
   licence:
     status: open-conditional
-    notes: ODbL attribution and share-alike apply to databases; produced works and third-party layers need separate
-      analysis.
+    notes: 'Terms: https://www.openstreetmap.org/copyright says OpenStreetMap is open data "rozpowszechniany na licencji Open
+      Data Commons Open Database License (ODbL)" and may be copied, distributed and adapted "pod warunkiem podania OpenStreetMap
+      i jego autorów jako źródła" (page in Polish) (page read 11 Nov 2026 from a GitHub runner). Attribution: "© OpenStreetMap
+      contributors" with the ODbL link; share-alike applies to derived databases, produced works and third-party layers need
+      separate analysis. Geofabrik extracts carry the same ODbL.'
   updates: Weekly planet, minute/hour/day diffs; community edits may revert or delete objects.
   ingestion:
-    history: 'PROPOSAL: seed regional extract or planet; preserve raw tags and versions.'
+    history: 'Poland extract poland-latest.osm.pbf from Geofabrik (https://download.geofabrik.de/europe/poland.html): 2.0
+      GB, refreshed daily (data up to 2026-11-10T21:21:39Z at the check), per-voivodeship extracts 80-180 MB; the official
+      full planet file is the alternative route (https://planet.openstreetmap.org/, about 80 GB, not measured).'
     incremental: 'PROPOSAL: apply replication sequence diffs idempotently; periodic checksum/reseed.'
     identifiers: OSM type+ID+version; spatial links are probabilistic unless tagged identifiers exist.
   modelling:
@@ -7516,9 +7620,12 @@ sources:
     overlap: May underlie geocoders and map products; avoid duplicate-derived counting.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
-    blockers: [ODbL attribution/share-alike design, Select extract boundary, Handle deletions/redactions]
+    evidence: tested
+    connection: tested
+    blockers:
+    - ODbL attribution/share-alike design
+    - Select extract boundary
+    - Handle deletions/redactions
     references:
     - https://wiki.openstreetmap.org/wiki/Planet.osm
     - https://www.openstreetmap.org/copyright
@@ -7565,15 +7672,14 @@ sources:
   name: Crossref REST API
   short_name: Crossref
   provider: Crossref
-  status: registered
+  status: approved
   family: J
   kpi: false
   geography: worldwide
   provider_type: community-academic
   domains: [scholarly-communications, identifier-registry]
   entities: [work, journal, publisher, funder, licence]
-  granularity: Member-deposited work metadata keyed primarily by DOI, with relations, dates, funders and licences
-    when deposited.
+  granularity: Member-deposited work metadata keyed primarily by DOI, with relations, dates, funders and licences when deposited.
   coverage: Historical DOI metadata follows member deposits; completeness and field history vary by publisher.
   access:
     endpoint: https://www.crossref.org/documentation/retrieve-metadata/rest-api/
@@ -7584,8 +7690,11 @@ sources:
     limits: Rate etiquette and service pools apply; no numeric allowance relied on.
   licence:
     status: open-conditional
-    notes: Most bibliographic metadata has low rights friction, but abstracts and linked content may be copyrighted;
-      attribution/provenance remain prudent.
+    notes: 'Terms: https://www.crossref.org/documentation/retrieve-metadata/rest-api/ says: "All this metadata is openly shared
+      with the global scholarly community through our free APIs" (page read 11 Nov 2026 from a GitHub runner); the page has
+      a "Public data files and snapshots" route for bulk. Licence name and per-field rights (abstracts, linked content) were
+      not quoted: keep status open-conditional for bibliographic metadata only, exclude abstracts and full text; re-read the
+      Crossref metadata licence page when writing the declaration.'
   updates: Deposits update continuously; records can be corrected.
   ingestion:
     history: 'PROPOSAL: backfill DOI prefixes/filters in resumable cursor batches.'
@@ -7598,7 +7707,9 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Define abstract handling, Choose filters/cursor strategy, Measure Polish publisher coverage]
+    blockers:
+    - Confirm the public data file (annual snapshot) URL and size in the dev trial
+    - Exclude abstracts and full-text links
     references:
     - https://www.crossref.org/documentation/retrieve-metadata/rest-api/
 - id: CD-030
@@ -7689,15 +7800,14 @@ sources:
   name: Allegro REST API
   short_name: Allegro API
   provider: Allegro
-  status: registered
+  status: parked
   family: J
   kpi: false
   geography: multicountry-Europe
   provider_type: commercial
   domains: [e-commerce]
   entities: [seller-account, offer, product, order, category]
-  granularity: Seller-owned offers/orders plus selected public resources such as categories; endpoint authorization
-    varies.
+  granularity: Seller-owned offers/orders plus selected public resources such as categories; endpoint authorization varies.
   coverage: Operational current state; no general historical marketplace snapshot product is documented.
   access:
     endpoint: https://developer.allegro.pl/tutorials/uwierzytelnianie-i-autoryzacja-zlq9e75GdIR
@@ -7708,8 +7818,9 @@ sources:
     limits: Endpoint/application specific; unknown here.
   licence:
     status: restricted
-    notes: Designed for sales integrations. Public offer search is restricted to verified applications and does
-      not imply bulk marketplace reuse.
+    notes: 'Terms: https://developer.allegro.pl/tutorials/uwierzytelnianie-i-autoryzacja- (terms page not re-read in this
+      review; the restriction is as recorded at registration). Designed for sales integrations. Public offer search is restricted
+      to verified applications and does not imply bulk marketplace reuse. Not reusable for public display: stays internal.'
   updates: Operational resources change continuously; events and polling differ by resource.
   ingestion:
     history: 'PROPOSAL: onboard only consenting seller accounts and approved public resources.'
@@ -7723,6 +7834,8 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Parked: sales-integration API: public offer search is restricted to verified applications and does not imply data reuse
+      rights'
     - Application registration and verification
     - Confirm commercial analytics/reuse
     - Restrict scope to authorized sellers
@@ -7730,6 +7843,7 @@ sources:
     - https://developer.allegro.pl/tutorials/uwierzytelnianie-i-autoryzacja-zlq9e75GdIR
     - https://developer.allegro.pl/documentation
     - https://github.com/allegro/allegro-api/issues/4213
+    - https://developer.allegro.pl/tutorials/uwierzytelnianie-i-autoryzacja-
 - id: CD-033
   name: Dane Otodom dashboards and reports
   short_name: Otodom reports
@@ -7939,7 +8053,7 @@ sources:
   name: Open Patent Services (OPS)
   short_name: EPO Open Patent Services
   provider: European Patent Organisation (EPO)
-  status: registered
+  status: parked
   family: J
   kpi: false
   geography: multicountry
@@ -7957,12 +8071,13 @@ sources:
     limits: 'Official OPS page: free up to 4 GB/week; fair-use limits also apply.'
   licence:
     status: restricted
-    notes: Terms allow inclusion in own products; prohibit making or distributing data as such. Product use needs
-      explicit rights review.
+    notes: 'Terms: https://www.epo.org/en/searching-for-patents/data/web-services/ops (terms page not re-read in this review;
+      the restriction is as recorded at registration). Terms allow inclusion in own products; prohibit making or distributing
+      data as such. Product use needs explicit rights review. Not reusable for public display: stays internal.'
   updates: Record/publication updates; version-specific discovery to confirm.
   ingestion:
-    history: 'Proposal: partition licensed collection within shared weekly quota; evaluate official bulk product
-      for large backfiles.'
+    history: 'Proposal: partition licensed collection within shared weekly quota; evaluate official bulk product for large
+      backfiles.'
     incremental: 'Proposal: bounded publication-window retrieval plus legal-status/family reconciliation.'
     identifiers: Publication/application numbers, country/kind codes, families and classifications.
   modelling:
@@ -7972,7 +8087,11 @@ sources:
     priority: conditional
     evidence: documented
     connection: not-tested
-    blockers: [Product vs raw redistribution boundary, Sustainable history volume]
+    blockers:
+    - 'Parked: OPS terms allow use in own products but prohibit distributing the data as such and need a fair-use agreement;
+      for patent statistics use PATSTAT/WIPO (GL-032) instead'
+    - Product vs raw redistribution boundary
+    - Sustainable history volume
     references:
     - https://www.epo.org/en/searching-for-patents/data/web-services/ops
     - https://www.epo.org/en/service-support/ordering/terms-and-conditions/ops-terms-and-conditions
