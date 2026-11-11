@@ -5,7 +5,9 @@ files described in docs/published.md (schemas in warehouse/published/schemas/): 
 ``catalog/<table>.parquet``, ``manifest.json``, ``kpi/<kpi_key>/latest.json`` / ``series.parquet``,
 ``feed/calendar.ics``, ``status.json`` and ``geo/country.geojson`` / ``geo/voivodeship.geojson``; and the topics
 ranking (O32): ``06_published/v2/topics.json`` once warehouse.yaml ``topics.publish`` is true, until then only the
-internal review copy ``06_published/v1/review/topics.json`` (data portal, after sign-in) and the run's job summary.
+internal review copy ``06_published/v1/review/topics.json`` (data portal, after sign-in) and the run's job summary;
+and contract v2 for zohelo-bi under ``06_published/v2/`` (warehouse/publish_v2.py) when warehouse.yaml
+``published_v2`` is true.
 """
 
 from __future__ import annotations
@@ -722,6 +724,7 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     entries: list[dict[str, Any]] = []
     problems: list[str] = []
     domains = {d["domain_key"]: d for d in seed("domain")}
+    tables: dict[str, pa.Table] = {}  # gold.metrics_<kpi_key> read below, reused by contract v2
     for kpi in seed("kpi"):
         kpi_key = kpi["kpi_key"]
         if kpi["status"] != "published":
@@ -731,6 +734,7 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
         except NoSuchTableError:
             missing.append(kpi_key)
             continue
+        tables[kpi_key] = metrics
         table = kpi_series(metrics, measures, kpi_key, kpi["unit_key"])
         data = parquet(table)
         if len(data) > SERIES_LIMIT:
@@ -757,7 +761,8 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     result = {"written": written, "skipped": sorted(SKIP), "missing": missing, "differences": 0}
     result["series"] = series
     result["catalog_tables"] = catalog_tables(cat, client, prefix, namespace)
-    body = json.dumps(catalog_json(entries, generated_at), ensure_ascii=False, separators=(",", ":")).encode()
+    v1_catalog = catalog_json(entries, generated_at)
+    body = json.dumps(v1_catalog, ensure_ascii=False, separators=(",", ":")).encode()
     result["catalog_json"] = {"kpis": len(entries), "bytes": put(client, prefix + "catalog/catalog.json", body)}
     from ingestion.common import scheduler
     import run
@@ -774,4 +779,20 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     if prefix == PREFIX:  # topics: the production run only (a trial prefix writes v1 files alone)
         result["topics"] = topics(cat, client, generated_at)
     annotate("notice", "gold.publish: latest", result)
+    if prefix == PREFIX and published_v2():  # contract v2: the production run only, after every v1 file
+        from warehouse import publish_v2
+
+        try:
+            result["v2"] = publish_v2.write(cat, client, tables, checked_at, v1_catalog, status, generated_at)
+        except ValueError as error:
+            annotate("error", "gold.publish: v2 not written in full", {"error": str(error)[:3000]})
+            raise
+        annotate("notice", "gold.publish: v2", result["v2"])
     return result
+
+
+def published_v2() -> bool:
+    """warehouse.yaml ``published_v2``: whether gold.publish writes contract v2 (docs/published.md)."""
+    import yaml
+
+    return bool(yaml.safe_load((PROJECT / "warehouse.yaml").read_text()).get("published_v2", False))

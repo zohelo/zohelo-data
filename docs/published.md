@@ -230,8 +230,8 @@ Owner decisions O27/O28 (2026-11-10): the zohelo-bi design template becomes zohe
 written **alongside** v1 under `06_published/v2/`; v1 stays unchanged for zohelo.com until zohelo.com chooses to
 move. `gold.publish` writes both. zohelo-bi reads v2 only.
 
-Status (2026-11-11): seeds, schemas and fixtures in place; the writer (`warehouse/publish_v2.py`, behind a
-`warehouse.yaml` switch) follows in the next pull request. Schemas in `warehouse/published/schemas/v2/`,
+Status (2026-11-11): built. `warehouse/publish_v2.py` writes it after the v1 files when `published_v2: true` in
+`warehouse/warehouse.yaml` (`false` stops it; v1 is not affected). Schemas in `warehouse/published/schemas/v2/`,
 fixtures in `warehouse/published/fixtures/v2/` (from synthetic Gold rows; `ops.repo_check` checks them against the
 schemas and the cross-file rules of `published_v2_problems`). Seeds: `kpi_v2_map.csv` (the v2 keys),
 `kpi.csv` (`definition_pl` beside `definition_en`), `geography_v2.csv`, `unit_decimals.csv`, `kpi_member.csv`.
