@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "generated_at": "2026-01-01T00:00:00Z",
+  "sources": [
+    {
+      "source_key": "eurostat",
+      "name_pl": "Eurostat",
+      "name_en": "Eurostat",
+      "last_loaded_at": "2025-12-31T22:45:00Z",
+      "next_expected_at": "2026-01-01T10:30Z",
+      "lag_days": 0
+    },
+    {
+      "source_key": "nbp",
+      "name_pl": "NBP kursy walut i cena złota",
+      "name_en": "NBP exchange rates and gold price",
+      "last_loaded_at": "2025-12-31T11:40:00Z",
+      "next_expected_at": "2026-01-02T11:30Z",
+      "lag_days": 0
+    },
+    {
+      "source_key": "gleif",
+      "name_pl": "GLEIF",
+      "name_en": "GLEIF LEI golden copy",
+      "last_loaded_at": null,
+      "next_expected_at": null,
+      "lag_days": null
+    }
+  ]
+}

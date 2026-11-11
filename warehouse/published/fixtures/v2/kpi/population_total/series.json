@@ -1,0 +1,100 @@
+{
+  "kpi_key": "population_total",
+  "frequency": "A",
+  "unit_key": "persons",
+  "periods": [
+    "2022",
+    "2023",
+    "2024"
+  ],
+  "series": [
+    {
+      "geography": "PL",
+      "source_key": "gus_bdl",
+      "unit_key": "persons",
+      "members": {},
+      "values": [
+        37900000.0,
+        37750000.0,
+        37600000.0
+      ]
+    },
+    {
+      "geography": "PL",
+      "source_key": "eurostat",
+      "unit_key": "persons",
+      "members": {},
+      "values": [
+        37800000.0,
+        37660000.0,
+        37520000.0
+      ]
+    },
+    {
+      "geography": "PL",
+      "source_key": "world_bank_wdi",
+      "unit_key": "persons",
+      "members": {},
+      "values": [
+        37700000.0,
+        37580000.0,
+        37460000.0
+      ]
+    },
+    {
+      "geography": "EU27",
+      "source_key": "eurostat",
+      "unit_key": "persons",
+      "members": {},
+      "values": [
+        448400000.0,
+        449300000.0,
+        450200000.0
+      ]
+    },
+    {
+      "geography": "EU27",
+      "source_key": "world_bank_wdi",
+      "unit_key": "persons",
+      "members": {},
+      "values": [
+        447900000.0,
+        448700000.0,
+        449500000.0
+      ]
+    },
+    {
+      "geography": "DE",
+      "source_key": "eurostat",
+      "unit_key": "persons",
+      "members": {},
+      "values": [
+        83200000.0,
+        83500000.0,
+        83800000.0
+      ]
+    },
+    {
+      "geography": "PL-02",
+      "source_key": "gus_bdl",
+      "unit_key": "persons",
+      "members": {},
+      "values": [
+        2880000.0,
+        2871000.0,
+        2862000.0
+      ]
+    },
+    {
+      "geography": "PL-12",
+      "source_key": "gus_bdl",
+      "unit_key": "persons",
+      "members": {},
+      "values": [
+        3410000.0,
+        3412000.0,
+        3414000.0
+      ]
+    }
+  ]
+}

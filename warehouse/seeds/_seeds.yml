@@ -121,3 +121,34 @@ seeds:
         tests: [not_null]
       - name: kpi_key
         tests: [not_null, {relationships: {arguments: {to: ref('kpi_v2_map'), field: v2_key}}}]
+  - name: geography_v2
+    description: >-
+      Geographies of published contract v2 (docs/published.md): v2 key (ISO 3166-1 alpha-2 with Greece EL, EU27,
+      ISO 3166-2 PL-02 … PL-32), the Gold geography keys it stands for (';' separated), names, level, EU membership
+      and order. Gold rows of any other area stay out of v2.
+    columns:
+      - name: geography_key
+        tests: [not_null, unique]
+      - name: gold_keys
+        tests: [not_null, unique]
+      - name: level
+        tests: [not_null, {accepted_values: {arguments: {values: [country, voivodeship, aggregate]}}}]
+  - name: unit_decimals
+    description: Decimals to show per unit (published contract v2 catalog.json units[].decimals).
+    columns:
+      - name: unit_key
+        tests: [not_null, unique, {relationships: {arguments: {to: ref('unit'), field: unit_key}}}]
+      - name: decimals
+        tests: [not_null]
+  - name: kpi_member
+    description: >-
+      Curated breakdown members per v2 KPI (published contract v2): when a v2 key lists members of a dimension,
+      only those members reach v2, with these names and order (e.g. eurpln = currency EUR of fx_rate).
+    config: {column_types: {member_key: varchar, parent_key: varchar}}
+    columns:
+      - name: v2_key
+        tests: [not_null, {relationships: {arguments: {to: ref('kpi_v2_map'), field: v2_key}}}]
+      - name: dimension_key
+        tests: [not_null]
+      - name: member_key
+        tests: [not_null]

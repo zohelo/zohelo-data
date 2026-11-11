@@ -1,0 +1,59 @@
+{
+  "kpi_key": "gdp_nominal",
+  "frequency": "A",
+  "unit_key": "mln_ncu",
+  "periods": [
+    "2022",
+    "2023",
+    "2024"
+  ],
+  "series": [
+    {
+      "geography": "PL",
+      "source_key": "eurostat",
+      "unit_key": "mln_eur",
+      "members": {},
+      "values": [
+        655000.0,
+        735000.0,
+        815000.0
+      ],
+      "flags": {
+        "2024": "p"
+      }
+    },
+    {
+      "geography": "PL",
+      "source_key": "world_bank_wdi",
+      "unit_key": "usd",
+      "members": {},
+      "values": [
+        690000000000.0,
+        770000000000.0,
+        850000000000.0
+      ]
+    },
+    {
+      "geography": "PL",
+      "source_key": "gus_dbw",
+      "unit_key": "mln_pln",
+      "members": {},
+      "values": [
+        3067000.0,
+        3377000.0,
+        3687000.0
+      ]
+    },
+    {
+      "geography": "DE",
+      "source_key": "eurostat",
+      "unit_key": "mln_eur",
+      "members": {},
+      "values": [
+        3877000.0,
+        3997000.0,
+        4117000.0
+      ]
+    }
+  ]
+}

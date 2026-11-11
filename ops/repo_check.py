@@ -414,7 +414,12 @@ def backlog() -> list[str]:
 
 PUBLISHED = ROOT / "warehouse" / "published"
 # Fixture path pattern (relative to warehouse/published/fixtures) → schema name in warehouse/published/schemas.
-PUBLISHED_SCHEMAS = {
+PUBLISHED_SCHEMAS = {  # Path.match matches from the right: v2 entries first ("status.json" matches "v2/status.json")
+    "v2/catalog.json": "v2/catalog",
+    "v2/latest.json": "v2/latest",
+    "v2/calendar.json": "v2/calendar",
+    "v2/status.json": "v2/status",
+    "v2/kpi/*/series.json": "v2/series",
     "catalog/catalog.json": "catalog",
     "manifest.json": "manifest",
     "status.json": "status",
@@ -478,6 +483,152 @@ def published_contract() -> list[str]:
             problems.append(f"kpi/{key}/latest.json: missing for published KPI {key!r} (D26)")
         elif (found := json.loads(latest.read_text(encoding="utf-8")).get("kpi_key")) != key:
             problems.append(f"kpi/{key}/latest.json: kpi_key {found!r} is not {key!r}")
+    v2 = {
+        f.relative_to(fixtures / "v2").as_posix(): json.loads(f.read_text(encoding="utf-8"))
+        for f in sorted((fixtures / "v2").rglob("*.json"))
+        if f.name != "topics.json"
+    }
+    problems += [f"v2: {p}" for p in published_v2_problems(v2)]
+    return problems
+
+
+PERIOD_FORMATS = {"M": r"[0-9]{4}-(0[1-9]|1[0-2])", "Q": r"[0-9]{4}-Q[1-4]", "A": r"[0-9]{4}"}
+
+
+def published_v2_problems(files: dict[str, dict]) -> list[str]:
+    """Cross-file rules of published contract v2 (docs/published.md) over the files of 06_published/v2/ by path
+    (catalog.json, latest.json, calendar.json, status.json, kpi/<kpi_key>/series.json): every catalog KPI has its
+    series.json and the reverse; units, geographies, sources, dimensions and members used are declared in the
+    catalog; periods are sorted, unique and of the KPI's frequency, with first_period/last_period at the ends; every
+    series has one value or null per period and at least one value; flags only on periods; latest.json has one
+    value per KPI and geography, on a period of the series; next_release is the KPI's first calendar.json date.
+    gold.publish runs it before writing v2 (warehouse/publish_v2.py); the published contract check on the fixtures."""
+    problems = []
+    for name in ("catalog.json", "latest.json", "calendar.json", "status.json"):
+        if name not in files:
+            problems.append(f"{name}: missing")
+    if "catalog.json" not in files:
+        return problems
+    catalog = files["catalog.json"]
+    kpis = {k["kpi_key"]: k for k in catalog.get("kpis", [])}
+    units = {u["unit_key"] for u in catalog.get("units", [])}
+    geos = {g["key"] for g in catalog.get("geographies", [])}
+    sources = {s["source_key"] for s in catalog.get("sources", [])}
+    members = {d["dimension_key"]: {m["key"] for m in d.get("members", [])} for d in catalog.get("dimensions", [])}
+    if len(kpis) != len(catalog.get("kpis", [])):
+        problems.append("catalog.json: a kpi_key occurs twice")
+    for dim, keys in members.items():
+        if "_T" in keys:
+            problems.append(f"catalog.json: dimension {dim} lists the total _T as a member")
+    series = {name.split("/")[1]: doc for name, doc in files.items() if name.startswith("kpi/")}
+    problems += [f"kpi/{k}/series.json: missing for catalog KPI {k}" for k in kpis if k not in series]
+    problems += [f"kpi/{k}/series.json: {k} is not in catalog.json" for k in series if k not in kpis]
+    for key, kpi in kpis.items():
+        where = f"catalog.json {key}"
+        if kpi["unit_key"] not in units:
+            problems.append(f"{where}: unit {kpi['unit_key']} not in units")
+        problems += [f"{where}: geography {g} not in geographies" for g in kpi["geographies"] if g not in geos]
+        problems += [f"{where}: source {s} not in sources" for s in kpi["source_keys"] if s not in sources]
+        problems += [f"{where}: dimension {d} not in dimensions" for d in kpi["dimension_keys"] if d not in members]
+    for key, doc in series.items():
+        kpi = kpis.get(key)
+        where = f"kpi/{key}/series.json"
+        if kpi is None:
+            continue
+        periods = doc["periods"]
+        if doc["kpi_key"] != key:
+            problems.append(f"{where}: kpi_key {doc['kpi_key']} is not {key}")
+        if doc["frequency"] != kpi["frequency"]:
+            problems.append(f"{where}: frequency {doc['frequency']} is not the catalog's {kpi['frequency']}")
+        if periods != sorted(set(periods)):
+            problems.append(f"{where}: periods are not sorted and unique")
+        fmt = PERIOD_FORMATS.get(doc["frequency"], ".*")
+        problems += [f"{where}: period {p} is not {doc['frequency']}" for p in periods if not re.fullmatch(fmt, p)]
+        if periods and (periods[0], periods[-1]) != (kpi["first_period"], kpi["last_period"]):
+            problems.append(f"{where}: periods {periods[0]}…{periods[-1]} differ from the catalog's range")
+        for i, s in enumerate(doc["series"]):
+            at = f"{where} series[{i}]"
+            if len(s["values"]) != len(periods):
+                problems.append(f"{at}: {len(s['values'])} values for {len(periods)} periods")
+            if all(v is None for v in s["values"]):
+                problems.append(f"{at}: no value")
+            if s["geography"] not in kpi["geographies"]:
+                problems.append(f"{at}: geography {s['geography']} not in the KPI's geographies")
+            if s["source_key"] not in kpi["source_keys"]:
+                problems.append(f"{at}: source {s['source_key']} not in the KPI's source_keys")
+            if s["unit_key"] not in units:
+                problems.append(f"{at}: unit {s['unit_key']} not in units")
+            for dim, member in s["members"].items():
+                if dim not in kpi["dimension_keys"] or member not in members.get(dim, set()):
+                    problems.append(f"{at}: member {dim}={member} not declared")
+            problems += [f"{at}: flag on unknown period {p}" for p in s.get("flags", {}) if p not in periods]
+    seen = set()
+    for v in files.get("latest.json", {}).get("values", []):
+        where = f"latest.json {v['kpi_key']} {v['geography']}"
+        if (v["kpi_key"], v["geography"]) in seen:
+            problems.append(f"{where}: occurs twice")
+        seen.add((v["kpi_key"], v["geography"]))
+        if v["kpi_key"] not in kpis:
+            problems.append(f"{where}: KPI not in catalog.json")
+            continue
+        if v["geography"] not in kpis[v["kpi_key"]]["geographies"]:
+            problems.append(f"{where}: geography not in the KPI's geographies")
+        if v["kpi_key"] in series and v["period"] not in series[v["kpi_key"]]["periods"]:
+            problems.append(f"{where}: period {v['period']} not in series.json")
+        if v["unit_key"] not in units:
+            problems.append(f"{where}: unit {v['unit_key']} not in units")
+    first: dict[str, str] = {}
+    for r in sorted(files.get("calendar.json", {}).get("releases", []), key=lambda r: r["date"]):
+        for k in r["kpi_keys"]:
+            if k not in kpis:
+                problems.append(f"calendar.json {r['date']}: KPI {k} not in catalog.json")
+            first.setdefault(k, r["date"])
+    for key, kpi in kpis.items():
+        if kpi["next_release"] != first.get(key):
+            problems.append(f"catalog.json {key}: next_release {kpi['next_release']} is not {first.get(key)}")
+    return problems
+
+
+def published_v2_seeds() -> list[str]:
+    """Seeds of published contract v2: frequency (M, Q or A), aggregation and polarity are one value per v2 key of
+    kpi_v2_map.csv; a published concept with a v2 key has definition_en and definition_pl in kpi.csv; every unit of
+    unit.csv has decimals in unit_decimals.csv; kpi_member.csv names v2 keys of the map."""
+    seeds = ROOT / "warehouse" / "seeds"
+
+    def rows(name: str) -> list[dict[str, str]]:
+        with open(seeds / f"{name}.csv", newline="", encoding="utf-8") as handle:
+            return list(csv.DictReader(handle))
+
+    problems = []
+    v2map = rows("kpi_v2_map")
+    for field in ("frequency", "aggregation", "polarity"):
+        values: dict[str, set[str]] = {}
+        for r in v2map:
+            values.setdefault(r["v2_key"], set()).add(r[field])
+        problems += [f"kpi_v2_map.csv {k}: several {field} values {sorted(v)}" for k, v in values.items() if len(v) > 1]
+    problems += [
+        f"kpi_v2_map.csv {r['v2_key']}: frequency {r['frequency']} is not M, Q or A"
+        for r in v2map
+        if r["frequency"] not in PERIOD_FORMATS
+    ]
+    mapped = {r["concept_key"] for r in v2map if r["concept_key"]}
+    for kpi in rows("kpi"):
+        if kpi["kpi_key"] in mapped and kpi["status"] == "published":
+            for field in ("definition_en", "definition_pl"):
+                if not kpi[field]:
+                    problems.append(f"kpi.csv {kpi['kpi_key']}: published v2 concept without {field}")
+    decimals = {r["unit_key"] for r in rows("unit_decimals")}
+    problems += [
+        f"unit_decimals.csv: no decimals for unit {u['unit_key']}"
+        for u in rows("unit")
+        if u["unit_key"] not in decimals
+    ]
+    keys = {r["v2_key"] for r in v2map}
+    problems += [
+        f"kpi_member.csv: {r['v2_key']} is not a v2 key of kpi_v2_map.csv"
+        for r in rows("kpi_member")
+        if r["v2_key"] not in keys
+    ]
     return problems
 
 
@@ -487,6 +638,8 @@ def _schema_problems(value: object, schema: dict, where: str) -> list[str]:
     if types and not any(JSON_TYPES[t](value) for t in types):
         return [f"{where}: expected {'|'.join(types)}, got {type(value).__name__}"]
     problems = []
+    if "enum" in schema and value not in schema["enum"]:
+        problems.append(f"{where}: {value!r} is not one of {schema['enum']}")
     pattern = schema.get("pattern")
     if isinstance(value, str) and pattern and re.search(pattern, value) is None:
         problems.append(f"{where}: {value!r} does not match {pattern}")
@@ -574,6 +727,7 @@ def main() -> int:
         "scheduler imports": scheduler_imports,
         "backlog": backlog,
         "published contract": published_contract,
+        "published v2 seeds": published_v2_seeds,
         "semantic models": semantic_models,
     }
     failed = 0

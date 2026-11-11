@@ -1,0 +1,21 @@
+{
+  "kpi_key": "eurpln",
+  "frequency": "M",
+  "unit_key": "pln_per_unit",
+  "periods": [
+    "2025-11",
+    "2025-12"
+  ],
+  "series": [
+    {
+      "geography": "PL",
+      "source_key": "nbp",
+      "unit_key": "pln_per_unit",
+      "members": {},
+      "values": [
+        4.232,
+        4.23187
+      ]
+    }
+  ]
+}

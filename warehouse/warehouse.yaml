@@ -44,6 +44,7 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.licence, gold.source,  # seeds warehouse/seeds/licence.csv, source.csv
        gold.release_calendar,  # seed release_calendar.csv
        gold.kpi_v2_map,  # seed kpi_v2_map.csv: zohelo-bi first slice, v2 key → concept and source (#2584)
+       gold.geography_v2, gold.unit_decimals, gold.kpi_member,  # seeds of published contract v2 (docs/published.md)
        gold.news_outlet,  # seed news_outlet.csv: outlets of the news feeds (topics, O32)
        gold.topic, gold.topic_kpi, gold.topic_keyword, gold.topic_signal, gold.release_kpi,  # topic seeds (O32, docs/topics.md)
        gold.topic_matches, gold.topic_daily, gold.topic_rank, gold.topic_quality,  # topics Gold (O32, docs/topics.md)

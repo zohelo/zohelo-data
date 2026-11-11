@@ -11,6 +11,9 @@ paths = [
   '''^tests/test_storage_manager\.py$''',
   # deleted source research inventory: API documentation text matched as keys
   '''^docs/source-research/source-inventory\.json$''',
+  # published contract v2 catalog fixture: licence keys such as cc_by_4_0_world_bank_findex match the generic
+  # API-key rule (checked 11 Nov 2026, #2650: seed keys of warehouse/seeds/licence.csv, no secrets)
+  '''^warehouse/published/fixtures/v2/catalog\.json$''',
   # dbt build output (ignored by git), when scanning a working tree
   '''^warehouse/target/''',
 ]

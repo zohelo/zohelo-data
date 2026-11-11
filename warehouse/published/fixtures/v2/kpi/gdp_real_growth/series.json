@@ -1,0 +1,71 @@
+{
+  "kpi_key": "gdp_real_growth",
+  "frequency": "Q",
+  "unit_key": "pct",
+  "periods": [
+    "2024-Q1",
+    "2024-Q2",
+    "2024-Q3",
+    "2024-Q4",
+    "2025-Q1",
+    "2025-Q2"
+  ],
+  "series": [
+    {
+      "geography": "PL",
+      "source_key": "eurostat",
+      "unit_key": "pct",
+      "members": {},
+      "values": [
+        2.5,
+        2.8,
+        3.1,
+        3.4,
+        3.7,
+        4.0
+      ]
+    },
+    {
+      "geography": "PL",
+      "source_key": "gus_dbw",
+      "unit_key": "index_py_100",
+      "members": {},
+      "values": [
+        102.4,
+        102.7,
+        103.0,
+        103.30000000000001,
+        103.60000000000001,
+        103.9
+      ]
+    },
+    {
+      "geography": "EU27",
+      "source_key": "eurostat",
+      "unit_key": "pct",
+      "members": {},
+      "values": [
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0,
+        1.1
+      ]
+    },
+    {
+      "geography": "DE",
+      "source_key": "eurostat",
+      "unit_key": "pct",
+      "members": {},
+      "values": [
+        -0.2,
+        -0.1,
+        0.0,
+        0.10000000000000003,
+        0.2,
+        0.3
+      ]
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "kpi_key": "unemployment_lfs",
+  "frequency": "Q",
+  "unit_key": "pct_labour_force",
+  "periods": [
+    "2024-Q1",
+    "2024-Q2",
+    "2024-Q3",
+    "2024-Q4",
+    "2025-Q1",
+    "2025-Q2"
+  ],
+  "series": [
+    {
+      "geography": "PL",
+      "source_key": "eurostat",
+      "unit_key": "pct_labour_force",
+      "members": {},
+      "values": [
+        2.9,
+        2.85,
+        2.8,
+        2.75,
+        2.6999999999999997,
+        2.65
+      ]
+    },
+    {
+      "geography": "PL",
+      "source_key": "gus_dbw",
+      "unit_key": "pct_labour_force",
+      "members": {},
+      "values": [
+        3.0,
+        2.95,
+        2.9,
+        2.85,
+        2.8,
+        2.75
+      ]
+    },
+    {
+      "geography": "EU27",
+      "source_key": "eurostat",
+      "unit_key": "pct_labour_force",
+      "members": {},
+      "values": [
+        6.0,
+        5.98,
+        5.96,
+        5.94,
+        5.92,
+        5.9
+      ]
+    },
+    {
+      "geography": "DE",
+      "source_key": "eurostat",
+      "unit_key": "pct_labour_force",
+      "members": {},
+      "values": [
+        3.3,
+        3.3499999999999996,
+        3.4,
+        3.4499999999999997,
+        3.5,
+        3.55
+      ]
+    },
+    {
+      "geography": "PL-14",
+      "source_key": "gus_dbw",
+      "unit_key": "pct_labour_force",
+      "members": {},
+      "values": [
+        2.4,
+        2.36,
+        2.32,
+        2.28,
+        2.2399999999999998,
+        2.1999999999999997
+      ]
+    }
+  ]
+}

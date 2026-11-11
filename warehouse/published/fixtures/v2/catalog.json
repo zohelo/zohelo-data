@@ -1,0 +1,1712 @@
+{
+  "version": 2,
+  "generated_at": "2026-01-01T00:00:00Z",
+  "kpis": [
+    {
+      "kpi_key": "eurpln",
+      "name_pl": "Kurs waluty w PLN",
+      "name_en": "Exchange rate to PLN",
+      "definition_pl": "Średni kurs waluty w złotych publikowany przez Narodowy Bank Polski (tabela A); w v2 średnia miesięczna.",
+      "definition_en": "Average exchange rate of a currency in zloty published by Narodowy Bank Polski (table A); v2 shows the monthly mean.",
+      "unit_key": "pln_per_unit",
+      "frequency": "M",
+      "domain_key": "finance",
+      "group_key": "finance.fx_gold",
+      "source_keys": [
+        "nbp"
+      ],
+      "geographies": [
+        "PL"
+      ],
+      "dimension_keys": [],
+      "first_period": "2025-11",
+      "last_period": "2025-12",
+      "aggregation": "mean",
+      "polarity": "neutral",
+      "loaded_at": "2025-12-31T11:20:00Z",
+      "next_release": "2026-11-09"
+    },
+    {
+      "kpi_key": "gdp_nominal",
+      "name_pl": "PKB w cenach bieżących",
+      "name_en": "GDP, current prices",
+      "definition_pl": "Produkt krajowy brutto w bieżących cenach rynkowych: wartość wszystkich dóbr i usług finalnych wytworzonych na obszarze w roku.",
+      "definition_en": "Gross domestic product at current market prices: the value of all final goods and services produced in the area in the year.",
+      "unit_key": "mln_ncu",
+      "frequency": "A",
+      "domain_key": "economy",
+      "group_key": "economy.national_accounts",
+      "source_keys": [
+        "eurostat",
+        "world_bank_wdi",
+        "gus_dbw"
+      ],
+      "geographies": [
+        "PL",
+        "DE"
+      ],
+      "dimension_keys": [],
+      "first_period": "2022",
+      "last_period": "2024",
+      "aggregation": "sum",
+      "polarity": "neutral",
+      "loaded_at": "2025-12-30T06:10:00Z",
+      "next_release": null
+    },
+    {
+      "kpi_key": "gdp_real_growth",
+      "name_pl": "Dynamika realna PKB",
+      "name_en": "GDP volume growth",
+      "definition_pl": "Zmiana realnego produktu krajowego brutto (ceny stałe) wobec analogicznego okresu roku poprzedniego.",
+      "definition_en": "Change in real gross domestic product (constant prices) against the same period a year earlier.",
+      "unit_key": "pct",
+      "frequency": "Q",
+      "domain_key": "economy",
+      "group_key": "economy.national_accounts",
+      "source_keys": [
+        "eurostat",
+        "gus_dbw"
+      ],
+      "geographies": [
+        "PL",
+        "EU27",
+        "DE"
+      ],
+      "dimension_keys": [],
+      "first_period": "2024-Q1",
+      "last_period": "2025-Q2",
+      "aggregation": "rate",
+      "polarity": "up",
+      "loaded_at": "2025-12-30T06:10:00Z",
+      "next_release": null
+    },
+    {
+      "kpi_key": "hicp_annual_rate",
+      "name_pl": "Inflacja (ceny konsumpcyjne)",
+      "name_en": "Inflation, consumer prices",
+      "definition_pl": "Zmiana cen konsumpcyjnych wobec tego samego miesiąca rok wcześniej; Eurostat publikuje zharmonizowany wskaźnik (HICP), Bank Światowy krajowy CPI.",
+      "definition_en": "Change in consumer prices against the same month a year earlier; Eurostat publishes the harmonised index (HICP), the World Bank the national CPI.",
+      "unit_key": "pct",
+      "frequency": "M",
+      "domain_key": "economy",
+      "group_key": "economy.prices",
+      "source_keys": [
+        "eurostat"
+      ],
+      "geographies": [
+        "PL",
+        "EU27",
+        "DE",
+        "EL"
+      ],
+      "dimension_keys": [],
+      "first_period": "2024-09",
+      "last_period": "2025-09",
+      "aggregation": "rate",
+      "polarity": "neutral",
+      "loaded_at": "2025-12-30T06:10:00Z",
+      "next_release": "2026-01-07"
+    },
+    {
+      "kpi_key": "population_total",
+      "name_pl": "Ludność",
+      "name_en": "Population",
+      "definition_pl": "Liczba mieszkańców obszaru; GUS liczy ludność na 31 grudnia, Eurostat na 1 stycznia, Bank Światowy w połowie roku.",
+      "definition_en": "Number of residents of the area; GUS counts residents on 31 December, Eurostat on 1 January, the World Bank at mid-year.",
+      "unit_key": "persons",
+      "frequency": "A",
+      "domain_key": "population",
+      "group_key": "population.stock",
+      "source_keys": [
+        "gus_bdl",
+        "eurostat",
+        "world_bank_wdi"
+      ],
+      "geographies": [
+        "PL",
+        "EU27",
+        "DE",
+        "PL-02",
+        "PL-12"
+      ],
+      "dimension_keys": [],
+      "first_period": "2022",
+      "last_period": "2024",
+      "aggregation": "sum",
+      "polarity": "neutral",
+      "loaded_at": "2025-12-30T06:10:00Z",
+      "next_release": null
+    },
+    {
+      "kpi_key": "unemployment_lfs",
+      "name_pl": "Stopa bezrobocia (BAEL)",
+      "name_en": "Unemployment rate (LFS)",
+      "definition_pl": "Bezrobotni jako odsetek aktywnych zawodowo według Badania Aktywności Ekonomicznej Ludności (definicja MOP), wiek 15-74, o ile źródło nie podaje inaczej.",
+      "definition_en": "Unemployed people as a percentage of the labour force, Labour Force Survey (ILO definition), age 15-74 unless the source says otherwise.",
+      "unit_key": "pct_labour_force",
+      "frequency": "Q",
+      "domain_key": "labour",
+      "group_key": "labour.employment",
+      "source_keys": [
+        "eurostat",
+        "gus_dbw"
+      ],
+      "geographies": [
+        "PL",
+        "EU27",
+        "DE",
+        "PL-14"
+      ],
+      "dimension_keys": [],
+      "first_period": "2024-Q1",
+      "last_period": "2025-Q2",
+      "aggregation": "rate",
+      "polarity": "down",
+      "loaded_at": "2025-12-30T06:10:00Z",
+      "next_release": null
+    }
+  ],
+  "dimensions": [],
+  "geographies": [
+    {
+      "key": "PL",
+      "name_pl": "Polska",
+      "name_en": "Poland",
+      "level": "country",
+      "eu": true
+    },
+    {
+      "key": "EU27",
+      "name_pl": "Unia Europejska (27)",
+      "name_en": "European Union (27)",
+      "level": "aggregate",
+      "eu": true
+    },
+    {
+      "key": "DE",
+      "name_pl": "Niemcy",
+      "name_en": "Germany",
+      "level": "country",
+      "eu": true
+    },
+    {
+      "key": "EL",
+      "name_pl": "Grecja",
+      "name_en": "Greece",
+      "level": "country",
+      "eu": true
+    },
+    {
+      "key": "PL-02",
+      "name_pl": "dolnośląskie",
+      "name_en": "Dolnośląskie",
+      "level": "voivodeship",
+      "eu": true
+    },
+    {
+      "key": "PL-12",
+      "name_pl": "małopolskie",
+      "name_en": "Małopolskie",
+      "level": "voivodeship",
+      "eu": true
+    },
+    {
+      "key": "PL-14",
+      "name_pl": "mazowieckie",
+      "name_en": "Mazowieckie",
+      "level": "voivodeship",
+      "eu": true
+    }
+  ],
+  "units": [
+    {
+      "unit_key": "persons",
+      "symbol": "os.",
+      "name_en": "persons",
+      "name_pl": "osoby",
+      "is_rate": false,
+      "decimals": 0
+    },
+    {
+      "unit_key": "mln_ncu",
+      "symbol": "mln",
+      "name_en": "million, source currency",
+      "name_pl": "mln, waluta źródła",
+      "is_rate": false,
+      "decimals": 0
+    },
+    {
+      "unit_key": "ncu_per_person",
+      "symbol": "/os.",
+      "name_en": "source currency per person",
+      "name_pl": "waluta źródła na osobę",
+      "is_rate": false,
+      "decimals": 0
+    },
+    {
+      "unit_key": "pct",
+      "symbol": "%",
+      "name_en": "per cent",
+      "name_pl": "procent",
+      "is_rate": true,
+      "decimals": 1
+    },
+    {
+      "unit_key": "pct_labour_force",
+      "symbol": "%",
+      "name_en": "% of labour force",
+      "name_pl": "% aktywnych zawodowo",
+      "is_rate": true,
+      "decimals": 1
+    },
+    {
+      "unit_key": "pct_population",
+      "symbol": "%",
+      "name_en": "% of population",
+      "name_pl": "% ludności",
+      "is_rate": true,
+      "decimals": 1
+    },
+    {
+      "unit_key": "years",
+      "symbol": "lata",
+      "name_en": "years",
+      "name_pl": "lata",
+      "is_rate": false,
+      "decimals": 1
+    },
+    {
+      "unit_key": "pln",
+      "symbol": "zł",
+      "name_en": "Polish zloty",
+      "name_pl": "złoty",
+      "is_rate": false,
+      "decimals": 0
+    },
+    {
+      "unit_key": "dwellings",
+      "symbol": "mieszk.",
+      "name_en": "dwellings",
+      "name_pl": "mieszkania",
+      "is_rate": false,
+      "decimals": 0
+    },
+    {
+      "unit_key": "km2",
+      "symbol": "km²",
+      "name_en": "square kilometres",
+      "name_pl": "kilometry kwadratowe",
+      "is_rate": false,
+      "decimals": 0
+    },
+    {
+      "unit_key": "persons_per_km2",
+      "symbol": "os./km²",
+      "name_en": "persons per km²",
+      "name_pl": "osoby na km²",
+      "is_rate": true,
+      "decimals": 0
+    },
+    {
+      "unit_key": "pln_per_unit",
+      "symbol": "zł",
+      "name_en": "PLN per currency unit",
+      "name_pl": "zł za jednostkę waluty",
+      "is_rate": true,
+      "decimals": 4
+    },
+    {
+      "unit_key": "pln_per_gram",
+      "symbol": "zł/g",
+      "name_en": "PLN per gram",
+      "name_pl": "zł za gram",
+      "is_rate": true,
+      "decimals": 2
+    },
+    {
+      "unit_key": "mln_eur",
+      "symbol": "mln EUR",
+      "name_en": "million euro",
+      "name_pl": "mln euro",
+      "is_rate": false,
+      "decimals": 0
+    },
+    {
+      "unit_key": "usd",
+      "symbol": "USD",
+      "name_en": "US dollars",
+      "name_pl": "dolary amerykańskie",
+      "is_rate": false,
+      "decimals": 0
+    },
+    {
+      "unit_key": "eur_per_person",
+      "symbol": "EUR/os.",
+      "name_en": "euro per person",
+      "name_pl": "euro na osobę",
+      "is_rate": false,
+      "decimals": 0
+    },
+    {
+      "unit_key": "usd_per_person",
+      "symbol": "USD/os.",
+      "name_en": "US dollars per person",
+      "name_pl": "dolary amerykańskie na osobę",
+      "is_rate": false,
+      "decimals": 0
+    },
+    {
+      "unit_key": "pct_gdp",
+      "symbol": "% PKB",
+      "name_en": "% of GDP",
+      "name_pl": "% PKB",
+      "is_rate": true,
+      "decimals": 1
+    },
+    {
+      "unit_key": "index_eu27_100",
+      "symbol": "EU27=100",
+      "name_en": "index, EU27 = 100",
+      "name_pl": "indeks, UE27 = 100",
+      "is_rate": true,
+      "decimals": 0
+    },
+    {
+      "unit_key": "index_2020_100",
+      "symbol": "2020=100",
+      "name_en": "index, 2020 = 100",
+      "name_pl": "indeks, 2020 = 100",
+      "is_rate": true,
+      "decimals": 1
+    },
+    {
+      "unit_key": "thousand_tonnes",
+      "symbol": "tys. t",
+      "name_en": "thousand tonnes",
+      "name_pl": "tysiące ton",
+      "is_rate": false,
+      "decimals": 0
+    },
+    {
+      "unit_key": "children_per_woman",
+      "symbol": "dzieci/kobietę",
+      "name_en": "children per woman",
+      "name_pl": "dzieci na kobietę",
+      "is_rate": true,
+      "decimals": 2
+    },
+    {
+      "unit_key": "index_py_100",
+      "symbol": "py=100",
+      "name_en": "index, same period of the previous year = 100",
+      "name_pl": "indeks, analogiczny okres roku poprzedniego = 100",
+      "is_rate": true,
+      "decimals": 1
+    },
+    {
+      "unit_key": "index_pp_100",
+      "symbol": "pp=100",
+      "name_en": "index, previous period = 100",
+      "name_pl": "indeks, okres poprzedni = 100",
+      "is_rate": true,
+      "decimals": 1
+    },
+    {
+      "unit_key": "index_2010_100",
+      "symbol": "2010=100",
+      "name_en": "index, 2010 = 100",
+      "name_pl": "indeks, 2010 = 100",
+      "is_rate": true,
+      "decimals": 1
+    },
+    {
+      "unit_key": "index_lta_100",
+      "symbol": "LTA=100",
+      "name_en": "index, long-term average = 100",
+      "name_pl": "indeks, średnia długookresowa = 100",
+      "is_rate": true,
+      "decimals": 1
+    },
+    {
+      "unit_key": "balance",
+      "symbol": "saldo",
+      "name_en": "balance of answers",
+      "name_pl": "saldo odpowiedzi",
+      "is_rate": true,
+      "decimals": 1
+    },
+    {
+      "unit_key": "pct_points",
+      "symbol": "p.p.",
+      "name_en": "percentage points",
+      "name_pl": "punkty procentowe",
+      "is_rate": true,
+      "decimals": 1
+    },
+    {
+      "unit_key": "gini_0_100",
+      "symbol": "Gini",
+      "name_en": "Gini coefficient, 0-100",
+      "name_pl": "współczynnik Giniego, 0-100",
+      "is_rate": true,
+      "decimals": 1
+    },
+    {
+      "unit_key": "persons_per_offer",
+      "symbol": "os./ofertę",
+      "name_en": "persons per job offer",
+      "name_pl": "osoby na 1 ofertę pracy",
+      "is_rate": true,
+      "decimals": 1
+    },
+    {
+      "unit_key": "mln_pln",
+      "symbol": "mln zł",
+      "name_en": "million zloty",
+      "name_pl": "miliony złotych",
+      "is_rate": false,
+      "decimals": 0
+    },
+    {
+      "unit_key": "thousand_pln",
+      "symbol": "tys. zł",
+      "name_en": "thousand zloty",
+      "name_pl": "tysiące złotych",
+      "is_rate": false,
+      "decimals": 0
+    },
+    {
+      "unit_key": "mt_co2e",
+      "symbol": "Mt CO2e",
+      "name_en": "million tonnes of CO2 equivalent",
+      "name_pl": "miliony ton ekwiwalentu CO2",
+      "is_rate": false,
+      "decimals": 1
+    },
+    {
+      "unit_key": "ppp_usd_per_person",
+      "symbol": "$ PPP/os.",
+      "name_en": "PPP international dollars per person",
+      "name_pl": "dolary międzynarodowe PPP na osobę",
+      "is_rate": false,
+      "decimals": 0
+    },
+    {
+      "unit_key": "ncu",
+      "symbol": "NCU",
+      "name_en": "source currency",
+      "name_pl": "waluta źródła",
+      "is_rate": false,
+      "decimals": 0
+    }
+  ],
+  "domains": [
+    {
+      "domain_key": "economy",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "Economy",
+      "name_pl": "Gospodarka",
+      "csa_code": "201",
+      "sort": 1
+    },
+    {
+      "domain_key": "economy.national_accounts",
+      "level": "group",
+      "parent_key": "economy",
+      "name_en": "National accounts & GDP",
+      "name_pl": "Rachunki narodowe i PKB",
+      "csa_code": "201",
+      "sort": 1
+    },
+    {
+      "domain_key": "economy.business_cycle",
+      "level": "group",
+      "parent_key": "economy",
+      "name_en": "Business cycle & short-term indicators",
+      "name_pl": "Koniunktura i wskaźniki krótkookresowe",
+      "csa_code": "201",
+      "sort": 2
+    },
+    {
+      "domain_key": "economy.prices",
+      "level": "group",
+      "parent_key": "economy",
+      "name_en": "Prices & inflation",
+      "name_pl": "Ceny i inflacja",
+      "csa_code": "205",
+      "sort": 3
+    },
+    {
+      "domain_key": "economy.investment",
+      "level": "group",
+      "parent_key": "economy",
+      "name_en": "Investment & capital",
+      "name_pl": "Inwestycje i kapitał",
+      "csa_code": "201",
+      "sort": 4
+    },
+    {
+      "domain_key": "economy.trade_bop",
+      "level": "group",
+      "parent_key": "economy",
+      "name_en": "Trade & balance of payments",
+      "name_pl": "Handel zagraniczny i bilans płatniczy",
+      "csa_code": "204",
+      "sort": 5
+    },
+    {
+      "domain_key": "finance",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "Finance",
+      "name_pl": "Finanse",
+      "csa_code": "20306",
+      "sort": 2
+    },
+    {
+      "domain_key": "finance.public_finance",
+      "level": "group",
+      "parent_key": "finance",
+      "name_en": "Public finance & debt",
+      "name_pl": "Finanse publiczne i dług",
+      "csa_code": "201",
+      "sort": 1
+    },
+    {
+      "domain_key": "finance.money_banking",
+      "level": "group",
+      "parent_key": "finance",
+      "name_en": "Money, banking & interest rates",
+      "name_pl": "Pieniądz, banki i stopy procentowe",
+      "csa_code": "20306",
+      "sort": 2
+    },
+    {
+      "domain_key": "finance.fx_gold",
+      "level": "group",
+      "parent_key": "finance",
+      "name_en": "Exchange rates & gold",
+      "name_pl": "Kursy walut i złoto",
+      "csa_code": "20306",
+      "sort": 3
+    },
+    {
+      "domain_key": "finance.capital_markets",
+      "level": "group",
+      "parent_key": "finance",
+      "name_en": "Capital markets",
+      "name_pl": "Rynki kapitałowe",
+      "csa_code": "20306",
+      "sort": 4
+    },
+    {
+      "domain_key": "finance.insurance_pensions",
+      "level": "group",
+      "parent_key": "finance",
+      "name_en": "Insurance & pensions",
+      "name_pl": "Ubezpieczenia i emerytury",
+      "csa_code": "20306",
+      "sort": 5
+    },
+    {
+      "domain_key": "finance.local_government",
+      "level": "group",
+      "parent_key": "finance",
+      "name_en": "Local-government finance",
+      "name_pl": "Finanse samorządów",
+      "csa_code": "201",
+      "sort": 6
+    },
+    {
+      "domain_key": "business",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "Business & industry",
+      "name_pl": "Biznes i przemysł",
+      "csa_code": "202",
+      "sort": 3
+    },
+    {
+      "domain_key": "business.enterprises",
+      "level": "group",
+      "parent_key": "business",
+      "name_en": "Enterprises & registers",
+      "name_pl": "Przedsiębiorstwa i rejestry",
+      "csa_code": "202",
+      "sort": 1
+    },
+    {
+      "domain_key": "business.industry_construction",
+      "level": "group",
+      "parent_key": "business",
+      "name_en": "Industry & construction",
+      "name_pl": "Przemysł i budownictwo",
+      "csa_code": "20303",
+      "sort": 2
+    },
+    {
+      "domain_key": "business.trade_services",
+      "level": "group",
+      "parent_key": "business",
+      "name_en": "Trade & services",
+      "name_pl": "Handel i usługi",
+      "csa_code": "20307",
+      "sort": 3
+    },
+    {
+      "domain_key": "business.agriculture",
+      "level": "group",
+      "parent_key": "business",
+      "name_en": "Agriculture, forestry & fishing",
+      "name_pl": "Rolnictwo, leśnictwo i rybactwo",
+      "csa_code": "20301",
+      "sort": 4
+    },
+    {
+      "domain_key": "business.tourism",
+      "level": "group",
+      "parent_key": "business",
+      "name_en": "Tourism",
+      "name_pl": "Turystyka",
+      "csa_code": "20305",
+      "sort": 5
+    },
+    {
+      "domain_key": "business.finances",
+      "level": "group",
+      "parent_key": "business",
+      "name_en": "Business finances",
+      "name_pl": "Finanse przedsiębiorstw",
+      "csa_code": "202",
+      "sort": 6
+    },
+    {
+      "domain_key": "labour",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "Labour & income",
+      "name_pl": "Praca i dochody",
+      "csa_code": "103",
+      "sort": 4
+    },
+    {
+      "domain_key": "labour.employment",
+      "level": "group",
+      "parent_key": "labour",
+      "name_en": "Employment & unemployment",
+      "name_pl": "Zatrudnienie i bezrobocie",
+      "csa_code": "103",
+      "sort": 1
+    },
+    {
+      "domain_key": "labour.wages",
+      "level": "group",
+      "parent_key": "labour",
+      "name_en": "Wages & labour costs",
+      "name_pl": "Wynagrodzenia i koszty pracy",
+      "csa_code": "103",
+      "sort": 2
+    },
+    {
+      "domain_key": "labour.income_living",
+      "level": "group",
+      "parent_key": "labour",
+      "name_en": "Income & living conditions",
+      "name_pl": "Dochody i warunki życia",
+      "csa_code": "106",
+      "sort": 3
+    },
+    {
+      "domain_key": "labour.social_protection",
+      "level": "group",
+      "parent_key": "labour",
+      "name_en": "Social protection & benefits",
+      "name_pl": "Zabezpieczenie społeczne i świadczenia",
+      "csa_code": "107",
+      "sort": 4
+    },
+    {
+      "domain_key": "population",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "Population",
+      "name_pl": "Ludność",
+      "csa_code": "101",
+      "sort": 5
+    },
+    {
+      "domain_key": "population.stock",
+      "level": "group",
+      "parent_key": "population",
+      "name_en": "Population stock & structure",
+      "name_pl": "Stan i struktura ludności",
+      "csa_code": "101",
+      "sort": 1
+    },
+    {
+      "domain_key": "population.vital",
+      "level": "group",
+      "parent_key": "population",
+      "name_en": "Births, deaths & life expectancy",
+      "name_pl": "Urodzenia, zgony i trwanie życia",
+      "csa_code": "101",
+      "sort": 2
+    },
+    {
+      "domain_key": "population.migration",
+      "level": "group",
+      "parent_key": "population",
+      "name_en": "Migration",
+      "name_pl": "Migracje",
+      "csa_code": "102",
+      "sort": 3
+    },
+    {
+      "domain_key": "population.households",
+      "level": "group",
+      "parent_key": "population",
+      "name_en": "Families & households",
+      "name_pl": "Rodziny i gospodarstwa domowe",
+      "csa_code": "101",
+      "sort": 4
+    },
+    {
+      "domain_key": "population.census",
+      "level": "group",
+      "parent_key": "population",
+      "name_en": "Census",
+      "name_pl": "Spisy powszechne",
+      "csa_code": "101",
+      "sort": 5
+    },
+    {
+      "domain_key": "health",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "Health",
+      "name_pl": "Zdrowie",
+      "csa_code": "105",
+      "sort": 6
+    },
+    {
+      "domain_key": "health.status",
+      "level": "group",
+      "parent_key": "health",
+      "name_en": "Health status",
+      "name_pl": "Stan zdrowia",
+      "csa_code": "105",
+      "sort": 1
+    },
+    {
+      "domain_key": "health.system",
+      "level": "group",
+      "parent_key": "health",
+      "name_en": "Healthcare system & NFZ",
+      "name_pl": "Ochrona zdrowia i NFZ",
+      "csa_code": "105",
+      "sort": 2
+    },
+    {
+      "domain_key": "health.public_health",
+      "level": "group",
+      "parent_key": "health",
+      "name_en": "Public health & epidemiology",
+      "name_pl": "Zdrowie publiczne i epidemiologia",
+      "csa_code": "105",
+      "sort": 3
+    },
+    {
+      "domain_key": "health.pharma",
+      "level": "group",
+      "parent_key": "health",
+      "name_en": "Pharmaceuticals & reimbursement",
+      "name_pl": "Leki i refundacja",
+      "csa_code": "105",
+      "sort": 4
+    },
+    {
+      "domain_key": "education",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "Education & science",
+      "name_pl": "Edukacja i nauka",
+      "csa_code": "104",
+      "sort": 7
+    },
+    {
+      "domain_key": "education.school",
+      "level": "group",
+      "parent_key": "education",
+      "name_en": "Pre-school & school",
+      "name_pl": "Wychowanie przedszkolne i szkoły",
+      "csa_code": "104",
+      "sort": 1
+    },
+    {
+      "domain_key": "education.higher",
+      "level": "group",
+      "parent_key": "education",
+      "name_en": "Higher education",
+      "name_pl": "Szkolnictwo wyższe",
+      "csa_code": "104",
+      "sort": 2
+    },
+    {
+      "domain_key": "education.exams",
+      "level": "group",
+      "parent_key": "education",
+      "name_en": "Exams & outcomes",
+      "name_pl": "Egzaminy i wyniki",
+      "csa_code": "104",
+      "sort": 3
+    },
+    {
+      "domain_key": "education.science",
+      "level": "group",
+      "parent_key": "education",
+      "name_en": "Science, R&D & patents",
+      "name_pl": "Nauka, B+R i patenty",
+      "csa_code": "206",
+      "sort": 4
+    },
+    {
+      "domain_key": "education.skills",
+      "level": "group",
+      "parent_key": "education",
+      "name_en": "Skills & lifelong learning",
+      "name_pl": "Umiejętności i kształcenie ustawiczne",
+      "csa_code": "104",
+      "sort": 5
+    },
+    {
+      "domain_key": "society",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "Society & culture",
+      "name_pl": "Społeczeństwo i kultura",
+      "csa_code": "109",
+      "sort": 8
+    },
+    {
+      "domain_key": "society.culture",
+      "level": "group",
+      "parent_key": "society",
+      "name_en": "Culture & heritage",
+      "name_pl": "Kultura i dziedzictwo",
+      "csa_code": "109",
+      "sort": 1
+    },
+    {
+      "domain_key": "society.media",
+      "level": "group",
+      "parent_key": "society",
+      "name_en": "Media",
+      "name_pl": "Media",
+      "csa_code": "109",
+      "sort": 2
+    },
+    {
+      "domain_key": "society.sport",
+      "level": "group",
+      "parent_key": "society",
+      "name_en": "Sport & recreation",
+      "name_pl": "Sport i rekreacja",
+      "csa_code": "109",
+      "sort": 3
+    },
+    {
+      "domain_key": "society.time_use",
+      "level": "group",
+      "parent_key": "society",
+      "name_en": "Time use & quality of life",
+      "name_pl": "Czas wolny i jakość życia",
+      "csa_code": "110",
+      "sort": 4
+    },
+    {
+      "domain_key": "society.civil",
+      "level": "group",
+      "parent_key": "society",
+      "name_en": "Civil society & social economy",
+      "name_pl": "Społeczeństwo obywatelskie i ekonomia społeczna",
+      "csa_code": "510",
+      "sort": 5
+    },
+    {
+      "domain_key": "housing",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "Housing & territory",
+      "name_pl": "Mieszkania i terytorium",
+      "csa_code": "108",
+      "sort": 9
+    },
+    {
+      "domain_key": "housing.housing",
+      "level": "group",
+      "parent_key": "housing",
+      "name_en": "Housing & real estate",
+      "name_pl": "Mieszkania i nieruchomości",
+      "csa_code": "108",
+      "sort": 1
+    },
+    {
+      "domain_key": "housing.municipal",
+      "level": "group",
+      "parent_key": "housing",
+      "name_en": "Municipal infrastructure",
+      "name_pl": "Infrastruktura komunalna",
+      "csa_code": "108",
+      "sort": 2
+    },
+    {
+      "domain_key": "housing.land",
+      "level": "group",
+      "parent_key": "housing",
+      "name_en": "Land, planning & buildings",
+      "name_pl": "Grunty, planowanie i budynki",
+      "csa_code": "507",
+      "sort": 3
+    },
+    {
+      "domain_key": "housing.territory",
+      "level": "group",
+      "parent_key": "housing",
+      "name_en": "Territorial division & geography",
+      "name_pl": "Podział terytorialny i geografia",
+      "csa_code": "507",
+      "sort": 4
+    },
+    {
+      "domain_key": "housing.regions",
+      "level": "group",
+      "parent_key": "housing",
+      "name_en": "Cities & regions",
+      "name_pl": "Miasta i regiony",
+      "csa_code": "507",
+      "sort": 5
+    },
+    {
+      "domain_key": "environment",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "Environment & energy",
+      "name_pl": "Środowisko i energia",
+      "csa_code": "301",
+      "sort": 10
+    },
+    {
+      "domain_key": "environment.condition",
+      "level": "group",
+      "parent_key": "environment",
+      "name_en": "Environmental condition & air/water quality",
+      "name_pl": "Stan środowiska, powietrze i woda",
+      "csa_code": "301",
+      "sort": 1
+    },
+    {
+      "domain_key": "environment.climate",
+      "level": "group",
+      "parent_key": "environment",
+      "name_en": "Climate & weather",
+      "name_pl": "Klimat i pogoda",
+      "csa_code": "506",
+      "sort": 2
+    },
+    {
+      "domain_key": "environment.waste",
+      "level": "group",
+      "parent_key": "environment",
+      "name_en": "Waste & circular economy",
+      "name_pl": "Odpady i gospodarka o obiegu zamkniętym",
+      "csa_code": "509",
+      "sort": 3
+    },
+    {
+      "domain_key": "environment.energy",
+      "level": "group",
+      "parent_key": "environment",
+      "name_en": "Energy supply & markets",
+      "name_pl": "Energia i rynki energii",
+      "csa_code": "20302",
+      "sort": 4
+    },
+    {
+      "domain_key": "environment.resources",
+      "level": "group",
+      "parent_key": "environment",
+      "name_en": "Natural resources & forestry",
+      "name_pl": "Zasoby naturalne i lasy",
+      "csa_code": "305",
+      "sort": 5
+    },
+    {
+      "domain_key": "transport",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "Transport & digital",
+      "name_pl": "Transport i cyfryzacja",
+      "csa_code": "20304",
+      "sort": 11
+    },
+    {
+      "domain_key": "transport.modes",
+      "level": "group",
+      "parent_key": "transport",
+      "name_en": "Road, rail, air & sea",
+      "name_pl": "Transport drogowy, kolejowy, lotniczy i morski",
+      "csa_code": "20304",
+      "sort": 1
+    },
+    {
+      "domain_key": "transport.vehicles",
+      "level": "group",
+      "parent_key": "transport",
+      "name_en": "Vehicles & road safety",
+      "name_pl": "Pojazdy i bezpieczeństwo drogowe",
+      "csa_code": "20304",
+      "sort": 2
+    },
+    {
+      "domain_key": "transport.public_transport",
+      "level": "group",
+      "parent_key": "transport",
+      "name_en": "Public transport & mobility",
+      "name_pl": "Transport publiczny i mobilność",
+      "csa_code": "20304",
+      "sort": 3
+    },
+    {
+      "domain_key": "transport.telecom",
+      "level": "group",
+      "parent_key": "transport",
+      "name_en": "Telecom & internet",
+      "name_pl": "Telekomunikacja i internet",
+      "csa_code": "508",
+      "sort": 4
+    },
+    {
+      "domain_key": "transport.digital",
+      "level": "group",
+      "parent_key": "transport",
+      "name_en": "Digital society & e-government",
+      "name_pl": "Społeczeństwo cyfrowe i e-administracja",
+      "csa_code": "508",
+      "sort": 5
+    },
+    {
+      "domain_key": "state",
+      "level": "domain",
+      "parent_key": null,
+      "name_en": "State, law & safety",
+      "name_pl": "Państwo, prawo i bezpieczeństwo",
+      "csa_code": "401",
+      "sort": 12
+    },
+    {
+      "domain_key": "state.government",
+      "level": "group",
+      "parent_key": "state",
+      "name_en": "Government & parliament",
+      "name_pl": "Rząd i parlament",
+      "csa_code": "401",
+      "sort": 1
+    },
+    {
+      "domain_key": "state.elections",
+      "level": "group",
+      "parent_key": "state",
+      "name_en": "Elections & participation",
+      "name_pl": "Wybory i partycypacja",
+      "csa_code": "401",
+      "sort": 2
+    },
+    {
+      "domain_key": "state.justice",
+      "level": "group",
+      "parent_key": "state",
+      "name_en": "Justice & courts",
+      "name_pl": "Wymiar sprawiedliwości i sądy",
+      "csa_code": "403",
+      "sort": 3
+    },
+    {
+      "domain_key": "state.crime",
+      "level": "group",
+      "parent_key": "state",
+      "name_en": "Crime & public safety",
+      "name_pl": "Przestępczość i bezpieczeństwo publiczne",
+      "csa_code": "40801",
+      "sort": 4
+    },
+    {
+      "domain_key": "state.procurement",
+      "level": "group",
+      "parent_key": "state",
+      "name_en": "Public procurement",
+      "name_pl": "Zamówienia publiczne",
+      "csa_code": "401",
+      "sort": 5
+    },
+    {
+      "domain_key": "state.administration",
+      "level": "group",
+      "parent_key": "state",
+      "name_en": "Administration, audit & openness",
+      "name_pl": "Administracja, kontrola i jawność",
+      "csa_code": "401",
+      "sort": 6
+    },
+    {
+      "domain_key": "economy.national_accounts.gdp",
+      "level": "subgroup",
+      "parent_key": "economy.national_accounts",
+      "name_en": "GDP",
+      "name_pl": "PKB",
+      "csa_code": "201",
+      "sort": 1
+    },
+    {
+      "domain_key": "economy.prices.consumer_prices",
+      "level": "subgroup",
+      "parent_key": "economy.prices",
+      "name_en": "Consumer prices",
+      "name_pl": "Ceny konsumpcyjne",
+      "csa_code": "205",
+      "sort": 1
+    },
+    {
+      "domain_key": "labour.employment.lfs",
+      "level": "subgroup",
+      "parent_key": "labour.employment",
+      "name_en": "Labour force survey",
+      "name_pl": "Badanie aktywności ekonomicznej ludności (BAEL)",
+      "csa_code": "103",
+      "sort": 1
+    },
+    {
+      "domain_key": "labour.employment.registered_unemployment",
+      "level": "subgroup",
+      "parent_key": "labour.employment",
+      "name_en": "Registered unemployment",
+      "name_pl": "Bezrobocie rejestrowane",
+      "csa_code": "103",
+      "sort": 2
+    },
+    {
+      "domain_key": "population.stock.population",
+      "level": "subgroup",
+      "parent_key": "population.stock",
+      "name_en": "Population",
+      "name_pl": "Ludność",
+      "csa_code": "101",
+      "sort": 1
+    },
+    {
+      "domain_key": "finance.fx_gold.exchange_rates",
+      "level": "subgroup",
+      "parent_key": "finance.fx_gold",
+      "name_en": "Exchange rates",
+      "name_pl": "Kursy walut",
+      "csa_code": "20306",
+      "sort": 1
+    }
+  ],
+  "sources": [
+    {
+      "source_key": "eurostat",
+      "register_id": "GL-001",
+      "name_pl": "Eurostat",
+      "name_en": "Eurostat",
+      "publisher": "European Commission",
+      "family": "cube",
+      "block_kind": "dataset",
+      "provider_type": "international-public",
+      "licence_key": "eurostat_reuse",
+      "url": "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction"
+    },
+    {
+      "source_key": "gus_bdl",
+      "register_id": "PLS-001",
+      "name_pl": "GUS Bank Danych Lokalnych",
+      "name_en": "GUS Local Data Bank",
+      "publisher": "GUS",
+      "family": "cube",
+      "block_kind": "subgroup",
+      "provider_type": "national-public",
+      "licence_key": "cc_by_4_0_gus",
+      "url": "https://api.stat.gov.pl/Home/BdlApi"
+    },
+    {
+      "source_key": "gus_dbw",
+      "register_id": "PLS-002",
+      "name_pl": "GUS Dziedzinowe Bazy Wiedzy",
+      "name_en": "GUS Knowledge Databases",
+      "publisher": "GUS",
+      "family": "cube",
+      "block_kind": "file (indicator × section × presentation × periodicity × year)",
+      "provider_type": "national-public",
+      "licence_key": "cc_by_4_0_gus",
+      "url": "https://api.stat.gov.pl/Home/DBWApi?lang=en"
+    },
+    {
+      "source_key": "world_bank_wdi",
+      "register_id": "GL-005",
+      "name_pl": "World Bank WDI",
+      "name_en": "World Bank World Development Indicators",
+      "publisher": "World Bank",
+      "family": "cube",
+      "block_kind": "indicator",
+      "provider_type": "international-public",
+      "licence_key": "cc_by_4_0_world_bank",
+      "url": "https://datatopics.worldbank.org/world-development-indicators/"
+    },
+    {
+      "source_key": "nbp",
+      "register_id": "PLG-001",
+      "name_pl": "NBP kursy walut i cena złota",
+      "name_en": "NBP exchange rates and gold price",
+      "publisher": "Narodowy Bank Polski",
+      "family": "cube",
+      "block_kind": "table",
+      "provider_type": "national-public",
+      "licence_key": "unresolved",
+      "url": "https://api.nbp.pl/en.html"
+    },
+    {
+      "source_key": "nbp_interest_rates",
+      "register_id": "PLG-006",
+      "name_pl": "NBP stopy procentowe",
+      "name_en": "NBP interest rates",
+      "publisher": "Narodowy Bank Polski",
+      "family": "cube",
+      "block_kind": "file",
+      "provider_type": "national-public",
+      "licence_key": "unresolved",
+      "url": "https://nbp.pl/en/monetary-policy/mpc-decisions/basic-interest-rates/"
+    },
+    {
+      "source_key": "gleif",
+      "register_id": "CD-015",
+      "name_pl": "GLEIF",
+      "name_en": "GLEIF LEI golden copy",
+      "publisher": "GLEIF",
+      "family": "registry",
+      "block_kind": "file",
+      "provider_type": "international-public",
+      "licence_key": "cc0_gleif",
+      "url": "https://www.gleif.org/en/lei-data/access-and-use-lei-data"
+    },
+    {
+      "source_key": "opendata_org",
+      "register_id": "EX-005",
+      "name_pl": "OpenData ODO Senzing",
+      "name_en": "OpenData organisations, people, locations",
+      "publisher": "OpenData",
+      "family": "registry",
+      "block_kind": "snapshot member",
+      "provider_type": "unknown",
+      "licence_key": "unresolved",
+      "url": ""
+    },
+    {
+      "source_key": "mf_biala_lista",
+      "register_id": "PLG-011",
+      "name_pl": "MF biała lista VAT",
+      "name_en": "MF VAT white list (flat file)",
+      "publisher": "Ministerstwo Finansów",
+      "family": "lookup",
+      "block_kind": "file",
+      "provider_type": "national-public",
+      "licence_key": "mf_flat_file",
+      "url": "https://www.podatki.gov.pl/wykaz-podatnikow-vat-wyszukiwarka"
+    },
+    {
+      "source_key": "mf_treasury_debt",
+      "register_id": "PLG-008",
+      "name_pl": "MF szeregi czasowe długu Skarbu Państwa",
+      "name_en": "MF State Treasury debt time series",
+      "publisher": "Ministerstwo Finansów",
+      "family": "cube",
+      "block_kind": "file",
+      "provider_type": "national-public",
+      "licence_key": "gov_pl_terms",
+      "url": "https://www.gov.pl/web/finanse/szeregiczasowe"
+    },
+    {
+      "source_key": "mf_public_debt",
+      "register_id": "PLG-009",
+      "name_pl": "MF zadłużenie sektora finansów publicznych",
+      "name_en": "MF public finance sector debt",
+      "publisher": "Ministerstwo Finansów",
+      "family": "cube",
+      "block_kind": "file",
+      "provider_type": "national-public",
+      "licence_key": "gov_pl_terms",
+      "url": "https://www.gov.pl/web/finanse/szeregiczasowe"
+    },
+    {
+      "source_key": "mf_state_budget",
+      "register_id": "PLG-007",
+      "name_pl": "MF sprawozdania z wykonania budżetu państwa",
+      "name_en": "MF state budget execution reports",
+      "publisher": "Ministerstwo Finansów",
+      "family": "cube",
+      "block_kind": "file",
+      "provider_type": "national-public",
+      "licence_key": "gov_pl_terms",
+      "url": "https://www.gov.pl/web/finanse/budzet-panstwa"
+    },
+    {
+      "source_key": "gus_teryt",
+      "register_id": "PLS-007",
+      "name_pl": "GUS TERYT",
+      "name_en": "GUS TERYT register",
+      "publisher": "GUS",
+      "family": "reference",
+      "block_kind": "file",
+      "provider_type": "national-public",
+      "licence_key": "open_data_act_teryt",
+      "url": "https://eteryt.stat.gov.pl/eteryt/rejestr_teryt/udostepnianie_danych/baza_teryt/baza_teryt.aspx"
+    },
+    {
+      "source_key": "gugik_prg",
+      "register_id": "PL-ENV-001",
+      "name_pl": "GUGiK PRG",
+      "name_en": "GUGiK state register of boundaries",
+      "publisher": "GUGiK",
+      "family": "reference",
+      "block_kind": "file",
+      "provider_type": "national-public",
+      "licence_key": "free_use_prg",
+      "url": "https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl"
+    },
+    {
+      "source_key": "un_wpp",
+      "register_id": "GL-039",
+      "name_pl": "ONZ World Population Prospects",
+      "name_en": "UN World Population Prospects",
+      "publisher": "United Nations, Population Division",
+      "family": "cube",
+      "block_kind": "file",
+      "provider_type": "international-public",
+      "licence_key": "cc_by_3_0_igo_un_wpp",
+      "url": "https://population.un.org/wpp/"
+    },
+    {
+      "source_key": "world_bank_findex",
+      "register_id": "GL-009",
+      "name_pl": "Bank Światowy Global Findex",
+      "name_en": "World Bank Global Findex Database",
+      "publisher": "World Bank",
+      "family": "cube",
+      "block_kind": "file",
+      "provider_type": "international-public",
+      "licence_key": "cc_by_4_0_world_bank_findex",
+      "url": "https://www.worldbank.org/en/publication/globalfindex"
+    },
+    {
+      "source_key": "world_bank_wgi",
+      "register_id": "GL-008",
+      "name_pl": "Bank Światowy WGI",
+      "name_en": "World Bank Worldwide Governance Indicators",
+      "publisher": "World Bank",
+      "family": "cube",
+      "block_kind": "file",
+      "provider_type": "international-public",
+      "licence_key": "cc_by_4_0_world_bank_wgi",
+      "url": "https://www.worldbank.org/en/publication/worldwide-governance-indicators"
+    },
+    {
+      "source_key": "unctad",
+      "register_id": "GL-021",
+      "name_pl": "UNCTAD Data Hub",
+      "name_en": "UNCTAD Data Hub (UNCTADstat)",
+      "publisher": "UN Trade and Development (UNCTAD)",
+      "family": "cube",
+      "block_kind": "file",
+      "provider_type": "international-public",
+      "licence_key": "cc_by_3_0_igo_unctad",
+      "url": "https://unctadstat.unctad.org/"
+    },
+    {
+      "source_key": "ecb",
+      "register_id": "GL-016",
+      "name_pl": "EBC Data Portal",
+      "name_en": "ECB Data Portal",
+      "publisher": "European Central Bank",
+      "family": "cube",
+      "block_kind": "file",
+      "provider_type": "international-public",
+      "licence_key": "ecb_statistics_reuse",
+      "url": "https://data.ecb.europa.eu/"
+    },
+    {
+      "source_key": "world_bank_icp",
+      "register_id": "GL-011",
+      "name_pl": "Bank Światowy ICP",
+      "name_en": "World Bank International Comparison Program",
+      "publisher": "World Bank",
+      "family": "cube",
+      "block_kind": "file",
+      "provider_type": "international-public",
+      "licence_key": "cc_by_4_0_world_bank_icp",
+      "url": "https://www.worldbank.org/en/programs/icp"
+    },
+    {
+      "source_key": "krus",
+      "register_id": "PLS-011",
+      "name_pl": "KRUS podstawowe dane statystyczne",
+      "name_en": "KRUS basic benefit statistics",
+      "publisher": "KRUS",
+      "family": "cube",
+      "block_kind": "file",
+      "provider_type": "national-public",
+      "licence_key": "gov_pl_terms_krus",
+      "url": "https://www.gov.pl/web/krus/podstawowe-dane-statystyczne-z-zakresu-swiadczeniobiorcow"
+    },
+    {
+      "source_key": "world_bank_ids",
+      "register_id": "GL-007",
+      "name_pl": "Bank Światowy IDS",
+      "name_en": "World Bank International Debt Statistics",
+      "publisher": "World Bank",
+      "family": "cube",
+      "block_kind": "file",
+      "provider_type": "international-public",
+      "licence_key": "cc_by_4_0_world_bank_ids",
+      "url": "https://www.worldbank.org/en/programs/debt-statistics/ids"
+    },
+    {
+      "source_key": "oecd",
+      "register_id": "GL-003",
+      "name_pl": "OECD Data Explorer",
+      "name_en": "OECD Data Explorer",
+      "publisher": "OECD",
+      "family": "cube",
+      "block_kind": "file",
+      "provider_type": "international-public",
+      "licence_key": "oecd_terms",
+      "url": "https://www.oecd.org/en/data/insights/data-explainers/2024/09/api.html"
+    },
+    {
+      "source_key": "news_feeds",
+      "register_id": "TP-001",
+      "name_pl": "Kanały RSS serwisów informacyjnych",
+      "name_en": "News headline feeds (RSS/Atom)",
+      "publisher": "Bankier.pl, Money.pl, Business Insider Polska, Rzeczpospolita, Puls Biznesu, Forsal, Notes from Poland",
+      "family": "signal",
+      "block_kind": "feed",
+      "provider_type": "commercial",
+      "licence_key": "press_headline_link",
+      "url": "https://github.com/zohelo/zohelo-data/blob/main/docs/topics.md"
+    },
+    {
+      "source_key": "wikimedia_pageviews",
+      "register_id": "CD-025",
+      "name_pl": "Wikimedia: odsłony artykułów",
+      "name_en": "Wikimedia pageviews",
+      "publisher": "Wikimedia Foundation",
+      "family": "signal",
+      "block_kind": "file",
+      "provider_type": "community-academic",
+      "licence_key": "cc0_wikimedia_pageviews",
+      "url": "https://doc.wikimedia.org/generated-data-platform/aqs/analytics-api/reference/page-views.html"
+    },
+    {
+      "source_key": "gdelt",
+      "register_id": "CD-030",
+      "name_pl": "GDELT: wolumen i wydźwięk wiadomości",
+      "name_en": "GDELT news volume and tone",
+      "publisher": "GDELT Project",
+      "family": "signal",
+      "block_kind": "file",
+      "provider_type": "community-academic",
+      "licence_key": "gdelt_terms",
+      "url": "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/"
+    },
+    {
+      "source_key": "release_calendars",
+      "register_id": "TP-010",
+      "name_pl": "Kalendarze publikacji statystyk",
+      "name_en": "Official release calendars",
+      "publisher": "Eurostat, GUS, ECB",
+      "family": "signal",
+      "block_kind": "file",
+      "provider_type": "international-public",
+      "licence_key": "eurostat_reuse",
+      "url": "https://ec.europa.eu/eurostat/news/euro-indicators/release-calendar"
+    }
+  ],
+  "licences": [
+    {
+      "licence_key": "eurostat_reuse",
+      "name": "Eurostat reuse policy (Commission Decision 2011/833/EU, CC BY 4.0)",
+      "url": "https://ec.europa.eu/eurostat/web/main/help/copyright-notice",
+      "attribution_text": "Source: Eurostat",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "cc_by_4_0_world_bank",
+      "name": "CC BY 4.0 (World Bank)",
+      "url": "https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators",
+      "attribution_text": "Source: World Bank, World Development Indicators",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "cc_by_4_0_gus",
+      "name": "CC BY 4.0 (GUS)",
+      "url": "https://creativecommons.org/licenses/by/4.0/",
+      "attribution_text": "Źródło: GUS / Source: Statistics Poland",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "open_data_act_teryt",
+      "name": "Open Data Act re-use (GUS TERYT)",
+      "url": "https://eteryt.stat.gov.pl/eTeryt/rejestr_teryt/udostepnianie_danych/formy_i_zasady_udostepniania/formy_i_zasady_udostepniania.aspx",
+      "attribution_text": "Źródło: GUS, TERYT",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "free_use_prg",
+      "name": "Free use (GUGiK PRG)",
+      "url": "https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/",
+      "attribution_text": "Źródło: GUGiK, PRG",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "cc0_gleif",
+      "name": "CC0 1.0 (GLEIF)",
+      "url": "https://www.gleif.org/en/meta/lei-data-terms-of-use",
+      "attribution_text": "Source: GLEIF",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "gov_pl_terms",
+      "name": "gov.pl terms (CC BY-SA 4.0 for text; official materials free to use)",
+      "url": "https://www.gov.pl/web/gov/prawa-autorskie",
+      "attribution_text": "Źródło: Ministerstwo Finansów / Source: Ministry of Finance",
+      "commercial_ok": true,
+      "share_alike": true
+    },
+    {
+      "licence_key": "mf_flat_file",
+      "name": "MF VAT list flat file (republication not stated)",
+      "url": "https://www.podatki.gov.pl/vat/bezpieczna-transakcja/wykaz-podatnikow-vat/plik-plaski/",
+      "attribution_text": "Źródło: Ministerstwo Finansów, Wykaz podatników VAT",
+      "commercial_ok": false,
+      "share_alike": false
+    },
+    {
+      "licence_key": "cc_by_3_0_igo_un_wpp",
+      "name": "CC BY 3.0 IGO (UN World Population Prospects)",
+      "url": "http://creativecommons.org/licenses/by/3.0/igo/",
+      "attribution_text": "Source: United Nations, Department of Economic and Social Affairs, Population Division (2024). World Population Prospects 2024, Online Edition.",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "cc_by_4_0_world_bank_findex",
+      "name": "CC BY 4.0 (World Bank Global Findex)",
+      "url": "https://datacatalog.worldbank.org/search/dataset/0039935",
+      "attribution_text": "Source: World Bank, Global Findex Database",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "cc_by_4_0_world_bank_wgi",
+      "name": "CC BY 4.0 (World Bank WGI)",
+      "url": "https://datacatalog.worldbank.org/search/dataset/0038026",
+      "attribution_text": "Source: World Bank, Worldwide Governance Indicators",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "cc_by_3_0_igo_unctad",
+      "name": "CC BY 3.0 IGO (UNCTAD Data Hub)",
+      "url": "http://creativecommons.org/licenses/by/3.0/igo/",
+      "attribution_text": "Source: United Nations Trade and Development (UNCTAD) Data Hub, unctadstat.unctad.org",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "ecb_statistics_reuse",
+      "name": "ECB statistics usage policy",
+      "url": "https://www.ecb.europa.eu/stats/ecb_statistics/governance_and_quality_framework/html/usage_policy.en.html",
+      "attribution_text": "Source: ECB statistics",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "cc_by_4_0_world_bank_icp",
+      "name": "CC BY 4.0 (World Bank ICP)",
+      "url": "https://datacatalog.worldbank.org/search/dataset/0066092/international-comparison-program-2021",
+      "attribution_text": "Source: World Bank, International Comparison Program (ICP) 2021",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "gov_pl_terms_krus",
+      "name": "gov.pl terms (official materials free to use; KRUS)",
+      "url": "https://www.gov.pl/web/gov/prawa-autorskie",
+      "attribution_text": "Źródło: KRUS / Source: KRUS (Agricultural Social Insurance Fund)",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "cc_by_4_0_world_bank_ids",
+      "name": "CC BY 4.0 (World Bank IDS)",
+      "url": "https://datacatalog.worldbank.org/search/dataset/0038015/international-debt-statistics",
+      "attribution_text": "Source: World Bank, International Debt Statistics",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "unresolved",
+      "name": "Terms not established",
+      "url": "https://github.com/zohelo/zohelo-data/blob/main/ingestion/register.yaml",
+      "attribution_text": "Source: see the source register",
+      "commercial_ok": false,
+      "share_alike": false
+    },
+    {
+      "licence_key": "oecd_terms",
+      "name": "OECD Terms and Conditions (Data)",
+      "url": "https://www.oecd.org/en/about/terms-conditions.html",
+      "attribution_text": "Source: OECD, OECD Data Explorer",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "press_headline_link",
+      "name": "Headline and link only (press publishers' right, EU directive 2019/790 art. 15)",
+      "url": "https://github.com/zohelo/zohelo-data/blob/main/docs/topics.md",
+      "attribution_text": "Source: the outlet named beside each headline (link to the article)",
+      "commercial_ok": false,
+      "share_alike": false
+    },
+    {
+      "licence_key": "cc0_wikimedia_pageviews",
+      "name": "CC0 1.0 (Wikimedia pageview statistics)",
+      "url": "https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use",
+      "attribution_text": "Source: Wikimedia Foundation, pageviews",
+      "commercial_ok": true,
+      "share_alike": false
+    },
+    {
+      "licence_key": "gdelt_terms",
+      "name": "GDELT Project terms of use (unrestricted use with citation)",
+      "url": "https://www.gdeltproject.org/about.html#termsofuse",
+      "attribution_text": "Source: The GDELT Project, https://www.gdeltproject.org/",
+      "commercial_ok": true,
+      "share_alike": false
+    }
+  ]
+}
