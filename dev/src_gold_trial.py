@@ -25,9 +25,16 @@ def build() -> None:
     started = time.monotonic()
     run = subprocess.run(
         ["dbt", "build", "--target", "prod", "--select", "path:models/gold", "path:seeds",
-         "--exclude", "path:models/gold/topics", "--threads", "4", "--vars", f"{{gold_schema: {NS}}}"],
+         "--exclude", "path:models/gold/topics", "--threads", "2", "--vars", f"{{gold_schema: {NS}}}"],
         cwd=ROOT / "warehouse", env=env, capture_output=True, text=True,
     )
+    for wait in (90, 240, 480):  # catalog HTTP 429: retry the failed and skipped nodes (warehouse.yaml waits)
+        if run.returncode == 0 or "429" not in run.stdout:
+            break
+        annotate("notice", "trial retry", {"wait_s": wait})
+        time.sleep(wait)
+        run = subprocess.run(["dbt", "retry", "--threads", "1"], cwd=ROOT / "warehouse", env=env,
+                             capture_output=True, text=True)
     results = json.loads((ROOT / "warehouse" / "target" / "run_results.json").read_text())["results"]
     bad = [(r["unique_id"].split(".")[-1][:60], r["status"], (r.get("message") or "")[:200])
            for r in results if r["status"] not in ("success", "pass")]
@@ -103,14 +110,23 @@ def drop() -> None:
     for i in range(0, len(text), 3500):
         annotate("notice", f"trial rows [{i // 3500 + 1}]", text[i:i + 3500])
     for ident in cat.list_tables(NS):
+        for attempt in range(6):
+            try:
+                cat.drop_table(ident)
+                failed.pop(ident[-1], None)
+                break
+            except Exception as exc:  # noqa: BLE001 - rate limits: back off, report what is left
+                failed[ident[-1]] = str(exc)[:100]
+                time.sleep(10 * (attempt + 1))
+        time.sleep(1)
+    for attempt in range(6):
         try:
-            cat.drop_table(ident)
-        except Exception as exc:  # noqa: BLE001 - report, keep going
-            failed[ident[-1]] = str(exc)[:100]
-    try:
-        cat.drop_namespace(NS)
-    except Exception as exc:  # noqa: BLE001
-        failed["namespace"] = str(exc)[:100]
+            cat.drop_namespace(NS)
+            failed.pop("namespace", None)
+            break
+        except Exception as exc:  # noqa: BLE001
+            failed["namespace"] = str(exc)[:100]
+            time.sleep(10 * (attempt + 1))
     annotate("notice" if not failed else "warning", "trial dropped", {"tables": len(rows), "failed": failed})
 
 
