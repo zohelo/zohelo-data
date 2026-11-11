@@ -9,8 +9,9 @@ description: UNCTAD Data Hub (UNCTADstat) — bulk CSV file (7z) per selected ta
 # is the primary compiler (FDI, trade in goods and services, digital services, commodity prices,
 # maritime); GDP, population, CPI and exchange rates are left to WDI, WPP, ECB and NBP, and the
 # large creative-economy and bilateral-services tables (335 MB and 86 MB compressed) are out until a
-# model needs them. CC BY 3.0 IGO (register GL-021). A schedule (stage 4) comes after the Dev trial
-# (#2399).
+# model needs them. CC BY 3.0 IGO (register GL-021). Proven by the Dev trial (#2399); every table is one CSV in
+# the same shape (Dev probes 43084525257, 43084992517): time field, code/label pairs, measures with footnote and
+# missing-value columns.
 extraction:
   kind: bulk_file
   bulk_file:
@@ -54,17 +55,23 @@ extraction:
   initial: bulk
   production: snapshot                  # each archive is the complete table
   incremental_policy: changed_since_last  # SHA-256 (no Last-Modified from the server)
-  schedule: []
+  schedule: # UTC; tables are revised a few times a year (commodity prices monthly); weekly check (Tuesday 05:55), unchanged bytes skipped
+    - {cron: "55 5 * * 2", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/unctad/
 archive_policy:
   move: true
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
-bronze: []
-silver: []
-gold: []
+bronze: [bronze.unctad_rows, bronze.unctad_rejected_files]
+silver: [silver.unctad_fdi_flows_stock, silver.unctad_merchandise_trade, silver.unctad_services_trade,
+         silver.unctad_digital_services_trade, silver.unctad_commodity_prices, silver.unctad_liner_shipping_connectivity,
+         silver.unctad_merchant_fleet, silver.unctad_seaborne_trade, silver.unctad_port_calls]
+gold: [gold.build_unctad, gold.metrics_exports_goods, gold.metrics_exports_services]
 
-refresh: {mode: full}
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): nine tables, 1.24 million rows in all, the largest 807,733 (services by
+# category); each Silver model below the ~1M full-rebuild policy; rebuilt in full.
+refresh: {mode: full, decided: "D32 + #UNCTAD_ISSUE"}
 
-activities: [landing.inspect, landing.extract, landing.verify]
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

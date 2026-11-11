@@ -178,6 +178,26 @@ wdi as (
     from {{ ref('wdi_countries') }} as w
     left join geo as g on g.level_name = 'country' and w.iso2_code = g.iso2
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
+),
+
+-- UNCTAD: economies by UNCTAD code (M49 with UNCTAD variants, France 251) from poc_unctad_areas: the EU27 members,
+-- 3412 European Union (2020 …) = EU27_2020, 0000 World. Other economies have no ISO code in the tables (_X); the
+-- build stage builds only the listed areas.
+unctad_areas as ({{ poc_unctad_areas() }}),
+
+unctad as (
+    select
+        'unctad' as source_system,
+        c.economy as source_code,
+        coalesce(g.geography_key, '_X') as geography_key
+    from (
+        select distinct economy from {{ ref('unctad_fdi_flows_stock') }}
+        union
+        select distinct economy from {{ ref('unctad_merchandise_trade') }}
+    ) as c
+    left join unctad_areas as a on c.economy = a.economy
+    left join geo as g on a.candidate_key = g.geography_key
+    where c.economy is not null
 )
 
 select
@@ -195,6 +215,8 @@ from (
     select * from dbw
     union all
     select * from wdi
+    union all
+    select * from unctad
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

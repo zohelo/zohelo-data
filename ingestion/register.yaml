@@ -986,7 +986,8 @@ sources:
   short_name: UNCTAD Data Hub
   provider: UN Trade and Development (UNCTAD)
   source_system: unctad
-  status: approved
+  current: true
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -994,14 +995,19 @@ sources:
   domains: [trade, investment, shipping, development, digital-economy]
   entities: [country, country-group]
   granularity: Indicator/economy/period with table-specific breakdowns; some bilateral or product datasets.
-  coverage: More than 150 indicators for almost all economies; start/frequency vary by table.
+  coverage: 'More than 150 indicators for almost all economies; start/frequency vary by table. Landed tables (Dev
+    probes 43084525257, 43084992517, 11 Nov 2026): FDI flows and stocks 1990-2025 (36,950 rows), merchandise trade
+    1948-2025 (46,108), services trade by category 2005-2025 (807,733), digitally deliverable services 2010-2025,
+    commodity prices monthly from 1995, port liner shipping connectivity quarterly from 2006, merchant fleet from 1980,
+    seaborne trade 2000-2024, port calls 2018-2023. Economy codes M49 with UNCTAD variants (France 251); EU group 3412
+    "European Union (2020 …)".'
   access:
-    endpoint: https://unctadstat.unctad.org/
+    endpoint: https://unctadstat-api.unctad.org/bulkdownload/
     kind: bulk_file
     interfaces: [HTML, download files]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No explicit numeric quota found; nine archives (14 MB of 7z), one request each, weekly.
   licence:
     status: open-conditional
     notes: 'Terms: CC BY 3.0 IGO, https://unctadstat.unctad.org/EN/About.html ("All materials provided on this website
@@ -1019,11 +1025,10 @@ sources:
     overlap: Often uses UN Comtrade, WTO and national data; preserve table citation and upstream lineage.
   research:
     priority: review-next
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
     - 'Check third-party terms per selected table'
-    - 'Confirm machine-download stability'
     references:
     - https://unctadstat.unctad.org/
     - https://unctadstat.unctad.org/EN/IndicatorsExplained.html
