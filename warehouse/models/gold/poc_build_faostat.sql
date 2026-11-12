@@ -34,7 +34,11 @@ select
     cast(null as varchar) as sex_code,
     true as is_total,
     o.value,
-    case o.flag when 'E' then 'estimated' when 'I' then 'estimated' when 'B' then 'break' when 'P' then 'provisional'
+    case o.flag
+        when 'E' then 'estimated'
+        when 'I' then 'estimated'
+        when 'B' then 'break'
+        when 'P' then 'provisional'
         else 'ok'
     end as observation_status_key,
     o.source_version,
