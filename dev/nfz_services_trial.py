@@ -155,6 +155,18 @@ def bronze_profile(con) -> dict:
                                           "count(*) c from bronze_basic where record = 'value' group by all) group by 1"),
         "per_catalog": rows(con, "select catalog, count(distinct entity), count(distinct entity || coalesce(table_id, '')) "
                                  "filter (where table_id is not null), count(*) from bronze_basic group by 1 order by 1"),
+        "dup_rows": rows(con, "select b.entity, b.year, b.period_from, b.table_id, b.scope, b.branch, b.source_row_number, "
+                              "b.number_of_patients, b.number_of_hospitalizations, b.percentage, b.duration_median from bronze_basic b "
+                              "join (select entity, table_id, scope, branch from bronze_basic where record = 'value' group by all "
+                              "having count(*) > 1) d on b.entity = d.entity and b.table_id = d.table_id and b.scope = d.scope "
+                              "and b.branch is not distinct from d.branch order by all", 20),
+        "zero_rows_by_scope": rows(con, "select scope, count(*) from bronze_basic where number_of_hospitalizations = '0' group by 1"),
+        "zero_rows_patterns": rows(con, "select number_of_patients, ratio_of_rehospitalizations, percentage, percentage_of_sections, "
+                                        "duration_median, duration_mode, average_value_of_hospitalization, average_value_of_drg, count(*) "
+                                        "from bronze_basic where number_of_hospitalizations = '0' group by all order by count(*) desc limit 10"),
+        "zero_text_by_column": dict(zip(VALUE_COLUMNS, con.execute("select " + ", ".join(
+            f"count(*) filter (where {c} in ('0', '0.0'))" for c in VALUE_COLUMNS) + " from bronze_basic").fetchone())),
+        "median_zero_with_stays": one(con, "select count(*) from bronze_basic where duration_median = '0' and number_of_hospitalizations <> '0'"),
         "benefits_rows": one(con, "select count(*) from bronze_benefits"),
         "benefits_by_catalog": rows(con, "select catalog, count(*), count(distinct benefit_code) from bronze_benefits group by 1 order by 1"),
     }
@@ -180,7 +192,9 @@ def schema_tests(con, yml: str, model: str, table: str) -> dict:
     for t in m.get("tests", []):
         if "unique" in t:
             expr = t["unique"]["column_name"]
-            results["unique"] = one(con, f"select count(*) from (select {expr} k from {table} group by 1 having count(*) > 1)")
+            where = (t["unique"].get("config") or {}).get("where") or "true"
+            results[f"unique {expr[:40]} where {where}"] = one(
+                con, f"select count(*) from (select {expr} k from {table} where {where} group by 1 having count(*) > 1)")
     for col in m.get("columns", []):
         for t in col.get("tests", []):
             if t == "not_null":
@@ -205,6 +219,8 @@ def silver(con) -> dict:
                     "tests": schema_tests(con, "warehouse/models/silver/nfz_services/_nfz_services.yml", model, model)}
     test = render("warehouse/tests/nfz_services_tables_in_silver.sql", {})
     s["test nfz_services_tables_in_silver"] = one(con, f"select count(*) from ({test})")
+    test = render("warehouse/tests/nfz_services_repeated_areas.sql", {})
+    s["test nfz_services_repeated_areas (warn)"] = one(con, f"select count(*) from ({test})")
     b = "nfz_services_basic_data"
     s["profile"] = {
         "benefits": one(con, f"select count(distinct entity) from {b}"),
@@ -217,6 +233,13 @@ def silver(con) -> dict:
         "nulls": rows(con, f"select count(*) filter (where number_of_hospitalizations is null), count(*) filter (where average_value_of_hospitalization_pln is null), "
                            f"count(*) filter (where percentage_of_sections is null), count(*) from {b}"),
         "avg_value_published_years": rows(con, f"select min(year), max(year) from {b} where average_value_of_hospitalization_pln is not null"),
+        "without_hospitalisations": one(con, f"select count(*) from {b} where without_hospitalisations"),
+        "repeated_area_rows": rows(con, f"select entity, year, table_id, area_code, area_records, source_row_number, number_of_hospitalizations "
+                                        f"from {b} where area_records > 1 order by all", 20),
+        "nonnull_measures_per_row": one(con, f"select avg(" + " + ".join(f"({c} is not null)::int" for c in (
+            "number_of_patients", "number_of_hospitalizations", "ratio_of_rehospitalizations", "percentage", "percentage_of_sections",
+            "duration_median_days", "duration_mode_days", "average_value_of_hospitalization_pln", "average_value_of_hospitalization_points",
+            "average_value_of_drg_pln", "average_value_of_drg_points")) + f")::decimal(6,3) from {b} where area_records = 1"),
         "benefits_not_in_dictionary": one(con, f"select count(*) from (select distinct catalog, benefit_code from {b}) s "
                                                f"anti join nfz_services_benefits d using (catalog, benefit_code)"),
     }
