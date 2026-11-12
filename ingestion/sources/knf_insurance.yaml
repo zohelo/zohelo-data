@@ -1,0 +1,31 @@
+source_system: knf_insurance
+description: "KNF (Komisja Nadzoru Finansowego) insurance and pension statistics — release workbooks (XLSX) of the statistics listing: OFE monthly data, the quarterly insurance market bulletin (parts A-D), IKE and IKZE yearly"
+
+# Extraction strategy (docs/landing.md). Register PLG-018. Bulk feature: KNF publishes each release as its own article of
+# the statistics listing (https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne, paged, 421 articles on
+# 12 Nov 2026) with one to four .xlsx files under /knf/pl/komponenty/img/; the file URL changes per release, so the
+# links are found at run time: listing → article (title names series and period) → .xlsx
+# (ingestion/to_landing/knf_insurance/). Entity = one file of one release (ofe_YYYY_MM, bulletin_YYYY_qN_<part>,
+# ike_YYYY, ikze_YYYY); version = Last-Modified (KNF sends none: download time), written only when the SHA-256
+# changed. Restart unit: one release file. Releases from 2023 on (FIRST_YEAR).
+extraction:
+  initial: bulk
+  production: snapshot                  # each file is one release as published; a replaced file lands as a new version
+  incremental_policy: changed_since_last  # missing releases, plus the newest release of each series (SHA-256)
+  schedule: # UTC; OFE monthly by the 20th of the next month; insurance bulletin quarterly, about 3 months after the quarter (2/2026: 29 Sep); IKE/IKZE yearly
+    - {cron: "40 6 6,23 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/knf_insurance/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.knf_insurance_cells, bronze.knf_insurance_rejected_files]
+silver: [silver.knf_insurance_observations]
+gold: [gold.build_knf_insurance]
+
+bronze_latest_only: true   # policy #822/#845: the newest copy of each release file; every release is its own entity
+# Refresh policy for all layers (D32): a few small workbooks a month (30-70 kB each), small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2871"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
