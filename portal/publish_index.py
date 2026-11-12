@@ -8,6 +8,12 @@ Tables the R2 Data Catalog places in its default location (``__r2_data_catalog/<
 every dbt-built Silver and Gold table) are shown under their layer folder by table name
 (``04_gold/<table>/...``); downloads still use the real key (#2179). The catalog's own
 folder is otherwise not listed.
+
+A concurrent ``silver_gold.build`` swaps tables while this job runs (dbt creates
+``<table>__dbt_tmp``, renames the old table to ``__dbt_backup``, renames, drops), so a listed table
+can be gone by the time it is loaded. dbt's temporary and backup tables are never shown; a listed
+table that is still not found after one short re-check is skipped with a warning annotation and the
+next refresh picks it up (#2825). Any other error fails the job.
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -17,6 +23,7 @@ import json
 import mimetypes
 import os
 from pathlib import PurePosixPath
+import time
 
 import boto3
 from botocore.config import Config
@@ -33,24 +40,60 @@ EXCLUDED_LAKEHOUSE_PREFIXES = (
 )
 # Catalog namespaces shown in the portal and the layer folder their tables appear in.
 NAMESPACE_LAYERS = {"bronze": "02_bronze", "silver": "03_silver", "gold": "04_gold"}
+# Intermediate tables dbt creates and drops while it swaps a table in (silver_gold.build).
+DBT_SWAP_SUFFIXES = ("__dbt_tmp", "__dbt_backup")
+# Wait before re-checking a listed table that was not found (a swap takes a few seconds).
+SWAP_RECHECK_SECONDS = 15
 
 
-def catalog_folders():
+def load_listed(cat, identifier, retry, recheck_seconds=SWAP_RECHECK_SECONDS):
+    """Load a listed table; None when it is still not found after one re-check (dropped or mid-swap)."""
+    from pyiceberg.exceptions import NoSuchTableError
+
+    def load():
+        return retry(lambda: cat.load_table(identifier), f"load {'.'.join(identifier)}")
+
+    try:
+        return load()
+    except NoSuchTableError:
+        time.sleep(recheck_seconds)
+    try:
+        return load()
+    except NoSuchTableError:
+        return None
+
+
+def catalog_folders(cat=None, recheck_seconds=SWAP_RECHECK_SECONDS):
     """Bucket key prefix of every catalog-located table in a shown namespace → its display folder."""
     from urllib.parse import urlsplit
 
     from ingestion.common.bronze_files import retry
-    from ingestion.common.r2 import catalog
+    from ingestion.common.report import annotate
 
-    cat = catalog()
+    if cat is None:
+        from ingestion.common.r2 import catalog
+
+        cat = catalog()
     folders = {}
+    skipped = []
     for namespace, layer in NAMESPACE_LAYERS.items():
         identifiers = retry(lambda namespace=namespace: cat.list_tables(namespace), f"list {namespace}")
         for identifier in identifiers:
-            table = retry(lambda identifier=identifier: cat.load_table(identifier), f"load {identifier}")
+            if identifier[-1].endswith(DBT_SWAP_SUFFIXES):
+                continue
+            table = load_listed(cat, identifier, retry, recheck_seconds)
+            if table is None:
+                skipped.append(".".join(identifier))
+                continue
             location = urlsplit(table.location()).path.strip("/") + "/"
             if location.startswith(CATALOG_PREFIX):
                 folders[location] = f"{layer}/{identifier[-1]}/"
+    if skipped:
+        annotate(
+            "warning",
+            "serving.refresh_index: tables skipped",
+            {"reason": "listed but not found after a re-check (concurrent build); next refresh", "tables": skipped},
+        )
     return folders
 
 
