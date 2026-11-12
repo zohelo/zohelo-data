@@ -62,10 +62,13 @@ def apply(
     temp_directory: str | None = None,
     source_view: str = "bronze",
     row_group_size: int = 1_000_000,
+    prepare: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Run warehouse/entity/<model>.sql over one input file, or the files of one entity (local paths or
     s3:// URIs), read as the relation ``source_view``. The writer holds one row group per thread in
-    memory: wide rows need a smaller ``row_group_size``."""
+    memory: wide rows need a smaller ``row_group_size``. ``prepare`` (table name -> model) runs
+    other models first, in order, and keeps each result as a table the model can read: a small lookup
+    made from the input is then known to be small when the model's joins are planned."""
     sql = (MODELS / f"{model}.sql").read_text(encoding="utf-8")
     output = Path(output)
     if output.exists():
@@ -79,6 +82,9 @@ def apply(
         con.execute(f"CREATE VIEW {source_view} AS SELECT * FROM read_parquet([{files}])")
         for name, path in (lookups or {}).items():
             con.execute(f"CREATE VIEW {name} AS SELECT * FROM read_parquet('{str(path).replace(chr(39), '')}')")
+        for name, step in (prepare or {}).items():
+            step_sql = (MODELS / f"{step}.sql").read_text(encoding="utf-8")
+            con.execute(f"CREATE TEMP TABLE {name} AS {step_sql}")
         target = str(output).replace("'", "''")
         options = f"FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE {int(row_group_size)}"
         con.execute(f"COPY ({sql}) TO '{target}' ({options})")
