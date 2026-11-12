@@ -143,6 +143,9 @@ def main(argv) -> int:
                 ][:24],
             },
         )
+        show(con, "unmatched area labels", "select family, row_label, to_hex(encode(row_label)) hex, count(*) from silver "
+             "where area_code is null group by all order by all")
+        show(con, "payer rows", "select distinct entity, row_label from silver where family = 'payers_voiv' order by all", 60)
         show(con, "silver per family/measure", "select family, measure, frequency, unit_code, count(*) n, "
              "count(distinct area_code) areas, count(distinct breakdown_code) bds, min(period_label), max(period_label) "
              "from silver group by all order by all")
