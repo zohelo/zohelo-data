@@ -1,0 +1,25 @@
+version: 2
+models:
+  - name: unhcr_population
+    description: >-
+      UNHCR Refugee Statistics (CC BY 4.0 with UNHCR's supplemental terms) from bronze.unhcr_population: forcibly
+      displaced and stateless people (refugees, asylum seekers, returned refugees, IDPs of concern to UNHCR,
+      returned IDPs, stateless, others of concern, other people in need of international protection, host
+      community), end-of-year stocks in persons, for every country of asylum (entity population_by_asylum, origins
+      summed) and for Poland by country of origin (entity poland_by_origin). Grain: entity × year × coa × coo.
+      "-" is null, not 0. History and trial run in the PR.
+    tests:
+      - unique:
+          column_name: "entity || '|' || year || '|' || coa || '|' || coo"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: ['population_by_asylum', 'poland_by_origin']}}}]
+      - name: year
+        tests: [not_null]
+      - name: coa
+        tests: [not_null]
+      - name: coo
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source response (lineage to Landing/Archive).
+        tests: [not_null]
