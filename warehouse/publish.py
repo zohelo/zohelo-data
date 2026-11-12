@@ -181,34 +181,50 @@ DEFER_HOURS = 6
 
 
 def read_tables(
-    cat, wanted: list[tuple[str, str]], waited_for: set[tuple[str, str]], waits=BUILD_WAIT_SECONDS, scans=None
+    cat,
+    wanted: list[tuple[str, str]],
+    waited_for: set[tuple[str, str]],
+    waits=BUILD_WAIT_SECONDS,
+    scans=None,
+    never_empty=frozenset(),
 ):
-    """Read the (namespace, table) pairs in ``wanted``; returns ``(tables, missing)``.
+    """Read the (namespace, table) pairs in ``wanted``; returns ``(tables, missing, empty)``.
 
     Every table is read once (``scans``: pyiceberg scan arguments per pair, default the whole table). Those
     missing and in ``waited_for`` (they feed a file that is live) are read again after each wait, until none of
     them is missing or the waits are used up. A missing table that feeds no live file (not built yet) is not
-    waited for. A table that was read is not read again."""
+    waited for. A table that was read is not read again. A table in ``never_empty`` that is read with no rows
+    counts as missing (a seed between its create and its insert); ``empty`` names those among ``missing``."""
     from pyiceberg.exceptions import NoSuchTableError
 
     tables: dict[tuple[str, str], pa.Table] = {}
     pending = list(dict.fromkeys(wanted))
     not_waited: list[tuple[str, str]] = []
+    empty: set[tuple[str, str]] = set()
     for round_number, wait in enumerate((None, *waits)):
         if wait is not None:
             time.sleep(wait)
         still = []
         for key in pending:
             try:
-                tables[key] = gold(cat, *key, waits=(), **(scans or {}).get(key, {}))
+                table = gold(cat, *key, waits=(), **(scans or {}).get(key, {}))
             except NoSuchTableError:
+                empty.discard(key)
                 still.append(key)
+                continue
+            if key in never_empty and table.num_rows == 0:
+                empty.add(key)
+                still.append(key)
+                continue
+            empty.discard(key)
+            tables[key] = table
         if round_number == 0:
             not_waited = [key for key in still if key not in waited_for]
         pending = [key for key in still if key in waited_for]
         if not pending:
             break
-    return tables, not_waited + pending
+    missing = not_waited + pending
+    return tables, missing, sorted(empty & set(missing))
 
 
 def published_age_hours(client, prefix: str, now: datetime) -> float | None:
@@ -877,7 +893,8 @@ def preload(cat, client, prefix: str, namespace: str, measures, licensed: set[st
     and ``lost``: the tables that feed live files but are still missing after the waits of read_tables, each with
     what it feeds. A metrics table missing for a KPI that has no live file (not built yet) is not waited for and
     is not lost; the same holds for a catalog table (support_reads) without a live catalog/<name>.parquet. Every
-    other table of support_reads is always waited for."""
+    other table of support_reads is always waited for. A support table that is a seed with rows in the repository
+    and is read with no rows counts as missing (dbt creates a seed's table before it inserts the rows)."""
     from warehouse import publish_v2
 
     v1 = [
@@ -912,8 +929,15 @@ def preload(cat, client, prefix: str, namespace: str, measures, licensed: set[st
             feeds.setdefault(table, set()).add(f"v2 {entry['kpi_key']}")
             if entry["kpi_key"] in live_v2:
                 waited_for.add(table)
-    tables, missing = read_tables(cat, wanted, waited_for, scans={t: scan for t, (_fed, scan) in support.items()})
-    lost = {f"{ns}.{name}": sorted(feeds[(ns, name)]) for ns, name in missing if (ns, name) in waited_for}
+    seeds = {table for table in support if (PROJECT / "seeds" / f"{table[1]}.csv").exists() and seed(table[1])}
+    tables, missing, empty = read_tables(
+        cat, wanted, waited_for, scans={t: scan for t, (_fed, scan) in support.items()}, never_empty=seeds
+    )
+    lost = {
+        f"{ns}.{name}": sorted(feeds[(ns, name)]) + (["read with no rows"] if (ns, name) in empty else [])
+        for ns, name in missing
+        if (ns, name) in waited_for
+    }
     return {"tables": tables, "v2_only": v2_only, "lost": lost}
 
 
@@ -967,7 +991,7 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     preloaded = preload(cat, client, prefix, namespace, measures, licensed, v2)
     if preloaded.get("lost"):
         return deferred(client, prefix, preloaded["lost"], datetime.now(UTC))
-    read = preloaded["tables"]  # no catalog read after this line: every table below comes from it
+    read = preloaded["tables"]  # no catalog read after this line (v2 included): every table below comes from it
     checked_at = checked(read[COVERAGE])
     for kpi in seed("kpi"):
         kpi_key = kpi["kpi_key"]
