@@ -776,6 +776,22 @@ years (after the file's version year, Silver `is_projection`) are not built. Ref
 exception #2815. Terms: CC BY 4.0 with FAO's additional terms (no use for the promotion of a commercial
 enterprise), licence row `cc_by_4_0_fao`. Restart unit: one domain file.
 
+## UNdata (UN Statistical Yearbook tables)
+
+**Built (12 Nov 2026, register GL-017).** UNdata's legacy data-mart download handlers now return the
+UN System Data Commons page, so the maintained product is used: the UN Statistical Yearbook CSV tables
+linked from `https://data.un.org/Default.aspx` (`_Docs/SYB/CSV/SYB68_<table>_202511_<title>.csv`). The
+file names change per edition, so each entity finds its CSV link by table number (`url_from`); a copy is
+written only when the SHA-256 changed. 27 tables of one layout (title line, then
+`Region/Country/Area,,Year,Series,Value,Footnotes,Source`); five tables with extra columns (SYB 123,
+130, 176, 317, 330) are left out until modelled. The files are Windows-1252 with a few undefined bytes,
+decoded losslessly (Latin-1 plus the Windows-1252 0x80–0x9F characters). Bronze:
+`bronze.undata_syb_values` (rows as published). Silver: `silver.undata_syb_values` (M49 area code,
+year, series with its unit in the name, value without thousands separators): 126,703 rows, 1975–2025
+(Dev trial 43163356932). Each row cites its source agency. Terms: UNdata conditions of use (free reuse
+citing UNdata; commercial use not addressed), licence row `undata_terms` with `commercial_ok` false.
+Monthly check. Restart unit: one table.
+
 ## News headline feeds (`news_feeds`, topics)
 
 **Implemented (10 Nov 2026, register TP-001…TP-008, family J; topics layer O32, [topics.md](topics.md)).**
