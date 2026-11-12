@@ -1206,7 +1206,9 @@ sources:
     status: open-conditional
     notes: 'Terms: CC BY 4.0 plus WHO additional terms (confirmed 11 Nov 2026, Dev probe 43099401602: "Unless specifically
       indicated otherwise, these Datasets are provided to you under a Creative Commons Attribution 4.0 International
-      License (CC BY 4.0), with the additional terms below"), https://data.who.int/redirect-pages/footer/learn-more/terms-and-conditions
+      License (CC BY 4.0), with the additional terms below"); per-dataset check 12 Nov 2026, Dev trial 43198114362: the
+      indicator pages of both landed files (90E2E48 life expectancy, C64284D HALE) state "Data copyright and licensing:
+      Attribution 4.0 International (CC BY 4.0) License", no exception), https://data.who.int/redirect-pages/footer/learn-more/terms-and-conditions
       ("Terms and conditions for WHO datasets"): attribution as indicated in each dataset''s metadata; do not falsify
       or misrepresent; do not de-anonymise; no use of the WHO name or emblem and no implied endorsement; provided without
       warranty; WHO may change or discontinue datasets. Attribution: per dataset metadata, default "Source: World Health
@@ -1226,7 +1228,6 @@ sources:
     connection: tested
     blockers:
     - 'Build GHO-to-new-platform crosswalk'
-    - 'Check per-dataset licence exceptions and change notices'
     references:
     - https://data.who.int/
     - https://data.who.int/about/data/terms-and-conditions
