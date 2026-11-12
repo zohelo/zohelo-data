@@ -1,0 +1,27 @@
+version: 2
+models:
+  - name: ids_observations
+    description: >-
+      International Debt Statistics of the newest bulk archive, one row per debtor economy × counterpart
+      area × series × year; value as double plus the source lexeme. Debtors are about 120 low- and
+      middle-income economies and their groups (no Poland, no EU member state); counterpart WLD (world).
+    tests:
+      - unique:
+          column_name: "economy_code || '|' || counterpart_code || '|' || series_code || '|' || year"
+    columns:
+      - name: economy_code
+        tests: [not_null]
+      - name: counterpart_code
+        tests: [not_null]
+      - name: series_code
+        tests: [not_null, {relationships: {arguments: {to: ref('ids_series'), field: series_code}}}]
+      - name: year
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source archive (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: ids_series
+    description: IDS series with name, definitions, topic, source, aggregation method and licence.
+    columns:
+      - name: series_code
+        tests: [not_null, unique]

@@ -1,4 +1,4 @@
-{{ config(alias='build_prg') }}
+{{ config(alias='build_prg', tags=['gold_block']) }}
 {# Gold build stage (#2739): the area of every Polish administrative unit as the state register of
    boundaries (GUGiK PRG, silver.prg_units) publishes it (JPT_POWIER, hectares, here km²), one daily
    observation at the date of the PRG edition held (latest-only policy: one date). Voivodeships, powiats

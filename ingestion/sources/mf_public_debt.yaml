@@ -5,7 +5,7 @@ description: Ministry of Finance public finance sector debt (XLSX, quarterly)
 # sector debt workbook, linked from the stable page "Szeregi czasowe" on gov.pl after the Treasury
 # debt workbook (gov.pl terms, register PLG-009). Each release is a new https://www.gov.pl/attachment/<uuid>,
 # so the link is found on the page at run time (url_from). Version = Last-Modified; written only
-# when the SHA-256 changed. Quarterly series; a schedule (stage 4) comes after the Dev trial.
+# when the SHA-256 changed. Quarterly series; Dev probes 43084312730, 43085156243 (11 Nov 2026) reached www.gov.pl from Actions.
 extraction:
   kind: bulk_file
   bulk_file:
@@ -20,17 +20,20 @@ extraction:
   initial: bulk
   production: snapshot                  # each workbook holds the complete series
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
-  schedule: []
+  schedule: # UTC; release: quarterly, about three months after the quarter; weekly check
+    - {cron: "55 13 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/mf_public_debt/
 archive_policy:
   move: true
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
-bronze: []
-silver: []
-gold: []
+bronze: [bronze.mf_public_debt_cells, bronze.mf_public_debt_rejected_files]
+silver: [silver.public_debt]
+gold: [gold.build_public_finance]
 
-refresh: {mode: full}
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): small workbooks (under 200,000 cells), rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2766"}
 
-activities: [landing.inspect, landing.extract, landing.verify]
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
