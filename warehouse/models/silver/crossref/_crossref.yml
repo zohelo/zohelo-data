@@ -1,0 +1,38 @@
+version: 2
+models:
+  - name: crossref_works_pl_counts
+    description: >-
+      Crossref (metadata usable for any purpose, abstracts excluded; none is requested) counts of the works whose
+      deposited author affiliation names Poland or Polska. Grain: entity × facet × facet_value (works_pl_by_year:
+      total and works per publication year; works_pl_<year>, from 2000: total and works by type, publisher and
+      funder of that year). Only works whose publisher deposits affiliations can be counted.
+    tests:
+      - unique:
+          column_name: "entity || '|' || facet || '|' || coalesce(facet_value, '')"
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: facet
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['_total', 'published', 'type-name', 'publisher-name', 'funder-doi']
+      - name: works
+        description: Count as published; a non-numeric count would be null and fail here.
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: crossref_funders
+    description: >-
+      Crossref Funder Registry entries located in Poland. Grain: funder_id (registry id, funder_doi 10.13039/<id>).
+    columns:
+      - name: funder_id
+        tests: [not_null, unique]
+      - name: name
+        tests: [not_null]
+      - name: location
+        tests: [not_null, {accepted_values: {arguments: {values: ['Poland']}}}]
+      - name: raw_sha256
+        tests: [not_null]
