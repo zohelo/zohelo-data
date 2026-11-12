@@ -488,7 +488,8 @@
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
    left out (zero rows) only when the changed-only plan declared it waiting: warehouse/changed.py lists
-   it under `empty_blocks` (its source tables do not exist yet) and warehouse/build.py passes that list
+   it under `empty_blocks` (its source tables do not exist yet and neither does its own table; a waiting
+   block that has a table is never listed, the build stops instead) and warehouse/build.py passes that list
    as the dbt var `waiting_blocks`. Any other missing block (a partial catalog listing, a run killed
    between renames, an explicit-filter build) is a compiler error, so a source never drops out of Gold
    silently; a block built in this run that fails makes dbt skip every model reading it. At parse time
@@ -521,6 +522,32 @@
                 ~ 'waiting (var waiting_blocks): build it first, e.g. select ' ~ model ~ '+'
             ) -%}
         {%- endif -%}
+    {%- endif -%}
+{% endmacro %}
+
+{# A Silver table the shared geography map reads only for a source's own codes, as a FROM item: the table
+   when it exists, else an empty relation with `columns` ('name:type, …') when the changed-only plan declared
+   the model waiting (its source has no Bronze yet; warehouse/build.py passes plan["waiting"] as the dbt var
+   `waiting_models`). So a source before its first load adds no rows to the map instead of holding back the
+   map and every block reading it (#2903). Any other missing table is a compiler error. The reading model lists
+   the same names in config meta `optional_parents`: warehouse/changed.py does not let it wait for them, and
+   ops/repo_check.py checks both lists agree. At parse time the model is ref'd, so dbt records the dependency. #}
+{% macro poc_optional_ref(model, columns) %}
+    {%- set relation = ref(model) -%}
+    {%- if not execute or load_relation(relation) is not none -%}
+        {{ relation }}
+    {%- elif model in var('waiting_models', []) -%}
+        {%- do log('Optional input ' ~ relation ~ ' is waiting (source tables do not exist yet): zero rows', info=true) -%}
+        {%- set cols = [] -%}
+        {%- for column in columns.split(',') -%}
+            {%- do cols.append('cast(null as ' ~ column.split(':')[1] | trim ~ ') as ' ~ column.split(':')[0] | trim) -%}
+        {%- endfor -%}
+        (select {{ cols | join(', ') }} where false)
+    {%- else -%}
+        {%- do exceptions.raise_compiler_error(
+            'Optional input ' ~ model ~ ' (' ~ relation ~ ') does not exist and changed.py did not declare it '
+            ~ 'waiting (var waiting_models): build it first, e.g. select ' ~ model ~ '+'
+        ) -%}
     {%- endif -%}
 {% endmacro %}
 
