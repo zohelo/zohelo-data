@@ -72,7 +72,9 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- 43163012721). Documentation only until metrics_current_account_components and metrics_fdi_inflow join the
     -- metrics union below (draft concepts are outside the test's scope).
     ('current_account_components', 'nbp_bop', '%', -1e6, 1e6),
-    ('fdi_inflow', 'nbp_bop', '%', -1e6, 1e6)
+    ('fdi_inflow', 'nbp_bop', '%', -1e6, 1e6),
+    -- percent per year; highest 24.0 in 1998 (silver.nbp_policy_rates, Dev trial 43093114523)
+    ('nbp_reference_rate', 'nbp_interest_rates', '%', 0, 30)
 ),
 
 metrics as (
@@ -147,6 +149,15 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_gdp_volume_growth') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_nbp_reference_rate') }}
 )
 
 select

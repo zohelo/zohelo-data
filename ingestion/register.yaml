@@ -4019,7 +4019,7 @@ sources:
   provider: Narodowy Bank Polski (NBP)
   source_system: nbp_interest_rates
   current: true
-  status: silver
+  status: built
   family: C
   kpi: true
   geography: Poland

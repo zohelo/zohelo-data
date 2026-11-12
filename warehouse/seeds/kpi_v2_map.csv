@@ -107,7 +107,7 @@ long_term_unemployment,labour,A,,gus_dbw,1618_1335_95_4,,A;Q,PL,sex;age,rate,dow
 median_wage,labour,A,,gus_bdl,P4610,,M,PL;VOIV,sex,mean,up,needs-block,"BDL median gross wage (wage-distribution survey, P4610) in Silver; month labels are placed by the build; not activated (958k rows, needs a level filter)"
 median_wage,labour,A,,gus_dbw,1714_1575_243_1,,M,PL;VOIV,,mean,up,needs-block,DBW median wage (1714_*) in Silver; codes not probed
 min_wage,labour,A,,eurostat,EARN_MW_CUR,,S,PL;EU,currency,none,neutral,needs-block,half-yearly (S): Gold has no half-yearly fact
-nbp_reference_rate,poland,M,,nbp_interest_rates,,,D,PL,,none,neutral,needs-block,"NBP official rates in Silver since #2590 (silver.nbp_policy_rates, register PLG-006); a Gold build stage for them is not added yet"
+nbp_reference_rate,poland,M,nbp_reference_rate,nbp_interest_rates,policy_rates,nbp_interest_rates:ref,M,PL,,none,neutral,ready,"rate in force at the end of each month (today in the current month), from silver.nbp_policy_rates (MPC change dates, PLG-006); licence unresolved: internal"
 neet_rate,labour;poland,A,neet_rate,eurostat,LFSI_NEET_A,eurostat:LFSI_NEET_A:PC_POP,A,PL;EU;EU27,sex,rate,down,ready,age 15-29
 neet_rate,labour;poland,A,neet_rate,world_bank_wdi,SL.UEM.NEET.ZS,world_bank_wdi:SL.UEM.NEET.ZS,A,PL;EU;EU27,,rate,down,ready,age 15-24
 niip_gdp,economy;poland,Q,niip_gdp,eurostat,TIPSII10,eurostat:TIPSII10:PC_GDP,A,PL;EU;EU27,,rate,neutral,ready,annual (MIP scoreboard)

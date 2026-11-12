@@ -568,16 +568,16 @@ voivodeships), `dimensions`, `aggregation`, `polarity`, `status` and `note`:
 - `needs-source`: not ingested; `note` names the register id. The NBP balance of payments and investment
   position (`nbp_bop`, PLG-002, PLG-003) are in Gold (`build_nbp_bop`); the workbooks publish amounts only, so the shares of GDP
   (`current_account_gdp`, `niip_gdp`) need a derivation and stay `needs-block`. NBP official rates
-  (`nbp_interest_rates`, PLG-006) reached Silver on 10 Nov (#2590) and are `needs-block` until their Gold build
-  stage exists. The OECD CLI (`oecd`, GL-003) is `ready` since `gold.build_oecd` (#2738), for the EU members the
+  (`nbp_interest_rates`, PLG-006) have the Gold build stage `build_nbp_interest_rates`: Silver holds one row per MPC
+  change, Gold places the rate in force on the last day of each month (today, provisional, in the current month). The OECD CLI (`oecd`, GL-003) is `ready` since `gold.build_oecd` (#2738), for the EU members the
   OECD covers (DE, ES, FR, IT): it has no Polish or EU-27 series.
 
 v2 keys by their best source status:
 
 | | ready | needs-block | needs-source | total |
 |---|---|---|---|---|
-| Polska w skrócie | 28 | 3 | 0 | 31 |
-| all 78 keys | 65 | 12 | 1 | 78 |
+| Polska w skrócie | 29 | 2 | 0 | 31 |
+| all 78 keys | 66 | 11 | 1 | 78 |
 
 Rows by source (161 rows; 36 keys have two or more ready sources):
 
@@ -606,7 +606,7 @@ Rows by source (161 rows; 36 keys have two or more ready sources):
 
 Gold has a quarterly fact (`fact_quarterly`), and the BDL and DBW builds place monthly and quarterly periods, so
 LFS rates, the current account, NAMQ, job vacancies and the GUS short-term series keep their frequency. Polska w
-skrócie still needs `nbp_reference_rate` (NBP PLG-006: in Silver, Gold build stage missing), `price_m2_secondary` (the secondary market is a breakdown
+skrócie still needs `price_m2_secondary` (the secondary market is a breakdown
 member of BDL P3788/P3794 and DBW 309_485: a member filter, `kpi_member.csv`) and `broadband_households` (the
 ingested broadband datasets end in 2021). GUS indices (`… = 100`) are published as the source gives them, with the
 measure's unit; the rate is the value minus 100. The v2 key of a concept is read from this map (see Rules).

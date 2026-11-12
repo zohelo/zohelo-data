@@ -203,3 +203,4 @@ current_account_components,nbp_bop,nbp_bop:bop_q:EUR:balance_on_services,"NBP qu
 current_account_components,nbp_bop,nbp_bop:bop_q:EUR:balance_on_primary_income,"NBP quarterly balance of payments, primary income balance, million EUR",5,
 current_account_components,nbp_bop,nbp_bop:bop_q:EUR:balance_on_secondary_income,"NBP quarterly balance of payments, secondary income balance, million EUR",6,
 fdi_inflow,nbp_bop,nbp_bop:bop_q:EUR:direct_investment_liabilities,"NBP quarterly balance of payments, direct investment liabilities (inward), million EUR",4,
+nbp_reference_rate,nbp_interest_rates,nbp_interest_rates:ref,"reference rate in force at the end of the month",1,
