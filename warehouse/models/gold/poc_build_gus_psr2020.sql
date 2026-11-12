@@ -29,6 +29,7 @@ select
         when 'farms' then 'holdings'
         when 'ha' then 'ha'
         when 'heads' then 'heads'
+        when 'ha_per_holding' then 'ha per holding'
     end as unit_name,
     s.area_name as geography_source_code,
     coalesce(g.geography_key, '_X') as geography_key,

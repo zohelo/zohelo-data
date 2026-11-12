@@ -1,0 +1,56 @@
+source_system: ilostat
+description: "ILOSTAT (International Labour Organization) — bulk indicator files: unemployment, employment, participation, NEET"
+
+# Extraction strategy (docs/landing.md). Bulk feature: ILOSTAT's bulk download page
+# (https://rplumber.ilo.org/files/website/bulk/indicator.html) links one gzip CSV per indicator and frequency,
+# every country, ILO region and period in one file (https://rplumber.ilo.org/data/indicator?id=<id>&format=.csv.gz).
+# Each entity is one such file landed through the shared bulk_file pattern, one request per entity and run,
+# written only when the SHA-256 changed. The files are generated per request without Last-Modified, so
+# version = download time. National (reported) series; ILO modelled estimates are separate indicators (not
+# selected). CC BY 4.0 for releases from 3 May 2023 (register GL-023); the files are the current release.
+# Proven from Actions by the Dev probe 43087048719 (UNE_DEAP_SEX_AGE_RT_A: 317,000 rows, 1.9 MB gzip).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: une_deap_sex_age_rt_a   # unemployment rate by sex and age, annual
+        url: "https://rplumber.ilo.org/data/indicator/?id=UNE_DEAP_SEX_AGE_RT_A&format=.csv.gz"
+        format: gzip
+        version: ingested
+      - entity: une_deap_sex_age_rt_q   # unemployment rate by sex and age, quarterly
+        url: "https://rplumber.ilo.org/data/indicator/?id=UNE_DEAP_SEX_AGE_RT_Q&format=.csv.gz"
+        format: gzip
+        version: ingested
+      - entity: emp_dwap_sex_age_rt_a   # employment-to-population ratio by sex and age, annual
+        url: "https://rplumber.ilo.org/data/indicator/?id=EMP_DWAP_SEX_AGE_RT_A&format=.csv.gz"
+        format: gzip
+        version: ingested
+      - entity: eap_dwap_sex_age_rt_a   # labour force participation rate by sex and age, annual
+        url: "https://rplumber.ilo.org/data/indicator/?id=EAP_DWAP_SEX_AGE_RT_A&format=.csv.gz"
+        format: gzip
+        version: ingested
+      - entity: eip_neet_sex_rt_a       # share of youth not in employment, education or training, annual
+        url: "https://rplumber.ilo.org/data/indicator/?id=EIP_NEET_SEX_RT_A&format=.csv.gz"
+        format: gzip
+        version: ingested
+  initial: bulk
+  production: snapshot                  # each file is the complete history of its indicator
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; release: ILOSTAT updates indicators continuously as countries report (no calendar); weekly check (Tuesday 05:40), unchanged bytes skipped
+    - {cron: "40 5 * * 2", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/ilostat/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.ilostat_observations, bronze.ilostat_rejected_files]
+silver: [silver.ilostat_observations]
+gold: []
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): five whole-indicator snapshots; each new copy replaces its entity,
+# and Silver (newest copy per entity) is rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2753"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
