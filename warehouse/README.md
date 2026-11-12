@@ -12,7 +12,8 @@ semantic_models/                  MetricFlow semantic models and metrics
 seeds/                            seeds/ = owner-readable code lists, built into gold
 dimensions/                       dimension registry (definitions-as-code, draft; docs/model.md)
 macros/, tests/                   shared macros; singular data tests
-entity/, entity.py                per-entity Silver SQL applied by the Eurostat and BDL loaders
+entity/, entity.py                per-entity Silver SQL applied by the Eurostat and BDL loaders; gold_*.sql: Gold per block
+observations.py                   Gold observations per block, by rule (docs/gold-coverage.md)
 build.py, changed.py, catalog.py  build engine: changed-only build, catalog publication
 warehouse.yaml                    activities the Pipeline may run
 ```
