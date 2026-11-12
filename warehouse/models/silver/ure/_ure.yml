@@ -7,7 +7,7 @@ models:
       competitive_market_price (page 7852, average electricity sale price on the competitive market, zł/MWh): yearly
       from 2008, quarterly from 2015-Q2; household_price (page 7853, average price for a household customer including
       the distribution charge, zł/kWh): yearly from 2012. indicator_name keeps URE's column header (its definition)
-      and page_title the page title; values as published. Dev trial run ids in docs/sources.md.
+      and page_title the page title; values as published. Dev trial 43290227035: 77 rows.
     tests:
       - unique:
           column_name: "indicator_code || '|' || frequency || '|' || period_label"
