@@ -4686,7 +4686,7 @@ sources:
   name: Database of decisions of the President of UOKiK
   short_name: UOKiK decisions
   provider: Office of Competition and Consumer Protection (UOKiK)
-  status: parked
+  status: approved
   family: F
   kpi: false
   geography: Poland
@@ -4697,46 +4697,56 @@ sources:
   coverage: Historical coverage depends on collection; start not established.
   access:
     endpoint: https://decyzje.uokik.gov.pl/bp/dec_prez.nsf
-    kind: web
-    interfaces: [HTML search, PDF]
-    auth: public browsing
+    kind: api
+    interfaces: [JSON (Domino view), HTML, PDF]
+    auth: public
     cost: free
-    limits: uokik.gov.pl robots.txt lists 147 Disallow lines and names ClaudeBot, anthropic-ai, GPTBot and CCBot; decyzje.uokik.gov.pl
-      gave no answer to a GitHub runner (timeout).
+    limits: 'None published. decyzje.uokik.gov.pl has no robots.txt (HTTP 404). The main site uokik.gov.pl is another host:
+      its robots.txt (87 agents) allows generic agents and disallows ClaudeBot, anthropic-ai, GPTBot, CCBot and other AI crawlers
+      by name, so nothing is read from uokik.gov.pl. The decisions host timed out in the first probe and answered in the second.'
   licence:
     status: unresolved
-    notes: 'Terms: not read. The probe honoured the uokik.gov.pl robots.txt rule for Claude crawlers, so no UOKiK page was
-      opened; bip.uokik.gov.pl did not resolve. No dane.gov.pl record of UOKiK was found by search (desk, 12 Nov 2026). Published
-      decisions are redacted versions.'
-  updates: Decision-driven; corrections and appeals may alter context. A decision of 15 Dec 2025 (DOZIK-6/2025) was the newest
-    seen in web search results.
+    notes: 'Terms: not read. The entry page of the decisions host is a 393-byte frameset without terms; UOKiK''s terms would
+      be on uokik.gov.pl, which is not opened because its robots.txt disallows the Claude crawlers by name. Reuse is therefore
+      not stated as allowed: internal use only until the terms are quoted. Published decisions are redacted versions.'
+  updates: Decision-driven; corrections and appeals may alter context. The entry page was last modified 12 Nov 2026; a decision
+    of 15 Dec 2025 (DOZIK-6/2025) was the newest seen in web search results.
   ingestion:
-    history: 'No machine route: one PDF per decision in a Lotus Domino database (URLs of the form /bp/dec_prez.nsf/<view>/<unid>/$FILE/<name>.pdf,
-      seen in web search results only); no bulk file, API or export was found. Decisions from 2003 appear in search results.'
-    incremental: None proposed while parked.
-    identifiers: Decision number (e.g. DOZIK-6/2025), date, department signature.
+    history: 'API route: the Lotus Domino view https://decyzje.uokik.gov.pl/bp/dec_prez.nsf/WWW-wszystkie?ReadViewEntries&OutputFormat=JSON&count=<n>&start=<position>
+      returns the index of decisions as JSON (tested with count=3: HTTP 200, application/json, 12 top-level categories; the
+      first has 18 children and 1,408 descendant entries). Full load: page through the view with start and count. PROPOSAL:
+      500 entries per request, one request per second; the number of entries and requests is measured at the build. Only the
+      index columns are stored; the decision PDFs (/bp/dec_prez.nsf/<view>/<unid>/$FILE/<name>.pdf) are not downloaded. Entity
+      = decision (view entry); version = snapshot date. Decisions from 2003 appear in search results.'
+    incremental: 'PROPOSAL: weekly snapshot of the view index; a new decision is a new view entry (@unid).'
+    identifiers: View entry id (@unid, @noteid); decision number (e.g. DOZIK-6/2025), date, department signature.
   modelling:
-    notes: 'kpi false and no Gold use today. If ever wanted: annual counts of decisions and fines from the UOKiK annual report,
-      not the PDFs.'
+    notes: 'kpi false. Smallest Gold selection: an entity table of decisions (number, date, department signature, category
+      as the view gives them) and the count of decisions per year and type, Poland only, no regional grain. Fines are in the
+      PDFs, not in the index (unverified), so no fines measure is proposed. Effort M.'
     overlap: May overlap court judgments and UOKiK reports.
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Parked: no route from the platform. Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov
-      2026): decyzje.uokik.gov.pl timed out on robots.txt; uokik.gov.pl robots.txt disallows the Claude crawlers by name (ClaudeBot,
-      anthropic-ai), which the probe honoured, so nothing else was requested. Web-only source (one PDF per decision), no reuse
-      terms read, kpi false.'
-    - 'Owner option: a reuse request to UOKiK for a decisions index, if enforcement statistics are ever wanted.'
+    - 'Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026):
+      decyzje.uokik.gov.pl answered: robots.txt HTTP 404, entry page 200, the view WWW-wszystkie as JSON 200. In the first
+      probe (run 43282997907) the same host timed out, so the build uses long timeouts and reports a timeout instead of retrying
+      hard.'
+    - 'Licence unresolved: UOKiK''s terms are not read (uokik.gov.pl names the Claude crawlers in robots.txt). Internal build
+      only.'
+    - 'Not verified: the column list of the view (the probe printed the first 260 characters of the JSON), the number of entries,
+      and whether every decision type is in WWW-wszystkie. The builder lists the columns first.'
     references:
     - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf
+    - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf/WWW-wszystkie?ReadViewEntries&OutputFormat=JSON
     - https://uokik.gov.pl/robots.txt
 - id: PLG-021
   name: Concentration decisions and notifications
   short_name: UOKiK concentration decisions
   provider: Office of Competition and Consumer Protection (UOKiK)
-  status: parked
+  status: approved
   family: F
   kpi: false
   geography: Poland
@@ -4746,37 +4756,45 @@ sources:
   granularity: Concentration case, parties, decision and procedural dates.
   coverage: Coverage/first year not verified.
   access:
-    endpoint: https://uokik.gov.pl/koncentracje
-    kind: web
-    interfaces: [HTML, PDF]
-    auth: public browsing
+    endpoint: https://decyzje.uokik.gov.pl/bp/dec_prez.nsf
+    kind: api
+    interfaces: [JSON (Domino view), HTML, PDF]
+    auth: public
     cost: free
-    limits: uokik.gov.pl robots.txt lists 147 Disallow lines and names ClaudeBot, anthropic-ai, GPTBot and CCBot.
+    limits: 'None published. decyzje.uokik.gov.pl has no robots.txt (HTTP 404). The main site uokik.gov.pl is another host:
+      its robots.txt (87 agents) allows generic agents and disallows ClaudeBot, anthropic-ai, GPTBot, CCBot and other AI crawlers
+      by name, so nothing is read from uokik.gov.pl. The page https://uokik.gov.pl/koncentracje is therefore not used.'
   licence:
     status: unresolved
-    notes: 'Terms: not read. The probe honoured the uokik.gov.pl robots.txt rule for Claude crawlers, so https://uokik.gov.pl/koncentracje
-      was not opened. No dane.gov.pl record of UOKiK was found by search (desk, 12 Nov 2026).'
+    notes: 'Terms: not read. The entry page of the decisions host is a 393-byte frameset without terms; UOKiK''s terms would
+      be on uokik.gov.pl, which is not opened because its robots.txt disallows the Claude crawlers by name. Reuse is therefore
+      not stated as allowed: internal use only until the terms are quoted. Published decisions are redacted versions.'
   updates: Event-driven; proceeding, decision and appeal dates differ. Annual totals appear in the UOKiK annual report (spring).
   ingestion:
-    history: 'No machine route: concentration decisions (DKK series) are PDFs in the same decisions database as PLG-020; no
-      index file, API or export was found.'
-    incremental: None proposed while parked.
+    history: 'Same route as PLG-020, one extraction for both entries: concentration decisions (DKK series) are entries of
+      the decisions database, read from the JSON view https://decyzje.uokik.gov.pl/bp/dec_prez.nsf/WWW-wszystkie?ReadViewEntries&OutputFormat=JSON
+      (tested, see PLG-020). No separate index, API or export of concentration cases was found. Notifications that did not
+      end in a published decision are not in this route.'
+    incremental: 'With PLG-020: weekly snapshot of the view index; a new decision is a new view entry.'
     identifiers: Case signature (DKK-...), decision number and date.
   modelling:
-    notes: kpi false and no Gold use today. Annual national counts only (notifications, decisions, conditional decisions),
-      no regional grain.
+    notes: 'kpi false. Smallest Gold selection: the count of concentration decisions per year (DKK signature), Poland only,
+      from the decisions entity table of PLG-020; no regional grain. Effort S on top of PLG-020.'
     overlap: Subset/view of broader UOKiK decisions; deduplicate by case.
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Parked: no route from the platform. Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov
-      2026): uokik.gov.pl robots.txt disallows the Claude crawlers by name (ClaudeBot, anthropic-ai), which the probe honoured;
-      the decisions host decyzje.uokik.gov.pl timed out. Web-only source, no reuse terms read, kpi false.'
-    - 'Owner option: as PLG-020 (one reuse request to UOKiK covers both).'
+    - 'Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026):
+      the decisions host answered (robots.txt HTTP 404, the view WWW-wszystkie as JSON 200). Build together with PLG-020 as
+      one source system.'
+    - 'Licence unresolved: UOKiK''s terms are not read. Internal build only.'
+    - 'Not verified: that the view exposes the signature or department column needed to select DKK decisions (the probe printed
+      only the first 260 characters of the JSON). If it does not, this entry goes back to reviewing with that finding.'
     references:
-    - https://uokik.gov.pl/koncentracje
+    - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf
+    - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf/WWW-wszystkie?ReadViewEntries&OutputFormat=JSON
     - https://uokik.gov.pl/robots.txt
 - id: PLG-022
   name: e-Zamówienia / BZP read API
@@ -4929,7 +4947,7 @@ sources:
   name: Senate legislative process, sittings, votes and members
   short_name: Senate data
   provider: Chancellery of the Senate
-  status: reviewing
+  status: approved
   family: F
   kpi: false
   geography: Poland
@@ -4944,37 +4962,44 @@ sources:
     interfaces: [HTML]
     auth: public browsing; no API, export or feed found
     cost: free
-    limits: None published. robots.txt has three Disallow lines (/gfx/, /pdf/ and a / that did not apply to the probe agent);
-      the pages below were allowed.
+    limits: 'None published. robots.txt, read in full by the probe: "User-agent: * Disallow: /gfx/ Disallow: /pdf/ Allow:
+      /*.pdf$ Allow: /*.doc$ Allow: /*.xls$ Allow: /*.rtf$" and "User-agent: Fasterfox Disallow: /". The pages of this route
+      are allowed for every agent.'
   licence:
     status: unresolved
-    notes: 'Terms: the Senate has a re-use page, https://www.senat.gov.pl/ponowne-wykorzystywanie-informacji-sektora-publicznego/
-      (linked from the footer; the probe reached it but captured only the cookie banner, and the desk fetch could not open
-      it), so the conditions are not read yet. Until they are quoted the source stays internal.'
+    notes: 'Terms: https://www.senat.gov.pl/ponowne-wykorzystywanie-informacji-sektora-publicznego/ (read by the probe 12
+      Nov 2026; 9,600 characters). The part captured describes the request procedure (after a request the Head of the Chancellery
+      may make an offer with conditions or fees: "może złożyć wnioskodawcy ofertę zawierającą warunki ponownego wykorzystywania
+      lub informację o wysokości opłat za ponowne wykorzystywanie") and personal-data information. The sentence that sets
+      the conditions for information published on the website was not in the captured part, so reuse is not quoted as allowed:
+      unresolved, internal use only.'
   updates: Event-driven around sittings and legislative work.
   ingestion:
-    history: 'Web only, server-rendered HTML: votes per sitting day at /prace/posiedzenia/przebieg,<sitting>,<day>,glosowania.html
+    history: 'Web route, server-rendered HTML read with plain requests (no browser session): votes per sitting day at /prace/posiedzenia/przebieg,<sitting>,<day>,glosowania.html
       with a print page per vote (/prace/posiedzenia/glosowanie-drukuj,<vote id>.html); senators at /sklad/senatorowie/senator,<id>,<term>,<slug>.html
       (102 links for term 11). The home page, the sittings page and the legislative-process page link no API, open-data page,
-      XML, JSON, CSV or RSS.'
-    incremental: 'PROPOSAL if the web route is allowed: new sittings only, one request per second.'
+      XML, JSON, CSV or RSS. Request pattern: one connection, one request per second, term 11 only, never /gfx/ or /pdf/.
+      The number of sittings and votes of term 11 was not counted: size is measured at the build. Entity = vote (vote id);
+      version = download time.'
+    incremental: New sitting days only (the sittings page lists them); one request per second; senator pages once per month.
     identifiers: Term, sitting number, day, vote id; senator id.
   modelling:
-    notes: 'kpi false. Possible Gold use: votes per sitting and senator attendance for term 11, Poland only, no regional grain.
-      Low value next to the Sejm API (PLG-024).'
+    notes: 'kpi false. Smallest Gold selection: votes per sitting and senator attendance for term 11, Poland only, no regional
+      grain. Low value next to the Sejm API (PLG-024). Effort M.'
     overlap: Same bill appears across Sejm, Senate and ELI stages.
   research:
     priority: review-next
     evidence: documented
     connection: tested
     blockers:
-    - 'Owner question: PLG-025 Senate has no API, export or feed; the only route is reading the HTML pages of senat.gov.pl
-      (votes per sitting day, one print page per vote, about 100 senator pages). A web route needs your decision per source:
-      allow a polite crawl (one request per second, new sittings only), or park PLG-025? Recommendation: park (kpi false;
-      the Sejm API covers parliament).'
+    - 'Route decided: polite crawl of public pages that robots.txt allows. The playbook asks for an owner decision or a D
+      row per web source; this approval follows the orchestrator verdict on PR #2878 under the owner rule of 12 Nov 2026 (issue
+      #2873). The D row in docs/decisions.md is still to be written before the build.'
     - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): www.senat.gov.pl answered 200
-      on the home, sittings, votes and senators pages; bip.senat.gov.pl was not readable.'
-    - Re-use conditions on the Senate re-use page are not quoted yet.
+      on the home, sittings, votes and senators pages; bip.senat.gov.pl was not readable. Dev probe run 43288930412 (job 131429683337,
+      branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026): robots.txt read in full; the re-use page answered
+      200.'
+    - 'Licence unresolved: the re-use conditions for website content are not quoted yet. Internal build only.'
     references:
     - https://www.senat.gov.pl/prace/posiedzenia/
     - https://www.senat.gov.pl/sklad/senatorowie/
@@ -5072,7 +5097,7 @@ sources:
   name: NIK audit-results database
   short_name: NIK audit results
   provider: Supreme Audit Office (NIK)
-  status: parked
+  status: reviewing
   family: F
   kpi: false
   geography: Poland
@@ -5087,7 +5112,8 @@ sources:
     interfaces: [HTML search, PDF]
     auth: public browsing
     cost: free
-    limits: None published. The site sits behind Imperva Incapsula bot protection.
+    limits: None published. robots.txt of www.nik.gov.pl and bip.nik.gov.pl disallows /szukaj/, /p/, /g2/, /logowanie/, /cms/
+      and /do_druku/ for every agent. Both sites sit behind Imperva Incapsula bot protection.
   licence:
     status: open-conditional
     notes: 'Terms: NIK re-use page https://www.nik.gov.pl/kontakt/ponowne-wykorzystywanie-informacji/ (desk fetch 12 Nov 2026;
@@ -5100,24 +5126,33 @@ sources:
       returned only the bot-protection page to the desk fetch; re-read the wording before any publication.'
   updates: Publication date differs from the audited period; continuous.
   ingestion:
-    history: 'No machine route: one HTML record and PDF per audit (e.g. /kontrole/wyniki-kontroli-nik/pobierz,<id>,typ,kj.pdf
-      and /plik/id,<n>.pdf, seen in web search results); the results page links no RSS, XML, API, CSV or dane.gov.pl set (probe),
-      and https://www.nik.gov.pl/rss/ returned a 389-byte XML stub.'
-    incremental: None proposed while parked.
+    history: 'No machine route found: one HTML record and PDF per audit (e.g. /kontrole/wyniki-kontroli-nik/pobierz,<id>,typ,kj.pdf
+      and /plik/id,<n>.pdf, seen in web search results). A plain request for https://www.nik.gov.pl/kontrole/wyniki-kontroli-nik/
+      (and the same path on bip.nik.gov.pl) gets HTTP 200 with the page frame (about 6,100 characters of text, three forms,
+      the Incapsula script) and no audit records or record links; HEAD of https://www.nik.gov.pl/plik/id,31066.pdf returned
+      HTTP 500. The results page links no RSS, XML, API, CSV or dane.gov.pl set, and https://www.nik.gov.pl/rss/ returned
+      a 389-byte XML stub. dane.gov.pl could not be searched from a runner (timeout).'
+    incremental: None until the owner question is answered.
     identifiers: Audit number (e.g. P/25/001), publication date, unit.
   modelling:
-    notes: 'kpi false and no Gold use today: text reports, national scope, no statistical series.'
+    notes: 'kpi false. If a list of audits is obtained: an entity table of audits (number, title, publication date, unit)
+      and the count of audits per year, national scope; no statistical series. Effort S from a file.'
     overlap: May cite agency statistics; cited figures are not independent NIK observations.
   research:
     priority: review-next
     evidence: documented
     connection: tested
     blockers:
-    - 'Parked: web-only text source (one PDF per audit, no export, feed or API) behind Imperva Incapsula bot protection, which
-      is never worked around; kpi false. Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026):
-      the results page and bip.nik.gov.pl answered 200 to the runner with the Incapsula script in the page; the desk fetch
-      of the copyright page and of one report PDF got the protection page only.'
-    - 'Owner option: none needed; un-park only if an audit index is wanted and NIK offers a file or feed.'
+    - 'Owner question: NIK publishes audit results only as one web record and one PDF per audit, behind Imperva Incapsula
+      bot protection that we never work around; plain requests get the page frame without the list of audits, and no file,
+      feed or dane.gov.pl set was found. Do you want a re-use request sent to NIK (text drafted for you) for a machine-readable
+      list of audits (number, title, publication date, unit, link), or do you decide that NIK stays out because it has no
+      statistical series (kpi false)?'
+    - 'Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026):
+      robots.txt of both hosts read; results page on both hosts HTTP 200 with the Incapsula script, no audit records; PDF
+      HEAD HTTP 500. Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the same pages
+      answered 200; the desk fetch of the copyright page and of one report PDF got the protection page only.'
+    - Terms are recorded (open-conditional, NIK re-use page); the copyright page is still to be re-read before any publication.
     references:
     - https://www.nik.gov.pl/kontrole/wyniki-kontroli-nik/
     - https://www.nik.gov.pl/kontakt/ponowne-wykorzystywanie-informacji/
@@ -5290,7 +5325,7 @@ sources:
   name: Prison statistics
   short_name: Prison Service statistics
   provider: Prison Service (Służba Więzienna)
-  status: parked
+  status: reviewing
   family: F
   kpi: true
   geography: Poland
@@ -5305,7 +5340,8 @@ sources:
     interfaces: [PDF, HTML]
     auth: public download
     cost: free
-    limits: None published. From a GitHub runner sw.gov.pl fails TLS certificate verification.
+    limits: None published. From a GitHub runner sw.gov.pl and www.sw.gov.pl fail TLS certificate verification; bip.sw.gov.pl
+      does not resolve.
   licence:
     status: unresolved
     notes: 'Terms: not read (the host was not reachable from the runner, and the desk fetch was refused by robots.txt on the
@@ -5317,26 +5353,35 @@ sources:
     history: Files linked from https://sw.gov.pl/strona/statystyka-miesieczna and /statystyka-roczna; file URLs are hashes
       (/sites/default/files/migrated-assets/assets/xx/xx/xx/<sha1>.pdf, older /assets/...), so the listing page is the only
       stable entry. The files seen are PDF tables (33 pages for a month), also where the link text says xlsx. No API.
-    incremental: None proposed while parked.
+    incremental: None until the owner question is answered.
     identifiers: Report month or year; table number; prison-service district (16 districts, not voivodeships) or facility.
   modelling:
-    notes: 'If reachable: prison population, capacity and occupancy rate, monthly, Poland and the 16 prison-service districts
-      (no TERYT). Stand-in with a route today: Eurostat crime and criminal-justice tables on prisons through GL-001 (annual;
-      not checked against the loaded datasets).'
+    notes: 'With a route today: prison capacity and persons held, annual, Poland, from Eurostat crim_pris_cap through GL-001
+      (in Silver: 2,754 rows; data 2008-2024). From this source once it is reachable: prison population, capacity and occupancy
+      rate, monthly, Poland and the 16 prison-service districts (no TERYT); frequencies monthly and annual. Effort M (PDF
+      tables).'
     overlap: May overlap ministry/GUS aggregates.
   research:
     priority: review-next
     evidence: documented
     connection: not-tested
     blockers:
-    - 'Parked: sw.gov.pl fails TLS certificate verification from GitHub runners (Dev probe run 43282997907 (job 131408942570,
-      branch test/src-dfh-probe, 12 Nov 2026): CERTIFICATE_VERIFY_FAILED on robots.txt and every page); TLS checks are never
-      disabled. The data are PDF tables with hash-named URLs, and no reuse terms were read.'
-    - 'Owner option: none; re-probe when the certificate chain of sw.gov.pl is fixed.'
+    - 'Owner question: the Prison Service site fails TLS certificate verification from GitHub runners on both hostnames (sw.gov.pl
+      and www.sw.gov.pl), TLS checks are never disabled, and dane.gov.pl does not answer runners. Eurostat crim_pris_cap,
+      which we load, gives prison capacity and persons held for Poland per year (2008-2024), but not the monthly figures or
+      the 16 prison-service districts. Do you want to write to the Prison Service (text drafted for you) asking it to repair
+      the certificate chain of sw.gov.pl or to send the monthly tables as files, or do you accept the annual Eurostat series
+      as the prison KPI and leave the monthly tables out?'
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): CERTIFICATE_VERIFY_FAILED on
+      sw.gov.pl (robots.txt and every page). Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script
+      dev/src_dfh_fix_probe.py, 12 Nov 2026): the same error on www.sw.gov.pl; bip.sw.gov.pl: name not known; dane.gov.pl
+      and api.dane.gov.pl timed out (75 s); Silver holds crim_pris_cap (2,754 rows).'
+    - 'The data are PDF tables with hash-named URLs, and no reuse terms were read: licence unresolved.'
     references:
     - https://sw.gov.pl/strona/Statystyka
     - https://sw.gov.pl/strona/statystyka-miesieczna
     - https://sw.gov.pl/strona/statystyka-roczna
+    - https://ec.europa.eu/eurostat/databrowser/view/crim_pris_cap/default/table
 - id: PLG-033
   name: Police Statistics portal
   short_name: Police statistics
@@ -6637,7 +6682,7 @@ sources:
   name: Road programme and infrastructure downloads (RPBDK/MOP)
   short_name: GDDKiA road downloads
   provider: GDDKiA
-  status: parked
+  status: approved
   family: H
   kpi: false
   geography: Poland
@@ -6653,7 +6698,8 @@ sources:
     interfaces: [PDF, XLSX, XML, HTML]
     auth: public download
     cost: free
-    limits: None published. archiwum.gddkia.gov.pl gave no answer to a GitHub runner (timeout).
+    limits: None published. archiwum.gddkia.gov.pl (the road-obstruction feed) gave no answer to a GitHub runner in two probes
+      (timeouts of 20 s and 75 s); the gov.pl pages and attachments answer.
   licence:
     status: unresolved
     notes: 'Terms: the pages state no licence for the files (probe 12 Nov 2026). gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie
@@ -6665,25 +6711,34 @@ sources:
   updates: Programme status PDF Last-Modified 4 Nov 2026; MOP table monthly (September 2026 edition, Last-Modified 26 Oct
     2026); obstruction feed live.
   ingestion:
-    history: 'https://www.gov.pl/web/gddkia/dane-do-pobrania links three pages: /biezaca-realizacja-pbdk-na-lata-2014-2023
-      (the programme status is one PDF of 1.1 MB plus contractor and legend PDFs), /wykaz-parkingow-i-mop (one XLSX "Tabela
-      MOP istniejące"), /dane-o-utrudnieniach-na-drogach-krajowych (XML and XSD served from archiwum.gddkia.gov.pl). No XML
-      of the road programme was found.'
-    incremental: None proposed while parked.
+    history: 'Bulk files on gov.pl, tested from a runner. https://www.gov.pl/web/gddkia/wykaz-parkingow-i-mop links one XLSX
+      "Tabela MOP istniejące" (September 2026 edition: 89,285 bytes, one sheet "Arkusz1"; columns Lp., Oddział, Województwo,
+      Zarządca, Miejscowość, name of the rest area, current category, target category). https://www.gov.pl/web/gddkia/biezaca-realizacja-pbdk-na-lata-2014-2023
+      links the road-programme status as one PDF (1,121,256 bytes, 6 pages, with a text layer: 9,796 text operators, no page
+      images) plus contractor and legend PDFs. Attachment ids change per edition, so the two pages are the stable entries.
+      Not in this route: the road-obstruction XML feed on archiwum.gddkia.gov.pl (a live operational feed; the host timed
+      out in both probes). No XML of the road programme was found.'
+    incremental: Snapshot per file; version = Last-Modified of the attachment; monthly check of the two pages (the MOP table
+      is monthly).
     identifiers: Road number, section name, MOP name and category.
   modelling:
-    notes: 'kpi false and no Gold use today: the programme status is a PDF, and the MOP table is a list of rest areas without
-      a KPI. Stand-in with a route: length of motorways and expressways in GUS BDL and Eurostat through the onboarded sources.'
+    notes: 'kpi false. Smallest Gold selection: an entity table of rest areas (MOP) and the count of rest areas per voivodeship
+      and category (voivodeship names in the file, mapped to TERYT). Second step: road-programme status per section from the
+      PDF text layer (road, section, stage) as an entity table; the PDF layout is read at the build. Road length itself comes
+      from GUS BDL and Eurostat through the onboarded sources. Effort S for the MOP table, M with the PDF.'
     overlap: Complements GPR traffic counts; it describes assets/programmes, not traffic observations.
   research:
     priority: review-next
     evidence: documented
     connection: tested
     blockers:
-    - 'Parked: no machine-readable road-programme data (PDF only) and the XML feed host archiwum.gddkia.gov.pl timed out from
-      a GitHub runner (Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026)); the only tabular
-      file is the MOP rest-area list, which feeds no KPI.'
-    - 'Owner option: the MOP XLSX on gov.pl is reachable, if a rest-area entity table is ever wanted.'
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the three gov.pl pages and the
+      programme PDF answered 200 to a GitHub runner. Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe,
+      script dev/src_dfh_fix_probe.py, 12 Nov 2026): the MOP workbook was read (one sheet, columns as listed), the programme
+      PDF has a text layer, archiwum.gddkia.gov.pl timed out again (75 s).'
+    - Licence unresolved (gov.pl attachments; the gov.pl wording is the owner question recorded under PL-ENV-022). Internal
+      build only.
+    - 'The platform has no PDF table reader yet: the PDF step adds text-layer extraction (no OCR).'
     references:
     - https://www.gov.pl/web/gddkia/dane-do-pobrania
     - https://www.gov.pl/web/gddkia/wykaz-parkingow-i-mop
@@ -6751,7 +6806,7 @@ sources:
   name: Rail Data Portal (Dane UTK)
   short_name: UTK rail data
   provider: Urząd Transportu Kolejowego (UTK)
-  status: parked
+  status: reviewing
   family: H
   kpi: true
   geography: Poland
@@ -6767,40 +6822,49 @@ sources:
     interfaces: [HTML, charts, bulk-files, PDF]
     auth: Public portal.
     cost: Free public access.
-    limits: None published. dane.utk.gov.pl answers HTTP 403 to a GitHub runner.
+    limits: None published. dane.utk.gov.pl and utk.gov.pl answer HTTP 403 to a GitHub runner (on robots.txt).
   licence:
     status: unresolved
-    notes: 'Terms: not read. The portal refused the runner (HTTP 403 on robots.txt) and the desk fetch could not open it either;
-      the dane.gov.pl record 128 ("Przewozy pasażerskie - statystyka miesięczna, kwartalna, roczna") was not readable (api.dane.gov.pl
-      and dane.gov.pl timed out from the runner).'
+    notes: 'Terms: not read. Both UTK hosts refused the runner (HTTP 403 on robots.txt) and the desk fetch could not open
+      them; the dane.gov.pl record 128 ("Przewozy pasażerskie - statystyka miesięczna, kwartalna, roczna") was not readable
+      (api.dane.gov.pl and dane.gov.pl timed out from the runner in both probes).'
   updates: Monthly, quarterly and annual depending on the series.
   ingestion:
     history: 'Not established: the portal sections (/sts/przewozy-towarowe, /sts/sprawozdania-roczne and others) are known
       from web search results only.'
-    incremental: None proposed while parked.
+    incremental: None until the owner question is answered.
     identifiers: Series, period, carrier or station where present.
   modelling:
-    notes: 'If reachable: rail passengers, passenger-km, freight tonnes and tonne-km, punctuality, monthly, Poland. Stand-in
-      with a route today: Eurostat rail transport tables (rail_pa_*, rail_go_*) through GL-001 (quarterly and annual; not
-      checked against the loaded datasets) and GUS BDL transport tables.'
+    notes: 'With a route today: rail passengers and goods for Poland per quarter from Eurostat rail_pa_quartal and rail_go_quartal
+      through GL-001 (in Silver: 6,750 rows each; data from 2004-Q1 to 2026-Q2), annual in rail_pa_total and rail_go_total
+      (Eurostat catalogue, to 2025). Only at UTK: monthly figures, punctuality and per-carrier data. From this source once
+      it is reachable: rail passengers, passenger-km, freight tonnes and tonne-km, punctuality, monthly, Poland. Effort M.'
     overlap: UTK is the regulatory statistical source; operator/open-transit data have different scope.
   research:
     priority: review-first
     evidence: documented
     connection: not-tested
     blockers:
-    - 'Parked: dane.utk.gov.pl refuses GitHub runners (Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe,
-      12 Nov 2026): HTTP 403 on robots.txt, so nothing else was requested); the refusal is not worked around. Formats, file
-      URLs and reuse terms are unread.'
-    - 'Owner option: ask UTK (re-use request) for access from cloud addresses and for the terms of the portal data.'
+    - 'Owner question: UTK refuses GitHub runners on both of its hosts (dane.utk.gov.pl and utk.gov.pl answer HTTP 403), which
+      we do not work around, and dane.gov.pl, where UTK also publishes (dataset 128), does not answer runners. Eurostat rail_pa_quartal
+      and rail_go_quartal, which we load, give passengers and goods for Poland per quarter (to 2026-Q2); monthly figures,
+      punctuality and per-carrier data exist only at UTK. Do you want to write to UTK (text drafted for you) asking for access
+      from GitHub-runner addresses or for the files with their reuse terms, or do you accept the quarterly Eurostat series
+      as the rail KPIs and leave the UTK portal out?'
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): dane.utk.gov.pl HTTP 403 on robots.txt,
+      nothing else requested. Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py,
+      12 Nov 2026): utk.gov.pl HTTP 403 on robots.txt; api.dane.gov.pl and dane.gov.pl timed out (75 s); Silver holds rail_pa_quartal
+      and rail_go_quartal (6,750 rows each).'
+    - 'Formats, file URLs and reuse terms of the portal are unread: licence unresolved.'
     references:
     - https://dane.utk.gov.pl/
     - https://dane.gov.pl/pl/dataset/128,przewozy-pasazerskie-statystyka-miesieczna-kwartalna-roczna
+    - https://ec.europa.eu/eurostat/databrowser/view/rail_pa_quartal/default/table
 - id: PL-ENV-026
   name: Airport traffic statistics
   short_name: ULC airport traffic
   provider: Urząd Lotnictwa Cywilnego (ULC)
-  status: parked
+  status: approved
   family: H
   kpi: true
   geography: Poland
@@ -6825,29 +6889,40 @@ sources:
       has no reuse sentence (desk fetch). Attribution if used: "Źródło: Urząd Lotnictwa Cywilnego".'
   updates: Quarterly with a lag of three to six months (page updated 23 Oct 2026 with Q1 2026; Q4 2025 file dated 22 Apr 2026).
   ingestion:
-    history: 'Bulk PDF only: https://ulc.gov.pl/statystyki-analizy/statystyki-wg-portow-lotniczych links 65 PDFs, no XLSX
-      or CSV (e.g. /_download/2026/statystyki_2026/_pl/wg_portow_lotniczych_1kw2026.pdf, 442,042 bytes; /_download/statystyki/2025/q4/wg_portow_lotniczych_4kw2025.pdf;
-      the oldest /_download/regulacja_rynku/statystyki/1ql_2010.pdf). Paths differ per release, so the listing page is the
-      entry. No API.'
-    incremental: None proposed while parked.
+    history: 'Bulk PDF: https://ulc.gov.pl/statystyki-analizy/statystyki-wg-portow-lotniczych links 65 PDFs, no XLSX or CSV
+      (e.g. /_download/2026/statystyki_2026/_pl/wg_portow_lotniczych_1kw2026.pdf, 442,042 bytes; /_download/statystyki/2025/q4/wg_portow_lotniczych_4kw2025.pdf;
+      the oldest /_download/regulacja_rynku/statystyki/1ql_2010.pdf, 139,818 bytes). Paths differ per release, so the listing
+      page is the entry. The PDFs carry a text layer (Q1 2026: 1 page, 247 text operators, fonts with ToUnicode maps; Q1 2010:
+      2 pages, 337 text operators), so tables are read by text-layer extraction, without OCR. Full load: 65 files, a few hundred
+      KB each. No API.'
+    incremental: Snapshot of the listing page; a new quarter is a new PDF link; version = Last-Modified and ETag of the file;
+      check monthly.
     identifiers: Airport name (no ICAO or IATA code in the tables), quarter.
   modelling:
-    notes: 'If built: passengers and operations per airport and for Poland, quarterly. Stand-in with a route today: Eurostat
-      air transport by airport (avia_*) through GL-001, which carries Polish airports (not checked against the loaded datasets).'
+    notes: 'Smallest Gold selection: passengers and aircraft operations per airport and for Poland, quarterly from Q1 2010
+      (about 15 airports; airport names mapped to ICAO codes and voivodeships by a small seed). Frequency: quarterly only;
+      each PDF repeats the two previous years, so the same quarter appears in up to three files: keep the newest file per
+      quarter. Overlap: Eurostat avia_paoa (in Silver, 301.6 million rows, to 2026-Q3) carries passengers of Polish airports
+      and was more current than ULC on 12 Nov 2026 (ULC: Q1 2026); keep both series (O31). Effort M (PDF layouts differ over
+      16 years).'
     overlap: Airport totals can overlap port/route reports; do not sum views without definition checks.
   research:
     priority: review-next
     evidence: documented
     connection: tested
     blockers:
-    - 'Parked: PDF-only tables (the platform reads no PDF tables), no reuse terms stated, and Eurostat publishes airport passengers
-      with a licence. Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the listing and
-      two PDFs answered 200 to a GitHub runner (Incapsula script present on the pages).'
-    - 'Owner option: un-park if quarterly per-airport figures ahead of Eurostat are wanted; needs a PDF table reader and a
-      reuse request to ULC.'
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the listing and two PDFs answered
+      200 to a GitHub runner. Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py,
+      12 Nov 2026): the newest and the oldest PDF were downloaded and have a text layer.'
+    - 'Licence unresolved: no reuse terms are stated on ulc.gov.pl. Internal build only; a reuse request to ULC is an owner
+      option.'
+    - 'The platform has no PDF table reader yet: the build adds text-layer extraction and checks each table against its total
+      row. The pages carry the Incapsula script; plain requests were served. If the site starts refusing, the refusal is recorded
+      and not worked around.'
     references:
     - https://ulc.gov.pl/statystyki-analizy/statystyki-wg-portow-lotniczych
     - https://ulc.gov.pl/udostepnianie-informacji-w-celach-naukowych
+    - https://ec.europa.eu/eurostat/databrowser/view/avia_paoa/default/table
 - id: PL-ENV-027
   name: Port of Gdańsk cargo and traffic statistics releases
   short_name: Port of Gdańsk statistics
@@ -6877,28 +6952,39 @@ sources:
   ingestion:
     history: 'No machine route: figures appear in press-release text, and https://www.portgdansk.pl/en/business/general-information/facts-and-figures/
       shows charts for 2010-2025 without numbers or a download (its only file link is a PwC report PDF).'
-    incremental: None proposed while parked.
+    incremental: 'None: the series are read from Eurostat (GL-001).'
     identifiers: Period, cargo group.
   modelling:
-    notes: 'No Gold use from this source. Stand-in with a route today: Eurostat maritime transport by port (mar_*) through
-      GL-001 and GUS maritime statistics (not checked against the loaded datasets).'
+    notes: 'No Gold use from this source. The port''s figures come from Eurostat maritime statistics through GL-001: gross
+      weight of goods handled in the port of Gdańsk (mar_mg_aa_pwhd, annual 2005-2024, port code PL_0PLGDN), quarterly detail
+      for Polish ports (mar_go_qm_pl, 2004-Q1 to 2026-Q1), containers in TEU (mar_mg_am_pvh), cargo type (mar_mg_am_pwhc)
+      and passengers (mar_mp_aa_pphd).'
     overlap: Port-specific facts are not a national maritime total and may overlap national summaries.
   research:
     priority: specialist
     evidence: documented
     connection: tested
     blockers:
-    - 'Parked: press releases and charts only, all rights reserved, no data file (Dev probe run 43282997907 (job 131408942570,
-      branch test/src-dfh-probe, 12 Nov 2026): the facts-and-figures page answered 200 and links no data file).'
-    - 'Owner option: none; port cargo comes from Eurostat and GUS.'
+    - 'Parked, not for a technical reason: the port authority, a company, reserves all rights and offers press-release text
+      and charts only, and its series are contained in Eurostat maritime statistics that we load through GL-001: mar_mg_aa_pwhd
+      (gross weight handled in main ports; Gdańsk is rep_mar PL_0PLGDN; 3,960 rows in Silver) and mar_go_qm_pl (Poland by
+      port, quarterly; 2,476,692 rows in Silver), with mar_mg_am_pvh, mar_mg_am_pwhc and mar_mp_aa_pphd listed in silver.eurostat_dataflows
+      (Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026)).
+      Eurostat is two to three quarters behind the port''s own releases.'
+    - 'Owner option: if the port''s earlier quarterly figures are wanted, a written permission request to ZMPG S.A. (text
+      drafted on request).'
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the facts-and-figures page answered
+      200 and links no data file. Not verified: that Gdańsk is a port in mar_go_qm_pl and in the three catalogue tables (only
+      mar_mg_aa_pwhd was opened), and the Silver row counts of those three.'
     references:
     - https://www.portgdansk.pl/en/business/general-information/facts-and-figures/
     - https://www.portgdansk.pl/wydarzenia/trzy-kwartaly-2026-ponad-6-mln-ton-ladunkow-wiecej-niz-przed-rokiem-port-gdansk-bije-rekordy/
+    - https://ec.europa.eu/eurostat/databrowser/view/mar_mg_aa_pwhd/default/table
 - id: PL-ENV-028
   name: Warsaw open-data portal and public-transport feeds
   short_name: Warsaw open data and GTFS
   provider: Miasto Stołeczne Warszawa / Warszawski Transport Publiczny
-  status: parked
+  status: reviewing
   family: H
   kpi: false
   geography: Warsaw, Poland
@@ -6913,8 +6999,8 @@ sources:
     interfaces: [portal, API, bulk-files]
     auth: Legacy API needs a personal apikey after registration (reported by third parties; the portal itself was not readable).
     cost: Free public access; conditions differ by resource.
-    limits: api.um.warszawa.pl and dane.um.warszawa.pl gave no answer to a GitHub runner (timeout); www.ztm.waw.pl answered
-      HTTP 202 with an empty body.
+    limits: api.um.warszawa.pl and dane.um.warszawa.pl gave no answer to a GitHub runner in two probes (timeouts of 20 s and
+      75 s on robots.txt); www.ztm.waw.pl answered HTTP 202 with an empty body.
   licence:
     status: unresolved
     notes: 'Terms: not read (neither city portal was reachable). https://warszawa19115.pl/-/dane-po-warszawsku (desk fetch
@@ -6924,11 +7010,12 @@ sources:
   updates: Vehicle positions refresh frequently; timetables daily. Portal migration from api.um.warszawa.pl to dane.um.warszawa.pl
     in progress.
   ingestion:
-    history: 'No route from the platform: both city portals time out from GitHub runners, the legacy API needs an apikey tied
-      to a personal account, and the ZTM timetable source is a restricted endpoint according to the maintainer of the third-party
-      WarsawGTFS rebuild (https://github.com/MKuranowski/WarsawGTFS). That rebuild (https://mkuran.pl/gtfs/warsaw.zip) is
-      not the city''s feed and carries conflicting licence labels, so it is not used.'
-    incremental: None proposed while parked.
+    history: 'No route from the platform yet: both city portals time out from GitHub runners, the legacy API needs an apikey
+      tied to a personal account, and the ZTM timetable source is a restricted endpoint according to the maintainer of the
+      third-party WarsawGTFS rebuild (https://github.com/MKuranowski/WarsawGTFS). That rebuild (https://mkuran.pl/gtfs/warsaw.zip)
+      is not the city''s feed and carries conflicting licence labels, so it is not used. dane.gov.pl could not be searched
+      for Warsaw sets (timeout from the runner).'
+    incremental: None until the owner question is answered.
     identifiers: Dataset id; GTFS ids if a feed is ever available.
   modelling:
     notes: 'kpi false. If a feed becomes reachable: the same city-GTFS selection as PL-ENV-029 and PL-ENV-030.'
@@ -6938,11 +7025,16 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - 'Parked: api.um.warszawa.pl and dane.um.warszawa.pl do not answer GitHub runners (Dev probe run 43282997907 (job 131408942570,
-      branch test/src-dfh-probe, 12 Nov 2026): timeout on robots.txt of both; www.ztm.waw.pl HTTP 202, empty body), and the
-      API needs an apikey from an account the owner would have to create.'
-    - 'Owner option: register an account for an apikey once the new portal dane.um.warszawa.pl is reachable; no action proposed
-      now.'
+    - 'Owner question: Warsaw''s city data needs two things that only you can provide. The legacy API api.um.warszawa.pl needs
+      a personal apikey from a registered account (reported by third parties; the portal was not readable), and both city
+      portals (api.um.warszawa.pl and the new dane.um.warszawa.pl) do not answer GitHub runners. Do you want to register an
+      account and key and send the city a re-use request (text drafted for you) for access from GitHub-runner addresses or
+      for the timetable files with their reuse terms, or do you leave Warsaw out of the city feeds (Gdańsk, Poznań and Wrocław
+      are approved)?'
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): timeout on robots.txt of both
+      portals (20 s); www.ztm.waw.pl HTTP 202, empty body. Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe,
+      script dev/src_dfh_fix_probe.py, 12 Nov 2026): timeout on robots.txt of both portals again (75 s).'
+    - 'Reuse terms not read: licence unresolved.'
     references:
     - https://warszawa19115.pl/-/dane-po-warszawsku
     - https://api.um.warszawa.pl/
