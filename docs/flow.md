@@ -30,5 +30,8 @@ always with at least one agent working, and every change passes the same station
 - **Evidence over claims:** a builder reports what it ran; a reviewer reads the diff, not the builder's summary.
   Nothing is "done" before Verify.
 - **Refusals stand:** a permission or safety refusal is reported, never worked around.
+- **Documentation (O39):** each repo documents itself; zohelo-data holds the data platform and the published
+  contract only. A document or decision that concerns only zohelo.com goes to zohelo/zohelo, only zohelo-bi to
+  zohelo/zohelo-bi; a moved decision row keeps its id here as a pointer.
 - **Visibility:** the `flow:` labels on issues show the station in GitHub; the task list in the session shows the
   running lanes; `claude/where-we-are.md` in the claude.ai project shows the state and what needs the owner.
