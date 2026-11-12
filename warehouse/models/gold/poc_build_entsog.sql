@@ -7,10 +7,12 @@
                                                          of poc_entsog_point_groups (unlisted points: 'unmapped');
      entsog:physical_flow_month_sum:kWh:<entry|exit>     monthly sum of the daily values (kWh), same breakdowns.
    Completeness rule: a point-direction "reports" in a gas month when it has at least one value in that month
-   (virtual and trading points published only as isNA never report). A daily sum is built only when every reporting
-   point-direction of its scope (all points of the direction, or the group) has a value that day; a day with a
-   reporting point missing is left out, never published as if complete. A monthly sum is built only for an ended
-   month whose every day has a complete daily sum. observation_status_key = 'provisional' when any value summed
+   (virtual and trading points published only as isNA never report). It is expected on a gas day when it reports in
+   that month and has a record that day (points start and stop mid-month; tests/entsog_physical_flow_complete.sql
+   fails on a missing record inside a point's span). A daily sum is built only when every expected point-direction
+   of its scope (all points of the direction, or the group) has a value that day: a day with an expected point
+   published as isNA is left out, never published as if complete. A monthly sum is built only for an ended month
+   whose every day has a complete daily sum. observation_status_key = 'provisional' when any value summed
    is Provisional (or any day of the month is), else 'ok'. No unit conversion (D33). #}
 with groups as ({{ poc_entsog_point_groups() }}),
 
@@ -25,6 +27,9 @@ flows as (
         f.flow_status,
         f.source_version,
         f.raw_sha256,
+        bool_or(f.value_kwh_d is not null) over (
+            partition by f.operator_key, f.point_key, f.direction_key, date_trunc('month', f.gas_day)
+        ) as reports_in_month,
         coalesce(g.group_key, 'unmapped') as group_key,
         coalesce(g.group_label, 'Points not in the reviewed group list') as group_label
     from {{ ref('entsog_physical_flow') }} as f
@@ -47,17 +52,6 @@ scoped as (
     from flows
 ),
 
-reporting as (
-    select
-        operator_key,
-        direction_key,
-        scope_key,
-        gas_month,
-        count(distinct point_key) filter (where value_kwh_d is not null) as points_reporting
-    from scoped
-    group by all
-),
-
 daily as (
     select
         s.operator_key,
@@ -68,6 +62,7 @@ daily as (
         s.gas_month,
         sum(s.value_kwh_d) as value,
         count(distinct s.point_key) filter (where s.value_kwh_d is not null) as points_with_value,
+        count(distinct s.point_key) filter (where s.reports_in_month) as points_expected,
         bool_or(s.value_kwh_d is not null and s.flow_status is distinct from 'Confirmed') as any_provisional,
         -- every record of one operator and gas day comes from the same month answer: one version, one file
         max(s.source_version) as source_version,
@@ -77,15 +72,9 @@ daily as (
 ),
 
 daily_complete as (
-    select d.*
-    from daily as d
-    inner join reporting as r
-        on
-            d.operator_key = r.operator_key
-            and d.direction_key = r.direction_key
-            and d.scope_key is not distinct from r.scope_key
-            and d.gas_month = r.gas_month
-    where r.points_reporting > 0 and d.points_with_value = r.points_reporting
+    select *
+    from daily
+    where points_with_value > 0 and points_with_value = points_expected
 ),
 
 monthly as (
@@ -114,7 +103,7 @@ observations as (
         'D' as frequency,
         gas_day as date_key,
         cast(gas_day as varchar) as period_label,
-        * exclude (gas_day, gas_month, points_with_value)
+        * exclude (gas_day, gas_month, points_with_value, points_expected)
     from daily_complete
     union all
     select

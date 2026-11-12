@@ -6,8 +6,9 @@
 {% endmacro %}
 
 {# Point groups: a reviewed static list keyed by the platform's pointKey, one group per point (both directions).
-   Built from the points GAZ-SYSTEM published in 2021-2026 with the API's own pointType and the adjacent country of
-   /api/v1/operatorpointdirections (Dev probe 43320099570). A point that publishes flows and is not listed here goes
+   Built from the 49 point-directions GAZ-SYSTEM published from 2021-01 to 2026-11 (Dev trial 43323294484) with the
+   API's own pointType and the adjacent country of /api/v1/operatorpointdirections (Dev probe 43320099570); the
+   virtual and trading points (VTP-*, ITP-00543) publish no physical flow and are not listed. A point that publishes flows and is not listed here goes
    to group 'unmapped' in Gold and is reported by tests/entsog_point_groups.sql (warning); it still counts in the
    entry and exit totals, which sum every point of the direction. #}
 {% macro poc_entsog_point_groups() %}
@@ -20,6 +21,8 @@
         ('ITP-00177', 'interconnector_sk', 'Interconnector Slovakia'),
         ('ITP-00556', 'interconnector_lt', 'Interconnector Lithuania (GIPL)'),
         ('ITP-10008', 'interconnector_ua', 'Interconnector Ukraine'),
+        ('ITP-00092', 'interconnector_by', 'Interconnectors Belarus (Wysokoje, Tieterowka; until mid-2023)'),
+        ('ITP-00094', 'interconnector_by', 'Interconnectors Belarus (Wysokoje, Tieterowka; until mid-2023)'),
         ('ITP-00293', 'yamal_system', 'Yamal transit system (point of interconnection PWP)'),
         ('DIS-00195', 'cross_border_distribution', 'Cross-border distribution points (CZ)'),
         ('DIS-00204', 'cross_border_distribution', 'Cross-border distribution points (CZ)'),
