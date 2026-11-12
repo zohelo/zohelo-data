@@ -74,7 +74,41 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('current_account_components', 'nbp_bop', '%', -1e6, 1e6),
     ('fdi_inflow', 'nbp_bop', '%', -1e6, 1e6),
     -- percent per year; highest 24.0 in 1998 (silver.nbp_policy_rates, Dev trial 43093114523)
-    ('nbp_reference_rate', 'nbp_interest_rates', '%', 0, 30)
+    ('nbp_reference_rate', 'nbp_interest_rates', '%', 0, 30),
+    -- slice needs-block rows (#2743): every source of the concepts unioned below
+    -- 550.6 (Dev trial 43093114523: a candidate country in the 1990s)
+    ('core_inflation', 'eurostat', '%', -10, 600),
+    -- national currencies; 322,800 (Dev trial 43093114523)
+    ('min_wage', 'eurostat', '%', 1, 1e6),
+    ('adult_learning', 'eurostat', '%', 0, 100),
+    ('adult_learning', 'gus_bdl', '%', 0, 100),
+    ('extreme_poverty', 'gus_bdl', '%', 0, 100),
+    -- % change on a year earlier
+    ('industrial_production', 'eurostat', '%', -100, 300),
+    -- index, previous year = 100
+    ('industrial_production', 'gus_bdl', '%', 1, 300),
+    -- index, same month a year earlier = 100
+    ('industrial_production', 'gus_dbw', '%', 1, 300),
+    -- % change on a year earlier; 261 (Dev trial 43093114523)
+    ('construction_output', 'eurostat', '%', -100, 400),
+    -- index, same month a year earlier = 100
+    ('construction_output', 'gus_dbw', '%', 1, 300),
+    -- persons; Poland 6,702,934 in 2026-08
+    ('employment_enterprise', 'gus_bdl', '%', 1000, 2e7),
+    -- PLN; Poland 7,530.45 in 2026-03
+    ('median_wage', 'gus_bdl', '%', 500, 1e5),
+    ('median_wage', 'gus_dbw', '%', 500, 1e5),
+    -- PLN per m2; 2,202 the lowest (Dev trial 43093114523)
+    ('price_m2_secondary', 'gus_bdl', '%', 300, 1e5),
+    ('price_m2_secondary', 'gus_dbw', '%', 300, 1e5),
+    ('arope_rate', 'eurostat', '%', 0, 100),
+    ('arope_rate', 'gus_dbw', '%', 0, 100),
+    ('long_term_unemployment', 'eurostat', '%', 0, 100),
+    ('long_term_unemployment', 'gus_dbw', '%', 0, 100),
+    ('registered_unemployed', 'gus_bdl', '%', 0, 5e6),
+    ('registered_unemployed', 'gus_dbw', '%', 0, 5e6),
+    -- MRPiPS (#2778): persons, Poland and voivodeships, end of month
+    ('registered_unemployed', 'mrpips_unemployment', '%', 0, 5e6)
 ),
 
 metrics as (
@@ -158,6 +192,114 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_nbp_reference_rate') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_core_inflation') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_min_wage') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_adult_learning') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_extreme_poverty') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_industrial_production') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_construction_output') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_employment_enterprise') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_median_wage') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_price_m2_secondary') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_arope_rate') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_long_term_unemployment') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_registered_unemployed') }}
 )
 
 select
