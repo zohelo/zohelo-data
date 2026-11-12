@@ -165,7 +165,9 @@ TABLES["geography"] = {
 # Per source: the Silver entity table and how its entities group into blocks, the build stage, and the
 # small tables the build stage reads (relation -> (namespace, table, columns, filter); the filter keeps
 # the rows of one source: a value of `source_system`, or (column, value); the column is then dropped).
-# Optional: `local_input` (the block's Silver files are downloaded once and every step reads the local
+# Optional: `map_model` (a model run once per run over the lookups; its rows replace `geo_map`, so a
+# source can map its codes by rule and the build stage and the changed-map check read the same map),
+# `local_input` (the block's Silver files are downloaded once and every step reads the local
 # copy: one GET per file instead of range requests from each step), `not_loaded` (a model that counts
 # the Silver rows the build stage leaves out, by reason, for the run summary), `load_order` (lookup,
 # block column, rank column, ranks: blocks are built by rank group first, smaller blocks first inside).
@@ -196,11 +198,13 @@ SOURCES: dict[str, dict[str, Any]] = {
             "levels": ("silver", "bdl_variables", ("subgroup_id", "level"), None),
         },
         "keyed_by": ("geo_map",),
+        "map_model": "gold_gus_bdl_map",  # unit ids by the TERYT code they carry
         "local_input": True,
         "not_loaded": "gold_gus_bdl_not_loaded",
         # O43: Poland and voivodeships first, then powiats, then gminas. A subgroup is built whole, so the
-        # order is by the lowest territorial level its variables have (BDL levels 0–6; 5 powiat, 6 gmina).
-        "load_order": ("levels", "subgroup_id", "level", ((2, 0), (5, 1), (6, 2))),
+        # order is by the lowest territorial level its variables have (BDL levels 0–6: to 4 Poland,
+        # macroregions, voivodeships, regions and subregions; 5 powiat; 6 gmina).
+        "load_order": ("levels", "subgroup_id", "level", ((4, 0), (5, 1), (6, 2))),
     },
 }
 
@@ -228,6 +232,25 @@ def export_lookups(cat, source: str, directory: Path) -> tuple[dict[str, str], d
             geo_map = dict(zip(codes, keys, strict=True))
         paths[name] = str(directory / f"{name}.parquet")
         pq.write_table(data, paths[name])
+    if spec.get("map_model"):
+        import duckdb
+
+        con = duckdb.connect()
+        try:
+            for name, path in paths.items():
+                con.execute(f"CREATE VIEW {name} AS SELECT * FROM read_parquet('{path.replace(chr(39), '')}')")
+            data = con.sql((MODELS / f"{spec['map_model']}.sql").read_text(encoding="utf-8")).to_arrow_table()
+        finally:
+            con.close()
+        codes, keys = data.column("source_code").to_pylist(), data.column("geography_key").to_pylist()
+        geo_map = dict(zip(codes, keys, strict=True))
+        if len(geo_map) != len(codes):  # two rows for one code would repeat every row of that unit
+            raise RuntimeError(
+                f"{source}: {spec['map_model']} gives {len(codes) - len(geo_map)} codes more than one area"
+            )
+        for name in spec["keyed_by"]:
+            paths[name] = str(directory / f"{name}.by_rule.parquet")
+            pq.write_table(data, paths[name])
     return paths, geo_map
 
 
@@ -306,7 +329,8 @@ def model_digest(source: str) -> str:
     decides a block's Gold files."""
     digest = sha256()
     spec = SOURCES[source]
-    for model in (*spec.get("prepare", {}).values(), spec["build"], *(t["model"] for t in TABLES.values())):
+    rules = (spec.get("map_model"), *spec.get("prepare", {}).values(), spec["build"])
+    for model in (*(m for m in rules if m), *(t["model"] for t in TABLES.values())):
         digest.update((MODELS / f"{model}.sql").read_bytes())
     return digest.hexdigest()[:12]
 
