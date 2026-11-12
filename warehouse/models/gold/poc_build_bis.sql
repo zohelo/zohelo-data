@@ -49,7 +49,7 @@ obs as (
     from {{ ref('bis_observations') }} as o
     where
         o.obs_value is not null
-        and o.ref_area not in (select area_code from not_built_areas)
+        and o.ref_area not in (select n.area_code from not_built_areas as n)
 ),
 
 geo_map as (
