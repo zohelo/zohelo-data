@@ -51,6 +51,10 @@ pct_exports,% eksportu,"% of exports of goods, services and primary income","% e
 days,dni,days,dni,false,days,1
 payers,płatn.,contribution payers,płatnicy składek,false,payers,1
 certificates,zaśw.,medical certificates,zaświadczenia lekarskie,false,certificates,1
+pln_per_m2,zł/m²,PLN per square metre,zł za m²,false,pln_per_m2,1
+facilities,ob.,facilities,obiekty,false,facilities,1
+bed_places,miejsca,bed places,miejsca noclegowe,false,bed_places,1
+overnight_stays,nocl.,overnight stays,noclegi,false,overnight_stays,1
 index_0_1,0-1,"index, 0 to 1","indeks, od 0 do 1",true,index_0_1,1
 index_2021_100,2021=100,"index, 2021 = 100","indeks, 2021 = 100",true,index_2021_100,1
 ncu_per_usd,NCU/USD,source currency per US dollar,waluta źródła za dolara amerykańskiego,true,ncu_per_usd,1

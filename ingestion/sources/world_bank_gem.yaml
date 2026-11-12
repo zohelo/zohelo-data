@@ -1,0 +1,36 @@
+source_system: world_bank_gem
+description: World Bank Global Economic Monitor (GEM, API source 15) — eight monthly/quarterly series for the EU27 members, one JSON file per series
+
+# Extraction strategy (docs/landing.md). Bulk feature checked first: DataBank's GemDataEXTR.zip (11 MB) was last
+# modified 2024-03-05 while the source was updated 2026-09-08 (Dev probe 43275104514), so it is stale. Route
+# (decision 12 Nov 2026): the World Bank API v2 for source 15, as for world_bank_icp. Tested for a full load: a
+# request for every economy or for several series does not finish (HTTP 524 after 300 s), one series for the 27 EU
+# members answers in about 70 s (18,225 records, 4 MB; Dev probes 43270092150, 43275104514, 43278796642). Entity =
+# one declared series for the EU27 members (own extractor ingestion/to_landing/world_bank_gem/, the ICP pattern);
+# version = the source's lastupdated, so nothing is downloaded again until the World Bank updates GEM. CC BY 4.0
+# (register GL-006; Data Catalog record 0037798).
+extraction:
+  initial: api
+  production: snapshot                  # each series file is the complete series for the EU27 members
+  incremental_policy: changed_since_last  # source lastupdated / SHA-256 per series
+  schedule: # UTC; release: GEM is refreshed irregularly (catalogue "daily", API lastupdated 2026-09-08); weekly check (Thursday 03:20): two catalogue requests, the eight series only when lastupdated changes
+    - {cron: "20 3 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/world_bank_gem/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.gem_observations, bronze.gem_rejected_files]
+silver: [silver.gem_observations]
+gold: [gold.build_world_bank_gem]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gem_observations: {rows: 127000}  # 84,618: 8 series × EU27 × A/Q/M periods 1987-2026 (Dev trial 43283254888)
+  poc_build_world_bank_gem: {rows: 116000}  # 77,656: 8 series × up to 27 members, monthly (GDP quarterly), 1987-2026 (Dev trial 43283254888)
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): eight series files (about 100,000 observations) replaced whole when GEM is
+# updated, no changed-since filter; rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2373"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

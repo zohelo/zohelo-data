@@ -26,7 +26,9 @@
    value codes of Indicator, Variable and Measurement joined by '.', empty for a table whose only variable is the
    country). PXWeb has no unit attribute: unit_code is the unit as the value label prints it (per cent for
    rates and growth rates). zero_is_missing: a level (index, persons, wage, exchange rate) cannot be 0, so a
-   0 there is a cell without a value and is not loaded; a rate or growth rate of 0 is an observation.
+   0 there is a value below the printed precision or a cell without a value and is not loaded (148 cells,
+   all 1990-1997, mostly successor states of the USSR in the hyperinflation years; Dev trial 43306220004); a
+   rate or growth rate of 0 is an observation.
    tests/unece_measures_match.sql fails when a listed combination has no rows in Silver or a built table
    carries a combination that is not listed. #}
 {% macro poc_unece_measures() %}

@@ -7,8 +7,9 @@
    population). Each table has one frequency (annual, quarterly or monthly), so each measure has one. No
    breakdowns: the tables built carry only the measure variables and the country. Values and units as published
    (D33: thousands of persons stay thousands, indices stay 2021 = 100). The JSON-stat files carry no status and
-   no cell without a value reaches Silver; a 0 in a level series (poc_unece_measures.zero_is_missing) is a cell
-   without a value and is not loaded, a rate of 0 is kept. A period that starts after the build day cannot be an
+   no cell without a value reaches Silver; a 0 in a level series (poc_unece_measures.zero_is_missing) is a value
+   below the printed precision or a cell without a value and is not loaded (148 cells, 1990-1997), a rate of 0 is
+   kept. A period that starts after the build day cannot be an
    observation and is left out (none today). Areas through poc_map_geography (section unece, static): the 56
    countries by UN M49 code, E27 → EUROSTAT:EU27_2020, EAA → EUROSTAT:EA; the UNECE's own groupings (CIS, CWG,
    EAEU, ECE, NA, ST7) have no Gold area and are not built; any other code maps to _X and is counted by

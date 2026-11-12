@@ -148,6 +148,7 @@ world_bank_ids,pct_exports,,pct_exports
 un_wpp,thousand_persons,,thousand_persons
 un_wpp,children_per_woman,,children_per_woman
 un_wpp,years,,years
+world_bank_gem,pct,,pct
 unhcr,persons,,persons
 eea,Gg CO2 equivalent,,thousand_tonnes
 zus_psz,persons,,persons
@@ -157,6 +158,21 @@ zus_psz,payers,,payers
 zus_psz,certificates,,certificates
 nbp_bop,mln_eur,,mln_eur
 nbp_bop,mln_pln,,mln_pln
+nbp_interest_rates,pct,,pct
+eurostat,_Z,eurostat:EARN_MW_CUR:_Z:NAC,ncu
+gus_bdl,-,gus_bdl:P2692:-%,index_py_100
+gus_bdl,-,gus_bdl:P2721:-%,index_py_100
+gus_bdl,zł,gus_bdl:P3788:zł%,pln_per_m2
+gus_bdl,zł,gus_bdl:P3794:zł%,pln_per_m2
+gus_dbw,[zł],gus_dbw:309_485_180_3:%,pln_per_m2
+gus_dbw,udział w danej grupie gospodarstw domowych [%],,pct
+gus_culture,persons,,persons
+gus_culture,facilities,,facilities
+gus_culture_participation,pct_population,,pct_population
+gus_tourism,facilities,,facilities
+gus_tourism,bed_places,,bed_places
+gus_tourism,persons,,persons
+gus_tourism,overnight_stays,,overnight_stays
 bis,368,,pct
 bis,882,,index_2020_100
 bis,628,,index_2010_100

@@ -5,7 +5,8 @@ error that shows only at compile time (a wrong macro argument, a missing ref, a 
 the production build. This compiles every model with the target name `prod` (the namespaces and aliases of
 generate_schema_name / generate_alias_name) and the `topics` var of warehouse/build.py, against in-memory DuckDB:
 the R2 Data Catalog is replaced by an empty local database attached as `r2`, so no credentials or network are used.
-The only stubs are empty tables for the Gold blocks, which poc_observations() looks up with load_relation. Each
+The only stubs are empty tables for the Gold blocks, which poc_observations() looks up with load_relation, and for
+the optional parents (config meta `optional_parents`), which poc_optional_ref() looks up the same way. Each
 compiled SQL model or test must be exactly one statement that DuckDB's own parser accepts (nothing is bound or
 run); each compiled Python model must parse. dbt writes its target and logs to a temporary directory.
 
@@ -24,6 +25,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
 PROJECT = ROOT / "warehouse"
+OPTIONAL_PARENTS = "optional_parents"  # config meta of a model: parents read through poc_optional_ref()
 BLOCK_TAG = "gold_block"  # the Gold blocks poc_observations() looks up (repo_check `configuration` keeps the list)
 PROFILE = """zohelo:
   target: prod
@@ -67,8 +69,11 @@ def problems() -> list[str]:
             return [compile_error(str(parsed.exception))]
         manifest = parsed.result
         with duckdb.connect(str(catalog)) as con:
+            optional = {
+                name for node in manifest.nodes.values() for name in node.config.meta.get(OPTIONAL_PARENTS) or []
+            }
             for node in manifest.nodes.values():
-                if node.resource_type == "model" and BLOCK_TAG in node.tags:
+                if node.resource_type == "model" and (BLOCK_TAG in node.tags or node.name in optional):
                     con.execute(f'create schema if not exists "{node.schema}"')
                     con.execute(f'create table "{node.schema}"."{node.alias}" (stub integer)')
         select = ["--select", "resource_type:model", "resource_type:test"]
