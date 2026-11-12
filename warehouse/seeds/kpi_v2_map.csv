@@ -18,7 +18,7 @@ business_climate,economy,M,business_climate,eurostat,EI_BSIN_M_R2,eurostat:EI_BS
 business_climate,economy,M,,gus_dbw,184_960_267_1,,M,PL,nace,none,up,needs-block,"GUS general business climate indicator (seasonally adjusted) in Silver by NACE section only, no all-economy total"
 capacity_utilisation,economy,Q,capacity_utilisation,eurostat,EI_BSIN_Q_R2,eurostat:EI_BSIN_Q_R2:%:BS-ICU-PC,Q,PL;EU;EU27,,rate,neutral,ready,seasonally adjusted
 child_arope,labour;poland,A,child_arope,eurostat,ILC_PEPS01N,eurostat:ILC_PEPS01N:PC:Y_LT18,A,PL;EU;EU27,sex,rate,down,ready,age under 18
-cli_oecd,economy,M,,oecd,DSD_STES@DF_CLI,,M,PL;EU,,index,neutral,needs-block,"OECD CLI in Silver since #2594 (silver.oecd_cli, register GL-003); a Gold build stage for OECD is not added yet; no Eurostat equivalent"
+cli_oecd,economy,M,cli_oecd,oecd,DSD_STES@DF_CLI,oecd:cli:IX:LI:AA,M,EU,,index,neutral,ready,"amplitude adjusted, long-term average = 100; the OECD publishes the CLI for 22 economies and aggregates: no Polish or EU-27 series (EU members DE, ES, FR, IT); OECD business and consumer confidence for Poland are the separate draft concepts business_confidence_oecd and consumer_confidence_oecd (no v2 key)"
 construction_output,economy,M,construction_output,eurostat,STS_COPR_M,eurostat:STS_COPR_M:PCH_SM:PRD,M,PL;EU;EU27,,rate,up,ready,"NACE F, calendar adjusted, % change on a year earlier"
 construction_output,economy,M,construction_output,gus_dbw,392_16_223_1,gus_dbw:392_16_223_1:223,M,PL,,rate,up,ready,"index, same month a year earlier = 100, seasonally adjusted (rate = value - 100)"
 construction_output,economy,M,,gus_bdl,P2721,,Q,PL;VOIV,nace,rate,up,needs-block,BDL quarterly construction output by voivodeship in Silver; not activated
@@ -75,6 +75,7 @@ gfcf_growth,economy,Q,gfcf_growth,eurostat,NAMQ_10_GDP,eurostat:NAMQ_10_GDP:CLV_
 gfcf_rate,economy,A,gfcf_rate,eurostat,NAMA_10_GDP,eurostat:NAMA_10_GDP:PC_GDP:P51G,A,PL;EU;EU27,,rate,up,ready,
 gfcf_rate,economy,A,gfcf_rate,world_bank_wdi,NE.GDI.FTOT.ZS,world_bank_wdi:NE.GDI.FTOT.ZS,A,PL;EU;EU27,,rate,up,ready,
 gg_debt_gdp,poland,A,gg_debt_gdp,eurostat,GOV_10DD_EDPT1,eurostat:GOV_10DD_EDPT1:PC_GDP:GD,A,PL;EU;EU27,,rate,down,ready,"general government (S13), Maastricht debt"
+gg_debt_gdp,poland,A,gg_debt_gdp,mf_public_debt,Dlug_publiczny (Dług w relacji do PKB),mf_public_debt:debt_gdp:PC_GDP:GG:YE;mf_public_debt:debt_gdp:PC_GDP:GG,A;Q,PL,,rate,down,ready,"Ministry of Finance: general government (EDP) debt over GDP, quarterly; A = the 31 December value (measure suffix :YE)"
 gg_deficit_gdp,poland,A,gg_balance_gdp,eurostat,GOV_10DD_EDPT1,eurostat:GOV_10DD_EDPT1:PC_GDP:B9,A,PL;EU;EU27,,rate,up,ready,net lending (+) / net borrowing (-) of S13
 gg_deficit_gdp,poland,A,gg_balance_gdp,world_bank_wdi,GC.NLD.TOTL.GD.ZS,world_bank_wdi:GC.NLD.TOTL.GD.ZS,A,PL;EU;EU27,,rate,up,ready,GFS net lending/borrowing
 ghg_emissions,poland,A,ghg_emissions,eurostat,ENV_AIR_GGE,eurostat:ENV_AIR_GGE:THS_T:GHG,A,PL;EU;EU27,,sum,down,ready,"CO2 equivalent, excl. LULUCF, incl. international aviation"

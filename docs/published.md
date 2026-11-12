@@ -178,6 +178,25 @@ with simplified coordinates; each Feature has these properties:
 and the names and parents in `gold.dim_geography`, simplified at 0.005° with coordinates rounded to 4 decimals;
 `nuts1` and `nuts2` follow later.
 
+### geo/neighbours.csv (proposed, not written yet)
+
+The smallest shape for spatial econometrics (the owner's research kit builds contiguity and distance weight
+matrices from it): one CSV, UTF-8, header row, one row per unit × neighbour of the same level, both directions,
+from `gold.geo_neighbour` joined to `gold.geo_unit` for the centroids.
+
+| column | type | meaning |
+|---|---|---|
+| level | string | `voivodeship`, `powiat` or `gmina` (as the geojson file names) |
+| geography_key | string | the unit, `TERC:<code>` as in the geojson features |
+| neighbour_key | string | the neighbouring unit of the same level |
+| shared_border_km | number | length of the common boundary in km (EPSG:2180), 3 decimals; 0 for units touching in points only |
+| contiguity | string | `rook` (shared line of any length) or `queen` (point contact only — not the textbook queen, which includes rook pairs); a textbook queen matrix takes every row, a rook matrix the rows with `rook` |
+
+Centroids and areas for distance-based weights go into the geojson features as optional properties
+`centroid_lon`, `centroid_lat`, `area_km2` (additive, from `gold.geo_unit`) instead of a second file. Size: about
+16,200 rows (34, 1,003 and 7,075 pairs per level in Nov 2026), under 1 MB. No unit is isolated, so every row of a
+weight matrix has a neighbour. `gold.publish` writes it once `gold.geo_neighbour` exists in production (#2739).
+
 ## feed/changes.json and feed/calendar.ics
 
 `changes.json`:
@@ -503,15 +522,16 @@ voivodeships), `dimensions`, `aggregation`, `polarity`, `status` and `note`:
 - `needs-block`: in Silver (codes checked or block named) but not activated: a member filter, a half-yearly fact, a
   derivation or a row-size decision is missing; `note` says which.
 - `needs-source`: not ingested; `note` names the register id (NBP balance of payments PLG-002, investment
-  position PLG-003). NBP official rates (`nbp_interest_rates`, PLG-006) and the OECD CLI (`oecd`, GL-003) reached
-  Silver on 10 Nov (#2590, #2594) and are `needs-block` until their Gold build stages exist.
+  position PLG-003). NBP official rates (`nbp_interest_rates`, PLG-006) reached Silver on 10 Nov (#2590) and are
+  `needs-block` until their Gold build stage exists. The OECD CLI (`oecd`, GL-003) is `ready` since `gold.build_oecd`
+  (#2738), for the EU members the OECD covers (DE, ES, FR, IT): it has no Polish or EU-27 series.
 
 v2 keys by their best source status:
 
 | | ready | needs-block | needs-source | total |
 |---|---|---|---|---|
 | Polska w skrócie | 28 | 3 | 0 | 31 |
-| all 78 keys | 63 | 14 | 1 | 78 |
+| all 78 keys | 64 | 13 | 1 | 78 |
 
 Rows by source (141 rows; 31 keys have two or more ready sources):
 
@@ -523,7 +543,7 @@ Rows by source (141 rows; 31 keys have two or more ready sources):
 | world_bank_wdi | 23 | 1 | 0 | 24 |
 | nbp | 1 | 0 | 6 | 7 |
 | nbp_interest_rates | 0 | 1 | 0 | 1 |
-| oecd | 0 | 1 | 0 | 1 |
+| oecd | 1 | 0 | 0 | 1 |
 
 Gold has a quarterly fact (`fact_quarterly`), and the BDL and DBW builds place monthly and quarterly periods, so
 LFS rates, the current account, NAMQ, job vacancies and the GUS short-term series keep their frequency. Polska w

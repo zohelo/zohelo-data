@@ -25,7 +25,7 @@ from warehouse import observations as obs
 NS = "zz_dev_gold_coverage"
 SOURCE = "eurostat"
 ALWAYS = ["UNE_RT_M", "NAMA_10_GDP", "PRC_HICP_MINR", "DEMO_PJAN", "NAMQ_10_GDP", "DEMO_R_PJANAGGR3", "EARN_MW_CUR",
-          "NAIO_10_FCP_U3", "AVIA_TF_ACC"]
+          "NAIO_10_FCP_U3", "AVIA_TF_ACA"]
 SPOT = {  # series of the rule-based layer whose newest PL value is reported, with the curated fact's value
     "UNE_RT_M": "measure_key = 'eurostat:UNE_RT_M:PC_ACT:SA@M' and breakdown_json like '%\"age\":\"TOTAL\"%' and sex_key = '_T'",
     "NAMA_10_GDP": "measure_key = 'eurostat:NAMA_10_GDP:CP_MEUR:B1GQ@A'",

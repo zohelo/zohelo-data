@@ -29,6 +29,7 @@ average_gross_wage,gus_bdl,gus_bdl:P2497:%,,1,
 dwellings_completed,gus_bdl,gus_bdl:P3824:%,,1,
 area,gus_bdl,gus_bdl:P1410:%,ha in the source,1,
 area,world_bank_wdi,world_bank_wdi:AG.LND.TOTL.K2,land area,2,
+area,gugik_prg,gugik_prg:jednostki_administracyjne:km2:area,"state register of boundaries, voivodeships, powiats and gminas (not the country polygon, which includes sea waters); edition held, latest only",3,km2
 population_density,gus_bdl,gus_bdl:P2425:%,,1,
 fx_rate,nbp,nbp:fx:A:mid,"NBP table A, mid",1,
 gold_price,nbp,nbp:gold:price,"NBP fixing, 1000 fineness",1,
@@ -41,6 +42,7 @@ bond_yield_10y,eurostat,eurostat:IRT_LT_MCBY_M:_Z:MCBY,EMU convergence criterion
 gdp_per_capita_pps,eurostat,eurostat:NAMA_10R_2GDP:PPS_HAB_EU27_2020,countries and NUTS 2,1,
 gerd_gdp,eurostat,eurostat:RD_E_GERDTOT:PC_GDP,all sectors,1,
 gg_debt_gdp,eurostat,eurostat:GOV_10DD_EDPT1:PC_GDP:GD,general government (S13),1,
+gg_debt_gdp,mf_public_debt,mf_public_debt:debt_gdp:PC_GDP:GG%,"general government (EDP), Ministry of Finance; quarterly and the 31 December value (:YE)",2,
 gg_balance_gdp,eurostat,eurostat:GOV_10DD_EDPT1:PC_GDP:B9,general government (S13),1,
 ghg_emissions,eurostat,eurostat:ENV_AIR_GGE:THS_T:GHG,"excl. LULUCF, incl. international aviation",1,
 neet_rate,eurostat,eurostat:LFSI_NEET_A:PC_POP,15-29,1,
@@ -144,6 +146,14 @@ pensioners,gus_bdl,gus_bdl:P2861:osoba:przeciętna liczba emerytów i rencistów
 zus_pension_avg,gus_bdl,gus_bdl:P2860:zł:z pozarolniczego systemu ubezpieczeń społecznych emerytury,"non-agricultural system, old-age pension",1,
 investment_outlays,gus_bdl,gus_bdl:P2862:tys. zł:nakłady inwestycyjne w przedsiębiorstwach,"enterprises, current prices",1,
 vacancies_per_unemployed,gus_bdl,gus_bdl:P4334:osoba:zarejestrowani bezrobotni na 1 ofertę pracy,annual,1,
+business_confidence_oecd,oecd,oecd:cli:IX:BCICP:AA,"amplitude adjusted, long-term average = 100",1,index_lta_100
+consumer_confidence_oecd,oecd,oecd:cli:IX:CCICP:AA,"amplitude adjusted, long-term average = 100",1,index_lta_100
+cli_oecd,oecd,oecd:cli:IX:LI:AA,"amplitude adjusted, long-term average = 100; 22 economies and aggregates",1,index_lta_100
+lei_issued,gleif,gleif:lei2:entities:ISSUED,"registration status ISSUED; PENDING_TRANSFER and PENDING_ARCHIVAL (about 0.04 %) not included",1,entities
+vat_whitelist_entries,mf_biala_lista,mf_biala_lista:flat_file:entries,"active and exempt taxpayers, entries = taxpayer × bank account",1,list_entries
+state_budget_balance,mf_state_budget,mf_state_budget:execution_ytd:THS_PLN:balance%,"cumulative from January; the full year (:A)",1,
+state_treasury_debt,mf_treasury_debt,mf_treasury_debt:debt_instrument:MIO_PLN:TOTAL,end of month,1,
+krus_pension_avg,krus,krus:benefits:PLN:old_age:avg_benefit_pln%,"average monthly benefit, quarter and year (:A)",1,
 fdi_inflow,unctad,unctad:US_FdiFlowsStock:08:1:USD_MN,"FDI inward flows, US$ million at current prices (UNCTAD)",3,mln_usd
 exports_goods,unctad,unctad:US_TradeMerchTotal:02:USD_MN,"merchandise exports, US$ million at current prices",1,
 exports_services,unctad,unctad:US_TradeServCatTotal:02:S:USD_MN,"services exports (total), US$ million at current prices",1,

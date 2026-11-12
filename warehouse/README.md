@@ -23,7 +23,8 @@ catalog (readable by DuckDB and R2 SQL). Iceberg tables cannot be renamed in the
 transaction that created them, so the profile commits each statement separately; a
 table rebuild is therefore not atomic. When the catalog's rate limit (HTTP 429) or an
 Iceberg commit that does not yet see the build's own `__dbt_tmp` table (#2574) fails a
-build, `build.py` resumes it with `dbt retry` on fewer threads (`warehouse.yaml`
+model, `build.py` resumes the build with `dbt retry` on fewer threads, also when a data test
+failed in the same build (#2789; the test still fails the build) (`warehouse.yaml`
 `rate_limit_retry_*`, `commit_retry_threads`), which also replaces tables a failed rename
 left as `__dbt_backup`.
 
@@ -71,6 +72,13 @@ Eurostat and GUS BDL observations are not dbt models. Their loaders write Silver
 (design #875): `warehouse/entity/<table>.sql` is applied to each dataset / subgroup right after
 its Bronze file, and the result replaces that entity in Silver (`warehouse/entity.py`). dbt
 sees them as sources (`silver_entities` in `models/bronze/sources.yml`) for Gold.
+
+Gold per block (docs/gold-coverage.md, O36): `observations.py` puts every loaded Silver block of a big
+source into `gold.<source>_observations`, `_series` and `_measures` by rule, one file per block,
+rebuilt only when the block's Silver files, the Gold SQL (`entity/gold_*.sql`) or the geography map
+changed; each block is checked for one row per `series_key` × `date_key` before it is accepted.
+Built for Eurostat; run by hand (`python -m warehouse.observations --source eurostat`), not yet a
+Pipeline activity.
 
 ```sh
 cd warehouse && DBT_PROFILES_DIR=. dbt build --target trial   # needs the R2 env vars

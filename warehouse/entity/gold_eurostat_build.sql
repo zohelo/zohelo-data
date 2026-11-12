@@ -20,7 +20,12 @@ with measure_rule as (
         || '|tra_meas|ind_type|finpos|co_nco|wst_oper|indicator|item|variable|lcstruct|asset10|asset|s_adj)$' as pattern
 ),
 
+<<<<<<< HEAD
 placed as (
+=======
+-- not materialized: the rows are streamed twice (shapes, final join) instead of held in memory
+placed as not materialized (
+>>>>>>> feat/2792-gold-eurostat-observations
     select
         s.*,
         upper(s.dataset_id) as block_id,
@@ -98,7 +103,11 @@ dimension_lists as (
         dimension_id,
         any_value(codelist_id) as codelist_id
     from dims
+<<<<<<< HEAD
     where upper(dataset_id) = (select any_value(p.block_id) from placed as p)
+=======
+    where upper(dataset_id) in (select s.block_id from shapes as s)
+>>>>>>> feat/2792-gold-eurostat-observations
     group by dimension_id
 ),
 
@@ -145,6 +154,17 @@ shaped as (
     group by block_id, freq_code, unit_code, breakdown_dimensions, breakdown_codes
 ),
 
+<<<<<<< HEAD
+=======
+block_names as (
+    select
+        upper(dataset_id) as block_id,
+        any_value(name_en) as name_en
+    from flows
+    group by upper(dataset_id)
+),
+
+>>>>>>> feat/2792-gold-eurostat-observations
 series as (  -- shapes without any breakdown dimension keep their row
     select
         s.block_id,
@@ -168,6 +188,7 @@ series as (  -- shapes without any breakdown dimension keep their row
             and s.breakdown_dimensions = x.breakdown_dimensions
             and s.breakdown_codes = x.breakdown_codes
     left join code_names as u on u.codelist_id = 'UNIT' and s.unit_code = u.code
+<<<<<<< HEAD
     left join (
         select
             upper(dataset_id) as block_id,
@@ -175,6 +196,9 @@ series as (  -- shapes without any breakdown dimension keep their row
         from flows
         group by upper(dataset_id)
     ) as f on s.block_id = f.block_id
+=======
+    left join block_names as f on s.block_id = f.block_id
+>>>>>>> feat/2792-gold-eurostat-observations
 )
 
 select
