@@ -1,4 +1,4 @@
-{{ config(alias='build_un_wpp') }}
+{{ config(alias='build_un_wpp', tags=['gold_block']) }}
 {# Gold build stage: UN World Population Prospects 2024 (medium variant) for the areas of poc_un_wpp_blocks (EU27
    countries, the European Union (EU: 27) group → EUROSTAT:EU27_2020, World → WB:WLD), annual. Every indicator
    is two measures: un_wpp:<indicator>:estimate (1950-2023) and un_wpp:<indicator>:projection (2024-2100,

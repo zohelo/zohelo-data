@@ -1,0 +1,24 @@
+version: 2
+models:
+  - name: icp_observations
+    description: >-
+      International Comparison Program 2021 (source 90) of the newest page of every series: one row per
+      economy or region × classification (measure) × series (expenditure category) × year with a value;
+      value as double plus the source lexeme.
+    tests:
+      - unique:
+          column_name: "economy_code || '|' || classification_code || '|' || series_code || '|' || year"
+    columns:
+      - name: economy_code
+        tests: [not_null]
+      - name: classification_code
+        tests: [not_null]
+      - name: series_code
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source page (lineage to Landing/Archive).
+        tests: [not_null]
