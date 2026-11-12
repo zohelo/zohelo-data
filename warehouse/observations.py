@@ -363,7 +363,8 @@ def load_order(
     todo = [c for c in todo if c["block"] not in (no_area or ())]
     if not column or not todo:
         return groups
-    block_of_path = {path: c["block"] for c in todo for path in c["paths"]}
+    # DuckDB names a file as it was given; the scheme is dropped in case a version spells it another way
+    block_of_path = {path.split("://", 1)[-1]: c["block"] for c in todo for path in c["paths"]}
     codes: dict[str, set[str]] = {c["block"]: set() for c in todo}
     read: set[str] = set()
     paths = [path for c in sorted(todo, key=lambda c: c["rows"]) for path in c["paths"]]
@@ -383,12 +384,13 @@ def load_order(
                 ).fetchall()
             except duckdb.Error:  # the order is a preference: a batch that cannot be read keeps group 1
                 continue
-            if any(path not in block_of_path for path, _ in rows):  # a file name spelled another way
+            named = [(path.split("://", 1)[-1], code) for path, code in rows]
+            if any(path not in block_of_path for path, _ in named):  # not one of the files asked for
                 continue
-            for path, code in rows:
+            for path, code in named:
                 if code is not None:
                     codes[block_of_path[path]].add(code)
-            read.update(block_of_path[path] for path in batch)
+            read.update(block_of_path[path.split("://", 1)[-1]] for path in batch)
     finally:
         con.close()
     for block in read:
