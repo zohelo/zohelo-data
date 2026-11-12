@@ -265,6 +265,18 @@ teryt_prg as (
     where unit_level in ('kraj', 'wojewodztwo', 'powiat', 'gmina')
 ),
 
+-- World Bank WGI, Findex and ICP (#2736): World Bank economy codes like WDI's, so each gets WDI's mapping (iso2 or
+-- WB:<code>), built from wdi_countries only so that this shared model never waits for their Silver tables. A code
+-- WDI does not know (a few territories, ICP benchmark groups) is not listed and the build stage maps it to _X.
+wb_family as (
+    select
+        s.source_system,
+        w.source_code,
+        w.geography_key
+    from wdi as w
+    cross join (values ('world_bank_wgi'), ('world_bank_findex'), ('world_bank_icp')) as s (source_system)
+),
+
 -- UNCTAD: economies by UNCTAD code (M49; France 250 in the FDI, merchandise and services tables, 251 only in port
 -- calls) from poc_unctad_areas: the EU27 members, 3412 European Union (2020 …) = EU27_2020, 0000 World. Other
 -- economies have no ISO code in the tables (_X); the build stage builds only the listed areas, and
@@ -391,6 +403,8 @@ from (
     select * from gleif
     union all
     select * from teryt_prg
+    union all
+    select * from wb_family
     union all
     select * from unctad
     union all

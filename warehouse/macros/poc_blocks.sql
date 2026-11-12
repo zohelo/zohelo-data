@@ -219,6 +219,32 @@
     ) as t (ref_area, name_en, eurostat_code)
 {% endmacro %}
 
+{# World Bank WGI: the six governance estimates (#2736). #}
+{% macro poc_wgi_blocks() %}
+    select * from (
+        values
+        ('GOV_WGI_VA.EST'), ('GOV_WGI_PV.EST'), ('GOV_WGI_GE.EST'), ('GOV_WGI_RQ.EST'), ('GOV_WGI_RL.EST'),
+        ('GOV_WGI_CC.EST')
+    ) as t (indicator_code)
+{% endmacro %}
+
+{# World Bank Global Findex: account ownership, age 15+ (#2736). #}
+{% macro poc_findex_blocks() %}
+    select * from (
+        values
+        ('account_t_d', 'Account ownership (% age 15+)')
+    ) as t (indicator, block_name)
+{% endmacro %}
+
+{# World Bank ICP 2021: GDP per capita in PPP and the GDP price level index (#2736). #}
+{% macro poc_icp_blocks() %}
+    select * from (
+        values
+        ('1000000', 'PCAP.PP', 'ICP GDP per capita, PPP-based (international $)'),
+        ('1000000', 'PX.WL', 'ICP GDP price level index (world = 100)')
+    ) as t (series_code, classification_code, block_name)
+{% endmacro %}
+
 {# UNCTAD Data Hub blocks (gold.build_unctad): table × dimension codes (dimension_names, in that order) × measure.
    measure_field is the table's measure column; measure_suffix its short code in the measure key. #}
 {% macro poc_unctad_blocks() %}
@@ -377,6 +403,9 @@
     poc_build_wdi:world_bank_wdi
     poc_build_nbp:nbp
     poc_build_unctad:unctad
+    poc_build_wgi:world_bank_wgi
+    poc_build_findex:world_bank_findex
+    poc_build_icp:world_bank_icp
     poc_build_public_finance:mf_public_debt
     poc_build_oecd:oecd
     poc_build_gleif:gleif
@@ -458,6 +487,12 @@
     select 'gus_dbw', block_id, block_name from ({{ poc_dbw_blocks() }})
     union all
     select 'world_bank_wdi', indicator_code, 'WDI ' || indicator_code from ({{ poc_wdi_blocks() }})
+    union all
+    select 'world_bank_wgi', indicator_code, 'WGI ' || indicator_code from ({{ poc_wgi_blocks() }})
+    union all
+    select 'world_bank_findex', indicator, block_name from ({{ poc_findex_blocks() }})
+    union all
+    select 'world_bank_icp', series_code || ':' || classification_code, block_name from ({{ poc_icp_blocks() }})
     union all
     select distinct 'unctad', entity, entity from ({{ poc_unctad_blocks() }})
     union all

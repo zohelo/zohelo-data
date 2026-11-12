@@ -46,6 +46,7 @@ v1 may switch to 64-bit hashes (design decision 4).
 | GUS DBW | 581_57_93_4 Ludność (annual, by macroregion/region/podregion, sex, age), 581_16_2_1 Ludność (monthly, Poland) | all files of the block |
 | World Bank | 10 indicators of the concepts | all economies, all years |
 | NBP | table A mid, table C bid/ask, gold | all |
+| World Bank WGI, Findex, ICP (#2736) | WGI six governance estimates (`GOV_WGI_*.EST`); Findex `account_t_d` (× 100, per cent); ICP GDP (series 1000000) `PCAP.PP` and `PX.WL` | all economies (unmatched territories and ICP benchmark groups map to `_X`); Findex group `all` only; no EU27 aggregate in any of the three |
 | Eurostat, zohelo-bi first slice (#2584) | trng_lfse_01, ilc_peps01n, isoc_sk_dskl_i21, irt_lt_mcby_m, nama_10r_2gdp, gov_10dd_edpt1, env_air_gge, rd_e_gerdtot, demo_mlexpec, demo_r_mlifexp, lfsi_neet_a, tipsii10, demo_pjanind, demo_r_pjanind2, cei_wm011, ert_eff_ic_m, edat_lfse_03, demo_find, demo_r_find2; lfsi_emp_a also `ACT` | the measure of each slice KPI (`seeds/kpi_v2_map.csv`); countries and EU27, Polish NUTS 1–2 for the `_r_` datasets (`poc_src_eurostat.py`) |
 | OECD (#2738) | DSD_STES@DF_CLI (`cli`): BCICP, CCICP, LI with adjustment AA, index points | all areas; ISO 3166 alpha-3 → country, EU27_2020 → the Eurostat aggregate, other aggregates `OECD:<code>`; LI has no Polish or EU series |
 | GLEIF, MF white list (#2740) | GLEIF `lei2`; MF `flat_file` | counts of the newest golden copy / flat file, daily snapshot (entity-snapshot facts, docs/model.md) |
