@@ -81,8 +81,8 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_tourists_accommodated: {rows: 200}  # 119
   poc_metrics_tourist_overnight_stays: {rows: 200}  # 119
   poc_metrics_tourist_bed_places: {rows: 200}  # 119
-  poc_metrics_museum_visiting_share: {rows: 20}  # 6: 2 editions x 3 sex groups
-  poc_metrics_theatre_attendance_share: {rows: 20}  # 6
+  poc_metrics_museum_visiting_share: {rows: 20}  # at most 6: 2 editions x 3 sex groups (Silver 6 per measure, trial 43298219762; 2 if the metrics keep totals only)
+  poc_metrics_theatre_attendance_share: {rows: 20}  # at most 6, as above
   bdl_units: {rows: 20000}  # 4,694
   bdl_variables: {rows: 200000}  # 50,985
   eurostat_codes: {rows: 1000000}  # 294,750
