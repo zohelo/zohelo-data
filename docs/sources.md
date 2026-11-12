@@ -5,7 +5,9 @@ All candidate sources (about 180) are listed in the source register
 kind, endpoint, interfaces, auth, limits, licence status, update behaviour, history and
 incremental load approach, identifiers, research priority and blockers) and a `status`
 (table below). The id prefix (GL, PLS, PL-ENV, PLG, CD, EX) groups the entries. An onboarded source links to its declaration
-via `source_system`. This page details the routes of the onboarded sources.
+via `source_system`. This page details the routes of the sources onboarded until 12 November 2026; a source
+onboarded later has the same section as its own file `docs/sources/<source_system>.md`
+([source-registration.md](source-registration.md)), so this page takes no new sections.
 
 | status | meaning |
 |---|---|

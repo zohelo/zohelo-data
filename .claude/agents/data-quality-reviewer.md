@@ -48,7 +48,7 @@ model: opus
    only (or declared accumulating), rejected files 0 or explained.
 6. **Silver tests**: `unique` on the stated grain, `not_null` on keys and `raw_sha256`, `accepted_values` on closed
    lists; the grain in the description matches the SQL; trial shows 0 duplicate and 0 null keys.
-7. **Incremental policy and row ceilings**: every full-rebuild model is in `warehouse.yaml` `full_rebuild` with a
+7. **Incremental policy and row ceilings**: every full-rebuild model has a `full_rebuild` entry (the source's own YAML, or `warehouse.yaml` for a shared model) with a
    ceiling near 1.5 × the measured rows and at most 1 M (else an `exception:` issue or an incremental model; #822, D28);
    `refresh.mode` is argued per source (size, update pattern, changed-since) and `refresh.decided` cites `D32`
    plus the source's PR or issue (#875, D32).

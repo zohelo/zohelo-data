@@ -54,8 +54,8 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 | sqlfluff (dialect duckdb, jinja templater with dbt built-ins, no lakehouse connection; settings in `pyproject.toml`): lowercase keywords, explicit aliases, qualified columns when several tables are joined; RF04 (keyword-named columns such as `year`) and AL05 are off on purpose | [auto] |
 | No `select *` in a Gold model's output from upstream models; import CTEs (`x as (select * from ref(...))`) and unions of the model's own CTEs are allowed | [review] |
 | Every model has a YAML entry with description, column descriptions for keys, and at least one test (`not_null`/`unique` on the grain) | [auto] |
-| A model that is not incremental (full rebuild) has a row ceiling in `warehouse.yaml` `full_rebuild`; above 1M rows only with an `exception:` issue (owner policy #822); prod builds warn above the ceiling and fail above twice it | [auto] repo_check `configuration`, `build.py` |
-| `warehouse.yaml` `gold` lists every Gold model (by alias) and seed, plus `gold.coverage`, and nothing else | [auto] repo_check `configuration` |
+| A model that is not incremental (full rebuild) has a row ceiling under `full_rebuild`, in its source's `ingestion/sources/<source>.yaml` or in `warehouse.yaml` for a shared model, in one place only; above 1M rows only with an `exception:` issue (owner policy #822); prod builds warn above the ceiling and fail above twice it | [auto] repo_check `configuration`, `build.py` |
+| The Gold list (`warehouse.yaml` `gold` plus each source's `gold:`) holds every Gold model (by alias) and seed, plus `gold.coverage`, and nothing else; a source is declared in every place that reads it ([source-registration.md](source-registration.md)) | [auto] repo_check `configuration` |
 | Model header comment: what it is, grain, source | [auto] repo_check `model headers` (presence); content [review] |
 | Gold facts join conformed dimensions through keys; no source-specific codes in Gold keys without a scheme prefix | [review] |
 | Metrics declared in `semantic_models/` with description and filter | [auto] repo_check `model headers` (presence); content [review] |
