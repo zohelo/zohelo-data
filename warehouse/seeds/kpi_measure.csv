@@ -187,3 +187,24 @@ external_debt_gni,world_bank_ids,world_bank_ids:DT.DOD.DECT.GN.ZS,"external debt
 external_debt_service,world_bank_ids,world_bank_ids:DT.TDS.DECT.CD,"total debt service (TDS), current US$; projections not built",1,usd
 external_debt_service_gni,world_bank_ids,world_bank_ids:DT.TDS.DECT.GN.ZS,"total debt service, % of GNI (series not in the IDS series metadata; name from the observations)",1,pct_gni
 external_debt_service_exports,world_bank_ids,world_bank_ids:DT.TDS.DECT.EX.ZS,"total debt service, % of exports of goods, services and primary income",1,pct_exports
+reer,bis,bis:eer:882:R.B,"CPI-based, broad basket of 64 economies, 2020 = 100 (BIS)",3,
+policy_rate,bis,bis:cbpol:368,"end of month, per cent per year (BIS)",1,
+house_price_growth,bis,bis:spp:771:N,"nominal, year-on-year change, quarterly (BIS selected series)",1,
+real_house_price_growth,bis,bis:spp:771:R,"CPI-deflated, year-on-year change, quarterly (BIS selected series)",1,
+credit_to_gdp,bis,bis:tc:770:P.A.M,"all lenders, market value, adjusted for breaks, quarterly (BIS total credit)",1,
+debt_service_ratio,bis,bis:dsr:367:P,"private non-financial sector, quarterly (BIS)",1,
+unemployment_rate,ilostat,ilostat:une_deap_sex_age_rt_a:PC:AGE_YTHADULT_YGE15,"annual, 15+, national labour force survey as reported to the ILO",8,
+unemployment_rate,ilostat,ilostat:une_deap_sex_age_rt_q:PC:AGE_YTHADULT_YGE15,"quarterly, 15+, national labour force survey as reported to the ILO",9,
+youth_unemployment,ilostat,ilostat:une_deap_sex_age_rt_a:PC:AGE_YTHADULT_Y15-24,"annual, 15-24, national labour force survey as reported to the ILO",4,
+youth_unemployment,ilostat,ilostat:une_deap_sex_age_rt_q:PC:AGE_YTHADULT_Y15-24,"quarterly, 15-24, national labour force survey as reported to the ILO",5,
+employment_rate,ilostat,ilostat:emp_dwap_sex_age_rt_a:PC:AGE_YTHADULT_Y15-64,"annual, 15-64, employment-to-population ratio (Eurostat: 20-64)",6,
+activity_rate,ilostat,ilostat:eap_dwap_sex_age_rt_a:PC:AGE_YTHADULT_Y15-64,"annual, 15-64, labour force participation rate (Eurostat: 20-64)",6,
+neet_rate,ilostat,ilostat:eip_neet_sex_rt_a:PC,"annual, 15-24 (Eurostat: 15-29)",3,
+life_expectancy,undp_hdr,undp_hdr:composite_indices:years:le,"at birth, both sexes and by sex (Human Development Report, newest report)",6,
+hdi,undp_hdr,undp_hdr:composite_indices:index:hdi,"both sexes and by sex (Human Development Report, newest report)",1,
+gdp_current_prices,undata,undata:syb_230:millions of US dollars:gdp_current,"millions of US dollars at current prices, selected years (UN Statistical Yearbook)",6,mln_usd
+gdp_per_capita,undata,undata:syb_230:US dollars:gdp_per_capita,"US dollars at current prices, selected years (UN Statistical Yearbook)",3,usd_per_person
+gdp_volume_growth,undata,undata:syb_230:percent:gdp_growth,"real rate of growth, selected years (UN Statistical Yearbook)",6,
+gerd_gdp,undata,undata:syb_285:percentage of GDP:gerd_gdp,"% of GDP, selected years (UNESCO UIS as printed in the UN Statistical Yearbook)",4,
+internet_users,undata,undata:syb_314:percentage of individuals:internet_users,selected years (ITU as printed in the UN Statistical Yearbook),1,
+health_expenditure_gdp,undata,undata:syb_325:% of GDP:health_expenditure,selected years (WHO as printed in the UN Statistical Yearbook),1,
