@@ -12,6 +12,8 @@ implemented and authorized:
                shared pattern named by extraction.kind (bulk_file: ingestion/to_landing/patterns/)
                ingestion/to_bronze/<source>/__init__.py (bronze.*, landing.archive)
                PLATFORM_ACTIVITIES below (silver_gold.build, gold.publish, serving.refresh_index)
+               warehouse/entity/gold_<source>_build.sql (gold.observations: the source's per-block Gold
+               build stage, run by warehouse/observations.py; docs/gold-coverage.md, D35)
   authorized   ingestion/sources/<source>.yaml "activities";
                warehouse/warehouse.yaml and portal/portal.yaml for platform activities
 Activities are idempotent, so a scheduled run and a manual run are the same thing and a
@@ -45,6 +47,7 @@ ORDER = (
     "archive.prune",
     "silver_gold.build",
     "gold.publish",
+    "gold.observations",
     "serving.refresh_index",
 )
 WRITES = {
@@ -54,6 +57,7 @@ WRITES = {
     "archive.prune",
     "silver_gold.build",
     "gold.publish",
+    "gold.observations",
 }
 
 RUNS = {
@@ -74,9 +78,11 @@ RUNS = {
         "archive.prune",
         "silver_gold.build",
         "gold.publish",
+        "gold.observations",
     ],
     "silver/gold: build models": ["silver_gold.build", "gold.publish"],
     "gold: publish": ["gold.publish"],
+    "gold: observations": ["gold.observations"],
     "serving: refresh portal index": ["serving.refresh_index"],
 }
 
@@ -102,6 +108,15 @@ def _publish(p: Params) -> int:
 
     publish.main()
     return 0
+
+
+def _observations(source: str, p: Params) -> int:
+    """gold.observations: the source's per-block Gold load (docs/gold-coverage.md, D35). The filter names
+    blocks (ids or globs; `*` = every block); without one the run only continues a load already started. The
+    budget leaves 15 minutes of the job for the last commits and the annotations."""
+    from warehouse import observations
+
+    return observations.activity(source, p.budget_minutes - 15, p.filter)
 
 
 def _build(p: Params) -> int:
@@ -246,6 +261,8 @@ def implemented(source: str) -> dict:
                 raise
             continue
         code.update(module.ACTIVITIES)
+    if (ROOT / "warehouse" / "entity" / f"gold_{source}_build.sql").exists():  # a per-block Gold build stage
+        code["gold.observations"] = lambda p: _observations(source, p)
     declared = (yaml.safe_load((SOURCES / f"{source}.yaml").read_text()) or {}).get("bronze_latest_only")
     if "bronze.load" in code and declared:  # latest version only (#845): a load replaces superseded versions
         code["bronze.load"] = lambda p, load=code["bronze.load"]: _load_latest_only(source, load, p)
