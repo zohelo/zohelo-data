@@ -103,13 +103,32 @@ def _short(message: str, head: int = 200, tail: int = 600) -> str:
     return message if len(message) <= head + tail else f"{message[:head]} ... {message[-tail:]}"
 
 
+SELECT_SHOWN_CHARS = 400  # of the select list in the annotation; the rest is a count
+
+
+def _select_for_annotation(selectors: list[str], limit: int = SELECT_SHOWN_CHARS) -> dict:
+    """The select list for the annotation: whole when short, else its first names and `select_count`.
+
+    A changed-only build after a shared macro or seed change selects 150 to 200 models, about 4,000 characters:
+    left whole, the annotation was cut inside the list and lost exit_code, row_ceilings and every failure (#2875)."""
+    if len(json.dumps(selectors, separators=(",", ":"))) <= limit:
+        return {"select": selectors}
+    first: list[str] = []
+    for name in selectors:
+        if len(json.dumps([*first, name], separators=(",", ":"))) > limit:
+            break
+        first.append(name)
+    return {"select": first, "select_count": len(selectors), "select_more": len(selectors) - len(first)}
+
+
 def _for_annotation(summary: dict, shown: int = MAX_FAILURES_SHOWN) -> dict:
-    """The summary fitted to one annotation: failures go last, at most `shown` of them (fewer
-    if escaping makes them too long) with a count of the rest, their messages sharing 2,400
-    characters, so the batch and catalog results are never cut off. The step summary keeps
-    every failure in full."""
+    """The summary fitted to one annotation: a long select list is shortened to its first names and a
+    count; failures go last, at most `shown` of them (fewer if escaping makes them too long) with a
+    count of the rest, their messages sharing 2,400 characters, so the batch and catalog results are
+    never cut off. The step summary keeps the select list and every failure in full."""
     failures = summary["failures"]
     out = {k: v for k, v in summary.items() if k != "failures"}
+    out.update(_select_for_annotation(summary.get("select") or []))
     budget = 2400 // max(1, min(len(failures), shown))
     listed = [
         {**f, "message": _short(f["message"], head=min(200, budget // 4), tail=max(1, min(600, budget * 3 // 4)))}
@@ -200,6 +219,10 @@ def build_once(
             break
         latest.update({r["unique_id"]: r for r in retried})
     results = list(latest.values())
+    # The exit code so far is the last dbt command's: a retry re-runs only the failed and skipped nodes, so it can
+    # exit 0 while an earlier failure stays in `latest` (or write no results at all); any failure left fails the build.
+    if returncode == 0 and any(r["status"] in FAILED for r in results):
+        returncode = 1
     summary = {
         "target": target,
         "select": selectors,

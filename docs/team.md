@@ -451,7 +451,7 @@ are open, the next one is the first missing piece below.
 6. **Shared front-end foundation**, with the Designer, who supplies the Design System artifact the package
    implements: the architecture of `@zohelo/design` (D3) — tokens, components,
    chart style, the shared header and footer, package boundaries, versioning and how zohelo, zohelo-bi and the data
-   portal consume it (D21, D25) — so the design system is built once for three products.
+   portal consume it (D21, D25 in zohelo/zohelo docs/decisions.md) — so the design system is built once for three products.
 
 ### Review
 

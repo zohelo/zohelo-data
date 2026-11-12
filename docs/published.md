@@ -26,6 +26,16 @@ strings in ISO 8601 UTC.
   metadata, no numbers), so readers can apply the same rule. `gold.publish` reports the KPIs and rows it left out
   (`licence_gate` in its annotation). Since 12 Nov 2026 this leaves NBP (`nbp`, `nbp_interest_rates`) out, so v1
   has no `fx_rate` and v2 no `eurpln`, until NBP's terms are established.
+- **Units** (decision D33): every value whose published unit is mapped is in the `unit_key` written beside it, the
+  target unit of its series (the measure's `kpi_measure.csv` `unit_key`, else the KPI's). `gold.metrics_<kpi>` converts the published value to that
+  unit by pure scale only (same `base_unit_key` in `unit.csv`; × factor of the published unit ÷ factor of the target,
+  with the published decimals shifted by the factor) and keeps `value_published` and `unit_published` beside it;
+  Gold facts keep the value as published. Currencies, index bases and price bases are never converted: a KPI
+  published in EUR, PLN and USD has one series per currency, each with its own `unit_key`. Since 12 Nov 2026 the World
+  Bank series of `gdp_current_prices` (`NY.GDP.MKTP.CD`) is in `mln_usd` (was `usd`, values ÷ 1,000,000).
+  A series whose published unit code has no `unit_map.csv` row (warning test `metrics_unit_unmapped`; none on 12 Nov 2026) is not
+  converted: its value stays as published, the metrics `unit` column carries the published code, and the `unit_key` written here is then only the series' intended
+  unit, not a verified one, until the row is added.
 - gold.publish checks every JSON file against its schema in warehouse/published/schemas/ before writing it and fails
   on a problem.
 - The data portal serves these files read-only, after sign-in, at `/api/published/v1/<path>` (portal/worker/src/index.js).
@@ -55,7 +65,7 @@ strings in ISO 8601 UTC.
 | kpis[].loaded_at | string | yes | when the KPI's data was last loaded (ISO 8601 UTC) |
 | kpis[].status | string | yes | KPI status |
 | domains | array | yes | the taxonomy; each entry has the columns of `warehouse/seeds/domain.csv` |
-| units | array | yes | the units; each entry has the columns of `warehouse/seeds/unit.csv` |
+| units | array | yes | the units; each entry has the columns of `warehouse/seeds/unit.csv` (strings; `is_rate` boolean), including `base_unit_key` and `factor` (D33, additive since 12 Nov 2026: one unit is `factor` base units, an exact decimal as a string, e.g. `mln_usd` = `1000000` × `usd`) |
 | sources | array | yes | one entry per source |
 | sources[].source_key | string | yes | source key |
 | sources[].name_pl | string | yes | Polish name |
@@ -163,7 +173,7 @@ gold.publish reads each file back and fails when a value is not in Gold.
 | period_start | date | yes | first day of the period |
 | frequency | string | yes | frequency |
 | value | number | yes | value (Parquet double) |
-| unit_key | string | yes | unit of this row (key in `catalog/unit`): its measure's `kpi_measure.csv` `unit_key`, or the KPI's unit when that is empty (#2449) |
+| unit_key | string | yes | unit of this row (key in `catalog/unit`): its measure's `kpi_measure.csv` `unit_key`, or the KPI's unit when that is empty (#2449); `value` is in this unit (D33, below) |
 | flags | string | yes | status flags |
 | dim_<dimension_key> | string | yes | one column per extra dimension; `'_T'` = total |
 
@@ -318,8 +328,9 @@ schemas and the cross-file rules of `published_v2_problems`). Seeds: `kpi_v2_map
   Where `kpi_member.csv` lists members of a dimension for a v2 key, only those reach v2 (`eurpln` = currency `EUR`);
   a dimension left with one member is not a dimension.
 - Units: every series and every latest value carries its own `unit_key` (the measure's `kpi_measure.csv` unit, else
-  the KPI's), because sources publish one KPI in different units (GDP in mln EUR, mln PLN and US$; GUS indices
-  `index_py_100` beside rates in %).
+  the KPI's), because sources publish one KPI in different currencies or index bases (GDP in mln EUR, mln PLN and
+  mln US$; GUS indices `index_py_100` beside rates in %). Values are in that unit, converted by pure scale from the
+  published unit in `gold.metrics_<kpi>` (D33, as v1).
 - Flags: Gold observation status → letter: provisional `p`, estimated `e`, break `b`, forecast `f`, low reliability
   `u`, definition differs `d`, not significant `n`, confidential `c`; other statuses carry no flag.
 - Every JSON file is checked against its schema in `warehouse/published/schemas/v2/` before it is written; the
@@ -351,7 +362,7 @@ schemas and the cross-file rules of `published_v2_problems`). Seeds: `kpi_v2_map
 | dimensions[].dimension_key, name_pl, name_en | string | |
 | dimensions[].members[] | array | `{ key, name_pl, name_en, sort, parent_key? }`, total excluded |
 | geographies[] | array | `{ key, name_pl, name_en, level: country \| voivodeship \| aggregate, eu: boolean }` for every key used |
-| units[] | array | `unit.csv` plus `decimals` (integer: the precision to show) |
+| units[] | array | `unit.csv` (with `base_unit_key` and `factor`, D33) plus `decimals` (integer: the precision to show) |
 | domains, sources, licences | array | as v1 |
 
 Written from the seeds: names, `unit_key` and `status` from `kpi.csv`, definitions from its `definition_pl`/`definition_en`
@@ -456,7 +467,7 @@ yardsticks live there). Rules, no language model. Written with the other v2 file
 | briefs[].released_at_source | string | `calendar` or `detected` (then `released_at` is the day of `detected_at`) |
 | briefs[].detected_at | string | when `gold.publish` first published the period; at most `window_days` before `generated_at` |
 | briefs[].next_release | string or null | the KPI's first `calendar.json` date after `released_at` (on a release day the release itself is not the next one) |
-| detections[] | array | writer state, not for display: `{ kpi_key, geography, period, detected_at, released_at, released_at_source }` of every period detected in the last `window_days`, one per KPI, geography and period; every brief has its entry |
+| detections[] | array | writer state, not for display: `{ kpi_key, geography, period, source_key, detected_at, released_at, released_at_source }` of every period detected in the last `window_days` and not after `generated_at`, one per KPI, geography and period; every brief has its entry; `source_key` is optional (entries written before it match any source) |
 
 **Change unit** (`ops.repo_check.brief_change_unit`, one rule for writer and check): `pp`, the difference in
 percentage points, for KPIs with aggregation `rate`, units in % (`pct…`, including `pct_points`) and the indices
@@ -471,7 +482,7 @@ published files themselves: before writing, `gold.publish` reads the previous `l
 `06_published/v2/`. A KPI × geography gets a brief when its `latest.json` period is later than the one in the
 previous `latest.json`, of the same frequency and from the same source (`detected_at` = now). `detections` keeps
 every period detected in the last `window_days`: a period found there keeps its `detected_at`, and a new period at or
-below a detected one keeps that detection's `detected_at` (a transient step back, P → P−1 → P, is not a second
+below a detected one keeps that detection's `detected_at`, both only when the detection is of the same source (a transient step back, P → P−1 → P, is not a second
 release). A brief stays while `detected_at` is at most `window_days` old and is replaced when a newer period arrives.
 Its numbers are recomputed from the current files on every run, so revisions show. Not a release, so no brief: a KPI
 or geography that was not in the previous `latest.json` (first publication), a revised value of the same period, a
@@ -549,29 +560,34 @@ voivodeships), `dimensions`, `aggregation`, `polarity`, `status` and `note`:
   `published` concepts reach v1.
 - `needs-block`: in Silver (codes checked or block named) but not activated: a member filter, a half-yearly fact, a
   derivation or a row-size decision is missing; `note` says which.
-- `needs-source`: not ingested; `note` names the register id (NBP balance of payments PLG-002, investment
-  position PLG-003). NBP official rates (`nbp_interest_rates`, PLG-006) reached Silver on 10 Nov (#2590) and are
-  `needs-block` until their Gold build stage exists. The OECD CLI (`oecd`, GL-003) is `ready` since `gold.build_oecd`
-  (#2738), for the EU members the OECD covers (DE, ES, FR, IT): it has no Polish or EU-27 series.
+- `needs-source`: not ingested; `note` names the register id. The NBP balance of payments and investment
+  position (`nbp_bop`, PLG-002, PLG-003) are built to Silver (#2754) and `needs-block` until their Gold build stage
+  exists; the workbooks publish amounts only, so the shares of GDP need a derivation. NBP official rates
+  (`nbp_interest_rates`, PLG-006) reached Silver on 10 Nov (#2590) and are `needs-block` until their Gold build
+  stage exists. The OECD CLI (`oecd`, GL-003) is `ready` since `gold.build_oecd` (#2738), for the EU members the
+  OECD covers (DE, ES, FR, IT): it has no Polish or EU-27 series.
 
 v2 keys by their best source status:
 
 | | ready | needs-block | needs-source | total |
 |---|---|---|---|---|
 | Polska w skrócie | 28 | 3 | 0 | 31 |
-| all 78 keys | 64 | 13 | 1 | 78 |
+| all 78 keys | 65 | 12 | 1 | 78 |
 
-Rows by source (141 rows; 31 keys have two or more ready sources):
+Rows by source (144 rows; 32 keys have two or more ready sources):
 
 | source | ready | needs-block | needs-source | rows |
 |---|---|---|---|---|
 | eurostat | 51 | 7 | 0 | 58 |
-| gus_bdl | 17 | 8 | 0 | 25 |
 | gus_dbw | 17 | 8 | 0 | 25 |
+| gus_bdl | 17 | 8 | 0 | 25 |
 | world_bank_wdi | 23 | 1 | 0 | 24 |
-| nbp | 1 | 0 | 6 | 7 |
-| nbp_interest_rates | 0 | 1 | 0 | 1 |
+| nbp_bop | 0 | 4 | 0 | 4 |
+| nbp | 1 | 0 | 2 | 3 |
+| unctad | 2 | 0 | 0 | 2 |
 | oecd | 1 | 0 | 0 | 1 |
+| mf_public_debt | 1 | 0 | 0 | 1 |
+| nbp_interest_rates | 0 | 1 | 0 | 1 |
 
 Gold has a quarterly fact (`fact_quarterly`), and the BDL and DBW builds place monthly and quarterly periods, so
 LFS rates, the current account, NAMQ, job vacancies and the GUS short-term series keep their frequency. Polska w

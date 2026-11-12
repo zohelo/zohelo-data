@@ -346,6 +346,29 @@
     ) as t (area_code, candidate_key)
 {% endmacro %}
 
+{# UN WPP blocks: one per indicator (gold.build_un_wpp); countries: the EU27 members built (ISO two-letter). #}
+{% macro poc_un_wpp_blocks() %}
+    select
+        *,
+        'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' as countries
+    from (
+        values
+        ('TPopulation1July', 'Total population on 1 July (UN WPP)', 'thousand_persons', 'thousand persons'),
+        ('TFR', 'Total fertility rate (UN WPP)', 'children_per_woman', 'live births per woman'),
+        ('LEx', 'Life expectancy at birth, both sexes (UN WPP)', 'years', 'years'),
+        ('MedianAgePop', 'Median age of the population (UN WPP)', 'years', 'years'),
+        ('OldAgeDependency', 'Old-age dependency ratio, 65+ per 100 aged 15-64, computed from UN WPP 2024 five-year age groups', 'per_100', 'per 100 persons aged 15-64')
+    ) as t (indicator, block_name, unit_code, unit_name)
+{% endmacro %}
+
+{# UN WPP groups → Gold area by LocID (poc_map_geography section un_wpp; static). Countries map by ISO code. #}
+{% macro poc_un_wpp_areas() %}
+    select * from (
+        values
+        ('1551', 'EUROSTAT:EU27_2020'), ('900', 'WB:WLD')
+    ) as t (loc_id, candidate_key)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -431,6 +454,8 @@
     poc_build_faostat:faostat
     poc_build_ecb:ecb
     poc_build_ids:world_bank_ids
+    poc_build_un_wpp:un_wpp
+    poc_build_zus_psz:zus_psz
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -520,6 +545,8 @@
     union all
     select 'world_bank_ids', 'IDS_CSV', 'World Bank International Debt Statistics'
     union all
+    select 'un_wpp', indicator, block_name from ({{ poc_un_wpp_blocks() }})
+    union all
     select * from (
         values
         ('nbp', 'fx_A', 'NBP exchange rates, table A'),
@@ -537,6 +564,14 @@
         ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file'),
         ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units'),
         ('mf_jst_budgets', 'jst_budget', 'MF local-government budget summaries (year to date)'),
-        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)')
+        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)'),
+        ('zus_psz', 'pensioners_dec', 'ZUS old-age pensioners in December'),
+        ('zus_psz', 'pension_amount_dec', 'ZUS average old-age pension in December'),
+        ('zus_psz', 'insured_pension', 'ZUS insured persons, pension insurance'),
+        ('zus_psz', 'insured_sickness_voiv', 'ZUS insured persons, sickness insurance, by voivodeship'),
+        ('zus_psz', 'insured_health', 'ZUS insured persons, health insurance'),
+        ('zus_psz', 'foreign_insured', 'ZUS foreign citizens in pension insurance'),
+        ('zus_psz', 'payers_voiv', 'ZUS active contribution payers, by voivodeship'),
+        ('zus_psz', 'absence_voiv', 'ZUS sickness absence, by voivodeship')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}

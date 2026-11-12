@@ -181,6 +181,8 @@ def config_problems(config: dict) -> list[str]:
                     problems.append(f"{source}: {f.get('entity')}: url_date needs {{date}} in the url")
                 if f.get("version", "last_modified") not in {"last_modified", "ingested"}:
                     problems.append(f"{source}: {f.get('entity')}: version must be last_modified or ingested")
+                if f.get("probe", "head") not in {"head", "get"}:  # bulk_file.PROBES
+                    problems.append(f"{source}: {f.get('entity')}: probe must be head or get")
         for item in (cfg.get("extraction") or {}).get("excluded") or []:
             if not isinstance(item, dict) or item.get("id") is None or not item.get("reason"):
                 problems.append(f"{source}: extraction.excluded entries need an id and a reason: {item}")

@@ -36,9 +36,9 @@ seeds:
       - name: v2_key
         tests: [not_null]
       - name: source_key
-        tests:
-          - not_null
-          - accepted_values: {arguments: {values: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, nbp_interest_rates, oecd, unctad, mf_public_debt, who, unesco_uis, faostat, ecb]}}
+        # A source of source.csv, not a hand-kept list: every onboarding adds its source.csv row, and a list
+        # missing one (mrpips_unemployment, #2778) failed this test and skipped 25 nodes of every prod build.
+        tests: [not_null, {relationships: {arguments: {to: ref('source'), field: source_key}}}]
       - name: concept_key
         tests: [{relationships: {arguments: {to: ref('kpi'), field: kpi_key}}}]
       - name: aggregation
@@ -133,6 +133,38 @@ seeds:
         tests: [not_null, unique]
       - name: level
         tests: [not_null, {accepted_values: {arguments: {values: [country, voivodeship, aggregate]}}}]
+  - name: unit
+    description: >-
+      Units of the KPIs (docs/playbook.md "Units", decision D33). base_unit_key and factor make the scale
+      machine-readable: one unit is `factor` base units (exact decimal; mln_pln = 1000000 pln, ha = 10000 m2).
+      Rates, indices and balances are their own base with factor 1; the per-cent units share the base pct.
+    config: {column_types: {factor: "decimal(38,9)"}}
+    columns:
+      - name: unit_key
+        tests: [not_null, unique]
+      - name: base_unit_key
+        tests: [not_null, {relationships: {arguments: {to: ref('unit'), field: unit_key}}}]
+      - name: factor
+        tests: [not_null]
+  - name: unit_map
+    description: >-
+      Source unit codes (build stage unit_code, as published) → unit.csv unit_key (D33). measure_key_pattern
+      (a LIKE pattern, empty = every measure of the code) maps a code whose meaning depends on the measure: World
+      Bank WDI publishes the unit only in the indicator name ("as named"), GUS BDL "-" is dimensionless; the
+      longest matching pattern wins. A code without a row stays as published and is reported (dim_unit
+      `mapped`, test metrics_unit_unmapped).
+    config: {column_types: {source_system: varchar, unit_code: varchar, measure_key_pattern: varchar, unit_key: varchar}}
+    tests:
+      - unique:
+          arguments:
+            column_name: "source_system || '|' || unit_code || '|' || coalesce(measure_key_pattern, '')"
+    columns:
+      - name: source_system
+        tests: [not_null]
+      - name: unit_code
+        tests: [not_null]
+      - name: unit_key
+        tests: [not_null, {relationships: {arguments: {to: ref('unit'), field: unit_key}}}]
   - name: unit_decimals
     description: Decimals to show per unit (published contract v2 catalog.json units[].decimals).
     columns:
