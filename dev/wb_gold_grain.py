@@ -36,7 +36,13 @@ def main() -> int:
     cat = catalog()
     con = duckdb.connect()
     con.register("geo", cat.load_table(("gold", "dim_geography")).scan().to_arrow())
-    con.register("wdi_countries", cat.load_table(("silver", "wdi_countries")).scan().to_arrow())
+    try:
+        con.register("wdi_countries", cat.load_table(("silver", "wdi_countries")).scan().to_arrow())
+        print("GRAIN | wdi_countries | silver table")
+    except Exception as exc:  # noqa: BLE001  (silver.wdi_countries missing: rebuild it from Bronze, read-only)
+        print(f"GRAIN | wdi_countries | silver missing ({type(exc).__name__}); built from bronze.wdi_bulk_metadata")
+        con.register("bronze_wdi_bulk_metadata", cat.load_table(("bronze", "wdi_bulk_metadata")).scan().to_arrow())
+        con.execute(f"create table wdi_countries as {clean(Path('warehouse/models/silver/world_bank_wdi/wdi_countries.sql').read_text())}")
     for t in ("wgi_observations", "wgi_metadata", "findex_observations", "icp_observations"):
         con.register(f"bronze_{t}", cat.load_table(("bronze", t)).scan().to_arrow())
     for m in ("world_bank_wgi/wgi_indicators", "world_bank_wgi/wgi_observations", "world_bank_findex/findex_observations", "world_bank_icp/icp_observations"):
