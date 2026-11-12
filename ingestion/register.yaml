@@ -740,7 +740,8 @@ sources:
   short_name: ECB Data Portal
   provider: European Central Bank
   source_system: ecb
-  status: approved
+  current: true
+  status: built
   family: C
   kpi: true
   geography: multicountry-Europe
@@ -749,14 +750,20 @@ sources:
   entities: [country, financial-institution-aggregate, sector]
   granularity: Series/observation through SDMX; dimensions vary by dataflow and include frequency, area, item and
     adjustment.
-  coverage: Euro area/EU plus counterpart and selected external economies; start varies by series.
+  coverage: 'Euro area/EU plus counterpart and selected external economies; start varies by series. Landed selections
+    (Dev probes 11 Nov 2026): EXR 44 currencies against the euro, daily from 1999-01-04 (266,219 rows); key ECB
+    rates (FM) from 1999 at change dates; EUR STR from 2019-10; HICP annual rate (HICP, COICOP 2018) and the
+    discontinued ICP (to 2025-12) for every EU member, the euro area (U2, I8, I9) and the EU (B0/D0); long-term
+    interest rates for convergence purposes (IRS) for every EU member incl. Poland from 2001-01; euro area
+    monetary aggregates M1-M3 (BSI) from 1980-01.'
   access:
-    endpoint: https://data.ecb.europa.eu/
+    endpoint: https://data-api.ecb.europa.eu/service/data/
     kind: api
     interfaces: [HTML, SDMX REST API, CSV]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No explicit numeric quota found; one request per selection and run, weekly. The largest selection
+      (EXR, every currency, full history) is one 57 MB response.
   licence:
     status: open-conditional
     notes: 'Terms:
@@ -764,7 +771,13 @@ sources:
       — ESCB statistics are provided free of charge irrespective of commercial or non-commercial use, provided
       the source is quoted, the statistics (including metadata) are not modified, and the ECB and NCB
       disclaimers are respected; third-party data needs prior permission from the originator; no right to
-      confidential data. Attribution: "Source: ECB statistics".'
+      confidential data. Attribution: "Source: ECB statistics". Compilers of the built selections (review of #2758):
+      EXR, FM, EST and BSI are ECB/ESCB statistics. HICP and ICP are compiled by Eurostat (TITLE_COMPL "Statistical
+      Office of the European Commission (Eurostat)" / "Eurostat", Dev trial 43099368908), so they fall under the
+      Eurostat reuse policy (Commission Decision 2011/833/EU, CC BY 4.0, "Source: Eurostat"; register GL-001), which
+      also allows commercial reuse. IRS (long-term interest rates for convergence purposes) is collected from national
+      sources; its compilers'' terms are not established, so the IRS series stay out of the published layer until
+      they are (kpi_v2_map bond_yield_10y / ecb: needs-block).'
   updates: Release and revision cadence is dataflow-specific; API page was unavailable during review.
   ingestion:
     history: Snapshot dataflow structures and complete selected series.
@@ -775,11 +788,11 @@ sources:
     overlap: Overlaps Eurostat, BIS and national central banks; retain source and methodological basis.
   research:
     priority: review-first
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - 'Re-open current API documentation'
-    - 'Identify third-party series exceptions (prior permission needed)'
+    - 'Third-party terms of IRS (long-term interest rates for convergence purposes, national compilers) not established;
+      HICP/ICP are Eurostat (CC BY 4.0) and EXR, FM, EST, BSI are ECB statistics. Check every dataflow added.'
     references:
     - https://data.ecb.europa.eu/
     - https://data.ecb.europa.eu/help/api/overview

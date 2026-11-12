@@ -387,6 +387,22 @@ sources:
       field_names (the header) and field_values (the row), both |-separated, as source text; partitioned by entity.
   - name: unctad_rejected_files
     description: UNCTAD Landing files the Bronze decoder rejected, with the reason.
+- name: ecb
+  description: ECB Data Portal — selected dataflows as SDMX CSV (SDMX REST API, format=csvdata)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/ecb/
+    loaded_by: ingestion/to_bronze/ecb/
+    config: ingestion/sources/ecb.yaml
+  tables:
+  - name: ecb_observations
+    description: >-
+      One row per observation of the newest copy of each selection (entity, e.g. exr_daily), in the generic
+      SDMX format of bronze.oecd_observations: dataflow (the KEY's flow id), series_dimensions / series_key,
+      time_period, obs_value and attribute_names / attribute_values as source text; partitioned by entity.
+  - name: ecb_rejected_files
+    description: ECB Landing files the Bronze decoder rejected, with the reason.
 - name: oecd
   description: OECD Data Explorer — selected dataflows as SDMX CSV (SDMX REST API)
   database: r2
