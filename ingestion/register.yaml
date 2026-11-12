@@ -7863,12 +7863,13 @@ sources:
       request at a time, a pause of a few seconds, identified user agent; no report files.'
   licence:
     status: unresolved
-    notes: 'No reuse terms are stated for the OAM. https://intranet.knf.gov.pl/en/MARKET/OAM (desk reading 12 Nov 2026) calls
-      it "a centralised data system for the central storage of regulated information" and links "Enter OAM" (moam.knf.gov.pl/moam.nsf);
-      the KNF pages carry only "Copyrights © 2023 Komisja Nadzoru Finansowego"; the ESPI rules (https://www.knf.gov.pl/knf/pl/komponenty/img/Regulamin_korzystania_z_ESPI_66994.pdf,
-      linked from https://www.knf.gov.pl/dla_rynku/espi) govern issuers, not readers. Commercial reuse: not stated. Modification:
-      not stated. Attribution sentence: none given (working text: "Źródło: Komisja Nadzoru Finansowego, OAM"). Stays internal.
-      Only issuer, title, type, date and link are stored (O32, O33): no report text, no attachments.'
+    notes: 'Terms: none stated for the OAM (https://moam.knf.gov.pl/moam.nsf, list page read by the runner 12 Nov 2026). https://intranet.knf.gov.pl/en/MARKET/OAM
+      (desk reading 12 Nov 2026) calls it "a centralised data system for the central storage of regulated information" and
+      links "Enter OAM" (moam.knf.gov.pl/moam.nsf); the KNF pages carry only "Copyrights © 2023 Komisja Nadzoru Finansowego";
+      the ESPI rules (https://www.knf.gov.pl/knf/pl/komponenty/img/Regulamin_korzystania_z_ESPI_66994.pdf, linked from https://www.knf.gov.pl/dla_rynku/espi)
+      govern issuers, not readers. Commercial reuse: not stated. Modification: not stated. Attribution sentence: none given
+      (working text: "Źródło: Komisja Nadzoru Finansowego, OAM"). Stays internal. Only issuer, title, type, date and link
+      are stored (O32, O33): no report text, no attachments.'
   updates: Event-driven, every day; the list showed "Liczba raportów za dzień 2026-11-12 wynosi 87" at 19:37 UTC. Corrections
     arrive as new reports. From July 2027 the EU single access point (ESAP) is to be public (ESMA press release of 10 Jul
     2026, desk reading).
@@ -7934,14 +7935,14 @@ sources:
       identified user agent; no attachments.'
   licence:
     status: unresolved
-    notes: 'No reuse terms are stated for the report list. https://www.gpw.pl/disclaimer (desk reading 12 Nov 2026; runner
-      200) holds only a liability notice and "2017 © Warsaw Stock Exchange". GPW resolution 646/2011 (https://www.gpw.pl/pub/files/PDF/regulacje/Uch_646_zal.pdf),
-      §8, gives rights to the exchange only: "Giełdzie przysługuje prawo do korzystania, przetwarzania i udostępniania raportów
-      przekazanych jej przez emitentów."; §3 ust. 2: reports are "niezwłocznie publikowane na odpowiednich stronach internetowych
-      administrowanych przez Giełdę". GPW''s paid information-services rules do not mention issuer reports. Commercial reuse:
-      not stated. Modification: not stated. Attribution sentence: none given (working text: "Źródło: GPW, Elektroniczna Baza
-      Informacji"). Stays internal. Only headline, link, report number, type, category and publication time are stored (O32,
-      O33).'
+    notes: 'Terms: none stated for the report list; the site notice is https://www.gpw.pl/disclaimer. https://www.gpw.pl/disclaimer
+      (desk reading 12 Nov 2026; runner 200) holds only a liability notice and "2017 © Warsaw Stock Exchange". GPW resolution
+      646/2011 (https://www.gpw.pl/pub/files/PDF/regulacje/Uch_646_zal.pdf), §8, gives rights to the exchange only: "Giełdzie
+      przysługuje prawo do korzystania, przetwarzania i udostępniania raportów przekazanych jej przez emitentów."; §3 ust.
+      2: reports are "niezwłocznie publikowane na odpowiednich stronach internetowych administrowanych przez Giełdę". GPW''s
+      paid information-services rules do not mention issuer reports. Commercial reuse: not stated. Modification: not stated.
+      Attribution sentence: none given (working text: "Źródło: GPW, Elektroniczna Baza Informacji"). Stays internal. Only
+      headline, link, report number, type, category and publication time are stored (O32, O33).'
   updates: Event-driven, every day; corrections are separate reports with their own numbers.
   ingestion:
     history: 'Web route: https://www.gpw.pl/espi-ebi-reports lists ESPI and EBI reports together (HTML, 107,890 bytes; rows
@@ -8069,7 +8070,9 @@ sources:
       WIG20, mWIG40, sWIG80, 10-year government bond yield); PLN exchange rates already come from NBP. Frequency D; closes
       are adjusted (third-party account); gaps are missing rows; revisions after splits unknown. No overlap with published
       KPIs. Effort M.
-    overlap: Index values originate from GPW (CD-005, CD-011, both licensed); exchange rates from NBP.
+    overlap: Index values originate from GPW (CD-005, CD-011, both licensed). The 10-year government bond yield is published
+      monthly by the ECB (GL-016) and Eurostat (GL-001) as the long-term interest rate for convergence purposes, and PLN exchange
+      rates by NBP, so only the stock indices and daily frequency would be new.
   research:
     priority: conditional
     evidence: catalogue-only
@@ -9188,8 +9191,10 @@ sources:
       (2026); Population based on various sources (2024) – with major processing by Our World in Data". The chart metadata.json
       has no licence field (checked on seven charts); the origin licence is in the indicator metadata (origins[].license,
       desk reading of archived copies). Rule for the build: a chart is publishable only when every origin licence allows reuse
-      and modification; otherwise it stays internal (examples read: Corruption Perceptions Index, origin CC BY-ND 4.0; World
-      Happiness Report, own data-sharing policy).'
+      and modification; otherwise it stays internal. The three charts selected below are third-party data (Global Carbon Budget,
+      V-Dem, Maddison Project) whose origin licences are not read yet, so the build gives them an unresolved licence key until
+      origins[].license is recorded per chart (examples read: Corruption Perceptions Index, origin CC BY-ND 4.0; World Happiness
+      Report, own data-sharing policy).'
   updates: 'Per chart: lastUpdated and nextUpdate in the metadata (for example consumption-based CO2 lastUpdated 2026-11-10,
     nextUpdate 2027-11-10). Whole series are revised in place.'
   ingestion:
@@ -9329,11 +9334,11 @@ sources:
     evidence: documented
     connection: tested
     blockers:
-    - 'Owner question (written permission), one for CD-033 and CD-034: Otodom''s terms forbid using or aggregating its content
-      without written consent, and OTOMOTO publishes its market report only as charts on a host that refused the runner. Ask
-      Grupa OLX in writing for permission to store and show the monthly Otodom and OTOMOTO aggregates with attribution (the
-      request can be drafted for you), or park both? Recommendation: park; official series exist for housing prices (NBP,
-      GUS) and car registrations (CEPiK, PL-ENV-024).'
+    - 'Owner question (written permission): Otodom''s terms forbid using or aggregating its content without written consent
+      of Grupa OLX, which also publishes the OTOMOTO market report (CD-034, buildable but without reuse terms). Ask Grupa
+      OLX in writing for permission to store and show the monthly Otodom and OTOMOTO aggregates with attribution (the request
+      can be drafted for you), or leave Otodom unbuilt and OTOMOTO internal? Recommendation: ask once for both; without an
+      answer Otodom is not built (official housing-price series exist at NBP and GUS but are not asking prices).'
     - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): https://www.otodom.pl/regulamin
       answered 200 with the clause quoted in licence.notes; both data pages answered 200 (240,810 and 282,588 bytes) with
       no data file or chart embed in the HTML.'
@@ -9347,62 +9352,76 @@ sources:
   name: Raport Rynkowy OTOMOTO
   short_name: OTOMOTO market report
   provider: OTOMOTO / OLX Group
-  status: reviewing
+  status: approved
   family: J
   kpi: false
   geography: Poland
   provider_type: commercial
   domains: [automotive-market]
   entities: [vehicle-segment, region, listing, registration-aggregate]
-  granularity: Monthly supply, demand proxies, prices and vehicle-segment indicators in reports; some regional splits
-    appear.
-  coverage: Report archive visibly covers recent monthly and annual periods; raw listing history is not offered
-    publicly.
+  granularity: 'Monthly edition of the report as one Infogram page; each chart carries its data table (month by segment: listings
+    of used, imported and new cars, price bands, fuel shares, demand indices).'
+  coverage: The August 2026 edition holds monthly series from 2025-01 to 2026-08 (one series from 2023-01); earlier editions
+    go back to about 2024. Raw listing history is not offered.
   access:
     endpoint: https://www.otomoto.pl/news/raport-rynkowy-otomoto
     kind: web
     interfaces:
     - HTML
+    - JSON
     - interactive-report
     - PDF
-    auth: Public reading in a browser.
-    cost: mixed
-    limits: www.otomoto.pl answered HTTP 403 to the runner's robots.txt request, so no page of the host was fetched (12 Nov
-      2026).
+    auth: Public, no login.
+    cost: free
+    limits: infogram.com robots.txt (97 characters) does not forbid the edition page; one request per edition per month. www.otomoto.pl
+      answered HTTP 403 to the runner's robots.txt request, so no page of that host is read (12 Nov 2026).
   licence:
     status: unresolved
-    notes: 'No terms were read. The report page (desk reading 12 Nov 2026) has a footer link "Zasady Serwisu" that points
-      to "#", no OTOMOTO regulamin was found by search, and the host refused the runner (HTTP 403 on robots.txt), so no terms
-      page of www.otomoto.pl is quoted. The annual report PDF carries "© OTOMOTO INSIGHTS". Commercial reuse: not stated.
-      Modification: not stated. Automated access: refused to the runner. Attribution sentence: none. Stays internal; nothing
-      is loaded.'
-  updates: Monthly ("aktualizowane co miesiąc"); the page was modified 2026-10-19 (desk reading).
+    notes: 'Terms: none found for https://www.otomoto.pl/news/raport-rynkowy-otomoto. The report page (desk reading 12 Nov
+      2026) has a footer link "Zasady Serwisu" that points to "#", no OTOMOTO regulamin was found by search, and www.otomoto.pl
+      refused the runner (HTTP 403 on robots.txt), so no terms page of the publisher is quoted. The annual report PDF carries
+      "© OTOMOTO INSIGHTS". The terms of infogram.com (the host the data is read from) were not read. Commercial reuse: not
+      stated. Modification: not stated. Attribution sentence: none given (working text: "Źródło: OTOMOTO Insights, Raport
+      Rynkowy OTOMOTO"). Stays internal.'
+  updates: Monthly ("aktualizowane co miesiąc"); the report page was modified 2026-10-19 (desk reading). Each edition is a
+    new Infogram page with its own address.
   ingestion:
-    history: 'No machine-readable route: the monthly editions are Infogram chart pages linked from an HTML article, annual
-      and quarterly reports are PDF with charts only; no CSV or XLSX. Nothing is loaded without permission.'
-    incremental: None.
-    identifiers: Month, vehicle segment, metric; demand figures come from CEPiK, supply from OTOMOTO listings.
+    history: 'Web route, tested: the monthly edition is a public Infogram page (August 2026: https://infogram.com/0826otomotoinsights-1hxj48mj9m8o52v,
+      953,532 bytes) whose HTML holds the chart data as JSON (window.infographicData: 27 chart data blocks, 62 sheets, 6,193
+      cells). Example table: month, used, imported and new listings, 2025-01 (229888, 69209, 43666) to 2026-08 (224196, 63815,
+      45226). Annual and quarterly PDF reports hold charts only and are not used.'
+    incremental: 'One edition per month; an edition repeats about 20 months of history, so a missed month is recovered from
+      the next one. The address of a new edition is linked from the report page on www.otomoto.pl, which refuses the runner:
+      until that is solved without touching the refusal, the new address is added by hand to the source''s configuration each
+      month.'
+    identifiers: Edition (month in the page title, for example 08_26), chart id (UUID in the JSON), sheet, month (YYYY-MM),
+      segment label in Polish.
   modelling:
-    notes: 'kpi false. With permission the selection would be the monthly median asking price of used cars and the number
-      of listings, Poland. Frequency M. Not established: markers, revisions, size (nothing read). No overlap with published
-      KPIs. Effort M, and only with permission.'
-    overlap: Blends OTOMOTO supply with CEPiK, GUS and NBP figures; registrations come from CEPiK directly (PL-ENV-024).
+    notes: 'kpi false. Smallest Gold selection, Poland, monthly: number of listings of used, imported and new cars, and the
+      demand index of users (January 2025 = 100); price-band and fuel shares later. No voivodeship tables seen in the edition.
+      Frequency M only. Values are text with a decimal comma and some carry the change in brackets ("19,4% (0,6 p.p.)"): parse,
+      never coerce; empty cells are null, not zero. Duplicates: every edition repeats earlier months, possibly revised; the
+      edition tells versions apart, keep the newest. No overlap with published KPIs. Size: about 1 MB of HTML and 6,000 cells
+      per edition (measured). Effort M (chart ids and layouts can change between editions).'
+    overlap: Demand figures blend CEPiK registrations (PL-ENV-024) with platform data; listings and asking prices are OTOMOTO's
+      own and are in no loaded source.
   research:
     priority: specialist
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Owner question (written permission), one for CD-033 and CD-034: Otodom''s terms forbid using or aggregating its content
-      without written consent, and OTOMOTO publishes its market report only as charts on a host that refused the runner. Ask
-      Grupa OLX in writing for permission to store and show the monthly Otodom and OTOMOTO aggregates with attribution (the
-      request can be drafted for you), or park both? Recommendation: park; official series exist for housing prices (NBP,
-      GUS) and car registrations (CEPiK, PL-ENV-024).'
-    - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): https://www.otomoto.pl/robots.txt
-      answered HTTP 403, so the report page and the regulamin address were not requested. The refusal is recorded, not worked
-      around.'
-    - 'Not verified: robots.txt content, any terms of the site, whether the Infogram pages offer a data download.'
+    - 'Route decision: a read of one public page per month that robots.txt does not forbid; like the other web routes it needs
+      the D row in docs/decisions.md before the build (verdicts on PR #2878 and PR #2902).'
+    - 'Dev probe run 43304076522 (job 131482594214, branch test/src-cd-probe, 12 Nov 2026): the August 2026 Infogram edition
+      answered 200 (953,532 bytes) with the chart data in the HTML; infogram.com robots.txt 200 with no rule against it. Earlier
+      run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): https://www.otomoto.pl/robots.txt answered
+      HTTP 403, so the report page was not requested from the runner. The refusal is recorded, not worked around.'
+    - 'Open: how a run learns the address of a new monthly edition without the refused host (by hand for now); the terms of
+      infogram.com; whether older editions stay online.'
+    - 'Publication needs permission: the question to Grupa OLX under CD-033 covers this report too.'
     references:
     - https://www.otomoto.pl/news/raport-rynkowy-otomoto
+    - https://infogram.com/0826otomotoinsights-1hxj48mj9m8o52v
     - https://www.otomoto.pl/news/otomoto-insights-2025-podsumowanie
     - https://otomoto.pl/news/uploads/2024/02/Otomoto-Insights-Raport-2024-v7.pdf
 - id: EX-001
