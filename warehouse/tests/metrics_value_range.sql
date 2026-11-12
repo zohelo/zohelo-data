@@ -38,7 +38,13 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('gdp_volume_growth', 'gus_dbw', '%', 50, 200),
     -- WHO data.who.int (#2408): years; highest 87.37 (all areas, 2000-2021, Dev trial 43159213097). Documentation only
     -- until metrics_life_expectancy joins the metrics union below.
-    ('life_expectancy', 'who', '%', 0, 130)
+    ('life_expectancy', 'who', '%', 0, 130),
+    -- UNESCO UIS (#2411): % of GDP; highest 6.35 (all areas, Dev trial 43159213097). Documentation only until
+    -- metrics_gerd_gdp joins the metrics union below.
+    ('gerd_gdp', 'unesco_uis', '%', 0, 9.5),
+    -- UNESCO UIS (#2411): % of population 25+; capped at 100 (all areas max 73.91). Documentation only until
+    -- metrics_tertiary_attainment joins the metrics union below.
+    ('tertiary_attainment', 'unesco_uis', '%', 0, 100)
 ),
 
 metrics as (

@@ -259,6 +259,16 @@
     ) as t (entity, block_name)
 {% endmacro %}
 
+{# UNESCO UIS blocks (gold.build_unesco_uis): one per Data API selection; areas: EU27 members (ISO alpha-3 through
+   dim_geography.iso3). #}
+{% macro poc_unesco_uis_blocks() %}
+    select * from (
+        values
+        ('gerd_gdp', 'EXPGDP.TOT', 'GERD as a percentage of GDP (UIS)', 'pct_gdp'),
+        ('tertiary_attainment', 'EA.5T8.AG25T99', 'Completed short-cycle tertiary or higher, population 25+ (UIS)', 'pct')
+    ) as t (entity, indicator_id, block_name, unit_code)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -337,6 +347,7 @@
     poc_build_mf_jst_budgets:mf_jst_budgets
     poc_build_mrpips_unemployment:mrpips_unemployment
     poc_build_who:who
+    poc_build_unesco_uis:unesco_uis
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -411,6 +422,8 @@
     select distinct 'unctad', entity, entity from ({{ poc_unctad_blocks() }})
     union all
     select 'who', entity, block_name from ({{ poc_who_blocks() }})
+    union all
+    select 'unesco_uis', entity, block_name from ({{ poc_unesco_uis_blocks() }})
     union all
     select * from (
         values

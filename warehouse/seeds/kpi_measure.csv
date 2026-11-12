@@ -164,3 +164,5 @@ local_gov_debt,mf_jst_budgets,mf_jst_budgets:jst_budget:pln:liabilities_total,"M
 registered_unemployed,mrpips_unemployment,mrpips_unemployment:registered_unemployment:persons:unemployed_persons,"MRPiPS-01, end of month, by sex, Poland and voivodeships",2,
 registered_unemployment_rate,mrpips_unemployment,mrpips_unemployment:registered_unemployment:pct:unemployment_rate,"MRPiPS, end of month, Poland, voivodeships and powiats",3,
 life_expectancy,who,who:life_expectancy:years:WHOSIS_000001,"at birth, both sexes and by sex (WHO Global Health Estimates)",5,
+gerd_gdp,unesco_uis,unesco_uis:gerd_gdp:pct_gdp:EXPGDP.TOT,"% of GDP, UIS (SDG 9.5.1)",3,
+tertiary_attainment,unesco_uis,unesco_uis:tertiary_attainment:pct:EA.5T8.AG25T99,"25+, completed short-cycle tertiary or higher, ISCED 5-8 (Eurostat: 25-34)",3,

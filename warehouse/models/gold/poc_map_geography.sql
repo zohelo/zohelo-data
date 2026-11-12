@@ -307,6 +307,22 @@ who as (
     ) as a
     left join who_m49 as m on a.geo_type = 'COUNTRY' and lpad(a.geo_code_m49, 3, '0') = m.m49
     left join geo as g on g.level_name = 'country' and m.iso2 = g.geography_key
+),
+
+-- UNESCO UIS: countries by ISO 3166-1 alpha-3 (dim_geography.iso3); regional units ('SDG: ...', 'WB: ...') have no
+-- Gold key (_X), and the build stage builds only the EU27 members.
+unesco_uis as (
+    select
+        'unesco_uis' as source_system,
+        a.geo_unit as source_code,
+        coalesce(g.geography_key, '_X') as geography_key
+    from (
+        select distinct
+            geo_unit,
+            is_country_code
+        from {{ ref('unesco_uis_observations') }}
+    ) as a
+    left join geo as g on a.is_country_code and g.level_name = 'country' and a.geo_unit = g.iso3
 )
 
 select
@@ -336,6 +352,8 @@ from (
     select * from unctad
     union all
     select * from who
+    union all
+    select * from unesco_uis
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null
