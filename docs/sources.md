@@ -1046,7 +1046,7 @@ addressed; no named licence, D23).
 
 **Built (12 Nov 2026, register PLS-005, PLS-006).** One-off censuses: the final-results pages link one XLSX of tables
 per theme at fixed `/download/` URLs, declared as files of the shared `bulk_file` pattern (no extractor code): NSP 2021
-themes `ludnosc_stan_struktura`, `rynek_pracy` (the housing workbook prints the 2021 rows without their area label and is not declared); PSR 2020 `charakterystyka_cz2` (tables by
+themes `ludnosc_stan_struktura`, `rynek_pracy` (the housing workbook prints the 2021 rows without their area label: Task #2921; PSR part 1 and the .xls annex: Task #2922); PSR 2020 `charakterystyka_cz2` (tables by
 voivodeship). Entity = one workbook, version = download time when the SHA-256 changed, restart unit one file. Bronze
 `bronze.<source>_cells` (`ingestion/common/gus_publications.py`); Silver `silver.<source>_tables` with the curated
 tables found by title and header (`warehouse/macros/gus_tables.sql`): population 2011 and 2021 (total, urban, rural,

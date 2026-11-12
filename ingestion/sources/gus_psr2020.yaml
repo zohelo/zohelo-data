@@ -8,6 +8,8 @@ description: "GUS — Powszechny Spis Rolny 2020 (agricultural census 2020), tab
 # wyników" annex is XLS only (not loaded). A one-off census: declared files of the shared bulk_file pattern (no
 # extractor code); entity = one workbook, version = download time, written only when the SHA-256 changed. Restart
 # unit: one file.
+# Dev trial 43288120956: 1 file, 9,263 Bronze cells, 102 Silver and Gold rows, 0 duplicate keys, 0 rejected; second runs
+# wrote nothing.
 extraction:
   kind: bulk_file
   bulk_file:

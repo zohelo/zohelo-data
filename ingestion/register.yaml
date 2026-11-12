@@ -2269,7 +2269,7 @@ sources:
     evidence: catalogue-only
     connection: tested
     blockers:
-    - 'Curated tables only (Dev probes 43270285788, 43271452794, 43271980321): population 2011 and 2021 (total, urban, rural, urban share) and census activity, employment and unemployment rates by voivodeship, from the themed final-results workbooks; the nationality, language and religion tables, census-district tables, households and housing are in the catalogue but not built. Census values are not added to the published population or unemployment KPIs (benchmarks, not additive to BDL).'
+    - 'Curated tables only (Dev probes 43270285788, 43271452794, 43271980321): population 2011 and 2021 (total, urban, rural, urban share) and census activity, employment and unemployment rates by voivodeship, from the themed final-results workbooks; nationality, language and religion, census-district and household tables are not curated yet; housing indicators: Task #2921. Census values are not added to the published population or unemployment KPIs (benchmarks, not additive to BDL).'
     references:
     - https://stat.gov.pl/spisy-powszechne/nsp-2021/
     - https://stat.gov.pl/en/copyright/
@@ -2315,7 +2315,7 @@ sources:
     evidence: catalogue-only
     connection: tested
     blockers:
-    - 'Curated tables only: holdings 2010 and 2020, agricultural land, average agricultural land per holding, cattle and pigs by voivodeship from part 2 of Charakterystyka gospodarstw rolnych w 2020 r.; part 1 (area groups, legal forms, economic size) is not loaded; the Raport z wyników annex is XLS only.'
+    - 'Curated tables only: holdings 2010 and 2020, agricultural land, average agricultural land per holding, cattle and pigs by voivodeship from part 2 of Charakterystyka gospodarstw rolnych w 2020 r.; part 1 (area groups, legal forms, economic size) and the Raport z wyników annex (.xls): Task #2922.'
     references:
     - https://stat.gov.pl/spisy-powszechne/powszechny-spis-rolny-2020/
     - https://stat.gov.pl/en/copyright/

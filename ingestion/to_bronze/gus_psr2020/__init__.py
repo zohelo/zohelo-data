@@ -1,4 +1,6 @@
-"""GUS PSR 2020 agricultural census: Landing → Bronze activities (register PLS-006). Landing is the shared bulk_file pattern.
+"""GUS PSR 2020 agricultural census: Landing → Bronze activities (register PLS-006).
+
+Landing is the shared bulk_file pattern.
 
 bronze.load       newest copy of every declared workbook → bronze.gus_psr2020_cells
                   (one row per workbook cell, ingestion/common/gus_publications.py);
