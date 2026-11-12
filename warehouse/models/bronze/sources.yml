@@ -688,3 +688,19 @@ sources:
       entity.
   - name: mrpips_unemployment_rejected_files
     description: MRPiPS registered-unemployment Landing files the Bronze decoder rejected, with the reason.
+- name: gios_groundwater
+  description: GIOŚ / PIG-PIB groundwater quality monitoring — yearly XLSX workbooks of results and quality classes
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gios_groundwater/
+    loaded_by: ingestion/to_bronze/gios_groundwater/
+    config: ingestion/sources/gios_groundwater.yaml
+  tables:
+  - name: gios_groundwater_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of the newest copy of each
+      workbook (entity <kind>_<year>), with the workbook kind, the result page's link text and the role of the cell's
+      column read from the header row; partitioned by entity.
+  - name: gios_groundwater_rejected_files
+    description: GIOŚ groundwater workbooks the Bronze decoder rejected (unknown sheet or header layout), with the reason.

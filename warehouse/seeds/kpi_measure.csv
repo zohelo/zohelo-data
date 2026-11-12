@@ -191,3 +191,4 @@ total_fertility_rate,un_wpp,un_wpp:TFR:estimate,"UN WPP 2024 estimate (to 2023)"
 life_expectancy,un_wpp,un_wpp:LEx:estimate,"at birth, both sexes, UN WPP 2024 estimate (to 2023)",5,
 old_age_dependency,un_wpp,un_wpp:OldAgeDependency:estimate,"65+ per 100 aged 15-64 on 1 July, from UN WPP 2024 broad age groups (to 2023)",5,
 population_projection,un_wpp,un_wpp:TPopulation1July:projection,"1 July, UN WPP 2024 medium variant, 2024-2100, thousands as published",1,thousand_persons
+groundwater_good_quality_share,gios_groundwater,gios_groundwater:quality_classes:pct:I-III:diagnostic,"diagnostic network only (2007, 2010, 2012, 2016, 2019, 2022); the operational network of the other years is a different sample of points at risk",1,pct
