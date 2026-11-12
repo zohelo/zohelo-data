@@ -61,6 +61,22 @@ DBW rows by the periodicity id that ends the block id: `4` (annual) 730 M in 3,1
 96 M in 570, `5` 43 M in 108, `1` (monthly) 14 M in 554, `2` 3 M in 376, `3` (quarterly) 2 M in 631,
 `7` 0.06 M in 13. 99 blocks have more than 1 M rows.
 
+**Eurostat trial** (Dev run 43195798983, 129 sampled datasets into scratch, removed afterwards):
+128 built in 28 minutes on one runner with three workers, 253.8 M fact rows, 15.2 M series, 4,471
+measures, about 9 M rows a minute; 0 duplicate `series_key × date_key` over the whole trial table,
+0 null keys, 0 blocks rejected, every Silver row with a value loaded. One dataset (`NAIO_10_FCP_U3`,
+44 M rows) ran out of its 4 GB and was not loaded; such a block is now tried again alone with the
+full memory. The newest Polish values equal the curated facts (unemployment 2026-09 3.4, GDP 2025
+923,507.3 M EUR, HICP 2026-09 4.0, population 2025 36,497,495). 2.5% of the rows (142 codes) have
+no geography match: Polish NUTS 3 regions (`PL213`, `PL633`, …) of weekly deaths, which the Eurostat
+part of `map_geography` does not map yet.
+
+Size in Gold: 1.4 bytes per fact row and 14.7 bytes per series (362 MB and 223 MB for the trial,
+against 287 MB of Silver for the same datasets). For all of Eurostat that is 17 to 24 GB (by the
+ratio to Silver, and by rows and series), more than half of it the series table, because annual
+series are short. At the trial's speed the first full Eurostat load is about 13 runner-hours,
+spread over resumable runs.
+
 ## Decisions
 
 ### 1. Scope: every block, every geography the source publishes
@@ -286,8 +302,10 @@ Known sources and their row of the adapter table (Silver row counts from `wareho
 
 | # | Question | Proposal | Who |
 |---|---|---|---|
-| 1 | Storage: Silver of the three sources is 13.7 GB, already above R2's free 10 GB; Gold in full adds a similar amount (measured per row in the Eurostat trial, PR of #2792). | Accept the storage for full coverage; otherwise Poland and national comparators only (4,160 M Eurostat rows) or Poland only (196 M) | owner |
+| 1 | Storage: Silver of the three sources is 13.7 GB, already above R2's free 10 GB. Gold in full adds about twice that (Eurostat 17 to 24 GB measured by the trial; BDL and DBW about 11 GB by the same ratio). | Accept the storage for full coverage; otherwise Poland and national comparators only (4,160 M Eurostat rows) or Poland only (196 M) | owner |
 | 2 | S and W periods in Gold | Load them with their own frequency in these tables; `fact_semiannual` of #2781 stays the curated answer for KPIs | architect |
 | 3 | D28 deviation (per-block files instead of a dbt incremental model) | As decision 3 | architect |
 | 4 | Non-KPI measures in zohelo-bi (published v2 catalogue) | Additive `catalog/measures_<source>.parquet`; decide after Eurostat is loaded | owner |
 | 5 | BDL gmina level (341 M of 458 M rows) | In scope, loaded last | owner, with 1 |
+| 6 | The series table is larger than the fact (short annual series, labels repeated per series) | Before the production load, move the breakdown labels to one small table per block (dimension, code, name) and measure again | architect |
+| 7 | Eurostat codes of Polish NUTS 3 regions are unmatched (`_X`) | Map them in the Eurostat part of `poc_map_geography.sql` to the podregion keys DBW already uses | architect |
