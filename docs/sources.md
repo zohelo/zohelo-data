@@ -1035,6 +1035,6 @@ old Excel (.xls) attachments. Only MRPiPS-03 is landed (a "korekta" attachment r
 2019; entity = one year (`mrpips03_<year>`), version = download time, landed attachment URLs are not downloaded again,
 restart unit one file (`ingestion/to_landing/mrpips_social_assistance/`). Bronze `bronze.mrpips_social_assistance_cells`
 reads the .xls with xlrd (added to `requirements.txt`) into the shared cell shape. Silver
-`silver.mrpips_social_assistance_tables` (macro `gus_tables.sql`, sheet "DZIAŁ 2"): persons granted a benefit by
+`silver.mrpips_social_assistance_tables` (macro `gus_tables.sql`, section DZIAŁ 2, DZIAŁ 3 until 2020, found by header): persons granted a benefit by
 decision, families and persons in families by voivodeship. Gold block `social_assistance` (annual), KPI
 `social_assistance_recipients` (draft). Monthly check. Licence: gov.pl terms (official materials free to use).
