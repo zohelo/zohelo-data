@@ -55,7 +55,10 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('ghg_emissions', 'faostat', '%', 0, 8.2e7),
     -- FAOSTAT (#2402): 1000 ha; World land area 13,040,161.55 (Dev trial 43159213097). Documentation only (no
     -- metrics_area model yet).
-    ('area', 'faostat', '%', 0, 2e7)
+    ('area', 'faostat', '%', 0, 2e7),
+    -- EEA GovReg (#2424): kt CO2e, total excl. LULUCF; highest set from the trial. Documentation only until
+    -- metrics_ghg_emissions joins the metrics union below.
+    ('ghg_emissions', 'eea', 'eea:govreg_ghg_inventory:gg_co2e:Sectors/Totals_excl', 0, 2e6)
 ),
 
 metrics as (

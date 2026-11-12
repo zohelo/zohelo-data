@@ -33,6 +33,7 @@ SOURCES = (
     "who",
     "unesco_uis",
     "faostat",
+    "eea",
     "undata",
     "bis",
     "ilostat",
