@@ -36,6 +36,8 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('tourist_bed_places', 'gus_tourism', '%', 0, 5e6),
     ('museum_visiting_share', 'gus_culture_participation', '%', 0, 100),
     ('theatre_attendance_share', 'gus_culture_participation', '%', 0, 100),
+    -- MRPiPS-03 (#2910): persons granted social assistance, PL 2019 = 1,205,506 (Dev trial 43293740538)
+    ('social_assistance_recipients', 'mrpips_social_assistance', '%', 0, 1e7),
     ('inflation', 'eurostat', '%', -100, 3000),
     ('inflation', 'world_bank_wdi', '%', -100, 100000),
     ('unemployment_rate', 'eurostat', '%', 0, 60),
@@ -225,6 +227,15 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_theatre_attendance_share') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_social_assistance_recipients') }}
 )
 
 select

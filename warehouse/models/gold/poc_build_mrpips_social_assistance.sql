@@ -34,7 +34,11 @@ select
     cast(null as varchar) as sex_code,
     true as is_total,
     s.value,
-    'ok' as observation_status_key,
+    case s.cell_status
+        when 'low_reliability' then 'low_reliability'
+        when 'below_half_unit' then 'flagged'
+        else 'ok'
+    end as observation_status_key,
     s.source_version,
     s.raw_sha256
 from {{ ref('mrpips_social_assistance_tables') }} as s
