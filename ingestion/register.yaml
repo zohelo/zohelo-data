@@ -6934,7 +6934,14 @@ sources:
       fair-access rate limit, 10 requests per second per the FAQs, not re-read here).
   licence:
     status: open-conditional
-    notes: SEC access is public, but filer attachments can contain third-party rights and personal data; preserve provenance.
+    notes: 'Terms: SEC.gov privacy and security policy, section "Website Dissemination", https://www.sec.gov/privacy (read
+      12 Nov 2026): "Information presented on sec.gov is considered public information and may be copied or further distributed",
+      without the permission of the SEC; "Please consider appropriate citation to the SEC as the source." No licence is named;
+      commercial reuse and modification are not restricted by the policy (copying and further distribution of public information
+      without permission). Conditions: no SEC seal, logos or artwork, and the EDGAR names and the SEC name are trademarks
+      that may not be used in a trade name, trademark or domain. Filer attachments can contain third-party rights and personal
+      data: ingest the structured JSON, preserve provenance. Attribution: "Source: U.S. Securities and Exchange Commission,
+      EDGAR".'
   updates: API JSON updates in real time; bulk ZIPs update nightly; indexes are daily/quarterly.
   ingestion:
     history: 'Bulk: nightly ZIPs of the JSON APIs (recompiled about 3:00 a.m. ET): companyfacts.zip (XBRL Company Facts and
@@ -6955,6 +6962,7 @@ sources:
     references:
     - https://www.sec.gov/search-filings/edgar-application-programming-interfaces
     - https://www.sec.gov/about/developer-resources
+    - https://www.sec.gov/privacy
 - id: CD-013
   name: ESEF annual financial reports via national OAMs
   short_name: ESEF annual reports
@@ -7690,11 +7698,14 @@ sources:
     limits: Rate etiquette and service pools apply; no numeric allowance relied on.
   licence:
     status: open-conditional
-    notes: 'Terms: https://www.crossref.org/documentation/retrieve-metadata/rest-api/ says: "All this metadata is openly shared
-      with the global scholarly community through our free APIs" (page read 11 Nov 2026 from a GitHub runner); the page has
-      a "Public data files and snapshots" route for bulk. Licence name and per-field rights (abstracts, linked content) were
-      not quoted: keep status open-conditional for bibliographic metadata only, exclude abstracts and full text; re-read the
-      Crossref metadata licence page when writing the declaration.'
+    notes: 'Terms: https://www.crossref.org/documentation/retrieve-metadata/rest-api/ (read 11 Nov 2026 from a GitHub runner,
+      re-read 12 Nov 2026): "All this metadata is openly shared with the global scholarly community through our free APIs";
+      "almost none of the metadata is subject to copyright, and you may use it for any purpose."; "Some abstracts contained
+      in the metadata may be subject to copyright by publishers or authors." No licence is named for the metadata (the page
+      footer CC BY 4.0 covers the website content). Commercial reuse and modification: allowed for the bibliographic metadata
+      (any purpose); abstracts and linked full text are excluded (copyright of publishers or authors). Bulk route: "Public
+      data files and snapshots" on the same page. Attribution (courtesy, not required by the page): "Source: Crossref metadata,
+      crossref.org".'
   updates: Deposits update continuously; records can be corrected.
   ingestion:
     history: 'PROPOSAL: backfill DOI prefixes/filters in resumable cursor batches.'
