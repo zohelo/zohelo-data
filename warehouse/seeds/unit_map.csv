@@ -186,3 +186,27 @@ world_bank_icp,PCAP.PP,,ppp_usd_per_person
 world_bank_icp,PX.WL,,index_world_100
 mrpips_social_assistance,persons,,persons
 mrpips_social_assistance,families,,families
+bis,368,,pct
+bis,882,,index_2020_100
+bis,628,,index_2010_100
+bis,771,,pct
+bis,770,,pct_gdp
+bis,367,,pct
+ilostat,PC,,pct
+undp_hdr,index,,index_0_1
+undp_hdr,years,,years
+undp_hdr,2021 PPP $,,ppp_usd_per_person
+undata,millions of US dollars,,mln_usd
+undata,US dollars,,usd_per_person
+undata,percent,,pct
+undata,percentage of GDP,,pct_gdp
+undata,percentage of individuals,,pct_population
+undata,% of GDP,,pct_gdp
+unece,percent,,pct
+unece,2021=100,,index_2021_100
+unece,Thousands of persons,,thousand_persons
+unece,US$,,usd
+unece,NC,,ncu
+unece,NCU per US$,,ncu_per_usd
+unece,NCU per Euro,,ncu_per_eur
+unece,NCU per Ruble,,ncu_per_rub

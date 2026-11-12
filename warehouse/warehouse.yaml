@@ -68,7 +68,8 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.dimension, gold.dimension_alias, gold.dim_dimension,  # catalogue: axes
        gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_public_finance, gold.build_oecd, gold.build_gleif, gold.build_mf_biala_lista, gold.build_zus_psz, gold.build_prg, gold.build_wdi, gold.build_mrpips_unemployment, gold.build_mf_jst_budgets, gold.build_unctad, gold.build_un_wpp, gold.metrics_population_projection, gold.build_faostat, gold.build_unesco_uis, gold.build_who, gold.build_unhcr, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_semiannual, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth, gold.metrics_urban_population_share, gold.metrics_agricultural_holdings, gold.metrics_average_farm_area, gold.metrics_museum_visitors, gold.metrics_cinema_admissions, gold.metrics_public_library_users, gold.metrics_tourists_accommodated, gold.metrics_tourist_overnight_stays, gold.metrics_tourist_bed_places, gold.metrics_museum_visiting_share, gold.metrics_theatre_attendance_share, gold.build_ecb, gold.metrics_m3_growth, gold.metrics_ecb_deposit_rate, gold.build_eea, gold.metrics_social_assistance_recipients,
        gold.build_wgi, gold.build_findex, gold.build_icp,  # World Bank WGI, Findex, ICP (#2736)
-       gold.metrics_wgi_voice_accountability, gold.metrics_wgi_political_stability, gold.metrics_wgi_government_effectiveness, gold.metrics_wgi_regulatory_quality, gold.metrics_wgi_rule_of_law, gold.metrics_wgi_control_of_corruption, gold.metrics_account_ownership, gold.metrics_price_level_index, gold.build_ids]   # Gold v1 (warehouse/models/gold, docs/model.md)
+       gold.metrics_wgi_voice_accountability, gold.metrics_wgi_political_stability, gold.metrics_wgi_government_effectiveness, gold.metrics_wgi_regulatory_quality, gold.metrics_wgi_rule_of_law, gold.metrics_wgi_control_of_corruption, gold.metrics_account_ownership, gold.metrics_price_level_index, gold.build_ids,
+       gold.metrics_policy_rate, gold.metrics_house_price_growth, gold.metrics_real_house_price_growth, gold.metrics_credit_to_gdp, gold.metrics_debt_service_ratio, gold.metrics_hdi, gold.metrics_internet_users, gold.metrics_health_expenditure_gdp]   # draft KPIs of BIS, UNDP HDR, UNdata (#2861); Gold v1 (warehouse/models/gold, docs/model.md)
 demo_namespaces: [demo_bronze, demo_silver, demo_gold]  # phase 2 demo warehouse (program plan §3.3); never in the public catalogue
 
 # Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
@@ -190,8 +191,8 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_fact_annual: {rows: 1500000, exception: "#2294"}  # 1,092,012 (10 Nov) + ~230,000 slice series (#2592); until the Gold v1 cut-over (D28)
   poc_fact_daily: {rows: 800000}  # + ECB EXR (13 currencies) and EUR STR, ~95,000
   poc_fact_semiannual: {rows: 5000}  # 3,125 (Dev trial 43292078190)
-  poc_fact_quarterly: {rows: 255000}  # 168,545 (Dev trial 43292078190)
-  poc_fact_monthly: {rows: 810000}  # 541,532 (Dev trial 43292078190)
+  poc_fact_quarterly: {rows: 537000}  # 357,774 = 168,545 (Dev trial 43292078190) + BIS 95,479, ILOSTAT 37,642, UNECE 56,108 (Dev trial 43306220004, #2861); 1.5 x
+  poc_fact_monthly: {rows: 971000}  # 647,049 = 541,532 (Dev trial 43292078190) + BIS 75,423, UNECE 30,094 (Dev trial 43306220004, #2861); 1.5 x
   poc_map_geography: {rows: 150000}
   poc_measure_dimensions: {rows: 5000}
   kpi_dimension: {rows: 10000}
@@ -222,12 +223,12 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_niip_gdp: {rows: 10000}
   poc_metrics_old_age_dependency: {rows: 30000}  # + World Bank WDI, all economies (#2592)
   poc_metrics_recycling_rate: {rows: 10000}
-  poc_metrics_reer: {rows: 40000}  # + World Bank WDI, all economies (#2592)
+  poc_metrics_reer: {rows: 69000}  # 46,111 with BIS 25,152 (64 areas, monthly; Dev trial 43290214779); 1.5 x
   poc_metrics_tertiary_attainment: {rows: 30000}  # + World Bank WDI, all economies (#2592)
   poc_metrics_total_fertility_rate: {rows: 30000}  # + World Bank WDI, all economies (#2592)
   poc_metrics_life_expectancy: {rows: 30000}  # 19,562 (10 Nov)
   # every source per slice KPI (O31, #2592)
-  poc_metrics_cpi_annual_rate: {rows: 30000}
+  poc_metrics_cpi_annual_rate: {rows: 50000}  # 21,609 with UNECE 8,635 (Dev trial 43306220004) + World Bank GEM monthly CPI, about 10,000 (not in that trial); 1.5 x
   poc_metrics_real_wage_growth: {rows: 30000}
   poc_metrics_nominal_wage_growth: {rows: 30000}
   poc_metrics_registered_unemployed: {rows: 30000}
@@ -256,7 +257,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_gender_pay_gap: {rows: 20000}
   poc_metrics_gini: {rows: 20000}
   poc_metrics_social_spending_gdp: {rows: 20000}
-  poc_metrics_youth_unemployment: {rows: 38000}  # 25,306 (Dev run 43285255495, 12 Nov)
+  poc_metrics_youth_unemployment: {rows: 44000}  # 29,436 with ILOSTAT 4,130 (Dev trial 43290214779); 25,306 before (Dev run 43285255495, 12 Nov); 1.5 x
   poc_metrics_disposable_income_pc: {rows: 20000}
   poc_metrics_pensioners: {rows: 20000}
   poc_metrics_zus_pension_avg: {rows: 20000}
@@ -275,6 +276,14 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_external_debt_service: {rows: 10000}
   poc_metrics_external_debt_service_gni: {rows: 10000}
   poc_metrics_external_debt_service_exports: {rows: 10000}
+  poc_metrics_policy_rate: {rows: 38000}  # 25,119 (Dev trial 43290214779); 1.5 x
+  poc_metrics_house_price_growth: {rows: 13000}  # 8,637 (Dev trial 43290214779); 1.5 x
+  poc_metrics_real_house_price_growth: {rows: 13000}  # 8,541 (Dev trial 43290214779); 1.5 x
+  poc_metrics_credit_to_gdp: {rows: 14000}  # 9,380 (Dev trial 43290214779); 1.5 x
+  poc_metrics_debt_service_ratio: {rows: 5200}  # 3,476 (Dev trial 43290214779); 1.5 x
+  poc_metrics_hdi: {rows: 1400}  # 947 (Dev trial 43290214779); 1.5 x
+  poc_metrics_internet_users: {rows: 300}  # 196 (Dev trial 43290214779); 1.5 x
+  poc_metrics_health_expenditure_gdp: {rows: 250}  # 162 (Dev trial 43290214779); 1.5 x
   geo_unit: {rows: 4300}  # 2,876 (Dev trial 43099545187)
   geo_neighbour: {rows: 25000}  # 16,224 (Dev trial 43099545187)
   poc_metrics_area: {rows: 50000}  # 33,753 (Dev trial 43099545187)

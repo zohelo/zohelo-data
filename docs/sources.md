@@ -806,6 +806,9 @@ year; indicators hdi, le, eys, mys, gnipc, gdi, gii, ihdi, phdi, components and 
 Each report recalculates the whole series, so values compare within one release; the Archive keeps the
 previous report 400 days. Terms: CC BY 3.0 IGO, licence row `cc_by_3_0_igo_undp_hdr`. Monthly check.
 Restart unit: the file.
+Gold (#2861): `gold.build_undp_hdr` — HDI, life expectancy at birth, expected and mean years of schooling and GNI
+per capita (total, female, male), IHDI and GII for the EU27 members and World; additional source of KPI
+`life_expectancy` (next to Eurostat, GUS BDL, UN WPP, WHO and the World Bank), draft KPI `hdi`.
 
 ## WHO data.who.int (indicator files)
 
@@ -869,6 +872,11 @@ year, series with its unit in the name, value without thousands separators): 126
 (Dev trial 43163356932). Each row cites its source agency. Terms: UNdata conditions of use (free reuse
 citing UNdata; commercial use not addressed), licence row `undata_terms` with `commercial_ok` false.
 Monthly check. Restart unit: one table.
+Gold (#2861): `gold.build_undata` — six series of four tables (GDP in current prices, GDP per capita, real GDP
+growth; GERD; internet users; current health expenditure) for the EU27 members and World, values as published;
+additional source of KPIs `gdp_current_prices`, `gdp_per_capita`, `gdp_volume_growth` and `gerd_gdp`, draft KPIs
+`internet_users` and `health_expenditure_gdp`. Tables from UN WPP or ILO estimates are not built (their newest
+year is a projection or an estimate ahead of the data).
 
 ## BIS Data Portal (SDMX)
 
@@ -885,6 +893,11 @@ Silver: `silver.bis_observations` (dimensions as JSON, area from REF_AREA or BOR
 attributes sent on rows without a period filled onto their observations, `NaN` as no value). Terms:
 BIS permitted use of statistics (cite the BIS; no additional charge to users; no warranty), licence row
 `bis_terms`. Weekly Thursday check. Restart unit: one selection.
+Gold (#2861): `gold.build_bis` — the series of macro `poc_bis_measures` (`warehouse/macros/sources/bis.sql`) (policy rate, broad-basket effective exchange rates,
+residential property prices, credit as % of GDP, credit-to-GDP gap, debt service ratios), each its own measure,
+for the countries the BIS publishes and the euro area; additional source of KPI `reer` (next to the World Bank), draft KPIs
+`policy_rate`, `house_price_growth`, `real_house_price_growth`, `credit_to_gdp`, `debt_service_ratio`.
+`tests/bis_gold_units.sql` fails when the BIS changes the unit of a built series.
 
 ## ILOSTAT (bulk indicator files)
 
@@ -903,6 +916,10 @@ ref_area, source, indicator, sex, classif1 as series_key; obs_status and notes a
 `silver.ilostat_observations` (ref_area ISO alpha-3 or ILO aggregate X…, typed value, frequency from the
 entity). Refresh full (D32): a narrow table rebuilt weekly in full, ceiling exception #2832. Terms:
 CC BY 4.0 for releases from 3 May 2023, licence row `cc_by_4_0_ilo`. Restart unit: one indicator file.
+Gold (#2861): `gold.build_ilostat` — the five files for the EU27 members by sex, age bands 15+, 15-24, 25+ and
+15-64 as measures, the annual and the quarterly unemployment rate as separate measures; additional source of KPIs
+`unemployment_rate`, `youth_unemployment`, `employment_rate`, `activity_rate` and `neet_rate`. The survey
+(`source`) is not part of the series: the ILO publishes one survey per area, indicator and period.
 
 ## UNECE Statistical Database (PXWeb)
 
@@ -920,6 +937,14 @@ value labels per file). Silver: `silver.unece_observations` (codes and labels as
 Country variable: M49 codes and aggregates such as E27 = EU-27). Terms: UNECE copyright notice (free
 reuse incl. commercial, acknowledge UNECE), licence row `unece_terms`. Weekly Monday check. Restart
 unit: one table.
+Gold (#2861, #2885): `gold.build_unece` — nine of the 29 tables, the measures of macro `poc_unece_measures`
+(`warehouse/macros/sources/unece.sql`): unemployment rate (annual, monthly), consumer and producer price indices
+(annual, quarterly), gross average monthly wages, industrial production, population and employment, exchange
+rates and PPPs (annual), total employment (quarterly), for the 56 countries, the EU-27 and the euro area; additional
+source of KPIs `unemployment_rate`, `unemployment_rate_monthly_sa`, `cpi_annual_rate`, `ppi_annual_rate`,
+`industrial_production` and `population`. The other 20 tables (about 2.3 million rows: GDP by expenditure and
+activity, the overviews, monthly prices, exchange rates and industrial production) are outside this curated
+selection and reach Gold with the per-block full coverage (D35, docs/gold-coverage.md). `tests/unece_measures_match.sql` fails when a built table's codes change.
 
 ## UNHCR Refugee Statistics (`unhcr`)
 
