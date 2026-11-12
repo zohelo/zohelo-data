@@ -157,3 +157,7 @@ krus_pension_avg,krus,krus:benefits:PLN:old_age:avg_benefit_pln%,"average monthl
 fdi_inflow,unctad,unctad:US_FdiFlowsStock:08:1:USD_MN,"FDI inward flows, US$ million at current prices (UNCTAD)",3,mln_usd
 exports_goods,unctad,unctad:US_TradeMerchTotal:02:USD_MN,"merchandise exports, US$ million at current prices",1,
 exports_services,unctad,unctad:US_TradeServCatTotal:02:S:USD_MN,"services exports (total), US$ million at current prices",1,
+local_gov_revenue,mf_jst_budgets,mf_jst_budgets:jst_budget:pln:revenue_executed,"MF summaries, executed, year to date, by unit type",1,
+local_gov_expenditure,mf_jst_budgets,mf_jst_budgets:jst_budget:pln:expenditure_executed,"MF summaries, executed, year to date, by unit type",1,
+local_gov_balance,mf_jst_budgets,mf_jst_budgets:jst_budget:pln:result_executed,"MF summaries, year to date, by unit type",1,
+local_gov_debt,mf_jst_budgets,mf_jst_budgets:jst_budget:pln:liabilities_total,"MF summaries, end of quarter, by unit type",1,

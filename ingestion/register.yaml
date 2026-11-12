@@ -4002,7 +4002,8 @@ sources:
   name: Local-government budget reports (sprawozdania budżetowe JST)
   short_name: MF local-government budgets
   provider: Ministry of Finance
-  status: approved
+  source_system: mf_jst_budgets
+  status: built
   family: D
   kpi: true
   geography: Poland
@@ -4017,7 +4018,7 @@ sources:
     interfaces: [XLSX, DBF, HTML]
     auth: public download
     cost: free
-    limits: Unknown.
+    limits: None stated; one request at a time, 2 s apart.
   licence:
     status: open-conditional
     notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
@@ -4041,9 +4042,9 @@ sources:
   research:
     priority: review-first
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Inspect formats, identifiers and corrections.'
+    - 'Per-unit report databases (Rb27S, Rb28S, RbNDS, RbN, RbZ ZIPs, 2001-2026, TERYT per unit) not built yet; summaries built from 2022 Q1.'
     references:
     - https://www.gov.pl/web/finanse/sprawozdania-budzetowe
     - https://www.gov.pl/web/gov/prawa-autorskie

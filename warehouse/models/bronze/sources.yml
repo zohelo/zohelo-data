@@ -495,3 +495,18 @@ sources:
   schema: gold
   tables:
   - name: coverage
+- name: mf_jst_budgets
+  description: Ministry of Finance — local-government budget reports, quarterly summary workbooks (Zestawienia zbiorcze)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mf_jst_budgets/
+    loaded_by: ingestion/to_bronze/mf_jst_budgets/
+    config: ingestion/sources/mf_jst_budgets.yaml
+  tables:
+  - name: mf_jst_budgets_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of the newest copy of each
+      summary workbook (entity <type>_<dw|zn>_<year>_k<quarter>); partitioned by entity.
+  - name: mf_jst_budgets_rejected_files
+    description: MF local-government summary files the Bronze decoder rejected, with the reason.
