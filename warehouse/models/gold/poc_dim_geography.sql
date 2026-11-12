@@ -3,10 +3,12 @@
    area; the codes every source uses for it are attributes (iso2, nuts_code, terc_code,
    bdl_unit_id, wb_code), so a GUS series and a Eurostat series of Małopolskie share one key.
    Natural keys: 'PL' (country iso2), 'TERC:<code>' (Polish units), 'NUTS:<code>' (NUTS areas
-   without a TERC unit), 'BDL:<id>' (BDL podregiony), 'EUROSTAT:<code>' / 'WB:<code>'
+   without a TERC unit), 'BDL:<id>' (BDL podregiony), 'EUROSTAT:<code>' / 'WB:<code>' / 'OECD:<code>'
    (aggregates), '_T', '_Z', '_X'. Hierarchy for Poland: Polska → makroregion → województwo →
    region (only Mazowieckie splits) → podregion → powiat → gmina. #}
 with nuts_pl as ({{ poc_nuts_pl() }}),
+
+oecd_areas as ({{ poc_oecd_areas() }}),
 
 woj_makro as ({{ poc_woj_makroregion() }}),
 
@@ -43,6 +45,16 @@ wb_countries as (
         income_group
     from wdi
     where iso2_code is not null and length(iso2_code) = 2 and region is not null
+),
+
+-- OECD aggregates (#2738): only the codes listed in poc_oecd_areas that are not a Eurostat aggregate; any other
+-- OECD code without an ISO 3166 alpha-3 country stays unmatched (_X) and build_check reports it.
+oecd_aggregates as (
+    select
+        ref_area,
+        name_en
+    from oecd_areas
+    where eurostat_code = ''
 ),
 
 countries as (
@@ -240,6 +252,22 @@ aggregates as (
         true as is_aggregate
     from wdi
     where region is null or iso2_code is null or length(iso2_code) <> 2
+    union all
+    select
+        'OECD:' || ref_area as geography_key,
+        name_en,
+        null as name_pl,
+        0 as level,
+        'aggregate' as level_name,
+        null as parent_key,
+        null as iso2,
+        null as iso3,
+        null as nuts_code,
+        null as terc_code,
+        null as bdl_unit_id,
+        null as wb_code,
+        true as is_aggregate
+    from oecd_aggregates
 ),
 
 specials as (
@@ -332,6 +360,14 @@ select
     case
         when m.level_name = 'powiat' then m.geography_key
         when m.level_name = 'gmina' then 'TERC:' || substr(m.terc_code, 1, 4)
-    end as powiat_key
+    end as powiat_key,
+    -- TERYT attributes of Polish units (#2739): unit type as TERYT names it (powiat, miasto na prawach
+    -- powiatu, gmina miejska/wiejska/miejsko-wiejska, miasto, obszar wiejski, dzielnica, delegatura), the
+    -- gmina type digit (RODZ), ISO 3166-2 for voivodeships (PL-<TERC>) and the TERYT state date.
+    t.unit_type_pl as teryt_unit_type,
+    t.gmina_type_code,
+    case when m.level_name = 'wojewodztwo' then 'PL-' || m.terc_code end as iso_3166_2,
+    t.state_date as teryt_state_date
 from members as m
+left join terc as t on m.terc_code = t.terc_code
 qualify row_number() over (partition by m.geography_key order by m.name_en) = 1
