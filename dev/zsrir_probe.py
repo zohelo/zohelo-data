@@ -68,7 +68,45 @@ def datasets():
     return found
 
 
+def dump(name, body):
+    """Sheet names and the first rows of each sheet, compact, to the log."""
+    try:
+        if body[:2] == b"PK":
+            from ingestion.common import xlsx_cells
+
+            rows = {}
+            for c in xlsx_cells.cells(body):
+                key = (c["sheet_index"], c["sheet_name"])
+                rows.setdefault(key, {}).setdefault(c["row_number"], []).append(f"{c['cell_ref']}={c['value_text'][:40]}")
+        else:
+            import xlrd
+
+            book = xlrd.open_workbook(file_contents=body)
+            rows = {}
+            for i, sn in enumerate(book.sheet_names(), 1):
+                sh = book.sheet_by_name(sn)
+                for r in range(sh.nrows):
+                    vals = [f"{xlrd.formula.cellname(r, c)}={str(sh.cell_value(r, c))[:40]}" for c in range(sh.ncols) if sh.cell_value(r, c) not in ("", None)]
+                    if vals:
+                        rows.setdefault((i, sn), {})[r + 1] = vals
+    except Exception as exc:  # noqa: BLE001 - probe
+        print(f"  dump {name} failed: {type(exc).__name__} {str(exc)[:200]}")
+        return
+    print(f"  workbook {name}: {len(rows)} sheets")
+    for (i, sn), rs in list(rows.items())[:12]:
+        print(f"   sheet {i} {sn!r}: rows {len(rs)} max_row {max(rs)}")
+        for rn in sorted(rs)[:45]:
+            print(f"     r{rn}: " + " | ".join(rs[rn][:14])[:400])
+
+
 def main(argv):
+    for url in ("https://zsrir.minrol.gov.pl/", "https://www.gov.pl/web/rolnictwo/zintegrowany-system-rolniczej-informacji-rynkowej"):
+        try:
+            time.sleep(PAUSE)
+            r = session.get(url, timeout=30)
+            print(f"reach {url}: {r.status_code} {len(r.content)} bytes")
+        except requests.RequestException as exc:
+            print(f"reach {url}: {type(exc).__name__} {str(exc)[:160]}")
     found = datasets()
     print(f"datasets found: {len(found)}")
     zs = {k: v for k, v in found.items() if "rolniczej informacji rynkowej" in v["attributes"]["title"].lower()}
@@ -95,7 +133,12 @@ def main(argv):
             fmts[x["attributes"].get("format")] = fmts.get(x["attributes"].get("format"), 0) + 1
         dates = sorted(str(x["attributes"].get("data_date")) for x in resources)
         print(f"  resources: {len(resources)} formats={fmts} data_date {dates[:1]}..{dates[-1:]}")
-        for x in resources[:6]:
+        years = {}
+        for x in resources:
+            y = str(x["attributes"].get("data_date"))[:4]
+            years[y] = years.get(y, 0) + 1
+        print("  resources per data_date year:", dict(sorted(years.items())))
+        for x in resources[:6] + resources[-3:]:
             a2 = x["attributes"]
             print(f"   - {x['id']} {a2.get('data_date')} {a2.get('format')} {a2.get('title')!r} {a2.get('file_url') or a2.get('download_url')}")
         xlsx = [x for x in resources if str(x["attributes"].get("format")).lower() in ("xlsx", "xls")]
@@ -108,11 +151,17 @@ def main(argv):
             print(f"  download {x['id']} status={r.status_code} bytes={len(r.content)} type={r.headers.get('Content-Type')}")
             if r.status_code == 200:
                 save(f"file_{k}_{x['id']}.{x['attributes'].get('format', 'bin').lower()}", r.content)
+                dump(f"{k}/{x['id']} {x['attributes'].get('title')!r}", r.content)
     for url in argv:
         r = get(url)
         if r is not None:
             print(f"\n===== {url} status={r.status_code} bytes={len(r.content)}")
             save("page_" + re.sub(r"[^a-z0-9]+", "_", url.lower())[-60:] + ".html", r.content)
+            from ingestion.common.gus_publications import _links
+
+            for href, text in _links(url):
+                if any(k in href for k in ("/attachment/", "dane.gov.pl", "rynek", "zsrir", "biuletyn")):
+                    print(f"   link {text[:90]!r} -> {href}")
     return 0
 
 
