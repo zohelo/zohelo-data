@@ -1,0 +1,46 @@
+version: 2
+models:
+  - name: senate_sitting_days
+    description: >-
+      Entity table (events): one row per sitting day of the Senate of the Republic of Poland, term XI (register
+      PLG-025, route D36), keyed by the Senate's sitting id and the day number; date_key = the day's date; status as
+      printed, the votes its page lists. Planned sittings are not here.
+    tests:
+      - unique:
+          column_name: "sitting_id || '|' || day_number"
+    columns:
+      - name: sitting_id
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+  - name: senate_votes
+    description: >-
+      Entity table (events): one row per vote of the Senate of the Republic of Poland, term XI, keyed by the Senate's
+      vote id; date_key = the sitting day's date; subject and subtitle as printed (metadata, no texts of bills);
+      totals as printed (empty while the vote's page is not read). Individual senators' votes are not kept.
+    columns:
+      - name: vote_id
+        tests: [not_null, unique]
+      - name: date_key
+        tests: [not_null]
+  - name: poc_build_senat
+    description: >-
+      Build stage - Senate of the Republic of Poland, term XI, Poland: sitting days (block sitting_days) and votes
+      (block votes) of finished sittings per month (measures ...:monthly, M) and per year (...:annual, A). Only
+      periods in which the Senate sat have a row (no zero filling); the period of the sittings list's download date
+      is provisional.
+    columns:
+      - name: measure_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['senat:sitting_days:days:monthly', 'senat:sitting_days:days:annual', 'senat:votes:votes:monthly', 'senat:votes:votes:annual']}}}]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: ['M', 'A']}}}]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['PL']}}}]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_senate_sitting_days
+    description: Draft KPI senate_sitting_days - sitting days of the Senate per month, Poland (finished sittings).
+  - name: poc_metrics_senate_votes
+    description: Draft KPI senate_votes - votes held in the Senate per month, Poland (finished sittings).

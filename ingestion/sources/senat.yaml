@@ -1,0 +1,55 @@
+source_system: senat
+description: "Senate of the Republic of Poland (www.senat.gov.pl): term XI sittings, sitting days, votes and senators"
+
+# Extraction strategy (docs/landing.md). Register PLG-025. No API, export or feed: the route is a polite read of
+# server-rendered public pages that robots.txt allows, authorized by decision D36 (docs/decisions.md): the sittings
+# list (/prace/posiedzenia/, page,<n>.html), the votes page of each sitting day
+# (/prace/posiedzenia/przebieg,<id>,<day>,glosowania.html), the print page of each vote with its totals
+# (/prace/posiedzenia/glosowanie-drukuj,<vote id>.html; the day page carries no totals) and the senators list
+# (/sklad/senatorowie/). Never /gfx/ or /pdf/, no stenograms, speeches, senator profiles or photos; bip.senat.gov.pl
+# is not used. robots.txt is read first in every run; one connection, one request at a time, at least 1.1 s apart,
+# a clear user agent; a 401/403/429 or a bot-protection page stops the run and is not retried
+# (ingestion/to_landing/senat/). Entity = one page (a list page, one sitting day, one vote, the senators list);
+# version = download time (the server's Last-Modified is the response time), written only when the SHA-256 changed.
+# A sitting day is read again only while its sitting is not finished and for the two newest finished sittings; a
+# vote page is read once. Restart unit: one page; a run stops at 2,000 requests or 75 minutes and the next run
+# continues (the first load, about 3,500 pages, takes two or three runs).
+# Size (Dev probe 43326678967, 12 Nov 2026): 7 list pages, 69 sittings (one planned), list page 93 KB, day pages
+# 49-374 KB, vote pages about 73 KB, senators list 119 KB (102 senators); 491 votes on the 16 days of sittings 59-68.
+# History: HISTORY_TRIAL
+extraction:
+  initial: web_pages
+  production: snapshot                  # each page as published; a changed page replaces its entity
+  incremental_policy: changed_since_last  # new sitting days and votes; the list pages and open sittings again
+  schedule: # UTC; the Senate sits every two to four weeks (Tuesday to Thursday); weekly, Saturday night off-peak
+    - {cron: "40 3 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/senat/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze:
+  - bronze.senat_sittings
+  - bronze.senat_day_votes
+  - bronze.senat_vote_results
+  - bronze.senat_senators
+  - bronze.senat_rejected_files
+silver: [silver.senat_sitting_days, silver.senat_votes, silver.senat_senators]
+gold: [gold.senate_sitting_days, gold.senate_votes, gold.build_senat, gold.metrics_senate_sitting_days, gold.metrics_senate_votes]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  senat_sitting_days: {rows: 300}  # TRIAL
+  senat_votes: {rows: 6000}  # TRIAL
+  senat_senators: {rows: 200}  # TRIAL
+  senate_sitting_days: {rows: 300}  # TRIAL
+  senate_votes: {rows: 6000}  # TRIAL
+  poc_build_senat: {rows: 300}  # TRIAL
+  poc_metrics_senate_sitting_days: {rows: 100}  # TRIAL
+  poc_metrics_senate_votes: {rows: 100}  # TRIAL
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): a few thousand small pages for the whole term, a few hundred new ones after
+# each sitting, no changed-since filter on the site; Silver and Gold are a few thousand rows: small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #482"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

@@ -1,0 +1,63 @@
+version: 2
+models:
+  - name: senat_sitting_days
+    description: >-
+      Senate of the Republic of Poland (register PLG-025, route D36), term XI: one row per sitting day. Grain:
+      sitting_id x day_number. Days of finished and running sittings as the sittings list shows them, day_date read
+      from the printed dates (never guessed: an unread date fails the tests), status as printed, whether the day's
+      votes page is landed and how many votes it lists. History and trial run: ingestion/sources/senat.yaml.
+    tests:
+      - unique:
+          column_name: "sitting_id || '|' || day_number"
+    columns:
+      - name: sitting_id
+        tests: [not_null]
+      - name: sitting_number
+        tests: [not_null]
+      - name: day_number
+        tests: [not_null]
+      - name: day_date
+        tests: [not_null]
+      - name: status_text
+        tests: [not_null, {accepted_values: {arguments: {values: ['Zakończone']}}}]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: senat_votes
+    description: >-
+      Senate of the Republic of Poland (register PLG-025, route D36), term XI: one row per vote. Grain: vote_id
+      (also unique: sitting_id x vote_number). Subject and subtitle as printed on the sitting day's votes page, the
+      day's date, the totals printed on the vote's page (empty while that page is not read, results_landed false).
+    tests:
+      - unique:
+          column_name: vote_id
+      - unique:
+          column_name: "sitting_id || '|' || vote_number"
+    columns:
+      - name: vote_id
+        tests: [not_null]
+      - name: sitting_id
+        tests: [not_null]
+      - name: day_number
+        tests: [not_null]
+      - name: day_date
+        tests: [not_null]
+      - name: vote_number
+        tests: [not_null]
+      - name: subject
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: senat_senators
+    description: >-
+      Senate of the Republic of Poland (register PLG-025, route D36): one row per senator of term XI on the senators
+      list. Grain: senator_id. Name as printed and, for a mandate that ended, its date; no photos, biographies or
+      reasons.
+    columns:
+      - name: senator_id
+        tests: [not_null, unique]
+      - name: term
+        tests: [not_null, {accepted_values: {arguments: {values: [11]}}}]
+      - name: name
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
