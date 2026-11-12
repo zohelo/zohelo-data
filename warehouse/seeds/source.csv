@@ -32,3 +32,5 @@ undp_hdr,GL-028,UNDP Human Development Data Center,UNDP Human Development Data C
 undata,GL-017,UNdata,UNdata,United Nations Statistics Division,cube,file,international-public,undata_terms,https://data.un.org/Default.aspx
 mf_jst_budgets,PLG-010,MF sprawozdania budżetowe JST,MF local-government budget reports,Ministerstwo Finansów,cube,file,national-public,gov_pl_terms,https://www.gov.pl/web/finanse/sprawozdania-budzetowe
 unece,GL-038,UNECE Statistical Database,UNECE Statistical Database,United Nations Economic Commission for Europe,cube,table,international-public,unece_terms,https://w3.unece.org/PXWeb/en
+mf_jst_budgets,PLG-010,MF sprawozdania budżetowe JST,MF local-government budget reports,Ministerstwo Finansów,cube,file,national-public,gov_pl_terms,https://www.gov.pl/web/finanse/sprawozdania-budzetowe
+bis,GL-015,BIS Data Portal,BIS Data Portal,Bank for International Settlements,cube,file,international-public,bis_terms,https://data.bis.org/
