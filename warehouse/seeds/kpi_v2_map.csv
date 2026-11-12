@@ -81,6 +81,7 @@ gg_deficit_gdp,poland,A,gg_balance_gdp,eurostat,GOV_10DD_EDPT1,eurostat:GOV_10DD
 gg_deficit_gdp,poland,A,gg_balance_gdp,world_bank_wdi,GC.NLD.TOTL.GD.ZS,world_bank_wdi:GC.NLD.TOTL.GD.ZS,A,PL;EU;EU27,,rate,up,ready,GFS net lending/borrowing
 ghg_emissions,poland,A,ghg_emissions,eurostat,ENV_AIR_GGE,eurostat:ENV_AIR_GGE:THS_T:GHG,A,PL;EU;EU27,,sum,down,ready,"CO2 equivalent, excl. LULUCF, incl. international aviation"
 ghg_emissions,poland,A,ghg_emissions,world_bank_wdi,EN.GHG.ALL.MT.CE.AR5,world_bank_wdi:EN.GHG.ALL.MT.CE.AR5,A,PL;EU;EU27,,sum,down,ready,"Mt CO2e, AR5"
+ghg_emissions,poland,A,ghg_emissions,faostat,GT,faostat:emissions_totals:kt:6829.723113.3050,A,PL;EU;EU27,,sum,down,ready,"all sectors without LULUCF, kt CO2eq (AR5); FAOSTAT emissions totals"
 gini,labour,A,gini,eurostat,ILC_DI12,eurostat:ILC_DI12:%:GINI_HND,A,PL;EU;EU27,,none,neutral,ready,EU-SILC
 gini,labour,A,gini,world_bank_wdi,SI.POV.GINI,world_bank_wdi:SI.POV.GINI,A,PL;EU;EU27,,none,neutral,ready,World Bank estimate
 gva_by_section,economy,A,gva_by_section,eurostat,NAMA_10_A10,eurostat:NAMA_10_A10:CP_MNAC:B1G,A,PL;EU;EU27,nace,sum,neutral,ready,total in metrics; NACE sections need kpi_member

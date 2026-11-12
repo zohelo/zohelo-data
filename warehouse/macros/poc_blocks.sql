@@ -269,6 +269,16 @@
     ) as t (entity, indicator_id, block_name, unit_code)
 {% endmacro %}
 
+{# FAOSTAT blocks (gold.build_faostat): one per domain item × element; areas: EU27 members (M49, macro
+   poc_m49_eu27), FAO aggregates 5707 European Union (27) and 5000 World. #}
+{% macro poc_faostat_blocks() %}
+    select * from (
+        values
+        ('emissions_totals', '6829', '723113', 'GHG emissions, all sectors without LULUCF, CO2eq (AR5) (FAOSTAT)'),
+        ('land_use', '6601', '5110', 'Land area (FAOSTAT)')
+    ) as t (entity, item_code, element_code, block_name)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -348,6 +358,7 @@
     poc_build_mrpips_unemployment:mrpips_unemployment
     poc_build_who:who
     poc_build_unesco_uis:unesco_uis
+    poc_build_faostat:faostat
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -424,6 +435,8 @@
     select 'who', entity, block_name from ({{ poc_who_blocks() }})
     union all
     select 'unesco_uis', entity, block_name from ({{ poc_unesco_uis_blocks() }})
+    union all
+    select 'faostat', entity || ':' || item_code || '.' || element_code, block_name from ({{ poc_faostat_blocks() }})
     union all
     select * from (
         values
