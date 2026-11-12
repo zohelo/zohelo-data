@@ -150,7 +150,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_population_projection: {rows: 5000}  # 29 areas × 77 years
   poc_metrics_gdp_current_prices: {rows: 50000}
   poc_metrics_inflation: {rows: 40000}
-  poc_metrics_population: {rows: 81000}  # 51,992 in prod (gus_dbw, gus_bdl; read by Dev trial 43098260601) + 2,146 UN WPP estimates = 54,138; 1.5 x
+  poc_metrics_population: {rows: 100000}  # + WDI and Eurostat (#2592)
   poc_metrics_unemployment_rate: {rows: 40000}
   poc_metrics_gdp_per_capita: {rows: 40000}
   poc_metrics_gdp_volume_growth: {rows: 40000}

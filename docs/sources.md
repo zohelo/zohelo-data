@@ -558,8 +558,10 @@ groups summed from the five-year groups, dependency ratios; the five-year rows s
 (EU: 27)" (LocID 1551, EU27_2020) and World; every indicator is an `:estimate` (to 2023) and a `:projection`
 (2024-2100, status forecast) measure; population in persons (published thousands × 1,000), other values as
 published; latest revision only, no vintages; areas through
-`poc_map_geography` (section `un_wpp`); KPIs population, total_fertility_rate, life_expectancy,
-old_age_dependency (estimates) and population_projection. Monthly check (3rd, 06:25 UTC), full rebuild (D32).
+`poc_map_geography` (section `un_wpp`, static codes); draft KPIs total_fertility_rate, life_expectancy,
+old_age_dependency (computed from the five-year age groups) and population_projection. Licence `unresolved`: no UN
+page states the WPP terms (Dev probe 43098349843), so WPP is kept out of the published layer: no row for the
+published KPI population, and its `kpi_v2_map` rows are needs-block. Monthly check (3rd, 06:25 UTC), full rebuild (D32).
 
 ## World Bank Global Findex Database
 

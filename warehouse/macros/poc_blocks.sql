@@ -228,8 +228,16 @@
         ('TFR', 'Total fertility rate (UN WPP)', 'children_per_woman', 'live births per woman'),
         ('LEx', 'Life expectancy at birth, both sexes (UN WPP)', 'years', 'years'),
         ('MedianAgePop', 'Median age of the population (UN WPP)', 'years', 'years'),
-        ('OldAgeDependency', 'Old-age dependency ratio, 65+ per 100 aged 15-64 (UN WPP)', 'per_100', 'per 100 persons aged 15-64')
+        ('OldAgeDependency', 'Old-age dependency ratio, 65+ per 100 aged 15-64, computed from UN WPP 2024 five-year age groups', 'per_100', 'per 100 persons aged 15-64')
     ) as t (indicator, block_name, unit_code, unit_name)
+{% endmacro %}
+
+{# UN WPP groups → Gold area by LocID (poc_map_geography section un_wpp; static). Countries map by ISO code. #}
+{% macro poc_un_wpp_areas() %}
+    select * from (
+        values
+        ('1551', 'EUROSTAT:EU27_2020'), ('900', 'WB:WLD')
+    ) as t (loc_id, candidate_key)
 {% endmacro %}
 
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie

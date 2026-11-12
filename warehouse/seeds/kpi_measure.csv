@@ -151,7 +151,6 @@ krus_pension_avg,krus,krus:benefits:PLN:old_age:avg_benefit_pln%,"average monthl
 fdi_inflow,unctad,unctad:US_FdiFlowsStock:08:1:USD_MN,"FDI inward flows, US$ million at current prices (UNCTAD)",3,mln_usd
 exports_goods,unctad,unctad:US_TradeMerchTotal:02:USD_MN,"merchandise exports, US$ million at current prices",1,
 exports_services,unctad,unctad:US_TradeServCatTotal:02:S:USD_MN,"services exports (total), US$ million at current prices",1,
-population,un_wpp,un_wpp:TPopulation1July:estimate,"1 July, UN WPP 2024 estimate (to 2023)",5,
 total_fertility_rate,un_wpp,un_wpp:TFR:estimate,"UN WPP 2024 estimate (to 2023)",5,
 life_expectancy,un_wpp,un_wpp:LEx:estimate,"at birth, both sexes, UN WPP 2024 estimate (to 2023)",5,
 old_age_dependency,un_wpp,un_wpp:OldAgeDependency:estimate,"65+ per 100 aged 15-64 on 1 July, from UN WPP 2024 broad age groups (to 2023)",5,

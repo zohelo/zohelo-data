@@ -13,9 +13,6 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('population', 'eurostat', '%', 0, 1e9),
     -- persons; largest area WLD 2025 = 8,215,424,893 (World Bank API SP.POP.TOTL, #2788)
     ('population', 'world_bank_wdi', '%', 0, 1e10),
-    -- persons (published thousands x 1,000); largest area World 2023 = 8,091,734,930 (UN WPP 2024 LocID 900,
-    -- Dev trial 43098260601); only the :estimate measure is in metrics_population (#2761)
-    ('population', 'un_wpp', '%', 0, 1e10),
     ('gdp_current_prices', 'eurostat', 'eurostat:NAMA_10_GDP:CP_MEUR:B1GQ', 0, 3e7),
     -- million national currency; largest HU 2025 = 87,307,647 million HUF (Eurostat nama_10_gdp, #2788)
     ('gdp_current_prices', 'eurostat', 'eurostat:NAMA_10_GDP:CP_MNAC:B1GQ', 0, 1e9),
