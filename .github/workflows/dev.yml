@@ -14,8 +14,10 @@ name: Dev · branch runs
 # secret scan, and it is the only required status check (ruleset "main", context `check`). Agents run
 # `python -m ops.repo_check` locally while iterating. A push after the label leaves the new head without
 # `check`, so the merge waits until the label is added again.
-# Its name is written as an expression on purpose: a job skipped by its `if` (any other label) reports
-# its raw name, not `check`, so a skipped run can never stand in for the required check.
+# Its name depends on the label on purpose: GitHub counts a skipped job as passed, and a job skipped by
+# its `if` (another label, a Dev dispatch) must not report the name `check`. A constant name, even
+# `${{ 'check' }}`, is reported as `check` when skipped (PR #2841); this expression yields `check` only
+# for `merge:check` and is otherwise `gate-skipped` (or left unevaluated), never `check`.
 # `check-portal` runs after `check` only when the pull request changes portal/app: install, lint,
 # type-check, build and the axe-core accessibility check on the build (portal/app/a11y, the runner
 # shared with zohelo and zohelo-bi).
@@ -46,7 +48,7 @@ concurrency:
 jobs:
   check:
     if: github.event_name == 'pull_request' && github.event.label.name == 'merge:check'
-    name: ${{ 'check' }}
+    name: ${{ github.event.label.name == 'merge:check' && 'check' || 'gate-skipped' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
