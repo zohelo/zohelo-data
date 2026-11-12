@@ -1,331 +1,418 @@
-"""Dev trial (PL-ENV-015 PIG-PIB MIDAS, #2870).
+"""Dev trial (PL-ENV-015 PIG-PIB MIDAS, #2870): Landing → Bronze → Silver → Gold into scratch.
 
-Mode ``probe`` (read-only, no R2 writes): robots.txt, WFS capabilities (versions, output formats, paging
-constraints, CRS), DescribeFeatureType and hits per layer, byte stability of two identical small GetFeature
-requests per version (an embedded timeStamp changes the bytes every request), one full GetFeature per layer with
-an attribute profile. One request at a time with pauses. At most 10 annotations.
+Landing load of the six WFS layers into the Landing prefix zz_dev_pig_midas/ (twice; every response embeds its
+request time, so the second pass is expected to land again: reported, not hidden), inspect and verify; Bronze load
+into Iceberg namespace zz_dev_pig_midas and lake prefix zz_dev_pig_midas/ (twice: the second appends nothing);
+Bronze profile; then the Silver models and the Gold build stage rendered with Jinja from warehouse/models into local
+DuckDB, each built twice, with every test of _pig_midas.yml run as SQL, build_check, the fact grain by series_key ×
+date_key, the metrics rows and the value bound; gold.dim_geography is read (read-only) for the geography match.
+The MIDAS terms pages are read once. sqlfluff (the repository's pinned version) lints warehouse/models.
+Everything written is removed in `finally`. At most 10 annotations.
 """
 
 from __future__ import annotations
 
-from collections import Counter
+import csv
 import json
 from pathlib import Path
 import re
-import sys
-import tempfile
 import time
-from urllib.parse import quote
-import xml.etree.ElementTree as ET
 
+import duckdb
+from jinja2 import Environment
 import requests
+import yaml
 
+from ingestion.common.r2 import catalog, req, s3
 from ingestion.common.report import annotate
+from ingestion.to_bronze.pig_midas import load as bronze_load
+from ingestion.to_landing import pig_midas as landing
 from ingestion.to_landing.patterns import bulk_file
 
-HOST = "https://cbdgmapa.pgi.gov.pl"
-WFS = f"{HOST}/arcgis/services/midas/MapServer/WFSServer"
-UA = {"User-Agent": bulk_file.USER_AGENT}
-PAUSE = 4
+SCRATCH = "zz_dev_pig_midas"
+SOURCE = "pig_midas"
+SILVER = "warehouse/models/silver/pig_midas"
+LOG: dict = {}
 
 
-def get(url: str, timeout: int = 120) -> requests.Response:
-    time.sleep(PAUSE)
-    return requests.get(url, headers={**UA, "Accept-Encoding": "identity"}, timeout=(30, timeout))
+def q(con, sql):
+    return [[str(v) for v in r] for r in con.execute(sql).fetchall()]
 
 
-def local(tag: str) -> str:
-    return tag.rsplit("}", 1)[-1]
+def render(path: str, refs: dict[str, str], sources: dict[str, str]) -> str:
+    return (
+        Environment()
+        .from_string(Path(path).read_text())
+        .render(config=lambda **_k: "", ref=lambda n: refs.get(n, n), source=lambda _s, t: sources[t])
+    )
 
 
-def capabilities() -> tuple[dict, list[str]]:
-    out: dict = {}
-    r = get(f"{HOST}/robots.txt", 30)
-    out["robots"] = {"status": r.status_code, "ct": r.headers.get("Content-Type"), "body": r.text[:400]}
-    types: list[str] = []
-    for version in ("2.0.0", "1.1.0"):
-        r = get(f"{WFS}?service=WFS&request=GetCapabilities&version={version}")
-        info: dict = {"status": r.status_code, "bytes": len(r.content), "server": r.headers.get("Server")}
-        if r.status_code == 200:
-            root = ET.fromstring(r.content)
-            info["root_version"] = root.attrib.get("version")
-            ops = {}
-            for op in root.iter():
-                if local(op.tag) == "Operation":
-                    params = {}
-                    for p in op:
-                        if local(p.tag) in ("Parameter", "Constraint"):
-                            vals = [v.text for v in p.iter() if local(v.tag) in ("Value", "DefaultValue") and v.text]
-                            params[p.attrib.get("name")] = vals[:12]
-                    ops[op.attrib.get("name")] = params
-            info["getfeature"] = ops.get("GetFeature")
-            info["global_constraints"] = {
-                c.attrib.get("name"): [v.text for v in c.iter() if local(v.tag) in ("Value", "DefaultValue")][:3]
-                for c in root.iter()
-                if local(c.tag) == "Constraint"
-                and c.attrib.get("name")
-                in ("ImplementsResultPaging", "CountDefault", "ImplementsStandardJoins", "KVPEncoding")
-            }
-            fts = []
-            for ft in root.iter():
-                if local(ft.tag) == "FeatureType":
-                    d = {
-                        local(c.tag): (c.text or "").strip()[:120]
-                        for c in ft
-                        if local(c.tag) in ("Name", "Title", "DefaultCRS", "DefaultSRS", "OtherCRS", "OtherSRS")
-                    }
-                    fmts = [f.text for f in ft.iter() if local(f.tag) == "Format"]
-                    if fmts:
-                        d["formats"] = fmts[:6]
-                    fts.append(d)
-            info["feature_types"] = fts
-            if version == "2.0.0":
-                types = [f.get("Name") for f in fts]
-                info["fees_access"] = [
-                    (local(e.tag), (e.text or "")[:300])
-                    for e in root.iter()
-                    if local(e.tag) in ("Fees", "AccessConstraints")
-                ]
-        out[version] = info
-    return out, types
-
-
-def feature_rows(path: Path) -> tuple[dict, list[dict], list[str]]:
-    """Root attributes, per feature {property: text or geometry tag}, member element names."""
-    root_attrs: dict = {}
-    rows: list[dict] = []
-    members: Counter = Counter()
-    depth = 0
-    for event, el in ET.iterparse(str(path), events=("start", "end")):
-        if event == "start":
-            depth += 1
-            if depth == 1:
-                root_attrs = {local(k): v for k, v in el.attrib.items()}
+def terms() -> None:
+    out = {}
+    for name, url in (
+        ("robots", "https://www.pgi.gov.pl/robots.txt"),
+        ("midas_sources", "https://www.pgi.gov.pl/midas/zrodla-danych.html"),
+        ("isp_rules", "https://www.pgi.gov.pl/rejestry-i-bazy-danych-geologicznych/zasady-korzystania-z-isp.html"),
+    ):
+        time.sleep(3)
+        try:
+            r = requests.get(url, headers={"User-Agent": bulk_file.USER_AGENT}, timeout=60)
+        except requests.RequestException as exc:
+            out[name] = {"error": str(exc)[:200]}
             continue
-        depth -= 1
-        if depth == 1 and local(el.tag) in ("member", "featureMember", "featureMembers"):
-            members[local(el.tag)] += 1
-            for feat in el:
-                row = {
-                    "@id": feat.attrib.get("{http://www.opengis.net/gml/3.2}id")
-                    or feat.attrib.get("{http://www.opengis.net/gml}id")
-                }
-                for prop in feat:
-                    kids = list(prop)
-                    row[local(prop.tag)] = f"<{local(kids[0].tag)}>" if kids else prop.text
-                rows.append(row)
-            el.clear()
-    return root_attrs, rows, list(members)
+        if name == "robots":
+            out[name] = {"status": r.status_code, "disallow": re.findall(r"(?im)^disallow:.*$", r.text)[:12]}
+            continue
+        text = re.sub(r"\s+", " ", re.sub(r"(?s)<script.*?</script>|<style.*?</style>|<[^>]+>", " ", r.text))
+        hits = [
+            text[max(0, m.start() - 160) : m.start() + 240]
+            for m in re.finditer(r"(?i)źródł|komercyj|licencj|warunk", text)
+        ]
+        out[name] = {"status": r.status_code, "hits": hits[:3]}
+    LOG["terms"] = out
+    annotate("notice", "midas terms pages", out)
 
 
-def profile(rows: list[dict]) -> list:
-    cols: dict[str, list] = {}
-    for row in rows:
-        for k, v in row.items():
-            cols.setdefault(k, []).append(v)
-    out = []
-    for k, vals in cols.items():
-        nonnull = [v for v in vals if v not in (None, "")]
-        distinct = Counter(nonnull)
-        shape = Counter(
-            "int"
-            if re.fullmatch(r"-?\d+", v)
-            else "num"
-            if re.fullmatch(r"-?\d+[.,]\d+", v)
-            else "date"
-            if re.match(r"\d{4}-\d\d-\d\d", v)
-            else "geom"
-            if v.startswith("<")
-            else "text"
-            for v in nonnull[:5000]
-        )
-        out.append(
-            [k, len(vals) - len(nonnull), len(distinct), dict(shape), [str(s)[:24] for s, _ in distinct.most_common(3)]]
-        )
+def landing_steps() -> dict:
+    bucket = req("STORAGE_LANDING_BUCKET_NAME")
+    runs, outcomes = [], []
+    for _ in (1, 2):
+        started = time.monotonic()
+        runs.append(bulk_file.main(SOURCE, "load", landing_root=SCRATCH, pause_seconds=landing.PAUSE_SECONDS))
+        outcomes.append(round(time.monotonic() - started))
+    held = {}
+    for spec in bulk_file.declaration(SOURCE):
+        rec = bulk_file.landed(s3(), bucket, bulk_file.prefix(SOURCE, spec["entity"], SCRATCH))
+        held[spec["entity"]] = {
+            "copies": len(rec),
+            "bytes": [r["size_bytes"] for r in rec],
+            "same_sha_both_passes": len({r["sha256"] for r in rec}) == 1,
+            "version": rec[-1]["version_token"] if rec else None,
+        }
+    inspect = bulk_file.main(SOURCE, "inspect", landing_root=SCRATCH)
+    verify = bulk_file.main(SOURCE, "verify", landing_root=SCRATCH)
+    out = {
+        "extract_exit_two_passes": runs,
+        "seconds": outcomes,
+        "inspect_exit": inspect,
+        "verify_exit": verify,
+        "files": sum(v["copies"] for v in held.values()),
+        "bytes_newest": sum(v["bytes"][-1] for v in held.values() if v["bytes"]),
+        "per_layer": held,
+    }
+    LOG["landing"] = out
+    annotate("notice", "midas landing (scratch)", out)
     return out
 
 
-def probe() -> None:
-    caps, types = capabilities()
-    print(json.dumps(caps, ensure_ascii=False), flush=True)
-    annotate("notice", "midas probe: capabilities 2.0.0", caps.get("2.0.0"))
-    annotate(
-        "notice", "midas probe: robots, capabilities 1.1.0", {"robots": caps["robots"], "1.1.0": caps.get("1.1.0")}
+def bronze_steps(con) -> None:
+    exits = [bronze_load.load(0, landing_root=SCRATCH, namespace=SCRATCH) for _ in (1, 2)]
+    cat = catalog()
+    table = cat.load_table((SCRATCH, "pig_midas_features"))
+    files_after = len(list(table.scan().plan_files()))
+    arrow = table.scan().to_arrow()
+    try:
+        rejected = cat.load_table((SCRATCH, "pig_midas_rejected_files")).scan().to_arrow().to_pylist()
+    except Exception:  # noqa: BLE001
+        rejected = []
+    con.register("bronze_a", arrow)
+    con.execute("create table bronze as select * from bronze_a")
+    snaps = [s.summary for s in table.snapshots()] if hasattr(table, "snapshots") else []
+    out = {
+        "bronze_exit_two_loads": exits,
+        "files": files_after,
+        "commits": len(snaps),
+        "rows": arrow.num_rows,
+        "rejected": [{k: r.get(k) for k in ("entity", "error")} for r in rejected][:3],
+        "per_entity": q(
+            con,
+            """select entity, count(*), count(distinct object_id), count(distinct contour_id),
+            count(distinct deposit_number), count(distinct register_number), count(distinct raw_sha256),
+            count(*) filter (where geometry_type is null), min(served_at) from bronze group by 1 order by 1""",
+        ),
+    }
+    LOG["bronze"] = out
+    annotate("notice", "midas bronze (scratch): entity, rows, objectids, contours, deposits, registers, files", out)
+    cols = [c for c, _ in bronze_load.COLUMNS if c not in ("entity", "ingested_at", "source_row_number")]
+    blanks = " union all ".join(
+        f"select '{c}' as col, count(*) filter (where {c} is null) as nulls, "
+        f"count(*) filter (where {c} is not null and trim({c}) = '') as blanks from bronze"
+        for c in cols
     )
-    stability = {}
-    per_layer = {}
-    for n, name in enumerate(types):
-        tn = quote(name, safe=":")
-        info: dict = {}
-        r = get(f"{WFS}?service=WFS&version=2.0.0&request=DescribeFeatureType&typeNames={tn}")
-        if r.status_code == 200:
-            try:
-                root = ET.fromstring(r.content)
-                info["describe"] = [
-                    [e.attrib.get("name"), e.attrib.get("type"), e.attrib.get("minOccurs"), e.attrib.get("nillable")]
-                    for e in root.iter()
-                    if local(e.tag) == "element" and e.attrib.get("type")
-                ][:60]
-            except ET.ParseError as exc:
-                info["describe_error"] = str(exc)[:200]
-        else:
-            info["describe_status"] = r.status_code
-        r = get(f"{WFS}?service=WFS&version=2.0.0&request=GetFeature&typeNames={tn}&resultType=hits")
-        info["hits"] = {"status": r.status_code, "head": r.text[:300]}
-        if n < 2:  # byte stability of identical requests, both versions, small counts
-            for version, cnt in (("2.0.0", "count=3"), ("1.1.0", "maxFeatures=3")):
-                key = "typeNames" if version == "2.0.0" else "typeName"
-                url = f"{WFS}?service=WFS&version={version}&request=GetFeature&{key}={tn}&{cnt}"
-                a, b = get(url), get(url)
-                ts = re.findall(rb'timeStamp="[^"]+"', a.content[:2000])
-                stability[f"{n}:{version}"] = {
-                    "status": [a.status_code, b.status_code],
-                    "same_bytes": a.content == b.content,
-                    "bytes": len(a.content),
-                    "timestamp_attr": [t.decode() for t in ts],
-                    "ct": a.headers.get("Content-Type"),
-                    "last_modified": a.headers.get("Last-Modified"),
-                    "etag": a.headers.get("ETag"),
-                    "head": a.text[:350],
-                }
-            url = f"{WFS}?service=WFS&version=2.0.0&request=GetFeature&typeNames={tn}&count=3&outputFormat=GEOJSON"
-            g = get(url)
-            stability[f"{n}:geojson"] = {
-                "status": g.status_code,
-                "ct": g.headers.get("Content-Type"),
-                "head": g.text[:200],
-            }
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "layer.xml"
-            url = f"{WFS}?service=WFS&version=2.0.0&request=GetFeature&typeNames={tn}"
-            started = time.monotonic()
-            time.sleep(PAUSE)
-            try:
-                digest, size, headers, _final, _d = bulk_file.download(url, path, "raw", retries=2, read_timeout=600)
-            except Exception as exc:
-                info["full_error"] = f"{type(exc).__name__}: {str(exc)[:300]}"
-                per_layer[name] = info
-                continue
-            info["full"] = {
-                "bytes": size,
-                "seconds": round(time.monotonic() - started),
-                "sha": digest[:12],
-                "ct": headers.get("Content-Type"),
-                "head": path.read_bytes()[:300].decode("utf-8", "replace"),
-            }
-            try:
-                root_attrs, rows, members = feature_rows(path)
-            except ET.ParseError as exc:
-                info["parse_error"] = str(exc)[:300]
-                per_layer[name] = info
-                continue
-            info["root"] = root_attrs
-            info["members"] = members
-            info["features"] = len(rows)
-            ids = Counter(r.get("@id") for r in rows)
-            info["dup_gml_ids"] = sum(1 for c in ids.values() if c > 1)
-            info["profile"] = profile(rows)
-        per_layer[name] = info
-        print(json.dumps({"layer": name, **info}, ensure_ascii=False), flush=True)
-        brief = {k: v for k, v in info.items() if k != "describe" or "profile" not in info}
-        if "full" in brief:
-            brief["full"] = {k: v for k, v in brief["full"].items() if k != "head"}
-        annotate("notice", f"midas probe layer {n}", {"type": name, **brief})
-    annotate("notice", "midas probe: byte stability", stability)
-    print(json.dumps({"layers": list(per_layer)}, ensure_ascii=False))
+    profile = {
+        "null_and_blank_per_column": [r for r in q(con, blanks) if r[1] != "0" or r[2] != "0"],
+        "blank_strings": q(
+            con,
+            "select '|' || value || '|', count(*) from (select unnest(["
+            + ", ".join(cols)
+            + "]) as value from bronze) where trim(value) = '' group by 1",
+        ),
+        "deposit_number_not_integer": q(
+            con,
+            """select entity, count(*) from bronze where deposit_number is not null
+            and not regexp_full_match(deposit_number, '[0-9]+(\\.0+)?') group by 1""",
+        ),
+        "date_shapes": q(
+            con,
+            """select count(*) filter (where established_on is not null and not regexp_full_match(established_on, '\\d\\d/\\d\\d/\\d{4}')),
+            count(*) filter (where valid_until is not null and not regexp_full_match(valid_until, '\\d\\d/\\d\\d/\\d{4}')),
+            count(*) filter (where abolished_on is not null and not regexp_full_match(abolished_on, '\\d\\d/\\d\\d/\\d{4}'))
+            from bronze""",
+        ),
+        "coordinate_system_values": q(
+            con,
+            "select entity, list(distinct coordinate_system order by coordinate_system) from bronze where entity like '%mining%' group by 1",
+        ),
+        "status_values": q(
+            con, "select entity, status, count(*) from bronze where status is not null group by all order by all"
+        ),
+        "served_at_minmax": q(con, "select min(served_at), max(served_at) from bronze"),
+    }
+    LOG["bronze_profile"] = profile
+    annotate("notice", "midas bronze profile", profile)
 
 
-def probe2() -> None:
-    """Attribute profile of every layer from one GML32+GZIP GetFeature each; key uniqueness and number formats."""
-    import gzip
+def yml_tests(con) -> dict:
+    spec = yaml.safe_load(Path(f"{SILVER}/_pig_midas.yml").read_text())
+    results = {}
+    for model in spec["models"]:
+        name = model["name"]
+        for t in model.get("tests") or []:
+            expr = t["unique"]["column_name"]
+            results[f"{name}:unique({expr[:40]})"] = q(
+                con, f"select count(*) from (select {expr} as k from {name} group by 1 having count(*) > 1)"
+            )[0][0]
+        for col in model.get("columns") or []:
+            for t in col.get("tests") or []:
+                if t == "not_null":
+                    results[f"{name}.{col['name']}:not_null"] = q(
+                        con, f"select count(*) from {name} where {col['name']} is null"
+                    )[0][0]
+                elif isinstance(t, dict) and "accepted_values" in t:
+                    values = t["accepted_values"]["arguments"]["values"]
+                    listed = ", ".join("'" + str(v).replace("'", "''") + "'" for v in values)
+                    results[f"{name}.{col['name']}:accepted_values"] = q(
+                        con,
+                        f"select count(*) from {name} where {col['name']} is not null "
+                        f"and cast({col['name']} as varchar) not in ({listed})",
+                    )[0][0]
+    return results
 
-    _caps, types = capabilities()
-    for n, name in enumerate(types):
-        tn = quote(name, safe=":")
-        info: dict = {}
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "layer.gz"
-            url = f"{WFS}?service=WFS&version=2.0.0&request=GetFeature&typeNames={tn}&outputFormat=GML32%2BGZIP"
-            started = time.monotonic()
-            time.sleep(PAUSE)
+
+def silver_steps(con) -> None:
+    sources = {"pig_midas_features": "bronze"}
+    dep = render(f"{SILVER}/pig_midas_deposits.sql", {}, sources)
+    con_sql = render(f"{SILVER}/pig_midas_mining_contours.sql", {}, sources)
+    counts = {"pig_midas_deposits": [], "pig_midas_mining_contours": []}
+    for _ in (1, 2):
+        con.execute(f"create or replace table pig_midas_deposits as {dep}")
+        con.execute(f"create or replace table pig_midas_mining_contours as {con_sql}")
+        for t in counts:
+            counts[t].append(con.execute(f"select count(*) from {t}").fetchone()[0])
+    tests = yml_tests(con)
+    out = {
+        "rows_two_builds": counts,
+        "tests_failing_rows": tests,
+        "per_layer": q(
+            con,
+            """select layer, count(*), count(distinct deposit_number), min(snapshot_date) from pig_midas_deposits
+            group by 1 union all select layer, count(*), count(distinct register_number), min(snapshot_date)
+            from pig_midas_mining_contours group by 1 order by 1""",
+        ),
+    }
+    LOG["silver"] = out
+    annotate("notice", "midas silver: rows, every _pig_midas.yml test (failing rows)", out)
+    profile = {
+        "mineral_codes_documented": q(
+            con,
+            "select list(mineral_code order by mineral_code) from (select distinct mineral_code from pig_midas_deposits where layer = 'documented')",
+        ),
+        "mineral_codes_removed_not_in_documented": q(
+            con,
+            """select list(distinct mineral_code) from pig_midas_deposits where layer = 'removed' and mineral_code not in
+            (select mineral_code from pig_midas_deposits where layer = 'documented')""",
+        ),
+        "code_name_pairs_not_1to1": q(
+            con,
+            "select count(*) from (select mineral_code from pig_midas_deposits group by 1 having count(distinct mineral_name) > 1)",
+        ),
+        "deposits_with_several_codes": q(
+            con,
+            "select count(*) from (select deposit_number from pig_midas_deposits where layer = 'documented' group by 1 having count(distinct mineral_code) > 1)",
+        ),
+        "deposits_polygons_max": q(
+            con,
+            "select max(n) from (select count(*) n from pig_midas_deposits where layer = 'documented' group by deposit_number)",
+        ),
+        "registers_with_several_contours": q(
+            con,
+            "select layer, count(*) from (select layer, register_number from pig_midas_mining_contours group by all having count(*) > 1) group by 1 order by 1",
+        ),
+        "contour_deposit_not_whole": q(
+            con,
+            "select count(*) from pig_midas_mining_contours where deposit_number is null and deposit_number_text is not null",
+        ),
+        "current_contours_deposit_not_in_documented": q(
+            con,
+            """select layer, count(*) from pig_midas_mining_contours where layer in ('mining_areas', 'mining_terrains')
+            and deposit_number not in (select deposit_number from pig_midas_deposits where layer = 'documented') group by 1""",
+        ),
+        "dates": q(
+            con,
+            """select layer, min(established_on), max(established_on), min(valid_until), max(valid_until),
+            min(abolished_on), max(abolished_on), count(*) filter (where valid_until < snapshot_date)
+            from pig_midas_mining_contours group by 1 order by 1""",
+        ),
+        "epsg_values": q(
+            con,
+            "select list(distinct coordinate_system_epsg order by coordinate_system_epsg) from pig_midas_mining_contours",
+        ),
+        "area_ranges": q(
+            con,
+            """select layer, min(shape_area_m2), max(shape_area_m2), min(declared_area_m2), max(declared_area_m2)
+            from (select layer, shape_area_m2, null::double declared_area_m2 from pig_midas_deposits union all
+            select layer, shape_area_m2, declared_area_m2 from pig_midas_mining_contours) group by 1 order by 1""",
+        ),
+    }
+    LOG["silver_profile"] = profile
+    annotate("notice", "midas silver profile", profile)
+
+
+def gold_steps(con, geo_keys) -> None:
+    con.register("geo_a", geo_keys)
+    con.execute("create table dim_geography as select geography_key from geo_a")
+    refs = {"pig_midas_deposits": "pig_midas_deposits", "pig_midas_mining_contours": "pig_midas_mining_contours"}
+    build = render("warehouse/models/gold/poc_build_pig_midas.sql", refs, {})
+    rows = []
+    for _ in (1, 2):
+        con.execute(f"create or replace table build as {build}")
+        rows.append(con.execute("select count(*) from build").fetchone()[0])
+    blocks = re.findall(r"\('pig_midas', '([a-z_]+)', '([^']+)'\)", Path("warehouse/macros/poc_blocks.sql").read_text())
+    con.execute("create or replace table activated (block_id varchar, block_name varchar)")
+    con.executemany("insert into activated values (?, ?)", blocks)
+    with open("warehouse/seeds/kpi_measure.csv", encoding="utf-8") as handle:
+        patterns = [r["measure_key_pattern"] for r in csv.DictReader(handle) if r["source_system"] == SOURCE]
+    likes = " or ".join(f"measure_key like '{p}'" for p in patterns) or "false"
+    bound = re.search(
+        r"\('mineral_deposits', 'pig_midas', '([^']*)', ([0-9.e+-]+), ([0-9.e+-]+)\)",
+        Path("warehouse/tests/metrics_value_range.sql").read_text(),
+    )
+    out = {
+        "rows_two_builds": rows,
+        "build_check": q(
+            con,
+            """select a.block_id, count(b.block_id), count(distinct b.measure_key || '|' || b.geography_key || '|' || b.breakdown_json),
+            count(*) filter (where b.geography_key = '_X'), count(*) filter (where b.geography_key not in (select geography_key from dim_geography)),
+            min(b.date_key), max(b.date_key), list(distinct b.unit_code)
+            from activated as a left join build as b using (block_id) group by 1 order by 1""",
+        ),
+        "dup_series_key_x_date_key": q(
+            con,
+            """select count(*) from (select measure_key || '|' || geography_key || '|' || breakdown_json as series_key,
+            date_key from build group by all having count(*) > 1)""",
+        ),
+        "null_or_nonpositive_values": q(con, "select count(*) from build where value is null or value <= 0"),
+        "spot_PL_totals": q(con, "select measure_key, date_key, value from build where is_total order by 1"),
+        "top_minerals": q(
+            con,
+            """select json_extract_string(breakdown_json, '$.mineral_code'), json_extract_string(breakdown_label_json, '$.mineral_code'), value
+            from build where not is_total order by value desc limit 6""",
+        ),
+        "codes_sum_vs_total": q(
+            con,
+            "select sum(value) filter (where not is_total), sum(value) filter (where is_total) from build where block_id = 'documented_deposits'",
+        ),
+        "metrics_rows_and_bound": q(
+            con,
+            f"""select count(*), min(value), max(value),
+            {f"count(*) filter (where value < {bound.group(2)} or value > {bound.group(3)})" if bound else "'no bound'"}
+            from build where is_total and geography_key <> '_X' and ({likes})""",
+        ),
+        "kpi_patterns": patterns,
+    }
+    LOG["gold"] = out
+    annotate("notice", "midas gold build_pig_midas (block, rows, series, _X, not in dim_geography, dates, units)", out)
+
+
+def lint() -> None:
+    import subprocess
+    import sys
+
+    from ops import repo_check
+
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", repo_check.SQLFLUFF], capture_output=True, text=True)
+    files = [
+        f"{SILVER}/pig_midas_deposits.sql",
+        f"{SILVER}/pig_midas_mining_contours.sql",
+        "warehouse/models/gold/poc_build_pig_midas.sql",
+        "warehouse/models/gold/poc_metrics_mineral_deposits.sql",
+    ]
+    problems = repo_check.tool([sys.executable, "-m", "sqlfluff", "lint", *files, "--disable-progress-bar"])
+    LOG["sqlfluff"] = problems
+    annotate(
+        "notice" if not problems else "warning",
+        "midas sqlfluff (pinned, own models)",
+        {"version": repo_check.SQLFLUFF, "files": len(files), "problems": [p[-3000:] for p in problems]},
+    )
+
+
+def cleanup() -> None:
+    removed: dict = {"tables": [], "landing_objects": 0, "lake_objects": 0}
+    cat = catalog()
+    try:
+        for table in cat.list_tables(SCRATCH):
             try:
-                _sha, size, headers, _f, _d = bulk_file.download(url, path, "gzip", retries=2, read_timeout=600)
-            except Exception as exc:
-                annotate("warning", f"midas probe2 layer {n}", {"type": name, "gzip_error": str(exc)[:400]})
-                continue
-            raw = Path(tmp) / "layer.xml"
-            with gzip.open(path) as src, raw.open("wb") as dst:
-                while block := src.read(8 << 20):
-                    dst.write(block)
-            info["gzip"] = {
-                "bytes": size,
-                "xml_bytes": raw.stat().st_size,
-                "seconds": round(time.monotonic() - started),
-                "ct": headers.get("Content-Type"),
-                "cd": headers.get("Content-Disposition"),
-                "head": raw.read_bytes()[:120].decode("utf-8", "replace"),
-            }
-            root_attrs, rows, members = feature_rows(raw)
-        info["root"] = {k: v for k, v in root_attrs.items() if k != "schemaLocation"}
-        info["members"], info["features"] = members, len(rows)
-        cols = sorted({k for r in rows for k in r})
-        info["columns"] = cols
-        keys = {}
-        for key in ("OBJECTID", "Numer_złoża", "ID_konturu", "@id"):
-            vals = [r.get(key) for r in rows]
-            c = Counter(v for v in vals if v not in (None, ""))
-            keys[key] = {
-                "null": sum(1 for v in vals if v in (None, "")),
-                "distinct": len(c),
-                "dup_values": sum(1 for v in c.values() if v > 1),
-                "max_rep": max(c.values(), default=0),
-                "sample_dup": [k for k, v in c.most_common(3) if v > 1],
-            }
-        info["keys"] = keys
-        prof = []
-        for k in cols:
-            vals = [r.get(k) for r in rows]
-            nonnull = [v for v in vals if v not in (None, "")]
-            shapes = Counter(
-                "int"
-                if re.fullmatch(r"-?\d+", v)
-                else "dec"
-                if re.fullmatch(r"-?\d+\.\d+", v)
-                else "exp"
-                if re.fullmatch(r"-?\d+(\.\d+)?[eE][-+]?\d+", v)
-                else "geom"
-                if v.startswith("<")
-                else "text"
-                for v in nonnull
-            )
-            nums = [float(v) for v in nonnull if re.fullmatch(r"-?\d+(\.\d+)?([eE][-+]?\d+)?", v)]
-            c = Counter(nonnull)
-            row = [k, len(vals) - len(nonnull), len(c), dict(shapes)]
-            if nums:
-                row += [min(nums), max(nums)]
-            row.append([str(s)[:20] for s, _ in c.most_common(4)])
-            prof.append(row)
-        info["profile"] = prof
-        if any(r.get("Numer_złoża") for r in rows):
-            nz = [r.get("Numer_złoża") or "" for r in rows]
-            info["numer_zloza_nonint"] = [v for v in Counter(nz) if v and not re.fullmatch(r"\d+(\.0+)?", v)][:8]
-        print(json.dumps({"layer": name, **info}, ensure_ascii=False), flush=True)
-        annotate("notice", f"midas probe2 layer {n}", {"type": name[6:40], **info})
+                cat.purge_table(table)
+            except Exception:  # noqa: BLE001
+                cat.drop_table(table)
+            removed["tables"].append(".".join(table))
+        cat.drop_namespace(SCRATCH)
+    except Exception as exc:  # noqa: BLE001
+        removed["catalog_error"] = f"{type(exc).__name__}: {str(exc)[:200]}"
+    client = s3()
+    for var, label in (
+        ("STORAGE_LANDING_BUCKET_NAME", "landing_objects"),
+        ("STORAGE_LAKEHOUSE_BUCKET_NAME", "lake_objects"),
+    ):
+        bucket = req(var)
+        for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=f"{SCRATCH}/"):
+            keys = [{"Key": o["Key"]} for o in page.get("Contents", [])]
+            if keys:
+                client.delete_objects(Bucket=bucket, Delete={"Objects": keys})
+                removed[label] += len(keys)
+    removed["objects_left"] = sum(
+        len(p.get("Contents", []))
+        for b in ("STORAGE_LANDING_BUCKET_NAME", "STORAGE_LAKEHOUSE_BUCKET_NAME")
+        for p in client.get_paginator("list_objects_v2").paginate(Bucket=req(b), Prefix=f"{SCRATCH}/")
+    )
+    annotate("notice", "midas scratch removed", removed)
 
 
 def main() -> int:
-    mode = sys.argv[1] if len(sys.argv) > 1 else "trial"
+    from ingestion.common import bulk_bronze
+
+    bulk_file.annotate = bulk_bronze.annotate = lambda *_a, **_k: None  # their summaries go to the log only (cap 10)
+    failed = 0
     try:
-        if mode == "probe":
-            probe()
-        elif mode == "probe2":
-            probe2()
-        else:
-            raise SystemExit(f"unknown mode {mode}")
-    except Exception as exc:
-        annotate("error", "midas trial failed", {"error": f"{type(exc).__name__}: {str(exc)[:1500]}"})
-        return 1
-    return 0
+        for step in (terms, lint):
+            try:
+                step()
+            except Exception as exc:  # noqa: BLE001
+                print(json.dumps({f"{step.__name__}_error": str(exc)[:300]}))
+        try:
+            landing_steps()
+            con = duckdb.connect()
+            bronze_steps(con)
+            silver_steps(con)
+            geo = catalog().load_table(("gold", "dim_geography")).scan(selected_fields=("geography_key",)).to_arrow()
+            gold_steps(con, geo)
+        except Exception as exc:  # noqa: BLE001
+            failed = 1
+            annotate("error", "midas trial failed", {"error": f"{type(exc).__name__}: {str(exc)[:1500]}"})
+    finally:
+        cleanup()
+        print(json.dumps(LOG, default=str, ensure_ascii=False))
+    return failed
 
 
 if __name__ == "__main__":

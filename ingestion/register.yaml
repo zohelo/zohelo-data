@@ -6054,7 +6054,8 @@ sources:
   name: MIDAS mineral deposits and mining areas database
   short_name: PIG-PIB MIDAS deposits
   provider: PIG-PIB
-  status: approved
+  source_system: pig_midas
+  status: built
   family: G
   kpi: false
   geography: Poland

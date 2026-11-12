@@ -58,7 +58,10 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('ghg_emissions', 'faostat', '%', 0, 8.2e7),
     -- FAOSTAT (#2402): 1000 ha; World land area 13,040,161.55 (Dev trial 43159213097). Documentation only (no
     -- metrics_area model yet).
-    ('area', 'faostat', '%', 0, 2e7)
+    ('area', 'faostat', '%', 0, 2e7),
+    -- PIG-PIB MIDAS (#2870): documented mineral deposits in Poland, distinct MIDAS deposit numbers; 14,954 in the
+    -- WFS layer of 12 Nov 2026 (Dev probe 43286265906)
+    ('mineral_deposits', 'pig_midas', '%', 0, 1e5)
 ),
 
 metrics as (
@@ -133,6 +136,15 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_gdp_volume_growth') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_mineral_deposits') }}
 )
 
 select

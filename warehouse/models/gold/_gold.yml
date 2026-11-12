@@ -159,6 +159,16 @@ models:
         tests: [not_null]
   - name: poc_build_prg
     description: Build stage — area (km²) of every Polish administrative unit with a PRG boundary, daily at the PRG edition held.
+  - name: poc_build_pig_midas
+    description: >-
+      Build stage — PIG-PIB MIDAS counts of the newest WFS download (entity snapshot, daily at the download day):
+      documented mineral deposits (distinct deposit numbers) by MIDAS mineral code, current mining areas and mining
+      terrains (distinct register numbers); Poland only (the layers carry no region code). Latest snapshot only.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
   - name: geo_unit
     description: >-
       One row per Polish administrative unit with a PRG boundary (country, voivodeships, powiats, gminas): PRG

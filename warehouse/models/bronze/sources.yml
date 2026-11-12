@@ -607,6 +607,22 @@ sources:
   - name: wdi_country_series
   - name: wdi_footnote
   - name: wdi_series_time
+- name: pig_midas
+  description: PIG-PIB MIDAS — mineral deposits, mining areas and mining terrains (public WFS, six layers)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/pig_midas/
+    loaded_by: ingestion/to_bronze/pig_midas/
+    config: ingestion/sources/pig_midas.yaml
+  tables:
+  - name: pig_midas_features
+    description: >-
+      One row per feature of the newest download of each WFS layer (entity documented_deposits, removed_deposits,
+      mining_areas, mining_terrains, archival_mining_areas, archival_mining_terrains), attributes as source text under
+      English column names, no coordinates (geometry_type only); partitioned by entity.
+  - name: pig_midas_rejected_files
+    description: MIDAS Landing files the Bronze decoder rejected, with the reason.
 - name: silver_entities
   description: >-
     Silver tables written per source entity by the loaders, not by dbt (design #875): each
