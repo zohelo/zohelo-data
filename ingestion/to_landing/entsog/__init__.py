@@ -1,7 +1,7 @@
 """ENTSOG Transparency Platform Landing activities (code in extract.py).
 
 landing.inspect   extract.py --mode inspect   gas months of the window vs Landing (missing / open / closed), no requests
-landing.extract   extract.py --mode load      missing months newest first, then open months; unchanged answers are not written
+landing.extract   extract.py --mode load      missing months newest first, then open ones; unchanged answers not kept
 landing.verify    extract.py --mode verify    every receipt has its data file (Landing or Archive)
 """
 
