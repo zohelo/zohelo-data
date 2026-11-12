@@ -19,7 +19,7 @@ on:
         required: true
         type: choice
         default: eurostat
-        options: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, opendata_org, nbp, nbp_interest_rates, gleif, mf_biala_lista, mf_treasury_debt, mf_public_debt, mf_state_budget, gugik_prg, gus_teryt, un_wpp, world_bank_findex, world_bank_icp, world_bank_wgi, world_bank_ids, unctad, krus, ecb, oecd, undp_hdr, news_feeds, gdelt, wikimedia_pageviews, release_calendars, mf_jst_budgets, mrpips_unemployment, faostat, unesco_uis, who, undata, bis, ilostat, unece, gus_culture, gus_culture_participation, gus_tourism, gus_nsp2021, gus_psr2020, platform]
+        options: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, opendata_org, nbp, nbp_bop, nbp_interest_rates, gleif, mf_biala_lista, mf_treasury_debt, mf_public_debt, mf_state_budget, gugik_prg, gus_teryt, un_wpp, world_bank_findex, world_bank_icp, world_bank_wgi, world_bank_ids, unctad, krus, ecb, oecd, undp_hdr, news_feeds, gdelt, wikimedia_pageviews, release_calendars, mf_jst_budgets, mrpips_unemployment, faostat, unesco_uis, who, undata, bis, ilostat, unece, zus_psz, unhcr, eea, gus_culture, gus_culture_participation, gus_tourism, platform]
       run:
         description: Run
         required: true
@@ -300,7 +300,9 @@ jobs:
 
   gold-publish:
     needs: [plan, silver-gold-build]
-    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'gold.publish') }}"
+    # Not after a model build that a newer queued build replaced (result cancelled): that run would publish
+    # while the newer build rewrites the tables, and the newer run publishes after its own build (#2834).
+    if: "${{ !cancelled() && !failure() && needs.silver-gold-build.result != 'cancelled' && contains(fromJSON(needs.plan.outputs.activities), 'gold.publish') }}"
     name: gold.publish
     # warehouse/publish.py is the only writer of 06_published/v1/ (docs/published.md): one at a time; a newer
     # queued publish replaces an older queued one (cancelled by design, not an alert).

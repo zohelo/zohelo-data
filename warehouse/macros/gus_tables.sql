@@ -1,7 +1,7 @@
 {# GUS publication tables (bronze.<source>_cells of ingestion/common/gus_publications.py and the census workbooks):
    the values of curated tables, found by their title and column headers, never by fixed cell positions, so a
    table that moved to another sheet, workbook or column in a later edition is still found, and a table whose title
-   or header no longer matches yields no rows (the Silver tests and the trial counts show it).
+   or header no longer matches yields no rows (the completeness tests and the trial counts show it).
 
    gus_table_values(relation, specs, poland_label): one row per spec x data row x value cell; poland_label is the
    regex (on the lower-case label without spaces) of the Poland row, default '^(polska|poland)'. A spec is a dict:
@@ -25,10 +25,13 @@
    is a "POLSKA" row without a year when a "POLAND" row without a year follows it (older editions print the
    previous year in Polish, the current one in English).
    The label column is the leftmost column holding a voivodeship name or a group label.
-   Values: numbers as stored; GUS symbols: '–' / '-' magnitude zero (value 0, status ok), '.' and '#' no data or
-   confidential (no value, status confidential), 'x' not applicable (no value), a number followed by 'v' (low
+   Values: numbers as stored; GUS symbols: '–' / '-' magnitude zero (value 0, status ok), a stored 0 is more than
+   zero but less than half a unit (value 0, status below_half_unit), '.' no data or no reliable data (no value,
+   status missing), '#' confidential (no value), 'x' not applicable (no value), a number followed by 'v' (low
    precision of a survey estimate) as the number with status low_reliability; any other text is status unparsed
-   with no value (a Silver accepted_values test fails on it). #}
+   with no value (a Silver accepted_values test fails on it). A data row whose cells are all symbols is kept.
+   Completeness is tested per model (warehouse/tests/gus_tables_complete*.sql): every period × measure has all
+   areas (or groups), so a title or header that stops matching in a new edition fails the build. #}
 
 {% macro gus_regions() %}
     select * from (
@@ -162,6 +165,13 @@
         select distinct entity, member, sheet_name, row_number from sheet_cells where is_number
     ),
 
+    -- rows with a number or a GUS symbol: a data row whose cells are all '.', '#' or 'x' is kept with its status
+    value_rows as (
+        select distinct entity, member, sheet_name, row_number
+        from sheet_cells
+        where is_number or txt in ('-', '.', '#', 'x', 'X') or regexp_matches(txt, '^-?[0-9]+([.,][0-9]+)? ?v$')
+    ),
+
     region_rows_all as (
         select
             l.entity, l.member, l.sheet_name, l.row_number, l.area_name, l.edition_year, l.poland_kind,
@@ -171,7 +181,7 @@
             ) as label_year
         from region_labels as l
         inner join label_columns as lc using (entity, member, sheet_name)
-        inner join numeric_rows as n using (entity, member, sheet_name, row_number)
+        inner join value_rows as n using (entity, member, sheet_name, row_number)
         left join sheet_cells as nxt
             on l.entity = nxt.entity and l.member = nxt.member and l.sheet_name = nxt.sheet_name
             and l.row_number = nxt.row_number and nxt.column_number = lc.label_col + 1
@@ -183,7 +193,7 @@
         select r.*
         from region_rows_all as r
         where not (
-            r.poland_kind = 'pl' and r.label_year is null and exists (
+            coalesce(r.poland_kind, '') = 'pl' and r.label_year is null and exists (
                 select 1 from region_rows_all as e
                 where e.entity = r.entity and e.member = r.member and e.sheet_name = r.sheet_name
                     and e.poland_kind = 'en' and e.label_year is null
@@ -277,7 +287,7 @@
             'polska' as area_name, g.group_code, g.table_code as g_table, g.measure_code as g_measure
         from group_labels as g
         inner join label_columns as lc using (entity, member, sheet_name)
-        inner join numeric_rows as n using (entity, member, sheet_name, row_number)
+        inner join value_rows as n using (entity, member, sheet_name, row_number)
         where g.column_number = lc.label_col
     ),
 
@@ -330,9 +340,11 @@
                 then cast(replace(regexp_extract(c.txt, '^(-?[0-9]+([.,][0-9]+)?)', 1), ',', '.') as double)
         end as value,
         case
+            when c.is_number and cast(c.txt as double) = 0 then 'below_half_unit'
             when c.is_number or c.txt in ('-') then 'ok'
             when regexp_matches(c.txt, '^-?[0-9]+([.,][0-9]+)? ?v$') then 'low_reliability'
-            when c.txt in ('.', '#') then 'confidential'
+            when c.txt = '#' then 'confidential'
+            when c.txt = '.' then 'missing'
             when lower(c.txt) = 'x' then 'not_applicable'
             else 'unparsed'
         end as cell_status,

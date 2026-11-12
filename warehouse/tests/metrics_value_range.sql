@@ -25,6 +25,17 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('gdp_current_prices', 'world_bank_wdi', 'world_bank_wdi:NY.GDP.MKTP.CD', 0, 3e8),
     -- current local currency units; largest IR 2025 = 2.693e17 IRR as published (WDI NY.GDP.MKTP.CN, #2788)
     ('gdp_current_prices', 'world_bank_wdi', 'world_bank_wdi:NY.GDP.MKTP.CN', 0, 3e18),
+    -- GUS publication tables (#2893), counts per year; Poland is the largest area: museum visits 46,242,767 (2025),
+    -- cinema admissions 61,949,490 (2019), library users 5,983,725 (2019), tourists 42,738,329, overnight stays
+    -- 104,692,301, bed places 887,158 (2025) (Dev trial 43288102198); survey shares are % of persons 15+
+    ('museum_visitors', 'gus_culture', '%', 0, 2e8),
+    ('cinema_admissions', 'gus_culture', '%', 0, 2e8),
+    ('public_library_users', 'gus_culture', '%', 0, 3e7),
+    ('tourists_accommodated', 'gus_tourism', '%', 0, 2e8),
+    ('tourist_overnight_stays', 'gus_tourism', '%', 0, 5e8),
+    ('tourist_bed_places', 'gus_tourism', '%', 0, 5e6),
+    ('museum_visiting_share', 'gus_culture_participation', '%', 0, 100),
+    ('theatre_attendance_share', 'gus_culture_participation', '%', 0, 100),
     ('inflation', 'eurostat', '%', -100, 3000),
     ('inflation', 'world_bank_wdi', '%', -100, 100000),
     ('unemployment_rate', 'eurostat', '%', 0, 60),
@@ -60,7 +71,14 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('ghg_emissions', 'faostat', '%', 0, 8.2e4),
     -- FAOSTAT (#2402): published in 1000 ha, metrics in km² since D33 (× 10); World land area 13,040,161.55 thousand ha
     -- = 130,401,615.5 km² (Dev trial 43159213097). Documentation only (not in the metrics union below).
-    ('area', 'faostat', '%', 0, 2e8)
+    ('area', 'faostat', '%', 0, 2e8),
+    -- UNHCR (#2415): persons; highest refugees 4,404,995 (all asylum countries 1951-2025, Dev trial 43282453427).
+    -- Documentation only (no metrics_refugees_hosted model yet).
+    ('refugees_hosted', 'unhcr', '%', 0, 2e7),
+    -- EEA GovReg (#2424): published in Gg (kt) CO2e, metrics in Mt CO2e (D33, ÷ 1000); highest member DE 1,253,128 kt
+    -- = 1,253.1 Mt (total excl. LULUCF, 1990-2024, Dev trial 43282453427). Documentation only until
+    -- metrics_ghg_emissions joins the metrics union below.
+    ('ghg_emissions', 'eea', 'eea:govreg_ghg_inventory:gg_co2e:Sectors/Totals_excl', 0, 2e3)
 ),
 
 metrics as (
@@ -135,6 +153,78 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_gdp_volume_growth') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_museum_visitors') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_cinema_admissions') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_public_library_users') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_tourists_accommodated') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_tourist_overnight_stays') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_tourist_bed_places') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_museum_visiting_share') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_theatre_attendance_share') }}
 )
 
 select
