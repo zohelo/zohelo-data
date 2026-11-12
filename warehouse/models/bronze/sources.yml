@@ -292,6 +292,37 @@ sources:
       day (YYYYMMDD), views; partitioned by entity (<lang>_<title slug>).
   - name: wikimedia_pageviews_rejected_files
     description: Wikimedia pageviews Landing files the Bronze decoder rejected, with the reason.
+- name: who
+  description: WHO data.who.int — indicator CSV files (all areas, years and sexes)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/who/
+    loaded_by: ingestion/to_bronze/who/
+    config: ingestion/sources/who.yaml
+  tables:
+  - name: who_observations
+    description: >-
+      One row per row of the newest copy of each indicator CSV (entity: life_expectancy, hale), every value as
+      published text, columns lower-cased (ind_code, dim_time, dim_geo_code_m49, dim_geo_code_type, dim_sex,
+      amount_n, amount_nl, amount_nu, ...); partitioned by entity.
+  - name: who_rejected_files
+    description: WHO data.who.int Landing files the Bronze decoder rejected, with the reason.
+- name: unesco_uis
+  description: UNESCO UIS — Data API whole-indicator selections (JSON)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/unesco_uis/
+    loaded_by: ingestion/to_bronze/unesco_uis/
+    config: ingestion/sources/unesco_uis.yaml
+  tables:
+  - name: unesco_uis_observations
+    description: >-
+      One row per record of the newest copy of each selection (entity: gerd_gdp, tertiary_attainment), as text:
+      indicator_id, geo_unit, year, value, magnitude, qualifier; partitioned by entity.
+  - name: unesco_uis_rejected_files
+    description: UNESCO UIS Landing files the Bronze decoder rejected, with the reason.
 - name: faostat
   description: FAOSTAT (FAO) — bulk domain zips (All Data, Normalized)
   database: r2

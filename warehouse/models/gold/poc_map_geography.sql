@@ -288,6 +288,43 @@ unctad as (
     where c.economy is not null
 ),
 
+-- WHO data.who.int: areas by M49 code (unpadded) and type; countries through poc_m49_eu27 (the EU27 members),
+-- World (GLOBAL 1) = WB:WLD. WHO regions and income groups have no Gold key (_X); the build stage builds only the
+-- mapped areas. source_code = <type>:<code>, as region and country codes share one number space.
+who_m49 as ({{ poc_m49_eu27() }}),
+
+who as (
+    select
+        'who' as source_system,
+        a.geo_type || ':' || a.geo_code_m49 as source_code,
+        coalesce(g.geography_key, case when a.geo_type = 'GLOBAL' and a.geo_code_m49 = '1' then 'WB:WLD' end, '_X')
+            as geography_key
+    from (
+        select distinct
+            geo_type,
+            geo_code_m49
+        from {{ ref('who_observations') }}
+    ) as a
+    left join who_m49 as m on a.geo_type = 'COUNTRY' and lpad(a.geo_code_m49, 3, '0') = m.m49
+    left join geo as g on g.level_name = 'country' and m.iso2 = g.geography_key
+),
+
+-- UNESCO UIS: countries by ISO 3166-1 alpha-3 (dim_geography.iso3); regional units ('SDG: ...', 'WB: ...') have no
+-- Gold key (_X), and the build stage builds only the EU27 members.
+unesco_uis as (
+    select
+        'unesco_uis' as source_system,
+        a.geo_unit as source_code,
+        coalesce(g.geography_key, '_X') as geography_key
+    from (
+        select distinct
+            geo_unit,
+            is_country_code
+        from {{ ref('unesco_uis_observations') }}
+    ) as a
+    left join geo as g on a.is_country_code and g.level_name = 'country' and a.geo_unit = g.iso3
+),
+
 -- FAOSTAT: FAO area codes; countries through their UN M49 code (poc_m49_eu27: the EU27 members), FAO aggregates
 -- 5707 European Union (27) = EU27_2020 (current members, fixed composition) and 5000 World. Other areas have no
 -- Gold key here (_X); the build stage builds only the mapped ones.
@@ -337,6 +374,10 @@ from (
     select * from teryt_prg
     union all
     select * from unctad
+    union all
+    select * from who
+    union all
+    select * from unesco_uis
     union all
     select * from faostat
 ) as m
