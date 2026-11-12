@@ -943,8 +943,8 @@ Gold (#2861, #2885): `gold.build_unece` — nine of the 29 tables, the measures 
 rates and PPPs (annual), total employment (quarterly), for the 56 countries, the EU-27 and the euro area; additional
 source of KPIs `unemployment_rate`, `unemployment_rate_monthly_sa`, `cpi_annual_rate`, `ppi_annual_rate`,
 `industrial_production` and `population`. The other 20 tables (about 2.3 million rows: GDP by expenditure and
-activity, the overviews, monthly prices, exchange rates and industrial production) wait for the per-block
-incremental Gold load (D28). `tests/unece_measures_match.sql` fails when a built table's codes change.
+activity, the overviews, monthly prices, exchange rates and industrial production) are outside this curated
+selection and reach Gold with the per-block full coverage (D35, docs/gold-coverage.md). `tests/unece_measures_match.sql` fails when a built table's codes change.
 
 ## UNHCR Refugee Statistics (`unhcr`)
 

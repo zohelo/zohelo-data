@@ -579,7 +579,7 @@ v2 keys by their best source status:
 | Polska w skrócie | 31 | 1 | 0 | 32 |
 | all 79 keys | 72 | 6 | 1 | 79 |
 
-Rows by source (185 rows; 42 keys have two or more ready sources):
+Rows by source (188 rows; 42 keys have two or more ready sources):
 
 | source | ready | needs-block | needs-source | rows |
 |---|---|---|---|---|
@@ -596,6 +596,7 @@ Rows by source (185 rows; 42 keys have two or more ready sources):
 | gus_tourism | 3 | 0 | 0 | 3 |
 | nbp | 1 | 0 | 2 | 3 |
 | undata | 3 | 0 | 0 | 3 |
+| world_bank_edstats | 3 | 0 | 0 | 3 |
 | gus_culture_participation | 2 | 0 | 0 | 2 |
 | mrpips_unemployment | 2 | 0 | 0 | 2 |
 | unctad | 2 | 0 | 0 | 2 |
