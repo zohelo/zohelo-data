@@ -1,12 +1,14 @@
 {{ config(alias='map_geography') }}
 {# Gold PoC: every source's geography code → the area it means in dim_geography
    (design draft 2: map_geography__<source>, merged into one table). Unmatched codes map to
-   '_X' and are counted by the build check. #}
+   '_X' and are counted by the build check. A new source does not add a CTE here: it defines
+   poc_geography__<source_system>() in warehouse/macros/sources/<source_system>.sql
+   (docs/source-registration.md) and the two poc_geography_* calls below place it. #}
 with geo as (select * from {{ ref('poc_dim_geography') }}),
 
 nuts_pl as ({{ poc_nuts_pl() }}),
 
-eurostat_codes as (
+{{ poc_geography_ctes() }}eurostat_codes as (
     select code from {{ ref('eurostat_codes') }}
     where codelist_id = 'GEO'
     group by code
@@ -183,37 +185,6 @@ mrpips as (
     select
         'mrpips_unemployment' as source_system,
         '0000' as source_code,
-        'PL' as geography_key
-),
-
--- GUS publication tables (culture, participation in culture, tourism): areas by name as printed (lower case);
--- matched to the TERYT voivodeship names, 'polska' = Poland.
-gus_publications as (
-    select
-        s.source_system,
-        lower(w.name_u) as source_code,
-        'TERC:' || w.terc_code as geography_key
-    from terc_woj as w
-    cross join (values ('gus_culture'), ('gus_culture_participation'), ('gus_tourism')) as s (source_system)
-    union all
-    select
-        s.source_system,
-        'polska' as source_code,
-        'PL' as geography_key
-    from (values ('gus_culture'), ('gus_culture_participation'), ('gus_tourism')) as s (source_system)
-),
-
--- MRPiPS social assistance (MRPiPS-03): voivodeships by name as printed (lower case), matched to the TERYT names.
-mrpips_social_assistance as (
-    select
-        'mrpips_social_assistance' as source_system,
-        lower(name_u) as source_code,
-        'TERC:' || terc_code as geography_key
-    from terc_woj
-    union all
-    select
-        'mrpips_social_assistance' as source_system,
-        'polska' as source_code,
         'PL' as geography_key
 ),
 
@@ -486,7 +457,7 @@ select
     coalesce(g.geography_key, '_X') as geography_key,
     g.geography_key is not null as matched
 from (
-    select * from eurostat
+    {{ poc_geography_union() }}select * from eurostat
     union all
     select * from bdl
     union all
@@ -495,10 +466,6 @@ from (
     select * from dbw
     union all
     select * from mrpips
-    union all
-    select * from mrpips_social_assistance
-    union all
-    select * from gus_publications
     union all
     select * from wdi
     union all

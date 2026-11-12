@@ -5,7 +5,9 @@ All candidate sources (about 180) are listed in the source register
 kind, endpoint, interfaces, auth, limits, licence status, update behaviour, history and
 incremental load approach, identifiers, research priority and blockers) and a `status`
 (table below). The id prefix (GL, PLS, PL-ENV, PLG, CD, EX) groups the entries. An onboarded source links to its declaration
-via `source_system`. This page details the routes of the onboarded sources.
+via `source_system`. This page details the routes of the sources onboarded until 12 November 2026; a source
+onboarded later has the same section as its own file `docs/sources/<source_system>.md`
+([source-registration.md](source-registration.md)), so this page takes no new sections.
 
 | status | meaning |
 |---|---|
@@ -359,9 +361,9 @@ nbp.pl pages that link the files answer automated clients with HTTP 403 (Dev pro
 answer. Bronze: `bronze.nbp_bop_cells` (one row per non-empty cell, the shared standard-library reader
 `ingestion/common/xlsx_cells.py`; a workbook whose sheets are not exactly its currency sheets is rejected). Silver: `silver.nbp_bop_observations` (workbook ×
 currency × item × period; `item_code` fixed by rule and checked against the expected list; NBP's typo
-"Finsncial derivatives" in bop_m is normalised). Gold: the build stage
-`build_nbp_bop` (PLN and EUR) follows once Silver exists in production (a Gold model reading a missing
-source would hold the shared facts back). The workbooks hold amounts only: the shares of GDP of the current
+"Finsncial derivatives" in bop_m is normalised). Gold: build stage
+`build_nbp_bop` (PLN and EUR, one measure per workbook × currency × item; IIP components and their parent
+totals are separate measures, never to be summed together). The workbooks hold amounts only: the shares of GDP of the current
 account and of the net position are not published there. Licence: NBP website Terms of Use, unresolved
 (internal, owner decision of 14 Oct 2026).
 
@@ -916,6 +918,7 @@ value labels per file). Silver: `silver.unece_observations` (codes and labels as
 Country variable: M49 codes and aggregates such as E27 = EU-27). Terms: UNECE copyright notice (free
 reuse incl. commercial, acknowledge UNECE), licence row `unece_terms`. Weekly Monday check. Restart
 unit: one table.
+
 ## UNHCR Refugee Statistics (`unhcr`)
 
 **Built (12 Nov 2026, register GL-029).** The Refugee Statistics API (`https://api.unhcr.org/population/v1/`, public,
@@ -1041,33 +1044,3 @@ and women, Poland and voivodeships). Gold block `registered_unemployment` (KPIs 
 `registered_unemployment_rate`, next to GUS BDL and DBW). Weekly schedule (Tuesday). Licence: CC BY 3.0 PL (portal
 footer). The ZIPs since 2001, the half-yearly occupation and vacancy tables and the yearly MRPiPS-01 data files
 (SPR1, about 27 MB) are not built yet.
-
-## GUS publication tables: culture, participation in culture, tourism (`gus_culture`, `gus_culture_participation`, `gus_tourism`)
-
-**Built (12 Nov 2026, register PLS-027, PLS-028, PLS-035).** stat.gov.pl publishes each edition of "Kultura i
-dziedzictwo narodowe w <year> r." (until 2020 "Kultura w <year> roku"), "Uczestnictwo ludności w kulturze w <year> r."
-(every five years) and "Turystyka w <year> r." on its own page with a tables file ("Tablice w formacie XLSX"): one
-workbook or a ZIP of chapter workbooks. Route: the subject page links the newest edition, every edition page links the
-others (`ingestion/common/gus_publications.py`, editions from 2019). Entity = one edition (`kultura_<year>`,
-`uczestnictwo_<year>`, `turystyka_<year>`), version = download time (no Last-Modified) when the SHA-256 changed; the
-newest edition is downloaded again on every run; restart unit: one edition. Bronze `bronze.<source>_cells` (every
-cell of every workbook, with the ZIP member). Silver `silver.<source>_tables`: curated tables found by title and
-column header (`warehouse/macros/gus_tables.sql`), never by cell position; GUS symbols kept as `cell_status` ('.'
-and 'x' have no value, survey estimates marked 'v' are `low_reliability`). Tables: museum visitors, cinema
-admissions, public library users and public libraries by voivodeship (culture); establishments and bed places
-(31 July), tourists and overnight stays by voivodeship (tourism); visiting museums, using a library, attending
-theatre in % of persons 15+, by sex (participation). Gold blocks `culture_institutions`, `accommodation`,
-`participation` (annual); KPIs draft. Monthly schedule (6th). Licence: GUS terms (source given; commercial reuse not
-addressed; no named licence, D23).
-
-## MRPiPS social assistance statistics (`mrpips_social_assistance`)
-
-**Built (12 Nov 2026, register PLS-031).** gov.pl lists a page "Statystyka za rok <year>" per year (from
-https://www.gov.pl/web/rodzina/statystyki-pomocy-spolecznej, 1999-2025) with the MRPiPS-03, -05 and -06 reports as
-old Excel (.xls) attachments. Only MRPiPS-03 is landed (a "korekta" attachment replaces the original), years from
-2019; entity = one year (`mrpips03_<year>`), version = download time, landed attachment URLs are not downloaded again,
-restart unit one file (`ingestion/to_landing/mrpips_social_assistance/`). Bronze `bronze.mrpips_social_assistance_cells`
-reads the .xls with xlrd (added to `requirements.txt`) into the shared cell shape. Silver
-`silver.mrpips_social_assistance_tables` (macro `gus_tables.sql`, section DZIAŁ 2, DZIAŁ 3 until 2020, found by header): persons granted a benefit by
-decision, families and persons in families by voivodeship. Gold block `social_assistance` (annual), KPI
-`social_assistance_recipients` (draft). Monthly check. Licence: gov.pl terms (official materials free to use).

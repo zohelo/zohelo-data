@@ -15,11 +15,12 @@ on:
   workflow_dispatch:
     inputs:
       source:
-        description: Source (ingestion/sources/<source>.yaml); platform for silver/gold and serving
+        # Free text, not a choice list: a list would need a line per source in this file. The plan job
+        # refuses anything that is not ingestion/sources/<source>.yaml or platform (docs/source-registration.md).
+        description: "Source id: the file name in ingestion/sources/ without .yaml (e.g. eurostat, nbp); platform for silver/gold and serving"
         required: true
-        type: choice
+        type: string
         default: eurostat
-        options: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, opendata_org, nbp, nbp_bop, nbp_interest_rates, gleif, mf_biala_lista, mf_treasury_debt, mf_public_debt, mf_state_budget, gugik_prg, gus_teryt, un_wpp, world_bank_findex, world_bank_icp, world_bank_wgi, world_bank_ids, unctad, krus, ecb, oecd, undp_hdr, news_feeds, gdelt, wikimedia_pageviews, release_calendars, mf_jst_budgets, mrpips_unemployment, faostat, unesco_uis, who, undata, bis, ilostat, unece, zus_psz, unhcr, eea, gus_culture, gus_culture_participation, gus_tourism, mrpips_social_assistance, platform]
       run:
         description: Run
         required: true
@@ -60,7 +61,9 @@ permissions:
 
 concurrency:
   # One writer per source; read-only runs get their own group and never wait behind it.
-  group: "zohelo-pipeline-${{ (github.event_name == 'schedule' || inputs.run == 'scheduler: dispatch due runs') && 'scheduler' || inputs.source }}${{ (inputs.run == 'landing: inspect' || inputs.run == 'landing: verify' || inputs.run == 'bronze: verify') && '-read' || '' }}"
+  # `source` is free text and is used here before the plan job checks it: a typed `scheduler` or anything with a
+  # hyphen (`<source>-read`) gets a group of its own, so it can never join or displace another run's group.
+  group: "zohelo-pipeline-${{ (github.event_name == 'schedule' || inputs.run == 'scheduler: dispatch due runs') && 'scheduler' || ((inputs.source == 'scheduler' || contains(inputs.source, '-')) && format('refused-{0}', github.run_id) || inputs.source) }}${{ (inputs.run == 'landing: inspect' || inputs.run == 'landing: verify' || inputs.run == 'bronze: verify') && '-read' || '' }}"
   cancel-in-progress: false
 
 env:
@@ -139,6 +142,9 @@ jobs:
           PARALLEL_DOWNLOADS: ${{ inputs.parallel_downloads }}
         run: |
           set -euo pipefail
+          if ! printf '%s' "$SOURCE" | grep -Eq '^[a-z0-9_]+$' || { [ "$SOURCE" != platform ] && [ ! -f "ingestion/sources/$SOURCE.yaml" ]; }; then
+            echo "::error title=unknown source::'$SOURCE' is not a declared source: use a file name of ingestion/sources/ without .yaml, or platform" >&2; exit 2
+          fi
           case "$MAX_ITEMS" in ''|*[!0-9]*) echo "max_items must be a non-negative integer" >&2; exit 2 ;; esac
           case "$PARALLEL_DOWNLOADS" in 1|2|3|4|5|6|7|8) ;; *) echo "parallel_downloads must be 1-8" >&2; exit 2 ;; esac
           case "$PARALLEL_JOBS" in 1|2|3|4|5|6|7|8) ;; *) echo "parallel_jobs must be 1-8" >&2; exit 2 ;; esac
@@ -300,9 +306,7 @@ jobs:
 
   gold-publish:
     needs: [plan, silver-gold-build]
-    # Not after a model build that a newer queued build replaced (result cancelled): that run would publish
-    # while the newer build rewrites the tables, and the newer run publishes after its own build (#2834).
-    if: "${{ !cancelled() && !failure() && needs.silver-gold-build.result != 'cancelled' && contains(fromJSON(needs.plan.outputs.activities), 'gold.publish') }}"
+    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'gold.publish') }}"
     name: gold.publish
     # warehouse/publish.py is the only writer of 06_published/v1/ (docs/published.md): one at a time; a newer
     # queued publish replaces an older queued one (cancelled by design, not an alert).

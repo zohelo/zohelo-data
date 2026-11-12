@@ -25,6 +25,7 @@ import time
 import yaml
 
 from ingestion.common.report import ANNOTATION_LIMIT, annotate, step_summary
+from warehouse import declared
 
 PROJECT = Path(__file__).resolve().parent
 _RETRY = yaml.safe_load((PROJECT / "warehouse.yaml").read_text())
@@ -32,7 +33,7 @@ RATE_LIMIT_WAITS = [float(s) for s in _RETRY["rate_limit_retry_waits"]]
 RATE_LIMIT_THREADS = int(_RETRY["rate_limit_retry_threads"])
 COMMIT_RETRY_THREADS = int(_RETRY["commit_retry_threads"])
 # Owner policy #822: only small tables are rebuilt in full; each full-rebuild model has a row ceiling.
-FULL_REBUILD = _RETRY["full_rebuild"]
+FULL_REBUILD = declared.full_rebuild()  # warehouse.yaml and each source's own YAML
 # Topics settings (docs/topics.md): weights, windows and thresholds, passed to every build as the dbt var `topics`.
 TOPICS = _RETRY["topics"]
 
@@ -292,7 +293,7 @@ def table_rows(table) -> int:
 
 def row_ceilings(results: list[dict]) -> dict:
     """Owner policy #822 (#868): the rows of each full-rebuild model this build wrote, against
-    its ceiling in warehouse.yaml `full_rebuild`. Above the ceiling: a warning; above twice the
+    its declared ceiling (`full_rebuild`, warehouse/declared.py). Above the ceiling: a warning; above twice the
     ceiling: the build fails, so a full rebuild that grew is noticed and made incremental (or
     given an exception). A full-rebuild model missing from the list is reported as unlisted
     (repo_check fails on it too). dbt's manifest of this build gives materializations and tables."""

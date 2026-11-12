@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: gus_tourism
+  description: GUS Turystyka (register PLS-035), annual publication tables
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gus_tourism/
+    loaded_by: ingestion/to_bronze/gus_tourism/
+    config: ingestion/sources/gus_tourism.yaml
+  tables:
+  - name: gus_tourism_cells
+    description: >-
+      One row per non-empty cell (value as stored, ZIP member, sheet, row, column, number format) of every workbook
+      of the newest copy of each landed file; partitioned by entity.
+  - name: gus_tourism_rejected_files
+    description: Files of gus_tourism the Bronze decoder rejected, with the reason.
