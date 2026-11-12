@@ -27,3 +27,4 @@ wikimedia_pageviews,CD-025,Wikimedia: odsłony artykułów,Wikimedia pageviews,W
 gdelt,CD-030,GDELT: wolumen i wydźwięk wiadomości,GDELT news volume and tone,GDELT Project,signal,file,community-academic,gdelt_terms,https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/
 release_calendars,TP-010,Kalendarze publikacji statystyk,Official release calendars,"Eurostat, GUS, ECB",signal,file,international-public,eurostat_reuse,https://ec.europa.eu/eurostat/news/euro-indicators/release-calendar
 faostat,GL-022,FAOSTAT,FAOSTAT,Food and Agriculture Organization of the United Nations,cube,file,international-public,cc_by_4_0_fao,https://www.fao.org/faostat/en/#data
+who,GL-025,WHO: dane zdrowotne (data.who.int),WHO data (data.who.int),World Health Organization,cube,file,international-public,cc_by_4_0_who,https://data.who.int/indicators

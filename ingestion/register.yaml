@@ -1179,7 +1179,8 @@ sources:
   name: WHO Data platform (data.who.int) datasets
   short_name: WHO data.who.int
   provider: World Health Organization
-  status: approved
+  source_system: who
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1189,15 +1190,19 @@ sources:
   granularity: Machine-readable dataset grain varies; metadata defines dimensions and citations.
   coverage: Worldwide with dataset-specific years and Member State reporting coverage.
   access:
-    endpoint: https://data.who.int/
-    kind: api
+    endpoint: https://srhdpeuwpubsa.blob.core.windows.net/whdh/DATADOT/INDICATOR/90E2E48_ALL_LATEST.csv
+    kind: bulk_file
     interfaces: [HTML, API, machine-readable files]
     auth: public; dataset/API specific
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No numeric quota published; one request per indicator CSV and run. Each indicator page links its
+      complete data as <uid>_ALL_LATEST.csv (life expectancy 90E2E48 2.2 MB, HALE C64284D 2.3 MB; Dev probes
+      43099401602 and 43100116863, 11 Nov 2026).
   licence:
     status: open-conditional
-    notes: 'Terms: CC BY 4.0 plus WHO additional terms, https://data.who.int/redirect-pages/footer/learn-more/terms-and-conditions
+    notes: 'Terms: CC BY 4.0 plus WHO additional terms (confirmed 11 Nov 2026, Dev probe 43099401602: "Unless specifically
+      indicated otherwise, these Datasets are provided to you under a Creative Commons Attribution 4.0 International
+      License (CC BY 4.0), with the additional terms below"), https://data.who.int/redirect-pages/footer/learn-more/terms-and-conditions
       ("Terms and conditions for WHO datasets"): attribution as indicated in each dataset''s metadata; do not falsify
       or misrepresent; do not de-anonymise; no use of the WHO name or emblem and no implied endorsement; provided without
       warranty; WHO may change or discontinue datasets. Attribution: per dataset metadata, default "Source: World Health
@@ -1214,7 +1219,7 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
     - 'Build GHO-to-new-platform crosswalk'
     - 'Check per-dataset licence exceptions and change notices'

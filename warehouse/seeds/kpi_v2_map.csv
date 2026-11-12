@@ -93,6 +93,7 @@ labour_productivity,labour,Q,labour_productivity,eurostat,NAMQ_10_LP_ULC,eurosta
 life_expectancy,poland,A,life_expectancy,eurostat,DEMO_MLEXPEC;DEMO_R_MLIFEXP,eurostat:DEMO_MLEXPEC:YR;eurostat:DEMO_R_MLIFEXP:YR,A,PL;EU;EU27;VOIV,sex,none,up,ready,at birth; countries and Polish NUTS 2
 life_expectancy,poland,A,life_expectancy,gus_bdl,P2730,gus_bdl:P2730:lata:% / 0,A,PL;VOIV,sex,none,up,ready,"at birth, men and women as two measures (BDL has no both-sexes value)"
 life_expectancy,poland,A,life_expectancy,world_bank_wdi,SP.DYN.LE00.IN,world_bank_wdi:SP.DYN.LE00.IN,A,PL;EU;EU27,,none,up,ready,
+life_expectancy,poland,A,life_expectancy,who,90E2E48 (WHOSIS_000001),who:life_expectancy:years:WHOSIS_000001,A,PL;EU,sex,none,up,ready,"at birth, WHO Global Health Estimates; EU27 members and World (no EU27 aggregate)"
 long_term_unemployment,labour,A,long_term_unemployment,eurostat,UNE_LTU_A,eurostat:UNE_LTU_A:PC_ACT:LTU,A,PL;EU;EU27,sex,rate,down,ready,15-74
 long_term_unemployment,labour,A,,gus_dbw,1618_1335_95_4,,A;Q,PL,sex;age,rate,down,needs-block,GUS LFS long-term unemployment rate (1618_*) in Silver; codes not probed
 median_wage,labour,A,,gus_bdl,P4610,,M,PL;VOIV,sex,mean,up,needs-block,"BDL median gross wage (wage-distribution survey, P4610) in Silver; month labels are placed by the build; not activated (958k rows, needs a level filter)"
