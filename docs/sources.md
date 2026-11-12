@@ -640,7 +640,9 @@ entity = one series for every economy and year
 (`/v2/sources/90/country/all/series/<id>/time/all?format=json&per_page=50000`, one file per
 page when a series is larger), version = the source's `lastupdated` date, so a series is
 downloaded again only when the World Bank updates ICP. Restart unit: one series. Licence CC BY
-4.0 (register GL-011).
+4.0 (register GL-011). A series page can take minutes to generate when the API has no cached copy (prod run
+43157799551): 7-minute timeout, six retries with backoff; a series that still fails is recorded and the
+others still land, the run ends red and the next run fetches the missing series.
 
 **Bronze and Silver (11 Nov 2026, #2736).** Bronze `bronze.icp_observations`
 (`ingestion/to_bronze/world_bank_icp/`, shared loader `bulk_bronze.py` over the series folders in
@@ -688,7 +690,7 @@ and footnotes). Restart unit: the whole file (one download). Licence CC BY 4.0 (
 **Bronze and Silver (11 Nov 2026, #2736).** Bronze `bronze.ids_observations` and `bronze.ids_metadata`
 through the shared DataBank decoders (`ingestion/common/databank_bronze.py`; IDS adds the counterpart
 area and pads some codes with spaces, which Silver trims). Silver `silver.ids_observations` and
-`silver.ids_series`. The November 2026 archive: 2,647,628 observations, 134 debtor economies and groups,
+`silver.ids_series` (the series member plus one series the observations use without a metadata row, DT.TDS.DECT.GN.ZS, `in_series_metadata` false). The November 2026 archive: 2,647,628 observations, 134 debtor economies and groups,
 577 series, counterpart WLD only, 1970–2033 with projections (Dev trial 43085820597). IDS has no Poland
 and no EU member state (debtors are low- and middle-income economies), so it publishes no KPI for the
 zohelo slice. `silver.ids_observations` is rebuilt in full above the #822 1M-row ceiling under its own exception record
@@ -788,3 +790,18 @@ seed `release_calendar.csv` stays the manual fallback. Files are built per run b
 `ingestion/to_landing/release_calendars/`, landed through `bulk_file`; Bronze `bronze.release_calendar_items`
 (newest copy of each file, latest-only); Silver `silver.releases` with `kpi_keys` (seed `release_kpi.csv` by
 title, Eurostat also by dataset code against `kpi_v2_map`).
+
+## MF local-government budget reports (`mf_jst_budgets`)
+
+**Built (12 Nov 2026, register PLG-010).** gov.pl lists, per year, a page ("2025 r.", from
+`https://www.gov.pl/web/finanse/sprawozdania-budzetowe`, paginated) whose sub-page "Zestawienia zbiorcze" links one
+summary XLSX per quarter, unit type (Gminy, Miasta, Powiaty, Wojew, JST, Związki) and family (DW revenue and
+expenditure, ZN liabilities and receivables): `<Type>_<DW|ZN>_<year>_k<quarter>_<YYYYMMDD>.xlsx`, from 2022 Q1 (204
+files on 11 Nov 2026). Entity = type × family × year × quarter; a corrected file gets a new attachment URL and lands as
+a new version; landed URLs are not downloaded again; restart unit: one file. Bronze `bronze.mf_jst_budgets_cells`
+(one row per cell, shared `ingestion/common/xlsx_cells.py`). Silver `silver.mf_jst_budget_summary` (unit type ×
+quarter × section × item × plan/executed/total, PLN, year to date). Gold block `jst_budget`: executed revenue,
+expenditure, result and liabilities by unit type (KPIs `local_gov_revenue`, `local_gov_expenditure`,
+`local_gov_balance`, `local_gov_debt`, draft). Weekly schedule (Wednesday). Licence: gov.pl terms (official
+materials). The per-unit report databases (Rb27S, Rb28S, … ZIPs, 2001-2026, one row per unit and budget class) are a
+separate, larger scope.
