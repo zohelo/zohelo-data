@@ -59,6 +59,9 @@ The orchestrator session runs on **Opus 5.5** as product owner and DevOps lead.
   `portal/app` changed. Green → merge (squash). A push after the label leaves the new head without `check`:
   remove and re-add the label once the fix is pushed. "Re-run jobs" repeats `check` on the same commit only (for a
   flaky failure), never on a newer head.
+- **Documentation (O42):** each repo documents itself; zohelo-data holds the data platform and the published
+  contract only. A document or decision that concerns only zohelo.com goes to zohelo/zohelo, only zohelo-bi to
+  zohelo/zohelo-bi; a moved decision row keeps its id here as a pointer.
 - **Visibility:** the `flow:` labels on issues show the station in GitHub; the task list in the session shows the
   running lanes; `claude/where-we-are.md` in the claude.ai project shows the state and what needs the owner.
 
