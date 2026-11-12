@@ -74,8 +74,16 @@ class Plan:
         self.nodes: dict[str, tuple[str, dict]] = {}  # key -> (kind, node with inherited fields)
         self.stages: dict[str, int] = {}  # stage key -> number, from stages.yaml
         self.pending: list[tuple[str, str, str, list[dict]]] = []  # edit/delete paths to check
-        # register entries by how their Epic is made (parked and later phases: none, docs/backlog.md §3)
-        self.sources = {"file": 0, "generated": 0, "parked": 0, "no_family": []}
+        # register entries by how their Epic is made (parked with `Contained in:`: none, docs/backlog.md §3)
+        self.sources = {"file": 0, "generated": 0, "contained": 0, "no_family": []}
+        # Epic keys of parked entries that are not contained: the sync closes none of their issues, neither as not
+        # planned (also not those of a later stage that the parked entry no longer renders) nor by the roll-up
+        # (owner rule of 12 Nov 2026, #2873)
+        self.parked: set[str] = set()
+
+    def is_parked(self, key: str) -> bool:
+        """Whether the node or issue key belongs to the Epic of a parked entry that is not contained."""
+        return "/".join(key.split("/")[:2]) in self.parked
 
     def error(self, file: str, key: str, message: str) -> None:
         self.errors.append(f"{file}: {key}: {message}")
@@ -170,7 +178,22 @@ def fill(text: object, values: dict[str, str]) -> object:
     return text
 
 
-REVIEW_ONLY = {"registered", "reviewing"}  # register statuses whose Epic holds only the stage-1 review
+# register statuses whose Epic holds only the stage-1 review (a parked entry keeps it: its review is open again)
+REVIEW_ONLY = {"registered", "reviewing", "parked"}
+
+
+CONTAINED = "Contained in:"  # first research.blockers item of a parked entry whose data another loaded source holds
+
+
+def contained(entry: dict) -> bool:
+    """A parked entry that is settled for good: its first research.blockers item starts with `Contained in:` and
+    names the loaded source that holds the data. Only such an entry loses its Epic, so the sync closes its issues
+    as not planned; every other parked entry keeps its review issues open (owner rule of 12 Nov 2026, #2873: no
+    source is dropped for a technical reason)."""
+    research = entry.get("research") if isinstance(entry.get("research"), dict) else {}
+    blockers = research.get("blockers") or []
+    first = blockers[0] if isinstance(blockers, list) and blockers else None
+    return str(entry.get("status")) == "parked" and isinstance(first, str) and first.startswith(CONTAINED)
 
 
 LICENCE_EVIDENCE = "Terms:"  # how a reviewed entry's licence.notes records the provider's terms (stages.yaml, stage 1)
@@ -184,7 +207,7 @@ def review_done(entry: dict) -> dict[str, str]:
     licence.notes records the terms. A licence of `unresolved` with its evidence counts: the source is built and
     kept internal by the licence gate (O36, O37)."""
     status = str(entry.get("status") or "registered")
-    if status in REVIEW_ONLY or status == "parked":
+    if status in REVIEW_ONLY:
         return {}
     licence = entry.get("licence") if isinstance(entry.get("licence"), dict) else {}
     proof = f"register entry {entry['id']} in {REGISTER} on main: status {status}, licence {licence.get('status')}"
@@ -196,7 +219,8 @@ def review_done(entry: dict) -> dict[str, str]:
 
 def source_epic(entry: dict, stages: list[dict]) -> dict:
     """The Epic of a register entry without a hand-written file: stage 1 with its Tasks, and stage 2 with its Tasks
-    once the entry is approved or later (registered and reviewing entries get stage 1 only; owner #2230, Bug #2337).
+    once the entry is approved or later (registered, reviewing and parked entries get stage 1 only; owner #2230,
+    Bug #2337).
     The two stage-1 Tasks are done when the register says so (review_done)."""
     ident = str(entry["id"])
     low = ident.lower()
@@ -256,9 +280,9 @@ def source_epic(entry: dict, stages: list[dict]) -> dict:
 
 
 def load_sources(plan: Plan, root: Path, read) -> None:
-    """Add a generated Epic for every register entry that has no epics/src-<id lower>.yaml and is not parked
-    (docs/backlog.md §3; owner O36, 11 Nov: every source is onboarded, so every source keeps its issues; the sync
-    closes the issues of a parked entry as not planned)."""
+    """Add a generated Epic for every register entry that has no epics/src-<id lower>.yaml, except a parked entry
+    whose data another loaded source holds (`contained`; docs/backlog.md §3; owner O36, 11 Nov: every source is
+    onboarded, so every source keeps its issues; the sync closes the issues of a contained entry as not planned)."""
     register = read(root / REGISTER)
     stages = read(root / ".github" / "backlog" / "stages.yaml")
     entries = (register or {}).get("sources") if isinstance(register, dict) else None
@@ -267,10 +291,12 @@ def load_sources(plan: Plan, root: Path, read) -> None:
     files = {p.stem for p in (root / ".github" / "backlog" / "epics").glob("src-*.yaml")}
     for entry in entries:
         ident = str(entry.get("id", "?"))
+        if str(entry.get("status")) == "parked" and not contained(entry):
+            plan.parked.add(f"data/src-{ident.lower()}")
         if f"src-{ident.lower()}" in files:
             plan.sources["file"] += 1
-        elif str(entry.get("status")) == "parked":
-            plan.sources["parked"] += 1
+        elif contained(entry):
+            plan.sources["contained"] += 1
         elif not entry.get("family"):
             plan.sources["no_family"].append(ident)
         else:
@@ -540,7 +566,7 @@ def validate(roots: list[Path], strict: bool = False) -> int:
         print(f"warning: register entries without family, no Epic generated: {', '.join(found['no_family'])}")
     print(f"file sources: {found['file']}")
     print(f"generated sources: {found['generated']}")
-    print(f"parked sources (no Epic): {found['parked']}")
+    print(f"parked sources contained in another source (no Epic): {found['contained']}")
     print(f"register entries without family: {len(found['no_family'])}")
     print(f"ok: {c['areas']} areas, {c['epics']} epics, {c['deliverables']} deliverables, {c['tasks']} tasks")
     return 0
@@ -990,7 +1016,9 @@ def run_sync(roots: list[Path], apply: bool) -> int:
                         {"sub_issue_id": existing["id"], "replace_parent": True},
                     )
         for key, issue in issues.items():
-            if key not in plan.nodes and issue["state"] == "open" and issue["repo"] in loaded:
+            if key in plan.nodes or issue["state"] != "open" or issue["repo"] not in loaded:
+                continue
+            if not plan.is_parked(key):
                 close_issue(api, counts, issue["repo"], issue, "Removed from the plan", "not_planned")
         roll_up(api, counts, plan, issues, loaded)
     except Stop:
@@ -1171,7 +1199,8 @@ def completed_comment(node: dict, kind: str) -> str:
 
 def roll_up(api: Github, counts: dict, plan: Plan, issues: dict[str, dict], loaded: set[str]) -> None:
     """Close open Deliverables whose Tasks are all closed (and that have no todo lines), then open Epics whose
-    Deliverables are all closed, so progress shows on the board. Areas never close; the sync never reopens."""
+    Deliverables are all closed, so progress shows on the board. Areas never close; the sync never reopens. The
+    issues of a parked entry are left as they are (Plan.parked)."""
     children: dict[str, list[str]] = {}
     for key, (kind, node) in plan.nodes.items():
         parent = parent_key(kind, node)
@@ -1181,6 +1210,8 @@ def roll_up(api: Github, counts: dict, plan: Plan, issues: dict[str, dict], load
         for key, (kind, node) in plan.nodes.items():
             issue = issues.get(key)
             if kind != layer or not issue or issue["state"] != "open" or node["repo"] not in loaded:
+                continue
+            if plan.is_parked(key):
                 continue
             kids = children.get(key, [])
             if not kids or node.get("todo") or any(plan.nodes[k][1].get("todo") for k in kids):

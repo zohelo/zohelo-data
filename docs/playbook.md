@@ -35,8 +35,11 @@ stages are `.github/backlog/stages.yaml`.
   it). Never claim a licence the source does not state. `Terms:` is what lets the backlog sync
   close the review issues of an approved entry (docs/backlog.md §2).
 - Outcome: register `status: approved` (route and terms known, or `unresolved` and internal),
-  or `parked` with the reason as the first `research.blockers` item. A new key or account, a
-  paid tier or unclear legality is an owner question (AGENTS.md "Ask the owner first").
+  or `parked` with the reason as the first `research.blockers` item (never for a technical
+  reason; when the data is fully in a source already loaded, that item starts with
+  `Contained in:` and names it, which is what lets the backlog sync close the entry's issues).
+  A new key or account, a paid tier or unclear legality is an owner question (AGENTS.md "Ask
+  the owner first").
 
 ## 2. Landing (`ingestion/to_landing/<source>/` or the shared pattern `ingestion/to_landing/patterns/<kind>.py`)
 

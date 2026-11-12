@@ -91,7 +91,7 @@ stages:
         depends_on: [licence]
         notes:
           - "Rendered only after data/ingestion/register-restructure/fields/funnel is merged (repo_check accepts approved/parked from then on)."
-          - "backlog_sync closes this issue from the register once the status is approved or later (#2907); for a parked entry it closes the issues as not planned."
+          - "backlog_sync closes this issue from the register once the status is approved or later (#2907); for a parked entry they stay open, unless its first research.blockers item starts with `Contained in:` (the data is in a source already loaded), which closes them as not planned."
 
   - n: 2
     key: development
