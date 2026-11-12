@@ -87,7 +87,7 @@ select
         as observation_status,
     r.announcement_refs,
     c.page_title,
-    strptime(c.page_modified, '%d.%m.%Y')::date as page_modified,
+    cast(strptime(c.page_modified, '%d.%m.%Y') as date) as page_modified,
     c.source_version,
     c.raw_sha256,
     c.ingested_at

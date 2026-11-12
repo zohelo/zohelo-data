@@ -5,7 +5,7 @@ description: "Urząd Regulacji Energetyki (URE) — electricity price indicators
 # page of www.ure.gov.pl ("Energia elektryczna → Ceny i wskaźniki") whose article holds the indicator's whole series as
 # one HTML table (no export, no session). Each entity is one indicator page, landed as the exact page bytes through
 # the shared bulk_file pattern, one request per page and run, 2 seconds apart (page 7853 through its link on the
-# indicator list). The site sends a different page on every request (same size, new SHA-256: a per-request token), so
+# indicator list). The site sends a different page on every request (same size, new SHA-256: a render-time comment), so
 # a page lands again only when its content changed (title, dates, table cells; ingestion/to_landing/ure/). Version:
 # the server sends no Last-Modified, so the version token is the download time; the page's own "Data modyfikacji" is
 # kept in Bronze and Silver. robots.txt of www.ure.gov.pl is empty (200, Dev trial 43286298849). Restart unit: one

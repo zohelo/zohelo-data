@@ -19,8 +19,8 @@ select
         when 'competitive_market_price' then 'URE average electricity sale price on the competitive market'
         when 'household_price' then 'URE average electricity price for households'
     end as block_name,
-    'ure:' || s.indicator_code || ':' || s.unit_code || ':' || case s.frequency when 'A' then 'annual' else 'quarterly' end
-        as measure_key,
+    'ure:' || s.indicator_code || ':' || s.unit_code || ':'
+    || case s.frequency when 'A' then 'annual' else 'quarterly' end as measure_key,
     s.indicator_name || ' (URE, ' || case s.frequency when 'A' then 'yearly' else 'quarterly' end || ')'
         as measure_name,
     case s.frequency when 'A' then 'annual' else 'quarterly' end as measure_codes,

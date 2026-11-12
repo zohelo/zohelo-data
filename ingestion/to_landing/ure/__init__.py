@@ -4,8 +4,9 @@ landing.inspect  bulk_file pattern (run.py)
 landing.extract  bulk_file load of the declared pages, 2 seconds apart; a download whose page content (title,
                  publication and modification date, every table cell; to_bronze/ure/load.py ``parse``) equals the
                  newest landed copy is not landed again: www.ure.gov.pl sends a different page on every request
-                 (same size, new SHA-256: a per-request token; Dev trial 43286298849), so the SHA-256 alone would
-                 land every page on every run
+                 (same size, new SHA-256: the closing comment carries the page's render time, e.g.
+                 ``<!-- 0.030842 / WebAdministrator …``; Dev trials 43286298849, 43290227035), so the SHA-256 alone
+                 would land every page on every run
 landing.verify   bulk_file pattern (run.py)
 """
 
