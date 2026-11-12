@@ -103,8 +103,8 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_dbw: {rows: 600000}  # 312,512 (10 Nov) + ~110,000 slice blocks (#2592)
   poc_build_eurostat: {rows: 800000}
   poc_build_nbp: {rows: 600000}
-  poc_build_gleif: {rows: 100000}  # LEI counts per country/voivodeship × status × one breakdown (~7,900 jurisdiction × form × status combinations)
-  poc_build_mf_biala_lista: {rows: 100}  # 4 rows per daily file
+  poc_build_gleif: {rows: 25000}  # 16,851 (Dev trial 43099545187)
+  poc_build_mf_biala_lista: {rows: 10}  # 4 (Dev trial 43099545187)
   poc_build_wdi: {rows: 500000}  # + 16 slice indicators, all economies (#2592)
   poc_concept_measures: {rows: 1000}
   poc_dim_calendar: {rows: 80000}
@@ -188,7 +188,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_average_gross_wage: {rows: 20000}
   poc_metrics_employment_rate: {rows: 20000}
   poc_metrics_registered_unemployment_rate: {rows: 30000}
-  poc_metrics_lei_issued: {rows: 1000}  # one total per country and voivodeship (#2740)
-  poc_metrics_vat_whitelist_entries: {rows: 100}
+  poc_metrics_lei_issued: {rows: 350}  # 232 (Dev trial 43099545187)
+  poc_metrics_vat_whitelist_entries: {rows: 10}  # 1 (Dev trial 43099545187)
   dim_dataset: {rows: 40000}
   dim_dimension: {rows: 1000}

@@ -132,10 +132,20 @@ models:
     description: >-
       Build stage — GLEIF LEI counts of the newest golden copy (entity snapshot, daily): by registration status
       (measure), entity status, legal form (ELF) and entity category (breakdowns, one at a time), per country of
-      legal jurisdiction and, for Poland, voivodeship of the legal address.
+      legal jurisdiction and, for Poland, voivodeship of the legal address. Latest snapshot only (Silver is latest-only).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
   - name: poc_build_mf_biala_lista
     description: >-
       Build stage — MF VAT white list flat file entries (taxpayer × account hashes) by taxpayer status and
-      virtual-account masks, Poland, daily snapshot of the newest file.
+      virtual-account masks, Poland, newest file only. Licence unresolved: internal.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
   - name: poc_build_check
     description: Per activated block — rows, series, unmatched geography, dates, flags; read after every build.
