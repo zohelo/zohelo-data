@@ -8,8 +8,8 @@ build job and keeps every run out of the group unless the waiting place is free:
 - ``enter``: no build is waiting. The run's build job joins the group (it runs at once, or waits for the running one).
 - ``covered``: a changed-only build of another run is waiting and has not started. That build plans after this
   run's Bronze load ended (``warehouse/changed.py`` is stateless and reads the tables when the build starts), so
-  it rebuilds what this run changed. This run's build and publish are skipped and the run ends green, naming
-  the covering run.
+  it rebuilds what this run changed. This run's build, publish and portal index refresh are skipped (the covering
+  run refreshes the index after its build, #2954) and the run ends green, naming the covering run.
 - a build with a model filter (a ``platform`` run with a ``filter``) is not changed-only: it covers no other run
   and no run covers it. When such a build is waiting, or this run is one and any build is waiting, this job
   waits until the waiting build has started and decides again.
@@ -166,7 +166,8 @@ def main() -> int:
         )
         summary["why"] = (
             f"the changed-only build of run {other} had not started at decided_at, after this run's Bronze load; "
-            "it plans when it starts and rebuilds what this run changed. This run builds and publishes nothing."
+            "it plans when it starts and rebuilds what this run changed. This run builds and publishes nothing, and "
+            "that run refreshes the portal index."
         )
     if problem:
         summary["problem"] = problem

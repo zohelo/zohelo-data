@@ -323,7 +323,7 @@ jobs:
         if: steps.decide.outputs.decision == 'covered'
         env:
           COVERED_BY: ${{ steps.decide.outputs.covered_by }}
-        run: echo "The model build of run $COVERED_BY rebuilds what this run changed; this run builds and publishes nothing."
+        run: echo "The model build of run $COVERED_BY rebuilds what this run changed; this run builds and publishes nothing and leaves the portal index to that run."
 
   silver-gold-build:
     needs: [plan, archive-prune, build-queue]
@@ -376,8 +376,11 @@ jobs:
           activity: gold.publish
 
   serving-refresh-index:
-    needs: [plan, gold-publish]
-    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'serving.refresh_index') }}"
+    needs: [plan, build-queue, gold-publish]
+    # Not in a covered run: the covering run refreshes the index after its build and publish, when the tables this
+    # run loaded are built too. Covered runs end together, and their refreshes, each listing both buckets in full,
+    # were refused by R2 ("Reduce your concurrent request rate", #2954).
+    if: "${{ !cancelled() && !failure() && needs.build-queue.outputs.decision != 'covered' && contains(fromJSON(needs.plan.outputs.activities), 'serving.refresh_index') }}"
     name: serving.refresh_index
     runs-on: ubuntu-24.04
     timeout-minutes: 30

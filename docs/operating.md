@@ -46,8 +46,9 @@ of the Pipeline runs that have not ended:
 
 - **enter**: no build is waiting; the run's build runs now or waits for the running one.
 - **covered**: another run's changed-only build is waiting and has not started. It plans when it starts, after
-  this run's Bronze load, and rebuilds what this run changed. This run's build and `gold.publish` are skipped, the
-  run ends green, and the annotation `silver_gold.build covered by run <id>` names the covering run. The proof is in
+  this run's Bronze load, and rebuilds what this run changed. This run's build, `gold.publish` and
+  `serving.refresh_index` are skipped (the covering run refreshes the index after its build and publish; covered runs
+  end together and R2 refuses several whole-bucket listings at once, #2954), the run ends green, and the annotation `silver_gold.build covered by run <id>` names the covering run. The proof is in
   that run: its build job started after `decided_at`, and its `warehouse dbt build` annotation lists the models.
 - A build with a model filter (a `platform` run with a `filter`; job name `silver_gold.queue · filter`) covers no
   run and is covered by none: next to it a queue job waits until the waiting build has started.
