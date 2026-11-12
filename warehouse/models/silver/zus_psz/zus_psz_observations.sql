@@ -14,8 +14,9 @@
      payers_voiv           active contribution payers at the quarter end (Q), Poland and voivodeships, by payer type
                            (TOTAL, SELF = a natural person paying only for themselves, and insured-count classes)
      absence_voiv          sick-leave days and medical certificates in the quarter (Q), Poland and voivodeships
-   area_code: '00' = Poland (the "Ogółem" row, which also counts persons ZUS could not assign to a voivodeship), else
-   the TERYT voivodeship code, matched by the official voivodeship name (ZUS gives names only). Cells that are not
+   area_code: '00' = Poland (the "Ogółem" row, which also counts persons ZUS could not assign to a voivodeship), '_U'
+   = the row "nieustalone województwo" (voivodeship not established; absence table), else the TERYT voivodeship code,
+   matched by the official voivodeship name (ZUS gives names only; spaces around the hyphen ignored). Cells that are not
    numbers are left out. Values as published. #}
 with cells as (
     select
@@ -127,7 +128,12 @@ typed as (
         end as frequency,
         case
             when r.family in ('insured_sickness_voiv', 'payers_voiv', 'absence_voiv')
-                then case when starts_with(r.label_l, 'ogółem') then '00' else v.area_code end
+                then
+                    case
+                        when starts_with(r.label_l, 'ogółem') then '00'
+                        when starts_with(r.label_l, 'nieustalone') then '_U'
+                        else v.area_code
+                    end
             else '00'
         end as area_code,
         case
@@ -170,7 +176,7 @@ typed as (
             when r.family = 'foreign_insured' then cast(try_strptime(r.label, '%d.%m.%Y') as date)
         end as stock_date
     from raw as r
-    left join voivodeships as v on r.label_l = v.name_l
+    left join voivodeships as v on regexp_replace(r.label_l, '\s*-\s*', '-', 'g') = v.name_l
     where
         -- rows each family models (others: the amount distribution, the average age, powiats)
         (r.family <> 'pension_amount_dec' or starts_with(r.label_l, 'przeciętna wysokość na osobę'))
