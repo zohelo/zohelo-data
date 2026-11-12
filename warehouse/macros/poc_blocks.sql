@@ -369,6 +369,31 @@
     ) as t (loc_id, candidate_key)
 {% endmacro %}
 
+{# UNHCR Refugee Statistics blocks (gold.build_unhcr): one per API selection; areas: EU27 members as countries of
+   asylum (ISO alpha-3 through dim_geography.iso3). #}
+{% macro poc_unhcr_blocks() %}
+    select * from (
+        values
+        ('population_by_asylum', 'People under UNHCR mandate by country of asylum, end of year (UNHCR)'),
+        ('poland_by_origin', 'People under UNHCR mandate in Poland by country of origin, end of year (UNHCR)')
+    ) as t (entity, block_name)
+{% endmacro %}
+
+{# EEA greenhouse gas inventory (gold.build_eea, block govreg_ghg_inventory): the sectors built, CRF codes as
+   published; is_total marks the national totals (without and with LULUCF). #}
+{% macro poc_eea_sectors() %}
+    select * from (
+        values
+        ('Sectors/Totals_excl', true),
+        ('Sectors/Totals_incl', true),
+        ('1', false),
+        ('2', false),
+        ('3', false),
+        ('4', false),
+        ('5', false)
+    ) as t (sector_code, is_total)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -453,9 +478,12 @@
     poc_build_who:who
     poc_build_unesco_uis:unesco_uis
     poc_build_faostat:faostat
+    poc_build_eea:eea
     poc_build_ecb:ecb
     poc_build_ids:world_bank_ids
     poc_build_un_wpp:un_wpp
+    poc_build_unhcr:unhcr
+    poc_build_zus_psz:zus_psz
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -541,11 +569,15 @@
     union all
     select 'faostat', entity || ':' || item_code || '.' || element_code, block_name from ({{ poc_faostat_blocks() }})
     union all
+    select 'eea', 'govreg_ghg_inventory', 'Greenhouse gas emissions by sector, GovReg inventory (EEA)'
+    union all
     select 'ecb', entity, block_name from ({{ poc_ecb_blocks() }})
     union all
     select 'world_bank_ids', 'IDS_CSV', 'World Bank International Debt Statistics'
     union all
     select 'un_wpp', indicator, block_name from ({{ poc_un_wpp_blocks() }})
+    union all
+    select 'unhcr', entity, block_name from ({{ poc_unhcr_blocks() }})
     union all
     select * from (
         values
@@ -565,6 +597,14 @@
         ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units'),
         ('mf_jst_budgets', 'jst_budget', 'MF local-government budget summaries (year to date)'),
         ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)'),
+        ('zus_psz', 'pensioners_dec', 'ZUS old-age pensioners in December'),
+        ('zus_psz', 'pension_amount_dec', 'ZUS average old-age pension in December'),
+        ('zus_psz', 'insured_pension', 'ZUS insured persons, pension insurance'),
+        ('zus_psz', 'insured_sickness_voiv', 'ZUS insured persons, sickness insurance, by voivodeship'),
+        ('zus_psz', 'insured_health', 'ZUS insured persons, health insurance'),
+        ('zus_psz', 'foreign_insured', 'ZUS foreign citizens in pension insurance'),
+        ('zus_psz', 'payers_voiv', 'ZUS active contribution payers, by voivodeship'),
+        ('zus_psz', 'absence_voiv', 'ZUS sickness absence, by voivodeship'),
         ('nbp_bop', 'bop_m', 'NBP balance of payments, monthly'),
         ('nbp_bop', 'bop_q', 'NBP balance of payments, quarterly'),
         ('nbp_bop', 'iip_q', 'NBP international investment position, quarterly')

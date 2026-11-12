@@ -718,6 +718,37 @@ of III quarter 2025 on (survivors' pensions including those paid with other pens
 `footnote` and becomes observation status `break` in Gold: a series break. Gold (`poc_build_public_finance.sql`): every benefit type and measure, quarterly
 and yearly. Schedule: Wednesdays 14:05 UTC.
 
+## ZUS statistical portal (`zus_psz`)
+
+**Route (12 Nov 2026, #2461).** Portal Statystyczny ZUS (psz.zus.pl, register PLS-009) has no API: its category
+pages link one XLSX per topic table and period under `/documents/493365/<folder>/<name>.xlsx/<uuid>`, and the folder
+id stays the same for a table across years. `ingestion/to_landing/zus_psz/` reads six category pages (one request
+each, 2 s apart), keeps the links of a curated list of folders (`FAMILIES`), reads the period from the file name and
+lands each file through the shared `bulk_file.load_file`. **Entity** = family × period (`pensioners_dec_2025`,
+`absence_voiv_2026_q3`); **version** = Last-Modified, written only when the SHA-256 changed. Each run lands missing
+periods and re-downloads the two newest of each family (corrections, the current year's monthly files). **Restart
+unit:** one file. English copies (`EN…`) and `.xls` years are not landed.
+
+Families: `pensioners_dec` (old-age pensioners in December by age and sex, 2018–) and `pension_amount_dec` (average
+old-age pension in December by sex, 2018–), Poland; `insured_pension` (pension insurance, by age and sex),
+`insured_sickness_voiv` (sickness insurance, Poland and voivodeships), `payers_voiv` (active contribution payers by
+voivodeship and payer type) and `absence_voiv` (sick-leave days and certificates by voivodeship), quarterly;
+`insured_health` (health insurance, monthly, 2012–) and `foreign_insured` (foreign citizens in pension insurance, all
+and Ukrainian, monthly, 2020–). The portal lists the quarterly tables for the current year only, so their history
+starts with the first landing and is kept by `keep_latest: 1` per entity; the Archive is then the only copy. ZUS
+publishes no voivodeship pension table after 2011. Licence `unresolved`: ZUS's re-use terms cover information published
+in its BIP and on dane.gov.pl (or passed on request), not psz.zus.pl, which states no terms of its own. The source stays
+internal (licence gate) until the same tables are landed from dane.gov.pl or ZUS confirms in writing that psz.zus.pl
+falls under its terms (owner question).
+
+**Bronze to Gold.** `bronze.zus_psz_cells`: one row per cell (`xlsx_cells`), latest version per entity; a workbook
+without its family's header row is rejected with the reason. Silver `silver.zus_psz_observations`: one row per family
+× period × area × sex × breakdown × measure; voivodeships matched by their official names to TERYT codes ('00' =
+Poland); `tests/zus_psz_voivodeships.sql` fails when a voivodeship table lacks one of the 17 areas. Gold
+`poc_build_zus_psz.sql`, one block per family, one frequency per measure (A, Q or M). KPIs (draft): `zus_pension_avg`
+(December average, next to GUS BDL), `zus_insured_persons`, `foreign_insured_persons`, `sick_leave_days`. Schedule:
+Thursdays 07:25 UTC; refresh `full` (D32 + #2461).
+
 ## World Bank International Debt Statistics (IDS)
 
 **Extraction (3 Nov 2026).** DataBank publishes IDS as a bulk CSV ZIP on a stable URL, the same
@@ -885,6 +916,39 @@ value labels per file). Silver: `silver.unece_observations` (codes and labels as
 Country variable: M49 codes and aggregates such as E27 = EU-27). Terms: UNECE copyright notice (free
 reuse incl. commercial, acknowledge UNECE), licence row `unece_terms`. Weekly Monday check. Restart
 unit: one table.
+## UNHCR Refugee Statistics (`unhcr`)
+
+**Built (12 Nov 2026, register GL-029).** The Refugee Statistics API (`https://api.unhcr.org/population/v1/`, public,
+no key) returns a whole selection in one request when `limit` exceeds its rows; `unhcr.yaml` lands two fixed
+`/population/` selections through the shared `bulk_file` pattern, version = download time (an unchanged response is
+skipped): `population_by_asylum` (`coa_all=true`: every country of asylum, origins summed; 7,802 rows, 1951–2025)
+and `poland_by_origin` (`coa=POL&coo_all=true`: Poland by country of origin; 1,373 rows, 1991–2025), ISO alpha-3
+codes (`cf_type=ISO`). Default aggregation guard: the API sums every dimension left out into one row (`-`), so each
+selection names its dimensions, Bronze rejects a response over more than one page, and
+`tests/unhcr_selection.sql` checks each entity. The third-party `idmc` and `unrwa` endpoints are not landed. Bronze:
+`bronze.unhcr_population` (values as text, `-` kept). Silver: `silver.unhcr_population` (grain entity × year × coa
+× coo, end-of-year stocks in persons, `-` → null). Gold: `gold.build_unhcr` — refugees, asylum seekers, stateless
+and other people in need of international protection for the EU27 members as countries of asylum, and Poland by
+origin (`{"origin": <ISO3>}`); KPI `refugees_hosted` (draft). Refresh full (D32). Terms: CC BY 4.0 with UNHCR's
+supplemental terms (credit "UNHCR Refugee Population Statistics Database" and link the terms), licence row
+`cc_by_4_0_unhcr`. Restart unit: one selection.
+
+## EEA Datahub: greenhouse gas inventory (`eea`)
+
+**Built (12 Nov 2026, register GL-037).** Every version of an EEA dataset is its own catalogue record with a public
+file share. The GovReg inventory ("National emissions reported to the UNFCCC and to the EU under the Governance
+Regulation") share holds the CSV as `UNFCCC_<n>_csv.zip` (8.6 MB, 100 MB unpacked, 1990 onwards), an SQLite file
+(2.0 GB) and an Access database (198 MB). `ingestion/to_landing/eea/` resolves the newest version each run (the
+series record's siblings → the version records of the newest year → each share's file list, public WebDAV) and
+lands the ZIP through the shared `bulk_file` pattern; the share link sends no Last-Modified, so version = download
+time and an unchanged ZIP is skipped. Entity: `govreg_ghg_inventory` (2026 ver. 2.1 in the trial: 692,640 rows, 33
+areas, 9 pollutants, 166 sectors). Bronze: `bronze.eea_ghg_inventory` (CSV columns lower-cased, text). Silver:
+`silver.eea_ghg_inventory` (grain country_code × format_name × pollutant_name × sector_code × year; value null when
+the source gives a notation key such as NO, NE, IE, NA, C, never 0). Gold: `gold.build_eea` — all greenhouse gases
+in Gg (= kt) CO2 equivalent, totals with and without LULUCF and CRF sectors 1–5, EU27 members (ISO alpha-2); the
+EEA aggregate `EUA` is not mapped. KPI `ghg_emissions` (total without LULUCF, UNFCCC scope, so without
+international aviation, unlike Eurostat). Refresh full (D32). Terms: CC BY 4.0 under the EEA legal notice, licence
+row `cc_by_4_0_eea`. Restart unit: the dataset version.
 
 ## News headline feeds (`news_feeds`, topics)
 
