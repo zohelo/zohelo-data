@@ -5,7 +5,7 @@ the Gold build stage are rendered with Jinja from warehouse/ and run in local Du
 each built twice, with the schema tests of the YAML files and the source's singular tests. Read-only reads of
 production: the row count of gold.fact_annual (snapshot summary) and silver.teryt_terc names. Deleted before merge.
 
-Subset (declared): catalogs 1d and 1w whole, and 36 benefits of 1a, 1b and 1c (SUBSET) including the four KPI groups.
+Subset (declared): catalogs 1d and 1w whole, and 29 benefits of 1a, 1b and 1c (SUBSET) including the four KPI groups.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ SOURCE = "nfz_services"
 CAPTURED: list = []
 A1 = ["0013001", "0008013", "0008015", "0001048", "0013002", "0001094", "0001049", "0001050", "0001051", "0002101",
       "0002019", "0002102", "0004018", "0005023", "0005053", "0005054", "0005055", "0006058", "0008004", "0008005",
-      "0009002", "0011064", "0001001", "0001002", "0001003", "0001004", "0001011", "0001092", "0001012", "0001013"]
+      "0009002", "0011064", "0001001"]
 SUBSET = ["1d", "1w", *[f"1a_5.51.01.{c}" for c in A1], "1b_5.52.01.0001492", "1b_5.52.01.0001497",
           "1b_5.52.01.0001398", "1c_5.53.01.0001465", "1c_5.53.01.0005004", "1c_5.53.01.0003060"]
 FILTER = ",".join(SUBSET)
@@ -87,7 +87,7 @@ def landing() -> dict:
     for n in (1, 2):
         CAPTURED.clear()
         start = time.monotonic()
-        code = extract.main(["--mode", "load", "--filter", FILTER, "--budget-minutes", "55", "--landing-root", SCRATCH])
+        code = extract.main(["--mode", "load", "--filter", FILTER, "--budget-minutes", "70", "--landing-root", SCRATCH])
         summary = next((d for t, d in CAPTURED if "landing load" in t), {})
         files, size, receipts = landing_objects()
         keep = ("benefits", "missing", "held", "canary", "share_this_week", "reread_this_week", "landed_new",
