@@ -24,10 +24,12 @@ itself (legislacja.rcl.gov.pl, legislacja.gov.pl) times out for GitHub runners a
   status), publication on the list (`Data publikacji`, Warsaw local time), link.
 - **Gold:** entity table `gold.government_drafts` (keyed by the work-list number) and the build stage
   `gold.build_kprm_work_list`: drafts entering the list per month (`…:monthly`) and per year (`…:annual`) by month
-  or year of `Data publikacji`, total and by kind or by responsible body; periods without an entry have no row.
+  or year of `Data publikacji`, total and by kind or by responsible body; the drafts that entered the list in a
+  month or year by their current status (`…:monthly_by_current_status`, `…:annual_by_current_status`: the status in
+  the newest file of that period's entries, not a history of status changes); periods without an entry have no row.
   `Data publikacji` rises with the work-list number and does not move when the status changes (Dev probe
-  43320804384), so it dates the entry. Realised and withdrawn counts by date are not built: the file does not give
-  the date of the status change. Draft KPI `government_drafts_listed` (state.government).
+  43320804384), so it dates the entry. Realised and withdrawn counts by the date of the change are not built: the
+  file does not give that date. Draft KPI `government_drafts_listed` (state.government), monthly total.
 - **Left out:** the Prime Minister's own list (https://www.gov.pl/web/premier/wpl-prm, `Rejestr_20874196.csv`): 8
   columns, no kind, body or publication date, so not the same layout; the lists of earlier governments (HTML pages
   without a file).

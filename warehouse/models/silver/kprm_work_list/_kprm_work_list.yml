@@ -10,7 +10,8 @@ models:
       planned_adoption is the published plan as free text (quarter, date, "ZREALIZOWANY ..."), never a date key.
       status in_progress = the source's empty Status realizacji. Not carried from Landing: Osoba odpowiedzialna,
       the aims and substance texts, the regulatory-impact columns. tests/kprm_work_list_drafts_complete.sql checks
-      the size and that kind agrees with the number's first letter.
+      that the table is not empty and that kind agrees with the number's first letter (the type can change after
+      numbering, so it is not compared with the number's later letters).
     tests:
       - unique:
           column_name: draft_number
