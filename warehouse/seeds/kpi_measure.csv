@@ -29,6 +29,7 @@ average_gross_wage,gus_bdl,gus_bdl:P2497:%,,1,
 dwellings_completed,gus_bdl,gus_bdl:P3824:%,,1,
 area,gus_bdl,gus_bdl:P1410:%,ha in the source,1,
 area,world_bank_wdi,world_bank_wdi:AG.LND.TOTL.K2,land area,2,
+area,gugik_prg,gugik_prg:jednostki_administracyjne:km2:area,"state register of boundaries, voivodeships, powiats and gminas (not the country polygon, which includes sea waters); edition held, latest only",3,km2
 population_density,gus_bdl,gus_bdl:P2425:%,,1,
 fx_rate,nbp,nbp:fx:A:mid,"NBP table A, mid",1,
 gold_price,nbp,nbp:gold:price,"NBP fixing, 1000 fineness",1,
@@ -156,6 +157,17 @@ krus_pension_avg,krus,krus:benefits:PLN:old_age:avg_benefit_pln%,"average monthl
 fdi_inflow,unctad,unctad:US_FdiFlowsStock:08:1:USD_MN,"FDI inward flows, US$ million at current prices (UNCTAD)",3,mln_usd
 exports_goods,unctad,unctad:US_TradeMerchTotal:02:USD_MN,"merchandise exports, US$ million at current prices",1,
 exports_services,unctad,unctad:US_TradeServCatTotal:02:S:USD_MN,"services exports (total), US$ million at current prices",1,
+local_gov_revenue,mf_jst_budgets,mf_jst_budgets:jst_budget:pln:revenue_executed,"MF summaries, executed, year to date, by unit type",1,
+local_gov_expenditure,mf_jst_budgets,mf_jst_budgets:jst_budget:pln:expenditure_executed,"MF summaries, executed, year to date, by unit type",1,
+local_gov_balance,mf_jst_budgets,mf_jst_budgets:jst_budget:pln:result_executed,"MF summaries, year to date, by unit type",1,
+local_gov_debt,mf_jst_budgets,mf_jst_budgets:jst_budget:pln:liabilities_total,"MF summaries, end of quarter, by unit type",1,
+registered_unemployed,mrpips_unemployment,mrpips_unemployment:registered_unemployment:persons:unemployed_persons,"MRPiPS-01, end of month, by sex, Poland and voivodeships",2,
+registered_unemployment_rate,mrpips_unemployment,mrpips_unemployment:registered_unemployment:pct:unemployment_rate,"MRPiPS, end of month, Poland, voivodeships and powiats",3,
+life_expectancy,who,who:life_expectancy:years:WHOSIS_000001,"at birth, both sexes and by sex (WHO Global Health Estimates)",5,
+gerd_gdp,unesco_uis,unesco_uis:gerd_gdp:pct_gdp:EXPGDP.TOT,"% of GDP, UIS (SDG 9.5.1)",3,
+tertiary_attainment,unesco_uis,unesco_uis:tertiary_attainment:pct:EA.5T8.AG25T99,"25+, completed short-cycle tertiary or higher, ISCED 5-8 (Eurostat: 25-34)",3,
+ghg_emissions,faostat,faostat:emissions_totals:kt:6829.723113.3050,"all sectors without LULUCF, CO2eq (AR5), kt (FAOSTAT emissions totals)",3,thousand_tonnes
+area,faostat,faostat:land_use:1000 ha:6601.5110._Z,"land area, 1000 ha (FAOSTAT land use)",3,thousand_ha
 core_inflation,eurostat,eurostat:PRC_HICP_MINR:RCH_A:TOT_X_NRG_FOOD,"HICP (COICOP 2018) excluding energy, food, alcohol and tobacco, annual rate of change",1,
 min_wage,eurostat,eurostat:EARN_MW_CUR:_Z:NAC,"monthly, national currency, half-yearly",1,
 adult_learning,gus_bdl,gus_bdl:P2656:%:wartość liczbowa,"LFS, 25-64, annual average, Poland and voivodeships",2,

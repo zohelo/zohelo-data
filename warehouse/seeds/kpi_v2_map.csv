@@ -70,6 +70,7 @@ gdp_regional_growth,economy,A,gdp_regional_growth,gus_dbw,1173_793_92_4,gus_dbw:
 gender_pay_gap,labour,A,gender_pay_gap,eurostat,EARN_GR_GPGR2,eurostat:EARN_GR_GPGR2:PC,A,PL;EU;EU27,,rate,down,ready,"unadjusted, NACE B-S except O"
 gerd_gdp,poland,A,gerd_gdp,eurostat,RD_E_GERDTOT,eurostat:RD_E_GERDTOT:PC_GDP,A,PL;EU;EU27,sector,rate,up,ready,all sectors of performance
 gerd_gdp,poland,A,gerd_gdp,world_bank_wdi,GB.XPD.RSDV.GD.ZS,world_bank_wdi:GB.XPD.RSDV.GD.ZS,A,PL;EU;EU27,,rate,up,ready,
+gerd_gdp,poland,A,gerd_gdp,unesco_uis,EXPGDP.TOT,unesco_uis:gerd_gdp:pct_gdp:EXPGDP.TOT,A,PL;EU,,rate,up,needs-block,"UIS, SDG 9.5.1; EU27 members; CC BY-SA 4.0: waits for per-series licence and Adapted from credit in publishing (#2816)"
 gfcf_by_asset,economy,A,gfcf_by_asset,eurostat,NAMA_10_AN6,eurostat:NAMA_10_AN6:CP_MNAC,A,PL;EU;EU27,asset,sum,neutral,ready,total fixed assets (N11G) in metrics; asset types need kpi_member
 gfcf_growth,economy,Q,gfcf_growth,eurostat,NAMQ_10_GDP,eurostat:NAMQ_10_GDP:CLV_PCH_SM:P51G,Q,PL;EU;EU27,,rate,up,ready,seasonally and calendar adjusted
 gfcf_rate,economy,A,gfcf_rate,eurostat,NAMA_10_GDP,eurostat:NAMA_10_GDP:PC_GDP:P51G,A,PL;EU;EU27,,rate,up,ready,
@@ -80,6 +81,7 @@ gg_deficit_gdp,poland,A,gg_balance_gdp,eurostat,GOV_10DD_EDPT1,eurostat:GOV_10DD
 gg_deficit_gdp,poland,A,gg_balance_gdp,world_bank_wdi,GC.NLD.TOTL.GD.ZS,world_bank_wdi:GC.NLD.TOTL.GD.ZS,A,PL;EU;EU27,,rate,up,ready,GFS net lending/borrowing
 ghg_emissions,poland,A,ghg_emissions,eurostat,ENV_AIR_GGE,eurostat:ENV_AIR_GGE:THS_T:GHG,A,PL;EU;EU27,,sum,down,ready,"CO2 equivalent, excl. LULUCF, incl. international aviation"
 ghg_emissions,poland,A,ghg_emissions,world_bank_wdi,EN.GHG.ALL.MT.CE.AR5,world_bank_wdi:EN.GHG.ALL.MT.CE.AR5,A,PL;EU;EU27,,sum,down,ready,"Mt CO2e, AR5"
+ghg_emissions,poland,A,ghg_emissions,faostat,GT,faostat:emissions_totals:kt:6829.723113.3050,A,PL;EU;EU27,,sum,down,ready,"all sectors without LULUCF, kt CO2eq (AR5); FAOSTAT emissions totals"
 gini,labour,A,gini,eurostat,ILC_DI12,eurostat:ILC_DI12:%:GINI_HND,A,PL;EU;EU27,,none,neutral,ready,EU-SILC
 gini,labour,A,gini,world_bank_wdi,SI.POV.GINI,world_bank_wdi:SI.POV.GINI,A,PL;EU;EU27,,none,neutral,ready,World Bank estimate
 gva_by_section,economy,A,gva_by_section,eurostat,NAMA_10_A10,eurostat:NAMA_10_A10:CP_MNAC:B1G,A,PL;EU;EU27,nace,sum,neutral,ready,total in metrics; NACE sections need kpi_member
@@ -95,11 +97,12 @@ labour_productivity,labour,Q,labour_productivity,eurostat,NAMQ_10_LP_ULC,eurosta
 life_expectancy,poland,A,life_expectancy,eurostat,DEMO_MLEXPEC;DEMO_R_MLIFEXP,eurostat:DEMO_MLEXPEC:YR;eurostat:DEMO_R_MLIFEXP:YR,A,PL;EU;EU27;VOIV,sex,none,up,ready,at birth; countries and Polish NUTS 2
 life_expectancy,poland,A,life_expectancy,gus_bdl,P2730,gus_bdl:P2730:lata:% / 0,A,PL;VOIV,sex,none,up,ready,"at birth, men and women as two measures (BDL has no both-sexes value)"
 life_expectancy,poland,A,life_expectancy,world_bank_wdi,SP.DYN.LE00.IN,world_bank_wdi:SP.DYN.LE00.IN,A,PL;EU;EU27,,none,up,ready,
+life_expectancy,poland,A,life_expectancy,who,90E2E48 (WHOSIS_000001),who:life_expectancy:years:WHOSIS_000001,A,PL;EU,sex,none,up,ready,"at birth, WHO Global Health Estimates; EU27 members and World (no EU27 aggregate)"
 long_term_unemployment,labour,A,long_term_unemployment,eurostat,UNE_LTU_A,eurostat:UNE_LTU_A:PC_ACT:LTU,A,PL;EU;EU27,sex,rate,down,ready,15-74
 long_term_unemployment,labour,A,long_term_unemployment,gus_dbw,1618_1335_95_4,gus_dbw:1618_1335_95_4:95,A,PL,sex;age,rate,down,ready,"15-74, 12 months or more counted as the total (rule); 2021-2025 (Dev probe 43085044303)"
 median_wage,labour,A,median_wage,gus_bdl,P4610,gus_bdl:P4610:zł:wg miejsca zamieszkania,M,PL;VOIV,sex,mean,up,ready,"by place of residence (the employer-seat basis is a second measure in Gold), Poland and voivodeships, 2024-2026 (Dev probe 43085044303)"
 median_wage,labour,A,median_wage,gus_dbw,1714_1575_243_1,gus_dbw:1714_1575_243_1:243,M,PL;VOIV,,mean,up,ready,"by place of residence (rule total), Poland and voivodeships read from 494 areas (Dev probe 43085044303)"
-min_wage,labour,A,min_wage,eurostat,EARN_MW_CUR,eurostat:EARN_MW_CUR:_Z:NAC,S,PL;EU,currency,none,neutral,ready,half-yearly (S) in gold.fact_semiannual (a half-year is not folded into another frequency); national currency; v2 needs a half-year period format before the concept is published
+min_wage,labour,A,,eurostat,EARN_MW_CUR,eurostat:EARN_MW_CUR:_Z:NAC,S,PL;EU,currency,none,neutral,needs-block,"half-yearly (S) in gold.fact_semiannual (concept min_wage, measure eurostat:EARN_MW_CUR:_Z:NAC); v2 has no half-year period format, and since O37 every ready row reaches v2, so the row waits for one (#2743)"
 nbp_reference_rate,poland,M,,nbp_interest_rates,,,D,PL,,none,neutral,needs-block,"NBP official rates in Silver since #2590 (silver.nbp_policy_rates, register PLG-006); a Gold build stage for them is not added yet"
 neet_rate,labour;poland,A,neet_rate,eurostat,LFSI_NEET_A,eurostat:LFSI_NEET_A:PC_POP,A,PL;EU;EU27,sex,rate,down,ready,age 15-29
 neet_rate,labour;poland,A,neet_rate,world_bank_wdi,SL.UEM.NEET.ZS,world_bank_wdi:SL.UEM.NEET.ZS,A,PL;EU;EU27,,rate,down,ready,age 15-24
@@ -122,14 +125,17 @@ recycling_rate,poland,A,recycling_rate,eurostat,CEI_WM011,eurostat:CEI_WM011:PC:
 reer,economy;poland,M,reer,eurostat,ERT_EFF_IC_M,eurostat:ERT_EFF_IC_M:I20:REER_IC42_CPI,M,PL;EU;EU27,,index,neutral,ready,"CPI-deflated, 42 partners, 2020 = 100"
 reer,economy;poland,M,reer,world_bank_wdi,PX.REX.REER,world_bank_wdi:PX.REX.REER,A,PL;EU;EU27,,index,neutral,ready,2010 = 100 (IMF)
 registered_unemployed,labour,M,registered_unemployed,gus_bdl,P2961,gus_bdl:P2961:osoba,M,PL;VOIV,sex,sum,down,ready,end of month (month in the first label)
+registered_unemployed,labour,M,registered_unemployed,mrpips_unemployment,registered_unemployment,mrpips_unemployment:registered_unemployment:persons:unemployed_persons,M,PL;VOIV,sex,sum,down,ready,"MRPiPS-01 TAB 2, end of month, from January 2021"
 registered_unemployed,labour,M,registered_unemployed,gus_dbw,507_870_93_1,gus_dbw:507_870_93_1:93,M,PL;VOIV,sex;age,sum,down,ready,Poland and voivodeships only (0.8M rows with powiats); quarter-end repeats of months left out (Dev probe 43085044303)
 registered_unemployment,labour,M,registered_unemployment_rate,gus_bdl,P2392,gus_bdl:P2392:%,A,PL;VOIV,,rate,down,ready,end of year
 registered_unemployment,labour,M,registered_unemployment_rate,gus_dbw,875_143_95_1,gus_dbw:875_143_95_1:95,M,PL;VOIV,,rate,down,ready,"end of month, also powiats"
+registered_unemployment,labour,M,registered_unemployment_rate,mrpips_unemployment,registered_unemployment,mrpips_unemployment:registered_unemployment:pct:unemployment_rate,M,PL;VOIV,,rate,down,ready,"MRPiPS, end of month, also powiats, from September 2020"
 retail_sales,economy,M,retail_sales,eurostat,STS_TRTU_M,eurostat:STS_TRTU_M:PCH_SM:VOL_SLS,M,PL;EU;EU27,,rate,up,ready,"NACE G47, volume, calendar adjusted"
 retail_sales,economy,M,retail_sales,gus_dbw,109_849_7_1,gus_dbw:109_849_7_1:7,M,PL,,rate,up,ready,"index, same month a year earlier = 100, constant prices"
 social_spending_gdp,labour,A,social_spending_gdp,eurostat,GOV_10A_EXP,eurostat:GOV_10A_EXP:PC_GDP:TE,A,PL;EU;EU27,,rate,neutral,ready,"general government, COFOG 10 social protection"
 tertiary_attainment,poland,A,tertiary_attainment,eurostat,EDAT_LFSE_03,eurostat:EDAT_LFSE_03:PC:ED5-8,A,PL;EU;EU27,sex,rate,up,ready,"age 25-34, ISCED 5-8"
 tertiary_attainment,poland,A,tertiary_attainment,world_bank_wdi,SE.TER.CUAT.BA.ZS,world_bank_wdi:SE.TER.CUAT.BA.ZS,A,PL;EU;EU27,,rate,up,ready,"25+, at least bachelor's (sparse: 2013-2021 for Poland)"
+tertiary_attainment,poland,A,tertiary_attainment,unesco_uis,EA.5T8.AG25T99,unesco_uis:tertiary_attainment:pct:EA.5T8.AG25T99,A,PL;EU,sex,rate,up,needs-block,"25+, ISCED 5-8 (short-cycle tertiary or higher); EU27 members; CC BY-SA 4.0: waits for per-series licence in publishing (#2816)"
 tfr,poland,A,total_fertility_rate,eurostat,DEMO_FIND;DEMO_R_FIND2,eurostat:DEMO_FIND:_Z:TOTFERRT;eurostat:DEMO_R_FIND2:NR:TOTFERRT,A,PL;EU;EU27;VOIV,,none,neutral,ready,
 tfr,poland,A,total_fertility_rate,gus_bdl,P2346,gus_bdl:P2346:-:dzietność,A,PL;VOIV,,none,neutral,ready,
 tfr,poland,A,total_fertility_rate,world_bank_wdi,SP.DYN.TFRT.IN,world_bank_wdi:SP.DYN.TFRT.IN,A,PL;EU;EU27,,none,neutral,ready,

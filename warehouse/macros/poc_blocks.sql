@@ -294,6 +294,36 @@
     ) as t (economy, candidate_key)
 {% endmacro %}
 
+{# WHO data.who.int blocks (gold.build_who): one per indicator file; areas: EU27 members (M49, macro
+   poc_m49_eu27) and World (M49 1, GLOBAL). #}
+{% macro poc_who_blocks() %}
+    select * from (
+        values
+        ('life_expectancy', 'Life expectancy at birth (WHO)'),
+        ('hale', 'Healthy life expectancy at birth (WHO)')
+    ) as t (entity, block_name)
+{% endmacro %}
+
+{# UNESCO UIS blocks (gold.build_unesco_uis): one per Data API selection; areas: EU27 members (ISO alpha-3 through
+   dim_geography.iso3). #}
+{% macro poc_unesco_uis_blocks() %}
+    select * from (
+        values
+        ('gerd_gdp', 'EXPGDP.TOT', 'GERD as a percentage of GDP (UIS)', 'pct_gdp'),
+        ('tertiary_attainment', 'EA.5T8.AG25T99', 'Completed short-cycle tertiary or higher, population 25+ (UIS)', 'pct')
+    ) as t (entity, indicator_id, block_name, unit_code)
+{% endmacro %}
+
+{# FAOSTAT blocks (gold.build_faostat): one per domain item × element; areas: EU27 members (M49, macro
+   poc_m49_eu27), FAO aggregates 5707 European Union (27) and 5000 World. #}
+{% macro poc_faostat_blocks() %}
+    select * from (
+        values
+        ('emissions_totals', '6829', '723113', 'GHG emissions, all sectors without LULUCF, CO2eq (AR5) (FAOSTAT)'),
+        ('land_use', '6601', '5110', 'Land area (FAOSTAT)')
+    ) as t (entity, item_code, element_code, block_name)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -368,6 +398,12 @@
     poc_build_oecd:oecd
     poc_build_gleif:gleif
     poc_build_mf_biala_lista:mf_biala_lista
+    poc_build_prg:gugik_prg
+    poc_build_mf_jst_budgets:mf_jst_budgets
+    poc_build_mrpips_unemployment:mrpips_unemployment
+    poc_build_who:who
+    poc_build_unesco_uis:unesco_uis
+    poc_build_faostat:faostat
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -441,6 +477,12 @@
     union all
     select distinct 'unctad', entity, entity from ({{ poc_unctad_blocks() }})
     union all
+    select 'who', entity, block_name from ({{ poc_who_blocks() }})
+    union all
+    select 'unesco_uis', entity, block_name from ({{ poc_unesco_uis_blocks() }})
+    union all
+    select 'faostat', entity || ':' || item_code || '.' || element_code, block_name from ({{ poc_faostat_blocks() }})
+    union all
     select * from (
         values
         ('nbp', 'fx_A', 'NBP exchange rates, table A'),
@@ -455,6 +497,9 @@
         ('krus', 'benefits', 'KRUS pensions and benefits'),
         ('oecd', 'cli', 'OECD composite leading indicators and confidence indicators'),
         ('gleif', 'lei2', 'GLEIF LEI records (golden copy)'),
-        ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file')
+        ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file'),
+        ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units'),
+        ('mf_jst_budgets', 'jst_budget', 'MF local-government budget summaries (year to date)'),
+        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}

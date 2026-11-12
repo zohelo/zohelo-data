@@ -1,0 +1,44 @@
+source_system: unesco_uis
+description: "UNESCO Institute for Statistics (UIS) — Data API, whole-indicator selections: GERD, tertiary attainment"
+
+# Extraction strategy (docs/landing.md). The UIS bulk feature (BDDS, https://databrowser.uis.unesco.org/resources/bulk)
+# publishes whole themes only, under a release folder that changes each release (SDG.zip 34 MB, OPRI.zip 68 MB in
+# 202602), far more than the indicators used here. The UIS Data API (https://api.uis.unesco.org/api/public/documentation/,
+# public, no key) returns an indicator's complete data — every country and region, every year — in one request
+# (limit 100,000 records per request): https://api.uis.unesco.org/api/public/data/indicators?indicator=<code>.
+# Each entity is one such whole-indicator selection through the shared bulk_file pattern, one request per entity
+# and run; no Last-Modified, so version = download time and an unchanged response (same SHA-256) is skipped.
+# Licence CC BY-SA 4.0 (register GL-026). Proven from Actions by Dev probes 43099401602 and 43100116863.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: gerd_gdp              # EXPGDP.TOT: GERD as a percentage of GDP (SDG 9.5.1)
+        url: "https://api.uis.unesco.org/api/public/data/indicators?indicator=EXPGDP.TOT"
+        format: raw
+        version: ingested
+      - entity: tertiary_attainment   # EA.5T8.AG25T99[.F|.M]: completed short-cycle tertiary or higher, 25+, both sexes, female, male (%)
+        url: "https://api.uis.unesco.org/api/public/data/indicators?indicator=EA.5T8.AG25T99&indicator=EA.5T8.AG25T99.F&indicator=EA.5T8.AG25T99.M"
+        format: raw
+        version: ingested
+  initial: bulk
+  production: snapshot                  # each response is the complete history of its indicators
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; release: UIS data releases in February and September (education) and per theme; weekly check (Monday 05:50), unchanged responses skipped
+    - {cron: "50 5 * * 1", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/unesco_uis/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.unesco_uis_observations, bronze.unesco_uis_rejected_files]
+silver: [silver.unesco_uis_observations]
+gold: [gold.build_unesco_uis]
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): two small whole-indicator selections (a few thousand records); a new copy
+# replaces its entity and Silver is rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2411"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

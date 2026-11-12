@@ -8,6 +8,9 @@ ranking (O32): ``06_published/v2/topics.json`` once warehouse.yaml ``topics.publ
 internal review copy ``06_published/v1/review/topics.json`` (data portal, after sign-in) and the run's job summary;
 and contract v2 for zohelo-bi under ``06_published/v2/`` (warehouse/publish_v2.py) when warehouse.yaml
 ``published_v2`` is true.
+
+Licence gate (O37, docs/published.md): no row of a source whose licence is unresolved or missing (source.csv
+``licence_key`` → licence.csv) reaches any published file, v1 or v2.
 """
 
 from __future__ import annotations
@@ -27,6 +30,9 @@ SCHEMAS = Path(__file__).resolve().parent / "published" / "schemas"
 PREFIX = "06_published/v1/"
 LEVELS = {"country": "country", "wojewodztwo": "voivodeship"}  # Gold geography_level → contract level
 FREQ_RANK = {"D": 1, "B": 2, "W": 3, "M": 4, "Q": 5, "S": 6, "A": 7}
+UNRESOLVED_LICENCE = "unresolved"  # licence.csv: terms not established (licence gate, O37)
+# fx_rate is licence-blocked today (NBP unresolved, O37); the skip stays for when its terms are established, since
+# kpi_latest would otherwise pick one arbitrary currency per source and geography.
 SKIP = {"fx_rate": "one value per currency; latest.json has no currency field"}
 LATEST_LIMIT = 100_000  # bytes, docs/published.md size limits (D22)
 TOPICS_KEY = "06_published/v2/topics.json"  # docs/published.md, "topics.json"
@@ -84,6 +90,38 @@ def gold(cat, namespace: str, name: str) -> pa.Table:
 def seed(name: str) -> list[dict[str, str]]:
     with (PROJECT / "seeds" / f"{name}.csv").open(encoding="utf-8", newline="") as handle:
         return list(csv.DictReader(handle))
+
+
+def licensed_sources(sources: list[dict[str, str]], licences: list[dict[str, str]]) -> set[str]:
+    """The source_keys whose rows may be published (licence gate, O37): the source's licence_key is a row of
+    licence.csv and is not ``unresolved``; pure. A source missing from source.csv is never licensed."""
+    known = {lic["licence_key"] for lic in licences} - {UNRESOLVED_LICENCE}
+    return {s["source_key"] for s in sources if s.get("licence_key") in known}
+
+
+def licence_gated(metrics: pa.Table, licensed: set[str], kpi_key: str = "") -> pa.Table:
+    """The rows of a gold.metrics_<kpi_key> table whose source_system is licensed; pure. ValueError when a row has
+    no source_system (a Gold defect, never counted as a licence removal)."""
+    import pyarrow.compute as pc
+
+    column = metrics.column("source_system")
+    if column.null_count:
+        raise ValueError(f"gold.metrics_{kpi_key}: {column.null_count} rows without source_system")
+    return metrics.filter(pc.is_in(column, value_set=pa.array(sorted(licensed), pa.string())))
+
+
+def licence_blocked(kpi_key: str, measures: list[dict[str, str]], licensed: set[str]) -> bool:
+    """True when every source kpi_measure.csv maps for the KPI is unlicensed (decided by the seeds alone, never by a
+    read): the KPI is out of the published layer and its files are removed; pure."""
+    sources = {m["source_system"] for m in measures if m["kpi_key"] == kpi_key}
+    return bool(sources) and not sources & licensed
+
+
+def remove(client, key: str) -> None:
+    """Delete one published object (a no-op when it does not exist)."""
+    from ingestion.common.r2 import req
+
+    client.delete_object(Bucket=req("STORAGE_LAKEHOUSE_BUCKET_NAME"), Key=key)
 
 
 def iso(ts: datetime) -> str:
@@ -724,16 +762,26 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     entries: list[dict[str, Any]] = []
     problems: list[str] = []
     domains = {d["domain_key"]: d for d in seed("domain")}
-    tables: dict[str, pa.Table] = {}  # gold.metrics_<kpi_key> read below, reused by contract v2
+    tables: dict[str, pa.Table] = {}  # gold.metrics_<kpi_key> read below (licence-gated), reused by contract v2
+    licensed = licensed_sources(seed("source"), seed("licence"))
+    licence_removed: dict[str, int] = {}  # KPI → rows left out by the licence gate
+    blocked: list[str] = []  # published KPIs whose every source is unlicensed: no files (earlier ones removed)
     for kpi in seed("kpi"):
         kpi_key = kpi["kpi_key"]
         if kpi["status"] != "published":
+            continue
+        if licence_blocked(kpi_key, measures, licensed):
+            blocked.append(kpi_key)  # files removed at the end, after every write and read-back succeeded
             continue
         try:
             metrics = gold(cat, namespace, f"metrics_{kpi_key}")
         except NoSuchTableError:
             missing.append(kpi_key)
             continue
+        gated = licence_gated(metrics, licensed, kpi_key)
+        if gated.num_rows < metrics.num_rows:
+            licence_removed[kpi_key] = metrics.num_rows - gated.num_rows
+        metrics = gated
         tables[kpi_key] = metrics
         table = kpi_series(metrics, measures, kpi_key, kpi["unit_key"])
         data = parquet(table)
@@ -759,6 +807,7 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
         )
         raise ValueError(f"{len(problems)} latest.json values differ from Gold")
     result = {"written": written, "skipped": sorted(SKIP), "missing": missing, "differences": 0}
+    result["licence_gate"] = {"blocked": blocked, "rows_removed": licence_removed}
     result["series"] = series
     result["catalog_tables"] = catalog_tables(cat, client, prefix, namespace)
     v1_catalog = catalog_json(entries, generated_at)
@@ -778,6 +827,9 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     result["geo"] = geo(cat, client, prefix)
     if prefix == PREFIX:  # topics: the production run only (a trial prefix writes v1 files alone)
         result["topics"] = topics(cat, client, generated_at)
+    for kpi_key in blocked:  # last v1 step, after every write and read-back; seed-decided, never by a failed read
+        for name in ("series.parquet", "latest.json"):
+            remove(client, prefix + f"kpi/{kpi_key}/{name}")
     annotate("notice", "gold.publish: latest", result)
     if prefix == PREFIX and published_v2():  # contract v2: the production run only, after every v1 file
         from warehouse import publish_v2
