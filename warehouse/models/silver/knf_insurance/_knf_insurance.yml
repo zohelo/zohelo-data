@@ -1,0 +1,49 @@
+version: 2
+models:
+  - name: knf_insurance_observations
+    description: >-
+      KNF insurance and pension statistics (register PLG-018), values as published: one row per series × period ×
+      table × item × provider × measure (grain), from the newest copy of every release workbook. bulletin: quarterly
+      insurance bulletin part A, premiums and claims of life and non-life insurers by insurer and total (thousand
+      zloty, cumulative from 1 January, Q); ofe: open pension funds by fund and total (net assets, members,
+      contributions, unit value; M); ike / ikze: individual retirement accounts by item and provider group (number
+      and value; A). Text in a value position ("x", "-") is not loaded. History: bulletins from 2023 Q1, IKE/IKZE from
+      2023, OFE from the newest month (KNF links only the newest OFE workbook; older months accumulate).
+    tests:
+      - unique:
+          column_name: "series || '|' || period_label || '|' || table_code || '|' || item_label || '|' || provider || '|' || measure_code"
+    columns:
+      - name: series
+        tests: [not_null, {accepted_values: {arguments: {values: ['bulletin', 'ofe', 'ike', 'ikze']}}}]
+      - name: entity
+        tests: [not_null]
+      - name: table_code
+        tests: [not_null]
+      - name: item_label
+        tests: [not_null]
+      - name: provider
+        description: IKE/IKZE provider group of the column ('_T' = all providers; bulletin and OFE '_T').
+        tests:
+          - not_null
+          - accepted_values: {arguments: {values: ['_T', 'insurers', 'investment_funds', 'brokers', 'banks', 'voluntary_pension_funds']}}
+      - name: business_line
+        tests: [not_null, {accepted_values: {arguments: {values: ['life', 'non_life', 'pension']}}}]
+      - name: measure_code
+        description: Null when a header the model does not know appears (the test then fails).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['gross_written_premium', 'earned_premium_net', 'claims_paid_gross', 'claims_incurred_net', 'net_assets', 'members', 'contributions', 'contribution_interest', 'contributions_count', 'unit_value', 'count', 'value']
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['thousand_pln', 'pln', 'persons', 'number', 'pieces']}}}]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: ['M', 'Q', 'A']}}}]
+      - name: period_start
+        tests: [not_null]
+      - name: period_label
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

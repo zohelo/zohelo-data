@@ -17,9 +17,10 @@ landing.extract  missing releases first (oldest first), then the newest RECHECK 
                  at a time, PAUSE seconds apart, within the time budget; releases before FIRST_YEAR are ignored
 landing.verify   every receipt has its file (bulk_file pattern)
 
-Discovery reads the listing's first page and follows its numbered pages (PAGE_LINK) while a page still names
-releases from FIRST_YEAR on and a release is missing, at most MAX_PAGES pages; then one article page per release
-that is missing or rechecked.
+Discovery reads the listing's first page and follows its numbered pages (``?page=<n>``) while a page names a release
+still wanted, at most MAX_PAGES pages; then one article page per wanted or rechecked release. KNF links the OFE
+workbook from the newest OFE article only (older OFE articles carry no file, Dev trial 43285716017), so OFE history
+accumulates from the first landed month on.
 """
 
 from __future__ import annotations
@@ -111,8 +112,21 @@ def release(title: str) -> tuple[str, str] | None:
     return None
 
 
+def wanted(found: dict[tuple[str, str], str], held_releases: set[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Releases to download, oldest first: every bulletin, IKE and IKZE release not held; OFE only from the newest
+    held month on (KNF links the workbook from the newest OFE article only; older articles carry none), or the newest
+    listed month when none is held."""
+    newest_ofe = max((k for s, k in held_releases if s == "ofe"), default=None)
+    newest_ofe = newest_ofe or max((k for s, k in found if s == "ofe"), default="")
+    return [(s, k) for s, k in sorted(found) if (s, k) not in held_releases and (s != "ofe" or k >= newest_ofe)]
+
+
 def articles(held: set[str], max_pages: int = MAX_PAGES) -> dict[tuple[str, str], str]:
-    """{(series, release key): article URL} for every release from FIRST_YEAR on that the listing names."""
+    """{(series, release key): article URL} for every release from FIRST_YEAR on that the listing names.
+
+    The listing is newest first: the next page is read only while the current one names a release still wanted
+    (wanted()), so a run with everything held reads one page."""
+    held_releases = {release_of(e) for e in held}
     found: dict[tuple[str, str], str] = {}
     seen_pages, queue, pages_read = {LISTING}, [LISTING], 0
     while queue and pages_read < max_pages:
@@ -121,14 +135,14 @@ def articles(held: set[str], max_pages: int = MAX_PAGES) -> dict[tuple[str, str]
             time.sleep(PAUSE)
         links = _anchors(page)
         pages_read += 1
-        recent = False
+        on_page = set()
         for href, text in links:
             named = release(text) if ARTICLE_LINK.search(href) else None
             if named and int(named[1][:4]) >= FIRST_YEAR:
                 found.setdefault(named, href)
-                recent = True
-        if not recent and pages_read > 1:
-            break  # the listing is newest first: a page without a release from FIRST_YEAR on ends the walk
+                on_page.add(named)
+        if not on_page & set(wanted(found, held_releases)):
+            break
         numbered = sorted(
             {(int(m.group(1)), h) for h, _ in links if (m := PAGE_LINK.search(h)) and h not in seen_pages}
         )
@@ -178,7 +192,7 @@ def plan(found: dict[tuple[str, str], str], held: set[str]) -> list[tuple[str, s
     """(series, key, article) to read: releases without a landed file (oldest first), then the newest RECHECK
     releases of each series again."""
     held_releases = {release_of(e) for e in held}
-    missing = [(s, k, a) for (s, k), a in found.items() if (s, k) not in held_releases]
+    missing = [(s, k, found[(s, k)]) for s, k in wanted(found, held_releases)]
     recheck = []
     for series in sorted({s for s, _ in found}):
         newest = sorted(k for s, k in found if s == series)[-RECHECK:]
@@ -192,7 +206,7 @@ def _inspect(p) -> int:
     held = held_entities()
     found = articles(held)
     held_releases = {release_of(e) for e in held}
-    missing = [f"{s}_{k}" for s, k in found if (s, k) not in held_releases]
+    missing = [f"{s}_{k}" for s, k in wanted(found, held_releases)]
     per_series = {s: sum(1 for x, _ in found if x == s) for s in sorted({s for s, _ in found})}
     summary = {"releases_listed": per_series, "entities_held": len(held), "missing": missing[:24]}
     annotate("notice" if found else "error", f"{SOURCE} landing inspect", summary)

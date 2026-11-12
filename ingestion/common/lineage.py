@@ -53,6 +53,7 @@ SOURCES = (
     "unctad",
     "mf_jst_budgets",
     "mrpips_unemployment",
+    "knf_insurance",
     "ecb",
     "un_wpp",
 )

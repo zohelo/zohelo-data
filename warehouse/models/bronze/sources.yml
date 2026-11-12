@@ -688,3 +688,18 @@ sources:
       entity.
   - name: mrpips_unemployment_rejected_files
     description: MRPiPS registered-unemployment Landing files the Bronze decoder rejected, with the reason.
+- name: knf_insurance
+  description: KNF insurance and pension statistics — release workbooks of the KNF statistics listing (OFE, insurance bulletin, IKE/IKZE)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/knf_insurance/
+    loaded_by: ingestion/to_bronze/knf_insurance/
+    config: ingestion/sources/knf_insurance.yaml
+  tables:
+  - name: knf_insurance_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of the newest copy of each
+      release workbook (entity ofe_YYYY_MM, bulletin_YYYY_qN_<part>, ike_YYYY, ikze_YYYY); partitioned by entity.
+  - name: knf_insurance_rejected_files
+    description: KNF insurance and pension release files the Bronze decoder rejected, with the reason.

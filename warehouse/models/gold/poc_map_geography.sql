@@ -186,6 +186,15 @@ mrpips as (
         'PL' as geography_key
 ),
 
+-- KNF insurance and pension statistics: national totals only (bulletin, OFE, IKE/IKZE); one literal code, as the
+-- workbooks carry no area code.
+knf_insurance as (
+    select
+        'knf_insurance' as source_system,
+        'PL' as source_code,
+        'PL' as geography_key
+),
+
 wdi as (
     select
         'world_bank_wdi' as source_system,
@@ -425,6 +434,8 @@ from (
     select * from dbw
     union all
     select * from mrpips
+    union all
+    select * from knf_insurance
     union all
     select * from wdi
     union all

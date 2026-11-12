@@ -4587,7 +4587,8 @@ sources:
   name: Insurance, pension and other financial-sector information
   short_name: KNF insurance and pensions data
   provider: Polish Financial Supervision Authority (KNF)
-  status: approved
+  source_system: knf_insurance
+  status: built
   family: C
   kpi: true
   geography: Poland
