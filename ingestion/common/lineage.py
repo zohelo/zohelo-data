@@ -38,6 +38,10 @@ SOURCES = (
     "gdelt",
     "wikimedia_pageviews",
     "release_calendars",
+    "mf_public_debt",
+    "mf_state_budget",
+    "mf_treasury_debt",
+    "krus",
     "unctad",
     "un_wpp",
 )
