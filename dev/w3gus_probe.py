@@ -50,6 +50,9 @@ def col(ref):
     return n - 1
 
 
+ONLY = None
+
+
 def xlsx_preview(body, rows, sheets):
     z = zipfile.ZipFile(io.BytesIO(body))
     shared = []
@@ -62,6 +65,8 @@ def xlsx_preview(body, rows, sheets):
     names = [(s.attrib["name"], target[s.attrib[RNS]]) for s in wb.find("m:sheets", NS)]
     print("  sheets:", [n for n, _ in names])
     for name, tgt in names[:sheets]:
+        if ONLY and not re.search(ONLY, name):
+            continue
         path = "xl/" + tgt.lstrip("/").removeprefix("xl/")
         root = ET.fromstring(z.read(path))
         dim = root.find("m:dimension", NS)
@@ -97,6 +102,10 @@ def fetch(url):
 def main(argv):
     pattern, rows, sheets, grep, member = r".", 12, 2, None, None
     for arg in argv:
+        if arg.startswith("only="):
+            global ONLY
+            ONLY = arg[5:] or None
+            continue
         if arg.startswith("member="):
             member = arg[7:]
             continue
