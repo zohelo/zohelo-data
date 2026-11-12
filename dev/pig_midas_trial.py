@@ -103,7 +103,7 @@ def feature_rows(path: Path) -> tuple[dict, list[dict], list[str]]:
                 root_attrs = {local(k): v for k, v in el.attrib.items()}
             continue
         depth -= 1
-        if depth == 2 and local(el.tag) in ("member", "featureMember", "featureMembers"):
+        if depth == 1 and local(el.tag) in ("member", "featureMember", "featureMembers"):
             members[local(el.tag)] += 1
             for feat in el:
                 row = {
@@ -235,11 +235,91 @@ def probe() -> None:
     print(json.dumps({"layers": list(per_layer)}, ensure_ascii=False))
 
 
+def probe2() -> None:
+    """Attribute profile of every layer from one GML32+GZIP GetFeature each; key uniqueness and number formats."""
+    import gzip
+
+    _caps, types = capabilities()
+    for n, name in enumerate(types):
+        tn = quote(name, safe=":")
+        info: dict = {}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "layer.gz"
+            url = f"{WFS}?service=WFS&version=2.0.0&request=GetFeature&typeNames={tn}&outputFormat=GML32%2BGZIP"
+            started = time.monotonic()
+            time.sleep(PAUSE)
+            try:
+                _sha, size, headers, _f, _d = bulk_file.download(url, path, "gzip", retries=2, read_timeout=600)
+            except Exception as exc:
+                annotate("warning", f"midas probe2 layer {n}", {"type": name, "gzip_error": str(exc)[:400]})
+                continue
+            raw = Path(tmp) / "layer.xml"
+            with gzip.open(path) as src, raw.open("wb") as dst:
+                while block := src.read(8 << 20):
+                    dst.write(block)
+            info["gzip"] = {
+                "bytes": size,
+                "xml_bytes": raw.stat().st_size,
+                "seconds": round(time.monotonic() - started),
+                "ct": headers.get("Content-Type"),
+                "cd": headers.get("Content-Disposition"),
+                "head": raw.read_bytes()[:120].decode("utf-8", "replace"),
+            }
+            root_attrs, rows, members = feature_rows(raw)
+        info["root"] = {k: v for k, v in root_attrs.items() if k != "schemaLocation"}
+        info["members"], info["features"] = members, len(rows)
+        cols = sorted({k for r in rows for k in r})
+        info["columns"] = cols
+        keys = {}
+        for key in ("OBJECTID", "Numer_złoża", "ID_konturu", "@id"):
+            vals = [r.get(key) for r in rows]
+            c = Counter(v for v in vals if v not in (None, ""))
+            keys[key] = {
+                "null": sum(1 for v in vals if v in (None, "")),
+                "distinct": len(c),
+                "dup_values": sum(1 for v in c.values() if v > 1),
+                "max_rep": max(c.values(), default=0),
+                "sample_dup": [k for k, v in c.most_common(3) if v > 1],
+            }
+        info["keys"] = keys
+        prof = []
+        for k in cols:
+            vals = [r.get(k) for r in rows]
+            nonnull = [v for v in vals if v not in (None, "")]
+            shapes = Counter(
+                "int"
+                if re.fullmatch(r"-?\d+", v)
+                else "dec"
+                if re.fullmatch(r"-?\d+\.\d+", v)
+                else "exp"
+                if re.fullmatch(r"-?\d+(\.\d+)?[eE][-+]?\d+", v)
+                else "geom"
+                if v.startswith("<")
+                else "text"
+                for v in nonnull
+            )
+            nums = [float(v) for v in nonnull if re.fullmatch(r"-?\d+(\.\d+)?([eE][-+]?\d+)?", v)]
+            c = Counter(nonnull)
+            row = [k, len(vals) - len(nonnull), len(c), dict(shapes)]
+            if nums:
+                row += [min(nums), max(nums)]
+            row.append([str(s)[:20] for s, _ in c.most_common(4)])
+            prof.append(row)
+        info["profile"] = prof
+        if any(r.get("Numer_złoża") for r in rows):
+            nz = [r.get("Numer_złoża") or "" for r in rows]
+            info["numer_zloza_nonint"] = [v for v in Counter(nz) if v and not re.fullmatch(r"\d+(\.0+)?", v)][:8]
+        print(json.dumps({"layer": name, **info}, ensure_ascii=False), flush=True)
+        annotate("notice", f"midas probe2 layer {n}", {"type": name[6:40], **info})
+
+
 def main() -> int:
     mode = sys.argv[1] if len(sys.argv) > 1 else "trial"
     try:
         if mode == "probe":
             probe()
+        elif mode == "probe2":
+            probe2()
         else:
             raise SystemExit(f"unknown mode {mode}")
     except Exception as exc:
