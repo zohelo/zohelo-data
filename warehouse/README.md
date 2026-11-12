@@ -80,8 +80,9 @@ Gold per block (docs/gold-coverage.md, O36, O43, decision D35): `observations.py
 block of a big source into `gold.<source>_observations`, `_series`, `_measures` and `_geography` by
 rule, one file per block, rebuilt only when the block's Silver files, the Gold SQL
 (`entity/gold_*.sql`) or the mapping of its geography codes changed; each block is checked for one
-row per `series_key` × `date_key` before it is accepted. Built for Eurostat and tried in Dev
-(`--trial zz_dev_<topic>`); not yet a Pipeline activity, so nothing runs in production.
+row per `series_key` × `date_key` before it is accepted. Built for Eurostat and GUS BDL
+(`entity/gold_gus_bdl_*.sql`) and tried in Dev (`--trial zz_dev_<topic>`); not yet a Pipeline
+activity, so nothing runs in production.
 
 ```sh
 cd warehouse && DBT_PROFILES_DIR=. dbt build --target trial   # needs the R2 env vars

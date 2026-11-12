@@ -74,7 +74,8 @@ decides what to build from Iceberg metadata only (file lists and table propertie
 listing or opening data files; it reads a block's Silver and Gold files only when it rebuilds that
 block, reads the source's small lookups once per run, and reads `gold.<source>_geography` only when
 the geography map changed. One file per block and table keeps a rebuild or a block query at one
-object per table.
+object per table. A source may have a block's Silver files downloaded once per rebuild
+(`local_input`, GUS BDL), so the steps of its build stage do not each read them from storage.
 
 - **Per source, not one table:** sources are drilled across, never unioned; a query for one block
   reads one file.
@@ -123,8 +124,12 @@ one. It is retried when its recipe changes.
   dimension order: the indicator-like dimensions (`indic_*`, `na_item`, `bop_item`, `nrg_bal`,
   `stk_flow`, …; one pattern in the build stage) and `s_adj`, because seasonal adjustment belongs to
   the measure. Every other dimension is a breakdown, codes as published in `breakdown_json`.
-- **GUS BDL.** The rule of `poc_build_bdl.sql`: label positions where no variable of the subgroup
-  says `ogółem` name the measure; a period label becomes the frequency.
+- **GUS BDL.** The rule of `poc_build_bdl.sql`, read from the subgroup's own Silver file
+  (`gold_gus_bdl_labels.sql`): label positions where no variable of the subgroup says `ogółem` name
+  the measure; a first label that names a month, a quarter or `rok` becomes the frequency and the
+  date. A cumulative period (`1-3 kwartały`, `styczeń-maj`, `półrocze`) cannot be placed and is
+  counted as not loaded. The curated stage's hand-made exceptions (measure positions of two
+  subgroups, chained price bases, year and level filters) are not part of the rule.
 - **GUS DBW.** The rule of `poc_build_dbw.sql`: measure = indicator × presentation; the territorial
   dimension is the one whose positions match areas most often; the other dimensions are breakdowns.
 
@@ -146,12 +151,24 @@ rule-based build stages apply the rules the curated stages already apply:
   `confidential`; a value flagged `f` with status `forecast`. A row keeps its status in every table
   it reaches; a reader that wants observed values only filters on `observation_status_key`, and a
   forecast is never presented as an observation.
-- GUS BDL: an empty value is not loaded; a cell with attribute `x` ("filling the item is impossible
-  or pointless") is not loaded even when it carries 0; two different published values for one key
-  reject the subgroup in Silver already.
+- GUS BDL: an empty value is not loaded; a 0 under a no-value sign is not loaded (#2852: website
+  signs `x`, `X`, `n`; API attribute ids 4, 14, 50, 91), a number other than 0 under such a sign is;
+  two different published values for one key reject the subgroup in Silver already. A value for a
+  year after the year of the subgroup's version, and every row of a subgroup named a projection
+  (`prognoza`), has status `forecast`.
 - GUS DBW: an empty value is not loaded; a 0 with a missing-value reason (`id_brak_wartosci` other
   than "value present") is not loaded; a value with a confidentiality id (`id_tajnosci`) is loaded
   with status `confidential`.
+
+**One area, one unit per block (GUS BDL).** BDL publishes one area under several units: a region
+(level 3) that is a whole voivodeship, the website's TERYT code beside the unit id, another unit
+under a borrowed id. Two units under one `geography_key` would repeat `series_key × date_key`, and
+choosing between their rows would be a silent pick. `gold_gus_bdl_units.sql` therefore gives each
+area one unit by rule (the unit named as its id says; a voivodeship before the region that stands
+in for it; the unit id before the TERYT code; a tie gives it to none). Every other unit keeps all
+its rows under `_X` with the source code `<code>#<area>`, which names the area it maps to; the
+builder reads that form when the map changes, so giving regions their own keys later rebuilds only
+the blocks that hold one.
 
 ### 6. Frequency is part of the measure key; S and W have their own frequency
 
