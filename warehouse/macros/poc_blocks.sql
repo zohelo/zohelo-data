@@ -331,6 +331,9 @@
     poc_build_unctad:unctad
     poc_build_public_finance:mf_public_debt
     poc_build_oecd:oecd
+    poc_build_gleif:gleif
+    poc_build_mf_biala_lista:mf_biala_lista
+    poc_build_prg:gugik_prg
     poc_build_unesco_uis:unesco_uis
 {% endmacro %}
 
@@ -419,6 +422,9 @@
         ('mf_state_budget', 'execution_ytd', 'State budget execution, cumulative (MF)'),
         ('mf_state_budget', 'plan', 'State budget act (MF)'),
         ('krus', 'benefits', 'KRUS pensions and benefits'),
-        ('oecd', 'cli', 'OECD composite leading indicators and confidence indicators')
+        ('oecd', 'cli', 'OECD composite leading indicators and confidence indicators'),
+        ('gleif', 'lei2', 'GLEIF LEI records (golden copy)'),
+        ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file'),
+        ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}
