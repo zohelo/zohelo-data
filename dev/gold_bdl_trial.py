@@ -30,7 +30,7 @@ NS = "zz_dev_gold_bdl"
 SOURCE = "gus_bdl"
 # curated KPI subgroups (poc_bdl_blocks) and subgroups loaded through the API (ingestion/sources/gus_bdl.yaml)
 ALWAYS = ["P2137", "P1873", "P2425", "P2392", "P2497", "P3824", "P1410", "P2961", "P2955", "P1869", "P3502",
-          "P2346", "P3788", "P2730", "P2359"]
+          "P2346", "P3788", "P2730", "P2359", "P2496", "P2692", "P3794", "P2837"]
 API = ["P4624", "P3804", "P4058", "P3433", "P3475", "P2324"]
 NO_VALUE = ("value = 0 and ((channel = 'web_export' and coalesce(lower(attribute), '') in ('x', 'n')) "
             "or (channel = 'api' and coalesce(attribute, '') in ('4', '14', '50', '91')))")
@@ -88,11 +88,11 @@ def build(args: list[str]) -> tuple[int, dict]:
     return code, json.loads(lines[-1]) if lines else {}
 
 
-def pick(silver: dict, ranks: dict[str, int]) -> list[str]:
+def pick(silver: dict, ranks: dict[str, int], projections: list[str]) -> list[str]:
     """At least 40 subgroups of different sizes and levels: per level group (to voivodeship, to powiat,
     to gmina) four from each third by Silver rows, the curated and API subgroups, and the two largest."""
     rng = random.Random(20261112)
-    picked = {b for b in [*ALWAYS, *API] if b in silver}
+    picked = {b for b in [*ALWAYS, *API, *projections] if b in silver}
     for group in (0, 1, 2):
         blocks = sorted((b for b in silver if ranks.get(b) == group), key=lambda b: silver[b]["rows"])
         third = max(1, len(blocks) // 3)
@@ -136,13 +136,32 @@ def checks(cat, con, silver_paths: list[str]) -> dict:
                 else geography_key end, count(*)
             from {o} group by 1 order by 2 desc"""
     ).fetchall()
-    out["geography_codes"] = con.execute(
-        f"""select case when geography_key <> '_X' then 'mapped'
-                when geography_source_code like '%#%#%' then 'another unit under the code'
-                when geography_source_code like '%#TERC:%' or geography_source_code like '%#PL'
-                    or geography_source_code like '%#NUTS:%' or geography_source_code like '%#BDL:%' then 'area held by another unit'
-                else 'not in the map' end, count(*), count(distinct geography_source_code), sum(points)
-            from {g} group by 1 order by 2 desc"""
+    kind = """case when geography_key <> '_X' then 'mapped'
+                when geography_source_code like '%#%#%' then 'another name under the code'
+                when geography_source_code like '%#%' and length(split_part(geography_source_code, '#', 1)) = 7
+                    then 'TERYT code beside the unit id'
+                when geography_source_code like '%#%' then 'region or macroregion on a voivodeship'
+                when length(geography_source_code) = 7 then 'TERYT code not in the map'
+                else 'unit id not in the map' end"""
+    out["geography_codes (kind, block x code, codes, points)"] = con.execute(
+        f"select {kind}, count(*), count(distinct geography_source_code), sum(points) from {g} group by 1 order by 4 desc"
+    ).fetchall()
+    out["unmatched_share_of_rows"] = round(one(f"select count(*) filter (where geography_key = '_X') / count(*) from {o}")[0], 4)
+    out["other_names_under_a_code"] = con.execute(
+        f"select block_id, geography_source_code, points from {g} where geography_source_code like '%#%#%' order by 3 desc limit 6"
+    ).fetchall()
+    # rows of a unit that does not hold its area, against the rows of the unit that does (same series, same period)
+    out["twins (kind, rows, holder has the cell, same value, other value)"] = con.execute(
+        f"""with d as (
+                select series_key, {kind} as kind,
+                    measure_key || '|' || split_part(geography_source_code, '#', 2) || '|' || breakdown_json as holder_key
+                from {s} where geography_source_code like '%#%'
+            )
+            select d.kind, count(*), count(h.value), count(*) filter (where h.value = t.value),
+                count(*) filter (where h.value <> t.value)
+            from {o} as t inner join d on t.series_key = d.series_key
+            left join {o} as h on h.series_key = d.holder_key and h.date_key = t.date_key
+            group by 1 order by 2 desc"""
     ).fetchall()
     out["not_in_map_top"] = con.execute(
         f"""select geography_source_code, count(*), sum(points) from {g}
@@ -150,7 +169,7 @@ def checks(cat, con, silver_paths: list[str]) -> dict:
     ).fetchall()
     out["stand_in_sample"] = con.execute(
         f"""select geography_source_code, count(*) from {g} where geography_source_code like '%#%'
-            group by 1 order by 2 desc limit 8"""
+            group by 1 order by 2 desc limit 4"""
     ).fetchall()
     out["measures_per_block"] = con.execute(
         f"select min(n), median(n), max(n) from (select block_id, count(*) as n from {m} group by 1)"
@@ -272,7 +291,12 @@ def main() -> None:
         with tempfile.TemporaryDirectory(dir=tmp) as directory:
             lookups, geo_map = obs.export_lookups(cat, SOURCE, Path(directory))
             ranks = obs.load_ranks(SOURCE, lookups)
-        sample = pick(silver, ranks)
+            named = duckdb.sql(
+                f"select block_id from read_parquet('{lookups['names']}') where lower(block_name) like '%prognoz%' order by 1"
+            ).fetchall()
+        projections = sorted((b for (b,) in named if b in silver), key=lambda b: silver[b]["rows"])
+        sample = pick(silver, ranks, projections[:2])
+        ids = [k for c, k in geo_map.items() if len(c) == 12]
         silver_paths = [p for b in sample for p in silver[b]["paths"]]
         groups = {}
         for b, held in silver.items():
@@ -285,7 +309,9 @@ def main() -> None:
         plan = {
             "subgroups_in_silver": len(silver),
             "geo_map_codes": len(geo_map),
-            "load_order_groups (0 to voivodeship, 1 to powiat, 2 to gmina, 3 level unknown)": groups,
+            "unit_ids_in_map_and_unmatched": [len(ids), sum(k == "_X" for k in ids)],
+            "subgroups_named_projection": [len(projections), projections[:6]],
+            "load_order_groups (0 to voivodeship and subregion, 1 to powiat, 2 to gmina, 3 level unknown)": groups,
             "sample": len(sample),
             "sample_silver_rows": sum(sizes),
             "sample_silver_mb": round(sum(silver[b]["bytes"] for b in sample) / 1e6, 1),
@@ -319,7 +345,9 @@ def main() -> None:
             "difference": (first.get("silver_rows") or 0) - (first.get("rows") or 0)
             - sum((first.get("not_loaded") or {}).values()),
         }
-        geo_keys = ("geo", "geography_codes", "not_in_map_top", "stand_in_sample")
+        geo_keys = ("geo", "geography_codes (kind, block x code, codes, points)", "unmatched_share_of_rows",
+                "other_names_under_a_code", "twins (kind, rows, holder has the cell, same value, other value)",
+                "not_in_map_top", "stand_in_sample")
         cell_keys = ("no_value_signs", "signs_kept", "cumulative_labels", "channels", "status", "forecast_blocks")
         annotate("notice", "bdl gold trial checks", {k: v for k, v in report.items() if k not in (*geo_keys, *cell_keys)})
         annotate("notice", "bdl gold trial geography", {k: report[k] for k in geo_keys})
