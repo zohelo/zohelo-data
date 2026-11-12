@@ -61,21 +61,20 @@ DBW rows by the periodicity id that ends the block id: `4` (annual) 730 M in 3,1
 96 M in 570, `5` 43 M in 108, `1` (monthly) 14 M in 554, `2` 3 M in 376, `3` (quarterly) 2 M in 631,
 `7` 0.06 M in 13. 99 blocks have more than 1 M rows.
 
-**Eurostat trial** (Dev run 43195798983, 129 sampled datasets into scratch, removed afterwards):
-128 built in 28 minutes on one runner with three workers, 253.8 M fact rows, 15.2 M series, 4,471
-measures, about 9 M rows a minute; 0 duplicate `series_key × date_key` over the whole trial table,
-0 null keys, 0 blocks rejected, every Silver row with a value loaded. One dataset (`NAIO_10_FCP_U3`,
-44 M rows) ran out of its 4 GB and was not loaded; such a block is now tried again alone with the
-full memory. The newest Polish values equal the curated facts (unemployment 2026-09 3.4, GDP 2025
-923,507.3 M EUR, HICP 2026-09 4.0, population 2025 36,497,495). 2.5% of the rows (142 codes) have
-no geography match: Polish NUTS 3 regions (`PL213`, `PL633`, …) of weekly deaths, which the Eurostat
-part of `map_geography` does not map yet.
+**Eurostat trials** (Dev runs 43195798983 and 43251674524; samples of 129 and 71 datasets built into
+scratch and removed afterwards). In the second, 70 datasets were built in 41 minutes on one runner:
+246.4 M fact rows, 18.1 M series, 4,325 measures, 6 to 9 M rows a minute. In both: 0 duplicate
+`series_key × date_key` over the whole trial table, 0 null keys, 0 blocks rejected, every Silver row
+with a value loaded. The newest Polish values equal the curated facts (unemployment 2026-09 3.4, GDP
+2025 923,507.3 M EUR, HICP 2026-09 4.0, population 2025 36,497,495). 2.6% of the rows (106 codes)
+have no geography match: mostly Polish NUTS 3 regions (`PL213`, `PL633`, …) of weekly deaths, which
+the Eurostat part of `map_geography` does not map yet. The largest dataset, `AVIA_TF_ACA`, was not
+built in these runs (it ran out of temp space; fixed in #2831, verified separately).
 
-Size in Gold: 1.4 bytes per fact row and 14.7 bytes per series (362 MB and 223 MB for the trial,
-against 287 MB of Silver for the same datasets). For all of Eurostat that is 17 to 24 GB (by the
-ratio to Silver, and by rows and series), more than half of it the series table, because annual
-series are short. At the trial's speed the first full Eurostat load is about 13 runner-hours,
-spread over resumable runs.
+Size in Gold: 1.3 bytes per fact row and 12.9 bytes per series (323 MB and 234 MB for the second
+trial, against 211 MB of Silver for the same datasets). For all of Eurostat that is about 22 GB:
+9 GB of facts and 13 GB of series, because annual series are short. At the trials' speed the first
+full Eurostat load is 13 to 19 runner-hours, spread over resumable runs.
 
 ## Decisions
 
@@ -106,8 +105,13 @@ sources (design #875). Reasons:
   the data changing.
 - **Dimensions are shared, not copied:** `geography_key`, `date_key`, `observation_status_key` and
   `sex_key` join the existing `dim_geography`, `dim_calendar`, `dim_observation_status` and `sex`.
-  `unit_key` is the source's unit code as published, named in the measures table (`dim_unit` is
-  built from the curated blocks only).
+  `unit_key` is the source's unit code as published, named in the measures table.
+- **Units follow D33** (#2835): facts keep the published value and the published unit; nothing is
+  converted or rescaled in these tables. The conformed unit of a source code is looked up in
+  `unit_map.csv` (`source_system`, `unit_code`, optional `measure_key_pattern`) through `dim_unit`,
+  and a value is rescaled only in the KPI layer, to the KPI's `unit_key`. A code without a
+  `unit_map` row stays valid here (unmapped, the source's own name). A `measure_key_pattern` meant
+  for rule keys has to allow the `@<frequency>` ending.
 
 The source's build stage (`warehouse/entity/gold_<source>_build.sql`) produces the 21-column
 common observation shape of `poc_build_nbp.sql`; the three projections
@@ -184,12 +188,15 @@ calendar cannot place (2 datasets, 916 rows with frequency `NAP`) are not loaded
 
 ### 6. Labels from the Silver dictionaries
 
-Names are resolved in the build stage from the source's own dictionaries (Eurostat:
-`eurostat_dataflows`, `eurostat_dimensions`, `eurostat_codes`; BDL: `bdl_variables`; DBW:
-`src_dbw_dictionary`): `measure_name` = block name, unit name and the names of the measure codes;
-`breakdown_label_json` holds the names of the breakdown codes per series. Labels are stored on the
-measure and the series, never on the fact. A label that changes without a new data version is
-picked up at the block's next rebuild.
+Names are resolved from the source's own dictionaries (Eurostat: `eurostat_dataflows`,
+`eurostat_dimensions`, `eurostat_codes`; BDL: `bdl_variables`; DBW: `src_dbw_dictionary`).
+`measure_name` = block name, unit name and the names of the measure codes, stored once per measure.
+Labels of breakdown codes are **not** stored per row or per series: Eurostat has about 989 M series,
+and building the label per series was what exhausted memory on the series-heavy datasets (trial
+below). `breakdown_label_json` stays empty for these sources, as in today's `poc_build_eurostat`;
+the names are one small table per block (`gold.<source>_codes`: dimension, code, name, total code),
+a follow-up Task. A name that changes without a new data version is picked up at the block's next
+rebuild.
 
 ### 7. Quality gates
 
@@ -302,10 +309,11 @@ Known sources and their row of the adapter table (Silver row counts from `wareho
 
 | # | Question | Proposal | Who |
 |---|---|---|---|
-| 1 | Storage: Silver of the three sources is 13.7 GB, already above R2's free 10 GB. Gold in full adds about twice that (Eurostat 17 to 24 GB measured by the trial; BDL and DBW about 11 GB by the same ratio). | Accept the storage for full coverage; otherwise Poland and national comparators only (4,160 M Eurostat rows) or Poland only (196 M) | owner |
+| 1 | Storage: Silver of the three sources is 13.7 GB, already above R2's free 10 GB. Gold in full adds about twice that (Eurostat about 22 GB from the trials; BDL and DBW about 14 GB by the same ratio to Silver, not measured). | Accept the storage for full coverage; otherwise Poland and national comparators only (4,160 M Eurostat rows) or Poland only (196 M) | owner |
 | 2 | S and W periods in Gold | Load them with their own frequency in these tables; `fact_semiannual` of #2781 stays the curated answer for KPIs | architect |
 | 3 | D28 deviation (per-block files instead of a dbt incremental model) | As decision 3 | architect |
 | 4 | Non-KPI measures in zohelo-bi (published v2 catalogue) | Additive `catalog/measures_<source>.parquet`; decide after Eurostat is loaded | owner |
 | 5 | BDL gmina level (341 M of 458 M rows) | In scope, loaded last | owner, with 1 |
-| 6 | In full the series table would be larger than the fact (989 M short series; labels repeated per series) | Before the production load, move the breakdown labels to one small table per block (dimension, code, name) and measure again | architect |
+| 6 | Names of breakdown codes | Not per series (decision 6); build `gold.<source>_codes` per block before the portal shows these tables | architect |
 | 7 | Eurostat codes of Polish NUTS 3 regions are unmatched (`_X`) | Map them in the Eurostat part of `poc_map_geography.sql` to the podregion keys DBW already uses | architect |
+| 8 | The series table is more than half of the bytes (989 M short series for Eurostat) | Keep it for the first load; then decide whether series attributes move onto the fact for annual blocks | architect |
