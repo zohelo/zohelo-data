@@ -84,8 +84,8 @@ def load(
     receipts = []
     for spec in bulk_file.declaration(source) if specs is None else specs:
         held = bulk_file.landed(client, landing_bucket, bulk_file.prefix(source, spec["entity"], landing_root))
-        if held:
-            receipts += held if all_versions else [held[-1]]
+        if held:  # newest = every part of the newest download (one ingested_at, as latest.keep_digests keeps them)
+            receipts += held if all_versions else [r for r in held if r["ingested_at"] == held[-1]["ingested_at"]]
     todo = [r for r in receipts if r["sha256"] not in done]
     totals: dict[str, Any] = {"entities_landed": len(receipts), "candidates": len(todo), "appended_files": 0}
     totals.update({"rows_added": 0, "rejected": 0})

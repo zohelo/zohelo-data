@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: poc_build_nfz_pharmacy_refunds
+    description: >-
+      Gold build stage of NFZ pharmacy refunds (NFZ statistics API /monthly-provisions, register PLS-013, #2930):
+      monthly observations, Poland (PL) and the 16 voivodeships (TERC:02 ... TERC:32), each for all reimbursed
+      medicines (breakdown {}, is_total) and for each of the 14 ATC main groups (breakdown {"atc": "<code>"}, the
+      group name as label). The groups do not sum to the total: medicines outside the 14 groups (the API's group
+      "-") are only in the total; no remainder is derived. Five measures, values, units and scale as published
+      (D33; the terms forbid modifying the data):
+      quantity (packages) = "Ilość zrefundowanych opakowań", reimbursed packages dispensed, fractions of a package
+      as published; refund (PLN) = "Kwota refundacji NFZ", the amount NFZ reimbursed; donation (PLN) = "Dotacja
+      Ministerstwa Zdrowia w ramach programu 75+", the Ministry of Health subsidy of the 75+ free-medicines
+      programme; contribution_of_patient (PLN) = "Dopłata pacjenta", the patient's co-payment; value (PLN) =
+      "Całkowity koszt produktu leczniczego; koszt refundacji NFZ + dopłata pacjenta + dotacja MZ (75+)", the total
+      cost (API swagger 1.0 field descriptions). In the published numbers value = refund + contribution_of_patient
+      (VALUE_IDENTITY), so the 75+ subsidy is not added on top of refund as the description reads; shown as
+      published, nothing derived.
+      Rows: GOLD_ROWS (Dev trial TRIAL).
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || geography_key || '|' || breakdown_json || '|' || date_key"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
