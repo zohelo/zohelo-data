@@ -4,8 +4,10 @@
 ``catalog.json``, ``latest.json``, ``kpi/<kpi_key>/series.json``, ``calendar.json``, ``briefs.json`` (release
 briefs: the facts of each new KPI period) and ``status.json`` (the v1 file, copied), written by
 ``warehouse/publish.py`` after the v1 files when warehouse.yaml ``published_v2`` is true (``topics.json`` has
-its own writer there). The v2 KPIs are the v2 keys of ``seeds/kpi_v2_map.csv`` whose concept has status
-``published`` in ``seeds/kpi.csv``; each ready source of the map is its own series (O31). Geography keys come
+its own writer there). The v2 KPIs are the v2 keys of ``seeds/kpi_v2_map.csv`` with a concept in ``seeds/kpi.csv``
+and Gold series from a ready, licensed source, whatever the concept's status (owner decision O37: v2 is the review
+stage, no publishing decision; the status is shown in catalog.json); each ready source of the map is its own series
+(O31). Sources whose licence is unresolved or missing never reach v2 (licence gate, O37). Geography keys come
 from ``seeds/geography_v2.csv``, decimals from ``seeds/unit_decimals.csv``, curated members from
 ``seeds/kpi_member.csv``. Every JSON file is checked against ``published/schemas/v2/`` and the cross-file rules of
 ``ops.repo_check.published_v2_problems`` before it is written, and every number is read back against Gold.
@@ -25,7 +27,7 @@ from typing import Any
 import duckdb
 import pyarrow as pa
 
-from warehouse.publish import get, period_label, put, schema_checked, seed
+from warehouse.publish import get, licensed_sources, period_label, put, remove, schema_checked, seed
 
 V2_PREFIX = "06_published/v2/"
 GZIP_LIMITS = {  # docs/published.md
@@ -56,10 +58,17 @@ def dumps(obj: Any) -> bytes:
     return json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
-def v2_kpis(kpis: list[dict[str, str]], v2map: list[dict[str, str]]) -> list[dict[str, Any]]:
-    """The v2 KPIs: one entry per v2 key whose one concept has status published, with its ready sources and the
-    measure patterns of each; pure. ValueError when a v2 key has several concepts or differing frequency,
-    aggregation or polarity across its rows."""
+def v2_kpis(
+    kpis: list[dict[str, str]], v2map: list[dict[str, str]], licensed: set[str] | None = None
+) -> list[dict[str, Any]]:
+    """The v2 KPI candidates: one entry per v2 key with one concept and at least one ready source that is licensed
+    (``licensed``: source_keys of publish.licensed_sources; None = the seeds' own), with those sources and the
+    measure patterns of each; the concept's status (draft or published) does not gate v2 (O37). Whether a candidate
+    has Gold series is decided by ``build``. Pure apart from reading the source and licence seeds when ``licensed``
+    is None. ValueError when a v2 key has several concepts or differing frequency, aggregation or polarity across
+    its rows."""
+    if licensed is None:
+        licensed = licensed_sources(seed("source"), seed("licence"))
     by_concept = {k["kpi_key"]: k for k in kpis}
     rows_by_key: dict[str, list[dict[str, str]]] = defaultdict(list)
     for row in v2map:
@@ -73,8 +82,6 @@ def v2_kpis(kpis: list[dict[str, str]], v2map: list[dict[str, str]]) -> list[dic
             continue
         concept = concepts.pop()
         kpi = by_concept[concept]
-        if kpi["status"] != "published":
-            continue
         fixed = {}
         for field in ("frequency", "aggregation", "polarity"):
             values = {r[field] for r in rows}
@@ -83,7 +90,11 @@ def v2_kpis(kpis: list[dict[str, str]], v2map: list[dict[str, str]]) -> list[dic
             fixed[field] = values.pop()
         if fixed["frequency"] not in SHOWN:
             raise ValueError(f"kpi_v2_map: {key} frequency {fixed['frequency']} is not one of {SHOWN}")
-        ready = [r for r in rows if r["status"] == "ready" and r["concept_key"] == concept]
+        ready = [
+            r for r in rows if r["status"] == "ready" and r["concept_key"] == concept and r["source_key"] in licensed
+        ]
+        if not ready:  # needs-block / needs-source only, or no licensed source: nothing to publish
+            continue
         sources = {r["source_key"]: [p for p in r["measure_key_pattern"].split(";") if p] for r in ready}
         # A non-geographic row (Gold `_Z`, e.g. the NBP rates against the zloty) belongs to the one geography the
         # map names for its source, when it names exactly one.
@@ -687,6 +698,7 @@ def catalog_entry(
         "polarity": entry["polarity"],
         "loaded_at": max(stamps) if stamps else generated_at,
         "next_release": next_release,
+        "status": kpi["status"],
     }
 
 
@@ -1034,6 +1046,9 @@ def write(
     for name in sorted(files, key=lambda n: (not n.startswith("kpi/"), n)):
         sizes[name] = _sized(name, dumps(files[name]))
         put(client, prefix + name, dumps(files[name]))
+    stale = stale_series(client, prefix, files)
+    for key in stale:  # v2 is rebuilt whole: a KPI that left v2 (licence gate, no Gold series) leaves no file
+        remove(client, key)
     written = {name: json.loads(get(client, prefix + name)) for name in files}
     problems = read_back(written, context)
     if problems:
@@ -1041,6 +1056,7 @@ def write(
     return {
         "prefix": prefix,
         "kpis": sorted(n.split("/")[1] for n in files if n.startswith("kpi/")),
+        "removed": [k[len(prefix) :] for k in stale],
         "missing": context["missing"],
         "empty": context["empty"],
         "latest_values": len(files["latest.json"]["values"]),
@@ -1049,6 +1065,22 @@ def write(
         "bytes": {n: s.get("gzip_bytes", s["bytes"]) for n, s in sizes.items()},
         "differences": 0,
     }
+
+
+def stale_series(client, prefix: str, files: dict[str, dict[str, Any]]) -> list[str]:
+    """Keys of ``kpi/<kpi_key>/…`` objects under prefix that this run did not write."""
+    from ingestion.common.r2 import req
+
+    found = []
+    pages = client.get_paginator("list_objects_v2").paginate(
+        Bucket=req("STORAGE_LAKEHOUSE_BUCKET_NAME"), Prefix=prefix + "kpi/"
+    )
+    for page in pages:
+        for item in page.get("Contents", []):
+            key = str(item["Key"])
+            if key[len(prefix) :] not in files:
+                found.append(key)
+    return sorted(found)
 
 
 def _published(client, key: str) -> dict[str, Any] | None:
