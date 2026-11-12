@@ -32,7 +32,7 @@ archive_policy:
   prune: report
 bronze: [bronze.undp_hdr_values, bronze.undp_hdr_rejected_files]
 silver: [silver.undp_hdr_indices]
-gold: []
+gold: [gold.build_undp_hdr, gold.metrics_hdi]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one file of ~200,000 values a year, rebuilt in full.

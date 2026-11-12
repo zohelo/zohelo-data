@@ -52,7 +52,7 @@ archive_policy:
   prune: report
 bronze: [bronze.bis_observations, bronze.bis_rejected_files]
 silver: [silver.bis_observations]
-gold: []
+gold: [gold.build_bis, gold.metrics_policy_rate, gold.metrics_house_price_growth, gold.metrics_real_house_price_growth, gold.metrics_credit_to_gdp, gold.metrics_debt_service_ratio]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): six whole-selection snapshots of ~371,000 rows together; each new

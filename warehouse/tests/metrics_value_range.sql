@@ -55,7 +55,16 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('ghg_emissions', 'faostat', '%', 0, 8.2e7),
     -- FAOSTAT (#2402): 1000 ha; World land area 13,040,161.55 (Dev trial 43159213097). Documentation only (no
     -- metrics_area model yet).
-    ('area', 'faostat', '%', 0, 2e7)
+    ('area', 'faostat', '%', 0, 2e7),
+    -- ILOSTAT (#2861): per cent of the labour force, 15+, EU27 members, annual and quarterly national LFS series;
+    -- Poland 2025 = TRIAL, highest value TRIAL (Dev trial TRIAL); the other sources' bound
+    ('unemployment_rate', 'ilostat', '%', 0, 60),
+    -- UN Statistical Yearbook (#2861), EU27 members and World, selected years: GDP in millions of US dollars as
+    -- published (World 2023 = TRIAL, Poland 809,201), GDP per capita in US dollars (highest TRIAL, Poland 20,876),
+    -- real GDP growth in per cent (TRIAL to TRIAL; Poland 2023 = 0.1) (Dev trial TRIAL)
+    ('gdp_current_prices', 'undata', '%', 0, 3e8),
+    ('gdp_per_capita', 'undata', '%', 0, 5e5),
+    ('gdp_volume_growth', 'undata', '%', -100, 200)
 ),
 
 metrics as (
