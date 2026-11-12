@@ -88,7 +88,7 @@ def one(url, mode, arg):
         out.append("   NOT FETCHED (robots.txt or host refusal)")
         return "\n".join(out)
     try:
-        r, raw = fetch(url, "HEAD" if mode == "head" else "GET", 12000000 if mode == "owid" else 900000)
+        r, raw = fetch(url, "HEAD" if mode == "head" else "GET", 12000000 if mode in ("owid", "infogram") else 900000)
         h = r.headers
         out.append(f"   status={r.status} final={r.geturl()[:120]} ctype={h.get('content-type')} len={h.get('content-length')} "
                    f"lastmod={h.get('last-modified')} etag={h.get('etag')} read={len(raw)}")
