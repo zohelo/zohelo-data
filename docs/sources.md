@@ -5,7 +5,9 @@ All candidate sources (about 180) are listed in the source register
 kind, endpoint, interfaces, auth, limits, licence status, update behaviour, history and
 incremental load approach, identifiers, research priority and blockers) and a `status`
 (table below). The id prefix (GL, PLS, PL-ENV, PLG, CD, EX) groups the entries. An onboarded source links to its declaration
-via `source_system`. This page details the routes of the onboarded sources.
+via `source_system`. This page details the routes of the sources onboarded until 12 November 2026; a source
+onboarded later has the same section as its own file `docs/sources/<source_system>.md`
+([source-registration.md](source-registration.md)), so this page takes no new sections.
 
 | status | meaning |
 |---|---|
@@ -359,9 +361,9 @@ nbp.pl pages that link the files answer automated clients with HTTP 403 (Dev pro
 answer. Bronze: `bronze.nbp_bop_cells` (one row per non-empty cell, the shared standard-library reader
 `ingestion/common/xlsx_cells.py`; a workbook whose sheets are not exactly its currency sheets is rejected). Silver: `silver.nbp_bop_observations` (workbook ×
 currency × item × period; `item_code` fixed by rule and checked against the expected list; NBP's typo
-"Finsncial derivatives" in bop_m is normalised). Gold: the build stage
-`build_nbp_bop` (PLN and EUR) follows once Silver exists in production (a Gold model reading a missing
-source would hold the shared facts back). The workbooks hold amounts only: the shares of GDP of the current
+"Finsncial derivatives" in bop_m is normalised). Gold: build stage
+`build_nbp_bop` (PLN and EUR, one measure per workbook × currency × item; IIP components and their parent
+totals are separate measures, never to be summed together). The workbooks hold amounts only: the shares of GDP of the current
 account and of the net position are not published there. Licence: NBP website Terms of Use, unresolved
 (internal, owner decision of 14 Oct 2026).
 
@@ -916,6 +918,7 @@ value labels per file). Silver: `silver.unece_observations` (codes and labels as
 Country variable: M49 codes and aggregates such as E27 = EU-27). Terms: UNECE copyright notice (free
 reuse incl. commercial, acknowledge UNECE), licence row `unece_terms`. Weekly Monday check. Restart
 unit: one table.
+
 ## UNHCR Refugee Statistics (`unhcr`)
 
 **Built (12 Nov 2026, register GL-029).** The Refugee Statistics API (`https://api.unhcr.org/population/v1/`, public,
@@ -949,21 +952,6 @@ in Gg (= kt) CO2 equivalent, totals with and without LULUCF and CRF sectors 1–
 EEA aggregate `EUA` is not mapped. KPI `ghg_emissions` (total without LULUCF, UNFCCC scope, so without
 international aviation, unlike Eurostat). Refresh full (D32). Terms: CC BY 4.0 under the EEA legal notice, licence
 row `cc_by_4_0_eea`. Restart unit: the dataset version.
-
-## OECD PISA through the World Bank Education Statistics (`world_bank_edstats`)
-
-**Built (12 Nov 2026, register GL-004).** The OECD publishes the PISA country mean scores only in web tools and
-report workbooks on www.oecd.org, which answers HTTP 403 to GitHub runners (not worked around); the OECD Data
-Explorer has no PISA dataflow, and the PISA databases are microdata (means need survey weights and plausible values,
-not computed here). The World Bank's Education Statistics database (API source 12) republishes the OECD's means as
-indicators `LO.PISA.REA`, `LO.PISA.MAT`, `LO.PISA.SCI` with `.FE`/`.MA` variants. `world_bank_edstats.yaml` lands one
-World Bank API answer per subject (every economy, from 2000, one page) through the shared `bulk_file` pattern,
-version = download time. Cycles 2000–2018 (source lastupdated 2024-06-25); PISA 2022 is not republished yet: the
-register asks the owner about a manual load. Bronze: `bronze.edstats_observations`. Silver: `silver.edstats_pisa`
-(grain entity × indicator × economy × year, sex from the indicator code; 3,777 values, 85 economies). Gold:
-`gold.build_world_bank_edstats` — one measure per subject with a sex breakdown, EU27 members; KPIs `pisa_reading`,
-`pisa_mathematics`, `pisa_science` (draft, unit `pisa_score`). Refresh full (D32). Terms: CC BY 4.0 (World Bank Data
-Catalog 0038480), licence row `cc_by_4_0_world_bank_edstats`. Restart unit: one subject.
 
 ## News headline feeds (`news_feeds`, topics)
 

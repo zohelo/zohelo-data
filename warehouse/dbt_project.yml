@@ -25,3 +25,8 @@ seeds:
   zohelo:
     +database: r2
     +schema: "{{ var('gold_schema', 'gold') }}"
+
+# Per-source Gold macros are found by name while a model is parsed (macros/source_registration.sql, D34);
+# partial parsing does not follow that, so every command parses the whole project (about 5 seconds).
+flags:
+  partial_parse: false

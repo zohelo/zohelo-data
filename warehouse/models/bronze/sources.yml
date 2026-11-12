@@ -323,22 +323,6 @@ sources:
       day (YYYYMMDD), views; partitioned by entity (<lang>_<title slug>).
   - name: wikimedia_pageviews_rejected_files
     description: Wikimedia pageviews Landing files the Bronze decoder rejected, with the reason.
-- name: world_bank_edstats
-  description: World Bank Education Statistics (API source 12) — OECD PISA mean scores
-  database: r2
-  schema: bronze
-  meta:
-    landing: 01_landing/world_bank_edstats/
-    loaded_by: ingestion/to_bronze/world_bank_edstats/
-    config: ingestion/sources/world_bank_edstats.yaml
-  tables:
-  - name: edstats_observations
-    description: >-
-      One row per record with a value of the newest answer of each PISA selection (entity pisa_mathematics,
-      pisa_reading, pisa_science): indicator_id, indicator_name, country_id, country_name, country_iso3, year,
-      value_text (exact JSON number text), obs_status, source_last_updated; partitioned by entity.
-  - name: edstats_rejected_files
-    description: World Bank EdStats Landing files the Bronze decoder rejected, with the reason.
 - name: unhcr
   description: UNHCR Refugee Statistics API — population stocks by country of asylum (and Poland by origin), per year
   database: r2

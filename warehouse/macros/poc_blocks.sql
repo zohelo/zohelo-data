@@ -58,7 +58,10 @@
         ('NAMA_10_A10', 'Gross value added and income by A*10 industry', 'A', 'TOTAL'),
         ('ILC_DI12', 'Gini coefficient of equivalised disposable income', 'A', 'TOTAL'),
         ('NAMA_10R_2GVAGR', 'Real growth rate of regional gross value added', 'A', ''),
-        ('GOV_10A_EXP', 'General government expenditure by function (COFOG)', 'A', 'S13,GF10')
+        ('GOV_10A_EXP', 'General government expenditure by function (COFOG)', 'A', 'S13,GF10'),
+        -- slice needs-block rows (O36, #2743): half-years go to gold.fact_semiannual
+        ('EARN_MW_CUR', 'Monthly minimum wages, bi-annual data', 'S', ''),
+        ('ERT_BIL_EUR_M', 'Euro/ECU exchange rates, monthly data', 'M', '')
     ) as t (dataset_id, block_name, freq_code, total_breakdown)
 {% endmacro %}
 
@@ -108,7 +111,10 @@
         ('NAMA_10_A10', 'na_item'),
         ('ILC_DI12', 'statinfo'),
         ('NAMA_10R_2GVAGR', 'na_item'),
-        ('GOV_10A_EXP', 'na_item')
+        ('GOV_10A_EXP', 'na_item'),
+        ('EARN_MW_CUR', 'currency'),
+        ('ERT_BIL_EUR_M', 'statinfo'),
+        ('ERT_BIL_EUR_M', 'currency')
     ) as t (dataset_id, dimension_id)
 {% endmacro %}
 
@@ -138,8 +144,27 @@
         ('P2861', 'Emeryci i renciści', 'WYNAGRODZENIA I ŚWIADCZENIA SPOŁECZNE / EMERYTURY I RENTY'),
         ('P2860', 'Przeciętna miesięczna emerytura i renta brutto', 'WYNAGRODZENIA I ŚWIADCZENIA SPOŁECZNE / EMERYTURY I RENTY'),
         ('P2862', 'Nakłady inwestycyjne i wartość brutto środków trwałych', 'INWESTYCJE I ŚRODKI TRWAŁE'),
-        ('P3502', 'Produkt krajowy brutto ogółem, dynamika', 'RACHUNKI REGIONALNE / PRODUKT KRAJOWY BRUTTO')
+        ('P3502', 'Produkt krajowy brutto ogółem, dynamika', 'RACHUNKI REGIONALNE / PRODUKT KRAJOWY BRUTTO'),
+        -- slice needs-block rows (O36, #2743): Poland and voivodeships only
+        ('P2656', 'Osoby dorosłe (25-64) uczestniczące w kształceniu lub szkoleniu (BAEL, średnioroczne)', 'RYNEK PRACY / AKTYWNOŚĆ EKONOMICZNA (BAEL)'),
+        ('P2713', 'Wskaźniki zasięgu ubóstwa - % osób w gosp. dom. o wydatkach poniżej granicy ubóstwa', 'BUDŻETY GOSPODARSTW DOMOWYCH / UBÓSTWO'),
+        ('P2692', 'Produkcja sprzedana przemysłu wg PKD 2007 (dane kwartalne)', 'PRZEMYSŁ I BUDOWNICTWO / PRODUKCJA PRZEMYSŁOWA'),
+        ('P2721', 'Produkcja sprzedana budownictwa wg PKD 2007 (dane kwartalne)', 'PRZEMYSŁ I BUDOWNICTWO / BUDOWNICTWO'),
+        ('P2837', 'Pracujący w sektorze przedsiębiorstw (dane krótkookresowe)', 'RYNEK PRACY / PRACUJĄCY'),
+        ('P4610', 'Mediana wynagrodzeń miesięcznych brutto (Rozkład wynagrodzeń w gospodarce narodowej)', 'WYNAGRODZENIA I ŚWIADCZENIA SPOŁECZNE / WYNAGRODZENIA'),
+        ('P3788', 'Średnia cena za 1 m2 lokali mieszkalnych sprzedanych w ramach transakcji rynkowych', 'GOSPODARKA MIESZKANIOWA / CENY LOKALI MIESZKALNYCH'),
+        ('P3794', 'Średnia cena za 1 m2 lokali mieszkalnych sprzedanych w ramach transakcji rynkowych (kwartalne)', 'GOSPODARKA MIESZKANIOWA / CENY LOKALI MIESZKALNYCH')
     ) as t (subgroup_id, block_name, subject_path)
+{% endmacro %}
+
+{# BDL label positions (after the period label is taken out) that name the measure although some variables
+   say "ogółem" there: the market of the dwelling prices, so the secondary market is a measure of its own. #}
+{% macro poc_bdl_measure_positions() %}
+    select * from (
+        values
+        ('P3788', 1),
+        ('P3794', 1)
+    ) as t (subgroup_id, position)
 {% endmacro %}
 
 {# DBW blocks: indicator × section × presentation × periodicity; the files (one per year) share the prefix. #}
@@ -170,8 +195,28 @@
         ('814_2_7_1', 'Produkcja sprzedana przemysłu — analogiczny okres = 100, ceny stałe', 'M'),
         ('392_16_223_1', 'Produkcja budowlano-montażowa — analogiczny okres = 100, wyrównana sezonowo', 'M'),
         ('109_849_7_1', 'Sprzedaż detaliczna towarów — analogiczny okres = 100, ceny stałe', 'M'),
-        ('469_16_117_1', 'Bieżący wskaźnik ufności konsumenckiej (BWUK)', 'M')
+        ('469_16_117_1', 'Bieżący wskaźnik ufności konsumenckiej (BWUK)', 'M'),
+        -- slice needs-block rows (O36, #2743)
+        ('1603_1339_116_4', 'Odsetek osób zagrożonych ubóstwem lub wykluczeniem społecznym — makroregiony, regiony', 'A'),
+        ('1618_1335_95_4', 'Stopa bezrobocia długotrwałego - BAEL', 'A'),
+        ('1714_1575_243_1', 'Mediana wynagrodzeń miesięcznych brutto (Rozkład wynagrodzeń) [zł]', 'M'),
+        ('309_485_180_3', 'Średnie ceny za 1 m2 lokali mieszkalnych sprzedanych w ramach transakcji rynkowych [zł]', 'Q'),
+        ('507_870_93_1', 'Bezrobotni zarejestrowani — płeć, wiek', 'M')
     ) as t (block_id, block_name, freq_code)
+{% endmacro %}
+
+{# DBW block rules. regional: only Poland and voivodeships are read (poc_src_dbw.py REGIONAL, territory in
+   position 1). total_labels ('|'-separated, lower case): positions that count as the total where the block has
+   no "ogółem" (the age band and duration of the LFS long-term rate, the residence basis of the median wage).
+   measure_dimension: a dimension whose position names the measure (the market of the dwelling prices). #}
+{% macro poc_dbw_block_rules() %}
+    select * from (
+        values
+        ('1618_1335_95_4', false, 'od 15 do 74 lat|12 miesięcy i więcej', ''),
+        ('1714_1575_243_1', true, 'miejsce zamieszkania', ''),
+        ('309_485_180_3', true, '', 'rodzaj rynku nieruchomości'),
+        ('507_870_93_1', true, '', '')
+    ) as t (block_id, regional, total_labels, measure_dimension)
 {% endmacro %}
 
 {% macro poc_wdi_blocks() %}
@@ -369,17 +414,6 @@
     ) as t (loc_id, candidate_key)
 {% endmacro %}
 
-{# OECD PISA mean scores through the World Bank EdStats republication (gold.build_world_bank_edstats): one block per
-   subject; areas: EU27 members (ISO alpha-3 through dim_geography.iso3). #}
-{% macro poc_world_bank_edstats_blocks() %}
-    select * from (
-        values
-        ('pisa_reading', 'LO.PISA.REA', 'PISA mean score, reading (OECD via World Bank EdStats)'),
-        ('pisa_mathematics', 'LO.PISA.MAT', 'PISA mean score, mathematics (OECD via World Bank EdStats)'),
-        ('pisa_science', 'LO.PISA.SCI', 'PISA mean score, science (OECD via World Bank EdStats)')
-    ) as t (entity, indicator_id, block_name)
-{% endmacro %}
-
 {# UNHCR Refugee Statistics blocks (gold.build_unhcr): one per API selection; areas: EU27 members as countries of
    asylum (ISO alpha-3 through dim_geography.iso3). #}
 {% macro poc_unhcr_blocks() %}
@@ -465,10 +499,11 @@
     order by k.kpi_key, m.priority
 {% endmacro %}
 
-{# The Gold blocks (build stage models) as `model:source_system`, one per line. A block model carries the tag
-   `gold_block` (ops/repo_check.py checks both lists agree): its children do not wait for it in the
-   changed-only build (warehouse/changed.py), they read it only once its table exists. #}
-{% macro poc_block_models() %}
+{# The Gold blocks (build stage models) listed here before per-source registration (D34,
+   docs/source-registration.md), as `model:source_system`, one per line. Do not add lines: a new source
+   registers itself in warehouse/macros/sources/<source>.sql and poc_block_models()
+   (macros/source_registration.sql) adds it to this list. #}
+{% macro poc_legacy_block_models() %}
     poc_build_eurostat:eurostat
     poc_build_bdl:gus_bdl
     poc_build_dbw:gus_dbw
@@ -494,12 +529,12 @@
     poc_build_un_wpp:un_wpp
     poc_build_unhcr:unhcr
     poc_build_zus_psz:zus_psz
-    poc_build_world_bank_edstats:world_bank_edstats
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
    left out (zero rows) only when the changed-only plan declared it waiting: warehouse/changed.py lists
-   it under `empty_blocks` (its source tables do not exist yet) and warehouse/build.py passes that list
+   it under `empty_blocks` (its source tables do not exist yet and neither does its own table; a waiting
+   block that has a table is never listed, the build stops instead) and warehouse/build.py passes that list
    as the dbt var `waiting_blocks`. Any other missing block (a partial catalog listing, a run killed
    between renames, an explicit-filter build) is a compiler error, so a source never drops out of Gold
    silently; a block built in this run that fails makes dbt skip every model reading it. At parse time
@@ -535,6 +570,32 @@
     {%- endif -%}
 {% endmacro %}
 
+{# A Silver table the shared geography map reads only for a source's own codes, as a FROM item: the table
+   when it exists, else an empty relation with `columns` ('name:type, …') when the changed-only plan declared
+   the model waiting (its source has no Bronze yet; warehouse/build.py passes plan["waiting"] as the dbt var
+   `waiting_models`). So a source before its first load adds no rows to the map instead of holding back the
+   map and every block reading it (#2903). Any other missing table is a compiler error. The reading model lists
+   the same names in config meta `optional_parents`: warehouse/changed.py does not let it wait for them, and
+   ops/repo_check.py checks both lists agree. At parse time the model is ref'd, so dbt records the dependency. #}
+{% macro poc_optional_ref(model, columns) %}
+    {%- set relation = ref(model) -%}
+    {%- if not execute or load_relation(relation) is not none -%}
+        {{ relation }}
+    {%- elif model in var('waiting_models', []) -%}
+        {%- do log('Optional input ' ~ relation ~ ' is waiting (source tables do not exist yet): zero rows', info=true) -%}
+        {%- set cols = [] -%}
+        {%- for column in columns.split(',') -%}
+            {%- do cols.append('cast(null as ' ~ column.split(':')[1] | trim ~ ') as ' ~ column.split(':')[0] | trim) -%}
+        {%- endfor -%}
+        (select {{ cols | join(', ') }} where false)
+    {%- else -%}
+        {%- do exceptions.raise_compiler_error(
+            'Optional input ' ~ model ~ ' (' ~ relation ~ ') does not exist and changed.py did not declare it '
+            ~ 'waiting (var waiting_models): build it first, e.g. select ' ~ model ~ '+'
+        ) -%}
+    {%- endif -%}
+{% endmacro %}
+
 {# The source_system of each waiting block (poc_block_waiting), quoted and comma-separated ('' at parse
    time). #}
 {% macro poc_absent_blocks() %}
@@ -555,9 +616,10 @@
     || '|' || breakdown_json
 {% endmacro %}
 
-{# Every activated block of every source: the list build_check reports against, so a block that
-   yields no rows (not in Silver yet, or filtered out) is visible. #}
-{% macro poc_activated_blocks() %}
+{# The activated blocks listed here before per-source registration (D34). Do not add lines: a new source
+   names its blocks in warehouse/macros/sources/<source>.sql and poc_activated_blocks()
+   (macros/source_registration.sql) adds them. #}
+{% macro poc_legacy_activated_blocks() %}
     select 'eurostat' as source_system, dataset_id as block_id, block_name from ({{ poc_eurostat_blocks() }})
     union all
     select 'gus_bdl', subgroup_id, block_name from ({{ poc_bdl_blocks() }})
@@ -579,8 +641,6 @@
     select 'unesco_uis', entity, block_name from ({{ poc_unesco_uis_blocks() }})
     union all
     select 'faostat', entity || ':' || item_code || '.' || element_code, block_name from ({{ poc_faostat_blocks() }})
-    union all
-    select 'world_bank_edstats', entity, block_name from ({{ poc_world_bank_edstats_blocks() }})
     union all
     select 'eea', 'govreg_ghg_inventory', 'Greenhouse gas emissions by sector, GovReg inventory (EEA)'
     union all

@@ -42,6 +42,9 @@ archive_policy:
 bronze: [bronze.edstats_observations, bronze.edstats_rejected_files]
 silver: [silver.edstats_pisa]
 gold: [gold.build_world_bank_edstats]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  edstats_pisa: {rows: 5700}  # 3,777: 9 indicators × up to 85 economies × 7 cycles 2000-2018 (Dev trial 43291944406)
+  poc_build_world_bank_edstats: {rows: 2300}  # 1,517: 3 subjects × EU27 × 7 cycles × 3 sexes, values only (Dev trial 43291944406)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): three small selections (a few thousand values) replaced whole, no

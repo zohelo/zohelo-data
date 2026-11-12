@@ -24,10 +24,19 @@ listed in ``full_refresh`` and the build passes it as the dbt var ``full_refresh
 
 A model whose source table does not exist yet (a new source before its first Bronze load), directly or
 through other models, is left out and listed under ``waiting``. A Gold block (a model tagged ``gold_block``,
-listed in ``poc_block_models()`` in macros/poc_blocks.sql) stops that: it waits itself, but the models that
+listed by ``poc_block_models()``, macros/source_registration.sql) stops that: it waits itself, but the models that
 union the blocks (facts, dimensions, metrics) are planned as usual and read only the blocks whose table
 exists (``poc_observations()``), so a new source's block contributes zero rows until its first run instead
-of holding back the whole Gold layer. Those blocks are listed again under ``empty_blocks``.
+of holding back the whole Gold layer. Those blocks are listed again under ``empty_blocks``, but only when
+their own table does not exist either. A model also does not wait for a parent it declares optional (config
+meta ``optional_parents``, read through ``poc_optional_ref()``: the Silver tables the shared geography map reads
+only for a source's own codes), so one source without Bronze cannot hold back the map and every block that
+reads it (#2903).
+
+A waiting model that already has a table is not a new source: an input it was built from is gone, or a new
+input was added to it before that input's first load. It is listed under ``stalled`` with the missing source
+tables, and the build stops before dbt runs (warehouse/build.py): such a model would otherwise stay frozen
+without a word, and a stalled Gold block must never be passed on as an empty one.
 
 Table compaction also makes a new snapshot, so a compacted input causes a rebuild:
 conservative, never a missed change.
@@ -44,6 +53,7 @@ from typing import Any
 
 PROJECT = Path(__file__).resolve().parent
 BLOCK_TAG = "gold_block"  # a Gold block: its children read it only when its table exists
+OPTIONAL_PARENTS = "optional_parents"  # config meta: parents (model names) a model reads only when they exist
 BUILT_FROM = "zohelo.built_from_ms"
 FINGERPRINT = "zohelo.build_fingerprint"
 # Code outside a model's own SQL that can change what it writes.
@@ -109,6 +119,7 @@ def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
             "fingerprint": hashlib.sha256(code.encode()).hexdigest()[:32],
             "incremental": node.get("config", {}).get("materialized") == "incremental",
             "block": BLOCK_TAG in node.get("tags", []),
+            "optional": set(node.get("config", {}).get("meta", {}).get(OPTIONAL_PARENTS) or []),
         }
     return out
 
@@ -140,7 +151,9 @@ def table_state(cat, namespace: str, table: str) -> dict[str, Any] | None:
 def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
     """{"select": model names to build, "reasons": name → why, "unchanged": count,
     "full_refresh": incremental models among them to rebuild in full, "waiting": models left out because a
-    source table they read does not exist yet, "empty_blocks": the Gold blocks among them, read as zero rows}."""
+    source table they read does not exist yet, "empty_blocks": the Gold blocks among them that have no table
+    either, read as zero rows, "stalled": waiting model → the missing source tables, for every waiting model
+    that has a table (the build must stop on any)}."""
     graph = models(meta)
     relations = {uid: (m["namespace"], m["table"]) for uid, m in graph.items()}
     for uid in {p for m in graph.values() for p in m["parents"] if p.startswith("source.")}:
@@ -161,13 +174,24 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
         """True when a source table this model reads (directly or through other models) does not exist yet:
         a newly onboarded source whose first Bronze load has not run. Building it would fail every pipeline's
         build, so it waits and is listed under "waiting". A waiting Gold block does not make its children
-        wait: they skip a block whose table does not exist (poc_observations)."""
+        wait: they skip a block whose table does not exist (poc_observations). Nor does a parent the model
+        declares optional (poc_optional_ref)."""
         if uid not in blocked:
-            parents = graph[uid]["parents"]
-            blocked[uid] = any(p.startswith("source.") and state.get(p) is None for p in parents) or any(
-                p in graph and waiting(p) and not graph[p]["block"] for p in parents
-            )
+            blocked[uid] = bool(missing_sources(uid))
         return blocked[uid]
+
+    missing: dict[str, set[str]] = {}
+
+    def missing_sources(uid: str) -> set[str]:
+        """The source tables that do not exist and make this model wait (through other models too)."""
+        if uid not in missing:
+            model = graph[uid]
+            found = {p for p in model["parents"] if p.startswith("source.") and state.get(p) is None}
+            for p in model["parents"]:
+                if p in graph and not graph[p]["block"] and graph[p]["name"] not in model["optional"]:
+                    found |= missing_sources(p)
+            missing[uid] = found
+        return missing[uid]
 
     def stale(uid: str) -> bool:
         if uid in done:
@@ -208,7 +232,14 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
         "unchanged": len(graph) - len(reasons) - sum(blocked.values()),
         "full_refresh": full,
         "waiting": sorted(graph[u]["name"] for u, b in blocked.items() if b),
-        "empty_blocks": sorted(graph[u]["name"] for u, b in blocked.items() if b and graph[u]["block"]),
+        "empty_blocks": sorted(
+            graph[u]["name"] for u, b in blocked.items() if b and graph[u]["block"] and state[u] is None
+        ),
+        "stalled": {
+            graph[u]["name"]: sorted(".".join(relations[p]) for p in missing[u])
+            for u, b in sorted(blocked.items(), key=lambda item: graph[item[0]]["name"])
+            if b and state[u] is not None
+        },
     }
 
 
