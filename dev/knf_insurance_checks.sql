@@ -57,3 +57,9 @@ inner join cells as n on v.entity = n.entity and v.sheet_name = n.sheet_name and
 where ends_with(v.sheet_name, '_dane liczbowe') and v.column_number in (4, 6, 8, 10, 12, 14) and v.row_number > 9
     and v.cell_type = 'n' and try_cast(v.value_text as double) = 0 and try_cast(n.value_text as double) > 0
 group by 1 order by 1
+;
+-- layout dump of older workbooks (log only)
+select entity, sheet_name, row_number, column_number, cell_type, left(value_text, 90) from cells
+where (entity in ('bulletin_2023_q1_a', 'bulletin_2024_q4_a') and sheet_name like 'Tabl.A.3%' and row_number <= 7)
+    or (entity in ('ike_2023', 'ike_2024', 'ikze_2023') and row_number between 5 and 10)
+order by all
