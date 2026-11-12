@@ -30,3 +30,5 @@ undata_terms,UNdata conditions of use,https://data.un.org/Host.aspx?Content=UNda
 bis_terms,BIS terms of use for statistics,https://www.bis.org/about/legal/permitted-use-statistics,Source: BIS statistics (Bank for International Settlements),false,false
 cc_by_4_0_ilo,CC BY 4.0 (ILOSTAT),https://www.ilo.org/node/9321,"Source: ILO, ILOSTAT, https://ilostat.ilo.org/data/",true,false
 unece_terms,UNECE Statistical Database copyright notice,https://w3.unece.org/PXWeb/Static/Copyright_notice.html,Source: UNECE Statistical Database.,true,false
+cc_by_4_0_unhcr,CC BY 4.0 with UNHCR supplemental terms (Refugee Statistics),https://www.unhcr.org/terms-use-datasets,"Source: UNHCR Refugee Population Statistics Database, https://www.unhcr.org/refugee-statistics/ (terms of use: https://www.unhcr.org/terms-use-datasets)",true,false
+cc_by_4_0_eea,CC BY 4.0 (European Environment Agency legal notice),https://www.eea.europa.eu/en/legal-notice,"Source: European Environment Agency (EEA), GovReg: National emissions reported to the UNFCCC and to the EU under the Governance Regulation, <version>, <download date>.",true,false
