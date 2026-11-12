@@ -4389,7 +4389,8 @@ sources:
   name: Open KRS API (API Rejestrów Sądowych)
   short_name: KRS open API
   provider: Ministry of Justice
-  status: approved
+  status: built
+  source_system: ms_krs
   family: E
   kpi: false
   geography: Poland
@@ -4404,32 +4405,37 @@ sources:
     interfaces: [REST API, JSON]
     auth: public; no key documented
     cost: free
-    limits: Unknown.
+    limits: None published (no robots.txt on api-krs.ms.gov.pl, no rate-limit headers; Dev probe 43320344152). The pipeline
+      sends one request at a time, 1 s apart, at most 120 minutes a run.
   licence:
     status: unresolved
     notes: 'Terms: no licence on https://prs.ms.gov.pl/krs/openApi (the page documents the Open API; no terms text matched
       in the page body (page read 11 Nov 2026 from a GitHub runner)). KRS data are public by statute but no attribution or
       redistribution text is given: licence stays unresolved (internal only) until the Ministry of Justice terms or the dane.gov.pl
       dataset licence (https://dane.gov.pl/en/dataset/27606%2Capi-krajowego-rejestru-sadowego-api-krs) are confirmed.'
-  updates: Reflects registered records; no official change-feed guarantee verified.
+  updates: 'Entries are made on working days; https://api-krs.ms.gov.pl/api/Krs/Biuletyn/<YYYY-MM-DD> lists the KRS numbers
+    with an entry on a day (4,277 numbers for 10 Nov 2026; days back to June 2022 answer).'
   ingestion:
-    history: 'PROPOSAL: fetch current/full extracts only for KRS identifiers obtained from an authorised source; no enumeration
-      route is documented here.'
-    incremental: 'PROPOSAL: re-fetch known KRS numbers and compare canonical payloads after limits/terms review; this is polling,
-      not CDC.'
+    history: 'Built: current extracts (OdpisAktualny, register P, then S on 204) for the KRS numbers GLEIF lists (registration
+      authority RA000484; 31,892 numbers), ascending, about ten daily runs for the first load; reduced before Landing
+      to an entity-level allowlist (docs/sources/ms_krs.md). Left out: every other KRS entity (no authorised list of
+      numbers yet), full extracts (OdpisPelny) and all sections about persons.'
+    incremental: The daily bulletin names the held numbers to ask again; a part of the selection is rewritten only
+      when a record in it changed.
     identifiers: KRS primary; NIP and REGON when present
   modelling:
     notes: Model entity, section and roles; minimize natural-person fields.
     overlap: Complements RDF and CEIDG; legal-form scopes differ.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Route: the Open API answers per KRS number (current and full extract); no bulk list is documented, so the KRS number
-      list must come from REGON/CEIDG or the register search: confirm in the stage-2 dev trial'
-    - Confirm rate limits and exact endpoint in the Dev trial (limits not published on the page)
-    - 'Licence unresolved: confirm terms; personal data of natural persons in extracts needs an allowlist'
+    - 'Licence unresolved (internal only): the Open API page is a script-rendered application without terms text
+      in its HTML, and api.dane.gov.pl (dataset 27606) did not answer the runner (connect timeout, Dev probe
+      43320344152); the Ministry of Justice terms or the dane.gov.pl dataset licence still have to be read.'
+    - 'Selection: only entities with an LEI. A list of all KRS numbers needs an authorised source (REGON/BIR, or
+      walking the bulletin days back to June 2022 and beyond): a later task.'
     references:
     - https://prs.ms.gov.pl/krs/openApi
     - https://dane.gov.pl/en/dataset/27606%2Capi-krajowego-rejestru-sadowego-api-krs

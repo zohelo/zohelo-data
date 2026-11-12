@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: krs_entity
+    description: >-
+      One row per KRS number with a current extract in the Open KRS API (Ministry of Justice; terms not
+      established, internal only): register, legal form, registered name, NIP, REGON, seat (voivodeship key of
+      dim_geography, powiat, gmina, town; no street address), registration date, date of the last entry, share
+      capital, main PKD code, liquidation and bankruptcy flags. Selection: the KRS numbers GLEIF lists (entities
+      with an LEI), not the whole register. No natural persons.
+    columns:
+      - name: krs_number
+        description: >-
+          The ten-digit KRS number. Joins GLEIF by registration_authority_entity_id (authority RA000484); no
+          relationships test to a shared model.
+        tests: [not_null, unique]
+      - name: register
+        tests: [not_null, {accepted_values: {arguments: {values: ['RejP', 'RejS']}}}]
+      - name: name
+        tests: [not_null]
+  - name: poc_build_ms_krs
+    description: >-
+      Gold build stage of the Open KRS API: entities loaded with a current extract, one date (the day of the
+      newest request), by legal form and seat voivodeship (measure ms_krs:lei_selection:entities). A count of
+      what is loaded from the selection (entities with an LEI), not of Polish companies.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
