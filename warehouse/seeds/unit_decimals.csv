@@ -14,6 +14,7 @@ pln_per_unit,4
 pln_per_gram,2
 mln_eur,0
 usd,0
+mln_usd,0
 eur_per_person,0
 usd_per_person,0
 pct_gdp,1

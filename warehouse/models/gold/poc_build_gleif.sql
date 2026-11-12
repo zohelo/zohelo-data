@@ -1,4 +1,4 @@
-{{ config(alias='build_gleif') }}
+{{ config(alias='build_gleif', tags=['gold_block']) }}
 {# Gold build stage (#2740): GLEIF LEI counts, an entity snapshot of the newest golden copy
    (silver.gleif_legal_entities, latest-only: one date, the golden copy's publication day). Measure =
    LEI records by registration status (measure_key gleif:lei2:entities:<ISSUED|LAPSED|RETIRED|…|_T>);

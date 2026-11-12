@@ -1,4 +1,4 @@
-{{ config(alias='build_eurostat') }}
+{{ config(alias='build_eurostat', tags=['gold_block']) }}
 {# Gold PoC build stage: the sampled Eurostat blocks as observations in the common shape
    (measure, geography, date, breakdown, value). One row per Silver row kept by the sample
    filters; in v1 this is the per-block builder. Measure = dataset × unit × the block's

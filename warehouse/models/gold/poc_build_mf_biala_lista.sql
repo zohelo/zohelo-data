@@ -1,4 +1,4 @@
-{{ config(alias='build_mf_biala_lista') }}
+{{ config(alias='build_mf_biala_lista', tags=['gold_block']) }}
 {# Gold build stage (#2740): MF VAT white list flat file, an entity snapshot of the newest daily file
    (silver.biala_lista_taxpayer_hashes and silver.biala_lista_masks, latest-only: one date, the file's
    generation date). The flat file publishes only SHA-512 hashes of (date + NIP + bank account), so the

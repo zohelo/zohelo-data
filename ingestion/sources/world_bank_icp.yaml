@@ -7,22 +7,25 @@ description: World Bank International Comparison Program (ICP 2021, API source 9
 # 1,182,384 observations, about 380 MB of JSON at 50,000 per page). Entity = one series for every
 # economy and year (own extractor ingestion/to_landing/world_bank_icp/, #2386); version = the
 # source's lastupdated date, so nothing is downloaded again until the World Bank updates ICP.
-# CC BY 4.0 (register GL-011). A schedule (stage 4) comes after the Dev trial (#2387).
+# CC BY 4.0 (register GL-011).
 extraction:
   initial: api
   production: snapshot                  # each series file is the complete series of the cycle
   incremental_policy: changed_since_last  # source lastupdated / SHA-256 per page
-  schedule: []
+  schedule: # UTC; release: ICP revises its database every few years (lastupdated 2024-08-04); weekly check (Thursday 02:50): two catalogue requests, series fetched only when lastupdated changes
+    - {cron: "50 2 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/world_bank_icp/
 archive_policy:
   move: true
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
-bronze: []
-silver: []
+bronze: [bronze.icp_observations, bronze.icp_rejected_files]
+silver: [silver.icp_observations]
 gold: []
 
-refresh: {mode: full}
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32, small source: full in every layer): 48 series pages (~375 MB of JSON); rebuilt in full when the World Bank updates ICP.
+refresh: {mode: full, decided: "D32 + #2736"}
 
-activities: [landing.inspect, landing.extract, landing.verify]
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
