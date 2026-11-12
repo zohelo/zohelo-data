@@ -5,20 +5,23 @@
 
    gus_table_values(relation, specs): one row per spec x data row x value cell. A spec is a dict:
      table    short code of the table (kept in Silver)
-     title    regex (case-insensitive) on the sheet title = the text of rows 1-3
+     title    regex (case-insensitive) on the sheet title = the text of rows 1-3 and of any row up to 8 with a cell
+              starting 'Tabl' (sheets that open with a chapter heading)
      measure  measure code; unit: the unit code as published
      header   regex (case-insensitive) on the column's header path: the header rows' texts above the column, each
               carried to the right over its merged area (until a header cell in its own or a higher row starts),
-              joined ' | '
+              joined ' | '; title text in columns right of the label column can lead the path, so anchor a
+              regex on a path segment, '(^|\| )Ogółem', not on the start
      block    optional regex on the block label (the nearest pure-text row above the data row: "NSP 2021",
               "w liczbach bezwzględnych"); without it every data row of the sheet counts
      period   optional reference year; default the edition year (the entity's last four digits)
      groups   optional [[group_code, label regex], ...]: data rows are the rows whose label matches (survey tables
               of Poland by sex); without it data rows are the voivodeship rows and the Poland row
    Areas: the 16 voivodeships by their names (lower case; area_name) and Poland ('polska': labels "Polska",
-   "POLAND", "Polska 2024"); a Poland row that names another year than the period (the previous year printed
-   above the current one) is left out. The label column is the leftmost column holding a voivodeship name or a
-   group label.
+   "POLAND", "Polska 2024", "P O L S K A 2018"); a Poland row that names another year than the period (the
+   previous year printed above the current one) is left out, and so is a "POLSKA" row without a year when a "POLAND" row
+   without a year follows it (older editions print the previous year in Polish, the current one in English).
+   The label column is the leftmost column holding a voivodeship name or a group label.
    Values: numbers as stored; GUS symbols: '–' / '-' magnitude zero (value 0, status ok), '.' and '#' no data or
    confidential (no value, status confidential), 'x' not applicable (no value), a number followed by 'v' (low
    precision of a survey estimate) as the number with status low_reliability; any other text is status unparsed
@@ -81,10 +84,17 @@
         from cells
     ),
 
-    titles as (
-        select entity, member, sheet_name, string_agg(txt, ' ' order by row_number, column_number) as title
+    table_rows as (
+        select distinct entity, member, sheet_name, row_number
         from flagged
-        where row_number <= 3
+        where row_number <= 8 and regexp_matches(txt, '^(?i)tabl')
+    ),
+
+    titles as (
+        select f.entity, f.member, f.sheet_name, string_agg(f.txt, ' ' order by f.row_number, f.column_number) as title
+        from flagged as f
+        left join table_rows as t using (entity, member, sheet_name, row_number)
+        where f.row_number <= 3 or t.row_number is not null
         group by all
     ),
 
@@ -108,9 +118,14 @@
         select
             c.*,
             case
-                when regexp_matches(c.label_l, '^(polska|poland)\b') then 'polska'
+                when regexp_matches(replace(c.label_l, ' ', ''), '^(polska|poland)') then 'polska'
                 when r.area_name is not null then r.area_name
-            end as area_name
+            end as area_name,
+            case
+                when regexp_matches(replace(c.label_l, ' ', ''), '^poland') then 'en'
+                when regexp_matches(replace(c.label_l, ' ', ''), '^polska')
+                    and not contains(replace(c.label_l, ' ', ''), 'poland') then 'pl'
+            end as poland_kind
         from sheet_cells as c
         left join ({{ gus_regions() }}) as r on c.label_l = r.area_name
     ),
@@ -139,9 +154,9 @@
         select distinct entity, member, sheet_name, row_number from sheet_cells where is_number
     ),
 
-    region_rows as (
+    region_rows_all as (
         select
-            l.entity, l.member, l.sheet_name, l.row_number, l.area_name, l.edition_year,
+            l.entity, l.member, l.sheet_name, l.row_number, l.area_name, l.edition_year, l.poland_kind,
             coalesce(
                 try_cast(regexp_extract(l.label_l, '((19|20)[0-9]{2})', 1) as integer),
                 try_cast(regexp_extract(nxt.txt, '^((19|20)[0-9]{2})$', 1) as integer)
@@ -155,10 +170,23 @@
         where l.area_name is not null and l.column_number = lc.label_col
     ),
 
+    -- two Poland rows without a year ("POLSKA" above "POLAND", older editions): the first is the previous year
+    region_rows as (
+        select r.*
+        from region_rows_all as r
+        where not (
+            r.poland_kind = 'pl' and r.label_year is null and exists (
+                select 1 from region_rows_all as e
+                where e.entity = r.entity and e.member = r.member and e.sheet_name = r.sheet_name
+                    and e.poland_kind = 'en' and e.label_year is null
+            )
+        )
+    ),
+
     first_rows as (
         select entity, member, sheet_name, min(row_number) as first_row
         from (
-            select entity, member, sheet_name, row_number from region_rows
+            select entity, member, sheet_name, row_number from region_rows_all
             union all
             select entity, member, sheet_name, row_number from group_labels
         )

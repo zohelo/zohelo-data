@@ -9,12 +9,12 @@
    Values as published; GUS symbols per the macro. #}
 {% set specs = [
     {'table': 'establishments', 'title': 'I/1\\. ?TURYSTYCZNE OBIEKTY NOCLEGOWE', 'measure': 'establishments',
-     'header': '^Ogółem', 'unit': 'facilities'},
+     'header': '(^|\\| )Ogółem', 'unit': 'facilities'},
     {'table': 'bed_places', 'title': 'I/2\\. ?MIEJSCA NOCLEGOWE', 'measure': 'bed_places',
-     'header': '^Ogółem', 'unit': 'bed_places'},
+     'header': '(^|\\| )Ogółem', 'unit': 'bed_places'},
     {'table': 'tourists', 'title': 'II/17\\. ?TURYŚCI KORZYSTAJĄCY', 'measure': 'tourists',
-     'header': '^Ogółem', 'unit': 'persons'},
+     'header': '(^|\\| )Ogółem', 'unit': 'persons'},
     {'table': 'overnight_stays', 'title': 'II/19\\. ?NOCLEGI UDZIELONE', 'measure': 'overnight_stays',
-     'header': '^Ogółem', 'unit': 'overnight_stays'},
+     'header': '(^|\\| )Ogółem', 'unit': 'overnight_stays'},
 ] %}
 select * from ({{ gus_table_values(source('gus_tourism', 'gus_tourism_cells'), specs) }})

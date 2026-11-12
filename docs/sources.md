@@ -854,3 +854,21 @@ and women, Poland and voivodeships). Gold block `registered_unemployment` (KPIs 
 `registered_unemployment_rate`, next to GUS BDL and DBW). Weekly schedule (Tuesday). Licence: CC BY 3.0 PL (portal
 footer). The ZIPs since 2001, the half-yearly occupation and vacancy tables and the yearly MRPiPS-01 data files
 (SPR1, about 27 MB) are not built yet.
+
+## GUS publication tables: culture, participation in culture, tourism (`gus_culture`, `gus_culture_participation`, `gus_tourism`)
+
+**Built (12 Nov 2026, register PLS-027, PLS-028, PLS-035).** stat.gov.pl publishes each edition of "Kultura i
+dziedzictwo narodowe w <year> r." (until 2020 "Kultura w <year> roku"), "Uczestnictwo ludności w kulturze w <year> r."
+(every five years) and "Turystyka w <year> r." on its own page with a tables file ("Tablice w formacie XLSX"): one
+workbook or a ZIP of chapter workbooks. Route: the subject page links the newest edition, every edition page links the
+others (`ingestion/common/gus_publications.py`, editions from 2019). Entity = one edition (`kultura_<year>`,
+`uczestnictwo_<year>`, `turystyka_<year>`), version = download time (no Last-Modified) when the SHA-256 changed; the
+newest edition is downloaded again on every run; restart unit: one edition. Bronze `bronze.<source>_cells` (every
+cell of every workbook, with the ZIP member). Silver `silver.<source>_tables`: curated tables found by title and
+column header (`warehouse/macros/gus_tables.sql`), never by cell position; GUS symbols kept as `cell_status` ('.'
+and 'x' have no value, survey estimates marked 'v' are `low_reliability`). Tables: museum visitors, cinema
+admissions, public library users and public libraries by voivodeship (culture); establishments and bed places
+(31 July), tourists and overnight stays by voivodeship (tourism); visiting museums, using a library, attending
+theatre in % of persons 15+, by sex (participation). Gold blocks `culture_institutions`, `accommodation`,
+`participation` (annual); KPIs draft. Monthly schedule (6th). Licence: GUS terms (source given; commercial reuse not
+addressed; no named licence, D23).
