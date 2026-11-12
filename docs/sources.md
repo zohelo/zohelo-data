@@ -959,3 +959,32 @@ and women, Poland and voivodeships). Gold block `registered_unemployment` (KPIs 
 `registered_unemployment_rate`, next to GUS BDL and DBW). Weekly schedule (Tuesday). Licence: CC BY 3.0 PL (portal
 footer). The ZIPs since 2001, the half-yearly occupation and vacancy tables and the yearly MRPiPS-01 data files
 (SPR1, about 27 MB) are not built yet.
+
+## KNF insurance and pension statistics (`knf_insurance`)
+
+**Built (12 Nov 2026, register PLG-018).** KNF publishes each statistics release as its own article of the listing
+https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne (newest first, `?page=<n>`), with one to four
+`.xlsx` files under `/knf/pl/komponenty/img/`; the file URL changes per release. Route
+(`ingestion/to_landing/knf_insurance/`): listing → article (the title names series and period) → workbook, one
+request at a time, 2 s apart; robots.txt has no Disallow (Dev trial 43285716017). Series and entities: quarterly
+insurance bulletin "Biuletyn Kwartalny. Rynek ubezpieczeń <q>/<year>", parts A-D (`bulletin_YYYY_qN_<part>`; 2023 Q4
+has no part D); OFE monthly data "Dane miesięczne OFE - <month> <year>" (`ofe_YYYY_MM`); IKE and IKZE yearly
+"Informacje o rynku IKE|IKZE ... 31 grudnia <year>" (`ike_YYYY`, `ikze_YYYY`). Releases from 2023 on. Version =
+download time (KNF sends no Last-Modified), a changed file lands as a new version; restart unit: one release file.
+KNF links the OFE workbook only from the newest OFE article (older OFE articles carry no file), so OFE history
+accumulates from the first landed month; each run lands the missing releases and re-downloads the newest of each
+series. Bronze `bronze.knf_insurance_cells`: one row per cell (shared `ingestion/common/xlsx_cells.py`); a workbook
+without its series' layout (bulletin part A: the four premium and claims tables by English title; OFE: sheets
+"Aktywa netto" and "Członkowie"; IKE/IKZE: "<IKE|IKZE>_dane liczbowe") is rejected with the reason. Silver
+`silver.knf_insurance_observations` (series × period × table × item × provider × measure): bulletin part A premiums
+and claims of life and non-life insurers by insurer and total (thousand zloty, year to date, Q), OFE by fund and total
+(net assets, members, contributions, unit value; M), IKE/IKZE items by provider group (number and value; A); "x", "-"
+and IKE/IKZE value zeros printed next to a positive count are not values. Gold `build_knf_insurance`, blocks
+`insurance_market`, `ofe`, `ike_ikze` (market totals for Poland, units as printed; draft KPIs `insurance_gwp_life`,
+`insurance_gwp_nonlife`, `insurance_claims_life`, `insurance_claims_nonlife`, `ofe_net_assets`, `ofe_members`,
+`ike_accounts`, `ike_assets`, `ikze_accounts`, `ikze_assets` in finance.insurance_pensions). Schedule: the 6th and 23rd
+of each month, 06:40 UTC (OFE by the 20th, bulletin about three months after the quarter). Licence: unresolved (KNF
+legal notice asks for the source and a link, grants no reuse terms): `source.csv` `licence_key` `unresolved`, so the
+licence gate of `gold.publish` keeps every row out of v1 and v2; internal only. Not built: bulletin parts B-D in
+Silver, the OFE investment portfolio and accounts sheets, PPK, OFE history before the first landed month (the
+"Archiwalne informacje dotyczące OFE" article was not examined).
