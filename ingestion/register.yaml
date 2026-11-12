@@ -6166,7 +6166,8 @@ sources:
   name: Portal Jakości Powietrza API
   short_name: GIOŚ air quality
   provider: Główny Inspektorat Ochrony Środowiska (GIOŚ)
-  status: approved
+  source_system: gios_air_quality
+  status: built
   family: G
   kpi: true
   geography: Poland
@@ -6200,7 +6201,9 @@ sources:
   ingestion:
     history: 'New API v1: https://api.gios.gov.pl/pjp-api/v1/rest/data/getData/{sensorId} (measurements), /aqindex/getIndex/{stationId},
       station and sensor lists; the old /pjp-api/rest/ endpoints are withdrawn. Archive series of validated data are published
-      separately (check the GIOŚ archive pages in the dev trial).'
+      separately: annual ZIP files 2000-2025 on https://powietrze.gios.gov.pl/pjp/archives (/pjp/archives/downloadFile/<id>) and
+      the API v1 archivalData endpoints (getDataBySensor, getDataForAllStationsByYearAndVoivodeship; limit 2 requests a minute),
+      found in Dev probe 43322192937; not loaded by the first build (#2960).'
     incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
     identifiers: Station, sensor/parameter and observation timestamp.
   modelling:

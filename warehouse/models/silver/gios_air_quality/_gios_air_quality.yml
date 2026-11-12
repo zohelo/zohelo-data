@@ -1,0 +1,40 @@
+version: 2
+models:
+  - name: gios_air_stations
+    description: >-
+      GIOŚ air quality monitoring stations (register PL-ENV-010) from the station lists of the daily API v1 passes. Grain: station_id (newest pass that listed it).
+      Names of commune (Gmina), district (Powiat) and voivodeship (Województwo, upper case) as published; the API
+      gives no TERYT codes. Hourly values: silver.gios_air_hourly (entity table). Trial run: see
+      docs/sources/gios_air_quality.md.
+    columns:
+      - name: station_id
+        tests: [not_null, unique]
+      - name: station_code
+        tests: [not_null]
+      - name: voivodeship
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [DOLNOŚLĄSKIE, KUJAWSKO-POMORSKIE, LUBELSKIE, LUBUSKIE, MAZOWIECKIE, MAŁOPOLSKIE, OPOLSKIE,
+                         PODKARPACKIE, PODLASKIE, POMORSKIE, WARMIŃSKO-MAZURSKIE, WIELKOPOLSKIE, ZACHODNIOPOMORSKIE,
+                         ŁÓDZKIE, ŚLĄSKIE, ŚWIĘTOKRZYSKIE]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: gios_air_sensors
+    description: >-
+      GIOŚ air quality sensors (register PL-ENV-010) from the sensor lists of the daily API v1 passes.
+      Grain: sensor_id (newest pass that listed it). Parameter code (Wskaźnik - kod), formula and name as published.
+    columns:
+      - name: sensor_id
+        tests: [not_null, unique]
+      - name: station_id
+        tests: [not_null]
+      - name: parameter_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['C6H6', 'CO', 'NO', 'NO2', 'NOx', 'O3', 'PM10', 'PM2.5', 'SO2']
+      - name: raw_sha256
+        tests: [not_null]

@@ -1,0 +1,40 @@
+source_system: gios_air_quality
+description: "GIOŚ Portal Jakości Powietrza API v1 — stations, sensors and hourly air-quality measurements (provisional), one pass a day"
+
+# Extraction strategy (docs/landing.md, docs/sources/gios_air_quality.md). Register PL-ENV-010. Bulk feature checked
+# first: the annual ZIP files of the measurement archive (https://powietrze.gios.gov.pl/pjp/archives, "Wyniki pomiarów z
+# <year> roku", 2000-2025, /pjp/archives/downloadFile/<id>) hold verified history as spreadsheets; they are not loaded in
+# this first build (left out, docs/sources/gios_air_quality.md). Current data: the API v1
+# (https://api.gios.gov.pl/pjp-api/v1/rest/, OpenAPI /pjp-api/v3/api-docs; the old /pjp-api/rest/ services were withdrawn
+# on 30 Jun 2025), tested from Actions (Dev probes 43320759991, 43322192937): station list in one page of 500 (288
+# stations), sensors per station, hourly values per sensor from the last full hour to the third day back. One pass =
+# 1 + about 290 + about 1,100 requests, one at a time, 1 s apart (stated limit 1,500 a minute; 31 s between pages of
+# the station list, limited to 2 a minute). Own extractor ingestion/to_landing/gios_air_quality/.
+extraction:
+  initial: api
+  production: snapshot                  # each pass is a complete copy of the API's three-day window
+  incremental_policy: changed_since_last  # station and sensor lists by SHA-256; one measurement pass per UTC day
+  schedule: # UTC; hourly values, the API keeps three days, so a daily pass loses nothing and revises each hour up to
+    # three times. 02:40 UTC (03:40 CET / 04:40 CEST): the previous local day is complete.
+    - {cron: "40 2 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gios_air_quality/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}   # every pass is its own entity (one version), so every pass is kept
+  prune: report
+bronze: [bronze.gios_air_stations, bronze.gios_air_sensors, bronze.gios_air_measurements, bronze.gios_air_quality_rejected_files]
+silver: [silver.gios_air_stations, silver.gios_air_sensors, silver.gios_air_hourly]
+gold: [gold.build_gios_air_quality]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gios_air_stations: {rows: 450}  # 288 operating stations (Dev probe 43322192937)
+  gios_air_sensors: {rows: 2000}  # sensors of the 288 stations (Dev trial, docs/sources/gios_air_quality.md)
+  poc_build_gios_air_quality: {rows: 60000}  # 18 areas × 5 pollutants × days: about 90 rows a day, so the ceiling holds about 18 months; incremental before 1 M (D28)
+
+bronze_latest_only: true   # policy #822/#845: superseded station and sensor lists are removed; a pass has one version
+# Refresh policy for all layers (D32): hourly values grow by about 26,000 rows a day, so Silver measurements are an
+# entity table with one file per measurement day (ingestion/to_bronze/gios_air_quality/entities.py); Bronze adds one
+# file per pass; the station and sensor lists are small and rebuilt in full (dbt).
+refresh: {mode: incremental, unit: "pass (Bronze), measurement day (Silver)", decided: "D32 + #2960"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
