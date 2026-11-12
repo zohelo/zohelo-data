@@ -10,8 +10,9 @@ every page of ``/monthly-provisions`` for it (25 rows a page, the API's maximum)
 Every answer carries the request time in ``meta.date-modified``, so a new download is compared by the SHA-256 of
 its ``data`` rows (``data_sha256`` in the receipts), not by its bytes; equal rows are not written again.
 
-Guards before anything is written: every page answers the filters asked (``links.self``), the page numbers and
-``meta.count`` agree, the rows equal ``meta.count`` and (year, month) is unique; otherwise the entity fails.
+Guards before anything is written: every page answers the filters asked (``links.self``: the province code, an
+ATC filter), the page numbers and ``meta.count`` agree, the rows equal ``meta.count`` and (year, month) is unique;
+otherwise the entity fails.
 
 Layout (docs/landing.md):
 ``<root>/nfz_pharmacy_refunds/snapshot/data/<area>_<atc>/<version>__<ingested>__part-<n>.json`` + one receipt per
@@ -133,7 +134,10 @@ def download(session: requests.Session, entity: str, asked: dict[str, str]) -> l
         body, parsed, address = get_json(session, "monthly-provisions", **asked, page=page, limit=LIMIT)
         meta = parsed["meta"]
         echoed = {k: v[0] for k, v in parse_qs(urlsplit((parsed.get("links") or {}).get("self") or "").query).items()}
-        if any(echoed.get(k) != v for k, v in asked.items()) or int(meta["page"]) != page:
+        # province must come back as asked (unknown codes are answered, not refused); atc must be present (the API
+        # refuses an unknown group name with HTTP 400, and its encoding of Polish letters in the link is its own)
+        answered = (echoed.get("province"), bool(echoed.get("atc")))
+        if answered != (asked.get("province"), "atc" in asked) or int(meta["page"]) != page:
             raise RuntimeError(f"{entity}: page {page} answers {echoed} page {meta['page']}, asked {asked}")
         if count is None:
             count = int(meta["count"])
