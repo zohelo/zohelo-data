@@ -1,0 +1,41 @@
+source_system: ms_krs
+description: "Open KRS API (Ministry of Justice) — current register extracts of the KRS entities that hold an LEI, entity-level fields only"
+
+# Extraction strategy (docs/landing.md, docs/sources/ms_krs.md). The register has no bulk file and no list of
+# numbers; the Open API (https://prs.ms.gov.pl/krs/openApi) answers one KRS number per request:
+# https://api-krs.ms.gov.pl/api/krs/OdpisAktualny/<krs>?rejestr=<P|S>&format=json (200 JSON, 204 when that register
+# holds no current extract), and https://api-krs.ms.gov.pl/api/Krs/Biuletyn/<YYYY-MM-DD> lists the numbers with an
+# entry on a day. Selection: the KRS numbers of silver.gleif_legal_entities (registration authority RA000484, ten
+# digits; 31,892 numbers on 12 Nov 2026, Dev probe 43320344152), ascending. One request at a time, 1 s apart
+# (no limit is published; median answer 0.66 s), at most 120 minutes a run: the first load takes about ten daily
+# runs, each continuing from Landing. Every answer is reduced to an entity-level allowlist before it lands (no
+# natural persons, no addresses; ingestion/to_landing/ms_krs/extract.py). Landing: 16 parts (KRS number modulo
+# 16), each file the complete current state of its part, written only when its bytes changed. Daily afterwards:
+# the bulletins since the last run name the held numbers to ask again.
+extraction:
+  initial: api
+  production: snapshot                    # each file is the complete current state of its part
+  incremental_policy: changed_since_last  # the daily bulletin of changed numbers; SHA-256 per part
+  schedule: # UTC; 02:40/03:40 Warsaw, after the day's bulletin is complete; the register changes on working days
+    - {cron: "40 1 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/ms_krs/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 7}   # a part is rewritten whole on most days (about 2 MB each)
+  prune: report
+bronze: [bronze.ms_krs_extracts, bronze.ms_krs_rejected_files]
+silver: [silver.ms_krs_entities]
+gold: [gold.krs_entity, gold.build_ms_krs]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); sized for the whole selection, which loads over ~10 runs
+  ms_krs_entities: {rows: 48000}  # 1.5 x 31,892 selected numbers (Dev probe 43320344152)
+  krs_entity: {rows: 48000}  # at most the same; numbers without a current extract are left out
+  poc_build_ms_krs: {rows: 1500}  # (legal forms + 1) x (16 voivodeships + PL + _X): about 40 forms at most
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a part
+# Refresh policy for all layers (D32): 16 small files (about 32,000 records in all); a changed part replaces its
+# entity in Bronze, Silver and Gold are rebuilt in full. The source's changed-since route (the bulletin) is used
+# in Landing, where the requests are.
+refresh: {mode: full, decided: "D32 + #1362"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
