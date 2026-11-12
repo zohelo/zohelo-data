@@ -1,4 +1,4 @@
-"""GUS Kultura i dziedzictwo narodowe (culture and national heritage), annual tables: Landing activities (register PLS-027).
+"""GUS Kultura i dziedzictwo narodowe: Landing activities (register PLS-027).
 
 Shared logic in ingestion/common/gus_publications.py: the series page links the newest edition, each edition page
 links the other editions and its tables file; entity = one edition (``kultura_<year>``), from 2019.

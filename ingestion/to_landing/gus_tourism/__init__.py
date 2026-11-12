@@ -1,4 +1,4 @@
-"""GUS Turystyka (tourism), annual tables: Landing activities (register PLS-035).
+"""GUS Turystyka: Landing activities (register PLS-035).
 
 Shared logic in ingestion/common/gus_publications.py: the series page links the newest edition, each edition page
 links the other editions and its tables file; entity = one edition (``turystyka_<year>``), from 2019.
