@@ -26,6 +26,9 @@ models:
         tests: [not_null]
       - name: unit
         tests: [not_null]
+      - name: is_projection
+        description: Year after the year of the file's version (Last-Modified): a projection, never an observation.
+        tests: [not_null]
       - name: raw_sha256
         description: Landing SHA-256 of the source file (lineage to Landing/Archive).
         tests: [not_null]

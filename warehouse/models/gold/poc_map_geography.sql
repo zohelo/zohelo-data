@@ -180,6 +180,30 @@ wdi as (
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
 ),
 
+-- OECD (#2738): countries by ISO 3166 alpha-3 (dim_geography iso3); EU27_2020 is the Eurostat aggregate, the
+-- aggregates of macro poc_oecd_areas are OECD:<code> members. Built from Gold's own lists, not from
+-- silver.oecd_cli, so the dimensions never wait for the OECD source; codes outside them are unmatched (_X).
+oecd as (
+    select
+        'oecd' as source_system,
+        g.iso3 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso3 is not null
+    union all
+    select
+        'oecd' as source_system,
+        'EU27_2020' as source_code,
+        'EUROSTAT:EU27_2020' as geography_key
+    union all
+    select
+        'oecd' as source_system,
+        replace(g.geography_key, 'OECD:', '') as source_code,
+        g.geography_key
+    from geo as g
+    where g.geography_key like 'OECD:%'
+),
+
 -- UNCTAD: economies by UNCTAD code (M49; France 250 in the FDI, merchandise and services tables, 251 only in port
 -- calls) from poc_unctad_areas: the EU27 members, 3412 European Union (2020 …) = EU27_2020, 0000 World. Other
 -- economies have no ISO code in the tables (_X); the build stage builds only the listed areas, and
@@ -242,6 +266,8 @@ from (
     select * from dbw
     union all
     select * from wdi
+    union all
+    select * from oecd
     union all
     select * from unctad
     union all

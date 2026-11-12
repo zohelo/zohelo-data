@@ -3,8 +3,10 @@
    CO2eq, AR5; land use: land area in 1000 ha) for the EU27 members, the FAO aggregate European Union (27)
    (→ EUROSTAT:EU27_2020) and World (→ WB:WLD), annual. measure_key faostat:<entity>:<unit>:<item>.<element>.<source>
    (the source code keeps FAO TIER 1 and other GT sources apart; '_Z' where the domain has none). Values and units
-   as published; FAO flags (A official, E estimated, I imputed, ...) map to observation status ok. Areas through
-   poc_map_geography (section faostat); unmapped areas are not built. #}
+   as published; FAO flags E (estimated) and I (imputed) → observation status estimated, B → break, P →
+   provisional, others (A official, X international organisation, ...) → ok. Projections (Silver is_projection:
+   a year after the file's version year) are never built. Areas through poc_map_geography (section faostat);
+   unmapped areas are not built. #}
 with blocks as ({{ poc_faostat_blocks() }}),
 
 geo_map as (
@@ -32,10 +34,12 @@ select
     cast(null as varchar) as sex_code,
     true as is_total,
     o.value,
-    'ok' as observation_status_key,
+    case o.flag when 'E' then 'estimated' when 'I' then 'estimated' when 'B' then 'break' when 'P' then 'provisional'
+        else 'ok'
+    end as observation_status_key,
     o.source_version,
     o.raw_sha256
 from {{ ref('faostat_observations') }} as o
 inner join blocks as b on o.entity = b.entity and o.item_code = b.item_code and o.element_code = b.element_code
 inner join geo_map as g on cast(o.area_code as varchar) = g.source_code
-where o.value is not null
+where o.value is not null and not o.is_projection
