@@ -163,7 +163,7 @@ sources:
   name: Programme for International Student Assessment (PISA) databases
   short_name: OECD PISA
   provider: OECD
-  status: approved
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -200,10 +200,20 @@ sources:
   research:
     priority: specialist
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Confirm per-cycle file licences (third-party restrictions in file metadata)'
-    - 'Implement complex-survey methodology before publishing estimates'
+    - 'Parked (12 Nov 2026, #2370): no machine route to the OECD-published country mean scores. The OECD Data Explorer
+      SDMX API lists 1,552 dataflows and none for PISA (Dev probe 43273970310); the means are published only in the
+      PISA Data Explorer (interactive web tool), the results reports'' StatLink workbooks and Education GPS (PDF and
+      embedding, no download), and www.oecd.org answers HTTP 403 to GitHub runners (bot protection, Dev probe
+      43275098288; not worked around). The PISA databases are student microdata: country means need the survey weights,
+      replicate weights and plausible values, which the brief rules out computing here.'
+    - 'Confirm per-cycle file licences (third-party restrictions in file metadata): the 2022 database page states no
+      terms of its own (read 12 Nov 2026); the OECD Terms and Conditions page was not readable from a runner (403)'
+    - 'Options for a decision: (a) the OECD-published means as republished by the World Bank Education Statistics
+      (indicators LO.PISA.REA/MAT/SCI; route, coverage and terms not checked) as a separate World Bank source; (b) a one-off manual load of
+      the PISA 2022 Results StatLink workbooks (web export, needs an owner decision or D row); (c) wait for an OECD
+      Data Explorer PISA dataflow'
     references:
     - https://www.oecd.org/en/about/programmes/pisa/pisa-data.html
     - https://www.oecd.org/en/about/terms-conditions.html
