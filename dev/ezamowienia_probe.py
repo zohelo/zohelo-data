@@ -1,6 +1,6 @@
 """Read-only probe of the BZP read WebService (PLG-022, Task #1382): instruction ZIP, swagger, list shape.
 
-GET only, one request at a time, 1.5 s apart, at most 60 requests; robots.txt read first and honoured.
+GET only, one request at a time, 2.5 s apart (published limit 30 a minute), at most 60 requests; robots.txt read first and honoured.
 Personal data are never printed: for notice answers only key names, value types and a fixed set of
 non-personal fields (ids, types, dates, CPV, province) are shown.
 """
@@ -19,6 +19,7 @@ import zipfile
 UA = "zohelo-data/1.0 (+https://zohelo.com; public statistics platform)"
 HOST = "https://ezamowienia.gov.pl"
 API = f"{HOST}/mo-client-board/api/notices"
+V1 = f"{HOST}/mo-board/api/v1/notice"
 ZIP = "https://media.ezamowienia.gov.pl/pod/2022/08/Zalacznik-3-Instrukcja-integracji-z-API-BZP.zip"
 BUDGET = [60]
 RP = urllib.robotparser.RobotFileParser()
@@ -31,7 +32,7 @@ def get(url, n=30_000_000, check_robots=True):
     BUDGET[0] -= 1
     if check_robots and url.startswith(HOST) and not RP.can_fetch(UA, url):
         return None, "robots disallow", {}
-    time.sleep(1.5)
+    time.sleep(2.5)  # published limit: 30 requests a minute per IP (403 above it)
     try:
         req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json, */*"})
         with urllib.request.urlopen(req, timeout=120) as r:
@@ -134,7 +135,9 @@ def swagger():
     for path in (
         "/mo-client-board/swagger/v1/swagger.json",
         "/mo-client-board/swagger/index.html",
-        "/mo-client-board/swagger.json",
+        "/mo-board/swagger/v1/swagger.json",
+        "/mo-board/swagger/index.html",
+        "/mo-board/api/swagger/v1/swagger.json",
     ):
         body, st, _ = get(HOST + path)
         print(f"\n=== SWAGGER {path}: {st}", flush=True)
@@ -162,13 +165,23 @@ def main():
     RP.parse(body.decode("utf-8", "replace").splitlines() if body and st.startswith("200") else [])
     zip_text()
     swagger()
-    notices(API + "/", "bare")
     d1, d2 = "2026-11-03T00:00:00", "2026-11-04T00:00:00"
-    notices(f"{API}?PublicationDateFrom={d1}&PublicationDateTo={d2}&PageSize=5", "dates only")
-    notices(f"{API}?NoticeType=ContractNotice&PublicationDateFrom={d1}&PublicationDateTo={d2}&PageSize=5&PageNumber=1", "contract notice p1")
-    notices(f"{API}?NoticeType=TenderResultNotice&PublicationDateFrom={d1}&PublicationDateTo={d2}&PageSize=5&PageNumber=1", "result p1")
-    notices(f"{API}?NoticeType=ContractNotice&PublicationDateFrom={d1}&PublicationDateTo={d2}&PageSize=1000", "contract one day big page")
-    notices(f"{API}/search?NoticeType=ContractNotice&PublicationDateFrom={d1}&PublicationDateTo={d2}&PageSize=5", "search path")
+    notices(V1, "v1 bare")
+    notices(f"{V1}?PublicationDateFrom={d1}&PublicationDateTo={d2}&PageSize=5", "v1 dates only")
+    notices(f"{V1}?NoticeType=ContractNotice&PublicationDateFrom={d1}&PublicationDateTo={d2}&PageSize=5", "v1 contract p")
+    notices(f"{V1}?NoticeType=TenderResultNotice&PublicationDateFrom={d1}&PublicationDateTo={d2}&PageSize=5", "v1 result p")
+    big = notices(f"{V1}?NoticeType=TenderResultNotice&PublicationDateFrom={d1}&PublicationDateTo={d2}&PageSize=5000", "v1 result day big page")
+    notices(f"{V1}?NoticeType=TenderResultNotice&PublicationDateFrom={d1}&PublicationDateTo={d2}&PageSize=5&PageNumber=2", "v1 page 2")
+    notices(f"{V1}/stats", "v1 stats")
+    notices(API + "/", "legacy bare")
+    notices(f"{API}?NoticeType=ContractNotice&PublicationDateFrom={d1}&PublicationDateTo={d2}&PageSize=5", "legacy contract")
+    if big:
+        keys = {}
+        for it in big:
+            for c in it.get("contractors") or []:
+                for k in c:
+                    keys[k] = keys.get(k, 0) + 1
+        print("contractor keys:", keys)
     print("\nrequests left:", BUDGET[0])
 
 
