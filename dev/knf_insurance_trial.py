@@ -34,10 +34,32 @@ SILVER = Path("warehouse/models/silver/knf_insurance")
 GOLD = Path("warehouse/models/gold/poc_build_knf_insurance.sql")
 MACROS = Path("warehouse/macros/xlsx_cells.sql").read_text()
 REAL = report.annotate
+CAPTURED: list[tuple[str, dict]] = []
+TITLES: list[str] = []
 
 
-def quiet(level, title, data):  # the steps' own annotations are printed; the trial writes at most 10
+def quiet(level, title, data):  # the steps' own annotations are printed and kept; the trial writes at most 10
     print(f"[{level}] {title}: {str(data)[:1500]}", flush=True)
+    CAPTURED.append((title, data))
+
+
+def step(title: str) -> list:
+    """The compact results of the captured step annotations with this title, in order."""
+    keys = ("releases_planned", "files_landed", "files_unchanged", "deferred_to_next_run", "refused",
+            "entities_landed", "candidates", "appended_files", "rows_added", "rejected")
+    return [{k: d[k] for k in keys if isinstance(d, dict) and k in d} for t, d in CAPTURED if t == title]
+
+
+_release = landing.release
+
+
+def logged_release(title: str):  # every IKE/IKZE article title the listing walk reads (half-yearly editions?)
+    if re.search(r"\bIKZ?E\b", title) and title not in TITLES:
+        TITLES.append(title[:110])
+    return _release(title)
+
+
+landing.release = logged_release
 
 
 def q(con, sql):
@@ -162,12 +184,20 @@ def main() -> None:
                 time.sleep(90)
         exits.append(landing.extract(60, landing_root=LANDING))  # idempotency: must land nothing
         summary["landing_exit"], summary["landing_resumed_after"] = exits, resumed
+        summary["landing_extract_runs"] = step("knf_insurance landing extract")  # the last one must land 0 files
+        summary["ike_ikze_titles_seen"] = TITLES[:16]
         held = sorted(landing.held_entities(LANDING))
         receipts = [r for e in held for r in bulk_file.landed(client, req("STORAGE_LANDING_BUCKET_NAME"), bulk_file.prefix(landing.SOURCE, e, LANDING))]
         summary["landing_files"] = len(receipts)
         summary["landing_bytes"] = sum(r["size_bytes"] for r in receipts)
         summary["landing_versions_per_entity_max"] = max((sum(1 for r in receipts if r["entity"] == e) for e in held), default=0)
-        summary["entities"] = held
+        by_series: dict = {}
+        for e in held:
+            by_series.setdefault(landing.release_of(e)[0], []).append(e)
+        summary["entities"] = {k: [len(v), v[0], v[-1]] for k, v in by_series.items()}
+        summary["bulletins_without_four_parts"] = sorted(
+            r for r in {landing.release_of(e) for e in by_series.get("bulletin", [])}
+            if sum(1 for e in by_series["bulletin"] if landing.release_of(e) == r) < 4)
         summary["last_modified_sent"] = sum(1 for r in receipts if r["version_basis"] == "Last-Modified")
         summary["verify_exit"] = bulk_file.main(landing.SOURCE, "verify", landing_root=LANDING, specs=[{"entity": e} for e in held])
         rows = []
@@ -182,10 +212,15 @@ def main() -> None:
             t = cat.load_table((NS, bronze.TABLE)).scan().to_arrow()
             rows.append((t.num_rows, len(cat.load_table((NS, bronze.TABLE)).inspect.files())))
         summary["bronze_rows_files_load1_load2"] = rows
+        summary["bronze_load_runs"] = step("knf_insurance Bronze from Landing")  # the last one must append 0
         rejected = []
         with contextlib.suppress(Exception):
             rejected = cat.load_table((NS, bronze.REJECTED)).scan().to_arrow().to_pylist()
-        summary["rejected"] = [(r["entity"], r["error"][:160]) for r in rejected]
+        reasons: dict = {}
+        for r in sorted(rejected, key=lambda r: r["entity"]):
+            reasons.setdefault(r["error"][:110], []).append(r["entity"])
+        summary["rejected"] = {k: [len(v), v[0], v[-1]] for k, v in reasons.items()}
+        summary["rejected_rows"] = len(rejected)
         con.register("cells", t)
         REAL("notice", "knf_insurance trial: landing and bronze", summary)
     except Exception:  # noqa: BLE001
@@ -198,7 +233,7 @@ def main() -> None:
         REAL("error", "knf_insurance trial: bronze profile", traceback.format_exc()[-1500:])
     if not SILVER.exists():
         return
-    sources, refs, silver = {("knf_insurance", "knf_insurance_cells"): "cells"}, {}, {}
+    sources, refs, silver, checks = {("knf_insurance", "knf_insurance_cells"): "cells"}, {}, {}, {}
     try:
         for path in sorted(SILVER.glob("*.sql")):
             name = path.stem
@@ -219,10 +254,12 @@ def main() -> None:
                     for r in res[:200]:
                         print("   ", r)
                     if title.startswith("-- annotate"):
-                        silver[title[12:60]] = res[:40]
+                        checks[title[12:60]] = res[:30]
                 except Exception as exc:  # noqa: BLE001
                     print(f"\n=== {title} failed: {exc}")
-        REAL("notice" if all(not s["test_failures"] for s in silver.values() if isinstance(s, dict)) else "error", "knf_insurance trial: silver", silver)
+                    checks[title[12:60]] = f"failed: {str(exc)[:200]}"
+        REAL("notice" if all(not s["test_failures"] for s in silver.values()) else "error", "knf_insurance trial: silver", silver)
+        REAL("notice", "knf_insurance trial: silver checks", checks)
     except Exception:  # noqa: BLE001
         REAL("error", "knf_insurance trial: silver", {"done": silver, "crash": traceback.format_exc()[-2000:]})
         return
@@ -242,9 +279,33 @@ def main() -> None:
             "units": q(con, "select unit_code, count(*) from g group by 1 order by 1"),
             "spot": q(con, "select measure_key, period_label, value, unit_code from g where is_total qualify row_number() over (partition by measure_key order by date_key desc) = 1 order by 1")[:30],
         }
+        con.execute("create table kpi_measure as select * from read_csv('warehouse/seeds/kpi_measure.csv', all_varchar = true)")
+        gold["rows_per_measure_x_period_max"] = q(con, "select max(n) from (select count(*) n from g group by measure_key, geography_key, date_key)")[0][0]
+        gold["kpi_newest"] = q(con, """select k.kpi_key, max(g.period_label), arg_max(g.value, g.date_key), count(g.value)
+            from kpi_measure as k left join g on g.measure_key like k.measure_key_pattern
+            where k.source_system = 'knf_insurance' group by 1 order by 1""")
         REAL("notice" if gold["dup_series_key_x_date_key"] == 0 else "error", "knf_insurance trial: gold build", gold)
     except Exception:  # noqa: BLE001
         REAL("error", "knf_insurance trial: gold build", traceback.format_exc()[-2000:])
+    try:
+        import pyarrow as pa
+
+        from warehouse import publish
+
+        seeds = {n: list(csv.DictReader(open(f"warehouse/seeds/{n}.csv", encoding="utf-8"))) for n in ("source", "licence", "kpi_measure")}
+        licensed = publish.licensed_sources(seeds["source"], seeds["licence"])
+        mine = [k for k in dict.fromkeys(m["kpi_key"] for m in seeds["kpi_measure"] if m["source_system"] == "knf_insurance")]
+        rows = q(con, "select source_system from g")
+        gated = publish.licence_gated(pa.table({"source_system": [r[0] for r in rows]}), licensed, "knf")
+        REAL("notice", "knf_insurance trial: licence gate", {
+            "source_csv": [r for r in seeds["source"] if r["source_key"] == "knf_insurance"],
+            "licence_csv": [r for r in seeds["licence"] if r["licence_key"] == "unresolved"],
+            "knf_insurance_licensed": "knf_insurance" in licensed,
+            "kpis_blocked": {k: publish.licence_blocked(k, seeds["kpi_measure"], licensed) for k in mine},
+            "gold_rows_before_after_gate": [len(rows), gated.num_rows],
+        })
+    except Exception:  # noqa: BLE001
+        REAL("error", "knf_insurance trial: licence gate", traceback.format_exc()[-1500:])
 
 
 def cleanup() -> dict:

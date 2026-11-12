@@ -1,7 +1,7 @@
--- annotate silver_by_series
+-- silver_by_series (log only)
 select series, frequency, count(*), count(distinct entity), min(period_label), max(period_label)
 from knf_insurance_observations group by all order by 1;
--- annotate grain_duplicates
+-- annotate grain_dups
 select count(*) from (
     select series, period_label, table_code, item_label, provider, measure_code from knf_insurance_observations
     group by all having count(*) > 1
@@ -17,7 +17,8 @@ select count(*) filter (where entity <> 'bulletin_' || year(period_end) || '_q' 
 from knf_insurance_observations where series = 'bulletin';
 -- annotate ofe_ike_period_vs_entity
 select count(*) filter (where series = 'ofe' and entity <> 'ofe_' || strftime(period_end, '%Y_%m')),
-    count(*) filter (where series in ('ike', 'ikze') and entity <> series || '_' || year(period_end))
+    count(*) filter (where series in ('ike', 'ikze') and entity <> series || '_' || year(period_end)
+        || case frequency when 'S' then '_h1' else '' end)
 from knf_insurance_observations;
 -- annotate markers_in_modelled_sheets
 with t as (
@@ -36,11 +37,11 @@ select split_part(c.entity, '_', 1), trim(c.value_text), count(*)
 from cells as c inner join t on c.entity = t.entity and c.sheet_name = t.sheet_name
 where c.cell_type in ('s', 'inlineStr', 'str') and length(trim(c.value_text)) <= 4 and c.column_number >= 2
 group by all order by 1, 3 desc;
--- annotate ike_ikze_sex_rows_value
+-- ike_ikze_sex_rows_value (log only)
 select series, period_label, item_code, value from knf_insurance_observations
 where series in ('ike', 'ikze') and provider = '_T' and measure_code = 'value' and regexp_matches(item_label, 'kobiety|mężczyźni')
 order by 1, 2, 3 limit 12;
--- annotate zero_values_by_series
+-- zero_values_by_series (log only)
 select series, measure_code, count(*) filter (where value = 0), count(*) from knf_insurance_observations
 where is_total group by all having count(*) filter (where value = 0) > 0 order by 1, 2;
 -- per quarter rows (log only)
@@ -50,13 +51,41 @@ from knf_insurance_observations group by all order by 1, 2;
 select series, table_code, measure_label, count(*) from knf_insurance_observations where measure_code is null or unit_code is null or provider is null
 group by all
 ;
--- annotate ike_ikze_zero_value_markers_dropped
-select split_part(v.entity, '_', 1), count(*) from cells as v
-inner join cells as n on v.entity = n.entity and v.sheet_name = n.sheet_name and v.row_number = n.row_number
-    and n.column_number = v.column_number - 1
-where ends_with(v.sheet_name, '_dane liczbowe') and v.column_number in (4, 6, 8, 10, 12, 14) and v.row_number > 9
-    and v.cell_type = 'n' and try_cast(v.value_text as double) = 0 and try_cast(n.value_text as double) > 0
-group by 1 order by 1
+-- annotate ike_ikze_printed_zero_values_kept
+select series, provider, left(item_label, 48), count(*), min(period_label), max(period_label)
+from knf_insurance_observations as o
+where series in ('ike', 'ikze') and measure_code = 'value' and value = 0
+group by all order by 1, 4 desc limit 12
+;
+-- annotate printed_zeros_by_series_measure
+select series, measure_code, count(*) filter (where value = 0), count(*) from knf_insurance_observations
+group by all having count(*) filter (where value = 0) > 0 order by 1, 2
+;
+-- annotate text_in_value_positions_of_modelled_rows
+with v as (
+    select o.entity, o.source_row, o.series from knf_insurance_observations as o group by all
+)
+select c.series, trim(c.value_text), count(*) from (
+    select *, split_part(entity, '_', 1) as series from cells
+    where cell_type in ('s', 'inlineStr', 'str') and column_number >= 3 and length(trim(value_text)) <= 6
+) as c
+inner join v on c.entity = v.entity and c.row_number = v.source_row
+group by all order by 1, 3 desc limit 20
+;
+-- annotate totals_vs_sum_of_parts
+select series, period_label, table_code, measure_code,
+    max(value) filter (where is_total) as total,
+    sum(value) filter (where not is_total) as parts,
+    round(max(value) filter (where is_total) - sum(value) filter (where not is_total), 2) as diff
+from knf_insurance_observations
+where (series = 'ofe' and measure_code in ('net_assets', 'members'))
+    or (series = 'bulletin' and measure_code = 'gross_written_premium' and period_label in ('2023-Q4', '2026-Q2'))
+group by all order by abs(diff) desc nulls last limit 12
+;
+-- annotate silver_nulls_and_periods
+select series, frequency, count(*), count(distinct period_label), min(period_label), max(period_label),
+    count(*) filter (where item_label is null or unit_code is null or measure_code is null or provider is null)
+from knf_insurance_observations group by all order by 1, 2
 ;
 -- layout dump of older workbooks (log only)
 select entity, sheet_name, row_number, column_number, cell_type, left(value_text, 90) from cells
