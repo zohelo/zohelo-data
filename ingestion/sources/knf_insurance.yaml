@@ -7,7 +7,8 @@ description: "KNF (Komisja Nadzoru Finansowego) insurance and pension statistics
 # links are found at run time: listing → article (title names series and period) → .xlsx
 # (ingestion/to_landing/knf_insurance/). Entity = one file of one release (ofe_YYYY_MM, bulletin_YYYY_qN_<part>,
 # ike_YYYY, ikze_YYYY); version = Last-Modified (KNF sends none: download time), written only when the SHA-256
-# changed. Restart unit: one release file. Releases from 2023 on (FIRST_YEAR).
+# changed. Restart unit: one release file. Releases from 2023 on (FIRST_YEAR). Older OFE months are .xls (OLE2):
+# landed as published, rejected by Bronze with that reason (no .xls reader without a new dependency).
 extraction:
   initial: bulk
   production: snapshot                  # each file is one release as published; a replaced file lands as a new version
