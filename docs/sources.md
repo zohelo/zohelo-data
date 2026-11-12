@@ -826,6 +826,23 @@ ref_area, source, indicator, sex, classif1 as series_key; obs_status and notes a
 entity). Refresh full (D32): a narrow table rebuilt weekly in full, ceiling exception #2832. Terms:
 CC BY 4.0 for releases from 3 May 2023, licence row `cc_by_4_0_ilo`. Restart unit: one indicator file.
 
+## UNECE Statistical Database (PXWeb)
+
+**Built (11 Nov 2026, register GL-038).** No bulk feature: the database (PXWeb 2015) does not serve
+its PX files, and its PXWeb API v1 (`https://w3.unece.org/PXWeb2015/api/v1/en/STAT`) answers data only
+to POST queries. `ingestion/to_landing/unece/` therefore lists the tables of the economic statistics
+folder `20-ME` (macroeconomic overview, national accounts, labour force and wages, price indices,
+industrial production, external economic relations, globalization) and queries each whole as JSON-stat
+2.0; a table above the API cell limit (HTTP 403) is queried per value of its first variable and lands
+as entities `<table>__p<value code>` (Silver keeps only the newer of the whole and part shapes). Version = the table's `updated` time (the API restamps tables daily, so the
+SHA-256 decides whether a copy is written). One request at a time with a 4 s pause: the API answers
+bursts with 429. Bronze: `bronze.unece_observations` (the generic SDMX format of the OECD onboarding:
+variable codes as series_key (`|`-separated), period label, value and status) and `bronze.unece_codes` (variable and
+value labels per file). Silver: `silver.unece_observations` (codes and labels as JSON, area = the
+Country variable: M49 codes and aggregates such as E27 = EU-27). Terms: UNECE copyright notice (free
+reuse incl. commercial, acknowledge UNECE), licence row `unece_terms`. Weekly Monday check. Restart
+unit: one table.
+
 ## News headline feeds (`news_feeds`, topics)
 
 **Implemented (10 Nov 2026, register TP-001…TP-008, family J; topics layer O32, [topics.md](topics.md)).**
