@@ -24,7 +24,8 @@ from warehouse import observations as obs
 
 NS = "zz_dev_gold_coverage"
 SOURCE = "eurostat"
-ALWAYS = ["UNE_RT_M", "NAMA_10_GDP", "PRC_HICP_MINR", "DEMO_PJAN", "NAMQ_10_GDP", "DEMO_R_PJANAGGR3", "EARN_MW_CUR"]
+ALWAYS = ["UNE_RT_M", "NAMA_10_GDP", "PRC_HICP_MINR", "DEMO_PJAN", "NAMQ_10_GDP", "DEMO_R_PJANAGGR3", "EARN_MW_CUR",
+          "NAIO_10_FCP_U3", "AVIA_TF_ACC"]
 SPOT = {  # series of the rule-based layer whose newest PL value is reported, with the curated fact's value
     "UNE_RT_M": "measure_key = 'eurostat:UNE_RT_M:PC_ACT:SA@M' and breakdown_json like '%\"age\":\"TOTAL\"%' and sex_key = '_T'",
     "NAMA_10_GDP": "measure_key = 'eurostat:NAMA_10_GDP:CP_MEUR:B1GQ@A'",
@@ -205,14 +206,14 @@ def main() -> None:
     cat, client = catalog(), s3()
     annotate("notice", "trial cleanup before", cleanup(cat, client))  # leftovers of a killed earlier run
     try:
-        diagnose(["TIN00092", "UNE_RT_M", "NAMA_10_GDP", "DEMO_PJAN"])
         silver = et.state(cat.load_table(obs.SOURCES[SOURCE]["silver"]), "dataset_id")
         by_size = sorted(silver, key=lambda e: -silver[e]["rows"])
         upper = {e.upper(): e for e in silver}
         picked = set(random.Random(20261112).sample(sorted(silver), min(size, len(silver))))
         picked |= {upper[b] for b in ALWAYS if b in upper}
         # large datasets: memory and time of a heavy case (the very largest are named in the plan, not built)
-        picked |= set([e for e in by_size if silver[e]["rows"] <= 150_000_000][:2])
+        if size:
+            picked |= set([e for e in by_size if silver[e]["rows"] <= 150_000_000][:2])
         sample = sorted(e.upper() for e in picked)
         silver_paths = [p for e in picked for p in silver[e]["paths"]]
         plan = {
