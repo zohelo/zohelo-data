@@ -211,36 +211,100 @@ def crawl_bundles(root: str, max_files: int = 70) -> None:
         note("bundle_ctx", c)
 
 
-API = "https://rpwdl2.ezdrowie.gov.pl/api"
+API = "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip"
+TYPES = ["HEALTHCARE_PROVIDER", "PHYSICIAN_PRACTICE", "GROUP_PHYSICIAN_PRACTICE", "NURSING_PRACTICE",
+         "GROUP_NURSING_PRACTICE", "PHYSIOTHERAPY_PRACTICE", "GROUP_PHYSIOTHERAPY_PRACTICE", "DIAGNOSTIC_PRACTICE",
+         "GROUP_DIAGNOSTIC_PRACTICE"]
 
 
-def module_dump(names: list[str]) -> None:
-    calls: list[str] = []
-    for name in names:
-        jb, ji = fetch(f"https://rpwdl2.ezdrowie.gov.pl/{name}", limit=4_000_000)
-        src = text_of(jb)
-        note("module", {"name": name, **ji})
-        for i in range(0, min(len(src), 60000), 15000):
-            print(f"[module_src {name} {i}] {src[i:i + 15000]}", flush=True)
-        for m in re.finditer(r"`\$\{[A-Za-z0-9_.]+\}(/[^`]{1,200})`", src):
-            calls.append(m.group(1))
-        for m in re.finditer(r"""import\(["']\./([A-Za-z0-9_\-]+\.js)["']\)""", src):
-            note("module_import", {"from": name, "import": m.group(1)})
-    note("module_calls", sorted(set(calls)))
-    for path in sorted(set(calls)):
-        if "${" in path:
-            continue
-        body, info = fetch(API + path, accept="application/json", limit=2_000_000)
-        note("api_get", {"path": path, **info, "head": text_of(body)[:4000]})
+def download(url: str, path: str) -> dict:
+    import hashlib
+    if not robots_ok(url):
+        return {"status": "robots disallow"}
+    time.sleep(2.0)
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "*/*"})
+    h = hashlib.sha256()
+    n = 0
+    started = time.time()
+    try:
+        with urllib.request.urlopen(req, timeout=300) as r, open(path, "wb") as fh:
+            hdr = {k.lower(): v[:160] for k, v in r.headers.items() if k.lower() in ("content-type", "content-length", "last-modified", "etag", "content-disposition", "cache-control", "date")}
+            while True:
+                chunk = r.read(1 << 20)
+                if not chunk:
+                    break
+                fh.write(chunk)
+                h.update(chunk)
+                n += 1 << 0 if False else len(chunk)
+            return {"status": r.status, **hdr, "bytes": n, "sha256": h.hexdigest()[:16], "seconds": round(time.time() - started, 1)}
+    except urllib.error.HTTPError as e:
+        return {"status": e.code, "body": e.read(300).decode("utf-8", "replace")}
+    except Exception as e:  # noqa: BLE001
+        return {"status": f"{type(e).__name__}: {str(e)[:160]}"}
+
+
+def profile_csv(path: str, name: str) -> dict:
+    import duckdb
+    con = duckdb.connect()
+    raw = open(path, "rb").read(3000)
+    first = raw.split(b"\n", 1)[0]
+    out = {"member": name, "first_line": first.decode("utf-8", "replace")[:1500], "bom": raw[:3] == b"\xef\xbb\xbf"}
+    try:
+        rel = con.sql(f"select * from read_csv('{path}', all_varchar=true, header=true, sample_size=-1)")
+        cols = rel.columns
+        out["rows"] = con.sql(f"select count(*) from read_csv('{path}', all_varchar=true, header=true, sample_size=-1)").fetchone()[0]
+        prof = {}
+        for c in cols:
+            q = f'select count("{c}"), count(distinct "{c}"), max(length("{c}")) from read_csv(\'{path}\', all_varchar=true, header=true, sample_size=-1)'
+            nn, nd, ml = con.sql(q).fetchone()
+            item = {"nonnull": nn, "distinct": nd, "maxlen": ml}
+            if nd <= 25:
+                vals = con.sql(f'select "{c}", count(*) from read_csv(\'{path}\', all_varchar=true, header=true, sample_size=-1) group by 1 order by 2 desc').fetchall()
+                item["values"] = [[str(v)[:70], k] for v, k in vals]
+            prof[c] = item
+        out["columns"] = prof
+        sniff = con.sql(f"select Delimiter, Quote, HasHeader from sniff_csv('{path}')").fetchone()
+        out["sniff"] = list(sniff)
+    except Exception as e:  # noqa: BLE001
+        out["error"] = f"{type(e).__name__}: {str(e)[:400]}"
+    return out
 
 
 def main(argv: list[str]) -> int:
-    module_dump(argv or ["chunk-KOLANLQK.js"])
     import os
-    out_dir = os.environ.get("DEV_OUTPUT_DIR")
-    if out_dir:
-        with open(os.path.join(out_dir, "rpwdl_probe.json"), "w", encoding="utf-8") as fh:
-            json.dump(OUT, fh, ensure_ascii=False, indent=1, default=str)
+    import tempfile
+    import zipfile
+    fmt = argv[0] if argv else "CSV"
+    types = argv[1].split(",") if len(argv) > 1 else TYPES
+    actives = argv[2].split(",") if len(argv) > 2 else ["true", "false"]
+    with tempfile.TemporaryDirectory() as tmp:
+        for t in types:
+            for active in actives:
+                url = f"{API}/initial?fileTypeInsideZip={fmt}&activityType={t}&activeLedgers={active}"
+                path = os.path.join(tmp, f"{t}_{active}.zip")
+                info = download(url, path)
+                members = []
+                if info.get("status") == 200:
+                    try:
+                        with zipfile.ZipFile(path) as z:
+                            for m in z.infolist():
+                                members.append([m.filename, m.file_size, m.compress_size, "%04d-%02d-%02dT%02d:%02d" % m.date_time[:5]])
+                            note("file", {"type": t, "active": active, **info, "members": members})
+                            for m in z.infolist():
+                                if m.filename.lower().endswith(".csv"):
+                                    dst = z.extract(m, tmp)
+                                    note("csv", {"type": t, "active": active, **profile_csv(dst, m.filename)})
+                                    os.remove(dst)
+                                elif fmt != "CSV":
+                                    with z.open(m) as fh:
+                                        head = fh.read(4000).decode("utf-8", "replace")
+                                    note("head", {"type": t, "member": m.filename, "structure": re.sub(r">[^<]{1,200}<", "><", head)[:4000]})
+                    except zipfile.BadZipFile:
+                        note("file", {"type": t, "active": active, **info, "error": "not a zip", "head": open(path, "rb").read(200).decode("utf-8", "replace")})
+                else:
+                    note("file", {"type": t, "active": active, **info})
+                if os.path.exists(path):
+                    os.remove(path)
     return 0
 
 
