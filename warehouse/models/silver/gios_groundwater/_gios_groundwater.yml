@@ -4,7 +4,8 @@ models:
     description: >-
       Final groundwater quality class (I-V) of each monitoring point per year from GIOŚ "Klasy jakości wód
       podziemnych" workbooks (register PL-ENV-012), newest version per workbook (bronze.gios_groundwater_cells, entity
-      classes_<year>). Grain: entity x row_number (one point in one year). History and counts: Dev trial (#2870).
+      classes_<year>). Grain: entity x row_number (one point in one year; a point listed twice in a year stays two rows: 1
+      in 2019, 2 in 2022). 2004-2025, 13,253 rows (Dev trial 43295509288, #2870).
     tests:
       - unique:
           column_name: "entity || '|' || cast(row_number as varchar)"
@@ -27,7 +28,8 @@ models:
     description: >-
       One row per sample row of the GIOŚ groundwater result workbooks (inorganic, organic, nitrate study and its
       per-indicator classes; register PL-ENV-012), newest version per workbook, with point identifiers, location names
-      (no TERYT code), sampling date and monitoring network. Grain: entity x row_number.
+      (no TERYT code), sampling date and monitoring network. Grain: entity x row_number. 1991-2025, 28,965 rows (Dev
+      trial 43295509288).
     tests:
       - unique:
           column_name: "entity || '|' || cast(row_number as varchar)"
@@ -51,7 +53,8 @@ models:
     description: >-
       Inorganic indicator results 1991-2007 (GIOŚ groundwater monitoring, register PL-ENV-012), newest version per
       workbook. Grain: entity x row_number x column_number (sample x indicator). value only for numbers; markers kept
-      in value_text and value_flag (below_limit with limit_value, not_determined), never 0.
+      in value_text and value_flag (below_limit with limit_value, not_determined, unreadable), never 0; cells holding
+      only spaces are left out. 389,523 rows (Dev trial 43295509288).
     tests:
       - unique:
           column_name: "entity || '|' || cast(row_number as varchar) || '|' || cast(column_number as varchar)"
@@ -75,7 +78,7 @@ models:
     description: >-
       Inorganic indicator results from 2008 and the nitrate study (GIOŚ groundwater monitoring, register PL-ENV-012),
       newest version per workbook. Grain: entity x row_number x column_number (sample x indicator). value only for
-      numbers; markers kept in value_text and value_flag, never 0.
+      numbers; markers kept in value_text and value_flag, never 0. 2008-2025, 622,472 rows (Dev trial 43295509288).
     tests:
       - unique:
           column_name: "entity || '|' || cast(row_number as varchar) || '|' || cast(column_number as varchar)"
@@ -84,7 +87,7 @@ models:
     description: >-
       Organic indicator results from 2009 (GIOŚ groundwater monitoring, register PL-ENV-012), newest version per
       workbook. Grain: entity x row_number x column_number (sample x indicator). value only for numbers; markers kept
-      in value_text and value_flag, never 0.
+      in value_text and value_flag, never 0. 2009-2025, 280,456 rows (Dev trial 43295509288).
     tests:
       - unique:
           column_name: "entity || '|' || cast(row_number as varchar) || '|' || cast(column_number as varchar)"
@@ -92,7 +95,7 @@ models:
   - name: gios_groundwater_indicator_classes
     description: >-
       Quality class per indicator of the GIOŚ nitrate study (register PL-ENV-012), newest version per workbook. Grain:
-      entity x row_number x column_number (sample x indicator).
+      entity x row_number x column_number (sample x indicator). 2025, 3,587 rows (Dev trial 43295509288).
     tests:
       - unique:
           column_name: "entity || '|' || cast(row_number as varchar) || '|' || cast(column_number as varchar)"

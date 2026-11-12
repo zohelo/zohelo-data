@@ -959,3 +959,32 @@ and women, Poland and voivodeships). Gold block `registered_unemployment` (KPIs 
 `registered_unemployment_rate`, next to GUS BDL and DBW). Weekly schedule (Tuesday). Licence: CC BY 3.0 PL (portal
 footer). The ZIPs since 2001, the half-yearly occupation and vacancy tables and the yearly MRPiPS-01 data files
 (SPR1, about 27 MB) are not built yet.
+
+## GIOŚ groundwater quality monitoring (`gios_groundwater`)
+
+**Built (12 Nov 2026, register PL-ENV-012, #2870).** The groundwater portal of GIOŚ (mjwp.gios.gov.pl, "Wyniki
+badań", State Environmental Monitoring with PIG-PIB) has one result page per year 2008-2025 and two for 1991-2003 and
+2004-2007, all in each page's menu (2021: `wyniki-badan-2021-a.html`). Route: the pages' links to XLSX workbooks under
+hash names (`/g2/oryginal/<yyyy_mm>/<md5>.xlsx`, a new name when a file is re-issued); the link text names the year
+and the workbook ("2025 - Wyniki badań wskaźników fizykochemicznych NIEORGANICZNYCH - … - monitoring operacyjny").
+Entity = workbook kind x year: `inorganic_<year>` (1991-), `organic_<year>` (2009-), `classes_<year>` (final quality
+class per point, 2004-), `nitrate_inorganic_<year>` and `nitrate_classes_<year>` (2025 nitrate study); version =
+Last-Modified, a changed file lands as a new version, the link text is kept in the receipt; restart unit: one
+workbook. Each run reads the 20 pages and downloads missing workbooks, re-issued ones (URL changed) and the newest two
+years, 10 s apart: a burst of requests was once answered with a short page without links, which now fails the run
+with its status and headers instead of landing nothing. 76 workbooks, 18.9 MB (Dev trial 43295509288). Bronze
+`bronze.gios_groundwater_cells`: one row per cell (shared `ingestion/common/xlsx_cells.py`) with the workbook kind,
+the link text and the column role from the header row (descriptors from a closed list, `final_class`, `parameter`,
+`parameter_class`, `monitoring_type`, `lab_analysis_no`); a workbook with another layout is rejected with the reason.
+Silver: `gios_groundwater_quality_classes` (point x year, class I-V, monitoring network), `gios_groundwater_samples`
+(sample rows with point ids, location names, sampling date), `gios_groundwater_results_inorganic_1991_2007`,
+`gios_groundwater_results_inorganic` (2008-) and `gios_groundwater_results_organic` (sample x indicator; split only to
+keep each table below 1 M rows), `gios_groundwater_indicator_classes` (nitrate study). Values as published: numbers
+(also decimal-comma text), markers `<x` (below the limit of quantification, limit kept), `n.o.` (not determined) and
+`#######` kept as text and flags, never 0. The workbooks carry no TERYT code (voivodeship, powiat, gmina by name):
+Gold block `quality_classes` counts points by final class and the share in classes I-III per year and monitoring
+network for Poland (KPI `groundwater_good_quality_share`, diagnostic network). The network of a year is the one the
+inorganic-results link names (the 2012 classes link says "opercyjny", the 2012 results and its 1,040 points are
+diagnostic). Weekly in March-May, monthly otherwise. Licence: Open Data Act re-use for any purpose; source line
+"opracowano na podstawie danych Inspekcji Ochrony Środowiska uzyskanych w ramach Państwowego Monitoringu Środowiska".
+Not built: the `OBJAŚNIENIA` text file of the pages and the maps (JPG).
