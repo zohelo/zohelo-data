@@ -3,8 +3,9 @@
 
    bulletin  Quarterly bulletin "Rynek ubezpieczeń", part A, the four tables found by their English title (row 1-3):
              Premiums / Claims of Life / Non-Life Insurance Companies (A.3, A.7, A.14, A.18 in 2026): one row per insurer
-             and the total ("Razem / Total"); measures from the header row ("Wyszczególnienie" in column 1); period from
-             "za okres / for: 01.01.YYYY - DD.MM.YYYY" (year to date, frequency Q, period = the quarter of the end date)
+             and the total ("Razem / Total"); measures from the header row (the first row with a "Składka…" or
+             "Odszkodowania…" heading); period from "za okres / for: 01.01.YYYY - DD.MM.YYYY" above it (year to date,
+             frequency Q, period = the quarter of the end date)
    ofe       OFE monthly workbook, sheets Aktywa netto, Członkowie, Składki, Jednostka rozrachunkowa: one row per fund and
              the total ("Razem", "Średnia ważona"); header row = column B "Otwarty fundusz emerytalny"; period from
              "Stan na dzień: / Dane miesięczne: YYYY-MM-DD" (frequency M)
@@ -39,17 +40,6 @@ b_tables as (
         and regexp_matches(text, '^Table A\.[0-9]+\. (Premiums|Claims) of (Life|Non-Life) Insurance Companies$')
 ),
 
-b_periods as (
-    select
-        c.entity,
-        c.sheet_name,
-        cast(strptime(regexp_extract(c.text, '([0-9.]{10}) ?- ?[0-9.]{10}', 1), '%d.%m.%Y') as date) as period_from,
-        cast(strptime(regexp_extract(c.text, '[0-9.]{10} ?- ?([0-9.]{10})', 1), '%d.%m.%Y') as date) as period_end
-    from cells as c
-    inner join b_tables as t on c.entity = t.entity and c.sheet_name = t.sheet_name
-    where c.column_number = 1 and c.row_number <= 4 and starts_with(c.text, 'za okres')
-),
-
 b_header as (
     select
         c.entity,
@@ -57,8 +47,23 @@ b_header as (
         min(c.row_number) as header_row
     from cells as c
     inner join b_tables as t on c.entity = t.entity and c.sheet_name = t.sheet_name
-    where c.column_number = 1 and starts_with(c.text, 'Wyszczególnienie')
+    where c.column_number >= 2 and (starts_with(c.text, 'Składka') or starts_with(c.text, 'Odszkodowania'))
     group by all
+),
+
+b_periods as (
+    -- "za okres / for: 01.01.2026 - 30.06.2026" (also an en dash, or "01.01. - 30.06.2026"): any cell above the header
+    select
+        c.entity,
+        c.sheet_name,
+        cast(strptime(regexp_extract(c.text, '[-–] ?([0-9]{2}\.[0-9]{2}\.[0-9]{4})', 1), '%d.%m.%Y') as date)
+            as period_end,
+        regexp_extract(c.text, '([0-9]{2}\.[0-9]{2})\.(?:[0-9]{4})? ?[-–]', 1) as from_day_month
+    from cells as c
+    inner join b_header as h on c.entity = h.entity and c.sheet_name = h.sheet_name
+    where
+        c.row_number < h.header_row
+        and regexp_matches(c.text, '[0-9]{2}\.[0-9]{2}\.(?:[0-9]{4})? ?[-–] ?[0-9]{2}\.[0-9]{2}\.[0-9]{4}')
 ),
 
 b_measures as (
@@ -95,7 +100,7 @@ bulletin as (
         m.unit_label,
         case when m.unit_label = 'w tys. zł' then 'thousand_pln' end as unit_code,
         'Q' as frequency,
-        p.period_from,
+        cast(strptime(p.from_day_month || '.' || year(p.period_end), '%d.%m.%Y') as date) as period_from,
         p.period_end,
         make_date(year(p.period_end), 3 * quarter(p.period_end) - 2, 1) as period_start,
         year(p.period_end) || '-Q' || quarter(p.period_end) as period_label,
@@ -260,13 +265,11 @@ ike as (
         k.provider_label is null as is_total,
         case
             when k.provider_label is null then '_T'
-            when k.provider_label = 'zakłady ubezpieczeń' then 'insurers'
-            when k.provider_label = 'fundusze inwestycyjne zarządzane przez TFI' then 'investment_funds'
-            when k.provider_label = 'podmioty prowadzące działalność maklerską' then 'brokers'
-            when k.provider_label = 'banki' then 'banks'
-            when
-                k.provider_label = 'dobrowolne fundusze emerytalne zarządzane przez PTE'
-                then 'voluntary_pension_funds'
+            when lower(k.provider_label) like 'zakład% ubezpiecze%' then 'insurers'
+            when lower(k.provider_label) like '%fundusz% inwestycyjn%' then 'investment_funds'
+            when lower(k.provider_label) like '%makler%' or lower(k.provider_label) like '%dom% makler%' then 'brokers'
+            when lower(k.provider_label) like 'bank%' then 'banks'
+            when lower(k.provider_label) like '%dobrowoln% fundusz% emerytaln%' then 'voluntary_pension_funds'
         end as provider,
         'pension' as business_line,
         k.measure_code,
