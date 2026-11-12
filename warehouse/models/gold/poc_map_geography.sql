@@ -424,6 +424,17 @@ un_wpp as (
         geography_key
     from geo
     where level_name = 'country' and length(geography_key) = 2
+),
+
+-- World Bank EdStats (OECD PISA republication): countries by ISO 3166-1 alpha-3 (dim_geography iso3), built from
+-- Gold's own list like oecd, so the dimensions never wait for the source; World Bank aggregates (OED, ...) are _X.
+world_bank_edstats as (
+    select
+        'world_bank_edstats' as source_system,
+        g.iso3 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso3 is not null
 )
 
 select
@@ -467,6 +478,8 @@ from (
     select * from un_wpp
     union all
     select * from zus_psz
+    union all
+    select * from world_bank_edstats
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

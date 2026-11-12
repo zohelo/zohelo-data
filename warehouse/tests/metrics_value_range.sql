@@ -60,7 +60,12 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('ghg_emissions', 'faostat', '%', 0, 8.2e4),
     -- FAOSTAT (#2402): published in 1000 ha, metrics in km² since D33 (× 10); World land area 13,040,161.55 thousand ha
     -- = 130,401,615.5 km² (Dev trial 43159213097). Documentation only (not in the metrics union below).
-    ('area', 'faostat', '%', 0, 2e8)
+    ('area', 'faostat', '%', 0, 2e8),
+    -- OECD PISA via World Bank EdStats (#2370): score points, all economies 2000-2018: 257.4 to 615.6 (Dev trial
+    -- 43291944406). Documentation only (no PISA metrics models yet).
+    ('pisa_reading', 'world_bank_edstats', '%', 200, 800),
+    ('pisa_mathematics', 'world_bank_edstats', '%', 200, 800),
+    ('pisa_science', 'world_bank_edstats', '%', 200, 800)
 ),
 
 metrics as (

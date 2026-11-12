@@ -41,6 +41,7 @@ SOURCES = (
     "world_bank_wdi",
     "world_bank_findex",
     "world_bank_icp",
+    "world_bank_edstats",
     "world_bank_ids",
     "world_bank_wgi",
     "news_feeds",

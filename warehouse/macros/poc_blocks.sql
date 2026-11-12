@@ -369,6 +369,17 @@
     ) as t (loc_id, candidate_key)
 {% endmacro %}
 
+{# OECD PISA mean scores through the World Bank EdStats republication (gold.build_world_bank_edstats): one block per
+   subject; areas: EU27 members (ISO alpha-3 through dim_geography.iso3). #}
+{% macro poc_world_bank_edstats_blocks() %}
+    select * from (
+        values
+        ('pisa_reading', 'LO.PISA.REA', 'PISA mean score, reading (OECD via World Bank EdStats)'),
+        ('pisa_mathematics', 'LO.PISA.MAT', 'PISA mean score, mathematics (OECD via World Bank EdStats)'),
+        ('pisa_science', 'LO.PISA.SCI', 'PISA mean score, science (OECD via World Bank EdStats)')
+    ) as t (entity, indicator_id, block_name)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -456,6 +467,7 @@
     poc_build_ids:world_bank_ids
     poc_build_un_wpp:un_wpp
     poc_build_zus_psz:zus_psz
+    poc_build_world_bank_edstats:world_bank_edstats
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -540,6 +552,8 @@
     select 'unesco_uis', entity, block_name from ({{ poc_unesco_uis_blocks() }})
     union all
     select 'faostat', entity || ':' || item_code || '.' || element_code, block_name from ({{ poc_faostat_blocks() }})
+    union all
+    select 'world_bank_edstats', entity, block_name from ({{ poc_world_bank_edstats_blocks() }})
     union all
     select 'ecb', entity, block_name from ({{ poc_ecb_blocks() }})
     union all
