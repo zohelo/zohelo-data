@@ -61,8 +61,8 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
     if str(meta.get("page")) != str(part["index"]) or (not page["data"] and int(meta["count"])):
         raise ValueError(f"page {meta.get('page')} with {len(page['data'])} rows, receipt part {part}")
     echoed = {k: v[0] for k, v in parse_qs(urlsplit((page.get("links") or {}).get("self") or "").query).items()}
-    asked = (None if receipt["area_code"] == "PL" else receipt["area_code"], receipt["atc_name"] is not None)
-    if (echoed.get("province"), bool(echoed.get("atc"))) != asked:
+    asked = (None if receipt["area_code"] == "PL" else receipt["area_code"], receipt["atc_name"])
+    if (echoed.get("province"), echoed.get("atc")) != asked:
         raise ValueError(f"answer for province {echoed.get('province')} atc {echoed.get('atc')}, asked {asked}")
     columns: dict[str, list[Any]] = {n: [] for n, _ in COLUMNS}
     for number, record in enumerate(page["data"], start=1):
