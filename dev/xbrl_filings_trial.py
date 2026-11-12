@@ -164,6 +164,7 @@ def trial(limit: int) -> None:  # noqa: PLR0915
         "validation": q(con, "select count(*) filter (where error_count > 0), count(*) filter (where warning_count > 0), count(*) filter (where inconsistency_count > 0), max(error_count), max(warning_count) from s_filings"),
         "distinct": q(con, "select count(distinct lei), count(distinct lei || '|' || period_end::varchar) from s_filings")})
     conflicts = test("warehouse/tests/xbrl_filings_fact_conflicts.sql", {"xbrl_filings_facts": "s_facts"})
+    conflicts_sql = Environment().from_string(Path("warehouse/tests/xbrl_filings_fact_conflicts.sql").read_text()).render(config=lambda **_k: "", ref=lambda _n: "s_facts")
     annotate("notice", "xbrl_filings silver facts", {
         "rows_two_builds": counts["s_facts"],
         "dup_grain": q(con, "select count(*) from (select 1 from s_facts group by fxo_id, concept, period_start, period_end, unit_code having count(*) > 1)"),
@@ -176,17 +177,21 @@ def trial(limit: int) -> None:  # noqa: PLR0915
         "filings_with_facts": q(con, "select count(distinct fxo_id), count(distinct fxo_id) filter (where concept = 'ifrs-full:Revenue'), count(distinct fxo_id) filter (where concept = 'ifrs-full:ProfitLoss'), count(distinct fxo_id) filter (where is_reporting_period) from s_facts"),
         "value_range": q(con, "select concept, min(value), max(value), count(*) filter (where value = 0), count(*) filter (where value < 0) from s_facts group by 1 order by 1"),
         "decimals": q(con, "select decimals, count(*) from s_facts group by 1 order by 2 desc limit 6"),
-        "conflict_test_rows": len(conflicts), "conflict_sample": conflicts[:6]})
+        "candidates": q(con, "select reporting_period_candidates, count(*) from s_facts group by 1 order by 1"),
+        "conflict_test_rows": len(conflicts), "conflicts_by_reason": q(con, "select reason, concept, count(*), count(distinct fxo_id) from (" + conflicts_sql + ") group by all order by all"), "conflict_sample": conflicts[:4]})
     differ = test("warehouse/tests/esef_issuer_period_values_differ.sql", {"esef_financial_fact": "esef_financial_fact"})
     annotate("notice", "xbrl_filings gold entity tables", {
         "rows_two_builds": {k: counts[k] for k in ("esef_filing", "esef_issuer", "esef_financial_fact")},
-        "dup_keys": q(con, "select (select count(*) from (select fxo_id from esef_filing group by 1 having count(*) > 1)), (select count(*) from (select lei from esef_issuer group by 1 having count(*) > 1)), (select count(*) from (select 1 from esef_financial_fact group by fxo_id, concept, period_start, period_end, unit_code having count(*) > 1))"),
+        "dup_keys": q(con, "select (select count(*) from (select fxo_id from esef_filing group by 1 having count(*) > 1)), (select count(*) from (select lei from esef_issuer group by 1 having count(*) > 1)), (select count(*) from (select 1 from esef_financial_fact group by fxo_id, concept, unit_code having count(*) > 1))"),
         "null_keys": q(con, "select (select count(*) from esef_filing where fxo_id is null or lei is null or period_end is null), (select count(*) from esef_issuer where lei is null or issuer_name is null), (select count(*) from esef_financial_fact where fxo_id is null or lei is null or value is null or measure is null or unit_code is null)"),
         "issuer_filings": q(con, "select sum(filings), min(first_period_end), max(last_period_end), max(filings), max(period_ends) from esef_issuer"),
-        "facts_by_measure_currency": q(con, "select measure, currency_code, count(*), count(*) filter (where is_reporting_period), count(distinct lei) from esef_financial_fact group by all order by all"),
+        "facts_by_measure_currency": q(con, "select measure, currency_code, count(*), count(distinct fxo_id), count(distinct lei) from esef_financial_fact group by all order by all"),
+        "facts_by_year": q(con, "select period_end_year, measure, count(*), count(distinct lei) from esef_financial_fact group by all order by all"),
+        "period_days": q(con, "select case when period_end - period_start between 360 and 370 then 'year' when period_end - period_start < 360 then 'shorter' else 'longer' end, count(*) from esef_financial_fact group by 1 order by 1"),
+        "filings_with_json_without_gold_value": q(con, "select count(*) filter (where fxo_id not in (select fxo_id from esef_financial_fact where measure = 'revenue')), count(*) filter (where fxo_id not in (select fxo_id from esef_financial_fact where measure = 'profit_loss')), count(*) from esef_filing where has_json"),
         "facts_lei_not_in_issuer": q(con, "select count(*) from esef_financial_fact where lei not in (select lei from esef_issuer)"),
         "issuer_period_values_differ_rows": len(differ), "differ_sample": differ[:5],
-        "multi_filing_groups_with_facts_agreeing": q(con, "select count(*) from (select lei, concept, period_start, period_end, unit_code from esef_financial_fact where is_reporting_period group by all having count(*) > 1 and count(distinct value) = 1)")})
+        "multi_filing_groups_with_facts_agreeing": q(con, "select count(*) from (select lei, concept, period_start, period_end, unit_code from esef_financial_fact group by all having count(*) > 1 and count(distinct value) = 1)")})
     annotate("notice", "xbrl_filings gold build stage", {
         "rows_two_builds": counts["build"],
         "dup_series_date": q(con, "select count(*) from (select measure_key || '|' || geography_key || '|' || breakdown_json as series_key, date_key from build group by all having count(*) > 1)"),
@@ -199,8 +204,8 @@ def trial(limit: int) -> None:  # noqa: PLR0915
     spot = {}
     for name in names:
         spot[name] = q(con, f"""select i.lei, f.fxo_id, f.measure, f.period_end, f.value, f.currency_code, f.decimals
-            from esef_issuer i left join esef_financial_fact f on f.lei = i.lei and f.is_reporting_period
-            where upper(i.issuer_name) like '%{name}%' order by f.period_end desc nulls last, f.measure limit 4""")
+            from esef_issuer i left join esef_financial_fact f on f.lei = i.lei
+            where upper(i.issuer_name) like '%{name}%' order by f.period_end desc nulls last, f.measure, f.fxo_id limit 4""")
     annotate("notice", "xbrl_filings spot records", {
         "issuer_rows": q(con, "select lei, issuer_name, filings, first_period_end, last_period_end from esef_issuer where " + " or ".join(f"upper(issuer_name) like '%{n}%'" for n in names) + " order by 2"),
         "facts": spot})
