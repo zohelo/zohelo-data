@@ -3,7 +3,7 @@
    observations, year to date (cumulative from January; the measure names say so). Block 'jst_budget': executed
    revenue, executed expenditure, the budget result (revenue minus expenditure) and liabilities (debt, code E) of
    Poland's local-government units, in PLN; the unit type is the breakdown (jst = all units, the total). One
-   frequency (Q) per measure_key. #}
+   frequency (Q) per measure_key. "WYDATKI OGÓŁEM UE" (EU-funded expenditure) is another item, not matched. #}
 with picked as (
     select
         *,
@@ -12,7 +12,9 @@ with picked as (
                 section = 'revenue' and upper(item_label) = 'DOCHODY OGÓŁEM' and item_occurrence = 1
                 and measure_code = 'executed' then 'revenue_executed'
             when
-                section = 'expenditure' and upper(item_label) like 'WYDATKI OGÓŁEM%' and item_occurrence = 1
+                section = 'expenditure'
+                and regexp_replace(upper(item_label), '\s*Z TEGO:$', '') = 'WYDATKI OGÓŁEM'
+                and item_occurrence = 1
                 and measure_code = 'executed' then 'expenditure_executed'
             when
                 section = 'expenditure' and upper(item_label) = 'WYNIK' and item_occurrence = 1
