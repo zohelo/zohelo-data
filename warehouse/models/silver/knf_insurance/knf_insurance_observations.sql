@@ -276,4 +276,10 @@ select * from bulletin
 union all
 select * from ofe
 union all
+-- KNF prints 0 in the value column of IKE/IKZE rows it does not value (accounts opened, rows by sex and age):
+-- a 0 value next to a positive count of the same row and provider is that marker, not a value, and is left out
 select * from ike
+qualify not (
+    measure_code = 'value' and value = 0
+    and max(case when measure_code = 'count' then value end) over (partition by entity, source_row, provider) > 0
+)
