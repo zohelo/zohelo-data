@@ -1,154 +1,103 @@
-"""Read-only probe for PL-ENV-033 (GUNB RWDZ): producer bulk page, WFS capabilities, attribute list, paging.
+"""Read-only probe 2 for PL-ENV-033 (GUNB RWDZ): the producer's bulk files (pobranie.html).
 
-GET only, one request at a time with pauses, user agent set. Values of fields that may name persons are never
-printed: only field names, fill counts and value shapes (letters -> a, digits -> 9); sample values only for fields
-whose names look like codes or dates.
+GET/HEAD only, one request at a time with pauses, user agent set. Values of columns that may name persons or
+addresses are never printed: only column names, fill counts, distinct counts and value shapes (letters -> a,
+digits -> 9); sample values only for columns whose names look like codes, dates, kinds or authorities.
 """
 
+import csv
+import io
 import re
+import tempfile
 import time
-import urllib.error
 import urllib.request
+import zipfile
 from collections import Counter
+from pathlib import Path
 
-UA = "zohelo-data/1.0 (open data platform; contact via github.com/zohelo)"
+UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
 B = "https://wyszukiwarka.gunb.gov.pl"
-W = "https://mapy.geoportal.gov.pl/wss/ext/GlownyUrzadNadzoruBudowlanego/RWDZ-WFS"
-SAFE = re.compile(r"(?i)data|date|kod|teryt|terc|rodzaj|kategor|typ|organ|woj|powiat|gmina|jedn|status|rok|numer_?w|id$|gml_id|obiekt|klasa|zamier|decyz|wniosk")
+FILES = ["dolnoslaskie", "kujawsko-pomorskie", "lodzkie", "lubelskie", "lubuskie", "malopolskie", "mazowieckie",
+         "opolskie", "podkarpackie", "podlaskie", "pomorskie", "slaskie", "swietokrzyskie", "warminsko-mazurskie",
+         "wielkopolskie", "zachodniopomorskie", "zgloszenia_2016_2021", "zgloszenia_2022_up"]
+SAFE = re.compile(r"(?i)data|date|kod|teryt|terc|rodzaj|kategor|typ|organ|woj|powiat|gmina|jedn|status|rok|stan|decyz|wniosk|zgl|obiekt_w|^id|numer_ew|kubatura")
+UNSAFE = re.compile(r"(?i)nazwisk|imie|imię|inwest|projekt|ulica|nr_dom|dzialk|działk|obreb|obręb|adres|miasto|miejsc|nazwa_zam|opis|kod_poczt|arkusz|cecha")
 
 
-def get(url, n=3_000_000, timeout=120):
+def fetch(url, n=None, method="GET", timeout=600):
+    req = urllib.request.Request(url, headers={"User-Agent": UA}, method=method)
     t = time.time()
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": UA})
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            body = r.read(n)
-            return {"st": r.status, "ct": r.headers.get("Content-Type"), "lm": r.headers.get("Last-Modified"),
-                    "len": r.headers.get("Content-Length"), "body": body, "s": round(time.time() - t, 1)}
-    except urllib.error.HTTPError as e:
-        return {"st": e.code, "err": f"HTTP {e.code}", "body": e.read(3000), "s": round(time.time() - t, 1)}
-    except Exception as e:  # noqa: BLE001
-        return {"err": f"{type(e).__name__}: {str(e)[:200]}", "s": round(time.time() - t, 1)}
-
-
-def txt(r):
-    return r.get("body", b"").decode("utf-8", "replace")
-
-
-def plain(s):
-    return re.sub(r"\s+", " ", re.sub(r"(?s)<script.*?</script>|<style.*?</style>|<[^>]+>", " ", s)).strip()
-
-
-def show(label, r, n=600):
-    print(f"## {label}: st={r.get('st')} err={r.get('err')} ct={r.get('ct')} lm={r.get('lm')} len={r.get('len')} "
-          f"bytes={len(r.get('body', b''))} s={r.get('s')}")
-    if n:
-        print(plain(txt(r))[:n])
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        body = r.read(n) if n else (r.read() if method == "GET" else b"")
+        return r.status, dict(r.headers), body, round(time.time() - t, 1)
 
 
 def shape(v):
     return re.sub(r"[0-9]", "9", re.sub(r"[^\W\d_]", "a", v))[:40]
 
 
-def features(xml):
-    return re.findall(r"(?s)<ms:(pozwolenia_\w+)\b[^>]*>(.*?)</ms:\1>", xml)
-
-
-def fields(body):
-    return re.findall(r"(?s)<ms:(\w+)>([^<]*)</ms:\1>", body)
+def profile(name, data: bytes):
+    with tempfile.TemporaryDirectory() as tmp:
+        p = Path(tmp) / "f.zip"
+        p.write_bytes(data)
+        with zipfile.ZipFile(p) as z:
+            infos = z.infolist()
+            print(f"  members: {[(i.filename, i.file_size, i.date_time) for i in infos]}")
+            for info in infos[:2]:
+                raw = z.read(info)
+                print(f"  {info.filename}: bytes {len(raw)} bom {raw[:3] == b'\xef\xbb\xbf'} crlf {raw.count(b'\r\n')} lf {raw.count(b'\n')}")
+                text = raw.decode("utf-8-sig", errors="replace")
+                lines = text.splitlines()
+                print("  first line (header):", lines[0][:1500])
+                header = lines[0].split("#")
+                widths = Counter(len(line.split("#")) for line in lines[1:])
+                print("  header fields", len(header), "line field counts", widths.most_common(6))
+                rows = list(csv.reader(io.StringIO(text), delimiter="#", quotechar='"'))
+                print("  csv-module rows", len(rows) - 1, "widths", Counter(len(r) for r in rows[1:]).most_common(5))
+                quoted = sum(1 for line in lines[1:2000] if '"' in line)
+                print("  lines with a double quote (first 2000)", quoted)
+                body = [r for r in rows[1:] if len(r) == len(header)]
+                for i, col in enumerate(header):
+                    vals = [r[i].strip() for r in body]
+                    filled = sum(1 for v in vals if v)
+                    dist = Counter(vals)
+                    sh = Counter(shape(v) for v in vals).most_common(4)
+                    line = f"   [{i}] {col!r}: filled {filled}/{len(vals)} distinct {len(dist)} shapes {sh}"
+                    if SAFE.search(col) and not UNSAFE.search(col):
+                        line += f" top {[(k[:50], c) for k, c in dist.most_common(14)]}"
+                        if re.search(r"(?i)data", col):
+                            years = Counter(v[:4] for v in vals if v)
+                            line += f" years {sorted(years.items())} min {min((v for v in vals if v), default=None)} max {max((v for v in vals if v), default=None)}"
+                    else:
+                        line += " (values not printed)"
+                    print(line)
+                for i, col in enumerate(header):
+                    if re.search(r"(?i)numer_ew|^id", col):
+                        dist = Counter(r[i] for r in body)
+                        print(f"  key {col}: rows {len(body)} distinct {len(dist)} repeated {sum(1 for c in dist.values() if c > 1)} empty {dist.get('', 0)}")
 
 
 def main():
-    print("# GUNB producer site")
-    for p in ("/robots.txt", "/pobranie.html", "/"):
-        r = get(B + p)
-        show(p, r, 2500)
-        if p == "/pobranie.html" and "body" in r:
-            t = txt(r)
-            ls = sorted(set(re.findall(r'href=["\']([^"\']+\.(?:zip|csv|7z|gz|xlsx?))["\']', t, re.I)))
-            print("files:", len(ls), ls[:40])
-            for u in ls[:3]:
-                u = u if u.startswith("http") else B + "/" + u.lstrip("/")
-                time.sleep(2)
-                h = get(u, n=1)
-                print("  file", u, h.get("st"), h.get("ct"), h.get("len"), h.get("lm"), h.get("err"))
+    r = fetch(B + "/pobranie.html")
+    t = r[2].decode("utf-8", "replace")
+    print("terms words on pobranie.html:", re.findall(r"(?i)[^.]{0,120}(?:licenc|ponown|wykorzyst|regulamin|warunk|osobow|RODO)[^.]{0,120}", re.sub(r"<[^>]+>", " ", t))[:6])
+    time.sleep(2)
+    r = fetch(B + "/")
+    t = re.sub(r"\s+", " ", re.sub(r"(?s)<script.*?</script>|<[^>]+>", " ", r[2].decode("utf-8", "replace")))
+    print("terms words on home:", re.findall(r"(?i)[^.]{0,160}(?:licenc|ponown|wykorzyst|regulamin|warunk|osobow|RODO|jawn)[^.]{0,160}", t)[:8])
+    print("# HEAD of every file")
+    for f in FILES:
+        time.sleep(1.5)
+        try:
+            st, h, _, s = fetch(f"{B}/pliki_pobranie/wynik_{f}.zip", method="HEAD", timeout=60)
+            print(f"  {f}: {st} {h.get('Content-Length')} {h.get('Last-Modified')} {h.get('ETag')} {h.get('Content-Type')} {s}s")
+        except Exception as e:  # noqa: BLE001
+            print(f"  {f}: {type(e).__name__} {str(e)[:150]}")
+    for f in ("opolskie", "zgloszenia_2022_up"):
         time.sleep(3)
-    r = get("https://dev.wyszukiwarka.gunb.gov.pl/docs")
-    show("api docs", r, 800)
-
-    print("# WFS capabilities")
-    time.sleep(2)
-    c = get(W + "?SERVICE=WFS&REQUEST=GetCapabilities")
-    show("caps", c, 0)
-    ct = txt(c)
-    print("versions", sorted(set(re.findall(r'version="([0-9.]+)"', ct[:3000]))))
-    for tag in ("Fees", "AccessConstraints", "Abstract"):
-        print(tag, plain(" ".join(re.findall(rf"(?is)<(?:ows:)?{tag}>.*?</(?:ows:)?{tag}>", ct)))[:600])
-    print("types", re.findall(r"<(?:wfs:)?Name>([^<]+)</(?:wfs:)?Name>", ct))
-    print("outputformats", sorted(set(re.findall(r"(?is)<ows:Value>([^<]*)</ows:Value>", ct)))[:60])
-    print("constraints", re.findall(r'(?is)<ows:Constraint name="(\w+)">\s*<ows:NoValues/>\s*<ows:DefaultValue>([^<]*)', ct))
-    print("constraints2", re.findall(r'(?is)<(?:fes|ows):Constraint name="(\w+)">.{0,200}?DefaultValue>([^<]*)', ct)[:40])
-
-    print("# DescribeFeatureType")
-    time.sleep(2)
-    d = get(W + "?SERVICE=WFS&VERSION=2.0.0&REQUEST=DescribeFeatureType&TYPENAMES=ms:pozwolenia_2026")
-    show("dft 2.0.0", d, 0)
-    print(re.findall(r'<(?:xsd?:)?element[^>]*name="([^"]+)"[^>]*?(?:type="([^"]+)")?', txt(d)))
-    time.sleep(2)
-    d = get(W + "?SERVICE=WFS&VERSION=1.1.0&REQUEST=DescribeFeatureType&TYPENAME=ms:pozwolenia_2026")
-    show("dft 1.1.0", d, 0)
-    print(re.findall(r'<(?:xsd?:)?element[^>]*name="([^"]+)"[^>]*?(?:type="([^"]+)")?', txt(d)))
-
-    print("# GetFeature sample (100) of 2026")
-    time.sleep(2)
-    g = get(W + "?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ms:pozwolenia_2026&COUNT=100&STARTINDEX=0")
-    show("gf 100", g, 0)
-    x = txt(g)
-    print("head", re.sub(r"\s+", " ", x[:900]))
-    fs = features(x)
-    print("features", len(fs), "bytes/feature", round(len(g.get("body", b"")) / max(len(fs), 1)))
-    fill, shapes, samples, order = Counter(), {}, {}, []
-    for _, body in fs:
-        for k, v in fields(body):
-            if k not in order:
-                order.append(k)
-            if v.strip():
-                fill[k] += 1
-            shapes.setdefault(k, Counter())[shape(v.strip())] += 1
-            if SAFE.search(k):
-                samples.setdefault(k, Counter())[v.strip()[:60]] += 1
-    geom = re.findall(r"(?s)<ms:(\w+)>\s*<gml:", fs[0][1]) if fs else []
-    print("geometry fields", geom)
-    for k in order:
-        print(f"  {k}: filled {fill[k]}/{len(fs)} shapes {shapes[k].most_common(4)}"
-              + (f" samples {samples[k].most_common(6)}" if k in samples else " (values not printed)"))
-
-    print("# formats and propertyName")
-    for of in ("application/json", "geojson", "csv", "text/csv", "GML2"):
-        time.sleep(2)
-        r = get(W + f"?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ms:pozwolenia_2026&COUNT=2&OUTPUTFORMAT={of}", n=4000)
-        print("  of", of, r.get("st"), r.get("ct"), r.get("err"), len(r.get("body", b"")), plain(txt(r))[:160] if r.get("err") or "xml" in str(r.get("ct")) else "")
-    if order:
-        keep = ",".join(k for k in order if SAFE.search(k))[:600]
-        time.sleep(2)
-        r = get(W + f"?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ms:pozwolenia_2026&COUNT=5&PROPERTYNAME={keep}")
-        print("  propertyName", keep, r.get("st"), r.get("err"), [k for k, _ in fields(features(txt(r))[0][1])] if features(txt(r)) else plain(txt(r))[:300])
-
-    print("# paging speed and order (2026)")
-    for start, cnt in ((0, 1000), (100000, 1000), (300000, 5000)):
-        time.sleep(3)
-        r = get(W + f"?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ms:pozwolenia_2026&COUNT={cnt}&STARTINDEX={start}", n=200_000_000, timeout=300)
-        x = txt(r)
-        fs = features(x)
-        ids = [dict(fields(b)).get("id") or re.search(r'gml:id="([^"]+)"', b or "") for _, b in fs[:1]]
-        print(f"  start {start} count {cnt}: st {r.get('st')} {r.get('err')} features {len(fs)} bytes {len(r.get('body', b''))} s {r.get('s')}"
-              f" matched {re.findall(r'numberMatched=\"(\w+)\"', x[:2000])} returned {re.findall(r'numberReturned=\"(\w+)\"', x[:2000])}"
-              f" gml ids {re.findall(r'gml:id=\"([^\"]+)\"', x)[:2]}")
-    print("# hits")
-    for y in ("2020", "2021", "2022", "2023", "2024", "2025", "2026", "pozostale"):
-        time.sleep(2)
-        r = get(W + f"?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ms:pozwolenia_{y}&RESULTTYPE=hits", n=4000)
-        print("  ", y, r.get("st"), r.get("err"), re.findall(r'numberMatched="(\w+)"', txt(r)), r.get("s"))
+        st, h, body, s = fetch(f"{B}/pliki_pobranie/wynik_{f}.zip")
+        print(f"# {f}: {st} bytes {len(body)} in {s}s")
+        profile(f, body)
 
 
 if __name__ == "__main__":
