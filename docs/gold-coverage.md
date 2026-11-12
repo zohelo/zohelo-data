@@ -59,22 +59,28 @@ periods (`1-3 kwartały`, `półrocze`) 25 M. 106 subgroups have more than 1 M r
 
 DBW rows by the periodicity id that ends the block id: `4` (annual) 730 M in 3,191 blocks, `282`
 96 M in 570, `5` 43 M in 108, `1` (monthly) 14 M in 554, `2` 3 M in 376, `3` (quarterly) 2 M in 631,
-`7` 0.06 M in 13. 99 blocks have more than 1 M rows.
+`7` 0.06 M in 13. 99 blocks have more than 1 M rows. (The
+probe counts 5,443 distinct file stems where the inventory counts 4,873 blocks; the difference is to
+be reconciled in the DBW Task before its build stage is written.)
 
-**Eurostat trials** (Dev runs 43195798983 and 43251674524; samples of 129 and 71 datasets built into
-scratch and removed afterwards). In the second, 70 datasets were built in 41 minutes on one runner:
-246.4 M fact rows, 18.1 M series, 4,325 measures, 6 to 9 M rows a minute. In both: 0 duplicate
-`series_key × date_key` over the whole trial table, 0 null keys, 0 blocks rejected, every Silver row
-with a value loaded. The newest Polish values equal the curated facts (unemployment 2026-09 3.4, GDP
-2025 923,507.3 M EUR, HICP 2026-09 4.0, population 2025 36,497,495). 2.6% of the rows (106 codes)
-have no geography match: mostly Polish NUTS 3 regions (`PL213`, `PL633`, …) of weekly deaths, which
-the Eurostat part of `map_geography` does not map yet. The largest dataset, `AVIA_TF_ACA`, was not
-built in these runs (it ran out of temp space; fixed in #2831, verified separately).
+**Eurostat trials** (samples built into scratch and removed afterwards; Dev runs 43195798983 with 129
+datasets, 43251674524 with 71, 43276680619 with 50 on the code of #2831 as reviewed). The last: 50
+datasets in 10 minutes on one runner, 220.2 M fact rows, 14.1 M series, 4,261 measures. Over the
+runs 6 to 22 M fact rows a minute. In all of them: 0 duplicate `series_key × date_key` over the whole
+trial table, 0 null keys, 0 blocks rejected, every Silver row with a value loaded in the blocks
+built. The newest Polish values equal the curated facts (unemployment 2026-09 3.4, GDP 2025
+923,507.3 M EUR, HICP 2026-09 4.0, population 2025 36,497,495). 2.6 to 2.9% of the rows have no
+geography match: mostly Polish NUTS 3 regions (`PL213`, `PL633`, …) of weekly deaths, which the
+Eurostat part of `map_geography` does not map yet.
+The largest dataset, `AVIA_TF_ACA`
+(492 M rows with a value, 3,633 M Silver rows), failed on temp space in runs 43244012890 and
+43251674524 and was built in run 43268232691 after the build was split into steps (#2831): 26 minutes
+alone, 0 duplicates, every row with a value loaded.
 
-Size in Gold: 1.3 bytes per fact row and 12.9 bytes per series (323 MB and 234 MB for the second
-trial, against 211 MB of Silver for the same datasets). For all of Eurostat that is about 22 GB:
-9 GB of facts and 13 GB of series, because annual series are short. At the trials' speed the first
-full Eurostat load is 13 to 19 runner-hours, spread over resumable runs.
+Size in Gold: 1.2 to 1.3 bytes per fact row and 12.9 bytes per series (259 MB and 182 MB in the last
+trial). For all of Eurostat that is about 22 GB: 9 GB of facts and 13 GB of series, because annual
+series are short. At the trials' speed the first full Eurostat load is 5 to 19 runner-hours, spread
+over resumable runs.
 
 ## Decisions
 
@@ -85,13 +91,14 @@ is still 4,160 M Eurostat rows, and Poland alone (196 M) drops the comparison th
 about. One rule for all blocks is also what removes the hand-picking. The cost is storage, not
 build time (decision 3): see "Open decisions".
 
-### 2. Layout: three tables per source, one file per block
+### 2. Layout: four tables per source, one file per block
 
 | Table | One row is | Columns |
 |---|---|---|
 | `gold.<source>_observations` | series × period | as `gold.fact_*`: `series_key, measure_key, geography_key, date_key, frequency, value, observation_status_key, source_system, block_id, period_label, source_version, raw_sha256` |
 | `gold.<source>_series` | one time series | as `gold.dim_series`, plus `source_version, raw_sha256` |
 | `gold.<source>_measures` | one measure | as the activated rows of `gold.dim_measure`, plus `unit_name`, unmatched-geography and total-series point counts |
+| `gold.<source>_geography` | block × source geography code | the area the code was mapped to (`_X` unmatched, `_Z` none) and its points |
 
 Each table is partitioned by `block_id` and holds exactly one Parquet file per block
 (`04_gold/<source>/<table>/<block>/<recipe>.parquet`), the layout Silver already uses for these
@@ -114,35 +121,57 @@ sources (design #875). Reasons:
   for rule keys has to allow the `@<frequency>` ending.
 
 The source's build stage (`warehouse/entity/gold_<source>_build.sql`) produces the 21-column
-common observation shape of `poc_build_nbp.sql`; the three projections
-(`gold_observations.sql`, `gold_series.sql`, `gold_measures.sql`) are the same SQL for every source.
+common observation shape of `poc_build_nbp.sql`; the four projections (`gold_observations.sql`,
+`gold_series.sql`, `gold_measures.sql`, `gold_geography.sql`) are the same SQL for every source.
 
 ### 3. Incremental by block; the grain is checked on every block
 
 A block's `<recipe>` is a digest of what its files were made from: the names of its Silver files
-(they carry the Landing SHA-256 and the Silver model), the Gold SQL, and the source's rows of
-`gold.map_geography`. A run compares recipes in the tables' file lists and builds only blocks whose
-recipe changed. So a daily run rebuilds only the datasets with a new source version; a changed rule
-or geography map rebuilds every block of that source; a block that left Silver leaves Gold. Runs
-are time-budgeted and resumable: finished blocks are committed in chunks.
+(they carry the Landing SHA-256 and the Silver model), the Gold SQL, and the mapping of the geography
+codes **that block holds**. A run compares recipes in the tables' file lists and builds only blocks
+whose recipe changed:
+
+| What changed | What is rebuilt | Cost for Eurostat |
+|---|---|---|
+| A dataset's source version | that dataset | the daily load: see below |
+| A row of `gold.map_geography` (a new code, a code newly matched) | the blocks holding that code (`gold.<source>_geography` lists each block's codes and areas; it is read only when the map changed) | the Polish NUTS 3 mapping of open decision 7 touches the regional datasets only |
+| The Gold SQL of the source (a rule) | every block of the source | 5 to 19 runner-hours, over several resumable runs; Gold stays readable meanwhile, block by block |
+| A block left Silver | removed from Gold, within the removal cap (decision D34) | none |
+
+Runs are time-budgeted and resumable: finished blocks are committed in chunks. The daily load is the
+datasets Eurostat updated that day. By the landed versions in `gold.coverage` (Dev run 43276680619;
+two releases a day): 9 Nov 34 datasets with 98 M Silver rows, 10 Nov 88 with 643 M, 11 Nov 215 with
+1,005 M; on 6 Nov 95 datasets with 6,808 M Silver rows, a day when the largest tables were updated.
+At the measured 40 to 120 M Silver rows a minute a usual day is 5 to 30 minutes of one runner and a
+heavy day 1 to 3 hours. (Older days are undercounted: a dataset shows only its newest version.)
 
 This is the refresh policy the three sources already declare ("a new dataset version replaces that
 dataset in Bronze, Silver and Gold", `refresh: {mode: incremental, unit: …}`, #875, D32).
 
-**Deviation from D28, proposed here.** D28 expects a Gold fact above 1 M rows to be a dbt
-incremental model with unique key `series_key, date_key`. These tables keep that grain but are
-written per block by `warehouse/observations.py`, outside dbt, as Silver is. Reason: a dbt merge by
-key over 7,000 M rows would rewrite or scan the table on a 16 GB runner; replacing whole files per
-block needs no scan and no row-level deletes. `changed.py` and the `full_rebuild` ceilings do not
-apply to them (they are not dbt models). Undo: drop the three tables and the activity; the curated
-facts do not read them.
+**Decision D34 (docs/decisions.md), an exception to D28.** D28 expects a Gold fact above 1 M rows
+to be a dbt incremental model with unique key `series_key, date_key`. These tables keep that grain
+but are written per block by `warehouse/observations.py`, outside dbt, as Silver is. Reason: a dbt
+merge by key over 7,000 M rows would rewrite or scan the table on a 16 GB runner; replacing whole
+files per block needs no scan and no row-level deletes. `changed.py` and the `full_rebuild` row
+ceilings (#822) are for dbt models and do not apply; D34 puts these limits in their place:
+
+- **Run budget:** a run stops starting blocks at its time budget (the Pipeline's `budget-minutes`); a
+  block built alone starts only when its estimate fits the time left, otherwise it waits and is
+  listed. Memory per block is bounded (4 GB in parallel, 10 GB alone), whatever the block's size.
+- **Removal cap:** one run removes at most 5% of the blocks Gold holds (at least 10); above that it
+  removes nothing and fails, so a partial Silver listing cannot empty Gold. An empty listing stops
+  the run.
+- **No partial block, no silent loss:** a block is accepted whole or rejected with a recorded reason;
+  a rejected new version keeps the version Gold already holds.
+
+Undo: drop the tables of the source and the activity; the curated facts do not read them.
 
 **Grain.** Every block is checked before it is accepted: one row per `series_key × date_key`
 (the grouping of `tests/fact_grain.sql`). `measure_key` starts with the source and the block, so a
 duplicate can only occur inside one block and the per-block check covers the whole table at no
 extra cost: a table-wide grain test over 7,000 M rows is never run. A block that breaks the grain
-is rejected whole, recorded in `gold.observations_rejected` with the reason and removed from Gold;
-it is retried when its recipe changes.
+is rejected whole and recorded in `gold.observations_rejected` with the reason; Gold keeps the
+block's previous version, if it has one. It is retried when its recipe changes.
 
 ### 4. Measure keys by rule
 
@@ -171,6 +200,18 @@ have a total code; the misses are mostly `age` (`Y15-74` is the total), `nace_r2
 similar. So `is_total` is a convenience, never a filter KPIs depend on: a KPI names its codes in
 `kpi_measure.csv`. Follow-up: read the root of each code list's hierarchy
 (`eurostat_codes.parent_code`) as the total.
+
+**Suppressed and missing cells** (lesson of 11 Nov: a flagged zero is not a value). The rule-based
+build stages carry the rules the curated stages already apply:
+
+- Eurostat: `:` is no value and the row is not loaded; a value with flag `c` is loaded with status
+  `confidential`.
+- GUS BDL: an empty value is not loaded; a cell with attribute `x` ("filling the item is impossible
+  or pointless") is not loaded even when it carries 0; two different published values for one key
+  reject the subgroup in Silver already.
+- GUS DBW: an empty value is not loaded; a 0 with a missing-value reason (`id_brak_wartosci` other
+  than "value present") is not loaded; a value with a confidentiality id (`id_tajnosci`) is loaded
+  with status `confidential`.
 
 ### 5. Frequency is part of the measure key
 
@@ -214,16 +255,19 @@ run as a Dev trial with the failing blocks annotated (D29).
 
 ### 8. What the portals can query
 
-- **data.zohelo.com** reads Iceberg tables: the three tables per source are queryable as they are,
+- **data.zohelo.com** reads Iceberg tables: the tables of a source are queryable as they are,
   and `gold.<source>_measures` (one row per measure, small) is the entry point; a block filter reads
   one file.
 - **zohelo-bi and zohelo.com** read the published layer, which carries KPIs only. A catalogue of
   non-KPI measures for zohelo-bi is a contract change (published v2, additive): proposal
   `catalog/measures_<source>.parquet` written from `gold.<source>_measures`, and series fetched per
   block from its one file. Not built; see "Open decisions".
-- **KPIs** stay curated. Once a source is fully in these tables, its `poc_build_<source>` stage can
-  read the block files instead of Silver and the hand filters in `poc_src_*.py` can go; that is a
-  later Task per source and changes no key.
+- **KPIs** stay curated, with their hand-made measure keys. Rule keys and hand keys differ
+  (decision 4), and published v1 files carry `measure_key`, so the curated build stages keep deriving
+  their own keys. Once a source is fully in these tables, its `poc_build_<source>` stage may read the
+  block files instead of Silver (the hand filters in `poc_src_*.py` can go) while still writing the
+  hand keys; moving `kpi_measure.csv` patterns to rule keys is a separate decision per source, taken
+  with checklist step 7.
 
 ## One adapter per source
 
@@ -233,16 +277,28 @@ rows with a value, with no block list and no sample filter. It states the source
 nothing else: which codes define the measure, which are breakdowns, what the total is, how periods
 and geography codes map. Everything after the build stage is shared.
 
-Where the build stage runs follows the size rules (#822, D28, D32):
+Where the build stage runs: **full coverage of every statistical source goes through the per-block
+path** (decision 3, D34), big or small. The curated `fact_*` tables cannot take unfiltered sources:
 
-| Source size in Gold | Build stage | Runs in | Lands in |
+| Curated table | Rows (12 Nov, run 43157931560) | Ceiling (`warehouse.yaml`) | Headroom |
 |---|---|---|---|
-| Above 1 M rows, or Silver written per entity (Eurostat, GUS BDL, GUS DBW, World Bank WDI at 9 M rows) | `warehouse/entity/gold_<source>_build.sql`, plus one entry in `SOURCES` of `warehouse/observations.py` (Silver table, how entities group into blocks, lookup tables) | per block, incremental by recipe (decision 3) | `gold.<source>_observations`, `_series`, `_measures` |
-| Below 1 M rows (NBP, OECD, UNCTAD, MF, KRUS, ECB and the like) | `warehouse/models/gold/poc_build_<source>.sql`, unfiltered | the dbt build, rebuilt in full under its `full_rebuild` ceiling | `gold.fact_*`, `dim_series`, `dim_measure` through `poc_observations()` |
+| `fact_annual` | 1,279,175 | 1,500,000 (exception #2294, D28) | 220,825 |
+| `fact_quarterly` | 141,495 | 250,000 | 108,505 |
+| `fact_monthly` | 325,478 | 300,000 | none: already above |
+| `fact_daily` | 372,538 | 600,000 | 227,462 |
 
-A small source that grows past its ceiling moves to the first row: its build SQL stays the same
-apart from the Jinja refs. The curated `fact_*` tables stay below their ceilings because the big
-sources add no rows to them.
+One unfiltered small source already exceeds that: `unctad_services_trade` alone is 808 k Silver rows,
+`oecd_cli` 241 k monthly rows, `nbp_fx_rates` 428 k daily rows. So the `fact_*` tables stay what they
+are, the reviewed KPI selections under their #822 ceilings, and no source is "unfiltered" into them.
+
+| Source's Silver | Block | Adapter |
+|---|---|---|
+| Written per entity (Eurostat, GUS BDL, GUS DBW) | the entity, or a group of entities (DBW: the files of one block) | `warehouse/entity/gold_<source>_*.sql` and one entry in `SOURCES` of `warehouse/observations.py` (Silver table, how entities group into blocks, lookup tables) |
+| A dbt table (World Bank WDI 9.0 M rows, UNCTAD, OECD, NBP, MF, KRUS, ECB and the like) | the Silver table (its file list is the recipe), so the source is rebuilt in Gold when its Silver table was rebuilt | the same two things; the driver's support for an unpartitioned Silver table is part of the first such source's Task |
+
+Both land in `gold.<source>_observations`, `_series`, `_measures` and `_geography`. A table-sized
+block is bounded by the same run limits (D34); a Silver table too large for one block (above about
+500 M rows, the largest block built so far) is split by an entity column first.
 
 ## Coverage metric
 
@@ -259,10 +315,17 @@ positions; a flat Silver table: its key columns without the period).
 - `gold.build_check` gains a per-source summary row: blocks loaded, blocks in Gold, loaded series,
   series in Gold, coverage %, rows not loaded with the reason (no value, period not placeable,
   block rejected).
-- 100% is reached when every loaded block is `in gold` and series in Gold equals loaded series; a
-  rejected block or an unplaced period keeps the source below 100% and names why. Unmatched
-  geography (`_X`) does not lower coverage (the series is in Gold with its source code) and is
-  reported next to it.
+- **Explained exclusions.** Some rows cannot be placed by rule and are not loaded: a row without a
+  value (Gold v1 rule 6), and a period the calendar cannot place (Eurostat frequency `NAP`: 2 datasets,
+  916 rows). Each is counted per block with its reason. Coverage is
+  **series in Gold ÷ (loaded series − series excluded by a stated rule)**, and the excluded series
+  are shown next to it with the reason. A series that only has rows without a value was never a
+  loaded series. So 100% is reachable, and it never hides a loss: anything not in Gold is either in
+  the denominator or listed as an exclusion.
+- 100% is reached when every loaded block is `in gold` and series in Gold equals the denominator; a
+  rejected block or a block waiting for a longer run keeps the source below 100% and names why.
+  Unmatched geography (`_X`) does not lower coverage (the series is in Gold with its source code)
+  and is reported next to it, per code, from `gold.<source>_geography`.
 
 ## Rollout
 
@@ -270,38 +333,40 @@ The three big sources first: they hold by far the largest gap (about 8,300 M row
 
 1. Eurostat: build stage, driver and projections (Task #2792), Dev trial on a sample.
 2. Pipeline activity `gold.observations` after `silver_gold.build` in the source's full dataflow,
-   completeness in the source's verify, the `gold.coverage` columns above, the tables in
-   `warehouse.yaml` `gold`, the portal catalogue. The activity is authorized in
+   completeness in the source's verify, the `gold.coverage` columns above, the portal catalogue.
+   Before anything is scheduled the new tables are listed in `warehouse.yaml` `gold` and in
+   `NOT_DBT_GOLD` of `ops/repo_check.py`, or `ops/retire_tables.py` would treat them as leftovers. The activity is authorized in
    `ingestion/sources/eurostat.yaml` only after the storage decision.
 3. The first production load runs smallest blocks first within each run's budget, so most datasets
    land in the first runs and the 133 largest last.
 4. GUS BDL, then GUS DBW: one build stage each; the driver and the projections are shared. DBW needs
    its periodicity ids (`282`, `5`, `2`, `7`) mapped to frequencies from the dictionary first.
-5. World Bank WDI (9.0 M Silver rows, block = indicator): the fourth per-block source.
+5. World Bank WDI (9.0 M Silver rows): the first source whose Silver is a dbt table.
 
 Then every remaining source, one Task and one PR each, with this checklist:
 
 1. Count the source's Silver: tables, rows with a value, loaded series (the metric's denominator).
-2. Choose the row of the adapter table by the measured size; record it in the source YAML `refresh`.
-3. Write the build stage for **all** Silver tables and series of the source: remove block lists and
-   sample filters; one measure rule per table; periods other than A, S, Q, M, W, D reported, not folded.
+2. Choose the block (the Silver table, or an entity column when the table is too large for one
+   block); record it in the source YAML `refresh`.
+3. Write the rule-based build stage for **all** Silver tables and series of the source, without
+   block lists or sample filters (the curated `poc_build_<source>` stays for the KPIs); one measure rule per table; periods other than A, S, Q, M, W, D reported, not folded.
 4. Map every geography code in `poc_map_geography.sql`; list unmatched codes with the reason.
 5. Units: one `unit.csv` row per unit a KPI uses; other units stay as published.
 6. Dev trial into `zz_dev_<topic>`: grain by `series_key × date_key` empty, coverage 100% or each
-   missing series explained, row counts against Silver, ceilings from the measured rows.
+   missing series explained, row counts against Silver, build time and size.
 7. Existing `kpi_measure.csv` patterns still match exactly the series they matched before (compare
    `concept_measures` before and after); published KPIs keep their keys and their first source.
 8. Register sources: every loaded entity in its Gold dimension or entity table, keyed by the
    official identifier; the metric counts entities.
 
-Known sources and their row of the adapter table (Silver row counts from `warehouse.yaml`
+Known sources (Silver row counts from `warehouse.yaml`
 `full_rebuild`; sources still in open PRs are sized by their own Task):
 
 | Source | Silver today | Gold today | Path |
 |---|---|---|---|
-| World Bank WDI | `wdi_observations` 9.0 M rows, 1,498 indicators | 26 indicators | per block |
-| OECD | `oecd_cli` 241 k rows | 3 indicators | dbt, unfiltered |
-| NBP | `nbp_fx_rates` 428 k, `nbp_gold_fixings` 3.5 k, `nbp_policy_rates` 390 | tables A and C, gold; rates in #2737 | dbt, unfiltered |
+| World Bank WDI | `wdi_observations` 9.0 M rows, 1,498 indicators | 26 indicators | per block; block = Silver table |
+| OECD | `oecd_cli` 241 k rows | 3 indicators | per block; block = Silver table |
+| NBP | `nbp_fx_rates` 428 k, `nbp_gold_fixings` 3.5 k, `nbp_policy_rates` 390 | tables A and C, gold; rates in #2737 | per block; block = Silver table |
 | UNCTAD, ECB, UN WPP, MF debt and budget, KRUS, NBP balance of payments, World Bank WGI/Findex/ICP | in open PRs | selections | sized in step 1 |
 | GLEIF, MF white list, TERYT, PRG | entity tables | partial (#2739, #2740) | entity coverage, step 8 |
 
@@ -311,7 +376,7 @@ Known sources and their row of the adapter table (Silver row counts from `wareho
 |---|---|---|---|
 | 1 | Storage: Silver of the three sources is 13.7 GB, already above R2's free 10 GB. Gold in full adds about 36 GB (Eurostat about 22 GB from the trials; BDL and DBW about 14 GB by the same ratio to Silver, not measured). | Accept the storage for full coverage; otherwise Poland and national comparators only (4,160 M Eurostat rows) or Poland only (196 M) | owner |
 | 2 | S and W periods in Gold | Load them with their own frequency in these tables; `fact_semiannual` of #2781 stays the curated answer for KPIs | architect |
-| 3 | D28 deviation (per-block files instead of a dbt incremental model) | As decision 3 | architect |
+| 3 | D28 deviation (per-block files instead of a dbt incremental model) | Decided: D34 | architect, 12 Nov |
 | 4 | Non-KPI measures in zohelo-bi (published v2 catalogue) | Additive `catalog/measures_<source>.parquet`; decide after Eurostat is loaded | owner |
 | 5 | BDL gmina level (341 M of 458 M rows) | In scope, loaded last | owner, with 1 |
 | 6 | Names of breakdown codes | Not per series (decision 6); build `gold.<source>_codes` per block before the portal shows these tables | architect |
