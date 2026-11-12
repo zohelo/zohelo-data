@@ -34,9 +34,17 @@ flows as (
 
 -- one row per scope: the total of the direction (group_key null) and each group
 scoped as (
-    select *, cast(null as varchar) as scope_key, cast(null as varchar) as scope_label from flows
+    select
+        *,
+        cast(null as varchar) as scope_key,
+        cast(null as varchar) as scope_label
+    from flows
     union all
-    select *, group_key as scope_key, group_label as scope_label from flows
+    select
+        *,
+        group_key as scope_key,
+        group_label as scope_label
+    from flows
 ),
 
 reporting as (
@@ -72,10 +80,11 @@ daily_complete as (
     select d.*
     from daily as d
     inner join reporting as r
-        on d.operator_key = r.operator_key
-        and d.direction_key = r.direction_key
-        and d.scope_key is not distinct from r.scope_key
-        and d.gas_month = r.gas_month
+        on
+            d.operator_key = r.operator_key
+            and d.direction_key = r.direction_key
+            and d.scope_key is not distinct from r.scope_key
+            and d.gas_month = r.gas_month
     where r.points_reporting > 0 and d.points_with_value = r.points_reporting
 ),
 
@@ -120,7 +129,9 @@ observations as (
 ),
 
 geo_map as (
-    select source_code, geography_key
+    select
+        source_code,
+        geography_key
     from {{ ref('poc_map_geography') }}
     where source_system = 'entsog'
 )
@@ -130,10 +141,9 @@ select
     'physical_flow' as block_id,
     'ENTSOG TP physical gas flows, GAZ-SYSTEM (daily; monthly sums)' as block_name,
     'entsog:' || o.measure_block || ':' || o.unit_code || ':' || o.direction_key as measure_key,
-    case o.measure_block
-        when 'physical_flow' then 'Natural gas physical flow, ' || o.direction_key || ' points, GAZ-SYSTEM transmission system (daily, ENTSOG TP)'
-        else 'Natural gas physical flow, ' || o.direction_key || ' points, GAZ-SYSTEM transmission system (monthly sum of complete days, ENTSOG TP)'
-    end as measure_name,
+    'Natural gas physical flow, ' || o.direction_key || ' points, GAZ-SYSTEM transmission system ('
+    || case o.measure_block when 'physical_flow' then 'daily' else 'monthly sum of complete days' end
+    || ', ENTSOG TP)' as measure_name,
     o.direction_key as measure_codes,
     o.unit_code,
     o.unit_name,
@@ -142,8 +152,10 @@ select
     o.frequency,
     o.date_key,
     o.period_label,
-    case when o.scope_key is null then '{}' else cast(to_json(map(['point_group'], [o.scope_key])) as varchar) end as breakdown_json,
-    case when o.scope_key is null then null else cast(to_json(map(['point_group'], [o.scope_label])) as varchar) end as breakdown_label_json,
+    case when o.scope_key is null then '{}' else cast(to_json(map(['point_group'], [o.scope_key])) as varchar) end
+        as breakdown_json,
+    case when o.scope_key is null then null else cast(to_json(map(['point_group'], [o.scope_label])) as varchar) end
+        as breakdown_label_json,
     cast(null as varchar) as sex_code,
     o.scope_key is null as is_total,
     o.value,

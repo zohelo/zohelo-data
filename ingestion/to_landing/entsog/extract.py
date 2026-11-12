@@ -166,8 +166,13 @@ def land(client, bucket: str, root: str, session, slug: str, operator: str, mont
         "object": {"bucket": bucket, "key": key},
         "part": {"index": 1, "total": 1},
         "code_sha": os.environ.get("GITHUB_SHA", ""),
-        "detail": {"operator": operator, "indicator": INDICATORS[slug], "month": f"{month[0]:04d}-{month[1]:02d}",
-                   "replaces_sha256": before["sha256"] if before else None, **detail},
+        "detail": {
+            "operator": operator,
+            "indicator": INDICATORS[slug],
+            "month": f"{month[0]:04d}-{month[1]:02d}",
+            "replaces_sha256": before["sha256"] if before else None,
+            **detail,
+        },
     }
     put_new(
         client,
@@ -215,7 +220,11 @@ def run_verify(client, bucket: str, root: str, held: dict[str, list]) -> dict[st
         if r["object"]["key"] not in present
         and stored.get(r["sha256"], {}).get("key") != archive_key(SOURCE, r["sha256"], r["object"]["key"])
     ]
-    return {"receipts": sum(len(v) for v in held.values()), "missing_data": len(problems), "missing_sample": problems[:10]}
+    return {
+        "receipts": sum(len(v) for v in held.values()),
+        "missing_data": len(problems),
+        "missing_sample": problems[:10],
+    }
 
 
 def main(argv=None) -> int:
@@ -235,8 +244,11 @@ def main(argv=None) -> int:
         status = 1 if summary["missing_data"] else 0
     else:
         todo = plan(held, today, {s.strip() for s in args.filter.split(",") if s.strip()})
-        summary = {"mode": args.mode, "window": f"{FIRST_MONTH[0]}-{FIRST_MONTH[1]:02d}..{today:%Y-%m}",
-                   **{k: len(v) for k, v in todo.items()}}
+        summary = {
+            "mode": args.mode,
+            "window": f"{FIRST_MONTH[0]}-{FIRST_MONTH[1]:02d}..{today:%Y-%m}",
+            **{k: len(v) for k, v in todo.items()},
+        }
         summary["open_months"] = [entity(*t).rsplit("__", 1)[1] for t in todo["open"]][:12]
         if args.mode == "load":
             session = requests.Session()
@@ -252,7 +264,9 @@ def main(argv=None) -> int:
                 requests_made += 1
                 name = entity(slug, operator, month)
                 try:
-                    outcomes[land(client, bucket, args.landing_root, session, slug, operator, month, held.get(name, []))] += 1
+                    outcomes[
+                        land(client, bucket, args.landing_root, session, slug, operator, month, held.get(name, []))
+                    ] += 1
                 except (RuntimeError, ValueError) as exc:  # one month failing must not stop the others
                     failed.append({"entity": name, "error": str(exc)[:200]})
             summary.update(outcomes)

@@ -90,7 +90,9 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
         if unknown:
             raise ValueError(f"record {number}: unknown fields {sorted(unknown)}")
         if record.get("operatorKey") != detail.get("operator") or record.get("indicator") != detail.get("indicator"):
-            raise ValueError(f"record {number}: operator/indicator {record.get('operatorKey')}/{record.get('indicator')}")
+            raise ValueError(
+                f"record {number}: operator/indicator {record.get('operatorKey')}/{record.get('indicator')}"
+            )
         if record.get("periodType") != "day":
             raise ValueError(f"record {number}: periodType {record.get('periodType')!r}")
         for field, column in FIELDS.items():
