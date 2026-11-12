@@ -196,6 +196,7 @@ life_expectancy,un_wpp,un_wpp:LEx:estimate,"at birth, both sexes, UN WPP 2024 es
 old_age_dependency,un_wpp,un_wpp:OldAgeDependency:estimate,"65+ per 100 aged 15-64 on 1 July, from UN WPP 2024 broad age groups (to 2023)",5,
 population_projection,un_wpp,un_wpp:TPopulation1July:projection,"1 July, UN WPP 2024 medium variant, 2024-2100, thousands as published",1,thousand_persons
 refugees_hosted,unhcr,unhcr:population_by_asylum:persons:refugees,"UNHCR population statistics, end of year, by country of asylum (origins summed)",1,
+ghg_emissions,eea,eea:govreg_ghg_inventory:gg_co2e:Sectors/Totals_excl,"total excl. LULUCF as reported to the UNFCCC (international bunkers excluded), Gg = kt CO2e, EEA GovReg inventory",4,
 reer,bis,bis:eer:882:R.B,"CPI-based, broad basket of 64 economies, 2020 = 100 (BIS)",3,
 policy_rate,bis,bis:cbpol:368,"end of month, per cent per year (BIS)",1,
 house_price_growth,bis,bis:spp:771:N,"nominal, year-on-year change, quarterly (BIS selected series)",1,

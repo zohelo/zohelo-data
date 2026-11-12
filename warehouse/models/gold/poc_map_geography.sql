@@ -438,6 +438,17 @@ unhcr as (
     where g.level_name = 'country' and g.iso3 is not null
 ),
 
+-- EEA greenhouse gas inventory: countries by ISO 3166-1 alpha-2 as published (Greece GR), built from Gold's own
+-- list like oecd, so the dimensions never wait for the EEA source; the EEA aggregate EUA has no Gold key (_X).
+eea as (
+    select
+        'eea' as source_system,
+        g.iso2 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso2 is not null
+),
+
 -- BIS (#2861): ISO 3166 alpha-2 countries (dim_geography's country keys) and XM euro area → EUROSTAT:EA
 -- (poc_bis_areas; the BIS aggregates 4T, 5R, 5A, G2, XW have no Gold area and are not listed). Static: Gold does
 -- not read BIS Silver here.
@@ -536,6 +547,8 @@ from (
     select * from un_wpp
     union all
     select * from unhcr
+    union all
+    select * from eea
     union all
     select * from zus_psz
     union all

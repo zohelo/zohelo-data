@@ -64,6 +64,10 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- UNHCR (#2415): persons; highest refugees 4,404,995 (all asylum countries 1951-2025, Dev trial 43282453427).
     -- Documentation only (no metrics_refugees_hosted model yet).
     ('refugees_hosted', 'unhcr', '%', 0, 2e7),
+    -- EEA GovReg (#2424): published in Gg (kt) CO2e, metrics in Mt CO2e (D33, ÷ 1000); highest member DE 1,253,128 kt
+    -- = 1,253.1 Mt (total excl. LULUCF, 1990-2024, Dev trial 43282453427). Documentation only until
+    -- metrics_ghg_emissions joins the metrics union below.
+    ('ghg_emissions', 'eea', 'eea:govreg_ghg_inventory:gg_co2e:Sectors/Totals_excl', 0, 2e3),
     -- ILOSTAT (#2861): per cent of the labour force, 15+, EU27 members, annual and quarterly national series;
     -- highest 28.153 (GR, quarterly), Poland 2025 = 3.018 (Dev trial 43290214779); the other sources' bound
     ('unemployment_rate', 'ilostat', '%', 0, 60),
