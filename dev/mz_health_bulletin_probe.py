@@ -109,6 +109,20 @@ def dump(ids, sheet, rows):
             note(f"dump {fid} {i}", p)
 
 
+def html(argv):
+    url = next((a[4:] for a in argv if a.startswith("url=")), PAGE)
+    r = get(url)
+    t = r.text
+    note("html meta", {"url": url, "status": r.status_code, "bytes": len(t)})
+    hrefs = sorted(set(re.findall(r'href="([^"#]+)"', t)))
+    note("hrefs", " ".join(h for h in hrefs if "badania" in h or "biuletyn" in h.lower() or "page" in h.lower() or "?" in h)[:3800])
+    for word in ("2021", "2019", "2018", "wi\u0119cej", "Archiwum", "cur=", "delta", "pagination", "15038"):
+        hits = [m.start() for m in re.finditer(word, t)]
+        if hits:
+            i = hits[0]
+            note(f"ctx {word} ({len(hits)})", re.sub(r"\s+", " ", t[max(0, i - 900): i + 900]))
+
+
 def main(argv):
     mode = argv[0] if argv else "page"
     ids = [a[3:] for a in argv if a.startswith("id=")]
@@ -116,6 +130,8 @@ def main(argv):
         page()
     elif mode == "sheets":
         sheets(ids)
+    elif mode == "html":
+        html(argv)
     elif mode == "dump":
         sheet = next((a[6:] for a in argv if a.startswith("sheet=")), ".")
         rows = int(next((a[5:] for a in argv if a.startswith("rows=")), "12"))
