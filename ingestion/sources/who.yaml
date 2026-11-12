@@ -1,0 +1,43 @@
+source_system: who
+description: "WHO data.who.int — indicator CSV files: life expectancy at birth, healthy life expectancy (HALE)"
+
+# Extraction strategy (docs/landing.md). Bulk feature: every indicator page of data.who.int links one CSV with the
+# indicator's complete data (every country, WHO region, income group and World, every year and sex):
+# https://srhdpeuwpubsa.blob.core.windows.net/whdh/DATADOT/INDICATOR/<indicator uid>_ALL_LATEST.csv (the page's
+# "Download" link). Each entity is one such file through the shared bulk_file pattern, one request per entity and
+# run; the blob store sends Last-Modified, so version = the file's Last-Modified and an unchanged file is skipped.
+# data.who.int is the CC BY 4.0 route to the GHO indicators (register GL-025); the GHO OData API (GL-024) is
+# parked for its terms. Proven from Actions by Dev probes 43099401602 and 43100116863 (life expectancy 2.2 MB).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: life_expectancy   # 90E2E48, WHOSIS_000001: life expectancy at birth (years), by sex, 2000 onwards
+        url: "https://srhdpeuwpubsa.blob.core.windows.net/whdh/DATADOT/INDICATOR/90E2E48_ALL_LATEST.csv"
+        format: raw
+        version: last_modified
+      - entity: hale              # C64284D, WHOSIS_000002: healthy life expectancy at birth (years), by sex
+        url: "https://srhdpeuwpubsa.blob.core.windows.net/whdh/DATADOT/INDICATOR/C64284D_ALL_LATEST.csv"
+        format: raw
+        version: last_modified
+  initial: bulk
+  production: snapshot                  # each file is the complete history of its indicator
+  incremental_policy: changed_since_last  # Last-Modified, then SHA-256
+  schedule: # UTC; release: Global Health Estimates and World Health Statistics, about once a year (no calendar); weekly check (Friday 05:35), unchanged files skipped
+    - {cron: "35 5 * * 5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/who/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.who_observations, bronze.who_rejected_files]
+silver: [silver.who_observations]
+gold: [gold.build_who]
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): two small whole-indicator files (about 30,000 rows each) that change about
+# once a year; a new copy replaces its entity and Silver is rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2408"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

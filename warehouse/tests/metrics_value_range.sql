@@ -16,7 +16,9 @@ with bounds (concept_key, source_system, value_min, value_max) as (
     ('gdp_per_capita', 'eurostat', 0, 2e5),
     ('gdp_per_capita', 'world_bank_wdi', 0, 5e5),
     ('gdp_volume_growth', 'eurostat', -50, 100),
-    ('gdp_volume_growth', 'world_bank_wdi', -100, 200)
+    ('gdp_volume_growth', 'world_bank_wdi', -100, 200),
+    -- WHO data.who.int (#2408): years; highest 87.37 (all areas, 2000-2021, Dev trial 43159213097)
+    ('life_expectancy', 'who', 0, 130)
 ),
 
 metrics as (
