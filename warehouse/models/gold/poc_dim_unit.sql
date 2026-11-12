@@ -23,8 +23,8 @@ mapped as (
     from used as u
     left join {{ ref('unit_map') }} as m
         on
-            m.source_system = u.source_system
-            and m.unit_code = u.unit_code
+            u.source_system = m.source_system
+            and u.unit_code = m.unit_code
             and coalesce(m.measure_key_pattern, '') = ''
     group by u.unit_code
 )
@@ -37,7 +37,7 @@ select
     coalesce(len(m.conformed_unit_keys) = 1, false) as mapped,
     m.sources
 from mapped as m
-left join {{ ref('unit') }} as c on c.unit_key = m.conformed_unit_keys[1]
+left join {{ ref('unit') }} as c on m.conformed_unit_keys[1] = c.unit_key
 union all
 select
     '_Z' as unit_key,

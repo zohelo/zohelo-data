@@ -7,8 +7,8 @@
    Units (decision D33): the facts keep the value and unit as the source publishes them; this view is
    the one place that normalises a KPI. `value` is in the series' target unit `unit` (the measure's
    kpi_measure.csv unit_key, else the KPI's unit, the same rule as gold.publish), converted by pure
-   scale: published value × factor(source unit) / factor(target unit), unit.csv, rounded to the
-   published decimals shifted by the factor (poc_rescale). The source unit is the unit_map.csv row of
+   scale: published value × factor(source unit) / factor(target unit), unit.csv, with the published
+   decimals shifted by the factor (poc_rescale). The source unit is the unit_map.csv row of
    the measure's unit code. `value_published` and `unit_published` keep what the source published.
    No conversion when the code has no unit_map row (reported by test metrics_unit_unmapped) or the
    two units have different bases (test metrics_unit_base fails): currencies, index bases and price
@@ -104,23 +104,23 @@ where s.is_total and f.geography_key <> '_X'
     {% if concept_key is not none %}where cm.concept_key = '{{ concept_key }}'{% endif %}
 {% endmacro %}
 
-{# A value converted by pure scale (D33): value × ratio, rounded to the decimals the value was published
-   with (its shortest decimal text, exponent included) shifted by the ratio's power of ten, so 12.3
-   thousand → 12300 and 1234567 USD → 1.234567 million USD, without float artefacts. #}
+{# A value converted by pure scale (D33). For a power-of-ten ratio (every unit.csv factor today) the decimal point
+   of the published value's shortest decimal text is moved by the ratio's exponent and the text is read back, so
+   the result is the double nearest to the exact decimal (1035491784197.4406 US$ → 1035491.7841974406 million US$,
+   12.3 thousand → 12300) with the published decimals shifted by the factor and no float artefacts; any other ratio
+   multiplies. #}
 {% macro poc_rescale(value, ratio) %}
-    round(
-        cast({{ value }} as double) * {{ ratio }},
-        cast(
-            greatest(
-                length(rtrim(regexp_extract(cast(cast({{ value }} as double) as varchar), '[.]([0-9]*)', 1), '0'))
-                - coalesce(try_cast(regexp_extract(cast(cast({{ value }} as double) as varchar), '[eE]([-+]?[0-9]+)', 1) as integer), 0),
-                0
+    case
+        when abs(log10({{ ratio }}) - round(log10({{ ratio }}))) < 1e-9 then cast(
+            regexp_extract(cast(cast({{ value }} as double) as varchar), '^[^eE]*')
+            || 'e'
+            || cast(
+                coalesce(try_cast(regexp_extract(cast(cast({{ value }} as double) as varchar), '[eE]([-+]?[0-9]+)', 1) as integer), 0)
+                + cast(round(log10({{ ratio }})) as integer)
+                as varchar
             )
-            + case
-                when abs(-log10({{ ratio }}) - round(-log10({{ ratio }}))) < 1e-9 then round(-log10({{ ratio }}))
-                else ceil(-log10({{ ratio }}))
-            end
-            as integer
+            as double
         )
-    )
+        else cast({{ value }} as double) * {{ ratio }}
+    end
 {% endmacro %}
