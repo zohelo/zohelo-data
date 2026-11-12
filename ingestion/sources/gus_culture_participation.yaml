@@ -7,7 +7,7 @@ description: "GUS — Uczestnictwo ludności w kulturze (participation of the po
 # Last-Modified), written only when the SHA-256 changed; the newest edition is downloaded again on every run, older
 # landed editions are not (ingestion/common/gus_publications.py, ingestion/to_landing/gus_culture_participation/). Restart unit: one
 # edition. Dev probes 43269548145, 43270285788, 43270655323, 43271452794 on test/w3-gus-probe.
-# History: survey editions 2019 and 2024 (earlier editions, 2014 and 2009, are before first_year 2019); Dev trial 43288102198: 2 files, 167,630 Bronze cells, 18 Silver and Gold rows, 0 duplicate keys; second runs wrote nothing.
+# History: survey editions 2019 and 2024 (earlier editions, 2014 and 2009, are before first_year 2019); Dev trial 43298219762 (first 43288102198): 2 files, 167,630 Bronze cells, 18 Silver and Gold rows, 0 duplicate keys; second runs wrote nothing.
 extraction:
   initial: bulk
   production: snapshot                  # each edition file as published; a correction replaces it
