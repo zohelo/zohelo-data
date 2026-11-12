@@ -25,7 +25,7 @@ import requests
 
 UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
 ELECTIONS = ["sejmsenat2023", "pe2024", "samorzad2024", "prezydent2025", "prezydent20200628"]
-BUDGET = [160]
+BUDGET = [200]
 STOP = [False]
 OUT = Path(os.environ.get("DEV_OUTPUT_DIR", "/tmp/dev-output"))
 KEEP = re.compile(r"(wojew|powiat|gmin|kraj|polsk|okreg|zagranic|statk|kandydat)", re.I)
@@ -95,6 +95,10 @@ def bundle_names(election: str) -> list[str]:
             print(f"... csv@{m.start()}: {code[max(0, m.start() - 300): m.start() + 200]!r}", flush=True)
         for m in list(re.finditer(r"wyniki_|frekwencja|_po_", code))[:80]:
             print(f"... name@{m.start()}: {code[max(0, m.start() - 60): m.start() + 120]!r}", flush=True)
+        for m in list(re.finditer(r"(?i)licencj|prawa autorsk|ponowne wykorzyst|warunki korzyst|creative commons", code))[:10]:
+            print(f"... terms@{m.start()}: {code[max(0, m.start() - 200): m.start() + 300]!r}", flush=True)
+    for m in list(re.finditer(r"(?i)licencj|prawa autorsk|ponowne wykorzyst|warunki korzyst|creative commons", html))[:10]:
+        print(f"... page terms@{m.start()}: {html[max(0, m.start() - 200): m.start() + 300]!r}", flush=True)
     names = sorted(set(names))
     print(f"### {election} names from the bundle ({len(names)}): {names}", flush=True)
     return names
@@ -153,7 +157,7 @@ def main(argv: list[str]) -> int:
         names = bundle_names(election)
         picked = [n for n in names if KEEP.search(n) and not SKIP.search(n)]
         print(f"### {election} picked {picked}", flush=True)
-        for name in picked[:14]:
+        for name in picked[:24]:
             profile(election, name)
     for item in extra:
         election, name = item.split(":", 1)
