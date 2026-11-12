@@ -5,7 +5,7 @@
    (ZZK.WORLD → WB:WLD); the HDR development groups and UNDP regions (ZZA … ZZJ) have no Gold area and are not
    built. measure_key undp_hdr:composite_indices:<unit>:<measure>: hdi, le (life expectancy at birth), eys, mys
    (expected and mean years of schooling) and gnipc (GNI per capita, 2021 PPP $) with a sex breakdown
-   ({"sex": "T" | "F" | "M"} from the source's total, _f and _m columns; is_total for the total); ihdi, gii and gdi
+   ({"sex": "T" | "F" | "M"} from the source's total, _f and _m columns; is_total for the total); ihdi and gii
    without one. Values as published; the file has no status flags (ok). A new report recalculates the whole
    series, and Gold holds the newest report only. #}
 with measures as ({{ poc_undp_hdr_measures() }}),

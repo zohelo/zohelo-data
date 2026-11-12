@@ -76,13 +76,24 @@ def records(cat, ns: str, name: str) -> int:
 
 
 def missing_silver(cat) -> list[str]:
+    """Blocks whose Silver tables production does not have yet (they wait, as in the changed-only build), found from
+    the refs of every poc_build_*.sql; poc_map_geography's refs to such tables are replaced by empty stubs."""
     have = {i[-1] for i in cat.list_tables("silver")}
+    silver_models = {p.stem for p in (ROOT / "warehouse/models/silver").rglob("*.sql")}
+    waiting = []
+    for model in sorted((ROOT / "warehouse/models/gold").glob("poc_build_*.sql")):
+        refs = set(re.findall(r"ref\('([a-z0-9_]+)'\)", model.read_text())) & silver_models
+        if refs - have:
+            waiting.append(model.stem)
+            OUT.setdefault("waiting_because", {})[model.stem] = sorted(refs - have)
     path = ROOT / "warehouse/models/gold/poc_map_geography.sql"
-    sql, waiting = path.read_text(), []
-    for name, (block, stub) in STUBS.items():
+    sql = path.read_text()
+    for name, (_block, stub) in STUBS.items():
         if name not in have:
             sql = sql.replace("{{ ref('" + name + "') }}", "(" + stub + ")")
-            waiting.append(block)
+    unstubbed = (set(re.findall(r"\{\{ ref\('([a-z0-9_]+)'\) \}\}", sql)) & silver_models) - have
+    if unstubbed:
+        OUT["map_geography_missing_silver"] = sorted(unstubbed)
     path.write_text(sql)
     SUMMARY["silver_present"] = {t: t in have for t in ("bis_observations", "ilostat_observations", "undp_hdr_indices",
                                                         "undata_syb_values", "unece_observations")}

@@ -1,46 +1,51 @@
-unit_key,symbol,name_en,name_pl,is_rate
-persons,os.,persons,osoby,false
-mln_ncu,mln,"million, source currency","mln, waluta źródła",false
-ncu_per_person,/os.,source currency per person,waluta źródła na osobę,false
-pct,%,per cent,procent,true
-pct_labour_force,%,% of labour force,% aktywnych zawodowo,true
-pct_population,%,% of population,% ludności,true
-years,lata,years,lata,false
-pln,zł,Polish zloty,złoty,false
-dwellings,mieszk.,dwellings,mieszkania,false
-km2,km²,square kilometres,kilometry kwadratowe,false
-persons_per_km2,os./km²,persons per km²,osoby na km²,true
-pln_per_unit,zł,PLN per currency unit,zł za jednostkę waluty,true
-pln_per_gram,zł/g,PLN per gram,zł za gram,true
-mln_eur,mln EUR,million euro,mln euro,false
-usd,USD,US dollars,dolary amerykańskie,false
-mln_usd,mln USD,million US dollars,mln dolarów amerykańskich,false
-eur_per_person,EUR/os.,euro per person,euro na osobę,false
-usd_per_person,USD/os.,US dollars per person,dolary amerykańskie na osobę,false
-pct_gdp,% PKB,% of GDP,% PKB,true
-index_eu27_100,EU27=100,"index, EU27 = 100","indeks, UE27 = 100",true
-index_2020_100,2020=100,"index, 2020 = 100","indeks, 2020 = 100",true
-thousand_tonnes,tys. t,thousand tonnes,tysiące ton,false
-children_per_woman,dzieci/kobietę,children per woman,dzieci na kobietę,true
-index_py_100,py=100,"index, same period of the previous year = 100","indeks, analogiczny okres roku poprzedniego = 100",true
-index_pp_100,pp=100,"index, previous period = 100","indeks, okres poprzedni = 100",true
-index_2010_100,2010=100,"index, 2010 = 100","indeks, 2010 = 100",true
-index_lta_100,LTA=100,"index, long-term average = 100","indeks, średnia długookresowa = 100",true
-balance,saldo,balance of answers,saldo odpowiedzi,true
-pct_points,p.p.,percentage points,punkty procentowe,true
-gini_0_100,Gini,"Gini coefficient, 0-100","współczynnik Giniego, 0-100",true
-persons_per_offer,os./ofertę,persons per job offer,osoby na 1 ofertę pracy,true
-mln_pln,mln zł,million zloty,miliony złotych,false
-thousand_pln,tys. zł,thousand zloty,tysiące złotych,false
-mt_co2e,Mt CO2e,million tonnes of CO2 equivalent,miliony ton ekwiwalentu CO2,false
-ppp_usd_per_person,$ PPP/os.,PPP international dollars per person,dolary międzynarodowe PPP na osobę,false
-ncu,NCU,source currency,waluta źródła,false
-entities,podm.,legal entities,podmioty,false
-list_entries,wpisy,list entries,wpisy,false
-thousand_persons,tys. os.,thousand persons,tysiące osób,false
-thousand_ha,tys. ha,thousand hectares,tysiące hektarów,false
-wgi_estimate,est.,"governance estimate, about -2.5 to 2.5","ocena jakości rządzenia, ok. -2,5 do 2,5",true
-index_world_100,świat=100,"index, world = 100","indeks, świat = 100",true
-pct_gni,% DNB,% of GNI,% DNB,true
-pct_exports,% eksportu,"% of exports of goods, services and primary income","% eksportu towarów, usług i dochodów pierwotnych",true
-index_0_1,0-1,"index, 0 to 1","indeks, od 0 do 1",true
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
+persons,os.,persons,osoby,false,persons,1
+mln_ncu,mln,"million, source currency","mln, waluta źródła",false,ncu,1000000
+ncu_per_person,/os.,source currency per person,waluta źródła na osobę,false,ncu_per_person,1
+pct,%,per cent,procent,true,pct,1
+per_100,/100,per 100 persons,na 100 osób,true,per_100,1
+pct_labour_force,%,% of labour force,% aktywnych zawodowo,true,pct,1
+pct_population,%,% of population,% ludności,true,pct,1
+years,lata,years,lata,false,years,1
+pln,zł,Polish zloty,złoty,false,pln,1
+dwellings,mieszk.,dwellings,mieszkania,false,dwellings,1
+km2,km²,square kilometres,kilometry kwadratowe,false,m2,1000000
+persons_per_km2,os./km²,persons per km²,osoby na km²,true,persons_per_km2,1
+pln_per_unit,zł,PLN per currency unit,zł za jednostkę waluty,true,pln_per_unit,1
+pln_per_gram,zł/g,PLN per gram,zł za gram,true,pln_per_gram,1
+mln_eur,mln EUR,million euro,mln euro,false,eur,1000000
+usd,USD,US dollars,dolary amerykańskie,false,usd,1
+mln_usd,mln USD,million US dollars,mln dolarów amerykańskich,false,usd,1000000
+eur_per_person,EUR/os.,euro per person,euro na osobę,false,eur_per_person,1
+usd_per_person,USD/os.,US dollars per person,dolary amerykańskie na osobę,false,usd_per_person,1
+pct_gdp,% PKB,% of GDP,% PKB,true,pct,1
+index_eu27_100,EU27=100,"index, EU27 = 100","indeks, UE27 = 100",true,index_eu27_100,1
+index_2020_100,2020=100,"index, 2020 = 100","indeks, 2020 = 100",true,index_2020_100,1
+thousand_tonnes,tys. t,thousand tonnes,tysiące ton,false,tonnes,1000
+children_per_woman,dzieci/kobietę,children per woman,dzieci na kobietę,true,children_per_woman,1
+index_py_100,py=100,"index, same period of the previous year = 100","indeks, analogiczny okres roku poprzedniego = 100",true,index_py_100,1
+index_pp_100,pp=100,"index, previous period = 100","indeks, okres poprzedni = 100",true,index_pp_100,1
+index_2010_100,2010=100,"index, 2010 = 100","indeks, 2010 = 100",true,index_2010_100,1
+index_lta_100,LTA=100,"index, long-term average = 100","indeks, średnia długookresowa = 100",true,index_lta_100,1
+balance,saldo,balance of answers,saldo odpowiedzi,true,balance,1
+pct_points,p.p.,percentage points,punkty procentowe,true,pct_points,1
+gini_0_100,Gini,"Gini coefficient, 0-100","współczynnik Giniego, 0-100",true,gini_0_100,1
+persons_per_offer,os./ofertę,persons per job offer,osoby na 1 ofertę pracy,true,persons_per_offer,1
+mln_pln,mln zł,million zloty,miliony złotych,false,pln,1000000
+thousand_pln,tys. zł,thousand zloty,tysiące złotych,false,pln,1000
+mt_co2e,Mt CO2e,million tonnes of CO2 equivalent,miliony ton ekwiwalentu CO2,false,tonnes,1000000
+ppp_usd_per_person,$ PPP/os.,PPP international dollars per person,dolary międzynarodowe PPP na osobę,false,ppp_usd_per_person,1
+ncu,NCU,source currency,waluta źródła,false,ncu,1
+entities,podm.,legal entities,podmioty,false,entities,1
+list_entries,wpisy,list entries,wpisy,false,list_entries,1
+thousand_persons,tys. os.,thousand persons,tysiące osób,false,persons,1000
+ha,ha,hectares,hektary,false,m2,10000
+m2,m²,square metres,metry kwadratowe,false,m2,1
+eur,EUR,euro,euro,false,eur,1
+tonnes,t,tonnes,tony,false,tonnes,1
+thousand_ha,tys. ha,thousand hectares,tysiące hektarów,false,m2,10000000
+wgi_estimate,est.,"governance estimate, about -2.5 to 2.5","ocena jakości rządzenia, ok. -2,5 do 2,5",true,wgi_estimate,1
+index_world_100,świat=100,"index, world = 100","indeks, świat = 100",true,index_world_100,1
+pct_gni,% DNB,% of GNI,% DNB,true,pct,1
+pct_exports,% eksportu,"% of exports of goods, services and primary income","% eksportu towarów, usług i dochodów pierwotnych",true,pct,1
+index_0_1,0-1,"index, 0 to 1","indeks, od 0 do 1",true,index_0_1,1

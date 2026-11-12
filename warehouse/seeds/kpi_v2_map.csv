@@ -106,6 +106,7 @@ life_expectancy,poland,A,life_expectancy,eurostat,DEMO_MLEXPEC;DEMO_R_MLIFEXP,eu
 life_expectancy,poland,A,life_expectancy,gus_bdl,P2730,gus_bdl:P2730:lata:% / 0,A,PL;VOIV,sex,none,up,ready,"at birth, men and women as two measures (BDL has no both-sexes value)"
 life_expectancy,poland,A,life_expectancy,world_bank_wdi,SP.DYN.LE00.IN,world_bank_wdi:SP.DYN.LE00.IN,A,PL;EU;EU27,,none,up,ready,
 life_expectancy,poland,A,life_expectancy,who,90E2E48 (WHOSIS_000001),who:life_expectancy:years:WHOSIS_000001,A,PL;EU,sex,none,up,ready,"at birth, WHO Global Health Estimates; EU27 members and World (no EU27 aggregate)"
+life_expectancy,poland,A,life_expectancy,un_wpp,WPP2024 Demographic Indicators,un_wpp:LEx:estimate,A,PL;EU;EU27,,none,up,needs-block,"licence unresolved (#2761): no UN page states the WPP terms; at birth, both sexes; estimates to 2023"
 life_expectancy,poland,A,life_expectancy,undp_hdr,HDR composite indices (le),undp_hdr:composite_indices:years:le,A,PL;EU,sex,none,up,ready,"at birth, UNDP Human Development Report (newest report, 1990 to the report year); EU member states and World, no EU27 aggregate"
 long_term_unemployment,labour,A,long_term_unemployment,eurostat,UNE_LTU_A,eurostat:UNE_LTU_A:PC_ACT:LTU,A,PL;EU;EU27,sex,rate,down,ready,15-74
 long_term_unemployment,labour,A,,gus_dbw,1618_1335_95_4,,A;Q,PL,sex;age,rate,down,needs-block,GUS LFS long-term unemployment rate (1618_*) in Silver; codes not probed
@@ -122,11 +123,13 @@ nominal_wage_growth,labour,M,nominal_wage_growth,gus_dbw,376_2_184_1;398_16_184_
 old_age_dependency,poland,A,old_age_dependency,eurostat,DEMO_PJANIND;DEMO_R_PJANIND2,eurostat:DEMO_PJANIND:_Z:OLDDEP1;eurostat:DEMO_R_PJANIND2:PC:OLDDEP1,A,PL;EU;EU27;VOIV,,rate,neutral,ready,65+ per 100 aged 15-64
 old_age_dependency,poland,A,old_age_dependency,gus_bdl,P2426,gus_bdl:P2426:osoba:współczynnik obciążenia demograficznego osobami starszymi,A,PL;VOIV,,rate,neutral,ready,65+ per 100 aged 15-64
 old_age_dependency,poland,A,old_age_dependency,world_bank_wdi,SP.POP.DPND.OL,world_bank_wdi:SP.POP.DPND.OL,A,PL;EU;EU27,,rate,neutral,ready,
+old_age_dependency,poland,A,old_age_dependency,un_wpp,WPP2024 Population by Age5,un_wpp:OldAgeDependency:estimate,A,PL;EU;EU27,,rate,neutral,needs-block,"licence unresolved (#2761): no UN page states the WPP terms; 65+ per 100 aged 15-64 on 1 July, summed from WPP five-year age groups; estimates to 2023"
 pensioners,labour,A,pensioners,gus_bdl,P2861,gus_bdl:P2861:osoba:przeciętna liczba emerytów i rencistów ogółem,A,PL;VOIV,,sum,neutral,ready,average number of old-age and disability pensioners
 population_total,poland,A,population,gus_bdl,P2137,gus_bdl:P2137:osoba,A,PL;VOIV,sex;age,sum,neutral,ready,31 December
 population_total,poland,A,population,gus_dbw,581_57_93_4,gus_dbw:581_57_93_4:%,A,PL;VOIV,sex;age,sum,neutral,ready,"31 December, macroregions, regions, subregions"
 population_total,poland,A,population,eurostat,DEMO_PJAN,eurostat:DEMO_PJAN:NR,A,PL;EU;EU27,sex,sum,neutral,ready,1 January (also concept population_usual_residence)
 population_total,poland,A,population,world_bank_wdi,SP.POP.TOTL,world_bank_wdi:SP.POP.TOTL,A,PL;EU;EU27,,sum,neutral,ready,midyear estimate
+population_total,poland,A,population,un_wpp,WPP2024 Demographic Indicators,un_wpp:TPopulation1July:estimate,A,PL;EU;EU27,,sum,neutral,needs-block,"licence unresolved (#2761): no UN page states the WPP terms; 1 July, estimates to 2023 (projections 2024-2100 are concept population_projection); EU27 = WPP group European Union (EU: 27)"
 ppi_annual_rate,economy,M,ppi_annual_rate,eurostat,STS_INPP_M,eurostat:STS_INPP_M:PCH_SM:PRC_PRR,M,PL;EU;EU27,,rate,neutral,ready,"domestic market, NACE B-E36"
 price_m2_secondary,poland,Q,,gus_bdl,P3788;P3794,gus_bdl:P3788:zł,A;Q,PL;VOIV,market,mean,neutral,needs-block,"secondary market is a breakdown member (rynek wtórny) of P3788/P3794, verified in Silver; metrics keep totals only: needs a member filter (kpi_member) before activating"
 price_m2_secondary,poland,Q,,gus_dbw,309_485_180_3,gus_dbw:309_485_180_3:180,Q,PL;VOIV,market,mean,neutral,needs-block,same: wtórny rynek nieruchomości is a breakdown member
@@ -150,6 +153,7 @@ tertiary_attainment,poland,A,tertiary_attainment,unesco_uis,EA.5T8.AG25T99,unesc
 tfr,poland,A,total_fertility_rate,eurostat,DEMO_FIND;DEMO_R_FIND2,eurostat:DEMO_FIND:_Z:TOTFERRT;eurostat:DEMO_R_FIND2:NR:TOTFERRT,A,PL;EU;EU27;VOIV,,none,neutral,ready,
 tfr,poland,A,total_fertility_rate,gus_bdl,P2346,gus_bdl:P2346:-:dzietność,A,PL;VOIV,,none,neutral,ready,
 tfr,poland,A,total_fertility_rate,world_bank_wdi,SP.DYN.TFRT.IN,world_bank_wdi:SP.DYN.TFRT.IN,A,PL;EU;EU27,,none,neutral,ready,
+tfr,poland,A,total_fertility_rate,un_wpp,WPP2024 Demographic Indicators,un_wpp:TFR:estimate,A,PL;EU;EU27,,none,neutral,needs-block,"licence unresolved (#2761): no UN page states the WPP terms; estimates to 2023"
 trade_balance,economy,M,,eurostat,EXT_ST_EU27_2020SITC,,M,EU27,,sum,neutral,needs-block,"only the EU27 reporter in Silver, no PL rows"
 unemployment_lfs,labour;poland,Q,unemployment_rate,eurostat,UNE_RT_A;UNE_RT_Q;LFST_R_LFU3RT,eurostat:UNE_RT_A:PC_ACT;eurostat:UNE_RT_Q:PC_ACT:Y15-74;eurostat:LFST_R_LFU3RT:PC,A;Q,PL;EU;EU27;VOIV,sex,rate,down,ready,15-74; quarterly seasonally adjusted; Polish NUTS 2 annual
 unemployment_lfs,labour;poland,Q,unemployment_rate,gus_dbw,1514_1360_95_3,gus_dbw:1514_1360_95_3:95,Q,PL;VOIV,education,rate,down,ready,"LFS (BAEL), age 15-89"

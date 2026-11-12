@@ -346,6 +346,29 @@
     ) as t (area_code, candidate_key)
 {% endmacro %}
 
+{# UN WPP blocks: one per indicator (gold.build_un_wpp); countries: the EU27 members built (ISO two-letter). #}
+{% macro poc_un_wpp_blocks() %}
+    select
+        *,
+        'AT,BE,BG,CY,CZ,DE,DK,EE,ES,FI,FR,GR,HR,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,RO,SE,SI,SK' as countries
+    from (
+        values
+        ('TPopulation1July', 'Total population on 1 July (UN WPP)', 'thousand_persons', 'thousand persons'),
+        ('TFR', 'Total fertility rate (UN WPP)', 'children_per_woman', 'live births per woman'),
+        ('LEx', 'Life expectancy at birth, both sexes (UN WPP)', 'years', 'years'),
+        ('MedianAgePop', 'Median age of the population (UN WPP)', 'years', 'years'),
+        ('OldAgeDependency', 'Old-age dependency ratio, 65+ per 100 aged 15-64, computed from UN WPP 2024 five-year age groups', 'per_100', 'per 100 persons aged 15-64')
+    ) as t (indicator, block_name, unit_code, unit_name)
+{% endmacro %}
+
+{# UN WPP groups → Gold area by LocID (poc_map_geography section un_wpp; static). Countries map by ISO code. #}
+{% macro poc_un_wpp_areas() %}
+    select * from (
+        values
+        ('1551', 'EUROSTAT:EU27_2020'), ('900', 'WB:WLD')
+    ) as t (loc_id, candidate_key)
+{% endmacro %}
+
 {# BIS Data Portal measures (gold.build_bis, #2861): one row per built series of a landed selection
    (ingestion/sources/bis.yaml entity). series_code = the series key without FREQ and the area, as the BIS
    publishes it; measure_codes = the codes that stay in the measure key next to the unit; unit_code / unit_name
@@ -353,15 +376,14 @@
    year-on-year changes in per cent, 770 percentage of GDP, 367 per cent); source_unit = UNIT_MEASURE of the
    series in silver.bis_observations (tests/bis_gold_units.sql fails when the BIS changes it, e.g. a rebased
    index). Total credit (tc): percentage of GDP, adjusted for breaks only; amounts in national currency and US
-   dollars, the unadjusted series, credit from banks and to the whole non-financial sector are not built. #}
+   dollars, the unadjusted series, credit from banks and to the whole non-financial sector, and the narrow-basket (27 economies) effective exchange
+   rates are not built. #}
 {% macro poc_bis_measures() %}
     select * from (
         values
         ('cbpol', '', '', '368', 'Per cent per year', '368', 'Central bank policy rate, end of month'),
         ('eer', 'R.B', 'R.B', '882', 'Index, 2020 = 100', '882', 'Real effective exchange rate, CPI-based, broad basket (64 economies)'),
         ('eer', 'N.B', 'N.B', '882', 'Index, 2020 = 100', '882', 'Nominal effective exchange rate, broad basket (64 economies)'),
-        ('eer', 'R.N', 'R.N', '882', 'Index, 2020 = 100', '882', 'Real effective exchange rate, CPI-based, narrow basket (27 economies)'),
-        ('eer', 'N.N', 'N.N', '882', 'Index, 2020 = 100', '882', 'Nominal effective exchange rate, narrow basket (27 economies)'),
         ('spp', 'N.628', 'N', '628', 'Index, 2010 = 100', '628', 'Residential property prices, nominal'),
         ('spp', 'R.628', 'R', '628', 'Index, 2010 = 100', '628', 'Residential property prices, real (CPI-deflated)'),
         ('spp', 'N.771', 'N', '771', 'Year-on-year changes, in per cent', '771', 'Residential property prices, nominal, year-on-year change'),
@@ -428,8 +450,9 @@
 
 {# UNDP Human Development Report measures built (gold.build_undp_hdr, #2861): source indicator (column name
    without the year) → measure, sex and unit. The file has no unit column: units are those of the HDR technical
-   notes. Not built: ranks and groups, the planetary-pressures indices, the inequality components, and the
-   Gender Inequality Index components (abr, mmr, pr_*, se_*, lfpr_*), co2_prod, mf, pop_total. #}
+   notes. Not built: the Gender Development Index (gdi, a female-to-male ratio), ranks and groups, the
+   planetary-pressures indices, the inequality components, the Gender Inequality Index components (abr, mmr,
+   pr_*, se_*, lfpr_*), co2_prod, mf and pop_total. #}
 {% macro poc_undp_hdr_measures() %}
     select * from (
         values
@@ -449,8 +472,7 @@
         ('gni_pc_f', 'gnipc', 'F', '2021 PPP $', '2021 PPP $ per person', 'Gross national income per capita'),
         ('gni_pc_m', 'gnipc', 'M', '2021 PPP $', '2021 PPP $ per person', 'Gross national income per capita'),
         ('ihdi', 'ihdi', '', 'index', 'index (0 to 1)', 'Inequality-adjusted Human Development Index (IHDI)'),
-        ('gii', 'gii', '', 'index', 'index (0 to 1)', 'Gender Inequality Index (GII)'),
-        ('gdi', 'gdi', '', 'ratio', 'ratio of female to male HDI', 'Gender Development Index (GDI)')
+        ('gii', 'gii', '', 'index', 'index (0 to 1)', 'Gender Inequality Index (GII)')
     ) as t (indicator, measure, sex_code, unit_code, unit_name, measure_name)
 {% endmacro %}
 
@@ -556,6 +578,7 @@
     poc_build_faostat:faostat
     poc_build_ecb:ecb
     poc_build_ids:world_bank_ids
+    poc_build_un_wpp:un_wpp
     poc_build_bis:bis
     poc_build_ilostat:ilostat
     poc_build_undp_hdr:undp_hdr
@@ -648,6 +671,8 @@
     select 'ecb', entity, block_name from ({{ poc_ecb_blocks() }})
     union all
     select 'world_bank_ids', 'IDS_CSV', 'World Bank International Debt Statistics'
+    union all
+    select 'un_wpp', indicator, block_name from ({{ poc_un_wpp_blocks() }})
     union all
     select 'bis', entity, block_name from ({{ poc_bis_blocks() }})
     union all

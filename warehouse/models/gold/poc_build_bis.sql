@@ -2,7 +2,7 @@
 {# Gold build stage: the BIS series of poc_bis_measures (macros/poc_blocks.sql) from silver.bis_observations in the
    common shape. One measure per built series code, one frequency per measure (policy rates and effective
    exchange rates monthly, the property price and credit selections quarterly): measure_key
-   bis:<entity>:<BIS unit code>[:<codes>], e.g. bis:cbpol:368, bis:eer:882:R.B (real, broad basket), bis:spp:771:N
+   bis:<entity>:<BIS unit code>[:<codes>], e.g. bis:cbpol:368, bis:eer:882:R.B (real, broad basket; the narrow basket is not built), bis:spp:771:N
    (nominal residential property prices, year-on-year change), bis:tc:770:P.A.M (credit to the private
    non-financial sector, all lenders, market value, percentage of GDP, adjusted for breaks), bis:credit_gap:770:P.A.C,
    bis:dsr:367:P. Values and units as published (D33); a cell without a value (NaN, OBS_STATUS M) is not loaded.
