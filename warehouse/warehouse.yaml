@@ -48,7 +48,7 @@ topics:
 gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.domain,  # seed warehouse/seeds/domain.csv
        gold.kpi_dimension,  # catalogue: dimensions per KPI and measure
-       gold.kpi, gold.kpi_measure, gold.unit,  # seeds warehouse/seeds/kpi.csv, kpi_measure.csv, unit.csv
+       gold.kpi, gold.kpi_measure, gold.unit, gold.unit_map,  # seeds warehouse/seeds/kpi.csv, kpi_measure.csv, unit.csv, unit_map.csv (D33)
        gold.sex,  # seed warehouse/seeds/sex.csv (SDMX CL_SEX)
        gold.licence, gold.source,  # seeds warehouse/seeds/licence.csv, source.csv
        gold.release_calendar,  # seed release_calendar.csv
