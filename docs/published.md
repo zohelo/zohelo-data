@@ -19,8 +19,10 @@ strings in ISO 8601 UTC.
 - **Licence gate** (O37; a legal boundary, applied to v1 and v2 alike): a row of a source whose `licence_key` in
   `warehouse/seeds/source.csv` is `unresolved` or not a row of `licence.csv` (a source missing from `source.csv`
   counts as missing) reaches no published file: not `latest.json`, not `series.parquet`/`series.json`, not a KPI's
-  `source_keys`. A KPI left without a licensed row is not published at all (no catalog entry, no files; files of
-  an earlier run are removed). The `sources` and `licences` lists of `catalog.json` stay complete (register
+  `source_keys`. A KPI whose every source in `kpi_measure.csv` (v1) or every `ready` map source (v2) is unlicensed is not
+  published at all (no catalog entry, no files); files of an earlier run are removed as the run's last step, after
+  every write and read-back succeeded. This is decided from the seeds alone, never because a Gold read failed. A
+  Gold row without `source_system` fails the run. The `sources` and `licences` lists of `catalog.json` stay complete (register
   metadata, no numbers), so readers can apply the same rule. `gold.publish` reports the KPIs and rows it left out
   (`licence_gate` in its annotation). Since 12 Nov 2026 this leaves NBP (`nbp`, `nbp_interest_rates`) out, so v1
   has no `fx_rate` and v2 no `eurpln`, until NBP's terms are established.
@@ -260,8 +262,11 @@ schemas and the cross-file rules of `published_v2_problems`). Seeds: `kpi_v2_map
 
 ## Rules
 
-- Prefix `06_published/v2/`; rebuilt whole by `gold.publish` after each Gold build (a `kpi/<kpi_key>/` file this run
-  did not write is removed); no history; UTF-8; ISO 8601 UTC; additive fields are allowed, any rename or removal
+- Prefix `06_published/v2/`; rebuilt whole by `gold.publish` after each Gold build. `kpi/<kpi_key>/` files are removed
+  only for a KPI out of scope (no longer a candidate by the seeds and the licence gate), after the read-back. A KPI
+  still in scope whose `series.json` is published but that this run could not build (missing table, read failure,
+  no row at the shown frequency) fails the run before anything is written, so the live files stay; take it out of
+  scope in `kpi_v2_map.csv` to retire it. `catalog.json` has at least one KPI (`minItems`); no history; UTF-8; ISO 8601 UTC; additive fields are allowed, any rename or removal
   needs v3 alongside.
 - The licence gate of v1 (Rules above, O37) applies to v2 too.
 - **Which KPIs** (owner decision O37, 12 Nov 2026: no publishing decision for v2; bi.zohelo.com is not shared yet,
