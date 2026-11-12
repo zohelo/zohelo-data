@@ -163,19 +163,23 @@ sources:
   name: Programme for International Student Assessment (PISA) databases
   short_name: OECD PISA
   provider: OECD
-  status: approved
+  source_system: world_bank_edstats
+  status: built
   family: A
   kpi: true
   geography: worldwide
   provider_type: international-public
   domains: [education, skills, survey]
   entities: [student, school, country]
-  granularity: Anonymized student, school-principal and parent response files; derived country indicators also available.
-  coverage: Cycles 2000-2022 are linked; participating economies vary by cycle. 2025 materials are emerging.
+  granularity: 'Built: country mean score per subject (reading, mathematics, science) and sex per assessment year, as
+    published by the OECD and republished by the World Bank EdStats. The OECD databases themselves are anonymised
+    student, school-principal and parent response files (not used).'
+  coverage: 'Built: cycles 2000-2018, up to 85 economies (World Bank EdStats, lastupdated 2024-06-25). The OECD has published
+    2022; 2025 results are due in December 2026 (owner question below).'
   access:
-    endpoint: https://www.oecd.org/en/about/programmes/pisa/pisa-data.html
-    kind: bulk_file
-    interfaces: [bulk-files, HTML, PISA Data Explorer, PDF]
+    endpoint: https://api.worldbank.org/v2/country/all/indicator/LO.PISA.MAT?source=12&format=json
+    kind: api
+    interfaces: [World Bank API v2 (EdStats, source 12), bulk-files, HTML, PISA Data Explorer, PDF]
     auth: public downloads; some tools may have separate access
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
@@ -186,7 +190,11 @@ sources:
       adapt, distribute and embed for any purpose, commercial use and modification included, subject to dataset
       and third-party restrictions); other PISA content (reports, instruments) is CC BY-NC-SA 3.0 IGO and needs
       the OECD disclaimer when adapted or translated. Attribution: "OECD (<year>), PISA <cycle> Database, <DOI
-      or URL> (accessed on <date>)" or the citation given with the file.'
+      or URL> (accessed on <date>)" or the citation given with the file. Route terms (the data loaded): World Bank Data
+      Catalog, Education Statistics, https://datacatalog.worldbank.org/search/dataset/0038480/education-statistics
+      (read 12 Nov 2026): "This dataset is licensed under Creative Commons Attribution 4.0", classified Public; no
+      separate terms for the PISA indicators. Attribution used (licence.csv cc_by_4_0_world_bank_edstats): "Source:
+      OECD PISA, as published in The World Bank, Education Statistics".'
   updates: Released by assessment cycle; corrections or later files are not documented as a stable revision feed.
   ingestion:
     history: Archive each cycle, codebooks, questionnaires and technical report.
@@ -200,10 +208,18 @@ sources:
   research:
     priority: specialist
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Confirm per-cycle file licences (third-party restrictions in file metadata)'
-    - 'Implement complex-survey methodology before publishing estimates'
+    - 'Needs owner (PISA 2022 gap): the route is the World Bank Education Statistics republication of the OECD country
+      means (API source 12, LO.PISA.REA/MAT/SCI and .FE/.MA, CC BY 4.0, Data Catalog 0038480; source lastupdated
+      2024-06-25), which holds the assessment years 2000-2018 only (Dev probe 43290232665). PISA 2022 means are
+      published by the OECD only on www.oecd.org (report StatLink workbooks, PISA Data Explorer), which answers HTTP
+      403 to GitHub runners (Dev probe 43275098288, not worked around); the OECD Data Explorer SDMX API has no PISA
+      dataflow (Dev probe 43273970310). Question: may we load the PISA 2022 (and later 2025) country means once by a
+      manual download of the OECD results StatLink workbooks (a web export, needs your decision), or ask the OECD in
+      writing for a machine route?'
+    - 'Means are the OECD-published estimates (survey weights and plausible values applied by the OECD); the
+      microdata are not used'
     references:
     - https://www.oecd.org/en/about/programmes/pisa/pisa-data.html
     - https://www.oecd.org/en/about/terms-conditions.html

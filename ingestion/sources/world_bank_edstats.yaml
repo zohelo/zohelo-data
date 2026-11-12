@@ -1,0 +1,54 @@
+source_system: world_bank_edstats
+description: "World Bank Education Statistics (API source 12) — OECD PISA country mean scores (reading, mathematics, science; by sex)"
+
+# Extraction strategy (docs/landing.md). Register GL-004 (OECD PISA). The OECD publishes PISA country means only in
+# web tools and report workbooks on www.oecd.org, which answers HTTP 403 to GitHub runners (not worked around), and
+# the OECD Data Explorer has no PISA dataflow; the PISA databases are microdata (means need survey weights and
+# plausible values, not computed here). The World Bank's Education Statistics database republishes the OECD's mean
+# scores as indicators (LO.PISA.MAT/REA/SCI and .FE/.MA), served by the World Bank API v2 the repo already reads:
+# one request per subject returns every economy and year in one page (date 2000 onwards). Each entity is one such
+# fixed selection through the shared bulk_file pattern; the API sends no version, so version = download time and an
+# unchanged answer is skipped. Cycles 2000-2018 (source lastupdated 2024-06-25); PISA 2022 is not republished yet
+# (owner question in the register). CC BY 4.0 (Data Catalog record 0038480). Proven from Actions by Dev probe
+# 43290232665 and Dev trial 43291944406 (3,777 values, 85 economies, Poland 2018: mathematics 515.6, reading 511.9,
+# science 511.0).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: pisa_mathematics   # mean performance on the mathematics scale, both sexes, female, male
+        url: "https://api.worldbank.org/v2/country/all/indicator/LO.PISA.MAT;LO.PISA.MAT.FE;LO.PISA.MAT.MA?source=12&format=json&per_page=30000&date=2000:2030"
+        format: raw
+        version: ingested
+      - entity: pisa_reading       # mean performance on the reading scale, both sexes, female, male
+        url: "https://api.worldbank.org/v2/country/all/indicator/LO.PISA.REA;LO.PISA.REA.FE;LO.PISA.REA.MA?source=12&format=json&per_page=30000&date=2000:2030"
+        format: raw
+        version: ingested
+      - entity: pisa_science       # mean performance on the science scale, both sexes, female, male
+        url: "https://api.worldbank.org/v2/country/all/indicator/LO.PISA.SCI;LO.PISA.SCI.FE;LO.PISA.SCI.MA?source=12&format=json&per_page=30000&date=2000:2030"
+        format: raw
+        version: ingested
+  initial: api
+  production: snapshot                  # each answer is the complete history of its indicators
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; release: PISA every three years (2022 results Dec 2023, 2025 results due Dec 2026), EdStats updates irregularly; monthly check (5th, 04:40), unchanged answers skipped
+    - {cron: "40 4 5 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/world_bank_edstats/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.edstats_observations, bronze.edstats_rejected_files]
+silver: [silver.edstats_pisa]
+gold: [gold.build_world_bank_edstats]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  edstats_pisa: {rows: 5700}  # 3,777: 9 indicators × up to 85 economies × 7 cycles 2000-2018 (Dev trial 43291944406)
+  poc_build_world_bank_edstats: {rows: 2300}  # 1,517: 3 subjects × EU27 × 7 cycles × 3 sexes, values only (Dev trial 43291944406)
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): three small selections (a few thousand values) replaced whole, no
+# changed-since filter; rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2370"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
