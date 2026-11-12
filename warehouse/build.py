@@ -73,6 +73,8 @@ def changed_only(target: str, variables: dict | None) -> int:
     variables = dict(variables or {})
     if plan["full_refresh"]:
         variables["full_refresh_models"] = plan["full_refresh"]
+    if plan["empty_blocks"]:  # the only Gold blocks poc_observations() may find without a table
+        variables["waiting_blocks"] = plan["empty_blocks"]
     return build_once(plan["select"], target, variables, changed_plan={"cat": cat, "meta": meta, **plan})[0]
 
 
@@ -82,7 +84,12 @@ def _why(plan: dict) -> dict:
     for reason in plan["reasons"].values():
         kind = reason.split(":")[0]
         kinds[kind] = kinds.get(kind, 0) + 1
-    return {"unchanged": plan["unchanged"], "why": kinds, "waiting": plan.get("waiting", [])}
+    return {
+        "unchanged": plan["unchanged"],
+        "why": kinds,
+        "waiting": plan.get("waiting", []),
+        "empty_blocks": plan.get("empty_blocks", []),  # waiting Gold blocks the facts read as zero rows
+    }
 
 
 MAX_FAILURES_SHOWN = 8

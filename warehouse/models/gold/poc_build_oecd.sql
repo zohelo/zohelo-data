@@ -1,4 +1,4 @@
-{{ config(alias='build_oecd') }}
+{{ config(alias='build_oecd', tags=['gold_block']) }}
 {# Gold build stage: OECD composite leading indicators and confidence indicators (silver.oecd_cli,
    dataflow DSD_STES@DF_CLI) in the common shape, monthly. The measures are listed in
    poc_oecd_measures (macros/poc_blocks.sql): business and consumer confidence (Poland from 1997 / 2001)

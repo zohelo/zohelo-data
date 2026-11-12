@@ -3,8 +3,7 @@ description: World Bank Worldwide Governance Indicators — DataBank bulk CSV ar
 
 # Extraction strategy (docs/landing.md). Bulk feature: the WGI CSV ZIP on DataBank's stable bulk
 # download URL (the same route as WDI_CSV; CC BY 4.0, register GL-008). Version = Last-Modified;
-# written only when the SHA-256 changed. WGI is revised once a year; a schedule (stage 4) comes
-# after the Dev trial (#2381).
+# written only when the SHA-256 changed. WGI is revised once a year.
 extraction:
   kind: bulk_file
   bulk_file:
@@ -16,17 +15,20 @@ extraction:
   initial: bulk
   production: snapshot                  # each archive is the complete database
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
-  schedule: []
+  schedule: # UTC; release: WGI is revised once a year (last: 25 Sep 2026); weekly check (Thursday 01:20), unchanged bytes are skipped
+    - {cron: "20 1 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/world_bank_wgi/
 archive_policy:
   move: true
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
-bronze: []
-silver: []
+bronze: [bronze.wgi_observations, bronze.wgi_metadata, bronze.wgi_rejected_files]
+silver: [silver.wgi_observations, silver.wgi_indicators]
 gold: []
 
-refresh: {mode: full}
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32, small source: full in every layer): one archive of ~3 MB (~150,000 observations); rebuilt in full when a new archive lands.
+refresh: {mode: full, decided: "D32 + #2736"}
 
-activities: [landing.inspect, landing.extract, landing.verify]
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
