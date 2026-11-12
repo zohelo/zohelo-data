@@ -447,7 +447,7 @@ each release is a new `https://www.gov.pl/attachment/<uuid>`. The declaration
 `treasury_debt_series`, finding the link on the page at run time (`url_from`, pattern
 `/attachment/`; `landing: inspect` lists every match). Version = Last-Modified (download time
 when absent); written only when the SHA-256 changed. Restart unit: the whole workbook. Terms:
-gov.pl (register PLG-008). Bronze, Silver and a schedule are later stages.
+gov.pl (register PLG-008). **Bronze to Gold (11 Nov 2026).** The workbook's cells go to `bronze.mf_treasury_debt_cells` (one row per non-empty cell: sheet, row, column, source text, number format; shared decoder `ingestion/common/xlsx_cells.py`, latest-only). Silver `silver.treasury_debt`: every time-series sheet in long form (macro `xlsx_wide_series`: a block starts at a row of dates, items are the column-1 labels below it; repeated labels such as currencies are told apart by `item_occurrence`), month ends from 2001. Gold: build stage `poc_build_public_finance.sql` (debt by instrument, million PLN, monthly). Schedule: weekdays 13:45 UTC. Dev probes 43084312730, 43085156243 reached www.gov.pl from Actions (an earlier refusal seen by the release-calendar probe did not recur); api.dane.gov.pl timed out from Actions, so it is not an alternative route.
 
 ## MF public finance sector debt
 
@@ -458,20 +458,27 @@ sector debt workbook (`Dlug_publiczny_<quarter>.xlsx`) as the second attachment 
 `https://www.gov.pl/attachment/<uuid>`. The declaration `mf_public_debt.yaml` lands it through the
 shared `bulk_file` pattern as entity `public_debt` (`url_from`, pattern `/attachment/`, `pick: last`;
 `landing: inspect` lists every match). Version = Last-Modified (download time when absent); written
-only when the SHA-256 changed. Restart unit: the workbook. Terms: gov.pl (register PLG-009). Bronze,
-Silver and a schedule are later stages.
+only when the SHA-256 changed. Restart unit: the workbook. Terms: gov.pl (register PLG-009). **Bronze to Gold (11 Nov 2026).** The workbook's cells go to `bronze.mf_public_debt_cells` (one row per non-empty cell: sheet, row, column, source text, number format; shared decoder `ingestion/common/xlsx_cells.py`, latest-only). Silver `silver.public_debt`: the six sheets in long form (`xlsx_wide_series`), unit `mln_pln` or `ratio` (the '%'-formatted debt-to-GDP rows). Gold: build stage `poc_build_public_finance.sql` (debt to GDP for State Treasury, PDP and general government EDP debt, quarterly and the 31 December value as the year (measure suffix `:YE`), which is the MF series of the v2 KPI `gg_debt_gdp` next to Eurostat (O31); the same debts and EDP debt by ESA instrument in million PLN). Schedule: Wednesdays 13:55 UTC. Dev probes 43084312730, 43085156243 reached www.gov.pl from Actions (an earlier refusal seen by the release-calendar probe did not recur); api.dane.gov.pl timed out from Actions, so it is not an alternative route.
 
 ## MF state budget execution (monthly)
 
-**Extraction (2 Nov 2026).** The Ministry of Finance publishes the monthly operational report on
-state budget execution (cumulative, year to date) on per-year pages
-`https://www.gov.pl/web/finanse/sprawozdania-miesieczne-<year>`, as xlsx/pdf pairs, newest first;
-each release is a new `https://www.gov.pl/attachment/<uuid>`. The declaration `mf_state_budget.yaml`
-lands the newest xlsx through the shared `bulk_file` pattern as entity `budget_execution_monthly`
-(`url_from`, pattern `/attachment/`, `pick: first`). Version = Last-Modified (download time when
-absent); written only when the SHA-256 changed. Restart unit: the workbook. The page name changes
-each January (rollover is a later Task). Terms: gov.pl (register PLG-007). Bronze, Silver and a
-schedule are later stages.
+**Extraction (2 Nov 2026; one entity per year since 11 Nov).** The Ministry of Finance publishes the
+monthly operational report on state budget execution on per-year pages
+`https://www.gov.pl/web/finanse/sprawozdania-miesieczne-<year>`, as xlsx/pdf pairs, newest first (pages
+2018–2026 list XLSX; 2010–2017 list none); each release is a new `https://www.gov.pl/attachment/<uuid>`.
+Table 1 of every report repeats each month of its year so far (cumulative from January), so the newest
+report of each year holds the whole year. `mf_state_budget.yaml` declares the file once with
+`years: {from: 2018}`: the `bulk_file` pattern expands it to entities `budget_execution_2018` …
+`budget_execution_<current year>` (`url_from` page with `{year}`, `pick: first`); the current year's entity is
+optional, so January, before the first report, is not a failure, and the yearly rollover needs no code
+change. With `years.open: 2` only the current and the previous year are downloaded again; older years
+land once (their December report is final). Version = Last-Modified; written only when the SHA-256 changed. Terms: gov.pl (register PLG-007).
+**Bronze to Gold (11 Nov 2026).** Cells in `bronze.mf_state_budget_cells` (latest-only per year entity);
+Silver `silver.budget_execution`: table 1, one row per year × month × item × measure (`execution_ytd`
+cumulative, `plan` = budget act), thousand PLN, `item_key` for revenue, expenditure, balance, EU funds
+result and financing (domestic, foreign). Gold (`poc_build_public_finance.sql`): execution monthly and the
+December value as the year (measure suffix `:A`, so it never shares a series × date with January), plan yearly. Tables 2–20 are in Bronze, not yet modelled. Schedule: weekdays
+13:35 UTC.
 
 ## OpenData.org (BrightQuery)
 
@@ -551,8 +558,15 @@ declaration. Bronze, Silver and a schedule are later stages.
 `findex_country` (version = Last-Modified, download time when absent; written only when the
 SHA-256 changed), so a new edition is picked up without a code change. Restart unit: the whole
 file. Licence CC BY 4.0 for the country-level indicators only (register GL-009); the
-individual-level microdata (Research Data License) is out of scope. Bronze, Silver and a
-schedule are later stages.
+individual-level microdata (Research Data License) is out of scope.
+
+**Bronze and Silver (11 Nov 2026, #2736).** Bronze `bronze.findex_observations`
+(`ingestion/to_bronze/world_bank_findex/`): the wide file kept long, one row per economy × survey year ×
+population group (`group`/`group2`) × indicator column with a value (`NA` not stored), values as text; key
+columns found by name prefix, since `regionwb24_hi`/`incomegroupwb24` carry the edition. Silver
+`silver.findex_observations` (typed, shares 0–1). 2025 edition: 385,599 observations, 174 economies and
+aggregates (World Bank regions and income groups, no EU aggregate), 430 indicators, waves 2011–2024
+(Dev trial 43085820597). Weekly check Thursday 02:20 UTC.
 ## World Bank Worldwide Governance Indicators (WGI)
 
 **Extraction (2 Nov 2026).** DataBank publishes WGI as a bulk CSV ZIP on a stable URL, the same
@@ -560,8 +574,15 @@ route as WDI (`https://databank.worldbank.org/data/download/WGI_CSV.zip`). The d
 `world_bank_wgi.yaml` lands it through the shared `bulk_file` pattern as entity `WGI_CSV`
 (version = Last-Modified, download time when absent; written only when the SHA-256 changed).
 Restart unit: the whole file (one download). Licence CC BY 4.0 (register GL-008), attribution
-"Source: World Bank, Worldwide Governance Indicators". WGI is revised once a year. Bronze, Silver
-and a schedule are later stages.
+"Source: World Bank, Worldwide Governance Indicators". WGI is revised once a year.
+
+**Bronze and Silver (11 Nov 2026, #2736).** Bronze `bronze.wgi_observations` and `bronze.wgi_metadata`
+through the shared DataBank decoders (`ingestion/common/databank_bronze.py`, members identified by their
+headers; observations long, empty cells not stored; metadata as field/value rows). Silver
+`silver.wgi_observations` and `silver.wgi_indicators`. The September 2026 archive: 202,092 observations,
+216 countries and territories (no aggregates, so no EU value), 36 indicators = six dimensions × estimate
+(EST), score 0–100 (SC) with 90 % bounds, standard error and number of sources; 1996, 1998, 2000, then
+yearly to 2025 (Dev trial 43085820597). Weekly check Thursday 01:20 UTC.
 
 ## UNCTAD Data Hub (UNCTADstat)
 
@@ -576,7 +597,22 @@ rates) and the large creative-economy and bilateral-services tables are not decl
 sends no Last-Modified, so the version is the download time and a file is written only when its
 SHA-256 changed. Restart unit: one table. Licence CC BY 3.0 IGO (register GL-021), attribution
 "Source: United Nations Trade and Development (UNCTAD) Data Hub, unctadstat.unctad.org"; tables
-with third-party series keep their own terms. Bronze, Silver and a schedule are later stages.
+with third-party series keep their own terms.
+
+**Implemented (11 Nov 2026).** Every table's CSV has one shape: a time field (Year, Period or Quarter),
+code/label pairs (Economy, Flow, Category…) and measures, each with "Footnote" and "Missing value"
+columns. Bronze: `bronze.unctad_rows`, generic CSV rows (`field_names` / `field_values`, `|`-separated:
+column names contain commas), extracted with the runner's 7-Zip. Silver: one model per table
+(`silver.unctad_fdi_flows_stock`, `unctad_merchandise_trade`, `unctad_services_trade`,
+`unctad_digital_services_trade`, `unctad_commodity_prices`, `unctad_liner_shipping_connectivity`,
+`unctad_merchant_fleet`, `unctad_seaborne_trade`, `unctad_port_calls`) from the macro `unctad_table`:
+period, economy, the other dimensions and the measures (value, footnote, missing reason) as JSON maps by
+name. Gold: `gold.build_unctad` (FDI flows and stocks, merchandise and services exports and imports) for
+the EU27 members (UNCTAD codes, France 250), the group "European Union (2020 …)" (3412, EU27_2020) and
+World; KPIs fdi_inflow, exports_goods and exports_services, draft until the per-table third-party terms
+(register GL-021 blocker; merchandise trade is synchronised with WTO) are checked. Weekly schedule (Tuesday
+05:55 UTC), full rebuild when a table's bytes change (D32: each archive is the whole table); the services
+table (807,733 rows) is rebuilt in full under the exception #2777 to #822.
 
 ## ECB Data Portal
 
@@ -604,7 +640,15 @@ entity = one series for every economy and year
 (`/v2/sources/90/country/all/series/<id>/time/all?format=json&per_page=50000`, one file per
 page when a series is larger), version = the source's `lastupdated` date, so a series is
 downloaded again only when the World Bank updates ICP. Restart unit: one series. Licence CC BY
-4.0 (register GL-011). Bronze, Silver and a schedule are later stages.
+4.0 (register GL-011).
+
+**Bronze and Silver (11 Nov 2026, #2736).** Bronze `bronze.icp_observations`
+(`ingestion/to_bronze/world_bank_icp/`, shared loader `bulk_bronze.py` over the series folders in
+Landing): one row per record with a value, the codes and labels of Country, Classification, Series and
+Time, the value as the exact JSON number text. Silver `silver.icp_observations`. 231,174 observations,
+207 economies and benchmark groups (ECB, HIB, LIB, LMB, UMB, WLD; no EU aggregate), 48 series × 17
+classifications (expenditure in LCU and US$, PPP, per capita PPP, price level index world = 100, …),
+2017–2023 (Dev trial 43085820597). Archive retention: newest version + 90 days. Weekly check Thursday 02:50 UTC (two catalogue requests while unchanged).
 
 ## KRUS basic benefit statistics
 
@@ -621,7 +665,13 @@ Last-Modified in the trial, so the version is the download time and a file is wr
 its SHA-256 changed; each version is the whole series to date (`snapshot`). Older versions can hold quarters that a later file drops if KRUS shortens the window,
 so `prune` stays `report`. Restart unit: the file. Not declared: the quarterly statistical
 information PDFs (51 tables), which have no stable listing page. Terms: gov.pl, official materials
-free to use (register PLS-011). Bronze, Silver and a schedule are later stages.
+free to use (register PLS-011). **Bronze to Gold (11 Nov 2026).** Cells in `bronze.krus_cells`
+(latest-only); Silver `silver.krus_benefits`: one row per period (quarter or year) × benefit type × measure
+(`beneficiaries`, `avg_benefit_pln`), from I quarter 2020; benefit types from the header rows (group, then
+"Ogółem" / "w tym wypadkowe"); an unknown column fails the `benefit_key` not-null test. The footnote mark
+of III quarter 2025 on (survivors' pensions including those paid with other pensions) is kept in
+`footnote` and becomes observation status `break` in Gold: a series break. Gold (`poc_build_public_finance.sql`): every benefit type and measure, quarterly
+and yearly. Schedule: Wednesdays 14:05 UTC.
 
 ## World Bank International Debt Statistics (IDS)
 
@@ -634,7 +684,17 @@ The Dev trial (#2378) landed 11.1 MB (Last-Modified 5 Dec 2025): `IDS_ALLCountri
 projections, 35 % of year cells empty) and four metadata CSVs (country, 574 series, country-series
 and footnotes). Restart unit: the whole file (one download). Licence CC BY 4.0 (register GL-007), attribution
 "Source: World Bank, International Debt Statistics". IDS is published once a year in December.
-Bronze, Silver and a schedule are later stages.
+
+**Bronze and Silver (11 Nov 2026, #2736).** Bronze `bronze.ids_observations` and `bronze.ids_metadata`
+through the shared DataBank decoders (`ingestion/common/databank_bronze.py`; IDS adds the counterpart
+area and pads some codes with spaces, which Silver trims). Silver `silver.ids_observations` and
+`silver.ids_series`. The November 2026 archive: 2,647,628 observations, 134 debtor economies and groups,
+577 series, counterpart WLD only, 1970–2033 with projections (Dev trial 43085820597). IDS has no Poland
+and no EU member state (debtors are low- and middle-income economies), so it publishes no KPI for the
+zohelo slice. `silver.ids_observations` is rebuilt in full above the #822 1M-row ceiling under its own exception record
+(#2772: 4M ceiling; every archive revises the whole history; rebuilt on a new archive and on any change to the
+shared build fingerprint; review 15 Jan 2027).
+Weekly check Thursday 01:40 UTC.
 
 ## OECD Data Explorer (SDMX)
 

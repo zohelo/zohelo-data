@@ -151,6 +151,66 @@ sources:
       as published, position in its list), with the header's generation date and transformation count.
   - name: biala_lista_rejected_files
     description: Landing files the white-list Bronze decoder rejected, with the reason (cleared by ops/retry_rejected).
+- name: mf_public_debt
+  description: Ministry of Finance public debt workbook (public finance sector, general government EDP, debt to GDP)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mf_public_debt/
+    loaded_by: ingestion/to_bronze/mf_public_debt/
+    config: ingestion/sources/mf_public_debt.yaml
+  tables:
+  - name: mf_public_debt_cells
+    description: >-
+      One row per non-empty cell of the newest Landing copy of each workbook (entity public_debt): sheet, row, column,
+      source text (value_text), cell type and number format (ingestion/common/xlsx_cells.py); partitioned by entity.
+  - name: mf_public_debt_rejected_files
+    description: mf_public_debt Landing files the Bronze decoder rejected (not an XLSX workbook), with the reason.
+- name: mf_state_budget
+  description: Ministry of Finance monthly state budget execution reports (one entity per year)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mf_state_budget/
+    loaded_by: ingestion/to_bronze/mf_state_budget/
+    config: ingestion/sources/mf_state_budget.yaml
+  tables:
+  - name: mf_state_budget_cells
+    description: >-
+      One row per non-empty cell of the newest Landing copy of each workbook (entity budget_execution_<year>): sheet, row, column,
+      source text (value_text), cell type and number format (ingestion/common/xlsx_cells.py); partitioned by entity.
+  - name: mf_state_budget_rejected_files
+    description: mf_state_budget Landing files the Bronze decoder rejected (not an XLSX workbook), with the reason.
+- name: mf_treasury_debt
+  description: Ministry of Finance State Treasury debt time-series workbook
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mf_treasury_debt/
+    loaded_by: ingestion/to_bronze/mf_treasury_debt/
+    config: ingestion/sources/mf_treasury_debt.yaml
+  tables:
+  - name: mf_treasury_debt_cells
+    description: >-
+      One row per non-empty cell of the newest Landing copy of each workbook (entity treasury_debt_series): sheet, row, column,
+      source text (value_text), cell type and number format (ingestion/common/xlsx_cells.py); partitioned by entity.
+  - name: mf_treasury_debt_rejected_files
+    description: mf_treasury_debt Landing files the Bronze decoder rejected (not an XLSX workbook), with the reason.
+- name: krus
+  description: KRUS basic benefit statistics workbook (pensions and benefits paid, quarterly since 2020)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/krus/
+    loaded_by: ingestion/to_bronze/krus/
+    config: ingestion/sources/krus.yaml
+  tables:
+  - name: krus_cells
+    description: >-
+      One row per non-empty cell of the newest Landing copy of each workbook (entity swiadczenia_kwartalne): sheet, row, column,
+      source text (value_text), cell type and number format (ingestion/common/xlsx_cells.py); partitioned by entity.
+  - name: krus_rejected_files
+    description: krus Landing files the Bronze decoder rejected (not an XLSX workbook), with the reason.
 - name: nbp
   description: Narodowy Bank Polski — exchange rate tables A/B/C and gold prices (NBP Web API)
   database: r2
@@ -248,6 +308,21 @@ sources:
       (feed). Never descriptions, article text or images.
   - name: news_feeds_rejected_files
     description: News feed Landing files the Bronze decoder rejected, with the reason.
+- name: unctad
+  description: UNCTAD Data Hub (UNCTADstat) — bulk CSV (7z) per selected table
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/unctad/
+    loaded_by: ingestion/to_bronze/unctad/
+    config: ingestion/sources/unctad.yaml
+  tables:
+  - name: unctad_rows
+    description: >-
+      One row per data row of the newest copy of each table (entity, e.g. US_FdiFlowsStock), generic:
+      field_names (the header) and field_values (the row), both |-separated, as source text; partitioned by entity.
+  - name: unctad_rejected_files
+    description: UNCTAD Landing files the Bronze decoder rejected, with the reason.
 - name: oecd
   description: OECD Data Explorer — selected dataflows as SDMX CSV (SDMX REST API)
   database: r2
@@ -297,6 +372,72 @@ sources:
     description: Variable and value labels of each landed table (one row per variable × value code).
   - name: unece_rejected_files
     description: UNECE Landing files the Bronze decoder rejected, with the reason.
+- name: world_bank_findex
+  description: World Bank Global Findex Database — country-level CSV
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/world_bank_findex/
+    loaded_by: ingestion/to_bronze/world_bank_findex/
+    config: ingestion/sources/world_bank_findex.yaml
+  tables:
+  - name: findex_observations
+    description: >-
+      One row per economy or aggregate × survey year × population group × indicator with a value of the newest edition (NA cells are not stored): economy name and code, year, adult population, region, income group, group / group2, indicator id, value as text (shares 0-1).
+  - name: findex_rejected_files
+    description: >-
+      Findex Landing files the Bronze decoder rejected, with the reason.
+- name: world_bank_icp
+  description: World Bank International Comparison Program (ICP 2021, API v2 source 90) — one JSON page per series
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/world_bank_icp/
+    loaded_by: ingestion/to_bronze/world_bank_icp/
+    config: ingestion/sources/world_bank_icp.yaml
+  tables:
+  - name: icp_observations
+    description: >-
+      One row per record with a value of the newest page of every series: country, classification, series and time codes and labels, value as the exact JSON number text; partitioned by entity (series_<id>).
+  - name: icp_rejected_files
+    description: >-
+      ICP Landing pages the Bronze decoder rejected, with the reason.
+- name: world_bank_ids
+  description: World Bank International Debt Statistics — DataBank bulk CSV archive
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/world_bank_ids/
+    loaded_by: ingestion/to_bronze/world_bank_ids/
+    config: ingestion/sources/world_bank_ids.yaml
+  tables:
+  - name: ids_observations
+    description: >-
+      One row per economy × series × counterpart area × year with a value of the observation member of the newest IDS_CSV archive (empty cells are not stored); codes, names and values as source text; partitioned by entity (IDS_CSV archive). Some codes are padded with spaces as published.
+  - name: ids_metadata
+    description: >-
+      Every other IDS member (country, series, country-series, series-time, footnote) as field/value rows: member file, source row number, field, value text.
+  - name: ids_rejected_files
+    description: >-
+      IDS Landing archives the Bronze decoder rejected, with the reason.
+- name: world_bank_wgi
+  description: World Bank Worldwide Governance Indicators — DataBank bulk CSV archive
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/world_bank_wgi/
+    loaded_by: ingestion/to_bronze/world_bank_wgi/
+    config: ingestion/sources/world_bank_wgi.yaml
+  tables:
+  - name: wgi_observations
+    description: >-
+      One row per economy × series × year with a value of the observation member of the newest WGI_CSV archive (empty cells are not stored); codes, names and values as source text; partitioned by entity (WGI_CSV archive).
+  - name: wgi_metadata
+    description: >-
+      Every other WGI member (country, series) as field/value rows: member file, source row number, field, value text.
+  - name: wgi_rejected_files
+    description: >-
+      WGI Landing archives the Bronze decoder rejected, with the reason.
 - name: world_bank_wdi
   description: World Bank WDI bulk CSV archive and API responses
   database: r2
