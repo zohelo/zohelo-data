@@ -2560,17 +2560,17 @@ sources:
     - https://www.gov.pl/attachment/657d4965-e3c5-4d36-a321-32650b7df31d
 - id: PLS-012
   name: API Statystyki NFZ – Świadczenia
-  short_name: "NFZ statistics: services"
+  short_name: 'NFZ statistics: services'
   provider: Narodowy Fundusz Zdrowia (NFZ)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland; provider/clinical group tables
   provider_type: national-public
   domains: [healthcare utilization, hospitalizations, diagnoses, procedures]
   entities: [patient-aggregate, hospitalization-aggregate, health service, diagnosis, procedure]
-  granularity: Published statistical table keyed by table ID, with sex, age, admission/discharge, product, ICD-9
-    and ICD-10 breakdowns.
+  granularity: Published statistical table keyed by table ID, with sex, age, admission/discharge, product, ICD-9 and ICD-10
+    breakdowns.
   coverage: Available-year list/table catalogue; exact first year must be enumerated after approval.
   access:
     endpoint: https://api.nfz.gov.pl/app-stat-api-jgp/
@@ -2578,20 +2578,19 @@ sources:
     interfaces: [REST API, JSON, XML, Swagger]
     auth: Public API; no key described in opened documentation.
     cost: free
-    limits: '10 requests/second per IP (terms v1.1, section III).'
+    limits: 10 requests/second per IP (terms v1.1, section III).
   licence:
     status: open-conditional
-    notes: 'Terms: API regulations (Regulamin) of "API Statystyki NFZ - Świadczenia" v1.1,
-      https://api.nfz.gov.pl/app-stat-api-jgp/terms (section II): users must state the source by giving the address
-      https://api.nfz.gov.pl/; the user may not modify the data ("Niedozwolone jest modyfikowanie danych przez
-      Usługobiorcę"); no use for software that breaks the law or third-party rights, misleads users or acts
-      maliciously; no overloading (10 requests/second per IP); NFZ may block users for breaches and may change the
-      API and its terms. No licence name and no clause on commercial reuse (footer: Copyright © Narodowy Fundusz
-      Zdrowia, Open Data logo linking to dane.gov.pl); public display of the published values is allowed with
-      attribution. Show values as published; any figure we derive (rates, sums, shares) is labelled as a zohelo
-      calculation. Disclaimer: use is at the user''s own risk, NFZ is not liable for lost profits. Attribution:
-      "Źródło: Narodowy Fundusz Zdrowia, API Statystyki NFZ – Świadczenia (https://api.nfz.gov.pl/)" / "Source:
-      National Health Fund (NFZ), NFZ Statistics API – Services (https://api.nfz.gov.pl/)".'
+    notes: 'Terms: API regulations (Regulamin) of "API Statystyki NFZ - Świadczenia" v1.1, https://api.nfz.gov.pl/app-stat-api-jgp/terms
+      (section II): users must state the source by giving the address https://api.nfz.gov.pl/; the user may not modify the
+      data ("Niedozwolone jest modyfikowanie danych przez Usługobiorcę"); no use for software that breaks the law or third-party
+      rights, misleads users or acts maliciously; no overloading (10 requests/second per IP); NFZ may block users for breaches
+      and may change the API and its terms. No licence name and no clause on commercial reuse (footer: Copyright © Narodowy
+      Fundusz Zdrowia, Open Data logo linking to dane.gov.pl); public display of the published values is allowed with attribution.
+      Show values as published; any figure we derive (rates, sums, shares) is labelled as a zohelo calculation. Disclaimer:
+      use is at the user''s own risk, NFZ is not liable for lost profits. Attribution: "Źródło: Narodowy Fundusz Zdrowia,
+      API Statystyki NFZ – Świadczenia (https://api.nfz.gov.pl/)" / "Source: National Health Fund (NFZ), NFZ Statistics API
+      – Services (https://api.nfz.gov.pl/)".'
   updates: Table releases; schedule and revision policy unknown.
   ingestion:
     history: Enumerate table index and available years, then snapshot complete chosen tables.
@@ -2603,20 +2602,20 @@ sources:
     overlap: Overlaps NFZ reports and GUS health statistics; administrative claims perspective differs.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived
-      values; published values are shown unchanged'
-    - 'Enumerate history'
+    - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived values; published
+      values are shown unchanged'
+    - Enumerate history
     references:
     - https://api.nfz.gov.pl/app-stat-api-jgp/
     - https://api.nfz.gov.pl/app-stat-api-jgp/terms
 - id: PLS-013
   name: API Statystyki NFZ – Refundacja apteczna
-  short_name: "NFZ statistics: pharmacy refunds"
+  short_name: 'NFZ statistics: pharmacy refunds'
   provider: Narodowy Fundusz Zdrowia (NFZ)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland
@@ -2631,20 +2630,18 @@ sources:
     interfaces: [REST API, JSON, XML, Swagger]
     auth: Public API; no key indicated on root documentation.
     cost: free
-    limits: '10 requests/second per IP (terms v1.0, section III).'
+    limits: 10 requests/second per IP (terms v1.0, section III).
   licence:
     status: open-conditional
-    notes: 'Terms: API regulations (Regulamin) of "API Statystyki NFZ - Refundacja Apteczna" v1.0,
-      https://api.nfz.gov.pl/app-stat-api-ra/terms (section II): users must state the source by giving the address
-      https://api.nfz.gov.pl/; the user may not modify the data ("Niedozwolone jest modyfikowanie danych przez
-      Usługobiorcę"); no use for software that breaks the law or third-party rights, misleads users or acts
-      maliciously; no overloading (10 requests/second per IP); NFZ may block users for breaches and may change the
-      API and its terms. No licence name and no clause on commercial reuse; public display of the published values
-      is allowed with attribution. Show values as published; any figure we derive (rates, sums, shares) is labelled
-      as a zohelo calculation. Disclaimer: use is at the user''s own risk, NFZ is not liable for lost profits.
-      Attribution: "Źródło: Narodowy Fundusz Zdrowia, API Statystyki NFZ – Refundacja Apteczna
-      (https://api.nfz.gov.pl/)" / "Source: National Health Fund (NFZ), NFZ Statistics API – Pharmacy Refunds
-      (https://api.nfz.gov.pl/)".'
+    notes: 'Terms: API regulations (Regulamin) of "API Statystyki NFZ - Refundacja Apteczna" v1.0, https://api.nfz.gov.pl/app-stat-api-ra/terms
+      (section II): users must state the source by giving the address https://api.nfz.gov.pl/; the user may not modify the
+      data ("Niedozwolone jest modyfikowanie danych przez Usługobiorcę"); no use for software that breaks the law or third-party
+      rights, misleads users or acts maliciously; no overloading (10 requests/second per IP); NFZ may block users for breaches
+      and may change the API and its terms. No licence name and no clause on commercial reuse; public display of the published
+      values is allowed with attribution. Show values as published; any figure we derive (rates, sums, shares) is labelled
+      as a zohelo calculation. Disclaimer: use is at the user''s own risk, NFZ is not liable for lost profits. Attribution:
+      "Źródło: Narodowy Fundusz Zdrowia, API Statystyki NFZ – Refundacja Apteczna (https://api.nfz.gov.pl/)" / "Source: National
+      Health Fund (NFZ), NFZ Statistics API – Pharmacy Refunds (https://api.nfz.gov.pl/)".'
   updates: Release schedule and revision policy unknown.
   ingestion:
     history: Enumerate table index/years and snapshot selected aggregates.
@@ -2655,13 +2652,13 @@ sources:
     overlap: May overlap CeZ e-prescription counts and NFZ Zdrowe Dane; populations and concepts differ.
   research:
     priority: review-next
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived
-      values; published values are shown unchanged'
-    - 'Enumerate dimensions/history'
-    - 'Resolve medicine-code crosswalks'
+    - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived values; published
+      values are shown unchanged'
+    - Enumerate dimensions/history
+    - Resolve medicine-code crosswalks
     references:
     - https://api.nfz.gov.pl/app-stat-api-ra/
     - https://api.nfz.gov.pl/app-stat-api-ra/terms
@@ -2669,15 +2666,14 @@ sources:
   name: API Umowy NFZ
   short_name: NFZ contracts
   provider: Narodowy Fundusz Zdrowia (NFZ)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland; NFZ branch and provider
   provider_type: national-public
   domains: [healthcare contracts, providers, public spending]
   entities: [healthcare provider, contract, service product, NFZ branch]
-  granularity: Agreement/plan/month at provider and contract-product level; data cover contracts by regional NFZ
-    branches.
+  granularity: Agreement/plan/month at provider and contract-product level; data cover contracts by regional NFZ branches.
   coverage: Contracts from 2008 according to product terms.
   access:
     endpoint: https://api.nfz.gov.pl/app-umw-api/
@@ -2685,19 +2681,17 @@ sources:
     interfaces: [REST API, JSON, XML, Swagger]
     auth: Public API; no key specified.
     cost: free
-    limits: '10 requests/second per IP (terms v1.2, section III).'
+    limits: 10 requests/second per IP (terms v1.2, section III).
   licence:
     status: open-conditional
     notes: 'Terms: API regulations (Regulamin) of "API Umowy NFZ" v1.2, https://api.nfz.gov.pl/app-umw-api/terms (section
-      II): users must state the source by giving the address https://api.nfz.gov.pl/; the user may not modify the
-      data ("Niedozwolone jest modyfikowanie danych przez Usługobiorcę"); no use for software that breaks the law or
-      third-party rights, misleads users or acts maliciously; no overloading (10 requests/second per IP); NFZ may
-      block users for breaches and may change the API and its terms. No licence name and no clause on commercial
-      reuse; public display of the published values is allowed with attribution. Show values as published; any
-      figure we derive (rates, sums, shares) is labelled as a zohelo calculation. Disclaimer: use is at the user''s
-      own risk, NFZ is not liable for lost profits. Attribution: "Źródło: Narodowy Fundusz Zdrowia, API Umowy NFZ
-      (https://api.nfz.gov.pl/)" / "Source: National Health Fund (NFZ), NFZ Contracts API
-      (https://api.nfz.gov.pl/)".'
+      II): users must state the source by giving the address https://api.nfz.gov.pl/; the user may not modify the data ("Niedozwolone
+      jest modyfikowanie danych przez Usługobiorcę"); no use for software that breaks the law or third-party rights, misleads
+      users or acts maliciously; no overloading (10 requests/second per IP); NFZ may block users for breaches and may change
+      the API and its terms. No licence name and no clause on commercial reuse; public display of the published values is
+      allowed with attribution. Show values as published; any figure we derive (rates, sums, shares) is labelled as a zohelo
+      calculation. Disclaimer: use is at the user''s own risk, NFZ is not liable for lost profits. Attribution: "Źródło: Narodowy
+      Fundusz Zdrowia, API Umowy NFZ (https://api.nfz.gov.pl/)" / "Source: National Health Fund (NFZ), NFZ Contracts API (https://api.nfz.gov.pl/)".'
   updates: Live contract database; update/revision cadence unknown.
   ingestion:
     history: Enumerate available years then snapshot agreements, plans, months, providers and dictionaries.
@@ -2709,13 +2703,13 @@ sources:
     overlap: Overlaps RPWDL facility entities and NFZ utilization; contract presence does not equal service delivery.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived
-      values; published values are shown unchanged'
-    - 'Determine robust provider linkage'
-    - 'Document amendment semantics'
+    - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived values; published
+      values are shown unchanged'
+    - Determine robust provider linkage
+    - Document amendment semantics
     references:
     - https://api.nfz.gov.pl/app-umw-api/
     - https://api.nfz.gov.pl/app-umw-api/terms
@@ -2723,7 +2717,7 @@ sources:
   name: API Terminy Leczenia / Informator o Terminach Leczenia
   short_name: NFZ waiting times
   provider: Narodowy Fundusz Zdrowia (NFZ)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland; service location
@@ -2733,25 +2727,23 @@ sources:
   granularity: Benefit/provider/place/case record with first available date and month-end waiting-list count.
   coverage: Current data; v1.3 docs point to v1.4. History unknown.
   access:
-    endpoint: https://api.nfz.gov.pl/app-itl-api/
+    endpoint: https://apinfz.nfz.gov.pl/app-itl-api-pcus/
     kind: api
     interfaces: [REST API, JSON, XML, Swagger]
     auth: Public data API; no key described.
     cost: free
-    limits: '10 requests/second per IP (terms v1.3, section III; v1.3 is the version the documentation page names on 2 Nov
-      2026).'
+    limits: 10 requests/second per IP (terms v1.3 section III); v1.3 is marked obsolete, v1.4 is the live version.
   licence:
     status: open-conditional
-    notes: 'Terms: API regulations (Regulamin) of "API Terminy Leczenia" v1.3, https://api.nfz.gov.pl/app-itl-api/terms
-      (section II): users must state the source by giving the address https://api.nfz.gov.pl/; the user may not
-      modify the data ("Niedozwolone jest modyfikowanie danych przez Usługobiorcę"); no use for software that breaks
-      the law or third-party rights, misleads users or acts maliciously; no overloading (10 requests/second per IP);
-      NFZ may block users for breaches and may change the API and its terms. No licence name and no clause on
-      commercial reuse; public display of the published values is allowed with attribution. Show values as
-      published; any figure we derive (rates, sums, shares) is labelled as a zohelo calculation. Disclaimer: use is
-      at the user''s own risk, NFZ is not liable for lost profits. Attribution: "Źródło: Narodowy Fundusz Zdrowia,
-      API Terminy Leczenia (https://api.nfz.gov.pl/)" / "Source: National Health Fund (NFZ), NFZ Waiting Times API
-      (https://api.nfz.gov.pl/)".'
+    notes: 'Terms: API regulations (Regulamin) of "API Terminy Leczenia" v1.3, https://api.nfz.gov.pl/app-itl-api/terms (section
+      II): users must state the source by giving the address https://api.nfz.gov.pl/; the user may not modify the data ("Niedozwolone
+      jest modyfikowanie danych przez Usługobiorcę"); no use for software that breaks the law or third-party rights, misleads
+      users or acts maliciously; no overloading (10 requests/second per IP); NFZ may block users for breaches and may change
+      the API and its terms. No licence name and no clause on commercial reuse; public display of the published values is
+      allowed with attribution. Show values as published; any figure we derive (rates, sums, shares) is labelled as a zohelo
+      calculation. Disclaimer: use is at the user''s own risk, NFZ is not liable for lost profits. Attribution: "Źródło: Narodowy
+      Fundusz Zdrowia, API Terminy Leczenia (https://api.nfz.gov.pl/)" / "Source: National Health Fund (NFZ), NFZ Waiting
+      Times API (https://api.nfz.gov.pl/)".'
   updates: Availability changes frequently; month-end counts coexist with point-in-time first dates.
   ingestion:
     history: Begin dated snapshots after onboarding; no historical backfill claim.
@@ -2762,21 +2754,24 @@ sources:
     overlap: Overlaps NFZ contracts/providers but describes availability, not contracts or completed care.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived
-      values; published values are shown unchanged'
-    - 'Define snapshot cadence'
-    - 'Resolve provider/place identity'
+    - 'Terms recorded for API v1.3 (https://api.nfz.gov.pl/app-itl-api/terms); v1.4 documentation (from 10 July 2026, https://apinfz.nfz.gov.pl/app-itl-api-pcus/)
+      has no /terms page: re-read the v1.4 terms before the first public use'
+    - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived values; published
+      values are shown unchanged'
+    - Define snapshot cadence
+    - Resolve provider/place identity
     references:
     - https://api.nfz.gov.pl/app-itl-api/
     - https://api.nfz.gov.pl/app-itl-api/terms
+    - https://apinfz.nfz.gov.pl/app-itl-api-pcus/swagger/v1.4/swagger.json
 - id: PLS-016
   name: e-zdrowie w liczbach dashboards
   short_name: CeZ e-health in numbers
   provider: Centrum e-Zdrowia (CeZ)
-  status: registered
+  status: parked
   family: B
   kpi: true
   geography: Poland; some voivodeship/powiat breakdowns
@@ -2794,7 +2789,9 @@ sources:
     limits: Unknown.
   licence:
     status: unresolved
-    notes: Portal copyright states all rights reserved; no dataset reuse permission verified.
+    notes: 'Terms: none for data. Portal footer of https://ezdrowie.gov.pl/portal/home/badania-i-dane: "© 2026 Centrum e-Zdrowia.
+      Wszystkie prawa zastrzeżone." (all rights reserved); no reuse licence on the dashboard pages (checked 11 Nov 2026 from
+      a GitHub runner). Not reusable: stays internal.'
   updates: Dashboard-dependent; no common publication schedule verified.
   ingestion:
     history: Only ingest if a documented export exists; otherwise retain as research/reference candidate.
@@ -2806,15 +2803,21 @@ sources:
   research:
     priority: conditional
     evidence: documented
-    connection: not-tested
-    blockers: [Find machine-readable exports, Obtain reuse permission/terms, Document indicator definitions]
+    connection: tested
+    blockers:
+    - 'Parked: dashboards only (e-zdrowie w liczbach pages), no export or API, and the portal footer reads "© 2026 Centrum
+      e-Zdrowia. Wszystkie prawa zastrzeżone" (all rights reserved); re-open if CeZ publishes tables with reuse terms'
+    - Find machine-readable exports
+    - Obtain reuse permission/terms
+    - Document indicator definitions
     references:
     - https://ezdrowie.gov.pl/portal/home/badania-i-dane
+    - https://ezdrowie.gov.pl/portal/artykul/e-zdrowie-w-liczbach-e-recepty
 - id: PLS-017
   name: Biuletyn Statystyczny ochrony zdrowia
   short_name: MZ health statistics bulletin
   provider: Ministerstwo Zdrowia / Centrum e-Zdrowia
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland and voivodeships, table-dependent
@@ -2822,30 +2825,38 @@ sources:
   domains: [health system, morbidity, hospitals, health workforce]
   entities: [facility-aggregate, health-worker aggregate, patient-aggregate, territorial unit]
   granularity: Annual bulletin table with hospitals, staff and selected morbidity measures.
-  coverage: Multiple annual editions; exact earliest online year not verified.
+  coverage: Editions 2000-2025 on the download list (PDF; since 2019 also a tables XLSX; 2000, 2004 and 2005 as RAR).
   access:
-    endpoint: https://ezdrowie.gov.pl/portal/home/badania-i-dane
-    kind: web
-    interfaces: [PDF, HTML]
+    endpoint: https://ezdrowie.gov.pl/portal/home/badania-i-dane/biuletyn-statystyczny
+    kind: bulk_file
+    interfaces: [HTML, XLSX, PDF]
     auth: Public download.
     cost: free
-    limits: Unknown.
+    limits: None stated; plain file downloads via /downloadFile/<id> (e.g. /downloadFile/15038).
   licence:
     status: unresolved
-    notes: No explicit reuse licence verified.
-  updates: Annual publication; correction process unknown.
+    notes: 'Terms: no reuse licence on the page; the portal footer reads "© 2026 Centrum e-Zdrowia. Wszystkie prawa zastrzeżone."
+      (checked 11 Nov 2026). The bulletin is Ministry of Health public-sector statistics (Statistical Bulletin of the Ministry
+      of Health), but the site states no licence or attribution text; licence stays unresolved (internal only) until an owner
+      decision or a written confirmation from MZ/CeZ.'
+  updates: Annual; the 2025 edition (PDF 4.17 MB, tables XLSX 0.29 MB) was posted on 2025-10-31, the 2024 edition on 2024-10-31,
+    2023 on 2023-11-10.
   ingestion:
-    history: Backfill available editions; parse only stable tables and retain PDFs.
-    incremental: Poll catalogue annually; version replacements.
+    history: 'Download every edition: XLSX tables 2019-2025 (about 0.3 MB each) and PDF 2000-2018 (0.3-5.8 MB each, about
+      70 MB all PDFs); keep the original files and the posting date.'
+    incremental: Poll the page once a month from October; new edition = new /downloadFile id; version by checksum.
     identifiers: Edition + table + category + geography + reference year.
   modelling:
     notes: Separate establishment stocks, beds, personnel headcounts/FTE and cases.
     overlap: May duplicate GUS health publications and sector-register counts with different reference dates.
   research:
     priority: review-next
-    evidence: documented
-    connection: not-tested
-    blockers: [Inventory edition archive, Find structured tables, Resolve reuse rights]
+    evidence: tested
+    connection: tested
+    blockers:
+    - 'Licence unresolved: needs an owner decision or MZ confirmation before public display'
+    - Use the XLSX tables from 2019; earlier editions are PDF only (page-level extraction not tested)
+    - Assess workbook schema drift between editions
     references:
     - https://ezdrowie.gov.pl/portal/home/badania-i-dane
 - id: PLS-018
@@ -2903,7 +2914,7 @@ sources:
   name: Biuletyny, meldunki i informacje epidemiologiczne (EPIMELD)
   short_name: NIZP-PZH epidemiology bulletins
   provider: Narodowy Instytut Zdrowia Publicznego PZH – PIB (NIZP PZH)
-  status: registered
+  status: parked
   family: B
   kpi: true
   geography: Poland and voivodeships, publication-dependent
@@ -2921,7 +2932,10 @@ sources:
     limits: No API; crawl/download limits unknown.
   licence:
     status: unresolved
-    notes: No explicit reuse licence verified; definitions and published corrections must be retained.
+    notes: 'Terms: none found. The index page https://wwwold.pzh.gov.pl/oldpage/epimeld/index_p.html and https://www.pzh.gov.pl/
+      show no licence or reuse statement (footer: "2026 NIZP PZH-PIB All rights reserved"); the bulletins are PDF files per
+      period (e.g. 2026/INF_26_11B.pdf) (checked 11 Nov 2026 from a GitHub runner). Not reusable as structured data: stays
+      internal.'
   updates: Fortnightly notices plus annual bulletins and occasional corrections.
   ingestion:
     history: Backfill annual bulletins first; add fortnightly PDFs if parsing value warrants cost.
@@ -2930,20 +2944,24 @@ sources:
       dimensions.
   modelling:
     notes: Notifications are not necessarily unique patients; cumulative notices must not be summed.
-    overlap: CeZ infectious-disease dashboard and GIS reports may use related upstream data; methodology and refresh
-      differ.
+    overlap: CeZ infectious-disease dashboard and GIS reports may use related upstream data; methodology and refresh differ.
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
-    blockers: [Resolve reuse rights, Map historical definition changes, Design cumulative-versus-period parsing]
+    connection: tested
+    blockers:
+    - 'Parked: fortnightly meldunki and annual bulletins are PDF only (INF_26_12B.pdf etc.), no tables as CSV/XLSX, and no
+      reuse terms stated on wwwold.pzh.gov.pl; re-open if NIZP-PZH publishes structured tables'
+    - Resolve reuse rights
+    - Map historical definition changes
+    - Design cumulative-versus-period parsing
     references:
     - https://wwwold.pzh.gov.pl/oldpage/epimeld/index_p.html
 - id: PLS-020
   name: Rejestr Podmiotów Wykonujących Działalność Leczniczą (RPWDL)
   short_name: RPWDL healthcare providers
   provider: Minister Zdrowia / Centrum e-Zdrowia
-  status: registered
+  status: approved
   family: E
   kpi: false
   geography: Poland
@@ -2953,20 +2971,25 @@ sources:
   granularity: Public register entry for healthcare entity/practice and its units/locations; public fields only.
   coverage: Current register; historical/change access not documented on opened landing page.
   access:
-    endpoint: https://rpwdl.ezdrowie.gov.pl/
-    kind: web
-    interfaces: [HTML search]
-    auth: Public search; structured bulk/API access not verified.
+    endpoint: https://rpwdl2.ezdrowie.gov.pl/
+    kind: bulk_file
+    interfaces: [HTML search, file download]
+    auth: Public (no login) for the search and the download section.
     cost: free
-    limits: Unknown.
+    limits: None stated; downloads are generated in the application ("Pliki do pobrania" section, one register type per file).
   licence:
     status: unresolved
-    notes: Public visibility does not establish bulk redistribution rights. Exclude personal/contact data beyond
-      necessary public professional/entity fields.
+    notes: 'Terms: no reuse licence found. The RPWDL 2.0 user guide for anonymous users (https://ezdrowie.gov.pl/pobierz/rpwdl-2-0-instrukcja-dla-uzytkownikow-niezalogowanych,
+      section 2.3 "Pliki do pobrania") says: "Dowiesz się, jak pobrać dane gromadzone w RPWDL 2.0 w postaci plików." (how
+      to download the data held in RPWDL 2.0 as files); the guide states no licence. Register content is public by the Medical
+      Activity Act, but no attribution text is given: licence stays unresolved (internal only); exclude personal and contact
+      data.'
   updates: Operational register; update cadence/history unknown.
   ingestion:
-    history: No bulk history proposal until an official export/API and terms are documented.
-    incremental: If approved, snapshot public entity/facility fields with observed-at date.
+    history: 'Download the register files from "Pliki do pobrania" (register type: healthcare entities, individual and group
+      medical practices, nursing practices) and keep each file as received; no history of changes is offered, so keep one
+      snapshot per run.'
+    incremental: Full snapshot per run; diff in Silver by register key.
     identifiers: Register-book number and entry identifiers; REGON may link legal entity, but practices/units and locations
       require hierarchical keys.
   modelling:
@@ -2974,54 +2997,68 @@ sources:
     overlap: Overlaps NFZ providers/contracts but registration does not imply an NFZ contract.
   research:
     priority: conditional
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - Locate official bulk/API documentation
-    - Legal/privacy review
-    - Define public-field allowlist and history policy
-    references: ['https://rpwdl.ezdrowie.gov.pl/']
+    - 'Licence unresolved: public register, no attribution or reuse text found'
+    - 'Download section is an interactive form: verify the file format (XML/CSV/XLSX) and whether a scripted request can fetch
+      it (Dev probe against rpwdl2.ezdrowie.gov.pl)'
+    - Define public-field allowlist and history policy (personal data)
+    references:
+    - https://rpwdl.ezdrowie.gov.pl/
 - id: PLS-021
   name: Rejestr Szkół i Placówek Oświatowych (RSPO) API and search
   short_name: RSPO schools register
   provider: Ministerstwo Edukacji Narodowej / System Informacji Oświatowej
-  status: registered
+  status: approved
   family: E
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [schools, education institutions, reference data]
   entities: [school, education establishment, governing body, territorial unit]
-  granularity: One school/establishment register entry, integrating SIO data and searchable by location or governing
-    body.
+  granularity: One school/establishment register entry, integrating SIO data and searchable by location or governing body.
   coverage: Current register; historical coverage/change semantics unknown.
   access:
     endpoint: https://api.rspo.gov.pl/
     kind: api
-    interfaces: [REST API, HTML search]
-    auth: Public search; API is intended for integration. Authentication, quotas and bulk terms not verified.
+    interfaces: [REST API, OpenAPI 3.1 (JSON)]
+    auth: Free, but credentials (basic auth) are granted only after an e-mail request to rspo@cie.gov.pl ("Wniosek o dostęp
+      do API <entity>"), decided within 14 days; CIE may refuse without reason.
     cost: free
-    limits: Unknown.
+    limits: CIE "may introduce request limits" (Regulamin point 3.5); none published. Free of charge (Regulamin 1.5).
   licence:
     status: unresolved
-    notes: No reuse licence was found on opened pages; facility contact/person-related fields require minimization.
+    notes: 'Terms: API regulations https://api.rspo.gov.pl/files/Regulamin.pdf: API access is free ("Dostęp do usługi jest
+      bezpłatny"), possible only after an approved application, the administrator of the RSPO data is CIE, credentials must
+      not be passed on, use must match the application; CIE is not liable for the effects of using the data. The regulations
+      carry no licence, no attribution text and no statement on public redistribution; licence stays unresolved (internal
+      only) until CIE confirms redistribution of the school list in writing (the application asks for the purpose, so state
+      public display).'
   updates: Operational register; cadence not documented.
   ingestion:
     history: Enumerate only after current API documentation and terms are reviewed.
-    incremental: Poll modified/current entities if supported; otherwise periodic full reconciliation, without CDC
-      claim.
-    identifiers: RSPO number should be primary; REGON can link governing/legal entity but may be shared; address links
-      need TERYT codes where supplied.
+    incremental: Poll modified/current entities if supported; otherwise periodic full reconciliation, without CDC claim.
+    identifiers: RSPO number should be primary; REGON can link governing/legal entity but may be shared; address links need
+      TERYT codes where supplied.
   modelling:
     notes: Model institution, site, governing body and school type separately; status and validity dates matter.
-    overlap: Overlaps SIO aggregates and GUS education establishment counts; one is entity-level register, others
-      aggregates.
+    overlap: Overlaps SIO aggregates and GUS education establishment counts; one is entity-level register, others aggregates.
   research:
     priority: review-first
-    evidence: catalogue-only
-    connection: not-tested
-    blockers: [Open API specification, Verify authentication/limits/licence, Define allowed public fields]
-    references: ['https://api.rspo.gov.pl/', 'https://rspo.gov.pl/institutions']
+    evidence: tested
+    connection: tested
+    blockers:
+    - 'Owner action: send the access request to rspo@cie.gov.pl (the application form is https://api.rspo.gov.pl/files/Wniosek.pdf);
+      credentials arrive within 14 days'
+    - 'Licence unresolved: ask CIE for the redistribution terms in the same e-mail'
+    - Define allowed public fields (contact and person-related fields are minimised)
+    references:
+    - https://api.rspo.gov.pl/
+    - https://rspo.gov.pl/institutions
+    - https://api.rspo.gov.pl/v3/api-docs.yaml
+    - https://api.rspo.gov.pl/files/Regulamin.pdf
+    - https://api.rspo.gov.pl/files/RSPO-API-doc.pdf
 - id: PLS-022
   name: SIO public and archival education statistics
   short_name: SIO education statistics
@@ -3058,8 +3095,9 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Route unclear: the archive page https://cie.gov.pl/archiwalne-dane-statystyczne/ lists no file links in its HTML (scripted
+      content); find the XLSX download URLs and a terms statement'
     - Resolve reuse rights
-    - Inventory current vs archival pages
     - Assess schema changes from education reforms
     references:
     - https://cie.gov.pl/archiwalne-dane-statystyczne/
@@ -3067,7 +3105,7 @@ sources:
   name: RAD-on public data and POL-on APIs
   short_name: RAD-on / POL-on
   provider: Ośrodek Przetwarzania Informacji – Państwowy Instytut Badawczy (OPI PIB)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland
@@ -3082,14 +3120,20 @@ sources:
     interfaces: [REST API, HTML, interactive reports]
     auth: Public portal; current account/API conditions and quotas need specification review.
     cost: free
-    limits: Unknown.
+    limits: Not published on the pages read; the API page is a single-page app (swagger at /swagger-ui/index.html answers
+      200).
   licence:
     status: unresolved
-    notes: No commercial redistribution licence verified. Prioritize institutions/programmes and aggregates over
-      researcher records.
+    notes: 'Terms: https://polon.nauka.gov.pl/en/public-data/ says "We make part of the data from the POL-on system publicly
+      available in accordance with the law. Most of it is provided through the RAD-on system"; no licence name and no attribution
+      text on the pages read; licence stays unresolved (internal only) until the RAD-on terms (radon.nauka.gov.pl, help centre)
+      are found or OPI PIB confirms them.'
   updates: Operational updates plus periodic reports; resource-specific.
   ingestion:
-    history: Start with institutions and study programmes after terms review; avoid person-level harvesting.
+    history: 'Start with the non-person resources listed under https://polon.nauka.gov.pl/en/public-data/: institutions of
+      higher education and science, private universities register, branches, doctoral schools, study programmes, evaluation
+      of scientific activity, disciplines, projects, investments, patents. Skip scientists and staff, promotion documents
+      and publication-author affiliations (personal data).'
     incremental: Use supported update filters only if documented; otherwise snapshot and diff.
     identifiers: POL-on resource ID; REGON may link institutions; programme identity needs institution and version.
   modelling:
@@ -3097,28 +3141,29 @@ sources:
     overlap: ELA derives from POL-on plus ZUS; avoid duplicating ELA outcomes as raw POL-on measures.
   research:
     priority: review-first
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - Open current API specification and terms
-    - Identify non-person resource endpoints
-    - Document quotas/history filters
+    - 'Licence unresolved: no licence text on the public-data page; look in the RAD-on help centre and API terms'
+    - 'Open the OpenAPI specification (swagger-ui is a single-page app: find the api-docs URL in a Dev probe)'
+    - Document quotas and history filters
     references:
     - https://radon.nauka.gov.pl/api
     - https://radon.nauka.gov.pl/pomoc/tag/api/page/2/
+    - https://polon.nauka.gov.pl/en/public-data/
+    - https://radon.nauka.gov.pl/dane/instytucje-systemu-szkolnictwa-wyzszego-i-nauki
 - id: PLS-024
   name: Ogólnopolski system monitorowania Ekonomicznych Losów Absolwentów (ELA)
   short_name: ELA graduate outcomes
   provider: Ministerstwo Nauki i Szkolnictwa Wyższego / OPI PIB
-  status: registered
+  status: parked
   family: B
   kpi: true
   geography: Poland; institution and field of study
   provider_type: national-public
   domains: [graduate outcomes, earnings, employment, higher education]
   entities: [graduate-cohort aggregate, institution, study programme, field of study]
-  granularity: Graduate cohort/programme outcome indicator, with reports and rankings; privacy-protected aggregates
-    only.
+  granularity: Graduate cohort/programme outcome indicator, with reports and rankings; privacy-protected aggregates only.
   coverage: Tracks outcomes shortly after graduation and up to five years after diploma; editions/cohorts vary.
   access:
     endpoint: https://ela.nauka.gov.pl/pl
@@ -3129,37 +3174,42 @@ sources:
     limits: Unknown.
   licence:
     status: unresolved
-    notes: No explicit redistribution licence verified. Underlying linked ZUS/POL-on microdata are not public and
-      are out of scope.
+    notes: 'Terms: none found. https://ela.nauka.gov.pl/pl is a single-page report application; the edition description https://ela.nauka.gov.pl/ELA10_opis_badania_20250625.pdf
+      documents the automatic reports and indicators but offers no data download or licence (checked 11 Nov 2026 from a GitHub
+      runner). Not reachable as data: stays internal.'
   updates: New cohorts/editions and follow-up years are added periodically.
   ingestion:
     history: Backfill public cohort aggregates/reports once export format and terms are confirmed.
     incremental: Poll editions; append follow-up year while versioning revised indicators.
     identifiers: Cohort graduation year + institution/programme/field identifiers + years since diploma.
   modelling:
-    notes: Relative earnings/unemployment indicators depend on local benchmarks; cohort suppression and programme
-      changes must remain visible.
-    overlap: Derived from ZUS and POL-on; do not join back to individuals or treat as independent counts of either
-      source.
+    notes: Relative earnings/unemployment indicators depend on local benchmarks; cohort suppression and programme changes
+      must remain visible.
+    overlap: Derived from ZUS and POL-on; do not join back to individuals or treat as independent counts of either source.
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
-    blockers: [Find machine-readable export, Resolve reuse rights, Document suppression and identifiers]
-    references: ['https://ela.nauka.gov.pl/pl']
+    connection: tested
+    blockers:
+    - 'Parked: interactive reports and PDF descriptions only (ELA10_opis_badania_20250625.pdf), no export or API found; the
+      data are ZUS/POL-on microdata aggregates under statistical confidentiality; re-open if ELA publishes tables with terms'
+    - Find machine-readable export
+    - Resolve reuse rights
+    - Document suppression and identifiers
+    references:
+    - https://ela.nauka.gov.pl/pl
 - id: PLS-025
   name: National examination results and reports
   short_name: CKE exam results
   provider: Centralna Komisja Egzaminacyjna (CKE)
-  status: registered
+  status: parked
   family: B
   kpi: true
   geography: Poland; school-location categories and regions, release-dependent
   provider_type: national-public
   domains: [education outcomes, examinations]
   entities: [candidate-aggregate, school-location aggregate, territorial unit, exam subject]
-  granularity: Aggregate exam result/distribution by subject, location category and other published breakdowns;
-    no pupil records.
+  granularity: Aggregate exam result/distribution by subject, location category and other published breakdowns; no pupil records.
   coverage: Eighth-grade exam archive on opened page covers 2019-2026.
   access:
     endpoint: https://cke.gov.pl/egzamin-osmoklasisty/wyniki/
@@ -3170,7 +3220,9 @@ sources:
     limits: Unknown.
   licence:
     status: unresolved
-    notes: No explicit reuse licence verified.
+    notes: 'Terms: none found. https://cke.gov.pl/egzamin-osmoklasisty/wyniki/ links PDF reports per year 2019-2026 (e.g.
+      .../Informacje_o_wynikach/2026/egzamin_osmoklasisty_matematyka_sprawozdanie_2026.pdf) and the map app mapa.wyniki.edu.pl;
+      the pages carry no licence or reuse text (checked 11 Nov 2026 from a GitHub runner). Stays internal.'
   updates: Annual preliminary and detailed releases; results may be staged.
   ingestion:
     history: Backfill annual summary/distribution/location tables and retain release stage.
@@ -3182,8 +3234,13 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
-    blockers: [Resolve reuse rights, Inventory XLSX availability by year, Document preliminary/final status]
+    connection: tested
+    blockers:
+    - 'Parked: results are PDF reports (sprawozdania, location and percentile tables) and a map application, no CSV/XLSX or
+      API found on cke.gov.pl; no reuse terms stated; re-open if CKE publishes tabular data'
+    - Resolve reuse rights
+    - Inventory XLSX availability by year
+    - Document preliminary/final status
     references:
     - https://cke.gov.pl/egzamin-osmoklasisty/wyniki/
 - id: PLS-026
@@ -3381,15 +3438,15 @@ sources:
   name: Barometr Zawodów
   short_name: Barometr Zawodów
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej / regional labour offices
-  status: registered
+  status: parked
   family: B
   kpi: true
   geography: powiat, voivodeship and Poland
   provider_type: national-public
   domains: [occupational shortage forecast, labour demand, vacancies]
   entities: [occupation, powiat, voivodeship, country]
-  granularity: Annual expert forecast category (shortage/balance/surplus) by occupation and powiat; portal also
-    shows occupational statistics.
+  granularity: Annual expert forecast category (shortage/balance/surplus) by occupation and powiat; portal also shows occupational
+    statistics.
   coverage: Nationwide forecasts available from 2016; Małopolska has earlier results.
   access:
     endpoint: https://barometrzawodow.pl/en/module/forecasts-on-maps
@@ -3400,7 +3457,8 @@ sources:
     limits: Unknown.
   licence:
     status: unresolved
-    notes: Site terms/licence for commercial reuse were not verified.
+    notes: 'Terms: none found. https://barometrzawodow.pl/ (run by Wojewódzki Urząd Pracy w Krakowie) shows "All rights reserved"
+      in the footer and no licence or data-download page (checked 11 Nov 2026 from a GitHub runner). Stays internal.'
   updates: Annual forecast produced from expert assessment in prior-year Q3/Q4.
   ingestion:
     history: Backfill forecast cards/maps by year and geography after export and licence review.
@@ -3412,8 +3470,13 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
-    blockers: [Find machine-readable export, Resolve reuse rights, Version occupation group mapping]
+    connection: tested
+    blockers:
+    - 'Parked: interactive maps and PDF publications only, no export or API found on barometrzawodow.pl; no reuse terms stated
+      (site footer: "All rights reserved"); re-open if WUP Kraków publishes the forecast tables'
+    - Find machine-readable export
+    - Resolve reuse rights
+    - Version occupation group mapping
     references:
     - https://barometrzawodow.pl/en/module/forecasts-on-maps
     - https://barometrzawodow.pl/
