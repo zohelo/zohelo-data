@@ -111,7 +111,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_dbw: {rows: 600000}  # 312,512 (10 Nov) + ~110,000 slice blocks (#2592)
   poc_build_eurostat: {rows: 800000}
   poc_build_nbp: {rows: 600000}
-  poc_build_unctad: {rows: 30000}  # ~12,000: 29 areas × 10 measures × 35-78 years (Dev probes 11 Nov)
+  poc_build_unctad: {rows: 18000}  # 11,871 (Dev trial 43100532689): 29 areas × 10 measures
   poc_build_wdi: {rows: 500000}  # + 16 slice indicators, all economies (#2592)
   poc_concept_measures: {rows: 1000}
   poc_dim_calendar: {rows: 80000}
@@ -131,8 +131,8 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_measure_dimensions: {rows: 5000}
   kpi_dimension: {rows: 10000}
   poc_metrics_fx_rate: {rows: 600000}
-  poc_metrics_exports_goods: {rows: 5000}  # 29 areas × 78 years
-  poc_metrics_exports_services: {rows: 2000}  # 29 areas × 21 years
+  poc_metrics_exports_goods: {rows: 3000}  # 1,880 build rows of the measure (Dev trial 43100532689)
+  poc_metrics_exports_services: {rows: 1000}  # 608 build rows of the measure (Dev trial 43100532689)
   poc_metrics_gdp_current_prices: {rows: 50000}
   poc_metrics_inflation: {rows: 40000}
   poc_metrics_population: {rows: 100000}  # + WDI and Eurostat (#2592)
