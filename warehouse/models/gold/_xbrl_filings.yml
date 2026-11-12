@@ -38,13 +38,14 @@ models:
         tests: [not_null]
   - name: esef_financial_fact
     description: >-
-      Entity-level revenue (ifrs-full:Revenue) and profit or loss (ifrs-full:ProfitLoss) as tagged in the ESEF
-      annual reports of Polish issuers held by filings.xbrl.org. Grain: fxo_id × concept × period_start ×
-      period_end × unit_code (filing level: nothing is picked between language versions or refilings). Values in
-      the currency published, not converted, not aggregated. Licence unresolved: internal.
+      Entity-level revenue (ifrs-full:Revenue) and profit or loss (ifrs-full:ProfitLoss) of the reporting period
+      as tagged in the ESEF annual reports of Polish issuers held by filings.xbrl.org. Grain: fxo_id × concept ×
+      unit_code (filing level: nothing is picked between language versions or refilings; a filing with several
+      candidate facts for a concept is left out). Values in the currency published, not converted, not
+      aggregated. Licence unresolved: internal.
     tests:
       - unique:
-          column_name: "fxo_id || '|' || concept || '|' || period_start || '|' || period_end || '|' || unit_code"
+          column_name: "fxo_id || '|' || concept || '|' || unit_code"
     columns:
       - name: fxo_id
         description: The filing (gold.esef_filing).
@@ -59,6 +60,8 @@ models:
       - name: period_start
         tests: [not_null]
       - name: period_end
+        tests: [not_null]
+      - name: period_end_year
         tests: [not_null]
       - name: unit_code
         description: The unit as tagged in the report (iso4217:<currency>); unit_map.csv maps it to the conformed unit (D33).

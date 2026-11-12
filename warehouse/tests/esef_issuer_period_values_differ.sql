@@ -15,6 +15,5 @@ select
     max(value) as value_max,
     string_agg(fxo_id, ',' order by fxo_id) as fxo_ids
 from {{ ref('esef_financial_fact') }}
-where is_reporting_period
 group by lei, concept, period_start, period_end, unit_code
 having count(distinct value) > 1
