@@ -1,0 +1,37 @@
+source_system: mrpips_unemployment
+description: "MRPiPS / Publiczne Służby Zatrudnienia — registered unemployment, monthly 'statystyki strukturalne' ZIPs (rate and stock by voivodeship and powiat, MRPiPS-01 tables)"
+
+# Extraction strategy (docs/landing.md). Register PLS-029. Bulk feature: the Public Employment Services portal
+# (psz.praca.gov.pl, Bezrobocie rejestrowane) publishes one ZIP per month, "statystyki strukturalne <month> <year>"
+# (about 0.4-3 MB): the rate workbook (registered unemployed in thousands and the registered unemployment rate at the
+# end of the month for Poland, voivodeships and every powiat, TERYT codes), the MRPiPS-01 result tables, Dane_*.xlsx
+# and a PDF report (Dev probes on test/src-w2pl-probe: 43086683486 listing, 43087695597 ZIP members, 43091539492 year
+# categories). Entity = one month (stat_YYYY_MM), version = Last-Modified, written only when the SHA-256 changed: a
+# corrected ZIP lands as a new version and the newest version wins. ZIP links are discovered from the listing page and
+# its year categories (ingestion/to_landing/mrpips_unemployment/); months held and older than the two newest are not
+# downloaded again. Restart unit: one month. History: months from January 2019 are landed (88 of 93 listed; the
+# portal lists no ZIP for 2020-12, 2021-06, 2021-08, 2021-11, 2021-12). Dev trial 43100663615: September 2020 -
+# September 2026 in Silver (68 months); January 2019 - August 2020 hold the rate table only as .xls and are rejected
+# with that reason.
+extraction:
+  initial: bulk
+  production: snapshot                  # each ZIP is the month as published; a correction replaces it
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256, newest two months re-checked
+  schedule: # UTC; MRPiPS publishes a month's ZIP about 3-4 weeks after the month (Sep 2026 ZIP: 24 Oct); weekly check
+    - {cron: "35 6 * * 2", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/mrpips_unemployment/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.mrpips_unemployment_cells, bronze.mrpips_unemployment_rejected_files]
+silver: [silver.mrpips_registered_unemployment]
+gold: [gold.build_mrpips_unemployment]
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a month
+# Refresh policy for all layers (D32): one ZIP per month, about 3,350 Bronze cells and 828 Silver rows per month
+# (under 1 M rows for decades); small, so every layer is rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2348"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

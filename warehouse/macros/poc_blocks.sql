@@ -323,6 +323,9 @@
     poc_build_oecd:oecd
     poc_build_gleif:gleif
     poc_build_mf_biala_lista:mf_biala_lista
+    poc_build_prg:gugik_prg
+    poc_build_mf_jst_budgets:mf_jst_budgets
+    poc_build_mrpips_unemployment:mrpips_unemployment
     poc_build_nbp_interest_rates:nbp_interest_rates
 {% endmacro %}
 
@@ -412,6 +415,9 @@
         ('oecd', 'cli', 'OECD composite leading indicators and confidence indicators'),
         ('gleif', 'lei2', 'GLEIF LEI records (golden copy)'),
         ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file'),
+        ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units'),
+        ('mf_jst_budgets', 'jst_budget', 'MF local-government budget summaries (year to date)'),
+        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)'),
         ('nbp_interest_rates', 'policy_rates', 'NBP official interest rates')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}
