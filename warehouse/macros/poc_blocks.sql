@@ -346,6 +346,16 @@
     ) as t (area_code, candidate_key)
 {% endmacro %}
 
+{# UNHCR Refugee Statistics blocks (gold.build_unhcr): one per API selection; areas: EU27 members as countries of
+   asylum (ISO alpha-3 through dim_geography.iso3). #}
+{% macro poc_unhcr_blocks() %}
+    select * from (
+        values
+        ('population_by_asylum', 'People under UNHCR mandate by country of asylum, end of year (UNHCR)'),
+        ('poland_by_origin', 'People under UNHCR mandate in Poland by country of origin, end of year (UNHCR)')
+    ) as t (entity, block_name)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -431,6 +441,7 @@
     poc_build_faostat:faostat
     poc_build_ecb:ecb
     poc_build_ids:world_bank_ids
+    poc_build_unhcr:unhcr
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -519,6 +530,8 @@
     select 'ecb', entity, block_name from ({{ poc_ecb_blocks() }})
     union all
     select 'world_bank_ids', 'IDS_CSV', 'World Bank International Debt Statistics'
+    union all
+    select 'unhcr', entity, block_name from ({{ poc_unhcr_blocks() }})
     union all
     select * from (
         values

@@ -187,3 +187,4 @@ external_debt_gni,world_bank_ids,world_bank_ids:DT.DOD.DECT.GN.ZS,"external debt
 external_debt_service,world_bank_ids,world_bank_ids:DT.TDS.DECT.CD,"total debt service (TDS), current US$; projections not built",1,usd
 external_debt_service_gni,world_bank_ids,world_bank_ids:DT.TDS.DECT.GN.ZS,"total debt service, % of GNI (series not in the IDS series metadata; name from the observations)",1,pct_gni
 external_debt_service_exports,world_bank_ids,world_bank_ids:DT.TDS.DECT.EX.ZS,"total debt service, % of exports of goods, services and primary income",1,pct_exports
+refugees_hosted,unhcr,unhcr:population_by_asylum:persons:refugees,"UNHCR population statistics, end of year, by country of asylum (origins summed)",1,
