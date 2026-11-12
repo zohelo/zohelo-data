@@ -4,6 +4,7 @@ GET/HEAD only; robots.txt honoured; a refusing host is reported and never retrie
 of the RWDZ files are printed (header and row count only), because rows may name persons.
 """
 
+import html
 import json
 import re
 
@@ -89,10 +90,41 @@ def uokik_view():
     o["startkey_dkk"] = m2 if j2 is None else [[(c.get("text") or c.get("datetime") or {}).get("0", "")[:40] for c in e.get("entrydata", [])][:4] for e in j2.get("viewentry", [])[:3]]
     return o
 
+def gunb_wfs():
+    """Official alternative: the GUGiK WFS built on the RWDZ register (announced on gov.pl/web/gugik)."""
+    o = {}
+    pg = "https://www.gov.pl/web/gugik/nowa-usluga-wfs-zwiazana-z-rejestrem-wnioskow-decyzji-i-zgloszen"
+    r = get(pg, n=900000)
+    if "err" in r:
+        return {"page": r["err"]}
+    t = text(r)
+    o["page"] = r["st"]
+    o["date"] = around(t, r"\d{2}\.\d{2}\.\d{4}", 0, 40, 1)
+    o["text"] = around(t, r"usług\w+ WFS|RWDZ|pozwole", 60, 420, 2)
+    urls = sorted(set(re.findall(r'https?://[A-Za-z0-9./_\-]*(?:wss|wfs|WFS)[A-Za-z0-9./_\-?=&;]*', html.unescape(t))))
+    o["urls"] = urls[:6]
+    for u in urls[:2]:
+        base = u.split("?")[0]
+        c = get(base + "?SERVICE=WFS&REQUEST=GetCapabilities", n=1500000, timeout=90)
+        if "err" in c:
+            o["caps:" + short(base)[-50:]] = c["err"]
+            continue
+        ct = text(c)
+        names = re.findall(r"<(?:wfs:)?Name>([^<]+)</(?:wfs:)?Name>", ct)
+        o["caps:" + short(base)[-50:]] = {"st": c["st"], "types": names[:12], "fees": plain(" ".join(re.findall(r"(?is)<(?:ows:)?Fees>.*?</(?:ows:)?Fees>", ct)))[:200], "constraints": plain(" ".join(re.findall(r"(?is)<(?:ows:)?AccessConstraints>.*?</(?:ows:)?AccessConstraints>", ct)))[:400], "title": plain(" ".join(re.findall(r"(?is)<(?:ows:)?Title>.*?</(?:ows:)?Title>", ct)[:1]))[:120], "abstract": plain(" ".join(re.findall(r"(?is)<(?:ows:)?Abstract>.*?</(?:ows:)?Abstract>", ct)[:1]))[:300], "formats": sorted(set(re.findall(r"(?i)text/csv|application/json|geojson|shape-zip|gml[^<\"]{0,12}", ct)))[:8]}
+        for nm in names[:3]:
+            hits = get(f"{base}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES={nm}&resultType=hits", n=4000, timeout=120)
+            m = re.search(r'numberMatched="(\w+)"', text(hits))
+            o["hits:" + nm[-30:]] = m.group(1) if m else meta(hits)
+        if names:
+            d = get(f"{base}?SERVICE=WFS&VERSION=2.0.0&REQUEST=DescribeFeatureType&TYPENAMES={names[0]}", n=200000, timeout=90)
+            o["fields"] = re.findall(r'<(?:xsd?:)?element[^>]*name="([^"]+)"', text(d))[:40] if "body" in d else d["err"]
+    return o
+
 
 def main():
     parts = []
-    for sid, fn in (("PL-ENV-033 files", gunb), ("PL-ENV-033 terms api", gunb_terms_api), ("PLG-021 view", uokik_view)):
+    for sid, fn in (("PL-ENV-033 files", gunb), ("PL-ENV-033 wfs", gunb_wfs)):
         try:
             parts.append((sid, fn()))
         except Exception as e:  # noqa: BLE001
