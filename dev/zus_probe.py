@@ -136,6 +136,19 @@ def main(argv):
             elif a.startswith("links="):
                 print(f"\n===== links {a[6:]}")
                 links(a[6:])
+            elif a.startswith("text="):
+                print(f"\n===== text {a[5:]}")
+                r = get(a[5:])
+                if r is not None:
+                    body = re.sub(r"(?is)<(script|style).*?</\\1>", " ", r.text)
+                    body = re.sub(r"<[^>]+>", " ", body)
+                    import html as _h
+                    words = " ".join(_h.unescape(body).split())
+                    print(f"  status={r.status_code} chars={len(words)}")
+                    for m in re.finditer(GREP or ".", words, re.I):
+                        print("  ..." + words[max(0, m.start() - 300): m.end() + 500] + "...")
+                        if not GREP:
+                            break
             elif a.startswith("xlsx="):
                 print(f"\n===== xlsx {a[5:]}")
                 xlsx(a[5:], rows, full)
