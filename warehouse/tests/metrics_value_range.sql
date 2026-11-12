@@ -29,13 +29,33 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('unemployment_rate', 'gus_dbw', '%', 0, 60),
     ('unemployment_rate', 'gus_bdl', '%', 0, 60),
     ('fx_rate', 'nbp', '%', 0, 100000),
+    -- ECB (#2758): the ECB's HICP is Eurostat's HICP republished (TITLE_COMPL "Statistical Office of the European
+    -- Commission (Eurostat)"), so it takes Eurostat's bound; EUR/PLN monthly average 4.3813 in 2026-10 and daily
+    -- 4.0712-4.4038 since 1999 (EXR, Dev trial 43099368908), NBP's bound
+    ('inflation', 'ecb', '%', -100, 3000),
+    ('fx_rate', 'ecb', '%', 0, 100000),
     ('gdp_per_capita', 'eurostat', '%', 0, 2e5),
     ('gdp_per_capita', 'world_bank_wdi', '%', 0, 5e5),
     ('gdp_volume_growth', 'eurostat', '%', -50, 100),
     ('gdp_volume_growth', 'world_bank_wdi', '%', -100, 200),
     -- an index, previous period or same quarter of the previous year = 100 (rate = value - 100);
     -- Poland published 92.6-111.2 (GUS DBW 1038_16_389_3) and 98.0-106.9 (1038_16_92_4), #2788
-    ('gdp_volume_growth', 'gus_dbw', '%', 50, 200)
+    ('gdp_volume_growth', 'gus_dbw', '%', 50, 200),
+    -- WHO data.who.int (#2408): years; highest 87.37 (all areas, 2000-2021, Dev trial 43159213097). Documentation only
+    -- until metrics_life_expectancy joins the metrics union below.
+    ('life_expectancy', 'who', '%', 0, 130),
+    -- UNESCO UIS (#2411): % of GDP; highest 6.35 (all areas, Dev trial 43159213097). Documentation only until
+    -- metrics_gerd_gdp joins the metrics union below.
+    ('gerd_gdp', 'unesco_uis', '%', 0, 9.5),
+    -- UNESCO UIS (#2411): % of population 25+; capped at 100 (all areas max 73.91). Documentation only until
+    -- metrics_tertiary_attainment joins the metrics union below.
+    ('tertiary_attainment', 'unesco_uis', '%', 0, 100),
+    -- FAOSTAT (#2402): kt CO2eq; World 54,253,565 kt (all sectors without LULUCF, 2024, Dev trial 43159213097).
+    -- Documentation only until metrics_ghg_emissions joins the metrics union below.
+    ('ghg_emissions', 'faostat', '%', 0, 8.2e7),
+    -- FAOSTAT (#2402): 1000 ha; World land area 13,040,161.55 (Dev trial 43159213097). Documentation only (no
+    -- metrics_area model yet).
+    ('area', 'faostat', '%', 0, 2e7)
 ),
 
 metrics as (

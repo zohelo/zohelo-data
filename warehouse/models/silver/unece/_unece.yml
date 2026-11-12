@@ -1,0 +1,24 @@
+version: 2
+models:
+  - name: unece_observations
+    description: >-
+      UNECE Statistical Database economic statistics (PXWeb folder 20-ME: macroeconomic overview, national
+      accounts, labour force and wages, price indices, industrial production, external economic relations,
+      globalization) from bronze.unece_observations and bronze.unece_codes: newest copy of each table, every
+      UNECE member country and aggregate (E27 = EU-27, EAA = euro area). Grain: entity × series_key ×
+      time_period. Codes in dimensions_json, labels in labels_json.
+    tests:
+      - unique:
+          column_name: "entity || '|' || series_key || '|' || time_period"
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: table_id
+        tests: [not_null]
+      - name: series_key
+        tests: [not_null]
+      - name: time_period
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]

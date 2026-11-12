@@ -10,10 +10,10 @@ always with at least one agent working, and every change passes the same station
 | 1 | Intake | – | Orchestrator, or a triage agent (Sonnet) for large sweeps | the issue is classified done / obsolete / relevant, with priority (P1–P3) and size (S/M/L) |
 | 2 | Spec | `flow:spec` | Fable for open-ended work (design, strategy, scoring), Opus otherwise | the issue body says what "done" means and how it is checked; skipped when it already does |
 | 3 | Ready | `flow:ready` | – | a build slot is free (work-in-progress limit below) |
-| 4 | Build | `flow:build` | builder agent (Opus; Sonnet for routine edits), in its own git worktree or clone | the PR is open, linked with `Closes #n`, all checks green, and the builder ran its own verification |
+| 4 | Build | `flow:build` | builder agent (Opus; Sonnet for routine edits), in its own git worktree or clone | the PR is open, linked with `Closes #n`, `python -m ops.repo_check` passes locally, and the builder ran its own verification |
 | 5 | Review | `flow:review` | an independent review agent that did not write the change: review-council (correctness, security, interface, architecture, test evidence, policy) or the PR-review toolkit; `ui-ux-designer` (zohelo-bi, Fable) for portal UI | verdict merge / merge after fixes / do not merge, with file:line findings |
 | 6 | Rework | `flow:rework` | the same builder, resumed with the findings | fixes pushed as follow-up commits, checks green; back to Review only if the reviewer asked for it or a blocker was fixed |
-| 7 | Merge | – | orchestrator (O34: checks green and no blockers) | merged; the owner is told what went in |
+| 7 | Merge | `merge:check` (on the PR) | orchestrator (O34: `check` green on the final head and no blockers) | merged; the owner is told what went in |
 | 8 | Verify | `flow:verify` | orchestrator | the next scheduled production run proves it (data), or the deploy and UI suite do (portal); then the issue closes |
 | – | Owner | `flow:owner` | owner | business, legal, public, AGENTS.md and "Ask the owner first" items; at most three on the "where we are" page |
 
@@ -30,5 +30,12 @@ always with at least one agent working, and every change passes the same station
 - **Evidence over claims:** a builder reports what it ran; a reviewer reads the diff, not the builder's summary.
   Nothing is "done" before Verify.
 - **Refusals stand:** a permission or safety refusal is reported, never worked around.
+- **Merge gate (owner direction 12 Nov 2026: no Actions run on every push):** pushes to a PR start no workflow.
+  Builders and rework run `python -m ops.repo_check` (and `npm run lint`/`typecheck` in `portal/app` for portal
+  changes) locally before every push. When the PR is reviewed and final, the orchestrator adds the label
+  `merge:check`; `check` (the required status check) runs once on that head, and `check-portal` after it when
+  `portal/app` changed. Green → merge (squash). A push after the label leaves the new head without `check`:
+  remove and re-add the label once the fix is pushed. "Re-run jobs" repeats `check` on the same commit only (for a
+  flaky failure), never on a newer head.
 - **Visibility:** the `flow:` labels on issues show the station in GitHub; the task list in the session shows the
   running lanes; `claude/where-we-are.md` in the claude.ai project shows the state and what needs the owner.

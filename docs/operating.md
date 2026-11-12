@@ -5,8 +5,8 @@
 | Workflow | Runs | Trigger |
 |---|---|---|
 | **Pipeline** (`pipeline.yml`) | the dataflow: pick a `source` and a `run` | manual, `main` only |
-| **Ops · ad-hoc** (`ops.yml`) | one standing task from `ops/` | manual, `main` only |
-| **Dev · branch runs** (`dev.yml`) | one `dev/` script on a feature branch (trials, tests); deleted before merge | manual, never `main` |
+| **Ops · ad-hoc** (`ops.yml`) | one standing task from `ops/`; weekly CodeQL scan of `main` (job `codeql`) | manual or the schedule table (ops/README.md), `main` only |
+| **Dev · branch runs** (`dev.yml`) | one `dev/` script on a feature branch (trials, tests); deleted before merge. Also the merge gate: `check` and `check-portal` | trials: manual, never `main`; gate: label `merge:check` on a pull request |
 | **Deploy portal** (`deploy-portal.yml`) | build and deploy `portal/app` and `portal/worker` | push to `main` changing them, or manual |
 | **Branch cleanup** (`branch-cleanup.yml`) | deletes a merged pull request's branch; weekly sweep of merged branches | pull request merged, Monday, or manual |
 
@@ -27,7 +27,7 @@ whose YAML sets `extraction.kind` (for example `bulk_file`) runs the shared patt
 | `archive.prune` | `ingestion/common/retention.py` | apply the source's Archive retention (`archive_policy` in its config) |
 | `silver_gold.build` | `warehouse/build.py` | platform: dbt build of `warehouse/models/` (filter = model names; empty = only models whose inputs or code changed, leaving out models whose source table does not exist yet (a new source before its first Bronze load; listed as `waiting` in the run summary); a waiting Gold block (tag `gold_block`) does not hold back the facts, dimensions and metrics: the block is listed again under `empty_blocks`, passed to dbt as the var `waiting_blocks`, read as zero rows and noted by `build_check` as `waiting: …`; a block without a table that the plan did not declare waiting (a partial catalog listing, a run killed between renames, a filtered build such as `poc_fact_annual+`) fails the build, and so does a block that is built in the run and fails; `fqn:*` = all); publishes the data catalog (only the Pipeline on `main`; Dev trials skip it) |
 | `gold.publish` | `warehouse/publish.py`, `warehouse/publish_v2.py` | platform: rewrites 06_published/v1/ from Gold, then 06_published/v2/ when warehouse.yaml `published_v2` is true (docs/published.md) |
-| `serving.refresh_index` | `portal/publish_index.py` | platform: rebuild the portal file index |
+| `serving.refresh_index` | `portal/publish_index.py` | platform: rebuild the portal file index; dbt temporary and backup tables (`__dbt_tmp`, `__dbt_backup`) are not shown, and listed tables that a concurrent `silver_gold.build` swaps away (not found again after one 15 s re-check of all misses) are skipped with a warning annotation and shown by the next refresh; more than 3 skipped tables or more than 10% of those listed fail the job (R2 answers the same 404 for a bad credential); any other error fails the job (#2825) |
 
 A Pipeline run is one activity or a source's `full dataflow: landing → bronze → silver → gold → portal`
 (owner direction 20 Oct, #875): Landing, Bronze (entity sources write Silver with Bronze), archive,
@@ -53,9 +53,12 @@ npm --prefix portal/app run dev
 ```
 
 Production reads and writes need the R2 credentials, which exist only in GitHub
-Actions. There is no repository test suite; the `check` job in `dev.yml` runs on every
-pull request (compile, lint, YAML, configuration consistency, dbt parse) and must pass
-before merge. Quality rules: [quality.md](quality.md).
+Actions. There is no repository test suite. No workflow runs on a push to a pull request
+(owner direction 12 Nov 2026): run `python -m ops.repo_check` locally while iterating. The
+`check` job in `dev.yml` (linked task, compile, lint, YAML, configuration consistency, dbt
+parse, secret scan) runs once, when the label `merge:check` is added to the reviewed, final
+pull request, and must pass on its head before merge ([flow.md](flow.md), merge gate).
+CodeQL scans `main` weekly from Ops, not each pull request. Quality rules: [quality.md](quality.md).
 
 ### Dev trials
 
