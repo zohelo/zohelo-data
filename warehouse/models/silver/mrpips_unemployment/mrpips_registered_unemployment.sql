@@ -8,15 +8,9 @@
      Mężczyźni M when present) with rows POLSKA and the voivodeships: measure unemployed_persons (persons). The
      voivodeship code comes from the rate workbook's "Woj. <NAME>" row of the same month (by name).
    Values as published (no rescaling); a cell that is not a number is not loaded. #}
-with cells as (
+with newest as (
     select *
     from {{ source('mrpips_unemployment', 'mrpips_unemployment_cells') }}
-    qualify row_number() over (partition by raw_sha256, source_row_number order by ingested_at) = 1
-),
-
-newest as (
-    select *
-    from cells
     qualify rank() over (partition by entity order by source_version desc, ingested_at desc) = 1
 ),
 

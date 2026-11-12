@@ -10,9 +10,9 @@ description: "MRPiPS / Publiczne Służby Zatrudnienia — registered unemployme
 # corrected ZIP lands as a new version and the newest version wins. ZIP links are discovered from the listing page and
 # its year categories (ingestion/to_landing/mrpips_unemployment/); months held and older than the two newest are not
 # downloaded again. Restart unit: one month. History: months from January 2019 are landed (88 of 93 listed; the
-# portal lists no ZIP for 2020-12, 2021-06, 2021-08, 2021-11, 2021-12). Dev trial 43092641513: February 2023 -
-# September 2026 in Silver; earlier ZIPs name the rate workbook stopa-pow-*.xlsx (September 2020 - January 2023,
-# accepted since, not yet trialled) or hold it only as .xls (January 2019 - August 2020, rejected with that reason).
+# portal lists no ZIP for 2020-12, 2021-06, 2021-08, 2021-11, 2021-12). Dev trial 43100663615: September 2020 -
+# September 2026 in Silver (68 months); January 2019 - August 2020 hold the rate table only as .xls and are rejected
+# with that reason.
 extraction:
   initial: bulk
   production: snapshot                  # each ZIP is the month as published; a correction replaces it

@@ -7,8 +7,8 @@ models:
       period_date x area_code x measure_code x sex_code. area_code = TERYT voivodeship + powiat code (WWPP; 0000 =
       Poland, WW00 = voivodeship). Measures: unemployed_thousands (thousand_persons) and unemployment_rate (pct) for
       Poland, voivodeships and powiats from the rate workbook; unemployed_persons (persons, sex T/F/M) for Poland and
-      voivodeships from MRPiPS-01 TAB 2. History from February 2023 in Dev trial 43092641513 (35,640 rows, 44 months); September 2020 - January 2023
-      follow from the stopa-pow workbooks.
+      voivodeships from MRPiPS-01 TAB 2. History from September 2020 (MRPiPS-01 TAB 2 from January 2021): Dev trial 43100663615, 56,202 rows, 68
+      months.
     tests:
       - unique:
           column_name: "cast(period_date as varchar) || '|' || area_code || '|' || measure_code || '|' || sex_code"
