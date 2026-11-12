@@ -32,6 +32,7 @@ SELECTION = re.compile(
 )
 LINKED = 94  # workbooks the six topic pages linked on 12 Nov 2026 (Dev probe 43289510189); the archive is closed
 PAUSE = 2.0
+R2_RETRIES = 4
 
 
 def entity_of(url: str) -> str:
@@ -134,7 +135,7 @@ def extract(budget_minutes: float, landing_root: str = "01_landing") -> int:
             continue
         time.sleep(PAUSE if entity in landed else 0)
         try:
-            results.append(bulk_file.load_file(client, bucket, SOURCE, spec, landing_root))
+            results.append(_land(client, bucket, spec, landing_root))
         except bulk_file.PermanentError as exc:
             refused.append({"entity": entity, "error": str(exc)[:120]})
     summary.update(
@@ -150,6 +151,24 @@ def extract(budget_minutes: float, landing_root: str = "01_landing") -> int:
     result = level(summary, {"unreachable": states.get("unreachable", []) + [r["entity"] for r in refused]})
     annotate(result, f"{SOURCE} landing extract", summary)
     return 1 if result == "error" else 0
+
+
+def _land(client: Any, bucket: str, spec: dict[str, Any], landing_root: str) -> dict[str, Any]:
+    """bulk_file.load_file with bounded retries when R2 throttles (429/503 on a write or its check): the receipt is
+    written last, so a repeated attempt starts from what Landing holds."""
+    from botocore.exceptions import ClientError
+
+    from ingestion.to_landing.patterns import bulk_file
+
+    for attempt in range(R2_RETRIES):
+        try:
+            return bulk_file.load_file(client, bucket, SOURCE, spec, landing_root)
+        except ClientError as exc:
+            code = str(exc.response.get("Error", {}).get("Code", ""))
+            if attempt == R2_RETRIES - 1 or code not in ("429", "503", "SlowDown", "TooManyRequests"):
+                raise
+            time.sleep(30 * (attempt + 1))
+    raise RuntimeError("unreachable")
 
 
 def _extract(p) -> int:
