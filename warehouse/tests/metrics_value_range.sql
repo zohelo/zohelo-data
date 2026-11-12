@@ -61,6 +61,13 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- FAOSTAT (#2402): published in 1000 ha, metrics in km² since D33 (× 10); World land area 13,040,161.55 thousand ha
     -- = 130,401,615.5 km² (Dev trial 43159213097). Documentation only (not in the metrics union below).
     ('area', 'faostat', '%', 0, 2e8),
+    -- UNHCR (#2415): persons; highest refugees 4,404,995 (all asylum countries 1951-2025, Dev trial 43282453427).
+    -- Documentation only (no metrics_refugees_hosted model yet).
+    ('refugees_hosted', 'unhcr', '%', 0, 2e7),
+    -- EEA GovReg (#2424): published in Gg (kt) CO2e, metrics in Mt CO2e (D33, ÷ 1000); highest member DE 1,253,128 kt
+    -- = 1,253.1 Mt (total excl. LULUCF, 1990-2024, Dev trial 43282453427). Documentation only until
+    -- metrics_ghg_emissions joins the metrics union below.
+    ('ghg_emissions', 'eea', 'eea:govreg_ghg_inventory:gg_co2e:Sectors/Totals_excl', 0, 2e3),
     -- slice needs-block rows (#2743): every source of the concepts unioned below
     -- 550.6 (Dev trial 43093114523: a candidate country in the 1990s)
     ('core_inflation', 'eurostat', '%', -10, 600),

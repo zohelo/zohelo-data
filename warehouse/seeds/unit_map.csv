@@ -148,6 +148,13 @@ world_bank_ids,pct_exports,,pct_exports
 un_wpp,thousand_persons,,thousand_persons
 un_wpp,children_per_woman,,children_per_woman
 un_wpp,years,,years
+unhcr,persons,,persons
+eea,Gg CO2 equivalent,,thousand_tonnes
+zus_psz,persons,,persons
+zus_psz,PLN,,pln
+zus_psz,days,,days
+zus_psz,payers,,payers
+zus_psz,certificates,,certificates
 eurostat,_Z,eurostat:EARN_MW_CUR:_Z:NAC,ncu
 gus_bdl,-,gus_bdl:P2692:-%,index_py_100
 gus_bdl,-,gus_bdl:P2721:-%,index_py_100

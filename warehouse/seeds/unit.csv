@@ -48,4 +48,7 @@ wgi_estimate,est.,"governance estimate, about -2.5 to 2.5","ocena jakości rząd
 index_world_100,świat=100,"index, world = 100","indeks, świat = 100",true,index_world_100,1
 pct_gni,% DNB,% of GNI,% DNB,true,pct,1
 pct_exports,% eksportu,"% of exports of goods, services and primary income","% eksportu towarów, usług i dochodów pierwotnych",true,pct,1
+days,dni,days,dni,false,days,1
+payers,płatn.,contribution payers,płatnicy składek,false,payers,1
+certificates,zaśw.,medical certificates,zaświadczenia lekarskie,false,certificates,1
 pln_per_m2,zł/m²,PLN per square metre,zł za m²,false,pln_per_m2,1

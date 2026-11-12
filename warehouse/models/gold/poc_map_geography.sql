@@ -291,6 +291,22 @@ wb_family as (
 -- calls) from poc_unctad_areas: the EU27 members, 3412 European Union (2020 …) = EU27_2020, 0000 World. Other
 -- economies have no ISO code in the tables (_X); the build stage builds only the listed areas, and
 -- tests/unctad_areas_present.sql fails when a listed code is missing from one of the three built tables.
+-- ZUS statistical portal (PLS-009): '00' = Poland; voivodeships by their 2-digit TERYT code (the Silver model matched
+-- ZUS's voivodeship names to these codes). Built from TERYT, so the dimensions never wait for the ZUS source.
+zus_psz as (
+    select
+        'zus_psz' as source_system,
+        terc_code as source_code,
+        'TERC:' || terc_code as geography_key
+    from {{ ref('teryt_terc') }}
+    where unit_level = 'wojewodztwo'
+    union all
+    select
+        'zus_psz' as source_system,
+        '00' as source_code,
+        'PL' as geography_key
+),
+
 unctad_areas as ({{ poc_unctad_areas() }}),
 
 unctad as (
@@ -408,6 +424,29 @@ un_wpp as (
         geography_key
     from geo
     where level_name = 'country' and length(geography_key) = 2
+),
+
+-- UNHCR Refugee Statistics (cf_type=ISO): countries of asylum by ISO 3166-1 alpha-3 (dim_geography iso3), built
+-- from Gold's own list like oecd, so the dimensions never wait for the UNHCR source; UNHCR's own codes for
+-- unknown or stateless origins are breakdowns, not areas.
+unhcr as (
+    select
+        'unhcr' as source_system,
+        g.iso3 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso3 is not null
+),
+
+-- EEA greenhouse gas inventory: countries by ISO 3166-1 alpha-2 as published (Greece GR), built from Gold's own
+-- list like oecd, so the dimensions never wait for the EEA source; the EEA aggregate EUA has no Gold key (_X).
+eea as (
+    select
+        'eea' as source_system,
+        g.iso2 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso2 is not null
 )
 
 select
@@ -449,6 +488,12 @@ from (
     select * from ids
     union all
     select * from un_wpp
+    union all
+    select * from unhcr
+    union all
+    select * from eea
+    union all
+    select * from zus_psz
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null
