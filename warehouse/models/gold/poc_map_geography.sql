@@ -203,6 +203,20 @@ gus_publications as (
     from (values ('gus_culture'), ('gus_culture_participation'), ('gus_tourism'), ('gus_nsp2021'), ('gus_psr2020')) as s (source_system)
 ),
 
+-- MRPiPS social assistance (MRPiPS-03): voivodeships by name as printed (lower case), matched to the TERYT names.
+mrpips_social_assistance as (
+    select
+        'mrpips_social_assistance' as source_system,
+        lower(name_u) as source_code,
+        'TERC:' || terc_code as geography_key
+    from terc_woj
+    union all
+    select
+        'mrpips_social_assistance' as source_system,
+        'polska' as source_code,
+        'PL' as geography_key
+),
+
 wdi as (
     select
         'world_bank_wdi' as source_system,
@@ -442,6 +456,8 @@ from (
     select * from dbw
     union all
     select * from mrpips
+    union all
+    select * from mrpips_social_assistance
     union all
     select * from gus_publications
     union all

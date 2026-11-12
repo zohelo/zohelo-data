@@ -3494,7 +3494,8 @@ sources:
   name: Social assistance and family-support statistical reports
   short_name: MRPiPS social assistance
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej
-  status: approved
+  source_system: mrpips_social_assistance
+  status: built
   family: B
   kpi: true
   geography: Poland and voivodeships, report-dependent
@@ -3532,10 +3533,9 @@ sources:
   research:
     priority: specialist
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
-    - Select named report families
-    - Map legislative breaks
+    - 'Curated table only (Dev probes 43270285788, 43288193321): MRPiPS-03 DZIAŁ 2 row 1 by voivodeship (persons granted a benefit by decision, families, persons in families), years from 2019; the files are .xls only (read with xlrd). Other sections (benefit forms 1A-1D, reasons 3, family types 4) and the MRPiPS-05/-06 reports are not modelled; legislative breaks before 2019 not mapped.'
     references:
     - https://www.gov.pl/web/rodzina/analizy-i-raporty
     - https://www.gov.pl/web/rodzina/sprawozdawczosc
@@ -3794,85 +3794,94 @@ sources:
   name: Balance of payments statistics
   short_name: NBP balance of payments
   provider: Narodowy Bank Polski (NBP)
-  status: registered
+  source_system: nbp_bop
+  current: true
+  status: built
   family: C
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [macroeconomics, external sector]
   entities: [country]
-  granularity: Period, BOP component, direction, counterpart/instrument where published.
-  coverage: History varies by table; no universal start date verified.
+  granularity: 'Balance of payments items (current, capital and financial account, credits, debits, balances, by
+    functional category and sector) by month (bop_m) and quarter (bop_q), in million PLN, EUR and USD.'
+  coverage: Monthly and quarterly from 2004 (Dev probe 43085930329, 11 Nov 2026).
   access:
-    endpoint: https://nbp.pl/en/statistic-and-financial-reporting/
+    endpoint: https://static.nbp.pl/dane/bilans-platniczy/bop_q.xlsx
     kind: bulk_file
-    interfaces: [HTML, XLSX, PDF]
+    interfaces: [XLSX, PDF]
     auth: public download
     cost: free
-    limits: Unknown.
+    limits: 'Two workbooks (~290 kB bop_m, ~340 kB bop_q) at fixed URLs; the nbp.pl pages linking them answer
+      automated clients with HTTP 403. Terms of Use §5(1): one request per file and run.'
   licence:
     status: unresolved
-    notes: Public access is documented; attachment reuse terms remain unresolved.
-  updates: Monthly/quarterly/annual observations depending on table; vintages may revise history.
+    notes: 'Terms: Terms of Use of the Narodowy Bank Polski Website,
+      https://static.nbp.pl/dokumenty/regulaminy/regulamin_nbppl_en.pdf (personal use, source with a link to
+      www.nbp.pl; commercial reuse and redistribution not addressed). Attribution: "Źródło: NBP, www.nbp.pl".
+      Unresolved under the owner decision of 14 Oct 2026 (NBP data stays internal until NBP confirms reuse terms).'
+  updates: Monthly BoP about six weeks after the month, quarterly BoP about three months after the quarter; revised
+    history (the whole workbook is replaced; Last-Modified 14 Oct 2026 bop_m, 30 Sep 2026 bop_q at the probe).
   ingestion:
-    history: 'PROPOSAL: enumerate NBP BOP downloadable table families first; backfill each file separately with
-      its publication vintage.'
-    incremental: 'PROPOSAL: use the NBP release calendar to fetch new files, then compare recent periods because
-      publication dates are not row-level CDC.'
-    identifiers: period + BOP component + direction + unit + vintage
+    history: Full history in each workbook; landed whole (bulk_file pattern), one version kept in Bronze.
+    incremental: Weekday re-download; written only when the SHA-256 changed.
+    identifiers: workbook + currency sheet + item (row label, block, section) + period
   modelling:
-    notes: Separate flows, balances, credits/debits and adjusted series.
-    overlap: Overlaps ECB/Eurostat/IMF copies; preserve NBP vintage.
+    notes: Separate flows, balances, credits/debits; amounts only (no shares of GDP in the workbooks).
+    overlap: Overlaps Eurostat BOP_C6_Q / BOP_GDP6_Q; each source its own series (O31).
   research:
     priority: review-first
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - Map table history, stable codes and licence.
+    - Confirm NBP reuse terms.
     references:
-    - https://nbp.pl/en/statistic-and-financial-reporting/
+    - https://static.nbp.pl/dane/bilans-platniczy/bop_m.xlsx
+    - https://static.nbp.pl/dane/bilans-platniczy/bop_q.xlsx
     - https://nbp.pl/en/statistic-and-financial-reporting/calendar/
 - id: PLG-003
   name: International investment position and external statistics
   short_name: NBP investment position
   provider: Narodowy Bank Polski (NBP)
-  status: registered
+  source_system: nbp_bop
+  current: true
+  status: built
   family: C
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [macroeconomics, external sector, investment]
   entities: [country]
-  granularity: Stock by period, functional category, instrument and sector where published.
-  coverage: Dataset-specific; exact history not established.
+  granularity: 'International investment position: assets and liabilities by functional category, instrument and
+    sector, end of quarter, in million PLN, EUR and USD (iip_q). Other external statistics (external debt, reserves)
+    are a separate, not yet built scope.'
+  coverage: Quarterly from 2004 (Dev probe 43085930329, 11 Nov 2026).
   access:
-    endpoint: https://nbp.pl/en/statistic-and-financial-reporting/
+    endpoint: https://static.nbp.pl/dane/bilans-platniczy/iip_q.xlsx
     kind: bulk_file
-    interfaces: [HTML, XLSX, PDF]
+    interfaces: [XLSX, PDF]
     auth: public download
     cost: free
-    limits: Unknown.
+    limits: One workbook (~170 kB) at a fixed URL, landed with PLG-002 by source_system nbp_bop.
   licence:
     status: unresolved
-    notes: Public access does not itself establish redistribution rights.
-  updates: Quarterly/annual tables; positions may be revised for valuation/source changes.
+    notes: 'Same NBP website Terms of Use as PLG-002; unresolved under the owner decision of 14 Oct 2026.'
+  updates: Quarterly, about three months after the quarter; positions revised (Last-Modified 29 Sep 2026 at the probe).
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
-    identifiers: period + asset/liability + category + instrument + sector
+    history: Full history in the workbook; landed whole (bulk_file pattern).
+    incremental: Weekday re-download; written only when the SHA-256 changed.
+    identifiers: currency sheet + item (row label, block, section) + quarter
   modelling:
     notes: Stocks are non-additive through time; separate transactions and valuation changes.
-    overlap: Related to BOP flows but not interchangeable; overlaps international replicas.
+    overlap: Related to BOP flows but not interchangeable; overlaps Eurostat BOP_IIP6_Q and TIPSII10.
   research:
     priority: review-next
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - Locate current table index, history and terms.
+    - Confirm NBP reuse terms.
     references:
-    - https://nbp.pl/en/statistic-and-financial-reporting/
+    - https://static.nbp.pl/dane/bilans-platniczy/iip_q.xlsx
 - id: PLG-004
   name: Monetary aggregates
   short_name: NBP monetary aggregates

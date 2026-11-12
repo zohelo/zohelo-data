@@ -7,6 +7,7 @@ description: "GUS — Kultura i dziedzictwo narodowe (culture and national herit
 # Last-Modified), written only when the SHA-256 changed; the newest edition is downloaded again on every run, older
 # landed editions are not (ingestion/common/gus_publications.py, ingestion/to_landing/gus_culture/). Restart unit: one
 # edition. Dev probes 43269548145, 43270285788, 43270655323, 43271452794 on test/w3-gus-probe.
+# History: editions 2019-2025 (reference years), 85 Silver rows each (5 tables x 17 areas); Dev trial 43288102198 (test/w3-gus-culture-trial): 7 files, 567,438 Bronze cells, 595 Silver and Gold rows, 0 duplicate keys, 0 rejected; second Landing and Bronze runs wrote nothing.
 extraction:
   initial: bulk
   production: snapshot                  # each edition file as published; a correction replaces it
