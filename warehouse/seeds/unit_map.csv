@@ -210,3 +210,6 @@ unece,NC,,ncu
 unece,NCU per US$,,ncu_per_usd
 unece,NCU per Euro,,ncu_per_eur
 unece,NCU per Ruble,,ncu_per_rub
+owid,t_co2_per_person,,t_co2_per_person
+owid,index_0_1,,index_0_1
+owid,intl_usd_2011_per_person,,intl_usd_2011_per_person

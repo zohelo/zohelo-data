@@ -191,7 +191,13 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- seasonally adjusted unemployment rate 0.5 to 36.7 (MK).
     ('unemployment_rate_monthly_sa', 'unece', '%', 0, 80),
     ('cpi_annual_rate', 'unece', '%', -50, 1e5),
-    ('ppi_annual_rate', 'unece', '%', -80, 1e5)
+    ('ppi_annual_rate', 'unece', '%', -80, 1e5),
+    -- Our World in Data (CD-031, #2982): consumption-based CO2 in tonnes per person (Global Carbon Budget); the V-Dem
+    -- electoral democracy index, 0 to 1 by definition; Maddison GDP per capita in international-$ at 2011 prices
+    -- (bounds as checked in the Dev trial of #2982 on every Gold row).
+    ('co2_consumption_per_capita', 'owid', '%', 0, 100),
+    ('electoral_democracy_index', 'owid', '%', 0, 1),
+    ('gdp_per_capita_long_run', 'owid', '%', 100, 300000)
 ),
 
 metrics as (
@@ -590,6 +596,33 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_health_expenditure_gdp') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_co2_consumption_per_capita') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_electoral_democracy_index') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_gdp_per_capita_long_run') }}
 )
 
 select

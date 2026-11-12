@@ -9362,7 +9362,8 @@ sources:
   name: Our World in Data Chart Data API
   short_name: Our World in Data
   provider: Global Change Data Lab
-  status: approved
+  source_system: owid
+  status: built
   family: J
   kpi: true
   geography: worldwide
