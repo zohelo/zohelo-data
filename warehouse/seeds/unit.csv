@@ -1,6 +1,5 @@
 unit_key,symbol,name_en,name_pl,is_rate
 persons,os.,persons,osoby,false
-thousand_persons,tys. os.,thousand persons,tysiące osób,false
 mln_ncu,mln,"million, source currency","mln, waluta źródła",false
 ncu_per_person,/os.,source currency per person,waluta źródła na osobę,false
 pct,%,per cent,procent,true
@@ -38,3 +37,4 @@ ppp_usd_per_person,$ PPP/os.,PPP international dollars per person,dolary między
 ncu,NCU,source currency,waluta źródła,false
 entities,podm.,legal entities,podmioty,false
 list_entries,wpisy,list entries,wpisy,false
+thousand_persons,tys. os.,thousand persons,tysiące osób,false

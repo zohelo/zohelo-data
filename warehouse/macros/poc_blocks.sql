@@ -249,6 +249,16 @@
     ) as t (economy, candidate_key)
 {% endmacro %}
 
+{# WHO data.who.int blocks (gold.build_who): one per indicator file; areas: EU27 members (M49, macro
+   poc_m49_eu27) and World (M49 1, GLOBAL). #}
+{% macro poc_who_blocks() %}
+    select * from (
+        values
+        ('life_expectancy', 'Life expectancy at birth (WHO)'),
+        ('hale', 'Healthy life expectancy at birth (WHO)')
+    ) as t (entity, block_name)
+{% endmacro %}
+
 {# UN WPP blocks: one per indicator (gold.build_un_wpp); countries: the EU27 members built (ISO two-letter). #}
 {% macro poc_un_wpp_blocks() %}
     select
@@ -347,6 +357,9 @@
     poc_build_gleif:gleif
     poc_build_mf_biala_lista:mf_biala_lista
     poc_build_prg:gugik_prg
+    poc_build_mf_jst_budgets:mf_jst_budgets
+    poc_build_mrpips_unemployment:mrpips_unemployment
+    poc_build_who:who
     poc_build_un_wpp:un_wpp
 {% endmacro %}
 
@@ -421,6 +434,8 @@
     union all
     select distinct 'unctad', entity, entity from ({{ poc_unctad_blocks() }})
     union all
+    select 'who', entity, block_name from ({{ poc_who_blocks() }})
+    union all
     select 'un_wpp', indicator, block_name from ({{ poc_un_wpp_blocks() }})
     union all
     select * from (
@@ -438,6 +453,8 @@
         ('oecd', 'cli', 'OECD composite leading indicators and confidence indicators'),
         ('gleif', 'lei2', 'GLEIF LEI records (golden copy)'),
         ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file'),
-        ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units')
+        ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units'),
+        ('mf_jst_budgets', 'jst_budget', 'MF local-government budget summaries (year to date)'),
+        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}

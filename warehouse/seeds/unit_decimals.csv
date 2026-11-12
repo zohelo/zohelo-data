@@ -1,6 +1,5 @@
 unit_key,decimals
 persons,0
-thousand_persons,3
 mln_ncu,0
 ncu_per_person,0
 pct,1
@@ -38,3 +37,4 @@ ppp_usd_per_person,0
 ncu,0
 entities,0
 list_entries,0
+thousand_persons,1
