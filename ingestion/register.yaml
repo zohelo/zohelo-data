@@ -2073,7 +2073,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - 'Dev probe 43162355678: strateg.stat.gov.pl/apidocs/ is a Flasgger UI whose spec URL was not found (apispec_1.json 404); the host api-strateg.stat.gov.pl does not resolve from GitHub runners (Dev probe 43086687586). API base URL and quota terms to be confirmed before a build.'
+    - 'Dev probe 43087698750: strateg.stat.gov.pl/apidocs/ is a Flasgger UI whose spec URL was not found (apispec_1.json 404); the host api-strateg.stat.gov.pl does not resolve from GitHub runners (Dev probe 43086687586). API base URL and quota terms to be confirmed before a build.'
     - Open current API method documentation (https://strateg.stat.gov.pl/apidocs/?lang=en)
     - Commercial reuse not addressed by GUS terms (ask GUS if needed)
     references:
@@ -2171,7 +2171,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - 'Dev probe 43162355678: final-results pages on stat.gov.pl link XLSX tables per theme (nationality, language and religion for Poland and territorial units; population by census district, sex and age group) under /download/gfx/portalinformacyjny/pl/defaultaktualnosci/6536/<n>/1/1/*.xlsx; a one-off release, a curated table list is the next step.'
+    - 'Dev probe 43160190595: final-results pages on stat.gov.pl link XLSX tables per theme (nationality, language and religion for Poland and territorial units; population by census district, sex and age group) under /download/gfx/portalinformacyjny/pl/defaultaktualnosci/6536/<n>/1/1/*.xlsx; a one-off release, a curated table list is the next step.'
     - Inventory exact downloadable table families
     - Define small-cell handling
     references:
@@ -3533,7 +3533,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
-    - 'Dev probe 43162355678: gov.pl/web/arimr/wdrazane-programy-i-dzialania---dane-liczbowe links per-scheme pages (e.g. platnosci-bezposrednie2) with no single statistics file index; the per-scheme attachments are still to be inventoried.'
+    - 'Dev probes 43086687586 and 43091539492: gov.pl/web/arimr/wdrazane-programy-i-dzialania---dane-liczbowe links per-scheme pages (e.g. platnosci-bezposrednie2) with no single statistics file index; the per-scheme attachments are still to be inventoried.'
     - Locate canonical aggregate statistics index
     - Exclude personal beneficiary records
     - Document cumulative-status semantics
