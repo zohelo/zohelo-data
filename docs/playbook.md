@@ -28,13 +28,18 @@ stages are `.github/backlog/stages.yaml`.
   registered keys are fine, no IP rotation, no parallel scraping, never around bot protection.
 - Define the **entity** (the source's own unit: dataset, table, file) and the **version**
   (the source's last update of that entity; download time when the source gives none).
-- Fill every field of the register entry. **Licence:** `licence.notes` names the terms URL,
-  the exact attribution sentence, and whether commercial reuse and modification are allowed.
-  Terms not stated by the source → `licence.status: unresolved` (the source stays internal;
-  the licence gate hides it). Never claim a licence the source does not state.
+- Fill every field of the register entry. **Licence:** `licence.notes` starts with `Terms:` and
+  names the terms URL, the exact attribution sentence, and whether commercial reuse and
+  modification are allowed. Terms not stated by the source → `licence.status: unresolved` and,
+  after `Terms:`, what the pages read say (the source stays internal; the licence gate hides
+  it). Never claim a licence the source does not state. `Terms:` is what lets the backlog sync
+  close the review issues of an approved entry (docs/backlog.md §2).
 - Outcome: register `status: approved` (route and terms known, or `unresolved` and internal),
-  or `parked` with the reason as the first `research.blockers` item. A new key or account, a
-  paid tier or unclear legality is an owner question (AGENTS.md "Ask the owner first").
+  or `parked` with the reason as the first `research.blockers` item (never for a technical
+  reason; when the data is fully in a source already loaded, that item starts with
+  `Contained in:` and names it, which is what lets the backlog sync close the entry's issues).
+  A new key or account, a paid tier or unclear legality is an owner question (AGENTS.md "Ask
+  the owner first").
 
 ## 2. Landing (`ingestion/to_landing/<source>/` or the shared pattern `ingestion/to_landing/patterns/<kind>.py`)
 

@@ -3870,7 +3870,9 @@ sources:
     limits: One workbook (~170 kB) at a fixed URL, landed with PLG-002 by source_system nbp_bop.
   licence:
     status: unresolved
-    notes: 'Same NBP website Terms of Use as PLG-002; unresolved under the owner decision of 14 Oct 2026.'
+    notes: 'Terms: same NBP website Terms of Use as PLG-002
+      (https://static.nbp.pl/dokumenty/regulaminy/regulamin_nbppl_en.pdf); unresolved under the owner decision of 14
+      Oct 2026.'
   updates: Quarterly, about three months after the quarter; positions revised (Last-Modified 29 Sep 2026 at the probe).
   ingestion:
     history: Full history in the workbook; landed whole (bulk_file pattern).
