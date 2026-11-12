@@ -19,10 +19,11 @@ skills:
   context); `dbt-toolkit:dbt-debug` when a dbt build or parse fails; `superpowers:systematic-debugging` when a
   trial fails twice for a reason you do not understand; `data:validate-data` on the trial's numbers before you
   cite them. Name them in a `Skills used:` line of your report (O24).
-- Work only in your own git worktree and your own source. Shared files (`ingestion/register.yaml`,
-  `warehouse/seeds/source.csv`, `licence.csv`, `unit.csv`, `warehouse/warehouse.yaml`,
-  `ingestion/common/lineage.py`, the Pipeline `source` option list, `warehouse/models/bronze/sources.yml`,
-  `docs/sources.md`): touch only your own rows or lines, rebase on `origin/main` right before opening the PR and
+- Work only in your own git worktree and your own source. A source's lines go in the source's own
+  files (`docs/source-registration.md`, D34): never add a line to `warehouse/warehouse.yaml`,
+  `ingestion/common/lineage.py`, `.github/workflows/pipeline.yml`, `warehouse/models/bronze/sources.yml` or
+  `docs/sources.md`. Still shared (`ingestion/register.yaml`, `warehouse/seeds/source.csv`, `licence.csv`,
+  `unit.csv`): touch only your own rows or lines, rebase on `origin/main` right before opening the PR and
   resolve conflicts by keeping both sides. Do not touch `poc_fact_*` or Gold (that is `gold-modeller`).
 - One PR per source (or small family), at most about 400 changed lines; body starts `Closes #<Task>` (create the
   Task by REST if the generated one does not exist: `gh api repos/zohelo/zohelo-data/issues -f title=… -f type=Task
@@ -56,7 +57,7 @@ skills:
    (judged per source, D32: `mode: full` for a small source, `incremental` with `unit` in every layer for a big
    one, from its size, update pattern and whether the source offers changed-since; no fixed row threshold;
    `decided: "D32, #<this source's PR or issue>"`), `activities`. Add `source_system` to the register
-   entry and the source to the Pipeline `source` options.
+   entry (the Pipeline needs no line: its `source` input is free text checked against the declarations).
 2. **Landing**: shared pattern, or `ingestion/to_landing/<source_system>/` exposing `landing.inspect`,
    `landing.extract`, `landing.verify`. Exact source bytes, receipt after the file, never overwrite, resumable,
    time-budgeted.
@@ -65,15 +66,16 @@ skills:
    `bronze.<source>_rejected_files`. DuckDB-native decoding.
 4. **Silver** `warehouse/models/silver/<source_system>/`: newest version per entity, typed values, source codes
    kept. `_<source_system>.yml` with the grain in the description, `unique` on the grain, `not_null` on keys and
-   `raw_sha256`, `accepted_values` on closed lists. Header comment: what, grain, source. A `full_rebuild` ceiling in
-   `warehouse/warehouse.yaml` (about 1.5 × the measured rows).
+   `raw_sha256`, `accepted_values` on closed lists. Header comment: what, grain, source. A `full_rebuild:` ceiling per
+   model in `ingestion/sources/<source_system>.yaml` (about 1.5 × the measured rows), and the Bronze tables as dbt
+   sources in `warehouse/models/bronze/<source_system>.yml`.
 5. **Dev trial** (`dev/<source_system>_trial.py` on the trial branch only): Landing → Bronze → Silver into
    scratch, each step run twice. Record files, bytes, rows per table, history range, duplicate keys, null keys,
    rejected files, and that the second run changed nothing.
 6. **Schedule**: `extraction.schedule` with a release-aware cron in UTC and the run
    `full dataflow: landing → bronze → silver → gold → portal`.
-7. **Docs and seeds**: `docs/sources.md` section (route, entity, version, restart unit), `source.csv`,
-   `licence.csv`, `lineage.py`, register `status: built`. You never set `silver` or `gold`: the orchestrator
+7. **Docs and seeds**: `docs/sources/<source_system>.md` (route, entity, version, restart unit), `source.csv`,
+   `licence.csv`, register `status: built`. You never set `silver` or `gold`: the orchestrator
    does at Verify, after the scheduler's own runs.
 
 ## Pre-PR checklist (lessons from reviews; every line gets "done: <evidence>" or "n/a: <why>" in the PR body)
@@ -98,7 +100,8 @@ These are the defects reviewers found repeatedly. A PR that skips a line goes to
    state are `unresolved`. Say which status the source has and what the catalogue row of the trial shows for it;
    do not write "the gate hides it" without that row.
 8. **Ceilings.** Every new full-rebuild model (build stage, metrics, Silver) has a `full_rebuild` ceiling in
-   `warehouse/warehouse.yaml`, about 1.5 × the rows measured on the final head, at most 1 M; above that the model is
+   the source's `ingestion/sources/<source>.yaml` (`warehouse/warehouse.yaml` only for a model of several sources), about
+   1.5 × the rows measured on the final head, at most 1 M; above that the model is
    incremental from the start (D28).
 9. **Fresh base, own rows.** Right before opening the PR: `git fetch origin main`, rebase (before the first push)
    or merge `origin/main` (after it; force-push is refused), keep both sides in shared files, then rerun

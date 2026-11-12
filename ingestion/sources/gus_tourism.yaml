@@ -7,7 +7,7 @@ description: "GUS — Turystyka (tourism), annual publication tables"
 # Last-Modified), written only when the SHA-256 changed; the newest edition is downloaded again on every run, older
 # landed editions are not (ingestion/common/gus_publications.py, ingestion/to_landing/gus_tourism/). Restart unit: one
 # edition. Dev probes 43269548145, 43270285788, 43270655323, 43271452794 on test/w3-gus-probe.
-# History: editions 2019-2025, 68 Silver rows each (4 tables x 17 areas); Dev trial 43288102198: 7 ZIPs, 222,840 Bronze cells, 476 Silver and Gold rows, 0 duplicate keys, 0 rejected; second runs wrote nothing.
+# History: editions 2019-2025, 68 Silver rows each (4 tables x 17 areas); Dev trial 43298219762 (first 43288102198): 7 ZIPs, 222,840 Bronze cells, 476 Silver and Gold rows, 0 duplicate keys, 0 rejected; second runs wrote nothing.
 extraction:
   initial: bulk
   production: snapshot                  # each edition file as published; a correction replaces it
@@ -23,6 +23,9 @@ archive_policy:
 bronze: [bronze.gus_tourism_cells, bronze.gus_tourism_rejected_files]
 silver: [silver.gus_tourism_tables]
 gold: [gold.build_gus_tourism]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gus_tourism_tables: {rows: 750}  # 476 rows, 7 editions 2019-2025 x 68 (Dev trial 43298219762)
+  poc_build_gus_tourism: {rows: 750}  # 476 (Dev trial 43298219762)
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): a handful of edition files, one new a year, a few hundred thousand cells;

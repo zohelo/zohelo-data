@@ -136,9 +136,11 @@ SOURCE_KEYS = {
     "bronze",
     "silver",
     "gold",
+    "full_rebuild",
     "legacy_tables",
     "activities",
 }
+RESERVED_IDS = ("platform", "scheduler")  # Pipeline names that are not sources
 EXTRACTION_KEYS = {"initial", "production", "incremental_policy", "schedule", "kind", "bulk_file", "excluded"}
 KINDS = {"bulk_file"}  # implemented shared patterns (docs/landing.md, common ingestion framework)
 
@@ -156,6 +158,9 @@ def config_problems(config: dict) -> list[str]:
             problems.append(f"{source}: missing keys {sorted(missing)}")
         if cfg.get("source_system") != source:
             problems.append(f"{source}: source_system must equal the file name")
+        if source in RESERVED_IDS or not source.replace("_", "").isalnum() or source != source.lower():
+            # The Pipeline's `source` input is free text and names the concurrency group (pipeline.yml).
+            problems.append(f"{source}: a source id is lower-case letters, digits and _ and not one of {RESERVED_IDS}")
         kind = (cfg.get("extraction") or {}).get("kind")
         if kind is not None and kind not in KINDS:
             problems.append(f"{source}: extraction.kind {kind!r} is not an implemented pattern {sorted(KINDS)}")
@@ -175,8 +180,8 @@ def config_problems(config: dict) -> list[str]:
                     problems.append(
                         f"{source}: {f.get('entity')}: url_from needs page and pattern (pick: first or last)"
                     )
-                if f.get("format", "raw") not in {"zip", "gzip", "7z", "raw"}:
-                    problems.append(f"{source}: {f.get('entity')}: format must be zip, gzip, 7z or raw")
+                if f.get("format", "raw") not in {"zip", "gzip", "7z", "json", "raw"}:
+                    problems.append(f"{source}: {f.get('entity')}: format must be zip, gzip, 7z, json or raw")
                 if f.get("url_date") and "{date}" not in str(f.get("url")):
                     problems.append(f"{source}: {f.get('entity')}: url_date needs {{date}} in the url")
                 if f.get("version", "last_modified") not in {"last_modified", "ingested"}:
