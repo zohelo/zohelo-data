@@ -1,4 +1,6 @@
-"""GUS NSP 2021 census: Landing → Bronze activities (register PLS-005). Landing is the shared bulk_file pattern.
+"""GUS NSP 2021 census: Landing → Bronze activities (register PLS-005).
+
+Landing is the shared bulk_file pattern.
 
 bronze.load       newest copy of every declared workbook → bronze.gus_nsp2021_cells
                   (one row per workbook cell, ingestion/common/gus_publications.py);

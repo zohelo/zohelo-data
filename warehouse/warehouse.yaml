@@ -123,12 +123,12 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_urban_population_share: {rows: 30}  # 17 areas
   poc_metrics_agricultural_holdings: {rows: 60}  # 34: 17 areas x 2010, 2020
   poc_metrics_average_farm_area: {rows: 30}  # 17 areas
-  gus_culture_tables: {rows: 1000}  # 595 rows, 7 editions 2019-2025 x 85 (Dev trial TRIAL1)
-  gus_culture_participation_tables: {rows: 50}  # 18 rows, editions 2019 and 2024 (Dev trial TRIAL1)
-  gus_tourism_tables: {rows: 750}  # 476 rows, 7 editions 2019-2025 x 68 (Dev trial TRIAL1)
-  poc_build_gus_culture: {rows: 1000}  # 595 (Dev trial TRIAL1)
-  poc_build_gus_culture_participation: {rows: 50}  # 18 (Dev trial TRIAL1)
-  poc_build_gus_tourism: {rows: 750}  # 476 (Dev trial TRIAL1)
+  gus_culture_tables: {rows: 1000}  # 595 rows, 7 editions 2019-2025 x 85 (Dev trial 43288102198)
+  gus_culture_participation_tables: {rows: 50}  # 18 rows, editions 2019 and 2024 (Dev trial 43288102198)
+  gus_tourism_tables: {rows: 750}  # 476 rows, 7 editions 2019-2025 x 68 (Dev trial 43288102198)
+  poc_build_gus_culture: {rows: 1000}  # 595 (Dev trial 43288102198)
+  poc_build_gus_culture_participation: {rows: 50}  # 18 (Dev trial 43288102198)
+  poc_build_gus_tourism: {rows: 750}  # 476 (Dev trial 43288102198)
   poc_metrics_museum_visitors: {rows: 200}  # 119: 17 areas x 7 years
   poc_metrics_cinema_admissions: {rows: 200}  # 119
   poc_metrics_public_library_users: {rows: 200}  # 119
@@ -265,7 +265,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_vacancies_per_unemployed: {rows: 20000}
   poc_metrics_average_gross_wage: {rows: 20000}
   poc_metrics_employment_rate: {rows: 20000}
-  poc_metrics_registered_unemployment_rate: {rows: 30000}
+  poc_metrics_registered_unemployment_rate: {rows: 56000}  # 37,170 rows on prod (12 Nov, review of #2852)
   poc_metrics_business_confidence_oecd: {rows: 50000}  # 27,432 rows, 55 areas (#2738)
   poc_metrics_consumer_confidence_oecd: {rows: 50000}  # 24,611 rows, 51 areas
   poc_metrics_cli_oecd: {rows: 30000}  # 14,307 rows, 22 areas
