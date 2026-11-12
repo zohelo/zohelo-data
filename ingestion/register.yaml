@@ -764,7 +764,13 @@ sources:
       — ESCB statistics are provided free of charge irrespective of commercial or non-commercial use, provided
       the source is quoted, the statistics (including metadata) are not modified, and the ECB and NCB
       disclaimers are respected; third-party data needs prior permission from the originator; no right to
-      confidential data. Attribution: "Source: ECB statistics".'
+      confidential data. Attribution: "Source: ECB statistics". Compilers of the built selections (review of #2758):
+      EXR, FM, EST and BSI are ECB/ESCB statistics. HICP and ICP are compiled by Eurostat (TITLE_COMPL "Statistical
+      Office of the European Commission (Eurostat)" / "Eurostat", Dev trial 43099368908), so they fall under the
+      Eurostat reuse policy (Commission Decision 2011/833/EU, CC BY 4.0, "Source: Eurostat"; register GL-001), which
+      also allows commercial reuse. IRS (long-term interest rates for convergence purposes) is collected from national
+      sources; its compilers'' terms are not established, so the IRS series stay out of the published layer until
+      they are (kpi_v2_map bond_yield_10y / ecb: needs-block).'
   updates: Release and revision cadence is dataflow-specific; API page was unavailable during review.
   ingestion:
     history: Snapshot dataflow structures and complete selected series.
@@ -778,7 +784,8 @@ sources:
     evidence: documented
     connection: tested
     blockers:
-    - 'Identify third-party series exceptions (prior permission needed) for every dataflow added'
+    - 'Third-party terms of IRS (long-term interest rates for convergence purposes, national compilers) not established;
+      HICP/ICP are Eurostat (CC BY 4.0) and EXR, FM, EST, BSI are ECB statistics. Check every dataflow added.'
     references:
     - https://data.ecb.europa.eu/
     - https://data.ecb.europa.eu/help/api/overview
