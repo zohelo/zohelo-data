@@ -24,7 +24,7 @@ listed in ``full_refresh`` and the build passes it as the dbt var ``full_refresh
 
 A model whose source table does not exist yet (a new source before its first Bronze load), directly or
 through other models, is left out and listed under ``waiting``. A Gold block (a model tagged ``gold_block``,
-listed in ``poc_block_models()`` in macros/poc_blocks.sql) stops that: it waits itself, but the models that
+listed by ``poc_block_models()``, macros/source_registration.sql) stops that: it waits itself, but the models that
 union the blocks (facts, dimensions, metrics) are planned as usual and read only the blocks whose table
 exists (``poc_observations()``), so a new source's block contributes zero rows until its first run instead
 of holding back the whole Gold layer. Those blocks are listed again under ``empty_blocks``.

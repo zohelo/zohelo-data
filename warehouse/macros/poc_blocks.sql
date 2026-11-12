@@ -406,10 +406,11 @@
     order by k.kpi_key, m.priority
 {% endmacro %}
 
-{# The Gold blocks (build stage models) as `model:source_system`, one per line. A block model carries the tag
-   `gold_block` (ops/repo_check.py checks both lists agree): its children do not wait for it in the
-   changed-only build (warehouse/changed.py), they read it only once its table exists. #}
-{% macro poc_block_models() %}
+{# The Gold blocks (build stage models) listed here before per-source registration (D34,
+   docs/source-registration.md), as `model:source_system`, one per line. Do not add lines: a new source
+   registers itself in warehouse/macros/sources/<source>.sql and poc_block_models()
+   (macros/source_registration.sql) adds it to this list. #}
+{% macro poc_legacy_block_models() %}
     poc_build_eurostat:eurostat
     poc_build_bdl:gus_bdl
     poc_build_dbw:gus_dbw
@@ -491,9 +492,10 @@
     || '|' || breakdown_json
 {% endmacro %}
 
-{# Every activated block of every source: the list build_check reports against, so a block that
-   yields no rows (not in Silver yet, or filtered out) is visible. #}
-{% macro poc_activated_blocks() %}
+{# The activated blocks listed here before per-source registration (D34). Do not add lines: a new source
+   names its blocks in warehouse/macros/sources/<source>.sql and poc_activated_blocks()
+   (macros/source_registration.sql) adds them. #}
+{% macro poc_legacy_activated_blocks() %}
     select 'eurostat' as source_system, dataset_id as block_id, block_name from ({{ poc_eurostat_blocks() }})
     union all
     select 'gus_bdl', subgroup_id, block_name from ({{ poc_bdl_blocks() }})
