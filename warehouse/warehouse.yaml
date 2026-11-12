@@ -62,7 +62,7 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)
        gold.dimension, gold.dimension_alias, gold.dim_dimension,  # catalogue: axes
-       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_wdi, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth]   # Gold v1 (warehouse/models/gold, docs/model.md)
+       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_wdi, gold.build_mf_jst_budgets, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth]   # Gold v1 (warehouse/models/gold, docs/model.md)
 demo_namespaces: [demo_bronze, demo_silver, demo_gold]  # phase 2 demo warehouse (program plan §3.3); never in the public catalogue
 
 # Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
@@ -85,6 +85,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   topic_rank: {rows: 1000}  # 5 periods × 35 topics
   topic_quality: {rows: 1000}
   topic_volume: {rows: 50000}  # 35 topics × days since the first landing  # topics (O32): ~150,000 headlines in 400 days (7 feeds)
+  mf_jst_budget_summary: {rows: 150000}  # see the PR for the Dev trial count
   nbp_policy_rates: {rows: 2000}  # 390 rows, 96 archive dates since 1998 (Dev trial 42777711811)
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865
@@ -97,6 +98,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_src_eurostat: {rows: 600000}  # 199,394 (10 Nov) + ~300,000 for the slice datasets (#2592)
   poc_src_dbw: {rows: 1000000}
   poc_src_dbw_dictionary: {rows: 200000}
+  poc_build_mf_jst_budgets: {rows: 2000}  # 4 measures x 6 unit types x quarters since 2022
   poc_build_check: {rows: 1000}
   poc_grain_check: {rows: 10000}
   poc_build_dbw: {rows: 600000}  # 312,512 (10 Nov) + ~110,000 slice blocks (#2592)

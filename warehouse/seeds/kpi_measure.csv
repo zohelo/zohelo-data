@@ -144,3 +144,7 @@ pensioners,gus_bdl,gus_bdl:P2861:osoba:przeciętna liczba emerytów i rencistów
 zus_pension_avg,gus_bdl,gus_bdl:P2860:zł:z pozarolniczego systemu ubezpieczeń społecznych emerytury,"non-agricultural system, old-age pension",1,
 investment_outlays,gus_bdl,gus_bdl:P2862:tys. zł:nakłady inwestycyjne w przedsiębiorstwach,"enterprises, current prices",1,
 vacancies_per_unemployed,gus_bdl,gus_bdl:P4334:osoba:zarejestrowani bezrobotni na 1 ofertę pracy,annual,1,
+local_gov_revenue,mf_jst_budgets,mf_jst_budgets:jst_budget:pln:revenue_executed,"MF summaries, executed, year to date, by unit type",1,
+local_gov_expenditure,mf_jst_budgets,mf_jst_budgets:jst_budget:pln:expenditure_executed,"MF summaries, executed, year to date, by unit type",1,
+local_gov_balance,mf_jst_budgets,mf_jst_budgets:jst_budget:pln:result_executed,"MF summaries, year to date, by unit type",1,
+local_gov_debt,mf_jst_budgets,mf_jst_budgets:jst_budget:pln:liabilities_total,"MF summaries, end of quarter, by unit type",1,

@@ -23,8 +23,8 @@ archive_policy:
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
 bronze: [bronze.mf_jst_budgets_cells, bronze.mf_jst_budgets_rejected_files]
-silver: []
-gold: []
+silver: [silver.mf_jst_budget_summary]
+gold: [gold.build_mf_jst_budgets]
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): about 20 workbooks of a few hundred cells a quarter; small, rebuilt in full.
