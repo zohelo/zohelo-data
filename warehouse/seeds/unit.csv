@@ -42,3 +42,4 @@ ha,ha,hectares,hektary,false,m2,10000
 m2,m²,square metres,metry kwadratowe,false,m2,1
 eur,EUR,euro,euro,false,eur,1
 tonnes,t,tonnes,tony,false,tonnes,1
+thousand_ha,tys. ha,thousand hectares,tysiące hektarów,false,m2,10000000

@@ -131,3 +131,8 @@ mf_jst_budgets,pln,,pln
 mrpips_unemployment,persons,,persons
 mrpips_unemployment,thousand_persons,,thousand_persons
 mrpips_unemployment,pct,,pct
+who,years,,years
+unesco_uis,pct_gdp,,pct_gdp
+unesco_uis,pct,,pct
+faostat,kt,,thousand_tonnes
+faostat,1000 ha,,thousand_ha
