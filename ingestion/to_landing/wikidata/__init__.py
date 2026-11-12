@@ -3,8 +3,9 @@
 landing.inspect  Landing per entity (held copies, newest) and one tiny ASK query that the endpoint answers; the
                  selections themselves are not run (no validator to compare: load compares the SHA-256)
 landing.extract  one SPARQL query per entity of queries.rq (units, population, area, coordinates, website, names),
-                 one at a time with a pause, through the shared bulk_file pattern (exact JSON bytes, receipt after
-                 the file, unchanged bytes skipped); each answer is about 1-2.5 MB and takes under 10 s
+                 one at a time with a pause, through the shared bulk_file pattern (exact JSON bytes, parsed before
+                 landing, receipt after the file, unchanged bytes skipped); each answer is about 1-2.5 MB and takes
+                 under 10 s
 landing.verify   every receipt has its file (bulk_file pattern)
 The user agent names the project and its website, as Wikimedia's User-Agent policy asks.
 """
@@ -34,7 +35,7 @@ def specs() -> list[dict]:
         {
             "entity": entity,
             "url": f"{ENDPOINT}?{urlencode({'query': query, 'format': 'json'})}",
-            "format": "raw",
+            "format": "json",  # parsed before landing: a cut-off answer is retried, never landed
             "version": "ingested",  # the endpoint sends no Last-Modified
             "user_agent": USER_AGENT,
             "read_timeout": 120,

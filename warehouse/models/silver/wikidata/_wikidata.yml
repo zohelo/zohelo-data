@@ -34,7 +34,10 @@ models:
           column_name: "terc_code || '|' || property"
     columns:
       - name: terc_code
-        tests: [not_null, {relationships: {arguments: {to: ref('teryt_terc'), field: terc_code}}}]
+        description: >-
+          A current TERYT code by construction (inner join to silver.teryt_terc). No relationships test: a test with a
+          shared parent would be selected by builds of teryt_terc before this table exists (Dev trial checks it).
+        tests: [not_null]
       - name: property
         tests:
           - not_null

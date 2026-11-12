@@ -1,8 +1,10 @@
 {# Wikidata attributes of Polish territorial units: one row per TERC code of the current TERYT catalogue
    (silver.teryt_terc) × property, for the codes Wikidata holds. Codes Wikidata has but TERYT does not (abolished
    units, other code shapes) are left out; the Dev trial counts them.
-   Item rule: among the items whose P1653 statement carries the code (not deprecated, no end time P582, item not
-   dissolved P576), the preferred-rank statement first, then the lowest numeric QID; item_candidates counts them.
+   Item rule: the items whose P1653 statement carries the code (not deprecated, no end time P582, item not
+   dissolved P576). Several items for one code are different entities, not versions: the code is kept only when
+   exactly one of them has a preferred-rank P1653 statement (that item), otherwise it is left out;
+   tests/wikidata_terc_several_items.sql warns on every such code, and the qid row's candidates = distinct items.
    Value rule, per property of that item: deprecated statements and websites with an end time are left out; then
    preferred rank first, the latest point in time (P585; none last), for websites one in Polish (Q809) or without
    a language first, and the statement id as the last tie-break; candidates counts the statements considered,
@@ -10,26 +12,35 @@
    label_pl, label_en, wikipedia_pl, wikipedia_en, population, area (value in unit_qid), coordinates (lon, lat), website. #}
 with statements as (select * from {{ ref('wikidata_statements') }}),
 
+items as (
+    select
+        value_text as terc_code,
+        qid,
+        bool_or(rank = 'preferred') as preferred,
+        max(raw_sha256) as raw_sha256,
+        max(source_version) as source_version
+    from statements
+    where property = 'P1653' and rank <> 'deprecated' and end_time is null and dissolved is null
+    group by value_text, qid
+),
+
 codes as (
     select
-        s.value_text as terc_code,
+        i.terc_code,
         t.unit_level,
-        s.qid,
-        s.rank,
-        s.raw_sha256,
-        s.source_version,
-        count(*) over (partition by s.value_text) as item_candidates,
-        row_number() over (
-            partition by s.value_text order by s.rank = 'preferred' desc, cast(substr(s.qid, 2) as bigint)
-        ) as pick
-    from statements as s
-    inner join {{ ref('teryt_terc') }} as t on s.value_text = t.terc_code
-    where s.property = 'P1653' and s.rank <> 'deprecated' and s.end_time is null and s.dissolved is null
+        i.qid,
+        i.preferred,
+        i.raw_sha256,
+        i.source_version,
+        count(*) over (partition by i.terc_code) as item_candidates,
+        count(*) filter (where i.preferred) over (partition by i.terc_code) as preferred_items
+    from items as i
+    inner join {{ ref('teryt_terc') }} as t on i.terc_code = t.terc_code
 ),
 
 units as (
     select * from codes
-    where pick = 1
+    where item_candidates = 1 or (preferred_items = 1 and preferred)
 ),
 
 candidates as (
@@ -96,7 +107,7 @@ select
     'qid' as property,
     qid,
     null as statement_id,
-    rank,
+    case when preferred then 'preferred' else 'normal' end as rank,
     qid as value_text,
     null as value_number,
     null as unit_qid,

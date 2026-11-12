@@ -9,7 +9,7 @@ framework")::
         files:
           - entity: WDI_CSV
             url: https://databank.worldbank.org/data/download/WDI_CSV.zip
-            format: zip              # zip | gzip | 7z | raw
+            format: zip              # zip | gzip | 7z | json (must parse) | raw
             version: last_modified   # last_modified (fallback: download time) | ingested
             url_date: Europe/Warsaw  # optional: {date} in url = today (YYYYMMDD) in this zone
             reduce: news_feed        # optional: land only the allowed part of the file (news: headline items)
@@ -57,11 +57,12 @@ from ingestion.common.report import annotate, step_summary
 
 ROOT = Path(__file__).resolve().parents[3]
 USER_AGENT = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
-EXTENSIONS = {"zip": "zip", "gzip": "gz", "7z": "7z", "raw": "bin"}
+EXTENSIONS = {"zip": "zip", "gzip": "gz", "7z": "7z", "json": "json", "raw": "bin"}
 CONTENT_TYPES = {
     "zip": "application/zip",
     "gzip": "application/gzip",
     "7z": "application/x-7z-compressed",
+    "json": "application/json",
     "raw": "application/octet-stream",
 }
 RETRIES = 4
@@ -244,6 +245,13 @@ def check_format(path: Path, fmt: str) -> dict[str, Any]:
             raise RuntimeError("7z test took longer than 30 minutes") from exc
         if tested.returncode != 0:
             raise RuntimeError(f"7z archive failed its test: {(tested.stdout + tested.stderr)[-300:]}")
+        return {}
+    if fmt == "json":  # an API answer cut off mid-stream (HTTP 200, no Content-Length) is not landed
+        try:
+            with path.open("rb") as handle:
+                json.load(handle)
+        except ValueError as exc:
+            raise RuntimeError(f"not a complete JSON document: {str(exc)[:120]}") from exc
         return {}
     if fmt == "gzip":
         with gzip.open(path) as handle:
