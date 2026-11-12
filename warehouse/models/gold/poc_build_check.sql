@@ -2,7 +2,8 @@
 {# Gold PoC build check, one row per activated block (also those that yielded no rows): rows,
    series, unmatched geography (_X), unplaced periods, dates, status flags. Read it after
    every build. A block whose table does not exist yet (a new source before its first Bronze/Silver
-   build; poc_observations) has zero rows and the note "waiting: …". #}
+   build that changed.py declared waiting; poc_observations) has zero rows and the note "waiting: …"; a
+   missing block that was not declared waiting fails this model (poc_block_waiting). #}
 {% set absent = poc_absent_blocks() | trim %}
 with activated as ({{ poc_activated_blocks() }}),
 

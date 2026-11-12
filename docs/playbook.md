@@ -117,11 +117,13 @@ source_version, raw_sha256`. Then:
 
 1. give the model the tag `gold_block` (`config(alias='build_<source>', tags=['gold_block'])`), add it
    to `poc_block_models()` and its blocks to `poc_activated_blocks()` in
-   `warehouse/macros/poc_blocks.sql` (your own lines only; `ops.repo_check` checks the tag and the list
-   agree). The Gold PR need not wait for the source's first scheduled run: until its Bronze/Silver
-   tables exist the block waits (run summary `waiting` and `empty_blocks`, `build_check` note
-   `waiting: …`) and the facts are built from the other blocks; the first run that creates the tables
-   builds the block and the facts with it;
+   `warehouse/macros/poc_blocks.sql` (your own lines only; `ops.repo_check` fails on a `poc_build_*`
+   model without the tag or the list line). The Gold PR need not wait for the source's first scheduled
+   run: until its Bronze/Silver tables exist the scheduled build declares the block waiting (run summary
+   `waiting` and `empty_blocks`, `build_check` note `waiting: …`) and builds the facts from the other
+   blocks; the first run that creates the tables builds the block and the facts with it. Only the
+   scheduled build may skip a block: a filtered build (Dev trial, `poc_fact_annual+`) fails on a block
+   without a table, so select the block too (`poc_build_<source>+`);
 2. add its codes to `poc_map_geography.sql` (section "Shared dimensions" below);
 3. add units to `warehouse/seeds/unit.csv`, KPIs to `kpi.csv` (status `draft` until checked),
    one `kpi_measure.csv` row per KPI × source measure, and for a KPI of the v2 map one
