@@ -9,7 +9,7 @@ token is the file's Last-Modified; an unchanged file (SHA-256) is not landed aga
 is "compiled up to the end of the previous month" and published within 5 working days). The REST and streaming
 APIs, the PSC snapshot (personal data) and officers are not used.
 
-Bronze `bronze.companies_house_companies`: every company of the newest snapshot (TRIAL_ROWS rows), 13 of the 55
+Bronze `bronze.companies_house_companies`: every company of the newest snapshot (5,711,779 rows, company numbers unique, 107 MB), 13 of the 55
 columns as text; replaced whole each month (`ingestion/to_bronze/companies_house/entities.py`, design #875). Not
 loaded, as personal data or unused: street lines, postcode, care-of line, PO box, county, previous names, accounts,
 returns, mortgages, partnership counts, URI, confirmation statement dates. A file with another header, a repeated
@@ -17,10 +17,10 @@ company number or no date in its name is rejected (`bronze.companies_house_rejec
 
 Silver, written by the loader from `warehouse/entity/companies_house_*.sql`:
 `silver.companies_house_poland_origin` (one row per company whose `CountryOfOrigin` is `POLAND`, the only spelling
-in the data; newest snapshot; TRIAL_PL rows: overseas companies with a UK establishment, numbers FC… and SF…, and
+in the data; newest snapshot; 50 rows: overseas companies with a UK establishment, numbers FC… and SF…, and
 overseas entities owning UK property, OE…; a UK-incorporated company with Polish owners is "United Kingdom" and is
 not there) and `silver.companies_house_snapshot_counts` (companies per snapshot × country of origin × category ×
-status, with the number incorporated in the month the snapshot closes; one file per snapshot date, kept: the
+status, 481 rows a snapshot, with the number incorporated in the month the snapshot closes; one file per snapshot date, kept: the
 monthly history builds up from the first Landing and a month without a landed snapshot has no row; earlier
 snapshots cannot be rebuilt once the Archive retention has passed).
 
@@ -39,5 +39,6 @@ requirements on how the information on the public register is used, and we’re 
 company data. You are responsible for complying with any applicable data protection, copyright and other
 legislation and regulations."; page footer: "All content is available under the Open Government Licence v3.0,
 except where otherwise stated". Licence row `companies_house_public_register`; attribution "Source: Companies House
-(UK), Free Company Data Product". Refresh incremental, unit file (D32). Archive: newest file plus 3 days. Dev trial
-TRIAL_RUN. Restart unit: the file.
+(UK), Free Company Data Product". Refresh incremental, unit file (D32). Archive: newest file plus 3 days. Dev probe 43320416371, Dev trial
+43328628842 (snapshot 2026-11-01: 5,711,779 companies on the register, 66,457 of them incorporated in October 2026; 50 of
+Polish origin, none with an LEI registered under its UK number in GLEIF). Restart unit: the file.
