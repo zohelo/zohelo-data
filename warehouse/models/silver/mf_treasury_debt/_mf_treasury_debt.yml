@@ -1,0 +1,24 @@
+version: 2
+models:
+  - name: treasury_debt
+    description: >-
+      Ministry of Finance State Treasury debt workbook (newest copy) in long form: one row per sheet × block ×
+      item × period end (month ends since 2001). Sheets: debt by instrument, by holder, by currency, actual maturity,
+      duration and average maturity, maturity of Treasury securities. Repeated labels are told apart by
+      item_occurrence. unit mln_pln, ratio ('%'-formatted cells) or number (duration sheet, years).
+    tests:
+      - unique:
+          column_name: "sheet_name || '|' || header_row || '|' || item_label || '|' || item_occurrence || '|' || cast(period_end as varchar)"
+    columns:
+      - name: sheet_name
+        tests: [not_null]
+      - name: item_label
+        tests: [not_null]
+      - name: period_end
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: unit
+        tests: [not_null, {accepted_values: {arguments: {values: ['mln_pln', 'ratio', 'number']}}}]
+      - name: raw_sha256
+        tests: [not_null]
