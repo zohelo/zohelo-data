@@ -233,6 +233,22 @@ gleif as (
     ) as t (letters, terc_code)
 ),
 
+-- TERYT TERC codes and the PRG unit codes (JPT_KOD_JE: TERC, '0' the country) are TERC keys (#2739).
+teryt_prg as (
+    select
+        'gus_teryt' as source_system,
+        terc_code as source_code,
+        'TERC:' || terc_code as geography_key
+    from {{ ref('teryt_terc') }}
+    union all
+    select distinct
+        'gugik_prg' as source_system,
+        teryt_code as source_code,
+        case when unit_level = 'kraj' then 'PL' else 'TERC:' || teryt_code end as geography_key
+    from {{ ref('prg_units') }}
+    where unit_level in ('kraj', 'wojewodztwo', 'powiat', 'gmina')
+),
+
 -- UNCTAD: economies by UNCTAD code (M49; France 250 in the FDI, merchandise and services tables, 251 only in port
 -- calls) from poc_unctad_areas: the EU27 members, 3412 European Union (2020 …) = EU27_2020, 0000 World. Other
 -- economies have no ISO code in the tables (_X); the build stage builds only the listed areas, and
@@ -275,6 +291,8 @@ from (
     select * from oecd
     union all
     select * from gleif
+    union all
+    select * from teryt_prg
     union all
     select * from unctad
 ) as m

@@ -323,6 +323,7 @@
     poc_build_oecd:oecd
     poc_build_gleif:gleif
     poc_build_mf_biala_lista:mf_biala_lista
+    poc_build_prg:gugik_prg
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -410,6 +411,7 @@
         ('krus', 'benefits', 'KRUS pensions and benefits'),
         ('oecd', 'cli', 'OECD composite leading indicators and confidence indicators'),
         ('gleif', 'lei2', 'GLEIF LEI records (golden copy)'),
-        ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file')
+        ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file'),
+        ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}
