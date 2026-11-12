@@ -25,7 +25,7 @@ from warehouse import observations as obs
 NS = "zz_dev_gold_coverage"
 SOURCE = "eurostat"
 ALWAYS = ["UNE_RT_M", "NAMA_10_GDP", "PRC_HICP_MINR", "DEMO_PJAN", "NAMQ_10_GDP", "DEMO_R_PJANAGGR3", "EARN_MW_CUR",
-          "NAIO_10_FCP_U3"]
+          "NAIO_10_FCP_U3", "AVIA_TF_ACA"]
 SPOT = {  # series of the rule-based layer whose newest PL value is reported, with the curated fact's value
     "UNE_RT_M": "measure_key = 'eurostat:UNE_RT_M:PC_ACT:SA@M' and breakdown_json like '%\"age\":\"TOTAL\"%' and sex_key = '_T'",
     "NAMA_10_GDP": "measure_key = 'eurostat:NAMA_10_GDP:CP_MEUR:B1GQ@A'",
@@ -90,7 +90,15 @@ def checks(cat, con, sample: list[str], silver_paths: list[str]) -> dict:
     out["by_frequency"] = con.execute(
         f"select frequency, count(*), min(date_key)::varchar, max(date_key)::varchar from {o} group by 1 order by 2 desc"
     ).fetchall()
-    out["status"] = con.execute(f"select observation_status_key, count(*) from {o} group by 1 order by 2 desc limit 6").fetchall()
+    out["status"] = con.execute(
+        f"select observation_status_key, count(*), count(*) filter (where value = 0) from {o} group by 1 order by 2 desc"
+    ).fetchall()
+    out["status_by_block"] = con.execute(
+        f"""select block_id, observation_status_key, count(*), count(*) filter (where value = 0) from {o}
+            where block_id in (select block_id from {o} where observation_status_key in ('confidential', 'forecast'))
+            group by 1, 2 order by 1, 3 desc limit 30"""
+    ).fetchall()
+    out["zero_values"] = con.execute(f"select count(*) from {o} where value = 0").fetchone()[0]
     out["geo"] = con.execute(
         f"""select case when geography_key = '_X' then '_X' when geography_key = '_Z' then '_Z'
                 when geography_key like 'TERC:%' then 'TERC' when geography_key like 'NUTS:%' then 'NUTS'
@@ -202,6 +210,33 @@ def changed_per_day(cat) -> dict:
     return {"days": [[d, n, r] for d, n, r in days], "version_sample": [s[0] for s in sample]}
 
 
+def flagged(con, silver, want: int = 3, scan: int = 400) -> dict:
+    """Datasets whose Silver holds Eurostat flags c and f (status_code only, small files first), and the
+    projection datasets (PROJ_*), so the trial shows those rules on real rows."""
+    import random as _random
+
+    small = sorted((e for e in silver if silver[e]["bytes"] < 20_000_000), key=lambda e: silver[e]["bytes"])
+    order = small[:]
+    _random.Random(7).shuffle(order)
+    found = {"c": [], "f": []}
+    for e in order[:scan]:
+        if all(len(v) >= want for v in found.values()):
+            break
+        files = files_of_entity(silver[e]["paths"])
+        letters = {r[0] for r in con.execute(
+            f"select distinct substr(trim(status_code), 1, 1) from {files} where value is not null"
+        ).fetchall()}
+        for k in found:
+            if k in letters and len(found[k]) < want:
+                found[k].append(e)
+    proj = sorted((e for e in silver if e.upper().startswith("PROJ_")), key=lambda e: silver[e]["bytes"])[:2]
+    return {"c": found["c"], "f": found["f"], "proj": proj}
+
+
+def files_of_entity(paths: list[str]) -> str:
+    return files(paths)
+
+
 def main() -> None:
     if len(sys.argv) > 2 and sys.argv[1] == "one":
         os.environ.setdefault("DUCKDB_TEMP_DIRECTORY", "/mnt/duckdb_tmp")
@@ -225,6 +260,8 @@ def main() -> None:
         upper = {e.upper(): e for e in silver}
         picked = set(random.Random(20261112).sample(sorted(silver), min(size, len(silver))))
         picked |= {upper[b] for b in ALWAYS if b in upper}
+        flag_sets = flagged(connect(tmp), silver)
+        picked |= {e for v in flag_sets.values() for e in v}
         # large datasets: memory and time of a heavy case (the very largest are named in the plan, not built)
         if size:
             picked |= set([e for e in by_size if silver[e]["rows"] <= 150_000_000][:2])
@@ -239,6 +276,7 @@ def main() -> None:
             "all_silver_mb": round(sum(h["bytes"] for h in silver.values()) / 1e6),
             "largest": [[e, silver[e]["rows"], round(silver[e]["bytes"] / 1e6)] for e in by_size[:4]],
             "largest_built": [e for e in by_size if silver[e]["rows"] <= 150_000_000][:2],
+            "flagged": {k: [e.upper() for e in v] for k, v in flag_sets.items()},
         }
         args = ["--source", SOURCE, "--trial", NS, "--minutes", str(minutes), "--only", *sample]
         started = time.monotonic()
@@ -253,9 +291,12 @@ def main() -> None:
         g = files(paths_of(cat, "geography"))
         report["geography_rows"] = con.execute(f"select count(*), count(*) filter (where geography_key = '_X') from {g}").fetchone()
         report["changed_per_day"] = changed_per_day(cat)
-        head = {k: v for k, v in report.items() if k not in ("unmatched_top", "spot_pl_newest", "curated_pl_newest", "status")}
+        flags = ("status", "status_by_block", "zero_values")
+        head = {k: v for k, v in report.items()
+                if k not in ("unmatched_top", "spot_pl_newest", "curated_pl_newest", "changed_per_day", *flags)}
+        annotate("notice", "gold observations trial flags", {k: report[k] for k in flags})
         annotate("notice", "gold observations trial", head)
-        annotate("notice", "gold observations trial values", {k: report[k] for k in ("spot_pl_newest", "curated_pl_newest", "unmatched_top", "status")})
+        annotate("notice", "gold observations trial values", {k: report[k] for k in ("spot_pl_newest", "curated_pl_newest", "unmatched_top")})
         rejected = cat.load_table((NS, obs.REJECTED[1])).scan().to_arrow().to_pylist() if (NS, obs.REJECTED[1]) in cat.list_tables(NS) else []
         annotate("notice", "gold observations trial rejected", {"count": len(rejected), "sample": [[r["entity"], r["error"][:150]] for r in rejected[:15]]})
     finally:

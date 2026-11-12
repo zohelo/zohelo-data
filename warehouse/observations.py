@@ -7,15 +7,20 @@ activation list: the block's Silver files go through the source's build stage
 by all sources (gold_observations.sql, gold_series.sql, gold_measures.sql). Gold holds exactly one
 file per block in each table, as Silver does (design #875):
 
-  04_gold/<source>/<table>/<block>/<recipe>.parquet     gold.<source>_observations | _series | _measures
+  04_gold/<source>/<table>/<block>/<recipe>.<content>.parquet   gold.<source>_observations | _series |
+                                                                  _measures | _geography
 
-``<recipe>`` names what the file was made from: the block's Silver files (their names carry the
-Landing SHA-256 and the Silver model), the Gold SQL, and the mapping of the geography codes the block
-holds. A block is rebuilt only when its recipe changed: a new source version rebuilds that block, a
-changed rule rebuilds every block, a changed row of gold.map_geography rebuilds the blocks that hold
-that code (gold.<source>_geography lists each block's codes), and a block that left Silver leaves
-Gold. What Gold holds is read from the tables' file lists; data is read only to find the blocks a
-changed geography map touches.
+``<content>`` is a digest of the file's own bytes, so an upload never replaces an object: a key a table
+holds is never rewritten (a rebuild after an interrupted run writes new keys), and an existing key
+with other bytes stops the run. ``<recipe>`` names what the file was made from: the block's Silver
+files (their names carry the Landing SHA-256 and the Silver model), the Gold SQL, and the mapping of
+the geography codes the block holds. A block is rebuilt only when its recipe changed: a new source
+version rebuilds that block, a changed rule rebuilds every block, a changed row of gold.map_geography
+rebuilds the blocks that hold that code (gold.<source>_geography lists each block's codes), and a
+block that left Silver leaves Gold. What Gold holds is read from the tables' file lists; data is read
+only to find the blocks a changed geography map touches. The four tables are committed one after
+the other (observations last); a block counts as built only when all four hold the same recipe, so
+a run that stops between the commits rebuilds the block next time.
 
 Limits of a run (decision D34; these replace the #822 row ceilings, which are for dbt models): the
 time budget; a block estimated to need more than the time left waits for a run with enough; at most
@@ -25,10 +30,10 @@ Gold (above it nothing is removed and the run fails).
 The grain is checked on every block before it is accepted: one row per series_key × date_key.
 measure_key begins with the source and the block, so a duplicate can only occur inside one block
 and the per-block check covers the whole table. A block that breaks the grain or yields no rows is
-rejected (gold.observations_rejected, keyed by its recipe) and never loaded in part; the block keeps
-the version Gold already holds, if any, and stays listed as rejected. A block that fails for another
-reason (storage, memory) is tried once more alone with the full memory limit, then reported and
-retried by the next run. Work runs in parallel processes; finished blocks are committed in chunks,
+rejected (gold.observations_rejected, keyed by its recipe and the geography map) and never loaded in
+part; the block keeps the version Gold already holds, if any, and stays listed as rejected. A block
+that fails for another reason (storage, memory) is tried once more alone with the full memory limit,
+then reported and retried by the next run. Work runs in parallel processes; finished blocks are committed in chunks,
 so a run that stops resumes where it stopped. Prints one JSON result line.
 """
 
@@ -64,9 +69,10 @@ BIG_ROWS = 50_000_000  # blocks with more Silver rows are built alone, with the 
 ROW_GROUP = 100_000
 MAX_REMOVE_SHARE = 0.05  # of the blocks Gold holds; at least MIN_REMOVABLE may always go
 MIN_REMOVABLE = 10
-# A block built alone is started only when its estimate fits the time left (Silver rows a minute, from
-# the slowest large blocks of the Dev trials; AVIA_TF_ACC: 57 M a minute).
-SERIAL_ROWS_PER_MINUTE = 20_000_000
+# A block built alone is started only when its estimate fits the time left. Silver bytes, not rows: rows
+# count empty cells, which cost little (AVIA_TF_ACA: 3,633 M Silver rows, 241 MB, built in 26 min;
+# AVIA_TF_ACC: 92 MB in 13 min; Dev runs 43268232691, 43202733905). 6 MB a minute is below both.
+SERIAL_BYTES_PER_MINUTE = 6_000_000
 MAP_DIGEST = "zohelo.geography_map_digest"  # on gold.<source>_geography: the map its rows were last checked against
 
 # Columns of the three Gold tables, in the order their models select them.
@@ -206,6 +212,37 @@ def expected_area(geo_map: dict[str, str], code: str | None) -> str:
     return "_Z" if code is None else geo_map.get(code, "_X")
 
 
+def recipe_of_file(path: str) -> str:
+    """The recipe in a Gold file name: ``<recipe>.<content>.parquet`` -> ``<recipe>``."""
+    return et.recipe_of(path).rsplit(".", 1)[0]
+
+
+def upload_new(client, bucket: str, key: str, path: Path, recipe: str) -> str:
+    """Upload a Gold file under a key that is never rewritten. The key ends in a digest of the bytes; an
+    object already under it with the same digest is the same file (a repeated attempt) and is kept; one
+    with other bytes is never deleted or replaced: the run stops, because a table may point to it."""
+    import botocore.exceptions
+
+    digest = sha256(path.read_bytes()).hexdigest()
+    try:
+        held = (client.head_object(Bucket=bucket, Key=key).get("Metadata") or {}).get("sha256")
+    except botocore.exceptions.ClientError as exc:
+        if str(exc.response.get("Error", {}).get("Code", "")) not in {"404", "NoSuchKey", "NotFound"}:
+            raise
+        held = None
+    if held == digest:
+        return f"s3://{bucket}/{key}"
+    if held is not None:
+        raise RuntimeError(f"{key}: another file is stored under this key; it is not replaced")
+    metadata = {"sha256": digest, "raw-sha256": recipe}
+    client.upload_file(
+        str(path), bucket, key, ExtraArgs={"ContentType": "application/vnd.apache.parquet", "Metadata": metadata}
+    )
+    if (client.head_object(Bucket=bucket, Key=key).get("Metadata") or {}).get("sha256") != digest:
+        raise RuntimeError(f"Gold upload verification failed: {key}")
+    return f"s3://{bucket}/{key}"
+
+
 def geography_digest(pairs: list[tuple[str | None, str]]) -> str:
     """Digest of a block's geography codes and the areas they map to."""
     return sha256(json.dumps(sorted(pairs, key=lambda p: (p[0] or "", p[1]))).encode()).hexdigest()[:8]
@@ -286,10 +323,10 @@ def plan(
     todo, rejected, complete = [], [], []
     for block, item in sorted(blocks.items()):
         recipe = f"{item['silver_recipe']}.{digest}"  # the worker adds the block's geography digest
-        if f"{source}:{block}:{recipe}" in refused:
+        if f"{source}:{block}:{recipe}.{map_digest}" in refused:  # a fixed map retries the block
             rejected.append(block)
             continue
-        held = [states[name].get(block, {}).get("recipes") or set() for name in ids]
+        held = [{recipe_of_file(p) for p in states[name].get(block, {}).get("paths", [])} for name in ids]
         current = len(held[0]) == 1 and all(h == held[0] for h in held) and next(iter(held[0])).startswith(recipe + ".")
         if current and block not in remapped:
             complete.append(block)
@@ -363,8 +400,10 @@ def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str
         recipe = f"{item['recipe']}.{geography_digest(pairs)}"
         client, bucket = s3(), req("STORAGE_LAKEHOUSE_BUCKET_NAME")
         for name in TABLES:
-            key = f"{prefix}{source}/{name}/{block}/{recipe}.parquet"
-            out["uris"][name] = bf.upload(client, bucket, key, work_dir / f"{name}.parquet", recipe)
+            path = work_dir / f"{name}.parquet"
+            content = sha256(path.read_bytes()).hexdigest()[:16]
+            key = f"{prefix}{source}/{name}/{block}/{recipe}.{content}.parquet"
+            out["uris"][name] = upload_new(client, bucket, key, path, recipe)
         out.update(
             status="ok",
             rows=reports["observations"]["rows"],
@@ -430,7 +469,7 @@ def main(argv=None) -> int:
                 [
                     {
                         "entity": f"{source}:{r['block']}",
-                        "raw_sha256": f"{source}:{r['block']}:{r['recipe']}",
+                        "raw_sha256": f"{source}:{r['block']}:{r['recipe']}.{p['map_digest']}",
                         "landing_key": "",
                         "error": r["error"],
                         "recorded_at": datetime.now(UTC),
@@ -495,7 +534,7 @@ def main(argv=None) -> int:
             commit()
         for c in sorted(serial, key=lambda c: c["rows"]):
             # the budget is checked before a block starts: one that cannot finish in the time left waits
-            if c["rows"] / SERIAL_ROWS_PER_MINUTE > (deadline - time.monotonic()) / 60:
+            if c["bytes"] / SERIAL_BYTES_PER_MINUTE > (deadline - time.monotonic()) / 60:
                 waiting.append(c["block"])
                 continue
             with ProcessPoolExecutor(max_workers=1, mp_context=clean) as alone:  # a kill fails that block only

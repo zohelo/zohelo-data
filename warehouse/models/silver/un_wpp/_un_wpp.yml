@@ -1,0 +1,49 @@
+version: 2
+models:
+  - name: un_wpp_demographic_indicators
+    description: >-
+      UN World Population Prospects 2024, demographic indicators, medium variant, from bronze.un_wpp_rows: 555
+      locations (countries and areas, regions, income and ad-hoc groups incl. European Union (EU: 27), LocID 1551)
+      × years 1950-2101; estimates to 2023, projections from 2024 (is_projection). Grain: loc_id × year.
+      Populations in thousands.
+    tests:
+      - unique:
+          column_name: "loc_id || '|' || year"
+    columns:
+      - name: loc_id
+        tests: [not_null]
+      - name: location
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: variant
+        tests: [not_null, {accepted_values: {arguments: {values: ['Medium']}}}]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: un_wpp_population_age_groups
+    description: >-
+      UN World Population Prospects 2024, population on 1 July by broad age group (0-14, 15-64, 65+; thousands)
+      and dependency ratios per 100 aged 15-64, summed from the 21 five-year groups of the medium variant;
+      555 locations × 1950-2100. Grain: loc_id × year.
+    tests:
+      - unique:
+          column_name: "loc_id || '|' || year"
+    columns:
+      - name: loc_id
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: age_groups
+        description: Five-year groups summed; 21 when the file is complete.
+        tests: [not_null, {accepted_values: {arguments: {values: [21], quote: false}}}]
+      - name: pop_total
+        tests: [not_null]
+      - name: pop_0_14
+        tests: [not_null]
+      - name: pop_15_64
+        tests: [not_null]
+      - name: pop_65_plus
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

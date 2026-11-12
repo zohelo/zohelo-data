@@ -1,0 +1,37 @@
+version: 2
+models:
+  - name: mrpips_registered_unemployment
+    description: >-
+      Registered unemployment at the end of each month from MRPiPS / Publiczne Służby Zatrudnienia (register PLS-029),
+      newest version of each month's "statystyki strukturalne" ZIP (bronze.mrpips_unemployment_cells). Grain:
+      period_date x area_code x measure_code x sex_code. area_code = TERYT voivodeship + powiat code (WWPP; 0000 =
+      Poland, WW00 = voivodeship). Measures: unemployed_thousands (thousand_persons) and unemployment_rate (pct) for
+      Poland, voivodeships and powiats from the rate workbook; unemployed_persons (persons, sex T/F/M) for Poland and
+      voivodeships from MRPiPS-01 TAB 2. History from September 2020 (MRPiPS-01 TAB 2 from January 2021): Dev trial 43100663615, 56,202 rows, 68
+      months.
+    tests:
+      - unique:
+          column_name: "cast(period_date as varchar) || '|' || area_code || '|' || measure_code || '|' || sex_code"
+    columns:
+      - name: period_date
+        description: First day of the reference month (stock at the end of that month).
+        tests: [not_null]
+      - name: entity
+        tests: [not_null]
+      - name: area_code
+        tests: [not_null]
+      - name: area_level
+        tests: [not_null, {accepted_values: {arguments: {values: [country, voivodeship, powiat]}}}]
+      - name: measure_code
+        tests:
+          - not_null
+          - accepted_values: {arguments: {values: [unemployed_thousands, unemployment_rate, unemployed_persons]}}
+      - name: sex_code
+        tests: [not_null, {accepted_values: {arguments: {values: [T, F, M]}}}]
+      - name: value
+        tests: [not_null]
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: [thousand_persons, pct, persons]}}}]
+      - name: raw_sha256
+        description: Landing SHA-256 of the month's ZIP (lineage to Landing/Archive).
+        tests: [not_null]

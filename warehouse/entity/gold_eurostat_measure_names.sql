@@ -9,7 +9,10 @@ with measure_shapes as (
         d.measure_dimension_ids,
         coalesce(
             array_to_string(
-                list_transform(d.measure_positions, lambda i: string_split(p.breakdown_codes, ',')[i]), ':'
+                list_transform(
+                    d.measure_positions, lambda i: string_split(p.breakdown_codes, ',')[i]  -- noqa: RF02
+                ),
+                ':'
             ),
             ''
         ) as measure_codes

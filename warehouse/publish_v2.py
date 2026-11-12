@@ -4,8 +4,10 @@
 ``catalog.json``, ``latest.json``, ``kpi/<kpi_key>/series.json``, ``calendar.json``, ``briefs.json`` (release
 briefs: the facts of each new KPI period) and ``status.json`` (the v1 file, copied), written by
 ``warehouse/publish.py`` after the v1 files when warehouse.yaml ``published_v2`` is true (``topics.json`` has
-its own writer there). The v2 KPIs are the v2 keys of ``seeds/kpi_v2_map.csv`` whose concept has status
-``published`` in ``seeds/kpi.csv``; each ready source of the map is its own series (O31). Geography keys come
+its own writer there). The v2 KPIs are the v2 keys of ``seeds/kpi_v2_map.csv`` with a concept in ``seeds/kpi.csv``
+and Gold series from a ready, licensed source, whatever the concept's status (owner decision O37: v2 is the review
+stage, no publishing decision; the status is shown in catalog.json); each ready source of the map is its own series
+(O31). Sources whose licence is unresolved or missing never reach v2 (licence gate, O37). Geography keys come
 from ``seeds/geography_v2.csv``, decimals from ``seeds/unit_decimals.csv``, curated members from
 ``seeds/kpi_member.csv``. Every JSON file is checked against ``published/schemas/v2/`` and the cross-file rules of
 ``ops.repo_check.published_v2_problems`` before it is written, and every number is read back against Gold.
@@ -25,7 +27,7 @@ from typing import Any
 import duckdb
 import pyarrow as pa
 
-from warehouse.publish import get, period_label, put, schema_checked, seed
+from warehouse.publish import get, licensed_sources, period_label, put, remove, schema_checked, seed
 
 V2_PREFIX = "06_published/v2/"
 GZIP_LIMITS = {  # docs/published.md
@@ -56,10 +58,17 @@ def dumps(obj: Any) -> bytes:
     return json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
-def v2_kpis(kpis: list[dict[str, str]], v2map: list[dict[str, str]]) -> list[dict[str, Any]]:
-    """The v2 KPIs: one entry per v2 key whose one concept has status published, with its ready sources and the
-    measure patterns of each; pure. ValueError when a v2 key has several concepts or differing frequency,
-    aggregation or polarity across its rows."""
+def v2_kpis(
+    kpis: list[dict[str, str]], v2map: list[dict[str, str]], licensed: set[str] | None = None
+) -> list[dict[str, Any]]:
+    """The v2 KPI candidates: one entry per v2 key with one concept and at least one ready source that is licensed
+    (``licensed``: source_keys of publish.licensed_sources; None = the seeds' own), with those sources and the
+    measure patterns of each; the concept's status (draft or published) does not gate v2 (O37). Whether a candidate
+    has Gold series is decided by ``build``. Pure apart from reading the source and licence seeds when ``licensed``
+    is None. ValueError when a v2 key has several concepts or differing frequency, aggregation or polarity across
+    its rows."""
+    if licensed is None:
+        licensed = licensed_sources(seed("source"), seed("licence"))
     by_concept = {k["kpi_key"]: k for k in kpis}
     rows_by_key: dict[str, list[dict[str, str]]] = defaultdict(list)
     for row in v2map:
@@ -73,8 +82,6 @@ def v2_kpis(kpis: list[dict[str, str]], v2map: list[dict[str, str]]) -> list[dic
             continue
         concept = concepts.pop()
         kpi = by_concept[concept]
-        if kpi["status"] != "published":
-            continue
         fixed = {}
         for field in ("frequency", "aggregation", "polarity"):
             values = {r[field] for r in rows}
@@ -83,7 +90,11 @@ def v2_kpis(kpis: list[dict[str, str]], v2map: list[dict[str, str]]) -> list[dic
             fixed[field] = values.pop()
         if fixed["frequency"] not in SHOWN:
             raise ValueError(f"kpi_v2_map: {key} frequency {fixed['frequency']} is not one of {SHOWN}")
-        ready = [r for r in rows if r["status"] == "ready" and r["concept_key"] == concept]
+        ready = [
+            r for r in rows if r["status"] == "ready" and r["concept_key"] == concept and r["source_key"] in licensed
+        ]
+        if not ready:  # needs-block / needs-source only, or no licensed source: nothing to publish
+            continue
         sources = {r["source_key"]: [p for p in r["measure_key_pattern"].split(";") if p] for r in ready}
         # A non-geographic row (Gold `_Z`, e.g. the NBP rates against the zloty) belongs to the one geography the
         # map names for its source, when it names exactly one.
@@ -383,7 +394,12 @@ def latest_values(
 
     def filled_of(s: dict[str, Any]) -> list[int]:
         partial = (s["source_key"], s["geography"]) in daily
-        return [i for i, v in enumerate(s["values"]) if v is not None and not (partial and periods[i] >= current)]
+        # Only monthly periods compare with the month of generated_at: as text '2026-Q1' >= '2026-11' (#2728).
+        return [
+            i
+            for i, v in enumerate(s["values"])
+            if v is not None and not (partial and period_frequency(periods[i]) == "M" and periods[i] >= current)
+        ]
 
     index = {p: i for i, p in enumerate(periods)}
     totals = [s for s in series_doc["series"] if not s["members"] and "frequency" not in s]
@@ -508,13 +524,16 @@ def briefs_json(
     def utc(stamp: str) -> datetime:
         return datetime.strptime(stamp[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=UTC)
 
-    oldest = utc(generated_at) - timedelta(days=int(config["window_days"]))
+    newest = utc(generated_at)
+    oldest = newest - timedelta(days=int(config["window_days"]))
     geographies = list(config["geographies"])
     before = {(v["kpi_key"], v["geography"]): v for v in (previous.get("latest.json") or {}).get("values", [])}
     detections = {
         (d["kpi_key"], d["geography"], d["period"]): d
         for d in (previous.get("briefs.json") or {}).get("detections", [])
-        if utc(d["detected_at"]) >= oldest
+        # A detection dated after generated_at (an overlapping or manual run) is dropped, not kept: the checker
+        # rejects it and would block the whole v2 publish (#2728).
+        if oldest <= utc(d["detected_at"]) <= newest
     }
     dates: dict[str, list[str]] = defaultdict(list)
     for release in calendar:
@@ -526,14 +545,23 @@ def briefs_json(
             continue
         kpi = kpis[v["kpi_key"]]
         frequency = period_frequency(v["period"])
+
+        def same_source(d: dict[str, Any], source: str = v["source_key"]) -> bool:
+            """A detection is reused only for the source it was made for (#2728); one written before
+            detections carried source_key matches any source."""
+            return d.get("source_key", source) == source
+
         at_or_above = sorted(
             (period_ordinal(p), d)
             for (k, g, p), d in detections.items()
             if (k, g) == (v["kpi_key"], v["geography"])
+            and same_source(d)
             and period_frequency(p) == frequency
             and period_ordinal(p) >= period_ordinal(v["period"])
         )
         old = detections.get((v["kpi_key"], v["geography"], v["period"]))
+        if old is not None and not same_source(old):
+            old = None
         last = before.get((v["kpi_key"], v["geography"]))
         if old is None:
             if (
@@ -566,6 +594,7 @@ def briefs_json(
             "kpi_key": v["kpi_key"],
             "geography": v["geography"],
             "period": v["period"],
+            "source_key": v["source_key"],
             "detected_at": detected_at,
             "released_at": released,
             "released_at_source": source,
@@ -687,6 +716,7 @@ def catalog_entry(
         "polarity": entry["polarity"],
         "loaded_at": max(stamps) if stamps else generated_at,
         "next_release": next_release,
+        "status": kpi["status"],
     }
 
 
@@ -1014,7 +1044,8 @@ def write(
     from warehouse.publish import gold
 
     tables = dict(metrics)
-    for entry in v2_kpis(seed("kpi"), seed("kpi_v2_map")):
+    candidates = v2_kpis(seed("kpi"), seed("kpi_v2_map"))
+    for entry in candidates:
         if entry["concept"] not in tables:
             with suppress(NoSuchTableError):
                 tables[entry["concept"]] = gold(cat, "gold", f"metrics_{entry['concept']}")
@@ -1029,6 +1060,12 @@ def write(
 
         annotate("warning", "gold.publish: previous v2 file without the expected keys, treated as absent", unusable)
     files, context = build(tables, checked_at, silver_releases, v1_catalog, status, generated_at, previous)
+    stale, lost = stale_plan(kpi_objects(client, prefix), {e["kpi_key"] for e in candidates}, files)
+    if lost:  # a KPI still in scope lost its series in this run (missing table, read failure): keep what is live
+        raise ValueError(
+            f"v2 KPIs in scope but not built this run, while published: {lost}; nothing written "
+            "(fix the Gold table, or take the KPI out of scope in kpi_v2_map.csv)"
+        )
     sizes = {}
     # series first, catalog after them; briefs.json before latest.json, whose previous copy tells what is new
     for name in sorted(files, key=lambda n: (not n.startswith("kpi/"), n)):
@@ -1038,9 +1075,12 @@ def write(
     problems = read_back(written, context)
     if problems:
         raise ValueError(f"{len(problems)} v2 numbers differ from Gold: {problems[:20]}")
+    for name in stale:  # after a clean read-back: files of KPIs out of scope (seeds, licence gate) only
+        remove(client, prefix + name)
     return {
         "prefix": prefix,
         "kpis": sorted(n.split("/")[1] for n in files if n.startswith("kpi/")),
+        "removed": stale,
         "missing": context["missing"],
         "empty": context["empty"],
         "latest_values": len(files["latest.json"]["values"]),
@@ -1049,6 +1089,38 @@ def write(
         "bytes": {n: s.get("gzip_bytes", s["bytes"]) for n, s in sizes.items()},
         "differences": 0,
     }
+
+
+def kpi_objects(client, prefix: str) -> set[str]:
+    """Paths (relative to prefix) of the ``kpi/<kpi_key>/…`` objects published under prefix."""
+    from ingestion.common.r2 import req
+
+    found = set()
+    pages = client.get_paginator("list_objects_v2").paginate(
+        Bucket=req("STORAGE_LAKEHOUSE_BUCKET_NAME"), Prefix=prefix + "kpi/"
+    )
+    for page in pages:
+        found |= {str(item["Key"])[len(prefix) :] for item in page.get("Contents", [])}
+    return found
+
+
+def stale_plan(existing: set[str], candidates: set[str], files: dict[str, Any]) -> tuple[list[str], list[str]]:
+    """Which published ``kpi/<kpi_key>/…`` paths this run removes, and which KPIs it lost; pure.
+
+    A KPI that is no longer a v2 candidate (``candidates``: the v2_kpis keys, decided by the seeds and the licence
+    gate alone) is out of scope: its files are removed. A candidate whose ``series.json`` is published but was not
+    built this run (missing table, read failure, no row at the shown frequency) is lost: the run must fail before
+    writing, so a transient failure never takes a live KPI down. Other leftover files of a built KPI are removed."""
+    stale, lost = [], set()
+    for path in sorted(existing):
+        if path in files:
+            continue
+        key = path.split("/")[1]
+        if key in candidates and f"kpi/{key}/series.json" not in files:
+            lost.add(key)
+        else:
+            stale.append(path)
+    return stale, sorted(lost)
 
 
 def _published(client, key: str) -> dict[str, Any] | None:
