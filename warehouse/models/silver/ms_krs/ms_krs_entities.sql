@@ -2,7 +2,7 @@
    Landing copy of each part (bronze.ms_krs_extracts). Grain: krs_number. Selection: the KRS numbers GLEIF lists
    (entities with an LEI), loaded over several runs, so this is not the register and its row count is not a
    count of Polish companies. has_current_extract = false: neither register P nor S holds a current extract of
-   the number (http_status 204; entities struck off the register), all other columns are then null.
+   the number (http_status 204 or 404; entities struck off the register), all other columns are then null.
    Entity-level fields only; the entity's registered name can contain a surname (partnerships), no other
    personal data is loaded. Typed: dates from dd.mm.yyyy, share capital from a decimal comma; regon as published
    (14 digits, the 9-digit REGON padded with zeros). main_pkd_code only when the extract names exactly one main

@@ -3,8 +3,8 @@ description: "Open KRS API (Ministry of Justice) — current register extracts o
 
 # Extraction strategy (docs/landing.md, docs/sources/ms_krs.md). The register has no bulk file and no list of
 # numbers; the Open API (https://prs.ms.gov.pl/krs/openApi) answers one KRS number per request:
-# https://api-krs.ms.gov.pl/api/krs/OdpisAktualny/<krs>?rejestr=<P|S>&format=json (200 JSON, 204 when that register
-# holds no current extract), and https://api-krs.ms.gov.pl/api/Krs/Biuletyn/<YYYY-MM-DD> lists the numbers with an
+# https://api-krs.ms.gov.pl/api/krs/OdpisAktualny/<krs>?rejestr=<P|S>&format=json (200 JSON; 204 or 404 when that
+# register holds no current extract), and https://api-krs.ms.gov.pl/api/Krs/Biuletyn/<YYYY-MM-DD> lists the numbers with an
 # entry on a day. Selection: the KRS numbers of silver.gleif_legal_entities (registration authority RA000484, ten
 # digits; 31,892 numbers on 12 Nov 2026, Dev probe 43320344152), ascending. One request at a time, 1 s apart
 # (no limit is published; median answer 0.66 s), at most 120 minutes a run: the first load takes about ten daily

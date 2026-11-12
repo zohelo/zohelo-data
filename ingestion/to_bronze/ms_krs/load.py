@@ -2,9 +2,9 @@
 """Open KRS API bronze.load: newest Landing copy of every part → bronze.ms_krs_extracts.
 
 Each file holds one JSON line per KRS number: the entity-level record that ingestion/to_landing/ms_krs/extract.py
-kept of the current extract (no natural persons, no addresses), or ``http_status`` 204 for a number without a
-current extract. One row per line, every value as text (the main-activity codes as a JSON array). A line with a
-field outside the allowlist, without a ten-digit KRS number or repeating a number rejects the file
+kept of the current extract (no natural persons, no addresses), or only ``http_status`` 204 or 404 for a number
+without a current extract. One row per line, every value as text (the main-activity codes as a JSON array). A
+line with a field outside the allowlist, without a ten-digit KRS number or repeating a number rejects the file
 (bronze.ms_krs_rejected_files). Shared code: ingestion/common/bulk_bronze.py.
 """
 

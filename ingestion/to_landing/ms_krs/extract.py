@@ -2,9 +2,10 @@
 
 Selection: the KRS numbers of silver.gleif_legal_entities (registration authority RA000484 = KRS, id of exactly
 ten digits); the API has no list of numbers, so the list comes from a source already loaded. Requests go one at
-a time with a pause: register P (entrepreneurs) first and, when it answers 204 (no current extract there),
-register S (associations and other organisations); 204 from both is recorded as a number without a current
-extract, so it is not asked again every run.
+a time with a pause: register P (entrepreneurs) first and, when it answers 204 or 404 (no current extract there),
+register S (associations and other organisations); no extract in either is recorded as a number without a
+current extract (``http_status`` of the last answer), so it is not asked again every run. Many such answers in a
+row stop the run and are not kept: that is what a moved endpoint would look like.
 
 Personal data: a full answer names board members, partners, proxies and liquidators (with PESEL). ``reduce``
 copies only the allowlisted entity-level fields into a new record; everything else, every section about
@@ -47,6 +48,8 @@ BULLETIN_MAX_DAYS = 45  # bulletin days read in one run; older unread days are r
 FLUSH_RECORDS = 500  # new records between Landing writes, so a failed run loses little
 RETRY_WAITS = (10, 30)  # seconds before the second and third attempt
 RETRY_STATUSES = {408, 429, 500, 502, 503, 504}
+NO_EXTRACT = {204, 404}  # the register holds no current extract of the number (P answers 204, S answers 404)
+NO_EXTRACT_RUN = 50  # numbers in a row without an extract that stop a run (about 1 in 4 has none)
 
 # The allowlist: reduced field → path in the answer below ``odpis``. Nothing else is kept.
 HEADER = {
@@ -175,7 +178,7 @@ class Api:
         self.requests = 0
 
     def get(self, url: str) -> tuple[int, Any]:
-        """(200, parsed JSON) or (204, None); anything else is retried or stops the run."""
+        """(200, parsed JSON) or (204 or 404, None); anything else is retried or stops the run."""
         problem = ""
         for attempt in range(len(RETRY_WAITS) + 1):
             if attempt:
@@ -188,8 +191,8 @@ class Api:
                 continue
             finally:
                 time.sleep(self.pause_seconds)
-            if response.status_code == 204:
-                return 204, None
+            if response.status_code in NO_EXTRACT:
+                return response.status_code, None
             if response.status_code == 200:
                 try:
                     return 200, response.json()
@@ -210,14 +213,14 @@ class Api:
                     return reduce(krs, document, requested_on), register
                 except ValueError as exc:
                     raise Stop(str(exc)) from exc
-        return {"krs_number": krs, "requested_on": requested_on, "http_status": 204}, "none"
+        return {"krs_number": krs, "requested_on": requested_on, "http_status": status}, "none"
 
     def bulletin(self, day: date) -> set[str]:
         """KRS numbers (ten digits) with an entry on that day; a day without entries is empty."""
         status, listed = self.get(BULLETIN_URL.format(day=day.isoformat()))
         if status == 204:
             return set()
-        if not isinstance(listed, list):
+        if status != 200 or not isinstance(listed, list):
             raise Stop(f"bulletin of {day} is not a list")
         return {f"{int(value):010d}" for value in listed if str(value).isdigit()}
 
@@ -314,10 +317,24 @@ def extract(
     summary: dict[str, Any] = {"source": SOURCE, "mode": "load", "selection": len(numbers), "held_before": len(held)}
     landed, error, since_flush = 0, None, 0
 
+    without: list[tuple[str, dict[str, Any] | None]] = []  # the current run of numbers without an extract
+
     def ask(krs: str) -> None:
         record, outcome = api.extract(krs, requested_on)
         outcomes[outcome] += 1
-        parts[part_of(krs)]["records"][krs] = record
+        records = parts[part_of(krs)]["records"]
+        if outcome == "none":
+            without.append((krs, records.get(krs)))
+        else:
+            without.clear()
+        records[krs] = record
+        if len(without) >= NO_EXTRACT_RUN:
+            for number, previous in without:  # not kept: put back what was held before
+                if previous is None:
+                    del parts[part_of(number)]["records"][number]
+                else:
+                    parts[part_of(number)]["records"][number] = previous
+            raise Stop(f"{NO_EXTRACT_RUN} numbers in a row without an extract, from {without[0][0]}: not kept")
 
     def flush() -> int:
         return sum(_land(client, bucket, part, landing_root) for part in parts.values())

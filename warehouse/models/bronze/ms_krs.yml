@@ -15,7 +15,7 @@ sources:
       One row per KRS number of the newest copy of each part (entity extracts_00 … extracts_15, KRS number modulo
       16), every value as text: the allowlisted entity-level fields of the current extract (register, legal form,
       name, NIP, REGON, seat without street address, dates, share capital, main PKD codes as a JSON array, counts of
-      liquidation, bankruptcy and restructuring entries), or http_status 204 for a number without a current
-      extract. No natural persons: those sections are dropped before Landing. Partitioned by entity.
+      liquidation, bankruptcy and restructuring entries), or only http_status 204 or 404 for a number without a
+      current extract. No natural persons: those sections are dropped before Landing. Partitioned by entity.
   - name: ms_krs_rejected_files
     description: Open KRS API Landing files the Bronze decoder rejected, with the reason.

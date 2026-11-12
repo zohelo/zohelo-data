@@ -3,7 +3,7 @@
 **Built (12 Nov 2026, register PLG-012, #1362).** Route: the Open API of the National Court Register
 (`https://prs.ms.gov.pl/krs/openApi`). It answers one KRS number per request,
 `https://api-krs.ms.gov.pl/api/krs/OdpisAktualny/<krs>?rejestr=<P|S>&format=json` (P = entrepreneurs, S =
-associations and other organisations; 200 with JSON, 204 when that register holds no current extract), and
+associations and other organisations; 200 with JSON; 204 from P and 404 from S when that register holds no current extract), and
 `https://api-krs.ms.gov.pl/api/Krs/Biuletyn/<YYYY-MM-DD>` lists the KRS numbers with an entry on a day. No bulk
 file, no list of numbers, no published limit, no robots.txt on the API host (Dev probe 43320344152: 54 extract
 requests, median 0.66 s, 5–63 KB each; bulletins answer back to June 2022).
@@ -28,7 +28,7 @@ O33 is the precedent: Landing holds the reduced record, and its SHA-256 is that 
 | `share_capital`, `share_capital_currency` | `dane.dzial1.kapital.wysokoscKapitaluZakladowego` |
 | `main_pkd` (codes only) | `dane.dzial3.przedmiotDzialalnosci.przedmiotPrzewazajacejDzialalnosci[]`: `kodDzial.kodKlasa.kodPodklasa` |
 | `liquidation_entries`, `liquidation_ended`, `bankruptcy_entries`, `bankruptcy_ended`, `restructuring_entries`, `dissolution_entry` | how many entries `dane.dzial6` holds per section and how many carry an end; never the entries (they name persons) |
-| `requested_on`, `http_status` | ours: Warsaw date of the request; 200, or 204 from both registers |
+| `requested_on`, `http_status` | ours: Warsaw date of the request; 200, or the last answer (204 or 404) when neither register holds a current extract |
 
 Dropped whole: `dzial2` (representation, supervisory body, proxies), partners and shareholders, branches,
 `dzial4`, `dzial5`, the contents of `dzial6`, court file references, the time the extract was generated. The
@@ -38,7 +38,8 @@ surname, which is part of the legal entity's name.
 **Landing.** 16 fixed entities `extracts_00` … `extracts_15` (KRS number modulo 16). A file is the complete
 current state of its part, one JSON line per number, sorted, so unchanged data gives the same bytes; a part is
 written only when its bytes changed. One request at a time, 1 s apart, user agent of the project, three attempts
-with back-off on 408/429/5xx and network errors, any other status stops the run (never worked around); at most
+with back-off on 408/429/5xx and network errors, any other status stops the run (never worked around), and so
+do 50 numbers in a row without an extract (a moved endpoint would look like that; they are not kept); at most
 120 minutes a run (about 4,300 requests), so the first load takes about ten daily runs, each continuing from
 Landing (numbers not held yet, ascending). Restart unit: one KRS number; a part is saved every 500 new records.
 Incremental: each run first reads the bulletins after a part's `bulletin_through` (receipt detail) up to
