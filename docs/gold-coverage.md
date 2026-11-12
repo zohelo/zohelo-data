@@ -192,8 +192,8 @@ Names are resolved from the source's own dictionaries (Eurostat: `eurostat_dataf
 `eurostat_dimensions`, `eurostat_codes`; BDL: `bdl_variables`; DBW: `src_dbw_dictionary`).
 `measure_name` = block name, unit name and the names of the measure codes, stored once per measure.
 Labels of breakdown codes are **not** stored per row or per series: Eurostat has about 989 M series,
-and building the label per series was what exhausted memory on the series-heavy datasets (trial
-below). `breakdown_label_json` stays empty for these sources, as in today's `poc_build_eurostat`;
+and building the label per series was what exhausted memory on the series-heavy datasets (#2831).
+`breakdown_label_json` stays empty for these sources, as in today's `poc_build_eurostat`;
 the names are one small table per block (`gold.<source>_codes`: dimension, code, name, total code),
 a follow-up Task. A name that changes without a new data version is picked up at the block's next
 rebuild.
@@ -309,7 +309,7 @@ Known sources and their row of the adapter table (Silver row counts from `wareho
 
 | # | Question | Proposal | Who |
 |---|---|---|---|
-| 1 | Storage: Silver of the three sources is 13.7 GB, already above R2's free 10 GB. Gold in full adds about twice that (Eurostat about 22 GB from the trials; BDL and DBW about 14 GB by the same ratio to Silver, not measured). | Accept the storage for full coverage; otherwise Poland and national comparators only (4,160 M Eurostat rows) or Poland only (196 M) | owner |
+| 1 | Storage: Silver of the three sources is 13.7 GB, already above R2's free 10 GB. Gold in full adds about 36 GB (Eurostat about 22 GB from the trials; BDL and DBW about 14 GB by the same ratio to Silver, not measured). | Accept the storage for full coverage; otherwise Poland and national comparators only (4,160 M Eurostat rows) or Poland only (196 M) | owner |
 | 2 | S and W periods in Gold | Load them with their own frequency in these tables; `fact_semiannual` of #2781 stays the curated answer for KPIs | architect |
 | 3 | D28 deviation (per-block files instead of a dbt incremental model) | As decision 3 | architect |
 | 4 | Non-KPI measures in zohelo-bi (published v2 catalogue) | Additive `catalog/measures_<source>.parquet`; decide after Eurostat is loaded | owner |
