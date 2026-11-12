@@ -174,3 +174,10 @@ gus_tourism,facilities,,facilities
 gus_tourism,bed_places,,bed_places
 gus_tourism,persons,,persons
 gus_tourism,overnight_stays,,overnight_stays
+gus_nsp2021,persons,,persons
+gus_nsp2021,pct_population,,pct_population
+gus_nsp2021,pct,,pct
+gus_psr2020,farms,,farms
+gus_psr2020,ha,,ha
+gus_psr2020,heads,,heads
+gus_psr2020,ha_per_holding,,ha_per_holding

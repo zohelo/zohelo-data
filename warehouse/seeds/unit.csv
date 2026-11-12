@@ -56,3 +56,6 @@ pln_per_m2,zł/m²,PLN per square metre,zł za m²,false,pln_per_m2,1
 facilities,ob.,facilities,obiekty,false,facilities,1
 bed_places,miejsca,bed places,miejsca noclegowe,false,bed_places,1
 overnight_stays,nocl.,overnight stays,noclegi,false,overnight_stays,1
+farms,gosp.,agricultural holdings,gospodarstwa rolne,false,farms,1
+heads,szt.,heads,sztuki,false,heads,1
+ha_per_holding,ha/gosp.,hectares per holding,hektary na gospodarstwo,false,ha_per_holding,1

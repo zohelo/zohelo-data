@@ -1,0 +1,43 @@
+source_system: gus_psr2020
+description: "GUS — Powszechny Spis Rolny 2020 (agricultural census 2020), tables of 'Charakterystyka gospodarstw rolnych w 2020 r.'"
+
+# Extraction strategy (docs/landing.md). Register PLS-006. Bulk feature: the PSR 2020 results pages
+# (https://stat.gov.pl/spisy-powszechne/powszechny-spis-rolny-2020/wyniki-spisu-psr-2020/) link the publication
+# "Charakterystyka gospodarstw rolnych w 2020 r." with two XLSX table workbooks at fixed /download/ URLs; part 2 holds
+# the tables by voivodeship (Dev probes 43270655323, 43271452794, 43271980321 on test/w3-gus-probe). The "Raport z
+# wyników" annex is XLS only (not loaded). A one-off census: declared files of the shared bulk_file pattern (no
+# extractor code); entity = one workbook, version = download time, written only when the SHA-256 changed. Restart
+# unit: one file.
+# Dev trial 43298219762: 1 file, 9,263 Bronze cells, 102 Silver and Gold rows, 0 duplicate keys, 0 rejected; second runs
+# wrote nothing.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: charakterystyka_cz2      # tables 13-33: holdings, land use, crops, livestock, labour by voivodeship
+        url: "https://stat.gov.pl/download/gfx/portalinformacyjny/pl/defaultaktualnosci/6479/6/1/1/powszechny_spis_rolny_2020_-_charakterystyka_gospodarstw_rolnych_w_2020_r._tablice_-_cz._2.xlsx"
+        format: raw
+        version: ingested
+  initial: bulk
+  production: snapshot                  # final results as published
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; a one-off census, corrections are rare: quarterly check, unchanged bytes skipped
+    - {cron: "45 6 10 1,4,7,10 *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gus_psr2020/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.gus_psr2020_cells, bronze.gus_psr2020_rejected_files]
+silver: [silver.gus_psr2020_tables]
+gold: [gold.build_gus_psr2020]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gus_psr2020_tables: {rows: 150}  # 102 rows, census 2020 (+ 2010 holdings) (Dev trial 43298219762)
+  poc_build_gus_psr2020: {rows: 150}  # 102 (Dev trial 43298219762)
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): one workbook of a one-off census; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2458"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
