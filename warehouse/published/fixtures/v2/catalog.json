@@ -24,7 +24,8 @@
       "aggregation": "mean",
       "polarity": "neutral",
       "loaded_at": "2025-12-31T11:20:00Z",
-      "next_release": "2026-11-09"
+      "next_release": "2026-11-09",
+      "status": "published"
     },
     {
       "kpi_key": "gdp_nominal",
@@ -51,7 +52,8 @@
       "aggregation": "sum",
       "polarity": "neutral",
       "loaded_at": "2025-12-30T06:10:00Z",
-      "next_release": null
+      "next_release": null,
+      "status": "draft"
     },
     {
       "kpi_key": "gdp_real_growth",
@@ -80,7 +82,8 @@
       "aggregation": "rate",
       "polarity": "up",
       "loaded_at": "2025-12-30T06:10:00Z",
-      "next_release": null
+      "next_release": null,
+      "status": "published"
     },
     {
       "kpi_key": "hicp_annual_rate",
@@ -108,7 +111,8 @@
       "aggregation": "rate",
       "polarity": "neutral",
       "loaded_at": "2025-12-30T06:10:00Z",
-      "next_release": "2026-01-07"
+      "next_release": "2026-01-07",
+      "status": "published"
     },
     {
       "kpi_key": "population_total",
@@ -138,7 +142,8 @@
       "aggregation": "sum",
       "polarity": "neutral",
       "loaded_at": "2025-12-30T06:10:00Z",
-      "next_release": null
+      "next_release": null,
+      "status": "published"
     },
     {
       "kpi_key": "unemployment_lfs",
@@ -166,7 +171,8 @@
       "aggregation": "rate",
       "polarity": "down",
       "loaded_at": "2025-12-30T06:10:00Z",
-      "next_release": null
+      "next_release": null,
+      "status": "published"
     }
   ],
   "dimensions": [],

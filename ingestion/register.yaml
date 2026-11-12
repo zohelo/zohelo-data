@@ -3250,7 +3250,8 @@ sources:
   name: Registered unemployment and labour-office vacancy statistics
   short_name: MRPiPS registered unemployment
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej / Public Employment Services
-  status: approved
+  source_system: mrpips_unemployment
+  status: built
   family: B
   kpi: true
   geography: Poland, voivodeship and powiat, table-dependent
@@ -3258,14 +3259,14 @@ sources:
   domains: [registered unemployment, job vacancies, employment services]
   entities: [unemployed-person aggregate, vacancy aggregate, territorial unit, occupation]
   granularity: Monthly aggregate by labour-office geography/category; occupation tables and vacancies are publication-dependent.
-  coverage: Long-running monthly administrative series; exact downloadable archive start not verified.
+  coverage: Monthly ZIPs since 2001 on the portal; built from January 2019 (one asset page per year); rate and stock for Poland, voivodeships and powiats.
   access:
-    endpoint: https://psz.praca.gov.pl/
+    endpoint: https://psz.praca.gov.pl/rynek-pracy/statystyki-i-analizy/bezrobocie-rejestrowane
     kind: bulk_file
     interfaces: [HTML, XLSX, PDF]
     auth: Public statistics pages/files.
     cost: free
-    limits: Unknown.
+    limits: None stated; one request at a time, 2 s apart.
   licence:
     status: open-conditional
     notes: 'Terms: footer of the Publiczne Służby Zatrudnienia portal https://psz.praca.gov.pl/: "Wszystkie treści
@@ -3276,8 +3277,8 @@ sources:
       Family, Labour and Social Policy / Public Employment Services, <table title> (<month>), CC BY 3.0 PL".'
   updates: Monthly preliminary/final releases and annual summaries.
   ingestion:
-    history: Backfill stable monthly workbooks after locating canonical archive.
-    incremental: Poll monthly and version preliminary/final replacements.
+    history: Monthly 'statystyki strukturalne' ZIPs from January 2019 (entity stat_YYYY_MM), found from the listing page, its year categories and the yearly asset pages.
+    incremental: Missing months, plus the newest two months re-downloaded on each weekly run; a changed ZIP lands as a new version (Last-Modified, SHA-256).
     identifiers: Reference month + territorial labour office/TERYT + category/occupation code.
   modelling:
     notes: Stocks at month end differ from monthly inflows/outflows and vacancies; registered unemployment differs
@@ -3285,11 +3286,10 @@ sources:
     overlap: GUS publishes registered unemployment too; align release source and avoid duplicate totals.
   research:
     priority: review-first
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - Locate canonical current archive and file schema
-    - Document vacancy and occupation definitions
+    - Vacancy and occupation tables (half-yearly XLSX) not built yet
     references:
     - https://psz.praca.gov.pl/
     - https://barometrzawodow.pl/
