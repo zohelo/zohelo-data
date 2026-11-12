@@ -805,6 +805,7 @@ year; indicators hdi, le, eys, mys, gnipc, gdi, gii, ihdi, phdi, components and 
 Each report recalculates the whole series, so values compare within one release; the Archive keeps the
 previous report 400 days. Terms: CC BY 3.0 IGO, licence row `cc_by_3_0_igo_undp_hdr`. Monthly check.
 Restart unit: the file.
+
 ## WHO data.who.int (indicator files)
 
 **Built (12 Nov 2026, register GL-025).** Every data.who.int indicator page links its complete data as one CSV,
