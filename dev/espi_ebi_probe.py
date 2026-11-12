@@ -1,7 +1,9 @@
-"""Read-only probe for CD-006 (KNF OAM list) and CD-007 (GPW report list). GET only, one request at a time,
-5 seconds apart, identified User-Agent. Prints page structure to the job log; nothing is written."""
+"""Read-only probe 2 for CD-006 (KNF OAM list) and CD-007 (GPW report list): by-date pattern, paging, depth.
+GET (and the list form's own POST to ajaxindex.php), one request at a time, 5 seconds apart, identified
+User-Agent. List pages only: never a report document or file. Prints counts to the job log; nothing is written."""
 
 from collections import Counter
+import html as htmllib
 import re
 import sys
 import time
@@ -11,83 +13,124 @@ import requests
 UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
 PAUSE = 5
 _n = 0
+S = requests.Session()
+S.headers.update({"User-Agent": UA, "Accept-Language": "pl,en"})
 
 
-def get(url, **kw):
+def call(method, url, **kw):
     global _n
     if _n:
         time.sleep(PAUSE)
     _n += 1
     t0 = time.time()
     try:
-        r = requests.get(url, headers={"User-Agent": UA, "Accept-Language": "pl,en"}, timeout=60, **kw)
+        r = S.request(method, url, timeout=60, **kw)
     except requests.RequestException as exc:
-        print(f"### GET {url} -> {type(exc).__name__}: {str(exc)[:200]}", flush=True)
+        print(f"### {method} {url} -> {type(exc).__name__}: {str(exc)[:200]}", flush=True)
         return None
-    print(f"### GET {url} -> {r.status_code} {len(r.content)} bytes {time.time() - t0:.1f}s final={r.url} "
-          f"ct={r.headers.get('content-type')} lm={r.headers.get('last-modified')} enc={r.encoding} "
-          f"server={r.headers.get('server')} setcookie={'yes' if r.headers.get('set-cookie') else 'no'}", flush=True)
+    print(f"### {method} {url} {kw.get('data') or ''} -> {r.status_code} {len(r.content)} bytes {time.time() - t0:.1f}s "
+          f"ct={r.headers.get('content-type')}", flush=True)
     return r
 
 
-def norm(href):
-    return re.sub(r"[0-9A-Fa-f]{16,}", "<HEX>", re.sub(r"\d{3,}", "<N>", href))
+KNF_ROW = re.compile(
+    r'(?is)<tr class="(?:even|odd)">\s*<td[^>]*>(.*?)</td>\s*<td[^>]*>(\d{4}-\d{2}-\d{2})</td>\s*<td[^>]*>'
+    r'<a href="?0/([0-9A-F]{32})"?>(.*?)</a></td>\s*<td[^>]*>.*?</td>\s*</tr>')
 
 
-def structure(html, rows=3, around=()):
-    hrefs = re.findall(r"""(?i)(?:href|src|action)\s*=\s*["']([^"']+)""", html)
-    for pat, n in Counter(norm(h) for h in hrefs).most_common(70):
-        print(f"  link {n:4d}  {pat[:200]}")
-    for tag in re.findall(r"(?is)<(?:form|input|select|option|button)\b[^>]*>", html)[:80]:
-        print("  tag ", re.sub(r"\s+", " ", tag)[:260])
-    trs = re.findall(r"(?is)<tr\b.*?</tr>", html)
-    print(f"  tr count {len(trs)}")
-    for tr in [t for t in trs if "href" in t][:rows]:
-        print("  ROW ", re.sub(r"\s+", " ", tr)[:1500])
-    for word in around:
-        for m in list(re.finditer(word, html))[:6]:
-            print(f"  AROUND {word!r} @{m.start()}: ", re.sub(r"\s+", " ", html[max(0, m.start() - 500): m.start() + 900]))
-    print("  HEAD ", re.sub(r"\s+", " ", html[:1500]))
-    print("  TAIL ", re.sub(r"\s+", " ", html[-1200:]), flush=True)
+def knf_page(day, start=1, count=20):
+    r = call("GET", f"https://moam.knf.gov.pl/moam.nsf/mOAM?readForm&RestrictToCategory={day}&start={start}&count={count}")
+    if r is None or r.status_code != 200:
+        return None
+    text = r.content.decode("utf-8", "replace")
+    msg = re.search(r'(?s)<div id="message">(.*?)</div>', text)
+    rows = KNF_ROW.findall(text)
+    trs = len(re.findall(r'<tr class="(?:even|odd)"', text))
+    pager = sorted(set(re.findall(r"RestrictToCategory=[^\"']*", text)))
+    print(f"  day={day} start={start} message={' '.join(msg.group(1).split()) if msg else None!r} rows={len(rows)} trs={trs} "
+          f"days_in_rows={Counter(x[1] for x in rows).most_common(3)} pager={pager}")
+    print("  prefixes:", Counter(htmllib.unescape(x[3]).split(",")[0].strip()[:25] for x in rows).most_common(12), flush=True)
+    return text, rows
 
 
 def knf():
-    r = get("https://moam.knf.gov.pl/robots.txt")
-    if r is not None:
-        print("  robots body:", r.text[:300].replace("\n", " | ") if "html" not in (r.headers.get("content-type") or "") else "(html page)")
-    r = get("https://moam.knf.gov.pl/moam.nsf")
+    r = call("GET", "https://moam.knf.gov.pl/moam.nsf/js/index.js")
+    if r is not None and r.status_code == 200:
+        js = r.text
+        for m in list(re.finditer(r"(?i)datepicker|RestrictToCategory|readForm", js))[:6]:
+            print("  JS ", re.sub(r"\s+", " ", js[max(0, m.start() - 300): m.start() + 500]))
+    got = knf_page("2026-11-12", 1)
+    if got:
+        text = got[0]
+        i = text.find("</table>")
+        print("  AFTER TABLE ", re.sub(r"\s+", " ", text[i: i + 1500]))
+    knf_page("2026-11-12", 81, 10)
+    knf_page("2026-11-10", 1)
+    for day in ("2026-11-08", "2026-10-12", "2025-11-12", "2021-11-12", "2016-11-10", "2011-11-10", "2009-03-02", "2026-11-13"):
+        knf_page(day, 1)
+
+
+GPW_ITEM = re.compile(
+    r'(?is)<li[^>]*>\s*<span class="date">([^<]*)</span>\s*<strong class="name">\s*<a href="espi-ebi-report\?geru_id=(\d+)[^"]*">'
+    r'(.*?)</a>\s*</strong>.*?<p>(.*?)</p>')
+FORM = {"action": "GPWEspiReportUnion", "start": "ajaxSearch", "page": "espi-ebi-reports", "format": "html", "lang": "EN",
+        "letter": "", "searchText": ""}
+
+
+def gpw_items(text, label):
+    items = GPW_ITEM.findall(text)
+    lis = len(re.findall(r"geru_id=", text)) // 2
+    heads = [[p.strip() for p in x[0].split("|")] for x in items]
+    ids = [int(x[1]) for x in items]
+    print(f"  {label}: items={len(items)} links/2={lis} ids={min(ids, default=None)}..{max(ids, default=None)} "
+          f"systems={Counter(h[2] if len(h) > 2 else '?' for h in heads)} categories={Counter(h[1] if len(h) > 1 else '?' for h in heads)} "
+          f"days={Counter(h[0][:10] for h in heads).most_common(6)} first={heads[0] if heads else None} last={heads[-1] if heads else None} "
+          f"isin_missing={sum(not re.search(r'\(([A-Z]{2}[A-Z0-9]{9}[0-9])\)\s*$', htmllib.unescape(x[2]).strip()) for x in items)}")
+    more = re.findall(r'<a href="" class="more"[^>]*>', text)
+    print("  more:", more[:2], "len", len(text), flush=True)
+    return items
+
+
+def gpw_post(label, **fields):
+    data = [(k, v) for k, v in {**FORM, **{k: v for k, v in fields.items() if not isinstance(v, list)}}.items()]
+    for k, v in fields.items():
+        if isinstance(v, list):
+            data += [(k, x) for x in v]
+    r = call("POST", "https://www.gpw.pl/ajaxindex.php", data=data, headers={"X-Requested-With": "XMLHttpRequest"})
     if r is None or r.status_code != 200:
-        return
-    html = r.text
-    structure(html, around=("Liczba raport", "(?i)regulamin|prawa autorskie|copyright|warunki korzystania"))
-    # follow at most 6 same-host navigation links that are not report documents
-    links = []
-    for h in re.findall(r"""(?i)href\s*=\s*["']([^"']+)""", html):
-        u = requests.compat.urljoin(r.url, h)
-        if "moam.knf.gov.pl" in u and not re.search(r"[0-9A-Fa-f]{32}", u) and u not in links and u.rstrip("/") != r.url.rstrip("/"):
-            links.append(u)
-    print("  NAV candidates:", links[:25])
-    for u in [x for x in links if not re.search(r"\.(css|js|ico|png|gif|jpg)(\?|$)", x)][:6]:
-        rr = get(u)
-        if rr is not None and rr.status_code == 200 and "html" in (rr.headers.get("content-type") or ""):
-            structure(rr.text, rows=2, around=("Liczba raport",))
+        print("  body:", (r.text[:300] if r is not None else None))
+        return []
+    if "geru_id" not in r.text:
+        print("  body without rows:", re.sub(r"\s+", " ", r.text[:400]))
+    return gpw_items(r.text, label)
 
 
 def gpw():
-    r = get("https://www.gpw.pl/robots.txt")
-    if r is not None:
-        print("  robots body:", r.text[:600].replace("\n", " | "))
-    r = get("https://www.gpw.pl/espi-ebi-reports")
+    r = call("GET", "https://www.gpw.pl/robots.txt")
+    print("  robots:", r.text.replace("\n", " | ") if r is not None else None)
+    r = call("GET", "https://www.gpw.pl/espi-ebi-reports")
     if r is None or r.status_code != 200:
         return
-    html = r.text
-    structure(html, rows=0, around=("(?i)ajaxindex", "(?i)show more|pokaż więcej|more-", "geru_id", "(?i)offset|limit"))
-    for m in list(re.finditer(r"(?is)<li\b[^>]*>(?:(?!</li>).)*geru_id(?:(?!</li>).)*</li>", html))[:3]:
-        print("  ITEM ", re.sub(r"\s+", " ", m.group(0))[:2500])
-    ids = re.findall(r"geru_id=(\d+)", html)
-    print("  geru ids:", len(ids), len(set(ids)), min(ids, default=None), max(ids, default=None))
-    print("  type words:", Counter(re.findall(r">\s*(ESPI|EBI)\s*<", html)))
-    print("  dates:", Counter(re.findall(r"\d{2}-\d{2}-\d{4}|\d{4}-\d{2}-\d{2}", html)).most_common(8), flush=True)
+    text = r.text
+    for word in (r"datepicker\(", r"data-type=\"pager\"|data-type='pager'|\.more", "typeRaports"):
+        for m in list(re.finditer(word, text))[:3]:
+            print(f"  AROUND {word!r} @{m.start()}: ", re.sub(r"\s+", " ", text[max(0, m.start() - 400): m.start() + 900]))
+    i = text.find("function loadSearchData")
+    print("  JS loadSearchData: ", re.sub(r"\s+", " ", text[i: i + 3500]))
+    for m in re.finditer(r'(?is)<label[^>]*>\s*<input[^>]*name="(?:typeRaports|categoryRaports)\[\]"[^>]*>(.*?)</label>', text):
+        print("  LABEL ", re.sub(r"\s+", " ", m.group(0))[:300])
+    gpw_items(text, "page")
+    all_types = ["RB", "P", "Q", "O", "R"]
+    gpw_post("ebi offset 0 limit 15", offset="0", limit="15", date="", **{"categoryRaports[]": ["EBI"], "typeRaports[]": all_types})
+    gpw_post("ebi offset 15 limit 30", offset="15", limit="30", date="", **{"categoryRaports[]": ["EBI"], "typeRaports[]": all_types})
+    for d in ("10-11-2026", "2026-11-10"):
+        gpw_post(f"ebi date {d}", offset="0", limit="15", date=d, **{"categoryRaports[]": ["EBI"], "typeRaports[]": all_types})
+    gpw_post("ebi date 10-11-2026 offset 15", offset="15", limit="30", date="10-11-2026", **{"categoryRaports[]": ["EBI"], "typeRaports[]": all_types})
+    for d in ("08-11-2026", "12-10-2026", "12-11-2025", "12-11-2021", "10-11-2016", "10-11-2011", "13-11-2026"):
+        gpw_post(f"ebi date {d}", offset="0", limit="15", date=d, **{"categoryRaports[]": ["EBI"], "typeRaports[]": all_types})
+    r = call("GET", "https://www.gpw.pl/espi-ebi-reports?categoryRaports=EBI&typeRaports=RB,P,Q,O,R&searchText=&date=10-11-2026")
+    if r is not None and r.status_code == 200:
+        gpw_items(r.text, "GET page with query")
 
 
 if __name__ == "__main__":
