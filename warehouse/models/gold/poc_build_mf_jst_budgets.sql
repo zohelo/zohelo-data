@@ -1,4 +1,4 @@
-{{ config(alias='build_mf_jst_budgets') }}
+{{ config(alias='build_mf_jst_budgets', tags=['gold_block']) }}
 {# Gold build stage: Ministry of Finance local-government budget summaries (register PLG-010) as quarterly
    observations, year to date (cumulative from January; the measure names say so). Block 'jst_budget': executed
    revenue, executed expenditure, the budget result (revenue minus expenditure) and liabilities (debt, code E) of

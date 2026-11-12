@@ -54,6 +54,9 @@ BUILTIN_FORMATS = {
     48: "##0.0E+0",
     49: "@",
 }
+# Locale-dependent built-in date formats (East Asian locales, ids 27-36 and 50-58): recorded as a date format so
+# Silver treats their numbers as dates; times among them are rare and would still read as dates of 1899-12-30.
+BUILTIN_FORMATS.update({fid: "yyyy-mm-dd (builtin)" for fid in (*range(27, 37), *range(50, 59))})
 REF = re.compile(r"^([A-Z]{1,3})([0-9]+)$")
 MAX_CELLS = 2_000_000  # a guard against a mislinked large file; the declared workbooks hold a few thousand
 
@@ -109,7 +112,7 @@ def sheets(z: zipfile.ZipFile) -> list[tuple[str, str]]:
 
 def cells(body: bytes) -> Iterator[dict[str, Any]]:
     """Every non-empty cell of every worksheet: sheet_index (1-based), sheet_name, row_number, column_number,
-    cell_ref, cell_type (s, n, str, b, e, inlineStr, d), value_text, number_format."""
+    cell_ref, cell_type (s, n, str, b, e, inlineStr; t="d" raises ValueError), value_text, number_format."""
     with zipfile.ZipFile(io.BytesIO(body)) as z:
         strings, formats, count = _shared_strings(z), _formats(z), 0
         for index, (name, part) in enumerate(sheets(z), start=1):
@@ -126,7 +129,12 @@ def cells(body: bytes) -> Iterator[dict[str, Any]]:
                 elif v is None or v.text is None:
                     value = None
                 elif kind == "s":
-                    value = strings[int(v.text)]
+                    index = int(v.text)
+                    if not 0 <= index < len(strings):
+                        raise ValueError(f"shared string {index} out of range on sheet {name!r}")
+                    value = strings[index]
+                elif kind == "d":  # ISO 8601 date cell: no declared workbook uses them; fail rather than guess
+                    raise ValueError(f"ISO date cell (t=d) on sheet {name!r} is not supported")
                 else:
                     value = v.text
                 if value is None or value == "":

@@ -1,0 +1,28 @@
+version: 2
+models:
+  - name: wgi_observations
+    description: >-
+      Worldwide Governance Indicators of the newest bulk archive, one row per economy × indicator × year
+      (1996, 1998, 2000, then yearly); value as double plus the source lexeme. About 214 countries and
+      territories, no aggregates (no EU or world value). Indicator codes GOV_WGI_<dimension>.<measure>.
+    tests:
+      - unique:
+          column_name: "economy_code || '|' || indicator_code || '|' || year"
+    columns:
+      - name: economy_code
+        description: World Bank three-letter economy code (ISO 3166 alpha-3 for countries).
+        tests: [not_null]
+      - name: indicator_code
+        tests: [not_null, {relationships: {arguments: {to: ref('wgi_indicators'), field: indicator_code}}}]
+      - name: year
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source archive (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: wgi_indicators
+    description: WGI indicators with dimension (topic), name, definition, unit, source and licence.
+    columns:
+      - name: indicator_code
+        tests: [not_null, unique]
