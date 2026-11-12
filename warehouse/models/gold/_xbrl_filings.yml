@@ -1,0 +1,77 @@
+version: 2
+
+models:
+  - name: esef_filing
+    description: >-
+      One row per ESEF annual financial report filing of a Polish issuer held by filings.xbrl.org (XBRL
+      International), keyed by the repository's filing id; issuer LEI, period end, date added, validation counts
+      (errors, warnings, inconsistencies of the repository's own validation). Language versions and refilings are
+      separate rows. The repository says it is not complete. Licence unresolved: internal.
+    columns:
+      - name: fxo_id
+        description: The repository's filing id (LEI-period end-standard-country-sequence).
+        tests: [not_null, unique]
+      - name: lei
+        description: >-
+          Issuer LEI (ISO 17442); joins GLEIF by LEI. No relationships test: it would tie this table's build to a
+          shared model.
+        tests: [not_null]
+      - name: period_end
+        tests: [not_null]
+      - name: period_end_year
+        tests: [not_null]
+      - name: filing_sequence
+        description: Last fxo_id segment; numbers language versions and refilings alike, not a version.
+        tests: [not_null]
+  - name: esef_issuer
+    description: >-
+      One row per issuer (LEI) with at least one ESEF annual financial report held by filings.xbrl.org for Poland:
+      name as the repository gives it, number of filings and period ends, first and last period end. Licence
+      unresolved: internal.
+    columns:
+      - name: lei
+        description: Issuer LEI (ISO 17442), the key; joins GLEIF by LEI.
+        tests: [not_null, unique]
+      - name: issuer_name
+        tests: [not_null]
+      - name: filings
+        tests: [not_null]
+  - name: esef_financial_fact
+    description: >-
+      Entity-level revenue (ifrs-full:Revenue) and profit or loss (ifrs-full:ProfitLoss) as tagged in the ESEF
+      annual reports of Polish issuers held by filings.xbrl.org. Grain: fxo_id × concept × period_start ×
+      period_end × unit_code (filing level: nothing is picked between language versions or refilings). Values in
+      the currency published, not converted, not aggregated. Licence unresolved: internal.
+    tests:
+      - unique:
+          column_name: "fxo_id || '|' || concept || '|' || period_start || '|' || period_end || '|' || unit_code"
+    columns:
+      - name: fxo_id
+        description: The filing (gold.esef_filing).
+        tests: [not_null]
+      - name: lei
+        description: Issuer LEI; joins GLEIF and gold.esef_issuer by LEI.
+        tests: [not_null]
+      - name: concept
+        tests: [not_null]
+      - name: measure
+        tests: [not_null, {accepted_values: {arguments: {values: ['revenue', 'profit_loss']}}}]
+      - name: period_start
+        tests: [not_null]
+      - name: period_end
+        tests: [not_null]
+      - name: unit_code
+        description: The unit as tagged in the report (iso4217:<currency>); unit_map.csv maps it to the conformed unit (D33).
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_build_xbrl_filings
+    description: >-
+      Build stage — ESEF annual financial reports of Polish issuers held by filings.xbrl.org, by year of period
+      end: filings (language versions and refilings each count) and issuers (distinct LEI) as two measures, Poland,
+      annual. Counts what the repository holds, which it says is not complete. Licence unresolved: internal.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]

@@ -1,0 +1,66 @@
+version: 2
+models:
+  - name: xbrl_filings_filings
+    description: >-
+      ESEF annual financial reports of Polish issuers held by filings.xbrl.org (XBRL International; licence
+      unresolved, internal), the newest copy of the filing list. Grain: fxo_id. The repository says it is not
+      complete. ROWS_FILINGS (Dev trial TRIAL).
+    columns:
+      - name: fxo_id
+        description: The repository's filing id (LEI-period end-standard-country-sequence).
+        tests: [not_null, unique]
+      - name: lei
+        description: The issuer's LEI (ISO 17442), the first 20 characters of fxo_id (tests/xbrl_filings_lei.sql); joins GLEIF by LEI.
+        tests: [not_null]
+      - name: issuer_name
+        tests: [not_null]
+      - name: period_end
+        tests: [not_null]
+      - name: country_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['PL']}}}]
+      - name: report_standard
+        tests: [not_null, {accepted_values: {arguments: {values: ['ESEF']}}}]
+      - name: filing_sequence
+        description: Last fxo_id segment, 0-based; numbers language versions and refilings alike (not a version).
+        tests: [not_null]
+      - name: date_added
+        tests: [not_null]
+      - name: package_sha256
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: xbrl_filings_facts
+    description: >-
+      Entity-level facts of ifrs-full:Revenue and ifrs-full:ProfitLoss from the xBRL-JSON documents of Polish ESEF
+      annual reports (filings.xbrl.org; licence unresolved, internal). Grain: fxo_id × concept × period_start ×
+      period_end × unit_code; value is null when a filing states several values for the key (values_distinct > 1).
+      ROWS_FACTS (Dev trial TRIAL).
+    tests:
+      - unique:
+          column_name: "fxo_id || '|' || concept || '|' || period_start || '|' || period_end || '|' || unit_code"
+    columns:
+      - name: fxo_id
+        description: A filing of the current list by construction (inner join to silver.xbrl_filings_filings).
+        tests: [not_null]
+      - name: lei
+        tests: [not_null]
+      - name: concept
+        tests: [not_null, {accepted_values: {arguments: {values: ['ifrs-full:Revenue', 'ifrs-full:ProfitLoss']}}}]
+      - name: period_start
+        tests: [not_null]
+      - name: period_end
+        tests: [not_null]
+      - name: unit_code
+        description: The unit as tagged (iso4217:<currency>); a currency not seen in the trial warns.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['iso4217:PLN']
+              config:
+                severity: warn
+      - name: values_distinct
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

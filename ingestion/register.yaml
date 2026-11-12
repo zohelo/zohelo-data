@@ -8442,7 +8442,8 @@ sources:
   name: ESEF annual financial reports via national OAMs
   short_name: ESEF annual reports
   provider: EU national Officially Appointed Mechanisms
-  status: approved
+  source_system: xbrl_filings
+  status: built
   family: I
   kpi: false
   geography: multicountry-Europe

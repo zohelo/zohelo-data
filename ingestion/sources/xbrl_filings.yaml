@@ -1,0 +1,44 @@
+source_system: xbrl_filings
+description: "filings.xbrl.org (XBRL International) — ESEF annual financial reports of Polish issuers: filing list, issuers, revenue and profit or loss"
+
+# Extraction strategy (docs/landing.md). Register CD-013. filings.xbrl.org has no bulk file per country (its yearly
+# index files hold every country and less than the API), so the documented JSON:API is the route
+# (https://filings.xbrl.org/docs/api, no key, no stated rate limit; "please set a user agent that includes a contact
+# email address, or a link to where we can find your contact details": the repository's identified User-Agent).
+# Entity filings_pl: the Polish filing list with issuers in one request (page of 1,000; 876 filings, 1.0 MB), exact
+# bytes, version = download time, unchanged bytes skipped. Entity facts_<fxo_id>: per filing with an xBRL-JSON
+# document (779 of 876; 0.1-9 MB each, mostly text blocks) the facts of ifrs-full:Revenue and ifrs-full:ProfitLoss,
+# reduced before Landing (storage rule, precedent O33), version = the filing's `processed` time; a version Landing
+# holds is not read again, so the first run reads each document once (one request at a time, 2 s apart, about 45
+# minutes) and later runs only new or reprocessed filings. Code: ingestion/to_landing/xbrl_filings/. Restart unit:
+# one filing. Proven from Actions by Dev probe 43321811201 (12 Nov 2026).
+extraction:
+  initial: api
+  production: snapshot                    # the list is complete; a facts document is one filing version
+  incremental_policy: changed_since_last  # list: SHA-256; facts: the filing's processed time
+  schedule: # UTC; filings arrive continuously with a peak in March-May (the provider's indexes were last written on
+    # a Wednesday around 13:00 UTC); weekly, Thursday 02:25
+    - {cron: "25 2 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/xbrl_filings/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.xbrl_filings_filings, bronze.xbrl_filings_facts, bronze.xbrl_filings_rejected_files]
+silver: [silver.xbrl_filings_filings, silver.xbrl_filings_facts]
+gold: [gold.esef_filing, gold.esef_issuer, gold.esef_financial_fact, gold.build_xbrl_filings]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  xbrl_filings_filings: {rows: 1300}  # 876 (Dev trial TRIAL)
+  xbrl_filings_facts: {rows: 1}  # TRIAL
+  esef_filing: {rows: 1300}  # 876 (Dev trial TRIAL)
+  esef_issuer: {rows: 500}  # 326 (Dev trial TRIAL)
+  esef_financial_fact: {rows: 1}  # TRIAL
+  poc_build_xbrl_filings: {rows: 20}  # TRIAL
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): one list of under 1,000 filings and a few thousand facts; the facts step is
+# changed-since by the filing's processed time; Silver and Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #1500"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

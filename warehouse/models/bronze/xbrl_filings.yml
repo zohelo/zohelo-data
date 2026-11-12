@@ -1,0 +1,24 @@
+version: 2
+
+sources:
+- name: xbrl_filings
+  description: filings.xbrl.org (XBRL International) — ESEF annual financial reports of Polish issuers, JSON:API and xBRL-JSON
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/xbrl_filings/
+    loaded_by: ingestion/to_bronze/xbrl_filings/
+    config: ingestion/sources/xbrl_filings.yaml
+  tables:
+  - name: xbrl_filings_filings
+    description: >-
+      One row per filing of the newest copy of the Polish filing list (entity filings_pl), every attribute as text
+      (fxo_id, period_end, country, date_added, processed, published, sha256, the four URLs, error, warning and
+      inconsistency counts) with the issuer's LEI and name from the included entity; partitioned by entity.
+  - name: xbrl_filings_facts
+    description: >-
+      One row per fact of ifrs-full:Revenue and ifrs-full:ProfitLoss in a filing's xBRL-JSON document (entity
+      facts_<fxo_id>, newest version): value, decimals, period, unit, entity and language as text, every other
+      dimension as JSON text in extra_dimensions ('{}' = an entity-level fact); partitioned by entity.
+  - name: xbrl_filings_rejected_files
+    description: filings.xbrl.org Landing files the Bronze decoder rejected, with the reason (a document without a fact of the selected concepts is one).
