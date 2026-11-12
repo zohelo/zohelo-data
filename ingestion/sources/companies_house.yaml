@@ -37,8 +37,8 @@ bronze: [bronze.companies_house_companies, bronze.companies_house_rejected_files
 silver: [silver.companies_house_poland_origin, silver.companies_house_snapshot_counts]
 gold: [gold.build_companies_house, gold.company_uk_poland_origin]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  poc_build_companies_house: {rows: 1000}  # BUILD_ROWS per monthly snapshot (Dev trial TRIAL_RUN); the history adds as many each month, so the ceiling is about 20 months, to be raised with the history
-  company_uk_poland_origin: {rows: 75}  # 50 (Dev trial TRIAL_RUN)
+  poc_build_companies_house: {rows: 1000}  # 48 per monthly snapshot (Dev trial 43328628842); the history adds as many each month, so the ceiling is about 20 months, to be raised with the history
+  company_uk_poland_origin: {rows: 75}  # 50 (Dev trial 43328628842)
 
 # Refresh policy for all layers (D32): one file of several million rows a month, replaced whole by the source, so
 # the unit is the file. Bronze holds the newest snapshot only (the file's entity is replaced); Silver is written
