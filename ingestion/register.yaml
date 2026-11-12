@@ -4293,7 +4293,7 @@ sources:
   name: Open KRS API (API Rejestrów Sądowych)
   short_name: KRS open API
   provider: Ministry of Justice
-  status: registered
+  status: approved
   family: E
   kpi: false
   geography: Poland
@@ -4311,23 +4311,29 @@ sources:
     limits: Unknown.
   licence:
     status: unresolved
-    notes: Public access is clear; bulk redistribution rights and service limits are not.
+    notes: 'Terms: no licence on https://prs.ms.gov.pl/krs/openApi (the page documents the Open API; no terms text matched
+      in the page body (page read 11 Nov 2026 from a GitHub runner)). KRS data are public by statute but no attribution or
+      redistribution text is given: licence stays unresolved (internal only) until the Ministry of Justice terms or the dane.gov.pl
+      dataset licence (https://dane.gov.pl/en/dataset/27606%2Capi-krajowego-rejestru-sadowego-api-krs) are confirmed.'
   updates: Reflects registered records; no official change-feed guarantee verified.
   ingestion:
-    history: 'PROPOSAL: fetch current/full extracts only for KRS identifiers obtained from an authorised source;
-      no enumeration route is documented here.'
-    incremental: 'PROPOSAL: re-fetch known KRS numbers and compare canonical payloads after limits/terms review;
-      this is polling, not CDC.'
+    history: 'PROPOSAL: fetch current/full extracts only for KRS identifiers obtained from an authorised source; no enumeration
+      route is documented here.'
+    incremental: 'PROPOSAL: re-fetch known KRS numbers and compare canonical payloads after limits/terms review; this is polling,
+      not CDC.'
     identifiers: KRS primary; NIP and REGON when present
   modelling:
     notes: Model entity, section and roles; minimize natural-person fields.
     overlap: Complements RDF and CEIDG; legal-form scopes differ.
   research:
     priority: review-first
-    evidence: catalogue-only
+    evidence: documented
     connection: not-tested
     blockers:
-    - Confirm terms, quotas, enumeration and person-data policy.
+    - 'Route: the Open API answers per KRS number (current and full extract); no bulk list is documented, so the KRS number
+      list must come from REGON/CEIDG or the register search: confirm in the stage-2 dev trial'
+    - Confirm rate limits and exact endpoint in the Dev trial (limits not published on the page)
+    - 'Licence unresolved: confirm terms; personal data of natural persons in extracts needs an allowlist'
     references:
     - https://prs.ms.gov.pl/krs/openApi
     - https://dane.gov.pl/en/dataset/27606%2Capi-krajowego-rejestru-sadowego-api-krs
@@ -4335,7 +4341,7 @@ sources:
   name: Repository of Financial Documents (RDF) viewer
   short_name: KRS financial documents (RDF)
   provider: Ministry of Justice
-  status: registered
+  status: parked
   family: I
   kpi: false
   geography: Poland
@@ -4356,27 +4362,29 @@ sources:
     notes: Free viewing/download does not establish bulk harvesting or republication rights.
   updates: Filing-driven; viewer timestamps are not a CDC contract.
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
+    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native labels.'
+    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as source CDC.'
     identifiers: KRS + document ID + reporting period + type
   modelling:
     notes: Preserve signed filing; derived facts need taxonomy, sign and unit controls.
     overlap: Links directly to KRS; primary evidence for filed accounts.
   research:
     priority: conditional
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
+    - 'Parked: restricted: free viewing/download of single financial documents only, no bulk or API route, and the browser
+      answers HTTP 403 to scripted requests from a GitHub runner; re-open if the Ministry of Justice offers a bulk export
+      with terms'
     - No bulk route
     - clarify reuse and person-data obligations.
-    references: ['https://rdf-przegladarka.ms.gov.pl/']
+    references:
+    - https://rdf-przegladarka.ms.gov.pl/
 - id: PLG-014
   name: CEIDG and Biznes.gov.pl Data Warehouse/API
   short_name: CEIDG
   provider: Ministry of Economic Development and Technology
-  status: registered
+  status: approved
   family: E
   kpi: false
   geography: Poland
@@ -4388,29 +4396,38 @@ sources:
   access:
     endpoint: https://dane.biznes.gov.pl/
     kind: api
-    interfaces: [REST API, HTML, reports]
-    auth: registration/API key appears required; confirm current flow
+    interfaces: [REST API (CEIDG data warehouse API v2), JSON, HTML]
+    auth: Free account on the CEIDG and Biznes.gov.pl data warehouse is required; API v2 uses a token (see the integrator
+      documentation).
     cost: free
-    limits: Unknown.
+    limits: 'API v2: more than 50 requests in 180 s triggers a 180 s pause (HTTP 429); documented optimal interval 3.6 s between
+      requests; page size via limit (default 50).'
   licence:
     status: unresolved
-    notes: Legal notes identify the warehouse; commercial redistribution and personal-data conditions need review.
+    notes: 'Terms: no data licence found. https://dane.biznes.gov.pl/ says "Aby skorzystać z Hurtowni danych CEIDG i Biznes.gov.pl
+      musisz posiadać konto" (an account is required) and its footer says articles on the service without other copyright
+      information "należą do informacji publicznych i udostępniamy je bezpłatnie" (this covers the articles, not the warehouse
+      data). Integrator guide v3.1 (PDF, 3 Sep 2026) states the request limit above. Licence stays unresolved (internal only)
+      until the Ministry of Development and Technology states reuse terms for the warehouse data; sole-trader records carry
+      personal data (public-field allowlist).'
   updates: Current-data service; no CDC guarantee assumed.
   ingestion:
-    history: 'PROPOSAL: after registration/key and terms review, backfill only through documented CEIDG warehouse/API
-      filters; avoid personal/contact fields by default.'
-    incremental: 'PROPOSAL: use documented modification filters as candidates, then reconcile entity snapshots because
-      change retention and CDC guarantees remain unverified.'
+    history: 'PROPOSAL: after registration/key and terms review, backfill only through documented CEIDG warehouse/API filters;
+      avoid personal/contact fields by default.'
+    incremental: 'PROPOSAL: use documented modification filters as candidates, then reconcile entity snapshots because change
+      retention and CDC guarantees remain unverified.'
     identifiers: NIP/REGON + CEIDG identifiers
   modelling:
     notes: Separate person from activity/establishment and minimize personal/contact fields.
     overlap: Complements KRS; cross-register matches need effective dating.
   research:
     priority: review-first
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Confirm auth, quotas, history, terms and legal basis.
+    - 'Owner action: create the data-warehouse account and obtain the API token (secret), then add it as a repository secret'
+    - 'Licence unresolved: no reuse terms for the data; personal-data allowlist for natural persons'
+    - Document change semantics (current-state service, no CDC)
     references:
     - https://dane.biznes.gov.pl/
     - https://www.biznes.gov.pl/en/portal/034100
@@ -4419,7 +4436,7 @@ sources:
   name: Central Register of Beneficial Owners (CRBR)
   short_name: CRBR beneficial owners
   provider: Ministry of Finance
-  status: registered
+  status: parked
   family: E
   kpi: false
   geography: Poland
@@ -4440,10 +4457,8 @@ sources:
     notes: Identifiable people and control data; public lookup does not authorize bulk profiling or redistribution.
   updates: Submission-driven; service-page dates are not record CDC.
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
+    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native labels.'
+    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as source CDC.'
     identifiers: KRS/NIP where present + entity + beneficiary/control
   modelling:
     notes: High-risk person data; retain only fields necessary for an approved purpose.
@@ -4453,9 +4468,12 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Parked: restricted: identifiable beneficial-owner data with access controls; public lookup does not authorise bulk
+      harvesting or republication; no API for third parties'
     - No bulk API
     - legal basis, retention and redistribution unresolved.
-    references: ['https://www.podatki.gov.pl/crbr/']
+    references:
+    - https://www.podatki.gov.pl/crbr/
 - id: PLG-016
   name: Supervised-entity registers and search
   short_name: KNF supervised entities
@@ -4624,7 +4642,7 @@ sources:
   name: KNF Public Warning List
   short_name: KNF public warning list
   provider: Polish Financial Supervision Authority (KNF)
-  status: registered
+  status: parked
   family: E
   kpi: false
   geography: Poland
@@ -4642,13 +4660,13 @@ sources:
     limits: Unknown.
   licence:
     status: restricted
-    notes: Entries concern allegations/proceedings and may name people; context/status must be preserved.
+    notes: 'Terms: none for reuse on https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne (page read 11 Nov 2026 from
+      a GitHub runner); the list states notifications of suspected offences and criminal proceedings (some with convictions);
+      context and status must be preserved. Not reusable: stays internal.'
   updates: Updated with notifications and proceeding information; no feed documented.
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
+    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native labels.'
+    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as source CDC.'
     identifiers: KRS/NIP/REGON where present + subject + legal basis
   modelling:
     notes: Never infer final liability; model allegation and procedural status over time.
@@ -4656,8 +4674,12 @@ sources:
   research:
     priority: specialist
     evidence: documented
-    connection: not-tested
-    blockers: [High reputational/person-data risk, no bulk rights verified.]
+    connection: tested
+    blockers:
+    - 'Parked: restricted: list of public warnings about alleged offences naming entities and people, HTML only, no export;
+      republishing risks defamation and context loss'
+    - High reputational/person-data risk
+    - no bulk rights verified.
     references:
     - https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne
 - id: PLG-020
@@ -4744,7 +4766,7 @@ sources:
   name: e-Zamówienia / BZP read API
   short_name: e-Zamówienia BZP
   provider: Public Procurement Office (UZP)
-  status: registered
+  status: approved
   family: D
   kpi: true
   geography: Poland
@@ -4756,36 +4778,45 @@ sources:
   access:
     endpoint: https://ezamowienia.gov.pl/pl/integracja/
     kind: api
-    interfaces: [REST API, JSON, HTML]
-    auth: BZP reading needs no integration procedure; other APIs do
+    interfaces: [REST API (BZP WebService), JSON, HTML]
+    auth: 'BZP notice reading needs no access application and is free (API regulations): "Usługa Webservice jest bezpłatna
+      i dostępna jest pod adresem https://ezamowienia.gov.pl/mo-client-board/api/notices/".'
     cost: free
     limits: Unknown.
   licence:
-    status: open-conditional
-    notes: API regulations govern use; distinguish read APIs from submission APIs.
+    status: unresolved
+    notes: 'Terms: API regulations https://media.ezamowienia.gov.pl/pod/2023/01/Regulamin-korzystania-z-API.pdf (version of
+      24 Nov 2023): "W zakresie Webservice nie wymagane jest składanie wniosku dostępowego. Usługa Webservice jest bezpłatna"
+      (BZP read WebService needs no application and is free); other services need OAuth 2.0 client credentials. The regulations
+      matched no licence or attribution clause for the notice data: licence stays unresolved (internal only) until the platform
+      operator (UZP/MRiT) states reuse terms; notices are public procurement information. Submission APIs (MO, PP, MMiA) are
+      out of scope.'
   updates: Notice publication/correction events; publication is not award CDC.
   ingestion:
-    history: 'PROPOSAL: backfill only the BZP notice/statistics read API, which requires no integration procedure;
-      exclude submission/integration APIs.'
-    incremental: 'PROPOSAL: use documented publication/update filters and reconcile notice versions; a notice update
-      is not contract-award CDC.'
+    history: 'PROPOSAL: backfill only the BZP notice/statistics read API, which requires no integration procedure; exclude
+      submission/integration APIs.'
+    incremental: 'PROPOSAL: use documented publication/update filters and reconcile notice versions; a notice update is not
+      contract-award CDC.'
     identifiers: notice ID + OCID/procedure ID + version + authority identifiers
   modelling:
     notes: Separate plans, notices, results, changes and lots.
     overlap: Overlaps TED for some notices; join by IDs, never sum notices as contracts.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Review API regulation, quotas, history and versions.
+    - 'Licence unresolved: no reuse or attribution text found; the notice data are public under the Public Procurement Law'
+    - Check the BZP WebService instruction (Załącznik 3, ZIP) for paging and update filters in the stage-2 dev trial
     references:
     - https://ezamowienia.gov.pl/pl/integracja/
+    - https://media.ezamowienia.gov.pl/pod/2023/01/Regulamin-korzystania-z-API.pdf
+    - https://media.ezamowienia.gov.pl/pod/2022/08/Zalacznik-3-Instrukcja-integracji-z-API-BZP.zip
 - id: PLG-023
   name: TED Search API and Open Data — Poland-filtered notices
   short_name: TED notices (Poland)
   provider: Publications Office of the European Union
-  status: registered
+  status: approved
   family: D
   kpi: true
   geography: multicountry-Europe
@@ -4795,38 +4826,47 @@ sources:
   granularity: EU notice, procedure and lot; filter Poland by buyer/place/country fields.
   coverage: Legacy XML and eForms; eForms apps entered production 2022-11-14.
   access:
-    endpoint: https://docs.ted.europa.eu/api/latest/index.html
+    endpoint: https://api.ted.europa.eu/v3/notices/search
     kind: api
-    interfaces: [REST API, JSON, XML, bulk files]
-    auth: anonymous for published notice search/retrieval; key for unpublished operations
+    interfaces: [REST API (POST /v3/notices/search), JSON, XML]
+    auth: 'Public: "The Search API does not require a key." (https://docs.ted.europa.eu/api/latest/index.html); keys are only
+      needed to publish notices.'
     cost: free
     limits: Unknown.
   licence:
-    status: open-conditional
-    notes: Published notices support reuse; review legal notice and person fields.
+    status: unresolved
+    notes: 'Terms: https://docs.ted.europa.eu/api/latest/search.html names commercial organisations among the users of the
+      Search API and says TED API "allows anonymous access to all services manipulating published notices"; the legal notice
+      page https://ted.europa.eu/en/legal-notice returned HTTP 202 with an empty body from the runner, so the reuse licence
+      and attribution text could not be quoted. Licence stays unresolved until the legal notice is read (expected: Publications
+      Office reuse under Decision 2011/833/EU; do not rely on it before quoting). Restrict the load to Poland (place of performance
+      / buyer country PL).'
   updates: Publication/change notices are event based and version-linked.
   ingestion:
-    history: 'PROPOSAL: use anonymous Search API/bulk access for published Poland-relevant notices; partition legacy
-      XML and post-2022 eForms schemas.'
-    incremental: 'PROPOSAL: retrieve new/change notices by documented query fields and preserve parent/version links;
-      unpublished-notice APIs remain out of scope.'
+    history: 'PROPOSAL: use anonymous Search API/bulk access for published Poland-relevant notices; partition legacy XML and
+      post-2022 eForms schemas.'
+    incremental: 'PROPOSAL: retrieve new/change notices by documented query fields and preserve parent/version links; unpublished-notice
+      APIs remain out of scope.'
     identifiers: publication number + notice/version + procedure/lot IDs
   modelling:
     notes: Model lifecycle, lots, buyers, winners and values separately.
     overlap: Overlaps BZP; publication scope/thresholds differ.
   research:
     priority: review-first
-    evidence: documented
+    evidence: tested
     connection: not-tested
     blockers:
-    - Review legal notice, historic schemas, limits and Poland filter.
+    - Read https://ted.europa.eu/en/legal-notice (browser or another route) and record the licence and attribution text
+    - 'Query limits not read: check https://docs.ted.europa.eu/api/latest/search.html (paging/iteration) in the dev trial'
+    - Review person fields in notices
     references:
     - https://docs.ted.europa.eu/api/latest/index.html
+    - https://docs.ted.europa.eu/api/latest/search.html
 - id: PLG-024
   name: Sejm API
   short_name: Sejm API
   provider: Chancellery of the Sejm
-  status: registered
+  status: approved
   family: F
   kpi: false
   geography: Poland
@@ -4838,30 +4878,37 @@ sources:
   access:
     endpoint: https://api.sejm.gov.pl/sejm.html
     kind: api
-    interfaces: [REST API, JSON, PDF, media]
-    auth: public; no key documented
+    interfaces: [REST API, JSON, OpenAPI]
+    auth: Public; no key.
     cost: free
-    limits: Unknown.
+    limits: None stated in the documentation (HTTP 200/400/404 only; page/limit via offset and limit).
   licence:
     status: unresolved
-    notes: Official API access is clear; licence and rate limits were not established.
+    notes: 'Terms: https://api.sejm.gov.pl/sejm.html documents the API without any licence, attribution or rate-limit clause
+      (page last changed 25 Aug 2026; a change history is listed). Licence stays unresolved (internal only) until the Chancellery
+      of the Sejm states reuse terms; the data are public parliamentary records, MP photos and personal data need a field
+      allowlist.'
   updates: Updated with parliamentary activity; corrections possible.
   ingestion:
-    history: 'PROPOSAL: traverse resources by parliamentary term; use offset/limit pagination where documented and
-      preserve document/event/vote keys.'
-    incremental: 'PROPOSAL: poll current-term resources, using available lastChanged metadata as a signal; reconcile
-      snapshots and prior-term corrections, without assuming CDC.'
+    history: 'Term 10 (since 2023-11-13) and earlier terms: MPs, votings, prints, proceedings, interpellations, committees;
+      entry point https://api.sejm.gov.pl/sejm/term10 (count and lastChanged per resource).'
+    incremental: 'PROPOSAL: poll current-term resources, using available lastChanged metadata as a signal; reconcile snapshots
+      and prior-term corrections, without assuming CDC.'
     identifiers: term + MP/sitting-vote/print/interpellation ID
   modelling:
     notes: Keep documents, events and votes distinct; memberships are effective-dated.
     overlap: Connects RCL drafts, Senate stages and ELI acts via explicit bridges.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Confirm limits, change behavior and terms.
-    references: ['https://api.sejm.gov.pl/sejm.html', 'https://api.sejm.gov.pl/']
+    - 'Licence unresolved: no terms on the API page'
+    - Define allowlist (photos, personal data)
+    references:
+    - https://api.sejm.gov.pl/sejm.html
+    - https://api.sejm.gov.pl/
+    - https://api.sejm.gov.pl/sejm/term10
 - id: PLG-025
   name: Senate legislative process, sittings, votes and members
   short_name: Senate data
@@ -4907,7 +4954,7 @@ sources:
   name: ELI Poland — Dziennik Ustaw and Monitor Polski
   short_name: ELI Dziennik Ustaw
   provider: Government Legislation Centre (RCL) / Chancellery of the Sejm
-  status: registered
+  status: approved
   family: F
   kpi: false
   geography: Poland
@@ -4917,21 +4964,24 @@ sources:
   granularity: Journal/year/position and published, consolidated or codified text.
   coverage: URI documentation states years 1918-current, subject to source availability.
   access:
-    endpoint: https://eli.gov.pl/
+    endpoint: https://api.sejm.gov.pl/eli.html
     kind: api
-    interfaces: [REST-style URIs, HTML, PDF, API]
-    auth: public; no key documented
+    interfaces: [REST API, JSON, PDF, HTML]
+    auth: Public; no key.
     cost: free
     limits: Unknown.
   licence:
-    status: open-conditional
-    notes: ELI describes reuse benefits, but exact licence/attribution rules need review.
+    status: unresolved
+    notes: 'Terms: the ELI API documentation https://api.sejm.gov.pl/eli.html (11 Nov 2026 read) states no licence or attribution
+      text. Registered as open-conditional on the strength of ELI general statements; the exact licence is not quoted anywhere
+      reachable, so it is set to unresolved (internal only) until the Chancellery of the Sejm confirms terms. Legal acts themselves
+      are not protected by copyright (Polish Copyright Act art. 4), but the database and formatting terms need confirmation.'
   updates: Publication-driven; consolidated/codified versions may appear later.
   ingestion:
-    history: 'PROPOSAL: enumerate documented ELI journal/year/position resources from 1918 onward, preserving ogl/tj/uj,
-      language and format.'
-    incremental: 'PROPOSAL: append new journal positions and revisit known acts for later consolidated/codified
-      versions; do not infer legal-status CDC.'
+    history: 'PROPOSAL: enumerate documented ELI journal/year/position resources from 1918 onward, preserving ogl/tj/uj, language
+      and format.'
+    incremental: 'PROPOSAL: append new journal positions and revisit known acts for later consolidated/codified versions;
+      do not infer legal-status CDC.'
     identifiers: ELI journal + year + position + text type + language + format
   modelling:
     notes: Published text may be authoritative; codified text may lack legal force.
@@ -4941,13 +4991,16 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm API quotas, licence and status semantics.
-    references: ['https://eli.gov.pl/', 'https://api.sejm.gov.pl/eli_pl.html']
+    - 'Licence unresolved: no licence text on the ELI API page'
+    - Confirm paging and the act-text endpoints in the dev trial
+    references:
+    - https://eli.gov.pl/
+    - https://api.sejm.gov.pl/eli_pl.html
 - id: PLG-027
   name: ISAP — Internet System of Legal Acts archive
   short_name: ISAP legal acts
   provider: Chancellery of the Sejm
-  status: registered
+  status: parked
   family: F
   kpi: false
   geography: Poland
@@ -4968,10 +5021,8 @@ sources:
     notes: Bibliographic database and scan reuse rights not verified.
   updates: Updated with publications/text versions; no machine feed verified.
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
+    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native labels.'
+    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as source CDC.'
     identifiers: journal + year + number/position; ELI where present
   modelling:
     notes: Separate metadata, original text and non-authoritative consolidated text.
@@ -4980,7 +5031,11 @@ sources:
     priority: specialist
     evidence: documented
     connection: not-tested
-    blockers: [No bulk/API route, clarify overlap and rights.]
+    blockers:
+    - 'Parked: superseded by PLG-026: ISAP is the web interface of the same legal-act database that the Sejm ELI API serves
+      as JSON and PDF; no separate bulk or API route; re-open only for scans not in ELI'
+    - No bulk/API route
+    - clarify overlap and rights.
     references:
     - https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=wdu20070500331
     - https://isap.sejm.gov.pl/
