@@ -149,6 +149,8 @@ un_wpp,thousand_persons,,thousand_persons
 un_wpp,children_per_woman,,children_per_woman
 un_wpp,years,,years
 world_bank_gem,pct,,pct
+unhcr,persons,,persons
+eea,Gg CO2 equivalent,,thousand_tonnes
 zus_psz,persons,,persons
 zus_psz,PLN,,pln
 zus_psz,days,,days
