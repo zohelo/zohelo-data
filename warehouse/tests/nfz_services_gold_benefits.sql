@@ -5,7 +5,7 @@
 with silver as (
     select catalog, benefit_code, count(*) as years
     from {{ ref('nfz_services_basic_data') }}
-    where period_kind = 'year' and area_code = 'PL' and number_of_hospitalizations is not null
+    where period_kind = 'year' and area_code = 'PL' and area_records = 1 and number_of_hospitalizations is not null
     group by all
 ),
 
