@@ -5,8 +5,9 @@
    Tables are found by title and column header (macro gus_table_values, warehouse/macros/gus_tables.sql):
    - population: TABL. 2 "Ludność według województw - dynamika zmian": Ogółem | 2011 and | 2021 (population),
      Miasta | 2021 (population_urban), Wieś | 2021 (population_rural), Ludność miejska w % | 2021 (urban_share)
-   - labour: TABL. 1 "Aktywność ekonomiczna ludności w wieku 15 lat lub więcej", block Ogółem: activity rate,
-     employment rate and unemployment rate in % (census definitions, persons aged 15+)
+   - labour: TABL. 1 "Aktywność ekonomiczna ludności w wieku 15 lat lub więcej" by voivodeship (sheet "TABL. 1.";
+     tables 1, 2, 5 and 6 of the workbook share the title), block Ogółem: activity rate, employment rate and
+     unemployment rate in % (census definitions, persons aged 15+)
    Values as published. #}
 {% set specs = [
     {'table': 'population', 'title': 'LUDNOŚĆ WEDŁUG WOJEWÓDZTW - DYNAMIKA ZMIAN', 'measure': 'population',
@@ -20,10 +21,13 @@
     {'table': 'population', 'title': 'LUDNOŚĆ WEDŁUG WOJEWÓDZTW - DYNAMIKA ZMIAN', 'measure': 'urban_share',
      'header': '(^|\\| )Ludność miejska w % .*\\| 2021$', 'unit': 'pct_population', 'period': 2021},
     {'table': 'labour', 'title': 'AKTYWNOŚĆ EKONOMICZNA LUDNOŚCI W WIEKU 15 LAT', 'measure': 'activity_rate',
-     'header': '(^|\\| )Współ-?czynnik aktywności', 'unit': 'pct', 'period': 2021, 'block': '^Ogółem'},
+     'header': '(^|\\| )Współ-?czynnik aktywności', 'unit': 'pct', 'period': 2021, 'block': '^Ogółem',
+     'sheet': '^TABL\\. 1\\.$'},
     {'table': 'labour', 'title': 'AKTYWNOŚĆ EKONOMICZNA LUDNOŚCI W WIEKU 15 LAT', 'measure': 'employment_rate',
-     'header': '(^|\\| )Wskaźnik zatrudnienia', 'unit': 'pct', 'period': 2021, 'block': '^Ogółem'},
+     'header': '(^|\\| )Wskaźnik zatrudnienia', 'unit': 'pct', 'period': 2021, 'block': '^Ogółem',
+     'sheet': '^TABL\\. 1\\.$'},
     {'table': 'labour', 'title': 'AKTYWNOŚĆ EKONOMICZNA LUDNOŚCI W WIEKU 15 LAT', 'measure': 'unemployment_rate',
-     'header': '(^|\\| )Stopa bezrobocia', 'unit': 'pct', 'period': 2021, 'block': '^Ogółem'},
+     'header': '(^|\\| )Stopa bezrobocia', 'unit': 'pct', 'period': 2021, 'block': '^Ogółem',
+     'sheet': '^TABL\\. 1\\.$'},
 ] %}
 select * from ({{ gus_table_values(source('gus_nsp2021', 'gus_nsp2021_cells'), specs) }})

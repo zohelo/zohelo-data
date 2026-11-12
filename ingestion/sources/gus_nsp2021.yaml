@@ -7,16 +7,13 @@ description: "GUS — Narodowy Spis Powszechny Ludności i Mieszkań 2021 (popul
 # test/w3-gus-probe). A one-off census: the curated themes are declared files of the shared bulk_file pattern (no
 # extractor code); entity = one theme workbook, version = download time (no Last-Modified), written only when the
 # SHA-256 changed (a corrected workbook gets a new URL here, which needs a declaration change). Restart unit: one file.
+# The housing workbook (Warunki mieszkaniowe) prints the 2021 row of each area without its label: not declared.
 extraction:
   kind: bulk_file
   bulk_file:
     files:
       - entity: ludnosc_stan_struktura   # Ludność. Stan i struktura demograficzno-społeczna (aneks): population by voivodeship
         url: "https://stat.gov.pl/download/gfx/portalinformacyjny/pl/defaultaktualnosci/6536/6/2/1/ludnosc_stan_i_struktura_demograficzno-spoleczna_w_swietle_wynikow_nsp_2021_aneks.xlsx"
-        format: raw
-        version: ingested
-      - entity: warunki_mieszkaniowe     # Warunki mieszkaniowe: dwellings and housing indicators by voivodeship
-        url: "https://stat.gov.pl/download/gfx/portalinformacyjny/pl/defaultaktualnosci/6536/5/2/1/warunkimieszkaniowewpolscewswietlewynikownarodowegospisupowszechnegoludnosciimieszkan2021.tablicewformaciexlsx.xlsx"
         format: raw
         version: ingested
       - entity: rynek_pracy              # Ludność na rynku pracy (wersja uaktualniona): economic activity by voivodeship
@@ -39,7 +36,7 @@ silver: [silver.gus_nsp2021_tables]
 gold: [gold.build_gus_nsp2021]
 
 bronze_latest_only: true   # policy #822/#845
-# Refresh policy for all layers (D32): three workbooks of a one-off census; small, rebuilt in full.
+# Refresh policy for all layers (D32): two workbooks of a one-off census; small, rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2454"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
