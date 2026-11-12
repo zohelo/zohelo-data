@@ -34,7 +34,7 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('gdp_volume_growth', 'eurostat', '%', -50, 100),
     ('gdp_volume_growth', 'world_bank_wdi', '%', -100, 200),
     -- an index, previous period or same quarter of the previous year = 100 (rate = value - 100);
-    -- Poland 1995-2026 published 91.x-111.2 (GUS DBW 1038_16_389_3 and 1038_16_92_4, #2788)
+    -- Poland published 92.6-111.2 (GUS DBW 1038_16_389_3) and 98.0-106.9 (1038_16_92_4), #2788
     ('gdp_volume_growth', 'gus_dbw', '%', 50, 200)
 ),
 
