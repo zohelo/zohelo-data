@@ -211,26 +211,31 @@ def crawl_bundles(root: str, max_files: int = 70) -> None:
         note("bundle_ctx", c)
 
 
-def main(argv: list[str]) -> int:
-    crawl_bundles("https://rpwdl2.ezdrowie.gov.pl/")
-    for root in ("https://rejestry.ezdrowie.gov.pl/registry/rpwdl", "https://rejestry.ezdrowie.gov.pl/"):
-        body, info = fetch(root, accept="text/html")
-        html = text_of(body)
-        note("rejestry", {"url": root, **info, "title": title(html), "links": [u for u in links(html, root) if KEYWORDS.search(u)][:40], "head": re.sub(r"\s+", " ", html[:600])})
-    body, info = fetch("https://ezdrowie.gov.pl/portal/home/rejestry-medyczne/rejestr-podmiotow-wykonujacych-dzialalnosc-lecznicza", accept="text/html")
-    html = text_of(body)
-    hits = [u for u in links(html, "https://ezdrowie.gov.pl/") if re.search(r"(pobierz|rpwdl|plik|xls|csv|zip|xml|dane)", u, re.I)]
-    txt = re.sub(r"<[^>]+>", " ", html)
-    snippets = [re.sub(r"\s+", " ", txt[max(0, m.start() - 200): m.end() + 300]) for m in re.finditer(r"(licencj|ponowne|wykorzyst|plik|pobra)", txt, re.I)][:12]
-    note("ezdrowie", {"links": hits[:40], "snippets": snippets})
-    for u in ("https://api.dane.gov.pl/1.4/datasets?q=RPWDL&per_page=20",
-              "https://api.dane.gov.pl/1.4/search?q=podmiot%C3%B3w%20wykonuj%C4%85cych%20dzia%C5%82alno%C5%9B%C4%87%20lecznicz%C4%85&per_page=20",
-              "https://dane.gov.pl/pl/dataset?q=RPWDL"):
-        body, info = fetch(u, accept="application/json, text/html", limit=400_000)
-        t = text_of(body)
-        titles = re.findall(r'"title"\s*:\s*"([^"]{0,140})"', t)[:30]
-        note("dane", {"url": u, **info, "titles": titles, "head": t[:300]})
+API = "https://rpwdl2.ezdrowie.gov.pl/api"
 
+
+def module_dump(names: list[str]) -> None:
+    calls: list[str] = []
+    for name in names:
+        jb, ji = fetch(f"https://rpwdl2.ezdrowie.gov.pl/{name}", limit=4_000_000)
+        src = text_of(jb)
+        note("module", {"name": name, **ji})
+        for i in range(0, min(len(src), 60000), 15000):
+            print(f"[module_src {name} {i}] {src[i:i + 15000]}", flush=True)
+        for m in re.finditer(r"`\$\{[A-Za-z0-9_.]+\}(/[^`]{1,200})`", src):
+            calls.append(m.group(1))
+        for m in re.finditer(r"""import\(["']\./([A-Za-z0-9_\-]+\.js)["']\)""", src):
+            note("module_import", {"from": name, "import": m.group(1)})
+    note("module_calls", sorted(set(calls)))
+    for path in sorted(set(calls)):
+        if "${" in path:
+            continue
+        body, info = fetch(API + path, accept="application/json", limit=2_000_000)
+        note("api_get", {"path": path, **info, "head": text_of(body)[:4000]})
+
+
+def main(argv: list[str]) -> int:
+    module_dump(argv or ["chunk-KOLANLQK.js"])
     import os
     out_dir = os.environ.get("DEV_OUTPUT_DIR")
     if out_dir:
