@@ -2703,7 +2703,8 @@ sources:
   name: API Umowy NFZ
   short_name: NFZ contracts
   provider: Narodowy Fundusz Zdrowia (NFZ)
-  status: approved
+  source_system: nfz_contracts
+  status: built
   family: B
   kpi: true
   geography: Poland; NFZ branch and provider

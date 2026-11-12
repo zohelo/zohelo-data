@@ -1,0 +1,21 @@
+version: 2
+models:
+  - name: poc_build_nfz_contracts
+    description: >-
+      Build stage — NFZ contracts API (register PLS-014): zohelo's counts and sums over the published agreement
+      register (silver.nfz_contracts_agreements), annual by contract year, for the 16 NFZ regional branches (=
+      voivodeships) and Poland (sum over the branches): agreements, healthcare providers (NFZ provider codes) and the
+      contracted amount in PLN (sum of published amounts; agreements without an amount are not in it), each in total
+      and by NFZ service type. Contract amounts are ceilings for the year, not expenditure.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || geography_key || '|' || breakdown_json || '|' || cast(date_key as varchar)"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null, {accepted_values: {arguments: {values: [PL, 'TERC:02', 'TERC:04', 'TERC:06', 'TERC:08', 'TERC:10', 'TERC:12', 'TERC:14', 'TERC:16', 'TERC:18', 'TERC:20', 'TERC:22', 'TERC:24', 'TERC:26', 'TERC:28', 'TERC:30', 'TERC:32']}}}]
+      - name: value
+        tests: [not_null]
