@@ -1,0 +1,31 @@
+version: 2
+models:
+  - name: mf_jst_budget_summary
+    description: >-
+      Ministry of Finance local-government budget summaries (register PLG-010): national totals per unit type (jst =
+      all units, gminy, miasta = cities with powiat rights, powiaty, wojew = voivodeships, zwiazki = unions) and
+      quarter, year to date, in PLN, from the newest copy of each summary workbook (bronze.mf_jst_budgets_cells).
+      Grain: unit_type x period_date x section x item_label x item_occurrence x measure_code. DW workbooks: plan
+      (after changes) and executed amounts of revenue, expenditure and financing items; ZN workbooks: totals of
+      liabilities (E codes) and receivables (N codes). History from 2022 Q1 (the summaries on the year pages).
+    tests:
+      - unique:
+          column_name: "concat_ws('|', unit_type, period_date, section, item_label, item_occurrence, measure_code)"
+    columns:
+      - name: unit_type
+        tests: [not_null, {accepted_values: {arguments: {values: [jst, gminy, miasta, powiaty, wojew, zwiazki]}}}]
+      - name: period_date
+        description: First day of the reference quarter; amounts are cumulative from the start of the year.
+        tests: [not_null]
+      - name: section
+        tests:
+          - not_null
+          - accepted_values: {arguments: {values: [revenue, expenditure, financing, liabilities, receivables]}}
+      - name: item_label
+        tests: [not_null]
+      - name: measure_code
+        tests: [not_null, {accepted_values: {arguments: {values: [plan, executed, total]}}}]
+      - name: value_pln
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
