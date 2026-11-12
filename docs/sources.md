@@ -551,8 +551,15 @@ declaration. Bronze, Silver and a schedule are later stages.
 `findex_country` (version = Last-Modified, download time when absent; written only when the
 SHA-256 changed), so a new edition is picked up without a code change. Restart unit: the whole
 file. Licence CC BY 4.0 for the country-level indicators only (register GL-009); the
-individual-level microdata (Research Data License) is out of scope. Bronze, Silver and a
-schedule are later stages.
+individual-level microdata (Research Data License) is out of scope.
+
+**Bronze and Silver (11 Nov 2026, #2736).** Bronze `bronze.findex_observations`
+(`ingestion/to_bronze/world_bank_findex/`): the wide file kept long, one row per economy × survey year ×
+population group (`group`/`group2`) × indicator column with a value (`NA` not stored), values as text; key
+columns found by name prefix, since `regionwb24_hi`/`incomegroupwb24` carry the edition. Silver
+`silver.findex_observations` (typed, shares 0–1). 2025 edition: 385,599 observations, 174 economies and
+aggregates (World Bank regions and income groups, no EU aggregate), 430 indicators, waves 2011–2024
+(Dev trial 43085820597). Weekly check Thursday 02:20 UTC.
 ## World Bank Worldwide Governance Indicators (WGI)
 
 **Extraction (2 Nov 2026).** DataBank publishes WGI as a bulk CSV ZIP on a stable URL, the same
@@ -560,8 +567,15 @@ route as WDI (`https://databank.worldbank.org/data/download/WGI_CSV.zip`). The d
 `world_bank_wgi.yaml` lands it through the shared `bulk_file` pattern as entity `WGI_CSV`
 (version = Last-Modified, download time when absent; written only when the SHA-256 changed).
 Restart unit: the whole file (one download). Licence CC BY 4.0 (register GL-008), attribution
-"Source: World Bank, Worldwide Governance Indicators". WGI is revised once a year. Bronze, Silver
-and a schedule are later stages.
+"Source: World Bank, Worldwide Governance Indicators". WGI is revised once a year.
+
+**Bronze and Silver (11 Nov 2026, #2736).** Bronze `bronze.wgi_observations` and `bronze.wgi_metadata`
+through the shared DataBank decoders (`ingestion/common/databank_bronze.py`, members identified by their
+headers; observations long, empty cells not stored; metadata as field/value rows). Silver
+`silver.wgi_observations` and `silver.wgi_indicators`. The September 2026 archive: 202,092 observations,
+216 countries and territories (no aggregates, so no EU value), 36 indicators = six dimensions × estimate
+(EST), score 0–100 (SC) with 90 % bounds, standard error and number of sources; 1996, 1998, 2000, then
+yearly to 2025 (Dev trial 43085820597). Weekly check Thursday 01:20 UTC.
 
 ## UNCTAD Data Hub (UNCTADstat)
 
@@ -604,7 +618,15 @@ entity = one series for every economy and year
 (`/v2/sources/90/country/all/series/<id>/time/all?format=json&per_page=50000`, one file per
 page when a series is larger), version = the source's `lastupdated` date, so a series is
 downloaded again only when the World Bank updates ICP. Restart unit: one series. Licence CC BY
-4.0 (register GL-011). Bronze, Silver and a schedule are later stages.
+4.0 (register GL-011).
+
+**Bronze and Silver (11 Nov 2026, #2736).** Bronze `bronze.icp_observations`
+(`ingestion/to_bronze/world_bank_icp/`, shared loader `bulk_bronze.py` over the series folders in
+Landing): one row per record with a value, the codes and labels of Country, Classification, Series and
+Time, the value as the exact JSON number text. Silver `silver.icp_observations`. 231,174 observations,
+207 economies and benchmark groups (ECB, HIB, LIB, LMB, UMB, WLD; no EU aggregate), 48 series × 17
+classifications (expenditure in LCU and US$, PPP, per capita PPP, price level index world = 100, …),
+2017–2023 (Dev trial 43085820597). Archive retention: newest version + 90 days. Weekly check Thursday 02:50 UTC (two catalogue requests while unchanged).
 
 ## KRUS basic benefit statistics
 
@@ -634,7 +656,17 @@ The Dev trial (#2378) landed 11.1 MB (Last-Modified 5 Dec 2025): `IDS_ALLCountri
 projections, 35 % of year cells empty) and four metadata CSVs (country, 574 series, country-series
 and footnotes). Restart unit: the whole file (one download). Licence CC BY 4.0 (register GL-007), attribution
 "Source: World Bank, International Debt Statistics". IDS is published once a year in December.
-Bronze, Silver and a schedule are later stages.
+
+**Bronze and Silver (11 Nov 2026, #2736).** Bronze `bronze.ids_observations` and `bronze.ids_metadata`
+through the shared DataBank decoders (`ingestion/common/databank_bronze.py`; IDS adds the counterpart
+area and pads some codes with spaces, which Silver trims). Silver `silver.ids_observations` and
+`silver.ids_series`. The November 2026 archive: 2,647,628 observations, 134 debtor economies and groups,
+577 series, counterpart WLD only, 1970–2033 with projections (Dev trial 43085820597). IDS has no Poland
+and no EU member state (debtors are low- and middle-income economies), so it publishes no KPI for the
+zohelo slice. `silver.ids_observations` is rebuilt in full above the #822 1M-row ceiling under its own exception record
+(#2772: 4M ceiling; every archive revises the whole history; rebuilt on a new archive and on any change to the
+shared build fingerprint; review 15 Jan 2027).
+Weekly check Thursday 01:40 UTC.
 
 ## OECD Data Explorer (SDMX)
 
