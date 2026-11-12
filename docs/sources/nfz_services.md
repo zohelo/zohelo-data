@@ -29,8 +29,9 @@ a quarter of the other benefits' indexes; an unchanged index costs that one requ
 new year: every benefit is asked in that run. A fifty-second of the benefits is read whole each week, so a revision
 under unchanged table ids is landed within a year. Restart unit: one benefit (complete or not there).
 
-**Initial load:** about 1,347 index requests + 2 × ~11,000 benefit-years ≈ 23,500 requests at about 1.2 s ≈
-8 hours, so two to three weekly runs (330-minute budget each); missing benefits first, the canaries first among them.
+**Initial load:** 1,347 index requests + 2 × ~13,200 benefit-years + 56 dictionary pages ≈ 27,800 requests at the
+measured 1.38 s per request ≈ 10.6 hours, so two (at most three) weekly runs of the 330-minute budget; missing benefits
+first, the canaries first among them. A transient R2 throttle (a bare HTTP 429 on HeadObject) is retried.
 
 **Bronze:** `bronze.nfz_services_benefits` (one row per dictionary entry) and `bronze.nfz_services_basic_data` (one
 row per record of a basic-data answer, values as the exact JSON number text; one `empty_table` row per listed table
@@ -38,16 +39,22 @@ without records and one `no_table` row per benefit without basic-data tables). *
 `silver.nfz_services_benefits` (catalog × code) and `silver.nfz_services_basic_data` (catalog × code × period ×
 area: `PL` or the NFZ branch code 01-16), typed as published: counts, per cent (0-100), hospitalisations per patient
 (`ratio-of-rehospitalizations`, e.g. 1.21), days, PLN and NFZ points. Small counts are published as they are (1, 2);
-a branch without hospitalisations has no row; a value the API does not publish is null (average values since 2012,
-`percentage-of-sections` of 1w) and never becomes 0.
+a branch without hospitalisations has either no row or a row of zeros: there the API's 0 for the ratio and the length
+of stay is a placeholder, so Silver sets those (and the average values) to null and keeps the counts and shares
+(`without_hospitalisations`). A value the API does not publish is null (average values after 2016,
+`percentage-of-sections` of several benefits) and never becomes 0. A table whose answer gives one area twice is kept
+whole in Silver (`area_records` > 1), left out of Gold and listed by the warning test
+`tests/nfz_services_repeated_areas.sql`; nothing is chosen between.
 
 **Gold:** `gold.build_nfz_services`, block = catalog, frequency A (part-year tables stay in Silver). Each benefit is
 its own measure, `nfz_services:<catalog>:<unit>:<product code>:<measure>` (no total over benefits exists). Built:
 hospitalisations and patients of every benefit for Poland, and every published measure for Poland and the 16
 branches (branch code n → voivodeship TERC 2n, `poc_geography__nfz_services()`) of the JGP groups N01 childbirth,
 H13 primary total hip replacement, H15 primary total knee replacement and A48 stroke unit > 7 days. The other
-series stay in Silver: building every benefit by branch would add about 2 million rows to `gold.fact_annual`, whose
-full rebuild is capped at 1.5 million (D28 exception #2294); they wait for the per-block Gold tables of D35. KPIs
+series stay in Silver: every published value of every benefit by branch would be about 1.5 million rows (≈ 196,500
+Silver rows × 7.7 published values), above the 1 M limit of a build stage and more than `gold.fact_annual` holds in
+all (1,500,334 rows on 12 Nov 2026, ceiling 1,500,000, D28 exception #2294); they wait for the per-block Gold tables
+of D35. The built scope is about 33,000 rows. KPIs
 (draft): `childbirth_hospitalisations`, `hip_replacements`, `knee_replacements`, `stroke_unit_hospitalisations`.
 
 **Terms:** Regulamin API Statystyki NFZ – Świadczenia v1.1 (https://api.nfz.gov.pl/app-stat-api-jgp/terms, read in

@@ -24,7 +24,8 @@ models:
       NFZ statistics API, services: the basic-data table ("Dane ogólne") of each loaded benefit and period, for
       Poland (area_code PL) and the 16 NFZ regional branches (area_code 01-16, NFZ numbering), from
       bronze.nfz_services_basic_data, newest copy of each benefit. Grain: catalog × benefit_code × period_start ×
-      period_end × area_code. Whole-year tables 2009-2024 (period_kind 'year') and part-year tables where a
+      period_end × area_code (for the records the API gives once per table and area, area_records = 1; every
+      record is unique by entity × table_id × area_code × source_row_number). Whole-year tables 2009-2024 (period_kind 'year') and part-year tables where a
       benefit changed within a year ('part_year'). Values as published (counts, per cent, ratio, days, PLN,
       points); null where the API publishes none; branches without hospitalisations have no row. Not loaded: the
       hospital-type splits and the other table types (docs/sources/nfz_services.md).
@@ -32,6 +33,10 @@ models:
     tests:
       - unique:
           column_name: "catalog || '|' || benefit_code || '|' || period_start || '|' || period_end || '|' || area_code"
+          config:
+            where: "area_records = 1"
+      - unique:
+          column_name: "entity || '|' || table_id || '|' || area_code || '|' || source_row_number"
     columns:
       - name: catalog
         tests: [not_null, {accepted_values: {arguments: {values: ['1a', '1b', '1c', '1d', '1w']}}}]
@@ -53,6 +58,15 @@ models:
           - accepted_values:
               arguments:
                 values: ['PL', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16']
+      - name: area_records
+        description: >-
+          Records the API gave for this table and area (1 normally); above 1 the records are kept, not chosen
+          between, left out of Gold and listed by tests/nfz_services_repeated_areas.sql (warning).
+        tests: [not_null]
+      - name: without_hospitalisations
+        description: >-
+          True for a row with 0 hospitalisations: the API's 0 for the ratio and the length of stay there is a
+          placeholder, so those columns (and the average values) are null; counts and shares stay as published.
       - name: raw_sha256
         description: Landing SHA-256 of the benefit's ZIP (lineage to Landing/Archive).
         tests: [not_null]

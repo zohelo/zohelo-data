@@ -5,7 +5,9 @@
    measure_key nfz_services:<catalog>:<unit code>:<benefit code>:<measure slug>, breakdown {}. Scope (macro
    poc_nfz_services_measures): hospitalisations and patients of every loaded benefit for Poland; every measure
    for Poland and the 16 NFZ branches of the benefits in poc_nfz_services_detail(). Values and units as published
-   (D33); a null is not loaded. Branches map to voivodeships in poc_geography__nfz_services(). #}
+   (D33); a null is not loaded (also the ratio and length of stay of a row without hospitalisations, null in Silver).
+   A table × area the API answers more than once (Silver area_records > 1) is left out and listed by
+   tests/nfz_services_repeated_areas.sql. Branches map to voivodeships in poc_geography__nfz_services(). #}
 with measures as ({{ poc_nfz_services_measures() }}),
 
 detail as ({{ poc_nfz_services_detail() }}),
@@ -23,7 +25,7 @@ silver as (
         d.benefit_code is not null as is_detail
     from {{ ref('nfz_services_basic_data') }} as s
     left join detail as d on s.catalog = d.catalog and s.benefit_code = d.benefit_code
-    where s.period_kind = 'year'
+    where s.period_kind = 'year' and s.area_records = 1  -- repeated areas are listed by a test, not chosen between
 ),
 
 long as (
