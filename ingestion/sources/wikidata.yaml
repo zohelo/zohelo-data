@@ -1,0 +1,34 @@
+source_system: wikidata
+description: "Wikidata Query Service — Polish voivodeships, powiats and gminas by TERC code (P1653): QID, labels, population, area, coordinates, website, Wikipedia articles"
+
+# Extraction strategy (docs/landing.md). Wikidata's bulk feature is the full entity dump (over 100 GB compressed) for
+# about 3,500 items here, so the documented query service is the route for this scoped selection
+# (https://www.wikidata.org/wiki/Wikidata:Data_access: "query services for scoped queries"). One SPARQL query per
+# entity (ingestion/to_landing/wikidata/queries.rq: terc_units, population, area, coordinates, website, names), each
+# returning every statement of every item with a P1653 statement (1-2.5 MB, under 10 s), run one at a time with a
+# 5 s pause and a user agent naming the project and its website (Wikimedia User-Agent policy); landed through the
+# shared bulk_file pattern by ingestion/to_landing/wikidata/. No Last-Modified: version = download time; an
+# unchanged answer (same SHA-256) is skipped. Proven from Actions by Dev probes 43272046396, 43272562156 and
+# 43273792713 (12 Nov 2026: 3,508 items, 3,618 TERC statements).
+extraction:
+  initial: api
+  production: snapshot                    # each answer is the complete current selection
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; Wikidata changes continuously (edits, bot imports of GUS figures); weekly, Sunday 03:40
+    - {cron: "40 3 * * 0", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/wikidata/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.wikidata_bindings, bronze.wikidata_rejected_files]
+silver: [silver.wikidata_statements, silver.wikidata_terc_attributes]
+gold: [gold.geo_unit_wikidata]
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): six small whole-selection answers (about 22,000 bindings) with no changed-since
+# filter worth using; a new copy replaces its entity and Silver and Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2843"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

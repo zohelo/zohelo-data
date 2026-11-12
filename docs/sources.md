@@ -805,6 +805,23 @@ Terms: unrestricted use with a citation of the GDELT Project and a link (gdeltpr
 User-Agent policy). A 404 (renamed article) is a warning. Bronze `bronze.wiki_pageviews` (accumulating), Silver
 `silver.topic_attention` (views summed over a topic's articles per day). Pageview data: CC0 1.0.
 
+## Wikidata: Polish territorial units by TERC (`wikidata`)
+
+**Built (12 Nov 2026, register CD-026, #2843).** Route: the Wikidata Query Service
+(`https://query.wikidata.org/sparql`), six queries in `ingestion/to_landing/wikidata/queries.rq`, one at a time,
+5 s apart, user agent naming the project and https://zohelo.com (Wikimedia User-Agent policy); the entity dumps
+would be over 100 GB for some 3,500 items. Entity: one selection (`terc_units`, `population`, `area`,
+`coordinates`, `website`, `names`), each holding every statement (any rank) of every item with a TERC code (P1653).
+Version: download time (no Last-Modified); an unchanged answer is skipped by SHA-256. Bronze
+`bronze.wikidata_bindings` (one row per SPARQL solution, text). Silver `silver.wikidata_statements` (one row per
+statement, qualifiers folded) and `silver.wikidata_terc_attributes` (one row per current TERYT code × property; one
+item and one statement chosen by preferred rank, latest point in time, statement id as the last tie-break; the
+rest counted in `candidates` and `tied`). Gold `gold.geo_unit_wikidata` (one row per `TERC:<code>`: QID, labels
+pl/en, population and its date, area as published, coordinates, website, Wikipedia articles pl/en): attributes,
+not a KPI block; GUS and PRG stay the statistical sources. Terms: CC0 1.0 for structured data
+(https://www.wikidata.org/wiki/Wikidata:Copyright); licence row `cc0_wikidata`. Refresh full (D32), weekly.
+Restart unit: one selection.
+
 ## Official release calendars (`release_calendars`, topics)
 
 **Implemented (10 Nov 2026, register TP-010, TP-011, TP-014; NBP TP-012 and MF TP-013 parked; topics layer

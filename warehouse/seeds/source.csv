@@ -31,3 +31,4 @@ mrpips_unemployment,PLS-029,MRPiPS bezrobocie rejestrowane,MRPiPS registered une
 who,GL-025,WHO: dane zdrowotne (data.who.int),WHO data (data.who.int),World Health Organization,cube,file,international-public,cc_by_4_0_who,https://data.who.int/indicators
 unesco_uis,GL-026,UNESCO UIS: statystyki edukacji i nauki,UNESCO Institute for Statistics (UIS),UNESCO Institute for Statistics,cube,file,international-public,cc_by_sa_4_0_uis,https://databrowser.uis.unesco.org/
 faostat,GL-022,FAOSTAT,FAOSTAT,Food and Agriculture Organization of the United Nations,cube,file,international-public,cc_by_4_0_fao,https://www.fao.org/faostat/en/#data
+wikidata,CD-026,Wikidata: jednostki terytorialne (TERC),Wikidata: Polish territorial units (TERC),Wikidata community / Wikimedia Foundation,reference,file,community-academic,cc0_wikidata,https://www.wikidata.org/wiki/Wikidata:Data_access
