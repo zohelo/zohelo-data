@@ -121,8 +121,8 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865
   teryt_terc: {rows: 20000}  # 4,360
-  wikidata_statements: {rows: 47000}  # 31,450 (Dev trial 43281448180)
-  wikidata_terc_attributes: {rows: 40000}  # 26,563: 3,150 TERC units × up to 9 properties (Dev trial 43281448180)
+  wikidata_statements: {rows: 47000}  # 31,450 (Dev trial 43288241509)
+  wikidata_terc_attributes: {rows: 40000}  # 26,554: 3,149 TERC units × up to 9 properties (Dev trial 43288241509)
   wgi_observations: {rows: 300000}  # 202,092 (Dev trial 43085820597)
   wgi_indicators: {rows: 1000}  # 36
   ids_observations: {rows: 4000000, exception: "#2772"}  # 2,647,628 (Dev trial 43085820597); #822 exception, review 2027-01-15
@@ -258,7 +258,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_external_debt_service_gni: {rows: 10000}
   poc_metrics_external_debt_service_exports: {rows: 10000}
   geo_unit: {rows: 4300}  # 2,876 (Dev trial 43099545187)
-  geo_unit_wikidata: {rows: 4700}  # 3,150 (Dev trial 43281448180)
+  geo_unit_wikidata: {rows: 4700}  # 3,149 (Dev trial 43288241509)
   geo_neighbour: {rows: 25000}  # 16,224 (Dev trial 43099545187)
   poc_metrics_area: {rows: 50000}  # 33,753 (Dev trial 43099545187)
   # World Bank WGI, Findex, ICP (#2736)
