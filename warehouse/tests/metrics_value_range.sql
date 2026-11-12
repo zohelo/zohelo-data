@@ -16,7 +16,8 @@ with bounds (concept_key, source_system, value_min, value_max) as (
     ('gdp_per_capita', 'eurostat', 0, 2e5),
     ('gdp_per_capita', 'world_bank_wdi', 0, 5e5),
     ('gdp_volume_growth', 'eurostat', -50, 100),
-    ('gdp_volume_growth', 'world_bank_wdi', -100, 200)
+    ('gdp_volume_growth', 'world_bank_wdi', -100, 200),
+    ('nbp_reference_rate', 'nbp_interest_rates', 0, 30)  -- 24.0 in 1998 (Dev trial 43093114523)
 ),
 
 metrics as (
