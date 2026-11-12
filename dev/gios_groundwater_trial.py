@@ -229,6 +229,7 @@ def silver_profile(con) -> dict:
                                             "count(*) filter (where not regexp_full_match(coalesce(lp, ''), '[0-9]+(\\.0)?')) "
                                             "from gios_groundwater_samples group by all order by 1, 3")
     p["samples_date_text"] = rows(con, "select sample_date_text, count(*) from gios_groundwater_samples where sample_date_text is not null group by 1 order by 2 desc limit 10")
+    p["samples_lab_analysis_no"] = one(con, "select count(lab_analysis_no) || ' in ' || coalesce(string_agg(distinct entity, ','), '-') from gios_groundwater_samples where lab_analysis_no is not null")
     p["samples_date_range"] = one(con, "select min(sample_date) || '..' || max(sample_date) from gios_groundwater_samples")
     p["samples_lp_not_numeric"] = rows(con, "select entity, row_number, lp, voivodeship from gios_groundwater_samples "
                                             "where not regexp_full_match(coalesce(lp, ''), '[0-9]+(\\.0)?') limit 10")
@@ -279,6 +280,23 @@ def gold(con) -> dict:
                                         "join build b on b.period_label = cast(s.year as varchar) and b.unit_code = 'points' and b.is_total "
                                         "where b.value <> s.n")
     return g
+
+
+def licence() -> dict:
+    import csv
+
+    from warehouse import publish
+
+    src = list(csv.DictReader(open("warehouse/seeds/source.csv", encoding="utf-8")))
+    lic = list(csv.DictReader(open("warehouse/seeds/licence.csv", encoding="utf-8")))
+    meas = list(csv.DictReader(open("warehouse/seeds/kpi_measure.csv", encoding="utf-8")))
+    row = next(r for r in src if r["source_key"] == "gios_groundwater")
+    terms = next((r for r in lic if r["licence_key"] == row["licence_key"]), None)
+    licensed = publish.licensed_sources(src, lic)
+    return {"source_row": {k: row[k] for k in ("source_key", "register_id", "licence_key")},
+            "licence_row": terms and {k: terms[k] for k in ("licence_key", "attribution_text", "commercial_ok")},
+            "licensed": "gios_groundwater" in licensed,
+            "kpi_blocked": publish.licence_blocked("groundwater_good_quality_share", meas, licensed)}
 
 
 def lint() -> dict:
@@ -339,7 +357,7 @@ def main(argv: list[str]) -> int:
         sp = silver_profile(con)
         note("gios_groundwater trial silver profile", {k: v for k, v in sp.items() if not k.startswith("gios_groundwater_results")})
         note("gios_groundwater trial silver results", {k: v for k, v in sp.items() if k.startswith("gios_groundwater_results")} | {"markers_total": sp["markers_total"]})
-        note("gios_groundwater trial gold", gold(con))
+        note("gios_groundwater trial gold", {**gold(con), "licence_gate": licence()})
     except Exception as exc:  # noqa: BLE001
         status = 1
         import traceback
