@@ -117,6 +117,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   krus_benefits: {rows: 900}  # 576 (Dev trial 43099813876), quarters and years since 2020
   mf_jst_budget_summary: {rows: 32000}  # 21,263 rows, 2022 Q1 - 2026 Q1 (Dev trial 43162316724)
   mrpips_registered_unemployment: {rows: 85000}  # 828 rows a month; 56,202 for 68 months (Dev trial 43100663615)
+  nbp_bop_observations: {rows: 85000}  # 55,332 (Dev trial 43093233419)
   nbp_policy_rates: {rows: 2000}  # 390 rows, 96 archive dates since 1998 (Dev trial 42777711811)
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865
@@ -159,7 +160,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_findex: {rows: 1200}  # 772 (Dev check 43092680524): account_t_d, group all
   poc_build_icp: {rows: 1250}  # 817 (Dev check 43092680524): 2 measures, 2017 and 2021 only
   poc_concept_measures: {rows: 1000}
-  poc_dim_calendar: {rows: 80000}
+  poc_dim_calendar: {rows: 110000}  # 73,414 (Dev run 43285255495, 12 Nov)
   poc_dim_concept: {rows: 1000}
   poc_dim_frequency: {rows: 1000}
   poc_dim_geography: {rows: 120000}
@@ -215,7 +216,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_gdp_regional_growth: {rows: 20000}
   poc_metrics_gfcf_rate: {rows: 20000}
   poc_metrics_gfcf_growth: {rows: 20000}
-  poc_metrics_gdp_contributions: {rows: 20000}
+  poc_metrics_gdp_contributions: {rows: 26000}  # 17,070 (Dev run 43285255495, 12 Nov)
   poc_metrics_gva_by_section: {rows: 20000}
   poc_metrics_gfcf_by_asset: {rows: 20000}
   poc_metrics_business_climate: {rows: 30000}
@@ -227,7 +228,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_retail_sales: {rows: 30000}
   poc_metrics_ppi_annual_rate: {rows: 30000}
   poc_metrics_current_account_gdp: {rows: 20000}
-  poc_metrics_current_account_components: {rows: 20000}
+  poc_metrics_current_account_components: {rows: 28000}  # 18,886 (Dev run 43285255495, 12 Nov)
   poc_metrics_fdi_inflow: {rows: 30000}  # + UNCTAD, 29 areas × 36 years
   poc_metrics_job_vacancy_rate: {rows: 20000}
   poc_metrics_labour_productivity: {rows: 20000}
@@ -236,7 +237,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_gender_pay_gap: {rows: 20000}
   poc_metrics_gini: {rows: 20000}
   poc_metrics_social_spending_gdp: {rows: 20000}
-  poc_metrics_youth_unemployment: {rows: 30000}
+  poc_metrics_youth_unemployment: {rows: 38000}  # 25,306 (Dev run 43285255495, 12 Nov)
   poc_metrics_disposable_income_pc: {rows: 20000}
   poc_metrics_pensioners: {rows: 20000}
   poc_metrics_zus_pension_avg: {rows: 20000}
@@ -244,7 +245,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_vacancies_per_unemployed: {rows: 20000}
   poc_metrics_average_gross_wage: {rows: 20000}
   poc_metrics_employment_rate: {rows: 20000}
-  poc_metrics_registered_unemployment_rate: {rows: 30000}
+  poc_metrics_registered_unemployment_rate: {rows: 56000}  # 37,170 rows on prod (12 Nov, review of #2852)
   poc_metrics_business_confidence_oecd: {rows: 50000}  # 27,432 rows, 55 areas (#2738)
   poc_metrics_consumer_confidence_oecd: {rows: 50000}  # 24,611 rows, 51 areas
   poc_metrics_cli_oecd: {rows: 30000}  # 14,307 rows, 22 areas
