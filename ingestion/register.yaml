@@ -4074,7 +4074,7 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: open-conditional
+    status: unresolved
     notes: 'Terms: https://www.podatki.gov.pl/vat/bezpieczna-transakcja/wykaz-podatnikow-vat/plik-plaski/ (Ministry of
       Finance flat file, https://plikplaski.mf.gov.pl/pliki/<YYYYMMDD>.7z, published daily with the public VAT taxpayer
       list). The flat file holds SHA-512 hashes of NIP+account, not readable data; republication: not stated. Attribution:
