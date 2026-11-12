@@ -1,0 +1,29 @@
+version: 2
+models:
+  - name: mrpips_social_assistance_tables
+    description: >-
+      MRPiPS-03 social assistance report (register PLS-031), DZIAŁ 2 row 1 by voivodeship: persons granted a
+      benefit by decision, families and persons in families, Poland and the 16 voivodeships, reference year =
+      report year. Grain: table_code x measure_code x area_name x group_code x period_year. Found by sheet,
+      title and column header (warehouse/macros/gus_tables.sql); value as published, cell_status from the
+      symbols ('X' not applicable has no value). Trial run: see ingestion/sources/mrpips_social_assistance.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', table_code, measure_code, area_name, group_code, period_year)"
+    columns:
+      - name: table_code
+        tests: [not_null]
+      - name: measure_code
+        tests: [not_null, {accepted_values: {arguments: {values: [persons_granted, families, persons_in_families]}}}]
+      - name: unit_code
+        tests: [not_null]
+      - name: area_name
+        tests: [not_null]
+      - name: group_code
+        tests: [not_null]
+      - name: period_year
+        tests: [not_null]
+      - name: cell_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, below_half_unit, low_reliability, missing, confidential, not_applicable]}}}]
+      - name: raw_sha256
+        tests: [not_null]
