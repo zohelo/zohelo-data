@@ -253,18 +253,25 @@ def check_format(path: Path, fmt: str) -> dict[str, Any]:
 
 
 def download(
-    url: str, path: Path, fmt: str, retries: int = RETRIES, read_timeout: int = 300, wait: int = 60
+    url: str,
+    path: Path,
+    fmt: str,
+    retries: int = RETRIES,
+    read_timeout: int = 300,
+    wait: int = 60,
+    user_agent: str = USER_AGENT,
 ) -> tuple[str, int, dict[str, str], str, dict[str, Any]]:
     """Stream to disk and check the format, with retries; returns (sha256, size, headers, URL, detail).
 
     A spec may shorten ``retries``, ``read_timeout`` and ``wait`` (seconds, times the attempt number) for an API
-    that answers small files fast or refuses for long stretches (GDELT)."""
+    that answers small files fast or refuses for long stretches (GDELT), and set ``user_agent`` where a provider's
+    policy asks for a specific contact (Wikidata: the project website)."""
     for attempt in range(retries):
         digest, size = sha256(), 0
         try:
             with requests.get(
                 url,
-                headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"},  # exact bytes, true length
+                headers={"User-Agent": user_agent, "Accept-Encoding": "identity"},  # exact bytes, true length
                 stream=True,
                 timeout=(30, read_timeout),
                 allow_redirects=True,
@@ -382,7 +389,7 @@ def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landi
         path = Path(temporary) / f"file.{EXTENSIONS[fmt]}"
         started = time.monotonic()
         url = resolve_url(spec)
-        limits = {k: spec[k] for k in ("retries", "read_timeout", "wait") if k in spec}
+        limits = {k: spec[k] for k in ("retries", "read_timeout", "wait", "user_agent") if k in spec}
         digest, size, headers, final_url, detail = download(url, path, fmt, **limits)
         if spec.get("reduce"):
             digest, size = reduce_file(path, spec["reduce"])
