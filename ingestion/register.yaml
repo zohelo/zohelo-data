@@ -1040,7 +1040,8 @@ sources:
   name: FAOSTAT
   short_name: FAOSTAT
   provider: Food and Agriculture Organization of the United Nations
-  status: approved
+  source_system: faostat
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1050,15 +1051,19 @@ sources:
   granularity: Domain-specific country/item/element/year observation; trade adds reporter/partner and flow.
   coverage: Global; histories and frequencies vary by domain, often annual.
   access:
-    endpoint: https://www.fao.org/faostat/en/
-    kind: api
+    endpoint: https://bulks-faostat.fao.org/production/datasets_E.json
+    kind: bulk_file
     interfaces: [HTML, bulk-files, API]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No numeric quota published; one request per domain zip and run. The bulk catalogue
+      https://bulks-faostat.fao.org/production/datasets_E.json lists every domain zip with size, rows and DateUpdate
+      (GT 20.6 MB zip, 2,498,428 rows; RL 3.0 MB, 421,850 rows; Dev probe 43099401602, 11 Nov 2026).
   licence:
     status: open-conditional
-    notes: 'Terms: CC BY 4.0, FAO Statistical Database Terms of Use https://www.fao.org/contact-us/terms/db-terms-of-use
+    notes: 'Terms: CC BY 4.0, FAO Statistical Database Terms of Use (confirmed 11 Nov 2026, Dev probe 43099401602:
+      "all datasets disseminated through FAO corporate statistical databases ... are licensed under the Creative
+      Commons Attribution-4.0 International licence (CC BY 4.0) ... as complemented by the Terms of Use"), https://www.fao.org/contact-us/terms/db-terms-of-use
       (unless a dataset''s metadata says otherwise): access, download, copy, adapt and re-disseminate; do not use datasets
       for or with the promotion of a commercial enterprise; do not imply FAO endorsement; do not misrepresent the data;
       third-party datasets need their provider''s consent; provided without warranty. Attribution (required format):
@@ -1074,10 +1079,9 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Confirm current API contract'
-    - 'Exclude third-party datasets that need provider consent'
+    - 'Exclude third-party datasets that need provider consent (population OA is UN WPP: not landed)'
     references:
     - https://www.fao.org/faostat/en/
     - https://www.fao.org/contact-us/terms/en/
@@ -1183,7 +1187,8 @@ sources:
   name: WHO Data platform (data.who.int) datasets
   short_name: WHO data.who.int
   provider: World Health Organization
-  status: approved
+  source_system: who
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1193,15 +1198,21 @@ sources:
   granularity: Machine-readable dataset grain varies; metadata defines dimensions and citations.
   coverage: Worldwide with dataset-specific years and Member State reporting coverage.
   access:
-    endpoint: https://data.who.int/
-    kind: api
+    endpoint: https://srhdpeuwpubsa.blob.core.windows.net/whdh/DATADOT/INDICATOR/90E2E48_ALL_LATEST.csv
+    kind: bulk_file
     interfaces: [HTML, API, machine-readable files]
     auth: public; dataset/API specific
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No numeric quota published; one request per indicator CSV and run. Each indicator page links its
+      complete data as <uid>_ALL_LATEST.csv (life expectancy 90E2E48 2.2 MB, HALE C64284D 2.3 MB; Dev probes
+      43099401602 and 43100116863, 11 Nov 2026).
   licence:
     status: open-conditional
-    notes: 'Terms: CC BY 4.0 plus WHO additional terms, https://data.who.int/redirect-pages/footer/learn-more/terms-and-conditions
+    notes: 'Terms: CC BY 4.0 plus WHO additional terms (confirmed 11 Nov 2026, Dev probe 43099401602: "Unless specifically
+      indicated otherwise, these Datasets are provided to you under a Creative Commons Attribution 4.0 International
+      License (CC BY 4.0), with the additional terms below"); per-dataset check 12 Nov 2026, Dev trial 43198114362: the
+      indicator pages of both landed files (90E2E48 life expectancy, C64284D HALE) state "Data copyright and licensing:
+      Attribution 4.0 International (CC BY 4.0) License", no exception), https://data.who.int/redirect-pages/footer/learn-more/terms-and-conditions
       ("Terms and conditions for WHO datasets"): attribution as indicated in each dataset''s metadata; do not falsify
       or misrepresent; do not de-anonymise; no use of the WHO name or emblem and no implied endorsement; provided without
       warranty; WHO may change or discontinue datasets. Attribution: per dataset metadata, default "Source: World Health
@@ -1218,10 +1229,9 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
     - 'Build GHO-to-new-platform crosswalk'
-    - 'Check per-dataset licence exceptions and change notices'
     references:
     - https://data.who.int/
     - https://data.who.int/about/data/terms-and-conditions
@@ -1230,7 +1240,8 @@ sources:
   name: UIS Data Browser
   short_name: UNESCO UIS
   provider: UNESCO Institute for Statistics
-  status: approved
+  source_system: unesco_uis
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1240,15 +1251,17 @@ sources:
   granularity: Indicator/country/year plus available sex, age, education level and other disaggregations.
   coverage: Global; February 2026 releases are shown for education, demography, science/technology and culture.
   access:
-    endpoint: https://databrowser.uis.unesco.org/
+    endpoint: https://api.uis.unesco.org/api/public/data/indicators
     kind: bulk_file
-    interfaces: [HTML, CSV, Excel, JSON]
+    interfaces: [HTML, CSV, Excel, JSON, REST API, bulk-files]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: 'Data API: at most 100,000 records per request (OpenAPI schema https://api.uis.unesco.org/api/public/openapi/schema.json);
+      no key. One request per whole-indicator selection and run (EA.5T8.AG25T99 276 KB). Bulk files (BDDS) per theme
+      under a release folder (202602: SDG.zip 34 MB, OPRI.zip 68 MB). Dev probes 43099401602 and 43100116863, 11 Nov 2026.'
   licence:
     status: open-conditional
-    notes: 'Terms: CC BY-SA 4.0, https://databrowser.uis.unesco.org/terms-and-conditions ("The work of the UIS is licensed
+    notes: 'Terms: CC BY-SA 4.0 (confirmed 11 Nov 2026, Dev probe 43099401602), https://databrowser.uis.unesco.org/terms-and-conditions ("The work of the UIS is licensed
       under the Creative Commons Attribution-ShareAlike 4.0 International license"): share and reproduce without charge;
       adaptations must carry the same licence (ShareAlike); no implied endorsement or affiliation; logo use needs permission.
       Attribution: "Source: UNESCO Institute for Statistics (UIS), <complete URL>, <date of extraction>" ("Adapted from"
@@ -1264,15 +1277,15 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
     - 'ShareAlike: published derivatives of UIS data must be released under CC BY-SA 4.0'
-    - 'Confirm stable API availability and identifiers'
     - 'Retain release vintages'
     references:
     - https://databrowser.uis.unesco.org/
     - https://www.unesco.org/en/open-access
     - https://databrowser.uis.unesco.org/terms-and-conditions
+    - https://api.uis.unesco.org/api/public/documentation/
 - id: GL-027
   name: UNICEF Data Warehouse Explorer and SDMX API
   short_name: UNICEF Data Warehouse
@@ -1468,7 +1481,7 @@ sources:
   name: ITU DataHub
   short_name: ITU DataHub
   provider: International Telecommunication Union
-  status: approved
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -1502,8 +1515,14 @@ sources:
   research:
     priority: review-next
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
+    - 'Parked: not reachable from GitHub runners — datahub.itu.int, datahub.itu.int/about and the download API
+      api.datahub.itu.int/v2/data/download/byid/<id> all answer HTTP 403 to a polite client (Dev probe 43099401602,
+      11 Nov 2026); never worked around. The only files on www.itu.int (reachable) are regional and global
+      aggregates (ITU_regional_global_Key_ICT_indicator_aggregates_Nov_2026.xlsx), not country data, under the ITU
+      website terms ("personal, educational, or non-commercial purposes"). Country data need ITU to allow automated
+      access (owner question: ask ITU, indicators@itu.int) or another route.'
     - 'NonCommercial + ShareAlike: only non-commercial display; derivatives under CC BY-NC-SA 3.0 IGO'
     - 'Confirm API availability'
     references:
