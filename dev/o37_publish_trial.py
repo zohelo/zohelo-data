@@ -60,7 +60,11 @@ def same(name: str, a: bytes, b: bytes) -> bool:
         keep = lambda body: [x for x in body.decode().splitlines() if not x.startswith("DTSTAMP")]  # noqa: E731
         return keep(a) == keep(b)
     if name.endswith(".parquet"):
-        return pq.read_table(io.BytesIO(a)).equals(pq.read_table(io.BytesIO(b)))
+        ta, tb = pq.read_table(io.BytesIO(a)), pq.read_table(io.BytesIO(b))
+        if ta.schema != tb.schema or ta.num_rows != tb.num_rows:
+            return False
+        order = [(c, "ascending") for c in ta.column_names if not str(ta.schema.field(c).type).startswith(("list", "struct", "map"))]
+        return ta.sort_by(order).equals(tb.sort_by(order))  # Iceberg scans have no fixed row order
     return False
 
 
