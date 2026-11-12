@@ -1,6 +1,7 @@
--- World Bank IDS (#2756): silver.ids_series holds at least one series. The series member is found by name
--- (IDS_SeriesMetaData.csv); a renamed member would leave the table empty and the relationships test of
--- ids_observations.series_code would then fail on every row. Returns one row when the table is empty.
-select count(*) as series_rows
+-- World Bank IDS (#2756): silver.ids_series holds series described by the archive's series member. The member
+-- is found by name (IDS_SeriesMetaData.csv); a renamed member would leave only the series taken from the
+-- observations (in_series_metadata false). Returns one row when no described series exists.
+select count(*) as described_series
 from {{ ref('ids_series') }}
+where in_series_metadata
 having count(*) = 0
