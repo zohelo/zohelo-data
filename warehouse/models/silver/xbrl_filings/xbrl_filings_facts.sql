@@ -8,7 +8,8 @@
    (tests/xbrl_filings_fact_conflicts.sql warns). xBRL-JSON periods end at midnight after the last day:
    period_end is that last day. Values and units as published (iso4217:<currency>), not rescaled; decimals is the
    highest precision stated. is_reporting_period marks the period ending on the filing's own period end (the other
-   periods are comparatives). #}
+   periods are comparatives); reporting_period_candidates counts the periods of the filing, concept and unit that
+   end there (more than one, e.g. a year and a shorter period: Gold leaves the filing's concept out). #}
 with newest as (
     select *
     from {{ source('xbrl_filings', 'xbrl_filings_facts') }}
@@ -50,23 +51,34 @@ grouped as (
         max(raw_sha256) as raw_sha256
     from typed
     group by fxo_id, concept, period_start, period_end, unit_code
+),
+
+joined as (
+    select
+        g.*,
+        f.lei,
+        g.period_end = f.period_end as is_reporting_period
+    from grouped as g
+    inner join {{ ref('xbrl_filings_filings') }} as f on g.fxo_id = f.fxo_id
 )
 
 select
-    g.fxo_id,
-    f.lei,
-    g.concept,
-    g.period_start,
-    g.period_end,
-    g.unit_code,
-    case when g.values_distinct = 1 then g.value_min end as value,
-    g.value_min,
-    g.value_max,
-    g.values_distinct,
-    g.facts,
-    g.decimals,
-    g.period_end = f.period_end as is_reporting_period,
-    g.source_version,
-    g.raw_sha256
-from grouped as g
-inner join {{ ref('xbrl_filings_filings') }} as f on g.fxo_id = f.fxo_id
+    fxo_id,
+    lei,
+    concept,
+    period_start,
+    period_end,
+    unit_code,
+    case when values_distinct = 1 then value_min end as value,
+    value_min,
+    value_max,
+    values_distinct,
+    facts,
+    decimals,
+    is_reporting_period,
+    case
+        when is_reporting_period then count(*) over (partition by fxo_id, concept, unit_code, is_reporting_period)
+    end as reporting_period_candidates,
+    source_version,
+    raw_sha256
+from joined

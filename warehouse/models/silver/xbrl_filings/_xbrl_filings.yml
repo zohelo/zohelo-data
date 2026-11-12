@@ -34,7 +34,8 @@ models:
     description: >-
       Entity-level facts of ifrs-full:Revenue and ifrs-full:ProfitLoss from the xBRL-JSON documents of Polish ESEF
       annual reports (filings.xbrl.org; licence unresolved, internal). Grain: fxo_id × concept × period_start ×
-      period_end × unit_code; value is null when a filing states several values for the key (values_distinct > 1).
+      period_end × unit_code; value is null when a filing states several values for the key (values_distinct > 1);
+      comparative periods included (is_reporting_period false).
       ROWS_FACTS (Dev trial TRIAL).
     tests:
       - unique:
@@ -61,6 +62,8 @@ models:
               config:
                 severity: warn
       - name: values_distinct
+        tests: [not_null]
+      - name: is_reporting_period
         tests: [not_null]
       - name: raw_sha256
         tests: [not_null]
