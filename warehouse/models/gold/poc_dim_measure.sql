@@ -50,7 +50,7 @@ coverage as (  -- the other blocks, one row per block: DBW files collapse to the
             status,
             silver_rows
         from {{ source('gold_coverage', 'coverage') }}
-        where source in ('eurostat', 'gus_bdl', 'gus_dbw', 'world_bank_wdi', 'nbp')
+        where source in ('eurostat', 'gus_bdl', 'gus_dbw', 'world_bank_wdi', 'nbp', 'oecd')
     ) as c
     left join activated_blocks as a on c.source_system = a.source_system and c.block_id = a.block_id
     where a.block_id is null
