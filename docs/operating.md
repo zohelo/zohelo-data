@@ -26,7 +26,7 @@ whose YAML sets `extraction.kind` (for example `bulk_file`) runs the shared patt
 | `landing.archive` | `ingestion/common/archive.py` | move Bronze-loaded Landing files to Archive (copy, verify SHA-256, delete from Landing; receipt stays) |
 | `archive.prune` | `ingestion/common/retention.py` | apply the source's Archive retention (`archive_policy` in its config) |
 | `silver_gold.build` | `warehouse/build.py` | platform: dbt build of `warehouse/models/` (filter = model names; empty = only models whose inputs or code changed, leaving out models whose source table does not exist yet (a new source before its first Bronze load; listed as `waiting` in the run summary); a waiting Gold block (tag `gold_block`) does not hold back the facts, dimensions and metrics: the block is listed again under `empty_blocks`, passed to dbt as the var `waiting_blocks`, read as zero rows and noted by `build_check` as `waiting: …`; only a waiting block that has no table is listed there, and the geography map reads a new source's codes only once that Silver table exists (`poc_optional_ref`, config meta `optional_parents`), so a source without Bronze holds back only its own models; a waiting model that already has a table (an input it was built from is gone, or a new input was added before that input's first load) is listed under `stalled` and fails the build before dbt runs, with the missing source tables in the error annotation (#2903); a block without a table that the plan did not declare waiting (a partial catalog listing, a run killed between renames, a filtered build such as `poc_fact_annual+`) fails the build, and so does a block that is built in the run and fails; `fqn:*` = all); publishes the data catalog (only the Pipeline on `main`; Dev trials skip it) |
-| `gold.publish` | `warehouse/publish.py`, `warehouse/publish_v2.py` | platform: rewrites 06_published/v1/ from Gold, then 06_published/v2/ when warehouse.yaml `published_v2` is true (docs/published.md). Skipped in a run whose model build was replaced in the queue by a newer one (that run publishes after its build). Reads every metrics table before the first write; the table of a live KPI that is missing (a concurrent `silver_gold.build` swaps tables) is read again for up to 9 minutes; still missing, the run writes and removes nothing and ends green with a warning (`deferred`) while the live files are at most 6 hours old, and fails after that (#2834) |
+| `gold.publish` | `warehouse/publish.py`, `warehouse/publish_v2.py` | platform: rewrites 06_published/v1/ from Gold, then 06_published/v2/ when warehouse.yaml `published_v2` is true (docs/published.md). Skipped in a run whose model build another run does (`covered`, below), and after a build that was replaced in the queue by a newer one: the other run publishes after its build. Reads every metrics table before the first write; the table of a live KPI that is missing (a concurrent `silver_gold.build` swaps tables) is read again for up to 9 minutes; still missing, the run writes and removes nothing and ends green with a warning (`deferred`) while the live files are at most 6 hours old, and fails after that (#2834) |
 | `serving.refresh_index` | `portal/publish_index.py` | platform: rebuild the portal file index; dbt temporary and backup tables (`__dbt_tmp`, `__dbt_backup`) are not shown, and listed tables that a concurrent `silver_gold.build` swaps away (not found again after one 15 s re-check of all misses) are skipped with a warning annotation and shown by the next refresh; more than 3 skipped tables or more than 10% of those listed fail the job (R2 answers the same 404 for a bad credential); any other error fails the job (#2825) |
 
 A Pipeline run is one activity or a source's `full dataflow: landing → bronze → silver → gold → portal`
@@ -38,6 +38,23 @@ it is implemented and listed under `activities:` in `ingestion/sources/<source>.
 (platform activities: `warehouse/warehouse.yaml`, `portal/portal.yaml`). Activities are idempotent and resume from durable
 state, so a rerun is always safe. Results are published as run annotations and the
 job summary.
+
+**One model build at a time, and no build is lost (#2932).** The build job runs in the concurrency group
+`zohelo-pipeline-build`. GitHub keeps one running and one waiting job per group and cancels the waiting one when
+another arrives, so the job `silver_gold.queue` (`warehouse/build_queue.py`) runs first and decides from the jobs
+of the Pipeline runs that have not ended:
+
+- **enter**: no build is waiting; the run's build runs now or waits for the running one.
+- **covered**: another run's changed-only build is waiting and has not started. It plans when it starts, after
+  this run's Bronze load, and rebuilds what this run changed. This run's build and `gold.publish` are skipped, the
+  run ends green, and the annotation `silver_gold.build covered by run <id>` names the covering run. The proof is in
+  that run: its build job started after `decided_at`, and its `warehouse dbt build` annotation lists the models.
+- A build with a model filter (a `platform` run with a `filter`; job name `silver_gold.queue · filter`) covers no
+  run and is covered by none: next to it a queue job waits until the waiting build has started.
+
+Queue jobs decide in the order GitHub created them, so sources dispatched in the same minute (the scheduler does
+that) cannot both take the waiting place. A queue job that cannot read the API enters with a warning. To start
+several sources at once, dispatch them: one build serves all of them.
 
 ## Local development
 
