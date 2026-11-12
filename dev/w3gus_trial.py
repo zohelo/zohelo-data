@@ -87,11 +87,12 @@ def main(argv) -> int:
                     from {source}_cells where row_number <= 3 group by all
                     having regexp_matches(title, '(?i){titles}') order by all""", limit=400)
             if dump:
-                pattern, ent = (dump.split("@") + ["."])[:2]
+                parts = dump.split("@")
+                pattern, ent, maxrow = parts[0], (parts[1:2] or ["."])[0], (parts[2:3] or ["16"])[0]
                 show(con, f"{source} dump", f"""with t as (select entity, member, sheet_name, string_agg(value_text, ' ' order by row_number, column_number) title
                     from {source}_cells where row_number <= 8 group by all having regexp_matches(title, '(?i){pattern}') and regexp_matches(entity, '{ent}'))
                     select c.entity, c.sheet_name, c.row_number, string_agg(c.column_number || ':' || replace(left(c.value_text, 45), chr(10), ' '), ' | ' order by c.column_number)
-                    from {source}_cells c join t using (entity, member, sheet_name) where c.row_number <= 16 group by all order by all""", limit=1500)
+                    from {source}_cells c join t using (entity, member, sheet_name) where c.row_number <= {maxrow} group by all order by all""", limit=1500)
             silver_path = next((ROOT / f"warehouse/models/silver/{source}").glob("*_tables.sql"))
             con.sql(f"create or replace table {source}_tables as " + render(silver_path, {f"{source}_cells": f"{source}_cells"}))
             con.sql(f"""create or replace table geo_{source} as
