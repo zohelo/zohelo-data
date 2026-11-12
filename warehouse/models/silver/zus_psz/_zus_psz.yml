@@ -10,7 +10,8 @@ models:
       lists only that year). area_code '00' = Poland, '_U' = voivodeship not established (included in Poland), else
       the TERYT voivodeship code (matched by name).
       breakdown_code: age group (as published, '_T' = all ages), payer type (_T, SELF, 1-9, 10-20, 21-49, 50-249,
-      250+) or citizenship (_T, UA). Values as published; non-numeric cells are left out.
+      250+) or citizenship (_T, UA). Values as published; non-numeric cells are left out. Dev trial 43271727766:
+      1,570 rows from 49 workbooks, 2012-01 to 2026-Q3.
     tests:
       - unique:
           column_name: "family || '|' || period_start || '|' || area_code || '|' || sex_code || '|' || breakdown_code || '|' || measure"

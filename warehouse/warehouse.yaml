@@ -105,7 +105,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   krus_benefits: {rows: 900}  # 576 (Dev trial 43099813876), quarters and years since 2020
   mf_jst_budget_summary: {rows: 32000}  # 21,263 rows, 2022 Q1 - 2026 Q1 (Dev trial 43162316724)
   mrpips_registered_unemployment: {rows: 85000}  # 828 rows a month; 56,202 for 68 months (Dev trial 43100663615)
-  zus_psz_observations: {rows: 3000}  # TRIAL
+  zus_psz_observations: {rows: 2400}  # 1,570 (Dev trial 43271727766); about 140 more a quarter
   nbp_policy_rates: {rows: 2000}  # 390 rows, 96 archive dates since 1998 (Dev trial 42777711811)
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865
@@ -135,7 +135,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_gleif: {rows: 25000}  # 16,851 (Dev trial 43099545187)
   poc_build_mf_biala_lista: {rows: 10}  # 4 (Dev trial 43099545187)
   poc_build_prg: {rows: 4300}  # 2,875 PRG units (16 voivodeships, 380 powiats, 2,479 gminas; Dev trial 43099545187 minus the country)
-  poc_build_zus_psz: {rows: 3000}  # TRIAL
+  poc_build_zus_psz: {rows: 2400}  # 1,564 (Dev trial 43271727766): 9 measures, 329 series
   poc_build_public_finance: {rows: 8600}  # 5,727 (Dev trial 43099813876)
   poc_build_unctad: {rows: 18000}  # 11,871 (Dev trial 43100532689): 29 areas × 10 measures
   poc_build_who: {rows: 6000}  # 3,696: 28 areas × 22 years × 3 sexes × 2 indicators (Dev trial 43159213097)
