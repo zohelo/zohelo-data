@@ -35,6 +35,11 @@ silver as (
     from {{ ref('poc_src_dbw') }} as o
     where
         o.value is not null
+        -- a cell with a missing-value reason is a GUS sign, not a number: DBW writes 0 in `wartosc`
+        -- with id_brak_wartosci 42 "zjawisko nie wystąpiło" (—) or 38 "brak informacji ..." (.);
+        -- published values carry 253 "Nie dotyczy" (#2788, Dev runs 43157854856 and 43159054852:
+        -- every 42 row of 1038_16_389_3, 1038_16_92_4 and 1514_1360_95_3 is 0, e.g. the 1995 indices)
+        and coalesce(o.missing_reason_id, 253) = 253
         and regexp_replace(o.entity_id, '(_[0-9]{4})?_pl$', '') in (select b.block_id from blocks as b)
 ),
 
