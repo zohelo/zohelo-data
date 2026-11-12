@@ -5,7 +5,8 @@
 (495 MB; one CSV of 2.8 GB) and the same data in 7 parts; the shared `bulk_file` pattern reads the page first
 (`url_from`) and lands the one file: one snapshot, one receipt. Entity: `basic_company_data`. Version: the
 snapshot date in the file name (in the receipt's `source_url`, Bronze column `snapshot_date`); the Landing version
-token is the file's Last-Modified; an unchanged file (SHA-256) is not landed again. Monthly, on the 10th (the file
+token is the file's Last-Modified; a file already held (same name on the page, same Last-Modified and size) is not
+downloaded again (`ingestion/to_landing/companies_house`), and an unchanged file (SHA-256) is not landed again. Monthly, on the 10th (the file
 is "compiled up to the end of the previous month" and published within 5 working days). The REST and streaming
 APIs, the PSC snapshot (personal data) and officers are not used.
 

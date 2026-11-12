@@ -9,8 +9,9 @@ description: "UK Companies House — Free Company Data Product: monthly snapshot
 # resume) either way, a 0.5 GB transfer is what GLEIF's lei2 already is on the runner, and one file is one
 # snapshot with one receipt (7 parts could land as a mix of two months). The snapshot date is the date in the file
 # name (kept in the receipt's source_url, a Bronze column); the Landing version token is the file's Last-Modified.
-# An unchanged file (same SHA-256) is not landed again. The REST and streaming APIs (key needed), the PSC snapshot
-# (personal data) and officers are not used. Terms: register CD-014.
+# A file Landing already holds (same name on the page, same Last-Modified and size) is not downloaded again
+# (ingestion/to_landing/companies_house); a downloaded file with an unchanged SHA-256 is not landed again. The REST
+# and streaming APIs (key needed), the PSC snapshot (personal data) and officers are not used. Terms: register CD-014.
 extraction:
   kind: bulk_file
   bulk_file:
