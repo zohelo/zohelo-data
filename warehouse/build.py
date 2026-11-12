@@ -201,6 +201,10 @@ def build_once(
             break
         latest.update({r["unique_id"]: r for r in retried})
     results = list(latest.values())
+    # The exit code so far is the last dbt command's: a retry re-runs only the failed and skipped nodes, so it can
+    # exit 0 while an earlier failure stays in `latest` (or write no results at all); any failure left fails the build.
+    if returncode == 0 and any(r["status"] in FAILED for r in results):
+        returncode = 1
     summary = {
         "target": target,
         "select": selectors,
