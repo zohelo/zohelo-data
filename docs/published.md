@@ -16,6 +16,16 @@ strings in ISO 8601 UTC.
 - Formats: keys match `^[a-z0-9_]+$`, domain keys dot-separated segments of that form, timestamps
   `YYYY-MM-DDTHH:MM[:SS[.f]]Z`; the schemas declare them as `pattern` (D24).
 - All fields below are required unless marked optional.
+- **Licence gate** (O37; a legal boundary, applied to v1 and v2 alike): a row of a source whose `licence_key` in
+  `warehouse/seeds/source.csv` is `unresolved` or not a row of `licence.csv` (a source missing from `source.csv`
+  counts as missing) reaches no published file: not `latest.json`, not `series.parquet`/`series.json`, not a KPI's
+  `source_keys`. A KPI whose every source in `kpi_measure.csv` (v1) or every `ready` map source (v2) is unlicensed is not
+  published at all (no catalog entry, no files); files of an earlier run are removed as the run's last step, after
+  every write and read-back succeeded. This is decided from the seeds alone, never because a Gold read failed. A
+  Gold row without `source_system` fails the run. The `sources` and `licences` lists of `catalog.json` stay complete (register
+  metadata, no numbers), so readers can apply the same rule. `gold.publish` reports the KPIs and rows it left out
+  (`licence_gate` in its annotation). Since 12 Nov 2026 this leaves NBP (`nbp`, `nbp_interest_rates`) out, so v1
+  has no `fx_rate` and v2 no `eurpln`, until NBP's terms are established.
 - gold.publish checks every JSON file against its schema in warehouse/published/schemas/ before writing it and fails
   on a problem.
 - The data portal serves these files read-only, after sign-in, at `/api/published/v1/<path>` (portal/worker/src/index.js).
@@ -249,7 +259,7 @@ Owner decisions O27/O28 (2026-11-10): the zohelo-bi design template becomes zohe
 written **alongside** v1 under `06_published/v2/`; v1 stays unchanged for zohelo.com until zohelo.com chooses to
 move. `gold.publish` writes both. zohelo-bi reads v2 only.
 
-Status (2026-11-11): built (`briefs.json` added 11 Nov). `warehouse/publish_v2.py` writes it after the v1 files
+Status (2026-11-12): built (`briefs.json` added 11 Nov; every Gold KPI regardless of `kpi.csv` status since O37). `warehouse/publish_v2.py` writes it after the v1 files
 when `published_v2: true` in `warehouse/warehouse.yaml` (`false` stops it; v1 is not affected). Schemas in `warehouse/published/schemas/v2/`,
 fixtures in `warehouse/published/fixtures/v2/` (from synthetic Gold rows; World Bank annual series on the quarterly
 `gdp_real_growth` and the monthly `hicp_annual_rate`; `ops.repo_check` checks them against the
@@ -271,8 +281,21 @@ schemas and the cross-file rules of `published_v2_problems`). Seeds: `kpi_v2_map
 
 ## Rules
 
-- Prefix `06_published/v2/`; rebuilt whole by `gold.publish` after each Gold build; no history; UTF-8; ISO 8601 UTC.
-- A KPI is in v2 only when its concept has `status = published` in `warehouse/seeds/kpi.csv`; its v2 key is the
+- Prefix `06_published/v2/`; rebuilt whole by `gold.publish` after each Gold build. `kpi/<kpi_key>/` files are removed
+  only for a KPI out of scope (no longer a candidate by the seeds and the licence gate), after the read-back. A KPI
+  still in scope whose `series.json` is published but that this run could not build (missing table, read failure,
+  no row at the shown frequency) fails the run before anything is written, so the live files stay; take it out of
+  scope in `kpi_v2_map.csv` to retire it. `catalog.json` has at least one KPI (`minItems`); no history; UTF-8; ISO 8601 UTC; additive fields are allowed, any rename or removal
+  needs v3 alongside.
+- The licence gate of v1 (Rules above, O37) applies to v2 too.
+- **Which KPIs** (owner decision O37, 12 Nov 2026: no publishing decision for v2; bi.zohelo.com is not shared yet,
+  so production is also the review stage): every v2 key of `warehouse/seeds/kpi_v2_map.csv` whose concept is in
+  `warehouse/seeds/kpi.csv`, with at least one `ready` map row for a licensed source (licence gate, above) and Gold
+  series at the shown frequency, whatever the concept's `status` (`draft` or `published`). The status is
+  information only: `catalog.json` carries it per KPI (`kpis[].status`) so the portal can mark drafts. Map rows
+  that are `needs-block` or `needs-source` publish nothing; a concept without its `metrics_<concept>` table or
+  without a row at the shown frequency is left out and reported (`missing`, `empty`). v1 is not affected: it
+  still publishes only `status = published` (zohelo.com is public). Its v2 key is the
   `v2_key` of the concept's rows in `warehouse/seeds/kpi_v2_map.csv` (one place for the mapping, no `v2_key` column
   in `kpi.csv`). A concept maps to one v2 key at most; a v2 key comes from exactly one concept. Each ready source of
   the map is its own series (O31), restricted to the map row's `measure_key_pattern`.
@@ -320,6 +343,7 @@ schemas and the cross-file rules of `published_v2_problems`). Seeds: `kpi_v2_map
 | kpis[].polarity | string | `up` (a rise is good), `down` (a fall is good), `neutral`; set only where most readers agree (docs/model.md) |
 | kpis[].loaded_at | string | newest load of its sources |
 | kpis[].next_release | string or null | next date in `release_calendar.csv` for the KPI (`YYYY-MM-DD`) |
+| kpis[].status | string | `draft` or `published`: the concept's `kpi.csv` status, information only (O37); the portal shows a draft badge, the KPI is in v2 either way. Added 12 Nov 2026 (additive) |
 | dimensions[] | array | every dimension used by a v2 KPI |
 | dimensions[].dimension_key, name_pl, name_en | string | |
 | dimensions[].members[] | array | `{ key, name_pl, name_en, sort, parent_key? }`, total excluded |
@@ -327,8 +351,8 @@ schemas and the cross-file rules of `published_v2_problems`). Seeds: `kpi_v2_map
 | units[] | array | `unit.csv` plus `decimals` (integer: the precision to show) |
 | domains, sources, licences | array | as v1 |
 
-Written from the seeds: names and `unit_key` from `kpi.csv`, definitions from its `definition_pl`/`definition_en`
-(required for a published concept with a v2 key), `frequency`, `aggregation` and `polarity` from `kpi_v2_map.csv`
+Written from the seeds: names, `unit_key` and `status` from `kpi.csv`, definitions from its `definition_pl`/`definition_en`
+(required for every concept with a `ready` map row, `ops.repo_check.published_v2_seeds`), `frequency`, `aggregation` and `polarity` from `kpi_v2_map.csv`
 (one value per v2 key), `domain_key`/`group_key` by walking `domain.csv` up from the concept's `subgroup_key`,
 `decimals` from `unit_decimals.csv`, member names and order from `kpi_member.csv` (else `sex.csv` for sex, else the
 member key), geographies from `geography_v2.csv` (`eu`: the area is in the EU). `source_keys` and `geographies` count
@@ -517,8 +541,9 @@ voivodeships), `dimensions`, `aggregation`, `polarity`, `status` and `note`:
 
 - `ready`: the measures are in activated blocks and the concept maps them in `kpi_measure.csv` (one row per source
   measure, units per measure where they differ, e.g. GUS indices `index_py_100` beside Eurostat rates); a
-  `metrics_<concept>` table after the next Gold build. New concepts start as `draft` and become `published` once the
-  build checks pass.
+  `metrics_<concept>` table after the next Gold build, and in v2 from then on (O37). New concepts start as `draft`
+  (shown as such in v2) and become `published` once the owner's review in bi.zohelo.com raised nothing; only
+  `published` concepts reach v1.
 - `needs-block`: in Silver (codes checked or block named) but not activated: a member filter, a half-yearly fact, a
   derivation or a row-size decision is missing; `note` says which.
 - `needs-source`: not ingested; `note` names the register id (NBP balance of payments PLG-002, investment

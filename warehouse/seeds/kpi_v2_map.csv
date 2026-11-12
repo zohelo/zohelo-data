@@ -124,8 +124,10 @@ reer,economy;poland,M,reer,eurostat,ERT_EFF_IC_M,eurostat:ERT_EFF_IC_M:I20:REER_
 reer,economy;poland,M,reer,world_bank_wdi,PX.REX.REER,world_bank_wdi:PX.REX.REER,A,PL;EU;EU27,,index,neutral,ready,2010 = 100 (IMF)
 registered_unemployed,labour,M,registered_unemployed,gus_bdl,P2961,gus_bdl:P2961:osoba,M,PL;VOIV,sex,sum,down,ready,end of month (month in the first label)
 registered_unemployed,labour,M,,gus_dbw,507_870_93_1,,M,PL;VOIV,sex;age,sum,down,needs-block,"DBW registered unemployed (507_*) in Silver: 0.8-2.3M rows per block with powiats, too big for the full-rebuild build"
+registered_unemployed,labour,M,registered_unemployed,mrpips_unemployment,registered_unemployment,mrpips_unemployment:registered_unemployment:persons:unemployed_persons,M,PL;VOIV,sex,sum,down,ready,"MRPiPS-01 TAB 2, end of month, from January 2021"
 registered_unemployment,labour,M,registered_unemployment_rate,gus_bdl,P2392,gus_bdl:P2392:%,A,PL;VOIV,,rate,down,ready,end of year
 registered_unemployment,labour,M,registered_unemployment_rate,gus_dbw,875_143_95_1,gus_dbw:875_143_95_1:95,M,PL;VOIV,,rate,down,ready,"end of month, also powiats"
+registered_unemployment,labour,M,registered_unemployment_rate,mrpips_unemployment,registered_unemployment,mrpips_unemployment:registered_unemployment:pct:unemployment_rate,M,PL;VOIV,,rate,down,ready,"MRPiPS, end of month, also powiats, from September 2020"
 retail_sales,economy,M,retail_sales,eurostat,STS_TRTU_M,eurostat:STS_TRTU_M:PCH_SM:VOL_SLS,M,PL;EU;EU27,,rate,up,ready,"NACE G47, volume, calendar adjusted"
 retail_sales,economy,M,retail_sales,gus_dbw,109_849_7_1,gus_dbw:109_849_7_1:7,M,PL,,rate,up,ready,"index, same month a year earlier = 100, constant prices"
 social_spending_gdp,labour,A,social_spending_gdp,eurostat,GOV_10A_EXP,eurostat:GOV_10A_EXP:PC_GDP:TE,A,PL;EU;EU27,,rate,neutral,ready,"general government, COFOG 10 social protection"
