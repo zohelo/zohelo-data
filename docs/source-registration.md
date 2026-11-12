@@ -72,7 +72,9 @@ it cannot follow macros found by name; a full parse takes about five seconds.
 ## What stays shared, and why
 
 - **The `workflow_dispatch` choice list** cannot be built from files: GitHub reads `options` from the
-  workflow file itself. It became a free-text input validated in the plan job. Cost: the owner types the
+  workflow file itself. It became a free-text input validated in the plan job. The text also names the run's
+  concurrency group before the plan job runs, so a typed `scheduler` or a text with a hyphen gets a group of
+  its own, and a source id may only be lower-case letters, digits and `_` (`run.py`). Cost: the owner types the
   source id instead of picking it; a typo fails the plan job in seconds with the message naming the rule.
 - **Seeds** (`source.csv`, `licence.csv`, `kpi.csv`, `kpi_measure.csv`, `kpi_v2_map.csv`, `unit.csv`,
   `unit_decimals.csv`) stay one file each for now. dbt builds one table per CSV file; per-source fragments
@@ -100,7 +102,9 @@ it cannot follow macros found by name; a full parse takes about five seconds.
 another: a `bronze:` table that is no dbt source table; a Silver model in no source's `silver:` list; a
 Gold model in no `gold` list or a listed table that no model builds; a full-rebuild model without a
 ceiling, or with two; a `poc_build_*` model that is not tagged, or neither registered nor in the old list,
-or both; a registration that names no model or no blocks, sits in the wrong file or names an unknown source;
+or both; a source with a block in the old list and a registration; a registration that names no model or no
+blocks, sits in the wrong file or names an unknown source; a geography CTE that is not named after its
+source or whose name already exists (in `poc_map_geography.sql` or in another source's macro);
 a `source.csv` or `licence.csv` row missing for a source (`register`); a choice list put back on the
 Pipeline `source` input.
 

@@ -61,7 +61,9 @@ permissions:
 
 concurrency:
   # One writer per source; read-only runs get their own group and never wait behind it.
-  group: "zohelo-pipeline-${{ (github.event_name == 'schedule' || inputs.run == 'scheduler: dispatch due runs') && 'scheduler' || inputs.source }}${{ (inputs.run == 'landing: inspect' || inputs.run == 'landing: verify' || inputs.run == 'bronze: verify') && '-read' || '' }}"
+  # `source` is free text and is used here before the plan job checks it: a typed `scheduler` or anything with a
+  # hyphen (`<source>-read`) gets a group of its own, so it can never join or displace another run's group.
+  group: "zohelo-pipeline-${{ (github.event_name == 'schedule' || inputs.run == 'scheduler: dispatch due runs') && 'scheduler' || ((inputs.source == 'scheduler' || contains(inputs.source, '-')) && format('refused-{0}', github.run_id) || inputs.source) }}${{ (inputs.run == 'landing: inspect' || inputs.run == 'landing: verify' || inputs.run == 'bronze: verify') && '-read' || '' }}"
   cancel-in-progress: false
 
 env:

@@ -307,15 +307,21 @@ SOURCE_MACROS = Path("warehouse/macros/sources")
 REGISTRATION = re.compile(r"\{%-?\s*macro\s+poc_(source|geography)__(\w+)\s*\(\s*\)\s*-?%\}(.*?)\{%-?\s*endmacro", re.S)
 REGISTERED_MODEL = re.compile(r"['\"]block_model['\"]\s*:\s*['\"](\w+)['\"]")
 REGISTERED_BLOCKS = re.compile(r"['\"](activated|blocks)['\"]\s*:")
+CTE_NAME = re.compile(r"^\s*(\w+) as \(", re.M)
+MAP_GEOGRAPHY = Path("warehouse/models/gold/poc_map_geography.sql")
 
 
 def registrations(files: list[Path]) -> tuple[dict[str, dict], list[str]]:
     """({source_system: {"block_model": model or None, "activated": bool, "geography": bool}}, problems) of the
     per-source Gold registrations: the macros poc_source__<source_system>() and poc_geography__<source_system>()
     live in warehouse/macros/sources/<source_system>.sql and nowhere else, and <source_system> is a declared
-    source (ingestion/sources/<source_system>.yaml)."""
+    source (ingestion/sources/<source_system>.yaml). The CTEs of a geography macro are named <source_system>
+    or <source_system>_<x>, and no name is used twice: not by a CTE written in poc_map_geography.sql (a source
+    that is still mapped there) and not by another source (dbt compiles two CTEs of one name; DuckDB fails on
+    them only in the build)."""
     found: dict[str, dict] = {}
     problems = []
+    taken = {name: str(MAP_GEOGRAPHY) for name in CTE_NAME.findall((ROOT / MAP_GEOGRAPHY).read_text())}
     for f in files:
         if f.parts[:2] != ("warehouse", "macros") or f.suffix != ".sql" or not (ROOT / f).exists():
             continue
@@ -329,8 +335,15 @@ def registrations(files: list[Path]) -> tuple[dict[str, dict], list[str]]:
             entry = found.setdefault(source, {"block_model": None, "activated": False, "geography": False})
             if kind == "geography":
                 entry["geography"] = True
-                if not re.search(rf"^\s*{source} as \(", body, re.M):
+                names = CTE_NAME.findall(body)
+                if source not in names:
                     problems.append(f"{f}: poc_geography__{source} must define the CTE `{source} as (...)`")
+                for name in names:
+                    if name != source and not name.startswith(f"{source}_"):
+                        problems.append(f"{f}: CTE {name} of poc_geography__{source} must be named {source}_<x>")
+                    if name in taken:
+                        problems.append(f"{f}: CTE {name} of poc_geography__{source} already exists in {taken[name]}")
+                    taken[name] = f"poc_geography__{source}"
                 continue
             model = REGISTERED_MODEL.search(body)
             entry["block_model"] = model.group(1) if model else None
@@ -367,6 +380,11 @@ def gold_blocks(files: list[Path]) -> list[str]:
         model = entry["block_model"]
         if model is None:
             continue
+        if source in legacy.values():
+            problems.append(
+                f"poc_source__{source}: {source} already has a Gold block in poc_legacy_block_models(); a source "
+                "is declared in one of the two places"
+            )
         if model in entries:
             problems.append(f"Gold block {model} is declared twice (poc_source__{source} and {entries[model]})")
         entries[model] = source

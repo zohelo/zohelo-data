@@ -140,6 +140,7 @@ SOURCE_KEYS = {
     "legacy_tables",
     "activities",
 }
+RESERVED_IDS = ("platform", "scheduler")  # Pipeline names that are not sources
 EXTRACTION_KEYS = {"initial", "production", "incremental_policy", "schedule", "kind", "bulk_file", "excluded"}
 KINDS = {"bulk_file"}  # implemented shared patterns (docs/landing.md, common ingestion framework)
 
@@ -157,6 +158,9 @@ def config_problems(config: dict) -> list[str]:
             problems.append(f"{source}: missing keys {sorted(missing)}")
         if cfg.get("source_system") != source:
             problems.append(f"{source}: source_system must equal the file name")
+        if source in RESERVED_IDS or not source.replace("_", "").isalnum() or source != source.lower():
+            # The Pipeline's `source` input is free text and names the concurrency group (pipeline.yml).
+            problems.append(f"{source}: a source id is lower-case letters, digits and _ and not one of {RESERVED_IDS}")
         kind = (cfg.get("extraction") or {}).get("kind")
         if kind is not None and kind not in KINDS:
             problems.append(f"{source}: extraction.kind {kind!r} is not an implemented pattern {sorted(KINDS)}")
