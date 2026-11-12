@@ -21,7 +21,8 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('gdp_current_prices', 'eurostat', 'eurostat:NAMA_10_GDP:CP_MNAC:B1GQ', 0, 1e9),
     -- million PLN, Poland only; 2025 = 3.915e6 (GUS DBW 1038_16_105_4; Eurostat CP_MNAC PL is the same order)
     ('gdp_current_prices', 'gus_dbw', '%', 0, 3e7),
-    ('gdp_current_prices', 'world_bank_wdi', 'world_bank_wdi:NY.GDP.MKTP.CD', 0, 3e14),
+    -- million US$ since D33 (metrics convert the published US$ by scale): the former bound 3e14 US$ / 1e6
+    ('gdp_current_prices', 'world_bank_wdi', 'world_bank_wdi:NY.GDP.MKTP.CD', 0, 3e8),
     -- current local currency units; largest IR 2025 = 2.693e17 IRR as published (WDI NY.GDP.MKTP.CN, #2788)
     ('gdp_current_prices', 'world_bank_wdi', 'world_bank_wdi:NY.GDP.MKTP.CN', 0, 3e18),
     ('inflation', 'eurostat', '%', -100, 3000),
@@ -53,12 +54,13 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- UNESCO UIS (#2411): % of population 25+; capped at 100 (all areas max 73.91). Documentation only until
     -- metrics_tertiary_attainment joins the metrics union below.
     ('tertiary_attainment', 'unesco_uis', '%', 0, 100),
-    -- FAOSTAT (#2402): kt CO2eq; World 54,253,565 kt (all sectors without LULUCF, 2024, Dev trial 43159213097).
-    -- Documentation only until metrics_ghg_emissions joins the metrics union below.
-    ('ghg_emissions', 'faostat', '%', 0, 8.2e7),
-    -- FAOSTAT (#2402): 1000 ha; World land area 13,040,161.55 (Dev trial 43159213097). Documentation only (no
-    -- metrics_area model yet).
-    ('area', 'faostat', '%', 0, 2e7)
+    -- FAOSTAT (#2402): published in kt CO2eq, metrics in Mt CO2e since D33 (÷ 1000); World 54,253,565 kt = 54,253.565 Mt
+    -- (all sectors without LULUCF, 2024, Dev trial 43159213097). Documentation only until metrics_ghg_emissions joins
+    -- the metrics union below.
+    ('ghg_emissions', 'faostat', '%', 0, 8.2e4),
+    -- FAOSTAT (#2402): published in 1000 ha, metrics in km² since D33 (× 10); World land area 13,040,161.55 thousand ha
+    -- = 130,401,615.5 km² (Dev trial 43159213097). Documentation only (not in the metrics union below).
+    ('area', 'faostat', '%', 0, 2e8)
 ),
 
 metrics as (
