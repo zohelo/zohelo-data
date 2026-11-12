@@ -37,7 +37,7 @@ archive_policy:
 bronze: [bronze.gleif_lei_records, bronze.gleif_relationship_records, bronze.gleif_reporting_exceptions,
          bronze.gleif_rejected_files]
 silver: [silver.gleif_legal_entities, silver.gleif_relationships, silver.gleif_reporting_exceptions]
-gold: []
+gold: [gold.build_gleif, gold.metrics_lei_issued]   # counts as entity-snapshot facts; an LEI entity table is later work
 legacy_tables: [bronze.gleif_lei2, silver.gleif_lei2, silver.gleif_relationship_records,
                 gold.dim_corporate_entity, gold.fact_corporate_relationships, gold.fact_corporate_reporting_exceptions]
 
