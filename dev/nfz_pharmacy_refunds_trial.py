@@ -261,6 +261,29 @@ def main() -> int:
                 "data_files": files, "data_bytes": size, "entities": len(parts),
                 "entities_by_pages": sorted({v: sum(1 for x in parts.values() if x == v) for v in parts.values()}.items())}))
 
+        def changelog():
+            """How often the data move: the documentation's Changelog page (read only, two GETs, 1 s apart)."""
+            import html
+            import re
+
+            session = requests.Session()
+            session.headers.update({"User-Agent": extract.USER_AGENT})
+            root = f"{extract.API}/"
+            time.sleep(1)
+            page = session.get(root, timeout=60)
+            links = sorted({h for h in re.findall(r'href="([^"]+)"', page.text) if "changelog" in h.lower()})
+            found = {"root_status": page.status_code, "changelog_links": links[:5]}
+            if links:
+                time.sleep(1)
+                target = requests.compat.urljoin(root, links[0])
+                doc = session.get(target, timeout=60)
+                text = re.sub(r"(?s)<(script|style)[^>]*>.*?</\1>", " ", doc.text)
+                text = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", text))).strip()
+                start = text.lower().find("changelog", text.lower().find("copyright"))
+                found.update({"url": target, "status": doc.status_code, "text": text[max(0, start) : max(0, start) + 2600]})
+            annotate("notice", "nfz_pharmacy_refunds trial · API changelog (release rhythm)", found)
+
+        stage("changelog", annotate, changelog)
         stage("landing", annotate, landing)
         table_id = (SCRATCH, load.TABLE)
 
