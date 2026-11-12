@@ -77,7 +77,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   nbp_fx_rates: {rows: 1000000}  # 428,392
   nbp_gold_fixings: {rows: 20000}  # 3,479
   oecd_cli: {rows: 400000}  # 240,988 (Dev trial 42777288678)
-  unece_observations: {rows: 3700000, exception: "#2786"}  # 2,436,893 (Dev trial 43157348624); D32: narrow table, whole-table snapshots, full rebuild weekly
+  unece_observations: {rows: 3700000, exception: "#2833"}  # 2,436,893 (Dev trial 43157348624); D32: narrow table, whole-table snapshots, full rebuild weekly
   unctad_fdi_flows_stock: {rows: 55000}  # 36,950 (Dev trial 43094105961)
   unctad_merchandise_trade: {rows: 70000}  # 46,108
   unctad_services_trade: {rows: 1200000, exception: "#2777"}  # 807,733, ~38,000 more a year; whole-table archive, full rebuild accepted

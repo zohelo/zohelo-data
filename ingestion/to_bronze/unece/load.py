@@ -10,7 +10,7 @@ codes and value codes (comma- and ``|``-separated: PXWeb value codes contain dot
 file's variable and value labels (one row per variable × value). A file that is not JSON-stat 2.0, whose value
 count does not match its sizes, or with a code containing ``|`` is rejected (bronze.unece_rejected_files).
 Entities are the table folders in Landing (``to_landing/unece/``, a table above the API cell limit in parts
-``<table>_p<n>``). Code shared with other small bulk sources: ingestion/common/bulk_bronze.py.
+``<table>__p<value code>``). Code shared with other small bulk sources: ingestion/common/bulk_bronze.py.
 """
 
 from __future__ import annotations

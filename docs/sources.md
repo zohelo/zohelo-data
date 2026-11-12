@@ -722,7 +722,7 @@ to POST queries. `ingestion/to_landing/unece/` therefore lists the tables of the
 folder `20-ME` (macroeconomic overview, national accounts, labour force and wages, price indices,
 industrial production, external economic relations, globalization) and queries each whole as JSON-stat
 2.0; a table above the API cell limit (HTTP 403) is queried per value of its first variable and lands
-as entities `<table>_p<n>`. Version = the table's `updated` time (the API restamps tables daily, so the
+as entities `<table>__p<value code>` (Silver keeps only the newer of the whole and part shapes). Version = the table's `updated` time (the API restamps tables daily, so the
 SHA-256 decides whether a copy is written). One request at a time with a 4 s pause: the API answers
 bursts with 429. Bronze: `bronze.unece_observations` (the generic SDMX format of the OECD onboarding:
 variable codes as series_key (`|`-separated), period label, value and status) and `bronze.unece_codes` (variable and

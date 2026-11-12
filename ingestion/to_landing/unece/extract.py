@@ -7,11 +7,12 @@ entity is one table: every table under the folders in FOLDERS (``20-ME``: macroe
 accounts, labour force and wages, price indices, industrial production, external relations, globalization),
 listed by the API with its ``updated`` time. A table is queried whole (every value of every variable,
 ``json-stat2``); a table above the API's cell limit (HTTP 403) is queried per value of its first variable and
-lands each part as its own entity ``<table>_p<n>``. Version = the table's ``updated`` time; a file whose bytes equal the
+lands each part as its own entity ``<table>__p<value code>`` (the code made path-safe, so a part keeps its name
+when the API reorders or adds values). Version = the table's ``updated`` time; a file whose bytes equal the
 newest landed copy is not written again.
 
 Layout (docs/landing.md):
-``<root>/unece/snapshot/data/<table>[_p<n>]/<version>__<ingested>.json`` + receipt.
+``<root>/unece/snapshot/data/<table>[__p<value code>]/<version>__<ingested>.json`` + receipt.
 
 Modes: inspect (tables vs Landing: missing / stale / current), load (missing first, then stale), verify (every
 receipt has its data file in Landing or the Archive). Polite access: one request at a time, a pause between
@@ -26,6 +27,7 @@ from datetime import UTC, datetime
 from hashlib import sha256
 import json
 import os
+import re
 import time
 from typing import Any
 
@@ -116,12 +118,18 @@ def landed(client, bucket: str, root: str) -> dict[str, list[dict[str, Any]]]:
     return out
 
 
+def part_name(entity: str, code: str) -> str:
+    """Entity of one table part: the table id, ``__p`` and the first variable's value code, path-safe."""
+    return f"{entity}__p{re.sub(r'[^A-Za-z0-9]+', '_', code).strip('_')}"
+
+
 def state(held: dict[str, list[dict[str, Any]]], entity: str, version: str) -> str:
-    """missing / stale / current of a table, whole (<table>) or in parts (<table>_p1 …)."""
-    rows = held.get(entity) or held.get(f"{entity}_p1")
-    if not rows:
+    """missing / stale / current of a table, whole (<table>) or in parts (<table>__p<code> …): current only when
+    the newest receipt of every landed part is at least the table's version."""
+    parts = [rows for name, rows in held.items() if name == entity or name.startswith(f"{entity}__p")]
+    if not parts:
         return "missing"
-    return "current" if rows[-1]["version_token"] >= version else "stale"
+    return "current" if all(rows[-1]["version_token"] >= version for rows in parts) else "stale"
 
 
 def put_new(client, bucket: str, key: str, body: bytes) -> None:
@@ -141,7 +149,7 @@ def put_new(client, bucket: str, key: str, body: bytes) -> None:
 
 
 def land_table(client, bucket: str, root: str, session, entity: str, table: dict, held: dict) -> Counter:
-    """One table (whole, or per value of its first variable as entities <table>_p<n>); a file whose bytes
+    """One table (whole, or per value of its first variable as entities <table>__p<code>); a file whose bytes
     equal the newest landed copy of its entity is not written again."""
     outcomes: Counter = Counter()
     address = f"{API}/{table['path']}"
@@ -150,7 +158,10 @@ def land_table(client, bucket: str, root: str, session, entity: str, table: dict
         parts = [(entity, call(session, address, query(variables)))]
     except TooLarge:
         values = variables[0]["values"]
-        parts = [(f"{entity}_p{n}", call(session, address, query(variables, v))) for n, v in enumerate(values, 1)]
+        names = [part_name(entity, v) for v in values]
+        if len(set(names)) != len(names):
+            raise RuntimeError(f"{entity}: two value codes give the same part name") from None
+        parts = [(name, call(session, address, query(variables, v))) for name, v in zip(names, values, strict=True)]
     for name, body in parts:
         json.loads(body)  # a JSON-stat answer, or fail before writing
         digest = sha256(body).hexdigest()
