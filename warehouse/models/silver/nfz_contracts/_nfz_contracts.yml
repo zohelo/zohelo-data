@@ -1,0 +1,52 @@
+version: 2
+models:
+  - name: nfz_contracts_agreements
+    description: >-
+      NFZ contracts API (register PLS-014, https://api.nfz.gov.pl/app-umw-api/, version 1.2): every agreement the 16
+      NFZ regional branches list for each landed contract year (scope in ingestion/sources/nfz_contracts.yaml), from the
+      newest copy of each year and branch. Grain: agreement_id (one id per agreement and contract year). Values as
+      published (terms forbid modifying the data): amount_pln is the agreement's value for the year as NFZ states it, a
+      contract ceiling and not expenditure, null where NFZ gives none. Plans by contract product and months are not
+      loaded. tests/nfz_contracts_agreements_complete.sql checks every year and branch in scope is present.
+    tests:
+      - unique:
+          column_name: agreement_id
+    columns:
+      - name: agreement_id
+        tests: [not_null]
+      - name: contract_year
+        tests: [not_null]
+      - name: branch_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16']
+      - name: service_type_code
+        tests: [not_null]
+      - name: provider_code
+        tests: [not_null]
+      - name: updated_at
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the year and branch file (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: nfz_contracts_providers
+    description: >-
+      NFZ contracts API (register PLS-014): healthcare providers holding an NFZ agreement in the landed contract years,
+      from silver.nfz_contracts_agreements. Grain: branch_code x provider_code (NFZ provider codes are per branch).
+      Identifiers (NIP, REGON, registry number), name and place as published on the provider's most recently updated
+      agreements; presence by contract year. Linking to other registers uses NIP or REGON, never the name.
+      tests/nfz_contracts_providers_complete.sql checks every provider of an agreement is here.
+    tests:
+      - unique:
+          column_name: "branch_code || '|' || provider_code"
+    columns:
+      - name: branch_code
+        tests: [not_null]
+      - name: provider_code
+        tests: [not_null]
+      - name: first_contract_year
+        tests: [not_null]
+      - name: last_contract_year
+        tests: [not_null]

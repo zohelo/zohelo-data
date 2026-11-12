@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+- name: nfz_contracts
+  description: NFZ contracts API (register PLS-014) — agreements of the NFZ regional branches by contract year and branch
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/nfz_contracts/
+    loaded_by: ingestion/to_bronze/nfz_contracts/
+    config: ingestion/sources/nfz_contracts.yaml
+  tables:
+  - name: nfz_contracts_agreements
+    description: >-
+      One row per agreement record of the newest copy of each year and branch (entity agreements_<year>_<branch>):
+      agreement_id and every attribute of the API as the exact JSON text (code, technical_code, origin_code,
+      service_type, service_name, amount_text, updated_at, provider_code, provider_nip, provider_regon,
+      provider_registry_number, provider_name, provider_place, year_text, branch), the page member and the record's
+      position; partitioned by entity.
+  - name: nfz_contracts_rejected_files
+    description: NFZ contracts Landing files the Bronze decoder rejected, with the reason.

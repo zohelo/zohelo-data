@@ -1,0 +1,49 @@
+source_system: nfz_contracts
+description: "NFZ contracts API (API Umowy NFZ): the agreements the 16 NFZ regional branches signed with healthcare providers, per contract year and branch, from 2019"
+
+# Extraction strategy (docs/landing.md). Register PLS-014. Bulk feature: none (NFZ publishes the contract register
+# only through this API and its web viewer). Route: the API https://api.nfz.gov.pl/app-umw-api/ (version 1.2, Swagger
+# swagger/v1.2/swagger.json), read by the Dev probes 43321414005 and 43323636829: /agreements needs a year and a
+# branch, at most 25 a page; /available-years 2008-2026; robots.txt 404 (none); terms: 10 requests per second per IP
+# (we make one at a time, 0.3 s apart, about 1.1 s per page). Own extractor ingestion/to_landing/nfz_contracts/.
+# Entity = one contract year and branch (agreements_<year>_<branch>), every page of its list as one ZIP of the exact
+# answers. Version: the API gives no update date (meta.date-modified is the request time), so a copy is written only
+# when the digest of the pages' data members changed; version = download time. Scope (#2955): the agreements level for
+# contract years 2019-2026 (FIRST_YEAR in the extractor; 327,177 agreements, 13,146 pages). Measured full load of the
+# agreements level 2008-2026 (probe 43323636829): 856,063 agreements, 34,382 pages, about 11 hours at one request at a
+# time, and a Silver table above the 1 M full-rebuild limit (#822), so 2008-2018 (528,886 agreements) are left out
+# until Silver is incremental. Left out as well: the plans of each agreement by contract product and their months and
+# packages (/agreements/{id}, /plans/{id}, /months/{id}: one request per agreement or plan, about 327,000 requests for
+# the scope), the provider dictionary with addresses and TERYT commune (/providers, about 26,000 a year) and the
+# product, service-type and orthopedic-supply dictionaries (the agreements carry the service type code and name).
+# Initial load: 13,146 pages at about 1.1 s each, about 4 hours: one scheduled run (330-minute budget; resumable).
+extraction:
+  initial: api
+  production: snapshot                  # each ZIP is the complete list of one contract year and branch
+  incremental_policy: changed_since_last  # data digest per year and branch; open years read again in every run
+  schedule: # UTC; release: a live register NFZ updates as agreements are signed and amended (no calendar); weekly
+    # (Saturday 01:15): the current and previous contract year read again (32 lists, 3,579 pages in 2025-2026, ~70 min)
+    - {cron: "15 1 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/nfz_contracts/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.nfz_contracts_agreements, bronze.nfz_contracts_rejected_files]
+silver: [silver.nfz_contracts_agreements, silver.nfz_contracts_providers]
+gold: [gold.build_nfz_contracts]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  nfz_contracts_agreements: {rows: 490000}  # TRIAL
+  nfz_contracts_providers: {rows: 40000}  # TRIAL
+  poc_build_nfz_contracts: {rows: 11000}  # TRIAL
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32 + #2955): 128 year-and-branch files (under 1 MB each) and a Silver table of
+# about 330,000 rows; NFZ amends agreements during and after their year, so Landing reads the current and previous
+# contract year again in every run (and an older year once a year); a changed list replaces its one Bronze file, and
+# Silver and the Gold build stage are rebuilt in full from Bronze (seconds of DuckDB). The API's updatedAt filter is
+# a changed-since for amendments but shows no removed agreements, so the open years are read whole.
+refresh: {mode: full, decided: "D32 + #2955"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
