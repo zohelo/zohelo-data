@@ -124,7 +124,10 @@ source_version, raw_sha256`. Then:
    blocks; the first run that creates the tables builds the block and the facts with it. Only the
    scheduled build may skip a block: a filtered build (Dev trial, `poc_fact_annual+`) fails on a block
    without a table, so select the block too (`poc_build_<source>+`);
-2. add its codes to `poc_map_geography.sql` (section "Shared dimensions" below);
+2. add its codes to `poc_map_geography.sql` (section "Shared dimensions" below); when the map reads the
+   source's own Silver table for them, read it through `poc_optional_ref('<model>', '<column>:<type>, …')`
+   and add the model to the map's config meta `optional_parents`: a plain `ref()` there makes the map and
+   every block wait for the source's first Bronze load, and the scheduled build then fails (`stalled`, #2903);
 3. add units to `warehouse/seeds/unit.csv` (with `base_unit_key` and `factor`) and the source's unit codes to
    `unit_map.csv` (D33), KPIs to `kpi.csv` (status `draft` until checked),
    one `kpi_measure.csv` row per KPI × source measure, and for a KPI of the v2 map one
