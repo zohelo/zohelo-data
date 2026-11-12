@@ -14,7 +14,7 @@
 --   breakdown   = the other dimensions, DBW's own ids as published: {"<dimension id>":"<position id>"};
 --                 their names are in the block's dictionary, not repeated per row (decision 7)
 --   unit        = the presentation's name as published (D33), the key of unit_map.csv
---   date_key    = first day of the period (A, S, Q, M); other periods are not loaded
+--   date_key    = first day of the period (A, S, Q, M) in the year id_daty; other periods are not loaded
 --   geography   = the position of the territorial slot, by name through gold.map_geography; a block without
 --                 one → _Z; unmatched → _X with `<NAME> #<position id>` kept in the key
 -- Cells that are not plain values (DBW's id_brak_wartosci, id_tajnosci, id_flaga):
@@ -94,7 +94,7 @@ placed as (
     where
         s.value is not null and (coalesce(s.missing_reason_id, 253) = 253 or s.value <> 0)
         and pe.frequency is not null
-        and s.year is not null
+        and s.year between 1000 and 9999
 ),
 
 kept as (
