@@ -9,11 +9,14 @@ models:
       group name as label). The groups do not sum to the total: medicines outside the 14 groups (the API's group
       "-") are only in the total; no remainder is derived. Five measures, values, units and scale as published
       (D33; the terms forbid modifying the data):
-      quantity (packages) = DEFINITION_QUANTITY;
-      refund (PLN) = DEFINITION_REFUND;
-      donation (PLN) = DEFINITION_DONATION;
-      contribution_of_patient (PLN) = DEFINITION_CONTRIBUTION;
-      value (PLN) = DEFINITION_VALUE.
+      quantity (packages) = "Ilość zrefundowanych opakowań", reimbursed packages dispensed, fractions of a package
+      as published; refund (PLN) = "Kwota refundacji NFZ", the amount NFZ reimbursed; donation (PLN) = "Dotacja
+      Ministerstwa Zdrowia w ramach programu 75+", the Ministry of Health subsidy of the 75+ free-medicines
+      programme; contribution_of_patient (PLN) = "Dopłata pacjenta", the patient's co-payment; value (PLN) =
+      "Całkowity koszt produktu leczniczego; koszt refundacji NFZ + dopłata pacjenta + dotacja MZ (75+)", the total
+      cost (API swagger 1.0 field descriptions). In the published numbers value = refund + contribution_of_patient
+      (VALUE_IDENTITY), so the 75+ subsidy is not added on top of refund as the description reads; shown as
+      published, nothing derived.
       Rows: GOLD_ROWS (Dev trial TRIAL).
     tests:
       - unique:

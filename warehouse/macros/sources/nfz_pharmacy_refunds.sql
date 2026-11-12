@@ -29,10 +29,10 @@
     select * from (
         values
         ('quantity', 'packages', 'packages', 'Reimbursed packages dispensed by pharmacies (NFZ)'),
-        ('refund', 'PLN', 'PLN', 'NFZ reimbursement of medicines dispensed by pharmacies (NFZ)'),
-        ('donation', 'PLN', 'PLN', 'State-budget payment for free medicines dispensed by pharmacies (NFZ)'),
-        ('contribution_of_patient', 'PLN', 'PLN', 'Patient payment for reimbursed medicines (NFZ)'),
-        ('value', 'PLN', 'PLN', 'Value of reimbursed medicines dispensed by pharmacies (NFZ)')
+        ('refund', 'PLN', 'PLN', 'NFZ refund for medicines dispensed by pharmacies (NFZ)'),
+        ('donation', 'PLN', 'PLN', 'Ministry of Health subsidy, 75+ programme, pharmacy medicines (NFZ)'),
+        ('contribution_of_patient', 'PLN', 'PLN', 'Patient co-payment for reimbursed medicines (NFZ)'),
+        ('value', 'PLN', 'PLN', 'Total cost of reimbursed medicines dispensed by pharmacies (NFZ)')
     ) as t (field, unit_code, unit_name, measure_name)
 {% endmacro %}
 
