@@ -30,8 +30,8 @@ silver: [silver.mrpips_registered_unemployment]
 gold: [gold.build_mrpips_unemployment]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a month
-# Refresh policy for all layers (D32): one ZIP per month, about 12 000 Bronze cells and 800 Silver rows per month
+# Refresh policy for all layers (D32): one ZIP per month, about 3,350 Bronze cells and 828 Silver rows per month
 # (under 1 M rows for decades); small, so every layer is rebuilt in full.
-refresh: {mode: full, decided: "D32 + PLS-029 onboarding PR"}
+refresh: {mode: full, decided: "D32 + #2348"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
