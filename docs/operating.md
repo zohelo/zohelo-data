@@ -55,9 +55,10 @@ npm --prefix portal/app run dev
 Production reads and writes need the R2 credentials, which exist only in GitHub
 Actions. There is no repository test suite. No workflow runs on a push to a pull request
 (owner direction 12 Nov 2026): run `python -m ops.repo_check` locally while iterating. The
-`check` job in `dev.yml` (linked task, compile, lint, YAML, configuration consistency, dbt
-parse, secret scan) runs once, when the label `merge:check` is added to the reviewed, final
-pull request, and must pass on its head before merge ([flow.md](flow.md), merge gate).
+`check` job in `dev.yml` (linked task, compile, lint, YAML, configuration consistency, offline
+dbt compile with a DuckDB parse of every model, dbt parse, secret scan) runs once, when the
+label `merge:check` is added to the reviewed, final pull request, and must pass on its head
+before merge ([flow.md](flow.md), merge gate).
 CodeQL scans `main` weekly from Ops, not each pull request. Quality rules: [quality.md](quality.md).
 
 ### Dev trials
