@@ -51,6 +51,7 @@ SOURCES = (
     "mf_state_budget",
     "mf_treasury_debt",
     "krus",
+    "zus_psz",
     "unctad",
     "mf_jst_budgets",
     "mrpips_unemployment",
