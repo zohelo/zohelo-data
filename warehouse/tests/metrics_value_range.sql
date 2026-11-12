@@ -16,7 +16,9 @@ with bounds (concept_key, source_system, value_min, value_max) as (
     ('gdp_per_capita', 'eurostat', 0, 2e5),
     ('gdp_per_capita', 'world_bank_wdi', 0, 5e5),
     ('gdp_volume_growth', 'eurostat', -50, 100),
-    ('gdp_volume_growth', 'world_bank_wdi', -100, 200)
+    ('gdp_volume_growth', 'world_bank_wdi', -100, 200),
+    ('current_account_components', 'nbp_bop', -1e6, 1e6)  -- million EUR,
+    ('fdi_inflow', 'nbp_bop', -1e6, 1e6)  -- million EUR
 ),
 
 metrics as (
