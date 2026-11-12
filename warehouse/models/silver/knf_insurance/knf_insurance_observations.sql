@@ -51,7 +51,10 @@ b_periods as (
 ),
 
 b_header as (
-    select c.entity, c.sheet_name, min(c.row_number) as header_row
+    select
+        c.entity,
+        c.sheet_name,
+        min(c.row_number) as header_row
     from cells as c
     inner join b_tables as t on c.entity = t.entity and c.sheet_name = t.sheet_name
     where c.column_number = 1 and starts_with(c.text, 'Wyszczególnienie')
@@ -105,17 +108,23 @@ bulletin as (
     inner join b_header as h on t.entity = h.entity and t.sheet_name = h.sheet_name
     inner join b_periods as p on t.entity = p.entity and t.sheet_name = p.sheet_name
     inner join cells as i
-        on t.entity = i.entity and t.sheet_name = i.sheet_name and i.column_number = 1 and i.row_number > h.header_row
+        on
+            t.entity = i.entity and t.sheet_name = i.sheet_name and i.column_number = 1
+            and h.header_row < i.row_number
     inner join b_measures as m on t.entity = m.entity and t.sheet_name = m.sheet_name
     inner join cells as v
-        on i.entity = v.entity and i.sheet_name = v.sheet_name and i.row_number = v.row_number
-        and v.column_number = m.column_number
+        on
+            i.entity = v.entity and i.sheet_name = v.sheet_name and i.row_number = v.row_number
+            and m.column_number = v.column_number
     where v.cell_type = 'n' and v.number_value is not null
 ),
 
 -- OFE monthly ------------------------------------------------------------------------------------------------------
 o_sheets as (
-    select entity, sheet_name, min(row_number) as header_row
+    select
+        entity,
+        sheet_name,
+        min(row_number) as header_row
     from cells
     where
         series = 'ofe' and sheet_name in ('Aktywa netto', 'Członkowie', 'Składki', 'Jednostka rozrachunkowa')
@@ -124,7 +133,10 @@ o_sheets as (
 ),
 
 o_periods as (
-    select c.entity, c.sheet_name, cast(regexp_extract(c.text, '([0-9]{4}-[0-9]{2}-[0-9]{2})', 1) as date) as period_end
+    select
+        c.entity,
+        c.sheet_name,
+        cast(regexp_extract(c.text, '([0-9]{4}-[0-9]{2}-[0-9]{2})', 1) as date) as period_end
     from cells as c
     inner join o_sheets as s on c.entity = s.entity and c.sheet_name = s.sheet_name
     where
@@ -184,24 +196,34 @@ ofe as (
     from o_sheets as s
     inner join o_periods as p on s.entity = p.entity and s.sheet_name = p.sheet_name
     inner join cells as i
-        on s.entity = i.entity and s.sheet_name = i.sheet_name and i.column_number = 2 and i.row_number > s.header_row
+        on
+            s.entity = i.entity and s.sheet_name = i.sheet_name and i.column_number = 2
+            and s.header_row < i.row_number
     inner join o_measures as m on s.entity = m.entity and s.sheet_name = m.sheet_name
     inner join cells as v
-        on i.entity = v.entity and i.sheet_name = v.sheet_name and i.row_number = v.row_number
-        and v.column_number = m.column_number
+        on
+            i.entity = v.entity and i.sheet_name = v.sheet_name and i.row_number = v.row_number
+            and m.column_number = v.column_number
     where v.cell_type = 'n' and v.number_value is not null
 ),
 
 -- IKE / IKZE yearly ------------------------------------------------------------------------------------------------
 k_sheets as (
-    select entity, sheet_name, min(row_number) as measure_row
+    select
+        entity,
+        sheet_name,
+        split_part(entity, '_', 1) as series,
+        min(row_number) as measure_row
     from cells
     where series in ('ike', 'ikze') and ends_with(sheet_name, '_dane liczbowe') and text = 'Liczba (w szt.)'
     group by all
 ),
 
 k_periods as (
-    select c.entity, c.sheet_name, cast(regexp_extract(c.text, '([0-9]{4}-[0-9]{2}-[0-9]{2})', 1) as date) as period_end
+    select
+        c.entity,
+        c.sheet_name,
+        cast(regexp_extract(c.text, '([0-9]{4}-[0-9]{2}-[0-9]{2})', 1) as date) as period_end
     from cells as c
     inner join k_sheets as s on c.entity = s.entity and c.sheet_name = s.sheet_name
     where c.row_number < s.measure_row and regexp_matches(c.text, '^Stan na dzień: *[0-9]{4}-[0-9]{2}-[0-9]{2}$')
@@ -261,14 +283,17 @@ ike as (
         v.raw_sha256,
         v.source_version,
         v.ingested_at
-    from (select *, split_part(entity, '_', 1) as series from k_sheets) as s
+    from k_sheets as s
     inner join k_periods as p on s.entity = p.entity and s.sheet_name = p.sheet_name
     inner join cells as i
-        on s.entity = i.entity and s.sheet_name = i.sheet_name and i.column_number = 2 and i.row_number > s.measure_row
+        on
+            s.entity = i.entity and s.sheet_name = i.sheet_name and i.column_number = 2
+            and s.measure_row < i.row_number
     inner join k_columns as k on s.entity = k.entity and s.sheet_name = k.sheet_name
     inner join cells as v
-        on i.entity = v.entity and i.sheet_name = v.sheet_name and i.row_number = v.row_number
-        and v.column_number = k.column_number
+        on
+            i.entity = v.entity and i.sheet_name = v.sheet_name and i.row_number = v.row_number
+            and k.column_number = v.column_number
     where v.cell_type = 'n' and v.number_value is not null
 )
 
