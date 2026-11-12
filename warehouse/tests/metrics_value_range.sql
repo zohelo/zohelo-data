@@ -59,6 +59,9 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- UNHCR (#2415): persons; highest refugees 4,404,995 (all asylum countries 1951-2025, Dev trial 43279310455).
     -- Documentation only (no metrics_refugees_hosted model yet).
     ('refugees_hosted', 'unhcr', '%', 0, 2e7)
+    -- EEA GovReg (#2424): kt CO2e, total excl. LULUCF; highest set from the trial. Documentation only until
+    -- metrics_ghg_emissions joins the metrics union below.
+    ('ghg_emissions', 'eea', 'eea:govreg_ghg_inventory:gg_co2e:Sectors/Totals_excl', 0, 2e6)
 ),
 
 metrics as (
