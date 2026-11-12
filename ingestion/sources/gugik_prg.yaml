@@ -1,9 +1,12 @@
 source_system: gugik_prg
-description: "GUGiK PRG — national register of boundaries: administrative units and cadastral units (shapefiles)"
+description: "GUGiK PRG — national register of boundaries (administrative and cadastral units) and address points (shapefiles)"
 
-# Extraction strategy (docs/landing.md). Bulk feature: one national ZIP of shapefiles on
-# opendata.geoportal.gov.pl (~377 MB, ~7 min). No validators from the server, so every run
-# downloads and writes only when the SHA-256 changed. Free for any purpose (GUGiK).
+# Extraction strategy (docs/landing.md). Bulk feature: national ZIPs of shapefiles on
+# opendata.geoportal.gov.pl. Boundaries (~377 MB, ~7 min): no validators from the server, so every
+# run downloads and writes only when the SHA-256 changed. Address points (PL-ENV-007, #2870; 564 MB,
+# address points, streets, localities and squares, the address members Deflate64): the server sends
+# Last-Modified and ETag, so an unchanged package is not downloaded again (skip_unchanged).
+# Free for any purpose (GUGiK).
 extraction:
   kind: bulk_file
   bulk_file:
@@ -12,27 +15,36 @@ extraction:
         url: https://opendata.geoportal.gov.pl/prg/granice/00_jednostki_administracyjne.zip
         format: zip
         version: ingested          # the server sends no validators
+      - entity: punkty_adresowe
+        url: https://opendata.geoportal.gov.pl/prg/adresy/PunktyAdresowe/POLSKA.zip
+        format: zip
+        version: last_modified     # rebuilt often (Last-Modified on most days); loaded monthly
+        skip_unchanged: true
   initial: bulk
-  production: snapshot                  # the package is the complete register state
-  incremental_policy: changed_since_last  # by SHA-256 of the download
-  schedule:                             # UTC; monthly (state 1 January + corrections)
+  production: snapshot                  # each package is the complete register state
+  incremental_policy: changed_since_last  # Last-Modified + ETag (addresses), SHA-256 of the download
+  schedule:                             # UTC; monthly (boundaries: state 1 January + corrections;
+    # addresses: updated continuously by the gminas, a monthly state is enough for counts per gmina)
     - {cron: "40 2 3 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/gugik_prg/
-# ZIP kept as exact bytes (.bin). Yearly changes: newest version + 90 days.
+# ZIPs kept as exact bytes (.bin). Newest version of each package only (0.56 GB a month for the
+# addresses; #2870); retention is per source, so the boundaries keep no superseded copy either.
 archive_policy:
   move: true
-  retention: {keep_latest: 1, keep_days: 90}
+  retention: {keep_latest: 1, keep_days: 0}
   prune: report
-bronze: [bronze.prg_boundaries, bronze.prg_rejected_files]
-silver: [silver.prg_units]
-gold: [gold.geo_unit, gold.geo_neighbour, gold.build_prg]   # also gold.map_geography (PRG codes) and geo/<level>.geojson
+bronze: [bronze.prg_boundaries, bronze.prg_address_points, bronze.prg_rejected_files]
+silver: [silver.prg_units, silver.prg_address_gminas]
+gold: [gold.geo_unit, gold.geo_neighbour, gold.build_prg, gold.build_prg_addresses]   # also gold.map_geography (PRG codes) and geo/<level>.geojson
 # Tables of retired code still in the catalog, replaced by the tables above (globs allowed).
 legacy_tables: [bronze.prg_country, bronze.prg_voivodeships, bronze.prg_counties, bronze.prg_municipalities,
                 bronze.prg_surface_areas, silver.prg_*, gold.dim_prg_*, gold.fact_prg_surface_areas]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
-# Refresh policy for all layers (owner decision #875): small, rebuilt in full (monthly).
-refresh: {mode: full, decided: "#875"}
+# Refresh policy for all layers (#875; D32 for the address package, #2870): rebuilt in full monthly. The
+# address package (~8.6 M points) is one file without changed-since: its Bronze file is replaced whole
+# (latest only) and Silver holds only the per-gmina aggregate (~2,500 rows), so no big table is rebuilt.
+refresh: {mode: full, decided: "D32 + #2870 (boundaries #875)"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

@@ -13,6 +13,7 @@ framework")::
             version: last_modified   # last_modified (fallback: download time) | ingested
             url_date: Europe/Warsaw  # optional: {date} in url = today (YYYYMMDD) in this zone
             reduce: news_feed        # optional: land only the allowed part of the file (news: headline items)
+            skip_unchanged: true     # optional: no download while Last-Modified and ETag equal the newest copy's
           - entity: treasury_debt_series   # a file whose URL changes per release
             url_from:                # instead of url: find the link on a stable page
               page: https://www.gov.pl/web/finanse/szeregiczasowe
@@ -25,8 +26,10 @@ framework")::
               pattern: /attachment/
 
 Each file lands as ``01_landing/<source>/snapshot/data/<entity>/<version>__<ingested>.<ext>``
-with a receipt, only when its SHA-256 differs from the newest landed copy. The download
-streams to disk, is checked by format, uploaded and verified by size and SHA-256; network
+with a receipt, only when its SHA-256 differs from the newest landed copy (with ``skip_unchanged``, a file whose
+Last-Modified and ETag equal the newest copy's is not downloaded at all). The download
+streams to disk, is checked by format (ZIP methods Python cannot read, e.g. Deflate64, by 7-Zip), uploaded and
+verified by size and SHA-256; network
 errors and 5xx/408/429 are retried, other 4xx fail at once. Modes: inspect (Landing vs the
 server's Last-Modified; an unreachable URL is an error), load, verify (every receipt has
 its file in Landing or the Archive).
@@ -221,29 +224,43 @@ def resolve_url(spec: dict[str, Any], links: list[str] | None = None) -> str:
     return links[-1] if spec["url_from"].get("pick", "first") == "last" else links[0]
 
 
+# ZIP compression methods Python's zipfile reads; others (Deflate64, method 9, in the PRG address package) are
+# tested with the 7-Zip tool instead.
+ZIP_METHODS = {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED, zipfile.ZIP_BZIP2, zipfile.ZIP_LZMA}
+
+
+def seven_zip_test(path: Path) -> None:
+    """Test every member's CRC with the 7-Zip tool of the runner image; raise when one fails."""
+    import shutil
+    import subprocess
+
+    tool = shutil.which("7z") or shutil.which("7za")
+    if not tool:
+        raise RuntimeError("7z is not installed")
+    try:
+        tested = subprocess.run(
+            [tool, "t", "-bd", str(path)], capture_output=True, text=True, errors="replace", timeout=1800
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("7z test took longer than 30 minutes") from exc
+    if tested.returncode != 0:
+        raise RuntimeError(f"7z archive failed its test: {(tested.stdout + tested.stderr)[-300:]}")
+
+
 def check_format(path: Path, fmt: str) -> dict[str, Any]:
     """Raise when the file is not a valid instance of its declared format; return details."""
     if fmt == "zip":
         with zipfile.ZipFile(path) as archive:
-            bad = archive.testzip()
-            if bad:
-                raise RuntimeError(f"ZIP member failed its CRC: {bad}")
-            return {"members": [(i.filename, i.file_size) for i in archive.infolist()]}
+            members = archive.infolist()
+            if any(i.compress_type not in ZIP_METHODS for i in members):
+                seven_zip_test(path)
+            else:
+                bad = archive.testzip()
+                if bad:
+                    raise RuntimeError(f"ZIP member failed its CRC: {bad}")
+            return {"members": [(i.filename, i.file_size) for i in members]}
     if fmt == "7z":  # the 7-Zip tool of the runner image tests every member's CRC
-        import shutil
-        import subprocess
-
-        tool = shutil.which("7z") or shutil.which("7za")
-        if not tool:
-            raise RuntimeError("7z is not installed")
-        try:
-            tested = subprocess.run(
-                [tool, "t", "-bd", str(path)], capture_output=True, text=True, errors="replace", timeout=1800
-            )
-        except subprocess.TimeoutExpired as exc:
-            raise RuntimeError("7z test took longer than 30 minutes") from exc
-        if tested.returncode != 0:
-            raise RuntimeError(f"7z archive failed its test: {(tested.stdout + tested.stderr)[-300:]}")
+        seven_zip_test(path)
         return {}
     if fmt == "gzip":
         with gzip.open(path) as handle:
@@ -387,6 +404,19 @@ def reduce_held(client: Any, bucket: str, source: str, spec: dict[str, Any], lan
     return done
 
 
+def validators_unchanged(url: str, spec: dict[str, Any], newest: dict[str, Any]) -> bool:
+    """``skip_unchanged``: the server's Last-Modified and ETag equal those of the newest landed copy (landed with
+    version Last-Modified). Any doubt (no answer, a missing validator, an older receipt) means download."""
+    if newest.get("version_basis") != "Last-Modified":
+        return False
+    head, http = probe(url, spec.get("probe", "head"))
+    if head is None or http != "200":
+        return False
+    held_etag = ((newest.get("detail") or {}).get("http") or {}).get("etag")
+    etag = head.headers.get("ETag")
+    return server_version(dict(head.headers)) == newest["version_token"] and bool(etag) and etag == held_etag
+
+
 def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landing_root: str) -> dict[str, Any]:
     """Download one declared file and land it with a receipt unless its bytes are unchanged."""
     fmt = spec.get("format", "raw")
@@ -396,6 +426,13 @@ def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landi
         path = Path(temporary) / f"file.{EXTENSIONS[fmt]}"
         started = time.monotonic()
         url = resolve_url(spec)
+        if spec.get("skip_unchanged") and held and validators_unchanged(url, spec, held[-1]):
+            return {
+                "entity": spec["entity"],
+                "outcome": "unchanged",
+                "download": "skipped: Last-Modified and ETag unchanged",
+                "version": held[-1]["version_token"],
+            }
         limits = {k: spec[k] for k in ("retries", "read_timeout", "wait") if k in spec}
         digest, size, headers, final_url, detail = download(url, path, fmt, **limits)
         if spec.get("reduce"):

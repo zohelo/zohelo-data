@@ -273,6 +273,15 @@ teryt_prg as (
         case when unit_level = 'kraj' then 'PL' else 'TERC:' || teryt_code end as geography_key
     from {{ ref('prg_units') }}
     where unit_level in ('kraj', 'wojewodztwo', 'powiat', 'gmina')
+    union all
+    -- PRG address points (#2870): TERYT_GMI is the gmina's TERC code; TERYT gminas too, by code, so a gmina the
+    -- boundary edition held does not list yet still maps (the same key when both list it)
+    select
+        'gugik_prg' as source_system,
+        terc_code as source_code,
+        'TERC:' || terc_code as geography_key
+    from {{ ref('teryt_terc') }}
+    where unit_level = 'gmina'
 ),
 
 -- World Bank WGI, Findex and ICP (#2736): World Bank economy codes like WDI's, so each gets WDI's mapping (iso2 or

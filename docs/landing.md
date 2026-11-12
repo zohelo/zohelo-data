@@ -154,6 +154,12 @@ A server that answers HEAD wrongly in another way (404, a dropped connection; UN
 API, zus.pl) gets `probe: get` on its files: the streamed GET is then the only request, with the same
 retries and timeouts. `probe` is `head` (default) or `get`; other values fail the configuration check.
 
+`skip_unchanged: true` (with `version: last_modified`) makes `landing: extract` ask for the headers first and
+skip the download when the server's Last-Modified and ETag equal those in the newest receipt; any missing
+validator or failed probe means the file is downloaded and compared by SHA-256 as usual (PRG address points,
+564 MB a month). ZIP members in a method Python cannot read (Deflate64 in the PRG address package) are tested
+with the runner's 7-Zip tool.
+
 A file declares either `url` or `url_from`. With `url_from`, `landing: inspect` lists the
 matching links (first 10) and the chosen URL per entity, a page without a match is an
 error, and the receipt's `source_url` is the resolved URL. JavaScript-rendered pages are

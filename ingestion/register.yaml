@@ -5616,7 +5616,8 @@ sources:
   name: Krajowa Integracja Numeracji Adresowej / PRG address services
   short_name: GUGiK address points
   provider: GUGiK and municipalities
-  status: approved
+  source_system: gugik_prg
+  status: built
   family: E
   kpi: false
   geography: Poland

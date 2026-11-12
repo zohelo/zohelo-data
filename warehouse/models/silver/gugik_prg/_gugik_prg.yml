@@ -12,3 +12,24 @@ models:
         tests: [not_null]
       - name: teryt_code
         description: TERYT code as published; for gminas the 7-character TERC code.
+  - name: prg_address_gminas
+    description: >-
+      Address points per gmina from the newest national PRG address package (PL-ENV-007, #2870;
+      bronze.prg_address_points, one row per point). Grain: terc_code (TERYT_GMI, the gmina's 7-digit TERC code as
+      published). Counts of the package's points: all, with a street (ID_ULIC), without a locality (ID_SIMC),
+      without a number, and distinct localities. Latest state only (no history is published).
+    columns:
+      - name: terc_code
+        description: TERYT_GMI as published, 7 digits WWPPGGT.
+        tests: [unique, not_null]
+      - name: gmina_type_code
+        description: Seventh TERC digit (1 urban, 2 rural, 3 urban-rural gmina).
+        tests: [not_null, {accepted_values: {arguments: {values: ['1', '2', '3']}}}]
+      - name: address_points
+        tests: [not_null]
+      - name: source_version
+        description: Last-Modified of the package (YYYYMMDDTHHMMSSZ).
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the package (lineage to Landing/Archive).
+        tests: [not_null]
