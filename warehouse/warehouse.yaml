@@ -159,7 +159,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_findex: {rows: 1200}  # 772 (Dev check 43092680524): account_t_d, group all
   poc_build_icp: {rows: 1250}  # 817 (Dev check 43092680524): 2 measures, 2017 and 2021 only
   poc_concept_measures: {rows: 1000}
-  poc_dim_calendar: {rows: 80000}
+  poc_dim_calendar: {rows: 110000}  # 73,414 (Dev run 43285255495, 12 Nov)
   poc_dim_concept: {rows: 1000}
   poc_dim_frequency: {rows: 1000}
   poc_dim_geography: {rows: 120000}
@@ -215,7 +215,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_gdp_regional_growth: {rows: 20000}
   poc_metrics_gfcf_rate: {rows: 20000}
   poc_metrics_gfcf_growth: {rows: 20000}
-  poc_metrics_gdp_contributions: {rows: 20000}
+  poc_metrics_gdp_contributions: {rows: 26000}  # 17,070 (Dev run 43285255495, 12 Nov)
   poc_metrics_gva_by_section: {rows: 20000}
   poc_metrics_gfcf_by_asset: {rows: 20000}
   poc_metrics_business_climate: {rows: 30000}
@@ -227,7 +227,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_retail_sales: {rows: 30000}
   poc_metrics_ppi_annual_rate: {rows: 30000}
   poc_metrics_current_account_gdp: {rows: 20000}
-  poc_metrics_current_account_components: {rows: 20000}
+  poc_metrics_current_account_components: {rows: 28000}  # 18,886 (Dev run 43285255495, 12 Nov)
   poc_metrics_fdi_inflow: {rows: 30000}  # + UNCTAD, 29 areas × 36 years
   poc_metrics_job_vacancy_rate: {rows: 20000}
   poc_metrics_labour_productivity: {rows: 20000}
@@ -236,7 +236,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_gender_pay_gap: {rows: 20000}
   poc_metrics_gini: {rows: 20000}
   poc_metrics_social_spending_gdp: {rows: 20000}
-  poc_metrics_youth_unemployment: {rows: 30000}
+  poc_metrics_youth_unemployment: {rows: 38000}  # 25,306 (Dev run 43285255495, 12 Nov)
   poc_metrics_disposable_income_pc: {rows: 20000}
   poc_metrics_pensioners: {rows: 20000}
   poc_metrics_zus_pension_avg: {rows: 20000}
