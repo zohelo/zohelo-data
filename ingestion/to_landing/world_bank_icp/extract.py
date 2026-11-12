@@ -18,6 +18,8 @@ Modes:
 
 Polite access: one request at a time, a pause between requests, bounded retries with backoff
 on 429/5xx and timeouts, an identifying User-Agent.
+A series that still fails after its retries is recorded (failed_series) and the others are
+still landed; the run then exits 1 so the gap is visible, and the next run fetches it again.
 """
 
 from __future__ import annotations
@@ -40,10 +42,10 @@ from ingestion.common.report import annotate, step_summary
 SOURCE = "world_bank_icp"
 SOURCE_ID = 90
 API = "https://api.worldbank.org/v2"
-PER_PAGE = 50000
+PER_PAGE = 50000  # one page per series today; kept so landed pages stay comparable
 PAUSE_SECONDS = 1.0
-TIMEOUT_SECONDS = 180
-RETRIES = 5
+TIMEOUT_SECONDS = 420  # a full series page can take minutes to generate (prod run 43157799551 timed out)
+RETRIES = 6
 USER_AGENT = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
 
 
@@ -62,7 +64,7 @@ def fetch(session: requests.Session, address: str) -> tuple[bytes, dict[str, str
             return response.content, dict(response.headers)
         if response is not None and response.status_code not in (429, 500, 502, 503, 504):
             raise RuntimeError(f"World Bank API {response.status_code} for {address}: {response.text[:200]}")
-        time.sleep(min(120, 5 * 2**attempt))
+        time.sleep(min(300, 15 * 2**attempt))
     raise RuntimeError(f"World Bank API kept failing: {address}")
 
 
@@ -251,19 +253,26 @@ def main(argv=None) -> int:
         if args.mode == "load":
             deadline = time.monotonic() + args.budget_minutes * 60
             outcomes: Counter = Counter()
+            failed: list[dict[str, str]] = []
             order = [s for s in series if states[s] == "missing"] + [s for s in series if states[s] == "stale"]
             for series_id in order:
                 if time.monotonic() > deadline:
                     outcomes["not_started_time_budget"] += 1
                     continue
-                outcomes.update(
-                    land_series(client, bucket, args.landing_root, session, series_id, version, held.get(series_id))
-                )
+                try:
+                    outcomes.update(
+                        land_series(client, bucket, args.landing_root, session, series_id, version, held.get(series_id))
+                    )
+                except RuntimeError as exc:  # one series failing must not stop the others; recorded, run ends red
+                    failed.append({"series": series_id, "error": str(exc)[:200]})
+                    continue
                 outcomes["series_done"] += 1
             summary.update(outcomes)
-            status = 2 if outcomes["not_started_time_budget"] else 0
+            summary["failed_series"] = len(failed)
+            summary["failed_sample"] = failed[:5]
+            status = 1 if failed else 2 if outcomes["not_started_time_budget"] else 0
     print(json.dumps(summary, sort_keys=True, default=str))
-    annotate("notice", f"world_bank_icp landing {args.mode}", summary)
+    annotate("error" if status == 1 else "notice", f"world_bank_icp landing {args.mode}", summary)
     step_summary(
         f"## world_bank_icp · landing {args.mode}\n\n```json\n{json.dumps(summary, indent=2, default=str)}\n```\n"
     )

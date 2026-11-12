@@ -1,4 +1,4 @@
-{{ config(alias='build_nbp') }}
+{{ config(alias='build_nbp', tags=['gold_block']) }}
 {# Gold PoC build stage: NBP exchange rates (table A mid; table C bid and ask) and gold
    fixings as daily observations. The currency is the series breakdown, the geography is
    not applicable (_Z). #}
