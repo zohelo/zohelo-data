@@ -69,8 +69,7 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_public_finance, gold.build_oecd, gold.build_gleif, gold.build_mf_biala_lista, gold.build_zus_psz, gold.build_prg, gold.build_wdi, gold.build_mrpips_unemployment, gold.build_mf_jst_budgets, gold.build_unctad, gold.build_un_wpp, gold.metrics_population_projection, gold.build_faostat, gold.build_unesco_uis, gold.build_who, gold.build_unhcr, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth, gold.build_ecb, gold.metrics_m3_growth, gold.metrics_ecb_deposit_rate, gold.build_eea,
        gold.build_wgi, gold.build_findex, gold.build_icp,  # World Bank WGI, Findex, ICP (#2736)
        gold.metrics_wgi_voice_accountability, gold.metrics_wgi_political_stability, gold.metrics_wgi_government_effectiveness, gold.metrics_wgi_regulatory_quality, gold.metrics_wgi_rule_of_law, gold.metrics_wgi_control_of_corruption, gold.metrics_account_ownership, gold.metrics_price_level_index, gold.build_ids,
-       gold.build_bis, gold.build_ilostat, gold.build_undp_hdr, gold.build_undata,  # BIS, ILOSTAT, UNDP HDR, UNdata (#2861)
-       gold.metrics_policy_rate, gold.metrics_house_price_growth, gold.metrics_real_house_price_growth, gold.metrics_credit_to_gdp, gold.metrics_debt_service_ratio, gold.metrics_hdi, gold.metrics_internet_users, gold.metrics_health_expenditure_gdp]   # Gold v1 (warehouse/models/gold, docs/model.md)
+       gold.metrics_policy_rate, gold.metrics_house_price_growth, gold.metrics_real_house_price_growth, gold.metrics_credit_to_gdp, gold.metrics_debt_service_ratio, gold.metrics_hdi, gold.metrics_internet_users, gold.metrics_health_expenditure_gdp]   # draft KPIs of BIS, UNDP HDR, UNdata (#2861); Gold v1 (warehouse/models/gold, docs/model.md)
 demo_namespaces: [demo_bronze, demo_silver, demo_gold]  # phase 2 demo warehouse (program plan §3.3); never in the public catalogue
 
 # Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
@@ -152,10 +151,6 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_gleif: {rows: 25000}  # 16,851 (Dev trial 43099545187)
   poc_build_mf_biala_lista: {rows: 10}  # 4 (Dev trial 43099545187)
   poc_build_ids: {rows: 50000}  # 31,260 (Dev trial 43202506484)
-  poc_build_bis: {rows: 256000}  # 170,902: cbpol 25,119, eer 50,304, spp 34,996, tc 28,681, credit_gap 24,620, dsr 7,182 (Dev trial 43290214779); 1.5 x
-  poc_build_ilostat: {rows: 117000}  # 78,147: EU27, annual 40,505 + quarterly 37,642 (Dev trial 43290214779); 1.5 x
-  poc_build_undp_hdr: {rows: 23000}  # 15,471: 28 areas, 7 measures, 1990-2023 (Dev trial 43290214779); 1.5 x
-  poc_build_undata: {rows: 1600}  # 1,059: 28 areas, 6 series, the years the Yearbook prints (Dev trial 43290214779); 1.5 x
   poc_build_prg: {rows: 4300}  # 2,875 PRG units (16 voivodeships, 380 powiats, 2,479 gminas; Dev trial 43099545187 minus the country)
   poc_build_zus_psz: {rows: 2400}  # 1,564 (Dev trial 43271727766): 9 measures, 329 series
   poc_build_public_finance: {rows: 8600}  # 5,727 (Dev trial 43099813876)

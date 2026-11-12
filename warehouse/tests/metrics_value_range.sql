@@ -81,7 +81,46 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- 20,876), real GDP growth in per cent (-10.9 to 24.6 IE, Poland 2023 = 0.1); Dev trial 43290214779, the WDI bounds
     ('gdp_current_prices', 'undata', '%', 0, 3e8),
     ('gdp_per_capita', 'undata', '%', 0, 5e5),
-    ('gdp_volume_growth', 'undata', '%', -100, 200)
+    ('gdp_volume_growth', 'undata', '%', -100, 200),
+    -- Draft KPIs of BIS, UNDP HDR and UNdata (#2861), in the metrics union below; measured in Dev trial 43290214779.
+    -- Policy rate, per cent per year: -0.75 to 355,085.64 (BR, hyperinflation, as the BIS publishes it), Poland
+    -- 2026-10 = 3.75; the upper bound only catches a broken file.
+    ('policy_rate', 'bis', '%', -5, 5e5),
+    -- Residential property prices, year-on-year change in per cent: nominal -42.25 to 360.35 (IT, 1940s), real
+    -- -45.84 to 59.64 (LT); Poland 2026-Q2 = 6.29 and 3.29.
+    ('house_price_growth', 'bis', '%', -100, 1000),
+    ('real_house_price_growth', 'bis', '%', -100, 300),
+    -- Credit to the private non-financial sector, % of GDP: 7.5 to 482.6 (LU), Poland 2026-Q1 = 57.1.
+    ('credit_to_gdp', 'bis', '%', 0, 1000),
+    -- Debt service ratio of the private non-financial sector, per cent of income: 3.0 to 40.2 (BR), Poland 6.3.
+    ('debt_service_ratio', 'bis', '%', 0, 100),
+    -- Human Development Index, 0 to 1 by definition: 0.608 to 0.962 (DK), Poland 2023 = 0.906.
+    ('hdi', 'undp_hdr', '%', 0, 1),
+    -- Individuals using the internet, % of the population: 15.6 to 99.3 (LU), Poland 2023 = 86.4.
+    ('internet_users', 'undata', '%', 0, 100),
+    -- Current health expenditure, % of GDP: 4.9 to 12.9 (DE), Poland 2022 = 6.4.
+    ('health_expenditure_gdp', 'undata', '%', 0, 30),
+    -- The new sources of KPIs whose metrics models are not in the union below (their other sources have no bound
+    -- either): documentation until those models join it. Dev trial 43290214779: reer 9.59 to 519.14 (AR; index,
+    -- 2020 = 100), employment rate 43.857 to 83.293, activity rate 45.944 to 85.643, NEET 3.079 to 77.747 (BG),
+    -- youth unemployment 1.627 to 60.726 (GR), life expectancy 65.11 to 83.72 years, GERD 0.4 to 3.7 % of GDP.
+    ('reer', 'bis', '%', 0, 2000),
+    ('employment_rate', 'ilostat', '%', 0, 100),
+    ('activity_rate', 'ilostat', '%', 0, 100),
+    ('neet_rate', 'ilostat', '%', 0, 100),
+    ('youth_unemployment', 'ilostat', '%', 0, 100),
+    ('life_expectancy', 'undp_hdr', '%', 20, 100),
+    ('gerd_gdp', 'undata', '%', 0, 10),
+    -- UNECE Statistical Database (#2861, #2885), 56 member countries, EU-27 and euro area. Unemployment rate, annual,
+    -- per cent. Population: published in thousands of persons, metrics in persons (D33, x 1000); largest area the
+    -- EU-27 (about 450 million) and the United States (about 340 million).
+    ('unemployment_rate', 'unece', '%', 0, 80),
+    ('population', 'unece', '%', 0, 1e9),
+    -- UNECE in KPIs whose metrics models are not in the union below: documentation until those models join it.
+    ('unemployment_rate_monthly_sa', 'unece', '%', 0, 80),
+    ('cpi_annual_rate', 'unece', '%', -50, 1e5),
+    ('ppi_annual_rate', 'unece', '%', -80, 1e5),
+    ('industrial_production', 'unece', '%', -80, 300)
 ),
 
 metrics as (
@@ -156,6 +195,78 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_gdp_volume_growth') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_policy_rate') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_house_price_growth') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_real_house_price_growth') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_credit_to_gdp') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_debt_service_ratio') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_hdi') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_internet_users') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_health_expenditure_gdp') }}
 )
 
 select

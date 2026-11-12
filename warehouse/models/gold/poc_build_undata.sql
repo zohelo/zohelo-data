@@ -4,8 +4,11 @@
    (UN M49 → poc_map_geography section undata, static; macro poc_m49_eu27) and World (M49 1 → WB:WLD); other
    regions are not built. measure_key undata:<table>:<unit as in the series name>:<measure code>; measure_name
    is the series as published. Values as published (millions of US dollars stay millions, D33); an entry
-   without a number is not loaded. A footnote "Estimate…" sets the status estimated; a row footnoted as a
-   projection is not an observation and is left out (none in the built series today). #}
+   without a number is not loaded. A footnote "Estimate…" sets the status estimated; any other footnote
+   qualifies the definition, coverage or reference period of the value (e.g. internet users "Population aged 16
+   to 74 years", health expenditure "Data are based on SHA2011") and sets definition_differs, so a footnoted value
+   is never shown as a plain one; a row footnoted as a projection is not an observation and is left out (none
+   in the built series today). #}
 with series as ({{ poc_undata_series() }}),
 
 geo_map as (
@@ -32,7 +35,11 @@ select
     cast(null as varchar) as sex_code,
     true as is_total,
     o.value,
-    case when o.footnotes ilike '%estimate%' then 'estimated' else 'ok' end as observation_status_key,
+    case
+        when o.footnotes ilike '%estimate%' then 'estimated'
+        when nullif(trim(o.footnotes), '') is not null then 'definition_differs'
+        else 'ok'
+    end as observation_status_key,
     o.source_version,
     o.raw_sha256
 from {{ ref('undata_syb_values') }} as o

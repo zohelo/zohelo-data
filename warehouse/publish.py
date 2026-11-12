@@ -37,9 +37,9 @@ UNRESOLVED_LICENCE = "unresolved"  # licence.csv: terms not established (licence
 # kpi_latest would otherwise pick one arbitrary currency per source and geography.
 SKIP = {"fx_rate": "one value per currency; latest.json has no currency field"}
 # Sources that reach the published contract v2 only, never v1 (zohelo.com): v1 orders values by source_key, so a new
-# source would change what zohelo.com shows first (review of #2758). BIS, ILOSTAT, UNDP HDR and UNdata (#2861) feed
-# published KPIs too (unemployment_rate, the GDP KPIs).
-V2_ONLY_SOURCES = {"ecb", "bis", "ilostat", "undp_hdr", "undata"}
+# source would change what zohelo.com shows first (review of #2758). BIS, ILOSTAT, UNDP HDR, UNdata and UNECE (#2861)
+# feed published KPIs too (unemployment_rate, population, the GDP KPIs).
+V2_ONLY_SOURCES = {"ecb", "bis", "ilostat", "undp_hdr", "undata", "unece"}
 LATEST_LIMIT = 100_000  # bytes, docs/published.md size limits (D22)
 TOPICS_KEY = "06_published/v2/topics.json"  # docs/published.md, "topics.json"
 TOPICS_REVIEW_KEY = "06_published/v1/review/topics.json"  # internal review (docs/topics.md, "Internal review")

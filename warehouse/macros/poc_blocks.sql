@@ -394,130 +394,6 @@
     ) as t (sector_code, is_total)
 {% endmacro %}
 
-{# BIS Data Portal measures (gold.build_bis, #2861): one row per built series of a landed selection
-   (ingestion/sources/bis.yaml entity). series_code = the series key without FREQ and the area, as the BIS
-   publishes it; measure_codes = the codes that stay in the measure key next to the unit; unit_code / unit_name
-   as published (BIS unit codes: 368 per cent per year, 882 index 2020 = 100, 628 index 2010 = 100, 771
-   year-on-year changes in per cent, 770 percentage of GDP, 367 per cent); source_unit = UNIT_MEASURE of the
-   series in silver.bis_observations (tests/bis_gold_units.sql fails when the BIS changes it, e.g. a rebased
-   index). Total credit (tc): percentage of GDP, adjusted for breaks only; amounts in national currency and US
-   dollars, the unadjusted series, credit from banks and to the whole non-financial sector, and the narrow-basket (27 economies) effective exchange
-   rates are not built. #}
-{% macro poc_bis_measures() %}
-    select * from (
-        values
-        ('cbpol', '', '', '368', 'Per cent per year', '368', 'Central bank policy rate, end of month'),
-        ('eer', 'R.B', 'R.B', '882', 'Index, 2020 = 100', '882', 'Real effective exchange rate, CPI-based, broad basket (64 economies)'),
-        ('eer', 'N.B', 'N.B', '882', 'Index, 2020 = 100', '882', 'Nominal effective exchange rate, broad basket (64 economies)'),
-        ('spp', 'N.628', 'N', '628', 'Index, 2010 = 100', '628', 'Residential property prices, nominal'),
-        ('spp', 'R.628', 'R', '628', 'Index, 2010 = 100', '628', 'Residential property prices, real (CPI-deflated)'),
-        ('spp', 'N.771', 'N', '771', 'Year-on-year changes, in per cent', '771', 'Residential property prices, nominal, year-on-year change'),
-        ('spp', 'R.771', 'R', '771', 'Year-on-year changes, in per cent', '771', 'Residential property prices, real (CPI-deflated), year-on-year change'),
-        ('tc', 'P.A.M.770.A', 'P.A.M', '770', 'Percentage of GDP', '367', 'Credit to the private non-financial sector from all sectors, market value, adjusted for breaks'),
-        ('tc', 'H.A.M.770.A', 'H.A.M', '770', 'Percentage of GDP', '367', 'Credit to households and NPISHs from all sectors, market value, adjusted for breaks'),
-        ('tc', 'N.A.M.770.A', 'N.A.M', '770', 'Percentage of GDP', '367', 'Credit to non-financial corporations from all sectors, market value, adjusted for breaks'),
-        ('tc', 'G.A.N.770.A', 'G.A.N', '770', 'Percentage of GDP', '367', 'Credit to general government from all sectors, nominal value, adjusted for breaks'),
-        ('credit_gap', 'P.A.A', 'P.A.A', '770', 'Percentage of GDP', '770', 'Credit-to-GDP ratio, private non-financial sector, actual data'),
-        ('credit_gap', 'P.A.B', 'P.A.B', '770', 'Percentage of GDP', '770', 'Credit-to-GDP ratio, private non-financial sector, trend (one-sided HP filter)'),
-        ('credit_gap', 'P.A.C', 'P.A.C', '770', 'Percentage of GDP', '770', 'Credit-to-GDP gap, private non-financial sector (actual minus trend)'),
-        ('dsr', 'P', 'P', '367', 'Per cent', '367', 'Debt service ratio, private non-financial sector'),
-        ('dsr', 'H', 'H', '367', 'Per cent', '367', 'Debt service ratio, households and NPISHs'),
-        ('dsr', 'N', 'N', '367', 'Per cent', '367', 'Debt service ratio, non-financial corporations')
-    ) as t (entity, series_code, measure_codes, unit_code, unit_name, source_unit, measure_name)
-{% endmacro %}
-
-{# BIS selections built (block = landed entity). #}
-{% macro poc_bis_blocks() %}
-    select * from (
-        values
-        ('cbpol', 'BIS central bank policy rates, monthly'),
-        ('eer', 'BIS effective exchange rates, monthly'),
-        ('spp', 'BIS selected residential property prices, quarterly'),
-        ('tc', 'BIS total credit to the non-financial sector, quarterly'),
-        ('credit_gap', 'BIS credit-to-GDP gaps, quarterly'),
-        ('dsr', 'BIS debt service ratios, quarterly')
-    ) as t (entity, block_name)
-{% endmacro %}
-
-{# BIS area codes that are not ISO 3166 alpha-2 countries (silver.bis_observations, Dev probe 43281574547):
-   XM euro area → the Eurostat euro-area member (as ECB U2); the BIS aggregates have no Gold area and are not
-   built (candidate_key ''): 4T emerging market economies, 5R advanced economies, 5A all reporting economies,
-   G2 G20, XW world. Static, so Gold does not read BIS Silver in poc_map_geography. #}
-{% macro poc_bis_areas() %}
-    select * from (
-        values
-        ('XM', 'EUROSTAT:EA'), ('4T', ''), ('5R', ''), ('5A', ''), ('G2', ''), ('XW', '')
-    ) as t (area_code, candidate_key)
-{% endmacro %}
-
-{# ILOSTAT indicator files built (gold.build_ilostat, #2861): block = landed entity, one frequency each (the
-   annual and the quarterly unemployment file are separate blocks and measures). #}
-{% macro poc_ilostat_blocks() %}
-    select * from (
-        values
-        ('une_deap_sex_age_rt_a', 'ILOSTAT unemployment rate by sex and age, annual', 'Unemployment rate'),
-        ('une_deap_sex_age_rt_q', 'ILOSTAT unemployment rate by sex and age, quarterly', 'Unemployment rate'),
-        ('emp_dwap_sex_age_rt_a', 'ILOSTAT employment-to-population ratio by sex and age, annual', 'Employment-to-population ratio'),
-        ('eap_dwap_sex_age_rt_a', 'ILOSTAT labour force participation rate by sex and age, annual', 'Labour force participation rate'),
-        ('eip_neet_sex_rt_a', 'ILOSTAT share of youth not in employment, education or training, annual', 'Share of youth (15-24) not in employment, education or training')
-    ) as t (entity, block_name, measure_label)
-{% endmacro %}
-
-{# ILOSTAT age bands built: the youth/adult classification (classif1), each band its own measure. The 5- and
-   10-year bands and the AGE_AGGREGATE bands are not built. #}
-{% macro poc_ilostat_ages() %}
-    select * from (
-        values
-        ('AGE_YTHADULT_YGE15', '15+'), ('AGE_YTHADULT_Y15-24', '15-24'), ('AGE_YTHADULT_YGE25', '25+'),
-        ('AGE_YTHADULT_Y15-64', '15-64')
-    ) as t (classif1, age_label)
-{% endmacro %}
-
-{# UNDP Human Development Report measures built (gold.build_undp_hdr, #2861): source indicator (column name
-   without the year) → measure, sex and unit. The file has no unit column: units are those of the HDR technical
-   notes. Not built: the Gender Development Index (gdi, a female-to-male ratio), ranks and groups, the
-   planetary-pressures indices, the inequality components, the Gender Inequality Index components (abr, mmr,
-   pr_*, se_*, lfpr_*), co2_prod, mf and pop_total. #}
-{% macro poc_undp_hdr_measures() %}
-    select * from (
-        values
-        ('hdi', 'hdi', 'T', 'index', 'index (0 to 1)', 'Human Development Index (HDI)'),
-        ('hdi_f', 'hdi', 'F', 'index', 'index (0 to 1)', 'Human Development Index (HDI)'),
-        ('hdi_m', 'hdi', 'M', 'index', 'index (0 to 1)', 'Human Development Index (HDI)'),
-        ('le', 'le', 'T', 'years', 'years', 'Life expectancy at birth'),
-        ('le_f', 'le', 'F', 'years', 'years', 'Life expectancy at birth'),
-        ('le_m', 'le', 'M', 'years', 'years', 'Life expectancy at birth'),
-        ('eys', 'eys', 'T', 'years', 'years', 'Expected years of schooling'),
-        ('eys_f', 'eys', 'F', 'years', 'years', 'Expected years of schooling'),
-        ('eys_m', 'eys', 'M', 'years', 'years', 'Expected years of schooling'),
-        ('mys', 'mys', 'T', 'years', 'years', 'Mean years of schooling'),
-        ('mys_f', 'mys', 'F', 'years', 'years', 'Mean years of schooling'),
-        ('mys_m', 'mys', 'M', 'years', 'years', 'Mean years of schooling'),
-        ('gnipc', 'gnipc', 'T', '2021 PPP $', '2021 PPP $ per person', 'Gross national income per capita'),
-        ('gni_pc_f', 'gnipc', 'F', '2021 PPP $', '2021 PPP $ per person', 'Gross national income per capita'),
-        ('gni_pc_m', 'gnipc', 'M', '2021 PPP $', '2021 PPP $ per person', 'Gross national income per capita'),
-        ('ihdi', 'ihdi', '', 'index', 'index (0 to 1)', 'Inequality-adjusted Human Development Index (IHDI)'),
-        ('gii', 'gii', '', 'index', 'index (0 to 1)', 'Gender Inequality Index (GII)')
-    ) as t (indicator, measure, sex_code, unit_code, unit_name, measure_name)
-{% endmacro %}
-
-{# UN Statistical Yearbook series built (gold.build_undata, #2861): table (entity) × series text as published;
-   measure_code is Gold's short code (the Yearbook has none); the unit is the one in the series name. Not built:
-   the tables taken from UN World Population Prospects (syb_1, syb_246: the newest year is a projection) and
-   from ILO estimates (syb_200, syb_329: the newest year is an estimate ahead of the data), and the other 20
-   tables. #}
-{% macro poc_undata_series() %}
-    select * from (
-        values
-        ('syb_230', 'UN Statistical Yearbook: GDP and GDP per capita', 'GDP in current prices (millions of US dollars)', 'gdp_current', 'millions of US dollars'),
-        ('syb_230', 'UN Statistical Yearbook: GDP and GDP per capita', 'GDP per capita (US dollars)', 'gdp_per_capita', 'US dollars'),
-        ('syb_230', 'UN Statistical Yearbook: GDP and GDP per capita', 'GDP real rates of growth (percent)', 'gdp_growth', 'percent'),
-        ('syb_285', 'UN Statistical Yearbook: research and development expenditure and researchers', 'Gross domestic expenditure on R&D: as a percentage of GDP', 'gerd_gdp', 'percentage of GDP'),
-        ('syb_314', 'UN Statistical Yearbook: internet usage', 'Percentage of individuals using the internet', 'internet_users', 'percentage of individuals'),
-        ('syb_325', 'UN Statistical Yearbook: expenditure on health', 'Current health expenditure (% of GDP)', 'health_expenditure', '% of GDP')
-    ) as t (entity, block_name, series, measure_code, unit_code)
-{% endmacro %}
-
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -608,10 +484,6 @@
     poc_build_un_wpp:un_wpp
     poc_build_unhcr:unhcr
     poc_build_zus_psz:zus_psz
-    poc_build_bis:bis
-    poc_build_ilostat:ilostat
-    poc_build_undp_hdr:undp_hdr
-    poc_build_undata:undata
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -707,14 +579,6 @@
     select 'un_wpp', indicator, block_name from ({{ poc_un_wpp_blocks() }})
     union all
     select 'unhcr', entity, block_name from ({{ poc_unhcr_blocks() }})
-    union all
-    select 'bis', entity, block_name from ({{ poc_bis_blocks() }})
-    union all
-    select 'ilostat', entity, block_name from ({{ poc_ilostat_blocks() }})
-    union all
-    select 'undp_hdr', 'composite_indices', 'UNDP Human Development Report composite indices, complete time series'
-    union all
-    select distinct 'undata', entity, block_name from ({{ poc_undata_series() }})
     union all
     select * from (
         values

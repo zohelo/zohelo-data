@@ -80,7 +80,7 @@ strings in ISO 8601 UTC.
 | licences[].commercial_ok | boolean | yes | commercial use allowed |
 
 v1 files (latest.json, series.parquet, catalog.json) leave out the sources in `V2_ONLY_SOURCES` of
-`warehouse/publish.py` (ECB, BIS, ILOSTAT, UNDP HDR, UNdata): they reach contract v2 only, so a new source never changes what zohelo.com shows first.
+`warehouse/publish.py` (ECB, BIS, ILOSTAT, UNDP HDR, UNdata, UNECE): they reach contract v2 only, so a new source never changes what zohelo.com shows first.
 
 `warehouse/publish.py` writes it (`kpi_entry`, `catalog_json`) with one `kpis` entry per published KPI that has a
 `gold.metrics_<kpi_key>` table, computed from that KPI's series.parquet rows: `source_keys` and `geo_levels`
@@ -579,7 +579,7 @@ v2 keys by their best source status:
 | Polska w skrócie | 28 | 3 | 0 | 31 |
 | all 78 keys | 65 | 12 | 1 | 78 |
 
-Rows by source (161 rows; 36 keys have two or more ready sources):
+Rows by source (176 rows; 37 keys have two or more ready sources):
 
 | source | ready | needs-block | needs-source | rows |
 |---|---|---|---|---|
@@ -587,10 +587,13 @@ Rows by source (161 rows; 36 keys have two or more ready sources):
 | gus_bdl | 17 | 8 | 0 | 25 |
 | gus_dbw | 17 | 8 | 0 | 25 |
 | world_bank_wdi | 23 | 1 | 0 | 24 |
+| ilostat | 5 | 0 | 0 | 5 |
+| unece | 5 | 0 | 0 | 5 |
 | nbp_bop | 2 | 2 | 0 | 4 |
 | un_wpp | 0 | 4 | 0 | 4 |
 | ecb | 2 | 1 | 0 | 3 |
 | nbp | 1 | 0 | 2 | 3 |
+| undata | 3 | 0 | 0 | 3 |
 | mrpips_unemployment | 2 | 0 | 0 | 2 |
 | unctad | 2 | 0 | 0 | 2 |
 | unesco_uis | 0 | 2 | 0 | 2 |
@@ -603,6 +606,8 @@ Rows by source (161 rows; 36 keys have two or more ready sources):
 | who | 1 | 0 | 0 | 1 |
 | world_bank_icp | 1 | 0 | 0 | 1 |
 | zus_psz | 1 | 0 | 0 | 1 |
+| bis | 1 | 0 | 0 | 1 |
+| undp_hdr | 1 | 0 | 0 | 1 |
 
 Gold has a quarterly fact (`fact_quarterly`), and the BDL and DBW builds place monthly and quarterly periods, so
 LFS rates, the current account, NAMQ, job vacancies and the GUS short-term series keep their frequency. Polska w
