@@ -59,8 +59,6 @@ AREAS = (  # Poland and the 16 voivodeships as the DBW dictionaries name them (u
     "ZACHODNIOPOMORSKIE",
 )
 
-NO_DICTIONARY = "select '' as entity_id, '' as nazwa_kolumny, '' as id_elementu, '' as opis where false"
-
 
 def regional_rule(dictionary_sql):
     """SQL condition keeping, in REGIONAL blocks, only rows whose position 1 is Poland or a voivodeship."""
@@ -96,7 +94,8 @@ def model(dbt, con):
     import os
 
     dbt.config(materialized="table", alias="src_dbw")
-    dbt.source("silver_entities", "dbw_observations")  # declares the input (changed-only build)
+    dbt.source("silver_entities", "dbw_observations")  # declares the inputs (changed-only build)
+    dbt.source("gus_dbw", "dbw_dictionary_items")  # the territory names of the REGIONAL blocks
     prefix = " or ".join(f"starts_with(entity_id, '{b}_')" for b in BLOCKS)
     where = f"({prefix}) and value is not null"
     if "STORAGE_LAKEHOUSE_CATALOG_URL" not in os.environ:  # local harness: the fake source tables
@@ -107,7 +106,9 @@ def model(dbt, con):
     regional = [StartsWith("entity_id", f"{b}_") for b in REGIONAL]
     dict_files = planned_files(("bronze", "dbw_dictionary_items"), Or(*regional) if len(regional) > 1 else regional[0])
     dict_paths = ", ".join("'" + p.replace("'", "''") + "'" for p in dict_files)
-    rule = regional_rule(f"select * from read_parquet([{dict_paths}])" if dict_files else NO_DICTIONARY)
+    if not dict_files:  # without the dictionaries the REGIONAL blocks would silently lose every row
+        raise RuntimeError("bronze.dbw_dictionary_items has no files for the REGIONAL blocks " + ", ".join(REGIONAL))
+    rule = regional_rule(f"select * from read_parquet([{dict_paths}])")
     filters = [StartsWith("entity_id", f"{b}_") for b in BLOCKS]
     files = planned_files(("silver", "dbw_observations"), Or(*filters) if len(filters) > 1 else filters[0])
     if not files:

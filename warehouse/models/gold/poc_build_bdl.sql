@@ -173,7 +173,11 @@ silver as (
     left join units as u on o.unit_code = u.unit_id
     left join variables as v on o.subgroup_id = v.subgroup_id and o.variable_id = v.variable_id
     left join label_rule as r on o.subgroup_id = r.subgroup_id
-    where o.value is not null and o.year >= 2010
+    where
+        o.value is not null and o.year >= 2010
+        -- a cell the source marks and stores as 0 is no value: website symbol "x" (not applicable or not
+        -- published) or "a", API attributes 0, 4, 91 (#2743); "z" (less than half a unit) is a real rounded value
+        and not (o.attribute is not null and o.value = 0 and o.attribute <> 'z')
 ),
 
 kept as (
@@ -226,6 +230,25 @@ kept as (
         end
 ),
 
+rebased as (  -- a measure published in several price bases ("średnie ceny bieżące z 2015 r.") is chained:
+    -- per period the newest base, one measure without the base in its label (the bases overlap, #2743)
+    select * exclude (price_base, base_free_label)
+    from (
+        select
+            * replace (
+                regexp_replace(measure_label, ' \(średnie ceny bieżące z [0-9]{4} r\.\)', '') as measure_label
+            ),
+            try_cast(regexp_extract(measure_label, 'z ([0-9]{4}) r\.\)', 1) as integer) as price_base,
+            regexp_replace(measure_label, ' \(średnie ceny bieżące z [0-9]{4} r\.\)', '') as base_free_label
+        from kept
+    ) as based
+    qualify
+        price_base is null
+        or price_base = max(price_base) over (
+            partition by subgroup_id, unit_code, unit_name, measure_unit, base_free_label, labels, year, period_code
+        )
+),
+
 mapped as (
     select
         k.*,
@@ -235,7 +258,7 @@ mapped as (
             when k.unit_name_of_id is not null and upper(trim(k.unit_name_of_id)) <> upper(trim(k.unit_name)) then '_X'
             else coalesce(g.geography_key, '_X')
         end as geography_key
-    from kept as k
+    from rebased as k
     left join geo_map as g on k.unit_code = g.source_code
 ),
 
@@ -288,7 +311,12 @@ select
     end as sex_code,
     len(list_filter(k.labels, lambda x: lower(x) <> 'ogółem')) = 0 as is_total,  -- noqa: RF03
     k.value,
-    case when k.value_conflict then 'conflicting_values' else 'ok' end as observation_status_key,
+    case
+        when k.value_conflict then 'conflicting_values'
+        when k.attribute = 'z' then 'not_significant'  -- less than half a unit, published as 0
+        when k.attribute is not null then 'flagged'
+        else 'ok'
+    end as observation_status_key,
     k.source_version,
     k.raw_sha256
 from deduplicated as k
