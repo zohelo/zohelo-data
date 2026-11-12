@@ -88,10 +88,12 @@ stages are `.github/backlog/stages.yaml`.
 - `_<source>.yml`: description with grain, history range and the trial run id; a `unique`
   test on the grain; `not_null` on every key column and on `raw_sha256`; `accepted_values`
   on frequency and other closed code lists.
-- Also in the same PR: Bronze tables in `warehouse/models/bronze/sources.yml`, the source in
-  `ingestion/common/lineage.py`, the Pipeline `source` option, `warehouse/seeds/source.csv`
-  and `licence.csv` rows, a `docs/sources.md` section, and the register entry
-  (`source_system`, `status: built`).
+- Also in the same PR, all in the source's own files ([source-registration.md](source-registration.md), D34):
+  its Bronze tables as dbt sources in `warehouse/models/bronze/<source>.yml` (not `sources.yml`), the row
+  ceilings of its Silver models under `full_rebuild:` in `ingestion/sources/<source>.yaml`, its route in
+  `docs/sources/<source>.md`, and the register entry (`source_system`, `status: built`). Nothing to add to
+  `lineage.py`, the Pipeline `source` input or `warehouse.yaml`. Still shared: one row each in
+  `warehouse/seeds/source.csv` and `licence.csv` (your own row only).
 - News and other text feeds keep only headline, link, guid, publication time and language,
   reduced before Landing; descriptions and article text are never stored, also not in
   Landing or the Archive (O32, O33).
@@ -115,23 +117,26 @@ unit_name, geography_source_code, geography_key, frequency, date_key, period_lab
 breakdown_json, breakdown_label_json, sex_code, is_total, value, observation_status_key,
 source_version, raw_sha256`. Then:
 
-1. give the model the tag `gold_block` (`config(alias='build_<source>', tags=['gold_block'])`), add it
-   to `poc_block_models()` and its blocks to `poc_activated_blocks()` in
-   `warehouse/macros/poc_blocks.sql` (your own lines only; `ops.repo_check` fails on a `poc_build_*`
-   model without the tag or the list line). The Gold PR need not wait for the source's first scheduled
+1. give the model the tag `gold_block` (`config(alias='build_<source>', tags=['gold_block'])`) and register
+   it in the source's own macro file `warehouse/macros/sources/<source>.sql`: the block macros and
+   `poc_source__<source>()` returning the model and its blocks (template in
+   [source-registration.md](source-registration.md)). Do not add lines to `warehouse/macros/poc_blocks.sql`;
+   `ops.repo_check` fails on a `poc_build_*` model without the tag or the registration. The Gold PR need not wait for the source's first scheduled
    run: until its Bronze/Silver tables exist the scheduled build declares the block waiting (run summary
    `waiting` and `empty_blocks`, `build_check` note `waiting: …`) and builds the facts from the other
    blocks; the first run that creates the tables builds the block and the facts with it. Only the
    scheduled build may skip a block: a filtered build (Dev trial, `poc_fact_annual+`) fails on a block
    without a table, so select the block too (`poc_build_<source>+`);
-2. add its codes to `poc_map_geography.sql` (section "Shared dimensions" below);
+2. map its codes in `poc_geography__<source>()` in the same macro file (section "Shared dimensions" below;
+   not a CTE in `poc_map_geography.sql`);
 3. add units to `warehouse/seeds/unit.csv` (with `base_unit_key` and `factor`) and the source's unit codes to
    `unit_map.csv` (D33), KPIs to `kpi.csv` (status `draft` until checked),
    one `kpi_measure.csv` row per KPI × source measure, and for a KPI of the v2 map one
    `kpi_v2_map.csv` row per v2 key × source (O31: a source is added next to the others,
    never instead of one);
-4. list the model in `warehouse/warehouse.yaml` (`gold` and `full_rebuild` with a measured
-   ceiling) and in the source YAML `gold:`.
+4. list the model and the source's own metrics models in the source YAML `gold:` and give each a measured
+   ceiling under `full_rebuild:` there; describe and test them in `warehouse/models/gold/_<source>.yml`.
+   `warehouse/warehouse.yaml` and `_gold.yml` take only models shared by several sources.
 
 A reference or register source (`kpi: false`) enters Gold as a dimension or entity table
 keyed by official identifiers (TERYT, LEI, NIP, REGON, KRS), never matched by name
@@ -188,7 +193,7 @@ reported, never forced.
 | Dimension | Rule |
 |---|---|
 | **Time** | `date_key` is a date at day grain = the **first day of the period** (2025 → 2025-01-01, 2025-Q3 → 2025-07-01, 2025-11 → 2025-11-01, a day → that day); it joins `dim_calendar`. `frequency` is a `frequency.csv` key (`A`, `S`, `Q`, `M`, `W`, `D`, `B`); `period_label` keeps the source's period text. Facts exist for A, Q, M and D: a source with S or W periods needs a new fact model first, it is not folded into another frequency. Annual values are never expanded to days. Stock dates (31 December, 1 January, mid-year) stay in the measure definition, not in `date_key`. |
-| **Geography** | `geography_key` is the area, not the source's code: countries ISO 3166-1 alpha-2 (`PL`; Eurostat `EL` → `GR`, `UK` → `GB`; ISO3 and World Bank codes through `dim_geography.iso3` / `wb_code`); Polish units `TERC:<7-digit code>` (województwo `WW00000`, powiat `WWPP000`, gmina `WWPPGGT`); other regions `NUTS:<code>` (a Polish NUTS 2 that equals a voivodeship maps to its `TERC:` key, `poc_nuts_pl`); aggregates keep a scheme prefix (`EUROSTAT:EU27_2020`, `WB:WLD`); no geography → `_Z`; unmatched → `_X` with `geography_source_code` kept. Add one CTE per source to `poc_map_geography.sql` mapping every source code; map by code or an official correspondence table (GUS KTS–TERYT), by name only as a reported fallback. |
+| **Geography** | `geography_key` is the area, not the source's code: countries ISO 3166-1 alpha-2 (`PL`; Eurostat `EL` → `GR`, `UK` → `GB`; ISO3 and World Bank codes through `dim_geography.iso3` / `wb_code`); Polish units `TERC:<7-digit code>` (województwo `WW00000`, powiat `WWPP000`, gmina `WWPPGGT`); other regions `NUTS:<code>` (a Polish NUTS 2 that equals a voivodeship maps to its `TERC:` key, `poc_nuts_pl`); aggregates keep a scheme prefix (`EUROSTAT:EU27_2020`, `WB:WLD`); no geography → `_Z`; unmatched → `_X` with `geography_source_code` kept. Each source maps every source code in its own `poc_geography__<source>()` ([source-registration.md](source-registration.md)); map by code or an official correspondence table (GUS KTS–TERYT), by name only as a reported fallback. |
 | **Units** | Values are stored as published (D33): `unit_code` and `unit_name` as the source publishes them, no conversion or rescaling in Silver or the build stage (a source in thousands stays in thousands, with its own unit). Each unit is a `unit.csv` row with `base_unit_key` and `factor` (exact decimal: base units per unit) and decimals in `unit_decimals.csv`; each source code gets a `unit_map.csv` row (`source_system`, `unit_code` → `unit_key`; a `measure_key_pattern` only where the code's meaning depends on the measure, as WDI "as named"); an unmapped code stays as published and is reported (`dim_unit.mapped`, test `metrics_unit_unmapped`). A KPI is normalised only in the KPI layer (`poc_concept_metrics`): the target unit is the `kpi_measure.csv` `unit_key`, else the KPI's; the metrics `value` is converted by pure scale (same `base_unit_key`, test `metrics_unit_base`), with `value_published` and `unit_published` beside it. Targets: counts in single units, money in the KPI's scale per currency (`mln_eur`, `mln_pln`, `mln_usd`), area in `km2`. Currencies, index bases and price bases are never converted; multiplier and currency are part of the unit (`mln_ncu`), price base and seasonal adjustment belong to the measure. |
 | **Measure and breakdowns** | `measure_key` = `<source>:<block>:<unit>[:<measure codes>]`; everything else that splits a series goes to `breakdown_json` with source codes as published. Totals (`TOTAL`, `T`, `ogółem`) set `is_total = true`; sex goes to `sex_code` (`T`, `M`, `F`). |
 | **Domain** | Every KPI has one `subgroup_key`, the key of a group or subgroup row of `warehouse/seeds/domain.csv` (12 domains: economy, finance, business, labour, population, health, education, society, housing, environment, transport, state; groups and subgroups below them, CSA codes attached). Add a group or subgroup row only when no existing one fits, in the same PR. |
