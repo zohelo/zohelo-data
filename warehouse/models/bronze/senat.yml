@@ -1,0 +1,35 @@
+version: 2
+
+sources:
+- name: senat
+  description: >-
+    Senate of the Republic of Poland (register PLG-025), term XI pages of www.senat.gov.pl read under decision D36:
+    sittings list, sitting-day votes pages, vote print pages, senators list. Text as printed; newest copy of each page.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/senat/
+    loaded_by: ingestion/to_bronze/senat/
+    config: ingestion/sources/senat.yaml
+  tables:
+  - name: senat_sittings
+    description: >-
+      One row per sitting block of a sittings list page (entity sittings_page_<nn>): internal sitting_id, label
+      "<n>. posiedzenie Senatu RP XI kadencji", sitting_number, the dates as printed (date_text), the status label,
+      day_numbers ('|' separated days with a votes page; empty for a planned sitting); partitioned by entity.
+  - name: senat_day_votes
+    description: >-
+      One row per vote listed on a sitting-day votes page (entity day_<sitting_id>_<day>): vote_number (per
+      sitting), subject, subtitle, vote_id, with the sitting's number, dates and status as the page prints them; a
+      day without votes is one row with empty vote columns; partitioned by entity.
+  - name: senat_vote_results
+    description: >-
+      One row per vote print page (entity vote_<vote_id>): title, subtitle, totals as printed (voted = głosowało,
+      votes_for = za, votes_against = przeciw, abstained = wstrzymało się), senators_listed and mark_counts (senators
+      per printed mark); individual senators' votes are not stored; partitioned by entity.
+  - name: senat_senators
+    description: >-
+      One row per senator of term XI on the senators list (entity senators): senator_id, term, URL slug, name and the
+      printed annotation (end of mandate); no photos or biographies.
+  - name: senat_rejected_files
+    description: Senate Landing files the Bronze decoder rejected (unknown page layout), with the reason.

@@ -298,6 +298,7 @@ jobs:
     outputs:
       decision: ${{ steps.decide.outputs.decision }}
       covered_by: ${{ steps.decide.outputs.covered_by }}
+      index: ${{ steps.decide.outputs.index }}
     # Least privilege: this job only needs github.token, so it blanks the workflow-level secrets.
     env:
       STORAGE_LAKEHOUSE_CATALOG_WRITE_TOKEN: ""
@@ -376,9 +377,19 @@ jobs:
           activity: gold.publish
 
   serving-refresh-index:
-    needs: [plan, gold-publish]
-    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'serving.refresh_index') }}"
+    needs: [plan, build-queue, gold-publish]
+    # Not in a run whose build is covered by another source's run: that run refreshes the index after its build.
+    # Covered runs of one scheduler batch refreshed it at the same time and failed on R2's limit of concurrent
+    # requests for one object (#2947).
+    if: "${{ !cancelled() && !failure() && needs.build-queue.outputs.index != 'covered' && contains(fromJSON(needs.plan.outputs.activities), 'serving.refresh_index') }}"
     name: serving.refresh_index
+    # One refresh at a time for the runs that still refresh (covered by a platform run, or not covered).
+    # `queue: max` keeps every waiting job (up to 100) and runs them one after another; without it GitHub
+    # keeps one waiting job per group and cancels the older one, which would end its run cancelled (#2932).
+    concurrency:
+      group: zohelo-pipeline-index
+      cancel-in-progress: false
+      queue: max
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:

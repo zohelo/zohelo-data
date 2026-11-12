@@ -5130,7 +5130,8 @@ sources:
   name: Senate legislative process, sittings, votes and members
   short_name: Senate data
   provider: Chancellery of the Senate
-  status: approved
+  source_system: senat
+  status: built
   family: F
   kpi: false
   geography: Poland
@@ -5149,21 +5150,22 @@ sources:
       /*.pdf$ Allow: /*.doc$ Allow: /*.xls$ Allow: /*.rtf$" and "User-agent: Fasterfox Disallow: /". The pages of this route
       are allowed for every agent.'
   licence:
-    status: unresolved
-    notes: 'Terms: https://www.senat.gov.pl/ponowne-wykorzystywanie-informacji-sektora-publicznego/ (read by the probe 12
-      Nov 2026; 9,600 characters). The part captured describes the request procedure (after a request the Head of the Chancellery
-      may make an offer with conditions or fees: "może złożyć wnioskodawcy ofertę zawierającą warunki ponownego wykorzystywania
-      lub informację o wysokości opłat za ponowne wykorzystywanie") and personal-data information. The sentence that sets
-      the conditions for information published on the website was not in the captured part, so reuse is not quoted as allowed:
-      unresolved, internal use only.'
+    status: open-conditional
+    notes: 'Terms: https://www.senat.gov.pl/ponowne-wykorzystywanie-informacji-sektora-publicznego/ (read in full by Dev probe
+      43326678967, 12 Nov 2026), section I: "Ponowne wykorzystywanie informacji sektora publicznego udostępnionej na stronach
+      internetowych www.senat.gov.pl oraz www.senat.edu.pl jest bezpłatne, ale wymaga: - poinformowania o źródle jej pozyskania
+      oraz o przetworzeniu informacji ponownie wykorzystywanej; - w przypadku informacji mającej cechy utworu [...] poinformowania
+      o nazwisku, imieniu lub pseudonimie twórcy". Attribution: "Źródło: Kancelaria Senatu, www.senat.gov.pl; dane przetworzone
+      przez zohelo". Modification allowed with the notice of processing; commercial reuse not addressed (recorded as not
+      allowed, licence.csv senat_psi_reuse). Photos marked PAP are excluded (none are read).'
   updates: Event-driven around sittings and legislative work.
   ingestion:
     history: 'Web route, server-rendered HTML read with plain requests (no browser session): votes per sitting day at /prace/posiedzenia/przebieg,<sitting>,<day>,glosowania.html
       with a print page per vote (/prace/posiedzenia/glosowanie-drukuj,<vote id>.html); senators at /sklad/senatorowie/senator,<id>,<term>,<slug>.html
       (102 links for term 11). The home page, the sittings page and the legislative-process page link no API, open-data page,
       XML, JSON, CSV or RSS. Request pattern: one connection, one request per second, term 11 only, never /gfx/ or /pdf/.
-      The number of sittings and votes of term 11 was not counted: size is measured at the build. Entity = vote (vote id);
-      version = download time.'
+      Built under decision D36 (#482): sittings list (7 pages), one votes page per sitting day, one print page per vote (the
+      day page has no totals), senators list; entity = one page, version = download time. Size: docs/sources/senat.md.'
     incremental: New sitting days only (the sittings page lists them); one request per second; senator pages once per month.
     identifiers: Term, sitting number, day, vote id; senator id.
   modelling:
@@ -5176,14 +5178,12 @@ sources:
     connection: tested
     blockers:
     - 'Route decided: polite crawl of public pages that robots.txt allows, following the orchestrator verdict on PR #2878
-      under the owner rule of 12 Nov 2026 (issue #2873). A verdict is not an owner decision: the builder writes the D row
-      in docs/decisions.md, or obtains an owner decision, in the build pull request before any activities entry for this source
-      merges (AGENTS.md "Authorizations").'
+      under the owner rule of 12 Nov 2026 (issue #2873); recorded as decision D36 in docs/decisions.md by the build pull
+      request (#482), which the owner may overrule.'
     - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): www.senat.gov.pl answered 200
       on the home, sittings, votes and senators pages; bip.senat.gov.pl was not readable. Dev probe run 43288930412 (job 131429683337,
       branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026): robots.txt read in full; the re-use page answered
       200.'
-    - 'Licence unresolved: the re-use conditions for website content are not quoted yet. Internal build only.'
     references:
     - https://www.senat.gov.pl/prace/posiedzenia/
     - https://www.senat.gov.pl/sklad/senatorowie/
