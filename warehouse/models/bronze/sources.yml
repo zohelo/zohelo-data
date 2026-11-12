@@ -419,6 +419,22 @@ sources:
       time_period, obs_value and attribute_names / attribute_values as source text; partitioned by entity.
   - name: ecb_rejected_files
     description: ECB Landing files the Bronze decoder rejected, with the reason.
+- name: un_wpp
+  description: UN World Population Prospects 2024 — CSV files (gzip) of the Population Division
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/un_wpp/
+    loaded_by: ingestion/to_bronze/un_wpp/
+    config: ingestion/sources/un_wpp.yaml
+  tables:
+  - name: un_wpp_rows
+    description: >-
+      Generic CSV rows of the newest copy of each file (entity): one header row per file (source_row_number 1,
+      field_names = the header, comma-separated) and one row per data row (field_values, |-separated), source
+      text; partitioned by entity.
+  - name: un_wpp_rejected_files
+    description: UN WPP Landing files the Bronze decoder rejected, with the reason.
 - name: oecd
   description: OECD Data Explorer — selected dataflows as SDMX CSV (SDMX REST API)
   database: r2
