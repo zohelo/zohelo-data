@@ -248,6 +248,10 @@ def main(argv: list[str]) -> int:
     # 3. The credentialed API: landing page and public description only (no data path is called).
     page_text("https://api.rspo.gov.pl/", r"(wniosek|regulamin|dost\u0119p|licencj|bezp\u0142at|publiczn)")
     openapi_security("https://api.rspo.gov.pl/v3/api-docs.yaml")
+    # Does a data path answer without credentials? Status and content type only, no record content.
+    for u in ("https://api.rspo.gov.pl/api/placowki/?page=1", "https://api.rspo.gov.pl/api/placowki/"):
+        _b, info = fetch(u, accept="application/json", limit=2000)
+        note("api_noauth", {"url": u, **{k: v for k, v in info.items() if k != "body"}})
     # 4. The old public site (rspo.men.gov.pl): does it still answer, and what does it say?
     for u in ("https://rspo.men.gov.pl/", "https://www.gov.pl/web/edukacja/rejestr-szkol-i-placowek-oswiatowych",
               "https://cie.gov.pl/"):
