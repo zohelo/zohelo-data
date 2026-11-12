@@ -35,7 +35,10 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('gdp_volume_growth', 'world_bank_wdi', '%', -100, 200),
     -- an index, previous period or same quarter of the previous year = 100 (rate = value - 100);
     -- Poland published 92.6-111.2 (GUS DBW 1038_16_389_3) and 98.0-106.9 (1038_16_92_4), #2788
-    ('gdp_volume_growth', 'gus_dbw', '%', 50, 200)
+    ('gdp_volume_growth', 'gus_dbw', '%', 50, 200),
+    -- WHO data.who.int (#2408): years; highest 87.37 (all areas, 2000-2021, Dev trial 43159213097). Documentation only
+    -- until metrics_life_expectancy joins the metrics union below.
+    ('life_expectancy', 'who', '%', 0, 130)
 ),
 
 metrics as (
