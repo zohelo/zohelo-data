@@ -231,6 +231,21 @@ sources:
   - name: nbp_exchange_rates_table_b
   - name: nbp_exchange_rates_table_c
   - name: nbp_gold_prices
+- name: nbp_bop
+  description: Narodowy Bank Polski — balance of payments (monthly, quarterly) and international investment position (quarterly), XLSX
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/nbp_bop/
+    loaded_by: ingestion/to_bronze/nbp_bop/
+    config: ingestion/sources/nbp_bop.yaml
+  tables:
+  - name: nbp_bop_cells
+    description: >-
+      One row per non-empty cell of each landed workbook (entity bop_m, bop_q, iip_q; sheet = currency): sheet,
+      row, column, source text and number format (ingestion/common/xlsx_cells.py); partitioned by entity.
+  - name: nbp_bop_rejected_files
+    description: NBP balance-of-payments Landing files the Bronze decoder rejected, with the reason.
 - name: nbp_interest_rates
   description: Narodowy Bank Polski — official NBP interest rates (archive and current XML files)
   database: r2
