@@ -21,7 +21,12 @@ models:
         description: Landing SHA-256 of the source archive (lineage to Landing/Archive).
         tests: [not_null]
   - name: ids_series
-    description: IDS series with name, definitions, topic, source, aggregation method and licence.
+    description: >-
+      IDS series with name, definitions, topic, source, aggregation method and licence from the series member,
+      plus every series the observations use that the series member lacks (in_series_metadata false, name from
+      the observations; one in the 7 Nov 2026 archive: DT.TDS.DECT.GN.ZS).
     columns:
       - name: series_code
         tests: [not_null, unique]
+      - name: in_series_metadata
+        tests: [not_null]
