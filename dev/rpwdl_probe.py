@@ -27,7 +27,7 @@ OUT: dict[str, list] = {}
 
 def note(section: str, item) -> None:
     OUT.setdefault(section, []).append(item)
-    print(f"[{section}] {json.dumps(item, ensure_ascii=False, default=str)[:3000]}", flush=True)
+    print(f"[{section}] {json.dumps(item, ensure_ascii=False, default=str)[:20000]}", flush=True)
 
 
 def robots_ok(url: str) -> bool:
@@ -66,7 +66,7 @@ def fetch(url: str, method: str = "GET", limit: int = 3_000_000, accept: str = "
         headers["Content-Type"] = ctype
     try:
         req = urllib.request.Request(url, headers=headers, method=method, data=data)
-        with urllib.request.urlopen(req, timeout=60) as r:
+        with urllib.request.urlopen(req, timeout=120) as r:
             body = r.read(limit) if method != "HEAD" else b""
             hdr = {k.lower(): v[:120] for k, v in r.headers.items() if k.lower() in ("content-type", "content-length", "last-modified", "etag", "content-disposition", "server")}
             return body, {"status": r.status, "final": r.geturl(), **hdr, "read": len(body)}
@@ -181,49 +181,61 @@ def dane_resources(ds_id: str) -> None:
     note("dane_resources", {"dataset": ds_id, **info, "meta": meta, "resources": out})
 
 
+def crawl_bundles(root: str, max_files: int = 70) -> None:
+    body, info = fetch(root, accept="text/html")
+    queue = [u for u in links(text_of(body), root) if u.endswith(".js")]
+    seen: set[str] = set()
+    api_paths: dict[str, list[str]] = {}
+    env: list[str] = []
+    ctx: list[str] = []
+    while queue and len(seen) < max_files:
+        js = queue.pop(0)
+        if js in seen:
+            continue
+        seen.add(js)
+        jb, ji = fetch(js, limit=8_000_000)
+        src = text_of(jb)
+        for m in re.finditer(r"""(?:from|import\()\s*["'](\./[A-Za-z0-9_\-]+\.js)["']""", src):
+            u = urllib.parse.urljoin(root, m.group(1))
+            if u not in seen:
+                queue.append(u)
+        for m in re.finditer(r"`\$\{[A-Za-z0-9_.]+\}(/[^`]{1,200})`", src):
+            api_paths.setdefault(m.group(1), []).append(js.rsplit("/", 1)[-1])
+        for m in re.finditer(r"""(?:url|apiUrl|baseUrl|api)\s*:\s*["'`](https?://[^"'`]+)["'`]""", src):
+            env.append(m.group(0)[:200])
+        for m in re.finditer(r"(Pliki do pobrania|pliki-do-pobrania|files-to-download|public-files|publicFile|downloadFile|saveAs\(|generateFile|getFile)", src):
+            ctx.append(js.rsplit("/", 1)[-1] + ": " + src[max(0, m.start() - 250): m.end() + 250].replace("\n", " "))
+    note("bundle_api", {"files": len(seen), "paths": {k: sorted(set(v))[:3] for k, v in sorted(api_paths.items())}})
+    note("bundle_env", sorted(set(env)))
+    for c in ctx[:40]:
+        note("bundle_ctx", c)
+
+
 def main(argv: list[str]) -> int:
-    probe_spa("https://rpwdl2.ezdrowie.gov.pl/")
-    probe_urls([
-        "https://rpwdl2.ezdrowie.gov.pl/swagger/v1/swagger.json",
-        "https://rpwdl2.ezdrowie.gov.pl/api/swagger/v1/swagger.json",
-        "https://rpwdl2.ezdrowie.gov.pl/v3/api-docs",
-        "https://rpwdl2.ezdrowie.gov.pl/api",
-        "https://rpwdl2.ezdrowie.gov.pl/Pliki",
-        "https://rpwdl2.ezdrowie.gov.pl/pliki-do-pobrania",
-    ], "rpwdl2_candidates")
-    body, info = fetch("https://rpwdl.ezdrowie.gov.pl/", accept="text/html")
+    crawl_bundles("https://rpwdl2.ezdrowie.gov.pl/")
+    for root in ("https://rejestry.ezdrowie.gov.pl/registry/rpwdl", "https://rejestry.ezdrowie.gov.pl/"):
+        body, info = fetch(root, accept="text/html")
+        html = text_of(body)
+        note("rejestry", {"url": root, **info, "title": title(html), "links": [u for u in links(html, root) if KEYWORDS.search(u)][:40], "head": re.sub(r"\s+", " ", html[:600])})
+    body, info = fetch("https://ezdrowie.gov.pl/portal/home/rejestry-medyczne/rejestr-podmiotow-wykonujacych-dzialalnosc-lecznicza", accept="text/html")
     html = text_of(body)
-    note("page", {"url": "https://rpwdl.ezdrowie.gov.pl/", **info, "title": title(html), "bytes": len(html)})
-    if body:
-        found = links(html, info.get("final") or "https://rpwdl.ezdrowie.gov.pl/")
-        note("links", {"url": "rpwdl", "n": len(found), "links": found[:80]})
-        dl = [u for u in found if KEYWORDS.search(u) and "rpwdl" in u][:8]
-        probe_urls(dl, "rpwdl_old_links", accept="text/html")
-    probe_urls([
-        "https://rpwdl.ezdrowie.gov.pl/Registry/Download",
-        "https://rpwdl.ezdrowie.gov.pl/Home/Download",
-        "https://rpwdl.ezdrowie.gov.pl/Registry/Files",
-    ], "rpwdl_old_candidates", accept="text/html")
-    seen = set()
-    for q in ("RPWDL", "podmiotów wykonujących działalność leczniczą", "rejestr podmiotów leczniczych", "praktyki lekarskie", "Centrum e-Zdrowia rejestr"):
-        for d in dane(q):
-            t = d["title"].lower()
-            if d["id"] not in seen and ("leczni" in t or "rpwdl" in t or "praktyk" in t or "zakład" in t):
-                seen.add(d["id"])
-    for ds_id in list(seen)[:8]:
-        dane_resources(ds_id)
-    probe_urls(["https://ezdrowie.gov.pl/portal/home/rejestry-medyczne/rejestr-podmiotow-wykonujacych-dzialalnosc-lecznicza",
-                "https://www.gov.pl/web/zdrowie/rejestr-podmiotow-wykonujacych-dzialalnosc-lecznicza"], "ezdrowie", accept="text/html")
+    hits = [u for u in links(html, "https://ezdrowie.gov.pl/") if re.search(r"(pobierz|rpwdl|plik|xls|csv|zip|xml|dane)", u, re.I)]
+    txt = re.sub(r"<[^>]+>", " ", html)
+    snippets = [re.sub(r"\s+", " ", txt[max(0, m.start() - 200): m.end() + 300]) for m in re.finditer(r"(licencj|ponowne|wykorzyst|plik|pobra)", txt, re.I)][:12]
+    note("ezdrowie", {"links": hits[:40], "snippets": snippets})
+    for u in ("https://api.dane.gov.pl/1.4/datasets?q=RPWDL&per_page=20",
+              "https://api.dane.gov.pl/1.4/search?q=podmiot%C3%B3w%20wykonuj%C4%85cych%20dzia%C5%82alno%C5%9B%C4%87%20lecznicz%C4%85&per_page=20",
+              "https://dane.gov.pl/pl/dataset?q=RPWDL"):
+        body, info = fetch(u, accept="application/json, text/html", limit=400_000)
+        t = text_of(body)
+        titles = re.findall(r'"title"\s*:\s*"([^"]{0,140})"', t)[:30]
+        note("dane", {"url": u, **info, "titles": titles, "head": t[:300]})
 
     import os
     out_dir = os.environ.get("DEV_OUTPUT_DIR")
     if out_dir:
         with open(os.path.join(out_dir, "rpwdl_probe.json"), "w", encoding="utf-8") as fh:
             json.dump(OUT, fh, ensure_ascii=False, indent=1, default=str)
-    # Compact annotations: at most 10, each under the cap.
-    OUT.setdefault("robots", []).append({"requests_left": BUDGET[0]})
-    for section, items in list(OUT.items())[:10]:
-        annotate("notice", f"rpwdl probe {section}", items)
     return 0
 
 
