@@ -111,6 +111,9 @@ Unit = base unit + multiplier + currency (UCUM for physical units, ISO 4217 for
 currencies, SDMX CL_UNIT_MULT). Price base (current, constant, chain-linked + reference
 year) and seasonal adjustment are separate dimensions even where Eurostat or WDI bake
 them into a unit code or indicator name; Silver parses them with reviewed mapping tables.
+Built (decision D33): `unit.csv` carries each unit's `base_unit_key` and `factor`, `unit_map.csv` maps the
+sources' unit codes; facts keep the published value and unit, and only the KPI metrics convert, by pure scale, to
+the KPI's target unit (docs/playbook.md "Units").
 
 ## Classifications
 
