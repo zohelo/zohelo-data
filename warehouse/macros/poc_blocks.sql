@@ -369,6 +369,16 @@
     ) as t (loc_id, candidate_key)
 {% endmacro %}
 
+{# UNHCR Refugee Statistics blocks (gold.build_unhcr): one per API selection; areas: EU27 members as countries of
+   asylum (ISO alpha-3 through dim_geography.iso3). #}
+{% macro poc_unhcr_blocks() %}
+    select * from (
+        values
+        ('population_by_asylum', 'People under UNHCR mandate by country of asylum, end of year (UNHCR)'),
+        ('poland_by_origin', 'People under UNHCR mandate in Poland by country of origin, end of year (UNHCR)')
+    ) as t (entity, block_name)
+{% endmacro %}
+
 {# BIS Data Portal measures (gold.build_bis, #2861): one row per built series of a landed selection
    (ingestion/sources/bis.yaml entity). series_code = the series key without FREQ and the area, as the BIS
    publishes it; measure_codes = the codes that stay in the measure key next to the unit; unit_code / unit_name
@@ -579,6 +589,7 @@
     poc_build_ecb:ecb
     poc_build_ids:world_bank_ids
     poc_build_un_wpp:un_wpp
+    poc_build_unhcr:unhcr
     poc_build_zus_psz:zus_psz
     poc_build_bis:bis
     poc_build_ilostat:ilostat
@@ -674,6 +685,8 @@
     select 'world_bank_ids', 'IDS_CSV', 'World Bank International Debt Statistics'
     union all
     select 'un_wpp', indicator, block_name from ({{ poc_un_wpp_blocks() }})
+    union all
+    select 'unhcr', entity, block_name from ({{ poc_unhcr_blocks() }})
     union all
     select 'bis', entity, block_name from ({{ poc_bis_blocks() }})
     union all

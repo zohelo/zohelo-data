@@ -426,6 +426,18 @@ un_wpp as (
     where level_name = 'country' and length(geography_key) = 2
 ),
 
+-- UNHCR Refugee Statistics (cf_type=ISO): countries of asylum by ISO 3166-1 alpha-3 (dim_geography iso3), built
+-- from Gold's own list like oecd, so the dimensions never wait for the UNHCR source; UNHCR's own codes for
+-- unknown or stateless origins are breakdowns, not areas.
+unhcr as (
+    select
+        'unhcr' as source_system,
+        g.iso3 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso3 is not null
+),
+
 -- BIS (#2861): ISO 3166 alpha-2 countries (dim_geography's country keys) and XM euro area → EUROSTAT:EA
 -- (poc_bis_areas; the BIS aggregates 4T, 5R, 5A, G2, XW have no Gold area and are not listed). Static: Gold does
 -- not read BIS Silver here.
@@ -522,6 +534,8 @@ from (
     select * from ids
     union all
     select * from un_wpp
+    union all
+    select * from unhcr
     union all
     select * from zus_psz
     union all

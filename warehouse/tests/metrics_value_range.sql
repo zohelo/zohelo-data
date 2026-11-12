@@ -61,6 +61,9 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- FAOSTAT (#2402): published in 1000 ha, metrics in km² since D33 (× 10); World land area 13,040,161.55 thousand ha
     -- = 130,401,615.5 km² (Dev trial 43159213097). Documentation only (not in the metrics union below).
     ('area', 'faostat', '%', 0, 2e8),
+    -- UNHCR (#2415): persons; highest refugees 4,404,995 (all asylum countries 1951-2025, Dev trial 43282453427).
+    -- Documentation only (no metrics_refugees_hosted model yet).
+    ('refugees_hosted', 'unhcr', '%', 0, 2e7),
     -- ILOSTAT (#2861): per cent of the labour force, 15+, EU27 members, annual and quarterly national series;
     -- highest 28.153 (GR, quarterly), Poland 2025 = 3.018 (Dev trial 43290214779); the other sources' bound
     ('unemployment_rate', 'ilostat', '%', 0, 60),
