@@ -196,6 +196,16 @@ wdi as (
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
 ),
 
+-- World Bank IDS (#2819): the same World Bank economy codes as WDI (ISO3 countries, WB: groups such as LMY,
+-- ECA), so the mapping is the WDI one under its own source_system; no IDS table is read here.
+ids as (
+    select
+        'world_bank_ids' as source_system,
+        source_code,
+        geography_key
+    from wdi
+),
+
 -- OECD (#2738): countries by ISO 3166 alpha-3 (dim_geography iso3); EU27_2020 is the Eurostat aggregate, the
 -- aggregates of macro poc_oecd_areas are OECD:<code> members. Built from Gold's own lists, not from
 -- silver.oecd_cli, so the dimensions never wait for the OECD source; codes outside them are unmatched (_X).
@@ -265,6 +275,18 @@ teryt_prg as (
     where unit_level in ('kraj', 'wojewodztwo', 'powiat', 'gmina')
 ),
 
+-- World Bank WGI, Findex and ICP (#2736): World Bank economy codes like WDI's, so each gets WDI's mapping (iso2 or
+-- WB:<code>), built from wdi_countries only so that this shared model never waits for their Silver tables. A code
+-- WDI does not know (a few territories, ICP benchmark groups) is not listed and the build stage maps it to _X.
+wb_family as (
+    select
+        s.source_system,
+        w.source_code,
+        w.geography_key
+    from wdi as w
+    cross join (values ('world_bank_wgi'), ('world_bank_findex'), ('world_bank_icp')) as s (source_system)
+),
+
 -- UNCTAD: economies by UNCTAD code (M49; France 250 in the FDI, merchandise and services tables, 251 only in port
 -- calls) from poc_unctad_areas: the EU27 members, 3412 European Union (2020 …) = EU27_2020, 0000 World. Other
 -- economies have no ISO code in the tables (_X); the build stage builds only the listed areas, and
@@ -307,6 +329,65 @@ who as (
     ) as a
     left join who_m49 as m on a.geo_type = 'COUNTRY' and lpad(a.geo_code_m49, 3, '0') = m.m49
     left join geo as g on g.level_name = 'country' and m.iso2 = g.geography_key
+),
+
+-- UNESCO UIS: countries by ISO 3166-1 alpha-3 (dim_geography.iso3); regional units ('SDG: ...', 'WB: ...') have no
+-- Gold key (_X), and the build stage builds only the EU27 members.
+unesco_uis as (
+    select
+        'unesco_uis' as source_system,
+        a.geo_unit as source_code,
+        coalesce(g.geography_key, '_X') as geography_key
+    from (
+        select distinct
+            geo_unit,
+            is_country_code
+        from {{ ref('unesco_uis_observations') }}
+    ) as a
+    left join geo as g on a.is_country_code and g.level_name = 'country' and a.geo_unit = g.iso3
+),
+
+-- FAOSTAT: FAO area codes; countries through their UN M49 code (poc_m49_eu27: the EU27 members), FAO aggregates
+-- 5707 European Union (27) = EU27_2020 (current members, fixed composition) and 5000 World. Other areas have no
+-- Gold key here (_X); the build stage builds only the mapped ones.
+faostat_m49 as ({{ poc_m49_eu27() }}),
+
+faostat as (
+    select
+        'faostat' as source_system,
+        cast(a.area_code as varchar) as source_code,
+        coalesce(
+            g.geography_key,
+            case a.area_code when 5707 then 'EUROSTAT:EU27_2020' when 5000 then 'WB:WLD' end,
+            '_X'
+        ) as geography_key
+    from (
+        select distinct
+            area_code,
+            area_code_m49
+        from {{ ref('faostat_observations') }}
+    ) as a
+    left join faostat_m49 as m on a.area_code_m49 = m.m49 and a.area_code < 5000
+    left join geo as g on g.level_name = 'country' and m.iso2 = g.geography_key
+),
+
+-- ECB: ISO two-letter countries (GR, GB) and the aggregates of poc_ecb_areas (U2, I8, I9, B6, B0, D0); static
+-- codes, so Gold does not read ECB Silver here. Countries come from dim_geography's country keys.
+ecb_areas as ({{ poc_ecb_areas() }}),
+
+ecb as (
+    select
+        'ecb' as source_system,
+        area_code as source_code,
+        candidate_key as geography_key
+    from ecb_areas
+    union all
+    select
+        'ecb' as source_system,
+        geography_key as source_code,
+        geography_key
+    from geo
+    where level_name = 'country' and length(geography_key) = 2
 ),
 
 -- UN WPP: locations by ISO two-letter code (countries and areas, matched to dim_geography's country keys) and the
@@ -353,9 +434,19 @@ from (
     union all
     select * from teryt_prg
     union all
+    select * from wb_family
+    union all
     select * from unctad
     union all
     select * from who
+    union all
+    select * from unesco_uis
+    union all
+    select * from faostat
+    union all
+    select * from ecb
+    union all
+    select * from ids
     union all
     select * from un_wpp
 ) as m

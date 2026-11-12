@@ -640,8 +640,19 @@ Version = Last-Modified, download time when absent; written only when the SHA-25
 Restart unit: one entity (one request). Entity: the selection, one file of SDMX CSV
 observations with their attributes. Re-use under the ECB statistics usage policy (register
 GL-016): free, also commercial, attribution "Source: ECB statistics", statistics not modified.
-The queries are proven from Actions by the Dev trial (#2393); an `updatedAfter` delta, Bronze,
-Silver and a schedule are later stages.
+The queries are proven from Actions by the Dev trial (#2393).
+
+**Implemented (11 Nov 2026).** Three more selections: `hicp_annual_rate` (HICP, the COICOP 2018 dataflow
+that replaced ICP on 4 Feb 2026; ICP stops at 2025-12 and stays as the old method's history),
+`irs_long_term` (IRS, long-term interest rates for convergence purposes, every EU member incl. Poland
+from 2001-01) and `bsi_monetary_aggregates` (BSI, euro area M1–M3 stocks, index and annual growth,
+seasonally adjusted, from 1980). Bronze: `bronze.ecb_observations`, the generic SDMX format of
+`bronze.oecd_observations` (KEY split into `dataflow` and `series_key`). Silver: `silver.ecb_observations`
+(all selections, typed, dimensions JSON, period_start). Gold: `gold.build_ecb` (blocks in
+`poc_ecb_blocks`: 13 EXR currencies, key rates, €STR, HICP/ICP, IRS, BSI); KPIs fx_rate (EUR/PLN),
+inflation (HICP), bond_yield_10y (IRS), m3_growth and ecb_deposit_rate. Areas: ISO two-letter countries
+(GR), U2 → EA, I8 → EA19, I9 → EA20, B6 → EU27_2020 (fixed composition), B0/D0 → EU (changing composition). Weekly schedule
+(Thursday 05:40 UTC), full rebuild (D32: about 300,000 rows).
 
 ## World Bank International Comparison Program (ICP)
 
@@ -730,6 +741,19 @@ attribute_names/attribute_values, text). Silver: `silver.oecd_cli`. Terms: OECD 
 Conditions (data reuse incl. commercial, with attribution; dataset-specific third-party limits are
 checked per added dataflow). Restart unit: one selection.
 
+## UNDP Human Development Data Center (HDI)
+
+**Built (11 Nov 2026, register GL-028).** The downloads page
+(`https://hdr.undp.org/data-center/documentation-and-downloads`) links one CSV with every composite index
+and component for every country and aggregate (HDR25: `…/2025_HDR/HDR25_Composite_indices_complete_time_series.csv`,
+2.0 MB). Its URL changes with each report, so `undp_hdr.yaml` finds the link on the page (`url_from`);
+a copy is written only when the SHA-256 changed. Bronze: `bronze.undp_hdr_values`, one row per non-empty
+cell (id columns, source column name, value as text). Silver: `silver.undp_hdr_indices` (iso3 × indicator ×
+year; indicators hdi, le, eys, mys, gnipc, gdi, gii, ihdi, phdi, components and sex variants; aggregates
+`ZZ…`): 200,004 values, 206 areas, 1990–2023 (Dev trial 43093051337; Poland HDI 0.906, rank 35 in 2023).
+Each report recalculates the whole series, so values compare within one release; the Archive keeps the
+previous report 400 days. Terms: CC BY 3.0 IGO, licence row `cc_by_3_0_igo_undp_hdr`. Monthly check.
+Restart unit: the file.
 ## WHO data.who.int (indicator files)
 
 **Built (12 Nov 2026, register GL-025).** Every data.who.int indicator page links its complete data as one CSV,
@@ -742,6 +766,107 @@ text). Silver: `silver.who_observations` (grain entity × geo_type × geo_code_m
 bounds). Gold: `gold.build_who` — both indicators for the EU27 members (M49, macro `poc_m49_eu27`) and World, sex
 as breakdown (KPI life_expectancy). Refresh full (D32). Terms: CC BY 4.0 with WHO's additional terms, licence
 row `cc_by_4_0_who`. Restart unit: one indicator file.
+
+## UNESCO UIS (Data API selections)
+
+**Built (12 Nov 2026, register GL-026).** The UIS bulk files (BDDS) hold whole themes under a release folder
+(SDG.zip 34 MB, OPRI.zip 68 MB in 202602); the public UIS Data API returns an indicator's complete data in one
+request (`https://api.uis.unesco.org/api/public/data/indicators?indicator=<code>`, at most 100,000 records).
+`unesco_uis.yaml` lands two whole-indicator selections through the shared `bulk_file` pattern, version =
+download time (unchanged bytes skipped): `gerd_gdp` (EXPGDP.TOT, GERD as % of GDP, 1996–2024) and
+`tertiary_attainment` (EA.5T8.AG25T99 with .F and .M, short-cycle tertiary or higher, population 25+,
+1970–2025): 10,689 records, every country and region (Dev trial 43159213097). Bronze:
+`bronze.unesco_uis_observations` (one row per record, DuckDB JSON reader). Silver:
+`silver.unesco_uis_observations` (grain entity × indicator_id × geo_unit × year). Gold: `gold.build_unesco_uis`
+for the EU27 members (ISO alpha-3), sex as breakdown for attainment (KPIs gerd_gdp, tertiary_attainment).
+Refresh full (D32). Terms: CC BY-SA 4.0: values derived from UIS data are published under CC BY-SA 4.0 with the credit "Source:
+(Adapted from) UNESCO Institute for Statistics (UIS), <URL>, <date of extraction>"; licence row `cc_by_sa_4_0_uis`.
+The UIS `kpi_v2_map` rows stay `needs-block` until publishing carries that licence per series (#2816). Restart unit: one selection.
+
+## FAOSTAT (bulk domain files)
+
+**Built (12 Nov 2026, register GL-022).** FAOSTAT publishes each domain as one zip of the whole domain ("All
+Data (Normalized)"), listed with size, rows and update date in the bulk catalogue
+`https://bulks-faostat.fao.org/production/datasets_E.json`. `faostat.yaml` lands two through the shared
+`bulk_file` pattern, one request per entity and run, version = the file's Last-Modified: `emissions_totals`
+(GT, agrifood systems emissions totals, 20.6 MB zip, 2,498,428 rows) and `land_use` (RL, 3.0 MB, 421,850
+rows), 278–284 areas from 1961 (Dev trial 43159213097). Population (OA) is UN WPP re-disseminated (third-party
+data, onboarded as `un_wpp`) and not landed. Bronze: `bronze.faostat_observations` (one row per published row,
+values as text, DuckDB CSV reader). Silver: `silver.faostat_observations` (grain entity × area_code ×
+item_code × element_code × year × source_code). Gold: `gold.build_faostat` — GHG emissions all sectors without
+LULUCF (kt CO2eq, AR5, 1990–2024; KPI ghg_emissions) and land area (1000 ha as published, 1961–2024; KPI area,
+whose unit is km² — 1000 ha = 10 km², converted only in a consumer, never in Silver or Gold) for the EU27
+members (M49 codes, macro `poc_m49_eu27`), European Union (27) and World; flags E and I → estimated; projected
+years (after the file's version year, Silver `is_projection`) are not built. Refresh full (D32), ceiling
+exception #2815. Terms: CC BY 4.0 with FAO's additional terms (no use for the promotion of a commercial
+enterprise), licence row `cc_by_4_0_fao`. Restart unit: one domain file.
+
+## UNdata (UN Statistical Yearbook tables)
+
+**Built (12 Nov 2026, register GL-017).** UNdata's legacy data-mart download handlers now return the
+UN System Data Commons page, so the maintained product is used: the UN Statistical Yearbook CSV tables
+linked from `https://data.un.org/Default.aspx` (`_Docs/SYB/CSV/SYB68_<table>_202511_<title>.csv`). The
+file names change per edition, so each entity finds its CSV link by table number (`url_from`); a copy is
+written only when the SHA-256 changed. 27 tables of one layout (title line, then
+`Region/Country/Area,,Year,Series,Value,Footnotes,Source`); five tables with extra columns (SYB 123,
+130, 176, 317, 330) are left out until modelled. The files are Windows-1252 with a few undefined bytes,
+decoded losslessly (Latin-1 plus the Windows-1252 0x80–0x9F characters). Bronze:
+`bronze.undata_syb_values` (rows as published). Silver: `silver.undata_syb_values` (M49 area code,
+year, series with its unit in the name, value without thousands separators): 126,703 rows, 1975–2025
+(Dev trial 43163356932). Each row cites its source agency. Terms: UNdata conditions of use (free reuse
+citing UNdata; commercial use not addressed), licence row `undata_terms` with `commercial_ok` false.
+Monthly check. Restart unit: one table.
+
+## BIS Data Portal (SDMX)
+
+**Built (11 Nov 2026, register GL-015).** The BIS Data Portal has csv_flat bulk zips per dataflow
+(`https://data.bis.org/bulkdownload`), but they decorate every code with its label, put series
+attributes on separate rows and carry the daily series (WS_CBPOL 476 MB unzipped). The SDMX REST API
+returns the same dataflow as SDMX-CSV 2.0 codes (`https://stats.bis.org/api/v1/data/<dataflow>/<key>/all?format=sdmx-csv`),
+one response per selection. `bis.yaml` lands six selections through the shared `bulk_file` pattern, one
+request per entity and run: `cbpol` (WS_CBPOL, monthly), `eer` (WS_EER, monthly), `spp` (WS_SPP), `tc`
+(WS_TC), `credit_gap` (WS_CREDIT_GAP), `dsr` (WS_DSR); 371,000 observations, 64 MB, Poland in all six
+(Dev probe 43087048719). No Last-Modified, so version = download time; a copy is written only when the
+SHA-256 changed. Bronze: `bronze.bis_observations` (the generic SDMX format of the OECD onboarding).
+Silver: `silver.bis_observations` (dimensions as JSON, area from REF_AREA or BORROWERS_CTY, series
+attributes sent on rows without a period filled onto their observations, `NaN` as no value). Terms:
+BIS permitted use of statistics (cite the BIS; no additional charge to users; no warranty), licence row
+`bis_terms`. Weekly Thursday check. Restart unit: one selection.
+
+## ILOSTAT (bulk indicator files)
+
+**Built (11 Nov 2026, register GL-023).** ILOSTAT's bulk download page
+(`https://rplumber.ilo.org/files/website/bulk/indicator.html`) links one gzip CSV per indicator and
+frequency with every country, ILO region and period (`https://rplumber.ilo.org/data/indicator/?id=<id>&format=.csv.gz`).
+`ilostat.yaml` lands five through the shared `bulk_file` pattern, one request per entity and run:
+`une_deap_sex_age_rt_a` / `_q` (unemployment rate by sex and age), `emp_dwap_sex_age_rt_a`
+(employment-to-population ratio), `eap_dwap_sex_age_rt_a` (labour force participation rate),
+`eip_neet_sex_rt_a` (youth NEET rate): 1,718,986 observations, all 27 EU countries, Poland from the
+LFS (source BA:432) 2000–2025 annual and 2000Q1–2026Q2 quarterly (Dev trial 43091444753). National
+(reported) series only; ILO modelled estimates are separate indicators. No Last-Modified, so version =
+download time; the bytes are stable between downloads, so an unchanged file is skipped. Bronze:
+`bronze.ilostat_observations` (the generic SDMX format of the OECD onboarding: dimension columns
+ref_area, source, indicator, sex, classif1 as series_key; obs_status and notes as attributes). Silver:
+`silver.ilostat_observations` (ref_area ISO alpha-3 or ILO aggregate X…, typed value, frequency from the
+entity). Refresh full (D32): a narrow table rebuilt weekly in full, ceiling exception #2832. Terms:
+CC BY 4.0 for releases from 3 May 2023, licence row `cc_by_4_0_ilo`. Restart unit: one indicator file.
+
+## UNECE Statistical Database (PXWeb)
+
+**Built (11 Nov 2026, register GL-038).** No bulk feature: the database (PXWeb 2015) does not serve
+its PX files, and its PXWeb API v1 (`https://w3.unece.org/PXWeb2015/api/v1/en/STAT`) answers data only
+to POST queries. `ingestion/to_landing/unece/` therefore lists the tables of the economic statistics
+folder `20-ME` (macroeconomic overview, national accounts, labour force and wages, price indices,
+industrial production, external economic relations, globalization) and queries each whole as JSON-stat
+2.0; a table above the API cell limit (HTTP 403) is queried per value of its first variable and lands
+as entities `<table>__p<value code>` (Silver keeps only the newer of the whole and part shapes). Version = the table's `updated` time (the API restamps tables daily, so the
+SHA-256 decides whether a copy is written). One request at a time with a 4 s pause: the API answers
+bursts with 429. Bronze: `bronze.unece_observations` (the generic SDMX format of the OECD onboarding:
+variable codes as series_key (`|`-separated), period label, value and status) and `bronze.unece_codes` (variable and
+value labels per file). Silver: `silver.unece_observations` (codes and labels as JSON, area = the
+Country variable: M49 codes and aggregates such as E27 = EU-27). Terms: UNECE copyright notice (free
+reuse incl. commercial, acknowledge UNECE), licence row `unece_terms`. Weekly Monday check. Restart
+unit: one table.
 
 ## News headline feeds (`news_feeds`, topics)
 
