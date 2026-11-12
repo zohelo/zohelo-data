@@ -80,14 +80,21 @@ it cannot follow macros found by name; a full parse takes about five seconds.
   `unit_decimals.csv`) stay one file each for now. dbt builds one table per CSV file; per-source fragments
   would need either a generation step before every `dbt` command, `repo_check` and `gold.publish` (all read
   the CSVs directly), or one seed per fragment plus a union model whose refs cannot be discovered the way
-  macros are. Neither is clean. Two candidates, in this order:
-  1. `warehouse/seeds/*.csv merge=union` in `.gitattributes`: concurrent appended rows merge without a
-     conflict in local merges (the merge trains). Needs a trial of whether GitHub's merge button honours it,
-     and a duplicate-key check per seed in `repo_check`, because a union merge keeps both versions of a row
-     two pull requests edited.
-  2. Fragments `warehouse/seed_rows/<seed>/<source>.csv` assembled into `warehouse/seeds/<seed>.csv` by one
-     function that `build.py`, `changed.manifest`, `repo_check` and `publish` call first; the assembled
-     files leave git.
+  macros are. Neither is clean. Two steps:
+  1. **Done: `warehouse/seeds/*.csv merge=union` in `.gitattributes`.** A local `git merge` (a lane merging
+     `origin/main` into its branch, a merge train) keeps the rows both sides appended and reports no conflict
+     in a seed. Git reads the attribute from the branch being merged into: a merge train cut from `main` has
+     it at once, a branch cut before 12 November has it after its first merge of `main` (for that one merge,
+     put the same line into `.git/info/attributes`). GitHub's own merge does **not** use the attribute (trial of 12 November: pull requests #2927
+     and #2928 against a test branch that had it, each appending one row to `source.csv` after another row was
+     appended on the base, were `mergeable: false`), so a pull request still shows a seed conflict on GitHub
+     until `main` is merged into it. A union merge never stops, so when two pull requests edited the same row,
+     added the same row or changed the header it keeps both versions: `repo_check` (`seed files`) fails on a
+     repeated row or key, a second header line, a row with the wrong number of fields and a last line without
+     a line break. Run it after every merge that touched a seed.
+  2. Next, for no seed conflict on GitHub either: fragments `warehouse/seed_rows/<seed>/<source>.csv`
+     assembled into `warehouse/seeds/<seed>.csv` by one function that `build.py`, `changed.manifest`,
+     `repo_check` and `publish` call first; the assembled files leave git.
 - **`kpi.csv`-family rows and KPI metrics models** belong to a KPI, not to a source; a KPI pull request
   still adds its metrics model to `warehouse.yaml`. The same fragment idea applies and is left for the
   seeds step.
@@ -106,7 +113,7 @@ or both; a source with a block in the old list and a registration; a registratio
 blocks, sits in the wrong file or names an unknown source; a geography CTE that is not named after its
 source or whose name already exists (in `poc_map_geography.sql` or in another source's macro);
 a `source.csv` or `licence.csv` row missing for a source (`register`); a choice list put back on the
-Pipeline `source` input.
+Pipeline `source` input. `seed files` fails on what a union merge can leave in a seed (above).
 
 ## Rebuilds
 
