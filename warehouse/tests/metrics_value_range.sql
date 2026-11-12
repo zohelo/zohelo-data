@@ -68,12 +68,6 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- = 1,253.1 Mt (total excl. LULUCF, 1990-2024, Dev trial 43282453427). Documentation only until
     -- metrics_ghg_emissions joins the metrics union below.
     ('ghg_emissions', 'eea', 'eea:govreg_ghg_inventory:gg_co2e:Sectors/Totals_excl', 0, 2e3),
-    -- FAOSTAT (#2402): kt CO2eq; World 54,253,565 kt (all sectors without LULUCF, 2024, Dev trial 43159213097).
-    -- Documentation only until metrics_ghg_emissions joins the metrics union below.
-    ('ghg_emissions', 'faostat', '%', 0, 8.2e7),
-    -- FAOSTAT (#2402): 1000 ha; World land area 13,040,161.55 (Dev trial 43159213097). Documentation only (no
-    -- metrics_area model yet).
-    ('area', 'faostat', '%', 0, 2e7),
     -- percent per year; highest 24.0 in 1998 (silver.nbp_policy_rates, Dev trial 43093114523)
     ('nbp_reference_rate', 'nbp_interest_rates', '%', 0, 30)
 ),
