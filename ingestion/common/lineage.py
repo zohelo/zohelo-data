@@ -32,6 +32,7 @@ SOURCES = (
     "who",
     "unesco_uis",
     "faostat",
+    "unhcr",
     "world_bank_wdi",
     "world_bank_findex",
     "world_bank_icp",

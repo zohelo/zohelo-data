@@ -292,6 +292,23 @@ sources:
       day (YYYYMMDD), views; partitioned by entity (<lang>_<title slug>).
   - name: wikimedia_pageviews_rejected_files
     description: Wikimedia pageviews Landing files the Bronze decoder rejected, with the reason.
+- name: unhcr
+  description: UNHCR Refugee Statistics API — population stocks by country of asylum (and Poland by origin), per year
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/unhcr/
+    loaded_by: ingestion/to_bronze/unhcr/
+    config: ingestion/sources/unhcr.yaml
+  tables:
+  - name: unhcr_population
+    description: >-
+      One row per item of the newest response of each declared population selection (entity population_by_asylum,
+      poland_by_origin): year, origin and asylum codes (UNHCR and ISO alpha-3) and names, refugees, asylum_seekers,
+      returned_refugees, idps, returned_idps, stateless, ooc, oip, hst, every value as published text ("-" kept);
+      partitioned by entity.
+  - name: unhcr_rejected_files
+    description: UNHCR Landing files the Bronze decoder rejected (more than one page, unknown fields), with the reason.
 - name: who
   description: WHO data.who.int — indicator CSV files (all areas, years and sexes)
   database: r2

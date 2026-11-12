@@ -347,6 +347,18 @@ faostat as (
     ) as a
     left join faostat_m49 as m on a.area_code_m49 = m.m49 and a.area_code < 5000
     left join geo as g on g.level_name = 'country' and m.iso2 = g.geography_key
+),
+
+-- UNHCR Refugee Statistics (cf_type=ISO): countries of asylum by ISO 3166-1 alpha-3 (dim_geography iso3), built
+-- from Gold's own list like oecd, so the dimensions never wait for the UNHCR source; UNHCR's own codes for
+-- unknown or stateless origins are breakdowns, not areas.
+unhcr as (
+    select
+        'unhcr' as source_system,
+        g.iso3 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso3 is not null
 )
 
 select
@@ -380,6 +392,8 @@ from (
     select * from unesco_uis
     union all
     select * from faostat
+    union all
+    select * from unhcr
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

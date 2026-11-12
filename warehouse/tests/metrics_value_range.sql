@@ -50,7 +50,9 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('ghg_emissions', 'faostat', '%', 0, 8.2e7),
     -- FAOSTAT (#2402): 1000 ha; World land area 13,040,161.55 (Dev trial 43159213097). Documentation only (no
     -- metrics_area model yet).
-    ('area', 'faostat', '%', 0, 2e7)
+    ('area', 'faostat', '%', 0, 2e7),
+    -- UNHCR (#2415): persons; documentation only (no metrics_refugees_hosted model yet). Bound set from the trial.
+    ('refugees_hosted', 'unhcr', '%', 0, 2e7)
 ),
 
 metrics as (
