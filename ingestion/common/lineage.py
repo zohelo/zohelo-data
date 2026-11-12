@@ -35,10 +35,15 @@ SOURCES = (
     "undata",
     "unece",
     "world_bank_wdi",
+    "world_bank_findex",
+    "world_bank_icp",
+    "world_bank_ids",
+    "world_bank_wgi",
     "news_feeds",
     "gdelt",
     "wikimedia_pageviews",
     "release_calendars",
+    "unctad",
 )
 # Accumulating sources (every landed copy stays in Bronze, docs/topics.md): no latest-only gate.
 ACCUMULATING = ("news_feeds", "gdelt", "wikimedia_pageviews")
