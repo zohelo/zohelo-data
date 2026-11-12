@@ -52,7 +52,7 @@ def main() -> int:
     inline = f"""
         with t as (
             select *, case {cases} end as kpi,
-                geography_key = 'PL' or regexp_matches(geography_key, '^TERC:[0-9]{{2}}00000$') as pl_voiv
+                geography_key = 'PL' or regexp_matches(geography_key, '^TERC:[0-9]{{2}}$') as pl_voiv
             from {{{{ ref('zz_dev_bdl_removed') }}}}
         )
         select coalesce(kpi, '-') as kpi, geography_key, frequency, period_label, is_total, no_value, pl_voiv,
