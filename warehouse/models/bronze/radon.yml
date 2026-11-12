@@ -1,0 +1,22 @@
+version: 2
+
+sources:
+- name: radon
+  description: RAD-on open-data API (OPI PIB) — POL-on institutions and study programmes, reduced to non-person fields
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/radon/
+    loaded_by: ingestion/to_bronze/radon/
+    config: ingestion/sources/radon.yaml
+  tables:
+  - name: radon_institutions
+    description: >-
+      One row per institution record of the newest Landing copy (entity institutions), every allowlisted field as
+      source text under its API name (institutionUuid, regon, iKindCd, statusCode, voivodeship, ...).
+  - name: radon_courses
+    description: >-
+      One row per study programme record (API resource courses) of the newest Landing copy, every allowlisted field
+      as source text under its API name; disciplines and courseInstances (launches) as JSON text.
+  - name: radon_rejected_files
+    description: RAD-on Landing files the Bronze decoder rejected, with the reason.
