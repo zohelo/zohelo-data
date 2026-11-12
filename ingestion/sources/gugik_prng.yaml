@@ -1,0 +1,52 @@
+source_system: gugik_prng
+description: "GUGiK PRNG — Państwowy Rejestr Nazw Geograficznych (state register of geographical names), national part: localities and physiographic objects"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-002. Bulk feature: the national part of the register as two
+# packages on opendata.geoportal.gov.pl, linked from the "Dane do pobrania" WMS GetFeatureInfo of the PRNG page
+# (https://mapy.geoportal.gov.pl/wss/service/PZGIK/PRNG/WMS/DaneDoPobrania), each in GML, SHP and XLSX. The XLSX package
+# is the lightest decodable one (one sheet, one row per object, every attribute as a column; ~23 MB zipped, ~25 MB
+# workbook), declared as files of the shared bulk_file pattern (no extractor code). The server sends Last-Modified and
+# ETag and rebuilds the packages often (Last-Modified 12 Nov 2026 on the probe day; the ZIP names the export date in a
+# member "Export danych PRNG z dnia <date>.txt"); a copy lands only when its SHA-256 changed. Entity = one package,
+# version = Last-Modified, restart unit = one file. Left out: the world-names part (PRNG_SWIAT_*.zip, Polish names of
+# places abroad, 15,158 names) and the GML/SHP twins of the same records. Dev probes 43327592136 and 43328622271
+# (test/2971-gugik-prng-trial, 12 Nov 2026).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: miejscowosci             # localities (official and non-standardised names), 124,236 rows on 12 Nov 2026
+        url: https://opendata.geoportal.gov.pl/prng/PRNG_MIEJSCOWOSCI_XLSX.zip
+        format: zip
+        version: last_modified
+      - entity: obiekty_fizjograficzne   # physiographic objects (water, relief, land cover, ...), 131,525 rows
+        url: https://opendata.geoportal.gov.pl/prng/PRNG_OBIEKTY_FIZJOGRAFICZNE_XLSX.zip
+        format: zip
+        version: last_modified
+  initial: bulk
+  production: snapshot                    # each package is the complete current register part
+  incremental_policy: changed_since_last  # SHA-256 of the download
+  schedule: # UTC; updated continuously, official names verified yearly as of 1 January: monthly, the 5th at 03:25
+    - {cron: "25 3 5 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gugik_prng/
+# ZIPs kept as exact bytes. Newest version + 90 days in the Archive.
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.prng_names, bronze.prng_rejected_files]
+silver: [silver.prng_objects, silver.prng_object_gminas]
+gold: [gold.build_gugik_prng, gold.metrics_localities]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  prng_objects: {rows: 390000}  # 255,761 = 124,236 localities + 131,525 physiographic objects (Dev trial, PR)
+  prng_object_gminas: {rows: 420000}  # TRIAL
+  poc_build_gugik_prng: {rows: 100000}  # TRIAL
+  poc_metrics_localities: {rows: 5000}  # TRIAL
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): two packages of about 23 MB with no changed-since feature; each copy is the whole
+# register part, so a new copy replaces its entity and Silver and Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2971"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

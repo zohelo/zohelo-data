@@ -1,0 +1,21 @@
+version: 2
+models:
+  - name: poc_build_gugik_prng
+    description: >-
+      Build stage — GUGiK PRNG, state register of geographical names (register PL-ENV-002): counts of named objects
+      (localities by kind, physiographic objects by category, '_T' all) located wholly or partly in Poland, each
+      voivodeship, powiat and gmina, at the export date of the newest package (entity snapshot, frequency D). Unit
+      named_objects as counted. An object spanning several units counts once in each.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_localities
+    description: >-
+      Gold PoC metrics view of concept localities (draft): localities in the state register of geographical names
+      (GUGiK PRNG, all kinds), Poland, voivodeships, powiats and gminas, at the export date (macros/poc_metrics.sql).

@@ -1,0 +1,19 @@
+version: 2
+sources:
+- name: gugik_prng
+  description: GUGiK PRNG, state register of geographical names (register PL-ENV-002), national part
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gugik_prng/
+    loaded_by: ingestion/to_bronze/gugik_prng/
+    config: ingestion/sources/gugik_prng.yaml
+  tables:
+  - name: prng_names
+    description: >-
+      One row per sheet row of the data workbook of the newest copy of each package (entities miejscowosci and
+      obiekty_fizjograficzne): every attribute as the text read from the cell (Excel serial numbers for the version
+      and validity dates), the export date named in the package, the sheet row number and provenance; partitioned by
+      entity.
+  - name: prng_rejected_files
+    description: Packages of gugik_prng the Bronze decoder rejected, with the reason.
