@@ -21,7 +21,7 @@ UA = "zohelo-data/1.0 (+https://zohelo.com; open-data research probe)"
 
 def get(url, n=3_000_000, method="GET"):
     req = urllib.request.Request(url, method=method, headers={"User-Agent": UA, "Accept": "*/*"})
-    r = urllib.request.urlopen(req, timeout=60, context=ssl.create_default_context())
+    r = urllib.request.urlopen(req, timeout=150, context=ssl.create_default_context())
     raw = r.read(n) if method == "GET" else b""
     return r, raw
 
@@ -53,6 +53,13 @@ def one(line):
                     break
             if not n:
                 out.append("  (no match)")
+        elif mode == "jsonre":
+            found = []
+            for m in re.finditer(arg, txt):
+                if m.group(0) not in found:
+                    found.append(m.group(0))
+            out.extend("  " + f[:300] for f in found[:25])
+            out.append(f"  dimensions: {re.findall(r'\"shortName\":\"[^\"]*\"', txt)[:6]}")
         elif mode == "links":
             seen = set()
             for m in re.finditer(r'(?is)<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', txt):
