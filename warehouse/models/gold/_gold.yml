@@ -192,5 +192,16 @@ models:
         tests: [not_null]
       - name: date_key
         tests: [not_null]
+  - name: geo_unit_wikidata
+    description: >-
+      One row per Polish voivodeship, powiat and gmina (current TERYT code) that Wikidata holds: QID, labels pl/en,
+      population with point in time, area (km2 or ha as published), coordinates, official website, Wikipedia
+      articles pl/en (Wikidata, CC0; selection rule in silver.wikidata_terc_attributes).
+    columns:
+      - name: geography_key
+        tests: [not_null, unique, {relationships: {arguments: {to: ref('poc_dim_geography'), field: geography_key}}}]
+      - name: wikidata_qid
+        description: Not unique by design - a city with powiat rights is one item holding its powiat and gmina codes.
+        tests: [not_null]
   - name: poc_build_check
     description: Per activated block — rows, series, unmatched geography, dates, flags; read after every build.

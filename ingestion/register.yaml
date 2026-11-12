@@ -7506,7 +7506,8 @@ sources:
   name: Wikidata data access
   short_name: Wikidata
   provider: Wikidata community / Wikimedia Foundation
-  status: registered
+  source_system: wikidata
+  status: built
   family: J
   kpi: false
   geography: worldwide
@@ -7515,33 +7516,43 @@ sources:
   entities: [entity, statement, property, identifier]
   granularity: Entity statements with qualifiers, ranks, references and multilingual labels.
   coverage: Full current dumps, revision-addressable entities and project revision history; dumps are not real time.
+    Built scope (#2843) is Polish voivodeships, powiats and gminas by TERC code (P1653), about 3,500 items.
   access:
-    endpoint: https://www.wikidata.org/wiki/Wikidata:Data_access
+    endpoint: https://query.wikidata.org/sparql
     kind: api
     interfaces: [SPARQL, API, GraphQL, RDF, JSON, bulk-files]
     auth: Public; use dumps for large result sets and query services for scoped queries.
     cost: free
-    limits: Public services have workload constraints; no numeric allowance relied on.
+    limits: 'Public services have workload constraints (query timeout 60 s); no numeric allowance relied on. Built
+      route: six SPARQL queries a week, one at a time with a 5 s pause, 1-2.5 MB and under 10 s each; user agent
+      naming the project and https://zohelo.com (Wikimedia User-Agent policy). Dev probes 43272046396, 43272562156,
+      43273792713 (12 Nov 2026).'
   licence:
     status: open-conditional
-    notes: Main structured namespaces are CC0; text outside them is CC BY-SA and external references retain their
-      own rights.
+    notes: 'Terms: https://www.wikidata.org/wiki/Wikidata:Copyright - structured data of the main, Property, Lexeme
+      and EntitySchema namespaces is CC0 1.0 (no attribution required, commercial reuse and modification allowed);
+      text in the other namespaces is CC BY-SA and external references keep their own rights. The built scope reads
+      only main-namespace statements, labels and sitelinks (CC0). Courtesy attribution: "Source: Wikidata (CC0),
+      https://www.wikidata.org/".'
   updates: Live edits; dumps publish periodically and lag current state.
   ingestion:
-    history: 'PROPOSAL: seed entity dumps for chosen classes; retain statement references.'
-    incremental: 'PROPOSAL: consume recent changes or scoped refreshes, then reconcile dumps.'
-    identifiers: Q/P IDs plus external identifiers such as LEI, ISIN and registry IDs.
+    history: Current state only (no revision history); population statements carry their own point in time (1939-2024).
+    incremental: Weekly whole-selection snapshot; unchanged answers skipped by SHA-256.
+    identifiers: Q/P IDs plus external identifiers such as LEI, ISIN and registry IDs; built scope keyed by TERC (P1653).
   modelling:
-    notes: Statement graph with qualifiers; avoid flattening disputed or time-scoped claims.
-    overlap: Links Wikimedia, GLEIF, registries and OpenAlex; community assertions are not authoritative replacements.
+    notes: Statement graph with qualifiers; avoid flattening disputed or time-scoped claims. Silver keeps every
+      statement and chooses one per TERC × property by an explicit rank and point-in-time rule, counting the rest.
+    overlap: Links Wikimedia, GLEIF, registries and OpenAlex; community assertions are not authoritative replacements
+      (population and area stay attributes, GUS and PRG remain the statistical sources).
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
-    blockers: [Scope classes/properties, Set provenance quality rules, Plan dump infrastructure]
+    connection: tested
+    blockers: [Wider scope (classes beyond TERC units) would need the entity dumps]
     references:
     - https://www.wikidata.org/wiki/Wikidata:Data_access
     - https://www.wikidata.org/wiki/Wikidata:Copyright
+    - https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy
 - id: CD-027
   name: OpenStreetMap Planet, history and replication diffs
   short_name: OpenStreetMap

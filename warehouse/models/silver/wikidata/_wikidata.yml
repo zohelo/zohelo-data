@@ -1,0 +1,50 @@
+version: 2
+models:
+  - name: wikidata_statements
+    description: >-
+      Wikidata (CC0) statements of the items holding a TERC code (P1653), newest copy of each SPARQL selection:
+      P1653, P1082 population, P2046 area, P625 coordinates, P856 official website (every rank, qualifiers folded),
+      plus labels pl/en and Wikipedia articles pl/en per item. Grain: statement_id. Population point in time
+      1939-2024, mostly 2021 census (Dev probe 43273792713); counts in the PR's Dev trial.
+    columns:
+      - name: statement_id
+        tests: [not_null, unique]
+      - name: qid
+        tests: [not_null]
+      - name: property
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['P1653', 'P1082', 'P2046', 'P625', 'P856', 'label_pl', 'label_en', 'wikipedia_pl', 'wikipedia_en']
+      - name: rank
+        tests: [not_null, {accepted_values: {arguments: {values: ['preferred', 'normal', 'deprecated']}}}]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: wikidata_terc_attributes
+    description: >-
+      Wikidata attributes of the Polish voivodeships, powiats and gminas of the current TERYT catalogue that
+      Wikidata holds. Grain: terc_code × property; one item per code and one statement per property chosen by the
+      explicit rule in the model header (preferred rank, latest point in time, statement id as the last tie-break),
+      candidates and tied count what was set aside.
+    tests:
+      - unique:
+          column_name: "terc_code || '|' || property"
+    columns:
+      - name: terc_code
+        tests: [not_null, {relationships: {arguments: {to: ref('teryt_terc'), field: terc_code}}}]
+      - name: property
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['qid', 'label_pl', 'label_en', 'wikipedia_pl', 'wikipedia_en', 'population', 'area', 'coordinates', 'website']
+      - name: qid
+        tests: [not_null]
+      - name: value_text
+        tests: [not_null]
+      - name: unit_level
+        tests: [{accepted_values: {arguments: {values: ['wojewodztwo', 'powiat', 'gmina']}}}]
+      - name: raw_sha256
+        tests: [not_null]

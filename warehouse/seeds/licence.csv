@@ -30,3 +30,4 @@ undata_terms,UNdata conditions of use,https://data.un.org/Host.aspx?Content=UNda
 bis_terms,BIS terms of use for statistics,https://www.bis.org/about/legal/permitted-use-statistics,Source: BIS statistics (Bank for International Settlements),false,false
 cc_by_4_0_ilo,CC BY 4.0 (ILOSTAT),https://www.ilo.org/node/9321,"Source: ILO, ILOSTAT, https://ilostat.ilo.org/data/",true,false
 unece_terms,UNECE Statistical Database copyright notice,https://w3.unece.org/PXWeb/Static/Copyright_notice.html,Source: UNECE Statistical Database.,true,false
+cc0_wikidata,CC0 1.0 (Wikidata structured data),https://www.wikidata.org/wiki/Wikidata:Copyright,"Source: Wikidata (CC0), https://www.wikidata.org/",true,false

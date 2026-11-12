@@ -32,6 +32,7 @@ SOURCES = (
     "undp_hdr",
     "who",
     "unesco_uis",
+    "wikidata",
     "faostat",
     "undata",
     "bis",
