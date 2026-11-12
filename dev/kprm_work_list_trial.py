@@ -112,6 +112,9 @@ def main(argv) -> int:
                 if r[0] in SPOTS
             },
         }
+        ref["per_year_status"] = sorted(
+            Counter((r[h["Data publikacji"]][:4], r[h["Status realizacji"]] or "(empty)") for r in data).items()
+        )
         per_year = Counter(r[h["Data publikacji"]][:4] for r in data)
         ref["per_year"] = dict(sorted(per_year.items()))
         annotate("notice", "trial file (Python csv)", ref)
@@ -277,6 +280,18 @@ def main(argv) -> int:
             )[0][0],
             "metrics_rows_per_period_max": q(
                 f"select max(n) from (select date_key, count(*) n from {g} where frequency = 'M' and is_total group by 1)"
+            )[0][0],
+            "status_measure_sum_vs_entries": q(
+                f"select frequency, sum(value)::int filter (where measure_key like '%by_current_status'), "
+                f"sum(value)::int filter (where measure_key not like '%by_current_status' and is_total) from {g} group by 1"
+            ),
+            "annual_by_current_status": q(
+                f"select period_label, json_extract_string(breakdown_json, '$.current_status'), value::int from {g} "
+                f"where measure_key like '%annual_by_current_status' order by 1, 2"
+            ),
+            "metrics_rows_per_source_area_period_max": q(
+                f"select max(n) from (select geography_key, date_key, count(*) n from {g} "
+                f"where measure_key = 'kprm_work_list:entries:list_entries:monthly' and is_total and geography_key <> '_X' group by all)"
             )[0][0],
             "value_bound_0_1000_breaches": q(
                 f"select count(*) from {g} where frequency = 'M' and is_total and (value < 0 or value > 1000)"
