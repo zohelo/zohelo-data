@@ -7500,11 +7500,12 @@ sources:
       43273792713 (12 Nov 2026).'
   licence:
     status: open-conditional
-    notes: 'Terms: https://www.wikidata.org/wiki/Wikidata:Copyright - structured data of the main, Property, Lexeme
-      and EntitySchema namespaces is CC0 1.0 (no attribution required, commercial reuse and modification allowed);
-      text in the other namespaces is CC BY-SA and external references keep their own rights. The built scope reads
-      only main-namespace statements, labels and sitelinks (CC0). Courtesy attribution: "Source: Wikidata (CC0),
-      https://www.wikidata.org/".'
+    notes: 'Terms: https://www.wikidata.org/wiki/Wikidata:Copyright (page footer, read by Dev trial on 12 Nov 2026):
+      "All structured data from the main, Property, Lexeme, and EntitySchema namespaces is available under the Creative
+      Commons CC0 License; text in the other namespaces is available under the Creative Commons Attribution-ShareAlike
+      License". CC0 1.0: no attribution required, commercial reuse and modification allowed; external references keep
+      their own rights. The built scope reads only main-namespace statements, labels and sitelinks (CC0). Courtesy
+      attribution: "Source: Wikidata (CC0), https://www.wikidata.org/".'
   updates: Live edits; dumps publish periodically and lag current state.
   ingestion:
     history: Current state only (no revision history); population statements carry their own point in time (1939-2024).
