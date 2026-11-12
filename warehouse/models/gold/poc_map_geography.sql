@@ -178,6 +178,25 @@ wdi as (
     from {{ ref('wdi_countries') }} as w
     left join geo as g on g.level_name = 'country' and w.iso2_code = g.iso2
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
+),
+
+-- WHO data.who.int: areas by M49 code (unpadded) and type; countries through poc_m49_eu27 (the EU27 members),
+-- World (GLOBAL 1) = WB:WLD. WHO regions and income groups have no Gold key (_X); the build stage builds only the
+-- mapped areas. source_code = <type>:<code>, as region and country codes share one number space.
+who as (
+    select
+        'who' as source_system,
+        a.geo_type || ':' || a.geo_code_m49 as source_code,
+        coalesce(g.geography_key, case when a.geo_type = 'GLOBAL' and a.geo_code_m49 = '1' then 'WB:WLD' end, '_X')
+            as geography_key
+    from (
+        select distinct
+            geo_type,
+            geo_code_m49
+        from {{ ref('who_observations') }}
+    ) as a
+    left join ({{ poc_m49_eu27() }}) as m on a.geo_type = 'COUNTRY' and lpad(a.geo_code_m49, 3, '0') = m.m49
+    left join geo as g on g.level_name = 'country' and m.iso2 = g.geography_key
 )
 
 select
@@ -195,6 +214,8 @@ from (
     select * from dbw
     union all
     select * from wdi
+    union all
+    select * from who
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

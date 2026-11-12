@@ -38,7 +38,7 @@ seeds:
       - name: source_key
         tests:
           - not_null
-          - accepted_values: {arguments: {values: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, nbp_interest_rates, oecd]}}
+          - accepted_values: {arguments: {values: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, nbp, nbp_interest_rates, oecd, who]}}
       - name: concept_key
         tests: [{relationships: {arguments: {to: ref('kpi'), field: kpi_key}}}]
       - name: aggregation

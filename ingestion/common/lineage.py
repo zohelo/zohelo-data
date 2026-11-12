@@ -29,6 +29,7 @@ SOURCES = (
     "nbp",
     "nbp_interest_rates",
     "oecd",
+    "who",
     "world_bank_wdi",
     "news_feeds",
     "gdelt",

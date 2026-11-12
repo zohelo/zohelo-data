@@ -1,0 +1,27 @@
+version: 2
+models:
+  - name: who_observations
+    description: >-
+      WHO data.who.int indicators (CC BY 4.0 with WHO's additional terms) from bronze.who_observations: the newest
+      copy of each indicator CSV (entity) — life_expectancy (WHOSIS_000001, life expectancy at birth) and hale
+      (WHOSIS_000002, healthy life expectancy at birth), years, by sex, for every country, WHO region, World Bank
+      income group and World. Grain: entity × geo_type × geo_code_m49 × year × sex. Values in years.
+    tests:
+      - unique:
+          column_name: "entity || '|' || geo_type || '|' || geo_code_m49 || '|' || year || '|' || sex"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: ['life_expectancy', 'hale']}}}]
+      - name: geo_code_m49
+        tests: [not_null]
+      - name: geo_type
+        tests: [not_null, {accepted_values: {arguments: {values: ['COUNTRY', 'WHOREGION', 'WORLDBANKINCOMEGROUP', 'GLOBAL']}}}]
+      - name: time_type
+        tests: [{accepted_values: {arguments: {values: ['YEAR']}}}]
+      - name: year
+        tests: [not_null]
+      - name: sex
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]
