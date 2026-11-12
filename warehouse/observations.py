@@ -52,6 +52,9 @@ REJECTED = ("gold", "observations_rejected")
 COMMIT_EVERY = 200  # blocks
 COMMIT_SECONDS = 600
 BIG_ROWS = 50_000_000  # blocks with more Silver rows are built alone, with the full memory limit
+# The Parquet writer buffers a row group per thread; with names and JSON on every row, 1 M-row groups
+# took more than 10 GB on one dataset (NAIO_10_FCP_U3, Dev trial 43202733905).
+ROW_GROUP = 100_000
 
 # Columns of the three Gold tables, in the order their models select them.
 TABLES: dict[str, dict[str, Any]] = {
@@ -242,6 +245,7 @@ def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str
                 memory_limit=memory,
                 temp_directory=str(work_dir),
                 source_view="silver",
+                row_group_size=ROW_GROUP,
             )
             if built["rows"] == 0:
                 raise entity.EntityModelError("no row with a value and a period the calendar can place")
@@ -257,6 +261,7 @@ def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str
                     memory_limit=memory,
                     temp_directory=str(work_dir),
                     source_view="build",
+                    row_group_size=ROW_GROUP,
                 )
         except entity.EntityModelError as exc:  # verdict on the block under this recipe
             out.update(status="rejected", error=str(exc)[:1000])
