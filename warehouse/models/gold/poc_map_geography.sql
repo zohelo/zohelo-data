@@ -427,14 +427,34 @@ un_wpp as (
 ),
 
 -- World Bank EdStats (OECD PISA republication): countries by ISO 3166-1 alpha-3 (dim_geography iso3), built from
--- Gold's own list like oecd, so the dimensions never wait for the source; World Bank aggregates (OED, ...) are _X.
+-- Gold's own list like oecd, so the dimensions never wait for the source; World Bank aggregates (OED, ...) are not
+-- in this list, so the build stage's inner join leaves them out.
 world_bank_edstats as (
     select
         'world_bank_edstats' as source_system,
+),
+
+-- UNHCR Refugee Statistics (cf_type=ISO): countries of asylum by ISO 3166-1 alpha-3 (dim_geography iso3), built
+-- from Gold's own list like oecd, so the dimensions never wait for the UNHCR source; UNHCR's own codes for
+-- unknown or stateless origins are breakdowns, not areas.
+unhcr as (
+    select
+        'unhcr' as source_system,
         g.iso3 as source_code,
         g.geography_key
     from geo as g
     where g.level_name = 'country' and g.iso3 is not null
+),
+
+-- EEA greenhouse gas inventory: countries by ISO 3166-1 alpha-2 as published (Greece GR), built from Gold's own
+-- list like oecd, so the dimensions never wait for the EEA source; the EEA aggregate EUA has no Gold key (_X).
+eea as (
+    select
+        'eea' as source_system,
+        g.iso2 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso2 is not null
 )
 
 select
@@ -476,6 +496,10 @@ from (
     select * from ids
     union all
     select * from un_wpp
+    union all
+    select * from unhcr
+    union all
+    select * from eea
     union all
     select * from zus_psz
     union all

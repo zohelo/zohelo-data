@@ -339,6 +339,39 @@ sources:
       value_text (exact JSON number text), obs_status, source_last_updated; partitioned by entity.
   - name: edstats_rejected_files
     description: World Bank EdStats Landing files the Bronze decoder rejected, with the reason.
+- name: unhcr
+  description: UNHCR Refugee Statistics API — population stocks by country of asylum (and Poland by origin), per year
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/unhcr/
+    loaded_by: ingestion/to_bronze/unhcr/
+    config: ingestion/sources/unhcr.yaml
+  tables:
+  - name: unhcr_population
+    description: >-
+      One row per item of the newest response of each declared population selection (entity population_by_asylum,
+      poland_by_origin): year, origin and asylum codes (UNHCR and ISO alpha-3) and names, refugees, asylum_seekers,
+      returned_refugees, idps, returned_idps, stateless, ooc, oip, hst, every value as published text ("-" kept);
+      partitioned by entity.
+  - name: unhcr_rejected_files
+    description: UNHCR Landing files the Bronze decoder rejected (more than one page, unknown fields), with the reason.
+- name: eea
+  description: EEA Datahub — greenhouse gas inventory (GovReg), newest version's CSV
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/eea/
+    loaded_by: ingestion/to_bronze/eea/
+    config: ingestion/sources/eea.yaml
+  tables:
+  - name: eea_ghg_inventory
+    description: >-
+      One row per row of the newest GovReg CSV (entity govreg_ghg_inventory): country_code, country, format_name,
+      pollutant_name, sector_code, sector_name, parent_sector_code, unit, year, emissions, notation,
+      publicationdate, datasource, country_code_3, every value as published text; partitioned by entity.
+  - name: eea_rejected_files
+    description: EEA Landing files the Bronze decoder rejected (not one CSV member, unknown header), with the reason.
 - name: who
   description: WHO data.who.int — indicator CSV files (all areas, years and sexes)
   database: r2

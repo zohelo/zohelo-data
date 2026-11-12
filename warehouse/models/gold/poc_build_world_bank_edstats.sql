@@ -3,7 +3,8 @@
    for the EU27 members (ISO alpha-3 → poc_map_geography section world_bank_edstats), by assessment year (annual
    frequency, one value every three years). One measure per subject with a sex breakdown: the base indicator = both
    sexes (sex T, is_total), .FE = F, .MA = M, breakdown_json {"sex": ...}. measure_key
-   world_bank_edstats:<entity>:score:<base indicator>. Scores as published (PISA scale points). #}
+   world_bank_edstats:<entity>:score:<base indicator>. Scores as published (PISA scale points). The source sends
+   no status flag on these indicators (obs_status empty); a flag fails the build until it is mapped. #}
 with blocks as ({{ poc_world_bank_edstats_blocks() }}),
 
 eu27 as ({{ poc_m49_eu27() }}),
@@ -34,7 +35,10 @@ select
     o.sex_code,
     o.sex_code = 'T' as is_total,
     o.value,
-    'ok' as observation_status_key,
+    case
+        when o.obs_status is null then 'ok'
+        else error('build_world_bank_edstats: unmapped obs_status ' || o.obs_status)
+    end as observation_status_key,
     o.source_version,
     o.raw_sha256
 from {{ ref('edstats_pisa') }} as o

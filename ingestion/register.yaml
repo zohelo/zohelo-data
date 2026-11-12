@@ -171,12 +171,15 @@ sources:
   provider_type: international-public
   domains: [education, skills, survey]
   entities: [student, school, country]
-  granularity: Anonymized student, school-principal and parent response files; derived country indicators also available.
-  coverage: Cycles 2000-2022 are linked; participating economies vary by cycle. 2025 materials are emerging.
+  granularity: 'Built: country mean score per subject (reading, mathematics, science) and sex per assessment year, as
+    published by the OECD and republished by the World Bank EdStats. The OECD databases themselves are anonymised
+    student, school-principal and parent response files (not used).'
+  coverage: 'Built: cycles 2000-2018, up to 85 economies (World Bank EdStats, lastupdated 2024-06-25). The OECD has published
+    2022; 2025 results are due in December 2026 (owner question below).'
   access:
     endpoint: https://api.worldbank.org/v2/country/all/indicator/LO.PISA.MAT?source=12&format=json
     kind: api
-    interfaces: [bulk-files, HTML, PISA Data Explorer, PDF]
+    interfaces: [World Bank API v2 (EdStats, source 12), bulk-files, HTML, PISA Data Explorer, PDF]
     auth: public downloads; some tools may have separate access
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
@@ -187,7 +190,11 @@ sources:
       adapt, distribute and embed for any purpose, commercial use and modification included, subject to dataset
       and third-party restrictions); other PISA content (reports, instruments) is CC BY-NC-SA 3.0 IGO and needs
       the OECD disclaimer when adapted or translated. Attribution: "OECD (<year>), PISA <cycle> Database, <DOI
-      or URL> (accessed on <date>)" or the citation given with the file.'
+      or URL> (accessed on <date>)" or the citation given with the file. Route terms (the data loaded): World Bank Data
+      Catalog, Education Statistics, https://datacatalog.worldbank.org/search/dataset/0038480/education-statistics
+      (read 12 Nov 2026): "This dataset is licensed under Creative Commons Attribution 4.0", classified Public; no
+      separate terms for the PISA indicators. Attribution used (licence.csv cc_by_4_0_world_bank_edstats): "Source:
+      OECD PISA, as published in The World Bank, Education Statistics".'
   updates: Released by assessment cycle; corrections or later files are not documented as a stable revision feed.
   ingestion:
     history: Archive each cycle, codebooks, questionnaires and technical report.
@@ -1422,7 +1429,8 @@ sources:
   name: Refugee Data Finder / Refugee Statistics API
   short_name: UNHCR Refugee Statistics
   provider: United Nations High Commissioner for Refugees
-  status: approved
+  source_system: unhcr
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1438,7 +1446,8 @@ sources:
     interfaces: [HTML, REST API, JSON, CSV]
     auth: public
     cost: free
-    limits: Default page size 100 is documented; maximum and rate quota are unknown.
+    limits: Default page size 100 is documented; no maximum or rate quota stated; limit=20000 returns the 7,802-row
+      selection in one page (Dev trials 43279310455, 43282453427).
   licence:
     status: open-conditional
     notes: 'Terms: CC BY 4.0 plus supplemental terms, https://www.unhcr.org/terms-use-datasets ("licensed under a Creative
@@ -1453,15 +1462,15 @@ sources:
     identifiers: UNHCR or ISO3 origin/asylum codes + year + population category; preserve code-system choice.
   modelling:
     notes: Counts may aggregate when country filters are omitted; avoid accidental totals. Population stocks and
-      flows differ.
+      flows differ. Built (#2415) with every selection naming its dimensions (coa_all=true; coa=POL with coo_all=true),
+      Bronze rejecting a response over more than one page and tests/unhcr_selection.sql; the third-party idmc and
+      unrwa endpoints are not landed.
     overlap: Overlaps UNdata, IOM and WDI; operational situation data may have different cutoffs.
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
-    blockers:
-    - 'Guard against API default aggregation'
-    - 'Exclude third-party datasets flagged in metadata'
+    connection: tested
+    blockers: []
     references:
     - https://api.unhcr.org/docs/refugee-statistics.html
     - https://data.unhcr.org/en/situations/ukraine
@@ -1838,7 +1847,8 @@ sources:
   name: EEA Datahub
   short_name: EEA Datahub
   provider: European Environment Agency
-  status: approved
+  source_system: eea
+  status: built
   family: G
   kpi: true
   geography: multicountry-Europe
@@ -1897,8 +1907,6 @@ sources:
     evidence: documented
     connection: tested
     blockers:
-    - Download URL and size of the current greenhouse gas inventory version are not tested; resolve them from the version
-      record in the Landing trial.
     - Dataset-level rights scan for every further dataset (item-specific and third-party conditions override CC BY).
     references:
     - https://www.eea.europa.eu/en/datahub

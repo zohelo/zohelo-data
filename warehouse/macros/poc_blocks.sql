@@ -380,6 +380,31 @@
     ) as t (entity, indicator_id, block_name)
 {% endmacro %}
 
+{# UNHCR Refugee Statistics blocks (gold.build_unhcr): one per API selection; areas: EU27 members as countries of
+   asylum (ISO alpha-3 through dim_geography.iso3). #}
+{% macro poc_unhcr_blocks() %}
+    select * from (
+        values
+        ('population_by_asylum', 'People under UNHCR mandate by country of asylum, end of year (UNHCR)'),
+        ('poland_by_origin', 'People under UNHCR mandate in Poland by country of origin, end of year (UNHCR)')
+    ) as t (entity, block_name)
+{% endmacro %}
+
+{# EEA greenhouse gas inventory (gold.build_eea, block govreg_ghg_inventory): the sectors built, CRF codes as
+   published; is_total marks the national totals (without and with LULUCF). #}
+{% macro poc_eea_sectors() %}
+    select * from (
+        values
+        ('Sectors/Totals_excl', true),
+        ('Sectors/Totals_incl', true),
+        ('1', false),
+        ('2', false),
+        ('3', false),
+        ('4', false),
+        ('5', false)
+    ) as t (sector_code, is_total)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -463,9 +488,11 @@
     poc_build_who:who
     poc_build_unesco_uis:unesco_uis
     poc_build_faostat:faostat
+    poc_build_eea:eea
     poc_build_ecb:ecb
     poc_build_ids:world_bank_ids
     poc_build_un_wpp:un_wpp
+    poc_build_unhcr:unhcr
     poc_build_zus_psz:zus_psz
     poc_build_world_bank_edstats:world_bank_edstats
 {% endmacro %}
@@ -555,11 +582,15 @@
     union all
     select 'world_bank_edstats', entity, block_name from ({{ poc_world_bank_edstats_blocks() }})
     union all
+    select 'eea', 'govreg_ghg_inventory', 'Greenhouse gas emissions by sector, GovReg inventory (EEA)'
+    union all
     select 'ecb', entity, block_name from ({{ poc_ecb_blocks() }})
     union all
     select 'world_bank_ids', 'IDS_CSV', 'World Bank International Debt Statistics'
     union all
     select 'un_wpp', indicator, block_name from ({{ poc_un_wpp_blocks() }})
+    union all
+    select 'unhcr', entity, block_name from ({{ poc_unhcr_blocks() }})
     union all
     select * from (
         values
