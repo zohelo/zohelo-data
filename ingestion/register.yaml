@@ -1464,7 +1464,7 @@ sources:
   name: ITU DataHub
   short_name: ITU DataHub
   provider: International Telecommunication Union
-  status: approved
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -1498,8 +1498,14 @@ sources:
   research:
     priority: review-next
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
+    - 'Parked: not reachable from GitHub runners — datahub.itu.int, datahub.itu.int/about and the download API
+      api.datahub.itu.int/v2/data/download/byid/<id> all answer HTTP 403 to a polite client (Dev probe 43099401602,
+      11 Nov 2026); never worked around. The only files on www.itu.int (reachable) are regional and global
+      aggregates (ITU_regional_global_Key_ICT_indicator_aggregates_Nov_2026.xlsx), not country data, under the ITU
+      website terms ("personal, educational, or non-commercial purposes"). Country data need ITU to allow automated
+      access (owner question: ask ITU, indicators@itu.int) or another route.'
     - 'NonCommercial + ShareAlike: only non-commercial display; derivatives under CC BY-NC-SA 3.0 IGO'
     - 'Confirm API availability'
     references:
