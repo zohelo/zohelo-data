@@ -1,254 +1,237 @@
-"""Dev trial (PL-ENV-007, #2870): PRG address points as entity `punkty_adresowe` of gugik_prg.
+"""Dev trial (PL-ENV-007, #2870): PRG address points, entity `punkty_adresowe` of gugik_prg, Landing → Gold.
 
-Mode `probe` (read-only, no writes): HEAD of the national SHP package, then the ZIP read through HTTP Range requests
-(central directory, the head of each .dbf/.prj/.cpg/.shp member) to list the members, the DBF field list and
-record counts, and a few decoded records, without downloading the 564 MB file. One annotation per section.
+Landing extract of the declared address package into the Landing prefix zz_dev_gugik_prg/ twice (the second must
+skip the download: Last-Modified and ETag unchanged), inspect and verify; Bronze load into the Iceberg namespace
+zz_dev_gugik_prg and the lake prefix zz_dev_gugik_prg/ twice (the second appends nothing); a profile of the Bronze
+file; the Silver model and the Gold build stage rendered with Jinja from warehouse/models and run in local DuckDB,
+each twice, with the dbt tests' checks. dim_geography, map_geography, prg_units, teryt_terc, source and licence
+are read (read-only) from production. Everything written is removed in `finally`. At most 10 annotations.
 """
 
 from __future__ import annotations
 
-import io
-import json
-import struct
-import sys
-import zipfile
+import csv
+from pathlib import Path
+import time
 
-import requests
+import duckdb
+from jinja2 import Environment
 
+from ingestion.common.r2 import catalog, req, s3
 from ingestion.common.report import annotate
+from ingestion.to_bronze.gugik_prg import addresses
+from ingestion.to_landing.patterns import bulk_file
+from warehouse import entity
 
-URL = "https://opendata.geoportal.gov.pl/prg/adresy/PunktyAdresowe/POLSKA.zip"
-UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
-
-
-class RangeFile(io.RawIOBase):
-    """A read-only seekable view of a remote file through HTTP Range requests (256 kB read-ahead)."""
-
-    def __init__(self, url: str, size: int) -> None:
-        self.url, self.size, self.pos, self.requests = url, size, 0, 0
-        self.buf_start, self.buf = 0, b""
-
-    def seekable(self) -> bool:
-        return True
-
-    def readable(self) -> bool:
-        return True
-
-    def tell(self) -> int:
-        return self.pos
-
-    def seek(self, offset: int, whence: int = 0) -> int:
-        self.pos = {0: offset, 1: self.pos + offset, 2: self.size + offset}[whence]
-        return self.pos
-
-    def read(self, n: int = -1) -> bytes:
-        if n is None or n < 0:
-            n = self.size - self.pos
-        n = min(n, self.size - self.pos)
-        if n <= 0:
-            return b""
-        end = self.pos + n
-        if not (self.buf_start <= self.pos and end <= self.buf_start + len(self.buf)):
-            fetch_end = min(self.size, max(end, self.pos + (256 << 10))) - 1
-            if self.requests >= 200:
-                raise RuntimeError("more than 200 range requests")
-            r = requests.get(self.url, headers={"User-Agent": UA, "Range": f"bytes={self.pos}-{fetch_end}"},
-                             timeout=(30, 120))
-            self.requests += 1
-            if r.status_code != 206:
-                raise RuntimeError(f"range request answered {r.status_code}")
-            self.buf_start, self.buf = self.pos, r.content
-        out = self.buf[self.pos - self.buf_start: end - self.buf_start]
-        self.pos += len(out)
-        return out
-
-    def readinto(self, b) -> int:
-        data = self.read(len(b))
-        b[: len(data)] = data
-        return len(data)
+SOURCE = "gugik_prg"
+SCRATCH = "zz_dev_gugik_prg"
 
 
-def dbf_head(data: bytes, encoding: str) -> dict:
-    records, header_len, record_len = struct.unpack("<IHH", data[4:12])
-    fields, pos = [], 32
-    while data[pos] != 0x0D:
-        name = data[pos: pos + 11].split(b"\0")[0].decode("ascii", "replace")
-        fields.append([name, chr(data[pos + 11]), data[pos + 16], data[pos + 17]])
-        pos += 32
-    rows = []
-    for i in range(4):
-        start = header_len + i * record_len
-        rec = data[start: start + record_len]
-        if len(rec) < record_len:
-            break
-        offset, row = 1, {}
-        for name, _kind, length, _dec in fields:
-            row[name] = rec[offset: offset + length].decode(encoding, "replace").strip()
-            offset += length
-        rows.append(row)
-    return {"records": records, "header_len": header_len, "record_len": record_len, "fields": fields, "rows": rows}
+def q(con, sql):
+    return [[str(v) for v in r] for r in con.execute(sql).fetchall()]
 
 
-def probe() -> None:
-    head = requests.head(URL, headers={"User-Agent": UA, "Accept-Encoding": "identity"}, timeout=60,
-                         allow_redirects=True)
-    keep = ("Content-Length", "Last-Modified", "ETag", "Accept-Ranges", "Content-Type", "Cache-Control")
-    headers = {k: head.headers.get(k) for k in keep}
-    annotate("notice", "prg addresses HEAD", {"status": head.status_code, "url": head.url, **headers})
-    size = int(head.headers["Content-Length"])
-    remote = RangeFile(head.url, size)
-    archive = zipfile.ZipFile(io.BufferedReader(remote, buffer_size=1 << 16))
-    members = [[i.filename, i.file_size, i.compress_size, i.compress_type] for i in archive.infolist()]
-    annotate("notice", "prg addresses ZIP members", {"count": len(members), "members": members[:60]})
-    texts = {}
-    for info in archive.infolist():
-        low = info.filename.lower()
-        if low.endswith((".prj", ".cpg", ".txt", ".xml", ".pdf")) and info.file_size < 20000:
-            texts[info.filename] = archive.read(info).decode("utf-8", "replace")[:1500]
-    annotate("notice", "prg addresses side files", texts)
-    encoding = "utf-8"
-    for name, text in texts.items():
-        if name.lower().endswith(".cpg"):
-            encoding = {"1250": "cp1250", "65001": "utf-8"}.get(text.strip().upper().replace("UTF-8", "65001"),
-                                                                    text.strip() or "utf-8")
-    heads = {}
-    for info in archive.infolist():
-        if info.filename.lower().endswith(".dbf") and len(heads) < 4:
-            with archive.open(info) as member:
-                data = member.read(48 << 10)
-            heads[info.filename] = dbf_head(data, encoding)
-        if info.filename.lower().endswith(".shp") and len(heads) < 4:
-            with archive.open(info) as member:
-                data = member.read(100)
-            heads[info.filename] = {"shape_type": struct.unpack("<i", data[32:36])[0],
-                                    "bbox": struct.unpack("<4d", data[36:68]),
-                                    "file_length_bytes": struct.unpack(">i", data[24:28])[0] * 2}
-    for name, item in heads.items():
-        annotate("notice", f"prg addresses head of {name}", {"encoding": encoding, **item})
-    annotate("notice", "prg addresses probe done", {"range_requests": remote.requests})
+def one(con, sql):
+    return con.execute(sql).fetchone()[0]
 
 
-def disk() -> str:
-    import shutil
+def render(path: str, refs: dict[str, str], sources: dict[str, str]) -> str:
+    return Environment().from_string(Path(path).read_text()).render(
+        config=lambda **_k: "", ref=lambda n: refs.get(n, n), source=lambda _s, t: sources[t]
+    )
 
-    return f"{shutil.disk_usage('/tmp').free / 1e9:.1f} GB free"
+
+def prod(con, cat, name: str, table_id: tuple[str, str], columns: tuple[str, ...]) -> None:
+    con.register(f"{name}_a", cat.load_table(table_id).scan(selected_fields=columns).to_arrow())
+    con.execute(f"create table {name} as select * from {name}_a")
 
 
-def profile() -> None:
-    """Download once to the runner (no R2 writes), extract with 7z, profile the layers with DuckDB spatial."""
-    import hashlib
-    from pathlib import Path
-    import subprocess
-    import tempfile
-    import time
+def trial() -> None:
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
+    spec = next(s for s in bulk_file.declaration(SOURCE) if s["entity"] == addresses.ENTITY)
+    runs = []
+    for _ in (1, 2):
+        started = time.monotonic()
+        result = bulk_file.load_file(client, bucket, SOURCE, spec, SCRATCH)
+        runs.append({**result, "seconds": round(time.monotonic() - started)})
+    held = bulk_file.landed(client, bucket, bulk_file.prefix(SOURCE, spec["entity"], SCRATCH))
+    inspect = bulk_file.main(SOURCE, "inspect", landing_root=SCRATCH, specs=[spec])
+    verify = bulk_file.main(SOURCE, "verify", landing_root=SCRATCH, specs=[spec])
+    newest = held[-1]
+    annotate("notice", "prg addresses landing (scratch)", {
+        "extract_two_runs": runs, "receipts": len(held), "size_bytes": newest["size_bytes"],
+        "version": newest["version_token"], "version_basis": newest["version_basis"],
+        "etag": newest["detail"]["http"]["etag"], "members": len(newest["detail"].get("members", [])),
+        "inspect_exit": inspect, "verify_exit": verify})
 
-    import duckdb
+    timings = []
+    for _ in (1, 2):
+        started = time.monotonic()
+        exit_code = addresses.load(0, landing_root=SCRATCH, namespace=SCRATCH, lake_root=SCRATCH)
+        timings.append([exit_code, round(time.monotonic() - started)])
+    cat = catalog()
+    table = cat.load_table((SCRATCH, addresses.TABLE))
+    files = table.inspect.files()
+    paths = files.column("file_path").to_pylist()
+    try:
+        rejected = cat.load_table((SCRATCH, addresses.REJECTED)).scan().to_arrow().to_pylist()
+    except Exception:
+        rejected = []
+    snapshots = len(table.metadata.snapshots)
+    annotate("notice", "prg addresses bronze (scratch)", {
+        "load_exit_and_seconds_two_runs": timings, "files": len(paths),
+        "rows_metadata": sum(files.column("record_count").to_pylist()),
+        "parquet_bytes": sum(files.column("file_size_in_bytes").to_pylist()), "snapshots": snapshots,
+        "rejected": [{k: r.get(k) for k in ("entity", "error")} for r in rejected][:3]})
 
-    work = Path(tempfile.mkdtemp(prefix="prg-addr-"))
-    raw = work / "POLSKA.zip"
-    t0 = time.monotonic()
-    digest, size = hashlib.sha256(), 0
-    with requests.get(URL, headers={"User-Agent": UA, "Accept-Encoding": "identity"}, stream=True,
-                      timeout=(30, 300)) as r:
-        r.raise_for_status()
-        with raw.open("wb") as handle:
-            for block in r.iter_content(8 << 20):
-                handle.write(block)
-                digest.update(block)
-                size += len(block)
-        lm, etag = r.headers.get("Last-Modified"), r.headers.get("ETag")
-    t_dl = round(time.monotonic() - t0)
-    listing = subprocess.run(["7z", "l", "-slt", str(raw)], capture_output=True, text=True, check=True).stdout
-    methods = [line.split(" = ", 1)[1] for line in listing.splitlines() if line.startswith("Method = ")]
-    t0 = time.monotonic()
-    tested = subprocess.run(["7z", "t", "-bd", str(raw)], capture_output=True, text=True)
-    t_test = round(time.monotonic() - t0)
-    t0 = time.monotonic()
-    subprocess.run(["7z", "x", "-bd", "-y", f"-o{work}/x", str(raw)], capture_output=True, text=True, check=True)
-    t_x = round(time.monotonic() - t0)
-    annotate("notice", "prg addresses download and 7z", {
-        "bytes": size, "sha256": digest.hexdigest(), "last_modified": lm, "etag": etag, "download_s": t_dl,
-        "methods": sorted(set(methods)), "7z_test_rc": tested.returncode, "7z_test_tail": tested.stdout[-300:],
-        "test_s": t_test, "extract_s": t_x, "disk_after_extract": disk(),
-        "files": [[p.name, p.stat().st_size] for p in sorted((work / "x").rglob("*"))]})
-    heads = {}
-    for dbf in sorted((work / "x").rglob("*.dbf")):
-        with dbf.open("rb") as handle:
-            data = handle.read(64 << 10)
-        h = dbf_head(data, "utf-8")
-        records, header_len, record_len = h["records"], h["header_len"], h["record_len"]
-        bad_utf8 = sample_n = 0
-        with dbf.open("rb") as handle:
-            handle.seek(header_len)
-            for _ in range(20000):
-                rec = handle.read(record_len)
-                if len(rec) < record_len:
-                    break
-                sample_n += 1
-                try:
-                    rec.decode("utf-8")
-                except UnicodeDecodeError:
-                    bad_utf8 += 1
-        heads[dbf.name] = {"ldid": data[29], "records": records, "record_len": record_len, "fields": h["fields"],
-                           "utf8_invalid_of_sample": [bad_utf8, sample_n], "first_rows": h["rows"][:2]}
-    main_dbf = "PRG_PunktyAdresowe_POLSKA.dbf"
-    annotate("notice", f"prg addresses DBF {main_dbf}", heads[main_dbf])
-    annotate("notice", "prg addresses DBF of the other layers", {
-        n: {"records": h["records"], "ldid": h["ldid"], "fields": [f[0] for f in h["fields"]]}
-        for n, h in heads.items() if n != main_dbf})
-    shp = next((work / "x").rglob("PRG_PunktyAdresowe_POLSKA.shp"))
     con = duckdb.connect()
     con.execute("SET memory_limit = '8GB'; SET preserve_insertion_order = false")
-    con.execute(f"SET temp_directory = '{work}'")
-    con.execute("INSTALL spatial; LOAD spatial;")
-    enc = "UTF-8" if heads["PRG_PunktyAdresowe_POLSKA.dbf"]["utf8_invalid_of_sample"][0] == 0 else "CP1250"
-    t0 = time.monotonic()
-    con.execute(f"CREATE TABLE p AS SELECT * EXCLUDE (geom), ST_X(geom) AS x, ST_Y(geom) AS y, "
-                f"ST_GeometryType(geom)::VARCHAR AS gtype FROM ST_Read('{shp}', open_options=['ENCODING={enc}'])")
-    t_read = round(time.monotonic() - t0)
-    cols = [r[0] for r in con.execute("DESCRIBE p").fetchall()]
-    types = {r[0]: r[1] for r in con.execute("DESCRIBE p").fetchall()}
-    total = con.execute("SELECT count(*) FROM p").fetchone()[0]
-    annotate("notice", "prg addresses table", {
-        "rows": total, "read_s": t_read, "encoding": enc, "columns": [[c, types[c]] for c in cols],
-        "gtypes": con.execute("SELECT gtype, count(*) FROM p GROUP BY 1").fetchall(),
-        "xy_range": [str(v) for v in con.execute("SELECT min(x), max(x), min(y), max(y) FROM p").fetchone()],
-        "memory": con.execute("SELECT sum(memory_usage_bytes) FROM duckdb_memory()").fetchone()[0]})
-    prof = []
-    for c in cols:
-        if c in ("x", "y", "gtype"):
-            continue
-        q = (f'SELECT count(*) FILTER (WHERE "{c}" IS NULL), count(*) FILTER (WHERE CAST("{c}" AS VARCHAR) = \'\'), '
-             f'approx_count_distinct("{c}"), min(length(CAST("{c}" AS VARCHAR))), '
-             f'max(length(CAST("{c}" AS VARCHAR))) FROM p')
-        nulls, empty, distinct, lmin, lmax = con.execute(q).fetchone()
-        top = con.execute(f'SELECT CAST("{c}" AS VARCHAR), count(*) FROM p GROUP BY 1 ORDER BY 2 DESC LIMIT 4'
-                          ).fetchall()
-        prof.append([c, nulls, empty, distinct, lmin, lmax, [[str(v)[:40], n] for v, n in top]])
-    chunk = []
-    for item in prof:
-        chunk.append(item)
-        if len(json.dumps(chunk, ensure_ascii=False)) > 3600:
-            annotate("notice", "prg addresses column profile", {"cols": chunk[:-1]})
-            chunk = [item]
-    if chunk:
-        annotate("notice", "prg addresses column profile", {"cols": chunk})
-    sample = con.execute("SELECT * EXCLUDE (gtype) FROM p USING SAMPLE 3 ROWS").fetchall()
-    annotate("notice", "prg addresses sample rows", {"cols": cols, "rows": [[str(v)[:60] for v in r] for r in sample]})
+    entity._remote(con)
+    con.execute(f"create view bronze_b as select * from read_parquet({paths!r})")
+    digits = "regexp_full_match({c}, '[0-9]{{{n}}}')"
+    annotate("notice", "prg addresses bronze profile", {
+        "rows": one(con, "select count(*) from bronze_b"),
+        "distinct_id_iip": one(con, "select count(distinct id_iip) from bronze_b"),
+        "id_iip_repeated": q(con, "select count(*), sum(n) from (select id_iip, count(*) n from bronze_b group by 1 "
+                                  "having count(*) > 1)"),
+        "versions": q(con, "select source_version, raw_sha256, count(*) from bronze_b group by all"),
+        "nulls": q(con, "select " + ", ".join(f"count(*) filter (where {c} is null or trim({c}) = '')" for c in (
+            "id_iip", "numer_porz", "kod_poczt", "data_nad", "nazwa_ulc", "id_ulic", "nazwa_gmi", "teryt_gmi",
+            "nazwa_msc", "id_simc", "x", "y")) + " from bronze_b"),
+        "teryt_gmi": q(con, f"select count(distinct teryt_gmi), count(*) filter (where not "
+                            f"{digits.format(c='teryt_gmi', n=7)}) from bronze_b"),
+        "gmina_type_digit": q(con, "select substr(teryt_gmi, 7, 1), count(distinct teryt_gmi), count(*) from bronze_b "
+                                   "group by 1 order by 1"),
+        "id_simc_not_7_digits": q(con, f"select count(*), list(distinct id_simc)[1:5] from bronze_b where id_simc is "
+                                       f"not null and not {digits.format(c='id_simc', n=7)}"),
+        "id_ulic_not_5_digits": q(con, f"select count(*), list(distinct id_ulic)[1:5] from bronze_b where id_ulic is "
+                                       f"not null and not {digits.format(c='id_ulic', n=5)}"),
+        "numer_porz_non_numeric_sample": q(con, "select numer_porz, count(*) from bronze_b where not "
+                                                "regexp_full_match(numer_porz, '[0-9]+') group by 1 order by 2 desc "
+                                                "limit 6"),
+        "numer_porz_non_numeric": one(con, "select count(*) from bronze_b where not "
+                                           "regexp_full_match(numer_porz, '[0-9]+')"),
+        "same_address_repeated": q(con, "select count(*), sum(n) from (select teryt_gmi, id_simc, id_ulic, numer_porz, "
+                                        "count(*) n from bronze_b group by all having count(*) > 1)"),
+        "xy": q(con, "select min(try_cast(x as double)), max(try_cast(x as double)), min(try_cast(y as double)), "
+                     "max(try_cast(y as double)), count(*) filter (where try_cast(x as double) is null) from bronze_b"),
+        "crs": q(con, "select left(crs_wkt, 80), count(*) from bronze_b group by 1"),
+        "data_nad_range": q(con, "select min(data_nad), max(data_nad) from bronze_b")})
+
+    silver_sql = render("warehouse/models/silver/gugik_prg/prg_address_gminas.sql", {},
+                        {"prg_address_points": "bronze_b"})
+    silver_rows = []
+    for _ in (1, 2):
+        con.execute(f"create or replace table silver_t as {silver_sql}")
+        silver_rows.append(one(con, "select count(*) from silver_t"))
+    annotate("notice", "prg addresses silver prg_address_gminas", {
+        "rows_two_builds": silver_rows,
+        "unique_terc_code_dups": one(con, "select count(*) from (select terc_code from silver_t group by 1 "
+                                          "having count(*) > 1)"),
+        "not_null_fails": q(con, "select count(*) filter (where terc_code is null), count(*) filter (where "
+                                 "gmina_type_code is null), count(*) filter (where address_points is null), "
+                                 "count(*) filter (where source_version is null), count(*) filter (where raw_sha256 "
+                                 "is null) from silver_t"),
+        "accepted_gmina_type_fails": q(con, "select gmina_type_code, count(*) from silver_t where gmina_type_code "
+                                            "not in ('1', '2', '3') or gmina_type_code is null group by 1"),
+        "sum_points_vs_bronze": q(con, "select sum(address_points), (select count(*) from bronze_b) from silver_t"),
+        "totals": q(con, "select sum(points_with_street), sum(points_without_locality), sum(points_without_number), "
+                         "min(address_points), max(address_points), median(address_points) from silver_t"),
+        "smallest": q(con, "select terc_code, address_points from silver_t order by address_points limit 4")})
+
+    prod(con, cat, "geo", ("gold", "dim_geography"), ("geography_key", "level_name", "name_pl"))
+    prod(con, cat, "map_prod", ("gold", "map_geography"), ("source_system", "source_code", "geography_key"))
+    prod(con, cat, "teryt", ("silver", "teryt_terc"), ("terc_code", "unit_level", "name_pl"))
+    # map_geography as this branch builds it for gugik_prg: production's PRG codes + TERYT gminas (the new lines)
+    con.execute("""create table map_t as
+        select 'gugik_prg' as source_system, m.source_code, coalesce(g.geography_key, '_X') as geography_key
+        from (select source_code, geography_key from map_prod where source_system = 'gugik_prg'
+              union all select terc_code, 'TERC:' || terc_code from teryt where unit_level = 'gmina') as m
+        left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
+        qualify row_number() over (partition by m.source_code order by g.geography_key nulls last) = 1""")
+    gold_sql = render("warehouse/models/gold/poc_build_prg_addresses.sql",
+                      {"prg_address_gminas": "silver_t", "poc_map_geography": "map_t"}, {})
+    gold_rows = []
+    for _ in (1, 2):
+        con.execute(f"create or replace table gold_t as {gold_sql}")
+        gold_rows.append(one(con, "select count(*) from gold_t"))
+    series = ("measure_key || '|' || geography_key || case when geography_key = '_X' then ':' || "
+              "coalesce(geography_source_code, '') else '' end || '|' || breakdown_json")
+    annotate("notice", "prg addresses gold build_prg_addresses", {
+        "rows_two_builds": gold_rows,
+        "dup_series_x_date": one(con, f"select count(*) from (select {series}, date_key from gold_t group by all "
+                                      "having count(*) > 1)"),
+        "dates": q(con, "select date_key, frequency, count(*) from gold_t group by all"),
+        "rows_geography_unmatched": q(con, "select count(*), sum(value) from gold_t where geography_key = '_X'"),
+        "unmatched_codes": q(con, "select geography_source_code, value from gold_t where geography_key = '_X' "
+                                  "order by 2 desc limit 15"),
+        "matched_levels": q(con, "select g.level_name, count(*) from gold_t as b join geo as g using (geography_key) "
+                                 "group by 1"),
+        "teryt_gminas_without_points": q(con, "select count(*), list(terc_code)[1:8] from teryt where unit_level = "
+                                              "'gmina' and right(terc_code, 1) in ('1', '2', '3') and terc_code not "
+                                              "in (select terc_code from silver_t)"),
+        "spot": q(con, "select b.geography_key, g.name_pl, b.value, b.period_label from gold_t as b left join geo as g "
+                       "using (geography_key) where geography_source_code in ('1465011', '1261011', '0264011', "
+                       "'2205011', '1434102') order by 1"),
+        "poland_total": q(con, "select sum(value), count(*) from gold_t"),
+        "values_null_or_zero": one(con, "select count(*) from gold_t where value is null or value <= 0")})
+
+    seeds = Path("warehouse/seeds")
+    source_row = [r for r in csv.DictReader((seeds / "source.csv").open()) if r["source_key"] == SOURCE]
+    lic_keys = {r["licence_key"] for r in source_row}
+    lic_row = [r for r in csv.DictReader((seeds / "licence.csv").open()) if r["licence_key"] in lic_keys]
+    try:
+        prod_source = cat.load_table(("gold", "source")).scan().to_arrow().to_pylist()
+        prod_source = [r for r in prod_source if r.get("source_key") == SOURCE]
+    except Exception as exc:
+        prod_source = [f"{type(exc).__name__}: {str(exc)[:200]}"]
+    annotate("notice", "prg addresses licence (catalogue rows)", {
+        "source_csv": source_row, "licence_csv": lic_row, "prod_gold_source": prod_source})
+
+
+def cleanup() -> None:
+    removed: dict = {"tables": [], "landing_objects": 0, "lake_objects": 0}
+    cat = catalog()
+    try:
+        for table in cat.list_tables(SCRATCH):
+            try:
+                cat.purge_table(table)
+            except Exception:
+                cat.drop_table(table)
+            removed["tables"].append(".".join(table))
+        cat.drop_namespace(SCRATCH)
+    except Exception as exc:
+        removed["catalog_error"] = f"{type(exc).__name__}: {str(exc)[:200]}"
+    client = s3()
+    for var, label in (("STORAGE_LANDING_BUCKET_NAME", "landing_objects"),
+                       ("STORAGE_LAKEHOUSE_BUCKET_NAME", "lake_objects")):
+        bucket = req(var)
+        for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=f"{SCRATCH}/"):
+            keys = [{"Key": o["Key"]} for o in page.get("Contents", [])]
+            if keys:
+                client.delete_objects(Bucket=bucket, Delete={"Objects": keys})
+                removed[label] += len(keys)
+    removed["objects_left"] = sum(
+        len(p.get("Contents", []))
+        for b in ("STORAGE_LANDING_BUCKET_NAME", "STORAGE_LAKEHOUSE_BUCKET_NAME")
+        for p in client.get_paginator("list_objects_v2").paginate(Bucket=req(b), Prefix=f"{SCRATCH}/")
+    )
+    annotate("notice", "scratch removed", removed)
 
 
 def main() -> int:
-    mode = sys.argv[1] if len(sys.argv) > 1 else "probe"
+    bulk_file.annotate = addresses.annotate = lambda *_a, **_k: None  # their summaries go to the log only (cap 10)
+    failed = 0
     try:
-        if mode == "probe":
-            probe()
-        elif mode == "profile":
-            profile()
-        return 0
-    except Exception as exc:
-        annotate("error", "prg addresses probe failed", {"error": f"{type(exc).__name__}: {str(exc)[:1500]}"})
-        print(json.dumps({"error": str(exc)[:500]}))
-        return 1
+        try:
+            trial()
+        except Exception as exc:
+            failed = 1
+            annotate("error", "prg addresses trial failed", {"error": f"{type(exc).__name__}: {str(exc)[:1500]}"})
+            raise
+    finally:
+        cleanup()
+    return failed
 
 
 if __name__ == "__main__":
