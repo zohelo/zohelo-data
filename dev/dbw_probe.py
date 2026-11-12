@@ -14,7 +14,22 @@ import duckdb
 
 from ingestion.common import entity_tables as et
 from ingestion.common.r2 import catalog, req
-from ingestion.common.report import annotate
+
+
+def annotate(level: str, title: str, data) -> None:
+    """As ingestion.common.report.annotate, but Polish letters are kept as they are (each would take six bytes)."""
+    import json
+    import os
+
+    message = json.dumps(data, default=str, separators=(",", ":"), ensure_ascii=False)
+    if len(message) > 3900:
+        message = message[:3888] + "…[truncated]"
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+        print(f"::{level} title={title}::{message}", flush=True)
+    else:
+        print(f"[{level}] {title}: {message}", flush=True)
+
 
 WOJ = [
     "DOLNOŚLĄSKIE", "KUJAWSKO-POMORSKIE", "LUBELSKIE", "LUBUSKIE", "ŁÓDZKIE", "MAŁOPOLSKIE", "MAZOWIECKIE",
@@ -132,8 +147,8 @@ def main() -> None:
         "from d where col = 'id_okres' group by 1, 2 order by 3 desc"
     )
     packed = [f"{i}|{o}|{f}|{','.join(sorted(p))}" for i, o, f, p in periods]
-    for n, start in enumerate(range(0, min(len(packed), 150), 50)):
-        annotate("notice", f"dbw probe 3{'abc'[n]} periods", {"total": len(packed), "rows": packed[start : start + 50]})
+    for n, start in enumerate(range(0, min(len(packed), 110), 55)):
+        annotate("notice", f"dbw probe 3{'ab'[n]} periods", {"total": len(packed), "rows": packed[start : start + 55]})
     dates = one(
         "select id, opis, count(distinct entity_id) from d where col = 'id_daty' "
         "and not (regexp_matches(id, '^[0-9]{4}$') and opis = id) group by 1, 2 order by 3 desc limit 25"
@@ -166,7 +181,7 @@ def main() -> None:
     woj = ", ".join("'" + w + "'" for w in WOJ)
     con.execute(
         f"""create table pos as
-        select p.entity_id, cast(substr(p.col, 13) as integer) as k, w.id as dim_id, w.opis as dim_name, p.id as pos_id,
+        select p.entity_id, cast(regexp_extract(p.col, '([0-9])$', 1) as integer) as k, w.id as dim_id, w.opis as dim_name, p.id as pos_id,
             upper(trim(p.opis)) as label,
             case
                 when upper(trim(p.opis)) = 'POLSKA' then 'PL'
@@ -178,7 +193,7 @@ def main() -> None:
                 when regexp_matches(upper(trim(p.opis)), '^(GMINA |M\\. |M\\.ST\\. |MIASTO )') then 'GMINA'
             end as class
         from d as p
-        left join d as w on p.entity_id = w.entity_id and w.col = 'id_wymiar_' || substr(p.col, 13)
+        left join d as w on p.entity_id = w.entity_id and w.col = 'id_wymiar_' || regexp_extract(p.col, '([0-9])$', 1)
         where p.col like 'id_pozycja_%'"""
     )
     con.execute(
