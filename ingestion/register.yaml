@@ -3085,44 +3085,90 @@ sources:
   name: SIO public and archival education statistics
   short_name: SIO education statistics
   provider: Centrum Informatyczne Edukacji / Ministerstwo Edukacji Narodowej
-  status: registered
+  status: approved
   family: B
   kpi: true
-  geography: Poland and regional Poland, table-dependent
+  geography: Poland by voivodeship (two-digit GUS voivodeship id in the workbooks opened); no powiat, gmina or school level
+    seen
   provider_type: national-public
-  domains: [students, teachers, graduates, special education, preschool]
-  entities: [student-aggregate, teacher-aggregate, graduate-aggregate, territorial unit, school type]
-  granularity: Published aggregate table by school year, education category and geography; no pupil-level records.
-  coverage: Archive covers multiple school years; exact earliest year varies by subject.
+  domains: [students, teachers, graduates, special education, preschool, languages]
+  entities: [student-aggregate, teacher-aggregate, graduate-aggregate, territorial unit, school type, governing body]
+  granularity: One workbook per topic and reference date (30 September); rows are counts by voivodeship, school type, pupil
+    category, age or grade, sex or governing body; no pupil- or school-level records.
+  coverage: 'Closed archive: data as of 30 September 2010 to 30 September 2018 (school years 2010/2011 to 2018/2019, from
+    the file names); the teachers workbooks carry a 2006-2018 series. Nothing later is published on cie.gov.pl.'
   access:
     endpoint: https://cie.gov.pl/archiwalne-dane-statystyczne/
     kind: bulk_file
-    interfaces: [HTML, XLSX, PDF]
+    interfaces: [HTML, XLS, XLSX]
     auth: Public downloads.
     cost: free
-    limits: Unknown.
+    limits: None published. robots.txt of cie.gov.pl disallows only /cms/wp-admin/ (Dev probe run 43289510189, job 131431691639,
+      branch test/src-plgs-probe, 12 Nov 2026). A full load is 7 pages and 94 files.
   licence:
     status: unresolved
-    notes: No explicit reuse licence verified.
-  updates: Annual/school-year publication with topic-dependent timing.
+    notes: 'Terms: none stated. The site the files are read from, https://cie.gov.pl/ (home page and its only legal link
+      "Status prawny", https://cie.gov.pl/o-nas?sekcja=status, read from a GitHub runner on 12 Nov 2026; the archive index
+      and the six topic pages, desk fetch the same day), carries only "© Centrum Informatyczne Edukacji, 2026" and no licence,
+      re-use or attribution wording. Commercial reuse: not stated. Modification: not stated. Disclaimer: none. Attribution
+      sentence: none given by the provider; if CIE later allows reuse, propose "Źródło: Centrum Informatyczne Edukacji,
+      System Informacji Oświatowej, stan na 30 września <rok>". The CC BY-SA 4.0 footer of gov.pl covers gov.pl text, not
+      these files, and is not applied. Internal use only until CIE states terms (owner question in PR for #1711).'
+  updates: 'None expected: the archive is closed. All 94 files answer Last-Modified 8 August 2024 (Dev probe run 43289510189,
+    job 131431691639, branch test/src-plgs-probe, 12 Nov 2026), under /content/uploads/2020/09/. The Ministry''s page on
+    SIO data names dane.gov.pl and GUS BDL as the channels for current compilations (https://www.gov.pl/web/edukacja/system-informacji-oswiatowej-zasady-udostepniania-danych,
+    desk fetch).'
   ingestion:
-    history: Backfill topic archives and preserve workbook versions.
-    incremental: Poll annual release pages and diff replacement files.
-    identifiers: School year + topic/category + geography; link RSPO only when school-level identifiers are actually published.
+    history: 'Bulk: the index page links six topic pages (written with a double slash, https://cie.gov.pl//ads-uczniowie/;
+      /ads-uczniowie/ 32 files, /ads-wychowanie-przedszkolne/ 11, /ads-uczniowie-ze-specjalnymi-potrzebami-edukacyjnymi/
+      18, /ads-jezyki-obce-i-jezyki-mniejszosci-narodowych/ 18, /ads-absolwenci/ 9, /ads-nauczyciele/ 6), whose plain HTML
+      links 94 workbooks under https://cie.gov.pl/content/uploads/2020/09/: 64 .xls and 30 .xlsx, 10,216,033 bytes in total
+      by HEAD, largest 940,544 bytes, all 200 from a GitHub runner (Dev probe run 43289510189, job 131431691639, branch
+      test/src-plgs-probe, 12 Nov 2026). The files send Last-Modified (ETag seen on the two .xls files that were fetched).
+      The earlier blocker (no file links) looked only at the index page.'
+    incremental: 'Entity = workbook (file name), version = Last-Modified; one backfill, then a yearly re-read of the seven
+      pages (link count, names, Last-Modified). Small source: refresh full; unchanged bytes skipped by SHA-256.'
+    identifiers: Reference date (30 September of the year) + topic + voivodeship id ("Id WojGUS", two digits) + school type
+      id ("Id TypJedn", five digits) + pupil category; no RSPO number (no school-level rows).
   modelling:
-    notes: Use school-year periods; distinguish headcount, FTE and institutions; denominators change with reforms.
-    overlap: GUS education tables may reproduce SIO aggregates; source and release dates should determine precedence.
+    notes: 'Frequency: annual only (school year, reference date 30 September); no second frequency. Shape, read from three
+      2018/2019 XLSX workbooks (one sheet each, first rows only): tidy tables, e.g. "Id WojGUS ¦ Województwo ¦ Id TypJedn
+      ¦ Typ jednostki ¦ Kategoria uczniów ¦ Publiczność ¦ Organ prowadzący ¦ Liczba szkół/placówek" with the row "02 ¦ DOLNOŚLĄSKIE
+      ¦ 00001 ¦ Przedszkole ¦ Dzieci lub młodzież ¦ publiczna ¦ JST ¦ 459"; graduates as "Absolwenci" and "Absolwenci -
+      dziewczęta"; pupils by age with one column per age. Missing values: no suppression sign seen; an age that does not
+      occur in a school type is an empty cell (row "02 ¦ WOJ. DOLNOŚLĄSKIE ¦ 00003 ¦ Szkoła podstawowa ¦ Dzieci lub młodzież"
+      has empty columns for ages 2 to 4) and must stay empty, while a stated 0 is a value ("0 ¦ 0" for one music-school
+      row). Voivodeship names differ between files ("DOLNOŚLĄSKIE", "WOJ. DOLNOŚLĄSKIE"): join on the id. Duplicates: the
+      six teachers workbooks each repeat the series from 2006 (2006-2013 ... 2006-2018): keep the newest (NauczEtatyOsoby2006-2018v5_Woj2018v5.xls);
+      teachers are given as persons and as full-time posts, one measure_key each. School types change with the 2017 reform
+      (gimnazjum phase-out). The 64 .xls files are the old binary format (magic d0cf11e0), which ingestion/common/xlsx_cells.py
+      does not read and for which requirements.txt has no reader; their layout was not opened. Smallest Gold selection:
+      schools and pupils by school type and voivodeship (Poland as the sum) and graduates, from the XLSX years 2016-2018
+      first; teachers (persons, posts) and the years 2010-2015 once an .xls reader is chosen. Effort M.'
+    overlap: 'No kpi.csv KPI is published from this source; the education KPIs there (adult_learning, tertiary_attainment,
+      neet_rate, basic_digital_skills) are Eurostat survey measures, not school counts. GUS BDL (PLS-001, in Silver) carries
+      school and pupil counts and is the live series after 2018: BDL takes precedence where both exist. PLS-021 RSPO is
+      the school register, not aggregates.'
   research:
-    priority: review-first
-    evidence: documented
-    connection: not-tested
+    priority: review-next
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Route unclear: the archive page https://cie.gov.pl/archiwalne-dane-statystyczne/ lists no file links in its HTML (scripted
-      content); find the XLSX download URLs and a terms statement'
-    - Resolve reuse rights
-    - Assess schema changes from education reforms
+    - 'Licence unresolved: cie.gov.pl states no reuse terms, so the source stays internal until CIE states them.'
+    - 'Build task, not a review blocker: 64 of the 94 files are .xls (old binary format) and the pipeline has no reader
+      for them yet; the 30 .xlsx files (2016-2018) load with the shared decoder.'
+    - Closed archive (last data 30 September 2018); later SIO compilations on dane.gov.pl were not opened (the fetch tool
+      was refused; dane.gov.pl is PLG-030).
     references:
     - https://cie.gov.pl/archiwalne-dane-statystyczne/
+    - https://cie.gov.pl//ads-uczniowie/
+    - https://cie.gov.pl//ads-wychowanie-przedszkolne/
+    - https://cie.gov.pl//ads-uczniowie-ze-specjalnymi-potrzebami-edukacyjnymi/
+    - https://cie.gov.pl//ads-jezyki-obce-i-jezyki-mniejszosci-narodowych/
+    - https://cie.gov.pl//ads-absolwenci/
+    - https://cie.gov.pl//ads-nauczyciele/
+    - https://cie.gov.pl/o-nas?sekcja=status
+    - https://www.gov.pl/web/edukacja/system-informacji-oswiatowej-zasady-udostepniania-danych
 - id: PLS-023
   name: RAD-on public data and POL-on APIs
   short_name: RAD-on / POL-on
@@ -4511,42 +4557,117 @@ sources:
   name: Supervised-entity registers and search
   short_name: KNF supervised entities
   provider: Polish Financial Supervision Authority (KNF)
-  status: registered
+  status: approved
   family: E
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [financial regulation, business registry]
-  entities: [financial institution, enterprise]
-  granularity: Institution/list entry by sector and authorization/register status.
-  coverage: Current registers across regulated sectors; history varies.
+  entities: [financial institution, enterprise, person]
+  granularity: 'One register entry (institution, intermediary, agent or branch) per sector register, with type, status
+    and a register number. In the ESMA register: one authorised entity or branch with type, status, authorisation date
+    and LEI.'
+  coverage: 'Current state of each register; no dated history files. ESMA register, home member state Poland: 623
+    entries (478 active, 145 inactive), capital-market entities only. KNF''s own pages also list banks, credit unions,
+    insurers, pension societies and notified foreign entities.'
   access:
-    endpoint: https://www.knf.gov.pl/podmioty
-    kind: bulk_file
-    interfaces: [HTML lookup, download files]
-    auth: public browsing; downloads vary
+    endpoint: https://registers.esma.europa.eu/solr/esma_registers_upreg/select
+    kind: api
+    interfaces: [REST API, JSON, XML, HTML tables, JavaScript register applications]
+    auth: 'Public, no key or account (ESMA registers; KNF pages).'
     cost: free
-    limits: Unknown.
+    limits: 'ESMA: none stated in the application-to-application help
+      (https://registers.esma.europa.eu/publication/helpApp, desk fetch); requests carry a rows parameter (its
+      examples use 1000 and 100000); the robots.txt address of registers.esma.europa.eu returns the application page,
+      not rules. KNF: robots.txt of www.knf.gov.pl is "User-agent: * Allow: /"; the register sub-sites have no
+      robots.txt (HTTP 404), except ewidencjaakcji.knf.gov.pl and rejestracjaakcji.knf.gov.pl ("Disallow: /", not
+      read).'
   licence:
     status: unresolved
-    notes: Licence and bulk availability must be checked per register.
-  updates: Changes with supervisory status; no common version feed.
+    notes: 'Terms: KNF legal notice https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna (read from a GitHub runner,
+      12 Nov 2026): "Przy wykorzystywaniu materiałów ze strony internetowej KNF wymagane jest podanie źródła wraz z
+      linkiem do serwisu www.knf.gov.pl." No licence is named and the notice grants no reuse: commercial reuse not
+      stated, modification not stated, so the terms are unresolved (as for PLG-017). Disclaimer: the UKNF "nie ponosi
+      żadnej odpowiedzialności za jakiekolwiek szkody powstałe w wyniku korzystania z nich". Attribution: "Źródło:
+      Komisja Nadzoru Finansowego, www.knf.gov.pl". For the ESMA route: ESMA legal notice
+      https://www.esma.europa.eu/about-esma/legal-notice-and-data-protection (read from a GitHub runner, 12 Nov 2026):
+      "Reproduction of all information on this site (ESMA Library) is authorised except as otherwise stated, provided
+      the source is acknowledged and: where the original material is incorporated in documents that are sold
+      (regardless of the medium), the publisher must inform buyers that it may be obtained free of charge through ESMA
+      website; if the original material is transformed by the user (e.g. by making a summary of it or by translating
+      it) and republished, this must be stated explicitly through the following disclaimer: ‘This document has been
+      drafted using material downloaded from ESMA’s website’". That notice is on www.esma.europa.eu; the registers
+      site registers.esma.europa.eu shows only a "Legal Notice" footer link whose target was not read, so the status
+      stays unresolved for both routes and the source is internal. Some KNF registers name natural persons (agents,
+      advisers, brokers, actuaries): personal data, not loaded.'
+  updates: 'Continuous: entries change with KNF decisions; no change feed or release calendar. ESMA entries carry
+    ae_lastUpdate per entity. Dated KNF pages show "Data aktualizacji" (for example 16 May 2026, 14 July 2026).'
   ingestion:
-    history: 'PROPOSAL: inventory each KNF sector register and load only official downloadable tables; do not automate
-      HTML-only lists before terms review.'
-    incremental: 'PROPOSAL: snapshot each authorised register separately and track effective/status dates where
-      supplied; no common KNF change feed is documented.'
-    identifiers: KNF register number + KRS/NIP/LEI where present
+    history: 'Route 1, approved (API of the official EU republisher):
+      https://registers.esma.europa.eu/solr/esma_registers_upreg/select, the documented application-to-application
+      interface of the ESMA registers (Solr; JSON with wt=json). The filter fq=ae_homeMemberState:"POLAND" with
+      fq=type_s:parent returned 623 entries: AIF 515, MIF 60, UCI 24, MIR 10, CSP 5, MIT 3, MIE 2, ESF 1, MIA 1, MIO
+      1, MIS 1; competent authority KNF for 622; active 478, inactive 145; fields ae_entityName, ae_entityTypeCode,
+      ae_entityTypeLabel, ae_lei, ae_headOfficeLei, ae_competentAuthority, ae_homeMemberState, ae_hostMemberStates,
+      ae_officeType, ae_status, ae_authorisationNotificationDate, ae_lastUpdate, addresses (Dev probe run 43295075918
+      (job 131451094958), branch test/src-fix-probe, 12 Nov 2026); the whole core holds 101,553 entries. ae_lei is
+      empty on some entries (the one printed had none). Route 2, waits for the owner (question in research.blockers):
+      KNF''s fixed HTML pages below https://www.knf.gov.pl/podmioty: 117 pages read, 61 with tables (17,705 table
+      rows), 19 of them paged with ?page=n (cooperative banks: 25 pages); one small table per entity with name,
+      address, website and, where KNF gives one, its own number ("Numer centrali" for banks, "Numer zakładu w systemie
+      UKNF" and "Data zezwolenia" for insurers); no NIP, KRS or LEI (Dev probe run 43299743376 (job 131467412298)).
+      Not routes: the register applications (e-rup, rpkip, wpn, rdl, pok, zasi, euafi, depo, at, pzf, dystr, rfz, afi,
+      tfi, ppk .knf.gov.pl) are script pages of one family; in the scripts that were read (e-rup, rpkip, wpn, rdl,
+      pok, zasi, dystr) the tables are filled by POST data calls, and the script of rpu.knf.gov.pl (insurance
+      intermediaries) refers to reCAPTCHA: none was called. EBA:
+      https://euclid.eba.europa.eu/register/pir/registerDownload and the credit-institutions register answered the
+      runner with the same 685-byte application page on every address, so no file was obtained; EIOPA:
+      register.eiopa.europa.eu answers robots.txt with HTTP 403, nothing requested; dane.gov.pl timed out (75 s). The
+      two XLS files on the page Ewidencja akcji date from 2021 and 2017 and are not entity registers.'
+    incremental: 'ESMA route: entity = the Polish slice of the register, version = download date (the source gives
+      ae_lastUpdate per entry, no slice version); snapshot once a week, a few requests of 1000 rows; unchanged bytes
+      skipped by SHA-256. Small source: full refresh.'
+    identifiers: 'ESMA: id (ae<number>) and ae_dbId per entry, ae_lei where filled. KNF pages: KNF''s own numbers only
+      (bank routing number, insurer number); no NIP, KRS or LEI.'
   modelling:
-    notes: Authorization scope is effective-dated; absence is not proof of status.
-    overlap: Links to KRS and EU sector registers.
+    notes: 'kpi false: an entity table, no statistics. Smallest valuable selection for Gold: the active Polish
+      investment firms (MIF), UCITS management companies (UCI) and alternative fund managers (AIF) from the ESMA
+      register with a filled LEI, as attributes (authorisation type, status, authorisation date) of the legal-entity
+      dimension keyed by LEI (GLEIF, CD-015, is in Silver); entries without an LEI stay in Silver and are never
+      matched by name. Branch rows (ae_officeType Branch) are separate entries of the same firm. No suppression
+      markers; an empty ae_lei is a missing value. Banks, insurers and pension societies come only with route 2 and
+      have no official identifier there. Effort S for the ESMA route; M for the KNF pages.'
+    overlap: 'Entity identity is covered by KRS (PLG-012), CEIDG (PLG-014) and GLEIF (CD-015, in Silver), but none of
+      them holds the KNF authorisation type, status or register number, so this source is not contained in a loaded
+      one. KNF sector statistics are PLG-017 and PLG-018; the public warning list is PLG-019 (parked). No kpi.csv KPI
+      overlaps.'
   research:
-    priority: review-first
-    evidence: documented
-    connection: not-tested
+    priority: review-next
+    evidence: tested
+    connection: tested
     blockers:
-    - Per-register format, history and terms differ.
-    references: ['https://www.knf.gov.pl/podmioty']
+    - 'Owner question (it does not block the ESMA route): may the pipeline read KNF''s fixed HTML entity lists below
+      https://www.knf.gov.pl/podmioty (robots.txt "User-agent: * Allow: /"; 61 pages with tables, 19 of them paged, a
+      few hundred page requests per full read, one request every two seconds, once a month), for legal persons only
+      (banks, cooperative banks, credit unions, insurers, pension societies, brokerage houses, fund companies), never
+      the pages that list natural persons (investment advisers, brokers, actuaries, agents who are natural persons)
+      and never the register applications?'
+    - 'Build task, not a review blocker: re-read the Legal Notice link in the footer of registers.esma.europa.eu; if
+      it leads to the ESMA legal notice quoted in licence.notes, the ESMA route becomes open-conditional.'
+    - 'Lead for a separate entry, not read: KNF''s investment-fund API https://wybieramfundusze-api.knf.gov.pl (its
+      robots.txt names documentation.html and terms.pdf).'
+    - 'Not analysed: the register entries themselves and the regulations of the register sites; the pages that list
+      natural persons were only counted (tables and rows), their content was not printed.'
+    references:
+    - https://www.knf.gov.pl/podmioty
+    - https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna
+    - https://registers.esma.europa.eu/publication/helpApp
+    - https://registers.esma.europa.eu/solr/esma_registers_upreg/select
+    - https://www.esma.europa.eu/about-esma/legal-notice-and-data-protection
+    - https://www.eba.europa.eu/risk-and-data-analysis/data/registers/payment-institutions-register
+    - https://www.knf.gov.pl/en/ENTITIES/entities_search
+    - https://rpkip.knf.gov.pl/index.html?type=RPK
+    - https://bip.knf.gov.pl/knf/pl/komponenty/img/Instrukcja_dla_uzytkownika_RPKIP.pdf
 - id: PLG-017
   name: Banking-sector data and sector information
   short_name: KNF banking sector data
@@ -5495,41 +5616,107 @@ sources:
   name: Government Legislative Process portal (RPL), including consultations
   short_name: RCL legislative process (RPL)
   provider: Government Legislation Centre (RCL)
-  status: registered
+  status: approved
   family: F
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [legislation, public consultation]
-  entities: [draft legal act, ministry, consultation submission]
-  granularity: Project by type, title, creation date, applicant, work number and status, with documents.
-  coverage: Current, adopted and archived drafts; first year not stated.
+  entities: [draft legal act, legislative stage, ministry, consultation submission]
+  granularity: 'Approved route (the government''s work list on gov.pl): one row per planned government draft (bill,
+    regulation of the Council of Ministers, other government document) with work-list number, title, kind, type,
+    responsible body, planned adoption and status. RPL itself (not reachable): project by type, title, creation date,
+    applicant, work-list number and status, with staged documents.'
+  coverage: 'Work list of the Council of Ministers: 1,526 drafts published from 21 December 2023 to 12 November 2026
+    (the current government); earlier terms are HTML pages without a file. RPL: current, adopted and archived drafts
+    since 1 January 2012 by RCL''s accessibility statement (desk fetch); not read.'
   access:
-    endpoint: https://legislacja.rcl.gov.pl/
-    kind: web
-    interfaces: [HTML search, PDF, DOCX]
-    auth: public browsing; registration only to follow a project
+    endpoint: https://www.gov.pl/web/premier/wplip-rm
+    kind: bulk_file
+    interfaces: [CSV, HTML]
+    auth: Public download.
     cost: free
-    limits: Unknown.
+    limits: 'None published. robots.txt of www.gov.pl: "User-Agent: * Allow: /". The RPL hosts legislacja.rcl.gov.pl
+      and legislacja.gov.pl do not answer GitHub runners (timeouts on robots.txt in three runs on 12 Nov 2026), so
+      their robots.txt is unread.'
   licence:
-    status: unresolved
-    notes: Attachments may name commenters; bulk reuse terms not established.
-  updates: Project/document events; portal update time is not row CDC.
+    status: open-conditional
+    notes: 'Terms: KPRM re-use page https://www.gov.pl/web/premier/ponowne-wykorzystywanie, for the site that is read
+      (from a GitHub runner, 12 Nov 2026): "Informacje sektora publicznego udostępniane na stronie Kancelarii Prezesa Rady
+      Ministrów (dalej: KPRM) są udostępniane w celu ponownego wykorzystywania na licencji Creative Commons Uznanie
+      Autorstwa 3.0 Polska, o ile nie jest to stwierdzone inaczej. KPRM nie ponosi odpowiedzialności za dalsze ponowne
+      wykorzystywanie informacji sektora publicznego udostępnianych na stronie KPRM." The footer of the work-list page
+      (https://www.gov.pl/web/premier/wplip-rm) says: "Treści tekstowe publikowane w serwisie (z wyłączeniem treści
+      audiowizualnych), są udostępniane na licencji typu Creative Commons: uznanie autorstwa - na tych samych
+      warunkach 4.0 (CC BY-SA 4.0)." Both allow commercial reuse and modification with attribution; the two statements
+      differ, so the stricter one is applied: CC BY-SA 4.0, share-alike for published adaptations. Attribution:
+      "Źródło: Kancelaria Prezesa Rady Ministrów, Wykaz prac legislacyjnych i programowych Rady Ministrów, gov.pl
+      (<data pobrania>), CC BY-SA 4.0". For RPL data, should that route open: RCL''s re-use page
+      https://bip.rcl.gov.pl/rcl/ponowne-wykorzystywanie/3122,Warunki-ponownego-wykorzystywania-informacji-publicznej.html
+      (read from a GitHub runner, 12 Nov 2026) cites the re-use act and says "każdemu przysługuje prawo do ponownego
+      wykorzystywania informacji sektora publicznego: udostępnionych w systemie teleinformatycznym", naming "serwis
+      Rządowy Proces Legislacyjny", with the conditions "obowiązku każdorazowego informowania o źródle pozyskanych
+      danych oraz czasie wytworzenia żądanego zbioru przez podmiot zobowiązany, obowiązku informowania o przetworzeniu
+      informacji ponownie wykorzystywanej"; the RPL site''s own footer was never read (host timeout). Consultation
+      attachments are third parties'' works and name people: never loaded.'
+  updates: 'Event-driven: rows are added and changed as drafts enter the work list or change status; the newest row
+    was published on 12 Nov 2026 at 15:53. No feed; the file has no Last-Modified or ETag.'
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
-    identifiers: RCL project ID + work number + document/version
+    history: 'Bulk file: the page https://www.gov.pl/web/premier/wplip-rm links "Pobierz dane do pliku csv"
+      (https://www.gov.pl/register-file/Rejestr_20874195.csv): HEAD and GET 200 from a GitHub runner, 11,313,160
+      bytes, UTF-8 with BOM, semicolon-separated, 19 columns, 1,526 rows, all rows 19 fields wide. Columns: Numer
+      projektu (unique, for example UC2, UD505), Tytuł, Rodzaj dokumentu (Projekty ustaw, Projekty rozporządzeń,
+      Projekty innych dokumentów rządowych), Typ dokumentu (5 values), Informacja dodatkowa, two long text columns
+      (aims, up to 36,383 characters; substance, up to 90,880), three empty columns, Organ odpowiedzialny za
+      opracowanie projektu (46 values), Organ współpracujący, Osoba odpowiedzialna, Organ odpowiedzialny (44 values),
+      Planowane przyjęcie przez RM (free text), Informacja o rezygnacji, Status realizacji (Zrealizowany, Wycofany;
+      empty on 363 rows), Data publikacji (2023-12-21 09:46 to 2026-11-12 15:53), Podgląd (link to the draft''s page).
+      The Prime Minister''s own list https://www.gov.pl/web/premier/wpl-prm links Rejestr_20874196.csv (HEAD 200, not
+      read). The archive of earlier terms (https://www.gov.pl/web/premier/prace-legislacyjne-rady-ministrow) has no
+      file. Dev probe run 43299743376 (job 131467412298), branch test/src-fix-probe, 12 Nov 2026; the link was found
+      in Dev probe run 43295075918 (job 131451094958). RPL itself: legislacja.rcl.gov.pl and legislacja.gov.pl timed
+      out on robots.txt from GitHub runners in Dev probe run 43289510189 and again at about 20:00 UTC (90 s) and 20:25
+      UTC (60 s), so nothing else was requested there; dane.gov.pl timed out too (75 s). RPL addresses seen in search
+      results: /lista?typeId=<n>&pSize=<n>&pNumber=<n> and /projekt/<id> (not opened).'
+    incremental: 'Entity = the work-list file (one per list), version = download date (the source gives none);
+      snapshot once a day at most, unchanged bytes skipped by SHA-256. Small source: full refresh.'
+    identifiers: 'Work-list number (Numer projektu, for example UD505); RPL shows the same number per project
+      (/projekt/<id>), which would link the two if RPL becomes readable.'
   modelling:
-    notes: Separate proposal, consultation, impact assessment and final act.
-    overlap: Links to Sejm and ELI; many drafts never become acts.
+    notes: 'kpi false. Gold use, metadata only: an entity table of government drafts keyed by work-list number (kind,
+      type, responsible body, publication date, status); later, as event counts, drafts entering the work list per
+      month by responsible body and kind and the share realised or withdrawn (monthly and annual as separate
+      measure_keys). Do not load Osoba odpowiedzialna (names of officials) or the two long text columns into Silver
+      beyond what a title needs. Planowane przyjęcie is free text (quarter, date, "ZREALIZOWANY ..."): keep as
+      published. An empty Status realizacji means in progress, not unknown. Duplicates: Numer projektu is unique in
+      the file; titles repeat (1,287 distinct). Effort S.'
+    overlap: 'PLG-024 Sejm API (approved) covers bills from the Sejm print on and PLG-026 ELI (approved) the published
+      acts; the work list covers the planned government stage; RPL alone has the stage documents, ministers'' own
+      regulations and consultations, which no loaded source holds. No kpi.csv KPI overlaps.'
   research:
     priority: review-next
-    evidence: documented
-    connection: not-tested
-    blockers: [No bulk API, clarify attachment rights/person data.]
-    references: ['https://legislacja.rcl.gov.pl/']
+    evidence: tested
+    connection: tested
+    blockers:
+    - 'Owner question (it does not block the work-list build): will you send this to RCL (contact address on
+      https://bip.rcl.gov.pl, not read here)? "Szanowni Państwo, serwis Rządowy Proces Legislacyjny
+      (legislacja.gov.pl, legislacja.rcl.gov.pl) nie odpowiada na zapytania z serwerów GitHub Actions (przekroczenie
+      czasu połączenia). Proszę o informację: (1) czy RCL udostępnia lub może udostępnić wykaz projektów z metadanymi
+      (numer z wykazu, tytuł, wnioskodawca, etapy z datami) jako plik, kanał RSS lub API; (2) czy automatyczne,
+      rzadkie pobieranie stron list projektów jest dopuszczalne i z jakich adresów sieciowych."'
+    - 'Not worked around: the timeouts of both RPL hosts from GitHub runners (three runs on 12 Nov 2026); no other
+      network path is tried.'
+    - 'Not verified: robots.txt, footer and every page of the RPL site; the Prime Minister''s list file (HEAD only);
+      whether the address of the work-list file is stable (read the link from the page).'
+    - 'Consultation attachments name commenters: metadata only, never the documents.'
+    references:
+    - https://www.gov.pl/web/premier/wplip-rm
+    - https://www.gov.pl/register-file/Rejestr_20874195.csv
+    - https://www.gov.pl/web/premier/wpl-prm
+    - https://www.gov.pl/web/premier/ponowne-wykorzystywanie
+    - https://legislacja.rcl.gov.pl/
+    - https://bip.rcl.gov.pl/rcl/ponowne-wykorzystywanie/3122,Warunki-ponownego-wykorzystywania-informacji-publicznej.html
+    - https://bip.rcl.gov.pl/rcl/dostepnosc/deklaracje-dostepnosci/23028,Deklaracja-dostepnosci-strony-Rzadowego-Procesu-Legislacyjnego.html
 - id: PL-ENV-001
   name: Państwowy Rejestr Granic (PRG)
   short_name: GUGiK PRG
