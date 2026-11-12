@@ -576,10 +576,10 @@ v2 keys by their best source status:
 
 | | ready | needs-block | needs-source | total |
 |---|---|---|---|---|
-| Polska w skrócie | 29 | 2 | 0 | 31 |
-| all 78 keys | 70 | 7 | 1 | 78 |
+| Polska w skrócie | 31 | 1 | 0 | 32 |
+| all 79 keys | 72 | 6 | 1 | 79 |
 
-Rows by source (158 rows; 39 keys have two or more ready sources):
+Rows by source (162 rows; 41 keys have two or more ready sources):
 
 | source | ready | needs-block | needs-source | rows |
 |---|---|---|---|---|
@@ -587,19 +587,23 @@ Rows by source (158 rows; 39 keys have two or more ready sources):
 | gus_bdl | 23 | 2 | 0 | 25 |
 | gus_dbw | 22 | 3 | 0 | 25 |
 | world_bank_wdi | 23 | 1 | 0 | 24 |
-| nbp_bop | 0 | 4 | 0 | 4 |
+| nbp_bop | 2 | 2 | 0 | 4 |
 | un_wpp | 0 | 4 | 0 | 4 |
 | ecb | 2 | 1 | 0 | 3 |
 | nbp | 1 | 0 | 2 | 3 |
 | mrpips_unemployment | 2 | 0 | 0 | 2 |
 | unctad | 2 | 0 | 0 | 2 |
 | unesco_uis | 0 | 2 | 0 | 2 |
+| eea | 1 | 0 | 0 | 1 |
 | faostat | 1 | 0 | 0 | 1 |
 | mf_public_debt | 1 | 0 | 0 | 1 |
-| nbp_interest_rates | 0 | 1 | 0 | 1 |
+| nbp_interest_rates | 1 | 0 | 0 | 1 |
 | oecd | 1 | 0 | 0 | 1 |
+| unhcr | 1 | 0 | 0 | 1 |
 | who | 1 | 0 | 0 | 1 |
+| world_bank_gem | 1 | 0 | 0 | 1 |
 | world_bank_icp | 1 | 0 | 0 | 1 |
+| zus_psz | 1 | 0 | 0 | 1 |
 
 Gold has a quarterly fact (`fact_quarterly`), and the BDL and DBW builds place monthly and quarterly periods, so
 LFS rates, the current account, NAMQ, job vacancies and the GUS short-term series keep their frequency; half-years
