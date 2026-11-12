@@ -1,0 +1,29 @@
+version: 2
+models:
+  - name: bis_observations
+    description: >-
+      BIS statistics from bronze.bis_observations (SDMX REST API, SDMX-CSV 2.0): newest version of each
+      selection (entity) — cbpol (WS_CBPOL central bank policy rates, monthly, 1945-01 →), eer (WS_EER
+      nominal and real effective exchange rates, broad and narrow basket, monthly, 1964-01 →), spp (WS_SPP
+      residential property prices, nominal and real, index and y-o-y, quarterly, 1927-Q1 →), tc (WS_TC
+      total credit to the non-financial sector by borrower and lender, quarterly, 1940-Q2 →), credit_gap
+      (WS_CREDIT_GAP credit-to-GDP ratio, trend and gap, quarterly) and dsr (WS_DSR debt service ratios,
+      quarterly, 1999-Q1 →). Grain: entity × series_key × time_period. Poland in every selection (Dev probe
+      43087048719, 11 Nov 2026: 371,000 observations).
+    tests:
+      - unique:
+          column_name: "entity || '|' || series_key || '|' || time_period"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: ['cbpol', 'eer', 'spp', 'tc', 'credit_gap', 'dsr']}}}]
+      - name: series_key
+        tests: [not_null]
+      - name: freq
+        tests: [not_null, {accepted_values: {arguments: {values: ['M', 'Q', 'A', 'D']}}}]
+      - name: ref_area
+        tests: [not_null]
+      - name: time_period
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]

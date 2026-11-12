@@ -136,3 +136,7 @@ unesco_uis,pct_gdp,,pct_gdp
 unesco_uis,pct,,pct
 faostat,kt,,thousand_tonnes
 faostat,1000 ha,,thousand_ha
+ecb,PLN/EUR,,pln_per_unit
+ecb,PC,,pct
+ecb,PCCH,,pct
+ecb,MIO_EUR,,mln_eur
