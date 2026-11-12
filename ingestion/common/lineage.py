@@ -27,6 +27,7 @@ SOURCES = (
     "gugik_prg",
     "gus_teryt",
     "nbp",
+    "nbp_bop",
     "nbp_interest_rates",
     "oecd",
     "undp_hdr",
