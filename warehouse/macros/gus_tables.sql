@@ -3,7 +3,8 @@
    table that moved to another sheet, workbook or column in a later edition is still found, and a table whose title
    or header no longer matches yields no rows (the Silver tests and the trial counts show it).
 
-   gus_table_values(relation, specs): one row per spec x data row x value cell. A spec is a dict:
+   gus_table_values(relation, specs, poland_label): one row per spec x data row x value cell; poland_label is the
+   regex (on the lower-case label without spaces) of the Poland row, default '^(polska|poland)'. A spec is a dict:
      table    short code of the table (kept in Silver)
      title    regex (case-insensitive) on the sheet title = the text of rows 1-3 and of any row up to 8 with a cell
               starting 'Tabl' (sheets that open with a chapter heading)
@@ -18,10 +19,11 @@
      sheet    optional regex on the sheet name, where one workbook repeats a table title (census workbooks)
      groups   optional [[group_code, label regex], ...]: data rows are the rows whose label matches (survey tables
               of Poland by sex); without it data rows are the voivodeship rows and the Poland row
-   Areas: the 16 voivodeships by their names (lower case; area_name) and Poland ('polska': labels "Polska",
-   "POLAND", "Polska 2024", "P O L S K A 2018"); a Poland row that names another year than the period (the
-   previous year printed above the current one) is left out, and so is a "POLSKA" row without a year when a "POLAND" row
-   without a year follows it (older editions print the previous year in Polish, the current one in English).
+   Areas: the 16 voivodeships by their names (lower case, spaced hyphens closed: "kujawsko - pomorskie";
+   area_name) and Poland ('polska': labels "Polska", "POLAND", "Polska 2024", "P O L S K A 2018"); a Poland row
+   that names another year than the period (the previous year printed above the current one) is left out, and so
+   is a "POLSKA" row without a year when a "POLAND" row without a year follows it (older editions print the
+   previous year in Polish, the current one in English).
    The label column is the leftmost column holding a voivodeship name or a group label.
    Values: numbers as stored; GUS symbols: '–' / '-' magnitude zero (value 0, status ok), '.' and '#' no data or
    confidential (no value, status confidential), 'x' not applicable (no value), a number followed by 'v' (low
@@ -37,7 +39,7 @@
     ) as t (area_name)
 {% endmacro %}
 
-{% macro gus_table_values(relation, specs) %}
+{% macro gus_table_values(relation, specs, poland_label='^(polska|poland)') %}
     with specs (
         table_code, title_regex, measure_code, header_regex, unit_code, block_regex, period_year, sheet_regex
     ) as (
@@ -84,7 +86,7 @@
         select
             *,
             regexp_matches(txt, '^-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?$') as is_number,
-            lower(regexp_replace(txt, '^(?i)województwo\s+', '')) as label_l
+            regexp_replace(lower(regexp_replace(txt, '^(?i)województwo\s+', '')), '\s*-\s*', '-', 'g') as label_l
         from cells
     ),
 
@@ -124,7 +126,7 @@
         select
             c.*,
             case
-                when regexp_matches(replace(c.label_l, ' ', ''), '^(polska|poland)') then 'polska'
+                when regexp_matches(replace(c.label_l, ' ', ''), '{{ poland_label }}') then 'polska'
                 when r.area_name is not null then r.area_name
             end as area_name,
             case

@@ -1,0 +1,50 @@
+version: 2
+models:
+  - name: zus_psz_observations
+    description: >-
+      ZUS statistical portal (psz.zus.pl, register PLS-009), curated XLSX tables, newest copy of each family × period.
+      Grain: one row per family × period_start × area_code × sex_code × breakdown_code × measure. Families:
+      pensioners_dec and pension_amount_dec (December, A, Poland, 2018-), insured_pension (Q, by age and sex),
+      insured_sickness_voiv (Q, Poland and voivodeships), insured_health (M, 2012-), foreign_insured (M, 2020-),
+      payers_voiv (Q, by payer type), absence_voiv (Q). Quarterly tables only from the current year on (the portal
+      lists only that year). area_code '00' = Poland, '_U' = voivodeship not established (included in Poland), else
+      the TERYT voivodeship code (matched by name).
+      breakdown_code: age group (as published, '_T' = all ages), payer type (_T, SELF, 1-9, 10-20, 21-49, 50-249,
+      250+) or citizenship (_T, UA). Values as published; non-numeric cells are left out. Dev trial 43271727766:
+      1,570 rows from 49 workbooks, 2012-01 to 2026-Q3.
+    tests:
+      - unique:
+          column_name: "family || '|' || period_start || '|' || area_code || '|' || sex_code || '|' || breakdown_code || '|' || measure"
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: family
+        tests:
+          - not_null
+          - accepted_values: {arguments: {values: ['pensioners_dec', 'pension_amount_dec', 'insured_pension', 'insured_sickness_voiv', 'insured_health', 'foreign_insured', 'payers_voiv', 'absence_voiv']}}
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: ['A', 'Q', 'M']}}}]
+      - name: period_start
+        tests: [not_null]
+      - name: area_code
+        description: Null when a voivodeship table names an area that is not one of the 16 voivodeships (the test then fails).
+        tests:
+          - not_null
+          - accepted_values: {arguments: {values: ['00', '_U', '02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32']}}
+      - name: sex_code
+        description: Null when a header names neither total, men nor women (the test then fails).
+        tests: [not_null, {accepted_values: {arguments: {values: ['T', 'M', 'F']}}}]
+      - name: breakdown_code
+        description: Null when a payer-table column header is not known (the test then fails).
+        tests: [not_null]
+      - name: measure
+        description: Null when a sickness-absence column header is not known (the test then fails).
+        tests:
+          - not_null
+          - accepted_values: {arguments: {values: ['pensioners', 'avg_pension', 'insured_pension', 'insured_sickness', 'insured_health', 'foreign_insured', 'payers', 'sick_leave_days', 'sick_leave_certificates']}}
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['persons', 'PLN', 'payers', 'days', 'certificates']}}}]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

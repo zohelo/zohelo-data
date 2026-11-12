@@ -24,7 +24,7 @@ LISTING = "https://www.gov.pl/web/rodzina/statystyki-pomocy-spolecznej"
 FIRST_YEAR = 2019
 PAUSE = 2.0
 YEAR_TEXT = re.compile(r"^Staty?s?t?y?ka za (?:rok )?(\d{4})$", re.IGNORECASE)
-REPORT_TEXT = re.compile(r"M[A-Z]*PS[ _-]*03\b", re.IGNORECASE)
+REPORT_TEXT = re.compile(r"M[A-Z]*PS[ _-]*03(?![0-9])", re.IGNORECASE)
 CORRECTION = re.compile(r"korekt", re.IGNORECASE)
 
 
@@ -37,6 +37,7 @@ def _links(url: str) -> list[tuple[str, str]]:
 def reports(year: int, links: list[tuple[str, str]]) -> dict[str, Any] | None:
     """The year's MRPiPS-03 attachment (a correction if there is one); None when the page lists none."""
     found = [(h, t) for h, t in links if "/attachment/" in h and REPORT_TEXT.search(t) and ".xls" in t.lower()]
+    # .xls covers .xlsx too: 2021 was published as an XLSX workbook
     corrected = [(h, t) for h, t in found if CORRECTION.search(t)]
     pick = corrected or found
     if not pick:

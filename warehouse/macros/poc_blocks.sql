@@ -455,6 +455,7 @@
     poc_build_ecb:ecb
     poc_build_ids:world_bank_ids
     poc_build_un_wpp:un_wpp
+    poc_build_zus_psz:zus_psz
     poc_build_gus_culture:gus_culture
     poc_build_gus_culture_participation:gus_culture_participation
     poc_build_gus_tourism:gus_tourism
@@ -568,6 +569,14 @@
         ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units'),
         ('mf_jst_budgets', 'jst_budget', 'MF local-government budget summaries (year to date)'),
         ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)'),
+        ('zus_psz', 'pensioners_dec', 'ZUS old-age pensioners in December'),
+        ('zus_psz', 'pension_amount_dec', 'ZUS average old-age pension in December'),
+        ('zus_psz', 'insured_pension', 'ZUS insured persons, pension insurance'),
+        ('zus_psz', 'insured_sickness_voiv', 'ZUS insured persons, sickness insurance, by voivodeship'),
+        ('zus_psz', 'insured_health', 'ZUS insured persons, health insurance'),
+        ('zus_psz', 'foreign_insured', 'ZUS foreign citizens in pension insurance'),
+        ('zus_psz', 'payers_voiv', 'ZUS active contribution payers, by voivodeship'),
+        ('zus_psz', 'absence_voiv', 'ZUS sickness absence, by voivodeship'),
         ('gus_culture', 'culture_institutions', 'GUS culture and national heritage tables (annual)'),
         ('gus_culture_participation', 'participation', 'GUS participation in culture survey (persons aged 15+)'),
         ('gus_tourism', 'accommodation', 'GUS tourism tables: tourist accommodation (annual)'),

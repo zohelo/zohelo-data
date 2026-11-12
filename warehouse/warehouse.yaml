@@ -66,7 +66,11 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)
        gold.dimension, gold.dimension_alias, gold.dim_dimension,  # catalogue: axes
+<<<<<<< HEAD
        gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_public_finance, gold.build_oecd, gold.build_gleif, gold.build_mf_biala_lista, gold.build_prg, gold.build_wdi, gold.build_mrpips_unemployment, gold.build_mf_jst_budgets, gold.build_mrpips_social_assistance, gold.metrics_social_assistance_recipients, gold.build_gus_culture, gold.build_gus_culture_participation, gold.build_gus_tourism, gold.metrics_museum_visitors, gold.metrics_cinema_admissions, gold.metrics_public_library_users, gold.metrics_tourists_accommodated, gold.metrics_tourist_overnight_stays, gold.metrics_tourist_bed_places, gold.metrics_museum_visiting_share, gold.metrics_theatre_attendance_share, gold.build_unctad, gold.build_un_wpp, gold.metrics_population_projection, gold.build_faostat, gold.build_unesco_uis, gold.build_who, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth, gold.build_ecb, gold.metrics_m3_growth, gold.metrics_ecb_deposit_rate,
+=======
+       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_public_finance, gold.build_oecd, gold.build_gleif, gold.build_mf_biala_lista, gold.build_zus_psz, gold.build_prg, gold.build_wdi, gold.build_mrpips_unemployment, gold.build_mf_jst_budgets, gold.build_gus_culture, gold.build_gus_culture_participation, gold.build_gus_tourism, gold.metrics_museum_visitors, gold.metrics_cinema_admissions, gold.metrics_public_library_users, gold.metrics_tourists_accommodated, gold.metrics_tourist_overnight_stays, gold.metrics_tourist_bed_places, gold.metrics_museum_visiting_share, gold.metrics_theatre_attendance_share, gold.build_unctad, gold.build_un_wpp, gold.metrics_population_projection, gold.build_faostat, gold.build_unesco_uis, gold.build_who, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth, gold.build_ecb, gold.metrics_m3_growth, gold.metrics_ecb_deposit_rate,
+>>>>>>> feat/2474-gus-culture-tourism
        gold.build_wgi, gold.build_findex, gold.build_icp,  # World Bank WGI, Findex, ICP (#2736)
        gold.metrics_wgi_voice_accountability, gold.metrics_wgi_political_stability, gold.metrics_wgi_government_effectiveness, gold.metrics_wgi_regulatory_quality, gold.metrics_wgi_rule_of_law, gold.metrics_wgi_control_of_corruption, gold.metrics_account_ownership, gold.metrics_price_level_index, gold.build_ids]   # Gold v1 (warehouse/models/gold, docs/model.md)
 demo_namespaces: [demo_bronze, demo_silver, demo_gold]  # phase 2 demo warehouse (program plan §3.3); never in the public catalogue
@@ -116,6 +120,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   budget_execution: {rows: 2800}  # 1,845 (Dev trial 43099813876), 2018-2026, ~200 a year
   krus_benefits: {rows: 900}  # 576 (Dev trial 43099813876), quarters and years since 2020
   mf_jst_budget_summary: {rows: 32000}  # 21,263 rows, 2022 Q1 - 2026 Q1 (Dev trial 43162316724)
+<<<<<<< HEAD
   mrpips_social_assistance_tables: {rows: 400}  # placeholder until the Dev trial
   poc_build_mrpips_social_assistance: {rows: 400}  # placeholder until the Dev trial
   poc_metrics_social_assistance_recipients: {rows: 200}  # placeholder until the Dev trial
@@ -125,6 +130,14 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_gus_culture: {rows: 1000}  # 595 (Dev trial 43288102198)
   poc_build_gus_culture_participation: {rows: 50}  # 18 (Dev trial 43288102198)
   poc_build_gus_tourism: {rows: 750}  # 476 (Dev trial 43288102198)
+=======
+  gus_culture_tables: {rows: 1000}  # 595 rows, 7 editions 2019-2025 x 85 (Dev trial TRIAL1)
+  gus_culture_participation_tables: {rows: 50}  # 18 rows, editions 2019 and 2024 (Dev trial TRIAL1)
+  gus_tourism_tables: {rows: 750}  # 476 rows, 7 editions 2019-2025 x 68 (Dev trial TRIAL1)
+  poc_build_gus_culture: {rows: 1000}  # 595 (Dev trial TRIAL1)
+  poc_build_gus_culture_participation: {rows: 50}  # 18 (Dev trial TRIAL1)
+  poc_build_gus_tourism: {rows: 750}  # 476 (Dev trial TRIAL1)
+>>>>>>> feat/2474-gus-culture-tourism
   poc_metrics_museum_visitors: {rows: 200}  # 119: 17 areas x 7 years
   poc_metrics_cinema_admissions: {rows: 200}  # 119
   poc_metrics_public_library_users: {rows: 200}  # 119
@@ -135,6 +148,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_theatre_attendance_share: {rows: 20}  # 6
   mrpips_registered_unemployment: {rows: 85000}  # 828 rows a month; 56,202 for 68 months (Dev trial 43100663615)
   nbp_bop_observations: {rows: 85000}  # 55,332 (Dev trial 43093233419)
+  zus_psz_observations: {rows: 2400}  # 1,570 (Dev trial 43271727766); about 217 more a quarter + about 90 a year (December tables)
   nbp_policy_rates: {rows: 2000}  # 390 rows, 96 archive dates since 1998 (Dev trial 42777711811)
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865
@@ -165,6 +179,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_mf_biala_lista: {rows: 10}  # 4 (Dev trial 43099545187)
   poc_build_ids: {rows: 50000}  # 31,260 (Dev trial 43202506484)
   poc_build_prg: {rows: 4300}  # 2,875 PRG units (16 voivodeships, 380 powiats, 2,479 gminas; Dev trial 43099545187 minus the country)
+  poc_build_zus_psz: {rows: 2400}  # 1,564 (Dev trial 43271727766): 9 measures, 329 series
   poc_build_public_finance: {rows: 8600}  # 5,727 (Dev trial 43099813876)
   poc_build_unctad: {rows: 18000}  # 11,871 (Dev trial 43100532689): 29 areas × 10 measures
   poc_build_who: {rows: 6000}  # 3,696: 28 areas × 22 years × 3 sexes × 2 indicators (Dev trial 43159213097)
