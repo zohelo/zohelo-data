@@ -1,13 +1,14 @@
 -- Gold build stage of one GUS BDL subgroup, step 2 (docs/gold-coverage.md): one row per territorial unit
 -- of the subgroup (code + name, the Silver grain) with the area it gets. Kept as the table `units`.
--- Relations: silver; geo_map (gold.map_geography rows of GUS BDL: source_code, geography_key);
+-- Relations: silver; geo_map (the result of gold_gus_bdl_map.sql: source_code, geography_key);
 -- bdl_units (silver.bdl_units: unit_id, name, level).
--- A unit is mapped by its code: the 12-character BDL unit id or the 7-digit TERYT code of the website
--- export (Poland, voivodeship, powiat, gmina). One area has one unit in a block, decided by rule and never
--- by row order, because two units under one area would repeat series_key × date_key:
+-- A unit is mapped by its code: the 12-character BDL unit id or the 7-digit TERYT code of the older
+-- website exports (Poland, voivodeship, powiat, gmina). One area has one unit in a block, decided by rule
+-- and never by row order, because two units under one area would repeat series_key × date_key:
 --   borrowed code  a unit whose name is not the name of its id is another unit under a borrowed code (the
 --                  website export gives the Górnośląsko-Zagłębiowska Metropolia the id of Śląskie): it
---                  never holds the area
+--                  never holds the area. The export writes a gmina with its type digit, "Bochnia (1)",
+--                  the unit list without: the digit is not part of the name.
 --   stand-in       a BDL region (level 3) or macroregion (level 1) that the map places on a voivodeship
 --                  gives way to the voivodeship's own unit
 --   two codes      the BDL unit id comes before the website's TERYT code of the same area
@@ -28,7 +29,11 @@ described as (
         h.unit_code,
         h.unit_name,
         coalesce(g.geography_key, '_X') as mapped,
-        coalesce(u.name is not null and upper(trim(u.name)) <> upper(trim(h.unit_name)), false) as borrowed,
+        coalesce(
+            u.name is not null
+            and upper(trim(u.name)) <> upper(trim(regexp_replace(h.unit_name, '\s*\([0-9]\)\s*$', ''))),
+            false
+        ) as borrowed,
         coalesce(u.level in (1, 3) and g.geography_key like 'TERC:%', false) as stand_in,
         length(h.unit_code) = 12 as bdl_id,
         count(*) over (partition by h.unit_code) as names_of_code

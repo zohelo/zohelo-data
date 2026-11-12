@@ -160,6 +160,13 @@ rule-based build stages apply the rules the curated stages already apply:
   than "value present") is not loaded; a value with a confidentiality id (`id_tajnosci`) is loaded
   with status `confidential`.
 
+**GUS BDL geography by code.** A BDL unit id carries the TERYT code of its area, so Poland, a
+voivodeship, a powiat and a gmina are mapped by that code through the map's rows of the 7-digit
+TERYT codes (`gold_gus_bdl_map.sql`, run once per run; the build stage and the builder's check of
+a changed map read its result). The rows `gold.map_geography` holds for these ids are matched by
+name and are not used here: they leave four in ten gmina ids unmatched and give some gminas the
+area of a namesake. A code TERYT no longer has stays unmatched; it is never matched by name.
+
 **One area, one unit per block (GUS BDL).** BDL publishes one area under several units: a region
 (level 3) that is a whole voivodeship, the website's TERYT code beside the unit id, another unit
 under a borrowed id. Two units under one `geography_key` would repeat `series_key × date_key`, and
