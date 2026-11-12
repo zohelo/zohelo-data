@@ -14,7 +14,8 @@ semantic_models/                  MetricFlow semantic models and metrics
 seeds/                            seeds/ = owner-readable code lists, built into gold
 dimensions/                       dimension registry (definitions-as-code, draft; docs/model.md)
 macros/, tests/                   shared macros; singular data tests
-entity/, entity.py                per-entity Silver SQL applied by the Eurostat and BDL loaders
+entity/, entity.py                per-entity Silver SQL applied by the Eurostat and BDL loaders; gold_*.sql: Gold per block
+observations.py                   Gold observations per block, by rule (docs/gold-coverage.md)
 build.py, changed.py, catalog.py  build engine: changed-only build, catalog publication
 warehouse.yaml                    activities the Pipeline may run
 ```
@@ -73,6 +74,13 @@ Eurostat and GUS BDL observations are not dbt models. Their loaders write Silver
 (design #875): `warehouse/entity/<table>.sql` is applied to each dataset / subgroup right after
 its Bronze file, and the result replaces that entity in Silver (`warehouse/entity.py`). dbt
 sees them as sources (`silver_entities` in `models/bronze/sources.yml`) for Gold.
+
+Gold per block (docs/gold-coverage.md, O36, O43, decision D35): `observations.py` puts every loaded Silver
+block of a big source into `gold.<source>_observations`, `_series`, `_measures` and `_geography` by
+rule, one file per block, rebuilt only when the block's Silver files, the Gold SQL
+(`entity/gold_*.sql`) or the mapping of its geography codes changed; each block is checked for one
+row per `series_key` × `date_key` before it is accepted. Built for Eurostat and tried in Dev
+(`--trial zz_dev_<topic>`); not yet a Pipeline activity, so nothing runs in production.
 
 ```sh
 cd warehouse && DBT_PROFILES_DIR=. dbt build --target trial   # needs the R2 env vars
