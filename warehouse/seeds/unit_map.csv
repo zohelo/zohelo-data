@@ -156,6 +156,7 @@ zus_psz,PLN,,pln
 zus_psz,days,,days
 zus_psz,payers,,payers
 zus_psz,certificates,,certificates
+world_bank_edstats,score,,pisa_score
 nbp_bop,mln_eur,,mln_eur
 nbp_bop,mln_pln,,mln_pln
 nbp_interest_rates,pct,,pct
