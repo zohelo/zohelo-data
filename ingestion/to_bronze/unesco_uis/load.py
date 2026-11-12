@@ -57,7 +57,7 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
             unknown = sorted({f[0] for f in fields} - set(FIELDS))
             if unknown:
                 raise ValueError(f"unknown record fields: {unknown}")
-            table = con.execute(
+            table = con.sql(
                 f"""
                 select
                     ? as entity,
@@ -70,8 +70,8 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
                     unnest(cast(j -> '$.records' as json[])) with ordinality as u(r, n)
                 order by n
                 """,
-                [prov["entity"], prov["raw_sha256"], prov["source_version"], prov["ingested_at"], str(path)],
-            ).fetch_arrow_table()
+                params=[prov["entity"], prov["raw_sha256"], prov["source_version"], prov["ingested_at"], str(path)],
+            ).to_arrow_table()
         except duckdb.Error as exc:
             raise ValueError(f"not JSON: {exc}") from exc
         finally:

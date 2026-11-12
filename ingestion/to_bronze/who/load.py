@@ -60,7 +60,7 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
         path.write_text(text, encoding="utf-8")
         con = duckdb.connect()
         con.execute("set preserve_insertion_order = true")
-        table = con.execute(
+        table = con.sql(
             f"""
             select
                 ? as entity,
@@ -72,8 +72,8 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
             from read_csv(?, header = true, all_varchar = true, quote = '"', escape = '"', delim = ',',
                           strict_mode = true, null_padding = false)
             """,
-            [prov["entity"], prov["raw_sha256"], prov["source_version"], prov["ingested_at"], str(path)],
-        ).fetch_arrow_table()
+            params=[prov["entity"], prov["raw_sha256"], prov["source_version"], prov["ingested_at"], str(path)],
+        ).to_arrow_table()
         con.close()
     if not table.num_rows:
         raise ValueError("no observations")
