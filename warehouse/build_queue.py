@@ -60,7 +60,7 @@ def _get(repo: str, token: str, path: str) -> dict:
 
 def place(run: dict, jobs: list[dict]) -> dict | None:
     """Another run's place in the build queue, from its jobs: None when its build has not come near the queue or
-    has ended, else {"run", "state", "forced", "queue_job"} with state
+    has ended, else {"run", "state", "forced", "queue_job", "platform"} with state
 
     - ``deciding``: its queue job has not ended;
     - ``waiting``: it entered and its build job has not started (GitHub lists a job that waits for the
@@ -72,7 +72,8 @@ def place(run: dict, jobs: list[dict]) -> dict | None:
     build = next((j for j in jobs if j.get("name") == BUILD_JOB), None)
     if queue is None and build is None:
         return None
-    forced = queue["name"].endswith(FORCED) if queue else "· platform ·" in str(run.get("display_title", ""))
+    platform = "· platform ·" in str(run.get("display_title", ""))  # a platform run has no index refresh
+    forced = queue["name"].endswith(FORCED) if queue else platform
     if build is not None:
         if build.get("status") == "completed":
             return None
@@ -85,7 +86,13 @@ def place(run: dict, jobs: list[dict]) -> dict | None:
         return None  # failed or cancelled, or covered: it does not build
     else:
         state = "waiting"
-    return {"run": int(run["id"]), "state": state, "forced": forced, "queue_job": int(queue["id"]) if queue else 0}
+    return {
+        "run": int(run["id"]),
+        "state": state,
+        "forced": forced,
+        "queue_job": int(queue["id"]) if queue else 0,
+        "platform": platform,
+    }
 
 
 def decide(forced: bool, queue_job: int, others: list[dict]) -> tuple[str, int | None]:
@@ -173,10 +180,14 @@ def main() -> int:
     title = f"silver_gold.build covered by run {other}" if decision == "covered" else "silver_gold.queue"
     annotate("warning" if problem else "notice", title, summary)
     step_summary(f"## {title}\n\n```json\n{json.dumps(summary, indent=2)}\n```\n")
+    # The covering run also refreshes the portal index after its build, unless it is a platform run (no index
+    # refresh in its plan): several covered runs refreshing at once failed on R2's concurrent request limit (#2947).
+    by = next((o for o in others if o["run"] == other), None) if decision == "covered" else None
+    index = "covered" if by is not None and not by["platform"] else "refresh"
     output = os.environ.get("GITHUB_OUTPUT")
     if output:
         with open(output, "a", encoding="utf-8") as handle:
-            handle.write(f"decision={decision}\ncovered_by={other or ''}\n")
+            handle.write(f"decision={decision}\ncovered_by={other or ''}\nindex={index}\n")
     return 0
 
 
