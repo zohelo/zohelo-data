@@ -6310,9 +6310,11 @@ sources:
       49 KB a day; no nextLink at this size. Full load = one request per entity and day from 2024-06-14: 882 days to 12 Nov
       2026, so about 1,800 requests and 65 MB for the two entities, half an hour at one request a second. The entity catalogue
       was not read (https://api.raporty.pse.pl/api/ answers 404); date-range filters and paging were not tested.'
-    incremental: 'Entity = report x business day, version = max publication_ts; daily request of yesterday and today and a
-      re-read of the last 7 days for corrections (delta, append_only by day with replacement of a re-published day). About
-      35,000 rows a year per entity: small source, refresh full.'
+    incremental: 'Built (#2870): entity = report x business day, version = max publication_ts_utc; each daily run lands
+      the missing days up to yesterday (Warsaw) and re-reads the newest 7 days (a re-published day lands as a new
+      version, SHA-256); empty answers are not landed. Dev probe 43284836734: no Last-Modified/ETag, identical bytes on
+      repeat, his-wlk-cal days of 2024-2025 re-published in January 2026. About 35,000 rows a year per entity: small
+      source, refresh full.'
     identifiers: Report/dataset ID, business_date, dtime_utc, publication_ts.
   modelling:
     notes: 'Preserve Europe/Warsaw local time with the UTC column (DST days have 92 or 100 periods), settlement interval and

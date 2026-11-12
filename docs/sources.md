@@ -959,3 +959,24 @@ and women, Poland and voivodeships). Gold block `registered_unemployment` (KPIs 
 `registered_unemployment_rate`, next to GUS BDL and DBW). Weekly schedule (Tuesday). Licence: CC BY 3.0 PL (portal
 footer). The ZIPs since 2001, the half-yearly occupation and vacancy tables and the yearly MRPiPS-01 data files
 (SPR1, about 27 MB) are not built yet.
+## PSE Reports API v2 (`pse`)
+
+**Built (12 Nov 2026, register PL-ENV-019).** PSE (Polskie Sieci Elektroenergetyczne) serves its power-system and
+market reports only through the public API v2, `https://api.raporty.pse.pl/api/<report>?$filter=business_date eq
+'<YYYY-MM-DD>'` (no key, JSON `{"value": [...]}`, one row per 15-minute period: 96 a day, 92 on the last Sunday of
+March, 100 on the last Sunday of October; no Last-Modified or ETag; repeated requests return identical bytes). API v2
+starts on business day 2024-06-14. Built reports: `rce-pln` (market price of electricity RCE, PLN/MWh, published on
+the day before the business day) and `his-wlk-cal` (power demand `demand`, wind `wi`, photovoltaics `pv`,
+generating-unit groups `jg*`, `jnwrb`, cross-border balances `swm_p`/`swm_np`, MW; published after the day and
+re-published later). Route (`ingestion/to_landing/pse/`): one request per report and business day, at most one
+started a second; entity = report × business day (`rce_pln_YYYYMMDD`, `his_wlk_cal_YYYYMMDD`), version = newest
+`publication_ts_utc` of the rows, a copy lands only when its SHA-256 changed, an empty answer is not landed. Each run
+lands the missing days (oldest first, time-budgeted) and re-reads the newest 7 business days; restart unit: one
+report-day. Bronze `bronze.pse_rce_pln`, `bronze.pse_his_wlk_cal`: one row per answer row, all fields as text, JSON
+null kept; an unknown or missing field rejects the file. Silver `silver.pse_rce_pln` and `silver.pse_power_system`
+(business date × UTC period end, values typed, PSE codes kept; the local period end stays text because PSE marks the
+repeated hour `02a`) and `silver.pse_daily` (business date × measure: arithmetic mean of the 15-minute values of
+`rce_pln`, `demand`, `wi`, `pv` over complete days only, with `interval_count`). Gold blocks `rce_pln` and
+`his_wlk_cal` in `fact_daily`, geography PL (KPIs `electricity_price_rce`, `electricity_demand`, `wind_generation`,
+`pv_generation`, draft). Daily schedule (05:20 UTC). Licence: not stated by PSE (`unresolved`), internal. Not built:
+the other reports of the API (catalogue not readable, `/api/` answers 404) and days before 2024-06-14 (old API).
