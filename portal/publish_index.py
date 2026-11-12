@@ -11,9 +11,11 @@ folder is otherwise not listed.
 
 A concurrent ``silver_gold.build`` swaps tables while this job runs (dbt creates
 ``<table>__dbt_tmp``, renames the old table to ``__dbt_backup``, renames, drops), so a listed table
-can be gone by the time it is loaded. dbt's temporary and backup tables are never shown; a listed
-table that is still not found after one short re-check is skipped with a warning annotation and the
-next refresh picks it up (#2825). Any other error fails the job.
+can be gone by the time it is loaded. dbt's temporary and backup tables are never shown; the listed
+tables not found are re-checked together after one short wait, and those still missing are skipped
+with a warning annotation and picked up by the next refresh (#2825). More than 3 skipped tables, or
+more than 10% of those listed, fail the job: R2 answers the same 404 for a bad credential. Any other
+error fails the job.
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -42,23 +44,20 @@ EXCLUDED_LAKEHOUSE_PREFIXES = (
 NAMESPACE_LAYERS = {"bronze": "02_bronze", "silver": "03_silver", "gold": "04_gold"}
 # Intermediate tables dbt creates and drops while it swaps a table in (silver_gold.build).
 DBT_SWAP_SUFFIXES = ("__dbt_tmp", "__dbt_backup")
-# Wait before re-checking a listed table that was not found (a swap takes a few seconds).
+# Wait before re-checking the listed tables that were not found (a swap takes a few seconds).
 SWAP_RECHECK_SECONDS = 15
+# R2 answers 404 both for a missing table and for a missing or expired credential, so more skips
+# than a concurrent build can explain fail the job instead of publishing a degraded index.
+MAX_SKIPPED_TABLES = 3
+MAX_SKIPPED_SHARE = 0.10
 
 
-def load_listed(cat, identifier, retry, recheck_seconds=SWAP_RECHECK_SECONDS):
-    """Load a listed table; None when it is still not found after one re-check (dropped or mid-swap)."""
+def load_or_none(cat, identifier, retry):
+    """Load a listed table; None when the catalog does not find it (dropped or mid-swap)."""
     from pyiceberg.exceptions import NoSuchTableError
 
-    def load():
+    try:
         return retry(lambda: cat.load_table(identifier), f"load {'.'.join(identifier)}")
-
-    try:
-        return load()
-    except NoSuchTableError:
-        time.sleep(recheck_seconds)
-    try:
-        return load()
     except NoSuchTableError:
         return None
 
@@ -74,26 +73,41 @@ def catalog_folders(cat=None, recheck_seconds=SWAP_RECHECK_SECONDS):
         from ingestion.common.r2 import catalog
 
         cat = catalog()
-    folders = {}
-    skipped = []
+    listed = []
     for namespace, layer in NAMESPACE_LAYERS.items():
         identifiers = retry(lambda namespace=namespace: cat.list_tables(namespace), f"list {namespace}")
-        for identifier in identifiers:
-            if identifier[-1].endswith(DBT_SWAP_SUFFIXES):
-                continue
-            table = load_listed(cat, identifier, retry, recheck_seconds)
+        listed += [(layer, i) for i in identifiers if not i[-1].endswith(DBT_SWAP_SUFFIXES)]
+    tables = {}
+    missing = []
+    for layer, identifier in listed:
+        table = load_or_none(cat, identifier, retry)
+        if table is None:
+            missing.append((layer, identifier))
+        else:
+            tables[identifier] = (layer, table)
+    skipped = []
+    if missing:
+        time.sleep(recheck_seconds)  # one wait for all first-pass misses
+        for layer, identifier in missing:
+            table = load_or_none(cat, identifier, retry)
             if table is None:
                 skipped.append(".".join(identifier))
-                continue
-            location = urlsplit(table.location()).path.strip("/") + "/"
-            if location.startswith(CATALOG_PREFIX):
-                folders[location] = f"{layer}/{identifier[-1]}/"
+            else:
+                tables[identifier] = (layer, table)
     if skipped:
-        annotate(
-            "warning",
-            "serving.refresh_index: tables skipped",
-            {"reason": "listed but not found after a re-check (concurrent build); next refresh", "tables": skipped},
-        )
+        data = {"listed": len(listed), "tables": skipped}
+        if len(skipped) > MAX_SKIPPED_TABLES or len(skipped) > MAX_SKIPPED_SHARE * len(listed):
+            annotate("error", "serving.refresh_index: too many tables not found", data)
+            raise RuntimeError(
+                f"{len(skipped)} of {len(listed)} listed tables not found after a re-check "
+                "(more than a concurrent build explains; check the catalog credential)"
+            )
+        annotate("warning", "serving.refresh_index: tables skipped", {"reason": "concurrent build", **data})
+    folders = {}
+    for identifier, (layer, table) in tables.items():
+        location = urlsplit(table.location()).path.strip("/") + "/"
+        if location.startswith(CATALOG_PREFIX):
+            folders[location] = f"{layer}/{identifier[-1]}/"
     return folders
 
 
