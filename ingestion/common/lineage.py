@@ -54,6 +54,7 @@ SOURCES = (
     "mf_jst_budgets",
     "mrpips_unemployment",
     "ecb",
+    "un_wpp",
 )
 # Accumulating sources (every landed copy stays in Bronze, docs/topics.md): no latest-only gate.
 ACCUMULATING = ("news_feeds", "gdelt", "wikimedia_pageviews")
