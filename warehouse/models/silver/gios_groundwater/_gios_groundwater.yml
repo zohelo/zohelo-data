@@ -68,7 +68,7 @@ models:
         description: The indicator's header as published (name and unit).
         tests: [not_null]
       - name: value_flag
-        tests: [not_null, {accepted_values: {arguments: {values: [number, number_text, below_limit, not_determined]}}}]
+        tests: [not_null, {accepted_values: {arguments: {values: [number, number_text, below_limit, not_determined, unreadable]}}}]
       - name: raw_sha256
         tests: [not_null]
   - name: gios_groundwater_results_inorganic

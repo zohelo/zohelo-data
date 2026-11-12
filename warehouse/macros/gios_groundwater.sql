@@ -67,11 +67,11 @@
                 max(case when column_role = 'sample_date' and cell_type <> 'n' then trim(value_text) end)
                     as sample_date_text,
             {% else %}
-                max(case when column_role = '{{ d }}' then trim(value_text) end) as {{ d }},
+                max(case when column_role = '{{ d }}' then nullif(trim(value_text), '') end) as {{ d }},
             {% endif %}
         {% endfor %}
-        max(case when column_role = 'monitoring_type' then trim(value_text) end) as monitoring_type,
-        max(case when column_role = 'final_class' then trim(value_text) end) as final_class,
+        max(case when column_role = 'monitoring_type' then nullif(trim(value_text), '') end) as monitoring_type,
+        max(case when column_role = 'final_class' then nullif(trim(value_text), '') end) as final_class,
         any_value(source_version) as source_version,
         any_value(raw_sha256) as raw_sha256
     from ({{ gios_groundwater_newest(kinds) }}) as c
@@ -83,7 +83,8 @@
    its column: parameter as published, its name and the unit in square brackets. value only where the cell is a
    number (gios_groundwater_number); value_flag names what the cell holds: number, number_text (a number stored as
    text), below_limit ("<0,05": below the limit of quantification, limit_value = the number after "<"),
-   not_determined ("n.o."); other text keeps the flag 'other' and fails the accepted_values test. #}
+   not_determined ("n.o."), unreadable ("#######": the cell holds Excel's overflow mark as text); other text keeps
+   the flag 'other' and fails the accepted_values test. Cells holding only spaces are no value and are left out. #}
 {% macro gios_groundwater_results(kinds, year_from, year_to) %}
 with cells as (
     select *
@@ -116,6 +117,7 @@ select
         when regexp_full_match(trim(c.value_text), '-?[0-9]+([.,][0-9]+)?') then 'number_text'
         when regexp_full_match(trim(c.value_text), '<\s*[0-9]+([.,][0-9]+)?') then 'below_limit'
         when lower(trim(c.value_text)) = 'n.o.' then 'not_determined'
+        when regexp_full_match(trim(c.value_text), '#+') then 'unreadable'
         else 'other'
     end as value_flag,
     case
@@ -126,5 +128,5 @@ select
     c.raw_sha256
 from cells as c
 inner join headers as h on c.entity = h.entity and c.column_number = h.column_number
-where c.row_number > 1 and c.column_role = 'parameter'
+where c.row_number > 1 and c.column_role = 'parameter' and trim(c.value_text) <> ''
 {% endmacro %}
