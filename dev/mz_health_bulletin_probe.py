@@ -96,14 +96,20 @@ def sheets(ids):
             note(f"sheets {fid} {i}", p)
 
 
-def dump(ids, sheet, rows):
+def dump(ids, sheet, rows, title):
     for fid in ids:
         r = get(f"{BASE}/downloadFile/{fid}" if fid.isdigit() else f"{BASE}/pobierz/{fid}")
+        cells = list(xlsx_cells.cells(r.content))
+        heads: dict[str, str] = {}
+        for c in cells:
+            if c["row_number"] <= 2:
+                heads[c["sheet_name"]] = heads.get(c["sheet_name"], "") + " " + c["value_text"]
+        keep = {n for n, t in heads.items() if re.search(sheet, n) and re.search(title, t)}
         lines: dict[tuple[str, int], list[str]] = {}
-        for c in xlsx_cells.cells(r.content):
-            if c["row_number"] <= rows and re.search(sheet, c["sheet_name"]):
-                lines.setdefault((c["sheet_name"], c["row_number"]), []).append(
-                    f"{c['column_number']}:{re.sub(chr(10), ' ', c['value_text'])[:40]}")
+        for c in cells:
+            if c["sheet_name"] in keep and c["row_number"] <= rows:
+                v = re.sub(r"\s+", " ", c["value_text"])
+                lines.setdefault((c["sheet_name"], c["row_number"]), []).append(f"{c['column_number']}:{v[:60]}")
         items = [f"{s}#{n} " + "|".join(v) for (s, n), v in sorted(lines.items(), key=lambda x: (x[0][0], x[0][1]))]
         for i, p in enumerate(chunks(items, 3800)):
             note(f"dump {fid} {i}", p)
@@ -135,7 +141,8 @@ def main(argv):
     elif mode == "dump":
         sheet = next((a[6:] for a in argv if a.startswith("sheet=")), ".")
         rows = int(next((a[5:] for a in argv if a.startswith("rows=")), "12"))
-        dump(ids, sheet, rows)
+        title = next((a[6:] for a in argv if a.startswith("title=")), ".")
+        dump(ids, sheet, rows, title.replace("_", " "))
     return 0
 
 
