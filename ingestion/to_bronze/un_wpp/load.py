@@ -6,9 +6,9 @@ comma-separated, ``field_values`` null) and one row per data row (``field_values
 ``|``-separated, ``field_names`` null, so the header is stored once per file, not on 1.76 million rows). A revision
 that adds or reorders columns still loads; Silver joins each row to its file's header and picks fields by name.
 Values stay source text. A file that is not gzip, has no LocID/Time header, a row of another width than the
-header, or a value containing ``|`` is rejected (bronze.un_wpp_rejected_files). The demographic indicators file is about 84,000 rows, the population by
-five-year age group file about 1.76 million (190 MB uncompressed): both decode in memory. Code shared with other
-small bulk sources: ingestion/common/bulk_bronze.py.
+header, or a value containing ``|`` is rejected (bronze.un_wpp_rejected_files). The demographic indicators file
+is about 84,000 rows, the population by five-year age group file about 1.76 million (190 MB uncompressed): both
+decode in memory. Code shared with other small bulk sources: ingestion/common/bulk_bronze.py.
 """
 
 from __future__ import annotations
