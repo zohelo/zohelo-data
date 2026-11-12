@@ -61,17 +61,11 @@ def apply(
     memory_limit: str = "10GB",
     temp_directory: str | None = None,
     source_view: str = "bronze",
-<<<<<<< HEAD
-) -> dict[str, Any]:
-    """Run warehouse/entity/<model>.sql over one input file, or the files of one entity (local paths or
-    s3:// URIs), read as the relation ``source_view``."""
-=======
     row_group_size: int = 1_000_000,
 ) -> dict[str, Any]:
     """Run warehouse/entity/<model>.sql over one input file, or the files of one entity (local paths or
     s3:// URIs), read as the relation ``source_view``. The writer holds one row group per thread in
     memory: wide rows need a smaller ``row_group_size``."""
->>>>>>> feat/2792-gold-eurostat-observations
     sql = (MODELS / f"{model}.sql").read_text(encoding="utf-8")
     output = Path(output)
     if output.exists():
@@ -86,12 +80,8 @@ def apply(
         for name, path in (lookups or {}).items():
             con.execute(f"CREATE VIEW {name} AS SELECT * FROM read_parquet('{str(path).replace(chr(39), '')}')")
         target = str(output).replace("'", "''")
-<<<<<<< HEAD
-        con.execute(f"COPY ({sql}) TO '{target}' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 1000000)")
-=======
         options = f"FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE {int(row_group_size)}"
         con.execute(f"COPY ({sql}) TO '{target}' ({options})")
->>>>>>> feat/2792-gold-eurostat-observations
         bronze_rows = con.execute(f"SELECT count(*) FROM {source_view}").fetchone()[0]
         checks = ", ".join([f"count(*) FILTER (WHERE {c} IS NULL)" for c in not_null] or ["0"])
         rows, *nulls = con.execute(f"SELECT count(*), {checks} FROM read_parquet('{target}')").fetchone()
