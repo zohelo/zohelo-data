@@ -4758,10 +4758,18 @@ sources:
       decyzje.uokik.gov.pl answered: robots.txt HTTP 404, entry page 200, the view WWW-wszystkie as JSON 200. In the first
       probe (run 43282997907) the same host timed out, so the build uses long timeouts and reports a timeout instead of retrying
       hard.'
+    - 'Owner question: the main UOKiK site uokik.gov.pl names ClaudeBot and anthropic-ai (with other AI crawlers) in its robots.txt,
+      while the decisions database sits on another host, decyzje.uokik.gov.pl, which has no robots.txt. The build would read
+      only the decisions host, with a scheduled program and not an AI crawler. Do you accept that, or do you read the robots
+      rule as UOKiK''s wish for all its hosts, in which case PLG-020 and PLG-021 wait for a reuse request to UOKiK?'
     - 'Licence unresolved: UOKiK''s terms are not read (uokik.gov.pl names the Claude crawlers in robots.txt). Internal build
       only.'
-    - 'Not verified: the column list of the view (the probe printed the first 260 characters of the JSON), the number of entries,
-      and whether every decision type is in WWW-wszystkie. The builder lists the columns first.'
+    - 'Dev probe run 43294572845 (job 131449333769, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py, 12 Nov 2026,
+      19:53 UTC): the view WWW-wszystkie is categorised, not flat: 12 top-level categories (subject areas; the first is "Jakość
+      paliw"), then the year, then one entry per decision whose single cell is an HTML fragment starting "Numer decyzji:".
+      The names of the other eleven categories were not read. Still not verified: the number of entries and whether every
+      decision type is in the view. The builder lists the categories first and parses the decision number, date and parties
+      from the HTML cell.'
     references:
     - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf
     - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf/WWW-wszystkie?ReadViewEntries&OutputFormat=JSON
@@ -4814,8 +4822,12 @@ sources:
       the decisions host answered (robots.txt HTTP 404, the view WWW-wszystkie as JSON 200). Build together with PLG-020 as
       one source system.'
     - 'Licence unresolved: UOKiK''s terms are not read. Internal build only.'
-    - 'Not verified: that the view exposes the signature or department column needed to select DKK decisions (the probe printed
-      only the first 260 characters of the JSON). If it does not, this entry goes back to reviewing with that finding.'
+    - 'Dev probe run 43294572845 (job 131449333769, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py, 12 Nov 2026,
+      19:53 UTC): the view WWW-wszystkie is categorised, not flat: 12 top-level categories (subject areas; the first is "Jakość
+      paliw"), then the year, then one entry per decision whose single cell is an HTML fragment starting "Numer decyzji:".
+      The names of the other eleven categories were not read. So concentration decisions are selected by their category or
+      by the DKK signature in the decision number; which of the two works is not verified, and the stage-1 issue stays open
+      until the builder has listed the categories. If neither works, this entry goes back to reviewing with that finding.'
     references:
     - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf
     - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf/WWW-wszystkie?ReadViewEntries&OutputFormat=JSON
@@ -5016,9 +5028,10 @@ sources:
     evidence: documented
     connection: tested
     blockers:
-    - 'Route decided: polite crawl of public pages that robots.txt allows. The playbook asks for an owner decision or a D
-      row per web source; this approval follows the orchestrator verdict on PR #2878 under the owner rule of 12 Nov 2026 (issue
-      #2873). The D row in docs/decisions.md is still to be written before the build.'
+    - 'Route decided: polite crawl of public pages that robots.txt allows, following the orchestrator verdict on PR #2878
+      under the owner rule of 12 Nov 2026 (issue #2873). A verdict is not an owner decision: the builder writes the D row
+      in docs/decisions.md, or obtains an owner decision, in the build pull request before any activities entry for this source
+      merges (AGENTS.md "Authorizations").'
     - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): www.senat.gov.pl answered 200
       on the home, sittings, votes and senators pages; bip.senat.gov.pl was not readable. Dev probe run 43288930412 (job 131429683337,
       branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026): robots.txt read in full; the re-use page answered
@@ -6740,8 +6753,8 @@ sources:
       Zarządca, Miejscowość, name of the rest area, current category, target category). https://www.gov.pl/web/gddkia/biezaca-realizacja-pbdk-na-lata-2014-2023
       links the road-programme status as one PDF (1,121,256 bytes, 6 pages, with a text layer: 9,796 text operators, no page
       images) plus contractor and legend PDFs. Attachment ids change per edition, so the two pages are the stable entries.
-      Not in this route: the road-obstruction XML feed on archiwum.gddkia.gov.pl (a live operational feed; the host timed
-      out in both probes). No XML of the road programme was found.'
+      Not in this route: the road-obstruction XML feed on archiwum.gddkia.gov.pl, a live operational feed with no statistical
+      use. No XML of the road programme was found.'
     incremental: Snapshot per file; version = Last-Modified of the attachment; monthly check of the two pages (the MOP table
       is monthly).
     identifiers: Road number, section name, MOP name and category.
@@ -6979,10 +6992,10 @@ sources:
     incremental: 'None: the series are read from Eurostat (GL-001).'
     identifiers: Period, cargo group.
   modelling:
-    notes: 'No Gold use from this source. The port''s figures come from Eurostat maritime statistics through GL-001: gross
-      weight of goods handled in the port of Gdańsk (mar_mg_aa_pwhd, annual 2005-2024, port code PL_0PLGDN), quarterly detail
-      for Polish ports (mar_go_qm_pl, 2004-Q1 to 2026-Q1), containers in TEU (mar_mg_am_pvh), cargo type (mar_mg_am_pwhc)
-      and passengers (mar_mp_aa_pphd).'
+    notes: 'No Gold use from this source. Confirmed stand-in: annual gross weight of goods handled in the port of Gdańsk in
+      Eurostat mar_mg_aa_pwhd (2005-2024, port code PL_0PLGDN), loaded through GL-001. Likely further cover, not confirmed
+      for Gdańsk: quarterly detail for Polish ports (mar_go_qm_pl, in Silver), containers in TEU (mar_mg_am_pvh), cargo type
+      (mar_mg_am_pwhc) and passengers (mar_mp_aa_pphd).'
     overlap: Port-specific facts are not a national maritime total and may overlap national summaries.
   research:
     priority: specialist
@@ -6990,13 +7003,15 @@ sources:
     connection: tested
     blockers:
     - 'Parked, not for a technical reason: the port authority, a company, reserves all rights and offers press-release text
-      and charts only, and its series are contained in Eurostat maritime statistics that we load through GL-001: mar_mg_aa_pwhd
-      (gross weight handled in main ports; Gdańsk is rep_mar PL_0PLGDN; 3,960 rows in Silver) and mar_go_qm_pl (Poland by
-      port, quarterly; 2,476,692 rows in Silver), with mar_mg_am_pvh, mar_mg_am_pwhc and mar_mp_aa_pphd listed in silver.eurostat_dataflows
-      (Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026)).
-      Eurostat is two to three quarters behind the port''s own releases.'
-    - 'Owner option: if the port''s earlier quarterly figures are wanted, a written permission request to ZMPG S.A. (text
-      drafted on request).'
+      and charts only. Its annual gross weight handled is contained in Eurostat mar_mg_aa_pwhd, which we load through GL-001
+      (Gdańsk is rep_mar PL_0PLGDN; 3,960 rows in Silver; Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe,
+      script dev/src_dfh_fix_probe.py, 12 Nov 2026)). Containment of the quarterly, container, cargo-type and passenger series
+      is likely (mar_go_qm_pl with 2,476,692 rows in Silver; mar_mg_am_pvh, mar_mg_am_pwhc and mar_mp_aa_pphd listed in silver.eurostat_dataflows)
+      but not confirmed for Gdańsk. Eurostat is two to three quarters behind the port''s own releases.'
+    - 'Owner question: the Port of Gdańsk reserves all rights and publishes its quarterly cargo, container and passenger figures
+      only as press-release text; Eurostat, which we load, confirms only the annual gross weight for Gdańsk and runs two to
+      three quarters behind. Do you want a written permission request sent to ZMPG S.A. (text drafted for you) to reuse the
+      port''s quarterly figures with attribution, or do you accept the Eurostat series as sufficient?'
     - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the facts-and-figures page answered
       200 and links no data file. Not verified: that Gdańsk is a port in mar_go_qm_pl and in the three catalogue tables (only
       mar_mg_aa_pwhd was opened), and the Silver row counts of those three.'
@@ -7281,59 +7296,72 @@ sources:
   name: Rejestr Wniosków, Decyzji i Zgłoszeń (RWDZ) public search and API
   short_name: GUNB RWDZ building register
   provider: Główny Urząd Nadzoru Budowlanego (GUNB)
-  status: reviewing
+  status: approved
   family: H
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [construction permits, buildings, planning]
   entities: [permit application, decision, construction notification]
-  granularity: Individual public applications, decisions and notifications; a record is not an as-built building.
-  coverage: Current public register; central authoritative start date and amendment history were not confirmed.
+  granularity: One record per building-permit application or decision (point feature), in one WFS feature type per year; a
+    record is not an as-built building.
+  coverage: WFS feature types pozwolenia_2020 to pozwolenia_2026 plus pozwolenia_pozostale (earlier or undated records); 527,617
+    records for 2024, 519,719 for 2025, 331,852 for 2026 on 12 Nov 2026.
   access:
-    endpoint: https://wyszukiwarka.gunb.gov.pl/
+    endpoint: https://mapy.geoportal.gov.pl/wss/ext/GlownyUrzadNadzoruBudowlanego/RWDZ-WFS
     kind: api
-    interfaces: [HTML, REST-API, OpenAPI, JSON, bulk-files (unverified)]
-    auth: Public search; API documentation is public.
-    cost: Free public search; API cost terms not separately stated.
-    limits: 'Unknown: the service showed a maintenance page during the probe.'
+    interfaces: [WFS, GML, WMS, bulk-files (unverified), HTML]
+    auth: Public, no key.
+    cost: Free.
+    limits: 'None published: the WFS capabilities state no fees and no access constraints. The producer site wyszukiwarka.gunb.gov.pl
+      served a maintenance page ("Przerwa serwisowa - GUNB") in three probes between 18:46 and 20:01 UTC on 12 Nov 2026.'
   licence:
     status: unresolved
-    notes: 'Terms: not read. https://wyszukiwarka.gunb.gov.pl/ showed "Przerwa serwisowa - GUNB" to the probe and to the desk
-      fetch on 12 Nov 2026, so no terms page was reachable. The gov.pl page https://www.gov.pl/web/gunb/portal-e-budownictwo
-      describes RWDZ as the "centralny rejestr wszystkich wniosków, decyzji i zgłoszeń dotyczących inwestycji budowlanych"
-      and carries only the gov.pl footer for text content. Personal data: whether investor names of natural persons are in
-      the public files is not checked.'
-  updates: Registry updates follow authority filings; the refresh rhythm of the bulk files is not confirmed.
+    notes: 'Terms: none stated. The WFS capabilities (read by the probe 12 Nov 2026) have empty Fees and AccessConstraints
+      and the abstract: "Usługa WFS publikująca Rejestr Wniosków Decyzji i Zgłoszeń. Usługa publikowana jest w infrastrukturze
+      Głównego Urzędu Geodezji i Kartografii na podstawie danych Głównego Urzędu Nadzoru Budowlanego https://wyszukiwarka.gunb.gov.pl/pobranie.html".
+      The GUGiK announcement https://www.gov.pl/web/gugik/nowa-usluga-wfs-zwiazana-z-rejestrem-wnioskow-decyzji-i-zgloszen
+      (22 Apr 2022) states no licence; the GUNB site was in maintenance, so its terms are unread. Internal build only. Attribution
+      if used: "Źródło: Główny Urząd Nadzoru Budowlanego, Rejestr Wniosków, Decyzji i Zgłoszeń (usługa GUGiK)". Personal data:
+      the attribute list of the features was not read; fields naming natural persons are left out at Bronze.'
+  updates: Registry updates follow authority filings; the refresh rhythm of the WFS and of the bulk files is not stated.
   ingestion:
-    history: 'Not established. Expected route (from memory, unverified): bulk ZIP/CSV files per voivodeship and for Poland
-      on https://wyszukiwarka.gunb.gov.pl/pobranie.html. On 12 Nov 2026 every path of the host returned the same 1,503-byte
-      maintenance page with status 200 (Last-Modified 17:19 GMT), also for file names guessed by the probe, so nothing could
-      be confirmed. The API documentation host https://dev.wyszukiwarka.gunb.gov.pl/docs answered (page title "RWDZ API";
-      no openapi.json at the guessed path).'
-    incremental: 'PROPOSAL once confirmed: snapshot of the bulk files, version = Last-Modified.'
-    identifiers: Register number of the application, decision or notification; authority; TERYT of the location (to confirm).
+    history: 'Official alternative route, tested: the GUGiK WFS on GUNB data, https://mapy.geoportal.gov.pl/wss/ext/GlownyUrzadNadzoruBudowlanego/RWDZ-WFS
+      (GetCapabilities 200; feature types ms:pozwolenia_2020 ... ms:pozwolenia_2026 and ms:pozwolenia_pozostale; resultType=hits
+      works per type; GML output). Load per year type with paging (count and startIndex), one request at a time. The twin
+      WMS (.../RWDZ-WMS) is for maps only. Preferred route once it answers: the producer''s bulk files on https://wyszukiwarka.gunb.gov.pl/pobranie.html
+      (named in the WFS abstract; ZIP/CSV per voivodeship expected, unverified), which the builder retries first; the site
+      was in maintenance during all three probes. The RWDZ API documentation host https://dev.wyszukiwarka.gunb.gov.pl/docs
+      answers (title "RWDZ API"), its specification was not found.'
+    incremental: 'Snapshot per year type: closed years once, the current and the previous year weekly; version = download
+      date (the WFS gives none) or Last-Modified of the bulk files.'
+    identifiers: Register number of the application or decision; authority; location (TERYT to confirm in the attribute list);
+      year type.
   modelling:
-    notes: 'Highest Gold value in the transport and construction batch if the bulk files exist: new KPIs building permits
-      issued and construction notifications per month, Poland, voivodeships and powiats. kpi stays false until the route is
-      confirmed. Effort M.'
+    notes: 'Smallest Gold selection: building permits by month of decision and by voivodeship and powiat, from 2020. New KPIs:
+      building-permit decisions and applications per month (count), Poland, voivodeships and powiats. Geometry and address
+      detail are not kept beyond the territorial code. kpi flag stays false until the register-fields table is updated. Effort
+      M (WFS paging of about 0.5 million records per year, GML).'
     overlap: Complements EGiB/BDOT buildings and planning data; it does not prove construction completion.
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Owner question: the GUNB RWDZ service was in a maintenance window during the one Dev probe of this batch ("Przerwa
-      serwisowa", 12 Nov 2026 18:46 UTC), so its bulk files and terms are unread. May the next source-review run spend one
-      more short Dev probe on this single host (GET of pobranie.html and HEAD of the listed files)?'
-    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): wyszukiwarka.gunb.gov.pl reachable
-      from a GitHub runner but serving the maintenance page; dev.wyszukiwarka.gunb.gov.pl/docs 200.'
-    - Check the files for personal data of natural persons before any load.
+    - 'Dev probe run 43295137219 (job 131451310505, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py, 12 Nov 2026,
+      20:01 UTC): the GUGiK WFS answered 200 (capabilities, hits per year type); the attribute list was not read (DescribeFeatureType
+      returned only the type name), so check it for personal data at the Landing trial.'
+    - 'Dev probe run 43294572845 (job 131449333769, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py, 12 Nov 2026,
+      19:53 UTC) and Dev probe run 43295137219 (job 131451310505, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py,
+      12 Nov 2026, 20:01 UTC): wyszukiwarka.gunb.gov.pl still served the maintenance page (also in run 43282997907 at 18:46
+      UTC), so the bulk files and the terms on the producer site are unread; the builder retries pobranie.html before choosing
+      between bulk files and the WFS.'
+    - 'Licence unresolved: no terms stated on the WFS or the announcement. Internal build only.'
     references:
-    - https://wyszukiwarka.gunb.gov.pl/
+    - https://mapy.geoportal.gov.pl/wss/ext/GlownyUrzadNadzoruBudowlanego/RWDZ-WFS
+    - https://www.gov.pl/web/gugik/nowa-usluga-wfs-zwiazana-z-rejestrem-wnioskow-decyzji-i-zgloszen
     - https://wyszukiwarka.gunb.gov.pl/pobranie.html
     - https://dev.wyszukiwarka.gunb.gov.pl/docs
-    - https://www.gov.pl/web/gunb/portal-e-budownictwo
 - id: PL-ENV-034
   name: internet.gov.pl broadband coverage database and UKE market aggregates
   short_name: internet.gov.pl broadband
