@@ -2754,7 +2754,8 @@ sources:
   name: API Terminy Leczenia / Informator o Terminach Leczenia
   short_name: NFZ waiting times
   provider: Narodowy Fundusz Zdrowia (NFZ)
-  status: approved
+  source_system: nfz_waiting_times
+  status: built
   family: B
   kpi: true
   geography: Poland; service location

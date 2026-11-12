@@ -1,0 +1,45 @@
+source_system: nfz_waiting_times
+description: "NFZ API Terminy Leczenia v1.4 — monthly snapshot of every waiting-list queue (provider x place x benefit, stable and urgent case) by voivodeship"
+
+# Extraction strategy (docs/landing.md). Register PLS-015. No bulk feature: NFZ publishes the waiting-times register
+# only through the API (https://apinfz.nfz.gov.pl/app-itl-api-pcus/, v1.4 since 10 July 2026; v1.3 at
+# api.nfz.gov.pl/app-itl-api is marked obsolete). /queues needs no benefit: one case (1 stable, 2 urgent) and one
+# voivodeship (NFZ code 01-16) at most 25 records a page (Dev probes 43321395653, 43324760454: 74,070 queues per
+# case, 148,140 in all, about 5,930 pages; paging read twice gave the same ids in the same order). The API keeps no
+# history and gives no update time: each run is a dated snapshot, never backfilled. Entity = one case x voivodeship
+# in one snapshot month (queues_<YYYYMM>_case<c>_<pp>, 32 a month, own extractor ingestion/to_landing/
+# nfz_waiting_times/: one ZIP of the exact page answers per entity), version = time the read started. Every month is
+# its own entity, so Bronze keeps the newest copy of each month and the months accumulate.
+# Polite: one request at a time with a 0.3 s pause (terms v1.3 section III allow 10 a second per IP), bounded
+# retries; the site runs Imperva bot protection, which has never challenged these plain requests; a challenge or 403
+# fails the run and is not worked around. TRIAL_LINE
+extraction:
+  initial: api
+  production: snapshot                  # each entity is the complete list of one case and voivodeship that month
+  incremental_policy: changed_since_last  # this month's entities missing from Landing
+  schedule: # UTC; providers publish the month-end waiting-list counts of month M in the first days of M+1 and update the forecast dates continuously; monthly on the 20th (most counts of the previous month are in), a read of about TRIAL_HOURS
+    - {cron: "10 1 20 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/nfz_waiting_times/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}  # per entity, i.e. every month's newest copy is kept
+  prune: report
+bronze: [bronze.nfz_waiting_times_queues, bronze.nfz_waiting_times_rejected_files]
+silver: [silver.nfz_waiting_times_queues, silver.nfz_waiting_times_providers, silver.nfz_waiting_times_monthly]
+gold: [gold.build_nfz_waiting_times, gold.metrics_waiting_list_persons, gold.metrics_waiting_lists]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  nfz_waiting_times_queues: {rows: 225000}  # TRIAL_QUEUES
+  nfz_waiting_times_providers: {rows: 30000}  # TRIAL_PROVIDERS
+  nfz_waiting_times_monthly: {rows: 5000}  # TRIAL_MONTHLY; 102 rows a month (3 measures x 17 areas x 2 cases)
+  poc_build_nfz_waiting_times: {rows: 5000}  # TRIAL_BUILD; as the monthly counts
+  poc_metrics_waiting_list_persons: {rows: 1000}  # TRIAL_METRICS; 17 areas a month
+  poc_metrics_waiting_lists: {rows: 1000}  # TRIAL_METRICS; 17 areas a month
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded copies of a month's entity
+# Refresh policy for all layers (D32): about 150,000 records a month, read whole (the API has no changed-since filter
+# and no history); Bronze appends the month's 32 files, Silver keeps the newest month in detail and recounts all
+# months (about 100 rows each), rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2956"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

@@ -1,0 +1,71 @@
+version: 2
+models:
+  - name: nfz_waiting_times_queues
+    description: >-
+      NFZ waiting times, API Terminy Leczenia v1.4 (register PLS-015; terms unresolved, internal): every queue entry
+      (provider x place x benefit x case 1 stable / 2 urgent) of the newest complete monthly snapshot, values as
+      published (persons awaiting, removed and average waiting period of the statistics month; the forecast time to
+      the benefit as published text with its as-at date). No history is offered by the API: snapshots begin with
+      the first scheduled run. Grain: queue_id. Trial run: see ingestion/sources/nfz_waiting_times.yaml.
+    tests:
+      - unique:
+          column_name: queue_id
+    columns:
+      - name: queue_id
+        tests: [not_null]
+      - name: snapshot_month
+        tests: [not_null]
+      - name: province_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16']}}}]
+      - name: case_code
+        tests: [not_null, {accepted_values: {arguments: {values: [1, 2], quote: false}}}]
+      - name: benefit
+        tests: [not_null]
+      - name: provider_code
+        tests: [not_null]
+      - name: many_places
+        tests: [{accepted_values: {arguments: {values: ['Y', 'N']}}}]
+      - name: type_building
+        tests: [{accepted_values: {arguments: {values: [1, 2], quote: false}}}]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: nfz_waiting_times_providers
+    description: >-
+      Healthcare providers listing queues in the newest complete NFZ waiting-times snapshot (register PLS-015): one
+      row per NFZ voivodeship branch and provider code, name and TERYT seat code as published, with counts of queue
+      entries and places. Grain: province_code x provider_code.
+    tests:
+      - unique:
+          column_name: "province_code || '|' || provider_code"
+    columns:
+      - name: province_code
+        tests: [not_null]
+      - name: provider_code
+        tests: [not_null]
+      - name: snapshot_month
+        tests: [not_null]
+  - name: nfz_waiting_times_monthly
+    description: >-
+      Counts of the NFZ waiting-times snapshots (register PLS-015) by voivodeship ('00' = Poland), case and month,
+      zohelo calculations on unchanged published values: waiting_lists (queue entries listed, snapshot month),
+      persons_awaiting (sum of the published month-end counts for the month before the snapshot; missing counts are
+      not summed), lists_reporting (entries whose count was summed). Grain: measure_code x province_code x case_code x
+      period_month.
+    tests:
+      - unique:
+          column_name: "measure_code || '|' || province_code || '|' || case_code || '|' || period_month"
+    columns:
+      - name: measure_code
+        tests: [not_null, {accepted_values: {arguments: {values: [waiting_lists, persons_awaiting, lists_reporting]}}}]
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: [waiting_lists, persons]}}}]
+      - name: province_code
+        tests: [not_null]
+      - name: case_code
+        tests: [not_null]
+      - name: period_month
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
