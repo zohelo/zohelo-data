@@ -51,6 +51,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 | Rule | Check |
 |---|---|
 | `dbt parse` succeeds | [auto] |
+| Every model and data test compiles with the prod target offline (in-memory DuckDB, the R2 catalog replaced by an empty local `r2` with stub Gold block tables, the `topics` var of `build.py`), and its compiled SQL is exactly one statement that DuckDB's parser accepts; compiled Python models parse. `dbt parse` neither renders model Jinja nor parses SQL | [auto] repo_check `dbt compile` (`ops/dbt_compile.py`; on its own `python -m ops.dbt_compile`) |
 | sqlfluff (dialect duckdb, jinja templater with dbt built-ins, no lakehouse connection; settings in `pyproject.toml`): lowercase keywords, explicit aliases, qualified columns when several tables are joined; RF04 (keyword-named columns such as `year`) and AL05 are off on purpose | [auto] |
 | No `select *` in a Gold model's output from upstream models; import CTEs (`x as (select * from ref(...))`) and unions of the model's own CTEs are allowed | [review] |
 | Every model has a YAML entry with description, column descriptions for keys, and at least one test (`not_null`/`unique` on the grain) | [auto] |
@@ -95,7 +96,8 @@ and runnable by a person or another AI when Claude is not available. Rules marke
    rules, no `dev/`, five workflows with pinned actions, compile, ruff check + format,
    yamllint, configuration and schedules), `dbt parse`, and a gitleaks secret scan.
    Rule changes are made in `ops/repo_check.py` and `pyproject.toml`, not in the workflow.
-2. sqlfluff on the dbt models is part of `ops/repo_check` (14 Oct).
+2. sqlfluff on the dbt models (14 Oct) and the offline `dbt compile` with a DuckDB parse of every compiled
+   model and data test (`ops/dbt_compile.py`) are part of `ops/repo_check`.
 3. Reviewer: an independent review agent that did not write the change reviews every PR against
    this file before the merge (O34; source PRs: `data-quality-reviewer`, [flow.md](flow.md)
    station 5). There are no scheduled passes and no auto-merge (O26).
