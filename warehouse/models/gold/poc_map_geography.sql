@@ -432,6 +432,10 @@ un_wpp as (
 world_bank_edstats as (
     select
         'world_bank_edstats' as source_system,
+        g.iso3 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso3 is not null
 ),
 
 -- UNHCR Refugee Statistics (cf_type=ISO): countries of asylum by ISO 3166-1 alpha-3 (dim_geography iso3), built
