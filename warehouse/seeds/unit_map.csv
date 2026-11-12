@@ -166,3 +166,10 @@ gus_bdl,zł,gus_bdl:P3788:zł%,pln_per_m2
 gus_bdl,zł,gus_bdl:P3794:zł%,pln_per_m2
 gus_dbw,[zł],gus_dbw:309_485_180_3:%,pln_per_m2
 gus_dbw,udział w danej grupie gospodarstw domowych [%],,pct
+nfz_services,hospitalisations,,hospitalisations
+nfz_services,persons,,persons
+nfz_services,hospitalisations_per_patient,,hospitalisations_per_patient
+nfz_services,pct,,pct
+nfz_services,days,,days
+nfz_services,PLN,,pln
+nfz_services,points,,nfz_points

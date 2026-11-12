@@ -220,3 +220,7 @@ price_m2_secondary,gus_dbw,gus_dbw:309_485_180_3:180:wtórny rynek nieruchomośc
 arope_rate,gus_dbw,gus_dbw:1603_1339_116_4:116,"EU-SILC, Poland, macroregions and regions",2,
 long_term_unemployment,gus_dbw,gus_dbw:1618_1335_95_4:95,"LFS, 15-74, 12 months or more",2,
 registered_unemployed,gus_dbw,gus_dbw:507_870_93_1:93,"end of month, Poland and voivodeships",2,
+childbirth_hospitalisations,nfz_services,nfz_services:1a:hospitalisations:5.51.01.0013001:hospitalisations,"hospitalisations settled in JGP N01, Poland and NFZ branches (NFZ statistics API, basic-data)",1,
+hip_replacements,nfz_services,nfz_services:1a:hospitalisations:5.51.01.0008013:hospitalisations,"hospitalisations settled in JGP H13, Poland and NFZ branches (NFZ statistics API, basic-data)",1,
+knee_replacements,nfz_services,nfz_services:1a:hospitalisations:5.51.01.0008015:hospitalisations,"hospitalisations settled in JGP H15, Poland and NFZ branches (NFZ statistics API, basic-data)",1,
+stroke_unit_hospitalisations,nfz_services,nfz_services:1a:hospitalisations:5.51.01.0001048:hospitalisations,"hospitalisations settled in JGP A48, Poland and NFZ branches (NFZ statistics API, basic-data)",1,

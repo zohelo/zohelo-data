@@ -2584,7 +2584,8 @@ sources:
   name: API Statystyki NFZ – Świadczenia
   short_name: 'NFZ statistics: services'
   provider: Narodowy Fundusz Zdrowia (NFZ)
-  status: approved
+  source_system: nfz_services
+  status: built
   family: B
   kpi: true
   geography: Poland; provider/clinical group tables
