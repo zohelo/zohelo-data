@@ -105,6 +105,18 @@ silver as (
                 else 6
             end
         ) as unit_level,
+        -- No-value signs (#2788, #2806): "x"/"X" (GUS: "brak informacji, konieczność zachowania tajemnicy
+        -- statystycznej lub wypełnienie pozycji jest niemożliwe albo niecelowe") and "n" ("dana jeszcze niedostępna")
+        -- mark a cell without a value, written as 0 (every such row with a value is 0: 4.56 M website "x", Dev run
+        -- 43159054852; website "n", API 4/14/91/50, Dev run 43275462132). The website export carries the sign, the
+        -- API its attribute id (/attributes: 4 and 91 = x, 14 = X, 50 = n). Only a 0 counts: a number under such a
+        -- sign is kept. Kept too: "z"/"Z" (a significant zero), "a"/"A" (below the presentation format) and the
+        -- API's id 0 (blank sign). The rows are dropped after `deduplicated`, so a cell the API now marks as no value
+        -- does not bring back an older website number.
+        o.value = 0 and (
+            (o.channel = 'web_export' and coalesce(lower(o.attribute), '') in ('x', 'n'))
+            or (o.channel = 'api' and coalesce(o.attribute, '') in ('4', '14', '50', '91'))
+        ) as no_value,
         v.n1,
         v.n2,
         v.n3,
@@ -145,19 +157,7 @@ silver as (
     left join units as u on o.unit_code = u.unit_id
     left join variables as v on o.subgroup_id = v.subgroup_id and o.variable_id = v.variable_id
     left join label_rule as r on o.subgroup_id = r.subgroup_id
-    -- No-value signs leave the build in both channels (#2788, #2806): "x"/"X" (GUS: "brak informacji, konieczność
-    -- zachowania tajemnicy statystycznej lub wypełnienie pozycji jest niemożliwe albo niecelowe") and "n" ("dana
-    -- jeszcze niedostępna") mark a cell without a value, written as 0 (every such row with a value is 0: 4.56 M
-    -- website "x", Dev run 43159054852; website "n", API 4/14/91/50, Dev run 43275462132). The website export
-    -- carries the sign, the API its attribute id (/attributes: 4 and 91 = x, 14 = X, 50 = n). Kept: "z"/"Z"
-    -- (a significant zero), "a"/"A" (below the presentation format) and the API's id 0 (blank sign).
-    where
-        o.value is not null
-        and o.year >= 2010
-        and not (
-            (o.channel = 'web_export' and coalesce(lower(o.attribute), '') in ('x', 'n'))
-            or (o.channel = 'api' and coalesce(o.attribute, '') in ('4', '14', '50', '91'))
-        )
+    where o.value is not null and o.year >= 2010
 ),
 
 kept as (
@@ -223,6 +223,12 @@ deduplicated as (  -- one row per series × area × year: a subgroup can hold th
             year, period_code
         order by case when channel = 'api' then 0 else 1 end, source_version desc, unit_code asc
     ) = 1
+),
+
+with_value as (  -- the no-value cells leave after the API row has won its cell
+    select *
+    from deduplicated
+    where not no_value
 )
 
 select
@@ -264,4 +270,4 @@ select
     case when k.value_conflict then 'conflicting_values' else 'ok' end as observation_status_key,
     k.source_version,
     k.raw_sha256
-from deduplicated as k
+from with_value as k
