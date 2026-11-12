@@ -23,6 +23,9 @@ archive_policy:
 bronze: [bronze.gus_culture_cells, bronze.gus_culture_rejected_files]
 silver: [silver.gus_culture_tables]
 gold: [gold.build_gus_culture]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gus_culture_tables: {rows: 1000}  # 595 rows, 7 editions 2019-2025 x 85 (Dev trial 43298219762)
+  poc_build_gus_culture: {rows: 1000}  # 595 (Dev trial 43298219762)
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): a handful of edition files, one new a year, a few hundred thousand cells;

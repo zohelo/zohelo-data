@@ -61,7 +61,7 @@ matches the cron (an unknown cron fails the run, so no schedule can silently run
 script). To schedule a script, add the cron under `on.schedule` and a row to that table; the concurrency
 group is `zohelo-ops-<script or cron>`. Rows: `20 5 * * 1` (Mondays 05:20 UTC) runs `orphan_files --delete
 --min-age-hours 48` (orphans re-accumulate after failed commits and dropped tables; `--max-share` stays 0.5).
-Row `0 5 * * 1` (Mondays 05:00 UTC) runs `backlog_sync apply`: GitHub issues and the project follow the `.github/backlog/` files of the three repositories.
+Row `0 5 * * *` (daily 05:00 UTC) runs `backlog_sync apply`: GitHub issues and the project follow the register and the `.github/backlog/` files of the three repositories within a day (review batches merge daily, #2907); manual dispatch stays for a sync right after a merge.
 Row `30 5 * * 1` (Mondays 05:30 UTC) runs `security_alerts apply`: new security alerts become Bugs, fixed ones close.
 Row `40 5 * * 1` (Mondays 05:40 UTC) runs `tracker` without arguments: the classification lands in the run's
 annotations only (no issue is rewritten), so regressions show up weekly.

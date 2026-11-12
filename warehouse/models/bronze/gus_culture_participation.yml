@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: gus_culture_participation
+  description: GUS Uczestnictwo ludności w kulturze (register PLS-028), survey tables
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gus_culture_participation/
+    loaded_by: ingestion/to_bronze/gus_culture_participation/
+    config: ingestion/sources/gus_culture_participation.yaml
+  tables:
+  - name: gus_culture_participation_cells
+    description: >-
+      One row per non-empty cell (value as stored, ZIP member, sheet, row, column, number format) of every workbook
+      of the newest copy of each landed file; partitioned by entity.
+  - name: gus_culture_participation_rejected_files
+    description: Files of gus_culture_participation the Bronze decoder rejected, with the reason.

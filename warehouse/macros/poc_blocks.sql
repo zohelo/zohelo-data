@@ -454,10 +454,11 @@
     order by k.kpi_key, m.priority
 {% endmacro %}
 
-{# The Gold blocks (build stage models) as `model:source_system`, one per line. A block model carries the tag
-   `gold_block` (ops/repo_check.py checks both lists agree): its children do not wait for it in the
-   changed-only build (warehouse/changed.py), they read it only once its table exists. #}
-{% macro poc_block_models() %}
+{# The Gold blocks (build stage models) listed here before per-source registration (D34,
+   docs/source-registration.md), as `model:source_system`, one per line. Do not add lines: a new source
+   registers itself in warehouse/macros/sources/<source>.sql and poc_block_models()
+   (macros/source_registration.sql) adds it to this list. #}
+{% macro poc_legacy_block_models() %}
     poc_build_eurostat:eurostat
     poc_build_bdl:gus_bdl
     poc_build_dbw:gus_dbw
@@ -483,9 +484,6 @@
     poc_build_un_wpp:un_wpp
     poc_build_unhcr:unhcr
     poc_build_zus_psz:zus_psz
-    poc_build_gus_culture:gus_culture
-    poc_build_gus_culture_participation:gus_culture_participation
-    poc_build_gus_tourism:gus_tourism
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -546,9 +544,10 @@
     || '|' || breakdown_json
 {% endmacro %}
 
-{# Every activated block of every source: the list build_check reports against, so a block that
-   yields no rows (not in Silver yet, or filtered out) is visible. #}
-{% macro poc_activated_blocks() %}
+{# The activated blocks listed here before per-source registration (D34). Do not add lines: a new source
+   names its blocks in warehouse/macros/sources/<source>.sql and poc_activated_blocks()
+   (macros/source_registration.sql) adds them. #}
+{% macro poc_legacy_activated_blocks() %}
     select 'eurostat' as source_system, dataset_id as block_id, block_name from ({{ poc_eurostat_blocks() }})
     union all
     select 'gus_bdl', subgroup_id, block_name from ({{ poc_bdl_blocks() }})
@@ -606,9 +605,6 @@
         ('zus_psz', 'insured_health', 'ZUS insured persons, health insurance'),
         ('zus_psz', 'foreign_insured', 'ZUS foreign citizens in pension insurance'),
         ('zus_psz', 'payers_voiv', 'ZUS active contribution payers, by voivodeship'),
-        ('zus_psz', 'absence_voiv', 'ZUS sickness absence, by voivodeship'),
-        ('gus_culture', 'culture_institutions', 'GUS culture and national heritage tables (annual)'),
-        ('gus_culture_participation', 'participation', 'GUS participation in culture survey (persons aged 15+)'),
-        ('gus_tourism', 'accommodation', 'GUS tourism tables: tourist accommodation (annual)')
+        ('zus_psz', 'absence_voiv', 'ZUS sickness absence, by voivodeship')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}

@@ -23,6 +23,9 @@ archive_policy:
 bronze: [bronze.gus_tourism_cells, bronze.gus_tourism_rejected_files]
 silver: [silver.gus_tourism_tables]
 gold: [gold.build_gus_tourism]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gus_tourism_tables: {rows: 750}  # 476 rows, 7 editions 2019-2025 x 68 (Dev trial 43298219762)
+  poc_build_gus_tourism: {rows: 750}  # 476 (Dev trial 43298219762)
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): a handful of edition files, one new a year, a few hundred thousand cells;
