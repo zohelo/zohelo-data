@@ -4,6 +4,7 @@ gus_bdl,PLS-001,GUS Bank Danych Lokalnych,GUS Local Data Bank,GUS,cube,subgroup,
 gus_dbw,PLS-002,GUS Dziedzinowe Bazy Wiedzy,GUS Knowledge Databases,GUS,cube,file (indicator × section × presentation × periodicity × year),national-public,gus_copyright,https://api.stat.gov.pl/Home/DBWApi?lang=en
 world_bank_wdi,GL-005,World Bank WDI,World Bank World Development Indicators,World Bank,cube,indicator,international-public,cc_by_4_0_world_bank,https://datatopics.worldbank.org/world-development-indicators/
 nbp,PLG-001,NBP kursy walut i cena złota,NBP exchange rates and gold price,Narodowy Bank Polski,cube,table,national-public,unresolved,https://api.nbp.pl/en.html
+nbp_bop,PLG-002,NBP bilans płatniczy i międzynarodowa pozycja inwestycyjna,NBP balance of payments and international investment position,Narodowy Bank Polski,cube,file,national-public,unresolved,https://static.nbp.pl/dane/bilans-platniczy/
 nbp_interest_rates,PLG-006,NBP stopy procentowe,NBP interest rates,Narodowy Bank Polski,cube,file,national-public,unresolved,https://nbp.pl/en/monetary-policy/mpc-decisions/basic-interest-rates/
 gleif,CD-015,GLEIF,GLEIF LEI golden copy,GLEIF,registry,file,international-public,cc0_gleif,https://www.gleif.org/en/lei-data/access-and-use-lei-data
 opendata_org,EX-005,OpenData ODO Senzing,"OpenData organisations, people, locations",OpenData,registry,snapshot member,unknown,unresolved,
@@ -37,3 +38,4 @@ bis,GL-015,BIS Data Portal,BIS Data Portal,Bank for International Settlements,cu
 ilostat,GL-023,ILOSTAT,ILOSTAT,International Labour Organization,cube,file,international-public,cc_by_4_0_ilo,https://ilostat.ilo.org/data/bulk/
 unece,GL-038,UNECE Statistical Database,UNECE Statistical Database,United Nations Economic Commission for Europe,cube,table,international-public,unece_terms,https://w3.unece.org/PXWeb/en
 eea,GL-037,EEA: emisje gazów cieplarnianych (inwentaryzacja GovReg),EEA greenhouse gas inventory (GovReg),European Environment Agency,cube,file,international-public,cc_by_4_0_eea,https://www.eea.europa.eu/en/datahub/datahubitem-view/3b7fe76c-524a-439a-bfd2-a6e4046302a2
+zus_psz,PLS-009,Portal Statystyczny ZUS,ZUS statistical portal,Zakład Ubezpieczeń Społecznych (ZUS),cube,file,national-public,unresolved,https://psz.zus.pl/

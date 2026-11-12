@@ -1,0 +1,41 @@
+source_system: zus_psz
+description: "ZUS Portal Statystyczny (psz.zus.pl) — curated XLSX tables: old-age pensions in December, insured persons, contribution payers and sickness absence (Poland, voivodeships)"
+
+# Extraction strategy (docs/landing.md). Register PLS-009. Bulk feature: the portal's category pages link one XLSX per
+# topic table and period under /documents/493365/<folder>/<name>.xlsx/<uuid>; the folder id is stable per table (Dev
+# probes on test/zus-psz: 43199387896 categories, 43200140715 links of 18 category pages, 43200826028 and
+# 43201200619 workbook layouts). No API. Curated families (ingestion/to_landing/zus_psz FAMILIES), chosen for KPIs:
+#   pensioners_dec (9888915)        old-age pensioners in December by age and sex, Poland, 2018-
+#   pension_amount_dec (9888921)    average old-age pension in December by sex (and the amount distribution), 2018-
+#   insured_pension (532853)        insured persons, pension insurance, by age and sex, quarter ends
+#   insured_sickness_voiv (532793)  insured persons, sickness insurance, by voivodeship (and powiat), quarter ends
+#   insured_health (1159389)        insured persons, health insurance, monthly, one file per year, 2012-
+#   foreign_insured (3456951)       foreign citizens in pension insurance (all; Ukrainian), month ends, 2020-
+#   payers_voiv (533093)            active contribution payers by voivodeship and payer size, quarter ends
+#   absence_voiv (6744574)          sick-leave days and medical certificates by voivodeship, per quarter
+# The quarterly tables are listed for the current year only, so earlier quarters exist only in Landing/Archive from
+# the first run on. Older years as .xls (before 2018/2014) and English copies are not landed. Entity = family ×
+# period, version = Last-Modified, written only when the SHA-256 changed. Restart unit: one file.
+extraction:
+  initial: bulk
+  production: snapshot                  # each file is one table and period as published; a correction replaces it
+  incremental_policy: changed_since_last  # missing periods plus the two newest of each family re-checked
+  schedule: # UTC; quarterly tables 5-7 weeks after the quarter, monthly health and foreign files about monthly,
+    # December pension tables in the summer; weekly check
+    - {cron: "25 7 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/zus_psz/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report   # quarters the portal no longer lists live only in the Archive
+bronze: [bronze.zus_psz_cells, bronze.zus_psz_rejected_files]
+silver: [silver.zus_psz_observations]
+gold: [gold.build_zus_psz]
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a period
+# Refresh policy for all layers (D32): about 50 workbooks of 10-40 kB (under 20,000 cells) and a few hundred new
+# Silver rows a quarter; small, so every layer is rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2461"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

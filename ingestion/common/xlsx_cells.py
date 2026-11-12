@@ -129,10 +129,10 @@ def cells(body: bytes) -> Iterator[dict[str, Any]]:
                 elif v is None or v.text is None:
                     value = None
                 elif kind == "s":
-                    index = int(v.text)
-                    if not 0 <= index < len(strings):
-                        raise ValueError(f"shared string {index} out of range on sheet {name!r}")
-                    value = strings[index]
+                    string_index = int(v.text)
+                    if not 0 <= string_index < len(strings):
+                        raise ValueError(f"shared string {string_index} out of range on sheet {name!r}")
+                    value = strings[string_index]
                 elif kind == "d":  # ISO 8601 date cell: no declared workbook uses them; fail rather than guess
                     raise ValueError(f"ISO date cell (t=d) on sheet {name!r} is not supported")
                 else:
