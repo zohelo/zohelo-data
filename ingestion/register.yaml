@@ -3149,8 +3149,8 @@ sources:
     connection: tested
     blockers:
     - 'Licence unresolved: cie.gov.pl states no reuse terms, so the source stays internal until CIE states them.'
-    - '64 of the 94 files are .xls (old binary format): no reader in the pipeline yet; the 30 .xlsx files (2016-2018) load
-      with the shared decoder.'
+    - 'Build task, not a review blocker: 64 of the 94 files are .xls (old binary format) and the pipeline has no reader
+      for them yet; the 30 .xlsx files (2016-2018) load with the shared decoder.'
     - Closed archive (last data 30 September 2018); later SIO compilations on dane.gov.pl were not opened (the fetch tool
       was refused; dane.gov.pl is PLG-030).
     references:
@@ -4549,67 +4549,115 @@ sources:
   name: Supervised-entity registers and search
   short_name: KNF supervised entities
   provider: Polish Financial Supervision Authority (KNF)
-  status: parked
+  status: approved
   family: E
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [financial regulation, business registry]
   entities: [financial institution, enterprise, person]
-  granularity: One register entry (institution, intermediary, agent or branch) per sector register, with type, status and
-    register number.
-  coverage: Current state of each register; the entity search has an "Include deleted entities" option (KNF page, desk fetch);
-    no dated history files.
+  granularity: 'One register entry (institution, intermediary, agent or branch) per sector register, with type, status
+    and a register number. In the ESMA register: one authorised entity or branch with type, status, authorisation date
+    and LEI.'
+  coverage: 'Current state of each register; no dated history files. ESMA register, home member state Poland: 623
+    entries (478 active, 145 inactive), capital-market entities only. KNF''s own pages also list banks, credit unions,
+    insurers, pension societies and notified foreign entities.'
   access:
-    endpoint: https://www.knf.gov.pl/podmioty
-    kind: web
-    interfaces: [HTML search, JavaScript register applications]
-    auth: public browsing
+    endpoint: https://registers.esma.europa.eu/solr/esma_registers_upreg/select
+    kind: api
+    interfaces: [REST API, JSON, XML, HTML tables, JavaScript register applications]
+    auth: 'Public, no key or account (ESMA registers; KNF pages).'
     cost: free
-    limits: 'None published. robots.txt of www.knf.gov.pl allows all agents ("User-agent: * Allow: /"); the register sites
-      have no robots.txt (HTTP 404).'
+    limits: 'ESMA: none stated in the application-to-application help
+      (https://registers.esma.europa.eu/publication/helpApp, desk fetch); requests carry a rows parameter (its
+      examples use 1000 and 100000); the robots.txt address of registers.esma.europa.eu returns the application page,
+      not rules. KNF: robots.txt of www.knf.gov.pl is "User-agent: * Allow: /"; the register sub-sites have no
+      robots.txt (HTTP 404), except ewidencjaakcji.knf.gov.pl and rejestracjaakcji.knf.gov.pl ("Disallow: /", not
+      read).'
   licence:
     status: unresolved
-    notes: 'Terms: KNF legal notice https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna (read from a GitHub runner, 12
-      Nov 2026): "Przy wykorzystywaniu materiałów ze strony internetowej KNF wymagane jest podanie źródła wraz z linkiem
-      do serwisu www.knf.gov.pl." No licence is named and the notice grants no reuse: commercial reuse not stated, modification
-      not stated, so the terms are unresolved (as for PLG-017). Disclaimer: the UKNF "nie ponosi żadnej odpowiedzialności
-      za jakiekolwiek szkody powstałe w wyniku korzystania z nich". Attribution: "Źródło: Komisja Nadzoru Finansowego, www.knf.gov.pl".
-      The register sites (rpu, wpn, pok, rpkip, e-rup, rdl .knf.gov.pl) are script pages whose HTML shows no terms. Some
-      registers name natural persons (the RPKIP user manual lists the applicant type "Osoba fizyczna"): personal data.'
-  updates: 'Continuous: entries change with KNF decisions; no change feed, release calendar or version date found.'
+    notes: 'Terms: KNF legal notice https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna (read from a GitHub runner,
+      12 Nov 2026): "Przy wykorzystywaniu materiałów ze strony internetowej KNF wymagane jest podanie źródła wraz z
+      linkiem do serwisu www.knf.gov.pl." No licence is named and the notice grants no reuse: commercial reuse not
+      stated, modification not stated, so the terms are unresolved (as for PLG-017). Disclaimer: the UKNF "nie ponosi
+      żadnej odpowiedzialności za jakiekolwiek szkody powstałe w wyniku korzystania z nich". Attribution: "Źródło:
+      Komisja Nadzoru Finansowego, www.knf.gov.pl". For the ESMA route: ESMA legal notice
+      https://www.esma.europa.eu/about-esma/legal-notice-and-data-protection (read from a GitHub runner, 12 Nov 2026):
+      "Reproduction of all information on this site (ESMA Library) is authorised except as otherwise stated, provided
+      the source is acknowledged and: where the original material is incorporated in documents that are sold
+      (regardless of the medium), the publisher must inform buyers that it may be obtained free of charge through ESMA
+      website; if the original material is transformed by the user (e.g. by making a summary of it or by translating
+      it) and republished, this must be stated explicitly through the following disclaimer: ‘This document has been
+      drafted using material downloaded from ESMA’s website’". That notice is on www.esma.europa.eu; the registers
+      site registers.esma.europa.eu shows only a "Legal Notice" footer link whose target was not read, so the status
+      stays unresolved for both routes and the source is internal. Some KNF registers name natural persons (agents,
+      advisers, brokers, actuaries): personal data, not loaded.'
+  updates: 'Continuous: entries change with KNF decisions; no change feed or release calendar. ESMA entries carry
+    ae_lastUpdate per entity. Dated KNF pages show "Data aktualizacji" (for example 16 May 2026, 14 July 2026).'
   ingestion:
-    history: 'No machine route. https://www.knf.gov.pl/podmioty and its 12 sector pages (entity search, banking, capital
-      market, insurance, pension, payment services, credit unions, credit intermediaries, lending institutions, crowdfunding
-      providers, credit servicers, benchmark administrators) link no XLS, XLSX, CSV, XML, ZIP or JSON file; only the credit-union
-      page has an HTML table (36 rows). The registers themselves are JavaScript applications without an export link in their
-      HTML: rpu.knf.gov.pl, wpn.knf.gov.pl, pok.knf.gov.pl, rpkip.knf.gov.pl, e-rup.knf.gov.pl, rdl.knf.gov.pl (each 200
-      with 43 to 290 characters of text and 3 to 15 scripts). The English Register of Shares page links no XLS file. All
-      from Dev probe run 43289510189, job 131431691639, branch test/src-plgs-probe, 12 Nov 2026.'
-    incremental: None proposed while parked.
-    identifiers: KNF register number per register; NIP, KRS or LEI were not seen (the entries were not read).
+    history: 'Route 1, approved (API of the official EU republisher):
+      https://registers.esma.europa.eu/solr/esma_registers_upreg/select, the documented application-to-application
+      interface of the ESMA registers (Solr; JSON with wt=json). The filter fq=ae_homeMemberState:"POLAND" with
+      fq=type_s:parent returned 623 entries: AIF 515, MIF 60, UCI 24, MIR 10, CSP 5, MIT 3, MIE 2, ESF 1, MIA 1, MIO
+      1, MIS 1; competent authority KNF for 622; active 478, inactive 145; fields ae_entityName, ae_entityTypeCode,
+      ae_entityTypeLabel, ae_lei, ae_headOfficeLei, ae_competentAuthority, ae_homeMemberState, ae_hostMemberStates,
+      ae_officeType, ae_status, ae_authorisationNotificationDate, ae_lastUpdate, addresses (Dev probe run 43295075918
+      (job 131451094958), branch test/src-fix-probe, 12 Nov 2026); the whole core holds 101,553 entries. ae_lei is
+      empty on some entries (the one printed had none). Route 2, waits for the owner (question in research.blockers):
+      KNF''s fixed HTML pages below https://www.knf.gov.pl/podmioty: 117 pages read, 61 with tables (17,705 table
+      rows), 19 of them paged with ?page=n (cooperative banks: 25 pages); one small table per entity with name,
+      address, website and, where KNF gives one, its own number ("Numer centrali" for banks, "Numer zakładu w systemie
+      UKNF" and "Data zezwolenia" for insurers); no NIP, KRS or LEI (Dev probe run 43299743376 (job 131467412298)).
+      Not routes: the register applications (e-rup, rpkip, wpn, rdl, pok, zasi, euafi, depo, at, pzf, dystr, rfz, afi,
+      tfi, ppk .knf.gov.pl) are script pages of one family; in the scripts that were read (e-rup, rpkip, wpn, rdl,
+      pok, zasi, dystr) the tables are filled by POST data calls, and the script of rpu.knf.gov.pl (insurance
+      intermediaries) refers to reCAPTCHA: none was called. EBA:
+      https://euclid.eba.europa.eu/register/pir/registerDownload and the credit-institutions register answered the
+      runner with the same 685-byte application page on every address, so no file was obtained; EIOPA:
+      register.eiopa.europa.eu answers robots.txt with HTTP 403, nothing requested; dane.gov.pl timed out (75 s). The
+      two XLS files on the page Ewidencja akcji date from 2021 and 2017 and are not entity registers.'
+    incremental: 'ESMA route: entity = the Polish slice of the register, version = download date (the source gives
+      ae_lastUpdate per entry, no slice version); snapshot once a week, a few requests of 1000 rows; unchanged bytes
+      skipped by SHA-256. Small source: full refresh.'
+    identifiers: 'ESMA: id (ae<number>) and ae_dbId per entry, ae_lei where filled. KNF pages: KNF''s own numbers only
+      (bank routing number, insurer number); no NIP, KRS or LEI.'
   modelling:
-    notes: 'kpi false and no Gold use proposed: an entity list without history or statistics. A dimension of licensed institutions
-      would have to join KRS or GLEIF by a number these pages were not seen to carry.'
-    overlap: Entity identity is covered by KRS (PLG-012), CEIDG (PLG-014) and GLEIF (CD-015, in Silver); KNF sector statistics
-      are PLG-017 and PLG-018; the public warning list is PLG-019 (parked).
+    notes: 'kpi false: an entity table, no statistics. Smallest valuable selection for Gold: the active Polish
+      investment firms (MIF), UCITS management companies (UCI) and alternative fund managers (AIF) from the ESMA
+      register with a filled LEI, as attributes (authorisation type, status, authorisation date) of the legal-entity
+      dimension keyed by LEI (GLEIF, CD-015, is in Silver); entries without an LEI stay in Silver and are never
+      matched by name. Branch rows (ae_officeType Branch) are separate entries of the same firm. No suppression
+      markers; an empty ae_lei is a missing value. Banks, insurers and pension societies come only with route 2 and
+      have no official identifier there. Effort S for the ESMA route; M for the KNF pages.'
+    overlap: 'Entity identity is covered by KRS (PLG-012), CEIDG (PLG-014) and GLEIF (CD-015, in Silver), but none of
+      them holds the KNF authorisation type, status or register number, so this source is not contained in a loaded
+      one. KNF sector statistics are PLG-017 and PLG-018; the public warning list is PLG-019 (parked). No kpi.csv KPI
+      overlaps.'
   research:
     priority: review-next
     evidence: tested
     connection: tested
     blockers:
-    - 'Parked: no bulk file, export or documented API. The registers are JavaScript applications on six sub-sites, which
-      the pipeline does not read, and their data calls are undocumented; the sector pages of knf.gov.pl link no data file
-      (Dev probe run 43289510189, job 131431691639, branch test/src-plgs-probe, 12 Nov 2026). Some registers hold natural
-      persons, the licence is unresolved, and kpi is false.'
-    - Un-park only if KNF publishes a register file or a documented API; a web route would need an owner decision.
-    - 'Not read: the entries themselves, the regulamins of the register sites, the Polish capital-market sub-pages below
-      the sector page.'
+    - 'Owner question (it does not block the ESMA route): may the pipeline read KNF''s fixed HTML entity lists below
+      https://www.knf.gov.pl/podmioty (robots.txt "User-agent: * Allow: /"; 61 pages with tables, 19 of them paged, a
+      few hundred page requests per full read, one request every two seconds, once a month), for legal persons only
+      (banks, cooperative banks, credit unions, insurers, pension societies, brokerage houses, fund companies), never
+      the pages that list natural persons (investment advisers, brokers, actuaries, agents who are natural persons)
+      and never the register applications?'
+    - 'Build task, not a review blocker: re-read the Legal Notice link in the footer of registers.esma.europa.eu; if
+      it leads to the ESMA legal notice quoted in licence.notes, the ESMA route becomes open-conditional.'
+    - 'Lead for a separate entry, not read: KNF''s investment-fund API https://wybieramfundusze-api.knf.gov.pl (its
+      robots.txt names documentation.html and terms.pdf).'
+    - 'Not analysed: the register entries themselves and the regulations of the register sites; the pages that list
+      natural persons were only counted (tables and rows), their content was not printed.'
     references:
     - https://www.knf.gov.pl/podmioty
     - https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna
+    - https://registers.esma.europa.eu/publication/helpApp
+    - https://registers.esma.europa.eu/solr/esma_registers_upreg/select
+    - https://www.esma.europa.eu/about-esma/legal-notice-and-data-protection
+    - https://www.eba.europa.eu/risk-and-data-analysis/data/registers/payment-institutions-register
     - https://www.knf.gov.pl/en/ENTITIES/entities_search
-    - https://www.knf.gov.pl/en/ENTITIES/capital_market_entities/register_of_shares
     - https://rpkip.knf.gov.pl/index.html?type=RPK
     - https://bip.knf.gov.pl/knf/pl/komponenty/img/Instrukcja_dla_uzytkownika_RPKIP.pdf
 - id: PLG-017
@@ -5384,71 +5432,104 @@ sources:
   name: Government Legislative Process portal (RPL), including consultations
   short_name: RCL legislative process (RPL)
   provider: Government Legislation Centre (RCL)
-  status: parked
+  status: approved
   family: F
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [legislation, public consultation]
   entities: [draft legal act, legislative stage, ministry, consultation submission]
-  granularity: Project (draft act) by type, title, creation date, applicant, work-list number and status, with staged documents.
-  coverage: Current, adopted and archived drafts; RCL's accessibility statement dates the site from 1 January 2012 (desk
-    fetch); the first project year was not read.
+  granularity: 'Approved route (the government''s work list on gov.pl): one row per planned government draft (bill,
+    regulation of the Council of Ministers, other government document) with work-list number, title, kind, type,
+    responsible body, planned adoption and status. RPL itself (not reachable): project by type, title, creation date,
+    applicant, work-list number and status, with staged documents.'
+  coverage: 'Work list of the Council of Ministers: 1,526 drafts published from 21 December 2023 to 12 November 2026
+    (the current government); earlier terms are HTML pages without a file. RPL: current, adopted and archived drafts
+    since 1 January 2012 by RCL''s accessibility statement (desk fetch); not read.'
   access:
-    endpoint: https://legislacja.rcl.gov.pl/
-    kind: web
-    interfaces: [HTML search, PDF, DOCX]
-    auth: public browsing; registration only to follow a project
+    endpoint: https://www.gov.pl/web/premier/wplip-rm
+    kind: bulk_file
+    interfaces: [CSV, HTML]
+    auth: Public download.
     cost: free
-    limits: 'None published. robots.txt could not be read: the host timed out from a GitHub runner, and the desk fetch tool
-      was refused on the list, project and help pages with a robots.txt disallow for its agent.'
+    limits: 'None published. robots.txt of www.gov.pl: "User-Agent: * Allow: /". The RPL hosts legislacja.rcl.gov.pl
+      and legislacja.gov.pl do not answer GitHub runners (timeouts on robots.txt in three runs on 12 Nov 2026), so
+      their robots.txt is unread.'
   licence:
     status: open-conditional
-    notes: 'Terms: RCL''s re-use page https://bip.rcl.gov.pl/rcl/ponowne-wykorzystywanie/3122,Warunki-ponownego-wykorzystywania-informacji-publicznej.html
-      (read from a GitHub runner, 12 Nov 2026; dated 16 June 2016, changed 2 January 2019, by the desk fetch). It says,
-      citing the re-use act of 25 February 2016 (Dz. U. poz. 352): "każdy ma prawo do złożenia wniosku o ponowne wykorzystywanie
-      informacji sektora publicznego w celach komercyjnych lub niekomercyjnych innych niż pierwotny publiczny cel, dla którego
-      informacja została wytworzona", then: "każdemu przysługuje prawo do ponownego wykorzystywania informacji sektora publicznego:
-      udostępnionych w systemie teleinformatycznym" and "rządowe projekty aktów prawnych oraz dokumenty z nimi powiązane
-      udostępniane są na stronie podmiotowej Rządowego Centrum Legislacji, w serwisie Rządowy Proces Legislacyjny". Conditions
-      quoted: "obowiązku każdorazowego informowania o źródle pozyskanych danych oraz czasie wytworzenia żądanego zbioru
-      przez podmiot zobowiązany, obowiązku informowania o przetworzeniu informacji ponownie wykorzystywanej"; works and
-      databases also need their author named. Commercial reuse: yes (commercial purposes are named for requests, and the
-      right to reuse what is made available online is not limited by purpose). Modification: yes, when the processing is
-      stated. Free of charge ("udostępniane w celu ich ponownego wykorzystywania bezpłatnie"). Disclaimer: "Rządowe Centrum
-      Legislacji nie ponosi odpowiedzialności za: rezultaty przetworzenia udostępnionych lub przekazanych informacji sektora
-      publicznego, dalsze udostępnianie lub przekazywanie przetworzonych informacji sektora publicznego przez podmioty ponownie
-      je wykorzystujące." The page gives no attribution sentence; proposed: "Źródło: Rządowe Centrum Legislacji, serwis
-      Rządowy Proces Legislacyjny (legislacja.rcl.gov.pl), stan na <data>; dane przetworzone". Limits: the terms are on
-      RCL''s BIP, not on the RPL site, whose own footer could not be read (host timeout); attachments sent by third parties
-      in consultations are their authors'' works and name people, so only project metadata would be covered.'
-  updates: 'Event-driven: documents are added as a draft moves through agreement, consultation and later stages; no feed.'
+    notes: 'Terms for the site that is read: https://www.gov.pl/web/premier/ponowne-wykorzystywanie (read from a
+      GitHub runner, 12 Nov 2026): "Informacje sektora publicznego udostępniane na stronie Kancelarii Prezesa Rady
+      Ministrów (dalej: KPRM) są udostępniane w celu ponownego wykorzystywania na licencji Creative Commons Uznanie
+      Autorstwa 3.0 Polska, o ile nie jest to stwierdzone inaczej. KPRM nie ponosi odpowiedzialności za dalsze ponowne
+      wykorzystywanie informacji sektora publicznego udostępnianych na stronie KPRM." The footer of the work-list page
+      (https://www.gov.pl/web/premier/wplip-rm) says: "Treści tekstowe publikowane w serwisie (z wyłączeniem treści
+      audiowizualnych), są udostępniane na licencji typu Creative Commons: uznanie autorstwa - na tych samych
+      warunkach 4.0 (CC BY-SA 4.0)." Both allow commercial reuse and modification with attribution; the two statements
+      differ, so the stricter one is applied: CC BY-SA 4.0, share-alike for published adaptations. Attribution:
+      "Źródło: Kancelaria Prezesa Rady Ministrów, Wykaz prac legislacyjnych i programowych Rady Ministrów, gov.pl
+      (<data pobrania>), CC BY-SA 4.0". For RPL data, should that route open: RCL''s re-use page
+      https://bip.rcl.gov.pl/rcl/ponowne-wykorzystywanie/3122,Warunki-ponownego-wykorzystywania-informacji-publicznej.html
+      (read from a GitHub runner, 12 Nov 2026) cites the re-use act and says "każdemu przysługuje prawo do ponownego
+      wykorzystywania informacji sektora publicznego: udostępnionych w systemie teleinformatycznym", naming "serwis
+      Rządowy Proces Legislacyjny", with the conditions "obowiązku każdorazowego informowania o źródle pozyskanych
+      danych oraz czasie wytworzenia żądanego zbioru przez podmiot zobowiązany, obowiązku informowania o przetworzeniu
+      informacji ponownie wykorzystywanej"; the RPL site''s own footer was never read (host timeout). Consultation
+      attachments are third parties'' works and name people: never loaded.'
+  updates: 'Event-driven: rows are added and changed as drafts enter the work list or change status; the newest row
+    was published on 12 Nov 2026 at 15:53. No feed; the file has no Last-Modified or ETag.'
   ingestion:
-    history: 'No route from the pipeline: legislacja.rcl.gov.pl and legislacja.gov.pl timed out from a GitHub runner on
-      robots.txt, so the home page, the lists and a project page were not requested (Dev probe run 43289510189, job 131431691639,
-      branch test/src-plgs-probe, 12 Nov 2026); bip.rcl.gov.pl answered 200 in the same run. The desk search found no API,
-      RSS or Atom feed, bulk file or dane.gov.pl dataset; list addresses seen in search results have the form /lista?typeId=<n>&pSize=<n>&pNumber=<n>
-      and projects /projekt/<id> (not opened).'
-    incremental: None proposed while parked.
-    identifiers: RPL project id (/projekt/<id>) + stage id (/katalog/<id>) + the applicant's work-list number
+    history: 'Bulk file: the page https://www.gov.pl/web/premier/wplip-rm links "Pobierz dane do pliku csv"
+      (https://www.gov.pl/register-file/Rejestr_20874195.csv): HEAD and GET 200 from a GitHub runner, 11,313,160
+      bytes, UTF-8 with BOM, semicolon-separated, 19 columns, 1,526 rows, all rows 19 fields wide. Columns: Numer
+      projektu (unique, for example UC2, UD505), Tytuł, Rodzaj dokumentu (Projekty ustaw, Projekty rozporządzeń,
+      Projekty innych dokumentów rządowych), Typ dokumentu (5 values), Informacja dodatkowa, two long text columns
+      (aims, up to 36,383 characters; substance, up to 90,880), three empty columns, Organ odpowiedzialny za
+      opracowanie projektu (46 values), Organ współpracujący, Osoba odpowiedzialna, Organ odpowiedzialny (44 values),
+      Planowane przyjęcie przez RM (free text), Informacja o rezygnacji, Status realizacji (Zrealizowany, Wycofany;
+      empty on 363 rows), Data publikacji (2023-12-21 09:46 to 2026-11-12 15:53), Podgląd (link to the draft''s page).
+      The Prime Minister''s own list https://www.gov.pl/web/premier/wpl-prm links Rejestr_20874196.csv (HEAD 200, not
+      read). The archive of earlier terms (https://www.gov.pl/web/premier/prace-legislacyjne-rady-ministrow) has no
+      file. Dev probe run 43299743376 (job 131467412298), branch test/src-fix-probe, 12 Nov 2026; the link was found
+      in Dev probe run 43295075918 (job 131451094958). RPL itself: legislacja.rcl.gov.pl and legislacja.gov.pl timed
+      out on robots.txt from GitHub runners in Dev probe run 43289510189 and again at about 20:00 UTC (90 s) and 20:25
+      UTC (60 s), so nothing else was requested there; dane.gov.pl timed out too (75 s). RPL addresses seen in search
+      results: /lista?typeId=<n>&pSize=<n>&pNumber=<n> and /projekt/<id> (not opened).'
+    incremental: 'Entity = the work-list file (one per list), version = download date (the source gives none);
+      snapshot once a day at most, unchanged bytes skipped by SHA-256. Small source: full refresh.'
+    identifiers: 'Work-list number (Numer projektu, for example UD505); RPL shows the same number per project
+      (/projekt/<id>), which would link the two if RPL becomes readable.'
   modelling:
-    notes: 'kpi false. Possible later use, metadata only: government drafts started per month by applicant and type, share
-      adopted, days from first stage to adoption (event dates, monthly and annual as separate measure_keys). Value is low
-      next to the Sejm API and ELI.'
-    overlap: PLG-024 Sejm API (approved) covers bills from the Sejm print on and PLG-026 ELI (approved) the published acts;
-      RPL alone covers the government stage, ministers' regulations and drafts that are dropped. No kpi.csv KPI overlaps.
+    notes: 'kpi false. Gold use, metadata only: an entity table of government drafts keyed by work-list number (kind,
+      type, responsible body, publication date, status); later, as event counts, drafts entering the work list per
+      month by responsible body and kind and the share realised or withdrawn (monthly and annual as separate
+      measure_keys). Do not load Osoba odpowiedzialna (names of officials) or the two long text columns into Silver
+      beyond what a title needs. Planowane przyjęcie is free text (quarter, date, "ZREALIZOWANY ..."): keep as
+      published. An empty Status realizacji means in progress, not unknown. Duplicates: Numer projektu is unique in
+      the file; titles repeat (1,287 distinct). Effort S.'
+    overlap: 'PLG-024 Sejm API (approved) covers bills from the Sejm print on and PLG-026 ELI (approved) the published
+      acts; the work list covers the planned government stage; RPL alone has the stage documents, ministers'' own
+      regulations and consultations, which no loaded source holds. No kpi.csv KPI overlaps.'
   research:
     priority: review-next
     evidence: tested
     connection: tested
     blockers:
-    - 'Parked: the host does not answer GitHub runners (timeout on robots.txt of legislacja.rcl.gov.pl and legislacja.gov.pl,
-      Dev probe run 43289510189, job 131431691639, branch test/src-plgs-probe, 12 Nov 2026) and there is no API, feed or
-      bulk file; the only route would be reading HTML list and project pages (a web route, which needs an owner decision),
-      and the desk fetch tool was refused on those pages by robots.txt.'
-    - Un-park only if RCL publishes a feed, file or API, or the host becomes reachable and the owner allows a web route.
+    - 'Owner question (it does not block the work-list build): will you send this to RCL (contact address on
+      https://bip.rcl.gov.pl, not read here)? "Szanowni Państwo, serwis Rządowy Proces Legislacyjny
+      (legislacja.gov.pl, legislacja.rcl.gov.pl) nie odpowiada na zapytania z serwerów GitHub Actions (przekroczenie
+      czasu połączenia). Proszę o informację: (1) czy RCL udostępnia lub może udostępnić wykaz projektów z metadanymi
+      (numer z wykazu, tytuł, wnioskodawca, etapy z datami) jako plik, kanał RSS lub API; (2) czy automatyczne,
+      rzadkie pobieranie stron list projektów jest dopuszczalne i z jakich adresów sieciowych."'
+    - 'Not worked around: the timeouts of both RPL hosts from GitHub runners (three runs on 12 Nov 2026); no other
+      network path is tried.'
+    - 'Not verified: robots.txt, footer and every page of the RPL site; the Prime Minister''s list file (HEAD only);
+      whether the address of the work-list file is stable (read the link from the page).'
     - 'Consultation attachments name commenters: metadata only, never the documents.'
     references:
+    - https://www.gov.pl/web/premier/wplip-rm
+    - https://www.gov.pl/register-file/Rejestr_20874195.csv
+    - https://www.gov.pl/web/premier/wpl-prm
+    - https://www.gov.pl/web/premier/ponowne-wykorzystywanie
     - https://legislacja.rcl.gov.pl/
     - https://bip.rcl.gov.pl/rcl/ponowne-wykorzystywanie/3122,Warunki-ponownego-wykorzystywania-informacji-publicznej.html
     - https://bip.rcl.gov.pl/rcl/dostepnosc/deklaracje-dostepnosci/23028,Deklaracja-dostepnosci-strony-Rzadowego-Procesu-Legislacyjnego.html
