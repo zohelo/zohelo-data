@@ -187,6 +187,36 @@
     ) as t (indicator_code)
 {% endmacro %}
 
+{# UNCTAD Data Hub blocks (gold.build_unctad): table × dimension codes (dimension_names, in that order) × measure.
+   measure_field is the table's measure column; measure_suffix its short code in the measure key. #}
+{% macro poc_unctad_blocks() %}
+    select * from (
+        values
+        ('US_FdiFlowsStock', 'FDI inward flows (UNCTAD), US$ million', 'Flow,Direction', '08:1', 'Millions of US$ at current prices', 'USD_MN', 'MIO_USD', 'US$ million at current prices'),
+        ('US_FdiFlowsStock', 'FDI outward flows (UNCTAD), US$ million', 'Flow,Direction', '08:2', 'Millions of US$ at current prices', 'USD_MN', 'MIO_USD', 'US$ million at current prices'),
+        ('US_FdiFlowsStock', 'FDI inward stock (UNCTAD), US$ million', 'Flow,Direction', '09:1', 'Millions of US$ at current prices', 'USD_MN', 'MIO_USD', 'US$ million at current prices'),
+        ('US_FdiFlowsStock', 'FDI outward stock (UNCTAD), US$ million', 'Flow,Direction', '09:2', 'Millions of US$ at current prices', 'USD_MN', 'MIO_USD', 'US$ million at current prices'),
+        ('US_FdiFlowsStock', 'FDI inward stock (UNCTAD), % of GDP', 'Flow,Direction', '09:1', 'Percentage of Gross Domestic Product', 'PCT_GDP', 'PC_GDP', 'percent of GDP'),
+        ('US_TradeMerchTotal', 'Merchandise exports (UNCTAD), US$ million', 'Flow', '02', 'Millions of US$ at current prices', 'USD_MN', 'MIO_USD', 'US$ million at current prices'),
+        ('US_TradeMerchTotal', 'Merchandise imports (UNCTAD), US$ million', 'Flow', '01', 'Millions of US$ at current prices', 'USD_MN', 'MIO_USD', 'US$ million at current prices'),
+        ('US_TradeMerchTotal', 'Merchandise exports (UNCTAD), growth year on year', 'Flow', '02', 'Growth rate, year-on-year', 'GROWTH', 'PCH', 'percent change on previous year'),
+        ('US_TradeServCatTotal', 'Services exports (UNCTAD), US$ million', 'Flow,Category', '02:S', 'Millions of US$ at current prices', 'USD_MN', 'MIO_USD', 'US$ million at current prices'),
+        ('US_TradeServCatTotal', 'Services imports (UNCTAD), US$ million', 'Flow,Category', '01:S', 'Millions of US$ at current prices', 'USD_MN', 'MIO_USD', 'US$ million at current prices')
+    ) as t (entity, block_name, dimension_names, dimension_codes, measure_field, measure_suffix, unit_code, unit_name)
+{% endmacro %}
+
+{# UNCTAD economies built (gold.build_unctad): EU27 members by UNCTAD code, the European Union (2020 …) group and World. #}
+{% macro poc_unctad_areas() %}
+    select * from (
+        values
+        ('040', 'AT'), ('056', 'BE'), ('100', 'BG'), ('191', 'HR'), ('196', 'CY'), ('203', 'CZ'), ('208', 'DK'),
+        ('233', 'EE'), ('246', 'FI'), ('250', 'FR'), ('276', 'DE'), ('300', 'GR'), ('348', 'HU'), ('372', 'IE'),
+        ('380', 'IT'), ('428', 'LV'), ('440', 'LT'), ('442', 'LU'), ('470', 'MT'), ('528', 'NL'), ('616', 'PL'),
+        ('620', 'PT'), ('642', 'RO'), ('703', 'SK'), ('705', 'SI'), ('724', 'ES'), ('752', 'SE'),
+        ('3412', 'EUROSTAT:EU27_2020'), ('0000', 'WB:WLD')
+    ) as t (economy, candidate_key)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -255,6 +285,7 @@
     union all select * from {{ ref('poc_build_wdi') }}
     union all select * from {{ ref('poc_build_nbp') }}
     union all select * from {{ ref('poc_build_public_finance') }}
+    union all select * from {{ ref('poc_build_unctad') }}
 {% endmacro %}
 
 {# series_key: measure × geography × breakdown codes, readable; an unmatched area keeps its source code so
@@ -275,6 +306,8 @@
     select 'gus_dbw', block_id, block_name from ({{ poc_dbw_blocks() }})
     union all
     select 'world_bank_wdi', indicator_code, 'WDI ' || indicator_code from ({{ poc_wdi_blocks() }})
+    union all
+    select distinct 'unctad', entity, entity from ({{ poc_unctad_blocks() }})
     union all
     select * from (
         values

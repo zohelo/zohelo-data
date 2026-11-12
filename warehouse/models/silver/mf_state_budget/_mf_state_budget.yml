@@ -10,6 +10,10 @@ models:
     tests:
       - unique:
           column_name: "budget_year || '|' || measure || '|' || coalesce(cast(month_end as varchar), '-') || '|' || item_label || '|' || item_occurrence"
+      - unique:
+          # warn: a main line (item_key) listed twice in a report; Gold then keeps the first labelled row
+          column_name: "budget_year || '|' || measure || '|' || coalesce(cast(month_end as varchar), '-') || '|' || coalesce(item_key, item_label || '#' || item_occurrence)"
+          config: {severity: warn}
     columns:
       - name: budget_year
         tests: [not_null]

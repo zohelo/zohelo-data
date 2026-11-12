@@ -13,7 +13,7 @@
                                      thousand zloty (M; the December value as the year, A, suffix ':A')
                     plan             the same lines in the budget act (A)
    krus             benefits         average monthly beneficiaries and benefit by benefit type (Q; A with suffix
-                                     ':A'); periods with the KRUS footnote mark (from III quarter 2025: survivors'
+                                     ':A'); periods with KRUS footnote 2 (from III quarter 2025: survivors'
                                      pensions include those paid with other pensions) have status 'break' #}
 with debt_gdp_items as (
     select * from (
@@ -250,7 +250,7 @@ observations as (
         value,
         source_version,
         raw_sha256,
-        case when footnote is not null then 'break' else 'ok' end as observation_status_key
+        case when footnote = '2' then 'break' else 'ok' end as observation_status_key
     from krus
 )
 
