@@ -189,7 +189,7 @@ def main() -> None:
             counts = []
             for _ in (1, 2):
                 con.execute(f"create or replace table {name} as {render(path, sources, refs)}")
-                counts.append(q(con, f"select count(*), sum(hash(*)) from (select * exclude (ingested_at) from {name})")[0])
+                counts.append(q(con, f"select count(*), sum(hash(t)) from (select * exclude (ingested_at) from {name}) as t")[0])
             refs[name] = name
             results = tests(con, name)
             silver[name] = {"rows": counts[0][0], "rebuild_identical": counts[0] == counts[1], "tests_run": len(results), "test_failures": {k: v for k, v in results if v}}
