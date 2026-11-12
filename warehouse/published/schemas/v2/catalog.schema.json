@@ -27,6 +27,7 @@
     },
     "kpis": {
       "type": "array",
+      "minItems": 1,
       "items": {
         "type": "object",
         "required": [
@@ -47,7 +48,8 @@
           "aggregation",
           "polarity",
           "loaded_at",
-          "next_release"
+          "next_release",
+          "status"
         ],
         "properties": {
           "kpi_key": {
@@ -143,6 +145,13 @@
               "null"
             ],
             "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "published"
+            ]
           }
         },
         "additionalProperties": true

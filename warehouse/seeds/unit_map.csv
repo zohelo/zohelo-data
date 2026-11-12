@@ -127,3 +127,7 @@ unctad,PCH,,pct
 mf_state_budget,THS_PLN,,thousand_pln
 mf_treasury_debt,MIO_PLN,,mln_pln
 krus,PLN,,pln
+mf_jst_budgets,pln,,pln
+mrpips_unemployment,persons,,persons
+mrpips_unemployment,thousand_persons,,thousand_persons
+mrpips_unemployment,pct,,pct
