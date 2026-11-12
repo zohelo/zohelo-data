@@ -1,0 +1,39 @@
+source_system: entsog
+description: "ENTSOG Transparency Platform API — daily physical gas flows per point and direction of the declared transmission operators (GAZ-SYSTEM, PL-TSO-0002; register PL-ENV-021)"
+
+# Extraction strategy (docs/landing.md). The platform has no bulk file of operational data; its public REST API
+# (no key) is the documented route for automated download (TP Terms Art. 5.7) and was tested for a full load from a
+# runner: one gas month of GAZ-SYSTEM physical flows is one request of about 1.4 MB and 1,500 records in about 1 s,
+# and identical requests return identical bytes (Dev probe 43320099570). The API serves a rolling window of about
+# five years (January 2021 answered on 12 Nov 2026, December 2020 answered 404 "archived"). Own extractor
+# ingestion/to_landing/entsog/: entity = operator × indicator × gas month, version = the newest lastUpdateDateTime
+# of the answer; the backfill runs newest month first and resumes within the time budget; afterwards a run requests
+# the current month, every month not yet all Confirmed and one confirmed month in rotation (revisions happen: January
+# 2021 was last updated in February 2025). Monthly ranges, one request at a time, 5 s apart, bounded back-off (API
+# User Manual v3.0). Operators are configured in extract.py (OPERATORS); today only GAZ-SYSTEM.
+extraction:
+  initial: api
+  production: snapshot                    # each file is the complete answer for one operator, indicator and gas month
+  incremental_policy: changed_since_last  # an answer is written only when its bytes differ from the newest copy
+  schedule: # UTC; GAZ-SYSTEM publishes gas day D provisionally on D+1 (about 07:05 UTC) and confirms it after the month ends; daily at 07:40, about 3 requests
+    - {cron: "40 7 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/entsog/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.entsog_operational_data, bronze.entsog_rejected_files]
+silver: [silver.entsog_physical_flow, silver.entsog_points]
+gold: [gold.build_entsog]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  entsog_physical_flow: {rows: 150000}  # measured in the Dev trial (see docs/sources/entsog.md)
+  entsog_points: {rows: 200}
+  poc_build_entsog: {rows: 100000}
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a gas month
+# Refresh policy for all layers (D32): about 70 monthly answers (1.4 MB, 1,500 records each; about 17,500 records a
+# year), a new version replaces its month whole, and the API offers no changed-since filter; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2962"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
