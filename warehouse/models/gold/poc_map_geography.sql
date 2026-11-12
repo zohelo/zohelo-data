@@ -178,6 +178,53 @@ wdi as (
     from {{ ref('wdi_countries') }} as w
     left join geo as g on g.level_name = 'country' and w.iso2_code = g.iso2
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
+),
+
+-- OECD (#2738): countries by ISO 3166 alpha-3 (dim_geography iso3); EU27_2020 is the Eurostat aggregate, the
+-- aggregates of macro poc_oecd_areas are OECD:<code> members. Built from Gold's own lists, not from
+-- silver.oecd_cli, so the dimensions never wait for the OECD source; codes outside them are unmatched (_X).
+oecd as (
+    select
+        'oecd' as source_system,
+        g.iso3 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso3 is not null
+    union all
+    select
+        'oecd' as source_system,
+        'EU27_2020' as source_code,
+        'EUROSTAT:EU27_2020' as geography_key
+    union all
+    select
+        'oecd' as source_system,
+        replace(g.geography_key, 'OECD:', '') as source_code,
+        g.geography_key
+    from geo as g
+    where g.geography_key like 'OECD:%'
+),
+
+-- UNCTAD: economies by UNCTAD code (M49; France 250 in the FDI, merchandise and services tables, 251 only in port
+-- calls) from poc_unctad_areas: the EU27 members, 3412 European Union (2020 …) = EU27_2020, 0000 World. Other
+-- economies have no ISO code in the tables (_X); the build stage builds only the listed areas, and
+-- tests/unctad_areas_present.sql fails when a listed code is missing from one of the three built tables.
+unctad_areas as ({{ poc_unctad_areas() }}),
+
+unctad as (
+    select
+        'unctad' as source_system,
+        c.economy as source_code,
+        coalesce(g.geography_key, '_X') as geography_key
+    from (
+        select distinct economy from {{ ref('unctad_fdi_flows_stock') }}
+        union
+        select distinct economy from {{ ref('unctad_merchandise_trade') }}
+        union
+        select distinct economy from {{ ref('unctad_services_trade') }}
+    ) as c
+    left join unctad_areas as a on c.economy = a.economy
+    left join geo as g on a.candidate_key = g.geography_key
+    where c.economy is not null
 )
 
 select
@@ -195,6 +242,10 @@ from (
     select * from dbw
     union all
     select * from wdi
+    union all
+    select * from oecd
+    union all
+    select * from unctad
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

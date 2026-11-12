@@ -1,4 +1,4 @@
-{{ config(alias='build_dbw') }}
+{{ config(alias='build_dbw', tags=['gold_block']) }}
 {# Gold PoC build stage: sampled GUS DBW blocks (indicator × cross-section × presentation ×
    periodicity; one Landing file per year) as observations in the common shape. Labels come
    from each file's dictionary. The territorial dimension of a block is the one whose
@@ -35,6 +35,14 @@ silver as (
     from {{ ref('poc_src_dbw') }} as o
     where
         o.value is not null
+        -- a 0 with a missing-value reason is a GUS sign, not a number: DBW writes 0 in `wartosc`
+        -- with id_brak_wartosci 42 "zjawisko nie wystąpiło" (—) or 38 "brak informacji ..." (.);
+        -- published values carry 253 "Nie dotyczy" (#2788, Dev runs 43157854856 and 43159054852:
+        -- every 42 row of 1038_16_389_3, 1038_16_92_4 and 1514_1360_95_3 is 0, e.g. the 1995 indices).
+        -- A non-zero number is never dropped (reason 725, unchecked, keeps its non-zero values).
+        -- Caveat: reason 42 can be a true zero for a count measure; the activated blocks have 81 such
+        -- rows (Dev run 43159430946), all left out; a count block that needs them gets its own rule.
+        and (coalesce(o.missing_reason_id, 253) = 253 or o.value <> 0)
         and regexp_replace(o.entity_id, '(_[0-9]{4})?_pl$', '') in (select b.block_id from blocks as b)
 ),
 
@@ -112,7 +120,15 @@ per_row as (
     select
         l.rid,
         max(case when l.k = t.k then coalesce(l.geography_key, '_X') end) as geography_key,
-        max(case when l.k = t.k then l.pos_label end) as geography_source_code,
+        -- an unmatched area keeps its position id with its name: two powiaty share a name (bielski,
+        -- brzeski, ...) and would otherwise share a series (tests/fact_grain.sql)
+        max(
+            case
+                when l.k = t.k and l.geography_key is null
+                    then coalesce(l.pos_label, '') || ' #' || cast(l.pos_id as varchar)
+                when l.k = t.k then l.pos_label
+            end
+        ) as geography_source_code,
         cast(to_json(map(
             list(l.dim_name order by l.k) filter (where t.k is null or l.k <> t.k),
             list(l.pos_label order by l.k) filter (where t.k is null or l.k <> t.k)
@@ -196,6 +212,27 @@ shaped as (
             s.entity_id = cf.entity_id
             and cf.column_name = 'id_tajnosci'
             and cf.element_id = cast(s.confidentiality_id as varchar)
+),
+
+deduplicated as (  -- one row per series × period: a block that lists both a województwo and its
+    -- NUTS twin ("REGION DOLNOŚLĄSKIE", "MAKROREGION WOJEWÓDZTWO MAZOWIECKIE") maps both to one area
+    -- with the same value; the województwo row wins (tests/fact_grain.sql)
+    select *
+    from shaped
+    qualify row_number() over (
+        partition by
+            block_id, presentation_id,
+            case
+                when coalesce(geography_key, '_X') = '_X' then '_X:' || coalesce(geography_source_code, '')
+                else geography_key
+            end,
+            breakdown_json, year, period_id
+        order by
+            case when regexp_matches(upper(geography_source_code), '^(REGION|MAKROREGION) ') then 1 else 0 end,
+            source_version desc,
+            geography_source_code asc,
+            raw_sha256 asc
+    ) = 1
 )
 
 select
@@ -226,4 +263,4 @@ select
     end as observation_status_key,
     source_version,
     raw_sha256
-from shaped
+from deduplicated
