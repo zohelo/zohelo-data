@@ -1,0 +1,37 @@
+source_system: crossref
+description: "Crossref REST API — works with a Polish author affiliation (counts by year, type, publisher, funder) and the Funder Registry entries located in Poland"
+
+# Extraction strategy (docs/landing.md). Crossref's bulk feature (the annual public data file: every work's full
+# metadata) is far larger than this aggregate selection and would land abstracts, so the documented REST API is the
+# route, with aggregate requests only (CD-029 research; the page says "almost none of the metadata is subject to
+# copyright"; abstracts may be, and none is requested). About 30 requests (ingestion/to_landing/crossref/): rows=0
+# works queries with query.affiliation "Poland Polska" (total and counts by published year; per year from 2000:
+# facets type-name, publisher-name, funder-doi) and /funders?filter=location:Poland. One at a time, 2 s apart (the
+# API sends x-rate-limit-limit 1 per 1 s for these queries), user agent naming the project. No Last-Modified:
+# version = download time; unchanged bytes (SHA-256) are skipped. Proven from Actions by Dev probe 43326689827.
+extraction:
+  initial: api
+  production: snapshot                    # each answer is the complete current count
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; deposits arrive continuously and counts by year move slowly; weekly, Monday 04:50
+    - {cron: "50 4 * * 1", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/crossref/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.crossref_facet_counts, bronze.crossref_funders, bronze.crossref_rejected_files]
+silver: [silver.crossref_works_pl_counts, silver.crossref_funders]
+gold: [gold.build_crossref]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  crossref_works_pl_counts: {rows: 60000}  # estimate, measured in the Dev trial
+  crossref_funders: {rows: 300}  # estimate
+  poc_build_crossref: {rows: 60000}  # estimate
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): about 30 small answers (under 3 MB, some 20,000 counts) with no changed-since
+# filter for aggregates; a new copy replaces its entity and Silver and Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #553"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

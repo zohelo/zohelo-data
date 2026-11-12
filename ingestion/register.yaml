@@ -9268,7 +9268,8 @@ sources:
   name: Crossref REST API
   short_name: Crossref
   provider: Crossref
-  status: approved
+  source_system: crossref
+  status: built
   family: J
   kpi: false
   geography: worldwide
@@ -9304,11 +9305,18 @@ sources:
     overlap: Upstream of OpenAlex and many bibliographic services; retain deposited source.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Confirm the public data file (annual snapshot) URL and size in the dev trial
-    - Exclude abstracts and full-text links
+    - 'Built scope (#553): aggregate counts only, no work records (so no abstracts, author names or ORCIDs): works
+      whose deposited author affiliation names Poland or Polska (query.affiliation, rows=0) by publication year, and
+      per year from 2000 by type, publisher and funder; plus the Funder Registry entries located in Poland. Left out:
+      work-level records, licences, ROR affiliation ids, Polish members (the members route has no country filter).'
+    - 'Dev probe 43326689827 (12 Nov 2026): /works list queries answer x-rate-limit-limit 1 per 1s (pool
+      public-array), /funders and /members 5 per 1s (public-single); facets stop at 1,000 values; 302,513 works
+      matched Poland or Polska; 183 funders located in Poland. The annual public data file was not used (full
+      metadata of every work, abstracts included).'
+    - 'Coverage limit: only works whose publisher deposits affiliations are counted, so the count is a lower bound.'
     references:
     - https://www.crossref.org/documentation/retrieve-metadata/rest-api/
 - id: CD-030
