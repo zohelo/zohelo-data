@@ -37,8 +37,8 @@ def main() -> int:
         t = bf.retry(cat.load_table(("silver", "unece_observations")).scan(selected_fields=fields).to_arrow, "silver")
         con.register("s0", t)
         SUMMARY["rows"] = t.num_rows
-        con.execute("""create table s as select *, from_json(dimensions_json, 'MAP(VARCHAR, VARCHAR)') as d,
-            from_json(labels_json, 'MAP(VARCHAR, VARCHAR)') as l,
+        con.execute("""create table s as select *, cast(cast(dimensions_json as json) as map(varchar, varchar)) as d,
+            cast(cast(labels_json as json) as map(varchar, varchar)) as l,
             case when regexp_matches(time_period, '^[0-9]{4}$') then 'A'
                  when regexp_matches(time_period, '^[0-9]{4}Q[1-4]$') then 'Q'
                  when regexp_matches(time_period, '^[0-9]{4}M[0-9]{2}$') then 'M' else 'other' end as freq
