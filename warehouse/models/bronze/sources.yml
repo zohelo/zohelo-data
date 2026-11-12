@@ -401,6 +401,22 @@ sources:
       (entity = folder.file); DATA_SOURCE, RECORD_ID, bq_dataset and FEATURES (JSON text) as published.
   - name: opendata_rejected_files
     description: Snapshot members the OpenData Bronze decoder or Silver models rejected (cleared by ops/retry_rejected).
+- name: undp_hdr
+  description: UNDP Human Development Data Center — composite indices complete time series (wide CSV)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/undp_hdr/
+    loaded_by: ingestion/to_bronze/undp_hdr/
+    config: ingestion/sources/undp_hdr.yaml
+  tables:
+  - name: undp_hdr_values
+    description: >-
+      One row per non-empty cell of the newest copy of the composite indices file: the id columns (iso3,
+      country, hdicode, region), the source column name (indicator and year, e.g. hdi_2023) and the value
+      as text; partitioned by entity.
+  - name: undp_hdr_rejected_files
+    description: UNDP HDR Landing files the Bronze decoder rejected, with the reason.
 - name: world_bank_findex
   description: World Bank Global Findex Database — country-level CSV
   database: r2
