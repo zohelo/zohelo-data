@@ -116,13 +116,13 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   budget_execution: {rows: 2800}  # 1,845 (Dev trial 43099813876), 2018-2026, ~200 a year
   krus_benefits: {rows: 900}  # 576 (Dev trial 43099813876), quarters and years since 2020
   mf_jst_budget_summary: {rows: 32000}  # 21,263 rows, 2022 Q1 - 2026 Q1 (Dev trial 43162316724)
-  gus_nsp2021_tables: {rows: 300}  # placeholder until the Dev trial
-  gus_psr2020_tables: {rows: 200}  # placeholder until the Dev trial
-  poc_build_gus_nsp2021: {rows: 300}  # placeholder until the Dev trial
-  poc_build_gus_psr2020: {rows: 200}  # placeholder until the Dev trial
-  poc_metrics_urban_population_share: {rows: 100}  # placeholder until the Dev trial
-  poc_metrics_agricultural_holdings: {rows: 100}  # placeholder until the Dev trial
-  poc_metrics_average_farm_area: {rows: 100}  # placeholder until the Dev trial
+  gus_nsp2021_tables: {rows: 200}  # 136 rows, census 2021 (+ 2011 population) (Dev trial 43288120956)
+  gus_psr2020_tables: {rows: 150}  # 102 rows, census 2020 (+ 2010 holdings) (Dev trial 43288120956)
+  poc_build_gus_nsp2021: {rows: 200}  # 136 (Dev trial 43288120956)
+  poc_build_gus_psr2020: {rows: 150}  # 102 (Dev trial 43288120956)
+  poc_metrics_urban_population_share: {rows: 30}  # 17 areas
+  poc_metrics_agricultural_holdings: {rows: 60}  # 34: 17 areas x 2010, 2020
+  poc_metrics_average_farm_area: {rows: 30}  # 17 areas
   gus_culture_tables: {rows: 1000}  # 595 rows, 7 editions 2019-2025 x 85 (Dev trial TRIAL1)
   gus_culture_participation_tables: {rows: 50}  # 18 rows, editions 2019 and 2024 (Dev trial TRIAL1)
   gus_tourism_tables: {rows: 750}  # 476 rows, 7 editions 2019-2025 x 68 (Dev trial TRIAL1)

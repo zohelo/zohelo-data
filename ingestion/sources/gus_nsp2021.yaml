@@ -8,6 +8,8 @@ description: "GUS — Narodowy Spis Powszechny Ludności i Mieszkań 2021 (popul
 # extractor code); entity = one theme workbook, version = download time (no Last-Modified), written only when the
 # SHA-256 changed (a corrected workbook gets a new URL here, which needs a declaration change). Restart unit: one file.
 # The housing workbook (Warunki mieszkaniowe) prints the 2021 row of each area without its label: not declared.
+# Dev trial 43288120956 (test/w3-gus-culture-trial): 2 files, 95,717 Bronze cells, 136 Silver and Gold rows (Poland and
+# 16 voivodeships), 0 duplicate keys, 0 rejected; second Landing and Bronze runs wrote nothing.
 extraction:
   kind: bulk_file
   bulk_file:
