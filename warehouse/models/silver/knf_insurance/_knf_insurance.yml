@@ -7,8 +7,8 @@ models:
       insurance bulletin part A, premiums and claims of life and non-life insurers by insurer and total (thousand
       zloty, cumulative from 1 January, Q); ofe: open pension funds by fund and total (net assets, members,
       contributions, unit value; M); ike / ikze: individual retirement accounts by item and provider group (number
-      and value; A). Text in a value position ("x", "-") is not loaded, nor an IKE/IKZE value of 0 next to a positive
-      count (KNF prints 0 where it does not value a row). History: bulletins from 2023 Q1, IKE/IKZE from
+      and value; A at 31 December, S at 30 June). Text in a value position ("x", "-") is not loaded; a printed 0 is a
+      value and is kept. History: bulletins from 2023 Q1, IKE/IKZE from
       2023, OFE from September 2026 (older OFE months are .xls workbooks, rejected in Bronze).
     tests:
       - unique:
@@ -39,7 +39,7 @@ models:
       - name: unit_code
         tests: [not_null, {accepted_values: {arguments: {values: ['thousand_pln', 'pln', 'persons', 'number', 'pieces']}}}]
       - name: frequency
-        tests: [not_null, {accepted_values: {arguments: {values: ['M', 'Q', 'A']}}}]
+        tests: [not_null, {accepted_values: {arguments: {values: ['M', 'Q', 'A', 'S']}}}]
       - name: period_start
         tests: [not_null]
       - name: period_label

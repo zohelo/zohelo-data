@@ -11,9 +11,11 @@
              "Stan na dzień: / Dane miesięczne: YYYY-MM-DD" (frequency M)
    ike/ikze  "<IKE|IKZE>_dane liczbowe": one row per numbered item (column B) × provider group (row above the measure
              row; columns before the first group = all providers, '_T') × measure (Liczba (w szt.) / Wartość (w tys. zł));
-             period from "Stan na dzień: YYYY-12-31" (frequency A)
+             period from "Stan na dzień: YYYY-12-31" (frequency A; an edition at 30 June is S, period YYYY-S1: no
+             fact model takes it, it stays in Silver)
 
-   Only number cells are values: text in a value position ("x", "-", "b.d.") is not a number and is left out, never 0.
+   Only number cells are values: text in a value position ("x", "-", "b.d.") is not a number and is left out, never 0;
+   a printed 0 is a number and is kept as published.
    measure_code is null for a header the model does not know (the not_null test then fails); unit_label is the unit as
    printed in the header ("w tys. zł", "w PLN", "w szt."), unit_code its unit.csv key. #}
 with cells as (
@@ -276,11 +278,14 @@ ike as (
         k.measure_label,
         k.unit_label,
         case k.unit_label when 'w szt.' then 'pieces' when 'w tys. zł' then 'thousand_pln' end as unit_code,
-        'A' as frequency,
+        case month(p.period_end) when 12 then 'A' when 6 then 'S' end as frequency,
         make_date(year(p.period_end), 1, 1) as period_from,
         p.period_end,
         make_date(year(p.period_end), 1, 1) as period_start,
-        cast(year(p.period_end) as varchar) as period_label,
+        case month(p.period_end)
+            when 12 then cast(year(p.period_end) as varchar)
+            when 6 then year(p.period_end) || '-S1'
+        end as period_label,
         v.number_value as value,
         i.row_number as source_row,
         v.raw_sha256,
@@ -304,10 +309,4 @@ select * from bulletin
 union all
 select * from ofe
 union all
--- KNF prints 0 in the value column of IKE/IKZE rows it does not value (accounts opened, rows by sex and age):
--- a 0 value next to a positive count of the same row and provider is that marker, not a value, and is left out
 select * from ike
-qualify not (
-    measure_code = 'value' and value = 0
-    and max(case when measure_code = 'count' then value end) over (partition by entity, source_row, provider) > 0
-)

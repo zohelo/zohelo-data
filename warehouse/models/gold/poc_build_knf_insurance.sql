@@ -7,7 +7,8 @@
                      reinsurance; thousand zloty, cumulative from 1 January to the quarter end (Q)
    ofe               open pension funds (OFE) total: net assets (zloty) and members (persons) at the month end (M)
    ike_ikze          individual retirement accounts (IKE) and individual retirement security accounts (IKZE), all
-                     providers: accounts held at 31 December (szt.) and their value (thousand zloty) (A)
+                     providers: accounts held at 31 December (szt.) and their value (thousand zloty) (A; an
+                     edition at 30 June, frequency S, has no fact model and stays in Silver)
    The area is Poland ('PL' through poc_map_geography). #}
 with geo as (
     select
@@ -47,7 +48,7 @@ observations as (
         (series = 'bulletin' and is_total)
         or (series = 'ofe' and is_total and measure_code in ('net_assets', 'members'))
         or (
-            series in ('ike', 'ikze') and provider = '_T'
+            series in ('ike', 'ikze') and frequency = 'A' and provider = '_T'
             and item_label like '%prowadzone na koniec okresu sprawozdawczego%'
         )
 ),
