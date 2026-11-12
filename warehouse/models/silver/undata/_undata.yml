@@ -12,7 +12,11 @@ models:
           column_name: "entity || '|' || area_code || '|' || year || '|' || series"
     columns:
       - name: entity
-        tests: [not_null]
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['syb_1', 'syb_12', 'syb_125', 'syb_128', 'syb_145', 'syb_153', 'syb_154', 'syb_200', 'syb_223', 'syb_226', 'syb_230', 'syb_245', 'syb_246', 'syb_263', 'syb_264', 'syb_285', 'syb_309', 'syb_310', 'syb_313', 'syb_314', 'syb_315', 'syb_319', 'syb_323', 'syb_325', 'syb_327', 'syb_328', 'syb_329']
       - name: area_code
         tests: [not_null]
       - name: year

@@ -6,7 +6,8 @@ description: "UNdata (UN Statistics Division) — UN Statistical Yearbook tables
 # Yearbook (SYB) tables, one CSV per table linked from https://data.un.org/Default.aspx
 # (_Docs/SYB/CSV/SYB68_<table>_202511_<title>.csv, a few MB each). The file names change with each edition, so
 # each entity finds its link on that page (bulk_file url_from, pattern by table number); version = the server's
-# Last-Modified; a copy is written only when the SHA-256 changed. Each table cites its source agency (UN
+# Last-Modified when the download carries one (the Dev trial 43163356932's did not, so the download time was
+# used); a copy is written only when the SHA-256 changed. Each table cites its source agency (UN
 # Population Division, IMF, ILO …) per row. The UNdata SDMX service (data.un.org/ws/rest) carries other flows
 # (NA_MAIN is Eurostat's, 1.2 M rows; country data without Poland) and is not used. Terms: UNdata conditions
 # of use (register GL-017). Five tables have extra columns (system of trade, national currency, …: SYB 123, 130,
