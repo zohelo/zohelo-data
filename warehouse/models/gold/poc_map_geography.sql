@@ -180,6 +180,16 @@ wdi as (
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
 ),
 
+-- World Bank IDS (#2819): the same World Bank economy codes as WDI (ISO3 countries, WB: groups such as LMY,
+-- ECA), so the mapping is the WDI one under its own source_system; no IDS table is read here.
+ids as (
+    select
+        'world_bank_ids' as source_system,
+        source_code,
+        geography_key
+    from wdi
+),
+
 -- OECD (#2738): countries by ISO 3166 alpha-3 (dim_geography iso3); EU27_2020 is the Eurostat aggregate, the
 -- aggregates of macro poc_oecd_areas are OECD:<code> members. Built from Gold's own lists, not from
 -- silver.oecd_cli, so the dimensions never wait for the OECD source; codes outside them are unmatched (_X).
@@ -295,6 +305,8 @@ from (
     select * from teryt_prg
     union all
     select * from unctad
+    union all
+    select * from ids
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

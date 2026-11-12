@@ -62,10 +62,11 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.metrics_business_confidence_oecd, gold.metrics_consumer_confidence_oecd, gold.metrics_cli_oecd,  # OECD (#2738), draft until checked
        gold.metrics_lei_issued, gold.metrics_vat_whitelist_entries,  # registry counts GLEIF, MF white list (#2740), draft until checked
        gold.geo_unit, gold.geo_neighbour, gold.metrics_area,  # PRG/TERYT geography blocks (#2739): areas, centroids, contiguity
+       gold.metrics_external_debt_stocks, gold.metrics_external_debt_gni, gold.metrics_external_debt_service, gold.metrics_external_debt_service_gni, gold.metrics_external_debt_service_exports,  # World Bank IDS (#2819), draft until checked
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)
        gold.dimension, gold.dimension_alias, gold.dim_dimension,  # catalogue: axes
-       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_public_finance, gold.build_oecd, gold.build_gleif, gold.build_mf_biala_lista, gold.build_prg, gold.build_wdi, gold.build_unctad, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth]   # Gold v1 (warehouse/models/gold, docs/model.md)
+       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_public_finance, gold.build_oecd, gold.build_gleif, gold.build_mf_biala_lista, gold.build_prg, gold.build_ids, gold.build_wdi, gold.build_unctad, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth]   # Gold v1 (warehouse/models/gold, docs/model.md)
 demo_namespaces: [demo_bronze, demo_silver, demo_gold]  # phase 2 demo warehouse (program plan §3.3); never in the public catalogue
 
 # Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
@@ -127,6 +128,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_oecd: {rows: 100000}  # BCICP, CCICP and LI (AA): ~66,000 of silver.oecd_cli's 240,988 rows (Dev probe 43084707728)
   poc_build_gleif: {rows: 25000}  # 16,851 (Dev trial 43099545187)
   poc_build_mf_biala_lista: {rows: 10}  # 4 (Dev trial 43099545187)
+  poc_build_ids: {rows: 50000}  # 5 series, ~32,000 observations (Dev probe 43200414478: 6,623 + 6,324 + 6,600 actual + 6,305 + 5,404); measured in the PR
   poc_build_prg: {rows: 4300}  # 2,875 PRG units (16 voivodeships, 380 powiats, 2,479 gminas; Dev trial 43099545187 minus the country)
   poc_build_public_finance: {rows: 8600}  # 5,727 (Dev trial 43099813876)
   poc_build_unctad: {rows: 18000}  # 11,871 (Dev trial 43100532689): 29 areas × 10 measures
@@ -220,6 +222,11 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_cli_oecd: {rows: 30000}  # 14,307 rows, 22 areas
   poc_metrics_lei_issued: {rows: 350}  # 232 (Dev trial 43099545187)
   poc_metrics_vat_whitelist_entries: {rows: 10}  # 1 (Dev trial 43099545187)
+  poc_metrics_external_debt_stocks: {rows: 10000}  # 6,623 rows max (#2819)
+  poc_metrics_external_debt_gni: {rows: 10000}
+  poc_metrics_external_debt_service: {rows: 10000}
+  poc_metrics_external_debt_service_gni: {rows: 10000}
+  poc_metrics_external_debt_service_exports: {rows: 10000}
   geo_unit: {rows: 4300}  # 2,876 (Dev trial 43099545187)
   geo_neighbour: {rows: 25000}  # 16,224 (Dev trial 43099545187)
   poc_metrics_area: {rows: 50000}  # 33,753 (Dev trial 43099545187)

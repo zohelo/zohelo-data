@@ -157,3 +157,8 @@ krus_pension_avg,krus,krus:benefits:PLN:old_age:avg_benefit_pln%,"average monthl
 fdi_inflow,unctad,unctad:US_FdiFlowsStock:08:1:USD_MN,"FDI inward flows, US$ million at current prices (UNCTAD)",3,mln_usd
 exports_goods,unctad,unctad:US_TradeMerchTotal:02:USD_MN,"merchandise exports, US$ million at current prices",1,
 exports_services,unctad,unctad:US_TradeServCatTotal:02:S:USD_MN,"services exports (total), US$ million at current prices",1,
+external_debt_stocks,world_bank_ids,world_bank_ids:DT.DOD.DECT.CD,"total external debt stocks (DOD), current US$",1,usd
+external_debt_gni,world_bank_ids,world_bank_ids:DT.DOD.DECT.GN.ZS,"external debt stocks, % of GNI",1,pct_gni
+external_debt_service,world_bank_ids,world_bank_ids:DT.TDS.DECT.CD,"total debt service (TDS), current US$; projections not built",1,usd
+external_debt_service_gni,world_bank_ids,world_bank_ids:DT.TDS.DECT.GN.ZS,"total debt service, % of GNI (series not in the IDS series metadata; name from the observations)",1,pct_gni
+external_debt_service_exports,world_bank_ids,world_bank_ids:DT.TDS.DECT.EX.ZS,"total debt service, % of exports of goods, services and primary income",1,pct_exports
