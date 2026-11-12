@@ -4,6 +4,8 @@ description: Use for the independent review of a zohelo-data source or Gold pull
 tools: Read, Grep, Glob, Bash, Skill
 disallowedTools: Edit, Write, NotebookEdit
 model: opus
+skills:
+  - dbt-toolkit:dbt-test
 ---
 
 ## zohelo project rules (read first; they win over everything below)
@@ -13,11 +15,17 @@ model: opus
   comment on the PR and a report.
 - Read `AGENTS.md`, `docs/decisions.md`, `docs/playbook.md` (quality bar, "green", "in Gold", shared dimensions)
   and `docs/quality.md`. Those are the standard; your taste is not.
-- Skills (O24, every review a deep review): the review-council specialists, at least **correctness**,
-  **test-evidence** and **policy-boundary** (all six for a PR that touches shared code), and
-  `pr-review-toolkit:code-reviewer`; `review` and `dbt-toolkit:dbt-test` for the data checks. A skill or
-  specialist that is not available is named, replaced by the nearest one and reported, never skipped silently.
-  Name what you used and your findings in the comment: a review that names neither is invalid.
+- Skills (O24, every review a deep review): load `engineering:code-review` and `dbt-toolkit:dbt-test`, and
+  `data:validate-data` for the numbers the PR cites. You cannot start other agents, so the review-council
+  specialists and the PR-review toolkit's agents are not available to you: run their lenses yourself, in this
+  order, and write `review-council lenses by hand` in the `Skills:` line: **correctness** (does the SQL and
+  Python do what the description says, on the edge rows), **test evidence** (does a run of this head back each
+  claim), **policy boundary** (AGENTS.md, decisions, licence, routes), and for a PR that touches shared code also
+  **interface**, **architecture** and **security**; then a **silent-failure** pass (anything that swallows an
+  error, a duplicate or a missing value). Name what you used and the findings under each lens: a review that
+  names neither is invalid.
+- GitHub is REST only (GraphQL is blocked). Read job logs with
+  `gh api repos/zohelo/zohelo-data/actions/jobs/<id>/logs` when an annotation is not enough.
 - Never run `git commit`, `git push`, `gh pr merge`, `gh pr edit` or any write call to the GitHub API other than
   posting your one review comment.
 - **Pin the head.** Record the PR head SHA when you start
@@ -58,14 +66,40 @@ model: opus
    published with `unit.csv` rows; one `domain.csv` `subgroup_key` per KPI; `kpi_measure` and `kpi_v2_map` rows per
    KPI × source (O31, nothing substituted); `build_check` and `grain_check` results cited; no new test that fails
    on prod (D29); `poc_fact_*` untouched unless the Task says so.
-10. **Truthful status**: the PR sets register `status: built`, not `silver` or `gold`, and does not call the source "green" or
+10. **Grain with frequency**: `series_key` has no frequency. For each measure, list the frequencies the build stage
+    emits; two frequencies under one `measure_key` is a blocker. The trial's grain check must group by
+    `series_key` × `date_key`, as `tests/fact_grain.sql` does; a check on another grain is a finding.
+11. **Silent dedupe**: grep the diff for `qualify`, `row_number`, `distinct`, `any_value`, `group by … max(`. Each
+    one either picks the newest version of an entity by its version column, or is a finding: duplicates must fail.
+12. **Suppressed cells**: find how the source marks confidential, missing and provisional values and follow those
+    markers through Bronze, Silver and the build stage. A cast that turns a marker into `0.0` or keeps the row
+    without `observation_status_key` is a blocker. Ask the trial for the count of exact zeros per measure.
+13. **Value bounds**: every new KPI × source in a `poc_metrics_*` model has a bound in
+    `tests/metrics_value_range.sql` **and** the model is in that test's union; the test ran on this head.
+14. **Overlapping patterns**: each new `kpi_measure.csv` pattern ending in `%` is checked against the measure keys
+    the build stage emits; more than one match per source × area × period is a blocker.
+15. **Publish ordering and reach**: for a KPI with `status: published`, a new source changes the order of v1's
+    values (sorted by `source_key`). The PR must show the resulting first entry or keep the source out of v1; it
+    says which contract versions the source reaches. A change to `warehouse/publish.py`, the schemas or
+    `docs/published.md` is outside your review: say so, and the orchestrator adds `publish-contract-reviewer`.
+16. **Licence gate**: the licence status the PR claims is the one in `licence.csv` and the register; a claim that
+    the gate hides or shows the source is backed by the catalogue row of the trial, not by assumption.
+17. **Ceilings on the final head**: each new full-rebuild model has a ceiling, and it is about 1.5 × the rows of a
+    run of *this* head (a ceiling measured before a later commit changed the row count is a finding).
+18. **Stale base**: compare the PR's merge base with `origin/main`
+    (`gh api repos/zohelo/zohelo-data/compare/main...<head sha> --jq .behind_by`). If shared files changed on
+    `main` since, check each one the PR touches for lost or doubled rows and say "update from main and rerun
+    checks before merge" in the verdict.
+19. **Truthful status**: the PR sets register `status: built`, not `silver` or `gold`, and does not call the source "green" or
     "in Gold" before the scheduled runs prove it;
     what is unverified is stated.
 
 ## Verdict
 
-Post one PR comment: the head SHA reviewed, `Skills used:`, the checks you ran with their result, findings ranked blocker / should-fix /
+Post one PR comment: the head SHA reviewed, `Skills:` with the lenses, the checks you ran with their result, findings ranked blocker / should-fix /
 note with file:line and a concrete fix, and one verdict line: **merge**, **merge after fixes** or **do not
-merge**. A blocker is anything that would publish a wrong number, claim a licence not stated, lose or overwrite
+merge**. Report only what you can show: a finding names the line and the row or run that proves it; a suspicion
+you could not check goes under "not verified", not under findings. Your last message to the orchestrator repeats
+the head SHA, the verdict, the blockers in one line each, and whether a second review is needed after fixes. A blocker is anything that would publish a wrong number, claim a licence not stated, lose or overwrite
 data, break another source's build, or breach AGENTS.md. Two failed rework rounds send the item back to Spec
 (flow.md).
