@@ -1,0 +1,29 @@
+version: 2
+models:
+  - name: undp_hdr_indices
+    description: >-
+      UNDP Human Development Report composite indices from bronze.undp_hdr_values (Human Development Data
+      Center, HDR25 complete time series, CC BY 3.0 IGO): newest report, every country and aggregate (ZZ…
+      codes), indicators hdi, le, eys, mys, gnipc, gdi, gii, ihdi, phdi and components with sex variants,
+      1990 to the report's last year. Grain: iso3 × indicator × year. A new report recalculates the whole
+      series (compare within one release).
+    tests:
+      - unique:
+          column_name: "iso3 || '|' || indicator || '|' || year"
+    columns:
+      - name: iso3
+        tests: [not_null]
+      - name: indicator
+        description: >-
+          Indicator code from the source column name; the HDR25 set (Dev trial 43093051337). A new report that
+          adds an indicator fails this test until the list (and its meaning) is reviewed.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['abr', 'co2_prod', 'coef_ineq', 'diff_hdi_phdi', 'eys', 'eys_f', 'eys_m', 'gdi', 'gdi_group', 'gii', 'gii_rank', 'gni_pc_f', 'gni_pc_m', 'gnipc', 'hdi', 'hdi_f', 'hdi_m', 'hdi_rank', 'ihdi', 'ineq_edu', 'ineq_inc', 'ineq_le', 'le', 'le_f', 'le_m', 'lfpr_f', 'lfpr_m', 'loss', 'mf', 'mmr', 'mys', 'mys_f', 'mys_m', 'phdi', 'pop_total', 'pr_f', 'pr_m', 'rankdiff_hdi_phdi', 'se_f', 'se_m']
+      - name: year
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]
