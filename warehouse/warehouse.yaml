@@ -133,14 +133,14 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   wdi_observations: {rows: 12000000, exception: "#870"}  # 9,045,734; rebuilt weekly with WDI
   # Gold v1 (warehouse/models/gold; model names keep the poc_ prefix): rebuilt in full
   poc_build_bdl: {rows: 1000000}  # 483,646 (10 Nov) + ~100,000 slice subgroups (Poland and voivodeships only)
-  poc_src_eurostat: {rows: 760000}  # 505,586 (Dev trial 43093114523)
+  poc_src_eurostat: {rows: 760000}  # 505,620 (Dev trial 43292078190)
   poc_src_dbw: {rows: 1000000}
   poc_src_dbw_dictionary: {rows: 200000}
   poc_build_mf_jst_budgets: {rows: 650}  # 408 rows (Dev trial 43162316724)
   poc_build_mrpips_unemployment: {rows: 85000}  # = Silver mrpips_registered_unemployment (56,202 rows)
   poc_build_check: {rows: 1000}
   poc_grain_check: {rows: 10000}
-  poc_build_dbw: {rows: 710000}  # 470,322 (Dev trial 43093114523)
+  poc_build_dbw: {rows: 700000}  # 465,438 (Dev trial 43292078190)
   poc_build_eurostat: {rows: 800000}
   poc_build_nbp: {rows: 600000}
   poc_build_oecd: {rows: 100000}  # BCICP, CCICP and LI (AA): ~66,000 of silver.oecd_cli's 240,988 rows (Dev probe 43084707728)
@@ -171,9 +171,9 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_dim_unit: {rows: 1000}
   poc_fact_annual: {rows: 1500000, exception: "#2294"}  # 1,092,012 (10 Nov) + ~230,000 slice series (#2592); until the Gold v1 cut-over (D28)
   poc_fact_daily: {rows: 800000}  # + ECB EXR (13 currencies) and EUR STR, ~95,000
-  poc_fact_semiannual: {rows: 5000}  # 3,125 (Dev trial 43093114523)
-  poc_fact_quarterly: {rows: 270000}  # 179,203 (Dev trial 43093114523)
-  poc_fact_monthly: {rows: 660000}  # 391,828 with OECD (Dev trial 43099545187) + ~45,000 slice rows (#2743); ~1.5x
+  poc_fact_semiannual: {rows: 5000}  # 3,125 (Dev trial 43292078190)
+  poc_fact_quarterly: {rows: 255000}  # 168,545 (Dev trial 43292078190)
+  poc_fact_monthly: {rows: 810000}  # 541,532 (Dev trial 43292078190)
   poc_map_geography: {rows: 150000}
   poc_measure_dimensions: {rows: 5000}
   kpi_dimension: {rows: 10000}
@@ -270,11 +270,11 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_account_ownership: {rows: 1200}  # ~770
   poc_metrics_price_level_index: {rows: 600}  # ~400
   # slice needs-block rows (O36, #2743)
-  poc_metrics_core_inflation: {rows: 20000}  # 12,825 (Dev trial 43093114523)
-  poc_metrics_min_wage: {rows: 2500}  # 1,564 (Dev trial 43093114523)
-  poc_metrics_extreme_poverty: {rows: 500}  # 230 (Dev trial 43093114523)
-  poc_metrics_employment_enterprise: {rows: 7000}  # 4,600 (Dev trial 43093114523)
-  poc_metrics_median_wage: {rows: 2000}  # 1,097 (Dev trial 43093114523)
-  poc_metrics_price_m2_secondary: {rows: 4500}  # 2,853 (Dev trial 43093114523)
+  poc_metrics_core_inflation: {rows: 20000}  # 12,825 (Dev trial 43292078190)
+  poc_metrics_min_wage: {rows: 2500}  # 1,564 (Dev trial 43292078190)
+  poc_metrics_extreme_poverty: {rows: 300}  # 196 (Dev trial 43292078190)
+  poc_metrics_employment_enterprise: {rows: 7000}  # 4,598 (Dev trial 43292078190)
+  poc_metrics_median_wage: {rows: 1700}  # 1,097 (Dev trial 43292078190)
+  poc_metrics_price_m2_secondary: {rows: 4300}  # 2,853 (Dev trial 43292078190)
   dim_dataset: {rows: 40000}
   dim_dimension: {rows: 1000}
