@@ -105,7 +105,8 @@ def main(argv: list[str]) -> int:
         if m and "#" not in href:
             editions.setdefault(int(m.group(1)), href)
     print("editions:", {y: editions[y] for y in sorted(editions)})
-    for year in sorted({newest, min(editions)}, reverse=True):
+    years = sorted(editions, reverse=True) if "all" in argv else sorted({newest, min(editions)}, reverse=True)
+    for year in years:
         time.sleep(2)
         page_links = links if year == newest else _links(editions[year])
         print(f"\n===== files of {year}")
@@ -113,6 +114,8 @@ def main(argv: list[str]) -> int:
         for h, t in files:
             print(f"  {h} | {t[:120]}")
         tables = [h for h, t in files if re.search(r"tablic|tabel", t, re.I) and re.search(r"\.(zip|xlsx)$", h, re.I)]
+        if not tables:
+            tables = [h for h, t in files if re.search(rf"w {year}", t) and re.search(r"\.(zip|xlsx)$", h, re.I)]
         tables = list(dict.fromkeys(tables))
         print("  tables links:", tables)
         for url in tables[:2]:
@@ -120,7 +123,7 @@ def main(argv: list[str]) -> int:
             body = get(url)
             if body:
                 try:
-                    show_book(str(year), body, show if year == newest else None, rows)
+                    show_book(str(year), body, show if (year == newest or "all" in argv) else None, rows)
                 except Exception as exc:  # noqa: BLE001
                     print("  workbook error", type(exc).__name__, exc)
     return 0
