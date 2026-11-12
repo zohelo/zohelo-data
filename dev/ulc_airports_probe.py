@@ -7,6 +7,7 @@ never retries around it. Files go to DEV_OUTPUT_DIR (the run's artifact, 7 days)
 
 from __future__ import annotations
 
+import base64
 from hashlib import sha256
 from html.parser import HTMLParser
 import json
@@ -53,6 +54,15 @@ def challenged(response: requests.Response) -> str | None:
     return None
 
 
+def dump(label: str, body: bytes) -> None:
+    """The bytes as base64 lines in the job log (artifacts cannot be downloaded from the agent session)."""
+    text = base64.b64encode(body).decode()
+    print(f"@@BEGIN {label} {len(body)} {sha256(body).hexdigest()}", flush=True)
+    for i in range(0, len(text), 8000):
+        print("@@B " + text[i : i + 8000])
+    print(f"@@END {label}", flush=True)
+
+
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "pdf").mkdir(exist_ok=True)
@@ -60,6 +70,7 @@ def main() -> int:
     session.headers.update({"User-Agent": USER_AGENT})
     page = session.get(LISTING, timeout=(30, 60))
     (OUT / "listing.html").write_bytes(page.content)
+    dump("listing", page.content)
     keep = ("content-type", "last-modified", "server", "x-cdn", "x-iinfo")
     meta = {
         "listing_status": page.status_code,
@@ -102,6 +113,7 @@ def main() -> int:
             meta["refused"] = {"url": href, "reason": refusal or "not a PDF", "after_files": n}
             break
         (OUT / "pdf" / f"{n:03d}__{href.rsplit('/', 1)[-1]}").write_bytes(response.content)
+        dump(f"pdf {n:03d} {href}", response.content)
     meta["files"] = files
     (OUT / "probe.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False))
     ok = [f for f in files if f.get("pdf")]
