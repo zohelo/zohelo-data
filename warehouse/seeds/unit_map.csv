@@ -210,3 +210,7 @@ unece,NC,,ncu
 unece,NCU per US$,,ncu_per_usd
 unece,NCU per Euro,,ncu_per_eur
 unece,NCU per Ruble,,ncu_per_rub
+gtfs_gdansk,trips,,trips
+gtfs_krakow,trips,,trips
+gtfs_poznan,trips,,trips
+gtfs_wroclaw,trips,,trips

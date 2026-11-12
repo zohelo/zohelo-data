@@ -1,0 +1,38 @@
+version: 2
+models:
+  - name: poc_build_gtfs_wroclaw
+    description: >-
+      Gold build stage of gtfs_wroclaw (PL-ENV-032): scheduled public transport trips per service day of the Wrocław public transport GTFS timetable,
+      by GTFS route type (breakdown route_type) and in total (is_total), unit trips, area Wrocław (TERC:0264011).
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || geography_key || '|' || breakdown_json || '|' || date_key"
+      - gtfs_value_between:
+          arguments:
+            column_name: value
+            min_value: 1
+            max_value: 100000
+    columns:
+      - name: geography_key
+        description: The city that publishes the feed; '_X' would mean its TERC code left dim_geography.
+        tests: [not_null, {accepted_values: {arguments: {values: ['TERC:0264011']}}}]
+      - name: date_key
+        tests: [not_null]
+      - name: observation_status_key
+        description: provisional for a day after the newest download of its feed (still a plan); ok otherwise.
+        tests: [not_null, {accepted_values: {arguments: {values: ['ok', 'provisional']}}}]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: transit_stops_gtfs_wroclaw
+    description: >-
+      Stops of the Wrocław public transport GTFS timetable (PL-ENV-032), newest window of each feed; stop_key = 'gtfs_wroclaw:<feed>:<stop_id>'.
+      city_geography_key is the city that publishes the feed, not the stop's own gmina.
+    columns:
+      - name: stop_key
+        tests: [not_null, unique]
+  - name: transit_routes_gtfs_wroclaw
+    description: >-
+      Routes of the Wrocław public transport GTFS timetable (PL-ENV-032), newest window of each feed; route_key = 'gtfs_wroclaw:<feed>:<route_id>'.
+    columns:
+      - name: route_key
+        tests: [not_null, unique]

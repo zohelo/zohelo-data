@@ -1,0 +1,18 @@
+version: 2
+sources:
+- name: gtfs_krakow
+  description: ZTP Kraków static GTFS timetable (register PL-ENV-031), every landed validity window of each feed
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gtfs_krakow/
+    loaded_by: ingestion/to_bronze/gtfs_krakow/ (ingestion/common/gtfs.py)
+    config: ingestion/sources/gtfs_krakow.yaml
+  tables:
+  - name: gtfs_krakow_records
+    description: >-
+      One row per record of agency, routes, stops, trips, calendar, calendar_dates and feed_info (gtfs_file, the kept
+      GTFS fields as text) and one row per trip of stop_times.txt with its number of stop_times rows
+      (stop_times_rows); one Parquet file per landed window (entity <feed>_<first>_<last>), partitioned by entity.
+  - name: gtfs_krakow_rejected_files
+    description: Landed windows of gtfs_krakow the Bronze decoder rejected (unknown GTFS layout, code outside GTFS), with the reason.
