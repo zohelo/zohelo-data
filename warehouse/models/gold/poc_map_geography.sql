@@ -291,6 +291,22 @@ wb_family as (
 -- calls) from poc_unctad_areas: the EU27 members, 3412 European Union (2020 …) = EU27_2020, 0000 World. Other
 -- economies have no ISO code in the tables (_X); the build stage builds only the listed areas, and
 -- tests/unctad_areas_present.sql fails when a listed code is missing from one of the three built tables.
+-- ZUS statistical portal (PLS-009): '00' = Poland; voivodeships by their 2-digit TERYT code (the Silver model matched
+-- ZUS's voivodeship names to these codes). Built from TERYT, so the dimensions never wait for the ZUS source.
+zus_psz as (
+    select
+        'zus_psz' as source_system,
+        terc_code as source_code,
+        'TERC:' || terc_code as geography_key
+    from {{ ref('teryt_terc') }}
+    where unit_level = 'wojewodztwo'
+    union all
+    select
+        'zus_psz' as source_system,
+        '00' as source_code,
+        'PL' as geography_key
+),
+
 unctad_areas as ({{ poc_unctad_areas() }}),
 
 unctad as (
@@ -462,6 +478,8 @@ from (
     select * from un_wpp
     union all
     select * from world_bank_gem
+    union all
+    select * from zus_psz
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null
