@@ -164,9 +164,10 @@ def main() -> int:
             from build group by all order by 1""")
         g["geography"] = q(con, "select geography_key, geography_source_code, count(*) from build group by all")
         g["tests"] = {
-            t: q(con, f"select count(*) from ({render(f'warehouse/tests/{t}.sql', {}, {})})")[0][0]
+            t: q(con, f"select count(*) from ({render(f'warehouse/tests/{t}.sql', {'poc_build_entsog': 'build'}, {})})")[0][0]
             for t in ("entsog_value_range",)
         }
+        g["unmapped_rows"] = q(con, "select count(*) from build where breakdown_json like '%unmapped%'")
         g["days_total_vs_silver"] = q(con, """
             select direction_key, count(distinct gas_day) as silver_days,
               (select count(*) from build b where b.frequency = 'D' and b.breakdown_json = '{}'
