@@ -1,0 +1,84 @@
+source_system,unit_code,measure_key_pattern,unit_key
+eurostat,NR,,persons
+eurostat,THS_PER,,thousand_persons
+eurostat,CP_MEUR,,mln_eur
+eurostat,MIO_EUR,,mln_eur
+eurostat,CP_MNAC,,mln_ncu
+eurostat,MIO_NAC,,mln_ncu
+eurostat,CP_EUR_HAB,,eur_per_person
+eurostat,CLV_PCH_PRE,,pct
+eurostat,CLV_PCH_SM,,pct
+eurostat,PCH_PRE,,pct
+eurostat,PCH_SM,,pct
+eurostat,RCH_A,,pct
+eurostat,PC,,pct
+eurostat,PC_ACT,,pct_labour_force
+eurostat,PC_POP,,pct_population
+eurostat,PC_IND,,pct_population
+eurostat,PC_GDP,,pct_gdp
+eurostat,CON_PPCH_SM,,pct_points
+eurostat,YR,,years
+eurostat,PPS_HAB_EU27_2020,,index_eu27_100
+eurostat,I20,,index_2020_100
+eurostat,THS_T,,thousand_tonnes
+eurostat,BAL,,balance
+eurostat,NR,eurostat:DEMO_R_FIND2:NR:TOTFERRT,children_per_woman
+eurostat,_Z,eurostat:IRT_LT_MCBY_M:_Z:%,pct
+eurostat,_Z,eurostat:DEMO_PJANIND:_Z:OLDDEP1,pct
+eurostat,_Z,eurostat:DEMO_FIND:_Z:TOTFERRT,children_per_woman
+gus_bdl,osoba,,persons
+gus_bdl,%,,pct
+gus_bdl,zł,,pln
+gus_bdl,tys. zł,,thousand_pln
+gus_bdl,mln zł,,mln_pln
+gus_bdl,ha,,ha
+gus_bdl,km2,,km2
+gus_bdl,km²,,km2
+gus_bdl,lata,,years
+gus_bdl,osoba,gus_bdl:P2426:osoba:%,pct
+gus_bdl,osoba,gus_bdl:P4334:osoba:%,persons_per_offer
+gus_bdl,-,gus_bdl:P2955:-%,index_py_100
+gus_bdl,-,gus_bdl:P2496:-%,index_py_100
+gus_bdl,-,gus_bdl:P4635:-%,index_py_100
+gus_bdl,-,gus_bdl:P3502:-%,index_py_100
+gus_bdl,-,gus_bdl:P2346:-%,children_per_woman
+world_bank_wdi,as named,world_bank_wdi:NY.GDP.MKTP.CD,usd
+world_bank_wdi,as named,world_bank_wdi:NY.GDP.MKTP.CN,ncu
+world_bank_wdi,as named,world_bank_wdi:NY.GDP.PCAP.CD,usd_per_person
+world_bank_wdi,as named,world_bank_wdi:NY.GDP.PCAP.PP.CD,ppp_usd_per_person
+world_bank_wdi,as named,world_bank_wdi:NY.GDP.MKTP.KD.ZG,pct
+world_bank_wdi,as named,world_bank_wdi:FP.CPI.TOTL.ZG,pct
+world_bank_wdi,as named,world_bank_wdi:SL.UEM.TOTL.ZS,pct_labour_force
+world_bank_wdi,as named,world_bank_wdi:SL.UEM.1524.ZS,pct_labour_force
+world_bank_wdi,as named,world_bank_wdi:SL.EMP.TOTL.SP.ZS,pct_population
+world_bank_wdi,as named,world_bank_wdi:SL.TLF.ACTI.ZS,pct_population
+world_bank_wdi,as named,world_bank_wdi:SL.UEM.NEET.ZS,pct_population
+world_bank_wdi,as named,world_bank_wdi:SE.TER.CUAT.BA.ZS,pct_population
+world_bank_wdi,as named,world_bank_wdi:SP.DYN.LE00.IN,years
+world_bank_wdi,as named,world_bank_wdi:SP.POP.TOTL,persons
+world_bank_wdi,as named,world_bank_wdi:SM.POP.NETM,persons
+world_bank_wdi,as named,world_bank_wdi:AG.LND.TOTL.K2,km2
+world_bank_wdi,as named,world_bank_wdi:SP.DYN.TFRT.IN,children_per_woman
+world_bank_wdi,as named,world_bank_wdi:SP.POP.DPND.OL,pct
+world_bank_wdi,as named,world_bank_wdi:GB.XPD.RSDV.GD.ZS,pct_gdp
+world_bank_wdi,as named,world_bank_wdi:GC.NLD.TOTL.GD.ZS,pct_gdp
+world_bank_wdi,as named,world_bank_wdi:NE.GDI.FTOT.ZS,pct_gdp
+world_bank_wdi,as named,world_bank_wdi:BN.CAB.XOKA.GD.ZS,pct_gdp
+world_bank_wdi,as named,world_bank_wdi:BX.KLT.DINV.CD.WD,usd
+world_bank_wdi,as named,world_bank_wdi:EN.GHG.ALL.MT.CE.AR5,mt_co2e
+world_bank_wdi,as named,world_bank_wdi:PX.REX.REER,index_2010_100
+world_bank_wdi,as named,world_bank_wdi:SI.POV.GINI,gini_0_100
+nbp,PLN,,pln_per_unit
+nbp,PLN/g,,pln_per_gram
+oecd,IX,,index_lta_100
+gleif,entities,,entities
+mf_biala_lista,list_entries,,list_entries
+gugik_prg,ha,,ha
+mf_public_debt,PC_GDP,,pct_gdp
+mf_public_debt,MIO_PLN,,mln_pln
+unctad,MIO_USD,,mln_usd
+unctad,PC_GDP,,pct_gdp
+unctad,PCH,,pct
+mf_state_budget,THS_PLN,,thousand_pln
+mf_treasury_debt,MIO_PLN,,mln_pln
+krus,PLN,,pln

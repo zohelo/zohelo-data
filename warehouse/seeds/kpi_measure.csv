@@ -4,7 +4,7 @@ population_usual_residence,eurostat,eurostat:DEMO_R_PJANAGGR3:NR,"on 1 January, 
 population,gus_bdl,gus_bdl:P2137:osoba,on 31 December,1,
 population,gus_dbw,gus_dbw:581_57_93_4:%,on 31 December,2,
 gdp_current_prices,eurostat,eurostat:NAMA_10_GDP:CP_MEUR:B1GQ,million EUR,1,mln_eur
-gdp_current_prices,world_bank_wdi,world_bank_wdi:NY.GDP.MKTP.CD,current US$,2,usd
+gdp_current_prices,world_bank_wdi,world_bank_wdi:NY.GDP.MKTP.CD,current US$,2,mln_usd
 gdp_per_capita,eurostat,eurostat:NAMA_10_PC:CP_EUR_HAB:B1GQ,EUR per inhabitant,1,eur_per_person
 gdp_per_capita,world_bank_wdi,world_bank_wdi:NY.GDP.PCAP.CD,current US$,2,usd_per_person
 gdp_volume_growth,eurostat,eurostat:NAMA_10_GDP:CLV_PCH_PRE:B1GQ,"chain-linked volumes, % change on previous period",1,
@@ -29,7 +29,7 @@ average_gross_wage,gus_bdl,gus_bdl:P2497:%,,1,
 dwellings_completed,gus_bdl,gus_bdl:P3824:%,,1,
 area,gus_bdl,gus_bdl:P1410:%,ha in the source,1,
 area,world_bank_wdi,world_bank_wdi:AG.LND.TOTL.K2,land area,2,
-area,gugik_prg,gugik_prg:jednostki_administracyjne:km2:area,"state register of boundaries, voivodeships, powiats and gminas (not the country polygon, which includes sea waters); edition held, latest only",3,km2
+area,gugik_prg,gugik_prg:jednostki_administracyjne:ha:area,"state register of boundaries, voivodeships, powiats and gminas (not the country polygon, which includes sea waters); edition held, latest only",3,
 population_density,gus_bdl,gus_bdl:P2425:%,,1,
 fx_rate,nbp,nbp:fx:A:mid,"NBP table A, mid",1,
 gold_price,nbp,nbp:gold:price,"NBP fixing, 1000 fineness",1,
@@ -87,7 +87,7 @@ gerd_gdp,world_bank_wdi,world_bank_wdi:GB.XPD.RSDV.GD.ZS,% of GDP,2,
 neet_rate,world_bank_wdi,world_bank_wdi:SL.UEM.NEET.ZS,15-24 (Eurostat: 15-29),2,
 tertiary_attainment,world_bank_wdi,world_bank_wdi:SE.TER.CUAT.BA.ZS,"25+, at least bachelor's or equivalent (Eurostat: 25-34, ISCED 5-8)",2,
 gg_balance_gdp,world_bank_wdi,world_bank_wdi:GC.NLD.TOTL.GD.ZS,"net lending (+) / net borrowing (-), GFS",2,
-ghg_emissions,world_bank_wdi,world_bank_wdi:EN.GHG.ALL.MT.CE.AR5,"total excl. LULUCF, AR5, Mt CO2e",2,mt_co2e
+ghg_emissions,world_bank_wdi,world_bank_wdi:EN.GHG.ALL.MT.CE.AR5,"total excl. LULUCF, AR5, Mt CO2e",2,
 reer,world_bank_wdi,world_bank_wdi:PX.REX.REER,2010 = 100 (IMF),2,index_2010_100
 gdp_per_capita_pps,world_bank_wdi,world_bank_wdi:NY.GDP.PCAP.PP.CD,"GDP per capita, PPP, current international $ (not an EU27 index)",2,ppp_usd_per_person
 cpi_annual_rate,gus_dbw,gus_dbw:305_739_5_1:5,"CPI, same month of the previous year = 100, COICOP 1999, to 2025 (rate = value - 100)",1,index_py_100
@@ -129,7 +129,7 @@ current_account_gdp,eurostat,eurostat:BOP_GDP6_Q:PC_GDP:CA:BAL,"quarterly, not s
 current_account_gdp,world_bank_wdi,world_bank_wdi:BN.CAB.XOKA.GD.ZS,"annual, % of GDP",2,
 current_account_components,eurostat,eurostat:BOP_C6_Q:%:MIO_EUR:%:BAL,"current account (CA), goods (G), services (S), primary (IN1) and secondary (IN2) income, balances",1,
 fdi_inflow,eurostat,eurostat:BOP_FDI6_FLOW:%:MIO_EUR:NI:DI__D__F,"inward direct investment, net incurrence of liabilities, million EUR",1,
-fdi_inflow,world_bank_wdi,world_bank_wdi:BX.KLT.DINV.CD.WD,"net inflows, current US$",2,usd
+fdi_inflow,world_bank_wdi,world_bank_wdi:BX.KLT.DINV.CD.WD,"net inflows, current US$",2,mln_usd
 job_vacancy_rate,eurostat,eurostat:JVS_Q_NACE2:%:JVR,"NACE B-S, not seasonally adjusted",1,
 labour_productivity,eurostat,eurostat:NAMQ_10_LP_ULC:PCH_SM:RLPR_PER,"real labour productivity per person, seasonally adjusted",1,
 unit_labour_cost,eurostat,eurostat:NAMQ_10_LP_ULC:PCH_SM:NULC_PER,"nominal unit labour cost per person, seasonally adjusted",1,
