@@ -298,7 +298,7 @@ schemas and the cross-file rules of `published_v2_problems`). Seeds: `kpi_v2_map
   only for a KPI out of scope (no longer a candidate by the seeds and the licence gate), after the read-back. A KPI
   still in scope whose `series.json` is published but that this run could not build (missing table, read failure,
   no row at the shown frequency) fails the run before anything is written, so the live files stay; take it out of
-  scope in `kpi_v2_map.csv` to retire it. `catalog.json` has at least one KPI (`minItems`); no history; UTF-8; ISO 8601 UTC; additive fields are allowed, any rename or removal
+  scope in `kpi_v2_map.csv` to retire it. A missing table of a live v1 or v2 KPI is waited for first (up to 9 minutes); still missing, the whole run is deferred: no v1 or v2 file is written or removed, and the run fails only when the live files are more than 6 hours old (`warehouse/publish.py` `preload`, `deferred`). `catalog.json` has at least one KPI (`minItems`); no history; UTF-8; ISO 8601 UTC; additive fields are allowed, any rename or removal
   needs v3 alongside.
 - The licence gate of v1 (Rules above, O37) applies to v2 too.
 - **Which KPIs** (owner decision O37, 12 Nov 2026: no publishing decision for v2; bi.zohelo.com is not shared yet,

@@ -1,0 +1,47 @@
+source_system: unhcr
+description: "UNHCR Refugee Statistics API — forcibly displaced and stateless people by country of asylum and year (population stocks)"
+
+# Extraction strategy (docs/landing.md). The Refugee Data Finder has no bulk file of the population database; its
+# public Refugee Statistics API (https://api.unhcr.org/docs/refugee-statistics.html, no key) returns a whole
+# selection in one request when `limit` exceeds its rows. Each entity is one such fixed selection through the
+# shared bulk_file pattern, one request per entity and run; no source version is sent, so version = download time
+# and an unchanged response (same SHA-256) is skipped. Default aggregation guard: a dimension left out is summed
+# into one row ("-"), so every selection names its dimensions: `coa_all=true` lists every country of asylum
+# separately (origins summed), `coa=POL&coo_all=true` lists Poland by every country of origin; codes are ISO
+# 3166-1 alpha-3 (`cf_type=ISO`). Bronze rejects a response that does not fit one page (`maxPages` must be 1).
+# Third-party datasets (the `idmc` IDP and `unrwa` endpoints, flagged in the terms) are not landed. CC BY 4.0
+# with UNHCR's supplemental terms (register GL-029). Proven from Actions by Dev probe 43273970310 (coa_all: 7,802
+# rows 1951-2025; Poland: 35 years 1991-2025).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: population_by_asylum      # every country of asylum × year, origins summed
+        url: "https://api.unhcr.org/population/v1/population/?limit=20000&coa_all=true&cf_type=ISO&yearFrom=1951"
+        format: raw
+        version: ingested
+      - entity: poland_by_origin          # Poland as country of asylum × every country of origin × year
+        url: "https://api.unhcr.org/population/v1/population/?limit=20000&coa=POL&coo_all=true&cf_type=ISO&yearFrom=1951"
+        format: raw
+        version: ingested
+  initial: api
+  production: snapshot                  # each response is the complete history of its selection
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; release: Global Trends (end-year figures) in June, Mid-Year Trends in October/November, with revisions; weekly check (Tuesday 04:20), unchanged responses skipped
+    - {cron: "20 4 * * 2", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/unhcr/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.unhcr_population, bronze.unhcr_rejected_files]
+silver: [silver.unhcr_population]
+gold: [gold.build_unhcr]
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): two small whole-history selections (about 10,000 rows) without a
+# changed-since filter; a new copy replaces its entity and Silver is rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2415"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
