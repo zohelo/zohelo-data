@@ -133,11 +133,11 @@ def analyse(bronze, dim, yearly) -> dict:
     return out
 
 
-def run_landing(extract, mode: str) -> tuple[dict, int, float]:
+def run_landing(extract, mode: str, budget: int = 10) -> tuple[dict, int, float]:
     before, start, old = CALLS[0], time.monotonic(), sys.stdout
     sys.stdout = buf = io.StringIO()
     try:
-        code = extract.main(["--mode", mode, "--landing-root", LANDING, "--budget-minutes", "280"])
+        code = extract.main(["--mode", mode, "--landing-root", LANDING, "--budget-minutes", str(budget)])
     finally:
         sys.stdout = old
     summary = json.loads([ln for ln in buf.getvalue().splitlines() if ln.startswith("{")][-1])
@@ -160,7 +160,7 @@ def main() -> int:
     client, cat = s3(), bf.retry(catalog, "catalog")
     landing_bucket = req("STORAGE_LANDING_BUCKET_NAME")
     try:
-        first, calls1, secs1 = run_landing(extract, "load")
+        first, calls1, secs1 = run_landing(extract, "load", 290)
         second, calls2, secs2 = run_landing(extract, "load")
         verify, _, _ = run_landing(extract, "verify")
         files = receipts = size = 0
