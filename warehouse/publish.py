@@ -88,6 +88,60 @@ SERIES_LEVELS = {
 }
 
 
+# The tables gold.publish reads besides gold.metrics_<kpi>. Like those, every one of them is read before the first
+# write (preload, support_reads): seeds are dropped and loaded again by a concurrent silver_gold.build, and a read
+# in the middle of the writes left v1 written and topics.json and v2 not (#2944).
+COVERAGE = ("gold", "coverage")
+GEO_UNITS = ("silver", "prg_units")
+GEO_NAMES = ("gold", "dim_geography")
+RELEASES = ("silver", "releases")
+TOPIC_TABLES = (
+    "topic_rank",
+    "topic_matches",
+    "topic",
+    "topic_kpi",
+    "news_outlet",
+    "release_calendar",
+    "kpi_v2_map",
+    "release_kpi",
+)
+
+
+def support_reads(namespace: str, production: bool) -> dict[tuple[str, str], tuple[str, dict[str, Any]]]:
+    """Every table a run reads besides the metrics tables: (namespace, table) → (the files it feeds, the pyiceberg
+    scan arguments). ``production`` adds what only the production run writes (topics.json, contract v2).
+    ValueError when two uses of one table would need different scans."""
+    from pyiceberg.expressions import In
+
+    reads: dict[tuple[str, str], tuple[str, dict[str, Any]]] = {}
+
+    def add(key: tuple[str, str], feeds: str, **scan) -> None:
+        if key in reads and reads[key][1] != scan:
+            raise ValueError(f"{'.'.join(key)} is read with two different scans")
+        reads[key] = (f"{reads[key][0]}, {feeds}" if key in reads else feeds, scan)
+
+    add(COVERAGE, "checked_at of every file")
+    for name, table in CATALOG_TABLES.items():
+        add((namespace, table), f"catalog/{name}.parquet")
+    add(
+        GEO_UNITS,
+        "geo/<level>.geojson",
+        row_filter=In("unit_level", list(GEO)),
+        selected_fields=("unit_level", "teryt_code", "geometry_wkb"),
+    )
+    add(
+        GEO_NAMES,
+        "geo/<level>.geojson",
+        row_filter=In("level_name", ["country", "wojewodztwo", "powiat", "gmina"]),
+        selected_fields=("geography_key", "name_pl", "name_en", "parent_key"),
+    )
+    if production:
+        for table in TOPIC_TABLES:
+            add(("gold", table), "topics.json")
+        add(RELEASES, "topics.json, v2 calendar.json")
+    return reads
+
+
 def v1_rows(metrics: pa.Table) -> pa.Table:
     """The rows of gold.metrics_<kpi> that v1 publishes: every source except V2_ONLY_SOURCES; pure."""
     keep = pc.invert(pc.is_in(metrics.column("source_system"), value_set=pa.array(sorted(V2_ONLY_SOURCES))))
@@ -100,13 +154,14 @@ def v1_rows(metrics: pa.Table) -> pa.Table:
 SWAP_RECHECK_SECONDS = (10, 20)
 
 
-def gold(cat, namespace: str, name: str, waits: tuple[float, ...] = SWAP_RECHECK_SECONDS) -> pa.Table:
-    """A catalog table as Arrow; NoSuchTableError only when it is still missing after the swap re-checks."""
+def gold(cat, namespace: str, name: str, waits: tuple[float, ...] = SWAP_RECHECK_SECONDS, **scan) -> pa.Table:
+    """A catalog table as Arrow (``scan``: pyiceberg scan arguments, default the whole table); NoSuchTableError
+    only when it is still missing after the swap re-checks."""
     from pyiceberg.exceptions import NoSuchTableError
 
     for wait in (*waits, None):
         try:
-            return cat.load_table((namespace, name)).scan().to_arrow()
+            return cat.load_table((namespace, name)).scan(**scan).to_arrow()
         except NoSuchTableError:
             if wait is None:
                 raise
@@ -114,21 +169,25 @@ def gold(cat, namespace: str, name: str, waits: tuple[float, ...] = SWAP_RECHECK
     raise AssertionError("unreachable")
 
 
-# A table that feeds a live published KPI and is missing is waited for: another source's silver_gold.build can
-# hold it away for seconds (a swap) or minutes (a retry after a catalog 429, a long model). Only the missing
-# tables are read again, after these waits (9 minutes in all; the job's timeout is 30).
+# A table that feeds a live published file and is missing is waited for: another source's silver_gold.build can
+# hold it away for seconds (a swap) or minutes (a retry after a catalog 429, a long model, a seed that is dropped
+# and loaded again). Only the missing tables are read again, after these waits (9 minutes in all; the job's
+# timeout is 30).
 BUILD_WAIT_SECONDS = (10, 20, 30, 60, 120, 150, 150)
 # Still missing after that: this run writes nothing and ends green with a warning while the live files are
 # younger than this; older than this (or of unknown age) the run fails. A failed build raises its own alert.
 DEFER_HOURS = 6
 
 
-def read_tables(cat, wanted: list[tuple[str, str]], waited_for: set[tuple[str, str]], waits=BUILD_WAIT_SECONDS):
+def read_tables(
+    cat, wanted: list[tuple[str, str]], waited_for: set[tuple[str, str]], waits=BUILD_WAIT_SECONDS, scans=None
+):
     """Read the (namespace, table) pairs in ``wanted``; returns ``(tables, missing)``.
 
-    Every table is read once. Those missing and in ``waited_for`` (they feed a KPI whose files are live) are
-    read again after each wait, until none of them is missing or the waits are used up. A missing table that
-    feeds no live file (not built yet) is not waited for. A table that was read is not read again."""
+    Every table is read once (``scans``: pyiceberg scan arguments per pair, default the whole table). Those
+    missing and in ``waited_for`` (they feed a file that is live) are read again after each wait, until none of
+    them is missing or the waits are used up. A missing table that feeds no live file (not built yet) is not
+    waited for. A table that was read is not read again."""
     from pyiceberg.exceptions import NoSuchTableError
 
     tables: dict[tuple[str, str], pa.Table] = {}
@@ -140,7 +199,7 @@ def read_tables(cat, wanted: list[tuple[str, str]], waited_for: set[tuple[str, s
         still = []
         for key in pending:
             try:
-                tables[key] = gold(cat, *key, waits=())
+                tables[key] = gold(cat, *key, waits=(), **(scans or {}).get(key, {}))
             except NoSuchTableError:
                 still.append(key)
         if round_number == 0:
@@ -436,16 +495,25 @@ def kpi_series(metrics: pa.Table, measures: list[dict], kpi_key: str, unit_key: 
     ).to_arrow_table()
 
 
-def catalog_tables(cat, client, prefix: str, namespace: str) -> dict[str, Any]:
-    """Write catalog/<name>.parquet for every CATALOG_TABLES entry whose Gold table exists."""
-    from pyiceberg.exceptions import NoSuchTableError
+def live_catalog_files(client, prefix: str) -> set[str]:
+    """The CATALOG_TABLES names whose catalog/<name>.parquet is published under prefix."""
+    from ingestion.common.r2 import req
 
+    pages = client.get_paginator("list_objects_v2").paginate(
+        Bucket=req("STORAGE_LAKEHOUSE_BUCKET_NAME"), Prefix=prefix + "catalog/"
+    )
+    keys = {str(item["Key"]) for page in pages for item in page.get("Contents", [])}
+    return {name for name in CATALOG_TABLES if prefix + f"catalog/{name}.parquet" in keys}
+
+
+def catalog_tables(client, prefix: str, namespace: str, tables: dict[tuple[str, str], pa.Table]) -> dict[str, Any]:
+    """Write catalog/<name>.parquet for every CATALOG_TABLES entry whose Gold table exists. ``tables``: the tables
+    read before the first write (preload); one that is not among them has no table and no live file yet."""
     written: dict[str, int] = {}
     missing: list[str] = []
     for name, table_name in CATALOG_TABLES.items():
-        try:
-            table = gold(cat, namespace, table_name)
-        except NoSuchTableError:
+        table = tables.get((namespace, table_name))
+        if table is None:
             missing.append(name)
             continue
         put(client, prefix + f"catalog/{name}.parquet", parquet(table), "application/vnd.apache.parquet")
@@ -608,25 +676,10 @@ def features(shapes: list[dict], names: dict[str, dict], level: str) -> dict[str
     return {"type": "FeatureCollection", "features": collection}
 
 
-def geo(cat, client, prefix: str) -> dict[str, int]:
-    """Write geo/<level>.geojson (country, voivodeship, powiat, gmina) from silver.prg_units and gold.dim_geography."""
-    from pyiceberg.expressions import In
-
-    units = (
-        cat.load_table(("silver", "prg_units"))
-        .scan(row_filter=In("unit_level", list(GEO)), selected_fields=("unit_level", "teryt_code", "geometry_wkb"))
-        .to_arrow()
-    )
-    names = {
-        row["geography_key"]: row
-        for row in cat.load_table(("gold", "dim_geography"))
-        .scan(
-            row_filter=In("level_name", ["country", "wojewodztwo", "powiat", "gmina"]),
-            selected_fields=("geography_key", "name_pl", "name_en", "parent_key"),
-        )
-        .to_arrow()
-        .to_pylist()
-    }
+def geo(client, prefix: str, units: pa.Table, geography: pa.Table) -> dict[str, int]:
+    """Write geo/<level>.geojson (country, voivodeship, powiat, gmina) from the rows of silver.prg_units and
+    gold.dim_geography read before the first write (support_reads: GEO_UNITS, GEO_NAMES)."""
+    names = {row["geography_key"]: row for row in geography.to_pylist()}
     con = duckdb.connect()
     con.sql("INSTALL spatial; LOAD spatial;")
     con.register("units", units)
@@ -790,8 +843,9 @@ def topics_review(doc: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def topics(cat, client, generated_at: str) -> dict[str, Any]:
-    """Write topics.json (publish on) or its internal review copy (publish off); returns sizes and top topics."""
+def topics(client, generated_at: str, tables: dict[tuple[str, str], pa.Table]) -> dict[str, Any]:
+    """Write topics.json (publish on) or its internal review copy (publish off); returns sizes and top topics.
+    ``tables``: the tables read before the first write (support_reads: TOPIC_TABLES, RELEASES)."""
     import gzip
 
     import yaml
@@ -800,11 +854,9 @@ def topics(cat, client, generated_at: str) -> dict[str, Any]:
 
     cfg = yaml.safe_load((PROJECT / "warehouse.yaml").read_text())["topics"]
     con = duckdb.connect()
-    for name in ("topic_rank", "topic_matches"):
-        con.register(name, gold(cat, "gold", name))
-    for name in ("topic", "topic_kpi", "news_outlet", "release_calendar", "kpi_v2_map", "release_kpi"):
-        con.register(name, gold(cat, "gold", name))
-    con.register("releases", gold(cat, "silver", "releases"))
+    for name in TOPIC_TABLES:
+        con.register(name, tables[("gold", name)])
+    con.register("releases", tables[RELEASES])
     doc = topics_json(con, cfg, generated_at)
     body = json.dumps(doc, ensure_ascii=False, separators=(",", ":")).encode()
     zipped = len(gzip.compress(body))
@@ -818,11 +870,13 @@ def topics(cat, client, generated_at: str) -> dict[str, Any]:
 
 
 def preload(cat, client, prefix: str, namespace: str, measures, licensed: set[str], v2: bool) -> dict[str, Any]:
-    """Read every metrics table this run publishes from, before the first write (#2834).
+    """Read every table this run publishes from, before the first write (#2834, #2944).
 
     Returns ``tables`` ((namespace, table) → Arrow), ``v2_only`` (v2 concepts that are not v1 tables of this run)
-    and ``lost``: the KPIs whose files are live but whose table is still missing after the waits of read_tables.
-    A table missing for a KPI that has no live file (not built yet) is not waited for and is not lost."""
+    and ``lost``: the tables that feed live files but are still missing after the waits of read_tables, each with
+    what it feeds. A metrics table missing for a KPI that has no live file (not built yet) is not waited for and
+    is not lost; the same holds for a catalog table (support_reads) without a live catalog/<name>.parquet. Every
+    other table of support_reads is always waited for."""
     from warehouse import publish_v2
 
     v1 = [
@@ -834,6 +888,16 @@ def preload(cat, client, prefix: str, namespace: str, measures, licensed: set[st
     live = {p.split("/")[1] for p in publish_v2.kpi_objects(client, prefix) if p.endswith("/series.parquet")}
     waited_for = {(namespace, f"metrics_{key}") for key in v1 if key in live}
     feeds: dict[tuple[str, str], set[str]] = {(namespace, f"metrics_{key}"): {f"v1 {key}"} for key in v1}
+    support = support_reads(namespace, production=prefix == PREFIX)
+    catalog_live = {(namespace, CATALOG_TABLES[name]) for name in live_catalog_files(client, prefix)}
+    catalog_keys = {(namespace, table) for table in CATALOG_TABLES.values()}
+    for table, (fed, _scan) in support.items():
+        if table in feeds:
+            raise ValueError(f"{'.'.join(table)} is read as a metrics table and as a support table")
+        wanted.append(table)
+        feeds[table] = {fed}
+        if table not in catalog_keys or table in catalog_live:
+            waited_for.add(table)
     v2_only: list[str] = []
     if v2:
         live_v2 = {
@@ -847,13 +911,13 @@ def preload(cat, client, prefix: str, namespace: str, measures, licensed: set[st
             feeds.setdefault(table, set()).add(f"v2 {entry['kpi_key']}")
             if entry["kpi_key"] in live_v2:
                 waited_for.add(table)
-    tables, missing = read_tables(cat, wanted, waited_for)
+    tables, missing = read_tables(cat, wanted, waited_for, scans={t: scan for t, (_fed, scan) in support.items()})
     lost = {f"{ns}.{name}": sorted(feeds[(ns, name)]) for ns, name in missing if (ns, name) in waited_for}
     return {"tables": tables, "v2_only": v2_only, "lost": lost}
 
 
 def deferred(client, prefix: str, lost: dict[str, list[str]], now: datetime) -> dict[str, Any]:
-    """End a run that lost the table of a live KPI without writing or removing anything (#2834).
+    """End a run that lost a table that feeds live files without writing or removing anything (#2834, #2944).
 
     The live files stay as the last complete publish wrote them. While they are at most DEFER_HOURS old the run
     ends green with a warning (the next publish, after the build that holds the table, catches up); older, or of
@@ -870,17 +934,17 @@ def deferred(client, prefix: str, lost: dict[str, list[str]], now: datetime) -> 
         "removed": 0,
     }
     if age is None or age > DEFER_HOURS:
-        annotate("error", "gold.publish: Gold tables of live KPIs are missing, nothing written", detail)
-        raise ValueError(f"Gold tables of live KPIs are missing and the published files are stale: {sorted(lost)}")
-    annotate("warning", "gold.publish: deferred, Gold tables of live KPIs are missing (a build is running)", detail)
+        annotate("error", "gold.publish: tables of live files are missing, nothing written", detail)
+        raise ValueError(f"Tables of live files are missing and the published files are stale: {sorted(lost)}")
+    annotate("warning", "gold.publish: deferred, tables of live files are missing (a build is running)", detail)
     return {"deferred": detail}
 
 
 def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     """Write kpi/<kpi_key>/latest.json for every published KPI under prefix.
 
-    Every metrics table is read before the first write (preload); a run that cannot read the table of a live KPI
-    writes and removes nothing (deferred)."""
+    Every table the run reads is read before the first write (preload); a run that cannot read a table that feeds
+    live files writes and removes nothing (deferred)."""
     from ingestion.common.r2 import catalog, s3
     from ingestion.common.report import annotate
 
@@ -888,7 +952,6 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     cat = catalog()
     client = s3()
     measures = seed("kpi_measure")
-    checked_at = checked(gold(cat, "gold", "coverage"))
     written: dict[str, int] = {}
     missing: list[str] = []
     series: dict[str, int] = {}
@@ -903,6 +966,8 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     preloaded = preload(cat, client, prefix, namespace, measures, licensed, v2)
     if preloaded.get("lost"):
         return deferred(client, prefix, preloaded["lost"], datetime.now(UTC))
+    read = preloaded["tables"]  # no catalog read after this line: every table below comes from it
+    checked_at = checked(read[COVERAGE])
     for kpi in seed("kpi"):
         kpi_key = kpi["kpi_key"]
         if kpi["status"] != "published":
@@ -910,7 +975,7 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
         if licence_blocked(kpi_key, measures, licensed):
             blocked.append(kpi_key)  # files removed at the end, after every write and read-back succeeded
             continue
-        metrics = preloaded["tables"].get((namespace, f"metrics_{kpi_key}"))
+        metrics = read.get((namespace, f"metrics_{kpi_key}"))
         if metrics is None:  # never built and never published (a published table still missing ended the run above)
             missing.append(kpi_key)
             continue
@@ -946,7 +1011,7 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     result = {"written": written, "skipped": sorted(SKIP), "missing": missing, "differences": 0}
     result["licence_gate"] = {"blocked": blocked, "rows_removed": licence_removed}
     result["series"] = series
-    result["catalog_tables"] = catalog_tables(cat, client, prefix, namespace)
+    result["catalog_tables"] = catalog_tables(client, prefix, namespace, read)
     v1_catalog = catalog_json(entries, generated_at)
     body = json.dumps(v1_catalog, ensure_ascii=False, separators=(",", ":")).encode()
     result["catalog_json"] = {"kpis": len(entries), "bytes": put(client, prefix + "catalog/catalog.json", body)}
@@ -961,9 +1026,9 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     result["status"] = {"sources": len(status["sources"]), "bytes": put(client, prefix + "status.json", body)}
     result["manifest"] = manifest_json(client, prefix)
     result["calendar"] = calendar(client, prefix, generated_at)
-    result["geo"] = geo(cat, client, prefix)
+    result["geo"] = geo(client, prefix, read[GEO_UNITS], read[GEO_NAMES])
     if prefix == PREFIX:  # topics: the production run only (a trial prefix writes v1 files alone)
-        result["topics"] = topics(cat, client, generated_at)
+        result["topics"] = topics(client, generated_at, read)
     for kpi_key in blocked:  # last v1 step, after every write and read-back; seed-decided, never by a failed read
         for name in ("series.parquet", "latest.json"):
             remove(client, prefix + f"kpi/{kpi_key}/{name}")
@@ -972,10 +1037,21 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
         from warehouse import publish_v2
 
         # the v2-only concepts read before the first write, so v2 is built from the same read as v1
-        read = {name[len("metrics_") :]: t for (ns, name), t in preloaded["tables"].items() if ns == "gold"}
-        tables = {**{c: read[c] for c in preloaded["v2_only"] if c in read}, **tables}
+        concepts = {
+            name[len("metrics_") :]: t for (ns, name), t in read.items() if ns == "gold" and name.startswith("metrics_")
+        }
+        tables = {**{c: concepts[c] for c in preloaded["v2_only"] if c in concepts}, **tables}
         try:
-            result["v2"] = publish_v2.write(cat, client, tables, checked_at, v1_catalog, status, generated_at)
+            result["v2"] = publish_v2.write(
+                cat,
+                client,
+                tables,
+                checked_at,
+                v1_catalog,
+                status,
+                generated_at,
+                silver_releases=read[RELEASES].to_pylist(),
+            )
         except ValueError as error:
             annotate("error", "gold.publish: v2 not written in full", {"error": str(error)[:3000]})
             raise

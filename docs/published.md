@@ -109,7 +109,8 @@ One Parquet file per Gold catalogue table, with that table's columns.
 `warehouse/publish.py` `catalog_tables()` writes each file from its Gold table: dim_kpi ← `gold.kpi`, kpi_measure ←
 `gold.kpi_measure`, kpi_dimension ← `gold.kpi_dimension`, dim_domain ← `gold.domain`, dim_unit ← `gold.unit`,
 dim_source ← `gold.dim_source`, dim_licence ← `gold.licence`, freshness ← `gold.freshness`; a file whose table is
-not built yet is left out and reported as `missing` in the `gold.publish` annotation.
+not built yet is left out and reported as `missing` in the `gold.publish` annotation. A table whose file is already
+published is not "not built yet": when it cannot be read the run is deferred (v2 Rules below).
 
 ## manifest.json
 
@@ -298,7 +299,7 @@ schemas and the cross-file rules of `published_v2_problems`). Seeds: `kpi_v2_map
   only for a KPI out of scope (no longer a candidate by the seeds and the licence gate), after the read-back. A KPI
   still in scope whose `series.json` is published but that this run could not build (missing table, read failure,
   no row at the shown frequency) fails the run before anything is written, so the live files stay; take it out of
-  scope in `kpi_v2_map.csv` to retire it. A missing table of a live v1 or v2 KPI is waited for first (up to 9 minutes); still missing, the whole run is deferred: no v1 or v2 file is written or removed, and the run fails only when the live files are more than 6 hours old (`warehouse/publish.py` `preload`, `deferred`). `catalog.json` has at least one KPI (`minItems`); no history; UTF-8; ISO 8601 UTC; additive fields are allowed, any rename or removal
+  scope in `kpi_v2_map.csv` to retire it. Every table the run reads is read before the first write: the metrics tables, and `gold.coverage`, the catalog tables, the geo tables, the topic tables and `silver.releases` (`warehouse/publish.py` `support_reads`, #2944). A missing table that feeds a live file (a live v1 or v2 KPI, a published `catalog/<name>.parquet`, and always the others of `support_reads`) is waited for first (up to 9 minutes); still missing, the whole run is deferred: no v1 or v2 file is written or removed, and the run fails only when the live files are more than 6 hours old (`preload`, `deferred`). `catalog.json` has at least one KPI (`minItems`); no history; UTF-8; ISO 8601 UTC; additive fields are allowed, any rename or removal
   needs v3 alongside.
 - The licence gate of v1 (Rules above, O37) applies to v2 too.
 - A KPI whose live `series.json` holds only series of sources the licence gate now removes, and whose other
