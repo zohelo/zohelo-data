@@ -1413,7 +1413,8 @@ sources:
   name: Refugee Data Finder / Refugee Statistics API
   short_name: UNHCR Refugee Statistics
   provider: United Nations High Commissioner for Refugees
-  status: approved
+  source_system: unhcr
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1429,7 +1430,8 @@ sources:
     interfaces: [HTML, REST API, JSON, CSV]
     auth: public
     cost: free
-    limits: Default page size 100 is documented; maximum and rate quota are unknown.
+    limits: Default page size 100 is documented; no maximum or rate quota stated; limit=20000 returns the 7,802-row
+      selection in one page (Dev trials 43279310455, 43282453427).
   licence:
     status: open-conditional
     notes: 'Terms: CC BY 4.0 plus supplemental terms, https://www.unhcr.org/terms-use-datasets ("licensed under a Creative
@@ -1444,15 +1446,15 @@ sources:
     identifiers: UNHCR or ISO3 origin/asylum codes + year + population category; preserve code-system choice.
   modelling:
     notes: Counts may aggregate when country filters are omitted; avoid accidental totals. Population stocks and
-      flows differ.
+      flows differ. Built (#2415) with every selection naming its dimensions (coa_all=true; coa=POL with coo_all=true),
+      Bronze rejecting a response over more than one page and tests/unhcr_selection.sql; the third-party idmc and
+      unrwa endpoints are not landed.
     overlap: Overlaps UNdata, IOM and WDI; operational situation data may have different cutoffs.
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
-    blockers:
-    - 'Guard against API default aggregation'
-    - 'Exclude third-party datasets flagged in metadata'
+    connection: tested
+    blockers: []
     references:
     - https://api.unhcr.org/docs/refugee-statistics.html
     - https://data.unhcr.org/en/situations/ukraine
