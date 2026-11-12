@@ -5,8 +5,9 @@ One row per non-empty cell (ingestion/common/xlsx_cells.py: value as stored, she
 each release workbook (entity ofe_YYYY_MM, bulletin_YYYY_qN_<part>, ike_YYYY, ikze_YYYY; to_landing/knf_insurance).
 Each file holds its own period, so the newest copy of every entity is loaded (latest-only per entity).
 
-A workbook whose sheets do not carry the layout its series is known by (LAYOUTS: a sheet name pattern and a text
-that must appear on it) is rejected into bronze.knf_insurance_rejected_files with the reason, never guessed.
+An old-format workbook (.xls, older OFE months) is rejected with that reason. A workbook whose sheets do not
+carry the layout its series is known by (LAYOUTS: a sheet name pattern and a text that must appear on it) is
+rejected into bronze.knf_insurance_rejected_files with the reason, never guessed.
 """
 
 from __future__ import annotations
@@ -47,6 +48,8 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
     kind = layout(receipt["entity"])
     if kind not in LAYOUTS:
         raise ValueError(f"unknown series of entity {receipt['entity']!r}")
+    if body[:8] == bytes.fromhex("d0cf11e0a1b11ae1"):
+        raise ValueError("old Excel format (.xls, OLE2/BIFF): no reader without a new dependency; not loaded")
     table = xlsx_cells.decode(body, receipt)
     cells = list(zip(table.column("sheet_name").to_pylist(), table.column("value_text").to_pylist(), strict=True))
     for sheet_pattern, text_pattern in LAYOUTS[kind]:
