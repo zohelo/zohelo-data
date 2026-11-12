@@ -4,9 +4,13 @@ description: "Urząd Regulacji Energetyki (URE) — electricity price indicators
 # Extraction strategy (docs/landing.md). Register PL-ENV-020. URE publishes each price indicator on one fixed public
 # page of www.ure.gov.pl ("Energia elektryczna → Ceny i wskaźniki") whose article holds the indicator's whole series as
 # one HTML table (no export, no session). Each entity is one indicator page, landed as the exact page bytes through
-# the shared bulk_file pattern, one request per page and run; a page lands again only when its SHA-256 changed.
-# Version: the server sends no Last-Modified, so the version token is the download time; the page's own
-# "Data modyfikacji" is kept in Bronze and Silver. Restart unit: one page.
+# the shared bulk_file pattern, one request per page and run, 2 seconds apart (page 7853 through its link on the
+# indicator list). The site sends a different page on every request (same size, new SHA-256: a per-request token), so
+# a page lands again only when its content changed (title, dates, table cells; ingestion/to_landing/ure/). Version:
+# the server sends no Last-Modified, so the version token is the download time; the page's own "Data modyfikacji" is
+# kept in Bronze and Silver. robots.txt of www.ure.gov.pl is empty (200, Dev trial 43286298849). Restart unit: one
+# page. Pages 8425 (wholesale 2019 coefficients), 10600 (tariff groups), 9165 (capacity charge) and the gas page 7859
+# have other layouts and are not loaded (docs/sources.md).
 extraction:
   kind: bulk_file
   bulk_file:
@@ -34,7 +38,7 @@ archive_policy:
   prune: report
 bronze: [bronze.ure_table_cells, bronze.ure_rejected_files]
 silver: [silver.ure_price_indicators]
-gold: [gold.build_ure]
+gold: [gold.build_ure, gold.metrics_electricity_price_competitive, gold.metrics_electricity_price_households]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a page
 # Refresh policy for all layers (D32): a few pages of a few hundred cells, changed a few times a year; small, so every

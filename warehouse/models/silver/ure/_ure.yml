@@ -1,0 +1,42 @@
+version: 2
+models:
+  - name: ure_price_indicators
+    description: >-
+      URE electricity price indicators (register PL-ENV-020) from the newest copy of each indicator page of
+      www.ure.gov.pl (bronze.ure_table_cells). Grain: indicator_code x frequency x period_label.
+      competitive_market_price (page 7852, average electricity sale price on the competitive market, zł/MWh): yearly
+      from 2008, quarterly from 2015-Q2; household_price (page 7853, average price for a household customer including
+      the distribution charge, zł/kWh): yearly from 2012. indicator_name keeps URE's column header (its definition)
+      and page_title the page title; values as published. Dev trial run ids in docs/sources.md.
+    tests:
+      - unique:
+          column_name: "indicator_code || '|' || frequency || '|' || period_label"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: [page_7852, page_7853]}}}]
+      - name: indicator_code
+        tests:
+          - not_null
+          - accepted_values: {arguments: {values: [competitive_market_price, household_price]}}
+      - name: indicator_name
+        description: The value column's header on the URE page, as published.
+        tests: [not_null]
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: [pln_per_mwh, pln_per_kwh]}}}]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: [A, Q]}}}]
+      - name: period_label
+        tests: [not_null]
+      - name: period_start
+        description: First day of the year or quarter.
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: observation_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok]}}}]
+      - name: page_modified
+        description: The page's "Data modyfikacji".
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the page (lineage to Landing/Archive).
+        tests: [not_null]

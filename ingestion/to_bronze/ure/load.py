@@ -25,8 +25,26 @@ from ingestion.common import bulk_bronze
 SOURCE = "ure"
 TABLE_ID = ("bronze", "ure_table_cells")
 REJECTED_ID = ("bronze", "ure_rejected_files")
-# entity → regex the indicator table's header text (its first row, cells joined by " | ") must match (re.search).
-LAYOUTS: dict[str, str] = {}
+# entity → the indicator table's layout, read in Dev trial 43286298849: ``header`` regexes the header rows' text
+# (cells joined by " | ") must match in order (re.search), ``width`` the cell count of every data row (first cell a
+# year). Pages 8425, 10600, 9165 and the gas page 7859 have other layouts (not loaded; docs/sources.md).
+LAYOUTS: dict[str, dict[str, Any]] = {
+    "page_7852": {  # average sale price on the competitive market: year | yearly | Q1..Q4 | URE notice numbers
+        "header": [
+            r"^Rok \| Średnia roczna cena sprzedaży energii elektrycznej na rynku konkurencyjnym \[zł/MWh\] \| "
+            r"Średnia kwartalna cena sprzedaży energii elektrycznej na rynku konkurencyjnym[^|]* \| Nr Informacji",
+            r"^I kwartał \| II kwartał \| III kwartał \| IV kwartał$",
+        ],
+        "width": 7,
+    },
+    "page_7853": {  # household price including the distribution charge: year | price | URE notice number
+        "header": [
+            r"^Rok \| Cena energii elektrycznej dla odbiorcy w gospodarstwie domowym[^|]*\[zł/kWh\] \| Nr Informacji"
+        ],
+        "width": 3,
+    },
+}
+YEAR = re.compile(r"^\d{4}$")
 COLUMNS = [
     ("entity", "VARCHAR"),
     ("page_title", "VARCHAR"),  # <title> of the page, as published
@@ -139,6 +157,16 @@ def header(table: list[list[dict[str, Any]]]) -> str:
     return " | ".join(c["text"] for c in table[0]) if table else ""
 
 
+def fits(table: list[list[dict[str, Any]]], layout: dict[str, Any]) -> bool:
+    """The header rows match the layout's patterns and every other row is a year row of the layout's width."""
+    heads = layout["header"]
+    if len(table) <= len(heads):
+        return False
+    if not all(re.search(p, " | ".join(c["text"] for c in row)) for p, row in zip(heads, table, strict=False)):
+        return False
+    return all(YEAR.match(row[0]["text"]) and len(row) == layout["width"] for row in table[len(heads) :])
+
+
 def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
     page = parse(body)
     entity = receipt["entity"]
@@ -147,7 +175,8 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
         raise ValueError(f"no layout declared for entity {entity!r}; tables: {found}"[:990])
     if not page["modified"]:
         raise ValueError("no 'Data modyfikacji' on the page")
-    matched = [n for n, t in enumerate(page["tables"], 1) if re.search(LAYOUTS[entity], header(t))]
+    layout = LAYOUTS[entity]
+    matched = [n for n, t in enumerate(page["tables"], 1) if fits(t, layout)]
     if len(matched) != 1:
         raise ValueError(f"{len(matched)} tables match the layout of {entity}; tables: {found}"[:990])
     number = matched[0]

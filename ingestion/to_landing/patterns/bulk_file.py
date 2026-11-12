@@ -387,8 +387,13 @@ def reduce_held(client: Any, bucket: str, source: str, spec: dict[str, Any], lan
     return done
 
 
-def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landing_root: str) -> dict[str, Any]:
-    """Download one declared file and land it with a receipt unless its bytes are unchanged."""
+def load_file(
+    client: Any, bucket: str, source: str, spec: dict[str, Any], landing_root: str, same: Any = None
+) -> dict[str, Any]:
+    """Download one declared file and land it with a receipt unless its bytes are unchanged.
+
+    ``same(held_receipt, path)`` (optional, a source's own rule) returns True when the download differs from the newest
+    landed copy only in parts the source does not load (an HTML page's per-request nonce): it is then not landed."""
     fmt = spec.get("format", "raw")
     folder = prefix(source, spec["entity"], landing_root)
     held = landed(client, bucket, folder)
@@ -402,7 +407,7 @@ def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landi
             digest, size = reduce_file(path, spec["reduce"])
             detail = {**detail, "reduced": spec["reduce"]}
         seconds = round(time.monotonic() - started)
-        if held and held[-1]["sha256"] == digest:
+        if held and (held[-1]["sha256"] == digest or (same is not None and same(held[-1], path))):
             return {"entity": spec["entity"], "outcome": "unchanged", "sha256": digest, "download_seconds": seconds}
         ingested = stamp(datetime.now(UTC))
         basis = spec.get("version", "last_modified")
@@ -465,12 +470,14 @@ def main(
     specs: list[dict[str, Any]] | None = None,
     pause_seconds: float = 0.0,
     missing_ok: bool = False,
+    same: Any = None,
 ) -> int:
     """Run one mode for every declared file of a bulk_file source; exit 1 on missing data.
 
     ``specs`` replaces the declared files (sources whose files are built from a seed, to_landing/<source>/);
     ``pause_seconds`` waits between downloads (a source's published rate limit); with ``missing_ok`` a file
-    the server refuses with a 4xx (e.g. a renamed Wikipedia article) is reported as a warning, not a failure.
+    the server refuses with a 4xx (e.g. a renamed Wikipedia article) is reported as a warning, not a failure;
+    ``same`` is passed to load_file (a source's rule for a download that differs only in parts it does not load).
     """
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     results, status, missing = [], 0, []
@@ -488,7 +495,7 @@ def main(
             if n and pause_seconds:
                 time.sleep(pause_seconds)
             try:
-                results.append(load_file(client, bucket, source, spec, landing_root))
+                results.append(load_file(client, bucket, source, spec, landing_root, same))
             except PermanentError as exc:
                 if spec.get("optional"):
                     results.append({"entity": spec["entity"], "outcome": "not published yet", "error": str(exc)[:200]})

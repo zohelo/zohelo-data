@@ -37,6 +37,8 @@ current_account_gdp,economy;poland,Q,current_account_gdp,eurostat,BOP_GDP6_Q,eur
 current_account_gdp,economy;poland,Q,current_account_gdp,world_bank_wdi,BN.CAB.XOKA.GD.ZS,world_bank_wdi:BN.CAB.XOKA.GD.ZS,A,PL;EU;EU27,,rate,neutral,ready,annual
 current_account_gdp,economy;poland,Q,,nbp,,,,,,rate,neutral,needs-source,NBP balance of payments: register PLG-002
 disposable_income_pc,labour,A,disposable_income_pc,gus_bdl,P1869,gus_bdl:P1869:zł,A,PL;VOIV,,mean,up,ready,"household budget survey, per person per month"
+electricity_price_competitive,economy,Q,electricity_price_competitive,ure,7852,ure:competitive_market_price:pln_per_mwh:quarterly;ure:competitive_market_price:pln_per_mwh:annual,A;Q,PL,,mean,neutral,ready,"URE, competitive market, PLN/MWh; licence unresolved: internal until URE states terms"
+electricity_price_households,economy,A,electricity_price_households,ure,7853,ure:household_price:pln_per_kwh:annual,A,PL,,mean,neutral,ready,"URE, household customer including the distribution charge, PLN/kWh; licence unresolved: internal until URE states terms"
 employment_enterprise,labour,M,,gus_bdl,P2837,gus_bdl:P2837:%,M,PL;VOIV,nace,rate,up,needs-block,"BDL monthly in Silver (month in the first label, now placed by the build); not activated: 130k rows, needs a section filter"
 employment_rate,labour;poland,Q,employment_rate,eurostat,LFSI_EMP_A;LFSI_EMP_Q,eurostat:LFSI_EMP_A:PC_POP:EMP_LFS;eurostat:LFSI_EMP_Q:PC_POP:EMP_LFS,A;Q,PL;EU;EU27,sex,rate,up,ready,age 20-64; quarterly seasonally adjusted
 employment_rate,labour;poland,Q,employment_rate,gus_dbw,1513_1360_95_3,gus_dbw:1513_1360_95_3:95,Q,PL;VOIV,education,rate,up,ready,"LFS (BAEL), age 15-89"
