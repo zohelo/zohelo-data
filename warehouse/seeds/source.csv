@@ -1,5 +1,5 @@
 source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
-eurostat,GL-001,Eurostat,Eurostat,European Commission,cube,dataset,international-public,eurostat_reuse,https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction
+eurostat,GL-001,TRIAL-EDIT Eurostat,Eurostat,European Commission,cube,dataset,international-public,eurostat_reuse,https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction
 gus_bdl,PLS-001,GUS Bank Danych Lokalnych,GUS Local Data Bank,GUS,cube,subgroup,national-public,cc_by_4_0_gus,https://api.stat.gov.pl/Home/BdlApi
 gus_dbw,PLS-002,GUS Dziedzinowe Bazy Wiedzy,GUS Knowledge Databases,GUS,cube,file (indicator × section × presentation × periodicity × year),national-public,gus_copyright,https://api.stat.gov.pl/Home/DBWApi?lang=en
 world_bank_wdi,GL-005,World Bank WDI,World Bank World Development Indicators,World Bank,cube,indicator,international-public,cc_by_4_0_world_bank,https://datatopics.worldbank.org/world-development-indicators/
@@ -42,3 +42,4 @@ unhcr,GL-029,UNHCR: statystyki uchodźców,UNHCR Refugee Statistics,United Natio
 eea,GL-037,EEA: emisje gazów cieplarnianych (inwentaryzacja GovReg),EEA greenhouse gas inventory (GovReg),European Environment Agency,cube,file,international-public,cc_by_4_0_eea,https://www.eea.europa.eu/en/datahub/datahubitem-view/3b7fe76c-524a-439a-bfd2-a6e4046302a2
 zus_psz,PLS-009,Portal Statystyczny ZUS,ZUS statistical portal,Zakład Ubezpieczeń Społecznych (ZUS),cube,file,national-public,unresolved,https://psz.zus.pl/
 wikidata,CD-026,Wikidata: jednostki terytorialne (TERC),Wikidata: Polish territorial units (TERC),Wikidata community / Wikimedia Foundation,reference,file,community-academic,cc0_wikidata,https://www.wikidata.org/wiki/Wikidata:Data_access
+zz_trial_c,ZZ-C,c,c,c,c,c,c,cc_by_4_0,https://example.org/c
