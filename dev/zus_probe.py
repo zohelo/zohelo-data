@@ -21,6 +21,7 @@ import requests
 from ingestion.common import xlsx_cells
 
 GREP = None
+WIDTH = 140
 UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
 
 
@@ -115,7 +116,7 @@ def xlsx(url, rows, full):
         show = keys if full else keys[:rows] + (keys[-4:] if len(keys) > rows else [])
         for k in show:
             cells = sorted(rws[k], key=lambda c: c["column_number"])
-            print(f"    r{k}: " + " | ".join(f"{c['column_number']}:{c['value_text'][:38]}" for c in cells[:18]))
+            print(f"    r{k}: " + " | ".join(f"{c['column_number']}:{c['value_text'][:WIDTH].replace(chr(10), ' ')}" for c in cells[:18]))
 
 
 def main(argv):
