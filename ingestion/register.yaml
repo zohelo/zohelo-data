@@ -1715,7 +1715,7 @@ sources:
   name: Climate Data Store (CDS)
   short_name: Copernicus Climate Data Store
   provider: Copernicus Climate Change Service / ECMWF
-  status: approved
+  status: reviewing
   family: G
   kpi: true
   geography: worldwide
@@ -1723,48 +1723,62 @@ sources:
   domains: [climate, weather, reanalysis, projections]
   entities: [grid-cell, station, country-derived]
   granularity: Dataset grid/level/variable/time/member; often hourly and gridded.
-  coverage: Earth past, present and projections; ERA5 pressure-level time series is documented from 1940-present;
-    other datasets differ.
+  coverage: Earth past, present and projections; ERA5 pressure-level time series is documented from 1940-present; other datasets
+    differ.
   access:
-    endpoint: https://cds.climate.copernicus.eu/
+    endpoint: https://cds.climate.copernicus.eu/api
     kind: api
     interfaces: [HTML, API, GRIB, NetCDF, cloud workspace]
-    auth: registration, personal token, and manual dataset-terms acceptance
+    auth: registration, personal access token, and manual acceptance of each dataset's terms on its page
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: 'No numeric quota on the how-to page. ECMWF forum (2019, may be outdated): "For ERA5 monthly data on the CDS,
+      a request is limited to 10,000 fields"; requests are queued and limits are adjusted with system load.'
   licence:
     status: open-conditional
-    notes: 'Terms: CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ for Copernicus Products in the Climate Data
-      Store since 2 July 2025 (ECMWF announcement https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464,
-      replacing the Licence to Use Copernicus Products): reuse, modification and commercial use allowed with attribution
-      and indication of changes; non-Copernicus datasets in the CDS keep their own licence, shown on each dataset
-      page and accepted per dataset with the personal token. Disclaimer to show: neither the European Commission
-      nor ECMWF is responsible for any use made of the information. Attribution: "Generated using Copernicus Climate
-      Change Service information <year>" ("Contains modified Copernicus Climate Change Service information <year>"
-      when modified), plus the dataset''s citation from its References section.'
-  updates: Datasets can be corrected or extended; schedules vary.
+    notes: 'Terms: CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ for Copernicus Products in the Climate Data Store
+      since 2 July 2025 (ECMWF announcement https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464,
+      replacing the Licence to Use Copernicus Products): reuse, modification and commercial use allowed with attribution and
+      indication of changes; non-Copernicus datasets in the CDS keep their own licence, shown on each dataset page and accepted
+      per dataset with the personal token. Disclaimer to show: neither the European Commission nor ECMWF is responsible for
+      any use made of the information. Attribution: "Generated using Copernicus Climate Change Service information <year>"
+      ("Contains modified Copernicus Climate Change Service information <year>" when modified), plus the dataset''s citation
+      from its References section.'
+  updates: 'Per dataset. ERA5-Land monthly averaged data: "Monthly with a delay of 2-3 months relatively to the actual date";
+    the catalogue showed data to 2026-10-01 on 12 Nov 2026.'
   ingestion:
-    history: Chunk by dataset/variable/time/grid with manifest and licence snapshot.
-    incremental: Append new times, then re-fetch documented revision windows/check notices.
+    history: 'API only, no anonymous bulk: the catalogue is public (https://cds.climate.copernicus.eu/api/catalogue/v1/collections/reanalysis-era5-land-monthly-means
+      answered 200 with licence CC-BY-4.0 and extent 1950-01-01 to 2026-10-01 from a GitHub runner, Dev probe run 43203166665
+      (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)), but a retrieval needs the personal token and the accepted
+      dataset terms. Smallest load: ERA5-Land monthly averaged 2 m temperature and total precipitation, 1950 to present, cut
+      to the area of Poland and the EU (0.1 degree grid, GRIB); about 920 months x 2 variables = 1,840 fields, inside one
+      or two requests; size not measured.'
+    incremental: Entity = dataset x variable, version = the catalogue's updated date; request the new months monthly and re-request
+      the last three (the newest months are preliminary). Chunk by dataset/variable/time with a manifest and the licence text.
     identifiers: Dataset short name + variable + level + grid coordinates + valid/reference time + ensemble member.
   modelling:
-    notes: Gridded fields require CRS/grid/version. Country derivatives need reproducible spatial weighting.
-    overlap: Can overlap EEA indicators and national climate products; raw reanalysis is not an official country
-      observation.
+    notes: 'Gridded fields need CRS, grid and version; a country value needs reproducible area weighting over PRG/NUTS polygons,
+      which the pipeline does not have yet (GRIB decoding plus spatial averaging: effort L). Smallest Gold selection: mean
+      air temperature and precipitation total per month for Poland, the voivodeships and EU countries, with the anomaly against
+      1991-2020 as a metric, as new KPIs in environment.climate.'
+    overlap: No KPI of kpi.csv is published here yet. IMGW station archives (PL-ENV-009) are the national observations; Eurostat
+      heating and cooling degree days derive from the same reanalysis; raw reanalysis is not an official country observation.
   research:
     priority: specialist
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Account/token workflow
-    - Record each chosen dataset's licence (non-Copernicus datasets keep their own) and accept it with the token
-    - Large-volume cost/storage design
-    - Monitor corrections
+    - 'Owner: will you create a free ECMWF account for the Climate Data Store, accept the CC-BY licence on the dataset page
+      "ERA5-Land monthly averaged data from 1950 to present", and add the personal access token as the organisation secret
+      SOURCE_CDS_API_TOKEN?'
+    - Current request limits are not published on the pages read; measure in the Dev trial.
+    - GRIB decoding and area weighting to countries and voivodeships are not in the pipeline (design before Landing).
     references:
     - https://cds.climate.copernicus.eu/
     - https://cds.climate.copernicus.eu/how-to-api
+    - https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land-monthly-means?tab=overview
     - https://www.ecmwf.int/en/terms-use
     - https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464
+    - https://forum.ecmwf.int/t/cdsapi-limitations-and-restrictions/1639
 - id: GL-037
   name: EEA Datahub
   short_name: EEA Datahub
@@ -1781,39 +1795,63 @@ sources:
   access:
     endpoint: https://www.eea.europa.eu/en/datahub
     kind: bulk_file
-    interfaces: [HTML, download files, geospatial services]
+    interfaces: [HTML, download files, CSV, SQLite, Microsoft Access, catalogue API, Discodata SQL API, geospatial services]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: None published. Discodata (https://discodata.eea.europa.eu/sql?query=...&p=<page>&nrOfHits=<rows>) returns JSON
+      pages, 100 rows by default, no stated maximum.
   licence:
     status: open-conditional
-    notes: 'Terms: CC BY 4.0, EEA legal notice https://www.eea.europa.eu/en/legal-notice: material the EEA holds
-      rights to may be re-used without prior permission, free of charge, for commercial or non-commercial purposes
-      (reproduction, adaptation, distribution), provided the EEA is acknowledged as the original source in each copy
-      and the original meaning is not distorted; data with a copyright mark or other item-specific conditions and
-      third-party content follow their own terms; EEA logo only with consent; no liability, data may be incomplete
-      or out of date, not the official opinion of the EEA. Attribution: "Source: European Environment Agency (EEA),
-      <dataset title>, <download date>."'
-  updates: Datasets follow legislation/reporting cycles; revisions and update cadence are item-specific.
+    notes: 'Terms: EEA legal notice https://www.eea.europa.eu/en/legal-notice (read 12 Nov 2026): EEA material is published
+      under CC BY 4.0 and "may be re-used without prior permission, free of charge, for commercial or non-commercial purposes
+      ... provided that the EEA is always acknowledged as the original source of the material", in each copy and without distorting
+      the original meaning; modification (adaptation) is allowed. "The above-mentioned permissions do not apply to content
+      supplied by third parties"; "The re-use of certain data may be subject to different conditions", marked on the item.
+      The EEA data policy (https://www.eea.europa.eu/en/datahub/eea-data-policy) adds: "Unless indicated otherwise, dataset
+      will be distributed under open standard license ODC-by license or similar" and "EEA data are provided ''as is'' to users
+      without warranty of any kind". The catalogue record of the greenhouse gas inventory states "License CC-BY 4.0 ... Copyright
+      holder: European Environment Agency (EEA)" and "No limitations to public access" (record of the April 2024 version).
+      Disclaimer: the EEA accepts no responsibility or liability; the information does not necessarily reflect the official
+      opinion of the EEA. Attribution: "Source: European Environment Agency (EEA), <dataset title>, <download date>."'
+  updates: 'Per dataset. Greenhouse gas inventory (GovReg): yearly cycle with several versions a year (2026: ver. 1.0 17 April,
+    2.0 4 September, 2.1 2 October 2026).'
   ingestion:
-    history: Archive exact dataset release, metadata, rights owner and spatial schema.
-    incremental: Refresh by dataset release/date; replace corrected records.
-    identifiers: EEA dataset ID + published feature/observation key; map sites/facilities separately.
+    history: 'Bulk per dataset version. First dataset: "GovReg: National emissions reported to the UNFCCC and to the EU under
+      the Governance Regulation" (series https://www.eea.europa.eu/en/datahub/datahubitem-view/3b7fe76c-524a-439a-bfd2-a6e4046302a2,
+      1985-2024, formats CSV, SQLite and Access, "Direct download"). Every version is its own catalogue record (2026 ver.
+      2.1: f6a252a6-1bde-43a8-9e6a-f58146fd691e), so the file URL changes per release; the stable entry is the series record,
+      read as JSON from https://sdi.eea.europa.eu/catalogue/srv/api/records/<id> (200, 43,925 bytes from a GitHub runner,
+      Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)). The 2024 version documents the
+      pattern: direct download https://sdi.eea.europa.eu/data/<version record id> and WebDAV folder https://sdi.eea.europa.eu/webdav/datastore/public/<dataset
+      folder>. The download of the 2026 version was not tested (the series id itself answers 400 on /data/); size not measured.'
+    incremental: Entity = dataset, version = the version record id and publication date; poll the series record monthly and
+      land the newest version (snapshot, changed_since_last); corrected versions replace the entity.
+    identifiers: 'EEA dataset ID + published feature/observation key; for the inventory: country code + sector (CRF) + pollutant
+      + year.'
   modelling:
-    notes: Do not combine facility emissions, site measurements and country indicators in one fact; retain units/QA
-      flags.
-    overlap: Overlaps Eurostat, Copernicus, national agencies and EU reporting portals; identify authoritative dataset
-      owner.
+    notes: 'Do not combine facility emissions, site measurements and country indicators in one fact; retain units and QA flags.
+      Greenhouse gas inventory: grain country x CRF sector x gas x year, ISO 3166-1 alpha-2 country codes plus EU aggregates,
+      kt CO2 equivalent, annual from 1985/1990. Smallest Gold selection: total emissions with and without LULUCF and the main
+      sectors (energy, transport, industry, agriculture, waste) for Poland and all EU countries: a second source of the existing
+      KPI ghg_emissions (O31). Next datasets when wanted: Waterbase (water quality, stands in for PL-ENV-011), Natura 2000
+      and nationally designated areas (stand in for PL-ENV-017), air quality statistics.'
+    overlap: Publishes ghg_emissions (kpi.csv), which Eurostat and FAOSTAT also publish; overlaps Copernicus, national agencies
+      and EU reporting portals; identify the authoritative dataset owner.
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Dataset-level rights scan (item-specific and third-party conditions override CC BY)
-    - Inventory APIs/services per chosen dataset
+    - Download URL and size of the current greenhouse gas inventory version are not tested; resolve them from the version
+      record in the Landing trial.
+    - Dataset-level rights scan for every further dataset (item-specific and third-party conditions override CC BY).
     references:
     - https://www.eea.europa.eu/en/datahub
     - https://www.eea.europa.eu/en/legal-notice
+    - https://www.eea.europa.eu/en/datahub/eea-data-policy
+    - https://www.eea.europa.eu/en/datahub/datahubitem-view/3b7fe76c-524a-439a-bfd2-a6e4046302a2
+    - https://sdi.eea.europa.eu/catalogue/srv/api/records/6331f651-8863-4656-a911-669f2a332a1e
+    - https://discodata.eea.europa.eu/Help.html
 - id: GL-038
   name: UNECE Data Portal
   short_name: UNECE Data Portal
@@ -3709,7 +3747,7 @@ sources:
   name: Monetary aggregates
   short_name: NBP monetary aggregates
   provider: Narodowy Bank Polski (NBP)
-  status: registered
+  status: approved
   family: C
   kpi: true
   geography: Poland
@@ -3717,39 +3755,61 @@ sources:
   domains: [money, banking]
   entities: [country, financial institution sector]
   granularity: Aggregate/counterpart by month and published classification.
-  coverage: History varies by series.
+  coverage: Monthly from December 1996 (statement on the M3 page); M3 is the basic money-supply category since March 2002.
   access:
-    endpoint: https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/
+    endpoint: https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/m3-and-counterparts/
     kind: bulk_file
     interfaces: [HTML, XLSX, PDF]
     auth: public download
     cost: free
-    limits: Unknown.
+    limits: None published.
   licence:
     status: unresolved
-    notes: No blanket commercial licence was verified.
-  updates: Monthly observations; historical values may be revised.
+    notes: 'Terms: Terms of Use of the Narodowy Bank Polski Website, https://static.nbp.pl/dokumenty/regulaminy/regulamin_nbppl_en.pdf
+      (read 12 Nov 2026): saving files, copying pages in full or in part and printouts are allowed "for personal use" (§1(6));
+      "In the event of using materials derived from the NBP internet page, the user is required to state their source along
+      with a link to the website www.nbp.pl" (§1(8)); "Information and materials are for informational purposes only" (§4(1)).
+      Commercial reuse, redistribution and modification are not addressed. Attribution: "Źródło: NBP, www.nbp.pl" / "Source:
+      Narodowy Bank Polski, www.nbp.pl". Unresolved under the owner decision of 14 Oct 2026 (NBP data stays internal until
+      NBP confirms reuse terms; Task data/src-plg-001/review/ask-nbp, whose e-mail should name the monetary statistics too).'
+  updates: 'Monthly. NBP release calendar (https://nbp.pl/en/statistic-and-financial-reporting/calendar/): broad money M3
+    and its counterparts about the 22nd-24th for the previous month, reserve money and counterparts about the 5th-7th; earlier
+    months are revised in the same workbook.'
   ingestion:
-    history: 'PROPOSAL: backfill each published monetary-aggregate/M3 counterpart table independently and retain
-      hierarchy metadata.'
-    incremental: 'PROPOSAL: fetch new monthly tables and reconcile all periods supplied in the replacement file;
-      no date-filter API is documented.'
+    history: 'Bulk: one workbook per table behind the "Download >>" link of each table page (M3 and counterparts, reserve
+      money and counterparts, balance sheet of NBP in the monetary approach), each with the whole monthly history. NBP statistics
+      files sit under https://static.nbp.pl/dane/ with stable names (as bop_m.xlsx of PLG-002); the folder https://static.nbp.pl/dane/monetarno-finansowa/
+      is confirmed by the methodology PDFs (DIC-M3.pdf), the workbook names are unverified: the links are not in the static
+      HTML (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026) found 0 file links on the
+      three pages). Size not measured.'
+    incremental: 'Entity = workbook, version = Last-Modified of the file; re-download after the monthly release and replace
+      the entity (snapshot, changed_since_last). Small source: refresh full. Fits the fixed-URL bulk_file pattern next to
+      nbp_bop (suggested source_system nbp_monetary, shared with PLG-005).'
     identifiers: period + aggregate/component + sector + unit
   modelling:
-    notes: Do not sum parent aggregates with components; distinguish stocks, transactions and growth.
-    overlap: Overlaps ECB/IMF monetary series; retain national-source lineage.
+    notes: 'Do not sum parent aggregates with components; distinguish stocks, transactions and growth. Grain: item x month,
+      Poland only (geography PL), PLN million. Smallest Gold selection: M3, M1 and cash in circulation outside MFIs (monthly
+      stocks) as new KPIs in finance.money_banking, with M3 annual growth as a metric.'
+    overlap: No KPI of kpi.csv is published here yet. ECB BSI (GL-016) and Eurostat give the euro-area and EU comparison for
+      M3; keep NBP as its own series (O31).
   research:
     priority: review-first
-    evidence: catalogue-only
+    evidence: documented
     connection: not-tested
-    blockers: ['Confirm history, codes and reuse terms.']
+    blockers:
+    - Workbook URLs under static.nbp.pl/dane/monetarno-finansowa/ are not resolved (not in the static HTML); resolve and HEAD
+      them in the Landing trial.
+    - Confirm NBP reuse terms (owner, with PLG-001); until then internal only.
     references:
     - https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/
+    - https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/m3-and-counterparts/
+    - https://nbp.pl/en/statistic-and-financial-reporting/calendar/
+    - https://static.nbp.pl/dokumenty/regulaminy/regulamin_nbppl_en.pdf
 - id: PLG-005
   name: Banking and MFI balance-sheet statistics
   short_name: NBP banking statistics
   provider: Narodowy Bank Polski (NBP)
-  status: registered
+  status: approved
   family: C
   kpi: true
   geography: Poland
@@ -3757,33 +3817,56 @@ sources:
   domains: [banking, financial institutions]
   entities: [financial institution sector, country]
   granularity: Sector aggregate by item, counterparty, currency and period.
-  coverage: Dataset-specific; no universal start date verified.
+  coverage: Monthly from December 1996; December 1996 to February 2002 are estimates (statement on the assets-and-liabilities
+    page).
   access:
-    endpoint: https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/
+    endpoint: https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/assets-and-liabilities-of-monetary-financial-institutions/
     kind: bulk_file
     interfaces: [HTML, XLSX, PDF]
     auth: public download
     cost: free
-    limits: Unknown.
+    limits: None published.
   licence:
     status: unresolved
-    notes: Systematic commercial reuse terms remain unresolved.
-  updates: Mostly monthly/quarterly; release and observation dates differ.
+    notes: 'Terms: Terms of Use of the Narodowy Bank Polski Website, https://static.nbp.pl/dokumenty/regulaminy/regulamin_nbppl_en.pdf
+      (read 12 Nov 2026): saving files, copying pages in full or in part and printouts are allowed "for personal use" (§1(6));
+      "In the event of using materials derived from the NBP internet page, the user is required to state their source along
+      with a link to the website www.nbp.pl" (§1(8)); "Information and materials are for informational purposes only" (§4(1)).
+      Commercial reuse, redistribution and modification are not addressed. Attribution: "Źródło: NBP, www.nbp.pl" / "Source:
+      Narodowy Bank Polski, www.nbp.pl". Unresolved under the owner decision of 14 Oct 2026 (NBP data stays internal until
+      NBP confirms reuse terms; Task data/src-plg-001/review/ask-nbp, whose e-mail should name the monetary statistics too).'
+  updates: Monthly, with the monetary statistics release (M3 about the 22nd-24th for the previous month, NBP calendar); the
+    page gives no separate date for these tables. Earlier months are revised in the same workbook.
   ingestion:
-    history: 'PROPOSAL: backfill each downloadable MFI/banking table by reporting universe, measure type and vintage.'
-    incremental: 'PROPOSAL: poll the publication page for new monthly/quarterly files and recompare recent periods;
-      no source CDC is documented.'
-    identifiers: period + reporting sector + item + counterparty + currency
+    history: 'Bulk: the page offers two workbooks, "Assets and liabilities of monetary financial institutions (monthly data)"
+      and "Assets and liabilities of banks (monthly data)", plus the definitions of instrument categories and the sectoral
+      classification; the sister pages "Aggregated balance sheet of other MFIs" and "Consolidated balance sheet of MFIs" offer
+      one workbook each. Files are expected under https://static.nbp.pl/dane/monetarno-finansowa/ with stable names; the names
+      are unverified because the links are not in the static HTML (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
+      12 Nov 2026): 0 file links found). Size not measured.'
+    incremental: Entity = workbook, version = Last-Modified; re-download monthly and replace (snapshot, changed_since_last);
+      refresh full. One declaration with PLG-004 (suggested source_system nbp_monetary).
+    identifiers: period + reporting sector + item + counterparty sector + currency + maturity + residency
   modelling:
-    notes: Store stocks, transactions and rates separately; universe changes affect comparability.
-    overlap: KNF prudential data use different purposes/universes.
+    notes: 'Store stocks, transactions and rates separately; universe changes affect comparability. Grain: item x counterparty
+      sector (ESA 2010) x instrument x currency x original maturity x residency x month, Poland only, PLN million. Smallest
+      Gold selection: loans to households (total, housing, consumer), loans to non-financial corporations, deposits of households
+      and of non-financial corporations (monthly stocks) as new KPIs in finance.money_banking.'
+    overlap: KNF prudential data (PLG-017) use a different purpose and universe. ECB BSI (GL-016) gives the euro-area comparison;
+      no KPI of kpi.csv is published here yet.
   research:
     priority: review-first
-    evidence: catalogue-only
+    evidence: documented
     connection: not-tested
-    blockers: [Inventory tables and series breaks.]
+    blockers:
+    - Workbook URLs under static.nbp.pl/dane/monetarno-finansowa/ are not resolved (not in the static HTML); resolve and HEAD
+      them in the Landing trial.
+    - Confirm NBP reuse terms (owner, with PLG-001); until then internal only.
+    - Inventory series breaks (estimates before March 2002, sector reclassifications).
     references:
     - https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/
+    - https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/assets-and-liabilities-of-monetary-financial-institutions/
+    - https://static.nbp.pl/dokumenty/regulaminy/regulamin_nbppl_en.pdf
 - id: PLG-006
   name: Interest-rate statistics
   short_name: NBP interest rates
@@ -4297,7 +4380,7 @@ sources:
   name: Banking-sector data and sector information
   short_name: KNF banking sector data
   provider: Polish Financial Supervision Authority (KNF)
-  status: registered
+  status: approved
   family: C
   kpi: true
   geography: Poland
@@ -4305,40 +4388,57 @@ sources:
   domains: [banking, prudential statistics]
   entities: [banking sector, financial institution]
   granularity: Sector aggregates by bank type, balance sheet, profit, credit quality and capital.
-  coverage: Historical depth varies by workbook/report.
+  coverage: Monthly banking-sector data from January 2018 in the current workbook (new structure since the December 2023 release);
+    an archive workbook holds the series to December 2017 ("dane archiwalne przed zmianami MSSF").
   access:
-    endpoint: https://www.knf.gov.pl/dla_rynku/Informacje_sektorowe
+    endpoint: https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne?articleId=56224&p_id=18
     kind: bulk_file
-    interfaces: [XLSX, PDF, HTML]
+    interfaces: [HTML, XLSX, PDF]
     auth: public download
     cost: free
-    limits: Unknown.
+    limits: None published.
   licence:
-    status: unresolved
-    notes: No universal licence for attachments verified.
-  updates: Monthly/quarterly/annual depending on table; revisions possible.
+    status: open-conditional
+    notes: 'Terms: KNF legal notice https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna (read 12 Nov 2026, also from a
+      GitHub runner): "Przy wykorzystywaniu materiałów ze strony internetowej KNF wymagane jest podanie źródła wraz z linkiem
+      do serwisu www.knf.gov.pl." No licence is named; the notice does not mention commercial reuse or modification (neither
+      allowed nor forbidden in words), so both rest on that one sentence. Disclaimer: the UKNF "nie ponosi żadnej odpowiedzialności
+      za jakiekolwiek szkody powstałe w wyniku korzystania z nich". Attribution: "Źródło: Komisja Nadzoru Finansowego, www.knf.gov.pl".'
+  updates: 'Monthly: the page "Dane miesięczne sektora bankowego" is replaced in place about six weeks after the month (August
+    2026 data, "Data aktualizacji" 9 October 2026).'
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
-    identifiers: period + bank universe + measure + unit
+    history: 'Bulk: the stable page (articleId=56224) links the current workbook, whose URL changes with every release (https://www.knf.gov.pl/knf/pl/komponenty/img/2026_08-Dane_statystyczne_100100.xlsx,
+      2,197,937 bytes), and the archive to December 2017 (https://www.knf.gov.pl/knf/pl/komponenty/img/2017%2012%20-%20SEKTOR%20BANKOWY%20-%20DANE_55663.xlsx,
+      1,091,361 bytes); both answered 200 from a GitHub runner (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
+      12 Nov 2026)). The files send no Last-Modified or ETag.'
+    incremental: 'Entity = workbook (current, archive), version = the release month in the file name; read the stable page,
+      follow the .xlsx link, replace the entity (snapshot; unchanged bytes skipped by SHA-256). Small source: refresh full.'
+    identifiers: period + sheet + item + sector group (commercial banks, cooperative banks, branches of credit institutions)
   modelling:
-    notes: Ratios are non-additive; solo/consolidated bases and universe changes matter.
-    overlap: NBP banking statistics use different definitions.
+    notes: 'Accounting definitions changed with the IFRS switch at the start of 2018: keep the archive as a separate series.
+      Grain: item x sector group x month, Poland only, PLN million and percent; multi-sheet workbook (the page names a mortgage
+      sheet "Hipoteki" and a liquidity sheet with LCR and NSFR; the other sheets were not opened). Smallest Gold selection:
+      total assets, net profit (year to date), loans to the non-financial sector, and, where the workbook has them, the share
+      of impaired loans and the total capital ratio, as new monthly KPIs in finance.money_banking.'
+    overlap: Complements NBP monetary statistics (PLG-005) and ECB/EBA supervisory data, which give the EU comparison; no
+      KPI of kpi.csv is published here yet.
   research:
     priority: review-next
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Locate stable index, metadata, history and licence.
+    - Quarterly and annual KNF banking tables were not found on the statistics listing (only the monthly page is listed there);
+      search again when building.
     references:
+    - https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne?articleId=56224&p_id=18
+    - https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne
+    - https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna
     - https://www.knf.gov.pl/dla_rynku/Informacje_sektorowe
 - id: PLG-018
   name: Insurance, pension and other financial-sector information
   short_name: KNF insurance and pensions data
   provider: Polish Financial Supervision Authority (KNF)
-  status: registered
+  status: approved
   family: C
   kpi: true
   geography: Poland
@@ -4346,34 +4446,57 @@ sources:
   domains: [insurance, pensions, financial services]
   entities: [financial institution, financial sector]
   granularity: Sector tables/reports by institution type and period.
-  coverage: Dataset-specific; no common first year verified.
+  coverage: 'Insurance: quarterly bulletin (parts A-D), newest 2/2026. Pensions: monthly OFE data (newest September 2026),
+    IKE and IKZE yearly (31 December 2025), PPK net assets. First years per series not established; older releases are separate
+    articles of the listing (421 results).'
   access:
-    endpoint: https://www.knf.gov.pl/dla_rynku/Informacje_sektorowe
+    endpoint: https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne
     kind: bulk_file
-    interfaces: [XLSX, PDF, HTML]
+    interfaces: [HTML, XLSX, PDF]
     auth: public download
     cost: free
-    limits: Unknown.
+    limits: None published.
   licence:
-    status: unresolved
-    notes: Attachment reuse terms remain unresolved.
-  updates: Monthly, quarterly or annual by supervised sector.
+    status: open-conditional
+    notes: 'Terms: KNF legal notice https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna (read 12 Nov 2026, also from a
+      GitHub runner): "Przy wykorzystywaniu materiałów ze strony internetowej KNF wymagane jest podanie źródła wraz z linkiem
+      do serwisu www.knf.gov.pl." No licence is named; the notice does not mention commercial reuse or modification (neither
+      allowed nor forbidden in words), so both rest on that one sentence. Disclaimer: the UKNF "nie ponosi żadnej odpowiedzialności
+      za jakiekolwiek szkody powstałe w wyniku korzystania z nich". Attribution: "Źródło: Komisja Nadzoru Finansowego, www.knf.gov.pl".'
+  updates: 'OFE monthly: "Dane miesięczne zamieszczane są w terminie do 20-go dnia miesiąca następującego po miesiącu, którego
+    dotyczą dane" (September 2026 updated 21 October 2026). Insurance bulletin quarterly, about three months after the quarter
+    (2/2026 updated 29 September 2026). IKE/IKZE yearly.'
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
-    identifiers: period + sector + institution class + measure + unit
+    history: 'Bulk by release: every release is its own article of the statistics listing with one to four .xlsx files, so
+      the file URL changes per release and the stable page is the listing (paged, 421 results on 12 Nov 2026). Checked from
+      a GitHub runner (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)): insurance 2/2026
+      part A https://www.knf.gov.pl/knf/pl/komponenty/img/A_informacje_IIQ2026_99684.xlsx (64,312 bytes) and part D (statistical
+      report, 28,925 bytes); OFE September 2026 https://www.knf.gov.pl/knf/pl/komponenty/img/WWW_OFE_dane_mies_2026_09_100266.xlsx
+      (38,552 bytes). Each file holds one period, so history = one file per past release (OFE about 12 a year, insurance 4
+      x 4 a year). No Last-Modified or ETag.'
+    incremental: Entity = series (ofe_monthly, insurance_bulletin part A-D, ike, ikze, ppk), version = period in the article
+      title; read the first listing page after each release, land new articles only (accumulating source, all versions kept).
+      Backfill by walking the listing pages once, one request at a time.
+    identifiers: period + series + table + item (+ fund or insurer where published)
   modelling:
-    notes: Do not mix assets, flows, participants and ratios.
-    overlap: May overlap NBP/EU supervisory outputs.
+    notes: 'One period per file: build the time series in Silver. Grain: item x period, with fund-level rows for OFE and insurer-level
+      rows in bulletin part A; Poland only; PLN, persons, percent. Smallest Gold selection: OFE net assets and number of members
+      (monthly), gross written premium life and non-life (quarterly; which bulletin part holds it is to be confirmed), IKE
+      and IKZE accounts and assets (yearly) as new KPIs in finance.insurance_pensions.'
+    overlap: ZUS (PLS-009/010) and KRUS pension KPIs are the public pillar; these are the funded pillar and stay separate
+      series. EIOPA and Eurostat give the EU comparison for insurance; no KPI of kpi.csv is published here yet.
   research:
     priority: review-next
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Map tables, history, identifiers and terms.
+    - Listing paging parameters and the first year of each series are not established; inventory them in the Landing trial.
+    - Workbook layouts were not opened; confirm sheets and item codes before Silver.
     references:
+    - https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne
+    - https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne?articleId=100267&p_id=18
+    - https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne?articleId=99688&p_id=18
+    - https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna
     - https://www.knf.gov.pl/dla_rynku/Informacje_sektorowe
 - id: PLG-019
   name: KNF Public Warning List
@@ -5230,7 +5353,7 @@ sources:
   name: Krajowa Integracja Ewidencji Gruntów i Budynków (KI EGiB) aggregate WFS
   short_name: GUGiK KI EGiB
   provider: GUGiK with county cadastral authorities
-  status: registered
+  status: parked
   family: G
   kpi: false
   geography: Poland
@@ -5240,69 +5363,106 @@ sources:
   granularity: Parcel/building geometries and attributes supplied by participating county WFS services.
   coverage: 2025 service aggregates 385 county WFS sources daily; coverage is only what each county supplies.
   access:
-    endpoint: https://www.geoportal.gov.pl/pl/dane/ewidencja-gruntow-i-budynkow-egib/
+    endpoint: https://mapy.geoportal.gov.pl/wss/service/PZGIK/EGIB/WFS/UslugaZbiorcza
     kind: api
-    interfaces: [WFS, WMS, HTML]
+    interfaces: [WFS, WMS, GeoParquet, GPKG, HTML]
     auth: Public aggregate query/view services; underlying official cadastral extracts may follow separate rules.
     cost: Public service free; authoritative extracts may be charged by counties.
-    limits: Unknown; no numeric quota was confirmed.
+    limits: WFS returns 1,000 features per request by default (CountDefault in the capabilities); no other quota published.
   licence:
     status: unresolved
-    notes: No blanket commercial redistribution permission was confirmed for the aggregated payload.
-  updates: GUGiK says county data are pulled daily; source update times vary.
+    notes: 'Terms: the EGiB page https://www.geoportal.gov.pl/pl/dane/ewidencja-gruntow-i-budynkow-egib/ (read 12 Nov 2026,
+      also from a GitHub runner) states no licence and no free-reuse sentence for the aggregated data (unlike the PRG and
+      BDOT10k pages); the WFS capabilities say Fees "none" and AccessConstraints "none". Legal basis named: Rozporządzenie
+      Ministra Rozwoju, Pracy i Technologii z dnia 27 lipca 2021 r. w sprawie ewidencji gruntów i budynków. Commercial reuse
+      and modification are not addressed, so the source stays internal. Attribution if used: "Źródło: GUGiK, Krajowa Integracja
+      Ewidencji Gruntów" with the download date.'
+  updates: '"Usługa ta pobiera w cyklu codziennym dane z powiatowych usług pobierania WFS EGiB" (daily pull from the county
+    services); county registers change continuously.'
   ingestion:
-    history: 'PROPOSAL: snapshot by county/date; no archive was documented.'
-    incremental: 'PROPOSAL: spatial/ID diff snapshots; daily aggregation is not CDC.'
-    identifiers: Parcel/building identifier, county source and snapshot date.
+    history: 'Two routes. (1) Bulk: the geoportal module "Pobierz dane" ("Dane do pobrania" > "Dane powiatowe") gives parcels
+      and buildings for the country, a voivodeship or a county as GeoParquet or GPKG; the file URLs are produced inside the
+      map application and were not found in HTML. (2) WFS 2.0 with the feature types ms:dzialki and ms:budynki, 1,000 features
+      per page (capabilities 200, 17,245 bytes from a GitHub runner, Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
+      12 Nov 2026)). Object counts and bytes not measured; the country has tens of millions of parcels (estimate).'
+    incremental: 'PROPOSAL: source-specific snapshots by county; no trustworthy national change feed.'
+    identifiers: Parcel identifier, building identifier, TERYT/cadastral unit and source county.
   modelling:
-    notes: Track missing counties/layers explicitly and preserve provenance per feature.
-    overlap: Legal cadastre differs from generalized BDOT10k buildings and address points.
+    notes: 'Keep the provider county and the completeness status. Aggregate service is not a legal extract. No Gold use today:
+      parcel and building geometry feeds no KPI and no shared dimension (building and dwelling counts come from GUS BDL);
+      a count per county through WFS resultType=hits would be the smallest selection if ever wanted.'
+    overlap: Overlaps BDOT10k buildings and county cadastral systems; do not treat as identical.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Verify terms, schema heterogeneity, completeness and query limits.
+    - 'Parked: no Gold use (parcel and building geometry feeds no KPI or dimension) and a full national copy is far above
+      the free storage tier, which is an owner decision; reuse terms are not stated on the EGiB page.'
+    - Bulk GeoParquet/GPKG file URLs of the "Pobierz dane" module are not published in HTML.
+    - Coverage is only what each of the 385 county services supplies.
     references:
     - https://www.geoportal.gov.pl/pl/dane/ewidencja-gruntow-i-budynkow-egib/
+    - https://mapy.geoportal.gov.pl/wss/service/PZGIK/EGIB/WFS/UslugaZbiorcza
+    - https://integracja.gugik.gov.pl/cgi-bin/KrajowaIntegracjaEwidencjiGruntow
+    - https://uldk.gugik.gov.pl/opis.html
 - id: PL-ENV-007
   name: Krajowa Integracja Numeracji Adresowej / PRG address services
   short_name: GUGiK address points
   provider: GUGiK and municipalities
-  status: registered
+  status: approved
   family: E
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [addresses, geospatial]
   entities: [address point, street]
-  granularity: Integrated address-number and street presentation from municipal sources.
-  coverage: Current national integration; completeness and historical retention were not documented.
+  granularity: Address points (locality, street, house number, coordinates; attribute list not opened) from the municipal
+    address registers integrated in the PRG.
+  coverage: Current national state; the bulk packages carried Last-Modified 12 Nov 2026 (SHP) and 10 Nov 2026 (GML). No history
+    is published.
   access:
-    endpoint: https://www.gov.pl/web/gugik/nowy-adres-uslug-dotyczacych-numeracji-porzadkowej
-    kind: web
-    interfaces: [WMS, HTML]
-    auth: Public visualization service.
-    cost: Free viewing.
-    limits: Unknown; no numeric quota was confirmed.
+    endpoint: https://opendata.geoportal.gov.pl/prg/adresy/PunktyAdresowe/POLSKA.zip
+    kind: bulk_file
+    interfaces: [bulk-files, SHP, GML, WMS, HTML]
+    auth: Public download.
+    cost: Free.
+    limits: None published.
   licence:
-    status: unresolved
-    notes: The cited notice documents a WMS endpoint, not downloadable address objects or reuse rights.
-  updates: Source municipalities update on differing schedules.
+    status: open-conditional
+    notes: 'Terms: PRG page https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/ (read 12 Nov 2026), where the
+      address packages are listed: "Dane PRG są dostępne bezpłatnie i do dowolnego wykorzystania." No licence name and no
+      attribution wording; commercial reuse and modification are allowed by that sentence ("do dowolnego wykorzystania").
+      Legal basis: rozporządzenie Rady Ministrów z dnia 16 lipca 2021 r. (Dz.U. 2021 poz. 1373). Attribution: "Źródło: GUGiK,
+      Państwowy Rejestr Granic (adresy)" with the download date.'
+  updates: Address data "są aktualizowane na bieżąco w powiązaniu ze zmianami dokonywanymi w ewidencji miejscowości, ulic
+    i adresów"; the national packages carried Last-Modified 12 Nov 2026 (SHP) and 10 Nov 2026 (GML).
   ingestion:
-    history: 'PROPOSAL: none until an authorized object/bulk source is confirmed.'
-    incremental: 'PROPOSAL: use only a documented feature/download interface; do not scrape WMS.'
-    identifiers: Address text and source municipality; stable point identifiers unconfirmed.
+    history: 'Bulk, stable URLs (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)): https://opendata.geoportal.gov.pl/prg/adresy/PunktyAdresowe/POLSKA.zip
+      (SHP, 564,429,905 bytes, Last-Modified and ETag sent) and https://opendata.geoportal.gov.pl/prg/adresy/PRG-punkty_adresowe.zip
+      (GML, 804,643,553 bytes). Packages per gmina, powiat and voivodeship come from WMS GetFeatureInfo of https://integracja.gugik.gov.pl/cgi-bin/PanstwowyRejestrGranic.
+      Row count not measured.'
+    incremental: Entity = national SHP package, version = Last-Modified; snapshot, changed_since_last. The file is rebuilt
+      often (Last-Modified on the probe day) and is 0.56 GB, so load monthly and keep only the newest version in the Archive.
+      Add it as an entity of the existing gugik_prg source rather than a new source.
+    identifiers: PRG address identifier + TERYT (TERC, SIMC, ULIC) + house number.
   modelling:
-    notes: Treat normalization/geocoding as derived; retain Polish spelling and source municipality.
-    overlap: May overlap PRG/municipal registers; a rendered map is not an address database.
+    notes: 'Addresses are not legal parcel identifiers or current residents. kpi false: reference data. Smallest Gold selection:
+      the number of address points per gmina (TERC), joined by code to dim_geography as an attribute or an entity-snapshot
+      count (like the GLEIF and VAT white list counts); individual points stay in Silver.'
+    overlap: Overlaps TERYT streets and localities (PLS-007) and the PRG boundaries already onboarded (gugik_prg); EGiB buildings
+      (PL-ENV-006) are a different register.
   research:
     priority: conditional
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Find official object-level download/API, reuse terms, completeness and identifiers.
+    - Attribute list and row count of the SHP package were not opened; check on the real file before Bronze (0.56 GB zipped,
+      bounded memory).
     references:
+    - https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/
+    - https://opendata.geoportal.gov.pl/prg/adresy/PunktyAdresowe/POLSKA.zip
+    - https://opendata.geoportal.gov.pl/prg/adresy/PRG-punkty_adresowe.zip
     - https://www.gov.pl/web/gugik/nowy-adres-uslug-dotyczacych-numeracji-porzadkowej
 - id: PL-ENV-008
   name: 'Public Data API: synoptic, hydrological, meteorological and warning feeds'
@@ -5428,49 +5588,63 @@ sources:
   name: Surface-water monitoring results (Państwowy Monitoring Środowiska)
   short_name: GIOŚ surface water
   provider: GIOŚ
-  status: registered
+  status: parked
   family: G
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [water quality, environment]
   entities: [surface-water monitoring point, water body, sample, result]
-  granularity: Monitoring-point/sample parameter results and water-body assessments; downloadable format varies
-    by publication.
-  coverage: Annual/current publications; 2026 data are provisional and verified results follow after the next-year
-    deadline stated by GIOŚ.
+  granularity: Monitoring-point/sample parameter results and water-body assessments; downloadable format varies by publication.
+  coverage: Annual/current publications; 2026 data are provisional and verified results follow after the next-year deadline
+    stated by GIOŚ.
   access:
-    endpoint: https://wody.gios.gov.pl/pjwp/publication/367
-    kind: bulk_file
-    interfaces: [HTML, bulk-files]
-    auth: Public publication pages.
+    endpoint: https://wody.gios.gov.pl/pjwp/
+    kind: web
+    interfaces: [HTML, JavaScript application]
+    auth: Public pages.
     cost: Free public access.
-    limits: Unknown; no numeric quota was confirmed.
+    limits: None published.
   licence:
     status: unresolved
-    notes: No dataset-level commercial redistribution terms were confirmed.
-  updates: Provisional current-year values followed by verified publication; corrections possible.
+    notes: 'Terms: no dataset terms were found. GIOŚ re-use page https://www.gov.pl/web/gios/ponowne-wykorzystywanie (read
+      12 Nov 2026) gives only the general frame: information is passed on request for re-use "bezpłatnie", GIOŚ may set conditions
+      "które będą obiektywne, proporcjonalne, niedyskryminacyjne" or apply "standardowe otwarte licencje"; it names no licence,
+      no attribution wording and nothing on commercial reuse or modification for the water results. The portal itself could
+      not be read (JavaScript only).'
+  updates: Provisional current-year values followed by verified publication; corrections possible. Dates could not be read
+    from the portal.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Monitoring-point code, water-body code, parameter and sample date.
+    history: No machine route found. https://wody.gios.gov.pl/pjwp/ and its publication pages (for example /pjwp/publication/367)
+      return the same 1,149-byte JavaScript shell with no content and no links (Dev probe run 43203166665 (job 131131537831,
+      branch test/src-cg-probe, 12 Nov 2026)); JavaScript-only pages are not supported by the pipeline. dane.gov.pl could
+      not be searched from the session (robots refusal, not worked around).
+    incremental: None until a file or API route is found.
+    identifiers: Monitoring point code, water-body code, parameter, sample date/year and status.
   modelling:
-    notes: Separate samples, status assessments and publication versions; never overwrite provisional lineage.
-    overlap: Wody Polskie publishes water-management geography; GIOŚ supplies environmental monitoring evidence.
+    notes: 'Distinguish raw results from classification/assessment. If a route appears: share of surface water bodies by status
+      class per year for environment.condition. Stand-in with a route today: EEA Waterbase and WFD status data through GL-037
+      (Poland plus EU comparison).'
+    overlap: Complements groundwater monitoring (PL-ENV-012) and Wody Polskie planning data; overlaps EEA WISE reporting.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Confirm file formats, full history, licensing and coding dictionaries.
+    - 'Parked: the portal is a JavaScript-only application (1,149-byte shell, no files or API in HTML), which the pipeline
+      does not support; no bulk file and no reuse terms were found.'
+    - Check dane.gov.pl for GIOŚ surface-water result files by hand, or ask GIOŚ for the yearly result files (re-use request,
+      free of charge).
     references:
+    - https://wody.gios.gov.pl/pjwp/
     - https://wody.gios.gov.pl/pjwp/publication/367
     - https://www.gov.pl/web/gios/monitoring-jakosci-wod
+    - https://www.gov.pl/web/gios/ponowne-wykorzystywanie
 - id: PL-ENV-012
   name: Groundwater monitoring results (Monitoring Jakości Wód Podziemnych)
   short_name: GIOŚ groundwater
   provider: GIOŚ / Państwowy Instytut Geologiczny–PIB
-  status: registered
+  status: approved
   family: G
   kpi: true
   geography: Poland
@@ -5478,39 +5652,60 @@ sources:
   domains: [groundwater, water quality]
   entities: [monitoring point, sample, aquifer, result]
   granularity: Monitoring-point and sample-level groundwater chemistry/quality results where published.
-  coverage: Annual result publications and monitoring database; complete machine-readable history not confirmed.
+  coverage: Yearly result pages 1991-2003, 2004-2007 and every year 2008-2025 (page list read 12 Nov 2026); machine-readable
+    files verified for 2025 only.
   access:
     endpoint: https://mjwp.gios.gov.pl/wyniki-badan/wyniki-badan-2025.html
-    kind: web
-    interfaces: [HTML, XLS, map]
+    kind: bulk_file
+    interfaces: [HTML, XLSX, JPG]
     auth: Public result pages; underlying hydrogeological database access may differ.
     cost: Free publications.
-    limits: Unknown; no numeric quota was confirmed.
+    limits: None published.
   licence:
-    status: unresolved
-    notes: No uniform redistribution terms were confirmed across GIOŚ results and PIG database.
-  updates: Campaign-based/annual publication; exact validation and revision schedule varies.
+    status: open-conditional
+    notes: 'Terms: stated on the result page https://mjwp.gios.gov.pl/wyniki-badan/wyniki-badan-2025.html (read 12 Nov 2026,
+      also from a GitHub runner): "Podmioty wykorzystujące udostępnione dane są zobowiązane do podawania źródła udostępnionych
+      danych w następujący sposób: „opracowano na podstawie danych Inspekcji Ochrony Środowiska uzyskanych w ramach Państwowego
+      Monitoringu Środowiska”". No licence is named; use is conditional on that source line; commercial reuse and modification
+      are not mentioned (neither allowed nor forbidden in words). Note to show: "Aktualność udostępnionych informacji zgodna
+      z datą ich przygotowania (marzec 2026)." Attribution: the quoted sentence.'
+  updates: 'Yearly: the 2025 results were published in March 2026 (files dated 19 March 2026).'
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Monitoring-point ID, aquifer, parameter, sample date and campaign.
+    history: 'Bulk by year: each yearly page links XLSX files with hash names (URL changes per release; the stable entry is
+      the page https://mjwp.gios.gov.pl/wyniki-badan/wyniki-badan-<year>.html). 2025: five workbooks (inorganic indicators,
+      organic indicators and quality classes of operational monitoring; indicators and classes of the nitrate study), for
+      example https://mjwp.gios.gov.pl/g2/oryginal/2026_03/a9590ac1beebee567d198e94179f5a37.xlsx (353,746 bytes) and .../a11519d817605decc04b34db8e993004.xlsx
+      (94,011 bytes), both 200 with Last-Modified and ETag (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
+      12 Nov 2026)). For 2024, 2015 and 1991-2003 the probe found no links ending in a file extension, so the files of earlier
+      years are unverified. About 1 MB a year (estimate from the two files).'
+    incremental: 'Entity = year x workbook, version = Last-Modified; once a year in April read the newest yearly page and
+      land its files (accumulating by year; a re-issued year replaces its entity). Small source: refresh full.'
+    identifiers: Monitoring point number, groundwater body (JCWPd), sampling date/year, parameter and quality class.
   modelling:
-    notes: Retain analytical method, detection limits and verification status when available.
-    overlap: Complements PIG hydrogeology maps; monitoring results are observations, not aquifer geometry.
+    notes: 'Result sheets and class sheets are different grains; keep detection limits and qualifiers. Grain: monitoring point
+      x indicator x year; points carry coordinates and the groundwater body code, not TERYT (voivodeship only if the sheet
+      has it). Smallest Gold selection: share of monitoring points by quality class I-V per year for Poland as a new KPI in
+      environment.condition (good status = classes I-III).'
+    overlap: No KPI of kpi.csv is published here yet. EEA Waterbase groundwater (GL-037) carries the EU comparison; PIG-PIB
+      hydrogeological bases hold the same network.
   research:
     priority: review-next
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Open/download current files and verify schemas, terms and historical depth.
+    - File links of the yearly pages before 2025 are unverified (none found by extension); inventory every year in the Landing
+      trial.
+    - Workbook layouts differ by year and were not opened; confirm before Silver.
     references:
     - https://mjwp.gios.gov.pl/wyniki-badan/wyniki-badan-2025.html
+    - https://mjwp.gios.gov.pl/wyniki-badan/wyniki-badan-1991-2003.html
+    - https://www.gov.pl/web/gios/ponowne-wykorzystywanie
     - https://www.pgi.gov.pl/psh/dane-hydrogeologiczne-psh/947-bazy-danych-hydrogeologiczne/8887-bazy-danych-monitoring-wod-podziemnych.html
 - id: PL-ENV-013
   name: Hydroportal / water-management spatial data
   short_name: Wody Polskie Hydroportal
   provider: Państwowe Gospodarstwo Wodne Wody Polskie
-  status: registered
+  status: parked
   family: G
   kpi: false
   geography: Poland
@@ -5520,36 +5715,54 @@ sources:
   granularity: Flood hazard/risk, water-body and planning geometries; availability differs by theme.
   coverage: Current national planning/map editions; some dated plan cycles, but uniform archive depth unknown.
   access:
-    endpoint: https://www.gov.pl/web/wody-polskie/udostepnianie-danych-z-systemu-informacyjnego-gospodarowania-wodami
-    kind: bulk_file
-    interfaces: [WMS, download-services, HTML]
-    auth: Public viewer and spatial services; copies/parts are downloadable where technically feasible.
-    cost: Viewer free; some formal data provision may involve request or fees.
-    limits: Unknown; no numeric quota was confirmed.
+    endpoint: https://wody.isok.gov.pl/hydroportal.html
+    kind: web
+    interfaces: [WMS, HTML, JavaScript application, request form]
+    auth: Public viewer and WMS; copies of data sets through the viewer's download service or on request.
+    cost: Viewer and WMS free; a request "może wiązać się z naliczeniem opłaty".
+    limits: None published.
   licence:
-    status: dataset-specific
-    notes: Access and reuse must be checked per SIGW theme and provision route.
-  updates: Theme/plan-cycle specific.
+    status: open-conditional
+    notes: 'Terms: Wody Polskie page https://www.gov.pl/web/wody-polskie/udostepnianie-danych-z-systemu-informacyjnego-gospodarowania-wodami
+      (read 12 Nov 2026): "Dane mogą zostać wykorzystane nieodpłatnie zarówno w celach niekomercyjnych, jak i komercyjnych
+      pod warunkiem wskazania źródła oraz czasu wytworzenia i pozyskania informacji od podmiotu zobowiązanego." Commercial
+      reuse is allowed in words; modification is not mentioned. Data on dane.gov.pl "udostępniane są na podstawie ustawy z
+      dnia 25 lutego 2016 r. o ponownym wykorzystywaniu informacji sektora publicznego". Attribution: "Źródło: Państwowe Gospodarstwo
+      Wodne Wody Polskie, Hydroportal" with the date the data were produced and the date they were obtained.'
+  updates: Theme and plan-cycle specific (flood hazard and risk maps and water-management plans in six-year cycles).
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Water-body/plan identifiers, map edition and scenario.
+    history: No machine route for the vector data was found. The Hydroportal is a map application (19 KB page, Dev probe run
+      43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)); its INSPIRE page https://isok.gov.pl/inspire.html
+      lists view services only (WMS, for example https://wody.isok.gov.pl/wss/INSPIRE/INSPIRE_NZ_HY_MZPMRP_WMS for flood hazard
+      and https://wody.isok.gov.pl/wss/INSPIRE/INSPIRE_PGWWP_WMS for water bodies), which return images, not data; the download
+      service works inside the viewer; other data are sent on a written request to the regional water board, possibly for
+      a fee. One dataset is on dane.gov.pl (unit boundaries, https://dane.gov.pl/pl/dataset/2170).
+    incremental: None until a download route is found.
+    identifiers: Water-body codes, flood-map scenario identifiers and administrative/planning unit codes.
   modelling:
-    notes: Preserve scenario, probability and legal-plan edition; a WMS layer is presentation.
-    overlap: Flood layers overlap IMGW hydrology and GIOŚ water quality but represent modeled/managed concepts.
+    notes: 'Separate hazard, risk, water bodies and legal planning layers; preserve scenario/return-period and plan cycle.
+      kpi false. If a vector route appears: share of each gmina''s area inside the 1 percent flood hazard zone as an attribute
+      of dim_geography.'
+    overlap: Overlaps IMGW hydrology and GIOŚ monitoring but is planning/reference data, not observations; water-body geometry
+      is also reported to the EEA (GL-037).
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Inventory downloadable themes, formats, terms, fees and historical editions.
+    - 'Parked: no machine route for the vector data (view-only WMS, download inside a JavaScript viewer, the rest on written
+      request with a possible fee); kpi false and no Gold model needs it today.'
+    - 'Owner option: a written request to Wody Polskie for the flood hazard zones as SHP, if the gmina flood-zone share is
+      wanted.'
     references:
     - https://www.gov.pl/web/wody-polskie/udostepnianie-danych-z-systemu-informacyjnego-gospodarowania-wodami
+    - https://wody.isok.gov.pl/hydroportal.html
+    - https://isok.gov.pl/inspire.html
 - id: PL-ENV-014
   name: 'Central Geological Database: boreholes (CBDG Otwory)'
   short_name: PIG-PIB boreholes
   provider: Państwowy Instytut Geologiczny–PIB (PIG-PIB)
-  status: registered
+  status: parked
   family: G
   kpi: false
   geography: Poland
@@ -5559,37 +5772,56 @@ sources:
   granularity: Individual boreholes and associated thematic attributes.
   coverage: Records from the late nineteenth century to present; completeness varies by source and period.
   access:
-    endpoint: https://baza.pgi.gov.pl/podsystemy/otwory
+    endpoint: https://dm.pgi.gov.pl/
     kind: bulk_file
-    interfaces: [map, WMS, bulk-files, SHP, HTML]
-    auth: Public map and downloadable layers documented.
-    cost: Free public access; reuse terms unresolved.
-    limits: Unknown; no numeric quota was confirmed.
+    interfaces: [map, WMS, ArcGIS REST, bulk-files, SHP, HTML]
+    auth: Bulk files through the CBDG download manager, which sends the links to an e-mail address the user gives; map services
+      public.
+    cost: Free.
+    limits: None published.
   licence:
-    status: unresolved
-    notes: Public SHP download does not establish commercial redistribution rights.
-  updates: Database is maintained; cadence unknown.
+    status: open-conditional
+    notes: 'Terms: PIG-PIB rules for re-use of public sector information https://www.pgi.gov.pl/rejestry-i-bazy-danych-geologicznych/zasady-korzystania-z-isp.html
+      (read 12 Nov 2026; under the Open Data Act of 2021): information is provided for re-use "co do zasady, bezpłatnie";
+      the user must give "źródle, czasie wytworzenia i pozyskania informacji publicznej", say when the information was processed
+      and whether all or part was used, and pass the terms on to recipients; using the information counts as accepting the
+      offer. The rules set no separate limit on commercial use (a request only states whether the purpose is commercial);
+      modification is allowed when disclosed. PIG-PIB accepts no liability for use, interpretation or processing. Limit named
+      on the borehole page: "Dostęp do niektórych informacji, takich jak np. pomiary geofizczne wymaga uzyskania zgody." Attribution:
+      "Źródło: Państwowy Instytut Geologiczny - PIB, Centralna Baza Danych Geologicznych" with the date of the file and the
+      download date.'
+  updates: The download manager lists a dated package cbdg_otwory_2026_11_12.zip, so the borehole package is rebuilt about
+    daily.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Borehole identifier, coordinates, depth and source record.
+    history: 'Bulk: https://dm.pgi.gov.pl/ lists 93 ZIP packages, among them cbdg_otwory_<date>.zip (boreholes, 30.71 MB);
+      the manager does not show file URLs, it sends the links by e-mail (Dev probe run 43203166665 (job 131131537831, branch
+      test/src-cg-probe, 12 Nov 2026)). Map services: https://cbdgmapa.pgi.gov.pl/arcgis/rest/services lists cbdg_otwory (200
+      from a runner); whether it offers WFS or a query endpoint for a full load was not tested. http://uslugi_gis.pgi.gov.pl
+      answered 503.'
+    incremental: 'PROPOSAL: full dated snapshot and diff by borehole ID; no public change feed is documented.'
+    identifiers: CBDG borehole identifier/name plus coordinates and theme.
   modelling:
-    notes: Retain coordinate system, positional quality and source-era metadata.
-    overlap: CBDG is a family gateway; this row covers the named borehole subsystem only.
+    notes: 'Do not treat missing downhole measurements as absent observations; restricted details may be omitted. kpi false
+      and no Gold use today: single boreholes feed no KPI and no shared dimension.'
+    overlap: Overlaps MIDAS (PL-ENV-015), hydrogeological and geophysical subsystems by location but not definition.
   research:
     priority: review-next
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Confirm SHP license, attribute dictionary and revision behavior.
+    - 'Parked: no Gold use (single boreholes feed no KPI or dimension), and the bulk package is delivered only as links sent
+      to an e-mail address, which needs an owner contact address.'
+    - 'If wanted later: test the cbdg_otwory map service for a full load, or the owner requests the package link by e-mail.'
     references:
     - https://baza.pgi.gov.pl/podsystemy/otwory
+    - https://dm.pgi.gov.pl/
     - https://www.pgi.gov.pl/dane-geologiczne/geologiczne-bazy-danych.html
+    - https://www.pgi.gov.pl/rejestry-i-bazy-danych-geologicznych/zasady-korzystania-z-isp.html
 - id: PL-ENV-015
   name: MIDAS mineral deposits and mining areas database
   short_name: PIG-PIB MIDAS deposits
   provider: PIG-PIB
-  status: registered
+  status: approved
   family: G
   kpi: false
   geography: Poland
@@ -5597,37 +5829,63 @@ sources:
   domains: [minerals, mining, geology]
   entities: [deposit, mining area, concession]
   granularity: Deposit, mining area/land and concession records with geometry.
-  coverage: Current national resource; historical/version depth unconfirmed.
+  coverage: Current national state of documented deposits, mining areas and mining terrains, plus selected archival layers
+    (deposits removed from the balance, former mining areas and terrains); no dated versions.
   access:
-    endpoint: https://www.pgi.gov.pl/midas.html
+    endpoint: https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer
     kind: api
-    interfaces: [HTML, map, WMS, WFS, bulk-files, SHP]
-    auth: Public search/map and advertised spatial downloads/services.
-    cost: Free public access; legal reuse terms unresolved.
-    limits: Unknown; no numeric quota was confirmed.
+    interfaces: [WFS, ArcGIS REST, HTML, map, bulk-files, SHP]
+    auth: Public WFS and search application; the SHP packages of the download manager are sent to an e-mail address.
+    cost: Free.
+    limits: None published; no default feature count in the capabilities.
   licence:
-    status: unresolved
-    notes: Confirm terms for WFS/SHP reuse before onboarding.
-  updates: Maintained database; cadence and concession-effective dating require inspection.
+    status: open-conditional
+    notes: 'Terms: PIG-PIB rules for re-use of public sector information https://www.pgi.gov.pl/rejestry-i-bazy-danych-geologicznych/zasady-korzystania-z-isp.html
+      (read 12 Nov 2026; under the Open Data Act of 2021): information is provided for re-use "co do zasady, bezpłatnie";
+      the user must give "źródle, czasie wytworzenia i pozyskania informacji publicznej", say when the information was processed
+      and whether all or part was used, and pass the terms on to recipients; using the information counts as accepting the
+      offer. The rules set no separate limit on commercial use (a request only states whether the purpose is commercial);
+      modification is allowed when disclosed. PIG-PIB accepts no liability for use, interpretation or processing. The WFS
+      capabilities point to the same rules ("Zasady wykorzystania danych z bazy MIDAS"); the MIDAS rules page https://www.pgi.gov.pl/midas/zrodla-danych.html
+      was not opened. Attribution: "Źródło: Państwowy Instytut Geologiczny - PIB, System Gospodarki i Ochrony Bogactw Mineralnych
+      Polski MIDAS" with the date of the data and the download date.'
+  updates: Maintained continuously; the download manager carries daily dated packages (cbdg_midas_zloza_2026_11_12.zip), so
+    the layers change about daily. The yearly balance of mineral resources is the official reference state.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Deposit ID/name, mining-area ID and concession reference.
+    history: 'API: WFS https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetCapabilities
+      answered 200 (16,446 bytes) from a GitHub runner with six feature types: documented deposits, mining areas, mining terrains
+      and three archival layers (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)); a GetFeature
+      full load was not run. Sizes from the download manager''s catalogue: deposits 7.01 MB, mining areas 1.77 MB, mining
+      terrains 1.72 MB, removed deposits 0.95 MB zipped SHP, so a full load is a few requests per layer. The same data as
+      SHP ZIP sit in https://dm.pgi.gov.pl/, delivered by e-mail link only.'
+    incremental: 'Entity = feature type, version = download date (the WFS gives none); monthly full snapshot per layer (changed_since_last
+      by SHA-256). Small source: refresh full.'
+    identifiers: MIDAS deposit number, mining-area/land ID, concession number where published.
   modelling:
-    notes: Separate deposits, legal areas and concessions; retain validity dates and status.
-    overlap: Overlaps CBDG geology but describes resources/legal exploitation, not borehole observations.
+    notes: 'Separate deposit, mining area and mining terrain; preserve legal status and effective dates. kpi false: reference
+      data. Grain: one polygon per deposit or mining area with mineral type and status; CRS not checked, no TERYT code (assign
+      voivodeship and gmina by a spatial join to PRG). Smallest Gold selection: the documented-deposits layer as an entity
+      table with mineral, status and TERC, and from it the number of documented deposits and of active mining areas per voivodeship.'
+    overlap: Overlaps concession registers and the yearly balance of mineral resources (resources and extraction in tonnes
+      are in the balance and GUS BDL, not here).
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Verify WFS/SHP endpoints, license, schema and archived states.
-    references: ['https://www.pgi.gov.pl/midas.html', 'https://midas-app.pgi.gov.pl/']
+    - GetFeature for a full layer (output formats, paging, CRS) was not run; test in the Landing trial, one request at a time.
+    - MIDAS rules page (zrodla-danych.html) and attribute dictionary not opened.
+    references:
+    - https://www.pgi.gov.pl/midas.html
+    - https://midas-app.pgi.gov.pl/
+    - https://www.pgi.gov.pl/midas/dane-przestrzenne.html
+    - https://dm.pgi.gov.pl/
+    - https://www.pgi.gov.pl/rejestry-i-bazy-danych-geologicznych/zasady-korzystania-z-isp.html
 - id: PL-ENV-016
   name: Mapa Hydrogeologiczna Polski (MHP) data
   short_name: PIG-PIB hydrogeological map
   provider: PIG-PIB / Państwowa Służba Hydrogeologiczna
-  status: registered
+  status: parked
   family: G
   kpi: false
   geography: Poland
@@ -5641,32 +5899,43 @@ sources:
     kind: web
     interfaces: [JPG, PDF, SHP-by-request, MDB-by-request]
     auth: JPG/PDF public; database/SHP available on user request.
-    cost: Mixed/unknown for requested database files.
-    limits: Unknown; no numeric quota was confirmed.
+    cost: Free for public-purpose bodies and for teaching and research; other requests priced individually.
+    limits: None published.
   licence:
     status: restricted
-    notes: Machine-readable database access is request-based; commercial and redistribution rights not established.
+    notes: 'Terms: the GIS data are released only on a written request: "Dane z bazy GIS MHP udostępniane są standardowo w
+      formacie .mdb (GeoMedia Warehouse) i shp", "na wniosek użytkownika" (MHP page, read 12 Nov 2026). Ordering page https://www.pgi.gov.pl/psh/dane-hydrogeologiczne-psh/8850-jak-zamowic-dane-hydrogeologiczne.html:
+      "Udostępnianie danych dla podmiotów celu publicznego oraz na cele dydaktyczno-naukowe realizowane jest bezpłatnie",
+      and a free release needs the paper original stamped and signed, with the purpose stated; PIG-PIB "zastrzega sobie prawo
+      do przekazania tzw. warunków korzystania z danych". Commercial reuse, redistribution and modification are set per request,
+      not in public terms. General PIG-PIB rules: https://www.pgi.gov.pl/rejestry-i-bazy-danych-geologicznych/zasady-korzystania-z-isp.html.'
   updates: Edition/sheet based; cadence unknown.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Sheet, hydrogeological unit and edition.
+    history: 'No machine route: sheet images (JPG) and explanations (PDF) are public in the HydroGeoPortal viewer (https://epsh.pgi.gov.pl/epsh/);
+      the vector database (.mdb, SHP; GUPW in the 1992 system, PPW layers in the 1942 system, by sheet) is released on a paper
+      request sent to PIG-PIB, Rakowiecka 4, Warszawa.'
+    incremental: 'PROPOSAL: request versioned sheets/layers and refresh by edition.'
+    identifiers: Map sheet number, layer/theme and edition.
   modelling:
-    notes: Sources may use PL-1992 or legacy PL-1942; retain and transform CRS explicitly.
-    overlap: Related to monitoring points and Wody Polskie units; geometries/semantics differ.
+    notes: Images are not analytical data; vector/database access requires a separate route. kpi false and no Gold use today.
+    overlap: Overlaps other PSH hydrogeological bases and the groundwater bodies in the CBDG download manager (PL-ENV-014).
   research:
     priority: conditional
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Clarify request approval, cost, license, formats and coverage by layer.
+    - 'Parked: machine-readable data only on a signed paper request, free only for public-purpose bodies, teaching and research,
+      with terms set per request; no Gold use today.'
+    - 'Owner option: a paper request to PIG-PIB stating the purpose, if the map is ever wanted.'
     references:
     - https://www.pgi.gov.pl/psh/dane-hydrogeologiczne-psh/947-bazy-danych-hydrogeologiczne/8888-dane-hydrogeologiczne-mhp.html
+    - https://www.pgi.gov.pl/psh/dane-hydrogeologiczne-psh/8850-jak-zamowic-dane-hydrogeologiczne.html
+    - https://www.pgi.gov.pl/rejestry-i-bazy-danych-geologicznych/zasady-korzystania-z-isp.html
 - id: PL-ENV-017
   name: CRFOP and BDZP nature-protection spatial services
   short_name: GDOŚ nature protection
   provider: Generalna Dyrekcja Ochrony Środowiska (GDOŚ)
-  status: registered
+  status: parked
   family: G
   kpi: false
   geography: Poland
@@ -5676,36 +5945,55 @@ sources:
   granularity: Protected-area boundaries plus protected species/habitat spatial records.
   coverage: Current national services; CRFOP updates depend on regional/local authorities and archive depth is unknown.
   access:
-    endpoint: https://www.gov.pl/web/gdos/dostep-do-danych-geoprzestrzennych
+    endpoint: https://sdi.gdos.gov.pl/wfs
     kind: api
-    interfaces: [WMS, WFS, HTML]
+    interfaces: [WMS, WFS, SHP via WFS, HTML]
     auth: Public spatial services.
     cost: Free public access.
-    limits: Unknown; no numeric quota was confirmed.
+    limits: None published. A GitHub runner got HTTP 403 for https://sdi.gdos.gov.pl/robots.txt and https://bankdanych.gdos.gov.pl/robots.txt,
+      so nothing else was requested.
   licence:
     status: unresolved
-    notes: No blanket commercial reuse terms were confirmed; sensitive-species constraints require review.
-  updates: Source-dependent updates; authoritative legal acts, not map geometry, determine protected boundaries.
+    notes: 'Terms: the GDOŚ data page https://www.gov.pl/web/gdos/dostep-do-danych-geoprzestrzennych (read 12 Nov 2026) states
+      no licence, no attribution wording and nothing on commercial reuse or modification of the spatial data; the portal footer
+      licence (CC BY-SA 4.0 for text) covers the page text, not the data sets. Limit named on the page: the map data "nie
+      stanowią jednak prawnego ustalenia lokalizacji i przebiegu granicy form ochrony przyrody"; species records are generalised
+      to a 1 km grid. The GDOŚ re-use page was not found. Attribution if used: "Źródło: Generalna Dyrekcja Ochrony Środowiska,
+      Centralny Rejestr Form Ochrony Przyrody" with the download date.'
+  updates: Source-dependent updates; authoritative legal acts, not map geometry, determine protected boundaries. No update
+    dates are published for the layers.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Protection-form/site identifier, legal act and service version.
+    history: 'Documented route: the GDOŚ page gives one WFS GetFeature link per layer with outputFormat=shape-zip on https://sdi.gdos.gov.pl/wfs
+      (national parks, landscape parks, reserves, protected landscape areas, Natura 2000 SOO and OSO, nature and landscape
+      complexes, documentation sites, ecological sites, Ramsar areas, ecological corridors; nature monuments in 16 voivodeship
+      files), and WFS/WMS of the BDZP at https://bankdanych.gdos.gov.pl/backend/wfs. Not reachable from the platform: both
+      hosts answered 403 to a GitHub runner (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov
+      2026)); the refusal was not worked around, so sizes and counts are unknown.'
+    incremental: 'PROPOSAL: snapshot layers and compare IDs/geometries; change-data capture was not documented.'
+    identifiers: CRFOP object ID/code, INSPIRE ID where exposed, BDZP record ID and taxon/habitat code.
   modelling:
-    notes: Keep legal status and geometry provenance; do not present service boundary as dispositive.
-    overlap: Overlaps forest and water areas spatially but supplies protection designations.
+    notes: 'Keep legal form/status and effective dates; restrict sensitive occurrence precision as required. kpi false. If
+      reachable: protected-area polygons by form as an entity table and the protected share of each gmina''s area. Stand-in
+      with a route today: EEA Natura 2000 and nationally designated areas (CDDA) through GL-037; protected area in hectares
+      per gmina is in GUS BDL.'
+    overlap: Overlaps Natura 2000 and INSPIRE protected-site reporting (EEA) and GUS BDL protected-area statistics.
   research:
     priority: review-first
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm WFS schemas, licenses, sensitive-data policy and historical versions.
+    - 'Parked: the GDOŚ service hosts refuse GitHub runners (HTTP 403 on sdi.gdos.gov.pl and bankdanych.gdos.gov.pl), which
+      is not worked around; reuse terms for the spatial data are not stated.'
+    - 'Owner option: ask GDOŚ (re-use request) for the terms of the CRFOP layers and for access from cloud addresses.'
     references:
     - https://www.gov.pl/web/gdos/dostep-do-danych-geoprzestrzennych
+    - https://sdi.gdos.gov.pl/wfs
+    - https://bankdanych.gdos.gov.pl/backend/wfs
 - id: PL-ENV-018
   name: Bank Danych o Lasach (BDL) OGC services
   short_name: Lasy Państwowe forest data
   provider: Lasy Państwowe
-  status: registered
+  status: parked
   family: G
   kpi: false
   geography: Poland
@@ -5723,61 +6011,90 @@ sources:
     limits: Unknown; no numeric quota was confirmed.
   licence:
     status: unresolved
-    notes: Confirm terms before commercial redistribution.
+    notes: 'Terms: not read. The services page https://www9.bdl.lasy.gov.pl/portal/uslugi-ogc?v=1 (fetched 12 Nov 2026 from
+      a GitHub runner) carries the footer "© 2014-2026 Bank Danych o Lasach. All rights reserved." and links a "Regulamin"
+      whose text was not opened (the session reader was refused for this host and the refusal was not worked around). No licence,
+      attribution wording or statement on commercial reuse and modification is known, so nothing is claimed.'
   updates: Layer-specific cadence unknown.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Forest district/compartment identifiers and feature IDs.
+    history: 'Documented route: OGC services (WMS, WMTS, WFS, OGC API Features) listed on https://www9.bdl.lasy.gov.pl/portal/uslugi-ogc?v=1;
+      the page answered 200 (75 KB) from a GitHub runner but the endpoint URLs are not HTML links, so none was tested (Dev
+      probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)). The hosts have no robots.txt (404).
+      Sizes unknown.'
+    incremental: 'PROPOSAL: snapshot downloadable layers and compare IDs/geometries; no change-data capture is documented.'
+    identifiers: Forest address/compartment IDs and layer-native feature IDs.
   modelling:
-    notes: Inventory each layer/interface; WMS themes must not be treated as downloadable objects.
-    overlap: This forestry BDL is distinct from GUS Bank Danych Lokalnych. It overlaps BDOT land cover and GDOŚ
-      areas.
+    notes: 'Do not infer every WMS theme is downloadable. Preserve forest-management reference date. kpi false and no Gold
+      use today: forest area and forest cover per gmina come from GUS BDL (and Eurostat for the EU comparison).'
+    overlap: Overlaps BDOT10k/land-cover forests conceptually but is a forest-management source.
   research:
     priority: review-first
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm reuse license, feature schemas, pagination/limits and historical versions.
+    - 'Parked: reuse terms unknown (footer "All rights reserved", Regulamin not read) and no Gold use, since forest area and
+      cover come from GUS BDL; the OGC endpoints were not tested.'
+    - 'If wanted later: read the Regulamin by hand and test the WFS or OGC API Features endpoints for forest-district boundaries.'
     references:
     - https://www9.bdl.lasy.gov.pl/portal/uslugi-ogc?v=1
 - id: PL-ENV-019
   name: PSE Reports API v2 and market/system reports
   short_name: PSE reports
   provider: Polskie Sieci Elektroenergetyczne (PSE)
-  status: registered
+  status: approved
   family: G
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [electricity, power system, balancing market]
   entities: [market interval, system interval, generation unit aggregate]
-  granularity: Published system and balancing-market measures by report and interval.
-  coverage: Current v2 API plus dated historical report pages; series-specific start dates require inventory.
+  granularity: 15-minute values per report (entity) and business day, with local and UTC timestamps and the publication time.
+  coverage: 'API v2 from business day 2024-06-14: rce-pln returns 96 rows for 2024-06-14 and none for 2024-06-13. Older reports
+    are not in this API.'
   access:
-    endpoint: https://api.raporty.pse.pl/
+    endpoint: https://api.raporty.pse.pl/api/
     kind: api
-    interfaces: [REST-API, OpenAPI, HTML, bulk-files]
-    auth: Public API and reports.
-    cost: Free public access; reuse rights unresolved.
-    limits: Unknown; inspect OpenAPI and operating policy for paging/throttling.
+    interfaces: [REST-API, OData-style JSON, HTML]
+    auth: Public, no key.
+    cost: Free.
+    limits: None published; the responses carry no rate-limit headers. The old API v1 was announced to close at the end of
+      2025.
   licence:
     status: unresolved
-    notes: No clear commercial redistribution license was confirmed.
-  updates: Operational/market publications at series-specific intervals; corrections possible.
+    notes: 'Terms: none found. The PSE announcement https://www.pse.pl/-/najwazniejsze-dane-o-pracy-systemu-elektroenergetycznego-i-rynku-bilansujacego-w-nowej-odslonie
+      (read 12 Nov 2026) offers "możliwość pobierania danych liczbowych czy wykorzystania API według potrzeb użytkownika"
+      but states no licence, attribution wording, or rule on commercial reuse and modification; the pse.pl front page links
+      only a cookie policy and https://www.pse.pl/nota-prawna could not be opened. The source stays internal until PSE terms
+      are found. Attribution if used: "Źródło: PSE S.A., raporty.pse.pl".'
+  updates: 'Daily and intraday: each row has publication_ts; day-ahead values such as RCE are published the day before, operational
+    values after the day.'
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Report code, business date, interval/time and publication version.
+    history: 'API tested from a GitHub runner (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov
+      2026)): GET https://api.raporty.pse.pl/api/<entity>?$filter=business_date eq ''<YYYY-MM-DD>'' returns JSON {value: [...]};
+      rce-pln (balancing energy price, PLN/MWh: business_date, dtime, dtime_utc, period, rce_pln, publication_ts) 96 rows
+      and about 25 KB a day; his-wlk-cal (demand, wi = wind, pv = photovoltaics, generating-unit groups jg*) 96 rows and about
+      49 KB a day; no nextLink at this size. Full load = one request per entity and day from 2024-06-14: 882 days to 12 Nov
+      2026, so about 1,800 requests and 65 MB for the two entities, half an hour at one request a second. The entity catalogue
+      was not read (https://api.raporty.pse.pl/api/ answers 404); date-range filters and paging were not tested.'
+    incremental: 'Entity = report x business day, version = max publication_ts; daily request of yesterday and today and a
+      re-read of the last 7 days for corrections (delta, append_only by day with replacement of a re-published day). About
+      35,000 rows a year per entity: small source, refresh full.'
+    identifiers: Report/dataset ID, business_date, dtime_utc, publication_ts.
   modelling:
-    notes: Retain published timezone/offset and distinguish delivery, business and publication dates.
-    overlap: PSE is authoritative upstream for many electricity dashboards; do not double-count mirrors.
+    notes: 'Preserve Europe/Warsaw local time with the UTC column (DST days have 92 or 100 periods), settlement interval and
+      publication time. Grain: 15 minutes, Poland only (geography PL), PLN/MWh and MW. Smallest Gold selection, aggregated
+      to the day in Silver (fact_daily): average balancing energy price RCE (PLN/MWh), electricity demand, and wind and photovoltaic
+      generation with their share of demand, as new KPIs in environment.energy.'
+    overlap: No KPI of kpi.csv is published here yet. ENTSO-E Transparency and Eurostat/Ember carry the EU comparison for
+      load and generation; URE price indicators (PL-ENV-020) are quarterly averages of a different market.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Confirm endpoint catalog, history, revision rules, timezone and license.
+    - 'PSE reuse terms not found: internal only until the owner or PSE confirms them.'
+    - Entity catalogue, date-range filters and paging not tested; inventory in the Landing trial.
+    - History before 2024-06-14 (old reports) has no route in API v2.
     references:
     - https://api.raporty.pse.pl/
     - https://www.pse.pl/-/najwazniejsze-dane-o-pracy-systemu-elektroenergetycznego-i-rynku-bilansujacego-w-nowej-odslonie
@@ -5785,7 +6102,7 @@ sources:
   name: Energy price indicators and small-renewable-installation reports
   short_name: URE energy prices
   provider: Urząd Regulacji Energetyki (URE)
-  status: registered
+  status: approved
   family: G
   kpi: true
   geography: Poland
@@ -5793,40 +6110,60 @@ sources:
   domains: [electricity prices, renewable energy, regulation]
   entities: [market indicator, installation aggregate, technology]
   granularity: Quarterly/annual price indicators and annual aggregates for small renewable installations.
-  coverage: Price series vary; small-installation reports are annual since 2016, with definition change noted from
-    2021.
+  coverage: 'Average electricity price on the competitive market: yearly from 2008, quarterly from Q2 2015, newest Q2 2026
+    (table read 12 Nov 2026). Other indicators differ; small-installation reports are annual since 2016, with a definition
+    change from 2021.'
   access:
     endpoint: https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki
     kind: bulk_file
-    interfaces: [HTML, PDF, bulk-files]
-    auth: Public publications.
-    cost: Free public access.
-    limits: Unknown; no numeric quota was confirmed.
+    interfaces: [HTML tables, PDF]
+    auth: Public pages.
+    cost: Free.
+    limits: None published.
   licence:
     status: unresolved
-    notes: Publication access is documented; dataset redistribution terms were not found.
-  updates: Indicator-specific quarterly/annual updates; annual renewable reports may revise definitions.
+    notes: 'Terms: none found. The ure.gov.pl pages read on 12 Nov 2026 (indicator pages, the news item on small installations,
+      and the privacy policy https://www.ure.gov.pl/pl/wolnytekst/5192,dok.html) state no licence, no attribution wording
+      and nothing on reuse, commercial use or modification of the content; the footer has only privacy, accessibility, RSS
+      and BIP links. The source stays internal. Attribution if used: "Źródło: Urząd Regulacji Energetyki, www.ure.gov.pl"
+      with the page''s modification date.'
+  updates: 'Per indicator: quarterly prices are added to the same page after each quarter (page 7852: "Data modyfikacji: 25.09.2026"
+    with Q2 2026), yearly values once a year.'
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Indicator/report year, price type, technology and capacity band.
+    history: 'Fixed public pages, each with one HTML table holding the whole series (no export, no session): average competitive-market
+      electricity price https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki/7852,Srednia-cena-sprzedazy-energii-elektrycznej-na-rynku-konkurencyjnym-roczna-i-kwa.html
+      (200, 60,588 bytes, 21 table rows from a GitHub runner, Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
+      12 Nov 2026)), nine more electricity indicator pages listed on the endpoint (household price 7853, wholesale 8425, tariff
+      averages 10600, capacity charge 9165 and others) and the gas page https://www.ure.gov.pl/pl/paliwa-gazowe/ceny-wskazniki/7859
+      (quarterly gas purchase prices). Under 1 MB in total. The small-installation report is a document on bip.ure.gov.pl,
+      not a table (not included).'
+    incremental: Entity = indicator page, version = the page's modification date; fetch each page monthly and keep it when
+      the bytes change (snapshot, changed_since_last); the HTML table is parsed in Bronze and an unknown layout rejects the
+      file. Refresh full.
+    identifiers: Indicator name, period, unit, tariff/customer scope and report year.
   modelling:
-    notes: Model definitions as versioned metadata; do not splice pre/post-2021 installation scope blindly.
-    overlap: URE regulatory aggregates overlap PSE operational data but measure different populations.
+    notes: 'Keep legal definition/version with each indicator; do not compare redefined installation classes without adjustment.
+      Grain: indicator x year or quarter, Poland only, PLN/MWh. Smallest Gold selection: average electricity sale price on
+      the competitive market (yearly and quarterly) and the average household electricity price as new KPIs in environment.energy.'
+    overlap: No KPI of kpi.csv is published here yet. Eurostat electricity and gas price statistics (half-yearly, by consumption
+      band) carry the EU comparison; PSE prices (PL-ENV-019) are balancing-market prices.
   research:
     priority: review-next
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Inventory downloadable formats, definitions, revisions and reuse terms.
+    - 'URE reuse terms not found: internal only until the owner or URE confirms them.'
+    - Table layouts of the other nine indicator pages and of the gas page were not opened.
     references:
     - https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki
+    - https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki/7852,Srednia-cena-sprzedazy-energii-elektrycznej-na-rynku-konkurencyjnym-roczna-i-kwa.html
     - https://www.ure.gov.pl/pl/urzad/informacje-ogolne/aktualnosci/12642,Male-instalacje-OZE-w-2024-r.html
+    - https://www.ure.gov.pl/pl/wolnytekst/5192,dok.html
 - id: PL-ENV-021
   name: Gas transmission transparency data
   short_name: GAZ-SYSTEM transparency
   provider: Operator Gazociągów Przesyłowych GAZ-SYSTEM S.A.
-  status: registered
+  status: reviewing
   family: G
   kpi: true
   geography: Poland
@@ -5836,31 +6173,61 @@ sources:
   granularity: Capacity, nominations, actual flows, calorific value and planned-work disclosures by relevant point/time.
   coverage: Current and historical transparency pages vary by series; depth unconfirmed.
   access:
-    endpoint: https://www.gaz-system.pl/en/for-customers/market-information/data-transparency.html
-    kind: bulk_file
-    interfaces: [HTML, downloads, external-transparency-links]
+    endpoint: https://transparency.entsog.eu/api/v1/operationaldatas
+    kind: api
+    interfaces: [REST API (ENTSOG Transparency Platform), JSON, HTML, JavaScript application]
     auth: Public transparency data; shipper imbalance information requires authenticated SWI access.
-    cost: Public pages free; authenticated service terms separate.
-    limits: Unknown; no numeric quota was confirmed.
+    cost: Free.
+    limits: 'ENTSOG terms Art. 4.7: access may be restricted for downloads that are disproportionate ("7.5 times the average
+      user of the same category"); no numeric API quota published.'
   licence:
     status: unresolved
-    notes: No machine-data redistribution license was confirmed.
-  updates: Operational series and planned-work notices update on different schedules.
+    notes: 'Terms: GAZ-SYSTEM''s own transparency pages state no data terms; its public tables are a JavaScript application.
+      The same GAZ-SYSTEM data are on the ENTSOG Transparency Platform, whose Terms and Conditions of Use https://transparency.entsog.eu/pdf/Terms_and_Conditions_of_Use.pdf
+      (8 Feb 2016, read 12 Nov 2026) say: "you may download, store and use the contents of this Website" keeping proprietary
+      notices intact; when using data "you shall at least indicate the source, the title of the relevant Section and the date
+      of data download/extraction" in the form "ENTSOG TP [+title of the relevant Section] [DD-MM-YYYY] https://transparency.entsog.eu/";
+      but Art. 4.7: "ENTSOG does not permit automatic extraction of data or other usage that reduces the performance of the
+      Website." Commercial reuse is not addressed separately; ENTSOG disclaims responsibility when data are altered or processed.
+      The ENTSOG corporate site terms (https://www.entsog.eu/privacy-policy-and-terms-use) forbid republishing its contents
+      without written consent. Whether Art. 4.7 covers the published API is unclear: owner question.'
+  updates: Daily gas-day values (gas day 06:00 to 06:00 local time), first provisional and later confirmed (flowStatus); lastUpdateDateTime
+    per record.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Point code, gas day, direction and metric.
+    history: 'GAZ-SYSTEM: the public tables (calorific value, total imbalance, planned works, point lists) are in https://swi.gaz-system.pl/mir/,
+      a JavaScript application (736-byte shell from a GitHub runner, Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
+      12 Nov 2026)), which the pipeline does not support; no file downloads were found on the transparency page. ENTSOG API:
+      GET https://transparency.entsog.eu/api/v1/operationaldatas?operatorKey=PL-TSO-0002&indicator=Physical Flow&periodType=day&from=<date>&to=<date>
+      returns JSON (meta + operationaldatas: pointKey, pointLabel, directionKey, unit kWh/d, value, flowStatus, periodFrom/periodTo)
+      and answered 200 for 1-2 November 2026; the same request for January 2016 and October 2013 answered 404, so the history
+      depth is unknown. Size not measured.'
+    incremental: 'PROPOSAL after the owner''s answer: entity = indicator x month, daily request of the last days with a re-read
+      of the last 30 days for confirmed values.'
+    identifiers: ENTSOG pointKey + directionKey + indicator + periodFrom; operatorKey PL-TSO-0002; EIC code.
   modelling:
-    notes: Preserve gas-day/calendar conventions, units and provisional/revised status.
-    overlap: May mirror or link ENTSOG transparency; retain publisher/source chain.
+    notes: 'Separate capacity, nomination, allocation, flow, quality and outage facts; gas-day conventions matter. Grain:
+      point x direction x gas day, kWh/d. Smallest Gold selection: daily physical flow into Poland by entry group (LNG terminal
+      Świnoujście, Baltic Pipe, interconnectors) and the total as new KPIs in environment.energy; other EU operators come
+      from the same API.'
+    overlap: No KPI of kpi.csv is published here yet. Eurostat monthly gas balances carry the official EU comparison; ENTSOG
+      holds the same points for every EU operator.
   research:
     priority: review-next
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Determine direct formats/API, history, gas-day timezone, license and public/auth boundaries.
+    - 'Owner: the ENTSOG Transparency Platform terms (8 Feb 2016, Art. 4.7) say "ENTSOG does not permit automatic extraction
+      of data or other usage that reduces the performance of the Website" while ENTSOG publishes a public API; may we load
+      GAZ-SYSTEM''s daily physical flows through that API once a day (a few requests), or do you want to ask ENTSOG in writing
+      first?'
+    - GAZ-SYSTEM's own public tables are JavaScript-only (not supported); history depth in the ENTSOG API is unknown (2016
+      and 2013 answered 404).
     references:
     - https://www.gaz-system.pl/en/for-customers/market-information/data-transparency.html
+    - https://swi.gaz-system.pl/mir/
+    - https://transparency.entsog.eu/
+    - https://transparency.entsog.eu/pdf/Terms_and_Conditions_of_Use.pdf
+    - https://www.entsog.eu/privacy-policy-and-terms-use
 - id: PL-ENV-022
   name: Generalny Pomiar Ruchu (GPR)
   short_name: GDDKiA traffic census (GPR)
@@ -6393,47 +6760,59 @@ sources:
   name: Rejestr Urbanistyczny
   short_name: Rejestr Urbanistyczny
   provider: Ministerstwo Rozwoju i Technologii / GUGiK / local planning authorities
-  status: registered
+  status: parked
   family: G
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [spatial planning, land use]
   entities: [planning act, spatial dataset, planning document]
-  granularity: Published planning-document categories and related spatial layers; current machine-readable object
-    coverage varies by authority.
-  coverage: Launched 1 July 2026. Transitional publication rules applied through September; offices have until 30
-    November 2026 to populate current spatial data.
+  granularity: Published planning-document categories and related spatial layers; current machine-readable object coverage
+    varies by authority.
+  coverage: Launched 1 July 2026. Transitional publication rules applied through September; offices have until 30 November
+    2026 to populate current spatial data.
   access:
-    endpoint: https://www.gov.pl/web/zagospodarowanieprzestrzenne/rejestr-urbanistyczny-informacje
+    endpoint: https://rejestr-urbanistyczny.gov.pl/published
     kind: web
-    interfaces: [HTML, WMS, data-list]
+    interfaces: [HTML, JavaScript application, WMS, WFS, CSW]
     auth: Public and free register/services.
     cost: Free.
-    limits: Unknown; no numeric quota was confirmed.
+    limits: None published.
   licence:
     status: unresolved
-    notes: Free access is documented; downstream commercial redistribution terms and dataset-level notices remain
-      to verify.
-  updates: Local authorities update the central register; completeness is transitional as of the research date.
+    notes: 'Terms: free access is stated ("Rejestr Urbanistyczny jest bezpłatny i będzie regularnie aktualizowany przez jednostki
+      samorządu terytorialnego", https://www.gov.pl/web/zagospodarowanieprzestrzenne/rejestr-urbanistyczny-informacje; "Usługi
+      udostępniane w ramach Rejestru Urbanistycznego są bezpłatne", geoportal news; both read 12 Nov 2026), but no licence,
+      no attribution wording and nothing on commercial reuse or modification of the register data; the portal footer licence
+      (CC BY-SA 4.0) covers the page text only. Attribution if used: "Źródło: Rejestr Urbanistyczny, rejestr-urbanistyczny.gov.pl"
+      with the download date.'
+  updates: Local authorities update the register; offices must publish the spatial data current on 1 October 2026 by 30 November
+    2026, so the content is incomplete until then. Further duties follow to 30 June 2029.
   ingestion:
-    history: 'PROPOSAL: inventory records and local source links after transition, preserving legal publication
-      date.'
-    incremental: 'PROPOSAL: version by authority/document/date; WMS alone is not object ingestion.'
-    identifiers: Authority, document type/reference, adoption/effective dates and spatial-data identifier.
+    history: No machine route confirmed. The register lists WMS, WFS (download of spatial data) and CSW network services,
+      but the catalogue https://rejestr-urbanistyczny.gov.pl/published is a JavaScript application (22,530 bytes, 21 characters
+      of text, no links or service addresses in HTML; Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
+      12 Nov 2026)), which the pipeline does not support; the WFS addresses were not found on the gov.pl and geoportal pages.
+    incremental: 'PROPOSAL: inventory services/data after transition and snapshot by authority/layer/document.'
+    identifiers: TERYT of the authority plus the planning act identifier (APP) and document identifier.
   modelling:
-    notes: Model legal document and spatial representation separately; preserve status and supersession.
-    overlap: May link parcels/municipal plans but is not a cadastral source.
+    notes: 'Separate legal document, spatial extent and service metadata. Do not infer national completeness during transition.
+      kpi false. Smallest Gold selection once a WFS address is known: per gmina (TERC) whether a general plan (plan ogólny)
+      is published and the share of its area covered by local plans (MPZP), as attributes of dim_geography.'
+    overlap: Overlaps local planning portals and GUGiK planning integration but becomes the central publication register;
+      GUS BDL has yearly MPZP coverage per gmina.
   research:
     priority: conditional
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Recheck completeness after 30 November 2026
-    - verify download/WFS, identifiers, terms and transition effects.
+    - 'Parked until the recheck after 30 November 2026: the register is still being filled (legal deadline 30 November 2026)
+      and its catalogue is JavaScript-only; no WFS address or reuse terms were found.'
+    - 'Recheck in December 2026: WFS/CSW addresses, completeness by gmina, terms.'
     references:
     - https://www.gov.pl/web/zagospodarowanieprzestrzenne/rejestr-urbanistyczny-informacje
     - https://www.geoportal.gov.pl/aktualnosci/nowe-uslugi-w-geoportalu-rejestr-urbanistyczny/
+    - https://rejestr-urbanistyczny.gov.pl/published
     - https://www.gov.pl/web/zagospodarowanieprzestrzenne/rejestr-urbanistyczny-uruchomiony
 - id: CD-001
   name: Marketstack Stock Data API
