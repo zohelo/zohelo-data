@@ -46,6 +46,17 @@ EU = {
 MACROS = "".join(Path(p).read_text() for p in ("warehouse/macros/poc_blocks.sql", "warehouse/macros/m49.sql"))
 
 TRIALS = {
+    "world_bank_gem": {
+        "bronze": "gem_observations",
+        "rejected": "gem_rejected_files",
+        "silver": "gem_observations",
+        "grain": "series_code, country_code, time_code",
+        "checks": {
+            "per entity": "select series_code, frequency, count(*), count(distinct country_code), min(time_code), max(time_code) from gem_observations group by all order by 1, 2",
+            "PL": "select series_code, time_code, value from gem_observations where country_code = 'POL' and frequency = 'M' qualify row_number() over (partition by series_code order by time_code desc) = 1 order by 1",
+            "max": "select series_code, min(value), max(value) from gem_observations group by 1 order by 1",
+        },
+    },
     "eea": {
         "bronze": "eea_ghg_inventory",
         "silver": "eea_ghg_inventory",
@@ -115,6 +126,14 @@ def trial(source: str) -> dict:
         specs = eea.resolve()
         result["resolved"] = {k: specs[0][k] for k in ("url", "record")}
     CAPTURED.clear()
+    if source == "world_bank_gem":
+        from ingestion.to_landing.world_bank_gem import extract as gem
+
+        result["landing"] = [gem.main(["--mode", "load", "--landing-root", SCRATCH]) for _ in (1, 2)]
+        result["landing_outcomes"] = [{k: v for k, v in d.items() if k not in ("mode",)} for t, d in CAPTURED]
+        held_gem = gem.landed(s3(), req("STORAGE_LANDING_BUCKET_NAME"), SCRATCH)
+        result["landed_copies_bytes"] = {k: [len(v), v[-1]["size_bytes"]] for k, v in held_gem.items()}
+        return _after_landing(source, spec, result)
     result["landing"] = [bulk_file.main(source, "load", landing_root=SCRATCH, specs=specs) for _ in (1, 2)]
     result["landing_outcomes"] = [[f.get("outcome") for f in d.get("files", [])] for t, d in CAPTURED if "landing" in t]
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
@@ -123,6 +142,10 @@ def trial(source: str) -> dict:
         copies = bulk_file.landed(client, bucket, bulk_file.prefix(source, f["entity"], SCRATCH))
         held[f["entity"]] = [len(copies), copies[-1]["size_bytes"] if copies else 0]
     result["landed_copies_bytes"] = held  # 1 copy each: the second load wrote nothing
+    return _after_landing(source, spec, result)
+
+
+def _after_landing(source: str, spec: dict, result: dict) -> dict:
     loader = importlib.import_module(f"ingestion.to_bronze.{source}.load")
     CAPTURED.clear()
     result["bronze_exit"] = [loader.load(0, landing_root=SCRATCH, namespace=SCRATCH) for _ in (1, 2)]
@@ -133,7 +156,7 @@ def trial(source: str) -> dict:
     arrow = bronze.scan().to_arrow()
     result["bronze"] = {"files": len(files), "rows": arrow.num_rows}
     try:
-        rejected = cat.load_table((SCRATCH, f"{source}_rejected_files")).scan().to_arrow().to_pylist()
+        rejected = cat.load_table((SCRATCH, spec.get("rejected", f"{source}_rejected_files"))).scan().to_arrow().to_pylist()
     except Exception:  # noqa: BLE001
         rejected = []
     result["rejected"] = [{k: r.get(k) for k in ("entity", "error")} for r in rejected][:5]
