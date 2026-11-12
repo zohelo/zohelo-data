@@ -173,9 +173,31 @@ def fill(text: object, values: dict[str, str]) -> object:
 REVIEW_ONLY = {"registered", "reviewing"}  # register statuses whose Epic holds only the stage-1 review
 
 
+LICENCE_EVIDENCE = "Terms:"  # how a reviewed entry's licence.notes records the provider's terms (stages.yaml, stage 1)
+
+
+def review_done(entry: dict) -> dict[str, str]:
+    """The stage-1 Tasks that the register entry itself shows as done, with the evidence line for the issue (#2907).
+
+    A review is delivered as a register change, often many entries in one pull request, so the register is what
+    proves these two Tasks: `decide` once the status is approved or later, and `licence` once, in addition,
+    licence.notes records the terms. A licence of `unresolved` with its evidence counts: the source is built and
+    kept internal by the licence gate (O36, O37)."""
+    status = str(entry.get("status") or "registered")
+    if status in REVIEW_ONLY or status == "parked":
+        return {}
+    licence = entry.get("licence") if isinstance(entry.get("licence"), dict) else {}
+    proof = f"register entry {entry['id']} in {REGISTER} on main: status {status}, licence {licence.get('status')}"
+    done = {"decide": proof}
+    if LICENCE_EVIDENCE in str(licence.get("notes") or ""):
+        done["licence"] = proof + f", licence.notes records the terms (`{LICENCE_EVIDENCE}`)"
+    return done
+
+
 def source_epic(entry: dict, stages: list[dict]) -> dict:
     """The Epic of a register entry without a hand-written file: stage 1 with its Tasks, and stage 2 with its Tasks
-    once the entry is approved or later (registered and reviewing entries get stage 1 only; owner #2230, Bug #2337)."""
+    once the entry is approved or later (registered and reviewing entries get stage 1 only; owner #2230, Bug #2337).
+    The two stage-1 Tasks are done when the register says so (review_done)."""
     ident = str(entry["id"])
     low = ident.lower()
     key = f"data/src-{low}"
@@ -189,7 +211,9 @@ def source_epic(entry: dict, stages: list[dict]) -> dict:
         "family_area": f"data/src-{str(entry['family']).lower()}",
         "register_file": REGISTER,
     }
-    last_stage = 1 if str(entry.get("status") or "registered") in REVIEW_ONLY else 2
+    status = str(entry.get("status") or "registered")
+    last_stage = 1 if status in REVIEW_ONLY else 2
+    done = review_done(entry)
     deliverables = []
     for stage in stages:
         if stage.get("n") not in range(1, last_stage + 1):
@@ -204,6 +228,8 @@ def source_epic(entry: dict, stages: list[dict]) -> dict:
         for template in stage.get("tasks") or []:
             task = fill({k: v for k, v in template.items() if k != "key"}, values)
             task = {"key": f"{item['key']}/{template['key']}", "type": "Task", "state": "open", **task}
+            if stage.get("n") == 1 and template["key"] in done:
+                task.update(state="done", done_by=done[template["key"]])
             task["depends_on"] = [f"{item['key']}/{dep}" for dep in task.get("depends_on") or []]
             tasks.append(task)
         item["tasks"] = tasks

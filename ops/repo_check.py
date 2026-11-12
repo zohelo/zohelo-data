@@ -399,6 +399,12 @@ def register(files: list[Path]) -> list[str]:
         f"register: {e.get('id')}: status {e.get('status')!r}" for e in entries if e.get("status") not in STATUSES
     ]
     problems += [f"register: {e.get('id')}: missing {f}" for e in entries for f in REQUIRED if f not in e]
+    # A review that approves an entry records the terms after `Terms:`; backlog_sync closes its review issues on it.
+    problems += [
+        f"register: {e.get('id')}: status approved needs licence.notes with 'Terms:' (stages.yaml, stage 1)"
+        for e in entries
+        if e.get("status") == "approved" and "Terms:" not in str((e.get("licence") or {}).get("notes") or "")
+    ]
     problems += [
         f"register: {e.get('id')}: family {e.get('family')!r}" for e in entries if e.get("family") not in FAMILIES
     ]

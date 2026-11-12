@@ -32,6 +32,10 @@ Status: approved by the owner, 27 Oct 2026. Applies to `zohelo/zohelo-data`, `zo
 
 `backlog_sync apply` closes a Deliverable once all its Tasks are closed and it has no `todo` lines, and an Epic once all its
 Deliverables are closed (comment lists the `done_when`), so progress rolls up on the board; it never reopens an issue.
+The two Source review Tasks of a generated source Epic are the exception to "its PR merges": a review is a register
+change, often many entries in one pull request, so the sync closes them from the register (#2907): `decide` once the
+entry's status is `approved` or later, `licence` once, in addition, `licence.notes` carries `Terms:`. A licence of
+`unresolved` with its evidence counts, because the source is built and kept internal by the licence gate (O36, O37).
 The Quality Engineer reopens one whose `done_when` turns out false.
 
 ## 3. Files
