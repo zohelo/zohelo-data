@@ -31,7 +31,10 @@ models:
       - name: geography_key
         tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_geography'), field: geography_key}}}]
   - name: poc_dim_unit
-    description: Units of measure as the sources name them, with a conformed unit where known.
+    description: >-
+      Units of measure as the sources name them (unit_key = the source's code, as published), with the conformed
+      unit of seeds/unit_map.csv (D33): conformed_unit_key (a unit.csv key) and mapped = true when every source of
+      the code maps it to one unit without a measure pattern; otherwise null, false and the source's own name.
     columns:
       - name: unit_key
         tests: [not_null, unique]
@@ -158,7 +161,9 @@ models:
       - name: date_key
         tests: [not_null]
   - name: poc_build_prg
-    description: Build stage — area (km²) of every Polish administrative unit with a PRG boundary, daily at the PRG edition held.
+    description: >-
+      Build stage — area of every Polish administrative unit with a PRG boundary as PRG publishes it (JPT_POWIER,
+      hectares; D33: stored as published, KPI area converts to km²), daily at the PRG edition held.
   - name: geo_unit
     description: >-
       One row per Polish administrative unit with a PRG boundary (country, voivodeships, powiats, gminas): PRG
@@ -182,5 +187,15 @@ models:
         tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_geography'), field: geography_key}}}]
       - name: contiguity
         tests: [{accepted_values: {arguments: {values: ['rook', 'queen']}}}]
+  - name: poc_build_ids
+    description: >-
+      Build stage — World Bank IDS external debt stocks (US$, % of GNI) and debt service (US$, % of GNI, % of
+      exports), debtor economy × counterpart WLD, annual, actual years only (no projections); about 120 low- and
+      middle-income economies and their World Bank groups, no Poland or EU member state.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
   - name: poc_build_check
     description: Per activated block — rows, series, unmatched geography, dates, flags; read after every build.

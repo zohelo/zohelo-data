@@ -21,7 +21,7 @@
      'measure': 'agricultural_land',
      'header': '(^|\\| )Użytki rolne Agricultural land \\| razem', 'unit': 'ha', 'period': 2020, 'block': '^Ogółem'},
     {'table': 'average_area', 'title': 'TABL\\. 20\\. ŚREDNIA POWIERZCHNIA UŻYTKÓW ROLNYCH',
-     'measure': 'average_agricultural_land', 'header': '(^|\\| )Ogółem Total( \\||$)', 'unit': 'ha', 'period': 2020,
+     'measure': 'average_agricultural_land', 'header': '(^|\\| )Ogółem Total( \\||$)', 'unit': 'ha_per_holding', 'period': 2020,
      'block': '^Ogółem'},
     {'table': 'livestock', 'title': 'TABL\\. 24\\. POGŁOWIE ZWIERZĄT GOSPODARSKICH', 'measure': 'cattle',
      'header': '(^|\\| )Bydło Cattle \\| ogółem', 'unit': 'heads', 'period': 2020, 'block': '^Ogółem'},

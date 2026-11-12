@@ -20,10 +20,12 @@ from datetime import UTC, date, datetime, timedelta
 import io
 import json
 from pathlib import Path
+import time
 from typing import Any
 
 import duckdb
 import pyarrow as pa
+import pyarrow.compute as pc
 
 PROJECT = Path(__file__).resolve().parent
 SCHEMAS = Path(__file__).resolve().parent / "published" / "schemas"
@@ -34,6 +36,9 @@ UNRESOLVED_LICENCE = "unresolved"  # licence.csv: terms not established (licence
 # fx_rate is licence-blocked today (NBP unresolved, O37); the skip stays for when its terms are established, since
 # kpi_latest would otherwise pick one arbitrary currency per source and geography.
 SKIP = {"fx_rate": "one value per currency; latest.json has no currency field"}
+# Sources that reach the published contract v2 only, never v1 (zohelo.com): v1 orders values by source_key, so a new
+# source would change what zohelo.com shows first (review of #2758).
+V2_ONLY_SOURCES = {"ecb"}
 LATEST_LIMIT = 100_000  # bytes, docs/published.md size limits (D22)
 TOPICS_KEY = "06_published/v2/topics.json"  # docs/published.md, "topics.json"
 TOPICS_REVIEW_KEY = "06_published/v1/review/topics.json"  # internal review (docs/topics.md, "Internal review")
@@ -83,8 +88,30 @@ SERIES_LEVELS = {
 }
 
 
-def gold(cat, namespace: str, name: str) -> pa.Table:
-    return cat.load_table((namespace, name)).scan().to_arrow()
+def v1_rows(metrics: pa.Table) -> pa.Table:
+    """The rows of gold.metrics_<kpi> that v1 publishes: every source except V2_ONLY_SOURCES; pure."""
+    keep = pc.invert(pc.is_in(metrics.column("source_system"), value_set=pa.array(sorted(V2_ONLY_SOURCES))))
+    return metrics.filter(keep)
+
+
+# A concurrent silver_gold.build (another source's run; its concurrency group is not gold.publish's) swaps tables
+# (dbt __dbt_tmp/__dbt_backup renames, seeds dropped and recreated), so a table can be missing for a few seconds:
+# gold.news_outlet in prod run 43157796127 (#2793). A table not found is looked up again after these waits.
+SWAP_RECHECK_SECONDS = (10, 20)
+
+
+def gold(cat, namespace: str, name: str, waits: tuple[float, ...] = SWAP_RECHECK_SECONDS) -> pa.Table:
+    """A catalog table as Arrow; NoSuchTableError only when it is still missing after the swap re-checks."""
+    from pyiceberg.exceptions import NoSuchTableError
+
+    for wait in (*waits, None):
+        try:
+            return cat.load_table((namespace, name)).scan().to_arrow()
+        except NoSuchTableError:
+            if wait is None:
+                raise
+            time.sleep(wait)
+    raise AssertionError("unreachable")
 
 
 def seed(name: str) -> list[dict[str, str]]:
@@ -783,6 +810,7 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
             licence_removed[kpi_key] = metrics.num_rows - gated.num_rows
         metrics = gated
         tables[kpi_key] = metrics
+        metrics = v1_rows(metrics)
         table = kpi_series(metrics, measures, kpi_key, kpi["unit_key"])
         data = parquet(table)
         if len(data) > SERIES_LIMIT:
