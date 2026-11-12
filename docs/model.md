@@ -21,7 +21,7 @@ tables and the `poc` namespace stay until the retire Task drops them.
 | `geo_unit`, `geo_neighbour` | from the PRG boundaries (`silver.prg_units`): per unit with a boundary (country, voivodeships, powiats, gminas) the PRG area (the country row includes sea waters, `area_includes_sea`), centroid and neighbour count; contiguity pairs of units of the same level, both directions, with the shared border in km (EPSG:2180) and `rook` / `queen` — the spatial weight matrices of the research kit are pivots of it. The geometry itself stays in Silver (published simplified as `geo/<level>.geojson`) |
 | `dim_unit`, `dim_frequency`, `dim_source`, `dim_observation_status` | conformed units, frequencies, sources and observation flags |
 | `dim_measure`, `measure_dimensions`, `dim_series` | measure catalogue, the dimensions each measure offers, one row per series (measure × geography × breakdown) |
-| `fact_annual`, `fact_semiannual`, `fact_quarterly`, `fact_monthly`, `fact_daily` | observations per series and year / half-year / quarter / month / day |
+| `fact_annual`, `fact_semiannual`, `fact_quarterly`, `fact_monthly`, `fact_daily` | observations per series and year / half-year / quarter / month / day (the curated KPI selections; full coverage of every loaded series goes to the per-block tables `<source>_observations`, `_series`, `_measures`, `_geography` of D35, [gold-coverage.md](gold-coverage.md)) |
 | `dim_concept`, `concept_measures` | cross-source concepts (KPIs) and their measures |
 | `metrics_population`, `metrics_gdp_current_prices`, `metrics_inflation`, `metrics_unemployment_rate`, `metrics_fx_rate`, `metrics_gdp_per_capita`, `metrics_gdp_volume_growth` | the published metrics; draft concepts have their own `metrics_<kpi>` tables (e.g. OECD `metrics_business_confidence_oecd`, `metrics_consumer_confidence_oecd`, `metrics_cli_oecd`) |
 | `src_eurostat`, `src_dbw`, `src_dbw_dictionary`, `build_eurostat`, `build_bdl`, `build_dbw`, `build_wdi`, `build_nbp`, `build_nbp_bop`, `build_nbp_interest_rates`, `build_oecd`, `build_gleif`, `build_mf_biala_lista`, `build_prg`, `build_ids` | extraction and build stages per source |
@@ -140,6 +140,8 @@ Other open points are listed per dimension (`open_questions`) and marked `unveri
 2. Keys stay natural strings (geography_key, measure_key, series_key as in the PoC); no hash keys in v1.
 3. Geography: GUS KTS–TERYT correspondence for BDL ids, NUTS 3 ↔ podregion for DBW; name matching only as a reported fallback.
 4. Measure rules per source stay as in the PoC for v1; per-domain refinements are new Tasks.
-5. Facts: annual, half-yearly, quarterly, monthly, daily (`fact_quarterly` added for the zohelo-bi first slice: Eurostat, DBW and BDL quarterly series; `fact_semiannual` for half-yearly series, Eurostat minimum wages, #2743: a half-year is never folded into another frequency).
+5. Facts: annual, half-yearly, quarterly, monthly, daily (`fact_quarterly` added for the zohelo-bi first slice: Eurostat, DBW and BDL quarterly series; `fact_semiannual` for half-yearly series, Eurostat minimum wages, #2743: a half-year is never folded into another frequency). Full coverage is per source and block, not per frequency (D35).
 6. Rows without a value are not loaded; status flags kept.
-7. warehouse/entity/*.sql stay: they are per-entity Silver models applied by warehouse/entity.py (design #875), not Gold (deviation from plan A-23, logged in docs/decisions.md).
+7. warehouse/entity/*.sql stay: they are per-entity models applied by warehouse/entity.py (design #875). The Silver models are not Gold (deviation from plan A-23, logged in docs/decisions.md); the per-block Gold models of decision D35 (`gold_*.sql`, added with #2831; docs/gold-coverage.md) are applied by `warehouse/observations.py` the same way.
+
+Every loaded block of Eurostat, GUS BDL and GUS DBW in Gold by rule, on top of this model (O36): [gold-coverage.md](gold-coverage.md).
