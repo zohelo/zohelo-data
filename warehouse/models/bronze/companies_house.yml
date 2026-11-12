@@ -1,0 +1,36 @@
+version: 2
+
+sources:
+- name: companies_house
+  description: UK Companies House — Free Company Data Product, monthly snapshot of the companies on the register (CSV in a ZIP)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/companies_house/
+    loaded_by: ingestion/to_bronze/companies_house/
+    config: ingestion/sources/companies_house.yaml
+  tables:
+  - name: companies_house_companies
+    description: >-
+      One row per company of the newest snapshot (5.7 million), 13 of the file's 55 columns as text: company
+      number, name, category, status, country of origin, incorporation and dissolution date, SIC texts 1-4, post
+      town and country of the registered office; snapshot_date = the date in the file name. Street lines,
+      postcode, care-of line, PO box, county and previous names are not loaded (personal data).
+  - name: companies_house_rejected_files
+    description: Companies House Landing files the Bronze decoder or a Silver model rejected, with the reason.
+- name: companies_house_silver
+  description: >-
+    Companies House Silver tables, written per snapshot file by the loader, not by dbt (design #875), from
+    warehouse/entity/companies_house_*.sql.
+  database: r2
+  schema: silver
+  tables:
+  - name: companies_house_poland_origin
+    description: >-
+      Companies on the UK register whose country of origin is Poland, newest snapshot; one row per company
+      number (checked by the loader: unique, not null), typed dates, registered office as post town and country.
+  - name: companies_house_snapshot_counts
+    description: >-
+      Companies on the register per snapshot by country of origin, company category and company status, with the
+      number incorporated in the month the snapshot closes; one file per snapshot date, kept (monthly history).
+      Grain snapshot_date × country_of_origin × company_category × company_status (checked by the loader).
