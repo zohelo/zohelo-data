@@ -66,3 +66,9 @@ index_2021_100,1
 ncu_per_usd,4
 ncu_per_eur,4
 ncu_per_rub,4
+per_10k_population,2
+beds,0
+cases,0
+cases_per_bed,1
+patient_days,0
+thousand_patient_days,1

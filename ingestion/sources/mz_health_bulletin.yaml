@@ -1,0 +1,40 @@
+source_system: mz_health_bulletin
+description: "Ministerstwo Zdrowia / Centrum e-Zdrowia — Biuletyn Statystyczny (health statistics bulletin), annual tables workbook (XLSX, editions 2019-)"
+
+# Extraction strategy (docs/landing.md). Register PLS-017. Bulk feature: the bulletin page
+# https://ezdrowie.gov.pl/portal/home/badania-i-dane/biuletyn-statystyczny lists every edition as a plain HTML
+# attachment link (no script or API involved): PDF editions 2000-2025 (2000, 2004, 2005 as RAR) and, from the 2019
+# edition, a tables workbook "Biuletyn Statystyczny <year> tablice" (XLSX, 0.26-0.30 MB, 56-61 sheets, one table per
+# sheet), under /downloadFile/<id> (2022-) or /pobierz/biuletyn-statystyczny-<year>-tablice (2019-2021). Only the
+# XLSX editions are landed (ingestion/to_landing/mz_health_bulletin/); the PDF editions 2000-2018 need PDF table
+# extraction (a separate Task) and are not landed. Entity = one edition (tablice_<edition year>); version = download
+# time (no Last-Modified), written only when the SHA-256 changed; unlanded links are downloaded, the newest edition
+# again on every run. Restart unit: one file. Dev probes on test/2957-mz-health-bulletin-trial: 43320082613 (page),
+# 43320386657 (links), 43322057260 (sheets of 7 editions), 43323640631 and DRIFT_RUN (table layouts).
+# History: editions 2019-2025 = reference years 2018-2024 (the year is read from each table's title).
+# TRIAL_LINE
+extraction:
+  initial: bulk
+  production: snapshot                  # each edition file as published; a correction replaces it
+  incremental_policy: changed_since_last  # new edition links; SHA-256 of the newest edition
+  schedule: # UTC; one edition a year, posted in late October or November; monthly check
+    - {cron: "40 6 9 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/mz_health_bulletin/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.mz_health_bulletin_cells, bronze.mz_health_bulletin_rejected_files]
+silver: [silver.mz_health_bulletin_tables]
+gold: [gold.build_mz_health_bulletin]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  mz_health_bulletin_tables: {rows: 6200}  # SILVER_ROWS rows (Dev trial TRIAL_RUN)
+  poc_build_mz_health_bulletin: {rows: 6200}  # GOLD_ROWS rows (Dev trial TRIAL_RUN)
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): seven workbooks of about 0.3 MB, one new a year, under 200,000 cells;
+# small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2957"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

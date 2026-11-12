@@ -1,0 +1,20 @@
+version: 2
+models:
+  - name: poc_build_mz_health_bulletin
+    description: >-
+      Build stage — MZ / Centrum e-Zdrowia Biuletyn Statystyczny (register PLS-017, #2957), block health_bulletin:
+      health workers licensed and employed (persons and per 10,000 population, 31 December), general hospitals and
+      beds, general hospital activity (inpatient cases, patient-days in thousands, average stay, bed use), Poland and
+      the 16 voivodeships, annual, reference years 2018-2024, latest edition per reference year. Values and units as
+      published (D33). Licence unresolved: internal only (the publish gate keeps it out of v1 and v2).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

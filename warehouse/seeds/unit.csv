@@ -66,3 +66,9 @@ index_2021_100,2021=100,"index, 2021 = 100","indeks, 2021 = 100",true,index_2021
 ncu_per_usd,NCU/USD,source currency per US dollar,waluta źródła za dolara amerykańskiego,true,ncu_per_usd,1
 ncu_per_eur,NCU/EUR,source currency per euro,waluta źródła za euro,true,ncu_per_eur,1
 ncu_per_rub,NCU/RUB,source currency per Russian rouble,waluta źródła za rubla rosyjskiego,true,ncu_per_rub,1
+per_10k_population,/10 tys.,"per 10,000 population",na 10 tys. ludności,true,per_10k_population,1
+beds,łóżka,hospital beds,łóżka szpitalne,false,beds,1
+cases,przyp.,inpatient cases,przypadki hospitalizacji,false,cases,1
+cases_per_bed,przyp./łóżko,inpatient cases per bed,przypadki hospitalizacji na łóżko,true,cases_per_bed,1
+patient_days,osobodni,patient-days,osobodni,false,patient_days,1
+thousand_patient_days,tys. osobodni,thousand patient-days,tysiące osobodni,false,patient_days,1000
