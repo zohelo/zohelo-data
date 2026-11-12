@@ -9,6 +9,9 @@ description: "KNF (Polish Financial Supervision Authority) monthly banking-secto
 # reached the page and both files from Actions (200, no Last-Modified or ETag). Entity = workbook (current,
 # archive); the server sends no validator, so the version is the download time and a file is written only when
 # its SHA-256 changed (the release month is in the receipt's source_url). Restart unit: the workbook.
+# robots.txt (Dev trial 43285080215) names only Googlebot, Bingbot, Twitterbot and facebookexternalhit, each
+# "Allow: /", and no Disallow: no rule applies to this route. Dev trials 43285080215, 43289531076: both files
+# landed (2,197,937 and 1,091,361 bytes), a second extract wrote nothing (unchanged SHA-256).
 # KNF terms (nota prawna) name no licence: unresolved, internal only (register PLG-017).
 extraction:
   kind: bulk_file

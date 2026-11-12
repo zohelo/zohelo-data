@@ -11,7 +11,9 @@ models:
       ("Dane w zł", zloty), units ("Dane w sztukach", counts), ratio ('%'-formatted cells stored as fractions) or
       unstated (the archive prints no unit). frequency M (month ends) or Q (quarter ends: Adekwatność, Należności_5,
       the NSFR rows of Płynność, archive Tabela 07a and 10). A text cell under a header date keeps value null and
-      the text in value_marker (never 0); empty cells give no row.
+      the text in value_marker (never 0); empty cells give no row. Dev trial 43289531076: 301,671 rows (current
+      192,042, January 2018 - August 2026; archive 109,629, December 2009 - December 2017), no text markers in the
+      grid, 4,584 empty grid cells (no row), 22,978 cells stored as 0 by KNF.
     tests:
       - unique:
           column_name: "entity || '|' || sheet_name || '|' || source_row || '|' || cast(period_end as varchar)"

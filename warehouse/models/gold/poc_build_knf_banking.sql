@@ -10,7 +10,9 @@
    loans             nonfin_non_impaired     non-financial sector, portfolio B gross carrying amount without
                                              impairment, stages 1 and 2 (Należności_1, "SEKTOR NIEFINANSOWY") (M)
                      nonfin_impaired_stage3  the same with impairment, stage 3 (M)
-   capital_adequacy  total_capital_ratio     "Łączny współczynnik kapitałowy" (Adekwatność), quarter ends (Q) #}
+   capital_adequacy  total_capital_ratio     "Łączny współczynnik kapitałowy" (Adekwatność), quarter ends (Q)
+   Status 'break' on January 2026 of balance_sheet and loans (KNF's note on the December 2025 / January 2026 change);
+   'ok' otherwise. Dev trial 43289531076: 1,766 rows, 0 duplicates by series_key x date_key, 0 unmatched. #}
 with selection as (
     select * from (
         values
@@ -62,7 +64,7 @@ picked as (
         s.frequency,
         s.bank_group,
         s.bank_group_code,
-        s.unit_code as silver_unit,
+        case when s.unit_code = 'ratio' then 'RATIO' else 'PLN' end as unit_code,
         s.period_end,
         s.period_start,
         s.value,
@@ -86,12 +88,11 @@ select
     'knf_banking' as source_system,
     p.block_id,
     b.block_name,
-    'knf_banking:' || p.block_id || ':' || case when p.silver_unit = 'ratio' then 'RATIO' else 'PLN' end || ':' || p.code
-        as measure_key,
+    'knf_banking:' || p.block_id || ':' || p.unit_code || ':' || p.code as measure_key,
     p.name as measure_name,
     p.code as measure_codes,
-    case when p.silver_unit = 'ratio' then 'RATIO' else 'PLN' end as unit_code,
-    case when p.silver_unit = 'ratio' then 'ratio (fraction; printed as %)' else 'zł' end as unit_name,
+    p.unit_code,
+    case when p.unit_code = 'RATIO' then 'ratio (fraction; printed as %)' else 'zł' end as unit_name,
     'PL' as geography_source_code,
     coalesce(g.geography_key, '_X') as geography_key,
     p.frequency,
@@ -105,7 +106,13 @@ select
     cast(null as varchar) as sex_code,
     p.bank_group_code = 'sector' as is_total,
     p.value,
-    'ok' as observation_status_key,
+    -- KNF's note (sheet Info, B28; also on Bilans and Należności_1): values change markedly between December 2025
+    -- and January 2026 (BGK flow funds left out of the reports, items moved from the financial to the general
+    -- government sector, NBP resolution 45/2025): January 2026 of the balance-sheet and loan measures is a break
+    case
+        when p.block_id in ('balance_sheet', 'loans') and p.period_start = date '2026-01-01' then 'break'
+        else 'ok'
+    end as observation_status_key,
     p.source_version,
     p.raw_sha256
 from picked as p

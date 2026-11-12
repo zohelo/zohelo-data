@@ -959,3 +959,28 @@ and women, Poland and voivodeships). Gold block `registered_unemployment` (KPIs 
 `registered_unemployment_rate`, next to GUS BDL and DBW). Weekly schedule (Tuesday). Licence: CC BY 3.0 PL (portal
 footer). The ZIPs since 2001, the half-yearly occupation and vacancy tables and the yearly MRPiPS-01 data files
 (SPR1, about 27 MB) are not built yet.
+
+## KNF banking-sector data (`knf_banking`)
+
+**Built (12 Nov 2026, register PLG-017).** The KNF statistics page "Dane miesięczne sektora bankowego"
+(`dane_statystyczne?articleId=56224&p_id=18`) links two workbooks: the current one, whose URL changes with every
+monthly release (`/knf/pl/komponenty/img/<yyyy_mm>-Dane_statystyczne_<id>.xlsx`, about 2.2 MB), and the archive to
+December 2017 (`2017 12 - SEKTOR BANKOWY - DANE_55663.xlsx`, about 1.1 MB, accounting before IFRS 9). Route: shared
+`bulk_file` pattern, both links found on the page at run time (`url_from`). Entity = workbook (`current`,
+`archive`); KNF sends no Last-Modified or ETag, so the version is the download time and a file lands only when its
+SHA-256 changed; restart unit: the workbook. KNF replaces the page about six weeks after the month and revises
+back data with each release, so each version is the whole series. robots.txt names only four search and social
+bots with `Allow: /` and no `Disallow`. Bronze `bronze.knf_banking_cells`: one row per non-empty cell (shared
+`ingestion/common/xlsx_cells.py`, latest-only); a workbook with another set of sheets, without the header row (row
+9 current, 10 archive) or, in the current workbook, without the unit cells A3:A4 ("Dane w" / "zł" or "sztukach")
+is rejected with that reason. Silver `silver.knf_banking_series` (entity x sheet x source row x period end): every
+table sheet in long form, bank group as printed (Sektor bankowy, Banki komercyjne, Oddziały, Banki spółdzielcze),
+section heading, item label and occurrence, frequency M or Q (Adekwatność, Należności_5 and the NSFR rows of
+Płynność are quarterly), values as stored (zloty, counts, ratios as fractions; the archive prints no unit:
+`unstated`). Gold block set `build_knf_banking` (current workbook only, Poland, bank group as breakdown): total
+assets, net profit year to date, non-financial sector loans without impairment and impaired (stage 3), total
+capital ratio (Q); draft KPIs `bank_total_assets`, `bank_net_profit_ytd`, `bank_loans_nonfin_non_impaired`,
+`bank_loans_nonfin_impaired`, `bank_total_capital_ratio` (finance.money_banking); January 2026 of the balance-sheet
+and loan measures has status `break` (KNF's note on the December 2025 / January 2026 change). Weekly schedule
+(Thursday 07:25 UTC). Licence: KNF legal notice names no licence, `unresolved`: the licence gate keeps every row out
+of published v1 and v2. Dev trials 43285080215 (profile), 43289531076.

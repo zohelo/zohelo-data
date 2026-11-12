@@ -408,7 +408,7 @@ un_wpp as (
         geography_key
     from geo
     where level_name = 'country' and length(geography_key) = 2
-)
+),
 
 -- KNF banking-sector data (PLG-017): national aggregates only; the build stage writes the literal 'PL'.
 knf_banking as (
