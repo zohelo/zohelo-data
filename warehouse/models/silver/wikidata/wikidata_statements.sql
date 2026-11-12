@@ -26,7 +26,10 @@ statements as (
         nullif(regexp_extract(unit, '/entity/(Q[0-9]+)$', 1), '') as unit_qid,
         max(try_cast(left(time, 10) as date)) as point_in_time,
         max(try_cast(left(end_time, 10) as date)) as end_time,
-        string_agg(distinct regexp_extract(lang, '/entity/(Q[0-9]+)$', 1), ',' order by regexp_extract(lang, '/entity/(Q[0-9]+)$', 1)) as language_qids,
+        string_agg(
+            distinct regexp_extract(lang, '/entity/(Q[0-9]+)$', 1), ','
+            order by regexp_extract(lang, '/entity/(Q[0-9]+)$', 1)
+        ) as language_qids,
         max(try_cast(left(dissolved, 10) as date)) as dissolved,
         count(*) as solutions,
         raw_sha256,
@@ -38,33 +41,57 @@ statements as (
 
 names as (
     select
-        entity,
-        u.property,
-        regexp_extract(n.item, '/entity/(Q[0-9]+)$', 1) as qid,
-        regexp_extract(n.item, '/entity/(Q[0-9]+)$', 1) || '$' || u.property as statement_id,
-        'normal' as rank,
-        u.value_text,
-        cast(null as double) as value_number,
-        cast(null as varchar) as unit_qid,
-        cast(null as date) as point_in_time,
-        cast(null as date) as end_time,
-        cast(null as varchar) as language_qids,
-        cast(null as date) as dissolved,
-        1 as solutions,
+        n.entity,
         n.raw_sha256,
-        n.source_version
-    from newest as n,
-        unnest([
-            {'property': 'label_pl', 'value_text': n.label_pl}, {'property': 'label_en', 'value_text': n.label_en},
-            {'property': 'wikipedia_pl', 'value_text': n.article_pl}, {'property': 'wikipedia_en', 'value_text': n.article_en}
-        ]) as t(u)
-    where n.entity = 'names' and u.value_text is not null
+        n.source_version,
+        regexp_extract(n.item, '/entity/(Q[0-9]+)$', 1) as qid,
+        unnest(['label_pl', 'label_en', 'wikipedia_pl', 'wikipedia_en']) as property,
+        unnest([n.label_pl, n.label_en, n.article_pl, n.article_en]) as value_text
+    from newest as n
+    where n.entity = 'names'
 )
 
 select
-    *,
-    case when property = 'P625' then try_cast(regexp_extract(value_text, '^Point\(([-0-9.eE]+) ', 1) as double) end as lon,
-    case when property = 'P625' then try_cast(regexp_extract(value_text, ' ([-0-9.eE]+)\)$', 1) as double) end as lat
+    entity,
+    property,
+    qid,
+    statement_id,
+    rank,
+    value_text,
+    value_number,
+    unit_qid,
+    point_in_time,
+    end_time,
+    language_qids,
+    dissolved,
+    case
+        when property = 'P625' then try_cast(regexp_extract(value_text, '^Point\(([-0-9.eE]+) ', 1) as double)
+    end as lon,
+    case
+        when property = 'P625' then try_cast(regexp_extract(value_text, ' ([-0-9.eE]+)\)$', 1) as double)
+    end as lat,
+    solutions,
+    raw_sha256,
+    source_version
 from statements
-union all by name
-select *, cast(null as double) as lon, cast(null as double) as lat from names
+union all
+select
+    entity,
+    property,
+    qid,
+    qid || '$' || property as statement_id,
+    'normal' as rank,
+    value_text,
+    null as value_number,
+    null as unit_qid,
+    null as point_in_time,
+    null as end_time,
+    null as language_qids,
+    null as dissolved,
+    null as lon,
+    null as lat,
+    1 as solutions,
+    raw_sha256,
+    source_version
+from names
+where value_text is not null

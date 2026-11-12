@@ -27,7 +27,10 @@ codes as (
     where s.property = 'P1653' and s.rank <> 'deprecated' and s.end_time is null and s.dissolved is null
 ),
 
-units as (select * from codes where pick = 1),
+units as (
+    select * from codes
+    where pick = 1
+),
 
 candidates as (
     select
@@ -68,12 +71,40 @@ candidates as (
 )
 
 select
-    terc_code, unit_level, property, qid, statement_id, rank, value_text, value_number, unit_qid, point_in_time,
-    lon, lat, candidates, tied, raw_sha256, source_version
+    terc_code,
+    unit_level,
+    property,
+    qid,
+    statement_id,
+    rank,
+    value_text,
+    value_number,
+    unit_qid,
+    point_in_time,
+    lon,
+    lat,
+    candidates,
+    tied,
+    raw_sha256,
+    source_version
 from candidates
 where pick = 1
-union all by name
+union all
 select
-    terc_code, unit_level, 'qid' as property, qid, null as statement_id, rank, qid as value_text,
-    item_candidates as candidates, 1 as tied, raw_sha256, source_version
+    terc_code,
+    unit_level,
+    'qid' as property,
+    qid,
+    null as statement_id,
+    rank,
+    qid as value_text,
+    null as value_number,
+    null as unit_qid,
+    null as point_in_time,
+    null as lon,
+    null as lat,
+    item_candidates as candidates,
+    1 as tied,
+    raw_sha256,
+    source_version
 from units
