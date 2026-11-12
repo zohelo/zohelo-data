@@ -26,6 +26,28 @@ SLICE = ["EARN_MW_CUR", "ERT_BIL_EUR_M", "PRC_HICP_MINR", "P2656", "P2713", "P26
          "policy_rates"]
 
 
+# Silver tables of sources merged on main but not yet built in production (trial only: the branch's
+# poc_map_geography is patched to an empty stub for them and their blocks wait, as the changed-only build does).
+NEW_SILVER = {
+    "unesco_uis_observations": ("poc_build_unesco_uis", "select ''::varchar as geo_unit, false as is_country_code where false"),
+    "who_observations": ("poc_build_who", "select ''::varchar as geo_type, ''::varchar as geo_code_m49 where false"),
+    "faostat_observations": ("poc_build_faostat", "select 0::integer as area_code, ''::varchar as area_code_m49 where false"),
+}
+
+
+def missing_silver(cat):
+    """Patch poc_map_geography for every NEW_SILVER table missing in production; the blocks that wait."""
+    have = {i[-1] for i in cat.list_tables("silver")}
+    path = ROOT / "warehouse/models/gold/poc_map_geography.sql"
+    sql, waiting = path.read_text(), []
+    for table, (block, stub) in NEW_SILVER.items():
+        if table not in have:
+            sql = sql.replace("{{ ref('" + table + "') }}", "(" + stub + ")")
+            waiting.append(block)
+    path.write_text(sql)
+    return waiting
+
+
 def table(cat, name, fields=None):
     t = cat.load_table((NS, name))
     return t.scan(selected_fields=fields).to_arrow() if fields else t.scan().to_arrow()
@@ -49,25 +71,28 @@ def main() -> int:
     con = duckdb.connect()
     try:
         started, failed = time.monotonic(), []
-        excl = ["--exclude", "path:models/gold/topics", "path:tests/topic_quality.sql",
+        waiting = missing_silver(cat)
+        excl = ["--exclude", *[f"path:models/gold/{b}.sql" for b in waiting], "path:models/gold/topics", "path:tests/topic_quality.sql",
                 "path:tests/topic_quality_warn.sql", "path:tests/topic_seeds.sql"]
         for verb, sel in (("seed", ["path:seeds"]), ("run", ["path:models/gold"]), ("test", ["path:models/gold",
                                                                                          "path:seeds", "path:tests"])):
             cmd = ["dbt", verb, "--target", "prod", "--select", *sel, *excl, "--threads", "2",
-                   "--vars", f"{{gold_schema: {NS}}}"]
+                   "--vars", json.dumps({"gold_schema": NS, "waiting_blocks": waiting})]
             run = subprocess.run(cmd, cwd=ROOT / "warehouse", env=env, capture_output=True, text=True)
             for wait in (60, 180, 300):  # HTTP 429 from the catalog
                 if run.returncode == 0 or verb == "test" or "429" not in run.stdout:
                     break
                 time.sleep(wait)
-                run = subprocess.run(["dbt", "retry", "--target", "prod", "--vars", f"{{gold_schema: {NS}}}"],
+                run = subprocess.run(["dbt", "retry", "--target", "prod", "--vars", json.dumps({"gold_schema": NS,
+                                                                                   "waiting_blocks": waiting})],
                                      cwd=ROOT / "warehouse", env=env, capture_output=True, text=True)
             print(run.stdout[-30000:])
             res = json.loads((ROOT / "warehouse/target/run_results.json").read_text())["results"]
             failed += [[verb, r["unique_id"].split(".")[-1][:60], r["status"], (r.get("message") or "")[:90]]
                        for r in res if r["status"] not in ("success", "pass")]
         annotate("notice" if not failed else "warning", "1 dbt build and tests",
-                 {"minutes": round((time.monotonic() - started) / 60, 1), "not_passed": failed[:12]})
+                 {"minutes": round((time.monotonic() - started) / 60, 1), "waiting_blocks": waiting,
+                  "not_passed": failed[:12]})
         facts = [table(cat, n, ("series_key", "date_key", "source_system", "block_id")) for n in
                  ("fact_annual", "fact_semiannual", "fact_quarterly", "fact_monthly", "fact_daily")]
         con.register("f", pa.concat_tables(facts))
