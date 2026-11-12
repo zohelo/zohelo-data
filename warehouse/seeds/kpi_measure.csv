@@ -144,4 +144,7 @@ pensioners,gus_bdl,gus_bdl:P2861:osoba:przeciętna liczba emerytów i rencistów
 zus_pension_avg,gus_bdl,gus_bdl:P2860:zł:z pozarolniczego systemu ubezpieczeń społecznych emerytury,"non-agricultural system, old-age pension",1,
 investment_outlays,gus_bdl,gus_bdl:P2862:tys. zł:nakłady inwestycyjne w przedsiębiorstwach,"enterprises, current prices",1,
 vacancies_per_unemployed,gus_bdl,gus_bdl:P4334:osoba:zarejestrowani bezrobotni na 1 ofertę pracy,annual,1,
+fdi_inflow,unctad,unctad:US_FdiFlowsStock:08:1:USD_MN,"FDI inward flows, US$ million at current prices (UNCTAD)",3,mln_usd
+exports_goods,unctad,unctad:US_TradeMerchTotal:02:USD_MN,"merchandise exports, US$ million at current prices",1,
+exports_services,unctad,unctad:US_TradeServCatTotal:02:S:USD_MN,"services exports (total), US$ million at current prices",1,
 nbp_reference_rate,nbp_interest_rates,nbp_interest_rates:ref,"reference rate in force at the end of the month",1,

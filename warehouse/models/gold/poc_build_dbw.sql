@@ -1,4 +1,4 @@
-{{ config(alias='build_dbw') }}
+{{ config(alias='build_dbw', tags=['gold_block']) }}
 {# Gold PoC build stage: sampled GUS DBW blocks (indicator × cross-section × presentation ×
    periodicity; one Landing file per year) as observations in the common shape. Labels come
    from each file's dictionary. The territorial dimension of a block is the one whose
@@ -116,7 +116,8 @@ per_row as (
         -- brzeski, ...) and would otherwise share a series (tests/fact_grain.sql)
         max(
             case
-                when l.k = t.k and l.geography_key is null then l.pos_label || ' #' || cast(l.pos_id as varchar)
+                when l.k = t.k and l.geography_key is null
+                    then coalesce(l.pos_label, '') || ' #' || cast(l.pos_id as varchar)
                 when l.k = t.k then l.pos_label
             end
         ) as geography_source_code,
@@ -221,7 +222,8 @@ deduplicated as (  -- one row per series × period: a block that lists both a wo
         order by
             case when regexp_matches(upper(geography_source_code), '^(REGION|MAKROREGION) ') then 1 else 0 end,
             source_version desc,
-            geography_source_code asc
+            geography_source_code asc,
+            raw_sha256 asc
     ) = 1
 )
 

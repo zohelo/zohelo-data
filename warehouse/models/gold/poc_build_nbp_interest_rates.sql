@@ -1,8 +1,8 @@
-{{ config(alias='build_nbp_interest_rates') }}
+{{ config(alias='build_nbp_interest_rates', tags=['gold_block']) }}
 {# Gold build stage: official NBP interest rates (silver.nbp_policy_rates: reference, lombard, deposit,
    rediscount, discount) as monthly observations of Poland. Silver holds one row per rate and date of an MPC
    change; a rate holds until the next change, so Gold places the rate in force on the last day of each month
-   (today for the current month), from the month of the rate's first value. One measure per rate. #}
+   (today for the current month, marked provisional), from the month of the rate's first value. One measure per rate. #}
 with rates as (
     select
         rate_code,
@@ -52,7 +52,8 @@ select
     cast(null as varchar) as sex_code,
     true as is_total,
     cast(r.rate_pct as double) as value,
-    'ok' as observation_status_key,
+    -- the current month is open: a rate change before its end would change the value
+    case when a.date_key = date_trunc('month', current_date) then 'provisional' else 'ok' end as observation_status_key,
     r.source_version,
     r.raw_sha256
 from as_of as a
