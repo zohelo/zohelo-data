@@ -138,12 +138,14 @@ keyed by official identifiers (TERYT, LEI, NIP, REGON, KRS), never matched by na
 
 ## 8. Published
 
-`gold.publish` writes the published layer from Gold ([published.md](published.md)); only
-KPIs with `status: published` in `kpi.csv` reach it, each source as its own series
-(`source_key`). A KPI is set to `published` only with its `poc_metrics_<kpi>.sql` model, a
-semantic model, and PL and EN name and definition. The catalogue carries each source's
-licence; a source whose licence is `unresolved` or `restricted` stays internal (the
-portals' licence gate hides it).
+`gold.publish` writes the published layer from Gold ([published.md](published.md)), each
+source as its own series (`source_key`). v2 (bi.zohelo.com, the owner's review stage) gets
+every KPI with Gold series and a ready `kpi_v2_map.csv` row, draft or published (O37); v1
+(zohelo.com, public) only KPIs with `status: published` in `kpi.csv`. A KPI is set to
+`published` after the owner's review in bi.zohelo.com, with its `poc_metrics_<kpi>.sql`
+model, a semantic model, and PL and EN name and definition. The licence gate is in
+`gold.publish` (O37): no row of a source whose licence is `unresolved` or missing reaches
+v1 or v2; zohelo.com's build applies the same rule again (zohelo#469).
 
 ## Quality bar per layer
 
