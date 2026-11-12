@@ -8,7 +8,7 @@ name: Ops · ad-hoc
 on:
   schedule:
     - cron: '20 5 * * 1'
-    - cron: '0 5 * * 1'
+    - cron: '0 5 * * *'
     - cron: '30 5 * * 1'
     - cron: '40 5 * * 1'
     - cron: '50 5 * * 1'
@@ -57,7 +57,7 @@ jobs:
             # Schedule table: one row per cron; add a cron under on.schedule and a row here.
             case "$CRON" in
               '20 5 * * 1') script=orphan_files; args='--delete --min-age-hours 48' ;;
-              '0 5 * * 1') script=backlog_sync; args='apply' ;;
+              '0 5 * * *') script=backlog_sync; args='apply' ;;
               '30 5 * * 1') script=security_alerts; args='apply' ;;
               '40 5 * * 1') script=tracker; args='' ;;
               '50 5 * * 1') script=release_notes; args='' ;;

@@ -28,6 +28,7 @@ from ingestion.common.r2 import catalog, sources
 from ingestion.common.report import annotate, step_summary
 from ops.platform_inventory import SCRATCH, tables
 from ops.tracker import ROOT, classify
+from warehouse.declared import gold as declared_gold
 
 RETIRED = ("legacy", "leftover", "copy")
 
@@ -56,7 +57,7 @@ def candidates(found: dict[str, dict[str, Any]], classes: tuple[str, ...] = RETI
     """Catalog tables classified legacy, leftover or old-code copy (or only `classes`), sorted."""
     registry = sources()
     platform = yaml.safe_load((ROOT / "warehouse" / "warehouse.yaml").read_text()) or {}
-    shared_gold = list(platform.get("gold") or [])
+    shared_gold = declared_gold()
     demo_namespaces = platform.get("demo_namespaces") or []
     return sorted(n for n in found if classify(n, registry, shared_gold, demo_namespaces=demo_namespaces)[0] in classes)
 

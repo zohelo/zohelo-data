@@ -25,6 +25,7 @@ import time
 import yaml
 
 from ingestion.common.report import ANNOTATION_LIMIT, annotate, step_summary
+from warehouse import declared
 
 PROJECT = Path(__file__).resolve().parent
 _RETRY = yaml.safe_load((PROJECT / "warehouse.yaml").read_text())
@@ -32,7 +33,7 @@ RATE_LIMIT_WAITS = [float(s) for s in _RETRY["rate_limit_retry_waits"]]
 RATE_LIMIT_THREADS = int(_RETRY["rate_limit_retry_threads"])
 COMMIT_RETRY_THREADS = int(_RETRY["commit_retry_threads"])
 # Owner policy #822: only small tables are rebuilt in full; each full-rebuild model has a row ceiling.
-FULL_REBUILD = _RETRY["full_rebuild"]
+FULL_REBUILD = declared.full_rebuild()  # warehouse.yaml and each source's own YAML
 # Topics settings (docs/topics.md): weights, windows and thresholds, passed to every build as the dbt var `topics`.
 TOPICS = _RETRY["topics"]
 
@@ -63,6 +64,11 @@ def changed_only(target: str, variables: dict | None) -> int:
     meta = changed.manifest(target)
     plan = changed.plan(cat, meta)
     step_summary(f"## warehouse · changed models\n\n```json\n{json.dumps(plan, indent=2)}\n```\n")
+    if plan["stalled"]:
+        # A waiting model that has a table is not a new source: it would stay frozen, and a stalled Gold block
+        # passed on as empty would take its rows out of the facts. Nothing is built or published.
+        annotate("error", "warehouse dbt build: stalled models, nothing built", _stalled(plan["stalled"]))
+        return 1
     if not plan["select"]:
         from warehouse import catalog as data_catalog
 
@@ -76,7 +82,32 @@ def changed_only(target: str, variables: dict | None) -> int:
         variables["full_refresh_models"] = plan["full_refresh"]
     if plan["empty_blocks"]:  # the only Gold blocks poc_observations() may find without a table
         variables["waiting_blocks"] = plan["empty_blocks"]
+    if plan["waiting"]:  # the only optional inputs poc_optional_ref() may find without a table
+        variables["waiting_models"] = plan["waiting"]
     return build_once(plan["select"], target, variables, changed_plan={"cat": cat, "meta": meta, **plan})[0]
+
+
+STALLED_SHOWN = 20  # models named in the annotation; the step summary has the whole plan
+
+
+def _stalled(stalled: dict[str, list[str]]) -> dict:
+    """The stalled models for the error annotation: what happened, what to do, and each model with the source
+    tables it waits for (the first STALLED_SHOWN, with a count of the rest)."""
+    shown = dict(list(stalled.items())[:STALLED_SHOWN])
+    out = {
+        "error": (
+            "models that have a table in production are waiting for source tables that do not exist; they would "
+            "not be rebuilt, and a Gold block among them must never be read as empty. Nothing was built."
+        ),
+        "fix": (
+            "load the missing source tables (the source's first Bronze run), or make the new input optional "
+            "(poc_optional_ref and config meta optional_parents), or take it out of the model"
+        ),
+        "stalled": shown,
+    }
+    if len(stalled) > len(shown):
+        out["stalled_more"] = len(stalled) - len(shown)
+    return out
 
 
 def _why(plan: dict) -> dict:
@@ -292,7 +323,7 @@ def table_rows(table) -> int:
 
 def row_ceilings(results: list[dict]) -> dict:
     """Owner policy #822 (#868): the rows of each full-rebuild model this build wrote, against
-    its ceiling in warehouse.yaml `full_rebuild`. Above the ceiling: a warning; above twice the
+    its declared ceiling (`full_rebuild`, warehouse/declared.py). Above the ceiling: a warning; above twice the
     ceiling: the build fails, so a full rebuild that grew is noticed and made incremental (or
     given an exception). A full-rebuild model missing from the list is reported as unlisted
     (repo_check fails on it too). dbt's manifest of this build gives materializations and tables."""

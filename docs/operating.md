@@ -4,7 +4,7 @@
 
 | Workflow | Runs | Trigger |
 |---|---|---|
-| **Pipeline** (`pipeline.yml`) | the dataflow: pick a `source` and a `run` | manual, `main` only |
+| **Pipeline** (`pipeline.yml`) | the dataflow: type a `source` id (free text, checked by the plan job) and pick a `run` | manual, `main` only |
 | **Ops · ad-hoc** (`ops.yml`) | one standing task from `ops/`; weekly CodeQL scan of `main` (job `codeql`) | manual or the schedule table (ops/README.md), `main` only |
 | **Dev · branch runs** (`dev.yml`) | one `dev/` script on a feature branch (trials, tests); deleted before merge. Also the merge gate: `check` and `check-portal` | trials: manual, never `main`; gate: label `merge:check` on a pull request |
 | **Deploy portal** (`deploy-portal.yml`) | build and deploy `portal/app` and `portal/worker` | push to `main` changing them, or manual |
@@ -25,8 +25,8 @@ whose YAML sets `extraction.kind` (for example `bulk_file`) runs the shared patt
 | `bronze.verify` | `ingestion/common/lineage.py` | every Landing file is in Bronze or rejected with a reason; verifies one version per entity in Bronze (fails on breach); Landing files a Bronze table holds twice (warning) |
 | `landing.archive` | `ingestion/common/archive.py` | move Bronze-loaded Landing files to Archive (copy, verify SHA-256, delete from Landing; receipt stays) |
 | `archive.prune` | `ingestion/common/retention.py` | apply the source's Archive retention (`archive_policy` in its config) |
-| `silver_gold.build` | `warehouse/build.py` | platform: dbt build of `warehouse/models/` (filter = model names; empty = only models whose inputs or code changed, leaving out models whose source table does not exist yet (a new source before its first Bronze load; listed as `waiting` in the run summary); a waiting Gold block (tag `gold_block`) does not hold back the facts, dimensions and metrics: the block is listed again under `empty_blocks`, passed to dbt as the var `waiting_blocks`, read as zero rows and noted by `build_check` as `waiting: …`; a block without a table that the plan did not declare waiting (a partial catalog listing, a run killed between renames, a filtered build such as `poc_fact_annual+`) fails the build, and so does a block that is built in the run and fails; `fqn:*` = all); publishes the data catalog (only the Pipeline on `main`; Dev trials skip it) |
-| `gold.publish` | `warehouse/publish.py`, `warehouse/publish_v2.py` | platform: rewrites 06_published/v1/ from Gold, then 06_published/v2/ when warehouse.yaml `published_v2` is true (docs/published.md) |
+| `silver_gold.build` | `warehouse/build.py` | platform: dbt build of `warehouse/models/` (filter = model names; empty = only models whose inputs or code changed, leaving out models whose source table does not exist yet (a new source before its first Bronze load; listed as `waiting` in the run summary); a waiting Gold block (tag `gold_block`) does not hold back the facts, dimensions and metrics: the block is listed again under `empty_blocks`, passed to dbt as the var `waiting_blocks`, read as zero rows and noted by `build_check` as `waiting: …`; only a waiting block that has no table is listed there, and the geography map reads a new source's codes only once that Silver table exists (`poc_optional_ref`, config meta `optional_parents`), so a source without Bronze holds back only its own models; a waiting model that already has a table (an input it was built from is gone, or a new input was added before that input's first load) is listed under `stalled` and fails the build before dbt runs, with the missing source tables in the error annotation (#2903); a block without a table that the plan did not declare waiting (a partial catalog listing, a run killed between renames, a filtered build such as `poc_fact_annual+`) fails the build, and so does a block that is built in the run and fails; `fqn:*` = all); publishes the data catalog (only the Pipeline on `main`; Dev trials skip it) |
+| `gold.publish` | `warehouse/publish.py`, `warehouse/publish_v2.py` | platform: rewrites 06_published/v1/ from Gold, then 06_published/v2/ when warehouse.yaml `published_v2` is true (docs/published.md). Skipped in a run whose model build was replaced in the queue by a newer one (that run publishes after its build). Reads every metrics table before the first write; the table of a live KPI that is missing (a concurrent `silver_gold.build` swaps tables) is read again for up to 9 minutes; still missing, the run writes and removes nothing and ends green with a warning (`deferred`) while the live files are at most 6 hours old, and fails after that (#2834) |
 | `serving.refresh_index` | `portal/publish_index.py` | platform: rebuild the portal file index; dbt temporary and backup tables (`__dbt_tmp`, `__dbt_backup`) are not shown, and listed tables that a concurrent `silver_gold.build` swaps away (not found again after one 15 s re-check of all misses) are skipped with a warning annotation and shown by the next refresh; more than 3 skipped tables or more than 10% of those listed fail the job (R2 answers the same 404 for a bad credential); any other error fails the job (#2825) |
 
 A Pipeline run is one activity or a source's `full dataflow: landing → bronze → silver → gold → portal`
@@ -55,9 +55,10 @@ npm --prefix portal/app run dev
 Production reads and writes need the R2 credentials, which exist only in GitHub
 Actions. There is no repository test suite. No workflow runs on a push to a pull request
 (owner direction 12 Nov 2026): run `python -m ops.repo_check` locally while iterating. The
-`check` job in `dev.yml` (linked task, compile, lint, YAML, configuration consistency, dbt
-parse, secret scan) runs once, when the label `merge:check` is added to the reviewed, final
-pull request, and must pass on its head before merge ([flow.md](flow.md), merge gate).
+`check` job in `dev.yml` (linked task, compile, lint, YAML, configuration consistency, offline
+dbt compile with a DuckDB parse of every model, dbt parse, secret scan) runs once, when the
+label `merge:check` is added to the reviewed, final pull request, and must pass on its head
+before merge ([flow.md](flow.md), merge gate).
 CodeQL scans `main` weekly from Ops, not each pull request. Quality rules: [quality.md](quality.md).
 
 ### Dev trials
@@ -100,10 +101,12 @@ Every source is declared in `ingestion/sources/<source>.yaml` with one key set, 
 | `archive_folder` | Archive folder of a source not yet rebuilt (default `05_archive/<source>/`) |
 | `refresh` | required for loaded sources (owner policy, 21 Oct, #875): scheduled ingestion of a **small** source is `mode: full`; of a **big** source `mode: incremental` with `unit` (the entity a new version replaces), incremental in **every layer** (needs `to_bronze/<s>/entities.py`); a change that requires recalculating the whole table (e.g. Silver logic) is a **full build** for any source. `decided`: `D32` plus the PR or issue of that source (sources decided before D32 cite the owner decision issue, `#875`); small or big is judged per source by Claude under the owner's rules of 20–21 Oct (size, update pattern, whether the source offers changed-since; no fixed row threshold), D32 |
 | `bronze_latest_only` | optional boolean; when `true`, a Bronze load removes superseded versions (policy #822/#845) |
-| `bronze`, `silver`, `gold` | tables the source owns in each layer; `*_rejected_files` tables record decoder rejections |
+| `bronze`, `silver`, `gold` | tables the source owns in each layer; `*_rejected_files` tables record decoder rejections. `gold` is the one place a source's own Gold tables are listed ([source-registration.md](source-registration.md)) |
+| `full_rebuild` | optional; row ceilings of the source's own full-rebuild dbt models, `model: {rows: <ceiling>[, exception: "#<issue>"]}` (owner policy #822), with the measured count in a comment |
 | `legacy_tables` | tables of retired code still in the catalog (globs allowed), until deleted |
 | `activities` | the Pipeline activities authorized for the source |
 
-Shared Gold models and the Eurostat Silver batching settings are declared in
-`warehouse/warehouse.yaml`. Code derives table lists (Bronze proofs, archive sources,
-inventory) from these files; nothing is listed twice.
+Shared Gold models (dimensions, facts, seeds, KPI metrics), their row ceilings and the Eurostat Silver
+batching settings are declared in `warehouse/warehouse.yaml`. Code derives table lists (Bronze proofs,
+archive sources, inventory, the Gold list and the row ceilings: `warehouse/declared.py`) from these files;
+nothing is listed twice.
