@@ -4,8 +4,8 @@ models:
     description: >-
       Wikidata (CC0) statements of the items holding a TERC code (P1653), newest copy of each SPARQL selection:
       P1653, P1082 population, P2046 area, P625 coordinates, P856 official website (every rank, qualifiers folded),
-      plus labels pl/en and Wikipedia articles pl/en per item. Grain: statement_id. Population point in time
-      1939-2024, mostly 2021 census (Dev probe 43273792713); counts in the PR's Dev trial.
+      plus labels pl/en and Wikipedia articles pl/en per item. Grain: statement_id. 31,450 rows for 3,508 items;
+      population points in time up to 2025-06-30, mostly 2021 (census) and 2023 (Dev trial 43281448180).
     columns:
       - name: statement_id
         tests: [not_null, unique]
@@ -27,7 +27,8 @@ models:
       Wikidata attributes of the Polish voivodeships, powiats and gminas of the current TERYT catalogue that
       Wikidata holds. Grain: terc_code × property; one item per code and one statement per property chosen by the
       explicit rule in the model header (preferred rank, latest point in time, statement id as the last tie-break),
-      candidates and tied count what was set aside.
+      candidates and tied count what was set aside. 26,563 rows for 3,150 codes: 11 of 16 voivodeships, 367 of 380
+      powiats, 2,772 of 3,964 gmina-level codes (Dev trial 43281448180).
     tests:
       - unique:
           column_name: "terc_code || '|' || property"

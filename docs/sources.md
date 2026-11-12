@@ -909,7 +909,10 @@ statement, qualifiers folded) and `silver.wikidata_terc_attributes` (one row per
 item and one statement chosen by preferred rank, latest point in time, statement id as the last tie-break; the
 rest counted in `candidates` and `tied`). Gold `gold.geo_unit_wikidata` (one row per `TERC:<code>`: QID, labels
 pl/en, population and its date, area as published, coordinates, website, Wikipedia articles pl/en): attributes,
-not a KPI block; GUS and PRG stay the statistical sources. Terms: CC0 1.0 for structured data
+not a KPI block; GUS and PRG stay the statistical sources. Dev trial 43281448180: 6 files (11.8 MB), 21,028
+bindings, 3,508 items; 3,150 current TERYT codes matched (11 of 16 voivodeships, 367 of 380 powiats, 2,772 of
+3,964 gmina-level codes; 445 Wikidata codes of other shapes and 16 gmina codes not in TERYT are left out);
+population for 1,581 units. Terms: CC0 1.0 for structured data
 (https://www.wikidata.org/wiki/Wikidata:Copyright); licence row `cc0_wikidata`. Refresh full (D32), weekly.
 Restart unit: one selection.
 
