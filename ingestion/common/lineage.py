@@ -29,9 +29,14 @@ SOURCES = (
     "nbp",
     "nbp_interest_rates",
     "oecd",
+    "undp_hdr",
     "who",
     "unesco_uis",
     "faostat",
+    "undata",
+    "bis",
+    "ilostat",
+    "unece",
     "world_bank_wdi",
     "world_bank_findex",
     "world_bank_icp",
@@ -51,6 +56,8 @@ SOURCES = (
     "gus_culture_participation",
     "gus_tourism",
     "mrpips_unemployment",
+    "ecb",
+    "un_wpp",
 )
 # Accumulating sources (every landed copy stays in Bronze, docs/topics.md): no latest-only gate.
 ACCUMULATING = ("news_feeds", "gdelt", "wikimedia_pageviews")

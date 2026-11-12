@@ -24,7 +24,7 @@ tables and the `poc` namespace stay until the retire Task drops them.
 | `fact_annual`, `fact_quarterly`, `fact_monthly`, `fact_daily` | observations per series and year / quarter / month / day |
 | `dim_concept`, `concept_measures` | cross-source concepts (KPIs) and their measures |
 | `metrics_population`, `metrics_gdp_current_prices`, `metrics_inflation`, `metrics_unemployment_rate`, `metrics_fx_rate`, `metrics_gdp_per_capita`, `metrics_gdp_volume_growth` | the published metrics; draft concepts have their own `metrics_<kpi>` tables (e.g. OECD `metrics_business_confidence_oecd`, `metrics_consumer_confidence_oecd`, `metrics_cli_oecd`) |
-| `src_eurostat`, `src_dbw`, `src_dbw_dictionary`, `build_eurostat`, `build_bdl`, `build_dbw`, `build_wdi`, `build_nbp`, `build_oecd`, `build_gleif`, `build_mf_biala_lista`, `build_prg` | extraction and build stages per source |
+| `src_eurostat`, `src_dbw`, `src_dbw_dictionary`, `build_eurostat`, `build_bdl`, `build_dbw`, `build_wdi`, `build_nbp`, `build_oecd`, `build_gleif`, `build_mf_biala_lista`, `build_prg`, `build_ids` | extraction and build stages per source |
 | `build_check`, `grain_check` | per activated block rows, series, unmatched geography; fact grain check |
 | `coverage` | one row per block a source publishes (Eurostat dataset, BDL subgroup, DBW file, GLEIF/MF file, OpenData member, Landing entity of NBP/WDI/TERYT/PRG): published and landed version, in Bronze, in Silver, Silver rows, status `loaded` / `loading` / `outdated` / `waiting` / `rejected` / `published without data` / `excluded` / `no longer published` (Eurostat: held, but gone from the inventory). Not dbt: each source's `bronze.verify` replaces its own rows from catalogue and table metadata (`ingestion/common/coverage.py`). `excluded` marks a published block outside the scope (Eurostat Comext datasets, from `_control/eurostat/catalogue.json`, rewritten from the whole inventory by every `landing.inspect` and `landing.extract`). A verify that stops before its checks (no snapshot, no Landing file) leaves the previous rows; `checked_at` shows their age. Tells a block that is not offered apart from a block not loaded yet |
 
@@ -111,6 +111,9 @@ Unit = base unit + multiplier + currency (UCUM for physical units, ISO 4217 for
 currencies, SDMX CL_UNIT_MULT). Price base (current, constant, chain-linked + reference
 year) and seasonal adjustment are separate dimensions even where Eurostat or WDI bake
 them into a unit code or indicator name; Silver parses them with reviewed mapping tables.
+Built (decision D33): `unit.csv` carries each unit's `base_unit_key` and `factor`, `unit_map.csv` maps the
+sources' unit codes; facts keep the published value and unit, and only the KPI metrics convert, by pure scale, to
+the KPI's target unit (docs/playbook.md "Units").
 
 ## Classifications
 

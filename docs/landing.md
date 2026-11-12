@@ -148,6 +148,12 @@ extraction:
         format: raw
 ```
 
+`landing: inspect` asks the server for the file's headers (ETag, Last-Modified, Content-Length) with a
+HEAD request, and with a streamed GET whose body is not read when HEAD is refused (403, 405, 501).
+A server that answers HEAD wrongly in another way (404, a dropped connection; UNdata, the UIS Data
+API, zus.pl) gets `probe: get` on its files: the streamed GET is then the only request, with the same
+retries and timeouts. `probe` is `head` (default) or `get`; other values fail the configuration check.
+
 A file declares either `url` or `url_from`. With `url_from`, `landing: inspect` lists the
 matching links (first 10) and the chosen URL per entity, a page without a match is an
 error, and the receipt's `source_url` is the resolved URL. JavaScript-rendered pages are
