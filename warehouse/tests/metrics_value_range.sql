@@ -55,7 +55,11 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('ghg_emissions', 'faostat', '%', 0, 8.2e7),
     -- FAOSTAT (#2402): 1000 ha; World land area 13,040,161.55 (Dev trial 43159213097). Documentation only (no
     -- metrics_area model yet).
-    ('area', 'faostat', '%', 0, 2e7)
+    ('area', 'faostat', '%', 0, 2e7),
+    -- World Bank GEM (#2373): CPI % y-o-y; documentation only until metrics_cpi_annual_rate joins the union below.
+    ('cpi_annual_rate', 'world_bank_gem', 'world_bank_gem:CPTOTSAXNZGY:pct', -50, 1000),
+    -- World Bank GEM (#2373): unemployment rate %; documentation only (no metrics model for the monthly KPI yet).
+    ('unemployment_rate_monthly_sa', 'world_bank_gem', 'world_bank_gem:UNEMPSA_:pct', 0, 60)
 ),
 
 metrics as (
