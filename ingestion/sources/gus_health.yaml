@@ -1,0 +1,41 @@
+source_system: gus_health
+description: "GUS — Zdrowie i ochrona zdrowia (health and health care), annual publication tables (PLS-004, health family)"
+
+# Extraction strategy (docs/landing.md). Register PLS-004 (GUS thematic publications), health family only: the other
+# families of PLS-004 are not built here (docs/sources/gus_health.md). Bulk feature: stat.gov.pl publishes the annual
+# publication 'Zdrowie i ochrona zdrowia w <year> r.' (2024 edition published 29 January 2026) on its own page with a
+# tables file ('... Tablice w formacie XLSX': one workbook of 111 tables in 2024). The health subject page links the
+# newest edition, each edition page links the other editions (2012-2024). Entity = one edition (the reference year),
+# version = download time (no Last-Modified), written only when the SHA-256 changed; the newest edition is downloaded
+# again on every run, older landed editions are not (ingestion/common/gus_publications.py,
+# ingestion/to_landing/gus_health/). Restart unit: one edition. Dev probes 43326028228, PROBE2 on test/429-gus-health.
+# History: TRIAL_HISTORY
+extraction:
+  initial: bulk
+  production: snapshot                  # each edition file as published; a correction replaces it
+  incremental_policy: changed_since_last  # new editions; SHA-256 of the newest edition
+  schedule: # UTC; annual edition (late January); monthly check
+    - {cron: "40 6 7 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gus_health/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.gus_health_cells, bronze.gus_health_rejected_files]
+silver: [silver.gus_health_tables]
+gold: [gold.build_gus_health, gold.metrics_practising_doctors, gold.metrics_practising_nurses, gold.metrics_hospital_beds, gold.metrics_hospital_beds_per_10k]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gus_health_tables: {rows: CEIL_SILVER}  # TRIAL_SILVER
+  poc_build_gus_health: {rows: CEIL_GOLD}  # TRIAL_GOLD
+  poc_metrics_practising_doctors: {rows: CEIL_METRIC}  # TRIAL_METRIC
+  poc_metrics_practising_nurses: {rows: CEIL_METRIC}  # TRIAL_METRIC
+  poc_metrics_hospital_beds: {rows: CEIL_METRIC}  # TRIAL_METRIC
+  poc_metrics_hospital_beds_per_10k: {rows: CEIL_METRIC}  # TRIAL_METRIC
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): about a dozen edition files of 1 to 5 MB, one new a year, a few hundred
+# thousand cells; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #429"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
