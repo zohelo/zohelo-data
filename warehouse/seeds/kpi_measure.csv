@@ -189,3 +189,5 @@ external_debt_service_gni,world_bank_ids,world_bank_ids:DT.TDS.DECT.GN.ZS,"total
 external_debt_service_exports,world_bank_ids,world_bank_ids:DT.TDS.DECT.EX.ZS,"total debt service, % of exports of goods, services and primary income",1,pct_exports
 refugees_hosted,unhcr,unhcr:population_by_asylum:persons:refugees,"UNHCR population statistics, end of year, by country of asylum (origins summed)",1,
 ghg_emissions,eea,eea:govreg_ghg_inventory:gg_co2e:Sectors/Totals_excl,"total excl. LULUCF as reported to the UNFCCC (international bunkers excluded), Gg = kt CO2e, EEA GovReg inventory",4,thousand_tonnes
+cpi_annual_rate,world_bank_gem,world_bank_gem:CPTOTSAXNZGY:pct,"CPI, % y-o-y, not seasonally adjusted, monthly (World Bank GEM)",8,pct
+unemployment_rate_monthly_sa,world_bank_gem,world_bank_gem:UNEMPSA_:pct,"unemployment rate, seasonally adjusted, monthly (World Bank GEM)",10,pct_labour_force

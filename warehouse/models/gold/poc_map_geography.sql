@@ -396,6 +396,13 @@ ecb as (
 unhcr as (
     select
         'unhcr' as source_system,
+),
+
+-- World Bank GEM (API source 15): countries by ISO 3166-1 alpha-3 (dim_geography iso3), built from Gold's own list
+-- like oecd, so the dimensions never wait for the GEM source.
+world_bank_gem as (
+    select
+        'world_bank_gem' as source_system,
         g.iso3 as source_code,
         g.geography_key
     from geo as g
@@ -454,6 +461,8 @@ from (
     select * from unhcr
     union all
     select * from eea
+    union all
+    select * from world_bank_gem
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

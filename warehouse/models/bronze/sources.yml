@@ -325,6 +325,22 @@ sources:
       publicationdate, datasource, country_code_3, every value as published text; partitioned by entity.
   - name: eea_rejected_files
     description: EEA Landing files the Bronze decoder rejected (not one CSV member, unknown header), with the reason.
+- name: world_bank_gem
+  description: World Bank Global Economic Monitor (API source 15) — declared series for the EU27 members
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/world_bank_gem/
+    loaded_by: ingestion/to_bronze/world_bank_gem/
+    config: ingestion/sources/world_bank_gem.yaml
+  tables:
+  - name: gem_observations
+    description: >-
+      One row per record with a value of the newest answer of each series (entity series_<id>): country_code
+      (ISO alpha-3), country_name, series_code, series_name, time_code (2025, 2025Q3, 2025M07), time_value,
+      value_text (exact JSON number text); partitioned by entity.
+  - name: gem_rejected_files
+    description: World Bank GEM Landing files the Bronze decoder rejected, with the reason.
 - name: who
   description: WHO data.who.int — indicator CSV files (all areas, years and sexes)
   database: r2

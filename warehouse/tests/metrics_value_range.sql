@@ -62,6 +62,10 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- EEA GovReg (#2424): kt CO2e, total excl. LULUCF; highest set from the trial. Documentation only until
     -- metrics_ghg_emissions joins the metrics union below.
     ('ghg_emissions', 'eea', 'eea:govreg_ghg_inventory:gg_co2e:Sectors/Totals_excl', 0, 2e6)
+    -- World Bank GEM (#2373): CPI % y-o-y; documentation only until metrics_cpi_annual_rate joins the union below.
+    ('cpi_annual_rate', 'world_bank_gem', 'world_bank_gem:CPTOTSAXNZGY:pct', -50, 1000),
+    -- World Bank GEM (#2373): unemployment rate %; documentation only (no metrics model for the monthly KPI yet).
+    ('unemployment_rate_monthly_sa', 'world_bank_gem', 'world_bank_gem:UNEMPSA_:pct', 0, 60)
 ),
 
 metrics as (
