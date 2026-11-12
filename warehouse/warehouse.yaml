@@ -66,7 +66,7 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)
        gold.dimension, gold.dimension_alias, gold.dim_dimension,  # catalogue: axes
-       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_nbp_interest_rates, gold.build_public_finance, gold.build_oecd, gold.build_gleif, gold.build_mf_biala_lista, gold.build_prg, gold.build_wdi, gold.build_mrpips_unemployment, gold.build_mf_jst_budgets, gold.build_unctad, gold.build_un_wpp, gold.metrics_population_projection, gold.build_faostat, gold.build_unesco_uis, gold.build_who, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth, gold.build_ecb, gold.metrics_m3_growth, gold.metrics_ecb_deposit_rate,
+       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_nbp_interest_rates, gold.build_public_finance, gold.build_oecd, gold.build_gleif, gold.build_mf_biala_lista, gold.build_zus_psz, gold.build_prg, gold.build_wdi, gold.build_mrpips_unemployment, gold.build_mf_jst_budgets, gold.build_unctad, gold.build_un_wpp, gold.metrics_population_projection, gold.build_faostat, gold.build_unesco_uis, gold.build_who, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth, gold.build_ecb, gold.metrics_m3_growth, gold.metrics_ecb_deposit_rate,
        gold.build_wgi, gold.build_findex, gold.build_icp,  # World Bank WGI, Findex, ICP (#2736)
        gold.metrics_wgi_voice_accountability, gold.metrics_wgi_political_stability, gold.metrics_wgi_government_effectiveness, gold.metrics_wgi_regulatory_quality, gold.metrics_wgi_rule_of_law, gold.metrics_wgi_control_of_corruption, gold.metrics_account_ownership, gold.metrics_price_level_index, gold.build_ids]   # Gold v1 (warehouse/models/gold, docs/model.md)
 demo_namespaces: [demo_bronze, demo_silver, demo_gold]  # phase 2 demo warehouse (program plan §3.3); never in the public catalogue
@@ -117,6 +117,8 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   krus_benefits: {rows: 900}  # 576 (Dev trial 43099813876), quarters and years since 2020
   mf_jst_budget_summary: {rows: 32000}  # 21,263 rows, 2022 Q1 - 2026 Q1 (Dev trial 43162316724)
   mrpips_registered_unemployment: {rows: 85000}  # 828 rows a month; 56,202 for 68 months (Dev trial 43100663615)
+  nbp_bop_observations: {rows: 85000}  # 55,332 (Dev trial 43093233419)
+  zus_psz_observations: {rows: 2400}  # 1,570 (Dev trial 43271727766); about 217 more a quarter + about 90 a year (December tables)
   nbp_policy_rates: {rows: 2000}  # 390 rows, 96 archive dates since 1998 (Dev trial 42777711811)
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865
@@ -147,6 +149,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_mf_biala_lista: {rows: 10}  # 4 (Dev trial 43099545187)
   poc_build_ids: {rows: 50000}  # 31,260 (Dev trial 43202506484)
   poc_build_prg: {rows: 4300}  # 2,875 PRG units (16 voivodeships, 380 powiats, 2,479 gminas; Dev trial 43099545187 minus the country)
+  poc_build_zus_psz: {rows: 2400}  # 1,564 (Dev trial 43271727766): 9 measures, 329 series
   poc_build_public_finance: {rows: 8600}  # 5,727 (Dev trial 43099813876)
   poc_build_unctad: {rows: 18000}  # 11,871 (Dev trial 43100532689): 29 areas × 10 measures
   poc_build_who: {rows: 6000}  # 3,696: 28 areas × 22 years × 3 sexes × 2 indicators (Dev trial 43159213097)
@@ -160,7 +163,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_findex: {rows: 1200}  # 772 (Dev check 43092680524): account_t_d, group all
   poc_build_icp: {rows: 1250}  # 817 (Dev check 43092680524): 2 measures, 2017 and 2021 only
   poc_concept_measures: {rows: 1000}
-  poc_dim_calendar: {rows: 80000}
+  poc_dim_calendar: {rows: 110000}  # 73,414 (Dev run 43285255495, 12 Nov)
   poc_dim_concept: {rows: 1000}
   poc_dim_frequency: {rows: 1000}
   poc_dim_geography: {rows: 120000}
@@ -216,7 +219,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_gdp_regional_growth: {rows: 20000}
   poc_metrics_gfcf_rate: {rows: 20000}
   poc_metrics_gfcf_growth: {rows: 20000}
-  poc_metrics_gdp_contributions: {rows: 20000}
+  poc_metrics_gdp_contributions: {rows: 26000}  # 17,070 (Dev run 43285255495, 12 Nov)
   poc_metrics_gva_by_section: {rows: 20000}
   poc_metrics_gfcf_by_asset: {rows: 20000}
   poc_metrics_business_climate: {rows: 30000}
@@ -228,7 +231,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_retail_sales: {rows: 30000}
   poc_metrics_ppi_annual_rate: {rows: 30000}
   poc_metrics_current_account_gdp: {rows: 20000}
-  poc_metrics_current_account_components: {rows: 20000}
+  poc_metrics_current_account_components: {rows: 28000}  # 18,886 (Dev run 43285255495, 12 Nov)
   poc_metrics_fdi_inflow: {rows: 30000}  # + UNCTAD, 29 areas × 36 years
   poc_metrics_job_vacancy_rate: {rows: 20000}
   poc_metrics_labour_productivity: {rows: 20000}
@@ -237,7 +240,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_gender_pay_gap: {rows: 20000}
   poc_metrics_gini: {rows: 20000}
   poc_metrics_social_spending_gdp: {rows: 20000}
-  poc_metrics_youth_unemployment: {rows: 30000}
+  poc_metrics_youth_unemployment: {rows: 38000}  # 25,306 (Dev run 43285255495, 12 Nov)
   poc_metrics_disposable_income_pc: {rows: 20000}
   poc_metrics_pensioners: {rows: 20000}
   poc_metrics_zus_pension_avg: {rows: 20000}
@@ -245,7 +248,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_vacancies_per_unemployed: {rows: 20000}
   poc_metrics_average_gross_wage: {rows: 20000}
   poc_metrics_employment_rate: {rows: 20000}
-  poc_metrics_registered_unemployment_rate: {rows: 30000}
+  poc_metrics_registered_unemployment_rate: {rows: 56000}  # 37,170 rows on prod (12 Nov, review of #2852)
   poc_metrics_business_confidence_oecd: {rows: 50000}  # 27,432 rows, 55 areas (#2738)
   poc_metrics_consumer_confidence_oecd: {rows: 50000}  # 24,611 rows, 51 areas
   poc_metrics_cli_oecd: {rows: 30000}  # 14,307 rows, 22 areas
