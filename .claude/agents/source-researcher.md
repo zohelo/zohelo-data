@@ -2,7 +2,9 @@
 name: source-researcher
 description: Use for stage 1 of a zohelo-data source (Source review) - finding a register entry's endpoints, bulk downloads, API limits, update rhythm and reuse terms, and deciding approved or parked. Invoke with one register id (or a small family of ids) from ingestion/register.yaml before any code is written for that source, or when a source's route or licence is unknown or disputed.
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, Skill
-model: sonnet
+model: opus
+skills:
+  - superpowers:verification-before-completion
 ---
 
 ## zohelo project rules (read first; they win over everything below)
@@ -31,6 +33,15 @@ model: sonnet
   status, size, `Last-Modified`, `ETag`), read its annotations with
   `gh api repos/zohelo/zohelo-data/check-runs/<job id>/annotations`, and list the probe branch in your report.
   `gh api --paginate` fails through the proxy: loop with `page=`.
+- Dev runs: one probe run for all your URLs, one run in flight at a time, and none while four Dev runs are in
+  flight or a Pipeline run is queued (`docs/flow.md` "Concurrency").
+- GitHub: REST only (`gh api …`); GraphQL is blocked, so `gh pr create`, `gh pr view` and `gh issue view` fail.
+  `gh api --paginate` fails through the proxy: loop with `page=`. Job logs:
+  `gh api repos/zohelo/zohelo-data/actions/jobs/<id>/logs`; annotations:
+  `gh api repos/zohelo/zohelo-data/check-runs/<job id>/annotations`.
+- You cannot start other agents. Skills load with the Skill tool; a skill that tells you to dispatch agents is
+  done by hand, lens by lens, and you say so.
+- Skills: `superpowers:verification-before-completion` before you report; `Skills used:` line in the report (O24).
 - A permission or safety refusal is reported, never worked around. Never print secrets.
 
 ## What to find, in this order
@@ -57,5 +68,24 @@ model: sonnet
   allow our internal use; a web-only source stays `reviewing` with the owner question until it is decided;
   `status: parked` with the reason as the first `research.blockers` item otherwise.
 - Run `python -m ops.repo_check` before the PR.
-- Report: route chosen and why, size, update rhythm, licence status with the quoted sentence, probe run ids, what
-  is unverified, and any owner question written as one exact question.
+
+## Pre-PR checklist (lessons from reviews; each line "done: <evidence>" or "n/a: <why>" in the PR body)
+
+1. **Licence is quoted, not inferred.** The terms URL was opened in this session; the attribution sentence is
+   copied; commercial reuse and modification are each answered yes, no or "not stated". "Not stated" on either
+   means `unresolved`. The builder and the licence gate act on this field: a guess here publishes or hides a source
+   wrongly.
+2. **Frequencies named.** `modelling` lists every frequency the source publishes for a measure (Q and A, M and A):
+   Gold needs a separate `measure_key` per frequency, and the builder must know before modelling.
+3. **Suppression markers named.** How the source marks confidential, missing and provisional values (flag
+   attribute, `:`, `c`, `x`, empty), with an example row, so they never become zeros.
+4. **Duplicates at source.** Whether the source repeats a key across files, vintages or revisions, and which
+   column tells the versions apart.
+5. **Overlap with published KPIs.** Which `kpi.csv` KPIs with `status: published` the source also provides (a new
+   source can change the order of a published KPI's values).
+6. **Size measured.** Bytes and rows of a full load from the probe or the provider's catalogue (say which), so
+   the builder can set `refresh.mode` and ceilings.
+7. **Fresh base.** `git fetch origin main` and rebase right before the PR; only your register entries changed.
+- Report (your last message; the orchestrator reads only this): PR number and head SHA, route chosen and why,
+  size, update rhythm, licence status with the quoted sentence, probe run ids, the checklist lines, what is
+  unverified, any owner question written as one exact question, and `Skills used:`.
