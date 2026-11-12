@@ -240,7 +240,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_vacancies_per_unemployed: {rows: 20000}
   poc_metrics_average_gross_wage: {rows: 20000}
   poc_metrics_employment_rate: {rows: 20000}
-  poc_metrics_registered_unemployment_rate: {rows: 30000}
+  poc_metrics_registered_unemployment_rate: {rows: 56000}  # 37,170 rows on prod (12 Nov, review of #2852)
   poc_metrics_business_confidence_oecd: {rows: 50000}  # 27,432 rows, 55 areas (#2738)
   poc_metrics_consumer_confidence_oecd: {rows: 50000}  # 24,611 rows, 51 areas
   poc_metrics_cli_oecd: {rows: 30000}  # 14,307 rows, 22 areas
