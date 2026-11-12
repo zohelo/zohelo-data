@@ -1,0 +1,25 @@
+version: 2
+models:
+  - name: findex_observations
+    description: >-
+      Global Findex Database (country level) of the newest edition: one row per economy or aggregate ×
+      survey year (2011, 2014, 2017, 2021, 2022, 2024) × population group (group / group_value: all,
+      gender, age, income, education, labour force, urbanicity) × indicator; value as a share 0-1.
+      Aggregates are World Bank regions and income groups; no EU aggregate.
+    tests:
+      - unique:
+          column_name: "economy_code || '|' || year || '|' || group_name || '|' || group_value || '|' || indicator"
+    columns:
+      - name: economy_code
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: group_name
+        tests: [not_null]
+      - name: group_value
+        tests: [not_null]
+      - name: indicator
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]
