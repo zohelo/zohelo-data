@@ -26,17 +26,37 @@ REUSE = "https://www.gov.pl/web/premier/ponowne-wykorzystywanie"
 def get(url: str) -> requests.Response:
     time.sleep(3)
     r = requests.get(url, headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"}, timeout=(30, 300))
-    print(json.dumps({"url": url, "status": r.status_code, "bytes": len(r.content),
-                      "headers": {k: v for k, v in r.headers.items() if k.lower() in
-                                  ("content-type", "content-length", "last-modified", "etag", "content-disposition",
-                                   "cache-control")}}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {
+                "url": url,
+                "status": r.status_code,
+                "bytes": len(r.content),
+                "headers": {
+                    k: v
+                    for k, v in r.headers.items()
+                    if k.lower()
+                    in (
+                        "content-type",
+                        "content-length",
+                        "last-modified",
+                        "etag",
+                        "content-disposition",
+                        "cache-control",
+                    )
+                },
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
     return r
 
 
 def text_near(html: str, needle: str, width: int = 400) -> str:
     plain = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html))
     i = plain.find(needle)
-    return plain[max(0, i - 50): i + width] if i >= 0 else ""
+    return plain[max(0, i - 50) : i + width] if i >= 0 else ""
 
 
 def profile(name: str, body: bytes) -> dict:
@@ -54,9 +74,14 @@ def profile(name: str, body: bytes) -> dict:
         vals = cols[h]
         nonempty = [v for v in vals if v not in (None, "")]
         c = Counter(nonempty)
-        p = {"i": i, "empty": len(vals) - len(nonempty), "distinct": len(c),
-             "maxlen": max((len(v) for v in nonempty), default=0),
-             "newline_rows": sum(1 for v in nonempty if "\n" in v), "semicolon_rows": sum(1 for v in nonempty if ";" in v)}
+        p = {
+            "i": i,
+            "empty": len(vals) - len(nonempty),
+            "distinct": len(c),
+            "maxlen": max((len(v) for v in nonempty), default=0),
+            "newline_rows": sum(1 for v in nonempty if "\n" in v),
+            "semicolon_rows": sum(1 for v in nonempty if ";" in v),
+        }
         if len(c) <= 60 and p["maxlen"] <= 200:
             p["values"] = c.most_common()
         else:
@@ -73,9 +98,13 @@ def main(argv=None) -> int:
         links = links_matching(r.text, r.url, r"/register-file/")
         csv_links = links_matching(r.text, r.url, r"\.csv")
         anchor = re.findall(r'<a[^>]+href="([^"]*register-file[^"]*)"[^>]*>(.*?)</a>', r.text, flags=re.S)
-        results[key] = {"status": r.status_code, "register_links": links, "csv_links": csv_links,
-                        "anchors": [(h, re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", t)).strip()) for h, t in anchor][:5],
-                        "footer": text_near(r.text, "Treści tekstowe", 300)}
+        results[key] = {
+            "status": r.status_code,
+            "register_links": links,
+            "csv_links": csv_links,
+            "anchors": [(h, re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", t)).strip()) for h, t in anchor][:5],
+            "footer": text_near(r.text, "Treści tekstowe", 300),
+        }
         annotate("notice", f"probe page {key}", results[key])
     files = {}
     for key in PAGES:
@@ -105,8 +134,13 @@ def main(argv=None) -> int:
             # within each prefix, is the date non-decreasing in the number?
             mono = {}
             for p in prefixes:
-                rows = sorted(((int(re.sub(r"^[A-Z]+", "", r[0]) or 0) if re.fullmatch(r"[A-Z]+[0-9]+", r[0]) else -1,
-                                r[di]) for r in d if re.sub(r"[0-9].*$", "", r[0]) == p))
+                rows = sorted(
+                    (
+                        (int(re.sub(r"^[A-Z]+", "", r[0]) or 0) if re.fullmatch(r"[A-Z]+[0-9]+", r[0]) else -1, r[di])
+                        for r in d
+                        if re.sub(r"[0-9].*$", "", r[0]) == p
+                    )
+                )
                 inv = sum(1 for a, b in zip(rows, rows[1:]) if b[1] < a[1])
                 mono[p] = {"n": len(rows), "inversions": inv, "first": rows[:2], "last": rows[-2:]}
             info["date_vs_number"] = mono
@@ -119,17 +153,39 @@ def main(argv=None) -> int:
         # spot rows: first, last, two realised, two withdrawn
         if scol:
             si = ix[scol[0]]
-            keep = [0, len(d) - 1] + [i for i, r in enumerate(d) if r[si] == "Zrealizowany"][:2] + \
-                   [i for i, r in enumerate(d) if r[si] == "Wycofany"][:2]
-            spots = [{h[j]: (d[i][j][:100] if j < len(d[i]) else None) for j in range(len(h))
-                      if "osoba" not in h[j].lower() and len(d[i][j]) < 400} for i in keep]
+            keep = (
+                [0, len(d) - 1]
+                + [i for i, r in enumerate(d) if r[si] == "Zrealizowany"][:2]
+                + [i for i, r in enumerate(d) if r[si] == "Wycofany"][:2]
+            )
+            spots = [
+                {
+                    h[j]: (d[i][j][:100] if j < len(d[i]) else None)
+                    for j in range(len(h))
+                    if "osoba" not in h[j].lower() and len(d[i][j]) < 400
+                }
+                for i in keep
+            ]
             print(json.dumps({"spots": spots}, ensure_ascii=False), flush=True)
     if "wpl_prm" in files and main_:
-        annotate("notice", "probe prm vs main", {"same_header": files["wpl_prm"]["header"] == main_["header"],
-                                                  "prm_rows": files["wpl_prm"]["summary"]["rows"]})
+        annotate(
+            "notice",
+            "probe prm vs main",
+            {
+                "same_header": files["wpl_prm"]["header"] == main_["header"],
+                "prm_rows": files["wpl_prm"]["summary"]["rows"],
+            },
+        )
     r = get(REUSE)
-    annotate("notice", "probe reuse page", {"status": r.status_code, "text": text_near(r.text, "Informacje sektora", 450),
-                                            "footer": text_near(r.text, "Treści tekstowe", 300)})
+    annotate(
+        "notice",
+        "probe reuse page",
+        {
+            "status": r.status_code,
+            "text": text_near(r.text, "Informacje sektora", 450),
+            "footer": text_near(r.text, "Treści tekstowe", 300),
+        },
+    )
     return 0
 
 
