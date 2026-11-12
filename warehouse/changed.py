@@ -7,8 +7,10 @@ inputs change weekly at most. This plan is stateless: it reads Iceberg metadata 
 
 After a successful build every model it built carries two table properties:
 ``zohelo.built_from_ms`` (when that build started) and ``zohelo.build_fingerprint``
-(its SQL and config, the project's macros/dimensions/settings and requirements). A model
-is rebuilt when
+(its SQL and config, the project's macros/dimensions/settings and requirements). The per-source
+macro files (``macros/sources/``, docs/source-registration.md) count only for the models that use
+them, so a new source's file rebuilds the Gold models that read it and what is built on them, not
+every model of every source. A model is rebuilt when
 
 - its table is missing or has no properties (never built by this rule, or the last build failed),
 - its fingerprint differs (the code changed),
@@ -48,6 +50,7 @@ from collections.abc import Iterable
 import hashlib
 import json
 from pathlib import Path
+import re
 import subprocess
 from typing import Any
 
@@ -58,6 +61,11 @@ BUILT_FROM = "zohelo.built_from_ms"
 FINGERPRINT = "zohelo.build_fingerprint"
 # Code outside a model's own SQL that can change what it writes.
 SHARED_CODE = ("macros", "dimensions", "dbt_project.yml", "../requirements.txt")
+# Per-source macro files (D34): left out of the shared digest, fingerprinted with the models that use them.
+SOURCE_MACROS = "macros/sources"
+# The macros that find the per-source macros by name; dbt records no dependency for a macro called that way.
+REGISTRATION = "macros/source_registration.sql"
+SOURCE_MACRO_PREFIX = "poc_"  # a macro of another name there could replace a dbt macro for every model
 EXTERNAL_MODELS: frozenset[str] = frozenset()  # models built outside the scheduled build (none since #875)
 # A Bronze commit stamped just before a build started may become visible only after dbt
 # read that table; the recorded start is moved back by this margin (an extra rebuild at worst).
@@ -86,12 +94,74 @@ def manifest(target: str = "prod") -> dict[str, Any]:
 
 
 def shared_digest() -> str:
+    """One digest of the code every model shares; the files under SOURCE_MACROS are not in it."""
     digest = hashlib.sha256()
+    apart = (PROJECT / SOURCE_MACROS).resolve()
     for name in SHARED_CODE:
         root = (PROJECT / name).resolve()
         for path in sorted(root.rglob("*") if root.is_dir() else [root]):
-            if path.is_file():
+            if path.is_file() and apart not in path.parents:
                 digest.update(str(path.relative_to(root.parent)).encode() + b"\0" + path.read_bytes() + b"\0")
+    return digest.hexdigest()
+
+
+def source_macro_files(meta: dict[str, Any]) -> dict[str, list[str]]:
+    """unique_id of a model or seed → the files under SOURCE_MACROS its SQL depends on (project-relative, sorted);
+    pure (reads the manifest only).
+
+    A model depends on such a file when it calls a macro defined there, directly or through other project
+    macros, and on every such file when it reaches a macro of REGISTRATION, which calls the per-source macros by
+    a name built at run time. Calls are taken from dbt (``depends_on.macros`` of the node and of each macro)
+    and, because dbt does not record a call inside ``{% if execute %}`` or through ``context[...]``, also from the
+    text: a per-source or registration macro whose name occurs as a word in the model's code or in a reached
+    macro's code counts as called. A file there that defines a macro without SOURCE_MACRO_PREFIX belongs to
+    every model."""
+    project = meta["metadata"]["project_name"]
+    macros = {uid: m for uid, m in meta["macros"].items() if m["package_name"] == project}
+    files = {uid: Path(m["original_file_path"]).as_posix() for uid, m in macros.items()}
+    per_source = {uid for uid, f in files.items() if f.startswith(SOURCE_MACROS + "/")}
+    registration = {uid for uid, f in files.items() if f == REGISTRATION}
+    every = sorted({files[uid] for uid in per_source})
+    loose = {files[uid] for uid in per_source if not macros[uid]["name"].startswith(SOURCE_MACRO_PREFIX)}
+    named = {macros[uid]["name"]: uid for uid in per_source | registration}
+    word = re.compile(r"\b(" + "|".join(map(re.escape, sorted(named))) + r")\b") if named else None
+
+    def called(recorded: list[str], code: str) -> set[str]:
+        found = {uid for uid in recorded if uid in macros}
+        return found | ({named[name] for name in word.findall(code or "")} if word else set())
+
+    calls = {
+        uid: called(m.get("depends_on", {}).get("macros", []), m.get("macro_sql", "")) for uid, m in macros.items()
+    }
+
+    def reached(start: set[str]) -> set[str]:
+        """The macros and every project macro they call, at any depth."""
+        seen, queue = set(start), list(start)
+        while queue:
+            for callee in calls[queue.pop()] - seen:
+                seen.add(callee)
+                queue.append(callee)
+        return seen
+
+    out = {}
+    for uid, node in meta["nodes"].items():
+        if node.get("resource_type") not in ("model", "seed"):
+            continue
+        used = reached(called(node.get("depends_on", {}).get("macros", []), node.get("raw_code", "")))
+        if used & registration:
+            out[uid] = every
+        else:
+            out[uid] = sorted({files[m] for m in used & per_source} | loose)
+    return out
+
+
+def files_digest(files: list[str]) -> str:
+    """Digest of project files by path and content; "" for none."""
+    if not files:
+        return ""
+    digest = hashlib.sha256()
+    for name in files:
+        digest.update(name.encode() + b"\0" + (PROJECT / name).read_bytes() + b"\0")
     return digest.hexdigest()
 
 
@@ -100,6 +170,7 @@ def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
     Seeds are planned like models: their checksum is the CSV's, so an edited seed rebuilds itself
     and the models that ref it."""
     shared = shared_digest()
+    per_source = source_macro_files(meta)
     nodes = {**meta["nodes"], **meta["sources"]}
     out = {}
     for uid, node in meta["nodes"].items():
@@ -109,7 +180,9 @@ def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
         upstream = node.get("depends_on", {}).get("nodes", [])  # a seed lists none
         parents = sorted(".".join(relation(nodes[p])) for p in upstream if p in nodes)
         code = json.dumps(
-            [shared, node["checksum"]["checksum"], node.get("config", {}), parents], sort_keys=True, default=str
+            [shared, node["checksum"]["checksum"], node.get("config", {}), parents, files_digest(per_source[uid])],
+            sort_keys=True,
+            default=str,
         )
         out[uid] = {
             "name": node["name"],

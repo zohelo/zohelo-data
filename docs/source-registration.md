@@ -110,12 +110,20 @@ Pipeline `source` input.
 
 ## Rebuilds
 
-`warehouse/changed.py` fingerprints every model with one digest of everything under `warehouse/macros/`,
-`dimensions/`, `dbt_project.yml` and `requirements.txt`. So any pull request that touches a macro file,
-this one and every Gold source pull request before and after it, makes the next scheduled build rebuild
-every dbt model and seed once ("code changed"). Per-source macro files do not change that. Follow-up:
-fingerprint a model with the macros it uses (dbt's `depends_on.macros`, plus `macros/sources/` for the
-models that call the registration macros), so a new source rebuilds only Gold.
+`warehouse/changed.py` fingerprints every model with one digest of the code all models share: everything
+under `warehouse/macros/` except `macros/sources/`, `dimensions/`, `dbt_project.yml` and `requirements.txt`.
+A change there makes the next scheduled build rebuild every dbt model and seed once ("code changed"); so does
+a Gold pull request of a source that still adds lines to `macros/poc_blocks.sql`.
+
+The files under `macros/sources/` enter the fingerprint only of the models that use them
+(`source_macro_files()`): a model that calls a macro defined there gets that file, and a model that reaches
+the registration macros of `macros/source_registration.sql` (`poc_observations()`, `poc_block_models()`,
+`poc_activated_blocks()`, the two geography macros) gets all of them. Calls are taken from dbt's manifest and
+from the text of the model and of the macros it reaches, because dbt records no dependency for a macro called
+by a built name. So a new source's file rebuilds its own build stage, the geography map, the facts and
+dimensions that union the blocks and what is built on them (142 of the 166 Gold models on 12 November), and
+no Silver model and no seed. A macro in `macros/sources/` whose name does not start with `poc_` could
+replace a dbt macro for every model, so its file counts for every model.
 
 ## Undo
 

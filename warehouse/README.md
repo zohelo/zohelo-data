@@ -31,7 +31,8 @@ left as `__dbt_backup`.
 
 The scheduled build (empty filter) rebuilds only models whose inputs or code changed
 (owner policy #822, `changed.py`): a model is selected when its table is missing, its
-code fingerprint (SQL, config, macros, dimensions, `dbt_project.yml`, requirements)
+code fingerprint (SQL, config, macros, dimensions, `dbt_project.yml`, requirements; a file under
+`macros/sources/` only for the models that use it, docs/source-registration.md)
 differs, an upstream model is rebuilt, or a Bronze input or upstream table changed after
 its last build started. The scheduled build records `zohelo.built_from_ms` and
 `zohelo.build_fingerprint` as table properties of each model it wrote whose tests passed
