@@ -5,8 +5,8 @@
 | Workflow | Runs | Trigger |
 |---|---|---|
 | **Pipeline** (`pipeline.yml`) | the dataflow: pick a `source` and a `run` | manual, `main` only |
-| **Ops · ad-hoc** (`ops.yml`) | one standing task from `ops/` | manual, `main` only |
-| **Dev · branch runs** (`dev.yml`) | one `dev/` script on a feature branch (trials, tests); deleted before merge | manual, never `main` |
+| **Ops · ad-hoc** (`ops.yml`) | one standing task from `ops/`; weekly CodeQL scan of `main` (job `codeql`) | manual or the schedule table (ops/README.md), `main` only |
+| **Dev · branch runs** (`dev.yml`) | one `dev/` script on a feature branch (trials, tests); deleted before merge. Also the merge gate: `check` and `check-portal` | trials: manual, never `main`; gate: label `merge:check` on a pull request |
 | **Deploy portal** (`deploy-portal.yml`) | build and deploy `portal/app` and `portal/worker` | push to `main` changing them, or manual |
 | **Branch cleanup** (`branch-cleanup.yml`) | deletes a merged pull request's branch; weekly sweep of merged branches | pull request merged, Monday, or manual |
 
@@ -53,9 +53,12 @@ npm --prefix portal/app run dev
 ```
 
 Production reads and writes need the R2 credentials, which exist only in GitHub
-Actions. There is no repository test suite; the `check` job in `dev.yml` runs on every
-pull request (compile, lint, YAML, configuration consistency, dbt parse) and must pass
-before merge. Quality rules: [quality.md](quality.md).
+Actions. There is no repository test suite. No workflow runs on a push to a pull request
+(owner direction 12 Nov 2026): run `python -m ops.repo_check` locally while iterating. The
+`check` job in `dev.yml` (linked task, compile, lint, YAML, configuration consistency, dbt
+parse, secret scan) runs once, when the label `merge:check` is added to the reviewed, final
+pull request, and must pass on its head before merge ([flow.md](flow.md), merge gate).
+CodeQL scans `main` weekly from Ops, not each pull request. Quality rules: [quality.md](quality.md).
 
 ### Dev trials
 
