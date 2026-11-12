@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 import duckdb
 from jinja2 import Environment
@@ -70,13 +71,13 @@ def rows(con, q, limit=400):
     return [[None if v is None else str(v) for v in r] for r in con.execute(q).fetchall()][:limit]
 
 
-def show(con, title, q, limit=400):
+def show(con, title, q, limit=400, width=120):
     print(f"\n=== {title}", flush=True)
     rel = con.execute(q)
     print("\t".join(d[0] for d in rel.description))
     out = rel.fetchall()
     for r in out[:limit]:
-        print("\t".join("" if v is None else str(v)[:120] for v in r))
+        print("\t".join("" if v is None else str(v)[:width] for v in r))
     if len(out) > limit:
         print(f"... {len(out)} rows")
 
@@ -124,9 +125,12 @@ def landing_runs() -> dict:
             out[f"page_{label}"] = {"url": pages[label][-40:], "status": r.status_code, "bytes": len(r.content),
                                     "content_type": r.headers.get("Content-Type")}
     for attempt in (1, 2):
+        if attempt == 2:
+            time.sleep(180)  # the second pass a few minutes later, as a scheduled run would come
         CAPTURED.clear()
-        code = landing.extract(90, landing_root=LANDING_ROOT)
-        out[f"extract_{attempt}"] = {"exit": code}
+        code = landing.extract(120, landing_root=LANDING_ROOT)
+        out[f"extract_{attempt}"] = {"exit": code, **{k: v for t, d in CAPTURED if "landing extract" in t for k, v in d.items()
+                                                       if k in ("listed", "planned", "landed", "unchanged", "bytes_landed", "refused", "error", "pages")}}
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     held = landing.held_receipts(LANDING_ROOT)
     out["files"] = len(held)
@@ -180,13 +184,15 @@ def bronze_profile(con) -> dict:
     show(con, "headers per entity (role: text)", "select entity, string_agg(column_number || '=' || coalesce(c.role, '?') || ':' || "
               "regexp_replace(value_text, '\\s+', ' ', 'g'), ' | ' order by column_number) from bronze_cells b "
               "left join (select distinct entity e, column_number cn, column_role role from bronze_cells where row_number > 1) c "
-              "on c.e = b.entity and c.cn = b.column_number where row_number = 1 group by 1 order by 1")
+              "on c.e = b.entity and c.cn = b.column_number where row_number = 1 group by 1 order by 1", width=100000)
     shape = ("regexp_replace(regexp_replace(trim(value_text), '[0-9]', '9', 'g'), '9+', '9', 'g')")
     p["param_value_shapes"] = rows(con, f"select cell_type, {shape} s, count(*), min(value_text), max(value_text) from bronze_cells "
                                         f"where column_role = 'parameter' and row_number > 1 and cell_type <> 'n' group by all order by 3 desc limit 25")
-    p["param_text_strings"] = rows(con, "select trim(value_text), count(*) from bronze_cells where column_role = 'parameter' and row_number > 1 "
-                                        "and cell_type <> 'n' and not regexp_full_match(trim(value_text), '<?\\s*-?[0-9]+([.,][0-9]+)?') "
-                                        "group by 1 order by 2 desc limit 40")
+    p["param_text_strings"] = rows(con, "select b.entity, b.column_number, left(h.value_text, 60), count(*), min(b.value_text), max(b.value_text) "
+                                        "from bronze_cells b join bronze_cells h on h.entity = b.entity and h.column_number = b.column_number and h.row_number = 1 "
+                                        "where b.column_role = 'parameter' and b.row_number > 1 and b.cell_type <> 'n' "
+                                        "and not regexp_full_match(trim(b.value_text), '<?\\s*-?[0-9]+([.,][0-9]+)?|n\\.o\\.') "
+                                        "group by all order by 4 desc limit 30")
     p["numeric_cells_not_numbers"] = one(con, "select count(*) from bronze_cells where cell_type = 'n' and try_cast(value_text as double) is null")
     p["class_values"] = rows(con, "select column_role, trim(value_text), count(*) from bronze_cells where column_role in "
                                   "('final_class', 'parameter_class', 'monitoring_type') and row_number > 1 group by all order by all")
@@ -232,12 +238,13 @@ def silver_profile(con) -> dict:
             "years": one(con, f"select min(year) || '-' || max(year) from {m}"),
             "parameters": one(con, f"select count(distinct parameter) from {m}"),
             "no_unit": rows(con, f"select parameter, count(*) from {m} where unit is null group by 1 order by 2 desc limit 8"),
-            "other": rows(con, f"select value_text, count(*) from {m} where value_flag = 'other' group by 1 order by 2 desc limit 15"),
+            "other": rows(con, f"select entity, column_number, left(parameter, 50), count(*), min(value_text), max(value_text) from {m} "
+                               f"where value_flag = 'other' group by all order by 4 desc limit 10"),
             "zero_values": one(con, f"select count(*) from {m} where value = 0"),
             "negative_values": rows(con, f"select parameter, count(*) from {m} where value < 0 group by 1 order by 2 desc limit 5"),
         }
         show(con, f"{m} parameters", f"select parameter, count(*), count(value), min(year), max(year) from {m} group by 1 order by 1")
-    p["markers_total"] = one(con, " + ".join(f"(select count(*) from {m} where value_flag in ('below_limit', 'not_determined'))" for m in SILVER[2:5]))
+    p["markers_total"] = one(con, "select " + " + ".join(f"(select count(*) from {m} where value_flag in ('below_limit', 'not_determined'))" for m in SILVER[2:5]))
     p["indicator_classes"] = rows(con, "select parameter, string_agg(quality_class || '=' || n, ' ' order by quality_class) from "
                                        "(select parameter, quality_class, count(*) n from gios_groundwater_indicator_classes group by all) group by 1 order by 1")
     return p
@@ -321,8 +328,7 @@ def main(argv: list[str]) -> int:
     try:
         note("gios_groundwater trial lint", {**STATS, "sqlfluff": lint()})
         land = landing_runs()
-        extracts = [d for t, d in CAPTURED if "landing extract" in t]
-        note("gios_groundwater trial landing", {**land, "extracts": extracts[-2:] if extracts else None})
+        note("gios_groundwater trial landing", land)
         con = duckdb.connect()
         b = bronze_runs(con)
         note("gios_groundwater trial bronze", b)
