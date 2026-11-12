@@ -203,6 +203,14 @@
         ('life_expectancy', 'Life expectancy at birth (WHO)'),
         ('hale', 'Healthy life expectancy at birth (WHO)')
     ) as t (entity, block_name)
+{# UNESCO UIS blocks (gold.build_unesco_uis): one per Data API selection; areas: EU27 members (ISO alpha-3 through
+   dim_geography.iso3). #}
+{% macro poc_unesco_uis_blocks() %}
+    select * from (
+        values
+        ('gerd_gdp', 'EXPGDP.TOT', 'GERD as a percentage of GDP (UIS)', 'pct_gdp'),
+        ('tertiary_attainment', 'EA.5T8.AG25T99', 'Completed short-cycle tertiary or higher, population 25+ (UIS)', 'pct')
+    ) as t (entity, indicator_id, block_name, unit_code)
 {% endmacro %}
 
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
@@ -274,6 +282,7 @@
     union all select * from {{ ref('poc_build_nbp') }}
     union all select * from {{ ref('poc_build_faostat') }}
     union all select * from {{ ref('poc_build_who') }}
+    union all select * from {{ ref('poc_build_unesco_uis') }}
 {% endmacro %}
 
 {# series_key: measure × geography × breakdown codes, readable; an unmatched area keeps its source code so
@@ -296,7 +305,10 @@
     select 'world_bank_wdi', indicator_code, 'WDI ' || indicator_code from ({{ poc_wdi_blocks() }})
     union all
     select 'faostat', entity || ':' || item_code || '.' || element_code, block_name from ({{ poc_faostat_blocks() }})
+    union all
     select 'who', entity, block_name from ({{ poc_who_blocks() }})
+    union all
+    select 'unesco_uis', entity, block_name from ({{ poc_unesco_uis_blocks() }})
     union all
     select * from (
         values

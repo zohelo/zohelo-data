@@ -1231,7 +1231,8 @@ sources:
   name: UIS Data Browser
   short_name: UNESCO UIS
   provider: UNESCO Institute for Statistics
-  status: approved
+  source_system: unesco_uis
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1241,15 +1242,17 @@ sources:
   granularity: Indicator/country/year plus available sex, age, education level and other disaggregations.
   coverage: Global; February 2026 releases are shown for education, demography, science/technology and culture.
   access:
-    endpoint: https://databrowser.uis.unesco.org/
+    endpoint: https://api.uis.unesco.org/api/public/data/indicators
     kind: bulk_file
-    interfaces: [HTML, CSV, Excel, JSON]
+    interfaces: [HTML, CSV, Excel, JSON, REST API, bulk-files]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: 'Data API: at most 100,000 records per request (OpenAPI schema https://api.uis.unesco.org/api/public/openapi/schema.json);
+      no key. One request per whole-indicator selection and run (EA.5T8.AG25T99 276 KB). Bulk files (BDDS) per theme
+      under a release folder (202602: SDG.zip 34 MB, OPRI.zip 68 MB). Dev probes 43099401602 and 43100116863, 11 Nov 2026.'
   licence:
     status: open-conditional
-    notes: 'Terms: CC BY-SA 4.0, https://databrowser.uis.unesco.org/terms-and-conditions ("The work of the UIS is licensed
+    notes: 'Terms: CC BY-SA 4.0 (confirmed 11 Nov 2026, Dev probe 43099401602), https://databrowser.uis.unesco.org/terms-and-conditions ("The work of the UIS is licensed
       under the Creative Commons Attribution-ShareAlike 4.0 International license"): share and reproduce without charge;
       adaptations must carry the same licence (ShareAlike); no implied endorsement or affiliation; logo use needs permission.
       Attribution: "Source: UNESCO Institute for Statistics (UIS), <complete URL>, <date of extraction>" ("Adapted from"
@@ -1265,15 +1268,15 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
     - 'ShareAlike: published derivatives of UIS data must be released under CC BY-SA 4.0'
-    - 'Confirm stable API availability and identifiers'
     - 'Retain release vintages'
     references:
     - https://databrowser.uis.unesco.org/
     - https://www.unesco.org/en/open-access
     - https://databrowser.uis.unesco.org/terms-and-conditions
+    - https://api.uis.unesco.org/api/public/documentation/
 - id: GL-027
   name: UNICEF Data Warehouse Explorer and SDMX API
   short_name: UNICEF Data Warehouse

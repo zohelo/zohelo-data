@@ -1,0 +1,23 @@
+version: 2
+models:
+  - name: unesco_uis_observations
+    description: >-
+      UNESCO UIS indicators (CC BY-SA 4.0) from bronze.unesco_uis_observations: the newest copy of each Data API
+      selection (entity) — gerd_gdp (EXPGDP.TOT, GERD as % of GDP) and tertiary_attainment (EA.5T8.AG25T99, .F, .M:
+      completed short-cycle tertiary education or higher, population 25+, both sexes, female, male, %), every
+      country and region and year the UIS publishes. Grain: entity × indicator_id × geo_unit × year.
+    tests:
+      - unique:
+          column_name: "entity || '|' || indicator_id || '|' || geo_unit || '|' || year"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: ['gerd_gdp', 'tertiary_attainment']}}}]
+      - name: indicator_id
+        tests: [not_null, {accepted_values: {arguments: {values: ['EXPGDP.TOT', 'EA.5T8.AG25T99', 'EA.5T8.AG25T99.F', 'EA.5T8.AG25T99.M']}}}]
+      - name: geo_unit
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]

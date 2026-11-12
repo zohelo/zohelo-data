@@ -31,6 +31,7 @@ SOURCES = (
     "oecd",
     "faostat",
     "who",
+    "unesco_uis",
     "world_bank_wdi",
     "news_feeds",
     "gdelt",
