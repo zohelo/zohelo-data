@@ -4,8 +4,9 @@
 Observations use the generic SDMX Bronze format of the OECD onboarding (bronze.oecd_observations): one row per
 cell with a value, ``dataflow`` = the table title, ``series_dimensions`` / ``series_key`` the non-time variable
 codes and value codes (comma- and ``|``-separated: PXWeb value codes contain dots, e.g. ``ME.1041``),
-``time_period`` the time variable's label as published (1990, 2025Q2, 2025M07), ``obs_value`` as text, ``attribute_names`` / ``attribute_values`` the cell
-status. The PXWeb value codes are opaque (``ME.47``, ``616``, ``c0000803``), so bronze.unece_codes keeps each
+``time_period`` the time variable's label as published (1990, 2025Q2, 2025M07), ``obs_value`` as text,
+``attribute_names`` / ``attribute_values`` the cell status. The PXWeb value codes are opaque (``ME.47``,
+``616``, ``c0000803``), so bronze.unece_codes keeps each
 file's variable and value labels (one row per variable × value). A file that is not JSON-stat 2.0, whose value
 count does not match its sizes, or with a code containing ``|`` is rejected (bronze.unece_rejected_files).
 Entities are the table folders in Landing (``to_landing/unece/``, a table above the API cell limit in parts
