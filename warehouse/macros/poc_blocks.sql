@@ -466,6 +466,7 @@
     poc_build_ids:world_bank_ids
     poc_build_un_wpp:un_wpp
     poc_build_unhcr:unhcr
+    poc_build_zus_psz:zus_psz
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -576,6 +577,14 @@
         ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file'),
         ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units'),
         ('mf_jst_budgets', 'jst_budget', 'MF local-government budget summaries (year to date)'),
-        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)')
+        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)'),
+        ('zus_psz', 'pensioners_dec', 'ZUS old-age pensioners in December'),
+        ('zus_psz', 'pension_amount_dec', 'ZUS average old-age pension in December'),
+        ('zus_psz', 'insured_pension', 'ZUS insured persons, pension insurance'),
+        ('zus_psz', 'insured_sickness_voiv', 'ZUS insured persons, sickness insurance, by voivodeship'),
+        ('zus_psz', 'insured_health', 'ZUS insured persons, health insurance'),
+        ('zus_psz', 'foreign_insured', 'ZUS foreign citizens in pension insurance'),
+        ('zus_psz', 'payers_voiv', 'ZUS active contribution payers, by voivodeship'),
+        ('zus_psz', 'absence_voiv', 'ZUS sickness absence, by voivodeship')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}
