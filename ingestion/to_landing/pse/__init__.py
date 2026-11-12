@@ -79,7 +79,7 @@ def read_receipts(client: Any, bucket: str, keys: list[str]) -> list[dict[str, A
     from ingestion.common.r2 import get_with_backoff
 
     def one(key: str) -> dict[str, Any]:
-        return {**json.loads(get_with_backoff(client, bucket, key)), "receipt_key": key}
+        return {**json.loads(r2_call(lambda: get_with_backoff(client, bucket, key))), "receipt_key": key}
 
     with ThreadPoolExecutor(max_workers=8) as pool:
         return list(pool.map(one, keys))
@@ -89,6 +89,26 @@ def newest_receipts(client: Any, bucket: str, landing_root: str = "01_landing") 
     """Receipt of the newest landed copy of every entity (used by bronze.load)."""
     receipts, _ = listing(client, bucket, landing_root)
     return read_receipts(client, bucket, [keys[-1] for keys in receipts.values()])
+
+
+THROTTLED = {"429", "TooManyRequests", "SlowDown", "ServiceUnavailable", "503", "InternalError"}
+
+
+def r2_call(operation: Any, attempts: int = 7) -> Any:
+    """Run one R2 request, waiting out throttling (HTTP 429 / 503, "SlowDown") with backoff (2 s doubling, about
+    four minutes in all); other errors are raised at once. R2 answered 429 to a HeadObject in Dev trial 43318182249."""
+    from botocore.exceptions import ClientError
+
+    for attempt in range(attempts):
+        try:
+            return operation()
+        except ClientError as exc:
+            code = str(exc.response.get("Error", {}).get("Code", ""))
+            status = str(exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode", ""))
+            if (code not in THROTTLED and status not in THROTTLED) or attempt == attempts - 1:
+                raise
+            time.sleep(2 * 2**attempt)
+    raise RuntimeError("unreachable")
 
 
 def version_of(rows: list[dict[str, Any]]) -> str:
@@ -143,10 +163,9 @@ def write_day(client: Any, bucket: str, landing_root: str, got: dict[str, Any]) 
     name, digest, size = got["entity"], got["sha256"], got["size"]
     ingested = bulk_file.stamp(datetime.now(UTC))
     key = f"{bulk_file.prefix(SOURCE, name, landing_root)}{got['version']}__{ingested}.json"
-    client.upload_file(
-        str(got["path"]), bucket, key, ExtraArgs={"ContentType": "application/json", "Metadata": {"sha256": digest}}
-    )
-    head = client.head_object(Bucket=bucket, Key=key)
+    extra = {"ContentType": "application/json", "Metadata": {"sha256": digest}}
+    r2_call(lambda: client.upload_file(str(got["path"]), bucket, key, ExtraArgs=extra))
+    head = r2_call(lambda: client.head_object(Bucket=bucket, Key=key))
     if head["ContentLength"] != size or (head.get("Metadata") or {}).get("sha256") != digest:
         raise RuntimeError(f"Landing write could not be verified: {key}")
     got["path"].unlink()
@@ -176,12 +195,9 @@ def write_day(client: Any, bucket: str, landing_root: str, got: dict[str, Any]) 
             "http": {"content_type": got["content_type"]},
         },
     }
-    client.put_object(
-        Bucket=bucket,
-        Key=key.rsplit(".", 1)[0] + ".receipt.json",
-        ContentType="application/json",
-        Body=json.dumps(receipt, indent=2, sort_keys=True).encode(),
-    )
+    body = json.dumps(receipt, indent=2, sort_keys=True).encode()
+    receipt_key = key.rsplit(".", 1)[0] + ".receipt.json"
+    r2_call(lambda: client.put_object(Bucket=bucket, Key=receipt_key, ContentType="application/json", Body=body))
     return {"entity": name, "outcome": got["outcome"], "rows": got["rows"], "bytes": size}
 
 
