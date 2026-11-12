@@ -26,6 +26,13 @@ eurostat,NR,eurostat:DEMO_R_FIND2:NR:TOTFERRT,children_per_woman
 eurostat,_Z,eurostat:IRT_LT_MCBY_M:_Z:%,pct
 eurostat,_Z,eurostat:DEMO_PJANIND:_Z:OLDDEP1,pct
 eurostat,_Z,eurostat:DEMO_FIND:_Z:TOTFERRT,children_per_woman
+eurostat,_Z,eurostat:DEMO_GIND:_Z:%,persons
+eurostat,_Z,eurostat:BOP_C6_Q:_Z:MIO_EUR:%,mln_eur
+eurostat,_Z,eurostat:BOP_FDI6_FLOW:_Z:MIO_EUR:%,mln_eur
+eurostat,_Z,eurostat:EI_BSIN_Q_R2:_Z:BS-ICU-PC,pct
+eurostat,_Z,eurostat:EI_BSSI_M_R2:_Z:%,index_lta_100
+eurostat,_Z,eurostat:JVS_Q_NACE2:_Z:JVR,pct
+eurostat,_Z,eurostat:ILC_DI12:_Z:GINI_HND,gini_0_100
 gus_bdl,osoba,,persons
 gus_bdl,%,,pct
 gus_bdl,zł,,pln
@@ -42,6 +49,24 @@ gus_bdl,-,gus_bdl:P2496:-%,index_py_100
 gus_bdl,-,gus_bdl:P4635:-%,index_py_100
 gus_bdl,-,gus_bdl:P3502:-%,index_py_100
 gus_bdl,-,gus_bdl:P2346:-%,children_per_woman
+gus_bdl,osoba,gus_bdl:P2425:osoba:ludność na 1 km2,persons_per_km2
+gus_bdl,-,gus_bdl:P1873:-%,persons
+gus_bdl,-,gus_bdl:P3824:-:mieszkania,dwellings
+gus_dbw,[osoba],,persons
+gus_dbw,[%],,pct
+gus_dbw,[zł],,pln
+gus_dbw,[mln zł],,mln_pln
+gus_dbw,[-],gus_dbw:469_16_117_1:%,balance
+gus_dbw,analogiczny okres roku poprzedniego=100 [-],,index_py_100
+gus_dbw,analogiczny okres roku poprzedniego=100 ceny stałe [-],,index_py_100
+gus_dbw,analogiczny okres roku poprzedniego=100 ceny stałe z 2020 roku [-],,index_py_100
+gus_dbw,analogiczny okres roku poprzedniego=100 szereg wyrównany sezonowo ceny stałe [-],,index_py_100
+gus_dbw,analogiczny okres roku poprzedniego=100; ujęcie nominalne [-],,index_py_100
+gus_dbw,analogiczny okres roku poprzedniego=100; ujęcie realne [-],,index_py_100
+gus_dbw,okres poprzedni=100 szereg wyrównany sezonowo ceny stałe z 2020 roku [-],,index_pp_100
+gus_dbw,okres poprzedni=100 ceny stałe [-],,index_pp_100
+gus_dbw,okres poprzedni=100 ceny stałe [-],gus_dbw:1038_16_92_4:%,index_py_100
+gus_dbw,okres poprzedni=100 ceny stałe [-],gus_dbw:1173_793_92_4:%,index_py_100
 world_bank_wdi,as named,world_bank_wdi:NY.GDP.MKTP.CD,usd
 world_bank_wdi,as named,world_bank_wdi:NY.GDP.MKTP.CN,ncu
 world_bank_wdi,as named,world_bank_wdi:NY.GDP.PCAP.CD,usd_per_person
@@ -68,6 +93,26 @@ world_bank_wdi,as named,world_bank_wdi:BX.KLT.DINV.CD.WD,usd
 world_bank_wdi,as named,world_bank_wdi:EN.GHG.ALL.MT.CE.AR5,mt_co2e
 world_bank_wdi,as named,world_bank_wdi:PX.REX.REER,index_2010_100
 world_bank_wdi,as named,world_bank_wdi:SI.POV.GINI,gini_0_100
+world_bank_wdi,Current US$,,usd
+world_bank_wdi,Current US$,world_bank_wdi:NY.GDP.PCAP.CD,usd_per_person
+world_bank_wdi,Current international $,world_bank_wdi:NY.GDP.PCAP.PP.CD,ppp_usd_per_person
+world_bank_wdi,current LCU,,ncu
+world_bank_wdi,Unit,,persons
+world_bank_wdi,Years,,years
+world_bank_wdi,%,,pct
+world_bank_wdi,%,world_bank_wdi:SI.POV.GINI,gini_0_100
+world_bank_wdi,Percentage,,pct
+world_bank_wdi,% of GDP,,pct_gdp
+world_bank_wdi,% of total labor force,,pct_labour_force
+world_bank_wdi,% of total labor force ages 15-24,,pct_labour_force
+world_bank_wdi,% of total population ages 15+,,pct_population
+world_bank_wdi,% of total population ages 15-64,,pct_population
+world_bank_wdi,% of total population ages 25+,,pct_population
+world_bank_wdi,% of youth population,,pct_population
+world_bank_wdi,square kilometers,,km2
+world_bank_wdi,Births per woman,,children_per_woman
+world_bank_wdi,Mt CO2eq,,mt_co2e
+world_bank_wdi,index (2010 = 100),,index_2010_100
 nbp,PLN,,pln_per_unit
 nbp,PLN/g,,pln_per_gram
 oecd,IX,,index_lta_100
