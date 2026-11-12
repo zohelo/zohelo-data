@@ -6412,7 +6412,7 @@ sources:
   name: Gas transmission transparency data
   short_name: GAZ-SYSTEM transparency
   provider: Operator Gazociągów Przesyłowych GAZ-SYSTEM S.A.
-  status: reviewing
+  status: approved
   family: G
   kpi: true
   geography: Poland
@@ -6420,63 +6420,104 @@ sources:
   domains: [natural gas, transmission infrastructure, operations]
   entities: [interconnection point, gas-day measure, maintenance event]
   granularity: Capacity, nominations, actual flows, calorific value and planned-work disclosures by relevant point/time.
-  coverage: Current and historical transparency pages vary by series; depth unconfirmed.
+  coverage: GAZ-SYSTEM (operatorKey PL-TSO-0002) on the ENTSOG Transparency Platform, launched 1 October 2014 (TP User Manual
+    v4.5); daily physical flows read for a rolling window of about five years (1 January 2021 answered, 1 January 2020 did
+    not); 47 point-direction series per gas day in October and November 2026.
   access:
     endpoint: https://transparency.entsog.eu/api/v1/operationaldatas
     kind: api
-    interfaces: [REST API (ENTSOG Transparency Platform), JSON, HTML, JavaScript application]
-    auth: Public transparency data; shipper imbalance information requires authenticated SWI access.
+    interfaces: [REST API (ENTSOG Transparency Platform), JSON, XML, CSV, XLSX]
+    auth: 'None: no key or account for the public ENTSOG API. GAZ-SYSTEM''s shipper imbalance information needs an authenticated
+      SWI account (not used).'
     cost: Free.
-    limits: 'ENTSOG terms Art. 4.7: access may be restricted for downloads that are disproportionate ("7.5 times the average
-      user of the same category"); no numeric API quota published.'
+    limits: 'No numeric quota published. ENTSOG TP API User Manual v3.0 (https://transparency.entsog.eu/api/archiveDirectories/8/api-manual/ENTSOG_TP_API_UserManual_v3.0.pdf,
+      read 12 Nov 2026): "As the API is publicly accessible, usage restrictions apply to ensure fair access and platform stability.";
+      "All queries are subject to a maximum execution time of 60 seconds."; "If no limit parameter is provided, API calls
+      return a maximum of 100 records by default." (limit=-1 returns all records); "Monthly ranges are strongly recommended
+      instead of broad multi-month or multi-year queries."; "When handling failed or timed-out requests, implement reasonable
+      back-off intervals." "Do not send aggressive, rapid retries." Terms Art. 5.6: access may be blocked for "executing unproportioned
+      downloads (7.5 times more than the average User of the same category)". robots.txt of transparency.entsog.eu allows
+      everything ("User-agent: *", empty Disallow; Dev probe run 43288071987 (job 131426672054, branch test/src-env-probe,
+      12 Nov 2026)).'
   licence:
     status: unresolved
-    notes: 'Terms: GAZ-SYSTEM''s own transparency pages state no data terms; its public tables are a JavaScript application.
-      The same GAZ-SYSTEM data are on the ENTSOG Transparency Platform, whose Terms and Conditions of Use https://transparency.entsog.eu/pdf/Terms_and_Conditions_of_Use.pdf
-      (8 Feb 2016, read 12 Nov 2026) say: "you may download, store and use the contents of this Website" keeping proprietary
-      notices intact; when using data "you shall at least indicate the source, the title of the relevant Section and the date
-      of data download/extraction" in the form "ENTSOG TP [+title of the relevant Section] [DD-MM-YYYY] https://transparency.entsog.eu/";
-      but Art. 4.7: "ENTSOG does not permit automatic extraction of data or other usage that reduces the performance of the
-      Website." Commercial reuse is not addressed separately; ENTSOG disclaims responsibility when data are altered or processed.
-      The ENTSOG corporate site terms (https://www.entsog.eu/privacy-policy-and-terms-use) forbid republishing its contents
-      without written consent. Whether Art. 4.7 covers the published API is unclear: owner question.'
-  updates: Daily gas-day values (gas day 06:00 to 06:00 local time), first provisional and later confirmed (flowStatus); lastUpdateDateTime
-    per record.
+    notes: 'Terms: ENTSOG TP "Privacy & T&C of Use", TRA0394-16, Rev_3, 24 May 2018, https://transparency.entsog.eu/pdf/TRA0394_20161115_ENTSOG_TP_TC_of_Use_Rev_2_KNS_LG_KNS.pdf
+      (read 12 Nov 2026); it is the document the platform itself links in its forms as "Privacy Policy and Terms of Use" (found
+      in the site''s scripts by Dev probe run 43288071987 (job 131426672054, branch test/src-env-probe, 12 Nov 2026); the
+      older 8 Feb 2016 file https://transparency.entsog.eu/pdf/Terms_and_Conditions_of_Use.pdf is still on the host but is
+      not linked). Art. 5.1: "you may download, store and use the contents of the ENTSOG TP in good faith", subject to "always
+      complying with good business practices regarding the re-use of publicly available data" and "provided you keep intact
+      all trademark, copyright and other proprietary notices indicated." Attribution (Art. 5.2): "you shall at least indicate
+      the source, and the date of data download/extraction", in the form "ENTSOG TP [DD-MM-YYYY] https://transparency.entsog.eu/".
+      Automated access: Art. 5.6 "ENTSOG does not permit automatic extraction of data or other usage that reduces the performance
+      of the ENTSOG TP." and Art. 5.7 "The automate download of data is possible via the API tool of the ENTSOG TP" (within
+      the limits of the API User Manual), so loading through the API is allowed. Commercial reuse: not stated (Art. 6 only
+      forbids to "advertise or perform any commercial solicitation" on the platform). Modification: not stated as a permission;
+      disclaimer Art. 5.5 "ENTSOG disclaims any responsibility or liability should you alter, modify, summarize, or process
+      in any manner the data". Art. 3: the contents are "the exclusive property of ENTSOG, its members, or such third party
+      credited as provider of the contents". Because commercial reuse and modification are not stated, the status is unresolved
+      and the source stays internal. GAZ-SYSTEM''s own site states no data terms that the probe could find: its English home
+      page links no legal notice, terms or copyright page, and its data-transparency page (200, no file downloads) only links
+      the SWI application and the ENTSOG platform (Dev probe run 43295514703 (job 131452664788, same branch, second pass)).
+      The quotes were returned by the fetch tool in fragments of up to 125 characters; re-read the PDF before any publication.'
+  updates: 'Daily gas-day values, first Provisional and later Confirmed (flowStatus), with lastUpdateDateTime per record.
+    Observed on 12 Nov 2026: every gas day of October 2026 was Confirmed (newest lastUpdateDateTime 12 Nov 2026 18:21 UTC)
+    and 1 November 2026 was still Provisional (last updated 2 Nov 07:05 UTC), so a month is confirmed after it ends. The API
+    documents no changed-since filter (API User Manual v3.0).'
   ingestion:
-    history: 'GAZ-SYSTEM: the public tables (calorific value, total imbalance, planned works, point lists) are in https://swi.gaz-system.pl/mir/,
-      a JavaScript application (736-byte shell from a GitHub runner, Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
-      12 Nov 2026)), which the pipeline does not support; no file downloads were found on the transparency page. ENTSOG API:
-      GET https://transparency.entsog.eu/api/v1/operationaldatas?operatorKey=PL-TSO-0002&indicator=Physical Flow&periodType=day&from=<date>&to=<date>
-      returns JSON (meta + operationaldatas: pointKey, pointLabel, directionKey, unit kWh/d, value, flowStatus, periodFrom/periodTo)
-      and answered 200 for 1-2 November 2026; the same request for January 2016 and October 2013 answered 404, so the history
-      depth is unknown. Size not measured.'
-    incremental: 'PROPOSAL after the owner''s answer: entity = indicator x month, daily request of the last days with a re-read
-      of the last 30 days for confirmed values.'
-    identifiers: ENTSOG pointKey + directionKey + indicator + periodFrom; operatorKey PL-TSO-0002; EIC code.
+    history: 'Route: GET https://transparency.entsog.eu/api/v1/operationaldatas?operatorKey=PL-TSO-0002&indicator=Physical%20Flow&periodType=day&timezone=WET&limit=-1&from=<date>&to=<date>
+      returns JSON (meta + operationaldatas, 35 fields per record). Tested from a GitHub runner, Dev probe run 43288071987
+      (job 131426672054, branch test/src-env-probe, 12 Nov 2026): one gas day (1 Nov 2026) 200, 47 rows, 46,663 bytes, 1.1
+      s (meta count 47, total 72: the difference is not explained by the manual); the month of October 2026 200, 1,457 rows,
+      1,417,652 bytes, 1.8 s, 47 point-direction series, no repeated pointKey + directionKey + periodFrom; 1 January 2021
+      answered 200 (40,846 bytes), while 1 January 2020 and every earlier day tried back to October 2013 answered 404 with
+      the message "Data on the TP is archived on a rolling basis. If you are looking for data more than 5 years old, please
+      check the TP Archives" (Dev probe run 43295514703 (job 131452664788, same branch, second pass)), so the API serves a
+      rolling window of about five years; the TP Archives were not opened. Size: about 1.4 MB and 1,500 rows per month for
+      this indicator, so about 17 MB and 17,500 rows per year (measured month times twelve). Without limit=-1 the API returns
+      100 rows (the first probe, Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026), read
+      such a capped answer). Other formats by appending .csv, .xml or .xlsx to the endpoint (manual; not tested). GAZ-SYSTEM''s
+      own public tables are in https://swi.gaz-system.pl/mir/, a JavaScript application (736-byte shell, Dev probe run 43203166665
+      (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)), which the pipeline does not support, and are not needed:
+      the same disclosures are on the ENTSOG platform.'
+    incremental: 'Entity = indicator x gas month; version = newest lastUpdateDateTime in the month''s answer. Daily run: request
+      the current and the previous month (two requests per indicator, monthly windows as the manual recommends) and keep the
+      answer when the bytes change (snapshot, changed_since_last); a month stops being re-read once every row is Confirmed.
+      Backfill one month per request, spread out, oldest last. Refresh full (small source).'
+    identifiers: ENTSOG pointKey + directionKey + indicator + periodType + periodFrom; record id; operatorKey PL-TSO-0002;
+      tsoEicCode; tsoItemIdentifier.
   modelling:
     notes: 'Separate capacity, nomination, allocation, flow, quality and outage facts; gas-day conventions matter. Grain:
-      point x direction x gas day, kWh/d. Smallest Gold selection: daily physical flow into Poland by entry group (LNG terminal
-      Świnoujście, Baltic Pipe, interconnectors) and the total as new KPIs in environment.energy; other EU operators come
-      from the same API.'
-    overlap: No KPI of kpi.csv is published here yet. Eurostat monthly gas balances carry the official EU comparison; ENTSOG
-      holds the same points for every EU operator.
+      point x direction x gas day, kWh/d. Frequencies: day (tested); the API has other periodType values (manual, not tested),
+      and each frequency needs its own measure_key. Gas day in the answer: periodFrom 05:00 UTC to 05:00 UTC next day with
+      timezone=WET (06:00 Polish winter time); some points start at 03:00 UTC, so the gas day is taken from periodFrom per
+      point, not assumed. Missing values: 11 of the 47 series per day come with an empty value, isNA = 1 and an empty flowStatus
+      (341 of 1,457 rows in October 2026); they are missing, never zero. Provisional and Confirmed share one key and are told
+      apart by flowStatus and lastUpdateDateTime; the newest wins. Indicator names are case-sensitive ("Physical Flow"). Smallest
+      Gold selection: daily physical flow into and out of Poland by point group (proposed: LNG terminal, Baltic Pipe, interconnectors,
+      domestic gas fields; the groups are built from pointLabel and pointType) and the entry total, Poland only (no voivodeship
+      grain exists), as new KPIs in environment.energy; monthly sums as a second frequency for comparison with Eurostat.'
+    overlap: No KPI of kpi.csv is about gas flows (checked 12 Nov 2026). Eurostat monthly gas balances carry the official
+      EU comparison; ENTSOG holds the same points for every EU operator, so the same build can later take other operators.
   research:
     priority: review-next
     evidence: tested
     connection: tested
     blockers:
-    - 'Owner: the ENTSOG Transparency Platform terms (8 Feb 2016, Art. 4.7) say "ENTSOG does not permit automatic extraction
-      of data or other usage that reduces the performance of the Website" while ENTSOG publishes a public API; may we load
-      GAZ-SYSTEM''s daily physical flows through that API once a day (a few requests), or do you want to ask ENTSOG in writing
-      first?'
-    - GAZ-SYSTEM's own public tables are JavaScript-only (not supported); history depth in the ENTSOG API is unknown (2016
-      and 2013 answered 404).
+    - 'Licence unresolved: the ENTSOG terms allow download, storage, use and automated API download with the citation "ENTSOG
+      TP [DD-MM-YYYY] https://transparency.entsog.eu/", but do not state commercial reuse or modification; internal only until
+      the owner decides or ENTSOG answers.'
+    - The API holds a rolling window of about five years; older gas days are in the TP Archives, which were not opened. The
+      meaning of meta.total against meta.count is not documented; other period types and the other indicators (nominations,
+      allocations, capacities, GCV) were not tested.
     references:
     - https://www.gaz-system.pl/en/for-customers/market-information/data-transparency.html
     - https://swi.gaz-system.pl/mir/
     - https://transparency.entsog.eu/
+    - https://transparency.entsog.eu/pdf/TRA0394_20161115_ENTSOG_TP_TC_of_Use_Rev_2_KNS_LG_KNS.pdf
     - https://transparency.entsog.eu/pdf/Terms_and_Conditions_of_Use.pdf
-    - https://www.entsog.eu/privacy-policy-and-terms-use
+    - https://transparency.entsog.eu/api/archiveDirectories/8/api-manual/ENTSOG_TP_API_UserManual_v3.0.pdf
+    - https://www.entsog.eu/sites/default/files/2021-07/ENTSOG%20-%20TP%20User%20Manual_v_4.5.pdf
 - id: PL-ENV-022
   name: Generalny Pomiar Ruchu (GPR)
   short_name: GDDKiA traffic census (GPR)
@@ -6970,43 +7011,113 @@ sources:
   name: internet.gov.pl broadband coverage database and UKE market aggregates
   short_name: internet.gov.pl broadband
   provider: Ministerstwo Cyfryzacji / Instytut Łączności–PIB; UKE for market reports
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [broadband, telecommunications, digital infrastructure]
   entities: [address point, operator, technology, planned investment, market aggregate]
-  granularity: Public address-level availability/plans/demand in internet.gov.pl; UKE publishes aggregated market
-    reports.
-  coverage: Current database plus annual UKE reports; public bulk history and version retention unconfirmed.
+  granularity: 'Quarterly report "Polska w zasięgu stacjonarnego dostępu do internetu" (data of internet.gov.pl, SIDUSIS):
+    counts of address points and of coverages (zasięgi) by bandwidth class, medium and service type, for Poland (national
+    PDF, with address-point counts per voivodeship) and for each voivodeship, powiat and gmina (16 voivodeship PDFs). Address-level
+    coverage is shown only per address on the internet.gov.pl map. UKE: one national market report a year (PDF).'
+  coverage: Quarterly snapshots from 30 June 2024 (first edition published 15 July 2024) to 30 September 2026 (published 15
+    October 2026). UKE market report for 2025 published 30 June 2026.
   access:
-    endpoint: https://internet.gov.pl/
+    endpoint: https://www.gov.pl/web/cyfryzacja/ponad-8-mln-punktow-adresowych-w-zasiegu-internetu-stacjonarnego
     kind: bulk_file
-    interfaces: [HTML, map, catalogue-files, PDF]
-    auth: Public, free search/map; provider reporting has separate authentication.
-    cost: Free public access.
-    limits: Unknown; no numeric quota was confirmed.
+    interfaces: [PDF attachments on gov.pl release pages, internet.gov.pl map and per-address search, UKE annual PDF]
+    auth: 'Public, no login for the report files. internet.gov.pl: public per-address search only; data export and full API
+      documentation are for logged-in entities ("Dokumentacja dla użytkowników niezalogowanych została ograniczona do poziomu
+      zapytań publicznych", https://internet.gov.pl/media/public/docs/instrukcja.pdf, read 12 Nov 2026); no account is asked
+      for.'
+    cost: Free.
+    limits: 'None published. robots.txt: www.gov.pl "User-Agent: *" "Allow: /"; internet.gov.pl has none (HTTP 404); www.uke.gov.pl
+      allows PDF files ("Allow: /*.pdf$") (Dev probe run 43288071987 (job 131426672054, branch test/src-env-probe, 12 Nov
+      2026)). There is no bulk download of the address-level database: internet.gov.pl FAQ "Nie ma takiej możliwości. Można
+      sprawdzać informacje o zasięgach dla poszczególnych punktów adresowych." (https://internet.gov.pl/media/public/docs/faq.pdf,
+      read 12 Nov 2026); a load through per-address queries (millions of address points) is not polite and is not proposed.'
   licence:
     status: unresolved
-    notes: Public search does not prove bulk or commercial redistribution permission.
-  updates: Coverage submissions update on publisher schedules; annual UKE reports summarize the market.
+    notes: 'Terms: the report PDFs are served from www.gov.pl and carry no licence of their own. gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie
+      (Dev probe run 43288071987 (job 131426672054, branch test/src-env-probe, 12 Nov 2026)): "Korzystanie przez użytkowników
+      z materiałów urzędowych opublikowanych w serwisie Gov.pl nie wymaga zgody Ministra Cyfryzacji. W serwisie zamieszczane
+      są także utwory, co do których prawa autorskie przysługują osobom trzecim. Ich wykorzystanie przez internautów wymaga
+      zgody właścicieli tych materiałów." and (also on the terms page https://www.gov.pl/web/gov/warunki-korzystania and in
+      the footer of the release pages) "Treści tekstowe publikowane w serwisie (z wyłączeniem treści audiowizualnych), są
+      udostępniane na licencji typu Creative Commons: uznanie autorstwa - na tych samych warunkach 4.0 (CC BY-SA 4.0)." Neither
+      page names attached files, commercial reuse or modification of them: commercial reuse not stated, modification not stated,
+      no attribution sentence given, so the status is unresolved and the source stays internal (the same reading as the other
+      gov.pl attachment sources reviewed on 12 Nov 2026; whether a ministry report is a "materiał urzędowy" is the owner''s
+      legal reading). internet.gov.pl: no terms of use found (FAQ and user manual state none). uke.gov.pl: no terms page;
+      the report page shows only "© 2026 Urząd Komunikacji Elektronicznej". Attribution if used: "Źródło: Ministerstwo Cyfryzacji,
+      Polska w zasięgu stacjonarnego dostępu do internetu, stan na <data>, dane internet.gov.pl".'
+  updates: 'Quarterly ("Raport będzie publikowany cyklicznie w odstępach kwartalnych", first release page, 15 July 2024);
+    reference dates 31 March, 30 June, 30 September and 31 December; published about two weeks after the quarter (15 July
+    2024, 15 October 2024, 17 April 2025, 17 July 2025, 15 July 2026, 15 October 2026). Each edition is a new release page
+    with new attachment addresses. UKE market report: yearly, end of June.'
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Address point, operator, technology/speed, report vintage and geography.
+    history: 'Route: each edition is one release page on gov.pl/web/cyfryzacja with 17 PDF attachments (https://www.gov.pl/attachment/<uuid>):
+      one national file and 16 voivodeship files. Tested from a GitHub runner, Dev probe run 43288071987 (job 131426672054,
+      branch test/src-env-probe, 12 Nov 2026): the Q3 2026 page (published 15.10.2026) 200 with 17 attachments, 256,481,891
+      bytes in total, national file Polska_Q3_2026.pdf 1,439,176 bytes (Last-Modified 15 Oct 2026), largest file 31,432,467
+      bytes; the Q2 2026 page (15.07.2026) 200 with 17 attachments, 257,630,344 bytes, national file 1,439,123 bytes. Earlier
+      editions are smaller (provider''s page figures: Q1 2025 about 58 MB, Q2 2024 about 94 MB). The national PDF (about 15
+      pages; the fetch tool read its tables as text) holds the Poland tables and the address-point counts per voivodeship;
+      bandwidth by voivodeship, powiat and gmina is only in the voivodeship PDFs (one of them runs to more than 400 pages).
+      First build: the national PDF of every edition (about 1.4 MB each, ten editions about 15 MB); the voivodeship files
+      (about 255 MB per edition, 1 to 2.5 GB for all editions, an estimate) only after the storage cost is accepted. Release
+      pages are not listed on one stable page: the ministry''s news list https://www.gov.pl/web/cyfryzacja/wiadomosci answered
+      200 but its first page did not link the reports, so the release pages are a seed list in the source declaration, one
+      row per quarter (six release pages were read: Q2 2024, Q3 2024, Q1 2025, Q2 2025, Q2 2026 and Q3 2026; those of Q4 2024,
+      Q3 2025, Q4 2025 and Q1 2026 still have to be found). PDF text-layer extraction of the tables is not tested. internet.gov.pl
+      itself gives no machine route: its statistics page https://internet.gov.pl/stats/ is a JavaScript application (268 characters
+      of text from the runner, no data address in its scripts; Dev probe run 43295514703 (job 131452664788, same branch, second
+      pass)). UKE: the annual report is one PDF (30,398,464 bytes, 200 from the runner) with no data file; not part of the
+      first build.'
+    incremental: 'Entity = edition (reference quarter) x report file; version = the reference date printed in the report (the
+      attachment''s Last-Modified as a check). Each quarter adds a new set; an already loaded edition is fetched again only
+      when its bytes change (snapshot, changed_since_last). Whether earlier editions are ever revised is not known. Refresh
+      full (small source). Schedule: monthly check around the 20th, new seed row in January, April, July and October.'
+    identifiers: 'Reference quarter; TERC code in the section headers of the voivodeship PDFs ("TERC: 16" voivodeship, "TERC:
+      1601" powiat, "TERC: 1601011" gmina); voivodeship name in the national tables; bandwidth class in Mb/s; medium; service
+      type. No address-point identifiers are published.'
   modelling:
-    notes: Preserve claim vintage and distinguish reported coverage, planned investment and demand.
-    overlap: UKE aggregates and internet.gov.pl address claims are different grains; do not sum.
+    notes: 'Grain: reference quarter x territorial unit x bandwidth class (Mb/s), counts of address points and of coverages.
+      Frequency: quarterly only (stock at the reference date; no annual series). Bandwidth classes are exclusive rows that
+      add up to the unit total ("SUMA"); the printed shares ("Udział %") are shares of the address points in coverage, not
+      of all address points; "at least 100 Mb/s" is the sum of the classes from 100 upwards. Zero is printed as "0 0,00%";
+      no suppression, missing or provisional marker was seen. The same unit and quarter appear once per edition; editions
+      do not repeat earlier quarters. Units: address points (count), coverages (count), per cent. Smallest Gold selection,
+      from the national PDF only: for Poland, address points within fixed-broadband coverage, within at least 100 Mb/s and
+      within at least 1 Gb/s (count and share of all address points); for the 16 voivodeships, address points within coverage
+      and their share, quarterly; new KPIs in a digital-infrastructure domain. Bandwidth by voivodeship follows when the voivodeship
+      PDFs are loaded. UKE aggregates (subscriptions, households) are a different grain: do not sum or mix.'
+    overlap: No KPI of kpi.csv covers broadband or internet access (checked 12 Nov 2026), so no published KPI changes. Eurostat's
+      digital-economy tables (isoc) carry household internet access for the EU comparison; they measure households, not address
+      points.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Confirm public bulk/API route, license, address identifiers, history, quality and update cadence.
+    - 'Licence unresolved: gov.pl states that official materials need no consent and licenses its text content as CC BY-SA
+      4.0, but says nothing on attached files, commercial reuse or modification; internal only until the owner''s reading.'
+    - Release pages have no stable index (seed list per quarter; four editions still to be found); PDF table extraction not
+      tested; the voivodeship PDFs are about 255 MB per edition.
+    - 'A full download of the address-level data is only announced (FAQ: "W przyszłości planujemy rozwiązanie legislacyjne,
+      umożliwiające kompleksowe pobieranie danych"); re-check when it exists.'
     references:
-    - https://internet.gov.pl/
-    - https://www.gov.pl/web/5g/sprawdz-dostepnosc-internetu-w-swojej-okolicy-przewodnik-po-internetgovpl
+    - https://www.gov.pl/web/cyfryzacja/ponad-8-mln-punktow-adresowych-w-zasiegu-internetu-stacjonarnego
+    - https://www.gov.pl/web/cyfryzacja/coraz-wiecej-punktow-adresowych-w-zasiegu-szybkiego-internetu-stacjonarnego
+    - https://www.gov.pl/web/cyfryzacja/polska-w-zasiegu--pierwszy-raport-z-danymi-z-internetgovpl
+    - https://www.gov.pl/attachment/b5fbb888-d29f-4c4d-9b0c-0b4b20e66f5d
+    - https://www.gov.pl/attachment/9448f5fa-2f9d-43bc-ae1a-03c5ac1487fb
+    - https://www.gov.pl/web/gov/prawa-autorskie
+    - https://www.gov.pl/web/gov/warunki-korzystania
+    - https://internet.gov.pl/media/public/docs/faq.pdf
+    - https://internet.gov.pl/media/public/docs/instrukcja.pdf
     - https://www.uke.gov.pl/akt/raport-o-stanie-rynku-komunikacji-elektronicznej-w-2025-roku,670.html
 - id: PL-ENV-035
   name: Rejestr Urbanistyczny
