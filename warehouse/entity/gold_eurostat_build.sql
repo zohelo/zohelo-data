@@ -12,6 +12,7 @@
 --                 because series_key has none and two frequencies of one measure would collide on date_key
 --   date_key    = first day of the period (A, S, Q, M, W = ISO Monday, D); other periods are not loaded
 --   geography   = by code through map_geography; no geo dimension → _Z; unmatched → _X, code kept
+--   status      = Eurostat flag (first letter); every row of a projection dataset (PROJ_*) is `forecast`
 with placed as (
     select
         s.*,
@@ -48,7 +49,10 @@ split as (
         p.*,
         coalesce(
             array_to_string(
-                list_transform(d.measure_positions, lambda i: string_split(p.breakdown_codes, ',')[i]), ':'
+                list_transform(
+                    d.measure_positions, lambda i: string_split(p.breakdown_codes, ',')[i]  -- noqa: RF02
+                ),
+                ':'
             ),
             ''
         ) as measure_codes,
@@ -57,14 +61,18 @@ split as (
                 to_json(
                     map(
                         d.breakdown_dimension_ids,
-                        list_transform(d.breakdown_positions, lambda i: string_split(p.breakdown_codes, ',')[i])
+                        list_transform(
+                            d.breakdown_positions, lambda i: string_split(p.breakdown_codes, ',')[i]  -- noqa: RF02
+                        )
                     )
                 ) as varchar
             ),
             '{}'
         ) as breakdown_json,
         coalesce(
-            list_transform(d.breakdown_positions, lambda i: string_split(p.breakdown_codes, ',')[i])
+            list_transform(
+                d.breakdown_positions, lambda i: string_split(p.breakdown_codes, ',')[i]  -- noqa: RF02
+            )
             = d.breakdown_totals,
             true
         ) as is_total,
@@ -122,10 +130,15 @@ select
     case when p.sex_code_raw in ('F', 'M', 'T') then p.sex_code_raw end as sex_code,
     p.is_total,
     p.value,
-    case substr(nullif(trim(p.status_code), ''), 1, 1)
-        when 'p' then 'provisional' when 'e' then 'estimated' when 'c' then 'confidential' when 'b' then 'break'
-        when 'u' then 'low_reliability' when 'd' then 'definition_differs' when 'f' then 'forecast'
-        when 's' then 'estimated' when 'n' then 'not_significant' else 'ok'
+    -- projection datasets (PROJ_*) are projections in every row, whatever their flag: never observations
+    case
+        when p.block_id like 'PROJ\_%' escape '\' then 'forecast'
+        else
+            case substr(nullif(trim(p.status_code), ''), 1, 1)
+                when 'p' then 'provisional' when 'e' then 'estimated' when 'c' then 'confidential' when 'b' then 'break'
+                when 'u' then 'low_reliability' when 'd' then 'definition_differs' when 'f' then 'forecast'
+                when 's' then 'estimated' when 'n' then 'not_significant' else 'ok'
+            end
     end as observation_status_key,
     p.source_version,
     p.raw_sha256
