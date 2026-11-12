@@ -74,7 +74,7 @@ def page():
 
 def sheets(ids):
     for fid in ids:
-        r = get(f"{BASE}/downloadFile/{fid}")
+        r = get(f"{BASE}/downloadFile/{fid}" if fid.isdigit() else f"{BASE}/pobierz/{fid}")
         info = {"id": fid, "status": r.status_code, "bytes": len(r.content), "type": r.headers.get("Content-Type"),
                 "disposition": r.headers.get("Content-Disposition"), "last_modified": r.headers.get("Last-Modified"),
                 "magic": r.content[:4].hex()}
@@ -98,7 +98,7 @@ def sheets(ids):
 
 def dump(ids, sheet, rows):
     for fid in ids:
-        r = get(f"{BASE}/downloadFile/{fid}")
+        r = get(f"{BASE}/downloadFile/{fid}" if fid.isdigit() else f"{BASE}/pobierz/{fid}")
         lines: dict[tuple[str, int], list[str]] = {}
         for c in xlsx_cells.cells(r.content):
             if c["row_number"] <= rows and re.search(sheet, c["sheet_name"]):
