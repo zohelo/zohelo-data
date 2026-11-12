@@ -72,8 +72,10 @@ select
     make_date(b.year, 1, 1) as date_key,
     cast(b.year as varchar) as period_label,
     cast(json_object('quality_class', b.quality_class) as varchar) as breakdown_json,
-    cast(json_object('quality_class', case b.quality_class when '_T' then 'ogółem' else 'klasa ' || b.quality_class end)
-        as varchar) as breakdown_label_json,
+    cast(
+        json_object('quality_class', case b.quality_class when '_T' then 'ogółem' else 'klasa ' || b.quality_class end)
+        as varchar
+    ) as breakdown_label_json,
     cast(null as varchar) as sex_code,
     b.quality_class = '_T' as is_total,
     cast(b.points as double) as value,

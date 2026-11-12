@@ -36,7 +36,7 @@ PAGE_TEXT = re.compile(r"^\d{4}(-\d{4})?$")  # menu entries: "2025", "1991-2003"
 WORKBOOK = re.compile(r"^https?://mjwp\.gios\.gov\.pl/g2/oryginal/[0-9_]+/[0-9a-f]+\.xlsx$", re.IGNORECASE)
 LINK_YEAR = re.compile(r"^(\d{4})\s*-\s*")
 RECHECK = 2  # newest years whose workbooks are downloaded again on every run (corrections land as new versions)
-PAUSE = 3.0
+PAUSE = 10.0  # seconds between requests: the server answered a burst with a short page without links (#2870)
 FIRST_YEAR = 1991
 
 
@@ -55,8 +55,13 @@ def kind_of(text: str) -> str | None:
     return None
 
 
+class PageWithoutLinks(RuntimeError):
+    """A result page answered without its links (a short page instead of the portal page): reported with its status,
+    headers and start, never retried around (docs/landing.md: polite access, never around bot protection)."""
+
+
 def _links(url: str) -> list[tuple[str, str]]:
-    """(absolute href, link text) of every <a> on a page."""
+    """(absolute href, link text) of every <a> on a page; PageWithoutLinks when the page has none."""
     from html.parser import HTMLParser
     from urllib.parse import urljoin
 
@@ -91,6 +96,12 @@ def _links(url: str) -> list[tuple[str, str]]:
             response.raise_for_status()
             parser = Anchors()
             parser.feed(response.text)
+            if not parser.out:
+                headers = {k: v for k, v in response.headers.items() if k.lower() not in {"set-cookie"}}
+                raise PageWithoutLinks(
+                    f"{url}: status {response.status_code}, {len(response.content)} bytes, no links; headers "
+                    f"{headers}; start {' '.join(response.text.split())[:400]!r}"
+                )
             return [(href, " ".join(text.split())) for href, text in parser.out]
         except bulk_file.PermanentError:
             raise
@@ -107,6 +118,8 @@ def pages() -> dict[str, str]:
     for href, text in _links(START):
         if PAGE.match(href) and PAGE_TEXT.match(text):
             found.setdefault(text, href)
+    if not found:
+        raise PageWithoutLinks(f"{START}: no result-page menu")
     return dict(sorted(found.items()))
 
 
@@ -192,7 +205,11 @@ def _inspect(p) -> int:
     from ingestion.common.report import annotate
 
     held = held_receipts()
-    found, report = discover()
+    try:
+        found, report = discover()
+    except PageWithoutLinks as exc:
+        annotate("error", f"{SOURCE} landing inspect: page without links", {"error": str(exc)[:3000]})
+        return 1
     missing = sorted(set(found) - set(held))
     moved = sorted(e for e in found if e in held and held[e].get("source_url") != found[e]["url"])
     summary = {
@@ -216,7 +233,11 @@ def extract(budget_minutes: float, landing_root: str = "01_landing") -> int:
 
     deadline = time.monotonic() + budget_minutes * 60
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
-    found, report = discover()
+    try:
+        found, report = discover()
+    except PageWithoutLinks as exc:
+        annotate("error", f"{SOURCE} landing extract: page without links", {"error": str(exc)[:3000]})
+        return 1
     todo = plan(found, held_receipts(landing_root))
     results, refused, deferred = [], [], 0
     for n, spec in enumerate(todo):
