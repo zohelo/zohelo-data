@@ -1,6 +1,6 @@
 {# UN M49 numeric codes (https://unstats.un.org/unsd/methodology/m49/) of the EU27 member states and their ISO
-   3166-1 alpha-2 code: the comparison countries of the international sources that key areas by M49 (FAOSTAT,
-   WHO data.who.int). A code correspondence of the UN standard, not a name match. #}
+   3166-1 alpha-2 code: the comparison countries of the international sources (FAOSTAT and WHO data.who.int key
+   areas by M49; UNESCO UIS uses the list of members). A code correspondence of the UN standard, not a name match. #}
 {% macro poc_m49_eu27() %}
     select * from (
         values
