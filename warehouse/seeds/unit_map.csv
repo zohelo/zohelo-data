@@ -141,13 +141,14 @@ ecb,PC,,pct
 ecb,PCCH,,pct
 ecb,MIO_EUR,,mln_eur
 world_bank_wgi,governance estimate (about -2.5 to 2.5),,wgi_estimate
-world_bank_findex,% of population age 15+,,pct_population
+world_bank_findex,share of population age 15+,,share
 world_bank_ids,usd,,usd
 world_bank_ids,pct_gni,,pct_gni
 world_bank_ids,pct_exports,,pct_exports
 un_wpp,thousand_persons,,thousand_persons
 un_wpp,children_per_woman,,children_per_woman
 un_wpp,years,,years
+un_wpp,per_100,,pct
 world_bank_gem,pct,,pct
 unhcr,persons,,persons
 eea,Gg CO2 equivalent,,thousand_tonnes
@@ -166,3 +167,5 @@ gus_bdl,zł,gus_bdl:P3788:zł%,pln_per_m2
 gus_bdl,zł,gus_bdl:P3794:zł%,pln_per_m2
 gus_dbw,[zł],gus_dbw:309_485_180_3:%,pln_per_m2
 gus_dbw,udział w danej grupie gospodarstw domowych [%],,pct
+world_bank_icp,PCAP.PP,,ppp_usd_per_person
+world_bank_icp,PX.WL,,index_world_100

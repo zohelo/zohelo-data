@@ -52,3 +52,4 @@ days,dni,days,dni,false,days,1
 payers,płatn.,contribution payers,płatnicy składek,false,payers,1
 certificates,zaśw.,medical certificates,zaświadczenia lekarskie,false,certificates,1
 pln_per_m2,zł/m²,PLN per square metre,zł za m²,false,pln_per_m2,1
+share,0-1,"share (1 = 100%)","udział (1 = 100%)",true,pct,100
