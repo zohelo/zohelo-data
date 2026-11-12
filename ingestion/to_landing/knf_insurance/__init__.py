@@ -168,26 +168,35 @@ def release_of(entity: str) -> tuple[str, str]:
 
 
 def held_entities(landing_root: str = "01_landing") -> set[str]:
-    """Entities with a landed copy."""
+    """Entities with a complete landed copy (a receipt: it is written after the file)."""
     from ingestion.common.r2 import req, s3
 
     client, bucket, out = s3(), req("STORAGE_LANDING_BUCKET_NAME"), set()
-    for page in client.get_paginator("list_objects_v2").paginate(
-        Bucket=bucket, Prefix=f"{landing_root}/{SOURCE}/snapshot/data/", Delimiter="/"
-    ):
-        out |= {p["Prefix"].rstrip("/").rsplit("/", 1)[-1] for p in page.get("CommonPrefixes", [])}
+    root = f"{landing_root}/{SOURCE}/snapshot/data/"
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=root):
+        out |= {
+            o["Key"][len(root) :].split("/", 1)[0]
+            for o in page.get("Contents", [])
+            if o["Key"].endswith(".receipt.json")
+        }
     return out
 
 
 def plan(found: dict[tuple[str, str], str], held: set[str]) -> list[tuple[str, str, str]]:
-    """(series, key, article) to read: releases without a landed file (oldest first), then the newest RECHECK
-    releases of each series again."""
+    """(series, key, article) to read: releases without a landed file and bulletins with fewer than four parts
+    landed (a run stopped between parts; 2023 Q4 has no part D, so its article is read again whenever the listing walk
+    reaches it), oldest first; then the newest RECHECK releases of each series again."""
     held_releases = {release_of(e) for e in held}
-    missing = [(s, k, a) for (s, k), a in found.items() if (s, k) not in held_releases]
+    parts = {r: sum(1 for e in held if release_of(e) == r) for r in held_releases}
+    missing = [
+        (s, k, a)
+        for (s, k), a in found.items()
+        if (s, k) not in held_releases or (s == "bulletin" and parts[(s, k)] < 4)
+    ]
     recheck = []
     for series in sorted({s for s, _ in found}):
         newest = sorted(k for s, k in found if s == series)[-RECHECK:]
-        recheck += [(series, k, found[(series, k)]) for k in newest if (series, k) in held_releases]
+        recheck += [(series, k, found[(series, k)]) for k in newest if (series, k, found[(series, k)]) not in missing]
     return missing + recheck
 
 
