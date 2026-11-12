@@ -9,7 +9,8 @@
      foreign_insured        foreign citizens in pension insurance at the month end (M), all and Ukrainian
      payers_voiv            active contribution payers at the quarter end (Q), by payer type, Poland and voivodeships
      absence_voiv           sick-leave days and medical certificates in the quarter (Q), Poland and voivodeships
-   The area is '00' (Poland) or the TERYT voivodeship code, mapped in poc_map_geography. #}
+   The area is '00' (Poland) or the TERYT voivodeship code, mapped in poc_map_geography; the absence table's row
+   "nieustalone województwo" ('_U') is left out (it is part of Poland). #}
 with geo as (
     select
         source_code,
@@ -102,3 +103,5 @@ select
     x.raw_sha256
 from shaped as x
 left join geo as g on x.area_code = g.source_code
+-- '_U' (voivodeship not established) is part of the Poland row and has no area of its own
+where x.area_code <> '_U'
