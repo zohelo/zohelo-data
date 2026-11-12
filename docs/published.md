@@ -69,6 +69,9 @@ strings in ISO 8601 UTC.
 | licences[].attribution_text | string | yes | attribution to show with the data |
 | licences[].commercial_ok | boolean | yes | commercial use allowed |
 
+v1 files (latest.json, series.parquet, catalog.json) leave out the sources in `V2_ONLY_SOURCES` of
+`warehouse/publish.py` (ECB): they reach contract v2 only, so a new source never changes what zohelo.com shows first.
+
 `warehouse/publish.py` writes it (`kpi_entry`, `catalog_json`) with one `kpis` entry per published KPI that has a
 `gold.metrics_<kpi_key>` table, computed from that KPI's series.parquet rows: `source_keys` and `geo_levels`
 (non-geographic `_Z` rows count as `country`) as they occur, `first_period`/`last_period` from the rows of
@@ -453,7 +456,7 @@ yardsticks live there). Rules, no language model. Written with the other v2 file
 | briefs[].released_at_source | string | `calendar` or `detected` (then `released_at` is the day of `detected_at`) |
 | briefs[].detected_at | string | when `gold.publish` first published the period; at most `window_days` before `generated_at` |
 | briefs[].next_release | string or null | the KPI's first `calendar.json` date after `released_at` (on a release day the release itself is not the next one) |
-| detections[] | array | writer state, not for display: `{ kpi_key, geography, period, detected_at, released_at, released_at_source }` of every period detected in the last `window_days`, one per KPI, geography and period; every brief has its entry |
+| detections[] | array | writer state, not for display: `{ kpi_key, geography, period, source_key, detected_at, released_at, released_at_source }` of every period detected in the last `window_days` and not after `generated_at`, one per KPI, geography and period; every brief has its entry; `source_key` is optional (entries written before it match any source) |
 
 **Change unit** (`ops.repo_check.brief_change_unit`, one rule for writer and check): `pp`, the difference in
 percentage points, for KPIs with aggregation `rate`, units in % (`pct…`, including `pct_points`) and the indices
@@ -468,7 +471,7 @@ published files themselves: before writing, `gold.publish` reads the previous `l
 `06_published/v2/`. A KPI × geography gets a brief when its `latest.json` period is later than the one in the
 previous `latest.json`, of the same frequency and from the same source (`detected_at` = now). `detections` keeps
 every period detected in the last `window_days`: a period found there keeps its `detected_at`, and a new period at or
-below a detected one keeps that detection's `detected_at` (a transient step back, P → P−1 → P, is not a second
+below a detected one keeps that detection's `detected_at`, both only when the detection is of the same source (a transient step back, P → P−1 → P, is not a second
 release). A brief stays while `detected_at` is at most `window_days` old and is replaced when a newer period arrives.
 Its numbers are recomputed from the current files on every run, so revisions show. Not a release, so no brief: a KPI
 or geography that was not in the previous `latest.json` (first publication), a revised value of the same period, a

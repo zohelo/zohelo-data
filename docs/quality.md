@@ -90,7 +90,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 
 ## Enforcement
 
-1. `check` job on every pull request (from the owner's `dev.yml` change; until then the
+1. `check` job once per pull request, on the label `merge:check` (docs/flow.md, merge gate; from the owner's `dev.yml` change; until then the
    job runs compile, pyflakes, YAML parse, configuration, dbt parse): `python -m ops.repo_check` (root allowlist and file
    rules, no `dev/`, five workflows with pinned actions, compile, ruff check + format,
    yamllint, configuration and schedules), `dbt parse`, and a gitleaks secret scan.

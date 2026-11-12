@@ -1,0 +1,146 @@
+source_system: undata
+description: "UNdata (UN Statistics Division) — UN Statistical Yearbook tables (CSV)"
+
+# Extraction strategy (docs/landing.md). UNdata's legacy data-mart download handlers now return the "UN System
+# Data Commons" page (Dev probe 43086552621), so the maintained UNdata product is used: the UN Statistical
+# Yearbook (SYB) tables, one CSV per table linked from https://data.un.org/Default.aspx
+# (_Docs/SYB/CSV/SYB68_<table>_202511_<title>.csv, a few MB each). The file names change with each edition, so
+# each entity finds its link on that page (bulk_file url_from, pattern by table number); version = the server's
+# Last-Modified when the download carries one (the Dev trial 43163356932's did not, so the download time was
+# used); a copy is written only when the SHA-256 changed. Each table cites its source agency (UN
+# Population Division, IMF, ILO …) per row. The UNdata SDMX service (data.un.org/ws/rest) carries other flows
+# (NA_MAIN is Eurostat's, 1.2 M rows; country data without Poland) and is not used. Terms: UNdata conditions
+# of use (register GL-017). Five tables have extra columns (system of trade, national currency, …: SYB 123, 130,
+# 176, 317, 330) and are left out until their layout is modelled; the 27 declared tables share one layout.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: syb_1           # Population, Surface Area and Density
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_1_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_12           # Agricultural Index
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_12_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_125           # Balance of Payments
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_125_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_128           # Consumer Price Index
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_128_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_145           # Land
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_145_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_153           # Gross Value Added by Economic Activity
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_153_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_154           # Health Personnel
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_154_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_200           # Employment
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_200_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_223           # Net Disbursements from Official ODA from Donors
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_223_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_226           # Net Disbursements from Official ODA to Recipients
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_226_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_230           # GDP and GDP Per Capita
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_230_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_245           # Public expenditure on education and access to computers
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_245_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_246           # Population Growth, Fertility and Mortality Indicators
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_246_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_263           # Production, Trade and Supply of Energy
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_263_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_264           # Patents
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_264_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_285           # Research and Development Expenditure and Staff
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_285_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_309           # Education
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_309_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_310           # Carbon Dioxide Emission Estimates
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_310_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_313           # Threatened Species
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_313_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_314           # Internet Usage
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_314_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_315           # Water and Sanitation Services
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_315_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_319           # Ratio of girls to boys in education
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_319_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_323           # Teaching Staff in education
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_323_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_325           # Expenditure on health
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_325_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_327           # International Migrants and Refugees
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_327_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_328           # Intentional homicides and other crimes
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_328_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+      - entity: syb_329           # Labour Force and Unemployment
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_329_[0-9]+_[^/]*\\.csv"}
+        format: raw
+        version: last_modified
+  initial: bulk
+  production: snapshot                  # each file is the complete table of one edition
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: # UTC; release: one Statistical Yearbook edition a year (November) with occasional table updates; monthly check (5th, 07:10)
+    - {cron: "10 7 5 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/undata/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.undata_syb_values, bronze.undata_rejected_files]
+silver: [silver.undata_syb_values]
+gold: []
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): about thirty small whole-table snapshots, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2784"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
