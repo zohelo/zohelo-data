@@ -32,6 +32,10 @@ Status: approved by the owner, 27 Oct 2026. Applies to `zohelo/zohelo-data`, `zo
 
 `backlog_sync apply` closes a Deliverable once all its Tasks are closed and it has no `todo` lines, and an Epic once all its
 Deliverables are closed (comment lists the `done_when`), so progress rolls up on the board; it never reopens an issue.
+The two Source review Tasks of a generated source Epic are the exception to "its PR merges": a review is a register
+change, often many entries in one pull request, so the sync closes them from the register (#2907): `decide` once the
+entry's status is `approved` or later, `licence` once, in addition, `licence.notes` carries `Terms:`. A licence of
+`unresolved` with its evidence counts, because the source is built and kept internal by the licence gate (O36, O37).
 The Quality Engineer reopens one whose `done_when` turns out false.
 
 ## 3. Files
@@ -44,14 +48,18 @@ zohelo-data only:
   stages.yaml                # the 11-stage source template (source Epics are generated from the register)
 ```
 
-Source Epics are generated from `ingestion/register.yaml` for every entry that is not parked (owner O36, 11 Nov:
+Source Epics are generated from `ingestion/register.yaml` for every entry (owner O36, 11 Nov:
 data sources are the top priority and every source is onboarded through Gold, so every source keeps its issues;
 this reverses the current-phase rule of 10 Nov). For an entry without its own
 `epics/src-<id>.yaml` the Epic depends on the register status (owner, 28 Oct, #2230): `registered` or `reviewing` → only the stage-1 review Deliverable and its
 Tasks; `approved` and later → stage 1 and stage 2 with their Tasks (Bug #2337; until the stage-2 declaration Task adds
 `source_system` to the register, `{source_system}` is the id in lower case with `-` as `_`; a hand-written file carries
 the full stages);
-`parked` → no Epic, so the sync closes its open issues as not planned. Keys do not change with the status.
+`parked` → the stage-1 review Deliverable and its Tasks, and the sync closes none of the entry's open issues (not
+as not planned, also not those of a later stage, and not by the roll-up), because no source is dropped for a technical
+reason and a parked entry is reviewed again (owner rule of 12 Nov, #2873). The one exception: a parked entry whose
+first `research.blockers` item starts with `Contained in:` (it names the loaded source that holds the data) gets no
+Epic, so the sync closes its open issues as not planned. Keys do not change with the status.
 
 Keys are stable lower-case slugs, unique across the org, prefixed by repo: `data/…`, `bi/…`, `com/…`.
 A Deliverable key is `<epic-key>/<slug>`; a Task key `<deliverable-key>/<slug>`. Keys never change after an

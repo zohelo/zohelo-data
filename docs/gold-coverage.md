@@ -3,7 +3,7 @@
 How every source gets into Gold in full, without an activation list (owner direction O36). It
 extends the Gold v1 model of [model.md](model.md): natural string keys, series grain, sources
 drilled across through conformed dimensions and never unioned. The storage layout and the run limits are
-decision D34 in [decisions.md](decisions.md); the scope is O43; units follow D33.
+decision D35 in [decisions.md](decisions.md); the scope is O43; units follow D33.
 
 **100% coverage** means: every loaded Silver series of every source is available in Gold in the
 common observation shape (measure, unit, geography, calendar, breakdown, status). KPIs are the
@@ -46,10 +46,10 @@ group, smaller blocks first.
 
 ### 2. One path for every statistical source: per block
 
-Full coverage of every statistical source, big or small, is built per block (D34). The curated
+Full coverage of every statistical source, big or small, is built per block (D35). The curated
 `fact_*` tables stay the reviewed KPI selections under their #822 ceilings; no source is loaded
 into them unfiltered. One path keeps one set of rules (whole-block accept or reject, the grain
-checked per block, the run limits of D34) instead of a size threshold that a source crosses as it
+checked per block, the run limits of D35) instead of a size threshold that a source crosses as it
 grows.
 
 A **block** is the unit of rebuild: a Silver entity (Eurostat dataset, BDL subgroup), a group of
@@ -102,11 +102,11 @@ geography codes **that block holds**. A run builds only blocks whose recipe chan
 | A block's source version | that block (the daily load) |
 | A row of `gold.map_geography` | the blocks holding that code, found in `gold.<source>_geography`, which is read only when the map changed |
 | The Gold SQL of the source (a rule) | every block of the source, over several resumable runs; Gold stays readable block by block meanwhile |
-| A block left Silver | it is removed from Gold, within the removal cap of D34 |
+| A block left Silver | it is removed from Gold, within the removal cap of D35 |
 
 This is the refresh policy the big sources already declare (`refresh: {mode: incremental, unit: …}`,
 #875, D32). The limits that replace the #822 row ceilings for these tables (run budget, memory per
-block, removal cap, whole-block accept or reject) are D34.
+block, removal cap, whole-block accept or reject) are D35.
 
 **Grain.** Every block is checked before it is accepted: one row per `series_key × date_key`, the
 grouping of `tests/fact_grain.sql`. `measure_key` starts with the source and the block, so a
@@ -161,7 +161,7 @@ first day of the period, so the annual and the first-quarter row of one measure 
 not only where a block needs it: a key must not change when a dataset gains a second frequency.
 
 Half-yearly and weekly periods are loaded with their own frequency (`S`: 1 January and 1 July; `W`:
-the ISO week's Monday) and never folded into another frequency (D34). The playbook's rule that S and
+the ISO week's Monday) and never folded into another frequency (D35). The playbook's rule that S and
 W need a new fact model before they enter `fact_*` is unchanged for the curated facts. Periods the
 calendar cannot place (Eurostat frequency `NAP`) are not loaded and are counted as explained
 exclusions (decision 10).
@@ -235,10 +235,11 @@ and nothing else. Everything after the build stage is shared.
 3. The build stage covers **all** Silver tables and series of the source; one measure rule per
    table; periods other than A, S, Q, M, W, D are excluded and counted, never folded. The curated
    `poc_build_<source>` stays for the KPIs.
-4. Every geography code is mapped by code in the source's CTE of `poc_map_geography.sql` (an
-   official correspondence table where codes differ; names only as a reported fallback). That CTE
-   reads only tables that already exist on prod: a `ref()` to a Silver table that the source's first
-   scheduled run has not built yet turns the whole Gold build red.
+4. Every geography code is mapped by code in the source's `poc_geography__<source>()`
+   ([source-registration.md](source-registration.md), D34; an official correspondence table where
+   codes differ; names only as a reported fallback). It reads only tables that already exist on prod:
+   a `ref()` to a Silver table that the source's first scheduled run has not built yet turns the whole
+   Gold build red. The source's per-block Gold tables are declared in its own source YAML `gold:` (D34).
 5. Units follow D33: each unit is a `unit.csv` row with `base_unit_key` and `factor`, each source
    code a `unit_map.csv` row; an unmapped code stays as published and is reported.
 6. A Dev trial into `zz_dev_<topic>` shows the grain empty, coverage 100% or each missing series
@@ -254,5 +255,5 @@ and nothing else. Everything after the build stage is shared.
 |---|---|---|---|
 | 1 | Non-KPI measures in zohelo-bi | An additive published v2 catalogue, `catalog/measures_<source>.parquet` from `gold.<source>_measures`; decide once one source is fully loaded | owner |
 | 2 | Names of breakdown codes | One small table per block (`gold.<source>_codes`: dimension, code, name, total code) before the portal shows these tables | architect |
-| 3 | Eurostat codes of Polish NUTS 3 regions are unmatched (`_X`) | Map them in the Eurostat CTE of `poc_map_geography.sql` to the podregion keys DBW already uses | architect |
+| 3 | Eurostat codes of Polish NUTS 3 regions are unmatched (`_X`) | Map them in the Eurostat geography codes (the Eurostat CTE of `poc_map_geography.sql`, registered before D34) to the podregion keys DBW already uses | architect |
 | 4 | The series table is more than half of the bytes | Keep it for the first load; then decide whether series attributes move onto the fact for annual blocks | architect |

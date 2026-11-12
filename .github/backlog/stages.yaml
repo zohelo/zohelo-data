@@ -44,7 +44,7 @@ stages:
     predecessor: null
     done_when:
       - "Register entry {id} in {register_file} has every field filled (access, licence, updates, ingestion, modelling, research)"
-      - "licence.status is open-conditional, dataset-specific or restricted with notes that state the attribution text and any public-display limit; unresolved only with an owner decision recorded in licence.notes"
+      - "licence.notes starts with `Terms:` and records the licence: for open, open-conditional, dataset-specific or restricted the terms URL, the attribution text and any public-display limit; for unresolved the quoted evidence of what the provider's pages state (the source is built and kept internal by the licence gate: O36, O37)"
       - "Register status is approved (onboard) or parked (with the reason in research.blockers)"
     tasks:
       - key: licence
@@ -58,16 +58,18 @@ stages:
           - edit: "{register_file}"
         steps:
           - "Open the URLs in the entry's access.endpoint and research.references; find the provider's terms of use / copyright page."
-          - "Write into licence.notes: licence name or terms page URL, the exact attribution sentence to show, whether commercial reuse and modification are allowed, any disclaimer that must be shown."
-          - "Set licence.status: open-conditional when reuse with attribution is allowed; restricted when public display is not allowed; unresolved only if no terms exist (then add an owner:decision note to the Epic issue)."
+          - "Write into licence.notes, starting with `Terms:`: licence name or terms page URL, the exact attribution sentence to show, whether commercial reuse and modification are allowed, any disclaimer that must be shown."
+          - "Set licence.status: open-conditional when reuse with attribution is allowed; restricted when public display is not allowed; unresolved when the provider states no reuse terms: then quote after `Terms:` what its pages say and which pages were read. An unresolved licence needs no owner question: the source is built and the licence gate keeps it internal (O36, O37)."
           - "Remove resolved items from research.blockers."
         acceptance:
-          - "licence.notes of {id} names the terms URL and an attribution sentence"
+          - "licence.notes of {id} starts with `Terms:` and names the terms URL and an attribution sentence, or, for unresolved, quotes the pages read"
           - "python -m ops.repo_check passes"
         verify:
           - run: python -m ops.repo_check
             expect: exit code 0
         out_of_scope: ["Changing any other register entry", "Code changes"]
+        notes:
+          - "backlog_sync closes this issue from the register once the entry is approved or later and licence.notes carries `Terms:` (#2907); a batch pull request does not have to list it."
       - key: decide
         title: "Approve or park {short_name} in the register"
         effort: S
@@ -78,7 +80,7 @@ stages:
           - edit: "{register_file}"
         steps:
           - "Check the entry has access.kind, access.endpoint, licence (after the licence Task), updates, ingestion.identifiers and modelling.notes."
-          - "Set status: approved when a bulk feature or a tested API route exists and the licence allows our use; set status: parked otherwise and write the reason as the first research.blockers item."
+          - "Set status: approved when a bulk feature or a tested API route exists; the licence is recorded, and an unresolved licence does not stop the build (the source stays internal, O37). Set status: parked only for a reason that is not technical (owner rule of 12 Nov 2026, #2873) and write it as the first research.blockers item."
           - "kpi is a required field set when the entry was registered (rule in .github/backlog/assets/register-fields.md); change it only if this review proves it wrong, with the reason in the PR body."
         acceptance:
           - "{id} status is approved or parked"
@@ -89,6 +91,7 @@ stages:
         depends_on: [licence]
         notes:
           - "Rendered only after data/ingestion/register-restructure/fields/funnel is merged (repo_check accepts approved/parked from then on)."
+          - "backlog_sync closes this issue from the register once the status is approved or later (#2907); for a parked entry they stay open, unless its first research.blockers item starts with `Contained in:` (the data is in a source already loaded), which closes them as not planned."
 
   - n: 2
     key: development
