@@ -6,8 +6,10 @@ description: NFZ statistics API, pharmacy refunds (app-stat-api-ra v1.0) — mon
 # no key, 10 requests/second per IP (terms, section III), at most 25 rows a page (limit=50 or 100: HTTP 400).
 # Scope (lead's decision for #2930): /monthly-provisions for 17 areas (Poland unfiltered + province=01..16) x 15 ATC
 # selections (none + the 14 main groups of /atc, by name) = 255 entities of 4 pages (96 months, 2017-01 to
-# 2024-12), about 1,020 requests one at a time, 1 s apart. Not loaded: package-level /provisions, the gender, age,
-# 75+ and announcement splits, the product and substance dictionaries (docs/sources/nfz_pharmacy_refunds.md).
+# 2024-12), about 1,020 requests one at a time, 1 s apart; plus the /atc dictionary (metadata entity atc, Landing and
+# Archive only: its names are in the data receipts and Bronze rows). Not loaded: package-level /provisions, the gender,
+# age, 75+ and announcement splits, /yearly-provisions, the product and substance dictionaries
+# (docs/sources/nfz_pharmacy_refunds.md).
 # aggregationType is not sent (the API's default); W, G13 and G14 only regroup package codes and gave the same
 # monthly totals (probe, 2024-12). Entity = one area x ATC selection, all its pages (parts); version = end-date of
 # /available-periods, so a run whose version is held makes one request. Own extractor
@@ -22,6 +24,7 @@ extraction:
 landing: 01_landing/nfz_pharmacy_refunds/
 archive_policy:
   move: true
+  without_bronze: [metadata]   # the /atc dictionary
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
 bronze: [bronze.nfz_ra_monthly_provisions, bronze.nfz_pharmacy_refunds_rejected_files]

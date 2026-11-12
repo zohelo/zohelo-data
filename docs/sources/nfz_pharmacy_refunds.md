@@ -9,7 +9,9 @@ group **name**). Each entity is every page of its answer (one Landing file per p
 each; complete when all parts of the newest download are there). Version = `end-date` of `/available-periods`:
 a run whose version is held makes that one request. Answers carry the request time (`meta.date-modified`), so a
 new download is compared by the SHA-256 of its `data` rows (`data_sha256` in the receipts); equal rows are not
-written again. A full load is about 1,020 requests, one at a time, 1 s apart. Restart unit: one entity.
+written again. A full load is about 1,020 requests, one at a time, 1 s apart. Restart unit: one entity. The `/atc`
+answer (the 14 group names the filters take) is landed as the metadata entity `atc` when its rows change; it has no
+Bronze table (the names travel in the data receipts and Bronze rows) and is archived as `without_bronze`.
 
 - Bronze `bronze.nfz_ra_monthly_provisions`: one row per record, number text as published, the selection from
   the receipt, `meta_count` and page. Silver `silver.nfz_ra_monthly_provisions`: grain area × ATC selection ×

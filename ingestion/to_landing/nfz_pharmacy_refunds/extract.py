@@ -17,6 +17,9 @@ otherwise the entity fails.
 Layout (docs/landing.md):
 ``<root>/nfz_pharmacy_refunds/snapshot/data/<area>_<atc>/<version>__<ingested>__part-<n>.json`` + one receipt per
 part, written after the part. An entity counts as landed only when every part of its newest download has a receipt.
+The ``/atc`` answer (the 14 group names the filters take) is the metadata entity
+``<root>/nfz_pharmacy_refunds/snapshot/metadata/atc/<version>__<ingested>.json``, landed when its rows changed; it has
+no Bronze table (the names are in the data receipts and Bronze rows) and is archived as ``without_bronze``.
 Modes: inspect (missing / stale / current, one request), load (missing first, then stale; time-budgeted), verify
 (every receipt has its file, in Landing or the Archive). Polite access: one request at a time, a pause of about
 1 s, bounded retries with backoff on 429/5xx/timeouts (the ICP extractor's ``fetch``; an HTTP 500 ``Maintenance``
@@ -57,14 +60,18 @@ def entities() -> list[str]:
     return [f"{area}_{atc}" for area in AREAS for atc in [TOTAL, *ATC]]
 
 
-def prefix(root: str) -> str:
-    return f"{root.rstrip('/')}/{SOURCE}/snapshot/data/"
+def prefix(root: str, area: str = "data") -> str:
+    """Landing folder of the data or metadata area; area "" = the whole snapshot folder."""
+    return f"{root.rstrip('/')}/{SOURCE}/snapshot/" + (f"{area}/" if area else "")
 
 
 def get_json(session: requests.Session, path: str, **params: Any) -> tuple[bytes, Any, str]:
     time.sleep(PAUSE_SECONDS)
     address = f"{API}/{path}?{urlencode({**params, 'format': 'json', 'api-version': '1.0'})}"
-    body, _ = fetch(session, address)
+    try:  # fetch retries 429/5xx/timeouts (an HTTP 500 "Maintenance", error-code 4200004, too) and then gives up
+        body, _ = fetch(session, address)
+    except RuntimeError as exc:  # the ICP helper names its own API in the message
+        raise RuntimeError(f"NFZ API: {str(exc).replace('World Bank API ', '')}") from exc
     try:
         parsed = json.loads(body)
     except ValueError as exc:
@@ -81,13 +88,14 @@ def version(session: requests.Session) -> str:
     return datetime.strptime(end, "%Y-%m-%d").strftime("%Y%m%dT000000Z")
 
 
-def atc_names(session: requests.Session) -> dict[str, str]:
-    """ATC group code -> the name the data resources take as filter; fails when the groups are not the declared 14."""
-    _, listing, address = get_json(session, "atc", page=1, limit=LIMIT)
+def atc_names(session: requests.Session) -> tuple[dict[str, str], tuple[bytes, str]]:
+    """ATC group code -> the name the data resources take as filter, and the answer (body, address) to land; fails
+    when the groups are not the declared 14."""
+    body, listing, address = get_json(session, "atc", page=1, limit=LIMIT)
     names = {item["attributes"]["code"]: item["attributes"]["name"] for item in listing["data"]}
     if sorted(names) != sorted(ATC) or int(listing["meta"]["count"]) != len(ATC):
         raise RuntimeError(f"NFZ /atc lists {sorted(names)}, declared {ATC}: {address}")
-    return names
+    return names, (body, address)
 
 
 def put(client, bucket: str, key: str, body: bytes) -> None:
@@ -103,10 +111,10 @@ def put(client, bucket: str, key: str, body: bytes) -> None:
             time.sleep(10 * 2**attempt)
 
 
-def landed(client, bucket: str, root: str) -> dict[str, list[dict[str, Any]]]:
+def landed(client, bucket: str, root: str, area: str = "data") -> dict[str, list[dict[str, Any]]]:
     """Receipts in Landing by entity, oldest download first."""
     out: dict[str, list[dict[str, Any]]] = {}
-    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix(root)):
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix(root, area)):
         for o in page.get("Contents", []):
             if o["Key"].endswith(".receipt.json"):
                 body = {**json.loads(get_with_backoff(client, bucket, o["Key"])), "receipt_key": o["Key"]}
@@ -172,8 +180,30 @@ def download(session: requests.Session, entity: str, asked: dict[str, str]) -> l
 
 
 def data_digest(pages: list[tuple[bytes, str]]) -> str:
-    rows = sorted((r for body, _ in pages for r in json.loads(body)["data"]), key=lambda r: (r["year"], r["month"]))
+    """SHA-256 of the answer's ``data`` rows, canonical order (the bytes differ per request: meta.date-modified)."""
+    rows = [r for body, _ in pages for r in json.loads(body)["data"]]
+    rows.sort(key=lambda r: json.dumps(r, sort_keys=True))
     return sha256(json.dumps(rows, sort_keys=True).encode()).hexdigest()
+
+
+def write(client, bucket: str, key: str, body: bytes, address: str, index: int, total: int, fields: dict) -> None:
+    """One Landing file, then its receipt (written after the file: the receipt marks it complete)."""
+    put(client, bucket, key, body)
+    receipt = {
+        "schema_version": 2,
+        "kind": "nfz_pharmacy_refunds_landing",
+        "source_id": SOURCE,
+        "content": "snapshot",
+        "source_kind": "nfz_api_json",
+        "source_url": address,
+        "sha256": sha256(body).hexdigest(),
+        "size_bytes": len(body),
+        "object": {"bucket": bucket, "key": key},
+        "part": {"index": index, "total": total},
+        "code_sha": os.environ.get("GITHUB_SHA", ""),
+        **fields,
+    }
+    put(client, bucket, key[: -len(".json")] + ".receipt.json", json.dumps(receipt, indent=2, sort_keys=True).encode())
 
 
 def land_entity(client, bucket, root, session, entity, token, names, held) -> str:
@@ -185,38 +215,53 @@ def land_entity(client, bucket, root, session, entity, token, names, held) -> st
     ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     area, atc = entity.split("_")
     for index, (body, address) in enumerate(pages, start=1):
-        key = f"{prefix(root)}{entity}/{token}__{ingested}__part-{index}.json"
-        put(client, bucket, key, body)
-        receipt = {
-            "schema_version": 2,
-            "kind": "nfz_pharmacy_refunds_landing",
-            "source_id": SOURCE,
+        fields = {
             "entity": entity,
             "area_code": area,
             "atc_code": "_T" if atc == TOTAL else atc,
             "atc_name": names.get(atc),
-            "content": "snapshot",
             "area": "data",
-            "source_kind": "nfz_api_json",
             "version_token": token,
             "ingested_at": ingested,
-            "source_url": address,
-            "sha256": sha256(body).hexdigest(),
-            "size_bytes": len(body),
-            "object": {"bucket": bucket, "key": key},
-            "part": {"index": index, "total": len(pages)},
             "data_sha256": digest,
             "replaces_data_sha256": before[0]["data_sha256"] if before else None,
-            "code_sha": os.environ.get("GITHUB_SHA", ""),
         }
-        receipt_body = json.dumps(receipt, indent=2, sort_keys=True).encode()
-        put(client, bucket, key[: -len(".json")] + ".receipt.json", receipt_body)
+        write(
+            client,
+            bucket,
+            f"{prefix(root)}{entity}/{token}__{ingested}__part-{index}.json",
+            body,
+            address,
+            index,
+            len(pages),
+            fields,
+        )
     return "landed_changed" if before else "landed_new"
 
 
+def land_dictionary(client, bucket, root, token, answer: tuple[bytes, str], held) -> str:
+    """The /atc answer (the 14 group names the filters use) as metadata entity ``atc``, when its rows changed."""
+    body, address = answer
+    digest = data_digest([answer])
+    before = newest_complete(held)
+    if before and before[0]["data_sha256"] == digest:
+        return "unchanged_data"
+    ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    fields = {
+        "entity": "atc",
+        "area": "metadata",
+        "version_token": token,
+        "ingested_at": ingested,
+        "data_sha256": digest,
+    }
+    write(client, bucket, f"{prefix(root, 'metadata')}atc/{token}__{ingested}.json", body, address, 1, 1, fields)
+    return "landed"
+
+
 def run_verify(client, bucket: str, root: str, held: dict[str, list]) -> dict[str, Any]:
+    """Every receipt (data and the metadata entity atc) has its file in Landing or the Archive."""
     present = set()
-    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix(root)):
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix(root, "")):
         present |= {o["Key"] for o in page.get("Contents", []) if not o["Key"].endswith(".receipt.json")}
     stored = archived(client, bucket, SOURCE)
     problems = [
@@ -226,7 +271,7 @@ def run_verify(client, bucket: str, root: str, held: dict[str, list]) -> dict[st
         if r["object"]["key"] not in present
         and stored.get(r["sha256"], {}).get("key") != archive_key(SOURCE, r["sha256"], r["object"]["key"])
     ]
-    incomplete = sorted(e for e in entities() if held.get(e) and not newest_complete(held[e]))
+    incomplete = sorted(e for e in [*entities(), "atc"] if held.get(e) and not newest_complete(held[e]))
     return {
         "receipts": sum(len(v) for v in held.values()),
         "missing_data": len(problems),
@@ -244,9 +289,11 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     held = landed(client, bucket, args.landing_root)
+    dictionary = landed(client, bucket, args.landing_root, "metadata").get("atc")
     status = 0
     if args.mode == "verify":
-        summary: dict[str, Any] = {"mode": "verify", **run_verify(client, bucket, args.landing_root, held)}
+        everything = {**held, "atc": dictionary or []}
+        summary: dict[str, Any] = {"mode": "verify", **run_verify(client, bucket, args.landing_root, everything)}
         status = 1 if summary["missing_data"] else 0
     else:
         session = requests.Session()
@@ -256,10 +303,12 @@ def main(argv=None) -> int:
         todo = [e for e in entities() if not wanted or e in wanted]
         states = {e: state(held.get(e), token) for e in todo}
         summary = {"mode": args.mode, "source_version": token, "entities": len(todo), **Counter(states.values())}
+        summary["atc_dictionary"] = state(dictionary, token)
         order = [e for e in todo if states[e] == "missing"] + [e for e in todo if states[e] == "stale"]
-        if args.mode == "load" and order:
+        if args.mode == "load" and (order or summary["atc_dictionary"] != "current"):
             deadline = time.monotonic() + args.budget_minutes * 60
-            names = atc_names(session)
+            names, answer = atc_names(session)
+            summary["atc_dictionary"] = land_dictionary(client, bucket, args.landing_root, token, answer, dictionary)
             outcomes: Counter = Counter()
             failed: list[dict[str, str]] = []
             streak = 0  # entities failed in a row; two stop the run (API down or in maintenance)
