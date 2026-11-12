@@ -201,8 +201,10 @@ def summary(rows):
         dist = sorted({str(x)[:30] for x in vals if not isinstance(x, (dict, list))})
         nulls = sum(1 for x in vals if x is None or x == "")
         out[str(k)[:30]] = {"n": len(dist), "nulls": nulls, "vals": dist[:22] if len(dist) <= 60 else dist[:4] + ["…"] + dist[-4:]}
-    full = [json.dumps({k: r.get(k) for k in keys if not isinstance(r.get(k), (int, float))}, sort_keys=True, ensure_ascii=False) for r in rows]
-    out["repeated_label_sets"] = len(full) - len(set(full))
+    full = [json.dumps(r, sort_keys=True, ensure_ascii=False, default=str) for r in rows]
+    out["dup_rows"] = len(full) - len(set(full))
+    but_last = [json.dumps({k: r.get(k) for k in keys[:-1]}, sort_keys=True, ensure_ascii=False, default=str) for r in rows]
+    out["dup_all_but_last_key"] = len(but_last) - len(set(but_last))
     return out
 
 
