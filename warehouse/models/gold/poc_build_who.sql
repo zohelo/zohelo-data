@@ -2,7 +2,8 @@
 {# Gold build stage: WHO data.who.int indicators of poc_who_blocks (life expectancy and healthy life expectancy at
    birth, years) for the EU27 members and World (→ WB:WLD), annual, by sex: sex_code T/M/F and breakdown_json
    {"sex": <WHO code>}, is_total for both sexes. measure_key who:<entity>:years:<indicator code>. Values as
-   published (the point estimate; bounds stay in Silver). Areas through poc_map_geography (section who). #}
+   published (the point estimate; bounds stay in Silver); published rows only (publish_state PUBLISHED).
+   Areas through poc_map_geography (section who). #}
 with blocks as ({{ poc_who_blocks() }}),
 
 geo_map as (
@@ -43,4 +44,4 @@ select
 from shaped as o
 inner join blocks as b on o.entity = b.entity
 inner join geo_map as g on o.geo_type || ':' || o.geo_code_m49 = g.source_code
-where o.value is not null and o.time_type = 'YEAR'
+where o.value is not null and o.time_type = 'YEAR' and o.publish_state = 'PUBLISHED'

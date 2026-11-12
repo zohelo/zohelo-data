@@ -42,6 +42,8 @@ TRIALS = {
             "aggregates": "select distinct area_code, area_code_m49, area from faostat_observations where area_code in (5000, 5707) or area ilike 'European Union%' order by 1",
             "ghg sources": "select source_code, source, count(*) from faostat_observations where item_code = '6829' and element_code = '723113' group by all",
             "PL ghg land": "select entity, item_code, element_code, source_code, year, value, unit, flag from faostat_observations where area_code = 173 and ((item_code = '6829' and element_code = '723113') or (item_code = '6601' and element_code = '5110')) qualify row_number() over (partition by entity, source_code order by year desc) <= 2",
+            "projections": "select entity, item_code, source_code, min(year), max(year), count(*) from faostat_observations where is_projection group by all order by 1, 2 limit 30",
+            "flags in gold items": "select flag, count(*) from faostat_observations where (item_code = '6829' and element_code = '723113') or (item_code = '6601' and element_code = '5110') group by 1 order by 2 desc",
             "max ghg land": "select item_code, max(value) from faostat_observations where (item_code = '6829' and element_code = '723113') or (item_code = '6601' and element_code = '5110') group by 1",
         },
     },
@@ -54,6 +56,7 @@ TRIALS = {
             "PL": "select entity, sex, year, value from who_observations where geo_type = 'COUNTRY' and geo_code_m49 = '616' qualify row_number() over (partition by entity, sex order by year desc) <= 1",
             "World": "select entity, sex, year, value from who_observations where geo_type = 'GLOBAL' qualify row_number() over (partition by entity, sex order by year desc) <= 1",
             "range": "select entity, min(value), max(value) from who_observations group by 1",
+            "sex and state": "select sex, publish_state, count(*) from who_observations group by all order by all",
         },
     },
     "unesco_uis": {
@@ -84,6 +87,10 @@ def render(path: str, refs: dict[str, str], sources: dict[str, str]) -> str:
         ref=lambda name: refs.get(name, name),
         source=lambda _s, table: sources[table],
     )
+
+
+def render_activated() -> str:
+    return Environment().from_string(MACROS + "{{ poc_activated_blocks() }}").render(ref=lambda n: n, config=lambda **_k: "")
 
 
 def build_geo(con) -> None:
@@ -119,7 +126,7 @@ def trial(source: str) -> dict:
     con.register("bronze_obs", arrow)
     model(con, source, result)
     annotate("notice", f"{source} trial (scratch {SCRATCH})", {k: result[k] for k in ("landing", "landed_copies_per_entity", "bronze_exit", "bronze", "rejected", "silver_rows_two_builds", "silver_duplicate_keys", "silver_null_sha", "gold_rows_two_builds", "gold_dup_series_date")})
-    annotate("notice", f"{source} gold (scratch)", {"measures": result["gold measures"], "PL": result["gold PL latest"]})
+    annotate("notice", f"{source} gold (scratch)", {"measures": result["gold measures"], "PL": result["gold PL latest"], "build_check": result["build_check"], "grain_check": result["grain_check"]})
     return result
 
 
@@ -151,6 +158,7 @@ def model(con, source: str, result: dict) -> None:
     result["geo map"] = show(con, f"{source} geo map", "select geography_key = '_X', count(*) from gmap group by 1")
     build_sql = render(f"warehouse/models/gold/poc_build_{source}.sql", {silver: silver, "poc_map_geography": "gmap_all"}, {})
     con.execute(f"create or replace view gmap_all as select '{source}' as source_system, source_code, geography_key from gmap")
+    con.execute(f"create or replace table activated as select * from ({render_activated()}) where source_system = '{source}'")
     gold = []
     for _ in (1, 2):
         con.execute(f"create or replace table build as {build_sql}")
@@ -162,6 +170,8 @@ def model(con, source: str, result: dict) -> None:
     ).fetchone()[0]
     result["gold measures"] = show(con, f"{source} gold measures", "select measure_key, count(distinct geography_key), count(*), min(date_key), max(date_key), min(value), max(value) from build group by 1 order by 1")
     result["gold PL latest"] = show(con, f"{source} gold PL", "select measure_key, breakdown_json, date_key, value, observation_status_key from build where geography_key = 'PL' qualify row_number() over (partition by measure_key, breakdown_json order by date_key desc) = 1 order by 1, 2")
+    result["build_check"] = show(con, f"{source} build_check", "select b.source_system, b.block_id, count(o.block_id) as row_count, count(distinct o.measure_key || '|' || o.geography_key || '|' || o.breakdown_json) as series, count(*) filter (where o.geography_key = '_X') as rows_geography_unmatched, count(*) filter (where o.is_total) as rows_total_series, count(*) filter (where o.frequency = 'X') as rows_period_unplaced, min(o.date_key), max(o.date_key), list(distinct o.observation_status_key) from activated as b left join build as o on o.source_system = b.source_system and o.block_id = b.block_id group by all order by 2")
+    result["grain_check"] = show(con, f"{source} grain_check", "select source_system, block_id, count(*) as duplicate_keys from (select source_system, block_id, measure_key || '|' || geography_key || case when geography_key = '_X' then ':' || coalesce(geography_source_code, '') else '' end || '|' || breakdown_json as series_key, date_key from build group by all having count(*) > 1) group by all")
     result["gold areas"] = show(con, f"{source} gold areas", "select string_agg(distinct geography_key, ',' order by geography_key) from build")
 
 
@@ -194,10 +204,30 @@ def cleanup() -> None:
     annotate("notice", "scratch removed", removed)
 
 
+def who_pages() -> None:
+    import html as h
+    import urllib.request
+
+    out = {}
+    for uid, url in (("C64284D", "https://data.who.int/indicators/i/48D9B0C/C64284D"), ("90E2E48", "https://data.who.int/indicators/i/A21CFC2/90E2E48")):
+        req = urllib.request.Request(url, headers={"User-Agent": "zohelo-data/1.0 (+https://zohelo.com; terms check)"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            text = h.unescape(re.sub(r"(?s)<[^>]+>", " ", r.read().decode("utf-8", "replace")))
+        text = re.sub(r"\s+", " ", text)
+        hits = [text[max(0, m.start() - 150): m.start() + 450] for m in re.finditer(r"licen|Creative Commons|terms and conditions|Terms of use|Citation|copyright|third.party", text, re.I)]
+        print(f"### who page {uid} {url}: {json.dumps(hits)}", flush=True)
+        out[uid] = {"status": r.status, "licence_mentions": [x[:400] for x in hits if re.search(r"licen|Creative|copyright|third", x, re.I)][:4], "citation": [x[:400] for x in hits if "Citation" in x][:1]}
+    annotate("notice", "who indicator pages (terms check)", out)
+
+
 def main() -> int:
     sources = sys.argv[1:] or list(TRIALS)
     failed = 0
     try:
+        try:
+            who_pages()
+        except Exception as exc:  # noqa: BLE001
+            annotate("error", "who pages failed", {"error": f"{type(exc).__name__}: {str(exc)[:500]}"})
         for source in sources:
             try:
                 trial(source)
