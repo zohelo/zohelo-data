@@ -9,7 +9,8 @@ description: "UNdata (UN Statistics Division) — UN Statistical Yearbook tables
 # Last-Modified; a copy is written only when the SHA-256 changed. Each table cites its source agency (UN
 # Population Division, IMF, ILO …) per row. The UNdata SDMX service (data.un.org/ws/rest) carries other flows
 # (NA_MAIN is Eurostat's, 1.2 M rows; country data without Poland) and is not used. Terms: UNdata conditions
-# of use (register GL-017).
+# of use (register GL-017). Five tables have extra columns (system of trade, national currency, …: SYB 123, 130,
+# 176, 317, 330) and are left out until their layout is modelled; the 27 declared tables share one layout.
 extraction:
   kind: bulk_file
   bulk_file:
@@ -22,20 +23,12 @@ extraction:
         url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_12_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
-      - entity: syb_123           # Total Imports Exports and Balance of Trade
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_123_[0-9]+_[^/]*\\.csv"}
-        format: raw
-        version: last_modified
       - entity: syb_125           # Balance of Payments
         url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_125_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_128           # Consumer Price Index
         url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_128_[0-9]+_[^/]*\\.csv"}
-        format: raw
-        version: last_modified
-      - entity: syb_130           # Exchange Rates
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_130_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_145           # Land
@@ -48,10 +41,6 @@ extraction:
         version: last_modified
       - entity: syb_154           # Health Personnel
         url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_154_[0-9]+_[^/]*\\.csv"}
-        format: raw
-        version: last_modified
-      - entity: syb_176           # Tourist-Visitors Arrival and Expenditure
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_176_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_200           # Employment
@@ -110,10 +99,6 @@ extraction:
         url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_315_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
-      - entity: syb_317           # Seats held by women in Parliament
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_317_[0-9]+_[^/]*\\.csv"}
-        format: raw
-        version: last_modified
       - entity: syb_319           # Ratio of girls to boys in education
         url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_319_[0-9]+_[^/]*\\.csv"}
         format: raw
@@ -136,10 +121,6 @@ extraction:
         version: last_modified
       - entity: syb_329           # Labour Force and Unemployment
         url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_329_[0-9]+_[^/]*\\.csv"}
-        format: raw
-        version: last_modified
-      - entity: syb_330           # Major Trading Partners
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_330_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
   initial: bulk

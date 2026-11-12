@@ -800,7 +800,7 @@ sources:
     cost: free
     limits: No numeric quota published. The legacy ExplorerHandler/DownloadHandler now return the UN System Data
       Commons page (Dev probe 43086552621, 11 Nov 2026); the Statistical Yearbook CSV tables linked from
-      Default.aspx (SYB68, 32 tables, a few MB each) are used, one page and one file request per table and run.
+      Default.aspx (SYB68; 27 tables of one layout, a few MB each) are used, one page and one file request per table and run.
   licence:
     status: open-conditional
     notes: 'Terms: https://data.un.org/Host.aspx?Content=UNdataUse (UNdata Conditions of Use): all data and metadata

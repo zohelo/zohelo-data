@@ -3,8 +3,8 @@ models:
   - name: undata_syb_values
     description: >-
       UN Statistical Yearbook tables from bronze.undata_syb_values (UNdata, SYB68 edition, November 2025):
-      newest copy of each of 32 tables (population, GDP, CPI, employment, labour force and unemployment,
-      education, health, energy, CO2, trade, balance of payments, internet use, migrants …), every country
+      newest copy of each of 27 tables (population, GDP, CPI, employment, labour force and unemployment,
+      education, health, energy, CO2, balance of payments, internet use, migrants …), every country
       and M49 region. Grain: entity × area_code × year × series. Values typed (thousands separators removed);
       value_text keeps the published text (also for non-numeric entries).
     tests:
