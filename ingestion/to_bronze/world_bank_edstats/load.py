@@ -4,9 +4,9 @@
 Each file is one World Bank API v2 answer (ingestion/sources/world_bank_edstats.yaml) for the PISA mean-score
 indicators of one subject in the Education Statistics database (source 12), every economy, 2000 onwards:
 ``[{"page", "pages", "per_page", "total", "sourceid", "lastupdated"}, [{"indicator": {"id", "value"}, "country":
-{"id", "value"}, "countryiso3code", "date", "value", "unit", "obs_status", "decimal", "scale"}, ...]]``. One Bronze row per
-record with a value (a null value is an absent observation), every field as text, the value as the exact JSON
-number text. An answer over more than one page, an error message, or a record with other fields is rejected
+{"id", "value"}, "countryiso3code", "date", "value", "unit", "obs_status", "decimal", "scale"}, ...]]``. One Bronze row
+per record with a value (a null value is an absent observation), every field as text, the value as the exact
+JSON number text. An answer over more than one page, an error message, or a record with other fields is rejected
 (bronze.edstats_rejected_files). Code shared with other small bulk sources: ingestion/common/bulk_bronze.py.
 """
 
@@ -50,7 +50,7 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
         raise ValueError(f"World Bank API error: {json.dumps(meta)[:300]}")
     if str(meta.get("pages")) != "1":
         raise ValueError(f"answer over {meta.get('pages')} pages")
-    rows: dict[str, list[Any]] = {name: [] for name, _ in COLUMNS[1:12]}
+    rows: dict[str, list[Any]] = {name: [] for name, _ in COLUMNS[1:11]}
     rows["source_row_number"] = []
     for number, record in enumerate(records or [], start=1):
         unknown = sorted(set(record) - FIELDS)
