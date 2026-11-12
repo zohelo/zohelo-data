@@ -91,12 +91,12 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865
   teryt_terc: {rows: 20000}  # 4,360
-  wgi_observations: {rows: 400000}  # 202,092 (Dev trial 43085820597)
+  wgi_observations: {rows: 300000}  # 202,092 (Dev trial 43085820597)
   wgi_indicators: {rows: 1000}  # 36
-  ids_observations: {rows: 4000000, exception: "#2736"}  # 2,647,628 (Dev trial 43085820597); rebuilt only when the yearly IDS archive changes (D32)
+  ids_observations: {rows: 4000000, exception: "#2772"}  # 2,647,628 (Dev trial 43085820597); #822 exception, review 2027-01-15
   ids_series: {rows: 2000}  # 577
-  findex_observations: {rows: 800000}  # 385,599 (Dev trial 43085820597)
-  icp_observations: {rows: 500000}  # 231,174 (Dev trial 43085820597)
+  findex_observations: {rows: 580000}  # 385,599 (Dev trial 43085820597)
+  icp_observations: {rows: 350000}  # 231,174 (Dev trial 43085820597)
   wdi_countries: {rows: 1000}  # 265
   wdi_indicators: {rows: 10000}  # 1,498
   wdi_observations: {rows: 12000000, exception: "#870"}  # 9,045,734; rebuilt weekly with WDI

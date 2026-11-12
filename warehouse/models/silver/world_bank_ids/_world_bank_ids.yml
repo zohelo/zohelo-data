@@ -11,8 +11,10 @@ models:
     columns:
       - name: economy_code
         tests: [not_null]
-      - name: series_code
+      - name: counterpart_code
         tests: [not_null]
+      - name: series_code
+        tests: [not_null, {relationships: {arguments: {to: ref('ids_series'), field: series_code}}}]
       - name: year
         tests: [not_null]
       - name: raw_sha256

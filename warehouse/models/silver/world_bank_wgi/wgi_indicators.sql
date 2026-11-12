@@ -18,5 +18,5 @@ select
     max(case when field = 'License Type' then value_text end) as license_type,
     max(raw_sha256) as raw_sha256
 from newest
-group by source_row_number
+group by member, source_row_number
 having max(case when field = 'Series Code' then value_text end) is not null

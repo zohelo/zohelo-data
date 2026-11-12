@@ -63,12 +63,15 @@ META_ARROW = bulk_bronze.arrow_schema(META_COLUMNS)
 
 def _members(body: bytes) -> list[tuple[str, list[list[str]]]]:
     """Every CSV member of the archive as (name, rows), header first."""
-    archive = zipfile.ZipFile(io.BytesIO(body))
     out = []
-    for info in archive.infolist():
-        if info.filename.lower().endswith(".csv"):
-            text = archive.read(info).decode("utf-8-sig")
-            out.append((info.filename, list(csv.reader(io.StringIO(text, newline="")))))
+    try:  # a broken archive or CSV is a verdict on the file: rejected with the reason, not a crashed load
+        archive = zipfile.ZipFile(io.BytesIO(body))
+        for info in archive.infolist():
+            if info.filename.lower().endswith(".csv"):
+                text = archive.read(info).decode("utf-8-sig")
+                out.append((info.filename, list(csv.reader(io.StringIO(text, newline="")))))
+    except (zipfile.BadZipFile, csv.Error) as exc:
+        raise ValueError(f"{type(exc).__name__}: {exc}") from exc
     if not out:
         raise ValueError("archive holds no CSV member")
     return out
@@ -127,7 +130,10 @@ def metadata(body: bytes, receipt: dict[str, Any]) -> pa.Table:
     for name, rows in others:
         header = rows[0]
         for number, row in enumerate(rows[1:], start=2):
-            for field, value in zip(header, row, strict=False):
+            if len(row) > len(header):
+                raise ValueError(f"{name} line {number}: {len(row)} fields, header has {len(header)}")
+            padded = row + [""] * (len(header) - len(row))  # a short row: its missing trailing fields are empty
+            for field, value in zip(header, padded, strict=True):
                 if field and value != "":
                     columns["member"].append(name)
                     columns["source_row_number"].append(number)
