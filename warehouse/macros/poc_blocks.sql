@@ -517,6 +517,7 @@
     select 'faostat', entity || ':' || item_code || '.' || element_code, block_name from ({{ poc_faostat_blocks() }})
     union all
     select 'ecb', entity, block_name from ({{ poc_ecb_blocks() }})
+    union all
     select 'world_bank_ids', 'IDS_CSV', 'World Bank International Debt Statistics'
     union all
     select * from (
