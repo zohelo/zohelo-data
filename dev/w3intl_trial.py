@@ -146,9 +146,9 @@ def model(con, source: str, result: dict) -> None:
     }
     for title, query in spec["checks"].items():
         result[title] = show(con, f"{source} {title}", query)
-    for title, query in spec["checks"].items():
-        if title in ("countries", "pollutants", "top sectors", "notations", "PL total", "formats"):
-            annotate("notice", f"{source} silver {title}", result[title])
+    if source == "eea":
+        annotate("notice", "eea silver 1/2", {k: result[k] for k in ("countries", "formats", "notations", "pollutants")})
+        annotate("notice", "eea silver 2/2", {k: result[k] for k in ("top sectors", "PL total")})
     if not Path(f"warehouse/models/gold/poc_build_{source}.sql").exists():
         return
     build_geo(con)
