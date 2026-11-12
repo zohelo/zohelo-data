@@ -43,7 +43,12 @@ SOURCES = (
     "gdelt",
     "wikimedia_pageviews",
     "release_calendars",
+    "mf_public_debt",
+    "mf_state_budget",
+    "mf_treasury_debt",
+    "krus",
     "unctad",
+    "mf_jst_budgets",
 )
 # Accumulating sources (every landed copy stays in Bronze, docs/topics.md): no latest-only gate.
 ACCUMULATING = ("news_feeds", "gdelt", "wikimedia_pageviews")

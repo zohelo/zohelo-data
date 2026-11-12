@@ -1,4 +1,4 @@
-{{ config(alias='build_wdi') }}
+{{ config(alias='build_wdi', tags=['gold_block']) }}
 {# Gold PoC build stage: the World Bank WDI indicators of the PoC concepts in the common shape.
    No breakdowns: every series is a total. #}
 with blocks as ({{ poc_wdi_blocks() }}),

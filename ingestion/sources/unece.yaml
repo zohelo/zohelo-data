@@ -6,7 +6,7 @@ description: "UNECE Statistical Database — economic statistics (PXWeb tables: 
 # data only to POST queries, so a small extractor (ingestion/to_landing/unece/) replaces the bulk_file pattern:
 # entity = one table of the economic statistics folder 20-ME (discovered from the API's folder listing),
 # queried whole as JSON-stat 2.0 (a table above the API cell limit, HTTP 403, per value of its first variable as
-# entities <table>_p<n>); version = the table's "updated" time; unchanged bytes are not written again. The API
+# entities <table>__p<value code>); version = the table's "updated" time; unchanged bytes are not written again. The API
 # answers bursts with 429, so one request at a time with a 4 s pause. Terms: UNECE Statistical Database
 # copyright notice (register GL-038). Proven from Actions by the Dev probes 43093129692 and 43094350928.
 extraction:
@@ -27,6 +27,6 @@ gold: []
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): about forty small whole-table snapshots, rebuilt in full.
-refresh: {mode: full, decided: "D32 + #TASK"}
+refresh: {mode: full, decided: "D32 + #2786"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

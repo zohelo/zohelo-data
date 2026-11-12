@@ -8,6 +8,14 @@ Tables the R2 Data Catalog places in its default location (``__r2_data_catalog/<
 every dbt-built Silver and Gold table) are shown under their layer folder by table name
 (``04_gold/<table>/...``); downloads still use the real key (#2179). The catalog's own
 folder is otherwise not listed.
+
+A concurrent ``silver_gold.build`` swaps tables while this job runs (dbt creates
+``<table>__dbt_tmp``, renames the old table to ``__dbt_backup``, renames, drops), so a listed table
+can be gone by the time it is loaded. dbt's temporary and backup tables are never shown; the listed
+tables not found are re-checked together after one short wait, and those still missing are skipped
+with a warning annotation and picked up by the next refresh (#2825). More than 3 skipped tables, or
+more than 10% of those listed, fail the job: R2 answers the same 404 for a bad credential. Any other
+error fails the job.
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -17,6 +25,7 @@ import json
 import mimetypes
 import os
 from pathlib import PurePosixPath
+import time
 
 import boto3
 from botocore.config import Config
@@ -33,24 +42,72 @@ EXCLUDED_LAKEHOUSE_PREFIXES = (
 )
 # Catalog namespaces shown in the portal and the layer folder their tables appear in.
 NAMESPACE_LAYERS = {"bronze": "02_bronze", "silver": "03_silver", "gold": "04_gold"}
+# Intermediate tables dbt creates and drops while it swaps a table in (silver_gold.build).
+DBT_SWAP_SUFFIXES = ("__dbt_tmp", "__dbt_backup")
+# Wait before re-checking the listed tables that were not found (a swap takes a few seconds).
+SWAP_RECHECK_SECONDS = 15
+# R2 answers 404 both for a missing table and for a missing or expired credential, so more skips
+# than a concurrent build can explain fail the job instead of publishing a degraded index.
+MAX_SKIPPED_TABLES = 3
+MAX_SKIPPED_SHARE = 0.10
 
 
-def catalog_folders():
+def load_or_none(cat, identifier, retry):
+    """Load a listed table; None when the catalog does not find it (dropped or mid-swap)."""
+    from pyiceberg.exceptions import NoSuchTableError
+
+    try:
+        return retry(lambda: cat.load_table(identifier), f"load {'.'.join(identifier)}")
+    except NoSuchTableError:
+        return None
+
+
+def catalog_folders(cat=None, recheck_seconds=SWAP_RECHECK_SECONDS):
     """Bucket key prefix of every catalog-located table in a shown namespace → its display folder."""
     from urllib.parse import urlsplit
 
     from ingestion.common.bronze_files import retry
-    from ingestion.common.r2 import catalog
+    from ingestion.common.report import annotate
 
-    cat = catalog()
-    folders = {}
+    if cat is None:
+        from ingestion.common.r2 import catalog
+
+        cat = catalog()
+    listed = []
     for namespace, layer in NAMESPACE_LAYERS.items():
         identifiers = retry(lambda namespace=namespace: cat.list_tables(namespace), f"list {namespace}")
-        for identifier in identifiers:
-            table = retry(lambda identifier=identifier: cat.load_table(identifier), f"load {identifier}")
-            location = urlsplit(table.location()).path.strip("/") + "/"
-            if location.startswith(CATALOG_PREFIX):
-                folders[location] = f"{layer}/{identifier[-1]}/"
+        listed += [(layer, i) for i in identifiers if not i[-1].endswith(DBT_SWAP_SUFFIXES)]
+    tables = {}
+    missing = []
+    for layer, identifier in listed:
+        table = load_or_none(cat, identifier, retry)
+        if table is None:
+            missing.append((layer, identifier))
+        else:
+            tables[identifier] = (layer, table)
+    skipped = []
+    if missing:
+        time.sleep(recheck_seconds)  # one wait for all first-pass misses
+        for layer, identifier in missing:
+            table = load_or_none(cat, identifier, retry)
+            if table is None:
+                skipped.append(".".join(identifier))
+            else:
+                tables[identifier] = (layer, table)
+    if skipped:
+        data = {"listed": len(listed), "tables": skipped}
+        if len(skipped) > MAX_SKIPPED_TABLES or len(skipped) > MAX_SKIPPED_SHARE * len(listed):
+            annotate("error", "serving.refresh_index: too many tables not found", data)
+            raise RuntimeError(
+                f"{len(skipped)} of {len(listed)} listed tables not found after a re-check "
+                "(more than a concurrent build explains; check the catalog credential)"
+            )
+        annotate("warning", "serving.refresh_index: tables skipped", {"reason": "concurrent build", **data})
+    folders = {}
+    for identifier, (layer, table) in tables.items():
+        location = urlsplit(table.location()).path.strip("/") + "/"
+        if location.startswith(CATALOG_PREFIX):
+            folders[location] = f"{layer}/{identifier[-1]}/"
     return folders
 
 

@@ -151,6 +151,66 @@ sources:
       as published, position in its list), with the header's generation date and transformation count.
   - name: biala_lista_rejected_files
     description: Landing files the white-list Bronze decoder rejected, with the reason (cleared by ops/retry_rejected).
+- name: mf_public_debt
+  description: Ministry of Finance public debt workbook (public finance sector, general government EDP, debt to GDP)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mf_public_debt/
+    loaded_by: ingestion/to_bronze/mf_public_debt/
+    config: ingestion/sources/mf_public_debt.yaml
+  tables:
+  - name: mf_public_debt_cells
+    description: >-
+      One row per non-empty cell of the newest Landing copy of each workbook (entity public_debt): sheet, row, column,
+      source text (value_text), cell type and number format (ingestion/common/xlsx_cells.py); partitioned by entity.
+  - name: mf_public_debt_rejected_files
+    description: mf_public_debt Landing files the Bronze decoder rejected (not an XLSX workbook), with the reason.
+- name: mf_state_budget
+  description: Ministry of Finance monthly state budget execution reports (one entity per year)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mf_state_budget/
+    loaded_by: ingestion/to_bronze/mf_state_budget/
+    config: ingestion/sources/mf_state_budget.yaml
+  tables:
+  - name: mf_state_budget_cells
+    description: >-
+      One row per non-empty cell of the newest Landing copy of each workbook (entity budget_execution_<year>): sheet, row, column,
+      source text (value_text), cell type and number format (ingestion/common/xlsx_cells.py); partitioned by entity.
+  - name: mf_state_budget_rejected_files
+    description: mf_state_budget Landing files the Bronze decoder rejected (not an XLSX workbook), with the reason.
+- name: mf_treasury_debt
+  description: Ministry of Finance State Treasury debt time-series workbook
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mf_treasury_debt/
+    loaded_by: ingestion/to_bronze/mf_treasury_debt/
+    config: ingestion/sources/mf_treasury_debt.yaml
+  tables:
+  - name: mf_treasury_debt_cells
+    description: >-
+      One row per non-empty cell of the newest Landing copy of each workbook (entity treasury_debt_series): sheet, row, column,
+      source text (value_text), cell type and number format (ingestion/common/xlsx_cells.py); partitioned by entity.
+  - name: mf_treasury_debt_rejected_files
+    description: mf_treasury_debt Landing files the Bronze decoder rejected (not an XLSX workbook), with the reason.
+- name: krus
+  description: KRUS basic benefit statistics workbook (pensions and benefits paid, quarterly since 2020)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/krus/
+    loaded_by: ingestion/to_bronze/krus/
+    config: ingestion/sources/krus.yaml
+  tables:
+  - name: krus_cells
+    description: >-
+      One row per non-empty cell of the newest Landing copy of each workbook (entity swiadczenia_kwartalne): sheet, row, column,
+      source text (value_text), cell type and number format (ingestion/common/xlsx_cells.py); partitioned by entity.
+  - name: krus_rejected_files
+    description: krus Landing files the Bronze decoder rejected (not an XLSX workbook), with the reason.
 - name: nbp
   description: Narodowy Bank Polski — exchange rate tables A/B/C and gold prices (NBP Web API)
   database: r2
@@ -518,3 +578,18 @@ sources:
   schema: gold
   tables:
   - name: coverage
+- name: mf_jst_budgets
+  description: Ministry of Finance — local-government budget reports, quarterly summary workbooks (Zestawienia zbiorcze)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mf_jst_budgets/
+    loaded_by: ingestion/to_bronze/mf_jst_budgets/
+    config: ingestion/sources/mf_jst_budgets.yaml
+  tables:
+  - name: mf_jst_budgets_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of the newest copy of each
+      summary workbook (entity <type>_<dw|zn>_<year>_k<quarter>); partitioned by entity.
+  - name: mf_jst_budgets_rejected_files
+    description: MF local-government summary files the Bronze decoder rejected, with the reason.
