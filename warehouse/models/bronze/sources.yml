@@ -420,22 +420,6 @@ sources:
       partitioned by entity.
   - name: ilostat_rejected_files
     description: ILOSTAT Landing files the Bronze decoder rejected, with the reason.
-- name: wikidata
-  description: Wikidata Query Service — SPARQL selections of the items holding a Polish TERC code (P1653), JSON
-  database: r2
-  schema: bronze
-  meta:
-    landing: 01_landing/wikidata/
-    loaded_by: ingestion/to_bronze/wikidata/
-    config: ingestion/sources/wikidata.yaml
-  tables:
-  - name: wikidata_bindings
-    description: >-
-      One row per SPARQL solution of the newest copy of each selection (entity: terc_units, population, area,
-      coordinates, website, names), every variable's value as text (item, statement, rank, value, unit, time,
-      end_time, lang, dissolved, label_pl, label_en, article_pl, article_en); partitioned by entity.
-  - name: wikidata_rejected_files
-    description: Wikidata Landing files the Bronze decoder rejected, with the reason.
 - name: news_feeds
   description: News headline feeds (RSS/Atom) of Polish outlets — headlines and links only (topics, O32)
   database: r2

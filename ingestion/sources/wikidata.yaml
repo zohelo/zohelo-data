@@ -25,6 +25,10 @@ archive_policy:
 bronze: [bronze.wikidata_bindings, bronze.wikidata_rejected_files]
 silver: [silver.wikidata_statements, silver.wikidata_terc_attributes]
 gold: [gold.geo_unit_wikidata]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  wikidata_statements: {rows: 47000}  # 31,450 (Dev trial 43288241509)
+  wikidata_terc_attributes: {rows: 40000}  # 26,554: 3,149 TERC units × up to 9 properties (Dev trial 43288241509)
+  geo_unit_wikidata: {rows: 4700}  # 3,149 (Dev trial 43288241509)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): six small whole-selection answers (about 22,000 bindings) with no changed-since
