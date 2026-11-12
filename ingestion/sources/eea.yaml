@@ -1,0 +1,33 @@
+source_system: eea
+description: "EEA Datahub — greenhouse gas inventory (GovReg: national emissions reported to the UNFCCC and to the EU), newest version as CSV"
+
+# Extraction strategy (docs/landing.md). Bulk feature: each version of an EEA dataset is a catalogue record with its
+# own public file share ("Direct download" on the Datahub page); the GovReg greenhouse gas inventory share holds the
+# CSV (UNFCCC_<n>_csv.zip, 8.6 MB, 100 MB unpacked, from 1990), an SQLite file (2.0 GB) and an Access database
+# (198 MB) of the same data. The ZIP is the smallest complete copy. Its URL changes per version, so
+# ingestion/to_landing/eea/ resolves it at run time (series record siblings → newest version's share → file list)
+# and lands it through the shared bulk_file pattern; version = the file's Last-Modified, an unchanged file is
+# skipped. CC BY 4.0, EEA legal notice (register GL-037). Proven from Actions by Dev probes 43275098288 and
+# 43278942742 (2026 ver. 2.1, record f6a252a6-1bde-43a8-9e6a-f58146fd691e).
+extraction:
+  initial: bulk
+  production: snapshot                  # each version is the complete inventory
+  incremental_policy: changed_since_last  # newest version's ZIP Last-Modified, then SHA-256
+  schedule: # UTC; release: GovReg versions in spring (April, submission to the UNFCCC) and autumn resubmissions (2026: 17 Apr, 4 Sep, 2 Oct); weekly check (Wednesday 03:35), a handful of small catalogue requests, the ZIP only when it changed
+    - {cron: "35 3 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/eea/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.eea_ghg_inventory, bronze.eea_rejected_files]
+silver: [silver.eea_ghg_inventory]
+gold: [gold.build_eea]
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): one dataset of about 1 million rows that the EEA replaces whole a few times a
+# year and offers no changed-since filter; a new version replaces the entity and Silver is rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2424"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

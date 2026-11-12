@@ -33,6 +33,20 @@ EU = {
 MACROS = "".join(Path(p).read_text() for p in ("warehouse/macros/poc_blocks.sql", "warehouse/macros/m49.sql"))
 
 TRIALS = {
+    "eea": {
+        "bronze": "eea_ghg_inventory",
+        "silver": "eea_ghg_inventory",
+        "grain": "country_code, format_name, pollutant_name, sector_code, year",
+        "checks": {
+            "per entity": "select count(*), count(distinct country_code), min(year), max(year), count(*) filter (where value is null), count(distinct pollutant_name), count(distinct sector_code) from eea_ghg_inventory",
+            "countries": "select string_agg(distinct country_code || '/' || coalesce(country_code_3, '') , ',' order by country_code || '/' || coalesce(country_code_3, '')) from eea_ghg_inventory",
+            "formats": "select format_name, count(*) from eea_ghg_inventory group by 1",
+            "pollutants": "select pollutant_name, unit, count(*) from eea_ghg_inventory group by all order by 3 desc limit 25",
+            "top sectors": "select sector_code, sector_name, parent_sector_code, count(*) from eea_ghg_inventory where parent_sector_code like 'Sectors/Totals%' or sector_code not like '%.%' group by all order by 1 limit 40",
+            "notations": "select notation, count(*), count(*) filter (where value is not null) from eea_ghg_inventory group by 1 order by 2 desc limit 15",
+            "PL total": "select sector_code, sector_name, year, value, unit from eea_ghg_inventory where country_code = 'PL' and pollutant_name = 'All greenhouse gases - (CO2 equivalent)' and year = (select max(year) from eea_ghg_inventory) and sector_code not like '%.%' order by 1 limit 30",
+        },
+    },
     "unhcr": {
         "bronze": "unhcr_population",
         "silver": "unhcr_population",
@@ -79,10 +93,16 @@ def build_geo(con) -> None:
 def trial(source: str) -> dict:
     spec = TRIALS[source]
     result: dict = {}
-    result["landing"] = [bulk_file.main(source, "load", landing_root=SCRATCH) for _ in (1, 2)]
+    specs = None
+    if source == "eea":
+        from ingestion.to_landing import eea
+
+        specs = eea.resolve()
+        result["resolved"] = {k: specs[0][k] for k in ("url", "record")}
+    result["landing"] = [bulk_file.main(source, "load", landing_root=SCRATCH, specs=specs) for _ in (1, 2)]
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     held = {}
-    for f in bulk_file.declaration(source):
+    for f in specs or bulk_file.declaration(source):
         copies = bulk_file.landed(client, bucket, bulk_file.prefix(source, f["entity"], SCRATCH))
         held[f["entity"]] = [len(copies), copies[-1]["size_bytes"] if copies else 0]
     result["landed_copies_bytes"] = held  # 1 copy each: the second load wrote nothing
@@ -101,7 +121,7 @@ def trial(source: str) -> dict:
     con = duckdb.connect()
     con.register("bronze_obs", arrow)
     model(con, source, result)
-    annotate("notice", f"{source} trial L/B/S (scratch {SCRATCH})", {k: result.get(k) for k in ("landing", "landed_copies_bytes", "bronze_exit", "bronze", "rejected", "silver_rows_two_builds", "silver_duplicate_keys", "silver_null_keys", "tests", "per entity", "PL", "max")})
+    annotate("notice", f"{source} trial L/B/S (scratch {SCRATCH})", {k: result.get(k) for k in ("resolved", "landing", "landed_copies_bytes", "bronze_exit", "bronze", "rejected", "silver_rows_two_builds", "silver_duplicate_keys", "silver_null_keys", "tests", "per entity", "PL", "max")})
     annotate("notice", f"{source} trial Gold (scratch)", {k: result.get(k) for k in ("gold_rows_two_builds", "gold_dup_series_date", "gold measures", "gold PL latest", "build_check", "grain_check", "PL top origins")})
     return result
 
@@ -126,6 +146,11 @@ def model(con, source: str, result: dict) -> None:
     }
     for title, query in spec["checks"].items():
         result[title] = show(con, f"{source} {title}", query)
+    for title, query in spec["checks"].items():
+        if title in ("countries", "pollutants", "top sectors", "notations", "PL total", "formats"):
+            annotate("notice", f"{source} silver {title}", result[title])
+    if not Path(f"warehouse/models/gold/poc_build_{source}.sql").exists():
+        return
     build_geo(con)
     gmap_sql = render("warehouse/models/gold/poc_map_geography.sql", {}, {})
     cte = re.search(rf"\n{source} as \((.*?)\n\),?\n(?:\n|select)", gmap_sql, re.S).group(1)
