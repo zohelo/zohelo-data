@@ -11,3 +11,4 @@ dbt-core==1.12.6
 dbt-duckdb==1.11.1
 zstandard
 xlrd==2.0.2  # old Excel (.xls) workbooks: MRPiPS social assistance reports (PLS-031)
+pypdf==7.0.1  # PDF text layer: internet.gov.pl broadband report tables (PL-ENV-034)
