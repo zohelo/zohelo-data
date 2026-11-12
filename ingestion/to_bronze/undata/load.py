@@ -40,13 +40,17 @@ COLUMNS = [
     ("source_row_number", "BIGINT"),
 ]
 ARROW = bulk_bronze.arrow_schema(COLUMNS)
+# The tables are Windows-1252 (Côte d’Ivoire, Türkiye) with a few bytes Windows-1252 leaves undefined
+# (0x8F, 0x90): decoded as Latin-1, then the 0x80–0x9F range mapped to its Windows-1252 characters where
+# defined, so every byte keeps one character and nothing is dropped or guessed.
+CP1252 = {b: bytes([b]).decode("cp1252") for b in range(0x80, 0xA0) if b not in (0x81, 0x8D, 0x8F, 0x90, 0x9D)}
 
 
 def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
     try:
         text = body.decode("utf-8-sig")
     except UnicodeDecodeError:
-        text = body.decode("cp1252")
+        text = body.decode("latin-1").translate(CP1252)
     reader = csv.reader(io.StringIO(text, newline=""))
     title, header = next(reader, None), next(reader, None)
     if not title or not title[0].startswith("T") or len(title) < 2:
