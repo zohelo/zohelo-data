@@ -8,7 +8,8 @@ name: Dev · branch runs
 #
 # Merge gate (docs/flow.md, owner direction 12 Nov 2026: no Actions run on every push). The `check` job
 # runs once per pull request, when the orchestrator adds the label `merge:check` to a reviewed, final
-# pull request (removing and re-adding the label runs it again; so does "Re-run jobs"). It runs without
+# pull request. "Re-run jobs" repeats it on the same commit only (a flaky failure); after a push, remove
+# and re-add the label so it runs on the new head. It runs without
 # credentials: linked task, compile, lint, configuration consistency, repository rules, dbt parse and a
 # secret scan, and it is the only required status check (ruleset "main", context `check`). Agents run
 # `python -m ops.repo_check` locally while iterating. A push after the label leaves the new head without
@@ -39,7 +40,7 @@ permissions:
 # newer `merge:check` run cancels the older one, and other labels get a group of their own so they never
 # cancel it.
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('zohelo-dev-pr{0}-{1}', github.event.pull_request.number, github.event.label.name == 'merge:check' && 'check' || github.run_id) || format('zohelo-dev-{0}-{1}', github.ref_name, inputs.script) }}
+  group: ${{ github.event_name == 'pull_request' && format('zohelo-gate-pr{0}-{1}', github.event.pull_request.number, github.event.label.name == 'merge:check' && 'check' || github.run_id) || format('zohelo-dev-{0}-{1}', github.ref_name, inputs.script) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

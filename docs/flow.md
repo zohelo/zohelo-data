@@ -35,6 +35,7 @@ always with at least one agent working, and every change passes the same station
   changes) locally before every push. When the PR is reviewed and final, the orchestrator adds the label
   `merge:check`; `check` (the required status check) runs once on that head, and `check-portal` after it when
   `portal/app` changed. Green → merge (squash). A push after the label leaves the new head without `check`:
-  remove and re-add the label (or re-run the job) once the fix is pushed.
+  remove and re-add the label once the fix is pushed. "Re-run jobs" repeats `check` on the same commit only (for a
+  flaky failure), never on a newer head.
 - **Visibility:** the `flow:` labels on issues show the station in GitHub; the task list in the session shows the
   running lanes; `claude/where-we-are.md` in the claude.ai project shows the state and what needs the owner.
