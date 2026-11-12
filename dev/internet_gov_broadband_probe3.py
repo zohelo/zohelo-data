@@ -6,12 +6,12 @@ from __future__ import annotations
 
 import io
 import json
-from pathlib import Path
-import tempfile
 import time
 
 import requests
 from pypdf import PdfReader
+from pypdf._text_extraction import _layout_mode
+from pypdf.generic import ContentStream
 
 UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
 A = "https://www.gov.pl/attachment/"
@@ -25,19 +25,13 @@ def main():
         r = requests.get(A + uuid, headers={"User-Agent": UA}, timeout=(30, 120))
         reader = PdfReader(io.BytesIO(r.content))
         for i in range(5, 9):
-            with tempfile.TemporaryDirectory() as d:
-                reader.pages[i - 1].extract_text(extraction_mode="layout", layout_mode_debug_path=Path(d))
-                bts = json.loads((Path(d) / "bts.json").read_text())
-                out = [[round(b["tx"], 2), round(b["ty"], 2), round(b["displaced_tx"], 2), b["text"]] for b in bts]
-                print(f"BTS {quarter} {i} " + json.dumps(out, ensure_ascii=False), flush=True)
-                if quarter in ("2024Q2", "2026Q3") and i == 5:
-                    tjs = json.loads((Path(d) / "tjs.json").read_text())
-                    keys = sorted(tjs[0]) if tjs else []
-                    print(f"TJKEYS {keys}", flush=True)
-                    tj = [[round(t.get("tx", 0), 2), round(t.get("ty", 0), 2), round(t.get("displaced_tx", 0), 2),
-                           t.get("txt", t.get("text"))] for t in tjs]
-                    print(f"TJS {quarter} {i} " + json.dumps(tj, ensure_ascii=False, default=str), flush=True)
-
+            page = reader.pages[i - 1]
+            fonts = page._layout_mode_fonts()
+            ops = iter(ContentStream(page["/Contents"].get_object(), reader, "bytes").operations)
+            bts = _layout_mode.text_show_operations(ops, fonts, True, None)
+            out = [[round(b["tx"], 2), round(b["ty"], 2), round(b["displaced_tx"], 2), round(b["font_height"], 2),
+                    b["text"]] for b in bts]
+            print(f"BTS {quarter} {i} " + json.dumps(out, ensure_ascii=False), flush=True)
 
 if __name__ == "__main__":
     main()
