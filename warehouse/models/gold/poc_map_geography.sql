@@ -186,6 +186,14 @@ mrpips as (
         'PL' as geography_key
 ),
 
+-- PSE Reports API v2: values of the whole national power system, one literal code.
+pse as (
+    select
+        'pse' as source_system,
+        'PL' as source_code,
+        'PL' as geography_key
+),
+
 wdi as (
     select
         'world_bank_wdi' as source_system,
@@ -425,6 +433,8 @@ from (
     select * from dbw
     union all
     select * from mrpips
+    union all
+    select * from pse
     union all
     select * from wdi
     union all

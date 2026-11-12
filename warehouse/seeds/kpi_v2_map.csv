@@ -37,6 +37,8 @@ current_account_gdp,economy;poland,Q,current_account_gdp,eurostat,BOP_GDP6_Q,eur
 current_account_gdp,economy;poland,Q,current_account_gdp,world_bank_wdi,BN.CAB.XOKA.GD.ZS,world_bank_wdi:BN.CAB.XOKA.GD.ZS,A,PL;EU;EU27,,rate,neutral,ready,annual
 current_account_gdp,economy;poland,Q,,nbp,,,,,,rate,neutral,needs-source,NBP balance of payments: register PLG-002
 disposable_income_pc,labour,A,disposable_income_pc,gus_bdl,P1869,gus_bdl:P1869:zł,A,PL;VOIV,,mean,up,ready,"household budget survey, per person per month"
+electricity_demand,economy,M,electricity_demand,pse,his_wlk_cal,pse:his_wlk_cal:mw:demand,D,PL,,mean,neutral,needs-block,"licence unresolved (#2870): PSE states no reuse terms; daily mean of complete business days, v2 would show the monthly mean; no metrics model yet"
+electricity_price_rce,economy,M,electricity_price_rce,pse,rce_pln,pse:rce_pln:pln_per_mwh:rce_pln,D,PL,,mean,neutral,needs-block,"licence unresolved (#2870): PSE states no reuse terms; daily mean of complete business days, v2 would show the monthly mean; no metrics model yet"
 employment_enterprise,labour,M,,gus_bdl,P2837,gus_bdl:P2837:%,M,PL;VOIV,nace,rate,up,needs-block,"BDL monthly in Silver (month in the first label, now placed by the build); not activated: 130k rows, needs a section filter"
 employment_rate,labour;poland,Q,employment_rate,eurostat,LFSI_EMP_A;LFSI_EMP_Q,eurostat:LFSI_EMP_A:PC_POP:EMP_LFS;eurostat:LFSI_EMP_Q:PC_POP:EMP_LFS,A;Q,PL;EU;EU27,sex,rate,up,ready,age 20-64; quarterly seasonally adjusted
 employment_rate,labour;poland,Q,employment_rate,gus_dbw,1513_1360_95_3,gus_dbw:1513_1360_95_3:95,Q,PL;VOIV,education,rate,up,ready,"LFS (BAEL), age 15-89"
@@ -126,6 +128,7 @@ population_total,poland,A,population,un_wpp,WPP2024 Demographic Indicators,un_wp
 ppi_annual_rate,economy,M,ppi_annual_rate,eurostat,STS_INPP_M,eurostat:STS_INPP_M:PCH_SM:PRC_PRR,M,PL;EU;EU27,,rate,neutral,ready,"domestic market, NACE B-E36"
 price_m2_secondary,poland,Q,,gus_bdl,P3788;P3794,gus_bdl:P3788:zł,A;Q,PL;VOIV,market,mean,neutral,needs-block,"secondary market is a breakdown member (rynek wtórny) of P3788/P3794, verified in Silver; metrics keep totals only: needs a member filter (kpi_member) before activating"
 price_m2_secondary,poland,Q,,gus_dbw,309_485_180_3,gus_dbw:309_485_180_3:180,Q,PL;VOIV,market,mean,neutral,needs-block,same: wtórny rynek nieruchomości is a breakdown member
+pv_generation,economy,M,pv_generation,pse,his_wlk_cal,pse:his_wlk_cal:mw:pv,D,PL,,mean,neutral,needs-block,"licence unresolved (#2870): PSE states no reuse terms; daily mean of complete business days, v2 would show the monthly mean; no metrics model yet"
 real_wage_growth,labour;poland,M,real_wage_growth,gus_dbw,376_16_182_1;398_16_182_3,gus_dbw:376_16_182_1:182;gus_dbw:398_16_182_3:182,M;Q,PL,,rate,up,ready,"index, same period a year earlier = 100, real; enterprise sector monthly, national economy quarterly"
 recycling_rate,poland,A,recycling_rate,eurostat,CEI_WM011,eurostat:CEI_WM011:PC:RCY,A,PL;EU;EU27,,rate,up,ready,municipal waste
 reer,economy;poland,M,reer,eurostat,ERT_EFF_IC_M,eurostat:ERT_EFF_IC_M:I20:REER_IC42_CPI,M,PL;EU;EU27,,index,neutral,ready,"CPI-deflated, 42 partners, 2020 = 100"
@@ -153,6 +156,7 @@ unemployment_lfs,labour;poland,Q,unemployment_rate,gus_bdl,P2361,gus_bdl:P2361:%
 unemployment_lfs,labour;poland,Q,unemployment_rate,world_bank_wdi,SL.UEM.TOTL.ZS,world_bank_wdi:SL.UEM.TOTL.ZS,A,PL;EU;EU27,,rate,down,ready,ILO modelled estimate
 unit_labour_cost,labour,Q,unit_labour_cost,eurostat,NAMQ_10_LP_ULC,eurostat:NAMQ_10_LP_ULC:PCH_SM:NULC_PER,Q,PL;EU;EU27,,rate,neutral,ready,"nominal, per person, seasonally adjusted"
 vacancies_per_unemployed,labour,Q,vacancies_per_unemployed,gus_bdl,P4334,gus_bdl:P4334:osoba:zarejestrowani bezrobotni na 1 ofertę pracy,A,PL;VOIV,,none,neutral,ready,annual from 2020; the quarterly subgroup P2516 ends in 2010
+wind_generation,economy,M,wind_generation,pse,his_wlk_cal,pse:his_wlk_cal:mw:wi,D,PL,,mean,neutral,needs-block,"licence unresolved (#2870): PSE states no reuse terms; daily mean of complete business days, v2 would show the monthly mean; no metrics model yet"
 youth_unemployment,labour,Q,youth_unemployment,eurostat,UNE_RT_Q;UNE_RT_M,eurostat:UNE_RT_Q:PC_ACT:Y15-24;eurostat:UNE_RT_M:PC_ACT:Y_LT25,Q;M,PL;EU;EU27,sex,rate,down,ready,"15-24 quarterly, under 25 monthly, seasonally adjusted; annual UNE_RT_A Y15-24 not sampled (would rename the published unemployment measure)"
 youth_unemployment,labour,Q,youth_unemployment,world_bank_wdi,SL.UEM.1524.ZS,world_bank_wdi:SL.UEM.1524.ZS,A,PL;EU;EU27,,rate,down,ready,"15-24, ILO modelled"
 zus_pension_avg,labour,A,zus_pension_avg,gus_bdl,P2860,gus_bdl:P2860:zł:z pozarolniczego systemu ubezpieczeń społecznych emerytury,A,PL;VOIV,,mean,neutral,ready,"non-agricultural system, old-age pension"
