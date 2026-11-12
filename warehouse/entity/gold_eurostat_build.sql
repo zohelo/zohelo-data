@@ -3,7 +3,7 @@
 -- order). Applied by warehouse/observations.py to one Silver file at a time; relations:
 --   silver    the dataset's file of silver.eurostat_observations
 --   geo_map   gold.map_geography rows of Eurostat (source_code, geography_key)
---   flows, dims, codes   silver.eurostat_dataflows / eurostat_dimensions / eurostat_codes (labels)
+--   flows, dims, codes   silver.eurostat_dataflows / eurostat_dimensions / eurostat_codes (names)
 -- Rules, the same for every dataset (no per-dataset list):
 --   measure    = dataset × unit × the codes of the measure-defining dimensions (the indicator-like
 --                dimensions named in `measure_rule`) × frequency; frequency is part of the key because
@@ -52,37 +52,78 @@ placed as not materialized (
     where s.value is not null
 ),
 
-shapes as (  -- one row per unit × breakdown codes × frequency: the per-series work is done here, not per row
+-- Everything below works per row with small lookups only (a few dimensions, a few thousand measures):
+-- no row set is grouped by series, so memory does not grow with the number of series
+-- (AVIA_TF_ACA: 492 M rows with a value and no geo dimension).
+dimension_codes as (  -- the codes each breakdown dimension holds in this dataset
     select distinct
-        block_id,
-        freq_code,
-        unit_code,
-        coalesce(breakdown_dimensions, '') as breakdown_dimensions,
-        coalesce(breakdown_codes, '') as breakdown_codes
+        unnest(string_split(breakdown_dimensions, ',')) as dimension_id,
+        unnest(string_split(breakdown_codes, ',')) as code
     from placed
-),
-
-pairs as (
-    select
-        s.*,
-        unnest(string_split(s.breakdown_dimensions, ',')) as dimension_id,
-        unnest(string_split(s.breakdown_codes, ',')) as code,
-        generate_subscripts(string_split(s.breakdown_dimensions, ','), 1) as pos
-    from shapes as s
-    where s.breakdown_dimensions <> ''
+    where coalesce(breakdown_dimensions, '') <> ''
 ),
 
 dimension_totals as (  -- the total code of each breakdown dimension in this dataset, if it has one
     select
         dimension_id,
+        regexp_matches(dimension_id, (select r.pattern from measure_rule as r)) as is_measure,
         case
             when bool_or(code = 'TOTAL') then 'TOTAL'
             when bool_or(code = 'T') then 'T'
             when bool_or(code = '_T') then '_T'
-            when count(distinct code) = 1 then any_value(code)
+            when count(*) = 1 then any_value(code)
         end as total_code
-    from pairs
+    from dimension_codes
     group by dimension_id
+),
+
+dimension_sets as (  -- one row per dimension list (one per dataset in practice): positions of each kind
+    select
+        l.breakdown_dimensions,
+        coalesce(list(l.pos order by l.pos) filter (where t.is_measure), []) as measure_positions,
+        coalesce(list(l.pos order by l.pos) filter (where not t.is_measure), []) as breakdown_positions,
+        coalesce(list(l.dimension_id order by l.pos) filter (where not t.is_measure), []) as breakdown_dimension_ids,
+        coalesce(list(t.total_code order by l.pos) filter (where not t.is_measure), []) as breakdown_totals,
+        max(case when l.dimension_id = 'sex' then l.pos end) as sex_position
+    from (
+        select
+            d.breakdown_dimensions,
+            unnest(string_split(d.breakdown_dimensions, ',')) as dimension_id,
+            generate_subscripts(string_split(d.breakdown_dimensions, ','), 1) as pos
+        from (select distinct p.breakdown_dimensions from placed as p where coalesce(p.breakdown_dimensions, '') <> '') as d
+    ) as l
+    inner join dimension_totals as t on l.dimension_id = t.dimension_id
+    group by l.breakdown_dimensions
+),
+
+split as (
+    select
+        p.*,
+        coalesce(
+            array_to_string(
+                list_transform(d.measure_positions, lambda i: string_split(p.breakdown_codes, ',')[i]), ':'
+            ),
+            ''
+        ) as measure_codes,
+        coalesce(
+            cast(
+                to_json(
+                    map(
+                        d.breakdown_dimension_ids,
+                        list_transform(d.breakdown_positions, lambda i: string_split(p.breakdown_codes, ',')[i])
+                    )
+                ) as varchar
+            ),
+            '{}'
+        ) as breakdown_json,
+        coalesce(
+            list_transform(d.breakdown_positions, lambda i: string_split(p.breakdown_codes, ',')[i])
+            = d.breakdown_totals,
+            true
+        ) as is_total,
+        string_split(p.breakdown_codes, ',')[d.sex_position] as sex_code_raw
+    from placed as p
+    left join dimension_sets as d on p.breakdown_dimensions = d.breakdown_dimensions
 ),
 
 code_names as (
@@ -99,51 +140,39 @@ dimension_lists as (
         dimension_id,
         any_value(codelist_id) as codelist_id
     from dims
-    where upper(dataset_id) in (select s.block_id from shapes as s)
+    where upper(dataset_id) in (select distinct p.block_id from placed as p)
     group by dimension_id
 ),
 
-named as (
-    select
-        p.*,
-        regexp_matches(p.dimension_id, (select r.pattern from measure_rule as r)) as is_measure,
-        coalesce(n.name_en, p.code) as code_name,
-        coalesce(p.code = t.total_code, false) as is_total_code
-    from pairs as p
-    left join dimension_totals as t on p.dimension_id = t.dimension_id
-    left join dimension_lists as d on p.dimension_id = d.dimension_id
-    left join code_names as n on d.codelist_id = n.codelist_id and p.code = n.code
-),
-
-shaped as (
-    select
-        block_id,
+measure_shapes as (  -- one row per measure: few, whatever the number of series
+    select distinct
         freq_code,
         unit_code,
         breakdown_dimensions,
-        breakdown_codes,
-        coalesce(string_agg(code, ':' order by pos) filter (where is_measure), '') as measure_codes,
-        string_agg(code_name, ' — ' order by pos) filter (where is_measure) as codes_name,
-        cast(
-            to_json(
-                map(
-                    coalesce(list(dimension_id order by pos) filter (where not is_measure), []),
-                    coalesce(list(code order by pos) filter (where not is_measure), [])
-                )
-            ) as varchar
-        ) as breakdown_json,
-        cast(
-            to_json(
-                map(
-                    coalesce(list(dimension_id order by pos) filter (where not is_measure), []),
-                    coalesce(list(code_name order by pos) filter (where not is_measure), [])
-                )
-            ) as varchar
-        ) as breakdown_label_json,
-        coalesce(bool_and(is_total_code) filter (where not is_measure), true) as is_total,
-        max(case when dimension_id = 'sex' and code in ('F', 'M', 'T') then code end) as sex_code
-    from named
-    group by block_id, freq_code, unit_code, breakdown_dimensions, breakdown_codes
+        measure_codes
+    from split
+),
+
+measure_names as (  -- names of the measure codes, from the dataset's code lists
+    select
+        m.freq_code,
+        m.unit_code,
+        m.breakdown_dimensions,
+        m.measure_codes,
+        string_agg(coalesce(n.name_en, x.code), ' — ' order by x.pos) as codes_name
+    from measure_shapes as m
+    inner join dimension_sets as d on m.breakdown_dimensions = d.breakdown_dimensions
+    cross join lateral (
+        select
+            unnest(string_split(m.measure_codes, ':')) as code,
+            unnest(d.measure_positions) as dimension_position,
+            generate_subscripts(d.measure_positions, 1) as pos
+    ) as x
+    left join dimension_lists as l
+        on string_split(m.breakdown_dimensions, ',')[x.dimension_position] = l.dimension_id
+    left join code_names as n on l.codelist_id = n.codelist_id and x.code = n.code
+    where m.measure_codes <> ''
+    group by m.freq_code, m.unit_code, m.breakdown_dimensions, m.measure_codes
 ),
 
 block_names as (
@@ -152,59 +181,39 @@ block_names as (
         any_value(name_en) as name_en
     from flows
     group by upper(dataset_id)
-),
-
-series as (  -- shapes without any breakdown dimension keep their row
-    select
-        s.block_id,
-        s.freq_code,
-        s.unit_code,
-        s.breakdown_dimensions,
-        s.breakdown_codes,
-        coalesce(x.measure_codes, '') as measure_codes,
-        x.codes_name,
-        coalesce(x.breakdown_json, '{}') as breakdown_json,
-        coalesce(x.breakdown_label_json, '{}') as breakdown_label_json,
-        coalesce(x.is_total, true) as is_total,
-        x.sex_code,
-        coalesce(u.name_en, s.unit_code, 'as named by the measure') as unit_name,
-        coalesce(f.name_en, s.block_id) as block_name
-    from shapes as s
-    left join shaped as x
-        on
-            s.freq_code = x.freq_code
-            and s.unit_code is not distinct from x.unit_code
-            and s.breakdown_dimensions = x.breakdown_dimensions
-            and s.breakdown_codes = x.breakdown_codes
-    left join code_names as u on u.codelist_id = 'UNIT' and s.unit_code = u.code
-    left join block_names as f on s.block_id = f.block_id
 )
 
 select
     'eurostat' as source_system,
     p.block_id,
-    s.block_name,
+    coalesce(f.name_en, p.block_id) as block_name,
     'eurostat:'
     || p.block_id
     || ':'
     || coalesce(p.unit_code, '_Z')
-    || case when s.measure_codes = '' then '' else ':' || s.measure_codes end
+    || case when p.measure_codes = '' then '' else ':' || p.measure_codes end
     || '@'
     || p.freq_code as measure_key,
-    s.block_name || ' — ' || s.unit_name || coalesce(' — ' || s.codes_name, '') || ' [' || p.freq_code || ']'
-        as measure_name,
-    s.measure_codes,
+    coalesce(f.name_en, p.block_id)
+    || ' — '
+    || coalesce(u.name_en, p.unit_code, 'as named by the measure')
+    || coalesce(' — ' || n.codes_name, '')
+    || ' ['
+    || p.freq_code
+    || ']' as measure_name,
+    p.measure_codes,
     coalesce(p.unit_code, '_Z') as unit_code,
-    s.unit_name,
+    coalesce(u.name_en, p.unit_code, 'as named by the measure') as unit_name,
     p.geo_code as geography_source_code,
     case when p.geo_code is null then '_Z' else coalesce(g.geography_key, '_X') end as geography_key,
     p.freq_code as frequency,
     p.date_key,
     p.time_period as period_label,
-    s.breakdown_json,
-    s.breakdown_label_json,
-    s.sex_code,
-    s.is_total,
+    p.breakdown_json,
+    -- labels of the breakdown codes are not repeated on every row: the code lists name them
+    cast(null as varchar) as breakdown_label_json,
+    case when p.sex_code_raw in ('F', 'M', 'T') then p.sex_code_raw end as sex_code,
+    p.is_total,
     p.value,
     case substr(nullif(trim(p.status_code), ''), 1, 1)
         when 'p' then 'provisional' when 'e' then 'estimated' when 'c' then 'confidential' when 'b' then 'break'
@@ -213,12 +222,14 @@ select
     end as observation_status_key,
     p.source_version,
     p.raw_sha256
-from placed as p
-inner join series as s
+from split as p
+left join measure_names as n
     on
-        p.freq_code = s.freq_code
-        and p.unit_code is not distinct from s.unit_code
-        and coalesce(p.breakdown_dimensions, '') = s.breakdown_dimensions
-        and coalesce(p.breakdown_codes, '') = s.breakdown_codes
+        p.freq_code = n.freq_code
+        and p.unit_code is not distinct from n.unit_code
+        and p.breakdown_dimensions = n.breakdown_dimensions
+        and p.measure_codes = n.measure_codes
+left join code_names as u on u.codelist_id = 'UNIT' and p.unit_code = u.code
+left join block_names as f on p.block_id = f.block_id
 left join geo_map as g on p.geo_code = g.source_code
 where p.date_key is not null
