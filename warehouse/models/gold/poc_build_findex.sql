@@ -1,7 +1,8 @@
 {{ config(alias='build_findex', tags=['gold_block']) }}
 {# Gold PoC build stage: the World Bank Global Findex indicators of the activated blocks in the common shape,
-   whole adult population (group all) only. Findex publishes shares 0-1; Gold holds per cent (× 100), like the
-   WDI copy of the same indicator. Survey years 2011, 2014, 2017, 2021, 2022, 2024 (not every economy in
+   whole adult population (group all) only. Value, unit and scale as published (D33): Findex publishes shares of
+   the population group, 0-1, and the build stage keeps them (unit code "share of population age 15+", unit
+   share in unit_map.csv: base pct, factor 100); only the KPI layer shows per cent. Survey years 2011, 2014, 2017, 2021, 2022, 2024 (not every economy in
    every wave). Aggregates are World Bank regions and income groups; no EU aggregate. #}
 with blocks as ({{ poc_findex_blocks() }}),
 
@@ -17,8 +18,8 @@ select
     'world_bank_findex:' || o.indicator as measure_key,
     b.block_name as measure_name,
     '' as measure_codes,
-    '% of population age 15+' as unit_code,
-    '% of population age 15+' as unit_name,
+    'share of population age 15+' as unit_code,
+    'share of population age 15+ (0-1)' as unit_name,
     o.economy_code as geography_source_code,
     coalesce(g.geography_key, '_X') as geography_key,
     'A' as frequency,
@@ -28,7 +29,7 @@ select
     cast(null as varchar) as breakdown_label_json,
     cast(null as varchar) as sex_code,
     true as is_total,
-    o.value * 100 as value,
+    o.value,
     'ok' as observation_status_key,
     o.source_version,
     o.raw_sha256

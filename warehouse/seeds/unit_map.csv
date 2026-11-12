@@ -141,13 +141,14 @@ ecb,PC,,pct
 ecb,PCCH,,pct
 ecb,MIO_EUR,,mln_eur
 world_bank_wgi,governance estimate (about -2.5 to 2.5),,wgi_estimate
-world_bank_findex,% of population age 15+,,pct_population
+world_bank_findex,share of population age 15+,,share
 world_bank_ids,usd,,usd
 world_bank_ids,pct_gni,,pct_gni
 world_bank_ids,pct_exports,,pct_exports
 un_wpp,thousand_persons,,thousand_persons
 un_wpp,children_per_woman,,children_per_woman
 un_wpp,years,,years
+un_wpp,per_100,,pct
 world_bank_gem,pct,,pct
 unhcr,persons,,persons
 eea,Gg CO2 equivalent,,thousand_tonnes
@@ -181,3 +182,31 @@ gus_psr2020,farms,,farms
 gus_psr2020,ha,,ha
 gus_psr2020,heads,,heads
 gus_psr2020,ha_per_holding,,ha_per_holding
+world_bank_icp,PCAP.PP,,ppp_usd_per_person
+world_bank_icp,PX.WL,,index_world_100
+mrpips_social_assistance,persons,,persons
+mrpips_social_assistance,families,,families
+bis,368,,pct
+bis,882,,index_2020_100
+bis,628,,index_2010_100
+bis,771,,pct
+bis,770,,pct_gdp
+bis,367,,pct
+ilostat,PC,,pct
+undp_hdr,index,,index_0_1
+undp_hdr,years,,years
+undp_hdr,2021 PPP $,,ppp_usd_per_person
+undata,millions of US dollars,,mln_usd
+undata,US dollars,,usd_per_person
+undata,percent,,pct
+undata,percentage of GDP,,pct_gdp
+undata,percentage of individuals,,pct_population
+undata,% of GDP,,pct_gdp
+unece,percent,,pct
+unece,2021=100,,index_2021_100
+unece,Thousands of persons,,thousand_persons
+unece,US$,,usd
+unece,NC,,ncu
+unece,NCU per US$,,ncu_per_usd
+unece,NCU per Euro,,ncu_per_eur
+unece,NCU per Ruble,,ncu_per_rub

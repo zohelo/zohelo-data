@@ -29,7 +29,6 @@ import json
 import os
 import sys
 import time
-import urllib.error
 import urllib.request
 
 from ingestion.common.report import annotate, step_summary
@@ -40,7 +39,11 @@ BUILD_JOB = "silver_gold.build"
 FORCED = "· filter"
 COVERED_STEP = "covered by another run"  # pipeline.yml: the step that runs only when the decision is `covered`
 RUN_PAGES = 2  # of 100 dispatched runs on main, newest first: about six hours of runs
-SHORT_WAIT, SHORT_WAITS, LONG_WAIT = 5, 12, 120  # seconds: a queue job decides in seconds; a build starts in hours
+SHORT_WAIT, SHORT_WAITS, LONG_WAIT = 5, 12, 300  # seconds: a queue job decides in seconds; a build starts in hours
+# github.token gets 1,000 API calls an hour per repository, shared with the scheduler and notify: below this many
+# remaining calls a waiting job reads the queue only every LONG_WAIT seconds (#2946).
+CALLS_FLOOR = 300
+_calls_left: list[int] = []  # X-RateLimit-Remaining of the newest API answer
 WAIT_LIMIT = 180 * 60  # the build job's own time limit
 OWN_JOB_TRIES = 5
 
@@ -55,6 +58,9 @@ def _get(repo: str, token: str, path: str) -> dict:
         },
     )
     with urllib.request.urlopen(request, timeout=30) as response:
+        left = response.headers.get("X-RateLimit-Remaining")
+        if left is not None and left.isdigit():
+            _calls_left[:] = [int(left)]
         return json.load(response)
 
 
@@ -97,15 +103,16 @@ def place(run: dict, jobs: list[dict]) -> dict | None:
 
 def decide(forced: bool, queue_job: int, others: list[dict]) -> tuple[str, int | None]:
     """(``enter`` | ``covered`` | ``wait``, the run that covers or is waited for)."""
+    waiting = [o for o in others if o["state"] == "waiting"]
+    covering = [o for o in waiting if not o["forced"]]
+    if not forced and covering:
+        # Whatever earlier queue jobs still decide: this build has not started, so it covers this run (#2946).
+        return "covered", covering[0]["run"]
     earlier = [o for o in others if o["state"] == "deciding" and o["queue_job"] < queue_job]
     if earlier:
         return "wait", earlier[0]["run"]
-    waiting = [o for o in others if o["state"] == "waiting"]
     if not waiting:
         return "enter", None
-    covering = [o for o in waiting if not o["forced"]]
-    if not forced and covering:
-        return "covered", covering[0]["run"]
     return "wait", waiting[0]["run"]
 
 
@@ -153,10 +160,12 @@ def main() -> int:
             if time.monotonic() - started > WAIT_LIMIT:
                 decision, other, problem = "enter", None, f"waited over {WAIT_LIMIT // 60} minutes"
                 break
-            time.sleep(SHORT_WAIT if waits < SHORT_WAITS else LONG_WAIT)
+            scarce = bool(_calls_left) and _calls_left[0] < CALLS_FLOOR
+            time.sleep(LONG_WAIT if scarce or waits >= SHORT_WAITS else SHORT_WAIT)
             waits += 1
-    except (urllib.error.URLError, OSError, LookupError, ValueError, TypeError) as error:
-        # Never a build that nobody does: without a reading of the queue the run builds, as it did before this job.
+    except Exception as error:
+        # Any error, whatever its kind (#2946). Never a build that nobody does: without a reading of the queue the
+        # run builds, as it did before this job.
         decision, other, problem = "enter", None, f"{type(error).__name__}: {error}"[:300]
     summary = {
         "decision": decision,
@@ -166,6 +175,8 @@ def main() -> int:
         "waited_for_runs": waited_for,
         "queue": others,
     }
+    if _calls_left:
+        summary["api_calls_left"] = _calls_left[0]
     if decision == "covered":
         summary["covered_by_run"] = other
         summary["covered_by"] = (
