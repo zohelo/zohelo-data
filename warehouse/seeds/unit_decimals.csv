@@ -52,3 +52,6 @@ days,0
 payers,0
 certificates,0
 pln_per_m2,0
+hospitalisations,0
+hospitalisations_per_patient,2
+nfz_points,2
