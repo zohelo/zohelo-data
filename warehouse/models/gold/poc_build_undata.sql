@@ -4,11 +4,12 @@
    (UN M49 → poc_map_geography section undata, static; macro poc_m49_eu27) and World (M49 1 → WB:WLD); other
    regions are not built. measure_key undata:<table>:<unit as in the series name>:<measure code>; measure_name
    is the series as published. Values as published (millions of US dollars stay millions, D33); an entry
-   without a number is not loaded. A footnote "Estimate…" sets the status estimated; any other footnote
-   qualifies the definition, coverage or reference period of the value (e.g. internet users "Population aged 16
-   to 74 years", health expenditure "Data are based on SHA2011") and sets definition_differs, so a footnoted value
-   is never shown as a plain one; a row footnoted as a projection is not an observation and is left out (none
-   in the built series today). #}
+   without a number is not loaded. Footnotes are read sentence by sentence: a sentence that is not an estimate
+   note qualifies the definition, coverage or reference period of the value (e.g. internet users "Population aged
+   16 to 74 years", health expenditure "Data are based on SHA2011") and sets definition_differs, also when an
+   estimate note stands beside it; only estimate notes ("Estimate.") set estimated; so a footnoted value is never
+   shown as a plain one. A row footnoted as a projection is not an observation and is left out (none in the built
+   series today). tests/undata_series_not_empty.sql fails when a series of poc_undata_series matches no Silver row. #}
 with series as ({{ poc_undata_series() }}),
 
 geo_map as (
@@ -36,9 +37,10 @@ select
     true as is_total,
     o.value,
     case
-        when o.footnotes ilike '%estimate%' then 'estimated'
-        when nullif(trim(o.footnotes), '') is not null then 'definition_differs'
-        else 'ok'
+        when nullif(trim(o.footnotes), '') is null then 'ok'
+        when trim(regexp_replace(o.footnotes, '[^.;]*[Ee]stimat[^.;]*[.;]?', '', 'g'), ' .;') <> ''
+            then 'definition_differs'
+        else 'estimated'
     end as observation_status_key,
     o.source_version,
     o.raw_sha256

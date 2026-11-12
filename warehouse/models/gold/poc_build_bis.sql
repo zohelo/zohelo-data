@@ -9,7 +9,8 @@
    OBS_STATUS A (normal) is ok, B break, P provisional, E estimated, any other code flagged.
    Areas through poc_map_geography (section bis, static): ISO 3166 alpha-2 countries and XM euro area →
    EUROSTAT:EA; the BIS aggregates 4T, 5R, 5A, G2 and XW have no Gold area and are not built (poc_bis_areas); any
-   other unknown code maps to _X and is counted by build_check. No breakdowns: every series is its own measure. #}
+   other unknown code maps to _X and is counted by build_check. No breakdowns: every series is its own measure.
+   tests/bis_series_not_empty.sql fails when a series code of poc_bis_measures matches no Silver row. #}
 with measures as ({{ poc_bis_measures() }}),
 
 blocks as ({{ poc_bis_blocks() }}),
