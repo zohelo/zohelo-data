@@ -16,9 +16,9 @@ briefs: {window_days: 45, extreme_min_periods: 12, geographies: [PL, EU27]}
 schedule:
   - {cron: "30 7 * * *", run: "silver/gold: build models"}
 
-# Transient catalog errors: a build whose only failures are HTTP 429 from the R2 Data Catalog or
-# Iceberg commit failures (#2574) is resumed with `dbt retry` (its failed and skipped nodes) after
-# each of these waits, in seconds.
+# Transient catalog errors: a build whose failed models all failed on HTTP 429 from the R2 Data
+# Catalog or on Iceberg commit failures (#2574) is resumed with `dbt retry` (its failed and skipped
+# nodes) after each of these waits, in seconds; a failing data test does not prevent it (#2789).
 rate_limit_retry_waits: [60, 180, 420]
 rate_limit_retry_threads: 2     # fewer parallel catalog calls than the build's 4
 commit_retry_threads: 1         # after an Iceberg commit failure: no concurrent commits
