@@ -287,6 +287,7 @@
     poc_build_wdi:world_bank_wdi
     poc_build_nbp:nbp
     poc_build_unctad:unctad
+    poc_build_public_finance:mf_public_debt
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -364,6 +365,13 @@
         values
         ('nbp', 'fx_A', 'NBP exchange rates, table A'),
         ('nbp', 'fx_C', 'NBP exchange rates, table C'),
-        ('nbp', 'gold', 'NBP gold fixings')
+        ('nbp', 'gold', 'NBP gold fixings'),
+        ('mf_public_debt', 'debt_gdp', 'Public debt in relation to GDP (MF)'),
+        ('mf_public_debt', 'debt', 'Public debt (MF)'),
+        ('mf_public_debt', 'edp_debt', 'General government (EDP) debt by instrument (MF)'),
+        ('mf_treasury_debt', 'debt_instrument', 'State Treasury debt by instrument (MF)'),
+        ('mf_state_budget', 'execution_ytd', 'State budget execution, cumulative (MF)'),
+        ('mf_state_budget', 'plan', 'State budget act (MF)'),
+        ('krus', 'benefits', 'KRUS pensions and benefits')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}
