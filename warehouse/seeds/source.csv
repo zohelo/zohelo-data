@@ -28,4 +28,5 @@ gdelt,CD-030,GDELT: wolumen i wydźwięk wiadomości,GDELT news volume and tone,
 release_calendars,TP-010,Kalendarze publikacji statystyk,Official release calendars,"Eurostat, GUS, ECB",signal,file,international-public,eurostat_reuse,https://ec.europa.eu/eurostat/news/euro-indicators/release-calendar
 mf_jst_budgets,PLG-010,MF sprawozdania budżetowe JST,MF local-government budget reports,Ministerstwo Finansów,cube,file,national-public,gov_pl_terms,https://www.gov.pl/web/finanse/sprawozdania-budzetowe
 mrpips_unemployment,PLS-029,MRPiPS bezrobocie rejestrowane,MRPiPS registered unemployment,"Ministerstwo Rodziny, Pracy i Polityki Społecznej",cube,file,national-public,cc_by_3_0_pl_psz,https://psz.praca.gov.pl/rynek-pracy/statystyki-i-analizy/bezrobocie-rejestrowane
+who,GL-025,WHO: dane zdrowotne (data.who.int),WHO data (data.who.int),World Health Organization,cube,file,international-public,cc_by_4_0_who,https://data.who.int/indicators
 unesco_uis,GL-026,UNESCO UIS: statystyki edukacji i nauki,UNESCO Institute for Statistics (UIS),UNESCO Institute for Statistics,cube,file,international-public,cc_by_sa_4_0_uis,https://databrowser.uis.unesco.org/

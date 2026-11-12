@@ -249,6 +249,16 @@
     ) as t (economy, candidate_key)
 {% endmacro %}
 
+{# WHO data.who.int blocks (gold.build_who): one per indicator file; areas: EU27 members (M49, macro
+   poc_m49_eu27) and World (M49 1, GLOBAL). #}
+{% macro poc_who_blocks() %}
+    select * from (
+        values
+        ('life_expectancy', 'Life expectancy at birth (WHO)'),
+        ('hale', 'Healthy life expectancy at birth (WHO)')
+    ) as t (entity, block_name)
+{% endmacro %}
+
 {# UNESCO UIS blocks (gold.build_unesco_uis): one per Data API selection; areas: EU27 members (ISO alpha-3 through
    dim_geography.iso3). #}
 {% macro poc_unesco_uis_blocks() %}
@@ -336,6 +346,7 @@
     poc_build_prg:gugik_prg
     poc_build_mf_jst_budgets:mf_jst_budgets
     poc_build_mrpips_unemployment:mrpips_unemployment
+    poc_build_who:who
     poc_build_unesco_uis:unesco_uis
 {% endmacro %}
 
@@ -409,6 +420,8 @@
     select 'world_bank_wdi', indicator_code, 'WDI ' || indicator_code from ({{ poc_wdi_blocks() }})
     union all
     select distinct 'unctad', entity, entity from ({{ poc_unctad_blocks() }})
+    union all
+    select 'who', entity, block_name from ({{ poc_who_blocks() }})
     union all
     select 'unesco_uis', entity, block_name from ({{ poc_unesco_uis_blocks() }})
     union all
