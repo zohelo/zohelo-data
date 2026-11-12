@@ -640,7 +640,9 @@ entity = one series for every economy and year
 (`/v2/sources/90/country/all/series/<id>/time/all?format=json&per_page=50000`, one file per
 page when a series is larger), version = the source's `lastupdated` date, so a series is
 downloaded again only when the World Bank updates ICP. Restart unit: one series. Licence CC BY
-4.0 (register GL-011).
+4.0 (register GL-011). A series page can take minutes to generate when the API has no cached copy (prod run
+43157799551): 7-minute timeout, six retries with backoff; a series that still fails is recorded and the
+others still land, the run ends red and the next run fetches the missing series.
 
 **Bronze and Silver (11 Nov 2026, #2736).** Bronze `bronze.icp_observations`
 (`ingestion/to_bronze/world_bank_icp/`, shared loader `bulk_bronze.py` over the series folders in
@@ -688,7 +690,7 @@ and footnotes). Restart unit: the whole file (one download). Licence CC BY 4.0 (
 **Bronze and Silver (11 Nov 2026, #2736).** Bronze `bronze.ids_observations` and `bronze.ids_metadata`
 through the shared DataBank decoders (`ingestion/common/databank_bronze.py`; IDS adds the counterpart
 area and pads some codes with spaces, which Silver trims). Silver `silver.ids_observations` and
-`silver.ids_series`. The November 2026 archive: 2,647,628 observations, 134 debtor economies and groups,
+`silver.ids_series` (the series member plus one series the observations use without a metadata row, DT.TDS.DECT.GN.ZS, `in_series_metadata` false). The November 2026 archive: 2,647,628 observations, 134 debtor economies and groups,
 577 series, counterpart WLD only, 1970–2033 with projections (Dev trial 43085820597). IDS has no Poland
 and no EU member state (debtors are low- and middle-income economies), so it publishes no KPI for the
 zohelo slice. `silver.ids_observations` is rebuilt in full above the #822 1M-row ceiling under its own exception record
@@ -726,8 +728,9 @@ download time (unchanged bytes skipped): `gerd_gdp` (EXPGDP.TOT, GERD as % of GD
 `bronze.unesco_uis_observations` (one row per record, DuckDB JSON reader). Silver:
 `silver.unesco_uis_observations` (grain entity × indicator_id × geo_unit × year). Gold: `gold.build_unesco_uis`
 for the EU27 members (ISO alpha-3), sex as breakdown for attainment (KPIs gerd_gdp, tertiary_attainment).
-Refresh full (D32). Terms: CC BY-SA 4.0 (ShareAlike: published derivatives under the same licence), licence row
-`cc_by_sa_4_0_uis`. Restart unit: one selection.
+Refresh full (D32). Terms: CC BY-SA 4.0: values derived from UIS data are published under CC BY-SA 4.0 with the credit "Source:
+(Adapted from) UNESCO Institute for Statistics (UIS), <URL>, <date of extraction>"; licence row `cc_by_sa_4_0_uis`.
+The UIS `kpi_v2_map` rows stay `needs-block` until publishing carries that licence per series (#2816). Restart unit: one selection.
 
 ## News headline feeds (`news_feeds`, topics)
 
