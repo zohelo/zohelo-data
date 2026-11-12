@@ -1,0 +1,44 @@
+source_system: ure
+description: "Urząd Regulacji Energetyki (URE) — electricity price indicators, public HTML table pages on www.ure.gov.pl"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-020. URE publishes each price indicator on one fixed public
+# page of www.ure.gov.pl ("Energia elektryczna → Ceny i wskaźniki") whose article holds the indicator's whole series as
+# one HTML table (no export, no session). Each entity is one indicator page, landed as the exact page bytes through
+# the shared bulk_file pattern, one request per page and run; a page lands again only when its SHA-256 changed.
+# Version: the server sends no Last-Modified, so the version token is the download time; the page's own
+# "Data modyfikacji" is kept in Bronze and Silver. Restart unit: one page.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: page_7852   # average electricity sale price on the competitive market, yearly and quarterly
+        url: "https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki/7852,Srednia-cena-sprzedazy-energii-elektrycznej-na-rynku-konkurencyjnym-roczna-i-kwa.html"
+        format: raw
+        version: last_modified
+      - entity: page_7853   # average electricity price for households
+        url_from:
+          page: https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki
+          pattern: /ceny-wskazniki/7853,
+        format: raw
+        version: last_modified
+  initial: bulk
+  production: snapshot                  # each page is the complete series of its indicator
+  incremental_policy: changed_since_last  # SHA-256 of the page
+  schedule: # UTC; release: quarterly values are added after each quarter (page 7852 modified 25.09.2026 with Q2 2026), yearly once a year; monthly check
+    - {cron: "25 7 3 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/ure/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.ure_table_cells, bronze.ure_rejected_files]
+silver: [silver.ure_price_indicators]
+gold: [gold.build_ure]
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a page
+# Refresh policy for all layers (D32): a few pages of a few hundred cells, changed a few times a year; small, so every
+# layer is rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2870"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
