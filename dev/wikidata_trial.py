@@ -25,6 +25,7 @@ from ingestion.to_landing import wikidata as landing
 from ingestion.to_landing.patterns import bulk_file
 
 SCRATCH = "zz_dev_wikidata"
+landing_keys: list = []
 
 
 def q(con, sql):
@@ -45,16 +46,18 @@ def licence_page() -> None:
     annotate("notice", "wikidata licence page", {"status": r.status_code, "hits": hits})
 
 
-def trial() -> None:
+def trial() -> None:  # noqa: PLR0915
+    global landing_keys
     bucket = req("STORAGE_LANDING_BUCKET_NAME")
     runs = []
     for _ in (1, 2):
         runs.append(bulk_file.main(landing.SOURCE, "load", landing_root=SCRATCH, specs=landing.specs(),
                                    pause_seconds=landing.PAUSE_SECONDS))
-    held = {}
+    held, landing_keys = {}, []
     for spec in landing.specs():
         rec = bulk_file.landed(s3(), bucket, bulk_file.prefix(landing.SOURCE, spec["entity"], SCRATCH))
         held[spec["entity"]] = [len(rec), rec[-1]["size_bytes"] if rec else 0]
+        landing_keys += [r["object"]["key"].rsplit("/", 1)[-1] for r in rec]
     verify = bulk_file.main(landing.SOURCE, "verify", landing_root=SCRATCH, specs=landing.specs())
     bronze_exit = [bronze_load.load(0, landing_root=SCRATCH, namespace=SCRATCH) for _ in (1, 2)]
     cat = catalog()
@@ -108,7 +111,9 @@ def trial() -> None:
         "teryt_levels_vs_wikidata": q(con, "select t.unit_level, count(*), count(a.terc_code) from teryt as t left join (select distinct terc_code from att) as a using (terc_code) group by 1 order by 1"),
         "teryt_gmina_types_missing": q(con, "select t.gmina_type_code, count(*) from teryt as t where t.terc_code not in (select terc_code from att) group by 1 order by 1"),
         "not_in_teryt_sample": q(con, "select value_text, qid from wikidata_statements where property = 'P1653' and regexp_matches(value_text, '^([0-9]{2}|[0-9]{4}|[0-9]{7})$') and value_text not in (select terc_code from teryt) and rank <> 'deprecated' and dissolved is null limit 8"),
-        "codes_with_several_items": q(con, "select terc_code, value_text, candidates from att where property = 'qid' and candidates > 1"),
+        "codes_with_several_items_in_att": q(con, "select terc_code, value_text, candidates from att where property = 'qid' and candidates > 1"),
+        "warn_test_rows": q(con, Environment().from_string(Path("warehouse/tests/wikidata_terc_several_items.sql").read_text()).render(config=lambda **_k: "", ref=lambda n: n)),
+        "landing_keys_json": q(con, "select 1") and [k for k in landing_keys][:2],
         "items_with_several_codes": q(con, "select count(*) from (select qid from att where property = 'qid' group by 1 having count(*) > 1)")})
     annotate("notice", "wikidata silver attributes", {
         "rows_two_builds": counts["att"],
@@ -120,6 +125,7 @@ def trial() -> None:
     annotate("notice", "wikidata gold geo_unit_wikidata", {
         "rows_two_builds": counts["gold"],
         "dup_geography_key": q(con, "select count(*) from (select geography_key from gold group by 1 having count(*) > 1)"),
+        "qid_candidates_gt1": q(con, "select geography_key, wikidata_qid, qid_candidates from gold where qid_candidates > 1"),
         "not_in_dim_geography": q(con, "select count(*), list(geography_key)[1:5] from gold where geography_key not in (select geography_key from geo)"),
         "per_level": q(con, "select level_name, count(*), count(population), count(area), count(lat), count(website), count(wikipedia_pl), count(wikipedia_en), count(label_en) from gold group by 1 order by 1"),
         "spot": q(con, "select geography_key, wikidata_qid, label_pl, population, population_date, area, area_unit, lat, lon, website from gold where terc_code in ('14', '1465011', '1261011', '3262011') order by 1"),

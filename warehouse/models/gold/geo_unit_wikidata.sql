@@ -4,7 +4,8 @@
    the official code, never by name. Values as Wikidata publishes them, chosen in silver.wikidata_terc_attributes
    (preferred rank, latest point in time): population with its point in time, area in its unit (km2 or ha),
    coordinates of the item (not a computed centroid: gold.geo_unit has PRG's), official website, Wikipedia
-   articles pl/en. population_candidates > 1 means other population statements were set aside. #}
+   articles pl/en. population_candidates > 1 means other population statements were set aside; qid_candidates > 1 means
+   other items carry the same code and this one is the only preferred-rank one. #}
 with a as (select * from {{ ref('wikidata_terc_attributes') }})
 
 select
@@ -12,6 +13,7 @@ select
     terc_code,
     any_value(unit_level) as level_name,
     any_value(qid) as wikidata_qid,
+    max(candidates) filter (where property = 'qid') as qid_candidates,
     max(value_text) filter (where property = 'label_pl') as label_pl,
     max(value_text) filter (where property = 'label_en') as label_en,
     max(value_number) filter (where property = 'population') as population,

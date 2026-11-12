@@ -1,6 +1,7 @@
 # Wikidata Query Service selections for Polish territorial units (TERC code, P1653), one query per entity,
 # read by ingestion/to_landing/wikidata/. A line "#> <entity>" starts an entity's query. Every query returns all
-# statements (any rank) of every item that holds a P1653 statement, ordered, so unchanged data gives the same bytes;
+# statements (any rank) of every item that holds a P1653 statement, ordered by every projected variable (a repeated
+# qualifier cannot reorder rows), so unchanged data gives the same bytes;
 # DISTINCT folds the copies an item with two TERC statements would give (a subquery for the items times out).
 # Silver chooses among them (warehouse/models/silver/wikidata/). Variables are the Bronze columns.
 
@@ -8,31 +9,31 @@
 SELECT ?item ?statement ?rank ?value ?end_time ?dissolved WHERE {
   ?item p:P1653 ?statement . ?statement ps:P1653 ?value ; wikibase:rank ?rank .
   OPTIONAL { ?statement pq:P582 ?end_time } OPTIONAL { ?item wdt:P576 ?dissolved }
-} ORDER BY ?item ?statement
+} ORDER BY ?item ?statement ?rank ?value ?end_time ?dissolved
 
 #> population
 SELECT DISTINCT ?item ?statement ?rank ?value ?time WHERE {
   ?item p:P1653 [] ; p:P1082 ?statement . ?statement ps:P1082 ?value ; wikibase:rank ?rank .
   OPTIONAL { ?statement pq:P585 ?time }
-} ORDER BY ?item ?statement
+} ORDER BY ?item ?statement ?rank ?value ?time
 
 #> area
 SELECT DISTINCT ?item ?statement ?rank ?value ?unit ?time WHERE {
   ?item p:P1653 [] ; p:P2046 ?statement . ?statement wikibase:rank ?rank ;
     psv:P2046 [ wikibase:quantityAmount ?value ; wikibase:quantityUnit ?unit ] .
   OPTIONAL { ?statement pq:P585 ?time }
-} ORDER BY ?item ?statement
+} ORDER BY ?item ?statement ?rank ?value ?unit ?time
 
 #> coordinates
 SELECT DISTINCT ?item ?statement ?rank ?value WHERE {
   ?item p:P1653 [] ; p:P625 ?statement . ?statement ps:P625 ?value ; wikibase:rank ?rank .
-} ORDER BY ?item ?statement
+} ORDER BY ?item ?statement ?rank ?value
 
 #> website
 SELECT DISTINCT ?item ?statement ?rank ?value ?lang ?end_time WHERE {
   ?item p:P1653 [] ; p:P856 ?statement . ?statement ps:P856 ?value ; wikibase:rank ?rank .
   OPTIONAL { ?statement pq:P407 ?lang } OPTIONAL { ?statement pq:P582 ?end_time }
-} ORDER BY ?item ?statement ?lang
+} ORDER BY ?item ?statement ?rank ?value ?lang ?end_time
 
 #> names
 SELECT DISTINCT ?item ?label_pl ?label_en ?article_pl ?article_en WHERE {
@@ -41,4 +42,4 @@ SELECT DISTINCT ?item ?label_pl ?label_en ?article_pl ?article_en WHERE {
   OPTIONAL { ?item rdfs:label ?label_en FILTER(LANG(?label_en) = "en") }
   OPTIONAL { ?article_pl schema:about ?item ; schema:isPartOf <https://pl.wikipedia.org/> }
   OPTIONAL { ?article_en schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> }
-} ORDER BY ?item
+} ORDER BY ?item ?label_pl ?label_en ?article_pl ?article_en

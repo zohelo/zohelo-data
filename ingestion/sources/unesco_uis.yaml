@@ -17,10 +17,12 @@ extraction:
         url: "https://api.uis.unesco.org/api/public/data/indicators?indicator=EXPGDP.TOT"
         format: raw
         version: ingested
+        probe: get                    # the API answers HEAD with 404 (prod run 43269884909, #2838); GET serves it
       - entity: tertiary_attainment   # EA.5T8.AG25T99[.F|.M]: completed short-cycle tertiary or higher, 25+, both sexes, female, male (%)
         url: "https://api.uis.unesco.org/api/public/data/indicators?indicator=EA.5T8.AG25T99&indicator=EA.5T8.AG25T99.F&indicator=EA.5T8.AG25T99.M"
         format: raw
         version: ingested
+        probe: get
   initial: bulk
   production: snapshot                  # each response is the complete history of its indicators
   incremental_policy: changed_since_last  # SHA-256

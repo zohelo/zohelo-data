@@ -8,7 +8,9 @@ decision.
 ## Product views
 
 Target architecture, C4 views, gap and fitness checks per product (Architect, O20):
-[zohelo-data](architecture/zohelo-data.md), [zohelo.com](architecture/zohelo-com.md). zohelo-bi follows.
+[zohelo-data](architecture/zohelo-data.md). Each repo documents itself (O42): the zohelo.com view is in
+[zohelo/zohelo](https://github.com/zohelo/zohelo/blob/main/docs/architecture/zohelo-com.md), zohelo-bi's in
+[zohelo/zohelo-bi](https://github.com/zohelo/zohelo-bi/tree/main/docs).
 
 ## Dataflow and repository
 

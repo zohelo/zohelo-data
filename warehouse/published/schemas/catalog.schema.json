@@ -73,7 +73,9 @@
           "symbol": {"type": "string"},
           "name_en": {"type": "string"},
           "name_pl": {"type": "string"},
-          "is_rate": {"type": "boolean"}
+          "is_rate": {"type": "boolean"},
+          "base_unit_key": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+          "factor": {"type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$"}
         },
         "additionalProperties": true
       }

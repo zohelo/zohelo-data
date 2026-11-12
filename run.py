@@ -175,12 +175,14 @@ def config_problems(config: dict) -> list[str]:
                     problems.append(
                         f"{source}: {f.get('entity')}: url_from needs page and pattern (pick: first or last)"
                     )
-                if f.get("format", "raw") not in {"zip", "gzip", "7z", "raw"}:
-                    problems.append(f"{source}: {f.get('entity')}: format must be zip, gzip, 7z or raw")
+                if f.get("format", "raw") not in {"zip", "gzip", "7z", "json", "raw"}:
+                    problems.append(f"{source}: {f.get('entity')}: format must be zip, gzip, 7z, json or raw")
                 if f.get("url_date") and "{date}" not in str(f.get("url")):
                     problems.append(f"{source}: {f.get('entity')}: url_date needs {{date}} in the url")
                 if f.get("version", "last_modified") not in {"last_modified", "ingested"}:
                     problems.append(f"{source}: {f.get('entity')}: version must be last_modified or ingested")
+                if f.get("probe", "head") not in {"head", "get"}:  # bulk_file.PROBES
+                    problems.append(f"{source}: {f.get('entity')}: probe must be head or get")
         for item in (cfg.get("extraction") or {}).get("excluded") or []:
             if not isinstance(item, dict) or item.get("id") is None or not item.get("reason"):
                 problems.append(f"{source}: extraction.excluded entries need an id and a reason: {item}")
