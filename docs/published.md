@@ -178,6 +178,25 @@ with simplified coordinates; each Feature has these properties:
 and the names and parents in `gold.dim_geography`, simplified at 0.005° with coordinates rounded to 4 decimals;
 `nuts1` and `nuts2` follow later.
 
+### geo/neighbours.csv (proposed, not written yet)
+
+The smallest shape for spatial econometrics (the owner's research kit builds contiguity and distance weight
+matrices from it): one CSV, UTF-8, header row, one row per unit × neighbour of the same level, both directions,
+from `gold.geo_neighbour` joined to `gold.geo_unit` for the centroids.
+
+| column | type | meaning |
+|---|---|---|
+| level | string | `voivodeship`, `powiat` or `gmina` (as the geojson file names) |
+| geography_key | string | the unit, `TERC:<code>` as in the geojson features |
+| neighbour_key | string | the neighbouring unit of the same level |
+| shared_border_km | number | length of the common boundary in km (EPSG:2180), 3 decimals; 0 for units touching in points only |
+| contiguity | string | `rook` (shared line of any length) or `queen` (point contact only — not the textbook queen, which includes rook pairs); a textbook queen matrix takes every row, a rook matrix the rows with `rook` |
+
+Centroids and areas for distance-based weights go into the geojson features as optional properties
+`centroid_lon`, `centroid_lat`, `area_km2` (additive, from `gold.geo_unit`) instead of a second file. Size: about
+16,200 rows (34, 1,003 and 7,075 pairs per level in Nov 2026), under 1 MB. No unit is isolated, so every row of a
+weight matrix has a neighbour. `gold.publish` writes it once `gold.geo_neighbour` exists in production (#2739).
+
 ## feed/changes.json and feed/calendar.ics
 
 `changes.json`:

@@ -7,7 +7,7 @@ nbp,PLG-001,NBP kursy walut i cena złota,NBP exchange rates and gold price,Naro
 nbp_interest_rates,PLG-006,NBP stopy procentowe,NBP interest rates,Narodowy Bank Polski,cube,file,national-public,unresolved,https://nbp.pl/en/monetary-policy/mpc-decisions/basic-interest-rates/
 gleif,CD-015,GLEIF,GLEIF LEI golden copy,GLEIF,registry,file,international-public,cc0_gleif,https://www.gleif.org/en/lei-data/access-and-use-lei-data
 opendata_org,EX-005,OpenData ODO Senzing,"OpenData organisations, people, locations",OpenData,registry,snapshot member,unknown,unresolved,
-mf_biala_lista,PLG-011,MF biała lista VAT,MF VAT white list (flat file),Ministerstwo Finansów,lookup,file,national-public,mf_flat_file,https://www.podatki.gov.pl/wykaz-podatnikow-vat-wyszukiwarka
+mf_biala_lista,PLG-011,MF biała lista VAT,MF VAT white list (flat file),Ministerstwo Finansów,lookup,file,national-public,unresolved,https://www.podatki.gov.pl/wykaz-podatnikow-vat-wyszukiwarka
 mf_treasury_debt,PLG-008,MF szeregi czasowe długu Skarbu Państwa,MF State Treasury debt time series,Ministerstwo Finansów,cube,file,national-public,gov_pl_terms,https://www.gov.pl/web/finanse/szeregiczasowe
 mf_public_debt,PLG-009,MF zadłużenie sektora finansów publicznych,MF public finance sector debt,Ministerstwo Finansów,cube,file,national-public,gov_pl_terms,https://www.gov.pl/web/finanse/szeregiczasowe
 mf_state_budget,PLG-007,MF sprawozdania z wykonania budżetu państwa,MF state budget execution reports,Ministerstwo Finansów,cube,file,national-public,gov_pl_terms,https://www.gov.pl/web/finanse/budzet-panstwa
@@ -26,4 +26,5 @@ news_feeds,TP-001,Kanały RSS serwisów informacyjnych,News headline feeds (RSS/
 wikimedia_pageviews,CD-025,Wikimedia: odsłony artykułów,Wikimedia pageviews,Wikimedia Foundation,signal,file,community-academic,cc0_wikimedia_pageviews,https://doc.wikimedia.org/generated-data-platform/aqs/analytics-api/reference/page-views.html
 gdelt,CD-030,GDELT: wolumen i wydźwięk wiadomości,GDELT news volume and tone,GDELT Project,signal,file,community-academic,gdelt_terms,https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/
 release_calendars,TP-010,Kalendarze publikacji statystyk,Official release calendars,"Eurostat, GUS, ECB",signal,file,international-public,eurostat_reuse,https://ec.europa.eu/eurostat/news/euro-indicators/release-calendar
+mf_jst_budgets,PLG-010,MF sprawozdania budżetowe JST,MF local-government budget reports,Ministerstwo Finansów,cube,file,national-public,gov_pl_terms,https://www.gov.pl/web/finanse/sprawozdania-budzetowe
 ilostat,GL-023,ILOSTAT,ILOSTAT,International Labour Organization,cube,file,international-public,cc_by_4_0_ilo,https://ilostat.ilo.org/data/bulk/
