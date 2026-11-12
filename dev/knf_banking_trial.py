@@ -197,7 +197,7 @@ def checks(con) -> None:
         where (entity = 'current' and sheet_name = 'Info' and row_number between 26 and 31)
            or (entity = 'current' and sheet_name = 'Bilans' and row_number < 9 and column_number > 1)
         order by 1, 2, row_number, column_number""").fetchall()
-    REAL("notice", "knf_banking notes (Info, Bilans header)", [list(n) for n in notes])
+    print("notes", [list(n) for n in notes], flush=True)
     show(con, "silver per sheet", f"""select entity, sheet_name, frequency, unit_code, count(*), count(distinct source_row),
         min(period_end), max(period_end), count(value_marker) from {s} group by all order by 1, 2, 3, 4""")
     show(con, "silver sample: sector rows of the Gold items, newest 3", f"""select sheet_name, section_label, item_label, item_occurrence,
@@ -230,10 +230,26 @@ def lint() -> None:
     import subprocess
 
     subprocess.run([sys.executable, "-m", "pip", "install", "-q", "sqlfluff==4.4.0"], capture_output=True, text=True)
-    files = [str(p.relative_to(ROOT)) for p in [*sorted(SILVER_DIR.glob("*.sql")), GOLD, ROOT / "warehouse/models/gold/poc_map_geography.sql"]]
-    r = subprocess.run([sys.executable, "-m", "sqlfluff", "lint", *files, "--disable-progress-bar"], cwd=ROOT, capture_output=True, text=True)
-    print(r.stdout[-6000:], r.stderr[-2000:], flush=True)
-    REAL("notice" if r.returncode == 0 else "error", "knf_banking sqlfluff", {"exit": r.returncode, "tail": r.stdout[-3000:]})
+    r = subprocess.run(
+        [sys.executable, "-m", "sqlfluff", "lint", "warehouse/models", "--processes", "2", "--disable-progress-bar"],
+        cwd=ROOT, capture_output=True, text=True,
+    )
+    print(r.stdout[-8000:], r.stderr[-2000:], flush=True)
+    failing = [ln for ln in r.stdout.splitlines() if ln.startswith("== [") and "FAIL" in ln]
+    REAL("notice" if r.returncode == 0 else "error", "knf_banking sqlfluff (warehouse/models, as repo_check)",
+         {"exit": r.returncode, "failing_files": failing[:20], "tail": r.stdout[-1500:]})
+    import csv
+    from warehouse import publish
+    src = list(csv.DictReader(open(ROOT / "warehouse/seeds/source.csv", encoding="utf-8")))
+    lic = list(csv.DictReader(open(ROOT / "warehouse/seeds/licence.csv", encoding="utf-8")))
+    ms = list(csv.DictReader(open(ROOT / "warehouse/seeds/kpi_measure.csv", encoding="utf-8")))
+    licensed = publish.licensed_sources(src, lic)
+    row = next(x for x in src if x["source_key"] == SOURCE)
+    REAL("notice", "knf_banking licence gate (warehouse/publish.py)", {
+        "source_row": row, "licence_row": [x for x in lic if x["licence_key"] == row["licence_key"]],
+        "licensed": SOURCE in licensed,
+        "kpis_blocked": {k: publish.licence_blocked(k, ms, licensed) for k in sorted({m["kpi_key"] for m in ms if m["source_system"] == SOURCE})},
+    })
 
 
 def main(argv) -> int:
