@@ -35,6 +35,7 @@ SOURCES = (
     "faostat",
     "undata",
     "bis",
+    "ilostat",
     "world_bank_wdi",
     "world_bank_findex",
     "world_bank_icp",

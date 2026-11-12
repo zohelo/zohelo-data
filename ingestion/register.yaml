@@ -1097,7 +1097,8 @@ sources:
   name: ILOSTAT
   short_name: ILOSTAT
   provider: International Labour Organization
-  status: approved
+  source_system: ilostat
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1107,12 +1108,14 @@ sources:
   granularity: Indicator/ref-area/sex/classification/status/frequency/time at full statistical grain.
   coverage: Worldwide; start and availability vary by indicator and national reporting/ILO estimates.
   access:
-    endpoint: https://ilostat.ilo.org/
-    kind: api
+    endpoint: https://rplumber.ilo.org/data/indicator/?id=UNE_DEAP_SEX_AGE_RT_A&format=.csv.gz
+    kind: bulk_file
     interfaces: [HTML, bulk-files, SDMX tools]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No numeric quota published; one request per indicator file and run. Bulk files per indicator and
+      frequency are listed at https://rplumber.ilo.org/files/website/bulk/indicator.html (UNE_DEAP_SEX_AGE_RT_A
+      1.9 MB gzip, 317,000 rows; Dev probe 43087048719, 11 Nov 2026). The SDMX API (sdmx.ilo.org) also works.
   licence:
     status: open-conditional
     notes: 'Terms: CC BY 4.0 for ILOSTAT databases and datasets with their metadata published on or after 3 May 2023,
@@ -1129,11 +1132,10 @@ sources:
     overlap: Overlaps WDI, OECD, Eurostat and SDG series; ILO estimate versus national value is a meaningful distinction.
   research:
     priority: review-first
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
     - 'Load only releases published on or after 3 May 2023 (CC BY 4.0 cut-off)'
-    - 'Open current bulk/API guide'
     - 'Separate modeled and reported series'
     references:
     - https://ilostat.ilo.org/

@@ -28,3 +28,4 @@ cc_by_4_0_fao,CC BY 4.0 with FAO additional terms (FAOSTAT),https://www.fao.org/
 cc_by_3_0_igo_undp_hdr,CC BY 3.0 IGO (UNDP Human Development Reports),http://creativecommons.org/licenses/by/3.0/igo/,"Source: UNDP Human Development Reports, Human Development Data Center, https://hdr.undp.org/data-center (CC BY 3.0 IGO)",true,false
 undata_terms,UNdata conditions of use,https://data.un.org/Host.aspx?Content=UNdataUse,"Source: UNdata (data.un.org), UN Statistical Yearbook",false,false
 bis_terms,BIS terms of use for statistics,https://www.bis.org/about/legal/permitted-use-statistics,Source: BIS statistics (Bank for International Settlements),false,false
+cc_by_4_0_ilo,CC BY 4.0 (ILOSTAT),https://www.ilo.org/node/9321,"Source: ILO, ILOSTAT, https://ilostat.ilo.org/data/",true,false
