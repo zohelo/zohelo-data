@@ -13,6 +13,7 @@ on:
     - cron: '40 5 * * 1'
     - cron: '50 5 * * 1'
     - cron: '5 6 * * *'
+    - cron: '10 6 * * 0'
   workflow_dispatch:
     inputs:
       script:
@@ -61,6 +62,7 @@ jobs:
               '40 5 * * 1') script=tracker; args='' ;;
               '50 5 * * 1') script=release_notes; args='' ;;
               '5 6 * * *') script=scheduler_trigger; args='heartbeat' ;;
+              '10 6 * * 0') script=codeql; args='' ;;
               *) echo "::error title=ops schedule::no schedule table row for cron '$CRON'" >&2; exit 1 ;;
             esac
           fi
@@ -71,7 +73,7 @@ jobs:
 
   ops:
     needs: resolve
-    if: github.ref == 'refs/heads/main' && needs.resolve.outputs.script != 'branch_cleanup' && needs.resolve.outputs.script != 'release_notes'
+    if: github.ref == 'refs/heads/main' && needs.resolve.outputs.script != 'branch_cleanup' && needs.resolve.outputs.script != 'release_notes' && needs.resolve.outputs.script != 'codeql'
     name: "ops · ${{ needs.resolve.outputs.script }}"
     runs-on: ubuntu-24.04
     timeout-minutes: 350
@@ -286,3 +288,32 @@ jobs:
           ARGS="${ARGS//–/--}"
           read -ra argv <<< "$ARGS"
           python -m ops.branch_cleanup "${argv[@]}"
+
+  # CodeQL code scanning of main (actions, javascript-typescript, python; build mode none), Sundays
+  # 06:10 UTC (before Monday's security_alerts) and by dispatch of script=codeql. Replaces GitHub's
+  # default setup, which also scanned every pull request push (owner direction 12 Nov 2026).
+  # Categories match the default setup's, so existing alerts carry over. Not an ops/ script.
+  codeql:
+    needs: resolve
+    if: github.ref == 'refs/heads/main' && needs.resolve.outputs.script == 'codeql'
+    name: "ops · codeql · ${{ matrix.language }}"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [actions, javascript-typescript, python]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370  # v4.39.1
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370  # v4.39.1
+        with:
+          category: /language:${{ matrix.language }}

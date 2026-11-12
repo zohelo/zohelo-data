@@ -6,15 +6,22 @@ name: Dev · branch runs
 # Writes are allowed only to scratch locations (namespace or prefix starting with
 # zz_dev_), removed by the same script, unless the owner approved a one-off change.
 #
-# The `check` job runs on every pull request without credentials: compile, lint,
-# configuration consistency and repository rules. It is the required status check for
-# auto-merge (AGENTS.md, "Branches and pull requests"). The `check-portal` job runs on every
-# pull request too and, when the pull request changes portal/app, installs, lints, type-checks
-# and builds the portal and runs the axe-core accessibility check on the build (portal/app/a11y,
-# the runner shared with zohelo and zohelo-bi); otherwise it passes without work, so it can be a required check.
+# Merge gate (docs/flow.md, owner direction 12 Nov 2026: no Actions run on every push). The `check` job
+# runs once per pull request, when the orchestrator adds the label `merge:check` to a reviewed, final
+# pull request (removing and re-adding the label runs it again; so does "Re-run jobs"). It runs without
+# credentials: linked task, compile, lint, configuration consistency, repository rules, dbt parse and a
+# secret scan, and it is the only required status check (ruleset "main", context `check`). Agents run
+# `python -m ops.repo_check` locally while iterating. A push after the label leaves the new head without
+# `check`, so the merge waits until the label is added again.
+# Its name is written as an expression on purpose: a job skipped by its `if` (any other label) reports
+# its raw name, not `check`, so a skipped run can never stand in for the required check.
+# `check-portal` runs after `check` only when the pull request changes portal/app: install, lint,
+# type-check, build and the axe-core accessibility check on the build (portal/app/a11y, the runner
+# shared with zohelo and zohelo-bi).
 
 on:
   pull_request:
+    types: [labeled]
   workflow_dispatch:
     inputs:
       script:
@@ -28,20 +35,25 @@ on:
 permissions:
   contents: read
 
+# Dev trials: one run per branch and script, never cancelled. Merge gate: one run per pull request; a
+# newer `merge:check` run cancels the older one, and other labels get a group of their own so they never
+# cancel it.
 concurrency:
-  group: zohelo-dev-${{ github.ref_name }}-${{ inputs.script }}
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('zohelo-dev-pr{0}-{1}', github.event.pull_request.number, github.event.label.name == 'merge:check' && 'check' || github.run_id) || format('zohelo-dev-{0}-{1}', github.ref_name, inputs.script) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
-    if: github.event_name == 'pull_request'
-    name: check
+    if: github.event_name == 'pull_request' && github.event.label.name == 'merge:check'
+    name: ${{ 'check' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
       issues: read
       pull-requests: read
+    outputs:
+      portal: ${{ steps.changes.outputs.portal }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -50,6 +62,17 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version-file: .python-version
+      - name: Changes in portal/app
+        id: changes
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet "origin/$BASE_REF...HEAD" -- portal/app; then
+            echo "portal=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "portal=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Install
         run: |
           for attempt in 1 2 3; do python -m pip install --require-hashes -r requirements.txt && break; [ "$attempt" = 3 ] && exit 1; sleep $((attempt * 20)); done
@@ -86,7 +109,8 @@ jobs:
           ./gitleaks git --no-banner --redact --log-opts="origin/$BASE_REF..HEAD" .
 
   check-portal:
-    if: github.event_name == 'pull_request'
+    needs: check
+    if: needs.check.outputs.portal == 'true'
     name: check-portal
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -97,37 +121,18 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0
-      - name: Changes in portal/app
-        id: changes
-        working-directory: .
-        env:
-          BASE_REF: ${{ github.base_ref }}
-        run: |
-          set -euo pipefail
-          if git diff --quiet "origin/$BASE_REF...HEAD" -- portal/app; then
-            echo "portal=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=check-portal::no changes in portal/app"
-          else
-            echo "portal=true" >> "$GITHUB_OUTPUT"
-          fi
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
-        if: steps.changes.outputs.portal == 'true'
         with:
           node-version-file: .node-version
           cache: npm
           cache-dependency-path: portal/app/package-lock.json
       - name: Install
-        if: steps.changes.outputs.portal == 'true'
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Lint
-        if: steps.changes.outputs.portal == 'true'
         run: npm run lint
       - name: Typecheck
-        if: steps.changes.outputs.portal == 'true'
         run: npm run typecheck
       - name: Build
-        if: steps.changes.outputs.portal == 'true'
         env:
           DUCK_UI_BASEPATH: /
           DUCK_UI_R2_API_BASE: /api
@@ -135,15 +140,13 @@ jobs:
         run: npm run build
       - name: Browser for the accessibility check
         # Playwright's Chromium at the version in package-lock.json (#2499).
-        if: steps.changes.outputs.portal == 'true'
         run: npx playwright install --with-deps chromium
       - name: Accessibility (axe-core, 1440 and 390 px)
         # Fails on serious or critical elements not in a11y/a11y-baseline.json and on a page that
         # did not load; counts by rule and page go to the job summary.
-        if: steps.changes.outputs.portal == 'true'
         run: node a11y/a11y.mjs --report a11y-report.json
       - name: Accessibility report
-        if: ${{ !cancelled() && steps.changes.outputs.portal == 'true' }}
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: a11y-report
