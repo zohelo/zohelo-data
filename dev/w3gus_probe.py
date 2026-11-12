@@ -89,6 +89,24 @@ def xlsx_preview(body, rows, sheets):
                 print(f"    r{r.attrib.get('r')}: " + " | ".join(f"{k}:{str(v)[:60]}" for k, v in sorted(vals.items())[:40]))
 
 
+def xls_preview(body, rows, sheets):
+    import subprocess
+
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "xlrd==2.0.2"], check=False)
+    import xlrd
+
+    book = xlrd.open_workbook(file_contents=body)
+    print("  sheets:", book.sheet_names())
+    for sh in book.sheets()[:sheets]:
+        if ONLY and not re.search(ONLY, sh.name):
+            continue
+        print(f"  --- sheet {sh.name!r} rows={sh.nrows} cols={sh.ncols}")
+        for r in list(range(min(rows, sh.nrows))) + list(range(max(rows, sh.nrows - 3), sh.nrows)):
+            vals = {c: sh.cell_value(r, c) for c in range(sh.ncols) if sh.cell_value(r, c) not in ("", None)}
+            if vals:
+                print(f"    r{r + 1}: " + " | ".join(f"{k}:{str(v)[:50]}" for k, v in list(vals.items())[:30]))
+
+
 def fetch(url):
     for attempt in range(3):
         try:
@@ -155,6 +173,7 @@ def probe(arg, pattern, rows, sheets, grep, member):
                 print("  zip error", exc)
         elif body[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1":
             print("  OLE2 (xls/doc) file")
+            xls_preview(body, rows, sheets)
         elif "html" in ctype:
             if grep:
                 for m in list(re.finditer(grep, r.text))[:80]:
