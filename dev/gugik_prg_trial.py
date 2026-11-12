@@ -128,11 +128,122 @@ def probe() -> None:
     annotate("notice", "prg addresses probe done", {"range_requests": remote.requests})
 
 
+def disk() -> str:
+    import shutil
+
+    return f"{shutil.disk_usage('/tmp').free / 1e9:.1f} GB free"
+
+
+def profile() -> None:
+    """Download once to the runner (no R2 writes), extract with 7z, profile the layers with DuckDB spatial."""
+    import hashlib
+    from pathlib import Path
+    import subprocess
+    import tempfile
+    import time
+
+    import duckdb
+
+    work = Path(tempfile.mkdtemp(prefix="prg-addr-"))
+    raw = work / "POLSKA.zip"
+    t0 = time.monotonic()
+    digest, size = hashlib.sha256(), 0
+    with requests.get(URL, headers={"User-Agent": UA, "Accept-Encoding": "identity"}, stream=True,
+                      timeout=(30, 300)) as r:
+        r.raise_for_status()
+        with raw.open("wb") as handle:
+            for block in r.iter_content(8 << 20):
+                handle.write(block)
+                digest.update(block)
+                size += len(block)
+        lm, etag = r.headers.get("Last-Modified"), r.headers.get("ETag")
+    t_dl = round(time.monotonic() - t0)
+    listing = subprocess.run(["7z", "l", "-slt", str(raw)], capture_output=True, text=True, check=True).stdout
+    methods = [line.split(" = ", 1)[1] for line in listing.splitlines() if line.startswith("Method = ")]
+    t0 = time.monotonic()
+    tested = subprocess.run(["7z", "t", "-bd", str(raw)], capture_output=True, text=True)
+    t_test = round(time.monotonic() - t0)
+    t0 = time.monotonic()
+    subprocess.run(["7z", "x", "-bd", "-y", f"-o{work}/x", str(raw)], capture_output=True, text=True, check=True)
+    t_x = round(time.monotonic() - t0)
+    annotate("notice", "prg addresses download and 7z", {
+        "bytes": size, "sha256": digest.hexdigest(), "last_modified": lm, "etag": etag, "download_s": t_dl,
+        "methods": sorted(set(methods)), "7z_test_rc": tested.returncode, "7z_test_tail": tested.stdout[-300:],
+        "test_s": t_test, "extract_s": t_x, "disk_after_extract": disk(),
+        "files": [[p.name, p.stat().st_size] for p in sorted((work / "x").rglob("*"))]})
+    heads = {}
+    for dbf in sorted((work / "x").rglob("*.dbf")):
+        with dbf.open("rb") as handle:
+            data = handle.read(64 << 10)
+        h = dbf_head(data, "utf-8")
+        records, header_len, record_len = h["records"], h["header_len"], h["record_len"]
+        bad_utf8 = sample_n = 0
+        with dbf.open("rb") as handle:
+            handle.seek(header_len)
+            for _ in range(20000):
+                rec = handle.read(record_len)
+                if len(rec) < record_len:
+                    break
+                sample_n += 1
+                try:
+                    rec.decode("utf-8")
+                except UnicodeDecodeError:
+                    bad_utf8 += 1
+        heads[dbf.name] = {"ldid": data[29], "records": records, "record_len": record_len, "fields": h["fields"],
+                           "utf8_invalid_of_sample": [bad_utf8, sample_n], "first_rows": h["rows"][:2]}
+    main_dbf = "PRG_PunktyAdresowe_POLSKA.dbf"
+    annotate("notice", f"prg addresses DBF {main_dbf}", heads[main_dbf])
+    annotate("notice", "prg addresses DBF of the other layers", {
+        n: {"records": h["records"], "ldid": h["ldid"], "fields": [f[0] for f in h["fields"]]}
+        for n, h in heads.items() if n != main_dbf})
+    shp = next((work / "x").rglob("PRG_PunktyAdresowe_POLSKA.shp"))
+    con = duckdb.connect()
+    con.execute("SET memory_limit = '8GB'; SET preserve_insertion_order = false")
+    con.execute(f"SET temp_directory = '{work}'")
+    con.execute("INSTALL spatial; LOAD spatial;")
+    enc = "UTF-8" if heads["PRG_PunktyAdresowe_POLSKA.dbf"]["utf8_invalid_of_sample"][0] == 0 else "CP1250"
+    t0 = time.monotonic()
+    con.execute(f"CREATE TABLE p AS SELECT * EXCLUDE (geom), ST_X(geom) AS x, ST_Y(geom) AS y, "
+                f"ST_GeometryType(geom)::VARCHAR AS gtype FROM ST_Read('{shp}', open_options=['ENCODING={enc}'])")
+    t_read = round(time.monotonic() - t0)
+    cols = [r[0] for r in con.execute("DESCRIBE p").fetchall()]
+    types = {r[0]: r[1] for r in con.execute("DESCRIBE p").fetchall()}
+    total = con.execute("SELECT count(*) FROM p").fetchone()[0]
+    annotate("notice", "prg addresses table", {
+        "rows": total, "read_s": t_read, "encoding": enc, "columns": [[c, types[c]] for c in cols],
+        "gtypes": con.execute("SELECT gtype, count(*) FROM p GROUP BY 1").fetchall(),
+        "xy_range": [str(v) for v in con.execute("SELECT min(x), max(x), min(y), max(y) FROM p").fetchone()],
+        "memory": con.execute("SELECT sum(memory_usage_bytes) FROM duckdb_memory()").fetchone()[0]})
+    prof = []
+    for c in cols:
+        if c in ("x", "y", "gtype"):
+            continue
+        q = (f'SELECT count(*) FILTER (WHERE "{c}" IS NULL), count(*) FILTER (WHERE CAST("{c}" AS VARCHAR) = \'\'), '
+             f'approx_count_distinct("{c}"), min(length(CAST("{c}" AS VARCHAR))), '
+             f'max(length(CAST("{c}" AS VARCHAR))) FROM p')
+        nulls, empty, distinct, lmin, lmax = con.execute(q).fetchone()
+        top = con.execute(f'SELECT CAST("{c}" AS VARCHAR), count(*) FROM p GROUP BY 1 ORDER BY 2 DESC LIMIT 4'
+                          ).fetchall()
+        prof.append([c, nulls, empty, distinct, lmin, lmax, [[str(v)[:40], n] for v, n in top]])
+    chunk = []
+    for item in prof:
+        chunk.append(item)
+        if len(json.dumps(chunk, ensure_ascii=False)) > 3600:
+            annotate("notice", "prg addresses column profile", {"cols": chunk[:-1]})
+            chunk = [item]
+    if chunk:
+        annotate("notice", "prg addresses column profile", {"cols": chunk})
+    sample = con.execute("SELECT * EXCLUDE (gtype) FROM p USING SAMPLE 3 ROWS").fetchall()
+    annotate("notice", "prg addresses sample rows", {"cols": cols, "rows": [[str(v)[:60] for v in r] for r in sample]})
+
+
 def main() -> int:
     mode = sys.argv[1] if len(sys.argv) > 1 else "probe"
     try:
         if mode == "probe":
             probe()
+        elif mode == "profile":
+            profile()
         return 0
     except Exception as exc:
         annotate("error", "prg addresses probe failed", {"error": f"{type(exc).__name__}: {str(exc)[:1500]}"})
