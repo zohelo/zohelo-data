@@ -1,12 +1,14 @@
 {{ config(alias='map_geography') }}
 {# Gold PoC: every source's geography code → the area it means in dim_geography
    (design draft 2: map_geography__<source>, merged into one table). Unmatched codes map to
-   '_X' and are counted by the build check. #}
+   '_X' and are counted by the build check. A new source does not add a CTE here: it defines
+   poc_geography__<source_system>() in warehouse/macros/sources/<source_system>.sql
+   (docs/source-registration.md) and the two poc_geography_* calls below place it. #}
 with geo as (select * from {{ ref('poc_dim_geography') }}),
 
 nuts_pl as ({{ poc_nuts_pl() }}),
 
-eurostat_codes as (
+{{ poc_geography_ctes() }}eurostat_codes as (
     select code from {{ ref('eurostat_codes') }}
     where codelist_id = 'GEO'
     group by code
@@ -424,6 +426,29 @@ un_wpp as (
         geography_key
     from geo
     where level_name = 'country' and length(geography_key) = 2
+),
+
+-- UNHCR Refugee Statistics (cf_type=ISO): countries of asylum by ISO 3166-1 alpha-3 (dim_geography iso3), built
+-- from Gold's own list like oecd, so the dimensions never wait for the UNHCR source; UNHCR's own codes for
+-- unknown or stateless origins are breakdowns, not areas.
+unhcr as (
+    select
+        'unhcr' as source_system,
+        g.iso3 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso3 is not null
+),
+
+-- EEA greenhouse gas inventory: countries by ISO 3166-1 alpha-2 as published (Greece GR), built from Gold's own
+-- list like oecd, so the dimensions never wait for the EEA source; the EEA aggregate EUA has no Gold key (_X).
+eea as (
+    select
+        'eea' as source_system,
+        g.iso2 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso2 is not null
 )
 
 select
@@ -432,7 +457,7 @@ select
     coalesce(g.geography_key, '_X') as geography_key,
     g.geography_key is not null as matched
 from (
-    select * from eurostat
+    {{ poc_geography_union() }}select * from eurostat
     union all
     select * from bdl
     union all
@@ -465,6 +490,10 @@ from (
     select * from ids
     union all
     select * from un_wpp
+    union all
+    select * from unhcr
+    union all
+    select * from eea
     union all
     select * from zus_psz
 ) as m

@@ -5,7 +5,9 @@ the dimensional model and the semantic layer.
 
 ```
 dbt_project.yml, profiles.yml     project and connection (credentials from env vars)
-models/bronze/sources.yml         Bronze tables as dbt sources (built by ingestion/to_bronze)
+models/bronze/<source>.yml        Bronze tables as dbt sources (built by ingestion/to_bronze); sources.yml: older sources
+macros/sources/<source>.sql       a source's Gold block, activated blocks and geography codes (docs/source-registration.md)
+declared.py                       the Gold list and row ceilings: warehouse.yaml plus each source's own YAML
 models/silver/<source_system>/    typed, cleaned, conformed source tables
 models/gold/                      conformed dimensions and facts
 semantic_models/                  MetricFlow semantic models and metrics
@@ -57,7 +59,7 @@ such a fix must also change the model's code (e.g. a line in its header comment)
 next scheduled build rebuilds it in full; announce it in the Work log.
 
 Every other model is a full-rebuild table (the project default) and must be small (owner
-policy #822: below ~1M rows). `warehouse.yaml` `full_rebuild` gives each one a row ceiling;
+policy #822: below ~1M rows). `full_rebuild` (in the source's own YAML, or `warehouse.yaml` for a shared model) gives each one a row ceiling;
 `repo_check` fails when a non-incremental model has none, when a listed model is gone or
 incremental, or when a ceiling above 1M names no `exception:` issue. After a prod build,
 `build.py` reads the rows of each full-rebuild model it wrote (snapshot `total-records`)

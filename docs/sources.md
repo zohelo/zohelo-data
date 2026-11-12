@@ -5,7 +5,9 @@ All candidate sources (about 180) are listed in the source register
 kind, endpoint, interfaces, auth, limits, licence status, update behaviour, history and
 incremental load approach, identifiers, research priority and blockers) and a `status`
 (table below). The id prefix (GL, PLS, PL-ENV, PLG, CD, EX) groups the entries. An onboarded source links to its declaration
-via `source_system`. This page details the routes of the onboarded sources.
+via `source_system`. This page details the routes of the sources onboarded until 12 November 2026; a source
+onboarded later has the same section as its own file `docs/sources/<source_system>.md`
+([source-registration.md](source-registration.md)), so this page takes no new sections.
 
 | status | meaning |
 |---|---|
@@ -359,9 +361,9 @@ nbp.pl pages that link the files answer automated clients with HTTP 403 (Dev pro
 answer. Bronze: `bronze.nbp_bop_cells` (one row per non-empty cell, the shared standard-library reader
 `ingestion/common/xlsx_cells.py`; a workbook whose sheets are not exactly its currency sheets is rejected). Silver: `silver.nbp_bop_observations` (workbook ×
 currency × item × period; `item_code` fixed by rule and checked against the expected list; NBP's typo
-"Finsncial derivatives" in bop_m is normalised). Gold: the build stage
-`build_nbp_bop` (PLN and EUR) follows once Silver exists in production (a Gold model reading a missing
-source would hold the shared facts back). The workbooks hold amounts only: the shares of GDP of the current
+"Finsncial derivatives" in bop_m is normalised). Gold: build stage
+`build_nbp_bop` (PLN and EUR, one measure per workbook × currency × item; IIP components and their parent
+totals are separate measures, never to be summed together). The workbooks hold amounts only: the shares of GDP of the current
 account and of the net position are not published there. Licence: NBP website Terms of Use, unresolved
 (internal, owner decision of 14 Oct 2026).
 
@@ -916,6 +918,40 @@ value labels per file). Silver: `silver.unece_observations` (codes and labels as
 Country variable: M49 codes and aggregates such as E27 = EU-27). Terms: UNECE copyright notice (free
 reuse incl. commercial, acknowledge UNECE), licence row `unece_terms`. Weekly Monday check. Restart
 unit: one table.
+
+## UNHCR Refugee Statistics (`unhcr`)
+
+**Built (12 Nov 2026, register GL-029).** The Refugee Statistics API (`https://api.unhcr.org/population/v1/`, public,
+no key) returns a whole selection in one request when `limit` exceeds its rows; `unhcr.yaml` lands two fixed
+`/population/` selections through the shared `bulk_file` pattern, version = download time (an unchanged response is
+skipped): `population_by_asylum` (`coa_all=true`: every country of asylum, origins summed; 7,802 rows, 1951–2025)
+and `poland_by_origin` (`coa=POL&coo_all=true`: Poland by country of origin; 1,373 rows, 1991–2025), ISO alpha-3
+codes (`cf_type=ISO`). Default aggregation guard: the API sums every dimension left out into one row (`-`), so each
+selection names its dimensions, Bronze rejects a response over more than one page, and
+`tests/unhcr_selection.sql` checks each entity. The third-party `idmc` and `unrwa` endpoints are not landed. Bronze:
+`bronze.unhcr_population` (values as text, `-` kept). Silver: `silver.unhcr_population` (grain entity × year × coa
+× coo, end-of-year stocks in persons, `-` → null). Gold: `gold.build_unhcr` — refugees, asylum seekers, stateless
+and other people in need of international protection for the EU27 members as countries of asylum, and Poland by
+origin (`{"origin": <ISO3>}`); KPI `refugees_hosted` (draft). Refresh full (D32). Terms: CC BY 4.0 with UNHCR's
+supplemental terms (credit "UNHCR Refugee Population Statistics Database" and link the terms), licence row
+`cc_by_4_0_unhcr`. Restart unit: one selection.
+
+## EEA Datahub: greenhouse gas inventory (`eea`)
+
+**Built (12 Nov 2026, register GL-037).** Every version of an EEA dataset is its own catalogue record with a public
+file share. The GovReg inventory ("National emissions reported to the UNFCCC and to the EU under the Governance
+Regulation") share holds the CSV as `UNFCCC_<n>_csv.zip` (8.6 MB, 100 MB unpacked, 1990 onwards), an SQLite file
+(2.0 GB) and an Access database (198 MB). `ingestion/to_landing/eea/` resolves the newest version each run (the
+series record's siblings → the version records of the newest year → each share's file list, public WebDAV) and
+lands the ZIP through the shared `bulk_file` pattern; the share link sends no Last-Modified, so version = download
+time and an unchanged ZIP is skipped. Entity: `govreg_ghg_inventory` (2026 ver. 2.1 in the trial: 692,640 rows, 33
+areas, 9 pollutants, 166 sectors). Bronze: `bronze.eea_ghg_inventory` (CSV columns lower-cased, text). Silver:
+`silver.eea_ghg_inventory` (grain country_code × format_name × pollutant_name × sector_code × year; value null when
+the source gives a notation key such as NO, NE, IE, NA, C, never 0). Gold: `gold.build_eea` — all greenhouse gases
+in Gg (= kt) CO2 equivalent, totals with and without LULUCF and CRF sectors 1–5, EU27 members (ISO alpha-2); the
+EEA aggregate `EUA` is not mapped. KPI `ghg_emissions` (total without LULUCF, UNFCCC scope, so without
+international aviation, unlike Eurostat). Refresh full (D32). Terms: CC BY 4.0 under the EEA legal notice, licence
+row `cc_by_4_0_eea`. Restart unit: the dataset version.
 
 ## News headline feeds (`news_feeds`, topics)
 

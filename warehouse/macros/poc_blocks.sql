@@ -369,6 +369,31 @@
     ) as t (loc_id, candidate_key)
 {% endmacro %}
 
+{# UNHCR Refugee Statistics blocks (gold.build_unhcr): one per API selection; areas: EU27 members as countries of
+   asylum (ISO alpha-3 through dim_geography.iso3). #}
+{% macro poc_unhcr_blocks() %}
+    select * from (
+        values
+        ('population_by_asylum', 'People under UNHCR mandate by country of asylum, end of year (UNHCR)'),
+        ('poland_by_origin', 'People under UNHCR mandate in Poland by country of origin, end of year (UNHCR)')
+    ) as t (entity, block_name)
+{% endmacro %}
+
+{# EEA greenhouse gas inventory (gold.build_eea, block govreg_ghg_inventory): the sectors built, CRF codes as
+   published; is_total marks the national totals (without and with LULUCF). #}
+{% macro poc_eea_sectors() %}
+    select * from (
+        values
+        ('Sectors/Totals_excl', true),
+        ('Sectors/Totals_incl', true),
+        ('1', false),
+        ('2', false),
+        ('3', false),
+        ('4', false),
+        ('5', false)
+    ) as t (sector_code, is_total)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -429,10 +454,11 @@
     order by k.kpi_key, m.priority
 {% endmacro %}
 
-{# The Gold blocks (build stage models) as `model:source_system`, one per line. A block model carries the tag
-   `gold_block` (ops/repo_check.py checks both lists agree): its children do not wait for it in the
-   changed-only build (warehouse/changed.py), they read it only once its table exists. #}
-{% macro poc_block_models() %}
+{# The Gold blocks (build stage models) listed here before per-source registration (D34,
+   docs/source-registration.md), as `model:source_system`, one per line. Do not add lines: a new source
+   registers itself in warehouse/macros/sources/<source>.sql and poc_block_models()
+   (macros/source_registration.sql) adds it to this list. #}
+{% macro poc_legacy_block_models() %}
     poc_build_eurostat:eurostat
     poc_build_bdl:gus_bdl
     poc_build_dbw:gus_dbw
@@ -452,9 +478,11 @@
     poc_build_who:who
     poc_build_unesco_uis:unesco_uis
     poc_build_faostat:faostat
+    poc_build_eea:eea
     poc_build_ecb:ecb
     poc_build_ids:world_bank_ids
     poc_build_un_wpp:un_wpp
+    poc_build_unhcr:unhcr
     poc_build_zus_psz:zus_psz
 {% endmacro %}
 
@@ -516,9 +544,10 @@
     || '|' || breakdown_json
 {% endmacro %}
 
-{# Every activated block of every source: the list build_check reports against, so a block that
-   yields no rows (not in Silver yet, or filtered out) is visible. #}
-{% macro poc_activated_blocks() %}
+{# The activated blocks listed here before per-source registration (D34). Do not add lines: a new source
+   names its blocks in warehouse/macros/sources/<source>.sql and poc_activated_blocks()
+   (macros/source_registration.sql) adds them. #}
+{% macro poc_legacy_activated_blocks() %}
     select 'eurostat' as source_system, dataset_id as block_id, block_name from ({{ poc_eurostat_blocks() }})
     union all
     select 'gus_bdl', subgroup_id, block_name from ({{ poc_bdl_blocks() }})
@@ -541,11 +570,15 @@
     union all
     select 'faostat', entity || ':' || item_code || '.' || element_code, block_name from ({{ poc_faostat_blocks() }})
     union all
+    select 'eea', 'govreg_ghg_inventory', 'Greenhouse gas emissions by sector, GovReg inventory (EEA)'
+    union all
     select 'ecb', entity, block_name from ({{ poc_ecb_blocks() }})
     union all
     select 'world_bank_ids', 'IDS_CSV', 'World Bank International Debt Statistics'
     union all
     select 'un_wpp', indicator, block_name from ({{ poc_un_wpp_blocks() }})
+    union all
+    select 'unhcr', entity, block_name from ({{ poc_unhcr_blocks() }})
     union all
     select * from (
         values
