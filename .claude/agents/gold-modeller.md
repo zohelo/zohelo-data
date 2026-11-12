@@ -31,10 +31,13 @@ skills:
   Dev runs are in flight or a Pipeline run is queued. A filtered trial selects the block too
   (`poc_build_<source>+`).
 - Do **not** touch `warehouse/models/gold/poc_fact_*.sql` or `warehouse/tests/fact_grain.sql` unless your Task says
-  so. Shared files (`warehouse/macros/poc_blocks.sql`, `poc_map_geography.sql`, `kpi.csv`, `kpi_measure.csv`,
-  `kpi_v2_map.csv`, `unit.csv`, `domain.csv`, `warehouse/warehouse.yaml`): your own rows and lines only, rebase on
+  so. A source's Gold lines go in the source's own files (`docs/source-registration.md`, D34): never add a
+  line to `warehouse/macros/poc_blocks.sql`, `poc_map_geography.sql` or, for a model of one source,
+  `warehouse/warehouse.yaml` and `_gold.yml`. Still shared (`kpi.csv`, `kpi_measure.csv`, `kpi_v2_map.csv`,
+  `unit.csv`, `domain.csv`; `warehouse.yaml` for a metrics model of several sources): your own rows and lines only, rebase on
   `origin/main` right before the PR, keep both sides in conflicts.
-- Size policy: a model rebuilt in full has a measured ceiling in `warehouse.yaml` `full_rebuild` and stays below
+- Size policy: a model rebuilt in full has a measured ceiling under `full_rebuild:` (in the source's
+  `ingestion/sources/<source>.yaml`; `warehouse.yaml` for a model shared by several sources) and stays below
   1 M rows; anything larger is incremental from the start with unique key `series_key, date_key` (#822, D28).
   Big Silver tables are read by a Python model that lists only the activated blocks' files (see
   `poc_src_eurostat.py`), never by a full scan.
@@ -55,7 +58,7 @@ define the measure); which source dimensions are breakdowns; frequency; how each
 - **Time**: `date_key` = first day of the period, day grain, joins `dim_calendar`; facts exist for A, Q, M, D. A
   source with other periods (S, W) needs a fact model decision first: raise it, do not fold it.
 - **Geography**: ISO2 country keys, `TERC:<code>` for Polish units, `NUTS:<code>`, prefixed aggregates, `_Z`, `_X`
-  with the source code kept. One CTE per source in `poc_map_geography.sql`, mapped by code.
+  with the source code kept. One `poc_geography__<source>()` macro per source in `warehouse/macros/sources/<source>.sql`, mapped by code.
 - **Units**: as published; `unit.csv` row per KPI unit; price base and seasonal adjustment belong to the measure.
 - **Domain**: one `subgroup_key` of `domain.csv` per KPI.
 - Special members `_T`, `_Z`, `_U` instead of NULL keys.
@@ -63,14 +66,15 @@ define the measure); which source dimensions are breakdowns; frequency; how each
 ## Build
 
 1. Statistical source: `poc_build_<source>.sql` (alias `build_<source>`) in the exact column order of
-   `poc_build_nbp.sql`; add it to `poc_observations()` and its blocks to `poc_activated_blocks()`.
+   `poc_build_nbp.sql`, tagged `gold_block`; register it and its blocks with `poc_source__<source>()` in
+   `warehouse/macros/sources/<source>.sql` (template in `docs/source-registration.md`).
 2. Register or reference source: a dimension or entity table keyed by the official identifier (TERYT, LEI, NIP,
    REGON, KRS), with validity where the source has it; no observations invented from a register.
 3. Seeds: `unit.csv`, `kpi.csv` (new KPIs `draft`, PL and EN name), `kpi_measure.csv` (one row per KPI × source
    measure, priority), `kpi_v2_map.csv` (one row per v2 key × source). A `poc_metrics_<kpi>.sql` model and a
    semantic model before any KPI becomes `published`.
-4. `warehouse.yaml` (`gold` list, `full_rebuild` ceiling), the source YAML `gold:`, `_gold.yml` description and
-   tests, `docs/gold-poc.md` activation table row. Leave the register `status` as it is: the orchestrator sets
+4. The source YAML `gold:` and `full_rebuild:` ceiling, `warehouse/models/gold/_<source>.yml` description and
+   tests (`warehouse.yaml` and `_gold.yml` only for models shared by several sources), `docs/gold-poc.md` activation table row. Leave the register `status` as it is: the orchestrator sets
    `gold` at Verify, after a scheduled production build shows the source in `build_check`.
 
 ## Pre-PR checklist (lessons from reviews; every line gets "done: <evidence>" or "n/a: <why>" in the PR body)
@@ -100,7 +104,8 @@ These are the defects reviewers found repeatedly. A PR that skips a line goes to
    state are `unresolved`. Say which status the source has and what the catalogue row of the trial shows for it;
    do not write "the gate hides it" without that row.
 8. **Ceilings.** Every new full-rebuild model (build stage, metrics, Silver) has a `full_rebuild` ceiling in
-   `warehouse/warehouse.yaml`, about 1.5 × the rows measured on the final head, at most 1 M; above that the model is
+   the source's `ingestion/sources/<source>.yaml` (`warehouse/warehouse.yaml` only for a model of several sources), about
+   1.5 × the rows measured on the final head, at most 1 M; above that the model is
    incremental from the start (D28).
 9. **Fresh base, own rows.** Right before opening the PR: `git fetch origin main`, rebase (before the first push)
    or merge `origin/main` (after it; force-push is refused), keep both sides in shared files, then rerun
