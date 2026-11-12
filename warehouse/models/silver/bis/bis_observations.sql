@@ -24,18 +24,31 @@ newest as (
     qualify rank() over (partition by entity order by source_version desc, ingested_at desc) = 1
 ),
 
-series_rows as (  -- series attributes on rows without FREQ and period
+series_attributes as (  -- series attributes on rows without FREQ and period
     select
         entity,
         series_rest,
-        any_value(nullif(attr_values[list_position(attrs, 'UNIT_MEASURE')], '')) as unit_measure,
-        any_value(nullif(attr_values[list_position(attrs, 'UNIT_MULT')], '')) as unit_mult,
-        any_value(nullif(trim(coalesce(
+        nullif(attr_values[list_position(attrs, 'UNIT_MEASURE')], '') as unit_measure,
+        nullif(attr_values[list_position(attrs, 'UNIT_MULT')], '') as unit_mult,
+        nullif(trim(coalesce(
             nullif(attr_values[list_position(attrs, 'TITLE')], ''),
             attr_values[list_position(attrs, 'TITLE_TS')]
-        )), '')) as title
+        )), '') as title
     from newest
     where nullif(time_period, '') is null
+),
+
+series_rows as (  -- one value per series expected; series_attribute_variants > 1 fails tests/bis_series_attributes.sql
+    select
+        entity,
+        series_rest,
+        min(unit_measure) as unit_measure,
+        min(unit_mult) as unit_mult,
+        min(title) as title,
+        greatest(
+            count(distinct unit_measure), count(distinct unit_mult), count(distinct title)
+        ) as series_attribute_variants
+    from series_attributes
     group by 1, 2
 )
 
@@ -60,6 +73,7 @@ select
         nullif(o.attr_values[list_position(o.attrs, 'TITLE')], ''),
         o.attr_values[list_position(o.attrs, 'TITLE_TS')]
     )), ''), s.title) as title,
+    s.series_attribute_variants,
     o.raw_sha256,
     o.source_version,
     o.ingested_at
