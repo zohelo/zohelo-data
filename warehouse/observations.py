@@ -19,8 +19,9 @@ The grain is checked on every block before it is accepted: one row per series_ke
 measure_key begins with the source and the block, so a duplicate can only occur inside one block
 and the per-block check covers the whole table. A block that breaks the grain or yields no rows is
 rejected (gold.observations_rejected, keyed by its recipe) and removed from Gold, never loaded in
-part. A block that fails for another reason (storage, memory) is reported and retried by the next
-run. Work runs in parallel processes within a time budget; finished blocks are committed in chunks,
+part. A block that fails for another reason (storage, memory) is tried once more alone with the
+full memory limit, then reported and retried by the next run. Work runs in parallel processes within
+a time budget; finished blocks are committed in chunks,
 so a run that stops resumes where it stopped. Prints one JSON result line.
 """
 
@@ -50,7 +51,7 @@ ENTITY = "block_id"
 REJECTED = ("gold", "observations_rejected")
 COMMIT_EVERY = 200  # blocks
 COMMIT_SECONDS = 600
-BIG_BYTES = 150 << 20  # blocks whose Silver files are larger are built alone, with the full memory limit
+BIG_ROWS = 50_000_000  # blocks with more Silver rows are built alone, with the full memory limit
 
 # Columns of the three Gold tables, in the order their models select them.
 TABLES: dict[str, dict[str, Any]] = {
@@ -305,7 +306,7 @@ def main(argv=None) -> int:
         ids = p["ids"]
         for table_id in ids.values():
             et.configure(table_id)
-        todo = sorted(p["todo"], key=lambda c: c["bytes"])
+        todo = sorted(p["todo"], key=lambda c: c["rows"])
         totals = {"built": 0, "rows": 0, "series": 0, "measures": 0, "bytes": 0, "silver_rows": 0}
         rejected_now: list[dict[str, str]] = []
         failed: list[dict[str, str]] = []
@@ -363,8 +364,8 @@ def main(argv=None) -> int:
 
         if p["gone"]:
             commit(removed=p["gone"])
-        queue = [c for c in todo if c["bytes"] <= BIG_BYTES]
-        serial = [c for c in todo if c["bytes"] > BIG_BYTES]
+        queue = [c for c in todo if c["rows"] <= BIG_ROWS]
+        serial = [c for c in todo if c["rows"] > BIG_ROWS]
         while queue and time.monotonic() < deadline:
             broken = False
             with ProcessPoolExecutor(max_workers=args.workers, mp_context=clean) as pool:
@@ -383,15 +384,15 @@ def main(argv=None) -> int:
                         except BrokenProcessPool:  # a worker was killed (memory): unknown which; retry alone
                             serial.append(c)
                             broken = True
-                        except Exception as exc:  # not a verdict on the block: the next run retries it
-                            account(failure(c, exc))
+                        except Exception:  # not a verdict on the block (memory, storage): once more, alone
+                            serial.append(c)
                     if len(pending) >= COMMIT_EVERY or (pending and time.monotonic() - last_commit > COMMIT_SECONDS):
                         commit()
                 if broken:
                     serial += list(running.values())
                     pool.shutdown(wait=False, cancel_futures=True)
             commit()
-        for c in sorted(serial, key=lambda c: c["bytes"]):
+        for c in sorted(serial, key=lambda c: c["rows"]):
             if time.monotonic() > deadline:
                 break
             with ProcessPoolExecutor(max_workers=1, mp_context=clean) as alone:  # a kill fails that block only
