@@ -130,7 +130,15 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('registered_unemployed', 'gus_bdl', '%', 0, 5e6),
     ('registered_unemployed', 'gus_dbw', '%', 0, 5e6),
     -- MRPiPS (#2778): persons, Poland and voivodeships, end of month
-    ('registered_unemployed', 'mrpips_unemployment', '%', 0, 5e6)
+    ('registered_unemployed', 'mrpips_unemployment', '%', 0, 5e6),
+    -- Findex (#2931): published as a share 0-1, metrics in per cent of adults (D33, × 100); all areas 2011-2024:
+    -- 0.40 to 100.0 (Dev trial 43310863075). A share converted twice passes 100
+    ('account_ownership', 'world_bank_findex', '%', 0, 100),
+    -- World Bank IDS (#2931): published in current US$, metrics in million US$ (D33, ÷ 1,000,000); highest is the
+    -- low- and middle-income group in 2025: stocks 9,445,018, debt service 1,398,784 (Dev trial 43310863075). A value
+    -- left in US$ passes the bound for every economy with more than 30 (10) million US$
+    ('external_debt_stocks', 'world_bank_ids', '%', 0, 3e7),
+    ('external_debt_service', 'world_bank_ids', '%', 0, 1e7)
 ),
 
 metrics as (
@@ -411,6 +419,15 @@ metrics as (
         geography_key,
         date_key,
         value
+    from {{ ref('poc_metrics_account_ownership') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
     from {{ ref('poc_metrics_agricultural_holdings') }}
     union all
     select
@@ -420,7 +437,25 @@ metrics as (
         geography_key,
         date_key,
         value
+    from {{ ref('poc_metrics_external_debt_stocks') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
     from {{ ref('poc_metrics_average_farm_area') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_external_debt_service') }}
 )
 
 select

@@ -186,9 +186,9 @@ inflation,ecb,ecb:HICP:000000:ANR,"HICP (COICOP 2018), annual rate of change, EC
 bond_yield_10y,ecb,ecb:IRS:L40,"long-term interest rate for convergence purposes, ECB",2,
 m3_growth,ecb,ecb:BSI:M30:I:A,"euro area M3, annual growth rate, seasonally adjusted",1,
 ecb_deposit_rate,ecb,ecb:FM:DFR,"deposit facility rate, date of changes",1,
-external_debt_stocks,world_bank_ids,world_bank_ids:DT.DOD.DECT.CD,"total external debt stocks (DOD), current US$",1,usd
+external_debt_stocks,world_bank_ids,world_bank_ids:DT.DOD.DECT.CD,"total external debt stocks (DOD), current US$",1,mln_usd
 external_debt_gni,world_bank_ids,world_bank_ids:DT.DOD.DECT.GN.ZS,"external debt stocks, % of GNI",1,pct_gni
-external_debt_service,world_bank_ids,world_bank_ids:DT.TDS.DECT.CD,"total debt service (TDS), current US$; projections not built",1,usd
+external_debt_service,world_bank_ids,world_bank_ids:DT.TDS.DECT.CD,"total debt service (TDS), current US$; projections not built",1,mln_usd
 external_debt_service_gni,world_bank_ids,world_bank_ids:DT.TDS.DECT.GN.ZS,"total debt service, % of GNI (series not in the IDS series metadata; name from the observations)",1,pct_gni
 external_debt_service_exports,world_bank_ids,world_bank_ids:DT.TDS.DECT.EX.ZS,"total debt service, % of exports of goods, services and primary income",1,pct_exports
 total_fertility_rate,un_wpp,un_wpp:TFR:estimate,"UN WPP 2024 estimate (to 2023)",5,

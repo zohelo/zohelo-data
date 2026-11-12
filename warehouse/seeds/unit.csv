@@ -59,3 +59,4 @@ overnight_stays,nocl.,overnight stays,noclegi,false,overnight_stays,1
 farms,gosp.,agricultural holdings,gospodarstwa rolne,false,farms,1
 heads,szt.,heads,sztuki,false,heads,1
 ha_per_holding,ha/gosp.,hectares per holding,hektary na gospodarstwo,false,ha_per_holding,1
+share,0-1,"share (1 = 100%)","udział (1 = 100%)",true,pct,100
