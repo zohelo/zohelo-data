@@ -792,6 +792,22 @@ year, series with its unit in the name, value without thousands separators): 126
 citing UNdata; commercial use not addressed), licence row `undata_terms` with `commercial_ok` false.
 Monthly check. Restart unit: one table.
 
+## BIS Data Portal (SDMX)
+
+**Built (11 Nov 2026, register GL-015).** The BIS Data Portal has csv_flat bulk zips per dataflow
+(`https://data.bis.org/bulkdownload`), but they decorate every code with its label, put series
+attributes on separate rows and carry the daily series (WS_CBPOL 476 MB unzipped). The SDMX REST API
+returns the same dataflow as SDMX-CSV 2.0 codes (`https://stats.bis.org/api/v1/data/<dataflow>/<key>/all?format=sdmx-csv`),
+one response per selection. `bis.yaml` lands six selections through the shared `bulk_file` pattern, one
+request per entity and run: `cbpol` (WS_CBPOL, monthly), `eer` (WS_EER, monthly), `spp` (WS_SPP), `tc`
+(WS_TC), `credit_gap` (WS_CREDIT_GAP), `dsr` (WS_DSR); 371,000 observations, 64 MB, Poland in all six
+(Dev probe 43087048719). No Last-Modified, so version = download time; a copy is written only when the
+SHA-256 changed. Bronze: `bronze.bis_observations` (the generic SDMX format of the OECD onboarding).
+Silver: `silver.bis_observations` (dimensions as JSON, area from REF_AREA or BORROWERS_CTY, series
+attributes sent on rows without a period filled onto their observations, `NaN` as no value). Terms:
+BIS permitted use of statistics (cite the BIS; no additional charge to users; no warranty), licence row
+`bis_terms`. Weekly Thursday check. Restart unit: one selection.
+
 ## News headline feeds (`news_feeds`, topics)
 
 **Implemented (10 Nov 2026, register TP-001…TP-008, family J; topics layer O32, [topics.md](topics.md)).**

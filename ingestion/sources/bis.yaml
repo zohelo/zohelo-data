@@ -1,0 +1,62 @@
+source_system: bis
+description: "BIS Data Portal — selected SDMX dataflows (policy rates, effective exchange rates, property prices, credit)"
+
+# Extraction strategy (docs/landing.md). The BIS Data Portal has bulk files per dataflow
+# (https://data.bis.org/bulkdownload, csv_flat zips), but they decorate every code with its label
+# ("M: Monthly"), split series attributes into separate rows and carry the daily series (WS_CBPOL 476 MB
+# unzipped, WS_EER 297 MB). The SDMX REST API returns the same dataflow as standard SDMX-CSV 2.0 codes
+# with every attribute on the observation row, in one response per selection, so each entity is one fixed
+# query landed through the shared bulk_file pattern, one request per entity and run (no published quota),
+# written only when the SHA-256 changed. The API gives no Last-Modified, so version = download time.
+# Policy rates and effective exchange rates are taken monthly (end of period / average), the other
+# dataflows whole. Re-use under the BIS terms (register GL-015). Proven from Actions by the Dev probe
+# 43087048719: 371,000 observations in six selections, 64 MB.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: cbpol         # WS_CBPOL: central bank policy rates, monthly, all areas (25,166 obs, 1945-01 →)
+        url: "https://stats.bis.org/api/v1/data/WS_CBPOL/M./all?format=sdmx-csv"
+        format: raw
+        version: ingested
+      - entity: eer           # WS_EER: nominal and real effective exchange rates, broad and narrow, monthly (90,394)
+        url: "https://stats.bis.org/api/v1/data/WS_EER/M.../all?format=sdmx-csv"
+        format: raw
+        version: ingested
+      - entity: spp           # WS_SPP: selected residential property prices, quarterly (35,860)
+        url: "https://stats.bis.org/api/v1/data/WS_SPP/all/all?format=sdmx-csv"
+        format: raw
+        version: ingested
+      - entity: tc            # WS_TC: total credit to the non-financial sector, quarterly (188,399)
+        url: "https://stats.bis.org/api/v1/data/WS_TC/all/all?format=sdmx-csv"
+        format: raw
+        version: ingested
+      - entity: credit_gap    # WS_CREDIT_GAP: credit-to-GDP ratios, trends and gaps, quarterly (24,620)
+        url: "https://stats.bis.org/api/v1/data/WS_CREDIT_GAP/all/all?format=sdmx-csv"
+        format: raw
+        version: ingested
+      - entity: dsr           # WS_DSR: debt service ratios, quarterly (7,182)
+        url: "https://stats.bis.org/api/v1/data/WS_DSR/all/all?format=sdmx-csv"
+        format: raw
+        version: ingested
+  initial: bulk
+  production: snapshot                  # each response is the complete history of its selection
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; release: BIS statistics are updated in the first week of each month and at the quarterly releases (Mar, Jun, Sep, Dec); weekly check (Thursday 06:20), unchanged bytes skipped
+    - {cron: "20 6 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/bis/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.bis_observations, bronze.bis_rejected_files]
+silver: [silver.bis_observations]
+gold: []
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): six whole-selection snapshots of ~371,000 rows together; each new
+# copy replaces its entity, and Silver (newest copy per entity) is rebuilt in full in seconds.
+refresh: {mode: full, decided: "D32 + #2745"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

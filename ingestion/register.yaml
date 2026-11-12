@@ -688,7 +688,8 @@ sources:
   name: BIS Data Portal
   short_name: BIS Data Portal
   provider: Bank for International Settlements
-  status: approved
+  source_system: bis
+  status: built
   family: C
   kpi: true
   geography: worldwide
@@ -699,12 +700,15 @@ sources:
   coverage: Reporting central banks/national authorities; coverage/history differ by topic. Russia reporting stopped
     after 28 Feb 2022.
   access:
-    endpoint: https://data.bis.org/
+    endpoint: https://stats.bis.org/api/v1/data/WS_CBPOL/M./all?format=sdmx-csv
     kind: api
     interfaces: [HTML, SDMX REST API, CSV bulk, SDMX bulk]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No numeric quota published; one request per selection and run. Six selections (WS_CBPOL and WS_EER
+      monthly, WS_SPP, WS_TC, WS_CREDIT_GAP, WS_DSR whole) are 371,000 observations, 64 MB (Dev probe
+      43087048719, 11 Nov 2026). The csv_flat bulk zips decorate codes with labels and split series attributes
+      into separate rows, so the API's SDMX-CSV is used.
   licence:
     status: open-conditional
     notes: 'Terms: https://www.bis.org/about/legal/permitted-use-statistics — use of BIS statistics is unrestricted
@@ -723,7 +727,7 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
     - Commercial packaging must satisfy no-additional-charge condition
     - Review topic-specific confidentiality/coverage flags
