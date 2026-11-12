@@ -688,3 +688,19 @@ sources:
       entity.
   - name: mrpips_unemployment_rejected_files
     description: MRPiPS registered-unemployment Landing files the Bronze decoder rejected, with the reason.
+- name: knf_banking
+  description: KNF monthly banking-sector data workbooks ("Dane miesięczne sektora bankowego", current and archive)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/knf_banking/
+    loaded_by: ingestion/to_bronze/knf_banking/
+    config: ingestion/sources/knf_banking.yaml
+  tables:
+  - name: knf_banking_cells
+    description: >-
+      One row per non-empty cell of the newest Landing copy of each workbook (entity current, archive): sheet, row,
+      column, source text (value_text), cell type and number format (ingestion/common/xlsx_cells.py); partitioned by
+      entity.
+  - name: knf_banking_rejected_files
+    description: knf_banking Landing files the Bronze decoder rejected (not an XLSX workbook, or an unknown sheet or header layout), with the reason.

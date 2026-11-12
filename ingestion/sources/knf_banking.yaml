@@ -40,7 +40,7 @@ archive_policy:
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
 bronze: [bronze.knf_banking_cells, bronze.knf_banking_rejected_files]
-silver: [silver.knf_banking_monthly]
+silver: [silver.knf_banking_series]
 gold: [gold.build_knf_banking]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a workbook

@@ -410,6 +410,14 @@ un_wpp as (
     where level_name = 'country' and length(geography_key) = 2
 )
 
+-- KNF banking-sector data (PLG-017): national aggregates only; the build stage writes the literal 'PL'.
+knf_banking as (
+    select
+        'knf_banking' as source_system,
+        'PL' as source_code,
+        'PL' as geography_key
+)
+
 select
     m.source_system,
     m.source_code,
@@ -449,6 +457,8 @@ from (
     select * from ids
     union all
     select * from un_wpp
+    union all
+    select * from knf_banking
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

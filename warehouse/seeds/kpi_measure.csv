@@ -191,3 +191,8 @@ total_fertility_rate,un_wpp,un_wpp:TFR:estimate,"UN WPP 2024 estimate (to 2023)"
 life_expectancy,un_wpp,un_wpp:LEx:estimate,"at birth, both sexes, UN WPP 2024 estimate (to 2023)",5,
 old_age_dependency,un_wpp,un_wpp:OldAgeDependency:estimate,"65+ per 100 aged 15-64 on 1 July, from UN WPP 2024 broad age groups (to 2023)",5,
 population_projection,un_wpp,un_wpp:TPopulation1July:projection,"1 July, UN WPP 2024 medium variant, 2024-2100, thousands as published",1,thousand_persons
+bank_total_assets,knf_banking,knf_banking:balance_sheet:PLN:total_assets,"KNF Bilans, Aktywa razem, end of month, zloty, from January 2018",1,pln
+bank_net_profit_ytd,knf_banking,knf_banking:income_statement:PLN:net_profit_ytd,"KNF RZiS, Zysk (strata) roku bieżącego, cumulative from January, zloty, from January 2018",1,pln
+bank_loans_nonfin_non_impaired,knf_banking,knf_banking:loans:PLN:nonfin_non_impaired,"KNF Należności_1, sektor niefinansowy, należności bez utraty wartości (fazy 1 i 2), zloty, from January 2018",1,pln
+bank_loans_nonfin_impaired,knf_banking,knf_banking:loans:PLN:nonfin_impaired_stage3,"KNF Należności_1, sektor niefinansowy, należności ze stwierdzoną utratą wartości (faza 3), zloty, from January 2018",1,pln
+bank_total_capital_ratio,knf_banking,knf_banking:capital_adequacy:RATIO:total_capital_ratio,"KNF Adekwatność, Łączny współczynnik kapitałowy, quarter ends, stored fraction, from March 2018",1,ratio

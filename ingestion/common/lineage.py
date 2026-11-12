@@ -55,6 +55,7 @@ SOURCES = (
     "mrpips_unemployment",
     "ecb",
     "un_wpp",
+    "knf_banking",
 )
 # Accumulating sources (every landed copy stays in Bronze, docs/topics.md): no latest-only gate.
 ACCUMULATING = ("news_feeds", "gdelt", "wikimedia_pageviews")
