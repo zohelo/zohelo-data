@@ -3,7 +3,7 @@
 
 Every loaded Silver block of the source (Eurostat: a dataset) is put into Gold by rule, without an
 activation list: the block's Silver files go through the source's build stage
-(warehouse/entity/gold_<source>_build.sql, the common observation shape) and three projections shared
+(warehouse/entity/gold_<source>_*.sql, the common observation shape) and three projections shared
 by all sources (gold_observations.sql, gold_series.sql, gold_measures.sql). Gold holds exactly one
 file per block in each table, as Silver does (design #875):
 
@@ -136,6 +136,8 @@ SOURCES: dict[str, dict[str, Any]] = {
         "silver": ("silver", "eurostat_observations"),
         "block_of": str.upper,  # Eurostat spells a dataset id in either case
         "build": "gold_eurostat_build",
+        # steps before the build, each kept as a table it reads (table -> model)
+        "prepare": {"dimension_sets": "gold_eurostat_dimension_sets", "measure_names": "gold_eurostat_measure_names"},
         "lookups": {
             "geo_map": ("gold", "map_geography", ("source_system", "source_code", "geography_key"), "eurostat"),
             "flows": ("silver", "eurostat_dataflows", ("dataset_id", "name_en"), None),
@@ -175,7 +177,8 @@ def export_lookups(cat, source: str, directory: Path) -> tuple[dict[str, str], s
 def model_digest(source: str, keys_digest: str) -> str:
     """Digest of everything but the Silver files that decides a block's Gold files."""
     digest = sha256(keys_digest.encode())
-    for model in (SOURCES[source]["build"], *(t["model"] for t in TABLES.values())):
+    spec = SOURCES[source]
+    for model in (*spec.get("prepare", {}).values(), spec["build"], *(t["model"] for t in TABLES.values())):
         digest.update((MODELS / f"{model}.sql").read_bytes())
     return digest.hexdigest()[:12]
 
@@ -246,6 +249,7 @@ def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str
                 temp_directory=str(work_dir),
                 source_view="silver",
                 row_group_size=ROW_GROUP,
+                prepare=SOURCES[source].get("prepare"),
             )
             if built["rows"] == 0:
                 raise entity.EntityModelError("no row with a value and a period the calendar can place")

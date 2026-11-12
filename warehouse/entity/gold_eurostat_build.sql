@@ -1,27 +1,18 @@
 -- Gold build stage of ONE Eurostat dataset, by rule (docs/gold-coverage.md): every row of the dataset's
 -- Silver file with a value, in the common observation shape (the 21 columns of poc_build_nbp.sql, same
--- order). Applied by warehouse/observations.py to one Silver file at a time; relations:
+-- order). Applied by warehouse/observations.py to one Silver file at a time, after the two steps that
+-- make the tables `dimension_sets` (gold_eurostat_dimension_sets.sql: the measure and total rules) and
+-- `measure_names` (gold_eurostat_measure_names.sql). Relations:
 --   silver    the dataset's file of silver.eurostat_observations
 --   geo_map   gold.map_geography rows of Eurostat (source_code, geography_key)
---   flows, dims, codes   silver.eurostat_dataflows / eurostat_dimensions / eurostat_codes (names)
--- Rules, the same for every dataset (no per-dataset list):
---   measure    = dataset × unit × the codes of the measure-defining dimensions (the indicator-like
---                dimensions named in `measure_rule`) × frequency; frequency is part of the key because
---                series_key has none and two frequencies of one measure would collide on date_key
---   breakdown  = every other dimension, source codes as published
---   total      = each breakdown dimension holds its total code: TOTAL, T or _T when the dataset has
---                one for that dimension, the only code when the dimension has one code; a dimension
---                with several codes and no total code has no total series
---   date_key   = first day of the period (A, S, Q, M, W = ISO Monday, D); other periods are not loaded
---   geography  = by code through map_geography; no geo dimension → _Z; unmatched → _X, code kept
-with measure_rule as (
-    select
-        '^(indic|indic_[a-z0-9_]+|na_item|bop_item|nrg_bal|stk_flow|fdi_item|int_rt|exch_rt|airpol|statinfo'
-        || '|tra_meas|ind_type|finpos|co_nco|wst_oper|indicator|item|variable|lcstruct|asset10|asset|s_adj)$' as pattern
-),
-
--- not materialized: the rows are streamed twice (shapes, final join) instead of held in memory
-placed as not materialized (
+--   flows, codes   silver.eurostat_dataflows / eurostat_codes (names)
+-- Every row is shaped on its own with these small lookups: nothing is grouped by series, so memory
+-- does not grow with the number of series.
+--   measure_key = eurostat:<dataset>:<unit>[:<measure codes>]@<frequency>; frequency is part of the key
+--                 because series_key has none and two frequencies of one measure would collide on date_key
+--   date_key    = first day of the period (A, S, Q, M, W = ISO Monday, D); other periods are not loaded
+--   geography   = by code through map_geography; no geo dimension → _Z; unmatched → _X, code kept
+with placed as (
     select
         s.*,
         upper(s.dataset_id) as block_id,
@@ -50,50 +41,6 @@ placed as not materialized (
         end as date_key
     from silver as s
     where s.value is not null
-),
-
--- Everything below works per row with small lookups only (a few dimensions, a few thousand measures):
--- no row set is grouped by series, so memory does not grow with the number of series
--- (AVIA_TF_ACA: 492 M rows with a value and no geo dimension).
-dimension_codes as (  -- the codes each breakdown dimension holds in this dataset
-    select distinct
-        unnest(string_split(breakdown_dimensions, ',')) as dimension_id,
-        unnest(string_split(breakdown_codes, ',')) as code
-    from placed
-    where coalesce(breakdown_dimensions, '') <> ''
-),
-
-dimension_totals as (  -- the total code of each breakdown dimension in this dataset, if it has one
-    select
-        dimension_id,
-        regexp_matches(dimension_id, (select r.pattern from measure_rule as r)) as is_measure,
-        case
-            when bool_or(code = 'TOTAL') then 'TOTAL'
-            when bool_or(code = 'T') then 'T'
-            when bool_or(code = '_T') then '_T'
-            when count(*) = 1 then any_value(code)
-        end as total_code
-    from dimension_codes
-    group by dimension_id
-),
-
-dimension_sets as (  -- one row per dimension list (one per dataset in practice): positions of each kind
-    select
-        l.breakdown_dimensions,
-        coalesce(list(l.pos order by l.pos) filter (where t.is_measure), []) as measure_positions,
-        coalesce(list(l.pos order by l.pos) filter (where not t.is_measure), []) as breakdown_positions,
-        coalesce(list(l.dimension_id order by l.pos) filter (where not t.is_measure), []) as breakdown_dimension_ids,
-        coalesce(list(t.total_code order by l.pos) filter (where not t.is_measure), []) as breakdown_totals,
-        max(case when l.dimension_id = 'sex' then l.pos end) as sex_position
-    from (
-        select
-            d.breakdown_dimensions,
-            unnest(string_split(d.breakdown_dimensions, ',')) as dimension_id,
-            generate_subscripts(string_split(d.breakdown_dimensions, ','), 1) as pos
-        from (select distinct p.breakdown_dimensions from placed as p where coalesce(p.breakdown_dimensions, '') <> '') as d
-    ) as l
-    inner join dimension_totals as t on l.dimension_id = t.dimension_id
-    group by l.breakdown_dimensions
 ),
 
 split as (
@@ -133,46 +80,6 @@ code_names as (
         any_value(name_en) as name_en
     from codes
     group by codelist_id, code
-),
-
-dimension_lists as (
-    select
-        dimension_id,
-        any_value(codelist_id) as codelist_id
-    from dims
-    where upper(dataset_id) in (select distinct p.block_id from placed as p)
-    group by dimension_id
-),
-
-measure_shapes as (  -- one row per measure: few, whatever the number of series
-    select distinct
-        freq_code,
-        unit_code,
-        breakdown_dimensions,
-        measure_codes
-    from split
-),
-
-measure_names as (  -- names of the measure codes, from the dataset's code lists
-    select
-        m.freq_code,
-        m.unit_code,
-        m.breakdown_dimensions,
-        m.measure_codes,
-        string_agg(coalesce(n.name_en, x.code), ' — ' order by x.pos) as codes_name
-    from measure_shapes as m
-    inner join dimension_sets as d on m.breakdown_dimensions = d.breakdown_dimensions
-    cross join lateral (
-        select
-            unnest(string_split(m.measure_codes, ':')) as code,
-            unnest(d.measure_positions) as dimension_position,
-            generate_subscripts(d.measure_positions, 1) as pos
-    ) as x
-    left join dimension_lists as l
-        on string_split(m.breakdown_dimensions, ',')[x.dimension_position] = l.dimension_id
-    left join code_names as n on l.codelist_id = n.codelist_id and x.code = n.code
-    where m.measure_codes <> ''
-    group by m.freq_code, m.unit_code, m.breakdown_dimensions, m.measure_codes
 ),
 
 block_names as (
@@ -227,7 +134,6 @@ left join measure_names as n
     on
         p.freq_code = n.freq_code
         and p.unit_code is not distinct from n.unit_code
-        and p.breakdown_dimensions = n.breakdown_dimensions
         and p.measure_codes = n.measure_codes
 left join code_names as u on u.codelist_id = 'UNIT' and p.unit_code = u.code
 left join block_names as f on p.block_id = f.block_id
