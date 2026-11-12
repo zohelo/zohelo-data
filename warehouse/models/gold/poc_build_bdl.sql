@@ -130,6 +130,18 @@ silver as (
                 else 6
             end
         ) as unit_level,
+        -- No-value signs (#2788, #2806): "x"/"X" (GUS: "brak informacji, konieczność zachowania tajemnicy
+        -- statystycznej lub wypełnienie pozycji jest niemożliwe albo niecelowe") and "n" ("dana jeszcze niedostępna")
+        -- mark a cell without a value, written as 0 (every such row with a value is 0: 4.56 M website "x", Dev run
+        -- 43159054852; website "n", API 4/14/91/50, Dev run 43275462132). The website export carries the sign, the
+        -- API its attribute id (/attributes: 4 and 91 = x, 14 = X, 50 = n). Only a 0 counts: a number under such a
+        -- sign is kept. Kept too: "z"/"Z" (a significant zero), "a"/"A" (below the presentation format) and the
+        -- API's id 0 (blank sign). The rows are dropped after `deduplicated`, so a cell the API now marks as no value
+        -- does not bring back an older website number.
+        o.value = 0 and (
+            (o.channel = 'web_export' and coalesce(lower(o.attribute), '') in ('x', 'n'))
+            or (o.channel = 'api' and coalesce(o.attribute, '') in ('4', '14', '50', '91'))
+        ) as no_value,
         v.n1,
         v.n2,
         v.n3,
@@ -173,15 +185,7 @@ silver as (
     left join units as u on o.unit_code = u.unit_id
     left join variables as v on o.subgroup_id = v.subgroup_id and o.variable_id = v.variable_id
     left join label_rule as r on o.subgroup_id = r.subgroup_id
-    -- attribute "x" (GUS: "wypełnienie pozycji jest niemożliwe lub niecelowe") marks a cell without
-    -- a value; the export writes 0 there (all 4.56 M "x" rows are 0; P2361 lubuskie 2019-2020 and
-    -- three other voivodeships 2020, #2788, Dev run 43159054852)
-    where
-        o.value is not null and o.year >= 2010 and coalesce(lower(o.attribute), '') <> 'x'
-        -- also no value: website symbol "a" and API attributes 0, 4, 91 stored as 0 (every such row is 0 in the
-        -- slice subgroups, e.g. P3788 dwelling prices, P1869, P2721; Dev probe 43158714085, #2743); "z" (less
-        -- than half a unit) is a real rounded value
-        and not (o.attribute in ('a', '0', '4', '91') and o.value = 0)
+    where o.value is not null and o.year >= 2010
 ),
 
 kept as (
@@ -277,6 +281,12 @@ deduplicated as (  -- one row per series × area × year: a subgroup can hold th
             year, period_code
         order by case when channel = 'api' then 0 else 1 end, source_version desc, unit_code asc
     ) = 1
+),
+
+with_value as (  -- the no-value cells leave after the API row has won its cell
+    select *
+    from deduplicated
+    where not no_value
 )
 
 select
@@ -315,12 +325,7 @@ select
     end as sex_code,
     len(list_filter(k.labels, lambda x: lower(x) <> 'ogółem')) = 0 as is_total,  -- noqa: RF03
     k.value,
-    case
-        when k.value_conflict then 'conflicting_values'
-        when k.attribute = 'z' then 'not_significant'  -- less than half a unit, published as 0
-        when k.attribute is not null then 'flagged'
-        else 'ok'
-    end as observation_status_key,
+    case when k.value_conflict then 'conflicting_values' else 'ok' end as observation_status_key,
     k.source_version,
     k.raw_sha256
-from deduplicated as k
+from with_value as k

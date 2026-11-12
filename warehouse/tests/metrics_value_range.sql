@@ -77,8 +77,6 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('industrial_production', 'gus_dbw', '%', 1, 300),
     -- % change on a year earlier; 261 (Dev trial 43093114523)
     ('construction_output', 'eurostat', '%', -100, 400),
-    -- index, previous year = 100
-    ('construction_output', 'gus_bdl', '%', 1, 300),
     -- index, same month a year earlier = 100
     ('construction_output', 'gus_dbw', '%', 1, 300),
     -- persons; Poland 6,702,934 in 2026-08
