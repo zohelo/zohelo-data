@@ -54,12 +54,25 @@ def main(argv) -> int:
         terc = cat.load_table(("silver", "teryt_terc")).scan().to_arrow()
         con.register("terc", terc)
         for source in sources:
-            series = importlib.import_module(f"ingestion.to_landing.{source}").SERIES
             land = f"{SCRATCH}/01_landing"
+            try:
+                series = importlib.import_module(f"ingestion.to_landing.{source}").SERIES
+            except ModuleNotFoundError:
+                series = None  # a bulk_file declaration (census workbooks)
             for attempt in (1, 2):
                 print(f"\n##### {source} landing extract {attempt}", flush=True)
-                gp.extract(series, 60, landing_root=land)
-            entities = sorted(gp.held(series, land))
+                if series:
+                    gp.extract(series, 60, landing_root=land)
+                else:
+                    from ingestion.to_landing.patterns import bulk_file
+
+                    bulk_file.main(source, "load", landing_root=land)
+            if series:
+                entities = sorted(gp.held(series, land))
+            else:
+                from ingestion.to_landing.patterns import bulk_file
+
+                entities = [s["entity"] for s in bulk_file.declaration(source)]
             for attempt in (1, 2):
                 print(f"\n##### {source} bronze load {attempt}", flush=True)
                 gp.bronze_load(source, entities, landing_root=land, namespace=SCRATCH)
