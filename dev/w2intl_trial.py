@@ -100,6 +100,7 @@ MODELS = {
             ("status", "select obs_status, count(*) from silver group by all"),
             ("POL/E27 unemployment", "select table_id, area_name, labels_json, time_period, obs_value from silver where table_id like '%UnRate%' and area_code in ('616','E27') qualify row_number() over (partition by entity, series_key order by time_period desc) = 1"),
             ("entities", "select entity, count(*) from silver group by 1 order by 1"),
+            ("parts", "select count(distinct entity) filter (where entity like '%\\_\\_p%' escape '\\'), count(distinct table_id) from silver"),
         ],
     ),
 }
