@@ -254,7 +254,8 @@ sources:
   name: Global Economic Monitor (GEM)
   short_name: World Bank GEM
   provider: World Bank
-  status: approved
+  source_system: world_bank_gem
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -265,11 +266,12 @@ sources:
   coverage: High-frequency macroeconomic and financial indicators; geography and start vary by series.
   access:
     endpoint: https://databank.worldbank.org/source/global-economic-monitor-(gem)
-    kind: web
+    kind: api
     interfaces: [HTML, DataBank]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: 'No quota stated; country/all or several series per request time out (HTTP 524 after 300 s); one series for
+      the EU27 members answers in about 70 s (Dev probes 43275104514, 43278796642).'
   licence:
     status: open-conditional
     notes: 'Terms: CC BY 4.0 per the Data Catalog record
@@ -277,10 +279,16 @@ sources:
       (Public) and the World Bank Terms of Use for Datasets
       https://www.worldbank.org/ext/en/legal/terms-conditions/datasets; commercial reuse and modification
       allowed; do not imply World Bank endorsement or use its name or logo; third-party conditions, where any,
-      are in the indicator metadata. Attribution: "The World Bank: Global Economic Monitor: <data source>".'
+      are in the indicator metadata. Attribution: "The World Bank: Global Economic Monitor: <data source>". Series
+      source notes (API metadata, Dev probe 43293960453): CPTOTSAXN, CPTOTSAXNZGY and IPTOTSAKD "World Bank staff
+      calculations based on Datastream data", DPANUSSPB "World Bank staff calculations based on Datastream and IMF
+      International Finance Statistics data"; the other four have no metadata record; no series-level licence or
+      third-party terms are given.'
   updates: Frequent series updates and revisions; no product-wide schedule established.
   ingestion:
-    history: Archive complete named releases with metadata and vintage.
+    history: 'World Bank API v2 source 15 like world_bank_icp (decision of 12 Nov 2026 in the wave-3 source brief), replacing
+      the stale DataBank bulk ZIP and the web route; one series per request for the EU27 members, each version
+      (lastupdated) landed whole (#2373).'
     incremental: Reload a named release or affected period after publication; no CDC.
     identifiers: Use published economy and indicator IDs; preserve survey/round/vintage where applicable.
   modelling:
@@ -291,10 +299,8 @@ sources:
     evidence: catalogue-only
     connection: tested
     blockers:
-    - 'Owner decision needed (O36 wave 2, 11 Nov 2026): the registered route is web (DataBank). Dev probe 43086111225
-      found the bulk zip GemDataEXTR.zip (databankfiles.worldbank.org, 36 xlsx workbooks) stale since 2024-03-05,
-      while the World Bank API v2 source 15 (36 indicators) was updated 2026-09-08; an API extractor like
-      world_bank_icp (source 90) would replace the web route. Not built until the owner decides.'
+    - 'Coverage: 8 of the 36 series for the EU27 members are built; the other series and the non-EU economies follow
+      in #2904 (small country batches per series, as the API times out on every economy or several series)'
     references:
     - https://databank.worldbank.org/source/global-economic-monitor-(gem)
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -4019,7 +4025,7 @@ sources:
   provider: Narodowy Bank Polski (NBP)
   source_system: nbp_interest_rates
   current: true
-  status: silver
+  status: built
   family: C
   kpi: true
   geography: Poland

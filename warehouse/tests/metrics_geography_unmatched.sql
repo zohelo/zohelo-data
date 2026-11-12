@@ -14,6 +14,8 @@ with members as (
 facts as (
     select series_key, measure_key, source_system, geography_key, date_key from {{ ref('poc_fact_annual') }}
     union all
+    select series_key, measure_key, source_system, geography_key, date_key from {{ ref('poc_fact_semiannual') }}
+    union all
     select series_key, measure_key, source_system, geography_key, date_key from {{ ref('poc_fact_quarterly') }}
     union all
     select series_key, measure_key, source_system, geography_key, date_key from {{ ref('poc_fact_monthly') }}

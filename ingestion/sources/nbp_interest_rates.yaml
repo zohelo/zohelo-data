@@ -32,7 +32,9 @@ archive_policy:
   prune: report
 bronze: [bronze.nbp_interest_rate_items, bronze.nbp_interest_rates_rejected_files]
 silver: [silver.nbp_policy_rates]
-gold: []
+gold: [gold.build_nbp_interest_rates]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  poc_build_nbp_interest_rates: {rows: 2500}  # 1,541 (Dev trial 43093114523)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (owner decision #875): two files of a few hundred rows; rebuilt in full.

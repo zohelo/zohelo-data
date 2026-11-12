@@ -99,6 +99,15 @@ models:
         tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_calendar'), field: date_key}}}]
       - name: value
         tests: [not_null]
+  - name: poc_fact_semiannual
+    description: One row per series × half-year; date_key = first day of the half-year (1 January, 1 July).
+    columns:
+      - name: series_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_series'), field: series_key}}}]
+      - name: date_key
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_calendar'), field: date_key}}}]
+      - name: value
+        tests: [not_null]
   - name: poc_fact_quarterly
     description: One row per series × quarter; date_key = first day of the quarter.
     columns:
