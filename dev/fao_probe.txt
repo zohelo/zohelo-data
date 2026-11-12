@@ -1,15 +1,26 @@
-uis-schema	grep	https://api.uis.unesco.org/api/public/openapi/schema.json	rate.?limit|throttl|maximum|/api/public/data/indicators|geoUnit"|100000|records
-uis-gerd	grep	https://api.uis.unesco.org/api/public/definitions/indicators	"indicatorCode":"[^"]*","name":"[^"]*(GERD|expenditure on research)[^"]*"
-uis-ea	grep	https://api.uis.unesco.org/api/public/definitions/indicators	"indicatorCode":"EA\.(5T8|6T8)\.AG25T99(\.F|\.M)?"
-uis-all-ea	raw	https://api.uis.unesco.org/api/public/data/indicators?indicator=EA.5T8.AG25T99	700
-uis-all-ea2	grep	https://api.uis.unesco.org/api/public/data/indicators?indicator=EA.5T8.AG25T99&geoUnitType=NATIONAL	"geoUnit":"POL"[^}]*"year":202[0-9]
-uis-geo	raw	https://api.uis.unesco.org/api/public/definitions/geounits	600
-uis-bulk	grep	https://databrowser.uis.unesco.org/resources/bulk	bdds/202602/[^"\\]+
-uis-sdgzip	head	https://download.uis.unesco.org/bdds/202602/SDG.zip
-uis-oprizip	head	https://download.uis.unesco.org/bdds/202602/OPRI.zip
-itu-stat	links	https://www.itu.int/en/ITU-D/Statistics/Pages/stat/default.aspx	xlsx|csv|datahub|ITU_regional|Indicators
-itu-terms	grep	https://www.itu.int/en/about/Pages/terms-of-use.aspx	Creative Commons|licen|commercial
-itu-wtid	grep	https://www.itu.int/pub/D-IND-WTID.OL-2023	free|Creative|licen|DataHub
-who-le	raw	https://srhdpeuwpubsa.blob.core.windows.net/whdh/DATADOT/INDICATOR/90E2E48_ALL_LATEST.csv	600
-who-le-pl	grep	https://srhdpeuwpubsa.blob.core.windows.net/whdh/DATADOT/INDICATOR/90E2E48_ALL_LATEST.csv	,616,COUNTRY[^\n]*
-who-le-agg	grep	https://srhdpeuwpubsa.blob.core.windows.net/whdh/DATADOT/INDICATOR/90E2E48_ALL_LATEST.csv	,(REGION|WORLDBANKINCOMEGROUP|GLOBAL|WHOREGION)[^\n]*
+owid-le-meta	raw	https://ourworldindata.org/grapher/life-expectancy.metadata.json	2500
+owid-le-csv	raw	https://ourworldindata.org/grapher/life-expectancy.csv?v=1&csvType=full&useColumnShortNames=true	400
+owid-gdp-meta	raw	https://ourworldindata.org/grapher/gdp-per-capita-maddison-project-database.metadata.json	2000
+owid-co2-meta	raw	https://ourworldindata.org/grapher/annual-co2-emissions-per-country.metadata.json	2000
+owid-ghg-meta	raw	https://ourworldindata.org/grapher/total-ghg-emissions.metadata.json	2000
+owid-ren-meta	raw	https://ourworldindata.org/grapher/share-electricity-renewables.metadata.json	2000
+owid-tfr-meta	raw	https://ourworldindata.org/grapher/children-born-per-woman.metadata.json	1500
+owid-pov-meta	raw	https://ourworldindata.org/grapher/share-of-population-in-extreme-poverty.metadata.json	1500
+owid-energy-meta	raw	https://ourworldindata.org/grapher/per-capita-energy-use.metadata.json	1500
+owid-faq	grep	https://ourworldindata.org/faqs	permissive CC BY|third-party|license terms of those providers
+dgp-api	raw	https://api.dane.gov.pl/1.4/datasets?page=1&per_page=2	2500
+dgp-count	grep	https://api.dane.gov.pl/1.4/datasets?page=1&per_page=1	"count": ?[0-9]+|"meta"[^}]{0,300}
+dgp-inst	raw	https://api.dane.gov.pl/1.4/institutions?page=1&per_page=1	1200
+dgp-terms	grep	https://dane.gov.pl/pl/regulations	dowolnych cel|licencj|ponowne wykorzyst
+dgp-catalog	grep	https://api.dane.gov.pl/catalog/dcat_ap	dcat|Catalog
+wd-sparql	raw	https://query.wikidata.org/sparql?format=json&query=SELECT%20%3Fitem%20WHERE%20%7B%20%3Fitem%20wdt%3AP1653%20%3Fterc%20%7D%20LIMIT%203	600
+wd-policy	grep	https://meta.wikimedia.org/wiki/User-Agent_policy	contact|e-mail|email
+oa-works	raw	https://api.openalex.org/works?filter=institutions.country_code:pl,publication_year:2023&group_by=primary_topic.field.id&per_page=5	1500
+oa-key	grep	https://docs.openalex.org/how-to-use-the-api/rate-limits-and-authentication	api_key|API key|per day|credits|polite
+oa-snapshot	grep	https://docs.openalex.org/download-all-data/openalex-snapshot	s3|aws|snapshot|CC0
+cr-works	raw	https://api.crossref.org/works?filter=from-pub-date:2024,until-pub-date:2024&facet=publisher-name:3&rows=0	1200
+cr-etiquette	grep	https://www.crossref.org/documentation/retrieve-metadata/rest-api/tips-for-using-the-crossref-rest-api/	mailto|polite|public pool|rate
+sec-ua	grep	https://www.sec.gov/os/accessing-edgar-data	User-Agent|declare|10 requests
+ch-bulk	grep	https://download.companieshouse.gov.uk/en_output.html	BasicCompanyData[^"]*zip|Open Government|licence
+osm-geofabrik	head	https://download.geofabrik.de/europe/poland-latest.osm.pbf
+osm-copyright	grep	https://www.openstreetmap.org/copyright	Open Data Commons Open Database|ODbL|share
