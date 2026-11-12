@@ -26,4 +26,6 @@ news_feeds,TP-001,Kanały RSS serwisów informacyjnych,News headline feeds (RSS/
 wikimedia_pageviews,CD-025,Wikimedia: odsłony artykułów,Wikimedia pageviews,Wikimedia Foundation,signal,file,community-academic,cc0_wikimedia_pageviews,https://doc.wikimedia.org/generated-data-platform/aqs/analytics-api/reference/page-views.html
 gdelt,CD-030,GDELT: wolumen i wydźwięk wiadomości,GDELT news volume and tone,GDELT Project,signal,file,community-academic,gdelt_terms,https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/
 release_calendars,TP-010,Kalendarze publikacji statystyk,Official release calendars,"Eurostat, GUS, ECB",signal,file,international-public,eurostat_reuse,https://ec.europa.eu/eurostat/news/euro-indicators/release-calendar
+mf_jst_budgets,PLG-010,MF sprawozdania budżetowe JST,MF local-government budget reports,Ministerstwo Finansów,cube,file,national-public,gov_pl_terms,https://www.gov.pl/web/finanse/sprawozdania-budzetowe
+mrpips_unemployment,PLS-029,MRPiPS bezrobocie rejestrowane,MRPiPS registered unemployment,"Ministerstwo Rodziny, Pracy i Polityki Społecznej",cube,file,national-public,cc_by_3_0_pl_psz,https://psz.praca.gov.pl/rynek-pracy/statystyki-i-analizy/bezrobocie-rejestrowane
 faostat,GL-022,FAOSTAT,FAOSTAT,Food and Agriculture Organization of the United Nations,cube,file,international-public,cc_by_4_0_fao,https://www.fao.org/faostat/en/#data

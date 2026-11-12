@@ -2083,6 +2083,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
+    - 'Dev probe 43087698750: strateg.stat.gov.pl/apidocs/ is a Flasgger UI whose spec URL was not found (apispec_1.json 404); the host api-strateg.stat.gov.pl does not resolve from GitHub runners (Dev probe 43086687586). API base URL and quota terms to be confirmed before a build.'
     - Open current API method documentation (https://strateg.stat.gov.pl/apidocs/?lang=en)
     - Commercial reuse not addressed by GUS terms (ask GUS if needed)
     references:
@@ -2180,6 +2181,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
+    - 'Dev probe 43160190595: final-results pages on stat.gov.pl link XLSX tables per theme (nationality, language and religion for Poland and territorial units; population by census district, sex and age group) under /download/gfx/portalinformacyjny/pl/defaultaktualnosci/6536/<n>/1/1/*.xlsx; a one-off release, a curated table list is the next step.'
     - Inventory exact downloadable table families
     - Define small-cell handling
     references:
@@ -2375,7 +2377,10 @@ sources:
     priority: review-first
     evidence: documented
     connection: not-tested
-    blockers: [Choose stable topic families, Assess workbook schema drift]
+    blockers:
+    - 'Route found (Dev probes 43091539492, 43162355678 on test/src-w2pl-probe): psz.zus.pl category pages (e.g. /kategorie/emerytury/stan-na-grudzien) link one XLSX per topic table and year under /documents/493365/<folder>/<name>.xlsx/<uuid>, 2011 onwards (.xls before 2014), about 25 topic families. A build needs a chosen family list (pensions in December by voivodeship and benefit type first, for the KPI zus_pension_avg).'
+    - Choose stable topic families
+    - Assess workbook schema drift
     references:
     - https://psz.zus.pl/
     - https://psz.zus.pl/kategorie/ubezpieczeni/ubezpieczenia-emerytalne-i-rentowe
@@ -2424,6 +2429,7 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Dev probe 43087698750: the yearbook page offers PDF editions only (1999-2002 to 2021-2023), no XLSX or CSV; the same figures are on the ZUS statistical portal (PLS-009) as XLSX. Build from PLS-009; PDF table extraction not planned.'
     - Verify downloadable formats and earliest edition
     references:
     - https://www.zus.pl/baza-wiedzy/statystyka/rocznik-statystyczny-ubezpieczen-spolecznych
@@ -3252,7 +3258,8 @@ sources:
   name: Registered unemployment and labour-office vacancy statistics
   short_name: MRPiPS registered unemployment
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej / Public Employment Services
-  status: approved
+  source_system: mrpips_unemployment
+  status: built
   family: B
   kpi: true
   geography: Poland, voivodeship and powiat, table-dependent
@@ -3260,14 +3267,14 @@ sources:
   domains: [registered unemployment, job vacancies, employment services]
   entities: [unemployed-person aggregate, vacancy aggregate, territorial unit, occupation]
   granularity: Monthly aggregate by labour-office geography/category; occupation tables and vacancies are publication-dependent.
-  coverage: Long-running monthly administrative series; exact downloadable archive start not verified.
+  coverage: Monthly ZIPs since 2001 on the portal; built from January 2019 (one asset page per year); rate and stock for Poland, voivodeships and powiats.
   access:
-    endpoint: https://psz.praca.gov.pl/
+    endpoint: https://psz.praca.gov.pl/rynek-pracy/statystyki-i-analizy/bezrobocie-rejestrowane
     kind: bulk_file
     interfaces: [HTML, XLSX, PDF]
     auth: Public statistics pages/files.
     cost: free
-    limits: Unknown.
+    limits: None stated; one request at a time, 2 s apart.
   licence:
     status: open-conditional
     notes: 'Terms: footer of the Publiczne Służby Zatrudnienia portal https://psz.praca.gov.pl/: "Wszystkie treści
@@ -3278,8 +3285,8 @@ sources:
       Family, Labour and Social Policy / Public Employment Services, <table title> (<month>), CC BY 3.0 PL".'
   updates: Monthly preliminary/final releases and annual summaries.
   ingestion:
-    history: Backfill stable monthly workbooks after locating canonical archive.
-    incremental: Poll monthly and version preliminary/final replacements.
+    history: Monthly 'statystyki strukturalne' ZIPs from January 2019 (entity stat_YYYY_MM), found from the listing page, its year categories and the yearly asset pages.
+    incremental: Missing months, plus the newest two months re-downloaded on each weekly run; a changed ZIP lands as a new version (Last-Modified, SHA-256).
     identifiers: Reference month + territorial labour office/TERYT + category/occupation code.
   modelling:
     notes: Stocks at month end differ from monthly inflows/outflows and vacancies; registered unemployment differs
@@ -3287,11 +3294,10 @@ sources:
     overlap: GUS publishes registered unemployment too; align release source and avoid duplicate totals.
   research:
     priority: review-first
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - Locate canonical current archive and file schema
-    - Document vacancy and occupation definitions
+    - Vacancy and occupation tables (half-yearly XLSX) not built yet
     references:
     - https://psz.praca.gov.pl/
     - https://barometrzawodow.pl/
@@ -3429,6 +3435,7 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
+    - 'Dev probes 43087126643 and 43087698750: the new ZSRIR portal (zsrir.minrol.gov.pl) fails TLS certificate verification from GitHub runners (unable to get local issuer certificate); TLS checks are never disabled, so it is unreachable until its certificate chain is fixed. The legacy gov.pl market bulletins (rynek-zboz, rynek-mleka, ...) point to dane.gov.pl.'
     - Open new portal technical/terms pages
     - Inventory structured export
     - Resolve series breaks in 2025 migration
@@ -3536,6 +3543,7 @@ sources:
     evidence: catalogue-only
     connection: not-tested
     blockers:
+    - 'Dev probes 43086687586 and 43091539492: gov.pl/web/arimr/wdrazane-programy-i-dzialania---dane-liczbowe links per-scheme pages (e.g. platnosci-bezposrednie2) with no single statistics file index; the per-scheme attachments are still to be inventoried.'
     - Locate canonical aggregate statistics index
     - Exclude personal beneficiary records
     - Document cumulative-status semantics
@@ -4004,7 +4012,8 @@ sources:
   name: Local-government budget reports (sprawozdania budżetowe JST)
   short_name: MF local-government budgets
   provider: Ministry of Finance
-  status: approved
+  source_system: mf_jst_budgets
+  status: built
   family: D
   kpi: true
   geography: Poland
@@ -4019,7 +4028,7 @@ sources:
     interfaces: [XLSX, DBF, HTML]
     auth: public download
     cost: free
-    limits: Unknown.
+    limits: None stated; one request at a time, 2 s apart.
   licence:
     status: open-conditional
     notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
@@ -4043,9 +4052,9 @@ sources:
   research:
     priority: review-first
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Inspect formats, identifiers and corrections.'
+    - 'Per-unit report databases (Rb27S, Rb28S, RbNDS, RbN, RbZ ZIPs, 2001-2026, TERYT per unit) not built yet; summaries built from 2022 Q1.'
     references:
     - https://www.gov.pl/web/finanse/sprawozdania-budzetowe
     - https://www.gov.pl/web/gov/prawa-autorskie
