@@ -191,7 +191,10 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- seasonally adjusted unemployment rate 0.5 to 36.7 (MK).
     ('unemployment_rate_monthly_sa', 'unece', '%', 0, 80),
     ('cpi_annual_rate', 'unece', '%', -50, 1e5),
-    ('ppi_annual_rate', 'unece', '%', -80, 1e5)
+    ('ppi_annual_rate', 'unece', '%', -80, 1e5),
+    -- NFZ waiting times (#2956), stable case, Poland the largest area: TRIAL_NUMBERS
+    ('waiting_list_persons', 'nfz_waiting_times', '%', 0, 2e7),
+    ('waiting_lists', 'nfz_waiting_times', '%', 1, 1e6)
 ),
 
 metrics as (
@@ -590,6 +593,24 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_health_expenditure_gdp') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_waiting_list_persons') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_waiting_lists') }}
 )
 
 select

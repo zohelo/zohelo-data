@@ -1,0 +1,21 @@
+version: 2
+models:
+  - name: poc_build_nfz_waiting_times
+    description: >-
+      Build stage — NFZ waiting times (API Terminy Leczenia v1.4, register PLS-015), block waiting_lists: monthly
+      counts by voivodeship and Poland, per case (stable, urgent): waiting lists listed in the snapshot month, persons
+      awaiting at the end of the statistics month summed over the lists that published a count (zohelo calculation),
+      and the number of those lists. Values as counted from unchanged published values; licence unresolved (internal).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['PL', 'TERC:0200000', 'TERC:0400000', 'TERC:0600000', 'TERC:0800000', 'TERC:1000000', 'TERC:1200000', 'TERC:1400000', 'TERC:1600000', 'TERC:1800000', 'TERC:2000000', 'TERC:2200000', 'TERC:2400000', 'TERC:2600000', 'TERC:2800000', 'TERC:3000000', 'TERC:3200000']}}}]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_waiting_list_persons
+    description: Gold PoC metrics of the draft KPI waiting_list_persons (NFZ waiting times, stable case).
+  - name: poc_metrics_waiting_lists
+    description: Gold PoC metrics of the draft KPI waiting_lists (NFZ waiting times, stable case).

@@ -1,0 +1,19 @@
+version: 2
+sources:
+- name: nfz_waiting_times
+  description: NFZ waiting times, API Terminy Leczenia v1.4 (register PLS-015), monthly snapshots of every queue
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/nfz_waiting_times/
+    loaded_by: ingestion/to_bronze/nfz_waiting_times/
+    config: ingestion/sources/nfz_waiting_times.yaml
+  tables:
+  - name: nfz_waiting_times_queues
+    description: >-
+      One row per queue record (provider x place x benefit x case) of the newest copy of each entity
+      queues_<YYYYMM>_case<c>_<pp> (one snapshot month, case and NFZ voivodeship): published values as text, with
+      page_number and source_row_number; partitioned by entity. Contact data, REGON, NIP, address and coordinates
+      are not stored (they stay in the Landing and Archive bytes).
+  - name: nfz_waiting_times_rejected_files
+    description: Files of nfz_waiting_times the Bronze decoder rejected, with the reason.
