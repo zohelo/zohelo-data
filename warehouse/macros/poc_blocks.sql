@@ -219,6 +219,32 @@
     ) as t (ref_area, name_en, eurostat_code)
 {% endmacro %}
 
+{# World Bank WGI: the six governance estimates (#2736). #}
+{% macro poc_wgi_blocks() %}
+    select * from (
+        values
+        ('GOV_WGI_VA.EST'), ('GOV_WGI_PV.EST'), ('GOV_WGI_GE.EST'), ('GOV_WGI_RQ.EST'), ('GOV_WGI_RL.EST'),
+        ('GOV_WGI_CC.EST')
+    ) as t (indicator_code)
+{% endmacro %}
+
+{# World Bank Global Findex: account ownership, age 15+ (#2736). #}
+{% macro poc_findex_blocks() %}
+    select * from (
+        values
+        ('account_t_d', 'Account ownership (% age 15+)')
+    ) as t (indicator, block_name)
+{% endmacro %}
+
+{# World Bank ICP 2021: GDP per capita in PPP and the GDP price level index (#2736). #}
+{% macro poc_icp_blocks() %}
+    select * from (
+        values
+        ('1000000', 'PCAP.PP', 'ICP GDP per capita, PPP-based (international $)'),
+        ('1000000', 'PX.WL', 'ICP GDP price level index (world = 100)')
+    ) as t (series_code, classification_code, block_name)
+{% endmacro %}
+
 {# UNCTAD Data Hub blocks (gold.build_unctad): table × dimension codes (dimension_names, in that order) × measure.
    measure_field is the table's measure column; measure_suffix its short code in the measure key. #}
 {% macro poc_unctad_blocks() %}
@@ -235,6 +261,19 @@
         ('US_TradeServCatTotal', 'Services exports (UNCTAD), US$ million', 'Flow,Category', '02:S', 'Millions of US$ at current prices', 'USD_MN', 'MIO_USD', 'US$ million at current prices'),
         ('US_TradeServCatTotal', 'Services imports (UNCTAD), US$ million', 'Flow,Category', '01:S', 'Millions of US$ at current prices', 'USD_MN', 'MIO_USD', 'US$ million at current prices')
     ) as t (entity, block_name, dimension_names, dimension_codes, measure_field, measure_suffix, unit_code, unit_name)
+{% endmacro %}
+
+{# World Bank IDS series built (gold.build_ids, #2819): external debt stocks and debt service, in US$ and as
+   ratios. Debtor economy × counterpart WLD (the only counterpart in the archive); annual. #}
+{% macro poc_ids_series() %}
+    select * from (
+        values
+        ('DT.DOD.DECT.CD', 'usd'),
+        ('DT.DOD.DECT.GN.ZS', 'pct_gni'),
+        ('DT.TDS.DECT.CD', 'usd'),
+        ('DT.TDS.DECT.GN.ZS', 'pct_gni'),
+        ('DT.TDS.DECT.EX.ZS', 'pct_exports')
+    ) as t (series_code, unit_code)
 {% endmacro %}
 
 {# UNCTAD economies built (gold.build_unctad): EU27 members by UNCTAD code, the European Union (2020 …) group and World. #}
@@ -377,6 +416,9 @@
     poc_build_wdi:world_bank_wdi
     poc_build_nbp:nbp
     poc_build_unctad:unctad
+    poc_build_wgi:world_bank_wgi
+    poc_build_findex:world_bank_findex
+    poc_build_icp:world_bank_icp
     poc_build_public_finance:mf_public_debt
     poc_build_oecd:oecd
     poc_build_gleif:gleif
@@ -388,6 +430,7 @@
     poc_build_unesco_uis:unesco_uis
     poc_build_faostat:faostat
     poc_build_ecb:ecb
+    poc_build_ids:world_bank_ids
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -459,6 +502,12 @@
     union all
     select 'world_bank_wdi', indicator_code, 'WDI ' || indicator_code from ({{ poc_wdi_blocks() }})
     union all
+    select 'world_bank_wgi', indicator_code, 'WGI ' || indicator_code from ({{ poc_wgi_blocks() }})
+    union all
+    select 'world_bank_findex', indicator, block_name from ({{ poc_findex_blocks() }})
+    union all
+    select 'world_bank_icp', series_code || ':' || classification_code, block_name from ({{ poc_icp_blocks() }})
+    union all
     select distinct 'unctad', entity, entity from ({{ poc_unctad_blocks() }})
     union all
     select 'who', entity, block_name from ({{ poc_who_blocks() }})
@@ -468,6 +517,8 @@
     select 'faostat', entity || ':' || item_code || '.' || element_code, block_name from ({{ poc_faostat_blocks() }})
     union all
     select 'ecb', entity, block_name from ({{ poc_ecb_blocks() }})
+    union all
+    select 'world_bank_ids', 'IDS_CSV', 'World Bank International Debt Statistics'
     union all
     select * from (
         values
