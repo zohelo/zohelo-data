@@ -323,6 +323,7 @@
     poc_build_oecd:oecd
     poc_build_gleif:gleif
     poc_build_mf_biala_lista:mf_biala_lista
+    poc_build_zus_psz:zus_psz
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -410,6 +411,14 @@
         ('krus', 'benefits', 'KRUS pensions and benefits'),
         ('oecd', 'cli', 'OECD composite leading indicators and confidence indicators'),
         ('gleif', 'lei2', 'GLEIF LEI records (golden copy)'),
-        ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file')
+        ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file'),
+        ('zus_psz', 'pensioners_dec', 'ZUS old-age pensioners in December'),
+        ('zus_psz', 'pension_amount_dec', 'ZUS average old-age pension in December'),
+        ('zus_psz', 'insured_pension', 'ZUS insured persons, pension insurance'),
+        ('zus_psz', 'insured_sickness_voiv', 'ZUS insured persons, sickness insurance, by voivodeship'),
+        ('zus_psz', 'insured_health', 'ZUS insured persons, health insurance'),
+        ('zus_psz', 'foreign_insured', 'ZUS foreign citizens in pension insurance'),
+        ('zus_psz', 'payers_voiv', 'ZUS active contribution payers, by voivodeship'),
+        ('zus_psz', 'absence_voiv', 'ZUS sickness absence, by voivodeship')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}

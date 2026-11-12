@@ -211,6 +211,22 @@ sources:
       source text (value_text), cell type and number format (ingestion/common/xlsx_cells.py); partitioned by entity.
   - name: krus_rejected_files
     description: krus Landing files the Bronze decoder rejected (not an XLSX workbook), with the reason.
+- name: zus_psz
+  description: ZUS statistical portal (psz.zus.pl) curated XLSX tables (pensions, insured persons, payers, sickness absence)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/zus_psz/
+    loaded_by: ingestion/to_bronze/zus_psz/
+    config: ingestion/sources/zus_psz.yaml
+  tables:
+  - name: zus_psz_cells
+    description: >-
+      One row per non-empty cell of the newest Landing copy of each table family × period (entity, e.g. absence_voiv_2026_q3):
+      sheet, row, column, source text (value_text), cell type and number format (ingestion/common/xlsx_cells.py);
+      partitioned by entity.
+  - name: zus_psz_rejected_files
+    description: zus_psz Landing files the Bronze decoder rejected (not an XLSX workbook, or no header row of the family), with the reason.
 - name: nbp
   description: Narodowy Bank Polski — exchange rate tables A/B/C and gold prices (NBP Web API)
   database: r2
