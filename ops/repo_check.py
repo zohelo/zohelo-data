@@ -905,6 +905,8 @@ def _schema_problems(value: object, schema: dict, where: str) -> list[str]:
         for key, sub in schema.get("properties", {}).items():
             if key in value:
                 problems += _schema_problems(value[key], sub, f"{where}.{key}")
+    if isinstance(value, list) and len(value) < schema.get("minItems", 0):
+        problems.append(f"{where}: {len(value)} items, fewer than {schema['minItems']}")
     if isinstance(value, list) and "items" in schema:
         for i, item in enumerate(value):
             problems += _schema_problems(item, schema["items"], f"{where}[{i}]")

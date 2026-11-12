@@ -1026,7 +1026,8 @@ def write(
     from warehouse.publish import gold
 
     tables = dict(metrics)
-    for entry in v2_kpis(seed("kpi"), seed("kpi_v2_map")):
+    candidates = v2_kpis(seed("kpi"), seed("kpi_v2_map"))
+    for entry in candidates:
         if entry["concept"] not in tables:
             with suppress(NoSuchTableError):
                 tables[entry["concept"]] = gold(cat, "gold", f"metrics_{entry['concept']}")
@@ -1041,22 +1042,27 @@ def write(
 
         annotate("warning", "gold.publish: previous v2 file without the expected keys, treated as absent", unusable)
     files, context = build(tables, checked_at, silver_releases, v1_catalog, status, generated_at, previous)
+    stale, lost = stale_plan(kpi_objects(client, prefix), {e["kpi_key"] for e in candidates}, files)
+    if lost:  # a KPI still in scope lost its series in this run (missing table, read failure): keep what is live
+        raise ValueError(
+            f"v2 KPIs in scope but not built this run, while published: {lost}; nothing written "
+            "(fix the Gold table, or take the KPI out of scope in kpi_v2_map.csv)"
+        )
     sizes = {}
     # series first, catalog after them; briefs.json before latest.json, whose previous copy tells what is new
     for name in sorted(files, key=lambda n: (not n.startswith("kpi/"), n)):
         sizes[name] = _sized(name, dumps(files[name]))
         put(client, prefix + name, dumps(files[name]))
-    stale = stale_series(client, prefix, files)
-    for key in stale:  # v2 is rebuilt whole: a KPI that left v2 (licence gate, no Gold series) leaves no file
-        remove(client, key)
     written = {name: json.loads(get(client, prefix + name)) for name in files}
     problems = read_back(written, context)
     if problems:
         raise ValueError(f"{len(problems)} v2 numbers differ from Gold: {problems[:20]}")
+    for name in stale:  # after a clean read-back: files of KPIs out of scope (seeds, licence gate) only
+        remove(client, prefix + name)
     return {
         "prefix": prefix,
         "kpis": sorted(n.split("/")[1] for n in files if n.startswith("kpi/")),
-        "removed": [k[len(prefix) :] for k in stale],
+        "removed": stale,
         "missing": context["missing"],
         "empty": context["empty"],
         "latest_values": len(files["latest.json"]["values"]),
@@ -1067,20 +1073,36 @@ def write(
     }
 
 
-def stale_series(client, prefix: str, files: dict[str, dict[str, Any]]) -> list[str]:
-    """Keys of ``kpi/<kpi_key>/…`` objects under prefix that this run did not write."""
+def kpi_objects(client, prefix: str) -> set[str]:
+    """Paths (relative to prefix) of the ``kpi/<kpi_key>/…`` objects published under prefix."""
     from ingestion.common.r2 import req
 
-    found = []
+    found = set()
     pages = client.get_paginator("list_objects_v2").paginate(
         Bucket=req("STORAGE_LAKEHOUSE_BUCKET_NAME"), Prefix=prefix + "kpi/"
     )
     for page in pages:
-        for item in page.get("Contents", []):
-            key = str(item["Key"])
-            if key[len(prefix) :] not in files:
-                found.append(key)
-    return sorted(found)
+        found |= {str(item["Key"])[len(prefix) :] for item in page.get("Contents", [])}
+    return found
+
+
+def stale_plan(existing: set[str], candidates: set[str], files: dict[str, Any]) -> tuple[list[str], list[str]]:
+    """Which published ``kpi/<kpi_key>/…`` paths this run removes, and which KPIs it lost; pure.
+
+    A KPI that is no longer a v2 candidate (``candidates``: the v2_kpis keys, decided by the seeds and the licence
+    gate alone) is out of scope: its files are removed. A candidate whose ``series.json`` is published but was not
+    built this run (missing table, read failure, no row at the shown frequency) is lost: the run must fail before
+    writing, so a transient failure never takes a live KPI down. Other leftover files of a built KPI are removed."""
+    stale, lost = [], set()
+    for path in sorted(existing):
+        if path in files:
+            continue
+        key = path.split("/")[1]
+        if key in candidates and f"kpi/{key}/series.json" not in files:
+            lost.add(key)
+        else:
+            stale.append(path)
+    return stale, sorted(lost)
 
 
 def _published(client, key: str) -> dict[str, Any] | None:
