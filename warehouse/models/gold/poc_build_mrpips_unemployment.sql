@@ -1,4 +1,4 @@
-{{ config(alias='build_mrpips_unemployment') }}
+{{ config(alias='build_mrpips_unemployment', tags=['gold_block']) }}
 {# Gold build stage: MRPiPS registered unemployment (register PLS-029) as monthly observations.
    One block, 'registered_unemployment': measures unemployed_persons (persons, by sex; Poland and voivodeships),
    unemployed_thousands (thousand persons) and unemployment_rate (%) (both sexes; Poland, voivodeships, powiats).
