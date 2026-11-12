@@ -124,6 +124,9 @@ def main() -> int:
         # v2: main's code (status gate) and this branch's code (Gold series gate), each on its own v1 catalog
         checked_at = publish.checked(publish.gold(cat, "gold", "coverage"))
         stamp = publish.iso(__import__("datetime").datetime.now(__import__("datetime").UTC))
+        # main's v2 code against this branch's schema (status required): add the field, nothing else
+        old_entry = publish_v2_old.catalog_entry
+        publish_v2_old.catalog_entry = lambda entry, *a: {**old_entry(entry, *a), "status": entry["kpi"]["status"]}
         old_v2 = publish_v2_old.write(
             cat,
             client,
