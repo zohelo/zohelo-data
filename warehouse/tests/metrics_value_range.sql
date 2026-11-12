@@ -68,6 +68,11 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- = 1,253.1 Mt (total excl. LULUCF, 1990-2024, Dev trial 43282453427). Documentation only until
     -- metrics_ghg_emissions joins the metrics union below.
     ('ghg_emissions', 'eea', 'eea:govreg_ghg_inventory:gg_co2e:Sectors/Totals_excl', 0, 2e3),
+    -- NBP balance of payments (#2780): million EUR, Poland; current account 2026-Q2 -6,225, net IIP -283,248 (Dev trial
+    -- 43163012721). Documentation only until metrics_current_account_components and metrics_fdi_inflow join the
+    -- metrics union below (draft concepts are outside the test's scope).
+    ('current_account_components', 'nbp_bop', '%', -1e6, 1e6),
+    ('fdi_inflow', 'nbp_bop', '%', -1e6, 1e6),
     -- ILOSTAT (#2861): per cent of the labour force, 15+, EU27 members, annual and quarterly national series;
     -- highest 28.153 (GR, quarterly), Poland 2025 = 3.018 (Dev trial 43290214779); the other sources' bound
     ('unemployment_rate', 'ilostat', '%', 0, 60),

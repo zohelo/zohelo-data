@@ -1,12 +1,14 @@
 {{ config(alias='map_geography') }}
 {# Gold PoC: every source's geography code → the area it means in dim_geography
    (design draft 2: map_geography__<source>, merged into one table). Unmatched codes map to
-   '_X' and are counted by the build check. #}
+   '_X' and are counted by the build check. A new source does not add a CTE here: it defines
+   poc_geography__<source_system>() in warehouse/macros/sources/<source_system>.sql
+   (docs/source-registration.md) and the two poc_geography_* calls below place it. #}
 with geo as (select * from {{ ref('poc_dim_geography') }}),
 
 nuts_pl as ({{ poc_nuts_pl() }}),
 
-eurostat_codes as (
+{{ poc_geography_ctes() }}eurostat_codes as (
     select code from {{ ref('eurostat_codes') }}
     where codelist_id = 'GEO'
     group by code
@@ -512,7 +514,7 @@ select
     coalesce(g.geography_key, '_X') as geography_key,
     g.geography_key is not null as matched
 from (
-    select * from eurostat
+    {{ poc_geography_union() }}select * from eurostat
     union all
     select * from bdl
     union all

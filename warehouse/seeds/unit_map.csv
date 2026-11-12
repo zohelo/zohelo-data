@@ -155,6 +155,8 @@ zus_psz,PLN,,pln
 zus_psz,days,,days
 zus_psz,payers,,payers
 zus_psz,certificates,,certificates
+nbp_bop,mln_eur,,mln_eur
+nbp_bop,mln_pln,,mln_pln
 bis,368,,pct
 bis,882,,index_2020_100
 bis,628,,index_2010_100

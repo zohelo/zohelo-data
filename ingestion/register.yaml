@@ -3870,7 +3870,9 @@ sources:
     limits: One workbook (~170 kB) at a fixed URL, landed with PLG-002 by source_system nbp_bop.
   licence:
     status: unresolved
-    notes: 'Same NBP website Terms of Use as PLG-002; unresolved under the owner decision of 14 Oct 2026.'
+    notes: 'Terms: same NBP website Terms of Use as PLG-002
+      (https://static.nbp.pl/dokumenty/regulaminy/regulamin_nbppl_en.pdf); unresolved under the owner decision of 14
+      Oct 2026.'
   updates: Quarterly, about three months after the quarter; positions revised (Last-Modified 29 Sep 2026 at the probe).
   ingestion:
     history: Full history in the workbook; landed whole (bulk_file pattern).
@@ -4711,7 +4713,7 @@ sources:
   name: Database of decisions of the President of UOKiK
   short_name: UOKiK decisions
   provider: Office of Competition and Consumer Protection (UOKiK)
-  status: registered
+  status: approved
   family: F
   kpi: false
   geography: Poland
@@ -4722,37 +4724,64 @@ sources:
   coverage: Historical coverage depends on collection; start not established.
   access:
     endpoint: https://decyzje.uokik.gov.pl/bp/dec_prez.nsf
-    kind: web
-    interfaces: [HTML search, PDF]
-    auth: public browsing
+    kind: api
+    interfaces: [JSON (Domino view), HTML, PDF]
+    auth: public
     cost: free
-    limits: Unknown.
+    limits: 'None published. decyzje.uokik.gov.pl has no robots.txt (HTTP 404). The main site uokik.gov.pl is another host:
+      its robots.txt (87 agents) allows generic agents and disallows ClaudeBot, anthropic-ai, GPTBot, CCBot and other AI crawlers
+      by name, so nothing is read from uokik.gov.pl. The decisions host timed out in the first probe and answered in the second.'
   licence:
     status: unresolved
-    notes: Published decisions may be redacted; systematic reuse rights need verification.
-  updates: Decision-driven; corrections/appeals may alter context.
+    notes: 'Terms: not read. The entry page of the decisions host is a 393-byte frameset without terms; UOKiK''s terms would
+      be on uokik.gov.pl, which is not opened because its robots.txt disallows the Claude crawlers by name. Reuse is therefore
+      not stated as allowed: internal use only until the terms are quoted. Published decisions are redacted versions.'
+  updates: Decision-driven; corrections and appeals may alter context. The entry page was last modified 12 Nov 2026; a decision
+    of 15 Dec 2025 (DOZIK-6/2025) was the newest seen in web search results.
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
-    identifiers: case number + decision date + proceeding type + party
+    history: 'API route: the Lotus Domino view https://decyzje.uokik.gov.pl/bp/dec_prez.nsf/WWW-wszystkie?ReadViewEntries&OutputFormat=JSON&count=<n>&start=<position>
+      returns the index of decisions as JSON (tested with count=3: HTTP 200, application/json, 12 top-level categories; the
+      first has 18 children and 1,408 descendant entries). Full load: page through the view with start and count. PROPOSAL:
+      500 entries per request, one request per second; the number of entries and requests is measured at the build. Only the
+      index columns are stored; the decision PDFs (/bp/dec_prez.nsf/<view>/<unid>/$FILE/<name>.pdf) are not downloaded. Entity
+      = decision (view entry); version = snapshot date. Decisions from 2003 appear in search results.'
+    incremental: 'PROPOSAL: weekly snapshot of the view index; a new decision is a new view entry (@unid).'
+    identifiers: View entry id (@unid, @noteid); decision number (e.g. DOZIK-6/2025), date, department signature.
   modelling:
-    notes: Keep decision, appeal and finality separate.
+    notes: 'kpi false. Smallest Gold selection: an entity table of decisions (number, date, department signature, category
+      as the view gives them) and the count of decisions per year and type, Poland only, no regional grain. Fines are in the
+      PDFs, not in the index (unverified), so no fines measure is proposed. Effort M.'
     overlap: May overlap court judgments and UOKiK reports.
   research:
     priority: review-next
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - Confirm coverage, bulk method, redaction and terms.
+    - 'Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026):
+      decyzje.uokik.gov.pl answered: robots.txt HTTP 404, entry page 200, the view WWW-wszystkie as JSON 200. In the first
+      probe (run 43282997907) the same host timed out, so the build uses long timeouts and reports a timeout instead of retrying
+      hard.'
+    - 'Owner question: the main UOKiK site uokik.gov.pl names ClaudeBot and anthropic-ai (with other AI crawlers) in its robots.txt,
+      while the decisions database sits on another host, decyzje.uokik.gov.pl, which has no robots.txt. The build would read
+      only the decisions host, with a scheduled program and not an AI crawler. Do you accept that, or do you read the robots
+      rule as UOKiK''s wish for all its hosts, in which case PLG-020 and PLG-021 wait for a reuse request to UOKiK?'
+    - 'Licence unresolved: UOKiK''s terms are not read (uokik.gov.pl names the Claude crawlers in robots.txt). Internal build
+      only.'
+    - 'Dev probe run 43294572845 (job 131449333769, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py, 12 Nov 2026,
+      19:53 UTC): the view WWW-wszystkie is categorised, not flat: 12 top-level categories (subject areas; the first is "Jakość
+      paliw"), then the year, then one entry per decision whose single cell is an HTML fragment starting "Numer decyzji:".
+      The names of the other eleven categories were not read. Still not verified: the number of entries and whether every
+      decision type is in the view. The builder lists the categories first and parses the decision number, date and parties
+      from the HTML cell.'
     references:
     - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf
+    - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf/WWW-wszystkie?ReadViewEntries&OutputFormat=JSON
+    - https://uokik.gov.pl/robots.txt
 - id: PLG-021
   name: Concentration decisions and notifications
   short_name: UOKiK concentration decisions
   provider: Office of Competition and Consumer Protection (UOKiK)
-  status: registered
+  status: approved
   family: F
   kpi: false
   geography: Poland
@@ -4762,31 +4791,50 @@ sources:
   granularity: Concentration case, parties, decision and procedural dates.
   coverage: Coverage/first year not verified.
   access:
-    endpoint: https://uokik.gov.pl/koncentracje
-    kind: web
-    interfaces: [HTML, PDF]
-    auth: public browsing
+    endpoint: https://decyzje.uokik.gov.pl/bp/dec_prez.nsf
+    kind: api
+    interfaces: [JSON (Domino view), HTML, PDF]
+    auth: public
     cost: free
-    limits: Unknown.
+    limits: 'None published. decyzje.uokik.gov.pl has no robots.txt (HTTP 404). The main site uokik.gov.pl is another host:
+      its robots.txt (87 agents) allows generic agents and disallows ClaudeBot, anthropic-ai, GPTBot, CCBot and other AI crawlers
+      by name, so nothing is read from uokik.gov.pl. The page https://uokik.gov.pl/koncentracje is therefore not used.'
   licence:
     status: unresolved
-    notes: Public documents do not establish database redistribution rights.
-  updates: Event-driven; proceeding, decision and appeal dates differ.
+    notes: 'Terms: not read. The entry page of the decisions host is a 393-byte frameset without terms; UOKiK''s terms would
+      be on uokik.gov.pl, which is not opened because its robots.txt disallows the Claude crawlers by name. Reuse is therefore
+      not stated as allowed: internal use only until the terms are quoted. Published decisions are redacted versions.'
+  updates: Event-driven; proceeding, decision and appeal dates differ. Annual totals appear in the UOKiK annual report (spring).
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
-    identifiers: case number + parties + transaction + decision date
+    history: 'Same route as PLG-020, one extraction for both entries: concentration decisions (DKK series) are entries of
+      the decisions database, read from the JSON view https://decyzje.uokik.gov.pl/bp/dec_prez.nsf/WWW-wszystkie?ReadViewEntries&OutputFormat=JSON
+      (tested, see PLG-020). No separate index, API or export of concentration cases was found. Notifications that did not
+      end in a published decision are not in this route.'
+    incremental: 'With PLG-020: weekly snapshot of the view index; a new decision is a new view entry.'
+    identifiers: Case signature (DKK-...), decision number and date.
   modelling:
-    notes: A decision is not a completed transaction; preserve conditions and appeals.
+    notes: 'kpi false. Smallest Gold selection: the count of concentration decisions per year (DKK signature), Poland only,
+      from the decisions entity table of PLG-020; no regional grain. Effort S on top of PLG-020.'
     overlap: Subset/view of broader UOKiK decisions; deduplicate by case.
   research:
     priority: review-next
-    evidence: catalogue-only
-    connection: not-tested
-    blockers: ['Verify index URL, coverage and terms.']
-    references: ['https://uokik.gov.pl/koncentracje']
+    evidence: documented
+    connection: tested
+    blockers:
+    - 'Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026):
+      the decisions host answered (robots.txt HTTP 404, the view WWW-wszystkie as JSON 200). Build together with PLG-020 as
+      one source system.'
+    - 'Licence unresolved: UOKiK''s terms are not read. Internal build only.'
+    - 'Dev probe run 43294572845 (job 131449333769, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py, 12 Nov 2026,
+      19:53 UTC): the view WWW-wszystkie is categorised, not flat: 12 top-level categories (subject areas; the first is "Jakość
+      paliw"), then the year, then one entry per decision whose single cell is an HTML fragment starting "Numer decyzji:".
+      The names of the other eleven categories were not read. So concentration decisions are selected by their category or
+      by the DKK signature in the decision number; which of the two works is not verified, and the stage-1 issue stays open
+      until the builder has listed the categories. If neither works, this entry goes back to reviewing with that finding.'
+    references:
+    - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf
+    - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf/WWW-wszystkie?ReadViewEntries&OutputFormat=JSON
+    - https://uokik.gov.pl/robots.txt
 - id: PLG-022
   name: e-Zamówienia / BZP read API
   short_name: e-Zamówienia BZP
@@ -4938,7 +4986,7 @@ sources:
   name: Senate legislative process, sittings, votes and members
   short_name: Senate data
   provider: Chancellery of the Senate
-  status: registered
+  status: approved
   family: F
   kpi: false
   geography: Poland
@@ -4950,31 +4998,52 @@ sources:
   access:
     endpoint: https://www.senat.gov.pl/prace/proces-legislacyjny-w-senacie/
     kind: web
-    interfaces: [HTML, PDF, video]
-    auth: public browsing; no general API verified
+    interfaces: [HTML]
+    auth: public browsing; no API, export or feed found
     cost: free
-    limits: Unknown.
+    limits: 'None published. robots.txt, read in full by the probe: "User-agent: * Disallow: /gfx/ Disallow: /pdf/ Allow:
+      /*.pdf$ Allow: /*.doc$ Allow: /*.xls$ Allow: /*.rtf$" and "User-agent: Fasterfox Disallow: /". The pages of this route
+      are allowed for every agent.'
   licence:
     status: unresolved
-    notes: Viewing is public; systematic reuse and attachment rights require review.
+    notes: 'Terms: https://www.senat.gov.pl/ponowne-wykorzystywanie-informacji-sektora-publicznego/ (read by the probe 12
+      Nov 2026; 9,600 characters). The part captured describes the request procedure (after a request the Head of the Chancellery
+      may make an offer with conditions or fees: "może złożyć wnioskodawcy ofertę zawierającą warunki ponownego wykorzystywania
+      lub informację o wysokości opłat za ponowne wykorzystywanie") and personal-data information. The sentence that sets
+      the conditions for information published on the website was not in the captured part, so reuse is not quoted as allowed:
+      unresolved, internal use only.'
   updates: Event-driven around sittings and legislative work.
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
-    identifiers: term + sitting + day + vote; print; senator
+    history: 'Web route, server-rendered HTML read with plain requests (no browser session): votes per sitting day at /prace/posiedzenia/przebieg,<sitting>,<day>,glosowania.html
+      with a print page per vote (/prace/posiedzenia/glosowanie-drukuj,<vote id>.html); senators at /sklad/senatorowie/senator,<id>,<term>,<slug>.html
+      (102 links for term 11). The home page, the sittings page and the legislative-process page link no API, open-data page,
+      XML, JSON, CSV or RSS. Request pattern: one connection, one request per second, term 11 only, never /gfx/ or /pdf/.
+      The number of sittings and votes of term 11 was not counted: size is measured at the build. Entity = vote (vote id);
+      version = download time.'
+    incremental: New sitting days only (the sittings page lists them); one request per second; senator pages once per month.
+    identifiers: Term, sitting number, day, vote id; senator id.
   modelling:
-    notes: Keep agenda, transcript, vote and bill stage distinct.
+    notes: 'kpi false. Smallest Gold selection: votes per sitting and senator attendance for term 11, Poland only, no regional
+      grain. Low value next to the Sejm API (PLG-024). Effort M.'
     overlap: Same bill appears across Sejm, Senate and ELI stages.
   research:
     priority: review-next
-    evidence: catalogue-only
-    connection: not-tested
-    blockers: [No machine interface confirmed, map archive and terms.]
+    evidence: documented
+    connection: tested
+    blockers:
+    - 'Route decided: polite crawl of public pages that robots.txt allows, following the orchestrator verdict on PR #2878
+      under the owner rule of 12 Nov 2026 (issue #2873). A verdict is not an owner decision: the builder writes the D row
+      in docs/decisions.md, or obtains an owner decision, in the build pull request before any activities entry for this source
+      merges (AGENTS.md "Authorizations").'
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): www.senat.gov.pl answered 200
+      on the home, sittings, votes and senators pages; bip.senat.gov.pl was not readable. Dev probe run 43288930412 (job 131429683337,
+      branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026): robots.txt read in full; the re-use page answered
+      200.'
+    - 'Licence unresolved: the re-use conditions for website content are not quoted yet. Internal build only.'
     references:
-    - https://www.senat.gov.pl/prace/proces-legislacyjny-w-senacie/
     - https://www.senat.gov.pl/prace/posiedzenia/
+    - https://www.senat.gov.pl/sklad/senatorowie/
+    - https://www.senat.gov.pl/ponowne-wykorzystywanie-informacji-sektora-publicznego/
 - id: PLG-026
   name: ELI Poland — Dziennik Ustaw and Monitor Polski
   short_name: ELI Dziennik Ustaw
@@ -5068,7 +5137,7 @@ sources:
   name: NIK audit-results database
   short_name: NIK audit results
   provider: Supreme Audit Office (NIK)
-  status: registered
+  status: reviewing
   family: F
   kpi: false
   geography: Poland
@@ -5083,68 +5152,115 @@ sources:
     interfaces: [HTML search, PDF]
     auth: public browsing
     cost: free
-    limits: Unknown.
+    limits: None published. robots.txt of www.nik.gov.pl and bip.nik.gov.pl disallows /szukaj/, /p/, /g2/, /logowanie/, /cms/
+      and /do_druku/ for every agent. Both sites sit behind Imperva Incapsula bot protection.
   licence:
-    status: unresolved
-    notes: Attachment reuse and redaction conditions require review.
-  updates: Publication date differs from audited period.
+    status: open-conditional
+    notes: 'Terms: NIK re-use page https://www.nik.gov.pl/kontakt/ponowne-wykorzystywanie-informacji/ (desk fetch 12 Nov 2026;
+      the tool returned the sentence in fragments, joined here): "Warunkiem ponownego wykorzystywania informacji sektora publicznego
+      zamieszczonych na stronach internetowych NIK oraz udostępnionych na wniosek, jest obowiązek poinformowania o źródle,
+      czasie wytworzenia i pozyskania informacji od NIK oraz obowiązek poinformowania o przetworzeniu informacji ponownie
+      wykorzystywanej." and "NIK nie ponosi odpowiedzialności za treści informacji powstałej w wyniku przetworzenia uzyskanej
+      informacji." Commercial reuse is not excluded and no fee is charged for website content; modification must be stated.
+      Attribution: "Źródło: Najwyższa Izba Kontroli, <tytuł>, pozyskano <data>". The copyright page https://www.nik.gov.pl/zasady/prawa-autorskie.html
+      returned only the bot-protection page to the desk fetch; re-read the wording before any publication.'
+  updates: Publication date differs from the audited period; continuous.
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
-    identifiers: audit number + document type + publication date + audited unit
+    history: 'No machine route found: one HTML record and PDF per audit (e.g. /kontrole/wyniki-kontroli-nik/pobierz,<id>,typ,kj.pdf
+      and /plik/id,<n>.pdf, seen in web search results). A plain request for https://www.nik.gov.pl/kontrole/wyniki-kontroli-nik/
+      (and the same path on bip.nik.gov.pl) gets HTTP 200 with the page frame (about 6,100 characters of text, three forms,
+      the Incapsula script) and no audit records or record links; HEAD of https://www.nik.gov.pl/plik/id,31066.pdf returned
+      HTTP 500. The results page links no RSS, XML, API, CSV or dane.gov.pl set, and https://www.nik.gov.pl/rss/ returned
+      a 389-byte XML stub. dane.gov.pl could not be searched from a runner (timeout).'
+    incremental: None until the owner question is answered.
+    identifiers: Audit number (e.g. P/25/001), publication date, unit.
   modelling:
-    notes: Audit findings are documents, not additive statistics.
+    notes: 'kpi false. If a list of audits is obtained: an entity table of audits (number, title, publication date, unit)
+      and the count of audits per year, national scope; no statistical series. Effort S from a file.'
     overlap: May cite agency statistics; cited figures are not independent NIK observations.
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Confirm archive coverage, rights and document IDs.
+    - 'Owner question: NIK publishes audit results only as one web record and one PDF per audit, behind Imperva Incapsula
+      bot protection that we never work around; plain requests get the page frame without the list of audits, and no file,
+      feed or dane.gov.pl set was found. Do you want a re-use request sent to NIK (text drafted for you) for a machine-readable
+      list of audits (number, title, publication date, unit, link), or do you decide that NIK stays out because it has no
+      statistical series (kpi false)?'
+    - 'Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026):
+      robots.txt of both hosts read; results page on both hosts HTTP 200 with the Incapsula script, no audit records; PDF
+      HEAD HTTP 500. Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the same pages
+      answered 200; the desk fetch of the copyright page and of one report PDF got the protection page only.'
+    - Terms are recorded (open-conditional, NIK re-use page); the copyright page is still to be re-read before any publication.
     references:
     - https://www.nik.gov.pl/kontrole/wyniki-kontroli-nik/
+    - https://www.nik.gov.pl/kontakt/ponowne-wykorzystywanie-informacji/
+    - https://www.nik.gov.pl/zasady/prawa-autorskie.html
 - id: PLG-029
   name: Election and referendum results data service
   short_name: PKW election results
   provider: National Electoral Commission (PKW) / National Electoral Office (KBW)
-  status: registered
+  status: approved
   family: F
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [elections]
   entities: [candidate, committee, polling district, municipality, constituency]
-  granularity: Election results; finest grain may reach polling district.
+  granularity: Election results and turnout by voivodeship, powiat, gmina and polling district; one file family per election.
   coverage: Nationwide election/referendum data from 1990.
   access:
-    endpoint: https://pkw.gov.pl/
+    endpoint: https://wybory.gov.pl/
     kind: bulk_file
-    interfaces: [HTML, XLSX, CSV, PDF]
+    interfaces: [ZIP, CSV, XLSX, HTML]
     auth: public download
     cost: free
-    limits: Unknown.
+    limits: None published. robots.txt of pkw.gov.pl has no Disallow line; wybory.gov.pl serves an HTML page for /robots.txt;
+      danewyborcze.kbw.gov.pl has no robots.txt (404).
   licence:
     status: unresolved
-    notes: Official results are public; file licences and candidate-data handling need confirmation.
-  updates: Event-based with corrections; each election has its own schema.
+    notes: 'Terms: none stated. The probe found no copyright, licence or re-use sentence on https://pkw.gov.pl/ or https://wybory.gov.pl/
+      (footer and legal links searched), and the desk fetch found none on the 2025 "dane w arkuszach" page. Internal use only
+      until PKW/KBW state terms. Attribution if used: "Źródło: Państwowa Komisja Wyborcza" with the election and the file
+      name. Candidate names are public election data; committee-member files (sklad_komisji_obwodowych) are personal data
+      and stay out.'
+  updates: 'Per election: files appear with the official results and stay unchanged afterwards (Sejm 2023 files Last-Modified
+    23 Feb 2024).'
   ingestion:
-    history: 'PROPOSAL: load each official election/referendum download as its own schema, starting with the documented
-      nationwide archive from 1990.'
-    incremental: 'PROPOSAL: ingest official corrected files as new vintages keyed by election/round/area; do not
-      assume a common cross-election change feed.'
-    identifiers: election + round + district/precinct + committee/candidate
+    history: 'Bulk feature, one site per election: https://wybory.gov.pl/<election>/ redirects to https://<election>.pkw.gov.pl/<election>/
+      (sejmsenat2023, pe2024, samorzad2024, prezydent2025, prezydent20200628 are linked from wybory.gov.pl). Files are /<election>/data/csv/<name>_csv.zip
+      (and <name>_xlsx.zip). Tested: https://sejmsenat2023.pkw.gov.pl/sejmsenat2023/data/csv/wyniki_gl_na_listy_po_wojewodztwach_sejm_csv.zip
+      (application/zip, 2,790 bytes) and .../wyniki_gl_na_listy_po_gminach_sejm_csv.zip (155,899 bytes). The "dane w arkuszach"
+      page is a JavaScript shell: the file names of each election come from its script bundle (/<election>/j/<stamp>.min.js
+      builds data/csv/<name>_csv.zip); a wrong name returns the HTML shell with status 200, so check Content-Type. Names for
+      pe2024, samorzad2024 and prezydent2025 are still to be listed (the names guessed by the probe were wrong). Older elections:
+      https://danewyborcze.kbw.gov.pl/ (a static archive; its front page only redirects, content not inventoried).'
+    incremental: 'Static after each election: land once per election (snapshot), version = Last-Modified; add the next election
+      by hand when it is called.'
+    identifiers: Election id (site name), territorial code (TERYT expected, to confirm in the files), list or candidate number.
   modelling:
-    notes: Votes, turnout and elector counts have different denominators; boundaries vary.
+    notes: 'Smallest Gold selection: voivodeship and gmina results files of Sejm 2023, EP 2024, voivodeship assemblies 2024
+      and president 2025. New KPIs: voter turnout (%) and vote share by list or candidate, Poland and voivodeships; new dimension:
+      election (type, date, round). Effort M.'
     overlap: Sejm API covers activity, not election returns.
   research:
     priority: review-first
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - Map downloads, licences, corrections and boundary keys.
-    references: ['https://pkw.gov.pl/', 'https://prezydent2025.pkw.gov.pl/']
+    - 'Owner question: PKW and KBW publish no reuse terms for the election result files, so the source stays internal (licence
+      unresolved). Do you want a reuse request sent to KBW (text drafted for you), or do you accept the files as official
+      materials with the attribution "Źródło: Państwowa Komisja Wyborcza"?'
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): Sejm 2023 files fetched by HEAD
+      (application/zip); file names of the 2024 and 2025 elections not yet listed; danewyborcze.kbw.gov.pl content not inventoried.'
+    - Confirm the territorial code column (TERYT) in the files at the Landing trial.
+    references:
+    - https://wybory.gov.pl/
+    - https://sejmsenat2023.pkw.gov.pl/sejmsenat2023/pl/dane_w_arkuszach
+    - https://prezydent2025.pkw.gov.pl/prezydent2025/pl/dane_w_arkuszach
+    - https://danewyborcze.kbw.gov.pl/
+    - https://pkw.gov.pl/
 - id: PLG-030
   name: dane.gov.pl open-data catalogue and API
   short_name: dane.gov.pl
@@ -5188,48 +5304,68 @@ sources:
   name: Justice system statistical database (ISWS)
   short_name: ISWS justice statistics
   provider: Ministry of Justice
-  status: registered
+  status: approved
   family: F
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [courts, justice statistics]
   entities: [court, case category, person-aggregate]
-  granularity: Annual/multi-year tables by court level, district, case and measure.
-  coverage: History varies by publication.
+  granularity: Multi-year tables (one workbook per topic) of the common courts, prosecution-related and notarial statistics;
+    national, some by court level, appeal area or district.
+  coverage: Titles span 1946-2025; most multi-year workbooks run to 2025 (e.g. adoptions 2000-2025, notarial acts 1991-2025).
   access:
     endpoint: https://isws.ms.gov.pl/pl/baza-statystyczna/
     kind: bulk_file
-    interfaces: [XLSX, PDF, HTML]
+    interfaces: [XLS, PDF, HTML]
     auth: public download
     cost: free
-    limits: Unknown.
+    limits: None published; robots.txt has no Disallow line.
   licence:
-    status: unresolved
-    notes: Attachment licence not verified.
-  updates: Annual and occasional updates; form definitions change.
+    status: open-conditional
+    notes: 'Terms: the Ministry of Justice re-use page https://www.gov.pl/web/sprawiedliwosc/ponowne-wykorzystywanie (desk
+      fetch 12 Nov 2026; the tool returned fragments): conditions are the "obowiązek poinformowania o źródle pochodzenia,
+      czasie wytworzenia i pozyskania informacji od Ministerstwa Sprawiedliwości" and the "obowiązek poinformowania o przetworzeniu
+      informacji ponownie wykorzystywanej"; "Informacje sektora publicznego są udostępniane w celu ich ponownego wykorzystywania
+      bezpłatnie."; the Ministry "nie ponosi odpowiedzialności za dalsze udostępnianie lub ponowne wykorzystywanie". Commercial
+      and non-commercial reuse are both foreseen (a request names the purpose); modification must be stated. This is the Ministry-wide
+      page; isws.ms.gov.pl itself shows no terms (probe: no legal link, no licence sentence on the hub). Attribution: "Źródło:
+      Ministerstwo Sprawiedliwości, Informator Statystyczny Wymiaru Sprawiedliwości, <tytuł>, pozyskano <data>". dane.gov.pl
+      record 625 was not readable (api.dane.gov.pl timed out from the runner).'
+  updates: 'Annual: the multi-year workbooks are extended by a year (2025 present on 12 Nov 2026); the yearly statistical
+    report is a PDF (2025 edition present).'
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
-    identifiers: year + court/unit + case category + measure + form version
+    history: 'Bulk files linked from HTML: https://isws.ms.gov.pl/pl/baza-statystyczna/opracowania-wieloletnie/ lists 88 workbooks
+      as download,2853,<n>.html (answered as attachments named *.xls, 11-72 KB each in the three checked; Content-Type application/unknown);
+      /publikacje/ lists 66 PDFs (download,2779,<n>.html; the 2025 report is 3.6 MB). <n> is the position in the list, so
+      the entity is the attachment file name (Content-Disposition), not the URL. No API.'
+    incremental: Snapshot of the listing; version = file name plus bytes (no Last-Modified seen); re-read yearly after the
+      spring update, monthly check of the listing.
+    identifiers: Attachment file name; table title; year; court level or area where present.
   modelling:
-    notes: Inflow, disposal, backlog and duration are distinct; cases differ from persons.
+    notes: 'Smallest Gold selection: the multi-year workbooks on court caseload and case duration plus adoptions and notarial
+      acts (annual, Poland). New KPIs: cases received and resolved by the common courts, average case duration, final convictions
+      of adults. Court areas do not map to voivodeships, so Poland only at first. Files are named .xls: the shared XLSX decoder
+      (ingestion/common/xlsx_cells.py) does not read the old Excel format, so a reader is needed if the bytes are BIFF (not
+      inspected). Effort M.'
     overlap: May overlap GUS justice tables; retain ministry definitions.
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Map tables, regional IDs, revisions and terms.
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): hub, both listings and three
+      workbook downloads answered 200 to a GitHub runner; workbook layout and byte format (.xls) not inspected.'
+    - Pick the caseload workbooks from the 88 titles at the build (only the first seven titles were read).
     references:
-    - https://isws.ms.gov.pl/pl/baza-statystyczna/
+    - https://isws.ms.gov.pl/pl/baza-statystyczna/opracowania-wieloletnie/
+    - https://isws.ms.gov.pl/pl/baza-statystyczna/publikacje/
+    - https://www.gov.pl/web/sprawiedliwosc/ponowne-wykorzystywanie
 - id: PLG-032
   name: Prison statistics
   short_name: Prison Service statistics
   provider: Prison Service (Służba Więzienna)
-  status: registered
+  status: reviewing
   family: F
   kpi: true
   geography: Poland
@@ -5241,72 +5377,114 @@ sources:
   access:
     endpoint: https://sw.gov.pl/strona/Statystyka
     kind: bulk_file
-    interfaces: [XLSX, PDF, HTML]
+    interfaces: [PDF, HTML]
     auth: public download
     cost: free
-    limits: Unknown.
+    limits: None published. From a GitHub runner sw.gov.pl and www.sw.gov.pl fail TLS certificate verification; bip.sw.gov.pl
+      does not resolve.
   licence:
     status: unresolved
-    notes: Small cells/sensitive categories and reuse terms need review.
-  updates: Monthly, quarterly and annual releases; corrections possible.
+    notes: 'Terms: not read (the host was not reachable from the runner, and the desk fetch was refused by robots.txt on the
+      file path /sites/default/files/migrated-assets/). The one monthly report opened by the desk fetch (January 2019, PDF)
+      carries no reuse statement.'
+  updates: Monthly statistical information about three weeks after the month (January 2019 dated 22 Feb 2019; a June 2026
+    file appears in web search results); annual tables.
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
-    identifiers: period + institution/region + custody category + measure
+    history: Files linked from https://sw.gov.pl/strona/statystyka-miesieczna and /statystyka-roczna; file URLs are hashes
+      (/sites/default/files/migrated-assets/assets/xx/xx/xx/<sha1>.pdf, older /assets/...), so the listing page is the only
+      stable entry. The files seen are PDF tables (33 pages for a month), also where the link text says xlsx. No API.
+    incremental: None until the owner question is answered.
+    identifiers: Report month or year; table number; prison-service district (16 districts, not voivodeships) or facility.
   modelling:
-    notes: Stocks and flows differ; categories/frequencies can overlap.
+    notes: 'With a route today: prison capacity and persons held, annual, Poland, from Eurostat crim_pris_cap through GL-001
+      (in Silver: 2,754 rows; data 2008-2024). From this source once it is reachable: prison population, capacity and occupancy
+      rate, monthly, Poland and the 16 prison-service districts (no TERYT); frequencies monthly and annual. Effort M (PDF
+      tables).'
     overlap: May overlap ministry/GUS aggregates.
   research:
     priority: review-next
-    evidence: catalogue-only
+    evidence: documented
     connection: not-tested
     blockers:
-    - Verify formats, geography, suppression and licence.
+    - 'Owner question: the Prison Service site fails TLS certificate verification from GitHub runners on both hostnames (sw.gov.pl
+      and www.sw.gov.pl), TLS checks are never disabled, and dane.gov.pl does not answer runners. Eurostat crim_pris_cap,
+      which we load, gives prison capacity and persons held for Poland per year (2008-2024), but not the monthly figures or
+      the 16 prison-service districts. Do you want to write to the Prison Service (text drafted for you) asking it to repair
+      the certificate chain of sw.gov.pl or to send the monthly tables as files, or do you accept the annual Eurostat series
+      as the prison KPI and leave the monthly tables out?'
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): CERTIFICATE_VERIFY_FAILED on
+      sw.gov.pl (robots.txt and every page). Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script
+      dev/src_dfh_fix_probe.py, 12 Nov 2026): the same error on www.sw.gov.pl; bip.sw.gov.pl: name not known; dane.gov.pl
+      and api.dane.gov.pl timed out (75 s); Silver holds crim_pris_cap (2,754 rows).'
+    - 'The data are PDF tables with hash-named URLs, and no reuse terms were read: licence unresolved.'
     references:
     - https://sw.gov.pl/strona/Statystyka
+    - https://sw.gov.pl/strona/statystyka-miesieczna
     - https://sw.gov.pl/strona/statystyka-roczna
+    - https://ec.europa.eu/eurostat/databrowser/view/crim_pris_cap/default/table
 - id: PLG-033
   name: Police Statistics portal
   short_name: Police statistics
   provider: Polish Police Headquarters
-  status: registered
+  status: approved
   family: F
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [crime, public safety]
   entities: [offence-aggregate, person-aggregate, region]
-  granularity: Crime category and selected-topic statistics by year and sometimes region.
-  coverage: History varies by topic; no universal start year.
+  granularity: 'Annual crime statistics by category: recorded and detected offences and detection rate by voivodeship-level
+    unit; proceedings initiated by registering police unit.'
+  coverage: 1999 onwards; the end year differs by category (all offences to 2021, homicide to 2023 on 12 Nov 2026).
   access:
     endpoint: https://statystyka.policja.pl/
-    kind: web
-    interfaces: [HTML, XLS, PDF]
-    auth: public browsing/download
+    kind: bulk_file
+    interfaces: [XLSX, HTML]
+    auth: public download
     cost: free
-    limits: Unknown.
+    limits: None published; robots.txt disallows only /ftp/.
   licence:
     status: unresolved
-    notes: Portal has a legal-use notice; terms and small-cell treatment need review.
-  updates: Annual/topic updates; recording and law changes affect comparability.
+    notes: 'Terms: https://policja.pl/pol/wolnytekst/46616,dok.html ("Prawa autorskie", read by the probe 12 Nov 2026; the
+      footer of statystyka.policja.pl links it as "Nota prawna - Chcesz wykorzystać materiał z serwisu Statystyka. Zapoznaj
+      się z zasadami"): "W przypadku wykorzystania materiałów prosimy o podanie ich źródła: policja.pl. W serwisie zamieszczane
+      są także utwory, co do których prawa autorskie przysługują osobom trzecim. Ich wykorzystanie przez internautów wymaga
+      zgody właścicieli tych materiałów." The page asks for the source and says nothing on commercial reuse or modification,
+      so reuse is not stated as allowed: internal use until the owner decides. Attribution if used: "Źródło: policja.pl".'
+  updates: 'Annual per category, uneven: the all-offences workbook was last modified 25 Mar 2022 (data to 2021). No release
+    calendar.'
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
-    identifiers: year + offence/statistic + geography + measure
+    history: 'Bulk files linked from the category pages of https://statystyka.policja.pl/ (server-rendered): https://statystyka.policja.pl/st/przestepstwa-ogolem
+      lists two XLSX per category, e.g. /download/20/232277/przestepstwa-ogolem-do-2021.xlsx (27,434 bytes; by administrative
+      unit) and /download/20/232279/postepowania-wszczete-przestepstwa-ogolem-do-2021.xlsx (19,753 bytes; by police unit).
+      The file name carries the end year, so the category page is the stable entry. Categories: all offences, criminal offences,
+      seven selected categories (fight and battery, bodily harm, theft, burglary, robbery, damage to property, homicide) and
+      more; road-accident annual reports are on their own page (26 files).'
+    incremental: Snapshot per category workbook; version = Last-Modified (ETag present); yearly check is enough.
+    identifiers: Category page, workbook name, year, voivodeship-level police unit (names, no TERYT).
   modelling:
-    notes: Recorded/detected offences, suspects and victim reports differ.
-    overlap: Police, prosecution, court and GUS stages are not interchangeable.
+    notes: 'Smallest Gold selection: the by-administrative-unit workbook of all offences and of the seven selected categories.
+      New KPIs: recorded offences per 100,000 residents and detection rate (%), annual, Poland and voivodeships (population
+      from GUS). Caveat stated on the portal: for 2013-2016 offences of the central units (BSW KGP, CBŚP) are assigned to
+      voivodeship units, earlier years to garrisons. Police units are not one-to-one with voivodeships (a separate Warsaw
+      metropolitan command is expected; to confirm in the workbook). Effort S.'
+    overlap: GUS BDL publishes Police crime statistics by voivodeship and powiat, more current than the portal workbooks;
+      keep both series (O31).
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Review legal-use notice, history, definitions and formats.
-    references: ['https://statystyka.policja.pl/']
+    - 'Owner question: the Police copyright page says only "W przypadku wykorzystania materiałów prosimy o podanie ich źródła:
+      policja.pl." and nothing on commercial reuse or modification. Do you accept that as permission to publish with the attribution
+      "Źródło: policja.pl" (licence open-conditional), or does PLG-033 stay internal (unresolved)?'
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): portal, category page and both
+      workbooks (HEAD) answered 200 to a GitHub runner.'
+    - 'The all-offences workbook ends in 2021: check freshness per category at the build.'
+    references:
+    - https://statystyka.policja.pl/
+    - https://statystyka.policja.pl/st/przestepstwa-ogolem
+    - https://policja.pl/pol/wolnytekst/46616,dok.html
 - id: PLG-034
   name: Government Legislative Process portal (RPL), including consultations
   short_name: RCL legislative process (RPL)
@@ -6411,7 +6589,7 @@ sources:
   name: Gas transmission transparency data
   short_name: GAZ-SYSTEM transparency
   provider: Operator Gazociągów Przesyłowych GAZ-SYSTEM S.A.
-  status: reviewing
+  status: approved
   family: G
   kpi: true
   geography: Poland
@@ -6419,187 +6597,297 @@ sources:
   domains: [natural gas, transmission infrastructure, operations]
   entities: [interconnection point, gas-day measure, maintenance event]
   granularity: Capacity, nominations, actual flows, calorific value and planned-work disclosures by relevant point/time.
-  coverage: Current and historical transparency pages vary by series; depth unconfirmed.
+  coverage: GAZ-SYSTEM (operatorKey PL-TSO-0002) on the ENTSOG Transparency Platform, launched 1 October 2014 (TP User Manual
+    v4.5); daily physical flows read for a rolling window of about five years (1 January 2021 answered, 1 January 2020 did
+    not); 47 point-direction series per gas day in October and November 2026.
   access:
     endpoint: https://transparency.entsog.eu/api/v1/operationaldatas
     kind: api
-    interfaces: [REST API (ENTSOG Transparency Platform), JSON, HTML, JavaScript application]
-    auth: Public transparency data; shipper imbalance information requires authenticated SWI access.
+    interfaces: [REST API (ENTSOG Transparency Platform), JSON, XML, CSV, XLSX]
+    auth: 'None: no key or account for the public ENTSOG API. GAZ-SYSTEM''s shipper imbalance information needs an authenticated
+      SWI account (not used).'
     cost: Free.
-    limits: 'ENTSOG terms Art. 4.7: access may be restricted for downloads that are disproportionate ("7.5 times the average
-      user of the same category"); no numeric API quota published.'
+    limits: 'No numeric quota published. ENTSOG TP API User Manual v3.0 (https://transparency.entsog.eu/api/archiveDirectories/8/api-manual/ENTSOG_TP_API_UserManual_v3.0.pdf,
+      read 12 Nov 2026): "As the API is publicly accessible, usage restrictions apply to ensure fair access and platform stability.";
+      "All queries are subject to a maximum execution time of 60 seconds."; "If no limit parameter is provided, API calls
+      return a maximum of 100 records by default." (limit=-1 returns all records); "Monthly ranges are strongly recommended
+      instead of broad multi-month or multi-year queries."; "When handling failed or timed-out requests, implement reasonable
+      back-off intervals." "Do not send aggressive, rapid retries." Terms Art. 5.6: access may be blocked for "executing unproportioned
+      downloads (7.5 times more than the average User of the same category)". robots.txt of transparency.entsog.eu allows
+      everything ("User-agent: *", empty Disallow; Dev probe run 43288071987 (job 131426672054, branch test/src-env-probe,
+      12 Nov 2026)).'
   licence:
     status: unresolved
-    notes: 'Terms: GAZ-SYSTEM''s own transparency pages state no data terms; its public tables are a JavaScript application.
-      The same GAZ-SYSTEM data are on the ENTSOG Transparency Platform, whose Terms and Conditions of Use https://transparency.entsog.eu/pdf/Terms_and_Conditions_of_Use.pdf
-      (8 Feb 2016, read 12 Nov 2026) say: "you may download, store and use the contents of this Website" keeping proprietary
-      notices intact; when using data "you shall at least indicate the source, the title of the relevant Section and the date
-      of data download/extraction" in the form "ENTSOG TP [+title of the relevant Section] [DD-MM-YYYY] https://transparency.entsog.eu/";
-      but Art. 4.7: "ENTSOG does not permit automatic extraction of data or other usage that reduces the performance of the
-      Website." Commercial reuse is not addressed separately; ENTSOG disclaims responsibility when data are altered or processed.
-      The ENTSOG corporate site terms (https://www.entsog.eu/privacy-policy-and-terms-use) forbid republishing its contents
-      without written consent. Whether Art. 4.7 covers the published API is unclear: owner question.'
-  updates: Daily gas-day values (gas day 06:00 to 06:00 local time), first provisional and later confirmed (flowStatus); lastUpdateDateTime
-    per record.
+    notes: 'Terms: ENTSOG TP "Privacy & T&C of Use", TRA0394-16, Rev_3, 24 May 2018, https://transparency.entsog.eu/pdf/TRA0394_20161115_ENTSOG_TP_TC_of_Use_Rev_2_KNS_LG_KNS.pdf
+      (read 12 Nov 2026); it is the document the platform itself links in its forms as "Privacy Policy and Terms of Use" (found
+      in the site''s scripts by Dev probe run 43288071987 (job 131426672054, branch test/src-env-probe, 12 Nov 2026); the
+      older 8 Feb 2016 file https://transparency.entsog.eu/pdf/Terms_and_Conditions_of_Use.pdf is still on the host but is
+      not linked). Art. 5.1: "you may download, store and use the contents of the ENTSOG TP in good faith", subject to "always
+      complying with good business practices regarding the re-use of publicly available data" and "provided you keep intact
+      all trademark, copyright and other proprietary notices indicated." Attribution (Art. 5.2): "you shall at least indicate
+      the source, and the date of data download/extraction", in the form "ENTSOG TP [DD-MM-YYYY] https://transparency.entsog.eu/".
+      Automated access: Art. 5.6 "ENTSOG does not permit automatic extraction of data or other usage that reduces the performance
+      of the ENTSOG TP." and Art. 5.7 "The automate download of data is possible via the API tool of the ENTSOG TP" (within
+      the limits of the API User Manual), so loading through the API is allowed. Commercial reuse: not stated (Art. 6 only
+      forbids to "advertise or perform any commercial solicitation" on the platform). Modification: not stated as a permission;
+      disclaimer Art. 5.5 "ENTSOG disclaims any responsibility or liability should you alter, modify, summarize, or process
+      in any manner the data". Art. 3: the contents are "the exclusive property of ENTSOG, its members, or such third party
+      credited as provider of the contents". Because commercial reuse and modification are not stated, the status is unresolved
+      and the source stays internal. GAZ-SYSTEM''s own site states no data terms that the probe could find: its English home
+      page links no legal notice, terms or copyright page, and its data-transparency page (200, no file downloads) only links
+      the SWI application and the ENTSOG platform (Dev probe run 43295514703 (job 131452664788, same branch, second pass)).
+      The quotes were returned by the fetch tool in fragments of up to 125 characters; re-read the PDF before any publication.'
+  updates: 'Daily gas-day values, first Provisional and later Confirmed (flowStatus), with lastUpdateDateTime per record.
+    Observed on 12 Nov 2026: every gas day of October 2026 was Confirmed (newest lastUpdateDateTime 12 Nov 2026 18:21 UTC)
+    and 1 November 2026 was still Provisional (last updated 2 Nov 07:05 UTC), so a month is confirmed after it ends. The API
+    documents no changed-since filter (API User Manual v3.0).'
   ingestion:
-    history: 'GAZ-SYSTEM: the public tables (calorific value, total imbalance, planned works, point lists) are in https://swi.gaz-system.pl/mir/,
-      a JavaScript application (736-byte shell from a GitHub runner, Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
-      12 Nov 2026)), which the pipeline does not support; no file downloads were found on the transparency page. ENTSOG API:
-      GET https://transparency.entsog.eu/api/v1/operationaldatas?operatorKey=PL-TSO-0002&indicator=Physical Flow&periodType=day&from=<date>&to=<date>
-      returns JSON (meta + operationaldatas: pointKey, pointLabel, directionKey, unit kWh/d, value, flowStatus, periodFrom/periodTo)
-      and answered 200 for 1-2 November 2026; the same request for January 2016 and October 2013 answered 404, so the history
-      depth is unknown. Size not measured.'
-    incremental: 'PROPOSAL after the owner''s answer: entity = indicator x month, daily request of the last days with a re-read
-      of the last 30 days for confirmed values.'
-    identifiers: ENTSOG pointKey + directionKey + indicator + periodFrom; operatorKey PL-TSO-0002; EIC code.
+    history: 'Route: GET https://transparency.entsog.eu/api/v1/operationaldatas?operatorKey=PL-TSO-0002&indicator=Physical%20Flow&periodType=day&timezone=WET&limit=-1&from=<date>&to=<date>
+      returns JSON (meta + operationaldatas, 35 fields per record). Tested from a GitHub runner, Dev probe run 43288071987
+      (job 131426672054, branch test/src-env-probe, 12 Nov 2026): one gas day (1 Nov 2026) 200, 47 rows, 46,663 bytes, 1.1
+      s (meta count 47, total 72: the difference is not explained by the manual); the month of October 2026 200, 1,457 rows,
+      1,417,652 bytes, 1.8 s, 47 point-direction series, no repeated pointKey + directionKey + periodFrom; 1 January 2021
+      answered 200 (40,846 bytes), while 1 January 2020 and every earlier day tried back to October 2013 answered 404 with
+      the message "Data on the TP is archived on a rolling basis. If you are looking for data more than 5 years old, please
+      check the TP Archives" (Dev probe run 43295514703 (job 131452664788, same branch, second pass)), so the API serves a
+      rolling window of about five years; the TP Archives were not opened. Size: about 1.4 MB and 1,500 rows per month for
+      this indicator, so about 17 MB and 17,500 rows per year (measured month times twelve). Without limit=-1 the API returns
+      100 rows (the first probe, Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026), read
+      such a capped answer). Other formats by appending .csv, .xml or .xlsx to the endpoint (manual; not tested). GAZ-SYSTEM''s
+      own public tables are in https://swi.gaz-system.pl/mir/, a JavaScript application (736-byte shell, Dev probe run 43203166665
+      (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)), which the pipeline does not support, and are not needed:
+      the same disclosures are on the ENTSOG platform.'
+    incremental: 'Entity = indicator x gas month; version = newest lastUpdateDateTime in the month''s answer. Daily run: request
+      the current and the previous month (two requests per indicator, monthly windows as the manual recommends) and keep the
+      answer when the bytes change (snapshot, changed_since_last); a month stops being re-read once every row is Confirmed.
+      Backfill one month per request, spread out, oldest last. Refresh full (small source).'
+    identifiers: ENTSOG pointKey + directionKey + indicator + periodType + periodFrom; record id; operatorKey PL-TSO-0002;
+      tsoEicCode; tsoItemIdentifier.
   modelling:
     notes: 'Separate capacity, nomination, allocation, flow, quality and outage facts; gas-day conventions matter. Grain:
-      point x direction x gas day, kWh/d. Smallest Gold selection: daily physical flow into Poland by entry group (LNG terminal
-      Świnoujście, Baltic Pipe, interconnectors) and the total as new KPIs in environment.energy; other EU operators come
-      from the same API.'
-    overlap: No KPI of kpi.csv is published here yet. Eurostat monthly gas balances carry the official EU comparison; ENTSOG
-      holds the same points for every EU operator.
+      point x direction x gas day, kWh/d. Frequencies: day (tested); the API has other periodType values (manual, not tested),
+      and each frequency needs its own measure_key. Gas day in the answer: periodFrom 05:00 UTC to 05:00 UTC next day with
+      timezone=WET (06:00 Polish winter time); some points start at 03:00 UTC, so the gas day is taken from periodFrom per
+      point, not assumed. Missing values: 11 of the 47 series per day come with an empty value, isNA = 1 and an empty flowStatus
+      (341 of 1,457 rows in October 2026); they are missing, never zero. Provisional and Confirmed share one key and are told
+      apart by flowStatus and lastUpdateDateTime; the newest wins. Indicator names are case-sensitive ("Physical Flow"). Smallest
+      Gold selection: daily physical flow into and out of Poland by point group (proposed: LNG terminal, Baltic Pipe, interconnectors,
+      domestic gas fields; the groups are built from pointLabel and pointType) and the entry total, Poland only (no voivodeship
+      grain exists), as new KPIs in environment.energy; monthly sums as a second frequency for comparison with Eurostat.'
+    overlap: No KPI of kpi.csv is about gas flows (checked 12 Nov 2026). Eurostat monthly gas balances carry the official
+      EU comparison; ENTSOG holds the same points for every EU operator, so the same build can later take other operators.
   research:
     priority: review-next
     evidence: tested
     connection: tested
     blockers:
-    - 'Owner: the ENTSOG Transparency Platform terms (8 Feb 2016, Art. 4.7) say "ENTSOG does not permit automatic extraction
-      of data or other usage that reduces the performance of the Website" while ENTSOG publishes a public API; may we load
-      GAZ-SYSTEM''s daily physical flows through that API once a day (a few requests), or do you want to ask ENTSOG in writing
-      first?'
-    - GAZ-SYSTEM's own public tables are JavaScript-only (not supported); history depth in the ENTSOG API is unknown (2016
-      and 2013 answered 404).
+    - 'Licence unresolved: the ENTSOG terms allow download, storage, use and automated API download with the citation "ENTSOG
+      TP [DD-MM-YYYY] https://transparency.entsog.eu/", but do not state commercial reuse or modification; internal only until
+      the owner decides or ENTSOG answers.'
+    - The API holds a rolling window of about five years; older gas days are in the TP Archives, which were not opened. The
+      meaning of meta.total against meta.count is not documented; other period types and the other indicators (nominations,
+      allocations, capacities, GCV) were not tested.
     references:
     - https://www.gaz-system.pl/en/for-customers/market-information/data-transparency.html
     - https://swi.gaz-system.pl/mir/
     - https://transparency.entsog.eu/
+    - https://transparency.entsog.eu/pdf/TRA0394_20161115_ENTSOG_TP_TC_of_Use_Rev_2_KNS_LG_KNS.pdf
     - https://transparency.entsog.eu/pdf/Terms_and_Conditions_of_Use.pdf
-    - https://www.entsog.eu/privacy-policy-and-terms-use
+    - https://transparency.entsog.eu/api/archiveDirectories/8/api-manual/ENTSOG_TP_API_UserManual_v3.0.pdf
+    - https://www.entsog.eu/sites/default/files/2021-07/ENTSOG%20-%20TP%20User%20Manual_v_4.5.pdf
 - id: PL-ENV-022
   name: Generalny Pomiar Ruchu (GPR)
   short_name: GDDKiA traffic census (GPR)
   provider: Generalna Dyrekcja Dróg Krajowych i Autostrad (GDDKiA)
-  status: registered
+  status: approved
   family: H
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [road traffic, transport]
   entities: [road section, traffic count, vehicle class]
-  granularity: Average traffic/count statistics by measured national or voivodeship road section and vehicle class.
-  coverage: Named survey editions including 2020/2021; historical editions need catalogue inventory.
+  granularity: Average daily traffic (SDRR, with SDRDR and SDRL variants) per measured section of national and voivodeship
+    roads, by vehicle class.
+  coverage: Editions every five years; 2020/21 and 2025 have result files on gov.pl; 2015 and earlier are on the archive site
+    (not reachable from runners).
   access:
-    endpoint: https://www.gov.pl/web/gddkia/generalny-pomiar-ruchu-20202021
+    endpoint: https://www.gov.pl/web/gddkia/generalny-pomiar-ruchu-2025
     kind: bulk_file
-    interfaces: [bulk-files, PDF, maps, HTML]
-    auth: Public downloads/publications.
-    cost: Free public access.
-    limits: Unknown; no numeric quota was confirmed.
+    interfaces: [XLSX, XLS, SHP, PDF, HTML]
+    auth: public download
+    cost: free
+    limits: None published. Attachments are https://www.gov.pl/attachment/<uuid>.
   licence:
     status: unresolved
-    notes: No explicit commercial redistribution terms confirmed.
-  updates: Periodic general-count campaign, not live traffic.
+    notes: 'Terms: the GPR pages state no licence for the result files (probe 12 Nov 2026; the only "źródło" match on the
+      2025 page is its camera privacy notice). gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (read by the
+      probe): "Korzystanie przez użytkowników z materiałów urzędowych opublikowanych w serwisie Gov.pl nie wymaga zgody Ministra
+      Cyfryzacji. W serwisie zamieszczane są także utwory, co do których prawa autorskie przysługują osobom trzecim. Ich wykorzystanie
+      przez internautów wymaga zgody właścicieli tych materiałów."; page footer: "Treści tekstowe publikowane w serwisie (z
+      wyłączeniem treści audiowizualnych), są udostępniane na licencji typu Creative Commons: uznanie autorstwa - na tych
+      samych warunkach 4.0 (CC BY-SA 4.0)." The footer names text content, not attached data files. The same wording was recorded
+      as open-conditional for PLG-007, PLG-008, PLG-009 and PLS-034; here it stays unresolved until the owner confirms that
+      reading. Attribution if used: "Źródło: GDDKiA, Generalny Pomiar Ruchu 2025".'
+  updates: Every five years; GPR 2025 results were published in stages to 30 Sep 2026 (publication PDF Last-Modified 1 Oct
+    2026).
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Road number, section endpoints/ID, survey edition and vehicle class.
+    history: 'Bulk files linked from one page per edition: https://www.gov.pl/web/gddkia/generalny-pomiar-ruchu-2025 (54 attachments:
+      XLSX with a PDF twin for the section list and for SDRR, SDRDR and SDRL of national roads, the same for voivodeship roads,
+      a SHP ZIP, syntheses and maps) and https://www.gov.pl/web/gddkia/generalny-pomiar-ruchu-20202021 (33 attachments, XLS
+      with PDF twins). Attachment UUIDs change when a file is replaced, so the edition page is the entry; pick links labelled
+      XLSX or XLS (the probe opened a PDF twin by mistake, so the sheet layout is not inspected).'
+    incremental: Snapshot per edition; version = Last-Modified; errata replace a file (2020/21 had an erratum for 21 sections).
+    identifiers: Edition, road number, section number and chainage, voivodeship, vehicle class.
   modelling:
-    notes: Preserve road-network vintage and section geometry; comparisons require boundary matching.
+    notes: 'Smallest Gold selection: SDRR of motor vehicles on national roads and on voivodeship roads, editions 2020/21 and
+      2025. New KPI: average daily traffic (vehicles per day), Poland and voivodeships (length-weighted mean of sections),
+      heavy-vehicle share as a second measure. Sections have no TERYT; voivodeship comes from the file. Effort M (layouts
+      differ by edition and road type; the 2020/21 files are .xls).'
     overlap: Not comparable to real-time traffic feeds without temporal aggregation and method alignment.
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Confirm machine format, section geometry keys, methodology changes and license.
+    - 'Owner question (one answer for PL-ENV-022 and for any other gov.pl attachment without its own licence): gov.pl says
+      "Korzystanie przez użytkowników z materiałów urzędowych opublikowanych w serwisie Gov.pl nie wymaga zgody Ministra Cyfryzacji"
+      and licenses only its text content as CC BY-SA 4.0. PLG-007, PLG-008, PLG-009 and PLS-034 were recorded as open-conditional
+      on that wording. Should GPR follow them (publishable with attribution), or stay unresolved and internal?'
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): both edition pages and their
+      attachments answered 200 to a GitHub runner; XLSX layout not inspected.'
     references:
+    - https://www.gov.pl/web/gddkia/generalny-pomiar-ruchu-2025
     - https://www.gov.pl/web/gddkia/generalny-pomiar-ruchu-20202021
+    - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PL-ENV-023
   name: Road programme and infrastructure downloads (RPBDK/MOP)
   short_name: GDDKiA road downloads
   provider: GDDKiA
-  status: registered
+  status: approved
   family: H
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [road infrastructure, investment]
   entities: [road project, service area, road section]
-  granularity: Road-programme records in XML plus service/parking-place listings; schemas differ by product.
+  granularity: 'Three unrelated downloads: road-programme status (PDF), list of rest areas MOP (XLSX), road-obstruction feed
+    (XML with XSD on the archive site).'
   coverage: Current programme implementation and lists; archive depth unconfirmed.
   access:
     endpoint: https://www.gov.pl/web/gddkia/dane-do-pobrania
     kind: bulk_file
-    interfaces: [XML, XSD, bulk-files, HTML]
-    auth: Public downloads.
-    cost: Free public access.
-    limits: Unknown; no numeric quota was confirmed.
+    interfaces: [PDF, XLSX, XML, HTML]
+    auth: public download
+    cost: free
+    limits: None published. archiwum.gddkia.gov.pl (the road-obstruction feed) gave no answer to a GitHub runner in two probes
+      (timeouts of 20 s and 75 s); the gov.pl pages and attachments answer.
   licence:
     status: unresolved
-    notes: Terms for commercial reuse were not confirmed.
-  updates: Programme/list updates; cadence unknown.
+    notes: 'Terms: the pages state no licence for the files (probe 12 Nov 2026). gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie
+      (read by the probe): "Korzystanie przez użytkowników z materiałów urzędowych opublikowanych w serwisie Gov.pl nie wymaga
+      zgody Ministra Cyfryzacji. W serwisie zamieszczane są także utwory, co do których prawa autorskie przysługują osobom
+      trzecim. Ich wykorzystanie przez internautów wymaga zgody właścicieli tych materiałów."; page footer: "Treści tekstowe
+      publikowane w serwisie (z wyłączeniem treści audiowizualnych), są udostępniane na licencji typu Creative Commons: uznanie
+      autorstwa - na tych samych warunkach 4.0 (CC BY-SA 4.0)." The footer names text content, not attached data files.'
+  updates: Programme status PDF Last-Modified 4 Nov 2026; MOP table monthly (September 2026 edition, Last-Modified 26 Oct
+    2026); obstruction feed live.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Project/section identifiers, road number, location and publication date.
+    history: 'Bulk files on gov.pl, tested from a runner. https://www.gov.pl/web/gddkia/wykaz-parkingow-i-mop links one XLSX
+      "Tabela MOP istniejące" (September 2026 edition: 89,285 bytes, one sheet "Arkusz1"; columns Lp., Oddział, Województwo,
+      Zarządca, Miejscowość, name of the rest area, current category, target category). https://www.gov.pl/web/gddkia/biezaca-realizacja-pbdk-na-lata-2014-2023
+      links the road-programme status as one PDF (1,121,256 bytes, 6 pages, with a text layer: 9,796 text operators, no page
+      images) plus contractor and legend PDFs. Attachment ids change per edition, so the two pages are the stable entries.
+      Not in this route: the road-obstruction XML feed on archiwum.gddkia.gov.pl, a live operational feed with no statistical
+      use. No XML of the road programme was found.'
+    incremental: Snapshot per file; version = Last-Modified of the attachment; monthly check of the two pages (the MOP table
+      is monthly).
+    identifiers: Road number, section name, MOP name and category.
   modelling:
-    notes: Version projects and statuses; coordinates/list locations may need geocoding with source retained.
+    notes: 'kpi false. Smallest Gold selection: an entity table of rest areas (MOP) and the count of rest areas per voivodeship
+      and category (voivodeship names in the file, mapped to TERYT). Second step: road-programme status per section from the
+      PDF text layer (road, section, stage) as an entity table; the PDF layout is read at the build. Road length itself comes
+      from GUS BDL and Eurostat through the onboarded sources. Effort S for the MOP table, M with the PDF.'
     overlap: Complements GPR traffic counts; it describes assets/programmes, not traffic observations.
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Inspect XML schema, history, stable IDs and reuse terms.
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the three gov.pl pages and the
+      programme PDF answered 200 to a GitHub runner. Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe,
+      script dev/src_dfh_fix_probe.py, 12 Nov 2026): the MOP workbook was read (one sheet, columns as listed), the programme
+      PDF has a text layer, archiwum.gddkia.gov.pl timed out again (75 s).'
+    - Licence unresolved (gov.pl attachments; the gov.pl wording is the owner question recorded under PL-ENV-022). Internal
+      build only.
+    - 'The platform has no PDF table reader yet: the PDF step adds text-layer extraction (no OCR).'
     references:
     - https://www.gov.pl/web/gddkia/dane-do-pobrania
+    - https://www.gov.pl/web/gddkia/wykaz-parkingow-i-mop
+    - https://www.gov.pl/web/gddkia/biezaca-realizacja-pbdk-na-lata-2014-2023
 - id: PL-ENV-024
   name: CEPiK public API
   short_name: CEPiK
   provider: Ministerstwo Cyfryzacji / Centralna Ewidencja Pojazdów i Kierowców
-  status: registered
+  status: approved
   family: H
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [vehicles, transport]
   entities: [vehicle model/registration aggregate, public registry record]
-  granularity: Selected public vehicle data with more than 60 published parameters; exact endpoint grains vary.
-  coverage: Current registry/API; historical retention and revision behavior require endpoint review.
+  granularity: 'Statistics workbooks: vehicles registered per month by voivodeship and by vehicle type; driving licences issued;
+    inspection stations and technical inspections. The API serves single vehicle records.'
+  coverage: Statistics pages for 2023-2026 (10 pages listed); the 2026 workbook holds January-September on 12 Nov 2026.
   access:
-    endpoint: https://www.gov.pl/web/cepik/api-dla-centralnej-ewidencji-pojazdow-i-kierowcow-api-do-cepik
-    kind: api
-    interfaces: [REST-API, Swagger, JSON]
-    auth: Public, free API.
-    cost: Free.
-    limits: Unknown; no quota confirmed from the overview.
+    endpoint: https://www.gov.pl/web/cepik/statystyki
+    kind: bulk_file
+    interfaces: [XLSX, PDF, HTML, REST-API]
+    auth: public download; the API is public and free
+    cost: free
+    limits: None published for the files. api.cepik.gov.pl gave no answer to a GitHub runner (timeout), so the API is not
+      a route from the platform.
   licence:
     status: open-conditional
-    notes: Official page allows commercial and noncommercial reuse with source attribution; only selected registry
-      data are exposed.
-  updates: Registry-backed updates; timing and caching unknown.
+    notes: 'Terms: stated on https://www.gov.pl/web/cepik/api-dla-centralnej-ewidencji-pojazdow-i-kierowcow-api-do-cepik (read
+      by the probe 12 Nov 2026): "Dane z CEPiK można wykorzystywać do celów komercyjnych i niekomercyjnych. W obu przypadkach
+      musisz poinformować o źródle wytworzenia i pozyskania informacji." Commercial reuse allowed; modification is not addressed;
+      the source of creation and of acquisition must be named. The sentence stands on the API page and speaks of CEPiK data
+      in general; the statistics pages carry only the gov.pl footer (text content CC BY-SA 4.0). Attribution: "Źródło: Centralna
+      Ewidencja Pojazdów i Kierowców (CEPiK), Ministerstwo Cyfryzacji; pobrano z gov.pl <data>".'
+  updates: 'Monthly: the 2026 workbook by voivodeship was last modified 22 Oct 2026 with data to September.'
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Endpoint-specific vehicle/registry identifiers; privacy-safe fields only.
+    history: 'Bulk files linked from stable pages: https://www.gov.pl/web/cepik/statystyki lists one page per topic and year
+      (e.g. /web/cepik/pojazdy-zarejestrowane-w-2026-roku, /prawa-jazdy-wydane-w-2026-roku, /stacje-kontroli-pojazdow-skp-i-badania-techniczne-bt-w-2025-roku).
+      The 2026 vehicles page has four attachments: XLSX and PDF by voivodeship, XLSX and PDF by vehicle type. Tested: the
+      voivodeship XLSX (18,058 bytes, one sheet, a national row of monthly totals and one row per voivodeship with a column
+      block per month). Attachment UUIDs change with each monthly update, so the page is the entry. API https://api.cepik.gov.pl/
+      (vehicle records by voivodeship and date window): not reachable from runners and not needed for the aggregates.'
+    incremental: Snapshot of the current-year workbooks, monthly; version = Last-Modified; closed years once.
+    identifiers: Year, month, voivodeship (names), vehicle type.
   modelling:
-    notes: Respect scope filters and code dictionaries; do not infer owners/persons from public records.
+    notes: 'Smallest Gold selection: vehicles registered by voivodeship and by vehicle type, 2023-2026. New KPI: vehicle registrations
+      per month (count), Poland and voivodeships; second step: driving licences issued. Whether the counts are first registrations
+      or all registrations is to be read from the workbook header. Effort S (XLSX through the shared cell decoder).'
     overlap: Vehicle stock may overlap official aggregates; API records and statistical totals are different grains.
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Review Swagger, paging, history, suppressed fields and attribution implementation.
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): statistics pages and the voivodeship
+      XLSX answered 200 to a GitHub runner; api.cepik.gov.pl timed out (robots.txt, one attempt), so every API detail stays
+      unverified.'
+    - Confirm the definition of "pojazdy zarejestrowane" (first registrations or all) at the build.
     references:
+    - https://www.gov.pl/web/cepik/statystyki
+    - https://www.gov.pl/web/cepik/pojazdy-zarejestrowane-w-2026-roku
     - https://www.gov.pl/web/cepik/api-dla-centralnej-ewidencji-pojazdow-i-kierowcow-api-do-cepik
     - https://api.cepik.gov.pl/doc
 - id: PL-ENV-025
   name: Rail Data Portal (Dane UTK)
   short_name: UTK rail data
   provider: Urząd Transportu Kolejowego (UTK)
-  status: registered
+  status: reviewing
   family: H
   kpi: true
   geography: Poland
@@ -6615,73 +6903,112 @@ sources:
     interfaces: [HTML, charts, bulk-files, PDF]
     auth: Public portal.
     cost: Free public access.
-    limits: Unknown; no numeric quota was confirmed.
+    limits: None published. dane.utk.gov.pl and utk.gov.pl answer HTTP 403 to a GitHub runner (on robots.txt).
   licence:
     status: unresolved
-    notes: Dataset-level commercial redistribution rights not confirmed.
-  updates: Monthly/quarterly/annual depending series.
+    notes: 'Terms: not read. Both UTK hosts refused the runner (HTTP 403 on robots.txt) and the desk fetch could not open
+      them; the dane.gov.pl record 128 ("Przewozy pasażerskie - statystyka miesięczna, kwartalna, roczna") was not readable
+      (api.dane.gov.pl and dane.gov.pl timed out from the runner in both probes).'
+  updates: Monthly, quarterly and annual depending on the series.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Period, operator/category, station/region and metric definition.
+    history: 'Not established: the portal sections (/sts/przewozy-towarowe, /sts/sprawozdania-roczne and others) are known
+      from web search results only.'
+    incremental: None until the owner question is answered.
+    identifiers: Series, period, carrier or station where present.
   modelling:
-    notes: Preserve confidentiality suppression and definition revisions; passenger and train counts are non-additive
-      across views.
+    notes: 'With a route today: rail passengers and goods for Poland per quarter from Eurostat rail_pa_quartal and rail_go_quartal
+      through GL-001 (in Silver: 6,750 rows each; data from 2004-Q1 to 2026-Q2), annual in rail_pa_total and rail_go_total
+      (Eurostat catalogue, to 2025). Only at UTK: monthly figures, punctuality and per-carrier data. From this source once
+      it is reachable: rail passengers, passenger-km, freight tonnes and tonne-km, punctuality, monthly, Poland. Effort M.'
     overlap: UTK is the regulatory statistical source; operator/open-transit data have different scope.
   research:
     priority: review-first
     evidence: documented
     connection: not-tested
     blockers:
-    - Inventory formats, history, licenses, revisions and geographic coding.
+    - 'Owner question: UTK refuses GitHub runners on both of its hosts (dane.utk.gov.pl and utk.gov.pl answer HTTP 403), which
+      we do not work around, and dane.gov.pl, where UTK also publishes (dataset 128), does not answer runners. Eurostat rail_pa_quartal
+      and rail_go_quartal, which we load, give passengers and goods for Poland per quarter (to 2026-Q2); monthly figures,
+      punctuality and per-carrier data exist only at UTK. Do you want to write to UTK (text drafted for you) asking for access
+      from GitHub-runner addresses or for the files with their reuse terms, or do you accept the quarterly Eurostat series
+      as the rail KPIs and leave the UTK portal out?'
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): dane.utk.gov.pl HTTP 403 on robots.txt,
+      nothing else requested. Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py,
+      12 Nov 2026): utk.gov.pl HTTP 403 on robots.txt; api.dane.gov.pl and dane.gov.pl timed out (75 s); Silver holds rail_pa_quartal
+      and rail_go_quartal (6,750 rows each).'
+    - 'Formats, file URLs and reuse terms of the portal are unread: licence unresolved.'
     references:
     - https://dane.utk.gov.pl/
-    - https://utk.gov.pl/pl/raporty-i-analizy/analizy-i-monitoring/statystyka-przewozow-pa
+    - https://dane.gov.pl/pl/dataset/128,przewozy-pasazerskie-statystyka-miesieczna-kwartalna-roczna
+    - https://ec.europa.eu/eurostat/databrowser/view/rail_pa_quartal/default/table
 - id: PL-ENV-026
   name: Airport traffic statistics
   short_name: ULC airport traffic
   provider: Urząd Lotnictwa Cywilnego (ULC)
-  status: registered
+  status: approved
   family: H
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [aviation, passenger traffic, airports]
   entities: [airport, quarter, traffic metric]
-  granularity: Quarterly airport passengers, operations and related measures by Polish airport.
-  coverage: Download tables extend back at least to 2008–2010, depending measure.
+  granularity: Passengers and aircraft operations per Polish airport, per quarter, with the two previous years and the change
+    (PDF table of about 15 airports and a total).
+  coverage: 65 quarterly PDFs from Q1 2010 to Q1 2026.
   access:
     endpoint: https://ulc.gov.pl/statystyki-analizy/statystyki-wg-portow-lotniczych
     kind: bulk_file
-    interfaces: [HTML, bulk-files]
+    interfaces: [PDF, HTML]
     auth: Public downloads.
     cost: Free public access.
-    limits: Unknown; no numeric quota was confirmed.
+    limits: None published. robots.txt has 15 Disallow lines (/administrator/, /api/, /bin/, /cache/ and others), none on
+      /_download/. The site carries Imperva Incapsula bot protection.
   licence:
     status: unresolved
-    notes: No explicit commercial redistribution license confirmed.
-  updates: Quarterly with rolling multi-year files.
+    notes: 'Terms: none stated. The statistics page shows only "© 2026 Urząd Lotnictwa Cywilnego"; its footer links accessibility,
+      cookie and competition-rules pages, none with a reuse sentence (probe 12 Nov 2026); https://ulc.gov.pl/udostepnianie-informacji-w-celach-naukowych
+      has no reuse sentence (desk fetch). Attribution if used: "Źródło: Urząd Lotnictwa Cywilnego".'
+  updates: Quarterly with a lag of three to six months (page updated 23 Oct 2026 with Q1 2026; Q4 2025 file dated 22 Apr 2026).
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Airport, quarter/year and measure.
+    history: 'Bulk PDF: https://ulc.gov.pl/statystyki-analizy/statystyki-wg-portow-lotniczych links 65 PDFs, no XLSX or CSV
+      (e.g. /_download/2026/statystyki_2026/_pl/wg_portow_lotniczych_1kw2026.pdf, 442,042 bytes; /_download/statystyki/2025/q4/wg_portow_lotniczych_4kw2025.pdf;
+      the oldest /_download/regulacja_rynku/statystyki/1ql_2010.pdf, 139,818 bytes). Paths differ per release, so the listing
+      page is the entry. The PDFs carry a text layer (Q1 2026: 1 page, 247 text operators, fonts with ToUnicode maps; Q1 2010:
+      2 pages, 337 text operators), so tables are read by text-layer extraction, without OCR. Full load: 65 files, a few hundred
+      KB each. No API.'
+    incremental: Snapshot of the listing page; a new quarter is a new PDF link; version = Last-Modified and ETag of the file;
+      check monthly.
+    identifiers: Airport name (no ICAO or IATA code in the tables), quarter.
   modelling:
-    notes: Retain reporting definition; domestic passengers may be counted at both origin and destination.
+    notes: 'Smallest Gold selection: passengers and aircraft operations per airport and for Poland, quarterly from Q1 2010
+      (about 15 airports; airport names mapped to ICAO codes and voivodeships by a small seed). Frequency: quarterly only;
+      each PDF repeats the two previous years, so the same quarter appears in up to three files: keep the newest file per
+      quarter. Overlap: Eurostat avia_paoa (in Silver, 301.6 million rows, to 2026-Q3) carries passengers of Polish airports
+      and was more current than ULC on 12 Nov 2026 (ULC: Q1 2026); keep both series (O31). Effort M (PDF layouts differ over
+      16 years).'
     overlap: Airport totals can overlap port/route reports; do not sum views without definition checks.
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Confirm file formats, airport codes, revision policy and terms.
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the listing and two PDFs answered
+      200 to a GitHub runner. Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py,
+      12 Nov 2026): the newest and the oldest PDF were downloaded and have a text layer.'
+    - 'Licence unresolved: no reuse terms are stated on ulc.gov.pl. Internal build only; a reuse request to ULC is an owner
+      option.'
+    - 'The platform has no PDF table reader yet: the build adds text-layer extraction and checks each table against its total
+      row. The pages carry the Incapsula script; plain requests were served. If the site starts refusing, the refusal is recorded
+      and not worked around.'
     references:
     - https://ulc.gov.pl/statystyki-analizy/statystyki-wg-portow-lotniczych
-    - https://ulc.gov.pl/statystyki-analizy/statystyki-ruch-krajowy
+    - https://ulc.gov.pl/udostepnianie-informacji-w-celach-naukowych
+    - https://ec.europa.eu/eurostat/databrowser/view/avia_paoa/default/table
 - id: PL-ENV-027
   name: Port of Gdańsk cargo and traffic statistics releases
   short_name: Port of Gdańsk statistics
   provider: Zarząd Morskiego Portu Gdańsk S.A.
-  status: registered
+  status: parked
   family: H
   kpi: true
   geography: Port Gdańsk, Poland
@@ -6696,32 +7023,51 @@ sources:
     interfaces: [HTML]
     auth: Public web releases.
     cost: Free viewing.
-    limits: Unknown; no numeric quota was confirmed.
+    limits: None published; robots.txt disallows only /wp-admin/.
   licence:
-    status: unresolved
-    notes: No machine-readable redistribution terms confirmed.
-  updates: Periodic releases; revision policy unknown.
+    status: restricted
+    notes: 'Terms: the site footer reads "2026 © All rights reserved by ZMPG S.A." (probe 12 Nov 2026; Polish pages: "Wszelkie
+      prawa zastrzeżone przez Zarząd Morskiego Portu Gdańsk S.A.", desk fetch). No licence or reuse permission is stated;
+      the port authority is a company, not a public office.'
+  updates: Press releases after each quarter (the nine-month 2026 release is dated 27 Oct 2026).
   ingestion:
-    history: 'PROPOSAL: build a release manifest only after definitions and reuse are reviewed.'
-    incremental: 'PROPOSAL: ingest new releases with publication date; extraction from prose requires QA.'
-    identifiers: Port, reporting period, metric/category and release.
+    history: 'No machine route: figures appear in press-release text, and https://www.portgdansk.pl/en/business/general-information/facts-and-figures/
+      shows charts for 2010-2025 without numbers or a download (its only file link is a PwC report PDF).'
+    incremental: 'None: the series are read from Eurostat (GL-001).'
+    identifiers: Period, cargo group.
   modelling:
-    notes: Keep tonnes, TEU, calls and passengers as separate measures.
+    notes: 'No Gold use from this source. Confirmed stand-in: annual gross weight of goods handled in the port of Gdańsk in
+      Eurostat mar_mg_aa_pwhd (2005-2024, port code PL_0PLGDN), loaded through GL-001. Likely further cover, not confirmed
+      for Gdańsk: quarterly detail for Polish ports (mar_go_qm_pl, in Silver), containers in TEU (mar_mg_am_pvh), cargo type
+      (mar_mg_am_pwhc) and passengers (mar_mp_aa_pphd).'
     overlap: Port-specific facts are not a national maritime total and may overlap national summaries.
   research:
     priority: specialist
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Find official structured archive, definitions, revisions and license
-    - broaden to other ports separately.
+    - 'Parked, not for a technical reason: the port authority, a company, reserves all rights and offers press-release text
+      and charts only. Its annual gross weight handled is contained in Eurostat mar_mg_aa_pwhd, which we load through GL-001
+      (Gdańsk is rep_mar PL_0PLGDN; 3,960 rows in Silver; Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe,
+      script dev/src_dfh_fix_probe.py, 12 Nov 2026)). Containment of the quarterly, container, cargo-type and passenger series
+      is likely (mar_go_qm_pl with 2,476,692 rows in Silver; mar_mg_am_pvh, mar_mg_am_pwhc and mar_mp_aa_pphd listed in silver.eurostat_dataflows)
+      but not confirmed for Gdańsk. Eurostat is two to three quarters behind the port''s own releases.'
+    - 'Owner question: the Port of Gdańsk reserves all rights and publishes its quarterly cargo, container and passenger figures
+      only as press-release text; Eurostat, which we load, confirms only the annual gross weight for Gdańsk and runs two to
+      three quarters behind. Do you want a written permission request sent to ZMPG S.A. (text drafted for you) to reuse the
+      port''s quarterly figures with attribution, or do you accept the Eurostat series as sufficient?'
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the facts-and-figures page answered
+      200 and links no data file. Not verified: that Gdańsk is a port in mar_go_qm_pl and in the three catalogue tables (only
+      mar_mg_aa_pwhd was opened), and the Silver row counts of those three.'
     references:
-    - https://www.portgdansk.pl/wydarzenia/rekordowe-przeladunki-w-porcie-gdansk-mocny-polmetek-2026-roku/
+    - https://www.portgdansk.pl/en/business/general-information/facts-and-figures/
+    - https://www.portgdansk.pl/wydarzenia/trzy-kwartaly-2026-ponad-6-mln-ton-ladunkow-wiecej-niz-przed-rokiem-port-gdansk-bije-rekordy/
+    - https://ec.europa.eu/eurostat/databrowser/view/mar_mg_aa_pwhd/default/table
 - id: PL-ENV-028
   name: Warsaw open-data portal and public-transport feeds
   short_name: Warsaw open data and GTFS
   provider: Miasto Stołeczne Warszawa / Warszawski Transport Publiczny
-  status: registered
+  status: reviewing
   family: H
   kpi: false
   geography: Warsaw, Poland
@@ -6729,117 +7075,166 @@ sources:
   domains: [municipal open data, public transport]
   entities: [municipal dataset, vehicle, stop, trip]
   granularity: Portal datasets plus operational vehicle-position and timetable resources; formats differ.
-  coverage: Current city scope. The city is replacing api.um.warszawa.pl with dane.um.warszawa.pl; live-feed retention
-    unknown.
+  coverage: Current city scope. The city is replacing api.um.warszawa.pl with dane.um.warszawa.pl; live-feed retention unknown.
   access:
     endpoint: https://warszawa19115.pl/-/dane-po-warszawsku
     kind: api
     interfaces: [portal, API, bulk-files]
-    auth: Portal migration in progress; legacy resources may require registration.
+    auth: Legacy API needs a personal apikey after registration (reported by third parties; the portal itself was not readable).
     cost: Free public access; conditions differ by resource.
-    limits: Unknown; no numeric quota was confirmed.
+    limits: api.um.warszawa.pl and dane.um.warszawa.pl gave no answer to a GitHub runner in two probes (timeouts of 20 s and
+      75 s on robots.txt); www.ztm.waw.pl answered HTTP 202 with an empty body.
   licence:
-    status: dataset-specific
-    notes: Check each dataset terms and new portal contract.
-  updates: Vehicle positions reportedly refresh frequently; timetable/publication cycles differ.
+    status: unresolved
+    notes: 'Terms: not read (neither city portal was reachable). https://warszawa19115.pl/-/dane-po-warszawsku (desk fetch
+      12 Nov 2026) states no licence and says of the migration: "W ciągu najbliższych miesięcy serwis Otwarte dane Warszawy
+      całkowicie zastąpi dotychczasowy serwis." An attribution rule (credit "Miasto Stołeczne Warszawa", download date, link)
+      is reported by a third party only: unverified.'
+  updates: Vehicle positions refresh frequently; timetables daily. Portal migration from api.um.warszawa.pl to dane.um.warszawa.pl
+    in progress.
   ingestion:
-    history: 'PROPOSAL: use dated static packages where offered; do not treat current positions as history.'
-    incremental: 'PROPOSAL: snapshot authorized live endpoints with polling terms and source timestamps.'
-    identifiers: Dataset ID; transit line/stop/trip/vehicle IDs where supplied.
+    history: 'No route from the platform yet: both city portals time out from GitHub runners, the legacy API needs an apikey
+      tied to a personal account, and the ZTM timetable source is a restricted endpoint according to the maintainer of the
+      third-party WarsawGTFS rebuild (https://github.com/MKuranowski/WarsawGTFS). That rebuild (https://mkuran.pl/gtfs/warsaw.zip)
+      is not the city''s feed and carries conflicting licence labels, so it is not used. dane.gov.pl could not be searched
+      for Warsaw sets (timeout from the runner).'
+    incremental: None until the owner question is answered.
+    identifiers: Dataset id; GTFS ids if a feed is ever available.
   modelling:
-    notes: Keep portal and transport-source provenance; use Europe/Warsaw service dates.
+    notes: 'kpi false. If a feed becomes reachable: the same city-GTFS selection as PL-ENV-029 and PL-ENV-030.'
     overlap: City feeds may be mirrored in national catalogues; ingest producer version once.
   research:
     priority: review-first
     evidence: documented
     connection: not-tested
     blockers:
-    - Revalidate migration, registration, feed formats, retention, limits and terms.
+    - 'Owner question: Warsaw''s city data needs two things that only you can provide. The legacy API api.um.warszawa.pl needs
+      a personal apikey from a registered account (reported by third parties; the portal was not readable), and both city
+      portals (api.um.warszawa.pl and the new dane.um.warszawa.pl) do not answer GitHub runners. Do you want to register an
+      account and key and send the city a re-use request (text drafted for you) for access from GitHub-runner addresses or
+      for the timetable files with their reuse terms, or do you leave Warsaw out of the city feeds (Gdańsk, Poznań and Wrocław
+      are approved)?'
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): timeout on robots.txt of both
+      portals (20 s); www.ztm.waw.pl HTTP 202, empty body. Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe,
+      script dev/src_dfh_fix_probe.py, 12 Nov 2026): timeout on robots.txt of both portals again (75 s).'
+    - 'Reuse terms not read: licence unresolved.'
     references:
     - https://warszawa19115.pl/-/dane-po-warszawsku
-    - https://um.warszawa.pl/-/dane-po-warszawsku
+    - https://api.um.warszawa.pl/
+    - https://dane.um.warszawa.pl/
 - id: PL-ENV-029
   name: Gdańsk Open Data and GTFS/GTFS-Realtime feeds
   short_name: Gdańsk open data and GTFS
   provider: Gmina Miasta Gdańska / TRISTAR
-  status: registered
+  status: approved
   family: H
   kpi: false
   geography: Gdańsk, Poland
   provider_type: subnational-public
   domains: [municipal open data, public transport]
   entities: [municipal dataset, route, trip, stop, vehicle]
-  granularity: City datasets; static GTFS and GTFS-RT trip updates/vehicle positions.
-  coverage: Static feed covers no more than the next 14 days; realtime endpoints are current snapshots with no documented
-    archive.
+  granularity: Static GTFS of ZTM Gdańsk (agency, routes, stops, trips, stop_times, shapes, calendar_dates, feed_info); other
+    city datasets are out of scope.
+  coverage: The feed covers the next 14 days (12-26 Nov 2026 on the probe day); no archive at the source.
   access:
-    endpoint: https://www.gdansk.pl/otwarte-dane-w-gdansku
-    kind: api
-    interfaces: [CKAN, API, GTFS, GTFS-Realtime]
-    auth: Public portal/API.
+    endpoint: https://ckan.multimediagdansk.pl/dataset/tristar
+    kind: bulk_file
+    interfaces: [GTFS, ZIP, CKAN, GTFS-Realtime]
+    auth: Public download.
     cost: Free public access.
-    limits: Unknown; no numeric quota was confirmed.
+    limits: 'robots.txt: Crawl-delay 10 and Disallow for /api/, /revision/, /dataset/rate/ and /dataset/*/history, so the
+      CKAN API is not used; the fixed download URL is allowed.'
   licence:
-    status: dataset-specific
-    notes: City links terms, but each resource and redistribution condition needs verification.
-  updates: Static and realtime feeds update on separate schedules.
+    status: open-conditional
+    notes: 'Terms: the dataset page https://ckan.multimediagdansk.pl/dataset/tristar and the GTFS resource page show the licence
+      "Creative Commons Attribution" without a version number (desk fetch 12 Nov 2026). The "Regulamin korzystania z danych"
+      (PDF resource 09cafa1b-604b-4408-ac48-5720319b72b7 of the same dataset; the fetch tool returned clauses cut at 125 characters):
+      "Dane publiczne dostępne w serwisie są materiałami urzędowymi i jako takie nie są chronione przez prawa autorskie.";
+      "Korzystanie z Repozytorium jest nieodpłatne."; the reuser must "zamieścić informacje o źródle danych podając nazwę:
+      Zarząd Transportu Miejskiego w Gdańsku" and "podać datę wytworzenia oraz pozyskania informacji publicznej."; "Podmiot
+      ponownie wykorzystujący te dane ma obowiązek dbać o ich aktualność."; ZTM "nie ponosi odpowiedzialności za nieaktualność
+      danych". Commercial reuse and modification are not restricted in the clauses read. Attribution: "Źródło danych: Zarząd
+      Transportu Miejskiego w Gdańsku, wytworzono <data>, pozyskano <data>". Re-read the full regulamin before publication.'
+  updates: 'Daily: the file was last modified 12 Nov 2026 01:58 GMT; the catalogue says resources are refreshed once a day.'
   ingestion:
-    history: 'PROPOSAL: archive versioned GTFS ZIPs if terms allow.'
-    incremental: 'PROPOSAL: poll protobuf feeds within policy; RT snapshots are not CDC.'
-    identifiers: GTFS agency/stop/route/trip/service IDs and RT entity/timestamp.
+    history: 'Bulk feature, one stable URL: https://ckan.multimediagdansk.pl/dataset/c24aa637-3619-4dc2-a171-a23eec8f2172/resource/30e783e4-2bec-4a7d-bb22-ee3e3b26ca96/download/gtfsgoogle.zip
+      (tested: 25,576,857 bytes, application/zip, Last-Modified and ETag present; 8 text files, 170 MB unzipped; 93 routes,
+      1,624 stops, 95,365 trips, 2,272,891 stop_times rows, 679,206 shape points; feed_info: "Zarząd Transportu Miejskiego
+      w Gdańsku", feed_end_date 20261126; calendar_dates 20261112-20261126). GTFS-Realtime endpoints exist but are live snapshots
+      without an archive: out of scope.'
+    incremental: Snapshot; version = Last-Modified. A weekly copy is enough for the selection below (the feed changes daily
+      and has no history, so a missed day is lost only for stop_times).
+    identifiers: feed version, route_id, stop_id, trip_id, service date.
   modelling:
-    notes: Model >24-hour GTFS times and Europe/Warsaw DST correctly.
+    notes: 'kpi false; low Gold value (one city). Smallest selection shared with PL-ENV-030 and PL-ENV-032 as one city-GTFS
+      family: agency, routes, stops, trips and calendar_dates; stop_times only as a count of departures per service day. Gold:
+      stop and route entity tables and one measure, scheduled trips per day per city. Effort M for the first city (shared
+      GTFS pattern), S for each further one.'
     overlap: TRISTAR is producer-level; national catalogue entries may mirror it.
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Confirm terms, endpoint quotas, RT retention and geographic service boundary.
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the GTFS file was downloaded
+      and read on a GitHub runner; the CKAN API was not called (robots.txt).'
+    - Full wording of the regulamin to be re-read before publication (clauses were read in fragments).
     references:
-    - https://www.gdansk.pl/otwarte-dane-w-gdansku
-    - https://ckan.multimediagdansk.pl/dataset/tristar/resource/976e1fd1-73d9-4237-b6ba-3c06004d1105
+    - https://ckan.multimediagdansk.pl/dataset/tristar
     - https://ckan.multimediagdansk.pl/dataset/tristar/resource/30e783e4-2bec-4a7d-bb22-ee3e3b26ca96
+    - https://ckan.multimediagdansk.pl/dataset/tristar/resource/09cafa1b-604b-4408-ac48-5720319b72b7
 - id: PL-ENV-030
   name: Poznań GTFS and GTFS-Realtime open data
   short_name: Poznań GTFS
   provider: Zarząd Transportu Miejskiego w Poznaniu / Miasto Poznań
-  status: registered
+  status: approved
   family: H
   kpi: false
   geography: Poznań service area, Poland
   provider_type: subnational-public
   domains: [public transport, municipal open data]
   entities: [route, trip, stop, vehicle]
-  granularity: Static schedules plus GTFS-RT trip updates and vehicle positions.
-  coverage: Current service-area feeds; historical retention not documented.
+  granularity: Static GTFS of ZTM Poznań (9 text files); GTFS-Realtime feeds are live snapshots.
+  coverage: The feed covers about two weeks ahead (12-27 Nov 2026 on the probe day); the portal lists earlier files.
   access:
-    endpoint: https://www.ztm.poznan.pl/otwarte-dane/gtfs-rt/
-    kind: web
-    interfaces: [GTFS, GTFS-Realtime, protobuf, portal]
+    endpoint: https://www.ztm.poznan.pl/otwarte-dane/dla-deweloperow/
+    kind: bulk_file
+    interfaces: [GTFS, ZIP, GTFS-Realtime, protobuf]
     auth: Public download URLs.
     cost: Free public access.
-    limits: Unknown; no numeric quota was confirmed.
+    limits: None published; robots.txt disallows only /wp-admin/.
   licence:
-    status: unresolved
-    notes: No explicit commercial redistribution permission confirmed on the opened feed page.
-  updates: Live protobuf files carry current timestamps; static update cadence unconfirmed.
+    status: open-conditional
+    notes: 'Terms: stated on https://www.ztm.poznan.pl/otwarte-dane/dla-deweloperow/ (read by the probe 12 Nov 2026), section
+      "Zasady udostępniania": "Treści udostępniane są bezwnioskowo i bezpłatnie, na zasadach powszechnego dostępu i stanowią
+      źródło informacji. Warunkami ponownego wykorzystania są: 1. poinformowanie o źródle pozyskania informacji, 2. poinformowanie
+      o ostatniej aktualizacji danych, 3. poinformowanie o przetworzeniu pozyskanych danych." Stated aim: "powszechny i bezpłatny
+      dostęp" for building software for public-transport users. Commercial reuse is not excluded; modification is allowed
+      when stated. Attribution: "Źródło: ZTM Poznań, aktualizacja danych <data>" plus a note when the data were processed.'
+  updates: A new file for each timetable period (file name 20261112_20261127.zip); checked daily by third-party catalogues.
   ingestion:
-    history: 'PROPOSAL: archive static feed versions only after terms review.'
-    incremental: 'PROPOSAL: poll RT snapshots according to policy; do not infer event history.'
-    identifiers: GTFS/RT entity, agency, stop, route, trip and vehicle IDs.
+    history: 'Bulk feature, one stable URL: https://www.ztm.poznan.pl/pl/dla-deweloperow/getGTFSFile (tested: 11,644,722 bytes,
+      application/zip, attachment name 20261112_20261127.zip, no Last-Modified header; 9 text files, 91 MB unzipped; feed_info:
+      "ZTM Poznań", 20261112-20261127). Archive listing: https://www.ztm.poznan.pl/otwarte-dane/gtfsfiles/ (the old paths
+      /pl/dla-deweloperow/index and /gtfsFiles answer 404). GTFS-Realtime: https://www.ztm.poznan.pl/otwarte-dane/gtfs-rt/
+      (out of scope).'
+    incremental: Snapshot; version = attachment file name (validity period); a weekly check is enough.
+    identifiers: feed version, route_id, stop_id, trip_id, service date.
   modelling:
-    notes: Use feed version and Europe/Warsaw service date; keep RT matching failures.
+    notes: kpi false; low Gold value (one city). Same city-GTFS selection and Gold use as PL-ENV-029 (stops, routes, scheduled
+      trips per day). Effort S after the shared pattern exists.
     overlap: Poznań portal may catalogue the same ZTM producer feeds.
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Confirm static URL/horizon, license, quotas, retention and service boundary.
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the GTFS file was downloaded
+      and read on a GitHub runner; terms section read.'
     references:
+    - https://www.ztm.poznan.pl/otwarte-dane/dla-deweloperow/
+    - https://www.ztm.poznan.pl/otwarte-dane/gtfsfiles/
     - https://www.ztm.poznan.pl/otwarte-dane/gtfs-rt/
-    - https://www.ztm.poznan.pl/otwarte-dane/dokumentacja/
 - id: PL-ENV-031
   name: Kraków KMK GTFS and GTFS-Realtime feeds
   short_name: Kraków GTFS
@@ -6888,124 +7283,240 @@ sources:
   name: Wrocław Open Data public-transport schedules and vehicle positions
   short_name: Wrocław transport open data
   provider: Gmina Wrocław / Centrum Usług Informatycznych
-  status: registered
+  status: approved
   family: H
   kpi: false
   geography: Wrocław, Poland
   provider_type: subnational-public
   domains: [public transport, municipal open data]
   entities: [route, trip, stop, vehicle]
-  granularity: Current vehicle position records joined to static GTFS identifiers; CSV/JSON for positions and GTFS
-    schedule package.
-  coverage: Current city service; vehicle-position archive not documented.
+  granularity: Static GTFS snapshots of Wrocław public transport (ZIP); vehicle positions are a separate live dataset.
+  coverage: 'Timetable dataset published 19 Dec 2017; the listing keeps earlier snapshots (newest named 17 Oct 2026). Vehicle
+    positions: current state only.'
   access:
-    endpoint: https://open-data.cui.wroclaw.pl/hdb/metadane/51/
+    endpoint: https://open-data.cui.wroclaw.pl/hdb/metadane/13/
     kind: bulk_file
-    interfaces: [CSV, JSON, GTFS, portal]
+    interfaces: [GTFS, ZIP, CSV, JSON, portal]
     auth: Public downloads.
     cost: Free public access.
-    limits: Unknown; no numeric quota was confirmed.
+    limits: None published. The portal moved to https://open-data.cui.wroclaw.pl/ (own software, no CKAN API; opendata.cui.wroclaw.pl
+      redirects there). The old catalogue under https://www.wroclaw.pl/open-data/ is disallowed by robots.txt and is not used.
   licence:
-    status: dataset-specific
-    notes: Check resource-specific portal terms before commercial reuse.
-  updates: Vehicle-position metadata says refresh every 10 minutes; schedule cadence unconfirmed.
+    status: open
+    notes: 'Terms: the metadata page of the dataset "Rozkład jazdy transportu publicznego" (Urząd Miejski Wrocławia, Wydział
+      Transportu), https://open-data.cui.wroclaw.pl/hdb/metadane/13/, names the licence "CC0 1.0" (desk fetch 12 Nov 2026).
+      The portal licence list https://open-data.cui.wroclaw.pl/hdb/licencje/ includes CC0 1.0 next to CC BY 4.0 and non-commercial
+      variants, so the licence is per dataset. CC0 allows commercial reuse and modification without attribution. Attribution
+      used anyway: "Źródło: Otwarte Dane Wrocław, Rozkład jazdy transportu publicznego". The vehicle-position dataset (https://open-data.cui.wroclaw.pl/hdb/metadane/51/)
+      has its own licence field, not read.'
+  updates: 'Metadata says "Co godzinę" and last update 12 Nov 2026, while the newest snapshot in the file list is dated 23
+    Oct 2026: the real rhythm is per timetable change. Vehicle positions every 10 minutes.'
   ingestion:
-    history: 'PROPOSAL: archive versioned GTFS ZIPs where allowed.'
-    incremental: 'PROPOSAL: poll position files within terms; snapshots are not vehicle-event history.'
-    identifiers: Line, brigade/vehicle and GTFS route/trip/stop IDs.
+    history: Bulk files listed on https://open-data.cui.wroclaw.pl/hdb/ft/6/ (newest first; e.g. "OtwartyWroclaw_rozklad_jazdy_GTFS_17102026",
+      11.3 MB, https://open-data.cui.wroclaw.pl/hdb/download/146/). The download id is per snapshot, so the listing page is
+      the entry. Listing and file URL come from the desk fetch; a GitHub runner reached the portal (200 on /hdb/metadane/51/
+      and the home page) but did not fetch the file.
+    incremental: Snapshot of the newest listed file; version = snapshot name (date in the name); weekly check.
+    identifiers: snapshot name, route_id, stop_id, trip_id, service date.
   modelling:
-    notes: Retain source timestamp and Europe/Warsaw timezone; quantify join failures.
+    notes: kpi false; low Gold value (one city). Same city-GTFS selection and Gold use as PL-ENV-029 (stops, routes, scheduled
+      trips per day). Effort S after the shared pattern exists.
     overlap: National catalogue may mirror the city’s GTFS resource.
   research:
     priority: review-first
     evidence: documented
     connection: not-tested
     blockers:
-    - Confirm GTFS source URL, license, retention, limits and wider service boundary.
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): open-data.cui.wroclaw.pl answered
+      200 to a GitHub runner, but the GTFS listing and file were found by the desk fetch afterwards and are not yet fetched
+      from a runner: the Landing trial does it.'
+    - Read the licence field of the vehicle-position dataset only if it is ever wanted.
     references:
+    - https://open-data.cui.wroclaw.pl/hdb/metadane/13/
+    - https://open-data.cui.wroclaw.pl/hdb/ft/6/
+    - https://open-data.cui.wroclaw.pl/hdb/licencje/
     - https://open-data.cui.wroclaw.pl/hdb/metadane/51/
-    - https://dane.gov.pl/en/dataset/80/resource/1823,rozklad-jazdy-transportu-publicznego-gtfs
 - id: PL-ENV-033
   name: Rejestr Wniosków, Decyzji i Zgłoszeń (RWDZ) public search and API
   short_name: GUNB RWDZ building register
   provider: Główny Urząd Nadzoru Budowlanego (GUNB)
-  status: registered
+  status: approved
   family: H
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [construction permits, buildings, planning]
   entities: [permit application, decision, construction notification]
-  granularity: Individual public applications, decisions and notifications; a record is not an as-built building.
-  coverage: Current public register; central authoritative start date and amendment history were not confirmed.
+  granularity: One record per building-permit application or decision (point feature), in one WFS feature type per year; a
+    record is not an as-built building.
+  coverage: WFS feature types pozwolenia_2020 to pozwolenia_2026 plus pozwolenia_pozostale (earlier or undated records); 527,617
+    records for 2024, 519,719 for 2025, 331,852 for 2026 on 12 Nov 2026.
   access:
-    endpoint: https://wyszukiwarka.gunb.gov.pl/
+    endpoint: https://mapy.geoportal.gov.pl/wss/ext/GlownyUrzadNadzoruBudowlanego/RWDZ-WFS
     kind: api
-    interfaces: [HTML, REST-API, OpenAPI, JSON]
-    auth: Public search; API documentation is public.
-    cost: Free public search; API cost terms not separately stated.
-    limits: Unknown; inspect OpenAPI/operating terms.
+    interfaces: [WFS, GML, WMS, bulk-files (unverified), HTML]
+    auth: Public, no key.
+    cost: Free.
+    limits: 'None published: the WFS capabilities state no fees and no access constraints. The producer site wyszukiwarka.gunb.gov.pl
+      served a maintenance page ("Przerwa serwisowa - GUNB") in three probes between 18:46 and 20:01 UTC on 12 Nov 2026.'
   licence:
     status: unresolved
-    notes: Public register access does not establish bulk commercial redistribution rights.
-  updates: Registry updates follow authority filings; correction/version behavior unknown.
+    notes: 'Terms: none stated. The WFS capabilities (read by the probe 12 Nov 2026) have empty Fees and AccessConstraints
+      and the abstract: "Usługa WFS publikująca Rejestr Wniosków Decyzji i Zgłoszeń. Usługa publikowana jest w infrastrukturze
+      Głównego Urzędu Geodezji i Kartografii na podstawie danych Głównego Urzędu Nadzoru Budowlanego https://wyszukiwarka.gunb.gov.pl/pobranie.html".
+      The GUGiK announcement https://www.gov.pl/web/gugik/nowa-usluga-wfs-zwiazana-z-rejestrem-wnioskow-decyzji-i-zgloszen
+      (22 Apr 2022) states no licence; the GUNB site was in maintenance, so its terms are unread. Internal build only. Attribution
+      if used: "Źródło: Główny Urząd Nadzoru Budowlanego, Rejestr Wniosków, Decyzji i Zgłoszeń (usługa GUGiK)". Personal data:
+      the attribute list of the features was not read; fields naming natural persons are left out at Bronze.'
+  updates: Registry updates follow authority filings; the refresh rhythm of the WFS and of the bulk files is not stated.
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: RWDZ/application/decision reference, authority, parcel/address text and dates.
+    history: 'Official alternative route, tested: the GUGiK WFS on GUNB data, https://mapy.geoportal.gov.pl/wss/ext/GlownyUrzadNadzoruBudowlanego/RWDZ-WFS
+      (GetCapabilities 200; feature types ms:pozwolenia_2020 ... ms:pozwolenia_2026 and ms:pozwolenia_pozostale; resultType=hits
+      works per type; GML output). Load per year type with paging (count and startIndex), one request at a time. The twin
+      WMS (.../RWDZ-WMS) is for maps only. Preferred route once it answers: the producer''s bulk files on https://wyszukiwarka.gunb.gov.pl/pobranie.html
+      (named in the WFS abstract; ZIP/CSV per voivodeship expected, unverified), which the builder retries first; the site
+      was in maintenance during all three probes. The RWDZ API documentation host https://dev.wyszukiwarka.gunb.gov.pl/docs
+      answers (title "RWDZ API"), its specification was not found.'
+    incremental: 'Snapshot per year type: closed years once, the current and the previous year weekly; version = download
+      date (the WFS gives none) or Last-Modified of the bulk files.'
+    identifiers: Register number of the application or decision; authority; location (TERYT to confirm in the attribute list);
+      year type.
   modelling:
-    notes: Separate application, decision and notification events; addresses/parcels may be ambiguous.
+    notes: 'Smallest Gold selection: building permits by month of decision and by voivodeship and powiat, from 2020. New KPIs:
+      building-permit decisions and applications per month (count), Poland, voivodeships and powiats. Geometry and address
+      detail are not kept beyond the territorial code. kpi flag stays false until the register-fields table is updated. Effort
+      M (WFS paging of about 0.5 million records per year, GML).'
     overlap: Complements EGiB/BDOT buildings and planning data; it does not prove construction completion.
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Review API schema, pagination, history, privacy fields, quotas and reuse terms.
+    - 'Dev probe run 43295137219 (job 131451310505, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py, 12 Nov 2026,
+      20:01 UTC): the GUGiK WFS answered 200 (capabilities, hits per year type); the attribute list was not read (DescribeFeatureType
+      returned only the type name), so check it for personal data at the Landing trial.'
+    - 'Dev probe run 43294572845 (job 131449333769, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py, 12 Nov 2026,
+      19:53 UTC) and Dev probe run 43295137219 (job 131451310505, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py,
+      12 Nov 2026, 20:01 UTC): wyszukiwarka.gunb.gov.pl still served the maintenance page (also in run 43282997907 at 18:46
+      UTC), so the bulk files and the terms on the producer site are unread; the builder retries pobranie.html before choosing
+      between bulk files and the WFS.'
+    - 'Licence unresolved: no terms stated on the WFS or the announcement. Internal build only.'
     references:
-    - https://wyszukiwarka.gunb.gov.pl/
+    - https://mapy.geoportal.gov.pl/wss/ext/GlownyUrzadNadzoruBudowlanego/RWDZ-WFS
+    - https://www.gov.pl/web/gugik/nowa-usluga-wfs-zwiazana-z-rejestrem-wnioskow-decyzji-i-zgloszen
+    - https://wyszukiwarka.gunb.gov.pl/pobranie.html
     - https://dev.wyszukiwarka.gunb.gov.pl/docs
 - id: PL-ENV-034
   name: internet.gov.pl broadband coverage database and UKE market aggregates
   short_name: internet.gov.pl broadband
   provider: Ministerstwo Cyfryzacji / Instytut Łączności–PIB; UKE for market reports
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [broadband, telecommunications, digital infrastructure]
   entities: [address point, operator, technology, planned investment, market aggregate]
-  granularity: Public address-level availability/plans/demand in internet.gov.pl; UKE publishes aggregated market
-    reports.
-  coverage: Current database plus annual UKE reports; public bulk history and version retention unconfirmed.
+  granularity: 'Quarterly report "Polska w zasięgu stacjonarnego dostępu do internetu" (data of internet.gov.pl, SIDUSIS):
+    counts of address points and of coverages (zasięgi) by bandwidth class, medium and service type, for Poland (national
+    PDF, with address-point counts per voivodeship) and for each voivodeship, powiat and gmina (16 voivodeship PDFs). Address-level
+    coverage is shown only per address on the internet.gov.pl map. UKE: one national market report a year (PDF).'
+  coverage: Quarterly snapshots from 30 June 2024 (first edition published 15 July 2024) to 30 September 2026 (published 15
+    October 2026). UKE market report for 2025 published 30 June 2026.
   access:
-    endpoint: https://internet.gov.pl/
+    endpoint: https://www.gov.pl/web/cyfryzacja/ponad-8-mln-punktow-adresowych-w-zasiegu-internetu-stacjonarnego
     kind: bulk_file
-    interfaces: [HTML, map, catalogue-files, PDF]
-    auth: Public, free search/map; provider reporting has separate authentication.
-    cost: Free public access.
-    limits: Unknown; no numeric quota was confirmed.
+    interfaces: [PDF attachments on gov.pl release pages, internet.gov.pl map and per-address search, UKE annual PDF]
+    auth: 'Public, no login for the report files. internet.gov.pl: public per-address search only; data export and full API
+      documentation are for logged-in entities ("Dokumentacja dla użytkowników niezalogowanych została ograniczona do poziomu
+      zapytań publicznych", https://internet.gov.pl/media/public/docs/instrukcja.pdf, read 12 Nov 2026); no account is asked
+      for.'
+    cost: Free.
+    limits: 'None published. robots.txt: www.gov.pl "User-Agent: *" "Allow: /"; internet.gov.pl has none (HTTP 404); www.uke.gov.pl
+      allows PDF files ("Allow: /*.pdf$") (Dev probe run 43288071987 (job 131426672054, branch test/src-env-probe, 12 Nov
+      2026)). There is no bulk download of the address-level database: internet.gov.pl FAQ "Nie ma takiej możliwości. Można
+      sprawdzać informacje o zasięgach dla poszczególnych punktów adresowych." (https://internet.gov.pl/media/public/docs/faq.pdf,
+      read 12 Nov 2026); a load through per-address queries (millions of address points) is not polite and is not proposed.'
   licence:
     status: unresolved
-    notes: Public search does not prove bulk or commercial redistribution permission.
-  updates: Coverage submissions update on publisher schedules; annual UKE reports summarize the market.
+    notes: 'Terms: the report PDFs are served from www.gov.pl and carry no licence of their own. gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie
+      (Dev probe run 43288071987 (job 131426672054, branch test/src-env-probe, 12 Nov 2026)): "Korzystanie przez użytkowników
+      z materiałów urzędowych opublikowanych w serwisie Gov.pl nie wymaga zgody Ministra Cyfryzacji. W serwisie zamieszczane
+      są także utwory, co do których prawa autorskie przysługują osobom trzecim. Ich wykorzystanie przez internautów wymaga
+      zgody właścicieli tych materiałów." and (also on the terms page https://www.gov.pl/web/gov/warunki-korzystania and in
+      the footer of the release pages) "Treści tekstowe publikowane w serwisie (z wyłączeniem treści audiowizualnych), są
+      udostępniane na licencji typu Creative Commons: uznanie autorstwa - na tych samych warunkach 4.0 (CC BY-SA 4.0)." Neither
+      page names attached files, commercial reuse or modification of them: commercial reuse not stated, modification not stated,
+      no attribution sentence given, so the status is unresolved and the source stays internal (the same reading as the other
+      gov.pl attachment sources reviewed on 12 Nov 2026; whether a ministry report is a "materiał urzędowy" is the owner''s
+      legal reading). internet.gov.pl: no terms of use found (FAQ and user manual state none). uke.gov.pl: no terms page;
+      the report page shows only "© 2026 Urząd Komunikacji Elektronicznej". Attribution if used: "Źródło: Ministerstwo Cyfryzacji,
+      Polska w zasięgu stacjonarnego dostępu do internetu, stan na <data>, dane internet.gov.pl".'
+  updates: 'Quarterly ("Raport będzie publikowany cyklicznie w odstępach kwartalnych", first release page, 15 July 2024);
+    reference dates 31 March, 30 June, 30 September and 31 December; published about two weeks after the quarter (15 July
+    2024, 15 October 2024, 17 April 2025, 17 July 2025, 15 July 2026, 15 October 2026). Each edition is a new release page
+    with new attachment addresses. UKE market report: yearly, end of June.'
   ingestion:
-    history: 'PROPOSAL: capture available dated releases with source metadata.'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: Address point, operator, technology/speed, report vintage and geography.
+    history: 'Route: each edition is one release page on gov.pl/web/cyfryzacja with 17 PDF attachments (https://www.gov.pl/attachment/<uuid>):
+      one national file and 16 voivodeship files. Tested from a GitHub runner, Dev probe run 43288071987 (job 131426672054,
+      branch test/src-env-probe, 12 Nov 2026): the Q3 2026 page (published 15.10.2026) 200 with 17 attachments, 256,481,891
+      bytes in total, national file Polska_Q3_2026.pdf 1,439,176 bytes (Last-Modified 15 Oct 2026), largest file 31,432,467
+      bytes; the Q2 2026 page (15.07.2026) 200 with 17 attachments, 257,630,344 bytes, national file 1,439,123 bytes. Earlier
+      editions are smaller (provider''s page figures: Q1 2025 about 58 MB, Q2 2024 about 94 MB). The national PDF (about 15
+      pages; the fetch tool read its tables as text) holds the Poland tables and the address-point counts per voivodeship;
+      bandwidth by voivodeship, powiat and gmina is only in the voivodeship PDFs (one of them runs to more than 400 pages).
+      First build: the national PDF of every edition (about 1.4 MB each, ten editions about 15 MB); the voivodeship files
+      (about 255 MB per edition, 1 to 2.5 GB for all editions, an estimate) only after the storage cost is accepted. Release
+      pages are not listed on one stable page: the ministry''s news list https://www.gov.pl/web/cyfryzacja/wiadomosci answered
+      200 but its first page did not link the reports, so the release pages are a seed list in the source declaration, one
+      row per quarter (six release pages were read: Q2 2024, Q3 2024, Q1 2025, Q2 2025, Q2 2026 and Q3 2026; those of Q4 2024,
+      Q3 2025, Q4 2025 and Q1 2026 still have to be found). PDF text-layer extraction of the tables is not tested. internet.gov.pl
+      itself gives no machine route: its statistics page https://internet.gov.pl/stats/ is a JavaScript application (268 characters
+      of text from the runner, no data address in its scripts; Dev probe run 43295514703 (job 131452664788, same branch, second
+      pass)). UKE: the annual report is one PDF (30,398,464 bytes, 200 from the runner) with no data file; not part of the
+      first build.'
+    incremental: 'Entity = edition (reference quarter) x report file; version = the reference date printed in the report (the
+      attachment''s Last-Modified as a check). Each quarter adds a new set; an already loaded edition is fetched again only
+      when its bytes change (snapshot, changed_since_last). Whether earlier editions are ever revised is not known. Refresh
+      full (small source). Schedule: monthly check around the 20th, new seed row in January, April, July and October.'
+    identifiers: 'Reference quarter; TERC code in the section headers of the voivodeship PDFs ("TERC: 16" voivodeship, "TERC:
+      1601" powiat, "TERC: 1601011" gmina); voivodeship name in the national tables; bandwidth class in Mb/s; medium; service
+      type. No address-point identifiers are published.'
   modelling:
-    notes: Preserve claim vintage and distinguish reported coverage, planned investment and demand.
-    overlap: UKE aggregates and internet.gov.pl address claims are different grains; do not sum.
+    notes: 'Grain: reference quarter x territorial unit x bandwidth class (Mb/s), counts of address points and of coverages.
+      Frequency: quarterly only (stock at the reference date; no annual series). Bandwidth classes are exclusive rows that
+      add up to the unit total ("SUMA"); the printed shares ("Udział %") are shares of the address points in coverage, not
+      of all address points; "at least 100 Mb/s" is the sum of the classes from 100 upwards. Zero is printed as "0 0,00%";
+      no suppression, missing or provisional marker was seen. The same unit and quarter appear once per edition; editions
+      do not repeat earlier quarters. Units: address points (count), coverages (count), per cent. Smallest Gold selection,
+      from the national PDF only: for Poland, address points within fixed-broadband coverage, within at least 100 Mb/s and
+      within at least 1 Gb/s (count and share of all address points); for the 16 voivodeships, address points within coverage
+      and their share, quarterly; new KPIs in a digital-infrastructure domain. Bandwidth by voivodeship follows when the voivodeship
+      PDFs are loaded. UKE aggregates (subscriptions, households) are a different grain: do not sum or mix.'
+    overlap: No KPI of kpi.csv covers broadband or internet access (checked 12 Nov 2026), so no published KPI changes. Eurostat's
+      digital-economy tables (isoc) carry household internet access for the EU comparison; they measure households, not address
+      points.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Confirm public bulk/API route, license, address identifiers, history, quality and update cadence.
+    - 'Licence unresolved: gov.pl states that official materials need no consent and licenses its text content as CC BY-SA
+      4.0, but says nothing on attached files, commercial reuse or modification; internal only until the owner''s reading.'
+    - Release pages have no stable index (seed list per quarter; four editions still to be found); PDF table extraction not
+      tested; the voivodeship PDFs are about 255 MB per edition.
+    - 'A full download of the address-level data is only announced (FAQ: "W przyszłości planujemy rozwiązanie legislacyjne,
+      umożliwiające kompleksowe pobieranie danych"); re-check when it exists.'
     references:
-    - https://internet.gov.pl/
-    - https://www.gov.pl/web/5g/sprawdz-dostepnosc-internetu-w-swojej-okolicy-przewodnik-po-internetgovpl
+    - https://www.gov.pl/web/cyfryzacja/ponad-8-mln-punktow-adresowych-w-zasiegu-internetu-stacjonarnego
+    - https://www.gov.pl/web/cyfryzacja/coraz-wiecej-punktow-adresowych-w-zasiegu-szybkiego-internetu-stacjonarnego
+    - https://www.gov.pl/web/cyfryzacja/polska-w-zasiegu--pierwszy-raport-z-danymi-z-internetgovpl
+    - https://www.gov.pl/attachment/b5fbb888-d29f-4c4d-9b0c-0b4b20e66f5d
+    - https://www.gov.pl/attachment/9448f5fa-2f9d-43bc-ae1a-03c5ac1487fb
+    - https://www.gov.pl/web/gov/prawa-autorskie
+    - https://www.gov.pl/web/gov/warunki-korzystania
+    - https://internet.gov.pl/media/public/docs/faq.pdf
+    - https://internet.gov.pl/media/public/docs/instrukcja.pdf
     - https://www.uke.gov.pl/akt/raport-o-stanie-rynku-komunikacji-elektronicznej-w-2025-roku,670.html
 - id: PL-ENV-035
   name: Rejestr Urbanistyczny
@@ -8180,7 +8691,8 @@ sources:
   name: Wikidata data access
   short_name: Wikidata
   provider: Wikidata community / Wikimedia Foundation
-  status: approved
+  source_system: wikidata
+  status: built
   family: J
   kpi: false
   geography: worldwide
@@ -8189,40 +8701,49 @@ sources:
   entities: [entity, statement, property, identifier]
   granularity: Entity statements with qualifiers, ranks, references and multilingual labels.
   coverage: Full current dumps, revision-addressable entities and project revision history; dumps are not real time.
+    Built scope (#2843) is Polish voivodeships, powiats and gminas by TERC code (P1653), about 3,500 items.
   access:
-    endpoint: https://www.wikidata.org/wiki/Wikidata:Data_access
+    endpoint: https://query.wikidata.org/sparql
     kind: api
     interfaces: [SPARQL, API, GraphQL, RDF, JSON, bulk-files]
     auth: Public; use dumps for large result sets and query services for scoped queries.
     cost: free
-    limits: Public services have workload constraints; no numeric allowance relied on.
+    limits: 'Public services have workload constraints (query timeout 60 s); no numeric allowance relied on. Built
+      route: six SPARQL queries a week, one at a time with a 5 s pause, 1-2.5 MB and under 10 s each; user agent
+      naming the project and https://zohelo.com (Wikimedia User-Agent policy). Dev probes 43272046396, 43272562156,
+      43273792713 (12 Nov 2026).'
   licence:
     status: open-conditional
-    notes: 'Terms: https://www.wikidata.org/wiki/Wikidata:Licensing says: "All data in Wikidata has a CC0 license." and "Wikidata
-      requires a CC0 license, which is equivalent to public domain" (page read 11 Nov 2026 from a GitHub runner). No attribution
-      needed for structured data; text outside the main data namespaces is CC BY-SA and external references keep their own
-      rights; as a courtesy cite "Wikidata (CC0)".'
+    notes: 'Terms: https://www.wikidata.org/wiki/Wikidata:Copyright (page footer, read by Dev trial 43281448180 on 12
+      Nov 2026): "All structured data from the main, Property, Lexeme, and EntitySchema namespaces is available under
+      the Creative Commons CC0 License; text in the other namespaces is available under the Creative Commons
+      Attribution-ShareAlike License; additional terms may apply"; https://www.wikidata.org/wiki/Wikidata:Licensing: "All data in Wikidata has a
+      CC0 license." (read 11 Nov 2026). CC0 1.0: no attribution required, commercial reuse and modification allowed;
+      external references keep their own rights. The built scope reads only main-namespace statements, labels and
+      sitelinks (CC0). Courtesy attribution: "Source: Wikidata (CC0), https://www.wikidata.org/".'
   updates: Live edits; dumps publish periodically and lag current state.
   ingestion:
-    history: 'Bulk dumps at https://dumps.wikimedia.org/wikidatawiki/entities/ (listing answers 200); the full JSON dump is
-      very large (tens of GB compressed, estimate): scope to the entities and properties needed (Polish places, organisations,
-      identifiers) in stage 2.'
-    incremental: 'PROPOSAL: consume recent changes or scoped refreshes, then reconcile dumps.'
-    identifiers: Q/P IDs plus external identifiers such as LEI, ISIN and registry IDs.
+    history: 'Built scope: current state only (no revision history); population statements carry their own point in
+      time. Bulk dumps at https://dumps.wikimedia.org/wikidatawiki/entities/ (tens of GB compressed) for a wider scope.'
+    incremental: Weekly whole-selection snapshot; unchanged answers skipped by SHA-256.
+    identifiers: Q/P IDs plus external identifiers such as LEI, ISIN and registry IDs; built scope keyed by TERC (P1653).
   modelling:
-    notes: Statement graph with qualifiers; avoid flattening disputed or time-scoped claims.
-    overlap: Links Wikimedia, GLEIF, registries and OpenAlex; community assertions are not authoritative replacements.
+    notes: Statement graph with qualifiers; avoid flattening disputed or time-scoped claims. Silver keeps every
+      statement and chooses one per TERC × property by an explicit rank and point-in-time rule, counting the rest.
+    overlap: Links Wikimedia, GLEIF, registries and OpenAlex; community assertions are not authoritative replacements
+      (population and area stay attributes, GUS and PRG remain the statistical sources).
   research:
     priority: review-first
     evidence: tested
     connection: tested
     blockers:
-    - Scope classes/properties
-    - Set provenance quality rules
-    - Plan dump infrastructure
+    - Wider scope (Polish places, organisations, identifiers beyond TERC units) would need the entity dumps
+    - Set provenance quality rules (statement references are not landed)
     references:
     - https://www.wikidata.org/wiki/Wikidata:Data_access
     - https://www.wikidata.org/wiki/Wikidata:Copyright
+    - https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy
+    - https://www.wikidata.org/wiki/Wikidata:Licensing
 - id: CD-027
   name: OpenStreetMap Planet, history and replication diffs
   short_name: OpenStreetMap
@@ -8657,43 +9178,59 @@ sources:
   name: Fire-service intervention statistics and current casualty summaries
   short_name: PSP fire-service statistics
   provider: Headquarters of the State Fire Service (KG PSP)
-  status: registered
+  status: approved
   family: F
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [public-safety, emergency-services]
   entities: [region, incident-aggregate]
-  granularity: Published intervention tables and voivodeship casualty aggregates; not an assumed incident microdata
-    feed.
-  coverage: Annual archive includes 2025 and earlier years; precise uniform schema/history needs inspection.
+  granularity: 'Per year: one ZIP of data from incident reports and one ZIP of standard summary tables; the casualty page
+    is a current national and voivodeship summary.'
+  coverage: Annual archives 2016-2025 (both series).
   access:
     endpoint: https://www.gov.pl/web/kgpsp/interwencje-psp
     kind: bulk_file
-    interfaces: [ZIP-files, HTML, CSV]
-    auth: Public publication/download pages.
-    cost: Free public downloads.
-    limits: No numeric download quota documented on reviewed pages.
+    interfaces: [ZIP, HTML]
+    auth: public download
+    cost: free
+    limits: None published. Attachments are https://www.gov.pl/attachment/<uuid>.
   licence:
-    status: dataset-specific
-    notes: Attribution requested with KG PSP source and access date; archive points to dane.gov.pl licence records.
-  updates: Annual archives; current casualty page states daily updates.
+    status: open-conditional
+    notes: 'Terms: stated on the data page https://www.gov.pl/web/kgpsp/interwencje-psp (section LICENCJA, read by the probe
+      12 Nov 2026): "Dane statystyczne KG PSP, zostały zamieszczone na portalu dane.gov.pl Rodzaj licencji: CC BY 4.0 Link
+      do licencji: https://creativecommons.org/licenses/by/4.0/legalcode.pl"; "Adaptacje - remiksuj, zmieniaj i twórz na bazie
+      utworu dla dowolnego celu, także komercyjnego."; "Uznanie autorstwa - Utwór należy odpowiednio oznaczyć, podać link
+      do licencji i wskazać jeśli zostały dokonane w nim zmiany." Commercial reuse and modification allowed with attribution,
+      a link to the licence and a note of changes. Attribution: "Źródło: Komenda Główna Państwowej Straży Pożarnej, <nazwa
+      zestawienia> <rok>, CC BY 4.0, pobrano <data>".'
+  updates: 'Annual: the 2025 archives were online on 12 Nov 2026; the casualty summary page states daily updates.'
   ingestion:
-    history: 'Proposal: inventory annual ZIP resources and validate each table schema.'
-    incremental: 'Proposal: monitor resource revisions and snapshot current aggregates; distinguish cumulative from
-      daily counts.'
-    identifiers: Period, geographic code/name, incident category and measure.
+    history: 'Bulk files linked from the stable page https://www.gov.pl/web/kgpsp/interwencje-psp: 20 attachments, per year
+      2016-2025 one "zestawienie danych z informacji ze zdarzeń" ZIP (about 37-45 MB as labelled on the page) and one "tabele
+      stałych zestawień" ZIP (about 8-11 MB). Attachment UUIDs change per release, so the page is the entry. The content of
+      the ZIPs (file types, layout) was not captured by the probe.'
+    incremental: Snapshot per year file; version = Last-Modified; a closed year does not change, the newest year is re-checked
+      monthly.
+    identifiers: Year, table name, voivodeship (names), incident type.
   modelling:
-    notes: Separate event-period aggregates from cumulative reporting snapshots; align population denominators explicitly.
+    notes: 'Smallest Gold selection: the standard tables. New KPIs: fires, local emergencies and false alarms (count), fire
+      deaths and injured, annual, Poland and voivodeships, 2016-2025. The incident-report archives are a later step (size,
+      possible address detail to check). Effort M (ZIP content to be read at the Landing trial).'
     overlap: Local fire reports and national totals may describe the same interventions.
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
-    blockers: [Dataset-level licence, Current-summary time basis]
+    connection: tested
+    blockers:
+    - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): page and attachments answered
+      200 to a GitHub runner; licence section read; ZIP content not inspected.'
+    - Check the incident-report archives for address-level or personal detail before loading them; start with the standard
+      tables.
     references:
     - https://www.gov.pl/web/kgpsp/interwencje-psp
     - https://www.gov.pl/web/kgpsp/ofiary-polska
+    - https://creativecommons.org/licenses/by/4.0/legalcode.pl
 - id: EX-004
   name: Open Patent Services (OPS)
   short_name: EPO Open Patent Services

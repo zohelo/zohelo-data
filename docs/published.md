@@ -566,8 +566,8 @@ voivodeships), `dimensions`, `aggregation`, `polarity`, `status` and `note`:
 - `needs-block`: in Silver (codes checked or block named) but not activated: a member filter, a half-yearly fact, a
   derivation or a row-size decision is missing; `note` says which.
 - `needs-source`: not ingested; `note` names the register id. The NBP balance of payments and investment
-  position (`nbp_bop`, PLG-002, PLG-003) are built to Silver (#2754) and `needs-block` until their Gold build stage
-  exists; the workbooks publish amounts only, so the shares of GDP need a derivation. NBP official rates
+  position (`nbp_bop`, PLG-002, PLG-003) are in Gold (`build_nbp_bop`); the workbooks publish amounts only, so the shares of GDP
+  (`current_account_gdp`, `niip_gdp`) need a derivation and stay `needs-block`. NBP official rates
   (`nbp_interest_rates`, PLG-006) reached Silver on 10 Nov (#2590) and are `needs-block` until their Gold build
   stage exists. The OECD CLI (`oecd`, GL-003) is `ready` since `gold.build_oecd` (#2738), for the EU members the
   OECD covers (DE, ES, FR, IT): it has no Polish or EU-27 series.
@@ -579,20 +579,30 @@ v2 keys by their best source status:
 | Polska w skrócie | 28 | 3 | 0 | 31 |
 | all 78 keys | 65 | 12 | 1 | 78 |
 
-Rows by source (144 rows; 32 keys have two or more ready sources):
+Rows by source (161 rows; 36 keys have two or more ready sources):
 
 | source | ready | needs-block | needs-source | rows |
 |---|---|---|---|---|
 | eurostat | 51 | 7 | 0 | 58 |
-| gus_dbw | 17 | 8 | 0 | 25 |
 | gus_bdl | 17 | 8 | 0 | 25 |
+| gus_dbw | 17 | 8 | 0 | 25 |
 | world_bank_wdi | 23 | 1 | 0 | 24 |
-| nbp_bop | 0 | 4 | 0 | 4 |
+| nbp_bop | 2 | 2 | 0 | 4 |
+| un_wpp | 0 | 4 | 0 | 4 |
+| ecb | 2 | 1 | 0 | 3 |
 | nbp | 1 | 0 | 2 | 3 |
+| mrpips_unemployment | 2 | 0 | 0 | 2 |
 | unctad | 2 | 0 | 0 | 2 |
-| oecd | 1 | 0 | 0 | 1 |
+| unesco_uis | 0 | 2 | 0 | 2 |
+| eea | 1 | 0 | 0 | 1 |
+| faostat | 1 | 0 | 0 | 1 |
 | mf_public_debt | 1 | 0 | 0 | 1 |
 | nbp_interest_rates | 0 | 1 | 0 | 1 |
+| oecd | 1 | 0 | 0 | 1 |
+| unhcr | 1 | 0 | 0 | 1 |
+| who | 1 | 0 | 0 | 1 |
+| world_bank_icp | 1 | 0 | 0 | 1 |
+| zus_psz | 1 | 0 | 0 | 1 |
 
 Gold has a quarterly fact (`fact_quarterly`), and the BDL and DBW builds place monthly and quarterly periods, so
 LFS rates, the current account, NAMQ, job vacancies and the GUS short-term series keep their frequency. Polska w
