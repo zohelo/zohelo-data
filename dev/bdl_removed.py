@@ -52,7 +52,7 @@ def main() -> int:
         group by all order by kpi, geography_key, period_label
     """
     command = ["dbt", "show", "--target", "prod", "--project-dir", "warehouse", "--profiles-dir", "warehouse"]
-    command += ["--inline", inline, "--limit", "-1", "--log-format", "json"]
+    command += ["--inline", inline, "--limit", "-1", "--output", "json", "--log-format", "json"]
     done = subprocess.run(command, capture_output=True, text=True)
     rows = None
     for line in done.stdout.splitlines():
@@ -61,7 +61,9 @@ def main() -> int:
         except ValueError:
             continue
         if event.get("info", {}).get("name") == "ShowNode":
-            rows = json.loads(event["data"]["preview"])
+            preview = event["data"]["preview"]
+            rows = json.loads(preview) if isinstance(preview, str) else preview
+            rows = rows.get("show", rows) if isinstance(rows, dict) else rows
     COPY.unlink()
     if rows is None:
         annotate("error", "dev bdl_removed failed", done.stdout[-3000:] + done.stderr[-800:])
