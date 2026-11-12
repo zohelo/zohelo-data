@@ -167,6 +167,7 @@ TABLES["geography"] = {
     ],
 }
 
+
 def dbw_block(entity: str) -> str:
     """The block of a GUS DBW file: its id without the language and the year, wherever the year stands
     (the same two replacements as warehouse/entity/gold_gus_dbw_build.sql `block_id`)."""
