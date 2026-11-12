@@ -1,4 +1,3 @@
-{# ILOSTAT (gold.build_ilostat, #2861): D34 registration (docs/source-registration.md). #}
 {# ILOSTAT indicator files built (gold.build_ilostat, #2861): block = landed entity, one frequency each (the
    annual and the quarterly unemployment file are separate blocks and measures). #}
 {% macro poc_ilostat_blocks() %}
@@ -22,6 +21,7 @@
     ) as t (classif1, age_label)
 {% endmacro %}
 
+{# D34 registration (docs/source-registration.md): the Gold block and the geography of ilostat (#2861). #}
 {% macro poc_source__ilostat() %}
     {{ return({
         'block_model': 'poc_build_ilostat',
@@ -29,9 +29,9 @@
     }) }}
 {% endmacro %}
 
-{# Countries by ISO 3166 alpha-3 (dim_geography.iso3), from Gold's own list so the shared dimensions never wait
-   for ILOSTAT Silver. ILO aggregates (X01 …) are not listed; the build stage builds the EU27 members. #}
 {% macro poc_geography__ilostat() %}
+-- ILOSTAT: countries by ISO 3166 alpha-3 (dim_geography.iso3), from Gold's own list so the shared dimensions never
+-- wait for ILOSTAT Silver. ILO aggregates (X01 …) are not listed; the build stage builds the EU27 members.
 ilostat as (
     select
         'ilostat' as source_system,

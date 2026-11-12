@@ -1,15 +1,16 @@
 {{ config(alias='build_bis', tags=['gold_block']) }}
-{# Gold build stage: the BIS series of poc_bis_measures (macros/sources/bis.sql) from silver.bis_observations in the
+{# Gold build stage: the BIS series of poc_bis_measures (macros/poc_blocks.sql) from silver.bis_observations in the
    common shape. One measure per built series code, one frequency per measure (policy rates and effective
    exchange rates monthly, the property price and credit selections quarterly): measure_key
    bis:<entity>:<BIS unit code>[:<codes>], e.g. bis:cbpol:368, bis:eer:882:R.B (real, broad basket; the narrow basket is not built), bis:spp:771:N
    (nominal residential property prices, year-on-year change), bis:tc:770:P.A.M (credit to the private
    non-financial sector, all lenders, market value, percentage of GDP, adjusted for breaks), bis:credit_gap:770:P.A.C,
-   bis:dsr:367:P. Values and units as published (D33); a cell without a value (NaN, OBS_STATUS M) is not loaded;
-   OBS_STATUS A (normal) is ok, B break, P provisional, E estimated, any other code flagged.
+   bis:dsr:367:P. Values and units as published (D33); a cell without a value (NaN, OBS_STATUS M) is not loaded.
    Areas through poc_map_geography (section bis, static): ISO 3166 alpha-2 countries and XM euro area →
    EUROSTAT:EA; the BIS aggregates 4T, 5R, 5A, G2 and XW have no Gold area and are not built (poc_bis_areas); any
-   other unknown code maps to _X and is counted by build_check. No breakdowns: every series is its own measure. #}
+   other unknown code maps to _X and is counted by build_check. No breakdowns: every series is its own measure.
+   OBS_STATUS A (normal) → ok, B → break, P → provisional, E → estimated, any other flag → flagged.
+   tests/bis_gold_series_present.sql fails when a series code of poc_bis_measures matches no Silver row. #}
 with measures as ({{ poc_bis_measures() }}),
 
 blocks as ({{ poc_bis_blocks() }}),
@@ -23,7 +24,30 @@ not_built_areas as (
 obs as (
     select
         o.*,
-        {{ poc_bis_series_code() | trim }} as series_code
+        case o.entity
+            when 'cbpol' then ''
+            when 'eer'
+                then
+                    json_extract_string(o.dimensions_json, '$.EER_TYPE')
+                    || '.' || json_extract_string(o.dimensions_json, '$.EER_BASKET')
+            when 'spp'
+                then
+                    json_extract_string(o.dimensions_json, '$.VALUE')
+                    || '.' || json_extract_string(o.dimensions_json, '$.UNIT_MEASURE')
+            when 'tc'
+                then
+                    json_extract_string(o.dimensions_json, '$.TC_BORROWERS')
+                    || '.' || json_extract_string(o.dimensions_json, '$.TC_LENDERS')
+                    || '.' || json_extract_string(o.dimensions_json, '$.VALUATION')
+                    || '.' || json_extract_string(o.dimensions_json, '$.UNIT_TYPE')
+                    || '.' || json_extract_string(o.dimensions_json, '$.TC_ADJUST')
+            when 'credit_gap'
+                then
+                    json_extract_string(o.dimensions_json, '$.TC_BORROWERS')
+                    || '.' || json_extract_string(o.dimensions_json, '$.TC_LENDERS')
+                    || '.' || json_extract_string(o.dimensions_json, '$.CG_DTYPE')
+            when 'dsr' then json_extract_string(o.dimensions_json, '$.DSR_BORROWERS')
+        end as series_code
     from {{ ref('bis_observations') }} as o
     where
         o.obs_value is not null

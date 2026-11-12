@@ -163,19 +163,23 @@ sources:
   name: Programme for International Student Assessment (PISA) databases
   short_name: OECD PISA
   provider: OECD
-  status: approved
+  source_system: world_bank_edstats
+  status: built
   family: A
   kpi: true
   geography: worldwide
   provider_type: international-public
   domains: [education, skills, survey]
   entities: [student, school, country]
-  granularity: Anonymized student, school-principal and parent response files; derived country indicators also available.
-  coverage: Cycles 2000-2022 are linked; participating economies vary by cycle. 2025 materials are emerging.
+  granularity: 'Built: country mean score per subject (reading, mathematics, science) and sex per assessment year, as
+    published by the OECD and republished by the World Bank EdStats. The OECD databases themselves are anonymised
+    student, school-principal and parent response files (not used).'
+  coverage: 'Built: cycles 2000-2018, up to 85 economies (World Bank EdStats, lastupdated 2024-06-25). The OECD has published
+    2022; 2025 results are due in December 2026 (owner question below).'
   access:
-    endpoint: https://www.oecd.org/en/about/programmes/pisa/pisa-data.html
-    kind: bulk_file
-    interfaces: [bulk-files, HTML, PISA Data Explorer, PDF]
+    endpoint: https://api.worldbank.org/v2/country/all/indicator/LO.PISA.MAT?source=12&format=json
+    kind: api
+    interfaces: [World Bank API v2 (EdStats, source 12), bulk-files, HTML, PISA Data Explorer, PDF]
     auth: public downloads; some tools may have separate access
     cost: free
     limits: Unknown; no explicit numeric quota found in reviewed documentation.
@@ -186,7 +190,11 @@ sources:
       adapt, distribute and embed for any purpose, commercial use and modification included, subject to dataset
       and third-party restrictions); other PISA content (reports, instruments) is CC BY-NC-SA 3.0 IGO and needs
       the OECD disclaimer when adapted or translated. Attribution: "OECD (<year>), PISA <cycle> Database, <DOI
-      or URL> (accessed on <date>)" or the citation given with the file.'
+      or URL> (accessed on <date>)" or the citation given with the file. Route terms (the data loaded): World Bank Data
+      Catalog, Education Statistics, https://datacatalog.worldbank.org/search/dataset/0038480/education-statistics
+      (read 12 Nov 2026): "This dataset is licensed under Creative Commons Attribution 4.0", classified Public; no
+      separate terms for the PISA indicators. Attribution used (licence.csv cc_by_4_0_world_bank_edstats): "Source:
+      OECD PISA, as published in The World Bank, Education Statistics".'
   updates: Released by assessment cycle; corrections or later files are not documented as a stable revision feed.
   ingestion:
     history: Archive each cycle, codebooks, questionnaires and technical report.
@@ -200,10 +208,18 @@ sources:
   research:
     priority: specialist
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Confirm per-cycle file licences (third-party restrictions in file metadata)'
-    - 'Implement complex-survey methodology before publishing estimates'
+    - 'Needs owner (PISA 2022 gap): the route is the World Bank Education Statistics republication of the OECD country
+      means (API source 12, LO.PISA.REA/MAT/SCI and .FE/.MA, CC BY 4.0, Data Catalog 0038480; source lastupdated
+      2024-06-25), which holds the assessment years 2000-2018 only (Dev probe 43290232665). PISA 2022 means are
+      published by the OECD only on www.oecd.org (report StatLink workbooks, PISA Data Explorer), which answers HTTP
+      403 to GitHub runners (Dev probe 43275098288, not worked around); the OECD Data Explorer SDMX API has no PISA
+      dataflow (Dev probe 43273970310). Question: may we load the PISA 2022 (and later 2025) country means once by a
+      manual download of the OECD results StatLink workbooks (a web export, needs your decision), or ask the OECD in
+      writing for a machine route?'
+    - 'Means are the OECD-published estimates (survey weights and plausible values applied by the OECD); the
+      microdata are not used'
     references:
     - https://www.oecd.org/en/about/programmes/pisa/pisa-data.html
     - https://www.oecd.org/en/about/terms-conditions.html
@@ -254,7 +270,8 @@ sources:
   name: Global Economic Monitor (GEM)
   short_name: World Bank GEM
   provider: World Bank
-  status: approved
+  source_system: world_bank_gem
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -265,11 +282,12 @@ sources:
   coverage: High-frequency macroeconomic and financial indicators; geography and start vary by series.
   access:
     endpoint: https://databank.worldbank.org/source/global-economic-monitor-(gem)
-    kind: web
+    kind: api
     interfaces: [HTML, DataBank]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: 'No quota stated; country/all or several series per request time out (HTTP 524 after 300 s); one series for
+      the EU27 members answers in about 70 s (Dev probes 43275104514, 43278796642).'
   licence:
     status: open-conditional
     notes: 'Terms: CC BY 4.0 per the Data Catalog record
@@ -277,10 +295,16 @@ sources:
       (Public) and the World Bank Terms of Use for Datasets
       https://www.worldbank.org/ext/en/legal/terms-conditions/datasets; commercial reuse and modification
       allowed; do not imply World Bank endorsement or use its name or logo; third-party conditions, where any,
-      are in the indicator metadata. Attribution: "The World Bank: Global Economic Monitor: <data source>".'
+      are in the indicator metadata. Attribution: "The World Bank: Global Economic Monitor: <data source>". Series
+      source notes (API metadata, Dev probe 43293960453): CPTOTSAXN, CPTOTSAXNZGY and IPTOTSAKD "World Bank staff
+      calculations based on Datastream data", DPANUSSPB "World Bank staff calculations based on Datastream and IMF
+      International Finance Statistics data"; the other four have no metadata record; no series-level licence or
+      third-party terms are given.'
   updates: Frequent series updates and revisions; no product-wide schedule established.
   ingestion:
-    history: Archive complete named releases with metadata and vintage.
+    history: 'World Bank API v2 source 15 like world_bank_icp (decision of 12 Nov 2026 in the wave-3 source brief), replacing
+      the stale DataBank bulk ZIP and the web route; one series per request for the EU27 members, each version
+      (lastupdated) landed whole (#2373).'
     incremental: Reload a named release or affected period after publication; no CDC.
     identifiers: Use published economy and indicator IDs; preserve survey/round/vintage where applicable.
   modelling:
@@ -291,10 +315,8 @@ sources:
     evidence: catalogue-only
     connection: tested
     blockers:
-    - 'Owner decision needed (O36 wave 2, 11 Nov 2026): the registered route is web (DataBank). Dev probe 43086111225
-      found the bulk zip GemDataEXTR.zip (databankfiles.worldbank.org, 36 xlsx workbooks) stale since 2024-03-05,
-      while the World Bank API v2 source 15 (36 indicators) was updated 2026-09-08; an API extractor like
-      world_bank_icp (source 90) would replace the web route. Not built until the owner decides.'
+    - 'Coverage: 8 of the 36 series for the EU27 members are built; the other series and the non-EU economies follow
+      in #2904 (small country batches per series, as the API times out on every economy or several series)'
     references:
     - https://databank.worldbank.org/source/global-economic-monitor-(gem)
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -3079,44 +3101,90 @@ sources:
   name: SIO public and archival education statistics
   short_name: SIO education statistics
   provider: Centrum Informatyczne Edukacji / Ministerstwo Edukacji Narodowej
-  status: registered
+  status: approved
   family: B
   kpi: true
-  geography: Poland and regional Poland, table-dependent
+  geography: Poland by voivodeship (two-digit GUS voivodeship id in the workbooks opened); no powiat, gmina or school level
+    seen
   provider_type: national-public
-  domains: [students, teachers, graduates, special education, preschool]
-  entities: [student-aggregate, teacher-aggregate, graduate-aggregate, territorial unit, school type]
-  granularity: Published aggregate table by school year, education category and geography; no pupil-level records.
-  coverage: Archive covers multiple school years; exact earliest year varies by subject.
+  domains: [students, teachers, graduates, special education, preschool, languages]
+  entities: [student-aggregate, teacher-aggregate, graduate-aggregate, territorial unit, school type, governing body]
+  granularity: One workbook per topic and reference date (30 September); rows are counts by voivodeship, school type, pupil
+    category, age or grade, sex or governing body; no pupil- or school-level records.
+  coverage: 'Closed archive: data as of 30 September 2010 to 30 September 2018 (school years 2010/2011 to 2018/2019, from
+    the file names); the teachers workbooks carry a 2006-2018 series. Nothing later is published on cie.gov.pl.'
   access:
     endpoint: https://cie.gov.pl/archiwalne-dane-statystyczne/
     kind: bulk_file
-    interfaces: [HTML, XLSX, PDF]
+    interfaces: [HTML, XLS, XLSX]
     auth: Public downloads.
     cost: free
-    limits: Unknown.
+    limits: None published. robots.txt of cie.gov.pl disallows only /cms/wp-admin/ (Dev probe run 43289510189, job 131431691639,
+      branch test/src-plgs-probe, 12 Nov 2026). A full load is 7 pages and 94 files.
   licence:
     status: unresolved
-    notes: No explicit reuse licence verified.
-  updates: Annual/school-year publication with topic-dependent timing.
+    notes: 'Terms: none stated. The site the files are read from, https://cie.gov.pl/ (home page and its only legal link
+      "Status prawny", https://cie.gov.pl/o-nas?sekcja=status, read from a GitHub runner on 12 Nov 2026; the archive index
+      and the six topic pages, desk fetch the same day), carries only "© Centrum Informatyczne Edukacji, 2026" and no licence,
+      re-use or attribution wording. Commercial reuse: not stated. Modification: not stated. Disclaimer: none. Attribution
+      sentence: none given by the provider; if CIE later allows reuse, propose "Źródło: Centrum Informatyczne Edukacji,
+      System Informacji Oświatowej, stan na 30 września <rok>". The CC BY-SA 4.0 footer of gov.pl covers gov.pl text, not
+      these files, and is not applied. Internal use only until CIE states terms (owner question in PR for #1711).'
+  updates: 'None expected: the archive is closed. All 94 files answer Last-Modified 8 August 2024 (Dev probe run 43289510189,
+    job 131431691639, branch test/src-plgs-probe, 12 Nov 2026), under /content/uploads/2020/09/. The Ministry''s page on
+    SIO data names dane.gov.pl and GUS BDL as the channels for current compilations (https://www.gov.pl/web/edukacja/system-informacji-oswiatowej-zasady-udostepniania-danych,
+    desk fetch).'
   ingestion:
-    history: Backfill topic archives and preserve workbook versions.
-    incremental: Poll annual release pages and diff replacement files.
-    identifiers: School year + topic/category + geography; link RSPO only when school-level identifiers are actually published.
+    history: 'Bulk: the index page links six topic pages (written with a double slash, https://cie.gov.pl//ads-uczniowie/;
+      /ads-uczniowie/ 32 files, /ads-wychowanie-przedszkolne/ 11, /ads-uczniowie-ze-specjalnymi-potrzebami-edukacyjnymi/
+      18, /ads-jezyki-obce-i-jezyki-mniejszosci-narodowych/ 18, /ads-absolwenci/ 9, /ads-nauczyciele/ 6), whose plain HTML
+      links 94 workbooks under https://cie.gov.pl/content/uploads/2020/09/: 64 .xls and 30 .xlsx, 10,216,033 bytes in total
+      by HEAD, largest 940,544 bytes, all 200 from a GitHub runner (Dev probe run 43289510189, job 131431691639, branch
+      test/src-plgs-probe, 12 Nov 2026). The files send Last-Modified (ETag seen on the two .xls files that were fetched).
+      The earlier blocker (no file links) looked only at the index page.'
+    incremental: 'Entity = workbook (file name), version = Last-Modified; one backfill, then a yearly re-read of the seven
+      pages (link count, names, Last-Modified). Small source: refresh full; unchanged bytes skipped by SHA-256.'
+    identifiers: Reference date (30 September of the year) + topic + voivodeship id ("Id WojGUS", two digits) + school type
+      id ("Id TypJedn", five digits) + pupil category; no RSPO number (no school-level rows).
   modelling:
-    notes: Use school-year periods; distinguish headcount, FTE and institutions; denominators change with reforms.
-    overlap: GUS education tables may reproduce SIO aggregates; source and release dates should determine precedence.
+    notes: 'Frequency: annual only (school year, reference date 30 September); no second frequency. Shape, read from three
+      2018/2019 XLSX workbooks (one sheet each, first rows only): tidy tables, e.g. "Id WojGUS ¦ Województwo ¦ Id TypJedn
+      ¦ Typ jednostki ¦ Kategoria uczniów ¦ Publiczność ¦ Organ prowadzący ¦ Liczba szkół/placówek" with the row "02 ¦ DOLNOŚLĄSKIE
+      ¦ 00001 ¦ Przedszkole ¦ Dzieci lub młodzież ¦ publiczna ¦ JST ¦ 459"; graduates as "Absolwenci" and "Absolwenci -
+      dziewczęta"; pupils by age with one column per age. Missing values: no suppression sign seen; an age that does not
+      occur in a school type is an empty cell (row "02 ¦ WOJ. DOLNOŚLĄSKIE ¦ 00003 ¦ Szkoła podstawowa ¦ Dzieci lub młodzież"
+      has empty columns for ages 2 to 4) and must stay empty, while a stated 0 is a value ("0 ¦ 0" for one music-school
+      row). Voivodeship names differ between files ("DOLNOŚLĄSKIE", "WOJ. DOLNOŚLĄSKIE"): join on the id. Duplicates: the
+      six teachers workbooks each repeat the series from 2006 (2006-2013 ... 2006-2018): keep the newest (NauczEtatyOsoby2006-2018v5_Woj2018v5.xls);
+      teachers are given as persons and as full-time posts, one measure_key each. School types change with the 2017 reform
+      (gimnazjum phase-out). The 64 .xls files are the old binary format (magic d0cf11e0), which ingestion/common/xlsx_cells.py
+      does not read and for which requirements.txt has no reader; their layout was not opened. Smallest Gold selection:
+      schools and pupils by school type and voivodeship (Poland as the sum) and graduates, from the XLSX years 2016-2018
+      first; teachers (persons, posts) and the years 2010-2015 once an .xls reader is chosen. Effort M.'
+    overlap: 'No kpi.csv KPI is published from this source; the education KPIs there (adult_learning, tertiary_attainment,
+      neet_rate, basic_digital_skills) are Eurostat survey measures, not school counts. GUS BDL (PLS-001, in Silver) carries
+      school and pupil counts and is the live series after 2018: BDL takes precedence where both exist. PLS-021 RSPO is
+      the school register, not aggregates.'
   research:
-    priority: review-first
-    evidence: documented
-    connection: not-tested
+    priority: review-next
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Route unclear: the archive page https://cie.gov.pl/archiwalne-dane-statystyczne/ lists no file links in its HTML (scripted
-      content); find the XLSX download URLs and a terms statement'
-    - Resolve reuse rights
-    - Assess schema changes from education reforms
+    - 'Licence unresolved: cie.gov.pl states no reuse terms, so the source stays internal until CIE states them.'
+    - 'Build task, not a review blocker: 64 of the 94 files are .xls (old binary format) and the pipeline has no reader
+      for them yet; the 30 .xlsx files (2016-2018) load with the shared decoder.'
+    - Closed archive (last data 30 September 2018); later SIO compilations on dane.gov.pl were not opened (the fetch tool
+      was refused; dane.gov.pl is PLG-030).
     references:
     - https://cie.gov.pl/archiwalne-dane-statystyczne/
+    - https://cie.gov.pl//ads-uczniowie/
+    - https://cie.gov.pl//ads-wychowanie-przedszkolne/
+    - https://cie.gov.pl//ads-uczniowie-ze-specjalnymi-potrzebami-edukacyjnymi/
+    - https://cie.gov.pl//ads-jezyki-obce-i-jezyki-mniejszosci-narodowych/
+    - https://cie.gov.pl//ads-absolwenci/
+    - https://cie.gov.pl//ads-nauczyciele/
+    - https://cie.gov.pl/o-nas?sekcja=status
+    - https://www.gov.pl/web/edukacja/system-informacji-oswiatowej-zasady-udostepniania-danych
 - id: PLS-023
   name: RAD-on public data and POL-on APIs
   short_name: RAD-on / POL-on
@@ -3315,7 +3383,8 @@ sources:
   name: Kultura i dziedzictwo narodowe – annual tables
   short_name: GUS culture tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: approved
+  source_system: gus_culture
+  status: built
   family: B
   kpi: true
   geography: Poland and voivodeships
@@ -3350,9 +3419,9 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Map stable sheets across editions
+    - 'Curated tables only (Dev probes 43270655323, 43271074887): museum visitors, cinema admissions, cinemas, public library users, public libraries by voivodeship, editions from 2019 (Kultura w <year> roku until 2020, Kultura i dziedzictwo narodowe from 2021; one XLSX in 2025, a ZIP of chapter workbooks before). Other tables of the workbook are in Bronze, not modelled.'
     references:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/kultura-i-dziedzictwo-narodowe-w-2023-roku%2C2%2C21.html
     - https://stat.gov.pl/en/copyright/
@@ -3360,7 +3429,8 @@ sources:
   name: Uczestnictwo ludności w kulturze
   short_name: GUS cultural participation
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: approved
+  source_system: gus_culture_participation
+  status: built
   family: B
   kpi: true
   geography: Poland; demographic breakdowns
@@ -3396,10 +3466,9 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Inventory prior editions
-    - Verify comparability across questionnaire changes
+    - 'Curated tables only: visiting museums in Poland, using a library, attending theatre (% of persons 15+, Poland, by sex) of the 2019 and 2024 editions; the precision workbook is not landed. Comparability across questionnaires not verified.'
     references:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/uczestnictwo-ludnosci-w-kulturze-w-2024-r-%2C6%2C4.html
     - https://stat.gov.pl/en/copyright/
@@ -3709,7 +3778,8 @@ sources:
   name: Turystyka – annual accommodation-establishment tables
   short_name: GUS tourism tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: approved
+  source_system: gus_tourism
+  status: built
   family: B
   kpi: true
   geography: Poland and voivodeships/powiats, table-dependent
@@ -3748,9 +3818,9 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Map workbook schema across editions
+    - 'Curated tables only: establishments and bed places (31 July), tourists and overnight stays by voivodeship (TABL. I/1, I/2, II/17, II/19), editions from 2019; monthly and NUTS 3 tables are in Bronze, not modelled.'
     references:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2024-r-%2C1%2C22.html
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2025-r-%2C1%2C23.html
@@ -4019,7 +4089,7 @@ sources:
   provider: Narodowy Bank Polski (NBP)
   source_system: nbp_interest_rates
   current: true
-  status: silver
+  status: built
   family: C
   kpi: true
   geography: Poland
@@ -4505,42 +4575,117 @@ sources:
   name: Supervised-entity registers and search
   short_name: KNF supervised entities
   provider: Polish Financial Supervision Authority (KNF)
-  status: registered
+  status: approved
   family: E
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [financial regulation, business registry]
-  entities: [financial institution, enterprise]
-  granularity: Institution/list entry by sector and authorization/register status.
-  coverage: Current registers across regulated sectors; history varies.
+  entities: [financial institution, enterprise, person]
+  granularity: 'One register entry (institution, intermediary, agent or branch) per sector register, with type, status
+    and a register number. In the ESMA register: one authorised entity or branch with type, status, authorisation date
+    and LEI.'
+  coverage: 'Current state of each register; no dated history files. ESMA register, home member state Poland: 623
+    entries (478 active, 145 inactive), capital-market entities only. KNF''s own pages also list banks, credit unions,
+    insurers, pension societies and notified foreign entities.'
   access:
-    endpoint: https://www.knf.gov.pl/podmioty
-    kind: bulk_file
-    interfaces: [HTML lookup, download files]
-    auth: public browsing; downloads vary
+    endpoint: https://registers.esma.europa.eu/solr/esma_registers_upreg/select
+    kind: api
+    interfaces: [REST API, JSON, XML, HTML tables, JavaScript register applications]
+    auth: 'Public, no key or account (ESMA registers; KNF pages).'
     cost: free
-    limits: Unknown.
+    limits: 'ESMA: none stated in the application-to-application help
+      (https://registers.esma.europa.eu/publication/helpApp, desk fetch); requests carry a rows parameter (its
+      examples use 1000 and 100000); the robots.txt address of registers.esma.europa.eu returns the application page,
+      not rules. KNF: robots.txt of www.knf.gov.pl is "User-agent: * Allow: /"; the register sub-sites have no
+      robots.txt (HTTP 404), except ewidencjaakcji.knf.gov.pl and rejestracjaakcji.knf.gov.pl ("Disallow: /", not
+      read).'
   licence:
     status: unresolved
-    notes: Licence and bulk availability must be checked per register.
-  updates: Changes with supervisory status; no common version feed.
+    notes: 'Terms: KNF legal notice https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna (read from a GitHub runner,
+      12 Nov 2026): "Przy wykorzystywaniu materiałów ze strony internetowej KNF wymagane jest podanie źródła wraz z
+      linkiem do serwisu www.knf.gov.pl." No licence is named and the notice grants no reuse: commercial reuse not
+      stated, modification not stated, so the terms are unresolved (as for PLG-017). Disclaimer: the UKNF "nie ponosi
+      żadnej odpowiedzialności za jakiekolwiek szkody powstałe w wyniku korzystania z nich". Attribution: "Źródło:
+      Komisja Nadzoru Finansowego, www.knf.gov.pl". For the ESMA route: ESMA legal notice
+      https://www.esma.europa.eu/about-esma/legal-notice-and-data-protection (read from a GitHub runner, 12 Nov 2026):
+      "Reproduction of all information on this site (ESMA Library) is authorised except as otherwise stated, provided
+      the source is acknowledged and: where the original material is incorporated in documents that are sold
+      (regardless of the medium), the publisher must inform buyers that it may be obtained free of charge through ESMA
+      website; if the original material is transformed by the user (e.g. by making a summary of it or by translating
+      it) and republished, this must be stated explicitly through the following disclaimer: ‘This document has been
+      drafted using material downloaded from ESMA’s website’". That notice is on www.esma.europa.eu; the registers
+      site registers.esma.europa.eu shows only a "Legal Notice" footer link whose target was not read, so the status
+      stays unresolved for both routes and the source is internal. Some KNF registers name natural persons (agents,
+      advisers, brokers, actuaries): personal data, not loaded.'
+  updates: 'Continuous: entries change with KNF decisions; no change feed or release calendar. ESMA entries carry
+    ae_lastUpdate per entity. Dated KNF pages show "Data aktualizacji" (for example 16 May 2026, 14 July 2026).'
   ingestion:
-    history: 'PROPOSAL: inventory each KNF sector register and load only official downloadable tables; do not automate
-      HTML-only lists before terms review.'
-    incremental: 'PROPOSAL: snapshot each authorised register separately and track effective/status dates where
-      supplied; no common KNF change feed is documented.'
-    identifiers: KNF register number + KRS/NIP/LEI where present
+    history: 'Route 1, approved (API of the official EU republisher):
+      https://registers.esma.europa.eu/solr/esma_registers_upreg/select, the documented application-to-application
+      interface of the ESMA registers (Solr; JSON with wt=json). The filter fq=ae_homeMemberState:"POLAND" with
+      fq=type_s:parent returned 623 entries: AIF 515, MIF 60, UCI 24, MIR 10, CSP 5, MIT 3, MIE 2, ESF 1, MIA 1, MIO
+      1, MIS 1; competent authority KNF for 622; active 478, inactive 145; fields ae_entityName, ae_entityTypeCode,
+      ae_entityTypeLabel, ae_lei, ae_headOfficeLei, ae_competentAuthority, ae_homeMemberState, ae_hostMemberStates,
+      ae_officeType, ae_status, ae_authorisationNotificationDate, ae_lastUpdate, addresses (Dev probe run 43295075918
+      (job 131451094958), branch test/src-fix-probe, 12 Nov 2026); the whole core holds 101,553 entries. ae_lei is
+      empty on some entries (the one printed had none). Route 2, waits for the owner (question in research.blockers):
+      KNF''s fixed HTML pages below https://www.knf.gov.pl/podmioty: 117 pages read, 61 with tables (17,705 table
+      rows), 19 of them paged with ?page=n (cooperative banks: 25 pages); one small table per entity with name,
+      address, website and, where KNF gives one, its own number ("Numer centrali" for banks, "Numer zakładu w systemie
+      UKNF" and "Data zezwolenia" for insurers); no NIP, KRS or LEI (Dev probe run 43299743376 (job 131467412298)).
+      Not routes: the register applications (e-rup, rpkip, wpn, rdl, pok, zasi, euafi, depo, at, pzf, dystr, rfz, afi,
+      tfi, ppk .knf.gov.pl) are script pages of one family; in the scripts that were read (e-rup, rpkip, wpn, rdl,
+      pok, zasi, dystr) the tables are filled by POST data calls, and the script of rpu.knf.gov.pl (insurance
+      intermediaries) refers to reCAPTCHA: none was called. EBA:
+      https://euclid.eba.europa.eu/register/pir/registerDownload and the credit-institutions register answered the
+      runner with the same 685-byte application page on every address, so no file was obtained; EIOPA:
+      register.eiopa.europa.eu answers robots.txt with HTTP 403, nothing requested; dane.gov.pl timed out (75 s). The
+      two XLS files on the page Ewidencja akcji date from 2021 and 2017 and are not entity registers.'
+    incremental: 'ESMA route: entity = the Polish slice of the register, version = download date (the source gives
+      ae_lastUpdate per entry, no slice version); snapshot once a week, a few requests of 1000 rows; unchanged bytes
+      skipped by SHA-256. Small source: full refresh.'
+    identifiers: 'ESMA: id (ae<number>) and ae_dbId per entry, ae_lei where filled. KNF pages: KNF''s own numbers only
+      (bank routing number, insurer number); no NIP, KRS or LEI.'
   modelling:
-    notes: Authorization scope is effective-dated; absence is not proof of status.
-    overlap: Links to KRS and EU sector registers.
+    notes: 'kpi false: an entity table, no statistics. Smallest valuable selection for Gold: the active Polish
+      investment firms (MIF), UCITS management companies (UCI) and alternative fund managers (AIF) from the ESMA
+      register with a filled LEI, as attributes (authorisation type, status, authorisation date) of the legal-entity
+      dimension keyed by LEI (GLEIF, CD-015, is in Silver); entries without an LEI stay in Silver and are never
+      matched by name. Branch rows (ae_officeType Branch) are separate entries of the same firm. No suppression
+      markers; an empty ae_lei is a missing value. Banks, insurers and pension societies come only with route 2 and
+      have no official identifier there. Effort S for the ESMA route; M for the KNF pages.'
+    overlap: 'Entity identity is covered by KRS (PLG-012), CEIDG (PLG-014) and GLEIF (CD-015, in Silver), but none of
+      them holds the KNF authorisation type, status or register number, so this source is not contained in a loaded
+      one. KNF sector statistics are PLG-017 and PLG-018; the public warning list is PLG-019 (parked). No kpi.csv KPI
+      overlaps.'
   research:
-    priority: review-first
-    evidence: documented
-    connection: not-tested
+    priority: review-next
+    evidence: tested
+    connection: tested
     blockers:
-    - Per-register format, history and terms differ.
-    references: ['https://www.knf.gov.pl/podmioty']
+    - 'Owner question (it does not block the ESMA route): may the pipeline read KNF''s fixed HTML entity lists below
+      https://www.knf.gov.pl/podmioty (robots.txt "User-agent: * Allow: /"; 61 pages with tables, 19 of them paged, a
+      few hundred page requests per full read, one request every two seconds, once a month), for legal persons only
+      (banks, cooperative banks, credit unions, insurers, pension societies, brokerage houses, fund companies), never
+      the pages that list natural persons (investment advisers, brokers, actuaries, agents who are natural persons)
+      and never the register applications?'
+    - 'Build task, not a review blocker: re-read the Legal Notice link in the footer of registers.esma.europa.eu; if
+      it leads to the ESMA legal notice quoted in licence.notes, the ESMA route becomes open-conditional.'
+    - 'Lead for a separate entry, not read: KNF''s investment-fund API https://wybieramfundusze-api.knf.gov.pl (its
+      robots.txt names documentation.html and terms.pdf).'
+    - 'Not analysed: the register entries themselves and the regulations of the register sites; the pages that list
+      natural persons were only counted (tables and rows), their content was not printed.'
+    references:
+    - https://www.knf.gov.pl/podmioty
+    - https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna
+    - https://registers.esma.europa.eu/publication/helpApp
+    - https://registers.esma.europa.eu/solr/esma_registers_upreg/select
+    - https://www.esma.europa.eu/about-esma/legal-notice-and-data-protection
+    - https://www.eba.europa.eu/risk-and-data-analysis/data/registers/payment-institutions-register
+    - https://www.knf.gov.pl/en/ENTITIES/entities_search
+    - https://rpkip.knf.gov.pl/index.html?type=RPK
+    - https://bip.knf.gov.pl/knf/pl/komponenty/img/Instrukcja_dla_uzytkownika_RPKIP.pdf
 - id: PLG-017
   name: Banking-sector data and sector information
   short_name: KNF banking sector data
@@ -5489,41 +5634,107 @@ sources:
   name: Government Legislative Process portal (RPL), including consultations
   short_name: RCL legislative process (RPL)
   provider: Government Legislation Centre (RCL)
-  status: registered
+  status: approved
   family: F
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [legislation, public consultation]
-  entities: [draft legal act, ministry, consultation submission]
-  granularity: Project by type, title, creation date, applicant, work number and status, with documents.
-  coverage: Current, adopted and archived drafts; first year not stated.
+  entities: [draft legal act, legislative stage, ministry, consultation submission]
+  granularity: 'Approved route (the government''s work list on gov.pl): one row per planned government draft (bill,
+    regulation of the Council of Ministers, other government document) with work-list number, title, kind, type,
+    responsible body, planned adoption and status. RPL itself (not reachable): project by type, title, creation date,
+    applicant, work-list number and status, with staged documents.'
+  coverage: 'Work list of the Council of Ministers: 1,526 drafts published from 21 December 2023 to 12 November 2026
+    (the current government); earlier terms are HTML pages without a file. RPL: current, adopted and archived drafts
+    since 1 January 2012 by RCL''s accessibility statement (desk fetch); not read.'
   access:
-    endpoint: https://legislacja.rcl.gov.pl/
-    kind: web
-    interfaces: [HTML search, PDF, DOCX]
-    auth: public browsing; registration only to follow a project
+    endpoint: https://www.gov.pl/web/premier/wplip-rm
+    kind: bulk_file
+    interfaces: [CSV, HTML]
+    auth: Public download.
     cost: free
-    limits: Unknown.
+    limits: 'None published. robots.txt of www.gov.pl: "User-Agent: * Allow: /". The RPL hosts legislacja.rcl.gov.pl
+      and legislacja.gov.pl do not answer GitHub runners (timeouts on robots.txt in three runs on 12 Nov 2026), so
+      their robots.txt is unread.'
   licence:
-    status: unresolved
-    notes: Attachments may name commenters; bulk reuse terms not established.
-  updates: Project/document events; portal update time is not row CDC.
+    status: open-conditional
+    notes: 'Terms: KPRM re-use page https://www.gov.pl/web/premier/ponowne-wykorzystywanie, for the site that is read
+      (from a GitHub runner, 12 Nov 2026): "Informacje sektora publicznego udostępniane na stronie Kancelarii Prezesa Rady
+      Ministrów (dalej: KPRM) są udostępniane w celu ponownego wykorzystywania na licencji Creative Commons Uznanie
+      Autorstwa 3.0 Polska, o ile nie jest to stwierdzone inaczej. KPRM nie ponosi odpowiedzialności za dalsze ponowne
+      wykorzystywanie informacji sektora publicznego udostępnianych na stronie KPRM." The footer of the work-list page
+      (https://www.gov.pl/web/premier/wplip-rm) says: "Treści tekstowe publikowane w serwisie (z wyłączeniem treści
+      audiowizualnych), są udostępniane na licencji typu Creative Commons: uznanie autorstwa - na tych samych
+      warunkach 4.0 (CC BY-SA 4.0)." Both allow commercial reuse and modification with attribution; the two statements
+      differ, so the stricter one is applied: CC BY-SA 4.0, share-alike for published adaptations. Attribution:
+      "Źródło: Kancelaria Prezesa Rady Ministrów, Wykaz prac legislacyjnych i programowych Rady Ministrów, gov.pl
+      (<data pobrania>), CC BY-SA 4.0". For RPL data, should that route open: RCL''s re-use page
+      https://bip.rcl.gov.pl/rcl/ponowne-wykorzystywanie/3122,Warunki-ponownego-wykorzystywania-informacji-publicznej.html
+      (read from a GitHub runner, 12 Nov 2026) cites the re-use act and says "każdemu przysługuje prawo do ponownego
+      wykorzystywania informacji sektora publicznego: udostępnionych w systemie teleinformatycznym", naming "serwis
+      Rządowy Proces Legislacyjny", with the conditions "obowiązku każdorazowego informowania o źródle pozyskanych
+      danych oraz czasie wytworzenia żądanego zbioru przez podmiot zobowiązany, obowiązku informowania o przetworzeniu
+      informacji ponownie wykorzystywanej"; the RPL site''s own footer was never read (host timeout). Consultation
+      attachments are third parties'' works and name people: never loaded.'
+  updates: 'Event-driven: rows are added and changed as drafts enter the work list or change status; the newest row
+    was published on 12 Nov 2026 at 15:53. No feed; the file has no Last-Modified or ETag.'
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
-      labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
-      source CDC.'
-    identifiers: RCL project ID + work number + document/version
+    history: 'Bulk file: the page https://www.gov.pl/web/premier/wplip-rm links "Pobierz dane do pliku csv"
+      (https://www.gov.pl/register-file/Rejestr_20874195.csv): HEAD and GET 200 from a GitHub runner, 11,313,160
+      bytes, UTF-8 with BOM, semicolon-separated, 19 columns, 1,526 rows, all rows 19 fields wide. Columns: Numer
+      projektu (unique, for example UC2, UD505), Tytuł, Rodzaj dokumentu (Projekty ustaw, Projekty rozporządzeń,
+      Projekty innych dokumentów rządowych), Typ dokumentu (5 values), Informacja dodatkowa, two long text columns
+      (aims, up to 36,383 characters; substance, up to 90,880), three empty columns, Organ odpowiedzialny za
+      opracowanie projektu (46 values), Organ współpracujący, Osoba odpowiedzialna, Organ odpowiedzialny (44 values),
+      Planowane przyjęcie przez RM (free text), Informacja o rezygnacji, Status realizacji (Zrealizowany, Wycofany;
+      empty on 363 rows), Data publikacji (2023-12-21 09:46 to 2026-11-12 15:53), Podgląd (link to the draft''s page).
+      The Prime Minister''s own list https://www.gov.pl/web/premier/wpl-prm links Rejestr_20874196.csv (HEAD 200, not
+      read). The archive of earlier terms (https://www.gov.pl/web/premier/prace-legislacyjne-rady-ministrow) has no
+      file. Dev probe run 43299743376 (job 131467412298), branch test/src-fix-probe, 12 Nov 2026; the link was found
+      in Dev probe run 43295075918 (job 131451094958). RPL itself: legislacja.rcl.gov.pl and legislacja.gov.pl timed
+      out on robots.txt from GitHub runners in Dev probe run 43289510189 and again at about 20:00 UTC (90 s) and 20:25
+      UTC (60 s), so nothing else was requested there; dane.gov.pl timed out too (75 s). RPL addresses seen in search
+      results: /lista?typeId=<n>&pSize=<n>&pNumber=<n> and /projekt/<id> (not opened).'
+    incremental: 'Entity = the work-list file (one per list), version = download date (the source gives none);
+      snapshot once a day at most, unchanged bytes skipped by SHA-256. Small source: full refresh.'
+    identifiers: 'Work-list number (Numer projektu, for example UD505); RPL shows the same number per project
+      (/projekt/<id>), which would link the two if RPL becomes readable.'
   modelling:
-    notes: Separate proposal, consultation, impact assessment and final act.
-    overlap: Links to Sejm and ELI; many drafts never become acts.
+    notes: 'kpi false. Gold use, metadata only: an entity table of government drafts keyed by work-list number (kind,
+      type, responsible body, publication date, status); later, as event counts, drafts entering the work list per
+      month by responsible body and kind and the share realised or withdrawn (monthly and annual as separate
+      measure_keys). Do not load Osoba odpowiedzialna (names of officials) or the two long text columns into Silver
+      beyond what a title needs. Planowane przyjęcie is free text (quarter, date, "ZREALIZOWANY ..."): keep as
+      published. An empty Status realizacji means in progress, not unknown. Duplicates: Numer projektu is unique in
+      the file; titles repeat (1,287 distinct). Effort S.'
+    overlap: 'PLG-024 Sejm API (approved) covers bills from the Sejm print on and PLG-026 ELI (approved) the published
+      acts; the work list covers the planned government stage; RPL alone has the stage documents, ministers'' own
+      regulations and consultations, which no loaded source holds. No kpi.csv KPI overlaps.'
   research:
     priority: review-next
-    evidence: documented
-    connection: not-tested
-    blockers: [No bulk API, clarify attachment rights/person data.]
-    references: ['https://legislacja.rcl.gov.pl/']
+    evidence: tested
+    connection: tested
+    blockers:
+    - 'Owner question (it does not block the work-list build): will you send this to RCL (contact address on
+      https://bip.rcl.gov.pl, not read here)? "Szanowni Państwo, serwis Rządowy Proces Legislacyjny
+      (legislacja.gov.pl, legislacja.rcl.gov.pl) nie odpowiada na zapytania z serwerów GitHub Actions (przekroczenie
+      czasu połączenia). Proszę o informację: (1) czy RCL udostępnia lub może udostępnić wykaz projektów z metadanymi
+      (numer z wykazu, tytuł, wnioskodawca, etapy z datami) jako plik, kanał RSS lub API; (2) czy automatyczne,
+      rzadkie pobieranie stron list projektów jest dopuszczalne i z jakich adresów sieciowych."'
+    - 'Not worked around: the timeouts of both RPL hosts from GitHub runners (three runs on 12 Nov 2026); no other
+      network path is tried.'
+    - 'Not verified: robots.txt, footer and every page of the RPL site; the Prime Minister''s list file (HEAD only);
+      whether the address of the work-list file is stable (read the link from the page).'
+    - 'Consultation attachments name commenters: metadata only, never the documents.'
+    references:
+    - https://www.gov.pl/web/premier/wplip-rm
+    - https://www.gov.pl/register-file/Rejestr_20874195.csv
+    - https://www.gov.pl/web/premier/wpl-prm
+    - https://www.gov.pl/web/premier/ponowne-wykorzystywanie
+    - https://legislacja.rcl.gov.pl/
+    - https://bip.rcl.gov.pl/rcl/ponowne-wykorzystywanie/3122,Warunki-ponownego-wykorzystywania-informacji-publicznej.html
+    - https://bip.rcl.gov.pl/rcl/dostepnosc/deklaracje-dostepnosci/23028,Deklaracja-dostepnosci-strony-Rzadowego-Procesu-Legislacyjnego.html
 - id: PL-ENV-001
   name: Państwowy Rejestr Granic (PRG)
   short_name: GUGiK PRG
@@ -7718,7 +7929,7 @@ sources:
   name: Nasdaq Data Link
   short_name: Nasdaq Data Link
   provider: Nasdaq
-  status: registered
+  status: reviewing
   family: I
   kpi: false
   geography: worldwide
@@ -7728,35 +7939,63 @@ sources:
   granularity: Dataset-defined rows or series through streaming, real-time/delayed and tables products.
   coverage: Dataset-specific; large-table bulk downloads can provide full or filtered history where entitled.
   access:
-    endpoint: https://docs.data.nasdaq.com/docs/getting-started
+    endpoint: https://data.nasdaq.com/
     kind: api
-    interfaces: [API, bulk-files, Python, R, Excel, SQL]
-    auth: Free account/API key for normal API use; premium datasets require subscription.
+    interfaces:
+    - API
+    - JSON
+    - CSV
+    - XML
+    - Parquet
+    auth: 'API key from a Nasdaq Data Link account (the owner would have to create it). Docs (desk reading 12 Nov 2026): time-series
+      API "you must have an API key"; bulk download "All requests will require the use of an API Key".'
     cost: mixed
-    limits: Product and account limits vary; no single platform quota applies.
+    limits: 'https://docs.data.nasdaq.com/docs/rate-limits-1 (desk reading 12 Nov 2026): without a key "20 calls per 10 minutes
+      and 50 calls per day"; with a key "300 calls per 10 seconds, 2,000 calls per 10 minutes and a limit of 50,000 calls
+      per day", concurrency limit of one; bulk download is described for subscribers ("For new subscribers, an initial 25
+      request limit").'
   licence:
-    status: dataset-specific
-    notes: Licensing is dataset-specific; platform access does not transfer upstream redistribution rights.
-  updates: Tables commonly update on provider schedules; streaming products differ.
+    status: unresolved
+    notes: 'No terms page of data.nasdaq.com (the site the data is read from) was found or read: the runner received only
+      a JavaScript shell from https://data.nasdaq.com/ and the session could not open the host (12 Nov 2026). Evidence read
+      instead: https://help.quandl.com/article/602-who-sets-the-terms-and-conditions-for-databases-that-i-sell-on-nasdaq-data-link
+      ("you would set the exact terms by which your Nasdaq Data Link customers access your data": terms are set per dataset
+      by its publisher) and https://www.nasdaq.com/legal, which covers nasdaq.com, not Data Link ("solely for your personal,
+      non-commercial use"; "agree not to sell, copy, distribute, or create derivative works based on the Services"). Commercial
+      reuse: not stated for Data Link. Modification: not stated. Attribution sentence: none found. Stays internal.'
+  updates: Dataset-specific. "Free data feeds do not have any regular, guaranteed update times" (https://help.quandl.com/article/510-how-often-is-the-data-on-nasdaq-data-link-refreshed-or-updated,
+    desk reading 12 Nov 2026).
   ingestion:
-    history: 'PROPOSAL: ingest only approved product codes; use bulk history when documented.'
-    incremental: 'PROPOSAL: use dataset filters/watermarks and periodic restatement.'
-    identifiers: Dataset code plus native row keys and dates; maintain upstream provider identity.
+    history: 'None proposed before the owner answer. If opened: one table per product code through the Tables API with the
+      key.'
+    incremental: None proposed.
+    identifiers: Dataset (product) code plus native row keys and dates; keep the upstream publisher.
   modelling:
-    notes: Model each product separately; do not blend unlike vendor definitions.
-    overlap: Frequently republishes official or commercial upstream data; lineage prevents double counting.
+    notes: 'kpi false. No Gold selection: "Most of the datasets on Nasdaq Data Link is premium" (getting-started page) and
+      the only free product confirmed is the US CFTC Commitments of Traders table, which CFTC publishes itself; no Poland-specific
+      dataset was found. Frequencies, missing-value markers, duplicates and size were not established (nothing to load). No
+      overlap with published KPIs.'
+    overlap: Republishes official or commercial upstream data; the original producer is the better source for every free series
+      found.
   research:
     priority: conditional
     evidence: documented
     connection: not-tested
     blockers:
-    - Select exact datasets
-    - Review each dataset licence
-    - Confirm stable post-migration documentation
+    - 'Owner question (account, key): Nasdaq Data Link needs an account and an API key that you would create, almost all of
+      its data is paid, and the only free product found is the US CFTC Commitments of Traders table (no data about Poland).
+      Create a free account and key for it, or park CD-004? Recommendation: park.'
+    - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): https://data.nasdaq.com/ answered
+      200 with a JavaScript shell (3,184 bytes, no terms links in the HTML); robots.txt 200 with no rule against the request;
+      https://docs.data.nasdaq.com/docs/getting-started and /docs/rate-limits-1 answered 404 to the runner, although both
+      opened in the session the same day (the getting-started page says the docs site "will be retired on August 31 2026").'
+    - 'Not verified: the data.nasdaq.com terms of use, the list of free products beyond CFTC, any API call (no key).'
     references:
     - https://docs.data.nasdaq.com/docs/getting-started
     - https://docs.data.nasdaq.com/docs/data-organization
     - https://docs.data.nasdaq.com/docs/large-table-download
+    - https://docs.data.nasdaq.com/docs/rate-limits-1
+    - https://www.nasdaq.com/legal
 - id: CD-005
   name: GPW Market Data
   short_name: GPW market data
@@ -7806,81 +8045,146 @@ sources:
   name: Electronic Information Transmission System (ESPI)
   short_name: KNF ESPI
   provider: Polish Financial Supervision Authority (KNF)
-  status: registered
+  status: approved
   family: I
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [corporate-filings, financial-markets]
   entities: [issuer, filing, security]
-  granularity: Issuer report/document with report number, type, publication time and attachments.
-  coverage: Public historical reports are discoverable through dissemination portals; stable complete bulk depth
-    is not documented.
+  granularity: 'One row per issuer report in KNF''s public OAM list: issuer, date received, report type and title, link to
+    the file.'
+  coverage: Regulated-market issuers (423 issuers and about 2,000 periodic reports in 2023, KNF supervision report); the depth
+    of the public OAM list is not measured yet.
   access:
-    endpoint: https://www.knf.gov.pl/dla_rynku/espi
+    endpoint: https://moam.knf.gov.pl/moam.nsf
     kind: web
-    interfaces: [HTML, PDF, XHTML]
-    auth: Public reading; issuer submission access is separate.
+    interfaces:
+    - HTML
+    auth: Public reading, no login. ESPI itself is a closed transmission system (issuers to KNF and on to the market operator
+      and news agencies); the public copy is KNF's OAM.
     cost: free
-    limits: No documented public API or bulk limit.
+    limits: 'None documented; moam.knf.gov.pl has no robots.txt (404). Proposed pattern: the by-date list once a day, one
+      request at a time, a pause of a few seconds, identified user agent; no report files.'
   licence:
     status: unresolved
-    notes: Public disclosure does not itself grant bulk harvesting or redistribution rights for attachments.
-  updates: Reports publish when issuers submit; corrections arrive as new reports.
+    notes: 'Terms: none stated for the OAM (https://moam.knf.gov.pl/moam.nsf, list page read by the runner 12 Nov 2026). https://intranet.knf.gov.pl/en/MARKET/OAM
+      (desk reading 12 Nov 2026) calls it "a centralised data system for the central storage of regulated information" and
+      links "Enter OAM" (moam.knf.gov.pl/moam.nsf); the KNF pages carry only "Copyrights © 2023 Komisja Nadzoru Finansowego";
+      the ESPI rules (https://www.knf.gov.pl/knf/pl/komponenty/img/Regulamin_korzystania_z_ESPI_66994.pdf, linked from https://www.knf.gov.pl/dla_rynku/espi)
+      govern issuers, not readers. Commercial reuse: not stated. Modification: not stated. Attribution sentence: none given
+      (working text: "Źródło: Komisja Nadzoru Finansowego, OAM"). Stays internal. Only issuer, title, type, date and link
+      are stored (O32, O33): no report text, no attachments.'
+  updates: Event-driven, every day; the list showed "Liczba raportów za dzień 2026-11-12 wynosi 87" at 19:37 UTC. Corrections
+    arrive as new reports. From July 2027 the EU single access point (ESAP) is to be public (ESMA press release of 10 Jul
+    2026, desk reading).
   ingestion:
-    history: 'PROPOSAL: start with a bounded issuer/date audit from public pages; preserve original files.'
-    incremental: 'PROPOSAL: monitor report lists and reconcile late/corrective reports.'
-    identifiers: Issuer, report number, publication timestamp, ISIN/LEI when present.
+    history: 'Web route: the public OAM list at https://moam.knf.gov.pl/moam.nsf (HTML, 14,916 bytes for the current day;
+      views by issuer, by date received and all, plus search). The URL pattern of the by-date view and the depth of history
+      are to be measured in the build trial with the same polite pattern.'
+    incremental: 'Daily: read the day''s list and the previous days still open; a report is new by its link. One row per report;
+      nothing is overwritten.'
+    identifiers: OAM document link (guid), issuer name, date received, report type prefix of the title (RB, RB-W, UNI-EN,
+      periodic types). LEI or ISIN are not in the list.
   modelling:
-    notes: Immutable filing event plus version/attachment table; do not overwrite corrections.
-    overlap: PAP/InfoStrefa and issuer/GPW pages may mirror the same report.
+    notes: 'kpi false. Smallest Gold selection: number of issuer reports per day and month for Poland, split by report type
+      (current, periodic), plus an issuer list; no voivodeship split in the source. Frequency: event data, aggregated to D
+      and M (separate measure keys). No values, so no suppression markers. Duplicates: a correction is a new report with its
+      own link; the same report also appears on gpw.pl (CD-007) and PAP (CD-008, parked), so count from one source only. No
+      overlap with published KPIs. Size: about 90 rows a day (measured on one day). Effort S.'
+    overlap: CD-007 lists the same ESPI reports on gpw.pl; CD-006 is the regulated-market source and CD-007 supplies only
+      EBI rows.
   research:
     priority: review-next
-    evidence: documented
-    connection: not-tested
-    blockers: [Identify authoritative public archive, Confirm automation and reuse terms, Assess archive completeness]
+    evidence: tested
+    connection: tested
+    blockers:
+    - 'Route decision: a polite read of public list pages that robots.txt does not forbid. The playbook asks for an owner
+      decision or a D row per web source; this approval follows the orchestrator verdict on PR #2878 ("a polite crawl of public
+      pages is a valid route") under the owner rule of 12 Nov 2026 (issue #2873). The D row in docs/decisions.md is still
+      to be written before the build.'
+    - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): http://moam.knf.gov.pl/moam.nsf
+      redirected to https and answered 200 (text/html, 14,916 bytes) with the day''s list of 87 reports (issuer, date, title,
+      file link); robots.txt 404; https://www.knf.gov.pl/dla_rynku/espi answered 200 and links only the issuer-side ESPI pages.'
+    - 'Not verified: the by-date and by-issuer URL patterns, how far back the list goes, any terms text on the OAM pages beyond
+      the list page.'
     references:
+    - https://moam.knf.gov.pl/moam.nsf
     - https://www.knf.gov.pl/dla_rynku/espi
-    - https://www.knf.gov.pl/dla_konsumenta/kampanie_informacyjne/obowiazki_emitentow
+    - https://intranet.knf.gov.pl/en/MARKET/OAM
+    - https://www.esma.europa.eu/press-news/esma-news/esma-launches-data-collection-under-first-phase-esap
 - id: CD-007
   name: Electronic Information Base (EBI)
   short_name: GPW EBI
   provider: Warsaw Stock Exchange (GPW)
-  status: registered
+  status: approved
   family: I
   kpi: false
   geography: Poland
   provider_type: commercial
   domains: [corporate-filings, financial-markets]
   entities: [issuer, filing, security]
-  granularity: Current, periodic and corporate-governance reports of alternative-market issuers.
-  coverage: Public reports are disseminated through GPW/PAP channels; complete machine-readable archive is not documented.
+  granularity: 'One row per EBI report in GPW''s public report list: time, category, report number, issuer with ISIN, title,
+    link.'
+  coverage: NewConnect and Catalyst issuers; the list page shows the newest reports (10 to 12 Nov 2026 on the probe day);
+    the depth reachable through paging is not measured yet.
   access:
-    endpoint: https://www.knf.gov.pl/dla_konsumenta/kampanie_informacyjne/obowiazki_emitentow
+    endpoint: https://www.gpw.pl/espi-ebi-reports
     kind: web
-    interfaces: [HTML, PDF]
-    auth: Public reading; issuer submission is controlled.
+    interfaces:
+    - HTML
+    auth: Public reading, no login.
     cost: free
-    limits: No documented public API or bulk allowance.
+    limits: 'None documented; www.gpw.pl robots.txt (53 characters) does not forbid the list. https://www.gpw.pl/ebi answered
+      403 to the runner and is not used. Proposed pattern: the list once a day, one request at a time, a pause of a few seconds,
+      identified user agent; no attachments.'
   licence:
     status: unresolved
-    notes: Viewing reports is public; automated collection and attachment reuse remain unresolved.
-  updates: Issuer-event driven; corrections are distinct reports.
+    notes: 'Terms: none stated for the report list; the site notice is https://www.gpw.pl/disclaimer. https://www.gpw.pl/disclaimer
+      (desk reading 12 Nov 2026; runner 200) holds only a liability notice and "2017 © Warsaw Stock Exchange". GPW resolution
+      646/2011 (https://www.gpw.pl/pub/files/PDF/regulacje/Uch_646_zal.pdf), §8, gives rights to the exchange only: "Giełdzie
+      przysługuje prawo do korzystania, przetwarzania i udostępniania raportów przekazanych jej przez emitentów."; §3 ust.
+      2: reports are "niezwłocznie publikowane na odpowiednich stronach internetowych administrowanych przez Giełdę". GPW''s
+      paid information-services rules do not mention issuer reports. Commercial reuse: not stated. Modification: not stated.
+      Attribution sentence: none given (working text: "Źródło: GPW, Elektroniczna Baza Informacji"). Stays internal. Only
+      headline, link, report number, type, category and publication time are stored (O32, O33).'
+  updates: Event-driven, every day; corrections are separate reports with their own numbers.
   ingestion:
-    history: 'PROPOSAL: inventory report metadata and attachments for selected NewConnect/Catalyst issuers.'
-    incremental: 'PROPOSAL: list-page polling plus periodic completeness reconciliation.'
-    identifiers: Issuer, EBI report number, publication time, market and security identifiers.
+    history: 'Web route: https://www.gpw.pl/espi-ebi-reports lists ESPI and EBI reports together (HTML, 107,890 bytes; rows
+      carry a detail link https://www.gpw.pl/espi-ebi-report?geru_id=<id>; the page loads further rows through an "ajaxindex"
+      request behind a "Show more" button). Keep rows of type EBI. Whether older rows can be read without JavaScript, and
+      how far back, is to be measured in the build trial.'
+    incremental: 'Daily: read the newest rows until the last known geru_id; one row per report, nothing overwritten.'
+    identifiers: geru_id (guid), EBI report number, issuer name and ISIN, publication time, category (current, quarterly,
+      half-year, annual).
   modelling:
-    notes: Keep source labels and report versions; parse periodic facts separately.
-    overlap: May overlap ESPI for dual obligations and PAP/InfoStrefa mirrors.
+    notes: 'kpi false. Smallest Gold selection: number of EBI reports per day and month for Poland, split by category, plus
+      the issuer list with ISIN; no voivodeship split in the source. Frequency: event data, aggregated to D and M (separate
+      measure keys). No values, so no suppression markers. Duplicates: the same list also carries ESPI reports (source CD-006):
+      filter by type so a report is counted once. No overlap with published KPIs. Size: not measured per day (the page showed
+      the ten newest ids 500444 to 500453; KNF listed 87 ESPI reports on the same day). Effort S, M if paging needs the ajax
+      request.'
+    overlap: ESPI rows of the same list belong to CD-006 (KNF OAM); PAP Biznes (CD-008, parked) mirrors both.
   research:
     priority: review-next
-    evidence: documented
-    connection: not-tested
-    blockers: [Locate authoritative archive, Confirm automation/reuse terms, Define ESPI/EBI precedence]
+    evidence: tested
+    connection: tested
+    blockers:
+    - 'Route decision: a polite read of public list pages that robots.txt does not forbid. The playbook asks for an owner
+      decision or a D row per web source; this approval follows the orchestrator verdict on PR #2878 ("a polite crawl of public
+      pages is a valid route") under the owner rule of 12 Nov 2026 (issue #2873). The D row in docs/decisions.md is still
+      to be written before the build.'
+    - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): https://www.gpw.pl/espi-ebi-reports
+      answered 200 (107,890 bytes) with report rows and detail links (geru_id=500444 to 500453); https://www.gpw.pl/rss and
+      /disclaimer answered 200 (the RSS page is an HTML page, no report feed was confirmed); https://www.gpw.pl/ebi answered
+      403 Forbidden and is not used.'
+    - 'Not verified: the ajaxindex request parameters and history depth; report archives on newconnect.pl and gpwcatalyst.pl
+      (none found).'
     references:
+    - https://www.gpw.pl/espi-ebi-reports
+    - https://www.gpw.pl/disclaimer
+    - https://www.gpw.pl/pub/files/PDF/regulacje/Uch_646_zal.pdf
     - https://www.knf.gov.pl/dla_konsumenta/kampanie_informacyjne/obowiazki_emitentow
-    - https://www.gpw.pl/ebi
 - id: CD-008
   name: PAP Biznes ESPI/EBI dissemination portal
   short_name: PAP Biznes ESPI/EBI
@@ -7931,7 +8235,7 @@ sources:
   name: Stooq historical quotations
   short_name: Stooq quotations
   provider: Stooq
-  status: registered
+  status: reviewing
   family: I
   kpi: false
   geography: worldwide
@@ -7941,29 +8245,56 @@ sources:
   granularity: Symbol-frequency price series exposed through website download patterns.
   coverage: History and market scope appear symbol-specific; official browsable documentation was blocked.
   access:
-    endpoint: https://stooq.pl/q/d/?s=aapl.us
+    endpoint: https://stooq.pl/db/h/
     kind: bulk_file
-    interfaces: [HTML, CSV]
-    auth: Browser access observed; formal API/auth model unresolved.
+    interfaces:
+    - HTML
+    - CSV
+    - ZIP
+    auth: 'Not read on the site (robots.txt). Third-party reports only, unverified: "As March 2026, Stooq requires an API
+      key for data downloads" (https://github.com/pydata/pandas-datareader/issues/1012); the key and the bulk ZIPs are behind
+      a captcha (https://www.quantstart.com/articles/an-introduction-to-stooq-pricing-data).'
     cost: unknown
-    limits: Unknown.
+    limits: stooq.pl robots.txt (200, 96 characters) disallows /, /db/h/ and /q/d/l/ for the generic agent and for the Claude
+      agents, so nothing was fetched. A daily hit limit is reported by third parties ("Exceeded the daily hits limit"), number
+      unknown.
   licence:
     status: unresolved
-    notes: No verified commercial reuse or automated-download permission.
-  updates: Unknown; apparent daily/intraday series must be verified.
+    notes: 'No terms were read: stooq.pl robots.txt disallows automated access to every path probed (12 Nov 2026) and the
+      session could not open stooq.pl or stooq.com, so no terms or regulamin page of Stooq is quoted. Commercial reuse: not
+      stated (not read). Modification: not stated (not read). Automated download: refused by robots.txt. Attribution sentence:
+      none. Stays internal; nothing is loaded.'
+  updates: Not verified (daily series by third-party accounts).
   ingestion:
-    history: 'PROPOSAL: do not ingest until official terms and interface documentation are obtained.'
-    incremental: 'PROPOSAL: none before permission; later use bounded date polling.'
-    identifiers: Stooq symbol and date/time; map cautiously to ISIN/MIC.
+    history: 'None without permission. Third-party descriptions (unverified): per-symbol CSV at /q/d/l/?s=<symbol>&i=d and
+      bulk ZIPs per market and frequency at /db/h/.'
+    incremental: None without permission.
+    identifiers: Stooq symbol and date; mapping to ISIN and MIC would be needed.
   modelling:
-    notes: Catalogue only; adjustment, timezone and currency semantics need sampling.
-    overlap: Likely overlaps exchange and vendor price feeds with unclear transformations.
+    notes: kpi false. If permission is ever given, the smallest selection is daily closes of about ten Polish series (WIG,
+      WIG20, mWIG40, sWIG80, 10-year government bond yield); PLN exchange rates already come from NBP. Frequency D; closes
+      are adjusted (third-party account); gaps are missing rows; revisions after splits unknown. No overlap with published
+      KPIs. Effort M.
+    overlap: Index values originate from GPW (CD-005, CD-011, both licensed). The 10-year government bond yield is published
+      monthly by the ECB (GL-016) and Eurostat (GL-001) as the long-term interest rate for convergence purposes, and PLN exchange
+      rates by NBP, so only the stock indices and daily frequency would be new.
   research:
     priority: conditional
     evidence: catalogue-only
     connection: not-tested
-    blockers: [Obtain official terms, Verify supported download interface, Document adjustment/history semantics]
-    references: ['https://stooq.pl/q/d/?s=aapl.us', 'https://stooq.pl/t/?i=10']
+    blockers:
+    - 'Owner question (written permission): Stooq''s robots.txt forbids automated access to its download pages and, by third-party
+      reports, downloads need a key issued behind a captcha. Ask Stooq in writing for permission and a key for a daily download
+      of about ten Polish series (WIG, WIG20, 10-year bond yield), or park CD-009? Recommendation: park; PLN exchange rates
+      already come from NBP.'
+    - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): stooq.pl/robots.txt answered 200
+      (96 characters) and disallows https://stooq.pl/, /db/h/ and /q/d/l/?s=wig20&i=d for every agent tested; none of the
+      three was fetched. The refusal is recorded, not worked around.'
+    - 'Not verified: everything about the download interface, the key requirement, the terms, history depth and update time.'
+    references:
+    - https://stooq.pl/db/h/
+    - https://stooq.pl/q/d/?s=aapl.us
+    - https://stooq.pl/t/?i=10
 - id: CD-010
   name: TGE Market Data
   short_name: TGE market data
@@ -8112,7 +8443,7 @@ sources:
   name: ESEF annual financial reports via national OAMs
   short_name: ESEF annual reports
   provider: EU national Officially Appointed Mechanisms
-  status: registered
+  status: approved
   family: I
   kpi: false
   geography: multicountry-Europe
@@ -8120,77 +8451,143 @@ sources:
   domains: [corporate-filings, company-fundamentals]
   entities: [issuer, annual-report, reported-fact]
   granularity: Annual financial report package, usually XHTML with inline XBRL facts and issuer-specific extensions.
-  coverage: ESEF applies to regulated-market annual reports under phased requirements; archives reside with national
-    OAMs.
+  coverage: The first Polish filing in filings.xbrl.org has period end 2021-12-31; 877 filings from the Polish source (PAP
+    Biznes) on its source page; the repository says it is not complete.
   access:
-    endpoint: https://www.esma.europa.eu/issuer-disclosure/electronic-reporting
-    kind: bulk_file
-    interfaces: [XHTML, iXBRL, ZIP, HTML]
-    auth: OAM-specific public access; ESMA supplies taxonomy and reporting rules, not a central filing API.
-    cost: mixed
-    limits: OAM-specific or unknown.
+    endpoint: https://filings.xbrl.org/docs/api
+    kind: api
+    interfaces:
+    - API
+    - JSON
+    - ZIP
+    - iXBRL
+    auth: None. "Access to the API is provided free of charge." The provider asks for "a user agent that includes a contact
+      email address".
+    cost: free
+    limits: No rate limit stated; page size 30 by default, 1,000 at most; "we reserve the right to alter the API at any time,
+      including applying rate limits or withdrawing it completely" (https://filings.xbrl.org/docs/api, desk reading 12 Nov
+      2026). No robots.txt (404).
   licence:
-    status: dataset-specific
-    notes: Reuse, automation and document rights must be checked per OAM and filing; public filing is not a blanket
-      licence.
-  updates: Annual, with corrections/re-filings governed by national channels.
+    status: unresolved
+    notes: 'Terms: https://filings.xbrl.org/docs/about (read by the runner 12 Nov 2026), section "Terms of use": "At present,
+      there are no restrictions on the ways that the data can be used." The same page ends "© 2021-23 XBRL All Rights Reserved."
+      No licence is named, and commercial reuse and modification are not addressed in words: commercial reuse not stated,
+      modification not stated, so the status is unresolved (the sentence may be accepted by the owner as permission: owner
+      question below). Attribution sentence: none given (working text: "Source: filings.xbrl.org (XBRL International), issuer
+      annual financial reports"). The Polish filings are collected from PAP Biznes (https://filings.xbrl.org/source), whose
+      own portal is CD-008 (restricted); the reports themselves are issuers'' documents. There is no official central repository
+      ("there is no official, central repository for ESEF filings", XBRL International, 20 May 2022). Stays internal.'
+  updates: 'Continuous, with a peak each spring; yearly index files are "updated whenever new filings are processed" and carry
+    Last-Modified (filings-2025.json: Wed, 28 Oct 2026 20:53:02 GMT).'
   ingestion:
-    history: 'PROPOSAL: inventory OAMs, then ingest filing packages and validation metadata by country.'
-    incremental: 'PROPOSAL: monitor OAM publication lists and preserve replacement relationships.'
-    identifiers: Issuer LEI/ISIN, report period, filing/package identifier; extension taxonomies need anchoring.
+    history: 'API: https://filings.xbrl.org/api/filings?filter[country]=PL (JSON:API; tested, one filing returned with period_end,
+      country, fxo_id, date_added, processed, sha256, package_url, json_url, error_count) and /api/entities; bulk index per
+      year https://filings.xbrl.org/indexes/filings-<YEAR>.json (tested, HEAD 200). Load the Polish filing list first; the
+      xBRL-JSON facts (json_url) only for the selected concepts.'
+    incremental: The yearly index files with If-Modified-Since, or the API filtered by country and sorted by date_added; a
+      filing is new by its fxo_id and sha256.
+    identifiers: fxo_id (LEI, period end, ESEF, country, sequence), entity LEI, sha256 of the package; the last path segment
+      numbers language versions and refilings.
   modelling:
-    notes: Raw package plus normalized dimensional facts; do not discard contexts or decimals.
-    overlap: Overlaps issuer sites and national disclosure portals; ESMA is standards source, not filing mirror.
+    notes: 'kpi false. Smallest Gold selection, Poland first: number of ESEF annual reports per reporting year for Poland,
+      then revenue and profit or loss from the xBRL-JSON of Polish filers as an entity-level table by LEI (joins GLEIF, CD-015).
+      No voivodeship split (a registered-office region would come from GLEIF). Frequency A only. No suppression markers; a
+      fact may be absent, and error_count and warning_count mark validation problems. Duplicates: one issuer and period can
+      have several filings (language versions, refilings) told apart by the last fxo_id segment: keep the newest per LEI and
+      period_end. No overlap with published KPIs. Size: about 877 Polish filings in the list, a few hundred KB of list JSON
+      (provider''s count, the API filter was tested with one row); the size of the JSON facts is not measured. Effort M.'
+    overlap: PAP Biznes (CD-008) is the origin of the Polish packages; issuer sites and the KNF OAM (CD-006) hold the same
+      reports as files.
   research:
     priority: review-next
-    evidence: documented
-    connection: not-tested
-    blockers: [Map OAMs and licences, Test package discoverability, Define extension-taxonomy processing]
+    evidence: tested
+    connection: tested
+    blockers:
+    - 'Owner question (legal reading, does not stop the internal build): filings.xbrl.org says "At present, there are no restrictions
+      on the ways that the data can be used" but names no licence, and its Polish filings are collected from PAP Biznes. Accept
+      that sentence as permission to publish figures taken from Polish ESEF reports with the attribution "Source: filings.xbrl.org
+      (XBRL International), issuer annual financial reports", or keep CD-013 internal?'
+    - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): the API filter for PL answered
+      200 (application/vnd.api+json, 1,502 bytes for one filing); /indexes/filings-2025.json answered 200 with Last-Modified;
+      /about.html redirected to /docs/about with the terms sentence quoted above; robots.txt 404.'
+    - 'Not verified: the count of Polish filings through the API (877 is the source-page figure), the years covered for Poland,
+      the size of a full load of facts, how a refiling is numbered.'
     references:
+    - https://filings.xbrl.org/docs/api
+    - https://filings.xbrl.org/docs/about
+    - https://filings.xbrl.org/source
+    - https://www.xbrl.org/news/well-over-3000-esef-filings-at-filings-xbrl-org-where-are-they-coming-from-and-how-can-we-improve-access/
     - https://www.esma.europa.eu/issuer-disclosure/electronic-reporting
-    - https://www.esma.europa.eu/sites/default/files/library/esma32-60-254_esef_reporting_manual.pdf
 - id: CD-014
   name: Companies House Public Data, Document and Streaming APIs
   short_name: Companies House
   provider: UK Companies House
-  status: registered
+  status: approved
   family: I
   kpi: false
   geography: United Kingdom
   provider_type: national-public
   domains: [business-register, corporate-filings]
   entities: [enterprise, officer, filing, person]
-  granularity: Company profile, officers, persons with significant control, charges, filing metadata and filed documents.
-  coverage: Current registry plus filing history; document depth and bulk availability vary by product.
+  granularity: 'Free Company Data Product: one row per live company on the register (name, number, registered office, status,
+    type, country of origin, incorporation date, SIC codes). PSC and accounts products exist but are out of the selection.'
+  coverage: Snapshot of live companies, compiled to the end of the previous month; the listing holds only the current snapshot,
+    so history builds up from the first Landing.
   access:
-    endpoint: https://developer-specs.company-information.service.gov.uk/
-    kind: api
-    interfaces: [API, stream, HTML, document-download]
-    auth: Registered application and API/stream key; OAuth for user-authorized actions.
+    endpoint: https://download.companieshouse.gov.uk/en_output.html
+    kind: bulk_file
+    interfaces:
+    - ZIP
+    - CSV
+    - HTML
+    auth: None for the bulk files. The REST and streaming APIs need a registered key and are not used.
     cost: free
-    limits: Published API limits apply but no number is encoded here.
+    limits: None stated for the download pages; robots.txt (43 characters) does not forbid them. For reference, the API allows
+      "600 requests within a five-minute period" (https://developer-specs.company-information.service.gov.uk/guides/rateLimiting,
+      desk reading 12 Nov 2026).
   licence:
-    status: unresolved
-    notes: Crown copyright, personal data, document copyright and downstream reuse conditions require product-level
-      review.
-  updates: REST reflects registry state; streaming endpoints expose selected changes.
+    status: open-conditional
+    notes: 'Terms: https://www.gov.uk/guidance/companies-house-data-products (read by the runner 12 Nov 2026): "We impose
+      no rules or requirements on how the information on the public register is used, and we’re not responsible for your use
+      of the company data. You are responsible for complying with any applicable data protection, copyright and other legislation
+      and regulations."; page footer: "All content is available under the Open Government Licence v3.0, except where otherwise
+      stated". The download page itself says only that the snapshot "is provided free of charge and will not be supported".
+      Commercial reuse: allowed (no rules or requirements on use; the word "commercial" is not used). Modification: allowed
+      on the same sentence. Attribution: none required for register data; shown as "Source: Companies House (UK), Free Company
+      Data Product". Condition: data-protection law is the reuser''s duty, so the PSC snapshot (personal data) stays out.'
+  updates: 'Monthly: "compiled up to the end of the previous month", published within 5 working days; the 2026-11-01 edition
+    was written on 7 Nov 2026 (Last-Modified). PSC snapshot daily before 10am GMT (not used).'
   ingestion:
-    history: 'PROPOSAL: seed company profiles and filings by company number; fetch only approved documents.'
-    incremental: 'PROPOSAL: stream changes with periodic full reconciliation; treat events as hints, not guaranteed
-      CDC.'
-    identifiers: Company number is primary; officers/persons require careful disambiguation.
+    history: 'Bulk feature: the listing page links BasicCompanyDataAsOneFile-<YYYY-MM-DD>.zip (tested: 494,554,856 bytes,
+      application/zip, Last-Modified and ETag present) and the same data in 7 parts of about 70 MB; the date in the name changes
+      each month, so the listing page is read first.'
+    incremental: Monthly snapshot; version = the date in the file name. Each snapshot replaces the previous one; a company
+      that leaves the register disappears from the file.
+    identifiers: Company number; country of origin as text; UK postcode, no NUTS or TERYT codes.
   modelling:
-    notes: Effective-date company dimension plus immutable filings; avoid person identity inference.
-    overlap: Overlaps OpenCorporates and GLEIF; Companies House is upstream registry.
+    notes: 'kpi false and low value for Poland: build after the Polish and international statistical sources. Smallest Gold
+      selection: monthly number of live UK-registered companies whose country of origin is Poland, and new incorporations
+      per month in total; the full file stays in Bronze as one snapshot. No Polish regional split. Frequency M. Missing values
+      are empty fields (field list PDF not read: unverified, as is the exact name of the country-of-origin column). Duplicates:
+      none expected inside a snapshot; snapshots repeat every company each month, the file date tells them apart. No overlap
+      with published KPIs. Size: 495 MB zipped per month (measured), several million rows (not counted). Effort M.'
+    overlap: Upstream of OpenCorporates (CD-016, parked); overlaps GLEIF (CD-015) for companies with an LEI.
   research:
     priority: review-next
-    evidence: documented
-    connection: not-tested
-    blockers: [Confirm reuse per API/document, Define personal-data retention, Review stream completeness]
+    evidence: tested
+    connection: tested
+    blockers:
+    - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): en_output.html answered 200 (7,442
+      bytes, Last-Modified 7 Nov 2026) and lists the one-file ZIP (471Mb) and 7 parts; HEAD of BasicCompanyDataAsOneFile-2026-11-01.zip
+      answered 200 with 494,554,856 bytes; en_pscdata.html and the gov.uk guidance answered 200.'
+    - 'Not verified: the column names and empty-value markers (the field list PDF was not read), the row count, whether older
+      snapshots stay downloadable, the accounts data pages.'
+    - The PSC snapshot (about 2.5 GB, daily, personal data) is deliberately out of scope.
     references:
+    - https://download.companieshouse.gov.uk/en_output.html
+    - https://www.gov.uk/guidance/companies-house-data-products
+    - https://www.gov.uk/government/publications/companies-house-accreditation-to-information-fair-traders-scheme/public-task-copyright-and-crown-copyright
     - https://developer-specs.company-information.service.gov.uk/
-    - https://developer.company-information.service.gov.uk/authentication
-    - https://developer.company-information.service.gov.uk/
 - id: CD-015
   name: Global LEI Index, GLEIF API and Golden Copy/Delta Files
   short_name: GLEIF
@@ -8796,7 +9193,7 @@ sources:
   name: OpenAlex
   short_name: OpenAlex
   provider: OurResearch
-  status: registered
+  status: approved
   family: J
   kpi: false
   geography: worldwide
@@ -8807,30 +9204,67 @@ sources:
   coverage: Broad scholarly index; exact retrospective completeness varies by source, field, language and entity
     type.
   access:
-    endpoint: https://help.openalex.org/
+    endpoint: https://api.openalex.org/works
     kind: api
-    interfaces: [API, bulk-files, HTML]
-    auth: Current help center documents REST/API and data access; exact key/plan conditions need review.
-    cost: mixed
-    limits: Plan/access specific; unknown here.
+    interfaces:
+    - API
+    - JSON
+    - bulk-files
+    - Parquet
+    auth: 'No key for small queries: the API answered without one and said "No API key, so this request shares one free daily
+      budget ($0.10) with everyone on your network''s IP address." A free key ($1 of usage a day) needs an account the owner
+      would create; not needed for the selection.'
+    cost: free
+    limits: 'https://help.openalex.org/access/pricing/ (runner, 12 Nov 2026): "Every account gets $1 of API usage per day
+      for free"; without a key $0.10 a day shared per IP address (API notice). A group_by request returns at most 200 groups
+      per page. The polite pool and the mailto parameter no longer exist (desk reading). robots.txt of api.openalex.org (23
+      characters) does not forbid the API.'
   licence:
-    status: unresolved
-    notes: Current licensing and redistribution terms were not exposed in the opened help pages; treat reuse as
-      unresolved.
-  updates: Continuously maintained index; correction and snapshot cadence require confirmation.
+    status: open
+    notes: 'Terms: https://help.openalex.org/access/pricing/ (read by the runner 12 Nov 2026, page last updated 3 Nov 2026):
+      "Every record is released under a CC0 public-domain license, with no “personal use only” carve-out and no permission
+      to ask." The snapshot bucket carries the licence text: https://openalex.s3.amazonaws.com/LICENSE.txt begins "Creative
+      Commons Legal Code CC0 1.0 Universal" (runner, 7,047 bytes). Commercial reuse: allowed (CC0). Modification: allowed
+      (CC0). Attribution: not required; shown as a courtesy: "Source: OpenAlex (CC0)".'
+  updates: The index changes daily; counts for past years keep moving as works are added and merged. Public snapshot quarterly,
+    on the second Wednesday of January, April, July and October (RELEASE_NOTES.txt, latest release 2026-10-14).
   ingestion:
-    history: 'PROPOSAL: resolve licence first, then seed snapshot or scoped API entities.'
-    incremental: 'PROPOSAL: use update timestamps only after semantics are verified; reconcile snapshots.'
-    identifiers: OpenAlex IDs plus DOI, ORCID, ROR, ISSN and Wikidata IDs.
+    history: 'API aggregates, tested: https://api.openalex.org/works?filter=authorships.countries:PL&group_by=publication_year
+      (200, JSON, 11,435 bytes, 177 year groups, count 1,807,832 works) and the same with open_access.is_oa:true (200, 11,264
+      bytes). Two to four requests per run. The bulk snapshot (s3://openalex, about 750 GB per format by the provider''s figure)
+      is far beyond the free storage tier and is not used.'
+    incremental: Full re-read of the few aggregate responses each run (weekly or monthly); every response is kept as a new
+      version because past counts are revised.
+    identifiers: Country code ISO 3166-1 alpha-2 (PL), publication year; institution ids with ROR for a later regional split.
   modelling:
-    notes: Separate works, authorships, concepts/topics and citations; avoid author-name joins.
-    overlap: Overlaps Crossref and Wikidata; OpenAlex enrichments are not identical to publisher metadata.
+    notes: 'kpi false today (register-fields table); the selection is aggregate statistics, so the flag may be reviewed after
+      the build. Smallest Gold selection, Poland first: scholarly works with at least one author affiliated in Poland per
+      publication year, and the open-access share of those works; then the same for other countries for comparison. Voivodeships:
+      possible later through institutions mapped to regions (not verified, effort M). Frequency A only. No suppression markers:
+      works without an affiliation are simply not counted; year groups with few works exist for early years. Duplicates: none
+      within a response; counts change between runs (revisions), the fetch date tells versions apart. No overlap with published
+      KPIs (gerd_gdp is a draft KPI of the same domain). Size: about 23 KB per run (measured). Effort S.'
+    overlap: Built on Crossref (CD-029) and other inputs; OpenAlex adds affiliations and open-access status that Crossref
+      does not have.
   research:
     priority: review-next
-    evidence: documented
-    connection: not-tested
-    blockers: [Open current access/licence pages, Confirm snapshot availability, Assess Polish-language coverage]
-    references: ['https://help.openalex.org/', 'https://openalex.org/']
+    evidence: tested
+    connection: tested
+    blockers:
+    - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): both group_by requests answered
+      200 without a key; LICENSE.txt (CC0 1.0) and RELEASE_NOTES.txt answered 200 from openalex.s3.amazonaws.com; the pricing
+      page answered 200.'
+    - 'Risk: the keyless budget is shared per IP address, and GitHub runners share addresses; if runs meet a refusal, the
+      next step is an owner question for a free OpenAlex account and key, not a retry pattern.'
+    - 'Not verified: the cost of one group_by request against the $0.10 budget, coverage of Polish-language works, the institution-to-region
+      mapping.'
+    references:
+    - https://help.openalex.org/access/pricing/
+    - https://help.openalex.org/api/grouping.md
+    - https://help.openalex.org/data/countries.md
+    - https://help.openalex.org/access/snapshot/
+    - https://openalex.s3.amazonaws.com/LICENSE.txt
+    - https://openalex.s3.amazonaws.com/RELEASE_NOTES.txt
 - id: CD-029
   name: Crossref REST API
   short_name: Crossref
@@ -8929,7 +9363,7 @@ sources:
   name: Our World in Data Chart Data API
   short_name: Our World in Data
   provider: Global Change Data Lab
-  status: registered
+  status: approved
   family: J
   kpi: true
   geography: worldwide
@@ -8939,29 +9373,73 @@ sources:
   granularity: Indicator-geography-time observations with chart metadata and upstream source attribution.
   coverage: Dataset-specific; many series are long-run, but coverage follows each chart and upstream provider.
   access:
-    endpoint: https://ourworldindata.org/faqs
+    endpoint: https://owid-docs.readthedocs.io/projects/etl/api/chart-api/
     kind: api
-    interfaces: [API, CSV, JSON, HTML]
-    auth: Public direct chart-data URLs.
+    interfaces:
+    - API
+    - CSV
+    - JSON
+    - ZIP
+    auth: Public, no key.
     cost: free
-    limits: No API quota documented on the opened FAQ.
+    limits: None documented. CSV and ZIP can answer 403 "Data is non-redistributable" for some charts (chart API documentation).
+      ourworldindata.org robots.txt (47 characters) does not forbid /grapher/.
   licence:
     status: dataset-specific
-    notes: OWID-produced data is CC BY with citation; most data is third-party and retains upstream licence terms.
-  updates: Chart data changes with upstream updates and OWID processing; revisions are possible.
+    notes: 'Terms: https://ourworldindata.org/faqs (desk reading and runner, 12 Nov 2026): "Most of the data on Our World
+      in Data comes from third-party providers (such as the WHO, UN, and World Bank) and is subject to the license terms of
+      those providers."; "Data produced by us falls under our permissive CC BY license; you have permission to use, reproduce,
+      and distribute it, provided that you cite us."; "we ask you to always respect their license terms and cite them appropriately".
+      Site footer: "Our charts, articles, and data are licensed under CC BY, unless stated otherwise." Commercial reuse and
+      modification: allowed for data produced by OWID (CC BY); for third-party data they follow the upstream provider, chart
+      by chart. Attribution sentence: the chart''s citationShort from <slug>.metadata.json, for example "Global Carbon Budget
+      (2026); Population based on various sources (2024) – with major processing by Our World in Data". The chart metadata.json
+      has no licence field (checked on seven charts); the origin licence is in the indicator metadata (origins[].license,
+      desk reading of archived copies). Rule for the build: a chart is publishable only when every origin licence allows reuse
+      and modification; otherwise it stays internal. The three charts selected below are third-party data (Global Carbon Budget,
+      V-Dem, Maddison Project) whose origin licences are not read yet, so the build gives them an unresolved licence key until
+      origins[].license is recorded per chart (examples read: Corruption Perceptions Index, origin CC BY-ND 4.0; World Happiness
+      Report, own data-sharing policy).'
+  updates: 'Per chart: lastUpdated and nextUpdate in the metadata (for example consumption-based CO2 lastUpdated 2026-11-10,
+    nextUpdate 2027-11-10). Whole series are revised in place.'
   ingestion:
-    history: 'PROPOSAL: approve chart-by-chart licences, then snapshot CSV plus metadata.'
-    incremental: 'PROPOSAL: poll metadata/data hashes and version snapshots when changed.'
-    identifiers: Chart slug, entity code, year/date and variable; map ISO cautiously.
+    history: 'Fixed URLs per chart, tested: https://ourworldindata.org/grapher/<slug>.csv?csvType=full&useColumnShortNames=true
+      and https://ourworldindata.org/grapher/<slug>.metadata.json. Tested charts with Poland rows: consumption-co2-per-capita
+      (139,293 bytes, 4,780 rows, Poland 1990-2024), electoral-democracy-index (1,115,453 bytes, 34,228 rows, Poland 1789-2025),
+      gdp-per-capita-maddison-project-database (567,429 bytes, 21,586 rows, Poland 1400-2022), life-expectancy (605,252 bytes,
+      21,565 rows, Poland 1931-2023), human-development-index, happiness-cantril-ladder, ti-corruption-perception-index. Two
+      old slugs redirect (electoral-democracy, gdp-per-capita-maddison): use the final ones.'
+    incremental: Snapshot per chart; version = lastUpdated of the metadata (the CSV Last-Modified is the request time). Re-read
+      monthly and keep each version.
+    identifiers: Chart slug, column short name, entity code (ISO 3166-1 alpha-3, POL; OWID's own codes for regions), year.
   modelling:
-    notes: Indicator facts with unit/definition/version; do not blend processed and official series.
-    overlap: Often republishes WHO/UN/World Bank and others; cite and deduplicate by upstream series.
+    notes: 'kpi true. Smallest Gold selection, Poland and all countries, annual, three charts whose data the platform has
+      from no direct source: consumption-co2-per-capita (Global Carbon Budget), electoral-democracy-index (V-Dem) and gdp-per-capita-maddison-project-database
+      (long-run GDP per person, international-$ in 2011 prices). Not selected: human-development-index (UNDP HDR is loaded
+      directly, GL-028), life-expectancy (overlaps the draft KPI life_expectancy from official sources), happiness and corruption
+      charts (origin licences do not allow free reuse). No voivodeship data. Frequency A only. Missing values: a missing year
+      is a missing row or an empty cell (the Maddison file has an annotations column that is empty in 21,558 rows; the V-Dem
+      file has 4,113 empty cells, its owid_region column included): never a zero. Duplicates: none within a file (entity,
+      year); revisions replace the series, lastUpdated tells versions apart. Overlap with published KPIs: gdp_per_capita is
+      published in national currency; the Maddison series has another unit and gets its own measure key. Size: about 1.8 MB
+      for the three charts (measured). Effort S.'
+    overlap: Republishes WHO, UN, World Bank, UNDP and research datasets; take a series from OWID only when the upstream is
+      not loaded directly.
   research:
     priority: review-next
-    evidence: documented
-    connection: not-tested
-    blockers: [Per-chart upstream licence review, Track methodology and source, Define revision snapshots]
-    references: ['https://ourworldindata.org/faqs']
+    evidence: tested
+    connection: tested
+    blockers:
+    - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): the FAQ page, seven chart CSV
+      files and seven metadata.json files answered 200; every CSV has rows for POL.'
+    - 'Before publication: read origins[].license of each selected chart from the indicator metadata on a runner (the session
+      read archived copies only) and record it per chart; until then the three charts are internal.'
+    - 'Not verified: the live host of the indicator metadata, the origin licences of the Global Carbon Budget, V-Dem and Maddison
+      charts, the catalog API (marked as under active development).'
+    references:
+    - https://ourworldindata.org/faqs
+    - https://owid-docs.readthedocs.io/projects/etl/api/chart-api/
+    - https://owid-docs.readthedocs.io/projects/etl/architecture/metadata/reference/
 - id: CD-032
   name: Allegro REST API
   short_name: Allegro API
@@ -9014,7 +9492,7 @@ sources:
   name: Dane Otodom dashboards and reports
   short_name: Otodom reports
   provider: Otodom / OLX Group
-  status: registered
+  status: reviewing
   family: J
   kpi: false
   geography: Poland
@@ -9025,155 +9503,352 @@ sources:
     segment.
   coverage: Series and dashboard history vary; pages show current and archived reports rather than raw listing histories.
   access:
-    endpoint: https://www.otodom.pl/wiadomosci/dane-otodom-aktualne-ceny-ofertowe-mieszkan-i-domow/
+    endpoint: https://www.otodom.pl/wiadomosci/dane/aktualne-dane/
     kind: web
-    interfaces: [HTML, dashboard, PDF]
-    auth: Public reading; no documented public data API or bulk export.
-    cost: free
-    limits: No public API limit documented.
+    interfaces:
+    - HTML
+    - dashboard
+    - PDF
+    auth: 'Public reading. The data product is paid: Otodom Analytics (https://analytics.otodom.pl/), a subscription of 399
+      to 1,699 zł per 30 days or an individual offer (desk reading 12 Nov 2026); no CSV, XLSX or API is mentioned.'
+    cost: mixed
+    limits: None documented; www.otodom.pl robots.txt (1,259 characters) does not forbid the pages read.
   licence:
-    status: unresolved
-    notes: Charts/reports are copyrighted publications unless a specific licence says otherwise; automated extraction/republication
-      unresolved.
-  updates: Dashboard/report-specific, often periodic; revisions unknown.
+    status: restricted
+    notes: 'Terms: https://www.otodom.pl/regulamin/ (read by the runner 12 Nov 2026; operator Grupa OLX sp. z o.o.): "Zabrania
+      się w szczególności: a. jakiegokolwiek wykorzystywania tych treści bez pisemnej zgody uprawnionych; b. jakiegokolwiek
+      agregowania i przetwarzania danych oraz innych informacji dostępnych w Serwisie w celu ich dalszego udostępniania osobom
+      trzecim w ramach innych serwisów internetowych jak i poza Internetem". Commercial reuse: not allowed without written
+      consent. Modification (aggregating, processing for third parties): not allowed. Automated access: not addressed by name.
+      Attribution sentence: none, since reuse is not allowed. Not reusable for public display.'
+  updates: Dashboard articles are updated a few times a year (2026-03-01, 2026-07-02 seen); price press releases roughly monthly.
   ingestion:
-    history: 'PROPOSAL: catalogue publications only pending written reuse permission or licensed analytics product.'
-    incremental: 'PROPOSAL: record new report releases and metadata, not scrape listing inventory.'
-    identifiers: Geography, market segment, metric and period; listing counts are platform supply, not total market stock.
+    history: 'No machine-readable route: the two data pages answered 200 as HTML articles with no CSV or XLSX link and no
+      chart embed in the HTML (only a tag-manager frame); the dashboards are drawn by scripts. Nothing is loaded without written
+      consent.'
+    incremental: None.
+    identifiers: City, market segment, metric and month; counts are platform listings, not the whole market.
   modelling:
-    notes: Aggregate indicator facts with methodology/version; preserve native Polish labels.
-    overlap: May overlap OLX listings, official housing statistics and private analytics; definitions differ.
+    notes: 'kpi false. With permission the selection would be the monthly asking price per square metre and rent for the largest
+      cities (no voivodeship series seen). Frequency M. Not established: markers, revisions, size (nothing read). No overlap
+      with published KPIs. Effort M, and only with a licence.'
+    overlap: 'Official housing-price series: NBP residential price reports (quarterly, 17 cities) and GUS; asking prices differ
+      from transaction prices.'
   research:
     priority: specialist
-    evidence: catalogue-only
-    connection: not-tested
-    blockers: [Confirm reuse/automation rights, Obtain methodology and exports, Clarify Otodom Analytics licensing]
+    evidence: documented
+    connection: tested
+    blockers:
+    - 'Owner question (written permission): Otodom''s terms forbid using or aggregating its content without written consent
+      of Grupa OLX, which also publishes the OTOMOTO market report (CD-034, buildable but without reuse terms). Ask Grupa
+      OLX in writing for permission to store and show the monthly Otodom and OTOMOTO aggregates with attribution (the request
+      can be drafted for you), or leave Otodom unbuilt and OTOMOTO internal? Recommendation: ask once for both; without an
+      answer Otodom is not built (official housing-price series exist at NBP and GUS but are not asking prices).'
+    - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): https://www.otodom.pl/regulamin
+      answered 200 with the clause quoted in licence.notes; both data pages answered 200 (240,810 and 282,588 bytes) with
+      no data file or chart embed in the HTML.'
+    - 'Not verified: the Otodom Analytics terms, any data endpoint behind the dashboards, history depth.'
     references:
     - https://www.otodom.pl/wiadomosci/dane-otodom-aktualne-ceny-ofertowe-mieszkan-i-domow/
     - https://www.otodom.pl/wiadomosci/dane/aktualne-dane/
+    - https://www.otodom.pl/regulamin/
+    - https://analytics.otodom.pl/
 - id: CD-034
   name: Raport Rynkowy OTOMOTO
   short_name: OTOMOTO market report
   provider: OTOMOTO / OLX Group
-  status: registered
+  status: approved
   family: J
   kpi: false
   geography: Poland
   provider_type: commercial
   domains: [automotive-market]
   entities: [vehicle-segment, region, listing, registration-aggregate]
-  granularity: Monthly supply, demand proxies, prices and vehicle-segment indicators in reports; some regional splits
-    appear.
-  coverage: Report archive visibly covers recent monthly and annual periods; raw listing history is not offered
-    publicly.
+  granularity: 'Monthly edition of the report as one Infogram page; each chart carries its data table (month by segment: listings
+    of used, imported and new cars, price bands, fuel shares, demand indices).'
+  coverage: The August 2026 edition holds monthly series from 2025-01 to 2026-08 (one series from 2023-01); earlier editions
+    go back to about 2024. Raw listing history is not offered.
   access:
     endpoint: https://www.otomoto.pl/news/raport-rynkowy-otomoto
     kind: web
-    interfaces: [HTML, interactive-report, PDF]
-    auth: Public reading; business tools may require customer access.
-    cost: mixed
-    limits: No public API limit documented.
+    interfaces:
+    - HTML
+    - JSON
+    - interactive-report
+    - PDF
+    auth: Public, no login.
+    cost: free
+    limits: infogram.com robots.txt (97 characters) does not forbid the edition page; one request per edition per month. www.otomoto.pl
+      answered HTTP 403 to the runner's robots.txt request, so no page of that host is read (12 Nov 2026).
   licence:
     status: unresolved
-    notes: Publication access does not authorize automated extraction or redistribution; report-specific rights
-      remain unresolved.
-  updates: Monthly reports; combines OTOMOTO supply with CEPiK demand and GUS/NBP context.
+    notes: 'Terms: none found for https://www.otomoto.pl/news/raport-rynkowy-otomoto. The report page (desk reading 12 Nov
+      2026) has a footer link "Zasady Serwisu" that points to "#", no OTOMOTO regulamin was found by search, and www.otomoto.pl
+      refused the runner (HTTP 403 on robots.txt), so no terms page of the publisher is quoted. The annual report PDF carries
+      "© OTOMOTO INSIGHTS". The terms of infogram.com (the host the data is read from) were not read. Commercial reuse: not
+      stated. Modification: not stated. Attribution sentence: none given (working text: "Źródło: OTOMOTO Insights, Raport
+      Rynkowy OTOMOTO"). Stays internal.'
+  updates: Monthly ("aktualizowane co miesiąc"); the report page was modified 2026-10-19 (desk reading). Each edition is a
+    new Infogram page with its own address.
   ingestion:
-    history: 'PROPOSAL: catalogue releases; onboard only licensed structured exports if offered.'
-    incremental: 'PROPOSAL: record monthly publication metadata and revisions.'
-    identifiers: Period, vehicle condition/type, region and metric; platform demand is partly estimated.
+    history: 'Web route, tested: the monthly edition is a public Infogram page (August 2026: https://infogram.com/0826otomotoinsights-1hxj48mj9m8o52v,
+      953,532 bytes) whose HTML holds the chart data as JSON (window.infographicData: 27 chart data blocks, 62 sheets, 6,193
+      cells). Example table: month, used, imported and new listings, 2025-01 (229888, 69209, 43666) to 2026-08 (224196, 63815,
+      45226). Annual and quarterly PDF reports hold charts only and are not used.'
+    incremental: 'One edition per month; an edition repeats about 20 months of history, so a missed month is recovered from
+      the next one. The address of a new edition is linked from the report page on www.otomoto.pl, which refuses the runner:
+      until that is solved without touching the refusal, the new address is added by hand to the source''s configuration each
+      month.'
+    identifiers: Edition (month in the page title, for example 08_26), chart id (UUID in the JSON), sheet, month (YYYY-MM),
+      segment label in Polish.
   modelling:
-    notes: Aggregate fact with methodology/source component; do not treat estimated sales as registrations.
-    overlap: Explicitly blends OTOMOTO, CEPiK, GUS and NBP, so retain component provenance and avoid resumming.
+    notes: 'kpi false. Smallest Gold selection, Poland, monthly: number of listings of used, imported and new cars, and the
+      demand index of users (January 2025 = 100); price-band and fuel shares later. No voivodeship tables seen in the edition.
+      Frequency M only. Values are text with a decimal comma and some carry the change in brackets ("19,4% (0,6 p.p.)"): parse,
+      never coerce; empty cells are null, not zero. Duplicates: every edition repeats earlier months, possibly revised; the
+      edition tells versions apart, keep the newest. No overlap with published KPIs. Size: about 1 MB of HTML and 6,000 cells
+      per edition (measured). Effort M (chart ids and layouts can change between editions).'
+    overlap: Demand figures blend CEPiK registrations (PL-ENV-024) with platform data; listings and asking prices are OTOMOTO's
+      own and are in no loaded source.
   research:
     priority: specialist
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Confirm report reuse rights
-    - Obtain machine-readable data/methodology
-    - Separate upstream official series
+    - 'Route decision: a read of one public page per month that robots.txt does not forbid; like the other web routes it needs
+      the D row in docs/decisions.md before the build (verdicts on PR #2878 and PR #2902).'
+    - 'Dev probe run 43304076522 (job 131482594214, branch test/src-cd-probe, 12 Nov 2026): the August 2026 Infogram edition
+      answered 200 (953,532 bytes) with the chart data in the HTML; infogram.com robots.txt 200 with no rule against it. Earlier
+      run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): https://www.otomoto.pl/robots.txt answered
+      HTTP 403, so the report page was not requested from the runner. The refusal is recorded, not worked around.'
+    - 'Open: how a run learns the address of a new monthly edition without the refused host (by hand for now); the terms of
+      infogram.com; whether older editions stay online.'
+    - 'Publication needs permission: the question to Grupa OLX under CD-033 covers this report too.'
     references:
     - https://www.otomoto.pl/news/raport-rynkowy-otomoto
+    - https://infogram.com/0826otomotoinsights-1hxj48mj9m8o52v
     - https://www.otomoto.pl/news/otomoto-insights-2025-podsumowanie
+    - https://otomoto.pl/news/uploads/2024/02/Otomoto-Insights-Raport-2024-v7.pdf
 - id: EX-001
   name: Industrial-property statistical APIs
   short_name: UPRP industrial-property statistics
   provider: Patent Office of the Republic of Poland (UPRP)
-  status: registered
+  status: approved
   family: B
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [innovation, intellectual-property]
   entities: [region, applicant-aggregate]
-  granularity: Published aggregate by origin, entity type or voivodeship and measure.
-  coverage: Dataset-specific; complete temporal bounds not established.
+  granularity: 'Annual counts of applications and of rights granted for inventions, utility models, trademarks and
+    industrial designs, and of European-patent validations, as labelled figures, charts and tables in the annual
+    report. The ten API aggregates (by origin, by type of domestic applicant, by voivodeship) were not read
+    (robots.txt).'
+  coverage: 'Annual reports for 2003 to 2025 (23 years, 30 PDF files; 2019 to 2025 in Polish and in English). Patents
+    granted by UPRP to domestic applicants by voivodeship, 2009 to 2025, are also in GUS BDL subgroup P3005
+    (PLS-001).'
   access:
-    endpoint: https://uprp.gov.pl/pl/o-urzedzie/statystyki/api-do-statystyk
-    kind: api
-    interfaces: [API-index]
-    auth: Official page links statistical endpoints; endpoint authentication not tested.
-    cost: Public documentation; production access conditions to confirm.
-    limits: Not stated in reviewed index.
+    endpoint: https://uprp.gov.pl/pl/publikacje/raport-roczny-uprp
+    kind: bulk_file
+    interfaces: [PDF, API, HTML-iframe-charts]
+    auth: Public download of the report files, no key or account.
+    cost: free
+    limits: 'None documented. robots.txt of uprp.gov.pl let the probe read the report page and files (generic agent
+      and Claude agents). The "API do statystyk" and the chart iframes are on statystyka.pue.uprp.gov.pl, whose
+      robots.txt is "User-agent: *" / "Disallow: /": no automated request is made there.'
   licence:
     status: unresolved
-    notes: No dataset-specific redistribution grant established from the API index.
-  updates: Period statistics; revision cadence not established.
+    notes: 'Terms:
+      https://uprp.gov.pl/pl/warunki-korzystania-z-portalu-informacyjnego-urzedu-patentowego-rp-i-platformy-uslug-elektronicznych-urzedu-patentowego-rp
+      ("Warunki korzystania z Portalu Informacyjnego Urzędu Patentowego RP i Platformy Usług Elektronicznych Urzędu
+      Patentowego RP", "Data publikacji: 12.09.2023 r. wersja 3.0."; they cover uprp.gov.pl and "ich subdomen
+      *.uprp.gov.pl", read in full on 12 Nov 2026). They do not address reuse: no sentence on reusing content or data,
+      no attribution sentence, commercial reuse not stated, modification not stated. What they say: "Korzystanie z PI
+      i PUEUP jest bezpłatne.", "Użytkownik korzysta z zasobów PI i PUEUP na własną odpowiedzialność." and "W sprawach
+      nieuregulowanych w niniejszych Warunkach Korzystania zastosowanie mają obowiązujące przepisy prawa." The page
+      "Zasady udostępniania danych statystycznych"
+      (https://uprp.gov.pl/pl/o-urzedzie/statystyki/zasady-udostepniania-danych-statystycznych) gives no reuse terms
+      either; requests for other compilations "są rozpatrywane zgodnie z przepisami Ustawy o dostępie do informacji
+      publicznej". The annual-report page states no terms of its own. No licence is claimed: the source is built and
+      stays internal (licence gate) until UPRP states terms; the owner question in research.blockers asks for them. No
+      owner decision exists on these terms.'
+  updates: 'Yearly: the report for a year appears in the following summer (2025 edition: Polish file Last-Modified 31
+    Aug 2026, English file 11 Sep 2026).'
   ingestion:
-    history: 'Proposal: inventory eight linked measure families, then bounded period/category retrieval.'
-    incremental: 'Proposal: compare metadata and re-read recent/revised periods; no confirmed change feed.'
-    identifiers: Measure, period, geography, applicant origin/type; map regions with dated crosswalks.
+    history: 'Bulk: the page https://uprp.gov.pl/pl/publikacje/raport-roczny-uprp links 30 PDF files for 2003 to 2025
+      (the file addresses follow no pattern, so read the links from the page); all 30 answered HEAD 200 from a GitHub
+      runner, 298,429,334 bytes in total. The 2025 Polish report (10,143,966 bytes, 94 page objects) has a text layer
+      with the figures as labelled text, for example "patenty na wynalazki 2283", "prawa ochronne na wzory użytkowe
+      490", "walidacje patentów europejskich 10 580", "prawa ochronne na znaki towarowe 12 048", "prawa z rejestracji
+      wzorów przemysłowych 712" (diacritics restored here: the raw strings lose them to the font encoding, so the
+      build needs a PDF library that applies the font maps, which the pipeline does not have yet). The reports for
+      2003 to 2024 were not opened. Dev probe run 43295075918 (job 131451094958) and Dev probe run 43299743376 (job
+      131467412298), branch test/src-fix-probe, 12 Nov 2026. Not a route: the ten API endpoints
+      https://statystyka.pue.uprp.gov.pl/team/uprp/<name> (zgl_kraj_zag, zgl_rodz_pod, zgl_woj, udziel_kraj_zag,
+      udziel_rodz_pod, udziel_woj, zt_zgl_kraj_zag, zt_udz_kraj_zag, wp_zgl_kraj_zag, wp_udz_kraj_zag) and the
+      statistics pages of uprp.gov.pl, which are iframes from the same host: its robots.txt disallows all robots (Dev
+      probe run 43287937228, job 131426191655, branch test/src-ex-probe, 12 Nov 2026), honoured. dane.gov.pl timed out
+      from the runner again (75 s).'
+    incremental: 'Entity = one annual report (year, Polish edition), version = Last-Modified of the file; one new file
+      a year, unchanged bytes skipped by SHA-256. Small source: full refresh.'
+    identifiers: 'Year + right type (invention, utility model, trademark, industrial design, European-patent
+      validation) + event (application, grant or registration) + applicant origin where the report gives it.'
   modelling:
-    notes: Statistical facts; applications, grants and rights are distinct events.
-    overlap: UPRP records and WIPO/EPO aggregates can share underlying applications; do not sum providers.
+    notes: 'Counts in single units, annual only (frequency A). Applications, grants and rights in force are distinct
+      events counted by different dates (filing date; date the right number is assigned). Smallest Gold selection,
+      Poland first: (1) patents granted by UPRP to domestic applicants, Poland and the 16 voivodeships, 2009 to 2025,
+      from GUS BDL P3005 (variable 271227; by applicant type 782881 to 782883 from 2018), a loaded source, so no
+      EX-001 code is needed for it; (2) from the annual reports, the Poland totals BDL does not carry: trademark and
+      industrial-design applications and registrations, utility models and European-patent validations, 2003 to 2025.
+      New KPIs in the domain group education.science (Science, R&D & patents); none is in kpi.csv today, so no
+      published KPI changes. The 2025 report gives 2,283 patents granted and BDL gives 2,242 for Poland in 2025:
+      different scopes (not reconciled), so the two are separate series and never mixed. Suppression markers: none
+      seen in the 2025 totals; older reports unknown. Duplicates: later reports restate earlier years; keep the newest
+      report''s value per year. Effort L for the PDF route (23 yearly layouts, no PDF reader in the pipeline); S if
+      UPRP allows the API.'
+    overlap: 'UPRP says it passes its survey results to GUS ("dane wynikowe są przekazywane do Głównego Urzędu
+      Statystycznego"). Checked on 12 Nov 2026 (Dev probe run 43295075918 (job 131451094958) and Dev probe run
+      43299743376 (job 131467412298)): GUS BDL (PLS-001) group G483 "Ochrona własności przemysłowej w Polsce" has the
+      subgroups P3005 "Wynalazki" (2009 to 2025, last update 21 May 2026; 11 variables seen: patents granted by UPRP
+      in total and by type of applicant, per 100 thousand and per million inhabitants, shares, applications per
+      million inhabitants; Poland and 16 voivodeships) and P3006 "Wzory użytkowe" (variables not listed: HTTP 429); a
+      variable-name search found no trademark or industrial-design variable in BDL. World Bank WDI (GL-005, bulk) has
+      IP.PAT.RESD and IP.PAT.NRES for Poland, 1980 to 2024 (3,363 and 90 in 2024); the five trademark and design codes
+      tried returned no data for Poland. UNdata (GL-017) declares SYB table 264 "Patents" (not queried). Eurostat
+      (GL-001): 34 patent or intellectual-property tables in the catalogue, the EPO patent tables end in 2012 or 2013
+      and none carries UPRP filings. WIPO IP Statistics (GL-032) is parked on its licence. O31: each source stays its
+      own series; do not sum providers.'
   research:
     priority: review-next
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Confirm formats, periods and reuse conditions
+    - 'Owner question (it does not block the internal build; a yes from UPRP replaces PDF reading with ten small API
+      reads and can resolve the licence): will you send this to UPRP (Centrum.Kontaktowe@uprp.gov.pl)? "Szanowni
+      Państwo, na stronie »API do statystyk« (https://uprp.gov.pl/pl/o-urzedzie/statystyki/api-do-statystyk)
+      udostępniają Państwo dziesięć zestawień pod adresami w domenie statystyka.pue.uprp.gov.pl, ale plik robots.txt
+      tej domeny zabrania dostępu programom (Disallow: /). Proszę o informację: (1) czy mogę pobierać te dziesięć
+      zestawień programem raz w miesiącu; (2) na jakich warunkach mogę je ponownie wykorzystywać i publikować w
+      serwisie zohelo.com z adnotacją »Źródło: Urząd Patentowy RP«."'
+    - 'Build task, not a review blocker: the pipeline has no PDF reader, and the reports for 2003 to 2024 were not
+      opened, so their layouts are unknown.'
+    - 'Not verified: whether P3005 and P3006 are already in Bronze (the GUS BDL initial load is in progress); the
+      variables of P3006; everything inside the ten API endpoints.'
     references:
+    - https://uprp.gov.pl/pl/publikacje/raport-roczny-uprp
+    - https://uprp.gov.pl/sites/default/files/2026-08/Raport%20roczny%202025.pdf
     - https://uprp.gov.pl/pl/o-urzedzie/statystyki/api-do-statystyk
+    - https://statystyka.pue.uprp.gov.pl/robots.txt
+    - https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny
+    - https://uprp.gov.pl/pl/o-urzedzie/statystyki/zasady-udostepniania-danych-statystycznych
+    - https://uprp.gov.pl/pl/o-urzedzie/statystyki/metodologia-i-slownik-pojec
+    - https://uprp.gov.pl/pl/warunki-korzystania-z-portalu-informacyjnego-urzedu-patentowego-rp-i-platformy-uslug-elektronicznych-urzedu-patentowego-rp
+    - https://bdl.stat.gov.pl/api/v1/subjects/P3005?format=json&lang=pl
+    - https://api.worldbank.org/v2/country/POL/indicator/IP.PAT.RESD?format=json
 - id: EX-002
   name: e-Wyszukiwarka industrial-property search
   short_name: UPRP e-Wyszukiwarka
   provider: Patent Office of the Republic of Poland (UPRP)
-  status: registered
+  status: reviewing
   family: E
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [innovation, intellectual-property]
   entities: [patent, trademark, industrial-design, applicant]
-  granularity: Public industrial-property records and BUP/WUP publication results.
-  coverage: Collection-dependent; full machine-readable backfile not established.
+  granularity: 'One record per published application or exclusive right (inventions, utility models, trademarks,
+    industrial designs), from the UPRP domain systems and the BUP and WUP publications.'
+  coverage: 'UPRP describes the search as covering "opublikowanych zgłoszeń i udzielonych praw wyłącznych na wszystkie
+    przedmioty własności przemysłowej" (no record was read). The bulletins that publish the same records are on
+    uprp.gov.pl as PDF: BUP 1973 to 2026, WUP 1924 to 2026.'
   access:
     endpoint: https://uprp.gov.pl/pl/uslugi-online/e-wyszukiwarka
     kind: web
-    interfaces: [web-search, publication-documents]
-    auth: Public search described; e-Profile supports search subscriptions.
-    cost: Public discovery; bulk conditions unresolved.
-    limits: No bulk/API quota established.
+    interfaces: [web-search-JavaScript-app, API, PDF]
+    auth: 'Public search in a browser. UPRP''s web service api.uprp.gov.pl has no public documentation or terms;
+      whether it needs an account or a key is not stated anywhere read. The bulletin PDF files need nothing.'
+    cost: free
+    limits: 'None documented. https://ewyszukiwarka.pue.uprp.gov.pl and https://api.uprp.gov.pl answer a GitHub runner
+      with an Imperva/Incapsula challenge page (Dev probe run 43287937228); bot protection is never worked around. The
+      bulletin files on uprp.gov.pl are plain downloads.'
   licence:
     status: unresolved
-    notes: Search availability does not establish bulk redistribution rights.
-  updates: Source search/publication changes; exact feed semantics unverified.
+    notes: 'Terms:
+      https://uprp.gov.pl/pl/warunki-korzystania-z-portalu-informacyjnego-urzedu-patentowego-rp-i-platformy-uslug-elektronicznych-urzedu-patentowego-rp
+      ("Data publikacji: 12.09.2023 r. wersja 3.0."; they cover uprp.gov.pl and "ich subdomen *.uprp.gov.pl", so the
+      search application and the bulletin files too; read in full on 12 Nov 2026). They do not address reuse: no
+      attribution sentence, commercial reuse not stated, modification not stated, bulk or automated reading not
+      mentioned. Relevant wording: "Użytkownik korzysta z zasobów PI i PUEUP na własną odpowiedzialność." and
+      "Użytkownik obowiązany jest do zachowania poufności pozyskanych danych, w szczególności w sytuacji pozyskania
+      danych bez tytułu prawnego." Unit data beyond the search go by request: "Wnioski są rozpatrywane zgodnie z
+      przepisami Ustawy o dostępie do informacji publicznej"
+      (https://uprp.gov.pl/pl/o-urzedzie/statystyki/zasady-udostepniania-danych-statystycznych). Records name
+      applicants, right holders and inventors (personal data of natural persons). No licence is claimed; whatever is
+      built stays internal. No owner decision exists on these terms.'
+  updates: 'Weekly: the bulletins appear on Mondays (BUP trademarks no. 45/2026: Last-Modified Mon, 9 Nov 2026; no.
+    44: 2 Nov 2026; no. 43: 26 Oct 2026). No feed or change list.'
   ingestion:
-    history: 'Proposal: seek documented export/licensed bulk before entity-level backfill.'
-    incremental: 'Proposal: use authorized publication/discovery route if available; no inferred crawler permission.'
-    identifiers: Official application/publication numbers and versioned classification codes; applicants need identity
-      resolution.
+    history: 'Three routes were looked at. (1) UPRP''s own web service: its 2024 report to WIPO says the office "has
+      used webservice available on https://api.uprp.gov.pl/", that "only link to this webservice is published on
+      https://dane.gov.pl/pl", that there is an "API endpoint serving bibliographic data for given numbers and dates
+      of BUP and WUP publications" and that "At the end of 2023, the EPO switched to retrieve the data using the
+      provided API" (https://confluence.wipo.int/confluence/spaces/ATR/pages/1640995272/CWS+ATR+PI+2024+PL, desk
+      fetch, 12 Nov 2026). The host is behind the bot protection, so this route needs UPRP to give access: the owner
+      question. (2) Tested fallback, the bulletins: https://uprp.gov.pl/pl/publikacje/biuletyn-i-wiadomosci-uprp
+      (5,159,339 bytes of HTML) links 3,287 PDF files: BUP trademarks 506 files (2017 to 2026), BUP inventions and
+      utility models 390 (2017 to 2026), BUP before the split 1,119 (1973 to 2016), WUP 1,237 (1924 to 2026), other
+      35. The newest three answered HEAD 200 with Last-Modified (3.7 to 7.5 MB each); bup45_2026.pdf (2,778,880 bytes,
+      23 page objects) and wup45_2026.pdf (5,968,277 bytes, 124 page objects) have text layers. Total size not
+      measured; record layout not analysed; old years may be scans. Dev probe run 43295075918 (job 131451094958) and
+      Dev probe run 43299743376 (job 131467412298), branch test/src-fix-probe, 12 Nov 2026. (3) Official republishers:
+      EPO (Espacenet shows the Polish documents: "The data are currently published on ESPACENET"; the bulk-data page
+      of epo.org answered 200 and lists DOCDB and INPADOC, their terms were not captured; Open Patent Services is
+      EX-004, parked on its licence and needing an account); EUIPO TMview and DesignView receive UPRP data (DesignView
+      since November 2022, TMview since September 2024:
+      https://confluence.wipo.int/confluence/spaces/ATR/pages/1640995286/CWS+ATR+TM+2024+PL), but www.tmdn.org closed
+      the connection on robots.txt from the runner, so nothing was requested there; WIPO databases were not probed;
+      dane.gov.pl timed out from the runner (75 s).'
+    incremental: 'For the bulletin route: entity = one bulletin issue (series, year, number), version = Last-Modified;
+      issues are never replaced, so new files only (delta), read from the listing page once a week.'
+    identifiers: 'Application number, right number, BUP/WUP series, number and date, classification symbol; applicants
+      would need REGON or another official identifier, never a name match.'
   modelling:
-    notes: Separate application, publication, legal-status and applicant bridges; no entity matching by name alone.
-    overlap: EPO/WIPO may contain related family records; patent families differ from individual publications.
+    notes: 'kpi false. Gold use: an entity table of industrial-property rights keyed by application number (right
+      type, filing and publication dates, classification, bulletin issue), for legal persons only; names of natural
+      persons (inventors, individual applicants) are not stored. Smallest valuable selection: issues from 2017 on (the
+      two current BUP series and WUP). Counts of applications and grants belong to EX-001, not here. Effort L on the
+      bulletin route (PDF text extraction, no PDF reader in the pipeline); M if UPRP gives API access.'
+    overlap: 'EPO Open Patent Services (EX-004, parked) and WIPO hold related records of Polish applications; patent
+      families differ from individual publications. Aggregates: EX-001 and GUS BDL P3005. No other loaded source holds
+      these unit records.'
   research:
     priority: conditional
-    evidence: documented
-    connection: not-tested
-    blockers: [Automated/bulk access route, Reuse and applicant-field review]
+    evidence: tested
+    connection: tested
+    blockers:
+    - 'Owner: will you send this request to UPRP (Centrum.Kontaktowe@uprp.gov.pl)? "Szanowni Państwo, w raporcie dla
+      WIPO (CWS ATR 2024) Urząd opisuje usługę sieciową https://api.uprp.gov.pl/ z danymi bibliograficznymi publikacji
+      BUP i WUP, z której korzystają m.in. EPO i WIPO. Proszę o: (1) dostęp do tej usługi wraz z dokumentacją albo
+      cykliczny plik z danymi bibliograficznymi opublikowanych zgłoszeń i udzielonych praw (numer i data zgłoszenia
+      lub prawa, tytuł, numer i data BUP/WUP, symbol klasyfikacji, nazwa i kraj zgłaszającego lub uprawnionego); (2)
+      warunki ponownego wykorzystywania tych danych w serwisie zohelo.com." If your answer is no, or UPRP refuses or
+      does not reply, tell us and EX-002 is approved on the tested bulletin route (ingestion.history, route 2), built
+      without names of natural persons.'
+    - 'Not worked around: the Incapsula challenge on ewyszukiwarka.pue.uprp.gov.pl, pue.uprp.gov.pl,
+      ebazawiedzy.pue.uprp.gov.pl and api.uprp.gov.pl (Dev probe run 43287937228, job 131426191655, branch
+      test/src-ex-probe, 12 Nov 2026).'
+    - 'Not verified: the record layout and the total size of the bulletins, whether the oldest are scans, the EPO
+      bulk-data terms, what dane.gov.pl links for UPRP.'
     references:
     - https://uprp.gov.pl/pl/uslugi-online/e-wyszukiwarka
+    - https://uprp.gov.pl/pl/wyszukiwarki
+    - https://ewyszukiwarka.pue.uprp.gov.pl/
+    - https://uprp.gov.pl/pl/publikacje/biuletyn-i-wiadomosci-uprp
+    - https://confluence.wipo.int/confluence/spaces/ATR/pages/1640995272/CWS+ATR+PI+2024+PL
+    - https://confluence.wipo.int/confluence/spaces/ATR/pages/1640995286/CWS+ATR+TM+2024+PL
+    - https://www.epo.org/en/searching-for-patents/data/bulk-data-sets
+    - https://uprp.gov.pl/pl/o-urzedzie/statystyki/zasady-udostepniania-danych-statystycznych
+    - https://uprp.gov.pl/pl/warunki-korzystania-z-portalu-informacyjnego-urzedu-patentowego-rp-i-platformy-uslug-elektronicznych-urzedu-patentowego-rp
 - id: EX-003
   name: Fire-service intervention statistics and current casualty summaries
   short_name: PSP fire-service statistics

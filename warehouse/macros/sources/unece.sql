@@ -5,8 +5,9 @@
 {# UNECE tables built (block = PXWeb table id as landed; one frequency per table, so one per measure). The other
    20 tables of folder 20-ME (GDP by expenditure and by activity, per capita, deflators, employment by activity,
    the macroeconomic overviews, monthly and quarterly prices and exchange rates, monthly industrial production,
-   globalization indicators; about 2.3 million rows) wait for the per-block incremental Gold load (D28: a
-   full-rebuild model and the frequency facts stay below 1 M rows). #}
+   globalization indicators; about 2.3 million rows) are not loaded here: this stage holds the curated selection
+   and stays below 1 M rows (D28); every loaded series goes to Gold by the per-block load of D35
+   (docs/gold-coverage.md, Task #2885). #}
 {% macro poc_unece_blocks() %}
     select * from (
         values

@@ -1,4 +1,3 @@
-{# BIS Data Portal (gold.build_bis, #2861): D34 registration (docs/source-registration.md). #}
 {# BIS Data Portal measures (gold.build_bis, #2861): one row per built series of a landed selection
    (ingestion/sources/bis.yaml entity). series_code = the series key without FREQ and the area, as the BIS
    publishes it; measure_codes = the codes that stay in the measure key next to the unit; unit_code / unit_name
@@ -55,36 +54,7 @@
     ) as t (area_code, candidate_key)
 {% endmacro %}
 
-{# The series code of a row of silver.bis_observations (alias o): the series key without FREQ and the area, as
-   poc_bis_measures lists it. One expression for the build stage and the tests that read Silver
-   (tests/bis_gold_units.sql, tests/bis_series_not_empty.sql). #}
-{% macro poc_bis_series_code() %}
-        case o.entity
-            when 'cbpol' then ''
-            when 'eer'
-                then
-                    json_extract_string(o.dimensions_json, '$.EER_TYPE')
-                    || '.' || json_extract_string(o.dimensions_json, '$.EER_BASKET')
-            when 'spp'
-                then
-                    json_extract_string(o.dimensions_json, '$.VALUE')
-                    || '.' || json_extract_string(o.dimensions_json, '$.UNIT_MEASURE')
-            when 'tc'
-                then
-                    json_extract_string(o.dimensions_json, '$.TC_BORROWERS')
-                    || '.' || json_extract_string(o.dimensions_json, '$.TC_LENDERS')
-                    || '.' || json_extract_string(o.dimensions_json, '$.VALUATION')
-                    || '.' || json_extract_string(o.dimensions_json, '$.UNIT_TYPE')
-                    || '.' || json_extract_string(o.dimensions_json, '$.TC_ADJUST')
-            when 'credit_gap'
-                then
-                    json_extract_string(o.dimensions_json, '$.TC_BORROWERS')
-                    || '.' || json_extract_string(o.dimensions_json, '$.TC_LENDERS')
-                    || '.' || json_extract_string(o.dimensions_json, '$.CG_DTYPE')
-            when 'dsr' then json_extract_string(o.dimensions_json, '$.DSR_BORROWERS')
-        end
-{%- endmacro %}
-
+{# D34 registration (docs/source-registration.md): the Gold block and the geography of bis (#2861). #}
 {% macro poc_source__bis() %}
     {{ return({
         'block_model': 'poc_build_bis',
@@ -92,10 +62,9 @@
     }) }}
 {% endmacro %}
 
-{# ISO 3166 alpha-2 countries (dim_geography's country keys) and XM euro area → EUROSTAT:EA (poc_bis_areas; the
-   BIS aggregates 4T, 5R, 5A, G2, XW have no Gold area and are not listed). Static: Gold does not read BIS
-   Silver here. #}
 {% macro poc_geography__bis() %}
+-- BIS: ISO 3166 alpha-2 countries (dim_geography's country keys) and XM euro area → EUROSTAT:EA (poc_bis_areas; the
+-- BIS aggregates 4T, 5R, 5A, G2, XW have no Gold area and are not listed). Static: Gold does not read BIS Silver here.
 bis_areas as ({{ poc_bis_areas() }}),
 
 bis as (

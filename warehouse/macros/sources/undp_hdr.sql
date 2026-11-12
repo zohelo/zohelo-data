@@ -1,5 +1,3 @@
-{# UNDP Human Development Report (gold.build_undp_hdr, #2861): D34 registration
-   (docs/source-registration.md). #}
 {# UNDP Human Development Report measures built (gold.build_undp_hdr, #2861): source indicator (column name
    without the year) → measure, sex and unit. The file has no unit column: units are those of the HDR technical
    notes. Not built: the Gender Development Index (gdi, a female-to-male ratio), ranks and groups, the
@@ -28,18 +26,17 @@
     ) as t (indicator, measure, sex_code, unit_code, unit_name, measure_name)
 {% endmacro %}
 
+{# D34 registration (docs/source-registration.md): the Gold block and the geography of undp_hdr (#2861). #}
 {% macro poc_source__undp_hdr() %}
     {{ return({
         'block_model': 'poc_build_undp_hdr',
-        'blocks': [
-            ['composite_indices', 'UNDP Human Development Report composite indices, complete time series'],
-        ],
+        'blocks': [['composite_indices', 'UNDP Human Development Report composite indices, complete time series']],
     }) }}
 {% endmacro %}
 
-{# Countries by ISO 3166 alpha-3 (dim_geography.iso3) and ZZK.WORLD = World, from Gold's own list. The HDR
-   groups and UNDP regions (ZZA … ZZJ) are not listed; the build stage builds the EU27 members and World. #}
 {% macro poc_geography__undp_hdr() %}
+-- UNDP HDR: countries by ISO 3166 alpha-3 (dim_geography.iso3), from Gold's own list; ZZK.WORLD is World. The HDR
+-- groups and regions (ZZA … ZZJ) are not listed; the build stage builds the EU27 members and World.
 undp_hdr as (
     select
         'undp_hdr' as source_system,

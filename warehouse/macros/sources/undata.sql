@@ -1,5 +1,3 @@
-{# UNdata, UN Statistical Yearbook (gold.build_undata, #2861): D34 registration
-   (docs/source-registration.md). #}
 {# UN Statistical Yearbook series built (gold.build_undata, #2861): table (entity) × series text as published;
    measure_code is Gold's short code (the Yearbook has none); the unit is the one in the series name. Not built:
    the tables taken from UN World Population Prospects (syb_1, syb_246: the newest year is a projection) and
@@ -17,6 +15,7 @@
     ) as t (entity, block_name, series, measure_code, unit_code)
 {% endmacro %}
 
+{# D34 registration (docs/source-registration.md): the Gold block and the geography of undata (#2861). #}
 {% macro poc_source__undata() %}
     {{ return({
         'block_model': 'poc_build_undata',
@@ -24,10 +23,10 @@
     }) }}
 {% endmacro %}
 
-{# Areas by UN M49 code as published (no leading zeros): the EU27 members (poc_m49_eu27) and 1 "Total, all
-   countries or areas" = World. Other regions (150 Europe, 97 European Union …) are not listed and not built.
-   Static. #}
 {% macro poc_geography__undata() %}
+-- UNdata Statistical Yearbook: areas by UN M49 code as published (no leading zeros): the EU27 members (poc_m49_eu27)
+-- and 1 "Total, all countries or areas" = World. Other regions (150 Europe, 97 European Union …) are not listed and
+-- not built. Static.
 undata_m49 as ({{ poc_m49_eu27() }}),
 
 undata as (

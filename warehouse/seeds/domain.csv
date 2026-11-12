@@ -78,3 +78,4 @@ labour.employment.lfs,subgroup,labour.employment,Labour force survey,Badanie akt
 labour.employment.registered_unemployment,subgroup,labour.employment,Registered unemployment,Bezrobocie rejestrowane,103,2
 population.stock.population,subgroup,population.stock,Population,Ludność,101,1
 finance.fx_gold.exchange_rates,subgroup,finance.fx_gold,Exchange rates,Kursy walut,20306,1
+society.time_use.human_development,subgroup,society.time_use,Human development,Rozwój społeczny,110,1

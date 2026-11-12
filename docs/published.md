@@ -568,24 +568,24 @@ voivodeships), `dimensions`, `aggregation`, `polarity`, `status` and `note`:
 - `needs-source`: not ingested; `note` names the register id. The NBP balance of payments and investment
   position (`nbp_bop`, PLG-002, PLG-003) are in Gold (`build_nbp_bop`); the workbooks publish amounts only, so the shares of GDP
   (`current_account_gdp`, `niip_gdp`) need a derivation and stay `needs-block`. NBP official rates
-  (`nbp_interest_rates`, PLG-006) reached Silver on 10 Nov (#2590) and are `needs-block` until their Gold build
-  stage exists. The OECD CLI (`oecd`, GL-003) is `ready` since `gold.build_oecd` (#2738), for the EU members the
+  (`nbp_interest_rates`, PLG-006) have the Gold build stage `build_nbp_interest_rates`: Silver holds one row per MPC
+  change, Gold places the rate in force on the last day of each month (today, provisional, in the current month). The OECD CLI (`oecd`, GL-003) is `ready` since `gold.build_oecd` (#2738), for the EU members the
   OECD covers (DE, ES, FR, IT): it has no Polish or EU-27 series.
 
 v2 keys by their best source status:
 
 | | ready | needs-block | needs-source | total |
 |---|---|---|---|---|
-| Polska w skrócie | 28 | 3 | 0 | 31 |
-| all 78 keys | 65 | 12 | 1 | 78 |
+| Polska w skrócie | 34 | 1 | 0 | 35 |
+| all 90 keys | 83 | 6 | 1 | 90 |
 
-Rows by source (176 rows; 37 keys have two or more ready sources):
+Rows by source (188 rows; 42 keys have two or more ready sources):
 
 | source | ready | needs-block | needs-source | rows |
 |---|---|---|---|---|
-| eurostat | 51 | 7 | 0 | 58 |
-| gus_bdl | 17 | 8 | 0 | 25 |
-| gus_dbw | 17 | 8 | 0 | 25 |
+| eurostat | 52 | 6 | 0 | 58 |
+| gus_bdl | 23 | 2 | 0 | 25 |
+| gus_dbw | 22 | 3 | 0 | 25 |
 | world_bank_wdi | 23 | 1 | 0 | 24 |
 | ilostat | 5 | 0 | 0 | 5 |
 | unece | 5 | 0 | 0 | 5 |
@@ -593,27 +593,36 @@ Rows by source (176 rows; 37 keys have two or more ready sources):
 | un_wpp | 0 | 4 | 0 | 4 |
 | ecb | 2 | 1 | 0 | 3 |
 | nbp | 1 | 0 | 2 | 3 |
+| gus_culture | 3 | 0 | 0 | 3 |
+| gus_tourism | 3 | 0 | 0 | 3 |
 | undata | 3 | 0 | 0 | 3 |
+| world_bank_edstats | 3 | 0 | 0 | 3 |
 | mrpips_unemployment | 2 | 0 | 0 | 2 |
 | unctad | 2 | 0 | 0 | 2 |
 | unesco_uis | 0 | 2 | 0 | 2 |
+| gus_culture_participation | 2 | 0 | 0 | 2 |
 | eea | 1 | 0 | 0 | 1 |
 | faostat | 1 | 0 | 0 | 1 |
 | mf_public_debt | 1 | 0 | 0 | 1 |
-| nbp_interest_rates | 0 | 1 | 0 | 1 |
+| nbp_interest_rates | 1 | 0 | 0 | 1 |
 | oecd | 1 | 0 | 0 | 1 |
 | unhcr | 1 | 0 | 0 | 1 |
 | who | 1 | 0 | 0 | 1 |
+| world_bank_gem | 1 | 0 | 0 | 1 |
 | world_bank_icp | 1 | 0 | 0 | 1 |
 | zus_psz | 1 | 0 | 0 | 1 |
 | bis | 1 | 0 | 0 | 1 |
 | undp_hdr | 1 | 0 | 0 | 1 |
 
 Gold has a quarterly fact (`fact_quarterly`), and the BDL and DBW builds place monthly and quarterly periods, so
-LFS rates, the current account, NAMQ, job vacancies and the GUS short-term series keep their frequency. Polska w
-skrócie still needs `nbp_reference_rate` (NBP PLG-006: in Silver, Gold build stage missing), `price_m2_secondary` (the secondary market is a breakdown
-member of BDL P3788/P3794 and DBW 309_485: a member filter, `kpi_member.csv`) and `broadband_households` (the
-ingested broadband datasets end in 2021). GUS indices (`… = 100`) are published as the source gives them, with the
+LFS rates, the current account, NAMQ, job vacancies and the GUS short-term series keep their frequency; half-years
+(Eurostat minimum wages) have their own fact, `fact_semiannual` (#2743), and wait for a v2 half-year format. A label or dimension that names the measure
+although it has an "ogółem" member (the market of the dwelling prices: BDL `poc_bdl_measure_positions`, DBW
+`poc_dbw_block_rules`) makes each member a measure with its own total series, so `price_m2_secondary` reads the
+secondary market directly; DBW blocks with powiaty or gminy that the slice needs only for Poland and the voivodeships
+are filtered in `src_dbw` (`REGIONAL`). Polska w
+skrócie still needs `broadband_households` (the ingested broadband datasets end in 2021); `nbp_reference_rate` is
+`ready` from `build_nbp_interest_rates` (#2737). GUS indices (`… = 100`) are published as the source gives them, with the
 measure's unit; the rate is the value minus 100. The v2 key of a concept is read from this map (see Rules).
 
 ## Who checks what

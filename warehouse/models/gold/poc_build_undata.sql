@@ -4,11 +4,16 @@
    (UN M49 → poc_map_geography section undata, static; macro poc_m49_eu27) and World (M49 1 → WB:WLD); other
    regions are not built. measure_key undata:<table>:<unit as in the series name>:<measure code>; measure_name
    is the series as published. Values as published (millions of US dollars stay millions, D33); an entry
-   without a number is not loaded. A footnote "Estimate…" sets the status estimated; any other footnote
-   qualifies the definition, coverage or reference period of the value (e.g. internet users "Population aged 16
-   to 74 years", health expenditure "Data are based on SHA2011") and sets definition_differs, so a footnoted value
-   is never shown as a plain one; a row footnoted as a projection is not an observation and is left out (none
-   in the built series today). #}
+   without a number is not loaded. Footnotes are free text and a row
+   has one status: a row without a footnote is ok; a footnote that is only the marker ("Estimate.", "Break in
+   series.", "Provisional.") → estimated / break / provisional; any other footnote, also one that adds a marker
+   to a definition ("Population aged 16 to 74 years.;Estimate.": the population covered, the accounting
+   standard, the reference period) → definition_differs, so no footnoted value passes as a plain one and the
+   definition difference is never hidden by "estimated"; the text stays in silver.undata_syb_values.
+   A row footnoted as a
+   projection is not an observation and is left out (none in the built series today).
+   tests/undata_gold_series_present.sql fails when a series of poc_undata_series matches no Silver row (a new
+   edition that renames a series). #}
 with series as ({{ poc_undata_series() }}),
 
 geo_map as (
@@ -36,9 +41,13 @@ select
     true as is_total,
     o.value,
     case
-        when o.footnotes ilike '%estimate%' then 'estimated'
-        when nullif(trim(o.footnotes), '') is not null then 'definition_differs'
-        else 'ok'
+        when nullif(trim(o.footnotes), '') is null then 'ok'
+        when regexp_full_match(o.footnotes, '(?i)\s*(estimates?|estimated( data| values?)?)\.?\s*')
+            then 'estimated'
+        when regexp_full_match(o.footnotes, '(?i)\s*break in (the )?(time )?series\.?\s*') then 'break'
+        when regexp_full_match(o.footnotes, '(?i)\s*(provisional|preliminary)( data| estimates?)?\.?\s*')
+            then 'provisional'
+        else 'definition_differs'
     end as observation_status_key,
     o.source_version,
     o.raw_sha256

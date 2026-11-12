@@ -60,7 +60,8 @@ DATASETS = {
     "NAMA_10_PC": ("A", "unit_code = 'CP_EUR_HAB' and " + HAS.format("B1GQ")),
     "UNE_RT_A": ("A", "unit_code = 'PC_ACT' and " + HAS.format("Y15-74")),
     "UNE_RT_M": ("M", all_of("SA", unit="PC_ACT", any_of=("TOTAL", "Y_LT25"))),
-    "PRC_HICP_MINR": ("M", "unit_code = 'RCH_A' and " + HAS.format("TOTAL")),
+    # all items and core (excluding energy, food, alcohol and tobacco; #2743)
+    "PRC_HICP_MINR": ("M", f"unit_code = 'RCH_A' and ({HAS.format('TOTAL')} or {HAS.format('TOT_X_NRG_FOOD')})"),
     "LFSI_EMP_A": ("A", "unit_code = 'PC_POP' and " + HAS.format("Y20-64")),
     # zohelo-bi first slice, every source per KPI (O31, #2592); codes checked in Silver (Dev probe)
     "EI_BSIN_M_R2": ("M", all_of("BS-ICI", "SA", unit="BAL")),
@@ -92,6 +93,9 @@ DATASETS = {
     "ILC_DI12": ("A", all_of("GINI_HND", "TOTAL")),
     "NAMA_10R_2GVAGR": ("A", all_of("B1GQ", unit="PCH_PRE", geo=f"({COUNTRIES} or {PL_REGIONS})")),
     "GOV_10A_EXP": ("A", all_of("S13", "GF10", "TE", unit="PC_GDP")),
+    # slice needs-block rows (O36, #2743); codes checked in Silver (Dev probe 43085044303)
+    "EARN_MW_CUR": ("S", f"({HAS.format('NAC')} or {HAS.format('EUR')}) and {COUNTRIES}"),
+    "ERT_BIL_EUR_M": ("M", f"{HAS.format('AVG')} and {HAS.format('PLN')}"),  # the euro in zloty; no PL geo code
 }
 COLUMNS = (
     "dataset_id, freq_code, unit_code, geo_code, time_period, value, status_code, "

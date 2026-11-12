@@ -202,7 +202,7 @@ def checks(cat) -> None:
 
     facts = []
     fact_rows = {}
-    for name in ("fact_annual", "fact_quarterly", "fact_monthly", "fact_daily"):
+    for name in ("fact_annual", "fact_semiannual", "fact_quarterly", "fact_monthly", "fact_daily"):
         try:
             t = table(cat, NS, name, ("series_key", "date_key", "source_system", "frequency"))
         except Exception as exc:
@@ -329,6 +329,18 @@ def silver(con, cat) -> None:
     q(con, "undata_pl_footnotes", """select entity, series, year, value, left(footnotes, 90) from syb
         where area_code = '616' and entity in ('syb_230', 'syb_285', 'syb_314', 'syb_325') and footnotes is not null
         order by 1, 2, 3""", 60)
+    q(con, "undata_footnote_status", """select case
+            when nullif(trim(footnotes), '') is null then 'ok'
+            when regexp_full_match(footnotes, '(?i)\\s*(estimates?|estimated( data| values?)?)\\.?\\s*') then 'estimated'
+            when regexp_full_match(footnotes, '(?i)\\s*break in (the )?(time )?series\\.?\\s*') then 'break'
+            when regexp_full_match(footnotes, '(?i)\\s*(provisional|preliminary)( data| estimates?)?\\.?\\s*') then 'provisional'
+            else 'definition_differs' end, left(coalesce(footnotes, ''), 110), count(*),
+        count(*) filter (where footnotes ilike '%estimate%'), count(*) filter (where footnotes ilike '%break%')
+        from syb where entity in ('syb_230', 'syb_285', 'syb_314', 'syb_325') and value is not null
+        and series in ('GDP in current prices (millions of US dollars)', 'GDP per capita (US dollars)',
+            'GDP real rates of growth (percent)', 'Gross domestic expenditure on R&D: as a percentage of GDP',
+            'Percentage of individuals using the internet', 'Current health expenditure (% of GDP)')
+        group by 1, 2 order by 3 desc""", 70)
     unece(con, cat)
 
 
