@@ -347,6 +347,24 @@ date, `valid_to` = next change). Licence: NBP website Terms of Use (source with 
 www.nbp.pl); public display waits for NBP's answer like the exchange rates. MFI interest-rate
 statistics are a separate, not yet built scope.
 
+### NBP balance of payments and international investment position (`nbp_bop`)
+
+**Built (11 Nov 2026, register PLG-002, PLG-003).** NBP publishes the balance of payments of Poland and the
+international investment position as three complete XLSX workbooks at fixed URLs, landed whole through the
+shared `bulk_file` pattern (version = Last-Modified, written only when the SHA-256 changed; restart unit: one
+file): `https://static.nbp.pl/dane/bilans-platniczy/bop_m.xlsx` (entity `bop_m`, monthly BoP),
+`bop_q.xlsx` (`bop_q`, quarterly BoP) and `iip_q.xlsx` (`iip_q`, quarterly positions), each with sheets
+PLN, EUR and USD (IIP: "IIP PLN" …), million units, items in rows and periods in columns from 2004. The
+nbp.pl pages that link the files answer automated clients with HTTP 403 (Dev probe 43085044303); the files
+answer. Bronze: `bronze.nbp_bop_cells` (one row per non-empty cell, the shared standard-library reader
+`ingestion/common/xlsx_cells.py`; a workbook whose sheets are not exactly its currency sheets is rejected). Silver: `silver.nbp_bop_observations` (workbook ×
+currency × item × period; `item_code` fixed by rule and checked against the expected list; NBP's typo
+"Finsncial derivatives" in bop_m is normalised). Gold: the build stage
+`build_nbp_bop` (PLN and EUR) follows once Silver exists in production (a Gold model reading a missing
+source would hold the shared facts back). The workbooks hold amounts only: the shares of GDP of the current
+account and of the net position are not published there. Licence: NBP website Terms of Use, unresolved
+(internal, owner decision of 14 Oct 2026).
+
 ### Broader statistics inventory and distributions
 
 Crawl only the following official navigation subtrees, follow their pagination/year
@@ -1042,15 +1060,14 @@ theatre in % of persons 15+, by sex (participation). Gold blocks `culture_instit
 `participation` (annual); KPIs draft. Monthly schedule (6th). Licence: GUS terms (source given; commercial reuse not
 addressed; no named licence, D23).
 
-## GUS census tables: NSP 2021 and PSR 2020 (`gus_nsp2021`, `gus_psr2020`)
+## MRPiPS social assistance statistics (`mrpips_social_assistance`)
 
-**Built (12 Nov 2026, register PLS-005, PLS-006).** One-off censuses: the final-results pages link one XLSX of tables
-per theme at fixed `/download/` URLs, declared as files of the shared `bulk_file` pattern (no extractor code): NSP 2021
-themes `ludnosc_stan_struktura`, `rynek_pracy` (the housing workbook prints the 2021 rows without their area label: Task #2921; PSR part 1 and the .xls annex: Task #2922); PSR 2020 `charakterystyka_cz2` (tables by
-voivodeship). Entity = one workbook, version = download time when the SHA-256 changed, restart unit one file. Bronze
-`bronze.<source>_cells` (`ingestion/common/gus_publications.py`); Silver `silver.<source>_tables` with the curated
-tables found by title and header (`warehouse/macros/gus_tables.sql`): population 2011 and 2021 (total, urban, rural,
-urban share), census activity, employment and unemployment rates; holdings 2010 and 2020, agricultural land, average
-agricultural land per holding, cattle, pigs, by voivodeship. Gold blocks `census_2021`, `agricultural_census_2020`
-(annual, the census year as period); census values are benchmarks and are not added to the population or unemployment
-KPIs. Quarterly check. Licence: GUS terms (source given; commercial reuse not addressed).
+**Built (12 Nov 2026, register PLS-031).** gov.pl lists a page "Statystyka za rok <year>" per year (from
+https://www.gov.pl/web/rodzina/statystyki-pomocy-spolecznej, 1999-2025) with the MRPiPS-03, -05 and -06 reports as
+old Excel (.xls) attachments. Only MRPiPS-03 is landed (a "korekta" attachment replaces the original), years from
+2019; entity = one year (`mrpips03_<year>`), version = download time, landed attachment URLs are not downloaded again,
+restart unit one file (`ingestion/to_landing/mrpips_social_assistance/`). Bronze `bronze.mrpips_social_assistance_cells`
+reads the .xls with xlrd (added to `requirements.txt`) into the shared cell shape. Silver
+`silver.mrpips_social_assistance_tables` (macro `gus_tables.sql`, section DZIAŁ 2, DZIAŁ 3 until 2020, found by header): persons granted a benefit by
+decision, families and persons in families by voivodeship. Gold block `social_assistance` (annual), KPI
+`social_assistance_recipients` (draft). Monthly check. Licence: gov.pl terms (official materials free to use).

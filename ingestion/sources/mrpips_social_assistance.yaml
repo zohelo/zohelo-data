@@ -8,6 +8,9 @@ description: "MRPiPS — social assistance statistics, annual MRPiPS-03 report (
 # for Poland); a "korekta" attachment replaces the original. Entity = one year (mrpips03_<year>), version = download
 # time (no Last-Modified); landed attachment URLs are not downloaded again (ingestion/to_landing/mrpips_social_assistance/).
 # Restart unit: one file. Bronze reads .xls with xlrd (requirements.txt).
+# History: 2019-2025 (2021 published as XLSX; sections DZIAŁ 3 until 2020, DZIAŁ 2 since). Dev trial 43293740538
+# (test/w3-gus-culture-trial): 7 files, 142,075 Bronze cells, 0 rejected, 357 Silver and Gold rows (3 measures x 17
+# areas x 7 years), 0 duplicate keys; second Landing and Bronze runs wrote nothing.
 extraction:
   initial: bulk
   production: snapshot                  # each report is the year as published; a correction replaces it
