@@ -22,7 +22,7 @@ only to find the blocks a changed geography map touches. The four tables are com
 the other (observations last); a block counts as built only when all four hold the same recipe, so
 a run that stops between the commits rebuilds the block next time.
 
-Limits of a run (decision D34; these replace the #822 row ceilings, which are for dbt models): the
+Limits of a run (decision D35; these replace the #822 row ceilings, which are for dbt models): the
 time budget; a block estimated to need more than the time left waits for a run with enough; at most
 MAX_REMOVE_SHARE of the blocks held may be removed in one run, so a partial Silver listing cannot empty
 Gold (above it nothing is removed and the run fails).

@@ -75,7 +75,7 @@ Eurostat and GUS BDL observations are not dbt models. Their loaders write Silver
 its Bronze file, and the result replaces that entity in Silver (`warehouse/entity.py`). dbt
 sees them as sources (`silver_entities` in `models/bronze/sources.yml`) for Gold.
 
-Gold per block (docs/gold-coverage.md, O36, decision D34): `observations.py` puts every loaded Silver
+Gold per block (docs/gold-coverage.md, O36, O43, decision D35): `observations.py` puts every loaded Silver
 block of a big source into `gold.<source>_observations`, `_series`, `_measures` and `_geography` by
 rule, one file per block, rebuilt only when the block's Silver files, the Gold SQL
 (`entity/gold_*.sql`) or the mapping of its geography codes changed; each block is checked for one
