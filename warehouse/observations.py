@@ -48,6 +48,7 @@ import json
 import multiprocessing
 import os
 from pathlib import Path
+import re
 import shutil
 import tempfile
 import time
@@ -74,6 +75,10 @@ MIN_REMOVABLE = 10
 # AVIA_TF_ACC: 92 MB in 13 min; Dev runs 43268232691, 43202733905). 6 MB a minute is below both.
 SERIAL_BYTES_PER_MINUTE = 6_000_000
 MAP_DIGEST = "zohelo.geography_map_digest"  # on gold.<source>_geography: the map its rows were last checked against
+# A DBW file id is <indicator>_<cross-section>_<presentation>_<periodicity>[_<year>]_pl; 570 yearly files
+# are named <indicator>_<cross-section>_<presentation>_<year>_282_pl instead (282 is the period "rok").
+DBW_YEAR_INSIDE = re.compile(r"^([0-9]+_[0-9]+_[0-9]+)_[0-9]{4}(_[0-9]{1,3})_pl$")
+DBW_FILE_END = re.compile(r"(_[0-9]{4})?_pl$")
 
 # Columns of the three Gold tables, in the order their models select them.
 TABLES: dict[str, dict[str, Any]] = {
@@ -162,6 +167,12 @@ TABLES["geography"] = {
     ],
 }
 
+def dbw_block(entity: str) -> str:
+    """The block of a GUS DBW file: its id without the language and the year, wherever the year stands
+    (the same two replacements as warehouse/entity/gold_gus_dbw_build.sql `block_id`)."""
+    return DBW_FILE_END.sub("", DBW_YEAR_INSIDE.sub(r"\1\2_pl", entity))
+
+
 # Per source: the Silver entity table and how its entities group into blocks, the build stage, and the
 # small tables the build stage reads (relation -> (namespace, table, columns, DuckDB filter)).
 SOURCES: dict[str, dict[str, Any]] = {
@@ -178,6 +189,28 @@ SOURCES: dict[str, dict[str, Any]] = {
             "codes": ("silver", "eurostat_codes", ("codelist_id", "code", "name_en"), None),
         },
         "keyed_by": ("geo_map",),  # lookups that decide keys: their content is part of the recipe
+    },
+    # GUS DBW: a block is indicator × cross-section × presentation × periodicity; its Silver files are one
+    # per year (or one file), and each has its own dictionary file in Bronze (the labels of its ids).
+    "gus_dbw": {
+        "silver": ("silver", "dbw_observations"),
+        "block_of": dbw_block,
+        "build": "gold_gus_dbw_build",
+        "prepare": {
+            "labels": "gold_gus_dbw_labels",
+            "periods": "gold_gus_dbw_periods",
+            "areas": "gold_gus_dbw_areas",
+            "shape": "gold_gus_dbw_shape",
+            "twins": "gold_gus_dbw_twins",
+        },
+        "lookups": {
+            "geo_map": ("gold", "map_geography", ("source_system", "source_code", "geography_key"), "gus_dbw"),
+        },
+        "keyed_by": ("geo_map",),
+        # the files of the block's entities in another table, read with the block (relation -> table)
+        "with": {"dictionary": ("bronze", "dbw_dictionary_items")},
+        # an area's source code is `<NAME> #<position id>`; the map is keyed by the name
+        "map_code": lambda code: code.rsplit(" #", 1)[0],
     },
 }
 
@@ -258,8 +291,15 @@ def model_digest(source: str) -> str:
     return digest.hexdigest()[:12]
 
 
-def blocks_of(source: str, silver_state: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    """Block -> its Silver files, their size, and the digest of their names."""
+def blocks_of(
+    source: str,
+    silver_state: dict[str, dict[str, Any]],
+    with_states: dict[str, dict[str, dict[str, Any]]] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Block -> its Silver files, their size, and the digest of their names. ``with_states`` (relation ->
+    the state of another table with the same entities, SOURCES ``with``) adds each entity's files there:
+    they are read with the block and their names are part of the digest; an entity without one is listed
+    under ``missing`` and the block is rejected until the file exists."""
     block_of = SOURCES[source]["block_of"]
     out: dict[str, dict[str, Any]] = {}
     for entity, held in silver_state.items():
@@ -269,16 +309,25 @@ def blocks_of(source: str, silver_state: dict[str, dict[str, Any]]) -> dict[str,
         item["paths"] += held["paths"]
         item["bytes"] += held["bytes"]
         item["rows"] += held["rows"]
+        for relation, state in (with_states or {}).items():
+            found = state.get(entity, {}).get("paths", [])
+            item.setdefault("with", {}).setdefault(relation, []).extend(found)
+            if not found:
+                item.setdefault("missing", []).append(f"{relation}:{entity}")
     for item in out.values():
         item["paths"].sort()
         names = "\n".join(et.recipe_of(p) for p in item["paths"])
+        for relation, paths in sorted(item.get("with", {}).items()):
+            paths.sort()
+            names += f"\n{relation}\n" + "\n".join(et.recipe_of(p) for p in paths)
         item["silver_recipe"] = sha256(names.encode()).hexdigest()[:16]
     return out
 
 
-def remapped_blocks(table, geo_map: dict[str, str]) -> tuple[set[str], str]:
+def remapped_blocks(table, geo_map: dict[str, str], map_code=None) -> tuple[set[str], str]:
     """Blocks holding a geography code whose mapping differs from the map now, and the map's digest.
-    The table's rows are read only when the map changed since they were last checked (table property)."""
+    The table's rows are read only when the map changed since they were last checked (table property).
+    ``map_code`` (SOURCES ``map_code``) gives the map's key of a source code that carries more than it."""
     digest = sha256(json.dumps(sorted(geo_map.items())).encode()).hexdigest()[:16]
     if table.properties.get(MAP_DIGEST) == digest or table.current_snapshot() is None:
         return set(), digest
@@ -288,7 +337,11 @@ def remapped_blocks(table, geo_map: dict[str, str]) -> tuple[set[str], str]:
         held.column("geography_source_code").to_pylist(),
         held.column("geography_key").to_pylist(),
     )
-    return {block for block, code, key in rows if expected_area(geo_map, code) != key}, digest
+    in_map = map_code or (lambda code: code)
+    changed = {
+        block for block, code, key in rows if expected_area(geo_map, code if code is None else in_map(code)) != key
+    }
+    return changed, digest
 
 
 def plan(
@@ -305,7 +358,11 @@ def plan(
     mapping of one of its geography codes), or removal (the block left Silver).
     ``create=False`` (checks): reads only, never creates a table."""
     silver = bf.retry(lambda: cat.load_table(SOURCES[source]["silver"]), "silver_table")
-    listed = blocks_of(source, et.state(silver, silver.spec().fields[0].name))
+    with_states = {}
+    for relation, table_id in SOURCES[source].get("with", {}).items():  # file lists only, as for Silver
+        other = bf.retry(lambda t=table_id: cat.load_table(t), relation)
+        with_states[relation] = et.state(other, other.spec().fields[0].name)
+    listed = blocks_of(source, et.state(silver, silver.spec().fields[0].name), with_states)
     if not listed:
         raise RuntimeError(f"{source}: the Silver table lists no blocks; nothing is built or removed")
     blocks = {b: v for b, v in listed.items() if b in only} if only else listed
@@ -318,7 +375,7 @@ def plan(
             load = lambda t=table_id: cat.load_table(t)  # noqa: E731
         tables[name] = bf.retry(load, name)
         states[name] = et.state(tables[name], ENTITY)
-    remapped, map_digest = remapped_blocks(tables["geography"], geo_map)
+    remapped, map_digest = remapped_blocks(tables["geography"], geo_map, SOURCES[source].get("map_code"))
     refused = bf.retry(lambda: bf.rejected_hashes(cat, rejected_id), "rejected")
     todo, rejected, complete = [], [], []
     for block, item in sorted(blocks.items()):
@@ -362,13 +419,17 @@ def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str
     try:
         build = work_dir / "build.parquet"
         try:
+            if item.get("missing"):
+                raise entity.EntityModelError(
+                    f"{len(item['missing'])} files of the block are missing, e.g. {item['missing'][:3]}"
+                )
             built = entity.apply(
                 SOURCES[source]["build"],
                 item["paths"],
                 build,
                 not_null=("measure_key", "geography_key", "date_key", "frequency", "breakdown_json", "is_total"),
                 same_rows=False,
-                lookups=lookups,
+                lookups={**lookups, **item.get("with", {})},
                 memory_limit=memory,
                 temp_directory=str(work_dir),
                 source_view="silver",
