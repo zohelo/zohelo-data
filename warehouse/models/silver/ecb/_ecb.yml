@@ -7,8 +7,8 @@ models:
       the ECB's monthly averages), FM key ECB rates (change dates from 1999-01-01), EST euro short-term rate (from
       2019-10-01), HICP annual rates (COICOP 2018, 1986-01 to 2026-10; PL from 1997-01) and the discontinued ICP
       (to 2025-12), IRS long-term interest rates for convergence purposes (1983-05 to 2026-10; PL from 2001-01),
-      BSI euro area monetary aggregates (1980-01 to 2026-09). 309,647 rows without exr_monthly (Dev trial
-      43088143150). Grain: dataflow × series_key × time_period. ref_area: ISO 3166 two-letter codes for countries
+      BSI euro area monetary aggregates (1980-01 to 2026-09). 322,020 rows (Dev trial 43099368908; exr_monthly
+      12,373 rows, 1999-01 to 2026-10). Grain: dataflow × series_key × time_period. ref_area: ISO 3166 two-letter codes for countries
       (GR, not EL) and ECB aggregates (U2 euro area changing composition, I8/I9/I10 fixed euro area compositions,
       B6 EU27 fixed, B0/D0 EU changing composition); null for EXR and EST. currency: EXR quoted currency (units per
       1 EUR). obs_value: null where the source gives none ('' or NaN).
