@@ -151,6 +151,15 @@ consumer_confidence_oecd,oecd,oecd:cli:IX:CCICP:AA,"amplitude adjusted, long-ter
 cli_oecd,oecd,oecd:cli:IX:LI:AA,"amplitude adjusted, long-term average = 100; 22 economies and aggregates",1,index_lta_100
 lei_issued,gleif,gleif:lei2:entities:ISSUED,"registration status ISSUED; PENDING_TRANSFER and PENDING_ARCHIVAL (about 0.04 %) not included",1,entities
 vat_whitelist_entries,mf_biala_lista,mf_biala_lista:flat_file:entries,"active and exempt taxpayers, entries = taxpayer × bank account",1,list_entries
+wgi_voice_accountability,world_bank_wgi,world_bank_wgi:GOV_WGI_VA.EST,governance estimate,1,
+wgi_political_stability,world_bank_wgi,world_bank_wgi:GOV_WGI_PV.EST,governance estimate,1,
+wgi_government_effectiveness,world_bank_wgi,world_bank_wgi:GOV_WGI_GE.EST,governance estimate,1,
+wgi_regulatory_quality,world_bank_wgi,world_bank_wgi:GOV_WGI_RQ.EST,governance estimate,1,
+wgi_rule_of_law,world_bank_wgi,world_bank_wgi:GOV_WGI_RL.EST,governance estimate,1,
+wgi_control_of_corruption,world_bank_wgi,world_bank_wgi:GOV_WGI_CC.EST,governance estimate,1,
+account_ownership,world_bank_findex,world_bank_findex:account_t_d,"age 15+, survey years",1,
+price_level_index,world_bank_icp,world_bank_icp:1000000:PX.WL,"GDP, ICP 2021 (benchmarks 2017 and 2021)",1,
+gdp_per_capita_pps,world_bank_icp,world_bank_icp:1000000:PCAP.PP,"ICP 2021 GDP per capita, PPP international $ (not an EU27 index)",3,ppp_usd_per_person
 state_budget_balance,mf_state_budget,mf_state_budget:execution_ytd:THS_PLN:balance%,"cumulative from January; the full year (:A)",1,
 state_treasury_debt,mf_treasury_debt,mf_treasury_debt:debt_instrument:MIO_PLN:TOTAL,end of month,1,
 krus_pension_avg,krus,krus:benefits:PLN:old_age:avg_benefit_pln%,"average monthly benefit, quarter and year (:A)",1,
@@ -170,3 +179,15 @@ registered_unemployment_rate,mrpips_unemployment,mrpips_unemployment:registered_
 life_expectancy,who,who:life_expectancy:years:WHOSIS_000001,"at birth, both sexes and by sex (WHO Global Health Estimates)",5,
 gerd_gdp,unesco_uis,unesco_uis:gerd_gdp:pct_gdp:EXPGDP.TOT,"% of GDP, UIS (SDG 9.5.1)",3,
 tertiary_attainment,unesco_uis,unesco_uis:tertiary_attainment:pct:EA.5T8.AG25T99,"25+, completed short-cycle tertiary or higher, ISCED 5-8 (Eurostat: 25-34)",3,
+ghg_emissions,faostat,faostat:emissions_totals:kt:6829.723113.3050,"all sectors without LULUCF, CO2eq (AR5), kt (FAOSTAT emissions totals)",3,thousand_tonnes
+area,faostat,faostat:land_use:1000 ha:6601.5110._Z,"land area, 1000 ha (FAOSTAT land use)",3,thousand_ha
+fx_rate,ecb,ecb:EXR:M:PLN:EUR,"ECB euro reference rate, monthly average published by the ECB, PLN per 1 EUR",2,
+inflation,ecb,ecb:HICP:000000:ANR,"HICP (COICOP 2018), annual rate of change, ECB",3,
+bond_yield_10y,ecb,ecb:IRS:L40,"long-term interest rate for convergence purposes, ECB",2,
+m3_growth,ecb,ecb:BSI:M30:I:A,"euro area M3, annual growth rate, seasonally adjusted",1,
+ecb_deposit_rate,ecb,ecb:FM:DFR,"deposit facility rate, date of changes",1,
+external_debt_stocks,world_bank_ids,world_bank_ids:DT.DOD.DECT.CD,"total external debt stocks (DOD), current US$",1,usd
+external_debt_gni,world_bank_ids,world_bank_ids:DT.DOD.DECT.GN.ZS,"external debt stocks, % of GNI",1,pct_gni
+external_debt_service,world_bank_ids,world_bank_ids:DT.TDS.DECT.CD,"total debt service (TDS), current US$; projections not built",1,usd
+external_debt_service_gni,world_bank_ids,world_bank_ids:DT.TDS.DECT.GN.ZS,"total debt service, % of GNI (series not in the IDS series metadata; name from the observations)",1,pct_gni
+external_debt_service_exports,world_bank_ids,world_bank_ids:DT.TDS.DECT.EX.ZS,"total debt service, % of exports of goods, services and primary income",1,pct_exports

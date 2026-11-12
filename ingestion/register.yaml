@@ -289,9 +289,12 @@ sources:
   research:
     priority: review-next
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Confirm stable machine-download contract'
+    - 'Owner decision needed (O36 wave 2, 11 Nov 2026): the registered route is web (DataBank). Dev probe 43086111225
+      found the bulk zip GemDataEXTR.zip (databankfiles.worldbank.org, 36 xlsx workbooks) stale since 2024-03-05,
+      while the World Bank API v2 source 15 (36 indicators) was updated 2026-09-08; an API extractor like
+      world_bank_icp (source 90) would replace the web route. Not built until the owner decides.'
     references:
     - https://databank.worldbank.org/source/global-economic-monitor-(gem)
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -688,7 +691,8 @@ sources:
   name: BIS Data Portal
   short_name: BIS Data Portal
   provider: Bank for International Settlements
-  status: approved
+  source_system: bis
+  status: built
   family: C
   kpi: true
   geography: worldwide
@@ -699,12 +703,15 @@ sources:
   coverage: Reporting central banks/national authorities; coverage/history differ by topic. Russia reporting stopped
     after 28 Feb 2022.
   access:
-    endpoint: https://data.bis.org/
+    endpoint: https://stats.bis.org/api/v1/data/WS_CBPOL/M./all?format=sdmx-csv
     kind: api
     interfaces: [HTML, SDMX REST API, CSV bulk, SDMX bulk]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No numeric quota published; one request per selection and run. Six selections (WS_CBPOL and WS_EER
+      monthly, WS_SPP, WS_TC, WS_CREDIT_GAP, WS_DSR whole) are 371,000 observations, 64 MB (Dev probe
+      43087048719, 11 Nov 2026). The csv_flat bulk zips decorate codes with labels and split series attributes
+      into separate rows, so the API's SDMX-CSV is used.
   licence:
     status: open-conditional
     notes: 'Terms: https://www.bis.org/about/legal/permitted-use-statistics — use of BIS statistics is unrestricted
@@ -723,7 +730,7 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
     - Commercial packaging must satisfy no-additional-charge condition
     - Review topic-specific confidentiality/coverage flags
@@ -733,7 +740,8 @@ sources:
   short_name: ECB Data Portal
   provider: European Central Bank
   source_system: ecb
-  status: approved
+  current: true
+  status: built
   family: C
   kpi: true
   geography: multicountry-Europe
@@ -742,14 +750,20 @@ sources:
   entities: [country, financial-institution-aggregate, sector]
   granularity: Series/observation through SDMX; dimensions vary by dataflow and include frequency, area, item and
     adjustment.
-  coverage: Euro area/EU plus counterpart and selected external economies; start varies by series.
+  coverage: 'Euro area/EU plus counterpart and selected external economies; start varies by series. Landed selections
+    (Dev probes 11 Nov 2026): EXR 44 currencies against the euro, daily from 1999-01-04 (266,219 rows); key ECB
+    rates (FM) from 1999 at change dates; EUR STR from 2019-10; HICP annual rate (HICP, COICOP 2018) and the
+    discontinued ICP (to 2025-12) for every EU member, the euro area (U2, I8, I9) and the EU (B0/D0); long-term
+    interest rates for convergence purposes (IRS) for every EU member incl. Poland from 2001-01; euro area
+    monetary aggregates M1-M3 (BSI) from 1980-01.'
   access:
-    endpoint: https://data.ecb.europa.eu/
+    endpoint: https://data-api.ecb.europa.eu/service/data/
     kind: api
     interfaces: [HTML, SDMX REST API, CSV]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No explicit numeric quota found; one request per selection and run, weekly. The largest selection
+      (EXR, every currency, full history) is one 57 MB response.
   licence:
     status: open-conditional
     notes: 'Terms:
@@ -757,7 +771,13 @@ sources:
       — ESCB statistics are provided free of charge irrespective of commercial or non-commercial use, provided
       the source is quoted, the statistics (including metadata) are not modified, and the ECB and NCB
       disclaimers are respected; third-party data needs prior permission from the originator; no right to
-      confidential data. Attribution: "Source: ECB statistics".'
+      confidential data. Attribution: "Source: ECB statistics". Compilers of the built selections (review of #2758):
+      EXR, FM, EST and BSI are ECB/ESCB statistics. HICP and ICP are compiled by Eurostat (TITLE_COMPL "Statistical
+      Office of the European Commission (Eurostat)" / "Eurostat", Dev trial 43099368908), so they fall under the
+      Eurostat reuse policy (Commission Decision 2011/833/EU, CC BY 4.0, "Source: Eurostat"; register GL-001), which
+      also allows commercial reuse. IRS (long-term interest rates for convergence purposes) is collected from national
+      sources; its compilers'' terms are not established, so the IRS series stay out of the published layer until
+      they are (kpi_v2_map bond_yield_10y / ecb: needs-block).'
   updates: Release and revision cadence is dataflow-specific; API page was unavailable during review.
   ingestion:
     history: Snapshot dataflow structures and complete selected series.
@@ -768,11 +788,11 @@ sources:
     overlap: Overlaps Eurostat, BIS and national central banks; retain source and methodological basis.
   research:
     priority: review-first
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - 'Re-open current API documentation'
-    - 'Identify third-party series exceptions (prior permission needed)'
+    - 'Third-party terms of IRS (long-term interest rates for convergence purposes, national compilers) not established;
+      HICP/ICP are Eurostat (CC BY 4.0) and EXR, FM, EST, BSI are ECB statistics. Check every dataflow added.'
     references:
     - https://data.ecb.europa.eu/
     - https://data.ecb.europa.eu/help/api/overview
@@ -781,7 +801,8 @@ sources:
   name: UNdata
   short_name: UNdata
   provider: United Nations Statistics Division
-  status: approved
+  source_system: undata
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -792,12 +813,14 @@ sources:
   coverage: Multicountry sources including UNSD and other UN agencies; histories vary and some marts are legacy
     editions.
   access:
-    endpoint: https://data.un.org/Handlers/ExplorerHandler.ashx?t=sources
+    endpoint: https://data.un.org/Default.aspx
     kind: bulk_file
     interfaces: [HTML, download handler, legacy web service]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No numeric quota published. The legacy ExplorerHandler/DownloadHandler now return the UN System Data
+      Commons page (Dev probe 43086552621, 11 Nov 2026); the Statistical Yearbook CSV tables linked from
+      Default.aspx (SYB68; 27 tables of one layout, a few MB each) are used, one page and one file request per table and run.
   licence:
     status: open-conditional
     notes: 'Terms: https://data.un.org/Host.aspx?Content=UNdataUse (UNdata Conditions of Use): all data and metadata
@@ -817,7 +840,7 @@ sources:
   research:
     priority: conditional
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
     - 'Assess whether each mart is current'
     - 'Check the source agency terms of each selected mart; confirm stable download contract'
@@ -1040,7 +1063,8 @@ sources:
   name: FAOSTAT
   short_name: FAOSTAT
   provider: Food and Agriculture Organization of the United Nations
-  status: approved
+  source_system: faostat
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1050,15 +1074,19 @@ sources:
   granularity: Domain-specific country/item/element/year observation; trade adds reporter/partner and flow.
   coverage: Global; histories and frequencies vary by domain, often annual.
   access:
-    endpoint: https://www.fao.org/faostat/en/
-    kind: api
+    endpoint: https://bulks-faostat.fao.org/production/datasets_E.json
+    kind: bulk_file
     interfaces: [HTML, bulk-files, API]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No numeric quota published; one request per domain zip and run. The bulk catalogue
+      https://bulks-faostat.fao.org/production/datasets_E.json lists every domain zip with size, rows and DateUpdate
+      (GT 20.6 MB zip, 2,498,428 rows; RL 3.0 MB, 421,850 rows; Dev probe 43099401602, 11 Nov 2026).
   licence:
     status: open-conditional
-    notes: 'Terms: CC BY 4.0, FAO Statistical Database Terms of Use https://www.fao.org/contact-us/terms/db-terms-of-use
+    notes: 'Terms: CC BY 4.0, FAO Statistical Database Terms of Use (confirmed 11 Nov 2026, Dev probe 43099401602:
+      "all datasets disseminated through FAO corporate statistical databases ... are licensed under the Creative
+      Commons Attribution-4.0 International licence (CC BY 4.0) ... as complemented by the Terms of Use"), https://www.fao.org/contact-us/terms/db-terms-of-use
       (unless a dataset''s metadata says otherwise): access, download, copy, adapt and re-disseminate; do not use datasets
       for or with the promotion of a commercial enterprise; do not imply FAO endorsement; do not misrepresent the data;
       third-party datasets need their provider''s consent; provided without warranty. Attribution (required format):
@@ -1074,10 +1102,9 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Confirm current API contract'
-    - 'Exclude third-party datasets that need provider consent'
+    - 'Exclude third-party datasets that need provider consent (population OA is UN WPP: not landed)'
     references:
     - https://www.fao.org/faostat/en/
     - https://www.fao.org/contact-us/terms/en/
@@ -1086,7 +1113,8 @@ sources:
   name: ILOSTAT
   short_name: ILOSTAT
   provider: International Labour Organization
-  status: approved
+  source_system: ilostat
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1096,12 +1124,14 @@ sources:
   granularity: Indicator/ref-area/sex/classification/status/frequency/time at full statistical grain.
   coverage: Worldwide; start and availability vary by indicator and national reporting/ILO estimates.
   access:
-    endpoint: https://ilostat.ilo.org/
-    kind: api
+    endpoint: https://rplumber.ilo.org/data/indicator/?id=UNE_DEAP_SEX_AGE_RT_A&format=.csv.gz
+    kind: bulk_file
     interfaces: [HTML, bulk-files, SDMX tools]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No numeric quota published; one request per indicator file and run. Bulk files per indicator and
+      frequency are listed at https://rplumber.ilo.org/files/website/bulk/indicator.html (UNE_DEAP_SEX_AGE_RT_A
+      1.9 MB gzip, 317,000 rows; Dev probe 43087048719, 11 Nov 2026). The SDMX API (sdmx.ilo.org) also works.
   licence:
     status: open-conditional
     notes: 'Terms: CC BY 4.0 for ILOSTAT databases and datasets with their metadata published on or after 3 May 2023,
@@ -1118,11 +1148,10 @@ sources:
     overlap: Overlaps WDI, OECD, Eurostat and SDG series; ILO estimate versus national value is a meaningful distinction.
   research:
     priority: review-first
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
     - 'Load only releases published on or after 3 May 2023 (CC BY 4.0 cut-off)'
-    - 'Open current bulk/API guide'
     - 'Separate modeled and reported series'
     references:
     - https://ilostat.ilo.org/
@@ -1335,7 +1364,8 @@ sources:
   name: Human Development Data Center
   short_name: UNDP Human Development
   provider: United Nations Development Programme
-  status: approved
+  source_system: undp_hdr
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1346,12 +1376,13 @@ sources:
   coverage: 193 countries and territories in Country Insights; index histories vary. HDI series is recalculated
     annually.
   access:
-    endpoint: https://hdr.undp.org/data-center
+    endpoint: https://hdr.undp.org/data-center/documentation-and-downloads
     kind: bulk_file
     interfaces: [HTML, bulk-files]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No numeric quota published; one page and one file request per run (HDR25 composite indices
+      CSV 2.0 MB; Dev probe 43086552621, 11 Nov 2026).
   licence:
     status: open-conditional
     notes: 'Terms: CC BY 3.0 IGO, https://hdr.undp.org/en/content/copyright-and-terms-use ("All materials provided on
@@ -1370,7 +1401,7 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
     - 'Enforce vintage-aware comparisons'
     - 'Check licences of externally sourced components'
@@ -1477,7 +1508,7 @@ sources:
   name: ITU DataHub
   short_name: ITU DataHub
   provider: International Telecommunication Union
-  status: approved
+  status: parked
   family: A
   kpi: true
   geography: worldwide
@@ -1511,8 +1542,14 @@ sources:
   research:
     priority: review-next
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
+    - 'Parked: not reachable from GitHub runners — datahub.itu.int, datahub.itu.int/about and the download API
+      api.datahub.itu.int/v2/data/download/byid/<id> all answer HTTP 403 to a polite client (Dev probe 43099401602,
+      11 Nov 2026); never worked around. The only files on www.itu.int (reachable) are regional and global
+      aggregates (ITU_regional_global_Key_ICT_indicator_aggregates_Nov_2026.xlsx), not country data, under the ITU
+      website terms ("personal, educational, or non-commercial purposes"). Country data need ITU to allow automated
+      access (owner question: ask ITU, indicators@itu.int) or another route.'
     - 'NonCommercial + ShareAlike: only non-commercial display; derivatives under CC BY-NC-SA 3.0 IGO'
     - 'Confirm API availability'
     references:
@@ -1827,7 +1864,8 @@ sources:
   name: UNECE Data Portal
   short_name: UNECE Data Portal
   provider: United Nations Economic Commission for Europe
-  status: approved
+  source_system: unece
+  status: built
   family: A
   kpi: true
   geography: multicountry-Europe
@@ -1837,12 +1875,13 @@ sources:
   granularity: Multidimensional table by country/city, socioeconomic classification and period.
   coverage: UNECE region, with emphasis on CIS and Central/Eastern Europe; table histories vary.
   access:
-    endpoint: https://w3.unece.org/PXWeb/en
-    kind: bulk_file
+    endpoint: https://w3.unece.org/PXWeb2015/api/v1/en/STAT
+    kind: api
     interfaces: [HTML, PXWeb tables, download files]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No numeric quota published; the PXWeb API answers bursts with HTTP 429 and very large queries with
+      403 (Dev probes 43093129692, 43094350928, 11 Nov 2026). PX files are not served; data only by POST.
   licence:
     status: open-conditional
     notes: 'Terms: UNECE Statistical Database copyright notice https://w3.unece.org/PXWeb/Static/Copyright_notice.html: "The data in the UNECE Statistical Database are available free of charge. Users are free to copy, reproduce and redistribute the data for both commercial and non-commercial purposes, provided UNECE is acknowledged as the source." Disclaimer: "UNECE does not take any responsibility for the use of the data." Attribution: "Source: UNECE Statistical Database."'
@@ -1857,7 +1896,7 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
     - 'Track database restructuring and discontinued series'
     - 'Confirm PXWeb API contract'
