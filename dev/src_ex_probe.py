@@ -23,7 +23,7 @@ CTX = ssl.create_default_context()
 ROBOTS: dict[str, object] = {}
 ROBOTS_TXT: dict[str, str] = {}
 LAST: dict[str, float] = {}
-BUDGET = [22]
+BUDGET = [60]
 LIMIT = 3800
 FOLLOW = (
     r"api|swagger|openapi|regulamin|ponown|praw\w*[-_ ]autor|otwart\w*[-_ ]dan|licenc|nota[-_ ]prawn|zastrze"
@@ -35,16 +35,8 @@ KW = (
     r"|podani\w+ źródł|wskazani\w+ źródł|zastrzeżone|Creative Commons|CC BY|CC0|komercyj|robot|automat|masow|hurtow"
 )
 START = [
-    "https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny/wynalazki-i-wzory-uzytkowe/wynalazki-i-wzory-uzytkowe-zgloszone-przez-podmioty-krajowe-i-zagraniczne",
-    "https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny/wynalazki-i-wzory-uzytkowe/wynalazki-i-wzory-uzytkowe-zgloszone-przez-podmioty-krajowe-wedlug-wojewodztw",
-    "https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny/wynalazki-i-wzory-uzytkowe/patenty-i-prawa-ochronne-na-wzory-uzytkowe-udzielone-podmiotom-krajowym-wedlug-wojewodztw",
-    "https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny/znaki-towarowe",
-    "https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny/wzory-przemyslowe",
-    "https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny/statystyka-pueup",
-    "https://uprp.gov.pl/pl/publikacje/raport-roczny-uprp",
-    "https://uprp.gov.pl/pl/publikacje/biuletyn-i-wiadomosci-uprp",
-    "https://uprp.gov.pl/pl/wyszukiwarki",
-    "https://uprp.gov.pl/pl/klauzula-informacyjna-rodo",
+    "https://uprp.gov.pl/bip",
+    "https://uprp.gov.pl/pl/bip",
 ]
 ALLOWED = ("uprp.gov.pl",)
 SECOND = {}
@@ -274,20 +266,136 @@ def visit(url, depth, queue, seen):
         note("legal", {"u": tag, "title": title[:50], "kw": [k[:520] for k in kws[:2]]})
     if len(p) < 600 or wall:
         note("thin", {"u": tag, "chars": len(p), "wall": wall, "title": title})
-    if depth >= 1:
+    if depth >= 2:
         return
     for a, u in ll:
         host = urllib.parse.urlsplit(u).netloc
         if not u.startswith("http") or not host.endswith(ALLOWED) or u in seen or " " in u:
             continue
         api_like = re.search(r"/api|api\.|swagger|openapi|otwart\w*[-_ ]dan", u + " " + a, re.I) and not re.search(r"\.(pdf|docx?)(\?|$)|api-do-statystyk|bot_", u, re.I)
-        legal_like = re.search(LEGAL, u + " " + a, re.I) and not re.search(r"\.(docx?|zip)(\?|$)", u, re.I)
-        stat_like = bool(re.search(r"modul-statystyczny/(znaki-towarowe|wzory-przemyslowe|statystyka-pueup)/", u)) and not SECOND.get(u.rsplit("/", 1)[0])
-        if stat_like:
-            SECOND[u.rsplit("/", 1)[0]] = b"1"
+        legal_like = re.search(r"regulamin|praw\w*[-_ ]autor|licenc|nota[-_ ]prawn|zastrze|warunki[-_ ]korzyst", u + " " + a, re.I) and not re.search(r"\.(docx?|zip|pdf)(\?|$)|warunki-korzystania-z-portalu", u, re.I)
+        stat_like = bool(re.search(r"ponown|re-?use|otwart\w*[-_ ]dan|udost\w+[-_ ]informacji", u + " " + a, re.I))
         if api_like or legal_like or stat_like:
             seen.add(u)
             queue.append((u, depth + 1, 0 if api_like else 1 if legal_like else 2))
+
+
+def api_json(title, url, pick):
+    r = get(url, timeout=90)
+    if "err" in r:
+        print(f"=== API {url}\nERR {r['err']}\n=== END", flush=True)
+        return {"u": url[:120], "err": r["err"]}
+    t = r["body"].decode("utf-8", "replace")
+    print(f"=== API {url}\nMETA st={r['st']} ct={r['ct']} read={len(r['body'])}\nBODY {t[:6000]}\n=== END", flush=True)
+    try:
+        return {"u": url[:120], "st": r["st"], "res": pick(json.loads(t))}
+    except Exception as e:  # noqa: BLE001
+        return {"u": url[:120], "st": r["st"], "parse": f"{type(e).__name__}: {str(e)[:80]}", "head": t[:200]}
+
+
+def bdl():
+    out = []
+    for word in ("patent", "wynalaz", "wzory użytkowe", "znaki towarowe", "wzory przemysłowe", "ochronne"):
+        q = urllib.parse.quote(word)
+        for kind in ("subjects", "variables"):
+            url = f"https://bdl.stat.gov.pl/api/v1/{kind}/search?name={q}&format=json&lang=pl&page-size=50"
+
+            def pick(d, kind=kind):
+                rows = d.get("results", [])
+                keys = ("id", "name", "subjectId", "n1", "n2", "n3", "level", "measureUnitName", "parentId", "hasVariables", "levels")
+                return {"total": d.get("totalRecords"), "rows": [{k: r[k] for k in keys if k in r} for r in rows[:50]]}
+
+            res = api_json("bdl", url, pick)
+            print(f"BDL {kind} {word}: {json.dumps(res, ensure_ascii=False)[:5000]}", flush=True)
+            out.append({"q": word, "kind": kind, "total": (res.get("res") or {}).get("total"), "err": res.get("err"), "first": json.dumps(((res.get("res") or {}).get("rows") or [])[:3], ensure_ascii=False)[:420]})
+    return out
+
+
+def wdi():
+    out = []
+    for code in ("IP.PAT.RESD", "IP.PAT.NRES", "IP.TMK.RESD", "IP.TMK.NRES", "IP.TMK.TOTL", "IP.IDS.RESD", "IP.IDS.NRES"):
+        url = f"https://api.worldbank.org/v2/country/POL/indicator/{code}?format=json&mrnev=2"
+
+        def pick(d):
+            rows = d[1] if isinstance(d, list) and len(d) > 1 and d[1] else []
+            return [{"name": r["indicator"]["value"], "date": r["date"], "value": r["value"]} for r in rows[:2]] or d[0]
+
+        out.append({"code": code, **api_json("wdi", url, pick)})
+        url = f"https://api.worldbank.org/v2/indicator/{code}?format=json"
+        out.append({"code": code, "meta": api_json("wdi", url, lambda d: {"src": d[1][0].get("sourceOrganization", "")[:160], "db": d[1][0].get("source", {}).get("value")})})
+    return out
+
+
+def dane():
+    out = []
+    for url in (
+        "https://api.dane.gov.pl/1.4/institutions?q=Urz%C4%85d%20Patentowy&per_page=10",
+        "https://api.dane.gov.pl/1.4/datasets?q=Urz%C4%85d%20Patentowy&per_page=10",
+        "https://dane.gov.pl/pl/dataset?q=Urz%C4%85d+Patentowy",
+    ):
+        def pick(d):
+            return {"count": (d.get("meta") or {}).get("count"), "titles": [((x.get("attributes") or {}).get("title") or "")[:80] + "|" + str(x.get("id")) for x in (d.get("data") or [])[:10]]}
+
+        out.append(api_json("dane", url, pick))
+    return out
+
+
+def pdf_peek(url, save=None):
+    import zlib
+
+    r = get(url, n=120000000, timeout=300)
+    if "err" in r:
+        return {"u": url[-60:], "err": r["err"]}
+    b = r["body"]
+    out = {"u": urllib.parse.unquote(url)[-60:], "bytes": len(b), "lm": r.get("lm"), "magic": b[:8].decode("latin-1")}
+    if save and os.environ.get("DEV_OUTPUT_DIR"):
+        with open(os.path.join(os.environ["DEV_OUTPUT_DIR"], save), "wb") as fh:
+            fh.write(b)
+        out["saved"] = save
+    out["pages"] = len(re.findall(rb"/Type\s*/Page[^s]", b))
+    texts = []
+    for m in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", b, re.S):
+        try:
+            d = zlib.decompress(m.group(1))
+        except Exception:  # noqa: BLE001
+            continue
+        if b"BT" not in d:
+            continue
+        parts = re.findall(rb"\((.*?)(?<!\\)\)", d)
+        txt = b"".join(parts).decode("latin-1", "replace")
+        if txt.strip():
+            texts.append(txt)
+    joined = " ".join(texts)
+    out["text_streams"] = len(texts)
+    out["text_chars"] = len(joined)
+    out["hits"] = {w: len(re.findall(w, joined, re.I)) for w in ("wojew", "mazowieckie", "patent", "znak", "Tabela|Tablica")}
+    for w in ("mazowieckie", "wojew"):
+        for sn in around(joined, w, 200, 500, 2):
+            print(f"PDF-TEXT {w}: {sn}", flush=True)
+    print(f"PDF {json.dumps(out, ensure_ascii=False)}\nPDF-SAMPLE {joined[:1500]}", flush=True)
+    return out
+
+
+def big_page(url):
+    r = get(url, n=20000000, timeout=120)
+    if "err" in r:
+        return {"u": url, "err": r["err"]}
+    t = r["body"].decode("utf-8", "replace")
+    m = re.search(r"(?is)<main\b.*?</main>", t)
+    ll = links(m.group(0) if m else t, url)
+    ext = {}
+    for _, u in ll:
+        e = re.search(r"\.([A-Za-z0-9]{2,5})(?:\?|$)", u)
+        k = e.group(1).lower() if e else "-"
+        ext[k] = ext.get(k, 0) + 1
+    hosts = {}
+    for _, u in ll:
+        h = urllib.parse.urlsplit(u).netloc
+        hosts[h] = hosts.get(h, 0) + 1
+    files = [(a, u) for a, u in ll if re.search(r"\.(pdf|zip|xml|xlsx?|csv)(\?|$)", u, re.I)]
+    out = {"u": url, "bytes": len(r["body"]), "main": bool(m), "links": len(ll), "ext": ext, "hosts": hosts, "first": [f"{a}|{u}"[:150] for a, u in files[:6]], "last": [f"{a}|{u}"[:150] for a, u in files[-4:]]}
+    print(f"=== BIG {json.dumps(out, ensure_ascii=False)}\nTEXT {plain(m.group(0) if m else t)[:3000]}\n=== END", flush=True)
+    return out
 
 
 def emit(title, data):
@@ -300,25 +408,31 @@ def emit(title, data):
 
 
 def main():
-    seen = set(START) | {"https://uprp.gov.pl/pl/form/napisz-do-nas", "https://uprp.gov.pl/pl/polityka-srodowiskowa-urzedu-patentowego-rzeczypospolitej-polskiej"}
+    seen = set(START)
     queue = [(u, 0, i) for i, u in enumerate(START)]
     n = 0
-    while queue and BUDGET[0] > 0:
+    while queue and BUDGET[0] > 22:
         queue.sort(key=lambda x: (x[1], x[2]))
         url, depth, _ = queue.pop(0)
         visit(url, depth, queue, seen)
         n += 1
     left = [u for u, _, _ in queue]
     print(f"=== LEFT {len(left)}\n" + "\n".join(left[:80]), flush=True)
-    emit("probe EX robots", {h: t[:700] for h, t in ROBOTS_TXT.items()})
-    api = NOTES.get("api", [])
-    for i in range(0, min(len(api), 30), 10):
-        emit(f"probe EX-001 api {i // 10 + 1}", api[i : i + 10])
-    legal = NOTES.get("legal", [])
-    for i in range(0, min(len(legal), 12), 4):
-        emit(f"probe EX legal {i // 4 + 1}", legal[i : i + 4])
-    emit("probe EX files, thin pages, errors", {k: NOTES.get(k, [])[:14] for k in ("files", "thin", "errors")})
-    emit("probe EX totals", {"visited": n, "left": len(left), "api": len(api), "legal": len(legal)})
+    BUDGET[0] = 60
+    emit("probe EX bip legal", NOTES.get("legal", [])[:5])
+    emit("probe EX bip errors", {k: NOTES.get(k, [])[:10] for k in ("thin", "errors")})
+    b = bdl()
+    emit("probe EX-001 bdl 1", b[:6])
+    emit("probe EX-001 bdl 2", b[6:])
+    emit("probe EX-001 wdi", wdi())
+    emit("probe EX dane.gov.pl", dane())
+    pdfs = [
+        pdf_peek("https://uprp.gov.pl/sites/default/files/2026-08/Raport%20roczny%202025.pdf", "raport_roczny_2025.pdf"),
+        pdf_peek("https://uprp.gov.pl/sites/default/files/inline-files/Raport_roczny_2010.pdf"),
+    ]
+    emit("probe EX-001 annual report pdf", pdfs)
+    emit("probe EX-002 bulletin page", big_page("https://uprp.gov.pl/pl/publikacje/biuletyn-i-wiadomosci-uprp"))
+    emit("probe EX totals", {"visited": n, "left": len(left)})
 
 
 if __name__ == "__main__":
