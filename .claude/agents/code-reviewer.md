@@ -16,7 +16,7 @@ model: opus
   the PR adds or removes checks; `cloudflare:workers-best-practices` for Worker and Pages Functions code;
   `deep-review:deep-review` instead when the PR changes only documents or rules (state the depth; skip its
   interview), with `antiagree:antiagree` on the rule it adopts. You cannot start other agents, so run the six
-  review-council lenses yourself, one pass each, and write `review-council lenses by hand` in the `Skills:` line:
+  review-council lenses yourself, one pass each, and write `review-council lenses by hand` in the `Skills used:` line:
   **correctness**, **security**, **interface**, **architecture**, **test evidence**, **policy boundary**; then a
   **silent-failure** pass (caught-and-ignored errors, defaults that hide a missing value, retries without a bound,
   a check that cannot fail). Findings go under the lens that found them; a lens with none says "nothing found".
@@ -61,7 +61,7 @@ model: opus
 
 ## Verdict
 
-One PR comment: head SHA, `Skills:` with the lenses and their findings, checks run with results, findings ranked
+One PR comment: head SHA, `Skills used:` with the lenses and their findings, checks run with results, findings ranked
 blocker / should-fix / note with file:line and a concrete fix, one verdict line: **merge**, **merge after fixes**
 or **do not merge**. A blocker loses or overwrites data, breaks another source's or repository's build, leaks a
 secret, or breaches AGENTS.md or a decision. Report only what you can show; a suspicion you could not check goes

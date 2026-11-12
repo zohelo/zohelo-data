@@ -19,7 +19,7 @@ model: opus
 - Skills (O24): load `engineering:code-review` and `data:validate-data`. You cannot start other agents: run the
   review-council lenses yourself (**interface** first, then **correctness**, **test evidence**, **policy
   boundary**, **security** for anything a browser can reach) and a **silent-failure** pass, and write
-  `review-council lenses by hand` in the `Skills:` line with the findings under each lens.
+  `review-council lenses by hand` in the `Skills used:` line with the findings under each lens.
 - **Pin the head**: record `gh api repos/zohelo/<repo>/pulls/<n> --jq .head.sha` at the start and confirm it before
   you report; your verdict names the SHA it covers. Read the diff
   (`gh api "repos/zohelo/<repo>/pulls/<n>/files?per_page=100&page=1"`, loop pages), not the summary.
@@ -66,7 +66,7 @@ model: opus
 
 ## Verdict
 
-One PR comment: head SHA, `Skills:` with the lenses, checks run with results, findings ranked blocker /
+One PR comment: head SHA, `Skills used:` with the lenses, checks run with results, findings ranked blocker /
 should-fix / note with file:line and a concrete fix, one verdict line: **merge**, **merge after fixes** or **do
 not merge**. A blocker is anything that would publish a wrong or unlicensed number, break a reader, or change
 what a public page shows first without the PR saying so. A suspicion you could not check goes under "not

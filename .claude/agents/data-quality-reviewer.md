@@ -18,7 +18,7 @@ skills:
 - Skills (O24, every review a deep review): load `engineering:code-review` and `dbt-toolkit:dbt-test`, and
   `data:validate-data` for the numbers the PR cites. You cannot start other agents, so the review-council
   specialists and the PR-review toolkit's agents are not available to you: run their lenses yourself, in this
-  order, and write `review-council lenses by hand` in the `Skills:` line: **correctness** (does the SQL and
+  order, and write `review-council lenses by hand` in the `Skills used:` line: **correctness** (does the SQL and
   Python do what the description says, on the edge rows), **test evidence** (does a run of this head back each
   claim), **policy boundary** (AGENTS.md, decisions, licence, routes), and for a PR that touches shared code also
   **interface**, **architecture** and **security**; then a **silent-failure** pass (anything that swallows an
@@ -96,7 +96,7 @@ skills:
 
 ## Verdict
 
-Post one PR comment: the head SHA reviewed, `Skills:` with the lenses, the checks you ran with their result, findings ranked blocker / should-fix /
+Post one PR comment: the head SHA reviewed, `Skills used:` with the lenses, the checks you ran with their result, findings ranked blocker / should-fix /
 note with file:line and a concrete fix, and one verdict line: **merge**, **merge after fixes** or **do not
 merge**. Report only what you can show: a finding names the line and the row or run that proves it; a suspicion
 you could not check goes under "not verified", not under findings. Your last message to the orchestrator repeats

@@ -10,16 +10,14 @@ The orchestrator session runs on **Opus 5.5** as product owner and DevOps lead.
 
 - **Owns:** turning the direction into a prioritised backlog and briefs; routing work to stations and models; the
   merge gate (checks green, an independent review without blockers, and the reviewed head SHA unchanged);
-  production dispatches and watching them; usage and runner limits ("Concurrency" below); feeding review lessons
+  production dispatches and watching them; agent and runner limits ("Concurrency" below); feeding review lessons
   into the briefs and the agents' checklists; the status page and the "Needs you" list.
 - **Does not:** write code or models, review, or take design decisions with lasting consequences. An orchestrator
   that builds cannot be reviewed independently (O34).
 - **Escalates to the `architect` agent (Fable):** architecture, the published contract, UX direction (with
   `ux-designer`), research questions, and trade-offs between options.
 - **Escalates to the owner:** money, accounts and agreements, legal readings, and what zohelo should become.
-- **Why Opus:** routine routing should not spend Fable's quota, and Fable has its own usage reset, so design work
-  and routing do not have to stop together (on 12 November both limits were reached at the same moment: see
-  "Concurrency").
+- **Why Opus:** routine routing should not spend Fable.
 
 ## Stations
 
@@ -27,7 +25,7 @@ The orchestrator session runs on **Opus 5.5** as product owner and DevOps lead.
 |---|---|---|---|---|
 | 1 | Intake | – | orchestrator; for a large sweep the `clerk` agent lists the facts and the orchestrator classifies | the issue is classified done / obsolete / relevant, with priority (P1–P3) and size (S/M/L) |
 | 2 | Spec | `flow:spec` | orchestrator for a brief that applies a decided design; `architect`, `ux-designer` or `owner-researcher` (Fable) when the escalation rule applies; `source-researcher` for a source | the issue body says what "done" means and how it is checked; skipped when it already does |
-| 3 | Ready | `flow:ready` | – | a build slot is free (work-in-progress limit below) |
+| 3 | Ready | `flow:ready` | – | a builder can start (work-in-progress rule below) |
 | 4 | Build | `flow:build` | a builder agent (`source-builder`, `gold-modeller`, `portal-builder`, or a general Opus agent with a brief), in its own git worktree or clone | the PR is open, linked with `Closes #n`, all checks green, and the builder ran its own verification |
 | 5 | Review | `flow:review` | an independent review agent that did not write the change: `data-quality-reviewer` (source and Gold), `publish-contract-reviewer` (published layer and its readers), `code-reviewer` (everything else), plus `ux-designer` for a change users see | verdict merge / merge after fixes / do not merge, with file:line findings |
 | 6 | Rework | `flow:rework` | the same builder, resumed with the findings | fixes pushed as follow-up commits, checks green; back to Review only if the reviewer asked for it or a blocker was fixed |
@@ -37,8 +35,8 @@ The orchestrator session runs on **Opus 5.5** as product owner and DevOps lead.
 
 ## Rules
 
-- **Work in progress:** at most 5 agents at a time, of which at most 3 builders and 2 reviewers ("Concurrency"
-  below); never two builders in the same files.
+- **Work in progress:** sized by review and runner capacity ("Concurrency" below): reviews before new builds, at
+  most 4 Dev runs in flight, never two builders in the same files.
 - **Rework limit:** two rounds. A third failure goes back to Spec with the `architect` instead of a third attempt.
 - **Never idle:** when an agent finishes, the orchestrator reviews its result and starts the next item from Ready
   in the same step; Ready holds at least three items.
@@ -78,7 +76,7 @@ overrides it per dispatch only as this table says.
 | Review of a source or Gold PR | Opus | `data-quality-reviewer` | needs a shell and the run evidence |
 | Review of a PR that changes the published layer or what reads it | Opus | `publish-contract-reviewer` | one reviewer who reads both sides of the contract |
 | Review of any other code PR | Opus | `code-reviewer` | six lenses in one context ("Review without sub-agents" below) |
-| Inventories (issues, PRs, branches, register against evidence), register and label bookkeeping, branch-cleanup lists | Sonnet | `clerk` | a rule decides every row and a command checks it; uses less of the budget than Opus for the same list |
+| Inventories (issues, PRs, branches, register against evidence), register and label bookkeeping, branch-cleanup lists | Sonnet | `clerk` | a rule decides every row and a command checks it |
 | Extracting lines and counts from job logs and run annotations | Haiku | `clerk`, dispatched with `model: haiku` | high volume, nothing to decide; the output is quoted lines with their run ids |
 
 **When to escalate to Fable.** One of these is true, and the orchestrator can write it as one question with the
@@ -102,36 +100,23 @@ the rework costs more than the model saves.
 
 **Review without sub-agents.** In this setup an agent started by the orchestrator cannot start further agents, so a
 reviewer cannot dispatch the review-council specialists or the PR-review toolkit's agents (skills do load inside an
-agent). Each reviewer therefore runs the lenses itself, in one context, and names them in its `Skills:` line as
+agent). Each reviewer therefore runs the lenses itself, in one context, and names them in its `Skills used:` line as
 `review-council lenses by hand` (O24: a missing skill is named and replaced, never skipped). For a PR that changes
 shared code many sources run through (`ingestion/common/`, `run.py`, `warehouse/macros/`, `warehouse/publish.py`,
-the workflows), the orchestrator may dispatch review-council specialists itself, next to the reviewer, within the
-limits below.
+the workflows), the orchestrator may dispatch review-council specialists itself, next to the reviewer.
 
 ## Concurrency
 
-Evidence, 11–12 November: about ten Opus agents at once used up the five-hour limit in two to three hours, three
-times in one day; Fable and Opus reached their limits at the same moment, so the two pools are not independent
-in practice; and GitHub runners queued when many agents dispatched Dev runs together. Ten agents for half the
-window means about five for the whole window. Limits, counted by the orchestrator before each dispatch:
+The owner upgraded his plan on 12 November 2026 (18:16) and has no five-hour usage limit any more, so no cap is
+derived from a usage window. The limits below have their own reasons; the orchestrator checks them before each
+dispatch. Evidence for them, 11–12 November: GitHub runners queued when many agents dispatched Dev runs together,
+and stale merges of a shared file were a review finding.
 
-| What | At once |
-|---|---|
-| Background agents in total, all models | 5 |
-| of which Opus | at most 4: up to 3 builders and up to 2 reviewers |
-| of which Fable | at most 2 (`architect`, `ux-designer`, `owner-researcher`), and only 1 while 4 Opus agents run |
-| of which Sonnet or Haiku | at most 1 `clerk` run |
-
-- **One budget.** Until a full five-hour window passes with Fable still available after Opus stopped (or the
-  reverse), plan as if all models draw on one budget: a Fable agent takes a slot of the five, it is not extra.
-- **After a limit hit:** no new dispatch until the reset; the next five-hour window runs with 3 agents in total
-  (2 builders, 1 reviewer or 1 Fable agent); back to 5 after a window without a hit. A limit hit goes on the
-  status page with the number of agents that were running, and three hits in a day lower the total by one until
-  the owner or a week without hits raises it again.
-- **Raise carefully.** The total goes up by one only after two consecutive windows end without a hit and with
-  the Ready queue not empty; never above 6 without new evidence.
-- **Reviews before new builds.** When slots are short, a waiting review or rework takes the free slot before a
-  new build: finished work that is not merged is the most expensive kind.
+- **Agents in total:** no fixed number; sized by review and runner capacity. A new builder starts only when every
+  open PR that waits for a review or a rework has an agent on it, and when a Dev slot will be free for its trial.
+  Fable agents (`architect`, `ux-designer`, `owner-researcher`) start when their station needs them.
+- **Reviews before new builds.** A waiting review or rework is dispatched before a new build: finished work that
+  is not merged is the most expensive kind.
 - **Short briefs, resumed agents:** rework resumes the same builder instead of starting a new one, and a brief
   names files and issue numbers instead of pasting them, so no agent re-reads what it already holds.
 - **Dev runs:** at most 4 in flight across all agents and one per agent. A builder runs one trial that covers
@@ -142,4 +127,10 @@ window means about five for the whole window. Limits, counted by the orchestrato
 - **Waiting is cheap, polling is not:** an agent that waits for a run checks it once a minute at most, and reads
   the annotations once, when the run has ended.
 - **One writer per shared file at merge time:** PRs that touch the same shared file merge one at a time; the next
-  one is updated from `main` and its checks rerun before it merges (stale merges were a review finding).
+  one is updated from `main` and its checks rerun before it merges (stale merges were a review finding), unless
+  they go in one merge train.
+- **Merge trains** (introduced 12 November 2026): reviewed PRs that touch shared append-only files (for example
+  `ingestion/register.yaml`, `docs/decisions.md`) are combined into one train branch by a merge operator. The
+  operator merges each PR's reviewed head SHA into the train, resolves the appends, runs the checks once on the
+  train head and merges the train into `main` with a merge commit, so each contained PR's commits reach `main`
+  and GitHub marks those PRs merged. A PR whose head changed after its review stays out of the train.

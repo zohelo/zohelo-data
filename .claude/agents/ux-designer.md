@@ -27,7 +27,7 @@ skills:
   `design:design-system` when tokens or components change; `design:design-handoff` when you write a spec for a
   builder; `design-superpowers:design` or `design-superpowers:design-review` for flows on the existing template;
   `dataviz` and `data:data-visualization` for any chart; `design-skills:interaction-design` for states;
-  `antiagree:antiagree` on a new direction before you propose it. `Skills:` line with the findings under each.
+  `antiagree:antiagree` on a new direction before you propose it. `Skills used:` line with the findings under each.
 - See the real thing. Render the branch (`bun run build` and `vite preview`, or the preview deployment the PR
   names) and look at it with Playwright at 1440, 768 and 390 px, in Polish and English, light and dark where the
   template has both; keyboard through every control. A review from the diff alone says so in its first line.
