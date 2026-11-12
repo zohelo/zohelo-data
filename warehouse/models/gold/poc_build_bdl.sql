@@ -1,4 +1,4 @@
-{{ config(alias='build_bdl') }}
+{{ config(alias='build_bdl', tags=['gold_block']) }}
 {# Gold PoC build stage: sampled GUS BDL subgroups as observations in the common shape.
    Coarse measure rule (to refine per domain in v1): measure = subgroup × measure unit × the
    label positions where no variable of the subgroup says "ogółem" (those name what is
@@ -173,11 +173,15 @@ silver as (
     left join units as u on o.unit_code = u.unit_id
     left join variables as v on o.subgroup_id = v.subgroup_id and o.variable_id = v.variable_id
     left join label_rule as r on o.subgroup_id = r.subgroup_id
+    -- attribute "x" (GUS: "wypełnienie pozycji jest niemożliwe lub niecelowe") marks a cell without
+    -- a value; the export writes 0 there (all 4.56 M "x" rows are 0; P2361 lubuskie 2019-2020 and
+    -- three other voivodeships 2020, #2788, Dev run 43159054852)
     where
-        o.value is not null and o.year >= 2010
-        -- a cell the source marks and stores as 0 is no value: website symbol "x" (not applicable or not
-        -- published) or "a", API attributes 0, 4, 91 (#2743); "z" (less than half a unit) is a real rounded value
-        and not (o.attribute is not null and o.value = 0 and o.attribute <> 'z')
+        o.value is not null and o.year >= 2010 and coalesce(lower(o.attribute), '') <> 'x'
+        -- also no value: website symbol "a" and API attributes 0, 4, 91 stored as 0 (every such row is 0 in the
+        -- slice subgroups, e.g. P3788 dwelling prices, P1869, P2721; Dev probe 43158714085, #2743); "z" (less
+        -- than half a unit) is a real rounded value
+        and not (o.attribute in ('a', '0', '4', '91') and o.value = 0)
 ),
 
 kept as (

@@ -1,0 +1,149 @@
+version: 2
+models:
+  - name: unctad_fdi_flows_stock
+    description: >-
+      UNCTAD Data Hub table US_FdiFlowsStock from bronze.unctad_rows (newest copy): FDI inflows and outflows, inward and outward stocks (US$ million, % of world, GDP, GFCF), annual from 1990, 36,950 rows (Dev probes
+      43084525257, 43084992517). Generic shape of macros/unctad.sql: period, economy (UNCTAD M49-based code
+      and label), other dimensions and the measures (value, footnote, missing-value reason) as JSON maps by name.
+    tests:
+      - unique:
+          column_name: "period || '|' || coalesce(economy, '') || '|' || dimensions"
+      - accepted_values:
+          column_name: "json_extract_string(dimensions, '$.Flow')"
+          arguments: {values: ['08', '09']}
+      - accepted_values:
+          column_name: "json_extract_string(dimensions, '$.Direction')"
+          arguments: {values: ['1', '2']}
+    columns:
+      - name: period
+        tests: [not_null]
+      - name: measure_values
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: unctad_merchandise_trade
+    description: >-
+      UNCTAD Data Hub table US_TradeMerchTotal from bronze.unctad_rows (newest copy): merchandise exports and imports, total (US$ million, % of world, growth), annual from 1948, 46,108 rows (Dev probes
+      43084525257, 43084992517). Generic shape of macros/unctad.sql: period, economy (UNCTAD M49-based code
+      and label), other dimensions and the measures (value, footnote, missing-value reason) as JSON maps by name.
+    tests:
+      - unique:
+          column_name: "period || '|' || coalesce(economy, '') || '|' || dimensions"
+      - accepted_values:
+          column_name: "json_extract_string(dimensions, '$.Flow')"
+          arguments: {values: ['01', '02']}
+    columns:
+      - name: period
+        tests: [not_null]
+      - name: measure_values
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: unctad_services_trade
+    description: >-
+      UNCTAD Data Hub table US_TradeServCatTotal from bronze.unctad_rows (newest copy): services exports and imports by EBOPS category (US$ million, shares, growth, % of GDP), annual from 2005, 807,733 rows (Dev probes
+      43084525257, 43084992517). Generic shape of macros/unctad.sql: period, economy (UNCTAD M49-based code
+      and label), other dimensions and the measures (value, footnote, missing-value reason) as JSON maps by name.
+    tests:
+      - unique:
+          column_name: "period || '|' || coalesce(economy, '') || '|' || dimensions"
+      - accepted_values:
+          column_name: "json_extract_string(dimensions, '$.Flow')"
+          arguments: {values: ['01', '02']}
+    columns:
+      - name: period
+        tests: [not_null]
+      - name: measure_values
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: unctad_digital_services_trade
+    description: >-
+      UNCTAD Data Hub table US_DigitallyDeliverableServices from bronze.unctad_rows (newest copy): digitally deliverable services trade by category, annual from 2010, 122,752 rows (Dev probes
+      43084525257, 43084992517). Generic shape of macros/unctad.sql: period, economy (UNCTAD M49-based code
+      and label), other dimensions and the measures (value, footnote, missing-value reason) as JSON maps by name.
+    tests:
+      - unique:
+          column_name: "period || '|' || coalesce(economy, '') || '|' || dimensions"
+    columns:
+      - name: period
+        tests: [not_null]
+      - name: measure_values
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: unctad_commodity_prices
+    description: >-
+      UNCTAD Data Hub table US_CommodityPrice_M from bronze.unctad_rows (newest copy): free market commodity prices and indices, monthly from 1995 (period 1995M01; no economy), 19,961 rows (Dev probes
+      43084525257, 43084992517). Generic shape of macros/unctad.sql: period, economy (UNCTAD M49-based code
+      and label), other dimensions and the measures (value, footnote, missing-value reason) as JSON maps by name.
+    tests:
+      - unique:
+          column_name: "period || '|' || coalesce(economy, '') || '|' || dimensions"
+    columns:
+      - name: period
+        tests: [not_null]
+      - name: measure_values
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: unctad_liner_shipping_connectivity
+    description: >-
+      UNCTAD Data Hub table US_PLSCI from bronze.unctad_rows (newest copy): port liner shipping connectivity index (Q1 2023 = 100), quarterly from 2006 (dimension Port; no economy), 76,003 rows (Dev probes
+      43084525257, 43084992517). Generic shape of macros/unctad.sql: period, economy (UNCTAD M49-based code
+      and label), other dimensions and the measures (value, footnote, missing-value reason) as JSON maps by name.
+    tests:
+      - unique:
+          column_name: "period || '|' || coalesce(economy, '') || '|' || dimensions"
+    columns:
+      - name: period
+        tests: [not_null]
+      - name: measure_values
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: unctad_merchant_fleet
+    description: >-
+      UNCTAD Data Hub table US_MerchantFleet from bronze.unctad_rows (newest copy): merchant fleet by flag of registration and ship type (dwt, GT, ships), annual from 1980, 63,896 rows (Dev probes
+      43084525257, 43084992517). Generic shape of macros/unctad.sql: period, economy (UNCTAD M49-based code
+      and label), other dimensions and the measures (value, footnote, missing-value reason) as JSON maps by name.
+    tests:
+      - unique:
+          column_name: "period || '|' || coalesce(economy, '') || '|' || dimensions"
+    columns:
+      - name: period
+        tests: [not_null]
+      - name: measure_values
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: unctad_seaborne_trade
+    description: >-
+      UNCTAD Data Hub table US_SeaborneTrade from bronze.unctad_rows (newest copy): seaborne trade loaded and discharged by cargo type (thousand tonnes), annual from 2000, 64,424 rows (Dev probes
+      43084525257, 43084992517). Generic shape of macros/unctad.sql: period, economy (UNCTAD M49-based code
+      and label), other dimensions and the measures (value, footnote, missing-value reason) as JSON maps by name.
+    tests:
+      - unique:
+          column_name: "period || '|' || coalesce(economy, '') || '|' || dimensions"
+    columns:
+      - name: period
+        tests: [not_null]
+      - name: measure_values
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: unctad_port_calls
+    description: >-
+      UNCTAD Data Hub table US_PortCalls from bronze.unctad_rows (newest copy): port calls and time in port by commercial market, annual 2018-2023, 1,197 rows (Dev probes
+      43084525257, 43084992517). Generic shape of macros/unctad.sql: period, economy (UNCTAD M49-based code
+      and label), other dimensions and the measures (value, footnote, missing-value reason) as JSON maps by name.
+    tests:
+      - unique:
+          column_name: "period || '|' || coalesce(economy, '') || '|' || dimensions"
+    columns:
+      - name: period
+        tests: [not_null]
+      - name: measure_values
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
