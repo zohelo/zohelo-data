@@ -847,7 +847,8 @@ def briefs_problems(
 
 def published_v2_seeds() -> list[str]:
     """Seeds of published contract v2: frequency (M, Q or A), aggregation and polarity are one value per v2 key of
-    kpi_v2_map.csv; a published concept with a v2 key has definition_en and definition_pl in kpi.csv; every unit of
+    kpi_v2_map.csv; a concept with a ready kpi_v2_map row (in v2 whatever its status, O37) has definition_en and
+    definition_pl in kpi.csv; every unit of
     unit.csv has decimals in unit_decimals.csv; kpi_member.csv names v2 keys of the map."""
     seeds = ROOT / "warehouse" / "seeds"
 
@@ -867,12 +868,12 @@ def published_v2_seeds() -> list[str]:
         for r in v2map
         if r["frequency"] not in PERIOD_FORMATS
     ]
-    mapped = {r["concept_key"] for r in v2map if r["concept_key"]}
-    for kpi in rows("kpi"):
-        if kpi["kpi_key"] in mapped and kpi["status"] == "published":
+    ready = {r["concept_key"] for r in v2map if r["concept_key"] and r["status"] == "ready"}
+    for kpi in rows("kpi"):  # O37: a concept with a ready map row reaches v2 whatever its status
+        if kpi["kpi_key"] in ready:
             for field in ("definition_en", "definition_pl"):
                 if not kpi[field]:
-                    problems.append(f"kpi.csv {kpi['kpi_key']}: published v2 concept without {field}")
+                    problems.append(f"kpi.csv {kpi['kpi_key']}: v2 concept (ready map row) without {field}")
     decimals = {r["unit_key"] for r in rows("unit_decimals")}
     problems += [
         f"unit_decimals.csv: no decimals for unit {u['unit_key']}"
@@ -904,6 +905,8 @@ def _schema_problems(value: object, schema: dict, where: str) -> list[str]:
         for key, sub in schema.get("properties", {}).items():
             if key in value:
                 problems += _schema_problems(value[key], sub, f"{where}.{key}")
+    if isinstance(value, list) and len(value) < schema.get("minItems", 0):
+        problems.append(f"{where}: {len(value)} items, fewer than {schema['minItems']}")
     if isinstance(value, list) and "items" in schema:
         for i, item in enumerate(value):
             problems += _schema_problems(item, schema["items"], f"{where}[{i}]")

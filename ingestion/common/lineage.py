@@ -43,6 +43,8 @@ SOURCES = (
     "mf_treasury_debt",
     "krus",
     "unctad",
+    "mf_jst_budgets",
+    "mrpips_unemployment",
     "ecb",
 )
 # Accumulating sources (every landed copy stays in Bronze, docs/topics.md): no latest-only gate.
