@@ -157,7 +157,41 @@ def curated(cat) -> dict:
     return out
 
 
+def one(block: str) -> None:
+    """One block built in this process (no pool), its result printed: run as a subprocess by `diagnose`."""
+    import json
+    import tempfile
+
+    cat = catalog()
+    tmp = os.environ["DUCKDB_TEMP_DIRECTORY"]
+    with tempfile.TemporaryDirectory(dir=tmp) as directory:
+        lookups, keys = obs.export_lookups(cat, SOURCE, Path(directory))
+        silver = cat.load_table(obs.SOURCES[SOURCE]["silver"])
+        item = obs.blocks_of(SOURCE, et.state(silver, "dataset_id"))[block]
+        result = obs.work(SOURCE, {"block": block, "recipe": "diagnose", **item}, lookups, "4GB", tmp, f"{NS}/gold/")
+    print("RESULT " + json.dumps(result, default=str), flush=True)
+
+
+def diagnose(blocks: list[str]) -> None:
+    """Each block in its own subprocess, with the exit code, the end of stderr and the kernel's kill lines."""
+    out = {}
+    for block in blocks:
+        started = time.monotonic()
+        done = subprocess.run([sys.executable, "-m", "dev.gold_observations_trial", "one", block],
+                              capture_output=True, text=True, timeout=1500)
+        result = [line[7:400] for line in done.stdout.splitlines() if line.startswith("RESULT ")]
+        out[block] = {"exit": done.returncode, "seconds": round(time.monotonic() - started), "result": result[:1],
+                      "stderr": done.stderr[-500:] if done.returncode else ""}
+    kernel = subprocess.run("sudo dmesg | grep -iE 'killed process|out of memory|segfault' | tail -4",
+                            shell=True, capture_output=True, text=True).stdout[-600:]
+    annotate("notice", "gold observations trial diagnose", {"blocks": out, "kernel": kernel})
+
+
 def main() -> None:
+    if len(sys.argv) > 2 and sys.argv[1] == "one":
+        os.environ.setdefault("DUCKDB_TEMP_DIRECTORY", "/mnt/duckdb_tmp")
+        one(sys.argv[2])
+        return
     size = int(sys.argv[1]) if len(sys.argv) > 1 else 300
     minutes = float(sys.argv[2]) if len(sys.argv) > 2 else 120
     tmp = "/mnt/duckdb_tmp"
@@ -171,6 +205,7 @@ def main() -> None:
     cat, client = catalog(), s3()
     annotate("notice", "trial cleanup before", cleanup(cat, client))  # leftovers of a killed earlier run
     try:
+        diagnose(["TIN00092", "UNE_RT_M", "NAMA_10_GDP", "DEMO_PJAN"])
         silver = et.state(cat.load_table(obs.SOURCES[SOURCE]["silver"]), "dataset_id")
         by_size = sorted(silver, key=lambda e: -silver[e]["rows"])
         upper = {e.upper(): e for e in silver}
