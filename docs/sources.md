@@ -5,7 +5,9 @@ All candidate sources (about 180) are listed in the source register
 kind, endpoint, interfaces, auth, limits, licence status, update behaviour, history and
 incremental load approach, identifiers, research priority and blockers) and a `status`
 (table below). The id prefix (GL, PLS, PL-ENV, PLG, CD, EX) groups the entries. An onboarded source links to its declaration
-via `source_system`. This page details the routes of the onboarded sources.
+via `source_system`. This page details the routes of the sources onboarded until 12 November 2026; a source
+onboarded later has the same section as its own file `docs/sources/<source_system>.md`
+([source-registration.md](source-registration.md)), so this page takes no new sections.
 
 | status | meaning |
 |---|---|
@@ -359,9 +361,9 @@ nbp.pl pages that link the files answer automated clients with HTTP 403 (Dev pro
 answer. Bronze: `bronze.nbp_bop_cells` (one row per non-empty cell, the shared standard-library reader
 `ingestion/common/xlsx_cells.py`; a workbook whose sheets are not exactly its currency sheets is rejected). Silver: `silver.nbp_bop_observations` (workbook ×
 currency × item × period; `item_code` fixed by rule and checked against the expected list; NBP's typo
-"Finsncial derivatives" in bop_m is normalised). Gold: the build stage
-`build_nbp_bop` (PLN and EUR) follows once Silver exists in production (a Gold model reading a missing
-source would hold the shared facts back). The workbooks hold amounts only: the shares of GDP of the current
+"Finsncial derivatives" in bop_m is normalised). Gold: build stage
+`build_nbp_bop` (PLN and EUR, one measure per workbook × currency × item; IIP components and their parent
+totals are separate measures, never to be summed together). The workbooks hold amounts only: the shares of GDP of the current
 account and of the net position are not published there. Licence: NBP website Terms of Use, unresolved
 (internal, owner decision of 14 Oct 2026).
 
@@ -804,9 +806,9 @@ Each report recalculates the whole series, so values compare within one release;
 previous report 400 days. Terms: CC BY 3.0 IGO, licence row `cc_by_3_0_igo_undp_hdr`. Monthly check.
 Restart unit: the file.
 Gold (#2861): `gold.build_undp_hdr` — HDI, life expectancy at birth, expected and mean years of schooling and GNI
-per capita (total, female, male), IHDI and GII for the EU27 members and World; second source family of KPI
+per capita (total, female, male), IHDI and GII for the EU27 members and World; a further source of KPI
 `life_expectancy`, draft KPI `hdi`.
-## WHO data.who.int (indicator files)
+
 ## WHO data.who.int (indicator files)
 
 **Built (12 Nov 2026, register GL-025).** Every data.who.int indicator page links its complete data as one CSV,
@@ -892,7 +894,7 @@ BIS permitted use of statistics (cite the BIS; no additional charge to users; no
 `bis_terms`. Weekly Thursday check. Restart unit: one selection.
 Gold (#2861): `gold.build_bis` — the series of macro `poc_bis_measures` (policy rate, broad-basket effective exchange rates,
 residential property prices, credit as % of GDP, credit-to-GDP gap, debt service ratios), each its own measure,
-for the countries the BIS publishes and the euro area; second source family of KPI `reer`, draft KPIs
+for the countries the BIS publishes and the euro area; a further source of KPI `reer`, draft KPIs
 `policy_rate`, `house_price_growth`, `real_house_price_growth`, `credit_to_gdp`, `debt_service_ratio`.
 `tests/bis_gold_units.sql` fails when the BIS changes the unit of a built series.
 
@@ -934,6 +936,7 @@ value labels per file). Silver: `silver.unece_observations` (codes and labels as
 Country variable: M49 codes and aggregates such as E27 = EU-27). Terms: UNECE copyright notice (free
 reuse incl. commercial, acknowledge UNECE), licence row `unece_terms`. Weekly Monday check. Restart
 unit: one table.
+
 ## UNHCR Refugee Statistics (`unhcr`)
 
 **Built (12 Nov 2026, register GL-029).** The Refugee Statistics API (`https://api.unhcr.org/population/v1/`, public,

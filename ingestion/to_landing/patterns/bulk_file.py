@@ -9,7 +9,7 @@ framework")::
         files:
           - entity: WDI_CSV
             url: https://databank.worldbank.org/data/download/WDI_CSV.zip
-            format: zip              # zip | gzip | 7z | raw
+            format: zip              # zip | gzip | 7z | json (must parse) | raw
             version: last_modified   # last_modified (fallback: download time) | ingested
             url_date: Europe/Warsaw  # optional: {date} in url = today (YYYYMMDD) in this zone
             reduce: news_feed        # optional: land only the allowed part of the file (news: headline items)
@@ -57,11 +57,12 @@ from ingestion.common.report import annotate, step_summary
 
 ROOT = Path(__file__).resolve().parents[3]
 USER_AGENT = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
-EXTENSIONS = {"zip": "zip", "gzip": "gz", "7z": "7z", "raw": "bin"}
+EXTENSIONS = {"zip": "zip", "gzip": "gz", "7z": "7z", "json": "json", "raw": "bin"}
 CONTENT_TYPES = {
     "zip": "application/zip",
     "gzip": "application/gzip",
     "7z": "application/x-7z-compressed",
+    "json": "application/json",
     "raw": "application/octet-stream",
 }
 RETRIES = 4
@@ -245,6 +246,13 @@ def check_format(path: Path, fmt: str) -> dict[str, Any]:
         if tested.returncode != 0:
             raise RuntimeError(f"7z archive failed its test: {(tested.stdout + tested.stderr)[-300:]}")
         return {}
+    if fmt == "json":  # an API answer cut off mid-stream (HTTP 200, no Content-Length) is not landed
+        try:
+            with path.open("rb") as handle:
+                json.load(handle)
+        except ValueError as exc:
+            raise RuntimeError(f"not a complete JSON document: {str(exc)[:120]}") from exc
+        return {}
     if fmt == "gzip":
         with gzip.open(path) as handle:
             while handle.read(8 << 20):
@@ -253,18 +261,25 @@ def check_format(path: Path, fmt: str) -> dict[str, Any]:
 
 
 def download(
-    url: str, path: Path, fmt: str, retries: int = RETRIES, read_timeout: int = 300, wait: int = 60
+    url: str,
+    path: Path,
+    fmt: str,
+    retries: int = RETRIES,
+    read_timeout: int = 300,
+    wait: int = 60,
+    user_agent: str = USER_AGENT,
 ) -> tuple[str, int, dict[str, str], str, dict[str, Any]]:
     """Stream to disk and check the format, with retries; returns (sha256, size, headers, URL, detail).
 
     A spec may shorten ``retries``, ``read_timeout`` and ``wait`` (seconds, times the attempt number) for an API
-    that answers small files fast or refuses for long stretches (GDELT)."""
+    that answers small files fast or refuses for long stretches (GDELT), and set ``user_agent`` where a provider's
+    policy asks for a specific contact (Wikidata: the project website)."""
     for attempt in range(retries):
         digest, size = sha256(), 0
         try:
             with requests.get(
                 url,
-                headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"},  # exact bytes, true length
+                headers={"User-Agent": user_agent, "Accept-Encoding": "identity"},  # exact bytes, true length
                 stream=True,
                 timeout=(30, read_timeout),
                 allow_redirects=True,
@@ -396,7 +411,7 @@ def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landi
         path = Path(temporary) / f"file.{EXTENSIONS[fmt]}"
         started = time.monotonic()
         url = resolve_url(spec)
-        limits = {k: spec[k] for k in ("retries", "read_timeout", "wait") if k in spec}
+        limits = {k: spec[k] for k in ("retries", "read_timeout", "wait", "user_agent") if k in spec}
         digest, size, headers, final_url, detail = download(url, path, fmt, **limits)
         if spec.get("reduce"):
             digest, size = reduce_file(path, spec["reduce"])

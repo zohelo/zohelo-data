@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: poc_build_undp_hdr
+    description: >-
+      Build stage — UNDP Human Development Report composite indices (newest report): HDI, life expectancy at
+      birth, expected and mean years of schooling, GNI per capita (by sex), IHDI and GII; EU27 members and
+      World, annual from 1990.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]

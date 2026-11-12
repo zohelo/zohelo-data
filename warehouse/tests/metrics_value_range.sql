@@ -61,6 +61,12 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- FAOSTAT (#2402): published in 1000 ha, metrics in km² since D33 (× 10); World land area 13,040,161.55 thousand ha
     -- = 130,401,615.5 km² (Dev trial 43159213097). Documentation only (not in the metrics union below).
     ('area', 'faostat', '%', 0, 2e8),
+    -- World Bank GEM (#2373): CPI % y-o-y, EU27 members 1987-2026: -6.5 to 3,453.3 (1990s hyperinflation; Dev trial
+    -- 43283254888). Documentation only until poc_metrics_cpi_annual_rate (it exists) joins the union below.
+    ('cpi_annual_rate', 'world_bank_gem', 'world_bank_gem:CPTOTSAXNZGY:pct', -50, 5000),
+    -- World Bank GEM (#2373): unemployment rate %, highest 28.7 (Dev trial 43283254888); documentation only (no
+    -- metrics model for the monthly KPI yet).
+    ('unemployment_rate_monthly_sa', 'world_bank_gem', 'world_bank_gem:UNEMPSA_:pct', 0, 60),
     -- UNHCR (#2415): persons; highest refugees 4,404,995 (all asylum countries 1951-2025, Dev trial 43282453427).
     -- Documentation only (no metrics_refugees_hosted model yet).
     ('refugees_hosted', 'unhcr', '%', 0, 2e7),
@@ -68,6 +74,47 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- = 1,253.1 Mt (total excl. LULUCF, 1990-2024, Dev trial 43282453427). Documentation only until
     -- metrics_ghg_emissions joins the metrics union below.
     ('ghg_emissions', 'eea', 'eea:govreg_ghg_inventory:gg_co2e:Sectors/Totals_excl', 0, 2e3),
+    -- NBP balance of payments (#2780): million EUR, Poland; current account 2026-Q2 -6,225, net IIP -283,248 (Dev trial
+    -- 43163012721). Documentation only until metrics_current_account_components and metrics_fdi_inflow join the
+    -- metrics union below (draft concepts are outside the test's scope).
+    ('current_account_components', 'nbp_bop', '%', -1e6, 1e6),
+    ('fdi_inflow', 'nbp_bop', '%', -1e6, 1e6),
+    -- percent per year; highest 24.0 in 1998 (silver.nbp_policy_rates, Dev trial 43093114523)
+    ('nbp_reference_rate', 'nbp_interest_rates', '%', 0, 30),
+    -- slice needs-block rows (#2743): every source of the concepts unioned below
+    -- 550.6 (Dev trial 43093114523: a candidate country in the 1990s)
+    ('core_inflation', 'eurostat', '%', -10, 600),
+    -- national currencies; 322,800 (Dev trial 43093114523)
+    ('min_wage', 'eurostat', '%', 1, 1e6),
+    ('adult_learning', 'eurostat', '%', 0, 100),
+    ('adult_learning', 'gus_bdl', '%', 0, 100),
+    ('extreme_poverty', 'gus_bdl', '%', 0, 100),
+    -- % change on a year earlier
+    ('industrial_production', 'eurostat', '%', -100, 300),
+    -- index, previous year = 100
+    ('industrial_production', 'gus_bdl', '%', 1, 300),
+    -- index, same month a year earlier = 100
+    ('industrial_production', 'gus_dbw', '%', 1, 300),
+    -- % change on a year earlier; 261 (Dev trial 43093114523)
+    ('construction_output', 'eurostat', '%', -100, 400),
+    -- index, same month a year earlier = 100
+    ('construction_output', 'gus_dbw', '%', 1, 300),
+    -- persons; Poland 6,702,934 in 2026-08
+    ('employment_enterprise', 'gus_bdl', '%', 1000, 2e7),
+    -- PLN; Poland 7,530.45 in 2026-03
+    ('median_wage', 'gus_bdl', '%', 500, 1e5),
+    ('median_wage', 'gus_dbw', '%', 500, 1e5),
+    -- PLN per m2; 2,202 the lowest (Dev trial 43093114523)
+    ('price_m2_secondary', 'gus_bdl', '%', 300, 1e5),
+    ('price_m2_secondary', 'gus_dbw', '%', 300, 1e5),
+    ('arope_rate', 'eurostat', '%', 0, 100),
+    ('arope_rate', 'gus_dbw', '%', 0, 100),
+    ('long_term_unemployment', 'eurostat', '%', 0, 100),
+    ('long_term_unemployment', 'gus_dbw', '%', 0, 100),
+    ('registered_unemployed', 'gus_bdl', '%', 0, 5e6),
+    ('registered_unemployed', 'gus_dbw', '%', 0, 5e6),
+    -- MRPiPS (#2778): persons, Poland and voivodeships, end of month
+    ('registered_unemployed', 'mrpips_unemployment', '%', 0, 5e6),
     -- ILOSTAT (#2861): per cent of the labour force, 15+, EU27 members, annual and quarterly national series;
     -- highest 28.153 (GR, quarterly), Poland 2025 = 3.018 (Dev trial 43290214779); the other sources' bound
     ('unemployment_rate', 'ilostat', '%', 0, 60),
@@ -76,7 +123,21 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- 20,876), real GDP growth in per cent (-10.9 to 24.6 IE, Poland 2023 = 0.1); Dev trial 43290214779, the WDI bounds
     ('gdp_current_prices', 'undata', '%', 0, 3e8),
     ('gdp_per_capita', 'undata', '%', 0, 5e5),
-    ('gdp_volume_growth', 'undata', '%', -100, 200)
+    ('gdp_volume_growth', 'undata', '%', -100, 200),
+    -- BIS, UNDP HDR and UNdata draft KPIs (#2861); observed ranges in Dev trial 43290214779. Policy rate, per cent
+    -- per year: -0.75 to 355,085.64 (BR, the hyperinflation years, as the BIS publishes it)
+    ('policy_rate', 'bis', '%', -5, 1e6),
+    -- residential property prices, year-on-year change in per cent: nominal -42.25 to 360.35 (IT), real -45.84 to 59.64
+    ('house_price_growth', 'bis', '%', -100, 1000),
+    ('real_house_price_growth', 'bis', '%', -100, 200),
+    -- credit to the private non-financial sector, % of GDP: 7.5 to 482.6 (LU); debt service ratio, per cent: 3.0 to 40.2
+    ('credit_to_gdp', 'bis', '%', 0, 1000),
+    ('debt_service_ratio', 'bis', '%', 0, 100),
+    -- HDI, index 0 to 1: 0.608 to 0.962 (EU27 members and World)
+    ('hdi', 'undp_hdr', '%', 0, 1),
+    -- internet users, % of individuals: 15.6 to 99.3; current health expenditure, % of GDP: 4.9 to 12.9
+    ('internet_users', 'undata', '%', 0, 100),
+    ('health_expenditure_gdp', 'undata', '%', 0, 30)
 ),
 
 metrics as (
@@ -151,6 +212,195 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_gdp_volume_growth') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_nbp_reference_rate') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_core_inflation') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_min_wage') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_adult_learning') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_extreme_poverty') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_industrial_production') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_construction_output') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_employment_enterprise') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_median_wage') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_price_m2_secondary') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_arope_rate') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_long_term_unemployment') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_registered_unemployed') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_policy_rate') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_house_price_growth') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_real_house_price_growth') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_credit_to_gdp') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_debt_service_ratio') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_hdi') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_internet_users') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_health_expenditure_gdp') }}
 )
 
 select

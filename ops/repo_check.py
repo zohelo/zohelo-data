@@ -227,6 +227,8 @@ def configuration(files: list[Path]) -> list[str]:
     problems += full_rebuild(files)
     problems += gold_list(files)
     problems += gold_blocks(files)
+    problems += source_declarations(files)
+    problems += optional_parents(files)
     return problems
 
 
@@ -237,30 +239,35 @@ EXCEPTION = re.compile(r"^#\d+$")
 
 def full_rebuild(files: list[Path]) -> list[str]:
     """Every dbt model, SQL or Python, that is not incremental (the project default is a full-rebuild table)
-    has a row ceiling in warehouse/warehouse.yaml `full_rebuild`; a ceiling above 1M rows
+    has a row ceiling under `full_rebuild`, in its source's ingestion/sources/<source>.yaml or, for a shared
+    model, in warehouse/warehouse.yaml (warehouse/declared.py), and in one place only; a ceiling above 1M rows
     names the issue that makes it incremental or records the owner's exception (#868)."""
-    declared = yaml.safe_load((ROOT / "warehouse/warehouse.yaml").read_text()).get("full_rebuild") or {}
+    from warehouse import declared as declarations
+
+    declared = declarations.full_rebuild()
     models = {
         f.stem: INCREMENTAL.search((ROOT / f).read_text()) is not None
         for f in files
         if f.parts[:2] == ("warehouse", "models") and f.suffix in (".sql", ".py") and (ROOT / f).exists()
     }
     problems = [
-        f"warehouse.yaml full_rebuild: model {name} is not incremental and has no row ceiling"
+        f"full_rebuild: model {name} is not incremental and has no row ceiling (its source's "
+        "ingestion/sources/<source>.yaml, or warehouse.yaml for a shared model)"
         for name, incremental in sorted(models.items())
         if not incremental and name not in declared
     ]
+    problems += [f"full_rebuild: {twice} is declared twice" for twice in declarations.full_rebuild_twice()]
     for name, entry in sorted(declared.items()):
         if name not in models:
-            problems.append(f"warehouse.yaml full_rebuild: {name} is not a model")
+            problems.append(f"full_rebuild: {name} is not a model")
             continue
         if models[name]:
-            problems.append(f"warehouse.yaml full_rebuild: {name} is incremental; remove it")
+            problems.append(f"full_rebuild: {name} is incremental; remove it")
         rows = entry.get("rows") if isinstance(entry, dict) else None
         if not isinstance(rows, int) or isinstance(rows, bool) or rows <= 0:
-            problems.append(f"warehouse.yaml full_rebuild: {name} needs rows: <positive integer>")
+            problems.append(f"full_rebuild: {name} needs rows: <positive integer>")
         elif rows > POLICY_ROWS and not EXCEPTION.match(str(entry.get("exception", ""))):
-            problems.append(f'warehouse.yaml full_rebuild: {name} ceiling {rows:,} > 1M needs exception: "#<issue>"')
+            problems.append(f'full_rebuild: {name} ceiling {rows:,} > 1M needs exception: "#<issue>"')
     return problems
 
 
@@ -269,8 +276,11 @@ NOT_DBT_GOLD = {"gold.coverage"}  # written by each source's bronze.verify (inge
 
 
 def gold_list(files: list[Path]) -> list[str]:
-    """warehouse.yaml `gold` lists every Gold model (by alias) and seed of the dbt project plus gold.coverage, and
-    nothing else (ops/retire_tables.py retires unlisted Gold tables)."""
+    """The declared Gold list (warehouse.yaml `gold` plus each source's `gold:`, warehouse/declared.py) holds every
+    Gold model (by alias) and seed of the dbt project plus gold.coverage, and nothing else (ops/retire_tables.py
+    retires unlisted Gold tables)."""
+    from warehouse import declared
+
     built = set()
     for f in files:
         if not (ROOT / f).exists():
@@ -280,23 +290,80 @@ def gold_list(files: list[Path]) -> list[str]:
             built.add("gold." + (alias.group(1) if alias else f.stem))
         elif f.parent == Path("warehouse/seeds") and f.suffix == ".csv":
             built.add("gold." + f.stem)
-    listed = set(yaml.safe_load((ROOT / "warehouse/warehouse.yaml").read_text()).get("gold") or [])
-    problems = [f"warehouse.yaml gold: {name} is built by the dbt project but not listed" for name in built - listed]
-    problems += [f"warehouse.yaml gold: {name} is not a Gold model or seed" for name in listed - built - NOT_DBT_GOLD]
+    listed = set(declared.gold())
+    problems = [
+        f"gold: {name} is built by the dbt project but not listed (`gold:` of its source's "
+        "ingestion/sources/<source>.yaml, or warehouse.yaml `gold` for a shared table)"
+        for name in built - listed
+    ]
+    problems += [f"gold: {name} is listed but is not a Gold model or seed" for name in listed - built - NOT_DBT_GOLD]
     return sorted(problems)
 
 
 GOLD_BLOCK_TAG = re.compile(r"tags\s*=\s*\[[^\]]*['\"]gold_block['\"]")
-GOLD_BLOCK_LIST = re.compile(r"macro poc_block_models\(\).*?endmacro", re.S)
-GOLD_ACTIVATED = re.compile(r"macro poc_activated_blocks\(\).*?endmacro", re.S)
+GOLD_BLOCK_LIST = re.compile(r"macro poc_legacy_block_models\(\).*?endmacro", re.S)
+GOLD_ACTIVATED = re.compile(r"macro poc_legacy_activated_blocks\(\).*?endmacro", re.S)
 GOLD_BLOCK_EXEMPT = {"poc_build_check"}  # reads the blocks; not a block
+# Per-source registration (docs/source-registration.md): warehouse/macros/sources/<source_system>.sql
+SOURCE_MACROS = Path("warehouse/macros/sources")
+REGISTRATION = re.compile(r"\{%-?\s*macro\s+poc_(source|geography)__(\w+)\s*\(\s*\)\s*-?%\}(.*?)\{%-?\s*endmacro", re.S)
+REGISTERED_MODEL = re.compile(r"['\"]block_model['\"]\s*:\s*['\"](\w+)['\"]")
+REGISTERED_BLOCKS = re.compile(r"['\"](activated|blocks)['\"]\s*:")
+CTE_NAME = re.compile(r"^\s*(\w+) as \(", re.M)
+MAP_GEOGRAPHY = Path("warehouse/models/gold/poc_map_geography.sql")
+
+
+def registrations(files: list[Path]) -> tuple[dict[str, dict], list[str]]:
+    """({source_system: {"block_model": model or None, "activated": bool, "geography": bool}}, problems) of the
+    per-source Gold registrations: the macros poc_source__<source_system>() and poc_geography__<source_system>()
+    live in warehouse/macros/sources/<source_system>.sql and nowhere else, and <source_system> is a declared
+    source (ingestion/sources/<source_system>.yaml). The CTEs of a geography macro are named <source_system>
+    or <source_system>_<x>, and no name is used twice: not by a CTE written in poc_map_geography.sql (a source
+    that is still mapped there) and not by another source (dbt compiles two CTEs of one name; DuckDB fails on
+    them only in the build)."""
+    found: dict[str, dict] = {}
+    problems = []
+    taken = {name: str(MAP_GEOGRAPHY) for name in CTE_NAME.findall((ROOT / MAP_GEOGRAPHY).read_text())}
+    for f in files:
+        if f.parts[:2] != ("warehouse", "macros") or f.suffix != ".sql" or not (ROOT / f).exists():
+            continue
+        for kind, source, body in REGISTRATION.findall((ROOT / f).read_text()):
+            if f != SOURCE_MACROS / f"{source}.sql":
+                problems.append(f"{f}: macro poc_{kind}__{source} belongs in {SOURCE_MACROS}/{source}.sql")
+            if not (ROOT / "ingestion/sources" / f"{source}.yaml").exists():
+                problems.append(
+                    f"{f}: poc_{kind}__{source}: {source} is not a source (ingestion/sources/{source}.yaml)"
+                )
+            entry = found.setdefault(source, {"block_model": None, "activated": False, "geography": False})
+            if kind == "geography":
+                entry["geography"] = True
+                names = CTE_NAME.findall(body)
+                if source not in names:
+                    problems.append(f"{f}: poc_geography__{source} must define the CTE `{source} as (...)`")
+                for name in names:
+                    if name != source and not name.startswith(f"{source}_"):
+                        problems.append(f"{f}: CTE {name} of poc_geography__{source} must be named {source}_<x>")
+                    if name in taken:
+                        problems.append(f"{f}: CTE {name} of poc_geography__{source} already exists in {taken[name]}")
+                    taken[name] = f"poc_geography__{source}"
+                continue
+            model = REGISTERED_MODEL.search(body)
+            entry["block_model"] = model.group(1) if model else None
+            entry["activated"] = REGISTERED_BLOCKS.search(body) is not None
+            if model is None:
+                problems.append(f"{f}: poc_source__{source} must return 'block_model': '<poc_build_ model>'")
+        if f.parent == SOURCE_MACROS and not (ROOT / "ingestion/sources" / f"{f.stem}.yaml").exists():
+            problems.append(f"{f}: the file name must be a source_system (ingestion/sources/{f.stem}.yaml)")
+    return found, problems
 
 
 def gold_blocks(files: list[Path]) -> list[str]:
     """Every Gold build stage model (models/gold/poc_build_*.sql except poc_build_check) is tagged `gold_block`
-    and listed in `poc_block_models()` (warehouse/macros/poc_blocks.sql), the tagged models are exactly the listed
-    ones, and each listed source_system has blocks in `poc_activated_blocks()`. warehouse/changed.py lets a waiting
-    block's children build; poc_observations() unions only the listed blocks."""
+    and declared exactly once: registered by its source (poc_source__<source_system>() in
+    warehouse/macros/sources/<source_system>.sql) or, for sources older than D34, listed in
+    `poc_legacy_block_models()` (warehouse/macros/poc_blocks.sql); the tagged models are exactly the declared
+    ones, and each declared source_system has activated blocks. warehouse/changed.py lets a waiting block's
+    children build; poc_observations() unions only the declared blocks."""
     stages, tagged = set(), set()
     for f in files:
         if f.parts[:3] != ("warehouse", "models", "gold") or f.suffix != ".sql" or not (ROOT / f).exists():
@@ -307,17 +374,109 @@ def gold_blocks(files: list[Path]) -> list[str]:
             tagged.add(f.stem)
     macros = (ROOT / "warehouse/macros/poc_blocks.sql").read_text()
     macro = GOLD_BLOCK_LIST.search(macros)
-    entries = dict(re.findall(r"^\s*(\w+):(\w+)\s*$", macro.group(0), re.M)) if macro else {}
+    legacy = dict(re.findall(r"^\s*(\w+):(\w+)\s*$", macro.group(0), re.M)) if macro else {}
     activated = GOLD_ACTIVATED.search(macros)
-    problems = [f"{m}: a Gold build stage must be tagged gold_block" for m in stages - tagged]
-    problems += [f"poc_block_models(): {m} is a Gold build stage but not listed" for m in stages - set(entries)]
-    problems += [f"poc_block_models(): {m} is tagged gold_block but not listed" for m in tagged - set(entries)]
-    problems += [f"poc_block_models(): {m} is listed but not tagged gold_block" for m in set(entries) - tagged]
+    registered, problems = registrations(files)
+    entries = dict(legacy)
+    for source, entry in sorted(registered.items()):
+        model = entry["block_model"]
+        if model is None:
+            continue
+        if source in legacy.values():
+            problems.append(
+                f"poc_source__{source}: {source} already has a Gold block in poc_legacy_block_models(); a source "
+                "is declared in one of the two places"
+            )
+        if model in entries:
+            problems.append(f"Gold block {model} is declared twice (poc_source__{source} and {entries[model]})")
+        entries[model] = source
+        if not entry["activated"]:
+            problems.append(f"poc_source__{source}: no `activated` select and no `blocks` list")
+    problems += [f"{m}: a Gold build stage must be tagged gold_block" for m in stages - tagged]
+    declare = "register it in warehouse/macros/sources/<source_system>.sql (docs/source-registration.md)"
+    problems += [f"{m} is a Gold build stage but not declared: {declare}" for m in stages - set(entries)]
+    problems += [f"{m} is tagged gold_block but not declared: {declare}" for m in tagged - set(entries)]
+    problems += [f"{m} is declared a Gold block but not tagged gold_block" for m in set(entries) - tagged]
     problems += [
-        f"poc_activated_blocks(): no blocks of {source} ({m})"
-        for m, source in entries.items()
+        f"poc_legacy_activated_blocks(): no blocks of {source} ({m})"
+        for m, source in legacy.items()
         if not activated or f"'{source}'" not in activated.group(0)
     ]
+    return sorted(problems)
+
+
+SILVER_ALIAS = GOLD_ALIAS
+
+
+def source_declarations(files: list[Path]) -> list[str]:
+    """A source is declared in every place that reads it (docs/source-registration.md): each table of a
+    source's `bronze:` is a dbt source table in warehouse/models/bronze/*.yml (so lineage starts at Bronze),
+    declared once; and each dbt Silver model is in the `silver:` list of exactly one source (a Gold table may
+    be shared by a family, as gold.build_public_finance is). The source.csv and licence.csv rows are checked
+    by `register`, the Gold list and row ceilings by `gold_list` and `full_rebuild`, the Gold block by
+    `gold_blocks`."""
+    from warehouse import declared
+
+    sources = declared.sources()
+    problems = []
+    dbt_tables: dict[str, list[str]] = {}
+    for f in files:
+        if f.parts[:3] == ("warehouse", "models", "bronze") and f.suffix in (".yml", ".yaml") and (ROOT / f).exists():
+            for block in (yaml.safe_load((ROOT / f).read_text()) or {}).get("sources") or []:
+                for table in block.get("tables") or []:
+                    name = f"{block.get('schema', block['name'])}.{table.get('identifier') or table['name']}"
+                    dbt_tables.setdefault(name, []).append(f"{f.name}: {block['name']}")
+    problems += [
+        f"dbt source table {name} is declared twice ({', '.join(where)})"
+        for name, where in sorted(dbt_tables.items())
+        if len(where) > 1
+    ]
+    silver_models = {}
+    for f in files:
+        if f.parts[:3] == ("warehouse", "models", "silver") and f.suffix in (".sql", ".py") and (ROOT / f).exists():
+            alias = SILVER_ALIAS.search((ROOT / f).read_text())
+            silver_models["silver." + (alias.group(1) if alias else f.stem)] = f
+    owners: dict[str, list[str]] = {}
+    for source, config in sources.items():
+        for name in config.get("bronze") or []:
+            if name not in dbt_tables:
+                problems.append(
+                    f"{source}: {name} is in ingestion/sources/{source}.yaml but is not a dbt source table: add it "
+                    f"to warehouse/models/bronze/{source}.yml"
+                )
+        for name in config.get("silver") or []:
+            owners.setdefault(name, []).append(source)
+    problems += [
+        f"{name} is listed by more than one source ({', '.join(where)})"
+        for name, where in sorted(owners.items())
+        if len(where) > 1
+    ]
+    problems += [
+        f"{f}: Silver model {name} is in no source's `silver:` list (ingestion/sources/<source>.yaml)"
+        for name, f in sorted(silver_models.items())
+        if name not in owners
+    ]
+    return problems
+
+
+OPTIONAL_REF = re.compile(r"poc_optional_ref\(\s*['\"](\w+)['\"]")
+OPTIONAL_PARENTS = re.compile(r"['\"]optional_parents['\"]\s*:\s*\[(.*?)\]", re.S)
+
+
+def optional_parents(files: list[Path]) -> list[str]:
+    """A model reads a table through `poc_optional_ref('<model>', …)` exactly when it lists that model in its
+    config meta `optional_parents`: warehouse/changed.py plans by the list (the model does not wait for those
+    parents), the macro reads by the call (an empty relation while the parent waits)."""
+    problems = []
+    for f in files:
+        if f.parts[:2] != ("warehouse", "models") or f.suffix != ".sql" or not (ROOT / f).exists():
+            continue
+        text = (ROOT / f).read_text()
+        read = set(OPTIONAL_REF.findall(text))
+        declared = OPTIONAL_PARENTS.search(text)
+        listed = set(re.findall(r"['\"](\w+)['\"]", declared.group(1))) if declared else set()
+        problems += [f"{f.stem}: poc_optional_ref('{m}') but not in meta optional_parents" for m in read - listed]
+        problems += [f"{f.stem}: {m} in meta optional_parents but not read by poc_optional_ref" for m in listed - read]
     return sorted(problems)
 
 
@@ -335,8 +494,13 @@ def scheduler_worker(dispatch_run: str) -> list[str]:
     problems = []
     if worker["RUN"] != dispatch_run or worker["RUN"] not in inputs["run"]["options"]:
         problems.append(f"{SCHEDULER_WORKER}: RUN {worker['RUN']!r} is not the scheduler dispatch {dispatch_run!r}")
-    if worker["SOURCE"] not in inputs["source"]["options"]:
+    if worker["SOURCE"] != "platform" and not (ROOT / "ingestion/sources" / f"{worker['SOURCE']}.yaml").exists():
         problems.append(f"{SCHEDULER_WORKER}: SOURCE {worker['SOURCE']!r} is not a Pipeline source")
+    if inputs["source"].get("type") != "string" or "options" in inputs["source"]:
+        problems.append(
+            f"{worker['WORKFLOW']}: the `source` input is free text checked by the plan job, not a choice list "
+            "(a list needs a line per source; docs/source-registration.md)"
+        )
     if worker["REF"] != "main":
         problems.append(f"{SCHEDULER_WORKER}: REF must be main (scheduler dispatches count only on main)")
     return problems
@@ -399,6 +563,12 @@ def register(files: list[Path]) -> list[str]:
         f"register: {e.get('id')}: status {e.get('status')!r}" for e in entries if e.get("status") not in STATUSES
     ]
     problems += [f"register: {e.get('id')}: missing {f}" for e in entries for f in REQUIRED if f not in e]
+    # A review that approves an entry records the terms after `Terms:`; backlog_sync closes its review issues on it.
+    problems += [
+        f"register: {e.get('id')}: status approved needs licence.notes with 'Terms:' (stages.yaml, stage 1)"
+        for e in entries
+        if e.get("status") == "approved" and "Terms:" not in str((e.get("licence") or {}).get("notes") or "")
+    ]
     problems += [
         f"register: {e.get('id')}: family {e.get('family')!r}" for e in entries if e.get("family") not in FAMILIES
     ]

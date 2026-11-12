@@ -8,7 +8,9 @@
    bis:dsr:367:P. Values and units as published (D33); a cell without a value (NaN, OBS_STATUS M) is not loaded.
    Areas through poc_map_geography (section bis, static): ISO 3166 alpha-2 countries and XM euro area →
    EUROSTAT:EA; the BIS aggregates 4T, 5R, 5A, G2 and XW have no Gold area and are not built (poc_bis_areas); any
-   other unknown code maps to _X and is counted by build_check. No breakdowns: every series is its own measure. #}
+   other unknown code maps to _X and is counted by build_check. No breakdowns: every series is its own measure.
+   OBS_STATUS A (normal) → ok, B → break, P → provisional, E → estimated, any other flag → flagged.
+   tests/bis_gold_series_present.sql fails when a series code of poc_bis_measures matches no Silver row. #}
 with measures as ({{ poc_bis_measures() }}),
 
 blocks as ({{ poc_bis_blocks() }}),
@@ -82,8 +84,13 @@ select
     cast(null as varchar) as sex_code,
     true as is_total,
     o.obs_value as value,
-    case o.obs_status when 'B' then 'break' when 'P' then 'provisional' when 'E' then 'estimated' else 'ok' end
-        as observation_status_key,
+    case
+        when o.obs_status is null or o.obs_status = 'A' then 'ok'
+        when o.obs_status = 'B' then 'break'
+        when o.obs_status = 'P' then 'provisional'
+        when o.obs_status = 'E' then 'estimated'
+        else 'flagged'
+    end as observation_status_key,
     o.source_version,
     o.raw_sha256
 from obs as o

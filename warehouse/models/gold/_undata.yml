@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: poc_build_undata
+    description: >-
+      Build stage — UN Statistical Yearbook (UNdata): GDP in current prices, GDP per capita and real GDP growth,
+      R&D expenditure, internet use and current health expenditure; EU27 members and World, the years the
+      Yearbook prints. Values and units as published.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]

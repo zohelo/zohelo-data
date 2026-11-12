@@ -1,12 +1,22 @@
-{{ config(alias='map_geography') }}
+{# The Silver tables read only for a source's own codes are optional (poc_optional_ref): a source before its
+   first Bronze load adds no rows here and does not hold back the map and the blocks that read it. #}
+{{ config(
+    alias='map_geography',
+    meta={'optional_parents': [
+        'unctad_fdi_flows_stock', 'unctad_merchandise_trade', 'unctad_services_trade',
+        'who_observations', 'unesco_uis_observations', 'faostat_observations',
+    ]}
+) }}
 {# Gold PoC: every source's geography code → the area it means in dim_geography
    (design draft 2: map_geography__<source>, merged into one table). Unmatched codes map to
-   '_X' and are counted by the build check. #}
+   '_X' and are counted by the build check. A new source does not add a CTE here: it defines
+   poc_geography__<source_system>() in warehouse/macros/sources/<source_system>.sql
+   (docs/source-registration.md) and the two poc_geography_* calls below place it. #}
 with geo as (select * from {{ ref('poc_dim_geography') }}),
 
 nuts_pl as ({{ poc_nuts_pl() }}),
 
-eurostat_codes as (
+{{ poc_geography_ctes() }}eurostat_codes as (
     select code from {{ ref('eurostat_codes') }}
     where codelist_id = 'GEO'
     group by code
@@ -315,11 +325,11 @@ unctad as (
         c.economy as source_code,
         coalesce(g.geography_key, '_X') as geography_key
     from (
-        select distinct economy from {{ ref('unctad_fdi_flows_stock') }}
+        select distinct economy from {{ poc_optional_ref('unctad_fdi_flows_stock', 'economy:varchar') }}
         union
-        select distinct economy from {{ ref('unctad_merchandise_trade') }}
+        select distinct economy from {{ poc_optional_ref('unctad_merchandise_trade', 'economy:varchar') }}
         union
-        select distinct economy from {{ ref('unctad_services_trade') }}
+        select distinct economy from {{ poc_optional_ref('unctad_services_trade', 'economy:varchar') }}
     ) as c
     left join unctad_areas as a on c.economy = a.economy
     left join geo as g on a.candidate_key = g.geography_key
@@ -341,7 +351,7 @@ who as (
         select distinct
             geo_type,
             geo_code_m49
-        from {{ ref('who_observations') }}
+        from {{ poc_optional_ref('who_observations', 'geo_type:varchar, geo_code_m49:varchar') }}
     ) as a
     left join who_m49 as m on a.geo_type = 'COUNTRY' and lpad(a.geo_code_m49, 3, '0') = m.m49
     left join geo as g on g.level_name = 'country' and m.iso2 = g.geography_key
@@ -358,7 +368,7 @@ unesco_uis as (
         select distinct
             geo_unit,
             is_country_code
-        from {{ ref('unesco_uis_observations') }}
+        from {{ poc_optional_ref('unesco_uis_observations', 'geo_unit:varchar, is_country_code:boolean') }}
     ) as a
     left join geo as g on a.is_country_code and g.level_name = 'country' and a.geo_unit = g.iso3
 ),
@@ -381,7 +391,7 @@ faostat as (
         select distinct
             area_code,
             area_code_m49
-        from {{ ref('faostat_observations') }}
+        from {{ poc_optional_ref('faostat_observations', 'area_code:integer, area_code_m49:varchar') }}
     ) as a
     left join faostat_m49 as m on a.area_code_m49 = m.m49 and a.area_code < 5000
     left join geo as g on g.level_name = 'country' and m.iso2 = g.geography_key
@@ -447,63 +457,6 @@ eea as (
         g.geography_key
     from geo as g
     where g.level_name = 'country' and g.iso2 is not null
-),
-
--- BIS (#2861): ISO 3166 alpha-2 countries (dim_geography's country keys) and XM euro area → EUROSTAT:EA
--- (poc_bis_areas; the BIS aggregates 4T, 5R, 5A, G2, XW have no Gold area and are not listed). Static: Gold does
--- not read BIS Silver here.
-bis_areas as ({{ poc_bis_areas() }}),
-
-bis as (
-    select
-        'bis' as source_system,
-        area_code as source_code,
-        candidate_key as geography_key
-    from bis_areas
-    where candidate_key <> ''
-    union all
-    select
-        'bis' as source_system,
-        geography_key as source_code,
-        geography_key
-    from geo
-    where level_name = 'country' and length(geography_key) = 2
-),
-
--- ILOSTAT and UNDP HDR (#2861): countries by ISO 3166 alpha-3 (dim_geography.iso3), from Gold's own list so the
--- shared dimensions never wait for their Silver tables; UNDP's ZZK.WORLD is World. ILO aggregates (X01 …) and the
--- HDR groups and regions (ZZA … ZZJ) are not listed; the build stages build the EU27 members (and World for UNDP).
-iso3_family as (
-    select
-        s.source_system,
-        g.iso3 as source_code,
-        g.geography_key
-    from geo as g
-    cross join (values ('ilostat'), ('undp_hdr')) as s (source_system)
-    where g.level_name = 'country' and g.iso3 is not null
-    union all
-    select
-        'undp_hdr' as source_system,
-        'ZZK.WORLD' as source_code,
-        'WB:WLD' as geography_key
-),
-
--- UNdata Statistical Yearbook (#2861): areas by UN M49 code as published (no leading zeros): the EU27 members
--- (poc_m49_eu27) and 1 "Total, all countries or areas" = World. Other regions (150 Europe, 97 European Union …)
--- are not listed and not built. Static.
-undata_m49 as ({{ poc_m49_eu27() }}),
-
-undata as (
-    select
-        'undata' as source_system,
-        cast(cast(m49 as integer) as varchar) as source_code,
-        iso2 as geography_key
-    from undata_m49
-    union all
-    select
-        'undata' as source_system,
-        '1' as source_code,
-        'WB:WLD' as geography_key
 )
 
 select
@@ -512,7 +465,7 @@ select
     coalesce(g.geography_key, '_X') as geography_key,
     g.geography_key is not null as matched
 from (
-    select * from eurostat
+    {{ poc_geography_union() }}select * from eurostat
     union all
     select * from bdl
     union all
@@ -551,12 +504,6 @@ from (
     select * from eea
     union all
     select * from zus_psz
-    union all
-    select * from bis
-    union all
-    select * from iso3_family
-    union all
-    select * from undata
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null
