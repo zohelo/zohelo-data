@@ -4,12 +4,13 @@ description: "PIG-PIB MIDAS — documented mineral deposits, mining areas and mi
 # Extraction strategy (docs/landing.md; register PL-ENV-015). The SHP packages of the CBDG download manager are
 # sent only as links to an e-mail address, so the route is the public ArcGIS WFS of MIDAS (API tested for a full
 # load): six feature types, one entity each, one GetFeature per layer returns the whole layer (numberMatched =
-# numberReturned, 4-18 k features, 8-43 MB GML; the capabilities set no CountDefault, so no paging), requested as
+# numberReturned, 4-18 k features, 8-43 MB GML, 1.4-9.5 MB gzip; no CountDefault in the capabilities, no paging), as
 # the server's own GML 3.2 gzip output (GML32+GZIP), one at a time with a pause (to_landing/pig_midas/).
 # The server gives no version and no validators, and every response embeds the request time
 # (wfs:FeatureCollection timeStamp, WFS 1.1.0 and 2.0.0 alike; Dev probe 43284905050), so the bytes differ on every
 # request: version = download time and every run lands every layer (full_refresh; the playbook's policy for a source
-# without a version whose files are small). Restart unit: one layer.
+# without a version whose files are small). Restart unit: one layer. The server answers HEAD with HTTP 500, so
+# landing.inspect probes with a streamed GET (probe: get; Dev trial 43289532679).
 extraction:
   kind: bulk_file
   bulk_file:
@@ -18,26 +19,32 @@ extraction:
         url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&version=2.0.0&request=GetFeature&typeNames=midas:MIDAS_-_udokumentowane_z%C5%82o%C5%BCa_kopalin&outputFormat=GML32%2BGZIP"
         format: gzip
         version: ingested
+        probe: get
       - entity: mining_areas              # obszary górnicze (contours, linked deposit number)
         url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&version=2.0.0&request=GetFeature&typeNames=midas:MIDAS_-_obszary_g%C3%B3rnicze&outputFormat=GML32%2BGZIP"
         format: gzip
         version: ingested
+        probe: get
       - entity: mining_terrains           # tereny górnicze (contours, linked deposit number)
         url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&version=2.0.0&request=GetFeature&typeNames=midas:MIDAS_-_tereny_g%C3%B3rnicze&outputFormat=GML32%2BGZIP"
         format: gzip
         version: ingested
+        probe: get
       - entity: removed_deposits          # złoża wybilansowane (selected archival data)
         url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&version=2.0.0&request=GetFeature&typeNames=midas:MIDAS___z%C5%82o%C5%BCa_wybilansowane__wyselekcjonowane_dane_archiwalne_&outputFormat=GML32%2BGZIP"
         format: gzip
         version: ingested
+        probe: get
       - entity: archival_mining_areas     # archiwalne obszary górnicze (selected archival data)
         url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&version=2.0.0&request=GetFeature&typeNames=midas:MIDAS_-_archiwalne_obszary_g%C3%B3rnicze__wyselekcjonowane_dane_archiwalne_&outputFormat=GML32%2BGZIP"
         format: gzip
         version: ingested
+        probe: get
       - entity: archival_mining_terrains  # archiwalne tereny górnicze (selected archival data)
         url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&version=2.0.0&request=GetFeature&typeNames=midas:MIDAS_-_archiwalne_tereny_g%C3%B3rnicze__wyselekcjonowane_dane_archiwalne_&outputFormat=GML32%2BGZIP"
         format: gzip
         version: ingested
+        probe: get
   initial: api
   production: snapshot             # each response is the complete current layer
   incremental_policy: full_refresh  # no version and request-stamped bytes: every run lands every layer

@@ -6092,8 +6092,9 @@ sources:
       full load was not run. Sizes from the download manager''s catalogue: deposits 7.01 MB, mining areas 1.77 MB, mining
       terrains 1.72 MB, removed deposits 0.95 MB zipped SHP, so a full load is a few requests per layer. The same data as
       SHP ZIP sit in https://dm.pgi.gov.pl/, delivered by e-mail link only.'
-    incremental: 'Entity = feature type, version = download date (the WFS gives none); monthly full snapshot per layer (changed_since_last
-      by SHA-256). Small source: refresh full.'
+    incremental: 'Entity = feature type (six layers), version = download time (the WFS gives none, and every response
+      embeds its request time, so the bytes differ on every request: full_refresh, every monthly run lands every layer;
+      Dev trial 43289532679). Small source (about 44 k features, 20 MB gzip): refresh full (D32, #2870).'
     identifiers: MIDAS deposit number, mining-area/land ID, concession number where published.
   modelling:
     notes: 'Separate deposit, mining area and mining terrain; preserve legal status and effective dates. kpi false: reference
@@ -6107,8 +6108,9 @@ sources:
     evidence: tested
     connection: tested
     blockers:
-    - GetFeature for a full layer (output formats, paging, CRS) was not run; test in the Landing trial, one request at a time.
-    - MIDAS rules page (zrodla-danych.html) and attribute dictionary not opened.
+    - 'No region code in any WFS layer: counts per voivodeship need a spatial join of the geometry (kept in Landing and
+      the Archive) to PRG boundaries, an architect question; Gold counts are Poland only. Built 12 Nov 2026 (#2870):
+      one GetFeature per layer returns the whole layer (GML32+GZIP, no paging), HEAD answers 500 (probe get).'
     references:
     - https://www.pgi.gov.pl/midas.html
     - https://midas-app.pgi.gov.pl/

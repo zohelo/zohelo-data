@@ -959,3 +959,28 @@ and women, Poland and voivodeships). Gold block `registered_unemployment` (KPIs 
 `registered_unemployment_rate`, next to GUS BDL and DBW). Weekly schedule (Tuesday). Licence: CC BY 3.0 PL (portal
 footer). The ZIPs since 2001, the half-yearly occupation and vacancy tables and the yearly MRPiPS-01 data files
 (SPR1, about 27 MB) are not built yet.
+
+## PIG-PIB MIDAS mineral deposits and mining areas (`pig_midas`)
+
+**Built (12 Nov 2026, register PL-ENV-015).** The download manager's SHP packages are sent only as e-mailed links,
+so the route is the public ArcGIS WFS of MIDAS (`cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer`,
+API tested for a full load; no robots.txt on the host). Six feature types, one entity each: `documented_deposits`
+(udokumentowane złoża kopalin), `mining_areas` (obszary górnicze), `mining_terrains` (tereny górnicze) and the
+selected archival layers `removed_deposits` (złoża wybilansowane), `archival_mining_areas`, `archival_mining_terrains`.
+One WFS 2.0 GetFeature per layer returns the whole layer (numberMatched = numberReturned; no CountDefault, so no
+paging) in the server's own GML 3.2 gzip output (`GML32+GZIP`, 1.4-9.5 MB, 20 MB for all six), landed by the shared
+`bulk_file` pattern, one request at a time with a 10 s pause (`to_landing/pig_midas/`). The server gives no version
+and no validators, answers HEAD with HTTP 500 (`probe: get`), and every response embeds its request time
+(`wfs:FeatureCollection timeStamp`), so the bytes differ on every request: version = download time,
+`incremental_policy: full_refresh`, every monthly run lands every layer. Restart unit: one layer. DescribeFeatureType
+lists only four or five attributes; the features carry about 20 (deposit number, name, field, mineral code and name,
+document number, mining office; contour id, register number, name, decision dates and authorities, areas).
+Bronze `bronze.pig_midas_features`: one row per feature, attributes as text under English names, no coordinates
+(the geometry stays in Landing and the Archive); an unknown attribute, another feature type or a truncated layer
+rejects the file. Silver `silver.pig_midas_deposits` (layer × object_id; a deposit has one or more polygons) and
+`silver.pig_midas_mining_contours` (layer × contour_id; an area or terrain has one or more contours); a value of
+only blanks is null, 31/12/9999 validity is null with `valid_indefinitely`. Gold block `build_pig_midas`: counts of
+the current layers at the download day (documented deposits by mineral code, mining areas, mining terrains;
+Poland only, as no layer carries a region code), KPI `mineral_deposits` (draft). Licence: PIG-PIB rules for re-use
+of public sector information (attribution with data and download dates; processing to be disclosed). Dev probes
+43284905050, 43286265906; trials 43289532679 and the final one cited in the build report.

@@ -4,9 +4,10 @@
    the layer's own contour id). A mining area or terrain (register_number, its number in the register of mining
    areas) can have several contours. deposit_number links to the deposit of pig_midas_deposits (published as a
    decimal, e.g. 14619.00000000; cast to an integer only when it is whole). Dates are published as dd/mm/yyyy;
-   valid_until is the end of validity the decision set; a value that is only blanks is null. Areas in m²: the
+   valid_until is the end of validity the decision set, null with valid_indefinitely when the source writes
+   31/12/9999 (no end date); a value that is only blanks is null. Areas in m²: the
    declared area of the decision and the polygon's Shape_Area (EPSG:2180, as computed by the server).
-   coordinate_system is the EPSG code of the coordinates in the source documents. No region code in the layers. #}
+   coordinate_system_epsg is the EPSG code of the coordinates in the source documents. No region code in the layers. #}
 with newest as (
     select *
     from {{ source('pig_midas', 'pig_midas_features') }}
@@ -17,7 +18,8 @@ with newest as (
 typed as (
     select
         *,
-        try_cast(deposit_number as decimal(18, 6)) as deposit_number_dec
+        try_cast(deposit_number as decimal(18, 6)) as deposit_number_dec,
+        cast(strptime(nullif(trim(valid_until), ''), '%d/%m/%Y') as date) as valid_until_date
     from newest
 )
 
@@ -35,7 +37,8 @@ select
     nullif(trim(deposit_name), '') as deposit_name,
     nullif(trim(mineral_name), '') as mineral_name,
     cast(strptime(nullif(trim(established_on), ''), '%d/%m/%Y') as date) as established_on,
-    cast(strptime(nullif(trim(valid_until), ''), '%d/%m/%Y') as date) as valid_until,
+    case when valid_until_date <> date '9999-12-31' then valid_until_date end as valid_until,
+    valid_until_date = date '9999-12-31' as valid_indefinitely,
     cast(strptime(nullif(trim(abolished_on), ''), '%d/%m/%Y') as date) as abolished_on,
     nullif(trim(establishing_decision), '') as establishing_decision,
     nullif(trim(establishing_authority), '') as establishing_authority,
