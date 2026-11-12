@@ -1,7 +1,9 @@
-"""Apply a per-entity Silver model (warehouse/entity/<model>.sql) to one Bronze file (design #875).
+"""Apply a per-entity model (warehouse/entity/<model>.sql) to one entity's input file (design #875).
 
-The model is plain SQL that selects from the relation ``bronze`` (the one Bronze file of the
-entity version); small lookup tables can be passed as extra relations. The result is written
+A Silver model is plain SQL that selects from the relation ``bronze`` (the one Bronze file of the
+entity version); small lookup tables can be passed as extra relations. The Gold models of a block
+(``gold_*.sql``, docs/gold-coverage.md) work the same way over the block's Silver files, with the
+input relation named by ``source_view``. The result is written
 as one ZSTD Parquet file, which the loader then puts in place of the entity's partition in
 Silver. Checks run on the result before it is accepted: the row count matches the rule of the
 model (``same_rows``: one Silver row per Bronze row), the listed columns are never null, the
@@ -48,7 +50,7 @@ def _remote(con: duckdb.DuckDBPyConnection) -> None:
 
 def apply(
     model: str,
-    bronze: str,
+    bronze: str | list[str],
     output: Path,
     *,
     not_null: tuple[str, ...] = (),
@@ -58,22 +60,26 @@ def apply(
     lookups: dict[str, str] | None = None,
     memory_limit: str = "10GB",
     temp_directory: str | None = None,
+    source_view: str = "bronze",
 ) -> dict[str, Any]:
-    """Run warehouse/entity/<model>.sql over one Bronze file (local path or s3:// URI)."""
+    """Run warehouse/entity/<model>.sql over one input file, or the files of one entity (local paths or
+    s3:// URIs), read as the relation ``source_view``."""
     sql = (MODELS / f"{model}.sql").read_text(encoding="utf-8")
     output = Path(output)
     if output.exists():
         raise EntityModelError(f"{output} must be a fresh path")
     con = _connect(memory_limit, temp_directory)
     try:
-        if bronze.startswith("s3://") or any(str(v).startswith("s3://") for v in (lookups or {}).values()):
+        inputs = [bronze] if isinstance(bronze, str) else list(bronze)
+        if any(str(v).startswith("s3://") for v in [*inputs, *(lookups or {}).values()]):
             _remote(con)
-        con.execute(f"CREATE VIEW bronze AS SELECT * FROM read_parquet('{bronze.replace(chr(39), '')}')")
+        files = ", ".join("'" + str(path).replace(chr(39), "") + "'" for path in inputs)
+        con.execute(f"CREATE VIEW {source_view} AS SELECT * FROM read_parquet([{files}])")
         for name, path in (lookups or {}).items():
             con.execute(f"CREATE VIEW {name} AS SELECT * FROM read_parquet('{str(path).replace(chr(39), '')}')")
         target = str(output).replace("'", "''")
         con.execute(f"COPY ({sql}) TO '{target}' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 1000000)")
-        bronze_rows = con.execute("SELECT count(*) FROM bronze").fetchone()[0]
+        bronze_rows = con.execute(f"SELECT count(*) FROM {source_view}").fetchone()[0]
         checks = ", ".join([f"count(*) FILTER (WHERE {c} IS NULL)" for c in not_null] or ["0"])
         rows, *nulls = con.execute(f"SELECT count(*), {checks} FROM read_parquet('{target}')").fetchone()
         keys = (
