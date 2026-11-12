@@ -248,6 +248,21 @@ sources:
       (feed). Never descriptions, article text or images.
   - name: news_feeds_rejected_files
     description: News feed Landing files the Bronze decoder rejected, with the reason.
+- name: unctad
+  description: UNCTAD Data Hub (UNCTADstat) — bulk CSV (7z) per selected table
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/unctad/
+    loaded_by: ingestion/to_bronze/unctad/
+    config: ingestion/sources/unctad.yaml
+  tables:
+  - name: unctad_rows
+    description: >-
+      One row per data row of the newest copy of each table (entity, e.g. US_FdiFlowsStock), generic:
+      field_names (the header) and field_values (the row), both |-separated, as source text; partitioned by entity.
+  - name: unctad_rejected_files
+    description: UNCTAD Landing files the Bronze decoder rejected, with the reason.
 - name: oecd
   description: OECD Data Explorer — selected dataflows as SDMX CSV (SDMX REST API)
   database: r2
