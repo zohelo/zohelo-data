@@ -408,6 +408,17 @@ un_wpp as (
         geography_key
     from geo
     where level_name = 'country' and length(geography_key) = 2
+),
+
+-- World Bank GEM (API source 15): countries by ISO 3166-1 alpha-3 (dim_geography iso3), built from Gold's own list
+-- like oecd, so the dimensions never wait for the GEM source.
+world_bank_gem as (
+    select
+        'world_bank_gem' as source_system,
+        g.iso3 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso3 is not null
 )
 
 select
@@ -449,6 +460,8 @@ from (
     select * from ids
     union all
     select * from un_wpp
+    union all
+    select * from world_bank_gem
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

@@ -369,6 +369,22 @@
     ) as t (loc_id, candidate_key)
 {% endmacro %}
 
+{# World Bank GEM series built (gold.build_world_bank_gem): one block per landed series (entity series_<id>), the
+   frequency built and the unit as GEM names it; areas: EU27 members (ISO alpha-3 through dim_geography.iso3). #}
+{% macro poc_world_bank_gem_series() %}
+    select * from (
+        values
+        ('series_CPTOTSAXNZGY', 'CPTOTSAXNZGY', 'M', 'pct', '% y-o-y', 'CPI, % y-o-y, not seasonally adjusted (World Bank GEM)'),
+        ('series_CPTOTSAXN', 'CPTOTSAXN', 'M', 'index', 'index', 'CPI price index, seasonally adjusted (World Bank GEM)'),
+        ('series_CORESA', 'CORESA', 'M', 'index', 'index', 'Core CPI index, seasonally adjusted (World Bank GEM)'),
+        ('series_IPTOTSAKD', 'IPTOTSAKD', 'M', 'constant_usd', 'constant US$', 'Industrial production, constant US$, seasonally adjusted (World Bank GEM)'),
+        ('series_UNEMPSA_', 'UNEMPSA_', 'M', 'pct', '%', 'Unemployment rate, seasonally adjusted (World Bank GEM)'),
+        ('series_RETSALESSA', 'RETSALESSA', 'M', 'index', 'index', 'Retail sales volume index, seasonally adjusted (World Bank GEM)'),
+        ('series_DPANUSSPB', 'DPANUSSPB', 'M', 'lcu_per_usd', 'LCU per US$', 'Exchange rate, LCU per US$, period average (World Bank GEM)'),
+        ('series_NYGDPMKTPSAKD', 'NYGDPMKTPSAKD', 'Q', 'mln_constant_2010_usd', 'constant 2010 US$, millions', 'GDP, constant 2010 US$, millions, seasonally adjusted (World Bank GEM)')
+    ) as t (entity, series_code, frequency, unit_code, unit_name, block_name)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -452,6 +468,7 @@
     poc_build_who:who
     poc_build_unesco_uis:unesco_uis
     poc_build_faostat:faostat
+    poc_build_world_bank_gem:world_bank_gem
     poc_build_ecb:ecb
     poc_build_ids:world_bank_ids
     poc_build_un_wpp:un_wpp
@@ -539,6 +556,8 @@
     select 'unesco_uis', entity, block_name from ({{ poc_unesco_uis_blocks() }})
     union all
     select 'faostat', entity || ':' || item_code || '.' || element_code, block_name from ({{ poc_faostat_blocks() }})
+    union all
+    select 'world_bank_gem', entity, block_name from ({{ poc_world_bank_gem_series() }})
     union all
     select 'ecb', entity, block_name from ({{ poc_ecb_blocks() }})
     union all

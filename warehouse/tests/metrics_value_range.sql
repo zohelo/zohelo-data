@@ -60,7 +60,13 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('ghg_emissions', 'faostat', '%', 0, 8.2e4),
     -- FAOSTAT (#2402): published in 1000 ha, metrics in km² since D33 (× 10); World land area 13,040,161.55 thousand ha
     -- = 130,401,615.5 km² (Dev trial 43159213097). Documentation only (not in the metrics union below).
-    ('area', 'faostat', '%', 0, 2e8)
+    ('area', 'faostat', '%', 0, 2e8),
+    -- World Bank GEM (#2373): CPI % y-o-y, EU27 members 1987-2026: -6.5 to 3,453.3 (1990s hyperinflation; Dev trial
+    -- 43283254888). Documentation only until a metrics_cpi_annual_rate model joins the union below.
+    ('cpi_annual_rate', 'world_bank_gem', 'world_bank_gem:CPTOTSAXNZGY:pct', -50, 5000),
+    -- World Bank GEM (#2373): unemployment rate %, highest 28.7 (Dev trial 43283254888); documentation only (no
+    -- metrics model for the monthly KPI yet).
+    ('unemployment_rate_monthly_sa', 'world_bank_gem', 'world_bank_gem:UNEMPSA_:pct', 0, 60)
 ),
 
 metrics as (

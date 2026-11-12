@@ -157,3 +157,4 @@ youth_unemployment,labour,Q,youth_unemployment,eurostat,UNE_RT_Q;UNE_RT_M,eurost
 youth_unemployment,labour,Q,youth_unemployment,world_bank_wdi,SL.UEM.1524.ZS,world_bank_wdi:SL.UEM.1524.ZS,A,PL;EU;EU27,,rate,down,ready,"15-24, ILO modelled"
 zus_pension_avg,labour,A,zus_pension_avg,gus_bdl,P2860,gus_bdl:P2860:zł:z pozarolniczego systemu ubezpieczeń społecznych emerytury,A,PL;VOIV,,mean,neutral,ready,"non-agricultural system, old-age pension"
 gdp_per_capita_pps,economy;poland,A,gdp_per_capita_pps,world_bank_icp,1000000:PCAP.PP,world_bank_icp:1000000:PCAP.PP,A,PL;EU,,index,up,ready,ICP 2021 GDP per capita in PPP international $ (2017 and 2021 benchmarks); no EU27 aggregate
+cpi_annual_rate,economy;labour;poland,M,cpi_annual_rate,world_bank_gem,CPTOTSAXNZGY,world_bank_gem:CPTOTSAXNZGY:pct,M,PL;EU,,rate,neutral,ready,"CPI, % y-o-y, monthly; EU27 members, no EU aggregate (World Bank GEM)"
