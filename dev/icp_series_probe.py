@@ -1,6 +1,9 @@
-"""Read-only Dev probe for #2800: does ICP series 9100000 fail at per_page=50000 but work smaller?
+"""Read-only Dev probe for #2800 (second run): how long do World Bank 502s last after the big ICP series?
 
-No R2 access, no writes. One request at a time with a pause; each result is one annotation.
+Run 1 (43287012577): series 9100000 at per_page=50000 answered 200 in 182 s (8.4 MB, 24,633 rows, 1 page);
+every request after it, including a healthy series, got an instant 502 HTML page. This run measures that:
+healthy series first, then 9100000, then the healthy series once a minute until 200 (at most 20 tries),
+then 9100000 at per_page=10000. No R2 access, no writes; one request at a time.
 """
 
 from __future__ import annotations
@@ -15,68 +18,48 @@ from ingestion.to_landing.world_bank_icp.extract import API, SOURCE_ID, USER_AGE
 
 SERIES = "9100000"
 HEALTHY = "1101150"
-SIZES = (50000, 20000, 10000, 5000, 1000)
 TIMEOUT = 600
-MAX_FULL_PAGES = 40
 
 
-def probe(session: requests.Session, series: str, per_page: int, page: int = 1) -> dict:
-    url = f"{API}/sources/{SOURCE_ID}/country/all/series/{series}/time/all?format=json&per_page={per_page}&page={page}"
-    out: dict = {"series": series, "per_page": per_page, "page": page}
+def probe(session: requests.Session, series: str, per_page: int) -> dict:
+    url = f"{API}/sources/{SOURCE_ID}/country/all/series/{series}/time/all?format=json&per_page={per_page}&page=1"
+    out: dict = {"series": series, "per_page": per_page}
     start = time.monotonic()
     try:
         r = session.get(url, timeout=TIMEOUT)
-        body = r.content
-        out.update(status=r.status_code, bytes=len(body), ctype=r.headers.get("Content-Type"))
+        out.update(status=r.status_code, bytes=len(r.content))
         try:
-            parsed = json.loads(body)
+            parsed = json.loads(r.content)
             if isinstance(parsed, dict):
-                out.update(pages=parsed.get("pages"), total=parsed.get("total"), per_page_resp=parsed.get("per_page"))
-                src = parsed.get("source")
-                data = src.get("data") if isinstance(src, dict) else None
-                out["rows"] = len(data) if isinstance(data, list) else None
-            else:
-                out["json_head"] = json.dumps(parsed)[:300]
+                out.update(pages=parsed.get("pages"), total=parsed.get("total"))
         except ValueError:
-            out["body_head"] = body[:300].decode("utf-8", "replace")
+            out["html"] = True
+            out["server"] = r.headers.get("Server")
     except requests.RequestException as exc:
-        out.update(status=None, error=f"{type(exc).__name__}: {str(exc)[:300]}")
+        out.update(status=None, error=f"{type(exc).__name__}: {str(exc)[:200]}")
     out["seconds"] = round(time.monotonic() - start, 1)
-    time.sleep(2)
     return out
 
 
 def main() -> int:
     session = requests.Session()
     session.headers.update({"User-Agent": USER_AGENT, "Accept": "application/json"})
-    results = []
-    for size in SIZES:
-        res = probe(session, SERIES, size)
-        results.append(res)
-        annotate("notice", f"icp probe {SERIES} per_page={size}", res)
-    annotate("notice", f"icp probe healthy {HEALTHY} per_page=50000", probe(session, HEALTHY, 50000))
-    # Full fetch at the largest size below 50000 whose page 1 worked: is the whole series reachable?
-    ok = [r for r in results if r.get("status") == 200 and r.get("pages") and r["per_page"] < 50000]
-    if ok:
-        first = ok[0]
-        pages = int(first["pages"])
-        rows = []
-        for page in range(2, min(pages, MAX_FULL_PAGES) + 1):
-            rows.append(probe(session, SERIES, first["per_page"], page))
-        good = [r for r in rows if r.get("status") == 200 and r.get("rows") is not None]
-        annotate(
-            "notice",
-            f"icp probe {SERIES} all pages per_page={first['per_page']}",
-            {
-                "pages": pages,
-                "fetched_pages_2_on": len(rows),
-                "ok": len(good),
-                "rows_total": (first.get("rows") or 0) + sum(r["rows"] for r in good),
-                "max_seconds": max([r["seconds"] for r in rows] + [first["seconds"]]),
-                "sum_seconds": round(sum(r["seconds"] for r in rows) + first["seconds"], 1),
-                "bad": [r for r in rows if r not in good][:3],
-            },
-        )
+    t0 = time.monotonic()
+    annotate("notice", "icp probe2 healthy before", probe(session, HEALTHY, 50000))
+    time.sleep(5)
+    annotate("notice", "icp probe2 9100000 per_page=50000", probe(session, SERIES, 50000))
+    after = time.monotonic()
+    tries = []
+    for _ in range(20):
+        time.sleep(60)
+        res = probe(session, HEALTHY, 50000)
+        tries.append({"t": round(time.monotonic() - after), "s": res["status"], "sec": res["seconds"]})
+        if res["status"] == 200:
+            break
+    annotate("notice", "icp probe2 healthy after big series, once a minute", {"tries": tries})
+    time.sleep(5)
+    annotate("notice", "icp probe2 9100000 per_page=10000", probe(session, SERIES, 10000))
+    annotate("notice", "icp probe2 total", {"minutes": round((time.monotonic() - t0) / 60, 1)})
     return 0
 
 
