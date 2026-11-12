@@ -28,6 +28,6 @@ gold: [gold.build_mf_jst_budgets]
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): about 20 workbooks of a few hundred cells a quarter; small, rebuilt in full.
-refresh: {mode: full, decided: "D32 + PLG-010 onboarding PR"}
+refresh: {mode: full, decided: "D32 + #2494"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

@@ -187,6 +187,38 @@
     ) as t (indicator_code)
 {% endmacro %}
 
+{# OECD composite leading and confidence indicators (silver.oecd_cli, #2738): the measures Gold builds.
+   Amplitude adjusted (AA), index points, long-term average = 100. The CLI (LI) covers 22 areas, not
+   Poland or the EU; business (BCICP) and consumer (CCICP) confidence cover Poland. #}
+{% macro poc_oecd_measures() %}
+    select * from (
+        values
+        ('BCICP', 'AA', 'IX', 'Business confidence indicator (BCI), amplitude adjusted, long-term average = 100'),
+        ('CCICP', 'AA', 'IX', 'Consumer confidence indicator (CCI), amplitude adjusted, long-term average = 100'),
+        ('LI', 'AA', 'IX', 'Composite leading indicator (CLI), amplitude adjusted, long-term average = 100')
+    ) as t (measure, adjustment, transformation, measure_name)
+{% endmacro %}
+
+{# OECD area codes that are not ISO 3166 alpha-3 countries: their names, and the Eurostat aggregate they equal
+   (EU27_2020 only: Gold has no Eurostat EA20 member, so the OECD euro areas are OECD:<code> members). #}
+{% macro poc_oecd_areas() %}
+    select * from (
+        values
+        ('EU27_2020', 'European Union (27 countries from 2020)', 'EU27_2020'),
+        ('EA20', 'Euro area (20 countries)', ''),
+        ('EA19', 'Euro area (19 countries)', ''),
+        ('EU', 'European Union (OECD composite)', ''),
+        ('OECDXEA', 'OECD excluding the euro area', ''),
+        ('OECD', 'OECD total', ''),
+        ('OECDE', 'OECD Europe', ''),
+        ('G7', 'G7', ''),
+        ('G20', 'G20', ''),
+        ('A5M', 'Major five Asia economies', ''),
+        ('G4E', 'Major four European economies', ''),
+        ('NAFTA', 'NAFTA', '')
+    ) as t (ref_area, name_en, eurostat_code)
+{% endmacro %}
+
 {# UNCTAD Data Hub blocks (gold.build_unctad): table × dimension codes (dimension_names, in that order) × measure.
    measure_field is the table's measure column; measure_suffix its short code in the measure key. #}
 {% macro poc_unctad_blocks() %}
@@ -288,6 +320,10 @@
     poc_build_nbp:nbp
     poc_build_unctad:unctad
     poc_build_public_finance:mf_public_debt
+    poc_build_oecd:oecd
+    poc_build_gleif:gleif
+    poc_build_mf_biala_lista:mf_biala_lista
+    poc_build_prg:gugik_prg
     poc_build_mf_jst_budgets:mf_jst_budgets
 {% endmacro %}
 
@@ -373,7 +409,11 @@
         ('mf_treasury_debt', 'debt_instrument', 'State Treasury debt by instrument (MF)'),
         ('mf_state_budget', 'execution_ytd', 'State budget execution, cumulative (MF)'),
         ('mf_state_budget', 'plan', 'State budget act (MF)'),
-        ('mf_jst_budgets', 'jst_budget', 'MF local-government budget summaries (year to date)'),
-        ('krus', 'benefits', 'KRUS pensions and benefits')
+        ('krus', 'benefits', 'KRUS pensions and benefits'),
+        ('oecd', 'cli', 'OECD composite leading indicators and confidence indicators'),
+        ('gleif', 'lei2', 'GLEIF LEI records (golden copy)'),
+        ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file'),
+        ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units'),
+        ('mf_jst_budgets', 'jst_budget', 'MF local-government budget summaries (year to date)')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}
