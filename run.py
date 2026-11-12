@@ -183,6 +183,10 @@ def config_problems(config: dict) -> list[str]:
                     problems.append(f"{source}: {f.get('entity')}: version must be last_modified or ingested")
                 if f.get("probe", "head") not in {"head", "get"}:  # bulk_file.PROBES
                     problems.append(f"{source}: {f.get('entity')}: probe must be head or get")
+                if f.get("skip_unchanged") not in (None, True, False) or (
+                    f.get("skip_unchanged") and f.get("version", "last_modified") != "last_modified"
+                ):
+                    problems.append(f"{source}: {f.get('entity')}: skip_unchanged is true or false, with last_modified")
         for item in (cfg.get("extraction") or {}).get("excluded") or []:
             if not isinstance(item, dict) or item.get("id") is None or not item.get("reason"):
                 problems.append(f"{source}: extraction.excluded entries need an id and a reason: {item}")

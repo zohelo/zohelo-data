@@ -151,6 +151,7 @@ consumer_confidence_oecd,oecd,oecd:cli:IX:CCICP:AA,"amplitude adjusted, long-ter
 cli_oecd,oecd,oecd:cli:IX:LI:AA,"amplitude adjusted, long-term average = 100; 22 economies and aggregates",1,index_lta_100
 lei_issued,gleif,gleif:lei2:entities:ISSUED,"registration status ISSUED; PENDING_TRANSFER and PENDING_ARCHIVAL (about 0.04 %) not included",1,entities
 vat_whitelist_entries,mf_biala_lista,mf_biala_lista:flat_file:entries,"active and exempt taxpayers, entries = taxpayer × bank account",1,list_entries
+address_points,gugik_prg,gugik_prg:punkty_adresowe:address_points,"all address points of the gmina in the newest national package, any status",1,address_points
 wgi_voice_accountability,world_bank_wgi,world_bank_wgi:GOV_WGI_VA.EST,governance estimate,1,
 wgi_political_stability,world_bank_wgi,world_bank_wgi:GOV_WGI_PV.EST,governance estimate,1,
 wgi_government_effectiveness,world_bank_wgi,world_bank_wgi:GOV_WGI_GE.EST,governance estimate,1,

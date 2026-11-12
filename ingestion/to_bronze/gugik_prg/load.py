@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GUGiK PRG bronze.load: newest Landing package → bronze.prg_boundaries.
+"""GUGiK PRG bronze.load: newest Landing boundary package → bronze.prg_boundaries.
 
 The ZIP's shapefile layers (A00 … A06) are read with DuckDB spatial and written as one
 Parquet file ``02_bronze/gugik_prg/boundaries/<entity>/<raw_sha256>.parquet``: one row per
@@ -27,6 +27,7 @@ from ingestion.common.r2 import archive_key, catalog, raw_chunks, req, s3
 from ingestion.common.report import annotate, step_summary
 from ingestion.to_landing.patterns import bulk_file
 
+ENTITY = "jednostki_administracyjne"  # the boundary package; the address package is addresses.py
 TABLE_ID = ("bronze", "prg_boundaries")
 REJECTED_ID = ("bronze", "prg_rejected_files")
 OUTPUT_PREFIX = "02_bronze/gugik_prg/boundaries/"
@@ -129,7 +130,7 @@ def load(budget_minutes: float) -> int:
     lake, landing_bucket = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
     bf.retry(lambda: bf.ensure_table(cat, TABLE_ID, COLUMNS, "entity"), "load_table")
     done = bf.loaded_hashes(cat.load_table(TABLE_ID)) | bf.rejected_hashes(cat, REJECTED_ID)
-    receipt = bulk_file.newest(client, landing_bucket, "gugik_prg", bulk_file.single_entity("gugik_prg"))
+    receipt = bulk_file.newest(client, landing_bucket, "gugik_prg", ENTITY)
     totals: dict[str, Any] = {"candidates": 0, "appended_files": 0, "rejected": 0}
     if receipt["sha256"] not in done:
         totals["candidates"] = 1

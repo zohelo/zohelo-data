@@ -54,7 +54,7 @@ sources:
   schema: bronze
   meta:
     landing: 01_landing/gugik_prg/
-    loaded_by: ingestion/to_bronze/gugik_prg/ (prg_country … prg_surface_areas by retired code)
+    loaded_by: ingestion/to_bronze/gugik_prg/ (load.py boundaries, addresses.py address points; prg_country … prg_surface_areas by retired code)
     config: ingestion/sources/gugik_prg.yaml
   tables:
   - name: prg_boundaries
@@ -63,6 +63,13 @@ sources:
       A01 voivodeships, A02 powiats, A03 gminas, A05 cadastral units, A06 cadastral precincts);
       attributes as text (jpt_kod_je = TERYT code), geometry as WKB (geographic ETRS89 as published) with the
       layer's .prj text in crs_wkt.
+  - name: prg_address_points
+    description: >-
+      One row per address point of the newest national address package (POLSKA.zip, layer
+      PRG_PunktyAdresowe_POLSKA; PL-ENV-007, #2870): the ten DBF attributes as text (id_iip, numer_porz,
+      kod_poczt, data_nad, nazwa_ulc, id_ulic, nazwa_gmi, teryt_gmi = the gmina's TERC code, nazwa_msc,
+      id_simc), the point's coordinates x, y as text in the published CRS (crs_wkt, PUWG 1992), source_row_number
+      = the shapefile record (OGC_FID).
   - name: prg_rejected_files
     description: Landing files the PRG Bronze decoder rejected, with the reason.
   - name: prg_country
