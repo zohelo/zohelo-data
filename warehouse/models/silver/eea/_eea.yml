@@ -1,0 +1,27 @@
+version: 2
+models:
+  - name: eea_ghg_inventory
+    description: >-
+      EEA greenhouse gas inventory, GovReg (national emissions reported to the UNFCCC and to the EU under the
+      Governance Regulation; EEA, CC BY 4.0), from bronze.eea_ghg_inventory: the newest version of the dataset, one
+      row per country (ISO 3166-1 alpha-2 and alpha-3 as published, EU aggregates included) × reporting format ×
+      pollutant × sector (CRF/IPCC code and parent) × year, emissions in the published unit (Gg or Gg CO2
+      equivalent) with the notation key. Grain: country_code × format_name × pollutant_name × sector_code × year.
+      History and trial run in the PR.
+    tests:
+      - unique:
+          column_name: "country_code || '|' || format_name || '|' || pollutant_name || '|' || sector_code || '|' || year"
+    columns:
+      - name: country_code
+        tests: [not_null]
+      - name: format_name
+        tests: [not_null]
+      - name: pollutant_name
+        tests: [not_null]
+      - name: sector_code
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source ZIP (lineage to Landing/Archive).
+        tests: [not_null]
