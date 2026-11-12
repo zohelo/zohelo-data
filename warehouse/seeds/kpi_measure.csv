@@ -144,3 +144,5 @@ pensioners,gus_bdl,gus_bdl:P2861:osoba:przeciętna liczba emerytów i rencistów
 zus_pension_avg,gus_bdl,gus_bdl:P2860:zł:z pozarolniczego systemu ubezpieczeń społecznych emerytury,"non-agricultural system, old-age pension",1,
 investment_outlays,gus_bdl,gus_bdl:P2862:tys. zł:nakłady inwestycyjne w przedsiębiorstwach,"enterprises, current prices",1,
 vacancies_per_unemployed,gus_bdl,gus_bdl:P4334:osoba:zarejestrowani bezrobotni na 1 ofertę pracy,annual,1,
+gerd_gdp,unesco_uis,unesco_uis:gerd_gdp:pct_gdp:EXPGDP.TOT,"% of GDP, UIS (SDG 9.5.1)",3,
+tertiary_attainment,unesco_uis,unesco_uis:tertiary_attainment:pct:EA.5T8.AG25T99,"25+, completed short-cycle tertiary or higher, ISCED 5-8 (Eurostat: 25-34)",3,

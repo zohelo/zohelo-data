@@ -68,6 +68,7 @@ gdp_regional_growth,economy,A,gdp_regional_growth,gus_dbw,1173_793_92_4,gus_dbw:
 gender_pay_gap,labour,A,gender_pay_gap,eurostat,EARN_GR_GPGR2,eurostat:EARN_GR_GPGR2:PC,A,PL;EU;EU27,,rate,down,ready,"unadjusted, NACE B-S except O"
 gerd_gdp,poland,A,gerd_gdp,eurostat,RD_E_GERDTOT,eurostat:RD_E_GERDTOT:PC_GDP,A,PL;EU;EU27,sector,rate,up,ready,all sectors of performance
 gerd_gdp,poland,A,gerd_gdp,world_bank_wdi,GB.XPD.RSDV.GD.ZS,world_bank_wdi:GB.XPD.RSDV.GD.ZS,A,PL;EU;EU27,,rate,up,ready,
+gerd_gdp,poland,A,gerd_gdp,unesco_uis,EXPGDP.TOT,unesco_uis:gerd_gdp:pct_gdp:EXPGDP.TOT,A,PL;EU,,rate,up,ready,"UIS, SDG 9.5.1; EU27 members (no EU27 aggregate)"
 gfcf_by_asset,economy,A,gfcf_by_asset,eurostat,NAMA_10_AN6,eurostat:NAMA_10_AN6:CP_MNAC,A,PL;EU;EU27,asset,sum,neutral,ready,total fixed assets (N11G) in metrics; asset types need kpi_member
 gfcf_growth,economy,Q,gfcf_growth,eurostat,NAMQ_10_GDP,eurostat:NAMQ_10_GDP:CLV_PCH_SM:P51G,Q,PL;EU;EU27,,rate,up,ready,seasonally and calendar adjusted
 gfcf_rate,economy,A,gfcf_rate,eurostat,NAMA_10_GDP,eurostat:NAMA_10_GDP:PC_GDP:P51G,A,PL;EU;EU27,,rate,up,ready,
@@ -127,6 +128,7 @@ retail_sales,economy,M,retail_sales,gus_dbw,109_849_7_1,gus_dbw:109_849_7_1:7,M,
 social_spending_gdp,labour,A,social_spending_gdp,eurostat,GOV_10A_EXP,eurostat:GOV_10A_EXP:PC_GDP:TE,A,PL;EU;EU27,,rate,neutral,ready,"general government, COFOG 10 social protection"
 tertiary_attainment,poland,A,tertiary_attainment,eurostat,EDAT_LFSE_03,eurostat:EDAT_LFSE_03:PC:ED5-8,A,PL;EU;EU27,sex,rate,up,ready,"age 25-34, ISCED 5-8"
 tertiary_attainment,poland,A,tertiary_attainment,world_bank_wdi,SE.TER.CUAT.BA.ZS,world_bank_wdi:SE.TER.CUAT.BA.ZS,A,PL;EU;EU27,,rate,up,ready,"25+, at least bachelor's (sparse: 2013-2021 for Poland)"
+tertiary_attainment,poland,A,tertiary_attainment,unesco_uis,EA.5T8.AG25T99,unesco_uis:tertiary_attainment:pct:EA.5T8.AG25T99,A,PL;EU,sex,rate,up,ready,"25+, ISCED 5-8 (short-cycle tertiary or higher); EU27 members"
 tfr,poland,A,total_fertility_rate,eurostat,DEMO_FIND;DEMO_R_FIND2,eurostat:DEMO_FIND:_Z:TOTFERRT;eurostat:DEMO_R_FIND2:NR:TOTFERRT,A,PL;EU;EU27;VOIV,,none,neutral,ready,
 tfr,poland,A,total_fertility_rate,gus_bdl,P2346,gus_bdl:P2346:-:dzietność,A,PL;VOIV,,none,neutral,ready,
 tfr,poland,A,total_fertility_rate,world_bank_wdi,SP.DYN.TFRT.IN,world_bank_wdi:SP.DYN.TFRT.IN,A,PL;EU;EU27,,none,neutral,ready,
