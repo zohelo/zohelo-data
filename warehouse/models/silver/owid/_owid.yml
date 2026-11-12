@@ -1,0 +1,55 @@
+version: 2
+models:
+  - name: owid_observations
+    description: >-
+      Our World in Data chart values from bronze.owid_values (register CD-031): the three selected charts,
+      consumption-based CO2 emissions per capita (Global Carbon Budget, tonnes per person), electoral democracy
+      index (V-Dem, 0 to 1) and GDP per capita (Maddison Project Database, international-$ in 2011 prices), every
+      OWID entity (countries by ISO alpha-3, OWID's own areas, regions and income groups without a code, historical
+      states), every year the chart has. Grain: chart × entity_name × year. Values as published; empty cells are
+      no rows. Whole series are revised in place (newest copy only).
+    tests:
+      - unique:
+          column_name: "chart || '|' || entity_name || '|' || year"
+    columns:
+      - name: chart
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['consumption_co2_per_capita', 'electoral_democracy_index', 'gdp_per_capita_maddison']
+      - name: entity_name
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: indicator
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['consumption_emissions_per_capita', 'electdem_vdem__estimate_best', 'gdp_per_capita']
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the chart CSV (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: owid_charts
+    description: >-
+      Our World in Data chart metadata from bronze.owid_charts (register CD-031): one row per selected chart and
+      column of its metadata.json, with the chart's citation (its attribution), the column's unit, lastUpdated (the
+      source's version), nextUpdate and indicator id as published. Grain: chart × short_name.
+    tests:
+      - unique:
+          column_name: "chart || '|' || short_name"
+    columns:
+      - name: chart
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['consumption_co2_per_capita', 'electoral_democracy_index', 'gdp_per_capita_maddison']
+      - name: short_name
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the metadata.json file.
+        tests: [not_null]
