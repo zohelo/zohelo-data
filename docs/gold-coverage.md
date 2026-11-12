@@ -307,5 +307,5 @@ Known sources and their row of the adapter table (Silver row counts from `wareho
 | 3 | D28 deviation (per-block files instead of a dbt incremental model) | As decision 3 | architect |
 | 4 | Non-KPI measures in zohelo-bi (published v2 catalogue) | Additive `catalog/measures_<source>.parquet`; decide after Eurostat is loaded | owner |
 | 5 | BDL gmina level (341 M of 458 M rows) | In scope, loaded last | owner, with 1 |
-| 6 | The series table is larger than the fact (short annual series, labels repeated per series) | Before the production load, move the breakdown labels to one small table per block (dimension, code, name) and measure again | architect |
+| 6 | In full the series table would be larger than the fact (989 M short series; labels repeated per series) | Before the production load, move the breakdown labels to one small table per block (dimension, code, name) and measure again | architect |
 | 7 | Eurostat codes of Polish NUTS 3 regions are unmatched (`_X`) | Map them in the Eurostat part of `poc_map_geography.sql` to the podregion keys DBW already uses | architect |
