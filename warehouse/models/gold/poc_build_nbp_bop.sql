@@ -1,7 +1,9 @@
-{{ config(alias='build_nbp_bop') }}
+{{ config(alias='build_nbp_bop', tags=['gold_block']) }}
 {# Gold build stage: NBP balance of payments (bop_m monthly, bop_q quarterly) and international investment
    position (iip_q, end of quarter) of Poland from silver.nbp_bop_observations, in million PLN and million
-   EUR (the USD sheets stay in Silver). One measure per workbook × currency × item; no breakdowns. #}
+   EUR (the USD sheets stay in Silver). One measure per workbook × currency × item; no breakdowns. IIP components
+   and their parent totals (assets.direct_investment and its equity / debt instruments) are separate measures: a
+   sum over measures double-counts. #}
 select
     'nbp_bop' as source_system,
     entity as block_id,
@@ -32,4 +34,4 @@ select
     source_version,
     raw_sha256
 from {{ ref('nbp_bop_observations') }}
-where currency in ('PLN', 'EUR') and value is not null
+where currency in ('PLN', 'EUR') and value is not null and date_key is not null

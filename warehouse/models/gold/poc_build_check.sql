@@ -1,7 +1,10 @@
 {{ config(alias='build_check') }}
 {# Gold PoC build check, one row per activated block (also those that yielded no rows): rows,
    series, unmatched geography (_X), unplaced periods, dates, status flags. Read it after
-   every build. #}
+   every build. A block whose table does not exist yet (a new source before its first Bronze/Silver
+   build that changed.py declared waiting; poc_observations) has zero rows and the note "waiting: …"; a
+   missing block that was not declared waiting fails this model (poc_block_waiting). #}
+{% set absent = poc_absent_blocks() | trim %}
 with activated as ({{ poc_activated_blocks() }}),
 
 built as (
@@ -49,7 +52,11 @@ select
     b.last_date,
     b.frequencies,
     b.statuses,
-    case when b.row_count is null then coalesce(c.status, 'no rows: not in Silver or filtered out') end as note
+    case
+        when list_contains(cast([{{ absent }}] as varchar[]), a.source_system)
+            then 'waiting: block table not created yet (source tables do not exist)'
+        when b.row_count is null then coalesce(c.status, 'no rows: not in Silver or filtered out')
+    end as note
 from activated as a
 left join built as b on a.source_system = b.source_system and a.block_id = b.block_id
 left join catalogue as c on a.source_system = c.source_system and a.block_id = c.block_id

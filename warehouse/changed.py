@@ -22,6 +22,13 @@ incrementally, except when its own code changed or it has no build properties: t
 listed in ``full_refresh`` and the build passes it as the dbt var ``full_refresh_models``
 (the model's config turns that into a full refresh of that model only).
 
+A model whose source table does not exist yet (a new source before its first Bronze load), directly or
+through other models, is left out and listed under ``waiting``. A Gold block (a model tagged ``gold_block``,
+listed in ``poc_block_models()`` in macros/poc_blocks.sql) stops that: it waits itself, but the models that
+union the blocks (facts, dimensions, metrics) are planned as usual and read only the blocks whose table
+exists (``poc_observations()``), so a new source's block contributes zero rows until its first run instead
+of holding back the whole Gold layer. Those blocks are listed again under ``empty_blocks``.
+
 Table compaction also makes a new snapshot, so a compacted input causes a rebuild:
 conservative, never a missed change.
 """
@@ -36,6 +43,7 @@ import subprocess
 from typing import Any
 
 PROJECT = Path(__file__).resolve().parent
+BLOCK_TAG = "gold_block"  # a Gold block: its children read it only when its table exists
 BUILT_FROM = "zohelo.built_from_ms"
 FINGERPRINT = "zohelo.build_fingerprint"
 # Code outside a model's own SQL that can change what it writes.
@@ -100,6 +108,7 @@ def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
             "parents": [p for p in upstream if p.startswith(("model.", "source.", "seed."))],
             "fingerprint": hashlib.sha256(code.encode()).hexdigest()[:32],
             "incremental": node.get("config", {}).get("materialized") == "incremental",
+            "block": BLOCK_TAG in node.get("tags", []),
         }
     return out
 
@@ -131,7 +140,7 @@ def table_state(cat, namespace: str, table: str) -> dict[str, Any] | None:
 def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
     """{"select": model names to build, "reasons": name → why, "unchanged": count,
     "full_refresh": incremental models among them to rebuild in full, "waiting": models left out because a
-    source table they read does not exist yet}."""
+    source table they read does not exist yet, "empty_blocks": the Gold blocks among them, read as zero rows}."""
     graph = models(meta)
     relations = {uid: (m["namespace"], m["table"]) for uid, m in graph.items()}
     for uid in {p for m in graph.values() for p in m["parents"] if p.startswith("source.")}:
@@ -151,11 +160,12 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
     def waiting(uid: str) -> bool:
         """True when a source table this model reads (directly or through other models) does not exist yet:
         a newly onboarded source whose first Bronze load has not run. Building it would fail every pipeline's
-        build, so it waits and is listed under "waiting"."""
+        build, so it waits and is listed under "waiting". A waiting Gold block does not make its children
+        wait: they skip a block whose table does not exist (poc_observations)."""
         if uid not in blocked:
             parents = graph[uid]["parents"]
             blocked[uid] = any(p.startswith("source.") and state.get(p) is None for p in parents) or any(
-                p in graph and waiting(p) for p in parents
+                p in graph and waiting(p) and not graph[p]["block"] for p in parents
             )
         return blocked[uid]
 
@@ -198,6 +208,7 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
         "unchanged": len(graph) - len(reasons) - sum(blocked.values()),
         "full_refresh": full,
         "waiting": sorted(graph[u]["name"] for u, b in blocked.items() if b),
+        "empty_blocks": sorted(graph[u]["name"] for u, b in blocked.items() if b and graph[u]["block"]),
     }
 
 
