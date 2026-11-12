@@ -38,7 +38,7 @@ ARROW = bulk_bronze.arrow_schema(COLUMNS)
 def expected_variables(entity: str) -> list[str]:
     """The SELECT list of the entity's query, in order."""
     query = landing.queries()[entity]
-    return re.findall(r"\?(\w+)", re.search(r"SELECT (.*?) WHERE", query, re.S).group(1))
+    return re.findall(r"\?(\w+)", re.search(r"SELECT (?:DISTINCT )?(.*?) WHERE", query, re.S).group(1))
 
 
 def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:

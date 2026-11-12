@@ -18,8 +18,9 @@ select
     max(point_in_time) filter (where property = 'population') as population_date,
     max(candidates) filter (where property = 'population') as population_candidates,
     max(value_number) filter (where property = 'area') as area,
-    max(case unit_qid when 'Q712226' then 'km2' when 'Q35852' then 'ha' else unit_qid end)
-        filter (where property = 'area') as area_unit,
+    max(
+        case unit_qid when 'Q712226' then 'km2' when 'Q35852' then 'ha' else unit_qid end
+    ) filter (where property = 'area') as area_unit,
     max(lon) filter (where property = 'coordinates') as lon,
     max(lat) filter (where property = 'coordinates') as lat,
     max(value_text) filter (where property = 'website') as website,
