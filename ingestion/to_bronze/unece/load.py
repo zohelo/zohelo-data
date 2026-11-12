@@ -3,11 +3,11 @@
 
 Observations use the generic SDMX Bronze format of the OECD onboarding (bronze.oecd_observations): one row per
 cell with a value, ``dataflow`` = the table title, ``series_dimensions`` / ``series_key`` the non-time variable
-codes and value codes (comma- and dot-separated, JSON-stat order), ``time_period`` the time variable's label as
-published (1990, 2025Q2, 2025M07), ``obs_value`` as text, ``attribute_names`` / ``attribute_values`` the cell
+codes and value codes (comma- and ``|``-separated: PXWeb value codes contain dots, e.g. ``ME.1041``),
+``time_period`` the time variable's label as published (1990, 2025Q2, 2025M07), ``obs_value`` as text, ``attribute_names`` / ``attribute_values`` the cell
 status. The PXWeb value codes are opaque (``ME.47``, ``616``, ``c0000803``), so bronze.unece_codes keeps each
 file's variable and value labels (one row per variable × value). A file that is not JSON-stat 2.0, whose value
-count does not match its sizes, or with a code containing a separator is rejected (bronze.unece_rejected_files).
+count does not match its sizes, or with a code containing ``|`` is rejected (bronze.unece_rejected_files).
 Entities are the table folders in Landing (``to_landing/unece/``, a table above the API cell limit in parts
 ``<table>_p<n>``). Code shared with other small bulk sources: ingestion/common/bulk_bronze.py.
 """
@@ -31,7 +31,7 @@ COLUMNS = [
     ("entity", "VARCHAR"),
     ("dataflow", "VARCHAR"),  # table title
     ("series_dimensions", "VARCHAR"),  # Variable,Measurement,Country
-    ("series_key", "VARCHAR"),  # ME.47.c0000803.616
+    ("series_key", "VARCHAR"),  # ME.47|c0000803|616
     ("time_period", "VARCHAR"),  # 2025
     ("obs_value", "VARCHAR"),
     ("attribute_names", "VARCHAR"),  # status
@@ -79,8 +79,8 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
     t = ids.index(time_dim)
     labels = data["dimension"][time_dim]["category"].get("label") or {}
     others = [i for i in range(len(ids)) if i != t]
-    if any("." in code for i in others for code in codes[i]):
-        raise ValueError("a value code contains a separator")
+    if any("|" in code for i in others for code in codes[i]):
+        raise ValueError("a value code contains the separator |")
     base = bulk_bronze.provenance(receipt)
     out: dict[str, list[Any]] = {name: [] for name, _ in COLUMNS}
     for position, combo in enumerate(product(*codes)):
@@ -88,7 +88,7 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
         if value is None:
             continue
         flag = status[position] if isinstance(status, list) else status.get(str(position), "")
-        out["series_key"].append(".".join(combo[i] for i in others))
+        out["series_key"].append("|".join(combo[i] for i in others))
         out["time_period"].append(labels.get(combo[t], combo[t]))
         out["obs_value"].append(str(value))
         out["attribute_values"].append(str(flag or "").replace("|", "/"))

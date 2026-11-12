@@ -14,7 +14,7 @@ newest as (
     select
         *,
         string_split(series_dimensions, ',') as dims,
-        string_split(series_key, '.') as codes
+        string_split(series_key, '|') as codes
     from source_rows
     qualify rank() over (partition by entity order by source_version desc, ingested_at desc) = 1
 ),
