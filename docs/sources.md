@@ -601,6 +601,7 @@ columns found by name prefix, since `regionwb24_hi`/`incomegroupwb24` carry the 
 `silver.findex_observations` (typed, shares 0–1). 2025 edition: 385,599 observations, 174 economies and
 aggregates (World Bank regions and income groups, no EU aggregate), 430 indicators, waves 2011–2024
 (Dev trial 43085820597). Weekly check Thursday 02:20 UTC.
+
 ## World Bank Worldwide Governance Indicators (WGI)
 
 **Extraction (2 Nov 2026).** DataBank publishes WGI as a bulk CSV ZIP on a stable URL, the same
@@ -805,6 +806,7 @@ year; indicators hdi, le, eys, mys, gnipc, gdi, gii, ihdi, phdi, components and 
 Each report recalculates the whole series, so values compare within one release; the Archive keeps the
 previous report 400 days. Terms: CC BY 3.0 IGO, licence row `cc_by_3_0_igo_undp_hdr`. Monthly check.
 Restart unit: the file.
+
 ## WHO data.who.int (indicator files)
 
 **Built (12 Nov 2026, register GL-025).** Every data.who.int indicator page links its complete data as one CSV,
@@ -1025,6 +1027,7 @@ expenditure, result and liabilities by unit type (KPIs `local_gov_revenue`, `loc
 `local_gov_balance`, `local_gov_debt`, draft). Weekly schedule (Wednesday). Licence: gov.pl terms (official
 materials). The per-unit report databases (Rb27S, Rb28S, … ZIPs, 2001-2026, one row per unit and budget class) are a
 separate, larger scope.
+
 ## MRPiPS registered unemployment (`mrpips_unemployment`)
 
 **Built (11 Nov 2026, register PLS-029).** The Public Employment Services portal (psz.praca.gov.pl, "Bezrobocie

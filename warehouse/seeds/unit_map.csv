@@ -167,5 +167,12 @@ gus_bdl,zł,gus_bdl:P3788:zł%,pln_per_m2
 gus_bdl,zł,gus_bdl:P3794:zł%,pln_per_m2
 gus_dbw,[zł],gus_dbw:309_485_180_3:%,pln_per_m2
 gus_dbw,udział w danej grupie gospodarstw domowych [%],,pct
+gus_culture,persons,,persons
+gus_culture,facilities,,facilities
+gus_culture_participation,pct_population,,pct_population
+gus_tourism,facilities,,facilities
+gus_tourism,bed_places,,bed_places
+gus_tourism,persons,,persons
+gus_tourism,overnight_stays,,overnight_stays
 world_bank_icp,PCAP.PP,,ppp_usd_per_person
 world_bank_icp,PX.WL,,index_world_100
