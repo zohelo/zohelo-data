@@ -80,7 +80,7 @@ strings in ISO 8601 UTC.
 | licences[].commercial_ok | boolean | yes | commercial use allowed |
 
 v1 files (latest.json, series.parquet, catalog.json) leave out the sources in `V2_ONLY_SOURCES` of
-`warehouse/publish.py` (ECB): they reach contract v2 only, so a new source never changes what zohelo.com shows first.
+`warehouse/publish.py` (ECB, BIS, ILOSTAT, UNDP HDR, UNdata): they reach contract v2 only, so a new source never changes what zohelo.com shows first.
 
 `warehouse/publish.py` writes it (`kpi_entry`, `catalog_json`) with one `kpis` entry per published KPI that has a
 `gold.metrics_<kpi_key>` table, computed from that KPI's series.parquet rows: `source_keys` and `geo_levels`

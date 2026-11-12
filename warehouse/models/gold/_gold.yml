@@ -197,5 +197,50 @@ models:
         tests: [not_null]
       - name: date_key
         tests: [not_null]
+  - name: poc_build_bis
+    description: >-
+      Build stage — BIS Data Portal: central bank policy rates and effective exchange rates (monthly), residential
+      property prices, total credit as a percentage of GDP, credit-to-GDP gaps and debt service ratios
+      (quarterly); the series of macro poc_bis_measures, each its own measure, for every country the BIS
+      publishes and the euro area. Values and BIS unit codes as published.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+  - name: poc_build_ilostat
+    description: >-
+      Build stage — ILOSTAT national (reported) labour force series for the EU27 members: unemployment rate
+      (annual and quarterly, separate measures), employment-to-population ratio, labour force participation rate
+      (age bands 15+, 15-24, 25+, 15-64 as measures) and the youth NEET rate, by sex. Per cent, as published.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: sex_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['T', 'M', 'F']}}}]
+  - name: poc_build_undp_hdr
+    description: >-
+      Build stage — UNDP Human Development Report composite indices (newest report): HDI, life expectancy at
+      birth, expected and mean years of schooling, GNI per capita (by sex), IHDI and GII; EU27 members and
+      World, annual from 1990.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+  - name: poc_build_undata
+    description: >-
+      Build stage — UN Statistical Yearbook (UNdata): GDP in current prices, GDP per capita and real GDP growth,
+      R&D expenditure, internet use and current health expenditure; EU27 members and World, the years the
+      Yearbook prints. Values and units as published.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
   - name: poc_build_check
     description: Per activated block — rows, series, unmatched geography, dates, flags; read after every build.

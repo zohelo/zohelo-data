@@ -148,3 +148,19 @@ world_bank_ids,pct_exports,,pct_exports
 un_wpp,thousand_persons,,thousand_persons
 un_wpp,children_per_woman,,children_per_woman
 un_wpp,years,,years
+bis,368,,pct
+bis,882,,index_2020_100
+bis,628,,index_2010_100
+bis,771,,pct
+bis,770,,pct_gdp
+bis,367,,pct
+ilostat,PC,,pct
+undp_hdr,index,,index_0_1
+undp_hdr,years,,years
+undp_hdr,2021 PPP $,,ppp_usd_per_person
+undata,millions of US dollars,,mln_usd
+undata,US dollars,,usd_per_person
+undata,percent,,pct
+undata,percentage of GDP,,pct_gdp
+undata,percentage of individuals,,pct_population
+undata,% of GDP,,pct_gdp

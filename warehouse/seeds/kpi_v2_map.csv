@@ -3,6 +3,7 @@ activity_rate,labour;poland,Q,activity_rate,eurostat,LFSI_EMP_A;LFSI_EMP_Q,euros
 activity_rate,labour;poland,Q,activity_rate,gus_dbw,1512_1360_95_3,gus_dbw:1512_1360_95_3:95,Q,PL;VOIV,education,rate,up,ready,"LFS (BAEL), age 15-89, macroregions and voivodeships"
 activity_rate,labour;poland,Q,activity_rate,gus_bdl,P2359,gus_bdl:P2359:%:wartość liczbowa,A,PL;VOIV,sex;age,rate,up,ready,"LFS annual average, 15+, ends 2020"
 activity_rate,labour;poland,Q,activity_rate,world_bank_wdi,SL.TLF.ACTI.ZS,world_bank_wdi:SL.TLF.ACTI.ZS,A,PL;EU;EU27,,rate,up,ready,"age 15-64, ILO modelled estimate"
+activity_rate,labour;poland,Q,activity_rate,ilostat,EAP_DWAP_SEX_AGE_RT_A,ilostat:eap_dwap_sex_age_rt_a:PC:AGE_YTHADULT_Y15-64,A,PL;EU,sex,rate,up,ready,"age 15-64, labour force participation rate; national labour force survey as reported to the ILO (ILOSTAT, reported series, not ILO modelled estimates); EU member states, no EU27 aggregate"
 adult_learning,poland,A,adult_learning,eurostat,TRNG_LFSE_01,eurostat:TRNG_LFSE_01:PC,A,PL;EU;EU27,sex,rate,up,ready,"age 25-64, last 4 weeks"
 adult_learning,poland,A,,gus_bdl,P2656,,A,PL;VOIV,,rate,up,needs-block,BDL LFS adults in education (P2656) is in Silver; codes not probed
 arope_rate,labour;poland,A,arope_rate,eurostat,ILC_PEPS01N,eurostat:ILC_PEPS01N:PC:TOTAL,A,PL;EU;EU27,sex,rate,down,ready,EU 2030 definition
@@ -42,6 +43,7 @@ employment_rate,labour;poland,Q,employment_rate,eurostat,LFSI_EMP_A;LFSI_EMP_Q,e
 employment_rate,labour;poland,Q,employment_rate,gus_dbw,1513_1360_95_3,gus_dbw:1513_1360_95_3:95,Q,PL;VOIV,education,rate,up,ready,"LFS (BAEL), age 15-89"
 employment_rate,labour;poland,Q,employment_rate,gus_bdl,P2360,gus_bdl:P2360:%:wartość liczbowa,A,PL;VOIV,sex;age,rate,up,ready,"LFS annual average, 15+, ends 2020"
 employment_rate,labour;poland,Q,employment_rate,world_bank_wdi,SL.EMP.TOTL.SP.ZS,world_bank_wdi:SL.EMP.TOTL.SP.ZS,A,PL;EU;EU27,,rate,up,ready,"15+, ILO modelled (also concept employment_rate_15plus)"
+employment_rate,labour;poland,Q,employment_rate,ilostat,EMP_DWAP_SEX_AGE_RT_A,ilostat:emp_dwap_sex_age_rt_a:PC:AGE_YTHADULT_Y15-64,A,PL;EU,sex,rate,up,ready,"age 15-64, employment-to-population ratio; national labour force survey as reported to the ILO (ILOSTAT, reported series, not ILO modelled estimates); EU member states, no EU27 aggregate"
 esi,economy,M,esi,eurostat,EI_BSSI_M_R2,eurostat:EI_BSSI_M_R2:%:BS-ESI-I,M,PL;EU;EU27,,index,up,ready,"long-term average = 100, seasonally adjusted"
 eurpln,poland,M,fx_rate,nbp,fx_A,nbp:fx:A:mid,D,PL,currency,mean,neutral,ready,EUR member of fx_rate (NBP table A); v2 publishes the monthly mean
 eurpln,poland,M,,eurostat,ERT_BIL_EUR_M,,M,PL,,mean,neutral,needs-block,Eurostat monthly euro exchange rates are in Silver (loaded); codes not probed
@@ -59,6 +61,7 @@ gdp_contributions,economy,Q,gdp_contributions,eurostat,NAMQ_10_GDP,eurostat:NAMQ
 gdp_nominal,economy,A,gdp_current_prices,eurostat,NAMA_10_GDP,eurostat:NAMA_10_GDP:CP_MNAC:B1GQ;eurostat:NAMA_10_GDP:CP_MEUR:B1GQ,A,PL;EU;EU27,,sum,neutral,ready,million national currency (PLN for Poland) and million EUR
 gdp_nominal,economy,A,gdp_current_prices,gus_dbw,1038_16_105_4,gus_dbw:1038_16_105_4:105,A,PL,,sum,neutral,ready,million PLN
 gdp_nominal,economy,A,gdp_current_prices,world_bank_wdi,NY.GDP.MKTP.CN;NY.GDP.MKTP.CD,world_bank_wdi:NY.GDP.MKTP.CN;world_bank_wdi:NY.GDP.MKTP.CD,A,PL;EU;EU27,,sum,neutral,ready,local currency units and current US$
+gdp_nominal,economy,A,gdp_current_prices,undata,SYB T13 (syb_230),undata:syb_230:millions of US dollars:gdp_current,A,PL;EU,,sum,neutral,ready,"millions of US dollars at current prices, selected years (UN Statistical Yearbook, UNSD national accounts); no EU27 aggregate"
 gdp_per_capita_pps,economy;poland,A,gdp_per_capita_pps,eurostat,NAMA_10R_2GDP,eurostat:NAMA_10R_2GDP:PPS_HAB_EU27_2020,A,PL;EU;EU27;VOIV,,index,up,ready,"GDP per inhabitant in PPS, EU27 = 100; countries and Polish NUTS 2"
 gdp_per_capita_pps,economy;poland,A,gdp_per_capita_pps,world_bank_wdi,NY.GDP.PCAP.PP.CD,world_bank_wdi:NY.GDP.PCAP.PP.CD,A,PL;EU;EU27,,index,up,ready,"PPP international $ per person, not an EU27 index"
 gdp_qoq_sa,economy,Q,gdp_qoq_sa,eurostat,NAMQ_10_GDP,eurostat:NAMQ_10_GDP:CLV_PCH_PRE:B1GQ,Q,PL;EU;EU27,,rate,up,ready,seasonally and calendar adjusted
@@ -66,6 +69,7 @@ gdp_qoq_sa,economy,Q,gdp_qoq_sa,gus_dbw,1038_16_390_3,gus_dbw:1038_16_390_3:390,
 gdp_real_growth,economy;poland,Q,gdp_volume_growth,eurostat,NAMA_10_GDP;NAMQ_10_GDP,eurostat:NAMA_10_GDP:CLV_PCH_PRE:B1GQ;eurostat:NAMQ_10_GDP:CLV_PCH_SM:B1GQ,A;Q,PL;EU;EU27,,rate,up,ready,annual; quarterly y/y seasonally and calendar adjusted
 gdp_real_growth,economy;poland,Q,gdp_volume_growth,gus_dbw,1038_16_389_3;1038_16_92_4,gus_dbw:1038_16_389_3:389;gus_dbw:1038_16_92_4:92,Q;A,PL,,rate,up,ready,"index, same period a year earlier = 100, constant prices (rate = value - 100)"
 gdp_real_growth,economy;poland,Q,gdp_volume_growth,world_bank_wdi,NY.GDP.MKTP.KD.ZG,world_bank_wdi:NY.GDP.MKTP.KD.ZG,A,PL;EU;EU27,,rate,up,ready,annual %
+gdp_real_growth,economy;poland,Q,gdp_volume_growth,undata,SYB T13 (syb_230),undata:syb_230:percent:gdp_growth,A,PL;EU,,rate,up,ready,"annual real rate of growth, selected years (UN Statistical Yearbook, UNSD national accounts); no EU27 aggregate"
 gdp_regional_growth,economy,A,gdp_regional_growth,eurostat,NAMA_10R_2GVAGR,eurostat:NAMA_10R_2GVAGR:PCH_PRE:B1GQ,A,PL;EU;EU27;VOIV,,rate,up,ready,"real growth of regional GDP, countries and Polish NUTS 2"
 gdp_regional_growth,economy,A,gdp_regional_growth,gus_bdl,P3502,"gus_bdl:P3502:-:dynamika produktu krajowego brutto ogółem, rok poprzedni=100",A,PL;VOIV,,rate,up,ready,"index, previous year = 100, constant prices"
 gdp_regional_growth,economy,A,gdp_regional_growth,gus_dbw,1173_793_92_4,gus_dbw:1173_793_92_4:92,A,PL;VOIV,,rate,up,ready,"index, previous year = 100, constant prices, regions (names mapped by the DBW geography rule; check build_check)"
@@ -73,6 +77,7 @@ gender_pay_gap,labour,A,gender_pay_gap,eurostat,EARN_GR_GPGR2,eurostat:EARN_GR_G
 gerd_gdp,poland,A,gerd_gdp,eurostat,RD_E_GERDTOT,eurostat:RD_E_GERDTOT:PC_GDP,A,PL;EU;EU27,sector,rate,up,ready,all sectors of performance
 gerd_gdp,poland,A,gerd_gdp,world_bank_wdi,GB.XPD.RSDV.GD.ZS,world_bank_wdi:GB.XPD.RSDV.GD.ZS,A,PL;EU;EU27,,rate,up,ready,
 gerd_gdp,poland,A,gerd_gdp,unesco_uis,EXPGDP.TOT,unesco_uis:gerd_gdp:pct_gdp:EXPGDP.TOT,A,PL;EU,,rate,up,needs-block,"UIS, SDG 9.5.1; EU27 members; CC BY-SA 4.0: waits for per-series licence and Adapted from credit in publishing (#2816)"
+gerd_gdp,poland,A,gerd_gdp,undata,SYB T28 (syb_285),undata:syb_285:percentage of GDP:gerd_gdp,A,PL;EU,,rate,up,ready,"% of GDP, selected years (UNESCO UIS as printed in the UN Statistical Yearbook); no EU27 aggregate"
 gfcf_by_asset,economy,A,gfcf_by_asset,eurostat,NAMA_10_AN6,eurostat:NAMA_10_AN6:CP_MNAC,A,PL;EU;EU27,asset,sum,neutral,ready,total fixed assets (N11G) in metrics; asset types need kpi_member
 gfcf_growth,economy,Q,gfcf_growth,eurostat,NAMQ_10_GDP,eurostat:NAMQ_10_GDP:CLV_PCH_SM:P51G,Q,PL;EU;EU27,,rate,up,ready,seasonally and calendar adjusted
 gfcf_rate,economy,A,gfcf_rate,eurostat,NAMA_10_GDP,eurostat:NAMA_10_GDP:PC_GDP:P51G,A,PL;EU;EU27,,rate,up,ready,
@@ -102,6 +107,7 @@ life_expectancy,poland,A,life_expectancy,gus_bdl,P2730,gus_bdl:P2730:lata:% / 0,
 life_expectancy,poland,A,life_expectancy,world_bank_wdi,SP.DYN.LE00.IN,world_bank_wdi:SP.DYN.LE00.IN,A,PL;EU;EU27,,none,up,ready,
 life_expectancy,poland,A,life_expectancy,who,90E2E48 (WHOSIS_000001),who:life_expectancy:years:WHOSIS_000001,A,PL;EU,sex,none,up,ready,"at birth, WHO Global Health Estimates; EU27 members and World (no EU27 aggregate)"
 life_expectancy,poland,A,life_expectancy,un_wpp,WPP2024 Demographic Indicators,un_wpp:LEx:estimate,A,PL;EU;EU27,,none,up,needs-block,"licence unresolved (#2761): no UN page states the WPP terms; at birth, both sexes; estimates to 2023"
+life_expectancy,poland,A,life_expectancy,undp_hdr,HDR composite indices (le),undp_hdr:composite_indices:years:le,A,PL;EU,sex,none,up,ready,"at birth, UNDP Human Development Report (newest report, 1990 to the report year); EU member states and World, no EU27 aggregate"
 long_term_unemployment,labour,A,long_term_unemployment,eurostat,UNE_LTU_A,eurostat:UNE_LTU_A:PC_ACT:LTU,A,PL;EU;EU27,sex,rate,down,ready,15-74
 long_term_unemployment,labour,A,,gus_dbw,1618_1335_95_4,,A;Q,PL,sex;age,rate,down,needs-block,GUS LFS long-term unemployment rate (1618_*) in Silver; codes not probed
 median_wage,labour,A,,gus_bdl,P4610,,M,PL;VOIV,sex,mean,up,needs-block,"BDL median gross wage (wage-distribution survey, P4610) in Silver; month labels are placed by the build; not activated (958k rows, needs a level filter)"
@@ -110,6 +116,7 @@ min_wage,labour,A,,eurostat,EARN_MW_CUR,,S,PL;EU,currency,none,neutral,needs-blo
 nbp_reference_rate,poland,M,,nbp_interest_rates,,,D,PL,,none,neutral,needs-block,"NBP official rates in Silver since #2590 (silver.nbp_policy_rates, register PLG-006); a Gold build stage for them is not added yet"
 neet_rate,labour;poland,A,neet_rate,eurostat,LFSI_NEET_A,eurostat:LFSI_NEET_A:PC_POP,A,PL;EU;EU27,sex,rate,down,ready,age 15-29
 neet_rate,labour;poland,A,neet_rate,world_bank_wdi,SL.UEM.NEET.ZS,world_bank_wdi:SL.UEM.NEET.ZS,A,PL;EU;EU27,,rate,down,ready,age 15-24
+neet_rate,labour;poland,A,neet_rate,ilostat,EIP_NEET_SEX_RT_A,ilostat:eip_neet_sex_rt_a:PC,A,PL;EU,sex,rate,down,ready,"age 15-24 (Eurostat: 15-29); national labour force survey as reported to the ILO (ILOSTAT, reported series, not ILO modelled estimates); EU member states, no EU27 aggregate"
 niip_gdp,economy;poland,Q,niip_gdp,eurostat,TIPSII10,eurostat:TIPSII10:PC_GDP,A,PL;EU;EU27,,rate,neutral,ready,annual (MIP scoreboard)
 niip_gdp,economy;poland,Q,,nbp,,,,,,rate,neutral,needs-source,NBP international investment position (quarterly): register PLG-003
 nominal_wage_growth,labour,M,nominal_wage_growth,gus_dbw,376_2_184_1;398_16_184_3,gus_dbw:376_2_184_1:184;gus_dbw:398_16_184_3:184,M;Q,PL;VOIV,,rate,up,ready,"index, same period a year earlier = 100; enterprise sector monthly, national economy quarterly"
@@ -130,6 +137,7 @@ real_wage_growth,labour;poland,M,real_wage_growth,gus_dbw,376_16_182_1;398_16_18
 recycling_rate,poland,A,recycling_rate,eurostat,CEI_WM011,eurostat:CEI_WM011:PC:RCY,A,PL;EU;EU27,,rate,up,ready,municipal waste
 reer,economy;poland,M,reer,eurostat,ERT_EFF_IC_M,eurostat:ERT_EFF_IC_M:I20:REER_IC42_CPI,M,PL;EU;EU27,,index,neutral,ready,"CPI-deflated, 42 partners, 2020 = 100"
 reer,economy;poland,M,reer,world_bank_wdi,PX.REX.REER,world_bank_wdi:PX.REX.REER,A,PL;EU;EU27,,index,neutral,ready,2010 = 100 (IMF)
+reer,economy;poland,M,reer,bis,WS_EER,bis:eer:882:R.B,M,PL;EU,,index,neutral,ready,"CPI-based, broad basket of 64 economies, 2020 = 100; EU member states and the euro area as the BIS publishes them, no EU27 aggregate"
 registered_unemployed,labour,M,registered_unemployed,gus_bdl,P2961,gus_bdl:P2961:osoba,M,PL;VOIV,sex,sum,down,ready,end of month (month in the first label)
 registered_unemployed,labour,M,,gus_dbw,507_870_93_1,,M,PL;VOIV,sex;age,sum,down,needs-block,"DBW registered unemployed (507_*) in Silver: 0.8-2.3M rows per block with powiats, too big for the full-rebuild build"
 registered_unemployed,labour,M,registered_unemployed,mrpips_unemployment,registered_unemployment,mrpips_unemployment:registered_unemployment:persons:unemployed_persons,M,PL;VOIV,sex,sum,down,ready,"MRPiPS-01 TAB 2, end of month, from January 2021"
@@ -151,9 +159,11 @@ unemployment_lfs,labour;poland,Q,unemployment_rate,eurostat,UNE_RT_A;UNE_RT_Q;LF
 unemployment_lfs,labour;poland,Q,unemployment_rate,gus_dbw,1514_1360_95_3,gus_dbw:1514_1360_95_3:95,Q,PL;VOIV,education,rate,down,ready,"LFS (BAEL), age 15-89"
 unemployment_lfs,labour;poland,Q,unemployment_rate,gus_bdl,P2361,gus_bdl:P2361:%:wartość liczbowa,A,PL;VOIV,sex;age,rate,down,ready,"LFS annual average, 15+, ends 2020"
 unemployment_lfs,labour;poland,Q,unemployment_rate,world_bank_wdi,SL.UEM.TOTL.ZS,world_bank_wdi:SL.UEM.TOTL.ZS,A,PL;EU;EU27,,rate,down,ready,ILO modelled estimate
+unemployment_lfs,labour;poland,Q,unemployment_rate,ilostat,UNE_DEAP_SEX_AGE_RT_A;UNE_DEAP_SEX_AGE_RT_Q,ilostat:une_deap_sex_age_rt_a:PC:AGE_YTHADULT_YGE15;ilostat:une_deap_sex_age_rt_q:PC:AGE_YTHADULT_YGE15,A;Q,PL;EU,sex,rate,down,ready,"age 15+; national labour force survey as reported to the ILO (ILOSTAT, reported series, not ILO modelled estimates); EU member states, no EU27 aggregate; quarterly as reported (seasonal adjustment not stated per series)"
 unit_labour_cost,labour,Q,unit_labour_cost,eurostat,NAMQ_10_LP_ULC,eurostat:NAMQ_10_LP_ULC:PCH_SM:NULC_PER,Q,PL;EU;EU27,,rate,neutral,ready,"nominal, per person, seasonally adjusted"
 vacancies_per_unemployed,labour,Q,vacancies_per_unemployed,gus_bdl,P4334,gus_bdl:P4334:osoba:zarejestrowani bezrobotni na 1 ofertę pracy,A,PL;VOIV,,none,neutral,ready,annual from 2020; the quarterly subgroup P2516 ends in 2010
 youth_unemployment,labour,Q,youth_unemployment,eurostat,UNE_RT_Q;UNE_RT_M,eurostat:UNE_RT_Q:PC_ACT:Y15-24;eurostat:UNE_RT_M:PC_ACT:Y_LT25,Q;M,PL;EU;EU27,sex,rate,down,ready,"15-24 quarterly, under 25 monthly, seasonally adjusted; annual UNE_RT_A Y15-24 not sampled (would rename the published unemployment measure)"
 youth_unemployment,labour,Q,youth_unemployment,world_bank_wdi,SL.UEM.1524.ZS,world_bank_wdi:SL.UEM.1524.ZS,A,PL;EU;EU27,,rate,down,ready,"15-24, ILO modelled"
+youth_unemployment,labour,Q,youth_unemployment,ilostat,UNE_DEAP_SEX_AGE_RT_A;UNE_DEAP_SEX_AGE_RT_Q,ilostat:une_deap_sex_age_rt_a:PC:AGE_YTHADULT_Y15-24;ilostat:une_deap_sex_age_rt_q:PC:AGE_YTHADULT_Y15-24,A;Q,PL;EU,sex,rate,down,ready,"age 15-24; national labour force survey as reported to the ILO (ILOSTAT, reported series, not ILO modelled estimates); EU member states, no EU27 aggregate"
 zus_pension_avg,labour,A,zus_pension_avg,gus_bdl,P2860,gus_bdl:P2860:zł:z pozarolniczego systemu ubezpieczeń społecznych emerytury,A,PL;VOIV,,mean,neutral,ready,"non-agricultural system, old-age pension"
 gdp_per_capita_pps,economy;poland,A,gdp_per_capita_pps,world_bank_icp,1000000:PCAP.PP,world_bank_icp:1000000:PCAP.PP,A,PL;EU,,index,up,ready,ICP 2021 GDP per capita in PPP international $ (2017 and 2021 benchmarks); no EU27 aggregate

@@ -408,6 +408,63 @@ un_wpp as (
         geography_key
     from geo
     where level_name = 'country' and length(geography_key) = 2
+),
+
+-- BIS (#2861): ISO 3166 alpha-2 countries (dim_geography's country keys) and XM euro area → EUROSTAT:EA
+-- (poc_bis_areas; the BIS aggregates 4T, 5R, 5A, G2, XW have no Gold area and are not listed). Static: Gold does
+-- not read BIS Silver here.
+bis_areas as ({{ poc_bis_areas() }}),
+
+bis as (
+    select
+        'bis' as source_system,
+        area_code as source_code,
+        candidate_key as geography_key
+    from bis_areas
+    where candidate_key <> ''
+    union all
+    select
+        'bis' as source_system,
+        geography_key as source_code,
+        geography_key
+    from geo
+    where level_name = 'country' and length(geography_key) = 2
+),
+
+-- ILOSTAT and UNDP HDR (#2861): countries by ISO 3166 alpha-3 (dim_geography.iso3), from Gold's own list so the
+-- shared dimensions never wait for their Silver tables; UNDP's ZZK.WORLD is World. ILO aggregates (X01 …) and the
+-- HDR groups and regions (ZZA … ZZJ) are not listed; the build stages build the EU27 members (and World for UNDP).
+iso3_family as (
+    select
+        s.source_system,
+        g.iso3 as source_code,
+        g.geography_key
+    from geo as g
+    cross join (values ('ilostat'), ('undp_hdr')) as s (source_system)
+    where g.level_name = 'country' and g.iso3 is not null
+    union all
+    select
+        'undp_hdr' as source_system,
+        'ZZK.WORLD' as source_code,
+        'WB:WLD' as geography_key
+),
+
+-- UNdata Statistical Yearbook (#2861): areas by UN M49 code as published (no leading zeros): the EU27 members
+-- (poc_m49_eu27) and 1 "Total, all countries or areas" = World. Other regions (150 Europe, 97 European Union …)
+-- are not listed and not built. Static.
+undata_m49 as ({{ poc_m49_eu27() }}),
+
+undata as (
+    select
+        'undata' as source_system,
+        cast(cast(m49 as integer) as varchar) as source_code,
+        iso2 as geography_key
+    from undata_m49
+    union all
+    select
+        'undata' as source_system,
+        '1' as source_code,
+        'WB:WLD' as geography_key
 )
 
 select
@@ -449,6 +506,12 @@ from (
     select * from ids
     union all
     select * from un_wpp
+    union all
+    select * from bis
+    union all
+    select * from iso3_family
+    union all
+    select * from undata
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

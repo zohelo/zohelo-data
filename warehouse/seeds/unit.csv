@@ -48,3 +48,4 @@ wgi_estimate,est.,"governance estimate, about -2.5 to 2.5","ocena jakości rząd
 index_world_100,świat=100,"index, world = 100","indeks, świat = 100",true,index_world_100,1
 pct_gni,% DNB,% of GNI,% DNB,true,pct,1
 pct_exports,% eksportu,"% of exports of goods, services and primary income","% eksportu towarów, usług i dochodów pierwotnych",true,pct,1
+index_0_1,0-1,"index, 0 to 1","indeks, od 0 do 1",true,index_0_1,1

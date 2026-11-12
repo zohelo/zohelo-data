@@ -137,7 +137,7 @@ archive_policy:
   prune: report
 bronze: [bronze.undata_syb_values, bronze.undata_rejected_files]
 silver: [silver.undata_syb_values]
-gold: []
+gold: [gold.build_undata, gold.metrics_internet_users, gold.metrics_health_expenditure_gdp]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): about thirty small whole-table snapshots, rebuilt in full.
