@@ -78,7 +78,12 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- EEA GovReg (#2424): published in Gg (kt) CO2e, metrics in Mt CO2e (D33, ÷ 1000); highest member DE 1,253,128 kt
     -- = 1,253.1 Mt (total excl. LULUCF, 1990-2024, Dev trial 43282453427). Documentation only until
     -- metrics_ghg_emissions joins the metrics union below.
-    ('ghg_emissions', 'eea', 'eea:govreg_ghg_inventory:gg_co2e:Sectors/Totals_excl', 0, 2e3)
+    ('ghg_emissions', 'eea', 'eea:govreg_ghg_inventory:gg_co2e:Sectors/Totals_excl', 0, 2e3),
+    -- NBP balance of payments (#2780): million EUR, Poland; current account 2026-Q2 -6,225, net IIP -283,248 (Dev trial
+    -- 43163012721). Documentation only until metrics_current_account_components and metrics_fdi_inflow join the
+    -- metrics union below (draft concepts are outside the test's scope).
+    ('current_account_components', 'nbp_bop', '%', -1e6, 1e6),
+    ('fdi_inflow', 'nbp_bop', '%', -1e6, 1e6)
 ),
 
 metrics as (

@@ -361,9 +361,9 @@ nbp.pl pages that link the files answer automated clients with HTTP 403 (Dev pro
 answer. Bronze: `bronze.nbp_bop_cells` (one row per non-empty cell, the shared standard-library reader
 `ingestion/common/xlsx_cells.py`; a workbook whose sheets are not exactly its currency sheets is rejected). Silver: `silver.nbp_bop_observations` (workbook ×
 currency × item × period; `item_code` fixed by rule and checked against the expected list; NBP's typo
-"Finsncial derivatives" in bop_m is normalised). Gold: the build stage
-`build_nbp_bop` (PLN and EUR) follows once Silver exists in production (a Gold model reading a missing
-source would hold the shared facts back). The workbooks hold amounts only: the shares of GDP of the current
+"Finsncial derivatives" in bop_m is normalised). Gold: build stage
+`build_nbp_bop` (PLN and EUR, one measure per workbook × currency × item; IIP components and their parent
+totals are separate measures, never to be summed together). The workbooks hold amounts only: the shares of GDP of the current
 account and of the net position are not published there. Licence: NBP website Terms of Use, unresolved
 (internal, owner decision of 14 Oct 2026).
 
