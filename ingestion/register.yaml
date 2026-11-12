@@ -5432,7 +5432,16 @@ sources:
       na minutę"): confirm per endpoint in the dev trial.'
   licence:
     status: open-conditional
-    notes: Attribution is required. GIOŚ warns current data are unverified and may change.
+    notes: 'Terms: Regulamin of the portal https://powietrze.gios.gov.pl/pjp/content/terms_of_service (read 12 Nov 2026),
+      which the API page binds API users to ("Korzystając z API akceptują Państwo wszystkie warunki zawarte w Regulaminie
+      portalu."). Licence, section 3: "Wykorzystywanie opublikowanych danych jest możliwe w oparciu o Licencję Creative Commons
+      BY 4.0 – Uznanie autorstwa." Use is free of charge, and the materials may be "ponownie wykorzystywane w całości lub w
+      istotnej części" (section 2). Conditions, section 4: the re-user "zobowiązany jest w sposób czytelny i wyraźny wskazać
+      źródło pozyskania informacji" and the time the information was produced, and whether it is used in full or in part.
+      Modification, section 5: allowed with a notice ("użytkownik zobowiązany jest do zamieszczenia stosownej informacji o
+      przetworzeniu (zmianie)"). Commercial reuse: allowed under CC BY 4.0 (the Regulamin does not restrict it). GIOŚ accepts
+      no liability for processed information (section 6). Attribution (section 4): "Źródło danych: GIOŚ - EKOINFONET", with
+      the measurement time and a note when values are processed. GIOŚ warns current data are unverified and may change.'
   updates: Operational updates can be delayed by transmission outages and may be revised after verification.
   ingestion:
     history: 'New API v1: https://api.gios.gov.pl/pjp-api/v1/rest/data/getData/{sensorId} (measurements), /aqindex/getIndex/{stationId},
@@ -5452,6 +5461,7 @@ sources:
     - Find the validated-archive download route (annual files) and its terms
     references:
     - https://powietrze.gios.gov.pl/pjp/content/api
+    - https://powietrze.gios.gov.pl/pjp/content/terms_of_service
 - id: PL-ENV-011
   name: Surface-water monitoring results (Państwowy Monitoring Środowiska)
   short_name: GIOŚ surface water
