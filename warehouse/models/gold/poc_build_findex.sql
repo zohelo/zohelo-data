@@ -1,4 +1,4 @@
-{{ config(alias='build_findex') }}
+{{ config(alias='build_findex', tags=['gold_block']) }}
 {# Gold PoC build stage: the World Bank Global Findex indicators of the activated blocks in the common shape,
    whole adult population (group all) only. Findex publishes shares 0-1; Gold holds per cent (× 100), like the
    WDI copy of the same indicator. Survey years 2011, 2014, 2017, 2021, 2022, 2024 (not every economy in

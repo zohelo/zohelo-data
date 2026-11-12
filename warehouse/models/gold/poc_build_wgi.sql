@@ -1,4 +1,4 @@
-{{ config(alias='build_wgi') }}
+{{ config(alias='build_wgi', tags=['gold_block']) }}
 {# Gold PoC build stage: the World Bank WGI governance estimates of the activated indicators in the common
    shape. Every economy WGI publishes (countries and territories; WGI has no aggregates, so no EU value).
    No breakdowns: every series is a total. #}

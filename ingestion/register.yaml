@@ -982,7 +982,8 @@ sources:
   short_name: UNCTAD Data Hub
   provider: UN Trade and Development (UNCTAD)
   source_system: unctad
-  status: approved
+  current: true
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -990,21 +991,28 @@ sources:
   domains: [trade, investment, shipping, development, digital-economy]
   entities: [country, country-group]
   granularity: Indicator/economy/period with table-specific breakdowns; some bilateral or product datasets.
-  coverage: More than 150 indicators for almost all economies; start/frequency vary by table.
+  coverage: 'More than 150 indicators for almost all economies; start/frequency vary by table. Landed tables (Dev
+    probes 43084525257, 43084992517, 11 Nov 2026): FDI flows and stocks 1990-2025 (36,950 rows), merchandise trade
+    1948-2025 (46,108), services trade by category 2005-2025 (807,733), digitally deliverable services 2010-2025,
+    commodity prices monthly from 1995, port liner shipping connectivity quarterly from 2006, merchant fleet from 1980,
+    seaborne trade 2000-2024, port calls 2018-2023. Economy codes M49 (France 250; 251 in port calls); EU group 3412
+    "European Union (2020 …)".'
   access:
-    endpoint: https://unctadstat.unctad.org/
+    endpoint: https://unctadstat-api.unctad.org/bulkdownload/
     kind: bulk_file
     interfaces: [HTML, download files]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No explicit numeric quota found; nine archives (14 MB of 7z), one request each, weekly.
   licence:
     status: open-conditional
     notes: 'Terms: CC BY 3.0 IGO, https://unctadstat.unctad.org/EN/About.html ("All materials provided on this website
       are copyrighted under the Creative Commons Attribution 3.0 IGO license"; data and metadata "may be copied freely,
       duplicated and further distributed" provided the Data Hub is cited): commercial reuse and adaptation allowed under
       the licence; third-party series may carry their own terms (check per table). Attribution: "Source: United Nations
-      Trade and Development (UNCTAD) Data Hub, unctadstat.unctad.org".'
+      Trade and Development (UNCTAD) Data Hub, unctadstat.unctad.org". Per-table third-party check (#2757, 11 Nov
+      2026): open, see research.blockers; until it is closed every UNCTAD KPI (exports_goods, exports_services and the
+      UNCTAD measure of fdi_inflow) stays draft in kpi.csv, so nothing from UNCTAD reaches the published layer.'
   updates: Table-specific updates and revisions; indicator-explainer documents carry methodology.
   ingestion:
     history: Archive named table export, metadata and terms.
@@ -1015,11 +1023,15 @@ sources:
     overlap: Often uses UN Comtrade, WTO and national data; preserve table citation and upstream lineage.
   research:
     priority: review-next
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - 'Check third-party terms per selected table'
-    - 'Confirm machine-download stability'
+    - 'Third-party terms per selected table, not yet checked (11 Nov 2026; the agent session cannot reach
+      unctadstat.unctad.org, so the per-table notes have to be read in a Dev probe or by the owner). Built tables:
+      US_TradeMerchTotal (exports_goods) is synchronised with WTO, so WTO terms may apply to its values: open;
+      US_TradeServCatTotal (exports_services): open; US_FdiFlowsStock (UNCTAD measure of fdi_inflow): open. Landed,
+      not modelled: US_DigitallyDeliverableServices, US_CommodityPrice_M, US_PLSCI, US_MerchantFleet,
+      US_SeaborneTrade, US_PortCalls: open. Until closed these KPIs stay draft (kpi.csv) and are not published.'
     references:
     - https://unctadstat.unctad.org/
     - https://unctadstat.unctad.org/EN/IndicatorsExplained.html

@@ -180,40 +180,39 @@ wdi as (
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
 ),
 
--- world_bank_wgi: World Bank economy codes like WDI's, mapped through the WDI economies (#2736)
-wb_wgi as (
+-- World Bank WGI, Findex and ICP (#2736): World Bank economy codes like WDI's, so each gets WDI's mapping (iso2 or
+-- WB:<code>), built from wdi_countries only so that this shared model never waits for their Silver tables. A code
+-- WDI does not know (a few territories, ICP benchmark groups) is not listed and the build stage maps it to _X.
+wb_family as (
     select
-        'world_bank_wgi' as source_system,
-        c.economy_code as source_code,
-        coalesce(g.geography_key, g_agg.geography_key, '_X') as geography_key
-    from (select distinct economy_code from {{ ref('wgi_observations') }}) as c
-    left join {{ ref('wdi_countries') }} as w on c.economy_code = w.economy_code
-    left join geo as g on g.level_name = 'country' and w.iso2_code = g.iso2
-    left join geo as g_agg on g_agg.geography_key = 'WB:' || c.economy_code
+        s.source_system,
+        w.source_code,
+        w.geography_key
+    from wdi as w
+    cross join (values ('world_bank_wgi'), ('world_bank_findex'), ('world_bank_icp')) as s (source_system)
 ),
 
--- world_bank_findex: World Bank economy codes like WDI's, mapped through the WDI economies (#2736)
-wb_findex as (
-    select
-        'world_bank_findex' as source_system,
-        c.economy_code as source_code,
-        coalesce(g.geography_key, g_agg.geography_key, '_X') as geography_key
-    from (select distinct economy_code from {{ ref('findex_observations') }}) as c
-    left join {{ ref('wdi_countries') }} as w on c.economy_code = w.economy_code
-    left join geo as g on g.level_name = 'country' and w.iso2_code = g.iso2
-    left join geo as g_agg on g_agg.geography_key = 'WB:' || c.economy_code
-),
+-- UNCTAD: economies by UNCTAD code (M49; France 250 in the FDI, merchandise and services tables, 251 only in port
+-- calls) from poc_unctad_areas: the EU27 members, 3412 European Union (2020 …) = EU27_2020, 0000 World. Other
+-- economies have no ISO code in the tables (_X); the build stage builds only the listed areas, and
+-- tests/unctad_areas_present.sql fails when a listed code is missing from one of the three built tables.
+unctad_areas as ({{ poc_unctad_areas() }}),
 
--- world_bank_icp: World Bank economy codes like WDI's, mapped through the WDI economies (#2736)
-wb_icp as (
+unctad as (
     select
-        'world_bank_icp' as source_system,
-        c.economy_code as source_code,
-        coalesce(g.geography_key, g_agg.geography_key, '_X') as geography_key
-    from (select distinct economy_code from {{ ref('icp_observations') }}) as c
-    left join {{ ref('wdi_countries') }} as w on c.economy_code = w.economy_code
-    left join geo as g on g.level_name = 'country' and w.iso2_code = g.iso2
-    left join geo as g_agg on g_agg.geography_key = 'WB:' || c.economy_code
+        'unctad' as source_system,
+        c.economy as source_code,
+        coalesce(g.geography_key, '_X') as geography_key
+    from (
+        select distinct economy from {{ ref('unctad_fdi_flows_stock') }}
+        union
+        select distinct economy from {{ ref('unctad_merchandise_trade') }}
+        union
+        select distinct economy from {{ ref('unctad_services_trade') }}
+    ) as c
+    left join unctad_areas as a on c.economy = a.economy
+    left join geo as g on a.candidate_key = g.geography_key
+    where c.economy is not null
 )
 
 select
@@ -232,11 +231,9 @@ from (
     union all
     select * from wdi
     union all
-    select * from wb_wgi
+    select * from wb_family
     union all
-    select * from wb_findex
-    union all
-    select * from wb_icp
+    select * from unctad
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

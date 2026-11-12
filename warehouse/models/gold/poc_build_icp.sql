@@ -1,7 +1,7 @@
-{{ config(alias='build_icp') }}
+{{ config(alias='build_icp', tags=['gold_block']) }}
 {# Gold PoC build stage: the World Bank ICP 2021 measures of the activated blocks (series × classification)
-   in the common shape. Every economy and benchmark group ICP publishes (no EU aggregate); 2017 and 2021
-   benchmarks, interim years where ICP publishes them. No breakdowns: every series is a total. #}
+   in the common shape. Every economy and benchmark group ICP publishes (no EU aggregate); the two activated
+   measures exist for the 2017 and 2021 benchmark years only. No breakdowns: every series is a total. #}
 with blocks as ({{ poc_icp_blocks() }}),
 
 geo_map as (
