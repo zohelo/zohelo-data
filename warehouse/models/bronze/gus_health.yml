@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: gus_health
+  description: GUS Zdrowie i ochrona zdrowia (register PLS-004, health family), annual publication tables
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gus_health/
+    loaded_by: ingestion/to_bronze/gus_health/
+    config: ingestion/sources/gus_health.yaml
+  tables:
+  - name: gus_health_cells
+    description: >-
+      One row per non-empty cell (value as stored, ZIP member, sheet, row, column, number format) of every workbook
+      of the newest copy of each landed file; partitioned by entity.
+  - name: gus_health_rejected_files
+    description: Files of gus_health the Bronze decoder rejected, with the reason.
