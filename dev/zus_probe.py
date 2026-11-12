@@ -20,6 +20,7 @@ import requests
 
 from ingestion.common import xlsx_cells
 
+GREP = None
 UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
 
 
@@ -87,7 +88,9 @@ def links(url):
         n += 1
         m = re.search(r"/documents/(\d+)/(\d+)/([^/]+)", h)
         name = unquote_plus(m.group(3)) if m else h
-        print(f"  L {m.group(2) if m else '-'} | {name} | {t[:90]}")
+        if GREP and not re.search(GREP, name + " " + t, re.I):
+            continue
+        print(f"  L {m.group(2) if m else '-'} | {name} | {t[:90]} | {h}")
     print(f"  xlsx links: {n}")
     # also year/tab structure hints
     for h, t in anchors(url) if False else []:
@@ -120,6 +123,9 @@ def main(argv):
     for a in argv:
         if a.startswith("rows="):
             rows = int(a[5:])
+        elif a.startswith("grep="):
+            global GREP
+            GREP = a[5:]
         elif a == "all=1":
             full = True
     for a in argv:
