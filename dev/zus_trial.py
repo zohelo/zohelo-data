@@ -100,7 +100,7 @@ def main(argv) -> int:
         voiv = rows(
             con,
             "select family, period_start, measure, breakdown_code, count(distinct area_code) areas from silver where "
-            "family in ('insured_sickness_voiv', 'payers_voiv', 'absence_voiv') group by all having count(distinct "
+            "family in ('insured_sickness_voiv', 'payers_voiv', 'absence_voiv') and area_code <> '_U' group by all having count(distinct "
             "area_code) <> 17",
         )
         annotate(
