@@ -21,6 +21,7 @@ KINDS = {1: "s", 2: "n", 3: "n", 4: "b", 5: "e"}  # xlrd cell types: text, numbe
 def decode(body: bytes, receipt: dict[str, Any]):
     """bulk_bronze decoder: every non-empty cell of the .xls workbook in the shared cell shape (member empty).
     Numbers keep their stored float (integers without '.0'); dates stay Excel serial numbers, as in xlsx_cells.
+    Error cells keep their Excel text (#N/A, #DIV/0!, ...), which Silver's status test rejects.
     A year published as an XLSX workbook (2021) is read with the shared XLSX decoder."""
     import xlrd
 
@@ -41,7 +42,9 @@ def decode(body: bytes, receipt: dict[str, Any]):
                 if cell.ctype not in KINDS or cell.value in ("", None):
                     continue
                 value = cell.value
-                if isinstance(value, float):
+                if cell.ctype == 5:  # an Excel error cell holds an integer code: keep the error text, never a number
+                    text = xlrd.error_text_from_code.get(value, "#ERR")
+                elif isinstance(value, float):
                     text = str(int(value)) if value.is_integer() else repr(value)
                 else:
                     text = str(value)

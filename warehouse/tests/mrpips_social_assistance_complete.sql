@@ -1,4 +1,4 @@
--- MRPiPS-03 social assistance (warehouse/macros/gus_tables.sql): every report year from the first to the last has
+-- MRPiPS-03 social assistance (warehouse/macros/gus_tables.sql): every report year from 2019 (the first landed) to the last has
 -- each of the three measures for all 17 areas (Poland = RAZEM and the 16 voivodeships). A section, header or
 -- label that stops matching in a new year's report fails here.
 with counts as (
@@ -11,7 +11,7 @@ with counts as (
 ),
 
 years as (
-    select unnest(generate_series(min(period_year), max(period_year))) as period_year
+    select unnest(generate_series(2019, max(period_year))) as period_year  -- FIRST_YEAR in the Landing module
     from counts
 ),
 

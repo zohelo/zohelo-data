@@ -85,10 +85,19 @@ def _inspect(p) -> int:
 
     found, summary = discover()
     todo = plan(found, held())
-    annotate(
-        "notice" if found else "error", f"{SOURCE} landing inspect", {**summary, "to_land": [s["entity"] for s in todo]}
-    )
-    return 0 if found else 1
+    level = coverage_level(found, summary)
+    annotate(level, f"{SOURCE} landing inspect", {**summary, "to_land": [s["entity"] for s in todo]})
+    return 1 if level == "error" else 0
+
+
+def coverage_level(found: dict[str, dict[str, Any]], summary: dict[str, Any]) -> str:
+    """'error' when no report is found or a year older than the newest listed one has no MRPiPS-03 link (a renamed
+    link must not be skipped silently); 'warning' when only the newest listed year has none yet (its page can go
+    up before the report); else 'notice'."""
+    missing, listed = summary["without_report"], summary["years_listed"]
+    if not found or any(year < max(listed) for year in missing):
+        return "error"
+    return "warning" if missing else "notice"
 
 
 def extract(budget_minutes: float, landing_root: str = "01_landing") -> int:
@@ -119,8 +128,11 @@ def extract(budget_minutes: float, landing_root: str = "01_landing") -> int:
             "refused": refused,
         }
     )
-    annotate("notice" if not refused else "warning", f"{SOURCE} landing extract", summary)
-    return 1 if refused and not results else 0
+    level = coverage_level(found, summary)
+    if refused and level == "notice":
+        level = "warning"
+    annotate(level, f"{SOURCE} landing extract", summary)
+    return 1 if level == "error" or (refused and not results) else 0
 
 
 def _extract(p) -> int:
