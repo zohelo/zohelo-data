@@ -13,6 +13,7 @@ import csv
 import os
 from pathlib import Path
 import re
+import time
 import traceback
 
 import duckdb
@@ -158,6 +159,7 @@ def main() -> None:
                 break
             except Exception as exc:
                 resumed.append(str(exc)[:160])
+                time.sleep(90)
         exits.append(landing.extract(60, landing_root=LANDING))  # idempotency: must land nothing
         summary["landing_exit"], summary["landing_resumed_after"] = exits, resumed
         held = sorted(landing.held_entities(LANDING))
@@ -170,7 +172,13 @@ def main() -> None:
         summary["verify_exit"] = bulk_file.main(landing.SOURCE, "verify", landing_root=LANDING, specs=[{"entity": e} for e in held])
         rows = []
         for _ in (1, 2):
-            bronze.load(0, landing_root=LANDING, namespace=NS)
+            for attempt in range(3):  # R2 throttling (429/503) seen on 12 Nov: the load resumes from its file list
+                try:
+                    bronze.load(0, landing_root=LANDING, namespace=NS)
+                    break
+                except Exception as exc:
+                    resumed.append("bronze: " + str(exc)[:160])
+                    time.sleep(90)
             t = cat.load_table((NS, bronze.TABLE)).scan().to_arrow()
             rows.append((t.num_rows, len(cat.load_table((NS, bronze.TABLE)).inspect.files())))
         summary["bronze_rows_files_load1_load2"] = rows
