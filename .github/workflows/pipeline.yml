@@ -19,7 +19,7 @@ on:
         required: true
         type: choice
         default: eurostat
-        options: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, opendata_org, nbp, nbp_interest_rates, gleif, mf_biala_lista, mf_treasury_debt, mf_public_debt, mf_state_budget, gugik_prg, gus_teryt, un_wpp, world_bank_findex, world_bank_icp, world_bank_wgi, world_bank_ids, unctad, krus, ecb, oecd, unesco_uis, who, news_feeds, gdelt, wikimedia_pageviews, release_calendars, mf_jst_budgets, mrpips_unemployment, platform]
+        options: [eurostat, gus_bdl, gus_dbw, world_bank_wdi, opendata_org, nbp, nbp_interest_rates, gleif, mf_biala_lista, mf_treasury_debt, mf_public_debt, mf_state_budget, gugik_prg, gus_teryt, un_wpp, world_bank_findex, world_bank_icp, world_bank_wgi, world_bank_ids, unctad, krus, ecb, oecd, faostat, unesco_uis, who, news_feeds, gdelt, wikimedia_pageviews, release_calendars, mf_jst_budgets, mrpips_unemployment, platform]
       run:
         description: Run
         required: true
