@@ -339,6 +339,23 @@ sources:
       year, source_code, source (null where the domain has none), unit, value, flag, note; partitioned by entity.
   - name: faostat_rejected_files
     description: FAOSTAT Landing files the Bronze decoder rejected, with the reason.
+- name: ilostat
+  description: ILOSTAT — bulk indicator files (gzip CSV, all countries)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/ilostat/
+    loaded_by: ingestion/to_bronze/ilostat/
+    config: ingestion/sources/ilostat.yaml
+  tables:
+  - name: ilostat_observations
+    description: >-
+      One row per observation of the newest copy of each indicator file (entity, e.g. une_deap_sex_age_rt_a),
+      as published: indicator, series_dimensions / series_key (ref_area, source, indicator, sex, classif1 …
+      in file order), time_period, obs_value and attribute_names / attribute_values as source text;
+      partitioned by entity.
+  - name: ilostat_rejected_files
+    description: ILOSTAT Landing files the Bronze decoder rejected, with the reason.
 - name: news_feeds
   description: News headline feeds (RSS/Atom) of Polish outlets — headlines and links only (topics, O32)
   database: r2
@@ -370,6 +387,22 @@ sources:
       field_names (the header) and field_values (the row), both |-separated, as source text; partitioned by entity.
   - name: unctad_rejected_files
     description: UNCTAD Landing files the Bronze decoder rejected, with the reason.
+- name: ecb
+  description: ECB Data Portal — selected dataflows as SDMX CSV (SDMX REST API, format=csvdata)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/ecb/
+    loaded_by: ingestion/to_bronze/ecb/
+    config: ingestion/sources/ecb.yaml
+  tables:
+  - name: ecb_observations
+    description: >-
+      One row per observation of the newest copy of each selection (entity, e.g. exr_daily), in the generic
+      SDMX format of bronze.oecd_observations: dataflow (the KEY's flow id), series_dimensions / series_key,
+      time_period, obs_value and attribute_names / attribute_values as source text; partitioned by entity.
+  - name: ecb_rejected_files
+    description: ECB Landing files the Bronze decoder rejected, with the reason.
 - name: oecd
   description: OECD Data Explorer — selected dataflows as SDMX CSV (SDMX REST API)
   database: r2
@@ -386,6 +419,22 @@ sources:
       obs_value and attribute_names / attribute_values as source text; partitioned by entity.
   - name: oecd_rejected_files
     description: OECD Landing files the Bronze decoder rejected, with the reason.
+- name: bis
+  description: BIS Data Portal — selected SDMX dataflows as SDMX-CSV (SDMX REST API)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/bis/
+    loaded_by: ingestion/to_bronze/bis/
+    config: ingestion/sources/bis.yaml
+  tables:
+  - name: bis_observations
+    description: >-
+      One row per record of the newest copy of each selection (entity, e.g. cbpol), as published:
+      dataflow, series_dimensions / series_key (dimension ids and codes in file order), time_period,
+      obs_value and attribute_names / attribute_values as source text; partitioned by entity.
+  - name: bis_rejected_files
+    description: BIS Landing files the Bronze decoder rejected, with the reason.
 - name: opendata_org
   description: OpenData.org (BrightQuery) organizations, people and locations — Senzing-ready snapshot
   database: r2
@@ -417,6 +466,40 @@ sources:
       as text; partitioned by entity.
   - name: undp_hdr_rejected_files
     description: UNDP HDR Landing files the Bronze decoder rejected, with the reason.
+- name: undata
+  description: UNdata — UN Statistical Yearbook tables (CSV)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/undata/
+    loaded_by: ingestion/to_bronze/undata/
+    config: ingestion/sources/undata.yaml
+  tables:
+  - name: undata_syb_values
+    description: >-
+      One row per row of the newest copy of each Statistical Yearbook table (entity, e.g. syb_1): table code
+      and title, area code (M49) and name, year, series, value, footnotes and source as published text;
+      partitioned by entity.
+  - name: undata_rejected_files
+    description: UNdata Landing files the Bronze decoder rejected, with the reason.
+- name: unece
+  description: UNECE Statistical Database — economic statistics, PXWeb tables as JSON-stat 2.0
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/unece/
+    loaded_by: ingestion/to_bronze/unece/
+    config: ingestion/sources/unece.yaml
+  tables:
+  - name: unece_observations
+    description: >-
+      One row per cell with a value of the newest copy of each table (entity): table title, series_dimensions /
+      series_key (variable and value codes), time_period (published label), obs_value and status as text;
+      partitioned by entity.
+  - name: unece_codes
+    description: Variable and value labels of each landed table (one row per variable × value code).
+  - name: unece_rejected_files
+    description: UNECE Landing files the Bronze decoder rejected, with the reason.
 - name: world_bank_findex
   description: World Bank Global Findex Database — country-level CSV
   database: r2

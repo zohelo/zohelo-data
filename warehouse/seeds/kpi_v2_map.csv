@@ -11,6 +11,7 @@ avg_wage,labour,M,average_gross_wage,gus_bdl,P2497,gus_bdl:P2497:%,A,PL;VOIV,,me
 avg_wage,labour,M,average_gross_wage,gus_dbw,376_2_243_1;398_16_243_3,gus_dbw:376_2_243_1:243;gus_dbw:398_16_243_3:243,M;Q,PL;VOIV,,mean,up,ready,enterprise sector monthly (Poland and voivodeships); national economy quarterly
 basic_digital_skills,poland,A,basic_digital_skills,eurostat,ISOC_SK_DSKL_I21,eurostat:ISOC_SK_DSKL_I21:PC_IND:I_DSK2_BAB,A,PL;EU;EU27,,rate,up,ready,"at least basic overall skills, individuals 16-74; survey every two years"
 bond_yield_10y,poland,M,bond_yield_10y,eurostat,IRT_LT_MCBY_M,eurostat:IRT_LT_MCBY_M:_Z:MCBY,M,PL;EU,,rate,neutral,ready,EMU convergence-criterion 10-year yield
+bond_yield_10y,poland,M,bond_yield_10y,ecb,IRS,ecb:IRS:L40,M,PL;EU,,rate,neutral,needs-block,"long-term interest rate for convergence purposes (10-year), ECB IRS, in Gold; kept out of v2 until the national compilers' terms are established (register GL-016, review of #2758)"
 broadband_households,poland,A,,eurostat,ISOC_CI_IT_H;ISOC_CI_IN_H,eurostat:ISOC_CI_IT_H:PC_HH:H_BBFIX,A,PL;EU;EU27,,rate,up,needs-block,"fixed broadband (ISOC_CI_IT_H, ISOC_R_BROAD_H) ends 2021 in Silver; ISOC_CI_IN_H (internet access of households, to 2025) is a different measure; choose before activating"
 broadband_households,poland,A,,world_bank_wdi,IT.NET.BBND.P2,,A,PL;EU;EU27,,rate,up,needs-block,"WDI counts fixed broadband subscriptions per 100 people, not households; in Silver, not mapped"
 broadband_households,poland,A,,gus_bdl,P3908,,A,PL;VOIV,,rate,up,needs-block,"BDL P3908 counts subscriber lines, not households"
@@ -44,6 +45,7 @@ employment_rate,labour;poland,Q,employment_rate,world_bank_wdi,SL.EMP.TOTL.SP.ZS
 esi,economy,M,esi,eurostat,EI_BSSI_M_R2,eurostat:EI_BSSI_M_R2:%:BS-ESI-I,M,PL;EU;EU27,,index,up,ready,"long-term average = 100, seasonally adjusted"
 eurpln,poland,M,fx_rate,nbp,fx_A,nbp:fx:A:mid,D,PL,currency,mean,neutral,ready,EUR member of fx_rate (NBP table A); v2 publishes the monthly mean
 eurpln,poland,M,,eurostat,ERT_BIL_EUR_M,,M,PL,,mean,neutral,needs-block,Eurostat monthly euro exchange rates are in Silver (loaded); codes not probed
+eurpln,poland,M,fx_rate,ecb,EXR,ecb:EXR:M:PLN:EUR,M,PL,currency,mean,neutral,ready,"ECB euro reference rate, the ECB's own monthly average (EXR M.PLN.EUR.SP00.A), PLN per 1 EUR; breakdown currency EUR as NBP"
 exports_by_partner,economy,A,,eurostat,EXT_ST_EU27_2020SITC,,A,EU27,partner,sum,neutral,needs-block,EXT_ST_EU27_2020SITC holds only the EU27 reporter (no PL rows in Silver); a member-state trade dataset is needed (Comext DS-* is out of scope)
 exports_goods,economy,M,,eurostat,EXT_ST_EU27_2020SITC,,M,EU27,,sum,up,needs-block,"only the EU27 reporter in Silver, no PL rows"
 exports_goods,economy,M,exports_goods,unctad,US_TradeMerchTotal,unctad:US_TradeMerchTotal:02:USD_MN,A,PL;EU;EU27,,sum,up,ready,"annual merchandise exports, US$ million at current prices; EU27 = UNCTAD group European Union (2020 …) incl. intra-EU trade"
@@ -87,6 +89,7 @@ gini,labour,A,gini,world_bank_wdi,SI.POV.GINI,world_bank_wdi:SI.POV.GINI,A,PL;EU
 gva_by_section,economy,A,gva_by_section,eurostat,NAMA_10_A10,eurostat:NAMA_10_A10:CP_MNAC:B1G,A,PL;EU;EU27,nace,sum,neutral,ready,total in metrics; NACE sections need kpi_member
 hicp_annual_rate,economy;poland,M,inflation,eurostat,PRC_HICP_MINR,eurostat:PRC_HICP_MINR:RCH_A,M,PL;EU;EU27,,rate,neutral,ready,COICOP breakdown not sampled yet
 hicp_annual_rate,economy;poland,M,inflation,world_bank_wdi,FP.CPI.TOTL.ZG,world_bank_wdi:FP.CPI.TOTL.ZG,A,PL;EU;EU27,,rate,neutral,ready,"CPI (not harmonised), annual %; kept as the v1 second measure"
+hicp_annual_rate,economy;poland,M,inflation,ecb,HICP,ecb:HICP:000000:ANR,M,PL;EU;EU27,,rate,neutral,ready,"HICP (COICOP 2018) total, annual rate of change, ECB dataflow HICP (replaced ICP on 4 Feb 2026), from 1996-12 for PL; EU27 = ECB area B6 (EU27 fixed composition)"
 industrial_production,economy,M,industrial_production,eurostat,STS_INPR_M,eurostat:STS_INPR_M:PCH_SM:PRD,M,PL;EU;EU27,,rate,up,ready,"NACE B-D, calendar adjusted"
 industrial_production,economy,M,industrial_production,gus_dbw,814_2_7_1,gus_dbw:814_2_7_1:7,M,PL;VOIV,,rate,up,ready,"index, same month a year earlier = 100, constant prices"
 industrial_production,economy,M,,gus_bdl,P2692,,Q,PL;VOIV,nace,rate,up,needs-block,BDL quarterly by voivodeship in Silver; not activated

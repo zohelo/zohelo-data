@@ -279,6 +279,34 @@
     ) as t (entity, item_code, element_code, block_name)
 {% endmacro %}
 
+{# ECB Data Portal blocks: one per landed selection (ingestion/sources/ecb.yaml entity). currencies: the EXR
+   currencies built (EU members outside the euro area and the main world currencies); empty for other flows. #}
+{% macro poc_ecb_blocks() %}
+    select * from (
+        values
+        ('exr_daily', 'ECB euro reference exchange rates, daily', 'PLN,CZK,HUF,RON,SEK,DKK,BGN,USD,GBP,CHF,JPY,CNY,NOK'),
+        ('exr_monthly', 'ECB euro reference exchange rates, monthly average', 'PLN,CZK,HUF,RON,SEK,DKK,BGN,USD,GBP,CHF,JPY,CNY,NOK'),
+        ('fm_key_rates', 'Key ECB interest rates (date of changes)', ''),
+        ('est_estr', 'Euro short-term rate (EUR STR)', ''),
+        ('icp_annual_rate', 'HICP annual rate of change (ICP, discontinued after 2025-12)', ''),
+        ('hicp_annual_rate', 'HICP annual rate of change (HICP, COICOP 2018)', ''),
+        ('irs_long_term', 'Long-term interest rates for convergence purposes (10-year)', ''),
+        ('bsi_monetary_aggregates', 'Euro area monetary aggregates M1, M2, M3', '')
+    ) as t (entity, block_name, currencies)
+{% endmacro %}
+
+{# ECB area codes → Gold area (poc_map_geography section ecb; static, so Gold does not depend on ECB Silver
+   existing). Countries are ISO two-letter codes and map by themselves; these are the aggregates (TITLE_COMPL in
+   silver.ecb_observations, Dev trial 43088143150). I8/I9 use the keys Eurostat's EA19/EA20 have today
+   (NUTS:EA19, NUTS:EA20). I10 (euro area 21) and V5 have no Gold area yet. #}
+{% macro poc_ecb_areas() %}
+    select * from (
+        values
+        ('U2', 'EUROSTAT:EA'), ('I8', 'NUTS:EA19'), ('I9', 'NUTS:EA20'), ('B6', 'EUROSTAT:EU27_2020'),
+        ('B0', 'EUROSTAT:EU'), ('D0', 'EUROSTAT:EU')
+    ) as t (area_code, candidate_key)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -359,6 +387,7 @@
     poc_build_who:who
     poc_build_unesco_uis:unesco_uis
     poc_build_faostat:faostat
+    poc_build_ecb:ecb
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -437,6 +466,8 @@
     select 'unesco_uis', entity, block_name from ({{ poc_unesco_uis_blocks() }})
     union all
     select 'faostat', entity || ':' || item_code || '.' || element_code, block_name from ({{ poc_faostat_blocks() }})
+    union all
+    select 'ecb', entity, block_name from ({{ poc_ecb_blocks() }})
     union all
     select * from (
         values
