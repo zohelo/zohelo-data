@@ -8564,80 +8564,160 @@ sources:
   name: Industrial-property statistical APIs
   short_name: UPRP industrial-property statistics
   provider: Patent Office of the Republic of Poland (UPRP)
-  status: registered
+  status: parked
   family: B
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [innovation, intellectual-property]
   entities: [region, applicant-aggregate]
-  granularity: Published aggregate by origin, entity type or voivodeship and measure.
-  coverage: Dataset-specific; complete temporal bounds not established.
+  granularity: 'Ten published aggregates: applications and grants of inventions and utility models by origin (domestic,
+    foreign), by type of domestic applicant and by voivodeship; trademark and industrial-design applications and grants
+    by origin. Periods and measures inside the endpoints were not read.'
+  coverage: 'Not established: the endpoints were not read (robots.txt). The annual report, the only other publication of
+    the same statistics, exists as PDF for 2003 to 2025.'
   access:
     endpoint: https://uprp.gov.pl/pl/o-urzedzie/statystyki/api-do-statystyk
     kind: api
-    interfaces: [API-index]
-    auth: Official page links statistical endpoints; endpoint authentication not tested.
-    cost: Public documentation; production access conditions to confirm.
-    limits: Not stated in reviewed index.
+    interfaces: [API, HTML-iframe-charts, PDF]
+    auth: 'Not established: no endpoint was requested. The index page names no key or account.'
+    cost: free
+    limits: 'None documented: the index page has only the ten titles and links. The host of all ten endpoints,
+      statystyka.pue.uprp.gov.pl, publishes robots.txt "User-agent: *" / "Disallow: /", so no automated request is
+      allowed there.'
   licence:
     status: unresolved
-    notes: No dataset-specific redistribution grant established from the API index.
-  updates: Period statistics; revision cadence not established.
+    notes: 'Terms: https://uprp.gov.pl/pl/warunki-korzystania-z-portalu-informacyjnego-urzedu-patentowego-rp-i-platformy-uslug-elektronicznych-urzedu-patentowego-rp
+      ("Warunki korzystania z Portalu Informacyjnego Urzędu Patentowego RP i Platformy Usług Elektronicznych Urzędu
+      Patentowego RP", "Data publikacji: 12.09.2023 r. wersja 3.0."; they cover uprp.gov.pl and "ich subdomen
+      *.uprp.gov.pl", read in full on 12 Nov 2026). They do not address reuse: no sentence on reusing content or data,
+      no attribution sentence, commercial reuse not stated, modification not stated. What they say: "Korzystanie z PI i
+      PUEUP jest bezpłatne.", "Użytkownik korzysta z zasobów PI i PUEUP na własną odpowiedzialność." and "W sprawach
+      nieuregulowanych w niniejszych Warunkach Korzystania zastosowanie mają obowiązujące przepisy prawa." The page
+      "Zasady udostępniania danych statystycznych" (https://uprp.gov.pl/pl/o-urzedzie/statystyki/zasady-udostepniania-danych-statystycznych)
+      gives no reuse terms either; requests for other compilations "są rozpatrywane zgodnie z przepisami Ustawy o dostępie
+      do informacji publicznej". No licence is claimed; the source stays internal. No owner decision exists on these
+      terms; the owner question is in research.blockers.'
+  updates: 'Not established. The annual report is yearly (the 2025 edition sits in a folder dated 2026-08).'
   ingestion:
-    history: 'Proposal: inventory eight linked measure families, then bounded period/category retrieval.'
-    incremental: 'Proposal: compare metadata and re-read recent/revised periods; no confirmed change feed.'
-    identifiers: Measure, period, geography, applicant origin/type; map regions with dated crosswalks.
+    history: 'No route. The index page links ten endpoints, https://statystyka.pue.uprp.gov.pl/team/uprp/<name> with
+      <name> = zgl_kraj_zag, zgl_rodz_pod, zgl_woj, udziel_kraj_zag, udziel_rodz_pod, udziel_woj, zt_zgl_kraj_zag,
+      zt_udz_kraj_zag, wp_zgl_kraj_zag, wp_udz_kraj_zag, and documents nothing about them (no parameters, formats or
+      periods). That host disallows all robots, so format, size, history and limits are unread. The statistics module
+      pages on uprp.gov.pl show the same tables only as iframes from the same host (/?module=Embed&OBJID=...): no
+      HTML table and no file. The annual reports are PDF only ("Raport dostępny jest wyłącznie w formie elektronicznej,
+      w postaci plików PDF."), 2003 to 2025, which the pipeline does not read as tables.'
+    incremental: None proposed while parked.
+    identifiers: 'Endpoint name (the ten above), period, voivodeship, applicant origin and type. UPRP takes seat and
+      type of the first applicant from REGON ("pozyskiwane są z rejestru REGON, a w przypadku braku numeru REGON,
+      ustalane na podstawie nazwy i kodu pocztowego").'
   modelling:
-    notes: Statistical facts; applications, grants and rights are distinct events.
-    overlap: UPRP records and WIPO/EPO aggregates can share underlying applications; do not sum providers.
+    notes: 'If the route opens: counts in single units for Poland and voivodeships; the frequencies are unknown
+      (endpoints unread; the annual report is yearly). Smallest Gold selection: patent applications and patents granted to
+      domestic applicants, Poland and the 16 voivodeships, then trademark and design applications for Poland; new KPIs
+      in the innovation group, none of them in kpi.csv today (no published KPI overlaps). Applications, grants and
+      rights are distinct events and are counted by different dates (filing date, date the right number is assigned).
+      Suppression markers, revisions and duplicate keys are unknown (endpoints unread). Effort S once readable.'
+    overlap: 'UPRP says it passes its survey results to GUS ("dane wynikowe są przekazywane do Głównego Urzędu
+      Statystycznego"); whether GUS BDL (PLS-001) carries patents by voivodeship was not checked here (unverified).
+      WIPO IP Statistics (GL-032, parked) is the international source of country totals (not re-read here); do not
+      sum providers.'
   research:
     priority: review-next
-    evidence: documented
+    evidence: tested
     connection: not-tested
     blockers:
-    - Confirm formats, periods and reuse conditions
+    - 'Parked: no route the platform may use. All ten API endpoints and the chart embeds are on
+      statystyka.pue.uprp.gov.pl, whose robots.txt is "User-agent: *" / "Disallow: /" (Dev probe run 43287937228, job 131426191655, branch
+      test/src-ex-probe, 12 Nov 2026); the probe honoured it and requested nothing on that host. The only other
+      publication is the annual report in PDF. Reuse terms are not stated (licence unresolved).'
+    - 'Owner question (optional; EX-001 stays parked without an answer): UPRP publishes an "API do statystyk" but its
+      host forbids all robots and the portal terms say nothing about reuse. Do you want to send UPRP
+      (Centrum.Kontaktowe@uprp.gov.pl) a request, drafted for you, asking (1) whether a program may read the ten API
+      endpoints once a month and (2) under what terms the statistics may be republished with the attribution "Źródło:
+      Urząd Patentowy RP"?'
+    - 'Not checked: whether GUS BDL already holds patents and utility models by voivodeship (the cheaper route if it
+      does).'
     references:
     - https://uprp.gov.pl/pl/o-urzedzie/statystyki/api-do-statystyk
+    - https://statystyka.pue.uprp.gov.pl/robots.txt
+    - https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny
+    - https://uprp.gov.pl/pl/o-urzedzie/statystyki/zasady-udostepniania-danych-statystycznych
+    - https://uprp.gov.pl/pl/o-urzedzie/statystyki/metodologia-i-slownik-pojec
+    - https://uprp.gov.pl/pl/publikacje/raport-roczny-uprp
+    - https://uprp.gov.pl/pl/warunki-korzystania-z-portalu-informacyjnego-urzedu-patentowego-rp-i-platformy-uslug-elektronicznych-urzedu-patentowego-rp
 - id: EX-002
   name: e-Wyszukiwarka industrial-property search
   short_name: UPRP e-Wyszukiwarka
   provider: Patent Office of the Republic of Poland (UPRP)
-  status: registered
+  status: parked
   family: E
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [innovation, intellectual-property]
   entities: [patent, trademark, industrial-design, applicant]
-  granularity: Public industrial-property records and BUP/WUP publication results.
-  coverage: Collection-dependent; full machine-readable backfile not established.
+  granularity: One record per published application or exclusive right (inventions, utility models, trademarks,
+    industrial designs), from the UPRP domain systems and the BUP and WUP publications.
+  coverage: 'Not established: no record was read. UPRP describes the service as covering "opublikowanych zgłoszeń i
+    udzielonych praw wyłącznych na wszystkie przedmioty własności przemysłowej".'
   access:
     endpoint: https://uprp.gov.pl/pl/uslugi-online/e-wyszukiwarka
     kind: web
-    interfaces: [web-search, publication-documents]
-    auth: Public search described; e-Profile supports search subscriptions.
-    cost: Public discovery; bulk conditions unresolved.
-    limits: No bulk/API quota established.
+    interfaces: [web-search-JavaScript-app]
+    auth: Public search in a browser; a PUEUP account (e-Profil) only for search subscriptions.
+    cost: free
+    limits: 'None documented. The search application https://ewyszukiwarka.pue.uprp.gov.pl is a JavaScript application
+      behind Imperva/Incapsula bot protection: its search address answered a GitHub runner with a 212-byte challenge
+      page, and its pages carry a hidden trap link for robots. Its robots.txt address returns the application page, not
+      rules.'
   licence:
     status: unresolved
-    notes: Search availability does not establish bulk redistribution rights.
-  updates: Source search/publication changes; exact feed semantics unverified.
+    notes: 'Terms: https://uprp.gov.pl/pl/warunki-korzystania-z-portalu-informacyjnego-urzedu-patentowego-rp-i-platformy-uslug-elektronicznych-urzedu-patentowego-rp
+      ("Data publikacji: 12.09.2023 r. wersja 3.0."; they cover uprp.gov.pl and "ich subdomen *.uprp.gov.pl", so the
+      search application too; read in full on 12 Nov 2026). They do not address reuse: no attribution sentence,
+      commercial reuse not stated, modification not stated, bulk or automated reading not mentioned. Relevant wording:
+      "Użytkownik korzysta z zasobów PI i PUEUP na własną odpowiedzialność." and "Użytkownik obowiązany jest do
+      zachowania poufności pozyskanych danych, w szczególności w sytuacji pozyskania danych bez tytułu prawnego." Unit
+      data beyond the search go by request: "Wnioski są rozpatrywane zgodnie z przepisami Ustawy o dostępie do informacji
+      publicznej" (https://uprp.gov.pl/pl/o-urzedzie/statystyki/zasady-udostepniania-danych-statystycznych). Records
+      name applicants, right holders and inventors (personal data of natural persons). No licence is claimed; no owner
+      decision exists on these terms.'
+  updates: 'Not established (no feed or change list was found on the pages read).'
   ingestion:
-    history: 'Proposal: seek documented export/licensed bulk before entity-level backfill.'
-    incremental: 'Proposal: use authorized publication/discovery route if available; no inferred crawler permission.'
-    identifiers: Official application/publication numbers and versioned classification codes; applicants need identity
-      resolution.
+    history: 'No machine route. UPRP calls the search "podstawowe źródło danych jednostkowych udostępnianych podmiotom
+      zewnętrznym"; the pages read offer no export, bulk file or documented API for it. A host api.uprp.gov.pl exists
+      (page title "PUEUP API Zewnętrzne") but is the same kind of JavaScript application behind the same bot protection
+      and no UPRP page read links or documents it, so its content and terms are unknown. Other unit data only on
+      request to UPRP, limited to: number and date of the application or right, title, BUP/WUP number and date, name,
+      city and country of the applicant, holder or inventor, classification symbol.'
+    incremental: None proposed while parked.
+    identifiers: Application number, right number, BUP/WUP publication number and date, classification symbol;
+      applicants would need REGON or another official identifier, never a name match.
   modelling:
-    notes: Separate application, publication, legal-status and applicant bridges; no entity matching by name alone.
-    overlap: EPO/WIPO may contain related family records; patent families differ from individual publications.
+    notes: 'kpi false and no Gold use today: a register of rights would be an entity table keyed by application number,
+      with applicants linked by an official identifier that the public record does not give. Counts of applications and
+      grants belong to EX-001, not here. Effort L if a route ever opens.'
+    overlap: EPO Open Patent Services (EX-004) and WIPO hold related records of Polish applications; patent families
+      differ from individual publications.
   research:
     priority: conditional
-    evidence: documented
-    connection: not-tested
-    blockers: [Automated/bulk access route, Reuse and applicant-field review]
+    evidence: tested
+    connection: tested
+    blockers:
+    - 'Parked: web-only source behind bot protection, which is never worked around. Dev probe run 43287937228 (job
+      131426191655, branch test/src-ex-probe, 12 Nov 2026): https://ewyszukiwarka.pue.uprp.gov.pl/search/simple-search?lng=pl answered 200 with a 212-byte Incapsula challenge page
+      and no content; pue.uprp.gov.pl, ebazawiedzy.pue.uprp.gov.pl and api.uprp.gov.pl answered the same way or as
+      empty JavaScript shells. No export, bulk file or documented API on the UPRP pages read; reuse terms not stated;
+      kpi false.'
+    - 'Owner option (not needed for any KPI): a request to UPRP under the access to public information act for a bulk
+      extract of published applications and rights, or for the documentation and terms of api.uprp.gov.pl.'
     references:
     - https://uprp.gov.pl/pl/uslugi-online/e-wyszukiwarka
+    - https://uprp.gov.pl/pl/wyszukiwarki
+    - https://ewyszukiwarka.pue.uprp.gov.pl/
+    - https://uprp.gov.pl/pl/o-urzedzie/statystyki/zasady-udostepniania-danych-statystycznych
+    - https://uprp.gov.pl/pl/warunki-korzystania-z-portalu-informacyjnego-urzedu-patentowego-rp-i-platformy-uslug-elektronicznych-urzedu-patentowego-rp
 - id: EX-003
   name: Fire-service intervention statistics and current casualty summaries
   short_name: PSP fire-service statistics
