@@ -1,7 +1,7 @@
 """Dev trial (CD-014 Companies House, #1502): Landing → Bronze → Silver → Gold into scratch.
 
-Landing load of the one-file ZIP into the Landing prefix zz_dev_companies_house/ (twice: the second downloads the
-file again and must write nothing), the entity loader into Iceberg namespace zz_dev_companies_house and lake
+Landing load of the one-file ZIP into the Landing prefix zz_dev_companies_house/ (twice: the second must see the
+receipt and neither download nor write), the entity loader into Iceberg namespace zz_dev_companies_house and lake
 prefix zz_dev_companies_house/ (twice: the second must find everything current), verify, a profile of Bronze and
 Silver, the two Gold models rendered with Jinja from warehouse/models in DuckDB (built twice) with the dbt tests'
 checks, and a synthetic second snapshot (the real counts file copied under the next month's date) to show that
@@ -23,6 +23,7 @@ from ingestion.common import entity_tables as et
 from ingestion.common import report
 from ingestion.common.r2 import catalog, req, s3
 from ingestion.to_bronze.companies_house import entities
+from ingestion.to_landing import companies_house as landing
 from ingestion.to_landing.patterns import bulk_file
 from warehouse import entity
 
@@ -66,7 +67,7 @@ def trial() -> None:  # noqa: PLR0915
     landing_runs = []
     for mode in ("inspect", "load", "load", "inspect", "verify"):
         captured.clear()
-        code = bulk_file.main(SOURCE, mode, landing_root=SCRATCH)
+        code = landing.extract(landing_root=SCRATCH) if mode == "load" else bulk_file.main(SOURCE, mode, landing_root=SCRATCH)
         files = [c["data"]["files"][0] for c in captured if "files" in c["data"]]
         held = objects(client, "STORAGE_LANDING_BUCKET_NAME")
         landing_runs.append({"mode": mode, "exit": code, "file": files[0] if files else None, "objects": len(held),
@@ -114,6 +115,7 @@ def trial() -> None:  # noqa: PLR0915
         "origin_top": q(con, "select country_of_origin, count(*) from b group by 1 order by 2 desc limit 6"),
         "status": q(con, "select company_status, count(*) from b group by 1 order by 2 desc"),
         "categories": q(con, "select count(distinct company_category) from b"),
+        "address_poland_by_origin": q(con, "select country_of_origin, count(*) from b where address_country ilike '%POLAND%' or address_country ilike 'POLSKA' group by 1 order by 2 desc limit 8"),
         "provenance": q(con, "select count(distinct raw_sha256), count(distinct source_version), count(*) filter (where raw_sha256 is null) from b")})
     counts, poland = entities.COUNTS, entities.POLAND
     annotate("notice", "companies_house trial: silver snapshot_counts", {
