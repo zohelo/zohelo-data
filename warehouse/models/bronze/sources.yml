@@ -618,3 +618,33 @@ sources:
       of the newest copy of each edition (entity <prefix>_<year>); partitioned by entity.
   - name: gus_tourism_rejected_files
     description: Edition files of gus_tourism the Bronze decoder rejected, with the reason.
+- name: gus_nsp2021
+  description: GUS NSP 2021 census (register PLS-005), final-results table workbooks
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gus_nsp2021/
+    loaded_by: ingestion/to_bronze/gus_nsp2021/
+    config: ingestion/sources/gus_nsp2021.yaml
+  tables:
+  - name: gus_nsp2021_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of the newest copy of each
+      declared workbook (entity = theme); partitioned by entity.
+  - name: gus_nsp2021_rejected_files
+    description: Workbooks of gus_nsp2021 the Bronze decoder rejected, with the reason.
+- name: gus_psr2020
+  description: GUS PSR 2020 agricultural census (register PLS-006), table workbooks
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gus_psr2020/
+    loaded_by: ingestion/to_bronze/gus_psr2020/
+    config: ingestion/sources/gus_psr2020.yaml
+  tables:
+  - name: gus_psr2020_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of the newest copy of each
+      declared workbook (entity = theme); partitioned by entity.
+  - name: gus_psr2020_rejected_files
+    description: Workbooks of gus_psr2020 the Bronze decoder rejected, with the reason.

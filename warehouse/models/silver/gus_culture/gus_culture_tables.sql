@@ -16,7 +16,7 @@
     {'table': 'cinema_admissions', 'title': 'Widzowie w kinach (?-i:[A-Z])', 'measure': 'cinema_admissions',
      'header': '(^|\\| )Ogółem Grand total( \\| ogółem grand total)?$', 'unit': 'persons'},
     {'table': 'cinemas', 'title': 'Kina i miejsca w kinach stałych (Stan|Cinemas|Powrót)', 'measure': 'cinemas',
-     'header': '(^|\\| )(Kina\\b.*\\| ogółem|Ogółem Grand total$)', 'unit': 'facilities'},
+     'header': '^Ogółem Grand total$|(^|\\| )Kina\\b[^|]*\\| ogółem', 'unit': 'facilities'},
     {'table': 'library_users',
      'title': 'Czytelnicy i wypożyczenia na zewnątrz w bibliotekach publicznych( w [0-9]{4} r\\.)? (?-i:[A-Z])',
      'measure': 'library_users', 'header': '(^|\\| )Czytelnicy\\b.*\\| ogółem', 'unit': 'persons'},

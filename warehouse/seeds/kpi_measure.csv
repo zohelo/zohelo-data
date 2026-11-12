@@ -176,3 +176,6 @@ tourist_overnight_stays,gus_tourism,gus_tourism:accommodation:overnight_stays:ov
 tourist_bed_places,gus_tourism,gus_tourism:accommodation:bed_places:bed_places,"GUS Turystyka, 31 July, Poland and voivodeships",1,
 museum_visiting_share,gus_culture_participation,gus_culture_participation:participation:pct_population:museum_visiting,"GUS survey, museums in Poland, past 12 months, by sex",1,
 theatre_attendance_share,gus_culture_participation,gus_culture_participation:participation:pct_population:theatre_attendance,"GUS survey, past 12 months, by sex",1,
+urban_population_share,gus_nsp2021,gus_nsp2021:census_2021:pct_population:urban_share,"NSP 2021, 31 March 2021, Poland and voivodeships",1,
+agricultural_holdings,gus_psr2020,gus_psr2020:agricultural_census_2020:farms:farms,"PSR 2010 and 2020, Poland and voivodeships",1,
+average_farm_area,gus_psr2020,gus_psr2020:agricultural_census_2020:ha:average_agricultural_land,"PSR 2020, Poland and voivodeships",1,

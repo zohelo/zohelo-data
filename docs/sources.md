@@ -872,3 +872,16 @@ admissions, public library users and public libraries by voivodeship (culture); 
 theatre in % of persons 15+, by sex (participation). Gold blocks `culture_institutions`, `accommodation`,
 `participation` (annual); KPIs draft. Monthly schedule (6th). Licence: GUS terms (source given; commercial reuse not
 addressed; no named licence, D23).
+
+## GUS census tables: NSP 2021 and PSR 2020 (`gus_nsp2021`, `gus_psr2020`)
+
+**Built (12 Nov 2026, register PLS-005, PLS-006).** One-off censuses: the final-results pages link one XLSX of tables
+per theme at fixed `/download/` URLs, declared as files of the shared `bulk_file` pattern (no extractor code): NSP 2021
+themes `ludnosc_stan_struktura`, `warunki_mieszkaniowe`, `rynek_pracy`; PSR 2020 `charakterystyka_cz2` (tables by
+voivodeship). Entity = one workbook, version = download time when the SHA-256 changed, restart unit one file. Bronze
+`bronze.<source>_cells` (`ingestion/common/gus_publications.py`); Silver `silver.<source>_tables` with the curated
+tables found by title and header (`warehouse/macros/gus_tables.sql`): population 2011 and 2021 (total, urban, rural,
+urban share), census activity, employment and unemployment rates; holdings 2010 and 2020, agricultural land, average
+agricultural land per holding, cattle, pigs, by voivodeship. Gold blocks `census_2021`, `agricultural_census_2020`
+(annual, the census year as period); census values are benchmarks and are not added to the population or unemployment
+KPIs. Quarterly check. Licence: GUS terms (source given; commercial reuse not addressed).

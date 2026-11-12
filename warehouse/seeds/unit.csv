@@ -42,3 +42,6 @@ thousand_ha,tys. ha,thousand hectares,tysiące hektarów,false
 facilities,ob.,facilities,obiekty,false
 bed_places,miejsca,bed places,miejsca noclegowe,false
 overnight_stays,nocl.,overnight stays,noclegi,false
+farms,gosp.,agricultural holdings,gospodarstwa rolne,false
+ha,ha,hectares,hektary,false
+heads,szt.,heads,sztuki,false

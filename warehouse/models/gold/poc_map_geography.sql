@@ -186,7 +186,7 @@ mrpips as (
         'PL' as geography_key
 ),
 
--- GUS publication tables (culture, participation in culture, tourism): areas by name as printed (lower case);
+-- GUS publication tables (culture, participation in culture, tourism, NSP 2021, PSR 2020): areas by name as printed (lower case);
 -- matched to the TERYT voivodeship names, 'polska' = Poland.
 gus_publications as (
     select
@@ -194,13 +194,13 @@ gus_publications as (
         lower(w.name_u) as source_code,
         'TERC:' || w.terc_code as geography_key
     from terc_woj as w
-    cross join (values ('gus_culture'), ('gus_culture_participation'), ('gus_tourism')) as s (source_system)
+    cross join (values ('gus_culture'), ('gus_culture_participation'), ('gus_tourism'), ('gus_nsp2021'), ('gus_psr2020')) as s (source_system)
     union all
     select
         s.source_system,
         'polska' as source_code,
         'PL' as geography_key
-    from (values ('gus_culture'), ('gus_culture_participation'), ('gus_tourism')) as s (source_system)
+    from (values ('gus_culture'), ('gus_culture_participation'), ('gus_tourism'), ('gus_nsp2021'), ('gus_psr2020')) as s (source_system)
 ),
 
 wdi as (

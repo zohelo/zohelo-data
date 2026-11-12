@@ -50,6 +50,8 @@ SOURCES = (
     "gus_culture",
     "gus_culture_participation",
     "gus_tourism",
+    "gus_nsp2021",
+    "gus_psr2020",
     "mrpips_unemployment",
 )
 # Accumulating sources (every landed copy stays in Bronze, docs/topics.md): no latest-only gate.
