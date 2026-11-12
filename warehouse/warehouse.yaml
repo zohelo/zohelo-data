@@ -117,12 +117,12 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   budget_execution: {rows: 2800}  # 1,845 (Dev trial 43099813876), 2018-2026, ~200 a year
   krus_benefits: {rows: 900}  # 576 (Dev trial 43099813876), quarters and years since 2020
   mf_jst_budget_summary: {rows: 32000}  # 21,263 rows, 2022 Q1 - 2026 Q1 (Dev trial 43162316724)
-  gus_culture_tables: {rows: 1000}  # 595 rows, 7 editions 2019-2025 x 85 (Dev trial TRIAL1)
-  gus_culture_participation_tables: {rows: 50}  # 18 rows, editions 2019 and 2024 (Dev trial TRIAL1)
-  gus_tourism_tables: {rows: 750}  # 476 rows, 7 editions 2019-2025 x 68 (Dev trial TRIAL1)
-  poc_build_gus_culture: {rows: 1000}  # 595 (Dev trial TRIAL1)
-  poc_build_gus_culture_participation: {rows: 50}  # 18 (Dev trial TRIAL1)
-  poc_build_gus_tourism: {rows: 750}  # 476 (Dev trial TRIAL1)
+  gus_culture_tables: {rows: 1000}  # 595 rows, 7 editions 2019-2025 x 85 (Dev trial 43288102198)
+  gus_culture_participation_tables: {rows: 50}  # 18 rows, editions 2019 and 2024 (Dev trial 43288102198)
+  gus_tourism_tables: {rows: 750}  # 476 rows, 7 editions 2019-2025 x 68 (Dev trial 43288102198)
+  poc_build_gus_culture: {rows: 1000}  # 595 (Dev trial 43288102198)
+  poc_build_gus_culture_participation: {rows: 50}  # 18 (Dev trial 43288102198)
+  poc_build_gus_tourism: {rows: 750}  # 476 (Dev trial 43288102198)
   poc_metrics_museum_visitors: {rows: 200}  # 119: 17 areas x 7 years
   poc_metrics_cinema_admissions: {rows: 200}  # 119
   poc_metrics_public_library_users: {rows: 200}  # 119
