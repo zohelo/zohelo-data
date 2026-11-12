@@ -1,0 +1,28 @@
+version: 2
+models:
+  - name: gem_observations
+    description: >-
+      World Bank Global Economic Monitor (CC BY 4.0) from bronze.gem_observations: the declared series (CPI % y-o-y
+      and index, core CPI, industrial production, unemployment rate, retail sales volume, LCU per US$, real GDP) for
+      the EU27 members, every period the API returns (annual, quarterly, monthly codes, frequency A/Q/M). Grain:
+      series_code × country_code × time_code. Annual rows of the current year (and quarterly rows of an unfinished
+      year) are GEM's partial-year values as published; Gold builds one frequency per series (monthly, real GDP
+      quarterly), so those annual rows stay in Silver only. tests/world_bank_gem_series.sql checks that every landed
+      series is a Gold block of poc_world_bank_gem_series and the reverse.
+    tests:
+      - unique:
+          column_name: "series_code || '|' || country_code || '|' || time_code"
+    columns:
+      - name: series_code
+        tests: [not_null]
+      - name: country_code
+        tests: [not_null]
+      - name: time_code
+        tests: [not_null]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: ['A', 'Q', 'M']}}}]
+      - name: period_start
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source answer (lineage to Landing/Archive).
+        tests: [not_null]
