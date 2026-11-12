@@ -80,7 +80,7 @@ strings in ISO 8601 UTC.
 | licences[].commercial_ok | boolean | yes | commercial use allowed |
 
 v1 files (latest.json, series.parquet, catalog.json) leave out the sources in `V2_ONLY_SOURCES` of
-`warehouse/publish.py` (ECB): they reach contract v2 only, so a new source never changes what zohelo.com shows first.
+`warehouse/publish.py` (ECB, BIS, ILOSTAT, UNDP HDR, UNdata, UNECE): they reach contract v2 only, so a new source never changes what zohelo.com shows first.
 
 `warehouse/publish.py` writes it (`kpi_entry`, `catalog_json`) with one `kpis` entry per published KPI that has a
 `gold.metrics_<kpi_key>` table, computed from that KPI's series.parquet rows: `source_keys` and `geo_levels`
@@ -580,7 +580,7 @@ v2 keys by their best source status:
 | Polska w skrócie | 31 | 1 | 0 | 32 |
 | all 79 keys | 72 | 6 | 1 | 79 |
 
-Rows by source (162 rows; 41 keys have two or more ready sources):
+Rows by source (188 rows; 42 keys have two or more ready sources):
 
 | source | ready | needs-block | needs-source | rows |
 |---|---|---|---|---|
@@ -588,18 +588,27 @@ Rows by source (162 rows; 41 keys have two or more ready sources):
 | gus_bdl | 23 | 2 | 0 | 25 |
 | gus_dbw | 22 | 3 | 0 | 25 |
 | world_bank_wdi | 23 | 1 | 0 | 24 |
+| ilostat | 5 | 0 | 0 | 5 |
+| unece | 5 | 0 | 0 | 5 |
 | nbp_bop | 2 | 2 | 0 | 4 |
 | un_wpp | 0 | 4 | 0 | 4 |
 | ecb | 2 | 1 | 0 | 3 |
+| gus_culture | 3 | 0 | 0 | 3 |
+| gus_tourism | 3 | 0 | 0 | 3 |
 | nbp | 1 | 0 | 2 | 3 |
+| undata | 3 | 0 | 0 | 3 |
+| world_bank_edstats | 3 | 0 | 0 | 3 |
+| gus_culture_participation | 2 | 0 | 0 | 2 |
 | mrpips_unemployment | 2 | 0 | 0 | 2 |
 | unctad | 2 | 0 | 0 | 2 |
 | unesco_uis | 0 | 2 | 0 | 2 |
+| bis | 1 | 0 | 0 | 1 |
 | eea | 1 | 0 | 0 | 1 |
 | faostat | 1 | 0 | 0 | 1 |
 | mf_public_debt | 1 | 0 | 0 | 1 |
 | nbp_interest_rates | 1 | 0 | 0 | 1 |
 | oecd | 1 | 0 | 0 | 1 |
+| undp_hdr | 1 | 0 | 0 | 1 |
 | unhcr | 1 | 0 | 0 | 1 |
 | who | 1 | 0 | 0 | 1 |
 | world_bank_gem | 1 | 0 | 0 | 1 |
