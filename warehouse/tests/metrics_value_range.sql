@@ -41,6 +41,8 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('urban_population_share', 'gus_nsp2021', '%', 0, 100),
     ('agricultural_holdings', 'gus_psr2020', '%', 0, 3e6),
     ('average_farm_area', 'gus_psr2020', '%', 0, 100),
+    -- MRPiPS-03 (#2910): persons granted social assistance, PL 2019 = 1,205,506 (Dev trial 43293740538)
+    ('social_assistance_recipients', 'mrpips_social_assistance', '%', 0, 1e7),
     ('inflation', 'eurostat', '%', -100, 3000),
     ('inflation', 'world_bank_wdi', '%', -100, 100000),
     ('unemployment_rate', 'eurostat', '%', 0, 60),
@@ -456,6 +458,15 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_external_debt_service') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_social_assistance_recipients') }}
 )
 
 select

@@ -234,3 +234,4 @@ theatre_attendance_share,gus_culture_participation,gus_culture_participation:par
 urban_population_share,gus_nsp2021,gus_nsp2021:census_2021:pct_population:urban_share,"NSP 2021, 31 March 2021, Poland and voivodeships",1,
 agricultural_holdings,gus_psr2020,gus_psr2020:agricultural_census_2020:farms:farms,"PSR 2010 and 2020, Poland and voivodeships",1,
 average_farm_area,gus_psr2020,gus_psr2020:agricultural_census_2020:ha_per_holding:average_agricultural_land,"PSR 2020, Poland and voivodeships",1,
+social_assistance_recipients,mrpips_social_assistance,mrpips_social_assistance:social_assistance:persons:persons_granted,"MRPiPS-03 DZIAŁ 2 row 1, Poland and voivodeships",1,

@@ -184,3 +184,5 @@ gus_psr2020,heads,,heads
 gus_psr2020,ha_per_holding,,ha_per_holding
 world_bank_icp,PCAP.PP,,ppp_usd_per_person
 world_bank_icp,PX.WL,,index_world_100
+mrpips_social_assistance,persons,,persons
+mrpips_social_assistance,families,,families
