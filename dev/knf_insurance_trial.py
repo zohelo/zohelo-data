@@ -151,7 +151,15 @@ def main() -> None:
     summary: dict = {"head": head}
     con = duckdb.connect()
     try:
-        summary["landing_exit"] = [landing.extract(60, landing_root=LANDING) for _ in (1, 2)]
+        exits, resumed = [], []
+        for attempt in range(3):  # a transient R2 error mid-run: the next extract resumes from Landing
+            try:
+                exits.append(landing.extract(60, landing_root=LANDING))
+                break
+            except Exception as exc:
+                resumed.append(str(exc)[:160])
+        exits.append(landing.extract(60, landing_root=LANDING))  # idempotency: must land nothing
+        summary["landing_exit"], summary["landing_resumed_after"] = exits, resumed
         held = sorted(landing.held_entities(LANDING))
         receipts = [r for e in held for r in bulk_file.landed(client, req("STORAGE_LANDING_BUCKET_NAME"), bulk_file.prefix(landing.SOURCE, e, LANDING))]
         summary["landing_files"] = len(receipts)
