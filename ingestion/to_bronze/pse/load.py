@@ -13,10 +13,12 @@ not one listing per entity.
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
 import tempfile
+import time
 from typing import Any
 
 import pyarrow as pa
@@ -40,6 +42,7 @@ VALUE_FIELDS = {
     ],
 }  # fmt: skip
 TABLES = {"rce_pln": "pse_rce_pln", "his_wlk_cal": "pse_his_wlk_cal"}
+WORKERS = 6
 
 
 def columns(report: str) -> list[tuple[str, str]]:
@@ -83,8 +86,25 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
     return pa.Table.from_pylist(rows, schema=bulk_bronze.arrow_schema(columns(report)))
 
 
+def read_raw(client: Any, bucket: str, receipt: dict[str, Any], attempts: int = 6) -> bytes:
+    """The Landing file's bytes (bulk_bronze.read_raw), waiting out R2 throttling with backoff: R2 answered
+    ServiceUnavailable "Reduce your rate of simultaneous reads" during the first trial's Bronze load."""
+    from botocore.exceptions import ClientError
+
+    for attempt in range(attempts):
+        try:
+            return bulk_bronze.read_raw(client, bucket, SOURCE, receipt)
+        except ClientError as exc:
+            code = str(exc.response.get("Error", {}).get("Code", ""))
+            if code not in {"ServiceUnavailable", "SlowDown", "InternalError", "503"} or attempt == attempts - 1:
+                raise
+            time.sleep(2 * 2**attempt)
+    raise RuntimeError("unreachable")
+
+
 def load(budget_minutes: float, landing_root: str = "01_landing", namespace: str = "bronze") -> int:
-    """budget_minutes is unused: the history is about 1,800 files of 25-50 KB, a day adds two."""
+    """budget_minutes is unused: the history is about 1,800 files of 25-50 KB, a day adds two. Files are read,
+    decoded and written by WORKERS threads (R2 round trips, not CPU, bound the history load); one commit per table."""
     client, cat = s3(), bf.retry(catalog, "catalog")
     lake, landing_bucket = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
     lake_root = "02_bronze" if namespace == "bronze" else namespace
@@ -100,30 +120,36 @@ def load(budget_minutes: float, landing_root: str = "01_landing", namespace: str
         )
         done = bf.loaded_hashes(table) | rejected_before
         todo = [r for r in receipts if report_of(r["entity"]) == report and r["sha256"] not in done]
-        uris, rows_added = [], 0
         with tempfile.TemporaryDirectory(prefix=f"zohelo-{SOURCE}-bronze-") as temporary:
-            for receipt in todo:
-                body = bulk_bronze.read_raw(client, landing_bucket, SOURCE, receipt)
+
+            def one(receipt: dict[str, Any], report: str = report, temporary: str = temporary) -> dict[str, Any]:
+                body = read_raw(client, landing_bucket, receipt)
                 try:
                     rows = decode(body, receipt)
                 except (ValueError, KeyError, TypeError, UnicodeDecodeError) as exc:
-                    rejected.append(
-                        {
+                    return {
+                        "rejected": {
                             "entity": receipt["entity"],
                             "raw_sha256": receipt["sha256"],
                             "landing_key": receipt["object"]["key"],
                             "error": f"{type(exc).__name__}: {exc}"[:1000],
                             "code_sha": os.environ.get("GITHUB_SHA", ""),
                         }
-                    )
-                    continue
+                    }
                 path = Path(temporary) / f"{receipt['sha256']}.parquet"
                 pq.write_table(rows, path, compression="zstd")
                 key = f"{lake_root}/{SOURCE}/{report}/{receipt['entity']}/{receipt['sha256']}.parquet"
-                uris.append(bf.upload(client, lake, key, path, receipt["sha256"]))
-                rows_added += rows.num_rows
+                uri = bf.upload(client, lake, key, path, receipt["sha256"])
+                path.unlink()
+                return {"uri": uri, "rows": rows.num_rows}
+
+            with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+                results = list(pool.map(one, todo))
+        uris = [r["uri"] for r in results if "uri" in r]
+        rejected += [r["rejected"] for r in results if "rejected" in r]
         if uris:
             bf.commit(cat, table_id, uris, ["entity", "raw_sha256"], f"{SOURCE}-bronze-load")
+        rows_added = sum(r.get("rows", 0) for r in results)
         totals[table_name] = {"candidates": len(todo), "appended_files": len(uris), "rows_added": rows_added}
     bf.record_rejections(cat, rejected_id, rejected)
     totals["rejected"] = len(rejected)
