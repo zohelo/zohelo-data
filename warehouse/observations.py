@@ -32,6 +32,7 @@ from concurrent.futures.process import BrokenProcessPool
 from datetime import UTC, datetime
 from hashlib import sha256
 import json
+import multiprocessing
 import os
 from pathlib import Path
 import shutil
@@ -352,8 +353,13 @@ def main(argv=None) -> int:
             else:
                 rejected_now.append({"block": result["block"], "error": result["error"][:160]})
 
-        def failure(c: dict[str, Any], exc: BaseException) -> dict[str, Any]:
-            return {"block": c["block"], "status": "failed", "error": f"{type(exc).__name__}: {exc}"}
+        def failure(c: dict[str, Any], exc: BaseException, cause: str = "") -> dict[str, Any]:
+            prefix = f"{cause}; " if cause else ""
+            return {"block": c["block"], "status": "failed", "error": f"{prefix}{type(exc).__name__}: {exc}"}
+
+        # Workers start clean (spawn): the parent has read Iceberg metadata through Arrow's S3 client by now,
+        # and a forked copy of that state is not safe to use.
+        clean = multiprocessing.get_context("spawn")
 
         if p["gone"]:
             commit(removed=p["gone"])
@@ -361,7 +367,7 @@ def main(argv=None) -> int:
         serial = [c for c in todo if c["bytes"] > BIG_BYTES]
         while queue and time.monotonic() < deadline:
             broken = False
-            with ProcessPoolExecutor(max_workers=args.workers) as pool:
+            with ProcessPoolExecutor(max_workers=args.workers, mp_context=clean) as pool:
                 running: dict = {}
                 while (queue or running) and not broken:
                     while queue and len(running) < args.workers and time.monotonic() < deadline:
@@ -388,9 +394,15 @@ def main(argv=None) -> int:
         for c in sorted(serial, key=lambda c: c["bytes"]):
             if time.monotonic() > deadline:
                 break
-            with ProcessPoolExecutor(max_workers=1) as alone:  # a kill fails that block only
+            with ProcessPoolExecutor(max_workers=1, mp_context=clean) as alone:  # a kill fails that block only
+                future = alone.submit(work, source, c, lookups, "10GB", tmp_root, prefix)
+                workers = list((alone._processes or {}).values())  # kept to read the exit code if it dies
                 try:
-                    account(alone.submit(work, source, c, lookups, "10GB", tmp_root, prefix).result())
+                    account(future.result())
+                except BrokenProcessPool as exc:
+                    from ingestion.to_bronze.eurostat.entities import worker_exit
+
+                    account(failure(c, exc, worker_exit(workers)))
                 except Exception as exc:
                     account(failure(c, exc))
             commit()
