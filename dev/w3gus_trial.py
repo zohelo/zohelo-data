@@ -55,27 +55,39 @@ def main(argv) -> int:
         con.register("terc", terc)
         for source in sources:
             land = f"{SCRATCH}/01_landing"
+            module = None
             try:
-                series = importlib.import_module(f"ingestion.to_landing.{source}").SERIES
+                module = importlib.import_module(f"ingestion.to_landing.{source}")
+                series = getattr(module, "SERIES", None)
             except ModuleNotFoundError:
                 series = None  # a bulk_file declaration (census workbooks)
+            custom = module is not None and series is None  # own discovery (MRPiPS year pages)
             for attempt in (1, 2):
                 print(f"\n##### {source} landing extract {attempt}", flush=True)
                 if series:
                     gp.extract(series, 60, landing_root=land)
+                elif custom:
+                    module.extract(60, landing_root=land)
                 else:
                     from ingestion.to_landing.patterns import bulk_file
 
                     bulk_file.main(source, "load", landing_root=land)
             if series:
                 entities = sorted(gp.held(series, land))
+            elif custom:
+                entities = sorted(module.held(land))
             else:
                 from ingestion.to_landing.patterns import bulk_file
 
                 entities = [s["entity"] for s in bulk_file.declaration(source)]
             for attempt in (1, 2):
                 print(f"\n##### {source} bronze load {attempt}", flush=True)
-                gp.bronze_load(source, entities, landing_root=land, namespace=SCRATCH)
+                if custom:
+                    importlib.import_module(f"ingestion.to_bronze.{source}").bronze_load(
+                        entities, landing_root=land, namespace=SCRATCH
+                    )
+                else:
+                    gp.bronze_load(source, entities, landing_root=land, namespace=SCRATCH)
             cells = cat.load_table((SCRATCH, f"{source}_cells")).scan().to_arrow()
             try:
                 rejected = cat.load_table((SCRATCH, f"{source}_rejected_files")).scan().to_arrow().to_pylist()
