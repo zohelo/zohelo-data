@@ -3367,7 +3367,8 @@ sources:
   name: Kultura i dziedzictwo narodowe – annual tables
   short_name: GUS culture tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: approved
+  source_system: gus_culture
+  status: built
   family: B
   kpi: true
   geography: Poland and voivodeships
@@ -3402,9 +3403,9 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Map stable sheets across editions
+    - 'Curated tables only (Dev probes 43270655323, 43271074887): museum visitors, cinema admissions, cinemas, public library users, public libraries by voivodeship, editions from 2019 (Kultura w <year> roku until 2020, Kultura i dziedzictwo narodowe from 2021; one XLSX in 2025, a ZIP of chapter workbooks before). Other tables of the workbook are in Bronze, not modelled.'
     references:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/kultura-i-dziedzictwo-narodowe-w-2023-roku%2C2%2C21.html
     - https://stat.gov.pl/en/copyright/
@@ -3412,7 +3413,8 @@ sources:
   name: Uczestnictwo ludności w kulturze
   short_name: GUS cultural participation
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: approved
+  source_system: gus_culture_participation
+  status: built
   family: B
   kpi: true
   geography: Poland; demographic breakdowns
@@ -3448,10 +3450,9 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Inventory prior editions
-    - Verify comparability across questionnaire changes
+    - 'Curated tables only: visiting museums in Poland, using a library, attending theatre (% of persons 15+, Poland, by sex) of the 2019 and 2024 editions; the precision workbook is not landed. Comparability across questionnaires not verified.'
     references:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/uczestnictwo-ludnosci-w-kulturze-w-2024-r-%2C6%2C4.html
     - https://stat.gov.pl/en/copyright/
@@ -3761,7 +3762,8 @@ sources:
   name: Turystyka – annual accommodation-establishment tables
   short_name: GUS tourism tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: approved
+  source_system: gus_tourism
+  status: built
   family: B
   kpi: true
   geography: Poland and voivodeships/powiats, table-dependent
@@ -3800,9 +3802,9 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Map workbook schema across editions
+    - 'Curated tables only: establishments and bed places (31 July), tourists and overnight stays by voivodeship (TABL. I/1, I/2, II/17, II/19), editions from 2019; monthly and NUTS 3 tables are in Bronze, not modelled.'
     references:
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2024-r-%2C1%2C22.html
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2025-r-%2C1%2C23.html

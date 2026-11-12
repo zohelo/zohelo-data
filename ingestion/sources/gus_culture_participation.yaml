@@ -1,0 +1,35 @@
+source_system: gus_culture_participation
+description: "GUS — Uczestnictwo ludności w kulturze (participation of the population in culture), survey tables"
+
+# Extraction strategy (docs/landing.md). Register PLS-028. Bulk feature: stat.gov.pl publishes a survey publication 'Uczestnictwo ludności w kulturze w <year> r.' every five years (2019, 2024): one XLSX workbook (2024: 44 tables) or a ZIP of chapter workbooks (2019); the precision workbook is not landed. The
+# series page links the newest edition; each edition page links the other editions and its tables file
+# ("Tablice w formacie XLSX"). Entity = one edition (the reference year), version = download time (no
+# Last-Modified), written only when the SHA-256 changed; the newest edition is downloaded again on every run, older
+# landed editions are not (ingestion/common/gus_publications.py, ingestion/to_landing/gus_culture_participation/). Restart unit: one
+# edition. Dev probes 43269548145, 43270285788, 43270655323, 43271452794 on test/w3-gus-probe.
+# History: survey editions 2019 and 2024 (earlier editions, 2014 and 2009, are before first_year 2019); Dev trial 43298219762 (first 43288102198): 2 files, 167,630 Bronze cells, 18 Silver and Gold rows, 0 duplicate keys; second runs wrote nothing.
+extraction:
+  initial: bulk
+  production: snapshot                  # each edition file as published; a correction replaces it
+  incremental_policy: changed_since_last  # new editions; SHA-256 of the newest edition
+  schedule: # UTC; a survey edition every five years; monthly check
+    - {cron: "25 6 6 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gus_culture_participation/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.gus_culture_participation_cells, bronze.gus_culture_participation_rejected_files]
+silver: [silver.gus_culture_participation_tables]
+gold: [gold.build_gus_culture_participation]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gus_culture_participation_tables: {rows: 50}  # 18 rows, editions 2019 and 2024 (Dev trial 43298219762)
+  poc_build_gus_culture_participation: {rows: 50}  # 18 (Dev trial 43298219762)
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): a handful of edition files, one new a year, a few hundred thousand cells;
+# small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2474"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
