@@ -128,7 +128,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_oecd: {rows: 100000}  # BCICP, CCICP and LI (AA): ~66,000 of silver.oecd_cli's 240,988 rows (Dev probe 43084707728)
   poc_build_gleif: {rows: 25000}  # 16,851 (Dev trial 43099545187)
   poc_build_mf_biala_lista: {rows: 10}  # 4 (Dev trial 43099545187)
-  poc_build_ids: {rows: 50000}  # 5 series, ~32,000 observations (Dev probe 43200414478: 6,623 + 6,324 + 6,600 actual + 6,305 + 5,404); measured in the PR
+  poc_build_ids: {rows: 50000}  # 31,260 (Dev trial 43202506484)
   poc_build_prg: {rows: 4300}  # 2,875 PRG units (16 voivodeships, 380 powiats, 2,479 gminas; Dev trial 43099545187 minus the country)
   poc_build_public_finance: {rows: 8600}  # 5,727 (Dev trial 43099813876)
   poc_build_unctad: {rows: 18000}  # 11,871 (Dev trial 43100532689): 29 areas × 10 measures
@@ -222,7 +222,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_cli_oecd: {rows: 30000}  # 14,307 rows, 22 areas
   poc_metrics_lei_issued: {rows: 350}  # 232 (Dev trial 43099545187)
   poc_metrics_vat_whitelist_entries: {rows: 10}  # 1 (Dev trial 43099545187)
-  poc_metrics_external_debt_stocks: {rows: 10000}  # 6,623 rows max (#2819)
+  poc_metrics_external_debt_stocks: {rows: 10000}  # 6,623 (Dev trial 43202506484); the others 5,404-6,604
   poc_metrics_external_debt_gni: {rows: 10000}
   poc_metrics_external_debt_service: {rows: 10000}
   poc_metrics_external_debt_service_gni: {rows: 10000}
