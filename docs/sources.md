@@ -971,9 +971,10 @@ insurance bulletin "Biuletyn Kwartalny. Rynek ubezpieczeń <q>/<year>", parts A-
 has no part D); OFE monthly data "Dane miesięczne OFE - <month> <year>" (`ofe_YYYY_MM`); IKE and IKZE yearly
 "Informacje o rynku IKE|IKZE ... 31 grudnia <year>" (`ike_YYYY`, `ikze_YYYY`). Releases from 2023 on. Version =
 download time (KNF sends no Last-Modified), a changed file lands as a new version; restart unit: one release file.
-KNF links the OFE workbook only from the newest OFE article (older OFE articles carry no file), so OFE history
-accumulates from the first landed month; each run lands the missing releases and re-downloads the newest of each
-series. Bronze `bronze.knf_insurance_cells`: one row per cell (shared `ingestion/common/xlsx_cells.py`); a workbook
+Older OFE months are linked as `.xls` (OLE2/BIFF): they land as published and Bronze rejects them with that
+reason (no `.xls` reader without a new dependency), so OFE reaches Silver from the first `.xlsx` month (September 2026).
+Each run lands the missing releases and re-downloads the newest of each series; the listing is read page by page
+only while a page names a release not yet held. Bronze `bronze.knf_insurance_cells`: one row per cell (shared `ingestion/common/xlsx_cells.py`); a workbook
 without its series' layout (bulletin part A: the four premium and claims tables by English title; OFE: sheets
 "Aktywa netto" and "Członkowie"; IKE/IKZE: "<IKE|IKZE>_dane liczbowe") is rejected with the reason. Silver
 `silver.knf_insurance_observations` (series × period × table × item × provider × measure): bulletin part A premiums
@@ -986,5 +987,5 @@ and IKE/IKZE value zeros printed next to a positive count are not values. Gold `
 of each month, 06:40 UTC (OFE by the 20th, bulletin about three months after the quarter). Licence: unresolved (KNF
 legal notice asks for the source and a link, grants no reuse terms): `source.csv` `licence_key` `unresolved`, so the
 licence gate of `gold.publish` keeps every row out of v1 and v2; internal only. Not built: bulletin parts B-D in
-Silver, the OFE investment portfolio and accounts sheets, PPK, OFE history before the first landed month (the
-"Archiwalne informacje dotyczące OFE" article was not examined).
+Silver, the OFE investment portfolio and accounts sheets, PPK, the `.xls` OFE months (2023-01 to 2026-08) and the
+"Archiwalne informacje dotyczące OFE" article (not examined).

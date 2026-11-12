@@ -9,7 +9,7 @@ models:
       contributions, unit value; M); ike / ikze: individual retirement accounts by item and provider group (number
       and value; A). Text in a value position ("x", "-") is not loaded, nor an IKE/IKZE value of 0 next to a positive
       count (KNF prints 0 where it does not value a row). History: bulletins from 2023 Q1, IKE/IKZE from
-      2023, OFE from the newest month (KNF links only the newest OFE workbook; older months accumulate).
+      2023, OFE from September 2026 (older OFE months are .xls workbooks, rejected in Bronze).
     tests:
       - unique:
           column_name: "series || '|' || period_label || '|' || table_code || '|' || item_label || '|' || provider || '|' || measure_code"
