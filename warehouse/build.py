@@ -5,9 +5,10 @@ filter (the scheduled run) builds only the models whose inputs or code changed s
 last build (warehouse/changed.py, owner policy #822), incremental models incrementally unless
 their code changed; "fqn:*" builds everything (incremental models incrementally). Eurostat and
 GUS BDL observations are not dbt models: their loaders write Silver per entity (design #875,
-warehouse/entity/). A build whose only failures are transient catalog errors (the rate limit,
-HTTP 429, or an Iceberg commit that does not yet see a table the build just created, #2574) is
-resumed with `dbt retry` after declared waits, with fewer threads.
+warehouse/entity/). A build whose failed models all failed on transient catalog errors (the rate limit, HTTP
+429, or an Iceberg commit that does not yet see a table the build just created, #2574) is
+resumed with `dbt retry` after declared waits, with fewer threads; failing data tests do not
+prevent that (#2789).
 Target prod writes to the silver/gold namespaces; results (models, tests, failures) are
 published per build as an annotation (GitHub keeps the first 10 per step) and in the step
 summary (all builds).
@@ -143,11 +144,18 @@ RATE_LIMITED = "HTTP 429"
 COMMIT_FAILED = "Failed to commit Iceberg transaction"
 
 
+def _transient(message: str) -> bool:
+    return RATE_LIMITED in message or COMMIT_FAILED in message
+
+
 def _transient_only(results: list[dict]) -> bool:
-    """True when the build failed and every failure is transient: the catalog's HTTP 429 (rate
-    limit) or an Iceberg commit failure."""
-    failures = [str(r.get("message")) for r in results if r["status"] in FAILED]
-    return bool(failures) and all(RATE_LIMITED in m or COMMIT_FAILED in m for m in failures)
+    """True when some failure is transient (the catalog's HTTP 429 rate limit or an Iceberg
+    commit failure) and every failed model, seed or snapshot failed transiently. A data test
+    that finds rows (#2789) does not block the retry: `dbt retry` re-runs it, it fails again,
+    and the build still fails on it, but the rate-limited models get built."""
+    failures = [r for r in results if r["status"] in FAILED]
+    blocking = [r for r in failures if not r["unique_id"].startswith("test.") and not _transient(str(r.get("message")))]
+    return any(_transient(str(r.get("message"))) for r in failures) and not blocking
 
 
 def _retry_threads(results: list[dict]) -> int:
