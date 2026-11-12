@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: mz_health_bulletin
+  description: MZ / Centrum e-Zdrowia Biuletyn Statystyczny (register PLS-017), annual tables workbooks (XLSX, editions 2019-)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mz_health_bulletin/
+    loaded_by: ingestion/to_bronze/mz_health_bulletin/
+    config: ingestion/sources/mz_health_bulletin.yaml
+  tables:
+  - name: mz_health_bulletin_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of every sheet of the newest
+      copy of each landed edition; partitioned by entity (tablice_<edition year>).
+  - name: mz_health_bulletin_rejected_files
+    description: Files of mz_health_bulletin the Bronze decoder rejected, with the reason.

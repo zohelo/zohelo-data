@@ -1,0 +1,51 @@
+version: 2
+models:
+  - name: mz_health_bulletin_tables
+    description: >-
+      MZ / Centrum e-Zdrowia Biuletyn Statystyczny (register PLS-017, #2957): four tables of every XLSX edition
+      (2019-2025 = reference years 2018-2024), Poland and the 16 voivodeships: health workers licensed to practise
+      (doctors, dentists, nurses, midwives; 31 December), health workers employed in health care establishments
+      (persons by primary workplace, 31 December; nine professions), general hospitals and beds, general hospital
+      activity (inpatient cases, patient-days in thousands, average stay, bed use). Counts and rates per 10,000
+      population as published. Grain: edition_year x table_kind x profession_code x measure_code x area_name (one
+      reference year per edition and table kind, read from the table titles). is_latest_edition marks the newest
+      edition of a key x reference year (Gold reads only those). Not published by the source: licensed doctors and
+      dentists for 2022 (the 2023 edition has no such table). Every other sheet is only in Bronze.
+      History and trial run: see ingestion/sources/mz_health_bulletin.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', edition_year, table_kind, profession_code, measure_code, area_name)"
+    columns:
+      - name: edition_year
+        tests: [not_null]
+      - name: table_kind
+        tests: [not_null, {accepted_values: {arguments: {values: [licensed, employed, hospitals, hospital_activity]}}}]
+      - name: profession_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  [doctors, dentists, pharmacists, lab_diagnosticians, nurses, midwives, physiotherapists, paramedics,
+                   dietitians, hospitals, beds, inpatients, patient_days, length_of_stay, bed_occupancy]
+      - name: measure_code
+        tests: [not_null, {accepted_values: {arguments: {values: [count, per_10k, per_bed, mean, days, pct]}}}]
+      - name: unit_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  [persons, per_10k_population, hospitals, beds, cases, cases_per_bed, thousand_patient_days, days,
+                   pct]
+      - name: area_name
+        tests: [not_null]
+      - name: period_year
+        description: Reference year from the table titles (majority of the table kind's titles in the edition), within edition year - 3 .. edition year - 1.
+        tests: [not_null]
+      - name: cell_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, dash, missing, not_applicable]}}}]
+      - name: is_latest_edition
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
