@@ -19,7 +19,18 @@ models:
         description: MIDAS deposit number (official identifier of the deposit in MIDAS).
         tests: [not_null]
       - name: mineral_code
-        description: MIDAS code of the main mineral (Kod), e.g. KN sand and gravel, IB ceramic clays.
+        description: >-
+          MIDAS code of the main mineral (Kod), e.g. KN sand and gravel, IB ceramic clays; the 60 codes of the
+          documented layer on 12 Nov 2026 (the removed layer uses a subset; Dev trial 43289532679).
+        tests:
+          - accepted_values:
+              arguments:
+                values: [
+                  'AG', 'BA', 'BU', 'DI', 'DO', 'FO', 'GA', 'GB', 'GC', 'GL', 'GO', 'GZ', 'IB', 'IC', 'IK',
+                  'KA', 'KC', 'KD', 'KM', 'KN', 'KR', 'KW', 'KZ', 'LF', 'LK', 'LS', 'MC', 'MG', 'MS', 'MW',
+                  'NR', 'PB', 'PC', 'PF', 'PP', 'PS', 'RA', 'RC', 'RF', 'RM', 'RN', 'RP', 'RS', 'RZ', 'SB',
+                  'SF', 'SK', 'SO', 'SP', 'SR', 'SS', 'TO', 'WB', 'WC', 'WK', 'WL', 'WT', 'WW', 'ZF', 'ZK'
+                ]
       - name: raw_sha256
         description: Landing SHA-256 of the layer download (lineage to Landing/Archive).
         tests: [not_null]
@@ -49,6 +60,14 @@ models:
       - name: register_number
         description: Number of the mining area or terrain in the register of mining areas.
         tests: [not_null]
+      - name: coordinate_system_epsg
+        description: EPSG code of the coordinates in the source documents (PUWG 1965, PUWG 2000, PUWG 1992, WGS 84 …).
+        tests:
+          - accepted_values:
+              arguments:
+                values: [2172, 2173, 2174, 2175, 2176, 2177, 2178, 2179, 2180, 3120, 4179, 4326]
+      - name: valid_indefinitely
+        description: True when the decision sets no end of validity (source date 31/12/9999); valid_until is then null.
       - name: raw_sha256
         description: Landing SHA-256 of the layer download (lineage to Landing/Archive).
         tests: [not_null]

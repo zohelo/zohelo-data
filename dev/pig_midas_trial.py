@@ -60,6 +60,22 @@ def terms() -> None:
         except requests.RequestException as exc:
             out[name] = {"error": str(exc)[:200]}
             continue
+        if name == "midas_sources":
+            links = [u for u in bulk_file.links_matching(r.text, r.url, r"(?i)regulamin") if u != r.url][:3]
+            out["regulamin_links"] = links
+            for link in links[:1]:
+                time.sleep(3)
+                g = requests.get(link, headers={"User-Agent": bulk_file.USER_AGENT}, timeout=60)
+                body = g.text if "html" in (g.headers.get("Content-Type") or "") else ""
+                plain = re.sub(r"\s+", " ", re.sub(r"(?s)<script.*?</script>|<style.*?</style>|<[^>]+>", " ", body))
+                out["regulamin"] = {
+                    "status": g.status_code,
+                    "ct": g.headers.get("Content-Type"),
+                    "hits": [
+                        plain[max(0, m.start() - 150) : m.start() + 250]
+                        for m in re.finditer(r"(?i)komercyj|licencj|źródł|rozpowszechn|odpłatn", plain)
+                    ][:4],
+                }
         if name == "robots":
             out[name] = {"status": r.status_code, "disallow": re.findall(r"(?im)^disallow:.*$", r.text)[:12]}
             continue
@@ -262,6 +278,10 @@ def silver_steps(con) -> None:
             """select layer, min(established_on), max(established_on), min(valid_until), max(valid_until),
             min(abolished_on), max(abolished_on), count(*) filter (where valid_until < snapshot_date)
             from pig_midas_mining_contours group by 1 order by 1""",
+        ),
+        "valid_indefinitely": q(
+            con,
+            "select layer, count(*) filter (where valid_indefinitely), count(*) filter (where valid_until is null) from pig_midas_mining_contours group by 1 order by 1",
         ),
         "epsg_values": q(
             con,
