@@ -2,7 +2,8 @@
    (inorganic 1991-, organic 2009-, the 2025 nitrate study and its per-indicator classes), newest version per workbook
    (bronze.gios_groundwater_cells). Grain: entity x row_number. Point identifiers and location as published (no TERYT
    code), sampling date (Excel serial date as a date; text dates parsed, other text in sample_date_text), year of the
-   study, the monitoring network named by the workbook's link text and, for 2007, the monitoring column. The values
+   study, the monitoring network named by the workbook's link text, for 2007 the monitoring column and for the
+   organic results of 2023 the laboratory's analysis number. The values
    of a row are in gios_groundwater_results_* and gios_groundwater_indicator_classes (same entity and row_number). #}
 select
     entity,
@@ -43,6 +44,7 @@ select
     sample_date,
     sample_date_text,
     monitoring_type,
+    lab_analysis_no,
     link_text,
     source_version,
     raw_sha256

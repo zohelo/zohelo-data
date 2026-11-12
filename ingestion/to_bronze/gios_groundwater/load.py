@@ -13,6 +13,7 @@ the cell's column, read from the header in row 1:
                      sample_date
   final_class        classes workbooks: the last column, "Klasa jakości <year> końcowa"
   monitoring_type    a results column whose header names the monitoring ("Monitoring diagnostyczny"; 2007)
+  lab_analysis_no    a results column "Nr analizy laboratoryjnej" (the laboratory's analysis number; organic 2023)
   parameter          results workbooks: every column after the descriptors (the header is the indicator and unit)
   parameter_class    nitrate_classes: every column after the descriptors (the class of that indicator)
 
@@ -68,6 +69,7 @@ DESCRIPTORS = [
 DESCRIPTOR_RE = [(re.compile(f"^{p}$"), role) for p, role in DESCRIPTORS]
 FINAL_CLASS = re.compile(r"^klasa jakości \d{4} końcowa$")
 MONITORING = re.compile(r"monitoring")
+LAB_NUMBER = re.compile(r"^nr analizy laboratoryjnej$")  # organic 2023: the laboratory's analysis number
 COLUMNS = [
     *xlsx_cells.COLUMNS[:1],
     ("workbook", "VARCHAR"),  # entity kind: inorganic | organic | classes | nitrate_inorganic | nitrate_classes
@@ -125,6 +127,8 @@ def roles(header: dict[int, str], kind: str) -> dict[int, str]:
             out[c] = "parameter_class"
         elif MONITORING.search(norm(header[c])) and "[" not in header[c]:
             out[c] = "monitoring_type"
+        elif LAB_NUMBER.match(norm(header[c])):
+            out[c] = "lab_analysis_no"
         else:
             out[c] = "parameter"
     return out

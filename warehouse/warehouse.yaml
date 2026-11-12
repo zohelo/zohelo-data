@@ -118,12 +118,12 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   krus_benefits: {rows: 900}  # 576 (Dev trial 43099813876), quarters and years since 2020
   mf_jst_budget_summary: {rows: 32000}  # 21,263 rows, 2022 Q1 - 2026 Q1 (Dev trial 43162316724)
   mrpips_registered_unemployment: {rows: 85000}  # 828 rows a month; 56,202 for 68 months (Dev trial 43100663615)
-  gios_groundwater_quality_classes: {rows: 30000}  # TRIAL
-  gios_groundwater_samples: {rows: 60000}  # TRIAL
-  gios_groundwater_results_inorganic_1991_2007: {rows: 900000}  # TRIAL
-  gios_groundwater_results_inorganic: {rows: 900000}  # TRIAL
-  gios_groundwater_results_organic: {rows: 400000}  # TRIAL
-  gios_groundwater_indicator_classes: {rows: 6000}  # TRIAL
+  gios_groundwater_quality_classes: {rows: 20000}  # 13,253: 2004-2025, one row per point and year (Dev trial 43295509288)
+  gios_groundwater_samples: {rows: 44000}  # 28,965 sample rows 1991-2025 (Dev trial 43295509288)
+  gios_groundwater_results_inorganic_1991_2007: {rows: 585000}  # 389,523, closed years (Dev trial 43295509288)
+  gios_groundwater_results_inorganic: {rows: 935000}  # 622,472 for 2008-2025, about 35,000 more a year (Dev trial 43295509288)
+  gios_groundwater_results_organic: {rows: 421000}  # 280,456 for 2009-2025 (Dev trial 43295509288)
+  gios_groundwater_indicator_classes: {rows: 5400}  # 3,587, nitrate study 2025 (Dev trial 43295509288)
   nbp_policy_rates: {rows: 2000}  # 390 rows, 96 archive dates since 1998 (Dev trial 42777711811)
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865
@@ -144,7 +144,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_src_dbw_dictionary: {rows: 200000}
   poc_build_mf_jst_budgets: {rows: 650}  # 408 rows (Dev trial 43162316724)
   poc_build_mrpips_unemployment: {rows: 85000}  # = Silver mrpips_registered_unemployment (56,202 rows)
-  poc_build_gios_groundwater: {rows: 1000}  # TRIAL
+  poc_build_gios_groundwater: {rows: 230}  # 149: 22 years x (points by class + share), about 7 more a year (Dev trial 43295509288)
   poc_build_check: {rows: 1000}
   poc_grain_check: {rows: 10000}
   poc_build_dbw: {rows: 600000}  # 312,512 (10 Nov) + ~110,000 slice blocks (#2592)
@@ -257,7 +257,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_consumer_confidence_oecd: {rows: 50000}  # 24,611 rows, 51 areas
   poc_metrics_cli_oecd: {rows: 30000}  # 14,307 rows, 22 areas
   poc_metrics_lei_issued: {rows: 350}  # 232 (Dev trial 43099545187)
-  poc_metrics_groundwater_good_quality_share: {rows: 100}  # TRIAL
+  poc_metrics_groundwater_good_quality_share: {rows: 20}  # 7: Poland, diagnostic years 2006-2022 (Dev trial 43295509288)
   poc_metrics_vat_whitelist_entries: {rows: 10}  # 1 (Dev trial 43099545187)
   poc_metrics_external_debt_stocks: {rows: 10000}  # 6,623 (Dev trial 43202506484); the others 5,404-6,604
   poc_metrics_external_debt_gni: {rows: 10000}

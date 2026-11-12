@@ -71,6 +71,7 @@
             {% endif %}
         {% endfor %}
         max(case when column_role = 'monitoring_type' then nullif(trim(value_text), '') end) as monitoring_type,
+        max(case when column_role = 'lab_analysis_no' then nullif(trim(value_text), '') end) as lab_analysis_no,
         max(case when column_role = 'final_class' then nullif(trim(value_text), '') end) as final_class,
         any_value(source_version) as source_version,
         any_value(raw_sha256) as raw_sha256
