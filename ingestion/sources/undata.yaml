@@ -15,131 +15,131 @@ extraction:
   bulk_file:
     files:
       - entity: syb_1           # Population, Surface Area and Density
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_1_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_1_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_12           # Agricultural Index
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_12_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_12_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_123           # Total Imports Exports and Balance of Trade
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_123_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_123_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_125           # Balance of Payments
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_125_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_125_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_128           # Consumer Price Index
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_128_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_128_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_130           # Exchange Rates
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_130_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_130_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_145           # Land
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_145_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_145_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_153           # Gross Value Added by Economic Activity
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_153_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_153_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_154           # Health Personnel
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_154_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_154_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_176           # Tourist-Visitors Arrival and Expenditure
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_176_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_176_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_200           # Employment
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_200_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_200_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_223           # Net Disbursements from Official ODA from Donors
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_223_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_223_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_226           # Net Disbursements from Official ODA to Recipients
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_226_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_226_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_230           # GDP and GDP Per Capita
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_230_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_230_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_245           # Public expenditure on education and access to computers
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_245_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_245_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_246           # Population Growth, Fertility and Mortality Indicators
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_246_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_246_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_263           # Production, Trade and Supply of Energy
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_263_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_263_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_264           # Patents
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_264_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_264_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_285           # Research and Development Expenditure and Staff
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_285_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_285_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_309           # Education
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_309_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_309_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_310           # Carbon Dioxide Emission Estimates
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_310_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_310_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_313           # Threatened Species
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_313_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_313_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_314           # Internet Usage
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_314_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_314_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_315           # Water and Sanitation Services
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_315_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_315_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_317           # Seats held by women in Parliament
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_317_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_317_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_319           # Ratio of girls to boys in education
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_319_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_319_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_323           # Teaching Staff in education
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_323_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_323_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_325           # Expenditure on health
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_325_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_325_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_327           # International Migrants and Refugees
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_327_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_327_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_328           # Intentional homicides and other crimes
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_328_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_328_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_329           # Labour Force and Unemployment
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_329_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_329_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
       - entity: syb_330           # Major Trading Partners
-        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/SYB[0-9]+_330_[0-9]+_"}
+        url_from: {page: "https://data.un.org/Default.aspx", pattern: "/CSV/SYB[0-9]+_330_[0-9]+_[^/]*\\.csv"}
         format: raw
         version: last_modified
   initial: bulk
@@ -159,6 +159,6 @@ gold: []
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): about thirty small whole-table snapshots, rebuilt in full.
-refresh: {mode: full, decided: "D32 + #TASK"}
+refresh: {mode: full, decided: "D32 + #2784"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
