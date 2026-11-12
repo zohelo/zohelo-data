@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """NBP balance of payments bronze.load: newest Landing copy of each workbook → bronze.nbp_bop_cells.
 
+<<<<<<< HEAD
 The three workbooks (bop_m, bop_q, iip_q) have one sheet per currency (PLN, EUR, USD; "IIP PLN" …), items
 in rows and periods in columns: a header row of years (each year written once over its months or quarters)
 and below it a row of period labels (I … XII, "I kw / I Q" … "IV kw / IV Q"). One Bronze row per filled
@@ -14,10 +15,18 @@ A workbook without the year and period header rows, or a sheet name the decoder 
 the file (bronze.nbp_bop_rejected_files): a change of the NBP layout is never loaded silently. Columns to
 the right of the period grid whose header is no period (none in the Dev probe) are not values of a
 period and are counted, not loaded. Code shared with other small bulk sources: ingestion/common/bulk_bronze.py.
+=======
+One row per non-empty cell (sheet, row, column, source text, number format), decoded by the shared
+ingestion/common/xlsx_cells.py; Silver (silver.nbp_bop_observations) reads the item rows and the year and
+period header. A workbook whose sheets are not exactly the declared currency sheets (PLN, EUR, USD; the IIP
+workbook "IIP PLN", "IIP EUR", "IIP USD") is rejected (bronze.nbp_bop_rejected_files), so a missing or
+renamed currency is never loaded silently. Loader: ingestion/common/bulk_bronze.py.
+>>>>>>> feat/2754-nbp-bop
 """
 
 from __future__ import annotations
 
+<<<<<<< HEAD
 import io
 import re
 from typing import Any
@@ -146,15 +155,47 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
     if not rows:
         raise ValueError("no value cells")
     return pa.Table.from_pylist(rows, schema=ARROW)
+=======
+from typing import Any
+
+from ingestion.common import bulk_bronze, xlsx_cells
+
+SOURCE = "nbp_bop"
+TABLE = "nbp_bop_cells"
+REJECTED = "nbp_bop_rejected_files"
+SHEETS = {
+    "bop_m": {"PLN", "EUR", "USD"},
+    "bop_q": {"PLN", "EUR", "USD"},
+    "iip_q": {"IIP PLN", "IIP EUR", "IIP USD"},
+}
+
+
+def decode(body: bytes, receipt: dict[str, Any]):
+    """xlsx_cells.decode, then the workbook's sheets must be exactly its declared currency sheets."""
+    table = xlsx_cells.decode(body, receipt)
+    found = set(table.column("sheet_name").to_pylist())
+    expected = SHEETS.get(receipt["entity"])
+    if expected is None:
+        raise ValueError(f"undeclared entity {receipt['entity']!r}")
+    if found != expected:
+        raise ValueError(f"sheets {sorted(found)}, expected {sorted(expected)}")
+    return table
+>>>>>>> feat/2754-nbp-bop
 
 
 def load(budget_minutes: float, landing_root: str = "01_landing", namespace: str = "bronze") -> int:
     """budget_minutes is unused: three workbooks of a few hundred kB."""
     return bulk_bronze.load(
         SOURCE,
+<<<<<<< HEAD
         (namespace, TABLE_ID[1]),
         (namespace, REJECTED_ID[1]),
         COLUMNS,
+=======
+        (namespace, TABLE),
+        (namespace, REJECTED),
+        xlsx_cells.COLUMNS,
+>>>>>>> feat/2754-nbp-bop
         decode,
         "cells",
         landing_root=landing_root,

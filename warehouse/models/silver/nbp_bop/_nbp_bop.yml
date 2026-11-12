@@ -3,6 +3,7 @@ models:
   - name: nbp_bop_observations
     description: >-
       NBP balance of payments of Poland (bop_m monthly, bop_q quarterly, register PLG-002) and international
+<<<<<<< HEAD
       investment position (iip_q quarterly, PLG-003) from bronze.nbp_bop_cells: one row per workbook × currency
       (PLN, EUR, USD) × item × period of the newest version of each workbook, history from 2004. value is in
       million units of the currency; item_code is the slug of the item's English label, prefixed by its block's
@@ -11,6 +12,18 @@ models:
     tests:
       - unique:
           column_name: "entity || '|' || currency || '|' || item_code || '|' || cast(date_key as varchar)"
+=======
+      investment position (iip_q quarterly, PLG-003) from bronze.nbp_bop_cells (shared xlsx_cells shape): one row
+      per workbook × currency (PLN, EUR, USD) × item × period of the newest version of each workbook, history
+      from 2004. value is in million units of the currency; item_code is fixed by rule (English label slug,
+      prefixed by block head and, for the IIP, by assets / liabilities) and checked against the expected list
+      (tests/nbp_bop_items.sql); cells outside the period grid or not numbers fail tests/nbp_bop_unplaced.sql.
+    tests:
+      - unique:
+          column_name: >-
+            entity || '|' || currency || '|' || item_code || '|'
+            || coalesce(cast(date_key as varchar), 'column ' || cast(source_column_number as varchar))
+>>>>>>> feat/2754-nbp-bop
     columns:
       - name: entity
         tests: [not_null, {accepted_values: {arguments: {values: ['bop_m', 'bop_q', 'iip_q']}}}]
@@ -18,8 +31,11 @@ models:
         tests: [not_null, {accepted_values: {arguments: {values: ['PLN', 'EUR', 'USD']}}}]
       - name: frequency
         tests: [not_null, {accepted_values: {arguments: {values: ['M', 'Q']}}}]
+<<<<<<< HEAD
       - name: date_key
         tests: [not_null]
+=======
+>>>>>>> feat/2754-nbp-bop
       - name: item_code
         tests: [not_null]
       - name: raw_sha256

@@ -46,11 +46,16 @@ eurpln,poland,M,fx_rate,nbp,fx_A,nbp:fx:A:mid,D,PL,currency,mean,neutral,ready,E
 eurpln,poland,M,,eurostat,ERT_BIL_EUR_M,,M,PL,,mean,neutral,needs-block,Eurostat monthly euro exchange rates are in Silver (loaded); codes not probed
 exports_by_partner,economy,A,,eurostat,EXT_ST_EU27_2020SITC,,A,EU27,partner,sum,neutral,needs-block,EXT_ST_EU27_2020SITC holds only the EU27 reporter (no PL rows in Silver); a member-state trade dataset is needed (Comext DS-* is out of scope)
 exports_goods,economy,M,,eurostat,EXT_ST_EU27_2020SITC,,M,EU27,,sum,up,needs-block,"only the EU27 reporter in Silver, no PL rows"
+exports_goods,economy,M,exports_goods,unctad,US_TradeMerchTotal,unctad:US_TradeMerchTotal:02:USD_MN,A,PL;EU;EU27,,sum,up,ready,"annual merchandise exports, US$ million at current prices; EU27 = UNCTAD group European Union (2020 …) incl. intra-EU trade"
 extreme_poverty,labour,A,,gus_bdl,P2713,,A,PL;VOIV,,rate,down,needs-block,BDL poverty rates by expenditure (P2713) in Silver; extreme-poverty line variable not probed
 family_benefit_recipients,labour,A,,gus_dbw,359_39_94_4,,A,PL;VOIV,,sum,neutral,needs-block,DBW family benefits (359_39_94_4) in Silver; codes not probed
 fdi_inflow,economy,A,fdi_inflow,eurostat,BOP_FDI6_FLOW,eurostat:BOP_FDI6_FLOW:%:MIO_EUR:NI:DI__D__F,A,PL;EU;EU27,,sum,neutral,ready,"inward direct investment, net incurrence of liabilities, million EUR"
 fdi_inflow,economy,A,fdi_inflow,world_bank_wdi,BX.KLT.DINV.CD.WD,world_bank_wdi:BX.KLT.DINV.CD.WD,A,PL;EU;EU27,,sum,neutral,ready,"net inflows, current US$"
 fdi_inflow,economy,A,,nbp_bop,bop_q,nbp_bop:bop_q:EUR:direct_investment_liabilities,Q,PL,,sum,neutral,needs-block,"in Silver after the first production run (silver.nbp_bop_observations, #2754); the Gold build stage build_nbp_bop follows: NBP quarterly BoP direct investment liabilities (inward, net incurrence), million EUR; quarterly beside the annual KPI; licence unresolved: internal"
+<<<<<<< HEAD
+=======
+fdi_inflow,economy,A,fdi_inflow,unctad,US_FdiFlowsStock,unctad:US_FdiFlowsStock:08:1:USD_MN,A,PL;EU;EU27,,sum,neutral,ready,"FDI inward flows, US$ million at current prices, directional basis (asset/liability basis where footnoted)"
+>>>>>>> feat/2754-nbp-bop
 gdp_contributions,economy,Q,gdp_contributions,eurostat,NAMQ_10_GDP,eurostat:NAMQ_10_GDP:CON_PPCH_SM:%,Q,PL;EU27,na_item,sum,neutral,ready,"percentage points, same quarter a year earlier; P3, P5G, P6, P7 as measures"
 gdp_nominal,economy,A,gdp_current_prices,eurostat,NAMA_10_GDP,eurostat:NAMA_10_GDP:CP_MNAC:B1GQ;eurostat:NAMA_10_GDP:CP_MEUR:B1GQ,A,PL;EU;EU27,,sum,neutral,ready,million national currency (PLN for Poland) and million EUR
 gdp_nominal,economy,A,gdp_current_prices,gus_dbw,1038_16_105_4,gus_dbw:1038_16_105_4:105,A,PL,,sum,neutral,ready,million PLN
@@ -73,6 +78,7 @@ gfcf_growth,economy,Q,gfcf_growth,eurostat,NAMQ_10_GDP,eurostat:NAMQ_10_GDP:CLV_
 gfcf_rate,economy,A,gfcf_rate,eurostat,NAMA_10_GDP,eurostat:NAMA_10_GDP:PC_GDP:P51G,A,PL;EU;EU27,,rate,up,ready,
 gfcf_rate,economy,A,gfcf_rate,world_bank_wdi,NE.GDI.FTOT.ZS,world_bank_wdi:NE.GDI.FTOT.ZS,A,PL;EU;EU27,,rate,up,ready,
 gg_debt_gdp,poland,A,gg_debt_gdp,eurostat,GOV_10DD_EDPT1,eurostat:GOV_10DD_EDPT1:PC_GDP:GD,A,PL;EU;EU27,,rate,down,ready,"general government (S13), Maastricht debt"
+gg_debt_gdp,poland,A,gg_debt_gdp,mf_public_debt,Dlug_publiczny (Dług w relacji do PKB),mf_public_debt:debt_gdp:PC_GDP:GG:YE;mf_public_debt:debt_gdp:PC_GDP:GG,A;Q,PL,,rate,down,ready,"Ministry of Finance: general government (EDP) debt over GDP, quarterly; A = the 31 December value (measure suffix :YE)"
 gg_deficit_gdp,poland,A,gg_balance_gdp,eurostat,GOV_10DD_EDPT1,eurostat:GOV_10DD_EDPT1:PC_GDP:B9,A,PL;EU;EU27,,rate,up,ready,net lending (+) / net borrowing (-) of S13
 gg_deficit_gdp,poland,A,gg_balance_gdp,world_bank_wdi,GC.NLD.TOTL.GD.ZS,world_bank_wdi:GC.NLD.TOTL.GD.ZS,A,PL;EU;EU27,,rate,up,ready,GFS net lending/borrowing
 ghg_emissions,poland,A,ghg_emissions,eurostat,ENV_AIR_GGE,eurostat:ENV_AIR_GGE:THS_T:GHG,A,PL;EU;EU27,,sum,down,ready,"CO2 equivalent, excl. LULUCF, incl. international aviation"

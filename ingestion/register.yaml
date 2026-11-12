@@ -300,7 +300,7 @@ sources:
   short_name: World Bank IDS
   provider: World Bank
   source_system: world_bank_ids
-  status: approved
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -335,9 +335,8 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
-    blockers:
-    - 'Confirm stable machine-download contract'
+    connection: tested
+    blockers: []
     references:
     - https://www.worldbank.org/en/programs/debt-statistics/ids
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -346,7 +345,7 @@ sources:
   short_name: World Bank WGI
   provider: World Bank
   source_system: world_bank_wgi
-  status: approved
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -380,9 +379,8 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
-    blockers:
-    - 'Confirm stable machine-download contract'
+    connection: tested
+    blockers: []
     references:
     - https://www.worldbank.org/en/publication/worldwide-governance-indicators
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -393,7 +391,7 @@ sources:
   short_name: World Bank Global Findex
   provider: World Bank
   source_system: world_bank_findex
-  status: approved
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -429,9 +427,8 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Confirm stable machine-download contract'
     - 'Use country-level indicators only; microdata may not be redistributed'
     references:
     - https://www.worldbank.org/en/publication/globalfindex
@@ -489,7 +486,7 @@ sources:
   short_name: World Bank ICP
   provider: World Bank
   source_system: world_bank_icp
-  status: approved
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -525,9 +522,8 @@ sources:
   research:
     priority: specialist
     evidence: catalogue-only
-    connection: not-tested
-    blockers:
-    - 'Confirm stable machine-download contract'
+    connection: tested
+    blockers: []
     references:
     - https://www.worldbank.org/en/research/brief/international-comparison-program
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -986,7 +982,8 @@ sources:
   short_name: UNCTAD Data Hub
   provider: UN Trade and Development (UNCTAD)
   source_system: unctad
-  status: approved
+  current: true
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -994,21 +991,28 @@ sources:
   domains: [trade, investment, shipping, development, digital-economy]
   entities: [country, country-group]
   granularity: Indicator/economy/period with table-specific breakdowns; some bilateral or product datasets.
-  coverage: More than 150 indicators for almost all economies; start/frequency vary by table.
+  coverage: 'More than 150 indicators for almost all economies; start/frequency vary by table. Landed tables (Dev
+    probes 43084525257, 43084992517, 11 Nov 2026): FDI flows and stocks 1990-2025 (36,950 rows), merchandise trade
+    1948-2025 (46,108), services trade by category 2005-2025 (807,733), digitally deliverable services 2010-2025,
+    commodity prices monthly from 1995, port liner shipping connectivity quarterly from 2006, merchant fleet from 1980,
+    seaborne trade 2000-2024, port calls 2018-2023. Economy codes M49 (France 250; 251 in port calls); EU group 3412
+    "European Union (2020 …)".'
   access:
-    endpoint: https://unctadstat.unctad.org/
+    endpoint: https://unctadstat-api.unctad.org/bulkdownload/
     kind: bulk_file
     interfaces: [HTML, download files]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: No explicit numeric quota found; nine archives (14 MB of 7z), one request each, weekly.
   licence:
     status: open-conditional
     notes: 'Terms: CC BY 3.0 IGO, https://unctadstat.unctad.org/EN/About.html ("All materials provided on this website
       are copyrighted under the Creative Commons Attribution 3.0 IGO license"; data and metadata "may be copied freely,
       duplicated and further distributed" provided the Data Hub is cited): commercial reuse and adaptation allowed under
       the licence; third-party series may carry their own terms (check per table). Attribution: "Source: United Nations
-      Trade and Development (UNCTAD) Data Hub, unctadstat.unctad.org".'
+      Trade and Development (UNCTAD) Data Hub, unctadstat.unctad.org". Per-table third-party check (#2757, 11 Nov
+      2026): open, see research.blockers; until it is closed every UNCTAD KPI (exports_goods, exports_services and the
+      UNCTAD measure of fdi_inflow) stays draft in kpi.csv, so nothing from UNCTAD reaches the published layer.'
   updates: Table-specific updates and revisions; indicator-explainer documents carry methodology.
   ingestion:
     history: Archive named table export, metadata and terms.
@@ -1019,11 +1023,15 @@ sources:
     overlap: Often uses UN Comtrade, WTO and national data; preserve table citation and upstream lineage.
   research:
     priority: review-next
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - 'Check third-party terms per selected table'
-    - 'Confirm machine-download stability'
+    - 'Third-party terms per selected table, not yet checked (11 Nov 2026; the agent session cannot reach
+      unctadstat.unctad.org, so the per-table notes have to be read in a Dev probe or by the owner). Built tables:
+      US_TradeMerchTotal (exports_goods) is synchronised with WTO, so WTO terms may apply to its values: open;
+      US_TradeServCatTotal (exports_services): open; US_FdiFlowsStock (UNCTAD measure of fdi_inflow): open. Landed,
+      not modelled: US_DigitallyDeliverableServices, US_CommodityPrice_M, US_PLSCI, US_MerchantFleet,
+      US_SeaborneTrade, US_PortCalls: open. Until closed these KPIs stay draft (kpi.csv) and are not published.'
     references:
     - https://unctadstat.unctad.org/
     - https://unctadstat.unctad.org/EN/IndicatorsExplained.html
@@ -2415,7 +2423,8 @@ sources:
   short_name: KRUS statistics
   provider: Kasa Rolniczego Ubezpieczenia Społecznego (KRUS)
   source_system: krus
-  status: approved
+  current: true
+  status: built
   family: B
   kpi: true
   geography: Poland; regional detail varies
@@ -2423,7 +2432,7 @@ sources:
   domains: [farm social insurance, pensions, benefits, accidents]
   entities: [insured-person aggregate, beneficiary aggregate, territorial unit]
   granularity: Quarter/annual aggregate table for insured persons, beneficiaries or claims; finest geography varies.
-  coverage: Archived quarterly materials; exact first year differs by topic.
+  coverage: 'Sheet Świadczenia: average monthly beneficiaries and benefit by benefit type, quarters and years from I quarter 2020; series break from III quarter 2025 (survivors'' pensions include those paid with other pensions, footnote 2); Dev probes 43084312730, 43085156243, 11 Nov 2026.'
   access:
     endpoint: https://www.gov.pl/web/krus/podstawowe-dane-statystyczne-z-zakresu-swiadczeniobiorcow
     kind: bulk_file
@@ -2441,8 +2450,8 @@ sources:
       / "Source: KRUS (Agricultural Social Insurance Fund), <table title> (<period>)".'
   updates: Quarterly for some beneficiary statistics; other series annual.
   ingestion:
-    history: Backfill each stable topic archive with edition/reference period.
-    incremental: Poll materials list; treat replacements as revisions.
+    history: 'Full series since 2020 in the one workbook.'
+    incremental: 'Weekly re-download; written only when the SHA-256 changed; Bronze keeps the newest copy.'
     identifiers: Topic + period + category + geography; KRUS population is distinct from ZUS.
   modelling:
     notes: Model stocks and payments separately; keep eligibility/population definitions.
@@ -2450,11 +2459,9 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Inventory file history and geography: the quarterly "Kwartalna Informacja Statystyczna" attachments on gov.pl
-      (Q3 and Q4 2025 read) carry 51 tables, regional ones by voivodeship; confirm which tables also ship as XLSX
-      before choosing PDF table extraction'
+    - 'The quarterly statistical information PDFs (51 tables, regional by voivodeship) have no stable listing and are not declared.'
     references:
     - https://www.gov.pl/web/krus/podstawowe-dane-statystyczne-z-zakresu-swiadczeniobiorcow
     - https://www.gov.pl/web/gov/prawa-autorskie
@@ -3848,7 +3855,8 @@ sources:
   short_name: MF state budget
   provider: Ministry of Finance
   source_system: mf_state_budget
-  status: approved
+  current: true
+  status: built
   family: D
   kpi: true
   geography: Poland
@@ -3856,7 +3864,7 @@ sources:
   domains: [public finance, budget]
   entities: [country, government unit]
   granularity: Budget year/classification line; monthly execution and annual plan documents.
-  coverage: Monthly execution sections from 2018; older material archived.
+  coverage: 'Table 1 of the monthly execution reports (sprawozdanie operatywne): cumulative revenue, expenditure, balance and financing by month, and the budget act, 2018 to the newest month (pages 2018–2026 list XLSX; 2010–2017 pages list none); Dev probes 43084312730, 43085156243, 11 Nov 2026.'
   access:
     endpoint: https://www.gov.pl/web/finanse/budzet-panstwa
     kind: bulk_file
@@ -3876,10 +3884,8 @@ sources:
       <report title> (<period>)".'
   updates: Monthly reports and annual acts; page modification time is not an observation date.
   ingestion:
-    history: 'PROPOSAL: load annual budget acts and the documented monthly execution files from 2018 onward; use
-      the linked archive separately for earlier years.'
-    incremental: 'PROPOSAL: append each monthly cumulative report and reconcile prior months within the year; page
-      modification time is not observation CDC.'
+    history: 'The newest report of each year since 2018 (each repeats every month of its year so far): one entity per year (bulk_file years).'
+    incremental: 'Weekday re-download of each year page''s newest report; written only when the SHA-256 changed; the newest report of a year replaces the previous one (latest-only per entity).'
     identifiers: year + report month + classification + measure
   modelling:
     notes: Separate plan, amended plan, cumulative execution and flow.
@@ -3887,9 +3893,9 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Map attachment schemas.'
+    - 'Tables 2–20 (revenue and expenditure by part, section and voivode budgets; EU funds budget) are in Bronze but not modelled in Silver yet.'
     references:
     - https://www.gov.pl/web/finanse/budzet-panstwa
     - https://www.gov.pl/web/finanse/sprawozdania-operatywne-miesieczne
@@ -3899,7 +3905,8 @@ sources:
   short_name: MF Treasury debt
   provider: Ministry of Finance
   source_system: mf_treasury_debt
-  status: approved
+  current: true
+  status: built
   family: D
   kpi: true
   geography: Poland
@@ -3907,7 +3914,7 @@ sources:
   domains: [public debt, public finance]
   entities: [country, debt instrument]
   granularity: Treasury debt by instrument, domestic/foreign criterion and period.
-  coverage: Official workbook and monthly bulletins; first period requires file inspection.
+  coverage: 'Workbook Zadluzenie_Skarbu_Panstwa.xlsx: six sheets (by instrument, holder, currency, actual maturity, duration and average maturity, maturity of Treasury securities), month ends from 2001-01; Dev probes 43084312730, 43085156243, 11 Nov 2026.'
   access:
     endpoint: https://www.gov.pl/web/finanse/szeregiczasowe
     kind: bulk_file
@@ -3927,10 +3934,8 @@ sources:
       Ministry of Finance, State Treasury debt time series (<month>)".'
   updates: Monthly; preliminary and final values may differ.
   ingestion:
-    history: 'PROPOSAL: load the official Treasury-debt time-series workbook, then retain each monthly bulletin
-      as a source vintage.'
-    incremental: 'PROPOSAL: replace/reconcile the newest workbook periods when a bulletin/file appears; preliminary
-      figures must remain distinguishable from final data.'
+    history: 'Full history in the one workbook (each release holds the whole series).'
+    incremental: 'Weekday re-download; written only when the SHA-256 changed; Bronze keeps the newest copy.'
     identifiers: month + instrument + issuance market/currency + vintage
   modelling:
     notes: Stocks are non-additive over time; retain value, share and change separately.
@@ -3938,9 +3943,9 @@ sources:
   research:
     priority: review-first
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Confirm workbook schema and revisions.'
+    - 'Preliminary vs final values are not told apart in the workbook; Bronze keeps only the newest copy (older copies in the Archive for 90 days).'
     references:
     - https://www.gov.pl/web/finanse/szeregiczasowe
     - https://www.gov.pl/attachment/cdea605f-3278-4a55-af7b-0162d548ea0f
@@ -3950,7 +3955,8 @@ sources:
   short_name: MF public debt
   provider: Ministry of Finance
   source_system: mf_public_debt
-  status: approved
+  current: true
+  status: built
   family: D
   kpi: true
   geography: Poland
@@ -3958,7 +3964,7 @@ sources:
   domains: [public debt, public finance]
   entities: [country, government sector]
   granularity: Debt by subsector, instrument and consolidation/methodology.
-  coverage: Quarterly/annual materials; workbook histories vary.
+  coverage: 'Workbook Dlug_publiczny_<q>.xlsx: public finance sector debt before/after consolidation by subsector (2000-12-31 on), by instrument (place of issue; residency), general government EDP debt by ESA 2010 instrument, PDP–EDP bridge, and debt to GDP (2001-12-31, quarterly from 2003); Dev probes 43084312730, 43085156243, 11 Nov 2026.'
   access:
     endpoint: https://www.gov.pl/web/finanse/zadluzenie-sektora-finansow-publicznych
     kind: bulk_file
@@ -3978,10 +3984,8 @@ sources:
       Ministry of Finance, Public finance sector debt (<period>)".'
   updates: Quarterly with revisions; national and EU methodologies can coexist.
   ingestion:
-    history: 'PROPOSAL: backfill each public-sector-debt workbook separately by national/EDP methodology and consolidation
-      basis.'
-    incremental: 'PROPOSAL: load each quarterly release and compare all periods present, retaining revisions rather
-      than treating the release date as CDC.'
+    history: 'Full history in the one workbook (each quarterly release holds the whole series).'
+    incremental: 'Weekly re-download; written only when the SHA-256 changed; Bronze keeps the newest copy.'
     identifiers: period + methodology + consolidation + subsector + instrument
   modelling:
     notes: Keep EDP/ESA and national definitions distinct; stocks are non-additive.
@@ -3989,9 +3993,9 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Document consolidation and breaks.
+    - 'National (PDP) and EDP definitions sit side by side in the workbook; Gold keeps them as separate measures (SP, PDP, GG).'
     references:
     - https://www.gov.pl/web/finanse/zadluzenie-sektora-finansow-publicznych
     - https://www.gov.pl/web/gov/prawa-autorskie
