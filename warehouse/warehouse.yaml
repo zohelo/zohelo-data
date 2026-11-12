@@ -118,7 +118,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_fact_annual: {rows: 1500000, exception: "#2294"}  # 1,092,012 (10 Nov) + ~230,000 slice series (#2592); until the Gold v1 cut-over (D28)
   poc_fact_daily: {rows: 600000}
   poc_fact_quarterly: {rows: 250000}  # quarterly series of the first slice (Eurostat NAMQ/BOP/LFS, DBW, BDL), ~170,000
-  poc_fact_monthly: {rows: 300000}  # 43,247 (10 Nov) + ~200,000 slice monthly series (#2592)
+  poc_fact_monthly: {rows: 600000}  # 391,828 incl. OECD 66,350 (Dev trial 43099545187, #2738); ~1.5x
   poc_map_geography: {rows: 150000}
   poc_measure_dimensions: {rows: 5000}
   kpi_dimension: {rows: 10000}

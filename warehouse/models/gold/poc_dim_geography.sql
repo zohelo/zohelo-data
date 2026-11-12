@@ -47,15 +47,14 @@ wb_countries as (
     where iso2_code is not null and length(iso2_code) = 2 and region is not null
 ),
 
--- OECD areas that are not countries (ISO 3166 alpha-3) nor Eurostat aggregates: OECD aggregates (#2738).
+-- OECD aggregates (#2738): only the codes listed in poc_oecd_areas that are not a Eurostat aggregate; any other
+-- OECD code without an ISO 3166 alpha-3 country stays unmatched (_X) and build_check reports it.
 oecd_aggregates as (
-    select distinct
-        o.ref_area,
-        coalesce(n.name_en, o.ref_area) as name_en
-    from {{ ref('oecd_cli') }} as o
-    left join oecd_areas as n on o.ref_area = n.ref_area
-    left join wb_countries as c on o.ref_area = c.iso3
-    where c.iso3 is null and coalesce(n.eurostat_code, '') = ''
+    select
+        ref_area,
+        name_en
+    from oecd_areas
+    where eurostat_code = ''
 ),
 
 countries as (
