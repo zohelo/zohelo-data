@@ -48,6 +48,9 @@ wgi_estimate,2
 index_world_100,1
 pct_gni,1
 pct_exports,1
+days,0
+payers,0
+certificates,0
 facilities,0
 bed_places,0
 overnight_stays,0

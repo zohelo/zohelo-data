@@ -1,7 +1,7 @@
 """MRPiPS social assistance statistics: Landing → Bronze activities (register PLS-031).
 
 bronze.load       newest copy of every landed report → bronze.mrpips_social_assistance_cells
-                  (one row per cell of the .xls workbook, read with xlrd: value as stored, sheet, row, column);
+                  (one row per cell of the .xls workbook, read with xlrd, or of an .xlsx workbook);
                   a file that is not an .xls workbook is rejected → bronze.mrpips_social_assistance_rejected_files
 bronze.verify     ingestion/common/lineage.py --source mrpips_social_assistance
 landing.archive   ingestion/common/archive.py --source mrpips_social_assistance (move to Archive)
@@ -20,11 +20,14 @@ KINDS = {1: "s", 2: "n", 3: "n", 4: "b", 5: "e"}  # xlrd cell types: text, numbe
 
 def decode(body: bytes, receipt: dict[str, Any]):
     """bulk_bronze decoder: every non-empty cell of the .xls workbook in the shared cell shape (member empty).
-    Numbers keep their stored float (integers without '.0'); dates stay Excel serial numbers, as in xlsx_cells."""
+    Numbers keep their stored float (integers without '.0'); dates stay Excel serial numbers, as in xlsx_cells.
+    A year published as an XLSX workbook (2021) is read with the shared XLSX decoder."""
     import xlrd
 
     from ingestion.common import bulk_bronze
 
+    if body[:2] == b"PK":
+        return gus_publications.decode(body, receipt)
     try:
         book = xlrd.open_workbook(file_contents=body, on_demand=True)
     except xlrd.XLRDError as exc:

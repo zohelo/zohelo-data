@@ -36,6 +36,7 @@ undata,GL-017,UNdata,UNdata,United Nations Statistics Division,cube,file,interna
 bis,GL-015,BIS Data Portal,BIS Data Portal,Bank for International Settlements,cube,file,international-public,bis_terms,https://data.bis.org/
 ilostat,GL-023,ILOSTAT,ILOSTAT,International Labour Organization,cube,file,international-public,cc_by_4_0_ilo,https://ilostat.ilo.org/data/bulk/
 unece,GL-038,UNECE Statistical Database,UNECE Statistical Database,United Nations Economic Commission for Europe,cube,table,international-public,unece_terms,https://w3.unece.org/PXWeb/en
+zus_psz,PLS-009,Portal Statystyczny ZUS,ZUS statistical portal,Zakład Ubezpieczeń Społecznych (ZUS),cube,file,national-public,unresolved,https://psz.zus.pl/
 gus_culture,PLS-027,GUS Kultura i dziedzictwo narodowe,GUS culture and national heritage,GUS,cube,file,national-public,gus_copyright_culture,https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/
 gus_culture_participation,PLS-028,GUS Uczestnictwo ludności w kulturze,GUS participation in culture,GUS,cube,file,national-public,gus_copyright_participation,https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/
 gus_tourism,PLS-035,GUS Turystyka,GUS tourism,GUS,cube,file,national-public,gus_copyright_tourism,https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/
