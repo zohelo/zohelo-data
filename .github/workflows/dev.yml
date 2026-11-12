@@ -42,7 +42,7 @@ permissions:
 # newer `merge:check` run cancels the older one, and other labels get a group of their own so they never
 # cancel it.
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('zohelo-gate-pr{0}-{1}', github.event.pull_request.number, github.event.label.name == 'merge:check' && 'check' || github.run_id) || format('zohelo-dev-{0}-{1}', github.ref_name, inputs.script) }}
+  group: ${{ github.event_name == 'pull_request' && format('zohelo-gate-pr{0}-{1}', github.event.pull_request.number, github.event.label.name == 'merge:check' && 'check' || github.run_id) || format('zohelo-dev-{0}-{1}-{2}', github.ref_name, inputs.script, github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -159,6 +159,11 @@ jobs:
   dev:
     if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
     name: "dev · ${{ github.ref_name }} · ${{ inputs.script }}"
+    # Trial only (test/refresh-queue, never merged): does a job-level group with `queue: max` keep every waiting job?
+    concurrency:
+      group: zz-dev-queue-trial
+      cancel-in-progress: false
+      queue: max
     runs-on: ubuntu-24.04
     timeout-minutes: 350
     env:
