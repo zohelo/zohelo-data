@@ -1,0 +1,65 @@
+version: 2
+models:
+  - name: prng_objects
+    description: >-
+      GUGiK PRNG, state register of geographical names (register PL-ENV-002; "Dane są dostępne bezpłatnie i do
+      dowolnego wykorzystania", geoportal.gov.pl), national part, newest copy of each package: one row per named
+      object, localities (entity miejscowosci) and physiographic objects (entity obiekty_fizjograficzne). Grain:
+      prng_id. Names, status, category and kind, territory and coordinates as published; latitude and longitude
+      parsed from the WGS84 text of a single main point. Profile and trial run in the PR.
+    columns:
+      - name: prng_id
+        description: Identyfikator PRNG, one sequence over both parts of the national register.
+        tests: [not_null, unique]
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: ['miejscowosci', 'obiekty_fizjograficzne']}}}]
+      - name: iip_id
+        tests: [not_null, unique]
+      - name: name
+        tests: [not_null]
+      - name: name_status
+        tests:
+          - not_null
+          - accepted_values: {arguments: {values: ['urzędowa', 'zestandaryzowana', 'niestandaryzowana']}}
+      - name: object_category
+        description: kategoria obiektu; 'miejscowość' for every locality.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['miejscowość', 'pokrycie terenu', 'ukształtowanie terenu', 'hydrografia', 'transport',
+                         'budowle', 'inne']
+      - name: object_kind
+        description: rodzaj obiektu (25 kinds of locality and 127 kinds of physiographic object on 12 Nov 2026).
+        tests: [not_null]
+      - name: representation_kind
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['punkt główny', 'punkt początkowy obiektu; punkt końcowy obiektu']
+      - name: gmina_codes
+        description: TERYT gmina codes as published, ';' between the gminas of an object that spans several.
+      - name: export_date
+        description: Date in the package's "Export danych PRNG z dnia <date>" member.
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source package (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: prng_object_gminas
+    description: >-
+      GUGiK PRNG (register PL-ENV-002): the gminas each named object of silver.prng_objects lies in, wholly or partly,
+      as the register lists them. Grain: prng_id × gmina_code. Powiat and voivodeship codes are the first 4 and 2
+      digits of the TERYT gmina code.
+    tests:
+      - unique:
+          column_name: "prng_id || '|' || gmina_code"
+    columns:
+      - name: prng_id
+        tests: [not_null]
+      - name: gmina_code
+        tests: [not_null]
+      - name: entity
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

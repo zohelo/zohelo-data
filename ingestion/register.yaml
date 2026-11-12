@@ -5784,7 +5784,8 @@ sources:
   name: Państwowy Rejestr Nazw Geograficznych (PRNG)
   short_name: GUGiK PRNG
   provider: GUGiK
-  status: approved
+  source_system: gugik_prng
+  status: built
   family: E
   kpi: false
   geography: Poland
@@ -5792,37 +5793,46 @@ sources:
   domains: [geographical names, geospatial]
   entities: [named place, geographic object]
   granularity: Individual Polish and world geographical-name records with PRNG identifier.
-  coverage: Current national register plus world-name section; historical snapshots not confirmed.
+  coverage: 'Current national register (localities 124,236 and physiographic objects 131,525 names, export of 12 Nov 2026)
+    plus a world-name section (15,158 names, export of 8 Sep 2026); no historical snapshots are published.'
   access:
     endpoint: https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-nazw-geograficznych-prng/
     kind: bulk_file
     interfaces: [GML, SHP, XLSX, WFS, WMS]
     auth: Public services and download.
     cost: Free download.
-    limits: Unknown; no numeric quota was confirmed.
+    limits: None published.
   licence:
-    status: unresolved
-    notes: 'Terms: the PRNG page https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-nazw-geograficznych-prng/ describes
-      free download of the national data but, unlike BDOT10k and NMT pages, carries no "możliwa do dowolnego wykorzystania"
-      sentence (page read 11 Nov 2026 from a GitHub runner); licence stays unresolved (internal only) until GUGiK states reuse
-      terms for PRNG.'
-  updates: Register is updated; cadence unknown.
+    status: open-conditional
+    notes: 'Terms: the PRNG page https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-nazw-geograficznych-prng/ (read 12 Nov
+      2026 from a GitHub runner, Dev probe 43327592136), section "Pobieranie danych z rejestru nazw geograficznych RP": "Dane
+      są dostępne bezpłatnie i do dowolnego wykorzystania." (the world part: "Pliki można pobrać bezpłatnie do powszechnego
+      wykorzystania"). The GUGiK page https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl
+      lists PRNG among the materials "udostępniane nieodpłatnie bez konieczności składania wniosku - zgodnie z art. 40a ust.
+      2 ustawy Prawo geodezyjne i kartograficzne". The packages carry no licence or notice file (members: data workbook,
+      column legend, "Export danych PRNG z dnia <date>"). No licence name and no attribution wording; commercial reuse and
+      modification are allowed by "do dowolnego wykorzystania". Attribution: "Źródło: GUGiK, PRNG" with the export date.
+      The note of 11 Nov 2026 (no such sentence) is superseded by this reading.'
+  updates: 'Updated continuously; official names are verified every year as of 1 January (page). The national packages are
+    rebuilt often (Last-Modified 12 Nov 2026 on the probe day).'
   ingestion:
-    history: 'Nationwide download in the geoportal "Dane do pobrania" layer "Państwowy Rejestr Nazw Geograficznych" (localities
-      and physiographic objects separately, GML, SHP, XLSX) or the WFS https://mapy.geoportal.gov.pl/wss/service/PZGiK/PRNG/WFS/GeographicalNames
-      (GML). Size: tens of MB (estimate, not measured).'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: PRNG identifier; retain native name, language/status fields and geometry.
+    history: 'Bulk, stable URLs, listed by the WMS GetFeatureInfo of https://mapy.geoportal.gov.pl/wss/service/PZGIK/PRNG/WMS/DaneDoPobrania
+      (Dev probe 43328622271, 12 Nov 2026): https://opendata.geoportal.gov.pl/prng/PRNG_MIEJSCOWOSCI_XLSX.zip (22,976,072
+      bytes) and PRNG_OBIEKTY_FIZJOGRAFICZNE_XLSX.zip (20,134,653 bytes), each also as _GML.zip and _SHP.zip; the world part
+      PRNG_SWIAT_{XLSX,GML,SHP}.zip (about 2.5 MB). Last-Modified and ETag are sent. Only the current state is published.'
+    incremental: Entity = national XLSX package, version = Last-Modified; snapshot, changed_since_last (SHA-256), monthly.
+    identifiers: PRNG identifier (and the INSPIRE id), TERYT gmina codes, SIMC identifier of localities; names, status and
+      language fields and the coordinates as published (one main point, or start and end points of linear objects).
   modelling:
-    notes: Model names separately from places because aliases and status can change.
+    notes: 'Built as gugik_prng: silver.prng_objects (entity table by PRNG id), silver.prng_object_gminas (object × gmina), Gold
+      counts of named objects by kind or category per Poland, voivodeship, powiat and gmina (gold.build_gugik_prng), KPI
+      localities (draft). The world part is left out.'
     overlap: Complements PRG and municipal address sources; names are not addresses.
   research:
     priority: review-next
-    evidence: documented
+    evidence: tested
     connection: tested
-    blockers:
-    - 'Licence unresolved: no reuse sentence on the PRNG page'
-    - Inspect the package notice of the downloaded file
+    blockers: []
     references:
     - https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-nazw-geograficznych-prng/
     - https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl

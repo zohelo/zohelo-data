@@ -66,3 +66,4 @@ index_2021_100,2021=100,"index, 2021 = 100","indeks, 2021 = 100",true,index_2021
 ncu_per_usd,NCU/USD,source currency per US dollar,waluta źródła za dolara amerykańskiego,true,ncu_per_usd,1
 ncu_per_eur,NCU/EUR,source currency per euro,waluta źródła za euro,true,ncu_per_eur,1
 ncu_per_rub,NCU/RUB,source currency per Russian rouble,waluta źródła za rubla rosyjskiego,true,ncu_per_rub,1
+named_objects,ob.,named objects,obiekty nazwane,false,named_objects,1
