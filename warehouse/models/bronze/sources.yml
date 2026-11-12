@@ -307,6 +307,22 @@ sources:
       day (YYYYMMDD), views; partitioned by entity (<lang>_<title slug>).
   - name: wikimedia_pageviews_rejected_files
     description: Wikimedia pageviews Landing files the Bronze decoder rejected, with the reason.
+- name: who
+  description: WHO data.who.int — indicator CSV files (all areas, years and sexes)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/who/
+    loaded_by: ingestion/to_bronze/who/
+    config: ingestion/sources/who.yaml
+  tables:
+  - name: who_observations
+    description: >-
+      One row per row of the newest copy of each indicator CSV (entity: life_expectancy, hale), every value as
+      published text, columns lower-cased (ind_code, dim_time, dim_geo_code_m49, dim_geo_code_type, dim_sex,
+      amount_n, amount_nl, amount_nu, ...); partitioned by entity.
+  - name: who_rejected_files
+    description: WHO data.who.int Landing files the Bronze decoder rejected, with the reason.
 - name: news_feeds
   description: News headline feeds (RSS/Atom) of Polish outlets — headlines and links only (topics, O32)
   database: r2
@@ -510,3 +526,34 @@ sources:
   schema: gold
   tables:
   - name: coverage
+- name: mf_jst_budgets
+  description: Ministry of Finance — local-government budget reports, quarterly summary workbooks (Zestawienia zbiorcze)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mf_jst_budgets/
+    loaded_by: ingestion/to_bronze/mf_jst_budgets/
+    config: ingestion/sources/mf_jst_budgets.yaml
+  tables:
+  - name: mf_jst_budgets_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of the newest copy of each
+      summary workbook (entity <type>_<dw|zn>_<year>_k<quarter>); partitioned by entity.
+  - name: mf_jst_budgets_rejected_files
+    description: MF local-government summary files the Bronze decoder rejected, with the reason.
+- name: mrpips_unemployment
+  description: MRPiPS / Publiczne Służby Zatrudnienia — registered unemployment, monthly "statystyki strukturalne" ZIPs
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mrpips_unemployment/
+    loaded_by: ingestion/to_bronze/mrpips_unemployment/
+    config: ingestion/sources/mrpips_unemployment.yaml
+  tables:
+  - name: mrpips_unemployment_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of the rate workbook and of
+      MRPiPS-01 sheets TAB 1 and TAB 2 in the newest copy of each month's ZIP (entity stat_YYYY_MM); partitioned by
+      entity.
+  - name: mrpips_unemployment_rejected_files
+    description: MRPiPS registered-unemployment Landing files the Bronze decoder rejected, with the reason.

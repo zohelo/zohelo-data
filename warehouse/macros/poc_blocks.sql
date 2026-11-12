@@ -249,6 +249,16 @@
     ) as t (economy, candidate_key)
 {% endmacro %}
 
+{# WHO data.who.int blocks (gold.build_who): one per indicator file; areas: EU27 members (M49, macro
+   poc_m49_eu27) and World (M49 1, GLOBAL). #}
+{% macro poc_who_blocks() %}
+    select * from (
+        values
+        ('life_expectancy', 'Life expectancy at birth (WHO)'),
+        ('hale', 'Healthy life expectancy at birth (WHO)')
+    ) as t (entity, block_name)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -324,6 +334,10 @@
     poc_build_oecd:oecd
     poc_build_gleif:gleif
     poc_build_mf_biala_lista:mf_biala_lista
+    poc_build_prg:gugik_prg
+    poc_build_mf_jst_budgets:mf_jst_budgets
+    poc_build_mrpips_unemployment:mrpips_unemployment
+    poc_build_who:who
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -397,6 +411,8 @@
     union all
     select distinct 'unctad', entity, entity from ({{ poc_unctad_blocks() }})
     union all
+    select 'who', entity, block_name from ({{ poc_who_blocks() }})
+    union all
     select * from (
         values
         ('nbp', 'fx_A', 'NBP exchange rates, table A'),
@@ -412,6 +428,9 @@
         ('oecd', 'cli', 'OECD composite leading indicators and confidence indicators'),
         ('gleif', 'lei2', 'GLEIF LEI records (golden copy)'),
         ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file'),
+        ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units'),
+        ('mf_jst_budgets', 'jst_budget', 'MF local-government budget summaries (year to date)'),
+        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)'),
         ('nbp_bop', 'bop_m', 'NBP balance of payments, monthly'),
         ('nbp_bop', 'bop_q', 'NBP balance of payments, quarterly'),
         ('nbp_bop', 'iip_q', 'NBP international investment position, quarterly')
