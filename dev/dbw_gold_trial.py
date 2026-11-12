@@ -120,7 +120,7 @@ def account(tmp: str, item: dict, geo_map_path: str) -> dict:
                     case
                         when s.value is null then 'empty'
                         when s.value = 0 and coalesce(s.missing_reason_id, 253) <> 253 then 'zero_sign'
-                        when pe.frequency is null or s.year is null then 'period'
+                        when pe.frequency is null or s.year is null or s.year not between 1000 and 9999 then 'period'
                         when t.entity_id is not null then 'twin'
                         else 'loaded'
                     end as outcome,
