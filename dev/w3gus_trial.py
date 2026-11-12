@@ -43,6 +43,8 @@ def show(con, title, sql, limit=120):
 
 
 def main(argv) -> int:
+    titles = next((a[7:] for a in argv if a.startswith("titles=")), None)
+    argv = [a for a in argv if not a.startswith("titles=")]
     sources = argv or ["gus_culture", "gus_culture_participation", "gus_tourism"]
     client = s3()
     cat = bf.retry(catalog, "catalog")
@@ -66,6 +68,10 @@ def main(argv) -> int:
             except Exception:
                 rejected = []
             con.register(f"{source}_cells", cells)
+            if titles:
+                show(con, f"{source} titles", f"""select entity, member, sheet_name, string_agg(trim(regexp_replace(value_text, '\\s+', ' ', 'g')), ' ' order by row_number, column_number)[:230] as title
+                    from {source}_cells where row_number <= 3 group by all
+                    having regexp_matches(title, '(?i){titles}') order by all""", limit=400)
             silver_path = next((ROOT / f"warehouse/models/silver/{source}").glob("*_tables.sql"))
             con.sql(f"create or replace table {source}_tables as " + render(silver_path, {f"{source}_cells": f"{source}_cells"}))
             con.sql(f"""create or replace table geo_{source} as
