@@ -37,7 +37,11 @@ def main() -> int:
     config = "{{ config(alias='build_bdl', tags=['gold_block']) }}"
     text = text.replace(config, "{{ config(materialized='ephemeral') }}")
     assert text.endswith("from with_value as k\n")
-    text = text[: -len("from with_value as k\n")] + "from deduplicated as k\nwhere k.no_value\n"
+    text = text[: -len("from with_value as k\n")] + "from deduplicated as k\n"
+    text = text.replace(
+        "\n    k.source_version,\n    k.raw_sha256\n", "\n    k.source_version,\n    k.raw_sha256,\n    k.no_value\n"
+    )
+    assert "k.no_value\n" in text
     COPY.write_text(text)
     scope = patterns()
     cases = " ".join(
@@ -46,9 +50,15 @@ def main() -> int:
         for p in ps
     )
     inline = f"""
-        select kpi, geography_key, frequency, period_label, is_total, count(*) as n, max(abs(value)) as max_abs
-        from (select *, case {cases} end as kpi from {{{{ ref('zz_dev_bdl_removed') }}}})
-        where kpi is not null and (geography_key = 'PL' or regexp_matches(geography_key, '^TERC:[0-9]{{2}}00000$'))
+        with t as (
+            select *, case {cases} end as kpi,
+                geography_key = 'PL' or regexp_matches(geography_key, '^TERC:[0-9]{{2}}00000$') as pl_voiv
+            from {{{{ ref('zz_dev_bdl_removed') }}}}
+        )
+        select coalesce(kpi, '-') as kpi, geography_key, frequency, period_label, is_total, no_value, pl_voiv,
+            count(*) as n, max(abs(value)) as max_abs
+        from t
+        where no_value or (kpi is not null and pl_voiv)
         group by all order by kpi, geography_key, period_label
     """
     command = ["dbt", "show", "--target", "prod", "--project-dir", "warehouse", "--profiles-dir", "warehouse"]
@@ -68,36 +78,42 @@ def main() -> int:
     if rows is None:
         annotate("error", "dev bdl_removed failed", done.stdout[-3000:] + done.stderr[-800:])
         return 1
-    total = sum(r["n"] for r in rows)
+    removed = [r for r in rows if r["no_value"]]
+    in_scope = [r for r in removed if r["kpi"] != "-" and r["pl_voiv"]]
+    kept = [r for r in rows if not r["no_value"]]
+    control = {}
+    for r in kept:
+        control[r["kpi"]] = control.get(r["kpi"], 0) + r["n"]
     by_kpi: dict[str, dict] = {}
-    for r in rows:
-        k = by_kpi.setdefault(r["kpi"], {"rows": 0, "cells": 0, "totals": 0, "geographies": set(), "periods": set()})
+    for r in in_scope:
+        k = by_kpi.setdefault(r["kpi"], {"rows": 0, "totals": 0, "geographies": set(), "periods": set()})
         k["rows"] += r["n"]
-        k["cells"] += 1
         k["totals"] += r["n"] if r["is_total"] else 0
         k["geographies"].add(r["geography_key"])
         k["periods"].add(r["period_label"])
+    levels: dict[str, int] = {}
+    for r in removed:
+        key = ("in_kpi" if r["kpi"] != "-" else "no_kpi") + (":pl_voiv" if r["pl_voiv"] else ":other_geo")
+        levels[key] = levels.get(key, 0) + r["n"]
     summary = {
-        kpi: {
-            **{x: v[x] for x in ("rows", "cells", "totals")},
-            "geographies": sorted(v["geographies"])[:20],
-            "periods": sorted(v["periods"]),
-        }
-        for kpi, v in by_kpi.items()
-    }
-    annotate(
-        "notice",
-        "dev bdl_removed summary",
-        {
-            "removed_rows_in_scope": total,
-            "max_abs_value": max([r["max_abs"] or 0 for r in rows] or [0]),
-            "kpis_in_scope": len(scope),
-            "by_kpi": summary,
+        "removed_rows_all": sum(r["n"] for r in removed),
+        "removed_by_scope": levels,
+        "removed_max_abs_value": max([r["max_abs"] or 0 for r in removed] or [0]),
+        "kept_rows_in_scope_control": control,
+        "removed_in_scope_by_kpi": {
+            kpi: {
+                "rows": v["rows"],
+                "totals": v["totals"],
+                "geographies": sorted(v["geographies"])[:20],
+                "periods": sorted(v["periods"]),
+            }
+            for kpi, v in by_kpi.items()
         },
-    )
-    detail = [[r["kpi"], r["geography_key"], r["period_label"], r["n"]] for r in rows if r["is_total"]]
+    }
+    annotate("notice", "dev bdl_removed summary", summary)
+    detail = [[r["kpi"], r["geography_key"], r["period_label"], r["n"]] for r in in_scope if r["is_total"]]
     text = json.dumps(detail, ensure_ascii=False)
-    for i in range(0, min(len(text), 7 * 3500), 3500):
+    for i in range(0, min(len(text), 6 * 3500), 3500):
         annotate("notice", f"dev bdl_removed totals {i // 3500}", text[i : i + 3500])
     return 0
 
