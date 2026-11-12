@@ -62,7 +62,7 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)
        gold.dimension, gold.dimension_alias, gold.dim_dimension,  # catalogue: axes
-       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_public_finance, gold.build_wdi, gold.build_unctad, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth]   # Gold v1 (warehouse/models/gold, docs/model.md)
+       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_public_finance, gold.build_wdi, gold.build_unctad, gold.build_unesco_uis, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth]   # Gold v1 (warehouse/models/gold, docs/model.md)
 demo_namespaces: [demo_bronze, demo_silver, demo_gold]  # phase 2 demo warehouse (program plan §3.3); never in the public catalogue
 
 # Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
@@ -86,6 +86,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   unctad_merchant_fleet: {rows: 96000}  # 63,896
   unctad_seaborne_trade: {rows: 97000}  # 64,424
   unctad_port_calls: {rows: 1800}  # 1,197
+  unesco_uis_observations: {rows: 16000}  # 10,689 (Dev trial 43159213097)
   news_headlines: {rows: 300000}
   releases: {rows: 5000}  # about 50 announced releases a week, 60-day window
   topic_attention: {rows: 50000}  # 35 topics × 455 days
@@ -123,6 +124,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_nbp: {rows: 600000}
   poc_build_public_finance: {rows: 8600}  # 5,727 (Dev trial 43099813876)
   poc_build_unctad: {rows: 18000}  # 11,871 (Dev trial 43100532689): 29 areas × 10 measures
+  poc_build_unesco_uis: {rows: 4500}  # 2,869: 27 EU members (Dev trial 43159213097)
   poc_build_wdi: {rows: 500000}  # + 16 slice indicators, all economies (#2592)
   poc_concept_measures: {rows: 1000}
   poc_dim_calendar: {rows: 80000}

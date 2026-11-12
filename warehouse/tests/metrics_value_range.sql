@@ -16,7 +16,11 @@ with bounds (concept_key, source_system, value_min, value_max) as (
     ('gdp_per_capita', 'eurostat', 0, 2e5),
     ('gdp_per_capita', 'world_bank_wdi', 0, 5e5),
     ('gdp_volume_growth', 'eurostat', -50, 100),
-    ('gdp_volume_growth', 'world_bank_wdi', -100, 200)
+    ('gdp_volume_growth', 'world_bank_wdi', -100, 200),
+    -- UNESCO UIS (#2411): % of GDP; highest 6.35 (all areas, Dev trial 43159213097)
+    ('gerd_gdp', 'unesco_uis', 0, 9.5),
+    -- UNESCO UIS (#2411): %; EU27 highest 54.35, all areas 73.91 (Dev trial 43159213097)
+    ('tertiary_attainment', 'unesco_uis', 0, 100)
 ),
 
 metrics as (

@@ -151,3 +151,5 @@ krus_pension_avg,krus,krus:benefits:PLN:old_age:avg_benefit_pln%,"average monthl
 fdi_inflow,unctad,unctad:US_FdiFlowsStock:08:1:USD_MN,"FDI inward flows, US$ million at current prices (UNCTAD)",3,mln_usd
 exports_goods,unctad,unctad:US_TradeMerchTotal:02:USD_MN,"merchandise exports, US$ million at current prices",1,
 exports_services,unctad,unctad:US_TradeServCatTotal:02:S:USD_MN,"services exports (total), US$ million at current prices",1,
+gerd_gdp,unesco_uis,unesco_uis:gerd_gdp:pct_gdp:EXPGDP.TOT,"% of GDP, UIS (SDG 9.5.1)",3,
+tertiary_attainment,unesco_uis,unesco_uis:tertiary_attainment:pct:EA.5T8.AG25T99,"25+, completed short-cycle tertiary or higher, ISCED 5-8 (Eurostat: 25-34)",3,

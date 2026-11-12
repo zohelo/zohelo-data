@@ -201,6 +201,22 @@ unctad as (
     left join unctad_areas as a on c.economy = a.economy
     left join geo as g on a.candidate_key = g.geography_key
     where c.economy is not null
+),
+
+-- UNESCO UIS: countries by ISO 3166-1 alpha-3 (dim_geography.iso3); regional units ('SDG: ...', 'WB: ...') have no
+-- Gold key (_X), and the build stage builds only the EU27 members.
+unesco_uis as (
+    select
+        'unesco_uis' as source_system,
+        a.geo_unit as source_code,
+        coalesce(g.geography_key, '_X') as geography_key
+    from (
+        select distinct
+            geo_unit,
+            is_country_code
+        from {{ ref('unesco_uis_observations') }}
+    ) as a
+    left join geo as g on a.is_country_code and g.level_name = 'country' and a.geo_unit = g.iso3
 )
 
 select
@@ -220,6 +236,8 @@ from (
     select * from wdi
     union all
     select * from unctad
+    union all
+    select * from unesco_uis
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null
