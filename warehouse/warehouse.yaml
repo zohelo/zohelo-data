@@ -103,7 +103,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_dbw: {rows: 600000}  # 312,512 (10 Nov) + ~110,000 slice blocks (#2592)
   poc_build_eurostat: {rows: 800000}
   poc_build_nbp: {rows: 600000}
-  poc_build_prg: {rows: 10000}  # 2,876 PRG units (country, 16 voivodeships, 380 powiats, 2,479 gminas)
+  poc_build_prg: {rows: 4300}  # 2,875 PRG units (16 voivodeships, 380 powiats, 2,479 gminas; Dev trial 43099545187 minus the country)
   poc_build_wdi: {rows: 500000}  # + 16 slice indicators, all economies (#2592)
   poc_concept_measures: {rows: 1000}
   poc_dim_calendar: {rows: 80000}
@@ -187,8 +187,8 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_average_gross_wage: {rows: 20000}
   poc_metrics_employment_rate: {rows: 20000}
   poc_metrics_registered_unemployment_rate: {rows: 30000}
-  geo_unit: {rows: 10000}  # 2,876 (#2739)
-  geo_neighbour: {rows: 50000}  # 16,224: (34 + 1,003 + 7,075 pairs) × 2 (Dev probe 43084707728)
-  poc_metrics_area: {rows: 150000}  # BDL P1410 to powiat, WDI land area, PRG
+  geo_unit: {rows: 4300}  # 2,876 (Dev trial 43099545187)
+  geo_neighbour: {rows: 25000}  # 16,224 (Dev trial 43099545187)
+  poc_metrics_area: {rows: 50000}  # 33,753 (Dev trial 43099545187)
   dim_dataset: {rows: 40000}
   dim_dimension: {rows: 1000}

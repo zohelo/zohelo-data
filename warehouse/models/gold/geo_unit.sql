@@ -1,6 +1,8 @@
 {{ config(alias='geo_unit', pre_hook="install spatial; load spatial") }}
 {# Gold geography block (#2739): one row per Polish administrative unit with a PRG boundary (the country,
-   16 voivodeships, 380 powiats, 2,479 gminas): area as PRG publishes it (JPT_POWIER, hectares → km²),
+   16 voivodeships, 380 powiats, 2,479 gminas): area as PRG publishes it (JPT_POWIER, hectares → km²;
+   the country row includes internal and territorial sea waters, area_includes_sea = true, so it is not
+   the sum of the units below it),
    centroid in longitude/latitude (computed in PUWG 1992, EPSG:2180, then back to ETRS89), the number of
    neighbours of the same level (gold.geo_neighbour) and the PRG validity and edition. The geometry stays
    in silver.prg_units; simplified shapes are published as geo/<level>.geojson (docs/published.md). #}
@@ -12,7 +14,16 @@ with units as (
         area_ha,
         valid_from,
         source_version,
-        st_transform(st_geomfromwkb(geometry_wkb), 'EPSG:4258', 'EPSG:2180', always_xy := true) as geom_2180
+        st_transform(
+            case
+                when
+                    st_xmin(st_geomfromwkb(geometry_wkb)) between 13 and 25
+                    and st_ymax(st_geomfromwkb(geometry_wkb)) between 48 and 56
+                    then st_geomfromwkb(geometry_wkb)
+                else error('PRG geometry ' || teryt_code || ' is not in EPSG:4258 degrees: check the edition CRS')
+            end,
+            'EPSG:4258', 'EPSG:2180', always_xy := true
+        ) as geom_2180
     from {{ ref('prg_units') }}
     where unit_level in ('kraj', 'wojewodztwo', 'powiat', 'gmina')
 ),
@@ -38,6 +49,7 @@ select
     case when c.unit_level = 'kraj' then null else c.teryt_code end as terc_code,
     c.name_pl,
     c.area_ha / 100 as area_km2,
+    c.unit_level = 'kraj' as area_includes_sea,
     round(st_x(c.centroid), 6) as centroid_lon,
     round(st_y(c.centroid), 6) as centroid_lat,
     coalesce(n.neighbours, 0) as neighbours,

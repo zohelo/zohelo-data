@@ -133,14 +133,16 @@ models:
   - name: geo_unit
     description: >-
       One row per Polish administrative unit with a PRG boundary (country, voivodeships, powiats, gminas): PRG
-      area, centroid (lon/lat, computed in EPSG:2180), number of neighbours, PRG validity and edition.
+      area, centroid (lon/lat, computed in EPSG:2180), number of neighbours, PRG validity and edition. The country
+      row's area includes internal and territorial sea waters (area_includes_sea).
     columns:
       - name: geography_key
         tests: [not_null, unique, {relationships: {arguments: {to: ref('poc_dim_geography'), field: geography_key}}}]
   - name: geo_neighbour
     description: >-
       Contiguity of Polish voivodeships, powiats and gminas from the full-resolution PRG boundaries: one row per
-      unit × neighbour of the same level, both directions; shared border in km (EPSG:2180), rook or queen.
+      unit × neighbour of the same level, both directions; shared border in km (EPSG:2180); rook = shared line,
+      queen = point contact only (a textbook queen matrix takes every row). tests/geo_neighbour_symmetry.sql.
     tests:
       - unique:
           column_name: "geography_key || '|' || neighbour_key"
@@ -148,7 +150,7 @@ models:
       - name: geography_key
         tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_geography'), field: geography_key}}}]
       - name: neighbour_key
-        tests: [not_null]
+        tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_geography'), field: geography_key}}}]
       - name: contiguity
         tests: [{accepted_values: {arguments: {values: ['rook', 'queen']}}}]
   - name: poc_build_check

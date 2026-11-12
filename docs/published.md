@@ -190,7 +190,7 @@ from `gold.geo_neighbour` joined to `gold.geo_unit` for the centroids.
 | geography_key | string | the unit, `TERC:<code>` as in the geojson features |
 | neighbour_key | string | the neighbouring unit of the same level |
 | shared_border_km | number | length of the common boundary in km (EPSG:2180), 3 decimals; 0 for units touching in points only |
-| contiguity | string | `rook` (shared line) or `queen` (points only); a queen matrix takes every row, a rook matrix rows with `rook` |
+| contiguity | string | `rook` (shared line of any length) or `queen` (point contact only — not the textbook queen, which includes rook pairs); a textbook queen matrix takes every row, a rook matrix the rows with `rook` |
 
 Centroids and areas for distance-based weights go into the geojson features as optional properties
 `centroid_lon`, `centroid_lat`, `area_km2` (additive, from `gold.geo_unit`) instead of a second file. Size: about
