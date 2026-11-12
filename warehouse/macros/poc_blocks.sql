@@ -369,6 +369,21 @@
     ) as t (loc_id, candidate_key)
 {% endmacro %}
 
+{# EEA greenhouse gas inventory (gold.build_eea, block govreg_ghg_inventory): the sectors built, CRF codes as
+   published; is_total marks the national totals (without and with LULUCF). #}
+{% macro poc_eea_sectors() %}
+    select * from (
+        values
+        ('Sectors/Totals_excl', true),
+        ('Sectors/Totals_incl', true),
+        ('1', false),
+        ('2', false),
+        ('3', false),
+        ('4', false),
+        ('5', false)
+    ) as t (sector_code, is_total)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -452,6 +467,7 @@
     poc_build_who:who
     poc_build_unesco_uis:unesco_uis
     poc_build_faostat:faostat
+    poc_build_eea:eea
     poc_build_ecb:ecb
     poc_build_ids:world_bank_ids
     poc_build_un_wpp:un_wpp
@@ -539,6 +555,8 @@
     select 'unesco_uis', entity, block_name from ({{ poc_unesco_uis_blocks() }})
     union all
     select 'faostat', entity || ':' || item_code || '.' || element_code, block_name from ({{ poc_faostat_blocks() }})
+    union all
+    select 'eea', 'govreg_ghg_inventory', 'Greenhouse gas emissions by sector, GovReg inventory (EEA)'
     union all
     select 'ecb', entity, block_name from ({{ poc_ecb_blocks() }})
     union all

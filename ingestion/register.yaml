@@ -1829,7 +1829,8 @@ sources:
   name: EEA Datahub
   short_name: EEA Datahub
   provider: European Environment Agency
-  status: approved
+  source_system: eea
+  status: built
   family: G
   kpi: true
   geography: multicountry-Europe
@@ -1888,8 +1889,6 @@ sources:
     evidence: documented
     connection: tested
     blockers:
-    - Download URL and size of the current greenhouse gas inventory version are not tested; resolve them from the version
-      record in the Landing trial.
     - Dataset-level rights scan for every further dataset (item-specific and third-party conditions override CC BY).
     references:
     - https://www.eea.europa.eu/en/datahub
