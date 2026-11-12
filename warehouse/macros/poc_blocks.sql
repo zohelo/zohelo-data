@@ -449,6 +449,7 @@
     poc_build_prg:gugik_prg
     poc_build_mf_jst_budgets:mf_jst_budgets
     poc_build_mrpips_unemployment:mrpips_unemployment
+    poc_build_knf_insurance:knf_insurance
     poc_build_who:who
     poc_build_unesco_uis:unesco_uis
     poc_build_faostat:faostat
@@ -563,6 +564,9 @@
         ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file'),
         ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units'),
         ('mf_jst_budgets', 'jst_budget', 'MF local-government budget summaries (year to date)'),
-        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)')
+        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)'),
+        ('knf_insurance', 'insurance_market', 'KNF quarterly insurance bulletin, market totals (year to date)'),
+        ('knf_insurance', 'ofe', 'KNF open pension funds (OFE), monthly'),
+        ('knf_insurance', 'ike_ikze', 'KNF individual retirement accounts (IKE, IKZE), yearly')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}

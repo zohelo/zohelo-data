@@ -21,32 +21,39 @@ from ingestion.common import bulk_bronze, xlsx_cells
 SOURCE = "knf_insurance"
 TABLE = "knf_insurance_cells"
 REJECTED = "knf_insurance_rejected_files"
-# series → (sheet name pattern, text pattern that must be in a cell of a matching sheet); from the trial's profile.
-LAYOUTS: dict[str, tuple[re.Pattern[str], re.Pattern[str]]] = {
-    "ofe": (re.compile(r".*"), re.compile(r"OFE|fundusz", re.IGNORECASE)),
-    "bulletin": (re.compile(r".*"), re.compile(r"ubezpiecze|składk", re.IGNORECASE)),
-    "ike": (re.compile(r".*"), re.compile(r"IKE", re.IGNORECASE)),
-    "ikze": (re.compile(r".*"), re.compile(r"IKZE", re.IGNORECASE)),
+# Layout per series (from the trial's profile, Dev trial 43285716017): each (sheet name pattern, text pattern) must
+# be met by at least one cell of a sheet whose name matches. Bulletin part A also needs the four tables Silver reads.
+TITLE = r"^Table A\.[0-9]+\. {} of {} Insurance Companies\s*$"
+LAYOUTS: dict[str, list[tuple[str, str]]] = {
+    "ofe": [(r"^Aktywa netto$", r"^Stan na dzień"), (r"^Członkowie$", r"^Stan na dzień")],
+    "bulletin_a": [
+        (r"^Tabl\.A\.", TITLE.format("Premiums", "Life")),
+        (r"^Tabl\.A\.", TITLE.format("Premiums", "Non-Life")),
+        (r"^Tabl\.A\.", TITLE.format("Claims", "Life")),
+        (r"^Tabl\.A\.", TITLE.format("Claims", "Non-Life")),
+    ],
+    "bulletin": [(r"^Tytuł części", r"^Biuletyn Kwartalny\. Rynek ubezpieczeń")],
+    "ike": [(r"^IKE_dane liczbowe$", r"^Informacje liczbowe o IKE$")],
+    "ikze": [(r"^IKZE_dane liczbowe$", r"^Informacje liczbowe o IKZE$")],
 }
 
 
+def layout(entity: str) -> str:
+    series = entity.split("_", 1)[0]
+    return "bulletin_a" if series == "bulletin" and entity.endswith("_a") else series
+
+
 def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
-    series = receipt["entity"].split("_", 1)[0]
-    if series not in LAYOUTS:
-        raise ValueError(f"unknown series {series!r} of entity {receipt['entity']!r}")
+    kind = layout(receipt["entity"])
+    if kind not in LAYOUTS:
+        raise ValueError(f"unknown series of entity {receipt['entity']!r}")
     table = xlsx_cells.decode(body, receipt)
-    sheet_pattern, marker = LAYOUTS[series]
-    names = sorted(set(table.column("sheet_name").to_pylist()))
-    matching = [s for s in names if sheet_pattern.search(s)]
-    if not matching:
-        raise ValueError(f"{series}: no sheet matches {sheet_pattern.pattern!r}; sheets {names}")
-    texts = (
-        t
-        for s, t in zip(table.column("sheet_name").to_pylist(), table.column("value_text").to_pylist(), strict=True)
-        if s in matching
-    )
-    if not any(marker.search(t) for t in texts):
-        raise ValueError(f"{series}: no cell matches {marker.pattern!r} on sheets {matching}")
+    cells = list(zip(table.column("sheet_name").to_pylist(), table.column("value_text").to_pylist(), strict=True))
+    for sheet_pattern, text_pattern in LAYOUTS[kind]:
+        sheet_re, text_re = re.compile(sheet_pattern), re.compile(text_pattern)
+        if not any(sheet_re.search(s) and text_re.search(" ".join(t.split())) for s, t in cells):
+            names = sorted({s for s, _ in cells})[:30]
+            raise ValueError(f"{kind}: no sheet {sheet_pattern!r} with a cell {text_pattern!r}; sheets {names}")
     return table
 
 

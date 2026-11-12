@@ -191,3 +191,13 @@ total_fertility_rate,un_wpp,un_wpp:TFR:estimate,"UN WPP 2024 estimate (to 2023)"
 life_expectancy,un_wpp,un_wpp:LEx:estimate,"at birth, both sexes, UN WPP 2024 estimate (to 2023)",5,
 old_age_dependency,un_wpp,un_wpp:OldAgeDependency:estimate,"65+ per 100 aged 15-64 on 1 July, from UN WPP 2024 broad age groups (to 2023)",5,
 population_projection,un_wpp,un_wpp:TPopulation1July:projection,"1 July, UN WPP 2024 medium variant, 2024-2100, thousands as published",1,thousand_persons
+insurance_gwp_life,knf_insurance,knf_insurance:insurance_market:thousand_pln:life:gross_written_premium,"KNF bulletin part A, all life insurers, year to date",1,thousand_pln
+insurance_gwp_nonlife,knf_insurance,knf_insurance:insurance_market:thousand_pln:non_life:gross_written_premium,"KNF bulletin part A, all non-life insurers, year to date",1,thousand_pln
+insurance_claims_life,knf_insurance,knf_insurance:insurance_market:thousand_pln:life:claims_paid_gross,"KNF bulletin part A, all life insurers, year to date",1,thousand_pln
+insurance_claims_nonlife,knf_insurance,knf_insurance:insurance_market:thousand_pln:non_life:claims_paid_gross,"KNF bulletin part A, all non-life insurers, year to date",1,thousand_pln
+ofe_net_assets,knf_insurance,knf_insurance:ofe:pln:net_assets,"KNF OFE monthly data, all funds, end of month",1,pln
+ofe_members,knf_insurance,knf_insurance:ofe:persons:members,"KNF OFE monthly data (ZUS), all funds, end of month",1,persons
+ike_accounts,knf_insurance,knf_insurance:ike_ikze:pieces:ike:accounts,"KNF IKE data, all providers, 31 December",1,pieces
+ike_assets,knf_insurance,knf_insurance:ike_ikze:thousand_pln:ike:assets,"KNF IKE data, all providers, 31 December",1,thousand_pln
+ikze_accounts,knf_insurance,knf_insurance:ike_ikze:pieces:ikze:accounts,"KNF IKZE data, all providers, 31 December",1,pieces
+ikze_assets,knf_insurance,knf_insurance:ike_ikze:thousand_pln:ikze:assets,"KNF IKZE data, all providers, 31 December",1,thousand_pln
