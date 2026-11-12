@@ -15,6 +15,7 @@
      block    optional regex on the block label (the nearest pure-text row above the data row: "NSP 2021",
               "w liczbach bezwzględnych"); without it every data row of the sheet counts
      period   optional reference year; default the edition year (the entity's last four digits)
+     sheet    optional regex on the sheet name, where one workbook repeats a table title (census workbooks)
      groups   optional [[group_code, label regex], ...]: data rows are the rows whose label matches (survey tables
               of Poland by sex); without it data rows are the voivodeship rows and the Poland row
    Areas: the 16 voivodeships by their names (lower case; area_name) and Poland ('polska': labels "Polska",
@@ -37,13 +38,16 @@
 {% endmacro %}
 
 {% macro gus_table_values(relation, specs) %}
-    with specs (table_code, title_regex, measure_code, header_regex, unit_code, block_regex, period_year) as (
+    with specs (
+        table_code, title_regex, measure_code, header_regex, unit_code, block_regex, period_year, sheet_regex
+    ) as (
         values
         {%- for s in specs %}
         (
             '{{ s.table }}', '{{ s.title }}', '{{ s.measure }}', '{{ s.header }}', '{{ s.unit }}',
             {{ "'" ~ s.block ~ "'" if s.block else 'cast(null as varchar)' }},
-            {{ s.period if s.period else 'cast(null as integer)' }}
+            {{ s.period if s.period else 'cast(null as integer)' }},
+            {{ "'" ~ s.sheet ~ "'" if s.sheet else 'cast(null as varchar)' }}
         ){{ "," if not loop.last }}
         {%- endfor %}
     ),
@@ -101,7 +105,9 @@
     matched as (
         select t.entity, t.member, t.sheet_name, s.*
         from titles as t
-        inner join specs as s on regexp_matches(t.title, '(?i)' || s.title_regex)
+        inner join specs as s
+            on regexp_matches(t.title, '(?i)' || s.title_regex)
+            and (s.sheet_regex is null or regexp_matches(t.sheet_name, s.sheet_regex))
     ),
 
     sheets as (
@@ -247,7 +253,11 @@
             string_agg(c.txt, ' ' order by c.column_number) as marker
         from sheet_cells as c
         left join numeric_rows as n using (entity, member, sheet_name, row_number)
-        where n.row_number is null and c.row_number > 2 and c.txt <> ''
+        left join (
+            select distinct entity, member, sheet_name, row_number from region_labels where area_name is not null
+        ) as named using (entity, member, sheet_name, row_number)
+        -- a text-only "Poland" row under "Polska" (bilingual labels on two rows) is not a block heading
+        where n.row_number is null and named.row_number is null and c.row_number > 2 and c.txt <> ''
         group by all
     ),
 
