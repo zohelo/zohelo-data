@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+- name: kprm_work_list
+  description: KPRM — the Council of Ministers' work list of government drafts (CSV file on gov.pl, register PLG-034)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/kprm_work_list/
+    loaded_by: ingestion/to_bronze/kprm_work_list/
+    config: ingestion/sources/kprm_work_list.yaml
+  tables:
+  - name: kprm_work_list_drafts
+    description: >-
+      One row per row of the newest work-list file (entity council_of_ministers), values as source text: numer_projektu,
+      tytul, rodzaj_dokumentu, typ_dokumentu, informacja_dodatkowa, organ_opracowujacy (Organ odpowiedzialny za
+      opracowanie projektu), organ_wspolpracujacy, organ_odpowiedzialny, planowane_przyjecie, informacja_o_rezygnacji,
+      status_realizacji, data_publikacji, podglad; empty cells are null. Not loaded: Osoba odpowiedzialna (names of
+      officials), the aims and substance texts and the three regulatory-impact columns (Landing keeps the exact file).
+  - name: kprm_work_list_rejected_files
+    description: KPRM work-list Landing files the Bronze decoder rejected (unknown header, a row not 19 fields wide), with the reason.

@@ -1,0 +1,40 @@
+version: 2
+models:
+  - name: government_drafts
+    description: >-
+      Entity table: one row per government draft on the Council of Ministers' work list (KPRM, CC BY-SA 4.0), keyed
+      by the work-list number (Numer projektu); kind, type, responsible, drafting and cooperating body, planned
+      adoption as published (free text, a plan), status (realised, withdrawn, in_progress = empty in the source),
+      resignation information, publication on the list (Warsaw local time), link to the draft's page. Latest file
+      only, no history.
+    columns:
+      - name: draft_number
+        tests: [not_null, unique]
+      - name: kind
+        tests: [not_null]
+      - name: status
+        tests: [not_null]
+      - name: published_date
+        tests: [not_null]
+  - name: poc_build_kprm_work_list
+    description: >-
+      Build stage — drafts entering the Council of Ministers' work list (KPRM), Poland: count per month
+      (measure ...:monthly, M) and per year (...:annual, A) of the publication on the list, total and by kind or by
+      responsible body (one breakdown at a time). Only periods with at least one entry have a row (no zero
+      filling); the period of the download date is provisional. Realised and withdrawn counts are not built (the
+      source gives no status-change date).
+    columns:
+      - name: measure_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['kprm_work_list:entries:list_entries:monthly', 'kprm_work_list:entries:list_entries:annual']}}}]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: ['M', 'A']}}}]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_government_drafts_listed
+    description: >-
+      Draft KPI government_drafts_listed: government drafts entering the Council of Ministers' work list per month,
+      Poland (KPRM work list, total series of the monthly measure).

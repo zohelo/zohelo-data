@@ -43,6 +43,9 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('average_farm_area', 'gus_psr2020', '%', 0, 100),
     -- MRPiPS-03 (#2910): persons granted social assistance, PL 2019 = 1,205,506 (Dev trial 43293740538)
     ('social_assistance_recipients', 'mrpips_social_assistance', '%', 0, 1e7),
+    -- KPRM work list (#491): drafts entering the list per month, Poland; largest month 2025-12 = 105 (Dev probe
+    -- 43320804384, 12 Nov 2026)
+    ('government_drafts_listed', 'kprm_work_list', '%', 0, 1000),
     ('inflation', 'eurostat', '%', -100, 3000),
     ('inflation', 'world_bank_wdi', '%', -100, 100000),
     ('unemployment_rate', 'eurostat', '%', 0, 60),
@@ -590,6 +593,15 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_health_expenditure_gdp') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_government_drafts_listed') }}
 )
 
 select
