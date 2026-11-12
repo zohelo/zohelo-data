@@ -91,25 +91,41 @@ def tests(con, name: str) -> list:
 
 
 def profile(con) -> dict:
-    """Per entity: sheets, cell counts, and the cells of every sheet to the log (first 60 rows) and a CSV."""
-    OUT.mkdir(parents=True, exist_ok=True)
-    rows = q(con, "select entity, sheet_index, sheet_name, row_number, column_number, cell_type, value_text, number_format from cells order by all")
-    with (OUT / "cells.csv").open("w", newline="") as f:
-        csv.writer(f).writerows([("entity", "sheet_index", "sheet_name", "row", "col", "type", "value", "format"), *rows])
-    newest = {}
-    for (entity,) in q(con, "select distinct entity from cells order by 1"):
-        newest[entity.split("_")[0] + ("_" + entity.rsplit("_", 1)[-1] if entity.startswith("bulletin") else "")] = entity
-    for entity in newest.values():
-        print(f"\n######## profile {entity}")
-        for sheet, n, maxr, maxc in q(con, f"select sheet_name, count(*), max(row_number), max(column_number) from cells where entity = '{entity}' group by sheet_index, sheet_name order by sheet_index"):
-            print(f"--- sheet {sheet!r}: {n} cells, rows {maxr}, cols {maxc}")
-            for r, c, t, v, fmt in q(con, f"select row_number, column_number, cell_type, value_text, number_format from cells where entity = '{entity}' and sheet_name = $$${sheet}$$$ and row_number <= 60 order by 1, 2".replace("$$$", "$$")):
-                print(f"   {r}:{c} {t} {v[:80]!r} {fmt}")
+    """Bronze profile: rows, entities, sheets, nulls, short text strings (markers), per series."""
     return {
-        "entities": q(con, "select split_part(entity, '_', 1), count(distinct entity), min(entity), max(entity), count(*) from cells group by 1 order by 1"),
-        "sheets": q(con, "select split_part(entity, '_', 1), list(distinct sheet_name order by sheet_name)[:20] from cells group by 1 order by 1"),
-        "non_numeric_short": q(con, "select value_text, count(*) from cells where cell_type in ('s','inlineStr','str') and length(trim(value_text)) <= 5 group by 1 order by 2 desc limit 25"),
+        "per_series": q(con, """select split_part(entity, '_', 1), count(distinct entity), min(entity), max(entity),
+            count(*), count(distinct sheet_name), count(*) filter (where value_text is null)
+            from cells group by 1 order by 1"""),
+        "distinct_keys_entity_sheet_row_col": q(con, "select count(distinct (entity, sheet_name, row_number, column_number)) from cells")[0][0],
+        "short_text_by_series": q(con, """select split_part(entity, '_', 1) s, value_text, count(*) from cells
+            where cell_type in ('s', 'inlineStr', 'str') and trim(value_text) in ('x', '-', 'b.d.', '.', ':', '–', 'n.d.', '*')
+            group by all order by 1, 3 desc"""),
+        "bulletin_a_tables": q(con, """select entity, list(sheet_name order by sheet_name) from cells where ends_with(entity, '_a')
+            and column_number = 1 and row_number <= 3 and regexp_matches(trim(regexp_replace(value_text, '\\s+', ' ', 'g')),
+            '^Table A\\.[0-9]+\\. (Premiums|Claims) of (Life|Non-Life) Insurance Companies$') group by 1 order by 1""")[:3],
     }
+
+
+def sqlfluff() -> dict:
+    import subprocess
+    import sys
+
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "sqlfluff==4.4.0"], check=True)
+    files = ["warehouse/models/silver/knf_insurance/knf_insurance_observations.sql", "warehouse/models/gold/poc_build_knf_insurance.sql", "warehouse/models/gold/poc_map_geography.sql"]
+    r = subprocess.run([sys.executable, "-m", "sqlfluff", "lint", *files, "--disable-progress-bar"], capture_output=True, text=True)
+    print(r.stdout[-6000:], r.stderr[-2000:])
+    return {"exit": r.returncode, "tail": r.stdout[-2500:]}
+
+
+def old_ofe() -> dict:
+    """Evidence: the anchors of the second-newest OFE article (does it link a workbook?)."""
+    links = landing._anchors(landing.LISTING)
+    ofe = [h for h, t in links if landing.ARTICLE_LINK.search(h) and (landing.release(t) or ("",))[0] == "ofe"]
+    if len(ofe) < 2:
+        return {"ofe_articles_on_page_1": len(ofe)}
+    anchors = landing._anchors(ofe[1])
+    files = [h for h, _ in anchors if re.search(r"\.(xlsx?|zip|pdf|csv)($|\?)", h, re.I)]
+    return {"article": ofe[1], "file_links": files[:10], "anchors": len(anchors)}
 
 
 def main() -> None:
@@ -122,11 +138,16 @@ def main() -> None:
         if out["robots"]["status"] != 200 or out["robots"]["blocked"]:
             REAL("warning", "knf_insurance trial robots", out["robots"])
         out["listing"] = listing_dump()
+        out["older_ofe_article"] = old_ofe()
     except Exception:  # noqa: BLE001
         out["probe_crash"] = traceback.format_exc()[-1200:]
     REAL("notice", "knf_insurance trial: robots and listing", out)
     if out.get("robots", {}).get("blocked"):
         return
+    try:
+        REAL("notice", "knf_insurance trial: sqlfluff", sqlfluff())
+    except Exception:
+        REAL("error", "knf_insurance trial: sqlfluff", traceback.format_exc()[-1000:])
     summary: dict = {"head": head}
     con = duckdb.connect()
     try:
