@@ -75,6 +75,11 @@ def landing_state(client, bucket) -> dict:
             continue
         size += held[-1]["size_bytes"]
         through.add(held[-1]["detail"]["bulletin_through"])
+        try:
+            client.head_object(Bucket=bucket, Key=held[-1]["object"]["key"])
+        except Exception as exc:  # noqa: BLE001
+            print(json.dumps({"head_failed": held[-1]["object"]["key"], "error": repr(exc)[:300],
+                              "response": str(getattr(exc, "response", ""))[:600]}), flush=True)
         body = bulk_bronze.read_raw(client, bucket, landing.SOURCE, held[-1])
         for line in body.decode("utf-8").splitlines():
             lines += 1
