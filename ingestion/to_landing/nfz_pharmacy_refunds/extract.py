@@ -91,13 +91,14 @@ def atc_names(session: requests.Session) -> dict[str, str]:
 
 
 def put(client, bucket: str, key: str, body: bytes) -> None:
-    """put_new (never overwrite) with bounded retries: R2 can answer a write with 503 ServiceUnavailable ("reduce
-    your concurrent request rate for the same object", Dev trial 43312973452) after the client's own retries."""
-    for attempt in range(5):
+    """put_new (never overwrite; equal bytes are a no-op) with bounded retries: R2 throttles under load with 429 or
+    503 ("reduce your concurrent request rate", Dev trials 43312973452, 43318649265) after the client's retries."""
+    for attempt in range(6):
         try:
             return put_new(client, bucket, key, body, "application/json")
         except ClientError as exc:
-            if exc.response.get("Error", {}).get("Code") not in ("ServiceUnavailable", "SlowDown") or attempt == 4:
+            status = int(exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode") or 0)
+            if (status != 429 and status < 500) or attempt == 5:
                 raise
             time.sleep(10 * 2**attempt)
 
