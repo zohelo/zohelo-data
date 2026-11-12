@@ -10,18 +10,25 @@ file per block in each table, as Silver does (design #875):
   04_gold/<source>/<table>/<block>/<recipe>.parquet     gold.<source>_observations | _series | _measures
 
 ``<recipe>`` names what the file was made from: the block's Silver files (their names carry the
-Landing SHA-256 and the Silver model), the Gold SQL and the source's rows of gold.map_geography. A
-block is rebuilt only when its recipe changed: a new source version rebuilds that block, a changed
-rule or geography map rebuilds every block, and a block that left Silver leaves Gold. What Gold holds
-is read from the tables' file lists; nothing is scanned.
+Landing SHA-256 and the Silver model), the Gold SQL, and the mapping of the geography codes the block
+holds. A block is rebuilt only when its recipe changed: a new source version rebuilds that block, a
+changed rule rebuilds every block, a changed row of gold.map_geography rebuilds the blocks that hold
+that code (gold.<source>_geography lists each block's codes), and a block that left Silver leaves
+Gold. What Gold holds is read from the tables' file lists; data is read only to find the blocks a
+changed geography map touches.
+
+Limits of a run (decision D34; these replace the #822 row ceilings, which are for dbt models): the
+time budget; a block estimated to need more than the time left waits for a run with enough; at most
+MAX_REMOVE_SHARE of the blocks held may be removed in one run, so a partial Silver listing cannot empty
+Gold (above it nothing is removed and the run fails).
 
 The grain is checked on every block before it is accepted: one row per series_key × date_key.
 measure_key begins with the source and the block, so a duplicate can only occur inside one block
 and the per-block check covers the whole table. A block that breaks the grain or yields no rows is
-rejected (gold.observations_rejected, keyed by its recipe) and removed from Gold, never loaded in
-part. A block that fails for another reason (storage, memory) is tried once more alone with the
-full memory limit, then reported and retried by the next run. Work runs in parallel processes within
-a time budget; finished blocks are committed in chunks,
+rejected (gold.observations_rejected, keyed by its recipe) and never loaded in part; the block keeps
+the version Gold already holds, if any, and stays listed as rejected. A block that fails for another
+reason (storage, memory) is tried once more alone with the full memory limit, then reported and
+retried by the next run. Work runs in parallel processes; finished blocks are committed in chunks,
 so a run that stops resumes where it stopped. Prints one JSON result line.
 """
 
@@ -55,6 +62,12 @@ BIG_ROWS = 50_000_000  # blocks with more Silver rows are built alone, with the 
 # The Parquet writer buffers a row group per thread; with names and JSON on every row, 1 M-row groups
 # took more than 10 GB on one dataset (NAIO_10_FCP_U3, Dev trial 43202733905).
 ROW_GROUP = 100_000
+MAX_REMOVE_SHARE = 0.05  # of the blocks Gold holds; at least MIN_REMOVABLE may always go
+MIN_REMOVABLE = 10
+# A block built alone is started only when its estimate fits the time left (Silver rows a minute, from
+# the slowest large blocks of the Dev trials; AVIA_TF_ACC: 57 M a minute).
+SERIAL_ROWS_PER_MINUTE = 20_000_000
+MAP_DIGEST = "zohelo.geography_map_digest"  # on gold.<source>_geography: the map its rows were last checked against
 
 # Columns of the three Gold tables, in the order their models select them.
 TABLES: dict[str, dict[str, Any]] = {
@@ -129,6 +142,20 @@ TABLES: dict[str, dict[str, Any]] = {
     },
 }
 
+TABLES["geography"] = {
+    "model": "gold_geography",
+    "unique_key": ("geography_source_code",),
+    "not_null": ("block_id", "geography_key"),
+    "reject_if": "geography_keys > 1",  # one source code mapped to two areas
+    "columns": [
+        ("block_id", "VARCHAR"),
+        ("geography_source_code", "VARCHAR"),
+        ("geography_key", "VARCHAR"),
+        ("geography_keys", "BIGINT"),
+        ("points", "BIGINT"),
+    ],
+}
+
 # Per source: the Silver entity table and how its entities group into blocks, the build stage, and the
 # small tables the build stage reads (relation -> (namespace, table, columns, DuckDB filter)).
 SOURCES: dict[str, dict[str, Any]] = {
@@ -153,30 +180,41 @@ def table_ids(source: str, namespace: str = "gold") -> dict[str, tuple[str, str]
     return {name: (namespace, f"{source}_{name}") for name in TABLES}
 
 
-def export_lookups(cat, source: str, directory: Path) -> tuple[dict[str, str], str]:
-    """The source's lookup tables as local Parquet files (read once per run), and the digest of those
-    that decide keys."""
+def export_lookups(cat, source: str, directory: Path) -> tuple[dict[str, str], dict[str, str]]:
+    """The source's lookup tables as local Parquet files (read once per run), and its geography map
+    (source code -> geography_key)."""
     import pyarrow.compute as pc
     import pyarrow.parquet as pq
 
     spec = SOURCES[source]
-    paths, digest = {}, sha256()
+    paths, geo_map = {}, {}
     for name, (namespace, table, columns, only_source) in spec["lookups"].items():
         data = bf.retry(lambda n=namespace, t=table, c=columns: cat.load_table((n, t)).scan(selected_fields=c), name)
         data = data.to_arrow()
         if only_source:
             data = data.filter(pc.equal(data.column("source_system"), only_source)).drop_columns(["source_system"])
         if name in spec["keyed_by"]:
-            ordered = data.sort_by([(c, "ascending") for c in data.column_names])
-            digest.update(json.dumps(ordered.to_pylist(), sort_keys=True, default=str).encode())
+            codes, keys = data.column("source_code").to_pylist(), data.column("geography_key").to_pylist()
+            geo_map = dict(zip(codes, keys, strict=True))
         paths[name] = str(directory / f"{name}.parquet")
         pq.write_table(data, paths[name])
-    return paths, digest.hexdigest()
+    return paths, geo_map
 
 
-def model_digest(source: str, keys_digest: str) -> str:
-    """Digest of everything but the Silver files that decides a block's Gold files."""
-    digest = sha256(keys_digest.encode())
+def expected_area(geo_map: dict[str, str], code: str | None) -> str:
+    """The geography_key the build stage gives a source code: no code `_Z`, unmatched `_X`."""
+    return "_Z" if code is None else geo_map.get(code, "_X")
+
+
+def geography_digest(pairs: list[tuple[str | None, str]]) -> str:
+    """Digest of a block's geography codes and the areas they map to."""
+    return sha256(json.dumps(sorted(pairs, key=lambda p: (p[0] or "", p[1]))).encode()).hexdigest()[:8]
+
+
+def model_digest(source: str) -> str:
+    """Digest of the Gold SQL of the source: with the Silver files and the block's geography mapping it
+    decides a block's Gold files."""
+    digest = sha256()
     spec = SOURCES[source]
     for model in (*spec.get("prepare", {}).values(), spec["build"], *(t["model"] for t in TABLES.values())):
         digest.update((MODELS / f"{model}.sql").read_bytes())
@@ -201,38 +239,87 @@ def blocks_of(source: str, silver_state: dict[str, dict[str, Any]]) -> dict[str,
     return out
 
 
-def plan(cat, source: str, digest: str, namespace: str, rejected_id: tuple[str, str], only: set[str] | None) -> dict:
-    """What each block needs, from the tables' file lists: build (new Silver files, new rule), or removal."""
+def remapped_blocks(table, geo_map: dict[str, str]) -> tuple[set[str], str]:
+    """Blocks holding a geography code whose mapping differs from the map now, and the map's digest.
+    The table's rows are read only when the map changed since they were last checked (table property)."""
+    digest = sha256(json.dumps(sorted(geo_map.items())).encode()).hexdigest()[:16]
+    if table.properties.get(MAP_DIGEST) == digest or table.current_snapshot() is None:
+        return set(), digest
+    held = table.scan(selected_fields=("block_id", "geography_source_code", "geography_key")).to_arrow()
+    rows = zip(  # noqa: B905 - columns of one arrow table
+        held.column("block_id").to_pylist(),
+        held.column("geography_source_code").to_pylist(),
+        held.column("geography_key").to_pylist(),
+    )
+    return {block for block, code, key in rows if expected_area(geo_map, code) != key}, digest
+
+
+def plan(
+    cat,
+    source: str,
+    digest: str,
+    geo_map: dict[str, str],
+    namespace: str,
+    rejected_id: tuple[str, str],
+    only: set[str] | None,
+    create: bool = True,
+) -> dict:
+    """What each block needs, from the tables' file lists: build (new Silver files, new rule, a changed
+    mapping of one of its geography codes), or removal (the block left Silver).
+    ``create=False`` (checks): reads only, never creates a table."""
     silver = bf.retry(lambda: cat.load_table(SOURCES[source]["silver"]), "silver_table")
-    blocks = blocks_of(source, et.state(silver, silver.spec().fields[0].name))
-    if only:
-        blocks = {b: v for b, v in blocks.items() if b in only}
+    listed = blocks_of(source, et.state(silver, silver.spec().fields[0].name))
+    if not listed:
+        raise RuntimeError(f"{source}: the Silver table lists no blocks; nothing is built or removed")
+    blocks = {b: v for b, v in listed.items() if b in only} if only else listed
     ids = table_ids(source, namespace)
-    states = {}
+    states, tables = {}, {}
     for name, table_id in ids.items():
-        table = bf.retry(lambda t=table_id, n=name: bf.ensure_table(cat, t, TABLES[n]["columns"], ENTITY), name)
-        states[name] = et.state(table, ENTITY)
+        if create:
+            load = lambda t=table_id, n=name: bf.ensure_table(cat, t, TABLES[n]["columns"], ENTITY)  # noqa: E731
+        else:
+            load = lambda t=table_id: cat.load_table(t)  # noqa: E731
+        tables[name] = bf.retry(load, name)
+        states[name] = et.state(tables[name], ENTITY)
+    remapped, map_digest = remapped_blocks(tables["geography"], geo_map)
     refused = bf.retry(lambda: bf.rejected_hashes(cat, rejected_id), "rejected")
-    todo, rejected, expected = [], [], {}
+    todo, rejected, complete = [], [], []
     for block, item in sorted(blocks.items()):
-        recipe = f"{item['silver_recipe']}.{digest}"
+        recipe = f"{item['silver_recipe']}.{digest}"  # the worker adds the block's geography digest
         if f"{source}:{block}:{recipe}" in refused:
             rejected.append(block)
             continue
-        expected[block] = recipe
-        if any(states[name].get(block, {}).get("recipes") != {recipe} for name in ids):
+        held = [states[name].get(block, {}).get("recipes") or set() for name in ids]
+        current = len(held[0]) == 1 and all(h == held[0] for h in held) and next(iter(held[0])).startswith(recipe + ".")
+        if current and block not in remapped:
+            complete.append(block)
+        else:
             todo.append({"block": block, "recipe": recipe, **item})
-    held = set().union(*(set(state) for state in states.values()))
-    gone = sorted(b for b in held if b not in expected and (only is None or b in only))
-    return {"blocks": len(blocks), "todo": todo, "rejected": rejected, "expected": expected, "gone": gone, "ids": ids}
+    held_blocks = set().union(*(set(state) for state in states.values()))
+    # a block leaves Gold only when it left Silver; a rejected new version keeps the version Gold holds
+    gone = sorted(b for b in held_blocks if b not in listed and (only is None or b in only))
+    return {
+        "blocks": len(blocks),
+        "todo": todo,
+        "rejected": rejected,
+        "complete": complete,
+        "gone": gone,
+        "held": len(held_blocks),
+        "remapped": len(remapped & set(blocks)),
+        "map_digest": map_digest,
+        "ids": ids,
+        "tables": tables,
+    }
 
 
 def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str, tmp_root: str, prefix: str) -> dict:
-    """One block: build stage, the three projections with their checks, upload. Runs in a worker process."""
+    """One block: build stage, the projections with their checks, upload. Runs in a worker process."""
+    import duckdb
+
     from warehouse import entity
 
-    block, recipe = item["block"], item["recipe"]
-    out: dict[str, Any] = {"block": block, "recipe": recipe, "silver_rows": item["rows"], "uris": {}}
+    block = item["block"]
+    out: dict[str, Any] = {"block": block, "recipe": item["recipe"], "silver_rows": item["rows"], "uris": {}}
     work_dir = Path(tempfile.mkdtemp(prefix=f"gold-{source}-", dir=tmp_root))
     started = time.monotonic()
     try:
@@ -262,6 +349,7 @@ def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str
                     not_null=table["not_null"],
                     same_rows=name == "observations",
                     unique_key=table["unique_key"],
+                    reject_if=table.get("reject_if", ""),
                     memory_limit=memory,
                     temp_directory=str(work_dir),
                     source_view="build",
@@ -270,6 +358,9 @@ def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str
         except entity.EntityModelError as exc:  # verdict on the block under this recipe
             out.update(status="rejected", error=str(exc)[:1000])
             return out
+        geography = str(work_dir / "geography.parquet").replace("'", "''")
+        pairs = duckdb.sql(f"select geography_source_code, geography_key from read_parquet('{geography}')").fetchall()
+        recipe = f"{item['recipe']}.{geography_digest(pairs)}"
         client, bucket = s3(), req("STORAGE_LAKEHOUSE_BUCKET_NAME")
         for name in TABLES:
             key = f"{prefix}{source}/{name}/{block}/{recipe}.parquet"
@@ -309,9 +400,9 @@ def main(argv=None) -> int:
     Path(tmp_root).mkdir(parents=True, exist_ok=True)
     lookup_dir = Path(tempfile.mkdtemp(prefix=f"gold-{source}-lookups-", dir=tmp_root))
     try:
-        lookups, keys_digest = export_lookups(cat, source, lookup_dir)
-        digest = model_digest(source, keys_digest)
-        p = plan(cat, source, digest, namespace, rejected_id, {b.upper() for b in args.only} if args.only else None)
+        lookups, geo_map = export_lookups(cat, source, lookup_dir)
+        only = {b.upper() for b in args.only} if args.only else None
+        p = plan(cat, source, model_digest(source), geo_map, namespace, rejected_id, only)
         ids = p["ids"]
         for table_id in ids.values():
             et.configure(table_id)
@@ -319,6 +410,7 @@ def main(argv=None) -> int:
         totals = {"built": 0, "rows": 0, "series": 0, "measures": 0, "bytes": 0, "silver_rows": 0}
         rejected_now: list[dict[str, str]] = []
         failed: list[dict[str, str]] = []
+        waiting: list[str] = []
         pending: list[dict[str, Any]] = []
         slowest: list[tuple[float, str, int]] = []
         last_commit = time.monotonic()
@@ -326,10 +418,9 @@ def main(argv=None) -> int:
         def commit(removed: list[str] | None = None) -> None:
             nonlocal pending, last_commit
             bad = [r for r in pending if r["status"] == "rejected"]
-            # observations last: a block counts as built only when all three tables hold its recipe
-            for name in ("measures", "series", "observations"):
+            # observations last: a block counts as built only when every table holds its recipe
+            for name in (*(n for n in TABLES if n != "observations"), "observations"):
                 wanted = {r["block"]: [r["uris"][name]] for r in pending if r["status"] == "ok"}
-                wanted.update({r["block"]: [] for r in bad})  # a rejected block does not keep its old version
                 wanted.update({block: [] for block in removed or []})
                 if wanted:
                     et.replace(cat, ids[name], ENTITY, wanted, [ENTITY], f"{source}-gold-observations")
@@ -370,8 +461,9 @@ def main(argv=None) -> int:
         # Workers start clean (spawn): the parent has read Iceberg metadata through Arrow's S3 client by now,
         # and a forked copy of that state is not safe to use.
         clean = multiprocessing.get_context("spawn")
-
-        if p["gone"]:
+        removable = max(MIN_REMOVABLE, int(p["held"] * MAX_REMOVE_SHARE))
+        removal_refused = len(p["gone"]) if len(p["gone"]) > removable else 0
+        if p["gone"] and not removal_refused:
             commit(removed=p["gone"])
         queue = [c for c in todo if c["rows"] <= BIG_ROWS]
         serial = [c for c in todo if c["rows"] > BIG_ROWS]
@@ -402,8 +494,10 @@ def main(argv=None) -> int:
                     pool.shutdown(wait=False, cancel_futures=True)
             commit()
         for c in sorted(serial, key=lambda c: c["rows"]):
-            if time.monotonic() > deadline:
-                break
+            # the budget is checked before a block starts: one that cannot finish in the time left waits
+            if c["rows"] / SERIAL_ROWS_PER_MINUTE > (deadline - time.monotonic()) / 60:
+                waiting.append(c["block"])
+                continue
             with ProcessPoolExecutor(max_workers=1, mp_context=clean) as alone:  # a kill fails that block only
                 future = alone.submit(work, source, c, lookups, "10GB", tmp_root, prefix)
                 workers = list((alone._processes or {}).values())  # kept to read the exit code if it dies
@@ -416,48 +510,58 @@ def main(argv=None) -> int:
                 except Exception as exc:
                     account(failure(c, exc))
             commit()
+        left = len(todo) - totals["built"] - len(rejected_now)
+        if left == 0 and not removal_refused and only is None:  # every block is checked against this map
+            with p["tables"]["geography"].refresh().transaction() as tx:
+                tx.set_properties({MAP_DIGEST: p["map_digest"]})
     finally:
         shutil.rmtree(lookup_dir, ignore_errors=True)
-    left = len(todo) - totals["built"] - len(rejected_now)
     minutes = (time.monotonic() - started) / 60
+    result = "complete" if left == 0 else ("failures" if failed else "incomplete_time_budget")
     summary = {
         "operation": f"{source}-gold-observations",
-        "result": "complete" if left == 0 else ("failures" if failed else "incomplete_time_budget"),
+        "result": "removal_refused" if removal_refused else result,
         "blocks_in_silver": p["blocks"],
         "todo": len(todo),
+        "remapped_geography": p["remapped"],
         "remaining": left,
         **totals,
-        "removed": len(p["gone"]),
+        "removed": 0 if removal_refused else len(p["gone"]),
+        "removal_refused": removal_refused,
         "rejected": len(rejected_now),
         "rejected_blocks": rejected_now[:8],
         "rejected_earlier": len(p["rejected"]),
         "failed": len(failed),
         "failed_blocks": failed[:5],
+        "waiting_for_a_longer_run": waiting[:8],
         "slowest": [list(s) for s in sorted(slowest, reverse=True)[:5]],
         "minutes": round(minutes, 1),
         "rows_per_minute": round(totals["rows"] / minutes) if minutes else 0,
     }
     print(json.dumps(summary, sort_keys=True), flush=True)
-    annotate("notice" if left == 0 and not rejected_now else "warning", f"{source} gold observations", summary)
-    return 0 if left == 0 else 2
+    clean_run = left == 0 and not rejected_now and not removal_refused
+    annotate("notice" if clean_run else "warning", f"{source} gold observations", summary)
+    return 0 if left == 0 and not removal_refused else 2
 
 
 def completeness(source: str) -> dict[str, Any]:
-    """Gold against Silver for the source, from file lists only: blocks holding the expected recipe."""
-    cat = bf.retry(catalog, "catalog")
-    with tempfile.TemporaryDirectory() as directory:
-        _, keys_digest = export_lookups(cat, source, Path(directory))
+    """Gold against Silver for the source, from file lists (and the geography rows when the map changed):
+    blocks holding the expected recipe. Reads only."""
     from pyiceberg.exceptions import NoSuchTableError
 
+    cat = bf.retry(catalog, "catalog")
+    with tempfile.TemporaryDirectory() as directory:
+        _, geo_map = export_lookups(cat, source, Path(directory))
     try:
-        p = plan(cat, source, model_digest(source, keys_digest), "gold", REJECTED, None)
+        p = plan(cat, source, model_digest(source), geo_map, "gold", REJECTED, None, create=False)
     except NoSuchTableError as exc:
         return {"source": source, "error": f"table missing: {exc}"}
     return {
         "source": source,
         "blocks_in_silver": p["blocks"],
-        "gold_complete": len(p["expected"]) - len(p["todo"]),
+        "gold_complete": len(p["complete"]),
         "to_build": len(p["todo"]),
+        "remapped_geography": p["remapped"],
         "rejected": len(p["rejected"]),
         "rejected_sample": p["rejected"][:10],
         "to_remove": len(p["gone"]),
