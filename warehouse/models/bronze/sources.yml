@@ -242,9 +242,8 @@ sources:
   tables:
   - name: nbp_bop_cells
     description: >-
-      One row per filled value cell of the newest copy of each workbook (entity bop_m, bop_q, iip_q; sheet =
-      currency), with the item's row label, block head and section, the year and period header texts and the
-      value as source text; partitioned by entity.
+      One row per non-empty cell of each landed workbook (entity bop_m, bop_q, iip_q; sheet = currency): sheet,
+      row, column, source text and number format (ingestion/common/xlsx_cells.py); partitioned by entity.
   - name: nbp_bop_rejected_files
     description: NBP balance-of-payments Landing files the Bronze decoder rejected, with the reason.
 - name: nbp_interest_rates

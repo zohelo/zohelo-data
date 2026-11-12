@@ -356,10 +356,10 @@ file): `https://static.nbp.pl/dane/bilans-platniczy/bop_m.xlsx` (entity `bop_m`,
 `bop_q.xlsx` (`bop_q`, quarterly BoP) and `iip_q.xlsx` (`iip_q`, quarterly positions), each with sheets
 PLN, EUR and USD (IIP: "IIP PLN" …), million units, items in rows and periods in columns from 2004. The
 nbp.pl pages that link the files answer automated clients with HTTP 403 (Dev probe 43085044303); the files
-answer. Bronze: `bronze.nbp_bop_cells` (one row per filled value cell as source text, with the item's row
-label, its block head and its section; openpyxl, pinned in requirements.txt; a workbook without the year and
-period header or with an unknown sheet is rejected). Silver: `silver.nbp_bop_observations` (workbook ×
-currency × item × period; `item_code` = slug of the English label, prefixed where it repeats). Gold: the build stage
+answer. Bronze: `bronze.nbp_bop_cells` (one row per non-empty cell, the shared standard-library reader
+`ingestion/common/xlsx_cells.py`; a workbook whose sheets are not exactly its currency sheets is rejected). Silver: `silver.nbp_bop_observations` (workbook ×
+currency × item × period; `item_code` fixed by rule and checked against the expected list; NBP's typo
+"Finsncial derivatives" in bop_m is normalised). Gold: the build stage
 `build_nbp_bop` (PLN and EUR) follows once Silver exists in production (a Gold model reading a missing
 source would hold the shared facts back). The workbooks hold amounts only: the shares of GDP of the current
 account and of the net position are not published there. Licence: NBP website Terms of Use, unresolved
