@@ -5635,8 +5635,8 @@ sources:
       their robots.txt is unread.'
   licence:
     status: open-conditional
-    notes: 'Terms for the site that is read: https://www.gov.pl/web/premier/ponowne-wykorzystywanie (read from a
-      GitHub runner, 12 Nov 2026): "Informacje sektora publicznego udostępniane na stronie Kancelarii Prezesa Rady
+    notes: 'Terms: KPRM re-use page https://www.gov.pl/web/premier/ponowne-wykorzystywanie, for the site that is read
+      (from a GitHub runner, 12 Nov 2026): "Informacje sektora publicznego udostępniane na stronie Kancelarii Prezesa Rady
       Ministrów (dalej: KPRM) są udostępniane w celu ponownego wykorzystywania na licencji Creative Commons Uznanie
       Autorstwa 3.0 Polska, o ile nie jest to stwierdzone inaczej. KPRM nie ponosi odpowiedzialności za dalsze ponowne
       wykorzystywanie informacji sektora publicznego udostępnianych na stronie KPRM." The footer of the work-list page
