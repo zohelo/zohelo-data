@@ -1,4 +1,4 @@
-{{ config(alias='build_dbw') }}
+{{ config(alias='build_dbw', tags=['gold_block']) }}
 {# Gold PoC build stage: sampled GUS DBW blocks (indicator × cross-section × presentation ×
    periodicity; one Landing file per year) as observations in the common shape. Labels come
    from each file's dictionary. The territorial dimension of a block is the one whose
