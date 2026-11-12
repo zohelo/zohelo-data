@@ -959,3 +959,24 @@ and women, Poland and voivodeships). Gold block `registered_unemployment` (KPIs 
 `registered_unemployment_rate`, next to GUS BDL and DBW). Weekly schedule (Tuesday). Licence: CC BY 3.0 PL (portal
 footer). The ZIPs since 2001, the half-yearly occupation and vacancy tables and the yearly MRPiPS-01 data files
 (SPR1, about 27 MB) are not built yet.
+## URE electricity price indicators (`ure`)
+
+**Built (12 Nov 2026, register PL-ENV-020, #2870).** Urząd Regulacji Energetyki publishes each price indicator on one
+public page of www.ure.gov.pl ("Energia elektryczna → Ceny i wskaźniki") whose article holds the whole series as one
+HTML table. Route: shared `bulk_file` pattern, entity = one indicator page (`page_7852` by its fixed URL, `page_7853`
+through its link on the indicator list), one request per page and run, 2 seconds apart; robots.txt is empty. The site
+sends a different page on every request (same size, a per-request token), so a page lands again only when its content
+changed (title, dates, table cells: `ingestion/to_landing/ure/`, the `same` rule of the pattern). Version = download
+time (no Last-Modified); the page's "Data modyfikacji" is kept. Restart unit: one page. Bronze
+`bronze.ure_table_cells`: one row per cell of the indicator table (text as printed, row, column, th/td, spans), parsed
+with the standard library; each page declares its layout (header rows, data-row width) and a page that does not match
+is rejected with the tables it found. Silver `silver.ure_price_indicators` (indicator × frequency × period):
+`competitive_market_price` (7852, average electricity sale price on the competitive market, zł/MWh, yearly from 2008,
+quarterly from 2015-Q2) and `household_price` (7853, price for a household customer including the distribution charge,
+zł/kWh, yearly from 2012); URE's column header is kept as the indicator's definition, '‒' (not published) and empty
+cells (not yet published) are not loaded. Gold block per indicator, Poland only; yearly and quarterly values are two
+measures (KPIs `electricity_price_competitive`, `electricity_price_households`, draft, environment.energy). Monthly
+schedule (3rd, 07:25 UTC). Licence: URE states no terms, so `unresolved` and internal (the licence gate keeps it out of
+v1 and v2). Not loaded (other layouts): wholesale prices 8425 (2019 coefficient tables), tariff group averages 10600,
+capacity charge rates 9165 and the gas purchase prices 7859 (two tables, and zł/m³ cells in 2013-2014 under a zł/MWh
+header). Dev trials 43286298849 (profile of the six pages) and the final run in the build report.
