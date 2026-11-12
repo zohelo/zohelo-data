@@ -1,7 +1,8 @@
-"""GUS Kultura i dziedzictwo narodowe (culture and national heritage), annual tables: Landing → Bronze activities (register PLS-027).
+"""GUS Kultura i dziedzictwo narodowe: Landing → Bronze activities (register PLS-027).
 
-bronze.load       newest copy of every landed edition → bronze.gus_culture_cells (one row per workbook cell,
-                  ingestion/common/gus_publications.py); rejections → bronze.gus_culture_rejected_files
+bronze.load       newest copy of every landed edition → bronze.gus_culture_cells
+                  (one row per workbook cell, ingestion/common/gus_publications.py);
+                  rejections → bronze.gus_culture_rejected_files
 bronze.verify     ingestion/common/lineage.py --source gus_culture
 landing.archive   ingestion/common/archive.py --source gus_culture (move to Archive)
 archive.prune     ingestion/common/retention.py --source gus_culture (archive_policy.retention)

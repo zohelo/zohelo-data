@@ -1,4 +1,4 @@
-"""GUS Uczestnictwo ludności w kulturze (participation in culture), survey tables: Landing activities (register PLS-028).
+"""GUS Uczestnictwo ludności w kulturze: Landing activities (register PLS-028).
 
 Shared logic in ingestion/common/gus_publications.py: the series page links the newest edition, each edition page
 links the other editions and its tables file; entity = one edition (``uczestnictwo_<year>``), from 2019.
