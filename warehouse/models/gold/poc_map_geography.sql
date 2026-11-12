@@ -418,6 +418,15 @@ eea as (
         g.geography_key
     from geo as g
     where g.level_name = 'country' and g.iso2 is not null
+),
+
+world_bank_edstats as (
+    select
+        'world_bank_edstats' as source_system,
+        g.iso3 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso3 is not null
 )
 
 select

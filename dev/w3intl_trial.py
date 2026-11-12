@@ -46,6 +46,17 @@ EU = {
 MACROS = "".join(Path(p).read_text() for p in ("warehouse/macros/poc_blocks.sql", "warehouse/macros/m49.sql"))
 
 TRIALS = {
+    "world_bank_edstats": {
+        "bronze": "edstats_observations",
+        "rejected": "edstats_rejected_files",
+        "silver": "edstats_pisa",
+        "grain": "entity, indicator_id, country_id, year",
+        "checks": {
+            "per entity": "select entity, indicator_id, count(*), count(distinct country_id), min(year), max(year), string_agg(distinct cast(year as varchar), ',' order by cast(year as varchar)) from edstats_pisa group by all order by 1, 2",
+            "PL": "select indicator_id, year, value from edstats_pisa where country_iso3 = 'POL' and sex_code = 'T' order by 1, 2",
+            "max": "select entity, min(value), max(value), max(source_last_updated), count(distinct country_iso3) filter (where country_iso3 is null) from edstats_pisa group by 1",
+        },
+    },
     "world_bank_gem": {
         "bronze": "gem_observations",
         "rejected": "gem_rejected_files",

@@ -387,6 +387,15 @@
     ) as t (entity, series_code, frequency, unit_code, unit_name, block_name)
 {% endmacro %}
 
+{% macro poc_world_bank_edstats_blocks() %}
+    select * from (
+        values
+        ('pisa_reading', 'LO.PISA.REA', 'PISA mean score, reading (OECD via World Bank EdStats)'),
+        ('pisa_mathematics', 'LO.PISA.MAT', 'PISA mean score, mathematics (OECD via World Bank EdStats)'),
+        ('pisa_science', 'LO.PISA.SCI', 'PISA mean score, science (OECD via World Bank EdStats)')
+    ) as t (entity, indicator_id, block_name)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -563,6 +572,8 @@
     select 'eea', 'govreg_ghg_inventory', 'Greenhouse gas emissions by sector, GovReg inventory (EEA)'
     union all
     select 'world_bank_gem', entity, block_name from ({{ poc_world_bank_gem_series() }})
+    union all
+    select 'world_bank_edstats', entity, block_name from ({{ poc_world_bank_edstats_blocks() }})
     union all
     select 'ecb', entity, block_name from ({{ poc_ecb_blocks() }})
     union all
