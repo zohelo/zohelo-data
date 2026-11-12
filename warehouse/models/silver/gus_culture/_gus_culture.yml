@@ -25,6 +25,6 @@ models:
       - name: period_year
         tests: [not_null]
       - name: cell_status
-        tests: [not_null, {accepted_values: {arguments: {values: [ok, low_reliability, confidential, not_applicable]}}}]
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, below_half_unit, low_reliability, missing, confidential, not_applicable]}}}]
       - name: raw_sha256
         tests: [not_null]

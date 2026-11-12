@@ -2,7 +2,8 @@
 {# Gold build stage: GUS participation in culture survey (persons aged 15+) (register PLS-028), annual observations
    of silver.gus_culture_participation_tables. Block 'participation': one measure_key per measure (frequency A only);
    the area is the voivodeship name or 'polska', mapped in poc_map_geography (TERYT names). Rows without a value (GUS
-   '.', 'x') are not loaded; survey estimates marked 'v' carry observation status low_reliability. #}
+   '.', 'x') are not loaded; survey estimates marked 'v' carry observation status low_reliability, a stored 0 (less
+   than half a unit) 'flagged'. #}
 with geo as (
     select
         source_code,
@@ -44,7 +45,11 @@ select
     s.group_code as sex_code,
     s.group_code = 'T' as is_total,
     s.value,
-    case s.cell_status when 'low_reliability' then 'low_reliability' else 'ok' end as observation_status_key,
+    case s.cell_status
+        when 'low_reliability' then 'low_reliability'
+        when 'below_half_unit' then 'flagged'
+        else 'ok'
+    end as observation_status_key,
     s.source_version,
     s.raw_sha256
 from {{ ref('gus_culture_participation_tables') }} as s

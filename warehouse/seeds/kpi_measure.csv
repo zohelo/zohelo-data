@@ -196,6 +196,7 @@ life_expectancy,un_wpp,un_wpp:LEx:estimate,"at birth, both sexes, UN WPP 2024 es
 old_age_dependency,un_wpp,un_wpp:OldAgeDependency:estimate,"65+ per 100 aged 15-64 on 1 July, from UN WPP 2024 broad age groups (to 2023)",5,
 population_projection,un_wpp,un_wpp:TPopulation1July:projection,"1 July, UN WPP 2024 medium variant, 2024-2100, thousands as published",1,thousand_persons
 refugees_hosted,unhcr,unhcr:population_by_asylum:persons:refugees,"UNHCR population statistics, end of year, by country of asylum (origins summed)",1,
+ghg_emissions,eea,eea:govreg_ghg_inventory:gg_co2e:Sectors/Totals_excl,"total excl. LULUCF as reported to the UNFCCC (international bunkers excluded), Gg = kt CO2e, EEA GovReg inventory",4,
 museum_visitors,gus_culture,gus_culture:culture_institutions:persons:museum_visitors,"GUS Kultura i dziedzictwo narodowe, museums, Poland and voivodeships",1,
 cinema_admissions,gus_culture,gus_culture:culture_institutions:persons:cinema_admissions,"GUS Kultura i dziedzictwo narodowe, cinemas, Poland and voivodeships",1,
 public_library_users,gus_culture,gus_culture:culture_institutions:persons:library_users,"GUS Kultura i dziedzictwo narodowe, public libraries, Poland and voivodeships",1,
