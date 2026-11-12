@@ -128,6 +128,35 @@ models:
     description: Extraction stage (Python model) — the activated DBW blocks' Silver rows, read from their files only.
   - name: poc_src_dbw_dictionary
     description: Extraction stage (Python model) — the label dictionaries of the activated DBW blocks' files.
+  - name: poc_build_oecd
+    description: >-
+      Build stage — OECD business confidence (BCICP), consumer confidence (CCICP) and the composite leading
+      indicator (LI), amplitude adjusted, long-term average = 100, monthly, from silver.oecd_cli; areas through
+      map_geography (ISO 3166 alpha-3 countries, EU27_2020 as the Eurostat aggregate, other OECD aggregates).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+  - name: poc_build_gleif
+    description: >-
+      Build stage — GLEIF LEI counts of the newest golden copy (entity snapshot, daily): by registration status
+      (measure), entity status, legal form (ELF) and entity category (breakdowns, one at a time), per country of
+      legal jurisdiction and, for Poland, voivodeship of the legal address. Latest snapshot only (Silver is latest-only).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+  - name: poc_build_mf_biala_lista
+    description: >-
+      Build stage — MF VAT white list flat file entries (taxpayer × account hashes) by taxpayer status and
+      virtual-account masks, Poland, newest file only. Licence unresolved: internal.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
   - name: poc_build_prg
     description: Build stage — area (km²) of every Polish administrative unit with a PRG boundary, daily at the PRG edition held.
   - name: geo_unit

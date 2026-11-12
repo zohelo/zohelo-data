@@ -180,6 +180,59 @@ wdi as (
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
 ),
 
+-- OECD (#2738): countries by ISO 3166 alpha-3 (dim_geography iso3); EU27_2020 is the Eurostat aggregate, the
+-- aggregates of macro poc_oecd_areas are OECD:<code> members. Built from Gold's own lists, not from
+-- silver.oecd_cli, so the dimensions never wait for the OECD source; codes outside them are unmatched (_X).
+oecd as (
+    select
+        'oecd' as source_system,
+        g.iso3 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso3 is not null
+    union all
+    select
+        'oecd' as source_system,
+        'EU27_2020' as source_code,
+        'EUROSTAT:EU27_2020' as geography_key
+    union all
+    select
+        'oecd' as source_system,
+        replace(g.geography_key, 'OECD:', '') as source_code,
+        g.geography_key
+    from geo as g
+    where g.geography_key like 'OECD:%'
+),
+
+-- GLEIF (#2740): countries of the legal jurisdiction by ISO 3166-1 alpha-2; Polish legal-address regions by
+-- ISO 3166-2, PL-<TERC> since 2018 and the legacy letter codes still found in the golden copy.
+gleif as (
+    select
+        'gleif' as source_system,
+        g.iso2 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso2 is not null
+    union all
+    select
+        'gleif' as source_system,
+        'PL-' || terc_code as source_code,
+        'TERC:' || terc_code as geography_key
+    from {{ ref('teryt_terc') }}
+    where unit_level = 'wojewodztwo'
+    union all
+    select
+        'gleif' as source_system,
+        'PL-' || letters as source_code,
+        'TERC:' || terc_code as geography_key
+    from (
+        values
+        ('DS', '02'), ('KP', '04'), ('LU', '06'), ('LB', '08'), ('LD', '10'), ('MA', '12'), ('MZ', '14'),
+        ('OP', '16'), ('PK', '18'), ('PD', '20'), ('PM', '22'), ('SL', '24'), ('SK', '26'), ('WN', '28'),
+        ('WP', '30'), ('ZP', '32')
+    ) as t (letters, terc_code)
+),
+
 -- TERYT TERC codes and the PRG unit codes (JPT_KOD_JE: TERC, '0' the country) are TERC keys (#2739).
 teryt_prg as (
     select
@@ -234,6 +287,10 @@ from (
     select * from dbw
     union all
     select * from wdi
+    union all
+    select * from oecd
+    union all
+    select * from gleif
     union all
     select * from teryt_prg
     union all
