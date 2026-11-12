@@ -145,6 +145,46 @@ def run_landing(extract, mode: str, budget: int = 10) -> tuple[dict, int, float]
     return summary, CALLS[0] - before, round(time.monotonic() - start)
 
 
+def retried(call, what: str, attempts: int = 6):
+    """R2 throttles under load (429/503, trials 43312973452, 43318649265): retry with backoff."""
+    from botocore.exceptions import ClientError
+
+    for attempt in range(attempts):
+        try:
+            return call()
+        except ClientError as exc:
+            status = int(exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode") or 0)
+            if (status != 429 and status < 500) or attempt == attempts - 1:
+                raise
+            print(f"{what}: R2 {status}, retry {attempt + 1}", flush=True)
+            time.sleep(10 * 2**attempt)
+    return None
+
+
+def clean(client, cat, buckets) -> dict:
+    """Remove everything under the scratch prefix in both buckets and drop the scratch tables; count what is left."""
+    removed, failed, dropped = 0, 0, []
+    for bucket in buckets:
+        keys = []
+        for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=f"{SCRATCH}/"):
+            keys += [o["Key"] for o in page.get("Contents", [])]
+        for key in keys:
+            try:
+                retried(lambda key=key, bucket=bucket: client.delete_object(Bucket=bucket, Key=key), "delete", 5)
+                removed += 1
+            except Exception:  # counted and reported; never stops the clean-up of the rest
+                failed += 1
+    with contextlib.suppress(Exception):
+        for ident in cat.list_tables(SCRATCH):
+            cat.drop_table(ident)
+            dropped.append(".".join(ident))
+    with contextlib.suppress(Exception):
+        cat.drop_namespace(SCRATCH)
+    left = sum(len(p.get("Contents", [])) for b in buckets
+               for p in client.get_paginator("list_objects_v2").paginate(Bucket=b, Prefix=f"{SCRATCH}/"))
+    return {"objects_removed": removed, "delete_failures": failed, "objects_left": left, "tables_dropped": dropped}
+
+
 def plain(obj):
     return json.loads(json.dumps(obj, default=str))
 
@@ -159,6 +199,8 @@ def main() -> int:
 
     client, cat = s3(), bf.retry(catalog, "catalog")
     landing_bucket = req("STORAGE_LANDING_BUCKET_NAME")
+    buckets = (landing_bucket, req("STORAGE_LAKEHOUSE_BUCKET_NAME"))
+    annotate("notice", "nfz_pharmacy_refunds trial · scratch cleaned before the start", clean(client, cat, buckets))
     try:
         first, calls1, secs1 = run_landing(extract, "load", 290)
         second, calls2, secs2 = run_landing(extract, "load")
@@ -180,10 +222,10 @@ def main() -> int:
                      "entities_by_pages": sorted({v: sum(1 for x in parts.values() if x == v) for v in parts.values()}.items())}))
 
         table_id = (SCRATCH, load.TABLE)
-        load.load(0, landing_root=LANDING, namespace=SCRATCH)
+        retried(lambda: load.load(0, landing_root=LANDING, namespace=SCRATCH), "bronze load 1", 4)
         files1 = len(bf.loaded_hashes(cat.load_table(table_id)))
         rows1 = cat.load_table(table_id).scan().to_arrow().num_rows
-        load.load(0, landing_root=LANDING, namespace=SCRATCH)
+        retried(lambda: load.load(0, landing_root=LANDING, namespace=SCRATCH), "bronze load 2", 4)
         bronze = cat.load_table(table_id).scan().to_arrow()
         files2 = len(bf.loaded_hashes(cat.load_table(table_id)))
         try:
@@ -212,20 +254,7 @@ def main() -> int:
             "licensed_by_gate": "nfz_pharmacy_refunds" in licensed_sources(sources, licences)}))
         print(json.dumps(plain(res), indent=1))
     finally:
-        removed = 0
-        for bucket in (landing_bucket, req("STORAGE_LAKEHOUSE_BUCKET_NAME")):
-            for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=f"{SCRATCH}/"):
-                for obj in page.get("Contents", []):
-                    client.delete_object(Bucket=bucket, Key=obj["Key"])
-                    removed += 1
-        dropped = []
-        with contextlib.suppress(Exception):
-            for ident in cat.list_tables(SCRATCH):
-                cat.drop_table(ident)
-                dropped.append(".".join(ident))
-        with contextlib.suppress(Exception):
-            cat.drop_namespace(SCRATCH)
-        annotate("notice", "nfz_pharmacy_refunds trial · cleanup", {"objects_removed": removed, "tables_dropped": dropped})
+        annotate("notice", "nfz_pharmacy_refunds trial · cleanup", clean(client, cat, buckets))
     return 0
 
 
