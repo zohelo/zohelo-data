@@ -1,6 +1,6 @@
 -- Gold series of ONE block (docs/gold-coverage.md): one row per time series of the block's build stage
--- (`build`), with the columns of gold.dim_series plus the block's version. Labels of the breakdown codes
--- come from the source's Silver dictionaries (breakdown_label_json).
+-- (`build`), with the columns of gold.dim_series plus the block's version. breakdown_label_json is
+-- whatever the build stage gives (empty for Eurostat: names of breakdown codes are not repeated per series).
 select
     measure_key
     || '|'

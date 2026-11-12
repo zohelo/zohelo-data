@@ -25,7 +25,7 @@ from warehouse import observations as obs
 NS = "zz_dev_gold_coverage"
 SOURCE = "eurostat"
 ALWAYS = ["UNE_RT_M", "NAMA_10_GDP", "PRC_HICP_MINR", "DEMO_PJAN", "NAMQ_10_GDP", "DEMO_R_PJANAGGR3", "EARN_MW_CUR",
-          "NAIO_10_FCP_U3", "AVIA_TF_ACA"]
+          "NAIO_10_FCP_U3"]
 SPOT = {  # series of the rule-based layer whose newest PL value is reported, with the curated fact's value
     "UNE_RT_M": "measure_key = 'eurostat:UNE_RT_M:PC_ACT:SA@M' and breakdown_json like '%\"age\":\"TOTAL\"%' and sex_key = '_T'",
     "NAMA_10_GDP": "measure_key = 'eurostat:NAMA_10_GDP:CP_MEUR:B1GQ@A'",
@@ -188,6 +188,20 @@ def diagnose(blocks: list[str]) -> None:
     annotate("notice", "gold observations trial diagnose", {"blocks": out, "kernel": kernel})
 
 
+def changed_per_day(cat) -> dict:
+    """Eurostat datasets by the day of their landed version (gold.coverage) and their Silver rows: the
+    daily incremental load."""
+    rows = cat.load_table(("gold", "coverage")).scan(selected_fields=("source", "landed_version", "silver_rows")).to_arrow()
+    con = duckdb.connect()
+    con.register("coverage", rows)
+    days = con.execute(
+        """select substr(landed_version, 1, 10) as day, count(*) as datasets, sum(silver_rows) as silver_rows
+           from coverage where source = 'eurostat' and landed_version is not null group by 1 order by 1 desc limit 21"""
+    ).fetchall()
+    sample = con.execute("select landed_version from coverage where source = 'eurostat' limit 2").fetchall()
+    return {"days": [[d, n, r] for d, n, r in days], "version_sample": [s[0] for s in sample]}
+
+
 def main() -> None:
     if len(sys.argv) > 2 and sys.argv[1] == "one":
         os.environ.setdefault("DUCKDB_TEMP_DIRECTORY", "/mnt/duckdb_tmp")
@@ -236,6 +250,9 @@ def main() -> None:
         report = {"plan": plan, "exit": [first, second], "build_minutes": build_minutes,
                   "second_run_seconds": round(time.monotonic() - started), **checks(cat, con, sample, silver_paths)}
         report["curated_pl_newest"] = curated(cat)
+        g = files(paths_of(cat, "geography"))
+        report["geography_rows"] = con.execute(f"select count(*), count(*) filter (where geography_key = '_X') from {g}").fetchone()
+        report["changed_per_day"] = changed_per_day(cat)
         head = {k: v for k, v in report.items() if k not in ("unmatched_top", "spot_pl_newest", "curated_pl_newest", "status")}
         annotate("notice", "gold observations trial", head)
         annotate("notice", "gold observations trial values", {k: report[k] for k in ("spot_pl_newest", "curated_pl_newest", "unmatched_top", "status")})
