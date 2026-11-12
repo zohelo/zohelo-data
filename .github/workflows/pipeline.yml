@@ -280,12 +280,58 @@ jobs:
           source: ${{ inputs.source }}
           activity: archive.prune
 
-  silver-gold-build:
+  build-queue:
+    # One model build at a time (silver-gold-build below), and GitHub keeps only one waiting job per concurrency
+    # group: a third build replaced the waiting one, whose run ended cancelled (#2932). This job keeps a run out of
+    # the group unless the waiting place is free: a run that finds another run's changed-only build waiting is
+    # covered by it (that build plans after this run's Bronze load) and ends green without a build or a publish.
+    # The job name carries the build kind for the other runs' queue jobs (warehouse/build_queue.py).
     needs: [plan, archive-prune]
     if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'silver_gold.build') }}"
+    name: "silver_gold.queue${{ (inputs.source == 'platform' && inputs.filter != '') && ' · filter' || '' }}"
+    runs-on: ubuntu-24.04
+    # Usually seconds. It waits only next to a build with a model filter, at most the build's own time limit.
+    timeout-minutes: 200
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      decision: ${{ steps.decide.outputs.decision }}
+      covered_by: ${{ steps.decide.outputs.covered_by }}
+    # Least privilege: this job only needs github.token, so it blanks the workflow-level secrets.
+    env:
+      STORAGE_LAKEHOUSE_CATALOG_WRITE_TOKEN: ""
+      STORAGE_WRITE_ACCESS_KEY: ""
+      STORAGE_WRITE_SECRET_KEY: ""
+      SOURCE_GUS_BDL_API_KEY: ""
+      SOURCE_GUS_BDL_WEB_LOGIN: ""
+      SOURCE_GUS_BDL_WEB_PASSWORD: ""
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Decide
+        id: decide
+        env:
+          PYTHONPATH: .
+          GITHUB_TOKEN: ${{ github.token }}
+          FORCED: ${{ inputs.source == 'platform' && inputs.filter != '' }}
+        # The runner's own Python and the standard library: no install, so the decision takes seconds.
+        run: python3 -m warehouse.build_queue
+      # The other runs' queue jobs read this step's conclusion (run or skipped) as this run's decision.
+      - name: covered by another run
+        if: steps.decide.outputs.decision == 'covered'
+        env:
+          COVERED_BY: ${{ steps.decide.outputs.covered_by }}
+        run: echo "The model build of run $COVERED_BY rebuilds what this run changed; this run builds and publishes nothing."
+
+  silver-gold-build:
+    needs: [plan, archive-prune, build-queue]
+    if: "${{ !cancelled() && !failure() && needs.build-queue.outputs.decision != 'covered' && contains(fromJSON(needs.plan.outputs.activities), 'silver_gold.build') }}"
     name: silver_gold.build
-    # One model build at a time across all sources (each source's full dataflow ends with one, #878).
-    # A newer queued build replaces an older queued one; the changed-only build still sees every change.
+    # One model build at a time across all sources (each source's full dataflow ends with one, #878). GitHub
+    # replaces a waiting job of this group when another arrives; build-queue lets a run in only while no build
+    # waits, so that should not happen. If it does, the newer changed-only build still sees every change.
     concurrency:
       group: zohelo-pipeline-build
       cancel-in-progress: false
@@ -305,8 +351,11 @@ jobs:
           filter: ${{ inputs.filter }}
 
   gold-publish:
-    needs: [plan, silver-gold-build]
-    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'gold.publish') }}"
+    needs: [plan, build-queue, silver-gold-build]
+    # Not in a run whose model build another run does (covered), and not after a build that a newer queued build
+    # replaced (result cancelled): that run would publish while the other build rewrites the tables, and the
+    # other run publishes after its own build (#2834; the condition of #2877 was lost in a merge, #2932).
+    if: "${{ !cancelled() && !failure() && needs.build-queue.outputs.decision != 'covered' && needs.silver-gold-build.result != 'cancelled' && contains(fromJSON(needs.plan.outputs.activities), 'gold.publish') }}"
     name: gold.publish
     # warehouse/publish.py is the only writer of 06_published/v1/ (docs/published.md): one at a time; a newer
     # queued publish replaces an older queued one (cancelled by design, not an alert).
@@ -348,9 +397,9 @@ jobs:
     # A failed or cancelled run opens (or comments on) an `alert` issue, so the owner gets an
     # e-mail. Cancelled counts: a job killed from outside (exit 143) ends as cancelled.
     needs: [scheduler, plan, landing-inspect, landing-extract, landing-verify, bronze-load, bronze-verify,
-            landing-archive, archive-prune, silver-gold-build, gold-publish, serving-refresh-index]
-    # A model build replaced in its queue by a newer one (concurrency zohelo-pipeline-build) ends as
-    # cancelled by design and is not an alert; a failed build is (#878 review).
+            landing-archive, archive-prune, build-queue, silver-gold-build, gold-publish, serving-refresh-index]
+    # A model build replaced in its queue by a newer one (concurrency zohelo-pipeline-build; build-queue should
+    # prevent it) ends as cancelled and is not an alert; a failed build is (#878 review).
     if: >-
       always() && (
       failure() ||
@@ -365,6 +414,7 @@ jobs:
       needs.bronze-verify.result == 'cancelled' ||
       needs.landing-archive.result == 'cancelled' ||
       needs.archive-prune.result == 'cancelled' ||
+      needs.build-queue.result == 'cancelled' ||
       needs.serving-refresh-index.result == 'cancelled')
     name: notify
     runs-on: ubuntu-24.04
