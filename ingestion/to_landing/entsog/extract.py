@@ -20,8 +20,11 @@ Which months are requested (load):
            N days for N closed months), because confirmed values are revised (January 2021 was last updated in
            February 2025).
 A month is closed when it has ended, its copy holds every gas day of the month, and every record with a value is
-``Confirmed`` (records with ``isNA`` have no value and no status; they count as final). The counts a decision needs
-are kept in the receipt, so inspect makes no request.
+``Confirmed`` (records with ``isNA`` have no value and no status; they count as final). Some old months keep a few
+``Provisional`` records for good (2021-12, 2022-11, 2022-12, 2023-05 to 2023-07 and 2026-08 on 12 Nov 2026, Dev trial
+43323294484): a month that ended more than SETTLE_MONTHS months ago counts as closed too and is re-read only in the
+rotation, so the daily run stays at about three requests. The counts a decision needs are kept in the receipt, so
+inspect makes no request.
 
 Layout (docs/landing.md): ``<root>/entsog/snapshot/data/<entity>/<version>__<ingested>.json`` + ``.receipt.json``.
 Polite access: one request at a time, a pause between requests, bounded retries with growing back-off on 429, 5xx
@@ -58,6 +61,7 @@ PAUSE_SECONDS = 5.0
 TIMEOUT_SECONDS = 90  # the API stops a query after 60 s
 BACKOFF_SECONDS = (30, 90, 240)  # waits before the 2nd, 3rd and 4th attempt
 ARCHIVED_TEXT = "archived on a rolling basis"
+SETTLE_MONTHS = 2  # an ended month older than this is not re-read daily even with Provisional records left
 
 
 def entity(slug: str, operator: str, month: tuple[int, int]) -> str:
@@ -125,8 +129,10 @@ def closed(receipt: dict[str, Any] | None, month: tuple[int, int], today: date) 
     if not receipt:
         return False
     detail = receipt.get("detail") or {}
-    ended = month < (today.year, today.month)
-    return ended and detail.get("gas_days") == detail.get("days_in_month") and detail.get("not_confirmed") == 0
+    if month >= (today.year, today.month) or detail.get("gas_days") != detail.get("days_in_month"):
+        return False  # the current month, or an answer that lacks gas days
+    settled = (today.year * 12 + today.month) - (month[0] * 12 + month[1]) > SETTLE_MONTHS
+    return detail.get("not_confirmed") == 0 or settled
 
 
 def land(client, bucket: str, root: str, session, slug: str, operator: str, month, held: list) -> str:

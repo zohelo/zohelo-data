@@ -1,64 +1,53 @@
--- entsog (silver.entsog_physical_flow): every gas day between an operator's first and last day is present, and
--- every point-direction published in a gas month has a record on each day of that month the operator published
--- (with a value or isNA). A month answer that loses days or points fails here instead of thinning the totals.
-with days as (
+-- entsog (silver.entsog_physical_flow): no gas day is missing inside a series. Every gas day between an operator's
+-- first and last day with a value has records, and every point-direction has a record on each day between its own
+-- first and last record (points start and stop mid-month: Vyrava 2022-11-12, Zlate Hory 2023-09-13, Tieterowka
+-- 2023-06-21, Wysokoje 2023-07-05; Dev trial 43323294484). A month answer that loses days or points fails here
+-- instead of thinning the totals; Gold's daily totals rely on it (a point without a record is not expected).
+with valued as (
     select
         operator_key,
-        gas_day,
-        date_trunc('month', gas_day) as gas_month
+        min(gas_day) as first_day,
+        max(gas_day) as last_day
     from {{ ref('entsog_physical_flow') }}
-    group by all
+    where value_kwh_d is not null
+    group by operator_key
 ),
 
-gaps as (
+operator_days as (
     select
-        d.operator_key,
-        cast(c.gas_day as date) as gas_day,
-        'missing day' as problem
-    from (
-        select
-            operator_key,
-            min(gas_day) as first_day,
-            max(gas_day) as last_day
-        from days
-        group by operator_key
-    ) as d
-    cross join lateral (select unnest(generate_series(d.first_day, d.last_day, interval 1 day)) as gas_day) as c
-    where not exists (
-        select 1 from days as x where x.operator_key = d.operator_key and x.gas_day = cast(c.gas_day as date)
-    )
+        v.operator_key,
+        cast(c.gas_day as date) as gas_day
+    from valued as v
+    cross join lateral (select unnest(generate_series(v.first_day, v.last_day, interval 1 day)) as gas_day) as c
 ),
 
-series_days as (
+series as (
     select
         operator_key,
         point_key,
         direction_key,
-        date_trunc('month', gas_day) as gas_month,
-        count(*) as n
+        min(gas_day) as first_day,
+        max(gas_day) as last_day,
+        count(*) as days
     from {{ ref('entsog_physical_flow') }}
-    group by all
-),
-
-month_days as (
-    select
-        operator_key,
-        gas_month,
-        count(*) as n
-    from days
-    group by all
+    group by operator_key, point_key, direction_key
 )
 
 select
-    operator_key,
-    gas_day,
-    problem
-from gaps
+    d.operator_key,
+    d.gas_day,
+    'no record on this day' as problem
+from operator_days as d
+where not exists (
+    select 1
+    from {{ ref('entsog_physical_flow') }} as f
+    where f.operator_key = d.operator_key and f.gas_day = d.gas_day
+)
 union all
 select
-    s.operator_key,
-    cast(s.gas_month as date) as gas_day,
-    'point ' || s.point_key || ' ' || s.direction_key || ': ' || s.n || ' of ' || m.n || ' days' as problem
-from series_days as s
-inner join month_days as m on s.operator_key = m.operator_key and s.gas_month = m.gas_month
-where s.n <> m.n
+    operator_key,
+    first_day as gas_day,
+    'point ' || point_key || ' ' || direction_key || ': ' || days || ' records from ' || first_day || ' to '
+    || last_day as problem
+from series
+where days <> last_day - first_day + 1
