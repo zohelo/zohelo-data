@@ -187,6 +187,16 @@
     ) as t (indicator_code)
 {% endmacro %}
 
+{# FAOSTAT blocks (gold.build_faostat): one per domain item × element; areas: EU27 members (M49, macro
+   poc_m49_eu27), FAO aggregates 5707 European Union (27) and 5000 World. #}
+{% macro poc_faostat_blocks() %}
+    select * from (
+        values
+        ('emissions_totals', '6829', '723113', 'GHG emissions, all sectors without LULUCF, CO2eq (AR5) (FAOSTAT)'),
+        ('land_use', '6601', '5110', 'Land area (FAOSTAT)')
+    ) as t (entity, item_code, element_code, block_name)
+{% endmacro %}
+
 {# NUTS 2016/2021 regions of Poland and the TERC voivodeship they equal; PL9 is Mazowieckie
    itself (NUTS 1) and its two NUTS 2 regions are children of the voivodeship. #}
 {% macro poc_nuts_pl() %}
@@ -254,6 +264,7 @@
     union all select * from {{ ref('poc_build_dbw') }}
     union all select * from {{ ref('poc_build_wdi') }}
     union all select * from {{ ref('poc_build_nbp') }}
+    union all select * from {{ ref('poc_build_faostat') }}
 {% endmacro %}
 
 {# series_key: measure × geography × breakdown codes, readable; an unmatched area keeps its source code so
@@ -274,6 +285,8 @@
     select 'gus_dbw', block_id, block_name from ({{ poc_dbw_blocks() }})
     union all
     select 'world_bank_wdi', indicator_code, 'WDI ' || indicator_code from ({{ poc_wdi_blocks() }})
+    union all
+    select 'faostat', entity || ':' || item_code || '.' || element_code, block_name from ({{ poc_faostat_blocks() }})
     union all
     select * from (
         values

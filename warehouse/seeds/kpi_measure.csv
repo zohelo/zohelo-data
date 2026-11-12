@@ -144,3 +144,5 @@ pensioners,gus_bdl,gus_bdl:P2861:osoba:przeciętna liczba emerytów i rencistów
 zus_pension_avg,gus_bdl,gus_bdl:P2860:zł:z pozarolniczego systemu ubezpieczeń społecznych emerytury,"non-agricultural system, old-age pension",1,
 investment_outlays,gus_bdl,gus_bdl:P2862:tys. zł:nakłady inwestycyjne w przedsiębiorstwach,"enterprises, current prices",1,
 vacancies_per_unemployed,gus_bdl,gus_bdl:P4334:osoba:zarejestrowani bezrobotni na 1 ofertę pracy,annual,1,
+ghg_emissions,faostat,faostat:emissions_totals:kt:6829.723113.%,"all sectors without LULUCF, CO2eq (AR5), kt (FAOSTAT emissions totals)",3,thousand_tonnes
+area,faostat,faostat:land_use:1000 ha:6601.5110._Z,"land area, 1000 ha (FAOSTAT land use)",3,thousand_ha
