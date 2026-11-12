@@ -4,7 +4,7 @@
 
 | Workflow | Runs | Trigger |
 |---|---|---|
-| **Pipeline** (`pipeline.yml`) | the dataflow: pick a `source` and a `run` | manual, `main` only |
+| **Pipeline** (`pipeline.yml`) | the dataflow: type a `source` id (free text, checked by the plan job) and pick a `run` | manual, `main` only |
 | **Ops · ad-hoc** (`ops.yml`) | one standing task from `ops/`; weekly CodeQL scan of `main` (job `codeql`) | manual or the schedule table (ops/README.md), `main` only |
 | **Dev · branch runs** (`dev.yml`) | one `dev/` script on a feature branch (trials, tests); deleted before merge. Also the merge gate: `check` and `check-portal` | trials: manual, never `main`; gate: label `merge:check` on a pull request |
 | **Deploy portal** (`deploy-portal.yml`) | build and deploy `portal/app` and `portal/worker` | push to `main` changing them, or manual |
@@ -100,10 +100,12 @@ Every source is declared in `ingestion/sources/<source>.yaml` with one key set, 
 | `archive_folder` | Archive folder of a source not yet rebuilt (default `05_archive/<source>/`) |
 | `refresh` | required for loaded sources (owner policy, 21 Oct, #875): scheduled ingestion of a **small** source is `mode: full`; of a **big** source `mode: incremental` with `unit` (the entity a new version replaces), incremental in **every layer** (needs `to_bronze/<s>/entities.py`); a change that requires recalculating the whole table (e.g. Silver logic) is a **full build** for any source. `decided`: `D32` plus the PR or issue of that source (sources decided before D32 cite the owner decision issue, `#875`); small or big is judged per source by Claude under the owner's rules of 20–21 Oct (size, update pattern, whether the source offers changed-since; no fixed row threshold), D32 |
 | `bronze_latest_only` | optional boolean; when `true`, a Bronze load removes superseded versions (policy #822/#845) |
-| `bronze`, `silver`, `gold` | tables the source owns in each layer; `*_rejected_files` tables record decoder rejections |
+| `bronze`, `silver`, `gold` | tables the source owns in each layer; `*_rejected_files` tables record decoder rejections. `gold` is the one place a source's own Gold tables are listed ([source-registration.md](source-registration.md)) |
+| `full_rebuild` | optional; row ceilings of the source's own full-rebuild dbt models, `model: {rows: <ceiling>[, exception: "#<issue>"]}` (owner policy #822), with the measured count in a comment |
 | `legacy_tables` | tables of retired code still in the catalog (globs allowed), until deleted |
 | `activities` | the Pipeline activities authorized for the source |
 
-Shared Gold models and the Eurostat Silver batching settings are declared in
-`warehouse/warehouse.yaml`. Code derives table lists (Bronze proofs, archive sources,
-inventory) from these files; nothing is listed twice.
+Shared Gold models (dimensions, facts, seeds, KPI metrics), their row ceilings and the Eurostat Silver
+batching settings are declared in `warehouse/warehouse.yaml`. Code derives table lists (Bronze proofs,
+archive sources, inventory, the Gold list and the row ceilings: `warehouse/declared.py`) from these files;
+nothing is listed twice.

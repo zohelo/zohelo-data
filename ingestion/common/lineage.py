@@ -22,39 +22,17 @@ from typing import Any
 from ingestion.common.r2 import landing_objects, latest_snapshot, req, s3
 from ingestion.common.report import annotate
 
-# Eurostat, GUS BDL, GLEIF: entities.verify (#875)
-SOURCES = (
-    "gugik_prg",
-    "gus_teryt",
-    "nbp",
-    "nbp_interest_rates",
-    "oecd",
-    "undp_hdr",
-    "who",
-    "unesco_uis",
-    "faostat",
-    "undata",
-    "bis",
-    "ilostat",
-    "unece",
-    "world_bank_wdi",
-    "world_bank_findex",
-    "world_bank_icp",
-    "world_bank_ids",
-    "world_bank_wgi",
-    "news_feeds",
-    "gdelt",
-    "wikimedia_pageviews",
-    "release_calendars",
-    "mf_public_debt",
-    "mf_state_budget",
-    "mf_treasury_debt",
-    "krus",
-    "unctad",
-    "mf_jst_budgets",
-    "mrpips_unemployment",
-    "ecb",
-)
+
+def sources() -> list[str]:
+    """Sources this check can run for: every declared source whose Pipeline loads Bronze (`bronze.load` in the
+    `activities` of ingestion/sources/<source>.yaml), the same rule as bronze_files.SOURCE_TABLES, which holds
+    the tables read here. A new source needs no line in this module. Eurostat, GUS BDL and GLEIF verify with
+    entities.verify (#875) and do not call it."""
+    from ingestion.common.r2 import sources as declared
+
+    return sorted(name for name, config in declared().items() if "bronze.load" in (config.get("activities") or []))
+
+
 # Accumulating sources (every landed copy stays in Bronze, docs/topics.md): no latest-only gate.
 ACCUMULATING = ("news_feeds", "gdelt", "wikimedia_pageviews")
 
@@ -138,7 +116,7 @@ def bronze_hashes(source: str) -> tuple[dict[str, set[str]], set[str]]:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", choices=SOURCES, required=True)
+    parser.add_argument("--source", choices=sources(), required=True)
     args = parser.parse_args(argv)
 
     client = s3()

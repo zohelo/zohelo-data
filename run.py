@@ -136,6 +136,7 @@ SOURCE_KEYS = {
     "bronze",
     "silver",
     "gold",
+    "full_rebuild",
     "legacy_tables",
     "activities",
 }
