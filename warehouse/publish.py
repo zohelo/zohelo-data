@@ -37,9 +37,9 @@ UNRESOLVED_LICENCE = "unresolved"  # licence.csv: terms not established (licence
 # kpi_latest would otherwise pick one arbitrary currency per source and geography.
 SKIP = {"fx_rate": "one value per currency; latest.json has no currency field"}
 # Sources that reach the published contract v2 only, never v1 (zohelo.com): v1 orders values by source_key, so a new
-# source would change what zohelo.com shows first (review of #2758). BIS, ILOSTAT, UNDP HDR and UNdata (#2861) feed
-# published KPIs too (unemployment_rate, the GDP KPIs).
-V2_ONLY_SOURCES = {"ecb", "bis", "ilostat", "undp_hdr", "undata"}
+# source would change what zohelo.com shows first (review of #2758). BIS, ILOSTAT, UNDP HDR, UNdata and UNECE (#2861)
+# feed published KPIs too (unemployment_rate, population, the GDP KPIs).
+V2_ONLY_SOURCES = {"ecb", "bis", "ilostat", "undp_hdr", "undata", "unece"}
 LATEST_LIMIT = 100_000  # bytes, docs/published.md size limits (D22)
 TOPICS_KEY = "06_published/v2/topics.json"  # docs/published.md, "topics.json"
 TOPICS_REVIEW_KEY = "06_published/v1/review/topics.json"  # internal review (docs/topics.md, "Internal review")
@@ -113,6 +113,52 @@ def gold(cat, namespace: str, name: str, waits: tuple[float, ...] = SWAP_RECHECK
                 raise
             time.sleep(wait)
     raise AssertionError("unreachable")
+
+
+# A table that feeds a live published KPI and is missing is waited for: another source's silver_gold.build can
+# hold it away for seconds (a swap) or minutes (a retry after a catalog 429, a long model). Only the missing
+# tables are read again, after these waits (9 minutes in all; the job's timeout is 30).
+BUILD_WAIT_SECONDS = (10, 20, 30, 60, 120, 150, 150)
+# Still missing after that: this run writes nothing and ends green with a warning while the live files are
+# younger than this; older than this (or of unknown age) the run fails. A failed build raises its own alert.
+DEFER_HOURS = 6
+
+
+def read_tables(cat, wanted: list[tuple[str, str]], waited_for: set[tuple[str, str]], waits=BUILD_WAIT_SECONDS):
+    """Read the (namespace, table) pairs in ``wanted``; returns ``(tables, missing)``.
+
+    Every table is read once. Those missing and in ``waited_for`` (they feed a KPI whose files are live) are
+    read again after each wait, until none of them is missing or the waits are used up. A missing table that
+    feeds no live file (not built yet) is not waited for. A table that was read is not read again."""
+    from pyiceberg.exceptions import NoSuchTableError
+
+    tables: dict[tuple[str, str], pa.Table] = {}
+    pending = list(dict.fromkeys(wanted))
+    not_waited: list[tuple[str, str]] = []
+    for round_number, wait in enumerate((None, *waits)):
+        if wait is not None:
+            time.sleep(wait)
+        still = []
+        for key in pending:
+            try:
+                tables[key] = gold(cat, *key, waits=())
+            except NoSuchTableError:
+                still.append(key)
+        if round_number == 0:
+            not_waited = [key for key in still if key not in waited_for]
+        pending = [key for key in still if key in waited_for]
+        if not pending:
+            break
+    return tables, not_waited + pending
+
+
+def published_age_hours(client, prefix: str, now: datetime) -> float | None:
+    """Hours since the live ``catalog/catalog.json`` under prefix was generated; None when it cannot be told."""
+    try:
+        stamp = json.loads(get(client, prefix + "catalog/catalog.json"))["generated_at"]
+        return (now - datetime.fromisoformat(stamp.replace("Z", "+00:00"))).total_seconds() / 3600
+    except Exception:  # no file, unreadable, no stamp: the caller treats an unknown age as too old
+        return None
 
 
 def seed(name: str) -> list[dict[str, str]]:
@@ -772,10 +818,70 @@ def topics(cat, client, generated_at: str) -> dict[str, Any]:
     return {"key": key, "published": bool(cfg.get("publish")), "bytes": len(body), "gzip_bytes": zipped, "top": top}
 
 
-def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
-    """Write kpi/<kpi_key>/latest.json for every published KPI under prefix."""
-    from pyiceberg.exceptions import NoSuchTableError
+def preload(cat, client, prefix: str, namespace: str, measures, licensed: set[str], v2: bool) -> dict[str, Any]:
+    """Read every metrics table this run publishes from, before the first write (#2834).
 
+    Returns ``tables`` ((namespace, table) → Arrow), ``v2_only`` (v2 concepts that are not v1 tables of this run)
+    and ``lost``: the KPIs whose files are live but whose table is still missing after the waits of read_tables.
+    A table missing for a KPI that has no live file (not built yet) is not waited for and is not lost."""
+    from warehouse import publish_v2
+
+    v1 = [
+        k["kpi_key"]
+        for k in seed("kpi")
+        if k["status"] == "published" and not licence_blocked(k["kpi_key"], measures, licensed)
+    ]
+    wanted = [(namespace, f"metrics_{key}") for key in v1]
+    live = {p.split("/")[1] for p in publish_v2.kpi_objects(client, prefix) if p.endswith("/series.parquet")}
+    waited_for = {(namespace, f"metrics_{key}") for key in v1 if key in live}
+    feeds: dict[tuple[str, str], set[str]] = {(namespace, f"metrics_{key}"): {f"v1 {key}"} for key in v1}
+    v2_only: list[str] = []
+    if v2:
+        live_v2 = {
+            p.split("/")[1] for p in publish_v2.kpi_objects(client, publish_v2.V2_PREFIX) if p.endswith("/series.json")
+        }
+        for entry in publish_v2.v2_kpis(seed("kpi"), seed("kpi_v2_map")):
+            table = ("gold", f"metrics_{entry['concept']}")
+            if table not in wanted:
+                wanted.append(table)
+                v2_only.append(entry["concept"])
+            feeds.setdefault(table, set()).add(f"v2 {entry['kpi_key']}")
+            if entry["kpi_key"] in live_v2:
+                waited_for.add(table)
+    tables, missing = read_tables(cat, wanted, waited_for)
+    lost = {f"{ns}.{name}": sorted(feeds[(ns, name)]) for ns, name in missing if (ns, name) in waited_for}
+    return {"tables": tables, "v2_only": v2_only, "lost": lost}
+
+
+def deferred(client, prefix: str, lost: dict[str, list[str]], now: datetime) -> dict[str, Any]:
+    """End a run that lost the table of a live KPI without writing or removing anything (#2834).
+
+    The live files stay as the last complete publish wrote them. While they are at most DEFER_HOURS old the run
+    ends green with a warning (the next publish, after the build that holds the table, catches up); older, or of
+    unknown age, it fails."""
+    from ingestion.common.report import annotate
+
+    age = published_age_hours(client, prefix, now)
+    detail = {
+        "missing_tables": lost,
+        "waited_seconds": sum(BUILD_WAIT_SECONDS),
+        "published_age_hours": None if age is None else round(age, 2),
+        "defer_hours": DEFER_HOURS,
+        "written": 0,
+        "removed": 0,
+    }
+    if age is None or age > DEFER_HOURS:
+        annotate("error", "gold.publish: Gold tables of live KPIs are missing, nothing written", detail)
+        raise ValueError(f"Gold tables of live KPIs are missing and the published files are stale: {sorted(lost)}")
+    annotate("warning", "gold.publish: deferred, Gold tables of live KPIs are missing (a build is running)", detail)
+    return {"deferred": detail}
+
+
+def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
+    """Write kpi/<kpi_key>/latest.json for every published KPI under prefix.
+
+    Every metrics table is read before the first write (preload); a run that cannot read the table of a live KPI
+    writes and removes nothing (deferred)."""
     from ingestion.common.r2 import catalog, s3
     from ingestion.common.report import annotate
 
@@ -794,6 +900,10 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
     licensed = licensed_sources(seed("source"), seed("licence"))
     licence_removed: dict[str, int] = {}  # KPI → rows left out by the licence gate
     blocked: list[str] = []  # published KPIs whose every source is unlicensed: no files (earlier ones removed)
+    v2 = prefix == PREFIX and published_v2()  # contract v2: the production run only
+    preloaded = preload(cat, client, prefix, namespace, measures, licensed, v2)
+    if preloaded.get("lost"):
+        return deferred(client, prefix, preloaded["lost"], datetime.now(UTC))
     for kpi in seed("kpi"):
         kpi_key = kpi["kpi_key"]
         if kpi["status"] != "published":
@@ -801,9 +911,8 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
         if licence_blocked(kpi_key, measures, licensed):
             blocked.append(kpi_key)  # files removed at the end, after every write and read-back succeeded
             continue
-        try:
-            metrics = gold(cat, namespace, f"metrics_{kpi_key}")
-        except NoSuchTableError:
+        metrics = preloaded["tables"].get((namespace, f"metrics_{kpi_key}"))
+        if metrics is None:  # never built and never published (a published table still missing ended the run above)
             missing.append(kpi_key)
             continue
         gated = licence_gated(metrics, licensed, kpi_key)
@@ -860,9 +969,12 @@ def main(prefix: str = PREFIX, namespace: str = "gold") -> dict[str, Any]:
         for name in ("series.parquet", "latest.json"):
             remove(client, prefix + f"kpi/{kpi_key}/{name}")
     annotate("notice", "gold.publish: latest", result)
-    if prefix == PREFIX and published_v2():  # contract v2: the production run only, after every v1 file
+    if v2:  # after every v1 file
         from warehouse import publish_v2
 
+        # the v2-only concepts read before the first write, so v2 is built from the same read as v1
+        read = {name[len("metrics_") :]: t for (ns, name), t in preloaded["tables"].items() if ns == "gold"}
+        tables = {**{c: read[c] for c in preloaded["v2_only"] if c in read}, **tables}
         try:
             result["v2"] = publish_v2.write(cat, client, tables, checked_at, v1_catalog, status, generated_at)
         except ValueError as error:

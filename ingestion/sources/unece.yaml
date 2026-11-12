@@ -23,7 +23,9 @@ archive_policy:
   prune: report
 bronze: [bronze.unece_observations, bronze.unece_codes, bronze.unece_rejected_files]
 silver: [silver.unece_observations]
-gold: []
+gold: [gold.build_unece]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  poc_build_unece: {rows: 175000}  # about 116,000 rows of the nine built tables in Silver (Dev probe 43304159871); 1.5 x
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): about forty small whole-table snapshots, rebuilt in full.

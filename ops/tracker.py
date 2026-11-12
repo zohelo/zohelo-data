@@ -42,6 +42,7 @@ from ingestion.common.r2 import catalog, get_with_backoff, req, s3, sources
 from ingestion.common.report import annotate, step_summary
 from ops.orphan_files import namespaces
 from ops.platform_inventory import SCRATCH, folders, namespace_check, warn_namespaces
+from warehouse.declared import gold as declared_gold
 
 ROOT = Path(__file__).resolve().parents[1]
 REST = "https://api.github.com"
@@ -301,7 +302,7 @@ def main(argv=None) -> int:
 
     registry = sources()
     platform = yaml.safe_load((ROOT / "warehouse" / "warehouse.yaml").read_text()) or {}
-    shared_gold = list(platform.get("gold") or [])
+    shared_gold = declared_gold()
     silver_models = models()
     feeds = gold_feeds(silver_models)
     semantic = semantic_models()

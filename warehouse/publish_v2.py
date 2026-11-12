@@ -1060,7 +1060,14 @@ def write(
 
         annotate("warning", "gold.publish: previous v2 file without the expected keys, treated as absent", unusable)
     files, context = build(tables, checked_at, silver_releases, v1_catalog, status, generated_at, previous)
-    stale, lost = stale_plan(kpi_objects(client, prefix), {e["kpi_key"] for e in candidates}, files)
+    existing = kpi_objects(client, prefix)
+    stale, lost = stale_plan(existing, {e["kpi_key"] for e in candidates}, files)
+    gated: dict[str, dict[str, list[str]]] = {}
+    if lost:  # which of them the licence gate explains: the sources of the live series.json decide
+        live = {key: series_sources(_published(client, f"{prefix}kpi/{key}/series.json")) for key in lost}
+        licensed = licensed_sources(seed("source"), seed("licence"))
+        gated, lost = licence_gated_out(lost, live, candidates, licensed, set(context["empty"]))
+        stale = sorted({*stale, *(p for p in existing if p.split("/")[1] in gated)})
     if lost:  # a KPI still in scope lost its series in this run (missing table, read failure): keep what is live
         raise ValueError(
             f"v2 KPIs in scope but not built this run, while published: {lost}; nothing written "
@@ -1081,6 +1088,7 @@ def write(
         "prefix": prefix,
         "kpis": sorted(n.split("/")[1] for n in files if n.startswith("kpi/")),
         "removed": stale,
+        "licence_gated": gated,  # KPIs out of scope for this run: every live series was of a gated source
         "missing": context["missing"],
         "empty": context["empty"],
         "latest_values": len(files["latest.json"]["values"]),
@@ -1110,7 +1118,9 @@ def stale_plan(existing: set[str], candidates: set[str], files: dict[str, Any]) 
     A KPI that is no longer a v2 candidate (``candidates``: the v2_kpis keys, decided by the seeds and the licence
     gate alone) is out of scope: its files are removed. A candidate whose ``series.json`` is published but was not
     built this run (missing table, read failure, no row at the shown frequency) is lost: the run must fail before
-    writing, so a transient failure never takes a live KPI down. Other leftover files of a built KPI are removed."""
+    writing, so a transient failure never takes a live KPI down, unless ``licence_gated_out`` shows that every
+    live series of it came from a source the licence gate now removes. Other leftover files of a built KPI are
+    removed."""
     stale, lost = [], set()
     for path in sorted(existing):
         if path in files:
@@ -1121,6 +1131,57 @@ def stale_plan(existing: set[str], candidates: set[str], files: dict[str, Any]) 
         else:
             stale.append(path)
     return stale, sorted(lost)
+
+
+def series_sources(doc: dict[str, Any] | None) -> set[str] | None:
+    """The source_keys of a published ``series.json``; None when there is no readable document or it does not
+    have the expected shape (then nothing can be said about what is live); pure."""
+    if not isinstance(doc, dict) or not isinstance(doc.get("series"), list):
+        return None
+    sources = {s.get("source_key") for s in doc["series"] if isinstance(s, dict)}
+    if not sources or not all(isinstance(s, str) and s for s in sources):
+        return None
+    return sources
+
+
+def licence_gated_out(
+    lost: list[str],
+    live: dict[str, set[str] | None],
+    candidates: list[dict[str, Any]],
+    licensed: set[str],
+    empty: set[str],
+) -> tuple[dict[str, dict[str, list[str]]], list[str]]:
+    """Splits the lost KPIs of ``stale_plan`` into those the licence gate explains and those still lost; pure.
+
+    ``live``: the source_keys of each lost KPI's published ``series.json`` (``series_sources``); ``candidates``:
+    the v2_kpis entries (their sources are the ready, licensed ones); ``empty``: the KPIs whose metrics table was
+    read in this run and gave no v2 row.
+
+    A lost KPI is out of scope for this run (returned first: KPI → ``gated_sources``, ``ready_without_rows``)
+    only when all three hold:
+
+    - its metrics table was read and gave no row of a ready, licensed source (``empty``); a missing or unreadable
+      table is never explained by the gate;
+    - its live ``series.json`` was read and names its sources;
+    - none of those live sources is licensed any more: everything that is live came from sources the licence gate
+      now removes (O37), so nothing that may stay published is taken down by removing the files.
+
+    The KPI is still a candidate because the map has another ready, licensed source that has no Gold rows (for
+    ``eurpln``: NBP gated, ECB ready but its block not built yet). Such a source was never published for this KPI,
+    so its missing rows are not a loss of live data; it is reported as ``ready_without_rows`` and the KPI comes
+    back by itself once that source has rows. If any live source is still licensed, its series vanished for a
+    reason the gate does not explain (table emptied, block dropped, pattern or frequency no longer matching):
+    the KPI stays lost and the run fails before writing, as before."""
+    ready = {e["kpi_key"]: sorted(e["sources"]) for e in candidates}
+    gated: dict[str, dict[str, list[str]]] = {}
+    still = []
+    for key in lost:
+        sources = live.get(key)
+        if key in empty and sources and not sources & licensed:
+            gated[key] = {"gated_sources": sorted(sources), "ready_without_rows": ready.get(key, [])}
+        else:
+            still.append(key)
+    return gated, still
 
 
 def _published(client, key: str) -> dict[str, Any] | None:

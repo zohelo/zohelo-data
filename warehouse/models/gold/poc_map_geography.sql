@@ -1,12 +1,14 @@
 {{ config(alias='map_geography') }}
 {# Gold PoC: every source's geography code → the area it means in dim_geography
    (design draft 2: map_geography__<source>, merged into one table). Unmatched codes map to
-   '_X' and are counted by the build check. #}
+   '_X' and are counted by the build check. A new source does not add a CTE here: it defines
+   poc_geography__<source_system>() in warehouse/macros/sources/<source_system>.sql
+   (docs/source-registration.md) and the two poc_geography_* calls below place it. #}
 with geo as (select * from {{ ref('poc_dim_geography') }}),
 
 nuts_pl as ({{ poc_nuts_pl() }}),
 
-eurostat_codes as (
+{{ poc_geography_ctes() }}eurostat_codes as (
     select code from {{ ref('eurostat_codes') }}
     where codelist_id = 'GEO'
     group by code
@@ -291,6 +293,22 @@ wb_family as (
 -- calls) from poc_unctad_areas: the EU27 members, 3412 European Union (2020 …) = EU27_2020, 0000 World. Other
 -- economies have no ISO code in the tables (_X); the build stage builds only the listed areas, and
 -- tests/unctad_areas_present.sql fails when a listed code is missing from one of the three built tables.
+-- ZUS statistical portal (PLS-009): '00' = Poland; voivodeships by their 2-digit TERYT code (the Silver model matched
+-- ZUS's voivodeship names to these codes). Built from TERYT, so the dimensions never wait for the ZUS source.
+zus_psz as (
+    select
+        'zus_psz' as source_system,
+        terc_code as source_code,
+        'TERC:' || terc_code as geography_key
+    from {{ ref('teryt_terc') }}
+    where unit_level = 'wojewodztwo'
+    union all
+    select
+        'zus_psz' as source_system,
+        '00' as source_code,
+        'PL' as geography_key
+),
+
 unctad_areas as ({{ poc_unctad_areas() }}),
 
 unctad as (
@@ -410,61 +428,27 @@ un_wpp as (
     where level_name = 'country' and length(geography_key) = 2
 ),
 
--- BIS (#2861): ISO 3166 alpha-2 countries (dim_geography's country keys) and XM euro area → EUROSTAT:EA
--- (poc_bis_areas; the BIS aggregates 4T, 5R, 5A, G2, XW have no Gold area and are not listed). Static: Gold does
--- not read BIS Silver here.
-bis_areas as ({{ poc_bis_areas() }}),
-
-bis as (
+-- UNHCR Refugee Statistics (cf_type=ISO): countries of asylum by ISO 3166-1 alpha-3 (dim_geography iso3), built
+-- from Gold's own list like oecd, so the dimensions never wait for the UNHCR source; UNHCR's own codes for
+-- unknown or stateless origins are breakdowns, not areas.
+unhcr as (
     select
-        'bis' as source_system,
-        area_code as source_code,
-        candidate_key as geography_key
-    from bis_areas
-    where candidate_key <> ''
-    union all
-    select
-        'bis' as source_system,
-        geography_key as source_code,
-        geography_key
-    from geo
-    where level_name = 'country' and length(geography_key) = 2
-),
-
--- ILOSTAT and UNDP HDR (#2861): countries by ISO 3166 alpha-3 (dim_geography.iso3), from Gold's own list so the
--- shared dimensions never wait for their Silver tables; UNDP's ZZK.WORLD is World. ILO aggregates (X01 …) and the
--- HDR groups and regions (ZZA … ZZJ) are not listed; the build stages build the EU27 members (and World for UNDP).
-iso3_family as (
-    select
-        s.source_system,
+        'unhcr' as source_system,
         g.iso3 as source_code,
         g.geography_key
     from geo as g
-    cross join (values ('ilostat'), ('undp_hdr')) as s (source_system)
     where g.level_name = 'country' and g.iso3 is not null
-    union all
-    select
-        'undp_hdr' as source_system,
-        'ZZK.WORLD' as source_code,
-        'WB:WLD' as geography_key
 ),
 
--- UNdata Statistical Yearbook (#2861): areas by UN M49 code as published (no leading zeros): the EU27 members
--- (poc_m49_eu27) and 1 "Total, all countries or areas" = World. Other regions (150 Europe, 97 European Union …)
--- are not listed and not built. Static.
-undata_m49 as ({{ poc_m49_eu27() }}),
-
-undata as (
+-- EEA greenhouse gas inventory: countries by ISO 3166-1 alpha-2 as published (Greece GR), built from Gold's own
+-- list like oecd, so the dimensions never wait for the EEA source; the EEA aggregate EUA has no Gold key (_X).
+eea as (
     select
-        'undata' as source_system,
-        cast(cast(m49 as integer) as varchar) as source_code,
-        iso2 as geography_key
-    from undata_m49
-    union all
-    select
-        'undata' as source_system,
-        '1' as source_code,
-        'WB:WLD' as geography_key
+        'eea' as source_system,
+        g.iso2 as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso2 is not null
 )
 
 select
@@ -473,7 +457,7 @@ select
     coalesce(g.geography_key, '_X') as geography_key,
     g.geography_key is not null as matched
 from (
-    select * from eurostat
+    {{ poc_geography_union() }}select * from eurostat
     union all
     select * from bdl
     union all
@@ -507,11 +491,11 @@ from (
     union all
     select * from un_wpp
     union all
-    select * from bis
+    select * from unhcr
     union all
-    select * from iso3_family
+    select * from eea
     union all
-    select * from undata
+    select * from zus_psz
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null

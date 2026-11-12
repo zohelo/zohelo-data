@@ -25,6 +25,7 @@ import time
 import yaml
 
 from ingestion.common.report import ANNOTATION_LIMIT, annotate, step_summary
+from warehouse import declared
 
 PROJECT = Path(__file__).resolve().parent
 _RETRY = yaml.safe_load((PROJECT / "warehouse.yaml").read_text())
@@ -32,7 +33,7 @@ RATE_LIMIT_WAITS = [float(s) for s in _RETRY["rate_limit_retry_waits"]]
 RATE_LIMIT_THREADS = int(_RETRY["rate_limit_retry_threads"])
 COMMIT_RETRY_THREADS = int(_RETRY["commit_retry_threads"])
 # Owner policy #822: only small tables are rebuilt in full; each full-rebuild model has a row ceiling.
-FULL_REBUILD = _RETRY["full_rebuild"]
+FULL_REBUILD = declared.full_rebuild()  # warehouse.yaml and each source's own YAML
 # Topics settings (docs/topics.md): weights, windows and thresholds, passed to every build as the dbt var `topics`.
 TOPICS = _RETRY["topics"]
 
@@ -103,13 +104,32 @@ def _short(message: str, head: int = 200, tail: int = 600) -> str:
     return message if len(message) <= head + tail else f"{message[:head]} ... {message[-tail:]}"
 
 
+SELECT_SHOWN_CHARS = 400  # of the select list in the annotation; the rest is a count
+
+
+def _select_for_annotation(selectors: list[str], limit: int = SELECT_SHOWN_CHARS) -> dict:
+    """The select list for the annotation: whole when short, else its first names and `select_count`.
+
+    A changed-only build after a shared macro or seed change selects 150 to 200 models, about 4,000 characters:
+    left whole, the annotation was cut inside the list and lost exit_code, row_ceilings and every failure (#2875)."""
+    if len(json.dumps(selectors, separators=(",", ":"))) <= limit:
+        return {"select": selectors}
+    first: list[str] = []
+    for name in selectors:
+        if len(json.dumps([*first, name], separators=(",", ":"))) > limit:
+            break
+        first.append(name)
+    return {"select": first, "select_count": len(selectors), "select_more": len(selectors) - len(first)}
+
+
 def _for_annotation(summary: dict, shown: int = MAX_FAILURES_SHOWN) -> dict:
-    """The summary fitted to one annotation: failures go last, at most `shown` of them (fewer
-    if escaping makes them too long) with a count of the rest, their messages sharing 2,400
-    characters, so the batch and catalog results are never cut off. The step summary keeps
-    every failure in full."""
+    """The summary fitted to one annotation: a long select list is shortened to its first names and a
+    count; failures go last, at most `shown` of them (fewer if escaping makes them too long) with a
+    count of the rest, their messages sharing 2,400 characters, so the batch and catalog results are
+    never cut off. The step summary keeps the select list and every failure in full."""
     failures = summary["failures"]
     out = {k: v for k, v in summary.items() if k != "failures"}
+    out.update(_select_for_annotation(summary.get("select") or []))
     budget = 2400 // max(1, min(len(failures), shown))
     listed = [
         {**f, "message": _short(f["message"], head=min(200, budget // 4), tail=max(1, min(600, budget * 3 // 4)))}
@@ -273,7 +293,7 @@ def table_rows(table) -> int:
 
 def row_ceilings(results: list[dict]) -> dict:
     """Owner policy #822 (#868): the rows of each full-rebuild model this build wrote, against
-    its ceiling in warehouse.yaml `full_rebuild`. Above the ceiling: a warning; above twice the
+    its declared ceiling (`full_rebuild`, warehouse/declared.py). Above the ceiling: a warning; above twice the
     ceiling: the build fails, so a full rebuild that grew is noticed and made incremental (or
     given an exception). A full-rebuild model missing from the list is reported as unlisted
     (repo_check fails on it too). dbt's manifest of this build gives materializations and tables."""

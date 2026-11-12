@@ -1,0 +1,16 @@
+version: 2
+models:
+  - name: poc_build_unece
+    description: >-
+      Build stage — UNECE Statistical Database, economic statistics: unemployment rate (annual, monthly),
+      consumer and producer price indices (annual, quarterly), gross average monthly wages, industrial
+      production, population and employment, exchange rates and purchasing power parities (annual) and total
+      employment (quarterly); the measures of macro poc_unece_measures for the 56 UNECE countries, the EU-27
+      and the euro area. Values and units as published.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]

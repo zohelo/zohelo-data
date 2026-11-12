@@ -32,6 +32,7 @@ from ingestion.common.bronze_files import retry
 from ingestion.common.r2 import catalog, req, s3, sources
 from ingestion.common.report import annotate, step_summary
 from ops.orphan_files import namespaces
+from warehouse.declared import gold as declared_gold
 
 ROOT = Path(__file__).resolve().parents[1]
 LAYERS = ("bronze", "silver", "gold")
@@ -182,7 +183,7 @@ def main(argv=None) -> int:
     # Shared Gold of the dbt project and retired-code tables still in the catalog are claimed too.
     # A declared table is never legacy, even when a legacy glob matches it (as ops/tracker.py).
     platform = yaml.safe_load((ROOT / "warehouse" / "warehouse.yaml").read_text()) or {}
-    claimed_tables.update(platform.get("gold") or [])
+    claimed_tables.update(declared_gold())
     legacy = [g for c in registry.values() for g in (c.get("legacy_tables") or [])]
     legacy_found = sorted(n for n in found if n not in claimed_tables and any(fnmatch.fnmatch(n, g) for g in legacy))
     claimed_tables.update(legacy_found)
