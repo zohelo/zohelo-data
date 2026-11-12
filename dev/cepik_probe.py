@@ -16,6 +16,7 @@ from ingestion.to_landing.patterns import bulk_file
 
 BASE = "https://www.gov.pl/web/cepik/"
 PAUSE = 2.0
+MAX_ROWS = 80  # rows printed per sheet
 
 
 def main(argv) -> int:
@@ -65,8 +66,13 @@ def main(argv) -> int:
             rows.setdefault((c["sheet_index"], c["sheet_name"], c["row_number"]), []).append(
                 f"{c['cell_ref']}={c['value_text'][:40].replace(chr(10), ' ')}{extra}"
             )
+        shown: dict = {}
         for (si, sn, rn), cs in sorted(rows.items()):
-            print(f"  {si}:{sn}:{rn}: " + " | ".join(cs))
+            shown[(si, sn)] = shown.get((si, sn), 0) + 1
+            if shown[(si, sn)] <= MAX_ROWS:
+                print(f"  {si}:{sn}:{rn}: " + " | ".join(cs)[:1500])
+        for (si, sn), k in sorted(shown.items()):
+            print(f"  SHEET {si}:{sn} rows {k}")
     annotate("notice", "cepik probe", summary)
     return 0
 
