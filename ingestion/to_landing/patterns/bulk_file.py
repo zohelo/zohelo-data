@@ -18,6 +18,11 @@ framework")::
               page: https://www.gov.pl/web/finanse/szeregiczasowe
               pattern: /attachment/  # re.search on each <a href>, made absolute against the page
               pick: first            # first (default) | last matching link, in page order
+          - entity: budget_execution       # one file per year, each on its own page
+            years: {from: 2018, open: 2}  # entities budget_execution_2018 … _<current year, Warsaw>; {year} in
+            url_from:                # url / url_from.page is that year; the current year's file is optional
+              page: https://www.gov.pl/web/finanse/sprawozdania-miesieczne-{year}
+              pattern: /attachment/
 
 Each file lands as ``01_landing/<source>/snapshot/data/<entity>/<version>__<ingested>.<ext>``
 with a receipt, only when its SHA-256 differs from the newest landed copy. The download
@@ -67,13 +72,40 @@ class PermanentError(RuntimeError):
     """A download failure that retrying will not fix (a 4xx response)."""
 
 
-def declaration(source: str) -> list[dict[str, Any]]:
-    """The declared files of a bulk_file source."""
+def declaration(source: str, today: datetime | None = None) -> list[dict[str, Any]]:
+    """The declared files of a bulk_file source; a file with ``years`` is one entity per year (expand_years)."""
     config = yaml.safe_load((ROOT / "ingestion" / "sources" / f"{source}.yaml").read_text())
     extraction = config.get("extraction") or {}
     if extraction.get("kind") != "bulk_file":
         raise ValueError(f"{source}: extraction.kind is not bulk_file")
-    return list(extraction["bulk_file"]["files"])
+    return [s for spec in extraction["bulk_file"]["files"] for s in expand_years(spec, today)]
+
+
+def expand_years(spec: dict[str, Any], today: datetime | None = None) -> list[dict[str, Any]]:
+    """A file declared with ``years: {from: <year>}`` as one spec per year up to the current year (Warsaw):
+    entity ``<entity>_<year>``, ``{year}`` replaced in url and url_from.page. The current year's spec is
+    ``optional`` (in January its page may not exist or list a file yet): load and inspect skip it with a
+    notice instead of failing. With ``years: {from: <year>, open: <n>}`` only the newest n years are downloaded
+    again once landed; an older year is ``closed`` and load skips it while Landing holds a copy (its file no
+    longer changes; a missing copy is still downloaded). Other specs are returned unchanged."""
+    if "years" not in spec:
+        return [spec]
+    from zoneinfo import ZoneInfo
+
+    current = (today or datetime.now(UTC)).astimezone(ZoneInfo("Europe/Warsaw")).year
+    base = {k: v for k, v in spec.items() if k != "years"}
+    out = []
+    open_years = int(spec["years"].get("open", 0))
+    for year in range(int(spec["years"]["from"]), current + 1):
+        one = {**base, "entity": f"{spec['entity']}_{year}", "year": year, "optional": year == current}
+        if open_years and year <= current - open_years:
+            one["closed"] = True
+        if "url" in base:
+            one["url"] = base["url"].replace("{year}", str(year))
+        if "url_from" in base:
+            one["url_from"] = {**base["url_from"], "page": base["url_from"]["page"].replace("{year}", str(year))}
+        out.append(one)
+    return out
 
 
 def single_entity(source: str) -> str:
@@ -436,11 +468,17 @@ def main(
                 rewritten = reduce_held(client, bucket, source, spec, landing_root)
                 if rewritten:
                     print(json.dumps({"entity": spec["entity"], "reduced_held_copies": rewritten}), flush=True)
+            if spec.get("closed") and landed(client, bucket, folder):
+                results.append({"entity": spec["entity"], "outcome": "closed year, held"})
+                continue
             if n and pause_seconds:
                 time.sleep(pause_seconds)
             try:
                 results.append(load_file(client, bucket, source, spec, landing_root))
             except PermanentError as exc:
+                if spec.get("optional"):
+                    results.append({"entity": spec["entity"], "outcome": "not published yet", "error": str(exc)[:200]})
+                    continue
                 if not missing_ok:
                     raise
                 missing.append({"entity": spec["entity"], "error": str(exc)[:200]})
@@ -457,8 +495,11 @@ def main(
                 url = resolve_url(spec, links)
             except (PermanentError, requests.RequestException, RuntimeError) as exc:
                 row.update({"state": "unreachable", "http": str(exc)[:200]})
+                if spec.get("optional") and isinstance(exc, PermanentError):
+                    row["state"] = "not published yet"  # the current year of a per-year file (expand_years)
+                else:
+                    status = 1
                 results.append(row)
-                status = 1
                 continue
             if links is not None:
                 row["page_links"] = links[:10]  # every match (first 10), to choose url_from.pick

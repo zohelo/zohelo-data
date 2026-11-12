@@ -1,0 +1,26 @@
+version: 2
+models:
+  - name: public_debt
+    description: >-
+      Ministry of Finance public debt workbook (newest copy) in long form: one row per sheet × block × item ×
+      period end (quarter ends; the EDP and GDP sheets from 2001-12-31). Sheets: public finance sector debt before
+      and after consolidation by subsector, by instrument (place of issue; residency), general government (EDP)
+      debt by ESA 2010 instrument (item_code AF.x), the PDP–EDP bridge, and debt in relation to GDP. unit mln_pln
+      (nominal, million zloty) or ratio (fraction of GDP). Non-numeric cells (b.d., -) are left out.
+    tests:
+      - unique:
+          column_name: "sheet_name || '|' || header_row || '|' || item_label || '|' || item_occurrence || '|' || cast(period_end as varchar)"
+    columns:
+      - name: sheet_name
+        tests: [not_null]
+      - name: item_label
+        tests: [not_null]
+      - name: period_end
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: unit
+        tests: [not_null, {accepted_values: {arguments: {values: ['mln_pln', 'ratio']}}}]
+      - name: raw_sha256
+        description: Landing SHA-256 of the workbook (lineage to Landing/Archive).
+        tests: [not_null]

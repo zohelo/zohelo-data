@@ -62,7 +62,7 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)
        gold.dimension, gold.dimension_alias, gold.dim_dimension,  # catalogue: axes
-       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_wdi, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth]   # Gold v1 (warehouse/models/gold, docs/model.md)
+       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_public_finance, gold.build_wdi, gold.build_unctad, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth]   # Gold v1 (warehouse/models/gold, docs/model.md)
 demo_namespaces: [demo_bronze, demo_silver, demo_gold]  # phase 2 demo warehouse (program plan §3.3); never in the public catalogue
 
 # Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
@@ -77,6 +77,15 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   nbp_fx_rates: {rows: 1000000}  # 428,392
   nbp_gold_fixings: {rows: 20000}  # 3,479
   oecd_cli: {rows: 400000}  # 240,988 (Dev trial 42777288678)
+  unctad_fdi_flows_stock: {rows: 55000}  # 36,950 (Dev trial 43094105961)
+  unctad_merchandise_trade: {rows: 70000}  # 46,108
+  unctad_services_trade: {rows: 1200000, exception: "#2777"}  # 807,733, ~38,000 more a year; whole-table archive, full rebuild accepted
+  unctad_digital_services_trade: {rows: 185000}  # 122,752
+  unctad_commodity_prices: {rows: 30000}  # 19,961
+  unctad_liner_shipping_connectivity: {rows: 115000}  # 76,003
+  unctad_merchant_fleet: {rows: 96000}  # 63,896
+  unctad_seaborne_trade: {rows: 97000}  # 64,424
+  unctad_port_calls: {rows: 1800}  # 1,197
   news_headlines: {rows: 300000}
   releases: {rows: 5000}  # about 50 announced releases a week, 60-day window
   topic_attention: {rows: 50000}  # 35 topics × 455 days
@@ -85,11 +94,21 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   topic_rank: {rows: 1000}  # 5 periods × 35 topics
   topic_quality: {rows: 1000}
   topic_volume: {rows: 50000}  # 35 topics × days since the first landing  # topics (O32): ~150,000 headlines in 400 days (7 feeds)
-  nbp_bop_observations: {rows: 150000}  # ~70,000 expected (3 workbooks x 3 currencies, probe 43085930329)
+  public_debt: {rows: 13500}  # 8,895 (Dev trial 43099813876)
+  treasury_debt: {rows: 125000}  # 83,206 (Dev trial 43099813876), monthly since 2001
+  budget_execution: {rows: 2800}  # 1,845 (Dev trial 43099813876), 2018-2026, ~200 a year
+  krus_benefits: {rows: 900}  # 576 (Dev trial 43099813876), quarters and years since 2020
+  nbp_bop_observations: {rows: 85000}  # 55,332 (Dev trial 43093233419)
   nbp_policy_rates: {rows: 2000}  # 390 rows, 96 archive dates since 1998 (Dev trial 42777711811)
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865
   teryt_terc: {rows: 20000}  # 4,360
+  wgi_observations: {rows: 300000}  # 202,092 (Dev trial 43085820597)
+  wgi_indicators: {rows: 1000}  # 36
+  ids_observations: {rows: 4000000, exception: "#2772"}  # 2,647,628 (Dev trial 43085820597); #822 exception, review 2027-01-15
+  ids_series: {rows: 2000}  # 577
+  findex_observations: {rows: 580000}  # 385,599 (Dev trial 43085820597)
+  icp_observations: {rows: 350000}  # 231,174 (Dev trial 43085820597)
   wdi_countries: {rows: 1000}  # 265
   wdi_indicators: {rows: 10000}  # 1,498
   wdi_observations: {rows: 12000000, exception: "#870"}  # 9,045,734; rebuilt weekly with WDI
@@ -103,6 +122,8 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_dbw: {rows: 600000}  # 312,512 (10 Nov) + ~110,000 slice blocks (#2592)
   poc_build_eurostat: {rows: 800000}
   poc_build_nbp: {rows: 600000}
+  poc_build_public_finance: {rows: 8600}  # 5,727 (Dev trial 43099813876)
+  poc_build_unctad: {rows: 18000}  # 11,871 (Dev trial 43100532689): 29 areas × 10 measures
   poc_build_wdi: {rows: 500000}  # + 16 slice indicators, all economies (#2592)
   poc_concept_measures: {rows: 1000}
   poc_dim_calendar: {rows: 80000}
@@ -122,6 +143,8 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_measure_dimensions: {rows: 5000}
   kpi_dimension: {rows: 10000}
   poc_metrics_fx_rate: {rows: 600000}
+  poc_metrics_exports_goods: {rows: 3000}  # 1,880 build rows of the measure (Dev trial 43100532689)
+  poc_metrics_exports_services: {rows: 1000}  # 608 build rows of the measure (Dev trial 43100532689)
   poc_metrics_gdp_current_prices: {rows: 50000}
   poc_metrics_inflation: {rows: 40000}
   poc_metrics_population: {rows: 100000}  # + WDI and Eurostat (#2592)
@@ -169,7 +192,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_ppi_annual_rate: {rows: 30000}
   poc_metrics_current_account_gdp: {rows: 20000}
   poc_metrics_current_account_components: {rows: 20000}
-  poc_metrics_fdi_inflow: {rows: 20000}
+  poc_metrics_fdi_inflow: {rows: 30000}  # + UNCTAD, 29 areas × 36 years
   poc_metrics_job_vacancy_rate: {rows: 20000}
   poc_metrics_labour_productivity: {rows: 20000}
   poc_metrics_unit_labour_cost: {rows: 20000}
