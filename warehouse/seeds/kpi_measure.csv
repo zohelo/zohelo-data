@@ -199,3 +199,4 @@ tourist_overnight_stays,gus_tourism,gus_tourism:accommodation:overnight_stays:ov
 tourist_bed_places,gus_tourism,gus_tourism:accommodation:bed_places:bed_places,"GUS Turystyka, 31 July, Poland and voivodeships",1,
 museum_visiting_share,gus_culture_participation,gus_culture_participation:participation:pct_population:museum_visiting,"GUS survey, museums in Poland, past 12 months, by sex",1,
 theatre_attendance_share,gus_culture_participation,gus_culture_participation:participation:pct_population:theatre_attendance,"GUS survey, past 12 months, by sex",1,
+social_assistance_recipients,mrpips_social_assistance,mrpips_social_assistance:social_assistance:persons:persons_granted,"MRPiPS-03 DZIAŁ 2 row 1, Poland and voivodeships",1,

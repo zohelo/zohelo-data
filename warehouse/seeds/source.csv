@@ -40,3 +40,4 @@ unece,GL-038,UNECE Statistical Database,UNECE Statistical Database,United Nation
 gus_culture,PLS-027,GUS Kultura i dziedzictwo narodowe,GUS culture and national heritage,GUS,cube,file,national-public,gus_copyright_culture,https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/
 gus_culture_participation,PLS-028,GUS Uczestnictwo ludności w kulturze,GUS participation in culture,GUS,cube,file,national-public,gus_copyright_participation,https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/
 gus_tourism,PLS-035,GUS Turystyka,GUS tourism,GUS,cube,file,national-public,gus_copyright_tourism,https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/
+mrpips_social_assistance,PLS-031,MRPiPS statystyka pomocy społecznej,MRPiPS social assistance statistics,"Ministerstwo Rodziny, Pracy i Polityki Społecznej",cube,file,national-public,gov_pl_terms_mrpips,https://www.gov.pl/web/rodzina/statystyki-pomocy-spolecznej

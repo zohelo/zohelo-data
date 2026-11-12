@@ -56,6 +56,7 @@ SOURCES = (
     "gus_culture",
     "gus_culture_participation",
     "gus_tourism",
+    "mrpips_social_assistance",
     "mrpips_unemployment",
     "ecb",
     "un_wpp",

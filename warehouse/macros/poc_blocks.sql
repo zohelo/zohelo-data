@@ -458,6 +458,7 @@
     poc_build_gus_culture:gus_culture
     poc_build_gus_culture_participation:gus_culture_participation
     poc_build_gus_tourism:gus_tourism
+    poc_build_mrpips_social_assistance:mrpips_social_assistance
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -569,6 +570,7 @@
         ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)'),
         ('gus_culture', 'culture_institutions', 'GUS culture and national heritage tables (annual)'),
         ('gus_culture_participation', 'participation', 'GUS participation in culture survey (persons aged 15+)'),
-        ('gus_tourism', 'accommodation', 'GUS tourism tables: tourist accommodation (annual)')
+        ('gus_tourism', 'accommodation', 'GUS tourism tables: tourist accommodation (annual)'),
+        ('mrpips_social_assistance', 'social_assistance', 'MRPiPS-03 social assistance (benefits granted, annual)')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}

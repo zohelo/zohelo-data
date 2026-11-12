@@ -3495,7 +3495,8 @@ sources:
   name: Social assistance and family-support statistical reports
   short_name: MRPiPS social assistance
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej
-  status: approved
+  source_system: mrpips_social_assistance
+  status: built
   family: B
   kpi: true
   geography: Poland and voivodeships, report-dependent
@@ -3533,10 +3534,9 @@ sources:
   research:
     priority: specialist
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
-    - Select named report families
-    - Map legislative breaks
+    - 'Curated table only (Dev probes 43270285788, 43288193321): MRPiPS-03 DZIAŁ 2 row 1 by voivodeship (persons granted a benefit by decision, families, persons in families), years from 2019; the files are .xls only (read with xlrd). Other sections (benefit forms 1A-1D, reasons 3, family types 4) and the MRPiPS-05/-06 reports are not modelled; legislative breaks before 2019 not mapped.'
     references:
     - https://www.gov.pl/web/rodzina/analizy-i-raporty
     - https://www.gov.pl/web/rodzina/sprawozdawczosc
