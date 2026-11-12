@@ -504,28 +504,32 @@ voivodeships), `dimensions`, `aggregation`, `polarity`, `status` and `note`:
   derivation or a row-size decision is missing; `note` says which.
 - `needs-source`: not ingested; `note` names the register id. The NBP balance of payments and investment
   position (`nbp_bop`, PLG-002, PLG-003) are in Gold (`build_nbp_bop`); the workbooks publish amounts only, so the shares of GDP
-  (`current_account_gdp`, `niip_gdp`) need a derivation and stay `needs-block`. NBP official rates (`nbp_interest_rates`, PLG-006) and the OECD CLI (`oecd`, GL-003) reached
-  Silver on 10 Nov (#2590, #2594) and are `needs-block` until their Gold build stages exist.
+  (`current_account_gdp`, `niip_gdp`) need a derivation and stay `needs-block`. NBP official rates
+  (`nbp_interest_rates`, PLG-006) reached Silver on 10 Nov (#2590) and are `needs-block` until their Gold build
+  stage exists. The OECD CLI (`oecd`, GL-003) is `ready` since `gold.build_oecd` (#2738), for the EU members the
+  OECD covers (DE, ES, FR, IT): it has no Polish or EU-27 series.
 
 v2 keys by their best source status:
 
 | | ready | needs-block | needs-source | total |
 |---|---|---|---|---|
 | Polska w skrócie | 28 | 3 | 0 | 31 |
-| all 78 keys | 63 | 14 | 1 | 78 |
+| all 78 keys | 65 | 12 | 1 | 78 |
 
-Rows by source (141 rows; 31 keys have two or more ready sources):
+Rows by source (144 rows; 33 keys have two or more ready sources):
 
 | source | ready | needs-block | needs-source | rows |
 |---|---|---|---|---|
 | eurostat | 51 | 7 | 0 | 58 |
-| gus_bdl | 17 | 8 | 0 | 25 |
 | gus_dbw | 17 | 8 | 0 | 25 |
+| gus_bdl | 17 | 8 | 0 | 25 |
 | world_bank_wdi | 23 | 1 | 0 | 24 |
-| nbp | 1 | 0 | 2 | 3 |
 | nbp_bop | 2 | 2 | 0 | 4 |
+| nbp | 1 | 0 | 2 | 3 |
+| unctad | 2 | 0 | 0 | 2 |
+| oecd | 1 | 0 | 0 | 1 |
+| mf_public_debt | 1 | 0 | 0 | 1 |
 | nbp_interest_rates | 0 | 1 | 0 | 1 |
-| oecd | 0 | 1 | 0 | 1 |
 
 Gold has a quarterly fact (`fact_quarterly`), and the BDL and DBW builds place monthly and quarterly periods, so
 LFS rates, the current account, NAMQ, job vacancies and the GUS short-term series keep their frequency. Polska w

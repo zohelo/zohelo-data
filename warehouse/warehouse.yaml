@@ -16,9 +16,9 @@ briefs: {window_days: 45, extreme_min_periods: 12, geographies: [PL, EU27]}
 schedule:
   - {cron: "30 7 * * *", run: "silver/gold: build models"}
 
-# Transient catalog errors: a build whose only failures are HTTP 429 from the R2 Data Catalog or
-# Iceberg commit failures (#2574) is resumed with `dbt retry` (its failed and skipped nodes) after
-# each of these waits, in seconds.
+# Transient catalog errors: a build whose failed models all failed on HTTP 429 from the R2 Data
+# Catalog or on Iceberg commit failures (#2574) is resumed with `dbt retry` (its failed and skipped
+# nodes) after each of these waits, in seconds; a failing data test does not prevent it (#2789).
 rate_limit_retry_waits: [60, 180, 420]
 rate_limit_retry_threads: 2     # fewer parallel catalog calls than the build's 4
 commit_retry_threads: 1         # after an Iceberg commit failure: no concurrent commits
@@ -59,10 +59,12 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.topic_matches, gold.topic_daily, gold.topic_rank, gold.topic_quality,  # topics Gold (O32, docs/topics.md)
        gold.metrics_activity_rate, gold.metrics_adult_learning, gold.metrics_arope_rate, gold.metrics_child_arope, gold.metrics_basic_digital_skills, gold.metrics_bond_yield_10y, gold.metrics_gdp_per_capita_pps, gold.metrics_gerd_gdp, gold.metrics_gg_debt_gdp, gold.metrics_gg_balance_gdp, gold.metrics_ghg_emissions, gold.metrics_neet_rate, gold.metrics_niip_gdp, gold.metrics_old_age_dependency, gold.metrics_recycling_rate, gold.metrics_reer, gold.metrics_tertiary_attainment, gold.metrics_total_fertility_rate, gold.metrics_life_expectancy,  # metrics of the first slice (#2584), draft until checked
        gold.metrics_cpi_annual_rate, gold.metrics_real_wage_growth, gold.metrics_nominal_wage_growth, gold.metrics_registered_unemployed, gold.metrics_gdp_qoq_sa, gold.metrics_gdp_regional_growth, gold.metrics_gfcf_rate, gold.metrics_gfcf_growth, gold.metrics_gdp_contributions, gold.metrics_gva_by_section, gold.metrics_gfcf_by_asset, gold.metrics_business_climate, gold.metrics_capacity_utilisation, gold.metrics_consumer_confidence, gold.metrics_esi, gold.metrics_industrial_production, gold.metrics_construction_output, gold.metrics_retail_sales, gold.metrics_ppi_annual_rate, gold.metrics_current_account_gdp, gold.metrics_current_account_components, gold.metrics_fdi_inflow, gold.metrics_job_vacancy_rate, gold.metrics_labour_productivity, gold.metrics_unit_labour_cost, gold.metrics_long_term_unemployment, gold.metrics_gender_pay_gap, gold.metrics_gini, gold.metrics_social_spending_gdp, gold.metrics_youth_unemployment, gold.metrics_disposable_income_pc, gold.metrics_pensioners, gold.metrics_zus_pension_avg, gold.metrics_investment_outlays, gold.metrics_vacancies_per_unemployed, gold.metrics_average_gross_wage, gold.metrics_employment_rate, gold.metrics_registered_unemployment_rate,  # every source per slice KPI (O31, #2592), draft until checked
+       gold.metrics_business_confidence_oecd, gold.metrics_consumer_confidence_oecd, gold.metrics_cli_oecd,  # OECD (#2738), draft until checked
+       gold.metrics_lei_issued, gold.metrics_vat_whitelist_entries,  # registry counts GLEIF, MF white list (#2740), draft until checked
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)
        gold.dimension, gold.dimension_alias, gold.dim_dimension,  # catalogue: axes
-       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_nbp_bop, gold.build_public_finance, gold.build_wdi, gold.build_unctad, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth]   # Gold v1 (warehouse/models/gold, docs/model.md)
+       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_nbp_bop, gold.build_public_finance, gold.build_oecd, gold.build_gleif, gold.build_mf_biala_lista, gold.build_wdi, gold.build_unctad, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth]   # Gold v1 (warehouse/models/gold, docs/model.md)
 demo_namespaces: [demo_bronze, demo_silver, demo_gold]  # phase 2 demo warehouse (program plan §3.3); never in the public catalogue
 
 # Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
@@ -122,6 +124,9 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_dbw: {rows: 600000}  # 312,512 (10 Nov) + ~110,000 slice blocks (#2592)
   poc_build_eurostat: {rows: 800000}
   poc_build_nbp: {rows: 600000}
+  poc_build_oecd: {rows: 100000}  # BCICP, CCICP and LI (AA): ~66,000 of silver.oecd_cli's 240,988 rows (Dev probe 43084707728)
+  poc_build_gleif: {rows: 25000}  # 16,851 (Dev trial 43099545187)
+  poc_build_mf_biala_lista: {rows: 10}  # 4 (Dev trial 43099545187)
   poc_build_nbp_bop: {rows: 55000}  # 36,888 PLN and EUR rows of Silver (Dev trial 43093233419)
   poc_build_public_finance: {rows: 8600}  # 5,727 (Dev trial 43099813876)
   poc_build_unctad: {rows: 18000}  # 11,871 (Dev trial 43100532689): 29 areas × 10 measures
@@ -139,7 +144,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_fact_annual: {rows: 1500000, exception: "#2294"}  # 1,092,012 (10 Nov) + ~230,000 slice series (#2592); until the Gold v1 cut-over (D28)
   poc_fact_daily: {rows: 600000}
   poc_fact_quarterly: {rows: 250000}  # quarterly series of the first slice (Eurostat NAMQ/BOP/LFS, DBW, BDL), ~170,000
-  poc_fact_monthly: {rows: 300000}  # 43,247 (10 Nov) + ~200,000 slice monthly series (#2592)
+  poc_fact_monthly: {rows: 600000}  # 391,828 incl. OECD 66,350 (Dev trial 43099545187, #2738); ~1.5x
   poc_map_geography: {rows: 150000}
   poc_measure_dimensions: {rows: 5000}
   kpi_dimension: {rows: 10000}
@@ -210,5 +215,10 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_average_gross_wage: {rows: 20000}
   poc_metrics_employment_rate: {rows: 20000}
   poc_metrics_registered_unemployment_rate: {rows: 30000}
+  poc_metrics_business_confidence_oecd: {rows: 50000}  # 27,432 rows, 55 areas (#2738)
+  poc_metrics_consumer_confidence_oecd: {rows: 50000}  # 24,611 rows, 51 areas
+  poc_metrics_cli_oecd: {rows: 30000}  # 14,307 rows, 22 areas
+  poc_metrics_lei_issued: {rows: 350}  # 232 (Dev trial 43099545187)
+  poc_metrics_vat_whitelist_entries: {rows: 10}  # 1 (Dev trial 43099545187)
   dim_dataset: {rows: 40000}
   dim_dimension: {rows: 1000}
