@@ -101,8 +101,12 @@ def yml_tests(con, name: str) -> list:
             out.append(("unique", one(con, f"select count(*) - count(distinct {expr}) from {name}")))
     for col in spec.get("columns", []):
         for t in col.get("tests", []):
-            if t == "not_null":
-                out.append((f"not_null {col['name']}", one(con, f"select count(*) from {name} where {col['name']} is null")))
+            if t == "not_null" or (isinstance(t, dict) and "not_null" in t):
+                where = ((t["not_null"] or {}).get("config", {}).get("where") if isinstance(t, dict) else None) or "true"
+                out.append((
+                    f"not_null {col['name']}",
+                    one(con, f"select count(*) from {name} where {col['name']} is null and ({where})"),
+                ))
             elif t == "unique":
                 out.append((f"unique {col['name']}", one(con, f"select count(*) - count(distinct {col['name']}) from {name}")))
             elif isinstance(t, dict) and "accepted_values" in t:
@@ -166,6 +170,72 @@ def profile(con) -> None:
         order by 1, 2, c.row_number, c.column_number""", 800)
 
 
+def checks(con) -> None:
+    """Bronze and Silver profile: markers, empty cells, frequencies, units, notes, layout rejection."""
+    s = "knf_banking_series"
+    prof = {
+        "bronze": con.sql("""select entity, count(*) cells, count(distinct sheet_name || '|' || row_number || '|' || column_number) keys,
+            count(*) filter (where value_text is null) null_text, count(distinct sheet_name) sheets from cells group by 1 order by 1""").fetchall(),
+        "silver_per_entity_freq": con.sql(f"""select entity, frequency, count(*), count(distinct sheet_name || source_row),
+            min(period_end)::varchar, max(period_end)::varchar from {s} group by all order by 1, 2""").fetchall(),
+        "markers": con.sql(f"select value_marker, count(*) from {s} where value_marker is not null group by 1 order by 2 desc limit 20").fetchall(),
+        "zero_values": one(con, f"select count(*) from {s} where value = 0"),
+        "units": con.sql(f"select entity, unit_code, unit_text, count(*) from {s} group by all order by 1, 2").fetchall(),
+        "bank_groups": con.sql(f"select entity, bank_group_code, bank_group, count(*) from {s} group by all order by 1, 2").fetchall(),
+        "q_items_in_monthly_blocks": con.sql(f"""select entity, sheet_name, coalesce(section_label, '') sec, count(distinct source_row)
+            from {s} where frequency = 'Q' and sheet_name not in ('Adekwatność', 'Należności_5', 'Tabela 07a', 'Tabela 10')
+            group by all order by 1, 2""").fetchall(),
+        "rebuild_ok": True,
+    }
+    # empty cells: item rows x header columns of their block without a cell
+    prof["empty_grid_cells"] = con.sql(f"""
+        with blocks as (select entity, sheet_name, header_row, count(distinct period_end) n from {s} group by all),
+             items as (select entity, sheet_name, header_row, source_row, count(*) present from {s} group by all)
+        select i.entity, sum(b.n - i.present) from items i join blocks b using (entity, sheet_name, header_row) group by 1 order by 1""").fetchall()
+    REAL("notice", "knf_banking profile (bronze, silver)", prof)
+    notes = con.sql("""select entity, sheet_name, cell_ref, value_text from cells
+        where (entity = 'current' and sheet_name = 'Info' and row_number between 26 and 31)
+           or (entity = 'current' and sheet_name = 'Bilans' and row_number < 9 and column_number > 1)
+        order by 1, 2, row_number, column_number""").fetchall()
+    REAL("notice", "knf_banking notes (Info, Bilans header)", [list(n) for n in notes])
+    show(con, "silver per sheet", f"""select entity, sheet_name, frequency, unit_code, count(*), count(distinct source_row),
+        min(period_end), max(period_end), count(value_marker) from {s} group by all order by 1, 2, 3, 4""")
+    show(con, "silver sample: sector rows of the Gold items, newest 3", f"""select sheet_name, section_label, item_label, item_occurrence,
+        bank_group_code, frequency, period_end, value, value_format from {s}
+        where entity = 'current' and item_label in ('Aktywa, razem', 'Zysk (strata) roku bieżącego', 'Łączny współczynnik kapitałowy',
+            'Należności bez utraty wartości, w tym:', 'Należności ze stwierdzoną utratą wartości - Faza 3')
+          and (section_label is null or section_label = 'SEKTOR NIEFINANSOWY')
+        qualify row_number() over (partition by sheet_name, source_row order by period_end desc) <= 3
+        order by 1, 5, 2, 3, 7""")
+    show(con, "sections per sheet", f"""select entity, sheet_name, section_label, count(distinct source_row) from {s}
+        group by all order by 1, 2, 3""", 400)
+    rows = con.sql("select sheet_name, row_number, column_number, cell_ref, cell_type, value_text, number_format from cells where entity = 'current'").fetchall()
+    keys = ["sheet_name", "row_number", "column_number", "cell_ref", "cell_type", "value_text", "number_format"]
+    dicts = [dict(zip(keys, r)) for r in rows]
+    tests = {}
+    for label, sample in (
+        ("as landed", dicts),
+        ("sheet RZiS removed", [d for d in dicts if d["sheet_name"] != "RZiS"]),
+        ("Bilans header moved", [{**d, "row_number": d["row_number"] + 1} if d["sheet_name"] == "Bilans" else d for d in dicts]),
+    ):
+        try:
+            load.check_layout("current", sample)
+            tests[label] = "accepted"
+        except ValueError as exc:
+            tests[label] = f"rejected: {str(exc)[:200]}"
+    REAL("notice", "knf_banking bronze layout check", tests)
+
+
+def lint() -> None:
+    import subprocess
+
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "sqlfluff==4.4.0"], capture_output=True, text=True)
+    files = [str(p.relative_to(ROOT)) for p in [*sorted(SILVER_DIR.glob("*.sql")), GOLD, ROOT / "warehouse/models/gold/poc_map_geography.sql"]]
+    r = subprocess.run([sys.executable, "-m", "sqlfluff", "lint", *files, "--disable-progress-bar"], cwd=ROOT, capture_output=True, text=True)
+    print(r.stdout[-6000:], r.stderr[-2000:], flush=True)
+    REAL("notice" if r.returncode == 0 else "error", "knf_banking sqlfluff", {"exit": r.returncode, "tail": r.stdout[-3000:]})
+
+
 def main(argv) -> int:
     report.annotate = bulk_bronze.annotate = bulk_file.annotate = quiet
     client, cat = s3(), bf.retry(catalog, "catalog")
@@ -206,11 +276,8 @@ def main(argv) -> int:
             "select entity, count(distinct raw_sha256), count(*), count(distinct sheet_name) from cells group by 1 order by 1"
         ).fetchall()
         REAL("notice", "knf_banking landing + bronze", landing)
-        profile(con)
-        sheets = con.sql(
-            "select entity, list(sheet_name || ':' || n order by i) from (select entity, sheet_index i, sheet_name, count(*) n from cells group by all) group by 1"
-        ).fetchall()
-        REAL("notice", "knf_banking sheets", sheets)
+        if "profile" in argv:
+            profile(con)
         if "profile" in argv or not SILVER_DIR.exists():
             return 0
         refs: dict = {}
@@ -220,7 +287,7 @@ def main(argv) -> int:
             counts = []
             for _ in (1, 2):
                 con.execute(f"create or replace table {name} as {render(path, refs)}")
-                counts.append(con.sql(f"select count(*), sum(hash(*)) from (select * exclude (ingested_at) from {name})").fetchall()[0])
+                counts.append(con.sql(f"select count(*), sum(hash(t)) from (select * exclude (ingested_at) from {name}) as t").fetchall()[0])
             refs[name] = name
             results = yml_tests(con, name)
             silver[name] = {
@@ -230,8 +297,9 @@ def main(argv) -> int:
                 "test_failures": {k: v for k, v in results if v},
             }
         findings["silver"] = silver
-        extra = Path(__file__).with_name("knf_banking_trial_checks.sql")
         print("silver", silver, flush=True)
+        REAL("notice" if not any(v["test_failures"] for v in silver.values()) else "error", "knf_banking silver tests", silver)
+        checks(con)
         if GOLD.exists():
             con.execute(
                 "create table poc_map_geography as select * from (values ('knf_banking', 'PL', 'PL', true)) "
@@ -239,27 +307,27 @@ def main(argv) -> int:
             )
             refs["poc_map_geography"] = "poc_map_geography"
             con.execute(f"create table g as {render(GOLD, refs)}")
-            findings["gold"] = {
+            gold = {
                 "rows": one(con, "select count(*) from g"),
-                "per_block": con.sql("select block_id || ':' || frequency, count(*), count(distinct measure_key) from g group by 1 order by 1").fetchall(),
+                "per_block": con.sql(
+                    "select block_id || ':' || frequency, count(*), count(distinct measure_key), min(period_label), max(period_label) "
+                    "from g group by 1 order by 1"
+                ).fetchall(),
                 "dup_series_key_x_date_key": one(con, """select count(*) from (select measure_key || '|' || geography_key ||
                     case when geography_key = '_X' then ':' || coalesce(geography_source_code, '') else '' end || '|' || breakdown_json as s,
                     date_key from g group by all having count(*) > 1)"""),
+                "measure_keys_with_2_frequencies": one(con, "select count(*) from (select measure_key from g group by 1 having count(distinct frequency) > 1)"),
                 "rows_geography_unmatched": one(con, "select count(*) from g where geography_key = '_X'"),
                 "null_value_or_date": one(con, "select count(*) from g where value is null or date_key is null"),
-                "range": one(con, "select min(period_label) || '..' || max(period_label) from g"),
+                "date_not_first_of_period": one(con, "select count(*) from g where (frequency = 'M' and day(date_key) <> 1) or (frequency = 'Q' and (day(date_key) <> 1 or month(date_key) not in (1, 4, 7, 10)))"),
                 "status": con.sql("select observation_status_key, count(*) from g group by 1").fetchall(),
+                "bank_groups": con.sql("select breakdown_json, count(*) from g group by 1 order by 1").fetchall(),
             }
-        if extra.exists():
-            for block in extra.read_text().split(";\n"):
-                if block.strip():
-                    title = block.strip().splitlines()[0].lstrip("- ")
-                    rows_ = show(con, title, block)
-                    if title.startswith("ANNOTATE"):
-                        REAL("notice", f"knf_banking {title[9:60]}", [list(r) for r in rows_][:60])
-        REAL("notice" if not any(v["test_failures"] for v in silver.values()) else "error", "knf_banking silver", silver)
-        if "gold" in findings:
-            REAL("notice" if findings["gold"]["dup_series_key_x_date_key"] == 0 else "error", "knf_banking gold", findings["gold"])
+            REAL("notice" if gold["dup_series_key_x_date_key"] == 0 else "error", "knf_banking gold", gold)
+            spot = con.sql("""select measure_key, period_label, value, unit_code from g where is_total
+                qualify row_number() over (partition by measure_key order by date_key desc) <= 2 order by 1, 2 desc""").fetchall()
+            REAL("notice", "knf_banking gold spot values (sector, newest two)", spot)
+        lint()
     except Exception:  # noqa: BLE001
         print("CRASH", traceback.format_exc()[-4000:], flush=True)
         REAL("error", "knf_banking trial crash", traceback.format_exc()[-1500:])
