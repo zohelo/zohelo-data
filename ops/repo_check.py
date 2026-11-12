@@ -287,23 +287,36 @@ def gold_list(files: list[Path]) -> list[str]:
 
 GOLD_BLOCK_TAG = re.compile(r"tags\s*=\s*\[[^\]]*['\"]gold_block['\"]")
 GOLD_BLOCK_LIST = re.compile(r"macro poc_block_models\(\).*?endmacro", re.S)
+GOLD_ACTIVATED = re.compile(r"macro poc_activated_blocks\(\).*?endmacro", re.S)
+GOLD_BLOCK_EXEMPT = {"poc_build_check"}  # reads the blocks; not a block
 
 
 def gold_blocks(files: list[Path]) -> list[str]:
-    """The models tagged `gold_block` (warehouse/changed.py lets their children build while they wait) are exactly
-    the blocks poc_observations() unions (`poc_block_models()` in warehouse/macros/poc_blocks.sql)."""
-    tagged = {
-        f.stem
-        for f in files
-        if f.parts[:3] == ("warehouse", "models", "gold")
-        and f.suffix == ".sql"
-        and (ROOT / f).exists()
-        and GOLD_BLOCK_TAG.search((ROOT / f).read_text())
-    }
-    macro = GOLD_BLOCK_LIST.search((ROOT / "warehouse/macros/poc_blocks.sql").read_text())
-    listed = set(re.findall(r"^\s*(\w+):\w+\s*$", macro.group(0), re.M)) if macro else set()
-    problems = [f"poc_block_models(): {m} is tagged gold_block but not listed" for m in tagged - listed]
-    problems += [f"poc_block_models(): {m} is listed but not tagged gold_block" for m in listed - tagged]
+    """Every Gold build stage model (models/gold/poc_build_*.sql except poc_build_check) is tagged `gold_block`
+    and listed in `poc_block_models()` (warehouse/macros/poc_blocks.sql), the tagged models are exactly the listed
+    ones, and each listed source_system has blocks in `poc_activated_blocks()`. warehouse/changed.py lets a waiting
+    block's children build; poc_observations() unions only the listed blocks."""
+    stages, tagged = set(), set()
+    for f in files:
+        if f.parts[:3] != ("warehouse", "models", "gold") or f.suffix != ".sql" or not (ROOT / f).exists():
+            continue
+        if f.stem.startswith("poc_build_") and f.stem not in GOLD_BLOCK_EXEMPT:
+            stages.add(f.stem)
+        if GOLD_BLOCK_TAG.search((ROOT / f).read_text()):
+            tagged.add(f.stem)
+    macros = (ROOT / "warehouse/macros/poc_blocks.sql").read_text()
+    macro = GOLD_BLOCK_LIST.search(macros)
+    entries = dict(re.findall(r"^\s*(\w+):(\w+)\s*$", macro.group(0), re.M)) if macro else {}
+    activated = GOLD_ACTIVATED.search(macros)
+    problems = [f"{m}: a Gold build stage must be tagged gold_block" for m in stages - tagged]
+    problems += [f"poc_block_models(): {m} is a Gold build stage but not listed" for m in stages - set(entries)]
+    problems += [f"poc_block_models(): {m} is tagged gold_block but not listed" for m in tagged - set(entries)]
+    problems += [f"poc_block_models(): {m} is listed but not tagged gold_block" for m in set(entries) - tagged]
+    problems += [
+        f"poc_activated_blocks(): no blocks of {source} ({m})"
+        for m, source in entries.items()
+        if not activated or f"'{source}'" not in activated.group(0)
+    ]
     return sorted(problems)
 
 

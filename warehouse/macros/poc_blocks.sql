@@ -258,20 +258,20 @@
     poc_build_nbp:nbp
 {% endmacro %}
 
-{# All Gold observations in the common shape: the union of the blocks whose table exists at run time (at
-   parse time every block, so dbt records each ref). A block whose table was never created (a new source whose
-   Bronze/Silver tables do not exist yet: changed.py leaves it out as waiting) contributes zero rows instead of
-   failing the union. Only "not created yet" is tolerated: a block built in this run that fails makes dbt skip
-   every model reading it, and build_check notes an absent block (poc_absent_blocks). #}
+{# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
+   left out (zero rows) only when the changed-only plan declared it waiting: warehouse/changed.py lists
+   it under `empty_blocks` (its source tables do not exist yet) and warehouse/build.py passes that list
+   as the dbt var `waiting_blocks`. Any other missing block (a partial catalog listing, a run killed
+   between renames, an explicit-filter build) is a compiler error, so a source never drops out of Gold
+   silently; a block built in this run that fails makes dbt skip every model reading it. At parse time
+   every block is ref'd, so dbt records each dependency. #}
 {% macro poc_observations() %}
     {% set ns = namespace(first=true) %}
     {% for entry in poc_block_models().split() %}
         {% set relation = ref(entry.split(':')[0]) %}
-        {% if not execute or load_relation(relation) is not none %}
+        {% if not execute or not (poc_block_waiting(entry, relation) | trim) %}
             {% if not ns.first %}union all {% endif %}select * from {{ relation }}
             {% set ns.first = false %}
-        {% else %}
-            {% do log('Gold block ' ~ relation ~ ' does not exist yet: zero rows', info=true) %}
         {% endif %}
     {% endfor %}
     {% if ns.first %}
@@ -279,12 +279,29 @@
     {% endif %}
 {% endmacro %}
 
-{# The source_system of each block whose table does not exist at run time, quoted and comma-separated
-   ('' at parse time). #}
+{# 'waiting' (rendered) when the block of `entry` (model:source_system) has no table and the plan declared
+   it waiting; '' when its table exists; a compiler error when it has no table and was not declared. #}
+{% macro poc_block_waiting(entry, relation) %}
+    {%- set model = entry.split(':')[0] -%}
+    {%- if load_relation(relation) is none -%}
+        {%- if model in var('waiting_blocks', []) -%}
+            {%- do log('Gold block ' ~ relation ~ ' is waiting (source tables do not exist yet): zero rows', info=true) -%}
+            waiting
+        {%- else -%}
+            {%- do exceptions.raise_compiler_error(
+                'Gold block ' ~ model ~ ' (' ~ relation ~ ') does not exist and changed.py did not declare it '
+                ~ 'waiting (var waiting_blocks): build it first, e.g. select ' ~ model ~ '+'
+            ) -%}
+        {%- endif -%}
+    {%- endif -%}
+{% endmacro %}
+
+{# The source_system of each waiting block (poc_block_waiting), quoted and comma-separated ('' at parse
+   time). #}
 {% macro poc_absent_blocks() %}
     {%- set absent = [] -%}
     {%- for entry in poc_block_models().split() -%}
-        {%- if execute and load_relation(ref(entry.split(':')[0])) is none -%}
+        {%- if execute and poc_block_waiting(entry, ref(entry.split(':')[0])) | trim -%}
             {%- do absent.append("'" ~ entry.split(':')[1] ~ "'") -%}
         {%- endif -%}
     {%- endfor -%}

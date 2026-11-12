@@ -73,6 +73,8 @@ def changed_only(target: str, variables: dict | None) -> int:
     variables = dict(variables or {})
     if plan["full_refresh"]:
         variables["full_refresh_models"] = plan["full_refresh"]
+    if plan["empty_blocks"]:  # the only Gold blocks poc_observations() may find without a table
+        variables["waiting_blocks"] = plan["empty_blocks"]
     return build_once(plan["select"], target, variables, changed_plan={"cat": cat, "meta": meta, **plan})[0]
 
 
