@@ -69,7 +69,7 @@
             value_text,
             source_version,
             raw_sha256,
-            cast(regexp_extract(entity, '_([0-9]{4})$', 1) as integer) as edition_year,
+            try_cast(regexp_extract(entity, '_([0-9]{4})$', 1) as integer) as edition_year,
             trim(regexp_replace(
                 replace(replace(replace(value_text, chr(160), ' '), '–', '-'), '—', '-'), '\s+', ' ', 'g'
             )) as txt
@@ -260,7 +260,7 @@
         union all
         select
             g.entity, g.member, g.sheet_name, g.row_number,
-            cast(regexp_extract(g.entity, '_([0-9]{4})$', 1) as integer) as edition_year,
+            try_cast(regexp_extract(g.entity, '_([0-9]{4})$', 1) as integer) as edition_year,
             cast(null as integer) as label_year,
             'polska' as area_name, g.group_code, g.table_code as g_table, g.measure_code as g_measure
         from group_labels as g
