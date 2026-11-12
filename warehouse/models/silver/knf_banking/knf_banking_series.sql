@@ -108,8 +108,11 @@ grid as (
     inner join headers as h
         on l.entity = h.entity and l.sheet_name = h.sheet_name and l.header_row = h.header_row
     inner join cells as c
-        on l.entity = c.entity and l.sheet_name = c.sheet_name and l.row_number = c.row_number
-        and h.column_number = c.column_number
+        on
+            l.entity = c.entity
+            and l.sheet_name = c.sheet_name
+            and l.row_number = c.row_number
+            and h.column_number = c.column_number
 ),
 
 items as (
@@ -177,10 +180,12 @@ select
     n.item_occurrence,
     case when g.quarterly or (n.numbers >= 2 and n.values_on_quarter_ends) then 'Q' else 'M' end as frequency,
     g.period_end,
-    case
-        when g.quarterly or (n.numbers >= 2 and n.values_on_quarter_ends) then date_trunc('quarter', g.period_end)
-        else date_trunc('month', g.period_end)
-    end::date as period_start,
+    cast(
+        case
+            when g.quarterly or (n.numbers >= 2 and n.values_on_quarter_ends) then date_trunc('quarter', g.period_end)
+            else date_trunc('month', g.period_end)
+        end as date
+    ) as period_start,
     case when g.cell_type = 'n' then g.number_value end as value,
     case when g.cell_type <> 'n' then g.value_text end as value_marker,
     g.number_format as value_format,

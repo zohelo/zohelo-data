@@ -117,7 +117,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   krus_benefits: {rows: 900}  # 576 (Dev trial 43099813876), quarters and years since 2020
   mf_jst_budget_summary: {rows: 32000}  # 21,263 rows, 2022 Q1 - 2026 Q1 (Dev trial 43162316724)
   mrpips_registered_unemployment: {rows: 85000}  # 828 rows a month; 56,202 for 68 months (Dev trial 43100663615)
-  knf_banking_series: {rows: 450000}  # placeholder until the Dev trial measures it
+  knf_banking_series: {rows: 450000}  # 301,671 (current 192,042 + archive 109,629; Dev trial 43289531076)
   nbp_policy_rates: {rows: 2000}  # 390 rows, 96 archive dates since 1998 (Dev trial 42777711811)
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865
@@ -138,7 +138,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_src_dbw_dictionary: {rows: 200000}
   poc_build_mf_jst_budgets: {rows: 650}  # 408 rows (Dev trial 43162316724)
   poc_build_mrpips_unemployment: {rows: 85000}  # = Silver mrpips_registered_unemployment (56,202 rows)
-  poc_build_knf_banking: {rows: 2700}  # placeholder until the Dev trial measures it
+  poc_build_knf_banking: {rows: 2700}  # 1,766 (Dev trial 43289531076): 5 measures x bank groups, monthly from 2018
   poc_build_check: {rows: 1000}
   poc_grain_check: {rows: 10000}
   poc_build_dbw: {rows: 600000}  # 312,512 (10 Nov) + ~110,000 slice blocks (#2592)
