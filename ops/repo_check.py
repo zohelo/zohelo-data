@@ -226,6 +226,7 @@ def configuration(files: list[Path]) -> list[str]:
     problems += full_rebuild(files)
     problems += gold_list(files)
     problems += gold_blocks(files)
+    problems += optional_parents(files)
     return problems
 
 
@@ -317,6 +318,27 @@ def gold_blocks(files: list[Path]) -> list[str]:
         for m, source in entries.items()
         if not activated or f"'{source}'" not in activated.group(0)
     ]
+    return sorted(problems)
+
+
+OPTIONAL_REF = re.compile(r"poc_optional_ref\(\s*['\"](\w+)['\"]")
+OPTIONAL_PARENTS = re.compile(r"['\"]optional_parents['\"]\s*:\s*\[(.*?)\]", re.S)
+
+
+def optional_parents(files: list[Path]) -> list[str]:
+    """A model reads a table through `poc_optional_ref('<model>', …)` exactly when it lists that model in its
+    config meta `optional_parents`: warehouse/changed.py plans by the list (the model does not wait for those
+    parents), the macro reads by the call (an empty relation while the parent waits)."""
+    problems = []
+    for f in files:
+        if f.parts[:2] != ("warehouse", "models") or f.suffix != ".sql" or not (ROOT / f).exists():
+            continue
+        text = (ROOT / f).read_text()
+        read = set(OPTIONAL_REF.findall(text))
+        declared = OPTIONAL_PARENTS.search(text)
+        listed = set(re.findall(r"['\"](\w+)['\"]", declared.group(1))) if declared else set()
+        problems += [f"{f.stem}: poc_optional_ref('{m}') but not in meta optional_parents" for m in read - listed]
+        problems += [f"{f.stem}: {m} in meta optional_parents but not read by poc_optional_ref" for m in listed - read]
     return sorted(problems)
 
 

@@ -1,4 +1,12 @@
-{{ config(alias='map_geography') }}
+{# The Silver tables read only for a source's own codes are optional (poc_optional_ref): a source before its
+   first Bronze load adds no rows here and does not hold back the map and the blocks that read it. #}
+{{ config(
+    alias='map_geography',
+    meta={'optional_parents': [
+        'unctad_fdi_flows_stock', 'unctad_merchandise_trade', 'unctad_services_trade',
+        'who_observations', 'unesco_uis_observations', 'faostat_observations',
+    ]}
+) }}
 {# Gold PoC: every source's geography code → the area it means in dim_geography
    (design draft 2: map_geography__<source>, merged into one table). Unmatched codes map to
    '_X' and are counted by the build check. #}
@@ -315,11 +323,11 @@ unctad as (
         c.economy as source_code,
         coalesce(g.geography_key, '_X') as geography_key
     from (
-        select distinct economy from {{ ref('unctad_fdi_flows_stock') }}
+        select distinct economy from {{ poc_optional_ref('unctad_fdi_flows_stock', 'economy:varchar') }}
         union
-        select distinct economy from {{ ref('unctad_merchandise_trade') }}
+        select distinct economy from {{ poc_optional_ref('unctad_merchandise_trade', 'economy:varchar') }}
         union
-        select distinct economy from {{ ref('unctad_services_trade') }}
+        select distinct economy from {{ poc_optional_ref('unctad_services_trade', 'economy:varchar') }}
     ) as c
     left join unctad_areas as a on c.economy = a.economy
     left join geo as g on a.candidate_key = g.geography_key
@@ -341,7 +349,7 @@ who as (
         select distinct
             geo_type,
             geo_code_m49
-        from {{ ref('who_observations') }}
+        from {{ poc_optional_ref('who_observations', 'geo_type:varchar, geo_code_m49:varchar') }}
     ) as a
     left join who_m49 as m on a.geo_type = 'COUNTRY' and lpad(a.geo_code_m49, 3, '0') = m.m49
     left join geo as g on g.level_name = 'country' and m.iso2 = g.geography_key
@@ -358,7 +366,7 @@ unesco_uis as (
         select distinct
             geo_unit,
             is_country_code
-        from {{ ref('unesco_uis_observations') }}
+        from {{ poc_optional_ref('unesco_uis_observations', 'geo_unit:varchar, is_country_code:boolean') }}
     ) as a
     left join geo as g on a.is_country_code and g.level_name = 'country' and a.geo_unit = g.iso3
 ),
@@ -381,7 +389,7 @@ faostat as (
         select distinct
             area_code,
             area_code_m49
-        from {{ ref('faostat_observations') }}
+        from {{ poc_optional_ref('faostat_observations', 'area_code:integer, area_code_m49:varchar') }}
     ) as a
     left join faostat_m49 as m on a.area_code_m49 = m.m49 and a.area_code < 5000
     left join geo as g on g.level_name = 'country' and m.iso2 = g.geography_key
