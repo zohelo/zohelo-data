@@ -137,27 +137,33 @@ def count_bulk(path: Path, want_samples: int = 2) -> dict:
 
 
 def fetch_bulk(client, digest: str, dataset_ids: list[str], target: Path) -> str:
-    """The landed bulk file with this SHA-256: the Archive copy, else the file still in Landing."""
+    """The landed bulk file with this SHA-256: the Archive copy (05_archive/, in the Landing bucket, where
+    landing.archive moves a Bronze-loaded file), else the file still in Landing. The bytes are checked
+    against the SHA-256 Silver carries, so the file compared is the one Silver was made from."""
     import botocore.exceptions
 
     lake, landing = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
-    places = [(lake, archive_key(SOURCE, digest, "x.tsv.gz"))]
+    key = archive_key(SOURCE, digest, "x.tsv.gz")
+    places = [(landing, key), (lake, key)]
     for dataset_id in dataset_ids:
-        for page in client.get_paginator("list_objects_v2").paginate(Bucket=landing, Prefix=f"{LANDING_PREFIX}{dataset_id}/"):
-            places += [(landing, o["Key"]) for o in page.get("Contents", []) if o["Key"].endswith(".tsv.gz")]
+        pages = client.get_paginator("list_objects_v2").paginate(Bucket=landing, Prefix=f"{LANDING_PREFIX}{dataset_id}/")
+        places += [(landing, o["Key"]) for page in pages for o in page.get("Contents", []) if o["Key"].endswith(".tsv.gz")]
+    tried = []
     for bucket, key in places:
         try:
             client.download_file(bucket, key, str(target))
-        except botocore.exceptions.ClientError:
+        except botocore.exceptions.ClientError as exc:
+            tried.append(f"{'landing' if bucket == landing else 'lakehouse'}:{key[:40]} {str(exc)[:60]}")
             continue
         held = sha256()
         with target.open("rb") as handle:
             for block in iter(lambda: handle.read(8 << 20), b""):
                 held.update(block)
         if held.hexdigest() == digest:
-            return key.split("/")[0] + "/…/" + key.rsplit("/", 1)[-1][:24]
+            return key.split("/")[0] + ("" if bucket == landing else " (lakehouse bucket)")
+        tried.append(f"{key[:40]} other bytes")
         target.unlink()
-    raise RuntimeError(f"no landed file with SHA-256 {digest[:12]} in Archive or Landing")
+    raise RuntimeError(f"no landed file with SHA-256 {digest[:12]}: {tried[:4]}")
 
 
 def silver_identity(dimensions: list[str], key: str, period: str) -> dict:
@@ -338,13 +344,15 @@ def main() -> None:
     cat, client = catalog(), s3()
     silver_table = cat.load_table(obs.SOURCES[SOURCE]["silver"])
     silver = et.state(silver_table, "dataset_id")
-    table = sample_zeros(tmp, silver)
-    total = [sum(r[i] for r in table) for i in (1, 2, 3)]
-    annotate("notice", "eurostat zeros: trial sample by dataset", {
-        "columns": ["dataset", "silver_rows", "with_value", "zeros"],
-        "datasets": len(table), "total": total, "trial_43293303988": {"rows": 708_671_317, "zeros": 559_352_315},
-        "top": table[:22],
-    })
+    table = []
+    if len(sys.argv) < 2:  # with datasets named, the sample (run 43325669692 has it) is not read again
+        table = sample_zeros(tmp, silver)
+        total = [sum(r[i] for r in table) for i in (1, 2, 3)]
+        annotate("notice", "eurostat zeros: trial sample by dataset", {
+            "columns": ["dataset", "silver_rows", "with_value", "zeros"],
+            "datasets": len(table), "total": total, "trial_43293303988": {"rows": 708_671_317, "zeros": 559_352_315},
+            "top": table[:22],
+        })
     blocks: dict[str, dict] = {}
     for e, held in silver.items():
         if e is None:
