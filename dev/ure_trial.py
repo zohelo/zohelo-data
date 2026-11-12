@@ -25,10 +25,25 @@ from ingestion.common import bulk_bronze
 from ingestion.common.r2 import catalog, req, s3
 from ingestion.common.report import annotate
 from ingestion.to_bronze.ure import load as ure_load
+from ingestion.to_landing import ure as ure_landing
 from ingestion.to_landing.patterns import bulk_file
 
 CAPTURED: list = []
 ROBOTS: dict = {}
+SAME: list = []
+
+
+def same_logged(held: dict, path) -> bool:
+    """The source rule (to_landing/ure.same_page), plus evidence: where the new download's bytes differ."""
+    result = ure_landing.same_page(held, path)
+    old = bulk_bronze.read_raw(s3(), held["object"]["bucket"], SOURCE, held)
+    new = path.read_bytes()
+    diff = [i for i in range(min(len(old), len(new))) if old[i] != new[i]]
+    first = diff[0] if diff else None
+    SAME.append({"entity": held["entity"], "same_content": result, "bytes_differ": len(diff), "sizes": [len(old), len(new)],
+                 "first_diff_context": [old[max(0, first - 60):first + 30].decode("utf-8", "replace"),
+                                        new[max(0, first - 60):first + 30].decode("utf-8", "replace")] if diff else None})
+    return result
 
 
 def _capture(level: str, title: str, data) -> None:
@@ -81,7 +96,15 @@ def specs(mode: str) -> list[dict]:
 def landing(spec_list: list[dict]) -> dict:
     out = {}
     CAPTURED.clear()
-    out["exit"] = [bulk_file.main(SOURCE, "load", landing_root=SCRATCH, specs=spec_list, pause_seconds=3) for _ in (1, 2)]
+    out["exit"] = [bulk_file.main(SOURCE, "load", landing_root=SCRATCH, specs=spec_list, pause_seconds=2, same=same_logged)
+                   for _ in (1, 2)]
+    out["same_rule"] = SAME[:3]
+    CAPTURED_LOAD = list(CAPTURED)
+    out["inspect_exit"] = bulk_file.main(SOURCE, "inspect", landing_root=SCRATCH, specs=spec_list)
+    out["inspect"] = [[(f.get("entity"), f.get("state"), f.get("http")) for f in d.get("files", [])] for t, d in CAPTURED if "inspect" in t]
+    out["verify_exit"] = bulk_file.main(SOURCE, "verify", landing_root=SCRATCH, specs=spec_list)
+    out["verify"] = [[(f.get("entity"), f.get("missing_data")) for f in d.get("files", [])] for t, d in CAPTURED if "verify" in t]
+    CAPTURED[:] = CAPTURED_LOAD
     out["outcomes"] = [[(f.get("entity"), f.get("outcome")) for f in d.get("files", [])] for t, d in CAPTURED if "landing" in t]
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     held = {}
@@ -170,7 +193,16 @@ def schema_tests(con, model: str) -> dict:
 
 
 def bronze_profile(con) -> dict:
+    values = ("(entity = 'page_7852' and column_number between 2 and 6 or entity = 'page_7853' and column_number = 2) "
+              "and regexp_full_match((select b.value_text from bronze_cells b where b.entity = c.entity and b.row_number = c.row_number "
+              "and b.column_number = 1), '[0-9]{4}')")
     return {
+        "dup_cell_keys": one(con, "select count(*) from (select entity, row_number, column_number from bronze_cells group by all having count(*) > 1)"),
+        "null_keys": one(con, "select count(*) from bronze_cells where entity is null or row_number is null or column_number is null or raw_sha256 is null"),
+        "years": rows(con, "select entity, min(value_text), max(value_text), count(*) from bronze_cells where column_number = 1 and regexp_full_match(value_text, '[0-9]{4}') group by 1 order by 1"),
+        "value_cells_by_kind": rows(con, f"select entity, case when value_text = '' then 'empty' when value_text = '‒' then 'U+2012' "
+                                         f"when regexp_full_match(value_text, '-?[0-9][0-9 ]*(,[0-9]+)?') then 'number' else 'other:' || value_text end, count(*) "
+                                         f"from bronze_cells c where {values} group by all order by all"),
         "per_entity": rows(con, "select entity, any_value(page_modified), count(*), count(distinct row_number), max(column_number), "
                                 "count(*) filter (where value_text is null or value_text = ''), count(distinct raw_sha256) from bronze_cells group by 1 order by 1"),
         "non_numeric_values": rows(con, "select value_text, count(*) from bronze_cells where cell_tag = 'td' and column_number > 1 "
@@ -193,7 +225,7 @@ def silver_gold(con, result: dict) -> None:
                             f"qualify row_number() over (partition by indicator_code, frequency order by period_start desc) <= 2 order by all")
     note("ure silver", s)
     result["silver"] = s
-    gmap = render("warehouse/models/gold/poc_map_geography.sql", {}, {})
+    gmap = Path("warehouse/models/gold/poc_map_geography.sql").read_text()  # the ure CTE has no Jinja
     cte = re.search(r"\nure as \((.*?)\n\),?\n", gmap, re.S).group(1)
     con.execute(f"create or replace table gmap_all as {cte}")
     build_sql = render("warehouse/models/gold/poc_build_ure.sql", {model: model, "poc_map_geography": "gmap_all"}, {})
@@ -216,8 +248,28 @@ def silver_gold(con, result: dict) -> None:
     g["measures"] = rows(con, "select measure_key, frequency, unit_code, count(*), min(period_label), max(period_label) from build group by all order by 1")
     g["PL_newest"] = rows(con, "select measure_key, period_label, value, observation_status_key from build where geography_key = 'PL' "
                                "qualify row_number() over (partition by measure_key order by date_key desc) = 1 order by 1")
-    g["columns"] = [d[0] for d in con.execute("select * from build limit 0").description]
+    g["columns_in_contract_order"] = [d[0] for d in con.execute("select * from build limit 0").description] == CONTRACT
+    g["metrics_value_range_violations"] = one(con, "select count(*) from build where (measure_key like 'ure:competitive_market_price:%' and (value < 0 or value > 5000)) "
+                                                   "or (measure_key like 'ure:household_price:%' and (value < 0 or value > 10))")
+    g["rows_per_area_period_measure_max"] = one(con, "select max(c) from (select count(*) c from build group by measure_key, geography_key, date_key)")
     note("ure gold", g)
+
+
+CONTRACT = ["source_system", "block_id", "block_name", "measure_key", "measure_name", "measure_codes", "unit_code", "unit_name",
+            "geography_source_code", "geography_key", "frequency", "date_key", "period_label", "breakdown_json",
+            "breakdown_label_json", "sex_code", "is_total", "value", "observation_status_key", "source_version", "raw_sha256"]
+
+
+def lint() -> None:
+    import subprocess
+
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "sqlfluff==4.4.0"], check=False)
+    files = ["warehouse/models/silver/ure", "warehouse/models/gold/poc_build_ure.sql", "warehouse/models/gold/poc_map_geography.sql",
+             "warehouse/models/gold/poc_metrics_electricity_price_competitive.sql", "warehouse/models/gold/poc_metrics_electricity_price_households.sql",
+             "warehouse/tests/metrics_value_range.sql"]
+    r = subprocess.run([sys.executable, "-m", "sqlfluff", "lint", *files, "--disable-progress-bar"], capture_output=True, text=True)
+    print(r.stdout[-6000:], r.stderr[-2000:], flush=True)
+    note("ure sqlfluff", {"exit": r.returncode, "tail": (r.stdout + r.stderr)[-2500:]})
 
 
 def cleanup() -> None:
@@ -268,6 +320,7 @@ def main(argv: list[str]) -> int:
         note("ure bronze", b)
         if mode != "profile":
             silver_gold(con, {})
+            lint()
     except Exception as exc:  # noqa: BLE001
         status = 1
         annotate("error", "ure trial failed", {"error": f"{type(exc).__name__}: {str(exc)[:1500]}"})
