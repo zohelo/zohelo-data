@@ -190,51 +190,26 @@ def main(argv) -> int:
             wh,
             env,
         )
-        status |= sh(
-            [
-                *dbt,
-                "build",
-                *common,
-                "--target",
-                "trial",
-                "--target-path",
-                str(tmp / "t2"),
-                "--select",
-                "kprm_work_list_drafts government_drafts poc_build_kprm_work_list",
-                *defer,
-            ],
-            wh,
-            env,
-        )
-        # a second build: the same row counts
+        models = "kprm_work_list_drafts government_drafts poc_build_kprm_work_list"
+        trial = [*common, "--target", "trial"]
+        status |= sh([*dbt, "run", *trial, "--target-path", str(tmp / "t2"), "--select", models, *defer], wh, env)
+        # every test of the three models (incl. tests/kprm_work_list_drafts_complete.sql), after all are built
+        status |= sh([*dbt, "test", *trial, "--target-path", str(tmp / "t3"), "--select", models, *defer], wh, env)
+        names = {
+            "kprm_work_list_drafts": "kprm_work_list_drafts",
+            "government_drafts": "government_drafts",
+            "poc_build_kprm_work_list": "build_kprm_work_list",
+        }  # trial target: tables keep model names
         counts = []
         for attempt in (1, 2):
-            if attempt == 2:
+            if attempt == 2:  # a second build: the same row counts
                 status |= sh(
-                    [
-                        *dbt,
-                        "run",
-                        *common,
-                        "--target",
-                        "trial",
-                        "--target-path",
-                        str(tmp / "t3"),
-                        "--select",
-                        "kprm_work_list_drafts government_drafts poc_build_kprm_work_list",
-                        *defer,
-                    ],
-                    wh,
-                    env,
+                    [*dbt, "run", *trial, "--target-path", str(tmp / "t4"), "--select", models, *defer], wh, env
                 )
-            counts.append(
-                {
-                    t: len(cat.load_table((SCRATCH, t)).scan().to_arrow())
-                    for t in ("kprm_work_list_drafts", "government_drafts", "build_kprm_work_list")
-                }
-            )
-        for t in ("kprm_work_list_drafts", "government_drafts", "build_kprm_work_list"):
-            con.register(t, cat.load_table((SCRATCH, t)).scan().to_arrow())
-        mg = cat.load_table((SCRATCH, "map_geography")).scan().to_arrow()
+            counts.append({t: len(cat.load_table((SCRATCH, t)).scan().to_arrow()) for t in names})
+        for t, alias in names.items():
+            con.register(alias, cat.load_table((SCRATCH, t)).scan().to_arrow())
+        mg = cat.load_table((SCRATCH, "poc_map_geography")).scan().to_arrow()
         con.register("mg", mg)
 
         # 5. Checks
@@ -264,6 +239,16 @@ def main(argv) -> int:
             )[0],
         }
         annotate("notice", "trial silver", silver)
+        annotate(
+            "notice",
+            "trial number vs kind/type",
+            q(
+                "select draft_number, kind, document_type, status, strftime(published_at, '%Y-%m-%d') "
+                "from kprm_work_list_drafts where kind <> case left(draft_number_prefix, 1) when 'U' then 'Projekty ustaw' "
+                "when 'R' then 'Projekty rozporządzeń' when 'I' then 'Projekty innych dokumentów rządowych' end "
+                "or split_part(replace(document_type, '–', '-'), ' - ', 1) <> substr(draft_number_prefix, 2)"
+            ),
+        )
         series = "measure_key || '|' || geography_key || case when geography_key = '_X' then ':' || coalesce(geography_source_code, '') else '' end || '|' || breakdown_json"
         gold = {
             "rows": q(f"select count(*) from {g}")[0][0],
