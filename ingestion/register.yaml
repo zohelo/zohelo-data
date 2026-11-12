@@ -8180,7 +8180,8 @@ sources:
   name: Wikidata data access
   short_name: Wikidata
   provider: Wikidata community / Wikimedia Foundation
-  status: approved
+  source_system: wikidata
+  status: built
   family: J
   kpi: false
   geography: worldwide
@@ -8189,40 +8190,49 @@ sources:
   entities: [entity, statement, property, identifier]
   granularity: Entity statements with qualifiers, ranks, references and multilingual labels.
   coverage: Full current dumps, revision-addressable entities and project revision history; dumps are not real time.
+    Built scope (#2843) is Polish voivodeships, powiats and gminas by TERC code (P1653), about 3,500 items.
   access:
-    endpoint: https://www.wikidata.org/wiki/Wikidata:Data_access
+    endpoint: https://query.wikidata.org/sparql
     kind: api
     interfaces: [SPARQL, API, GraphQL, RDF, JSON, bulk-files]
     auth: Public; use dumps for large result sets and query services for scoped queries.
     cost: free
-    limits: Public services have workload constraints; no numeric allowance relied on.
+    limits: 'Public services have workload constraints (query timeout 60 s); no numeric allowance relied on. Built
+      route: six SPARQL queries a week, one at a time with a 5 s pause, 1-2.5 MB and under 10 s each; user agent
+      naming the project and https://zohelo.com (Wikimedia User-Agent policy). Dev probes 43272046396, 43272562156,
+      43273792713 (12 Nov 2026).'
   licence:
     status: open-conditional
-    notes: 'Terms: https://www.wikidata.org/wiki/Wikidata:Licensing says: "All data in Wikidata has a CC0 license." and "Wikidata
-      requires a CC0 license, which is equivalent to public domain" (page read 11 Nov 2026 from a GitHub runner). No attribution
-      needed for structured data; text outside the main data namespaces is CC BY-SA and external references keep their own
-      rights; as a courtesy cite "Wikidata (CC0)".'
+    notes: 'Terms: https://www.wikidata.org/wiki/Wikidata:Copyright (page footer, read by Dev trial 43281448180 on 12
+      Nov 2026): "All structured data from the main, Property, Lexeme, and EntitySchema namespaces is available under
+      the Creative Commons CC0 License; text in the other namespaces is available under the Creative Commons
+      Attribution-ShareAlike License; additional terms may apply"; https://www.wikidata.org/wiki/Wikidata:Licensing: "All data in Wikidata has a
+      CC0 license." (read 11 Nov 2026). CC0 1.0: no attribution required, commercial reuse and modification allowed;
+      external references keep their own rights. The built scope reads only main-namespace statements, labels and
+      sitelinks (CC0). Courtesy attribution: "Source: Wikidata (CC0), https://www.wikidata.org/".'
   updates: Live edits; dumps publish periodically and lag current state.
   ingestion:
-    history: 'Bulk dumps at https://dumps.wikimedia.org/wikidatawiki/entities/ (listing answers 200); the full JSON dump is
-      very large (tens of GB compressed, estimate): scope to the entities and properties needed (Polish places, organisations,
-      identifiers) in stage 2.'
-    incremental: 'PROPOSAL: consume recent changes or scoped refreshes, then reconcile dumps.'
-    identifiers: Q/P IDs plus external identifiers such as LEI, ISIN and registry IDs.
+    history: 'Built scope: current state only (no revision history); population statements carry their own point in
+      time. Bulk dumps at https://dumps.wikimedia.org/wikidatawiki/entities/ (tens of GB compressed) for a wider scope.'
+    incremental: Weekly whole-selection snapshot; unchanged answers skipped by SHA-256.
+    identifiers: Q/P IDs plus external identifiers such as LEI, ISIN and registry IDs; built scope keyed by TERC (P1653).
   modelling:
-    notes: Statement graph with qualifiers; avoid flattening disputed or time-scoped claims.
-    overlap: Links Wikimedia, GLEIF, registries and OpenAlex; community assertions are not authoritative replacements.
+    notes: Statement graph with qualifiers; avoid flattening disputed or time-scoped claims. Silver keeps every
+      statement and chooses one per TERC × property by an explicit rank and point-in-time rule, counting the rest.
+    overlap: Links Wikimedia, GLEIF, registries and OpenAlex; community assertions are not authoritative replacements
+      (population and area stay attributes, GUS and PRG remain the statistical sources).
   research:
     priority: review-first
     evidence: tested
     connection: tested
     blockers:
-    - Scope classes/properties
-    - Set provenance quality rules
-    - Plan dump infrastructure
+    - Wider scope (Polish places, organisations, identifiers beyond TERC units) would need the entity dumps
+    - Set provenance quality rules (statement references are not landed)
     references:
     - https://www.wikidata.org/wiki/Wikidata:Data_access
     - https://www.wikidata.org/wiki/Wikidata:Copyright
+    - https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy
+    - https://www.wikidata.org/wiki/Wikidata:Licensing
 - id: CD-027
   name: OpenStreetMap Planet, history and replication diffs
   short_name: OpenStreetMap
