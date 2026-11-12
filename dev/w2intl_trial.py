@@ -38,6 +38,7 @@ MODELS = {
             ("PL series", "select entity, series_key, unit_measure, count(*), min(time_period), max(time_period) from silver where ref_area = 'PL' group by all order by all limit 60"),
             ("PL latest cbpol/spp", "select entity, series_key, time_period, obs_value from silver where ref_area = 'PL' and entity in ('cbpol','spp','credit_gap') qualify row_number() over (partition by series_key order by time_period desc) = 1"),
             ("areas", "select list(distinct ref_area order by ref_area) from silver"),
+            ("series attribute variants > 1", "select entity, count(distinct series_key) from silver where series_attribute_variants > 1 group by all"),
         ],
     ),
     "ilostat": (
