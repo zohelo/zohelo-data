@@ -3,7 +3,8 @@
 
 The `check` job runs this on every pull request; anyone can run it locally before
 pushing. Each check prints its findings; the exit code is 1 when any check fails.
-dbt parse and the secret scan run as their own steps of the job.
+dbt parse and the secret scan run as their own steps of the job; the offline dbt compile
+(ops/dbt_compile.py) runs here.
 """
 
 from __future__ import annotations
@@ -502,6 +503,20 @@ JSON_TYPES = {
     "object": lambda v: isinstance(v, dict),
     "null": lambda v: v is None,
 }
+
+
+def dbt_compile() -> list[str]:
+    """Every dbt model and data test compiles offline to one statement that DuckDB parses (ops/dbt_compile.py)."""
+    result = subprocess.run(
+        [sys.executable, "-m", "ops.dbt_compile"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PYTHONPATH": str(ROOT)},
+    )
+    if result.returncode == 0:
+        return []
+    return result.stdout.strip().splitlines()[-40:] or [result.stderr.strip()[-1500:] or "ops.dbt_compile failed"]
 
 
 def published_contract() -> list[str]:
@@ -1004,6 +1019,7 @@ def main() -> int:
         "yamllint": lambda: tool(["yamllint", "-s", "-d", YAMLLINT, "ingestion", "warehouse", "portal", ".github"]),
         "sqlfluff": sqlfluff,
         "model headers": lambda: model_headers(files),
+        "dbt compile": dbt_compile,
         "configuration": lambda: configuration(files),
         "scheduler imports": scheduler_imports,
         "backlog": backlog,

@@ -300,7 +300,9 @@ jobs:
 
   gold-publish:
     needs: [plan, silver-gold-build]
-    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'gold.publish') }}"
+    # Not after a model build that a newer queued build replaced (result cancelled): that run would publish
+    # while the newer build rewrites the tables, and the newer run publishes after its own build (#2834).
+    if: "${{ !cancelled() && !failure() && needs.silver-gold-build.result != 'cancelled' && contains(fromJSON(needs.plan.outputs.activities), 'gold.publish') }}"
     name: gold.publish
     # warehouse/publish.py is the only writer of 06_published/v1/ (docs/published.md): one at a time; a newer
     # queued publish replaces an older queued one (cancelled by design, not an alert).
