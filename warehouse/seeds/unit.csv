@@ -43,3 +43,7 @@ m2,m²,square metres,metry kwadratowe,false,m2,1
 eur,EUR,euro,euro,false,eur,1
 tonnes,t,tonnes,tony,false,tonnes,1
 thousand_ha,tys. ha,thousand hectares,tysiące hektarów,false,m2,10000000
+wgi_estimate,est.,"governance estimate, about -2.5 to 2.5","ocena jakości rządzenia, ok. -2,5 do 2,5",true,wgi_estimate,1
+index_world_100,świat=100,"index, world = 100","indeks, świat = 100",true,index_world_100,1
+pct_gni,% DNB,% of GNI,% DNB,true,pct,1
+pct_exports,% eksportu,"% of exports of goods, services and primary income","% eksportu towarów, usług i dochodów pierwotnych",true,pct,1

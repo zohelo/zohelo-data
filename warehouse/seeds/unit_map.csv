@@ -140,3 +140,8 @@ ecb,PLN/EUR,,pln_per_unit
 ecb,PC,,pct
 ecb,PCCH,,pct
 ecb,MIO_EUR,,mln_eur
+world_bank_wgi,governance estimate (about -2.5 to 2.5),,wgi_estimate
+world_bank_findex,% of population age 15+,,pct_population
+world_bank_ids,usd,,usd
+world_bank_ids,pct_gni,,pct_gni
+world_bank_ids,pct_exports,,pct_exports

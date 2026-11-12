@@ -196,6 +196,16 @@ wdi as (
     left join geo as g_agg on g_agg.geography_key = 'WB:' || w.economy_code
 ),
 
+-- World Bank IDS (#2819): the same World Bank economy codes as WDI (ISO3 countries, WB: groups such as LMY,
+-- ECA), so the mapping is the WDI one under its own source_system; no IDS table is read here.
+ids as (
+    select
+        'world_bank_ids' as source_system,
+        source_code,
+        geography_key
+    from wdi
+),
+
 -- OECD (#2738): countries by ISO 3166 alpha-3 (dim_geography iso3); EU27_2020 is the Eurostat aggregate, the
 -- aggregates of macro poc_oecd_areas are OECD:<code> members. Built from Gold's own lists, not from
 -- silver.oecd_cli, so the dimensions never wait for the OECD source; codes outside them are unmatched (_X).
@@ -263,6 +273,18 @@ teryt_prg as (
         case when unit_level = 'kraj' then 'PL' else 'TERC:' || teryt_code end as geography_key
     from {{ ref('prg_units') }}
     where unit_level in ('kraj', 'wojewodztwo', 'powiat', 'gmina')
+),
+
+-- World Bank WGI, Findex and ICP (#2736): World Bank economy codes like WDI's, so each gets WDI's mapping (iso2 or
+-- WB:<code>), built from wdi_countries only so that this shared model never waits for their Silver tables. A code
+-- WDI does not know (a few territories, ICP benchmark groups) is not listed and the build stage maps it to _X.
+wb_family as (
+    select
+        s.source_system,
+        w.source_code,
+        w.geography_key
+    from wdi as w
+    cross join (values ('world_bank_wgi'), ('world_bank_findex'), ('world_bank_icp')) as s (source_system)
 ),
 
 -- UNCTAD: economies by UNCTAD code (M49; France 250 in the FDI, merchandise and services tables, 251 only in port
@@ -392,6 +414,8 @@ from (
     union all
     select * from teryt_prg
     union all
+    select * from wb_family
+    union all
     select * from unctad
     union all
     select * from who
@@ -401,6 +425,8 @@ from (
     select * from faostat
     union all
     select * from ecb
+    union all
+    select * from ids
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null
