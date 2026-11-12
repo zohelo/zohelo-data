@@ -30,8 +30,8 @@
    status missing), '#' confidential (no value), 'x' not applicable (no value), a number followed by 'v' (low
    precision of a survey estimate) as the number with status low_reliability; any other text is status unparsed
    with no value (a Silver accepted_values test fails on it). A data row whose cells are all symbols is kept.
-   Completeness is tested per model (warehouse/tests/gus_tables_complete*.sql): every period × measure has all
-   areas (or groups), so a title or header that stops matching in a new edition fails the build. #}
+   Completeness is tested per model (warehouse/tests/<model>_complete.sql, one per Silver model): every period ×
+   measure has all areas (or groups), so a title or header that stops matching in a new edition fails the build. #}
 
 {% macro gus_regions() %}
     select * from (
