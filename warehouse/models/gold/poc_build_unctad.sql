@@ -1,4 +1,4 @@
-{{ config(alias='build_unctad') }}
+{{ config(alias='build_unctad', tags=['gold_block']) }}
 {# Gold build stage: UNCTAD Data Hub measures of poc_unctad_blocks for the EU27 members, the European Union
    (2020 …) group (economy 3412 → EUROSTAT:EU27_2020) and World (0000 → WB:WLD), annual. measure_key
    unctad:<table>:<dimension codes>:<measure>, e.g. unctad:US_FdiFlowsStock:08:1:USD_MN (FDI flow, inward, US$

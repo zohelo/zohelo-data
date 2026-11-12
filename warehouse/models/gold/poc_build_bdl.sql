@@ -1,4 +1,4 @@
-{{ config(alias='build_bdl') }}
+{{ config(alias='build_bdl', tags=['gold_block']) }}
 {# Gold PoC build stage: sampled GUS BDL subgroups as observations in the common shape.
    Coarse measure rule (to refine per domain in v1): measure = subgroup × measure unit × the
    label positions where no variable of the subgroup says "ogółem" (those name what is

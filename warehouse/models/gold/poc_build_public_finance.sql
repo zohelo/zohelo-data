@@ -1,4 +1,4 @@
-{{ config(alias='build_public_finance') }}
+{{ config(alias='build_public_finance', tags=['gold_block']) }}
 {# Gold build stage: Polish public finance from the Ministry of Finance and KRUS (Silver public_debt,
    treasury_debt, budget_execution, krus_benefits), Poland only, no breakdown (the instrument, item or benefit
    is part of the measure). Blocks:
