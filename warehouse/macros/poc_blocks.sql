@@ -455,6 +455,7 @@
     poc_build_ecb:ecb
     poc_build_ids:world_bank_ids
     poc_build_un_wpp:un_wpp
+    poc_build_pig_midas:pig_midas
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -563,6 +564,9 @@
         ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file'),
         ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units'),
         ('mf_jst_budgets', 'jst_budget', 'MF local-government budget summaries (year to date)'),
-        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)')
+        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)'),
+        ('pig_midas', 'documented_deposits', 'PIG-PIB MIDAS documented mineral deposits'),
+        ('pig_midas', 'mining_areas', 'PIG-PIB MIDAS mining areas'),
+        ('pig_midas', 'mining_terrains', 'PIG-PIB MIDAS mining terrains')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}

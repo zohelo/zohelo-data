@@ -44,3 +44,6 @@ wgi_estimate,est.,"governance estimate, about -2.5 to 2.5","ocena jakości rząd
 index_world_100,świat=100,"index, world = 100","indeks, świat = 100",true
 pct_gni,% DNB,% of GNI,% DNB,true
 pct_exports,% eksportu,"% of exports of goods, services and primary income","% eksportu towarów, usług i dochodów pierwotnych",true
+deposits,złoża,deposits,złoża,false
+mining_areas,OG,mining areas,obszary górnicze,false
+mining_terrains,TG,mining terrains,tereny górnicze,false

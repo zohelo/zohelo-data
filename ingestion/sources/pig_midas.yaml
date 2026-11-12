@@ -1,0 +1,63 @@
+source_system: pig_midas
+description: "PIG-PIB MIDAS — documented mineral deposits, mining areas and mining terrains (WFS layers)"
+
+# Extraction strategy (docs/landing.md; register PL-ENV-015). The SHP packages of the CBDG download manager are
+# sent only as links to an e-mail address, so the route is the public ArcGIS WFS of MIDAS (API tested for a full
+# load): six feature types, one entity each, one GetFeature per layer returns the whole layer (numberMatched =
+# numberReturned, 4-18 k features, 8-43 MB GML; the capabilities set no CountDefault, so no paging), requested as
+# the server's own GML 3.2 gzip output (GML32+GZIP), one at a time with a pause (to_landing/pig_midas/).
+# The server gives no version and no validators, and every response embeds the request time
+# (wfs:FeatureCollection timeStamp, WFS 1.1.0 and 2.0.0 alike; Dev probe 43284905050), so the bytes differ on every
+# request: version = download time and every run lands every layer (full_refresh; the playbook's policy for a source
+# without a version whose files are small). Restart unit: one layer.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: documented_deposits       # udokumentowane złoża kopalin (MultiSurface, deposit number)
+        url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&version=2.0.0&request=GetFeature&typeNames=midas:MIDAS_-_udokumentowane_z%C5%82o%C5%BCa_kopalin&outputFormat=GML32%2BGZIP"
+        format: gzip
+        version: ingested
+      - entity: mining_areas              # obszary górnicze (contours, linked deposit number)
+        url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&version=2.0.0&request=GetFeature&typeNames=midas:MIDAS_-_obszary_g%C3%B3rnicze&outputFormat=GML32%2BGZIP"
+        format: gzip
+        version: ingested
+      - entity: mining_terrains           # tereny górnicze (contours, linked deposit number)
+        url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&version=2.0.0&request=GetFeature&typeNames=midas:MIDAS_-_tereny_g%C3%B3rnicze&outputFormat=GML32%2BGZIP"
+        format: gzip
+        version: ingested
+      - entity: removed_deposits          # złoża wybilansowane (selected archival data)
+        url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&version=2.0.0&request=GetFeature&typeNames=midas:MIDAS___z%C5%82o%C5%BCa_wybilansowane__wyselekcjonowane_dane_archiwalne_&outputFormat=GML32%2BGZIP"
+        format: gzip
+        version: ingested
+      - entity: archival_mining_areas     # archiwalne obszary górnicze (selected archival data)
+        url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&version=2.0.0&request=GetFeature&typeNames=midas:MIDAS_-_archiwalne_obszary_g%C3%B3rnicze__wyselekcjonowane_dane_archiwalne_&outputFormat=GML32%2BGZIP"
+        format: gzip
+        version: ingested
+      - entity: archival_mining_terrains  # archiwalne tereny górnicze (selected archival data)
+        url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&version=2.0.0&request=GetFeature&typeNames=midas:MIDAS_-_archiwalne_tereny_g%C3%B3rnicze__wyselekcjonowane_dane_archiwalne_&outputFormat=GML32%2BGZIP"
+        format: gzip
+        version: ingested
+  initial: api
+  production: snapshot             # each response is the complete current layer
+  incremental_policy: full_refresh  # no version and request-stamped bytes: every run lands every layer
+  schedule:                        # UTC; MIDAS is edited continuously (daily packages in the download manager), the
+    # yearly balance of mineral resources is the reference state; a monthly snapshot (register PL-ENV-015)
+    - {cron: "25 2 6 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/pig_midas/
+# GML gzip kept as exact bytes (.bin); a new version every month: newest version + 90 days.
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.pig_midas_features, bronze.pig_midas_rejected_files]
+silver: [silver.pig_midas_deposits, silver.pig_midas_mining_contours]
+gold: [gold.build_pig_midas, gold.metrics_mineral_deposits]
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): six layers, about 44 k features in all, no changed-since in the WFS and a new
+# version of every layer each run; rebuilt in full.
+refresh: {mode: full, decided: "D32, #2870"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

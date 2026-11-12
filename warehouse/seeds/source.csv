@@ -36,3 +36,4 @@ undata,GL-017,UNdata,UNdata,United Nations Statistics Division,cube,file,interna
 bis,GL-015,BIS Data Portal,BIS Data Portal,Bank for International Settlements,cube,file,international-public,bis_terms,https://data.bis.org/
 ilostat,GL-023,ILOSTAT,ILOSTAT,International Labour Organization,cube,file,international-public,cc_by_4_0_ilo,https://ilostat.ilo.org/data/bulk/
 unece,GL-038,UNECE Statistical Database,UNECE Statistical Database,United Nations Economic Commission for Europe,cube,table,international-public,unece_terms,https://w3.unece.org/PXWeb/en
+pig_midas,PL-ENV-015,PIG-PIB MIDAS złoża kopalin i obszary górnicze,PIG-PIB MIDAS mineral deposits and mining areas,Państwowy Instytut Geologiczny - PIB,registry,layer,national-public,pig_pib_isp,https://www.pgi.gov.pl/midas.html
