@@ -52,9 +52,10 @@ for a number neither register holds a current extract of. **Gold** `gold.krs_ent
 with a current extract (register, legal form, name, NIP, REGON, seat with the voivodeship key of
 `dim_geography`, dates, share capital, main PKD code, liquidation and bankruptcy flags); it joins GLEIF by the
 KRS number (`registration_authority_id = 'RA000484'`, `registration_authority_entity_id`), other sources by
-NIP or REGON, never by name. `gold.build_ms_krs`: measure `ms_krs:lei_selection:entities`, the entities loaded
-by legal form and seat voivodeship on the day of the newest request. No KPI. Registrations per year are not
-built: over a selection of LEI holders they would mislead.
+NIP or REGON, never by name. `gold.build_ms_krs`: the entities loaded, by legal form and seat voivodeship (today's seat): measure
+`ms_krs:lei_selection:entities` on the day of the newest request (daily) and `ms_krs:lei_selection:registered`
+by the month of registration in KRS (monthly; a month without registrations has no row). Both count LEI holders
+that still have a current extract, not Polish companies or all registrations of a month. No KPI.
 
 **Terms.** Not established: the Open API page is a script-rendered application with no terms text in its HTML,
 the API host has no robots.txt, and `api.dane.gov.pl` (dataset 27606, "API Krajowego Rejestru Sądowego") did
