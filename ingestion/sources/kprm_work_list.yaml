@@ -1,0 +1,51 @@
+source_system: kprm_work_list
+description: "KPRM — Wykaz prac legislacyjnych i programowych Rady Ministrów (the Council of Ministers' work list of government drafts), CSV file on gov.pl"
+
+# Extraction strategy (docs/landing.md). Register PLG-034 (route: the government's work list; the RPL hosts
+# legislacja.rcl.gov.pl and legislacja.gov.pl time out for GitHub runners and are not used). Bulk feature: the page
+# https://www.gov.pl/web/premier/wplip-rm links "Pobierz dane do pliku csv" (/register-file/Rejestr_20874195.csv on
+# 12 Nov 2026; 11.3 MB, 1,526 drafts, 19 columns, no Last-Modified or ETag). The file's address is not documented
+# as stable, so it is read from the page on every run (url_from): a page without the link fails landing.inspect and
+# landing.extract; a file whose header differs is rejected by bronze.load with the header found. The page links
+# exactly one register file (Dev probe 43320804384). Entity = the work-list file, version = download time (the
+# source gives none); a copy lands only when its SHA-256 changed. Restart unit: the file.
+# The Prime Minister's own list (https://www.gov.pl/web/premier/wpl-prm, Rejestr_20874196.csv) has another layout
+# (8 columns: no kind, body or publication date; probe 43320804384) and is not loaded.
+# History: the current government's list, drafts published from 2023-12-21 (earlier terms are HTML pages without a
+# file).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: council_of_ministers   # Wykaz prac legislacyjnych i programowych Rady Ministrów
+        url_from:
+          page: https://www.gov.pl/web/premier/wplip-rm
+          pattern: /register-file/Rejestr_[0-9]+\.csv$
+        format: raw
+        version: ingested
+  initial: bulk
+  production: snapshot                  # the file is the complete current list
+  incremental_policy: changed_since_last  # SHA-256 of the file (no server validator)
+  schedule: # UTC; entries are added and changed on Warsaw working days (newest seen 15:53 local); daily at 03:25, off-peak, at most one snapshot a day
+    - {cron: "25 3 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/kprm_work_list/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.kprm_work_list_drafts, bronze.kprm_work_list_rejected_files]
+silver: [silver.kprm_work_list_drafts]
+gold: [gold.government_drafts, gold.build_kprm_work_list, gold.metrics_government_drafts_listed]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  kprm_work_list_drafts: {rows: 2300}  # 1,526 on 12 Nov 2026 (Dev probe 43320804384), about 500 new a year
+  government_drafts: {rows: 2300}  # one row per Silver draft
+  poc_build_kprm_work_list: {rows: 2300}  # trial count in the PR
+  poc_metrics_government_drafts_listed: {rows: 100}  # one row per month with an entry since 2023-12
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): one file of about 1,500 rows, replaced whole when the list changes, no
+# changed-since filter; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #491"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

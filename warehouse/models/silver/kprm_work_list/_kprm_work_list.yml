@@ -1,0 +1,60 @@
+version: 2
+models:
+  - name: kprm_work_list_drafts
+    description: >-
+      Government drafts on the Council of Ministers' work list (KPRM, Wykaz prac legislacyjnych i programowych Rady
+      Ministrów, CC BY-SA 4.0) from bronze.kprm_work_list_drafts, newest file only. Grain: draft_number (Numer
+      projektu, e.g. UD505; the letters encode kind and type: U/R/I = bill, regulation, other document, then D, C,
+      DER, PRO, A). History: the current government's list, entries published from 2023-12-21 (1,526 drafts on
+      12 Nov 2026, Dev probe 43320804384; trial run in the PR). Titles repeat (1,288 distinct), numbers do not.
+      planned_adoption is the published plan as free text (quarter, date, "ZREALIZOWANY ..."), never a date key.
+      status in_progress = the source's empty Status realizacji. Not carried from Landing: Osoba odpowiedzialna,
+      the aims and substance texts, the regulatory-impact columns. tests/kprm_work_list_drafts_complete.sql checks
+      the size and that kind agrees with the number's first letter.
+    tests:
+      - unique:
+          column_name: draft_number
+    columns:
+      - name: draft_number
+        tests: [not_null]
+      - name: draft_number_prefix
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['UD', 'UC', 'UDER', 'UPRO', 'UA', 'RD', 'RC', 'RDER', 'RPRO', 'ID', 'IC', 'IPRO']
+      - name: title
+        tests: [not_null]
+      - name: kind
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Projekty ustaw', 'Projekty rozporządzeń', 'Projekty innych dokumentów rządowych']
+      - name: document_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['D – pozostałe projekty', 'C – projekty implementujące UE', 'DER – projekty deregulacyjne',
+                         'PRO – projekty priorytetowe', 'A - projekty wynikające z expose']
+      - name: status_published
+        description: Status realizacji as published; null (empty in the file) while the draft is in progress.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Zrealizowany', 'Wycofany']
+      - name: status
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['realised', 'withdrawn', 'in_progress']
+      - name: published_at
+        description: Data publikacji (Warsaw local time, minutes), the entry's publication on the list.
+        tests: [not_null]
+      - name: link
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the work-list file (lineage to Landing/Archive).
+        tests: [not_null]
