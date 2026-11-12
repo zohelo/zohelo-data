@@ -49,3 +49,11 @@ from knf_insurance_observations group by all order by 1, 2;
 -- unknown headers (log only)
 select series, table_code, measure_label, count(*) from knf_insurance_observations where measure_code is null or unit_code is null or provider is null
 group by all
+;
+-- annotate ike_ikze_zero_value_markers_dropped
+select split_part(v.entity, '_', 1), count(*) from cells as v
+inner join cells as n on v.entity = n.entity and v.sheet_name = n.sheet_name and v.row_number = n.row_number
+    and n.column_number = v.column_number - 1
+where ends_with(v.sheet_name, '_dane liczbowe') and v.column_number in (4, 6, 8, 10, 12, 14) and v.row_number > 9
+    and v.cell_type = 'n' and try_cast(v.value_text as double) = 0 and try_cast(n.value_text as double) > 0
+group by 1 order by 1
