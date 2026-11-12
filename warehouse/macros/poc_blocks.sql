@@ -362,6 +362,8 @@
     poc_build_gus_culture:gus_culture
     poc_build_gus_culture_participation:gus_culture_participation
     poc_build_gus_tourism:gus_tourism
+    poc_build_gus_nsp2021:gus_nsp2021
+    poc_build_gus_psr2020:gus_psr2020
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -461,6 +463,8 @@
         ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)'),
         ('gus_culture', 'culture_institutions', 'GUS culture and national heritage tables (annual)'),
         ('gus_culture_participation', 'participation', 'GUS participation in culture survey (persons aged 15+)'),
-        ('gus_tourism', 'accommodation', 'GUS tourism tables: tourist accommodation (annual)')
+        ('gus_tourism', 'accommodation', 'GUS tourism tables: tourist accommodation (annual)'),
+        ('gus_nsp2021', 'census_2021', 'GUS NSP 2021 census final results (reference date 31 March)'),
+        ('gus_psr2020', 'agricultural_census_2020', 'GUS PSR 2020 agricultural census (holdings by voivodeship)')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}

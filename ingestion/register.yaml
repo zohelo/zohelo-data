@@ -2151,7 +2151,8 @@ sources:
   name: Narodowy Spis Powszechny Ludności i Mieszkań 2021 (NSP 2021) results
   short_name: GUS NSP 2021
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: approved
+  source_system: gus_nsp2021
+  status: built
   family: B
   kpi: true
   geography: Poland to fine census geographies, table-dependent
@@ -2188,11 +2189,9 @@ sources:
   research:
     priority: review-first
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
-    - 'Dev probe 43160190595: final-results pages on stat.gov.pl link XLSX tables per theme (nationality, language and religion for Poland and territorial units; population by census district, sex and age group) under /download/gfx/portalinformacyjny/pl/defaultaktualnosci/6536/<n>/1/1/*.xlsx; a one-off release, a curated table list is the next step.'
-    - Inventory exact downloadable table families
-    - Define small-cell handling
+    - 'Curated tables only (Dev probes 43270285788, 43271452794, 43271980321): population 2011 and 2021 (total, urban, rural, urban share) and census activity, employment and unemployment rates by voivodeship, from the themed final-results workbooks; the nationality, language and religion tables, census-district tables, households and housing are in the catalogue but not built. Census values are not added to the published population or unemployment KPIs (benchmarks, not additive to BDL).'
     references:
     - https://stat.gov.pl/spisy-powszechne/nsp-2021/
     - https://stat.gov.pl/en/copyright/
@@ -2200,7 +2199,8 @@ sources:
   name: Powszechny Spis Rolny 2020 (PSR 2020) results
   short_name: GUS PSR 2020
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: approved
+  source_system: gus_psr2020
+  status: built
   family: B
   kpi: true
   geography: Poland to local agricultural geographies, table-dependent
@@ -2235,10 +2235,9 @@ sources:
   research:
     priority: review-next
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
-    - Verify downloadable catalogue
-    - Document confidentiality symbols
+    - 'Curated tables only: holdings 2010 and 2020, agricultural land, average agricultural land per holding, cattle and pigs by voivodeship from part 2 of Charakterystyka gospodarstw rolnych w 2020 r.; part 1 (area groups, legal forms, economic size) is not loaded; the Raport z wyników annex is XLS only.'
     references:
     - https://stat.gov.pl/spisy-powszechne/powszechny-spis-rolny-2020/
     - https://stat.gov.pl/en/copyright/
