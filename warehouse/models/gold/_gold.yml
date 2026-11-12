@@ -148,6 +148,18 @@ models:
         tests: [not_null]
       - name: date_key
         tests: [not_null]
+  - name: poc_build_knf_banking
+    description: >-
+      Build stage — KNF monthly banking-sector data (silver.knf_banking_series, current workbook from January 2018):
+      total assets, net profit year to date, non-financial sector loans without impairment and impaired (stage 3),
+      monthly, in zloty as stored; total capital ratio, quarterly, as the stored fraction. Poland ('PL'), bank group
+      (sector, commercial, branches, cooperative) as breakdown; January 2026 of the balance-sheet and loan measures
+      has status 'break' (KNF's note). Source licence unresolved: internal only.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
   - name: poc_build_mf_biala_lista
     description: >-
       Build stage — MF VAT white list flat file entries (taxpayer × account hashes) by taxpayer status and
