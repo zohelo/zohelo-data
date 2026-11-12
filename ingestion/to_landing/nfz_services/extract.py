@@ -51,9 +51,10 @@ from typing import Any
 from urllib.parse import quote
 import zipfile
 
+from botocore.exceptions import ClientError
 import requests
 
-from ingestion.common.r2 import archive_key, archived, get_with_backoff, req, s3
+from ingestion.common.r2 import archive_key, archived, req, s3
 from ingestion.common.report import annotate, step_summary
 from ingestion.to_landing.world_bank_icp.extract import USER_AGENT, put_new
 
@@ -82,6 +83,24 @@ CANARY = (
 )
 BASIC = "basic-data"  # the resource of the general-data tables
 GENERAL = "general-data"
+
+
+R2_TRANSIENT = {"429", "500", "503", "SlowDown", "ServiceUnavailable", "InternalError", "TooManyRequests"}
+
+
+def r2_retry(operation, attempts: int = 6):
+    """An R2 call with backoff on throttling and 5xx (a HEAD answers a bare 429 that botocore does not retry; Dev
+    trial 43316067822). put_new is safe to repeat: a key already written with the same SHA-256 is accepted."""
+    for attempt in range(attempts):
+        try:
+            return operation()
+        except ClientError as exc:
+            code = str(exc.response.get("Error", {}).get("Code", ""))
+            status = exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+            if (code not in R2_TRANSIENT and status not in (429, 500, 502, 503, 504)) or attempt == attempts - 1:
+                raise
+            time.sleep(2 ** (attempt + 1))
+    raise AssertionError("unreachable")
 
 
 class Unavailable(RuntimeError):
@@ -204,12 +223,16 @@ def bundle(answers: list[tuple[str, str, bytes, Any]]) -> bytes:
 
 def landed(client, bucket: str, root: str) -> dict[str, list[dict[str, Any]]]:
     """Receipts in Landing by entity, oldest landed first."""
-    keys = []
-    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix(root)):
-        keys += [o["Key"] for o in page.get("Contents", []) if o["Key"].endswith(".receipt.json")]
+
+    def listing() -> list[str]:
+        pages = client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix(root))
+        return [o["Key"] for page in pages for o in page.get("Contents", []) if o["Key"].endswith(".receipt.json")]
+
+    keys = r2_retry(listing)
 
     def read(key: str) -> dict[str, Any]:
-        return {**json.loads(get_with_backoff(client, bucket, key)), "receipt_key": key}
+        body = r2_retry(lambda: client.get_object(Bucket=bucket, Key=key)["Body"].read())
+        return {**json.loads(body), "receipt_key": key}
 
     out: dict[str, list[dict[str, Any]]] = {}
     with ThreadPoolExecutor(max_workers=8) as pool:  # R2 throttles larger bursts of reads
@@ -230,7 +253,7 @@ def land(client, bucket: str, root: str, entity: str, answers: list, held: list 
     body = bundle(answers)
     ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     key = f"{prefix(root)}{entity}/{ingested}__{ingested}.zip"
-    put_new(client, bucket, key, body, "application/zip")
+    r2_retry(lambda: put_new(client, bucket, key, body, "application/zip"))
     receipt = {
         "schema_version": 2,
         "kind": "nfz_services_landing",
@@ -261,13 +284,8 @@ def land(client, bucket: str, root: str, entity: str, answers: list, held: list 
         "replaces_sha256": before["sha256"] if before else None,
         "code_sha": os.environ.get("GITHUB_SHA", ""),
     }
-    put_new(
-        client,
-        bucket,
-        key[: -len(".zip")] + ".receipt.json",
-        json.dumps(receipt, ensure_ascii=False, indent=2, sort_keys=True).encode(),
-        "application/json",
-    )
+    text = json.dumps(receipt, ensure_ascii=False, indent=2, sort_keys=True).encode()
+    r2_retry(lambda: put_new(client, bucket, key[: -len(".zip")] + ".receipt.json", text, "application/json"))
     return "landed_changed" if before else "landed_new"
 
 
