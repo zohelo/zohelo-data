@@ -21,7 +21,10 @@ models:
       - name: year
         tests: [not_null]
       - name: sex
-        tests: [not_null]
+        tests: [not_null, {accepted_values: {arguments: {values: ['FEMALE', 'MALE', 'TOTAL']}}}]
+      - name: publish_state
+        description: data.who.int publication state; the files carry published values only.
+        tests: [{accepted_values: {arguments: {values: ['PUBLISHED']}}}]
       - name: raw_sha256
         description: Landing SHA-256 of the source file (lineage to Landing/Archive).
         tests: [not_null]
