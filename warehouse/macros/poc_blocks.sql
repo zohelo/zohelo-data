@@ -263,6 +263,19 @@
     ) as t (entity, block_name, dimension_names, dimension_codes, measure_field, measure_suffix, unit_code, unit_name)
 {% endmacro %}
 
+{# World Bank IDS series built (gold.build_ids, #2819): external debt stocks and debt service, in US$ and as
+   ratios. Debtor economy × counterpart WLD (the only counterpart in the archive); annual. #}
+{% macro poc_ids_series() %}
+    select * from (
+        values
+        ('DT.DOD.DECT.CD', 'usd'),
+        ('DT.DOD.DECT.GN.ZS', 'pct_gni'),
+        ('DT.TDS.DECT.CD', 'usd'),
+        ('DT.TDS.DECT.GN.ZS', 'pct_gni'),
+        ('DT.TDS.DECT.EX.ZS', 'pct_exports')
+    ) as t (series_code, unit_code)
+{% endmacro %}
+
 {# UNCTAD economies built (gold.build_unctad): EU27 members by UNCTAD code, the European Union (2020 …) group and World. #}
 {% macro poc_unctad_areas() %}
     select * from (
@@ -417,6 +430,7 @@
     poc_build_unesco_uis:unesco_uis
     poc_build_faostat:faostat
     poc_build_ecb:ecb
+    poc_build_ids:world_bank_ids
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -503,6 +517,7 @@
     select 'faostat', entity || ':' || item_code || '.' || element_code, block_name from ({{ poc_faostat_blocks() }})
     union all
     select 'ecb', entity, block_name from ({{ poc_ecb_blocks() }})
+    select 'world_bank_ids', 'IDS_CSV', 'World Bank International Debt Statistics'
     union all
     select * from (
         values
