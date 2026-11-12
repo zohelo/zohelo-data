@@ -106,7 +106,7 @@ kept as (  -- the PoC sample: small, with breakdowns where they matter (sex), on
             when 'NAMA_10_PC' then unit_code = 'CP_EUR_HAB' and na_item_code = 'B1GQ'
             when 'UNE_RT_A' then unit_code = 'PC_ACT' and age_code = 'Y15-74'
             when 'UNE_RT_M' then unit_code = 'PC_ACT' and age_code in ('TOTAL', 'Y_LT25')
-            when 'PRC_HICP_MINR' then unit_code = 'RCH_A' and coicop18_code = 'TOTAL'
+            when 'PRC_HICP_MINR' then unit_code = 'RCH_A' and coicop18_code in ('TOTAL', 'TOT_X_NRG_FOOD')
             when 'LFSI_EMP_A' then unit_code = 'PC_POP' and age_code = 'Y20-64' and indic_em_code in ('EMP_LFS', 'ACT')
             -- every source per KPI (O31, #2592): the series are chosen in poc_src_eurostat.py
             when 'EI_BSIN_M_R2' then true
@@ -133,16 +133,32 @@ kept as (  -- the PoC sample: small, with breakdowns where they matter (sex), on
             when 'ILC_DI12' then true
             when 'NAMA_10R_2GVAGR' then true
             when 'GOV_10A_EXP' then true
+            -- slice needs-block rows (O36, #2743): filtered in poc_src_eurostat.py
+            when 'EARN_MW_CUR' then true
+            when 'ERT_BIL_EUR_M' then true
             else false
         end
+),
+
+row_dims as (  -- a HICP aggregate other than all items (core inflation) is a measure of its own, so the all-items
+    -- measure key (eurostat:PRC_HICP_MINR:RCH_A) and its series stay as published
+    select
+        *,
+        case
+            when upper(dataset_id) = 'PRC_HICP_MINR' and coicop18_code <> 'TOTAL'
+                then list_append(measure_dims, 'coicop18')
+            else measure_dims
+        end as row_measure_dims
+    from kept
 ),
 
 split as (
     select
         *,
-        list_filter(list_zip(dim_list, code_list), lambda x: list_contains(measure_dims, x[1])) as measure_pairs,
-        list_filter(list_zip(dim_list, code_list), lambda x: not list_contains(measure_dims, x[1])) as breakdown_pairs
-    from kept
+        list_filter(list_zip(dim_list, code_list), lambda x: list_contains(row_measure_dims, x[1])) as measure_pairs,
+        list_filter(list_zip(dim_list, code_list), lambda x: not list_contains(row_measure_dims, x[1]))
+            as breakdown_pairs
+    from row_dims
 ),
 
 shaped as (
@@ -160,6 +176,7 @@ shaped as (
             as breakdown_json,
         case
             when s.total_breakdown = '' then len(s.breakdown_pairs) = 0
+            when upper(s.dataset_id) = 'PRC_HICP_MINR' and len(s.breakdown_pairs) = 0 then true  -- core inflation
             else
                 list_sort(list_transform(s.breakdown_pairs, lambda x: x[2]))  -- noqa: RF02
                 = list_sort(string_split(s.total_breakdown, ','))
@@ -223,7 +240,8 @@ select
     coalesce(s.unit_code, '_Z') as unit_code,
     coalesce(s.unit_name, 'as named by the measure') as unit_name,
     s.geo_code as geography_source_code,
-    coalesce(g.geography_key, '_X') as geography_key,
+    -- the euro's exchange rate against the zloty is not an area's measure (as the NBP rates: _Z)
+    case when upper(s.dataset_id) = 'ERT_BIL_EUR_M' then '_Z' else coalesce(g.geography_key, '_X') end as geography_key,
     s.freq_code as frequency,
     s.date_key,
     s.time_period as period_label,
