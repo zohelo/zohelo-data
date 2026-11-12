@@ -2637,7 +2637,8 @@ sources:
   name: API Statystyki NFZ – Refundacja apteczna
   short_name: 'NFZ statistics: pharmacy refunds'
   provider: Narodowy Fundusz Zdrowia (NFZ)
-  status: approved
+  source_system: nfz_pharmacy_refunds
+  status: built
   family: B
   kpi: true
   geography: Poland

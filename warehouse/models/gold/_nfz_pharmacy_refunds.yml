@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: poc_build_nfz_pharmacy_refunds
+    description: >-
+      Gold build stage of NFZ pharmacy refunds (NFZ statistics API /monthly-provisions, register PLS-013, #2930):
+      monthly observations, Poland (PL) and the 16 voivodeships (TERC:02 ... TERC:32), each for all reimbursed
+      medicines (breakdown {}, is_total) and for each of the 14 ATC main groups (breakdown {"atc": "<code>"}, the
+      group name as label). The groups do not sum to the total: medicines outside the 14 groups (the API's group
+      "-") are only in the total; no remainder is derived. Five measures, values, units and scale as published
+      (D33; the terms forbid modifying the data):
+      quantity (packages) = DEFINITION_QUANTITY;
+      refund (PLN) = DEFINITION_REFUND;
+      donation (PLN) = DEFINITION_DONATION;
+      contribution_of_patient (PLN) = DEFINITION_CONTRIBUTION;
+      value (PLN) = DEFINITION_VALUE.
+      Rows: GOLD_ROWS (Dev trial TRIAL).
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || geography_key || '|' || breakdown_json || '|' || date_key"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]

@@ -220,3 +220,6 @@ price_m2_secondary,gus_dbw,gus_dbw:309_485_180_3:180:wtórny rynek nieruchomośc
 arope_rate,gus_dbw,gus_dbw:1603_1339_116_4:116,"EU-SILC, Poland, macroregions and regions",2,
 long_term_unemployment,gus_dbw,gus_dbw:1618_1335_95_4:95,"LFS, 15-74, 12 months or more",2,
 registered_unemployed,gus_dbw,gus_dbw:507_870_93_1:93,"end of month, Poland and voivodeships",2,
+nfz_pharmacy_refund,nfz_pharmacy_refunds,nfz_pharmacy_refunds:monthly_provisions:PLN:refund,"NFZ refund, all reimbursed medicines (no ATC filter), monthly, Poland and voivodeships, PLN as published",1,
+nfz_pharmacy_patient_payment,nfz_pharmacy_refunds,nfz_pharmacy_refunds:monthly_provisions:PLN:contribution_of_patient,"patient payment (contribution-of-patient), all reimbursed medicines, monthly, Poland and voivodeships, PLN as published",1,
+nfz_reimbursed_packages,nfz_pharmacy_refunds,nfz_pharmacy_refunds:monthly_provisions:packages:quantity,"packages dispensed (quantity, fractions as published), all reimbursed medicines, monthly, Poland and voivodeships",1,
