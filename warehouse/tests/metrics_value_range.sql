@@ -35,7 +35,9 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('gdp_volume_growth', 'world_bank_wdi', '%', -100, 200),
     -- an index, previous period or same quarter of the previous year = 100 (rate = value - 100);
     -- Poland published 92.6-111.2 (GUS DBW 1038_16_389_3) and 98.0-106.9 (1038_16_92_4), #2788
-    ('gdp_volume_growth', 'gus_dbw', '%', 50, 200)
+    ('gdp_volume_growth', 'gus_dbw', '%', 50, 200),
+    -- percent per year; highest 24.0 in 1998 (silver.nbp_policy_rates, Dev trial 43093114523)
+    ('nbp_reference_rate', 'nbp_interest_rates', '%', 0, 30)
 ),
 
 metrics as (
@@ -101,6 +103,15 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_gdp_volume_growth') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_nbp_reference_rate') }}
 )
 
 select
