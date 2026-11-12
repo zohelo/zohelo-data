@@ -98,6 +98,17 @@ def main() -> int:
     summary = {
         "removed_rows_all": sum(r["n"] for r in removed),
         "removed_by_scope": levels,
+        "removed_in_kpi_other_geo": sorted(
+            {
+                (r["kpi"], r["geography_key"][:9], r["frequency"]): 0
+                for r in removed
+                if r["kpi"] != "-" and not r["pl_voiv"]
+            }
+        )[:60],
+        "removed_in_kpi_other_geo_by_kpi": {
+            kpi: sum(r["n"] for r in removed if r["kpi"] == kpi and not r["pl_voiv"])
+            for kpi in sorted({r["kpi"] for r in removed if r["kpi"] != "-" and not r["pl_voiv"]})
+        },
         "removed_max_abs_value": max([r["max_abs"] or 0 for r in removed] or [0]),
         "kept_rows_in_scope_control": control,
         "removed_in_scope_by_kpi": {
