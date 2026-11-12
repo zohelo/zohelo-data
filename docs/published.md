@@ -503,29 +503,31 @@ voivodeships), `dimensions`, `aggregation`, `polarity`, `status` and `note`:
 - `needs-block`: in Silver (codes checked or block named) but not activated: a member filter, a half-yearly fact, a
   derivation or a row-size decision is missing; `note` says which.
 - `needs-source`: not ingested; `note` names the register id (NBP balance of payments PLG-002, investment
-  position PLG-003). The OECD CLI (`oecd`, GL-003) reached Silver on 10 Nov (#2594) and is `needs-block` until its
-  Gold build stage exists. NBP official rates (`nbp_interest_rates`, PLG-006) have the Gold build stage
+  position PLG-003). NBP official rates (`nbp_interest_rates`, PLG-006) have the Gold build stage
   `build_nbp_interest_rates`: Silver holds one row per MPC change, Gold places the rate in force on the last day of
-  each month (today in the current month) as a monthly observation of Poland, one measure per rate.
+  each month (today, provisional, in the current month) as a monthly observation of Poland, one measure per rate. The OECD CLI (`oecd`, GL-003) is `ready` since `gold.build_oecd`
+  (#2738), for the EU members the OECD covers (DE, ES, FR, IT): it has no Polish or EU-27 series.
 
 v2 keys by their best source status:
 
 | | ready | needs-block | needs-source | total |
 |---|---|---|---|---|
 | Polska w skrócie | 29 | 2 | 0 | 31 |
-| all 78 keys | 64 | 13 | 1 | 78 |
+| all 78 keys | 66 | 11 | 1 | 78 |
 
-Rows by source (141 rows; 31 keys have two or more ready sources):
+Rows by source (144 rows; 32 keys have two or more ready sources):
 
 | source | ready | needs-block | needs-source | rows |
 |---|---|---|---|---|
 | eurostat | 51 | 7 | 0 | 58 |
-| gus_bdl | 17 | 8 | 0 | 25 |
 | gus_dbw | 17 | 8 | 0 | 25 |
+| gus_bdl | 17 | 8 | 0 | 25 |
 | world_bank_wdi | 23 | 1 | 0 | 24 |
 | nbp | 1 | 0 | 6 | 7 |
+| unctad | 2 | 0 | 0 | 2 |
+| oecd | 1 | 0 | 0 | 1 |
+| mf_public_debt | 1 | 0 | 0 | 1 |
 | nbp_interest_rates | 1 | 0 | 0 | 1 |
-| oecd | 0 | 1 | 0 | 1 |
 
 Gold has a quarterly fact (`fact_quarterly`), and the BDL and DBW builds place monthly and quarterly periods, so
 LFS rates, the current account, NAMQ, job vacancies and the GUS short-term series keep their frequency. Polska w
