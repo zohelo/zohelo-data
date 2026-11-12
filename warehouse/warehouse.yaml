@@ -117,7 +117,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   krus_benefits: {rows: 900}  # 576 (Dev trial 43099813876), quarters and years since 2020
   mf_jst_budget_summary: {rows: 32000}  # 21,263 rows, 2022 Q1 - 2026 Q1 (Dev trial 43162316724)
   mrpips_registered_unemployment: {rows: 85000}  # 828 rows a month; 56,202 for 68 months (Dev trial 43100663615)
-  zus_psz_observations: {rows: 2400}  # 1,570 (Dev trial 43271727766); about 140 more a quarter
+  zus_psz_observations: {rows: 2400}  # 1,570 (Dev trial 43271727766); about 217 more a quarter + about 90 a year (December tables)
   nbp_policy_rates: {rows: 2000}  # 390 rows, 96 archive dates since 1998 (Dev trial 42777711811)
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865

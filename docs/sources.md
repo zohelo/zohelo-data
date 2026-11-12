@@ -717,9 +717,11 @@ old-age pension in December by sex, 2018–), Poland; `insured_pension` (pension
 voivodeship and payer type) and `absence_voiv` (sick-leave days and certificates by voivodeship), quarterly;
 `insured_health` (health insurance, monthly, 2012–) and `foreign_insured` (foreign citizens in pension insurance, all
 and Ukrainian, monthly, 2020–). The portal lists the quarterly tables for the current year only, so their history
-starts with the first landing and lives in Landing/Archive (`prune: report`). ZUS publishes no voivodeship pension
-table after 2011. Terms: ZUS re-use terms for public sector information (free, commercial and non-commercial; state
-the source, the dates of creation and retrieval and any processing); licence key `zus_psi_terms`.
+starts with the first landing and is kept by `keep_latest: 1` per entity; the Archive is then the only copy. ZUS
+publishes no voivodeship pension table after 2011. Licence `unresolved`: ZUS's re-use terms cover information published
+in its BIP and on dane.gov.pl (or passed on request), not psz.zus.pl, which states no terms of its own. The source stays
+internal (licence gate) until the same tables are landed from dane.gov.pl or ZUS confirms in writing that psz.zus.pl
+falls under its terms (owner question).
 
 **Bronze to Gold.** `bronze.zus_psz_cells`: one row per cell (`xlsx_cells`), latest version per entity; a workbook
 without its family's header row is rejected with the reason. Silver `silver.zus_psz_observations`: one row per family

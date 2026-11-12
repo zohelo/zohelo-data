@@ -31,7 +31,9 @@ RECHECK = 2
 PAUSE = 2.0
 QUARTER = r"\b(?P<quarter>I|II|III|IV) kw\.? ?(?P<year>20\d\d)\b"
 # family: (category page, folder id, file-name pattern with year and optionally quarter or month, header anchor)
-# The anchor is the text that starts column A of the table's header row; Bronze rejects a workbook without it.
+# The anchor is the text that starts column A of the table's header row; Bronze rejects a workbook without it, and
+# Silver (warehouse/models/silver/zus_psz/zus_psz_observations.sql, CTE anchors) finds the header row by the same text:
+# keep both lists equal.
 FAMILIES: dict[str, dict[str, str]] = {
     "pensioners_dec": {
         "page": "emerytury/stan-na-grudzien",
@@ -43,7 +45,7 @@ FAMILIES: dict[str, dict[str, str]] = {
         "page": "emerytury/stan-na-grudzien",
         "folder": "9888921",
         "name": r"wysokości świadczeń i płci - XII (?P<year>20\d\d)\b",
-        "anchor": "Przeciętna wysokość na osobę",
+        "anchor": "Wysokość świadczenia",
     },
     "insured_pension": {
         "page": "ubezpieczeni/ubezpieczenia-emerytalne-i-rentowe",

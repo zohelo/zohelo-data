@@ -3,8 +3,9 @@
 
 One row per non-empty cell (ingestion/common/xlsx_cells.py: value as stored, sheet, row, column, number format) of
 each landed workbook; Silver picks the cells it models. The family's header row must be there: column A of some row
-starts with the family's anchor text (ingestion/to_landing/zus_psz FAMILIES, whitespace collapsed). A workbook
-without it, or a file that is not an XLSX package, is rejected (bronze.zus_psz_rejected_files), never guessed.
+starts with the family's anchor text (ingestion/to_landing/zus_psz FAMILIES, whitespace collapsed), and every cell is on
+one worksheet (Silver joins cells by row and column). A workbook without the anchor, with cells on more than one
+worksheet, or a file that is not an XLSX package, is rejected (bronze.zus_psz_rejected_files), never guessed.
 """
 
 from __future__ import annotations
@@ -27,6 +28,9 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
     if family not in FAMILIES:
         raise ValueError(f"entity {receipt['entity']!r} belongs to no declared family")
     table = xlsx_cells.decode(body, receipt)
+    sheets = sorted(set(table.column("sheet_name").to_pylist()))
+    if len(sheets) != 1:
+        raise ValueError(f"unknown layout: {len(sheets)} worksheets with cells {sheets[:5]}, one expected ({family})")
     anchor = FAMILIES[family]["anchor"]
     texts = (
         " ".join(str(v).split())

@@ -36,6 +36,8 @@ with cells as (
     from ({{ xlsx_newest_cells(source('zus_psz', 'zus_psz_cells')) }}) as newest_cells
 ),
 
+-- the header text of each family; the same text as FAMILIES[...]['anchor'] in ingestion/to_landing/zus_psz, which
+-- Bronze requires in every workbook (tests/zus_psz_entities_in_silver.sql fails when an entity yields no row)
 anchors as (
     select * from (
         values
