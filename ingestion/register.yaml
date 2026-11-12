@@ -8521,7 +8521,8 @@ sources:
   name: Companies House Public Data, Document and Streaming APIs
   short_name: Companies House
   provider: UK Companies House
-  status: approved
+  source_system: companies_house
+  status: built
   family: I
   kpi: false
   geography: United Kingdom
@@ -8579,8 +8580,10 @@ sources:
     - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): en_output.html answered 200 (7,442
       bytes, Last-Modified 7 Nov 2026) and lists the one-file ZIP (471Mb) and 7 parts; HEAD of BasicCompanyDataAsOneFile-2026-11-01.zip
       answered 200 with 494,554,856 bytes; en_pscdata.html and the gov.uk guidance answered 200.'
-    - 'Not verified: the column names and empty-value markers (the field list PDF was not read), the row count, whether older
-      snapshots stay downloadable, the accounts data pages.'
+    - 'Dev probe run 43320416371 (12 Nov 2026) read the 2026-11-01 file: 5,711,779 rows, 55 columns, company numbers
+      unique; empty fields are empty (SIC "None Supplied", country of origin blank in 271 rows); CountryOfOrigin "POLAND"
+      in 50 rows (no other spelling); incorporation dates DD/MM/YYYY up to 2026-10-31. Not verified: whether older snapshots
+      stay downloadable, the accounts data pages.'
     - The PSC snapshot (about 2.5 GB, daily, personal data) is deliberately out of scope.
     references:
     - https://download.companieshouse.gov.uk/en_output.html
