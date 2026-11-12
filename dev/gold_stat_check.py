@@ -1,0 +1,231 @@
+"""Gold trial for #2743: dbt seed/run/test of the Gold project into zz_dev_gold_stat (dbt var gold_schema), then
+compact annotations: test results, grain by series_key x date_key, build_check of the slice blocks, the rows of the
+metrics_value_range and metrics_geography_unmatched tests (their SQL executed on the scratch tables), and the
+published BDL measures (P2137, P2361) against production gold.build_bdl. Scratch tables dropped at the end."""
+
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import time
+
+import duckdb
+import pyarrow as pa
+
+from ingestion.common import bronze_files as bf
+from ingestion.common.r2 import catalog
+from ingestion.common.report import annotate
+
+ROOT = Path(__file__).resolve().parents[1]
+NS = "zz_dev_gold_stat"
+SLICE = ["EARN_MW_CUR", "ERT_BIL_EUR_M", "PRC_HICP_MINR", "P2656", "P2713", "P2692", "P2721", "P2837", "P4610",
+         "P3788", "P3794", "1603_1339_116_4", "1618_1335_95_4", "1714_1575_243_1", "309_485_180_3", "507_870_93_1",
+         "policy_rates"]
+
+
+# Silver tables of sources merged on main but not yet built in production (trial only: the branch's
+# poc_map_geography is patched to an empty stub for them and their blocks wait, as the changed-only build does).
+NEW_SILVER = {
+    "unesco_uis_observations": ("poc_build_unesco_uis", "select ''::varchar as geo_unit, false as is_country_code where false"),
+    "who_observations": ("poc_build_who", "select ''::varchar as geo_type, ''::varchar as geo_code_m49 where false"),
+    "faostat_observations": ("poc_build_faostat", "select 0::integer as area_code, ''::varchar as area_code_m49 where false"),
+}
+
+
+def missing_silver(cat):
+    """Patch poc_map_geography for every NEW_SILVER table missing in production; the blocks that wait."""
+    have = {i[-1] for i in cat.list_tables("silver")}
+    path = ROOT / "warehouse/models/gold/poc_map_geography.sql"
+    sql, waiting = path.read_text(), []
+    for table, (block, stub) in NEW_SILVER.items():
+        if table not in have:
+            sql = sql.replace("{{ ref('" + table + "') }}", "(" + stub + ")")
+            waiting.append(block)
+    path.write_text(sql)
+    return waiting
+
+
+def table(cat, name, fields=None):
+    t = cat.load_table((NS, name))
+    return t.scan(selected_fields=fields).to_arrow() if fields else t.scan().to_arrow()
+
+
+def run_test_sql(con, cat, path):
+    sql = (ROOT / "warehouse/tests" / path).read_text()
+    sql = re.sub(r"\{\{\s*config\([^)]*\)\s*\}\}", "", sql)
+    for name in sorted(set(re.findall(r"\{\{ ref\('([a-z0-9_]+)'\) \}\}", sql))):
+        alias = name.replace("poc_", "", 1) if name.startswith("poc_") else name  # prod target: table = alias
+        con.register(f"t_{name}", table(cat, alias))
+        sql = sql.replace(f"{{{{ ref('{name}') }}}}", f"t_{name}")
+    return con.sql(sql)
+
+
+def main() -> int:
+    env = {**os.environ, "DBT_PROFILES_DIR": str(ROOT / "warehouse"), "DUCKDB_TEMP_DIRECTORY": "/mnt/duckdb_tmp"}
+    subprocess.run(["sudo", "mkdir", "-p", "/mnt/duckdb_tmp"], check=False)
+    subprocess.run(["sudo", "chmod", "777", "/mnt/duckdb_tmp"], check=False)
+    cat = bf.retry(catalog, "catalog")
+    con = duckdb.connect()
+    try:
+        started, failed = time.monotonic(), []
+        waiting = missing_silver(cat)
+        excl = ["--exclude", *[f"path:models/gold/{b}.sql" for b in waiting], "path:models/gold/topics", "path:tests/topic_quality.sql",
+                "path:tests/topic_quality_warn.sql", "path:tests/topic_seeds.sql"]
+        for verb, sel in (("seed", ["path:seeds"]), ("run", ["path:models/gold"]), ("test", ["path:models/gold",
+                                                                                         "path:seeds", "path:tests"])):
+            cmd = ["dbt", verb, "--target", "prod", "--select", *sel, *excl, "--threads", "2",
+                   "--vars", json.dumps({"gold_schema": NS, "waiting_blocks": waiting})]
+            run = subprocess.run(cmd, cwd=ROOT / "warehouse", env=env, capture_output=True, text=True)
+            for wait in (60, 180, 300):  # HTTP 429 from the catalog
+                if run.returncode == 0 or verb == "test" or "429" not in run.stdout:
+                    break
+                time.sleep(wait)
+                run = subprocess.run(["dbt", "retry", "--target", "prod", "--vars", json.dumps({"gold_schema": NS,
+                                                                                   "waiting_blocks": waiting})],
+                                     cwd=ROOT / "warehouse", env=env, capture_output=True, text=True)
+            print(run.stdout[-30000:])
+            res = json.loads((ROOT / "warehouse/target/run_results.json").read_text())["results"]
+            failed += [[verb, r["unique_id"].split(".")[-1][:60], r["status"], (r.get("message") or "")[:90]]
+                       for r in res if r["status"] not in ("success", "pass")]
+        annotate("notice" if not failed else "warning", "1 dbt build and tests",
+                 {"minutes": round((time.monotonic() - started) / 60, 1), "waiting_blocks": waiting,
+                  "not_passed": failed[:12]})
+        facts = [table(cat, n, ("series_key", "date_key", "source_system", "block_id")) for n in
+                 ("fact_annual", "fact_semiannual", "fact_quarterly", "fact_monthly", "fact_daily")]
+        con.register("f", pa.concat_tables(facts))
+        dups = con.sql("select source_system, block_id, count(*) from (select source_system, block_id, series_key, "
+                       "date_key from f group by all having count(*) > 1) group by all order by 3 desc").fetchall()
+        bc = table(cat, "build_check")
+        con.register("bc", bc)
+        ids = ", ".join(f"'{b}'" for b in SLICE)
+        rows = con.sql(f"select block_id, row_count, series, rows_geography_unmatched, rows_period_unplaced, "
+                       f"strftime(first_date, '%Y-%m'), strftime(last_date, '%Y-%m') from bc where block_id in ({ids}) "
+                       f"order by 1").fetchall()
+        annotate("notice" if not dups else "warning", "2 grain (series_key x date_key) and build_check of the slice",
+                 {"duplicate_keys": dups[:10], "build_check": [list(r) for r in rows]})
+        try:
+            check_tests(con, cat)
+        except Exception as exc:  # reported, the other steps go on
+            annotate("error", "3 test SQL failed", {"error": f"{type(exc).__name__}: {str(exc)[:600]}"})
+        for step, fn in (("4 published", published), ("6 v2", v2_check), ("7 zeros", zeros_and_rows)):
+            try:
+                fn(con, cat)
+            except Exception as exc:  # reported, the other steps go on
+                annotate("error", f"{step} check failed", {"error": f"{type(exc).__name__}: {str(exc)[:600]}"})
+    finally:
+        cleanup(cat)
+    return 0
+
+
+def check_tests(con, cat):
+    vr = run_test_sql(con, cat, "metrics_value_range.sql")
+    con.register("vr", vr.arrow().read_all())
+    vr_sum = con.sql("select concept_key, source_system, count(*), min(value), max(value), any_value(value_min), "
+                     "any_value(value_max) from vr group by all order by 3 desc").fetchall()
+    gu = run_test_sql(con, cat, "metrics_geography_unmatched.sql")
+    con.register("gu", gu.arrow().read_all())
+    gu_rows = con.sql("select concept_key, source_system, series_key, count(*) from gu group by all").fetchall()
+    annotate("notice", "3 test SQL on the scratch tables",
+             {"metrics_value_range_by_concept_source": [[str(x)[:40] for x in r] for r in vr_sum[:25]],
+              "metrics_geography_unmatched": [[str(x)[:70] for x in r] for r in gu_rows[:12]]})
+
+
+def published(con, cat):
+    from pyiceberg.expressions import In
+
+    fields = ("block_id", "measure_key", "geography_key", "breakdown_json", "date_key", "value", "observation_status_key")
+    prod = catalog().load_table(("gold", "build_bdl")).scan(
+        row_filter=In("block_id", ["P2137", "P2361"]), selected_fields=fields).to_arrow()
+    new = cat.load_table((NS, "build_bdl")).scan(row_filter=In("block_id", ["P2137", "P2361"]), selected_fields=fields).to_arrow()
+    con.register("p", prod)
+    con.register("n", new)
+    diff = con.sql("select coalesce(p.block_id, n.block_id) b, count(*) filter (where n.value is null) gone, "
+                   "count(*) filter (where p.value is null) added, count(*) filter (where p.value <> n.value) changed, "
+                   "count(*) filter (where p.observation_status_key <> n.observation_status_key) status_changed "
+                   "from p full join n using (measure_key, geography_key, breakdown_json, date_key) group by 1").fetchall()
+    annotate("notice", "4 published BDL measures vs production build_bdl, per series", [list(r) for r in diff])
+
+
+def v2_check(con, cat):
+    """publish_v2.build on the trial metrics (licence-gated, as gold.publish), nothing written."""
+    from datetime import UTC, datetime
+
+    from warehouse import publish, publish_v2
+    from warehouse.publish import seed
+
+    generated_at = publish.iso(datetime.now(UTC))
+    checked_at = publish.checked(publish.gold(catalog(), "gold", "coverage"))
+    licensed = publish.licensed_sources(seed("source"), seed("licence"))
+    measures, domains = seed("kpi_measure"), {d["domain_key"]: d for d in seed("domain")}
+    tables, entries = {}, []
+    for entry in publish_v2.v2_kpis(seed("kpi"), seed("kpi_v2_map")):
+        try:
+            tables[entry["concept"]] = publish.licence_gated(table(cat, f"metrics_{entry['concept']}"), licensed,
+                                                             entry["concept"])
+        except Exception:  # a concept without a metrics table is reported by build as missing
+            pass
+    for kpi in seed("kpi"):
+        if kpi["status"] == "published" and kpi["kpi_key"] in tables:
+            t = publish.kpi_series(publish.v1_rows(tables[kpi["kpi_key"]]), measures, kpi["kpi_key"], kpi["unit_key"])
+            entries.append(publish.kpi_entry(kpi, t, domains, checked_at, generated_at))
+    v1_catalog = publish.catalog_json(entries, generated_at)
+    status = publish.status_json(seed("source"), checked_at, {}, generated_at)
+    files, context = publish_v2.build(tables, checked_at, [], v1_catalog, status, generated_at, None)
+    mine = ["core_inflation", "adult_learning", "extreme_poverty", "industrial_production", "employment_enterprise",
+            "median_wage", "price_m2_secondary", "arope_rate", "long_term_unemployment", "registered_unemployed",
+            "construction_output", "min_wage", "eurpln"]
+    latest = [v for v in files["latest.json"]["values"] if v.get("kpi_key") in mine and v.get("geography") == "PL"]
+    series = {k: len(files[f"kpi/{k}/series.json"]["series"]) for k in mine if f"kpi/{k}/series.json" in files}
+    annotate("notice", "6 publish_v2.build on the trial metrics (nothing written)",
+             json.loads(json.dumps({"kpis": len([n for n in files if n.startswith("kpi/")]),
+                                    "missing": context["missing"], "empty": context["empty"], "slice_series": series,
+                                    "slice_latest_pl": [{k: v.get(k) for k in ("kpi_key", "source_key", "period",
+                                                                                 "value")} for v in latest][:20]},
+                                   default=str)))
+
+
+def zeros_and_rows(con, cat):
+    """Exact zeros per slice KPI x source (rate measures with lower bound 0), and table rows for the ceilings."""
+    out = {}
+    for c in ["adult_learning", "extreme_poverty", "arope_rate", "long_term_unemployment", "registered_unemployed",
+              "core_inflation", "industrial_production"]:
+        t = table(cat, f"metrics_{c}", ("source_system", "value"))
+        con.register("z", t)
+        out[c] = con.sql("select source_system, count(*) filter (where value = 0), count(*) from z group by 1").fetchall()
+    rows = {}
+    for name in ("build_bdl", "build_dbw", "build_eurostat", "src_eurostat", "src_dbw", "fact_annual", "fact_semiannual",
+                 "fact_quarterly", "fact_monthly", "fact_daily", "metrics_core_inflation", "metrics_min_wage",
+                 "metrics_extreme_poverty", "metrics_employment_enterprise", "metrics_median_wage",
+                 "metrics_price_m2_secondary"):
+        snap = cat.load_table((NS, name)).current_snapshot()
+        rows[name] = int((snap.summary or {}).get("total-records", -1)) if snap else 0
+    annotate("notice", "7 exact zeros (KPI: source, zeros, rows) and table rows", {"zeros": out, "rows": rows})
+
+
+def cleanup(cat):
+    dropped, failed = 0, []
+    for _ in range(4):
+        left = list(cat.list_tables(NS))
+        if not left:
+            break
+        for ident in left:
+            for wait in (0, 10, 30, 60):  # HTTP 429 from the catalog
+                time.sleep(wait)
+                try:
+                    cat.drop_table(ident)
+                    dropped += 1
+                    break
+                except Exception as exc:  # retried, then reported
+                    err = f"{ident[-1]}: {type(exc).__name__}"
+            else:
+                failed.append(err)
+    left = [i[-1] for i in cat.list_tables(NS)]
+    annotate("notice" if not left else "warning", "5 scratch dropped",
+             {"namespace": NS, "tables": dropped, "left": left[:20], "failed": failed[:5]})
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
