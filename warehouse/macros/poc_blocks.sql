@@ -195,6 +195,8 @@
         ('emissions_totals', '6829', '723113', 'GHG emissions, all sectors without LULUCF, CO2eq (AR5) (FAOSTAT)'),
         ('land_use', '6601', '5110', 'Land area (FAOSTAT)')
     ) as t (entity, item_code, element_code, block_name)
+{% endmacro %}
+
 {# WHO data.who.int blocks (gold.build_who): one per indicator file; areas: EU27 members (M49, macro
    poc_m49_eu27) and World (M49 1, GLOBAL). #}
 {% macro poc_who_blocks() %}
@@ -203,6 +205,8 @@
         ('life_expectancy', 'Life expectancy at birth (WHO)'),
         ('hale', 'Healthy life expectancy at birth (WHO)')
     ) as t (entity, block_name)
+{% endmacro %}
+
 {# UNESCO UIS blocks (gold.build_unesco_uis): one per Data API selection; areas: EU27 members (ISO alpha-3 through
    dim_geography.iso3). #}
 {% macro poc_unesco_uis_blocks() %}
