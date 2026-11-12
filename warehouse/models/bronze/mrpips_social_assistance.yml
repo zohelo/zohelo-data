@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: mrpips_social_assistance
+  description: MRPiPS social assistance statistics (register PLS-031), annual MRPiPS-03 report workbooks (.xls)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mrpips_social_assistance/
+    loaded_by: ingestion/to_bronze/mrpips_social_assistance/
+    config: ingestion/sources/mrpips_social_assistance.yaml
+  tables:
+  - name: mrpips_social_assistance_cells
+    description: >-
+      One row per non-empty cell (value as stored, ZIP member, sheet, row, column, number format) of every workbook
+      of the newest copy of each landed file; partitioned by entity.
+  - name: mrpips_social_assistance_rejected_files
+    description: Files of mrpips_social_assistance the Bronze decoder rejected, with the reason.
