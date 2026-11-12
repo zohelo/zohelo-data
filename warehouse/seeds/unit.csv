@@ -3,6 +3,7 @@ persons,os.,persons,osoby,false
 mln_ncu,mln,"million, source currency","mln, waluta źródła",false
 ncu_per_person,/os.,source currency per person,waluta źródła na osobę,false
 pct,%,per cent,procent,true
+per_100,/100,per 100 persons,na 100 osób,true
 pct_labour_force,%,% of labour force,% aktywnych zawodowo,true
 pct_population,%,% of population,% ludności,true
 years,lata,years,lata,false

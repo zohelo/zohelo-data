@@ -20,6 +20,7 @@ from datetime import UTC, date, datetime, timedelta
 import io
 import json
 from pathlib import Path
+import time
 from typing import Any
 
 import duckdb
@@ -93,8 +94,24 @@ def v1_rows(metrics: pa.Table) -> pa.Table:
     return metrics.filter(keep)
 
 
-def gold(cat, namespace: str, name: str) -> pa.Table:
-    return cat.load_table((namespace, name)).scan().to_arrow()
+# A concurrent silver_gold.build (another source's run; its concurrency group is not gold.publish's) swaps tables
+# (dbt __dbt_tmp/__dbt_backup renames, seeds dropped and recreated), so a table can be missing for a few seconds:
+# gold.news_outlet in prod run 43157796127 (#2793). A table not found is looked up again after these waits.
+SWAP_RECHECK_SECONDS = (10, 20)
+
+
+def gold(cat, namespace: str, name: str, waits: tuple[float, ...] = SWAP_RECHECK_SECONDS) -> pa.Table:
+    """A catalog table as Arrow; NoSuchTableError only when it is still missing after the swap re-checks."""
+    from pyiceberg.exceptions import NoSuchTableError
+
+    for wait in (*waits, None):
+        try:
+            return cat.load_table((namespace, name)).scan().to_arrow()
+        except NoSuchTableError:
+            if wait is None:
+                raise
+            time.sleep(wait)
+    raise AssertionError("unreachable")
 
 
 def seed(name: str) -> list[dict[str, str]]:

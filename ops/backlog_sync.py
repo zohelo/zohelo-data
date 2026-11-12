@@ -32,6 +32,12 @@ PREFIXES = {"data": "zohelo-data", "bi": "zohelo-bi", "com": "zohelo"}
 PHASES = {0, 1, 2, 3, "run"}
 PRIORITIES = {"P1", "P2", "P3"}
 EFFORTS = {"S", "M", "L"}
+# Project 1's options are named Urgent/High/Medium/Low (Priority) and High/Medium/Low (Effort), not P1…/S…
+# (#2545): a backlog value without an option of its own name is shown as the option mapped here.
+OPTION_FALLBACK = {
+    "Priority": {"P1": "High", "P2": "Medium", "P3": "Low"},
+    "Effort": {"S": "Low", "M": "Medium", "L": "High"},
+}
 FILE_OPS = {"edit", "create", "delete"}
 BANNED = re.compile(r"(?<!\w)(investigate|consider|as needed|etc\.)(?!\w)", re.IGNORECASE)
 MAX_TASK_BYTES = 3000
@@ -741,6 +747,7 @@ class Board:
         self.to_add = 0
         self.to_set = 0
         self.skipped: set[str] = set()
+        self.mapped: set[str] = set()  # backlog values shown as a fallback option (OPTION_FALLBACK)
         after = None
         while True:
             data = self.graphql(token, BOARD_QUERY, {"project": self.project, "after": after})["node"]
@@ -767,9 +774,17 @@ class Board:
             self.skipped.add(f"field {name}")
             return None
         if field["dataType"] == "SINGLE_SELECT":
-            for option in field["options"]:
-                if option["name"] == wanted or option["name"].split(" ", 1)[0].lower() == wanted.lower():
-                    return {"singleSelectOptionId": option["id"]}, option["name"]
+            # The exact name first (a later `project setup --apply` that renames the options still works), then the
+            # fallback option of OPTION_FALLBACK.
+            fallback = OPTION_FALLBACK.get(name, {}).get(wanted)
+            for candidate in (wanted, fallback):
+                if candidate is None:
+                    continue
+                for option in field["options"]:
+                    if option["name"] == candidate or option["name"].split(" ", 1)[0].lower() == candidate.lower():
+                        if candidate != wanted:
+                            self.mapped.add(f"{name} {wanted} → {option['name']}")
+                        return {"singleSelectOptionId": option["id"]}, option["name"]
             self.skipped.add(f"option {name}={wanted}")
             return None
         return ({"date": wanted} if field["dataType"] == "DATE" else {"text": wanted}), wanted
@@ -962,6 +977,8 @@ def run_sync(roots: list[Path], apply: bool) -> int:
     )
     if board.skipped:
         annotate("warning", "backlog_sync project fields missing", sorted(board.skipped))
+    if board.mapped:
+        annotate("notice", "backlog_sync project options mapped", sorted(board.mapped))
     labels = (
         ("created", "updated", "reparented", "closed")
         if apply

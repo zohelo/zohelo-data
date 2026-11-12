@@ -13,6 +13,9 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('population', 'eurostat', '%', 0, 1e9),
     -- persons; largest area WLD 2025 = 8,215,424,893 (World Bank API SP.POP.TOTL, #2788)
     ('population', 'world_bank_wdi', '%', 0, 1e10),
+    -- thousand persons as published (D33); largest area World, WPP 2024 medium-variant peak about 10.3 million
+    -- thousand in the 2080s (10,180,160.751 in 2100; Dev trial 43098260601)
+    ('population_projection', 'un_wpp', '%', 0, 2e7),
     ('gdp_current_prices', 'eurostat', 'eurostat:NAMA_10_GDP:CP_MEUR:B1GQ', 0, 3e7),
     -- million national currency; largest HU 2025 = 87,307,647 million HUF (Eurostat nama_10_gdp, #2788)
     ('gdp_current_prices', 'eurostat', 'eurostat:NAMA_10_GDP:CP_MNAC:B1GQ', 0, 1e9),
@@ -67,6 +70,15 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_population') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_population_projection') }}
     union all
     select
         concept_key,
