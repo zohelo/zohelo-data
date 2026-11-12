@@ -279,7 +279,11 @@ sources:
       (Public) and the World Bank Terms of Use for Datasets
       https://www.worldbank.org/ext/en/legal/terms-conditions/datasets; commercial reuse and modification
       allowed; do not imply World Bank endorsement or use its name or logo; third-party conditions, where any,
-      are in the indicator metadata. Attribution: "The World Bank: Global Economic Monitor: <data source>".'
+      are in the indicator metadata. Attribution: "The World Bank: Global Economic Monitor: <data source>". Series
+      source notes (API metadata, Dev probe 43293960453): CPTOTSAXN, CPTOTSAXNZGY and IPTOTSAKD "World Bank staff
+      calculations based on Datastream data", DPANUSSPB "World Bank staff calculations based on Datastream and IMF
+      International Finance Statistics data"; the other four have no metadata record; no series-level licence or
+      third-party terms are given.'
   updates: Frequent series updates and revisions; no product-wide schedule established.
   ingestion:
     history: 'World Bank API v2 source 15 like world_bank_icp (decision of 12 Nov 2026 in the wave-3 source brief), replacing
@@ -294,7 +298,9 @@ sources:
     priority: review-next
     evidence: catalogue-only
     connection: tested
-    blockers: []
+    blockers:
+    - 'Coverage: 8 of the 36 series for the EU27 members are built; the other series and the non-EU economies follow
+      in #2904 (small country batches per series, as the API times out on every economy or several series)'
     references:
     - https://databank.worldbank.org/source/global-economic-monitor-(gem)
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets

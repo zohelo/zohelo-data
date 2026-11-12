@@ -62,7 +62,7 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- = 130,401,615.5 km² (Dev trial 43159213097). Documentation only (not in the metrics union below).
     ('area', 'faostat', '%', 0, 2e8),
     -- World Bank GEM (#2373): CPI % y-o-y, EU27 members 1987-2026: -6.5 to 3,453.3 (1990s hyperinflation; Dev trial
-    -- 43283254888). Documentation only until a metrics_cpi_annual_rate model joins the union below.
+    -- 43283254888). Documentation only until poc_metrics_cpi_annual_rate (it exists) joins the union below.
     ('cpi_annual_rate', 'world_bank_gem', 'world_bank_gem:CPTOTSAXNZGY:pct', -50, 5000),
     -- World Bank GEM (#2373): unemployment rate %, highest 28.7 (Dev trial 43283254888); documentation only (no
     -- metrics model for the monthly KPI yet).

@@ -30,4 +30,4 @@ undata_terms,UNdata conditions of use,https://data.un.org/Host.aspx?Content=UNda
 bis_terms,BIS terms of use for statistics,https://www.bis.org/about/legal/permitted-use-statistics,Source: BIS statistics (Bank for International Settlements),false,false
 cc_by_4_0_ilo,CC BY 4.0 (ILOSTAT),https://www.ilo.org/node/9321,"Source: ILO, ILOSTAT, https://ilostat.ilo.org/data/",true,false
 unece_terms,UNECE Statistical Database copyright notice,https://w3.unece.org/PXWeb/Static/Copyright_notice.html,Source: UNECE Statistical Database.,true,false
-cc_by_4_0_world_bank_gem,CC BY 4.0 (World Bank Global Economic Monitor),https://datacatalog.worldbank.org/search/dataset/0037798/global-economic-monitor,"Source: The World Bank, Global Economic Monitor",true,false
+cc_by_4_0_world_bank_gem,CC BY 4.0 (World Bank Global Economic Monitor),https://datacatalog.worldbank.org/search/dataset/0037798/global-economic-monitor,"The World Bank: Global Economic Monitor: World Bank staff calculations based on Datastream data (exchange rates also IMF International Financial Statistics)",true,false

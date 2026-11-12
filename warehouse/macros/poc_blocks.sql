@@ -374,7 +374,7 @@
 {% macro poc_world_bank_gem_series() %}
     select * from (
         values
-        ('series_CPTOTSAXNZGY', 'CPTOTSAXNZGY', 'M', 'pct', '% y-o-y', 'CPI, % y-o-y, not seasonally adjusted (World Bank GEM)'),
+        ('series_CPTOTSAXNZGY', 'CPTOTSAXNZGY', 'M', 'pct', '% y-o-y', 'CPI price, % y-o-y (World Bank GEM)'),
         ('series_CPTOTSAXN', 'CPTOTSAXN', 'M', 'index', 'index', 'CPI price index, seasonally adjusted (World Bank GEM)'),
         ('series_CORESA', 'CORESA', 'M', 'index', 'index', 'Core CPI index, seasonally adjusted (World Bank GEM)'),
         ('series_IPTOTSAKD', 'IPTOTSAKD', 'M', 'constant_usd', 'constant US$', 'Industrial production, constant US$, seasonally adjusted (World Bank GEM)'),

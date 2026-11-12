@@ -43,7 +43,7 @@ PER_PAGE = 50000
 PAUSE_SECONDS = 2.0
 # The series built into Gold (gold.build_world_bank_gem, macro poc_world_bank_gem_series); ids as in the API.
 SERIES = [
-    "CPTOTSAXNZGY",  # CPI price, % y-o-y, not seasonally adjusted
+    "CPTOTSAXNZGY",  # CPI price, % y-o-y (name: "not seas. adj."; definition: seasonally adjusted)
     "CPTOTSAXN",  # CPI price index, seasonally adjusted
     "CORESA",  # core CPI index, seasonally adjusted
     "IPTOTSAKD",  # industrial production, constant US$, seasonally adjusted
