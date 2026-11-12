@@ -394,7 +394,12 @@ def latest_values(
 
     def filled_of(s: dict[str, Any]) -> list[int]:
         partial = (s["source_key"], s["geography"]) in daily
-        return [i for i, v in enumerate(s["values"]) if v is not None and not (partial and periods[i] >= current)]
+        # Only monthly periods compare with the month of generated_at: as text '2026-Q1' >= '2026-11' (#2728).
+        return [
+            i
+            for i, v in enumerate(s["values"])
+            if v is not None and not (partial and period_frequency(periods[i]) == "M" and periods[i] >= current)
+        ]
 
     index = {p: i for i, p in enumerate(periods)}
     totals = [s for s in series_doc["series"] if not s["members"] and "frequency" not in s]
@@ -519,13 +524,16 @@ def briefs_json(
     def utc(stamp: str) -> datetime:
         return datetime.strptime(stamp[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=UTC)
 
-    oldest = utc(generated_at) - timedelta(days=int(config["window_days"]))
+    newest = utc(generated_at)
+    oldest = newest - timedelta(days=int(config["window_days"]))
     geographies = list(config["geographies"])
     before = {(v["kpi_key"], v["geography"]): v for v in (previous.get("latest.json") or {}).get("values", [])}
     detections = {
         (d["kpi_key"], d["geography"], d["period"]): d
         for d in (previous.get("briefs.json") or {}).get("detections", [])
-        if utc(d["detected_at"]) >= oldest
+        # A detection dated after generated_at (an overlapping or manual run) is dropped, not kept: the checker
+        # rejects it and would block the whole v2 publish (#2728).
+        if oldest <= utc(d["detected_at"]) <= newest
     }
     dates: dict[str, list[str]] = defaultdict(list)
     for release in calendar:
@@ -537,14 +545,23 @@ def briefs_json(
             continue
         kpi = kpis[v["kpi_key"]]
         frequency = period_frequency(v["period"])
+
+        def same_source(d: dict[str, Any], source: str = v["source_key"]) -> bool:
+            """A detection is reused only for the source it was made for (#2728); one written before
+            detections carried source_key matches any source."""
+            return d.get("source_key", source) == source
+
         at_or_above = sorted(
             (period_ordinal(p), d)
             for (k, g, p), d in detections.items()
             if (k, g) == (v["kpi_key"], v["geography"])
+            and same_source(d)
             and period_frequency(p) == frequency
             and period_ordinal(p) >= period_ordinal(v["period"])
         )
         old = detections.get((v["kpi_key"], v["geography"], v["period"]))
+        if old is not None and not same_source(old):
+            old = None
         last = before.get((v["kpi_key"], v["geography"]))
         if old is None:
             if (
@@ -577,6 +594,7 @@ def briefs_json(
             "kpi_key": v["kpi_key"],
             "geography": v["geography"],
             "period": v["period"],
+            "source_key": v["source_key"],
             "detected_at": detected_at,
             "released_at": released,
             "released_at_source": source,

@@ -306,15 +306,29 @@ def download(
     raise RuntimeError("unreachable")
 
 
-def probe(url: str) -> tuple[requests.Response | None, str]:
-    """HEAD the URL (GET headers only when HEAD is refused), with retries; returns (response, status or error)."""
+PROBES = {"head", "get"}  # a file's `probe:` (default head); the configuration check rejects other values
+
+
+def probe(url: str, method: str = "head") -> tuple[requests.Response | None, str]:
+    """HEAD the URL (GET headers only when HEAD is refused), with retries; returns (response, status or error).
+    ``method="get"`` (a file's ``probe: get``) skips HEAD for servers that answer it wrongly (UNdata and the UIS
+    Data API 404, zus.pl drops the connection; #2546): a streamed GET whose body is never read."""
     response, http = None, ""
     for attempt in range(3):
         try:
-            response = requests.head(
-                url, headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"}, allow_redirects=True, timeout=60
-            )
-            if response.status_code in (403, 405, 501):  # some servers refuse HEAD but serve GET
+            if method == "get":
+                response = requests.get(
+                    url, headers={"User-Agent": USER_AGENT}, allow_redirects=True, timeout=60, stream=True
+                )
+                response.close()  # headers only; the body is not read
+            else:
+                response = requests.head(
+                    url,
+                    headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"},
+                    allow_redirects=True,
+                    timeout=60,
+                )
+            if method != "get" and response.status_code in (403, 405, 501):  # some servers refuse HEAD but serve GET
                 response = requests.get(
                     url, headers={"User-Agent": USER_AGENT}, allow_redirects=True, timeout=60, stream=True
                 )
@@ -511,7 +525,7 @@ def main(
             if links is not None:
                 row["page_links"] = links[:10]  # every match (first 10), to choose url_from.pick
             row["url"] = url
-            head, http = probe(url)
+            head, http = probe(url, spec.get("probe", "head"))
             row["server_version"] = (server_version(dict(head.headers)) if head is not None else None) or "unknown"
             if http != "200":  # a moved or blocked URL is an error, not a missing validator
                 row.update({"state": "unreachable", "http": http})
