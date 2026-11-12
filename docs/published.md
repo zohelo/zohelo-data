@@ -26,13 +26,16 @@ strings in ISO 8601 UTC.
   metadata, no numbers), so readers can apply the same rule. `gold.publish` reports the KPIs and rows it left out
   (`licence_gate` in its annotation). Since 12 Nov 2026 this leaves NBP (`nbp`, `nbp_interest_rates`) out, so v1
   has no `fx_rate` and v2 no `eurpln`, until NBP's terms are established.
-- **Units** (decision D33): every value is in the `unit_key` written beside it, the target unit of its series (the
-  measure's `kpi_measure.csv` `unit_key`, else the KPI's). `gold.metrics_<kpi>` converts the published value to that
+- **Units** (decision D33): every value whose published unit is mapped is in the `unit_key` written beside it, the
+  target unit of its series (the measure's `kpi_measure.csv` `unit_key`, else the KPI's). `gold.metrics_<kpi>` converts the published value to that
   unit by pure scale only (same `base_unit_key` in `unit.csv`; × factor of the published unit ÷ factor of the target,
   with the published decimals shifted by the factor) and keeps `value_published` and `unit_published` beside it;
   Gold facts keep the value as published. Currencies, index bases and price bases are never converted: a KPI
   published in EUR, PLN and USD has one series per currency, each with its own `unit_key`. Since 12 Nov 2026 the World
   Bank series of `gdp_current_prices` (`NY.GDP.MKTP.CD`) is in `mln_usd` (was `usd`, values ÷ 1,000,000).
+  A series whose published unit code has no `unit_map.csv` row (warning test `metrics_unit_unmapped`; none on 12 Nov 2026) is not
+  converted: its value stays as published, the metrics `unit` column carries the published code, and the `unit_key` written here is then only the series' intended
+  unit, not a verified one, until the row is added.
 - gold.publish checks every JSON file against its schema in warehouse/published/schemas/ before writing it and fails
   on a problem.
 - The data portal serves these files read-only, after sign-in, at `/api/published/v1/<path>` (portal/worker/src/index.js).

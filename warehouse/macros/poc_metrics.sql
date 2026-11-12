@@ -11,8 +11,9 @@
    decimals shifted by the factor (poc_rescale). The source unit is the unit_map.csv row of
    the measure's unit code. `value_published` and `unit_published` keep what the source published.
    No conversion when the code has no unit_map row (reported by test metrics_unit_unmapped) or the
-   two units have different bases (test metrics_unit_base fails): currencies, index bases and price
-   bases are never converted. #}
+   two units have different bases (test metrics_unit_base fails): then `value` stays as published and
+   `unit` is the published unit code, never a target the value is not in. Currencies, index bases and
+   price bases are never converted. #}
 {% macro poc_concept_metrics(concept_key) %}
 with members as (
     select cm.measure_key, cm.definition, cm.source_system
@@ -48,7 +49,7 @@ select
         when un.ratio is null or un.ratio = 1 then f.value
         else {{ poc_rescale('f.value', 'un.ratio') }}
     end as value,
-    un.target_unit_key as unit,
+    case when un.ratio is null then m.unit_key else un.target_unit_key end as unit,
     f.value as value_published,
     m.unit_key as unit_published,
     f.observation_status_key
@@ -108,9 +109,10 @@ where s.is_total and f.geography_key <> '_X'
    of the published value's shortest decimal text is moved by the ratio's exponent and the text is read back, so
    the result is the double nearest to the exact decimal (1035491784197.4406 US$ → 1035491.7841974406 million US$,
    12.3 thousand → 12300) with the published decimals shifted by the factor and no float artefacts; any other ratio
-   multiplies. #}
+   multiplies. NaN and infinite values are returned as they are. #}
 {% macro poc_rescale(value, ratio) %}
     case
+        when not isfinite(cast({{ value }} as double)) then cast({{ value }} as double)
         when abs(log10({{ ratio }}) - round(log10({{ ratio }}))) < 1e-9 then cast(
             regexp_extract(cast(cast({{ value }} as double) as varchar), '^[^eE]*')
             || 'e'
