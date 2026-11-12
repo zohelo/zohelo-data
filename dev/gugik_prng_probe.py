@@ -184,43 +184,52 @@ def inspect_package(path: Path, url: str, work: Path) -> None:
 
 
 def main(argv: list[str]) -> int:
-    body, info = fetch(PAGE)
-    html = text_of(body)
-    text = plain(html)
-    found = links(html, PAGE)
-    note("page", {"url": PAGE, **info, "bytes": len(html), "links": found[:200]})
-    note("page_terms", snippets(text, r"(licencj|wykorzyst|warunk|op[łl]at|bezp[łl]atn|prawa|CC BY|regulamin)"))
-    note("page_text", text[:12000])
-    body, ginfo = fetch(GOV)
-    gtext = plain(text_of(body))
-    note("gov", {"url": GOV, **ginfo, "prng": snippets(gtext, r"(PRNG|nazw geograficznych)", 500),
-                 "free_use": snippets(gtext, r"(dowolnego wykorzystania|wykorzystania)", 400, 12)})
+    wms = "https://mapy.geoportal.gov.pl/wss/service/PZGIK/PRNG/WMS/DaneDoPobrania"
+    body, info = fetch(wms + "?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0", limit=400_000)
+    caps = text_of(body)
+    layers = re.findall(r"<Layer[^>]*>\s*<Name>([^<]+)</Name>\s*<Title>([^<]*)</Title>", caps)
+    fmts = re.findall(r"<Format>([^<]+)</Format>", caps)
+    note("wms_caps", {**info, "layers": layers, "formats": sorted(set(fmts)), "head": caps[:1500]})
+    names = [n for n, _t in layers] or ["0"]
+    hrefs: list[str] = []
+    # points in Poland (EPSG:4326, lat/lon axis order of WMS 1.3.0): Warsaw, Krakow, Gdansk
+    for lat, lon in ((52.23, 21.01), (50.06, 19.94), (54.35, 18.65)):
+        bbox = f"{lat - 0.05},{lon - 0.05},{lat + 0.05},{lon + 0.05}"
+        for fmt in ("text/html", "application/vnd.ogc.gml", "text/plain"):
+            q = urllib.parse.urlencode({
+                "SERVICE": "WMS", "VERSION": "1.3.0", "REQUEST": "GetFeatureInfo", "LAYERS": ",".join(names),
+                "QUERY_LAYERS": ",".join(names), "STYLES": "", "CRS": "EPSG:4326", "BBOX": bbox, "WIDTH": "101",
+                "HEIGHT": "101", "I": "50", "J": "50", "INFO_FORMAT": fmt, "FEATURE_COUNT": "50", "FORMAT": "image/png"})
+            body, info = fetch(f"{wms}?{q}", limit=400_000)
+            t = text_of(body)
+            found = re.findall(r"https?://[^\"'\s<>]+", t)
+            hrefs += found
+            note("featureinfo", {"point": [lat, lon], "format": fmt, **info, "urls": sorted(set(found))[:60],
+                                 "text": t[:3000]})
+            if found:
+                break
+        if hrefs:
+            break
     body, winfo = fetch(WFS, limit=300_000)
-    note("wfs", {**winfo, "head": text_of(body)[:3000]})
-
-    cands = [u for u, _t in found if re.search(r"\.(zip|xlsx|xls|csv|gml|7z|gz)(\?|$)", u, re.I)
-             or re.search(r"(opendata|prng|pobier|download)", u, re.I)]
-    raw_urls = re.findall(r"https?://[^\"'\s<>]+?\.(?:zip|xlsx|xls|csv|gml|7z)\b", html, re.I)
-    note("raw_urls", sorted(set(raw_urls))[:80])
-    cands = list(dict.fromkeys(cands + raw_urls))
-    cands = [u for u in cands if not re.search(r"(facebook|twitter|linkedin|youtube|instagram)", u, re.I)]
+    wcaps = text_of(body)
+    note("wfs_types", {"types": re.findall(r"<FeatureType[^>]*>\s*<Name>([^<]+)</Name>\s*<Title>([^<]*)</Title>", wcaps),
+                       "output": sorted(set(re.findall(r"<ows:Value>([^<]+)</ows:Value>", wcaps)))[:60]})
+    cands = [u for u in dict.fromkeys(hrefs) if re.search(r"\.(zip|xlsx|xls|csv|gml|7z)(\?|$)", u, re.I)]
     note("candidates", cands)
     heads = []
-    for u in cands[:40]:
+    for u in cands[:30]:
         _b, h = fetch(u, method="HEAD")
         heads.append({"url": u, **h})
         note("head", heads[-1])
     work = Path(tempfile.mkdtemp(prefix="prng_"))
-    files = [h for h in heads if h.get("status") == 200 and re.search(r"(zip|excel|spreadsheet|octet|gml|xml|csv)",
-                                                                   h.get("content-type", ""), re.I)]
-    # lightest format first: XLSX packages, then CSV, then GML; SHP only when nothing else
+
     def rank(h):
         u = h["url"].lower()
         return (0 if "xls" in u else 1 if "csv" in u else 2 if "gml" in u else 3, int(h.get("content-length") or 0))
     done = 0
-    for h in sorted(files, key=rank):
-        if rank(h)[0] == 3 and done:
-            continue
+    for h in sorted([h for h in heads if h.get("status") == 200], key=rank):
+        if rank(h)[0] >= 2 and done:
+            continue  # GML/SHP only when no XLSX or CSV package exists
         if int(h.get("content-length") or 0) > 600_000_000:
             note("skipped", {"url": h["url"], "reason": "over 600 MB"})
             continue
@@ -237,7 +246,8 @@ def main(argv: list[str]) -> int:
         with open(os.path.join(out_dir, "gugik_prng_probe.json"), "w", encoding="utf-8") as fh:
             json.dump(OUT, fh, ensure_ascii=False, indent=1, default=str)
     annotate("notice", "prng probe summary", {
-        "page": info, "gov": ginfo, "wfs": winfo, "candidates": len(cands),
+        "candidates": cands, "heads": [{k: h.get(k) for k in ("url", "status", "content-length", "last-modified",
+                                                               "etag")} for h in heads],
         "downloads": [{k: d.get(k) for k in ("url", "status", "read", "seconds")} for d in OUT.get("download", [])],
         "tables": [{k: t[k] for k in ("label", "rows")} for t in OUT.get("table", [])],
         "errors": OUT.get("error", [])[:5]})
