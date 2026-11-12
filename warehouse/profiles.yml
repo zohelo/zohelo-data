@@ -15,6 +15,10 @@ zohelo:
         # Hosted runners have 16 GB; DuckDB's default (80 %) leaves little for dbt and
         # Iceberg writes, and builds were killed (exit 143). Spill goes to the big /mnt disk.
         memory_limit: "{{ env_var('DUCKDB_MEMORY_LIMIT', '10GB') }}"
+      # Set once, when the database is opened, never under `settings`: dbt-duckdb runs every
+      # entry of `settings` as SET on each new cursor, and DuckDB refuses any SET temp_directory
+      # (also to the same path) after the first spill, which failed every later node of the build.
+      config_options:
         temp_directory: "{{ env_var('DUCKDB_TEMP_DIRECTORY', '.duckdb_tmp') }}"
       # Iceberg tables cannot be renamed inside the transaction that created them,
       # and dbt's table materialization builds under a temporary name, then renames.
