@@ -570,6 +570,296 @@ def rcl():
     N["rcl"] = out
 
 
+# ---------------------------------------------------------------- second pass ("more")
+
+
+def excerpts(url, pattern, n=3000000, limit=6, after=600):
+    r = get(url, n, 60)
+    if "err" in r:
+        fail(url, r)
+        return None, []
+    t = r["body"].decode("utf-8", "replace")
+    p = plain(t)
+    ex = around(p, pattern, 200, after, limit)
+    print(f"=== EXCERPTS {url} final={r.get('final')} chars={len(p)}", flush=True)
+    for e in ex:
+        print(f"  … {e}", flush=True)
+    print(f"TAIL {p[-1800:]}\n=== END", flush=True)
+    return t, ex
+
+
+def more_bdl():
+    base = "https://bdl.stat.gov.pl/api/v1"
+    out = {}
+    d = jget(f"{base}/subjects?parent-id=G483&format=json&lang=pl&page-size=100")
+    if d:
+        out["G483_children"] = [(x.get("id"), x.get("name")) for x in d.get("results", [])]
+    d = jget(f"{base}/variables?subject-id=P3005&format=json&lang=pl&page-size=100")
+    if d:
+        out["P3005_variables"] = [(x.get("id"), " / ".join(str(x.get(k)) for k in ("n1", "n2", "n3") if x.get(k))[:90], x.get("measureUnitName"), x.get("level")) for x in d.get("results", [])]
+    print(f"=== BDL more {json.dumps(out, ensure_ascii=False)}\n=== END", flush=True)
+    N["bdl"] = out
+
+
+def more_knf():
+    start = "https://www.knf.gov.pl/podmioty"
+    queue, seen, pages, subsites = [(start, 0)], {start}, [], {}
+    dumped = 0
+    while queue and len(pages) < 135:
+        url, depth = queue.pop(0)
+        r = get(url)
+        if "err" in r:
+            fail(url, r)
+            continue
+        t = r["body"].decode("utf-8", "replace")
+        main = re.search(r"(?is)<main\b.*?</main>", t)
+        mt = main.group(0) if main else t
+        tables = re.findall(r"(?is)<table\b.*?</table>", mt)
+        rows = len(re.findall(r"(?i)<tr\b", mt))
+        pager = sorted({u for a, u in links(mt, url) if re.search(r"(?i)[?&](page|p|strona|start|offset)=", u)})[:3]
+        upd = re.findall(r"(?i)(?:stan na|aktualizac\w+|data aktualizacji)[^<]{0,40}", plain(mt))[:1]
+        short = url.replace("https://www.knf.gov.pl/podmioty", "") or "/"
+        pages.append({"p": short[-70:], "t": len(tables), "tr": rows, "pg": len(pager), "upd": upd[0][:50] if upd else None})
+        print(f"=== KNF {short} depth={depth} tables={len(tables)} tr={rows} pager={pager} upd={upd}", flush=True)
+        if tables and dumped < 6 and re.search(r"spolek_akcyjnych$|banki_spoldzielcze$|spolki_akcyjnej$|emerytaln|Firmy_inw|kas_spoldz", url):
+            dumped += 1
+            for tb in tables[:3]:
+                print(f"  TABLE {plain(tb)[:700]}", flush=True)
+            heads = [plain(h)[:40] for h in re.findall(r"(?is)<th\b.*?</th>", mt)[:12]]
+            print(f"  TH {heads}", flush=True)
+        for a, u in links(t, url):
+            sp = urllib.parse.urlsplit(u)
+            if sp.netloc == "www.knf.gov.pl" and sp.path.startswith("/podmioty") and depth < 3 and u not in seen and "?" not in u:
+                seen.add(u)
+                queue.append((u, depth + 1))
+            elif re.search(r"//[a-z0-9-]+\.knf\.gov\.pl", u) and "www.knf" not in u:
+                subsites.setdefault(sp.netloc, a[:60])
+        end()
+    with_tables = [x for x in pages if x["t"]]
+    print(f"=== KNF more pages={len(pages)} left={len(queue)} with_tables={len(with_tables)} tr_total={sum(x['tr'] for x in with_tables)}\nSUBSITES {json.dumps(subsites, ensure_ascii=False)}\n=== END", flush=True)
+    N["knf_pages"] = {"pages": len(pages), "left": len(queue), "with_tables": len(with_tables), "tr_total": sum(x["tr"] for x in with_tables), "paged": sum(1 for x in pages if x["pg"])}
+    N["knf_tables"] = [f"{x['p'].split('/')[-1][:44]}:{x['t']}/{x['tr']}" for x in with_tables][:70]
+    apps = {}
+    lib = r"(?i)jquery|bootstrap|datatables|popper|moment|select2|polyfill|recaptcha|font|\.min\.js"
+    for host in sorted(subsites):
+        u = f"https://{host}/"
+        r = get(u, 2000000, 40)
+        if "err" in r:
+            apps[host] = r["err"][:50]
+            fail(u, r)
+            continue
+        t = r["body"].decode("utf-8", "replace")
+        srcs = [urllib.parse.urljoin(u, html.unescape(x)) for x in re.findall(r'(?is)<script\b[^>]*src=["\']([^"\']+)', t)]
+        own = [x for x in srcs if urllib.parse.urlsplit(x).netloc == host and not re.search(lib, x)]
+        info = {"st": r["st"], "chars": len(plain(t)), "scripts": len(srcs), "own": [x.rsplit("/", 1)[-1][:30] for x in own[:4]], "captcha": bool(re.search(r"(?i)recaptcha|captcha", t)), "wall": bool(re.search(WALL, t[:30000]))}
+        print(f"=== APP {u} {json.dumps(info, ensure_ascii=False)}\nSCRIPTS {srcs}", flush=True)
+        calls = []
+        if host.split(".")[0] in ("e-rup", "rpkip", "wpn", "rdl", "pok", "zasi", "dystr"):
+            for x in own[:3]:
+                j = get(x, 3000000, 40)
+                if "err" in j:
+                    fail(x, j)
+                    continue
+                js = j["body"].decode("utf-8", "replace")
+                info["captcha"] = info["captcha"] or bool(re.search(r"(?i)recaptcha|captcha", js))
+                for m in re.finditer(r"(?i)\$\.(?:ajax|get|post|getJSON)\s*\(|\bfetch\s*\(|[\"']?url[\"']?\s*:|XMLHttpRequest|buttons\s*:", js):
+                    c = re.sub(r"\s+", " ", js[max(0, m.start() - 60) : m.start() + 260])
+                    if c not in calls:
+                        calls.append(c)
+                print(f"  OWN-JS {x} bytes={len(js)}", flush=True)
+            for c in calls[:14]:
+                print(f"  CALL {c}", flush=True)
+            info["calls"] = [re.sub(r"^.{0,60}?(?=\$\.|fetch|url)", "", c)[:110] for c in calls[:3]]
+        end()
+        apps[host.split(".")[0]] = info
+    N["knf_apps"] = apps
+
+
+def csv_profile(url):
+    import csv
+
+    csv.field_size_limit(10**8)
+    h = get(url, method="HEAD")
+    r = get(url, 40000000, 180)
+    if "err" in r:
+        fail(url, r)
+        return {"head": h.get("st") or h.get("err"), "err": r["err"][:80]}
+    b = r["body"]
+    for enc in ("utf-8-sig", "cp1250"):
+        try:
+            t = b.decode(enc)
+            break
+        except UnicodeDecodeError:
+            continue
+    else:
+        t, enc = b.decode("utf-8", "replace"), "utf-8?"
+    first = t.split("\n", 1)[0]
+    delim = max(";,\t|", key=first.count)
+    rows = list(csv.reader(io.StringIO(t), delimiter=delim))
+    header, body = rows[0], [x for x in rows[1:] if x]
+    cols = {}
+    for i, name in enumerate(header[:40]):
+        vals = [x[i].strip() for x in body if i < len(x)]
+        filled = [v for v in vals if v]
+        dist = sorted(set(filled))
+        dates = sorted(v[:10] for v in filled if re.match(r"\d{4}-\d\d-\d\d|\d\d\.\d\d\.\d{4}", v))
+        c = {"filled": len(filled), "distinct": len(dist), "maxlen": max((len(v) for v in filled), default=0)}
+        if dist and len(dist) <= 25:
+            c["values"] = [v[:60] for v in dist[:25]]
+        elif dist:
+            c["sample"] = [v[:80] for v in dist[:2]]
+        if dates:
+            c["dates"] = [dates[0], dates[-1], len(dates)]
+        cols[name.strip()[:50]] = c
+    info = {"head": h.get("st") or h.get("err"), "len": h.get("len"), "lm": h.get("lm"), "etag": h.get("etag"), "ct": r["ct"], "cd": r.get("cd"), "bytes": len(b), "encoding": enc, "delimiter": delim, "columns": len(header), "rows": len(body), "widths": sorted({len(x) for x in body})[:6]}
+    print(f"=== CSV {url}\n{json.dumps(info, ensure_ascii=False)}\nHEADER {header}", flush=True)
+    for k, v in cols.items():
+        print(f"  COL {k}: {json.dumps(v, ensure_ascii=False)[:900]}", flush=True)
+    for x in body[:2]:
+        print(f"  ROW {json.dumps([v[:160] for v in x], ensure_ascii=False)[:2500]}", flush=True)
+    end()
+    info["header"] = [x.strip()[:28] for x in header[:26]]
+    info["cols"] = {k[:24]: {a: b2 for a, b2 in v.items() if a in ("filled", "distinct", "dates")} for k, v in list(cols.items())[:26]}
+    return info
+
+
+def more_gov():
+    out = {}
+    base = "https://www.gov.pl/web/premier/wplip-rm"
+    got = page(base, text=300)
+    if got:
+        p, ll, t = got
+        print(f"FOOT {p[-2500:]}", flush=True)
+        end()
+        out["footer"] = [x[:420] for x in around(p, r"Creative Commons|licencj|CC BY|prawa autorskie", 160, 420, 2)]
+        tb = re.search(r"(?is)<table\b.*?</table>", t)
+        if tb:
+            print(f"=== GOV TABLE {plain(tb.group(0))[:1500]}\n=== END", flush=True)
+        csvs = [u for a, u in ll if "register-file" in u]
+        if csvs:
+            out["rm_csv"] = csv_profile(csvs[0])
+        reuse = next((u for a, u in ll if re.search(r"(?i)ponowne", a + u)), None)
+        if reuse:
+            _, ex = excerpts(reuse, r"ponown\w+ wykorzyst|warunk|licencj|źródł|bezpłatn|komercyj", after=700)
+            out["kprm_reuse"] = {"u": reuse[-70:], "ex": [e[:600] for e in ex[:3]]}
+        for label, pat in (("prm", r"Wykaz prac legislacyjnych Prezesa"), ("archive", r"ARCHIWUM")):
+            u = next((u for a, u in ll if re.search(pat, a)), None)
+            if not u:
+                continue
+            g2 = page(u, text=300)
+            if g2:
+                end()
+                c2 = [x for a, x in g2[1] if "register-file" in x]
+                hd = get(c2[0], method="HEAD") if c2 else {}
+                out[label] = {"u": u[-50:], "chars": len(g2[0]), "csv": c2[0][-45:] if c2 else None, "csv_head": hd.get("st") or hd.get("err"), "csv_len": hd.get("len")}
+    N["gov"] = out
+    rcl = {}
+    for host in ("https://legislacja.rcl.gov.pl", "https://legislacja.gov.pl"):
+        t0 = time.time()
+        r = get(host + "/", 500000, 60, robots_timeout=60)
+        rcl[urllib.parse.urlsplit(host).netloc] = {"result": r.get("st") or r.get("err"), "seconds": round(time.time() - t0), "utc": time.strftime("%H:%M", time.gmtime())}
+    N["rcl_again"] = rcl
+
+
+def more_legal():
+    out = {}
+    _, ex = excerpts("https://www.esma.europa.eu/about-esma/legal-notice-and-data-protection", r"copyright|reproduc|re-?use|acknowledg", after=700)
+    out["esma"] = [e[:700] for e in ex[:3]]
+    got = page("https://registers.esma.europa.eu/publication/", text=1500)
+    if got:
+        end()
+        out["esma_registers_page"] = [e[:400] for e in around(got[0], r"disclaimer|copyright|legal notice|reproduc", 100, 400, 2)]
+    t, ex = excerpts("https://www.epo.org/en/searching-for-patents/data/bulk-data-sets", r"free of charge|subscription|registration|terms and conditions|DOCDB", limit=5)
+    out["epo_bulk"] = [e[:420] for e in ex[:3]]
+    if t:
+        doc = next((u for a, u in links(t, "https://www.epo.org/en/searching-for-patents/data/bulk-data-sets") if re.search(r"(?i)docdb", u)), None)
+        if doc:
+            _, ex = excerpts(doc, r"free of charge|subscri|regist|terms|national offices|coverage", limit=6)
+            out["epo_docdb"] = {"u": doc[-60:], "ex": [e[:420] for e in ex[:3]]}
+    r = get("https://www.tmdn.org/tmview/", 500000, 40)
+    out["tmview"] = {"robots": ROBOTS_TXT.get("https://www.tmdn.org", "")[:200], "result": r.get("st") or r.get("err"), "chars": len(plain(r["body"].decode("utf-8", "replace"))) if "body" in r else None}
+    N["legal"] = out
+
+
+def more_uprp():
+    out = {}
+    r = get("https://uprp.gov.pl/sites/default/files/2026-08/Raport%20roczny%202025.pdf", 90000000, 120)
+    if "err" in r:
+        fail("raport 2025 pl", r)
+    else:
+        b = r["body"]
+        info = pdf_info(b)
+        chunks = []
+        for m in re.finditer(rb"stream\r?\n(.*?)endstream", b, re.S):
+            try:
+                d = zlib.decompressobj().decompress(m.group(1))
+            except zlib.error:
+                continue
+            if b"BT" in d and (b"Tj" in d or b"TJ" in d):
+                chunks.append(b"".join(re.findall(rb"\(((?:\\.|[^\\()])*)\)", d)).decode("latin-1", "replace"))
+        joined = " ".join(chunks)
+        words = {w: len(re.findall(w, joined, re.I)) for w in ("znak", "wzor", "patent", "zg.osze", "udzielon", "krajow", "zagraniczn", "tabela", "razem")}
+        ex = around(joined, r"znak\w* towarow", 150, 380, 3) + around(joined, r"wzor\w* przemys", 150, 380, 2)
+        print(f"=== UPRP PDF pl 2025 {json.dumps({k: info[k] for k in ('bytes', 'pages_marked', 'text_streams', 'literal_strings', 'hex_strings', 'images')})}\nWORDS {words}", flush=True)
+        for e in ex:
+            print(f"  … {e}", flush=True)
+        end()
+        out["report_pl_2025"] = {"bytes": info["bytes"], "pages": info["pages_marked"], "text_streams": info["text_streams"], "words": words, "ex": [e[:300] for e in ex[:2]]}
+    got = page("https://uprp.gov.pl/pl/publikacje/biuletyn-i-wiadomosci-uprp", n=20000000, timeout=120, text=200)
+    if got:
+        end()
+        fl = [(a, u) for a, u in got[1] if re.search(r"\.pdf(\?|$)", u, re.I)]
+        groups: dict[str, list] = {}
+        for a, u in fl:
+            m = re.search(r"/files/((?:bup|wup)[^/]*/\d{4}(?:/[^/\d][^/]*)?)", u, re.I)
+            key = re.sub(r"\d{4}", "YYYY", urllib.parse.unquote(m.group(1))) if m else "other"
+            groups.setdefault(key, []).append(u)
+        out["bulletin_groups"] = {k: [len(v), min(re.findall(r"(?:19|20)\d\d", " ".join(v)) or ["?"]), max(re.findall(r"(?:19|20)\d\d", " ".join(v)) or ["?"])] for k, v in groups.items()}
+        print(f"=== BULLETIN GROUPS {json.dumps(out['bulletin_groups'], ensure_ascii=False)}\n=== END", flush=True)
+        picks = {}
+        for kind, pat in (("bup_inventions", r"/bup/2026/(?!Znaki)"), ("wup", r"/wup/2026/")):
+            u = next((u for a, u in fl if re.search(pat, u)), None)
+            if not u:
+                continue
+            r = get(u, 90000000, 120)
+            if "err" in r:
+                fail(u, r)
+                continue
+            b = r["body"]
+            info = pdf_info(b)
+            text = []
+            for m in re.finditer(rb"stream\r?\n(.*?)endstream", b, re.S):
+                try:
+                    d = zlib.decompressobj().decompress(m.group(1))
+                except zlib.error:
+                    continue
+                text.append(d)
+            allb = b" ".join(text)
+            inid = {c: len(re.findall(rb"\(\s*\\?\(?" + c.encode() + rb"\\?\)?\s*\)|\\\(" + c.encode() + rb"\\\)", allb)) for c in ("21", "22", "51", "54", "71", "72", "73", "11")}
+            picks[kind] = {"u": u[-60:], "bytes": info["bytes"], "pages": info["pages_marked"], "text_streams": info["text_streams"], "literal": info["literal_strings"], "hex": info["hex_strings"], "images": info["images"], "inid_counts": inid}
+            print(f"=== BULLETIN {kind} {json.dumps(picks[kind], ensure_ascii=False)}\n=== END", flush=True)
+        out["bulletin_samples"] = picks
+    N["uprp"] = out
+
+
+def more():
+    for step in (more_bdl, more_gov, more_legal, more_uprp, more_knf):
+        try:
+            step()
+        except Exception as e:  # noqa: BLE001
+            ERR.append(f"step {step.__name__}: {type(e).__name__}: {str(e)[:120]}")
+            print(f"=== STEP {step.__name__} FAILED {type(e).__name__}: {e}", flush=True)
+    emit("probe fix2 1 robots", {h.split("//")[1]: t[:200] for h, t in ROBOTS_TXT.items()})
+    emit("probe fix2 2 EX-001 GUS BDL group G483", N.get("bdl"))
+    emit("probe fix2 3 UPRP annual report (pl) and bulletins", N.get("uprp"))
+    emit("probe fix2 4 PLG-034 gov.pl work list CSV", (N.get("gov") or {}).get("rm_csv"))
+    emit("probe fix2 5 PLG-034 gov.pl terms, other lists, RCL again", {k: v for k, v in (N.get("gov") or {}).items() if k != "rm_csv"} | {"rcl_again": N.get("rcl_again")})
+    emit("probe fix2 6 legal: ESMA, EPO, TMview", N.get("legal"))
+    emit("probe fix2 7 PLG-016 KNF fixed pages", {"summary": N.get("knf_pages"), "tables/rows": N.get("knf_tables")})
+    emit("probe fix2 8 PLG-016 KNF register sites", N.get("knf_apps"))
+    emit("probe fix2 9 errors and totals", {"requests": COUNT[0], "skipped_hosts": DEAD, "errors": ERR[:30]})
+
+
 def emit(title, data):
     msg = json.dumps(data, default=str, separators=(",", ":"), ensure_ascii=False)
     b = msg.encode("utf-8")
@@ -604,6 +894,9 @@ def urls_only(urls):
 
 
 def main():
+    if sys.argv[1:] == ["more"]:
+        more()
+        return
     if len(sys.argv) > 1:
         urls_only(sys.argv[1:])
         return
