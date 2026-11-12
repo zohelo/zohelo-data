@@ -5,11 +5,12 @@
    carries the indicator and the frequency, so the annual and the quarterly unemployment rate are separate
    measures (one frequency per measure); the youth/adult age bands of poc_ilostat_ages (15+, 15-24, 25+, 15-64)
    are measures, the youth NEET file has no age band. Sex is the breakdown ({"sex": <ILOSTAT code>}; sex_code
-   T/M/F, is_total for SEX_T); SEX_O is not built. The survey (ILOSTAT `source`) is not part of the series: the
-   ILO publishes one survey per area, indicator and period, and a change of survey is a break the ILO flags
+   T/M/F, is_total for SEX_T); SEX_O is not built. The survey (ILOSTAT `source`: a labour force survey, in early years
+   also a census or an official estimate) is not part of the series: the ILO publishes one per area, indicator
+   and period (0 periods with several, Dev trial 43290214779), and a change of survey is a break the ILO flags
    (obs_status B → break; U unreliable → low_reliability; any other flag → flagged). Values as published; a
    cell without a value is not loaded; a period that starts after the build day cannot be an observation and is
-   left out (the bulk files hold a few such periods outside the EU). #}
+   left out (none for the EU27 today; the ILO aggregates X01 …, not built, carry periods up to 2027). #}
 with blocks as ({{ poc_ilostat_blocks() }}),
 
 ages as ({{ poc_ilostat_ages() }}),

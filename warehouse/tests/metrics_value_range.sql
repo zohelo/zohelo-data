@@ -61,12 +61,12 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- FAOSTAT (#2402): published in 1000 ha, metrics in km² since D33 (× 10); World land area 13,040,161.55 thousand ha
     -- = 130,401,615.5 km² (Dev trial 43159213097). Documentation only (not in the metrics union below).
     ('area', 'faostat', '%', 0, 2e8),
-    -- ILOSTAT (#2861): per cent of the labour force, 15+, EU27 members, annual and quarterly national LFS series;
-    -- the other sources' bound (highest value and Poland's newest value: the PR's Dev trial)
+    -- ILOSTAT (#2861): per cent of the labour force, 15+, EU27 members, annual and quarterly national series;
+    -- highest 28.153 (GR, quarterly), Poland 2025 = 3.018 (Dev trial 43290214779); the other sources' bound
     ('unemployment_rate', 'ilostat', '%', 0, 60),
     -- UN Statistical Yearbook (#2861), EU27 members and World, selected years: GDP in millions of US dollars as
-    -- published (Poland 2023 = 809,201; the World total is of the order of 1e8), GDP per capita in US dollars
-    -- (Poland 2023 = 20,876), real GDP growth in per cent (Poland 2023 = 0.1); Dev probe 43281574547, the WDI bounds
+    -- published (World 2023 = 105,943,460, Poland 809,201), GDP per capita in US dollars (highest 128,936 LU, Poland
+    -- 20,876), real GDP growth in per cent (-10.9 to 24.6 IE, Poland 2023 = 0.1); Dev trial 43290214779, the WDI bounds
     ('gdp_current_prices', 'undata', '%', 0, 3e8),
     ('gdp_per_capita', 'undata', '%', 0, 5e5),
     ('gdp_volume_growth', 'undata', '%', -100, 200)
