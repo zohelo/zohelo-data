@@ -731,7 +731,7 @@ download time; the bytes are stable between downloads, so an unchanged file is s
 `bronze.ilostat_observations` (the generic SDMX format of the OECD onboarding: dimension columns
 ref_area, source, indicator, sex, classif1 as series_key; obs_status and notes as attributes). Silver:
 `silver.ilostat_observations` (ref_area ISO alpha-3 or ILO aggregate X…, typed value, frequency from the
-entity). Refresh full (D32): a narrow table rebuilt weekly in full, ceiling exception #2753. Terms:
+entity). Refresh full (D32): a narrow table rebuilt weekly in full, ceiling exception #2832. Terms:
 CC BY 4.0 for releases from 3 May 2023, licence row `cc_by_4_0_ilo`. Restart unit: one indicator file.
 
 ## News headline feeds (`news_feeds`, topics)

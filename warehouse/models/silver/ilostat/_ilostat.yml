@@ -13,7 +13,11 @@ models:
           column_name: "entity || '|' || series_key || '|' || time_period"
     columns:
       - name: entity
-        tests: [not_null]
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['une_deap_sex_age_rt_a', 'une_deap_sex_age_rt_q', 'emp_dwap_sex_age_rt_a', 'eap_dwap_sex_age_rt_a', 'eip_neet_sex_rt_a']
       - name: indicator
         tests: [not_null]
       - name: freq
@@ -21,7 +25,7 @@ models:
       - name: ref_area
         tests: [not_null]
       - name: sex
-        tests: [not_null]
+        tests: [not_null, {accepted_values: {arguments: {values: ['SEX_T', 'SEX_M', 'SEX_F', 'SEX_O']}}}]
       - name: time_period
         tests: [not_null]
       - name: raw_sha256
