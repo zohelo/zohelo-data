@@ -1,4 +1,4 @@
-{{ config(alias='build_ecb') }}
+{{ config(alias='build_ecb', tags=['gold_block']) }}
 {# Gold build stage: the activated ECB Data Portal selections (macros/poc_blocks.sql poc_ecb_blocks) in the common
    shape. measure_key ecb:<flow>:<codes that define the measure>: EXR ecb:EXR:<D|M>:<currency>:EUR (units of the
    currency per 1 EUR: daily reference rates and the ECB's own monthly averages; geography not applicable `_Z`;
