@@ -16,7 +16,11 @@ with bounds (concept_key, source_system, value_min, value_max) as (
     ('gdp_per_capita', 'eurostat', 0, 2e5),
     ('gdp_per_capita', 'world_bank_wdi', 0, 5e5),
     ('gdp_volume_growth', 'eurostat', -50, 100),
-    ('gdp_volume_growth', 'world_bank_wdi', -100, 200)
+    ('gdp_volume_growth', 'world_bank_wdi', -100, 200),
+    -- FAOSTAT (#2402): kt CO2eq; World 54,253,565 kt (all sectors without LULUCF, 2024 max, Dev trial 43159213097)
+    ('ghg_emissions', 'faostat', 0, 8.2e7),
+    -- FAOSTAT (#2402): 1000 ha; World land area 13,040,161.55 (Dev trial 43159213097)
+    ('area', 'faostat', 0, 2e7)
 ),
 
 metrics as (

@@ -1,0 +1,31 @@
+version: 2
+models:
+  - name: faostat_observations
+    description: >-
+      FAOSTAT (FAO, CC BY 4.0 with FAO's additional terms) from bronze.faostat_observations: the newest copy of
+      each bulk domain file (entity) — emissions_totals (GT: agrifood systems emissions, emissions totals, by
+      item = sector and element = gas or CO2eq) and land_use (RL: land use categories), every area and year
+      FAO publishes: 1961-2024, some GT items to 2050 as published (2,920,278 rows, Dev trial
+      43159213097). Grain: entity × area_code × item_code × element_code × year ×
+      source_code (source_code '_Z' in domains without sources). Values in the published unit.
+    tests:
+      - unique:
+          column_name: "entity || '|' || area_code || '|' || item_code || '|' || element_code || '|' || year || '|' || source_code"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: ['emissions_totals', 'land_use']}}}]
+      - name: area_code
+        tests: [not_null]
+      - name: item_code
+        tests: [not_null]
+      - name: element_code
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: source_code
+        tests: [not_null]
+      - name: unit
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]
