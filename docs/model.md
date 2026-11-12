@@ -140,3 +140,5 @@ Other open points are listed per dimension (`open_questions`) and marked `unveri
 5. Facts: annual, quarterly, monthly, daily (`fact_quarterly` added for the zohelo-bi first slice: Eurostat, DBW and BDL quarterly series).
 6. Rows without a value are not loaded; status flags kept.
 7. warehouse/entity/*.sql stay: they are per-entity Silver models applied by warehouse/entity.py (design #875), not Gold (deviation from plan A-23, logged in docs/decisions.md).
+
+Every loaded block of Eurostat, GUS BDL and GUS DBW in Gold by rule, on top of this model (O36): [gold-coverage.md](gold-coverage.md).
