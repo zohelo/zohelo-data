@@ -688,3 +688,23 @@ sources:
       entity.
   - name: mrpips_unemployment_rejected_files
     description: MRPiPS registered-unemployment Landing files the Bronze decoder rejected, with the reason.
+- name: pse
+  description: PSE Reports API v2 — 15-minute RCE price (rce-pln) and power-system values (his-wlk-cal), one API answer per report and business day
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/pse/
+    loaded_by: ingestion/to_bronze/pse/
+    config: ingestion/sources/pse.yaml
+  tables:
+  - name: pse_rce_pln
+    description: >-
+      One row per row of the newest copy of each rce-pln answer (entity rce_pln_YYYYMMDD): business date, local and
+      UTC period ends and labels, publication times and rce_pln, all as text; partitioned by entity.
+  - name: pse_his_wlk_cal
+    description: >-
+      One row per row of the newest copy of each his-wlk-cal answer (entity his_wlk_cal_YYYYMMDD): business date,
+      local and UTC period ends and labels, publication times and the 17 value columns (demand, wi, pv, jg*, jnwrb,
+      swm_p, swm_np), all as text, null where PSE publishes none; partitioned by entity.
+  - name: pse_rejected_files
+    description: PSE Landing files the Bronze decoder rejected (unknown or missing fields, another business day, no rows), with the reason.

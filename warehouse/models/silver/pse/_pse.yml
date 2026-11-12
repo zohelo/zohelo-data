@@ -1,0 +1,75 @@
+version: 2
+models:
+  - name: pse_rce_pln
+    description: >-
+      Market price of electricity RCE per 15-minute period from the PSE Reports API v2 (report rce-pln, register
+      PL-ENV-019), newest copy of each business day (bronze.pse_rce_pln). Grain: business_date x interval_end_utc.
+      PLN/MWh as published, published by PSE on the day before the business day. Business days from 2024-06-14.
+    tests:
+      - unique:
+          column_name: "cast(business_date as varchar) || '|' || cast(interval_end_utc as varchar)"
+    columns:
+      - name: business_date
+        tests: [not_null]
+      - name: interval_end_utc
+        description: End of the 15-minute period, UTC (PSE dtime_utc); the key, since local ends repeat on DST days.
+        tests: [not_null]
+      - name: interval_end_local
+        description: End of the period, Europe/Warsaw, as published (text; "02a" marks the repeated hour).
+      - name: rce_pln
+        description: RCE price, PLN/MWh.
+      - name: entity
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the report-day's API answer.
+        tests: [not_null]
+  - name: pse_power_system
+    description: >-
+      Power-system values per 15-minute period from the PSE Reports API v2 (report his-wlk-cal, register PL-ENV-019),
+      newest copy of each business day (bronze.pse_his_wlk_cal). Grain: business_date x interval_end_utc. MW as
+      published under PSE's column codes (demand, wi wind, pv photovoltaics, jg* generating-unit groups, jnwrb, swm_p,
+      swm_np); null where PSE publishes no value. Business days from 2024-06-14.
+    tests:
+      - unique:
+          column_name: "cast(business_date as varchar) || '|' || cast(interval_end_utc as varchar)"
+    columns:
+      - name: business_date
+        tests: [not_null]
+      - name: interval_end_utc
+        description: End of the 15-minute period, UTC (PSE dtime_utc).
+        tests: [not_null]
+      - name: demand
+        description: Power demand of the national power system, MW.
+      - name: wi
+        description: Wind generation, MW.
+      - name: pv
+        description: Photovoltaic generation, MW.
+      - name: entity
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the report-day's API answer.
+        tests: [not_null]
+  - name: pse_daily
+    description: >-
+      Daily values for Poland from the PSE Reports API v2 (register PL-ENV-019): arithmetic mean of the published
+      15-minute values over each complete business day (Europe/Warsaw) of the RCE price (PLN/MWh, unweighted) and of
+      demand, wind and photovoltaic generation (MW, mean power). Grain: business_date x measure_code. A day enters only
+      when every period (96; 92 or 100 on DST days) has a value; interval_count keeps the periods averaged.
+    tests:
+      - unique:
+          column_name: "cast(business_date as varchar) || '|' || measure_code"
+    columns:
+      - name: business_date
+        tests: [not_null]
+      - name: report
+        tests: [not_null, {accepted_values: {arguments: {values: [rce-pln, his-wlk-cal]}}}]
+      - name: measure_code
+        tests: [not_null, {accepted_values: {arguments: {values: [rce_pln, demand, wi, pv]}}}]
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: [pln_per_mwh, mw]}}}]
+      - name: value
+        tests: [not_null]
+      - name: interval_count
+        tests: [not_null, {accepted_values: {arguments: {values: [92, 96, 100], quote: false}}}]
+      - name: raw_sha256
+        tests: [not_null]

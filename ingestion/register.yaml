@@ -6274,7 +6274,8 @@ sources:
   name: PSE Reports API v2 and market/system reports
   short_name: PSE reports
   provider: Polskie Sieci Elektroenergetyczne (PSE)
-  status: approved
+  source_system: pse
+  status: built
   family: G
   kpi: true
   geography: Poland

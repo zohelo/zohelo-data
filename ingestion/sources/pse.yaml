@@ -1,0 +1,36 @@
+source_system: pse
+description: "PSE (Polskie Sieci Elektroenergetyczne) Reports API v2 — 15-minute market price of electricity RCE (rce-pln) and power-system values: demand, wind and photovoltaic generation (his-wlk-cal)"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-019. No bulk feature: the reports are served only by the
+# public API v2 (https://api.raporty.pse.pl/api/<report>?$filter=business_date eq '<YYYY-MM-DD>', no key, JSON, no
+# rate-limit headers, no Last-Modified or ETag); API v2 starts on business day 2024-06-14 (older reports have no
+# route). Route: one request per report and business day, at most one a second (Dev probe 43284836734: 0.97-1.37 s a
+# request, 25 KB rce-pln and 48 KB his-wlk-cal a day, repeated requests return identical bytes; DST days have 92 or
+# 100 rows). Entity = report x business day (rce_pln_YYYYMMDD, his_wlk_cal_YYYYMMDD), version = newest
+# publication_ts_utc of the rows, written only when the SHA-256 changed; an empty answer is not landed. Each run lands
+# the missing days (oldest first, time-budgeted) and requests the newest 7 business days again: PSE publishes
+# his-wlk-cal after the day and re-publishes it later (2024-2025 days carry publication times of January 2026).
+# Restart unit: one report-day. Code: ingestion/to_landing/pse/.
+extraction:
+  initial: api
+  production: snapshot                  # each file is one report-day as published; a re-publication replaces it
+  incremental_policy: changed_since_last  # missing days, newest 7 days re-read; SHA-256
+  schedule: # UTC; release: rce-pln for day D is published on D-1 about 13:00 UTC, his-wlk-cal for D on D+1 about 02:00 UTC; daily after both
+    - {cron: "20 5 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/pse/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.pse_rce_pln, bronze.pse_his_wlk_cal, bronze.pse_rejected_files]
+silver: [silver.pse_rce_pln, silver.pse_power_system, silver.pse_daily]
+gold: [gold.build_pse]
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded copies of a report-day
+# Refresh policy for all layers (D32): two reports of 96 rows a day, about 35,000 rows a year each and about
+# 1,500 a year in the daily aggregate; the source offers no changed-since query (a re-read window covers
+# corrections); small, so every layer is rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2870"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
