@@ -4,3 +4,6 @@
 # Windows scripts
 *.cmd text eol=crlf
 *.bat text eol=crlf
+
+# trial only
+warehouse/seeds/*.csv merge=union
