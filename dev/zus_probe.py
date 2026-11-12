@@ -108,11 +108,11 @@ def xlsx(url, rows, full):
         return
     by_sheet = {}
     for c in xlsx_cells.cells(body):
-        by_sheet.setdefault((c["sheet_index"], c["sheet_name"]), {}).setdefault(c["row_number"], []).append(c)
+        by_sheet.setdefault((0, c["sheet_name"]), {}).setdefault(c["row_number"], []).append(c)
     for (i, name), rws in by_sheet.items():
         print(f"  --- sheet {i} {name!r} rows={len(rws)} max_row={max(rws)}")
         keys = sorted(rws)
-        show = keys if (full and i == 1) else keys[:rows] + (keys[-4:] if len(keys) > rows else [])
+        show = keys if full else keys[:rows] + (keys[-4:] if len(keys) > rows else [])
         for k in show:
             cells = sorted(rws[k], key=lambda c: c["column_number"])
             print(f"    r{k}: " + " | ".join(f"{c['column_number']}:{c['value_text'][:38]}" for c in cells[:18]))
