@@ -23,7 +23,7 @@ CTX = ssl.create_default_context()
 ROBOTS: dict[str, object] = {}
 ROBOTS_TXT: dict[str, str] = {}
 LAST: dict[str, float] = {}
-BUDGET = [45]
+BUDGET = [22]
 LIMIT = 3800
 FOLLOW = (
     r"api|swagger|openapi|regulamin|ponown|praw\w*[-_ ]autor|otwart\w*[-_ ]dan|licenc|nota[-_ ]prawn|zastrze"
@@ -35,30 +35,16 @@ KW = (
     r"|podani\w+ źródł|wskazani\w+ źródł|zastrzeżone|Creative Commons|CC BY|CC0|komercyj|robot|automat|masow|hurtow"
 )
 START = [
-    "https://uprp.gov.pl/pl/warunki-korzystania-z-portalu-informacyjnego-urzedu-patentowego-rp-i-platformy-uslug-elektronicznych-urzedu-patentowego-rp",
-    "https://statystyka.pue.uprp.gov.pl/team/uprp/zgl_kraj_zag",
-    "https://statystyka.pue.uprp.gov.pl/team/uprp/zgl_rodz_pod",
-    "https://statystyka.pue.uprp.gov.pl/team/uprp/zgl_woj",
-    "https://statystyka.pue.uprp.gov.pl/team/uprp/udziel_kraj_zag",
-    "https://statystyka.pue.uprp.gov.pl/team/uprp/udziel_rodz_pod",
-    "https://statystyka.pue.uprp.gov.pl/team/uprp/udziel_woj",
-    "https://statystyka.pue.uprp.gov.pl/team/uprp/zt_zgl_kraj_zag",
-    "https://statystyka.pue.uprp.gov.pl/team/uprp/zt_udz_kraj_zag",
-    "https://statystyka.pue.uprp.gov.pl/team/uprp/wp_zgl_kraj_zag",
-    "https://statystyka.pue.uprp.gov.pl/team/uprp/wp_udz_kraj_zag",
-    "https://statystyka.pue.uprp.gov.pl/team/uprp/zgl_woj",
-    "https://statystyka.pue.uprp.gov.pl/",
-    "https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny/wynalazki-i-wzory-uzytkowe",
+    "https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny/wynalazki-i-wzory-uzytkowe/wynalazki-i-wzory-uzytkowe-zgloszone-przez-podmioty-krajowe-i-zagraniczne",
+    "https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny/wynalazki-i-wzory-uzytkowe/wynalazki-i-wzory-uzytkowe-zgloszone-przez-podmioty-krajowe-wedlug-wojewodztw",
+    "https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny/wynalazki-i-wzory-uzytkowe/patenty-i-prawa-ochronne-na-wzory-uzytkowe-udzielone-podmiotom-krajowym-wedlug-wojewodztw",
     "https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny/znaki-towarowe",
     "https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny/wzory-przemyslowe",
     "https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny/statystyka-pueup",
-    "https://uprp.gov.pl/pl/o-urzedzie/statystyki",
-    "https://uprp.gov.pl/pl",
-    "https://uprp.gov.pl/pl/uslugi-online",
-    "https://ewyszukiwarka.pue.uprp.gov.pl/search/simple-search?lng=pl",
-    "https://pue.uprp.gov.pl/",
-    "https://ebazawiedzy.pue.uprp.gov.pl/",
-    "https://api.uprp.gov.pl/",
+    "https://uprp.gov.pl/pl/publikacje/raport-roczny-uprp",
+    "https://uprp.gov.pl/pl/publikacje/biuletyn-i-wiadomosci-uprp",
+    "https://uprp.gov.pl/pl/wyszukiwarki",
+    "https://uprp.gov.pl/pl/klauzula-informacyjna-rodo",
 ]
 ALLOWED = ("uprp.gov.pl",)
 SECOND = {}
@@ -270,6 +256,14 @@ def visit(url, depth, queue, seen):
     for fr in re.findall(r'(?is)<iframe\b[^>]*src=["\']([^"\']+)', t)[:6]:
         print(f"IFRAME {html.unescape(fr)[:300]}", flush=True)
     ll = links(t, r.get("final") or url)
+    mt = main.group(0) if main else t
+    print(f"MAIN tables={len(re.findall('(?i)<table', mt))} canvas={len(re.findall('(?i)<canvas', mt))} svg={len(re.findall('(?i)<svg', mt))} iframes={len(re.findall('(?i)<iframe', mt))}", flush=True)
+    for m in re.findall(r"(?i)[\"'(]([^\"'()\s]*(?:statystyka\.pue|/team/uprp|chart|highcharts|plotly|\.csv|\.xlsx?|\.json)[^\"'()\s]*)", t)[:25]:
+        print(f"REF {m[:200]}", flush=True)
+    for a2, u2 in links(mt, r.get("final") or url)[:40]:
+        print(f"  MAIN-LINK {a2} | {u2}", flush=True)
+    for tb in re.findall(r"(?is)<table\b.*?</table>", mt)[:2]:
+        print(f"TABLE {plain(tb)[:1500]}", flush=True)
     print("LINKS", flush=True)
     for a, u in ll:
         if re.search(FOLLOW + r"|BUP|WUP|raport|wyszukiwar|publikac|\.(xlsx?|csv|zip|json|xml|pdf)(\?|$)", u + " " + a, re.I):
@@ -288,7 +282,9 @@ def visit(url, depth, queue, seen):
             continue
         api_like = re.search(r"/api|api\.|swagger|openapi|otwart\w*[-_ ]dan", u + " " + a, re.I) and not re.search(r"\.(pdf|docx?)(\?|$)|api-do-statystyk|bot_", u, re.I)
         legal_like = re.search(LEGAL, u + " " + a, re.I) and not re.search(r"\.(docx?|zip)(\?|$)", u, re.I)
-        stat_like = False
+        stat_like = bool(re.search(r"modul-statystyczny/(znaki-towarowe|wzory-przemyslowe|statystyka-pueup)/", u)) and not SECOND.get(u.rsplit("/", 1)[0])
+        if stat_like:
+            SECOND[u.rsplit("/", 1)[0]] = b"1"
         if api_like or legal_like or stat_like:
             seen.add(u)
             queue.append((u, depth + 1, 0 if api_like else 1 if legal_like else 2))
