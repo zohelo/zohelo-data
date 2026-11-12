@@ -124,6 +124,10 @@ def api() -> None:
         "pol_place_2026": "place-of-performance=POL AND publication-date>=20260101",
         "pol_buyer_or_place_2026": "(buyer-country=POL OR place-of-performance=POL) AND publication-date>=20260101",
         "all_2026_11_10": "publication-date=20261110",
+        "pol_buyer_sat_2026_11_07": "buyer-country=POL AND publication-date=20261107",
+        "pol_buyer_sun_2026_11_08": "buyer-country=POL AND publication-date=20261108",
+        "pol_buyer_mon_2026_11_09": "buyer-country=POL AND publication-date=20261109",
+        "pol_buyer_2025_01_02": "buyer-country=POL AND publication-date=20250102",
     }.items():
         status, body, secs = post({"query": query, "fields": ["publication-number"], "limit": 1, "page": 1})
         counts[label] = {
@@ -161,6 +165,46 @@ def sample(fields: list[str]) -> None:
     else:
         summary["body"] = str(res)[:2500]
     annotate("notice", "ted probe api sample day", summary)
+
+
+def limits_and_order() -> None:
+    """Largest accepted page size, and whether two identical requests return identical bytes (stable order)."""
+    out: dict = {}
+    for limit in (250, 251, 500, 1000):
+        status, res, _secs = post(
+            {"query": "buyer-country=POL AND publication-date=20261110", "fields": ["publication-number"],
+             "limit": limit, "page": 1}
+        )  # fmt: skip
+        out[f"limit_{limit}"] = {
+            "http": status,
+            "n": len(res.get("notices", [])) if isinstance(res, dict) else None,
+            "body": None if isinstance(res, dict) and status == 200 else str(res)[:400],
+        }
+    hashes, orders = [], []
+    for _ in range(2):
+        time.sleep(1.5)
+        r = requests.post(
+            API,
+            json={"query": "buyer-country=POL AND publication-date=20261110", "fields": ["publication-number",
+                  "notice-type"], "limit": 100, "page": 2},
+            headers={**HEAD, "Accept": "application/json"},
+            timeout=(20, 120),
+        )  # fmt: skip
+        import hashlib
+
+        hashes.append(hashlib.sha256(r.content).hexdigest()[:12])
+        orders.append([x.get("publication-number") for x in r.json().get("notices", [])][:8])
+    out["same_bytes_twice"] = hashes[0] == hashes[1]
+    out["page2_first8"] = orders
+    status, res, _ = post(
+        {"query": "buyer-country=POL AND publication-date=20261110 SORT BY publication-number ASC",
+         "fields": ["publication-number"], "limit": 5, "page": 1}
+    )  # fmt: skip
+    out["sort_by"] = {"http": status, "body": str(res)[:400]}
+    status, res, _ = post({"query": "publication-date>=20000101", "fields": ["publication-number"], "limit": 250,
+                           "page": 61})  # fmt: skip
+    out["page_61_x_250"] = {"http": status, "body": str(res)[:400]}
+    annotate("notice", "ted probe api limits and order", out)
 
 
 def iteration() -> None:
@@ -202,6 +246,13 @@ def main() -> int:
             "classification-cpv", "contract-nature", "procedure-type", "notice-title", "total-value",
             "total-value-cur", "estimated-value-proc", "estimated-value-cur-proc", "links", "ojs-number",
         ]  # fmt: skip
+    listed = set(re.findall(r"[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+", (OUT / "api_unknown_field.json").read_text()))
+    extra = sorted(
+        f for f in listed if re.search(r"nuts|value|cur|buyer|place-of-perf|notice-type|form-type", f, re.I)
+    )
+    annotate("notice", "ted probe fields listed", {"n": len(listed), "extra": extra[:150]})
+    if len(listed) > 50:
+        fields = [f for f in fields if f in listed] + [f for f in extra if f not in fields][:60]
     for attempt in range(3):
         status, res, _ = post({"query": "buyer-country=POL", "fields": fields, "limit": 1})
         if status == 200:
@@ -213,6 +264,7 @@ def main() -> int:
             break
         fields = [f for f in fields if f not in dropped]
     sample(fields)
+    limits_and_order()
     iteration()
     return 0
 
