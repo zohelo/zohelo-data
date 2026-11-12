@@ -31,3 +31,6 @@ mrpips_unemployment,PLS-029,MRPiPS bezrobocie rejestrowane,MRPiPS registered une
 who,GL-025,WHO: dane zdrowotne (data.who.int),WHO data (data.who.int),World Health Organization,cube,file,international-public,cc_by_4_0_who,https://data.who.int/indicators
 unesco_uis,GL-026,UNESCO UIS: statystyki edukacji i nauki,UNESCO Institute for Statistics (UIS),UNESCO Institute for Statistics,cube,file,international-public,cc_by_sa_4_0_uis,https://databrowser.uis.unesco.org/
 faostat,GL-022,FAOSTAT,FAOSTAT,Food and Agriculture Organization of the United Nations,cube,file,international-public,cc_by_4_0_fao,https://www.fao.org/faostat/en/#data
+gus_culture,PLS-027,GUS Kultura i dziedzictwo narodowe,GUS culture and national heritage,GUS,cube,file,national-public,gus_copyright_culture,https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/
+gus_culture_participation,PLS-028,GUS Uczestnictwo ludności w kulturze,GUS participation in culture,GUS,cube,file,national-public,gus_copyright_participation,https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/
+gus_tourism,PLS-035,GUS Turystyka,GUS tourism,GUS,cube,file,national-public,gus_copyright_tourism,https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/

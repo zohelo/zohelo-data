@@ -359,6 +359,9 @@
     poc_build_who:who
     poc_build_unesco_uis:unesco_uis
     poc_build_faostat:faostat
+    poc_build_gus_culture:gus_culture
+    poc_build_gus_culture_participation:gus_culture_participation
+    poc_build_gus_tourism:gus_tourism
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -455,6 +458,9 @@
         ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file'),
         ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units'),
         ('mf_jst_budgets', 'jst_budget', 'MF local-government budget summaries (year to date)'),
-        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)')
+        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)'),
+        ('gus_culture', 'culture_institutions', 'GUS culture and national heritage tables (annual)'),
+        ('gus_culture_participation', 'participation', 'GUS participation in culture survey (persons aged 15+)'),
+        ('gus_tourism', 'accommodation', 'GUS tourism tables: tourist accommodation (annual)')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}

@@ -168,3 +168,11 @@ gerd_gdp,unesco_uis,unesco_uis:gerd_gdp:pct_gdp:EXPGDP.TOT,"% of GDP, UIS (SDG 9
 tertiary_attainment,unesco_uis,unesco_uis:tertiary_attainment:pct:EA.5T8.AG25T99,"25+, completed short-cycle tertiary or higher, ISCED 5-8 (Eurostat: 25-34)",3,
 ghg_emissions,faostat,faostat:emissions_totals:kt:6829.723113.3050,"all sectors without LULUCF, CO2eq (AR5), kt (FAOSTAT emissions totals)",3,thousand_tonnes
 area,faostat,faostat:land_use:1000 ha:6601.5110._Z,"land area, 1000 ha (FAOSTAT land use)",3,thousand_ha
+museum_visitors,gus_culture,gus_culture:culture_institutions:persons:museum_visitors,"GUS Kultura i dziedzictwo narodowe, museums, Poland and voivodeships",1,
+cinema_admissions,gus_culture,gus_culture:culture_institutions:persons:cinema_admissions,"GUS Kultura i dziedzictwo narodowe, cinemas, Poland and voivodeships",1,
+public_library_users,gus_culture,gus_culture:culture_institutions:persons:library_users,"GUS Kultura i dziedzictwo narodowe, public libraries, Poland and voivodeships",1,
+tourists_accommodated,gus_tourism,gus_tourism:accommodation:persons:tourists,"GUS Turystyka, Poland and voivodeships",1,
+tourist_overnight_stays,gus_tourism,gus_tourism:accommodation:overnight_stays:overnight_stays,"GUS Turystyka, Poland and voivodeships",1,
+tourist_bed_places,gus_tourism,gus_tourism:accommodation:bed_places:bed_places,"GUS Turystyka, 31 July, Poland and voivodeships",1,
+museum_visiting_share,gus_culture_participation,gus_culture_participation:participation:pct_population:museum_visiting,"GUS survey, museums in Poland, past 12 months, by sex",1,
+theatre_attendance_share,gus_culture_participation,gus_culture_participation:participation:pct_population:theatre_attendance,"GUS survey, past 12 months, by sex",1,

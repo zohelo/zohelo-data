@@ -47,6 +47,9 @@ SOURCES = (
     "krus",
     "unctad",
     "mf_jst_budgets",
+    "gus_culture",
+    "gus_culture_participation",
+    "gus_tourism",
     "mrpips_unemployment",
 )
 # Accumulating sources (every landed copy stays in Bronze, docs/topics.md): no latest-only gate.

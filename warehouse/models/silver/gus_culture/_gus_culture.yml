@@ -1,0 +1,30 @@
+version: 2
+models:
+  - name: gus_culture_tables
+    description: >-
+      GUS Kultura i dziedzictwo narodowe (register PLS-027): curated tables of each edition (museum visitors,
+      cinema admissions, cinemas, public library users, public libraries), Poland and the 16 voivodeships,
+      reference year = edition year. Grain: table_code x measure_code x area_name x group_code x period_year.
+      Tables found by title and column header (warehouse/macros/gus_tables.sql); value as published, cell_status
+      from the GUS symbols (rows without a value are kept with their status). History and trial run: see
+      ingestion/sources/gus_culture.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', table_code, measure_code, area_name, group_code, period_year)"
+    columns:
+      - name: table_code
+        tests: [not_null]
+      - name: measure_code
+        tests: [not_null]
+      - name: unit_code
+        tests: [not_null]
+      - name: area_name
+        tests: [not_null]
+      - name: group_code
+        tests: [not_null]
+      - name: period_year
+        tests: [not_null]
+      - name: cell_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, low_reliability, confidential, not_applicable]}}}]
+      - name: raw_sha256
+        tests: [not_null]
