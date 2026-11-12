@@ -688,3 +688,19 @@ sources:
       entity.
   - name: mrpips_unemployment_rejected_files
     description: MRPiPS registered-unemployment Landing files the Bronze decoder rejected, with the reason.
+- name: ure
+  description: Urząd Regulacji Energetyki — electricity price indicators, public HTML table pages on www.ure.gov.pl
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/ure/
+    loaded_by: ingestion/to_bronze/ure/
+    config: ingestion/sources/ure.yaml
+  tables:
+  - name: ure_table_cells
+    description: >-
+      One row per cell (text as printed, table, row and column number, th/td, colspan, rowspan) of the indicator table
+      of the newest copy of each indicator page (entity page_<id>), with the page title, publication and modification
+      date; partitioned by entity.
+  - name: ure_rejected_files
+    description: URE indicator pages the Bronze decoder rejected (unknown layout), with the reason.

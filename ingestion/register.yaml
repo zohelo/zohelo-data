@@ -6335,7 +6335,8 @@ sources:
   name: Energy price indicators and small-renewable-installation reports
   short_name: URE energy prices
   provider: Urząd Regulacji Energetyki (URE)
-  status: approved
+  source_system: ure
+  status: built
   family: G
   kpi: true
   geography: Poland

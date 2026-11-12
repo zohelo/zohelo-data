@@ -58,7 +58,11 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('ghg_emissions', 'faostat', '%', 0, 8.2e7),
     -- FAOSTAT (#2402): 1000 ha; World land area 13,040,161.55 (Dev trial 43159213097). Documentation only (no
     -- metrics_area model yet).
-    ('area', 'faostat', '%', 0, 2e7)
+    ('area', 'faostat', '%', 0, 2e7),
+    -- URE (#2870): zł/MWh as published; 155.44 (2008) to 889.69 (2023-Q1) on page 7852 (Dev trial, docs/sources.md)
+    ('electricity_price_competitive', 'ure', '%', 0, 5000),
+    -- URE (#2870): zł/kWh as published; 0.4862 (2019) to 0.9198 (2025) on page 7853 (Dev trial, docs/sources.md)
+    ('electricity_price_households', 'ure', '%', 0, 10)
 ),
 
 metrics as (
@@ -133,6 +137,24 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_gdp_volume_growth') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_electricity_price_competitive') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_electricity_price_households') }}
 )
 
 select

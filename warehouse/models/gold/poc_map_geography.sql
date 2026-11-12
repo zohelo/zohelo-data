@@ -186,6 +186,14 @@ mrpips as (
         'PL' as geography_key
 ),
 
+-- URE price indicators: Poland only, the literal code 'PL' of the build stage (poc_build_ure).
+ure as (
+    select
+        'ure' as source_system,
+        'PL' as source_code,
+        'PL' as geography_key
+),
+
 wdi as (
     select
         'world_bank_wdi' as source_system,
@@ -425,6 +433,8 @@ from (
     select * from dbw
     union all
     select * from mrpips
+    union all
+    select * from ure
     union all
     select * from wdi
     union all
