@@ -6799,7 +6799,8 @@ sources:
   name: Gas transmission transparency data
   short_name: GAZ-SYSTEM transparency
   provider: Operator Gazociągów Przesyłowych GAZ-SYSTEM S.A.
-  status: approved
+  source_system: entsog
+  status: built
   family: G
   kpi: true
   geography: Poland

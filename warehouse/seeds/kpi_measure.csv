@@ -264,3 +264,7 @@ ppi_annual_rate,unece,unece:0_en_MECCPriceInterestY_r:percent:c0000773,"PPI, ann
 ppi_annual_rate,unece,unece:1_en_MECCPriceInterestQ_r:percent:c0000769,"PPI, growth over the same quarter of the previous year (UNECE Statistical Database)",3,
 industrial_production,unece,unece:0_en_MECCIndProdY_r:percent:c0000740,"industrial production index, annual growth rate (UNECE Statistical Database)",4,
 population,unece,unece:10_en_MELFOverviewY_r:Thousands of persons:ME.47.c0000803,"annual, thousands of persons as published (UNECE Statistical Database)",5,
+gas_entry_flow_daily,entsog,entsog:physical_flow:kWh/d:entry,"GAZ-SYSTEM, all entry points, kWh/d as published; point groups as breakdown (ENTSOG TP)",1,
+gas_exit_flow_daily,entsog,entsog:physical_flow:kWh/d:exit,"GAZ-SYSTEM, all exit points, kWh/d as published; point groups as breakdown (ENTSOG TP)",1,
+gas_entry_flow_monthly,entsog,entsog:physical_flow_month_sum:kWh:entry,"GAZ-SYSTEM, all entry points, monthly sum of complete days in kWh (ENTSOG TP)",1,
+gas_exit_flow_monthly,entsog,entsog:physical_flow_month_sum:kWh:exit,"GAZ-SYSTEM, all exit points, monthly sum of complete days in kWh (ENTSOG TP)",1,

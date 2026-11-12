@@ -1,0 +1,56 @@
+version: 2
+models:
+  - name: entsog_physical_flow
+    description: >-
+      ENTSOG Transparency Platform (licence unresolved: internal only) from bronze.entsog_operational_data: daily
+      physical gas flows of GAZ-SYSTEM (operator PL-TSO-0002) per point and direction, every gas day the API serves
+      (rolling window of about five years, from 1 January 2021). Grain: operator_key × point_key × direction_key ×
+      indicator × period_type × period_from (one gas day). value_kwh_d in kWh/d as published; null when the record
+      is isNA or empty (never 0). flow_status Provisional or Confirmed (null on isNA records); last_update_utc is the
+      record's lastUpdateDateTime. gas_day = date of period_from in WET (tests/entsog_gas_days.sql). Newest version
+      of each gas month, then the newest lastUpdateDateTime per key; ties stay and fail the unique test.
+    tests:
+      - unique:
+          column_name: "operator_key || '|' || point_key || '|' || direction_key || '|' || indicator || '|' || period_type || '|' || period_from"
+    columns:
+      - name: operator_key
+        tests: [not_null]
+      - name: point_key
+        tests: [not_null]
+      - name: direction_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['entry', 'exit']}}}]
+      - name: indicator
+        tests: [not_null, {accepted_values: {arguments: {values: ['Physical Flow']}}}]
+      - name: period_type
+        tests: [not_null, {accepted_values: {arguments: {values: ['day']}}}]
+      - name: period_from
+        tests: [not_null]
+      - name: gas_day
+        tests: [not_null]
+      - name: unit
+        tests: [{accepted_values: {arguments: {values: ['kWh/d']}}}]
+      - name: flow_status
+        tests: [{accepted_values: {arguments: {values: ['Provisional', 'Confirmed']}}}]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source answer (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: entsog_points
+    description: >-
+      ENTSOG point dimension from silver.entsog_physical_flow. Grain: operator_key × point_key × direction_key.
+      Newest label, the API's own point type (pointType, idPointType), the operator's item identifier, first and
+      last gas day, days with a value; reports_flows = false for points published only as isNA (virtual and
+      trading points). raw_sha256 is the answer of the point's newest gas day.
+    tests:
+      - unique:
+          column_name: "operator_key || '|' || point_key || '|' || direction_key"
+    columns:
+      - name: operator_key
+        tests: [not_null]
+      - name: point_key
+        tests: [not_null]
+      - name: direction_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['entry', 'exit']}}}]
+      - name: point_label
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

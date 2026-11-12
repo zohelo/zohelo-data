@@ -1,0 +1,28 @@
+version: 2
+models:
+  - name: poc_build_entsog
+    description: >-
+      Build stage — ENTSOG Transparency Platform, GAZ-SYSTEM (PL-TSO-0002), Poland: daily physical gas flow in
+      kWh/d as published, entry and exit, every point of the direction (is_total) and per point group
+      (poc_entsog_point_groups, 'unmapped' for an unlisted point); monthly sums in kWh as a second measure_key,
+      only for ended months whose every day is complete. A day is built only when every point-direction that
+      reports in that month has a value (see the model header). observation_status_key 'provisional' when a summed
+      value is Provisional. Licence unresolved: internal only.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || geography_key || '|' || breakdown_json || '|' || cast(date_key as varchar)"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['PL']}}}]
+      - name: frequency
+        tests: [{accepted_values: {arguments: {values: ['D', 'M']}}}]
+      - name: value
+        tests: [not_null]
+      - name: observation_status_key
+        tests: [{accepted_values: {arguments: {values: ['ok', 'provisional']}}}]
+      - name: raw_sha256
+        tests: [not_null]
