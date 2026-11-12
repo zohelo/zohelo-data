@@ -43,6 +43,14 @@ territory as (
     where area_positions > 0
     order by area_positions desc, area_positions / positions desc, slot asc
     limit 1
+),
+
+mapped as (  -- a name the map lists twice with one key is one mapping; with two keys it stays two rows,
+    -- repeats the block's rows and rejects the block (gold_geography.sql: geography_keys > 1)
+    select distinct
+        source_code,
+        geography_key
+    from geo_map
 )
 
 select
@@ -54,5 +62,5 @@ select
     and regexp_matches(coalesce(g.geography_key, ''), '^TERC:[0-9]{2}$') as is_twin
 from positions as p
 inner join territory as t on p.slot = t.slot
-left join geo_map as g on p.name = g.source_code
+left join mapped as g on p.name = g.source_code
 where p.position_id is not null
