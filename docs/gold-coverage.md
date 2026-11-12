@@ -235,10 +235,12 @@ and nothing else. Everything after the build stage is shared.
 3. The build stage covers **all** Silver tables and series of the source; one measure rule per
    table; periods other than A, S, Q, M, W, D are excluded and counted, never folded. The curated
    `poc_build_<source>` stays for the KPIs.
-4. Every geography code is mapped by code in the source's CTE of `poc_map_geography.sql` (an
-   official correspondence table where codes differ; names only as a reported fallback). That CTE
-   reads only tables that already exist on prod: a `ref()` to a Silver table that the source's first
-   scheduled run has not built yet turns the whole Gold build red.
+4. Every geography code is mapped by code in the source's `poc_geography__<source>()`
+   ([source-registration.md](source-registration.md), D34; an official correspondence table where
+   codes differ; names only as a reported fallback). When it reads the source's own Silver table, it
+   reads it through `poc_optional_ref` as [playbook.md](playbook.md) Gold step 2 says: a plain `ref()`
+   makes the map and every block wait for the source's first load (#2903). The source's per-block Gold
+   tables are declared in its own source YAML `gold:` (D34).
 5. Units follow D33: each unit is a `unit.csv` row with `base_unit_key` and `factor`, each source
    code a `unit_map.csv` row; an unmapped code stays as published and is reported.
 6. A Dev trial into `zz_dev_<topic>` shows the grain empty, coverage 100% or each missing series
@@ -254,5 +256,5 @@ and nothing else. Everything after the build stage is shared.
 |---|---|---|---|
 | 1 | Non-KPI measures in zohelo-bi | An additive published v2 catalogue, `catalog/measures_<source>.parquet` from `gold.<source>_measures`; decide once one source is fully loaded | owner |
 | 2 | Names of breakdown codes | One small table per block (`gold.<source>_codes`: dimension, code, name, total code) before the portal shows these tables | architect |
-| 3 | Eurostat codes of Polish NUTS 3 regions are unmatched (`_X`) | Map them in the Eurostat CTE of `poc_map_geography.sql` to the podregion keys DBW already uses | architect |
+| 3 | Eurostat codes of Polish NUTS 3 regions are unmatched (`_X`) | Map them to the podregion keys DBW already uses (Eurostat's codes are the `eurostat` CTE of `poc_map_geography.sql`, registered before D34) | architect |
 | 4 | The series table is more than half of the bytes | Keep it for the first load; then decide whether series attributes move onto the fact for annual blocks | architect |

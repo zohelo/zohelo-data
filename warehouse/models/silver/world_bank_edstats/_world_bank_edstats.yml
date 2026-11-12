@@ -1,0 +1,25 @@
+version: 2
+models:
+  - name: edstats_pisa
+    description: >-
+      OECD PISA country mean scores (reading, mathematics, science; both sexes, female, male) as republished by the
+      World Bank Education Statistics database (CC BY 4.0) from bronze.edstats_observations, every economy and
+      aggregate the World Bank lists, assessment years 2000-2018 (PISA 2022 not republished yet). Grain: entity ×
+      indicator_id × country_id × year. History and trial run in the PR.
+    tests:
+      - unique:
+          column_name: "entity || '|' || indicator_id || '|' || country_id || '|' || year"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: ['pisa_mathematics', 'pisa_reading', 'pisa_science']}}}]
+      - name: indicator_id
+        tests: [not_null]
+      - name: sex_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['T', 'F', 'M']}}}]
+      - name: country_id
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source answer (lineage to Landing/Archive).
+        tests: [not_null]
