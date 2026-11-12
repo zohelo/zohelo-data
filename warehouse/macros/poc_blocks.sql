@@ -277,14 +277,67 @@
     order by k.kpi_key, m.priority
 {% endmacro %}
 
-{# All PoC observations in the common shape (the build stages of the five sources). #}
+{# The Gold blocks (build stage models) as `model:source_system`, one per line. A block model carries the tag
+   `gold_block` (ops/repo_check.py checks both lists agree): its children do not wait for it in the
+   changed-only build (warehouse/changed.py), they read it only once its table exists. #}
+{% macro poc_block_models() %}
+    poc_build_eurostat:eurostat
+    poc_build_bdl:gus_bdl
+    poc_build_dbw:gus_dbw
+    poc_build_wdi:world_bank_wdi
+    poc_build_nbp:nbp
+    poc_build_unctad:unctad
+    poc_build_public_finance:mf_public_debt
+{% endmacro %}
+
+{# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
+   left out (zero rows) only when the changed-only plan declared it waiting: warehouse/changed.py lists
+   it under `empty_blocks` (its source tables do not exist yet) and warehouse/build.py passes that list
+   as the dbt var `waiting_blocks`. Any other missing block (a partial catalog listing, a run killed
+   between renames, an explicit-filter build) is a compiler error, so a source never drops out of Gold
+   silently; a block built in this run that fails makes dbt skip every model reading it. At parse time
+   every block is ref'd, so dbt records each dependency. #}
 {% macro poc_observations() %}
-    select * from {{ ref('poc_build_eurostat') }}
-    union all select * from {{ ref('poc_build_bdl') }}
-    union all select * from {{ ref('poc_build_dbw') }}
-    union all select * from {{ ref('poc_build_wdi') }}
-    union all select * from {{ ref('poc_build_nbp') }}
-    union all select * from {{ ref('poc_build_unctad') }}
+    {% set ns = namespace(first=true) %}
+    {% for entry in poc_block_models().split() %}
+        {% set relation = ref(entry.split(':')[0]) %}
+        {% if not execute or not (poc_block_waiting(entry, relation) | trim) %}
+            {% if not ns.first %}union all {% endif %}select * from {{ relation }}
+            {% set ns.first = false %}
+        {% endif %}
+    {% endfor %}
+    {% if ns.first %}
+        {% do exceptions.raise_compiler_error('poc_observations: no Gold block table exists') %}
+    {% endif %}
+{% endmacro %}
+
+{# 'waiting' (rendered) when the block of `entry` (model:source_system) has no table and the plan declared
+   it waiting; '' when its table exists; a compiler error when it has no table and was not declared. #}
+{% macro poc_block_waiting(entry, relation) %}
+    {%- set model = entry.split(':')[0] -%}
+    {%- if load_relation(relation) is none -%}
+        {%- if model in var('waiting_blocks', []) -%}
+            {%- do log('Gold block ' ~ relation ~ ' is waiting (source tables do not exist yet): zero rows', info=true) -%}
+            waiting
+        {%- else -%}
+            {%- do exceptions.raise_compiler_error(
+                'Gold block ' ~ model ~ ' (' ~ relation ~ ') does not exist and changed.py did not declare it '
+                ~ 'waiting (var waiting_blocks): build it first, e.g. select ' ~ model ~ '+'
+            ) -%}
+        {%- endif -%}
+    {%- endif -%}
+{% endmacro %}
+
+{# The source_system of each waiting block (poc_block_waiting), quoted and comma-separated ('' at parse
+   time). #}
+{% macro poc_absent_blocks() %}
+    {%- set absent = [] -%}
+    {%- for entry in poc_block_models().split() -%}
+        {%- if execute and poc_block_waiting(entry, ref(entry.split(':')[0])) | trim -%}
+            {%- do absent.append("'" ~ entry.split(':')[1] ~ "'") -%}
+        {%- endif -%}
+    {%- endfor -%}
+    {{- absent | join(', ') -}}
 {% endmacro %}
 
 {# series_key: measure × geography × breakdown codes, readable; an unmatched area keeps its source code so
@@ -312,6 +365,13 @@
         values
         ('nbp', 'fx_A', 'NBP exchange rates, table A'),
         ('nbp', 'fx_C', 'NBP exchange rates, table C'),
-        ('nbp', 'gold', 'NBP gold fixings')
+        ('nbp', 'gold', 'NBP gold fixings'),
+        ('mf_public_debt', 'debt_gdp', 'Public debt in relation to GDP (MF)'),
+        ('mf_public_debt', 'debt', 'Public debt (MF)'),
+        ('mf_public_debt', 'edp_debt', 'General government (EDP) debt by instrument (MF)'),
+        ('mf_treasury_debt', 'debt_instrument', 'State Treasury debt by instrument (MF)'),
+        ('mf_state_budget', 'execution_ytd', 'State budget execution, cumulative (MF)'),
+        ('mf_state_budget', 'plan', 'State budget act (MF)'),
+        ('krus', 'benefits', 'KRUS pensions and benefits')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}

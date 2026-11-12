@@ -16,9 +16,9 @@ briefs: {window_days: 45, extreme_min_periods: 12, geographies: [PL, EU27]}
 schedule:
   - {cron: "30 7 * * *", run: "silver/gold: build models"}
 
-# Transient catalog errors: a build whose only failures are HTTP 429 from the R2 Data Catalog or
-# Iceberg commit failures (#2574) is resumed with `dbt retry` (its failed and skipped nodes) after
-# each of these waits, in seconds.
+# Transient catalog errors: a build whose failed models all failed on HTTP 429 from the R2 Data
+# Catalog or on Iceberg commit failures (#2574) is resumed with `dbt retry` (its failed and skipped
+# nodes) after each of these waits, in seconds; a failing data test does not prevent it (#2789).
 rate_limit_retry_waits: [60, 180, 420]
 rate_limit_retry_threads: 2     # fewer parallel catalog calls than the build's 4
 commit_retry_threads: 1         # after an Iceberg commit failure: no concurrent commits
@@ -62,7 +62,7 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)
        gold.dimension, gold.dimension_alias, gold.dim_dimension,  # catalogue: axes
-       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_wdi, gold.build_unctad, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth]   # Gold v1 (warehouse/models/gold, docs/model.md)
+       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_public_finance, gold.build_wdi, gold.build_unctad, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth]   # Gold v1 (warehouse/models/gold, docs/model.md)
 demo_namespaces: [demo_bronze, demo_silver, demo_gold]  # phase 2 demo warehouse (program plan §3.3); never in the public catalogue
 
 # Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
@@ -94,6 +94,10 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   topic_rank: {rows: 1000}  # 5 periods × 35 topics
   topic_quality: {rows: 1000}
   topic_volume: {rows: 50000}  # 35 topics × days since the first landing  # topics (O32): ~150,000 headlines in 400 days (7 feeds)
+  public_debt: {rows: 13500}  # 8,895 (Dev trial 43099813876)
+  treasury_debt: {rows: 125000}  # 83,206 (Dev trial 43099813876), monthly since 2001
+  budget_execution: {rows: 2800}  # 1,845 (Dev trial 43099813876), 2018-2026, ~200 a year
+  krus_benefits: {rows: 900}  # 576 (Dev trial 43099813876), quarters and years since 2020
   nbp_policy_rates: {rows: 2000}  # 390 rows, 96 archive dates since 1998 (Dev trial 42777711811)
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865
@@ -117,6 +121,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_dbw: {rows: 600000}  # 312,512 (10 Nov) + ~110,000 slice blocks (#2592)
   poc_build_eurostat: {rows: 800000}
   poc_build_nbp: {rows: 600000}
+  poc_build_public_finance: {rows: 8600}  # 5,727 (Dev trial 43099813876)
   poc_build_unctad: {rows: 18000}  # 11,871 (Dev trial 43100532689): 29 areas × 10 measures
   poc_build_wdi: {rows: 500000}  # + 16 slice indicators, all economies (#2592)
   poc_concept_measures: {rows: 1000}

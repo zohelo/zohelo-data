@@ -22,7 +22,8 @@ catalog (readable by DuckDB and R2 SQL). Iceberg tables cannot be renamed in the
 transaction that created them, so the profile commits each statement separately; a
 table rebuild is therefore not atomic. When the catalog's rate limit (HTTP 429) or an
 Iceberg commit that does not yet see the build's own `__dbt_tmp` table (#2574) fails a
-build, `build.py` resumes it with `dbt retry` on fewer threads (`warehouse.yaml`
+model, `build.py` resumes the build with `dbt retry` on fewer threads, also when a data test
+failed in the same build (#2789; the test still fails the build) (`warehouse.yaml`
 `rate_limit_retry_*`, `commit_retry_threads`), which also replaces tables a failed rename
 left as `__dbt_backup`.
 
