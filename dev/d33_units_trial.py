@@ -106,6 +106,8 @@ def local(sql: str) -> str:
 
 
 def arrow(cur) -> pa.Table:
+    if hasattr(cur, "to_arrow_table"):  # duckdb 2
+        return cur.to_arrow_table()
     got = cur.arrow()
     return got.read_all() if hasattr(got, "read_all") else got
 
