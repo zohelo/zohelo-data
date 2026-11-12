@@ -24,53 +24,8 @@ Q = "?csvType=full&useColumnShortNames=true"
 
 # group -> list of (url, mode, arg)
 GROUPS = {
-    "CD-004 nasdaq": [
-        ("https://data.nasdaq.com/", "links", r"terms|legal|licen|pricing"),
-        ("https://docs.data.nasdaq.com/docs/getting-started", "text", r"premium|free|retired|API key"),
-        ("https://docs.data.nasdaq.com/docs/rate-limits-1", "text", r"calls per"),
-    ],
-    "CD-009 stooq": [
-        ("https://stooq.pl/", "links", r"regulamin|warunki|zastrze|terms|polityk|kontakt|db"),
-        ("https://stooq.pl/db/h/", "text", r"captcha|apikey|api key|limit|regulamin|kod z obrazka"),
-        ("https://stooq.pl/q/d/l/?s=wig20&i=d", "raw", "300"),
-    ],
-    "CD-006 CD-007 knf gpw": [
-        ("https://www.knf.gov.pl/dla_rynku/espi", "links", r"oam|moam|espi|raport"),
-        ("http://moam.knf.gov.pl/moam.nsf", "full", "500"),
-        ("https://www.gpw.pl/espi-ebi-reports", "rawgrep", r"rss|\.csv|\.xlsx|export|ajaxindex|geru_id=\d+"),
-        ("https://www.gpw.pl/rss", "full", "500"),
-        ("https://www.gpw.pl/disclaimer", "full", "900"),
-        ("https://www.gpw.pl/ebi", "head", ""),
-    ],
-    "CD-013 filings.xbrl.org": [
-        ("https://filings.xbrl.org/api/filings?filter%5Bcountry%5D=PL&page%5Bsize%5D=1", "raw", "900"),
-        ("https://filings.xbrl.org/indexes/filings-2025.json", "head", ""),
-        ("https://filings.xbrl.org/about.html", "text", r"restrictions|licen|terms"),
-    ],
-    "CD-014 companies house": [
-        ("https://download.companieshouse.gov.uk/en_output.html", "links", r"\.zip"),
-        ("https://download.companieshouse.gov.uk/BasicCompanyDataAsOneFile-2026-11-01.zip", "head", ""),
-        ("https://download.companieshouse.gov.uk/en_pscdata.html", "text", r"free of charge|licen"),
-        ("https://www.gov.uk/guidance/companies-house-data-products", "text", r"no rules or requirements|Open Government"),
-    ],
-    "CD-028 openalex": [
-        ("https://api.openalex.org/works?filter=authorships.countries:PL&group_by=publication_year", "raw", "700"),
-        ("https://api.openalex.org/works?filter=authorships.countries:PL,open_access.is_oa:true&group_by=publication_year", "raw", "300"),
-        ("https://openalex.s3.amazonaws.com/LICENSE.txt", "raw", "700"),
-        ("https://openalex.s3.amazonaws.com/RELEASE_NOTES.txt", "raw", "300"),
-        ("https://help.openalex.org/access/pricing/", "text", r"CC0|per day|API key"),
-    ],
-    "CD-031 owid": [("https://ourworldindata.org/faqs", "text", r"CC BY|third-party|license terms")]
-    + [(f"https://ourworldindata.org/grapher/{s}.csv{Q}", "owid", s) for s in OWID]
-    + [(f"https://ourworldindata.org/grapher/{s}.metadata.json", "owidmeta", s) for s in OWID],
-    "CD-033 otodom": [
-        ("https://www.otodom.pl/regulamin", "text", r"agregowani|pisemnej zgody|automat|robot|kopiowa"),
-        ("https://www.otodom.pl/wiadomosci/dane/aktualne-dane/", "rawgrep", r"<iframe[^>]+src=[^>]+|\.csv|\.xlsx|infogram|datawrapper|flourish|tableau|powerbi|lookerstudio"),
-        ("https://www.otodom.pl/wiadomosci/dane-otodom-aktualne-ceny-ofertowe-mieszkan-i-domow/", "rawgrep", r"<iframe[^>]+src=[^>]+|\.csv|\.xlsx|infogram|datawrapper|flourish|tableau|powerbi|lookerstudio"),
-    ],
-    "CD-034 otomoto": [
-        ("https://www.otomoto.pl/news/raport-rynkowy-otomoto", "rawgrep", r"<iframe[^>]+src=[^>]+|\.csv|\.xlsx|infogram\.com/[\w-]+|regulamin[^\"']*|datawrapper"),
-        ("https://www.otomoto.pl/regulamin", "text", r"agregowani|pisemnej zgody|automat|robot|kopiowa"),
+    "CD-034 otomoto infogram": [
+        ("https://infogram.com/0826otomotoinsights-1hxj48mj9m8o52v", "infogram", ""),
     ],
 }
 ROBOTS = {}
@@ -185,6 +140,35 @@ def one(url, mode, arg):
             out.append(f"   bytes={len(raw)} rows={len(rows) - 1} header={head[:6]} POL rows={len(pol)} "
                        f"POL years={yrs[0] if yrs else None}..{yrs[-1] if yrs else None} empty value cells={empty} "
                        f"last POL row={pol[-1][:6] if pol else None}")
+        elif mode == "infogram":
+            m = re.search(r"window\.infographicData\s*=\s*(\{.*?\});\s*</script>", txt, re.S)
+            out.append(f"   html {len(txt)} chars; title={plain(''.join(re.findall(r'(?is)<title>.*?</title>', txt)))[:120]}; "
+                       f"infographicData found={bool(m)}; download/csv/xlsx words={sorted(set(re.findall(r'(?i)download|\.csv|\.xlsx', txt)))[:6]}")
+            if m:
+                d = json.loads(m.group(1))
+                tables = []
+
+                def walk(o, path):
+                    if isinstance(o, dict):
+                        for k, v in o.items():
+                            if k == "data" and isinstance(v, list) and v and isinstance(v[0], list) and v[0] and isinstance(v[0][0], list):
+                                tables.append((path, v))
+                            else:
+                                walk(v, path + "/" + str(k))
+                    elif isinstance(o, list):
+                        for i, v in enumerate(o):
+                            walk(v, path + f"[{i}]")
+
+                def cell(c):
+                    return str(c.get("value", "") if isinstance(c, dict) else c)[:22]
+
+                walk(d, "")
+                out.append(f"   json {len(m.group(1))} chars; chart data blocks={len(tables)}; sheets={sum(len(t) for _, t in tables)}; "
+                           f"cells={sum(len(r) for _, t in tables for sh in t for r in sh)}")
+                for path, t in tables[:12]:
+                    sh = t[0]
+                    out.append(f"   ..{path[-46:]}: sheets={len(t)} rows={len(sh)} head={[cell(c) for c in sh[0][:5]]} "
+                               f"row2={[cell(c) for c in (sh[1][:5] if len(sh) > 1 else [])]} last={[cell(c) for c in sh[-1][:5]]}")
         elif mode == "owidmeta":
             d = json.loads(txt)
             out.append(f"   top keys={list(d)[:8]}")
