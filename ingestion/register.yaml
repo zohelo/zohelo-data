@@ -7336,7 +7336,8 @@ sources:
   name: Gdańsk Open Data and GTFS/GTFS-Realtime feeds
   short_name: Gdańsk open data and GTFS
   provider: Gmina Miasta Gdańska / TRISTAR
-  status: approved
+  source_system: gtfs_gdansk
+  status: built
   family: H
   kpi: false
   geography: Gdańsk, Poland
@@ -7397,7 +7398,8 @@ sources:
   name: Poznań GTFS and GTFS-Realtime open data
   short_name: Poznań GTFS
   provider: Zarząd Transportu Miejskiego w Poznaniu / Miasto Poznań
-  status: approved
+  source_system: gtfs_poznan
+  status: built
   family: H
   kpi: false
   geography: Poznań service area, Poland
@@ -7449,7 +7451,8 @@ sources:
   name: Kraków KMK GTFS and GTFS-Realtime feeds
   short_name: Kraków GTFS
   provider: Zarząd Transportu Publicznego w Krakowie / Miasto Kraków
-  status: approved
+  source_system: gtfs_krakow
+  status: built
   family: H
   kpi: false
   geography: Kraków metropolitan service area, Poland
@@ -7493,7 +7496,8 @@ sources:
   name: Wrocław Open Data public-transport schedules and vehicle positions
   short_name: Wrocław transport open data
   provider: Gmina Wrocław / Centrum Usług Informatycznych
-  status: approved
+  source_system: gtfs_wroclaw
+  status: built
   family: H
   kpi: false
   geography: Wrocław, Poland

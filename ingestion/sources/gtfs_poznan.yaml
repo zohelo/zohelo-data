@@ -1,0 +1,45 @@
+source_system: gtfs_poznan
+description: "ZTM Poznań static GTFS timetable: stops, routes and scheduled trips per service day"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-030, city GTFS family (ingestion/common/gtfs.py,
+# docs/sources/gtfs_poznan.md). Bulk feature: one stable URL that serves the current timetable period as a ZIP
+# (attachment name <first>_<last>.zip, no Last-Modified header). The feed covers about two weeks ahead and is
+# replaced per timetable period, so every changed download is kept: entity = feed + validity window
+# (gtfs_<first>_<last> service date), version = download time; an unchanged file is skipped by its SHA-256. Restart
+# unit: one download. GTFS-Realtime (otwarte-dane/gtfs-rt/) is out of scope.
+extraction:
+  kind: bulk_file   # declares the feed URL; the landing activities are ingestion/to_landing/gtfs_poznan/ (window entities)
+  bulk_file:
+    files:
+      - entity: gtfs
+        url: https://www.ztm.poznan.pl/pl/dla-deweloperow/getGTFSFile
+        format: zip
+        version: ingested
+  initial: bulk
+  production: snapshot                  # each file is the whole timetable of its window
+  incremental_policy: changed_since_last  # SHA-256 of the download
+  schedule: # UTC; a new file per timetable period (about two weeks ahead); Monday and Thursday so no service day is lost even after one failed run
+    - {cron: "25 3 * * 1,4", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gtfs_poznan/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}   # every window is its own entity: its newest copy is kept
+  prune: report
+bronze: [bronze.gtfs_poznan_records, bronze.gtfs_poznan_rejected_files]
+silver: [silver.gtfs_poznan_stops, silver.gtfs_poznan_routes, silver.gtfs_poznan_service_days]
+gold: [gold.build_gtfs_poznan, gold.transit_stops_gtfs_poznan, gold.transit_routes_gtfs_poznan]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gtfs_poznan_stops: {rows: 4500}
+  gtfs_poznan_routes: {rows: 300}
+  gtfs_poznan_service_days: {rows: 3000}
+  poc_build_gtfs_poznan: {rows: 4000}
+  transit_stops_gtfs_poznan: {rows: 4500}
+  transit_routes_gtfs_poznan: {rows: 300}
+
+bronze_latest_only: true   # policy #822/#845: per window entity; earlier windows stay, they are other entities
+# Refresh policy for all layers (D32): one ZIP of about 12 MB per timetable period; Bronze keeps one file per window
+# (stop_times as one row per trip) and Silver is rebuilt in full from them.
+refresh: {mode: full, decided: "D32 + #2978"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

@@ -1,0 +1,49 @@
+source_system: gtfs_wroclaw
+description: "Wrocław public transport static GTFS timetable (Otwarte Dane Wrocław): stops, routes and scheduled trips per service day"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-032, city GTFS family (ingestion/common/gtfs.py,
+# docs/sources/gtfs_wroclaw.md). Bulk feature: the dataset "Rozkład jazdy transportu publicznego" lists its GTFS
+# snapshots newest first on https://open-data.cui.wroclaw.pl/hdb/ft/6/, each with its own download id, so the URL is
+# taken from that page at run time (url_from, first matching link). The old catalogue under www.wroclaw.pl/open-data/
+# is disallowed by robots.txt and is not used. Every changed download is kept: entity = feed + validity window
+# (gtfs_<first>_<last> service date), version = Last-Modified (download time when absent); an unchanged file is
+# skipped by its SHA-256. Restart unit: one download. Vehicle positions are out of scope.
+extraction:
+  kind: bulk_file   # declares the listing page; the landing activities are ingestion/to_landing/gtfs_wroclaw/ (window entities)
+  bulk_file:
+    files:
+      - entity: gtfs
+        url_from:
+          page: https://open-data.cui.wroclaw.pl/hdb/ft/6/
+          pattern: /hdb/download/
+          pick: first
+        format: zip
+        version: last_modified
+  initial: bulk
+  production: snapshot                  # each file is the whole timetable of its window
+  incremental_policy: changed_since_last  # SHA-256 of the download
+  schedule: # UTC; a new snapshot per timetable change; Monday and Thursday, unchanged files are skipped
+    - {cron: "55 3 * * 1,4", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gtfs_wroclaw/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}   # every window is its own entity: its newest copy is kept
+  prune: report
+bronze: [bronze.gtfs_wroclaw_records, bronze.gtfs_wroclaw_rejected_files]
+silver: [silver.gtfs_wroclaw_stops, silver.gtfs_wroclaw_routes, silver.gtfs_wroclaw_service_days]
+gold: [gold.build_gtfs_wroclaw, gold.transit_stops_gtfs_wroclaw, gold.transit_routes_gtfs_wroclaw]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gtfs_wroclaw_stops: {rows: 4500}
+  gtfs_wroclaw_routes: {rows: 300}
+  gtfs_wroclaw_service_days: {rows: 3000}
+  poc_build_gtfs_wroclaw: {rows: 4000}
+  transit_stops_gtfs_wroclaw: {rows: 4500}
+  transit_routes_gtfs_wroclaw: {rows: 300}
+
+bronze_latest_only: true   # policy #822/#845: per window entity; earlier windows stay, they are other entities
+# Refresh policy for all layers (D32): one ZIP of about 11 MB per timetable change; Bronze keeps one file per window
+# (stop_times as one row per trip) and Silver is rebuilt in full from them.
+refresh: {mode: full, decided: "D32 + #2980"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

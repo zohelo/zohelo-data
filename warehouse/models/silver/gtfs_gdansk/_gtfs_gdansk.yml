@@ -1,0 +1,81 @@
+version: 2
+models:
+  - name: gtfs_gdansk_stops
+    description: >-
+      Stops of the ZTM Gdańsk static GTFS timetable (PL-ENV-029), newest landed window of each feed ['gtfs']. Grain: feed ×
+      stop_id. Trial counts in the pull request.
+    tests:
+      - unique:
+          column_name: "feed || '|' || stop_id"
+      - gtfs_feeds_present:
+          arguments:
+            feeds: ['gtfs']
+    columns:
+      - name: feed
+        tests: [not_null]
+      - name: stop_id
+        tests: [not_null]
+      - name: location_type
+        description: GTFS location_type (0 stop, 1 station, 2 entrance, 3 generic node, 4 boarding area; empty = 0).
+        tests: [not_null, {accepted_values: {arguments: {values: [0], quote: false}}}]
+      - name: raw_sha256
+        description: Landing SHA-256 of the window's ZIP (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: gtfs_gdansk_routes
+    description: >-
+      Routes of the ZTM Gdańsk static GTFS timetable (PL-ENV-029), newest landed window of each feed ['gtfs']. Grain: feed ×
+      route_id.
+    tests:
+      - unique:
+          column_name: "feed || '|' || route_id"
+      - gtfs_feeds_present:
+          arguments:
+            feeds: ['gtfs']
+    columns:
+      - name: feed
+        tests: [not_null]
+      - name: route_id
+        tests: [not_null]
+      - name: route_type
+        description: GTFS route_type as published (values seen in the trial).
+        tests: [not_null, {accepted_values: {arguments: {values: [0, 3], quote: false}}}]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: gtfs_gdansk_service_days
+    description: >-
+      Scheduled service of the ZTM Gdańsk static GTFS timetable (PL-ENV-029) per service day, accumulated over every landed
+      window of each feed ['gtfs']: trips running that day, departures (their stop_times rows) and routes, by
+      GTFS route type. Service days = calendar.txt weekday pattern from start_date to end_date, plus calendar_dates.txt
+      exception_type 1, minus exception_type 2. A day held by several windows takes the newest one downloaded on or before that day (else the earliest)
+      (snapshots_covering counts them). Grain: feed × service_date × route_type.
+    tests:
+      - unique:
+          column_name: "feed || '|' || service_date || '|' || route_type"
+      - gtfs_feeds_present:
+          arguments:
+            feeds: ['gtfs']
+      - gtfs_snapshot_choice:
+          arguments:
+            records: "source('gtfs_gdansk', 'gtfs_gdansk_records')"
+      - gtfs_service_days_contiguous:
+          config:
+            severity: warn
+      - gtfs_value_between:
+          arguments:
+            column_name: trips
+            min_value: 1
+            max_value: 100000
+    columns:
+      - name: feed
+        tests: [not_null]
+      - name: service_date
+        tests: [not_null]
+      - name: route_type
+        tests: [not_null, {accepted_values: {arguments: {values: [0, 3], quote: false}}}]
+      - name: snapshot_entity
+        tests: [not_null]
+      - name: snapshot_date
+        description: Download day (Europe/Warsaw) of the chosen snapshot.
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

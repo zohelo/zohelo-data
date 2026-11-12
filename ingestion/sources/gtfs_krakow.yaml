@@ -1,0 +1,53 @@
+source_system: gtfs_krakow
+description: "ZTP Kraków static GTFS timetables (buses, agglomeration buses, trams): stops, routes and scheduled trips per service day"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-031, city GTFS family (ingestion/common/gtfs.py,
+# docs/sources/gtfs_krakow.md). Bulk feature: three static GTFS ZIPs listed on https://gtfs.ztp.krakow.pl/, one
+# request at a time, 10 s apart. The feeds have no history at the source, so every changed download is kept:
+# entity = feed + validity window (<feed>_<first>_<last> service date), version = Last-Modified (download time when
+# absent); an unchanged file is skipped by its SHA-256. Restart unit: one feed download. GTFS-Realtime is out of scope.
+# Licence unresolved (no terms on the feed page): built and kept internal by the licence gate (O37).
+extraction:
+  kind: bulk_file   # declares the feed URLs; the landing activities are ingestion/to_landing/gtfs_krakow/ (window entities)
+  bulk_file:
+    files:
+      - entity: GTFS_KRK_A
+        url: https://gtfs.ztp.krakow.pl/GTFS_KRK_A.zip
+        format: zip
+        version: last_modified
+      - entity: GTFS_KRK_M
+        url: https://gtfs.ztp.krakow.pl/GTFS_KRK_M.zip
+        format: zip
+        version: last_modified
+      - entity: GTFS_KRK_T
+        url: https://gtfs.ztp.krakow.pl/GTFS_KRK_T.zip
+        format: zip
+        version: last_modified
+  initial: bulk
+  production: snapshot                  # each file is the whole timetable of its window
+  incremental_policy: changed_since_last  # SHA-256 of the download
+  schedule: # UTC; the portal marks the dataset daily; Monday and Thursday so no service day is lost even after one failed run
+    - {cron: "45 3 * * 1,4", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gtfs_krakow/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}   # every window is its own entity: its newest copy is kept
+  prune: report
+bronze: [bronze.gtfs_krakow_records, bronze.gtfs_krakow_rejected_files]
+silver: [silver.gtfs_krakow_stops, silver.gtfs_krakow_routes, silver.gtfs_krakow_service_days]
+gold: [gold.build_gtfs_krakow, gold.transit_stops_gtfs_krakow, gold.transit_routes_gtfs_krakow]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gtfs_krakow_stops: {rows: 6000}
+  gtfs_krakow_routes: {rows: 400}
+  gtfs_krakow_service_days: {rows: 4500}
+  poc_build_gtfs_krakow: {rows: 4500}
+  transit_stops_gtfs_krakow: {rows: 6000}
+  transit_routes_gtfs_krakow: {rows: 400}
+
+bronze_latest_only: true   # policy #822/#845: per window entity; earlier windows stay, they are other entities
+# Refresh policy for all layers (D32): three small ZIPs twice a week; Bronze keeps one file per window (stop_times as
+# one row per trip) and Silver is rebuilt in full from them.
+refresh: {mode: full, decided: "D32 + #2979"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
