@@ -16,7 +16,21 @@ with bounds (concept_key, source_system, value_min, value_max) as (
     ('gdp_per_capita', 'eurostat', 0, 2e5),
     ('gdp_per_capita', 'world_bank_wdi', 0, 5e5),
     ('gdp_volume_growth', 'eurostat', -50, 100),
-    ('gdp_volume_growth', 'world_bank_wdi', -100, 200)
+    ('gdp_volume_growth', 'world_bank_wdi', -100, 200),
+    ('core_inflation', 'eurostat', -10, 600)  -- 550.6 (Dev trial 43093114523, a candidate country's 1990s),
+    ('min_wage', 'eurostat', 0, 1e6)  -- national currencies, 322,800 (Dev trial 43093114523),
+    ('adult_learning', 'gus_bdl', 0, 100),
+    ('extreme_poverty', 'gus_bdl', 0, 100),
+    ('industrial_production', 'gus_bdl', 0, 300)  -- index, previous year = 100,
+    ('construction_output', 'gus_bdl', 0, 300)  -- index, previous year = 100,
+    ('employment_enterprise', 'gus_bdl', 0, 2e7),
+    ('median_wage', 'gus_bdl', 0, 1e5),
+    ('median_wage', 'gus_dbw', 0, 1e5),
+    ('price_m2_secondary', 'gus_bdl', 0, 1e5),
+    ('price_m2_secondary', 'gus_dbw', 0, 1e5),
+    ('arope_rate', 'gus_dbw', 0, 100),
+    ('long_term_unemployment', 'gus_dbw', 0, 100),
+    ('registered_unemployed', 'gus_dbw', 0, 5e6)
 ),
 
 metrics as (
