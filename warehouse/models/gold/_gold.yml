@@ -191,5 +191,15 @@ models:
         tests: [not_null, {relationships: {arguments: {to: ref('poc_dim_geography'), field: geography_key}}}]
       - name: contiguity
         tests: [{accepted_values: {arguments: {values: ['rook', 'queen']}}}]
+  - name: poc_build_ids
+    description: >-
+      Build stage — World Bank IDS external debt stocks (US$, % of GNI) and debt service (US$, % of GNI, % of
+      exports), debtor economy × counterpart WLD, annual, actual years only (no projections); about 120 low- and
+      middle-income economies and their World Bank groups, no Poland or EU member state.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
   - name: poc_build_check
     description: Per activated block — rows, series, unmatched geography, dates, flags; read after every build.

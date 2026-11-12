@@ -3,6 +3,7 @@ persons,os.,persons,osoby,false
 mln_ncu,mln,"million, source currency","mln, waluta źródła",false
 ncu_per_person,/os.,source currency per person,waluta źródła na osobę,false
 pct,%,per cent,procent,true
+per_100,/100,per 100 persons,na 100 osób,true
 pct_labour_force,%,% of labour force,% aktywnych zawodowo,true
 pct_population,%,% of population,% ludności,true
 years,lata,years,lata,false
@@ -39,4 +40,8 @@ entities,podm.,legal entities,podmioty,false
 list_entries,wpisy,list entries,wpisy,false
 thousand_persons,tys. os.,thousand persons,tysiące osób,false
 thousand_ha,tys. ha,thousand hectares,tysiące hektarów,false
+wgi_estimate,est.,"governance estimate, about -2.5 to 2.5","ocena jakości rządzenia, ok. -2,5 do 2,5",true
+index_world_100,świat=100,"index, world = 100","indeks, świat = 100",true
+pct_gni,% DNB,% of GNI,% DNB,true
+pct_exports,% eksportu,"% of exports of goods, services and primary income","% eksportu towarów, usług i dochodów pierwotnych",true
 pln_per_m2,zł/m²,PLN per square metre,zł za m²,false

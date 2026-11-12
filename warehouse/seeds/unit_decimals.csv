@@ -3,6 +3,7 @@ persons,0
 mln_ncu,0
 ncu_per_person,0
 pct,1
+per_100,1
 pct_labour_force,1
 pct_population,1
 years,1
@@ -39,4 +40,8 @@ entities,0
 list_entries,0
 thousand_persons,1
 thousand_ha,0
+wgi_estimate,2
+index_world_100,1
+pct_gni,1
+pct_exports,1
 pln_per_m2,0
