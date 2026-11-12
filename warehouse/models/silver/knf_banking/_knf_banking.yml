@@ -1,0 +1,53 @@
+version: 2
+models:
+  - name: knf_banking_series
+    description: >-
+      KNF monthly banking-sector data (register PLG-017), newest copy of each workbook (bronze.knf_banking_cells):
+      entity current ("Dane miesięczne sektora bankowego", sheets Struktura, Bilans, Należności_1 to _5, Zobowiązania,
+      Pozabilans, RZiS, Hipoteki, Płynność, Adekwatność; from January 2018) and archive (Tabela 01 to 11 and 07a, to
+      December 2017, accounting before IFRS 9: a separate series, not joined to the current one). Grain: entity x
+      sheet_name x source_row x period_end; the readable key is entity x sheet x header_row (bank group block) x
+      section_label x item_label x item_occurrence x period_end. Values as stored, no rescaling: unit_code pln
+      ("Dane w zł", zloty), units ("Dane w sztukach", counts), ratio ('%'-formatted cells stored as fractions) or
+      unstated (the archive prints no unit). frequency M (month ends) or Q (quarter ends: Adekwatność, Należności_5,
+      the NSFR rows of Płynność, archive Tabela 07a and 10). A text cell under a header date keeps value null and
+      the text in value_marker (never 0); empty cells give no row.
+    tests:
+      - unique:
+          column_name: "entity || '|' || sheet_name || '|' || source_row || '|' || cast(period_end as varchar)"
+      - unique:
+          column_name: "entity || '|' || sheet_name || '|' || header_row || '|' || coalesce(section_label, '') || '|' || item_label || '|' || item_occurrence || '|' || cast(period_end as varchar)"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: ['current', 'archive']}}}]
+      - name: sheet_name
+        tests: [not_null]
+      - name: bank_group
+        description: Bank group as printed above the block's header row.
+        tests: [not_null]
+      - name: bank_group_code
+        description: Null when KNF prints a bank group the model does not know (the test then fails).
+        tests:
+          - not_null
+          - accepted_values: {arguments: {values: ['sector', 'commercial', 'commercial_excl_affiliating', 'branches', 'cooperative', 'assets_over_200m_pln', 'assets_upto_200m_pln']}}
+      - name: item_label
+        tests: [not_null]
+      - name: item_occurrence
+        tests: [not_null]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: ['M', 'Q']}}}]
+      - name: period_end
+        tests: [not_null]
+      - name: period_start
+        tests: [not_null]
+      - name: value
+        description: The stored number; null only for a text marker cell (value_marker).
+        tests:
+          - not_null:
+              config:
+                where: "value_marker is null"
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['pln', 'units', 'ratio', 'unstated']}}}]
+      - name: raw_sha256
+        description: Landing SHA-256 of the workbook (lineage to Landing/Archive).
+        tests: [not_null]

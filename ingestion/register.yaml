@@ -4528,7 +4528,8 @@ sources:
   name: Banking-sector data and sector information
   short_name: KNF banking sector data
   provider: Polish Financial Supervision Authority (KNF)
-  status: approved
+  source_system: knf_banking
+  status: built
   family: C
   kpi: true
   geography: Poland
