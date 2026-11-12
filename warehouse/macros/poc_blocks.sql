@@ -455,6 +455,7 @@
     poc_build_ecb:ecb
     poc_build_ids:world_bank_ids
     poc_build_un_wpp:un_wpp
+    poc_build_gios_groundwater:gios_groundwater
 {% endmacro %}
 
 {# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
@@ -563,6 +564,7 @@
         ('mf_biala_lista', 'flat_file', 'MF VAT white list, flat file'),
         ('gugik_prg', 'jednostki_administracyjne', 'PRG administrative units'),
         ('mf_jst_budgets', 'jst_budget', 'MF local-government budget summaries (year to date)'),
-        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)')
+        ('mrpips_unemployment', 'registered_unemployment', 'MRPiPS registered unemployment (end of month)'),
+        ('gios_groundwater', 'quality_classes', 'GIOŚ groundwater quality classes of monitoring points')
     ) as t (source_system, block_id, block_name)
 {% endmacro %}

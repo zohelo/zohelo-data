@@ -192,5 +192,17 @@ models:
         tests: [not_null]
       - name: date_key
         tests: [not_null]
+  - name: poc_build_gios_groundwater
+    description: >-
+      Build stage — GIOŚ groundwater monitoring points by final quality class (I-V and all) and the share in classes
+      I-III, per year and monitoring network (diagnostic, operational, not stated 2004-2006; one measure each), Poland
+      (the workbooks publish no TERYT code).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
   - name: poc_build_check
     description: Per activated block — rows, series, unmatched geography, dates, flags; read after every build.

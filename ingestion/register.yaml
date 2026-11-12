@@ -5873,7 +5873,8 @@ sources:
   name: Groundwater monitoring results (Monitoring Jakości Wód Podziemnych)
   short_name: GIOŚ groundwater
   provider: GIOŚ / Państwowy Instytut Geologiczny–PIB
-  status: approved
+  source_system: gios_groundwater
+  status: built
   family: G
   kpi: true
   geography: Poland

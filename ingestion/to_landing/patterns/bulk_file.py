@@ -434,6 +434,7 @@ def load_file(client: Any, bucket: str, source: str, spec: dict[str, Any], landi
         "detail": {
             "pattern": "bulk_file",
             "format": fmt,
+            **(spec.get("detail") or {}),  # what a source module knows about the file (gios_groundwater: link text)
             **detail,
             "http": {
                 "last_modified": headers.get("Last-Modified"),

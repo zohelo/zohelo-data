@@ -1,0 +1,38 @@
+source_system: gios_groundwater
+description: "GIOŚ / PIG-PIB groundwater quality monitoring (Państwowy Monitoring Środowiska): yearly XLSX workbooks of indicator results and final quality classes per monitoring point, 1991- (mjwp.gios.gov.pl)"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-012. Bulk feature: the groundwater portal of GIOŚ
+# (mjwp.gios.gov.pl, "Wyniki badań") has one result page per year 2008-2025 and two for 1991-2003 and 2004-2007,
+# all in each page's menu; every page links its XLSX workbooks under hash names that change when a file is re-issued
+# (Dev probe 43286691466, #2870: 19 pages, 74 workbooks, 0.1-1.5 MB each). The link text names year and workbook,
+# so the links are read from the pages (ingestion/to_landing/gios_groundwater/): entity = workbook kind x year
+# (inorganic_<year> 1991-, organic_<year> 2009-, classes_<year> 2004-, nitrate_inorganic_<year> and
+# nitrate_classes_<year> 2025-), version = Last-Modified, written only when the SHA-256 changed; the newest two
+# years and any held workbook whose URL changed are downloaded again on each run. Restart unit: one workbook.
+# Terms: Open Data Act re-use for any purpose with the source line stated on the result pages (register PL-ENV-012).
+extraction:
+  initial: bulk
+  production: snapshot                  # each workbook is the year as published; a re-issue replaces it
+  incremental_policy: changed_since_last  # page links + Last-Modified / SHA-256
+  schedule: # UTC; GIOŚ publishes a year's workbooks once, in March of the next year (2025: 19 March 2026)
+    - {cron: "40 5 * 3-5 2", run: "full dataflow: landing → bronze → silver → gold → portal"}   # weekly, March-May
+    - {cron: "40 5 8 1,2,6-12 *", run: "full dataflow: landing → bronze → silver → gold → portal"}  # monthly otherwise (re-issues)
+
+landing: 01_landing/gios_groundwater/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.gios_groundwater_cells, bronze.gios_groundwater_rejected_files]
+silver: [silver.gios_groundwater_quality_classes, silver.gios_groundwater_samples,
+         silver.gios_groundwater_results_inorganic_1991_2007, silver.gios_groundwater_results_inorganic,
+         silver.gios_groundwater_results_organic, silver.gios_groundwater_indicator_classes]
+gold: [gold.build_gios_groundwater, gold.metrics_groundwater_good_quality_share]
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a workbook
+# Refresh policy for all layers (D32): about 75 workbooks (about 15 MB), one new year a year and rare re-issues, no
+# changed-since interface beyond the page links; Bronze loads only new or changed workbooks; Silver and Gold are
+# rebuilt in full (each Silver table below 1 M rows: the results are split by kind and era, #822).
+refresh: {mode: full, decided: "D32 + #2870"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
