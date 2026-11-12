@@ -2332,7 +2332,9 @@ sources:
   name: Portal Statystyczny ZUS
   short_name: ZUS statistical portal
   provider: Zakład Ubezpieczeń Społecznych (ZUS)
-  status: approved
+  source_system: zus_psz
+  current: true
+  status: built
   family: B
   kpi: true
   geography: Poland and voivodeships, table-dependent
@@ -2375,11 +2377,15 @@ sources:
   research:
     priority: review-first
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
     - 'Route found (Dev probes 43091539492, 43162355678 on test/src-w2pl-probe): psz.zus.pl category pages (e.g. /kategorie/emerytury/stan-na-grudzien) link one XLSX per topic table and year under /documents/493365/<folder>/<name>.xlsx/<uuid>, 2011 onwards (.xls before 2014), about 25 topic families. A build needs a chosen family list (pensions in December by voivodeship and benefit type first, for the KPI zus_pension_avg).'
-    - Choose stable topic families
-    - Assess workbook schema drift
+    - 'Built (#2461): curated families landed by folder id (ingestion/to_landing/zus_psz FAMILIES): pensioners_dec
+      9888915 and pension_amount_dec 9888921 (December, Poland, 2018-), insured_pension 532853, insured_sickness_voiv
+      532793, payers_voiv 533093, absence_voiv 6744574 (quarterly, current year only on the portal), insured_health
+      1159389 (monthly, 2012-) and foreign_insured 3456951 (monthly, 2020-). Not built: .xls years (before 2014/2018),
+      the 2012-2022 insured-by-age summary file, new awards, disability and survivors pensions, benefits, medical
+      certification, rehabilitation and family programmes. No voivodeship pension table after 2011.'
     references:
     - https://psz.zus.pl/
     - https://psz.zus.pl/kategorie/ubezpieczeni/ubezpieczenia-emerytalne-i-rentowe
