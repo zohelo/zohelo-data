@@ -969,7 +969,8 @@ https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne (newest first,
 request at a time, 2 s apart; robots.txt has no Disallow (Dev trial 43285716017). Series and entities: quarterly
 insurance bulletin "Biuletyn Kwartalny. Rynek ubezpieczeń <q>/<year>", parts A-D (`bulletin_YYYY_qN_<part>`; 2023 Q4
 has no part D); OFE monthly data "Dane miesięczne OFE - <month> <year>" (`ofe_YYYY_MM`); IKE and IKZE yearly
-"Informacje o rynku IKE|IKZE ... 31 grudnia <year>" (`ike_YYYY`, `ikze_YYYY`). Releases from 2023 on. Version =
+"Informacje o rynku IKE|IKZE ... 31 grudnia <year>" (`ike_YYYY`, `ikze_YYYY`; an edition at 30 czerwca, if published,
+`ike_YYYY_h1`, half-yearly S, stays in Silver: no fact model). Releases from 2023 on. Version =
 download time (KNF sends no Last-Modified), a changed file lands as a new version; restart unit: one release file.
 Older OFE months are linked as `.xls` (OLE2/BIFF): they land as published and Bronze rejects them with that
 reason (no `.xls` reader without a new dependency), so OFE reaches Silver from the first `.xlsx` month (September 2026).
@@ -980,7 +981,7 @@ without its series' layout (bulletin part A: the four premium and claims tables 
 `silver.knf_insurance_observations` (series × period × table × item × provider × measure): bulletin part A premiums
 and claims of life and non-life insurers by insurer and total (thousand zloty, year to date, Q), OFE by fund and total
 (net assets, members, contributions, unit value; M), IKE/IKZE items by provider group (number and value; A); "x", "-"
-and IKE/IKZE value zeros printed next to a positive count are not values. Gold `build_knf_insurance`, blocks
+and other text in a value position are not values (left out, never 0); a printed 0 is kept as published. Gold `build_knf_insurance`, blocks
 `insurance_market`, `ofe`, `ike_ikze` (market totals for Poland, units as printed; draft KPIs `insurance_gwp_life`,
 `insurance_gwp_nonlife`, `insurance_claims_life`, `insurance_claims_nonlife`, `ofe_net_assets`, `ofe_members`,
 `ike_accounts`, `ike_assets`, `ikze_accounts`, `ikze_assets` in finance.insurance_pensions). Schedule: the 6th and 23rd

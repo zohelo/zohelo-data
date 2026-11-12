@@ -8,6 +8,7 @@ page is the listing. Series built here (the article title names the series and t
   ofe       "Dane miesięczne OFE - <month> <year>"                 one workbook a month   entity ofe_YYYY_MM
   bulletin  "Biuletyn Kwartalny. Rynek ubezpieczeń <q>/<year>"     parts A-D a quarter    entity bulletin_YYYY_qN_<part>
   ike/ikze  "Informacje o rynku IKE|IKZE ... 31 grudnia <year>"    one workbook a year    entity ike_YYYY, ikze_YYYY
+            an edition "... 30 czerwca <year>", if KNF publishes one                    entity ike_YYYY_h1, ikze_YYYY_h1
 
 Entity = one file of one release; version = the response's Last-Modified (KNF sends none: download time), written
 only when the SHA-256 changed. An accumulating source: every release is kept (each file holds its own period).
@@ -43,7 +44,7 @@ MONTHS = {
 PLAIN = str.maketrans("ąćęłńóśźżĄĆĘŁŃÓŚŹŻ", "acelnoszzACELNOSZZ")
 OFE_TITLE = re.compile(r"Dane miesi[eę]czne OFE\s*[-–]\s*(\S+)\s+(\d{4})", re.IGNORECASE)
 BULLETIN_TITLE = re.compile(r"Biuletyn Kwartalny\.?\s*Rynek ubezpiecze[nń]\s+([1-4])\s*/\s*(\d{4})", re.IGNORECASE)
-IKE_TITLE = re.compile(r"Informacj\w* o rynku (IKE|IKZE)\b.*?31 grudnia (\d{4})", re.IGNORECASE)
+IKE_TITLE = re.compile(r"Informacj\w* o rynku (IKE|IKZE)\b.*?(31 grudnia|30 czerwca) (\d{4})", re.IGNORECASE)
 ARTICLE_LINK = re.compile(r"articleId=\d+")
 FILE_LINK = re.compile(r"/komponenty/img/[^?#]+\.xlsx?$", re.IGNORECASE)
 PART = re.compile(r"/([A-D])_[^/]*$")
@@ -98,7 +99,7 @@ def _anchors(url: str) -> list[tuple[str, str]]:
 
 def release(title: str) -> tuple[str, str] | None:
     """(series, release key) named by an article title, or None: ('ofe', '2026_09'), ('bulletin', '2026_q2'),
-    ('ike', '2025'), ('ikze', '2025')."""
+    ('ike', '2025'), ('ikze', '2025'), ('ike', '2025_h1') for an edition at 30 June."""
     m = OFE_TITLE.search(title)
     if m:
         month = MONTHS.get(m.group(1).lower().translate(PLAIN))
@@ -108,8 +109,13 @@ def release(title: str) -> tuple[str, str] | None:
         return "bulletin", f"{m.group(2)}_q{m.group(1)}"
     m = IKE_TITLE.search(title)
     if m:
-        return m.group(1).lower(), m.group(2)
+        return m.group(1).lower(), m.group(3) + ("" if m.group(2).lower().startswith("31") else "_h1")
     return None
+
+
+def newest_first(key: str) -> str:
+    """Sort key of a release key in time order: '2025_h1' (30 June) before '2025' (31 December)."""
+    return key + "_12" if re.fullmatch(r"\d{4}", key) else key.replace("_h1", "_06")
 
 
 def articles(held: set[str], max_pages: int = MAX_PAGES) -> dict[tuple[str, str], str]:
@@ -195,7 +201,7 @@ def plan(found: dict[tuple[str, str], str], held: set[str]) -> list[tuple[str, s
     ]
     recheck = []
     for series in sorted({s for s, _ in found}):
-        newest = sorted(k for s, k in found if s == series)[-RECHECK:]
+        newest = sorted((k for s, k in found if s == series), key=newest_first)[-RECHECK:]
         recheck += [(series, k, found[(series, k)]) for k in newest if (series, k, found[(series, k)]) not in missing]
     return missing + recheck
 
