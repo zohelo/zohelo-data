@@ -61,7 +61,7 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.metrics_cpi_annual_rate, gold.metrics_real_wage_growth, gold.metrics_nominal_wage_growth, gold.metrics_registered_unemployed, gold.metrics_gdp_qoq_sa, gold.metrics_gdp_regional_growth, gold.metrics_gfcf_rate, gold.metrics_gfcf_growth, gold.metrics_gdp_contributions, gold.metrics_gva_by_section, gold.metrics_gfcf_by_asset, gold.metrics_business_climate, gold.metrics_capacity_utilisation, gold.metrics_consumer_confidence, gold.metrics_esi, gold.metrics_industrial_production, gold.metrics_construction_output, gold.metrics_retail_sales, gold.metrics_ppi_annual_rate, gold.metrics_current_account_gdp, gold.metrics_current_account_components, gold.metrics_fdi_inflow, gold.metrics_job_vacancy_rate, gold.metrics_labour_productivity, gold.metrics_unit_labour_cost, gold.metrics_long_term_unemployment, gold.metrics_gender_pay_gap, gold.metrics_gini, gold.metrics_social_spending_gdp, gold.metrics_youth_unemployment, gold.metrics_disposable_income_pc, gold.metrics_pensioners, gold.metrics_zus_pension_avg, gold.metrics_investment_outlays, gold.metrics_vacancies_per_unemployed, gold.metrics_average_gross_wage, gold.metrics_employment_rate, gold.metrics_registered_unemployment_rate,  # every source per slice KPI (O31, #2592), draft until checked
        gold.metrics_business_confidence_oecd, gold.metrics_consumer_confidence_oecd, gold.metrics_cli_oecd,  # OECD (#2738), draft until checked
        gold.metrics_lei_issued, gold.metrics_vat_whitelist_entries,  # registry counts GLEIF, MF white list (#2740), draft until checked
-       gold.geo_unit, gold.geo_neighbour, gold.metrics_area,  # PRG/TERYT geography blocks (#2739): areas, centroids, contiguity
+       gold.geo_unit, gold.geo_neighbour, gold.geo_unit_wikidata, gold.metrics_area,  # PRG/TERYT geography blocks (#2739): areas, centroids, contiguity
        gold.metrics_external_debt_stocks, gold.metrics_external_debt_gni, gold.metrics_external_debt_service, gold.metrics_external_debt_service_gni, gold.metrics_external_debt_service_exports,  # World Bank IDS (#2819), draft until checked
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)
@@ -125,6 +125,8 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865
   teryt_terc: {rows: 20000}  # 4,360
+  wikidata_statements: {rows: 47000}  # 31,450 (Dev trial 43288241509)
+  wikidata_terc_attributes: {rows: 40000}  # 26,554: 3,149 TERC units × up to 9 properties (Dev trial 43288241509)
   wgi_observations: {rows: 300000}  # 202,092 (Dev trial 43085820597)
   wgi_indicators: {rows: 1000}  # 36
   ids_observations: {rows: 4000000, exception: "#2772"}  # 2,647,628 (Dev trial 43085820597); #822 exception, review 2027-01-15
@@ -263,6 +265,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_external_debt_service_gni: {rows: 10000}
   poc_metrics_external_debt_service_exports: {rows: 10000}
   geo_unit: {rows: 4300}  # 2,876 (Dev trial 43099545187)
+  geo_unit_wikidata: {rows: 4700}  # 3,149 (Dev trial 43288241509)
   geo_neighbour: {rows: 25000}  # 16,224 (Dev trial 43099545187)
   poc_metrics_area: {rows: 50000}  # 33,753 (Dev trial 43099545187)
   # World Bank WGI, Findex, ICP (#2736)
