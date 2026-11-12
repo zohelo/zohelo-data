@@ -1,0 +1,45 @@
+source_system: faostat
+description: "FAOSTAT (FAO) — bulk domain files: emissions totals (GT) and land use (RL)"
+
+# Extraction strategy (docs/landing.md). Bulk feature: FAOSTAT publishes every domain as one zip of the whole
+# domain ("All Data (Normalized)", every area, item, element and year), listed in the bulk catalogue
+# https://bulks-faostat.fao.org/production/datasets_E.json (FileLocation, DateUpdate). Each entity is one
+# domain file landed through the shared bulk_file pattern; the server sends Last-Modified, so version = the
+# file's Last-Modified and an unchanged file is skipped. Domains chosen for the KPIs FAO publishes itself (O31):
+# GT (Climate change: agrifood systems emissions, emissions totals; 20.6 MB zip, 2,498,428 rows: "All sectors
+# without LULUCF" is the ghg_emissions KPI) and RL (Land use; 3.0 MB zip, 421,850 rows: "Land area" is the area
+# KPI). Population (OA) is not landed: it is UN WPP re-disseminated (third-party data, onboarded as un_wpp).
+# Licence CC BY 4.0 plus FAO's additional terms (register GL-022). Proven from Actions by Dev probe 43099401602.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: emissions_totals   # GT: GHG emissions by sector and gas, every area, 1961 onwards
+        url: "https://bulks-faostat.fao.org/production/Emissions_Totals_E_All_Data_(Normalized).zip"
+        format: zip
+        version: last_modified
+      - entity: land_use           # RL: land use categories and irrigation, every area, 1961 onwards
+        url: "https://bulks-faostat.fao.org/production/Inputs_LandUse_E_All_Data_(Normalized).zip"
+        format: zip
+        version: last_modified
+  initial: bulk
+  production: snapshot                  # each zip is the complete history of its domain
+  incremental_policy: changed_since_last  # Last-Modified, then SHA-256
+  schedule: # UTC; release: FAOSTAT updates domains on its release calendar (GT yearly in Nov, RL yearly), no fixed day; weekly check (Thursday 05:25), unchanged files skipped
+    - {cron: "25 5 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/faostat/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.faostat_observations, bronze.faostat_rejected_files]
+silver: [silver.faostat_observations]
+gold: [gold.build_faostat]
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): two whole-domain snapshots that change once or twice a year; a new copy
+# replaces its entity and Silver (newest copy per entity) is rebuilt in full from Bronze in DuckDB.
+refresh: {mode: full, decided: "D32 + #2402"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

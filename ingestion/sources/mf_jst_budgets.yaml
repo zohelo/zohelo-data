@@ -1,0 +1,33 @@
+source_system: mf_jst_budgets
+description: "Ministry of Finance — local-government budget reports (sprawozdania budżetowe JST), quarterly summary workbooks by unit type"
+
+# Extraction strategy (docs/landing.md). Register PLG-010. Bulk feature: gov.pl publishes, per year
+# (https://www.gov.pl/web/finanse/sprawozdania-budzetowe → "2025 r." → "Zestawienia zbiorcze"), one summary XLSX
+# (about 30 kB) per quarter, unit type (Gminy, Miasta, Powiaty, Wojew, JST, Związki) and family (DW revenue and
+# expenditure, ZN liabilities and receivables): <Type>_<DW|ZN>_<year>_k<quarter>_<YYYYMMDD>.xlsx (Dev probe
+# 43091539492 on test/src-w2pl-probe). Entity = type × family × year × quarter; a corrected file gets a new
+# attachment URL and lands as a new version (download time; gov.pl sends no Last-Modified). Files are found from the
+# year pages (ingestion/to_landing/mf_jst_budgets/); landed attachment URLs are not downloaded again. Restart unit:
+# one file. The per-unit report databases (Rb27S, Rb28S, RbNDS, RbN, RbZ … ZIPs of 0.3-27 MB a quarter, 2001-2026)
+# are a separate scope.
+extraction:
+  initial: bulk
+  production: snapshot                  # each workbook is the quarter as published; a correction replaces it
+  incremental_policy: changed_since_last  # new attachment URL
+  schedule: # UTC; quarterly reports, summaries published about 6-11 weeks after the quarter; weekly check
+    - {cron: "50 7 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/mf_jst_budgets/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.mf_jst_budgets_cells, bronze.mf_jst_budgets_rejected_files]
+silver: [silver.mf_jst_budget_summary]
+gold: [gold.build_mf_jst_budgets]
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): about 20 workbooks of a few hundred cells a quarter; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2494"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

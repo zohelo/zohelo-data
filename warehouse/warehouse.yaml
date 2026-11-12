@@ -65,7 +65,7 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)
        gold.dimension, gold.dimension_alias, gold.dim_dimension,  # catalogue: axes
-       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_public_finance, gold.build_oecd, gold.build_gleif, gold.build_mf_biala_lista, gold.build_prg, gold.build_wdi, gold.build_unctad, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth]   # Gold v1 (warehouse/models/gold, docs/model.md)
+       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_public_finance, gold.build_oecd, gold.build_gleif, gold.build_mf_biala_lista, gold.build_prg, gold.build_wdi, gold.build_mrpips_unemployment, gold.build_mf_jst_budgets, gold.build_unctad, gold.build_faostat, gold.build_unesco_uis, gold.build_who, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth]   # Gold v1 (warehouse/models/gold, docs/model.md)
 demo_namespaces: [demo_bronze, demo_silver, demo_gold]  # phase 2 demo warehouse (program plan §3.3); never in the public catalogue
 
 # Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
@@ -80,6 +80,7 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   nbp_fx_rates: {rows: 1000000}  # 428,392
   nbp_gold_fixings: {rows: 20000}  # 3,479
   oecd_cli: {rows: 400000}  # 240,988 (Dev trial 42777288678)
+  undp_hdr_indices: {rows: 300000}  # 200,004 (Dev trial 43093051337)
   unctad_fdi_flows_stock: {rows: 55000}  # 36,950 (Dev trial 43094105961)
   unctad_merchandise_trade: {rows: 70000}  # 46,108
   unctad_services_trade: {rows: 1200000, exception: "#2777"}  # 807,733, ~38,000 more a year; whole-table archive, full rebuild accepted
@@ -89,6 +90,9 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   unctad_merchant_fleet: {rows: 96000}  # 63,896
   unctad_seaborne_trade: {rows: 97000}  # 64,424
   unctad_port_calls: {rows: 1800}  # 1,197
+  who_observations: {rows: 40000}  # 25,872: 2 indicators × ~4,300 area-years × 3 sexes (Dev trial 43159213097)
+  unesco_uis_observations: {rows: 16000}  # 10,689 (Dev trial 43159213097)
+  faostat_observations: {rows: 4400000, exception: "#2815"}  # 2,920,278 (GT 2,498,428 + RL 421,850; Dev trial 43159213097); D32: two whole-domain files, rebuilt in full when one changes (about yearly)
   news_headlines: {rows: 300000}
   releases: {rows: 5000}  # about 50 announced releases a week, 60-day window
   topic_attention: {rows: 50000}  # 35 topics × 455 days
@@ -101,6 +105,8 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   treasury_debt: {rows: 125000}  # 83,206 (Dev trial 43099813876), monthly since 2001
   budget_execution: {rows: 2800}  # 1,845 (Dev trial 43099813876), 2018-2026, ~200 a year
   krus_benefits: {rows: 900}  # 576 (Dev trial 43099813876), quarters and years since 2020
+  mf_jst_budget_summary: {rows: 32000}  # 21,263 rows, 2022 Q1 - 2026 Q1 (Dev trial 43162316724)
+  mrpips_registered_unemployment: {rows: 85000}  # 828 rows a month; 56,202 for 68 months (Dev trial 43100663615)
   nbp_policy_rates: {rows: 2000}  # 390 rows, 96 archive dates since 1998 (Dev trial 42777711811)
   prg_units: {rows: 200000}  # 60,367
   teryt_simc: {rows: 300000}  # 101,865
@@ -119,6 +125,8 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_src_eurostat: {rows: 600000}  # 199,394 (10 Nov) + ~300,000 for the slice datasets (#2592)
   poc_src_dbw: {rows: 1000000}
   poc_src_dbw_dictionary: {rows: 200000}
+  poc_build_mf_jst_budgets: {rows: 650}  # 408 rows (Dev trial 43162316724)
+  poc_build_mrpips_unemployment: {rows: 85000}  # = Silver mrpips_registered_unemployment (56,202 rows)
   poc_build_check: {rows: 1000}
   poc_grain_check: {rows: 10000}
   poc_build_dbw: {rows: 600000}  # 312,512 (10 Nov) + ~110,000 slice blocks (#2592)
@@ -130,6 +138,9 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_build_prg: {rows: 4300}  # 2,875 PRG units (16 voivodeships, 380 powiats, 2,479 gminas; Dev trial 43099545187 minus the country)
   poc_build_public_finance: {rows: 8600}  # 5,727 (Dev trial 43099813876)
   poc_build_unctad: {rows: 18000}  # 11,871 (Dev trial 43100532689): 29 areas × 10 measures
+  poc_build_who: {rows: 6000}  # 3,696: 28 areas × 22 years × 3 sexes × 2 indicators (Dev trial 43159213097)
+  poc_build_unesco_uis: {rows: 4500}  # 2,869: 27 EU members (Dev trial 43159213097)
+  poc_build_faostat: {rows: 4000}  # 2,538: 29 areas × 2 blocks (Dev trial 43159213097)
   poc_build_wdi: {rows: 500000}  # + 16 slice indicators, all economies (#2592)
   poc_concept_measures: {rows: 1000}
   poc_dim_calendar: {rows: 80000}

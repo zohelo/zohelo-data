@@ -170,6 +170,22 @@ dbw as (
             = regexp_replace(regexp_replace(d.source_code, '^PODREGION ', ''), '^(M\. ST\. |M\. |MIASTO )', '')
 ),
 
+-- MRPiPS registered unemployment: the rate workbook's WOJ. and POW. columns as one 4-digit code (WWPP; WW00 the
+-- voivodeship, 0000 Poland), generated from TERYT like the BDL codes.
+mrpips as (
+    select
+        'mrpips_unemployment' as source_system,
+        rpad(terc_code, 4, '0') as source_code,
+        'TERC:' || terc_code as geography_key
+    from {{ ref('teryt_terc') }}
+    where unit_level in ('wojewodztwo', 'powiat')
+    union all
+    select
+        'mrpips_unemployment' as source_system,
+        '0000' as source_code,
+        'PL' as geography_key
+),
+
 wdi as (
     select
         'world_bank_wdi' as source_system,
@@ -270,6 +286,67 @@ unctad as (
     left join unctad_areas as a on c.economy = a.economy
     left join geo as g on a.candidate_key = g.geography_key
     where c.economy is not null
+),
+
+-- WHO data.who.int: areas by M49 code (unpadded) and type; countries through poc_m49_eu27 (the EU27 members),
+-- World (GLOBAL 1) = WB:WLD. WHO regions and income groups have no Gold key (_X); the build stage builds only the
+-- mapped areas. source_code = <type>:<code>, as region and country codes share one number space.
+who_m49 as ({{ poc_m49_eu27() }}),
+
+who as (
+    select
+        'who' as source_system,
+        a.geo_type || ':' || a.geo_code_m49 as source_code,
+        coalesce(g.geography_key, case when a.geo_type = 'GLOBAL' and a.geo_code_m49 = '1' then 'WB:WLD' end, '_X')
+            as geography_key
+    from (
+        select distinct
+            geo_type,
+            geo_code_m49
+        from {{ ref('who_observations') }}
+    ) as a
+    left join who_m49 as m on a.geo_type = 'COUNTRY' and lpad(a.geo_code_m49, 3, '0') = m.m49
+    left join geo as g on g.level_name = 'country' and m.iso2 = g.geography_key
+),
+
+-- UNESCO UIS: countries by ISO 3166-1 alpha-3 (dim_geography.iso3); regional units ('SDG: ...', 'WB: ...') have no
+-- Gold key (_X), and the build stage builds only the EU27 members.
+unesco_uis as (
+    select
+        'unesco_uis' as source_system,
+        a.geo_unit as source_code,
+        coalesce(g.geography_key, '_X') as geography_key
+    from (
+        select distinct
+            geo_unit,
+            is_country_code
+        from {{ ref('unesco_uis_observations') }}
+    ) as a
+    left join geo as g on a.is_country_code and g.level_name = 'country' and a.geo_unit = g.iso3
+),
+
+-- FAOSTAT: FAO area codes; countries through their UN M49 code (poc_m49_eu27: the EU27 members), FAO aggregates
+-- 5707 European Union (27) = EU27_2020 (current members, fixed composition) and 5000 World. Other areas have no
+-- Gold key here (_X); the build stage builds only the mapped ones.
+faostat_m49 as ({{ poc_m49_eu27() }}),
+
+faostat as (
+    select
+        'faostat' as source_system,
+        cast(a.area_code as varchar) as source_code,
+        coalesce(
+            g.geography_key,
+            case a.area_code when 5707 then 'EUROSTAT:EU27_2020' when 5000 then 'WB:WLD' end,
+            '_X'
+        ) as geography_key
+    from (
+        select distinct
+            area_code,
+            area_code_m49
+        from {{ ref('faostat_observations') }}
+    ) as a
+    left join faostat_m49 as m on a.area_code_m49 = m.m49 and a.area_code < 5000
+    left join geo as g on g.level_name = 'country' and m.iso2 = g.geography_key
 )
 
 select
@@ -286,6 +363,8 @@ from (
     union all
     select * from dbw
     union all
+    select * from mrpips
+    union all
     select * from wdi
     union all
     select * from oecd
@@ -295,6 +374,12 @@ from (
     select * from teryt_prg
     union all
     select * from unctad
+    union all
+    select * from who
+    union all
+    select * from unesco_uis
+    union all
+    select * from faostat
 ) as m
 left join geo as g on m.geography_key = g.geography_key and g.geography_key <> '_X'
 where m.source_code is not null
