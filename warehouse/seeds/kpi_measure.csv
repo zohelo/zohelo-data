@@ -264,3 +264,4 @@ ppi_annual_rate,unece,unece:0_en_MECCPriceInterestY_r:percent:c0000773,"PPI, ann
 ppi_annual_rate,unece,unece:1_en_MECCPriceInterestQ_r:percent:c0000769,"PPI, growth over the same quarter of the previous year (UNECE Statistical Database)",3,
 industrial_production,unece,unece:0_en_MECCIndProdY_r:percent:c0000740,"industrial production index, annual growth rate (UNECE Statistical Database)",4,
 population,unece,unece:10_en_MELFOverviewY_r:Thousands of persons:ME.47.c0000803,"annual, thousands of persons as published (UNECE Statistical Database)",5,
+capital_market_entities,esma_registers,esma_registers:upreg:entities:Active,"ESMA register entries with status Active, home member state Poland, every type and office type (branches included)",1,entities

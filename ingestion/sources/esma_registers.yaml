@@ -1,0 +1,50 @@
+source_system: esma_registers
+description: "ESMA registers (esma_registers_upreg) — the entries with home member state Poland: authorised capital-market entities and their branches supervised by KNF (register PLG-016, ESMA route)"
+
+# Extraction strategy (docs/landing.md). ESMA publishes its registers through a documented application-to-application
+# interface (https://registers.esma.europa.eu/publication/helpApp): Solr select requests returning JSON (wt=json),
+# no key, no stated limits; there is no bulk file. The Polish slice is one fixed request (623 parent entries,
+# Dev probe 43295075918), landed through the shared bulk_file pattern: every parent entry (type_s:parent) whose
+# home member state is Poland, sorted by id, one page (rows=5000; Bronze rejects an answer whose numFound exceeds
+# the entries it holds), response header omitted so an unchanged register gives unchanged bytes. `fl` names the
+# fields landed: identifiers, name, type, status, dates, member states, LEI; the head-office and branch addresses,
+# the free-text comment and Solr's own bookkeeping (_version_, timestamp) are not requested (data minimisation,
+# docs/sources/esma_registers.md). No Last-Modified: version = download time; an unchanged answer (same SHA-256) is
+# skipped. KNF's own HTML pages are not read (owner question in the register entry).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: upreg_poland
+        url: "https://registers.esma.europa.eu/solr/esma_registers_upreg/select?q=*:*&fq=ae_homeMemberState:%22POLAND%22&fq=type_s:parent&fl=id,ae_dbId,type_s,ae_entityTypeCode,ae_entityTypeLabel,ae_entityName,ae_commercialName,ae_legalform,ae_lei,ae_headOfficeLei,ae_competentAuthority,ae_homeMemberState,ae_hostMemberState,ae_hostMemberStates,ae_officeType,ae_status,ae_authorisationNotificationDate,ae_authorisationWithdrawalEndDate,ae_authorisationWithdrawalEndDateStr,ae_lastUpdate,ae_website&sort=id%20asc&rows=5000&wt=json&omitHeader=true"
+        format: json             # parsed before landing: a cut-off answer is retried, never landed
+        version: ingested        # the Solr answer carries no Last-Modified
+        probe: get
+        read_timeout: 120
+  initial: api
+  production: snapshot                    # each answer is the complete current Polish slice
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; the register changes with KNF and ESMA decisions, no release calendar or change feed; monthly (8th, 05:15)
+    - {cron: "15 5 8 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/esma_registers/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.esma_registers_entries, bronze.esma_registers_rejected_files]
+silver: [silver.esma_registers_entities]
+gold: [gold.build_esma_registers, gold.supervised_entity_esma_registers, gold.metrics_capital_market_entities]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  esma_registers_entities: {rows: 950}  # 623 (Dev probe 43295075918; trial count in docs/sources/esma_registers.md)
+  supervised_entity_esma_registers: {rows: 950}  # one row per Silver entry
+  poc_build_esma_registers: {rows: 120}  # status (3) × (total + entity types + office types)
+  poc_metrics_capital_market_entities: {rows: 10}  # Poland, one snapshot date
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): one answer of about 600 entries (well under 1 MB) with no changed-since filter
+# worth using (ae_lastUpdate is per entry, deletions are not announced); a new copy replaces the entity and Silver and
+# Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2994"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

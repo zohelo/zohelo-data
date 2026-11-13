@@ -1,0 +1,31 @@
+version: 2
+models:
+  - name: esma_registers_entities
+    description: >-
+      ESMA registers (esma_registers_upreg, application-to-application Solr interface), the entries with home member
+      state Poland from the newest Landing copy of the slice: authorised capital-market entities and their branches
+      (ESMA type code and label, name, LEI, competent authority, host member states, office type, status,
+      authorisation, withdrawal and last-update dates). Grain: entry_id (ESMA's id, one row per entry; a branch is its
+      own entry). '' is null; an empty LEI is a missing LEI. Counts and the trial run in docs/sources/esma_registers.md;
+      tests/esma_registers_entities_complete.sql checks every Bronze entry yields exactly one row.
+    columns:
+      - name: entry_id
+        tests: [not_null, unique]
+      - name: entity_name
+        tests: [not_null]
+      - name: entity_type_code
+        description: >-
+          ESMA's register type code as published. Closed list from the data (Dev trial): a new type fails the build
+          until it is reviewed (does it list natural persons?) and added here.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['AIF', 'MIF', 'UCI', 'MIR', 'CSP', 'MIT', 'MIE', 'ESF', 'MIA', 'MIO', 'MIS']
+      - name: status
+        tests: [not_null, {accepted_values: {arguments: {values: ['Active', 'Inactive']}}}]
+      - name: home_member_state
+        tests: [not_null, {accepted_values: {arguments: {values: ['POLAND']}}}]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source answer (lineage to Landing/Archive).
+        tests: [not_null]

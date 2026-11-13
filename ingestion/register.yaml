@@ -4574,7 +4574,8 @@ sources:
   name: Supervised-entity registers and search
   short_name: KNF supervised entities
   provider: Polish Financial Supervision Authority (KNF)
-  status: approved
+  source_system: esma_registers
+  status: built
   family: E
   kpi: false
   geography: Poland

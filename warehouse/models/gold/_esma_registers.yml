@@ -1,0 +1,42 @@
+version: 2
+
+models:
+  - name: poc_build_esma_registers
+    description: >-
+      Gold build stage of the ESMA register entries with home member state Poland (block upreg): entry counts by
+      status (measure_key esma_registers:upreg:entities:<Active|Inactive|_T>), broken down by ESMA type code and by
+      office type one at a time, frequency D at the download day of the Landing copy (latest-only snapshot), geography
+      PL. Unit entities (register entries).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: supervised_entity_esma_registers
+    description: >-
+      Entity table: one row per ESMA register entry with home member state Poland (silver.esma_registers_entities),
+      keyed by ESMA's entry id; LEI as an attribute (null when ESMA gives none, never matched by name); validity
+      valid_from (authorisation or notification date) to valid_to (withdrawal date); no addresses, no persons.
+    columns:
+      - name: entry_id
+        description: ESMA's own entry id (ae<number>), the key.
+        tests: [not_null, unique]
+      - name: entity_name
+        tests: [not_null]
+      - name: home_geography_key
+        description: >-
+          PL through map_geography. No relationships test: it would be selected by builds of poc_dim_geography before
+          this table exists (the Dev trial checks it).
+        tests: [not_null, {accepted_values: {arguments: {values: ['PL']}}}]
+      - name: lei
+        description: >-
+          The entry's LEI as ESMA publishes it; null when ESMA's field is empty. No relationships test to GLEIF (a
+          shared model of another source).
+  - name: poc_metrics_capital_market_entities
+    description: >-
+      Gold metrics view of the draft concept capital_market_entities (macros/poc_metrics.sql): active entries of the
+      ESMA register by home member state (esma_registers, Poland), one row per source × area × day.
