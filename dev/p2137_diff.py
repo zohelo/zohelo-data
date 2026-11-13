@@ -138,7 +138,6 @@ def main() -> None:
     annotate("notice", "2 versions", stats)
 
     key = "measure_unit, breakdown, gid, year"
-    cols = "breakdown, gid, year, unit_code, unit_name, channel, source_version, attribute, value"
     for (a, oa), (b, ob) in zip(versions, versions[1:], strict=False):
         join = f"final{a} as a full join final{b} as b using ({key})"
         summary = con.execute(
