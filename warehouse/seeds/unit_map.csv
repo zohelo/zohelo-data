@@ -210,3 +210,5 @@ unece,NC,,ncu
 unece,NCU per US$,,ncu_per_usd
 unece,NCU per Euro,,ncu_per_eur
 unece,NCU per Ruble,,ncu_per_rub
+internet_gov_broadband,address_points,,address_points
+internet_gov_broadband,pct,,pct
