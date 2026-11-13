@@ -7620,7 +7620,8 @@ sources:
   name: internet.gov.pl broadband coverage database and UKE market aggregates
   short_name: internet.gov.pl broadband
   provider: Ministerstwo Cyfryzacji / Instytut Łączności–PIB; UKE for market reports
-  status: approved
+  source_system: internet_gov_broadband
+  status: built
   family: B
   kpi: true
   geography: Poland
