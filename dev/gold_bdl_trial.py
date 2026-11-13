@@ -314,7 +314,7 @@ def main() -> None:
             "geo_map_codes": len(geo_map),
             "unit_ids_in_map_and_unmatched": [len(ids), sum(k == "_X" for k in ids)],
             "subgroups_named_projection": projection_names,
-            "load_order_groups (0 to voivodeship and subregion, 1 to powiat, 2 to gmina, 3 level unknown)": groups,
+            "load_order_groups (0 to voivodeship and subregion, 1 to powiat, 2 to gmina and below, 3 no variable metadata)": groups,
             "sample": len(sample),
             "sample_silver_rows": sum(sizes),
             "sample_silver_mb": round(sum(silver[b]["bytes"] for b in sample) / 1e6, 1),
