@@ -67,7 +67,9 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
     printed, cells = tables.read_report(page_texts(body), quarter_end(receipt["entity"]))
     count = len(cells)
     prov = bulk_bronze.provenance(receipt)
-    data: dict[str, list[Any]] = {name: [prov[name]] * count for name in ("entity", "raw_sha256", "source_version", "ingested_at")}
+    data: dict[str, list[Any]] = {
+        name: [prov[name]] * count for name in ("entity", "raw_sha256", "source_version", "ingested_at")
+    }
     data["reference_date_text"] = [printed] * count
     for name, _ in FIELDS:
         data[name] = [cell[name] for cell in cells]

@@ -18,7 +18,11 @@ format, and the table is rejected (ValueError) when its header, its row labels (
 SUMA row (counts must add up exactly, every share must be its count's share of SUMA to the printed precision) or
 the number of cells per row does not match. Nothing is taken by position without its label: a value is kept with
 its row label and column header as printed. A label printed on two lines ("warmińsko-" / "mazurskie") is joined
-when the first line ends with a hyphen and the second holds the rest of a known name.
+when the first line ends with a hyphen and the second holds the rest of a known name. In the Q2 and Q3 2024
+editions the leading digit of that row's first number is drawn on the second label line ("warmińsko-  174856 ..." /
+"mazurskie  1"): the digits are put back in front of the first number only when they end at most ``LEAD_GAP``
+characters left of where that number starts (the column of the other rows' numbers); the sums and the rule
+"coverages >= address points in coverage" then hold only for the joined value, so a wrong join is still rejected.
 
 The reference date ("według stanu na dzień 30 września 2026") is read from the text and must be the last day of
 the edition's quarter (the entity name), else the file is rejected.
@@ -48,16 +52,20 @@ VOIVODESHIPS = (
     "zachodniopomorskie",
 )
 SERVICE_TYPES = ("Rzeczywisty", "Hurtowy (wyłącznie)", "Teoretyczny (wyłącznie)", "Brak zasięgu")
-BANDWIDTHS = tuple(str(n) for n in (2, 10, 20, 30, 40, 50, 60, 70, 80, 90, *range(100, 1000, 100), *range(1000, 10001, 1000)))
+BANDWIDTHS = tuple(
+    str(n) for n in (2, 10, 20, 30, 40, 50, 60, 70, 80, 90, *range(100, 1000, 100), *range(1000, 10001, 1000))
+)
 MONTHS = {"marca": 3, "czerwca": 6, "września": 9, "grudnia": 12}
 COUNT = re.compile(r"^(?:\d{1,3}(?:[   ]\d{3})+|\d+)$")
 # The report's own rows do not always add up exactly: the bandwidth classes' address points differ from SUMA by
-# -124 (2024-Q4), -180 (2025-Q1), -1 (2025-Q3) and +5 (2026-Q2) of about 7.7 million (Dev probes 43323654663,
-# 43326898115; the other columns add up exactly). A misread cell is off by thousands at least, so sums are checked
-# to 1 / 10,000 of SUMA (at least 1); the differences stay visible in Silver (test
+# +56, +21, -124, -180, -71, -1, -7 and +5 (2024-Q2 to 2026-Q2; 2026-Q1 and 2026-Q3 add up) of about 7.5 million
+# (Dev probes 43323654663, 43326898115; the other columns add up exactly). A misread cell is off by thousands at
+# least, so sums are checked to 1 / 10,000 of SUMA (at least 1); the differences stay visible in Silver (test
 # internet_gov_broadband_coverage_complete applies the same rule).
 SUM_TOLERANCE = 10_000
 SHARE = re.compile(r"^(?:\d{1,3},\d{2}%|100%)$")
+LEAD = re.compile(r"^\d{1,3}$")
+LEAD_GAP = 6  # characters between leading digits on the second label line and the number they belong to
 
 
 @dataclass(frozen=True)
@@ -73,8 +81,12 @@ TABLES = (
     Table(
         "territory",
         "Liczba punktów adresowych w zasięgu na terenie całego kraju.",
-        ("Województwo", "Liczba zasięgów", "Liczba punktów adresowych objętych zasięgiem",
-         "Liczba punktów adresowych ogółem"),
+        (
+            "Województwo",
+            "Liczba zasięgów",
+            "Liczba punktów adresowych objętych zasięgiem",
+            "Liczba punktów adresowych ogółem",
+        ),
         ("coverages", "address_points", "address_points_total"),
         VOIVODESHIPS,
     ),
@@ -99,6 +111,14 @@ TITLE = re.compile(r"^Tabela (\d+): (.*)$")
 def cells(line: str) -> list[str]:
     """A layout line split into cells at two or more spaces."""
     return [c for c in re.split(r" {2,}", line.strip()) if c]
+
+
+def number_start(line: str) -> int:
+    """Column where the first number cell of a layout line starts."""
+    for match in re.finditer(r"\S+(?: \S+)*", line):
+        if is_number(match.group(0)):
+            return match.start()
+    raise ValueError(f"no number in {line.strip()!r}")
 
 
 def is_number(text: str) -> bool:
@@ -149,7 +169,7 @@ def read_table(spec: Table, number_text: str, page_lines: list[tuple[int, list[s
     """The cells of one table: ``page_lines`` = (page number, layout lines after the title line) for the title's page
     and the pages after it. Raises ValueError on any mismatch."""
     expected_header = header_text(list(spec.header))
-    rows: list[tuple[int, str, list[str]]] = []  # (page, label, number cells)
+    rows: list[tuple[int, str, list[str], str]] = []  # (page, label, number cells, layout line)
     header_seen = 0
     pending: list[str] = []  # lines between a header start and the first row (multi-line headings)
     prefix = ""  # first line of a label printed on two lines
@@ -162,11 +182,27 @@ def read_table(spec: Table, number_text: str, page_lines: list[tuple[int, list[s
             if not parts:
                 continue
             numbers = [p for p in parts if is_number(p)]
+            if rows and rows[-1][1].endswith("-") and not pending and len(parts) == 2 and LEAD.match(parts[1]):
+                last_page, last_label, last_numbers, last_line = rows[-1]
+                if last_label + parts[0] in spec.labels:  # label on two lines, a number's leading digits on the second
+                    gap = number_start(last_line) - len(line.rstrip())
+                    if not 0 <= gap <= LEAD_GAP:
+                        raise ValueError(
+                            f"{spec.code}: digits {parts[1]!r} under {last_label!r} are {gap} characters "
+                            "from the first number"
+                        )
+                    rows[-1] = (
+                        last_page,
+                        last_label + parts[0],
+                        [parts[1] + last_numbers[0], *last_numbers[1:]],
+                        last_line,
+                    )
+                    continue
             if not numbers:
                 if rows and rows[-1][1].endswith("-") and len(parts) == 1 and not pending:
                     joined = rows[-1][1] + parts[0]
                     if joined in spec.labels:  # a label printed on two lines, numbers on the first
-                        rows[-1] = (rows[-1][0], joined, rows[-1][2])
+                        rows[-1] = (rows[-1][0], joined, rows[-1][2], rows[-1][3])
                         continue
                 if rows and len(parts) == 1 and parts[0].endswith("-") and not pending and not prefix:
                     prefix = parts[0]  # a label printed on two lines, numbers on the second
@@ -183,7 +219,7 @@ def read_table(spec: Table, number_text: str, page_lines: list[tuple[int, list[s
                 header_seen += 1
                 pending = []
             label_parts = parts[: len(parts) - len(numbers)]
-            if parts[len(label_parts):] != numbers:
+            if parts[len(label_parts) :] != numbers:
                 raise ValueError(f"{spec.code}: label and numbers interleaved in {line.strip()!r}")
             label = prefix + " ".join(label_parts) if label_parts else ""
             if prefix and label not in spec.labels:
@@ -191,7 +227,7 @@ def read_table(spec: Table, number_text: str, page_lines: list[tuple[int, list[s
             prefix = ""
             if spec.code == "bandwidth" and not label_parts:  # the class is a number itself
                 label, numbers = numbers[0], numbers[1:]
-            rows.append((page, label, numbers))
+            rows.append((page, label, numbers, line))
             if label == "SUMA":
                 done = True
                 break
@@ -204,10 +240,10 @@ def read_table(spec: Table, number_text: str, page_lines: list[tuple[int, list[s
         missing, extra = sorted(set(spec.labels) - set(labels)), sorted(set(labels) - set(spec.labels))
         raise ValueError(f"{spec.code}: row labels differ (missing {missing}, unexpected {extra}, rows {len(labels)})")
     width = len(spec.columns)
-    for page, label, numbers in rows:
+    for _, label, numbers, _ in rows:
         if len(numbers) != width:
             raise ValueError(f"{spec.code}: row {label!r} has {len(numbers)} number cells, expected {width}")
-        for code, text in zip(spec.columns, numbers):
+        for code, text in zip(spec.columns, numbers, strict=True):
             if code.endswith("_share") != bool(SHARE.match(text)) or not (COUNT.match(text) or SHARE.match(text)):
                 raise ValueError(f"{spec.code}: row {label!r} column {code}: {text!r} is not a {code}")
     total = rows[-1][2]
@@ -216,7 +252,7 @@ def read_table(spec: Table, number_text: str, page_lines: list[tuple[int, list[s
             if share(total[i]) != 100.0:
                 raise ValueError(f"{spec.code}: SUMA share {total[i]!r} is not 100%")
             count_index = i - 1
-            for _, label, numbers in rows[:-1]:
+            for _, label, numbers, _ in rows[:-1]:
                 exact = 100.0 * number(numbers[count_index]) / number(total[count_index])
                 if abs(share(numbers[i]) - exact) > 0.0051:
                     raise ValueError(f"{spec.code}: row {label!r} share {numbers[i]!r} is not {exact:.4f}% of SUMA")
@@ -224,17 +260,17 @@ def read_table(spec: Table, number_text: str, page_lines: list[tuple[int, list[s
             difference = sum(number(r[2][i]) for r in rows[:-1]) - number(total[i])
             if abs(difference) > max(1, number(total[i]) // SUM_TOLERANCE):
                 raise ValueError(f"{spec.code}: column {code} adds up to SUMA {total[i]!r} {difference:+d}")
-    columns = dict(zip(spec.columns, range(len(spec.columns))))
+    columns = {code: i for i, code in enumerate(spec.columns)}
     if "coverages" in columns and "address_points" in columns:  # every address point in coverage has a coverage
-        for _, label, numbers in rows:
+        for _, label, numbers, _ in rows:
             if number(numbers[columns["coverages"]]) < number(numbers[columns["address_points"]]):
                 raise ValueError(f"{spec.code}: row {label!r} has fewer coverages than address points in coverage")
     if "address_points_total" in columns:
-        for _, label, numbers in rows:
+        for _, label, numbers, _ in rows:
             if number(numbers[columns["address_points"]]) > number(numbers[columns["address_points_total"]]):
                 raise ValueError(f"{spec.code}: row {label!r} has more address points in coverage than in total")
     out = []
-    for row_number, (page, label, numbers) in enumerate(rows, start=1):
+    for row_number, (page, label, numbers, _) in enumerate(rows, start=1):
         for i, text in enumerate(numbers):
             out.append(
                 {

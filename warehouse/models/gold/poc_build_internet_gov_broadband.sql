@@ -1,16 +1,17 @@
 {{ config(alias='build_internet_gov_broadband', tags=['gold_block']) }}
 {# Gold build stage: internet.gov.pl fixed broadband coverage of address points (register PL-ENV-034), quarterly
    observations of silver.internet_gov_broadband_coverage. Block 'coverage'; one frequency (Q), date_key = first day
-   of the reference quarter (stock at its last day). Measures (unit as published: address points, or per cent):
-   - covered: address points within fixed broadband coverage (territory table; Poland and the 16 voivodeships);
-   - covered_share: covered / all address points x 100, own calculation, rounded to 2 decimals as the report rounds
-     its shares (both numbers are printed in the same table; the report prints no share per voivodeship);
-   - covered_100plus, covered_1000plus: Poland, sum of the bandwidth classes from 100 Mb/s and from 1000 Mb/s
-     upwards (own calculation: the classes are exclusive rows that add up to SUMA);
-   - covered_100plus_share, covered_1000plus_share: those sums / all address points of Poland x 100 (own
-     calculation; the report's printed shares in the bandwidth table are of the address points in coverage, not of
-     all address points, so they are not used). The report has no suppression or missing markers; every row
-     carries a value. #}
+   of the reference quarter (stock on its last day). Every value is printed in the report, except the two
+   bandwidth sums; no share is calculated here:
+   - covered, total: address points in coverage and all address points (territory table; Poland = SUMA row and the
+     16 voivodeships);
+   - covered_100plus, covered_1000plus: Poland, address points in coverage of at least 100 Mb/s and at least
+     1000 Mb/s, the sum of the printed bandwidth classes from 100 and from 1000 upwards (the classes are exclusive
+     rows; the register's rule);
+   - actual, wholesale_only, theoretical_only, no_coverage: Poland, address points by kind of coverage as printed
+     (service type table), each with the printed share of all address points as its own measure (<code>_share,
+     per cent).
+   The report has no suppression or missing marker; "0" and "0,00%" are printed zeros. #}
 with s as (
     select * from {{ ref('internet_gov_broadband_coverage') }}
 ),
@@ -23,65 +24,97 @@ geo as (
     where source_system = 'internet_gov_broadband'
 ),
 
-territory as (
+bandwidth as (
+    select
+        reference_date,
+        sum(address_points) filter (where bandwidth_mbps >= 100) as covered_100plus,
+        sum(address_points) filter (where bandwidth_mbps >= 1000) as covered_1000plus,
+        source_version,
+        raw_sha256
+    from s
+    where table_code = 'bandwidth' and class_code <> '_T'
+    group by reference_date, source_version, raw_sha256  -- one edition file per reference date (Silver)
+),
+
+service as (
+    select
+        reference_date,
+        case class_code
+            when 'rzeczywisty' then 'actual'
+            when 'hurtowy' then 'wholesale_only'
+            when 'teoretyczny' then 'theoretical_only'
+            when 'brak_zasiegu' then 'no_coverage'
+        end as measure_code,
+        address_points,
+        address_points_share_pct,
+        source_version,
+        raw_sha256
+    from s
+    where table_code = 'service_type' and class_code <> '_T'
+),
+
+observations as (
     select
         reference_date,
         area_code,
-        address_points,
-        address_points_total,
+        'covered' as measure_code,
+        'address_points' as unit_code,
+        cast(address_points as double) as value,
         source_version,
         raw_sha256
     from s
     where table_code = 'territory'
-),
-
-bandwidth as (
+    union all
     select
-        b.reference_date,
-        sum(b.address_points) filter (where b.bandwidth_mbps >= 100) as covered_100plus,
-        sum(b.address_points) filter (where b.bandwidth_mbps >= 1000) as covered_1000plus
-    from s as b
-    where b.table_code = 'bandwidth' and b.class_code <> '_T'
-    group by b.reference_date
-),
-
-poland as (
+        reference_date,
+        area_code,
+        'total' as measure_code,
+        'address_points' as unit_code,
+        cast(address_points_total as double) as value,
+        source_version,
+        raw_sha256
+    from s
+    where table_code = 'territory'
+    union all
     select
-        t.reference_date,
-        t.address_points_total,
-        b.covered_100plus,
-        b.covered_1000plus,
-        t.source_version,
-        t.raw_sha256
-    from territory as t
-    inner join bandwidth as b on t.reference_date = b.reference_date
-    where t.area_code = 'PL'
-),
-
-observations as (
-    select reference_date, area_code, 'covered' as measure_code, 'address_points' as unit_code,
-        cast(address_points as double) as value, source_version, raw_sha256
-    from territory
+        reference_date,
+        'PL' as area_code,
+        'covered_100plus' as measure_code,
+        'address_points' as unit_code,
+        cast(covered_100plus as double) as value,
+        source_version,
+        raw_sha256
+    from bandwidth
     union all
-    select reference_date, area_code, 'covered_share', 'pct',
-        round(100.0 * address_points / address_points_total, 2), source_version, raw_sha256
-    from territory
+    select
+        reference_date,
+        'PL' as area_code,
+        'covered_1000plus' as measure_code,
+        'address_points' as unit_code,
+        cast(covered_1000plus as double) as value,
+        source_version,
+        raw_sha256
+    from bandwidth
     union all
-    select reference_date, 'PL', 'covered_100plus', 'address_points', cast(covered_100plus as double),
-        source_version, raw_sha256
-    from poland
+    select
+        reference_date,
+        'PL' as area_code,
+        measure_code,
+        'address_points' as unit_code,
+        cast(address_points as double) as value,
+        source_version,
+        raw_sha256
+    from service
     union all
-    select reference_date, 'PL', 'covered_1000plus', 'address_points', cast(covered_1000plus as double),
-        source_version, raw_sha256
-    from poland
-    union all
-    select reference_date, 'PL', 'covered_100plus_share', 'pct', round(100.0 * covered_100plus / address_points_total, 2),
-        source_version, raw_sha256
-    from poland
-    union all
-    select reference_date, 'PL', 'covered_1000plus_share', 'pct',
-        round(100.0 * covered_1000plus / address_points_total, 2), source_version, raw_sha256
-    from poland
+    select
+        reference_date,
+        'PL' as area_code,
+        measure_code || '_share' as measure_code,
+        'pct' as unit_code,
+        cast(address_points_share_pct as double) as value,
+        source_version,
+        raw_sha256
+    from service
 )
 
 select
@@ -91,13 +124,21 @@ select
     'internet_gov_broadband:coverage:' || o.unit_code || ':' || o.measure_code as measure_key,
     case o.measure_code
         when 'covered' then 'Address points within fixed broadband coverage, end of quarter'
-        when 'covered_share' then 'Address points within fixed broadband coverage, % of all address points, end of quarter'
-        when 'covered_100plus' then 'Address points within fixed broadband coverage of at least 100 Mb/s, end of quarter'
-        when 'covered_1000plus' then 'Address points within fixed broadband coverage of at least 1 Gb/s, end of quarter'
-        when 'covered_100plus_share'
-            then 'Address points within fixed broadband coverage of at least 100 Mb/s, % of all address points, end of quarter'
-        when 'covered_1000plus_share'
-            then 'Address points within fixed broadband coverage of at least 1 Gb/s, % of all address points, end of quarter'
+        when 'total' then 'All address points, end of quarter'
+        when 'covered_100plus'
+            then 'Address points within fixed broadband coverage of at least 100 Mb/s, end of quarter'
+        when 'covered_1000plus'
+            then 'Address points within fixed broadband coverage of at least 1 Gb/s, end of quarter'
+        when 'actual' then 'Address points with actual fixed broadband service, end of quarter'
+        when 'wholesale_only' then 'Address points with wholesale fixed broadband coverage only, end of quarter'
+        when 'theoretical_only' then 'Address points with theoretical fixed broadband coverage only, end of quarter'
+        when 'no_coverage' then 'Address points without fixed broadband coverage, end of quarter'
+        when 'actual_share' then 'Address points with actual fixed broadband service, % of all address points'
+        when 'wholesale_only_share'
+            then 'Address points with wholesale fixed broadband coverage only, % of all address points'
+        when 'theoretical_only_share'
+            then 'Address points with theoretical fixed broadband coverage only, % of all address points'
+        when 'no_coverage_share' then 'Address points without fixed broadband coverage, % of all address points'
     end as measure_name,
     o.measure_code as measure_codes,
     o.unit_code,

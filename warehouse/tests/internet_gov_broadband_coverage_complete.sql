@@ -1,9 +1,11 @@
 -- internet_gov_broadband (register PL-ENV-034): every quarter between the first and the last edition is present and
 -- complete. Per reference date: the territory table holds exactly the 16 voivodeships of
 -- poc_internet_gov_broadband_voivodeships() (every printed name mapped to a TERC code, nothing else) plus Poland; the
--- bandwidth classes and the service types (actual + wholesale only + theoretical only = in coverage) add up to their SUMA row (address points and coverages), and the
--- Poland totals of the three tables agree. Bronze applies the same sums to each edition; this test keeps them true
--- for the model as built. Refs only this source's model.
+-- bandwidth classes and the service types (actual + wholesale only + theoretical only = in coverage) add up to their
+-- SUMA row, and the Poland totals of the three tables agree. The report's own bandwidth classes do not always add up
+-- to its SUMA of address points (-180 to +56 of about 7.5 million in 8 of the first 10 editions, Dev trial of #2963),
+-- so that one sum is checked to 1 / 10,000 of SUMA as in Bronze (tables.SUM_TOLERANCE); everything else is exact.
+-- Refs only this source's model.
 with s as (
     select * from {{ ref('internet_gov_broadband_coverage') }}
 ),
@@ -59,7 +61,7 @@ checks as (
         d.reference_date,
         coalesce(t.voivodeships, 0) = 16 and coalesce(t.poland, 0) = 1 and coalesce(t.other, 0) = 0 as territory_ok,
         t.voiv_points = t.pl_points and t.voiv_total = t.pl_total as territory_sums_ok,
-        b.class_points = b.sum_points and b.class_coverages = b.sum_coverages and b.sum_points = t.pl_points
+        abs(b.class_points - b.sum_points) <= greatest(1, b.sum_points // 10000) and b.class_coverages = b.sum_coverages and b.sum_points = t.pl_points
             as bandwidth_ok,
         r.class_points = r.sum_points and r.sum_points = t.pl_total and r.covered_points = t.pl_points
             as service_type_ok

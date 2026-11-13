@@ -29,7 +29,6 @@ import json
 import os
 import sys
 import time
-import urllib.error
 import urllib.request
 
 from ingestion.common.report import annotate, step_summary
@@ -40,7 +39,11 @@ BUILD_JOB = "silver_gold.build"
 FORCED = "· filter"
 COVERED_STEP = "covered by another run"  # pipeline.yml: the step that runs only when the decision is `covered`
 RUN_PAGES = 2  # of 100 dispatched runs on main, newest first: about six hours of runs
-SHORT_WAIT, SHORT_WAITS, LONG_WAIT = 5, 12, 120  # seconds: a queue job decides in seconds; a build starts in hours
+SHORT_WAIT, SHORT_WAITS, LONG_WAIT = 5, 12, 300  # seconds: a queue job decides in seconds; a build starts in hours
+# github.token gets 1,000 API calls an hour per repository, shared with the scheduler and notify: below this many
+# remaining calls a waiting job reads the queue only every LONG_WAIT seconds (#2946).
+CALLS_FLOOR = 300
+_calls_left: list[int] = []  # X-RateLimit-Remaining of the newest API answer
 WAIT_LIMIT = 180 * 60  # the build job's own time limit
 OWN_JOB_TRIES = 5
 
@@ -55,12 +58,15 @@ def _get(repo: str, token: str, path: str) -> dict:
         },
     )
     with urllib.request.urlopen(request, timeout=30) as response:
+        left = response.headers.get("X-RateLimit-Remaining")
+        if left is not None and left.isdigit():
+            _calls_left[:] = [int(left)]
         return json.load(response)
 
 
 def place(run: dict, jobs: list[dict]) -> dict | None:
     """Another run's place in the build queue, from its jobs: None when its build has not come near the queue or
-    has ended, else {"run", "state", "forced", "queue_job"} with state
+    has ended, else {"run", "state", "forced", "queue_job", "platform"} with state
 
     - ``deciding``: its queue job has not ended;
     - ``waiting``: it entered and its build job has not started (GitHub lists a job that waits for the
@@ -72,7 +78,8 @@ def place(run: dict, jobs: list[dict]) -> dict | None:
     build = next((j for j in jobs if j.get("name") == BUILD_JOB), None)
     if queue is None and build is None:
         return None
-    forced = queue["name"].endswith(FORCED) if queue else "· platform ·" in str(run.get("display_title", ""))
+    platform = "· platform ·" in str(run.get("display_title", ""))  # a platform run has no index refresh
+    forced = queue["name"].endswith(FORCED) if queue else platform
     if build is not None:
         if build.get("status") == "completed":
             return None
@@ -85,20 +92,27 @@ def place(run: dict, jobs: list[dict]) -> dict | None:
         return None  # failed or cancelled, or covered: it does not build
     else:
         state = "waiting"
-    return {"run": int(run["id"]), "state": state, "forced": forced, "queue_job": int(queue["id"]) if queue else 0}
+    return {
+        "run": int(run["id"]),
+        "state": state,
+        "forced": forced,
+        "queue_job": int(queue["id"]) if queue else 0,
+        "platform": platform,
+    }
 
 
 def decide(forced: bool, queue_job: int, others: list[dict]) -> tuple[str, int | None]:
     """(``enter`` | ``covered`` | ``wait``, the run that covers or is waited for)."""
+    waiting = [o for o in others if o["state"] == "waiting"]
+    covering = [o for o in waiting if not o["forced"]]
+    if not forced and covering:
+        # Whatever earlier queue jobs still decide: this build has not started, so it covers this run (#2946).
+        return "covered", covering[0]["run"]
     earlier = [o for o in others if o["state"] == "deciding" and o["queue_job"] < queue_job]
     if earlier:
         return "wait", earlier[0]["run"]
-    waiting = [o for o in others if o["state"] == "waiting"]
     if not waiting:
         return "enter", None
-    covering = [o for o in waiting if not o["forced"]]
-    if not forced and covering:
-        return "covered", covering[0]["run"]
     return "wait", waiting[0]["run"]
 
 
@@ -146,10 +160,12 @@ def main() -> int:
             if time.monotonic() - started > WAIT_LIMIT:
                 decision, other, problem = "enter", None, f"waited over {WAIT_LIMIT // 60} minutes"
                 break
-            time.sleep(SHORT_WAIT if waits < SHORT_WAITS else LONG_WAIT)
+            scarce = bool(_calls_left) and _calls_left[0] < CALLS_FLOOR
+            time.sleep(LONG_WAIT if scarce or waits >= SHORT_WAITS else SHORT_WAIT)
             waits += 1
-    except (urllib.error.URLError, OSError, LookupError, ValueError, TypeError) as error:
-        # Never a build that nobody does: without a reading of the queue the run builds, as it did before this job.
+    except Exception as error:
+        # Any error, whatever its kind (#2946). Never a build that nobody does: without a reading of the queue the
+        # run builds, as it did before this job.
         decision, other, problem = "enter", None, f"{type(error).__name__}: {error}"[:300]
     summary = {
         "decision": decision,
@@ -159,6 +175,8 @@ def main() -> int:
         "waited_for_runs": waited_for,
         "queue": others,
     }
+    if _calls_left:
+        summary["api_calls_left"] = _calls_left[0]
     if decision == "covered":
         summary["covered_by_run"] = other
         summary["covered_by"] = (
@@ -173,10 +191,14 @@ def main() -> int:
     title = f"silver_gold.build covered by run {other}" if decision == "covered" else "silver_gold.queue"
     annotate("warning" if problem else "notice", title, summary)
     step_summary(f"## {title}\n\n```json\n{json.dumps(summary, indent=2)}\n```\n")
+    # The covering run also refreshes the portal index after its build, unless it is a platform run (no index
+    # refresh in its plan): several covered runs refreshing at once failed on R2's concurrent request limit (#2947).
+    by = next((o for o in others if o["run"] == other), None) if decision == "covered" else None
+    index = "covered" if by is not None and not by["platform"] else "refresh"
     output = os.environ.get("GITHUB_OUTPUT")
     if output:
         with open(output, "a", encoding="utf-8") as handle:
-            handle.write(f"decision={decision}\ncovered_by={other or ''}\n")
+            handle.write(f"decision={decision}\ncovered_by={other or ''}\nindex={index}\n")
     return 0
 
 
