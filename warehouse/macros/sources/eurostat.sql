@@ -11,7 +11,9 @@
    own name for it to the podregion of the same name in the voivodeship of the code's NUTS 2 parent (the first
    four characters, through poc_nuts_pl()). Names are compared in upper case without the prefixes `PODREGION`,
    `MIASTO`, `M.` and `M. ST.`, the rule the GUS DBW map uses for the same areas. A code that matches no
-   podregion or more than one stays unmatched (`_X`) and is counted by the build check. #}
+   podregion or more than one stays unmatched (`_X`) and is counted by the build check: so do the codes of
+   earlier NUTS versions the list still carries (`PL127 Miasto Warszawa (NUTS 2013)`), which are other areas.
+   Dev trial 43330997519: 73 of 73 podregions matched, each by one code. #}
 {% macro poc_geography__eurostat() %}
 eurostat_nuts_pl as ({{ poc_nuts_pl() }}),
 

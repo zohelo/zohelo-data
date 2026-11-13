@@ -159,7 +159,10 @@ rule-based build stages apply the rules the curated stages already apply:
   `confidential`; a value flagged `f` with status `forecast`; every row of a projection dataset
   (`PROJ_*`) is `forecast`, whatever its flag. A row keeps its status in every table
   it reaches; a reader that wants observed values only filters on `observation_status_key`, and a
-  forecast is never presented as an observation.
+  forecast is never presented as an observation. An exact zero (`0`, `0.0`, `0.000`, with or without
+  a flag) is a value Eurostat publishes, most of all in the airport-pair and stock datasets, and is
+  loaded as published: no layer fills a cell, and the bulk file, Silver and Gold hold the same number
+  of zeros per dataset (#2973). A reader that wants no zeros filters on `value`.
 - GUS BDL: an empty value is not loaded; a cell with attribute `x` ("filling the item is impossible
   or pointless") is not loaded even when it carries 0; two different published values for one key
   reject the subgroup in Silver already.
