@@ -217,3 +217,5 @@ nfz_services,pct,,pct
 nfz_services,days,,days
 nfz_services,PLN,,pln
 nfz_services,points,,nfz_points
+nfz_pharmacy_refunds,PLN,,pln
+nfz_pharmacy_refunds,packages,,packages
