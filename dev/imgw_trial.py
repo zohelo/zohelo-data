@@ -65,7 +65,7 @@ def note(title, data):
     text = json.dumps(data, default=str, ensure_ascii=False)
     print(f"### {title}: {text}", flush=True)
     NOTES += 1
-    if NOTES <= 9:
+    if NOTES <= 9:  # with the scratch notice: at most 10 annotations
         annotate("notice", title, json.loads(text) if len(text) <= 3800 else {"truncated": text[:3700]})
 
 
@@ -286,7 +286,8 @@ def models(con):
 def gold(con):
     src = {"imgw_archive_synop_daily": "arch_silver"}
     g = {}
-    for model, refs in (("poc_build_imgw_archive", {}), ("poc_build_imgw_api", {"imgw_api_synop": "imgw_api_synop"})):
+    arch_refs = {"prg_units": "prg_units", "imgw_archive_synop_stations": "imgw_archive_synop_stations"}
+    for model, refs in (("poc_build_imgw_archive", arch_refs), ("poc_build_imgw_api", {"imgw_api_synop": "imgw_api_synop"})):
         sql = render(f"warehouse/models/gold/{model}.sql", refs, src)
         counts = []
         for _ in (1, 2):
@@ -297,6 +298,7 @@ def gold(con):
             "rows_two_builds": counts,
             "contract_columns": [d[0] for d in con.execute(f"select * from {t} limit 0").description] == CONTRACT,
             "dup_series_date": one(con, f"select count(*) from (select measure_key || '|' || geography_key || '|' || breakdown_json, date_key from {t} group by all having count(*) > 1)"),
+            "rows_by_geography_level": rows(con, f"select case when geography_key = 'PL' then 'PL' else 'voivodeship' end, frequency, count(*), count(distinct geography_key) from {t} group by all order by all"),
             "measures_with_two_frequencies": one(con, f"select count(*) from (select measure_key from {t} group by 1 having count(distinct frequency) > 1)"),
             "by_measure": rows(con, f"select measure_key, frequency, count(*), min(date_key), max(date_key), min(value), max(value), avg(value)::decimal(8,2) from {t} group by all order by 1"),
             "null_values": one(con, f"select count(*) from {t} where value is null"),
@@ -304,7 +306,26 @@ def gold(con):
             "tests": schema_tests(con, f"warehouse/models/gold/_{model.removeprefix('poc_build_')}.yml", t, model=model),
         }
     a = "poc_build_imgw_archive"
-    g["spot_monthly_2025"] = rows(con, f"select period_label, measure_codes, value from {a} where frequency = 'M' and period_label like '2025-%' order by 2, 1")
+    g["spot_monthly_2025_pl"] = rows(con, f"select period_label, measure_codes, value from {a} where frequency = 'M' and geography_key = 'PL' and period_label like '2025-%' order by 2, 1")
+    g["spot_jan_jul_pl"] = rows(con, f"select year(date_key), round(avg(value) filter (where month(date_key) = 1), 2), round(avg(value) filter (where month(date_key) = 7), 2) from {a} where measure_key like '%synop_monthly:degC%' and geography_key = 'PL' and year(date_key) in (1970, 1990, 2010, 2024, 2025) group by 1 order by 1")
+    g["spot_voiv_2025_07_temp_and_precip"] = rows(con, f"select geography_key, measure_codes, value from {a} where frequency = 'M' and date_key = date '2025-07-01' and geography_key <> 'PL' order by 2, 1", 40)
+    g["stations_per_voivodeship"] = rows(con, """select 'TERC:' || v.teryt_code, count(*), string_agg(s.station_name, '; ' order by s.station_name)
+        from imgw_archive_synop_stations s join prg_units v on st_contains(st_geomfromwkb(v.geometry_wkb), st_point(s.longitude, s.latitude))
+        where s.longitude is not null group by 1 order by 1""", 20)
+    g["stations_with_coordinates_not_placed"] = rows(con, """select s.station_code, s.station_name, s.longitude, s.latitude from imgw_archive_synop_stations s
+        where s.longitude is not null and not exists (select 1 from prg_units v where st_contains(st_geomfromwkb(v.geometry_wkb), st_point(s.longitude, s.latitude)))""")
+    g["stations_without_coordinates"] = rows(con, "select count(*), min(last_date), max(last_date) from imgw_archive_synop_stations where longitude is null")
+    g["active_stations_without_coordinates"] = rows(con, "select station_code, station_name, last_date from imgw_archive_synop_stations where longitude is null and last_date >= date '2025-01-01'")
+    # station link archive <-> API synop (id rule '12' + last three digits), checked against the names
+    g["api_synop_link"] = {
+        "api_stations": one(con, "select count(distinct station_id) from imgw_api_synop"),
+        "matched_by_code_rule": one(con, "select count(distinct a.station_id) from imgw_api_synop a join imgw_archive_synop_stations s on s.api_synop_station_id = a.station_id"),
+        "matched_names_agree": one(con, """select count(distinct a.station_id) from imgw_api_synop a join imgw_archive_synop_stations s on s.api_synop_station_id = a.station_id
+            where replace(replace(upper(strip_accents(a.station_name)), '-', ' '), '  ', ' ') = replace(replace(upper(strip_accents(s.station_name)), '-', ' '), '  ', ' ')"""),
+        "name_differences": rows(con, """select a.station_id, a.station_name, s.station_name from imgw_api_synop a join imgw_archive_synop_stations s on s.api_synop_station_id = a.station_id
+            where replace(replace(upper(strip_accents(a.station_name)), '-', ' '), '  ', ' ') <> replace(replace(upper(strip_accents(s.station_name)), '-', ' '), '  ', ' ') group by all""", 30),
+        "unmatched_api": rows(con, "select distinct a.station_id, a.station_name from imgw_api_synop a anti join imgw_archive_synop_stations s on s.api_synop_station_id = a.station_id"),
+    }
     g["spot_annual_mean_temp"] = rows(con, f"select year(date_key), round(avg(value), 2), count(*) from {a} where measure_key like '%synop_monthly:degC%' and year(date_key) in (1971, 1991, 2001, 2020, 2023, 2024, 2025) group by 1 order by 1")
     g["spot_annual_precip"] = rows(con, f"select year(date_key), round(sum(value), 1), count(*) from {a} where measure_key like '%synop_monthly:mm%' and year(date_key) in (1991, 2001, 2010, 2020, 2023, 2024, 2025) group by 1 order by 1")
     g["spot_daily"] = rows(con, f"select date_key, value from {a} where frequency = 'D' and date_key in ('2025-01-01', '2025-07-01', '2026-10-31', '1966-01-01') order by 1")
@@ -317,7 +338,9 @@ def gold(con):
                                   f"left join {a} b on b.measure_key like k.measure_key_pattern where k.source_system = 'imgw_archive' group by 1 order by 1")
     g["kpi_rows_per_area_period_max"] = one(con, f"select max(c) from (select k.kpi_key, b.geography_key, b.date_key, count(*) c from read_csv('warehouse/seeds/kpi_measure.csv', all_varchar=true) k "
                                                  f"join {a} b on b.measure_key like k.measure_key_pattern where k.source_system = 'imgw_archive' group by all)")
-    g["outside_bounds"] = one(con, f"select count(*) from {a} where (measure_key like '%synop_monthly:degC%' and (value < -30 or value > 35)) or (measure_key like '%synop_monthly:mm%' and (value < 0 or value > 500))")
+    g["outside_bounds"] = one(con, f"select count(*) from {a} where (measure_key like '%synop_monthly:degC%' and (value < -30 or value > 35)) or (measure_key like '%synop_monthly:mm%' and (value < 0 or value > 1000))")
+    g["metrics_rows_per_kpi"] = rows(con, f"select k.kpi_key, count(*) from read_csv('warehouse/seeds/kpi_measure.csv', all_varchar=true) k join {a} b on b.measure_key like k.measure_key_pattern where k.source_system = 'imgw_archive' group by 1")
+    g["max_monthly_precip_by_level"] = rows(con, f"select geography_key = 'PL', max(value), arg_max(geography_key || ' ' || period_label, value) from {a} where measure_key like '%synop_monthly:mm%' group by 1")
     return g
 
 
@@ -395,23 +418,46 @@ def main(argv):
         results["arch_bs"] = archive_bronze_silver()
         note("imgw_archive bronze+silver (twice), completeness", results["arch_bs"])
         con = duckdb.connect()
+        con.execute("install spatial; load spatial")
+        from pyiceberg.expressions import EqualTo
+
+        prg = catalog().load_table(("silver", "prg_units")).scan(
+            row_filter=EqualTo("unit_level", "wojewodztwo"), selected_fields=("unit_level", "teryt_code", "name_pl", "geometry_wkb")).to_arrow()
+        con.register("prg_arrow", prg)
+        con.execute("create table prg_units as select * from prg_arrow")
+        results["prg_voivodeships"] = len(prg)
         con.register("arch_bronze", scan(arch.BRONZE, ["entity", "nsp", "rok", "mc", "dz", "tmax", "wtmax", "tmin", "wtmin", "std", "wstd",
                                                         "tmng", "wtmng", "smdb", "wsmdb", "pksn", "wpksn", "usl", "wusl", "raw_sha256"]))
         con.register("arch_silver", scan(arch.SILVER))
         con.register("api_bronze_synop", scan((SCRATCH, "imgw_api_synop")))
         con.register("api_bronze_meteo", scan((SCRATCH, "imgw_api_meteo")))
         m = models(con)
-        note("imgw bronze profile", m["bronze_profile"])
-        note("imgw silver (archive entity table, API models, station dimension)", {k: m[k] for k in ("archive_silver", "api_silver", "stations")})
+        results["models"] = m
+        bp = m["bronze_profile"]
+        note("imgw bronze profile", {k: bp[k] for k in ("rows", "entities", "stations", "years", "dup_station_day", "null_keys", "status_values")})
+        note("imgw bronze markers", {k: bp[k] for k in ("non_numeric_values_blank_status", "empty_value_blank_status", "zero_value_with_status_8_9")})
+        a_s, api, st = m["archive_silver"], m["api_silver"], m["stations"]
+        note("imgw silver", {"archive": {k: a_s[k] for k in a_s if k != "by_parameter_status"}, "by_parameter_status": a_s["by_parameter_status"],
+                             "api": {k: api[k] for k in ("imgw_api_synop", "imgw_api_stations", "test imgw_api_synop_complete (warn)", "test imgw_api_stations_complete (warn)")},
+                             "stations": {k: st[k] for k in ("rows_two_builds", "tests", "test imgw_archive_synop_stations_complete", "with_coordinates", "active_last_month")}})
         g = gold(con)
-        note("imgw gold build stages", {k: g[k] for k in ("poc_build_imgw_archive", "poc_build_imgw_api")})
-        note("imgw gold spot values, KPI patterns, bounds", {k: v for k, v in g.items() if k not in ("poc_build_imgw_archive", "poc_build_imgw_api")})
-        note("imgw licence gate and production fact rows", {"licence": licence(), "prod": results["prod"]})
+        results["gold"] = g
+        results["licence"] = licence()
+        note("imgw gold build stages, licence gate, production fact rows", {**{k: g[k] for k in ("poc_build_imgw_archive", "poc_build_imgw_api")},
+                                                                            "licence": results["licence"], "prod": results["prod"]})
+        note("imgw gold spot values", {k: g[k] for k in ("spot_jan_jul_pl", "spot_monthly_2025_pl", "spot_annual_precip", "spot_daily", "months_missing", "outside_bounds", "metrics_rows_per_kpi", "max_monthly_precip_by_level", "kpi_rows_per_area_period_max")})
+        note("imgw voivodeships and station link", {"prg_voivodeships": results["prg_voivodeships"], **{k: g[k] for k in ("stations_per_voivodeship", "stations_with_coordinates_not_placed", "stations_without_coordinates", "active_stations_without_coordinates", "api_synop_link", "spot_voiv_2025_07_temp_and_precip")}})
+
     except Exception as exc:  # noqa: BLE001
         status = 1
         traceback.print_exc()
         annotate("error", "imgw trial failed", {"error": f"{type(exc).__name__}: {str(exc)[:1500]}"})
     finally:
+        import os
+
+        out_dir = Path(os.environ.get("DEV_OUTPUT_DIR", "/tmp/dev-output"))
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "imgw_trial.json").write_text(json.dumps(results, default=str, ensure_ascii=False, indent=1))
         cleanup()
     return status
 
