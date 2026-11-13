@@ -7,7 +7,8 @@
    OWID's continents, income groups and historical states have no Gold area and stay in Silver. Values as
    published, no status flags in the CSV (ok); source_version = the column's lastUpdated in metadata.json (else the
    Landing version). The charts publish no projections (tests/owid_observations_charts.sql fails on a year after
-   the current one). #}
+   the current one). Years before 1900 (Maddison from year 1, V-Dem from 1789) stay in Silver: the conformed
+   calendar poc_dim_calendar starts on 1900-01-01 and the facts test date_key against it. #}
 with charts as ({{ poc_owid_charts() }}),
 
 geo_map as (
@@ -50,3 +51,4 @@ inner join charts as c on o.chart = c.chart and o.indicator = c.indicator
 inner join geo_map as g on o.entity_code = g.source_code
 left join meta as m on o.chart = m.chart and o.indicator = m.short_name
 where o.value is not null
+    and o.year >= 1900

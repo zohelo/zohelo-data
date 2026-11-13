@@ -21,7 +21,8 @@ metadata.json). Silver: `silver.owid_observations` (grain chart × OWID entity �
 OWID's own areas, regions and income groups without a code, historical states) and `silver.owid_charts` (grain
 chart × column short name). An empty cell is no row, never a zero. Gold: `gold.build_owid`, one block and one
 annual measure per chart (`owid:<chart>:<unit>`), every country by ISO alpha-3, World (`OWID_WRL` → `WB:WLD`) and
-Kosovo (`OWID_KOS` → XKX); continents, income groups and OWID's historical states stay in Silver. Draft KPIs
+Kosovo (`OWID_KOS` → XKX); continents, income groups, OWID's historical states and every year before 1900 (Maddison from year 1, V-Dem
+from 1789; the conformed calendar starts in 1900) stay in Silver. Draft KPIs
 `co2_consumption_per_capita` and `electoral_democracy_index` (no published KPI has these concepts); the
 Maddison series is a fourth source of the published KPI `gdp_per_capita` (O31, its own unit
 `intl_usd_2011_per_person`, priority 4), contract v2 only (`V2_ONLY_SOURCES`), so zohelo.com's first value does
