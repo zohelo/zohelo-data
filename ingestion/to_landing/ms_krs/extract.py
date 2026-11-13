@@ -47,7 +47,7 @@ BUDGET_MINUTES = 120.0  # per run, about 4,300 requests
 BULLETIN_MAX_DAYS = 45  # bulletin days read in one run; older unread days are reported, not read
 FLUSH_RECORDS = 500  # new records between Landing writes, so a failed run loses little
 RETRY_WAITS = (10, 30)  # seconds before the second and third attempt
-RETRY_STATUSES = {408, 429, 500, 502, 503, 504}
+RETRY_STATUSES = {408, 500, 502, 503, 504}  # 429 and 403 are refusals: the run stops
 NO_EXTRACT = {204, 404}  # the register holds no current extract of the number (P answers 204, S answers 404)
 NO_EXTRACT_RUN = 50  # numbers in a row without an extract that stop a run (about 1 in 4 has none)
 
@@ -201,7 +201,7 @@ class Api:
                     continue
             problem = f"HTTP {response.status_code}"
             if response.status_code not in RETRY_STATUSES:
-                break  # a refusal (403, 404 …) is not asked again and never worked around
+                break  # a refusal (403, 429 …) is not asked again and never worked around
         raise Stop(f"{problem}: {url}")
 
     def extract(self, krs: str, requested_on: str) -> tuple[dict[str, Any], str]:
@@ -276,17 +276,6 @@ def _land(client: Any, bucket: str, part: dict[str, Any], landing_root: str) -> 
     return True
 
 
-def _read(operation: Any) -> bytes:
-    """A storage read, tried three times: a throttled answer must not look like a missing part."""
-    for wait in (5, 20):
-        try:
-            return operation()
-        except Exception as exc:  # any storage error is tried again; the third attempt raises
-            print(json.dumps({"status": "read_retry", "error": f"{type(exc).__name__}: {str(exc)[:200]}"}), flush=True)
-            time.sleep(wait)
-    return operation()
-
-
 def held_parts(client: Any, bucket: str, landing_root: str) -> dict[str, dict[str, Any]]:
     """Every part with its receipts, the records of its newest copy and the bulletin day it is settled through."""
     from ingestion.common.bulk_bronze import read_raw
@@ -294,7 +283,7 @@ def held_parts(client: Any, bucket: str, landing_root: str) -> dict[str, dict[st
     parts = {}
     for spec in specs():
         held = bulk_file.landed(client, bucket, bulk_file.prefix(SOURCE, spec["entity"], landing_root))
-        records = decode(_read(lambda receipt=held[-1]: read_raw(client, bucket, SOURCE, receipt))) if held else {}
+        records = decode(read_raw(client, bucket, SOURCE, held[-1])) if held else {}
         through = (held[-1].get("detail") or {}).get("bulletin_through") if held else None
         parts[spec["entity"]] = {
             "entity": spec["entity"],

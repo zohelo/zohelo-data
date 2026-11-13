@@ -4,16 +4,22 @@ models:
   - name: krs_entity
     description: >-
       One row per KRS number with a current extract in the Open KRS API (Ministry of Justice; terms not
-      established, internal only): register, legal form, registered name, NIP, REGON, seat (voivodeship key of
+      established, internal only): register, legal form, registered name, NIP, REGON, LEI (exact KRS match in GLEIF only), seat (voivodeship key of
       dim_geography, powiat, gmina, town; no street address), registration date, date of the last entry, share
       capital, main PKD code, liquidation and bankruptcy flags. Selection: the KRS numbers GLEIF lists (entities
       with an LEI), not the whole register. No natural persons.
     columns:
       - name: krs_number
-        description: >-
-          The ten-digit KRS number. Joins GLEIF by registration_authority_entity_id (authority RA000484); no
-          relationships test to a shared model.
+        description: The ten-digit KRS number (the register's own id).
         tests: [not_null, unique]
+      - name: lei
+        description: >-
+          The LEI of the one GLEIF record registered under exactly this KRS number (registration authority
+          RA000484); null when no record or several records name the number (lei_count). No relationships test
+          to a shared model.
+      - name: lei_count
+        description: GLEIF records that name this KRS number (0 = none any more, more than 1 = lei is left null).
+        tests: [not_null]
       - name: register
         tests: [not_null, {accepted_values: {arguments: {values: ['RejP', 'RejS']}}}]
       - name: name
