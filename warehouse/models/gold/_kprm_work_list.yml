@@ -21,9 +21,9 @@ models:
       Build stage — drafts entering the Council of Ministers' work list (KPRM), Poland: count per month
       (measure ...:monthly, M) and per year (...:annual, A) of the publication on the list, total and by kind or by
       responsible body (one breakdown at a time); and the drafts that entered the list in a month
-      (...:monthly_by_current_status) or year (...:annual_by_current_status) by their status in the newest file
-      (realised, withdrawn, in_progress): the current status of that period's entries, not a history of status
-      changes. Only periods with at least one entry have a row (no zero filling); the period of the download date
+      (...:monthly_by_current_status) or year (...:annual_by_current_status) of publication on the list, by their
+      status at download time (realised, withdrawn, in_progress; the newest file): values of earlier periods change
+      retroactively as statuses change, and it is not a history of status changes. Only periods with at least one entry have a row (no zero filling); the period of the download date
       is provisional. Realised and withdrawn counts by the date of the change are not built (the source gives no
       status-change date).
     columns:
