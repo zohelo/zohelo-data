@@ -1,8 +1,9 @@
 """Read-only reachability and layout probe of the Sejm API and the ELI API (PLG-024 #481, PLG-026 #483).
 
-GET only, one request at a time, three seconds apart, at most 45 requests. robots.txt first: a rejection page,
-an HTTP 401/403 or a disallow of /sejm/ or /eli/ stops the probe. A refusal (401, 403, a "Request Rejected"
-page) stops it too and is not retried. A 503 or a timeout gets one retry after 60 seconds. Prints status,
+GET only, one request at a time, three seconds apart, at most 45 requests. robots.txt first: a disallow of
+/sejm/ or /eli/ stops the probe. A rejection page on /robots.txt alone (the API host may not serve the file) is
+recorded and the documented API calls go on; a refusal of an API call (401, 403, a "Request Rejected" page)
+stops the probe and is never retried. A plain 503 or a timeout gets one retry after 60 seconds. Prints status,
 content type, size and the first bytes or the JSON shape of each answer to the job log. Writes nothing.
 """
 
@@ -46,7 +47,7 @@ def get(url, accept="application/json"):
     time.sleep(3.0)
     t0 = time.time()
     status, hdr, body = fetch(url, accept)
-    if status in (None, 502, 503, 504) and BUDGET[0] > 0:
+    if status in (None, 502, 503, 504) and not refused(status, body) and BUDGET[0] > 0:
         print(f"--- {url}: {status} {body[:200]!r}; one retry in 60 s", flush=True)
         BUDGET[0] -= 1
         time.sleep(60)
@@ -54,7 +55,7 @@ def get(url, accept="application/json"):
         status, hdr, body = fetch(url, accept)
     ms = int((time.time() - t0) * 1000)
     keep = {k: v[:100] for k, v in hdr.items() if k.lower() in ("content-type", "last-modified", "etag", "retry-after", "content-length", "server", "cache-control", "x-total-count") or "ratelimit" in k.lower()}
-    print(f"\n=== GET {url}\n--- status {status} | {len(body)} bytes | {ms} ms | {keep}", flush=True)
+    print(f"\n=== GET {url}\n--- status {status} | ctype {hdr.get('Content-Type', hdr.get('content-type'))} | {len(body)} bytes | {ms} ms | {keep}", flush=True)
     if refused(status, body):
         print("--- REFUSED: " + body[:600].decode("utf-8", "replace").replace("\n", " "), flush=True)
         STOP[0] = True
@@ -100,8 +101,9 @@ def robots():
     text = body.decode("utf-8", "replace")
     print(f"=== robots.txt: status {status} | {len(body)} bytes\n{text[:1500]}", flush=True)
     if refused(status, body):
-        print("--- robots.txt is a refusal: stop")
-        return False
+        print("--- ROBOTS_REFUSED: /robots.txt answered with a refusal page; recorded, going on with the documented API")
+        RP.parse([])
+        return True
     if status == 200 and "<html" not in text[:400].lower():
         RP.parse(text.splitlines())
     else:
