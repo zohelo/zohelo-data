@@ -1,0 +1,18 @@
+version: 2
+sources:
+- name: zus_yearbook
+  description: ZUS Rocznik Statystyczny Ubezpieczeń Społecznych (register PLS-010), the PDF editions' text layer
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/zus_yearbook/
+    loaded_by: ingestion/to_bronze/zus_yearbook/
+    config: ingestion/sources/zus_yearbook.yaml
+  tables:
+  - name: zus_yearbook_lines
+    description: >-
+      One row per non-empty text line of each page of the newest Landing copy of each edition (entity, e.g.
+      rocznik_2021_2023): page number, line number on the page and the line as pypdf reads it in layout mode
+      (columns kept apart by runs of spaces); partitioned by entity.
+  - name: zus_yearbook_rejected_files
+    description: zus_yearbook Landing files the Bronze decoder rejected (not a PDF, encrypted, or without a text layer), with the reason.
