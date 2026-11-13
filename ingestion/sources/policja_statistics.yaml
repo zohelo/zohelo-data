@@ -1,0 +1,80 @@
+source_system: policja_statistics
+description: "Polish Police statistics portal — recorded and detected offences and detection rate by voivodeship, per offence category, annual since 1999"
+
+# Extraction strategy (docs/landing.md). Register PLG-033. Bulk feature: statystyka.policja.pl links, on each
+# offence-category page (server-rendered), an XLSX "<category> wg jednostek podziału administracyjnego kraju -
+# przestępstwa stwierdzone, przestępstwa wykryte, % wykrycia (1999 - <end year>)" of about 30 kB. The file name
+# carries the end year (…-do-2023.xlsx), so the link is found on the category page (url_from); the companion
+# workbook "postępowania wszczęte" by registering police unit is not declared (smallest selection). Entity = one
+# category workbook, version = the server's Last-Modified (Dev probes 43327577263 on test/policja-stats-trial and
+# PROBE_RUN on test/policja_statistics-trial). Each file is the whole series of its category (snapshot).
+# Restart unit: one file. robots.txt disallows only /ftp/. End year on 13 Nov 2026: 2021 for all offences, economic
+# and road offences; 2023 for the other seven categories.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: ogolem
+        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-ogolem-do-[0-9]{4}\\.xlsx$"}
+        format: raw
+        version: last_modified
+      - entity: kryminalne
+        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-kryminalne", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-kryminalne-do-[0-9]{4}\\.xlsx$"}
+        format: raw
+        version: last_modified
+      - entity: wybrane_7
+        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-kryminalne/7-wybranych-kategorii-p", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-17x7-do-[0-9]{4}\\.xlsx$"}
+        format: raw
+        version: last_modified
+      - entity: zabojstwo
+        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-kryminalne/zabojstwo", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-zabojstwo-do-[0-9]{4}\\.xlsx$"}
+        format: raw
+        version: last_modified
+      - entity: zgwalcenie
+        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-kryminalne/zgwalcenie", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-zgwalcenie-do-[0-9]{4}\\.xlsx$"}
+        format: raw
+        version: last_modified
+      - entity: narkotyki
+        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-kryminalne/ustawa-o-przeciwdzialan", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-narkotyki-do-[0-9]{4}\\.xlsx$"}
+        format: raw
+        version: last_modified
+      - entity: gospodarcze
+        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-gospodarcz", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-gospodarcze-do-[0-9]{4}\\.xlsx$"}
+        format: raw
+        version: last_modified
+      - entity: korupcja
+        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-gospodarcz/przestepstwa-korupcyjne", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-korupcja-do-[0-9]{4}\\.xlsx$"}
+        format: raw
+        version: last_modified
+      - entity: drogowe
+        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-drogowe", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-drogowe-do-[0-9]{4}\\.xlsx$"}
+        format: raw
+        version: last_modified
+      - entity: drogowe_nietrzezwi
+        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-drogowe/prowadzenie-pojazdu-w-s", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-drogowe-nietrzezwi-do-[0-9]{4}\\.xlsx$"}
+        format: raw
+        version: last_modified
+  initial: bulk
+  production: snapshot                  # each workbook is its category's whole series since 1999
+  incremental_policy: changed_since_last  # Last-Modified, then SHA-256
+  schedule: # UTC; annual per category, uneven, no release calendar; monthly check
+    - {cron: "50 6 9 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/policja_statistics/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report   # a newer workbook could drop years an older one holds
+bronze: [bronze.policja_statistics_cells, bronze.policja_statistics_rejected_files]
+silver: [silver.policja_statistics_offences]
+gold: [gold.build_policja_statistics]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  policja_statistics_offences: {rows: 10000}  # to be measured
+  poc_build_policja_statistics: {rows: 10000}  # to be measured
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): ten workbooks of about 30 kB, a few thousand cells each, at most one new
+# version per category a year; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2969"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
