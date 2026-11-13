@@ -96,7 +96,7 @@ def main(argv) -> int:
         annotate("notice", "policja bronze", {
             "rows_after_run1": counts[0], "rows_after_run2": counts[1],
             "rejected": [(r.get("entity"), (r.get("error") or "")[:120]) for r in rejected],
-            "per_entity": con.sql("select string_agg(entity || ':' || n, ' ' order by entity) from (select entity, count(*) n from cells group by 1)").fetchone()[0]})
+            "per_entity": con.sql("select string_agg(entity || ':' || n, ' ' order by entity) from (select entity, count(*) n from cells group by 1)").fetchall()[0][0]})
         if "dump" in argv or not SILVER.exists():
             show(con, "sheets", "select entity, sheet_name, count(*) cells, max(row_number) max_row, max(column_number) max_col from cells group by all order by all")
             show(con, "number formats", "select cell_type, number_format, count(*) from cells group by all order by 3 desc")
