@@ -9,7 +9,9 @@
    period_end is that last day. Values and units as published (iso4217:<currency>), not rescaled; decimals is the
    highest precision stated. is_reporting_period marks the period ending on the filing's own period end (the other
    periods are comparatives); reporting_period_candidates counts the periods of the filing, concept and unit that
-   end there (more than one, e.g. a year and a shorter period: Gold leaves the filing's concept out). #}
+   end there (more than one, e.g. a year and a shorter period: Gold leaves the filing's concept out).
+   filing_sequence and filings_for_period come from the filing: an issuer and period end with several filings
+   (language versions, refilings) has rows for each of them, nothing is picked between filings. #}
 with newest as (
     select *
     from {{ source('xbrl_filings', 'xbrl_filings_facts') }}
@@ -57,6 +59,8 @@ joined as (
     select
         g.*,
         f.lei,
+        f.filing_sequence,
+        f.filings_for_period,
         g.period_end = f.period_end as is_reporting_period
     from grouped as g
     inner join {{ ref('xbrl_filings_filings') }} as f on g.fxo_id = f.fxo_id
@@ -65,6 +69,8 @@ joined as (
 select
     fxo_id,
     lei,
+    filing_sequence,
+    filings_for_period,
     concept,
     period_start,
     period_end,
