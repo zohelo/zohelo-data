@@ -6,9 +6,11 @@
      (Rodzaj dokumentu) or by responsible body (Organ odpowiedzialny, as published; _U where the cell is empty),
      one breakdown at a time with the other at _T (no cross-tabulation);
    - kprm_work_list:entries:list_entries:monthly_by_current_status (M) and ...:annual_by_current_status (A): the
-     drafts that entered the list in the period, by their status in the newest file (realised, withdrawn,
-     in_progress). This is the current status of that period's entries, not a history of status changes: the file
-     gives no date of a status change, so realised or withdrawn counts by the date of the change are not built.
+     drafts that entered the list in the period (month or year of publication on the list), by their status at
+     download time, i.e. in the newest file (realised, withdrawn, in_progress). It changes retroactively: when a
+     draft is realised or withdrawn, the value of its publication period moves between statuses at the next
+     download. It is not a history of status changes: the file gives no date of a status change, so realised or
+     withdrawn counts by the date of the change are not built.
      No total row (it is the entries total).
    A period gets a row only when at least one draft entered the list in it: empty months are not filled with zeros.
    The period holding the file's download date is open (provisional). Counts are of the drafts the newest file
@@ -68,10 +70,16 @@ select
     'Drafts entering the Council of Ministers work list (KPRM)' as block_name,
     'kprm_work_list:entries:list_entries:' || c.measure_code as measure_key,
     case
-        when c.current_status is null then 'Government drafts entering the Council of Ministers work list, '
-        else 'Government drafts that entered the Council of Ministers work list, by their current status, '
-    end
-    || case c.frequency when 'M' then 'per month' else 'per year' end || ' (KPRM)' as measure_name,
+        when c.current_status is null
+            then
+                'Government drafts entering the Council of Ministers work list, per '
+                || case c.frequency when 'M' then 'month' else 'year' end || ' of publication on the list (KPRM)'
+        else
+            'Government drafts that entered the Council of Ministers work list, by '
+            || case c.frequency when 'M' then 'month' else 'year' end
+            || ' of publication on the list and by their status at download time (KPRM; earlier periods change'
+            || ' as statuses change)'
+    end as measure_name,
     c.measure_code as measure_codes,
     'list_entries' as unit_code,
     'drafts entered on the work list' as unit_name,
