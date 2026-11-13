@@ -140,7 +140,9 @@ def checks(cat, con, silver_paths: list[str]) -> dict:
                 when geography_source_code like '%#%#%' then 'another name under the code'
                 when geography_source_code like '%#%' and length(split_part(geography_source_code, '#', 1)) = 7
                     then 'TERYT code beside the unit id'
-                when geography_source_code like '%#%' then 'region or macroregion on a voivodeship'
+                when geography_source_code like '%#%' and (substr(geography_source_code, 6, 7) = '0000000'
+                    or substr(geography_source_code, 3, 10) = '0000000000') then 'region or macroregion on a voivodeship'
+                when geography_source_code like '%#%' then 'unit id beside another unit id of the area'
                 when length(geography_source_code) = 7 then 'TERYT code not in the map'
                 else 'unit id not in the map' end"""
     out["geography_codes (kind, block x code, codes, points)"] = con.execute(
@@ -292,9 +294,10 @@ def main() -> None:
             lookups, geo_map = obs.export_lookups(cat, SOURCE, Path(directory))
             ranks = obs.load_ranks(SOURCE, lookups)
             named = duckdb.sql(
-                f"select block_id from read_parquet('{lookups['names']}') where lower(block_name) like '%prognoz%' order by 1"
+                f"select block_id, block_name from read_parquet('{lookups['names']}') where lower(block_name) like '%prognoz%' order by 1"
             ).fetchall()
-        projections = sorted((b for (b,) in named if b in silver), key=lambda b: silver[b]["rows"])
+        projection_names = {b: n[:90] for b, n in named if b in silver}
+        projections = sorted(projection_names, key=lambda b: silver[b]["rows"])
         sample = pick(silver, ranks, projections[:2])
         ids = [k for c, k in geo_map.items() if len(c) == 12]
         silver_paths = [p for b in sample for p in silver[b]["paths"]]
@@ -310,7 +313,7 @@ def main() -> None:
             "subgroups_in_silver": len(silver),
             "geo_map_codes": len(geo_map),
             "unit_ids_in_map_and_unmatched": [len(ids), sum(k == "_X" for k in ids)],
-            "subgroups_named_projection": [len(projections), projections[:6]],
+            "subgroups_named_projection": projection_names,
             "load_order_groups (0 to voivodeship and subregion, 1 to powiat, 2 to gmina, 3 level unknown)": groups,
             "sample": len(sample),
             "sample_silver_rows": sum(sizes),
