@@ -302,8 +302,8 @@ def main(argv) -> int:
                 f"select max(n) from (select date_key, count(*) n from {g} where frequency = 'M' and is_total group by 1)"
             )[0][0],
             "status_measure_sum_vs_entries": q(
-                f"select frequency, sum(value)::int filter (where measure_key like '%by_current_status'), "
-                f"sum(value)::int filter (where measure_key not like '%by_current_status' and is_total) from {g} group by 1"
+                f"select frequency, (sum(value) filter (where measure_key like '%by_current_status'))::int, "
+                f"(sum(value) filter (where measure_key not like '%by_current_status' and is_total))::int from {g} group by 1"
             ),
             "annual_by_current_status": q(
                 f"select period_label, json_extract_string(breakdown_json, '$.current_status'), value::int from {g} "
