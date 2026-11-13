@@ -230,6 +230,21 @@ def silver(con) -> dict:
         "awaiting_by_stat_month": rows(con, f"select statistics_month, count(*), count(awaiting), sum(awaiting) from {q} group by 1 order by 1"),
         "forecast_applicable": rows(con, f"select forecast_applicable, count(*) from {q} group by 1"),
         "providers": one(con, "select count(*) from nfz_waiting_times_providers"),
+        # many places: entries of one province x provider x benefit x case with many_places = 'Y'
+        "many_places_groups(entries_Y,groups,groups_same_count,groups_differing,entries_in_differing)": rows(
+            con, f"with g as (select province_code, case_code, provider_code, benefit, count(*) n, "
+                 f"count(distinct awaiting) d, count(awaiting) a, count(distinct statistics_month) m from {q} "
+                 f"where many_places = 'Y' group by all) select sum(n), count(*), count(*) filter (where d = 1 and a = n and m = 1), "
+                 f"count(*) filter (where not (d = 1 and a = n and m = 1)), sum(n) filter (where not (d = 1 and a = n and m = 1)) from g"),
+        "many_places_differing_sample": rows(
+            con, f"select province_code, case_code, provider_code, benefit, list(awaiting order by awaiting), "
+                 f"list(distinct statistics_month) from {q} where many_places = 'Y' group by all "
+                 f"having count(distinct awaiting) > 1 or count(awaiting) < count(*) limit 3"),
+        "naive_sum_vs_lists_PL_case1": rows(
+            con, f"select (select sum(awaiting) from {q} where case_code = 1 and statistics_month = snapshot_month - interval 1 month), "
+                 f"(select value from nfz_waiting_times_monthly where province_code = '00' and case_code = 1 and measure_code = 'persons_awaiting')"),
+        "suppression_markers_awaiting_non_numeric": rows(
+            con, "select awaiting, count(*) from bronze where awaiting is not null and try_cast(awaiting as bigint) is null group by 1 limit 10"),
         "monthly_by_measure": rows(con, "select measure_code, case_code, period_month, count(*), sum(value) filter (where province_code = '00') "
                                         "from nfz_waiting_times_monthly group by all order by all"),
     }
@@ -331,7 +346,7 @@ def main(argv: list[str]) -> int:
     filter_text = argv[0] if argv else ""
     status = 0
     try:
-        note(f"{SOURCE} v1.4 terms page", terms())
+        terms_page = terms()
         teryt = teryt_names()
         land = landing(filter_text)
         note(f"{SOURCE} landing (twice), inspect, verify", land)
@@ -342,11 +357,14 @@ def main(argv: list[str]) -> int:
         note(f"{SOURCE} bronze profile", bronze_profile(con))
         s = silver(con)
         note(f"{SOURCE} silver", {k: v for k, v in s.items() if k != "profile"})
+        many = {k: s["profile"].pop(k) for k in list(s["profile"]) if k.startswith(("many_places", "naive", "suppression"))}
         note(f"{SOURCE} silver profile", s["profile"])
+        note(f"{SOURCE} many places and markers", many)
         g = gold(con, teryt)
         note(f"{SOURCE} gold", {k: v for k, v in g.items() if k not in ("map", "spot_PL", "spot_mazowieckie_case1")})
         note(f"{SOURCE} gold geography and spot values", {k: g[k] for k in ("map", "spot_PL", "spot_mazowieckie_case1")})
-        note(f"{SOURCE} licence gate", licence())
+        note(f"{SOURCE} licence gate and v1.4 terms page", {**licence(), "terms_pages": {
+            k: {"status": v["status"], "head": v["head"][:600]} for k, v in terms_page.items()}})
     except Exception as exc:  # noqa: BLE001
         status = 1
         import traceback
