@@ -1,0 +1,92 @@
+version: 2
+# RPWDL register (PLS-020), newest register files; history and trial run: ingestion/sources/rpwdl.yaml and
+# docs/sources/rpwdl.md. Privacy allowlist in ingestion/to_bronze/rpwdl/load.py. Voivodeship codes: the first two
+# digits of the TERYT code (null when it is not one of the 16).
+models:
+  - name: rpwdl_providers
+    description: >-
+      Healthcare providers (podmioty wykonujące działalność leczniczą), one row per provider ledger of the newest
+      active and inactive files. Grain: book_id.
+    columns:
+      - name: book_id
+        tests: [not_null, unique]
+      - name: ledger_state
+        tests: [not_null, {accepted_values: {arguments: {values: [active, inactive]}}}]
+      - name: authority_type
+        tests: [{accepted_values: {arguments: {values: ['W']}}}]
+      - name: voivodeship_code
+        tests: &voivodeships [{accepted_values: {arguments: {values: ['02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32']}}}]
+      - name: is_active
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: rpwdl_establishments
+    description: >-
+      Establishments (zakłady lecznicze) of the healthcare providers, newest active and inactive files. Grain:
+      establishment_id.
+    columns:
+      - name: establishment_id
+        tests: [not_null, unique]
+      - name: book_id
+        tests: [not_null]
+      - name: ledger_state
+        tests: [not_null, {accepted_values: {arguments: {values: [active, inactive]}}}]
+      - name: voivodeship_code
+        tests: *voivodeships
+      - name: raw_sha256
+        tests: [not_null]
+  - name: rpwdl_units
+    description: >-
+      Organisational units (jednostki organizacyjne) of the establishments, newest active and inactive files.
+      Grain: unit_id.
+    columns:
+      - name: unit_id
+        tests: [not_null, unique]
+      - name: book_id
+        tests: [not_null]
+      - name: ledger_state
+        tests: [not_null, {accepted_values: {arguments: {values: [active, inactive]}}}]
+      - name: voivodeship_code
+        tests: *voivodeships
+      - name: raw_sha256
+        tests: [not_null]
+  - name: rpwdl_cells
+    description: >-
+      Organisational cells (komórki organizacyjne) of the units with bed and place counts, newest active and
+      inactive files. Grain: cell_id.
+    columns:
+      - name: cell_id
+        tests: [not_null, unique]
+      - name: book_id
+        tests: [not_null]
+      - name: ledger_state
+        tests: [not_null, {accepted_values: {arguments: {values: [active, inactive]}}}]
+      - name: voivodeship_code
+        tests: *voivodeships
+      - name: raw_sha256
+        tests: [not_null]
+  - name: rpwdl_practices
+    description: >-
+      Professional practices of the 8 practice registers (individual and group practices of physicians, nurses
+      and midwives, physiotherapists, laboratory diagnosticians), newest active and inactive files. Grain:
+      practice_register x practice_id.
+    tests:
+      - unique:
+          column_name: "practice_register || '|' || practice_id"
+    columns:
+      - name: practice_register
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [physician_practice, group_physician_practice, nursing_practice, group_nursing_practice,
+                         physiotherapy_practice, group_physiotherapy_practice, diagnostic_practice,
+                         group_diagnostic_practice]
+      - name: practice_id
+        tests: [not_null]
+      - name: ledger_state
+        tests: [not_null, {accepted_values: {arguments: {values: [active, inactive]}}}]
+      - name: voivodeship_code
+        tests: *voivodeships
+      - name: raw_sha256
+        tests: [not_null]

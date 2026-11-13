@@ -1,0 +1,32 @@
+version: 2
+models:
+  - name: poc_build_rpwdl
+    description: >-
+      Build stage — RPWDL register counts (register PLS-020): active healthcare providers, establishments,
+      organisational units, beds in organisational cells and professional practices (also by practice register),
+      Poland and the 16 voivodeships, newest snapshot only (annual, date_key = 1 January of the snapshot year).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: healthcare_provider_rpwdl
+    description: >-
+      One row per RPWDL healthcare provider ledger (active and inactive), keyed by book_id with REGON; seat area as
+      dim_geography keys. No relationships test to dim_geography (shared model, built before this table may exist).
+    columns:
+      - name: book_id
+        tests: [not_null, unique]
+      - name: ledger_state
+        tests: [not_null]
+  - name: healthcare_establishment_rpwdl
+    description: >-
+      One row per RPWDL establishment (zakład leczniczy) with its provider ledger; establishment area as dim_geography
+      keys.
+    columns:
+      - name: establishment_id
+        tests: [not_null, unique]
+      - name: book_id
+        tests: [not_null]
