@@ -4,9 +4,11 @@
    the dates as printed, e.g. '4, 5 i 6 listopada 2026 r.') and bronze.senat_day_votes (votes listed per day).
    Planned sittings have no days yet and are not here (a plan is not an event).
    day_date: the printed dates are split on ',', ' i ', ' oraz '; a date without a month or year takes them from the
-   next date that has them; day n is the n-th date. When the number of dates differs from the number of days, or a
-   date does not read as '<day> [<month in the genitive> [<year>]]', day_date stays empty and the tests fail: a new
-   way of printing dates is never guessed. A sitting listed on two list pages (a run stopped between pages) is taken
+   next date that has them; day n is the n-th date. A finished sitting must print as many dates as it has days; a
+   running sitting (status other than 'Zakończone') prints the dates of the whole sitting while only its first days
+   have a votes page, so it may have fewer days than dates. Otherwise, or when a date does not read as
+   '<day> [<month in the genitive> [<year>]]', day_date stays empty and the tests fail: a new way of printing dates
+   is never guessed. A sitting listed on two list pages (a run stopped between pages) is taken
    from the newest copy; two copies of the same time fail the unique test. #}
 with listed as (
     select
@@ -97,7 +99,9 @@ select
     l.sitting_number,
     d.day_number,
     case
-        when f.readable and f.dates_printed = d.days_listed
+        when
+            f.readable
+            and (f.dates_printed = d.days_listed or (l.status_text <> 'Zakończone' and d.days_listed < f.dates_printed))
             then try_cast(make_date(f.year, f.month_number, f.day_of_month) as date)
     end as day_date,
     l.date_text as sitting_date_text,

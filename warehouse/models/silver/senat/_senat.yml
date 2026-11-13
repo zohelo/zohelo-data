@@ -19,7 +19,10 @@ models:
       - name: day_date
         tests: [not_null]
       - name: status_text
-        tests: [not_null, {accepted_values: {arguments: {values: ['Zakończone']}}}]
+        # the trial saw only 'Zakończone' on days (planned sittings have none); the label of a running sitting
+        # was not seen, so an unseen label warns instead of failing the scheduled build (Gold counts only
+        # finished sittings, is_finished)
+        tests: [not_null, {accepted_values: {arguments: {values: ['Zakończone']}, config: {severity: warn}}}]
       - name: raw_sha256
         tests: [not_null]
   - name: senat_votes
