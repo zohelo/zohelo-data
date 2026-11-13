@@ -28,7 +28,11 @@ Maddison series is a fourth source of the published KPI `gdp_per_capita` (O31, i
 `intl_usd_2011_per_person`, priority 4), contract v2 only (`V2_ONLY_SOURCES`), so zohelo.com's first value does
 not change.
 
-Licence: per chart, from the origins of the indicator metadata (`origins[].license`), in `licence.csv`; the source
-row in `source.csv` stays `unresolved` (internal, the licence gate keeps it out of v1 and v2) until every chart's
-origins allow reuse and modification. Attribution: the chart's citation in metadata.json. Refresh full (D32);
+Licence: per chart, from the origins of the indicator metadata (`origins[].license` of
+`https://api.ourworldindata.org/v1/indicators/<id>.metadata.json`, read on a runner in Dev run 43340826282):
+consumption-co2-per-capita — Global Carbon Project and "Various sources" (population), CC BY 4.0;
+electoral-democracy-index — V-Dem, CC BY 4.0; gdp-per-capita-maddison-project-database — Bolt and van Zanden,
+CC BY 4.0. Every origin allows reuse and modification, so the source row in `source.csv` carries `cc_by_4_0_owid`
+(`licence.csv`). A chart whose origins are not all open stays out: adding a chart means reading its origins first,
+and an origin that is not CC BY (or as open) gives the source `unresolved` until the owner decides. Attribution: the chart's `citationShort` in metadata.json (Silver `owid_charts.citation_short`). Refresh full (D32);
 schedule monthly (14th, 05:40 UTC). Restart unit: one chart file.

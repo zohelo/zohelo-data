@@ -24,6 +24,7 @@ extraction:
         url: https://ourworldindata.org/grapher/consumption-co2-per-capita.metadata.json
         format: json
         version: ingested
+        probe: get                                     # metadata.json answers HEAD with 404, GET serves it (Dev run 43340826282)
       - entity: electoral_democracy_index              # V-Dem, index 0 to 1
         url: https://ourworldindata.org/grapher/electoral-democracy-index.csv?csvType=full&useColumnShortNames=true
         format: raw
@@ -32,6 +33,7 @@ extraction:
         url: https://ourworldindata.org/grapher/electoral-democracy-index.metadata.json
         format: json
         version: ingested
+        probe: get                                     # metadata.json answers HEAD with 404, GET serves it (Dev run 43340826282)
       - entity: gdp_per_capita_maddison                # Maddison Project Database, international-$ in 2011 prices
         url: https://ourworldindata.org/grapher/gdp-per-capita-maddison-project-database.csv?csvType=full&useColumnShortNames=true
         format: raw
@@ -40,6 +42,7 @@ extraction:
         url: https://ourworldindata.org/grapher/gdp-per-capita-maddison-project-database.metadata.json
         format: json
         version: ingested
+        probe: get                                     # metadata.json answers HEAD with 404, GET serves it (Dev run 43340826282)
   initial: bulk
   production: snapshot                    # each file is the chart's complete series
   incremental_policy: changed_since_last  # SHA-256 of the bytes
@@ -55,11 +58,11 @@ bronze: [bronze.owid_values, bronze.owid_charts, bronze.owid_rejected_files]
 silver: [silver.owid_observations, silver.owid_charts]
 gold: [gold.build_owid, gold.metrics_co2_consumption_per_capita, gold.metrics_electoral_democracy_index]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  owid_observations: {rows: 90000}  # measured in the Dev trial, see the PR
+  owid_observations: {rows: 90000}  # Dev run 43340826282: 60,594 Silver rows, 39,344 Gold rows (4,185 + 20,925 + 14,234)
   owid_charts: {rows: 20}
-  poc_build_owid: {rows: 90000}
-  poc_metrics_co2_consumption_per_capita: {rows: 10000}
-  poc_metrics_electoral_democracy_index: {rows: 50000}
+  poc_build_owid: {rows: 60000}
+  poc_metrics_co2_consumption_per_capita: {rows: 6500}
+  poc_metrics_electoral_democracy_index: {rows: 32000}
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): six files of about 1.8 MB in total (about 60,000 values), each replaced whole
