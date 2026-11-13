@@ -30,8 +30,10 @@ new year: every benefit is asked in that run. A fifty-second of the benefits is 
 under unchanged table ids is landed within a year. Restart unit: one benefit (complete or not there).
 
 **Initial load:** 1,347 index requests + 2 × ~13,200 benefit-years + 56 dictionary pages ≈ 27,800 requests at the
-measured 1.38 s per request ≈ 10.6 hours, so two (at most three) weekly runs of the 330-minute budget; missing benefits
-first, the canaries first among them. A transient R2 throttle (a bare HTTP 429 on HeadObject) is retried.
+1.50 s per request measured in Dev trial 43328619774 ≈ 11.6 hours, so three weekly runs of the 330-minute budget;
+missing benefits first, the canaries first among them. A run that ends on the budget reports
+`not_started_time_budget` and exits 2 (as ICP and GEM); the next run continues. A transient R2 throttle (a bare
+HTTP 429 on HeadObject) is retried.
 
 **Bronze:** `bronze.nfz_services_benefits` (one row per dictionary entry) and `bronze.nfz_services_basic_data` (one
 row per record of a basic-data answer, values as the exact JSON number text; one `empty_table` row per listed table

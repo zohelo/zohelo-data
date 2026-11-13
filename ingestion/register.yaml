@@ -2630,7 +2630,8 @@ sources:
     blockers:
     - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived values; published
       values are shown unchanged'
-    - Enumerate history
+    - 'Built for basic-data only (Poland and NFZ branches, 2009-2024, #2929): the other table types and the hospital-type
+      splits are not loaded'
     references:
     - https://api.nfz.gov.pl/app-stat-api-jgp/
     - https://api.nfz.gov.pl/app-stat-api-jgp/terms

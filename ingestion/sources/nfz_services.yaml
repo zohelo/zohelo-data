@@ -14,8 +14,9 @@ description: "NFZ statistics API, services (API Statystyki NFZ – Świadczenia,
 # ICD-9, ICD-10). Version: the API gives no update date (meta.date-modified is the request time), so a copy is
 # written only when the digest of its answers' data members differs from the newest copy; version = download time.
 # Initial load: 1,347 index requests + 2 × ~13,200 benefit-years + 56 dictionary pages ≈ 27,800 requests at the
-# 1.38 s per request measured in Dev trial 43321051429 (1,462 requests in 33.7 minutes) ≈ 10.6 hours, so two (at most
-# three) weekly runs of the 330-minute budget; missing benefits first, the canaries first among them; resumable.
+# 1.50 s per request measured in Dev trial 43328619774 (1,462 requests in 36.5 minutes) ≈ 11.6 hours, so three
+# weekly runs of the 330-minute budget (320 minutes of requests each); missing benefits first, the canaries first
+# among them; resumable; a run that ends on the budget reports not_started_time_budget and exits 2.
 extraction:
   initial: api
   production: snapshot                  # each ZIP is the complete set of answers of one benefit
@@ -36,12 +37,12 @@ silver: [silver.nfz_services_benefits, silver.nfz_services_basic_data]
 gold: [gold.build_nfz_services]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   nfz_services_benefits: {rows: 2100}  # 1,347 dictionary entries (Dev probe 43311426786)
-  # 9,754 rows for 655 tables of 84 benefits = 14.89 rows per table (Dev trial 43321051429); tables per benefit
+  # 9,754 rows for 655 tables of 84 benefits = 14.89 rows per table (Dev trial 43328619774); tables per benefit
   # 1a 10.8, 1c 6.3, 1d 6.0, 1w 8.0 (trial), 1b 11.7 (probe 43312094156 sample) → 883×10.8 + 134×11.7 + 273×6.3
   # + 260 + 112 ≈ 13,200 tables × 14.89 ≈ 196,500 rows; × 1.5
   nfz_services_basic_data: {rows: 295000}
-  # 2 measures × ~13,200 Polish benefit-years + 6,794 rows of the four detail groups (Dev trial 43321051429:
-  # 8,010 rows = 6,794 detail + 2 × 608 other Polish benefit-years) ≈ 33,100; × 1.5
+  # 2 measures × ~13,200 Polish benefit-years + 6,800 rows of the four detail groups (Dev trial 43328619774:
+  # 8,006 rows = 6,800 detail + 2 × 603 other Polish benefit-years) ≈ 33,200; × 1.5
   poc_build_nfz_services: {rows: 50000}
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
