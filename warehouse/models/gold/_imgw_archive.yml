@@ -1,0 +1,24 @@
+version: 2
+models:
+  - name: poc_build_imgw_archive
+    description: >-
+      Build stage — IMGW observation archive (daily synoptic station files): Poland daily mean air temperature (mean
+      of the station daily means, D) and monthly mean air temperature and monthly precipitation total (mean over the
+      stations with a complete month, M), from silver.imgw_archive_synop_daily; at least 30 stations per day or
+      month. Rule in the model header. Poland only (IMGW gives no voivodeship for its stations).
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || cast(date_key as varchar)"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: poc_metrics_air_temperature
+    description: Metrics of the draft KPI air_temperature (monthly mean air temperature, IMGW synoptic stations).
+  - name: poc_metrics_precipitation
+    description: Metrics of the draft KPI precipitation (monthly precipitation total, IMGW synoptic stations).

@@ -1,0 +1,20 @@
+version: 2
+models:
+  - name: imgw_archive_synop_stations
+    description: >-
+      Station dimension of the IMGW daily synoptic archive (register PL-ENV-009): one row per station_code (IMGW
+      9-digit code) found in silver.imgw_archive_synop_daily, with the name on its newest observation day, first and
+      last day, days held, and coordinates and altitude where the IMGW API station list has the same code. Grain:
+      station_code. Trial run in ingestion/sources/imgw_archive.yaml.
+    tests:
+      - unique:
+          column_name: station_code
+    columns:
+      - name: station_code
+        tests: [not_null]
+      - name: station_name
+        tests: [not_null]
+      - name: first_date
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

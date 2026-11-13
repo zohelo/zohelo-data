@@ -6077,7 +6077,8 @@ sources:
   name: 'Public Data API: synoptic, hydrological, meteorological and warning feeds'
   short_name: IMGW public data API
   provider: Instytut Meteorologii i Gospodarki Wodnej–PIB (IMGW-PIB)
-  status: approved
+  source_system: imgw_api
+  status: built
   family: G
   kpi: true
   geography: Poland
@@ -6094,13 +6095,18 @@ sources:
     cost: Generally free under stated reuse conditions.
     limits: None published on the API page.
   licence:
-    status: open-conditional
-    notes: 'Terms: IMGW data-sharing rules ("Regulamin udostępniania danych", section on https://danepubliczne.imgw.pl/apiinfo
-      (page read 11 Nov 2026 from a GitHub runner)): "Każdemu przysługuje prawo do ponownego wykorzystania informacji sektora
-      publicznego" (everyone may re-use the public sector information), data are offered through https://danepubliczne.imgw.pl/
-      and www.meteo.imgw.pl. The existing note records that commercial reuse is possible with attribution: keep "Źródło: Instytut
-      Meteorologii i Gospodarki Wodnej - Państwowy Instytut Badawczy" and mark processed values as processed; re-read the
-      regulation attribution clause when writing the declaration.'
+    status: unresolved
+    notes: 'Terms: IMGW-PIB "Regulamin udostępniania danych" on https://danepubliczne.imgw.pl/apiinfo (read 13 Nov 2026 from
+      a GitHub runner, Dev probe 43336937240); it covers the data offered through https://danepubliczne.imgw.pl/ (API
+      and file archive alike, §1). §1: "Każdemu przysługuje prawo do ponownego wykorzystania informacji sektora
+      publicznego". §5: "Korzystający może używać nieodpłatnie udostępnionych danych do celów prywatnych, a w przypadku
+      danych o wysokiej wartości w każdym celu" (free use for private purposes, for high-value data for any purpose);
+      use for business activity ("cel działalności gospodarczej", including publication on websites with advertising,
+      §2) needs an agreement under §3 unless the data are high-value data (Regulation (EU) 2023/138). Attribution (§5):
+      "Źródłem pochodzenia danych jest Instytut Meteorologii i Gospodarki Wodnej – Państwowy Instytut Badawczy";
+      processed data also "Dane Instytutu Meteorologii i Gospodarki Wodnej – Państwowego Instytutu Badawczego zostały
+      przetworzone". The page does not say which of its datasets are high-value data, so reuse beyond private purposes
+      is not established from the page: unresolved (internal) until the owner reads it (#2959).'
   updates: Observations/warnings refresh operationally; endpoint-specific cadence unknown.
   ingestion:
     history: 'Current-state endpoints only (the API has no history): https://danepubliczne.imgw.pl/api/data/synop (hourly
@@ -6116,6 +6122,9 @@ sources:
     evidence: tested
     connection: tested
     blockers:
+    - 'Owner: may IMGW synoptic observations (archive files and API) be treated as high-value datasets under Regulation
+      (EU) 2023/138, so that §5 of the IMGW Regulamin allows their reuse for any purpose with the attribution sentence
+      (licence then open-conditional), or should zohelo ask IMGW (biznes@imgw.pl)?'
     - Confirm endpoint schemas, retention, timestamps, quotas and attribution wording.
     references:
     - https://danepubliczne.imgw.pl/apiinfo
@@ -6123,7 +6132,8 @@ sources:
   name: Public observational file archive
   short_name: IMGW observation archive
   provider: IMGW-PIB
-  status: approved
+  source_system: imgw_archive
+  status: built
   family: G
   kpi: true
   geography: Poland
@@ -6140,10 +6150,18 @@ sources:
     cost: Generally free under IMGW reuse rules.
     limits: Unknown; no bulk-download rate policy was confirmed.
   licence:
-    status: open-conditional
-    notes: 'Terms: same IMGW rules as PL-ENV-008 (https://danepubliczne.imgw.pl/apiinfo): "Każdemu przysługuje prawo do ponownego
-      wykorzystania informacji sektora publicznego". Attribution as in PL-ENV-008; verify the clause covers every archive
-      sub-product.'
+    status: unresolved
+    notes: 'Terms: IMGW-PIB "Regulamin udostępniania danych" on https://danepubliczne.imgw.pl/apiinfo (read 13 Nov 2026 from
+      a GitHub runner, Dev probe 43336937240); it covers the data offered through https://danepubliczne.imgw.pl/ (API
+      and file archive alike, §1). §1: "Każdemu przysługuje prawo do ponownego wykorzystania informacji sektora
+      publicznego". §5: "Korzystający może używać nieodpłatnie udostępnionych danych do celów prywatnych, a w przypadku
+      danych o wysokiej wartości w każdym celu" (free use for private purposes, for high-value data for any purpose);
+      use for business activity ("cel działalności gospodarczej", including publication on websites with advertising,
+      §2) needs an agreement under §3 unless the data are high-value data (Regulation (EU) 2023/138). Attribution (§5):
+      "Źródłem pochodzenia danych jest Instytut Meteorologii i Gospodarki Wodnej – Państwowy Instytut Badawczy";
+      processed data also "Dane Instytutu Meteorologii i Gospodarki Wodnej – Państwowego Instytutu Badawczego zostały
+      przetworzone". The page does not say which of its datasets are high-value data, so reuse beyond private purposes
+      is not established from the page: unresolved (internal) until the owner reads it (#2959).'
   updates: Files appear in period-based directories; publication lag and revisions are series-specific.
   ingestion:
     history: 'Directory listing with dane_aktynometryczne/, dane_hydrologiczne/ and dane_meteorologiczne/ (zipped per year/period;
@@ -6158,6 +6176,9 @@ sources:
     evidence: tested
     connection: tested
     blockers:
+    - 'Owner: may IMGW synoptic observations (archive files and API) be treated as high-value datasets under Regulation
+      (EU) 2023/138, so that §5 of the IMGW Regulamin allows their reuse for any purpose with the attribution sentence
+      (licence then open-conditional), or should zohelo ask IMGW (biznes@imgw.pl)?'
     - Establish per-series years, format dictionaries and revision policy.
     references:
     - https://danepubliczne.imgw.pl/apiinfo

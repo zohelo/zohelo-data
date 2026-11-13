@@ -1,0 +1,36 @@
+version: 2
+models:
+  - name: imgw_api_synop
+    description: >-
+      IMGW-PIB public data API, synoptic stations (register PL-ENV-008): provisional current observations from every
+      landed snapshot of /api/data/synop, the newest snapshot of each station and observation hour. Grain: station_id
+      (WMO index as the API gives it) x observed_at (UTC hour). Temperature °C, wind speed m/s, wind direction
+      degrees, relative humidity %, precipitation mm, pressure hPa, as published; null when the API sends null.
+      History grows with the snapshots (from the first scheduled run); trial run in ingestion/sources/imgw_api.yaml.
+    tests:
+      - unique:
+          column_name: "station_id || '|' || cast(observed_at as varchar)"
+    columns:
+      - name: station_id
+        tests: [not_null]
+      - name: station_name
+        tests: [not_null]
+      - name: observed_at
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: imgw_api_stations
+    description: >-
+      IMGW automatic stations as listed by /api/data/meteo/ (newest landed snapshot): IMGW 9-digit station code,
+      name, longitude and latitude, altitude, founding year. Grain: station_code. No voivodeship or TERYT code (the
+      endpoint gives none).
+    tests:
+      - unique:
+          column_name: station_code
+    columns:
+      - name: station_code
+        tests: [not_null]
+      - name: station_name
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

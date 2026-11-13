@@ -1,0 +1,41 @@
+source_system: imgw_archive
+description: "IMGW-PIB public observation archive: daily synoptic station data (dane_meteorologiczne/dobowe/synop), 1966 to the last published month"
+
+# Extraction strategy (docs/landing.md), register PL-ENV-009. Bulk feature: the directory archive
+# https://danepubliczne.imgw.pl/data/dane_pomiarowo_obserwacyjne/ (Apache index, no robots.txt: HTTP 404) with
+# dane_meteorologiczne (synop, klimat, opad; daily, monthly, term data), dane_hydrologiczne (daily, monthly, half-year)
+# and dane_aktynometryczne (raw .DAN files 1990-2017, not updated since 2018). First scope, loaded now: the daily synop
+# files, 1,882 ZIPs of 2-60 KB (60-63 stations): five-year folders 1966_1970 ... 1996_2000 (one ZIP per station),
+# 2001 ... 2025 (one ZIP per station and year) and the current year (one ZIP per month, all stations; published about
+# the 5th working day after the month, Opis.txt). Entity = one ZIP, version = Last-Modified; stale when the index
+# shows a later time (IMGW replaces corrected files, lista_zmian.txt). Not loaded yet: klimat and opad daily (one ZIP
+# per month since 2001, about 2,400 files), monthly files (incomplete since mid-2024, UWAGA!.txt), term data, the
+# hydrological files and the actinometric files (docs/sources/imgw_archive.md). Dev probes 43328639972, 43336937240.
+extraction:
+  initial: bulk
+  production: snapshot                  # each ZIP is the complete file of its station and period
+  incremental_policy: changed_since_last  # missing ZIPs first (newest periods first), then those modified since
+  schedule: # UTC; synop daily files of a month appear about the 5th working day of the next month; check on the 9th and again on the 23rd (late files and corrections); 35 index pages, then only new or changed ZIPs
+    - {cron: "40 6 9,23 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/imgw_archive/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+# One file per ZIP in Bronze and in Silver, replaced whole (design #875).
+bronze: [bronze.imgw_archive_synop_daily, bronze.imgw_archive_rejected_files]
+silver: [silver.imgw_archive_synop_daily, silver.imgw_archive_synop_stations]
+gold: [gold.build_imgw_archive, gold.metrics_air_temperature, gold.metrics_precipitation]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  imgw_archive_synop_stations: {rows: 200}  # TRIAL (Dev trial TRIAL)
+  poc_build_imgw_archive: {rows: 40000}  # TRIAL (Dev trial TRIAL); grows by 365 + 24 a year
+  poc_metrics_air_temperature: {rows: 1500}  # TRIAL
+  poc_metrics_precipitation: {rows: 1500}  # TRIAL
+
+# Refresh policy for all layers (D32): about 1,900 files and 9 million Silver rows (60 stations x 60 years x 7
+# parameters); a month adds one file and IMGW replaces single files when it corrects them, so a new file version
+# replaces that file's entity in Bronze and Silver and nothing else is rewritten (unit = one ZIP).
+refresh: {mode: incremental, unit: file, decided: "D32 + #2959"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
