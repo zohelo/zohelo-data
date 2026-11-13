@@ -50,5 +50,6 @@ from {{ ref('owid_observations') }} as o
 inner join charts as c on o.chart = c.chart and o.indicator = c.indicator
 inner join geo_map as g on o.entity_code = g.source_code
 left join meta as m on o.chart = m.chart and o.indicator = m.short_name
-where o.value is not null
+where
+    o.value is not null
     and o.year >= 1900
