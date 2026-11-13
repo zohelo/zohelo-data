@@ -71,23 +71,23 @@ def sample(url: str, text: str, page: str) -> None:
             sheetrows: dict = {}
             for c in xlsx_cells.cells(body):
                 sheetrows[c["sheet_name"]] = max(sheetrows.get(c["sheet_name"], 0), c["row_number"])
-                if c["row_number"] <= 16:
+                if c["row_number"] <= 45:
                     rows.setdefault((c["sheet_name"], c["row_number"]), []).append(
                         f"{c['cell_ref']}={c['value_text'][:45]}"
                     )
             print("    sheets (max row):", sheetrows)
             shown = 0
             for (s, n), cs in rows.items():
-                if list(sheetrows).index(s) < 3 and shown < 60:
+                if list(sheetrows).index(s) < 2 and shown < 90:
                     shown += 1
-                    print(f"    [{s}] r{n}: {' | '.join(cs[:16])}")
+                    print(f"    [{s}] r{n}: {' | '.join(cs[:22])}")
         elif body[:4] == b"\xd0\xcf\x11\xe0":
             import xlrd
 
             wb = xlrd.open_workbook(file_contents=body)
             print("    sheets:", [(s.name, s.nrows, s.ncols) for s in wb.sheets()])
-            for sh in wb.sheets()[:3]:
-                for n in range(min(16, sh.nrows)):
+            for sh in wb.sheets()[:2]:
+                for n in range(min(45, sh.nrows)):
                     print(f"    [{sh.name}] r{n + 1}: {' | '.join(str(v)[:40] for v in sh.row_values(n)[:16])}")
         else:
             print("    head:", body[:800].decode("utf-8", "replace"))
