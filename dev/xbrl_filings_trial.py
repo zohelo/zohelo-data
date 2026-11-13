@@ -122,6 +122,7 @@ def trial(limit: int) -> None:  # noqa: PLR0915
         "facts_entities": q(con, "select count(distinct entity), count(distinct fxo_id), count(*) filter (where 'facts_' || fxo_id <> entity) from bronze_facts"),
         "facts_by_concept_dim": q(con, "select concept, extra_dimensions = '{}' as plain, count(*), count(distinct fxo_id) from bronze_facts group by all order by all"),
         "units": q(con, "select unit, count(*), count(distinct fxo_id) from bronze_facts group by 1 order by 2 desc limit 8"),
+        "units_plain": q(con, "select unit, count(*), count(distinct fxo_id) from bronze_facts where extra_dimensions = '{}' group by 1 order by 2 desc limit 8"),
         "period_shape": q(con, "select regexp_replace(period, '[0-9]', '9', 'g'), count(*) from bronze_facts group by 1 order by 2 desc limit 5"),
         "value_not_numeric": q(con, "select count(*) filter (where value is null), count(*) filter (where value is not null and try_cast(value as double) is null), (list(distinct value) filter (where value is not null and try_cast(value as double) is null))[1:5] from bronze_facts"),
         "decimals": q(con, "select decimals, count(*) from bronze_facts group by 1 order by 2 desc limit 8"),
@@ -189,6 +190,7 @@ def trial(limit: int) -> None:  # noqa: PLR0915
         "facts_by_year": q(con, "select period_end_year, measure, count(*), count(distinct lei) from esef_financial_fact group by all order by all"),
         "period_days": q(con, "select case when period_end - period_start between 360 and 370 then 'year' when period_end - period_start < 360 then 'shorter' else 'longer' end, count(*) from esef_financial_fact group by 1 order by 1"),
         "filings_with_json_without_gold_value": q(con, "select count(*) filter (where fxo_id not in (select fxo_id from esef_financial_fact where measure = 'revenue')), count(*) filter (where fxo_id not in (select fxo_id from esef_financial_fact where measure = 'profit_loss')), count(*) from esef_filing where has_json"),
+        "by_filings_for_period": q(con, "select filings_for_period, count(*), count(distinct fxo_id), count(distinct lei) from esef_financial_fact group by 1 order by 1"),
         "facts_lei_not_in_issuer": q(con, "select count(*) from esef_financial_fact where lei not in (select lei from esef_issuer)"),
         "issuer_period_values_differ_rows": len(differ), "differ_sample": differ[:5],
         "multi_filing_groups_with_facts_agreeing": q(con, "select count(*) from (select lei, concept, period_start, period_end, unit_code from esef_financial_fact group by all having count(*) > 1 and count(distinct value) = 1)")})
