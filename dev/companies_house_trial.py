@@ -73,10 +73,25 @@ def trial() -> None:  # noqa: PLR0915
         landing_runs.append({"mode": mode, "exit": code, "file": files[0] if files else None, "objects": len(held),
                              "bytes": sum(s for _, s in held)})
     receipts = bulk_file.landed(client, req("STORAGE_LANDING_BUCKET_NAME"), bulk_file.prefix(SOURCE, NAME, SCRATCH))
+    # what Landing holds: the reduced ZIP (its one CSV's header and size), not the producer's 55 columns
+    import zipfile
+
+    with tempfile.TemporaryDirectory() as temporary:
+        copy = Path(temporary) / "landed.zip"
+        entities.fetch(client, req("STORAGE_LANDING_BUCKET_NAME"), receipts[-1], copy)
+        with zipfile.ZipFile(copy) as archive:
+            landed_members = [(i.filename, i.file_size, i.compress_size) for i in archive.infolist()]
+            with archive.open(archive.infolist()[0]) as handle:
+                landed_header = handle.readline().decode().strip().split(",")
+                landed_lines = 1 + sum(1 for _ in handle)
     annotate("notice", "companies_house trial: landing (scratch)", {
         "runs": landing_runs, "receipts": len(receipts),
         "receipt": {k: receipts[-1].get(k) for k in ("version_token", "version_basis", "source_url", "sha256", "size_bytes")},
-        "members": receipts[-1]["detail"].get("members")})
+        "receipt_detail": {k: receipts[-1]["detail"].get(k) for k in ("reduced", "http", "format")},
+        "source_members_before_reduction": receipts[-1]["detail"].get("members"),
+        "landed_members": landed_members, "landed_header": landed_header, "landed_lines": landed_lines,
+        "landed_header_is_the_13_kept_columns": landed_header == list(landing.COLUMNS),
+        "second_load_outcome_held": (landing_runs[2]["file"] or {}).get("outcome") == "held"})
     # Bronze and Silver, twice, then verify
     loads = []
     for _ in (1, 2):
