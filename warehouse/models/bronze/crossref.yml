@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+- name: crossref
+  description: Crossref REST API — counts of the works with a Polish author affiliation and the Polish funders, JSON
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/crossref/
+    loaded_by: ingestion/to_bronze/crossref/
+    config: ingestion/sources/crossref.yaml
+  tables:
+  - name: crossref_facet_counts
+    description: >-
+      One row per facet value of the newest copy of each works request (entity works_pl_by_year: facet published;
+      works_pl_<year>: facets type-name, publisher-name, funder-doi) plus one '_total' row with total-results; counts
+      as published text; partitioned by entity.
+  - name: crossref_funders
+    description: >-
+      One row per Funder Registry entry located in Poland (entity funders_pl): id, name, location, uri, alternative
+      names (' | '), replaces and replaced-by ids (','), as published text.
+  - name: crossref_rejected_files
+    description: Crossref Landing files the Bronze decoder rejected, with the reason.
