@@ -3,10 +3,11 @@ models:
   - name: poc_build_internet_gov_broadband
     description: >-
       Build stage — internet.gov.pl fixed broadband coverage of address points (register PL-ENV-034), quarterly,
-      from silver.internet_gov_broadband_coverage: address points within coverage and their share of all address
-      points for Poland and the 16 voivodeships; for Poland also within at least 100 Mb/s and at least 1 Gb/s
-      (sums of the bandwidth classes) and their shares. Shares are own calculations from printed counts. Values
-      and units as published (address points, per cent).
+      from silver.internet_gov_broadband_coverage: address points within coverage and all address points for
+      Poland and the 16 voivodeships; for Poland also within at least 100 Mb/s and at least 1 Gb/s (sums of the
+      printed bandwidth classes) and by kind of coverage (actual, wholesale only, theoretical only, none) with
+      the printed share of all address points as separate measures. No share is calculated. Values and units as
+      published (address points, per cent).
     columns:
       - name: measure_key
         tests: [not_null]

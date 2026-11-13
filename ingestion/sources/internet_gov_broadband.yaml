@@ -11,9 +11,12 @@ description: "Ministerstwo Cyfryzacji — Polska w zasięgu stacjonarnego dostę
 # 15 Jul 2024 release), written only when the SHA-256 changed; every run downloads the ten files again (about
 # 15 MB, 3 s apart) and skips unchanged bytes. Restart unit: one edition. A new edition needs a new seed row:
 # landing.inspect and landing.extract warn "edition expected but not in the seed list" once the quarter ended more
-# than 20 days ago (ingestion/to_landing/internet_gov_broadband/). Left out: the 16 voivodeship PDFs (bandwidth
-# per voivodeship, powiat and gmina; about 255 MB per edition, storage cost not accepted yet) and UKE's annual
-# market report.
+# than 20 days ago (ingestion/to_landing/internet_gov_broadband/). Bronze reads the PDF text layer with pypdf
+# (layout mode, requirements.txt) and keeps three tables (by voivodeship, by kind of coverage, by bandwidth class),
+# found by title and checked against their SUMA rows; a table it does not recognise rejects the file with the
+# reason (ingestion/to_bronze/internet_gov_broadband/tables.py). Left out: the report's tables by medium, by kind of
+# service and of investment plans; the 16 voivodeship PDFs (bandwidth per voivodeship, powiat and gmina; about
+# 255 MB per edition, storage cost not accepted yet) and UKE's annual market report.
 extraction:
   kind: bulk_file
   bulk_file:
@@ -43,12 +46,12 @@ bronze: [bronze.internet_gov_broadband_cells, bronze.internet_gov_broadband_reje
 silver: [silver.internet_gov_broadband_coverage]
 gold: [gold.build_internet_gov_broadband]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  internet_gov_broadband_coverage: {rows: 1000}
-  poc_build_internet_gov_broadband: {rows: 1000}
+  internet_gov_broadband_coverage: {rows: 800}  # 520 rows, 10 editions x 52 (Dev trial TRIALRUN)
+  poc_build_internet_gov_broadband: {rows: 700}  # 440 rows, 10 quarters x 44 (Dev trial TRIALRUN)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
-# Refresh policy for all layers (D32): ten PDF files of about 1.4 MB, one new a quarter, a few thousand Bronze
-# cells; small, rebuilt in full.
+# Refresh policy for all layers (D32): ten PDF files of about 1.4 MB, one new a quarter, 181 Bronze cells per
+# edition; small, rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2963"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

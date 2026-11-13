@@ -22,9 +22,22 @@ models:
       - name: table_code
         tests: [not_null, {accepted_values: {arguments: {values: [territory, bandwidth, service_type]}}}]
       - name: area_code
-        tests: [not_null]
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32', PL]
       - name: class_code
-        tests: [not_null]
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [
+                  _T, rzeczywisty, hurtowy, teoretyczny, brak_zasiegu, '2', '10', '20', '30', '40', '50', '60', '70',
+                  '80', '90', '100', '200', '300', '400', '500', '600', '700', '800', '900', '1000', '2000', '3000',
+                  '4000', '5000', '6000', '7000', '8000', '9000', '10000']
+      - name: address_points_share_basis
+        tests: [{accepted_values: {arguments: {values: [address points in coverage, all address points]}}}]
       - name: address_points
         tests: [not_null]
       - name: raw_sha256

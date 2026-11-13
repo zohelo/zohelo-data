@@ -34,7 +34,7 @@ internet_gov_broadband as (
     select
         'internet_gov_broadband' as source_system,
         v.area_code as source_code,
-        'TERC:' || v.area_code || '00000' as geography_key
+        'TERC:' || v.area_code as geography_key
     from ({{ poc_internet_gov_broadband_voivodeships() }}) as v
     union all
     select

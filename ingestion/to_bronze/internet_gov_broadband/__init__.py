@@ -1,6 +1,7 @@
 """internet.gov.pl broadband report (PL-ENV-034) Landing → Bronze activities.
 
-bronze.load       load.py → bronze.internet_gov_broadband_cells (one Parquet file per Landing file; rejections → bronze.internet_gov_broadband_rejected_files)
+bronze.load       load.py → bronze.internet_gov_broadband_cells (one Parquet file per Landing file;
+                  rejections → bronze.internet_gov_broadband_rejected_files)
 bronze.verify     ingestion/common/lineage.py --source internet_gov_broadband
 landing.archive   ingestion/common/archive.py --source internet_gov_broadband (move to Archive)
 archive.prune     ingestion/common/retention.py --source internet_gov_broadband (archive_policy.retention)

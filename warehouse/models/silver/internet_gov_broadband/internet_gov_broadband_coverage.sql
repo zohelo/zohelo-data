@@ -11,7 +11,8 @@
      theoretical only, none) and SUMA as '_T': address points with the printed share of all address points.
    One Bronze cell per row label and column (Bronze rejects a table with a repeated row label), so the pivot below
    never merges two rows. Numbers as printed (space or no-break space thousands separator, decimal comma); Bronze rejects an edition whose
-   cells do not parse or whose classes do not add up to SUMA, so a cast failing here is a new defect, not data. #}
+   cells do not parse or whose classes do not add up to SUMA (to 1 / 10,000 for the bandwidth address points), so a
+   cast failing here is a new defect, not data. #}
 with cells as (
     select *
     from {{ source('internet_gov_broadband', 'internet_gov_broadband_cells') }}
