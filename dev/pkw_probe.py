@@ -27,6 +27,7 @@ UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics
 ELECTIONS = ["sejmsenat2023", "pe2024", "samorzad2024", "prezydent2025", "prezydent20200628"]
 BUDGET = [200]
 STOP = [False]
+MODULE = [False]  # arg "module": print the bundle's CSV-name module instead of the csv/name context
 OUT = Path(os.environ.get("DEV_OUTPUT_DIR", "/tmp/dev-output"))
 KEEP = re.compile(r"(wojew|powiat|gmin|kraj|polsk|okreg|zagranic|statk|kandydat)", re.I)
 SKIP = re.compile(r"(obwod|komisj|sklad|czlonk|protok)", re.I)
@@ -87,6 +88,16 @@ def bundle_names(election: str) -> list[str]:
         code = js.decode("utf-8", "replace")
         print(f"--- bundle {url}: {len(code)} chars", flush=True)
         names += re.findall(r"([A-Za-z0-9_\-]+)_csv\.zip", code)
+        if MODULE[0]:  # the names are built at run time by csv_links(config) in this module: print it whole
+            start = code.find('"@election/models/csv":[function')
+            end = code.find('}],"@', start + 40) if start >= 0 else -1
+            text = code[start:end + 3] if start >= 0 else ""
+            print(f"--- module @election/models/csv: {len(text)} chars", flush=True)
+            for i in range(0, min(len(text), 40_000), 900):
+                print(f"... module[{i}]: {text[i:i + 900]!r}", flush=True)
+            for m in list(re.finditer(r'"(?:/|\.\./)?data/[^"]{0,80}"|ostatniaAktualizacjaTs', code))[:30]:
+                print(f"... data@{m.start()}: {code[max(0, m.start() - 150): m.start() + 150]!r}", flush=True)
+            continue
         seen = 0
         for m in re.finditer(r"csv", code):
             if seen >= 25:
@@ -151,6 +162,8 @@ def profile(election: str, name: str) -> None:
 
 
 def main(argv: list[str]) -> int:
+    MODULE[0] = "module" in argv
+    argv = [a for a in argv if a != "module"]
     only = [a for a in argv if not a.startswith("name=")]
     extra = [a[5:] for a in argv if a.startswith("name=")]  # name=<election>:<file name>
     for election in only or ELECTIONS:
