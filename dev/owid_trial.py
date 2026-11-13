@@ -236,6 +236,11 @@ def main(argv) -> int:
             "code_year_dups": rows(con, """select chart, entity_code, year, string_agg(entity_name, ' | ') as names
                 from owid_observations where entity_code is not null group by all having count(*) > 1 limit 10"""),
             "versions": rows(con, "select chart, short_name, unit, last_updated, next_update from owid_charts order by all"),
+            "citations": rows(con, """select chart, citation_short from owid_charts
+                where short_name in ('consumption_emissions_per_capita', 'electdem_vdem__estimate_best', 'gdp_per_capita')
+                order by all"""),
+            "zero_values": rows(con, """select chart, entity_name, entity_code, year, value from owid_observations
+                where value = 0 order by all limit 10"""),
         }
         print("SILVER", silver, flush=True)
         annotate("notice", "owid trial silver", silver)
