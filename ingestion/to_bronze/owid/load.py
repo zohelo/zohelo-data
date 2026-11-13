@@ -10,7 +10,8 @@ width or an empty file is rejected into ``bronze.owid_rejected_files``.
 
 Chart metadata (``<slug>.metadata.json``): Bronze ``owid_charts`` keeps one row per chart column with the chart's
 title and citation and the column's short name, unit, lastUpdated, nextUpdate, citationShort and indicator id, as
-text. A document without ``chart`` and ``columns``, or a column without ``shortName``, is rejected.
+text. A document without ``chart`` and ``columns``, or a column that is not an object, is rejected; a column
+without ``shortName`` (an attribute column such as Maddison's annotations) keeps its metadata.json key as short_name.
 Code shared with other small bulk sources: ingestion/common/bulk_bronze.py.
 """
 
@@ -122,8 +123,11 @@ def decode_chart(body: bytes, receipt: dict[str, Any]) -> pa.Table:
     base = bulk_bronze.provenance(receipt)
     rows = []
     for title, column in columns.items():
-        if not isinstance(column, dict) or not column.get("shortName"):
-            raise ValueError(f"column {title!r} without shortName")
+        if not isinstance(column, dict):
+            raise ValueError(f"column {title!r} is not an object")
+        # An attribute column can come without shortName (Maddison: '900793-annotations', Dev run 43340826282):
+        # its key in metadata.json stands in, so the chart's other columns still load.
+        short_name = column.get("shortName") or title
         rows.append(
             {
                 **base,
@@ -132,7 +136,7 @@ def decode_chart(body: bytes, receipt: dict[str, Any]) -> pa.Table:
                 "chart_citation": text(chart.get("citation")),
                 "original_chart_url": text(chart.get("originalChartUrl")),
                 "column_title": title,
-                "short_name": str(column["shortName"]),
+                "short_name": str(short_name),
                 **{name: text(column.get(key)) for name, key in CHART_FIELDS.items()},
                 "date_downloaded": text(document.get("dateDownloaded")),
             }

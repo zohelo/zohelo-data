@@ -9418,8 +9418,9 @@ sources:
       has no licence field (checked on seven charts); the origin licence is in the indicator metadata (origins[].license,
       desk reading of archived copies). Rule for the build: a chart is publishable only when every origin licence allows reuse
       and modification; otherwise it stays internal. The three charts selected below are third-party data (Global Carbon Budget,
-      V-Dem, Maddison Project) whose origin licences are not read yet, so the build gives them an unresolved licence key until
-      origins[].license is recorded per chart (examples read: Corruption Perceptions Index, origin CC BY-ND 4.0; World Happiness
+      V-Dem, Maddison Project); origins[].license read on a runner (Dev run 43340826282, 13 Nov 2026): Global Carbon Project
+      CC BY 4.0 and Various sources (population) CC BY 4.0; V-Dem CC BY 4.0; Bolt and van Zanden (Maddison Project Database
+      2023) CC BY 4.0, so the build gives the source the licence key cc_by_4_0_owid (examples read: Corruption Perceptions Index, origin CC BY-ND 4.0; World Happiness
       Report, own data-sharing policy).'
   updates: 'Per chart: lastUpdated and nextUpdate in the metadata (for example consumption-based CO2 lastUpdated 2026-11-10,
     nextUpdate 2027-11-10). Whole series are revised in place.'
