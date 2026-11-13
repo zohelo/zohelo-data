@@ -7,7 +7,7 @@
    read from the table title; stock dates (31 December) are in the measure name. A reference year printed in two
    editions is taken from the latest edition (is_latest_edition, Silver); the older edition's row stays in Silver.
    Values and units as published (D33): rates per 10,000 population are not rescaled. Rows without a value ('-', '.',
-   'x') are not loaded. Areas: 'polska' and the 16 voivodeship names, mapped in poc_geography__mz_health_bulletin. #}
+   'x', a sheet repeating an older edition's table) are not loaded. Areas: 'polska' and the 16 voivodeship names, mapped in poc_geography__mz_health_bulletin. #}
 with geo as (
     select
         source_code,

@@ -26,9 +26,10 @@ archive_policy:
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
 bronze: [bronze.mz_health_bulletin_cells, bronze.mz_health_bulletin_rejected_files]
-silver: [silver.mz_health_bulletin_tables]
+silver: [silver.mz_health_bulletin_sheets, silver.mz_health_bulletin_tables]
 gold: [gold.build_mz_health_bulletin]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  mz_health_bulletin_sheets: {rows: 650}  # SHEET_ROWS rows (Dev trial TRIAL_RUN)
   mz_health_bulletin_tables: {rows: 6200}  # SILVER_ROWS rows (Dev trial TRIAL_RUN)
   poc_build_mz_health_bulletin: {rows: 6200}  # GOLD_ROWS rows (Dev trial TRIAL_RUN)
 
