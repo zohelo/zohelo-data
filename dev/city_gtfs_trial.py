@@ -170,8 +170,8 @@ def trial(source: str, client, cat, con) -> dict:
     bronze_counts = {
         (sha, f): n
         for sha, f, n in con.sql(
-            f"select raw_sha256, gtfs_file, case when gtfs_file = 'stop_times.txt' then sum(stop_times_rows) "
-            f"else count(*) end from {rec} group by all"
+            f"select raw_sha256, gtfs_file, sum(case when gtfs_file = 'stop_times.txt' then stop_times_rows else 1 end) "
+            f"from {rec} group by raw_sha256, gtfs_file"
         ).fetchall()
     }
     mismatch = [
