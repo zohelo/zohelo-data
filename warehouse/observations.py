@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Gold observations of a big source, one block at a time (docs/gold-coverage.md, owner direction O36).
 
-Every loaded Silver block of the source (Eurostat: a dataset; GUS BDL: a subgroup) is put into Gold by rule,
-without an activation list: the block's Silver files go through the source's build stage
+Every loaded Silver block of the source (Eurostat: a dataset; GUS BDL: a subgroup; a source whose Silver
+is dbt tables: a table) is put into Gold by rule, without an activation list: the block's Silver files go
+through the source's build stage
 (warehouse/entity/gold_<source>_*.sql, the common observation shape) and three projections shared
 by all sources (gold_observations.sql, gold_series.sql, gold_measures.sql). Gold holds exactly one
 file per block in each table, as Silver does (design #875):
@@ -274,6 +275,51 @@ SOURCES: dict[str, dict[str, Any]] = {
     },
 }
 
+# Sources whose Silver is dbt tables, not per-entity files (docs/gold-coverage.md, decision 2): `tables`
+# replaces `silver`, `block_of` and `build`. Each Silver table is one block (block id -> (table, build
+# stage)): its files are the table's current data files, read from the table's file list, so the block
+# is rebuilt when dbt rebuilt the table. A source's first table has the build stage
+# gold_<source>_build.sql (run.py and ops/repo_check.py know the source by it); a further table of
+# another shape has gold_<source>_build_<x>.sql. No `geography_column`: with a handful of blocks the
+# load order needs no read.
+SOURCES.update(
+    {
+        "world_bank_wdi": {
+            "tables": {"wdi_observations": (("silver", "wdi_observations"), "gold_world_bank_wdi_build")},
+            "lookups": {
+                "geo_map": (
+                    "gold",
+                    "map_geography",
+                    ("source_system", "source_code", "geography_key"),
+                    "world_bank_wdi",
+                ),
+                "indicators": (
+                    "silver",
+                    "wdi_indicators",
+                    ("indicator_code", "indicator_name", "unit_of_measure"),
+                    None,
+                ),
+            },
+            "keyed_by": ("geo_map",),
+        },
+        "oecd": {
+            "tables": {"oecd_cli": (("silver", "oecd_cli"), "gold_oecd_build")},
+            "lookups": {
+                "geo_map": ("gold", "map_geography", ("source_system", "source_code", "geography_key"), "oecd"),
+            },
+            "keyed_by": ("geo_map",),
+        },
+        "nbp": {  # no areas: exchange rates and the gold price belong to no territory (_Z)
+            "tables": {
+                "nbp_fx_rates": (("silver", "nbp_fx_rates"), "gold_nbp_build"),
+                "nbp_gold_fixings": (("silver", "nbp_gold_fixings"), "gold_nbp_build_gold_fixings"),
+            },
+            "lookups": {},
+            "keyed_by": (),
+        },
+    }
+)
+
 
 def table_ids(source: str, namespace: str = "gold") -> dict[str, tuple[str, str]]:
     return {name: (namespace, f"{source}_{name}") for name in TABLES}
@@ -390,12 +436,57 @@ def geography_digest(pairs: list[tuple[str | None, str]]) -> str:
     return sha256(json.dumps(sorted(pairs, key=lambda p: (p[0] or "", p[1]))).encode()).hexdigest()[:8]
 
 
+def build_stages(source: str) -> dict[str | None, str]:
+    """Block -> its build stage; one stage under None for a source whose blocks share it."""
+    spec = SOURCES[source]
+    if "tables" in spec:
+        return {block: stage for block, (_, stage) in spec["tables"].items()}
+    return {None: spec["build"]}
+
+
+def build_stage(source: str, block: str) -> str:
+    stages = build_stages(source)
+    return stages[block] if block in stages else stages[None]
+
+
+def silver_blocks(cat, source: str) -> dict[str, dict[str, Any]]:
+    """Block -> its Silver files, their size and rows, and the digest of their names, from file lists only.
+    An entity source: the partitions of its Silver table. A source of dbt tables: each declared table is
+    one block holding all the table's data files (dbt writes new files when it rebuilds a table, so their
+    names tell a rebuild). A declared table that is missing or holds no file stops the run: it is a fault
+    of the build, never a block that left the source, so nothing is removed from Gold for it."""
+    spec = SOURCES[source]
+    if "tables" not in spec:
+        silver = bf.retry(lambda: cat.load_table(spec["silver"]), "silver_table")
+        with_states = {}
+        for relation, table_id in spec.get("with", {}).items():  # file lists only, as for Silver
+            other = bf.retry(lambda t=table_id: cat.load_table(t), relation)
+            with_states[relation] = et.state(other, other.spec().fields[0].name)
+        return blocks_of(source, et.state(silver, silver.spec().fields[0].name), with_states)
+    out: dict[str, dict[str, Any]] = {}
+    for block, (table_id, _) in spec["tables"].items():
+        table = bf.retry(lambda t=table_id: cat.load_table(t), "silver_table")
+        held = list(et.state(table, "").values())  # every file, whatever the table's partitioning
+        item = {
+            "paths": sorted(path for h in held for path in h["paths"]),
+            "bytes": sum(h["bytes"] for h in held),
+            "rows": sum(h["rows"] for h in held),
+        }
+        if not item["paths"]:
+            raise RuntimeError(f"{source}: {'.'.join(table_id)} holds no data file; nothing is built or removed")
+        names = "\n".join(et.recipe_of(p) for p in item["paths"])
+        item["silver_recipe"] = sha256(names.encode()).hexdigest()[:16]
+        out[block] = item
+    return out
+
+
 def model_digest(source: str) -> str:
     """Digest of the Gold SQL of the source: with the Silver files and the block's geography mapping it
     decides a block's Gold files."""
     digest = sha256()
     spec = SOURCES[source]
-    rules = (spec.get("map_model"), *spec.get("prepare", {}).values(), spec["build"])
+    stages = sorted(set(build_stages(source).values()))
+    rules = (spec.get("map_model"), *spec.get("prepare", {}).values(), *stages)
     for model in (*(m for m in rules if m), *(t["model"] for t in TABLES.values())):
         digest.update((MODELS / f"{model}.sql").read_bytes())
     return digest.hexdigest()[:12]
@@ -602,12 +693,7 @@ def plan(
     """What each block needs, from the tables' file lists: build (new Silver files, new rule, a changed
     mapping of one of its geography codes), or removal (the block left Silver).
     ``create=False`` (checks): reads only, never creates a table."""
-    silver = bf.retry(lambda: cat.load_table(SOURCES[source]["silver"]), "silver_table")
-    with_states = {}
-    for relation, table_id in SOURCES[source].get("with", {}).items():  # file lists only, as for Silver
-        other = bf.retry(lambda t=table_id: cat.load_table(t), relation)
-        with_states[relation] = et.state(other, other.spec().fields[0].name)
-    listed = blocks_of(source, et.state(silver, silver.spec().fields[0].name), with_states)
+    listed = silver_blocks(cat, source)
     if not listed:
         raise RuntimeError(f"{source}: the Silver table lists no blocks; nothing is built or removed")
     blocks = {b: v for b, v in listed.items() if matches(only, b)}
@@ -687,7 +773,7 @@ def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str
                     f"{len(item['missing'])} files of the block are missing, e.g. {item['missing'][:3]}"
                 )
             built = entity.apply(
-                spec["build"],
+                build_stage(source, block),
                 inputs,
                 build,
                 not_null=("measure_key", "geography_key", "date_key", "frequency", "breakdown_json", "is_total"),

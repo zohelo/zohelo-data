@@ -30,10 +30,17 @@ archive_policy:
   prune: report
 bronze: [bronze.oecd_observations, bronze.oecd_rejected_files]
 silver: [silver.oecd_cli]
-gold: [gold.build_oecd, gold.metrics_business_confidence_oecd, gold.metrics_consumer_confidence_oecd, gold.metrics_cli_oecd]
+# Full coverage (O43, D35, docs/gold-coverage.md): every series of silver.oecd_cli by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table oecd_cli.
+gold: [gold.build_oecd, gold.metrics_business_confidence_oecd, gold.metrics_consumer_confidence_oecd, gold.metrics_cli_oecd,
+       gold.oecd_observations, gold.oecd_series, gold.oecd_measures, gold.oecd_geography, gold.observations_rejected]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (owner decision #875): one selection of ~241,000 rows; rebuilt in full.
 refresh: {mode: full, decided: "#875"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35; #2998): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver tables dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]
