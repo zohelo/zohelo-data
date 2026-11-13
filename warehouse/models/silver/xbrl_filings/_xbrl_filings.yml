@@ -46,6 +46,9 @@ models:
         tests: [not_null]
       - name: lei
         tests: [not_null]
+      - name: filings_for_period
+        description: Filings of the issuer and period end in the list (above 1, language versions or refilings).
+        tests: [not_null]
       - name: concept
         tests: [not_null, {accepted_values: {arguments: {values: ['ifrs-full:Revenue', 'ifrs-full:ProfitLoss']}}}]
       - name: period_start

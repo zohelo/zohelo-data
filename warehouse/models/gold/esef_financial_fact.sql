@@ -8,13 +8,17 @@
    the period end (tests/xbrl_filings_fact_conflicts.sql warns and lists them). Comparative periods stay in Silver.
    The grain stays at the filing: language versions and refilings of one report each have their rows, because the
    repository has no version column that tells them apart (tests/esef_issuer_period_values_differ.sql warns when
-   they disagree). A missing fact is no row. Joins gold.esef_filing by fxo_id and GLEIF by lei.
+   they disagree). filings_for_period says how many filings the repository holds for the issuer and period end:
+   1 means the row is the issuer's only filing for that period, more than 1 means the reader chooses between
+   filings (filing_sequence, gold.esef_filing.date_added) and must not add them up. A missing fact is no row. Joins gold.esef_filing by fxo_id and GLEIF by lei.
    Source: silver.xbrl_filings_facts. #}
 with facts as (select * from {{ ref('xbrl_filings_facts') }})
 
 select
     fxo_id,
     lei,
+    filing_sequence,
+    filings_for_period,
     concept,
     case concept when 'ifrs-full:Revenue' then 'revenue' when 'ifrs-full:ProfitLoss' then 'profit_loss' end as measure,
     period_start,

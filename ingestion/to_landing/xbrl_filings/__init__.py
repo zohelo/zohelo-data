@@ -14,7 +14,8 @@ Two kinds of entity are landed:
                       first run reads every document once and later runs only new or reprocessed filings.
 
 One request at a time, PAUSE seconds apart, bounded retries with backoff, a time budget; a run that stops at its
-budget continues from Landing on the next run. The provider states no rate limit and asks routine users for "a
+budget continues from Landing on the next run. A document that cannot be read (refused, not xBRL-JSON, or still
+failing after the retries) is reported and read again on the next run; FAILURES_IN_A_ROW failures stop the run. The provider states no rate limit and asks routine users for "a
 user agent that includes a contact email address, or a link to where we can find your contact details": the
 repository's identified User-Agent (bulk_file.USER_AGENT) carries the project link.
 
@@ -42,6 +43,7 @@ LIST_URL = (
 CONCEPTS = ("ifrs-full:ProfitLoss", "ifrs-full:Revenue")
 PAUSE = 2.0
 RETRIES = 3
+FAILURES_IN_A_ROW = 5  # documents that could not be read one after another: the host is down, the run stops
 
 
 def list_spec() -> dict[str, Any]:
@@ -220,17 +222,27 @@ def extract(budget_minutes: float, landing_root: str = "01_landing", max_items: 
     todo = plan(rows, held_versions(client, bucket, landing_root))
     if max_items:
         todo = todo[:max_items]
-    landed, refused, invalid, deferred, read_bytes, kept_bytes = 0, [], [], 0, 0, 0
+    import requests
+
+    landed, refused, invalid, failed, deferred, read_bytes, kept_bytes = 0, [], [], [], 0, 0, 0
+    in_a_row = 0
     for n, filing in enumerate(todo):
-        if time.monotonic() > deadline:
+        if time.monotonic() > deadline or in_a_row >= FAILURES_IN_A_ROW:
             deferred = len(todo) - n
             break
         time.sleep(PAUSE)
         try:
-            result = land_facts(client, bucket, filing, fetch(BASE + filing["json_url"]), landing_root)
+            body = fetch(BASE + filing["json_url"])
         except bulk_file.PermanentError as exc:
             refused.append({"fxo_id": filing["fxo_id"], "error": str(exc)[:120]})
             continue
+        except (requests.RequestException, RuntimeError) as exc:  # retries used up: read again next run
+            failed.append({"fxo_id": filing["fxo_id"], "error": str(exc)[:120]})
+            in_a_row += 1
+            continue
+        in_a_row = 0
+        try:
+            result = land_facts(client, bucket, filing, body, landing_root)
         except ValueError as exc:  # not JSON, or not an xBRL-JSON document: nothing is landed, read again next run
             invalid.append({"fxo_id": filing["fxo_id"], "error": str(exc)[:120]})
             continue
@@ -249,10 +261,16 @@ def extract(budget_minutes: float, landing_root: str = "01_landing", max_items: 
             "refused_sample": refused[:5],
             "invalid": len(invalid),
             "invalid_sample": invalid[:5],
+            "failed": len(failed),
+            "failed_sample": failed[:5],
         }
     )
-    annotate("warning" if refused or invalid else "notice", f"{SOURCE} landing extract", summary)
-    return 0
+    stopped = in_a_row >= FAILURES_IN_A_ROW
+    if stopped:
+        summary["error"] = f"{FAILURES_IN_A_ROW} documents in a row could not be read: stopped, the next run continues"
+    level = "error" if stopped else "warning" if refused or invalid or failed else "notice"
+    annotate(level, f"{SOURCE} landing extract", summary)
+    return 1 if stopped else 0
 
 
 def _inspect(p) -> int:

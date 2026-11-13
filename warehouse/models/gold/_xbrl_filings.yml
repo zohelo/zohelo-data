@@ -53,6 +53,11 @@ models:
       - name: lei
         description: Issuer LEI; joins GLEIF and gold.esef_issuer by LEI.
         tests: [not_null]
+      - name: filings_for_period
+        description: >-
+          Filings the repository holds for this issuer and period end (language versions, refilings). 1 = the only
+          filing; above 1 the rows of the issuer and period are alternatives, never summed.
+        tests: [not_null]
       - name: concept
         tests: [not_null]
       - name: measure
