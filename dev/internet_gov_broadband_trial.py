@@ -150,8 +150,8 @@ def main(argv: list[str]) -> int:
             bulk_file.main(SOURCE, "load", landing_root=land, pause_seconds=3.0)
             objects = [o for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=f"{land}/")
                        for o in page.get("Contents", [])]
-            files = [o for o in objects if o["Key"].endswith(".pdf")]
-            passes.append({"pass": attempt, "pdf_files": len(files), "bytes": sum(o["Size"] for o in files),
+            files = [o for o in objects if not o["Key"].endswith(".receipt.json")]
+            passes.append({"pass": attempt, "files": len(files), "bytes": sum(o["Size"] for o in files),
                            "receipts": sum(o["Key"].endswith(".receipt.json") for o in objects)})
         missing = landing.check_editions()
         bronze_passes = []
