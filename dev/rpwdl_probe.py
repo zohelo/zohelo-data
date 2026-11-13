@@ -247,26 +247,28 @@ def profile_csv(path: str, name: str) -> dict:
     import duckdb
     con = duckdb.connect()
     raw = open(path, "rb").read(3000)
-    first = raw.split(b"\n", 1)[0]
-    out = {"member": name, "first_line": first.decode("utf-8", "replace")[:1500], "bom": raw[:3] == b"\xef\xbb\xbf"}
+    out = {"member": name, "first_line": raw.split(b"\n", 1)[0].decode("utf-8", "replace")[:1500], "bom": raw[:3] == b"\xef\xbb\xbf"}
+    src = f"read_csv('{path}', all_varchar=true, header=true, sample_size=-1, delim=';', quote='\"', escape='\"', strict_mode=true)"
     try:
-        rel = con.sql(f"select * from read_csv('{path}', all_varchar=true, header=true, sample_size=-1)")
-        cols = rel.columns
-        out["rows"] = con.sql(f"select count(*) from read_csv('{path}', all_varchar=true, header=true, sample_size=-1)").fetchone()[0]
+        con.execute(f"create table t as select * from {src}")
+        cols = [r[0] for r in con.execute("describe t").fetchall()]
+        out["rows"] = con.execute("select count(*) from t").fetchall()[0][0]
         prof = {}
         for c in cols:
-            q = f'select count("{c}"), count(distinct "{c}"), max(length("{c}")) from read_csv(\'{path}\', all_varchar=true, header=true, sample_size=-1)'
-            nn, nd, ml = con.sql(q).fetchone()
-            item = {"nonnull": nn, "distinct": nd, "maxlen": ml}
-            if nd <= 25:
-                vals = con.sql(f'select "{c}", count(*) from read_csv(\'{path}\', all_varchar=true, header=true, sample_size=-1) group by 1 order by 2 desc').fetchall()
-                item["values"] = [[str(v)[:70], k] for v, k in vals]
+            nn, nd, ml, mn, mx = con.execute(f'select count("{c}"), count(distinct "{c}"), max(length("{c}")), min("{c}"), max("{c}") from t').fetchall()[0]
+            item = {"nn": nn, "nd": nd, "ml": ml}
+            if re.search(r"(Data|Teryt$|Teryt -? ?$|Teryt$|^Teryt|Początek|Koniec|Kod|Typ|Rodzaj|Forma|Izba|ID|Id )", c) and nd > 25:
+                item["min"], item["max"] = mn, mx
+                if "Teryt" in c and "opis" not in c:
+                    item["lengths"] = con.execute(f'select length("{c}"), count(*) from t group by 1 order by 1').fetchall()
+                if c.startswith("Data") or "okresu" in c:
+                    item["formats"] = con.execute(f"""select regexp_replace("{c}", '[0-9]', '9', 'g'), count(*) from t group by 1 order by 2 desc limit 5""").fetchall()
+            if nd <= 25 and not re.search(r"(Imie|Nazwisko|Nazwa|Telefon|Email|WWW|Ulica|Budynek|Lokal|Numer|Nip|NIP)", c):
+                item["values"] = [[str(v)[:80], k] for v, k in con.execute(f'select "{c}", count(*) from t group by 1 order by 2 desc').fetchall()]
             prof[c] = item
         out["columns"] = prof
-        sniff = con.sql(f"select Delimiter, Quote, HasHeader from sniff_csv('{path}')").fetchone()
-        out["sniff"] = list(sniff)
     except Exception as e:  # noqa: BLE001
-        out["error"] = f"{type(e).__name__}: {str(e)[:400]}"
+        out["error"] = f"{type(e).__name__}: {str(e)[:600]}"
     return out
 
 
