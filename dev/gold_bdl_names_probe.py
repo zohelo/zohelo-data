@@ -39,6 +39,10 @@ def main() -> None:
         con.execute(f"create view {name} as select * from read_parquet('{path}')")
     paths = [p for b in BLOCKS if b in silver for p in silver[b]["paths"]]
     listing = "read_parquet([" + ", ".join("'" + p.replace("'", "''") + "'" for p in paths) + "])"
+    run(con, listing)
+
+
+def run(con, listing: str) -> None:
     con.execute(
         f"""create table held as
             select subgroup_id, unit_code, unit_name, count(*) as n_rows, min(year) as first_year, max(year) as last_year
@@ -58,7 +62,7 @@ def main() -> None:
         ).fetchall(),
         "differ_examples (level, code, export name, id name, mapped, years)": con.execute(
             """select level, unit_code, unit_name, id_name, mapped, min(first_year), max(last_year), sum(n_rows)
-               from named where export_u <> id_u group by all
+               from named where export_u <> id_u group by level, unit_code, unit_name, id_name, mapped
                qualify row_number() over (partition by level order by unit_code) <= 22 order by 1, 2 limit 44"""
         ).fetchall(),
     })
