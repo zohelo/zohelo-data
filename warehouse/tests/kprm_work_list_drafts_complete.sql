@@ -1,9 +1,10 @@
 -- kprm_work_list (PLG-034): the Silver table holds drafts, and each draft's kind agrees with the first letter of its
 -- work-list number (U/R/I = Projekty ustaw / rozporządzeń / innych dokumentów rządowych): columns that shifted
 -- fail here instead of loading silently. The type (Typ dokumentu) is not compared with the number's later letters:
--- a draft keeps its number when its type changes (2 of 1,526 drafts on 12 Nov 2026, Dev trial in the PR); the
--- type's accepted_values catch a shifted column. No row floor: a new government starts a new, short list. One test
--- per Silver model (it reads no other source's table).
+-- they disagree in 2 of 1,526 drafts (UC57 and UDER84 are typed D, Dev trial 43343159781, 13 Nov 2026; a number is
+-- not reissued when a draft's type is reclassified, as far as the file shows); the type's accepted_values catch a
+-- shifted column. No row floor: a new government starts a new, short list. One test per Silver model (it reads no
+-- other source's table).
 with drafts as (
     select
         draft_number,

@@ -6,7 +6,7 @@ models:
       Ministrów, CC BY-SA 4.0) from bronze.kprm_work_list_drafts, newest file only. Grain: draft_number (Numer
       projektu, e.g. UD505; the letters encode kind and type: U/R/I = bill, regulation, other document, then D, C,
       DER, PRO, A). History: the current government's list, entries published from 2023-12-21 (1,526 drafts on
-      12 Nov 2026, Dev probe 43320804384; trial run in the PR). Titles repeat (1,288 distinct), numbers do not.
+      12 Nov 2026, Dev probe 43320804384 and trial 43343159781). Titles repeat (1,288 distinct), numbers do not.
       planned_adoption is the published plan as free text (quarter, date, "ZREALIZOWANY ..."), never a date key.
       status in_progress = the source's empty Status realizacji. Not carried from Landing: Osoba odpowiedzialna,
       the aims and substance texts, the regulatory-impact columns. tests/kprm_work_list_drafts_complete.sql checks

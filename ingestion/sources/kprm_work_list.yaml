@@ -40,8 +40,8 @@ gold: [gold.government_drafts, gold.build_kprm_work_list, gold.metrics_governmen
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   kprm_work_list_drafts: {rows: 2300}  # 1,526 on 12 Nov 2026 (Dev probe 43320804384), about 500 new a year
   government_drafts: {rows: 2300}  # one row per Silver draft
-  poc_build_kprm_work_list: {rows: 2300}  # trial count in the PR
-  poc_metrics_government_drafts_listed: {rows: 100}  # one row per month with an entry since 2023-12
+  poc_build_kprm_work_list: {rows: 1400}  # 941 rows, Dev trial 43343159781 (13 Nov 2026)
+  poc_metrics_government_drafts_listed: {rows: 55}  # one row per month with an entry: 36 (2023-12 to 2026-11, trial 43343159781)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one file of about 1,500 rows, replaced whole when the list changes, no
