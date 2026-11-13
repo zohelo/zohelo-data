@@ -132,9 +132,19 @@ def main() -> int:
             where flow_status = 'Provisional' group by 1 order by 1""")
         s["tests"] = {
             t: q(con, f"select count(*) from ({render(f'warehouse/tests/{t}.sql', {}, {})})")[0][0]
-            for t in ("entsog_gas_days", "entsog_physical_flow_complete", "entsog_point_groups")
+            for t in ("entsog_gas_days", "entsog_physical_flow_complete", "entsog_point_groups", "entsog_points_complete")
         }
-        s["complete_failures"] = q(con, f"select * from ({render('warehouse/tests/entsog_physical_flow_complete.sql', {}, {})}) limit 12")
+        s["yaml_tests_failing_rows"] = {
+            "flow accepted_values": q(con, """select count(*) from entsog_physical_flow where
+                direction_key not in ('entry', 'exit') or indicator <> 'Physical Flow' or period_type <> 'day'
+                or unit <> 'kWh/d' or flow_status not in ('Provisional', 'Confirmed')""")[0][0],
+            "points unique": q(con, """select count(*) from (select operator_key, point_key, direction_key
+                from entsog_points group by all having count(*) > 1)""")[0][0],
+            "points not_null": q(con, """select count(*) from entsog_points where operator_key is null
+                or point_key is null or direction_key is null or point_label is null or raw_sha256 is null
+                or direction_key not in ('entry', 'exit')""")[0][0],
+        }
+        s["complete_failures"] =q(con, f"select * from ({render('warehouse/tests/entsog_physical_flow_complete.sql', {}, {})}) limit 12")
         s["unmapped"] = q(con, f"select * from ({render('warehouse/tests/entsog_point_groups.sql', {}, {})})")
         annotate("notice", "entsog trial Silver", s)
         pts = q(con, """select point_key || '|' || direction_key || '|' || point_label || '|' || coalesce(point_type, '-')
