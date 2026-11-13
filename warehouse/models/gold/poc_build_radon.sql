@@ -127,8 +127,8 @@ select
     c.geo_code as geography_source_code,
     c.geography_key,
     'D' as frequency,
-    cast(strptime(left(s.source_version, 8), '%Y%m%d') as date) as date_key,
-    left(s.source_version, 8) as period_label,
+    cast(strptime(s.source_version, '%Y%m%dT%H%M%SZ') as date) as date_key,
+    cast(cast(strptime(s.source_version, '%Y%m%dT%H%M%SZ') as date) as varchar) as period_label,
     cast(json_object(c.breakdown, c.code) as varchar) as breakdown_json,
     case
         when c.code <> '_T' and l.label_count = 1 then cast(json_object(c.breakdown, l.label) as varchar)
