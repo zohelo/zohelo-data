@@ -26,8 +26,8 @@ SOURCE = "gus_health"
 SCRATCH = "zz_dev_gus_health"
 MACROS = "".join((ROOT / f"warehouse/macros/{m}.sql").read_text() for m in ("xlsx_cells", "gus_tables"))
 KPIS = {  # kpi -> measure_code, (min, max) as in warehouse/tests/metrics_value_range.sql
-    "practising_doctors": ("doctors", (0, 1e6)),
-    "practising_nurses": ("nurses", (0, 1e6)),
+    "doctors_working": ("doctors", (0, 1e6)),
+    "nurses_working": ("nurses", (0, 1e6)),
     "hospital_beds": ("beds", (0, 1e6)),
     "hospital_beds_per_10k": ("beds_per_10k", (0, 200)),
 }
@@ -155,6 +155,9 @@ def main(argv) -> int:
         show(con, "completeness failures", complete)
         show(con, "matched sheets", f"select entity, table_code, measure_code, sheet_name, any_value(header_path) hp, count(*) from {s} group by all order by all", limit=200)
         show(con, "gold sample", "select measure_key, geography_key, period_label, value, observation_status_key from gold where geography_key in ('PL', 'TERC:1400000') order by all", limit=200)
+        show(con, "notes of matched sheets", f"""select distinct c.entity, c.sheet_name, c.row_number, left(regexp_replace(c.value_text, '\\s+', ' ', 'g'), 400)
+            from {SOURCE}_cells c join (select distinct entity, member, sheet_name from {s}) m using (entity, member, sheet_name)
+            where regexp_matches(c.value_text, '(?i)^(u ?w ?a ?g ?a|n ?o ?t ?e|[a-d]\\))') order by all""", limit=400)
         show(con, "non-ok cells", f"select entity, table_code, measure_code, area_name, value_text, cell_status from {s} where cell_status <> 'ok' limit 60")
     finally:
         removed = 0
