@@ -4,8 +4,8 @@ models:
     description: >-
       Build stage — NFZ waiting times (API Terminy Leczenia v1.4, register PLS-015), block waiting_lists: monthly
       counts by voivodeship and Poland, per case (stable, urgent): waiting lists listed in the snapshot month, persons
-      awaiting at the end of the statistics month summed over the lists that published a count (zohelo calculation),
-      and the number of those lists. Values as counted from unchanged published values; licence unresolved (internal).
+      awaiting at the end of the statistics month summed over the lists that published a count, each list once (zohelo calculation),
+      and the number of those lists. Values as counted from unchanged published values; licence nfz_itl_api_terms.
     columns:
       - name: measure_key
         tests: [not_null]

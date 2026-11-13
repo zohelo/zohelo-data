@@ -2,7 +2,7 @@ version: 2
 models:
   - name: nfz_waiting_times_queues
     description: >-
-      NFZ waiting times, API Terminy Leczenia v1.4 (register PLS-015; terms unresolved, internal): every queue entry
+      NFZ waiting times, API Terminy Leczenia v1.4 (register PLS-015; licence nfz_itl_api_terms, the v1.3 regulations): every queue entry
       (provider x place x benefit x case 1 stable / 2 urgent) of the newest complete monthly snapshot, values as
       published (persons awaiting, removed and average waiting period of the statistics month; the forecast time to
       the benefit as published text with its as-at date). No history is offered by the API: snapshots begin with
@@ -48,9 +48,10 @@ models:
     description: >-
       Counts of the NFZ waiting-times snapshots (register PLS-015) by voivodeship ('00' = Poland), case and month,
       zohelo calculations on unchanged published values: waiting_lists (queue entries listed, snapshot month),
-      persons_awaiting (sum of the published month-end counts for the month before the snapshot; missing counts are
-      not summed), lists_reporting (entries whose count was summed). Grain: measure_code x province_code x case_code x
-      period_month.
+      persons_awaiting (sum of the published month-end counts for the month before the snapshot, each waiting list
+      once: the entries of a list shown at several places, many_places Y, enter once when they all give the same
+      count and not at all when they differ; missing counts are not summed), lists_reporting (lists whose count was
+      summed). Grain: measure_code x province_code x case_code x period_month.
     tests:
       - unique:
           column_name: "measure_code || '|' || province_code || '|' || case_code || '|' || period_month"
