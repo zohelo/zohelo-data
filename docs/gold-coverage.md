@@ -167,15 +167,18 @@ a changed map read its result). The rows `gold.map_geography` holds for these id
 name and are not used here: they leave four in ten gmina ids unmatched and give some gminas the
 area of a namesake. A code TERYT no longer has stays unmatched; it is never matched by name.
 
-**One area, one unit per block (GUS BDL).** BDL publishes one area under several units: a region
-(level 3) that is a whole voivodeship, the website's TERYT code beside the unit id, another unit
-under a borrowed id. Two units under one `geography_key` would repeat `series_key × date_key`, and
-choosing between their rows would be a silent pick. `gold_gus_bdl_units.sql` therefore gives each
-area one unit by rule (the unit named as its id says; a voivodeship before the region that stands
-in for it; the unit id before the TERYT code; a tie gives it to none). Every other unit keeps all
-its rows under `_X` with the source code `<code>#<area>`, which names the area it maps to; the
-builder reads that form when the map changes, so giving regions their own keys later rebuilds only
-the blocks that hold one.
+**One area, several units (GUS BDL).** BDL publishes one area under several units: a region
+(level 3) that is a whole voivodeship, a gmina before and after it got town rights, the TERYT code
+of an older export beside the unit id, another unit under a borrowed id. Two rows under one
+`geography_key` would repeat `series_key × date_key`, and choosing between them would be a silent
+pick. `gold_gus_bdl_units.sql` orders the units of an area by rule (the area's own unit before a
+region that stands in for it, the current TERYT code before a changed one, the unit id before the
+TERYT code), and `gold_gus_bdl_cells.sql` gives each cell (series × year) to the first unit that
+has it. The same cell of a later unit stays in Gold under `_X` with the source code
+`<code>#<area>`, whatever its value, so no row is dropped and no value is chosen; so does every
+row of a unit whose name is not the name of its id (a borrowed id) and of units the rule cannot
+order. The builder reads that form when the map changes, so giving regions their own keys later
+rebuilds only the blocks that hold one.
 
 ### 6. Frequency is part of the measure key; S and W have their own frequency
 

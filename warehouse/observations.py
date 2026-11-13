@@ -190,7 +190,13 @@ SOURCES: dict[str, dict[str, Any]] = {
         "silver": ("silver", "bdl_observations"),
         "block_of": str,  # a subgroup id (P####)
         "build": "gold_gus_bdl_build",
-        "prepare": {"labels": "gold_gus_bdl_labels", "units": "gold_gus_bdl_units"},
+        # steps before the build, in this order
+        "prepare": {
+            "signs": "gold_gus_bdl_signs",
+            "labels": "gold_gus_bdl_labels",
+            "units": "gold_gus_bdl_units",
+            "cells": "gold_gus_bdl_cells",
+        },
         "lookups": {
             "geo_map": ("gold", "map_geography", ("source_system", "source_code", "geography_key"), "gus_bdl"),
             "bdl_units": ("silver", "bdl_units", ("unit_id", "name", "level"), None),

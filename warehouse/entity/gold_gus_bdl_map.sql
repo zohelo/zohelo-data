@@ -1,5 +1,7 @@
 -- GUS BDL geography map for the per-block Gold build (docs/gold-coverage.md): source code -> geography_key,
--- one row per code. Run once per run by warehouse/observations.py over the source's lookups; the build
+-- one row per code, and whether the code is the area's own TERYT code (`own_code`; false for a code TERYT
+-- has changed since, which the map places on the current unit: a gmina before it got town rights).
+-- Run once per run by warehouse/observations.py over the source's lookups; the build
 -- stage and the builder's check of a changed map both read this result. Relations:
 --   geo_map     gold.map_geography rows of GUS BDL (source_code, geography_key)
 --   bdl_units   silver.bdl_units (unit_id, name, level)
@@ -28,7 +30,9 @@ with ids as (
 
 select
     m.source_code,
-    m.geography_key
+    m.geography_key,
+    length(m.source_code) <> 7 or m.geography_key = 'PL' or m.source_code = rpad(substr(m.geography_key, 6), 7, '0')
+        as own_code
 from geo_map as m
 where
     m.source_code not in (
@@ -39,7 +43,8 @@ where
 union all
 select
     i.unit_id as source_code,
-    coalesce(t.geography_key, '_X') as geography_key
+    coalesce(t.geography_key, '_X') as geography_key,
+    coalesce(t.geography_key = 'PL' or i.teryt_code = rpad(substr(t.geography_key, 6), 7, '0'), true) as own_code
 from ids as i
 left join geo_map as t on i.teryt_code = t.source_code
 where i.teryt_code is not null

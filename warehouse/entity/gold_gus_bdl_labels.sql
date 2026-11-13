@@ -1,4 +1,4 @@
--- Gold build stage of one GUS BDL subgroup, step 1 (docs/gold-coverage.md): one row per variable of the
+-- Gold build stage of one GUS BDL subgroup, step 2 (docs/gold-coverage.md): one row per variable of the
 -- subgroup as its Silver file holds it (`dimension_values`: the labels n1…n5 as a JSON array), with what
 -- the labels say. Kept as the table `labels` for the next steps, so every observation is shaped on its
 -- own by one small join. The rule of poc_build_bdl.sql, read from the subgroup's own file:
