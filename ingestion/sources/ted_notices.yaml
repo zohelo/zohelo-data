@@ -1,0 +1,42 @@
+source_system: ted_notices
+description: "TED (Tenders Electronic Daily) notices of Polish buyers, from 2025 — Search API v3 of the Publications Office of the EU"
+
+# Extraction strategy (docs/landing.md, docs/sources/ted_notices.md; register PLG-023). Bulk feature checked first: the
+# TED daily packages hold every notice of the day as eForms XML (all countries), while the Search API answers an
+# expert query with chosen fields, anonymously (https://docs.ted.europa.eu/api/latest/search.html: "does not require
+# authentication"), so the Search API is the route for a Poland selection. Tested from Actions (Dev probes 43327154765,
+# <probe2>): at most 250 notices a page, page x limit at most 15,000, fields x limit at most 10,000, identical bytes
+# for a repeated request (stable order); Polish buyers 98,144 notices in 2024, 114,101 in 2025, 110,929 in 2026 to
+# 10 Nov; 500-700 a publication day, none on Saturdays and Sundays. Entity = one page of one publication day
+# (ingestion/to_landing/ted_notices/), query buyer-country=POL AND publication-date=<day>; version = the publication
+# day. A published notice never changes (a change is a new notice), so each day is fetched once and the newest three
+# days are asked again. Window from 2025-01-01 (smallest valuable selection); earlier notices and other countries
+# are left out. Only the fields of extract.FIELDS are requested: no contact points, persons, addresses or e-mails.
+extraction:
+  initial: api
+  production: snapshot                    # each file is one complete answer page of a closed publication day
+  incremental_policy: changed_since_last  # missing days, then the newest three days again; unchanged bytes skipped
+  schedule: # UTC; TED publishes Monday to Friday; daily on weekdays after the morning publication
+    - {cron: "35 11 * * 1-5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/ted_notices/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.ted_notices, bronze.ted_notices_rejected_files]
+silver: [silver.ted_notices]
+gold: [gold.build_ted_notices, gold.ted_notice, gold.metrics_procurement_notices]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  ted_notices: {rows: 400000}  # measured in the Dev trial
+  ted_notice: {rows: 400000}  # measured in the Dev trial
+  poc_build_ted_notices: {rows: 20000}  # measured in the Dev trial
+  poc_metrics_procurement_notices: {rows: 1000}  # measured in the Dev trial
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a page
+# Refresh policy for all layers (D32): Landing and Bronze grow by one day's pages (about 600 notices) a weekday and
+# never reload a day; Silver and Gold (about 115,000 notices a year from 2025) are rebuilt in full while they stay
+# well below the 1 M ceiling; a longer window would make them incremental by publication day first.
+refresh: {mode: full, decided: "D32 + #2976"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

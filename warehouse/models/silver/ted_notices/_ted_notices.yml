@@ -1,0 +1,29 @@
+version: 2
+models:
+  - name: ted_notices
+    description: >-
+      TED notices of Polish buyers (register PLG-023, TED Search API v3 of the Publications Office of the EU; licence
+      unresolved, internal): every notice published from 2025-01-01 whose buyer country is Poland. Grain:
+      publication_number (one row per published notice; a change or correction is its own notice). Notice and form
+      type, procedure type, contract nature, CPV codes, buyer countries (ISO alpha-3), buyer NUTS codes, buyer legal
+      types and organisation names as published; estimated value of the procedure with its currency as published.
+      tests/ted_notices_pages_complete.sql checks that no page of a publication day is missing. History and trial
+      run: see ingestion/sources/ted_notices.yaml.
+    columns:
+      - name: publication_number
+        tests: [not_null, unique]
+      - name: publication_year
+        tests: [not_null]
+      - name: notice_type
+        tests: [not_null]
+      - name: form_type
+        tests: [not_null]
+      - name: publication_date
+        tests: [not_null]
+      - name: buyer_countries
+        tests: [not_null]
+      - name: entity
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source answer (lineage to Landing/Archive).
+        tests: [not_null]

@@ -5033,7 +5033,8 @@ sources:
   name: TED Search API and Open Data — Poland-filtered notices
   short_name: TED notices (Poland)
   provider: Publications Office of the European Union
-  status: approved
+  source_system: ted_notices
+  status: built
   family: D
   kpi: true
   geography: multicountry-Europe
