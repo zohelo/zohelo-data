@@ -5,7 +5,7 @@ models:
       Build stage — Our World in Data (register CD-031), three charts of third-party data, annual, one block and
       measure per chart: consumption-based CO2 emissions per capita (Global Carbon Budget, tonnes per person),
       electoral democracy index (V-Dem, 0 to 1), GDP per capita (Maddison Project Database, international-$ in
-      2011 prices); every country by ISO alpha-3, World (WB:WLD) and Kosovo. Licence per chart in licence.csv;
+      2011 prices); every country by ISO alpha-3, World (WB:WLD) and Kosovo, from 1900 (the calendar). Licence per chart in licence.csv;
       the source stays internal while its licence key is unresolved.
     columns:
       - name: measure_key
