@@ -63,6 +63,18 @@ A **block** is the unit of rebuild: a Silver entity (Eurostat dataset, BDL subgr
 entities (DBW: the files of one block), or, for a source whose Silver is a dbt table, the table
 itself; a table too large for one block is split by an entity column first.
 
+**A source whose Silver is dbt tables** (#2998; World Bank WDI, OECD, NBP so far) declares them in the
+builder (`tables` of its `SOURCES` entry): each table is one block, named after the table, with its own
+build stage, because two tables of one source rarely share a shape. The block's Silver files are the
+table's current data files, taken from the table's file list, so the plan still reads metadata only.
+dbt writes new files whenever it rebuilds a table, so the block is rebuilt in Gold whenever the changed-only
+build rebuilt its Silver table, also when the rows came out the same (a rebuild after a change of shared
+code); for tables of this size that costs one read of the table. A declared table that is missing or holds
+no file stops the run: that is a fault of the build, never a block that left the source, and nothing is
+removed from Gold for it (with a handful of blocks the removal cap of D35 would not protect them). The
+load order needs no read for these sources. Whole tables as blocks hold up to the size one worker builds
+alone (WDI: about 9 M rows); a larger table gets an entity column and per-entity Silver files first.
+
 ### 3. Layout: four tables per source, one file per block
 
 | Table | One row is | Columns |
@@ -140,6 +152,15 @@ one. It is retried when its recipe changes.
   says `ogółem` name the measure; a period label becomes the frequency.
 - **GUS DBW.** The rule of `poc_build_dbw.sql`: measure = indicator × presentation; the territorial
   dimension is the one whose positions match areas most often; the other dimensions are breakdowns.
+- **World Bank WDI.** `world_bank_wdi:wdi_observations:_Z:<indicator code>@A`: an indicator code is one
+  measure whole (WDI's codes for a sex or an age band are its own indicators), so no series has a
+  breakdown. The unit is not in the key (`_Z`): WDI states it in the indicator's name and in a metadata
+  field that is filled or corrected without the indicator changing. The unit code stays the metadata
+  field as published, else `as named`.
+- **OECD.** `oecd:oecd_cli:<UNIT_MEASURE>:<MEASURE>:<ADJUSTMENT>:<TRANSFORMATION>:<METHODOLOGY>@<FREQ>`:
+  every dimension of the dataflow other than the area and the frequency defines the measure.
+- **NBP.** `nbp:nbp_fx_rates:PLN:<table>:<mid|bid|ask>@D` with the currency as the breakdown;
+  `nbp:nbp_gold_fixings:PLN/g:price@D`. No area (`_Z`).
 
 The rule is code: changing it changes every recipe of the source. Rule keys differ from the curated
 hand-made keys (`eurostat:UNE_RT_M:PC_ACT:TOTAL` curated, `eurostat:UNE_RT_M:PC_ACT:SA@M` by rule).
@@ -169,6 +190,11 @@ rule-based build stages apply the rules the curated stages already apply:
 - GUS DBW: an empty value is not loaded; a 0 with a missing-value reason (`id_brak_wartosci` other
   than "value present") is not loaded; a value with a confidentiality id (`id_tajnosci`) is loaded
   with status `confidential`.
+- World Bank WDI: an empty cell is not loaded; a year after the year of the archive's version is loaded
+  with status `forecast`. OECD: a period without a number is not loaded; `OBS_STATUS` becomes the status
+  (`A` or none ok, `P`, `E`, `F`, `B`, `D`, `U`, `N`; any other code `flagged`, never silently ok). NBP: a
+  rate a table does not publish (bid and ask in A and B, mid in C) is no row; table B is published
+  weekly and its days in between are not filled.
 
 ### 6. Frequency is part of the measure key; S and W have their own frequency
 

@@ -26,7 +26,11 @@ archive_policy:
   prune: delete   # report reviewed 2026-10-28, run https://github.com/zohelo/zohelo-data/actions/runs/40446148186/job/122000035035
 bronze: [bronze.wdi_bulk_observations, bronze.wdi_bulk_metadata, bronze.wdi_rejected_files]
 silver: [silver.wdi_observations, silver.wdi_countries, silver.wdi_indicators]
-gold: []                              # WDI in Gold: shared models (warehouse/warehouse.yaml)
+# Gold: the curated KPI selection is in the shared models of warehouse/warehouse.yaml (build_wdi, fact_annual).
+# Full coverage (O43, D35, docs/gold-coverage.md): every indicator and economy by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table wdi_observations.
+gold: [gold.world_bank_wdi_observations, gold.world_bank_wdi_series, gold.world_bank_wdi_measures,
+       gold.world_bank_wdi_geography, gold.observations_rejected]
 # Tables of retired code still in the catalog, replaced by the tables above (globs allowed).
 legacy_tables: [bronze.wdi_data, bronze.wdi_country, bronze.wdi_series, bronze.wdi_country_series,
                 bronze.wdi_footnote, bronze.wdi_series_time, gold.*wdi*]
@@ -36,4 +40,8 @@ bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded 
 # in under a minute when a new archive lands (weekly).
 refresh: {mode: full, decided: "#875"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35; #2998): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver tables dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]
