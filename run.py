@@ -391,6 +391,19 @@ def main(argv: list[str] | None = None) -> int:
             raise
         _annotate_crash(args.source, args.activity, error)
         raise
+    finally:
+        _annotate_throttling(args.source, args.activity)
+
+
+def _annotate_throttling(source: str, activity: str) -> None:
+    """Storage requests R2 throttled in this activity (#2985): a notice when every one went through
+    after waiting, a warning when one was given up. Nothing when no request was throttled."""
+    r2 = sys.modules.get("ingestion.common.r2")
+    report = r2.THROTTLE.report() if r2 else {}
+    if report:
+        from ingestion.common.report import annotate
+
+        annotate("warning" if report["gave_up"] else "notice", f"{source} {activity} storage throttling", report)
 
 
 def _annotate_crash(source: str, activity: str, error: BaseException) -> None:

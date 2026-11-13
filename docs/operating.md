@@ -41,6 +41,15 @@ it is implemented and listed under `activities:` in `ingestion/sources/<source>.
 state, so a rerun is always safe. Results are published as run annotations and the
 job summary.
 
+**Storage throttling (#2985).** R2 refuses requests while many jobs use one bucket (HTTP 429, and 503 with
+`SlowDown` or `ServiceUnavailable`). Every boto3 client comes from `ingestion.common.r2.storage_client()`: a
+throttled request of any operation waits and is sent again, with exponential backoff and jitter (2 s doubling to
+60 s, at most 10 requests per call, about 5 minutes), and one process waits at most 15 minutes in total, after which
+the storage error fails the job. A request R2 refused was not applied, so the repeat writes the same key once. An
+activity that was throttled publishes the annotation `<source> <activity> storage throttling` (retries by operation
+and code, seconds waited; a warning when a call was given up). DuckDB's and PyIceberg's own readers of Iceberg data
+files do not go through this client.
+
 **One model build at a time, and no build is lost (#2932).** The build job runs in the concurrency group
 `zohelo-pipeline-build`. GitHub keeps one running and one waiting job per group and cancels the waiting one when
 another arrives, so the job `silver_gold.queue` (`warehouse/build_queue.py`) runs first and decides from the jobs
