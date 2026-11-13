@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+- name: ted_notices
+  description: TED Search API v3 (Publications Office of the EU) — notices of Polish buyers, one answer page per file
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/ted_notices/
+    loaded_by: ingestion/to_bronze/ted_notices/
+    config: ingestion/sources/ted_notices.yaml
+  tables:
+  - name: ted_notices
+    description: >-
+      One row per notice of the newest answer of each page entity (day_<YYYYMMDD>_p<n>): publication_number and
+      every requested field as text (a string as published, a list or language map as its JSON text): notice_type,
+      form_type, publication_date, dispatch_date, contract_nature, procedure_type, classification_cpv,
+      buyer_country, buyer_country_sub, buyer_name, buyer_legal_type, estimated_value_proc,
+      estimated_value_cur_proc; source_row_number = position in the page; partitioned by entity.
+  - name: ted_notices_rejected_files
+    description: TED Landing files the Bronze decoder rejected, with the reason.

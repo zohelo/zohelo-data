@@ -1,0 +1,30 @@
+version: 2
+models:
+  - name: poc_build_ted_notices
+    description: >-
+      Build stage — TED notices of Polish buyers counted by publication month (complete months only), Poland and
+      the voivodeships of the buyers (BT-507 NUTS codes), by form type and by notice type (each alone, the other at
+      _T). One measure ted_notices:notices:notices, unit notices. Licence unresolved: internal.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: ted_notice
+    description: >-
+      Entity table: one row per TED notice of Polish buyers, keyed by the TED publication number; publication day
+      as date_key, voivodeship keys of the Polish buyers, codes and the estimated value with its currency as
+      published (silver.ted_notices). Licence unresolved: internal.
+    columns:
+      - name: publication_number
+        tests: [not_null, unique]
+      - name: date_key
+        tests: [not_null]
+  - name: poc_metrics_procurement_notices
+    description: >-
+      KPI procurement_notices (draft): TED notices of Polish buyers per publication month, Poland and
+      voivodeships, total of all notice types (poc_concept_metrics).
