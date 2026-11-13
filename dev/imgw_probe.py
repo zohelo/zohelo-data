@@ -1,12 +1,10 @@
-"""Read-only probe of the IMGW public data archive and API (no writes anywhere).
-
-Lists the archive directory tree (sizes per family and year range), downloads the format
-description files and one small sample ZIP per family (in memory), reads the API endpoints once
-and the apiinfo page (Regulamin). Sequential requests, a pause between them, bounded retries.
-"""
+"""Read-only probe 2 of the IMGW archive and API (no writes anywhere): synop daily listing, station list,
+sample files with status statistics, API endpoints, Regulamin. Sequential requests with pauses."""
 
 from __future__ import annotations
 
+import collections
+import csv
 import html
 import io
 import json
@@ -14,8 +12,8 @@ import re
 import sys
 import time
 import zipfile
-from collections import defaultdict
-from urllib.parse import urljoin
+from datetime import UTC, datetime
+from urllib.parse import unquote, urljoin
 
 import requests
 
@@ -23,15 +21,13 @@ from ingestion.common.report import annotate
 
 BASE = "https://danepubliczne.imgw.pl/data/dane_pomiarowo_obserwacyjne/"
 API = "https://danepubliczne.imgw.pl/api/data/"
-UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
 S = requests.Session()
-S.headers["User-Agent"] = UA
-LOG = []
+S.headers["User-Agent"] = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
 
 
-def get(url: str) -> requests.Response:
+def get(url):
     for attempt in range(3):
-        time.sleep(0.4)
+        time.sleep(0.5)
         try:
             r = S.get(url, timeout=(20, 120))
             if r.status_code == 200 or 400 <= r.status_code < 500:
@@ -39,166 +35,134 @@ def get(url: str) -> requests.Response:
         except requests.RequestException as exc:
             print("retry", url, exc, flush=True)
         time.sleep(5 * (attempt + 1))
-    raise RuntimeError(f"failed {url}")
+    raise RuntimeError(url)
 
 
-ROW = re.compile(r'<a href="([^"?][^"]*)">[^<]*</a>\s*</td>\s*<td[^>]*>([^<]*)</td>\s*<td[^>]*>\s*([^<]*)</td>', re.I)
-ROW2 = re.compile(r'<a href="([^"?][^"]*)">[^<]*</a>\s+(\d{4}-\d\d-\d\d \d\d:\d\d)\s+(\S+)', re.I)
+ROW = re.compile(r'<a href="([^"?/][^"]*)">[^<]*</a>\s*</td>\s*<td[^>]*>([^<]*)</td>\s*<td[^>]*>\s*([^<]*)</td>', re.I)
 
 
-def size_of(text: str) -> float:
-    text = text.strip()
-    m = re.match(r"([\d.]+)([KMG]?)", text)
-    if not m:
-        return 0.0
-    return float(m.group(1)) * {"": 1, "K": 1e3, "M": 1e6, "G": 1e9}[m.group(2)]
+def listing(url):
+    body = get(url).text
+    rows = ROW.findall(body)
+    if not rows:
+        print("UNPARSED", url, body[:1500], flush=True)
+    return [(urljoin(url, h), m.strip(), s.strip()) for h, m, s in rows]
 
 
-def listing(url: str) -> list[tuple[str, str, float]]:
-    r = get(url)
-    body = r.text
-    out = []
-    for href, modified, size in ROW.findall(body) or ROW2.findall(body):
-        if href.startswith("/") or href.startswith(".."):
-            continue
-        out.append((urljoin(url, href), modified.strip(), size_of(size)))
-    if not out:
-        LOG.append({"unparsed_listing": url, "head": body[:600]})
-    return out
-
-
-def family(rel: str) -> str:
-    parts = rel.split("/")[:-1]
-    out = []
-    for part in parts:
-        if re.match(r"^(1[89]|20)\d\d", part):
-            break
-        out.append(part)
-    return "/".join(out)
-
-
-def main() -> int:
-    robots = get("https://danepubliczne.imgw.pl/robots.txt")
-    annotate("notice", "imgw robots.txt", {"http": robots.status_code, "text": robots.text[:1500]})
-    files = []  # (url, modified, bytes)
-    pages = 0
-    queue = [BASE]
-    while queue and pages < 900:
+def crawl(start, cap):
+    files, queue, pages = [], [start], 0
+    while queue and pages < cap:
         url = queue.pop(0)
         pages += 1
-        for child, modified, size in listing(url):
-            if child.endswith("/"):
-                queue.append(child)
-            else:
-                files.append((child, modified, size))
-    tree = defaultdict(lambda: {"files": 0, "bytes": 0.0, "years": set(), "newest": "", "examples": []})
-    docs = []
-    for url, modified, size in files:
-        rel = url[len(BASE):]
-        t = tree[family(rel)]
-        t["files"] += 1
-        t["bytes"] += size
-        t["newest"] = max(t["newest"], modified)
-        for y in re.findall(r"(?<!\d)(1[89]\d\d|20\d\d)(?!\d)", rel):
-            t["years"].add(int(y))
-        if len(t["examples"]) < 3 or not url.endswith(".zip"):
-            if len(t["examples"]) < 6:
-                t["examples"].append(rel)
-        if not url.lower().endswith(".zip"):
-            docs.append((url, size))
-    summary = {
-        k: {"files": v["files"], "MB": round(v["bytes"] / 1e6, 1), "years": [min(v["years"]), max(v["years"])] if v["years"] else None,
-            "newest": v["newest"], "ex": v["examples"][:4]}
-        for k, v in sorted(tree.items())
+        for child, m, s in listing(url):
+            (queue if child.endswith("/") else files).append(child if child.endswith("/") else (child, m, s))
+    return files, pages, queue
+
+
+def main():
+    out = {}
+    # 1. raw listing HTML of one directory (to see the exact index format)
+    r = get(BASE + "dane_meteorologiczne/dobowe/synop/")
+    print("===== RAW LISTING\n" + r.text[:4000], flush=True)
+    # 2. synop daily: full crawl
+    files, pages, left = crawl(BASE + "dane_meteorologiczne/dobowe/synop/", 200)
+    print(f"===== SYNOP DAILY pages={pages} left={len(left)} files={len(files)}", flush=True)
+    for f in files:
+        print("F", f[0][len(BASE):], f[1], f[2], flush=True)
+    per_dir = collections.Counter(f[0][len(BASE):].rsplit("/", 1)[0] for f in files)
+    out["synop_daily_dirs"] = dict(sorted(per_dir.items()))
+    annotate("notice", f"synop daily: {len(files)} files, {pages} pages", out["synop_daily_dirs"])
+    # 3. other families: year directories only (no file listing below the year), for scope statements
+    fam = {}
+    for sub in ["dane_meteorologiczne/dobowe/klimat/", "dane_meteorologiczne/dobowe/opad/", "dane_meteorologiczne/miesieczne/synop/",
+                "dane_meteorologiczne/terminowe/synop/", "dane_hydrologiczne/dobowe/", "dane_hydrologiczne/miesieczne/"]:
+        items = listing(BASE + sub)
+        fam[sub] = [i[0][len(BASE + sub):] for i in items][:80]
+        print(f"===== {sub}", json.dumps(fam[sub]), flush=True)
+    sample_dirs = {
+        "klimat2023": BASE + "dane_meteorologiczne/dobowe/klimat/2023/",
+        "opad2023": BASE + "dane_meteorologiczne/dobowe/opad/2023/",
+        "hydro2025": BASE + "dane_hydrologiczne/dobowe/2025/",
+        "hydro2022": BASE + "dane_hydrologiczne/dobowe/2022/",
     }
-    print(json.dumps({"pages": pages, "files": len(files), "tree": summary}, indent=1, ensure_ascii=False), flush=True)
-    total = round(sum(f[2] for f in files) / 1e9, 2)
-    compact = {k: [v["files"], v["MB"], v["years"], v["newest"][:10]] for k, v in summary.items()}
-    blob = json.dumps(compact, ensure_ascii=False, separators=(",", ":"))
-    for i in range(0, min(len(blob), 3700 * 3), 3700):
-        annotate("notice", f"imgw tree {i // 3700} (files, MB, years, newest) total {total} GB pages {pages}", blob[i:i + 3700])
-    # directory examples per family (last path names), to read the naming
-    names = defaultdict(list)
-    for url, modified, size in files:
-        rel = url[len(BASE):]
-        fam = family(rel)
-        names[fam].append(rel[len(fam) + 1:] + f"|{int(size / 1e3)}k")
-    ex = {k: (v[:3] + ["..."] + v[-4:]) for k, v in names.items()}
-    print(json.dumps(ex, indent=1, ensure_ascii=False), flush=True)
-    annotate("notice", "imgw file names per family", json.dumps(ex, ensure_ascii=False)[:3800])
-    # format description and station files
-    doc_out = {}
-    for url, size in docs:
-        r = get(url)
-        raw = r.content
-        try:
-            text = raw.decode("utf-8")
-            enc = "utf-8"
-        except UnicodeDecodeError:
-            text = raw.decode("cp1250", "replace")
-            enc = "cp1250"
-        rel = url[len(BASE):]
-        doc_out[rel] = {"bytes": len(raw), "enc": enc}
-        print(f"===== {rel} ({len(raw)} bytes, {enc})\n{text[:6000]}\n", flush=True)
-        LOG.append({"doc": rel, "text": text[:6000]})
-    annotate("notice", "imgw docs", doc_out)
-    # one small sample zip per family (newest small file)
+    for k, u in sample_dirs.items():
+        items = listing(u)
+        print(f"===== DIR {k}", json.dumps([(i[0][len(BASE):], i[1], i[2]) for i in items]), flush=True)
+    # 4. station list
+    raw = get(BASE + "dane_meteorologiczne/wykaz_stacji.csv").content
+    text = raw.decode("cp1250")
+    rows = list(csv.reader(io.StringIO(text)))
+    codes = collections.Counter(r[0] for r in rows)
+    code5 = collections.Counter(r[2].strip() for r in rows if len(r) > 2)
+    syn = [r for r in rows if len(r) > 2 and r[2].strip().startswith("12")]
+    st = {"rows": len(rows), "distinct_code": len(codes), "dup_code": [c for c, n in codes.items() if n > 1][:20],
+          "distinct_code5": len(code5), "dup_code5": [c for c, n in code5.items() if n > 1][:20], "widths": collections.Counter(len(r) for r in rows),
+          "synop_like": syn[:80]}
+    print("===== WYKAZ", json.dumps(st, ensure_ascii=False), flush=True)
+    annotate("notice", "wykaz_stacji", json.dumps(st, ensure_ascii=False)[:3800])
+    # 5. synop daily samples: newest monthly (current year), one per-station-year, one 5-year package
+    def pick(pred):
+        c = [f for f in files if pred(f[0][len(BASE):])]
+        return c[-1][0] if c else None
+    now = datetime.now(UTC).year
+    picks = {
+        "current_month": pick(lambda p: f"/{now}/" in p),
+        "prev_year_station": pick(lambda p: f"/{now - 1}/" in p),
+        "y2010_station": pick(lambda p: "/2010/" in p),
+        "five_year": pick(lambda p: re.search(r"/19\d\d_19\d\d/", p) is not None),
+    }
     samples = {}
-    for fam, entries in names.items():
-        cands = [(u, s) for u, m, s in files if family(u[len(BASE):]) == fam and u.endswith(".zip")]
-        if not cands:
+    for k, url in picks.items():
+        if not url:
             continue
-        cands.sort(key=lambda x: x[0])
-        url, size = cands[-1]
-        if size > 30e6:
-            small = [c for c in cands if c[1] < 30e6]
-            if not small:
-                continue
-            url, size = small[-1]
-        r = get(url)
-        z = zipfile.ZipFile(io.BytesIO(r.content))
-        info = []
+        z = zipfile.ZipFile(io.BytesIO(get(url).content))
         for m in z.infolist():
-            data = z.read(m)
-            text = data.decode("cp1250", "replace")
-            lines = text.splitlines()
-            info.append({"member": m.filename, "bytes": m.file_size, "lines": len(lines),
-                         "cols": len(lines[0].split(",")) if lines else 0, "head": lines[:3]})
-            print(f"===== SAMPLE {url} :: {m.filename}\n" + "\n".join(lines[:8]), flush=True)
-        samples[url[len(BASE):]] = info
+            data = z.read(m).decode("cp1250")
+            recs = list(csv.reader(io.StringIO(data)))
+            widths = collections.Counter(len(x) for x in recs)
+            info = {"url": url[len(BASE):], "member": m.filename, "rows": len(recs), "widths": dict(widths), "head": data.splitlines()[:2]}
+            if recs and len(recs[0]) == 65:
+                stats = {}
+                # value/status pairs of s_d: TMAX(5,6) TMIN(7,8) STD(9,10) TMNG(11,12) SMDB(13,14) PKSN(16,17) USL(20,21)
+                for name, vi, si in [("TMAX", 5, 6), ("TMIN", 7, 8), ("STD", 9, 10), ("SMDB", 13, 14), ("PKSN", 16, 17), ("USL", 20, 21)]:
+                    c = collections.Counter((("empty" if x[vi].strip() == "" else "zero" if re.fullmatch(r"-?0+(\.0+)?", x[vi].strip()) else "num" if re.fullmatch(r"-?\d+(\.\d+)?", x[vi].strip()) else "other:" + x[vi][:6]), x[si]) for x in recs)
+                    stats[name] = {f"{a}|{b}": n for (a, b), n in c.items()}
+                info["stats"] = stats
+                info["stations"] = len({x[0] for x in recs})
+                info["years"] = sorted({x[2] for x in recs})[:3] + sorted({x[2] for x in recs})[-2:]
+                info["roop"] = dict(collections.Counter(x[15] for x in recs))
+                info["sgr"] = dict(collections.Counter(x[58] for x in recs))
+            samples[f"{k}:{m.filename}"] = info
+            print("===== SAMPLE", json.dumps(info, ensure_ascii=False), flush=True)
     blob = json.dumps(samples, ensure_ascii=False)
     for i in range(0, min(len(blob), 3700 * 4), 3700):
-        annotate("notice", f"imgw samples {i // 3700}", blob[i:i + 3700])
-    # API
+        annotate("notice", f"synop samples {i // 3700}", blob[i:i + 3700])
+    # 6. API
     api = {}
-    for ep in ["synop", "hydro", "hydro2", "meteo", "warningsmeteo", "warningshydro", "product"]:
+    for ep in ["synop", "meteo", "hydro", "hydro2", "warningsmeteo", "warningshydro", "product"]:
         r = get(API + ep)
         try:
             data = r.json()
         except ValueError:
-            api[ep] = {"http": r.status_code, "bytes": len(r.content), "text": r.text[:200]}
+            api[ep] = {"http": r.status_code, "bytes": len(r.content), "text": r.text[:300]}
+            print(f"===== API {ep} not JSON {r.status_code} {r.text[:500]}", flush=True)
             continue
-        first = data[0] if isinstance(data, list) and data else data
-        api[ep] = {"http": r.status_code, "bytes": len(r.content), "n": len(data) if isinstance(data, list) else None,
-                   "first": first if len(json.dumps(first)) < 900 else json.dumps(first)[:900],
-                   "headers": {k: r.headers.get(k) for k in ("Last-Modified", "ETag", "Cache-Control", "Content-Type")}}
-        print(f"===== API {ep}\n{json.dumps(data, ensure_ascii=False)[:5000]}", flush=True)
-    blob = json.dumps(api, ensure_ascii=False)
-    for i in range(0, min(len(blob), 3700 * 3), 3700):
-        annotate("notice", f"imgw api {i // 3700}", blob[i:i + 3700])
-    # apiinfo page, Regulamin
+        recs = data if isinstance(data, list) else [data]
+        keys = collections.Counter(k for x in recs if isinstance(x, dict) for k in x)
+        api[ep] = {"http": r.status_code, "bytes": len(r.content), "n": len(recs), "keys": dict(keys),
+                   "headers": {k: r.headers.get(k) for k in ("Last-Modified", "ETag", "Cache-Control", "Content-Type", "Date")}}
+        print(f"===== API {ep} fetched {datetime.now(UTC).isoformat()} {json.dumps(api[ep], ensure_ascii=False)}\n{json.dumps(data, ensure_ascii=False)[:12000]}", flush=True)
+    annotate("notice", "imgw api", json.dumps(api, ensure_ascii=False)[:3800])
+    # 7. apiinfo
     r = get("https://danepubliczne.imgw.pl/apiinfo")
-    text = html.unescape(re.sub(r"<[^>]+>", " ", r.text))
-    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", r.text)))
+    print("===== APIINFO " + text, flush=True)
     i = text.find("Regulamin")
-    print("===== APIINFO\n" + text, flush=True)
-    annotate("notice", "imgw apiinfo Regulamin", {"http": r.status_code, "at": i, "text": text[max(0, i - 100): i + 3500]})
-    for kw in ["Źródło", "zrodlo", "przetworz", "komercyjn"]:
-        j = text.find(kw)
-        if j >= 0:
-            print(f"===== KW {kw}: {text[max(0, j - 600): j + 900]}", flush=True)
-    for item in LOG:
-        print(json.dumps(item, ensure_ascii=False)[:8000], flush=True)
+    annotate("notice", "apiinfo Regulamin", text[max(0, i): i + 3800])
+    for page in ["https://danepubliczne.imgw.pl/", "https://danepubliczne.imgw.pl/regulamin", "https://danepubliczne.imgw.pl/datastore"]:
+        r = get(page)
+        t = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", r.text)))
+        print(f"===== PAGE {page} {r.status_code} {t[:6000]}", flush=True)
     return 0
 
 
