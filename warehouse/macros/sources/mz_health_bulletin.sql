@@ -21,3 +21,36 @@ mz_health_bulletin as (
         'PL' as geography_key
 )
 {% endmacro %}
+
+{# The modelled columns of the four bulletin tables, shared by models/silver/mz_health_bulletin/: (table_kind,
+   header_regex, profession_code, measure_code, unit_code). A header is the header-row text with '_' read as a space,
+   a trailing footnote number dropped, lower case; it must match one regex in full. #}
+{% macro poc_mz_health_bulletin_specs() %}
+    {% set professions = [
+        ('lekarze', 'doctors'), ('lekarze dentyści', 'dentists'), ('farmaceuci', 'pharmacists'),
+        ('diagności laboratoryjni', 'lab_diagnosticians'), ('pielęgniarki', 'nurses'), ('położne', 'midwives'),
+        ('fizjoterapeuci', 'physiotherapists'), ('ratownicy medyczni', 'paramedics'), ('dietetycy', 'dietitians'),
+    ] %}
+    {% set specs = [] %}
+    {% for kind in ['licensed', 'employed'] %}{% for p in professions %}
+        {% do specs.append((kind, '^' ~ p[0] ~ ' liczba bezw[a-ząćęłńóśźż]*$', p[1], 'count', 'persons')) %}
+        {% do specs.append((kind, '^' ~ p[0] ~ ' wskaźnik$', p[1], 'per_10k', 'per_10k_population')) %}
+    {% endfor %}{% endfor %}
+    {% do specs.extend([
+        ('hospitals', '^szpitale ogółem$', 'hospitals', 'count', 'hospitals'),
+        ('hospitals', '^łóżka ogółem$', 'beds', 'count', 'beds'),
+        ('hospitals', '^łóżka wskaźnik$', 'beds', 'per_10k', 'per_10k_population'),
+        ('hospital_activity', '^leczeni w ciągu roku ogółem$', 'inpatients', 'count', 'cases'),
+        ('hospital_activity', '^leczeni na 1 łóżko wskaźn[a-z]*$', 'inpatients', 'per_bed', 'cases_per_bed'),
+        ('hospital_activity', '^osobodni w tysiącach$', 'patient_days', 'count', 'thousand_patient_days'),
+        ('hospital_activity', '^przeciętny pobyt chorego wskaźnik w dniach$', 'length_of_stay', 'mean', 'days'),
+        ('hospital_activity', '^wykorzystanie łóżka wskaźnik w dniach$', 'bed_occupancy', 'days', 'days'),
+        ('hospital_activity', '^wykorzystanie łóżka wskaźnik w %$', 'bed_occupancy', 'pct', 'pct'),
+    ]) %}
+    select * from (
+        values
+        {%- for s in specs %}
+            ('{{ s[0] }}', '{{ s[1] }}', '{{ s[2] }}', '{{ s[3] }}', '{{ s[4] }}'){{ "," if not loop.last }}
+        {%- endfor %}
+    ) as t (table_kind, header_regex, profession_code, measure_code, unit_code)
+{% endmacro %}
