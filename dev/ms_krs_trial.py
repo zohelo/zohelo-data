@@ -76,7 +76,7 @@ def landing_state(client, bucket) -> dict:
             continue
         size += held[-1]["size_bytes"]
         through.add(held[-1]["detail"]["bulletin_through"])
-        body = extract._read(lambda receipt=held[-1]: bulk_bronze.read_raw(client, bucket, landing.SOURCE, receipt))
+        body = bulk_bronze.read_raw(client, bucket, landing.SOURCE, held[-1])
         for line in body.decode("utf-8").splitlines():
             lines += 1
             longest = max(longest, len(line))
@@ -125,7 +125,7 @@ def trial(count: int) -> None:  # noqa: PLR0915
     con.execute("create table geo as select * from geo_a")
     gleif = cat.load_table(("silver", "gleif_legal_entities")).scan(
         row_filter=f"registration_authority_id == '{extract.KRS_AUTHORITY}'",
-        selected_fields=("lei", "registration_authority_entity_id", "legal_name")).to_arrow()
+        selected_fields=("lei", "registration_authority_id", "registration_authority_entity_id", "legal_name")).to_arrow()
     con.register("gleif_a", gleif)
     con.execute("create table gleif as select * from gleif_a")
     annotate("notice", "ms_krs bronze (scratch)", {
@@ -139,7 +139,7 @@ def trial(count: int) -> None:  # noqa: PLR0915
     con.execute(f"create table map as with {macros.poc_geography__ms_krs()} select * from ms_krs")
     silver = render("warehouse/models/silver/ms_krs/ms_krs_entities.sql", {}, {"ms_krs_extracts": "bronze_b"})
     refs = {"ms_krs_entities": "silver_e", "poc_map_geography": "map"}
-    entity = render("warehouse/models/gold/krs_entity.sql", refs, {})
+    entity = render("warehouse/models/gold/krs_entity.sql", refs, {"gleif_legal_entities": "gleif"})
     build = render("warehouse/models/gold/poc_build_ms_krs.sql", refs, {})
     counts: dict = {"silver_e": [], "gold_e": [], "gold_b": []}
     for _ in (1, 2):
@@ -179,9 +179,11 @@ def trial(count: int) -> None:  # noqa: PLR0915
         "seat_key_null_by_voivodeship": q(con, "select seat_voivodeship, count(*) from gold_e where seat_geography_key is null group by 1 order by 2 desc limit 8"),
         "seat_keys_not_in_dim_geography": q(con, "select count(*) from gold_e where seat_geography_key is not null and seat_geography_key not in (select geography_key from geo)"),
         "gleif_join[entities with an LEI, without, max LEIs per number]": q(con, "select count(*) filter (where n > 0), count(*) filter (where n = 0), max(n) from (select e.krs_number, count(g.lei) as n from gold_e as e left join gleif as g on g.registration_authority_entity_id = e.krs_number group by 1)"),
+        "lei[lei_count, entities, with lei]": q(con, "select lei_count, count(*), count(lei) from gold_e group by 1 order by 1"),
+        "lei_dup_or_wrong": q(con, "select (select count(*) from (select lei from gold_e where lei is not null group by 1 having count(*) > 1)), (select count(*) from gold_e as e where lei is not null and not exists (select 1 from gleif as g where g.lei = e.lei and g.registration_authority_entity_id = e.krs_number))"),
         "columns": [d[0] for d in con.execute("select * from gold_e limit 0").description]})
     annotate("notice", "ms_krs gold spot records", {
-        "spot": q(con, f"select krs_number, name, legal_form, nip, regon, seat_voivodeship, seat_geography_key, seat_town, registered_on, last_entry_on, share_capital, share_capital_currency, main_pkd_code, in_liquidation, in_bankruptcy from gold_e where krs_number in ({','.join(repr(k) for k in SPOT)}) order by 1"),
+        "spot": q(con, f"select krs_number, name, legal_form, nip, regon, lei, seat_voivodeship, seat_geography_key, seat_town, registered_on, last_entry_on, share_capital, share_capital_currency, main_pkd_code, in_liquidation, in_bankruptcy from gold_e where krs_number in ({','.join(repr(k) for k in SPOT)}) order by 1"),
         "expected": SPOT,
         "spot_without_extract": q(con, f"select krs_number, has_current_extract from silver_e where krs_number in ({','.join(repr(k) for k in SPOT)}) and not has_current_extract")})
     from warehouse import publish
@@ -189,7 +191,7 @@ def trial(count: int) -> None:  # noqa: PLR0915
     licensed = publish.licensed_sources(publish.seed("source"), publish.seed("licence"))
     annotate("notice", "ms_krs gold build_ms_krs", {
         "rows_two_builds": counts["gold_b"],
-        "dup_series_x_date": q(con, "select count(*) from (select measure_key || '|' || geography_key || '|' || breakdown_json as series_key, date_key from gold_b group by all having count(*) > 1)"),
+        "dup_series_x_date": q(con, "select count(*) from (select measure_key || '|' || geography_key || case when geography_key = '_X' then ':' || coalesce(geography_source_code, '') else '' end || '|' || breakdown_json as series_key, date_key from gold_b group by all having count(*) > 1)"),
         "frequencies_per_measure": q(con, "select measure_key, count(distinct frequency), min(frequency), count(*), count(distinct date_key), min(date_key), max(date_key), min(value), max(value), min(unit_code) from gold_b group by 1 order by 1"),
         "registered_pl_total_sum_vs_entities_with_date": q(con, "select (select sum(value) from gold_b where measure_codes = 'registered' and geography_key = 'PL' and is_total), (select count(*) from gold_e where registered_on is not null), (select count(*) from gold_e where registered_on is null)"),
         "registered_by_year_pl": q(con, "select year(date_key), sum(value)::int from gold_b where measure_codes = 'registered' and geography_key = 'PL' and is_total group by 1 order by 1"),
@@ -200,7 +202,7 @@ def trial(count: int) -> None:  # noqa: PLR0915
         "voivodeship_totals": q(con, "select geography_source_code, geography_key, value from gold_b where measure_codes = 'entities' and is_total order by 3 desc"),
         "sum_voivodeships_vs_pl": q(con, "select sum(value) filter (where geography_key <> 'PL'), sum(value) filter (where geography_key = 'PL') from gold_b where measure_codes = 'entities' and is_total"),
         "sum_forms_vs_total_pl": q(con, "select sum(value) filter (where not is_total), sum(value) filter (where is_total) from gold_b where measure_codes = 'entities' and geography_key = 'PL'"),
-        "geography_keys_not_in_dim": q(con, "select distinct geography_key from gold_b where geography_key not in (select geography_key from geo)"),
+        "geography_keys_not_in_dim": q(con, "select distinct geography_key, geography_source_code from gold_b where geography_key not in (select geography_key from geo)"),
         "sample": q(con, "select geography_key, breakdown_json, value from gold_b where measure_codes = 'entities' and geography_key = 'PL' order by value desc limit 6"),
         "licence_gate": {"source_csv": [s for s in publish.seed("source") if s["source_key"] == "ms_krs"],
                          "ms_krs_in_licensed_sources": "ms_krs" in licensed}})
