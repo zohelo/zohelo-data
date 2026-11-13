@@ -1,0 +1,37 @@
+source_system: cepik
+description: "CEPiK — vehicles registered per month by voivodeship and by vehicle type (gov.pl statistics workbooks)"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-024. Bulk feature: https://www.gov.pl/web/cepik/statystyki
+# lists one page per topic and year (/web/cepik/pojazdy-zarejestrowane-w-<year>-roku) with an XLSX and a PDF by
+# voivodeship and by vehicle type (XLSX from 2016, about 17 KB each). Entity = topic and year
+# (vehicles_voivodeship_<year>, vehicles_type_<year>), version = the attachment's Last-Modified; the current year's
+# workbook is replaced monthly under a new attachment URL and downloaded on every run (unchanged bytes are not
+# written), closed years only when a new attachment URL appears (ingestion/to_landing/cepik/). Restart unit: one
+# file. api.cepik.gov.pl does not answer GitHub runners and is not used. Dev probe 43340837086 (test/2966-cepik-trial).
+# History: 2016-01 to the newest published month (2026-09 on 13 Nov 2026).
+extraction:
+  initial: bulk
+  production: snapshot                  # each workbook as published; a new month replaces the current year's file
+  incremental_policy: changed_since_last  # Last-Modified + SHA-256 of the current year's workbooks
+  schedule: # UTC; the month's workbook appears about three weeks after the month ends (22 Oct 2026 for September)
+    - {cron: "40 6 26 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/cepik/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.cepik_cells, bronze.cepik_rejected_files]
+silver: [silver.cepik_vehicle_registrations]
+gold: [gold.build_cepik, gold.metrics_vehicle_registrations]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  cepik_vehicle_registrations: {rows: 7000}  # about 4,300: 2016-01 to 2026-09, 17 areas + up to 17 types a month (count: PR #2966 trial)
+  poc_build_cepik: {rows: 7000}  # Silver rows less the months left out (as Silver)
+  poc_metrics_vehicle_registrations: {rows: 3500}  # about 2,200: 17 areas x 129 months
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): 22 workbooks of about 17 KB, one changed a month, a few thousand Silver rows;
+# small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2966"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

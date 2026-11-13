@@ -25,6 +25,9 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('gdp_current_prices', 'world_bank_wdi', 'world_bank_wdi:NY.GDP.MKTP.CD', 0, 3e8),
     -- current local currency units; largest IR 2025 = 2.693e17 IRR as published (WDI NY.GDP.MKTP.CN, #2788)
     ('gdp_current_prices', 'world_bank_wdi', 'world_bank_wdi:NY.GDP.MKTP.CN', 0, 3e18),
+    -- vehicles registered in a month (#2966); Poland is the largest area: 206,017 in March 2026 (CEPiK workbook
+    -- of 22 Oct 2026, Dev probe 43340837086); a monthly count above 1 million is a scale error
+    ('vehicle_registrations', 'cepik', '%', 0, 1e6),
     -- GUS publication tables (#2893), counts per year; Poland is the largest area: museum visits 46,242,767 (2025),
     -- cinema admissions 61,949,490 (2019), library users 5,983,725 (2019), tourists 42,738,329, overnight stays
     -- 104,692,301, bed places 887,158 (2025) (Dev trial 43298219762); survey shares are % of persons 15+
@@ -590,6 +593,15 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_health_expenditure_gdp') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_vehicle_registrations') }}
 )
 
 select

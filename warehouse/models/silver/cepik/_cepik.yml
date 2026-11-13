@@ -1,0 +1,67 @@
+version: 2
+models:
+  - name: cepik_vehicle_registrations
+    description: >-
+      CEPiK statistics workbooks on gov.pl (register PL-ENV-024): vehicles registered per month by voivodeship (16
+      voivodeships and the national total row, group_code 'polska') and by vehicle type (Poland), 2016 to the newest
+      published month, from the newest copy of each yearly workbook. Grain: table_code x group_code x period_year x
+      period_month. Blocks found by their header label and Polish month names, never by fixed cell positions; values
+      as published (vehicles); an unpublished month is absent, never 0; check_status 'order_suspect' marks the
+      voivodeship rows of a month whose values are printed in another order than the names (left out of Gold).
+      Layout and trial run: see the model header and ingestion/sources/cepik.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', table_code, group_code, period_year, period_month)"
+    columns:
+      - name: table_code
+        tests: [not_null, {accepted_values: {arguments: {values: [voivodeship, vehicle_type]}}}]
+      - name: group_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - polska
+                  - dolnośląskie
+                  - kujawsko-pomorskie
+                  - lubelskie
+                  - lubuskie
+                  - łódzkie
+                  - małopolskie
+                  - mazowieckie
+                  - opolskie
+                  - podkarpackie
+                  - podlaskie
+                  - pomorskie
+                  - śląskie
+                  - świętokrzyskie
+                  - warmińsko-mazurskie
+                  - wielkopolskie
+                  - zachodniopomorskie
+                  - autobus
+                  - ciągnik rolniczy
+                  - ciągnik samochodowy
+                  - kolejka turystyczna
+                  - motocykl
+                  - motorower
+                  - naczepa ciężarowa
+                  - naczepa specjalna
+                  - przyczepa ciężarowa
+                  - przycz.ciężarowa rolnicza
+                  - przyczepa lekka
+                  - przyczepa specjalna
+                  - samochodowy inny
+                  - samochód ciężarowy
+                  - samochód osobowy
+                  - samochód specjalny
+                  - trolejbus
+      - name: period_year
+        tests: [not_null]
+      - name: period_month
+        tests: [not_null]
+      - name: cell_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok]}}}]
+      - name: check_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, order_suspect]}}}]
+      - name: raw_sha256
+        tests: [not_null]
