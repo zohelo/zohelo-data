@@ -36,6 +36,10 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('tourist_bed_places', 'gus_tourism', '%', 0, 5e6),
     ('museum_visiting_share', 'gus_culture_participation', '%', 0, 100),
     ('theatre_attendance_share', 'gus_culture_participation', '%', 0, 100),
+    -- RPWDL register counts (#2958), Poland the largest area: active healthcare providers 29,845 ledgers and
+    -- practices about 250,000 in the November 2026 files (Dev probe 43339211206)
+    ('healthcare_providers', 'rpwdl', '%', 0, 2e5),
+    ('medical_practices', 'rpwdl', '%', 0, 1e6),
     -- GUS census tables (#2897): urban share in %; holdings PL 2010 = 1,509,148; ha per holding, highest 22.22
     -- (lubuskie 2020) (Dev trial 43288120956)
     ('urban_population_share', 'gus_nsp2021', '%', 0, 100),
@@ -455,6 +459,24 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_theatre_attendance_share') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_healthcare_providers') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_medical_practices') }}
     union all
     select
         concept_key,
