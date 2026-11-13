@@ -66,3 +66,5 @@ index_2021_100,2021=100,"index, 2021 = 100","indeks, 2021 = 100",true,index_2021
 ncu_per_usd,NCU/USD,source currency per US dollar,waluta źródła za dolara amerykańskiego,true,ncu_per_usd,1
 ncu_per_eur,NCU/EUR,source currency per euro,waluta źródła za euro,true,ncu_per_eur,1
 ncu_per_rub,NCU/RUB,source currency per Russian rouble,waluta źródła za rubla rosyjskiego,true,ncu_per_rub,1
+t_co2_per_person,t CO2/os.,tonnes of CO2 per person,tony CO2 na osobę,false,t_co2_per_person,1
+intl_usd_2011_per_person,$ 2011/os.,international-$ in 2011 prices per person,dolary międzynarodowe w cenach z 2011 r. na osobę,false,intl_usd_2011_per_person,1

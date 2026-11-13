@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+- name: owid
+  description: Our World in Data chart data API (register CD-031) — three selected charts, CSV and metadata.json
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/owid/
+    loaded_by: ingestion/to_bronze/owid/
+    config: ingestion/sources/owid.yaml
+  tables:
+  - name: owid_values
+    description: >-
+      One row per CSV row × non-id column with a non-empty cell of the newest copy of each chart CSV (entity = chart):
+      entity_name (OWID entity), code (ISO 3166-1 alpha-3, OWID_… or empty), year, column_name (value or attribute
+      column short name), value (cell text as published), source_row_number; partitioned by entity.
+  - name: owid_charts
+    description: >-
+      One row per column of the newest copy of each chart's metadata.json (entity = <chart>_metadata): chart title
+      and citation, column short name, unit, lastUpdated, nextUpdate, citationShort, indicator id, as text.
+  - name: owid_rejected_files
+    description: Our World in Data Landing files the Bronze decoders rejected, with the reason.

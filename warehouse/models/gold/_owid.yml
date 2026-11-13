@@ -1,0 +1,22 @@
+version: 2
+models:
+  - name: poc_build_owid
+    description: >-
+      Build stage — Our World in Data (register CD-031), three charts of third-party data, annual, one block and
+      measure per chart: consumption-based CO2 emissions per capita (Global Carbon Budget, tonnes per person),
+      electoral democracy index (V-Dem, 0 to 1), GDP per capita (Maddison Project Database, international-$ in
+      2011 prices); every country by ISO alpha-3, World (WB:WLD) and Kosovo, from 1900 (the calendar). Licence cc_by_4_0_owid (every
+      origin of the three charts is CC BY 4.0).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_co2_consumption_per_capita
+    description: Metrics of the draft KPI co2_consumption_per_capita (Our World in Data, Global Carbon Budget).
+  - name: poc_metrics_electoral_democracy_index
+    description: Metrics of the draft KPI electoral_democracy_index (Our World in Data, V-Dem).
