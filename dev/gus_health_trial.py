@@ -39,13 +39,13 @@ def render(path: Path, tables: dict[str, str]) -> str:
     return env.from_string(text).render(source=lambda s, t: tables[t], ref=lambda m: tables[m])
 
 
-def show(con, title, sql, limit=120):
+def show(con, title, sql, limit=120, width=90):
     print(f"\n=== {title}", flush=True)
     rel = con.sql(sql)
     print("\t".join(d[0] for d in rel.description))
     rows = rel.fetchall()
     for r in rows[:limit]:
-        print("\t".join("" if v is None else str(v)[:90] for v in r))
+        print("\t".join("" if v is None else str(v)[:width] for v in r))
     if len(rows) > limit:
         print(f"... {len(rows)} rows")
 
@@ -70,6 +70,19 @@ def licence_row() -> dict:
 
 
 def main(argv) -> int:
+    if any(a == "pages=1" for a in argv):
+        import time
+
+        found = gp.editions(SERIES, gp._links(SERIES.series_page))
+        newest = max(found)
+        found = {**gp.editions(SERIES, gp._links(found[newest])), **found}
+        for year in sorted(found):
+            time.sleep(gp.PAUSE)
+            links = gp._links(found[year])
+            files_ = [(h, t) for h, t in links if re.search(r"\.(zip|xlsx?|rar|7z|pdf)$", h, re.I) or "ablic" in t]
+            print(f"== {year} {found[year]}")
+            for h, t in dict.fromkeys(files_):
+                print(f"   {h} | {t}")
     titles = next((a[7:] for a in argv if a.startswith("titles=")), None)
     dump = next((a[5:] for a in argv if a.startswith("dump=")), None)
     client = s3()
@@ -103,8 +116,8 @@ def main(argv) -> int:
             pattern, ent, maxrow = parts[0], (parts[1:2] or ["."])[0], (parts[2:3] or ["16"])[0]
             show(con, "dump", f"""with t as (select entity, member, sheet_name, string_agg(value_text, ' ' order by row_number, column_number) title
                 from {SOURCE}_cells where row_number <= 8 group by all having regexp_matches(title, '(?i){pattern}') and regexp_matches(entity, '{ent}'))
-                select c.entity, c.sheet_name, c.row_number, string_agg(c.column_number || ':' || replace(left(c.value_text, 45), chr(10), ' '), ' | ' order by c.column_number)
-                from {SOURCE}_cells c join t using (entity, member, sheet_name) where c.row_number <= {maxrow} group by all order by all""", limit=2500)
+                select c.entity, c.sheet_name, c.row_number, string_agg(c.column_number || ':' || replace(left(c.value_text, 80), chr(10), ' '), ' | ' order by c.column_number)
+                from {SOURCE}_cells c join t using (entity, member, sheet_name) where c.row_number <= {maxrow} group by all order by all""", limit=2500, width=1200)
         n = lambda q: con.sql(q).fetchall()[0][0]  # noqa: E731
         # Bronze profile (look before you model)
         bronze = {
@@ -157,7 +170,7 @@ def main(argv) -> int:
         show(con, "gold sample", "select measure_key, geography_key, period_label, value, observation_status_key from gold where geography_key in ('PL', 'TERC:1400000') order by all", limit=200)
         show(con, "notes of matched sheets", f"""select distinct c.entity, c.sheet_name, c.row_number, left(regexp_replace(c.value_text, '\\s+', ' ', 'g'), 400)
             from {SOURCE}_cells c join (select distinct entity, member, sheet_name from {s}) m using (entity, member, sheet_name)
-            where regexp_matches(c.value_text, '(?i)^(u ?w ?a ?g ?a|n ?o ?t ?e|[a-d]\\))') order by all""", limit=400)
+            where regexp_matches(c.value_text, '(?i)^(u ?w ?a ?g ?a|n ?o ?t ?e|[a-d]\\))') order by all""", limit=400, width=700)
         show(con, "non-ok cells", f"select entity, table_code, measure_code, area_name, value_text, cell_status from {s} where cell_status <> 'ok' limit 60")
     finally:
         removed = 0
