@@ -12,10 +12,11 @@ sources:
   tables:
   - name: companies_house_companies
     description: >-
-      One row per company of the newest snapshot (5.7 million), 13 of the file's 55 columns as text: company
-      number, name, category, status, country of origin, incorporation and dissolution date, SIC texts 1-4, post
-      town and country of the registered office; snapshot_date = the date in the file name. Street lines,
-      postcode, care-of line, PO box, county and previous names are not loaded (personal data).
+      One row per company of the newest snapshot (5.7 million), 13 of the source file's 55 columns as text:
+      company number, name, category, status, country of origin, incorporation and dissolution date, SIC texts
+      1-4, post town and country of the registered office; snapshot_date = the date in the file name. Street
+      lines, postcode, care-of line, PO box, county and previous names are dropped before Landing (personal
+      data) and stored nowhere.
   - name: companies_house_rejected_files
     description: Companies House Landing files the Bronze decoder or a Silver model rejected, with the reason.
 - name: companies_house_silver

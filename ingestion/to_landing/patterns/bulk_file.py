@@ -13,6 +13,7 @@ framework")::
             version: last_modified   # last_modified (fallback: download time) | ingested
             url_date: Europe/Warsaw  # optional: {date} in url = today (YYYYMMDD) in this zone
             reduce: news_feed        # optional: land only the allowed part of the file (news: headline items)
+                                     # (companies_house: the columns without personal data)
           - entity: treasury_debt_series   # a file whose URL changes per release
             url_from:                # instead of url: find the link on a stable page
               page: https://www.gov.pl/web/finanse/szeregiczasowe
@@ -358,6 +359,10 @@ def reducer(kind: str) -> Any:
         from ingestion.to_bronze.news_feeds.load import reduce_feed
 
         return reduce_feed
+    if kind == "companies_house":
+        from ingestion.to_landing.companies_house import reduce_snapshot
+
+        return reduce_snapshot
     raise ValueError(f"unknown reduce: {kind!r}")
 
 
