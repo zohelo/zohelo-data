@@ -64,7 +64,7 @@ def profile(name, data: bytes):
                     sh = Counter(shape(v) for v in vals).most_common(4)
                     line = f"   [{i}] {col!r}: filled {filled}/{len(vals)} distinct {len(dist)} shapes {sh}"
                     if SAFE.search(col) and not UNSAFE.search(col):
-                        line += f" top {[(k[:50], c) for k, c in dist.most_common(14)]}"
+                        line += f" top {[(k[:50], c) for k, c in dist.most_common(30)]}"
                         if re.search(r"(?i)data", col):
                             years = Counter(v[:4] for v in vals if v)
                             line += f" years {sorted(years.items())} min {min((v for v in vals if v), default=None)} max {max((v for v in vals if v), default=None)}"
