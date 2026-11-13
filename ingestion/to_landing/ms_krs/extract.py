@@ -276,6 +276,17 @@ def _land(client: Any, bucket: str, part: dict[str, Any], landing_root: str) -> 
     return True
 
 
+def _read(operation: Any) -> bytes:
+    """A storage read, tried three times: a throttled answer must not look like a missing part."""
+    for wait in (5, 20):
+        try:
+            return operation()
+        except Exception as exc:  # any storage error is tried again; the third attempt raises
+            print(json.dumps({"status": "read_retry", "error": f"{type(exc).__name__}: {str(exc)[:200]}"}), flush=True)
+            time.sleep(wait)
+    return operation()
+
+
 def held_parts(client: Any, bucket: str, landing_root: str) -> dict[str, dict[str, Any]]:
     """Every part with its receipts, the records of its newest copy and the bulletin day it is settled through."""
     from ingestion.common.bulk_bronze import read_raw
@@ -283,7 +294,7 @@ def held_parts(client: Any, bucket: str, landing_root: str) -> dict[str, dict[st
     parts = {}
     for spec in specs():
         held = bulk_file.landed(client, bucket, bulk_file.prefix(SOURCE, spec["entity"], landing_root))
-        records = decode(read_raw(client, bucket, SOURCE, held[-1])) if held else {}
+        records = decode(_read(lambda receipt=held[-1]: read_raw(client, bucket, SOURCE, receipt))) if held else {}
         through = (held[-1].get("detail") or {}).get("bulletin_through") if held else None
         parts[spec["entity"]] = {
             "entity": spec["entity"],

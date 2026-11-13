@@ -30,7 +30,10 @@ gold: [gold.krs_entity, gold.build_ms_krs]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822); sized for the whole selection, which loads over ~10 runs
   ms_krs_entities: {rows: 48000}  # 1.5 x 31,892 selected numbers (Dev probe 43320344152)
   krs_entity: {rows: 48000}  # at most the same; numbers without a current extract are left out
-  poc_build_ms_krs: {rows: 1500}  # (legal forms + 1) x (16 voivodeships + PL + _X): about 40 forms at most
+  # Upper bound, not 1.5 x a measured count (the selection loads over ~10 runs): about 24,000 entities with an
+  # extract (3 in 4 of the selection), each in at most 4 monthly cells (PL and its voivodeship, its legal form and
+  # _T), plus the snapshot measure (legal forms x 18 areas).
+  poc_build_ms_krs: {rows: 150000}
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a part
 # Refresh policy for all layers (D32): 16 small files (about 32,000 records in all); a changed part replaces its

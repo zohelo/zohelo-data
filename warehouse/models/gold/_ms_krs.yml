@@ -20,9 +20,11 @@ models:
         tests: [not_null]
   - name: poc_build_ms_krs
     description: >-
-      Gold build stage of the Open KRS API: entities loaded with a current extract, one date (the day of the
-      newest request), by legal form and seat voivodeship (measure ms_krs:lei_selection:entities). A count of
-      what is loaded from the selection (entities with an LEI), not of Polish companies.
+      Gold build stage of the Open KRS API: entities loaded with a current extract, by legal form and seat
+      voivodeship. Measure ms_krs:lei_selection:entities (daily, one date: the day of the newest request) and
+      ms_krs:lei_selection:registered (monthly, by the month of registration in KRS; a month without
+      registrations has no row). Counts of what is loaded from the selection (entities with an LEI), not of
+      Polish companies or of all registrations.
     columns:
       - name: measure_key
         tests: [not_null]
@@ -30,3 +32,7 @@ models:
         tests: [not_null]
       - name: value
         tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: frequency
+        tests: [{accepted_values: {arguments: {values: ['D', 'M']}}}]

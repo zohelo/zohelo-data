@@ -1,5 +1,6 @@
 {# Open KRS API (gold.build_ms_krs, gold.krs_entity, #1362): D34 registration (docs/source-registration.md).
-   One block: counts of the entities loaded, by legal form and seat voivodeship. #}
+   One block: counts of the entities loaded, by legal form and seat voivodeship, on the day of the newest
+   request and by month of registration. #}
 {% macro poc_source__ms_krs() %}
     {{ return({
         'block_model': 'poc_build_ms_krs',
