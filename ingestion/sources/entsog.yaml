@@ -27,9 +27,9 @@ bronze: [bronze.entsog_operational_data, bronze.entsog_rejected_files]
 silver: [silver.entsog_physical_flow, silver.entsog_points]
 gold: [gold.build_entsog]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  entsog_physical_flow: {rows: 150000}  # 97,114: 49 point-directions × gas days 2021-01-01..2026-11-30 (Dev trial 43323294484)
-  entsog_points: {rows: 100}  # 49 point-directions (Dev trial 43323294484)
-  poc_build_entsog: {rows: 100000}
+  entsog_physical_flow: {rows: 150000}  # 97,114: 49 point-directions × gas days 2021-01-01..2026-11-30 (Dev trials 43323294484, 43336977494); grows about 18,000 a year
+  entsog_points: {rows: 100}  # 49 point-directions (Dev trials 43323294484, 43336977494)
+  poc_build_entsog: {rows: 85000}  # 55,926 rows: 54,159 daily, 1,767 monthly (Dev trial 43336977494); grows about 10,000 a year
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a gas month
 # Refresh policy for all layers (D32): about 70 monthly answers (1.4 MB, 1,500 records each; about 17,500 records a
