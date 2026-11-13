@@ -9317,6 +9317,10 @@ sources:
       matched Poland or Polska; 183 funders located in Poland. The annual public data file was not used (full
       metadata of every work, abstracts included).'
     - 'Coverage limit: only works whose publisher deposits affiliations are counted, so the count is a lower bound.'
+    - 'Dev trial 43336945209 (13 Nov 2026): 29 answers, 854,848 bytes, a second run landed and loaded nothing new;
+      Silver 17,802 counts (publication years 1804..2027) and 183 funders, Gold 17,756 rows (total 1907..2026, 2026
+      provisional), 0 duplicates by series and date; PL 2024 = 26,973 works. The funder facet stops at 1,000 values
+      in 2019..2026.'
     references:
     - https://www.crossref.org/documentation/retrieve-metadata/rest-api/
 - id: CD-030

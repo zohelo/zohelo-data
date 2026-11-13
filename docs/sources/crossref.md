@@ -28,6 +28,10 @@ output; a field query also matches an affiliation abroad that names Poland; brea
 funders per work, none for most) and facets stop at 1,000 values. Left out: work-level records, licences, ROR
 affiliation ids and Polish Crossref members (the members route has no country filter).
 
+Dev trial 43336945209 (13 Nov 2026): 29 answers (854,848 bytes); a second Landing and Bronze run changed nothing.
+Silver 17,802 counts and 183 funders; Gold 17,756 rows, no duplicate series × date; Poland 2022 = 29,413 works
+(the largest year), 2024 = 26,973 (journal articles 25,109). The funder facet stops at 1,000 values in 2019 to 2026.
+
 Terms (https://www.crossref.org/documentation/retrieve-metadata/rest-api/, register CD-029): "almost none of the
 metadata is subject to copyright, and you may use it for any purpose"; abstracts may be copyrighted and none is
 requested. Licence row `crossref_metadata`, attribution "Source: Crossref metadata, crossref.org". Refresh full
