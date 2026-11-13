@@ -1,0 +1,22 @@
+version: 2
+
+sources:
+- name: esma_registers
+  description: ESMA registers (esma_registers_upreg, Solr JSON) — the parent entries with home member state Poland
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/esma_registers/
+    loaded_by: ingestion/to_bronze/esma_registers/
+    config: ingestion/sources/esma_registers.yaml
+  tables:
+  - name: esma_registers_entries
+    description: >-
+      One row per entry of the newest answer (entity upreg_poland): every field of the request's fl list as the text
+      the answer holds, in snake-case columns (id, ae_db_id, type_s, ae_entity_type_code, ae_entity_type_label,
+      ae_entity_name, ae_commercial_name, ae_legalform, ae_lei, ae_head_office_lei, ae_competent_authority,
+      ae_home_member_state, ae_host_member_state, ae_host_member_states as JSON array text, ae_office_type, ae_status,
+      ae_authorisation_notification_date, ae_authorisation_withdrawal_end_date(_str), ae_last_update, ae_website);
+      partitioned by entity.
+  - name: esma_registers_rejected_files
+    description: ESMA registers Landing files the Bronze decoder rejected, with the reason.
