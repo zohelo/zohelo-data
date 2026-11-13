@@ -147,12 +147,12 @@ def licences() -> list[dict]:
                 row["http"] = r.status_code
                 if r.status_code == 200:
                     j = r.json()
-                    print(json.dumps(j, indent=1)[:15000], flush=True)
+                    print(json.dumps({k: j.get(k) for k in ("id", "name", "unit", "license", "origins", "source")}, default=str)[:6000], flush=True)
                     row["license"] = j.get("license")
                     row["origins"] = [
                         {"producer": o.get("producer"), "title": o.get("title"), "license": o.get("license"),
                          "attribution": o.get("attribution"), "urlMain": o.get("urlMain"),
-                         "citation": (o.get("citationFull") or "")[:300]}
+                         "dateAccessed": o.get("dateAccessed"), "versionProducer": o.get("versionProducer")}
                         for o in j.get("origins", [])
                     ]
             out.append(row)
@@ -168,6 +168,16 @@ def main(argv) -> int:
         land = landing(client, landing_bucket)
         print("LANDING", land, flush=True)
         annotate("notice", "owid trial landing", land)
+        try:
+            lic = licences()
+            print("LICENCES", json.dumps(lic, default=str), flush=True)
+            annotate("notice", "owid trial origin licences", [
+                {"chart": r["chart"], "column": r.get("column"), "http": r.get("http"), "license": r.get("license"),
+                 "origins": sorted({f"{o.get('producer')} [{(o.get('license') or {}).get('name') if isinstance(o.get('license'), dict) else o.get('license')}]"
+                                    for o in r.get("origins") or []})}
+                for r in lic])
+        except Exception as exc:  # noqa: BLE001 - the licence read must not hide the build checks
+            annotate("warning", "owid trial origin licences failed", {"error": f"{type(exc).__name__}: {exc}"[:500]})
 
         bres, tables = bronze(cat)
         con.register("bronze_values", tables["values"])
@@ -261,6 +271,9 @@ def main(argv) -> int:
                 where g.source_code is null and o.entity_code is not null"""),
             "no_code_entities": one(con, """select string_agg(distinct entity_name, '; ') from owid_observations
                 where entity_code is null"""),
+            "mapped_rows_before_1900": rows(con, """select o.chart, count(*) as n, min(o.year) as first_year
+                from owid_observations as o inner join geo_map as g on o.entity_code = g.source_code
+                where o.year < 1900 group by all order by all"""),
         }
         print("GOLD", gold, flush=True)
         annotate("notice", "owid trial gold", gold)
@@ -273,9 +286,38 @@ def main(argv) -> int:
             from build_owid where geography_key = 'WB:WLD' group by all order by all""")
         annotate("notice", "owid trial Poland", {"newest": poland, "range": first_pl, "world_newest": world})
 
-        lic = licences()
-        print("LICENCES", lic, flush=True)
-        annotate("notice", "owid trial origin licences", lic)
+        # Checklist 5: one row per source x area x period for each KPI measure (kpi_measure.csv rows of owid).
+        import csv as _csv
+        seeds = {n: list(_csv.DictReader((ROOT / f"warehouse/seeds/{n}.csv").open(encoding="utf-8")))
+                 for n in ("source", "licence", "kpi_measure")}
+        owid_measures = [m for m in seeds["kpi_measure"] if m["source_system"] == SOURCE]
+        per_kpi = {}
+        for m in owid_measures:
+            per_kpi[m["kpi_key"]] = rows(con, f"""select count(*) as metric_rows,
+                coalesce(max(n), 0) as max_rows_per_area_period from (select geography_key, date_key, count(*) as n
+                from build_owid where measure_key like '{m["measure_key_pattern"]}' group by all)""")[0]
+        # Production rows of gold.metrics_gdp_per_capita (read only; snapshot summary) for its ceiling.
+        prod = {}
+        for name in ("metrics_gdp_per_capita", "fact_annual"):
+            try:
+                snap = cat.load_table(("gold", name)).current_snapshot()
+                prod[name] = int((snap.summary or {}).get("total-records", -1)) if snap else None
+            except Exception as exc:  # noqa: BLE001
+                prod[name] = f"unreadable: {type(exc).__name__}"
+        sys.path.insert(0, str(ROOT))
+        from warehouse import publish as pub
+        licensed = pub.licensed_sources(seeds["source"], seeds["licence"])
+        source_row = [s for s in seeds["source"] if s["source_key"] == SOURCE]
+        gate = {
+            "source_row": source_row,
+            "licence_row": [lic for lic in seeds["licence"] if source_row and lic["licence_key"] == source_row[0]["licence_key"]],
+            "owid_licensed": SOURCE in licensed,
+            "kpis_blocked": {k: pub.licence_blocked(k, seeds["kpi_measure"], licensed) for k in per_kpi},
+            "owid_v2_only": SOURCE in pub.V2_ONLY_SOURCES,
+        }
+        annotate("notice", "owid trial kpis and licence gate",
+                 {"per_kpi": per_kpi, "production_rows": prod, "gate": gate})
+
     finally:
         removed = 0
         for bucket in (req("STORAGE_LANDING_BUCKET_NAME"), req("STORAGE_LAKEHOUSE_BUCKET_NAME")):
