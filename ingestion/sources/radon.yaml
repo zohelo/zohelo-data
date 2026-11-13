@@ -1,0 +1,41 @@
+source_system: radon
+description: "RAD-on (OPI PIB) — POL-on institutions of higher education and science and study programmes, non-person fields"
+
+# Extraction strategy (docs/landing.md, docs/sources/radon.md). Register PLS-023. RAD-on has no bulk file; its public
+# REST API (no key) serves each POL-on resource in cursor pages:
+# https://radon.nauka.gov.pl/opendata/polon/<resource>?resultNumbers=<n>&token=<cursor>. Selection: institutions
+# (840 records) and courses = study programmes (11,696 records with their launches), Dev probe 43328619935. Persons
+# (employees, doctoral students, project managers, promotion procedures, publications) are not read; each record is
+# reduced to an allowlist of non-person fields before it lands (institution heads' names and contact details are
+# dropped in memory). One request at a time, 2 s apart; no limit is published. Entity = one resource, version =
+# download time (the API gives none); an unchanged resource (same SHA-256) is not landed again.
+extraction:
+  initial: api
+  production: snapshot                    # each file is the complete current state of its resource
+  incremental_policy: changed_since_last  # SHA-256 of the reduced records; the API has no changed-since filter
+  schedule: # UTC; POL-on changes continuously (institutions report to it), RAD-on refreshes daily; weekly, Monday
+    - {cron: "35 3 * * 1", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/radon/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.radon_institutions, bronze.radon_courses, bronze.radon_rejected_files]
+silver: [silver.radon_institutions, silver.radon_courses]
+gold: [gold.radon_institution, gold.radon_study_programme, gold.build_radon, gold.metrics_higher_education_institutions, gold.metrics_study_programmes]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured counts from the Dev trial on the final head
+  radon_institutions: {rows: 1300}  # 840 (Dev probe 43328619935)
+  radon_courses: {rows: 18000}  # 11,696 (Dev probe 43328619935)
+  radon_institution: {rows: 1300}
+  radon_study_programme: {rows: 18000}
+  poc_build_radon: {rows: 1500}
+  poc_metrics_higher_education_institutions: {rows: 100}
+  poc_metrics_study_programmes: {rows: 100}
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): two resources of about 12,500 records in all and no changed-since filter;
+# a changed resource replaces its entity in Bronze, Silver and Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2990"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

@@ -3188,7 +3188,8 @@ sources:
   name: RAD-on public data and POL-on APIs
   short_name: RAD-on / POL-on
   provider: Ośrodek Przetwarzania Informacji – Państwowy Instytut Badawczy (OPI PIB)
-  status: approved
+  source_system: radon
+  status: built
   family: B
   kpi: true
   geography: Poland
@@ -3203,8 +3204,9 @@ sources:
     interfaces: [REST API, HTML, interactive reports]
     auth: Public portal; current account/API conditions and quotas need specification review.
     cost: free
-    limits: Not published on the pages read; the API page is a single-page app (swagger at /swagger-ui/index.html answers
-      200).
+    limits: 'Not published on the pages read (help centre searched for "limit", "regulamin", "licencja", 12 Nov 2026). The
+      open-data API is https://radon.nauka.gov.pl/opendata/polon/<resource>?resultNumbers=<n>&token=<cursor>, no key; the
+      swagger page and the /api catalogue are single-page apps without a reachable OpenAPI file (Dev probe 43328619935).'
   licence:
     status: unresolved
     notes: 'Terms: https://polon.nauka.gov.pl/en/public-data/ says "We make part of the data from the POL-on system publicly
@@ -3227,9 +3229,12 @@ sources:
     evidence: documented
     connection: tested
     blockers:
-    - 'Licence unresolved: no licence text on the public-data page; look in the RAD-on help centre and API terms'
-    - 'Open the OpenAPI specification (swagger-ui is a single-page app: find the api-docs URL in a Dev probe)'
-    - Document quotas and history filters
+    - 'Built for institutions and study programmes (courses with their launches), #2990; branches, doctoral schools,
+      evaluation, projects, investments and patents are not loaded yet. Persons (staff, doctoral students, project managers,
+      promotion procedures, publication authors) are out of scope.'
+    - 'Licence unresolved: no licence text on the public-data page or in the RAD-on help centre pages read (Dev probe
+      43328619935); internal only until OPI PIB states terms'
+    - 'No quota and no changed-since filter documented: full snapshot weekly'
     references:
     - https://radon.nauka.gov.pl/api
     - https://radon.nauka.gov.pl/pomoc/tag/api/page/2/

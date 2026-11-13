@@ -28,6 +28,10 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- GUS publication tables (#2893), counts per year; Poland is the largest area: museum visits 46,242,767 (2025),
     -- cinema admissions 61,949,490 (2019), library users 5,983,725 (2019), tourists 42,738,329, overnight stays
     -- 104,692,301, bed places 887,158 (2025) (Dev trial 43298219762); survey shares are % of persons 15+
+    -- RAD-on / POL-on (#2990), counts on the download day; Poland is the largest area: 840 institutions of every
+    -- status and 11,696 study programmes of every status in the register (Dev probe 43328619935)
+    ('higher_education_institutions', 'radon', '%', 0, 2000),
+    ('study_programmes', 'radon', '%', 0, 30000),
     ('museum_visitors', 'gus_culture', '%', 0, 2e8),
     ('cinema_admissions', 'gus_culture', '%', 0, 2e8),
     ('public_library_users', 'gus_culture', '%', 0, 3e7),
@@ -590,6 +594,24 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_health_expenditure_gdp') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_higher_education_institutions') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_study_programmes') }}
 )
 
 select

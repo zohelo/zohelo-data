@@ -1,0 +1,39 @@
+version: 2
+models:
+  - name: radon_institutions
+    description: >-
+      RAD-on / POL-on institutions of the higher education and science system (register PLS-023, OPI PIB; terms not
+      established: internal only), newest Landing copy. Grain: institution_uuid (POL-on's own id), every kind and
+      status. Non-person fields only (the head of the institution and contact details are dropped before Landing).
+      History: current state only (snapshot); trial run in ingestion/sources/radon.yaml.
+    columns:
+      - name: institution_uuid
+        description: POL-on's own id of the institution (the register's id).
+        tests: [not_null, unique]
+      - name: name
+        tests: [not_null]
+      - name: kind_code
+        tests: [not_null]
+      - name: status_name
+        description: Status as published (Działająca, W likwidacji, Zlikwidowana, ...).
+        tests: [not_null, {accepted_values: {arguments: {values: ['Działająca']}}}]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: radon_courses
+    description: >-
+      RAD-on / POL-on study programmes (API resource courses; register PLS-023, OPI PIB; terms not established:
+      internal only), newest Landing copy. Grain: course_uuid (POL-on's own id), every status. Level, profile, ISCED
+      field and status as published; launches (form, title, start) and disciplines kept as JSON. History: current
+      state only (snapshot); trial run in ingestion/sources/radon.yaml.
+    columns:
+      - name: course_uuid
+        description: POL-on's own id of the study programme.
+        tests: [not_null, unique]
+      - name: level_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['1']}}}]
+      - name: status_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['3']}}}]
+      - name: main_institution_uuid
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
