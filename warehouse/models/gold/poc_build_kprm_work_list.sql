@@ -71,9 +71,11 @@ select
     'kprm_work_list:entries:list_entries:' || c.measure_code as measure_key,
     case
         when c.current_status is null
-            then 'Government drafts entering the Council of Ministers work list, per '
-            || case c.frequency when 'M' then 'month' else 'year' end || ' of publication on the list (KPRM)'
-        else 'Government drafts that entered the Council of Ministers work list, by '
+            then
+                'Government drafts entering the Council of Ministers work list, per '
+                || case c.frequency when 'M' then 'month' else 'year' end || ' of publication on the list (KPRM)'
+        else
+            'Government drafts that entered the Council of Ministers work list, by '
             || case c.frequency when 'M' then 'month' else 'year' end
             || ' of publication on the list and by their status at download time (KPRM; earlier periods change'
             || ' as statuses change)'
