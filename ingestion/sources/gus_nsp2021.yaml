@@ -1,0 +1,47 @@
+source_system: gus_nsp2021
+description: "GUS — Narodowy Spis Powszechny Ludności i Mieszkań 2021 (population and housing census 2021), final-results tables"
+
+# Extraction strategy (docs/landing.md). Register PLS-005. Bulk feature: the final-results pages of NSP 2021
+# (https://stat.gov.pl/spisy-powszechne/nsp-2021/nsp-2021-wyniki-ostateczne/) link one XLSX of tables per theme at
+# fixed /download/ URLs (Dev probes 43160190595 on test/src-w2pl-probe, 43270285788 and 43271980321 on
+# test/w3-gus-probe). A one-off census: the curated themes are declared files of the shared bulk_file pattern (no
+# extractor code); entity = one theme workbook, version = download time (no Last-Modified), written only when the
+# SHA-256 changed (a corrected workbook gets a new URL here, which needs a declaration change). Restart unit: one file.
+# The housing workbook (Warunki mieszkaniowe) prints the 2021 row of each area without its label: follow-up Task #2921.
+# Dev trial 43298219762 (test/w3-gus-culture-trial): 2 files, 95,717 Bronze cells, 136 Silver and Gold rows (Poland and
+# 16 voivodeships), 0 duplicate keys, 0 rejected; second Landing and Bronze runs wrote nothing.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: ludnosc_stan_struktura   # Ludność. Stan i struktura demograficzno-społeczna (aneks): population by voivodeship
+        url: "https://stat.gov.pl/download/gfx/portalinformacyjny/pl/defaultaktualnosci/6536/6/2/1/ludnosc_stan_i_struktura_demograficzno-spoleczna_w_swietle_wynikow_nsp_2021_aneks.xlsx"
+        format: raw
+        version: ingested
+      - entity: rynek_pracy              # Ludność na rynku pracy (wersja uaktualniona): economic activity by voivodeship
+        url: "https://stat.gov.pl/download/gfx/portalinformacyjny/pl/defaultaktualnosci/6536/11/3/1/ludnosc_na_rynku_pracy_w_swietle_wynikow_narodowego_spisu_powszechnego_ludnosci_i_mieszkan_wersja_uaktualniona.xlsx"
+        format: raw
+        version: ingested
+  initial: bulk
+  production: snapshot                  # final results as published
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; a one-off census, corrections are rare: quarterly check, unchanged bytes skipped
+    - {cron: "40 6 10 1,4,7,10 *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gus_nsp2021/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.gus_nsp2021_cells, bronze.gus_nsp2021_rejected_files]
+silver: [silver.gus_nsp2021_tables]
+gold: [gold.build_gus_nsp2021]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gus_nsp2021_tables: {rows: 200}  # 136 rows, census 2021 (+ 2011 population) (Dev trial 43298219762)
+  poc_build_gus_nsp2021: {rows: 200}  # 136 (Dev trial 43298219762)
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): two workbooks of a one-off census; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2454"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

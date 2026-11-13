@@ -272,13 +272,21 @@ def full_rebuild(files: list[Path]) -> list[str]:
 
 
 GOLD_ALIAS = re.compile(r"alias\s*=\s*['\"]([a-z0-9_]+)['\"]")
-NOT_DBT_GOLD = {"gold.coverage"}  # written by each source's bronze.verify (ingestion/common/coverage.py), not dbt
+# Gold tables that dbt does not build: gold.coverage is written by each source's bronze.verify
+# (ingestion/common/coverage.py); the per-block tables of a source with a build stage
+# warehouse/entity/gold_<source>_build.sql are written by gold.observations (warehouse/observations.py, D35).
+PER_BLOCK_TABLES = ("observations", "series", "measures", "geography")
+NOT_DBT_GOLD = {"gold.coverage", "gold.observations_rejected"} | {
+    f"gold.{stage.stem.removeprefix('gold_').removesuffix('_build')}_{table}"
+    for stage in (ROOT / "warehouse" / "entity").glob("gold_*_build.sql")
+    for table in PER_BLOCK_TABLES
+}
 
 
 def gold_list(files: list[Path]) -> list[str]:
     """The declared Gold list (warehouse.yaml `gold` plus each source's `gold:`, warehouse/declared.py) holds every
-    Gold model (by alias) and seed of the dbt project plus gold.coverage, and nothing else (ops/retire_tables.py
-    retires unlisted Gold tables)."""
+    Gold model (by alias) and seed of the dbt project plus the tables dbt does not build (NOT_DBT_GOLD), and nothing
+    else (ops/retire_tables.py retires unlisted Gold tables)."""
     from warehouse import declared
 
     built = set()
@@ -297,6 +305,21 @@ def gold_list(files: list[Path]) -> list[str]:
         for name in built - listed
     ]
     problems += [f"gold: {name} is listed but is not a Gold model or seed" for name in listed - built - NOT_DBT_GOLD]
+    # A source authorized for the per-block load declares the tables it writes (D34): an undeclared Gold table
+    # is a leftover to ops/retire_tables.py.
+    for source, config in declared.sources().items():
+        if "gold.observations" not in (config.get("activities") or []):
+            continue
+        wanted = {f"gold.{source}_{table}" for table in PER_BLOCK_TABLES} | {"gold.observations_rejected"}
+        problems += [
+            f"gold: {name} is written by gold.observations of {source} but is not in `gold:` of "
+            f"ingestion/sources/{source}.yaml"
+            for name in sorted(wanted - set(config.get("gold") or []))
+        ]
+        if not (ROOT / "warehouse" / "entity" / f"gold_{source}_build.sql").exists():
+            problems.append(
+                f"{source}: gold.observations needs the build stage warehouse/entity/gold_{source}_build.sql"
+            )
     return sorted(problems)
 
 
@@ -1030,6 +1053,78 @@ def briefs_problems(
     return problems
 
 
+# What identifies a row of a seed (warehouse/seeds/<name>.csv): the columns dbt's tests or the readers treat as its
+# key. A seed without an entry is checked for repeated rows only.
+SEED_KEYS = {
+    "dimension": ["dimension_key"],
+    "domain": ["domain_key"],
+    "frequency": ["frequency_key"],
+    "geography_v2": ["geography_key"],
+    "kpi": ["kpi_key"],
+    "kpi_measure": ["kpi_key", "source_system", "measure_key_pattern"],
+    "kpi_v2_map": ["v2_key", "source_key"],
+    "licence": ["licence_key"],
+    "news_outlet": ["outlet_key"],
+    "sex": ["sex_key"],
+    "source": ["source_key"],
+    "topic": ["topic_key"],
+    "unit": ["unit_key"],
+    "unit_decimals": ["unit_key"],
+    "unit_map": ["source_system", "unit_code", "measure_key_pattern"],
+}
+
+
+def seed_file_problems(name: str, text: str) -> list[str]:
+    """What is wrong with one seed CSV as a file; pure. The seed CSVs merge with git's union driver
+    (.gitattributes, docs/source-registration.md): a local merge keeps the lines both sides added and never reports
+    a conflict, so two pull requests that edited the same row, added the same row or changed the header leave
+    both versions in the file. Those leftovers are the findings: a line that does not end with a line break (the
+    next appended row would join it), a row whose number of fields differs from the header's, a second header
+    line, a repeated row, and a key (SEED_KEYS) on two rows."""
+    where = f"seeds: {name}.csv"
+    if not text.endswith("\n"):
+        return [f"{where}: the last line has no line break"]
+    rows = list(csv.reader(text.splitlines(keepends=True)))
+    header, body = rows[0], rows[1:]
+    problems = [
+        f"{where} row {number}: {len(row)} fields, the header has {len(header)}"
+        for number, row in enumerate(body, start=2)
+        if len(row) != len(header)
+    ]
+    # A second header line: the same first column name (both sides of a merge may have changed the header).
+    again = {number for number, row in enumerate(body, start=2) if row[:1] == header[:1]}
+    problems += [f"{where} row {number}: a second header line" for number in sorted(again)]
+    seen: dict[tuple[str, ...], int] = {}
+    for number, row in enumerate(body, start=2):
+        if number not in again and seen.setdefault(tuple(row), number) != number:
+            problems.append(f"{where} row {number}: the same row as row {seen[tuple(row)]}")
+    key = SEED_KEYS.get(name)
+    if key and all(column in header for column in key):
+        at = [header.index(column) for column in key]
+        first: dict[tuple[str, ...], int] = {}
+        for number, row in enumerate(body, start=2):
+            if len(row) != len(header) or number in again:
+                continue
+            value = tuple(row[i] for i in at)
+            if first.setdefault(value, number) != number and seen[tuple(row)] == number:
+                problems.append(
+                    f"{where} row {number}: key {', '.join(key)} = {', '.join(value)} is also on row {first[value]}"
+                )
+    elif key:
+        problems.append(f"{where}: key column {[c for c in key if c not in header]} is not in the header")
+    return problems
+
+
+def seed_files(files: list[Path]) -> list[str]:
+    """Every seed CSV is a clean table: see seed_file_problems."""
+    problems = []
+    for f in sorted(files):
+        if f.parent == Path("warehouse/seeds") and f.suffix == ".csv" and (ROOT / f).exists():
+            with open(ROOT / f, newline="", encoding="utf-8") as handle:
+                problems += seed_file_problems(f.stem, handle.read())
+    return problems
+
+
 def published_v2_seeds() -> list[str]:
     """Seeds of published contract v2: frequency (M, Q or A), aggregation and polarity are one value per v2 key of
     kpi_v2_map.csv; a concept with a ready kpi_v2_map row (in v2 whatever its status, O37) has definition_en and
@@ -1172,6 +1267,7 @@ def main() -> int:
         "scheduler imports": scheduler_imports,
         "backlog": backlog,
         "published contract": published_contract,
+        "seed files": lambda: seed_files(files),
         "published v2 seeds": published_v2_seeds,
         "semantic models": semantic_models,
     }

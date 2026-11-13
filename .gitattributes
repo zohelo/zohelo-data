@@ -4,3 +4,7 @@
 # Windows scripts
 *.cmd text eol=crlf
 *.bat text eol=crlf
+
+# Seed code lists: a local merge keeps the rows both sides appended (docs/source-registration.md).
+# GitHub's own merge does not use this; ops.repo_check `seed files` finds what a union merge can leave behind.
+warehouse/seeds/*.csv merge=union

@@ -51,5 +51,22 @@ pct_exports,% eksportu,"% of exports of goods, services and primary income","% e
 days,dni,days,dni,false,days,1
 payers,płatn.,contribution payers,płatnicy składek,false,payers,1
 certificates,zaśw.,medical certificates,zaświadczenia lekarskie,false,certificates,1
+pisa_score,pkt.,PISA score points,punkty PISA,true,pisa_score,1
 pln_per_m2,zł/m²,PLN per square metre,zł za m²,false,pln_per_m2,1
+facilities,ob.,facilities,obiekty,false,facilities,1
+bed_places,miejsca,bed places,miejsca noclegowe,false,bed_places,1
+overnight_stays,nocl.,overnight stays,noclegi,false,overnight_stays,1
+farms,gosp.,agricultural holdings,gospodarstwa rolne,false,farms,1
+heads,szt.,heads,sztuki,false,heads,1
+ha_per_holding,ha/gosp.,hectares per holding,hektary na gospodarstwo,false,ha_per_holding,1
+share,0-1,"share (1 = 100%)","udział (1 = 100%)",true,pct,100
+families,rodz.,families,rodziny,false,families,1
+index_0_1,0-1,"index, 0 to 1","indeks, od 0 do 1",true,index_0_1,1
+index_2021_100,2021=100,"index, 2021 = 100","indeks, 2021 = 100",true,index_2021_100,1
+ncu_per_usd,NCU/USD,source currency per US dollar,waluta źródła za dolara amerykańskiego,true,ncu_per_usd,1
+ncu_per_eur,NCU/EUR,source currency per euro,waluta źródła za euro,true,ncu_per_eur,1
+ncu_per_rub,NCU/RUB,source currency per Russian rouble,waluta źródła za rubla rosyjskiego,true,ncu_per_rub,1
+hospitalisations,hosp.,hospitalisations,hospitalizacje,false,hospitalisations,1
+hospitalisations_per_patient,hosp./pac.,hospitalisations per patient,hospitalizacje na pacjenta,true,hospitalisations_per_patient,1
+nfz_points,pkt,NFZ settlement points,punkty rozliczeniowe NFZ,false,nfz_points,1
 packages,op.,packages,opakowania,false,packages,1

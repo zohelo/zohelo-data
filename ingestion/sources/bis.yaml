@@ -52,7 +52,9 @@ archive_policy:
   prune: report
 bronze: [bronze.bis_observations, bronze.bis_rejected_files]
 silver: [silver.bis_observations]
-gold: []
+gold: [gold.build_bis]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  poc_build_bis: {rows: 256000}  # 170,902: cbpol 25,119, eer 50,304, spp 34,996, tc 28,681, credit_gap 24,620, dsr 7,182 (Dev trial 43290214779); 1.5 x
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): six whole-selection snapshots of ~371,000 rows together; each new

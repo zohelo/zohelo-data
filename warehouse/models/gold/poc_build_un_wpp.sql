@@ -4,7 +4,10 @@
    is two measures: un_wpp:<indicator>:estimate (1950-2023) and un_wpp:<indicator>:projection (2024-2100,
    observation status forecast), so a projection never becomes a KPI's latest value. Values, unit and scale as
    published (D33): population in thousands (unit thousand_persons); old-age dependency (65+ per 100 aged 15-64) from the broad age groups of
-   silver.un_wpp_population_age_groups. Areas through poc_map_geography (section un_wpp). No breakdowns. #}
+   silver.un_wpp_population_age_groups (unit code per_100; unit_map.csv maps it to pct: a count per 100 people of
+   the reference group is a percentage of that group, the unit in which Eurostat (PC) and WDI (%) publish the
+   same ratio, so the sources of KPI old_age_dependency share one unit and nothing is rescaled). Areas through
+   poc_map_geography (section un_wpp). No breakdowns. #}
 with blocks as ({{ poc_un_wpp_blocks() }}),
 
 geo_map as (

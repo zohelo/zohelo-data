@@ -14,7 +14,8 @@ semantic_models/                  MetricFlow semantic models and metrics
 seeds/                            seeds/ = owner-readable code lists, built into gold
 dimensions/                       dimension registry (definitions-as-code, draft; docs/model.md)
 macros/, tests/                   shared macros; singular data tests
-entity/, entity.py                per-entity Silver SQL applied by the Eurostat and BDL loaders
+entity/, entity.py                per-entity Silver SQL applied by the Eurostat and BDL loaders; gold_*.sql: Gold per block
+observations.py                   Gold observations per block, by rule (docs/gold-coverage.md)
 build.py, changed.py, catalog.py  build engine: changed-only build, catalog publication
 warehouse.yaml                    activities the Pipeline may run
 ```
@@ -31,7 +32,8 @@ left as `__dbt_backup`.
 
 The scheduled build (empty filter) rebuilds only models whose inputs or code changed
 (owner policy #822, `changed.py`): a model is selected when its table is missing, its
-code fingerprint (SQL, config, macros, dimensions, `dbt_project.yml`, requirements)
+code fingerprint (SQL, config, macros, dimensions, `dbt_project.yml`, requirements; a file under
+`macros/sources/` only for the models that use it, docs/source-registration.md)
 differs, an upstream model is rebuilt, or a Bronze input or upstream table changed after
 its last build started. The scheduled build records `zohelo.built_from_ms` and
 `zohelo.build_fingerprint` as table properties of each model it wrote whose tests passed
@@ -73,6 +75,15 @@ Eurostat and GUS BDL observations are not dbt models. Their loaders write Silver
 (design #875): `warehouse/entity/<table>.sql` is applied to each dataset / subgroup right after
 its Bronze file, and the result replaces that entity in Silver (`warehouse/entity.py`). dbt
 sees them as sources (`silver_entities` in `models/bronze/sources.yml`) for Gold.
+
+Gold per block (docs/gold-coverage.md, O36, O43, decision D35): `observations.py` puts every loaded Silver
+block of a big source into `gold.<source>_observations`, `_series`, `_measures` and `_geography` by
+rule, one file per block, rebuilt only when the block's Silver files, the Gold SQL
+(`entity/gold_*.sql`) or the mapping of its geography codes changed; each block is checked for one
+row per `series_key` × `date_key` before it is accepted. Built for Eurostat; the Pipeline activity
+`gold.observations` runs it (docs/operating.md): the first load is started by hand with a filter, later
+runs continue within their time budget in the order Polish regions, countries and aggregates, the rest
+(O43). Dev trials write to a scratch namespace (`--trial zz_dev_<topic>`).
 
 ```sh
 cd warehouse && DBT_PROFILES_DIR=. dbt build --target trial   # needs the R2 env vars

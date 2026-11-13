@@ -46,7 +46,9 @@ archive_policy:
   prune: report
 bronze: [bronze.ilostat_observations, bronze.ilostat_rejected_files]
 silver: [silver.ilostat_observations]
-gold: []
+gold: [gold.build_ilostat]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  poc_build_ilostat: {rows: 117000}  # 78,147: EU27, annual 40,505 + quarterly 37,642 (Dev trial 43290214779); 1.5 x
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): five whole-indicator snapshots; each new copy replaces its entity,

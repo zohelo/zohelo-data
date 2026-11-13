@@ -1,7 +1,9 @@
 {{ config(alias='build_icp', tags=['gold_block']) }}
 {# Gold PoC build stage: the World Bank ICP 2021 measures of the activated blocks (series × classification)
    in the common shape. Every economy and benchmark group ICP publishes (no EU aggregate); the two activated
-   measures exist for the 2017 and 2021 benchmark years only. No breakdowns: every series is a total. #}
+   measures exist for the 2017 and 2021 benchmark years only. No breakdowns: every series is a total. The unit
+   code is ICP's classification code (PCAP.PP, PX.WL), the unit name its published classification name:
+   unit_map.csv maps the stable code, not a label the source may reword (D33). #}
 with blocks as ({{ poc_icp_blocks() }}),
 
 geo_map as (
@@ -16,7 +18,7 @@ select
     'world_bank_icp:' || o.series_code || ':' || o.classification_code as measure_key,
     b.block_name as measure_name,
     o.classification_code as measure_codes,
-    o.classification_name as unit_code,
+    o.classification_code as unit_code,
     o.classification_name as unit_name,
     o.economy_code as geography_source_code,
     coalesce(g.geography_key, '_X') as geography_key,

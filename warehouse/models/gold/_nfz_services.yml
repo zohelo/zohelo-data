@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: poc_build_nfz_services
+    description: >-
+      Gold build stage of the NFZ statistics API, services (register PLS-012), from silver.nfz_services_basic_data,
+      whole-year tables 2009-2024 (frequency A). One block per catalog (1a, 1b, 1c, 1d, 1w). Each benefit is its own
+      measure: measure_key nfz_services:<catalog>:<unit code>:<NFZ product code>:<measure>, breakdown {} (the API
+      publishes no total over benefits). Hospitalisations and patients of every loaded benefit for Poland; every
+      published measure (patients, hospitalisations, hospitalisations per patient, the two percentages, median and
+      mode length of stay, average values in PLN and NFZ points) for Poland and the 16 NFZ regional branches
+      (voivodeships, TERC keys) of the JGP groups in poc_nfz_services_detail() (the KPI groups N01, H13, H15, A48).
+      Values and units as published (D33); nulls are not loaded. tests/nfz_services_gold_benefits.sql checks that
+      every loaded benefit with Polish hospitalisations is built and that every detail group is loaded.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

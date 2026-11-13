@@ -1,0 +1,14 @@
+version: 2
+models:
+  - name: poc_build_ilostat
+    description: >-
+      Build stage — ILOSTAT national (reported) labour force series for the EU27 members: unemployment rate
+      (annual and quarterly, separate measures), employment-to-population ratio, labour force participation rate
+      (age bands 15+, 15-24, 25+, 15-64 as measures) and the youth NEET rate, by sex. Per cent, as published.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: sex_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['T', 'M', 'F']}}}]
