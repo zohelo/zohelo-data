@@ -26,6 +26,10 @@ exclude_rules = ["structure.column_order", "references.keywords", "aliasing.unus
 apply_dbt_builtins = true
 load_macros_from_path = "warehouse/macros"
 
+[tool.sqlfluff.templater.jinja.context]
+# dbt's own variable, read by the models of warehouse/models/gold/seed_rows/ for the folder of their CSV files.
+invocation_args_dict = {project_dir = "warehouse"}
+
 [tool.sqlfluff.rules.capitalisation.keywords]
 capitalisation_policy = "lower"
 

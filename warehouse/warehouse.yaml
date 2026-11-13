@@ -5,7 +5,7 @@ activities: [silver_gold.build, gold.publish]
 
 # Published contract v2 for zohelo-bi (docs/published.md, "Published layer contract v2"): gold.publish writes
 # 06_published/v2/ (warehouse/publish_v2.py) after the v1 files; v1 is unchanged and zohelo.com reads v1 only.
-# Only KPIs with status published in seeds/kpi.csv reach v2. false: v2 is not written.
+# Only KPIs with status published in the kpi list (seed_rows/kpi/) reach v2. false: v2 is not written.
 published_v2: true
 # Release briefs (docs/published.md, "briefs.json"): written with v2. A KPI × geography gets a brief when its
 # latest.json period is newer than in the previously published latest.json (same source and frequency); the brief
@@ -48,12 +48,12 @@ topics:
 gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.domain,  # seed warehouse/seeds/domain.csv
        gold.kpi_dimension,  # catalogue: dimensions per KPI and measure
-       gold.kpi, gold.kpi_measure, gold.unit, gold.unit_map,  # seeds warehouse/seeds/kpi.csv, kpi_measure.csv, unit.csv, unit_map.csv (D33)
+       gold.kpi, gold.kpi_measure, gold.unit, gold.unit_map,  # code lists kept as rows per source: warehouse/seed_rows/<name>/ (D36; units D33)
        gold.sex,  # seed warehouse/seeds/sex.csv (SDMX CL_SEX)
-       gold.licence, gold.source,  # seeds warehouse/seeds/licence.csv, source.csv
+       gold.licence, gold.source,  # warehouse/seed_rows/licence/, source/ (D36)
        gold.release_calendar,  # seed release_calendar.csv
-       gold.kpi_v2_map,  # seed kpi_v2_map.csv: zohelo-bi first slice, v2 key → concept and source (#2584)
-       gold.geography_v2, gold.unit_decimals, gold.kpi_member,  # seeds of published contract v2 (docs/published.md)
+       gold.kpi_v2_map,  # warehouse/seed_rows/kpi_v2_map/ (D36): zohelo-bi first slice, v2 key → concept and source (#2584)
+       gold.geography_v2, gold.unit_decimals, gold.kpi_member,  # code lists of published contract v2 (docs/published.md); unit_decimals in warehouse/seed_rows/
        gold.news_outlet,  # seed news_outlet.csv: outlets of the news feeds (topics, O32)
        gold.topic, gold.topic_kpi, gold.topic_keyword, gold.topic_signal, gold.release_kpi,  # topic seeds (O32, docs/topics.md)
        gold.topic_matches, gold.topic_daily, gold.topic_rank, gold.topic_quality,  # topics Gold (O32, docs/topics.md)
@@ -305,4 +305,14 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_median_wage: {rows: 1700}  # 1,097 (Dev trial 43292078190)
   poc_metrics_price_m2_secondary: {rows: 4300}  # 2,853 (Dev trial 43292078190)
   dim_dataset: {rows: 40000}
+  # Code lists kept as rows per source (warehouse/seed_rows/, D36): they grow with every source by review, not
+  # with data, so the ceilings are far above today's rows (13 Nov: 50, 42, 138, 265, 192, 67, 211, 67).
+  source: {rows: 2000}
+  licence: {rows: 2000}
+  kpi: {rows: 10000}
+  kpi_measure: {rows: 30000}
+  kpi_v2_map: {rows: 10000}
+  unit: {rows: 3000}
+  unit_map: {rows: 30000}
+  unit_decimals: {rows: 3000}
   dim_dimension: {rows: 1000}

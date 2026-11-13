@@ -97,8 +97,9 @@ stages are `.github/backlog/stages.yaml`.
   its Bronze tables as dbt sources in `warehouse/models/bronze/<source>.yml` (not `sources.yml`), the row
   ceilings of its Silver models under `full_rebuild:` in `ingestion/sources/<source>.yaml`, its route in
   `docs/sources/<source>.md`, and the register entry (`source_system`, `status: built`). Nothing to add to
-  `lineage.py`, the Pipeline `source` input or `warehouse.yaml`. Still shared: one row each in
-  `warehouse/seeds/source.csv` and `licence.csv` (your own row only).
+  `lineage.py`, the Pipeline `source` input or `warehouse.yaml`. One row each for `source` and `licence`, in
+  `warehouse/seed_rows/source/<source>.csv` and `warehouse/seed_rows/licence/<source>.csv` (the header line of
+  `_shared.csv`, then your row; D36).
 - News and other text feeds keep only headline, link, guid, publication time and language,
   reduced before Landing; descriptions and article text are never stored, also not in
   Landing or the Archive (O32, O33).
@@ -137,11 +138,12 @@ source_version, raw_sha256`. Then:
    through `poc_optional_ref('<model>', '<column>:<type>, …')` and add the model to the map's config meta
    `optional_parents`: a plain `ref()` there makes the map and every block wait for the source's first Bronze
    load, and the scheduled build then fails (`stalled`, #2903);
-3. add units to `warehouse/seeds/unit.csv` (with `base_unit_key` and `factor`) and the source's unit codes to
-   `unit_map.csv` (D33), KPIs to `kpi.csv` (status `draft` until checked),
-   one `kpi_measure.csv` row per KPI × source measure, and for a KPI of the v2 map one
-   `kpi_v2_map.csv` row per v2 key × source (O31: a source is added next to the others,
-   never instead of one);
+3. add the rows of the code lists, each list in the source's own file `warehouse/seed_rows/<list>/<source>.csv`
+   (the header line of `_shared.csv`, then the rows; D36, never a new row in `_shared.csv`): units in `unit`
+   (with `base_unit_key` and `factor`) and `unit_decimals`, the source's unit codes in `unit_map` (D33), KPIs in
+   `kpi` (status `draft` until checked), one `kpi_measure` row per KPI × source measure, and for a KPI of the
+   v2 map one `kpi_v2_map` row per v2 key × source (O31: a source is added next to the others, never instead
+   of one);
 4. list the model and the source's own metrics models in the source YAML `gold:` and give each a measured
    ceiling under `full_rebuild:` there; describe and test them in `warehouse/models/gold/_<source>.yml`.
    `warehouse/warehouse.yaml` and `_gold.yml` take only models shared by several sources.

@@ -1,18 +1,6 @@
 version: 2
 
 seeds:
-  - name: licence
-    columns:
-      - name: licence_key
-        tests: [not_null, unique]
-  - name: source
-    columns:
-      - name: source_key
-        tests: [not_null, unique]
-      - name: register_id
-        tests: [not_null, unique]
-      - name: licence_key
-        tests: [{relationships: {arguments: {to: ref('licence'), field: licence_key}}}]
   - name: release_calendar
     config: {column_types: {release_at: varchar}}
     columns:
@@ -26,27 +14,6 @@ seeds:
     columns:
       - name: dimension_key
         tests: [not_null, {relationships: {arguments: {to: ref('dimension'), field: dimension_key}}}]
-  - name: kpi_v2_map
-    description: >-
-      zohelo-bi first slice (published contract v2): one row per v2 KPI key and source that publishes it (O31),
-      with the concept that feeds it (empty when none yet), the source measures, what the source offers,
-      aggregation, polarity and status. tests/kpi_v2_map_keys.sql checks one row per key and source and one
-      concept per v2 key (and the reverse).
-    columns:
-      - name: v2_key
-        tests: [not_null]
-      - name: source_key
-        # A source of source.csv, not a hand-kept list: every onboarding adds its source.csv row, and a list
-        # missing one (mrpips_unemployment, #2778) failed this test and skipped 25 nodes of every prod build.
-        tests: [not_null, {relationships: {arguments: {to: ref('source'), field: source_key}}}]
-      - name: concept_key
-        tests: [{relationships: {arguments: {to: ref('kpi'), field: kpi_key}}}]
-      - name: aggregation
-        tests: [not_null, {accepted_values: {arguments: {values: [sum, mean, rate, index, none]}}}]
-      - name: polarity
-        tests: [not_null, {accepted_values: {arguments: {values: [up, down, neutral]}}}]
-      - name: status
-        tests: [not_null, {accepted_values: {arguments: {values: [ready, needs-block, needs-source]}}}]
   - name: news_outlet
     description: >-
       News outlets whose feeds the topics layer reads (O32, docs/topics.md): one row per outlet with its
@@ -133,45 +100,6 @@ seeds:
         tests: [not_null, unique]
       - name: level
         tests: [not_null, {accepted_values: {arguments: {values: [country, voivodeship, aggregate]}}}]
-  - name: unit
-    description: >-
-      Units of the KPIs (docs/playbook.md "Units", decision D33). base_unit_key and factor make the scale
-      machine-readable: one unit is `factor` base units (exact decimal; mln_pln = 1000000 pln, ha = 10000 m2).
-      Rates, indices and balances are their own base with factor 1; the per-cent units share the base pct.
-    config: {column_types: {factor: "decimal(38,9)"}}
-    columns:
-      - name: unit_key
-        tests: [not_null, unique]
-      - name: base_unit_key
-        tests: [not_null, {relationships: {arguments: {to: ref('unit'), field: unit_key}}}]
-      - name: factor
-        tests: [not_null]
-  - name: unit_map
-    description: >-
-      Source unit codes (build stage unit_code, as published) → unit.csv unit_key (D33). measure_key_pattern
-      (a LIKE pattern, empty = every measure of the code) maps a code whose meaning depends on the measure: World
-      Bank WDI publishes the unit only in the indicator name ("as named"), GUS BDL "-" is dimensionless; the
-      longest matching pattern wins. A code without a row stays as published and is reported (dim_unit
-      `mapped`, test metrics_unit_unmapped).
-    config: {column_types: {source_system: varchar, unit_code: varchar, measure_key_pattern: varchar, unit_key: varchar}}
-    tests:
-      - unique:
-          arguments:
-            column_name: "source_system || '|' || unit_code || '|' || coalesce(measure_key_pattern, '')"
-    columns:
-      - name: source_system
-        tests: [not_null]
-      - name: unit_code
-        tests: [not_null]
-      - name: unit_key
-        tests: [not_null, {relationships: {arguments: {to: ref('unit'), field: unit_key}}}]
-  - name: unit_decimals
-    description: Decimals to show per unit (published contract v2 catalog.json units[].decimals).
-    columns:
-      - name: unit_key
-        tests: [not_null, unique, {relationships: {arguments: {to: ref('unit'), field: unit_key}}}]
-      - name: decimals
-        tests: [not_null]
   - name: kpi_member
     description: >-
       Curated breakdown members per v2 KPI (published contract v2): when a v2 key lists members of a dimension,

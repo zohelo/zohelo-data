@@ -3,7 +3,8 @@
 Decision D34 (12 November 2026). Until now every new source appended lines to the same shared files, so two
 source pull requests always conflicted and were merged one at a time or as hand-built merge trains. The rule
 now: **adding a source touches only files that belong to that source.** The shared files keep what they
-held on 12 November (nothing was moved, so open pull requests still merge) and take no new source lines.
+held on 12 November (nothing was moved, so open pull requests still merge) and take no new source lines. The
+code lists every source adds rows to followed on 13 November (D36, below).
 
 ## Where a new source's lines go
 
@@ -18,6 +19,7 @@ held on 12 November (nothing was moved, so open pull requests still merge) and t
 | `poc_blocks.sql`: block macros, `poc_block_models()`, `poc_activated_blocks()`, the union in `poc_observations()` | `warehouse/macros/sources/<source>.sql`: the block macros and `poc_source__<source>()` | `macros/source_registration.sql` finds the macros by name |
 | `poc_map_geography.sql`: a CTE and a union branch | `poc_geography__<source>()` in the same `warehouse/macros/sources/<source>.sql` | the same |
 | `docs/sources.md` | `docs/sources/<source>.md` (the same section, as its own file) | – |
+| `warehouse/seeds/source.csv`, `licence.csv`, `kpi.csv`, `kpi_measure.csv`, `kpi_v2_map.csv`, `unit.csv`, `unit_map.csv`, `unit_decimals.csv` | `warehouse/seed_rows/<list>/<source>.csv` (the list's header, then the source's rows; D36, below) | the model `warehouse/models/gold/seed_rows/<list>.sql` reads every CSV file of the folder; Python reads `warehouse/seed_rows.py` `rows()` |
 
 `warehouse.yaml` keeps what belongs to no single source: conformed dimensions, facts, seeds, KPI metrics
 that read several sources, and their ceilings.
@@ -76,32 +78,57 @@ it cannot follow macros found by name; a full parse takes about five seconds.
   concurrency group before the plan job runs, so a typed `scheduler` or a text with a hyphen gets a group of
   its own, and a source id may only be lower-case letters, digits and `_` (`run.py`). Cost: the owner types the
   source id instead of picking it; a typo fails the plan job in seconds with the message naming the rule.
-- **Seeds** (`source.csv`, `licence.csv`, `kpi.csv`, `kpi_measure.csv`, `kpi_v2_map.csv`, `unit.csv`,
-  `unit_decimals.csv`) stay one file each for now. dbt builds one table per CSV file; per-source fragments
-  would need either a generation step before every `dbt` command, `repo_check` and `gold.publish` (all read
-  the CSVs directly), or one seed per fragment plus a union model whose refs cannot be discovered the way
-  macros are. Neither is clean. Two steps:
-  1. **Done: `warehouse/seeds/*.csv merge=union` in `.gitattributes`.** A local `git merge` (a lane merging
-     `origin/main` into its branch, a merge train) keeps the rows both sides appended and reports no conflict
-     in a seed. Git reads the attribute from the branch being merged into: a merge train cut from `main` has
-     it at once, a branch cut before 12 November has it after its first merge of `main` (for that one merge,
-     put the same line into `.git/info/attributes`). GitHub's own merge does **not** use the attribute (trial of 12 November: pull requests #2927
-     and #2928 against a test branch that had it, each appending one row to `source.csv` after another row was
-     appended on the base, were `mergeable: false`), so a pull request still shows a seed conflict on GitHub
-     until `main` is merged into it. A union merge never stops, so when two pull requests edited the same row,
-     added the same row or changed the header it keeps both versions: `repo_check` (`seed files`) fails on a
-     repeated row or key, a second header line, a row with the wrong number of fields and a last line without
-     a line break. Run it after every merge that touched a seed.
-  2. Next, for no seed conflict on GitHub either: fragments `warehouse/seed_rows/<seed>/<source>.csv`
-     assembled into `warehouse/seeds/<seed>.csv` by one function that `build.py`, `changed.manifest`,
-     `repo_check` and `publish` call first; the assembled files leave git.
-- **`kpi.csv`-family rows and KPI metrics models** belong to a KPI, not to a source; a KPI pull request
-  still adds its metrics model to `warehouse.yaml`. The same fragment idea applies and is left for the
-  seeds step.
+- **`kpi`, `unit`, `unit_decimals` and `licence` rows** belong to a KPI, a unit or a licence, not to a source, so
+  no check can say which file a row belongs in. The rule is the same as for the other lists (next section): the
+  pull request that adds the row puts it into the file named after its source. A KPI pull request still adds a
+  metrics model of several sources to `warehouse.yaml`.
 - **Lines of sources registered before D34** stay where they are. Moving them is mechanical (cut the block
   macros, the list line, the CTE and the branch into `macros/sources/<source>.sql`; a trial move of WHO
   changed only the position of its branches in the compiled SQL) but reorders the unions, so the compiled
   SQL of the facts changes once. Do it in one pull request when no source pull request is open.
+
+## Code lists kept as rows per source (D36)
+
+Every source added a row to `source.csv` and `licence.csv`, and most added rows to `kpi.csv`, `kpi_measure.csv`,
+`kpi_v2_map.csv`, `unit.csv`, `unit_map.csv` and `unit_decimals.csv`. After D34 these rows were the only cause
+of conflicts between source pull requests: `merge=union` in `.gitattributes` joins them in a local merge, but
+GitHub's own merge does not use it (trial of 12 November: pull requests #2927 and #2928, each appending one row
+to `source.csv` after another row was appended on the base, were `mergeable: false`).
+
+Since 13 November each of the eight lists is a folder, `warehouse/seed_rows/<list>/`:
+
+- `_shared.csv` holds the rows from before the split. Rows there are edited in place (a KPI's status, a licence
+  text); it takes **no new rows**.
+- `<source_system>.csv` holds the rows a source's pull requests add: the same header line, then the rows. In
+  `source`, `kpi_measure`, `kpi_v2_map` and `unit_map` every row names its source, and the row goes into that
+  source's file. In `kpi`, `unit`, `unit_decimals` and `licence` the row goes into the file of the source whose
+  pull request adds it (a unit that two sources need is added once; the second pull request finds it there).
+- A file is created by `git add`; nobody appends to a file another pull request appends to, so GitHub has
+  nothing to merge. Two pull requests for the same source can still meet in that source's file.
+
+How the rows reach Gold. The lists are no longer dbt seeds (dbt builds one table per CSV file and cannot union
+files it finds by name). `warehouse/models/gold/seed_rows/<list>.sql` is a dbt model named like the seed was, so
+`ref('kpi')` and `gold.kpi` are unchanged. It reads `seed_rows/<list>/*.csv` from the checkout with DuckDB
+(`read_csv`, every column as text, columns found by header name) and casts the typed columns itself; the tests
+that were in `seeds/_seeds.yml` are in `models/gold/seed_rows/_seed_rows.yml`. There is no generation step and
+no generated file: `dbt parse`, `dbt run` and `dbt build` work on a fresh checkout from any directory (the
+folder is found through dbt's `invocation_args_dict.project_dir`). A trial that built the seeds with
+`dbt seed` builds these eight with the Gold models (`dbt run --select path:models/gold`, or
+`path:models/gold/seed_rows` alone).
+
+Python (`gold.publish`, the semantic manifest, `repo_check`) reads a list through `warehouse/seed_rows.py`
+`rows(<list>)`: the files in file-name order, `_shared.csv` first. That function also reads the lists that are
+still dbt seeds (`warehouse/seeds/<list>.csv`: domain, frequency, topics, …; no source adds rows to them).
+
+Differences from a dbt seed, none of which changes a row of 13 November (the eight tables built both ways have
+the same columns, types and rows): an empty field is NULL, and the text `null` is now kept as text (dbt's seed
+loader read it as NULL); a column's type is the model's cast, not guessed from the values, so one odd row cannot
+change it. The docs still call a list by its old file name (`kpi.csv` is the list `kpi`).
+
+**Open pull requests that added rows to `warehouse/seeds/<list>.csv`.** Merge `origin/main`. Git follows the
+rename, so the rows arrive in `warehouse/seed_rows/<list>/_shared.csv` (or the old file comes back, when git
+could not follow). `python -m ops.repo_check` (`seed files`) names each such file: cut your rows into
+`warehouse/seed_rows/<list>/<source_system>.csv` under a copy of the header line.
 
 ## Checks
 
@@ -113,7 +140,15 @@ or both; a source with a block in the old list and a registration; a registratio
 blocks, sits in the wrong file or names an unknown source; a geography CTE that is not named after its
 source or whose name already exists (in `poc_map_geography.sql` or in another source's macro);
 a `source.csv` or `licence.csv` row missing for a source (`register`); a choice list put back on the
-Pipeline `source` input. `seed files` fails on what a union merge can leave in a seed (above).
+Pipeline `source` input.
+
+`seed files` checks the code lists. A dbt seed: a repeated row or key, a second header line, a row with the
+wrong number of fields, a last line without a line break (what a union merge can leave behind). A list kept as
+rows per source, the same for each file, and: a file that is neither `_shared.csv` nor named after a declared
+source; more rows in `_shared.csv` than at the split (`SEED_ROWS_SHARED` in `ops/repo_check.py`); a row of
+`source`, `kpi_measure`, `kpi_v2_map` or `unit_map` in another source's file; a key on two rows across the
+files; a header that differs from the other files; a folder without its model, or a model that does not read the
+folder or does not name it in its config meta; a seed CSV put back next to its folder.
 
 ## Rebuilds
 
@@ -132,8 +167,18 @@ dimensions that union the blocks and what is built on them (142 of the 166 Gold 
 no Silver model and no seed. A macro in `macros/sources/` whose name does not start with `poc_` could
 replace a dbt macro for every model, so its file counts for every model.
 
+A list kept as rows per source is fingerprinted with its files (the model's config meta `seed_rows` names the
+folder): a new or edited file rebuilds that list and what reads it, as an edited seed CSV did. A new source's
+rows in `source` and `licence` rebuild `dim_source` and what is built on it; rows in `kpi_measure` or `unit_map`
+rebuild the KPI and unit models and the metrics.
+
 ## Undo
 
 Revert the pull request of D34: the choice list, `lineage.SOURCES` and the direct reads of `warehouse.yaml`
 come back. Sources registered the new way in the meantime need their lines moved to the shared files first
 (`repo_check` names each one). No data changes either way.
+
+D36 alone: for each list, join the files of `warehouse/seed_rows/<list>/` into `warehouse/seeds/<list>.csv`
+(one header), delete the folder and the model, and move the list's tests back to `seeds/_seeds.yml` (with
+`column_types: {factor: "decimal(38,9)"}` for `unit` and every column of `unit_map` as `varchar`).
+`seed_rows.rows()` then reads the seed, so its callers do not change. The tables keep their names and rows.

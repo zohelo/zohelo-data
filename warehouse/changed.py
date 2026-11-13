@@ -54,6 +54,8 @@ import re
 import subprocess
 from typing import Any
 
+from warehouse import seed_rows
+
 PROJECT = Path(__file__).resolve().parent
 BLOCK_TAG = "gold_block"  # a Gold block: its children read it only when its table exists
 OPTIONAL_PARENTS = "optional_parents"  # config meta: parents (model names) a model reads only when they exist
@@ -65,6 +67,9 @@ SHARED_CODE = ("macros", "dimensions", "dbt_project.yml", "../requirements.txt")
 SOURCE_MACROS = "macros/sources"
 # The macros that find the per-source macros by name; dbt records no dependency for a macro called that way.
 REGISTRATION = "macros/source_registration.sql"
+# A model that reads a code list kept per source (config meta of warehouse/seed_rows.py) is fingerprinted with the
+# list's files, as a seed is with its CSV: dbt's checksum of the model covers its SQL only.
+SEED_ROWS = seed_rows.META
 SOURCE_MACRO_PREFIX = "poc_"  # a macro of another name there could replace a dbt macro for every model
 EXTERNAL_MODELS: frozenset[str] = frozenset()  # models built outside the scheduled build (none since #875)
 # A Bronze commit stamped just before a build started may become visible only after dbt
@@ -168,7 +173,8 @@ def files_digest(files: list[str]) -> str:
 def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """unique_id → name, namespace, table, parents (unique ids of models, seeds and sources), fingerprint.
     Seeds are planned like models: their checksum is the CSV's, so an edited seed rebuilds itself
-    and the models that ref it."""
+    and the models that ref it. A model that reads a code list kept per source (config meta SEED_ROWS) has the
+    list's files in its fingerprint, so an added or edited file does the same."""
     shared = shared_digest()
     per_source = source_macro_files(meta)
     nodes = {**meta["nodes"], **meta["sources"]}
@@ -179,8 +185,16 @@ def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
         # Parents' resolved relations: repointing a source or ref to another table is a change.
         upstream = node.get("depends_on", {}).get("nodes", [])  # a seed lists none
         parents = sorted(".".join(relation(nodes[p])) for p in upstream if p in nodes)
+        listed = node.get("config", {}).get("meta", {}).get(SEED_ROWS)
+        rows = [path.relative_to(PROJECT).as_posix() for path in seed_rows.files(listed)] if listed else []
         code = json.dumps(
-            [shared, node["checksum"]["checksum"], node.get("config", {}), parents, files_digest(per_source[uid])],
+            [
+                shared,
+                node["checksum"]["checksum"],
+                node.get("config", {}),
+                parents,
+                files_digest(per_source[uid] + rows),
+            ],
             sort_keys=True,
             default=str,
         )

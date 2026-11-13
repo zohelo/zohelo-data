@@ -12,6 +12,7 @@ models/silver/<source_system>/    typed, cleaned, conformed source tables
 models/gold/                      conformed dimensions and facts
 semantic_models/                  MetricFlow semantic models and metrics
 seeds/                            seeds/ = owner-readable code lists, built into gold
+seed_rows/<list>/, seed_rows.py   the code lists every source adds rows to, one CSV file per source (docs/source-registration.md, D36)
 dimensions/                       dimension registry (definitions-as-code, draft; docs/model.md)
 macros/, tests/                   shared macros; singular data tests
 entity/, entity.py                per-entity Silver SQL applied by the Eurostat and BDL loaders; gold_*.sql: Gold per block

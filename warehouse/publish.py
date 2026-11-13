@@ -15,7 +15,6 @@ Licence gate (O37, docs/published.md): no row of a source whose licence is unres
 
 from __future__ import annotations
 
-import csv
 from datetime import UTC, date, datetime, timedelta
 import io
 import json
@@ -26,6 +25,8 @@ from typing import Any
 import duckdb
 import pyarrow as pa
 import pyarrow.compute as pc
+
+from warehouse import seed_rows
 
 PROJECT = Path(__file__).resolve().parent
 SCHEMAS = Path(__file__).resolve().parent / "published" / "schemas"
@@ -237,8 +238,8 @@ def published_age_hours(client, prefix: str, now: datetime) -> float | None:
 
 
 def seed(name: str) -> list[dict[str, str]]:
-    with (PROJECT / "seeds" / f"{name}.csv").open(encoding="utf-8", newline="") as handle:
-        return list(csv.DictReader(handle))
+    """The rows of a code list in the repository: a dbt seed or a list kept per source (warehouse/seed_rows.py)."""
+    return seed_rows.rows(name)
 
 
 def licensed_sources(sources: list[dict[str, str]], licences: list[dict[str, str]]) -> set[str]:
@@ -929,7 +930,7 @@ def preload(cat, client, prefix: str, namespace: str, measures, licensed: set[st
             feeds.setdefault(table, set()).add(f"v2 {entry['kpi_key']}")
             if entry["kpi_key"] in live_v2:
                 waited_for.add(table)
-    seeds = {table for table in support if (PROJECT / "seeds" / f"{table[1]}.csv").exists() and seed(table[1])}
+    seeds = {table for table in support if seed_rows.exists(table[1]) and seed(table[1])}
     tables, missing, empty = read_tables(
         cat, wanted, waited_for, scans={t: scan for t, (_fed, scan) in support.items()}, never_empty=seeds
     )

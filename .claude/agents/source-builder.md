@@ -22,9 +22,10 @@ skills:
 - Work only in your own git worktree and your own source. A source's lines go in the source's own
   files (`docs/source-registration.md`, D34): never add a line to `warehouse/warehouse.yaml`,
   `ingestion/common/lineage.py`, `.github/workflows/pipeline.yml`, `warehouse/models/bronze/sources.yml` or
-  `docs/sources.md`. Still shared (`ingestion/register.yaml`, `warehouse/seeds/source.csv`, `licence.csv`,
-  `unit.csv`): touch only your own rows or lines, rebase on `origin/main` right before opening the PR and
-  resolve conflicts by keeping both sides. Do not touch `poc_fact_*` or Gold (that is `gold-modeller`).
+  `docs/sources.md`. Your rows of the code lists (`source`, `licence`, `unit`, `unit_map`, `unit_decimals`) go in
+  `warehouse/seed_rows/<list>/<source_system>.csv`: the header line of `_shared.csv`, then your rows; never a new
+  row in `_shared.csv` or in another source's file (D36). Still shared: `ingestion/register.yaml` (touch only your
+  own entry, merge `origin/main` right before opening the PR and resolve conflicts by keeping both sides). Do not touch `poc_fact_*` or Gold (that is `gold-modeller`).
 - One PR per source (or small family), at most about 400 changed lines; body starts `Closes #<Task>` (create the
   Task by REST if the generated one does not exist: `gh api repos/zohelo/zohelo-data/issues -f title=… -f type=Task
   -f body=…`; open the PR by REST, `gh pr create` fails). Do **not** enable auto-merge: the orchestrator merges
@@ -74,8 +75,9 @@ skills:
    rejected files, and that the second run changed nothing.
 6. **Schedule**: `extraction.schedule` with a release-aware cron in UTC and the run
    `full dataflow: landing → bronze → silver → gold → portal`.
-7. **Docs and seeds**: `docs/sources/<source_system>.md` (route, entity, version, restart unit), `source.csv`,
-   `licence.csv`, register `status: built`. You never set `silver` or `gold`: the orchestrator
+7. **Docs and code lists**: `docs/sources/<source_system>.md` (route, entity, version, restart unit), your
+   `source` and `licence` rows in `warehouse/seed_rows/source/<source_system>.csv` and
+   `warehouse/seed_rows/licence/<source_system>.csv`, register `status: built`. You never set `silver` or `gold`: the orchestrator
    does at Verify, after the scheduler's own runs.
 
 ## Pre-PR checklist (lessons from reviews; every line gets "done: <evidence>" or "n/a: <why>" in the PR body)
