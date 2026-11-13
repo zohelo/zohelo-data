@@ -23,11 +23,12 @@ archive_policy:
   prune: report
 bronze: [bronze.crossref_facet_counts, bronze.crossref_funders, bronze.crossref_rejected_files]
 silver: [silver.crossref_works_pl_counts, silver.crossref_funders]
-gold: [gold.build_crossref]
+gold: [gold.build_crossref, gold.metrics_scholarly_works_pl_affiliation]   # draft KPI, read from this source only
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   crossref_works_pl_counts: {rows: 60000}  # estimate, measured in the Dev trial
   crossref_funders: {rows: 300}  # estimate
   poc_build_crossref: {rows: 60000}  # estimate
+  poc_metrics_scholarly_works_pl_affiliation: {rows: 200}  # estimate
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): about 30 small answers (under 3 MB, some 20,000 counts) with no changed-since

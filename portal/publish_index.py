@@ -32,8 +32,6 @@ import os
 from pathlib import PurePosixPath
 import time
 
-import boto3
-from botocore.config import Config
 from botocore.exceptions import ClientError
 
 INDEX_ROOT = "_portal_index/v1/"
@@ -227,14 +225,9 @@ def add_record(ids, parents, identity, meta, extra=None):
 def main():
     lakehouse = required("STORAGE_LAKEHOUSE_BUCKET_NAME")
     landing = required("STORAGE_LANDING_BUCKET_NAME")
-    s3 = boto3.client(
-        "s3",
-        endpoint_url=required("STORAGE_ENDPOINT_URL").rstrip("/"),
-        region_name="auto",
-        aws_access_key_id=required("STORAGE_WRITE_ACCESS_KEY"),
-        aws_secret_access_key=required("STORAGE_WRITE_SECRET_KEY"),
-        config=Config(signature_version="s3v4", retries={"max_attempts": 8, "mode": "standard"}),
-    )
+    from ingestion.common.r2 import storage_client
+
+    s3 = storage_client()  # the shared client: every throttled request waits and is sent again (#2985)
 
     table_folders = catalog_folders()
     waited = {"seconds": 0, "retries": 0}
