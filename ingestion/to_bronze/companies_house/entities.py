@@ -4,16 +4,18 @@
 Entity = the declared file (``basic_company_data``); its newest Landing version is the entity version:
 
   02_bronze/companies_house/companies_house_companies/<raw_sha256>.parquet     every company of the snapshot,
-      13 of the file's 55 columns as text (replaced whole: Bronze holds the newest snapshot only)
+      the 13 landed columns as text (replaced whole: Bronze holds the newest snapshot only)
   03_silver/companies_house/companies_house_poland_origin/<raw_sha256>.<digest>.parquet    replaced whole
   03_silver/companies_house/companies_house_snapshot_counts/<raw_sha256>.<digest>.parquet  entity = the snapshot
       date: one small file per snapshot, kept, so the monthly history builds up from the first Landing
 
-Personal data: the file's street lines, postcode, care-of line, PO box, county and previous names are not
-loaded (a registered office can be a director's home, a previous name a person's); neither are the accounts,
-returns, mortgage and partnership columns and the URI (not used by the selection). The header must still be the
-known 55 columns: another header rejects the file (bronze.companies_house_rejected_files) and every table keeps
-its previous version. Uploads happen only after every check passed. ``<digest>`` covers both Silver models.
+Personal data: the source file's street lines, postcode, care-of line, PO box, county and previous names (a
+registered office can be a director's home, a previous name a person's) are dropped before Landing
+(ingestion/to_landing/companies_house ``reduce_snapshot``), with the accounts, returns, mortgage and partnership
+columns and the URI (not used), so the landed file has 13 columns and ``raw_sha256`` is the SHA-256 of that
+reduced file. The header must be exactly those 13 columns: another header rejects the file
+(bronze.companies_house_rejected_files) and every table keeps its previous version. Uploads happen only after
+every check passed. ``<digest>`` covers both Silver models.
 ``landing_root``, ``namespace`` and ``lake_root`` exist for Dev trials (zz_dev_ scratch locations).
 """
 
@@ -39,6 +41,7 @@ from ingestion.common import bronze_files as bf
 from ingestion.common import entity_tables as et
 from ingestion.common.r2 import archive_key, catalog, raw_chunks, req, s3
 from ingestion.common.report import annotate, step_summary
+from ingestion.to_landing.companies_house import COLUMNS
 from ingestion.to_landing.patterns import bulk_file
 from warehouse import entity
 
@@ -56,19 +59,7 @@ SILVER = {  # model = Silver table: (not-null columns, key)
     ),
 }
 SNAPSHOT_RE = re.compile(r"BasicCompanyDataAsOneFile-(\d{4}-\d{2}-\d{2})\.zip$")
-HEADER = [  # the file's header (names stripped: some follow a space), snapshot of 1 November 2026
-    "CompanyName", "CompanyNumber", "RegAddress.CareOf", "RegAddress.POBox", "RegAddress.AddressLine1",
-    "RegAddress.AddressLine2", "RegAddress.PostTown", "RegAddress.County", "RegAddress.Country",
-    "RegAddress.PostCode", "CompanyCategory", "CompanyStatus", "CountryOfOrigin", "DissolutionDate",
-    "IncorporationDate", "Accounts.AccountRefDay", "Accounts.AccountRefMonth", "Accounts.NextDueDate",
-    "Accounts.LastMadeUpDate", "Accounts.AccountCategory", "Returns.NextDueDate", "Returns.LastMadeUpDate",
-    "Mortgages.NumMortCharges", "Mortgages.NumMortOutstanding", "Mortgages.NumMortPartSatisfied",
-    "Mortgages.NumMortSatisfied", "SICCode.SicText_1", "SICCode.SicText_2", "SICCode.SicText_3",
-    "SICCode.SicText_4", "LimitedPartnerships.NumGenPartners", "LimitedPartnerships.NumLimPartners", "URI",
-    *[f"PreviousName_{n}.{part}" for n in range(1, 11) for part in ("CONDATE", "CompanyName")],
-    "ConfStmtNextDueDate", "ConfStmtLastMadeUpDate",
-]  # fmt: skip
-KEPT = {  # CSV column → Bronze column (text, as published)
+KEPT = {  # landed CSV column (ingestion.to_landing.companies_house.COLUMNS) → Bronze column (text, as published)
     "CompanyNumber": "company_number",
     "CompanyName": "company_name",
     "CompanyCategory": "company_category",
@@ -89,6 +80,8 @@ PROVENANCE = [
     ("source_version", "VARCHAR"),
     ("ingested_at", "TIMESTAMPTZ"),
 ]
+if set(KEPT) != set(COLUMNS):  # one list decides what is landed, the other names it in Bronze
+    raise RuntimeError("companies_house: KEPT and the landed COLUMNS differ")
 BRONZE_COLUMNS = [(ENTITY, "VARCHAR")] + [(c, "VARCHAR") for c in KEPT.values()] + PROVENANCE
 SILVER_TYPES = {"string": "VARCHAR", "large_string": "VARCHAR", "int64": "BIGINT", "date32[day]": "DATE"}
 MEMORY = "8GB"
@@ -133,7 +126,7 @@ def fetch(client, bucket: str, receipt: dict[str, Any], path: Path) -> None:
 
 
 def decode(raw: Path, receipt: dict[str, Any], snapshot: str, output: Path) -> int:
-    """One ZIP → Parquet: entity, the kept CSV columns as text, snapshot date, provenance; returns the rows."""
+    """One landed ZIP → Parquet: entity, its CSV columns as text, snapshot date, provenance; returns the rows."""
     try:
         with zipfile.ZipFile(raw) as archive:
             members = [m for m in archive.infolist() if m.filename.lower().endswith(".csv")]
@@ -144,7 +137,7 @@ def decode(raw: Path, receipt: dict[str, Any], snapshot: str, output: Path) -> i
                 shutil.copyfileobj(src, dst, 16 << 20)
     except zipfile.BadZipFile as exc:
         raise DecodeError(f"not a readable ZIP: {exc}") from exc
-    raw.unlink()  # disk: the CSV is about 2.8 GB
+    raw.unlink()
     con = duckdb.connect()
     try:
         con.execute(f"SET memory_limit = '{MEMORY}'")
@@ -155,10 +148,10 @@ def decode(raw: Path, receipt: dict[str, Any], snapshot: str, output: Path) -> i
                 "header=true, all_varchar=true, strict_mode=true, encoding='utf-8', sample_size=-1)"
             )
             headers = [r[0] for r in con.execute("DESCRIBE src").fetchall()]
-            if [h.strip() for h in headers] != HEADER:
-                changed = sorted({h.strip() for h in headers} ^ set(HEADER))[:10]
-                raise DecodeError(f"CSV header differs from the known 55 columns: {changed or 'order'}")
-            named = {h.strip(): '"' + h.replace('"', '""') + '"' for h in headers}
+            if sorted(headers) != sorted(COLUMNS):
+                changed = sorted(set(headers) ^ set(COLUMNS))[:10]
+                raise DecodeError(f"CSV header differs from the {len(COLUMNS)} landed columns: {changed or 'repeated'}")
+            named = {h: '"' + h.replace('"', '""') + '"' for h in headers}
             select = ", ".join(
                 ["? AS entity"]
                 + [f"{named[column]} AS {name}" for column, name in KEPT.items()]

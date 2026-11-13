@@ -3,15 +3,19 @@ description: "UK Companies House — Free Company Data Product: monthly snapshot
 
 # Extraction strategy (docs/landing.md). Bulk feature: the Free Company Data Product, one snapshot a month of every
 # live company on the register, "compiled up to the end of the previous month" and published within 5 working days.
-# The listing page links BasicCompanyDataAsOneFile-<YYYY-MM-DD>.zip (about 495 MB; one CSV of about 2.6 GB) and the
+# The listing page links BasicCompanyDataAsOneFile-<YYYY-MM-DD>.zip (about 495 MB; one CSV of about 2.8 GB) and the
 # same data in 7 parts; the date in the name changes each month, so the shared bulk_file pattern reads the listing
 # page first (url_from). The one file is taken, not the 7 parts: the pattern downloads whole files (no Range
 # resume) either way, a 0.5 GB transfer is what GLEIF's lei2 already is on the runner, and one file is one
 # snapshot with one receipt (7 parts could land as a mix of two months). The snapshot date is the date in the file
 # name (kept in the receipt's source_url, a Bronze column); the Landing version token is the file's Last-Modified.
-# A file Landing already holds (same name on the page, same Last-Modified and size) is not downloaded again
-# (ingestion/to_landing/companies_house); a downloaded file with an unchanged SHA-256 is not landed again. The REST
-# and streaming APIs (key needed), the PSC snapshot (personal data) and officers are not used. Terms: register CD-014.
+# Personal data (no natural persons' data is stored; precedent O33): the file is reduced before Landing to the 13
+# columns the platform uses (reduce: companies_house, ingestion/to_landing/companies_house): the registered
+# office's care-of line, PO box, street lines, county and postcode and the previous names are dropped, with the
+# accounts, returns, mortgage and partnership columns and the URI, and are never stored (Landing, Archive, Bronze).
+# A file Landing already holds (same name on the page, same Last-Modified and ETag) is not downloaded again; a
+# downloaded file whose reduced bytes are unchanged (SHA-256) is not landed again. The REST and streaming APIs
+# (key needed), the PSC snapshot (personal data) and officers are not used. Terms: register CD-014.
 extraction:
   kind: bulk_file
   bulk_file:
@@ -22,6 +26,7 @@ extraction:
           pattern: 'BasicCompanyDataAsOneFile-\d{4}-\d{2}-\d{2}\.zip$'
         format: zip
         version: last_modified
+        reduce: companies_house   # land only the 13 columns without personal data
   initial: bulk
   production: snapshot                    # each file is the complete register of live companies
   incremental_policy: changed_since_last  # a new file name each month; SHA-256
@@ -29,7 +34,7 @@ extraction:
     - {cron: "40 4 10 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/companies_house/
-# Retention: the newest file plus 3 days of superseded ones (0.5 GB a file; storage is paid beyond the free tier).
+# Retention: the newest (reduced) file plus 3 days of superseded ones (storage is paid beyond the free tier).
 archive_policy:
   move: true
   retention: {keep_latest: 1, keep_days: 3}
@@ -38,8 +43,8 @@ bronze: [bronze.companies_house_companies, bronze.companies_house_rejected_files
 silver: [silver.companies_house_poland_origin, silver.companies_house_snapshot_counts]
 gold: [gold.build_companies_house, gold.company_uk_poland_origin]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  poc_build_companies_house: {rows: 1000}  # 48 per monthly snapshot (Dev trial 43328628842); the history adds as many each month, so the ceiling is about 20 months, to be raised with the history
-  company_uk_poland_origin: {rows: 75}  # 50 (Dev trial 43328628842)
+  poc_build_companies_house: {rows: 1000}  # 48 per monthly snapshot (measured, Dev trial of #1502); the history adds as many each month, so the ceiling is about 20 months, to be raised with the history
+  company_uk_poland_origin: {rows: 75}  # 50 (measured, Dev trial of #1502)
 
 # Refresh policy for all layers (D32): one file of several million rows a month, replaced whole by the source, so
 # the unit is the file. Bronze holds the newest snapshot only (the file's entity is replaced); Silver is written
