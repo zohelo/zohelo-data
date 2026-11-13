@@ -959,6 +959,7 @@ and women, Poland and voivodeships). Gold block `registered_unemployment` (KPIs 
 `registered_unemployment_rate`, next to GUS BDL and DBW). Weekly schedule (Tuesday). Licence: CC BY 3.0 PL (portal
 footer). The ZIPs since 2001, the half-yearly occupation and vacancy tables and the yearly MRPiPS-01 data files
 (SPR1, about 27 MB) are not built yet.
+
 ## PSE Reports API v2 (`pse`)
 
 **Built (12 Nov 2026, register PL-ENV-019).** PSE (Polskie Sieci Elektroenergetyczne) serves its power-system and
