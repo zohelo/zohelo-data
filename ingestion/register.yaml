@@ -2599,7 +2599,8 @@ sources:
   name: API Statystyki NFZ – Świadczenia
   short_name: 'NFZ statistics: services'
   provider: Narodowy Fundusz Zdrowia (NFZ)
-  status: approved
+  source_system: nfz_services
+  status: built
   family: B
   kpi: true
   geography: Poland; provider/clinical group tables
@@ -2644,7 +2645,8 @@ sources:
     blockers:
     - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived values; published
       values are shown unchanged'
-    - Enumerate history
+    - 'Built for basic-data only (Poland and NFZ branches, 2009-2024, #2929): the other table types and the hospital-type
+      splits are not loaded'
     references:
     - https://api.nfz.gov.pl/app-stat-api-jgp/
     - https://api.nfz.gov.pl/app-stat-api-jgp/terms
@@ -2652,7 +2654,8 @@ sources:
   name: API Statystyki NFZ – Refundacja apteczna
   short_name: 'NFZ statistics: pharmacy refunds'
   provider: Narodowy Fundusz Zdrowia (NFZ)
-  status: approved
+  source_system: nfz_pharmacy_refunds
+  status: built
   family: B
   kpi: true
   geography: Poland
@@ -2694,8 +2697,10 @@ sources:
     blockers:
     - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived values; published
       values are shown unchanged'
-    - Enumerate dimensions/history
-    - Resolve medicine-code crosswalks
+    - 'Built (#2930): /monthly-provisions for Poland and the 16 voivodeships x (no ATC filter + 14 ATC main groups), 2017-01
+      to 2024-12 in Nov 2026, plus the /atc dictionary. Not loaded: package-level /provisions, gender, age-group, 75+ and
+      announcement splits, top lists, /yearly-provisions'
+    - Resolve medicine-code crosswalks (package level, when /provisions is loaded)
     references:
     - https://api.nfz.gov.pl/app-stat-api-ra/
     - https://api.nfz.gov.pl/app-stat-api-ra/terms
