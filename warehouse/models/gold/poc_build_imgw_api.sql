@@ -5,7 +5,7 @@
    snapshots hold its temperature at all eight main synoptic terms (00, 03, ..., 21 UTC); the station's day value
    is the mean of those eight; Poland = mean over the stations that count, published for a day with at least 30 of
    the 62 stations. A day whose snapshots missed a term (a scheduled run that did not happen) is not published.
-   IMGW gives no voivodeship for the stations, so Poland only. #}
+   Poland only: the voivodeship series come from the verified archive (poc_build_imgw_archive). #}
 with terms as (
     select
         station_id,

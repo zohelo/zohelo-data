@@ -28,9 +28,13 @@ extraction:
   initial: api
   production: snapshot                  # each response is the current state; snapshots accumulate in Bronze
   incremental_policy: full_refresh      # no history, no version: every run fetches the current state
-  schedule: # UTC; synop observations are hourly, the main synoptic terms are 00, 03, ..., 21 UTC; a snapshot 25 minutes after each main term (the API answers within the hour), one request per run; the 21:25 run also loads and builds the day
-    - {cron: "25 0,3,6,9,12,15,18 * * *", run: "landing: extract"}
-    - {cron: "25 21 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  # UTC; synop observations are hourly, the main synoptic terms are 00, 03, ..., 21 UTC. A snapshot after each main
+  # term, one request per run (three-hourly, slower than the source): the slot at minute 5 is dispatched by the
+  # scheduler's :17 pass, so the fetch lands about 20 minutes after the term and a late start still stays within
+  # the term's hour (Dev probe 43336937240 saw hour 0 at 00:26). The 21:05 run also loads and builds the day.
+  schedule:
+    - {cron: "5 0,3,6,9,12,15,18 * * *", run: "landing: extract"}
+    - {cron: "5 21 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/imgw_api/
 archive_policy:
