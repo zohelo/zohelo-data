@@ -11,38 +11,11 @@
    (design draft 2: map_geography__<source>, merged into one table). Unmatched codes map to
    '_X' and are counted by the build check. A new source does not add a CTE here: it defines
    poc_geography__<source_system>() in warehouse/macros/sources/<source_system>.sql
-   (docs/source-registration.md) and the two poc_geography_* calls below place it. #}
+   (docs/source-registration.md) and the two poc_geography_* calls below place it. Eurostat's codes are
+   registered that way (macros/sources/eurostat.sql). #}
 with geo as (select * from {{ ref('poc_dim_geography') }}),
 
-nuts_pl as ({{ poc_nuts_pl() }}),
-
-{{ poc_geography_ctes() }}eurostat_codes as (
-    select code from {{ ref('eurostat_codes') }}
-    where codelist_id = 'GEO'
-    group by code
-),
-
-eurostat as (
-    select
-        'eurostat' as source_system,
-        c.code as source_code,
-        coalesce(
-            case when c.code in ('EL', 'UK') then (case c.code when 'EL' then 'GR' else 'GB' end) end,
-            case when n.woj_code is not null and n.level_name = 'wojewodztwo' then 'TERC:' || n.woj_code end,
-            case when n.nuts_code is not null then 'NUTS:' || n.nuts_code end,
-            g_country.geography_key,
-            g_nuts.geography_key,
-            g_agg.geography_key,
-            '_X'
-        ) as geography_key
-    from eurostat_codes as c
-    left join nuts_pl as n on c.code = n.nuts_code
-    left join geo as g_country on c.code = g_country.geography_key and g_country.level_name = 'country'
-    left join geo as g_nuts on g_nuts.geography_key = 'NUTS:' || c.code
-    left join geo as g_agg on g_agg.geography_key = 'EUROSTAT:' || c.code
-),
-
--- BDL: the web export keys rows by a 7-digit zero-padded TERYT code (0000000 Polska, WW00000
+{{ poc_geography_ctes() }}-- BDL: the web export keys rows by a 7-digit zero-padded TERYT code (0000000 Polska, WW00000
 -- województwo, WWPP000 powiat, WWPPGGT gmina); the API by a 12-character unit id (bdl_units),
 -- mapped here by level and name (v1: the GUS KTS–TERYT correspondence table).
 terc_woj as (
@@ -465,9 +438,7 @@ select
     coalesce(g.geography_key, '_X') as geography_key,
     g.geography_key is not null as matched
 from (
-    {{ poc_geography_union() }}select * from eurostat
-    union all
-    select * from bdl
+    {{ poc_geography_union() }}select * from bdl
     union all
     select * from bdl_terc
     union all
