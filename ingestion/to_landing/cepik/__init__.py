@@ -63,7 +63,7 @@ def discover(today: datetime | None = None) -> tuple[dict[str, dict[str, Any]], 
                 time.sleep(PAUSE)
                 try:
                     pages[url] = _links(url)
-                except Exception:  # noqa: BLE001 - a page not (yet) published: reported as without
+                except Exception:  # a page not (yet) published, or unreachable: reported as without a workbook
                     pages[url] = []
             spec = pick(topic, year, pages[url])
             if spec:

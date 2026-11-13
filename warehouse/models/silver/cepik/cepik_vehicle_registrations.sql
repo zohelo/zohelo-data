@@ -108,12 +108,12 @@ block_values as (
         m.period_month
     from data_rows as r
     inner join cells as c
-        on c.entity = r.entity and c.sheet_name = r.sheet_name and c.row_number = r.row_number and c.column_number > 1
+        on r.entity = c.entity and r.sheet_name = c.sheet_name and r.row_number = c.row_number and c.column_number > 1
     left join month_columns as m
         on
-            m.entity = r.entity
-            and m.sheet_name = r.sheet_name
-            and m.header_row = r.header_row
+            r.entity = m.entity
+            and r.sheet_name = m.sheet_name
+            and r.header_row = m.header_row
             and c.column_number between m.header_column and m.header_column + 2
 ),
 
@@ -138,14 +138,14 @@ national as (
         c.raw_sha256,
         rm.period_month
     from roman_rows as rr
-    inner join cells as h on h.entity = rr.entity and h.sheet_name = rr.sheet_name and h.row_number = rr.roman_row
+    inner join cells as h on rr.entity = h.entity and rr.sheet_name = h.sheet_name and rr.roman_row = h.row_number
     inner join roman as rm on h.value_text = rm.numeral
     inner join cells as c
         on
-            c.entity = rr.entity
-            and c.sheet_name = rr.sheet_name
-            and c.row_number = rr.roman_row + 1
-            and c.column_number = h.column_number
+            rr.entity = c.entity
+            and rr.sheet_name = c.sheet_name
+            and rr.roman_row + 1 = c.row_number
+            and h.column_number = c.column_number
     where c.table_code = 'voivodeship'
 ),
 
