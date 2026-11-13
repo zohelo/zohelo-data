@@ -20,6 +20,31 @@ from ingestion.to_landing import cie_sio as landing
 SCRATCH = "zz_dev_sio"
 
 
+def profile(cells) -> None:
+    """Print every workbook's layout to the job log: sheets and size, the first rows in full, and per column the
+    distinct values (at most 60) with the count of numeric and non-numeric cells."""
+    import duckdb
+
+    con = duckdb.connect()
+    con.register("c", cells)
+    for (entity,) in con.sql("select distinct entity from c order by 1").fetchall():
+        print(f"\n##### {entity}", flush=True)
+        for row in con.sql(f"""select sheet_index, sheet_name, count(*), max(row_number), max(column_number)
+                from c where entity = '{entity}' group by all order by 1""").fetchall():
+            print("SHEET", row)
+        for row in con.sql(f"""select sheet_index, row_number, string_agg(column_number || ':' || replace(value_text, chr(10), ' '),
+                ' | ' order by column_number) from c where entity = '{entity}' and row_number <= 6 group by all order by 1, 2""").fetchall():
+            print("ROW", row)
+        for row in con.sql(f"""select sheet_index, column_number, count(*) n,
+                count(*) filter (where try_cast(replace(value_text, ',', '.') as double) is not null) numeric,
+                string_agg(distinct left(value_text, 40), ' ~ ')[:1500] vals
+                from c where entity = '{entity}' and row_number > 1 group by all order by 1, 2""").fetchall():
+            if row[3] < row[2]:
+                print("COL", row)
+            else:
+                print("COL", row[:4], "numeric")
+
+
 def main(argv) -> int:
     client = s3()
     cat = bf.retry(catalog, "catalog")
@@ -37,6 +62,7 @@ def main(argv) -> int:
             rejected = cat.load_table((SCRATCH, "cie_sio_rejected_files")).scan().to_arrow().to_pylist()
         except Exception:
             rejected = []
+        profile(cells)
         annotate("notice", "cie_sio probe", {"entities": len(entities), "cells": cells.num_rows,
                                              "rejected": [(r["entity"], r["error"][:100]) for r in rejected]})
     finally:
