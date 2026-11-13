@@ -43,11 +43,11 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('average_farm_area', 'gus_psr2020', '%', 0, 100),
     -- MRPiPS-03 (#2910): persons granted social assistance, PL 2019 = 1,205,506 (Dev trial 43293740538)
     ('social_assistance_recipients', 'mrpips_social_assistance', '%', 0, 1e7),
-    -- IMGW synoptic stations, Poland monthly means (#2959): °C, Polish records of a station month lie within -25
-    -- and 30 (a mean over ~60 stations is narrower); precipitation mm per month, the wettest station months reach
-    -- about 500 mm in the mountains, a mean over the stations far less (Dev trial: see ingestion/sources/imgw_archive.yaml)
+    -- IMGW synoptic stations, Poland and voivodeship monthly means (#2959): °C, Polish station months lie within
+    -- -25 and 30; precipitation mm per month, a voivodeship mean can be one station, and the wettest mountain
+    -- station months reach several hundred mm (Dev trial: see ingestion/sources/imgw_archive.yaml)
     ('air_temperature', 'imgw_archive', '%', -30, 35),
-    ('precipitation', 'imgw_archive', '%', 0, 500),
+    ('precipitation', 'imgw_archive', '%', 0, 1000),
     ('inflation', 'eurostat', '%', -100, 3000),
     ('inflation', 'world_bank_wdi', '%', -100, 100000),
     ('unemployment_rate', 'eurostat', '%', 0, 60),

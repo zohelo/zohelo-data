@@ -4,7 +4,9 @@ models:
     description: >-
       Station dimension of the IMGW daily synoptic archive (register PL-ENV-009): one row per station_code (IMGW
       9-digit code) found in silver.imgw_archive_synop_daily, with the name on its newest observation day, first and
-      last day, days held, and coordinates and altitude where the IMGW API station list has the same code. Grain:
+      last day, days held, coordinates and altitude where the IMGW API station list (/api/data/meteo/) has the same
+      code, and api_synop_station_id, the id_stacji of /api/data/synop ('12' + the last three digits of a synoptic
+      code, the station number of the archive's wykaz_stacji.csv). No TERYT code (IMGW gives none). Grain:
       station_code. Trial run in ingestion/sources/imgw_archive.yaml.
     tests:
       - unique:
@@ -15,6 +17,8 @@ models:
       - name: station_name
         tests: [not_null]
       - name: first_date
+        tests: [not_null]
+      - name: in_api_station_list
         tests: [not_null]
       - name: raw_sha256
         tests: [not_null]

@@ -13,13 +13,16 @@ parameter for TMAX, TMIN, STD, TMNG (°C), SMDB (mm), PKSN (cm), USL (h), IMGW s
 measurement, `9` phenomenon absent; older files write 0 with status 8/9, so a value is kept only for a measured
 observation). When a year closes, its monthly files are superseded by the station files and leave Bronze and Silver.
 Station dimension `silver.imgw_archive_synop_stations` (IMGW 9-digit code, newest name, first/last day; coordinates
-where the API station list has the code; no TERYT, IMGW gives none). Dates are observation days as published (no time
+and altitude where the API station list `/api/data/meteo/` has the same code; `api_synop_station_id` = `12` + the last
+three digits of a synoptic code, the `id_stacji` of `/api/data/synop`; no TERYT, IMGW gives none). Dates are observation days as published (no time
 of day in the files).
 
 Gold `build_imgw_archive` (blocks `synop_daily` D and `synop_monthly` M, `warehouse/macros/sources/imgw_archive.sql`):
-Poland only (no station-to-voivodeship key from IMGW): daily mean air temperature = mean of the station daily means;
-monthly mean air temperature = mean over stations with every day measured; monthly precipitation = mean of the station
-monthly sums over stations with every day measured or "phenomenon absent" (0 mm); at least 30 stations. Draft KPIs
+Poland (every station, at least 30) and voivodeships (stations whose API coordinates lie inside the PRG boundary of the
+voivodeship, at least one; stations closed before the API list have no coordinates and count for Poland only): daily
+mean air temperature = mean of the station daily means; monthly mean air temperature = mean over stations with every
+day measured; monthly precipitation = mean of the station monthly sums over stations with every day measured or
+"phenomenon absent" (0 mm). Draft KPIs
 `air_temperature`, `precipitation`. Schedule: 9th and 23rd of the month, 06:40 UTC.
 
 Not loaded yet (same archive, other layouts): daily klimat and opad files (one ZIP per month since 2001), the term

@@ -29,9 +29,9 @@ silver: [silver.imgw_archive_synop_daily, silver.imgw_archive_synop_stations]
 gold: [gold.build_imgw_archive, gold.metrics_air_temperature, gold.metrics_precipitation]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   imgw_archive_synop_stations: {rows: 200}  # TRIAL (Dev trial TRIAL)
-  poc_build_imgw_archive: {rows: 40000}  # TRIAL (Dev trial TRIAL); grows by 365 + 24 a year
-  poc_metrics_air_temperature: {rows: 1500}  # TRIAL
-  poc_metrics_precipitation: {rows: 1500}  # TRIAL
+  poc_build_imgw_archive: {rows: 600000}  # TRIAL (Dev trial TRIAL); Poland and 16 voivodeships, daily and monthly
+  poc_metrics_air_temperature: {rows: 20000}  # TRIAL
+  poc_metrics_precipitation: {rows: 20000}  # TRIAL
 
 # Refresh policy for all layers (D32): about 1,900 files and 9 million Silver rows (60 stations x 60 years x 7
 # parameters); a month adds one file and IMGW replaces single files when it corrects them, so a new file version

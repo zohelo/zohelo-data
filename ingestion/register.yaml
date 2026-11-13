@@ -8411,7 +8411,7 @@ sources:
   name: EDGAR APIs, bulk data and filing archives
   short_name: SEC EDGAR
   provider: U.S. Securities and Exchange Commission
-  status: approved
+  status: reviewing
   family: I
   kpi: false
   geography: United States
@@ -8426,8 +8426,11 @@ sources:
     interfaces: [API, bulk-files, HTML, XBRL, JSON]
     auth: Public HTTPS, no key; identify requests and follow fair-access guidance.
     cost: free
-    limits: Automated access must follow the SEC privacy and security policy and developer FAQs (declare a User-Agent; SEC
-      fair-access rate limit, 10 requests per second per the FAQs, not re-read here).
+    limits: 'Automated access must follow the SEC privacy and security policy and developer FAQs (declare a User-Agent; SEC
+      fair-access rate limit, 10 requests per second per the FAQs, not re-read: the pages were refused). 12 Nov 2026: every
+      SEC host and route answered HTTP 403 to the repository''s identified User-Agent, from the first request on, with the
+      page "Request Rate Threshold Exceeded [...] Automated access to our sites must comply with SEC.gov''s Privacy and
+      Security Policy. Please visit www.sec.gov/developer for more developer resources and Fair Access guidelines."'
   licence:
     status: open-conditional
     notes: 'Terms: SEC.gov privacy and security policy, section "Website Dissemination", https://www.sec.gov/privacy (read
@@ -8453,7 +8456,25 @@ sources:
     evidence: tested
     connection: tested
     blockers:
-    - Re-read the SEC Developer FAQ for the exact fair-access limit and User-Agent rule before the declaration
+    - 'Owner question: SEC EDGAR answers HTTP 403 to the User-Agent every zohelo-data extractor sends ("zohelo-data/1.0
+      (+https://github.com/zohelo/zohelo-data; public statistics platform)"), on both hosts and every route, which we do not
+      work around. The SEC asks automated clients to declare a User-Agent naming the operator and a contact e-mail address
+      (its sample form, as commonly cited: "Sample Company Name AdminContact@<sample company domain>.com"; not re-read, the
+      page was refused too), and the project has no contact address configured; none is invented and no personal address
+      is used. Which e-mail address (a project mailbox you control, not a personal one) may zohelo-data declare in the User-Agent
+      of its SEC EDGAR requests?'
+    - 'Dev probe run 43321810312 (job 131544106164, branch test/1498-sec-edgar, script dev/sec_edgar_probe.py, 12 Nov 2026;
+      one request at a time, 3 s apart, GET and HEAD only): HTTP 403 on www.sec.gov/robots.txt and data.sec.gov/robots.txt
+      (the first two requests), on /about/developer-resources, /search-filings/edgar-search-assistance/accessing-edgar-data,
+      /search-filings/edgar-application-programming-interfaces and /privacy, on the bulk files /Archives/edgar/daily-index/bulkdata/submissions.zip
+      and /Archives/edgar/daily-index/xbrl/companyfacts.zip, on /files/company_tickers.json, on the company search by country
+      (State=R9, Poland) and on data.sec.gov/submissions/CIK0000320193.json. Nothing was read or stored. Unverified: whether
+      a User-Agent in the SEC''s form is served from GitHub runners (the source review''s probe of 12 Nov read the pages from
+      a runner with a browser-style agent, so the runner addresses are not refused as such).'
+    - 'After the answer (Development Task #1498): re-read the fair-access limit and the User-Agent rule; scope Polish and
+      Poland-related issuers (business address or state of incorporation Poland, EDGAR country code R9, to verify) selected
+      from the nightly submissions.zip while reading it (one request, the archive is not landed), entities only, no natural-person
+      filers, no street addresses or phone numbers; submissions JSON fields only, no filing documents.'
     - 'Filing attachments can hold third-party rights and personal data: ingest the structured JSON, not documents'
     references:
     - https://www.sec.gov/search-filings/edgar-application-programming-interfaces
