@@ -38,7 +38,8 @@ surname, which is part of the legal entity's name.
 **Landing.** 16 fixed entities `extracts_00` … `extracts_15` (KRS number modulo 16). A file is the complete
 current state of its part, one JSON line per number, sorted, so unchanged data gives the same bytes; a part is
 written only when its bytes changed. One request at a time, 1 s apart, user agent of the project, three attempts
-with back-off on 408/429/5xx and network errors, any other status stops the run (never worked around), and so
+with back-off on 408/5xx and network errors, any other status (403 and 429 included) stops the run at once
+(never worked around; the next scheduled run continues from Landing), and so
 do 50 numbers in a row without an extract (a moved endpoint would look like that; they are not kept); at most
 120 minutes a run (about 4,300 requests), so the first load takes about ten daily runs, each continuing from
 Landing (numbers not held yet, ascending). Restart unit: one KRS number; a part is saved every 500 new records.
@@ -50,9 +51,11 @@ number listed on a day not before its last request.
 **Silver** `silver.ms_krs_entities`: one row per KRS number asked for, typed; `has_current_extract` is false
 for a number neither register holds a current extract of. **Gold** `gold.krs_entity`: one row per KRS number
 with a current extract (register, legal form, name, NIP, REGON, seat with the voivodeship key of
-`dim_geography`, dates, share capital, main PKD code, liquidation and bankruptcy flags); it joins GLEIF by the
-KRS number (`registration_authority_id = 'RA000484'`, `registration_authority_entity_id`), other sources by
-NIP or REGON, never by name. `gold.build_ms_krs`: the entities loaded, by legal form and seat voivodeship (today's seat): measure
+`dim_geography`, dates, share capital, main PKD code, liquidation and bankruptcy flags). `lei` is the LEI of
+the one GLEIF record registered under exactly this KRS number (`registration_authority_id = 'RA000484'`,
+`registration_authority_entity_id`); when several GLEIF records name one number, or none any more, `lei` is
+null and `lei_count` says how many (no LEI is picked). It joins other sources by NIP or REGON, never by name.
+A number without a current extract (struck off) is not in Gold; the current extract carries no deletion date. `gold.build_ms_krs`: the entities loaded, by legal form and seat voivodeship (today's seat): measure
 `ms_krs:lei_selection:entities` on the day of the newest request (daily) and `ms_krs:lei_selection:registered`
 by the month of registration in KRS (monthly; a month without registrations has no row). Both count LEI holders
 that still have a current extract, not Polish companies or all registrations of a month. No KPI.

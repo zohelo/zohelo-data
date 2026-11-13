@@ -10,7 +10,8 @@
    seat; the seat is today's, also for the month of registration). The selection is the KRS numbers GLEIF lists,
    loaded over several runs: these are counts of loaded entities that still have a current extract, not of
    Polish companies and not of all registrations of a month. An extract without a voivodeship adds no
-   voivodeship row; names that are no voivodeship are counted together under _X. #}
+   voivodeship row; a name that is no voivodeship of dim_geography gets geography_key _X and keeps the name as
+   its source code (its own series, never merged with another name). #}
 with entities as (
     select
         coalesce(legal_form, '_U') as legal_form,
@@ -37,7 +38,7 @@ located as (
     from entities
     union all
     select
-        coalesce(g.source_code, '_X') as geo_code,
+        e.seat_voivodeship as geo_code,
         coalesce(g.geography_key, '_X') as geography_key,
         e.legal_form,
         e.registered_month
