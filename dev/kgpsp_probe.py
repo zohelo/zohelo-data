@@ -74,6 +74,25 @@ def show_xlsx(name: str, body: bytes, max_rows: int, max_cols: int = 18) -> dict
     return out
 
 
+def show_xls(name: str, body: bytes, max_rows: int, max_cols: int = 18) -> dict:
+    import xlrd
+
+    book = xlrd.open_workbook(file_contents=body, on_demand=True)
+    out = {}
+    for sname in book.sheet_names():
+        sh = book.sheet_by_name(sname)
+        out[sname] = [sh.nrows, sh.ncols]
+        print(f"  --- {name} :: xls sheet {sname!r} rows={sh.nrows} cols={sh.ncols}", flush=True)
+        for r in range(min(sh.nrows, max_rows)):
+            vals = [(c + 1, sh.cell_value(r, c)) for c in range(min(sh.ncols, max_cols)) if sh.cell_value(r, c) not in ("", None)]
+            print(f"    r{r + 1}: " + " | ".join(f"c{c}={str(v)[:50]!r}" for c, v in vals), flush=True)
+        if max_rows:
+            firsts = [str(next((v for v in sh.row_values(r) if v not in ("", None)), ""))[:30] for r in range(sh.nrows)]
+            print(f"    first-col labels: {firsts[:80]}", flush=True)
+        book.unload_sheet(sname)
+    return out
+
+
 def walk(z: zipfile.ZipFile, prefix: str, max_rows: int, detail: int) -> dict:
     out = {}
     shown = 0
@@ -95,6 +114,13 @@ def walk(z: zipfile.ZipFile, prefix: str, max_rows: int, detail: int) -> dict:
                 shown += 1
             except Exception as exc:  # noqa: BLE001
                 print(f"  xlsx error {key}: {exc}", flush=True)
+                out[key] = f"error {exc}"[:80]
+        elif kind.startswith("ole2") and low.endswith(".xls"):
+            try:
+                out[key] = show_xls(key, data, max_rows if shown < detail else 0)
+                shown += 1
+            except Exception as exc:  # noqa: BLE001
+                print(f"  xls error {key}: {exc}", flush=True)
                 out[key] = f"error {exc}"[:80]
         else:
             out[key] = kind
@@ -151,10 +177,16 @@ def main() -> int:
     tables = [(h, t) for h, t in att if re.search(r"(?i)tabel", t)]
     events = [(h, t) for h, t in att if re.search(r"(?i)informacji ze zdarze|zdarze", t) and (h, t) not in tables]
     res: dict = {}
-    for label, (h, t) in (("newest", tables[0]), ("oldest", tables[-1])) if tables else ():
+    for n, (h, t) in enumerate(tables):
+        label = "newest" if n == 0 else "oldest" if n == len(tables) - 1 else f"t{n}"
         z = zipfile.ZipFile(io.BytesIO(get(h).content))
         print(f"== standard tables {label} {t!r}: {len(z.infolist())} entries", flush=True)
-        res[label] = {"link": t[:60], "members": walk(z, "", 40 if label == "newest" else 12, 60 if label == "newest" else 6)}
+        rows, detail = (45, 80) if label in ("newest", "oldest") else (0, 0)
+        members = walk(z, "", rows, detail)
+        if label in ("newest", "oldest"):
+            res[label] = {"link": t[:60], "members": members}
+        else:
+            res.setdefault("other_years", {})[t[:40]] = sorted(members)[:60]
     if events and "noevents" not in sys.argv[1:]:
         print(f"== incident data {events[0][1]!r}", flush=True)
         res["incident"] = incident(events[0][0])
