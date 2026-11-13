@@ -1,0 +1,25 @@
+version: 2
+
+sources:
+- name: nfz_services
+  description: NFZ statistics API, services (JGP) — benefit dictionaries and basic-data tables per benefit and year
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/nfz_services/
+    loaded_by: ingestion/to_bronze/nfz_services/
+    config: ingestion/sources/nfz_services.yaml
+  tables:
+  - name: nfz_services_benefits
+    description: >-
+      One row per dictionary entry of the newest copy of each catalog (entity benefits_<catalog>): catalog
+      (1a, 1b, 1c, 1d, 1w), benefit_code (NFZ product code), benefit_name, page, source_row_number.
+  - name: nfz_services_basic_data
+    description: >-
+      One row per record of the basic-data answers of the newest copy of each benefit (entity <catalog>_<code>):
+      record 'value' with year, period_from/period_to (part-year tables), table_id, scope (pl | branch), branch
+      (NFZ branch code 01-16, null for Poland) and the eleven values as the exact JSON number text (null as the
+      API gives it); one 'empty_table' row per listed table without records and one 'no_table' row for a benefit
+      whose index lists no basic-data table. Partitioned by entity.
+  - name: nfz_services_rejected_files
+    description: NFZ services Landing files the Bronze decoder rejected, with the reason.

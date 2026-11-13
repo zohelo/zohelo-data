@@ -1,0 +1,72 @@
+version: 2
+models:
+  - name: nfz_services_benefits
+    description: >-
+      NFZ statistics API, services (register PLS-012, terms https://api.nfz.gov.pl/app-stat-api-jgp/terms): the
+      benefit dictionary of the five catalogs from bronze.nfz_services_benefits, newest copy of each catalog.
+      Grain: catalog × benefit_code (NFZ product code). 1,347 entries on 12 Nov 2026 (1a 883, 1b 134, 1c 273,
+      1d 43, 1w 14; Dev probe 43311426786).
+    tests:
+      - unique:
+          column_name: "catalog || '|' || benefit_code"
+    columns:
+      - name: catalog
+        tests: [not_null, {accepted_values: {arguments: {values: ['1a', '1b', '1c', '1d', '1w']}}}]
+      - name: benefit_code
+        tests: [not_null]
+      - name: benefit_name
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the dictionary ZIP (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: nfz_services_basic_data
+    description: >-
+      NFZ statistics API, services: the basic-data table ("Dane ogólne") of each loaded benefit and period, for
+      Poland (area_code PL) and the 16 NFZ regional branches (area_code 01-16, NFZ numbering), from
+      bronze.nfz_services_basic_data, newest copy of each benefit. Grain: catalog × benefit_code × period_start ×
+      period_end × area_code (for the records the API gives once per table and area, area_records = 1; every
+      record is unique by entity × table_id × area_code × source_row_number). Whole-year tables 2009-2024 (period_kind 'year') and part-year tables where a
+      benefit changed within a year ('part_year'). Values as published (counts, per cent, ratio, days, PLN,
+      points); null where the API publishes none; branches without hospitalisations have no row. Not loaded: the
+      hospital-type splits and the other table types (docs/sources/nfz_services.md).
+      tests/nfz_services_tables_in_silver.sql checks that every Bronze table with records reaches this model.
+    tests:
+      - unique:
+          column_name: "catalog || '|' || benefit_code || '|' || period_start || '|' || period_end || '|' || area_code"
+          config:
+            where: "area_records = 1"
+      - unique:
+          column_name: "entity || '|' || table_id || '|' || area_code || '|' || source_row_number"
+    columns:
+      - name: catalog
+        tests: [not_null, {accepted_values: {arguments: {values: ['1a', '1b', '1c', '1d', '1w']}}}]
+      - name: benefit_code
+        tests: [not_null]
+      - name: table_id
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: period_kind
+        tests: [not_null, {accepted_values: {arguments: {values: ['year', 'part_year']}}}]
+      - name: period_start
+        tests: [not_null]
+      - name: period_end
+        tests: [not_null]
+      - name: area_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['PL', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16']
+      - name: area_records
+        description: >-
+          Records the API gave for this table and area (1 normally); above 1 the records are kept, not chosen
+          between, left out of Gold and listed by tests/nfz_services_repeated_areas.sql (warning).
+        tests: [not_null]
+      - name: without_hospitalisations
+        description: >-
+          True for a row with 0 hospitalisations: the API's 0 for the ratio and the length of stay there is a
+          placeholder, so those columns (and the average values) are null; counts and shares stay as published.
+      - name: raw_sha256
+        description: Landing SHA-256 of the benefit's ZIP (lineage to Landing/Archive).
+        tests: [not_null]
