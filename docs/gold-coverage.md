@@ -44,7 +44,7 @@ aggregates, last the blocks with neither (other countries' regions only, airport
 group, smaller blocks first, and a group is finished before the next one starts.
 
 GUS BDL is a Polish source, so its three groups are territorial levels: subgroups down to
-voivodeships and subregions, then down to powiats, then down to gminas. The group is the lowest
+voivodeships and subregions, then down to powiats, then down to gminas and statistical localities. The group is the lowest
 level the subgroup's variables have (`silver.bdl_variables`, read once per run with the lookups);
 a subgroup without variable metadata is built with the last group. Nothing else is read for it.
 
