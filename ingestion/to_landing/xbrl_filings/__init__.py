@@ -15,9 +15,10 @@ Two kinds of entity are landed:
 
 One request at a time, PAUSE seconds apart, bounded retries with backoff, a time budget; a run that stops at its
 budget continues from Landing on the next run. A document that cannot be read (refused, not xBRL-JSON, or still
-failing after the retries) is reported and read again on the next run; FAILURES_IN_A_ROW failures stop the run. The provider states no rate limit and asks routine users for "a
-user agent that includes a contact email address, or a link to where we can find your contact details": the
-repository's identified User-Agent (bulk_file.USER_AGENT) carries the project link.
+failing after the retries) is reported and read again on the next run; FAILURES_IN_A_ROW failures stop the run.
+The provider states no rate limit and asks routine users for "a user agent that includes a contact email address,
+or a link to where we can find your contact details": the repository's identified User-Agent
+(bulk_file.USER_AGENT) carries the project link.
 
 landing.inspect  the API's count of Polish filings vs the list Landing holds, and facts held / to read; no writes
 landing.extract  the list, then the facts documents not yet held
