@@ -8,6 +8,10 @@ orchestrator's role follows O38; models follow the owner's rules of 12 November 
 
 The orchestrator session runs on **Opus 5.5** as product owner and DevOps lead.
 
+Status, 13 November 2026 (the orchestrator's note in work queue #2873, not an owner decision): the orchestrator
+session currently runs on **Fable 5.2**. O38 and the role below are unchanged; whether O38 names Fable from now
+on is the owner's call.
+
 - **Owns:** turning the direction into a prioritised backlog and briefs; routing work to stations and models; the
   merge gate (checks green, an independent review without blockers, and the reviewed head SHA unchanged);
   production dispatches and watching them; agent and runner limits ("Concurrency" below); feeding review lessons
@@ -74,7 +78,7 @@ overrides it per dispatch only as this table says.
 
 | Station or task | Model | Agent | Why |
 |---|---|---|---|
-| Orchestration: backlog, briefs, routing, merge gate, production runs, status page | Opus | the session | O38 |
+| Orchestration: backlog, briefs, routing, merge gate, production runs, status page | Opus (13 Nov: the session currently runs on Fable, see "Orchestrator") | the session | O38 |
 | Architecture; the published contract; a new fact kind, grain or shared dimension; a trade-off between options; the spec after two failed reworks | Fable | `architect` | lasting consequences, no document decides it yet |
 | UX direction, information architecture, visual design, design review of a change users see | Fable | `ux-designer` | design is judgement, and the owner reads the result first |
 | Research for the owner: strategy, market, legal background, ideas, concepts, non-technical briefs | Fable | `owner-researcher` | open questions, mostly non-technical |
