@@ -27,7 +27,7 @@ FIRST_EDITION = 2009  # first year of the oldest edition landed (Bronze parses t
 PAUSE = 5.0
 MAX_PAGES = 4  # the page lists ten documents per page; older editions sit on the next page
 LINK = re.compile(r"/documents/10182/167642/(?P<name>[^/?#]+\.pdf)(?:/|$)", re.IGNORECASE)
-YEARS = re.compile(r"\b(?P<first>(?:19|20)\d\d)\s*[-_ ]\s*(?P<last>(?:19|20)\d\d)\b")
+YEARS = re.compile(r"(?<!\d)(?P<first>(?:19|20)\d\d)\s*[-_ ]\s*(?P<last>(?:19|20)\d\d)(?!\d)")
 NEXT = re.compile(r"_cur=\d+")
 
 
