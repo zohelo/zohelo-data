@@ -281,7 +281,7 @@ def _read(operation: Any) -> bytes:
     for wait in (5, 20):
         try:
             return operation()
-        except Exception as exc:  # noqa: BLE001 - any storage error is tried again, the third one is raised
+        except Exception as exc:  # any storage error is tried again; the third attempt raises
             print(json.dumps({"status": "read_retry", "error": f"{type(exc).__name__}: {str(exc)[:200]}"}), flush=True)
             time.sleep(wait)
     return operation()
