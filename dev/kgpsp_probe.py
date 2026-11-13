@@ -174,7 +174,7 @@ def main() -> int:
         print(f"  CTX ...{text[max(0, m.start() - 150): m.end() + 250]}...", flush=True)
     annotate("notice", "kgpsp probe page", {"http": r.status_code, "links": len(links),
                                             "attachments": [[t[:70], h[-36:]] for h, t in att][:24]})
-    tables = [(h, t) for h, t in att if re.search(r"(?i)tabel", t)]
+    tables = [(h, t) for h, t in att if re.match(r"^20[0-9]{2} \S*\.zip", t) and not re.search(r"(?i)zdarze", t)]
     events = [(h, t) for h, t in att if re.search(r"(?i)informacji ze zdarze|zdarze", t) and (h, t) not in tables]
     res: dict = {}
     for n, (h, t) in enumerate(tables):
