@@ -1,0 +1,24 @@
+version: 2
+sources:
+- name: imgw_api
+  description: >-
+    IMGW-PIB public data API (register PL-ENV-008): every landed snapshot of the current-state endpoints, one
+    Parquet file per Landing file (accumulating).
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/imgw_api/
+    loaded_by: ingestion/to_bronze/imgw_api/
+    config: ingestion/sources/imgw_api.yaml
+  tables:
+  - name: imgw_api_synop
+    description: >-
+      /api/data/synop snapshots: one row per synoptic station (id_stacji = WMO index, stacja) and snapshot, the fields
+      as the API sends them (data_pomiaru, godzina_pomiaru, temperatura, predkosc_wiatru, kierunek_wiatru,
+      wilgotnosc_wzgledna, suma_opadu, cisnienie), with provenance; partitioned by entity.
+  - name: imgw_api_meteo
+    description: >-
+      /api/data/meteo/ snapshots (daily): one row per automatic station (kod_stacji = IMGW 9-digit code, nazwa_stacji,
+      lon, lat, wysokosc_npm, rok_zalozenia_stacji) and its newest 10-minute readings with their times, as sent.
+  - name: imgw_api_rejected_files
+    description: Snapshots of imgw_api the Bronze decoder rejected, with the reason.

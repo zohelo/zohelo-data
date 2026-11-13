@@ -1,0 +1,52 @@
+source_system: imgw_api
+description: "IMGW-PIB public data API: synoptic station observations (current state, kept as snapshots) and the automatic station list"
+
+# Extraction strategy (docs/landing.md), register PL-ENV-008. The API (https://danepubliczne.imgw.pl/apiinfo) serves
+# only the current state, so each response is landed as a snapshot through the shared bulk_file pattern (exact bytes,
+# version = download time, an unchanged response is skipped) and every snapshot is loaded (accumulating Bronze).
+# Landed: /api/data/synop (62 synoptic stations, the newest hourly observation, about 14 KB) at each synoptic main
+# term, and /api/data/meteo/ (788 automatic stations with code, name, coordinates and altitude, about 520 KB) once a
+# day for the station dimension (ingestion/to_landing/imgw_api/). Not landed: /hydro/ (913 hydrological stations,
+# 554 KB), the warnings (/warningsmeteo, /warningshydro: forecast texts) and /product. Times: the API does not name a
+# zone; on 13 Nov 2026 00:26 UTC synop showed hour 0 of 13 Nov and meteo readings of 00:10, i.e. UTC (Dev probe
+# 43336937240). History comes from the file archive (imgw_archive).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: synop
+        url: https://danepubliczne.imgw.pl/api/data/synop
+        format: json
+        version: ingested
+        probe: get
+      - entity: meteo
+        url: https://danepubliczne.imgw.pl/api/data/meteo/
+        format: json
+        version: ingested
+        probe: get
+        daily: true   # fetched only when the newest copy is over 20 hours old (station dimension)
+  initial: api
+  production: snapshot                  # each response is the current state; snapshots accumulate in Bronze
+  incremental_policy: full_refresh      # no history, no version: every run fetches the current state
+  schedule: # UTC; synop observations are hourly, the main synoptic terms are 00, 03, ..., 21 UTC; a snapshot 25 minutes after each main term (the API answers within the hour), one request per run; the 21:25 run also loads and builds the day
+    - {cron: "25 0,3,6,9,12,15,18 * * *", run: "landing: extract"}
+    - {cron: "25 21 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/imgw_api/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}   # every snapshot stays in Bronze (accumulating)
+  prune: report
+bronze: [bronze.imgw_api_synop, bronze.imgw_api_meteo, bronze.imgw_api_rejected_files]
+silver: [silver.imgw_api_synop, silver.imgw_api_stations]
+gold: [gold.build_imgw_api]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); the synop rows grow by about 500 a day (62 stations x 8 terms)
+  imgw_api_synop: {rows: 300000}  # TRIAL rows (Dev trial TRIAL); about 181,000 a year: about 18 months, then incremental
+  imgw_api_stations: {rows: 1200}  # TRIAL (Dev trial TRIAL)
+  poc_build_imgw_api: {rows: 1000}  # TRIAL; one row per complete day, about 365 a year
+
+# Refresh policy for all layers (D32): small snapshots (14 KB, 520 KB) with no changed-since filter; Silver is rebuilt
+# from the accumulated snapshots, newest snapshot per station and observation time.
+refresh: {mode: full, decided: "D32 + #2959"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
