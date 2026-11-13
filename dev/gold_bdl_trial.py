@@ -78,14 +78,14 @@ def cleanup(cat, client) -> dict:
 
 
 def build(args: list[str]) -> tuple[int, dict]:
-    """One builder run; its exit code and the summary line it prints."""
+    """One builder run; its exit code and its summary. The builder's own annotations are kept out of the
+    run page (this script reports the same numbers)."""
     out = io.StringIO()
     with contextlib.redirect_stdout(out):
-        code = obs.main(args)
-    lines = [line for line in out.getvalue().splitlines() if line.startswith("{") and '"operation"' in line]
+        summary = obs.run(args)
     kept = [line for line in out.getvalue().splitlines() if not line.startswith("::")]
     print("\n".join(kept)[-3000:], flush=True)
-    return code, json.loads(lines[-1]) if lines else {}
+    return (0 if summary.get("result") in ("complete", "not_started") else 2), summary
 
 
 def pick(silver: dict, ranks: dict[str, int], projections: list[str]) -> list[str]:
@@ -336,6 +336,7 @@ def main() -> None:
             "second_run_seconds": second_seconds,
             "second_run": {k: second.get(k) for k in ("todo", "built", "rows", "remaining", "rejected_earlier", "result")},
             "first_run": {k: v for k, v in first.items() if k not in ("operation",)},
+            "second_coverage": second.get("coverage"),
         })
         con = connect(tmp)
         report = checks(cat, con, silver_paths)
