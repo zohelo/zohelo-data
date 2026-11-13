@@ -1,6 +1,7 @@
 """Dev trial (PLG-012 Open KRS API, #1362): Landing → Bronze → Silver → Gold into scratch, removed in `finally`.
 
-Arguments: [upto KRS number, default 0000030000].
+Arguments: [count, default 1000]: the trial's selection is the first <count> KRS numbers of the production
+selection (ascending) plus the spot numbers that are in it (extract.selection is replaced in this script only).
 Landing (prefix zz_dev_ms_krs/): run 1 with the run date set three days back (so that the bulletin route has
 days to read afterwards), run 2 the same (must write nothing), then run 3 and run 4 with the real date (run 3 asks
 again for held numbers listed in the bulletins of the last three days; run 4 must write nothing). Bronze into
@@ -58,8 +59,8 @@ def terms() -> None:
     annotate("notice", "ms_krs terms pages (dane.gov.pl)", out)
 
 
-def run(upto: str, today=None) -> dict:
-    extract.extract(60.0, landing_root=SCRATCH, upto=upto, today=today)
+def run(today=None) -> dict:
+    extract.extract(75.0, landing_root=SCRATCH, today=today)
     keep = ("selection", "held_before", "held_after", "bulletin_days", "bulletin_days_unread", "listed_again",
             "asked_again", "bulletin_settled", "missing_before", "asked_new", "remaining", "answers", "requests",
             "parts_landed", "seconds", "error")
@@ -75,12 +76,7 @@ def landing_state(client, bucket) -> dict:
             continue
         size += held[-1]["size_bytes"]
         through.add(held[-1]["detail"]["bulletin_through"])
-        try:
-            client.head_object(Bucket=bucket, Key=held[-1]["object"]["key"])
-        except Exception as exc:  # noqa: BLE001
-            print(json.dumps({"head_failed": held[-1]["object"]["key"], "error": repr(exc)[:300],
-                              "response": str(getattr(exc, "response", ""))[:600]}), flush=True)
-        body = bulk_bronze.read_raw(client, bucket, landing.SOURCE, held[-1])
+        body = extract._read(lambda receipt=held[-1]: bulk_bronze.read_raw(client, bucket, landing.SOURCE, receipt))
         for line in body.decode("utf-8").splitlines():
             lines += 1
             longest = max(longest, len(line))
@@ -97,19 +93,24 @@ def bronze(cat) -> dict:
     return {"exit_two_loads": exits, "files": len(list(table.scan().plan_files())), "rows": table.scan(selected_fields=("krs_number",)).to_arrow().num_rows}
 
 
-def trial(upto: str) -> None:  # noqa: PLR0915
+def trial(count: int) -> None:  # noqa: PLR0915
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
+    full = extract.selection()
+    chosen = sorted(set(full[:count]) | (set(SPOT) & set(full)))
+    extract.selection = lambda upto=None: chosen
+    upto = {"production_selection": len(full), "trial_selection": len(chosen), "first": chosen[0], "last_of_first": full[:count][-1],
+            "spot_not_in_selection": sorted(set(SPOT) - set(full))}
     real = datetime.now(extract.WARSAW).date()
     back = real - timedelta(days=3)
-    runs = {"run1_date_3_days_back": run(upto, back), "run2_same_date": run(upto, back)}
+    runs = {"run1_date_3_days_back": run(back), "run2_same_date": run(back)}
     state2 = landing_state(client, bucket)
     cat = catalog()
     bronze_a = bronze(cat)
-    runs["run3_real_date"] = run(upto)
-    runs["run4_real_date"] = run(upto)
+    runs["run3_real_date"] = run()
+    runs["run4_real_date"] = run()
     verify = bulk_file.main(landing.SOURCE, "verify", landing_root=SCRATCH, specs=landing.specs())
     state4 = landing_state(client, bucket)
-    annotate("notice", "ms_krs landing (scratch)", {"upto": upto, "real_date": str(real), **runs, "verify_exit": verify,
+    annotate("notice", "ms_krs landing (scratch)", {"selection": upto, "real_date": str(real), **runs, "verify_exit": verify,
              "after_run2": state2, "after_run4": state4})
     bronze_b = bronze(cat)
     table = cat.load_table((SCRATCH, "ms_krs_extracts"))
@@ -188,15 +189,19 @@ def trial(upto: str) -> None:  # noqa: PLR0915
     licensed = publish.licensed_sources(publish.seed("source"), publish.seed("licence"))
     annotate("notice", "ms_krs gold build_ms_krs", {
         "rows_two_builds": counts["gold_b"],
-        "dup_series_x_date": q(con, "select count(*) from (select measure_key, geography_key, breakdown_json, date_key from gold_b group by all having count(*) > 1)"),
+        "dup_series_x_date": q(con, "select count(*) from (select measure_key || '|' || geography_key || '|' || breakdown_json as series_key, date_key from gold_b group by all having count(*) > 1)"),
+        "frequencies_per_measure": q(con, "select measure_key, count(distinct frequency), min(frequency), count(*), count(distinct date_key), min(date_key), max(date_key), min(value), max(value), min(unit_code) from gold_b group by 1 order by 1"),
+        "registered_pl_total_sum_vs_entities_with_date": q(con, "select (select sum(value) from gold_b where measure_codes = 'registered' and geography_key = 'PL' and is_total), (select count(*) from gold_e where registered_on is not null), (select count(*) from gold_e where registered_on is null)"),
+        "registered_by_year_pl": q(con, "select year(date_key), sum(value)::int from gold_b where measure_codes = 'registered' and geography_key = 'PL' and is_total group by 1 order by 1"),
+        "registered_sum_voivodeships_vs_pl": q(con, "select sum(value) filter (where geography_key <> 'PL'), sum(value) filter (where geography_key = 'PL') from gold_b where measure_codes = 'registered' and is_total"),
+        "zero_or_negative_values": q(con, "select count(*) from gold_b where value <= 0"),
         "null[measure,geography,value,date]": q(con, "select count(*) filter (where measure_key is null), count(*) filter (where geography_key is null), count(*) filter (where value is null), count(*) filter (where date_key is null) from gold_b"),
-        "dates_frequency_units": q(con, "select date_key, frequency, unit_code, count(*), min(value), max(value) from gold_b group by all"),
-        "pl_total_vs_entity_rows": q(con, "select (select value from gold_b where geography_key = 'PL' and is_total), (select count(*) from gold_e)"),
-        "voivodeship_totals": q(con, "select geography_source_code, geography_key, value from gold_b where is_total order by 3 desc"),
-        "sum_voivodeships_vs_pl": q(con, "select sum(value) filter (where geography_key <> 'PL'), sum(value) filter (where geography_key = 'PL') from gold_b where is_total"),
-        "sum_forms_vs_total_pl": q(con, "select sum(value) filter (where not is_total), sum(value) filter (where is_total) from gold_b where geography_key = 'PL'"),
+                "pl_total_vs_entity_rows": q(con, "select (select value from gold_b where measure_codes = 'entities' and geography_key = 'PL' and is_total), (select count(*) from gold_e)"),
+        "voivodeship_totals": q(con, "select geography_source_code, geography_key, value from gold_b where measure_codes = 'entities' and is_total order by 3 desc"),
+        "sum_voivodeships_vs_pl": q(con, "select sum(value) filter (where geography_key <> 'PL'), sum(value) filter (where geography_key = 'PL') from gold_b where measure_codes = 'entities' and is_total"),
+        "sum_forms_vs_total_pl": q(con, "select sum(value) filter (where not is_total), sum(value) filter (where is_total) from gold_b where measure_codes = 'entities' and geography_key = 'PL'"),
         "geography_keys_not_in_dim": q(con, "select distinct geography_key from gold_b where geography_key not in (select geography_key from geo)"),
-        "sample": q(con, "select geography_key, breakdown_json, value from gold_b where geography_key = 'PL' order by value desc limit 6"),
+        "sample": q(con, "select geography_key, breakdown_json, value from gold_b where measure_codes = 'entities' and geography_key = 'PL' order by value desc limit 6"),
         "licence_gate": {"source_csv": [s for s in publish.seed("source") if s["source_key"] == "ms_krs"],
                          "ms_krs_in_licensed_sources": "ms_krs" in licensed}})
 
@@ -231,7 +236,7 @@ def cleanup() -> None:
 
 
 def main() -> int:
-    upto = sys.argv[1] if len(sys.argv) > 1 else "0000030000"
+    upto = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
     bulk_file.annotate = bulk_bronze.annotate = lambda *_a, **_k: None  # summaries go to the log only (cap 10)
     extract.annotate = lambda _level, _title, data: captured.append(data)
     failed = 0
