@@ -1,0 +1,54 @@
+source_system: internet_gov_broadband
+description: "Ministerstwo Cyfryzacji — Polska w zasięgu stacjonarnego dostępu do internetu (internet.gov.pl), quarterly national report (PDF)"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-034. No bulk file or open API: internet.gov.pl answers
+# per-address queries only. The ministry publishes each quarter's report as one release page on
+# gov.pl/web/cyfryzacja with 17 PDF attachments (national file + 16 voivodeship files, about 255 MB); the release
+# pages have no stable index, so each edition is one seed row below: the national PDF's attachment address, read
+# on its release page (Dev probe 43323654663 walked the ministry's news list, 105 pages from 12 Nov 2026 back to
+# May 2024, and found all ten editions Q2 2024 - Q3 2026; none is missing). Entity = one edition (reference
+# quarter), version = the attachment's Last-Modified (the Q2 2024 file was replaced on 6 Sep 2024, after its
+# 15 Jul 2024 release), written only when the SHA-256 changed; every run downloads the ten files again (about
+# 15 MB, 3 s apart) and skips unchanged bytes. Restart unit: one edition. A new edition needs a new seed row:
+# landing.inspect and landing.extract warn "edition expected but not in the seed list" once the quarter ended more
+# than 20 days ago (ingestion/to_landing/internet_gov_broadband/). Left out: the 16 voivodeship PDFs (bandwidth
+# per voivodeship, powiat and gmina; about 255 MB per edition, storage cost not accepted yet) and UKE's annual
+# market report.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:  # quarter: reference date printed in the report; page: release page (published date)
+      - {entity: polska_2024q2, quarter: 2024-Q2, url: "https://www.gov.pl/attachment/defdeee4-dd1b-4344-8711-5574959d047b", format: raw, page: "https://www.gov.pl/web/cyfryzacja/polska-w-zasiegu--pierwszy-raport-z-danymi-z-internetgovpl"}  # 15.07.2024
+      - {entity: polska_2024q3, quarter: 2024-Q3, url: "https://www.gov.pl/attachment/b54d4888-10f7-4b1d-a02f-6693941fca97", format: raw, page: "https://www.gov.pl/web/cyfryzacja/juz-jest-sprawdz-nowy-raport-polska-w-zasiegu-z-danymi-z-internetgovpl"}  # 15.10.2024
+      - {entity: polska_2024q4, quarter: 2024-Q4, url: "https://www.gov.pl/attachment/0db69ba7-f72c-4bfb-b328-0dd1123de6e9", format: raw, page: "https://www.gov.pl/web/cyfryzacja/kolejna-odslona-raportu-polska-w-zasiegu-stacjonarnego-dostepu-do-internetu"}  # 15.01.2025
+      - {entity: polska_2025q1, quarter: 2025-Q1, url: "https://www.gov.pl/attachment/3b6faa68-9d91-4eec-ac7a-10ff8c28f868", format: raw, page: "https://www.gov.pl/web/cyfryzacja/Dane-o-zasiegu-internetu-stacjonarnego-nowy-raport-juz-dostepny"}  # 17.04.2025
+      - {entity: polska_2025q2, quarter: 2025-Q2, url: "https://www.gov.pl/attachment/0bfe442d-a9a3-4e44-bb71-fdbe4b0e467a", format: raw, page: "https://www.gov.pl/web/cyfryzacja/nowe-dane-o-zasiegu-internetu--kluczowe-narzedzie-dla-samorzadow"}  # 17.07.2025
+      - {entity: polska_2025q3, quarter: 2025-Q3, url: "https://www.gov.pl/attachment/b8a7745e-08a4-4488-9f13-21946d3ad6ee", format: raw, page: "https://www.gov.pl/web/cyfryzacja/dane-o-zasiegu-internetu-stacjonarnego--nowy-raport-juz-dostepny"}  # 17.10.2025
+      - {entity: polska_2025q4, quarter: 2025-Q4, url: "https://www.gov.pl/attachment/3e992fab-b68c-4fd1-9aba-88e677d118cb", format: raw, page: "https://www.gov.pl/web/cyfryzacja/jaki-jest-zasieg-internetu-stacjonarnego-w-polsce-sprawdz-to-w-raporcie-polska-w-zasiegu-stacjonarnego-dostepu-do-internetu2"}  # 14.01.2026
+      - {entity: polska_2026q1, quarter: 2026-Q1, url: "https://www.gov.pl/attachment/8a50664d-fd73-4139-9797-d3e391dfa165", format: raw, page: "https://www.gov.pl/web/cyfryzacja/coraz-wiecej-punktow-adresowych-w-zasiegu-internetu-stacjonarnego"}  # 14.04.2026
+      - {entity: polska_2026q2, quarter: 2026-Q2, url: "https://www.gov.pl/attachment/9448f5fa-2f9d-43bc-ae1a-03c5ac1487fb", format: raw, page: "https://www.gov.pl/web/cyfryzacja/coraz-wiecej-punktow-adresowych-w-zasiegu-szybkiego-internetu-stacjonarnego"}  # 15.07.2026
+      - {entity: polska_2026q3, quarter: 2026-Q3, url: "https://www.gov.pl/attachment/b5fbb888-d29f-4c4d-9b0c-0b4b20e66f5d", format: raw, page: "https://www.gov.pl/web/cyfryzacja/ponad-8-mln-punktow-adresowych-w-zasiegu-internetu-stacjonarnego"}  # 15.10.2026
+  initial: bulk
+  production: snapshot                  # each edition file as published; a replaced file lands as a new version
+  incremental_policy: changed_since_last  # SHA-256 of each edition file
+  schedule: # UTC; editions are published about two weeks after the quarter (14-17 Jan, Apr, Jul, Oct); monthly check on the 20th
+    - {cron: "40 6 20 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/internet_gov_broadband/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.internet_gov_broadband_cells, bronze.internet_gov_broadband_rejected_files]
+silver: [silver.internet_gov_broadband_coverage]
+gold: [gold.build_internet_gov_broadband]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  internet_gov_broadband_coverage: {rows: 1000}
+  poc_build_internet_gov_broadband: {rows: 1000}
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): ten PDF files of about 1.4 MB, one new a quarter, a few thousand Bronze
+# cells; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2963"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

@@ -1,0 +1,19 @@
+version: 2
+sources:
+- name: internet_gov_broadband
+  description: Ministerstwo Cyfryzacji, Polska w zasięgu stacjonarnego dostępu do internetu (register PL-ENV-034), national PDF per quarter
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/internet_gov_broadband/
+    loaded_by: ingestion/to_bronze/internet_gov_broadband/
+    config: ingestion/sources/internet_gov_broadband.yaml
+  tables:
+  - name: internet_gov_broadband_cells
+    description: >-
+      One row per value cell of the report tables read from the PDF text layer (address points and coverages by
+      voivodeship, by service type and by bandwidth class): cell text as printed, table number and title, page,
+      row and column position, row label and column header, the reference date printed in the report; newest
+      copy of each edition, partitioned by entity.
+  - name: internet_gov_broadband_rejected_files
+    description: Edition files of internet_gov_broadband the Bronze decoder rejected, with the reason.
