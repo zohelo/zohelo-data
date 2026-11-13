@@ -10,5 +10,6 @@ s3fs>=2025.1  # without a floor the resolver picks s3fs 0.4.2 (2019) to fit the 
 dbt-core==1.12.6
 dbt-duckdb==1.11.1
 zstandard
+pypdf==7.0.1  # PDF text layer: ZUS social insurance yearbook tables (PLS-010)
 xlrd==2.0.2  # old Excel (.xls) workbooks: MRPiPS social assistance reports (PLS-031)
 pypdf==7.0.1  # PDF text layer of report-only publications: ZUS social insurance yearbook (PLS-010)

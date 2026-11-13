@@ -1837,6 +1837,10 @@ pypdf==7.0.1 \
     --hash=sha256:0a78bb99efb41e9088260e9a8e5da134a5cbb9a322014744177bf29b5267ea6d \
     --hash=sha256:6131b764b046282357037309e7ef2a1b7679d4a5c53eed3db2bfbf7c673ddc2b
     # via -r requirements.in
+pypdf==7.0.1 \
+    --hash=sha256:0a78bb99efb41e9088260e9a8e5da134a5cbb9a322014744177bf29b5267ea6d \
+    --hash=sha256:6131b764b046282357037309e7ef2a1b7679d4a5c53eed3db2bfbf7c673ddc2b
+    # via -r requirements.in
 pyroaring==1.2.0 \
     --hash=sha256:0105988d0a54ec08c75cbece80831ca9b9e79883ddc374b0a9923472290fb7bd \
     --hash=sha256:060a11e87a27b9aaf0e8d88455e71e49af2e8a133803f90235224b01b957b4cc \

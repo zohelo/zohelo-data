@@ -27,7 +27,26 @@ FILES = {
 }
 
 
+def dane() -> None:
+    """dane.gov.pl: ZUS datasets that may hold the yearbook tables as XLSX/CSV (one request at a time)."""
+    for url in ("https://api.dane.gov.pl/1.4/search?q=rocznik%20statystyczny%20ubezpiecze%C5%84%20spo%C5%82ecznych&per_page=20",
+                "https://api.dane.gov.pl/1.4/datasets?q=ZUS%20rocznik&per_page=20",
+                "https://api.dane.gov.pl/1.4/datasets?q=Zak%C5%82ad%20Ubezpiecze%C5%84%20Spo%C5%82ecznych&per_page=50"):
+        try:
+            r = requests.get(url, headers={"User-Agent": UA, "Accept": "application/json"}, timeout=(90, 120))
+            data = r.json()
+            print("dane", r.status_code, url, "count", data.get("meta", {}).get("count"), flush=True)
+            for item in data.get("data", []):
+                a = item.get("attributes", {})
+                print("  ", item.get("type"), item.get("id"), (a.get("title") or "")[:110], "|",
+                      (a.get("formats") or a.get("format") or ""), flush=True)
+        except Exception as exc:  # noqa: BLE001 - probe continues
+            print("dane error", url, type(exc).__name__, str(exc)[:160], flush=True)
+        time.sleep(3)
+
+
 def main(argv) -> int:
+    dane()
     out = Path(os.environ.get("DEV_OUTPUT_DIR", "/tmp/dev-output"))
     out.mkdir(parents=True, exist_ok=True)
     for n, (entity, path) in enumerate(FILES.items()):
