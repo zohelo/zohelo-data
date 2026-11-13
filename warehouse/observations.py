@@ -233,10 +233,10 @@ SOURCES: dict[str, dict[str, Any]] = {
         "local_input": True,
         "not_loaded": "gold_gus_bdl_not_loaded",
         # O43: Poland and voivodeships first, then powiats, then gminas. A subgroup is built whole, so the
-        # order is by the lowest territorial level its variables have (BDL levels 0–6: to 4 Poland,
-        # macroregions, voivodeships, regions and subregions; 5 powiat; 6 gmina).
-        "load_order": ("levels", "subgroup_id", "level", ((4, 0), (5, 1), (6, 2))),
-        "groups": ("to voivodeships and subregions", "to powiats", "to gminas or level unknown"),
+        # order is by the lowest territorial level its variables have (BDL levels 0–7: to 4 Poland,
+        # macroregions, voivodeships, regions and subregions; 5 powiat; 6 gmina; 7 statistical locality).
+        "load_order": ("levels", "subgroup_id", "level", ((4, 0), (5, 1), (7, 2))),
+        "groups": ("to voivodeships and subregions", "to powiats", "to gminas and below, or level unknown"),
     },
 }
 
@@ -315,7 +315,7 @@ def load_ranks(source: str, lookups: dict[str, str]) -> dict[str, int]:
         if block is not None and value is not None:
             highest[block] = max(highest.get(block, value), value)
     return {
-        SOURCES[source]["block_of"](str(block)): next((rank for bound, rank in ranks if value <= bound), len(ranks))
+        SOURCES[source]["block_of"](str(block)): next((rank for bound, rank in ranks if value <= bound), ranks[-1][1])
         for block, value in highest.items()
     }
 
@@ -742,7 +742,7 @@ def run(argv=None) -> dict[str, Any]:
         # O43: Polish regions, then countries and aggregates, then the rest; smaller blocks first in a group
         if SOURCES[source].get("load_order"):  # the order is in the source's structure lookup: nothing is read
             ranks = load_ranks(source, lookups)
-            groups = {c["block"]: ranks.get(c["block"], len(GROUPS) - 1) for c in p["todo"]}
+            groups = {c["block"]: min(ranks.get(c["block"], len(GROUPS) - 1), len(GROUPS) - 1) for c in p["todo"]}
         else:
             groups = load_order(
                 source, p["todo"], geo_map, args.minutes * 60 * PROBE_SHARE, without_geography(source, lookups)
