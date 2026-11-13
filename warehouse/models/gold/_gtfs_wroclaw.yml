@@ -19,8 +19,7 @@ models:
       - name: date_key
         tests: [not_null]
       - name: observation_status_key
-        description: provisional for a day after the newest download of its feed (still a plan); ok otherwise.
-        tests: [not_null, {accepted_values: {arguments: {values: ['ok', 'provisional']}}}]
+        tests: [not_null, {accepted_values: {arguments: {values: ['ok']}}}]
       - name: raw_sha256
         tests: [not_null]
   - name: transit_stops_gtfs_wroclaw

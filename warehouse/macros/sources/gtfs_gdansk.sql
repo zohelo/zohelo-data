@@ -87,8 +87,8 @@ from c
    landed again and again). Which snapshot wins: the newest one downloaded on or before that day (Warsaw date of
    ingested_at), i.e. the timetable in force when the day ran; a day before the first download takes the earliest
    snapshot. So a day that has passed never changes when a later feed overlaps it, a future day follows the newest
-   download, and no day is counted twice. snapshot_date = the download day of the chosen snapshot (a day after the
-   feed's newest download is still a plan: Gold status provisional). snapshots_covering counts the windows that held the day. Two
+   download, and no day is counted twice. snapshot_date = the download day of the chosen snapshot; days after the
+   feed's newest download are the published plan, kept here and not loaded into Gold. snapshots_covering counts the windows that held the day. Two
    windows of a feed landed at the same instant would both be kept and fail the unique test (never a silent pick). #}
 {% macro poc_gtfs_service_days(records) %}
 with r as (select * from {{ records }}),
@@ -234,8 +234,9 @@ inner join snapshots as s on ch.raw_sha256 = s.raw_sha256 and ch.feed = s.feed
    (breakdown route_type, codes as published) and in total (is_total; the sum over route types and, in Kraków, over
    the three feeds), unit trips (D33). The area is the city that publishes the feed (poc_geography__<source>). Only
    days that every feed of the city covers are loaded (from the latest first day to the earliest last day over the
-   feeds), so a city total never sums a partial set of feeds. Status: provisional for a day after the newest download
-   of its feed (a plan that the next download may still change), ok otherwise (the last timetable seen for the day). #}
+   feeds), so a city total never sums a partial set of feeds; and only days up to the newest download of every feed:
+   a later day is still a plan (calendars run to 2028 in Kraków) and stays in Silver, it enters Gold once a download
+   on or after that day has been seen. A day keeps the last timetable seen for it (Silver's snapshot choice). #}
 {% macro poc_gtfs_build(source_system, service_days, city, authority) %}
 with geo as (
     select
@@ -249,15 +250,13 @@ feeds as (
     select
         feed,
         min(service_date) as first_day,
-        max(service_date) as last_day
+        least(max(service_date), max(snapshot_date)) as last_day
     from {{ service_days }}
     group by all
 ),
 
 days as (
-    select
-        s.*,
-        s.service_date > max(s.snapshot_date) over (partition by s.feed) as planned
+    select s.*
     from {{ service_days }} as s
     where s.service_date between (select max(first_day) from feeds) and (select min(last_day) from feeds)
 ),
@@ -267,7 +266,6 @@ by_type as (
         service_date,
         cast(route_type as varchar) as route_type,
         sum(trips) as trips,
-        bool_or(planned) as planned,
         max(source_version) as source_version,
         string_agg(distinct raw_sha256, ',' order by raw_sha256) as raw_sha256
     from days
@@ -279,7 +277,6 @@ total as (
         service_date,
         cast(null as varchar) as route_type,
         sum(trips) as trips,
-        bool_or(planned) as planned,
         max(source_version) as source_version,
         string_agg(distinct raw_sha256, ',' order by raw_sha256) as raw_sha256
     from days
@@ -314,7 +311,7 @@ select
     cast(null as varchar) as sex_code,
     o.route_type is null as is_total,
     cast(o.trips as double) as value,
-    case when o.planned then 'provisional' else 'ok' end as observation_status_key,
+    'ok' as observation_status_key,
     o.source_version,
     o.raw_sha256
 from observations as o
