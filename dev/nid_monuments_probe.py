@@ -138,7 +138,47 @@ def dane_gov() -> None:
                     break
     for u in files[:6]:
         show(u, head=True, tries=2)
-        show(u, 3000, nbytes=8000, tries=2)
+        body = show(u, 3000, nbytes=8000, tries=2)
+        if isinstance(body, str) and ("," in body[:2000] or ";" in body[:2000]) and "<html" not in body[:500].lower():
+            profile(u)
+
+
+def profile(url: str) -> None:
+    """Whole file to a temp dir, then aggregates only (no row is printed: addresses may identify private property)."""
+    import tempfile
+
+    import duckdb
+
+    body, st, sec = get(url, nbytes=400_000_000, tries=2, timeout=(60, 600))
+    note(f"full {url[:90]} -> {st[:80]} {len(body or b'')} B {sec:.0f}s")
+    if not body:
+        return
+    with tempfile.TemporaryDirectory() as tmp:
+        path = f"{tmp}/f.csv"
+        open(path, "wb").write(body)
+        con = duckdb.connect()
+        try:
+            con.sql(f"create table t as select * from read_csv('{path}', all_varchar=true, header=true)")
+        except Exception as exc:  # noqa: BLE001
+            note(f"read_csv failed {type(exc).__name__} {str(exc)[:300]}")
+            return
+        cols = [r[0] for r in con.sql("describe t").fetchall()]
+        n = con.sql("select count(*) from t").fetchone()[0]
+        note(f"PROFILE rows={n} cols={cols}")
+        skip = re.compile(r"ulic|adres|numer_?dom|nr_?dom|wlasc|właśc|owner|osob|kod_?poczt|lat|lon|geom|wsp|x$|y$", re.I)
+        for c in cols:
+            q = f'"{c}"'
+            nn, nd, mn, mx = con.sql(
+                f"select count(*) filter (where {q} is null or trim({q}) = ''), count(distinct {q}), min({q}), max({q}) from t"
+            ).fetchone()
+            line = f"COL {c}: nulls={nn} distinct={nd}"
+            if not skip.search(c):
+                line += f" min={str(mn)[:40]!r} max={str(mx)[:40]!r}"
+                if nd <= 60:
+                    top = con.sql(f"select {q}, count(*) from t group by 1 order by 2 desc limit 25").fetchall()
+                    line += " top=" + "; ".join(f"{str(v)[:40]}={k}" for v, k in top)
+            print(line, flush=True)
+            note(line[:600])
 
 
 def nid_pages() -> None:
