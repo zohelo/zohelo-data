@@ -197,7 +197,7 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- (bounds as checked in the Dev trial of #2982 on every Gold row).
     ('co2_consumption_per_capita', 'owid', '%', 0, 100),
     ('electoral_democracy_index', 'owid', '%', 0, 1),
-    ('gdp_per_capita_long_run', 'owid', '%', 100, 300000)
+    ('gdp_per_capita', 'owid', '%', 100, 300000)
 ),
 
 metrics as (
@@ -614,15 +614,6 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_electoral_democracy_index') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_gdp_per_capita_long_run') }}
 )
 
 select

@@ -20,5 +20,3 @@ models:
     description: Metrics of the draft KPI co2_consumption_per_capita (Our World in Data, Global Carbon Budget).
   - name: poc_metrics_electoral_democracy_index
     description: Metrics of the draft KPI electoral_democracy_index (Our World in Data, V-Dem).
-  - name: poc_metrics_gdp_per_capita_long_run
-    description: Metrics of the draft KPI gdp_per_capita_long_run (Our World in Data, Maddison Project Database).

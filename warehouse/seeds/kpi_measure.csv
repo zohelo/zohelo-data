@@ -266,4 +266,4 @@ industrial_production,unece,unece:0_en_MECCIndProdY_r:percent:c0000740,"industri
 population,unece,unece:10_en_MELFOverviewY_r:Thousands of persons:ME.47.c0000803,"annual, thousands of persons as published (UNECE Statistical Database)",5,
 co2_consumption_per_capita,owid,owid:consumption_co2_per_capita:t_co2_per_person,"tonnes per person, Global Carbon Budget (Our World in Data chart consumption-co2-per-capita)",1,
 electoral_democracy_index,owid,owid:electoral_democracy_index:index_0_1,"best estimate, 0 to 1, V-Dem (Our World in Data chart electoral-democracy-index)",1,
-gdp_per_capita_long_run,owid,owid:gdp_per_capita_maddison:intl_usd_2011_per_person,"international-$ in 2011 prices, Maddison Project Database (Our World in Data chart gdp-per-capita-maddison-project-database)",1,
+gdp_per_capita,owid,owid:gdp_per_capita_maddison:intl_usd_2011_per_person,"international-$ in 2011 prices, long-run series, Maddison Project Database (Our World in Data chart gdp-per-capita-maddison-project-database)",4,intl_usd_2011_per_person

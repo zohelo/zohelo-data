@@ -22,7 +22,10 @@ OWID's own areas, regions and income groups without a code, historical states) a
 chart × column short name). An empty cell is no row, never a zero. Gold: `gold.build_owid`, one block and one
 annual measure per chart (`owid:<chart>:<unit>`), every country by ISO alpha-3, World (`OWID_WRL` → `WB:WLD`) and
 Kosovo (`OWID_KOS` → XKX); continents, income groups and OWID's historical states stay in Silver. Draft KPIs
-`co2_consumption_per_capita`, `electoral_democracy_index`, `gdp_per_capita_long_run`.
+`co2_consumption_per_capita` and `electoral_democracy_index` (no published KPI has these concepts); the
+Maddison series is a fourth source of the published KPI `gdp_per_capita` (O31, its own unit
+`intl_usd_2011_per_person`, priority 4), contract v2 only (`V2_ONLY_SOURCES`), so zohelo.com's first value does
+not change.
 
 Licence: per chart, from the origins of the indicator metadata (`origins[].license`), in `licence.csv`; the source
 row in `source.csv` stays `unresolved` (internal, the licence gate keeps it out of v1 and v2) until every chart's
