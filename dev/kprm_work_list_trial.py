@@ -156,6 +156,15 @@ def main(argv) -> int:
                 "select count(*) from b where not regexp_full_match(data_publikacji,"
                 " '\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}')"
             )[0][0],
+            "max_len": dict(
+                zip(
+                    ("tytul", "informacja_dodatkowa", "planowane_przyjecie", "informacja_o_rezygnacji", "organ_wspolpracujacy"),
+                    q(
+                        "select max(length(tytul)), max(length(informacja_dodatkowa)), max(length(planowane_przyjecie)),"
+                        " max(length(informacja_o_rezygnacji)), max(length(organ_wspolpracujacy)) from b"
+                    )[0],
+                )
+            ),
             "rejected": [(r.get("entity"), (r.get("error") or "")[:200]) for r in rej],
             "columns": [f.name for f in table.schema().fields],
         }
@@ -269,6 +278,17 @@ def main(argv) -> int:
             "annual_total_PL": q(
                 f"select period_label, value::int, observation_status_key from {g} where frequency = 'A' and is_total order by 1"
             ),
+            "annual_total_sum_vs_file": [
+                q(f"select sum(value)::int from {g} where frequency = 'A' and is_total")[0][0],
+                ref["rows"],
+            ],
+            "current_status_sum_vs_file": [
+                q(
+                    f"select json_extract_string(breakdown_json, '$.current_status'), sum(value)::int from {g} "
+                    f"where measure_key like '%annual_by_current_status' group by 1 order by 1"
+                ),
+                ref["per_status"],
+            ],
             "annual_kind_sum_vs_file": q(
                 f"select sum(value)::int from {g} where frequency = 'A' and json_extract_string(breakdown_json, '$.kind') <> '_T'"
             )[0][0],
