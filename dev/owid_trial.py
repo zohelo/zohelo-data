@@ -276,6 +276,8 @@ def main(argv) -> int:
                 where o.year < 1900 group by all order by all"""),
         }
         print("GOLD", gold, flush=True)
+        for key in ("codes_not_mapped", "no_code_entities"):  # long name lists last and capped (full list in the log)
+            gold[key] = (gold.pop(key) or "")[:700]
         annotate("notice", "owid trial gold", gold)
         poland = rows(con, """select block_id, period_label, value, unit_code, source_version from build_owid
             where geography_key = 'PL' qualify row_number() over (partition by block_id order by date_key desc) <= 3
