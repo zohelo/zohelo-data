@@ -1,0 +1,20 @@
+version: 2
+
+sources:
+- name: entsog
+  description: ENTSOG Transparency Platform API — operational data (physical flows) of the declared transmission operators
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/entsog/
+    loaded_by: ingestion/to_bronze/entsog/
+    config: ingestion/sources/entsog.yaml
+  tables:
+  - name: entsog_operational_data
+    description: >-
+      One row per record of the newest answer of each gas month (entity physical_flow__<operatorKey>__<YYYY-MM>):
+      the 35 fields of /api/v1/operationaldatas as text (point_key, direction_key, period_from, value_text,
+      flow_status, is_na, last_update_date_time, point_type, ...); value_text is '' when is_na = '1'; partitioned
+      by entity.
+  - name: entsog_rejected_files
+    description: ENTSOG Landing files the Bronze decoder rejected, with the reason.
