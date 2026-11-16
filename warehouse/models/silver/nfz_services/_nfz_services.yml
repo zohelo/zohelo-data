@@ -27,7 +27,9 @@ models:
       period_end × area_code (for the records the API gives once per table and area, area_records = 1; every
       record is unique by entity × table_id × area_code × source_row_number). Whole-year tables 2009-2024 (period_kind 'year') and part-year tables where a
       benefit changed within a year ('part_year'). Values as published (counts, per cent, ratio, days, PLN,
-      points); null where the API publishes none; branches without hospitalisations have no row. Not loaded: the
+      points), every value a double so decimal text is never rounded; null where the API publishes none. A branch
+      the API lists with 0 hospitalisations keeps its row (0 patients and stays, ratio, length of stay and average
+      values null; 1,703 such rows in Dev trial 43328619774, without_hospitalisations = true). Not loaded: the
       hospital-type splits and the other table types (docs/sources/nfz_services.md).
       tests/nfz_services_tables_in_silver.sql checks that every Bronze table with records reaches this model.
     tests:

@@ -39,9 +39,10 @@ HTTP 429 on HeadObject) is retried.
 row per record of a basic-data answer, values as the exact JSON number text; one `empty_table` row per listed table
 without records and one `no_table` row per benefit without basic-data tables). **Silver:**
 `silver.nfz_services_benefits` (catalog × code) and `silver.nfz_services_basic_data` (catalog × code × period ×
-area: `PL` or the NFZ branch code 01-16), typed as published: counts, per cent (0-100), hospitalisations per patient
-(`ratio-of-rehospitalizations`, e.g. 1.21), days, PLN and NFZ points. Small counts are published as they are (1, 2);
-a branch without hospitalisations has either no row or a row of zeros: there the API's 0 for the ratio and the length
+area: `PL` or the NFZ branch code 01-16), every value a double so decimal text is never rounded (a median stay of
+2.5 days stays 2.5): counts, per cent (0-100), hospitalisations per patient (`ratio-of-rehospitalizations`, e.g.
+1.21), days, PLN and NFZ points. Small counts are published as they are (1, 2); a branch the API lists without
+hospitalisations keeps its row of zeros (1,703 rows in Dev trial 43328619774): there the API's 0 for the ratio and the length
 of stay is a placeholder, so Silver sets those (and the average values) to null and keeps the counts and shares
 (`without_hospitalisations`). A value the API does not publish is null (average values after 2016,
 `percentage-of-sections` of several benefits) and never becomes 0. A table whose answer gives one area twice is kept

@@ -5,12 +5,14 @@
    keeps every record with area_records > 1 and its source_row_number; they are not chosen between, Gold leaves
    them out and tests/nfz_services_repeated_areas.sql lists them (warning). A whole-year table has period_kind
    'year' (1 January to 31 December); a part-year table (the index's ``periods``, where a benefit changed within a
-   year) has period_kind 'part_year' and its own dates. Values as published, typed: counts as integers, shares in
-   per cent and the ratio as decimals, days as integers, PLN and points as decimals; a null stays null (the API
-   publishes no value, e.g. average values after 2016), a branch without hospitalisations may have no row. In a row
-   with 0 hospitalisations the API writes 0 for the ratio and the length of stay: a placeholder, not a measurement,
-   so those are null here (the counts and the shares stay as published). A text that is not a number fails the
-   cast, it is never zeroed. Source: bronze.nfz_services_basic_data (records 'value'). #}
+   year) has period_kind 'part_year' and its own dates. Values as published, every one cast to double, so a decimal
+   text is never rounded (a median stay of 2.5 days stays 2.5; an integer cast would round it, #3005 review); a null
+   stays null (the API publishes no value, e.g. average values after 2016). A branch the API lists without
+   hospitalisations keeps its row (0 patients, 0 hospitalisations; Dev trial 43328619774 had 1,703 such rows). In
+   a row with 0 hospitalisations the API writes 0 for the ratio and the length of stay: a placeholder, not a
+   measurement, so those (and the average values) are null here; the counts and the shares stay as published. A
+   text that is not a number fails the cast, it is never zeroed. Source: bronze.nfz_services_basic_data (records
+   'value'). #}
 with newest as (
     select *
     from {{ source('nfz_services', 'nfz_services_basic_data') }}
@@ -30,13 +32,13 @@ typed as (
         coalesce(cast(cast(period_to as timestamp) as date), make_date(cast(year as integer), 12, 31)) as period_end,
         coalesce(branch, 'PL') as area_code,
         branch as branch_code,
-        cast(number_of_patients as bigint) as number_of_patients,
-        cast(number_of_hospitalizations as bigint) as number_of_hospitalizations,
+        cast(number_of_patients as double) as number_of_patients,
+        cast(number_of_hospitalizations as double) as number_of_hospitalizations,
         cast(ratio_of_rehospitalizations as double) as ratio_of_rehospitalizations,
         cast(percentage as double) as percentage,
         cast(percentage_of_sections as double) as percentage_of_sections,
-        cast(duration_median as integer) as duration_median_days,
-        cast(duration_mode as integer) as duration_mode_days,
+        cast(duration_median as double) as duration_median_days,
+        cast(duration_mode as double) as duration_mode_days,
         cast(average_value_of_hospitalization as double) as average_value_of_hospitalization_pln,
         cast(average_value_of_hospitalization_points as double) as average_value_of_hospitalization_points,
         cast(average_value_of_drg as double) as average_value_of_drg_pln,

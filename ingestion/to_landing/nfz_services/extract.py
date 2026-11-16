@@ -39,12 +39,14 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+import csv
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from hashlib import sha256
 import io
 import json
 import os
+from pathlib import Path
 import re
 import time
 from typing import Any
@@ -70,14 +72,10 @@ FAIL_STREAK = 3  # benefits failing in a row: the API is down, the run stops ask
 SHARES = 4  # each held benefit's index is asked once every SHARES weekly runs
 REREAD = 52  # and all its tables once every REREAD weekly runs (a revision under unchanged table ids)
 MARGIN_MINUTES = 10  # no benefit is started in the last minutes of the budget
-# Benefits asked in every run (entity names): the JGP groups the KPIs read (kpi_measure.csv rows of nfz_services)
-# and one benefit each of the radiotherapy (1d) and highly specialised (1w) catalogs. A changed canary index means a
-# release (a new year): every held benefit is asked in that run.
-CANARY = (
-    "1a_5.51.01.0013001",  # N01 childbirth
-    "1a_5.51.01.0008013",  # H13 primary total hip replacement
-    "1a_5.51.01.0008015",  # H15 primary total knee replacement
-    "1a_5.51.01.0001048",  # A48 stroke, stroke unit > 7 days
+KPI_MEASURES = Path(__file__).resolve().parents[3] / "warehouse" / "seeds" / "kpi_measure.csv"
+# Benefits asked in every run besides the KPI groups (kpi_benefits): one benefit each of the radiotherapy (1d) and
+# highly specialised (1w) catalogs.
+EXTRA_CANARY = (
     "1d_5.07.01.0000061",  # 3D real-time brachytherapy
     "1w_03.4603.033.02",  # heart valve implantation
 )
@@ -107,6 +105,16 @@ class Unavailable(RuntimeError):
     """The API kept failing (5xx, Maintenance, timeouts) after the bounded retries."""
 
 
+def kpi_benefits(path: Path = KPI_MEASURES) -> tuple[str, ...]:
+    """Entities of the JGP groups the KPIs read: the kpi_measure.csv rows of nfz_services, whose measure key is
+    ``nfz_services:<catalog>:<unit>:<benefit code>:<measure>``. The same rows are the Gold detail list
+    (poc_nfz_services_detail(); tests/nfz_services_gold_benefits.sql fails on a KPI group missing there), so the
+    canaries follow the KPIs instead of a second hand-written list (#3005 review)."""
+    with path.open(newline="", encoding="utf-8") as handle:
+        keys = [r["measure_key_pattern"] for r in csv.DictReader(handle) if r["source_system"] == SOURCE]
+    return tuple(sorted({entity_of(k.split(":")[1], k.split(":")[3]) for k in keys}))
+
+
 def prefix(root: str) -> str:
     return f"{root.rstrip('/')}/{SOURCE}/snapshot/data/"
 
@@ -114,6 +122,11 @@ def prefix(root: str) -> str:
 def entity_of(catalog: str, code: str) -> str:
     """Landing folder of a benefit: catalog and code, characters outside [A-Za-z0-9.-] as '_'."""
     return f"{catalog}_{re.sub(r'[^A-Za-z0-9.-]', '_', code)}"
+
+
+# Benefits asked in every run (entity names). A changed canary index means a release (a new year): every held
+# benefit is asked in that run.
+CANARY = kpi_benefits() + EXTRA_CANARY
 
 
 def digest(value: Any) -> str:
