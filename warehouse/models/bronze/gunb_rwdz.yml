@@ -1,0 +1,30 @@
+version: 2
+sources:
+- name: gunb_rwdz
+  description: >-
+    GUNB Rejestr Wniosków, Decyzji i Zgłoszeń (register PL-ENV-033): the producer's files per voivodeship
+    (https://wyszukiwarka.gunb.gov.pl/pobranie.html). Bronze and Silver are written per file by the loader, not by
+    dbt (design #875, ingestion/to_bronze/gunb_rwdz/entities.py); columns naming natural persons, street addresses
+    and plots are left out before Bronze.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gunb_rwdz/
+    loaded_by: ingestion/to_bronze/gunb_rwdz/
+    config: ingestion/sources/gunb_rwdz.yaml
+  tables:
+  - name: gunb_rwdz_records
+    description: >-
+      One row per record of the newest copy of each voivodeship file (entity = voivodeship), the allowed columns as
+      published text plus provenance; partitioned by entity.
+  - name: gunb_rwdz_rejected_files
+    description: GUNB RWDZ files the Bronze decoder or the Silver model rejected, with the reason.
+- name: gunb_rwdz_silver
+  description: >-
+    Silver table of gunb_rwdz written per voivodeship file by the loader (design #875), from
+    warehouse/entity/gunb_rwdz_records.sql; it holds exactly the newest version of every file.
+  database: r2
+  schema: silver
+  tables:
+  - name: gunb_rwdz_records
+    description: TBD

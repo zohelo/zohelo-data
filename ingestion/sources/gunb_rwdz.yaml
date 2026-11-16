@@ -1,0 +1,57 @@
+source_system: gunb_rwdz
+description: "GUNB — Rejestr Wniosków, Decyzji i Zgłoszeń (RWDZ): building-permit applications and decisions, producer files per voivodeship"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-033. Bulk feature: the producer's page
+# https://wyszukiwarka.gunb.gov.pl/pobranie.html ("Do pobrania – dane udostępniane z systemu RWDZ z podziałem na
+# województwa … od 01.01.2016 r. z codzienną aktualizacją w godzinach nocnych"; '#'-separated UTF-8 CSV, one ZIP per
+# voivodeship at a fixed URL, Last-Modified sent) is preferred over the GUGiK WFS on the same data (GML pages only,
+# `PagingIsTransactionSafe` FALSE). Declared files of the shared bulk_file pattern (no extractor code); entity = one
+# voivodeship file, version = Last-Modified, written only when the SHA-256 changed. robots.txt disallows /results/,
+# /wniosek/ and /zgloszenie/ only. Dev probe 43326025936 (12 Nov 2026, 23:07 UTC): page and files answered 200.
+# Left out for now: the two national notification files (zgłoszenia 2016-2021, 2022-), see docs/sources/gunb_rwdz.md.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - {entity: dolnoslaskie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_dolnoslaskie.zip", format: zip, version: last_modified}
+      - {entity: kujawsko_pomorskie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_kujawsko-pomorskie.zip", format: zip, version: last_modified}
+      - {entity: lubelskie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_lubelskie.zip", format: zip, version: last_modified}
+      - {entity: lubuskie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_lubuskie.zip", format: zip, version: last_modified}
+      - {entity: lodzkie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_lodzkie.zip", format: zip, version: last_modified}
+      - {entity: malopolskie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_malopolskie.zip", format: zip, version: last_modified}
+      - {entity: mazowieckie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_mazowieckie.zip", format: zip, version: last_modified}
+      - {entity: opolskie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_opolskie.zip", format: zip, version: last_modified}
+      - {entity: podkarpackie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_podkarpackie.zip", format: zip, version: last_modified}
+      - {entity: podlaskie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_podlaskie.zip", format: zip, version: last_modified}
+      - {entity: pomorskie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_pomorskie.zip", format: zip, version: last_modified}
+      - {entity: slaskie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_slaskie.zip", format: zip, version: last_modified}
+      - {entity: swietokrzyskie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_swietokrzyskie.zip", format: zip, version: last_modified}
+      - {entity: warminsko_mazurskie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_warminsko-mazurskie.zip", format: zip, version: last_modified}
+      - {entity: wielkopolskie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_wielkopolskie.zip", format: zip, version: last_modified}
+      - {entity: zachodniopomorskie, url: "https://wyszukiwarka.gunb.gov.pl/pliki_pobranie/wynik_zachodniopomorskie.zip", format: zip, version: last_modified}
+  initial: bulk
+  production: snapshot                    # each file is the voivodeship's complete register since 2016
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256 per file
+  schedule: # UTC; the producer rebuilds the files every night (Last-Modified about 22:35 UTC); weekly is enough for monthly counts: Monday 04:20, 16 files of 15-25 MB, one at a time
+    - {cron: "20 4 * * 1", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gunb_rwdz/
+# Retention: the newest file per voivodeship plus 14 days of superseded ones (the raw files name natural persons as
+# GUNB publishes them; they never reach Bronze).
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 14}
+  prune: report
+bronze: [bronze.gunb_rwdz_records, bronze.gunb_rwdz_rejected_files]
+silver: [silver.gunb_rwdz_records]
+gold: [gold.build_gunb_rwdz]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  poc_build_gunb_rwdz: {rows: 0}  # TRIAL
+
+bronze_latest_only: true   # policy #822/#845: one file per entity (entity_tables replace)
+# Refresh policy for all layers (D32): about 4 million records since 2016 in 16 files that the producer rewrites
+# every night and that offer no changed-since filter; each file is the unit: a new version replaces that
+# voivodeship's file in Bronze and Silver (entity_tables), nothing else is rewritten.
+refresh: {mode: incremental, unit: file, decided: "D32 + #2984"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
