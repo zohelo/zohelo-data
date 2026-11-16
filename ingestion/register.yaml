@@ -2773,8 +2773,9 @@ sources:
     limits: 10 requests/second per IP (terms v1.3 section III); v1.3 is marked obsolete, v1.4 is the live version.
   licence:
     status: open-conditional
-    notes: 'Terms: API regulations (Regulamin) of "API Terminy Leczenia" v1.3, https://api.nfz.gov.pl/app-itl-api/terms (section
-      II): users must state the source by giving the address https://api.nfz.gov.pl/; the user may not modify the data ("Niedozwolone
+    notes: 'Terms: API regulations (Regulamin) of "API Terminy Leczenia", statute page of the v1.4 API the extractor reads,
+      https://apinfz.nfz.gov.pl/app-itl-api-pcus/swagger-ui/statute.html (same clauses as v1.3 at https://api.nfz.gov.pl/app-itl-api/terms;
+      read by Dev run 43343151288), section II: users must state the source by giving the address https://api.nfz.gov.pl/; the user may not modify the data ("Niedozwolone
       jest modyfikowanie danych przez Usługobiorcę"); no use for software that breaks the law or third-party rights, misleads
       users or acts maliciously; no overloading (10 requests/second per IP); NFZ may block users for breaches and may change
       the API and its terms. No licence name and no clause on commercial reuse; public display of the published values is
