@@ -16,6 +16,11 @@ tables not found are re-checked together after one short wait, and those still m
 with a warning annotation and picked up by the next refresh (#2825). More than 3 skipped tables, or
 more than 10% of those listed, fail the job: R2 answers the same 404 for a bad credential. Any other
 error fails the job.
+
+Both buckets are listed page by page. R2 answers ``ServiceUnavailable`` or ``SlowDown`` ("Reduce your
+concurrent request rate for the same object") when several clients list a bucket at once, and botocore's own
+8 attempts end after about 100 s. A throttled page is read again after a growing wait, at most 10 minutes of
+waiting per run; the pages already read are kept. Past that the job fails and nothing is written (#2947).
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -27,8 +32,7 @@ import os
 from pathlib import PurePosixPath
 import time
 
-import boto3
-from botocore.config import Config
+from botocore.exceptions import ClientError
 
 INDEX_ROOT = "_portal_index/v1/"
 CURRENT_KEY = INDEX_ROOT + "current.json"
@@ -50,6 +54,11 @@ SWAP_RECHECK_SECONDS = 15
 # than a concurrent build can explain fail the job instead of publishing a degraded index.
 MAX_SKIPPED_TABLES = 3
 MAX_SKIPPED_SHARE = 0.10
+# R2's answers to too many concurrent requests on one bucket; any other error fails at once.
+THROTTLED_CODES = ("ServiceUnavailable", "SlowDown")
+# Waits before a throttled list page is read again (after botocore's own attempts), and their sum per run.
+THROTTLE_WAITS_SECONDS = (15, 30, 60, 120, 240)
+THROTTLE_BUDGET_SECONDS = 600
 
 
 def load_or_none(cat, identifier, retry):
@@ -109,6 +118,37 @@ def catalog_folders(cat=None, recheck_seconds=SWAP_RECHECK_SECONDS):
         if location.startswith(CATALOG_PREFIX):
             folders[location] = f"{layer}/{identifier[-1]}/"
     return folders
+
+
+def list_pages(s3, bucket, prefix="", waited=None, sleep=time.sleep):
+    """Pages of ListObjectsV2 for a bucket. A throttled page is read again after a wait, keeping the pages
+    already read; ``waited`` ({"seconds", "retries"}) is the run's shared count, bounded by
+    THROTTLE_BUDGET_SECONDS."""
+    waited = {"seconds": 0, "retries": 0} if waited is None else waited
+    request = {"Bucket": bucket}
+    if prefix:
+        request["Prefix"] = prefix
+    while True:
+        attempt = 0
+        while True:
+            try:
+                page = s3.list_objects_v2(**request)
+                break
+            except ClientError as exc:
+                code = str(exc.response.get("Error", {}).get("Code", ""))
+                wait = THROTTLE_WAITS_SECONDS[attempt] if attempt < len(THROTTLE_WAITS_SECONDS) else None
+                if code not in THROTTLED_CODES or wait is None or waited["seconds"] + wait > THROTTLE_BUDGET_SECONDS:
+                    raise
+                note = {"status": "throttled", "bucket": bucket, "code": code, "wait_seconds": wait}
+                print(json.dumps(note), flush=True)
+                sleep(wait)
+                waited["seconds"] += wait
+                waited["retries"] += 1
+                attempt += 1
+        yield page
+        if not page.get("IsTruncated"):
+            return
+        request["ContinuationToken"] = page["NextContinuationToken"]
 
 
 def display_key(bucket, lakehouse, key, folders):
@@ -185,16 +225,12 @@ def add_record(ids, parents, identity, meta, extra=None):
 def main():
     lakehouse = required("STORAGE_LAKEHOUSE_BUCKET_NAME")
     landing = required("STORAGE_LANDING_BUCKET_NAME")
-    s3 = boto3.client(
-        "s3",
-        endpoint_url=required("STORAGE_ENDPOINT_URL").rstrip("/"),
-        region_name="auto",
-        aws_access_key_id=required("STORAGE_WRITE_ACCESS_KEY"),
-        aws_secret_access_key=required("STORAGE_WRITE_SECRET_KEY"),
-        config=Config(signature_version="s3v4", retries={"max_attempts": 8, "mode": "standard"}),
-    )
+    from ingestion.common.r2 import storage_client
+
+    s3 = storage_client()  # the shared client: every throttled request waits and is sent again (#2985)
 
     table_folders = catalog_folders()
+    waited = {"seconds": 0, "retries": 0}
     live = []
     folders = set()
     digest = hashlib.sha256()
@@ -202,8 +238,7 @@ def main():
     source_bytes = 0
 
     for bucket in (landing, lakehouse):
-        paginator = s3.get_paginator("list_objects_v2")
-        for page in paginator.paginate(Bucket=bucket):
+        for page in list_pages(s3, bucket, waited=waited):
             for item in page.get("Contents", []):
                 key = str(item["Key"])
                 shown = display_key(bucket, lakehouse, key, table_folders)
@@ -226,6 +261,12 @@ def main():
                 source_files += 1
                 source_bytes += size
                 digest.update(f"{bucket}\0{key}\0{shown}\0{size}\0{modified}\0{etag}\n".encode())
+
+    if waited["retries"]:
+        from ingestion.common.report import annotate
+
+        data = {"reason": "R2 concurrent requests", **waited}
+        annotate("warning", "serving.refresh_index: bucket listing throttled", data)
 
     source_inventory_sha256 = digest.hexdigest()
     source_run = source_inventory_sha256[:24]
@@ -333,15 +374,15 @@ def main():
         ContentType="application/json",
         CacheControl="no-store",
     )
-    pruned = prune_previous(s3, lakehouse, prefix + "/")
+    pruned = prune_previous(s3, lakehouse, prefix + "/", waited)
     print(json.dumps({"status": "published", "pruned_previous_objects": pruned, **pointer}, sort_keys=True))
     return 0
 
 
-def prune_previous(s3, bucket, keep_prefix):
+def prune_previous(s3, bucket, keep_prefix, waited=None):
     """Delete earlier index versions; only the current pointer and its index are kept."""
     stale = []
-    for page in s3.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=INDEX_ROOT):
+    for page in list_pages(s3, bucket, INDEX_ROOT, waited):
         for item in page.get("Contents", []):
             if item["Key"] != CURRENT_KEY and not item["Key"].startswith(keep_prefix):
                 stale.append({"Key": item["Key"]})

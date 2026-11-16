@@ -165,9 +165,9 @@ def split_name(name: str) -> tuple[str, str, str] | None:
 
 class R2:
     def __init__(self) -> None:
-        import boto3
         from boto3.s3.transfer import TransferConfig
-        from botocore.config import Config
+
+        from ingestion.common.r2 import storage_client
 
         def env(name: str) -> str:
             value = os.environ.get(name, "").strip()
@@ -176,16 +176,10 @@ class R2:
             return value
 
         self.landing = env("STORAGE_LANDING_BUCKET_NAME")
-        self.client = boto3.client(
-            "s3",
-            endpoint_url=env("STORAGE_ENDPOINT_URL").rstrip("/"),
-            region_name="auto",
-            aws_access_key_id=env("STORAGE_WRITE_ACCESS_KEY"),
-            aws_secret_access_key=env("STORAGE_WRITE_SECRET_KEY"),
-            config=Config(
-                signature_version="s3v4", retries={"max_attempts": 10, "mode": "standard"}, max_pool_connections=32
-            ),
-        )
+        for name in ("STORAGE_ENDPOINT_URL", "STORAGE_WRITE_ACCESS_KEY", "STORAGE_WRITE_SECRET_KEY"):
+            env(name)
+        # the shared client: throttled requests (429, SlowDown, ServiceUnavailable) wait and are sent again
+        self.client = storage_client(max_pool_connections=32)
         self.transfer = TransferConfig(
             multipart_threshold=64 * 1024 * 1024,
             multipart_chunksize=64 * 1024 * 1024,
@@ -921,7 +915,7 @@ def verify_landing(r2: R2, patterns: list[str]) -> dict:
             return "size_mismatch"
         return "ok"
 
-    with ThreadPoolExecutor(max_workers=16) as pool:
+    with ThreadPoolExecutor(max_workers=8) as pool:  # R2 throttles bursts of reads (as r2.landing_objects)
         outcomes = list(pool.map(check, receipts))
     receipted = {k[: -len(".receipt.json")] for k in receipts}
     orphans = sorted(k for k in sizes if k.rsplit(".", 2)[0] not in receipted and k[: -len(".tsv.gz")] not in receipted)

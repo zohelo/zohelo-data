@@ -26,11 +26,20 @@ archive_policy:
 bronze: [bronze.eurostat_observations, bronze.eurostat_rejected_files,
          bronze.eurostat_structure_items, bronze.eurostat_structure_rejected_files]
 silver: [silver.eurostat_observations, silver.eurostat_dataflows, silver.eurostat_codes, silver.eurostat_dimensions]
-gold: []                              # Eurostat in Gold: shared models in warehouse/warehouse.yaml
+# Gold: the curated KPI selection is in the shared models of warehouse/warehouse.yaml (build_eurostat, fact_*).
+# Full coverage (O43, D35, docs/gold-coverage.md): every loaded dataset by rule, one file per dataset and
+# table, written by gold.observations (warehouse/observations.py), not by dbt. observations_rejected is the
+# rejections table of every per-block source.
+gold: [gold.eurostat_observations, gold.eurostat_series, gold.eurostat_measures, gold.eurostat_geography,
+       gold.observations_rejected]
 
 # Refresh policy for all layers (owner decision #875): a new dataset version replaces that
 # dataset in Bronze, Silver and Gold; nothing else is rewritten.
 refresh: {mode: incremental, unit: dataset, decided: "#875"}
 
-# Activities the Pipeline may run (owner authorization).
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# Activities the Pipeline may run (owner authorization). gold.observations (owner decisions O36, O43; D35):
+# the last step of the full dataflow keeps Gold current with the datasets that changed; the first load is
+# started by hand (Pipeline run "gold: observations" with filter * or dataset codes) and continued by
+# every later run, each within its time budget, in the order Polish regions, countries and aggregates, rest.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]

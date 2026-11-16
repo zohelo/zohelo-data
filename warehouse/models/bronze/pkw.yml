@@ -1,0 +1,18 @@
+version: 2
+sources:
+- name: pkw
+  description: PKW election results (register PLG-029), area-level result files of the election sites
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/pkw/
+    loaded_by: ingestion/to_bronze/pkw/
+    config: ingestion/sources/pkw.yaml
+  tables:
+  - name: pkw_cells
+    description: >-
+      One row per non-empty cell (member or sheet, row, column, source text) of the newest copy of each landed
+      file: the CSV of a _csv.zip (UTF-8, semicolons, read by DuckDB) or the sheet of an XLSX workbook; partitioned
+      by entity.
+  - name: pkw_rejected_files
+    description: Files of pkw the Bronze decoder rejected, with the reason.
