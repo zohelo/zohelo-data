@@ -3331,7 +3331,8 @@ sources:
   name: Ewidencja zabytków nieruchomych / heritage monument datasets
   short_name: NID heritage register
   provider: Narodowy Instytut Dziedzictwa (NID)
-  status: approved
+  source_system: nid_monuments
+  status: built
   family: E
   kpi: false
   geography: Poland
@@ -3342,15 +3343,19 @@ sources:
     heritage law.
   coverage: Current nationwide dataset; historical versions/update archive not verified.
   access:
-    endpoint: https://dane.gov.pl/pl/dataset/2627
+    endpoint: https://nid.pl/zasoby/rejestr-zabytkow-zasoby/
     kind: bulk_file
     interfaces: [open-data catalogue, bulk files, HTML/maps]
     auth: Public catalogue/download; authentication not indicated.
     cost: free
-    limits: Unknown.
+    limits: Unknown. dane.gov.pl times out from GitHub Actions (Dev probes 43343138018, 43797381655); the NID lists
+      on nid.pl answer (17 PDF files, 0.8-1.7 MB each).
   licence:
-    status: open-conditional
-    notes: 'Terms: dane.gov.pl dataset 2627 ''Ewidencja zabytków nieruchomych'' (provider Narodowy Instytut Dziedzictwa,
+    status: unresolved
+    notes: 'Terms: the route read is NID''s page https://nid.pl/zasoby/rejestr-zabytkow-zasoby/ ("Wykaz zabytków
+      nieruchomych wpisanych do rejestru zabytków (księga A)", PDF lists per voivodeship); it states no licence, and
+      the site footer reads "Copyright © 2020 Narodowy Instytut Dziedzictwa All rights reserved." (16 Nov 2026), so
+      the source stays internal (licence row unresolved). The same register on dane.gov.pl dataset 2627 ''Ewidencja zabytków nieruchomych'' (provider Narodowy Instytut Dziedzictwa,
       https://dane.gov.pl/pl/dataset/2627, API https://api.dane.gov.pl/1.4/datasets/2627): licence CC BY 4.0
       (https://creativecommons.org/licenses/by/4.0/), default dane.gov.pl CC 4.0 condition, which allows commercial
       reuse and modification with attribution; the custom condition only names the origin (register cards of the
@@ -3372,13 +3377,13 @@ sources:
   research:
     priority: review-next
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
-    - Open NID-native download/metadata page
-    - Define safe address fields
+    - 'Licence: the NID page read states no terms (dane.gov.pl, which states CC BY 4.0, is not reachable from Actions)'
     references:
     - https://dane.gov.pl/pl/dataset/2627
     - https://api.dane.gov.pl/1.4/datasets/2627
+    - https://nid.pl/zasoby/rejestr-zabytkow-zasoby/
 - id: PLS-027
   name: Kultura i dziedzictwo narodowe – annual tables
   short_name: GUS culture tables
