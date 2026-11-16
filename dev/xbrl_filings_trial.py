@@ -147,11 +147,17 @@ def trial(limit: int) -> None:  # noqa: PLR0915
         for t in ("s_filings", "s_facts", *gold):
             counts.setdefault(t, []).append(con.execute(f"select count(*) from {t}").fetchone()[0])
 
+    bronze_sources = {"xbrl_filings_filings": "bronze_filings", "xbrl_filings_facts": "bronze_facts"}
+
     def test(path: str, refs: dict) -> list:
-        return q(con, Environment().from_string(Path(path).read_text()).render(config=lambda **_k: "", ref=lambda n: refs.get(n, n)))
+        return q(con, Environment().from_string(Path(path).read_text()).render(
+            config=lambda **_k: "", ref=lambda n: refs.get(n, n), source=lambda _s, t: bronze_sources[t]))
+
+    silver_refs = {"xbrl_filings_filings": "s_filings", "xbrl_filings_facts": "s_facts"}
 
     annotate("notice", "xbrl_filings silver filings", {
-        "rows_two_builds": counts["s_filings"],
+        "rows_two_builds": counts["s_filings"], "duckdb": duckdb.__version__,
+        "complete_test_rows": len(test("warehouse/tests/xbrl_filings_filings_complete.sql", silver_refs)),
         "dup_fxo_id": q(con, "select count(*) from (select fxo_id from s_filings group by 1 having count(*) > 1)"),
         "null_keys": q(con, "select count(*) filter (where fxo_id is null), count(*) filter (where lei is null), count(*) filter (where issuer_name is null), count(*) filter (where period_end is null), count(*) filter (where date_added is null), count(*) filter (where package_sha256 is null), count(*) filter (where raw_sha256 is null), count(*) filter (where filing_sequence is null), count(*) filter (where processed_at is null) from s_filings"),
         "country_standard": q(con, "select country_code, report_standard, count(*) from s_filings group by all"),
@@ -168,6 +174,7 @@ def trial(limit: int) -> None:  # noqa: PLR0915
     conflicts_sql = Environment().from_string(Path("warehouse/tests/xbrl_filings_fact_conflicts.sql").read_text()).render(config=lambda **_k: "", ref=lambda _n: "s_facts")
     annotate("notice", "xbrl_filings silver facts", {
         "rows_two_builds": counts["s_facts"],
+        "complete_test_rows": test("warehouse/tests/xbrl_filings_facts_complete.sql", silver_refs)[:5],
         "dup_grain": q(con, "select count(*) from (select 1 from s_facts group by fxo_id, concept, period_start, period_end, unit_code having count(*) > 1)"),
         "null_keys": q(con, "select count(*) filter (where fxo_id is null), count(*) filter (where lei is null), count(*) filter (where concept is null), count(*) filter (where period_start is null), count(*) filter (where period_end is null), count(*) filter (where unit_code is null), count(*) filter (where raw_sha256 is null), count(*) filter (where value is null) from s_facts"),
         "bronze_rows_left_out": q(con, "select count(*) filter (where extra_dimensions <> '{}') as dimensional, count(*) filter (where extra_dimensions = '{}' and not contains(period, '/')) as instant, count(*) filter (where extra_dimensions = '{}' and unit is null) as no_unit, count(*) filter (where extra_dimensions = '{}' and try_cast(value as double) is null) as no_number, count(*) filter (where fxo_id not in (select fxo_id from s_filings)) as not_in_list from bronze_facts"),
