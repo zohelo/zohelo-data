@@ -194,8 +194,9 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('ppi_annual_rate', 'unece', '%', -80, 1e5),
     -- Our World in Data (CD-031, #2982): consumption-based CO2 in tonnes per person (Global Carbon Budget); the V-Dem
     -- electoral democracy index, 0 to 1 by definition; Maddison GDP per capita in international-$ at 2011 prices
-    -- (bounds as checked in the Dev trial of #2982 on every Gold row).
-    ('co2_consumption_per_capita', 'owid', '%', 0, 100),
+    -- (bounds as checked in the Dev trial of #2982 on every Gold row). CO2 starts above 0: an exact 0 is a missing
+    -- value for a populated country and poc_build_owid does not build it.
+    ('co2_consumption_per_capita', 'owid', '%', 1e-6, 100),
     ('electoral_democracy_index', 'owid', '%', 0, 1),
     ('gdp_per_capita', 'owid', '%', 100, 300000)
 ),

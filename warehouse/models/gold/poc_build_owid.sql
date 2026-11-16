@@ -6,9 +6,12 @@
    international-$ in 2011 prices). Every country by ISO alpha-3, World and Kosovo (poc_map_geography section owid);
    OWID's continents, income groups and historical states have no Gold area and stay in Silver. Values as
    published, no status flags in the CSV (ok); source_version = the column's lastUpdated in metadata.json (else the
-   Landing version). The charts publish no projections (tests/owid_observations_charts.sql fails on a year after
-   the current one). Years before 1900 (Maddison from year 1, V-Dem from 1789) stay in Silver: the conformed
-   calendar poc_dim_calendar starts on 1900-01-01 and the facts test date_key against it. #}
+   Landing version). The charts publish no projections (tests/owid_observations_charts.sql fails on a year in or
+   after the current one). Years before 1900 (Maddison from year 1, V-Dem from 1789) stay in Silver: the conformed
+   calendar poc_dim_calendar starts on 1900-01-01 and the facts test date_key against it. An exact 0 in the
+   consumption-based CO2 chart is not built: zero consumption emissions for a populated country is a missing value,
+   not an observation (one cell in the trial of #2982, Namibia 1990); tests/metrics_value_range.sql bounds that KPI
+   above 0. #}
 with charts as ({{ poc_owid_charts() }}),
 
 geo_map as (
@@ -53,3 +56,4 @@ left join meta as m on o.chart = m.chart and o.indicator = m.short_name
 where
     o.value is not null
     and o.year >= 1900
+    and not (o.chart = 'consumption-co2-per-capita' and o.value = 0)
