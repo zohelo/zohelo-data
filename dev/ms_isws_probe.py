@@ -19,7 +19,8 @@ import requests
 LISTING = "https://isws.ms.gov.pl/pl/baza-statystyczna/opracowania-wieloletnie/"
 UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
 PAUSE = 2.0
-MAX_ROWS = 400
+MAX_ROWS = 45
+ROW_CHARS = 700
 
 
 class Page(HTMLParser):
@@ -75,10 +76,10 @@ def dump_xls(body: bytes) -> None:
                     v = "ERR:" + xlrd.error_text_from_code.get(v, "?")
                 elif isinstance(v, float):
                     v = str(int(v)) if v.is_integer() else repr(v)
-                v = " ".join(str(v).split())[:70]
+                v = " ".join(str(v).split())[:90]
                 parts.append(f"{xlrd.formula.colname(c)}={v}")
             if parts:
-                print(f"  R{r + 1}: " + " | ".join(parts))
+                print(f"  R{r + 1}: " + " | ".join(parts)[:ROW_CHARS])
 
 
 def dump_xlsx(body: bytes) -> None:
@@ -89,7 +90,7 @@ def dump_xlsx(body: bytes) -> None:
         rows.setdefault((c["sheet_name"], c["row_number"]), []).append(f"{c['cell_ref']}={c['value_text'][:70]}")
     for (sheet, r), parts in rows.items():
         if r <= MAX_ROWS:
-            print(f"  [{sheet}] R{r}: " + " | ".join(parts))
+            print(f"  [{sheet}] R{r}: " + " | ".join(parts)[:ROW_CHARS])
 
 
 def main(argv: list[str]) -> int:
