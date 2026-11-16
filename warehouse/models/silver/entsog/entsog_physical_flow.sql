@@ -1,7 +1,9 @@
 {# ENTSOG Transparency Platform (bronze.entsog_operational_data): daily physical gas flows as the transmission
    operator publishes them. Grain: operator × point × direction × indicator × period type × periodFrom (one gas day).
    Source: /api/v1/operationaldatas, indicator Physical Flow, periodType day, timezone WET, one answer per gas month.
-   Versions: the newest Landing copy of each gas month (entity); within a key the record with the newest
+   Versions: the newest Landing copy of each gas month (entity) by ingested_at, like Landing (bulk_file.landed) and
+   latest.py, so a re-landed answer replaces its month even when its newest lastUpdateDateTime is older (two copies
+   with the same ingested_at both stay and fail the unique test); within a key the record with the newest
    lastUpdateDateTime wins (rank, so two records of one key with the same lastUpdateDateTime both stay and fail the
    unique test instead of one being picked). Gas day = the date of periodFrom as published in WET: the gas day starts
    at 05:00 WET (06:00 Polish time) at most points and at 03:00 or 04:00 at some, so it is read per record, never
@@ -10,7 +12,7 @@
 with newest_month as (
     select *
     from {{ source('entsog', 'entsog_operational_data') }}
-    qualify rank() over (partition by entity order by source_version desc, ingested_at desc) = 1
+    qualify rank() over (partition by entity order by ingested_at desc) = 1
 ),
 
 typed as (
