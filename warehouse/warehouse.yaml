@@ -5,7 +5,7 @@ activities: [silver_gold.build, gold.publish]
 
 # Published contract v2 for zohelo-bi (docs/published.md, "Published layer contract v2"): gold.publish writes
 # 06_published/v2/ (warehouse/publish_v2.py) after the v1 files; v1 is unchanged and zohelo.com reads v1 only.
-# Only KPIs with status published in seeds/kpi.csv reach v2. false: v2 is not written.
+# Only KPIs with status published in the kpi list (seed_rows/kpi/) reach v2. false: v2 is not written.
 published_v2: true
 # Release briefs (docs/published.md, "briefs.json"): written with v2. A KPI × geography gets a brief when its
 # latest.json period is newer than in the previously published latest.json (same source and frequency); the brief
@@ -44,16 +44,17 @@ topics:
   freshness_hours: {warn: 48, fail: 168}   # gold.topic_quality: newest headline per outlet
   matched_share: {min: 0.10, max: 0.90}    # gold.topic_quality: share of last 7 days' headlines matched (warn outside)
 
-# Shared Gold built by the dbt project (conformed dimensions and facts across sources).
+# Shared Gold built by the dbt project (conformed dimensions and facts across sources). A source's own Gold tables
+# (its build stage) are in its ingestion/sources/<source>.yaml `gold:` (warehouse/declared.py, docs/source-registration.md).
 gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.domain,  # seed warehouse/seeds/domain.csv
        gold.kpi_dimension,  # catalogue: dimensions per KPI and measure
-       gold.kpi, gold.kpi_measure, gold.unit, gold.unit_map,  # seeds warehouse/seeds/kpi.csv, kpi_measure.csv, unit.csv, unit_map.csv (D33)
+       gold.kpi, gold.kpi_measure, gold.unit, gold.unit_map,  # code lists kept as rows per source: warehouse/seed_rows/<name>/ (D36; units D33)
        gold.sex,  # seed warehouse/seeds/sex.csv (SDMX CL_SEX)
-       gold.licence, gold.source,  # seeds warehouse/seeds/licence.csv, source.csv
+       gold.licence, gold.source,  # warehouse/seed_rows/licence/, source/ (D36)
        gold.release_calendar,  # seed release_calendar.csv
-       gold.kpi_v2_map,  # seed kpi_v2_map.csv: zohelo-bi first slice, v2 key → concept and source (#2584)
-       gold.geography_v2, gold.unit_decimals, gold.kpi_member,  # seeds of published contract v2 (docs/published.md)
+       gold.kpi_v2_map,  # warehouse/seed_rows/kpi_v2_map/ (D36): zohelo-bi first slice, v2 key → concept and source (#2584)
+       gold.geography_v2, gold.unit_decimals, gold.kpi_member,  # code lists of published contract v2 (docs/published.md); unit_decimals in warehouse/seed_rows/
        gold.news_outlet,  # seed news_outlet.csv: outlets of the news feeds (topics, O32)
        gold.topic, gold.topic_kpi, gold.topic_keyword, gold.topic_signal, gold.release_kpi,  # topic seeds (O32, docs/topics.md)
        gold.topic_matches, gold.topic_daily, gold.topic_rank, gold.topic_quality,  # topics Gold (O32, docs/topics.md)
@@ -66,16 +67,17 @@ gold: [gold.frequency,  # seed warehouse/seeds/frequency.csv
        gold.coverage,   # coverage: not dbt, each source's bronze.verify writes its rows (ingestion/common/coverage.py)
        gold.dim_dataset,  # catalogue: one row per source block (from gold.coverage)
        gold.dimension, gold.dimension_alias, gold.dim_dimension,  # catalogue: axes
-       gold.build_bdl, gold.src_eurostat, gold.src_dbw, gold.src_dbw_dictionary, gold.build_check, gold.grain_check, gold.build_dbw, gold.build_eurostat, gold.build_nbp, gold.build_public_finance, gold.build_oecd, gold.build_gleif, gold.build_mf_biala_lista, gold.build_zus_psz, gold.build_prg, gold.build_wdi, gold.build_mrpips_unemployment, gold.build_mf_jst_budgets, gold.build_unctad, gold.build_un_wpp, gold.metrics_population_projection, gold.build_faostat, gold.build_unesco_uis, gold.build_who, gold.build_unhcr, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_semiannual, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth, gold.metrics_urban_population_share, gold.metrics_agricultural_holdings, gold.metrics_average_farm_area, gold.metrics_museum_visitors, gold.metrics_cinema_admissions, gold.metrics_public_library_users, gold.metrics_tourists_accommodated, gold.metrics_tourist_overnight_stays, gold.metrics_tourist_bed_places, gold.metrics_museum_visiting_share, gold.metrics_theatre_attendance_share, gold.build_ecb, gold.metrics_m3_growth, gold.metrics_ecb_deposit_rate, gold.build_eea, gold.metrics_social_assistance_recipients,
-       gold.build_wgi, gold.build_findex, gold.build_icp,  # World Bank WGI, Findex, ICP (#2736)
-       gold.metrics_wgi_voice_accountability, gold.metrics_wgi_political_stability, gold.metrics_wgi_government_effectiveness, gold.metrics_wgi_regulatory_quality, gold.metrics_wgi_rule_of_law, gold.metrics_wgi_control_of_corruption, gold.metrics_account_ownership, gold.metrics_price_level_index, gold.build_ids,
+       gold.build_check, gold.grain_check, gold.build_public_finance, gold.metrics_population_projection, gold.metrics_exports_goods, gold.metrics_exports_services, gold.concept_measures, gold.dim_calendar, gold.dim_concept, gold.dim_frequency, gold.dim_geography, gold.dim_measure, gold.dim_observation_status, gold.dim_series, gold.dim_source, gold.dim_unit, gold.fact_annual, gold.fact_daily, gold.fact_monthly, gold.fact_semiannual, gold.fact_quarterly, gold.map_geography, gold.measure_dimensions, gold.metrics_fx_rate, gold.metrics_gdp_current_prices, gold.metrics_inflation, gold.metrics_population, gold.metrics_unemployment_rate, gold.metrics_gdp_per_capita, gold.metrics_gdp_volume_growth, gold.metrics_urban_population_share, gold.metrics_agricultural_holdings, gold.metrics_average_farm_area, gold.metrics_museum_visitors, gold.metrics_cinema_admissions, gold.metrics_public_library_users, gold.metrics_tourists_accommodated, gold.metrics_tourist_overnight_stays, gold.metrics_tourist_bed_places, gold.metrics_museum_visiting_share, gold.metrics_theatre_attendance_share, gold.metrics_m3_growth, gold.metrics_ecb_deposit_rate, gold.metrics_social_assistance_recipients,
+       gold.metrics_wgi_voice_accountability, gold.metrics_wgi_political_stability, gold.metrics_wgi_government_effectiveness, gold.metrics_wgi_regulatory_quality, gold.metrics_wgi_rule_of_law, gold.metrics_wgi_control_of_corruption, gold.metrics_account_ownership, gold.metrics_price_level_index,
        gold.metrics_policy_rate, gold.metrics_house_price_growth, gold.metrics_real_house_price_growth, gold.metrics_credit_to_gdp, gold.metrics_debt_service_ratio, gold.metrics_hdi, gold.metrics_internet_users, gold.metrics_health_expenditure_gdp]   # draft KPIs of BIS, UNDP HDR, UNdata (#2861); Gold v1 (warehouse/models/gold, docs/model.md)
 demo_namespaces: [demo_bronze, demo_silver, demo_gold]  # phase 2 demo warehouse (program plan §3.3); never in the public catalogue
 
 # Full-rebuild models (not incremental) and their row ceilings (owner policy #822: only tables
 # below ~1M rows are rebuilt in full; #868). repo_check fails on a model missing here or a ceiling
 # above 1M without an exception issue; a prod build warns above the ceiling and fails above twice it.
-full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 39374769989)
+# A source's Silver models and its build stage have their ceilings in its own
+# ingestion/sources/<source>.yaml `full_rebuild:` (warehouse/declared.py).
+full_rebuild:   # model: {rows: ceiling}
   poc_metrics_urban_population_share: {rows: 30}  # 17 areas
   poc_metrics_agricultural_holdings: {rows: 60}  # 34: 17 areas x 2010, 2020
   poc_metrics_average_farm_area: {rows: 30}  # 17 areas
@@ -88,96 +90,14 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_tourist_bed_places: {rows: 200}  # 119
   poc_metrics_museum_visiting_share: {rows: 20}  # at most 6: 2 editions x 3 sex groups (Silver 6 per measure, trial 43298219762; 2 if the metrics keep totals only)
   poc_metrics_theatre_attendance_share: {rows: 20}  # at most 6, as above
-  bdl_units: {rows: 20000}  # 4,694
-  bdl_variables: {rows: 200000}  # 50,985
-  eurostat_codes: {rows: 1000000}  # 294,750
-  eurostat_dataflows: {rows: 30000}  # 8,146
-  eurostat_dimensions: {rows: 200000}  # 54,101
-  nbp_fx_rates: {rows: 1000000}  # 428,392
-  nbp_gold_fixings: {rows: 20000}  # 3,479
-  oecd_cli: {rows: 400000}  # 240,988 (Dev trial 42777288678)
-  undp_hdr_indices: {rows: 300000}  # 200,004 (Dev trial 43093051337)
-  undata_syb_values: {rows: 200000}  # 126,703 (Dev trial 43163356932)
-  bis_observations: {rows: 560000}  # 371,000 (Dev probe 43087048719)
-  ilostat_observations: {rows: 2600000, exception: "#2832"}  # 1,718,986 (Dev trial 43091444753); D32: narrow table, five whole files, full rebuild weekly
-  unece_observations: {rows: 3700000, exception: "#2833"}  # 2,436,893 (Dev trial 43157348624); D32: narrow table, whole-table snapshots, full rebuild weekly
-  unctad_fdi_flows_stock: {rows: 55000}  # 36,950 (Dev trial 43094105961)
-  unctad_merchandise_trade: {rows: 70000}  # 46,108
-  unctad_services_trade: {rows: 1200000, exception: "#2777"}  # 807,733, ~38,000 more a year; whole-table archive, full rebuild accepted
-  unctad_digital_services_trade: {rows: 185000}  # 122,752
-  unctad_commodity_prices: {rows: 30000}  # 19,961
-  unctad_liner_shipping_connectivity: {rows: 115000}  # 76,003
-  unctad_merchant_fleet: {rows: 96000}  # 63,896
-  unctad_seaborne_trade: {rows: 97000}  # 64,424
-  unctad_port_calls: {rows: 1800}  # 1,197
-  who_observations: {rows: 40000}  # 25,872: 2 indicators × ~4,300 area-years × 3 sexes (Dev trial 43159213097)
-  unesco_uis_observations: {rows: 16000}  # 10,689 (Dev trial 43159213097)
-  faostat_observations: {rows: 4400000, exception: "#2815"}  # 2,920,278 (GT 2,498,428 + RL 421,850; Dev trial 43159213097); D32: two whole-domain files, rebuilt in full when one changes (about yearly)
-  eea_ghg_inventory: {rows: 1000000}  # 692,640: 33 areas × 9 pollutants × 166 sectors, 1990-2024 (Dev trial 43282453427); D32: one dataset replaced whole a few times a year
-  ecb_observations: {rows: 485000}  # 322,020 (Dev trial 43099368908, eight selections); 1.5 x
-  un_wpp_demographic_indicators: {rows: 127000}  # 84,360: 555 locations × 152 years (Dev trial 43093304689)
-  un_wpp_population_age_groups: {rows: 126000}  # 83,805: 555 locations × 151 years (Dev trial 43093304689)
-  unhcr_population: {rows: 14000}  # 9,175: 7,802 asylum-country years + 1,373 Poland origin years (Dev trials 43279310455, 43282453427)
-  news_headlines: {rows: 300000}
-  releases: {rows: 5000}  # about 50 announced releases a week, 60-day window
-  topic_attention: {rows: 50000}  # 35 topics × 455 days
   topic_matches: {rows: 500000}  # topics Gold: ~150,000 headlines in 400 days, about 1.5 topics each
   topic_daily: {rows: 50000}  # 35 topics × 456 days
   topic_rank: {rows: 1000}  # 5 periods × 35 topics
   topic_quality: {rows: 1000}
-  topic_volume: {rows: 50000}  # 35 topics × days since the first landing  # topics (O32): ~150,000 headlines in 400 days (7 feeds)
-  public_debt: {rows: 13500}  # 8,895 (Dev trial 43099813876)
-  treasury_debt: {rows: 125000}  # 83,206 (Dev trial 43099813876), monthly since 2001
-  budget_execution: {rows: 2800}  # 1,845 (Dev trial 43099813876), 2018-2026, ~200 a year
-  krus_benefits: {rows: 900}  # 576 (Dev trial 43099813876), quarters and years since 2020
-  mf_jst_budget_summary: {rows: 32000}  # 21,263 rows, 2022 Q1 - 2026 Q1 (Dev trial 43162316724)
-  mrpips_registered_unemployment: {rows: 85000}  # 828 rows a month; 56,202 for 68 months (Dev trial 43100663615)
-  nbp_bop_observations: {rows: 85000}  # 55,332 (Dev trial 43093233419)
-  zus_psz_observations: {rows: 2400}  # 1,570 (Dev trial 43271727766); about 217 more a quarter + about 90 a year (December tables)
-  nbp_policy_rates: {rows: 2000}  # 390 rows, 96 archive dates since 1998 (Dev trial 42777711811)
-  prg_units: {rows: 200000}  # 60,367
-  teryt_simc: {rows: 300000}  # 101,865
-  teryt_terc: {rows: 20000}  # 4,360
-  wgi_observations: {rows: 300000}  # 202,092 (Dev trial 43085820597)
-  wgi_indicators: {rows: 1000}  # 36
-  ids_observations: {rows: 4000000, exception: "#2772"}  # 2,647,628 (Dev trial 43085820597); #822 exception, review 2027-01-15
-  ids_series: {rows: 2000}  # 577
-  findex_observations: {rows: 580000}  # 385,599 (Dev trial 43085820597)
-  icp_observations: {rows: 350000}  # 231,174 (Dev trial 43085820597)
-  wdi_countries: {rows: 1000}  # 265
-  wdi_indicators: {rows: 10000}  # 1,498
-  wdi_observations: {rows: 12000000, exception: "#870"}  # 9,045,734; rebuilt weekly with WDI
   # Gold v1 (warehouse/models/gold; model names keep the poc_ prefix): rebuilt in full
-  poc_build_bdl: {rows: 1000000}  # 483,646 (10 Nov) + ~100,000 slice subgroups (Poland and voivodeships only)
-  poc_src_eurostat: {rows: 760000}  # 505,620 (Dev trial 43292078190)
-  poc_src_dbw: {rows: 1000000}
-  poc_src_dbw_dictionary: {rows: 200000}
-  poc_build_mf_jst_budgets: {rows: 650}  # 408 rows (Dev trial 43162316724)
-  poc_build_mrpips_unemployment: {rows: 85000}  # = Silver mrpips_registered_unemployment (56,202 rows)
   poc_build_check: {rows: 1000}
   poc_grain_check: {rows: 10000}
-  poc_build_dbw: {rows: 700000}  # 465,438 (Dev trial 43292078190)
-  poc_build_eurostat: {rows: 800000}
-  poc_build_nbp: {rows: 600000}
-  poc_build_oecd: {rows: 100000}  # BCICP, CCICP and LI (AA): ~66,000 of silver.oecd_cli's 240,988 rows (Dev probe 43084707728)
-  poc_build_gleif: {rows: 25000}  # 16,851 (Dev trial 43099545187)
-  poc_build_mf_biala_lista: {rows: 10}  # 4 (Dev trial 43099545187)
-  poc_build_ids: {rows: 50000}  # 31,260 (Dev trial 43202506484)
-  poc_build_prg: {rows: 4300}  # 2,875 PRG units (16 voivodeships, 380 powiats, 2,479 gminas; Dev trial 43099545187 minus the country)
-  poc_build_zus_psz: {rows: 2400}  # 1,564 (Dev trial 43271727766): 9 measures, 329 series
   poc_build_public_finance: {rows: 8600}  # 5,727 (Dev trial 43099813876)
-  poc_build_unctad: {rows: 18000}  # 11,871 (Dev trial 43100532689): 29 areas × 10 measures
-  poc_build_who: {rows: 6000}  # 3,696: 28 areas × 22 years × 3 sexes × 2 indicators (Dev trial 43159213097)
-  poc_build_unesco_uis: {rows: 4500}  # 2,869: 27 EU members (Dev trial 43159213097)
-  poc_build_unhcr: {rows: 12500}  # 8,208: EU27 as asylum countries 1951-2025 (4,089) + Poland by origin 1991-2025 (4,119) (Dev trials 43279310455, 43282453427)
-  poc_build_eea: {rows: 10000}  # 6,615: 27 countries × 7 sectors × 1990-2024, values only (Dev trial 43282453427)
-  poc_build_faostat: {rows: 4000}  # 2,538: 29 areas × 2 blocks (Dev trial 43159213097)
-  poc_build_ecb: {rows: 207000}  # 138,323 (Dev trial 43099368908); 1.5 x
-  poc_build_un_wpp: {rows: 33000}  # ~21,900: 29 areas × 151 years × 5 indicators (Dev trial 43093304689)
-  poc_build_wdi: {rows: 500000}  # + 16 slice indicators, all economies (#2592)
-  poc_build_wgi: {rows: 50000}  # 6 estimates x ~214 economies x 27 years (~35,000)
-  poc_build_findex: {rows: 1200}  # 772 (Dev check 43092680524): account_t_d, group all
-  poc_build_icp: {rows: 1250}  # 817 (Dev check 43092680524): 2 measures, 2017 and 2021 only
   poc_concept_measures: {rows: 1000}
   poc_dim_calendar: {rows: 110000}  # 73,414 (Dev run 43285255495, 12 Nov)
   poc_dim_concept: {rows: 1000}
@@ -305,4 +225,14 @@ full_rebuild:   # model: {rows: ceiling}  # rows measured 20 Oct (Dev run 393747
   poc_metrics_median_wage: {rows: 1700}  # 1,097 (Dev trial 43292078190)
   poc_metrics_price_m2_secondary: {rows: 4300}  # 2,853 (Dev trial 43292078190)
   dim_dataset: {rows: 40000}
+  # Code lists kept as rows per source (warehouse/seed_rows/, D36): they grow with every source by review, not
+  # with data, so the ceilings are far above today's rows (13 Nov: 50, 42, 138, 265, 192, 67, 211, 67).
+  source: {rows: 2000}
+  licence: {rows: 2000}
+  kpi: {rows: 10000}
+  kpi_measure: {rows: 30000}
+  kpi_v2_map: {rows: 10000}
+  unit: {rows: 3000}
+  unit_map: {rows: 30000}
+  unit_decimals: {rows: 3000}
   dim_dimension: {rows: 1000}

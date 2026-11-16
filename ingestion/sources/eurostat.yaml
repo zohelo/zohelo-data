@@ -31,7 +31,13 @@ silver: [silver.eurostat_observations, silver.eurostat_dataflows, silver.eurosta
 # table, written by gold.observations (warehouse/observations.py), not by dbt. observations_rejected is the
 # rejections table of every per-block source.
 gold: [gold.eurostat_observations, gold.eurostat_series, gold.eurostat_measures, gold.eurostat_geography,
-       gold.observations_rejected]
+       gold.observations_rejected, gold.build_eurostat, gold.src_eurostat]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  eurostat_codes: {rows: 1000000}  # 294,750 (20 Oct, Dev run 39374769989)
+  eurostat_dataflows: {rows: 30000}  # 8,146 (20 Oct, Dev run 39374769989)
+  eurostat_dimensions: {rows: 200000}  # 54,101 (20 Oct, Dev run 39374769989)
+  poc_src_eurostat: {rows: 760000}  # 505,620 (Dev trial 43292078190)
+  poc_build_eurostat: {rows: 800000}
 
 # Refresh policy for all layers (owner decision #875): a new dataset version replaces that
 # dataset in Bronze, Silver and Gold; nothing else is rewritten.
