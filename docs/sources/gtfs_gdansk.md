@@ -36,7 +36,9 @@ takes the earliest snapshot.
 **Gold.** Block `scheduled_trips` (`poc_build_gtfs_gdansk`, frequency D, unit `trips`, breakdown `route_type`
 and a total), area Gdańsk `TERC:2261011` (the city whose authority publishes the feed; lines reach neighbouring
 gminas); only days up to the newest download (a later day is still a plan and stays in Silver; it enters Gold once
-a download on or after it has been seen). Draft KPI
+a download on or after it has been seen). Route types stay as published: Gdańsk uses the extended codes 700 (bus
+service) and 900 (tram service), Kraków 3 and 900 (tram feed), Poznań and Wrocław 0 and 3 (Dev run 43800738045);
+a code outside a city's list fails its `accepted_values` test instead of starting a new breakdown silently. Draft KPI
 `scheduled_transit_trips`. Entity tables `gold.transit_stops_gtfs_gdansk` and `gold.transit_routes_gtfs_gdansk`,
 keyed `gtfs_gdansk:<feed>:<id>`.
 

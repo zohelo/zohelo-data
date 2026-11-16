@@ -318,7 +318,9 @@ from observations as o
 left join geo as g on g.source_code = '{{ city }}'
 {% endmacro %}
 
-{# GTFS route_type codes (https://gtfs.org/documentation/schedule/reference/#routestxt) → English names. #}
+{# GTFS route_type codes (https://gtfs.org/documentation/schedule/reference/#routestxt) and the extended codes that
+   Gdańsk (700, 900) and Kraków (900) publish (Google Transit extended route types) → English names; the code itself
+   stays as published in Silver and in the Gold breakdown. #}
 {% macro poc_gtfs_route_type_name(code) -%}
     case {{ code }}
         when '0' then 'Tram'
@@ -331,6 +333,8 @@ left join geo as g on g.source_code = '{{ city }}'
         when '7' then 'Funicular'
         when '11' then 'Trolleybus'
         when '12' then 'Monorail'
+        when '700' then 'Bus service'
+        when '900' then 'Tram service'
         else 'route_type ' || {{ code }}
     end
 {%- endmacro %}

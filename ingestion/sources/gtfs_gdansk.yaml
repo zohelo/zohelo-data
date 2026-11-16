@@ -29,7 +29,9 @@ archive_policy:
 bronze: [bronze.gtfs_gdansk_records, bronze.gtfs_gdansk_rejected_files]
 silver: [silver.gtfs_gdansk_stops, silver.gtfs_gdansk_routes, silver.gtfs_gdansk_service_days]
 gold: [gold.build_gtfs_gdansk, gold.transit_stops_gtfs_gdansk, gold.transit_routes_gtfs_gdansk]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); TRIAL counts filled from the Dev trial
+# Row ceilings (owner policy #822): stops and routes about 1.5 x Dev run 43800738045; service_days and the Gold
+# block grow by two to three rows per service day, so their ceilings leave about three years of history.
+full_rebuild:
   gtfs_gdansk_stops: {rows: 2500}
   gtfs_gdansk_routes: {rows: 150}
   gtfs_gdansk_service_days: {rows: 3000}
