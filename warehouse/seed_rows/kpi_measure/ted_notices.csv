@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+procurement_notices,ted_notices,ted_notices:notices:notices,"TED Search API, notices of Polish buyers by publication month (all notice types), Poland and voivodeships",1,

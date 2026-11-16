@@ -4,7 +4,84 @@
 -- A bound covers the measures of the KPI × source whose key matches its pattern ('%' = all of them);
 -- measures in different units (million EUR and million national currency) get a row each, and the
 -- patterns of one KPI × source never overlap. A measure without a bound fails, so a new source or
--- measure gets one here.
+-- measure gets one.
+{#- Where the bounds and the metrics models are declared (docs/source-registration.md, "Value ranges"): a source's
+    bounds and the metrics models of its KPIs are in warehouse/macros/value_range/<source_system>.sql,
+    poc_value_range__<source_system>() returning {'bounds': [[concept_key, measure_key_pattern, value_min, value_max],
+    ...], 'models': [<poc_metrics_ model>, ...]}, found by name like the Gold registrations of D34. The rows and models
+    written in this file are those of the sources from before that split: they are edited in place and take no new
+    rows or models. The union reads every model once (shared models first, then the sources' in name order). #}
+{%- set shared_models = [
+    'poc_metrics_population',
+    'poc_metrics_population_projection',
+    'poc_metrics_gdp_current_prices',
+    'poc_metrics_inflation',
+    'poc_metrics_unemployment_rate',
+    'poc_metrics_fx_rate',
+    'poc_metrics_gdp_per_capita',
+    'poc_metrics_gdp_volume_growth',
+    'poc_metrics_nbp_reference_rate',
+    'poc_metrics_core_inflation',
+    'poc_metrics_min_wage',
+    'poc_metrics_adult_learning',
+    'poc_metrics_extreme_poverty',
+    'poc_metrics_industrial_production',
+    'poc_metrics_construction_output',
+    'poc_metrics_employment_enterprise',
+    'poc_metrics_median_wage',
+    'poc_metrics_price_m2_secondary',
+    'poc_metrics_arope_rate',
+    'poc_metrics_long_term_unemployment',
+    'poc_metrics_registered_unemployed',
+    'poc_metrics_policy_rate',
+    'poc_metrics_account_ownership',
+    'poc_metrics_house_price_growth',
+    'poc_metrics_real_house_price_growth',
+    'poc_metrics_external_debt_stocks',
+    'poc_metrics_credit_to_gdp',
+    'poc_metrics_debt_service_ratio',
+    'poc_metrics_external_debt_service',
+    'poc_metrics_hdi',
+    'poc_metrics_internet_users',
+    'poc_metrics_health_expenditure_gdp',
+] -%}
+{%- set registered = namespace(bounds=[], models=[], keys=[]) -%}
+{%- for source in (poc_registered('poc_value_range__') if context is defined else []) -%}
+    {%- set declared = context['poc_value_range__' ~ source]() -%}
+    {%- if declared is not mapping or declared.keys() | list | sort != ['bounds', 'models'] -%}
+        {%- do exceptions.raise_compiler_error(
+            'poc_value_range__' ~ source ~ ': return exactly {"bounds": [...], "models": [...]}'
+        ) -%}
+    {%- endif -%}
+    {%- for bound in declared.bounds -%}
+        {%- set text = bound | map('string') | list -%}
+        {%- if bound | length != 4
+            or not modules.re.fullmatch('[a-z0-9_]+', text[0])
+            or not modules.re.fullmatch('-?[0-9]+(\\.[0-9]+)?(e-?[0-9]+)?', text[2])
+            or not modules.re.fullmatch('-?[0-9]+(\\.[0-9]+)?(e-?[0-9]+)?', text[3]) -%}
+            {%- do exceptions.raise_compiler_error(
+                'poc_value_range__' ~ source ~ ': a bound is [concept_key, measure_key_pattern, value_min, value_max]'
+                ~ ' with numbers as text, e.g. [\'population\', \'%\', \'0\', \'5e7\'], not ' ~ bound
+            ) -%}
+        {%- endif -%}
+        {%- set key = text[0] ~ '|' ~ source ~ '|' ~ text[1] -%}
+        {%- if key in registered.keys -%}
+            {%- do exceptions.raise_compiler_error('poc_value_range__' ~ source ~ ': bound ' ~ key ~ ' is declared twice') -%}
+        {%- endif -%}
+        {%- do registered.keys.append(key) -%}
+        {%- do registered.bounds.append([text[0], source, text[1], text[2], text[3]]) -%}
+    {%- endfor -%}
+    {%- for model in declared.models -%}
+        {%- if not (model is string and model.startswith('poc_metrics_')) -%}
+            {%- do exceptions.raise_compiler_error(
+                'poc_value_range__' ~ source ~ ': models lists poc_metrics_ models, not ' ~ model
+            ) -%}
+        {%- endif -%}
+        {%- if model not in shared_models and model not in registered.models -%}
+            {%- do registered.models.append(model) -%}
+        {%- endif -%}
+    {%- endfor -%}
+{%- endfor %}
 with bounds (concept_key, source_system, measure_key_pattern, value_min, value_max) as (
     values
     ('population', 'gus_bdl', '%', 0, 5e7),
@@ -25,40 +102,6 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('gdp_current_prices', 'world_bank_wdi', 'world_bank_wdi:NY.GDP.MKTP.CD', 0, 3e8),
     -- current local currency units; largest IR 2025 = 2.693e17 IRR as published (WDI NY.GDP.MKTP.CN, #2788)
     ('gdp_current_prices', 'world_bank_wdi', 'world_bank_wdi:NY.GDP.MKTP.CN', 0, 3e18),
-    -- GUS publication tables (#2893), counts per year; Poland is the largest area: museum visits 46,242,767 (2025),
-    -- cinema admissions 61,949,490 (2019), library users 5,983,725 (2019), tourists 42,738,329, overnight stays
-    -- 104,692,301, bed places 887,158 (2025) (Dev trial 43298219762); survey shares are % of persons 15+
-    -- RAD-on / POL-on (#2990), counts on the download day; Poland is the largest area: 840 institutions of every
-    -- status and 11,696 study programmes of every status in the register (Dev probe 43328619935)
-    ('higher_education_institutions', 'radon', '%', 0, 2000),
-    ('study_programmes', 'radon', '%', 0, 30000),
-    ('museum_visitors', 'gus_culture', '%', 0, 2e8),
-    ('cinema_admissions', 'gus_culture', '%', 0, 2e8),
-    ('public_library_users', 'gus_culture', '%', 0, 3e7),
-    ('tourists_accommodated', 'gus_tourism', '%', 0, 2e8),
-    ('tourist_overnight_stays', 'gus_tourism', '%', 0, 5e8),
-    ('tourist_bed_places', 'gus_tourism', '%', 0, 5e6),
-    ('museum_visiting_share', 'gus_culture_participation', '%', 0, 100),
-    ('theatre_attendance_share', 'gus_culture_participation', '%', 0, 100),
-    -- RPWDL register counts (#2958), Poland the largest area: active healthcare providers 29,845 ledgers and
-    -- practices 234,327 in the 16 November 2026 files (Dev trials 43796970764, 43813074556)
-    ('healthcare_providers', 'rpwdl', '%', 0, 2e5),
-    ('medical_practices', 'rpwdl', '%', 0, 1e6),
-    -- GUS census tables (#2897): urban share in %; holdings PL 2010 = 1,509,148; ha per holding, highest 22.22
-    -- (lubuskie 2020) (Dev trial 43288120956)
-    ('urban_population_share', 'gus_nsp2021', '%', 0, 100),
-    ('agricultural_holdings', 'gus_psr2020', '%', 0, 3e6),
-    ('average_farm_area', 'gus_psr2020', '%', 0, 100),
-    -- MRPiPS-03 (#2910): persons granted social assistance, PL 2019 = 1,205,506 (Dev trial 43293740538)
-    ('social_assistance_recipients', 'mrpips_social_assistance', '%', 0, 1e7),
-    -- Crossref works with affiliation text naming Poland or Polska per publication year (#553): largest PL 2022 =
-    -- 29,413 works (Dev trial 43336945209)
-    ('scholarly_works_pl_affiliation', 'crossref', '%', 0, 2e5),
-    -- ISWS (#2968): common courts, all cases, Poland; largest 2019 = 17,728,993 received, 16,400,377 resolved;
-    -- average duration in months, 2011-2025 between 4.05 and 7.15 (ISWS workbooks, Dev trial 43804846162)
-    ('court_cases_received', 'ms_isws', '%', 0, 5e7),
-    ('court_cases_resolved', 'ms_isws', '%', 0, 5e7),
-    ('court_case_duration', 'ms_isws', '%', 0, 60),
     ('inflation', 'eurostat', '%', -100, 3000),
     ('inflation', 'world_bank_wdi', '%', -100, 100000),
     ('unemployment_rate', 'eurostat', '%', 0, 60),
@@ -104,11 +147,6 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- UNHCR (#2415): persons; highest refugees 4,404,995 (all asylum countries 1951-2025, Dev trial 43282453427).
     -- Documentation only (no metrics_refugees_hosted model yet).
     ('refugees_hosted', 'unhcr', '%', 0, 2e7),
-    -- Police statistics portal (#2969): offences; Poland is the largest area, highest 1,466,643 (2003, all
-    -- offences; Dev trial 43806377026); % detected as published, 15.5 to 83.0 there, bound 0-100. Documentation
-    -- only (no metrics models yet).
-    ('recorded_offences', 'policja_statistics', '%', 0, 5e6),
-    ('offence_detection_rate', 'policja_statistics', '%', 0, 100),
     -- EEA GovReg (#2424): published in Gg (kt) CO2e, metrics in Mt CO2e (D33, ÷ 1000); highest member DE 1,253,128 kt
     -- = 1,253.1 Mt (total excl. LULUCF, 1990-2024, Dev trial 43282453427). Documentation only until
     -- metrics_ghg_emissions joins the metrics union below.
@@ -212,17 +250,14 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- seasonally adjusted unemployment rate 0.5 to 36.7 (MK).
     ('unemployment_rate_monthly_sa', 'unece', '%', 0, 80),
     ('cpi_annual_rate', 'unece', '%', -50, 1e5),
-    ('ppi_annual_rate', 'unece', '%', -80, 1e5),
-    -- Our World in Data (CD-031, #2982): consumption-based CO2 in tonnes per person (Global Carbon Budget); the V-Dem
-    -- electoral democracy index, 0 to 1 by definition; Maddison GDP per capita in international-$ at 2011 prices
-    -- (bounds as checked in the Dev trial of #2982 on every Gold row). CO2 starts above 0: an exact 0 is a missing
-    -- value for a populated country and poc_build_owid does not build it.
-    ('co2_consumption_per_capita', 'owid', '%', 1e-6, 100),
-    ('electoral_democracy_index', 'owid', '%', 0, 1),
-    ('gdp_per_capita', 'owid', '%', 100, 300000)
+    ('ppi_annual_rate', 'unece', '%', -80, 1e5)
+    {%- for bound in registered.bounds %},
+    ('{{ bound[0] }}', '{{ bound[1] }}', '{{ bound[2] | replace("'", "''") }}', {{ bound[3] }}, {{ bound[4] }})
+    {%- endfor %}
 ),
 
 metrics as (
+    {%- for model in shared_models + registered.models %}
     select
         concept_key,
         source_system,
@@ -230,484 +265,11 @@ metrics as (
         geography_key,
         date_key,
         value
-    from {{ ref('poc_metrics_population') }}
+    from {{ ref(model) }}
+        {%- if not loop.last %}
     union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_population_projection') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_gdp_current_prices') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_inflation') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_unemployment_rate') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_fx_rate') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_gdp_per_capita') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_gdp_volume_growth') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_nbp_reference_rate') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_core_inflation') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_min_wage') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_adult_learning') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_extreme_poverty') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_industrial_production') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_construction_output') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_employment_enterprise') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_median_wage') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_price_m2_secondary') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_arope_rate') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_long_term_unemployment') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_registered_unemployed') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_museum_visitors') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_cinema_admissions') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_public_library_users') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_tourists_accommodated') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_tourist_overnight_stays') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_tourist_bed_places') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_museum_visiting_share') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_theatre_attendance_share') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_healthcare_providers') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_medical_practices') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_urban_population_share') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_policy_rate') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_account_ownership') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_house_price_growth') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_agricultural_holdings') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_real_house_price_growth') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_external_debt_stocks') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_credit_to_gdp') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_average_farm_area') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_debt_service_ratio') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_external_debt_service') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_hdi') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_social_assistance_recipients') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_court_cases_received') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_court_cases_resolved') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_court_case_duration') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_internet_users') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_health_expenditure_gdp') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_scholarly_works_pl_affiliation') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_co2_consumption_per_capita') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_electoral_democracy_index') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_higher_education_institutions') }}
-    union all
-    select
-        concept_key,
-        source_system,
-        measure_key,
-        geography_key,
-        date_key,
-        value
-    from {{ ref('poc_metrics_study_programmes') }}
+        {%- endif %}
+    {%- endfor %}
 )
 
 select

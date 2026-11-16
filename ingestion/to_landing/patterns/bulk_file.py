@@ -9,10 +9,11 @@ framework")::
         files:
           - entity: WDI_CSV
             url: https://databank.worldbank.org/data/download/WDI_CSV.zip
-            format: zip              # zip | gzip | 7z | json (must parse) | raw
+            format: zip              # zip | gzip | 7z | json (must parse) | pdf (must start %PDF-) | raw
             version: last_modified   # last_modified (fallback: download time) | ingested
             url_date: Europe/Warsaw  # optional: {date} in url = today (YYYYMMDD) in this zone
-            reduce: news_feed        # optional: land only the allowed part of the file (news: headline items)
+            reduce: news_feed        # optional: land only the allowed part of the file (news: headline items;
+                                     # another kind: ingestion/to_landing/<kind>/ reduce_landing)
           - entity: treasury_debt_series   # a file whose URL changes per release
             url_from:                # instead of url: find the link on a stable page
               page: https://www.gov.pl/web/finanse/szeregiczasowe
@@ -39,6 +40,7 @@ from email.utils import parsedate_to_datetime
 import gzip
 from hashlib import sha256
 from html.parser import HTMLParser
+import importlib
 import json
 import os
 from pathlib import Path
@@ -57,12 +59,13 @@ from ingestion.common.report import annotate, step_summary
 
 ROOT = Path(__file__).resolve().parents[3]
 USER_AGENT = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
-EXTENSIONS = {"zip": "zip", "gzip": "gz", "7z": "7z", "json": "json", "raw": "bin"}
+EXTENSIONS = {"zip": "zip", "gzip": "gz", "7z": "7z", "json": "json", "pdf": "pdf", "raw": "bin"}
 CONTENT_TYPES = {
     "zip": "application/zip",
     "gzip": "application/gzip",
     "7z": "application/x-7z-compressed",
     "json": "application/json",
+    "pdf": "application/pdf",
     "raw": "application/octet-stream",
 }
 RETRIES = 4
@@ -253,6 +256,11 @@ def check_format(path: Path, fmt: str) -> dict[str, Any]:
         except ValueError as exc:
             raise RuntimeError(f"not a complete JSON document: {str(exc)[:120]}") from exc
         return {}
+    if fmt == "pdf":  # an HTML page (an error or a bot challenge) answered with 200 is not landed, nor retried
+        with path.open("rb") as handle:
+            if handle.read(5) != b"%PDF-":
+                raise PermanentError("not a PDF (an HTML or challenge page?)")
+        return {}
     if fmt == "gzip":
         with gzip.open(path) as handle:
             while handle.read(8 << 20):
@@ -353,11 +361,23 @@ def probe(url: str, method: str = "head") -> tuple[requests.Response | None, str
 
 
 def reducer(kind: str) -> Any:
-    """The function that keeps only the allowed part of a downloaded file (``reduce:`` in a file declaration)."""
+    """The function that keeps only the allowed part of a downloaded file (``reduce:`` in a file declaration):
+    ``news_feed``, or the name of a source's own Landing module ``ingestion/to_landing/<kind>/`` that exposes
+    ``reduce_landing(body: bytes) -> bytes`` (so a source adds no line here, D34)."""
     if kind == "news_feed":
         from ingestion.to_bronze.news_feeds.load import reduce_feed
 
         return reduce_feed
+    if re.fullmatch(r"[a-z0-9_]+", kind or ""):
+        name = f"ingestion.to_landing.{kind}"
+        try:
+            module = importlib.import_module(name)
+        except ModuleNotFoundError as exc:
+            if exc.name != name:  # the module exists and lacks a dependency: say so, not "unknown"
+                raise
+            module = None
+        if callable(getattr(module, "reduce_landing", None)):
+            return module.reduce_landing
     raise ValueError(f"unknown reduce: {kind!r}")
 
 

@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: cie_sio
+  description: SIO archival education statistics of cie.gov.pl (register PLS-022), workbooks (.xls and .xlsx)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/cie_sio/
+    loaded_by: ingestion/to_bronze/cie_sio/
+    config: ingestion/sources/cie_sio.yaml
+  tables:
+  - name: cie_sio_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column) of every workbook of the newest copy of each
+      landed file (.xls read with xlrd, .xlsx with the shared decoder); partitioned by entity.
+  - name: cie_sio_rejected_files
+    description: Files of cie_sio the Bronze decoder rejected, with the reason.
