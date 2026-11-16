@@ -1,0 +1,26 @@
+version: 2
+models:
+  - name: poc_build_gpw_ebi
+    description: >-
+      Build stage — EBI issuer reports published by GPW per month, Poland, total and by category; complete months
+      only (after the month of the oldest report held, before the current month), 0 in the total for a complete
+      month without a report.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: filing_gpw_ebi
+    description: >-
+      One row per EBI report in GPW's report list (register CD-007, 1 January of the previous year onwards): geru_id,
+      publication time (Warsaw), category, report number, issuer name and ISIN (where listed), link. The list gives
+      no KRS, NIP, REGON or LEI; titles are not stored. Terms unresolved: internal only.
+    columns:
+      - name: report_id
+        tests: [not_null, unique]
+      - name: issuer_name
+        tests: [not_null]
+      - name: published_at
+        tests: [not_null]

@@ -1,0 +1,38 @@
+source_system: knf_espi
+description: "KNF OAM list of ESPI issuer reports (regulated information of issuers on the regulated market): one row per report — issuer, day received, form code, report id, link"
+
+# Extraction strategy (docs/landing.md). No bulk feature, API or feed: the public copy of ESPI is KNF's OAM list,
+# https://moam.knf.gov.pl/moam.nsf (Lotus Domino HTML; robots.txt 404). Route (decision D36): its own view by day
+# of receipt, mOAM?readForm&RestrictToCategory=<YYYY-MM-DD>&start=<n>&count=20, list pages only, one request at a
+# time 5 s apart, the platform's User-Agent, bounded retries; a 4xx stops the run. Never a report page or file.
+# Each day lands as one reduced JSON document (issuer, day, the form code of the title, document id, link; no
+# title: titles can name natural persons); written only when its SHA-256 changed. Code: ingestion/to_landing/
+# knf_espi/ on ingestion/common/report_lists.py. Proven from Actions by the Dev probes 43321077523 and
+# 43326025983 (about 90 reports a day, history to 2009 and earlier) and the Dev trial cited in the PR.
+# History kept: 1 January of the previous year onwards (the first runs fill it newest first, 45 minutes a run).
+extraction:
+  initial: web
+  production: delta                       # one document per day of receipt; days accumulate
+  incremental_policy: changed_since_last  # each run reads today and 3 days back, plus days not held yet; SHA-256
+  schedule: # UTC; ESPI reports arrive all day until late evening (Warsaw); daily, after the night, at 04:40
+    - {cron: "40 4 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/knf_espi/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 30}
+  prune: report
+bronze: [bronze.knf_espi_reports, bronze.knf_espi_rejected_files]
+silver: [silver.knf_espi_reports]
+gold: [gold.build_knf_espi, gold.filing_knf_espi]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in the Dev trial cited in the PR
+  knf_espi_reports: {rows: 120000}   # about 90 reports a day × 700 days ≈ 63,000 at full history (trial: see PR)
+  filing_knf_espi: {rows: 120000}    # one row per Silver report
+  poc_build_knf_espi: {rows: 3000}   # 22 complete months × (total + form codes)
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded copies of a day
+# Refresh policy for all layers (D32): small (about 90 reports a day, under 70,000 rows for the two years held);
+# Landing reads only the days that can change, Bronze appends a changed day, Silver and Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #1486"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

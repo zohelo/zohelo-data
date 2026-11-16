@@ -4,10 +4,11 @@ Both sources are public HTML lists of issuer reports, read politely (decision D3
 at a time, PAUSE_SECONDS apart, the platform's identified User-Agent, bounded retries, never a report document or
 an attachment. A refusal (4xx, robots.txt, bot protection) stops the day; it is never tried another way.
 
-What is kept (O32, O33): per report the issuer name, the title (the public headline), the report type or category,
-the report number, the date or time as listed, the source's own report id and the link to the report's page, and
-the ISIN where the list gives it. A page is reduced to these fields in memory; the page HTML is never stored (the
-GPW page also carries prices). Persons are not parsed out of titles.
+What is kept (O32, O33, personal data): per report the issuer name, the report type code (KNF: the form code that
+starts the listed title, e.g. ``RB``, ``QSr``) or category and number (GPW), the date or time as listed, the
+source's own report id, the link to the report's page and the ISIN where the list gives it. Titles are NOT kept:
+they can name natural persons (board changes, MAR art. 19 notices). A page is reduced to these fields in memory;
+the page HTML is never stored (the GPW page also carries prices).
 
 Landing: one JSON document per source and day of the list (entity ``day_<YYYYMMDD>``), the day's reports sorted by
 report id, written only when its SHA-256 differs from the newest landed copy of that day; a day without reports is
@@ -19,6 +20,7 @@ Two ways to read, by what the list offers (Dev probes 43321077523 and 4332602598
   reads chosen days (``days_to_read``), one day at a time.
 - GPW lists reports newest first behind the page's own "Show more" request (15 a page) and holds few EBI reports
   (15 rows covered 11 weeks): ``extract_newest_first`` reads from the top down to the first day it needs.
+History: from 1 January of the previous year (``backfill_days``); the first runs fill it newest first.
 """
 
 from __future__ import annotations
@@ -44,12 +46,16 @@ WARSAW = ZoneInfo("Europe/Warsaw")
 PAUSE_SECONDS = 5  # between any two requests to one host
 RETRIES = 3
 REREAD_DAYS = 3  # the days before today that every run reads again (late reports, a missed run)
-BACKFILL_DAYS = {"knf_espi": 45, "gpw_ebi": 365}  # how far back the first runs read (KNF: one whole month held)
 MAX_PAGES = 60  # pages of one KNF day or of one GPW pass: beyond this is an error or a stop, never an endless loop
-FIELDS = {  # the reduced row of each source: every value is text, as listed
-    "knf_espi": ["report_id", "issuer_name", "received_date", "title", "link"],
-    "gpw_ebi": ["report_id", "published_text", "category", "report_number", "issuer_name", "isin", "title", "link"],
+FIELDS = {  # the reduced row of each source: every value is text, as listed; never the title (persons)
+    "knf_espi": ["report_id", "issuer_name", "received_date", "report_type", "link"],
+    "gpw_ebi": ["report_id", "published_text", "category", "report_number", "issuer_name", "isin", "link"],
 }
+
+
+def backfill_days(today: date) -> int:
+    """Days back to 1 January of the previous year: the history the first runs read (current and previous year)."""
+    return (today - date(today.year - 1, 1, 1)).days
 
 
 class Refused(RuntimeError):
@@ -105,6 +111,10 @@ KNF_BASE = "https://moam.knf.gov.pl/moam.nsf/"
 KNF_PAGE = KNF_BASE + "mOAM?readForm&RestrictToCategory={day}&start={start}&count={count}"  # the list's own pager
 KNF_PAGE_ROWS = 20
 KNF_MESSAGE = re.compile(r"Liczba raport\S+ za dzie\S+ (\d{4}-\d{2}-\d{2}) wynosi (\d+)")
+KNF_PAGER = re.compile(r"RestrictToCategory=(\d{4}-\d{2}-\d{2})&(?:amp;)?start=(\d+)&(?:amp;)?count=(\d+)")
+# The ESPI form code that starts a listed title ("RB, …", "QSr, …", "RB_FI_E_30.04.18, …", "UNI-EN, …"); a title
+# that does not start with one gives "" (Silver: _U). Only the code is kept, never the rest of the title.
+KNF_TYPE = re.compile(r"^([A-Z][A-Z0-9]*[a-z]?(?:[_-][A-Za-z0-9.]+)*)\s*,")
 KNF_TR = re.compile(r'(?is)<tr class="(?:even|odd)">(.*?)</tr>')
 KNF_CELLS = re.compile(
     r"(?is)^\s*<td[^>]*>(.*?)</td>\s*<td[^>]*>\s*(\d{4}-\d{2}-\d{2})\s*</td>\s*<td[^>]*>\s*"
@@ -112,11 +122,26 @@ KNF_CELLS = re.compile(
 )
 
 
+def report_type(title: str) -> str:
+    found = KNF_TYPE.match(title)
+    return found.group(1) if found and len(found.group(1)) <= 30 else ""
+
+
 def parse_knf(page: str) -> tuple[str | None, int | None, list[dict[str, str]]]:
     """(day, number of reports the page states for the day, the page's rows). Each list row has four cells:
-    issuer, date received, title linking the report's page (``0/<document id>``), file link (not kept). A row
-    of another shape raises Layout."""
+    issuer, date received, title linking the report's page (``0/<document id>``), file link (not kept); of the
+    title only the form code is kept. The number is the page's "Liczba raportów za dzień … wynosi N" message, else
+    the end of the pager's last link (``start + count - 1``); a day of one page states none. A row of another
+    shape raises Layout."""
     stated = KNF_MESSAGE.search(page)
+    if not stated:
+        pages = [(d, int(start) + int(count) - 1) for d, start, count in KNF_PAGER.findall(page)]
+        if pages:
+            return pages[0][0], max(end for _, end in pages), _knf_rows(page)
+    return (stated.group(1), int(stated.group(2)), _knf_rows(page)) if stated else (None, None, _knf_rows(page))
+
+
+def _knf_rows(page: str) -> list[dict[str, str]]:
     rows = []
     for cells in KNF_TR.findall(page):
         found = KNF_CELLS.match(cells)
@@ -128,13 +153,11 @@ def parse_knf(page: str) -> tuple[str | None, int | None, list[dict[str, str]]]:
                 "report_id": document.upper(),
                 "issuer_name": text(issuer),
                 "received_date": received,
-                "title": text(title),
+                "report_type": report_type(text(title)),
                 "link": f"{KNF_BASE}0/{document.upper()}",
             }
         )
-    if not stated:
-        return None, None, rows
-    return stated.group(1), int(stated.group(2)), rows
+    return rows
 
 
 def read_knf_day(reader: Reader, day: date) -> tuple[int | None, list[dict[str, str]], str]:
@@ -152,15 +175,14 @@ def read_knf_day(reader: Reader, day: date) -> tuple[int | None, list[dict[str, 
                 raise Layout(f"KNF list answered for {stated_day}, asked for {day}")
             if any(row["received_date"] != day.isoformat() for row in found):
                 raise Layout(f"KNF list of {day} holds a row of another day")
-            listed = stated if stated is not None else listed
+            if start == 1:  # the first page's statement; a later page's pager lists only the other pages
+                listed = stated
             rows.update({row["report_id"]: row for row in found})
             start += KNF_PAGE_ROWS
             if len(found) < KNF_PAGE_ROWS or (listed is not None and start > listed):
                 break
         else:
             raise Layout(f"KNF list of {day}: more than {MAX_PAGES} pages")
-        if listed is None and rows:
-            raise Layout(f"KNF list of {day}: rows without the day's stated number of reports")
         if listed is None or len(rows) == listed:
             return listed, list(rows.values()), first
         if attempt == 2:
@@ -184,8 +206,9 @@ ISIN = re.compile(r"^(.*\S)\s*\(([A-Z]{2}[A-Z0-9]{9}[0-9])\)$")
 def parse_gpw(page: str) -> list[dict[str, str]]:
     """The report rows of a list page or of a "Show more" fragment, ESPI and EBI alike, with ``system`` to tell
     them apart. Each item is ``<date time> | <category> | <system> | <number>``, the issuer with its ISIN in
-    brackets linking the report's page, and the title. An item that names a report in another shape raises Layout.
-    The price and change shown beside the issuer are not read."""
+    brackets linking the report's page, and the title (matched for the layout, never kept: it can name persons).
+    An item that names a report in another shape raises Layout. The price and change beside the issuer are not
+    read."""
     rows = []
     for item in GPW_ITEM.findall(page):
         if "geru_id=" not in item:
@@ -207,7 +230,6 @@ def parse_gpw(page: str) -> list[dict[str, str]]:
                 "report_number": head[3],
                 "issuer_name": with_isin.group(1) if with_isin else issuer,
                 "isin": with_isin.group(2) if with_isin else "",
-                "title": text(found.group(4)),
                 "link": GPW_REPORT.format(id=found.group(2)),
             }
         )
@@ -417,7 +439,7 @@ def extract_by_day(
 
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     today = today or datetime.now(WARSAW).date()
-    backfill = BACKFILL_DAYS[source] if backfill is None else backfill
+    backfill = backfill_days(today) if backfill is None else backfill
     reader, started = Reader(), time.monotonic()
     plan = days_to_read(today, landed_days(client, bucket, source, landing_root), reread, backfill)
     done, failed, left = [], [], 0
@@ -460,7 +482,7 @@ def extract_newest_first(
 
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     today = today or datetime.now(WARSAW).date()
-    backfill = BACKFILL_DAYS[source] if backfill is None else backfill
+    backfill = backfill_days(today) if backfill is None else backfill
     held = landed_days(client, bucket, source, landing_root)
     floor = min(today - timedelta(days=reread), max(held)) if held else today - timedelta(days=backfill)
     reader, started = Reader(), time.monotonic()

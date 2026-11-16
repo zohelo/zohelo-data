@@ -1,0 +1,28 @@
+version: 2
+models:
+  - name: gpw_ebi_reports
+    description: >-
+      EBI issuer reports in GPW's public report list (register CD-007), from bronze.gpw_ebi_reports (newest landed
+      copy of each day of publication), 1 January of the previous year onwards. Grain: report_id (GPW geru_id), one
+      row per report. Publication time (Warsaw, as listed), category, report number, issuer name and ISIN, link to
+      the report's page. No titles (persons), no report texts or attachments; KRS, NIP, REGON and LEI are not in
+      the list. Completeness: tests/gpw_ebi_reports_complete.sql.
+    columns:
+      - name: report_id
+        tests: [not_null, unique]
+      - name: published_at
+        tests: [not_null]
+      - name: category
+        description: Report category as listed; the values of the list's own filter seen in the Dev trial.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Current', 'Quarterly']
+      - name: issuer_name
+        tests: [not_null]
+      - name: link
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the day document (lineage to Landing/Archive).
+        tests: [not_null]
