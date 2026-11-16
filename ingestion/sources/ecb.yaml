@@ -60,6 +60,9 @@ archive_policy:
 bronze: [bronze.ecb_observations, bronze.ecb_rejected_files]
 silver: [silver.ecb_observations]
 gold: [gold.build_ecb, gold.metrics_m3_growth, gold.metrics_ecb_deposit_rate]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  ecb_observations: {rows: 485000}  # 322,020 (Dev trial 43099368908, eight selections); 1.5 x
+  poc_build_ecb: {rows: 207000}  # 138,323 (Dev trial 43099368908); 1.5 x
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): eight selections, silver.ecb_observations 322,020 rows (Dev trial
