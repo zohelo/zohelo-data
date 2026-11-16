@@ -60,7 +60,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 | Model header comment: what it is, grain, source | [auto] repo_check `model headers` (presence); content [review] |
 | Gold facts join conformed dimensions through keys; no source-specific codes in Gold keys without a scheme prefix | [review] |
 | Metrics declared in `semantic_models/` with description and filter | [auto] repo_check `model headers` (presence); content [review] |
-| Every KPI with status `published` in `warehouse/seeds/kpi.csv` has a metrics model and a semantic model on it | [auto] repo_check `semantic models` |
+| Every KPI with status `published` in the `kpi` list (`warehouse/seed_rows/kpi/`) has a metrics model and a semantic model on it | [auto] repo_check `semantic models` |
 | Every seed CSV is a clean table: no repeated row or key, one header line, every row with the header's number of fields, a line break at the end (what a union merge of two pull requests can leave behind, [source-registration.md](source-registration.md)) | [auto] repo_check `seed files` |
 
 ## 5. YAML and declarations
