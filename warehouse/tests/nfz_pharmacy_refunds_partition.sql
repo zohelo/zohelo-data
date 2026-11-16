@@ -1,4 +1,6 @@
--- NFZ pharmacy refunds: the 16 voivodeships partition Poland. For every ATC selection and month, the sum over the
+{{ config(severity='warn') }}
+-- Warning until a full load shows 0 rows on every ATC selection and month (#3005 review: one month of the
+-- unfiltered selection is checked so far). NFZ pharmacy refunds: the 16 voivodeships partition Poland. For every ATC selection and month, the sum over the
 -- provinces of each published value equals the unfiltered national value (Dev probe 43310762847: exact for
 -- 2024-12). The API answers an unknown province code with HTTP 200 instead of an error, so a province filter it
 -- stopped applying would show here as 16 copies of Poland. A check only, nothing is stored. Returns the months off.

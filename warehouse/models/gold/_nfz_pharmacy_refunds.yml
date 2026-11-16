@@ -15,7 +15,7 @@ models:
       programme; contribution_of_patient (PLN) = "Dopłata pacjenta", the patient's co-payment; value (PLN) =
       "Całkowity koszt produktu leczniczego; koszt refundacji NFZ + dopłata pacjenta + dotacja MZ (75+)", the total
       cost (API swagger 1.0 field descriptions). In the published numbers value = refund + contribution_of_patient
-      (VALUE_IDENTITY), so the 75+ subsidy is not added on top of refund as the description reads; shown as
+      (probe 43310762847, 2024-12: voivodeship 01 85,414,617.81 + 13,702,284.47 = 99,116,902.28; Poland 1,140,260,170.65 + 185,160,216.63 = 1,325,420,387.28), so the 75+ subsidy is not added on top of refund as the description reads; shown as
       published, nothing derived.
       Rows: GOLD_ROWS (Dev trial TRIAL).
     tests:
@@ -29,4 +29,6 @@ models:
       - name: date_key
         tests: [not_null]
       - name: value
+        tests: [not_null]
+      - name: raw_sha256
         tests: [not_null]

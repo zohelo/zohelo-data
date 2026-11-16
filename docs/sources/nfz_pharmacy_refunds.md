@@ -9,7 +9,9 @@ group **name**). Each entity is every page of its answer (one Landing file per p
 each; complete when all parts of the newest download are there). Version = `end-date` of `/available-periods`:
 a run whose version is held makes that one request. Answers carry the request time (`meta.date-modified`), so a
 new download is compared by the SHA-256 of its `data` rows (`data_sha256` in the receipts); equal rows are not
-written again. A full load is about 1,020 requests, one at a time, 1 s apart. Restart unit: one entity. The `/atc`
+written again. A revision of past months under an unchanged end-date would not move the version, so each run also
+reads again the current entities of its slot (a stable hash per calendar month: every entity once a year, about 21
+a run) and lands them only when their rows changed. A full load is about 1,020 requests, one at a time, 1 s apart. Restart unit: one entity. The `/atc`
 answer (the 14 group names the filters take) is landed as the metadata entity `atc` when its rows change; it has no
 Bronze table (the names travel in the data receipts and Bronze rows) and is archived as `without_bronze`.
 
@@ -25,7 +27,7 @@ Bronze table (the names travel in the data receipts and Bronze rows) and is arch
 - Definitions (API field descriptions): `quantity` reimbursed packages (fractions of a package as published),
   `refund` the NFZ refund, `donation` the Ministry of Health subsidy of the 75+ programme, `contribution-of-patient`
   the patient's co-payment, `value` the total cost, described as refund + co-payment + subsidy; in the published
-  numbers `value` = `refund` + `contribution-of-patient` (VALUE_IDENTITY), so the subsidy is not added on top of
+  numbers `value` = `refund` + `contribution-of-patient` (probe 43310762847, 2024-12: voivodeship `01` 85,414,617.81 + 13,702,284.47 = 99,116,902.28; Poland 1,140,260,170.65 + 185,160,216.63 = 1,325,420,387.28), so the subsidy is not added on top of
   the refund. Shown as published.
 - The 14 ATC groups do not sum to the total: the API's group `-` (medicines without an ATC group) is only in
   the total; no remainder is derived. Probe: the 14 groups plus `-` equal the total exactly (2024-12).
