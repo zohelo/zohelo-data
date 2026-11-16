@@ -114,9 +114,10 @@ def main(argv) -> int:
         if dump:
             parts = dump.split("@")
             pattern, ent, maxrow = parts[0], (parts[1:2] or ["."])[0], (parts[2:3] or ["16"])[0]
+            maxrow = int(maxrow)
             show(con, "dump", f"""with t as (select entity, member, sheet_name, string_agg(value_text, ' ' order by row_number, column_number) title
                 from {SOURCE}_cells where row_number <= 8 group by all having regexp_matches(title, '(?i){pattern}') and regexp_matches(entity, '{ent}'))
-                select c.entity, c.sheet_name, c.row_number, string_agg(c.column_number || ':' || replace(left(c.value_text, 80), chr(10), ' '), ' | ' order by c.column_number)
+                select c.entity, c.sheet_name, c.row_number, string_agg(c.column_number || ':' || replace(left(c.value_text, 400), chr(10), ' '), ' | ' order by c.column_number)
                 from {SOURCE}_cells c join t using (entity, member, sheet_name) where c.row_number <= {maxrow} group by all order by all""", limit=2500, width=1200)
         n = lambda q: con.sql(q).fetchall()[0][0]  # noqa: E731
         # Bronze profile (look before you model)
