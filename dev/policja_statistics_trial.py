@@ -119,7 +119,7 @@ def model(con, cells_rel: str) -> dict:
             select m.category_code, m.measure_code, m.period_year, m.value mv, sum(t.value) tv from silver m
             join silver t on t.category_code = m.category_code and t.measure_code = m.measure_code and t.period_year = m.period_year
                 and t.area_name like 'teren działania%'
-            where m.area_name = 'woj. mazowieckie' and m.measure_code <> 'detection_rate' group by all)"""),
+            where m.area_name like 'woj. mazowieckie%' and m.measure_code <> 'detection_rate' group by all)"""),
     }
     con.sql("create or replace table gold as " + render(GOLD, {"policja_statistics_offences": "silver", "poc_map_geography": "geo"}))
     out["gold"] = {
