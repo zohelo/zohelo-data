@@ -54,6 +54,11 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- GUGiK PRNG (#2971): localities in the register, Poland is the largest area: 124,236 (export 2026-11-12, Dev
     -- probe 43328622271)
     ('localities', 'gugik_prng', '%', 0, 5e5),
+    -- MRiRW ZSRIR (#2484), monthly purchase prices as published, Poland: raw milk zł/100 kg 91.28 (2004-04) to 274.01
+    -- (2022-11); pigs zł/kg live weight 4.25-9.16 (2022-2026); consumption wheat zł/t up to 1,590 (Dev probe 43856647230)
+    ('milk_purchase_price', 'mrirw_zsrir', '%', 0, 1000),
+    ('pig_purchase_price', 'mrirw_zsrir', '%', 0, 30),
+    ('wheat_purchase_price', 'mrirw_zsrir', '%', 0, 5000),
     -- Crossref works with affiliation text naming Poland or Polska per publication year (#553): largest PL 2022 =
     -- 29,413 works (Dev trial 43336945209)
     ('scholarly_works_pl_affiliation', 'crossref', '%', 0, 2e5),
@@ -675,6 +680,33 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_localities') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_milk_purchase_price') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_pig_purchase_price') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_wheat_purchase_price') }}
     union all
     select
         concept_key,
