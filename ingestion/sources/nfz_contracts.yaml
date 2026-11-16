@@ -9,14 +9,15 @@ description: "NFZ contracts API (API Umowy NFZ): the agreements the 16 NFZ regio
 # Entity = one contract year and branch (agreements_<year>_<branch>), every page of its list as one ZIP of the exact
 # answers. Version: the API gives no update date (meta.date-modified is the request time), so a copy is written only
 # when the digest of the pages' data members changed; version = download time. Scope (#2955): the agreements level for
-# contract years 2019-2026 (FIRST_YEAR in the extractor; 327,177 agreements, 13,146 pages). Measured full load of the
+# contract years from 2019 (FIRST_YEAR in the extractor) to the API's end year (2019-2027 in Dev trial 43814206385:
+# 327,206 agreements, 13,163 pages; 2027 had 2 agreements on 16 Nov 2026). Measured full load of the
 # agreements level 2008-2026 (probe 43323636829): 856,063 agreements, 34,382 pages, about 11 hours at one request at a
 # time, and a Silver table above the 1 M full-rebuild limit (#822), so 2008-2018 (528,886 agreements) are left out
 # until Silver is incremental. Left out as well: the plans of each agreement by contract product and their months and
 # packages (/agreements/{id}, /plans/{id}, /months/{id}: one request per agreement or plan, about 327,000 requests for
 # the scope), the provider dictionary with addresses and TERYT commune (/providers, about 26,000 a year) and the
 # product, service-type and orthopedic-supply dictionaries (the agreements carry the service type code and name).
-# Initial load: 13,146 pages, measured 113 minutes in Dev trial 43328769016 (about 0.5 s a page): one scheduled run
+# Initial load: 13,163 pages, measured 108.6 minutes in Dev trial 43814206385 (about 0.5 s a page): one scheduled run
 # (330-minute budget; resumable per year and branch).
 # Privacy: providers include natural persons (individual and group practices of doctors, nurses, midwives), so the
 # provider's name, NIP, REGON, registry number and place are not loaded into Bronze or Silver (only the Landing bytes
@@ -26,8 +27,8 @@ extraction:
   production: snapshot                  # each ZIP is the complete list of one contract year and branch
   incremental_policy: changed_since_last  # data digest per year and branch; open years read again in every run
   schedule: # UTC; release: a live register NFZ updates as agreements are signed and amended (no calendar); weekly
-    # (Saturday 01:15): the current and previous contract year read again (32 lists, 3,579 pages in 2025-2026; about
-    # 30 minutes at the trial's rate, not measured as a whole)
+    # (Saturday 01:15): the current and previous contract year, and any later year the API already serves, read again
+    # (48 lists for 2025-2027, measured 29.0 minutes, all unchanged, in Dev trial 43814206385)
     - {cron: "15 1 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/nfz_contracts/
@@ -39,9 +40,9 @@ bronze: [bronze.nfz_contracts_agreements, bronze.nfz_contracts_rejected_files]
 silver: [silver.nfz_contracts_agreements, silver.nfz_contracts_providers]
 gold: [gold.build_nfz_contracts]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  nfz_contracts_agreements: {rows: 490000}  # 327,177 (Dev trial 43328769016)
-  nfz_contracts_providers: {rows: 50000}  # 33,533 (Dev trial 43328769016)
-  poc_build_nfz_contracts: {rows: 600}  # 408 expected (17 areas x 8 years x 3 measures; Dev trial TRIAL_RUN)
+  nfz_contracts_agreements: {rows: 490000}  # 327,206 (Dev trial 43814206385)
+  nfz_contracts_providers: {rows: 50000}  # 33,541 (Dev trial 43814206385)
+  poc_build_nfz_contracts: {rows: 600}  # 417 (Dev trial 43814206385: 17 areas x 8 years + 3 areas in 2027, x 3)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32 + #2955): 128 year-and-branch files (under 1 MB each) and a Silver table of

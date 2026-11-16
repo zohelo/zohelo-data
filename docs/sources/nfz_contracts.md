@@ -8,10 +8,13 @@ second per IP), bounded retries. Entity = one contract year and branch (`agreeme
 its list landed as one ZIP of the exact answers; version = download time, written only when the pages' `data`
 differ from the newest copy (the API has no update date: `meta.date-modified` is the request time). Restart unit: one
 year and branch. Each weekly run reads the current and the previous contract year again (NFZ amends agreements
-during and after their year) and any older year once a year; the first run landed the scope in 113 minutes (Dev
-trial 43328769016), the weekly re-read of the two open years TRIAL_WEEKLY.
+during and after their year), any later year the API already serves, and any older year once a year; the first run
+landed the scope in 108.6 minutes and the weekly re-read of 2025-2027 (48 lists, all unchanged) took 29.0 minutes
+(Dev trial 43814206385).
 
-**Scope.** Contract years 2019–2026 (327,177 agreements, 13,146 pages, Dev probe 43323636829). Left out: contract
+**Scope.** Contract years from 2019 to the API's end year (Dev trial 43814206385: 2019–2027, 327,206 agreements,
+13,163 pages; 2027 had 2 agreements in 2 branches on 16 Nov 2026, so Gold shows a nearly empty 2027 until NFZ
+signs that year's agreements). Left out: contract
 years 2008–2018 (528,886 more agreements: the agreements table would pass the 1 M full-rebuild limit, #822; they can
 be added once Silver is incremental); each agreement's plans by contract product, their months and packages
 (settlement-unit quantities and prices: one request per agreement or plan, about 327,000 requests); the provider
@@ -44,7 +47,13 @@ know a provider only by its NFZ provider code and branch. The exact Landing byte
 keeps the source's bytes. Loading any of them needs an owner GDPR review first (as for REGON in `register.yaml` and
 `warehouse/dimensions/person.yaml`).
 
-**Amounts of 0.00.** ZERO_PROFILE
+**Amounts of 0.00.** NFZ publishes 0.00 as the amount of 54,239 agreements of 2019–2027 (Dev trial 43814206385;
+18.7 % of the 290,747 agreements with an amount); the API has no other marker, and 36,459 agreements (all of service
+type 12) have no amount (null). The zeros are concentrated in two service types: 01 (43,948 of 76,723, 57 %) and 21
+(7,718 of 9,038, 85 %), then 18 (1,472) and fewer than 430 in each other type; no agreement code with 0.00 in one year
+has a positive amount in another. NFZ does not say what 0.00 means, so Silver keeps it as published (no reading of it
+as "no amount"). In Gold it changes nothing: the amount is a sum, so a 0.00 adds nothing, and an agreement counts in
+the number of agreements whether its amount is 0.00 or null; no Gold amount row is 0 (0 of 139).
 
 **Completeness.** `tests/nfz_contracts_agreements_complete.sql` fails when a year and branch before the newest landed
 year has no agreement; `..._complete_newest.sql` only warns for the newest year (a year NFZ has just opened can have
