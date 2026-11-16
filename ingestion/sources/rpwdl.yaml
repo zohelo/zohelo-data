@@ -55,17 +55,17 @@ silver: [silver.rpwdl_providers, silver.rpwdl_establishments, silver.rpwdl_units
          silver.rpwdl_practices]
 gold: [gold.build_rpwdl, gold.healthcare_provider_rpwdl, gold.healthcare_establishment_rpwdl,
        gold.metrics_healthcare_providers, gold.metrics_medical_practices]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); counts from Dev probe 43339211206, see docs/sources/rpwdl.md
-  rpwdl_providers: {rows: 71000}  # 47,052 (29,845 active + 17,207 inactive ledgers)
-  rpwdl_establishments: {rows: 85000}  # 56,189
-  rpwdl_units: {rows: 120000}  # 79,599
-  rpwdl_cells: {rows: 950000}  # 627,432 (483,646 + 143,786)
-  rpwdl_practices: {rows: 430000}  # about 285,000 (9 register types)
-  poc_build_rpwdl: {rows: 400}  # 5 measures x 17 areas, practices also by 9 types: about 240
-  healthcare_provider_rpwdl: {rows: 71000}  # one row per provider ledger, 47,052
-  healthcare_establishment_rpwdl: {rows: 85000}  # 56,189
-  poc_metrics_healthcare_providers: {rows: 40}  # 17 areas, one snapshot year
-  poc_metrics_medical_practices: {rows: 40}  # 17 areas, one snapshot year
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); counts from Dev trial 43796970764 (16 Nov 2026)
+  rpwdl_providers: {rows: 71000}  # 47,060 (29,846 active + 17,214 inactive ledger rows)
+  rpwdl_establishments: {rows: 85000}  # 56,201
+  rpwdl_units: {rows: 120000}  # 79,616
+  rpwdl_cells: {rows: 950000}  # 627,566 (483,755 + 143,811)
+  rpwdl_practices: {rows: 430000}  # 278,341 (8 practice registers, active + inactive)
+  poc_build_rpwdl: {rows: 300}  # 203 (5 measures x 17 areas, practices also by 8 registers)
+  healthcare_provider_rpwdl: {rows: 71000}  # one row per provider ledger, 47,060
+  healthcare_establishment_rpwdl: {rows: 85000}  # 56,201
+  poc_metrics_healthcare_providers: {rows: 40}  # 17 areas a snapshot year (34 rows in both metrics)
+  poc_metrics_medical_practices: {rows: 40}  # 17 areas a snapshot year (34 rows in both metrics)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): 18 whole-register ZIPs (about 104 MB, 1.1 M Bronze rows) replaced whole on
