@@ -8,7 +8,10 @@ every page of ``/monthly-provisions`` for it (25 rows a page, the API's maximum)
 ``<version>__<ingested>__part-<n>.json``, all parts of one download sharing ``ingested``. Version = ``end-date`` of
 ``/available-periods`` (``YYYYMMDDT000000Z``): a run whose version is held makes that one request and nothing else.
 Every answer carries the request time in ``meta.date-modified``, so a new download is compared by the SHA-256 of
-its ``data`` rows (``data_sha256`` in the receipts), not by its bytes; equal rows are not written again.
+its ``data`` rows (``data_sha256`` in the receipts), not by its bytes; equal rows are not written again. A revision
+of past months under an unchanged end-date would not move the version, so each run also reads again the current
+entities of its slot (a stable hash of the entity per calendar month, REREAD slots: every entity once a year, about
+21 entities a monthly run) and lands them only when their rows changed.
 
 Guards before anything is written: every page answers the filters asked (``links.self`` echoes the province code
 and the ATC name), the page numbers and ``meta.count`` agree, the rows equal ``meta.count`` and (year, month) is unique;
@@ -54,6 +57,7 @@ AREAS = ["PL"] + [f"{i:02d}" for i in range(1, 17)]  # PL = no province filter; 
 ATC = ["A", "B", "C", "D", "G", "H", "J", "L", "M", "N", "P", "R", "S", "V"]  # the 14 groups of /atc
 TOTAL = "T"  # entity suffix of the selection without an ATC filter
 FIELDS = {"year", "month", "quantity", "refund", "donation", "contribution-of-patient", "value"}
+REREAD = 12  # current entities read again once every REREAD calendar months (revisions under an unchanged end-date)
 
 
 def entities() -> list[str]:
@@ -141,6 +145,12 @@ def state(rows: list[dict[str, Any]] | None, token: str) -> str:
     if not held:
         return "missing"
     return "current" if held[0]["version_token"] >= token else "stale"
+
+
+def reread_due(entity: str, today: datetime) -> bool:
+    """The entity's slot is this calendar month: a stable hash, so each entity is read again once every REREAD
+    months whatever the run day."""
+    return int(sha256(entity.encode()).hexdigest(), 16) % REREAD == (today.year * 12 + today.month) % REREAD
 
 
 def filters(entity: str, names: dict[str, str]) -> dict[str, str]:
@@ -305,6 +315,9 @@ def main(argv=None) -> int:
         summary = {"mode": args.mode, "source_version": token, "entities": len(todo), **Counter(states.values())}
         summary["atc_dictionary"] = state(dictionary, token)
         order = [e for e in todo if states[e] == "missing"] + [e for e in todo if states[e] == "stale"]
+        reread = [e for e in todo if states[e] == "current" and reread_due(e, datetime.now(UTC))]
+        summary["reread_due"] = len(reread)
+        order += reread
         if args.mode == "load" and (order or summary["atc_dictionary"] != "current"):
             deadline = time.monotonic() + args.budget_minutes * 60
             names, answer = atc_names(session)
