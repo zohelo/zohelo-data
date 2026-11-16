@@ -18,8 +18,8 @@ decision date of each item, `register_key` = list:number:date). Gold: entity tab
 (one row per register entry: number, date, objects, powiat or voivodeship, localities) and block `register` of
 `poc_build_nid_monuments` (objects and register entries by powiat, voivodeship and Poland on the date of the lists,
 frequency D); powiats matched by name within the voivodeship (`macros/sources/nid_monuments.sql`). Lists of
-30.06.2026 (Dev trial 43802337548): 80,657 items, 75,198 objects with a decision (numbered, "jw.", parts of an
-ensemble), 5,459 unnumbered, 54,914 register entries; 481 decisions without a readable full date keep the printed
+30.06.2026 (Dev trial 43803614937): 80,657 items, 75,198 objects with a decision (numbered, "jw.", parts of an
+ensemble), 5,459 unnumbered, 54,914 register entries; 523 decisions without a readable full date keep the printed
 text (dates before 1918 or after the list's date are misprints and get none). Left out: the
 dating of objects (free text) and the archaeological and movable registers. Quarterly check (lists updated twice a
 year). Terms: the NID page states no licence (site footer "All rights reserved"); licence `unresolved`, internal
