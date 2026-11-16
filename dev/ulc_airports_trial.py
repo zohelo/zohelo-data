@@ -3,16 +3,17 @@ zz_dev_ulc_airports, each twice, then the branch's Silver, test and Gold SQL app
 the source's macro file), checks and Poland spot values printed and annotated. Reads silver.teryt_terc (read-only)
 for the voivodeship keys. Everything written is removed at the end (finally). Deleted before merge.
 
-Argument replay=<job id>: since 16 Nov ~05:00 UTC ulc.gov.pl answers the runner with an Incapsula challenge (trial runs
-43807334129, 43808333414). Replay serves the branch's Landing code, through a stand-in for requests.get, the exact
-bytes the site served to Dev probe 43797214327 (listing and 64 PDFs, SHA-256 checked, read from that job's public
-log); no request reaches ulc.gov.pl. Everything after the HTTP answer (discovery, plan, PDF check, receipts,
-idempotence, Bronze, Silver, Gold) runs as in production."""
+The live site first: the first Landing run asks ulc.gov.pl. Since 16 Nov ~05:00 UTC the site answers the runner
+with an Incapsula challenge (trial runs 43807334129, 43808333414); when the first run is refused, Landing runs again
+twice in replay: the branch's Landing code gets, through a stand-in for requests.get, the exact bytes the site served
+to Dev probe 43797214327 (listing and 64 PDFs; dev/ulc_replay/, SHA-256 checked against the probe's log); no further
+request reaches ulc.gov.pl. Everything after the HTTP answer (discovery, plan, PDF check, receipts, idempotence,
+Bronze, Silver, Gold) runs as in production."""
 
 from __future__ import annotations
 
-import base64
 import csv
+import json
 from hashlib import sha256
 from pathlib import Path
 import re
@@ -82,32 +83,20 @@ class Answer:
             raise requests.HTTPError(f"{self.status_code}")
 
 
-def replay(job: str) -> dict[str, bytes]:
-    """{URL: bytes} from the probe job's log (@@BEGIN <label> <url> … <size> <sha256> / @@B base64 / @@END)."""
-    text = requests.get(f"https://api.github.com/repos/zohelo/zohelo-data/actions/jobs/{job}/logs", timeout=120)
-    text.raise_for_status()
-    out, current, parts = {}, None, []
-    for line in text.text.splitlines():
-        line = re.sub(r"^\S+Z ", "", line, count=1)
-        if line.startswith("@@BEGIN "):
-            current, parts = line.split(" "), []
-        elif line.startswith("@@B ") and current:
-            parts.append(line[4:].strip())
-        elif line.startswith("@@END") and current:
-            body = base64.b64decode("".join(parts))
-            if len(body) != int(current[-2]) or sha256(body).hexdigest() != current[-1]:
-                raise RuntimeError(f"replayed bytes do not match the probe's SHA-256: {current[1:4]}")
-            out[landing.LISTING if current[1] == "listing" else current[3]] = body
-            current = None
+def replay() -> dict[str, bytes]:
+    """{URL: bytes} from dev/ulc_replay/ (manifest.json {url: sha256}; each body checked against its SHA-256)."""
+    folder = ROOT / "dev/ulc_replay"
+    out = {}
+    for url, digest in json.loads((folder / "manifest.json").read_text())["bodies"].items():
+        body = (folder / f"{digest}.bin").read_bytes()
+        if sha256(body).hexdigest() != digest:
+            raise RuntimeError(f"replay body does not match its SHA-256: {url}")
+        out[url] = body
     return out
 
 
 def main(argv) -> int:
-    job = next((a[7:] for a in argv if a.startswith("replay=")), None)
-    if job:
-        served = replay(job)
-        print({"replayed_bodies": len(served)}, flush=True)
-        requests.get = lambda url, *a, **k: Answer(url, served.get(url))
+    mode = "live"
     client = s3()
     landing_bucket = req("STORAGE_LANDING_BUCKET_NAME")
     cat = bf.retry(catalog, "catalog")
@@ -116,9 +105,18 @@ def main(argv) -> int:
     try:
         idem: dict[str, object] = {}
         for attempt in (1, 2):
-            print(f"\n##### landing extract {attempt}", flush=True)
+            print(f"\n##### landing extract {attempt} ({mode})", flush=True)
             idem[f"landing_exit_{attempt}"] = landing.extract(60, landing_root=LAND)
             idem[f"receipts_after_{attempt}"] = receipts(client, landing_bucket)
+            if attempt == 1 and idem["landing_exit_1"] and not idem["receipts_after_1"]:
+                idem["live_landing"] = "refused (annotation 'ulc_airports landing extract')"
+                mode, served = "replay of probe 43797214327", replay()
+                requests.get = lambda url, *a, **k: Answer(url, served.get(url))
+                for again in (1, 2):
+                    print(f"\n##### landing extract {again} ({mode})", flush=True)
+                    idem[f"landing_exit_{again}"] = landing.extract(60, landing_root=LAND)
+                    idem[f"receipts_after_{again}"] = receipts(client, landing_bucket)
+                break
         held = sorted(landing.held_entities(LAND))
         idem["landing_verify_exit"] = bulk_file.main(
             "ulc_airports", "verify", landing_root=LAND, specs=[{"entity": e} for e in held]
@@ -139,7 +137,7 @@ def main(argv) -> int:
         # Bronze profile (look before modelling)
         values = "unnest([value_1, value_2, value_3])"
         profile = {
-            "replay_of_probe_job": job,
+            "landing_mode": mode,
             **idem,
             "files_landed": len(held),
             "bytes_landed": None,
@@ -260,9 +258,10 @@ def main(argv) -> int:
             src = [r for r in csv.DictReader(f) if r["source_key"] == "ulc_airports"]
         with (ROOT / "warehouse/seeds/licence.csv").open() as f:
             lic = [r for r in csv.DictReader(f) if src and r["licence_key"] == src[0]["licence_key"]]
-        g["catalogue_row"] = {"source": src, "licence": lic}
-        print("GOLD", g, flush=True)
-        annotate("notice", "ulc_airports trial gold", g)
+        g["catalogue_row"] = {
+            "source_licence_key": src[0]["licence_key"] if src else None,
+            "licence": [(r["licence_key"], r["name"], "commercial_ok=" + r["commercial_ok"]) for r in lic],
+        }
         spot = one(
             "select string_agg(period_label || ' ' || measure_codes || '=' || cast(value as bigint), '; ' order by"
             " period_label desc, measure_codes) from build where geography_key = 'PL' and is_total and date_key >= '2024-01-01'"
@@ -272,7 +271,9 @@ def main(argv) -> int:
             " from build where date_key = '2026-01-01' and geography_source_code in ('EPWA', 'EPKK', 'EPRA')"
             " or (date_key = '2019-07-01' and geography_source_code = 'EPWR')"
         )
-        annotate("notice", "ulc_airports trial Poland", {"poland": spot, "airports": airports_spot})
+        g.update(poland=spot, airports=airports_spot)
+        print("GOLD", g, flush=True)
+        annotate("notice", "ulc_airports trial gold", g)
         show(
             con,
             "gold sample",

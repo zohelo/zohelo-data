@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="pl-PL" lang="pl-PL" dir="ltr">
+<head>
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.1a3c9a8ebcc58dac607cdcc47329d03d-gdprlock/gtag/js?id=G-PD7EV7MWQ3"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-PD7EV7MWQ3');
+</script>
+<style>.anchormenu {margin-top:-170px; padding-top:170px}</style>
+    <meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="Urząd Lotnictwa Cywilnego">
+	<meta name="generator" content="Joomla! - Open Source Content Management">
+	<title>Statystyki wg portów lotniczych - Urząd Lotnictwa Cywilnego</title>
+	<link href="https://ulc.gov.pl/statystyki-analizy/statystyki-wg-portow-lotniczych" rel="alternate" hreflang="pl-PL">
+	<link href="https://ulc.gov.pl/en/market-regulation/statictics-and-analysis-of-air-transport-market/statistics-by-airports" rel="alternate" hreflang="en-GB">
+	<link href="/images/logo/favicon-ulc.svg" rel="icon" type="image/vnd.microsoft.icon">
+	<link href="https://ulc.gov.pl/szukaj?format=opensearch" rel="search" title="ULC" type="application/opensearchdescription+xml">
+
+    <link href="/media/templates/site/ulc/css/theme-7072d4beca9d76284a0a.css?1787225662" rel="stylesheet">
+	<link href="/media/templates/site/ulc/css/fonts-c29d9ebc1d884b6dc8ca.css?1787225662" rel="stylesheet" media="print" onload="this.media=&quot;all&quot;">
+	<link href="/media/templates/site/ulc/css/lightbox-10cfa56f61d9ba6d32ff.css?1787225662" rel="stylesheet">
+	<link href="/media/mod_languages/css/template.min.css?1787225662" rel="stylesheet">
+	<link href="/media/vendor/awesomplete/css/awesomplete.css?1.1.7" rel="stylesheet">
+	<link href="/plugins/system/gdpr/assets/css/cookieconsent.min.css?1787225662" rel="stylesheet">
+	<link href="/plugins/system/gdpr/assets/css/cookieconsentgooglecmp.min.css?1787225662" rel="stylesheet">
+	<link href="/plugins/system/gdpr/assets/css/cookieconsent.xtd.min.css?1787225662" rel="stylesheet">
+	<link href="/plugins/system/gdpr/assets/css/jquery.fancybox.min.css?1787225662" rel="stylesheet">
+	<link href="/media/plg_system_jcepro/site/css/content.min.css?86aa0286b6232c4a5b58f892ce080277" rel="stylesheet">
+	<style>div.cc-window.cc-floating{max-width:32em}@media(max-width: 639px){div.cc-window.cc-floating:not(.cc-center){max-width: none}}div.cc-window, span.cc-cookie-settings-toggler, span.cc-cookie-domains-toggler{font-size:14px}div.cc-revoke{font-size:14px}div.cc-settings-label,span.cc-cookie-settings-toggle{font-size:12px}div.cc-window.cc-banner{padding:1.6em 1.8em}div.cc-window.cc-floating{padding:3.2em 1.8em}input.cc-cookie-checkbox+span:before, input.cc-cookie-checkbox+span:after{border-radius:0px}div.cc-center,div.cc-floating,div.cc-checkbox-container,div.gdpr-fancybox-container div.fancybox-content,ul.cc-cookie-category-list li,fieldset.cc-service-list-title legend{border-radius:10px}div.cc-window a.cc-btn,span.cc-cookie-settings-toggle{border-radius:5px}</style>
+	<style>div.cc-checkboxes-container input.cc-cookie-checkbox+span,fieldset.cc-cookie-list-title .gdpr_cookie_switcher label.gdpr_onoffswitch-label{border-radius:15px}div.cc-checkboxes-container input.cc-cookie-checkbox+span::before{border-radius:10px;height:14px;bottom: 2px;width:14px}fieldset.cc-cookie-list-title .gdpr_cookie_switcher span.gdpr_onoffswitch-switch{border-radius:10px;height:14px;top:2px;right:3px}fieldset.cc-cookie-list-title .gdpr_onoffswitchcookie.gdpr_cookie_switcher.disabled .gdpr_onoffswitch-switch{right:25px}div.cc-checkboxes-container input.cc-cookie-checkbox:checked+span::before{left:8px}div.cc-checkboxes-container input.cc-cookie-checkbox+span::before{left:3px}div.gdpr-component-view span.cc-checkboxes-placeholder,div.gdpr-component-view div.cc-checkboxes-container input.cc-cookie-checkbox+span::before{border-radius:10px}div.gdpr-component-view div.cc-checkboxes-container input.cc-cookie-checkbox+span::before{height: 14px;bottom: 2px;left:3px}div.gdpr-component-view div.cc-checkboxes-container input.cc-cookie-checkbox:checked+span::before{transform:translateX(22px)}</style>
+	<style>.cc-window{position:fixed!important;left:30px!important;top:unset!important;right:unset!important;bottom:30px!important;transform:none!important;margin:0!important;border:0!important;box-shadow:5px 5px 15px rgba(0,0,0,.15),2px 2px 5px rgba(0,0,0,.10);padding:30px!important;line-height:1.625!important;max-height:calc(100vh - 60px);max-width:calc(100vh - 60px);overflow-x:unset!important;overflow-y:auto!important;display:flex!important;flex-direction:column!important;box-sizing:border-box!important;flex-wrap:nowrap!important;justify-content:flex-start!important}.cc-window span.cc-header{padding-bottom:10px;padding-top:0;flex-grow:0!important;margin:0!important}.cc-message>.cc-message-text::before{display:none!important;content:none!important}.cc-window span.cc-message{padding-bottom:0!important;text-align:center!important;flex-grow:0!important;margin-top:-1em!important}.cc-window div.cc-compliance.cc-highlight{margin-top:0;border:0!important;justify-content:center;flex-grow:0!important}.cc-window a.cc-link.cc-cookie,.cc-window a.cc-link.cc-cookie:hover,.cc-window a.cc-link.cc-privacy,.cc-window a.cc-link.cc-privacy:hover{margin:0 auto!important}.cc-window .cc-btn.cc-deny{background:#fff!important;color:#c72424!important;border:1px solid #c72424!important}.cc-window .cc-btn.cc-deny:hover,.cc-window .cc-btn.cc-deny:focus{background:#c72424!important;color:#fff!important;text-decoration:none!important}.cc-window .cc-btn.cc-allowall{background:#339e41!important;color:#fff!important;border:1px solid #339e41!important}.cc-window .cc-btn.cc-allowall:hover,.cc-window .cc-btn.cc-allowall:focus{background:#fff!important;color:#339e41!important;text-decoration:none!important}.cc-window .cc-btn.cc-allow{background:#339e41!important;color:#fff!important;border:1px solid #339e41!important;border-radius:10px!important;padding:10px 20px!important;margin-left:auto!important;margin-right:auto!important;display:inline-block!important;float:none!important}.cc-window .cc-btn.cc-allow:hover,.cc-window .cc-btn.cc-allow:focus{background:#fff!important;color:#339e41!important;text-decoration:none!important}.cc-checkbox-category-readmore{margin-top:.5em!important;text-align:left!important;margin-left:14px!important}.cc-window .cc-cookie-settings-toggle.cc-cookie-settings-toggle-xtd{color:#555!important;background:none!important;border:1px solid #555!important;display:inline-block!important;padding-left:20px;padding-right:20px;margin-bottom:0!important;margin-left:auto!important;margin-right:auto!important}.cc-window .cc-cookie-settings-toggle:hover,.cc-window .cc-cookie-settings-toggle:focus{background:#555!important;color:#fff!important;text-decoration:none!important}.cc-btn.cc-btn.cc-allowall,.cc-btn.cc-btn.cc-deny,.cc-cookie-settings-toggle{border-radius:10px!important;padding:10px;margin:1em!important}.cc-window .cc-cookie-settings-toggle span.cc-cookie-settings-toggler{margin:0 0 0 1em !important}.cc-window .cc-btn.cc-allowall,.cc-window .cc-btn.cc-allow,.cc-window .cc-btn.cc-deny,.cc-window .cc-cookie-settings-toggle{padding:10px 20px!important;height:unset!important}.cc-window div.cc-settings-label{font-size:18px;font-weight:700}.cc-window div.cc-settings-label::before{display:none!important}@media (min-width: 971px){.cc-window .cc-btn.cc-deny,.cc-window .cc-cookie-settings-toggle,.cc-window .cc-btn.cc-allowall{max-width:180px}.cc-window .cc-cookie-settings-toggle{margin-left:auto!important;margin-right:auto!important}}@media (max-width: 970px){.cc-window{padding:15px!important;top:20px!important;left:20px!important;bottom:unset!important;right:unset!important;max-width:calc(100vw - 40px)!important;max-height:calc(100vh - 40px)!important}.cc-message{margin-top:-1em!important}}html body,html body.gdpr-backdrop-effect{filter:unset!important;pointer-events:unset!important}.cc-window.cc-invisible{display:none!important}</style>
+	<style>div.gdprlock-placeholder-text,div.gdprcookielock-placeholder-text{color:#444444}</style>
+	<style>div.gdprlock-placeholder, div.gdprcookielock-placeholder{background:#f8f9fa}</style>
+
+    <!-- Facebook Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window,document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+ fbq('init', '1573041916369481'); 
+fbq('track', 'PageView');
+</script>
+<noscript>
+ <img height="1" width="1" 
+src="https://www.facebook.com/tr?id=1573041916369481&ev=PageView
+&noscript=1"/>
+</noscript>
+<!-- End Facebook Pixel Code -->
+</head>
+
+<body class="site page-259 com_content view-article  subpage" data-bs-theme="light">
+
+<div id="top-shortcuts" data-path="/statystyki-analizy/statystyki-wg-portow-lotniczych" data-lang="pl-PL">
+    <a href="#nav-menu" class="visually-hidden-focusable">
+        <i class="fas fa-bars" aria-hidden="true"></i><span class="d-inline-block ms-3">Główna nawigacja</span>
+    </a>
+    <a href="#content" class="visually-hidden-focusable">
+        <i class="fas fa-align-left" aria-hidden="true"></i><span class="d-inline-block ms-3">Treść</span>
+    </a>
+    <a href="#narzedzia-dostepnosci" class="visually-hidden-focusable">
+        <i class="fas fa-wheelchair" aria-hidden="true"></i><span class="d-inline-block ms-3">Narzędzia dostępności</span>
+    </a>
+    </div><div id="top">
+    <div id="navigation" class="shadow-sm py-3 py-lg-4 navbar navbar-light">
+
+        <!--Navigation header-->
+        <div class="container d-flex align-items-center">
+
+            <!--Logo-->
+            <a class="navbar-brand  position-relative py-0 mx-auto ms-lg-0 me-lg-auto mb-3 mb-lg-0 d-flex justify-content-center align-items-center" href="/" title="Urząd Lotnictwa Cywilnego">
+                                    <img src="/images/logo/logo-ulc-pl.svg" alt="Urząd Lotnictwa Cywilnego" class="hide-theme-dark" width="300" height="42" loading="lazy">                    <img src="/images/logo/logo-ulc-white-pl.svg" alt="Urząd Lotnictwa Cywilnego" class="hide-theme-light" loading="lazy">                                    
+                            </a>
+
+                            <span id="narzedzia-dostepnosci" aria-hidden="true" class="visually-hidden"></span>
+                <div class="toolbar-menu mx-auto mx-lg-0 d-flex align-items-center flex-wrap"><div class="module"><ul class="mod-menu nav flex-row flex-wrap nav-inline justify-content-center justify-content-md-start">
+    <li class="d-flex align-items-center flex-wrap nav-item item-112 level-1"><a href="http://bip.ulc.gov.pl/" class=" nav-link d-flex align-items-center" target="_blank" rel="noopener noreferrer"><img src="/images/icons/tools/bip.svg" alt="Biuletyn Informacji Publicznej" width="300" height="150" loading="lazy"></a></li><li class="d-flex align-items-center flex-wrap nav-item item-102 level-1"><a href="https://zsi.ulc.gov.pl/" class=" nav-link d-flex align-items-center" target="_blank" rel="noopener noreferrer"><img src="/images/icons/tools/ulc-zsi.png" alt="ZSI UC" width="41" height="40" loading="lazy"></a></li><li class="d-flex align-items-center flex-wrap nav-item item-109 level-1"><a href="#" class="a11-contrast-switch nav-link d-flex align-items-center"><i class=" fas fa-circle-half-stroke" aria-hidden="true"></i><span class="visually-hidden">Kontrast</span></a></li><li class="d-flex align-items-center flex-wrap nav-item item-137 level-1"><a href="#" class="a11-font-switch nav-link d-flex align-items-center"><i class=" fas fa-text-height" aria-hidden="true"></i><span class="visually-hidden">Rozmiar tekstu</span></a></li><li class="d-flex align-items-center flex-wrap nav-item item-110 level-1"><a href="#" class="a11-underline nav-link d-flex align-items-center"><i class=" fas fa-underline" aria-hidden="true"></i><span class="visually-hidden">Podkreślenie odnośników</span></a></li><li class="d-flex align-items-center flex-wrap nav-item item-111 level-1"><a href="https://youtu.be/Q83QGA7xBvE" class=" nav-link d-flex align-items-center" target="_blank" rel="noopener noreferrer"><i class=" fas fa-hands-asl-interpreting" aria-hidden="true"></i><span class="visually-hidden">Wideotłumacza</span></a></li></ul>
+</div><div class="module"><div class="moduletable ">
+<div class="mod-languages ms-3">
+    <p class="visually-hidden" id="language_picker_des_147">Wybierz swój język</p>
+
+
+    <ul aria-labelledby="language_picker_des_147" class="mod-languages__list lang-inline d-flex flex-wrap align-items-center">
+
+
+        <li class="d-flex align-items-center flex-wrap nav-itemlevel-1 divider"><span class="mod-menu__separator dropdown-divider"></span></li>
+                                            <li class="lang-active">
+                <a aria-current="true"  href="https://ulc.gov.pl/statystyki-analizy/statystyki-wg-portow-lotniczych">
+                                                                        <img title="Polski (PL)" src="/media/mod_languages/images/pl_pl.gif" alt="Polski (PL)" loading="lazy">                                                            </a>
+            </li>
+                                        <li>
+                <a  href="/en/market-regulation/statictics-and-analysis-of-air-transport-market/statistics-by-airports">
+                                                                        <img title="English (United Kingdom)" src="/media/mod_languages/images/en_gb.gif" alt="English (United Kingdom)" loading="lazy">                                                            </a>
+            </li>
+                </ul>
+
+</div>
+</div>
+</div></div>                    </div>
+
+    </div>
+
+    <!--Menu button-->
+        <div class="shadow-sm main-navbar position-relative">
+        <div class="container d-flex justify-content-between align-items-center" id="nav-menu">
+            <div class="module"><div class="moduletable ">
+        
+<nav aria-label="Menu główne" class="d-flex justify-content-end justify-content-lg-start">
+
+    <button class="btn btn-outline-primary d-inline-flex align-items-center d-lg-none px-3 py-2 my-3" id="offcanvas-menu-1-activator" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvas-menu-1"  aria-controls="offcanvas-menu-1" aria-expanded="false" aria-label="Przełącz nawigację">
+        <i class="fas fa-bars" aria-hidden="true"></i>
+        <span class="d-none d-sm-block ms-3">Menu</span>
+    </button>
+
+    <div class="d-none d-lg-block">
+        <ul class="mod-menu nav mod-menu-offcanvas flex-column flex-lg-row desktop-menu ">
+    <li class="d-flex align-items-center flex-wrap nav-item item-101 level-1 default"><a href="/" class="d-lg-none d-xl-flex nav-link d-flex align-items-center">Strona główna</a></li><li class="d-flex align-items-center flex-wrap nav-item item-115 level-1 deeper dropdown parent"><a href="/urzad" class=" nav-link d-flex align-items-center dropdown-toggle" data-bs-toggle="dropdown" data-bs-offset="0,0" aria-haspopup="true" aria-expanded="false">Urząd</a><ul class="dropdown-menu shadow-sm"><li class="d-flex align-items-center flex-wrap nav-item item-212 level-2"><a href="/urzad" class=" nav-link d-flex align-items-center">O nas</a></li><li class="d-flex align-items-center flex-wrap nav-item item-213 level-2"><a href="/urzad#misja" class=" nav-link d-flex align-items-center">Misja i wartości</a></li><li class="d-flex align-items-center flex-wrap nav-item item-219 level-2"><a href="/urzad/kierownictwo" class=" nav-link d-flex align-items-center">Kierownictwo</a></li><li class="d-flex align-items-center flex-wrap nav-item item-215 level-2"><a href="/urzad#struktura" class=" nav-link d-flex align-items-center">Struktura organizacyjna</a></li><li class="d-flex align-items-center flex-wrap nav-item item-216 level-2"><a href="/urzad#delegatury" class=" nav-link d-flex align-items-center">Delegatury</a></li><li class="d-flex align-items-center flex-wrap nav-item item-217 level-2"><a href="/urzad/skargi-wnioski" class=" nav-link d-flex align-items-center">Skargi i wnioski</a></li><li class="d-flex align-items-center flex-wrap nav-item item-218 level-2"><a href="/urzad#patronaty" class=" nav-link d-flex align-items-center">Patronaty Prezesa ULC</a></li></ul></li><li class="d-flex align-items-center flex-wrap nav-item item-116 level-1 deeper dropdown parent"><a href="/prawo" class=" nav-link d-flex align-items-center dropdown-toggle" data-bs-toggle="dropdown" data-bs-offset="0,0" aria-haspopup="true" aria-expanded="false">Prawo</a><ul class="dropdown-menu shadow-sm"><li class="d-flex align-items-center flex-wrap nav-item item-172 level-2"><a href="/prawo/prawo-miedzynarodowe" class=" nav-link d-flex align-items-center">Prawo międzynarodowe</a></li><li class="d-flex align-items-center flex-wrap nav-item item-173 level-2 parent"><a href="/prawo/prawo-uni-europejskiej" class=" nav-link d-flex align-items-center">Prawo UE</a></li><li class="d-flex align-items-center flex-wrap nav-item item-174 level-2"><a href="/prawo/krajowe" class=" nav-link d-flex align-items-center">Prawo krajowe</a></li><li class="d-flex align-items-center flex-wrap nav-item item-175 level-2"><a href="/prawo/dzienniki-urzedowe-ulc" class=" nav-link d-flex align-items-center">Dziennik Urzędowy</a></li><li class="d-flex align-items-center flex-wrap nav-item item-176 level-2 parent"><a href="/prawo/projekty" class=" nav-link d-flex align-items-center">Projekty</a></li></ul></li><li class="d-flex align-items-center flex-wrap nav-item item-819 level-1"><a href="https://bip.ulc.gov.pl/praca-w-ulc/ogloszenia-o-pracy-w-ulc" class=" nav-link d-flex align-items-center" target="_blank" rel="noopener noreferrer">Kariera</a></li><li class="d-flex align-items-center flex-wrap nav-item item-117 level-1 deeper dropdown parent"><a href="/kontakt/dane" class=" nav-link d-flex align-items-center dropdown-toggle" data-bs-toggle="dropdown" data-bs-offset="0,0" aria-haspopup="true" aria-expanded="false">Kontakt</a><ul class="dropdown-menu shadow-sm"><li class="d-flex align-items-center flex-wrap nav-item item-198 level-2"><a href="/kontakt/dane" class=" nav-link d-flex align-items-center">Dane kontaktowe</a></li><li class="d-flex align-items-center flex-wrap nav-item item-177 level-2"><a href="/kontakt/punkt-obslugi" class=" nav-link d-flex align-items-center">Punkt obsługi Klienta i Kancelaria</a></li><li class="d-flex align-items-center flex-wrap nav-item item-178 level-2"><a href="/kontakt/departamenty" class=" nav-link d-flex align-items-center">Departamenty i biura</a></li><li class="d-flex align-items-center flex-wrap nav-item item-199 level-2"><a href="/kontakt/delegatury" class=" nav-link d-flex align-items-center">Delegatury</a></li><li class="d-flex align-items-center flex-wrap nav-item item-179 level-2"><a href="/kontakt/biuro-prasowe" class=" nav-link d-flex align-items-center">Biuro prasowe</a></li><li class="d-flex align-items-center flex-wrap nav-item item-180 level-2"><a href="/kontakt/patronaty" class=" nav-link d-flex align-items-center">Patronaty Prezesa ULC</a></li><li class="d-flex align-items-center flex-wrap nav-item item-181 level-2"><a href="/kontakt/podpis" class=" nav-link d-flex align-items-center">Podpis elektroniczny</a></li><li class="d-flex align-items-center flex-wrap nav-item item-613 level-2"><a href="/cyberbezpieczenstwo-klientow" class=" nav-link d-flex align-items-center">Cyberbezpieczeństwo Klientów</a></li><li class="d-flex align-items-center flex-wrap nav-item item-614 level-2"><a href="/kontakt/inspektor-ochrony-danych" class=" nav-link d-flex align-items-center">Inspektor Ochrony Danych</a></li><li class="d-flex align-items-center flex-wrap nav-item item-683 level-2"><a href="/kontakt/struktura-infolinii" class=" nav-link d-flex align-items-center">Struktura infolinii</a></li></ul></li></ul>
+    </div>
+
+    <div class="offcanvas offcanvas-end d-flex d-lg-none" tabindex="-1" id="offcanvas-menu-1" aria-labelledby="offcanvas-menu-1-title">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="offcanvas-title h6 text-primary" id="offcanvas-menu-1-title">Menu główne</h5>
+            <button type="button" class="btn btn-outline-primary px-2 py-1 mt-1 me-1 d-flex align-items-center" data-bs-dismiss="offcanvas" aria-label="Zamknij">
+                <i class="fas fa-xmark" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="offcanvas-body py-2">
+            <ul class="mod-menu nav mod-menu-offcanvas flex-column flex-lg-row mobile-menu  mod-menu-default" id="mod-menu-default-1">
+    <li class="nav-item item-101 level-1 default"><a href="/" class="d-lg-none d-xl-flex nav-link">Strona główna</a></li><li class="nav-item item-115 level-1 deeper dropdown parent"><a href="/urzad" class=" nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#mod-menu-1-submenu-115" aria-expanded="false">Urząd</a><ul class="nav flex-column flex-nowrap collapse ps-3" id="mod-menu-1-submenu-115" data-bs-parent="#mod-menu-default-1"><li class="nav-item item-212 level-2"><a href="/urzad" class=" nav-link">O nas</a></li><li class="nav-item item-213 level-2"><a href="/urzad#misja" class=" nav-link">Misja i wartości</a></li><li class="nav-item item-219 level-2"><a href="/urzad/kierownictwo" class=" nav-link">Kierownictwo</a></li><li class="nav-item item-215 level-2"><a href="/urzad#struktura" class=" nav-link">Struktura organizacyjna</a></li><li class="nav-item item-216 level-2"><a href="/urzad#delegatury" class=" nav-link">Delegatury</a></li><li class="nav-item item-217 level-2"><a href="/urzad/skargi-wnioski" class=" nav-link">Skargi i wnioski</a></li><li class="nav-item item-218 level-2"><a href="/urzad#patronaty" class=" nav-link">Patronaty Prezesa ULC</a></li></ul></li><li class="nav-item item-116 level-1 deeper dropdown parent"><a href="/prawo" class=" nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#mod-menu-1-submenu-116" aria-expanded="false">Prawo</a><ul class="nav flex-column flex-nowrap collapse ps-3" id="mod-menu-1-submenu-116" data-bs-parent="#mod-menu-default-1"><li class="nav-item item-172 level-2"><a href="/prawo/prawo-miedzynarodowe" class=" nav-link">Prawo międzynarodowe</a></li><li class="nav-item item-173 level-2 parent"><a href="/prawo/prawo-uni-europejskiej" class=" nav-link">Prawo UE</a></li><li class="nav-item item-174 level-2"><a href="/prawo/krajowe" class=" nav-link">Prawo krajowe</a></li><li class="nav-item item-175 level-2"><a href="/prawo/dzienniki-urzedowe-ulc" class=" nav-link">Dziennik Urzędowy</a></li><li class="nav-item item-176 level-2 parent"><a href="/prawo/projekty" class=" nav-link">Projekty</a></li></ul></li><li class="nav-item item-819 level-1"><a href="https://bip.ulc.gov.pl/praca-w-ulc/ogloszenia-o-pracy-w-ulc" class=" nav-link" target="_blank" rel="noopener noreferrer">Kariera</a></li><li class="nav-item item-117 level-1 deeper dropdown parent"><a href="/kontakt/dane" class=" nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#mod-menu-1-submenu-117" aria-expanded="false">Kontakt</a><ul class="nav flex-column flex-nowrap collapse ps-3" id="mod-menu-1-submenu-117" data-bs-parent="#mod-menu-default-1"><li class="nav-item item-198 level-2"><a href="/kontakt/dane" class=" nav-link">Dane kontaktowe</a></li><li class="nav-item item-177 level-2"><a href="/kontakt/punkt-obslugi" class=" nav-link">Punkt obsługi Klienta i Kancelaria</a></li><li class="nav-item item-178 level-2"><a href="/kontakt/departamenty" class=" nav-link">Departamenty i biura</a></li><li class="nav-item item-199 level-2"><a href="/kontakt/delegatury" class=" nav-link">Delegatury</a></li><li class="nav-item item-179 level-2"><a href="/kontakt/biuro-prasowe" class=" nav-link">Biuro prasowe</a></li><li class="nav-item item-180 level-2"><a href="/kontakt/patronaty" class=" nav-link">Patronaty Prezesa ULC</a></li><li class="nav-item item-181 level-2"><a href="/kontakt/podpis" class=" nav-link">Podpis elektroniczny</a></li><li class="nav-item item-613 level-2"><a href="/cyberbezpieczenstwo-klientow" class=" nav-link">Cyberbezpieczeństwo Klientów</a></li><li class="nav-item item-614 level-2"><a href="/kontakt/inspektor-ochrony-danych" class=" nav-link">Inspektor Ochrony Danych</a></li><li class="nav-item item-683 level-2"><a href="/kontakt/struktura-infolinii" class=" nav-link">Struktura infolinii</a></li></ul></li></ul>
+        </div>
+    </div>
+</nav>
+</div>
+</div><div class="module" aria-labelledby="module-166-title"><div class="moduletable ">
+    <h3 class=" visually-hidden">Szukaj</h3>
+<form class="mod-finder js-finder-searchform form-search" action="/szukaj" method="get" role="search">
+    <label for="mod-finder-searchword166" class="visually-hidden finder">Szukaj</label><div class="mod-finder__search input-group"><input type="text" name="q" id="mod-finder-searchword166" class="js-finder-search-query form-control" value="" placeholder="Szukaj..."><button class="btn btn-primary d-flex align-items-center" type="submit"><i class="fas fa-search" aria-hidden="true"></i> <span class="d-none d-md-block ms-3" aria-hidden="true">Szukaj</span><span class="visually-hidden">Szukaj</span></button></div>
+            </form>
+</div>
+</div>        </div>
+    </div>
+    </div>
+
+
+    <!--After slider-->
+    <div id="slider-after" class="mt-4 mt-lg-5">
+        <div class="container">
+            <div class="wrapper">
+                <div class="row"><div class="module col-12"><div class="breadcrumb-container">
+    <ol itemscope itemtype="https://schema.org/BreadcrumbList" class="breadcrumb mt-n1 mt-lg-n3 mb-0">
+                    <li class="d-none d-md-block">
+                Jesteś tutaj: &#160;
+            </li>
+        
+                        <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                                            <a itemprop="item" href="/" class="pathway">
+                            <span itemprop="name" class="visually-hidden">
+                                ULC                            </span>
+                            <span aria-hidden="true">
+                                ULC                            </span>
+                        </a>
+                    
+                    <meta itemprop="position" content="1">
+                </li>
+                            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                                            <a itemprop="item" href="/statystyki-analizy" class="pathway">
+                            <span itemprop="name" class="visually-hidden">
+                                Statystyki, analizy                            </span>
+                            <span aria-hidden="true">
+                                Statystyki, analizy                            </span>
+                        </a>
+                    
+                    <meta itemprop="position" content="2">
+                </li>
+                            <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" class="breadcrumb-item active" aria-current="page">
+                    <span itemprop="name" class="visually-hidden">
+                        Statystyki wg portów lotniczych                    </span>
+                    <span aria-hidden="true">
+                        Statystyki wg portów lotniczych                    </span>
+                    <meta itemprop="position" content="3">
+                </li>
+                </ol>
+</div>
+</div></div>            </div>
+        </div>
+    </div>
+
+<!--System messages-->
+
+
+
+    <!--Content blocks-->
+    <div class="container mt-4 mt-lg-5">
+        <div class="row" id="main-header">
+
+            
+            <!--Main content-->
+            <div class="columns-container col-12 ">
+
+                
+                <main id="content">
+
+                    <article class="com-content-article item-page" itemscope itemtype="https://schema.org/Article">
+    <meta itemprop="inLanguage" content="pl-PL">
+
+    
+    
+        <div class="page-header">
+        <h1 itemprop="headline" class="h2">
+            Statystyki wg portów lotniczych        </h1>
+                            </div>
+    
+
+        
+        <div class="pb-3 pb-md-4">
+        <dl class="article-info text-muted  d-flex flex-wrap flex-column flex-md-row mb-0">
+
+            <dt class="article-info-term visually-hidden">
+                            Szczegóły                    </dt>
+
+        
+        
+        
+        
+                    <dd class="published me-3" title="Opublikowano: 07 maj 2015">
+    <i class="far fa-calendar me-2 text-secondary" aria-hidden="true"></i>
+    <time datetime="2015-05-07T12:44:08+02:00" itemprop="datePublished" class="font-sm" aria-hidden="true">
+        07.05.2015    </time>
+</dd>
+        
+    
+            
+                    <dd class="modified me-3">
+    <i class="fas fa-pen-alt me-2 text-secondary" aria-hidden="true"></i>
+    <span aria-hidden="true" class="font-sm" >Aktualizacja:</span>
+    <time datetime="2026-10-23T12:43:33+02:00" itemprop="datePublished" class="font-sm" aria-hidden="true">
+        23.10.2026    </time>
+</dd>
+        
+            </dl>
+    </div>
+    
+    
+        
+                                        <div itemprop="articleBody" class="com-content-article__body">
+            <p><strong>Liczba obsłużonych pasażerów w ruchu krajowym i międzynarodowym - regularnym i czarterowym w pierwszym kwartale lat 2024 - 2026</strong></p>
+<ul>
+<li><a href="/_download/2026/statystyki_2026/_pl/wg_portow_lotniczych_1kw2026.pdf" class="wf_file">Pierwszy kwartał 2026 r.</a></li>
+</ul>
+<p class="p1"><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu krajowym i międzynarodowym - regularnym i czarterowym w latach 2023 - 2025</strong></p>
+<ul>
+<li><a href="/_download/statystyki/2025/q4/wg_portow_lotniczych_4kw2025.pdf" class="wf_file">Czwarty kwartał 2025 r.</a></li>
+<li><a href="/_download/statystyki/2025/2026/wg_portow_lotniczych_3kw2025.pdf">Trzeci kwartał 2025 r.</a></li>
+<li><a href="/_download/2026/wg_portow_lotniczych_2kw2025.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Drugi kwartał 2025 r.</span></a></li>
+<li><a href="/_download/statystyki/2025/1kw_2025/wg_portow_lotniczych_1kw2025.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Pierwszy kwartał 2025 r.</span><span class="wf_file_size" style="margin-left: 5px;">483.54 KB</span></a><span class="wf_file_size" style="margin-left: 5px;">&nbsp; &nbsp;</span></li>
+</ul>
+<p><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu krajowym i międzynarodowym - regularnym i czarterowym w latach 2022 - 2024</strong></p>
+<ul>
+<li><a href="/_download/wg_portow_lotniczych_4kw2024_v2.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Czwarty kwartał 2024 r.</span><span class="wf_file_size" style="margin-left: 5px;">477.57 KB</span></a></li>
+<li><a href="/_download/wg_portow_lotniczych_3kw2024_v3.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Trzeci kwartał 2024 r.</span><span class="wf_file_size" style="margin-left: 5px;">477.64 KB</span></a></li>
+<li><a href="/_download/statystyki/2024/II_kw_2024/wg_portow_lotniczych_2kw2024_v2.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Drugi kwartał 2024 r.</span><span class="wf_file_size" style="margin-left: 5px;">483.68 KB</span></a></li>
+<li><a href="/_download/wg_portow_lotniczych_1kw2024_v2.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Pierwszy kwartał 2024 r.</span><span class="wf_file_size" style="margin-left: 5px;">453.49 KB</span></a></li>
+</ul>
+<p><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu krajowym i międzynarodowym - regularnym i czarterowym w latach 2021 - 2023</strong></p>
+<ul>
+<li><a href="/_download/statystyki/2023/IV_kw_2023/wg_portow_lotniczych_4kw2023.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Czwarty kwartał 2023 r.</span><span class="wf_file_size" style="margin-left: 5px;">483.46 KB</span></a></li>
+<li><a href="/_download/statystyki/2023/III_kw_2023/wg_portow_lotniczych_3kw2023.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Trzeci kwartał 2023 r.</span><span class="wf_file_size" style="margin-left: 5px;">484.77 KB</span></a></li>
+<li><a href="/_download/statystyki/2023/II_kw_2023/wg_portow_lotniczych_q22023.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Drugi kwartał 2023 r,</span><span class="wf_file_size" style="margin-left: 5px;">483.7 KB</span></a></li>
+<li><a href="/_download/statystyki/2023/wg_portow_lotniczych_1kw20231.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Pierwszy kwartał 2023 r.</span><span class="wf_file_size" style="margin-left: 5px;">264.71 KB</span></a></li>
+</ul>
+<p><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu krajowym i międzynarodowym - regularnym i czarterowym w latach 2020 - 2022</strong></p>
+<ul>
+<li><a href="/_download/statystyki/2022/wg_portow_lotniczych_4kw2022.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Czwarty kwartał 2022 r.</span><span class="wf_file_size" style="margin-left: 5px;">245.95 KB</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/2022/I_kw_2022/wg_portow_lotniczych_3kw2022.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Trzeci kwartał 2022 r.</span><span class="wf_file_size" style="margin-left: 5px;">245.93 KB</span></a></li>
+<li><a href="/_download/statystyki/2022/wg_portow_lotniczych_2kw2022.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Drugi kwartał 2022 r.</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/2022/I_kw_2022/wg_portow_lotniczych_1kw2022.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Pierwszy kwartał 2022</span><span class="wf_file_size" style="margin-left: 5px;">264.61 KB</span></a></li>
+</ul>
+<p><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu krajowym i międzynarodowym - regularnym i czarterowym w latach 2019 - 2021</strong></p>
+<ul>
+<li><a href="/_download/statystyki/wg_portow_lotniczych_4kw2021.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Czwarty kwartał 2021 r.</span></a></li>
+<li><a href="/_download/statystyki/wg_portow_lotniczych_3kw2021.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Trzeci kwartał 2021</span></a></li>
+<li><a href="/_download/statystyki/wg_portow_lotniczych_2kw2021.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Drugi kwartał 2021</span></a></li>
+<li><a href="/_download/statystyki/wg_portow_lotniczych_1kw2021_v3.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Pierwszy kwartał 2021</span></a>&nbsp;</li>
+</ul>
+<p><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu krajowym i międzynarodowym - regularnym i czarterowym w latach 2018 - 2020</strong></p>
+<ul>
+<li><a href="/_download/regulacja_rynku/statystyki/4kw2020/wg_portow_lotniczych_4kw2020.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Cały 2020 rok</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/3kw2020/wg_portow_lotniczych_3kw2020.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Trzeci kwartał 2020</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/2kw2020/wg_portow_lotniczych_2kw2020.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Drugi kwartał 2020</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/1kw2020/wg_portow_lotniczych_1kw2020.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Pierwszy kwartał 2020</span></a></li>
+</ul>
+<p><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu krajowym i międzynarodowym - regularnym i czarterowym w latach 2017 - 2019</strong></p>
+<ul>
+<li><a href="/_download/regulacja_rynku/statystyki/2019/wg_portow_lotniczych_4kw2019.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Cały 2019 rok</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/2019/wg_portow_lotniczych_kw32019.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Trzeci kwartał 2019</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/cargo/wg_portow_lotniczych_2kw2019.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Drugi kwartał 2017-2019</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/cargo/wg_portow_lotniczych_1kw2019.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Pierwszy kwartał 2017-2019</span></a></li>
+</ul>
+<p><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu krajowym i międzynarodowym - regularnym i czarterowym w latach 2016 - 2018</strong></p>
+<ul>
+<li><a href="/_download/regulacja_rynku/statystyki/2018/4-kw-2018/wg_portow_lotniczych_kw42018.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">cały 2018 rok</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/2018/3-kw-2018/wg_portow_lotniczych_3kw2018.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle; max-width: inherit;" /><span class="wf_file_text">Trzeci kwartał 2016-2018</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/2018/wg_portow_lotniczych_2kw2018.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle;" /><span class="wf_file_text">Drugi kwartał 2016-2018</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/2018/wg_portow_lotniczych_1kw2018.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle;" /><span class="wf_file_text">Pierwszy kwartał 2016-2018</span></a></li>
+</ul>
+<p><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu krajowym i międzynarodowym - regularnym i czarterowym w latach 2015 - 2017</strong></p>
+<ul>
+<li><a href="/_download/statystyki/2017/wg_portow_lotniczych_4kw2017.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle;" /><span class="wf_file_text">cały rok 2017</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/2017/2kw/wg_portow_lotniczych_kw32017.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle;" /><span class="wf_file_text">Trzeci kwartał 2015 - 2017</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/2017/2kw/wg_portow_lotniczych-2017kw2_v2.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle;" /><span class="wf_file_text">Drugi kwartał 2015-2017</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/1kw2017/wg_portow_lotniczych-2017kw1_v3.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle;" /><span class="wf_file_text">Pierwszy kwartał 2015-2017</span></a></li>
+</ul>
+<p><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu krajowym i międzynarodowym - regularnym i czarterowym w latach 2014 - 2016</strong></p>
+<ul>
+<li><a href="/_download/regulacja_rynku/statystyki/IV_kw_2016/wg_portow_lotniczych-2016kw4_v2.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle;" /><span class="wf_file_text">cały rok 2016</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/IV_kw_2016/wg_portow_lotniczych-2016kw3_v2.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle;" /><span class="wf_file_text">Trzeci kwartał 2014-2016</span></a></li>
+<li><a href="/_download/statystyki/2016/II-kw/wg_portow_lotniczych-2016kw2_v2.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle;" /><span class="wf_file_text">Drugi kwartał 2014-2016</span></a></li>
+<li><a href="/_download/statystyki/2016/wg_portow_lotniczych-2016kw1_v2.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle;" /><span class="wf_file_text">Pierwszy kwartał 2014-2016</span></a></li>
+</ul>
+<p><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu regularnym i czarterowym w polskich portach lotniczych w latach 2013 - 2015</strong></p>
+<ul>
+<li><a href="/_download/regulacja_rynku/statystyki/caly_rok_2015/wg_portow_lotniczych-2015kw4_v2.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle;" /><span class="wf_file_text">cały rok 2015</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/III_kw_2015/wg_portow_lotniczych-2015kw3_v2.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle;" /><span class="wf_file_text">trzeci kwaratał 2014-2015</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/q2_2015/wg_portow_lotniczych-2015kw2_v2.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle;" /><span class="wf_file_text">drugi kwartał 2014-2015</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/I_2015/wg_portow_lotniczych-2015kw1_v3.pdf" class="wf_file"><img src="/media/jce/icons/pdf.png" alt="pdf" class="wf_file_icon" style="border: 0px; vertical-align: middle;" /><span class="wf_file_text">pierwszy kwartał 2014-2015</span></a></li>
+</ul>
+<p><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu regularnym i czarterowym w polskich portach lotniczych w latach 2012 - 2014</strong></p>
+<ul>
+<li><a href="/_download/regulacja_rynku/statystyki/IV_kw_2014/wg_portow_lotniczych-2014kw4_v2.pdf" target="_blank" rel="noopener" class="jcepopup wf_file"><span class="wf_file_text">cały rok 2014</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/q3_2014/wg_portow_lotniczych-2014kw3_v2.pdf" target="_blank" rel="noopener" class="wf_file"><span class="wf_file_text">trzeci kwartał 2012-2014</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/q2_2014/wg_portow_lotniczych-2014kw2_v2.pdf" target="_blank" rel="noopener" class="wf_file"><span class="wf_file_text">drugi kwartał 2012-2014</span></a></li>
+<li><a href="/_download/statystyki/2014/1q_2014/wg_portow_lotniczych-2014kw1_v2.pdf" target="_blank" rel="noopener" class="wf_file"><span class="wf_file_text">pierwszy kwartał 2012-2014</span></a></li>
+</ul>
+<p><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu regularnym i czarterowym w polskich portach lotniczych w latach 2011 - 2013</strong></p>
+<ul>
+<li><a href="/_download/statystyki/2014/wg_portow_lotniczych_faktyczne.pdf" class="wf_file"><span class="wf_file_text">cały rok 2013</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/Q3_2013/wg-portow-lotniczych-faktyczne.pdf" class="wf_file"><span class="wf_file_text">trzeci kwartał 2013 r.</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/wg-portow-lotniczych-faktyczne-II-kw.pdf" class="wf_file"><span class="wf_file_text">drugi kwartał 2011-2013 r.</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/wg-portow/wg-portow-lotniczych-faktyczne-1-kw-2011-2013.pdf" class="wf_file"><span class="wf_file_text">pierwszy kwartał 2011-2013</span></a></li>
+</ul>
+<p><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu regularnym i czarterowym w polskich portach lotniczych w latach&nbsp; 2010 – 2012</strong></p>
+<ul>
+<li><a href="/_download/regulacja_rynku/statystyki/wg-portow/wg-portow-lotniczych-faktyczne-4-kw-201-2012.pdf" class="wf_file">cały rok 2012 r.</a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/wg_portw_lotniczych_2012_3q_best.pdf" target="_blank" rel="noopener" class="wf_file" title="trzeci kwartał 2012 r."><span class="wf_file_text">trzeci kwartał 2012 r.</span></a></li>
+<li><a href="/_download/statystyki/2012/2q_2012.pdf" target="_blank" rel="noopener" class="wf_file" title="drugi kwartał 2012 r.">drugi kwartał 2012 r.</a></li>
+<li><a href="/_download/statystyki/2012/1q_2012.pdf" target="_blank" rel="noopener" class="wf_file" title="pierwszy kwartał 2012 r."><span class="wf_file_text">pierwszy kwartał 2012 r.</span></a></li>
+</ul>
+<p><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu regularnym i czarterowym w polskich portach lotniczych w latach &nbsp;2009 - 2011</strong></p>
+<ul>
+<li><a href="/_download/statystyki/porty_09_11.pdf" target="_blank" rel="noopener" class="wf_file" title="cały rok 2011 r."><span class="wf_file_text">cały rok 2011 r.</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/3ql_2011.pdf" target="_blank" rel="noopener" class="wf_file" title="plik do pobrania"><span class="wf_file_text">trzeci kwartał 2011 r.&nbsp;</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/2ql_2011.pdf" target="_blank" rel="noopener" class="wf_file" title="plik do pobrania"><span class="wf_file_text">drugi kwartał 2011 r.&nbsp;</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/1ql_2011.pdf" target="_blank" rel="noopener" class="wf_file" title="plik do pobrania"><span class="wf_file_text">pierwszy kwartał 2011 r.</span></a></li>
+</ul>
+<p align="justify"><strong>Liczba obsłużonych pasażerów oraz wykonanych operacji w ruchu regularnym i czarterowym w polskich portach lotniczych w czwartym kwartale lat 2008 - 2010</strong></p>
+<ul>
+<li><a href="/_download/regulacja_rynku/statystyki/4ql_2010.pdf" target="_blank" rel="noopener" class="wf_file" title="cały rok 2010"><span class="wf_file_text">cały rok 2010</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/3ql_2010.pdf" target="_blank" rel="noopener" class="wf_file" title="plik do pobrania"><span class="wf_file_text">trzeci kwartał 2010 r.</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/2ql_2010.pdf" target="_blank" rel="noopener" class="wf_file" title="plik do pobrania"><span class="wf_file_text">drugi kwartał 2010 r.</span></a></li>
+<li><a href="/_download/regulacja_rynku/statystyki/1ql_2010.pdf" target="_blank" rel="noopener" class="wf_file" title="plik do pobrania"><span class="wf_file_text">pierwszy kwartał 2010 r.&nbsp;</span></a><strong><br /></strong></li>
+</ul>
+<p align="justify"><strong>&nbsp;</strong></p>         </div>
+
+        
+                                                            </article>
+
+
+                </main>
+
+                
+            </div>
+
+            
+        </div>
+    </div>
+
+
+<!--Footer-->
+<footer class="bg-primary text-white mt-4 mt-lg-5">
+
+            <!--Footer modules-->
+        <div class="container py-4 py-md-5 py-lg-5">
+            <div class="row">
+
+                                <div class="col-12 col-lg-6">
+                    <div class="row"><div class="module col-12" aria-labelledby="module-114-title"><div class="moduletable ">
+            <h3 class="module-title">Skróty</h3>        <ul class="mod-menu nav flex-column nav-2-columns  mod-menu-default" id="mod-menu-default-114">
+    <li class="nav-item item-126 level-1"><a href="/urzad" class=" nav-link">Urząd</a></li><li class="nav-item item-127 level-1"><a href="/prawo" class=" nav-link">Prawo</a></li><li class="nav-item item-128 level-1"><a href="https://bip.ulc.gov.pl/praca-w-ulc/ogloszenia-o-pracy-w-ulc" class=" nav-link" target="_blank" rel="noopener noreferrer">Kariera</a></li><li class="nav-item item-129 level-1"><a href="/kontakt/dane" class=" nav-link">Kontakt</a></li><li class="nav-item item-130 level-1"><a href="/ochrona-danych" class=" nav-link">Ochrona danych</a></li><li class="nav-item item-131 level-1"><a href="/polityka-dotyczaca-plikow-cookie" class=" nav-link">Polityka dotycząca plików cookie</a></li><li class="nav-item item-132 level-1"><a href="/deklaracja-dostepnosci" class=" nav-link">Deklaracja dostępności</a></li><li class="nav-item item-133 level-1"><a href="/vademecum-klienta" class=" nav-link">Vademecum klienta</a></li><li class="nav-item item-134 level-1"><a href="/konkursy-regulaminy" class=" nav-link">Konkursy i regulaminy</a></li><li class="nav-item item-135 level-1"><a href="/udostepnianie-informacji-w-celach-naukowych" class=" nav-link">Udostępnianie informacji w celach naukowych</a></li><li class="nav-item item-609 level-1"><a href="/dostepnosc" class=" nav-link">Dostępność</a></li><li class="nav-item item-863 level-1"><a href="/projekty-unijne" class=" nav-link">Projekty unijne</a></li></ul>
+</div>
+</div></div>                </div>
+                
+                                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="row"><div class="module col-12" aria-labelledby="module-113-title"><div class="moduletable ">
+            <h3 class="module-title">Kontakt</h3>        
+<div id="mod-custom113" class="mod-custom custom">
+    <p>ul. M. Flisa 2<br />02-247 Warszawa, Polska</p>
+<p>tel.: <a href="tel:+48225207200">+48 22 520 72 00</a><br />fax.: <a href="tel:+48225207300">+48 22 520 73 00</a><br />email: <a href="mailto:kancelaria@ulc.gov.pl">kancelaria@ulc.gov.pl</a></p>
+<p>AE:PL-89101-42775-FEHCG-19</p></div>
+</div>
+</div></div>                </div>
+                
+                                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="row"><div class="module col-12" aria-labelledby="module-111-title"><div class="moduletable ">
+            <h3 class="module-title">Media społecznościowe</h3>        <ul class="mod-menu nav flex-row flex-wrap nav-inline ">
+    <li class="d-flex align-items-center flex-wrap nav-item item-121 level-1"><a href="https://facebook.com/ULCGOVPL/" class=" nav-link d-flex align-items-center" target="_blank" rel="noopener noreferrer"><i class=" fab fa-square-facebook" aria-hidden="true"></i><span class="visually-hidden">Facebook</span></a></li><li class="d-flex align-items-center flex-wrap nav-item item-122 level-1"><a href="https://twitter.com/ulc_gov_pl" class=" nav-link d-flex align-items-center" target="_blank" rel="noopener noreferrer"><i class=" fab fa-square-x-twitter" aria-hidden="true"></i><span class="visually-hidden">X</span></a></li><li class="d-flex align-items-center flex-wrap nav-item item-123 level-1"><a href="https://14dd5266c70789bdc806364df4586335-gdprlock/channel/UChqoikdlWkpl7MSH9g-FCcw" class=" nav-link d-flex align-items-center" target="_blank" rel="noopener noreferrer"><i class=" fab fa-youtube" aria-hidden="true"></i><span class="visually-hidden">Youtube</span></a></li><li class="d-flex align-items-center flex-wrap nav-item item-124 level-1"><a href="https://linkedin.com/company/urzad-lotnictwa-cywilnego/" class=" nav-link d-flex align-items-center" target="_blank" rel="noopener noreferrer"><i class=" fab fa-linkedin" aria-hidden="true"></i><span class="visually-hidden">LinkedIn</span></a></li><li class="d-flex align-items-center flex-wrap nav-item item-125 level-1"><a href="https://www.8dc6460bbbb088757ed67ed8fb316b1b-gdprlock/ulc_gov_pl/" class=" nav-link d-flex align-items-center" target="_blank" rel="noopener noreferrer"><i class=" fab fa-instagram" aria-hidden="true"></i><span class="visually-hidden">Instagram</span></a></li></ul>
+</div>
+</div><div class="module col-12" aria-labelledby="module-112-title"></div></div>                </div>
+                
+            </div>
+        </div>
+    
+    <div class="bg-darker">
+        <div class="container">
+            <div class="wrapper py-3 py-md-4">
+                <!--Copyrights info-->
+                <span class="copyrights">© 2026 Urząd Lotnictwa Cywilnego</span>
+
+                            </div>
+        </div>
+    </div>
+
+</footer>
+
+
+<!--Script rendered-->
+<script src="/media/vendor/jquery/js/jquery.min.js?3.7.1"></script>
+	<script src="/media/templates/site/ulc/js/runtime-673afc1db7b3bb71dec8.js?1787225662"></script>
+	<script src="/media/templates/site/ulc/js/theme-b151b91ce17fb63eb01d.js?1787225662"></script>
+	<script src="/media/templates/site/ulc/js/lightbox-84da781a63e1e52b0b6e.js?1787225662"></script>
+	<script src="/media/templates/site/ulc/js/backtotop-581b739222dd2d72d600.js?1787225662"></script>
+	<script type="application/json" class="joomla-script-options new">{"joomla.jtext":{"MOD_FINDER_SEARCH_VALUE":"Szukaj...","JLIB_JS_AJAX_ERROR_OTHER":"Wystąpił błąd podczas pobierania danych JSON: kod odpowiedzi HTTP %s.","JLIB_JS_AJAX_ERROR_PARSE":"Wystąpił błąd podczas przetwarzania następujących danych JSON:<br\/><code style=\"color:inherit;white-space:pre-wrap;padding:0;margin:0;border:0;background:inherit;\">%s<\/code>."},"finder-search":{"url":"\/component\/finder\/?task=suggestions.suggest&format=json&tmpl=component&Itemid=101"},"system.paths":{"root":"","rootFull":"https:\/\/ulc.gov.pl\/","base":"","baseFull":"https:\/\/ulc.gov.pl\/"},"csrf.token":"7edc2f1d62e7746f255e5f75b7f24f8a"}</script>
+	<script src="/media/system/js/core.min.js?1787225662"></script>
+	<script src="/media/vendor/awesomplete/js/awesomplete.min.js?1.1.7" defer></script>
+	<script src="/media/com_finder/js/finder.min.js?1787225662" type="module"></script>
+	<script src="/plugins/system/gdpr/assets/js/jquery.fancybox.min.js?1787225662" defer></script>
+	<script src="/plugins/system/gdpr/assets/js/cookieconsent.min.js?1787225662" defer></script>
+	<script src="/plugins/system/gdpr/assets/js/init.js?1787225662" defer></script>
+	<script>
+
+		// Add scroll to top button
+		jQuery(function($){
+			$(document).backToTopButton({
+		        button_text: 'Do góry',
+		    });
+		});
+
+	</script>
+	<script type="application/ld+json">{"@context":"https:\/\/schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"item":{"@id":"https:\/\/ulc.gov.pl\/","name":"ULC"}},{"@type":"ListItem","position":2,"item":{"@id":"https:\/\/ulc.gov.pl\/statystyki-analizy","name":"Statystyki, analizy"}},{"@type":"ListItem","position":3,"item":{"name":"Statystyki wg portów lotniczych"}}]}</script>
+	<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://ulc.gov.pl/#/schema/Organization/base","name":"Urząd Lotnictwa Cywilnego","url":"https://ulc.gov.pl/","logo":{"@type":"ImageObject","@id":"https://ulc.gov.pl/#/schema/ImageObject/logo","url":"https://ulc.gov.pl/images/logo/logo-ulc-pl.svg","contentUrl":"https://ulc.gov.pl/images/logo/logo-ulc-pl.svg"},"image":{"@id":"https://ulc.gov.pl/#/schema/ImageObject/logo"},"sameAs":["https://facebook.com/ULCGOVPL/","https://twitter.com/ulc_gov_pl","https://linkedin.com/company/urzad-lotnictwa-cywilnego/","https://www.instagram.com/ulc_gov_pl/","https://youtube.com/channel/UChqoikdlWkpl7MSH9g-FCcw"]},{"@type":"WebSite","@id":"https://ulc.gov.pl/#/schema/WebSite/base","url":"https://ulc.gov.pl/","name":"Urząd Lotnictwa Cywilnego","publisher":{"@id":"https://ulc.gov.pl/#/schema/Organization/base"},"potentialAction":{"@type":"SearchAction","target":"https://ulc.gov.pl/szukaj?q={search_term_string}","query-input":"required name=search_term_string"}},{"@type":"WebPage","@id":"https://ulc.gov.pl/#/schema/WebPage/base","url":"https://ulc.gov.pl/statystyki-analizy/statystyki-wg-portow-lotniczych","name":"Statystyki wg portów lotniczych - Urząd Lotnictwa Cywilnego","description":"Urząd Lotnictwa Cywilnego","isPartOf":{"@id":"https://ulc.gov.pl/#/schema/WebSite/base"},"about":{"@id":"https://ulc.gov.pl/#/schema/Organization/base"},"inLanguage":"pl-PL"},{"@type":"Article","@id":"https://ulc.gov.pl/#/schema/com_content/article/5475","name":"Statystyki wg portów lotniczych","headline":"Statystyki wg portów lotniczych","inLanguage":"pl-PL","dateCreated":"2015-05-07T10:44:08+00:00","dateModified":"2026-10-23T00:00:00+00:00","isPartOf":{"@id":"https://ulc.gov.pl/#/schema/WebPage/base"}}]}</script>
+	<script>var gdprConfigurationOptions = { complianceType: 'opt-out',
+																			  cookieConsentLifetime: 365,
+																			  cookieConsentSamesitePolicy: '',
+																			  cookieConsentSecure: 0,
+																			  cookieJoomlaSettings: 0,
+																			  cookieConsentDomain: '',
+																			  cookieConsentPath: '/',
+																			  disableFirstReload: 0,
+																	  		  blockJoomlaSessionCookie: 1,
+																			  blockExternalCookiesDomains: 1,
+																			  externalAdvancedBlockingModeCustomAttribute: '',
+																			  allowedCookies: '',
+																			  blockCookieDefine: 1,
+																			  autoAcceptOnNextPage: 1,
+																			  revokable: 1,
+																			  lawByCountry: 0,
+																			  checkboxLawByCountry: 0,
+																			  blockPrivacyPolicy: 0,
+																			  cacheGeolocationCountry: 1,
+																			  countryAcceptReloadTimeout: 1000,
+																			  usaCCPARegions: null,
+																			  countryEnableReload: 1,
+																			  customHasLawCountries: [""],
+																			  dismissOnScroll: 0,
+																			  dismissOnTimeout: 0,
+																			  containerSelector: 'html',
+																			  hideOnMobileDevices: 0,
+																			  autoFloatingOnMobile: 0,
+																			  autoFloatingOnMobileThreshold: 1024,
+																			  autoRedirectOnDecline: 1,
+																			  autoRedirectOnDeclineLink: '/',
+																			  showReloadMsg: 0,
+																			  showReloadMsgText: 'Applying preferences and reloading the page...',
+																			  showConsentID: 0,
+																			  defaultClosedToolbar: 0,
+																			  toolbarLayout: 'basic-header',
+																			  toolbarTheme: 'block',
+																			  toolbarButtonsTheme: 'decline_first',
+																			  revocableToolbarTheme: 'basic',
+																			  toolbarPosition: 'center',
+																			  toolbarCenterTheme: 'extended',
+																			  revokePosition: 'revoke-bottom-left',
+																			  toolbarPositionmentType: 1,
+																			  positionCenterSimpleBackdrop: 1,
+																			  positionCenterBlurEffect: 1,
+																			  positionCenterBlurEffectAlwaysFirstVisit: 0,
+																			  preventPageScrolling: 0,
+																			  popupEffect: 'fade',
+																			  popupBackground: '#ffffff',
+																			  popupText: '#5c5c5c',
+																			  popupLink: '#2e3192',
+																			  buttonBackground: '#339e41',
+																			  buttonBorder: '#339e41',
+																			  buttonText: '#ffffff',
+																			  highlightOpacity: '100',
+																			  highlightBackground: '#ffffff',
+																			  highlightBorder: '#c72424',
+																			  highlightText: '#c72424',
+																			  highlightDismissBackground: '#ffffff',
+																		  	  highlightDismissBorder: '#b8b8b8',
+																		 	  highlightDismissText: '#5c5c5c',
+																			  autocenterRevokableButton: 0,
+																			  hideRevokableButton: 0,
+																			  hideRevokableButtonOnscroll: 0,
+																			  customRevokableButton: 0,
+																			  customRevokableButtonAction: 0,
+																			  headerText: 'Dbamy o Twoją prywatność',
+																			  messageText: 'Wykorzystujemy pliki cookie do spersonalizowania treści i reklam, aby oferować funkcje społecznościowe i analizować ruch w naszej witrynie. Informacje o tym, jak korzystasz z naszej witryny, udostępniamy partnerom społecznościowym, reklamowym i analitycznym. Partnerzy mogą połączyć te informacje z innymi danymi otrzymanymi od Ciebie lub uzyskanymi podczas korzystania z ich usług.',
+																			  denyMessageEnabled: 0, 
+																			  denyMessage: 'COM_GDPR_YOU_DID_NOT_ACCEPT  ',
+																			  placeholderBlockedResources: 1, 
+																			  placeholderBlockedResourcesAction: 'acceptall',
+																	  		  placeholderBlockedResourcesText: 'Musisz zaakceptować ciasteczka i przeładować stronę aby zobaczyć tą treść',
+																			  placeholderIndividualBlockedResourcesText: 'Musisz zaakceptować ciasteczka z domeny {domain} i przeładować stronę aby zobaczyć tą treść.',
+																			  placeholderIndividualBlockedResourcesAction: 0,
+																			  placeholderOnpageUnlock: 0,
+																			  scriptsOnpageUnlock: 0,
+																			  autoDetectYoutubePoster: 0,
+																			  autoDetectYoutubePosterApikey: 'AIzaSyAV_WIyYrUkFV1H8OKFYG8wIK8wVH9c82U',
+																			  dismissText: 'Akceptuję',
+																			  allowText: 'Akceptuj wybrane',
+																			  denyText: 'Odmawiam',
+																			  cookiePolicyLinkText: '',
+																			  cookiePolicyLink: 'javascript:void(0)',
+																			  cookiePolicyRevocableTabText: 'Polityka Cookies',
+																			  cookiePolicyRevocableTabIcon: 'text',
+																			  cookiePolicyRevocableTabIconCustom: '',
+																			  privacyPolicyLinkText: 'Polityka prywatności',
+																			  privacyPolicyLink: '/polityka-dotyczaca-plikow-cookie',
+																			  googleCMPTemplate: 1,
+																			  enableGdprBulkConsent: 0,
+																			  displayBulkConsentDomains: 0,
+																			  bulkConsentDomains: [""],
+																			  enableCustomScriptExecGeneric: 0,
+																			  customScriptExecGeneric: '',
+																			  categoriesCheckboxTemplate: 'cc-checkboxes-light',
+																			  toggleCookieSettings: 1,
+																			  toggleCookieSettingsLinkedView: 0,
+																			  toggleCookieSettingsButtonsArea: 0,
+ 																			  toggleCookieSettingsLinkedViewSefLink: '/component/gdpr/',
+																	  		  toggleCookieSettingsText: '<span class="cc-cookie-settings-toggle" role="button" tabindex="0">Preferencje <span class="cc-cookie-settings-toggler">&#x2191;</span></span>',
+																			  toggleCookieSettingsButtonBackground: '#333333',
+																			  toggleCookieSettingsButtonBorder: '#ffffff',
+																			  toggleCookieSettingsButtonText: '#ffffff',
+																			  showLinks: 1,
+																			  blankLinks: '_blank',
+																			  autoOpenPrivacyPolicy: 0,
+																			  openAlwaysDeclined: 0,
+																			  cookieSettingsLabel: 'Ustawienia ciasteczek',
+															  				  cookieSettingsDesc: 'Wybierz które ciasteczka chcesz wyłączyć poprzez kliknięcie na odpowiednie pole. Kliknij na kategorię aby dowiedzieć się więcej o tych ciasteczkach.',
+																			  cookieCategory1Enable: 1,
+																			  cookieCategory1Name: 'Wymagane',
+																			  cookieCategory1Locked: 1,
+																			  cookieCategory2Enable: 1,
+																			  cookieCategory2Name: 'Preferencje',
+																			  cookieCategory2Locked: 0,
+																			  cookieCategory3Enable: 1,
+																			  cookieCategory3Name: 'Statystyczne',
+																			  cookieCategory3Locked: 0,
+																			  cookieCategory4Enable: 1,
+																			  cookieCategory4Name: 'Marketing',
+																			  cookieCategory4Locked: 0,
+																			  cookieCategoriesDescriptions: {categoryReadMore: 'Ustawienia kategorii',cat1:'Wymagane ciasteczka są potrzebne do poprawnego działania strony, bez nich strona może nie ładować się wcale lub częściowo a niektóre elementy mogą nie działać.',cat2:'Ciasteczka ustawień pozwalają stronie zapamiętywać np. jakie wybrałeś język treści lub region.',cat3:'Ciasteczka statystyczne pozwalają nam zrozumieć jak użytkownicy korzystają ze strony aby ją ulepszyć. Informacje te są anonimowe.',cat4:'Ciasteczka marketingowe są używane do śledzenia użytkowników pomiędzy stronami. Potrzebne są aby wyświetlać tylko reklamy którymi możesz być zainteresowany.'},
+																			  alwaysReloadAfterCategoriesChange: 1,
+																			  preserveLockedCategories: 0,
+																			  declineButtonBehavior: 'hard',
+																			  honorGpc: 0,
+																			  blockCheckedCategoriesByDefault: 0,
+																			  reloadOnfirstDeclineall: 1,
+																			  trackExistingCheckboxSelectors: '',
+															  		  		  trackExistingCheckboxConsentLogsFormfields: 'name,email,subject,message',
+																			  allowallShowbutton: 1,
+																			  allowallText: 'Akceptuj wszystkie',
+																			  allowallButtonBackground: '#339e41',
+																			  allowallButtonBorder: '#339e41',
+																			  allowallButtonText: '#ffffff',
+																			  allowallButtonTimingAjax: 'fast',
+																			  includeAcceptButton: 1,
+																			  includeDenyButton: 0,
+																			  trackConsentDate: 0,
+																			  execCustomScriptsOnce: 1,
+																			  optoutIndividualResources: 0,
+																			  blockIndividualResourcesServerside: 0,
+																			  disableSwitchersOptoutCategory: 0,
+																			  autoAcceptCategories: 0,
+																			  allowallIndividualResources: 1,
+																			  blockLocalStorage: 0,
+																			  blockSessionStorage: 0,
+																			  externalAdvancedBlockingModeTags: 'iframe,script,img,source,link',
+																			  enableCustomScriptExecCategory1: 0,
+																			  customScriptExecCategory1: '',
+																			  enableCustomScriptExecCategory2: 0,
+																			  customScriptExecCategory2: '',
+																			  enableCustomScriptExecCategory3: 0,
+																			  customScriptExecCategory3: '',
+																			  enableCustomScriptExecCategory4: 0,
+																			  customScriptExecCategory4: '',
+																			  enableCustomDeclineScriptExecCategory1: 0,
+																			  customScriptDeclineExecCategory1: '',
+																			  enableCustomDeclineScriptExecCategory2: 0,
+																			  customScriptDeclineExecCategory2: '',
+																			  enableCustomDeclineScriptExecCategory3: 0,
+																			  customScriptDeclineExecCategory3: '',
+																			  enableCustomDeclineScriptExecCategory4: 0,
+																			  customScriptDeclineExecCategory4: '',
+																			  enableCMPPreferences: 0,
+																			  enableGTMEventsPreferences: 0,
+																			  enableCMPStatistics: 1,
+																			  enableGTMEventsStatistics: 0,
+																			  enableCMPAds: 1,
+																			  enableUETAds: 0,
+																			  enableGTMEventsAds: 0,
+																			  enableClarityAnalytics: 0,
+                                                                              enableClarityAds: 0,
+																			  fancyboxAlwaysBody: 0,
+																			  debugMode: 0
+																		};var gdpr_ajax_livesite='https://ulc.gov.pl/';var gdpr_enable_log_cookie_consent=1;</script>
+	<script>var gdprUseCookieCategories=1;var gdpr_ajaxendpoint_cookie_category_desc='https://ulc.gov.pl/index.php?option=com_gdpr&task=user.getCookieCategoryDescription&format=raw&lang=pl';</script>
+	<script>var gdprCookieCategoryDisabled2=1;</script>
+	<script>var gdprCookieCategoryDisabled3=1;</script>
+	<script>var gdprCookieCategoryDisabled4=1;</script>
+	<script>var gdprJSessCook='a77b0cac2567e37f5236c8ca9dddfc67';var gdprJSessVal='15dbf8c9668b274c0cc0aba0d3548375';var gdprJAdminSessCook='13cdeee974891c1f4e90a7888b310c0a';var gdprPropagateCategoriesSession=1;var gdprAlwaysPropagateCategoriesSession=1;var gdprAlwaysCheckCategoriesSession=0;</script>
+	<script>var gdprFancyboxWidth=700;var gdprFancyboxHeight=800;var gdprCloseText='Close';</script>
+	<link href="https://ulc.gov.pl/statystyki-analizy/statystyki-wg-portow-lotniczych" rel="alternate" hreflang="x-default">
+
+<!--End of script rendered-->
+
+
+<script type="text/javascript" src="/_Incapsula_Resource?SWJIYLWA=719d34d31c8e3a6e6fffd425f7e032f3&ns=1&cb=1315101479" async></script></body>
+</html>
