@@ -98,6 +98,28 @@ def profile_raw(body: bytes) -> None:
         )
 
 
+def network() -> dict:
+    """Which addresses www.gov.pl resolves to and whether a TCP connection to each opens (one try, 10 s)."""
+    import socket
+
+    out = {}
+    try:
+        infos = socket.getaddrinfo("www.gov.pl", 443, proto=socket.IPPROTO_TCP)
+    except OSError as exc:
+        return {"resolve_error": str(exc)}
+    for family, kind, proto, _, address in infos:
+        sock = socket.socket(family, kind, proto)
+        sock.settimeout(10)
+        try:
+            sock.connect(address)
+            out[address[0]] = "open"
+        except OSError as exc:
+            out[address[0]] = f"{type(exc).__name__}: {exc}"[:120]
+        finally:
+            sock.close()
+    return out
+
+
 def trial() -> int:
     from ingestion.common import bulk_bronze
     from ingestion.common.r2 import catalog, req, s3
@@ -108,6 +130,7 @@ def trial() -> int:
         module.annotate = collect
         module.step_summary = lambda _m: None
     # --- Landing ---------------------------------------------------------------------------------------------
+    note("kprm trial network", network())
     exits = [bulk_file.main(SOURCE, "load", landing_root=SCRATCH) for _ in (1, 2)]
     loads = [r["files"] for r in COLLECTED.get(f"{SOURCE} landing load", [])]
     inspect_exit = bulk_file.main(SOURCE, "inspect", landing_root=SCRATCH)
