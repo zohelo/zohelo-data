@@ -370,6 +370,8 @@ def catalog():
                     "s3.secret-access-key": req("STORAGE_WRITE_SECRET_KEY"),
                     "s3.endpoint": req("STORAGE_ENDPOINT_URL"),
                     "s3.region": "auto",
+                    # PyArrow's file reads and writes wait out R2 throttling like the boto3 client (#2989).
+                    "s3.retry-strategy-impl": "ingestion.common.s3_retry.R2S3RetryStrategy",
                 },
             )
             break

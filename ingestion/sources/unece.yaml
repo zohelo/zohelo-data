@@ -26,6 +26,7 @@ silver: [silver.unece_observations]
 gold: [gold.build_unece]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   poc_build_unece: {rows: 172000}  # 114,217: nine tables, 35 measures, 58 areas (Dev trial 43306220004); 1.5 x
+  unece_observations: {rows: 3700000, exception: "#2833"}  # 2,436,893 (Dev trial 43157348624); D32: narrow table, whole-table snapshots, full rebuild weekly
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): about forty small whole-table snapshots, rebuilt in full.

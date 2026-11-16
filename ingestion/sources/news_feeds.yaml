@@ -71,6 +71,8 @@ archive_policy:
 bronze: [bronze.news_items, bronze.news_feeds_rejected_files]
 silver: [silver.news_headlines]
 gold: []
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  news_headlines: {rows: 300000}
 
 # Refresh policy for all layers (owner decision #875): Bronze accumulates one small file per landed copy;
 # Silver keeps 400 days of headlines (about 150,000 rows) and is rebuilt in full.
