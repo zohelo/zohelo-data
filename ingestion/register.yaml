@@ -2854,7 +2854,8 @@ sources:
   name: Biuletyn Statystyczny ochrony zdrowia
   short_name: MZ health statistics bulletin
   provider: Ministerstwo Zdrowia / Centrum e-Zdrowia
-  status: approved
+  source_system: mz_health_bulletin
+  status: built
   family: B
   kpi: true
   geography: Poland and voivodeships, table-dependent
