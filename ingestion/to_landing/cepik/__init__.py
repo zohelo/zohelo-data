@@ -17,6 +17,7 @@ landing.verify   every receipt has its file (bulk_file pattern)
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import json
 import re
 import time
 from typing import Any
@@ -52,25 +53,34 @@ def pick(topic: str, year: int, links: list[tuple[str, str]]) -> dict[str, Any] 
 
 
 def discover(today: datetime | None = None) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+    """The topic workbooks the year pages link; one log line per page read (links found or the error, seconds)."""
     year_now = (today or datetime.now(UTC)).year
     found: dict[str, dict[str, Any]] = {}
     without: list[str] = []
     pages: dict[str, list[tuple[str, str]]] = {}
+    unreachable: list[str] = []
     for year in range(FIRST_YEAR, year_now + 1):
         for topic, (slug, _text) in TOPICS.items():
             url = BASE + slug.format(year=year)
             if url not in pages:
                 time.sleep(PAUSE)
+                started = time.monotonic()
                 try:
                     pages[url] = _links(url)
-                except Exception:  # a page not (yet) published, or unreachable: reported as without a workbook
+                    outcome = {"links": len(pages[url])}
+                except Exception as exc:  # a page not (yet) published, or unreachable: reported as without a workbook
                     pages[url] = []
+                    unreachable.append(url.removeprefix(BASE))
+                    outcome = {"error": f"{type(exc).__name__}: {str(exc)[:120]}"}
+                seconds = round(time.monotonic() - started, 1)
+                print(json.dumps({"page": url.removeprefix(BASE), **outcome, "seconds": seconds}), flush=True)
             spec = pick(topic, year, pages[url])
             if spec:
                 found[spec["entity"]] = spec
             else:
                 without.append(f"{topic}_{year}")
-    return found, {"years": [FIRST_YEAR, year_now], "without_workbook": without, "pages_read": len(pages)}
+    summary = {"years": [FIRST_YEAR, year_now], "without_workbook": without, "pages_read": len(pages)}
+    return found, {**summary, "pages_unreachable": unreachable}
 
 
 def held(landing_root: str = "01_landing") -> dict[str, set[str]]:
