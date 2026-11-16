@@ -10,8 +10,9 @@ description: "NID — register of immovable monuments (register book A), voivode
 # the list (<CODE>-rej_13.08.2026.pdf); ingestion/to_landing/nid_monuments/ reads the page once and lands the 17
 # lists through the shared bulk_file pattern, 3 s apart. Entity = one list; version = Last-Modified; unchanged
 # bytes are skipped. Bronze reads the PDF text layer with pypdf (requirements.txt) and keeps one row per list item.
-# Restart unit: one list. Probes 43798515781 (text layer) and 43799285327 (decoder on all lists: 50,258 items in the
-# 12 lists it read). Dev trial: see the pull request.
+# Restart unit: one list. Probes 43798515781 (text layer) and 43799285327 (decoder). Dev trial 43802337548 (first,
+# one powiat name fixed after it) and the final one in the pull request: 17 lists (23.1 MB), 80,657 Bronze items,
+# 0 rejected; second Landing and Bronze runs wrote nothing.
 extraction:
   initial: bulk
   production: snapshot                    # each list is the whole register of its voivodeship on its date
@@ -29,10 +30,10 @@ bronze: [bronze.nid_monuments_items, bronze.nid_monuments_rejected_files]
 silver: [silver.nid_monuments_items, silver.nid_monuments_decisions]
 gold: [gold.build_nid_monuments, gold.nid_monument_register]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  nid_monuments_items: {rows: 120000}  # measured in the Dev trial (see the pull request)
-  nid_monuments_decisions: {rows: 150000}
-  nid_monument_register: {rows: 120000}
-  poc_build_nid_monuments: {rows: 1500}
+  nid_monuments_items: {rows: 121000}  # 80,657 items of 17 lists, 30.06.2026 (Dev trial 43802337548)
+  nid_monuments_decisions: {rows: 126000}  # 83,606
+  nid_monument_register: {rows: 83000}  # 54,914 register entries
+  poc_build_nid_monuments: {rows: 1200}  # 794: 2 measures x (380 powiats + 16 voivodeships + Poland)
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): 17 files of 1-2 MB, about 70,000 items, replaced as a whole twice a year;

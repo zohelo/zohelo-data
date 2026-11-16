@@ -11,10 +11,12 @@
 
 {# The powiat source code of a list item: voivodeship code and the powiat name as printed, lower case, without the
    "miejski"/"grodzki" of a city with powiat rights, hyphens as spaces (TERYT "Jastrzębie-Zdrój", NID "Jastrzębie
-   Zdrój"); Kraków is printed "krakowski miejski". #}
+   Zdrój"); Kraków is printed "krakowski miejski"; the dolnośląskie list prints "kamienogórski" for TERYT's
+   "kamiennogórski" (Dev trial 43802337548). #}
 {% macro poc_nid_monuments_area_code(woj_code, powiat_text) %}
     ({{ woj_code }} || '|' || case
         when lower(trim({{ powiat_text }})) = 'krakowski miejski' then 'kraków'
+        when lower(trim({{ powiat_text }})) = 'kamienogórski' then 'kamiennogórski'
         else trim(regexp_replace(
             regexp_replace(lower(trim({{ powiat_text }})), '^(miejski|grodzki)\s+', ''), '[-\s]+', ' ', 'g'
         ))
