@@ -3,9 +3,10 @@
    download (frequency D, one date per block; Silver holds the newest copy only, so there is no history yet).
    Block 'institutions': institutions of the higher education and science system with status 'Działająca'
    (operating), by kind (breakdown institution_kind = POL-on's kind code, _T all). Block 'study_programmes': study
-   programmes with status X, by level (breakdown level = POL-on's level code, _T all), placed in
-   the voivodeship of the leading institution. PL counts every record, also those without a voivodeship; a record
-   adds a voivodeship row only when it names one (names that are no voivodeship go to _X). #}
+   programmes with status 3 'prowadzone' (in operation), by level (breakdown level = POL-on's level code, _T all),
+   placed in the voivodeship of the leading institution. PL counts every record, also those without a voivodeship;
+   a record adds a voivodeship row only when it names one with a voivodeship code (a leading institution abroad has
+   a region name such as 'Praga' or '-' and no code: PL only); a coded name the map does not know goes to _X. #}
 with institutions as (
     select
         'institutions' as block_id,
@@ -25,7 +26,7 @@ courses as (
         'level' as breakdown,
         level_code as code,
         level_name as label,
-        leading_voivodeship as voivodeship,
+        case when leading_voivodeship_code is not null then leading_voivodeship end as voivodeship,
         source_version,
         raw_sha256
     from {{ ref('radon_courses') }}
