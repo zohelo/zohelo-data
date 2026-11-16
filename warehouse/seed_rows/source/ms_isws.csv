@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+ms_isws,PLG-031,Informator Statystyczny Wymiaru Sprawiedliwości (opracowania wieloletnie),Justice system statistical database ISWS (multi-year tables),Ministerstwo Sprawiedliwości,cube,file,national-public,ms_reuse_terms,https://isws.ms.gov.pl/pl/baza-statystyczna/opracowania-wieloletnie/

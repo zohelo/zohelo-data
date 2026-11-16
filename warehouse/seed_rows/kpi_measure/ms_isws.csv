@@ -1,0 +1,4 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+court_cases_received,ms_isws,ms_isws:caseload:cases:incoming,"ISWS caseload workbook, OGÓŁEM row, Wpływ",1,
+court_cases_resolved,ms_isws,ms_isws:caseload:cases:resolved,"ISWS caseload workbook, OGÓŁEM row, Załatwienie",1,
+court_case_duration,ms_isws,ms_isws:duration:months:avg_duration,"ISWS duration workbook, Ogółem row, selected case categories",1,
