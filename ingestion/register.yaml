@@ -8095,8 +8095,8 @@ sources:
   provider_type: national-public
   domains: [corporate-filings, financial-markets]
   entities: [issuer, filing, security]
-  granularity: 'One row per issuer report in KNF''s public OAM list: issuer, date received, report type and title, link to
-    the file.'
+  granularity: 'One row per issuer report in KNF''s public OAM list: issuer, date received, the form code of the title,
+    OAM document id, link to the report''s page (the title itself is not stored).'
   coverage: Regulated-market issuers (423 issuers and about 2,000 periodic reports in 2023, KNF supervision report); the depth
     of the public OAM list is not measured yet.
   access:
@@ -8142,7 +8142,7 @@ sources:
     evidence: tested
     connection: tested
     blockers:
-    - 'Route decision: D36 in docs/decisions.md (16 Nov 2026, build pull request of #1486 and #1488): a polite read of the
+    - 'Route decision: D37 in docs/decisions.md (16 Nov 2026, build pull request of #1486 and #1488): a polite read of the
       public list pages only, following the orchestrator verdict on PR #2878 under the owner rule of 12 Nov 2026 (#2873).
       Titles are not stored (they can name natural persons); the stored fields are in docs/sources/knf_espi.md and gpw_ebi.md.'
     - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): http://moam.knf.gov.pl/moam.nsf
@@ -8167,8 +8167,8 @@ sources:
   provider_type: commercial
   domains: [corporate-filings, financial-markets]
   entities: [issuer, filing, security]
-  granularity: 'One row per EBI report in GPW''s public report list: time, category, report number, issuer with ISIN, title,
-    link.'
+  granularity: 'One row per EBI report in GPW''s public report list: time, category, report number, issuer with ISIN,
+    geru_id, link (the title is not stored).'
   coverage: NewConnect and Catalyst issuers; the list page shows the newest reports (10 to 12 Nov 2026 on the probe day);
     the depth reachable through paging is not measured yet.
   access:
@@ -8214,7 +8214,7 @@ sources:
     evidence: tested
     connection: tested
     blockers:
-    - 'Route decision: D36 in docs/decisions.md (16 Nov 2026, build pull request of #1486 and #1488): a polite read of the
+    - 'Route decision: D37 in docs/decisions.md (16 Nov 2026, build pull request of #1486 and #1488): a polite read of the
       public list pages only, following the orchestrator verdict on PR #2878 under the owner rule of 12 Nov 2026 (#2873).
       Titles are not stored (they can name natural persons); the stored fields are in docs/sources/knf_espi.md and gpw_ebi.md.'
     - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): https://www.gpw.pl/espi-ebi-reports

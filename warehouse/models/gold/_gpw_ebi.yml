@@ -3,8 +3,8 @@ models:
   - name: poc_build_gpw_ebi
     description: >-
       Build stage — EBI issuer reports published by GPW per month, Poland, total and by category; complete months
-      only (after the month of the oldest report held, before the current month), 0 in the total for a complete
-      month without a report.
+      only (after the month of the oldest report held, before the current month); a month without a report held
+      has no row, never a 0.
     columns:
       - name: measure_key
         tests: [not_null]

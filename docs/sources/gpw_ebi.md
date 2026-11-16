@@ -1,6 +1,6 @@
 # GPW EBI issuer reports, GPW report list (`gpw_ebi`)
 
-**Built (16 Nov 2026, register CD-007, #1488).** Route (decision D36): GPW's public list
+**Built (16 Nov 2026, register CD-007, #1488).** Route (decision D37): GPW's public list
 `https://www.gpw.pl/espi-ebi-reports` through the page's own "Show more" request (the form posted to
 `https://www.gpw.pl/ajaxindex.php`, only "EBI" ticked, 15 rows a request, newest first), one request at a time 5 s
 apart, the platform's User-Agent, at most 3 tries; robots.txt allows it; a 4xx stops the run.
@@ -17,6 +17,6 @@ attachments, the prices shown beside each row; KRS, NIP, REGON and LEI are not i
 Bronze `bronze.gpw_ebi_reports` (one row per report, text). Silver `silver.gpw_ebi_reports` (grain `report_id`;
 `tests/gpw_ebi_reports_complete.sql`: every held day and report reaches Silver, none misfiled). Gold
 `gold.filing_gpw_ebi` (one row per report, ISIN as the security key) and `gold.build_gpw_ebi` (block `reports`:
-reports per month of publication, Poland, total and by category, complete months only, 0 in the total for a complete
-month without a report; measure `gpw_ebi:reports:reports`, unit `reports`). Terms: none stated for the list;
+reports per month of publication, Poland, total and by category, complete months only, no row (never a 0) for a
+month without a report held; measure `gpw_ebi:reports:reports`, unit `reports`). Terms: none stated for the list;
 licence `unresolved`, internal only. Refresh full (D32), daily 04:55 UTC.
