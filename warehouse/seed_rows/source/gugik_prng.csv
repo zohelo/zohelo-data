@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+gugik_prng,PL-ENV-002,GUGiK PRNG,GUGiK state register of geographical names,GUGiK,reference,file,national-public,free_use_prng,https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-nazw-geograficznych-prng/

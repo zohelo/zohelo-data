@@ -36,6 +36,9 @@ archive_policy:
 bronze: [bronze.faostat_observations, bronze.faostat_rejected_files]
 silver: [silver.faostat_observations]
 gold: [gold.build_faostat]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  faostat_observations: {rows: 4400000, exception: "#2815"}  # 2,920,278 (GT 2,498,428 + RL 421,850; Dev trial 43159213097); D32: two whole-domain files, rebuilt in full when one changes (about yearly)
+  poc_build_faostat: {rows: 4000}  # 2,538: 29 areas × 2 blocks (Dev trial 43159213097)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): two whole-domain snapshots that change once or twice a year; a new copy

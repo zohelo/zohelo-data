@@ -38,6 +38,9 @@ archive_policy:
 bronze: [bronze.unhcr_population, bronze.unhcr_rejected_files]
 silver: [silver.unhcr_population]
 gold: [gold.build_unhcr]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  unhcr_population: {rows: 14000}  # 9,175: 7,802 asylum-country years + 1,373 Poland origin years (Dev trials 43279310455, 43282453427)
+  poc_build_unhcr: {rows: 12500}  # 8,208: EU27 as asylum countries 1951-2025 (4,089) + Poland by origin 1991-2025 (4,119) (Dev trials 43279310455, 43282453427)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): two small whole-history selections (about 10,000 rows) without a
