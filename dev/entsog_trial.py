@@ -196,6 +196,22 @@ def main() -> int:
             where frequency = 'D' and date_key = date '2026-10-15' and measure_codes = 'entry' order by value desc""")
         g["PL monthly totals 2026"] = q(con, """select measure_key, date_key, value, observation_status_key from build
             where breakdown_json = '{}' and frequency = 'M' and date_key >= date '2026-01-01' order by 1, 2""", 24)
+        g["gold_yaml_tests_failing_rows"] = q(con, """select count(*) from build where measure_key is null
+            or date_key is null or value is null or raw_sha256 is null or geography_key <> 'PL'
+            or frequency not in ('D', 'M') or observation_status_key not in ('ok', 'provisional')""")[0][0]
+        # Spot values recomputed from the landed answer's raw JSON (the operator's own published records), not
+        # from Bronze or Silver: sum of the 2026-10-15 values per direction vs the Gold daily total.
+        client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
+        oct_copy = held[extract.entity("physical_flow", "PL-TSO-0002", (2026, 10))][-1]
+        raw = json.loads(client.get_object(Bucket=bucket, Key=oct_copy["object"]["key"])["Body"].read())
+        spot = {}
+        for rec in raw["operationaldatas"]:
+            if str(rec.get("periodFrom", "")).startswith("2026-10-15") and rec.get("isNA") not in (1, True, "1") \
+                    and rec.get("value") not in (None, ""):
+                spot[rec["directionKey"]] = spot.get(rec["directionKey"], 0) + float(rec["value"])
+        gold_spot = dict(q(con, """select measure_codes, value from build where frequency = 'D'
+            and breakdown_json = '{}' and date_key = date '2026-10-15'"""))
+        g["spot 2026-10-15 raw JSON vs Gold"] = {d: [spot.get(d), gold_spot.get(d)] for d in ("entry", "exit")}
         annotate("notice", "entsog trial Gold", g)
         lic = duckdb.connect()
         lic.execute("create table source as select * from read_csv('warehouse/seeds/source.csv', all_varchar=true)")
