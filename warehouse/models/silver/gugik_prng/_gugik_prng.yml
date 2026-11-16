@@ -39,7 +39,9 @@ models:
               arguments:
                 values: ['punkt główny', 'punkt początkowy obiektu; punkt końcowy obiektu']
       - name: gmina_codes
-        description: TERYT gmina codes as published, ';' between the gminas of an object that spans several.
+        description: >-
+          TERYT gmina codes as published, one per point of the representation (';' between the start and end
+          points of a linear object, which may repeat one code).
       - name: export_date
         description: Date in the package's "Export danych PRNG z dnia <date>" member.
         tests: [not_null]
@@ -48,9 +50,10 @@ models:
         tests: [not_null]
   - name: prng_object_gminas
     description: >-
-      GUGiK PRNG (register PL-ENV-002): the gminas each named object of silver.prng_objects lies in, wholly or partly,
-      as the register lists them. Grain: prng_id × gmina_code. Powiat and voivodeship codes are the first 4 and 2
-      digits of the TERYT gmina code.
+      GUGiK PRNG (register PL-ENV-002): the gminas of the published points of each named object of
+      silver.prng_objects (its main point, or the start and end points of a linear object), as the register lists
+      them. Grain: prng_id × gmina_code; point_roles lists the points in that gmina ('main', 'start', 'end'). Powiat
+      and voivodeship codes are the first 4 and 2 digits of the TERYT gmina code.
     tests:
       - unique:
           column_name: "prng_id || '|' || gmina_code"
@@ -58,6 +61,8 @@ models:
       - name: prng_id
         tests: [not_null]
       - name: gmina_code
+        tests: [not_null]
+      - name: point_roles
         tests: [not_null]
       - name: entity
         tests: [not_null]
