@@ -11,7 +11,10 @@
    that month and has a record that day (points start and stop mid-month; tests/entsog_physical_flow_complete.sql
    fails on a missing record inside a point's span). A value is final when its record was last updated at or after
    the end of its gas day (last_update_utc >= period_to_utc): GAZ-SYSTEM publishes running values during the gas day,
-   so a record of a day that has not ended is never final. A daily sum is built only when every expected
+   so a record of a day that has not ended is never final. A value last updated during its day counts as final once
+   that day ended more than 7 days ago (the operator publishes D on D+1 and left it unrevised): two such records in
+   five years, the last days of the Belarus points (Tieterowka 2023-06-21, Wysokoje 2023-07-05; Dev trial
+   43813522644). A daily sum is built only when every expected
    point-direction of its scope (all points of the direction, or the group) has a final value that day: a day with an
    expected point published as isNA or still running is left out, never published as if complete
    (tests/entsog_gas_day_final.sql). A monthly sum is built only for an ended month
@@ -27,7 +30,8 @@ flows as (
         f.gas_day,
         date_trunc('month', f.gas_day) as gas_month,
         f.value_kwh_d,
-        f.value_kwh_d is not null and f.last_update_utc >= f.period_to_utc as is_final,
+        f.value_kwh_d is not null
+        and (f.last_update_utc >= f.period_to_utc or f.period_to_utc < now() - interval 7 day) as is_final,
         f.flow_status,
         f.source_version,
         f.raw_sha256,
