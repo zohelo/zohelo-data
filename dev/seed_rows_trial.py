@@ -79,6 +79,10 @@ def old_project() -> Path:
     return copy
 
 
+def one(con, sql: str):
+    return con.execute(sql).fetchall()[0][0]
+
+
 def load(cat, namespace: str, name: str):
     table = bf.retry(lambda: cat.load_table((namespace, name)), f"{namespace}.{name}")
     schema = [f"{field.name}:{field.field_type}:{'required' if field.required else 'optional'}"
@@ -96,8 +100,8 @@ def compare(cat) -> None:
             old_schema, old = load(cat, OLD, name)
             con.register("new_t", new)
             con.register("old_t", old)
-            only_old = con.execute("select count(*) from (select * from old_t except all select * from new_t)").fetchone()[0]
-            only_new = con.execute("select count(*) from (select * from new_t except all select * from old_t)").fetchone()[0]
+            only_old = one(con, "select count(*) from (select * from old_t except all select * from new_t)")
+            only_new = one(con, "select count(*) from (select * from new_t except all select * from old_t)")
             entry = {"rows_new": new.num_rows, "rows_old": old.num_rows, "only_old": only_old, "only_new": only_new,
                      "schema_same": new_schema == old_schema, "arrow_same": str(new.schema) == str(old.schema),
                      "csv_rows": len(seed_rows.rows(name))}
@@ -114,8 +118,8 @@ def compare(cat) -> None:
                 entry["prod"] = {
                     "rows": prod.num_rows,
                     "schema_same": prod_schema == new_schema,
-                    "only_prod": con.execute("select count(*) from (select * from prod_t except all select * from new_t)").fetchone()[0],
-                    "only_new": con.execute("select count(*) from (select * from new_t except all select * from prod_t)").fetchone()[0],
+                    "only_prod": one(con, "select count(*) from (select * from prod_t except all select * from new_t)"),
+                    "only_new": one(con, "select count(*) from (select * from new_t except all select * from prod_t)"),
                     "only_new_keys": [r[0] for r in con.execute(
                         f"select distinct {key} from (select * from new_t except all select * from prod_t) order by 1 limit 12").fetchall()],
                     "only_prod_keys": [r[0] for r in con.execute(
