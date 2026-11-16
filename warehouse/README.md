@@ -81,8 +81,8 @@ Gold per block (docs/gold-coverage.md, O36, O43, decision D35): `observations.py
 block of a big source into `gold.<source>_observations`, `_series`, `_measures` and `_geography` by
 rule, one file per block, rebuilt only when the block's Silver files, the Gold SQL
 (`entity/gold_*.sql`) or the mapping of its geography codes changed; each block is checked for one
-row per `series_key` × `date_key` before it is accepted. Built for Eurostat; the Pipeline activity
-`gold.observations` runs it (docs/operating.md): the first load is started by hand with a filter, later
+row per `series_key` × `date_key` before it is accepted. Built for Eurostat and GUS DBW; the Pipeline activity
+`gold.observations` runs it for every source that lists it in `activities` (docs/operating.md; Eurostat; GUS DBW's tables are declared, the activity is not authorized yet): the first load is started by hand with a filter, later
 runs continue within their time budget in the order Polish regions, countries and aggregates, the rest
 (O43). Dev trials write to a scratch namespace (`--trial zz_dev_<topic>`).
 
