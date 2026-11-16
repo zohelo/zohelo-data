@@ -9,6 +9,8 @@ description: "Ministry of Justice ISWS — multi-year justice statistics workboo
 # entry): caseload, duration, adoptions, notarial_acts. Version = download time (no Last-Modified); every selected
 # workbook is downloaded on every run and lands only when its SHA-256 changed. Restart unit: one file. Bronze reads
 # .xlsx with ingestion/common/xlsx_cells.py and .xls with xlrd (requirements.txt). Probe: Dev run 43797252172.
+# Dev trial 43804846162 (test/ms_isws-trial): 4 files, 23,589 Bronze cells, 0 rejected, 499 Silver and Gold rows
+# (1991-2025), 0 duplicate keys; second Landing and Bronze runs wrote nothing.
 extraction:
   initial: bulk
   production: snapshot                  # every workbook is the complete multi-year table as published
@@ -26,8 +28,8 @@ silver: [silver.ms_isws_tables]
 gold: [gold.build_ms_isws, gold.metrics_court_cases_received, gold.metrics_court_cases_resolved,
        gold.metrics_court_case_duration]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  ms_isws_tables: {rows: 900}  # TRIAL_SILVER
-  poc_build_ms_isws: {rows: 900}  # TRIAL_GOLD
+  ms_isws_tables: {rows: 750}  # 499 rows: caseload 315, adoptions 104, duration 45, notarial acts 35 (Dev trial 43804846162)
+  poc_build_ms_isws: {rows: 750}  # 499 (Dev trial 43804846162)
   poc_metrics_court_cases_received: {rows: 50}  # 15 years, Poland
   poc_metrics_court_cases_resolved: {rows: 50}  # 15 years, Poland
   poc_metrics_court_case_duration: {rows: 50}  # 15 years, Poland
