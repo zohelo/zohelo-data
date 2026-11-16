@@ -44,13 +44,29 @@ from warehouse import entity
 SOURCE = "gunb_rwdz"
 ENTITY = "entity"
 BRONZE, SILVER, REJECTED = "gunb_rwdz_records", "gunb_rwdz_records", "gunb_rwdz_rejected_files"
-# The producer's header (pobranie.html: '#' separates the columns, UTF-8), in order. A file with another header
-# is rejected: a new column could name a person.
-HEADER: list[str] = []
-# Columns read into Bronze (every other column is dropped before Bronze; see the module docstring).
-KEEP: list[str] = []
-NOT_NULL = ("record_id", "raw_sha256")
+# The producer's header line, exactly (';'-separated, UTF-8 with BOM, LF, '"' quotes; probes 43345366257 and
+# 43798083518). 'cecha' and 'ulica' appear twice. A file with another header is rejected: a new column could name a
+# person.
+HEADER = [
+    "numer_urzad", "numer_gunb", "nazwa_organu", "adres_organu", "data_wplywu_wniosku", "numer_decyzji_urzedu",
+    "data_wydania_decyzji", "nazwa_inwestor", "wojewodztwo", "miasto", "terc", "cecha", "cecha", "ulica",
+    "ulica_dalej", "nr_domu", "rodzaj_inwestycji", "kategoria", "nazwa_zamierzenia_bud", "nazwa_zam_budowlanego",
+    "kubatura", "projektant_nazwisko", "projektant_imie", "projektant_numer_uprawnien", "jednosta_numer_ew",
+    "obreb_numer", "numer_dzialki", "numer_arkusza_dzialki", "jednostka_stara_numeracja_z_wniosku",
+    "stara_numeracja_obreb_z_wnioskiu", "stara_numeracja_dzialka_z_wniosku",
+]  # fmt: skip
+# DuckDB names for the header's columns, position by position (a repeated name gets _2).
+NAMES = [h if h not in HEADER[:i] else f"{h}_{HEADER[:i].count(h) + 1}" for i, h in enumerate(HEADER)]
+# Columns read into Bronze: register numbers, the authority (a public office), dates, decision number, voivodeship,
+# TERYT code of the works, kind of investment, object category, cubature. Left out before Bronze: the authority's
+# address, the investor's name, town, street, house number, the free-text name of the works, the designer's name,
+# first name and licence number, and every plot and precinct number (register entry PL-ENV-033: location is kept
+# only as the territorial code).
+KEEP = ["numer_urzad", "numer_gunb", "nazwa_organu", "data_wplywu_wniosku", "numer_decyzji_urzedu",
+        "data_wydania_decyzji", "wojewodztwo", "terc", "rodzaj_inwestycji", "kategoria", "kubatura"]  # fmt: skip
+NOT_NULL = ("entity", "record_id", "voivodeship_code", "raw_sha256")
 KEY = ("record_id",)
+REJECT_IF = "contract_problem IS NOT NULL"
 PROVENANCE = [
     ("raw_sha256", "VARCHAR"),
     ("source_version", "VARCHAR"),
@@ -101,22 +117,22 @@ def decode(raw: Path, receipt: dict[str, Any], output: Path) -> int:
                     dst.write(block)
     except zipfile.BadZipFile as exc:
         raise RwdzDecodeError(f"not a readable ZIP: {exc}") from exc
+    with csv_path.open("rb") as handle:
+        first = handle.readline().decode("utf-8-sig", errors="replace").rstrip("\r\n").split(";")
+    if first != HEADER:
+        csv_path.unlink(missing_ok=True)
+        changed = sorted(set(first) ^ set(HEADER))[:10]
+        raise RwdzDecodeError(f"unknown layout: the header differs from the known RWDZ header {changed or first[:5]}")
     con = duckdb.connect()
     try:
         con.execute(f"SET memory_limit = '{MEMORY}'")
         con.execute(f"SET temp_directory = '{output.parent}'")
         source = str(csv_path).replace("'", "''")
-        try:
-            con.execute(
-                f"CREATE VIEW src AS SELECT * FROM read_csv('{source}', delim='#', quote='', escape='', header=true, "
-                "all_varchar=true, strict_mode=true, encoding='utf-8', sample_size=-1, null_padding=false)"
-            )
-            headers = [r[0] for r in con.execute("DESCRIBE src").fetchall()]
-        except (duckdb.InvalidInputException, duckdb.ConversionException) as exc:
-            raise RwdzDecodeError(f"CSV cannot be read: {str(exc)[:400]}") from exc
-        if headers != HEADER:
-            changed = sorted(set(headers) ^ set(HEADER))[:10]
-            raise RwdzDecodeError(f"unknown layout: the header differs from the known RWDZ header {changed or headers[:5]}")
+        columns = "{" + ", ".join(f"'{n}': 'VARCHAR'" for n in NAMES) + "}"
+        con.execute(
+            f"CREATE VIEW src AS SELECT * FROM read_csv('{source}', delim=';', quote='\"', escape='\"', header=false, "
+            f"skip=1, columns={columns}, strict_mode=true, null_padding=false, encoding='utf-8', parallel=false)"
+        )
         ingested = datetime.strptime(receipt["ingested_at"], "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
         select = ", ".join(
             ["? AS entity"]
@@ -131,11 +147,12 @@ def decode(raw: Path, receipt: dict[str, Any], output: Path) -> int:
         target = str(output).replace("'", "''")
         try:
             con.execute(
-                f"COPY (SELECT {select} FROM src) TO '{target}' (FORMAT parquet, COMPRESSION zstd, ROW_GROUP_SIZE 200000)",
+                f"COPY (SELECT {select} FROM src) TO '{target}' "
+                "(FORMAT parquet, COMPRESSION zstd, ROW_GROUP_SIZE 200000)",
                 [receipt["entity"], receipt["sha256"], receipt["version_token"], ingested],
             )
         except (duckdb.InvalidInputException, duckdb.ConversionException) as exc:
-            raise RwdzDecodeError(f"CSV cannot be read: {str(exc)[:400]}") from exc
+            raise RwdzDecodeError(f"CSV cannot be read: {safe_error(exc)}") from exc
         rows = con.execute(f"SELECT count(*) FROM read_parquet('{target}')").fetchone()[0]
         if not rows:
             raise RwdzDecodeError("the CSV has no rows")
@@ -143,6 +160,22 @@ def decode(raw: Path, receipt: dict[str, Any], output: Path) -> int:
     finally:
         con.close()
         csv_path.unlink(missing_ok=True)
+
+
+def safe_error(exc: Exception) -> str:
+    """The parser's message without the line it quotes (the line holds names and addresses)."""
+    return str(exc).split("\n")[0].split("Original Line")[0][:300]
+
+
+def conflicting(path: Path) -> int:
+    """Records whose lines disagree in a column read (that column is null for them, warehouse/entity SQL)."""
+    con = duckdb.connect()
+    try:
+        target = str(path).replace("'", "''")
+        sql = f"SELECT count(*) FROM read_parquet('{target}') WHERE conflicting_columns IS NOT NULL"
+        return int(con.execute(sql).fetchone()[0])
+    finally:
+        con.close()
 
 
 def table_columns(path: Path) -> list[tuple[str, str]]:
@@ -218,9 +251,11 @@ def run_entity(cat, client, lake: str, landing: str, name: str, refused: set[str
         silver_file = work / "silver.parquet"
         try:
             report = entity.apply(SILVER, bronze_input, silver_file, not_null=NOT_NULL, unique_key=KEY,
-                                  memory_limit=MEMORY, temp_directory=str(work))  # fmt: skip
+                                  same_rows=False, reject_if=REJECT_IF, memory_limit=MEMORY,
+                                  temp_directory=str(work))  # fmt: skip
         except entity.EntityModelError as exc:  # verdict of this model on this file: <sha>.<model>
             return {**rejection, "raw_sha256": f"{sha}.{digest}", "error": f"silver: {exc}"[:1000]}
+        report["conflicting"] = conflicting(silver_file)
         columns = table_columns(silver_file)
         if silver is None:
             bf.retry(lambda: bf.ensure_table(cat, where.silver, columns, ENTITY), "create_table")
@@ -242,7 +277,8 @@ def run_entity(cat, client, lake: str, landing: str, name: str, refused: set[str
         # Bronze and Silver are replaced together only once both files exist: a rejection keeps both.
         et.replace(cat, where.bronze, ENTITY, {name: [bronze_input]}, stats, "gunb-rwdz-entities")
         et.replace(cat, where.silver, ENTITY, {name: [silver_uri]}, stats, "gunb-rwdz-entities")
-    out["loaded"].append({"entity": name, "rows": report["rows"], "version": receipt["version_token"],
+    out["loaded"].append({"entity": name, "rows": report["rows"], "lines": report["bronze_rows"],
+                          "conflicting": report["conflicting"], "version": receipt["version_token"],
                           "bronze": "decoded" if need_bronze else "kept",
                           "minutes": round((time.monotonic() - started) / 60, 1)})  # fmt: skip
     return None
@@ -318,8 +354,16 @@ def verify(where: Where | None = None) -> int:
         rejected_names = {n for n, r in report.items() if r.get("rejected")}
         coverage.publish(
             SOURCE,
-            lambda: coverage.rows(SOURCE, {n: n for n in report}, cov["expected"], cov["expected_silver"], b_all,
-                                  s_all, landed=cov["landed"], rejected=rejected_names),  # fmt: skip
+            lambda: coverage.rows(
+                SOURCE,
+                {n: n for n in report},
+                cov["expected"],
+                cov["expected_silver"],
+                b_all,
+                s_all,
+                landed=cov["landed"],
+                rejected=rejected_names,
+            ),
         )
     return 1 if failed else 0
 

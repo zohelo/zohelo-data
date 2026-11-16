@@ -2,10 +2,10 @@ version: 2
 sources:
 - name: gunb_rwdz
   description: >-
-    GUNB Rejestr Wniosków, Decyzji i Zgłoszeń (register PL-ENV-033): the producer's files per voivodeship
-    (https://wyszukiwarka.gunb.gov.pl/pobranie.html). Bronze and Silver are written per file by the loader, not by
-    dbt (design #875, ingestion/to_bronze/gunb_rwdz/entities.py); columns naming natural persons, street addresses
-    and plots are left out before Bronze.
+    GUNB Rejestr Wniosków, Decyzji i Zgłoszeń (register PL-ENV-033): the producer's 16 voivodeship files of
+    building-permit applications with their decisions (https://wyszukiwarka.gunb.gov.pl/pobranie.html). Bronze and
+    Silver are written per file by the loader, not by dbt (design #875, ingestion/to_bronze/gunb_rwdz/entities.py);
+    columns naming natural persons, addresses and plots are left out before Bronze.
   database: r2
   schema: bronze
   meta:
@@ -15,8 +15,10 @@ sources:
   tables:
   - name: gunb_rwdz_records
     description: >-
-      One row per record of the newest copy of each voivodeship file (entity = voivodeship), the allowed columns as
-      published text plus provenance; partitioned by entity.
+      One row per line of the newest copy of each voivodeship file (entity = voivodeship): register number
+      (numer_gunb), office case number, authority, application and decision dates, decision number, voivodeship,
+      TERYT code, kind of investment, object category and cubature as published text, plus provenance. A record is
+      repeated on one line per plot (the plot columns are not read).
   - name: gunb_rwdz_rejected_files
     description: GUNB RWDZ files the Bronze decoder or the Silver model rejected, with the reason.
 - name: gunb_rwdz_silver
@@ -27,4 +29,9 @@ sources:
   schema: silver
   tables:
   - name: gunb_rwdz_records
-    description: TBD
+    description: >-
+      Entity table of the register: one row per register record (record_id = numer_gunb) of each voivodeship file,
+      typed dates (application, decision), the voivodeship's TERC code, the TERYT code, kind of investment and object
+      category as published, the number of source lines, and the columns on which the lines of a record disagree
+      (null there). Grain, not-null keys and the closed lists (voivodeship, kind, category, 7-digit TERYT, readable
+      dates) are checked by the loader on every file (entity.apply), which rejects the file otherwise.

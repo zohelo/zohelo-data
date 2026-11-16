@@ -3,12 +3,14 @@ description: "GUNB — Rejestr Wniosków, Decyzji i Zgłoszeń (RWDZ): building-
 
 # Extraction strategy (docs/landing.md). Register PL-ENV-033. Bulk feature: the producer's page
 # https://wyszukiwarka.gunb.gov.pl/pobranie.html ("Do pobrania – dane udostępniane z systemu RWDZ z podziałem na
-# województwa … od 01.01.2016 r. z codzienną aktualizacją w godzinach nocnych"; '#'-separated UTF-8 CSV, one ZIP per
-# voivodeship at a fixed URL, Last-Modified sent) is preferred over the GUGiK WFS on the same data (GML pages only,
+# województwa … od 01.01.2016 r. z codzienną aktualizacją w godzinach nocnych"; one ZIP per voivodeship at a fixed URL holding
+# one ';'-separated UTF-8 CSV, 7-47 MB zipped, 58-355 MB unzipped, Last-Modified sent) is preferred over the GUGiK WFS on the same data (GML pages only,
 # `PagingIsTransactionSafe` FALSE). Declared files of the shared bulk_file pattern (no extractor code); entity = one
 # voivodeship file, version = Last-Modified, written only when the SHA-256 changed. robots.txt disallows /results/,
-# /wniosek/ and /zgloszenie/ only. Dev probe 43326025936 (12 Nov 2026, 23:07 UTC): page and files answered 200.
-# Left out for now: the two national notification files (zgłoszenia 2016-2021, 2022-), see docs/sources/gunb_rwdz.md.
+# /wniosek/ and /zgloszenie/ only. Dev probes 43326025936 (12 Nov 2026: page and files answered 200) and 43798083518
+# (16 Nov 2026: all 16 files parsed, 5,170,755 lines, 2,875,574 register numbers).
+# Left out for now: the two national notification files (zgłoszenia 2016-2021, 2022-; about 1 M lines since 2022),
+# see docs/sources/gunb_rwdz.md.
 extraction:
   kind: bulk_file
   bulk_file:
