@@ -3724,7 +3724,8 @@ sources:
   name: Programme implementation and payment statistics
   short_name: ARiMR payment statistics
   provider: Agencja Restrukturyzacji i Modernizacji Rolnictwa (ARiMR)
-  status: approved
+  source_system: arimr_payments
+  status: built
   family: D
   kpi: true
   geography: Poland and regional Poland, programme-dependent
@@ -3748,9 +3749,10 @@ sources:
       (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
       attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
       consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
-      The report files carry no licence of their own. Aggregate statistics only; personal beneficiary data stay out
-      of scope. Attribution: "Źródło: ARiMR, <report title> (<date>)" / "Source: Agency for Restructuring and
-      Modernisation of Agriculture (ARiMR), <report title> (<date>)".'
+      The report files carry no licence of their own; each direct-payment report states "Wykorzystanie danych możliwe
+      za podaniem źródła." (use of the data is possible with the source named; probe 43345651745). Aggregate
+      statistics only; personal beneficiary data stay out of scope. Attribution: "Źródło: ARiMR, <report title>
+      (<date>)" / "Source: Agency for Restructuring and Modernisation of Agriculture (ARiMR), <report title> (<date>)".'
   updates: Campaign/programme-dependent; frequent operational updates for some schemes.
   ingestion:
     history: Curate aggregate statistics only after identifying stable named report families.
@@ -3763,15 +3765,15 @@ sources:
       from all farms.
   research:
     priority: conditional
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - 'Dev probes 43086687586 and 43091539492: gov.pl/web/arimr/wdrazane-programy-i-dzialania---dane-liczbowe links per-scheme pages (e.g. platnosci-bezposrednie2) with no single statistics file index; the per-scheme attachments are still to be inventoried.'
-    - Locate canonical aggregate statistics index
-    - Exclude personal beneficiary records
-    - Document cumulative-status semantics
+    - 'Curated selection only (Dev probes 43343134150, 43345651745): the index page links 13 scheme pages whose attachments are all PDF (no XLSX/CSV; api.dane.gov.pl timed out from the runner). Built: the monthly "Płatności bezpośrednie" report (newest and newest year-end), applications, decisions and amounts paid by campaign and voivodeship, cumulative as of the report date (newest report wins; open campaigns provisional). Not modelled: PS WPR 2023-2027 intervention reports, national aid, RDP 2014-2020 / 2007-2013 measures, KPO, fisheries and market-mechanism pages.'
+    - No beneficiary-level data: only voivodeship aggregates reach Bronze; the report footers (names of the ARiMR staff responsible) stay in the Landing file.
     references:
     - https://www.gov.pl/web/arimr
+    - https://www.gov.pl/web/arimr/wdrazane-programy-i-dzialania---dane-liczbowe
+    - https://www.gov.pl/web/arimr/platnosci-bezposrednie2
     - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-035
   name: Turystyka – annual accommodation-establishment tables
