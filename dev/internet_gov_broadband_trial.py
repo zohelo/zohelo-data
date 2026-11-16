@@ -110,7 +110,12 @@ def analyse(con: duckdb.DuckDBPyConnection, cells: pa.Table, extra: dict) -> int
         and measure_codes in ('covered', 'total', 'covered_100plus', 'covered_1000plus', 'no_coverage', 'no_coverage_share')""")
     voiv = n("""select string_agg(period_label || ' ' || geography_key || ' ' || measure_codes || '=' || value, '; ' order by all)
         from gold where geography_key in ('TERC:28', 'TERC:14') and period_label in ('2024-Q2', '2026-Q3')""")
-    report(f"{SOURCE} trial Poland spot values", {"poland": spots, "voivodeships": voiv})
+    seeds = ROOT / "warehouse/seeds"
+    licence = con.sql(f"""select s.source_key, s.licence_key, l.name, l.commercial_ok
+        from read_csv('{seeds / 'source.csv'}', all_varchar = true) as s
+        left join read_csv('{seeds / 'licence.csv'}', all_varchar = true) as l on s.licence_key = l.licence_key
+        where s.source_key = '{SOURCE}'""").fetchall()
+    report(f"{SOURCE} trial Poland spot values", {"poland": spots, "voivodeships": voiv, "catalogue_licence": licence})
     bad = sum(failures.values()) + gold["dup_series_date"] + gold["geography_unmatched"] + gold["null_values"]
     return 1 if bad else 0
 
