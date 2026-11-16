@@ -178,7 +178,7 @@ def trial(source: str, client, cat, con) -> dict:
         (sha[:10], f, n, bronze_counts.get((sha, f)))
         for sha, files in raw.items()
         for f, n in files.items()
-        if f != "_members" and bronze_counts.get((sha, f)) != n
+        if f != "_members" and bronze_counts.get((sha, f), 0) != n  # a header-only file has no Bronze rows
     ]
     stats["bronze_vs_raw_mismatch"] = mismatch
     stats["members"] = {sha[:10]: files["_members"] for sha, files in raw.items()}
@@ -248,8 +248,11 @@ def trial(source: str, client, cat, con) -> dict:
     stats["entities"] = {t: one(con, f"select count(*) from {t}_{source}") for t in ("transit_stops", "transit_routes")}
     stats["gold_tests_failing"] = {k: v for k, v in run_tests(con, gold_dir / f"_{source}.yml", tables).items() if v}
     stats["spot"] = con.sql(f"""select strftime(date_key, '%a %Y-%m-%d') || ' ' || coalesce(json_extract_string(breakdown_json, '$.route_type'), 'total') || '=' || cast(value as bigint) || ' ' || observation_status_key
-        from {g} where date_key in (select min(date_key) from {g} where dayofweek(date_key) = 3 union select min(date_key) from {g} where dayofweek(date_key) = 0)
+        from {g} where date_key in (select max(date_key) from {g} union select min(date_key) from {g} where dayofweek(date_key) = 0)
         order by date_key, is_total desc, breakdown_json""").fetchall()
+    stats["spot_check_total"] = one(con, f"""select count(*) from (select date_key, sum(value) filter (where is_total) t,
+        sum(value) filter (where not is_total) parts from {g} group by date_key) where t is distinct from parts""")
+    stats["route_type_labels"] = one(con, f"select string_agg(distinct breakdown_label_json, ' ') from {g} where not is_total")
     stats["spot"] = [s[0] for s in stats["spot"]]
     show(con, f"{source} gold sample", f"select date_key, breakdown_json, breakdown_label_json, value, observation_status_key, geography_key from {g} order by date_key, breakdown_json", limit=40)
     return stats
@@ -280,12 +283,13 @@ def main(argv) -> int:
                     "extract_1", "extract_2", "inspect_exit", "verify_exit", "bronze_1", "bronze_2", "bronze_files",
                     "bronze_rows", "rejected", "bronze_vs_raw_mismatch", "silver_rows", "service_days",
                     "silver_tests_failing", "gold_rows", "gold_days", "gold_status", "gold_dup_series_date",
-                    "gold_unmatched", "entities", "gold_tests_failing", "spot",
+                    "gold_unmatched", "entities", "gold_tests_failing", "spot", "spot_check_total", "route_type_labels",
                 )
             }
             compact["landing"] = [(x["entity"], x["bytes"], x["version"]) for x in stats["landing"]]
             ok = not (compact["silver_tests_failing"] or compact["gold_tests_failing"] or compact["rejected"]
-                      or compact["bronze_vs_raw_mismatch"] or compact["gold_dup_series_date"])
+                      or compact["bronze_vs_raw_mismatch"] or compact["gold_dup_series_date"]
+                      or compact["spot_check_total"] or compact["gold_unmatched"])
             annotate("notice" if ok else "warning", f"{source} trial", compact)
     finally:
         removed = 0
