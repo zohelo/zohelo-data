@@ -6,7 +6,8 @@
    - register_number: the text before " z ", notes in brackets removed, whitespace collapsed, a leading "i" removed; empty (another decision
      under the number named just before: "A/389 z 04.1963 i z 18.01.1969") takes the previous number of the item;
    - decision_date: the date (dd.mm.yyyy; '.', ',', '-' or '/' as separators) or null when it is not a full date
-     (a year, a month and year, a two-digit year), decision_date_text keeping it as printed;
+     (a year, a month and year, a two-digit year) or not a possible one (before 1918 or after the date of the list),
+     decision_date_text keeping it as printed;
    - a register part with no " z <date>" at all is one decision whose number is the whole part (ensemble colon and
      notes in brackets removed) and whose date is null.
    register_key = list_code:register_number:date (ISO date, else the date as printed): one register entry (a
@@ -86,8 +87,20 @@ numbered as (
         case
             when regexp_full_match(decision_date_text, '[0-9]{1,2}[.,/-][0-9]{1,2}[.,/-][0-9]{4}')
                 then cast(try_strptime(regexp_replace(decision_date_text, '[,/-]', '.', 'g'), '%d.%m.%Y') as date)
-        end as decision_date
+        end as parsed_date
     from exploded
+),
+
+-- a printed date before 1918 (no register existed) or after the date of the list is a misprint ("3020", "1013" in
+-- the lists of 30.06.2026, Dev trial 43802337548): no decision_date, the text is kept
+checked as (
+    select
+        n.*,
+        case
+            when n.parsed_date >= date '1918-01-01' and n.parsed_date <= i.list_state_date then n.parsed_date
+        end as decision_date
+    from numbered as n
+    inner join items as i on n.list_code = i.list_code and n.item_number = i.item_number
 )
 
 select
@@ -105,4 +118,4 @@ select
     i.source_version,
     i.raw_sha256
 from items as i
-inner join numbered as n on i.list_code = n.list_code and i.register_item_number = n.item_number
+inner join checked as n on i.list_code = n.list_code and i.register_item_number = n.item_number
