@@ -1,0 +1,33 @@
+source_system: kgpsp_interventions
+description: "KG PSP — fire-service intervention statistics, annual standard summary tables (tabele stałych zestawień ST SWD PSP)"
+
+# Extraction strategy (docs/landing.md). Register EX-003. Bulk feature: https://www.gov.pl/web/kgpsp/interwencje-psp
+# links, per year since 2016, a ZIP of standard summary tables ("2025 2025_.zip 7.96MB", under "Tabele stałych
+# Zestawień-ST SWD PSP") and a ZIP of incident-report data ("zestawienie danych z informacji ze zdarzeń", one CSV of
+# about 0.5 M records and 636 MB a year). Only the standard tables are landed; the incident-report archives are left
+# out (size; record-level location fields to be checked first). Attachment uuids change when a file is replaced, so
+# the page is the entry (ingestion/to_landing/kgpsp_interventions/). Entity = one year (tabele_<year>), version =
+# Last-Modified (gov.pl sends it for attachments), a new attachment URL lands only when its bytes differ. Restart
+# unit: one file. Dev probes 43339247470 (13 Nov: page and incident ZIP answered 200), 43798369369, 43798868238,
+# 43799659840 (16 Nov: www.gov.pl and dane.gov.pl time out at TCP connect from GitHub runners, IPv4 and IPv6).
+extraction:
+  initial: bulk
+  production: snapshot                  # each year's ZIP as published; a replaced file lands as a new version
+  incremental_policy: changed_since_last  # new attachment URL with different bytes
+  schedule: # UTC; the year's tables appear in the first months of the next year; monthly check (12th)
+    - {cron: "50 6 12 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/kgpsp_interventions/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.kgpsp_interventions_cells, bronze.kgpsp_interventions_rejected_files]
+silver: []
+gold: []
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): ten yearly ZIPs of about 8-11 MB, one new a year; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2970"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

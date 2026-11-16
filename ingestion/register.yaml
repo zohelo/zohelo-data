@@ -9873,6 +9873,7 @@ sources:
   name: Fire-service intervention statistics and current casualty summaries
   short_name: PSP fire-service statistics
   provider: Headquarters of the State Fire Service (KG PSP)
+  source_system: kgpsp_interventions
   status: approved
   family: F
   kpi: true
