@@ -227,7 +227,12 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- value for a populated country and poc_build_owid does not build it.
     ('co2_consumption_per_capita', 'owid', '%', 1e-6, 100),
     ('electoral_democracy_index', 'owid', '%', 0, 1),
-    ('gdp_per_capita', 'owid', '%', 100, 300000)
+    ('gdp_per_capita', 'owid', '%', 100, 300000),
+    -- ULC airport traffic (#2967), quarterly counts as published; highest total (all airports) Q3 2025: 21,241,797
+    -- passengers, 140,633 operations (Dev trial 43831892099).
+    -- Documentation only (no metrics model for these KPIs yet).
+    ('air_passengers', 'ulc_airports', '%', 0, 5e7),
+    ('air_passenger_operations', 'ulc_airports', '%', 0, 1e6)
 ),
 
 metrics as (
