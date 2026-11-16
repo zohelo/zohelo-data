@@ -161,8 +161,8 @@ def get(session: requests.Session, url: str, params: dict[str, Any]) -> bytes:
         time.sleep(PAUSE_SECONDS)
         try:
             response = session.get(url, params=params, timeout=TIMEOUT_SECONDS)
-        except (requests.ConnectionError, requests.Timeout):
-            response = None
+        except (requests.ConnectionError, requests.Timeout, requests.exceptions.ChunkedEncodingError):
+            response = None  # also an answer cut short (Dev trial 43840995051: IncompleteRead of a 10 MB page)
         if response is not None and response.status_code == 200:
             return response.content
         if response is not None and response.status_code not in (403, 429, 500, 502, 503, 504):
