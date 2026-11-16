@@ -46,6 +46,20 @@ def main(argv) -> int:
     cat = bf.retry(catalog, "catalog")
     con = duckdb.connect()
     n = lambda q: con.sql(q).fetchall()[0][0]  # noqa: E731
+    import time
+
+    import requests
+
+    started = time.monotonic()
+    try:  # one short request first: an unreachable host ends the trial in a minute, not after every retry
+        r = requests.get(landing.BASE + "statystyki", headers={"User-Agent": bulk_file.USER_AGENT}, timeout=(20, 40))
+        reach = {"status": r.status_code, "bytes": len(r.content), "server": r.headers.get("Server")}
+    except requests.RequestException as exc:
+        reach = {"error": f"{type(exc).__name__}: {str(exc)[:160]}"}
+    reach["seconds"] = round(time.monotonic() - started, 1)
+    annotate("notice" if reach.get("status") == 200 else "error", "cepik trial reach gov.pl", reach)
+    if reach.get("status") != 200:
+        return 1
     try:
         # Landing twice: the second run must write nothing
         states = []
