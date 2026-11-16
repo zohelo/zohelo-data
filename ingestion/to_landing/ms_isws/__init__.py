@@ -25,8 +25,15 @@ SOURCE = "ms_isws"
 HUB = "https://isws.ms.gov.pl/pl/baza-statystyczna/opracowania-wieloletnie/"
 LINK = re.compile(r"/download,2853,\d+\.html$")
 PAUSE = 2.0
-# entity: regex (case-insensitive, re.search) on the workbook title as the hub prints it (whitespace collapsed).
-SELECTION: dict[str, str] = {}
+# entity: regex (case-insensitive, re.search) on the workbook title as the hub prints it (whitespace collapsed);
+# the end year in a title moves with the yearly extension, so no pattern names it. Probe: Dev run 43797252172
+# (88 workbooks listed on 16 Nov 2026; these four are .xlsx, .xlsx, .xlsx and .xls).
+SELECTION: dict[str, str] = {
+    "caseload": r"^Ewidencja spraw w sądach powszechnych w Polsce \(The number of incoming",
+    "duration": r"^Średni czas trwania postępowania sądowego w latach 2011\b",
+    "adoptions": r"^Adopcje - przysposobienie w latach",
+    "notarial_acts": r"^Akty notarialne w latach",
+}
 
 
 def _links(url: str) -> list[tuple[str, str]]:
