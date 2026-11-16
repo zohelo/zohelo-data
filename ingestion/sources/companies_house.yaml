@@ -1,0 +1,64 @@
+source_system: companies_house
+description: "UK Companies House — Free Company Data Product: monthly snapshot of the companies on the UK register (basic company data)"
+
+# Extraction strategy (docs/landing.md). Bulk feature: the Free Company Data Product, one snapshot a month of every
+# live company on the register, "compiled up to the end of the previous month" and published within 5 working days.
+# The listing page links BasicCompanyDataAsOneFile-<YYYY-MM-DD>.zip (about 495 MB; one CSV of about 2.8 GB) and the
+# same data in 7 parts; the date in the name changes each month, so the shared bulk_file pattern reads the listing
+# page first (url_from). The one file is taken, not the 7 parts: the pattern downloads whole files (no Range
+# resume) either way, a 0.5 GB transfer is what GLEIF's lei2 already is on the runner, and one file is one
+# snapshot with one receipt (7 parts could land as a mix of two months). The snapshot date is the date in the file
+# name (kept in the receipt's source_url, a Bronze column); the Landing version token is the file's Last-Modified.
+# Personal data (no natural persons' data is stored; precedent O33): the file is reduced before Landing to the 13
+# columns the platform uses (reduce: companies_house, ingestion/to_landing/companies_house): the registered
+# office's care-of line, PO box, street lines, county and postcode and the previous names are dropped, with the
+# accounts, returns, mortgage and partnership columns and the URI, and are never stored (Landing, Archive, Bronze).
+# A file Landing already holds (same name on the page, same Last-Modified and ETag) is not downloaded again; a
+# downloaded file whose reduced bytes are unchanged (SHA-256) is not landed again. The REST and streaming APIs
+# (key needed), the PSC snapshot (personal data) and officers are not used. Terms: register CD-014.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: basic_company_data
+        url_from:
+          page: https://download.companieshouse.gov.uk/en_output.html
+          pattern: 'BasicCompanyDataAsOneFile-\d{4}-\d{2}-\d{2}\.zip$'
+        format: zip
+        version: last_modified
+        reduce: companies_house   # land only the 13 columns without personal data
+  initial: bulk
+  production: snapshot                    # each file is the complete register of live companies
+  incremental_policy: changed_since_last  # a new file name each month; SHA-256
+  # UTC; release: monthly, within 5 working days of the month's start (the 2026-11-01 file was written on 7 Nov).
+  # The 10th takes the month's file; the 20th is the catch-up for a red or skipped run on the 10th (the listing keeps
+  # only the current file, so a missed month is lost once the next one replaces it). When the 10th succeeded, the
+  # 20th costs one page request and one HEAD: the file Landing holds is not downloaded again (held_file).
+  schedule:
+    - {cron: "40 4 10 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+    - {cron: "40 4 20 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/companies_house/
+# Retention: the newest (reduced) file plus 3 days of superseded ones (storage is paid beyond the free tier).
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 3}
+  prune: report
+bronze: [bronze.companies_house_companies, bronze.companies_house_rejected_files]
+silver: [silver.companies_house_poland_origin, silver.companies_house_snapshot_counts]
+gold: [gold.build_companies_house, gold.company_uk_poland_origin]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  # Growth rule: 48 rows per monthly snapshot (measured, Dev trials of #1502) and the build keeps every snapshot, so
+  # the ceiling is 1.5 x 48 x the 14 snapshots expected by the end of 2027 (Nov 2026 to Dec 2027) = 1,008, rounded
+  # to 1,000. The build warns from the 21st snapshot (above 1,000) and fails above 2,000; raise it by 1.5 x 48 = 72
+  # for each further month of history to keep when the warning appears (far below the 1 M rows of D28).
+  poc_build_companies_house: {rows: 1000}
+  company_uk_poland_origin: {rows: 75}  # 50 (measured, Dev trial of #1502)
+
+# Refresh policy for all layers (D32): one file of several million rows a month, replaced whole by the source, so
+# the unit is the file. Bronze holds the newest snapshot only (the file's entity is replaced); Silver is written
+# per file by the loader (warehouse/entity/companies_house_*.sql): the Poland-origin selection is replaced, the
+# snapshot counts keep one small file per snapshot date, which is how the monthly history builds up.
+refresh: {mode: incremental, unit: file, decided: "D32 + #1502"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

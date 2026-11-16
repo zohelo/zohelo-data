@@ -228,6 +228,7 @@ def configuration(files: list[Path]) -> list[str]:
     problems += full_rebuild(files)
     problems += gold_list(files)
     problems += gold_blocks(files)
+    problems += value_ranges(files)
     problems += source_declarations(files)
     problems += optional_parents(files)
     return problems
@@ -379,6 +380,37 @@ def registrations(files: list[Path]) -> tuple[dict[str, dict], list[str]]:
         if f.parent == SOURCE_MACROS and not (ROOT / "ingestion/sources" / f"{f.stem}.yaml").exists():
             problems.append(f"{f}: the file name must be a source_system (ingestion/sources/{f.stem}.yaml)")
     return found, problems
+
+
+# Per-source value ranges (docs/source-registration.md, "Value ranges"): warehouse/macros/value_range/<source>.sql
+VALUE_RANGES = Path("warehouse/macros/value_range")
+MACRO_NAME = re.compile(r"\{%-?\s*macro\s+(\w+)\s*\(")
+VALUE_RANGE_CALL = re.compile(r"\bpoc_value_range__\w+")
+
+
+def value_ranges(files: list[Path]) -> list[str]:
+    """A source's value-range bounds for the test metrics_value_range: warehouse/macros/value_range/<source_system>.sql
+    is named after a declared source and defines one macro, poc_value_range__<source_system>(), and no file elsewhere
+    defines one. No model calls such a macro: warehouse/changed.py leaves these files out of every build fingerprint,
+    so a bound change rebuilds nothing; a model reading them would not be rebuilt when they change."""
+    problems = []
+    for f in files:
+        if f.suffix != ".sql" or not (ROOT / f).exists():
+            continue
+        text = (ROOT / f).read_text()
+        if f.parent == VALUE_RANGES:
+            if not (ROOT / "ingestion/sources" / f"{f.stem}.yaml").exists():
+                problems.append(f"{f}: the file name must be a source_system (ingestion/sources/{f.stem}.yaml)")
+            if MACRO_NAME.findall(text) != [f"poc_value_range__{f.stem}"]:
+                problems.append(f"{f}: define exactly one macro, poc_value_range__{f.stem}()")
+            continue
+        if f.parts[:2] == ("warehouse", "macros"):
+            for name in MACRO_NAME.findall(text):
+                if name.startswith("poc_value_range__"):
+                    problems.append(f"{f}: macro {name} belongs in {VALUE_RANGES}/{name[17:]}.sql")
+        if f.parts[:2] == ("warehouse", "models") and VALUE_RANGE_CALL.search(text):
+            problems.append(f"{f}: a model must not call poc_value_range__ macros (only tests/metrics_value_range.sql)")
+    return problems
 
 
 def gold_blocks(files: list[Path]) -> list[str]:
