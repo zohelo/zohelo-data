@@ -12,7 +12,7 @@ import duckdb
 from pyiceberg.expressions import EqualTo
 
 from ingestion.common import bronze_files as bf
-from ingestion.common.r2 import catalog
+from ingestion.common.r2 import catalog, req, s3
 from ingestion.common.report import annotate
 
 KEY = "measure_key, geography_key, breakdown_json, date_key"
@@ -64,7 +64,34 @@ def main() -> int:
         "2 P2137 keys with several rows (measure tail, geography, year, rows, units, values, distinct)",
         sample,
     )
+    receipts()
     return 0
+
+
+def receipts() -> None:
+    """Queue item 3a (#2873): objects under 01_landing/ by source, receipts apart. Every landing_objects() call and
+    the per-source receipt readers GET each receipt once, so receipts x readers per run x runs is a Class B
+    estimate. Listing only (Class A, 1,000 keys a page)."""
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
+    counts: dict[str, list[int]] = {}
+    pages = 0
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix="01_landing/"):
+        pages += 1
+        for item in page.get("Contents", []):
+            parts = item["Key"].split("/")
+            c = counts.setdefault(parts[1] if len(parts) > 2 else "-", [0, 0, 0])
+            c[0 if item["Key"].endswith(".receipt.json") else 1] += 1
+            c[2] += int(item.get("Size", 0))
+    top = sorted(counts.items(), key=lambda kv: -kv[1][0])
+    annotate(
+        "notice",
+        "3 Landing objects by source: receipts, data files, MB (01_landing/, sorted by receipts)",
+        {
+            "pages": pages,
+            "receipts_total": sum(v[0] for v in counts.values()),
+            "by_source": [[k, v[0], v[1], round(v[2] / 1e6)] for k, v in top[:40]],
+        },
+    )
 
 
 if __name__ == "__main__":
