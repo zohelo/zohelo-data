@@ -306,6 +306,9 @@ def producer_pm10(con) -> dict:
     except ValueError:
         out["text"] = r.text[:300]
         return out
+    if not isinstance(body, dict):
+        out["text"] = r.text[:300]
+        return out
     lists = {k: v for k, v in body.items() if isinstance(v, list)}
     out["lists"] = {k: len(v) for k, v in lists.items()}
     out["totalPages"] = body.get("totalPages")
@@ -428,7 +431,11 @@ def main(argv: list[str]) -> int:
         note("gios_air_quality trial silver", s, "warning" if bad else "notice")
         note("gios_air_quality trial gold", gold(con))
         note("gios_air_quality trial licence and archive", {"licence": licence(), "archive": archive_zip()})
-        note("gios_air_quality trial producer PM10 24h cross-check", producer_pm10(con))
+        try:
+            producer = producer_pm10(con)
+        except Exception as exc:  # noqa: BLE001 - a cross-check that cannot run is reported, not fatal
+            producer = {"error": f"{type(exc).__name__}: {str(exc)[:300]}"}
+        note("gios_air_quality trial producer PM10 24h cross-check", producer)
     except Exception as exc:  # noqa: BLE001
         status = 1
         traceback.print_exc()
