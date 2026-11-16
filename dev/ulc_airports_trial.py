@@ -1,17 +1,26 @@
 """Dev trial of ulc_airports (#2967): Landing and Bronze into zz_dev_ulc_airports/ (both buckets) and namespace
 zz_dev_ulc_airports, each twice, then the branch's Silver, test and Gold SQL applied in memory (Jinja-rendered with
 the source's macro file), checks and Poland spot values printed and annotated. Reads silver.teryt_terc (read-only)
-for the voivodeship keys. Everything written is removed at the end (finally). Deleted before merge."""
+for the voivodeship keys. Everything written is removed at the end (finally). Deleted before merge.
+
+Argument replay=<job id>: since 16 Nov ~05:00 UTC ulc.gov.pl answers the runner with an Incapsula challenge (trial runs
+43807334129, 43808333414). Replay serves the branch's Landing code, through a stand-in for requests.get, the exact
+bytes the site served to Dev probe 43797214327 (listing and 64 PDFs, SHA-256 checked, read from that job's public
+log); no request reaches ulc.gov.pl. Everything after the HTTP answer (discovery, plan, PDF check, receipts,
+idempotence, Bronze, Silver, Gold) runs as in production."""
 
 from __future__ import annotations
 
+import base64
 import csv
+from hashlib import sha256
 from pathlib import Path
 import re
 import sys
 
 import duckdb
 import jinja2
+import requests
 
 from ingestion.common import bronze_files as bf
 from ingestion.common.r2 import catalog, req, s3
@@ -49,7 +58,56 @@ def receipts(client, bucket) -> int:
     return n
 
 
+class Answer:
+    """A requests.Response stand-in for one replayed body."""
+
+    def __init__(self, url: str, body: bytes | None) -> None:
+        self.url, self.body = url, body or b""
+        self.status_code = 200 if body is not None else 404
+        self.content, self.text = self.body, self.body.decode("utf-8", "replace")
+        self.headers = {"Content-Length": str(len(self.body)), "Content-Type": "application/pdf"}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc) -> None:
+        return None
+
+    def iter_content(self, size):
+        for i in range(0, len(self.body), size):
+            yield self.body[i : i + size]
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise requests.HTTPError(f"{self.status_code}")
+
+
+def replay(job: str) -> dict[str, bytes]:
+    """{URL: bytes} from the probe job's log (@@BEGIN <label> <url> … <size> <sha256> / @@B base64 / @@END)."""
+    text = requests.get(f"https://api.github.com/repos/zohelo/zohelo-data/actions/jobs/{job}/logs", timeout=120)
+    text.raise_for_status()
+    out, current, parts = {}, None, []
+    for line in text.text.splitlines():
+        line = re.sub(r"^\S+Z ", "", line, count=1)
+        if line.startswith("@@BEGIN "):
+            current, parts = line.split(" "), []
+        elif line.startswith("@@B ") and current:
+            parts.append(line[4:].strip())
+        elif line.startswith("@@END") and current:
+            body = base64.b64decode("".join(parts))
+            if len(body) != int(current[-2]) or sha256(body).hexdigest() != current[-1]:
+                raise RuntimeError(f"replayed bytes do not match the probe's SHA-256: {current[1:4]}")
+            out[landing.LISTING if current[1] == "listing" else current[3]] = body
+            current = None
+    return out
+
+
 def main(argv) -> int:
+    job = next((a[7:] for a in argv if a.startswith("replay=")), None)
+    if job:
+        served = replay(job)
+        print({"replayed_bodies": len(served)}, flush=True)
+        requests.get = lambda url, *a, **k: Answer(url, served.get(url))
     client = s3()
     landing_bucket = req("STORAGE_LANDING_BUCKET_NAME")
     cat = bf.retry(catalog, "catalog")
@@ -81,6 +139,7 @@ def main(argv) -> int:
         # Bronze profile (look before modelling)
         values = "unnest([value_1, value_2, value_3])"
         profile = {
+            "replay_of_probe_job": job,
             **idem,
             "files_landed": len(held),
             "bytes_landed": None,
