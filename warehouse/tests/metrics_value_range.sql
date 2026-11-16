@@ -191,7 +191,10 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- seasonally adjusted unemployment rate 0.5 to 36.7 (MK).
     ('unemployment_rate_monthly_sa', 'unece', '%', 0, 80),
     ('cpi_annual_rate', 'unece', '%', -50, 1e5),
-    ('ppi_annual_rate', 'unece', '%', -80, 1e5)
+    ('ppi_annual_rate', 'unece', '%', -80, 1e5),
+    -- PKW election results (#486): turnout in per cent as published, Poland, voivodeships, powiats and gminas;
+    -- range TRIAL_RANGE (Dev trial TRIAL_ID)
+    ('voter_turnout', 'pkw', '%', 0, 100)
 ),
 
 metrics as (
@@ -590,6 +593,15 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_health_expenditure_gdp') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_voter_turnout') }}
 )
 
 select
