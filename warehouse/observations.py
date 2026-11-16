@@ -449,6 +449,25 @@ def build_stage(source: str, block: str) -> str:
     return stages[block] if block in stages else stages[None]
 
 
+SWAP_WAIT_SECONDS = 540
+
+
+def load_swapped(cat, table_id: tuple[str, str]):
+    """A Silver table that dbt builds. A model build of another run replaces such a table (drop and
+    rename), so a table not found is read again every 30 s for up to 9 minutes, as gold.publish does
+    (#2834); still missing, the run stops (nothing is built or removed)."""
+    from pyiceberg.exceptions import NoSuchTableError
+
+    deadline = time.monotonic() + SWAP_WAIT_SECONDS
+    while True:
+        try:
+            return bf.retry(lambda: cat.load_table(table_id), "silver_table")
+        except NoSuchTableError:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(30)
+
+
 def silver_blocks(cat, source: str) -> dict[str, dict[str, Any]]:
     """Block -> its Silver files, their size and rows, and the digest of their names, from file lists only.
     An entity source: the partitions of its Silver table. A source of dbt tables: each declared table is
@@ -465,7 +484,7 @@ def silver_blocks(cat, source: str) -> dict[str, dict[str, Any]]:
         return blocks_of(source, et.state(silver, silver.spec().fields[0].name), with_states)
     out: dict[str, dict[str, Any]] = {}
     for block, (table_id, _) in spec["tables"].items():
-        table = bf.retry(lambda t=table_id: cat.load_table(t), "silver_table")
+        table = load_swapped(cat, table_id)
         held = list(et.state(table, "").values())  # every file, whatever the table's partitioning
         item = {
             "paths": sorted(path for h in held for path in h["paths"]),

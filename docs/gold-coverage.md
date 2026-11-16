@@ -80,7 +80,9 @@ dbt writes new files whenever it rebuilds a table, so the block is rebuilt in Go
 build rebuilt its Silver table, also when the rows came out the same (a rebuild after a change of shared
 code); for tables of this size that costs one read of the table. A declared table that is missing or holds
 no file stops the run: that is a fault of the build, never a block that left the source, and nothing is
-removed from Gold for it (with a handful of blocks the removal cap of D35 would not protect them). The
+removed from Gold for it (with a handful of blocks the removal cap of D35 would not protect them). A model
+build of another run replaces a dbt table by drop and rename, so a table not found is read again every
+30 s for up to 9 minutes first, as `gold.publish` does (#2834). The
 load order needs no read for these sources. Whole tables as blocks hold up to the size one worker builds
 alone (WDI: about 9 M rows); a larger table gets an entity column and per-entity Silver files first.
 
