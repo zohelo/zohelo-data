@@ -1,0 +1,42 @@
+source_system: nid_monuments
+description: "NID — register of immovable monuments (register book A), voivodeship lists: register entries, objects, powiat and locality"
+
+# Extraction strategy (docs/landing.md). Register PLS-026. The register's open-data copy on dane.gov.pl (dataset 2627)
+# is not reachable from Actions (api.dane.gov.pl and dane.gov.pl time out, Dev probes 43343138018 and 43797381655),
+# NID's INSPIRE service of the register (usluga.zabytek.gov.pl/INSPIRE_IMD) is a WMS only (probe 43798051945; the
+# WFS services cover Monuments of History and UNESCO sites, 43797698239) and zabytek.pl disallows robots. Bulk
+# feature used: NID's own lists on https://nid.pl/zasoby/rejestr-zabytkow-zasoby/ ("Wykaz zabytków nieruchomych
+# wpisanych do rejestru zabytków (księga A)"), one PDF per voivodeship and one for Warsaw, file names with the date of
+# the list (<CODE>-rej_13.08.2026.pdf); ingestion/to_landing/nid_monuments/ reads the page once and lands the 17
+# lists through the shared bulk_file pattern, 3 s apart. Entity = one list; version = Last-Modified; unchanged
+# bytes are skipped. Bronze reads the PDF text layer with pypdf (requirements.txt) and keeps one row per list item.
+# Restart unit: one list. Probes 43798515781 (text layer) and 43799285327 (decoder on all lists: 50,258 items in the
+# 12 lists it read). Dev trial: see the pull request.
+extraction:
+  initial: bulk
+  production: snapshot                    # each list is the whole register of its voivodeship on its date
+  incremental_policy: changed_since_last  # Last-Modified, SHA-256
+  schedule: # UTC; the lists are updated twice a year (state 30 June published 13-19 August 2026; state 31 December
+    # expected early in the year); quarterly check on the 9th of March, June, September and December
+    - {cron: "25 5 9 3,6,9,12 *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/nid_monuments/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.nid_monuments_items, bronze.nid_monuments_rejected_files]
+silver: [silver.nid_monuments_items, silver.nid_monuments_decisions]
+gold: [gold.build_nid_monuments, gold.nid_monument_register]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  nid_monuments_items: {rows: 120000}  # measured in the Dev trial (see the pull request)
+  nid_monuments_decisions: {rows: 150000}
+  nid_monument_register: {rows: 120000}
+  poc_build_nid_monuments: {rows: 1500}
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): 17 files of 1-2 MB, about 70,000 items, replaced as a whole twice a year;
+# small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2471"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
