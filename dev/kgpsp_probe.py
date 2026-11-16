@@ -46,9 +46,32 @@ class Anchors(HTMLParser):
             self.depth = 0
 
 
+def dns() -> None:
+    import socket
+
+    try:
+        print("getaddrinfo", sorted({a[4][0] for a in socket.getaddrinfo("www.gov.pl", 443)}), flush=True)
+    except OSError as exc:
+        print("getaddrinfo error", exc, flush=True)
+
+
 def get(url: str) -> requests.Response:
-    time.sleep(3)
-    r = requests.get(url, headers={"User-Agent": bulk_file.USER_AGENT}, timeout=(30, 300))
+    for attempt in range(4):
+        time.sleep(3 + 30 * attempt)
+        try:
+            r = requests.get(url, headers={"User-Agent": bulk_file.USER_AGENT}, timeout=(30, 300))
+            break
+        except requests.ConnectionError as exc:
+            print(f"attempt {attempt}: {str(exc)[:200]}", flush=True)
+            dns()
+            if attempt == 1:
+                import urllib3.util.connection as uc
+                import socket
+
+                uc.allowed_gai_family = lambda: socket.AF_INET
+                print("IPv4 only from now", flush=True)
+    else:
+        raise RuntimeError("www.gov.pl unreachable")
     print(f"GET {url} -> {r.status_code} {len(r.content)} bytes {r.headers.get('Content-Type')} "
           f"LM={r.headers.get('Last-Modified')} ETag={r.headers.get('ETag')} CD={r.headers.get('Content-Disposition')}",
           flush=True)
@@ -161,6 +184,7 @@ def incident(url: str) -> dict:
 
 
 def main() -> int:
+    dns()
     r = get(PAGE)
     p = Anchors()
     p.feed(r.text)
