@@ -82,10 +82,14 @@ it cannot follow macros found by name; a full parse takes about five seconds.
   no check can say which file a row belongs in. The rule is the same as for the other lists (next section): the
   pull request that adds the row puts it into the file named after its source. A KPI pull request still adds a
   metrics model of several sources to `warehouse.yaml`.
-- **Lines of sources registered before D34** stay where they are. Moving them is mechanical (cut the block
-  macros, the list line, the CTE and the branch into `macros/sources/<source>.sql`; a trial move of WHO
-  changed only the position of its branches in the compiled SQL) but reorders the unions, so the compiled
-  SQL of the facts changes once. Do it in one pull request when no source pull request is open.
+- **Lines of sources registered before D34** moved to the sources' own files one kind at a time, each move
+  proved not to change the resolved lists, the compiled SQL or a build fingerprint. Moved (16 November): the
+  sources' Gold tables and row ceilings in `warehouse.yaml` (`gold.build_public_finance` stays, shared by
+  the MF family). Still shared: the Gold macros, the geography map and `docs/sources.md`. Moving the Gold
+  macros is mechanical (cut the block macros, the list line, the CTE and the branch into
+  `macros/sources/<source>.sql`; a trial move of WHO changed only the position of its branches in the
+  compiled SQL) but reorders the unions, so the compiled SQL of the facts changes once. Do it in one pull
+  request when no source pull request is open.
 
 ## Code lists kept as rows per source (D36)
 

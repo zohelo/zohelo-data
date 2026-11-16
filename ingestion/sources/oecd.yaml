@@ -31,6 +31,9 @@ archive_policy:
 bronze: [bronze.oecd_observations, bronze.oecd_rejected_files]
 silver: [silver.oecd_cli]
 gold: [gold.build_oecd, gold.metrics_business_confidence_oecd, gold.metrics_consumer_confidence_oecd, gold.metrics_cli_oecd]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  oecd_cli: {rows: 400000}  # 240,988 (Dev trial 42777288678)
+  poc_build_oecd: {rows: 100000}  # BCICP, CCICP and LI (AA): ~66,000 of silver.oecd_cli's 240,988 rows (Dev probe 43084707728)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (owner decision #875): one selection of ~241,000 rows; rebuilt in full.
