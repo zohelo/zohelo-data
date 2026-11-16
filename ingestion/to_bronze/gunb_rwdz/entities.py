@@ -197,12 +197,13 @@ def held(cat, table_id: tuple[str, str]):
 
 
 class Where:
-    """Production locations, or a Dev trial's scratch ones (namespace and prefixes zz_dev_*)."""
+    """Production locations, or a Dev trial's scratch ones (namespace and prefixes zz_dev_*). Bronze and Silver
+    tables share a name, so in one scratch namespace the Silver table is called silver_<name>."""
 
     def __init__(self, landing_root: str = "01_landing", namespace: str | None = None):
         self.landing_root = landing_root
         self.bronze = (namespace or "bronze", BRONZE)
-        self.silver = (namespace or "silver", SILVER)
+        self.silver = (namespace, f"silver_{SILVER}") if namespace else ("silver", SILVER)
         self.rejected = (namespace or "bronze", REJECTED)
         self.bronze_key = f"{namespace}/02_bronze" if namespace else "02_bronze"
         self.silver_key = f"{namespace}/03_silver" if namespace else "03_silver"
