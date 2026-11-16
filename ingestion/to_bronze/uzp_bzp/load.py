@@ -22,6 +22,7 @@ import os
 from pathlib import Path
 import re
 import tempfile
+import time
 from typing import Any
 
 import pyarrow as pa
@@ -36,6 +37,7 @@ from ingestion.to_landing.uzp_bzp import extract
 SOURCE = "uzp_bzp"
 TABLE = "uzp_bzp_notices"
 REJECTED = "uzp_bzp_rejected_files"
+COMMIT_EVERY = 50  # files per catalog commit (a first load is about 640 files)
 WRAPPER = {"notice_type", "publication_day", "stats_count", "notices"}
 FIELDS = [*sorted(extract.KEPT), "contractors", "values"]
 
@@ -96,7 +98,9 @@ def candidates(client, bucket: str, landing_root: str) -> list[dict[str, Any]]:
 
 
 def load(budget_minutes: float, landing_root: str = "01_landing", namespace: str = "bronze") -> int:
-    """budget_minutes is unused: a day's file is about 1 MB."""
+    """New Landing files, oldest entity first, committed COMMIT_EVERY files at a time so a long first load keeps its
+    progress; stops at the time budget (exit 2, the next run continues: loaded files are skipped by SHA-256)."""
+    deadline = time.monotonic() + budget_minutes * 60
     client, cat = s3(), bf.retry(catalog, "catalog")
     lake, landing_bucket = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
     lake_root = "02_bronze" if namespace == "bronze" else namespace
@@ -104,12 +108,22 @@ def load(budget_minutes: float, landing_root: str = "01_landing", namespace: str
     table = bf.retry(lambda: bf.ensure_table(cat, table_id, COLUMNS, "entity"), "load_table")
     done = bf.loaded_hashes(table) | bf.rejected_hashes(cat, rejected_id)
     receipts = candidates(client, landing_bucket, landing_root)
-    todo = [r for r in receipts if r["sha256"] not in done]
+    todo = sorted((r for r in receipts if r["sha256"] not in done), key=lambda r: r["entity"])
     totals: dict[str, Any] = {"candidates_in_landing": len(receipts), "new": len(todo), "appended_files": 0}
     totals.update({"rows_added": 0, "empty_files": 0, "rejected": 0})
-    uris, rejected = [], []
+    pending: list[str] = []
+    rejected: list[dict[str, Any]] = []
+
+    def flush() -> None:
+        if pending:
+            bf.commit(cat, table_id, pending, ["entity", "raw_sha256"], f"{SOURCE}-bronze-load")
+            totals["appended_files"] += len(pending)
+            pending.clear()
+
     with tempfile.TemporaryDirectory(prefix=f"zohelo-{SOURCE}-bronze-") as temporary:
         for receipt in todo:
+            if time.monotonic() > deadline:
+                break
             body = bulk_bronze.read_raw(client, landing_bucket, SOURCE, receipt)
             try:
                 rows = decode(body, receipt)
@@ -127,15 +141,18 @@ def load(budget_minutes: float, landing_root: str = "01_landing", namespace: str
             path = Path(temporary) / f"{receipt['sha256']}.parquet"
             pq.write_table(rows, path, compression="zstd")
             key = f"{lake_root}/{SOURCE}/notices/{receipt['entity']}/{receipt['sha256']}.parquet"
-            uris.append(bf.upload(client, lake, key, path, receipt["sha256"]))
+            pending.append(bf.upload(client, lake, key, path, receipt["sha256"]))
+            path.unlink()
             totals["rows_added"] += rows.num_rows
             totals["empty_files"] += rows.num_rows == 0
-    if uris:
-        bf.commit(cat, table_id, uris, ["entity", "raw_sha256"], f"{SOURCE}-bronze-load")
-        totals["appended_files"] = len(uris)
+            if len(pending) >= COMMIT_EVERY:
+                flush()
+        flush()
     bf.record_rejections(cat, rejected_id, rejected)
     totals["rejected"] = len(rejected)
     totals["rejected_sample"] = [{k: r[k] for k in ("entity", "error")} for r in rejected[:3]]
-    annotate("notice", f"{SOURCE} Bronze from Landing", {"result": "complete", "table": ".".join(table_id), **totals})
+    totals["remaining"] = totals["new"] - totals["appended_files"] - totals["rejected"]
+    result = "complete" if totals["remaining"] == 0 else "incomplete_time_budget"
+    annotate("notice", f"{SOURCE} Bronze from Landing", {"result": result, "table": ".".join(table_id), **totals})
     step_summary(f"## {SOURCE} · bronze load\n\n```json\n{json.dumps(totals, indent=2)}\n```\n")
-    return 0
+    return 0 if result == "complete" else 2
