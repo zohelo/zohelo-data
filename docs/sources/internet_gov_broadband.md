@@ -20,7 +20,9 @@ counts and the printed shares (per cent, with their denominator in `address_poin
 Gold block `coverage` (quarterly): address points in coverage and all address points (Poland and voivodeships);
 for Poland, at least 100 Mb/s and at least 1 Gb/s (sums of the bandwidth classes), and the kinds of coverage with
 their printed shares of all address points. No share is calculated. KPIs (draft): `broadband_coverage_points`,
-`broadband_100mbps_points`, `broadband_gigabit_points`, `broadband_no_coverage_share`. Monthly check on the 20th.
+`broadband_100mbps_points`, `broadband_gigabit_points`, `broadband_no_coverage_share`. Schedule: quarterly, the
+20th of January, April, July and October (06:40 UTC), like the report; a new seed row is followed by one run
+dispatched by hand. Quarterly only: the report prints no annual figure, and none is derived.
 Licence: `unresolved` (gov.pl terms say nothing about attached files), so the source stays internal.
 Left out: the report's tables by medium, kind of service and investment plans; the voivodeship PDFs (about 255 MB per
 edition); the UKE annual market report.
