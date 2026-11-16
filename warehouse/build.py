@@ -84,7 +84,14 @@ def changed_only(target: str, variables: dict | None) -> int:
         variables["waiting_blocks"] = plan["empty_blocks"]
     if plan["waiting"]:  # the only optional inputs poc_optional_ref() may find without a table
         variables["waiting_models"] = plan["waiting"]
-    return build_once(plan["select"], target, variables, changed_plan={"cat": cat, "meta": meta, **plan})[0]
+    # dbt would run a test that joins a waiting model to a rebuilt one, against a table that does not exist (#2948)
+    return build_once(
+        plan["select"],
+        target,
+        variables,
+        changed_plan={"cat": cat, "meta": meta, **plan},
+        exclude=plan["waiting_tests"],
+    )[0]
 
 
 STALLED_SHOWN = 20  # models named in the annotation; the step summary has the whole plan
@@ -222,14 +229,21 @@ def _retry_threads(results: list[dict]) -> int:
 
 
 def build_once(
-    selectors: list[str], target: str, variables: dict | None, changed_plan: dict | None = None
+    selectors: list[str],
+    target: str,
+    variables: dict | None,
+    changed_plan: dict | None = None,
+    exclude: list[str] | None = None,
 ) -> tuple[int, int]:
     """One dbt build; returns (exit code, 0). With a changed-only plan, a successful build
-    records its build properties on the models it wrote."""
+    records its build properties on the models it wrote. ``exclude``: node names dbt leaves out (the tests of
+    waiting models); `dbt retry` keeps the arguments of the build it retries."""
     started_ms = int(time.time() * 1000)
     command = ["dbt", "build", "--target", target, "--project-dir", str(PROJECT), "--profiles-dir", str(PROJECT)]
     if selectors:
         command += ["--select", *selectors]
+    if exclude:
+        command += ["--exclude", *exclude]
     variables = {"topics": TOPICS, **(variables or {})}
     command += ["--vars", json.dumps(variables)]
     returncode, results, tail = _dbt(command)
@@ -279,6 +293,11 @@ def build_once(
             "full_refresh": changed_plan["full_refresh"],
             **_why(changed_plan),
         }
+        if changed_plan.get("waiting_tests"):
+            # The proof that none of them ran: a test listed under "ran" was not matched by --exclude.
+            held = changed.waiting_tests(changed_plan["meta"], changed_plan["waiting"])
+            ran = sorted(held[r["unique_id"]] for r in results if r["unique_id"] in held)
+            summary["changed_only"]["waiting_tests"] = {"left_out": len(held), "ran": ran}
         summary["changed_only"]["properties"] = changed.record(
             changed_plan["cat"], changed_plan["meta"], results, started_ms
         )
