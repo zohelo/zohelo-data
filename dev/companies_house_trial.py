@@ -42,7 +42,17 @@ def q(con, sql):
 
 
 def render(path: str) -> str:
-    return Environment().from_string(Path(path).read_text()).render(config=lambda **_k: "", source=lambda _s, t: t)
+    refs = {"company_uk_poland_origin": "gold_entity", "poc_build_companies_house": "build"}
+    return Environment().from_string(Path(path).read_text()).render(
+        config=lambda **_k: "", source=lambda _s, t: t, ref=lambda m: refs[m])
+
+
+TESTS = ("companies_house_poland_origin_complete", "companies_house_snapshot_counts_complete")
+
+
+def run_tests(con) -> dict:
+    """The two completeness tests of warehouse/tests, rendered and run on the trial tables: failing rows."""
+    return {t: q(con, render(f"warehouse/tests/{t}.sql")) for t in TESTS}
 
 
 def tables(cat) -> dict:
@@ -118,6 +128,7 @@ def trial() -> None:  # noqa: PLR0915
         paths = [p for s in et.state(cat.load_table((SCRATCH, name)), "entity").values() for p in s["paths"]]
         files = ", ".join(f"'{p}'" for p in paths)
         con.execute(f"create table {view} as select * from read_parquet([{files}])")
+    con.execute(f"create view {entities.BRONZE} as select * from b")  # the name the tests' source() renders to
     annotate("notice", "companies_house trial: bronze profile", {
         "rows_numbers_nullnumbers_snapshots": q(con, "select count(*), count(distinct company_number), count(*) filter (where coalesce(company_number,'')=''), list(distinct snapshot_date) from b"),
         "columns": [r[0] for r in con.execute("describe b").fetchall()],
@@ -131,6 +142,7 @@ def trial() -> None:  # noqa: PLR0915
         "status": q(con, "select company_status, count(*) from b group by 1 order by 2 desc"),
         "categories": q(con, "select count(distinct company_category) from b"),
         "address_poland_by_origin": q(con, "select country_of_origin, count(*) from b where address_country ilike '%POLAND%' or address_country ilike 'POLSKA' group by 1 order by 2 desc limit 8"),
+        "duckdb": __import__("duckdb").__version__,
         "provenance": q(con, "select count(distinct raw_sha256), count(distinct source_version), count(*) filter (where raw_sha256 is null) from b")})
     counts, poland = entities.COUNTS, entities.POLAND
     annotate("notice", "companies_house trial: silver snapshot_counts", {
@@ -152,7 +164,7 @@ def trial() -> None:  # noqa: PLR0915
         "address_country": q(con, f"select address_country, count(*) from {poland} group by 1 order by 2 desc"),
         "incorporation_range": q(con, f"select min(incorporation_date), max(incorporation_date) from {poland}"),
         "sic": q(con, f"select sic_text_1, count(*) from {poland} group by 1"),
-        "well_known_orlen_pko_kghm_cdprojekt_pzu_allegro": q(con, f"select company_number, company_name from {poland} where regexp_matches(upper(company_name), 'ORLEN|PKO|KGHM|CD PROJEKT|PZU|ALLEGRO')"),
+        "well_known_orlen_pko_kghm_cdprojekt_pzu_allegro": q(con, f"select company_number, company_name from {poland} where regexp_matches(upper(company_name), 'ORLEN|PKO|KGHM|CD PROJEKT|PZU|ALLEGRO|PEKAO|ASSECO|COMARCH|LPP|INTER CARS|BANK')"),
         "spot": q(con, f"select company_number, company_name, company_category, company_status, incorporation_date, post_town, address_country from {poland} where regexp_matches(upper(company_name), 'LOTNICZE|POLIMEX|CITY INTERACTIVE|SOFTWARE MIND|INVESTMENT AND TRADE') order by 1")})
 
     # Gold: both models, built twice
@@ -196,6 +208,7 @@ def trial() -> None:  # noqa: PLR0915
         "sic_parse_check_whole_register": q(con, "select count(*) filter (where regexp_matches(sic_text_1, '^[0-9]{4,5} - ')), count(*) filter (where sic_text_1 = 'None Supplied'), count(*) from b"),
         "origin_geography_key": q(con, "select origin_geography_key, count(*) from gold_entity group by 1"),
         "columns": [r[0] for r in con.execute("describe gold_entity").fetchall()],
+        "completeness_tests_failing_rows": run_tests(con),
         "spot": q(con, "select company_key, company_name, company_category, incorporation_date, post_town from gold_entity where regexp_matches(upper(company_name), 'LOTNICZE|POLIMEX|CITY INTERACTIVE') order by 1")})
     try:  # how a join to GLEIF would work: GLEIF's registration authority RA000585 (Companies House) and its entity id
         from pyiceberg.expressions import EqualTo
@@ -234,6 +247,7 @@ def trial() -> None:  # noqa: PLR0915
     files = ", ".join(f"'{p}'" for s in st.values() for p in s["paths"])
     con.execute(f"create or replace table {counts} as select * from read_parquet([{files}])")
     con.execute(f"create or replace table build as {build_sql}")
+    synthetic["counts_test_failing_rows"] = run_tests(con)[TESTS[1]]
     synthetic["build_rows"] = q(con, "select count(*), count(distinct date_key), min(date_key), max(date_key) from build")
     synthetic["dup_series_key_x_date_key"] = q(con, grain)
     synthetic["dates_per_series"] = q(con, f"select n, count(*) from (select {series} as s, count(distinct date_key) as n from build group by 1) group by 1")
