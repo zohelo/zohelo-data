@@ -1,0 +1,3 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+healthcare_providers,rpwdl,rpwdl:register:entities:providers,"active ledgers on the snapshot day (download day), latest-only",1,entities
+medical_practices,rpwdl,rpwdl:register:practices:practices,"all 8 practice registers (practice_register _T), active on the snapshot day, latest-only",1,practices

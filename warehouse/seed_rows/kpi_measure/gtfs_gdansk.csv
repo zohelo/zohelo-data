@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+scheduled_transit_trips,gtfs_gdansk,gtfs_gdansk:scheduled_trips:trips,"scheduled trips per service day, ZTM Gdańsk GTFS timetable",1,
