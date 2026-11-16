@@ -4,10 +4,13 @@
 Healthcare-provider ZIPs (healthcare_provider_active / _inactive) feed bronze.rpwdl_providers (podmioty.csv),
 rpwdl_establishments (zaklady.csv), rpwdl_units (jednostki.csv) and rpwdl_cells (komorki.csv); the 16 practice ZIPs
 feed bronze.rpwdl_practices (praktyki.csv). One Bronze row per CSV row, values as source text (the text NULL
-included), provenance columns and the CSV row number. Privacy allowlist (register PLS-020): only the columns in
-the maps below are kept; names, NIP, decision numbers, street addresses, postcodes, phone, e-mail and web
-addresses are never read into Bronze, and the members wspolnicy.csv (practitioners' names, licence numbers) and
-adresy_swiadczen.csv (places of practice) are not read at all; swiadczenia, kontrole and akredyt_* are left out.
+included), provenance columns and the CSV row number. Privacy allowlist (register PLS-020, aggregate counts only):
+only the columns in the maps below are kept. Never read: names, NIP, REGON, book numbers and ledger ids (a provider
+or practice can be one natural person; the grain of those two tables is the file row), the practices' register
+ids, decision numbers, street addresses, postcodes, phone, e-mail and web addresses; the seat TERYT of a provider
+and the correspondence TERYT of a practice are cut to the voivodeship (first two digits). The members wspolnicy.csv
+(practitioners' names, licence numbers) and adresy_swiadczen.csv (places of practice) are not read at all;
+swiadczenia, kontrole and akredyt_* are left out.
 Every needed member's header must equal the expected header exactly, else the ZIP is rejected
 (bronze.rpwdl_rejected_files) for all its tables. DuckDB reads the CSVs (no per-cell Python). Code shared with
 other bulk sources: ingestion/common/bulk_bronze.py.
@@ -187,18 +190,14 @@ TABLES = {
         "podmioty.csv",
         PROVIDER_ENTITIES,
         {
-            "ID Księgi": "book_id",
-            "Numer księgi rejestrowej": "book_number",
-            "REGON": "regon",
             "Data wykreślenia z rejestru": "removal_date",
             "Data zmiany wpisu do rejestru": "entry_change_date",
             "Typ organu": "authority_type",
             "Kod organu": "authority_code",
             "Forma organizacyjno-prawna": "legal_form_code",
             "Forma organizacyjno-prawna opis": "legal_form_name",
-            "Teryt": "teryt",
+            "Teryt": "voivodeship_teryt",
             "Kod podmiotu tworzącego": "founder_code",
-            "Nazwa podmiotu tworzącego": "founder_name",
             "Data rozpoczęcia działalności": "start_date",
             "Data zakończenia działalności": "end_date",
             "Początek okresu zawieszenia": "suspension_start",
@@ -209,9 +208,7 @@ TABLES = {
         "zaklady.csv",
         PROVIDER_ENTITIES,
         {
-            "ID Księgi": "book_id",
             "ID ZOZ": "establishment_id",
-            "Regon": "regon",
             "Rodzaj działalności": "activity_kind",
             "Teryt": "teryt",
             "Data rozpoczęcia działalności": "start_date",
@@ -222,10 +219,8 @@ TABLES = {
         "jednostki.csv",
         PROVIDER_ENTITIES,
         {
-            "ID Księgi": "book_id",
             "ID ZOZ": "establishment_id",
             "ID Jednostki": "unit_id",
-            "Regon": "regon",
             "Kod jednostki": "unit_code",
             "Teryt": "teryt",
             "Data rozpoczęcia działalności JO": "start_date",
@@ -238,11 +233,9 @@ TABLES = {
         "komorki.csv",
         PROVIDER_ENTITIES,
         {
-            "ID Księgi": "book_id",
             "ID ZOZ": "establishment_id",
             "ID Jednostki": "unit_id",
             "ID Komórki": "cell_id",
-            "Regon": "regon",
             "Kod jednostki": "unit_code",
             "Kod komórki": "cell_code",
             "Specjalność komórki": "specialty_name",
@@ -262,21 +255,22 @@ TABLES = {
         "praktyki.csv",
         PRACTICE_ENTITIES,
         {
-            "Id rejestru": "practice_id",
             "Typ praktyki": "practice_kind",
             "Data uchwały wykr.": "removal_date",
-            "Numer ksiegi": "book_number",
             "Izba kod": "chamber_code",
             "Izba opis": "chamber_name",
             "Forma organizacyjno - prawna kod": "legal_form_code",
             "Forma organizacyjno - prawna opis": "legal_form_name",
-            "Adres korespondencyjny - Teryt": "teryt",
+            "Adres korespondencyjny - Teryt": "voivodeship_teryt",
             "Data rozp. dzialalnosci": "start_date",
             "Data zmiany wpisu do rejestru": "entry_change_date",
             "Data zak. dzialalnosci": "end_date",
         },
     ),
 }
+# Columns cut to their first two characters (the voivodeship code) when they start with two digits; other text
+# (the text NULL, 'brak wpisu') is kept as published.
+VOIVODESHIP_ONLY = {"voivodeship_teryt"}
 NEEDED = {"provider": ["podmioty.csv", "zaklady.csv", "jednostki.csv", "komorki.csv"], "practice": ["praktyki.csv"]}
 
 
@@ -307,6 +301,17 @@ def check_layout(archive: zipfile.ZipFile, entity: str) -> None:
             raise ValueError(f"{entity}: unknown {member} header: {found}")
 
 
+def select_list(kept: dict[str, str]) -> str:
+    """The SELECT items of the kept columns; VOIVODESHIP_ONLY columns are cut before they reach Bronze."""
+    items = []
+    for src, dst in kept.items():
+        col = f'"{src}"'
+        if dst in VOIVODESHIP_ONLY:
+            col = f"case when regexp_matches({col}, '^[0-9]{{2}}') then left({col}, 2) else {col} end"
+        items.append(f"{col} as {dst}")
+    return ", ".join(items)
+
+
 def decoder(table: str):
     member, _, kept = TABLES[table]
     arrow = bulk_bronze.arrow_schema(columns(table))
@@ -330,7 +335,7 @@ def decoder(table: str):
                     f"""
                     select
                         ? as entity,
-                        {", ".join(f'"{src}" as {dst}' for src, dst in kept.items())},
+                        {select_list(kept)},
                         ? as raw_sha256,
                         ? as source_version,
                         cast(? as timestamptz) as ingested_at,
