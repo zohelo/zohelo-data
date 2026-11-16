@@ -5633,7 +5633,8 @@ sources:
   name: Government Legislative Process portal (RPL), including consultations
   short_name: RCL legislative process (RPL)
   provider: Government Legislation Centre (RCL)
-  status: approved
+  source_system: kprm_work_list
+  status: built
   family: F
   kpi: false
   geography: Poland
