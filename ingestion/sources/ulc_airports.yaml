@@ -15,13 +15,15 @@ extraction:
   initial: bulk
   production: snapshot                  # each PDF is its quarter as published; a corrected file replaces it
   incremental_policy: changed_since_last  # new quarters and changed links; SHA-256 of the newest two
-  # Manual only (#2873, 16 Nov 2026): the listing page answers GitHub runners with an Incapsula challenge page at
-  # irregular times (Dev 05:00-05:10 refused, 08:31 served; production catch-up run 43843091936 at 09:48 refused), so a
-  # schedule runs red without a fault on our side, and the refusal is never worked around (O44). No other route to
-  # ULC's own figures is known (no XLSX, CSV or API on ulc.gov.pl; a web search found no ULC dataset on dane.gov.pl).
-  # The monthly check ("40 5 9 * *": a quarter is published three to six months after its end) returns when the
-  # owner answers the question on #2873; until then a manual run fills Landing when the page is served.
-  schedule: []
+  # UTC; a quarter is published three to six months after its end (Q1 2026 in June, page updated Oct 2026). Three
+  # slots a month (#3162): the listing answers GitHub runners with an Incapsula challenge page at irregular times (Dev
+  # 05:00-05:10 refused, 08:31 served; production run 43843091936 at 09:48 refused on 16 Nov). The refusal is never
+  # worked around (O44); a refused run is a warning while Landing is current and red when nothing has landed or the
+  # next quarter is overdue (210 days after its end; ingestion/to_landing/ulc_airports/).
+  schedule:
+    - {cron: "40 5 9 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+    - {cron: "10 14 16 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+    - {cron: "25 20 23 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/ulc_airports/
 archive_policy:
