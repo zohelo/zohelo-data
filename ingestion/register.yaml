@@ -3100,7 +3100,8 @@ sources:
   name: SIO public and archival education statistics
   short_name: SIO education statistics
   provider: Centrum Informatyczne Edukacji / Ministerstwo Edukacji Narodowej
-  status: approved
+  source_system: cie_sio
+  status: built
   family: B
   kpi: true
   geography: Poland by voivodeship (two-digit GUS voivodeship id in the workbooks opened); no powiat, gmina or school level
@@ -3170,8 +3171,8 @@ sources:
     connection: tested
     blockers:
     - 'Licence unresolved: cie.gov.pl states no reuse terms, so the source stays internal until CIE states them.'
-    - 'Build task, not a review blocker: 64 of the 94 files are .xls (old binary format) and the pipeline has no reader
-      for them yet; the 30 .xlsx files (2016-2018) load with the shared decoder.'
+    - 'Resolved in the build (#3130): the 64 .xls files decode with xlrd (as mrpips_social_assistance); all 94 files
+      decoded in Dev probe 43800731510 (715,454 cells, 0 rejected).'
     - Closed archive (last data 30 September 2018); later SIO compilations on dane.gov.pl were not opened (the fetch tool
       was refused; dane.gov.pl is PLG-030).
     references:

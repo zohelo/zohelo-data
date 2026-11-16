@@ -4,11 +4,12 @@ Centrum Informatyczne Edukacji keeps a closed archive of SIO compilations (refer
 2018): the index page https://cie.gov.pl/archiwalne-dane-statystyczne/ links six topic pages (``/ads-uczniowie/``,
 ``/ads-absolwenci/``, ``/ads-nauczyciele/``, ...), whose plain HTML links 94 workbooks (.xls and .xlsx) under
 ``/content/uploads/2020/09/``. Only the workbooks of the modelled families are landed (``SELECTION``, a regex on
-the file name): schools and pupils by voivodeship, governing body and school type, graduates by voivodeship and
-school type, and the newest teachers workbook (persons and full-time posts, 2006-2018). Entity = one workbook (the
-file name without extension, lower case, ``[a-z0-9_]``); version = the server's Last-Modified. A workbook already
-landed is downloaded again only when its Last-Modified is newer than the landed copy (a HEAD request each), and
-lands only when its SHA-256 changed. Restart unit: one file. One request at a time, PAUSE seconds apart.
+the entity): the nine graduates workbooks (2010-2018), the tidy schools-and-pupils workbook of 2018/2019 and the
+newest teachers workbook (persons and full-time posts, 2006-2018, which repeats the five older ones). Entity = one
+workbook (the file name without extension, lower case, ``[a-z0-9_]``); version = the server's Last-Modified. A
+workbook already landed is downloaded again only when its Last-Modified is newer than the landed copy (a HEAD
+request each), and lands only when its SHA-256 changed. Restart unit: one file. One request at a time, PAUSE
+seconds apart.
 
 landing.inspect  the selected workbooks the pages link vs Landing (missing / stale / current); no writes
 landing.extract  every selected workbook missing or stale in Landing
@@ -26,13 +27,10 @@ INDEX = "https://cie.gov.pl/archiwalne-dane-statystyczne/"
 TOPIC = re.compile(r"/ads-[a-z-]+/?$")
 WORKBOOK = re.compile(r"/content/uploads/.*\.xlsx?$", re.IGNORECASE)
 # The modelled families (warehouse/models/silver/cie_sio/); the other workbooks are listed by inspect, not landed.
-SELECTION = re.compile(
-    r"^(Szkoly_i_uczniowie_wg_organow|Liczba_szkol_i_uczniow_wg_wojewodztw_|Absolwenci_|NauczEtatyOsoby2006-2018)",
-    re.IGNORECASE,
-)
-LINKED = 94  # workbooks the six topic pages linked on 12 Nov 2026 (Dev probe 43289510189); the archive is closed
+SELECTION = re.compile(r"^(absolwenci_|nauczetatyosoby2006_2018|szkoly_i_uczniowie_wg_organow_prowadzacych_rokszkolny)")
+LINKED = 94  # workbooks the six topic pages linked (Dev probes 43289510189, 43800731510); the archive is closed
+SELECTED = 11  # 9 graduates, 1 teachers, 1 schools workbook (Dev probe 43800731510)
 PAUSE = 2.0
-R2_RETRIES = 4
 
 
 def entity_of(url: str) -> str:
@@ -54,9 +52,9 @@ def discover() -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
         files += [h for h in found if h not in files]
     selected: dict[str, dict[str, Any]] = {}
     for url in files:
-        if not SELECTION.search(url.rsplit("/", 1)[-1]):
-            continue
         entity = entity_of(url)
+        if not SELECTION.search(entity):
+            continue
         if entity in selected and selected[entity]["url"] != url:
             raise ValueError(f"{SOURCE}: two workbooks map to entity {entity}: {selected[entity]['url']}, {url}")
         selected[entity] = {"entity": entity, "url": url, "format": "raw", "version": "last_modified"}
@@ -93,10 +91,11 @@ def state(spec: dict[str, Any], landed: dict[str, str]) -> tuple[str, str | None
 
 def level(summary: dict[str, Any], states: dict[str, list[str]]) -> str:
     """'error' when nothing is selected or a landed workbook is unreachable; 'warning' when the archive's link count
-    changed (a new or removed file must be looked at); else 'notice'."""
+    or the selected count changed (a new or removed file must be looked at); else 'notice'."""
     if not summary["selected"] or states.get("unreachable"):
         return "error"
-    return "warning" if summary["workbooks_linked"] != LINKED else "notice"
+    changed = summary["workbooks_linked"] != LINKED or summary["selected"] != SELECTED
+    return "warning" if changed else "notice"
 
 
 def _inspect(p) -> int:
@@ -135,7 +134,7 @@ def extract(budget_minutes: float, landing_root: str = "01_landing") -> int:
             continue
         time.sleep(PAUSE if entity in landed else 0)
         try:
-            results.append(_land(client, bucket, spec, landing_root))
+            results.append(bulk_file.load_file(client, bucket, SOURCE, spec, landing_root))
         except bulk_file.PermanentError as exc:
             refused.append({"entity": entity, "error": str(exc)[:120]})
     summary.update(
@@ -151,24 +150,6 @@ def extract(budget_minutes: float, landing_root: str = "01_landing") -> int:
     result = level(summary, {"unreachable": states.get("unreachable", []) + [r["entity"] for r in refused]})
     annotate(result, f"{SOURCE} landing extract", summary)
     return 1 if result == "error" else 0
-
-
-def _land(client: Any, bucket: str, spec: dict[str, Any], landing_root: str) -> dict[str, Any]:
-    """bulk_file.load_file with bounded retries when R2 throttles (429/503 on a write or its check): the receipt is
-    written last, so a repeated attempt starts from what Landing holds."""
-    from botocore.exceptions import ClientError
-
-    from ingestion.to_landing.patterns import bulk_file
-
-    for attempt in range(R2_RETRIES):
-        try:
-            return bulk_file.load_file(client, bucket, SOURCE, spec, landing_root)
-        except ClientError as exc:
-            code = str(exc.response.get("Error", {}).get("Code", ""))
-            if attempt == R2_RETRIES - 1 or code not in ("429", "503", "SlowDown", "TooManyRequests"):
-                raise
-            time.sleep(30 * (attempt + 1))
-    raise RuntimeError("unreachable")
 
 
 def _extract(p) -> int:
