@@ -43,6 +43,43 @@ def dane() -> None:
         time.sleep(3)
 
 
+def robots() -> None:
+    for host in ("https://www.zus.pl", "https://psz.zus.pl"):
+        try:
+            r = requests.get(host + "/robots.txt", headers={"User-Agent": UA}, timeout=60)
+            print("robots", host, r.status_code, repr(r.text[:400]), flush=True)
+            annotate("notice", f"zus_yearbook robots {host}", {"status": r.status_code, "lines": r.text.splitlines()[:12]})
+        except Exception as exc:  # noqa: BLE001 - probe continues
+            print("robots error", host, exc, flush=True)
+        time.sleep(3)
+
+
+def dump(con, held) -> None:
+    """Log: every page's first two lines (titles), the first 12 pages in full, and full pages that mention
+    voivodeships with pensions, insured persons or payers (newest and oldest edition)."""
+    for entity in held:
+        print(f"\n##### TITLES {entity}", flush=True)
+        for page, text in con.sql(
+            f"select page_number, string_agg(line_text, ' || ' order by line_number) from zus_yearbook_lines "
+            f"where entity = '{entity}' and line_number <= 3 group by 1 order by 1"
+        ).fetchall():
+            print(f"{entity} p{page}: {' '.join(text.split())[:220]}")
+    for entity in [held[0], held[-1]] if held else []:
+        pages = [r[0] for r in con.sql(
+            f"select page_number from zus_yearbook_lines where entity = '{entity}' group by 1 "
+            "having bool_or(page_number <= 12) or (bool_or(lower(line_text) like '%wojew%') and "
+            "bool_or(regexp_matches(lower(line_text), 'emeryt|ubezpieczon|płatnik|zasiłk|renc')))"
+            " order by 1"
+        ).fetchall()]
+        print(f"\n##### PAGES {entity}: {pages}", flush=True)
+        for page in pages[:45]:
+            print(f"\n======== {entity} PAGE {page}")
+            for (line,) in con.sql(
+                f"select line_text from zus_yearbook_lines where entity = '{entity}' and page_number = {page} order by line_number"
+            ).fetchall():
+                print(line[:230])
+
+
 def render(path: Path, tables: dict[str, str]) -> str:
     macros = "".join(p.read_text() for p in sorted((ROOT / "warehouse/macros/sources").glob(f"{SOURCE}*.sql")))
     text = macros + re.sub(r"\{\{ config\(.*?\) \}\}", "", path.read_text(), flags=re.S)
@@ -66,6 +103,7 @@ def main(argv) -> int:
 
     if "dane" in argv:
         dane()
+    robots()
     out = Path(os.environ.get("DEV_OUTPUT_DIR", "/tmp/dev-output"))
     out.mkdir(parents=True, exist_ok=True)
     client = s3()
@@ -102,6 +140,8 @@ def main(argv) -> int:
             "pages": n("select string_agg(entity || ':' || p, ' ' order by entity) from (select entity, max(page_number) p from zus_yearbook_lines group by 1)"),
             "rejected": [(r.get("entity"), (r.get("error") or "")[:100]) for r in rejected],
         })
+        if "dump" in argv:
+            dump(con, held)
         for entity in held:
             rows = con.sql(f"select page_number, line_text from zus_yearbook_lines where entity = '{entity}' order by page_number, line_number").fetchall()
             with open(out / f"{entity}.txt", "w", encoding="utf-8") as f:
