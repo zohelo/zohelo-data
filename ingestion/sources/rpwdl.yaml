@@ -1,0 +1,73 @@
+source_system: rpwdl
+description: "RPWDL — Rejestr Podmiotów Wykonujących Działalność Leczniczą (register of healthcare providers and professional practices, Minister Zdrowia / Centrum e-Zdrowia), public register files"
+
+# Extraction strategy (docs/landing.md). Register PLS-020. Bulk feature: the "Pliki do pobrania" section of
+# rpwdl2.ezdrowie.gov.pl offers one ZIP per register type and ledger state; its download buttons call a public
+# GET endpoint without login or session (/api/rpwdl-public-resource/ledgers-zip/initial, file type CSV,
+# activityType = register type, activeLedgers = true | false). 9 register types x active / inactive = 18 ZIPs,
+# about 104 MB together (healthcare providers 34.7 + 11.8 MB, physician practices 38.4 + 5.7 MB, nursing 6.9 + 1.9,
+# physiotherapy 4.1 + 0.2, the group and diagnostic practices below 0.3 MB each). Healthcare-provider ZIPs hold
+# podmioty, zaklady, jednostki, komorki, swiadczenia, kontrole, akredyt_* CSVs; practice ZIPs hold praktyki,
+# wspolnicy, adresy_swiadczen (UTF-8, ';', '"' quotes, the text NULL for an empty field). The host has no
+# robots.txt (the path returns the application page). No Last-Modified: version = download time; a copy is
+# written only when its SHA-256 changed (the server caches a generated ZIP: two downloads 18 minutes apart gave
+# the same bytes). Restart unit: one ZIP. Dev probes 43322217479, 43324749951, 43326886407, 43336929057,
+# 43339211206 (test/2958-rpwdl-trial). Licence unresolved (register PLS-020): internal only.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - {entity: healthcare_provider_active, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=HEALTHCARE_PROVIDER&activeLedgers=true", format: zip, version: ingested}
+      - {entity: healthcare_provider_inactive, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=HEALTHCARE_PROVIDER&activeLedgers=false", format: zip, version: ingested}
+      - {entity: physician_practice_active, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=PHYSICIAN_PRACTICE&activeLedgers=true", format: zip, version: ingested}
+      - {entity: physician_practice_inactive, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=PHYSICIAN_PRACTICE&activeLedgers=false", format: zip, version: ingested}
+      - {entity: group_physician_practice_active, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=GROUP_PHYSICIAN_PRACTICE&activeLedgers=true", format: zip, version: ingested}
+      - {entity: group_physician_practice_inactive, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=GROUP_PHYSICIAN_PRACTICE&activeLedgers=false", format: zip, version: ingested}
+      - {entity: nursing_practice_active, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=NURSING_PRACTICE&activeLedgers=true", format: zip, version: ingested}
+      - {entity: nursing_practice_inactive, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=NURSING_PRACTICE&activeLedgers=false", format: zip, version: ingested}
+      - {entity: group_nursing_practice_active, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=GROUP_NURSING_PRACTICE&activeLedgers=true", format: zip, version: ingested}
+      - {entity: group_nursing_practice_inactive, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=GROUP_NURSING_PRACTICE&activeLedgers=false", format: zip, version: ingested}
+      - {entity: physiotherapy_practice_active, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=PHYSIOTHERAPY_PRACTICE&activeLedgers=true", format: zip, version: ingested}
+      - {entity: physiotherapy_practice_inactive, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=PHYSIOTHERAPY_PRACTICE&activeLedgers=false", format: zip, version: ingested}
+      - {entity: group_physiotherapy_practice_active, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=GROUP_PHYSIOTHERAPY_PRACTICE&activeLedgers=true", format: zip, version: ingested}
+      - {entity: group_physiotherapy_practice_inactive, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=GROUP_PHYSIOTHERAPY_PRACTICE&activeLedgers=false", format: zip, version: ingested}
+      - {entity: diagnostic_practice_active, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=DIAGNOSTIC_PRACTICE&activeLedgers=true", format: zip, version: ingested}
+      - {entity: diagnostic_practice_inactive, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=DIAGNOSTIC_PRACTICE&activeLedgers=false", format: zip, version: ingested}
+      - {entity: group_diagnostic_practice_active, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=GROUP_DIAGNOSTIC_PRACTICE&activeLedgers=true", format: zip, version: ingested}
+      - {entity: group_diagnostic_practice_inactive, url: "https://rpwdl2.ezdrowie.gov.pl/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsideZip=CSV&activityType=GROUP_DIAGNOSTIC_PRACTICE&activeLedgers=false", format: zip, version: ingested}
+  initial: bulk
+  production: snapshot                    # each ZIP is the complete current state of one register type and ledger state
+  incremental_policy: changed_since_last  # SHA-256 of each ZIP (no validator from the server)
+  schedule: # UTC; operational register, changed every working day, no release calendar; weekly (Tuesday 04:25), 18 downloads one at a time
+    - {cron: "25 4 * * 2", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/rpwdl/
+# Retention: newest version plus 30 days of superseded weekly copies (about 0.5 GB). The practice ZIPs carry the
+# practitioners' names and licence numbers (wspolnicy.csv) as published, so Landing and the Archive hold personal
+# data for that time (owner question on #3117); Bronze never reads that member and keeps only the allowlisted
+# columns of the others, no identifiers of providers or practices (ingestion/to_bronze/rpwdl/load.py).
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 30}
+  prune: report
+bronze: [bronze.rpwdl_providers, bronze.rpwdl_establishments, bronze.rpwdl_units, bronze.rpwdl_cells,
+         bronze.rpwdl_practices, bronze.rpwdl_rejected_files]
+silver: [silver.rpwdl_providers, silver.rpwdl_establishments, silver.rpwdl_units, silver.rpwdl_cells,
+         silver.rpwdl_practices]
+gold: [gold.build_rpwdl, gold.metrics_healthcare_providers, gold.metrics_medical_practices]  # counts only
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); counts from Dev trials 43796970764 and 43813074556 (16 Nov 2026, same rows)
+  rpwdl_providers: {rows: 71000}  # 47,060 (29,846 active + 17,214 inactive ledger rows)
+  rpwdl_establishments: {rows: 85000}  # 56,201
+  rpwdl_units: {rows: 120000}  # 79,616
+  rpwdl_cells: {rows: 950000}  # 627,566 (483,755 + 143,811)
+  rpwdl_practices: {rows: 430000}  # 278,341 (8 practice registers, active + inactive)
+  poc_build_rpwdl: {rows: 300}  # 203 (5 measures x 17 areas, practices also by 8 registers)
+  poc_metrics_healthcare_providers: {rows: 26}  # 17 (Poland and 16 voivodeships, one snapshot year)
+  poc_metrics_medical_practices: {rows: 26}  # 17 (Poland and 16 voivodeships, one snapshot year)
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): 18 whole-register ZIPs (about 104 MB, 1.1 M Bronze rows) replaced whole on
+# each run; the endpoint offers no changed-since file for the public, so every layer is rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2958"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

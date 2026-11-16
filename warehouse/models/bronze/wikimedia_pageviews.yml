@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: wikimedia_pageviews
+  description: Wikimedia pageviews REST API — daily user views of the Wikipedia articles listed per topic (topics, O32)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/wikimedia_pageviews/
+    loaded_by: ingestion/to_bronze/wikimedia_pageviews/
+    config: ingestion/sources/wikimedia_pageviews.yaml
+  tables:
+  - name: wiki_pageviews
+    description: >-
+      One row per article and day of every landed copy (accumulating; copies overlap): project, article,
+      day (YYYYMMDD), views; partitioned by entity (<lang>_<title slug>).
+  - name: wikimedia_pageviews_rejected_files
+    description: Wikimedia pageviews Landing files the Bronze decoder rejected, with the reason.
