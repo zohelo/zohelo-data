@@ -304,6 +304,7 @@ def main() -> None:
             "sample_rows_min_median_max": [sizes[0], sizes[len(sizes) // 2], sizes[-1]],
             "sample_by_last_part": dict(Counter(b.rsplit("_", 1)[-1] for b in sample).most_common()),
             "cleanup_before": before,
+            "activity_implemented": "gold.observations" in __import__("run").implemented(SOURCE),
         }
         annotate("notice", "dbw gold trial plan", plan)
         args = ["--source", SOURCE, "--trial", NS, "--minutes", str(minutes), "--only", *sample]
