@@ -12,8 +12,9 @@ within four weeks. Restart unit: one journal year. Size and history: `ingestion/
 Bronze (`ingestion/to_bronze/eli_pl/`; an incomplete year answer, an unknown key or an item of another journal or
 year rejects the file into `bronze.eli_pl_rejected_files`): `eli_pl_publishers`, `eli_pl_acts`. Silver: `eli_pl_acts`
 (one row per act, grain ELI id). Gold: entity table `legal_acts`; build stage `build_eli_pl` (block `acts`: acts per
-month by promulgation date, breakdowns journal × type, `_T` totals; only months with an act); draft KPI
-`legal_acts_published` (both journals, all types; no v2 map row). Weekly, Sunday 04:20 UTC. Licence: `unresolved`
+month by promulgation date, one measure per journal, breakdown act type, `_T` total; only months with an act; journal
+years in which more than 1% of acts have no promulgation date are left out); draft KPI `legal_acts_published`
+(Dziennik Ustaw, all types; no v2 map row). Weekly, Sunday 04:20 UTC. Licence: `unresolved`
 (the API page states no terms; legal acts are not protected by copyright, Polish Copyright Act art. 4, but the
 database terms are not stated), internal only.
 

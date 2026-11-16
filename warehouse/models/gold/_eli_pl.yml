@@ -12,12 +12,14 @@ models:
         tests: [not_null]
   - name: poc_build_eli_pl
     description: >-
-      Build stage - ELI Poland, Poland: acts published per month (M) by promulgation date, breakdowns journal (DU,
-      MP, _T) x act type (as published, _T); the series journal _T x type _T is the total. Only months with an act
-      of the series have a row (no zero filling); the month of the newest download is provisional.
+      Build stage - ELI Poland, Poland: acts published per month (M) by promulgation date, one measure per journal
+      (eli_pl:acts:acts:DU, eli_pl:acts:acts:MP; never summed), breakdown act type as published, _T = all types
+      (is_total). Journal years with more than 1% undated acts are left out; months that count acts of a year with
+      some undated acts are low_reliability. Only months with an act of the series have a row (no zero filling); the
+      month of the newest download is provisional.
     columns:
       - name: measure_key
-        tests: [not_null, {accepted_values: {arguments: {values: ['eli_pl:acts:acts:monthly']}}}]
+        tests: [not_null, {accepted_values: {arguments: {values: ['eli_pl:acts:acts:DU', 'eli_pl:acts:acts:MP']}}}]
       - name: frequency
         tests: [not_null, {accepted_values: {arguments: {values: ['M']}}}]
       - name: date_key
@@ -27,4 +29,4 @@ models:
       - name: value
         tests: [not_null]
   - name: poc_metrics_legal_acts_published
-    description: Draft KPI legal_acts_published - acts published in Dziennik Ustaw and Monitor Polski per month, Poland.
+    description: Draft KPI legal_acts_published - acts published in Dziennik Ustaw per month, Poland.
