@@ -122,7 +122,7 @@ select
     case when p.external_system = 'TERYT (SIMC)' then p.external_id end as simc_id,
     case
         when p.gmina_codes is null then 0
-        else len(list_distinct(list_transform(string_split(p.gmina_codes, ';'), x -> trim(x))))
+        else len(list_distinct(string_split(replace(p.gmina_codes, ' ', ''), ';')))
     end as gmina_count,  -- distinct gminas of the published points
     case
         when p.representation_kind = 'punkt główny' and p.lat_d <> ''
