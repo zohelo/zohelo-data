@@ -205,7 +205,7 @@ def dbt(work: Path, *args: str) -> tuple[int, dict]:
     return proc.returncode, results
 
 
-def setup_dbt(work: Path, arrow) -> tuple[dict, list[str]]:
+def setup_dbt(work: Path, arrow) -> tuple[dict, list[str], list[str]]:
     """Profile with the local file as r2 and the catalog as lake; the Bronze copy and views for the other parents."""
     profiles = yaml.safe_load((WAREHOUSE / "profiles.yml").read_text())
     prod = dict(profiles["zohelo"]["outputs"]["prod"])
@@ -241,7 +241,7 @@ def setup_dbt(work: Path, arrow) -> tuple[dict, list[str]]:
         con.execute(f"create schema if not exists {schema}")
     con.register("queues_arrow", arrow)
     con.execute(f"create table bronze.{nfz_load.TABLE} as select * from queues_arrow")
-    views = []
+    views, missing = [], set()
     for p in sorted(parents):
         if p.startswith(f"source.zohelo.{SOURCE}."):
             continue
@@ -253,18 +253,21 @@ def setup_dbt(work: Path, arrow) -> tuple[dict, list[str]]:
             views.append(f"{schema}.{name}")
         except duckdb.CatalogException:  # not in production yet (an optional parent, poc_optional_ref)
             views.append(f"missing:{schema}.{name}")
+            missing.add(p)
     con.close()
     aliases = {m: (nodes[f"model.zohelo.{m}"]["schema"], nodes[f"model.zohelo.{m}"]["alias"]) for m in SELECT}
-    return aliases, views + [f"read_only_attach={attach.get('read_only', False)}"]
+    # other sources' tests that read a table production does not have yet cannot run here
+    skipped = sorted(nodes[k]["name"] for k in tests if missing & set(nodes[k]["depends_on"]["nodes"]))
+    return aliases, views + [f"read_only_attach={attach.get('read_only', False)}"], skipped
 
 
 def build(arrow, work: Path) -> tuple[dict, dict, dict, list[str]]:
     """dbt build twice; returns (dbt summary, silver profile, gold checks, failures)."""
     failures: list[str] = []
-    aliases, views = setup_dbt(work, arrow)
+    aliases, views, skipped = setup_dbt(work, arrow)
     runs, fingerprints = [], []
     for attempt in (1, 2):
-        code, results = dbt(work, "build", "--select", *SELECT, "--exclude", "metrics_value_range")
+        code, results = dbt(work, "build", "--select", *SELECT, "--exclude", "metrics_value_range", *skipped)
         by_status: dict[str, int] = {}
         for st, _, _ in results.values():
             by_status[st] = by_status.get(st, 0) + 1
@@ -274,15 +277,25 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, list[str]]:
         if code or bad:
             failures.append(f"dbt build {attempt}: exit {code}, {bad}")
         local = duckdb.connect(str(work / "r2.duckdb"), read_only=True)
-        fingerprints.append({m: local.sql(f'select count(*), sum(hash(t)) from {s}."{a}" as t').fetchall()[0]
-                             for m, (s, a) in aliases.items() if m != "poc_map_geography" and m not in SEED_ROWS})
+        fp = {}
+        for m, (s, a) in aliases.items():
+            if m == "poc_map_geography" or m in SEED_ROWS:
+                continue
+            try:
+                fp[m] = local.sql(f'select count(*), sum(hash(t)) from {s}."{a}" as t').fetchall()[0]
+            except duckdb.Error:
+                fp[m] = None
+        fingerprints.append(fp)
         local.close()
     if fingerprints[0] != fingerprints[1]:
         failures.append("second dbt build changed a table")
+    if any(v is None for v in fingerprints[-1].values()):
+        failures.append(f"models not built: {[m for m, v in fingerprints[-1].items() if v is None]}")
+        return {"runs": runs, "tests_skipped_parent_missing": skipped}, {}, {}, failures
     con = duckdb.connect(str(work / "r2.duckdb"), read_only=True)
     rel = {m: f'{s}."{a}"' for m, (s, a) in aliases.items()}
     q, mo, b = rel["nfz_waiting_times_queues"], rel["nfz_waiting_times_monthly"], rel["poc_build_nfz_waiting_times"]
-    dbt_summary = {"runs": runs, "second_build_same_tables": fingerprints[0] == fingerprints[1],
+    dbt_summary = {"runs": runs, "tests_skipped_parent_missing": skipped, "second_build_same_tables": fingerprints[0] == fingerprints[1],
                    "rows": {m: v[0] for m, v in fingerprints[0].items()}, "views_onto_production": len([v for v in views if not v.startswith("missing:")]),
                    "parents_missing_in_production": [v for v in views if v.startswith("missing:")],
                    "silver_identifier_columns": {m: sorted(FORBIDDEN & {r[0] for r in con.sql(f"describe {rel[m]}").fetchall()})
