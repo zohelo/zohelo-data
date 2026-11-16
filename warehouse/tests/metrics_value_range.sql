@@ -51,6 +51,11 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('average_farm_area', 'gus_psr2020', '%', 0, 100),
     -- MRPiPS-03 (#2910): persons granted social assistance, PL 2019 = 1,205,506 (Dev trial 43293740538)
     ('social_assistance_recipients', 'mrpips_social_assistance', '%', 0, 1e7),
+    -- SIO teachers (#3130): persons, all grades, Poland 30 Sep 2006 = 649,745 (Dev probe 43800731510)
+    ('teachers', 'cie_sio', '%', 0, 2e6),
+    -- GUGiK PRNG (#2971): localities in the register, Poland is the largest area: 124,236 (export 2026-11-12, Dev
+    -- probe 43328622271)
+    ('localities', 'gugik_prng', '%', 0, 5e5),
     -- Crossref works with affiliation text naming Poland or Polska per publication year (#553): largest PL 2022 =
     -- 29,413 works (Dev trial 43336945209)
     ('scholarly_works_pl_affiliation', 'crossref', '%', 0, 2e5),
@@ -189,6 +194,9 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('internet_users', 'undata', '%', 0, 100),
     -- Current health expenditure, % of GDP: 4.9 to 12.9 (DE), Poland 2022 = 6.4.
     ('health_expenditure_gdp', 'undata', '%', 0, 30),
+    -- TED notices of Polish buyers per publication month (#2976): Poland 7,513 to 12,578, largest voivodeship
+    -- 3,448 (Mazowieckie, Oct 2025) (Dev trial 43344674034); about 115,000 a year in 2025
+    ('procurement_notices', 'ted_notices', '%', 0, 1e5),
     -- The new sources of KPIs whose metrics models are not in the union below (their other sources have no bound
     -- either): documentation until those models join it. Dev trial 43290214779: reer 9.59 to 519.14 (AR; index,
     -- 2020 = 100), employment rate 43.857 to 83.293, activity rate 45.944 to 85.643, NEET 3.079 to 77.747 (BG),
@@ -219,7 +227,12 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- value for a populated country and poc_build_owid does not build it.
     ('co2_consumption_per_capita', 'owid', '%', 1e-6, 100),
     ('electoral_democracy_index', 'owid', '%', 0, 1),
-    ('gdp_per_capita', 'owid', '%', 100, 300000)
+    ('gdp_per_capita', 'owid', '%', 100, 300000),
+    -- ULC airport traffic (#2967), quarterly counts as published; highest total (all airports) Q3 2025: 21,241,797
+    -- passengers, 140,633 operations (Dev trial 43831892099).
+    -- Documentation only (no metrics model for these KPIs yet).
+    ('air_passengers', 'ulc_airports', '%', 0, 5e7),
+    ('air_passenger_operations', 'ulc_airports', '%', 0, 1e6)
 ),
 
 metrics as (
@@ -626,6 +639,15 @@ metrics as (
         geography_key,
         date_key,
         value
+    from {{ ref('poc_metrics_teachers') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
     from {{ ref('poc_metrics_court_cases_received') }}
     union all
     select
@@ -663,6 +685,24 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_health_expenditure_gdp') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_procurement_notices') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_localities') }}
     union all
     select
         concept_key,
