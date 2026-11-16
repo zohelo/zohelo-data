@@ -47,8 +47,10 @@ throttled request of any operation waits and is sent again, with exponential bac
 60 s, at most 10 requests per call, about 5 minutes), and one process waits at most 15 minutes in total, after which
 the storage error fails the job. A request R2 refused was not applied, so the repeat writes the same key once. An
 activity that was throttled publishes the annotation `<source> <activity> storage throttling` (retries by operation
-and code, seconds waited; a warning when a call was given up). DuckDB's and PyIceberg's own readers of Iceberg data
-files do not go through this client.
+and code, seconds waited; a warning when a call was given up). PyIceberg reads and writes Iceberg data and metadata
+files through PyArrow, not this client: `r2.catalog()` gives it `ingestion/common/s3_retry.py` (AWS standard retries,
+20 attempts, about 5 minutes per request on sustained throttling, #2989). DuckDB's own reads (dbt build,
+`warehouse/entity.py`) use its `httpfs` defaults.
 
 **One model build at a time, and no build is lost (#2932).** The build job runs in the concurrency group
 `zohelo-pipeline-build`. GitHub keeps one running and one waiting job per group and cancels the waiting one when
