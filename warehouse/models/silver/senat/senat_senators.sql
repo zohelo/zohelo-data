@@ -13,3 +13,5 @@ select
     source_version,
     raw_sha256
 from {{ source('senat', 'senat_senators') }}
+-- newest copy of the senators list, by its version (download time); Bronze also prunes older copies
+qualify ingested_at = max(ingested_at) over (partition by entity)

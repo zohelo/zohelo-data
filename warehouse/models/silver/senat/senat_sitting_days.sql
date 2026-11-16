@@ -90,7 +90,11 @@ day_pages as (
         cast(day_number as integer) as day_number,
         count(vote_id) as votes_listed,
         raw_sha256 as day_page_sha256
-    from {{ source('senat', 'senat_day_votes') }}
+    from (
+        -- newest copy of each day page, by its version (download time); Bronze also prunes older copies
+        select * from {{ source('senat', 'senat_day_votes') }}
+        qualify ingested_at = max(ingested_at) over (partition by entity)
+    ) as newest
     group by sitting_id, day_number, raw_sha256
 )
 

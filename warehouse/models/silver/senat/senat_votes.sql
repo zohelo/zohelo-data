@@ -17,6 +17,8 @@ with listed as (
         raw_sha256
     from {{ source('senat', 'senat_day_votes') }}
     where vote_id is not null
+    -- newest copy of each day page, by its version (download time); Bronze also prunes older copies
+    qualify ingested_at = max(ingested_at) over (partition by entity)
 ),
 
 days as (
@@ -42,6 +44,7 @@ results as (
         source_version as result_version,
         raw_sha256 as result_raw_sha256
     from {{ source('senat', 'senat_vote_results') }}
+    qualify ingested_at = max(ingested_at) over (partition by entity)
 )
 
 select
