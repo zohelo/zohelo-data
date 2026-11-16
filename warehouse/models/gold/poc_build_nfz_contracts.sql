@@ -110,7 +110,8 @@ select
         when 'providers'
             then 'Healthcare providers with an NFZ agreement in the contract year (NFZ provider codes, zohelo count)'
         when 'contracted_amount'
-            then 'Contracted amount of NFZ agreements in the contract year (PLN, zohelo sum of published amounts; '
+            then
+                'Contracted amount of NFZ agreements in the contract year (PLN, zohelo sum of published amounts; '
                 || 'service type 12, medical devices, has no published amounts and is not included)'
     end as measure_name,
     m.measure_code as measure_codes,
