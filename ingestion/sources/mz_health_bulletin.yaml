@@ -10,9 +10,9 @@ description: "Ministerstwo Zdrowia / Centrum e-Zdrowia — Biuletyn Statystyczny
 # extraction (a separate Task) and are not landed. Entity = one edition (tablice_<edition year>); version = download
 # time (no Last-Modified), written only when the SHA-256 changed; unlanded links are downloaded, the newest edition
 # again on every run. Restart unit: one file. Dev probes on test/2957-mz-health-bulletin-trial: 43320082613 (page),
-# 43320386657 (links), 43322057260 (sheets of 7 editions), 43323640631 and DRIFT_RUN (table layouts).
+# 43320386657 (links), 43322057260 (sheets of 7 editions), 43323640631 and 43326018778 (table layouts).
 # History: editions 2019-2025 = reference years 2018-2024 (the year is read from each table's title).
-# TRIAL_LINE
+# Dev trial on the final code: 43796932230 (7 files, 73,250 Bronze cells, 415 sheets, 4,097 Silver values, 3,995 Gold rows).
 extraction:
   initial: bulk
   production: snapshot                  # each edition file as published; a correction replaces it
@@ -29,9 +29,9 @@ bronze: [bronze.mz_health_bulletin_cells, bronze.mz_health_bulletin_rejected_fil
 silver: [silver.mz_health_bulletin_sheets, silver.mz_health_bulletin_tables]
 gold: [gold.build_mz_health_bulletin]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  mz_health_bulletin_sheets: {rows: 650}  # SHEET_ROWS rows (Dev trial TRIAL_RUN)
-  mz_health_bulletin_tables: {rows: 6200}  # SILVER_ROWS rows (Dev trial TRIAL_RUN)
-  poc_build_mz_health_bulletin: {rows: 6200}  # GOLD_ROWS rows (Dev trial TRIAL_RUN)
+  mz_health_bulletin_sheets: {rows: 650}  # 415 rows (Dev trial 43796932230)
+  mz_health_bulletin_tables: {rows: 6200}  # 4,097 rows (Dev trial 43796932230)
+  poc_build_mz_health_bulletin: {rows: 6200}  # 3,995 rows (Dev trial 43796932230)
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): seven workbooks of about 0.3 MB, one new a year, under 200,000 cells;
