@@ -1,0 +1,4 @@
+version: 2
+models:
+  - name: poc_src_eurostat
+    description: Extraction stage (Python model) — the activated Eurostat datasets' Silver rows, read from their files only.

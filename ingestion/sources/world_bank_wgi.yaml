@@ -25,7 +25,11 @@ archive_policy:
   prune: report
 bronze: [bronze.wgi_observations, bronze.wgi_metadata, bronze.wgi_rejected_files]
 silver: [silver.wgi_observations, silver.wgi_indicators]
-gold: []
+gold: [gold.build_wgi]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  wgi_observations: {rows: 300000}  # 202,092 (Dev trial 43085820597)
+  wgi_indicators: {rows: 1000}  # 36
+  poc_build_wgi: {rows: 50000}  # 6 estimates x ~214 economies x 27 years (~35,000)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32, small source: full in every layer): one archive of ~3 MB (~150,000 observations); rebuilt in full when a new archive lands.

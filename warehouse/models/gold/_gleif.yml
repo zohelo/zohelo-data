@@ -1,0 +1,12 @@
+version: 2
+models:
+  - name: poc_build_gleif
+    description: >-
+      Build stage — GLEIF LEI counts of the newest golden copy (entity snapshot, daily): by registration status
+      (measure), entity status, legal form (ELF) and entity category (breakdowns, one at a time), per country of
+      legal jurisdiction and, for Poland, voivodeship of the legal address. Latest snapshot only (Silver is latest-only).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]

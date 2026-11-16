@@ -2,7 +2,7 @@
    (silver.prng_objects.gmina_codes, TERYT gmina codes separated by ';'). The register gives one code per point of the
    object's representation: one for a main point ('punkt główny'), two for a linear object (its start point, then its
    end point), so a river whose two ends lie in one gmina lists that code twice (10,615 objects in the export of
-   12 Nov 2026, Dev run 43806029951). Grain: prng_id × gmina_code, with the points that lie in that gmina
+   12 Nov 2026, Dev run 43807487098). Grain: prng_id × gmina_code, with the points that lie in that gmina
    (point_roles: 'main', 'start', 'end', in that order) and the powiat and voivodeship codes of the gmina code (its
    first 4 and 2 digits). These are the gminas of the published points, not every gmina the object crosses. An object
    without a gmina code (e.g. an area of the sea) has no row. A code that is not 7 digits, or a number of codes that
