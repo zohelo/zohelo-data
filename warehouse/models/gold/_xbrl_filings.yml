@@ -71,9 +71,8 @@ models:
         tests: [not_null]
       - name: unit_code
         description: >-
-          The unit as tagged in the report (iso4217:<currency>: PLN, EUR, USD, UAH in the trial), never converted.
-          An entity table, not a fact: it does not enter dim_unit, so unit_map has no row for it (D33 covers the
-          build stage's units, filings and entities).
+          The unit as tagged in the report (iso4217:<currency>: PLN, EUR, USD, UAH in the trial), never converted;
+          unit_map maps each code to its unit (D33).
         tests: [not_null]
       - name: value
         tests: [not_null]

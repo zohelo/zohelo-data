@@ -28,15 +28,16 @@ consolidated report of one issuer and period are separate filings with the next 
 column, so every filing is kept and nothing is picked between them (`esef_issuer_period_values_differ` warns when
 their values differ).
 
+Dev trial 43838478762 (16 Nov 2026): 876 Polish filings of 326 issuers (period ends 2020-12-31 to 2024-03-31;
+added 2021-06-08 to 2024-07-30, so the repository seems to have collected no Polish filing since July 2024), 779
+with an xBRL-JSON document; 3.0 GB read once (56 minutes), 4.3 MB landed; a second run wrote nothing. Bronze 14,578
+facts from 777 documents (2 rejected: no fact of the two concepts). Silver 2,956 fact rows; Gold 1,467 facts
+(revenue 690 filings, profit or loss 777; banks and insurers tag no `ifrs-full:Revenue`), in PLN, EUR, USD and UAH
+as published. Values are kept as tagged: PKO BP's 2020 profit or loss is tagged −2,561 m PLN.
+
 Left out: other countries, other concepts (assets, equity, employees …), dimensional facts (segments, equity
 components) and comparative periods in Gold (they stay in Silver), the report packages and viewers. The
 repository says it is not complete; its Polish filings were last added on 2024-07-30, so period ends 2023 and
-2024 are partly held (counts in Gold are what it holds, not every report filed). Refresh full (D32, #1500); weekly, Thursday 02:25 UTC. Terms: "At present,
-there are no restrictions on the ways that the data can be used" (https://filings.xbrl.org/docs/about), no licence
-named: `unresolved`, internal (owner question in the register). Restart unit: one filing.
-
-Dev trial 43838478762 (16 Nov 2026): Landing 876 filings in a 1.0 MB list and 779 facts documents (3.0 GB read,
-4.3 MB landed, 56 minutes), a second run wrote nothing; Bronze 876 filing rows and 14,578 fact rows, 2 documents
-rejected (no fact of the selected concepts); Silver 876 filings (326 LEIs, period ends 2020-12-31 to 2024-03-31)
-and 2,956 facts; Gold 876 filings, 326 issuers, 1,467 facts (PLN, EUR, USD, UAH), build stage 10 rows, 0
-duplicates by series_key × date_key.
+2024 are partly held (counts in Gold are what it holds, not every report filed). Refresh full (D32, #1500);
+weekly, Thursday 02:25 UTC. Terms: "At present, there are no restrictions on the ways that the data can be
+used" (https://filings.xbrl.org/docs/about), no licence named: `unresolved`, internal (owner question in the register). Restart unit: one filing.
