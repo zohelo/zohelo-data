@@ -51,6 +51,9 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('average_farm_area', 'gus_psr2020', '%', 0, 100),
     -- MRPiPS-03 (#2910): persons granted social assistance, PL 2019 = 1,205,506 (Dev trial 43293740538)
     ('social_assistance_recipients', 'mrpips_social_assistance', '%', 0, 1e7),
+    -- GUGiK PRNG (#2971): localities in the register, Poland is the largest area: 124,236 (export 2026-11-12, Dev
+    -- probe 43328622271)
+    ('localities', 'gugik_prng', '%', 0, 5e5),
     -- Crossref works with affiliation text naming Poland or Polska per publication year (#553): largest PL 2022 =
     -- 29,413 works (Dev trial 43336945209)
     ('scholarly_works_pl_affiliation', 'crossref', '%', 0, 2e5),
@@ -663,6 +666,15 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_health_expenditure_gdp') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_localities') }}
     union all
     select
         concept_key,

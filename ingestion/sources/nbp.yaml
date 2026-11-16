@@ -21,7 +21,12 @@ archive_policy:
   prune: report
 bronze: [bronze.nbp_observations, bronze.nbp_rejected_files]
 silver: [silver.nbp_fx_rates, silver.nbp_gold_fixings]
-gold: [gold.build_nbp]                              # Gold v1: build_nbp → fact_daily, metrics_fx_rate (warehouse/warehouse.yaml)
+# Gold v1 (curated): build_nbp (listed here) → fact_daily, metrics_fx_rate (warehouse/warehouse.yaml).
+# Full coverage (O43, D35, docs/gold-coverage.md): tables A, B and C and the gold price by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the blocks are the Silver tables nbp_fx_rates
+# and nbp_gold_fixings.
+gold: [gold.build_nbp, gold.nbp_observations, gold.nbp_series, gold.nbp_measures, gold.nbp_geography,
+       gold.observations_rejected]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   nbp_fx_rates: {rows: 1000000}  # 428,392 (20 Oct, Dev run 39374769989)
   nbp_gold_fixings: {rows: 20000}  # 3,479 (20 Oct, Dev run 39374769989)
@@ -34,4 +39,8 @@ bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded 
 # Refresh policy for all layers (owner decision #875): under 1M rows; Silver and Gold rebuilt in full.
 refresh: {mode: full, decided: "#875"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35; #2998): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver tables dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]
