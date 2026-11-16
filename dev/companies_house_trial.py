@@ -74,10 +74,18 @@ def trial() -> None:  # noqa: PLR0915
     client, cat = s3(), catalog()
     lake_root = f"{SCRATCH}/"
     # Landing
-    landing_runs = []
+    landing_runs, reduce_log = [], []
+    import contextlib
+    import io
+    import sys
+
     for mode in ("inspect", "load", "load", "inspect", "verify"):
         captured.clear()
-        code = landing.extract(landing_root=SCRATCH) if mode == "load" else bulk_file.main(SOURCE, mode, landing_root=SCRATCH)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = landing.extract(landing_root=SCRATCH) if mode == "load" else bulk_file.main(SOURCE, mode, landing_root=SCRATCH)
+        sys.stdout.write(out.getvalue())
+        reduce_log += [(len(landing_runs), line) for line in out.getvalue().splitlines() if "companies_house reduce" in line]
         files = [c["data"]["files"][0] for c in captured if "files" in c["data"]]
         held = objects(client, "STORAGE_LANDING_BUCKET_NAME")
         landing_runs.append({"mode": mode, "exit": code, "file": files[0] if files else None, "objects": len(held),
@@ -95,7 +103,7 @@ def trial() -> None:  # noqa: PLR0915
                 landed_header = handle.readline().decode().strip().split(",")
                 landed_lines = 1 + sum(1 for _ in handle)
     annotate("notice", "companies_house trial: landing (scratch)", {
-        "runs": landing_runs, "receipts": len(receipts),
+        "runs": landing_runs, "reduce_log_by_run": reduce_log, "receipts": len(receipts),
         "receipt": {k: receipts[-1].get(k) for k in ("version_token", "version_basis", "source_url", "sha256", "size_bytes")},
         "receipt_detail": {k: receipts[-1]["detail"].get(k) for k in ("reduced", "http", "format")},
         "source_members_before_reduction": receipts[-1]["detail"].get("members"),
