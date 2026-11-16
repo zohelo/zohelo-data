@@ -40,13 +40,11 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
-import csv
 from datetime import UTC, datetime
 from hashlib import sha256
 import io
 import json
 import os
-from pathlib import Path
 import re
 import time
 from typing import Any
@@ -59,6 +57,7 @@ import requests
 from ingestion.common.r2 import archive_key, archived, req, s3
 from ingestion.common.report import annotate, step_summary
 from ingestion.to_landing.world_bank_icp.extract import USER_AGENT, put_new
+from warehouse import seed_rows
 
 SOURCE = "nfz_services"
 API = "https://api.nfz.gov.pl/app-stat-api-jgp"
@@ -72,7 +71,6 @@ FAIL_STREAK = 3  # benefits failing in a row: the API is down, the run stops ask
 SHARES = 4  # each held benefit's index is asked once every SHARES weekly runs
 REREAD = 52  # and all its tables once every REREAD weekly runs (a revision under unchanged table ids)
 MARGIN_MINUTES = 10  # no benefit is started in the last minutes of the budget
-KPI_MEASURES = Path(__file__).resolve().parents[3] / "warehouse" / "seeds" / "kpi_measure.csv"
 # Benefits asked in every run besides the KPI groups (kpi_benefits): one benefit each of the radiotherapy (1d) and
 # highly specialised (1w) catalogs.
 EXTRA_CANARY = (
@@ -105,13 +103,13 @@ class Unavailable(RuntimeError):
     """The API kept failing (5xx, Maintenance, timeouts) after the bounded retries."""
 
 
-def kpi_benefits(path: Path = KPI_MEASURES) -> tuple[str, ...]:
-    """Entities of the JGP groups the KPIs read: the kpi_measure.csv rows of nfz_services, whose measure key is
+def kpi_benefits() -> tuple[str, ...]:
+    """Entities of the JGP groups the KPIs read: the kpi_measure rows of nfz_services (read with
+    warehouse/seed_rows.py, D36: warehouse/seed_rows/kpi_measure/nfz_services.csv), whose measure key is
     ``nfz_services:<catalog>:<unit>:<benefit code>:<measure>``. The same rows are the Gold detail list
     (poc_nfz_services_detail(); tests/nfz_services_gold_benefits.sql fails on a KPI group missing there), so the
     canaries follow the KPIs instead of a second hand-written list (#3005 review)."""
-    with path.open(newline="", encoding="utf-8") as handle:
-        keys = [r["measure_key_pattern"] for r in csv.DictReader(handle) if r["source_system"] == SOURCE]
+    keys = [r["measure_key_pattern"] for r in seed_rows.rows("kpi_measure") if r["source_system"] == SOURCE]
     return tuple(sorted({entity_of(k.split(":")[1], k.split(":")[3]) for k in keys}))
 
 
