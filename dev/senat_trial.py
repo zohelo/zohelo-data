@@ -1,9 +1,10 @@
 """Dev trial for #482 (Senate, PLG-025; test branch only, never on main).
 
-Landing -> Bronze -> Silver -> Gold into scratch, each step twice. Landing into the prefix zz_dev_senat/: pass 1 reads
-robots.txt, every sittings list page, the senators list, every sitting-day votes page and the print pages of the
-VOTES newest votes (about 430 requests, one at a time, 1.1 s apart); pass 2 lands no new vote page and must land
-nothing (the list pages and the open days are read again and must be unchanged). Then landing inspect and verify.
+Landing -> Bronze -> Silver -> Gold into scratch, each step twice. Landing into the prefix zz_dev_senat/: argument `all`
+(default) crawls the whole of term XI as production does, in passes of the production budget (2,000 requests or 75
+minutes each, one request at a time, 1.1 s apart) until no vote page is missing (at most MAX_PASSES), which also
+proves the resume; a number N instead lands only the N newest vote pages. Then one more full extract pass must land
+nothing (the list pages, the senators list and the re-read days unchanged). Then landing inspect and verify.
 Bronze into the Iceberg namespace zz_dev_senat and lake prefix zz_dev_senat/ (twice: the second appends nothing).
 Silver, the Gold entity tables and the build stage are the dbt SQL rendered with Jinja and run in local DuckDB over
 the scratch Bronze tables, each built twice, with the model tests and the completeness tests. Everything written is
@@ -14,6 +15,7 @@ from __future__ import annotations
 
 from collections import Counter
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -25,7 +27,10 @@ from jinja2 import Environment
 from ingestion.common import report as report_module
 
 SCRATCH = "zz_dev_senat"
-VOTES = int(sys.argv[1]) if len(sys.argv) > 1 else 300
+ARG = sys.argv[1] if len(sys.argv) > 1 else "all"
+VOTES = None if ARG == "all" else int(ARG)
+MAX_PASSES = 4
+OUT = Path(os.environ.get("DEV_OUTPUT_DIR", "/tmp/dev-output"))
 MACROS = "".join(p.read_text() for p in sorted(Path("warehouse/macros").glob("*.sql")))
 MACROS += Path("warehouse/macros/sources/senat.sql").read_text()
 COLLECTED: dict[str, list] = {}
@@ -42,6 +47,11 @@ report_module.step_summary = lambda _m: None
 
 
 def note(title: str, data, level: str = "notice") -> None:
+    full = json.dumps(data, default=str)
+    print(f"FULL {title}: {full}", flush=True)  # the annotation keeps about 4 KB; the log and the artifact keep all
+    OUT.mkdir(parents=True, exist_ok=True)
+    with (OUT / "senat_trial.jsonl").open("a") as handle:
+        handle.write(json.dumps({"title": title, "level": level, "data": data}, default=str) + "\n")
     ANNOTATE(level, title, data)
 
 
@@ -76,10 +86,21 @@ def trial() -> int:
     bronze.annotate = collect
     # --- Landing ---------------------------------------------------------------------------------------------
     t0 = time.monotonic()
-    runs = [
-        landing.run("extract", SCRATCH, max_new_votes=VOTES),
-        landing.run("extract", SCRATCH, max_new_votes=0),
-    ]
+    passes, timing = [], []
+    for _ in range(MAX_PASSES if VOTES is None else 1):
+        started = time.monotonic()
+        passes.append(landing.run("extract", SCRATCH, max_new_votes=VOTES))
+        timing.append(round((time.monotonic() - started) / 60, 1))
+        last = passes[-1]
+        if last["exit"] or (not last.get("stopped") and last.get("votes_missing_after") == 0):
+            break
+    if passes[-1]["exit"]:
+        raise RuntimeError(f"Landing stopped: {passes[-1].get('stopped')}")
+    started = time.monotonic()
+    again = landing.run("extract", SCRATCH, max_new_votes=None if VOTES is None else 0)
+    timing.append(round((time.monotonic() - started) / 60, 1))
+    runs = [passes[0], again]
+    landed_again = sum(n for kind in again["outcomes"].values() for k, n in kind.items() if k != "unchanged")
     minutes = round((time.monotonic() - t0) / 60, 1)
     inspect = landing.run("inspect", SCRATCH, max_requests=40)
     verify_exit = landing.verify(SCRATCH)
@@ -108,8 +129,17 @@ def trial() -> int:
                     "exit",
                 )
             },
-            "pass2": {k: runs[1].get(k) for k in ("requests", "outcomes", "votes_missing_after", "stopped", "exit")},
-            "minutes_both": minutes,
+            "resume_passes": [
+                {k: r.get(k) for k in ("requests", "outcomes", "votes_missing_after", "stopped", "exit")}
+                for r in passes[1:]
+            ],
+            "idempotency_pass": {
+                k: again.get(k) for k in ("requests", "outcomes", "votes_missing_after", "stopped", "exit")
+            },
+            "landed_by_idempotency_pass": landed_again,
+            "minutes_per_pass": timing,
+            "minutes_all": minutes,
+            "vote_pages_limit": VOTES or "all",
             "inspect": {
                 k: inspect.get(k)
                 for k in (
@@ -260,6 +290,19 @@ def trial() -> int:
             "senators": q(
                 con, "select count(*), count(*) filter (where in_office), count(mandate_ended_on) from senat_senators"
             ),
+            "votes_without_results": q(
+                con,
+                "select sitting_number, count(*) from senat_votes where not results_landed group by 1 order by 1",
+                20,
+            ),
+            "votes_null_date": count(con, "select 1 from senat_votes where day_date is null"),
+            "status_on_days": q(con, "select status_text, count(*) from senat_sitting_days group by 1"),
+            "totals_profile": q(
+                con,
+                "select min(voted), max(voted), min(votes_for), max(votes_for), max(votes_against), "
+                "max(abstained), min(senators_listed), max(senators_listed), "
+                "count(*) filter (where voted = 0) from senat_votes where results_landed",
+            ),
             "days_per_sitting": q(
                 con,
                 "select n, count(*) from (select sitting_id, count(*) n from "
@@ -278,6 +321,11 @@ def trial() -> int:
         for _ in (1, 2):
             con.execute(f"create or replace table {name} as {sql}")
             gold[name].append(count(con, f"select * from {name}"))
+    dups = count(
+        con,
+        "select measure_key || '|' || geography_key || '|' || breakdown_json, "
+        "date_key from poc_build_senat group by all having count(*) > 1",
+    )
     bounds = re.findall(
         r"\('(senate_\w+)', 'senat', '%', ([\d.e]+), ([\d.e]+)\)",
         Path("warehouse/tests/metrics_value_range.sql").read_text(),
@@ -293,11 +341,7 @@ def trial() -> int:
         "senat trial Gold build_senat and entity tables",
         {
             "rows_two_builds": gold,
-            "dup_series_date": count(
-                con,
-                "select measure_key || '|' || geography_key || '|' || breakdown_json, "
-                "date_key from poc_build_senat group by all having count(*) > 1",
-            ),
+            "dup_series_date": dups,
             "unmatched_geography": count(con, "select 1 from poc_build_senat where geography_key = '_X'"),
             "null_or_nan": count(
                 con, "select 1 from poc_build_senat where value is null or isnan(value) or date_key is null"
@@ -334,7 +378,45 @@ def trial() -> int:
             ),
         },
     )
-    return 0
+    con.execute(
+        "create or replace table seed_source as select * from read_csv('warehouse/seeds/source.csv', all_varchar=true)"
+    )
+    con.execute(
+        "create or replace table seed_licence as select * from read_csv('warehouse/seeds/licence.csv', all_varchar=true)"
+    )
+    note(
+        "senat trial licence and Gold maxima",
+        {
+            "catalogue_row": q(
+                con,
+                "select s.*, l.name, l.attribution_text, l.commercial_ok, l.share_alike from seed_source as s "
+                "left join seed_licence as l using (licence_key) where s.source_key = 'senat'",
+            ),
+            "max_per_measure": q(
+                con,
+                "select measure_key, max(value), arg_max(period_label, value) from poc_build_senat group by 1 "
+                "order by 1",
+            ),
+            "spot_2026_05": q(
+                con,
+                "select measure_key, value, observation_status_key from poc_build_senat "
+                "where period_label = '2026-05' order by 1",
+            ),
+        },
+    )
+    problems = {
+        "landed_by_idempotency_pass": landed_again,
+        "rejected_files": len(rejected),
+        "bronze_second_load_candidates": (COLLECTED.get("senat Bronze from Landing") or [{}, {}])[-1].get("candidates"),
+        "silver_failing_tests": {k: c for k, c in failing.items() if c and k != "accepted status"},
+        "silver_rebuild_differs": [k for k, v in silver.items() if len(set(v)) > 1],
+        "gold_rebuild_differs": [k for k, v in gold.items() if len(set(v)) > 1],
+        "dup_series_date": dups,
+        "rows_out_of_bounds": {k: c for k, c in out_of_bounds.items() if c},
+    }
+    bad = {k: v for k, v in problems.items() if v}
+    note("senat trial verdict", {"problems": bad} if bad else {"result": "all checks passed"}, "error" if bad else "notice")
+    return 1 if bad else 0
 
 
 def cleanup() -> None:
