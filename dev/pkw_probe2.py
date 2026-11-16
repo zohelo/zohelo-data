@@ -137,7 +137,22 @@ def profile(election: str, name: str, kind: str) -> None:
                 profile_csv(name, z.read(info))
 
 
+def gold_sizes() -> None:
+    """Row counts of the shared Gold tables a new block adds to (snapshot summaries; reads no data files)."""
+    from ingestion.common.r2 import catalog
+
+    cat = catalog()
+    for name in ("dim_series", "fact_daily", "fact_annual", "map_geography", "dim_measure", "build_check"):
+        try:
+            snap = cat.load_table(("gold", name)).current_snapshot()
+            summary = snap.summary.additional_properties if snap and snap.summary else {}
+            print(f"### gold.{name}: total-records {summary.get('total-records')}", flush=True)
+        except Exception as exc:  # noqa: BLE001
+            print(f"### gold.{name}: {type(exc).__name__} {str(exc)[:200]}", flush=True)
+
+
 def main(argv: list[str]) -> int:
+    gold_sizes()
     for election in argv or ELECTIONS:
         csv_names, xlsx_names = bundle(election)
         picked = [n for n in csv_names if KEEP.search(n) and not SKIP.search(n)]
