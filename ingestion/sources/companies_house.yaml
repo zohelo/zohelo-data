@@ -30,8 +30,13 @@ extraction:
   initial: bulk
   production: snapshot                    # each file is the complete register of live companies
   incremental_policy: changed_since_last  # a new file name each month; SHA-256
-  schedule: # UTC; release: monthly, within 5 working days of the month's start (the 2026-11-01 file was written on 7 Nov); the 10th, one download a month
+  # UTC; release: monthly, within 5 working days of the month's start (the 2026-11-01 file was written on 7 Nov).
+  # The 10th takes the month's file; the 20th is the catch-up for a red or skipped run on the 10th (the listing keeps
+  # only the current file, so a missed month is lost once the next one replaces it). When the 10th succeeded, the
+  # 20th costs one page request and one HEAD: the file Landing holds is not downloaded again (held_file).
+  schedule:
     - {cron: "40 4 10 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+    - {cron: "40 4 20 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/companies_house/
 # Retention: the newest (reduced) file plus 3 days of superseded ones (storage is paid beyond the free tier).
@@ -43,7 +48,11 @@ bronze: [bronze.companies_house_companies, bronze.companies_house_rejected_files
 silver: [silver.companies_house_poland_origin, silver.companies_house_snapshot_counts]
 gold: [gold.build_companies_house, gold.company_uk_poland_origin]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  poc_build_companies_house: {rows: 1000}  # 48 per monthly snapshot (measured, Dev trial of #1502); the history adds as many each month, so the ceiling is about 20 months, to be raised with the history
+  # Growth rule: 48 rows per monthly snapshot (measured, Dev trials of #1502) and the build keeps every snapshot, so
+  # the ceiling is 1.5 x 48 x the 14 snapshots expected by the end of 2027 (Nov 2026 to Dec 2027) = 1,008, rounded
+  # to 1,000. The build warns from the 21st snapshot (above 1,000) and fails above 2,000; raise it by 1.5 x 48 = 72
+  # for each further month of history to keep when the warning appears (far below the 1 M rows of D28).
+  poc_build_companies_house: {rows: 1000}
   company_uk_poland_origin: {rows: 75}  # 50 (measured, Dev trial of #1502)
 
 # Refresh policy for all layers (D32): one file of several million rows a month, replaced whole by the source, so
