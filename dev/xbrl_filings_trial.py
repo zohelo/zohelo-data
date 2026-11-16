@@ -9,7 +9,6 @@ Optional argument: the number of facts documents to read per extract run (a shor
 
 from __future__ import annotations
 
-import csv
 import json
 from pathlib import Path
 import re
@@ -26,6 +25,7 @@ from ingestion.common.r2 import catalog, req, s3
 from ingestion.to_bronze.xbrl_filings import load as bronze_load
 from ingestion.to_landing import xbrl_filings as landing
 from ingestion.to_landing.patterns import bulk_file
+from warehouse import seed_rows
 
 SCRATCH = "zz_dev_xbrl_filings"
 _annotate = report.annotate
@@ -61,8 +61,8 @@ def terms() -> None:
         text = re.sub(r"\s+", " ", re.sub(r"(?s)<[^>]+>", " ", r.text))
         out[name] = {"status": r.status_code, "final_url": r.url, "quotes": re.findall(pattern, text)[:3]}
     out["user_agent_sent"] = bulk_file.USER_AGENT
-    src = [r for r in csv.DictReader(open("warehouse/seeds/source.csv", encoding="utf-8")) if r["source_key"] == "xbrl_filings"]
-    lic = {r["licence_key"]: r for r in csv.DictReader(open("warehouse/seeds/licence.csv", encoding="utf-8"))}
+    src = [r for r in seed_rows.rows("source") if r["source_key"] == "xbrl_filings"]
+    lic = {r["licence_key"]: r for r in seed_rows.rows("licence")}
     out["licence_gate"] = {"source_row": src, "licence_row": lic.get(src[0]["licence_key"]) if src else None}
     annotate("notice", "xbrl_filings terms and licence row", out)
 
@@ -208,8 +208,9 @@ def trial(limit: int) -> None:  # noqa: PLR0915
         "nulls": q(con, "select count(*) from build where value is null or date_key is null or measure_key is null or raw_sha256 is null"),
         "distinct": q(con, "select distinct source_system, block_id, unit_code, geography_key, frequency, observation_status_key, is_total from build order by all"),
         "rows": q(con, "select measure_key, period_label, date_key, value from build order by 1, 2"),
-        "check_against_silver": q(con, "select count(*), count(distinct lei) from s_filings")})
-    names = ["ORLEN", "POWSZECHNA KASA", "KGHM", "CD PROJEKT", "POWSZECHNY ZAK", "ALLEGRO", "DINO POLSKA", "LPP"]
+        "check_against_silver": q(con, "select count(*), count(distinct lei) from s_filings"),
+        "value_range_test_rows": test("warehouse/tests/xbrl_filings_value_range.sql", {"poc_build_xbrl_filings": "build"})})
+    names = ["ORLEN", "POWSZECHNA KASA", "KGHM", "CD PROJEKT", "POWSZECHNY ZAK", "ALLEGRO", "DINO POLSKA", "LPP"]  # PZU = POWSZECHNY ZAKŁAD UBEZPIECZEŃ
     spot = {}
     for name in names:
         spot[name] = q(con, f"""select i.lei, f.fxo_id, f.measure, f.period_end, f.value, f.currency_code, f.decimals
