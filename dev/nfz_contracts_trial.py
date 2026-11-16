@@ -5,9 +5,13 @@ removed in `finally`. Landing runs the whole scope once (every year from FIRST_Y
 load), then a second unfiltered run, which is the weekly run (the two open years read again; nothing may be written
 unless NFZ changed a list meanwhile). Bronze runs twice (the second must append nothing). Silver and the Gold build
 stage are built with dbt itself (`dbt build`, the project in warehouse/, models + their generic and singular tests,
-twice) against a local DuckDB file attached as `r2`, which holds the scratch Bronze table and a stand-in
-`poc_map_geography` made from this source's registration macro and the production TERYT voivodeships (read-only
-read). Not exercised: the full poc_map_geography union, poc_build_check, poc_grain_check, poc_fact_annual.
+twice) against a local DuckDB file attached as `r2`, which holds the scratch Bronze table and this source's rows of
+the real `poc_map_geography`: the shared model compiled by dbt on the prod target and run read-only against the
+production catalog (falls back to a stand-in from the registration macro if that read fails, and says so). Shared
+models: the series-key grain check uses the real `poc_series_key()` macro (as poc_grain_check / fact_grain), the
+block lists `poc_block_models()` / `poc_activated_blocks()` are rendered by dbt, and the rows this block adds to
+poc_fact_annual are set against the production table's row count. Not built: poc_fact_annual, poc_build_check and
+poc_grain_check themselves (they union every source's block).
 Deleted before merge. Args: optional comma-separated entity filter for the first Landing run (default: whole scope).
 """
 
@@ -182,7 +186,42 @@ def env() -> Environment:
     return Environment(extensions=["jinja2.ext.do"])
 
 
-def dbt_build(arrow, teryt: dict) -> tuple[dict, Path]:
+def dbt(args: list[str], profiles: str, target: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["dbt", *args, "--project-dir", "warehouse", "--profiles-dir", profiles, "--target", target],
+                          capture_output=True, text=True)
+
+
+def shown(proc: subprocess.CompletedProcess) -> list[dict]:
+    """The rows of `dbt show --output json` from its stdout."""
+    start = proc.stdout.find('{\n  "show"')
+    if proc.returncode or start < 0:
+        raise RuntimeError(f"dbt show failed: {proc.stdout[-1500:]} {proc.stderr[-500:]}")
+    return json.JSONDecoder().raw_decode(proc.stdout[start:])[0]["show"]
+
+
+def real_map() -> tuple[list, dict]:
+    """This source's rows of the real shared poc_map_geography: compiled by dbt on the prod target, run read-only
+    against the production catalog (dbt show, a select)."""
+    info: dict = {}
+    try:
+        proc = dbt(["compile", "--select", "poc_map_geography"], "warehouse", "prod")
+        if proc.returncode:
+            raise RuntimeError(f"dbt compile: {proc.stdout[-1500:]}")
+        sql = Path("warehouse/target/compiled/zohelo/models/gold/poc_map_geography.sql").read_text()
+        info["compiled_has_nfz_cte"] = "nfz_contracts as (" in sql and "select * from nfz_contracts" in sql
+        inline = ("{% raw %}select source_system, source_code, geography_key from (" + sql + ") as m "
+                  "where source_system = 'nfz_contracts' order by source_code{% endraw %}")
+        got = shown(dbt(["show", "--inline", inline, "--limit", "1000", "--output", "json"], "warehouse", "prod"))
+        info["source"] = "real poc_map_geography (dbt, prod catalog, read-only)"
+        info["rows"] = [[r["source_code"], r["geography_key"]] for r in got]
+        return [(r["source_code"], r["geography_key"]) for r in got], info
+    except Exception as exc:
+        info["source"] = "stand-in (real map read failed)"
+        info["error"] = f"{type(exc).__name__}: {str(exc)[:600]}"
+        return [], info
+
+
+def dbt_build(arrow, teryt: dict, mapped: list) -> tuple[dict, Path, Path]:
     """dbt build of the three models and their tests, twice, into a local DuckDB file attached as r2."""
     tmp = Path(tempfile.mkdtemp(prefix="nfz_dbt_"))
     r2 = tmp / "r2.duckdb"
@@ -191,11 +230,16 @@ def dbt_build(arrow, teryt: dict) -> tuple[dict, Path]:
     con.execute("create schema bronze")
     con.execute("create table bronze.nfz_contracts_agreements as select * from arrow_bronze")
     con.execute(f"create schema {SCHEMA}")
-    keys = ", ".join(f"('TERC:{k}', 'wojewodztwo')" for k in teryt) or "('TERC:02', 'wojewodztwo')"
-    macros = Path("warehouse/macros/sources/nfz_contracts.sql").read_text()
-    cte = env().from_string(macros + "{{ poc_geography__nfz_contracts() }}").render()
-    con.execute(f"create table {SCHEMA}.poc_map_geography as with geo as (select * from (values {keys}) as t "
-                f"(geography_key, level_name)), {cte} select * from nfz_contracts")
+    if mapped:
+        values = ", ".join(f"('nfz_contracts', '{c}', '{k}')" for c, k in mapped)
+        con.execute(f"create table {SCHEMA}.poc_map_geography as select * from (values {values}) as t "
+                    "(source_system, source_code, geography_key)")
+    else:
+        keys = ", ".join(f"('TERC:{k}', 'wojewodztwo')" for k in teryt) or "('TERC:02', 'wojewodztwo')"
+        macros = Path("warehouse/macros/sources/nfz_contracts.sql").read_text()
+        cte = env().from_string(macros + "{{ poc_geography__nfz_contracts() }}").render()
+        con.execute(f"create table {SCHEMA}.poc_map_geography as with geo as (select * from (values {keys}) as t "
+                    f"(geography_key, level_name)), {cte} select * from nfz_contracts")
     con.close()
     profile = {"zohelo": {"target": "local", "outputs": {"local": {
         "type": "duckdb", "path": str(tmp / "main.duckdb"), "schema": SCHEMA, "threads": 4,
@@ -204,8 +248,7 @@ def dbt_build(arrow, teryt: dict) -> tuple[dict, Path]:
     out: dict = {"command": "dbt build --select " + " ".join(MODELS) + " --indirect-selection cautious", "builds": []}
     for n in (1, 2):
         start = time.monotonic()
-        proc = subprocess.run(["dbt", "build", "--project-dir", "warehouse", "--profiles-dir", str(tmp), "--target", "local",
-                               "--select", *MODELS, "--indirect-selection", "cautious"], capture_output=True, text=True)
+        proc = dbt(["build", "--select", *MODELS, "--indirect-selection", "cautious"], str(tmp), "local")
         print(proc.stdout[-2500:], proc.stderr[-2000:], flush=True)
         results = json.loads(Path("warehouse/target/run_results.json").read_text())["results"]
         status = {r["unique_id"].split(".")[-1 if r["unique_id"].startswith("model.") else 2]: (
@@ -219,7 +262,37 @@ def dbt_build(arrow, teryt: dict) -> tuple[dict, Path]:
             "singular_tests": {k: v for k, v in status.items() if k.startswith("nfz_contracts_")},
             "not_pass_or_success": {k: v for k, v in status.items() if not v.startswith(("pass", "success"))},
         })
-    return out, r2
+    return out, r2, tmp
+
+
+def shared(tmp: Path) -> dict:
+    """The shared Gold models' view of this block: grain by the real poc_series_key() (as poc_grain_check and
+    tests/fact_grain), the block lists rendered by dbt, and the rows added to poc_fact_annual."""
+    out: dict = {}
+    dup = ("select {{ poc_series_key() }} as series_key, date_key, count(*) as n from {{ ref('poc_build_nfz_contracts') }} "
+           "group by all having count(*) > 1")
+    out["dup_series_key_x_date_key (poc_series_key)"] = len(shown(dbt(["show", "--inline", dup, "--limit", "100",
+                                                                        "--output", "json"], str(tmp), "local")))
+    check = ("select count(*) as row_count, count(distinct {{ poc_series_key() }}) as series, count(distinct measure_key) "
+             "as measures, count(*) filter (where geography_key = '_X') as rows_geography_unmatched, count(*) filter "
+             "(where is_total) as rows_total_series, count(*) filter (where frequency = 'X') as rows_period_unplaced, "
+             "min(date_key)::varchar as first_date, max(date_key)::varchar as last_date, list(distinct frequency)::varchar "
+             "as frequencies, list(distinct observation_status_key)::varchar as statuses "
+             "from {{ ref('poc_build_nfz_contracts') }}")
+    out["build_check_columns"] = shown(dbt(["show", "--inline", check, "--output", "json"], str(tmp), "local"))
+    proc = dbt(["compile", "--inline", "{{ poc_block_models() }} ||| {{ poc_activated_blocks() }}"], str(tmp), "local")
+    out["in_poc_block_models"] = "poc_build_nfz_contracts:nfz_contracts" in proc.stdout
+    out["in_poc_activated_blocks"] = "('nfz_contracts', 'agreements'," in proc.stdout
+    with duckdb.connect(str(tmp / "r2.duckdb"), read_only=True) as c:
+        rows = one(c, f"select count(*) from {SCHEMA}.poc_build_nfz_contracts")
+    try:
+        summary = catalog().load_table(("gold", "fact_annual")).current_snapshot().summary
+        prod = int(summary["total-records"])
+        out["poc_fact_annual"] = {"prod_rows": prod, "plus_this_block": rows, "after": prod + rows,
+                                  "ceiling_warn": 1500000, "fails_at": 3000000}
+    except Exception as exc:
+        out["poc_fact_annual"] = {"plus_this_block": rows, "prod_read_error": f"{type(exc).__name__}: {str(exc)[:200]}"}
+    return out
 
 
 def silver(con) -> dict:
@@ -255,9 +328,8 @@ def gold(con, teryt: dict) -> dict:
     g["pl_equals_sum_of_branches"] = one(con, f"select count(*) from (select measure_key, breakdown_json, date_key, "
                                               "sum(value) filter (where geography_key <> 'PL') s, sum(value) filter (where geography_key = 'PL') p "
                                               f"from {b} group by all) where abs(s - p) > 0.001")
-    g["total_equals_sum_of_types"] = one(con, "select count(*) from (select measure_key, geography_key, date_key, "
-                                              "sum(value) filter (where not is_total) t, sum(value) filter (where is_total) a "
-                                              f"from {b} where measure_key not like '%providers%' group by all) where abs(t - a) > 0.01")
+    g["rows_not_total"] = one(con, f"select count(*) from {b} where not is_total or breakdown_json <> '{{}}'")
+    g["rows_value_0"] = one(con, f"select count(*) from {b} where value = 0")
     g["branch_name_mismatch"] = [
         [c, BRANCH_NAMES[c], k] for c, k in con.execute(f"select source_code, geography_key from {SCHEMA}.poc_map_geography "
                                                          "where source_code <> 'all_branches' order by 1").fetchall()
@@ -330,16 +402,18 @@ def cleanup() -> None:
     note("nfz_contracts scratch removed", removed)
 
 
-def analyse(arrow, teryt: dict) -> int:
+def analyse(arrow, teryt: dict, mapped: list, map_info: dict) -> int:
     """Everything after Bronze (also run locally on a synthetic Bronze table)."""
-    d, r2 = dbt_build(arrow, teryt)
+    d, r2, tmp = dbt_build(arrow, teryt, mapped)
+    sh = shared(tmp)  # dbt attaches the r2 file: before this process opens it
     con = duckdb.connect(str(r2), read_only=True)
     con.register("bronze_agreements", arrow)
     note("nfz_contracts bronze profile", bronze_profile(con))
     note("nfz_contracts dbt build (twice) and silver", {**d, "silver": silver(con)})
     g = gold(con, teryt)
     spots = ("spot_PL", "spot_mazowieckie_2025", "amount_measure_name", "kpi_patterns", "kpi_rows_per_area_period_max")
-    note("nfz_contracts gold", {k: v for k, v in g.items() if k not in spots})
+    note("nfz_contracts gold and shared models", {**{k: v for k, v in g.items() if k not in spots},
+                                                   "map_geography": map_info, "shared": sh})
     note("nfz_contracts spot values and zero amounts", {**{k: g[k] for k in spots}, "zero_amounts": zero_profile(con)})
     note("nfz_contracts licence gate", licence())
     return 0 if all(b["exit"] == 0 for b in d["builds"]) else 1
@@ -353,7 +427,8 @@ def main(argv: list[str]) -> int:
         note("nfz_contracts landing (twice), verify", {"teryt_voivodeships_read": len(teryt), **land})
         b, arrow = bronze()
         note("nfz_contracts bronze (twice)", b)
-        status = analyse(arrow, teryt)
+        mapped, map_info = real_map()
+        status = analyse(arrow, teryt, mapped, map_info)
     except Exception as exc:
         status = 1
         import traceback
