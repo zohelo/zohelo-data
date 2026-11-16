@@ -47,6 +47,11 @@ and the blocks that hold Polish regions, then the blocks that hold Poland, other
 aggregates, last the blocks with neither (other countries' regions only, airport pairs). Within a
 group, smaller blocks first, and a group is finished before the next one starts.
 
+GUS BDL is a Polish source, so its three groups are territorial levels: subgroups down to
+voivodeships and subregions, then down to powiats, then down to gminas and statistical localities. The group is the lowest
+level the subgroup's variables have (`silver.bdl_variables`, read once per run with the lookups);
+a subgroup without variable metadata is built with the last group. Nothing else is read for it.
+
 How a block's group is found (#2974): a block whose structure has no geography dimension is in the
 last group, from the structure metadata alone. For the other blocks the structure does not help:
 the structure messages Eurostat publishes name one `GEO` code list for every dataset, not the codes a
@@ -91,7 +96,8 @@ decides what to build from Iceberg metadata only (file lists and table propertie
 listing or opening data files; it reads a block's Silver and Gold files only when it rebuilds that
 block, reads the source's small lookups once per run, and reads `gold.<source>_geography` only when
 the geography map changed. One file per block and table keeps a rebuild or a block query at one
-object per table.
+object per table. A source may have a block's Silver files downloaded once per rebuild
+(`local_input`, GUS BDL), so the steps of its build stage do not each read them from storage.
 
 - **Per source, not one table:** sources are drilled across, never unioned; a query for one block
   reads one file.
@@ -140,8 +146,12 @@ one. It is retried when its recipe changes.
   dimension order: the indicator-like dimensions (`indic_*`, `na_item`, `bop_item`, `nrg_bal`,
   `stk_flow`, …; one pattern in the build stage) and `s_adj`, because seasonal adjustment belongs to
   the measure. Every other dimension is a breakdown, codes as published in `breakdown_json`.
-- **GUS BDL.** The rule of `poc_build_bdl.sql`: label positions where no variable of the subgroup
-  says `ogółem` name the measure; a period label becomes the frequency.
+- **GUS BDL.** The rule of `poc_build_bdl.sql`, read from the subgroup's own Silver file
+  (`gold_gus_bdl_labels.sql`): label positions where no variable of the subgroup says `ogółem` name
+  the measure; a first label that names a month, a quarter or `rok` becomes the frequency and the
+  date. A cumulative period (`1-3 kwartały`, `styczeń-maj`, `półrocze`) cannot be placed and is
+  counted as not loaded. The curated stage's hand-made exceptions (measure positions of two
+  subgroups, chained price bases, year and level filters) are not part of the rule.
 - **GUS DBW.** `gus_dbw:<block>:<presentation id>[:<cycle>]@<frequency>`: measure = indicator ×
   presentation, as `poc_build_dbw.sql`. The frequency comes from the period's own name (`id_okres`:
   "kind of data" annual, half-yearly, quarterly, monthly), not from the block id; `<cycle>` appears only
@@ -172,13 +182,35 @@ rule-based build stages apply the rules the curated stages already apply:
   a flag) is a value Eurostat publishes, most of all in the airport-pair and stock datasets, and is
   loaded as published: no layer fills a cell, and the bulk file, Silver and Gold hold the same number
   of zeros per dataset (#2973). A reader that wants no zeros filters on `value`.
-- GUS BDL: an empty value is not loaded; a cell with attribute `x` ("filling the item is impossible
-  or pointless") is not loaded even when it carries 0; two different published values for one key
-  reject the subgroup in Silver already.
+- GUS BDL: an empty value is not loaded; a 0 under a no-value sign is not loaded (#2852: website
+  signs `x`, `X`, `n`; API attribute ids 4, 14, 50, 91), a number other than 0 under such a sign is;
+  two different published values for one key reject the subgroup in Silver already. A value for a
+  year after the year of the subgroup's version, and every row of a subgroup named a projection
+  (`prognoza`), has status `forecast`.
 - GUS DBW: an empty value is not loaded; a 0 with a no-value sign (`id_brak_wartosci` other than 253
   "Nie dotyczy") is not loaded, a non-zero number with such a sign is loaded as `flagged`; a value whose
   `id_tajnosci` is not 43 "Dane jawne" is loaded with status `confidential`; `id_flaga` gives
   `provisional`, `estimated`, `break`, `low_reliability` and `forecast` (30 "Prognoza").
+
+**GUS BDL geography by code.** A BDL unit id carries the TERYT code of its area, so Poland, a
+voivodeship, a powiat and a gmina are mapped by that code through the map's rows of the 7-digit
+TERYT codes (`gold_gus_bdl_map.sql`, run once per run; the build stage and the builder's check of
+a changed map read its result). The rows `gold.map_geography` holds for these ids are matched by
+name and are not used here: they leave four in ten gmina ids unmatched and give some gminas the
+area of a namesake. A code TERYT no longer has stays unmatched; it is never matched by name.
+
+**One area, several units (GUS BDL).** BDL publishes one area under several units: a region
+(level 3) that is a whole voivodeship, a gmina before and after it got town rights, the TERYT code
+of an older export beside the unit id, another unit under a borrowed id. Two rows under one
+`geography_key` would repeat `series_key × date_key`, and choosing between them would be a silent
+pick. `gold_gus_bdl_units.sql` orders the units of an area by rule (the area's own unit before a
+region that stands in for it, the current TERYT code before a changed one, the unit id before the
+TERYT code), and `gold_gus_bdl_cells.sql` gives each cell (series × year) to the first unit that
+has it. The same cell of a later unit stays in Gold under `_X` with the source code
+`<code>#<area>`, whatever its value, so no row is dropped and no value is chosen; so does every
+row of a unit whose name is not the name of its id (a borrowed id) and of units the rule cannot
+order. The builder reads that form when the map changes, so giving regions their own keys later
+rebuilds only the blocks that hold one.
 
 ### 6. Frequency is part of the measure key; S and W have their own frequency
 
