@@ -8,20 +8,26 @@ the public endpoint `/api/rpwdl-public-resource/ledgers-zip/initial?fileTypeInsi
 (`<register>_<active|inactive>`), version = download time (no Last-Modified), written only when the SHA-256 changed;
 restart unit: one ZIP. About 104 MB a run (November 2026). Weekly schedule (Tuesday 04:25 UTC).
 
-Bronze (`ingestion/to_bronze/rpwdl/load.py`) reads only allowlisted columns: `rpwdl_providers` (podmioty.csv),
-`rpwdl_establishments` (zaklady.csv), `rpwdl_units` (jednostki.csv), `rpwdl_cells` (komorki.csv, with beds) and
-`rpwdl_practices` (praktyki.csv of the 8 practice registers). Never read: names, NIP, decision and business-register
-numbers, street addresses, postcodes, phone, e-mail, web addresses, and the members `wspolnicy.csv` (practitioners'
-names and licence numbers) and `adresy_swiadczen.csv` (places of practice). A changed header rejects the ZIP. Landing
-and the Archive keep the ZIPs as received (newest plus 30 days).
+Privacy (register PLS-020: aggregate counts only). A healthcare provider can be one natural person (sole trader) and
+an individual practice is one practitioner, so no table keeps an identifier of a provider or a practice: no name,
+NIP, REGON, book number, ledger id or practice register id (pseudonymous identifiers of a natural person are still
+personal data). Bronze (`ingestion/to_bronze/rpwdl/load.py`) reads only allowlisted columns:
+`rpwdl_providers` (podmioty.csv), `rpwdl_establishments` (zaklady.csv), `rpwdl_units` (jednostki.csv), `rpwdl_cells`
+(komorki.csv, with beds) and `rpwdl_practices` (praktyki.csv of the 8 practice registers). The seat TERYT of a
+provider and the correspondence TERYT of a practice reach Bronze cut to the voivodeship (two digits); establishments,
+units and cells (places of care) keep their own ids and TERYT code. Never read: names, NIP, REGON, decision and
+business-register numbers, street addresses, postcodes, phone, e-mail, web addresses, and the members `wspolnicy.csv`
+(practitioners' names and licence numbers) and `adresy_swiadczen.csv` (places of practice). A changed header rejects
+the ZIP. Landing and the Archive keep the ZIPs as received (newest plus 30 days), `wspolnicy.csv` included: an open
+owner question (#3117), with the licence. Person-level records (sole traders) are not loaded without an owner decision.
 
 Silver (`warehouse/models/silver/rpwdl/`): one row per provider ledger, establishment, unit, cell and practice entry
-of the newest files; the text `NULL` and `brak wpisu` are missing values; dates and counts typed (other text fails the
-build); voivodeship = first two digits of the TERYT code; `is_active` = active ledger file, not removed, not ended on
-the snapshot (download) day. Gold: block `register` (`poc_build_rpwdl`, annual, date = 1 January of the snapshot
-year, latest-only): active providers, establishments, organisational units, beds in organisational cells, practices
-(also by register), Poland and 16 voivodeships; entity tables `healthcare_provider_rpwdl` and
-`healthcare_establishment_rpwdl` (keys book_id, establishment_id, REGON, TERC keys). Draft KPIs
+of the newest files (grain: the file row for providers and practices, the id for the places of care); the text
+`NULL` and `brak wpisu` are missing values; dates and counts typed (other text fails the build); voivodeship = first
+two digits of the TERYT code when `silver.teryt_terc` has that voivodeship; `is_active` = active ledger file, not
+removed, not ended on the snapshot (download) day. Gold: block `register` (`poc_build_rpwdl`, annual, date = 1 January
+of the snapshot year, latest-only): active providers, establishments, organisational units, beds in organisational
+cells, practices (also by register), Poland and 16 voivodeships; counts only, no entity tables. Draft KPIs
 `healthcare_providers`, `medical_practices`.
 
 Left out: services per cell (swiadczenia.csv, 1.1 M rows), inspections (kontrole), accreditations (akredyt_*),

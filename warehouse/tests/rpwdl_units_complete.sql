@@ -1,22 +1,15 @@
--- rpwdl_units (register PLS-020): both ledger files (active, inactive) are present and every one of the 16
--- voivodeships has active rows. A register file that stops loading or a TERYT column that changes meaning fails
--- here instead of thinning the counts silently. Refs only this model (one test per Silver model).
-with expected as (
-    select unnest(['02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32']) as code
-    union all
-    select unnest(['ledger:active', 'ledger:inactive'])
-),
-
-found as (
-    select distinct voivodeship_code as code
-    from {{ ref('rpwdl_units') }}
-    where is_active and voivodeship_code is not null
-    union all
-    select distinct 'ledger:' || ledger_state
+-- rpwdl_units (register PLS-020): both ledger files (active, inactive) are present and active rows cover 16
+-- voivodeships (voivodeship_code comes from silver.teryt_terc, so no code list is typed here). A register file that
+-- stops loading or a TERYT column that changes meaning fails here instead of thinning the counts silently. Refs only
+-- this model (one test per Silver model).
+with found as (
+    select
+        count(distinct voivodeship_code) filter (where is_active) as voivodeships,
+        count(*) filter (where ledger_state = 'active') as active_rows,
+        count(*) filter (where ledger_state = 'inactive') as inactive_rows
     from {{ ref('rpwdl_units') }}
 )
 
-select e.code as missing
-from expected as e
-left join found as f on e.code = f.code
-where f.code is null
+select *
+from found
+where voivodeships <> 16 or active_rows = 0 or inactive_rows = 0

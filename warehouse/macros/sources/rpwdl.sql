@@ -23,12 +23,13 @@
     end
 {%- endmacro %}
 
-{# The voivodeship of a TERYT code (2, 4 or 7 digits as published): its first two digits when they are one of the
-   16 voivodeship codes; 0000000 and other text give null. #}
+{# The voivodeship of a TERYT code (2, 4 or 7 digits as published; Bronze keeps only 2 for providers and
+   practices): its first two digits when they are a voivodeship of silver.teryt_terc (newest catalogue state);
+   0000000, the text NULL and other text give null. #}
 {% macro poc_rpwdl_voivodeship(column) -%}
     case
         when left({{ poc_rpwdl_text(column) }}, 2) in (
-            '02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32'
+            select v.terc_code from {{ ref('teryt_terc') }} as v where v.unit_level = 'wojewodztwo'
         ) then left({{ poc_rpwdl_text(column) }}, 2)
     end
 {%- endmacro %}

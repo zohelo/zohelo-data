@@ -1,9 +1,10 @@
 {# RPWDL organisational cells (komórki organizacyjne: wards, clinics, labs) of the healthcare providers' units,
    register PLS-020: one row per cell (cell_id) of the newest active and inactive provider files
-   (bronze.rpwdl_cells). Grain: cell_id. Allowlist: no name, address or contact columns. specialty_code =
-   department code part VIII as published, specialty_name its label. Bed and place counts as published (a missing
-   count stays null; text that is not a count fails the build). is_active = in an active ledger file and not
-   ended on the snapshot date (a suspended cell counts). #}
+   (bronze.rpwdl_cells). Grain: cell_id. Allowlist: no provider ledger id, REGON, name, address or contact columns
+   (the ids kept identify places of care, not their provider). specialty_code = department code part VIII as
+   published, specialty_name its label. Bed and place counts as published (a missing count stays null; text that
+   is not a count fails the build). is_active = in an active ledger file and not ended on the snapshot date (a
+   suspended cell counts). #}
 with newest as ({{ poc_rpwdl_newest('rpwdl_cells') }}
 ),
 
@@ -12,8 +13,6 @@ typed as (
         cell_id,
         unit_id,
         establishment_id,
-        book_id,
-        {{ poc_rpwdl_text('regon') }} as regon,
         case when ends_with(entity, '_active') then 'active' else 'inactive' end as ledger_state,
         {{ poc_rpwdl_text('unit_code') }} as unit_code,
         {{ poc_rpwdl_text('cell_code') }} as cell_code,

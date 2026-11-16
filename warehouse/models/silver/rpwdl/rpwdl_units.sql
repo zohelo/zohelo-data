@@ -1,7 +1,8 @@
 {# RPWDL organisational units (jednostki organizacyjne) of the healthcare providers' establishments, register
    PLS-020: one row per unit (unit_id) of the newest active and inactive provider files (bronze.rpwdl_units).
-   Grain: unit_id. Allowlist: no name, address or contact columns. unit_code = the department code part V as
-   published. is_active = in an active ledger file and not ended on the snapshot date (a suspended unit counts). #}
+   Grain: unit_id. Allowlist: no provider ledger id, REGON, name, address or contact columns (the ids kept identify
+   places of care, not their provider). unit_code = the department code part V as published. is_active = in an
+   active ledger file and not ended on the snapshot date (a suspended unit counts). #}
 with newest as ({{ poc_rpwdl_newest('rpwdl_units') }}
 ),
 
@@ -9,8 +10,6 @@ typed as (
     select
         unit_id,
         establishment_id,
-        book_id,
-        {{ poc_rpwdl_text('regon') }} as regon,
         case when ends_with(entity, '_active') then 'active' else 'inactive' end as ledger_state,
         {{ poc_rpwdl_text('unit_code') }} as unit_code,
         {{ poc_rpwdl_text('teryt') }} as teryt,

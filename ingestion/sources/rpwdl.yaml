@@ -43,8 +43,9 @@ extraction:
 
 landing: 01_landing/rpwdl/
 # Retention: newest version plus 30 days of superseded weekly copies (about 0.5 GB). The practice ZIPs carry the
-# practitioners' names and licence numbers (wspolnicy.csv) as published; Bronze never reads that member and keeps
-# only the allowlisted columns of the others (ingestion/to_bronze/rpwdl/load.py).
+# practitioners' names and licence numbers (wspolnicy.csv) as published, so Landing and the Archive hold personal
+# data for that time (owner question on #3117); Bronze never reads that member and keeps only the allowlisted
+# columns of the others, no identifiers of providers or practices (ingestion/to_bronze/rpwdl/load.py).
 archive_policy:
   move: true
   retention: {keep_latest: 1, keep_days: 30}
@@ -53,8 +54,7 @@ bronze: [bronze.rpwdl_providers, bronze.rpwdl_establishments, bronze.rpwdl_units
          bronze.rpwdl_practices, bronze.rpwdl_rejected_files]
 silver: [silver.rpwdl_providers, silver.rpwdl_establishments, silver.rpwdl_units, silver.rpwdl_cells,
          silver.rpwdl_practices]
-gold: [gold.build_rpwdl, gold.healthcare_provider_rpwdl, gold.healthcare_establishment_rpwdl,
-       gold.metrics_healthcare_providers, gold.metrics_medical_practices]
+gold: [gold.build_rpwdl, gold.metrics_healthcare_providers, gold.metrics_medical_practices]  # counts only
 full_rebuild:   # model: {rows: ceiling} (owner policy #822); counts from Dev trial 43796970764 (16 Nov 2026)
   rpwdl_providers: {rows: 71000}  # 47,060 (29,846 active + 17,214 inactive ledger rows)
   rpwdl_establishments: {rows: 85000}  # 56,201
@@ -62,10 +62,8 @@ full_rebuild:   # model: {rows: ceiling} (owner policy #822); counts from Dev tr
   rpwdl_cells: {rows: 950000}  # 627,566 (483,755 + 143,811)
   rpwdl_practices: {rows: 430000}  # 278,341 (8 practice registers, active + inactive)
   poc_build_rpwdl: {rows: 300}  # 203 (5 measures x 17 areas, practices also by 8 registers)
-  healthcare_provider_rpwdl: {rows: 71000}  # one row per provider ledger, 47,060
-  healthcare_establishment_rpwdl: {rows: 85000}  # 56,201
-  poc_metrics_healthcare_providers: {rows: 40}  # 17 areas a snapshot year (34 rows in both metrics)
-  poc_metrics_medical_practices: {rows: 40}  # 17 areas a snapshot year (34 rows in both metrics)
+  poc_metrics_healthcare_providers: {rows: 26}  # 17 (Poland and 16 voivodeships, one snapshot year)
+  poc_metrics_medical_practices: {rows: 26}  # 17 (Poland and 16 voivodeships, one snapshot year)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): 18 whole-register ZIPs (about 104 MB, 1.1 M Bronze rows) replaced whole on
