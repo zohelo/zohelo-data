@@ -3,8 +3,10 @@
 Landing extract twice into zz_dev_gios_air/01_landing (Landing bucket) plus inspect and verify, Bronze load twice into
 namespace zz_dev_gios_air (lake prefix zz_dev_gios_air/; the load also writes the Silver entity table gios_air_hourly
 there), a Bronze profile, the dbt Silver models and their schema and completeness tests and the Gold build stage
-rendered with Jinja from warehouse/ and run in local DuckDB over the scratch tables (each built twice). One HEAD request
-to the newest archive ZIP (size only). Everything written is removed in `finally`. Deleted before merge.
+rendered with Jinja from warehouse/ and run in local DuckDB over the scratch tables (each built twice), with the Gold
+schema tests and tests/gios_air_quality_value_range.sql. One HEAD request to the newest archive ZIP (size only) and
+one request to aggregate/getAggregatePm10Data (GIOŚ's own 24-hour PM10 means) as the producer cross-check. Everything
+written is removed in `finally`. Deleted before merge.
 """
 
 from __future__ import annotations
@@ -194,8 +196,15 @@ def bronze_profile(con) -> dict:
         "lat_lon_range": one(con, f"select min(try_cast(latitude as double)) || '/' || max(try_cast(latitude as double)) || ' ' || "
                                   f"min(try_cast(longitude as double)) || '/' || max(try_cast(longitude as double)) from {st}"),
     }
-    show(con, "values per parameter (Bronze)", f"select s.parameter_code, count(*), count(m.value), min(try_cast(m.value as double)), "
-              f"max(try_cast(m.value as double)), avg(try_cast(m.value as double)) from {m} m join {s} s using (sensor_id) group by 1 order by 1")
+    per_param = (f"select s.parameter_code, count(*) n, count(m.value) n_value, count(*) - count(m.value) n_null, "
+                 f"count(*) filter (where try_cast(m.value as double) < 0) n_neg, min(try_cast(m.value as double)) mn, "
+                 f"max(try_cast(m.value as double)) mx from {m} m join (select distinct sensor_id, parameter_code from {s}) s "
+                 f"using (sensor_id) group by 1 order by 2 desc")
+    show(con, "values per parameter (Bronze)", per_param)
+    p["per_parameter_gold_codes"] = rows(con, f"select * from ({per_param}) where parameter_code in {POLLUTANTS}")
+    p["markers"] = {"null_value": p["measurements"]["null_value"], "non_numeric": p["measurements"]["non_numeric"],
+                    "distinct_non_numeric": rows(con, f"select distinct value from {m} where value is not null and "
+                                                      f"try_cast(value as double) is null limit 10")}
     return p
 
 
@@ -254,6 +263,9 @@ def gold(con) -> dict:
                 "breakdown_json", "breakdown_label_json", "sex_code", "is_total", "value", "observation_status_key",
                 "source_version", "raw_sha256"]
     g["columns_ok"] = cols == expected
+    g["schema_tests"] = schema_tests(con, "warehouse/models/gold/_gios_air_quality.yml", "poc_build_gios_air_quality", "build")
+    g["value_range_failures"] = len(con.execute(render("warehouse/tests/gios_air_quality_value_range.sql",
+                                                       {"poc_build_gios_air_quality": "build"})).fetchall())
     g["dup_series_date"] = one(con, "select count(*) from (select measure_key || '|' || geography_key || case when geography_key = '_X' "
                                     "then ':' || coalesce(geography_source_code, '') else '' end || '|' || breakdown_json, date_key "
                                     "from build group by all having count(*) > 1)")
@@ -280,6 +292,70 @@ def gold(con) -> dict:
         select (select d from day), round(avg(m), 4), count(*), (select round(value, 4) from build where measure_codes = 'PM10'
                and geography_key = 'PL' and date_key = (select d from day)) from sd""")
     return g
+
+
+def producer_pm10(con) -> dict:
+    """GIOŚ's own 24-hour PM10 means (aggregate/getAggregatePm10Data, limit 2 requests a minute): one request, then
+    the station-days it names compared with the sensor-day means of silver (same station code and day)."""
+    time.sleep(31)
+    r = requests.get(f"{landing.API}/aggregate/getAggregatePm10Data", params={"page": 0, "size": 500},
+                     headers={"User-Agent": landing.USER_AGENT, "Accept": landing.ACCEPT}, timeout=(30, 120))
+    out: dict = {"status": r.status_code, "bytes": len(r.content)}
+    try:
+        body = r.json()
+    except ValueError:
+        out["text"] = r.text[:300]
+        return out
+    lists = {k: v for k, v in body.items() if isinstance(v, list)}
+    out["lists"] = {k: len(v) for k, v in lists.items()}
+    out["totalPages"] = body.get("totalPages")
+    items = next(iter(lists.values()), [])
+    if not items:
+        return out
+    keys = list(items[0])
+    out["keys"] = keys
+    out["sample"] = items[:2]
+    code_key = next((k for k in keys if "kod stacji" in k.lower()), None)
+    date_key = next((k for k in keys if k.lower().startswith("data")), None)
+    value_keys = [k for k in keys if "24" in k]
+    out["matched_keys"] = {"station": code_key, "date": date_key, "value": value_keys}
+    if not (code_key and date_key and value_keys):
+        return out
+    rows_in = [(str(i.get(code_key)), str(i.get(date_key))[:10], i.get(value_keys[0])) for i in items
+               if i.get(value_keys[0]) is not None]
+    con.execute("create or replace table producer (station_code varchar, day varchar, value varchar)")
+    con.executemany("insert into producer values (?, ?, ?)", [(a, b, str(c)) for a, b, c in rows_in])
+    out["compare"] = rows(con, """
+        with ours as (
+            select st.station_code, strftime(h.measured_on, '%Y-%m-%d') as day, avg(h.value) as mean,
+                   count(h.value) as hours
+            from b_gios_air_hourly as h
+            join gios_air_sensors as s using (sensor_id)
+            join gios_air_stations as st on s.station_id = st.station_id
+            where s.parameter_code = 'PM10'
+            group by all
+        )
+        select p.station_code, p.day, p.value as gios_24h, round(o.mean, 2) as ours, o.hours,
+               round(o.mean - try_cast(p.value as double), 2) as diff
+        from producer as p join ours as o using (station_code, day)
+        where o.hours >= 18
+        order by abs(o.mean - try_cast(p.value as double)) desc nulls last
+        limit 8""")
+    out["compare_stats"] = rows(con, """
+        with ours as (
+            select st.station_code, strftime(h.measured_on, '%Y-%m-%d') as day, avg(h.value) as mean,
+                   count(h.value) as hours
+            from b_gios_air_hourly as h
+            join gios_air_sensors as s using (sensor_id)
+            join gios_air_stations as st on s.station_id = st.station_id
+            where s.parameter_code = 'PM10'
+            group by all
+        )
+        select count(*) as pairs, count(*) filter (where abs(o.mean - try_cast(p.value as double)) <= 0.5) as within_05,
+               round(max(abs(o.mean - try_cast(p.value as double))), 2) as max_abs_diff
+        from producer as p join ours as o using (station_code, day)
+        where o.hours >= 24""")
+    return out
 
 
 def licence() -> dict:
@@ -352,6 +428,7 @@ def main(argv: list[str]) -> int:
         note("gios_air_quality trial silver", s, "warning" if bad else "notice")
         note("gios_air_quality trial gold", gold(con))
         note("gios_air_quality trial licence and archive", {"licence": licence(), "archive": archive_zip()})
+        note("gios_air_quality trial producer PM10 24h cross-check", producer_pm10(con))
     except Exception as exc:  # noqa: BLE001
         status = 1
         traceback.print_exc()
