@@ -1,0 +1,216 @@
+{# ZUS Rocznik Statystyczny Ubezpieczeń Społecznych (register PLS-010): curated tables of each edition, read from the
+   PDF text layer (bronze.zus_yearbook_lines, newest copy of each edition). Grain: measure_code x area_name x
+   period_year (an edition covers three years; editions do not overlap).
+   Tables, found by title, never by page number:
+     payers_voiv   "Tabl. 8. Płatnicy według województw. Stan w dniu 31 grudnia": active contribution payers (accounts)
+     insured_voiv  "Tabl. 9. Ubezpieczeni według województw. Stan w dniu 31 grudnia": persons insured in old-age and
+                   disability pension insurance, assigned to the voivodeship of the payer's seat
+   Layout: the table occupies one half of a page (newer editions print two pages on one PDF page, so a line holds
+   both halves); its half runs from the title's column to the next title further right on the page, its lines from
+   the title to the next title below it. The header line gives the three years; every area row is the area name
+   (Polska and the 16 voivodeships, as printed, footnote letters dropped) followed by exactly one value per year.
+   Values are split on runs of two or more spaces; a value is digits in groups of three separated by one space, or
+   a ZUS sign ('-' or '–' nothing, '.' no data, 'x' not applicable): signs are kept as cell_status with no value,
+   never 0. A row whose value count differs from the year count yields nothing (tests/zus_yearbook_tables_complete.sql
+   then fails). The Polska row prints its values on the following line ("POLAND ..."). #}
+{% set areas = ['polska', 'dolnośląskie', 'kujawsko-pomorskie', 'lubelskie', 'lubuskie', 'łódzkie', 'małopolskie',
+    'mazowieckie', 'opolskie', 'podkarpackie', 'podlaskie', 'pomorskie', 'śląskie', 'świętokrzyskie',
+    'warmińsko-mazurskie', 'wielkopolskie', 'zachodniopomorskie'] %}
+with lines as (
+    select
+        entity as edition,
+        page_number,
+        line_number,
+        -- 'Tabl.' (any case) becomes a five-character marker, so a split keeps every column in place
+        regexp_replace(line_text, '[Tt][Aa][Bb][Ll]\.', '§§§§§', 'g') as line_text,
+        raw_sha256,
+        source_version
+    from {{ source('zus_yearbook', 'zus_yearbook_lines') }}
+    qualify dense_rank() over (partition by entity order by source_version desc) = 1
+),
+
+-- every 'Tabl.' on a line, with its column (1-based)
+marks as (
+    select
+        l.edition,
+        l.page_number,
+        l.line_number,
+        length(array_to_string(list_slice(string_split(l.line_text, '§§§§§'), 1, s.k), '§§§§§')) + 1 as col,
+        string_split(l.line_text, '§§§§§')[s.k + 1] as after_mark
+    from lines as l,
+        generate_series(1, len(string_split(l.line_text, '§§§§§')) - 1) as s (k)
+),
+
+titles as (
+    select
+        edition,
+        page_number,
+        line_number,
+        col,
+        case
+            when regexp_matches(after_mark, '^\s*[0-9]+\.?\s+(?i:płatnicy\s+według\s+województw)') then 'payers'
+            when regexp_matches(after_mark, '^\s*[0-9]+\.?\s+(?i:ubezpieczeni\s+według\s+województw)') then 'insured'
+        end as measure_code
+    from marks
+),
+
+-- the table's half and its lines: up to the next mark further right on the page, and the next mark in the same
+-- half below the title
+bands as (
+    select
+        t.edition,
+        t.page_number,
+        t.line_number as title_line,
+        t.measure_code,
+        greatest(t.col - 12, 1) as col_from,
+        coalesce((
+            select min(m.col) from marks as m
+            where m.edition = t.edition and m.page_number = t.page_number and m.col > t.col + 40
+        ), 100000) as col_to,
+        coalesce((
+            select min(m.line_number) from marks as m
+            where
+                m.edition = t.edition and m.page_number = t.page_number and m.line_number > t.line_number
+                and abs(m.col - t.col) <= 20
+        ), 100000) as line_to
+    from titles as t
+    where t.measure_code is not null
+),
+
+region as (
+    select
+        b.edition,
+        b.measure_code,
+        b.page_number,
+        l.line_number,
+        rtrim(substr(l.line_text, b.col_from, b.col_to - b.col_from)) as text,
+        l.raw_sha256,
+        l.source_version
+    from bands as b
+    inner join lines as l
+        on
+            b.edition = l.edition and b.page_number = l.page_number
+            and b.title_line < l.line_number and b.line_to > l.line_number
+),
+
+-- the first line of the region with three years is the header
+header as (
+    select
+        edition,
+        measure_code,
+        page_number,
+        min_by(text, line_number) as text
+    from region
+    where regexp_matches(text, '(19|20)[0-9]{2}\s+(19|20)[0-9]{2}\s+(19|20)[0-9]{2}')
+    group by all
+),
+
+years as (
+    select
+        edition,
+        measure_code,
+        page_number,
+        list_transform(
+            regexp_extract_all(text, '(?:19|20)[0-9]{2}'), lambda y: cast(y as integer)  -- noqa: RF02, RF03
+        ) as years
+    from header
+),
+
+parsed as (
+    select
+        r.*,
+        lower(regexp_extract(trim(r.text), '^([A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż-]+)', 1)) as word,
+        -- what follows the name and its dot leaders, cut on runs of two or more spaces
+        list_filter(
+            list_transform(
+                regexp_split_to_array(
+                    regexp_replace(trim(r.text), '^[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż-]+[a-c]?(\s*\.)*', ''), '\s{2,}'
+                ),
+                lambda x: trim(x)  -- noqa: RF02, RF03
+            ),
+            lambda x: x <> ''  -- noqa: RF02, RF03
+        ) as tokens
+    from region as r
+),
+
+area_rows as (
+    select
+        p.*,
+        (
+            select a.area from (select unnest({{ areas }}) as area) as a
+            where p.word = a.area or (p.word like a.area || '_' and length(p.word) = length(a.area) + 1)
+        ) as area_name
+    from parsed as p
+),
+
+-- the Polska row may print its values on the next line of the region (after the English name)
+rows_with_values as (
+    select
+        a.edition,
+        a.measure_code,
+        a.page_number,
+        a.line_number,
+        a.area_name,
+        case
+            when len(a.tokens) > 0 then a.tokens
+            else (
+                select min_by(n.tokens, n.line_number) from parsed as n
+                where
+                    n.edition = a.edition and n.measure_code = a.measure_code and n.page_number = a.page_number
+                    and n.line_number between a.line_number + 1 and a.line_number + 2 and len(n.tokens) > 0
+                    and n.word not in {{ areas | replace('[', '(') | replace(']', ')') }}
+            )
+        end as tokens,
+        a.raw_sha256,
+        a.source_version
+    from area_rows as a
+    where a.area_name is not null
+),
+
+cells as (
+    select
+        r.edition,
+        r.measure_code,
+        r.page_number,
+        r.line_number,
+        r.area_name,
+        y.years[s.k] as period_year,
+        r.tokens[s.k] as value_text,
+        r.raw_sha256,
+        r.source_version
+    from rows_with_values as r
+    inner join years as y
+        on r.edition = y.edition and r.measure_code = y.measure_code and r.page_number = y.page_number,
+        generate_series(1, len(y.years)) as s (k)
+    where
+        len(r.tokens) = len(y.years)
+        and list_bool_and(
+            list_transform(r.tokens, lambda x: regexp_matches(x, '^([0-9]{1,3}( [0-9]{3})*|[-–.x])$'))  -- noqa: RF02
+        )
+)
+
+select
+    'zus_yearbook' as source_system,
+    edition,
+    case measure_code when 'payers' then 'payers_voiv' else 'insured_voiv' end as table_code,
+    measure_code,
+    case measure_code when 'payers' then 'payers' else 'persons' end as unit_code,
+    area_name,
+    period_year,
+    value_text,
+    case
+        when value_text in ('-', '–') then null
+        when value_text in ('.', 'x') then null
+        else cast(replace(value_text, ' ', '') as double)
+    end as value,
+    case
+        when value_text in ('-', '–') then 'nil'
+        when value_text = '.' then 'missing'
+        when value_text = 'x' then 'not_applicable'
+        else 'ok'
+    end as cell_status,
+    page_number,
+    line_number,
+    source_version,
+    raw_sha256
+from cells
