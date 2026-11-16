@@ -2599,7 +2599,8 @@ sources:
   name: API Statystyki NFZ – Świadczenia
   short_name: 'NFZ statistics: services'
   provider: Narodowy Fundusz Zdrowia (NFZ)
-  status: approved
+  source_system: nfz_services
+  status: built
   family: B
   kpi: true
   geography: Poland; provider/clinical group tables
@@ -2644,7 +2645,8 @@ sources:
     blockers:
     - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived values; published
       values are shown unchanged'
-    - Enumerate history
+    - 'Built for basic-data only (Poland and NFZ branches, 2009-2024, #2929): the other table types and the hospital-type
+      splits are not loaded'
     references:
     - https://api.nfz.gov.pl/app-stat-api-jgp/
     - https://api.nfz.gov.pl/app-stat-api-jgp/terms
