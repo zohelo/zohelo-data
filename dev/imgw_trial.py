@@ -283,10 +283,31 @@ def models(con):
     return s
 
 
+def map_geography(con):
+    """poc_geography__imgw_archive rendered over production gold.dim_geography (read only) as poc_map_geography."""
+    out = {}
+    try:
+        geo = catalog().load_table(("gold", "dim_geography")).scan(
+            selected_fields=("geography_key", "level_name", "terc_code")).to_arrow()
+        con.register("geo_arrow", geo)
+        con.execute("create or replace table geo as select * from geo_arrow")
+        out["geo"] = "gold.dim_geography (production, read only)"
+    except Exception as exc:  # noqa: BLE001
+        con.execute("create or replace table geo as select 'TERC:' || teryt_code as geography_key, "
+                    "'wojewodztwo' as level_name, teryt_code as terc_code from prg_units")
+        out["geo"] = f"fallback from prg_units ({type(exc).__name__}: {str(exc)[:150]})"
+    text = Path("warehouse/macros/sources/imgw_archive.sql").read_text()
+    body = text.split("{% macro poc_geography__imgw_archive() %}")[1].split("{% endmacro %}")[0]
+    con.execute(f"create or replace table poc_map_geography as with {body} select * from imgw_archive")
+    out["map_rows"] = rows(con, "select count(*), count(distinct source_code), min(geography_key), max(geography_key) from poc_map_geography")
+    return out
+
+
 def gold(con):
     src = {"imgw_archive_synop_daily": "arch_silver"}
-    g = {}
-    arch_refs = {"prg_units": "prg_units", "imgw_archive_synop_stations": "imgw_archive_synop_stations"}
+    g = {"map_geography": map_geography(con)}
+    arch_refs = {"prg_units": "prg_units", "imgw_archive_synop_stations": "imgw_archive_synop_stations",
+                 "poc_map_geography": "poc_map_geography"}
     for model, refs in (("poc_build_imgw_archive", arch_refs), ("poc_build_imgw_api", {"imgw_api_synop": "imgw_api_synop"})):
         sql = render(f"warehouse/models/gold/{model}.sql", refs, src)
         counts = []
@@ -306,6 +327,8 @@ def gold(con):
             "tests": schema_tests(con, f"warehouse/models/gold/_{model.removeprefix('poc_build_')}.yml", t, model=model),
         }
     a = "poc_build_imgw_archive"
+    g["unmapped_rows_X"] = one(con, f"select count(*) from {a} where geography_key = '_X'")
+    g["daily_geographies"] = rows(con, f"select distinct geography_key from {a} where frequency = 'D'")
     g["spot_monthly_2025_pl"] = rows(con, f"select period_label, measure_codes, value from {a} where frequency = 'M' and geography_key = 'PL' and period_label like '2025-%' order by 2, 1")
     g["spot_jan_jul_pl"] = rows(con, f"select year(date_key), round(avg(value) filter (where month(date_key) = 1), 2), round(avg(value) filter (where month(date_key) = 7), 2) from {a} where measure_key like '%synop_monthly:degC%' and geography_key = 'PL' and year(date_key) in (1970, 1990, 2010, 2024, 2025) group by 1 order by 1")
     g["spot_voiv_2025_07_temp_and_precip"] = rows(con, f"select geography_key, measure_codes, value from {a} where frequency = 'M' and date_key = date '2025-07-01' and geography_key <> 'PL' order by 2, 1", 40)
@@ -326,8 +349,8 @@ def gold(con):
             where replace(replace(upper(strip_accents(a.station_name)), '-', ' '), '  ', ' ') <> replace(replace(upper(strip_accents(s.station_name)), '-', ' '), '  ', ' ') group by all""", 30),
         "unmatched_api": rows(con, "select distinct a.station_id, a.station_name from imgw_api_synop a anti join imgw_archive_synop_stations s on s.api_synop_station_id = a.station_id"),
     }
-    g["spot_annual_mean_temp"] = rows(con, f"select year(date_key), round(avg(value), 2), count(*) from {a} where measure_key like '%synop_monthly:degC%' and year(date_key) in (1971, 1991, 2001, 2020, 2023, 2024, 2025) group by 1 order by 1")
-    g["spot_annual_precip"] = rows(con, f"select year(date_key), round(sum(value), 1), count(*) from {a} where measure_key like '%synop_monthly:mm%' and year(date_key) in (1991, 2001, 2010, 2020, 2023, 2024, 2025) group by 1 order by 1")
+    g["spot_annual_mean_temp"] = rows(con, f"select year(date_key), round(avg(value), 2), count(*) from {a} where measure_key like '%synop_monthly:degC%' and geography_key = 'PL' and year(date_key) in (1971, 1991, 2001, 2020, 2023, 2024, 2025) group by 1 order by 1")
+    g["spot_annual_precip"] = rows(con, f"select year(date_key), round(sum(value), 1), count(*) from {a} where measure_key like '%synop_monthly:mm%' and geography_key = 'PL' and year(date_key) in (1991, 2001, 2010, 2020, 2023, 2024, 2025) group by 1 order by 1")
     g["spot_daily"] = rows(con, f"select date_key, value from {a} where frequency = 'D' and date_key in ('2025-01-01', '2025-07-01', '2026-10-31', '1966-01-01') order by 1")
     g["months_missing"] = rows(con, f"""with m as (select unnest(generate_series(date '1966-01-01', (select max(date_key) from {a} where frequency = 'M'), interval 1 month))::date d)
         select measure_key, count(*) from (select distinct measure_key from {a} where frequency = 'M') k cross join m anti join {a} b on b.measure_key = k.measure_key and b.date_key = m.d group by 1""")
@@ -445,8 +468,8 @@ def main(argv):
         results["licence"] = licence()
         note("imgw gold build stages, licence gate, production fact rows", {**{k: g[k] for k in ("poc_build_imgw_archive", "poc_build_imgw_api")},
                                                                             "licence": results["licence"], "prod": results["prod"]})
-        note("imgw gold spot values", {k: g[k] for k in ("spot_jan_jul_pl", "spot_monthly_2025_pl", "spot_annual_precip", "spot_daily", "months_missing", "outside_bounds", "metrics_rows_per_kpi", "max_monthly_precip_by_level", "kpi_rows_per_area_period_max")})
-        note("imgw voivodeships and station link", {"prg_voivodeships": results["prg_voivodeships"], **{k: g[k] for k in ("stations_per_voivodeship", "stations_with_coordinates_not_placed", "stations_without_coordinates", "active_stations_without_coordinates", "api_synop_link", "spot_voiv_2025_07_temp_and_precip")}})
+        note("imgw gold spot values", {k: g[k] for k in ("spot_jan_jul_pl", "spot_monthly_2025_pl", "spot_annual_mean_temp", "spot_annual_precip", "spot_daily", "months_missing", "outside_bounds", "metrics_rows_per_kpi", "max_monthly_precip_by_level", "kpi_rows_per_area_period_max")})
+        note("imgw voivodeships and station link", {"prg_voivodeships": results["prg_voivodeships"], **{k: g[k] for k in ("map_geography", "unmapped_rows_X", "daily_geographies", "stations_per_voivodeship", "stations_with_coordinates_not_placed", "stations_without_coordinates", "active_stations_without_coordinates", "api_synop_link", "spot_voiv_2025_07_temp_and_precip")}})
 
     except Exception as exc:  # noqa: BLE001
         status = 1
