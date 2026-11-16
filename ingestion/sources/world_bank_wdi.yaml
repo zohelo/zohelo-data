@@ -26,11 +26,17 @@ archive_policy:
   prune: delete   # report reviewed 2026-10-28, run https://github.com/zohelo/zohelo-data/actions/runs/40446148186/job/122000035035
 bronze: [bronze.wdi_bulk_observations, bronze.wdi_bulk_metadata, bronze.wdi_rejected_files]
 silver: [silver.wdi_observations, silver.wdi_countries, silver.wdi_indicators]
-# Gold: the curated KPI selection is in the shared models of warehouse/warehouse.yaml (build_wdi, fact_annual).
+# Gold: the curated KPI selection is build_wdi (listed here) and the shared models of warehouse/warehouse.yaml
+# (fact_annual).
 # Full coverage (O43, D35, docs/gold-coverage.md): every indicator and economy by rule, written by
 # gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table wdi_observations.
-gold: [gold.world_bank_wdi_observations, gold.world_bank_wdi_series, gold.world_bank_wdi_measures,
+gold: [gold.build_wdi, gold.world_bank_wdi_observations, gold.world_bank_wdi_series, gold.world_bank_wdi_measures,
        gold.world_bank_wdi_geography, gold.observations_rejected]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  wdi_countries: {rows: 1000}  # 265
+  wdi_indicators: {rows: 10000}  # 1,498
+  wdi_observations: {rows: 12000000, exception: "#870"}  # 9,045,734; rebuilt weekly with WDI
+  poc_build_wdi: {rows: 500000}  # + 16 slice indicators, all economies (#2592)
 # Tables of retired code still in the catalog, replaced by the tables above (globs allowed).
 legacy_tables: [bronze.wdi_data, bronze.wdi_country, bronze.wdi_series, bronze.wdi_country_series,
                 bronze.wdi_footnote, bronze.wdi_series_time, gold.*wdi*]

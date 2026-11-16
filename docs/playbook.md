@@ -191,7 +191,7 @@ merge (O34). Row ceilings come from a measured count, about 1.5 × the trial's r
   `gold.fact_*` through its build stage with every geography and date key matched or
   explained, its measures are in `dim_measure`, and each KPI it publishes has `kpi_measure`
   (and `kpi_v2_map`) rows; or (reference source) its Gold dimension or entity table is built,
-  tested and listed in `warehouse/warehouse.yaml`. **Register status:** the build PR sets `built` (code merged, production not yet proven).
+  tested and listed in its `ingestion/sources/<source>.yaml` `gold:`. **Register status:** the build PR sets `built` (code merged, production not yet proven).
   `silver` (= green) and `gold` (= in Gold) are set only at the Verify station of
   [flow.md](flow.md), by the orchestrator, after the scheduler's own runs prove it.
 
