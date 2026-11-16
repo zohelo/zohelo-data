@@ -1034,25 +1034,30 @@ def write(
     status: dict[str, Any],
     generated_at: str,
     prefix: str = V2_PREFIX,
+    silver_releases: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Write every v2 file under prefix, read each back and compare its numbers with Gold; returns sizes and counts.
 
-    ``metrics`` holds the gold.metrics_<concept> tables gold.publish has already read (by concept); the others are
-    read here. silver.releases is optional (calendar.json then has the release_calendar.csv rows only)."""
+    ``metrics`` holds the gold.metrics_<concept> tables gold.publish has already read (by concept).
+    ``silver_releases``: the rows of silver.releases gold.publish read before its first write; with them the
+    caller has read every table it could, and nothing is read from the catalog here (a concept that was missing
+    then is not built in this run). A caller that passes none (a trial) has the other concepts and the releases
+    read here, where silver.releases is optional (calendar.json then has the release_calendar.csv rows only)."""
     from pyiceberg.exceptions import NoSuchTableError
 
     from warehouse.publish import gold
 
     tables = dict(metrics)
     candidates = v2_kpis(seed("kpi"), seed("kpi_v2_map"))
-    for entry in candidates:
-        if entry["concept"] not in tables:
-            with suppress(NoSuchTableError):
-                tables[entry["concept"]] = gold(cat, "gold", f"metrics_{entry['concept']}")
-    try:
-        silver_releases = gold(cat, "silver", "releases").to_pylist()
-    except NoSuchTableError:
-        silver_releases = []
+    if silver_releases is None:
+        for entry in candidates:
+            if entry["concept"] not in tables:
+                with suppress(NoSuchTableError):
+                    tables[entry["concept"]] = gold(cat, "gold", f"metrics_{entry['concept']}")
+        try:
+            silver_releases = gold(cat, "silver", "releases").to_pylist()
+        except NoSuchTableError:
+            silver_releases = []
     previous = {name: _published(client, prefix + name) for name in ("latest.json", "briefs.json")}
     unusable = sorted(n for n, doc in previous.items() if doc is not None and n not in usable_previous(previous))
     if unusable:
