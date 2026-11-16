@@ -1,0 +1,7 @@
+version: 2
+models:
+  - name: poc_build_zus_yearbook
+    description: >-
+      Gold build stage of the ZUS social insurance statistical yearbook (register PLS-010): blocks payers_voiv and
+      insured_voiv, annual (31 December), Poland and the 16 voivodeships, from silver.zus_yearbook_tables; values,
+      units and scale as published (D33). Registered in warehouse/macros/sources/zus_yearbook.sql.
