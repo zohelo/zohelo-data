@@ -23,7 +23,11 @@ loads):
 |---|---|---|---|---|
 | Eurostat | about 8,200 datasets | about 7,000 M | about 1,000 M | about 8 GB |
 | GUS BDL | about 2,250 subgroups | about 460 M (340 M of it gminas) | about 76 M | about 3 GB |
-| GUS DBW | about 5,000 blocks | about 890 M | not counted | about 3 GB |
+| GUS DBW | 4,903 blocks | about 890 M | not counted (trial sample: one series per 5 rows) | about 2.6 GB |
+
+GUS DBW in Gold: a 52-block trial (52 M rows, #2983) wrote about 7.0 MB per million rows to the observations
+and 3.5 MB to the series table, about 9 GB for all of DBW at that rate (the sample is dominated by one gmina
+block, so this is an upper estimate).
 
 Eurostat by geography: Poland and its regions about 200 M rows; with the EU aggregates and all
 countries about 4,200 M; every geography about 7,000 M. Full Eurostat in Gold is about 22 GB, more
@@ -148,8 +152,13 @@ one. It is retried when its recipe changes.
   date. A cumulative period (`1-3 kwartały`, `styczeń-maj`, `półrocze`) cannot be placed and is
   counted as not loaded. The curated stage's hand-made exceptions (measure positions of two
   subgroups, chained price bases, year and level filters) are not part of the rule.
-- **GUS DBW.** The rule of `poc_build_dbw.sql`: measure = indicator × presentation; the territorial
-  dimension is the one whose positions match areas most often; the other dimensions are breakdowns.
+- **GUS DBW.** `gus_dbw:<block>:<presentation id>[:<cycle>]@<frequency>`: measure = indicator ×
+  presentation, as `poc_build_dbw.sql`. The frequency comes from the period's own name (`id_okres`:
+  "kind of data" annual, half-yearly, quarterly, monthly), not from the block id; `<cycle>` appears only
+  where a monthly figure is taken once a quarter or once a year. The territorial dimension is the
+  dimension slot with the most positions named like Polish areas in the block's own dictionary; the
+  other dimensions are breakdowns, DBW's dimension and position ids as published. Detail:
+  [sources.md](sources.md), GUS DBW.
 
 The rule is code: changing it changes every recipe of the source. Rule keys differ from the curated
 hand-made keys (`eurostat:UNE_RT_M:PC_ACT:TOTAL` curated, `eurostat:UNE_RT_M:PC_ACT:SA@M` by rule).
@@ -178,9 +187,10 @@ rule-based build stages apply the rules the curated stages already apply:
   two different published values for one key reject the subgroup in Silver already. A value for a
   year after the year of the subgroup's version, and every row of a subgroup named a projection
   (`prognoza`), has status `forecast`.
-- GUS DBW: an empty value is not loaded; a 0 with a missing-value reason (`id_brak_wartosci` other
-  than "value present") is not loaded; a value with a confidentiality id (`id_tajnosci`) is loaded
-  with status `confidential`.
+- GUS DBW: an empty value is not loaded; a 0 with a no-value sign (`id_brak_wartosci` other than 253
+  "Nie dotyczy") is not loaded, a non-zero number with such a sign is loaded as `flagged`; a value whose
+  `id_tajnosci` is not 43 "Dane jawne" is loaded with status `confidential`; `id_flaga` gives
+  `provisional`, `estimated`, `break`, `low_reliability` and `forecast` (30 "Prognoza").
 
 **GUS BDL geography by code.** A BDL unit id carries the TERYT code of its area, so Poland, a
 voivodeship, a powiat and a gmina are mapped by that code through the map's rows of the 7-digit
@@ -218,7 +228,7 @@ exclusions (decision 10).
 ### 7. Labels from the Silver dictionaries
 
 Names come from the source's own dictionaries (Eurostat: `eurostat_dataflows`, `eurostat_dimensions`,
-`eurostat_codes`; BDL: `bdl_variables`; DBW: `src_dbw_dictionary`). `measure_name` = block name, unit
+`eurostat_codes`; BDL: `bdl_variables`; DBW: the block's files of `bronze.dbw_dictionary_items`). `measure_name` = block name, unit
 name and the names of the measure codes, stored once per measure. Names of breakdown codes are
 **not** stored per row or per series (about 1,000 M Eurostat series): `breakdown_label_json` stays
 empty for these sources, as in the curated `poc_build_eurostat`, and the names belong in one small table
@@ -334,3 +344,5 @@ and nothing else. Everything after the build stage is shared.
 | 2 | Names of breakdown codes | One small table per block (`gold.<source>_codes`: dimension, code, name, total code) before the portal shows these tables | architect |
 | 3 | Eurostat codes of Polish NUTS 3 regions: mapped by name (#2974) | `poc_geography__eurostat()` maps a `PLxxx` code to the podregion (`BDL:<id>`) of the same name in the voivodeship of its NUTS 2 parent, because no loaded table holds the NUTS–KTS correspondence. Decide whether to load GUS's correspondence table and map by code | architect |
 | 4 | The series table is more than half of the bytes | Keep it for the first load; then decide whether series attributes move onto the fact for annual blocks | architect |
+| 5 | GUS DBW cumulative periods ("dane narastające": January to the month, first quarter to the quarter), three-year data and years that are not calendar years are not loaded; blocks that hold nothing else are rejected as empty | A fact kind with a period start and end (year to date) before they are loaded; never folded into A, Q or M | architect |
+| 6 | GUS DBW names powiaty, gminas and countries without a code: they are `_X` with `<NAME> #<position id>` kept | A correspondence of DBW position ids to TERYT from GUS; names only where one name is one unit | architect |
