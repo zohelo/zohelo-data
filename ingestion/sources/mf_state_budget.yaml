@@ -40,6 +40,8 @@ archive_policy:
 bronze: [bronze.mf_state_budget_cells, bronze.mf_state_budget_rejected_files]
 silver: [silver.budget_execution]
 gold: [gold.build_public_finance]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  budget_execution: {rows: 2800}  # 1,845 (Dev trial 43099813876), 2018-2026, ~200 a year
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): small workbooks (under 200,000 cells), rebuilt in full.
