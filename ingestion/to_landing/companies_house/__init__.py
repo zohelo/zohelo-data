@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 from typing import Any
 import zipfile
 
@@ -41,13 +42,16 @@ COLUMNS = (  # the columns landed, in the file's order; every other column is dr
     "SICCode.SicText_3",
     "SICCode.SicText_4",
 )
+BLANK_LIMIT = 1000  # empty lines skipped per file (the 2026-11 file has one mid-file); more means a broken file
 
 
 def reduce_landing(body: bytes) -> bytes:
     """The snapshot ZIP with only ``COLUMNS`` of its one CSV (header names stripped: some follow a space), as a
     ZIP with one CSV of the same name. The same input gives the same bytes (fixed member date, fixed compression).
     Raises when the ZIP does not hold exactly one CSV, a kept column is missing or repeated, or a row has another
-    number of fields than the header: such a file cannot be reduced safely and is not landed."""
+    number of fields than the header: such a file cannot be reduced safely and is not landed. An empty line (no
+    field at all; DuckDB skips it too) is no record and is left out; more than ``BLANK_LIMIT`` refuse the file. The
+    counts are printed to the job log."""
     out = io.BytesIO()
     with zipfile.ZipFile(io.BytesIO(body)) as archive:
         members = [m for m in archive.infolist() if m.filename.lower().endswith(".csv")]
@@ -69,14 +73,22 @@ def reduce_landing(body: bytes) -> bytes:
                 raise RuntimeError(f"{SOURCE}: the CSV header lacks or repeats {wrong}; nothing is landed")
             keep, width = [header.index(c) for c in COLUMNS], len(header)
             writer.writerow(COLUMNS)
+            blank, written = [], 0
             for number, row in enumerate(rows, start=2):
+                if not row:
+                    blank.append(number)
+                    if len(blank) > BLANK_LIMIT:
+                        raise RuntimeError(f"{SOURCE}: more than {BLANK_LIMIT} empty lines; nothing is landed")
+                    continue
                 if len(row) != width:
                     raise RuntimeError(
                         f"{SOURCE}: CSV line {number} has {len(row)} fields, the header {width}; nothing is landed"
                     )
                 writer.writerow([row[i] for i in keep])
+                written += 1
             text.flush()
             text.detach()
+    print(json.dumps({"companies_house reduce": {"rows": written, "empty_lines": len(blank), "at": blank[:5]}}))
     return out.getvalue()
 
 
