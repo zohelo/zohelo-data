@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -110,7 +111,8 @@ def trial(count: int) -> None:  # noqa: PLR0915
     runs["run4_real_date"] = run()
     verify = bulk_file.main(landing.SOURCE, "verify", landing_root=SCRATCH, specs=landing.specs())
     state4 = landing_state(client, bucket)
-    annotate("notice", "ms_krs landing (scratch)", {"selection": upto, "real_date": str(real), **runs, "verify_exit": verify,
+    annotate("notice", "ms_krs landing (scratch)", {"duckdb": duckdb.__version__, "head": os.environ.get("GITHUB_SHA", "")[:8],
+             "selection": upto, "real_date": str(real), **runs, "verify_exit": verify,
              "after_run2": state2, "after_run4": state4})
     bronze_b = bronze(cat)
     table = cat.load_table((SCRATCH, "ms_krs_extracts"))
@@ -148,10 +150,13 @@ def trial(count: int) -> None:  # noqa: PLR0915
         con.execute(f"create or replace table gold_b as {build}")
         for name, rows in counts.items():
             rows.append(con.execute(f"select count(*) from {name}").fetchone()[0])
+    complete = render("warehouse/tests/ms_krs_entities_complete.sql", {"ms_krs_entities": "silver_e"}, {"ms_krs_extracts": "bronze_b"})
     newest = "(select * from bronze_b qualify rank() over (partition by entity order by source_version desc, ingested_at desc) = 1)"
     annotate("notice", "ms_krs silver ms_krs_entities", {
         "rows_two_builds": counts["silver_e"], "bronze_rows_all_versions": q(con, "select count(*) from bronze_b"),
         "dup_krs_number": q(con, "select count(*) from (select krs_number from silver_e group by 1 having count(*) > 1)"),
+        "test_ms_krs_entities_complete_rows": q(con, f"select count(*) from ({complete})"),
+        "test_register_not_in[RejP,RejS]": q(con, "select count(*) from silver_e where register not in ('RejP', 'RejS')"),
         "null_keys[krs,has_extract,requested_on,raw_sha256]": q(con, "select count(*) filter (where krs_number is null), count(*) filter (where has_current_extract is null), count(*) filter (where requested_on is null), count(*) filter (where raw_sha256 is null) from silver_e"),
         "has_current_extract": q(con, "select has_current_extract, count(*) from silver_e group by 1 order by 1"),
         "register": q(con, "select register, count(*) from silver_e group by 1 order by 1"),
@@ -173,7 +178,8 @@ def trial(count: int) -> None:  # noqa: PLR0915
     annotate("notice", "ms_krs gold krs_entity", {
         "rows_two_builds": counts["gold_e"],
         "dup_krs_number": q(con, "select count(*) from (select krs_number from gold_e group by 1 having count(*) > 1)"),
-        "null[krs,register,name]": q(con, "select count(*) filter (where krs_number is null), count(*) filter (where register is null), count(*) filter (where name is null) from gold_e"),
+        "null[krs,register,name,lei_count]": q(con, "select count(*) filter (where krs_number is null), count(*) filter (where register is null), count(*) filter (where name is null), count(*) filter (where lei_count is null) from gold_e"),
+        "register_not_in[RejP,RejS]": q(con, "select count(*) from gold_e where register not in ('RejP', 'RejS')"),
         "map_rows_and_dup_codes": q(con, "select count(*), count(*) - count(distinct source_code) from map"),
         "map_keys": q(con, "select source_code, geography_key from map order by 2"),
         "seat_key_null_by_voivodeship": q(con, "select seat_voivodeship, count(*) from gold_e where seat_geography_key is null group by 1 order by 2 desc limit 8"),
