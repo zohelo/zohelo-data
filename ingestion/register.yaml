@@ -5083,7 +5083,8 @@ sources:
   name: Sejm API
   short_name: Sejm API
   provider: Chancellery of the Sejm
-  status: approved
+  source_system: sejm
+  status: built
   family: F
   kpi: false
   geography: Poland
