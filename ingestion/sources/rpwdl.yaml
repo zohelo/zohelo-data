@@ -55,7 +55,7 @@ bronze: [bronze.rpwdl_providers, bronze.rpwdl_establishments, bronze.rpwdl_units
 silver: [silver.rpwdl_providers, silver.rpwdl_establishments, silver.rpwdl_units, silver.rpwdl_cells,
          silver.rpwdl_practices]
 gold: [gold.build_rpwdl, gold.metrics_healthcare_providers, gold.metrics_medical_practices]  # counts only
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); counts from Dev trial 43796970764 (16 Nov 2026)
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); counts from Dev trials 43796970764 and 43813074556 (16 Nov 2026, same rows)
   rpwdl_providers: {rows: 71000}  # 47,060 (29,846 active + 17,214 inactive ledger rows)
   rpwdl_establishments: {rows: 85000}  # 56,201
   rpwdl_units: {rows: 120000}  # 79,616
