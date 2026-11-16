@@ -1,0 +1,5 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+childbirth_hospitalisations,nfz_services,nfz_services:1a:hospitalisations:5.51.01.0013001:hospitalisations,"hospitalisations settled in JGP N01, Poland and NFZ branches (NFZ statistics API, basic-data)",1,
+hip_replacements,nfz_services,nfz_services:1a:hospitalisations:5.51.01.0008013:hospitalisations,"hospitalisations settled in JGP H13, Poland and NFZ branches (NFZ statistics API, basic-data)",1,
+knee_replacements,nfz_services,nfz_services:1a:hospitalisations:5.51.01.0008015:hospitalisations,"hospitalisations settled in JGP H15, Poland and NFZ branches (NFZ statistics API, basic-data)",1,
+stroke_unit_hospitalisations,nfz_services,nfz_services:1a:hospitalisations:5.51.01.0001048:hospitalisations,"hospitalisations settled in JGP A48, Poland and NFZ branches (NFZ statistics API, basic-data)",1,

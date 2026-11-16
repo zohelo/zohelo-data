@@ -32,6 +32,9 @@ archive_policy:
 bronze: [bronze.zus_psz_cells, bronze.zus_psz_rejected_files]
 silver: [silver.zus_psz_observations]
 gold: [gold.build_zus_psz]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  zus_psz_observations: {rows: 2400}  # 1,570 (Dev trial 43271727766); about 217 more a quarter + about 90 a year (December tables)
+  poc_build_zus_psz: {rows: 2400}  # 1,564 (Dev trial 43271727766): 9 measures, 329 series
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a period
 # Refresh policy for all layers (D32): about 50 workbooks of 10-40 kB (under 20,000 cells) and a few hundred new
