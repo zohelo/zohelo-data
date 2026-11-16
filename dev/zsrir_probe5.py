@@ -103,7 +103,7 @@ def main(argv: list[str]) -> int:
                 d = get(f"/api/ZsrirData/DownloadReportFile?id={fid}")
                 if d is None:
                     continue
-                print(f"  download {fid} {it.get('fileName') or it.get('name')}: {d.status_code} {len(d.content)} bytes "
+                print(f"  download {fid} {it.get('filename')}: {d.status_code} {len(d.content)} bytes "
                       f"{d.headers.get('Content-Type')} {d.headers.get('Content-Disposition')} LM={d.headers.get('Last-Modified')} ETag={d.headers.get('ETag')}")
                 if d.status_code == 200:
                     (OUT / f"r{rid}_{fid}.bin").write_bytes(d.content)
