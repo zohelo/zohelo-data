@@ -31,6 +31,46 @@ REACH = [
 ]
 
 
+def aia_probe() -> None:
+    """If the server omits an intermediate, fetch it from the leaf's AIA 'CA Issuers' URL (the CA's own public
+    file) and verify the chain against certifi's roots plus that intermediate: verification stays on."""
+    import re
+    import ssl
+    import tempfile
+
+    import certifi
+
+    out = subprocess.run(
+        ["bash", "-c", "echo | timeout 30 openssl s_client -connect zsrir.minrol.gov.pl:443 -servername zsrir.minrol.gov.pl 2>/dev/null | openssl x509 -noout -text"],
+        capture_output=True, text=True, timeout=60,
+    ).stdout
+    m = re.search(r"CA Issuers - URI:(\S+)", out)
+    print("AIA CA Issuers:", m.group(1) if m else None)
+    if not m:
+        return
+    time.sleep(PAUSE)
+    der = requests.get(m.group(1), headers={"User-Agent": UA}, timeout=30).content
+    try:
+        pem = ssl.DER_cert_to_PEM_cert(der)
+    except Exception:  # noqa: BLE001 - may already be PEM or PKCS7
+        pem = der.decode("latin-1")
+    info = subprocess.run(["openssl", "x509", "-noout", "-subject", "-issuer", "-enddate"], input=pem, capture_output=True, text=True).stdout
+    print("intermediate:", info)
+    with tempfile.NamedTemporaryFile("w", suffix=".pem", delete=False) as f:
+        f.write(open(certifi.where()).read() + "\n" + pem)
+        bundle = f.name
+    for path in ("/", "/about", "/robots.txt", "/api", "/raporty"):
+        time.sleep(PAUSE)
+        try:
+            r = requests.get("https://zsrir.minrol.gov.pl" + path, headers={"User-Agent": UA}, timeout=30, verify=bundle)
+            print(f"verified-with-intermediate {path}: {r.status_code} {len(r.content)} {r.headers.get('Content-Type')}")
+            print("   ", r.text[:1500].replace("\n", " "))
+            for href in sorted(set(re.findall(r'(?:href|src)="([^"]+)"', r.text)))[:80]:
+                print("    link", href)
+        except requests.RequestException as exc:
+            print(f"verified-with-intermediate {path}: {type(exc).__name__} {str(exc)[:200]}")
+
+
 def main(argv: list[str]) -> int:
     out = subprocess.run(
         ["bash", "-c", "echo | timeout 30 openssl s_client -connect zsrir.minrol.gov.pl:443 -servername zsrir.minrol.gov.pl -showcerts 2>&1 | grep -E 's:|i:|Verify return|verify error|depth=|Certificate chain' | head -30"],
@@ -42,6 +82,7 @@ def main(argv: list[str]) -> int:
         capture_output=True, text=True, timeout=60,
     )
     print("== leaf AIA\n" + out.stdout)
+    aia_probe()
     for url in REACH:
         time.sleep(PAUSE)
         try:
