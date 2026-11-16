@@ -130,7 +130,7 @@ def held_entities(landing_root: str = "01_landing") -> set[str]:
 
 def plan(found: dict[str, str], landed: dict[str, str]) -> list[dict[str, Any]]:
     """Missing quarters (oldest first), quarters whose link changed, then the newest RECHECK quarters again."""
-    spec = {"format": "pdf", "version": "last_modified"}
+    spec = {"format": "pdf", "version": "last_modified", "retries": 3, "read_timeout": 120, "wait": 30}
     missing = [e for e in found if e not in landed]
     moved = [e for e in found if e in landed and landed[e] != found[e]]
     recheck = [e for e in sorted(found)[-RECHECK:] if e in landed and e not in moved]
@@ -154,6 +154,8 @@ def _inspect(p) -> int:
 
 
 def extract(budget_minutes: float, landing_root: str = "01_landing") -> int:
+    import requests
+
     from ingestion.common.r2 import req, s3
     from ingestion.common.report import annotate
     from ingestion.to_landing.patterns import bulk_file
@@ -179,6 +181,8 @@ def extract(budget_minutes: float, landing_root: str = "01_landing") -> int:
                 refused = {"entity": spec["entity"], "error": str(exc)[:160]}
                 break  # a refusal or a challenge page stops the run
             failed.append({"entity": spec["entity"], "error": str(exc)[:160]})
+        except (RuntimeError, requests.RequestException) as exc:  # after bulk_file's bounded retries
+            failed.append({"entity": spec["entity"], "error": f"{type(exc).__name__}: {exc}"[:160]})
     summary = {
         "listed": len(found),
         "planned": len(todo),
