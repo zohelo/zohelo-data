@@ -11,7 +11,6 @@ annotations.
 
 from __future__ import annotations
 
-import csv
 from pathlib import Path
 import re
 import time
@@ -163,6 +162,9 @@ def trial(cat) -> None:
         "categories": q(con, "select object_category, count(*) from silver_o group by 1 order by 2 desc"),
         "no_gmina": q(con, "select object_category, object_kind, count(*) from silver_o where gmina_count = 0 group by "
                            "all order by 3 desc limit 5"),
+        "bridge_point_roles": q(con, "select entity, point_roles::varchar, count(*) from silver_g group by all "
+                                     "order by 1, 3 desc"),
+        "objects_gmina_count": q(con, "select entity, gmina_count, count(*) from silver_o group by all order by 1, 2"),
         "bridge_levels": q(con, "select entity, count(distinct gmina_code), count(distinct powiat_code), "
                                 "count(distinct voivodeship_code) from silver_g group by 1")})
 
@@ -218,13 +220,14 @@ def trial(cat) -> None:
         "metrics_out_of_bound_0_5e5": sum(1 for r in metrics if not (0 <= r[3] <= 5e5)),
         "metrics_max": max((r[3] for r in metrics), default=None)})
 
-    seeds = Path("warehouse/seeds")
-    source_row = [r for r in csv.DictReader((seeds / "source.csv").open()) if r["source_key"] == SOURCE]
+    from warehouse import seed_rows
+
+    source_row = [r for r in seed_rows.rows("source") if r["source_key"] == SOURCE]
     lic = {r["licence_key"] for r in source_row}
     note("prng licence (catalogue rows)", {
-        "source_csv": source_row,
-        "licence_csv": [r for r in csv.DictReader((seeds / "licence.csv").open()) if r["licence_key"] in lic],
-        "unit_map": [r for r in csv.DictReader((seeds / "unit_map.csv").open()) if r["source_system"] == SOURCE]})
+        "source": source_row,
+        "licence": [r for r in seed_rows.rows("licence") if r["licence_key"] in lic],
+        "unit_map": [r for r in seed_rows.rows("unit_map") if r["source_system"] == SOURCE]})
 
 
 def cleanup(cat) -> None:
