@@ -1,0 +1,3 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+recorded_offences,poland,A,recorded_offences,policja_statistics,ogolem,policja_statistics:ogolem:offences:recorded,A,PL;VOIV,,sum,down,ready,"all offences recorded, Police statistics portal; see the workbook note on 2013 onwards"
+offence_detection_rate,poland,A,offence_detection_rate,policja_statistics,ogolem,policja_statistics:ogolem:pct:detection_rate,A,PL;VOIV,,rate,up,ready,"% detected as published, all offences, Police statistics portal"

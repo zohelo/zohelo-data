@@ -1,0 +1,6 @@
+version: 2
+models:
+  - name: poc_src_dbw
+    description: Extraction stage (Python model) — the activated DBW blocks' Silver rows, read from their files only.
+  - name: poc_src_dbw_dictionary
+    description: Extraction stage (Python model) — the label dictionaries of the activated DBW blocks' files.

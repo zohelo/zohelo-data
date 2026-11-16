@@ -1,0 +1,43 @@
+version: 2
+
+models:
+  - name: radon_institution
+    description: >-
+      One row per institution of the higher education and science system in POL-on (RAD-on, OPI PIB; terms not
+      established, internal only), keyed by POL-on's id: name, REGON, NIP, KRS, kind, university or science-institution
+      type, status (is_operating), start and liquidation dates, voivodeship (geography_key of dim_geography), town,
+      supervising institution. No natural persons.
+    columns:
+      - name: institution_uuid
+        description: POL-on's own id. No relationships test to a shared model.
+        tests: [not_null, unique]
+      - name: name
+        tests: [not_null]
+      - name: is_operating
+        tests: [not_null]
+  - name: radon_study_programme
+    description: >-
+      One row per study programme in POL-on (RAD-on, OPI PIB; internal only), keyed by POL-on's id: level, profile,
+      ISCED field, status, leading institution (institution_uuid of radon_institution) and its voivodeship, number of
+      launches.
+    columns:
+      - name: course_uuid
+        tests: [not_null, unique]
+      - name: leading_institution_uuid
+        description: The institution that leads the programme; Dev trial counts those missing from radon_institution.
+  - name: poc_build_radon
+    description: >-
+      Gold build stage of RAD-on / POL-on: operating institutions by kind and study programmes in operation by level,
+      Poland and voivodeships, on the day of the newest download (frequency D; no history yet). A count of the
+      register's records as RAD-on serves them.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_higher_education_institutions
+    description: KPI layer of higher_education_institutions (draft) from gold.build_radon via the facts.
+  - name: poc_metrics_study_programmes
+    description: KPI layer of study_programmes (draft) from gold.build_radon via the facts.
