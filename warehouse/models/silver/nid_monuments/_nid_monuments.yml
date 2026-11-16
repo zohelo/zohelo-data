@@ -1,0 +1,70 @@
+version: 2
+models:
+  - name: nid_monuments_items
+    description: >-
+      NID register of immovable monuments, register book A (licence unresolved, internal), from
+      bronze.nid_monuments_items: every item of the newest copy of the 17 PDF lists (16 voivodeships, Warsaw
+      separate), with the object, the register part as printed, its register_role (numbered, same_as_above,
+      component, unnumbered; rules in the model header), the powiat as printed in the page header, the locality and
+      the date of the list. No street address. Grain: list_code × item_number. Counts per list and role in the PR's
+      Dev trial; tests/nid_monuments_items_complete.sql checks every list is present.
+    tests:
+      - unique:
+          column_name: "list_code || '|' || item_number"
+    columns:
+      - name: list_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['dln', 'kuj', 'lbl', 'lbs', 'ldz', 'mal', 'maz', 'maz_war', 'opo', 'pdk', 'pdl', 'pom',
+                         'sls', 'swt', 'war', 'wlk', 'zpo']
+      - name: woj_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30',
+                         '32']
+      - name: item_number
+        tests: [not_null]
+      - name: powiat_text
+        tests: [not_null]
+      - name: list_state_date
+        tests: [not_null]
+      - name: register_role
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['numbered', 'same_as_above', 'component', 'unnumbered']
+      - name: raw_sha256
+        description: Landing SHA-256 of the source list (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: nid_monuments_decisions
+    description: >-
+      The register decisions of each item of silver.nid_monuments_items that has one (own, "jw." or as a part of
+      an ensemble): register number, decision date (null when the list prints no full date; the printed text kept)
+      and register_key = list:number:date, one register entry. Grain: list_code × item_number × decision_number.
+      tests/nid_monuments_decisions_complete.sql checks the share of numbered items whose decision dates could not
+      be read.
+    tests:
+      - unique:
+          column_name: "list_code || '|' || item_number || '|' || decision_number"
+    columns:
+      - name: list_code
+        tests: [not_null]
+      - name: item_number
+        tests: [not_null]
+      - name: decision_number
+        tests: [not_null]
+      - name: register_key
+        tests: [not_null]
+      - name: register_role
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['numbered', 'same_as_above', 'component']
+      - name: raw_sha256
+        tests: [not_null]

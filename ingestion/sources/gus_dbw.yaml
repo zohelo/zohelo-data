@@ -30,7 +30,12 @@ archive_policy:
 # Observations: one file per bulk file in Bronze and in Silver, replaced whole (design #875).
 bronze: [bronze.dbw_observations, bronze.dbw_dictionary_items, bronze.dbw_rejected_files]
 silver: [silver.dbw_observations]
-gold: []
+# Gold: the curated KPI blocks are in the shared models of warehouse/warehouse.yaml (build_dbw, fact_*).
+# Full coverage (O43, D35, docs/gold-coverage.md): every loaded block by rule, one file per block and table,
+# written by gold.observations (warehouse/observations.py, build stage warehouse/entity/gold_gus_dbw_build.sql),
+# not by dbt. gold.observations is not in `activities` yet: adding it there authorizes the Pipeline load.
+gold: [gold.gus_dbw_observations, gold.gus_dbw_series, gold.gus_dbw_measures, gold.gus_dbw_geography,
+       gold.observations_rejected]
 legacy_tables: [bronze.dbw_dictionaries, bronze.dbw_indicators, bronze.dbw_metadata, silver.dbw_dictionaries, silver.dbw_indicators, silver.dbw_metadata, gold.dim_dbw_dictionary, gold.dim_dbw_indicator, gold.dim_dbw_metadata, gold.fact_dbw_observations]
 
 # Refresh policy for all layers (design #875): a new file version replaces that file's entity
