@@ -5,8 +5,9 @@ models:
       Build stage — NFZ contracts API (register PLS-014): zohelo's counts and sums over the published agreement
       register (silver.nfz_contracts_agreements), annual by contract year, for the 16 NFZ regional branches (=
       voivodeships) and Poland (sum over the branches): agreements, healthcare providers (NFZ provider codes) and the
-      contracted amount in PLN (sum of published amounts; agreements without an amount are not in it), each in total
-      and by NFZ service type. Contract amounts are ceilings for the year, not expenditure.
+      contracted amount in PLN (sum of published amounts; agreements without an amount are not in it), totals over the
+      NFZ service types only (poc_fact_annual is above its warning ceiling, #2294; the breakdown by service type waits
+      for the per-block Gold load, D35). Contract amounts are ceilings for the year, not expenditure.
     tests:
       - unique:
           column_name: "measure_key || '|' || geography_key || '|' || breakdown_json || '|' || cast(date_key as varchar)"

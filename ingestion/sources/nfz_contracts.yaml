@@ -41,7 +41,7 @@ gold: [gold.build_nfz_contracts]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   nfz_contracts_agreements: {rows: 490000}  # 327,177 (Dev trial 43328769016)
   nfz_contracts_providers: {rows: 50000}  # 33,533 (Dev trial 43328769016)
-  poc_build_nfz_contracts: {rows: 9800}  # 6,506 (Dev trial 43328769016)
+  poc_build_nfz_contracts: {rows: 600}  # 408 expected (17 areas x 8 years x 3 measures; Dev trial TRIAL_RUN)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32 + #2955): 128 year-and-branch files (under 1 MB each) and a Silver table of
