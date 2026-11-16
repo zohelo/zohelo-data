@@ -1,0 +1,3 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+recorded_offences,policja_statistics,policja_statistics:ogolem:offences:recorded,"Police statistics portal, all offences, Poland and voivodeships",1,
+offence_detection_rate,policja_statistics,policja_statistics:ogolem:pct:detection_rate,"Police statistics portal, all offences, % as published, Poland and voivodeships",1,

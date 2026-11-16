@@ -1,0 +1,6 @@
+source_system,unit_code,measure_key_pattern,unit_key
+rpwdl,entities,,entities
+rpwdl,facilities,,facilities
+rpwdl,organisational_units,,organisational_units
+rpwdl,beds,,beds
+rpwdl,practices,,practices

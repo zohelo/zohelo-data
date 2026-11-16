@@ -1,0 +1,28 @@
+version: 2
+models:
+  - name: policja_statistics_offences
+    description: >-
+      Polish Police statistics portal (register PLG-033): offences recorded, offences detected and the detection rate
+      (% detected) per offence category workbook (ogolem = all offences, wybrane_7 = seven selected categories),
+      area as printed (Polska, the 16 voivodeships, the two police areas inside Mazowieckie) and year, from 1999.
+      Grain: category_code x area_name x measure_code x period_year. Columns found by header text; 'n.d.' and empty
+      cells kept with a null value and their cell_status. Aggregates only, no data about persons. History and trial
+      run: see ingestion/sources/policja_statistics.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', category_code, area_name, measure_code, period_year)"
+    columns:
+      - name: category_code
+        tests: [not_null, {accepted_values: {arguments: {values: [ogolem, wybrane_7]}}}]
+      - name: area_name
+        tests: [not_null]
+      - name: measure_code
+        tests: [not_null, {accepted_values: {arguments: {values: [recorded, detected, detection_rate]}}}]
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: [offences, pct]}}}]
+      - name: period_year
+        tests: [not_null]
+      - name: cell_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, not_available, missing]}}}]
+      - name: raw_sha256
+        tests: [not_null]
