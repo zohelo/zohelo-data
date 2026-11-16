@@ -37,6 +37,9 @@ archive_policy:
 bronze: [bronze.unesco_uis_observations, bronze.unesco_uis_rejected_files]
 silver: [silver.unesco_uis_observations]
 gold: [gold.build_unesco_uis]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  unesco_uis_observations: {rows: 16000}  # 10,689 (Dev trial 43159213097)
+  poc_build_unesco_uis: {rows: 4500}  # 2,869: 27 EU members (Dev trial 43159213097)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): two small whole-indicator selections (a few thousand records); a new copy
