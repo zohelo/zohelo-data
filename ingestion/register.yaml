@@ -5579,7 +5579,8 @@ sources:
   name: Police Statistics portal
   short_name: Police statistics
   provider: Polish Police Headquarters
-  status: approved
+  source_system: policja_statistics
+  status: built
   family: F
   kpi: true
   geography: Poland
@@ -5620,7 +5621,10 @@ sources:
       New KPIs: recorded offences per 100,000 residents and detection rate (%), annual, Poland and voivodeships (population
       from GUS). Caveat stated on the portal: for 2013-2016 offences of the central units (BSW KGP, CBŚP) are assigned to
       voivodeship units, earlier years to garrisons. Police units are not one-to-one with voivodeships (a separate Warsaw
-      metropolitan command is expected; to confirm in the workbook). Effort S.'
+      metropolitan command is expected; to confirm in the workbook). Effort S. Built 16 Nov 2026 (#2969, Dev trial 43806377026):
+      the workbooks print Polska, the 16 voivodeships (Mazowieckie as one row) and the two police areas that split Mazowieckie
+      (KSP Warszawa, KWP Radom); the voivodeships add up to Poland. Gold: Poland and voivodeships; KPIs recorded_offences
+      and offence_detection_rate (draft); the rate per 100,000 residents and the other eight categories are not built yet.'
     overlap: GUS BDL publishes Police crime statistics by voivodeship and powiat, more current than the portal workbooks;
       keep both series (O31).
   research:
