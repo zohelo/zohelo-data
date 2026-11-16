@@ -37,13 +37,15 @@ archive_policy:
 bronze: [bronze.gtfs_krakow_records, bronze.gtfs_krakow_rejected_files]
 silver: [silver.gtfs_krakow_stops, silver.gtfs_krakow_routes, silver.gtfs_krakow_service_days]
 gold: [gold.build_gtfs_krakow, gold.transit_stops_gtfs_krakow, gold.transit_routes_gtfs_krakow]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+# Row ceilings (owner policy #822): stops and routes about 1.5 x Dev run 43800738045; service_days and the Gold
+# block grow by two to three rows per service day, so their ceilings leave about three years of history.
+full_rebuild:
   gtfs_krakow_stops: {rows: 6000}
-  gtfs_krakow_routes: {rows: 400}
+  gtfs_krakow_routes: {rows: 330}
   gtfs_krakow_service_days: {rows: 4500}
   poc_build_gtfs_krakow: {rows: 4500}
   transit_stops_gtfs_krakow: {rows: 6000}
-  transit_routes_gtfs_krakow: {rows: 400}
+  transit_routes_gtfs_krakow: {rows: 330}
 
 bronze_latest_only: true   # policy #822/#845: per window entity; earlier windows stay, they are other entities
 # Refresh policy for all layers (D32): three small ZIPs twice a week; Bronze keeps one file per window (stop_times as

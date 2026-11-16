@@ -33,13 +33,15 @@ archive_policy:
 bronze: [bronze.gtfs_wroclaw_records, bronze.gtfs_wroclaw_rejected_files]
 silver: [silver.gtfs_wroclaw_stops, silver.gtfs_wroclaw_routes, silver.gtfs_wroclaw_service_days]
 gold: [gold.build_gtfs_wroclaw, gold.transit_stops_gtfs_wroclaw, gold.transit_routes_gtfs_wroclaw]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  gtfs_wroclaw_stops: {rows: 4500}
-  gtfs_wroclaw_routes: {rows: 300}
+# Row ceilings (owner policy #822): stops and routes about 1.5 x Dev run 43800738045; service_days and the Gold
+# block grow by two to three rows per service day, so their ceilings leave about three years of history.
+full_rebuild:
+  gtfs_wroclaw_stops: {rows: 3700}
+  gtfs_wroclaw_routes: {rows: 210}
   gtfs_wroclaw_service_days: {rows: 3000}
   poc_build_gtfs_wroclaw: {rows: 4000}
-  transit_stops_gtfs_wroclaw: {rows: 4500}
-  transit_routes_gtfs_wroclaw: {rows: 300}
+  transit_stops_gtfs_wroclaw: {rows: 3700}
+  transit_routes_gtfs_wroclaw: {rows: 210}
 
 bronze_latest_only: true   # policy #822/#845: per window entity; earlier windows stay, they are other entities
 # Refresh policy for all layers (D32): one ZIP of about 11 MB per timetable change; Bronze keeps one file per window

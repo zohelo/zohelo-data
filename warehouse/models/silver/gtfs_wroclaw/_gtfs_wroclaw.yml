@@ -37,7 +37,7 @@ models:
       - name: route_id
         tests: [not_null]
       - name: route_type
-        description: GTFS route_type as published (values seen in the trial).
+        description: GTFS route_type as published (values seen in Dev run 43800738045).
         tests: [not_null, {accepted_values: {arguments: {values: [0, 3], quote: false}}}]
       - name: raw_sha256
         tests: [not_null]

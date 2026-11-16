@@ -29,13 +29,15 @@ archive_policy:
 bronze: [bronze.gtfs_poznan_records, bronze.gtfs_poznan_rejected_files]
 silver: [silver.gtfs_poznan_stops, silver.gtfs_poznan_routes, silver.gtfs_poznan_service_days]
 gold: [gold.build_gtfs_poznan, gold.transit_stops_gtfs_poznan, gold.transit_routes_gtfs_poznan]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  gtfs_poznan_stops: {rows: 4500}
-  gtfs_poznan_routes: {rows: 300}
+# Row ceilings (owner policy #822): stops and routes about 1.5 x Dev run 43800738045; service_days and the Gold
+# block grow by two to three rows per service day, so their ceilings leave about three years of history.
+full_rebuild:
+  gtfs_poznan_stops: {rows: 5000}
+  gtfs_poznan_routes: {rows: 330}
   gtfs_poznan_service_days: {rows: 3000}
   poc_build_gtfs_poznan: {rows: 4000}
-  transit_stops_gtfs_poznan: {rows: 4500}
-  transit_routes_gtfs_poznan: {rows: 300}
+  transit_stops_gtfs_poznan: {rows: 5000}
+  transit_routes_gtfs_poznan: {rows: 330}
 
 bronze_latest_only: true   # policy #822/#845: per window entity; earlier windows stay, they are other entities
 # Refresh policy for all layers (D32): one ZIP of about 12 MB per timetable period; Bronze keeps one file per window
