@@ -1,0 +1,3 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+higher_education_institutions,radon,radon:institutions:institutions,"RAD-on / POL-on, status Działająca, all kinds",1,
+study_programmes,radon,radon:study_programmes:study_programmes,"RAD-on / POL-on, programmes in operation, all levels",1,
