@@ -6,8 +6,11 @@ Route (docs/sources/entsog.md; register PL-ENV-021): the platform's public REST 
 &from=<first day>&to=<last day>``. The API User Manual v3.0 asks for monthly ranges ("Monthly ranges are strongly
 recommended"), a query runs at most 60 s, and failed requests need "reasonable back-off intervals" without rapid
 retries; without ``limit=-1`` it returns 100 records. One month is about 1.4 MB and 1,500 records for GAZ-SYSTEM.
-The API serves a rolling window of about five years (older days answer 404 "Data on the TP is archived on a rolling
-basis ... check the TP Archives"); the TP Archives are not read.
+The API serves a rolling window (older days answer 404 "Data on the TP is archived on a rolling basis ... check the
+TP Archives"); the TP Archives are not read. On 12 Nov 2026 the window began on 1 January 2021 (December 2020 answered
+404 archived), i.e. 1 January of the year five years back: ``first_month`` derives the window's first month from the
+date that way, so months leave the rotation as they leave the window instead of spending its slot on a 404. If the
+API archives earlier than that rule, an "archived" answer in a run skips every older month of that run.
 
 Entity = operator x indicator x gas month (``physical_flow__<operatorKey>__<YYYY-MM>``). Version = the newest
 ``lastUpdateDateTime`` in the month's answer (UTC, ``YYYYMMDDTHHMMSSZ``). Two identical requests return identical
@@ -56,7 +59,7 @@ API = "https://transparency.entsog.eu/api/v1/operationaldatas"
 # Operators loaded (register id per operator). The same code takes another operator by adding it here.
 OPERATORS = {"PL-TSO-0002": "PL-ENV-021"}  # GAZ-SYSTEM S.A., Poland
 INDICATORS = {"physical_flow": "Physical Flow"}  # entity slug -> API indicator name (case-sensitive)
-FIRST_MONTH = (2021, 1)  # oldest gas month the API answered on 12 Nov 2026 (1 Jan 2020 answered 404, archived)
+WINDOW_YEARS = 5  # the API's window starts on 1 January five years back (12 Nov 2026: 2021-01 served, 2020-12 archived)
 PAUSE_SECONDS = 5.0
 TIMEOUT_SECONDS = 90  # the API stops a query after 60 s
 BACKOFF_SECONDS = (30, 90, 240)  # waits before the 2nd, 3rd and 4th attempt
@@ -68,9 +71,14 @@ def entity(slug: str, operator: str, month: tuple[int, int]) -> str:
     return f"{slug}__{operator}__{month[0]:04d}-{month[1]:02d}"
 
 
+def first_month(today: date) -> tuple[int, int]:
+    """Oldest gas month the API still serves: January of the year WINDOW_YEARS back."""
+    return (today.year - WINDOW_YEARS, 1)
+
+
 def months(today: date) -> list[tuple[int, int]]:
     """Gas months of the window, oldest first, up to the current month (UTC)."""
-    out, (y, m) = [], FIRST_MONTH
+    out, (y, m) = [], first_month(today)
     while (y, m) <= (today.year, today.month):
         out.append((y, m))
         y, m = (y + 1, 1) if m == 12 else (y, m + 1)
@@ -252,7 +260,7 @@ def main(argv=None) -> int:
         todo = plan(held, today, {s.strip() for s in args.filter.split(",") if s.strip()})
         summary = {
             "mode": args.mode,
-            "window": f"{FIRST_MONTH[0]}-{FIRST_MONTH[1]:02d}..{today:%Y-%m}",
+            "window": "{:04d}-{:02d}..{:%Y-%m}".format(*first_month(today), today),
             **{k: len(v) for k, v in todo.items()},
         }
         summary["open_months"] = [entity(*t).rsplit("__", 1)[1] for t in todo["open"]][:12]
@@ -263,16 +271,22 @@ def main(argv=None) -> int:
             outcomes: Counter = Counter()
             failed: list[dict[str, str]] = []
             requests_made = 0
+            archived_from: dict[tuple[str, str], tuple[int, int]] = {}  # newest month answered "archived" per entity
             for slug, operator, month in todo["missing"] + todo["open"] + todo["rotation"]:
+                if month <= archived_from.get((slug, operator), (0, 0)):
+                    outcomes["skipped_archived"] += 1  # older than a month the API answered "archived" in this run
+                    continue
                 if time.monotonic() > deadline or (args.max_requests and requests_made >= args.max_requests):
                     outcomes["not_started_budget"] += 1
                     continue
                 requests_made += 1
                 name = entity(slug, operator, month)
                 try:
-                    outcomes[
-                        land(client, bucket, args.landing_root, session, slug, operator, month, held.get(name, []))
-                    ] += 1
+                    before = held.get(name, [])
+                    outcome = land(client, bucket, args.landing_root, session, slug, operator, month, before)
+                    outcomes[outcome] += 1
+                    if outcome == "archived_at_source":
+                        archived_from[(slug, operator)] = max(month, archived_from.get((slug, operator), (0, 0)))
                 except (RuntimeError, ValueError) as exc:  # one month failing must not stop the others
                     failed.append({"entity": name, "error": str(exc)[:200]})
             summary.update(outcomes)

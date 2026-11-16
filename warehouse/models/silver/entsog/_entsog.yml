@@ -7,8 +7,9 @@ models:
       (rolling window of about five years, from 1 January 2021). Grain: operator_key × point_key × direction_key ×
       indicator × period_type × period_from (one gas day). value_kwh_d in kWh/d as published; null when the record
       is isNA or empty (never 0). flow_status Provisional or Confirmed (null on isNA records); last_update_utc is the
-      record's lastUpdateDateTime. gas_day = date of period_from in WET (tests/entsog_gas_days.sql). Newest version
-      of each gas month, then the newest lastUpdateDateTime per key; ties stay and fail the unique test.
+      record's lastUpdateDateTime. gas_day = date of period_from in WET (tests/entsog_gas_days.sql). Newest Landing
+      copy (ingested_at) of each gas month, then the newest lastUpdateDateTime per key; ties stay and fail the unique
+      test.
     tests:
       - unique:
           column_name: "operator_key || '|' || point_key || '|' || direction_key || '|' || indicator || '|' || period_type || '|' || period_from"

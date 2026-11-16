@@ -9,9 +9,12 @@
    Completeness rule: a point-direction "reports" in a gas month when it has at least one value in that month
    (virtual and trading points published only as isNA never report). It is expected on a gas day when it reports in
    that month and has a record that day (points start and stop mid-month; tests/entsog_physical_flow_complete.sql
-   fails on a missing record inside a point's span). A daily sum is built only when every expected point-direction
-   of its scope (all points of the direction, or the group) has a value that day: a day with an expected point
-   published as isNA is left out, never published as if complete. A monthly sum is built only for an ended month
+   fails on a missing record inside a point's span). A value is final when its record was last updated at or after
+   the end of its gas day (last_update_utc >= period_to_utc): GAZ-SYSTEM publishes running values during the gas day,
+   so a record of a day that has not ended is never final. A daily sum is built only when every expected
+   point-direction of its scope (all points of the direction, or the group) has a final value that day: a day with an
+   expected point published as isNA or still running is left out, never published as if complete
+   (tests/entsog_gas_day_final.sql). A monthly sum is built only for an ended month
    whose every day has a complete daily sum. observation_status_key = 'provisional' when any value summed
    is Provisional (or any day of the month is), else 'ok'. No unit conversion (D33). #}
 with groups as ({{ poc_entsog_point_groups() }}),
@@ -24,6 +27,7 @@ flows as (
         f.gas_day,
         date_trunc('month', f.gas_day) as gas_month,
         f.value_kwh_d,
+        f.value_kwh_d is not null and f.last_update_utc >= f.period_to_utc as is_final,
         f.flow_status,
         f.source_version,
         f.raw_sha256,
@@ -60,10 +64,10 @@ daily as (
         min(s.scope_label) as scope_label,  -- one label per group key
         s.gas_day,
         s.gas_month,
-        sum(s.value_kwh_d) as value,
-        count(distinct s.point_key) filter (where s.value_kwh_d is not null) as points_with_value,
+        sum(s.value_kwh_d) filter (where s.is_final) as value,
+        count(distinct s.point_key) filter (where s.is_final) as points_with_value,
         count(distinct s.point_key) filter (where s.reports_in_month) as points_expected,
-        bool_or(s.value_kwh_d is not null and s.flow_status is distinct from 'Confirmed') as any_provisional,
+        bool_or(s.is_final and s.flow_status is distinct from 'Confirmed') as any_provisional,
         -- every record of one operator and gas day comes from the same month answer: one version, one file
         max(s.source_version) as source_version,
         max(s.raw_sha256) as raw_sha256

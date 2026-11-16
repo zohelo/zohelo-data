@@ -10,7 +10,9 @@ one gas month per request, as the API User Manual v3.0 recommends ("Monthly rang
 execution limit; back-off on failures, no rapid retries; without `limit=-1` the API returns 100 records). One request
 at a time, 5 s apart, back-off 30/90/240 s on 429, 5xx and timeouts. No bulk file of operational data exists. The
 API serves a rolling window of about five years: on 12 Nov 2026 January 2021 answered and December 2020 answered
-404 "Data on the TP is archived on a rolling basis"; the TP Archives are not read.
+404 "Data on the TP is archived on a rolling basis"; the TP Archives are not read. The extractor derives the
+window's first month as January five years back (`first_month` in `extract.py`), so months leave the rotation as
+they leave the window; if the API archives earlier, an "archived" answer skips every older month of that run.
 
 **Entity, version, restart unit.** Entity = operator × indicator × gas month (`physical_flow__PL-TSO-0002__2026-10`);
 version = the newest `lastUpdateDateTime` of the answer; restart unit = one gas month. Identical requests return
@@ -30,7 +32,7 @@ D+1 at about 07:05 UTC), about three requests a run.
 - Silver `silver.entsog_physical_flow`: grain operator × point × direction × indicator × period type × periodFrom;
   value in kWh/d as published, null (never 0) on `isNA` or empty values; `flow_status` Provisional/Confirmed;
   `last_update_utc`. Gas day = the date of periodFrom in WET: the gas day starts at 05:00 WET at most points and at
-  03:00 or 04:00 at some (checked by `tests/entsog_gas_days.sql`). The newest month copy wins, then the newest
+  03:00 or 04:00 at some (checked by `tests/entsog_gas_days.sql`). The newest Landing copy of each month (by `ingested_at`, like Landing) wins, then the newest
   `lastUpdateDateTime` per key; a tie fails the unique test. `silver.entsog_points`: point dimension (operator,
   point, direction, label, the API's `pointType`, first and last day, days with a value, `reports_flows`).
 - Gold `gold.build_entsog` (block `physical_flow`, geography `PL`: the platform has no regional grain): entry and
@@ -39,12 +41,21 @@ D+1 at about 07:05 UTC), about three requests a run.
   `warehouse/macros/sources/entsog.sql`: LNG terminal, Baltic Pipe, interconnectors by neighbour, Yamal system
   (PWP), cross-border distribution, domestic production, storage, H/L-gas conversion, distribution, final
   consumers); an unlisted point that reports flows lands in group `unmapped` and `tests/entsog_point_groups.sql`
-  warns. Totals rule: a point-direction reports in a month when it has a value on any day of it; a daily sum is
-  built only when every reporting point of its scope has a value that day, a monthly sum only for an ended month
+  warns. Totals rule: a point-direction reports in a month when it has a value on any day of it; a value is final
+  when its record was updated at or after the end of its gas day (`last_update_utc >= period_to_utc`; GAZ-SYSTEM
+  publishes running values during the gas day); a daily sum is built only when every reporting point of its scope
+  has a final value that day, so the current gas day is never shown as a daily total
+  (`tests/entsog_gas_day_final.sql`), a monthly sum only for an ended month
   whose every day is complete. `observation_status_key` is `provisional` when any summed value is Provisional.
   Draft KPIs `gas_entry_flow_daily`, `gas_exit_flow_daily`, `gas_entry_flow_monthly`, `gas_exit_flow_monthly`
   (environment.energy). Totals sum every point as published, so they include storage withdrawal or injection and
   the H/L-gas conversion points (nitrogen removal enters H-gas taken from L-gas): use the groups to separate them.
+
+**Open decision (before any KPI leaves `draft`): net or cross-border totals.** The entry and exit totals include
+gas that moves inside the national system (storage withdrawal and injection, H/L-gas conversion), so they are
+not imports and exports. Whether the published KPIs should be those gross totals, a net balance, or cross-border
+points only (LNG, Baltic Pipe, interconnectors, Yamal) is not decided; the groups in Gold allow each. Until it
+is decided the KPIs stay `draft`.
 
 **Licence: `unresolved` (internal only).** ENTSOG TP "Privacy & T&C of Use" (TRA0394-16, Rev_3, 24 May 2018,
 https://transparency.entsog.eu/pdf/TRA0394_20161115_ENTSOG_TP_TC_of_Use_Rev_2_KNS_LG_KNS.pdf): Art. 5.1 "you may
