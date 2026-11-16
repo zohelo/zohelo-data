@@ -8044,7 +8044,8 @@ sources:
   name: Electronic Information Transmission System (ESPI)
   short_name: KNF ESPI
   provider: Polish Financial Supervision Authority (KNF)
-  status: approved
+  source_system: knf_espi
+  status: built
   family: I
   kpi: false
   geography: Poland
@@ -8072,8 +8073,8 @@ sources:
       links "Enter OAM" (moam.knf.gov.pl/moam.nsf); the KNF pages carry only "Copyrights © 2023 Komisja Nadzoru Finansowego";
       the ESPI rules (https://www.knf.gov.pl/knf/pl/komponenty/img/Regulamin_korzystania_z_ESPI_66994.pdf, linked from https://www.knf.gov.pl/dla_rynku/espi)
       govern issuers, not readers. Commercial reuse: not stated. Modification: not stated. Attribution sentence: none given
-      (working text: "Źródło: Komisja Nadzoru Finansowego, OAM"). Stays internal. Only issuer, title, type, date and link
-      are stored (O32, O33): no report text, no attachments.'
+      (working text: "Źródło: Komisja Nadzoru Finansowego, OAM"). Stays internal. Only issuer, form code, date, report id
+      and link are stored: no title (titles can name natural persons), no report text, no attachments.'
   updates: Event-driven, every day; the list showed "Liczba raportów za dzień 2026-11-12 wynosi 87" at 19:37 UTC. Corrections
     arrive as new reports. From July 2027 the EU single access point (ESAP) is to be public (ESMA press release of 10 Jul
     2026, desk reading).
@@ -8098,10 +8099,9 @@ sources:
     evidence: tested
     connection: tested
     blockers:
-    - 'Route decision: a polite read of public list pages that robots.txt does not forbid. The playbook asks for an owner
-      decision or a D row per web source; this approval follows the orchestrator verdict on PR #2878 ("a polite crawl of public
-      pages is a valid route") under the owner rule of 12 Nov 2026 (issue #2873). The D row in docs/decisions.md is still
-      to be written before the build.'
+    - 'Route decision: D36 in docs/decisions.md (16 Nov 2026, build pull request of #1486 and #1488): a polite read of the
+      public list pages only, following the orchestrator verdict on PR #2878 under the owner rule of 12 Nov 2026 (#2873).
+      Titles are not stored (they can name natural persons); the stored fields are in docs/sources/knf_espi.md and gpw_ebi.md.'
     - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): http://moam.knf.gov.pl/moam.nsf
       redirected to https and answered 200 (text/html, 14,916 bytes) with the day''s list of 87 reports (issuer, date, title,
       file link); robots.txt 404; https://www.knf.gov.pl/dla_rynku/espi answered 200 and links only the issuer-side ESPI pages.'
@@ -8116,7 +8116,8 @@ sources:
   name: Electronic Information Base (EBI)
   short_name: GPW EBI
   provider: Warsaw Stock Exchange (GPW)
-  status: approved
+  source_system: gpw_ebi
+  status: built
   family: I
   kpi: false
   geography: Poland
@@ -8146,7 +8147,8 @@ sources:
       2: reports are "niezwłocznie publikowane na odpowiednich stronach internetowych administrowanych przez Giełdę". GPW''s
       paid information-services rules do not mention issuer reports. Commercial reuse: not stated. Modification: not stated.
       Attribution sentence: none given (working text: "Źródło: GPW, Elektroniczna Baza Informacji"). Stays internal. Only
-      headline, link, report number, type, category and publication time are stored (O32, O33).'
+      issuer, ISIN, link, report id, report number, category and publication time are stored: no title (titles can name
+      natural persons).'
   updates: Event-driven, every day; corrections are separate reports with their own numbers.
   ingestion:
     history: 'Web route: https://www.gpw.pl/espi-ebi-reports lists ESPI and EBI reports together (HTML, 107,890 bytes; rows
@@ -8169,10 +8171,9 @@ sources:
     evidence: tested
     connection: tested
     blockers:
-    - 'Route decision: a polite read of public list pages that robots.txt does not forbid. The playbook asks for an owner
-      decision or a D row per web source; this approval follows the orchestrator verdict on PR #2878 ("a polite crawl of public
-      pages is a valid route") under the owner rule of 12 Nov 2026 (issue #2873). The D row in docs/decisions.md is still
-      to be written before the build.'
+    - 'Route decision: D36 in docs/decisions.md (16 Nov 2026, build pull request of #1486 and #1488): a polite read of the
+      public list pages only, following the orchestrator verdict on PR #2878 under the owner rule of 12 Nov 2026 (#2873).
+      Titles are not stored (they can name natural persons); the stored fields are in docs/sources/knf_espi.md and gpw_ebi.md.'
     - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): https://www.gpw.pl/espi-ebi-reports
       answered 200 (107,890 bytes) with report rows and detail links (geru_id=500444 to 500453); https://www.gpw.pl/rss and
       /disclaimer answered 200 (the RSS page is an HTML page, no report feed was confirmed); https://www.gpw.pl/ebi answered
@@ -8390,7 +8391,7 @@ sources:
   name: EDGAR APIs, bulk data and filing archives
   short_name: SEC EDGAR
   provider: U.S. Securities and Exchange Commission
-  status: approved
+  status: reviewing
   family: I
   kpi: false
   geography: United States
@@ -8405,8 +8406,11 @@ sources:
     interfaces: [API, bulk-files, HTML, XBRL, JSON]
     auth: Public HTTPS, no key; identify requests and follow fair-access guidance.
     cost: free
-    limits: Automated access must follow the SEC privacy and security policy and developer FAQs (declare a User-Agent; SEC
-      fair-access rate limit, 10 requests per second per the FAQs, not re-read here).
+    limits: 'Automated access must follow the SEC privacy and security policy and developer FAQs (declare a User-Agent; SEC
+      fair-access rate limit, 10 requests per second per the FAQs, not re-read: the pages were refused). 12 Nov 2026: every
+      SEC host and route answered HTTP 403 to the repository''s identified User-Agent, from the first request on, with the
+      page "Request Rate Threshold Exceeded [...] Automated access to our sites must comply with SEC.gov''s Privacy and
+      Security Policy. Please visit www.sec.gov/developer for more developer resources and Fair Access guidelines."'
   licence:
     status: open-conditional
     notes: 'Terms: SEC.gov privacy and security policy, section "Website Dissemination", https://www.sec.gov/privacy (read
@@ -8432,7 +8436,25 @@ sources:
     evidence: tested
     connection: tested
     blockers:
-    - Re-read the SEC Developer FAQ for the exact fair-access limit and User-Agent rule before the declaration
+    - 'Owner question: SEC EDGAR answers HTTP 403 to the User-Agent every zohelo-data extractor sends ("zohelo-data/1.0
+      (+https://github.com/zohelo/zohelo-data; public statistics platform)"), on both hosts and every route, which we do not
+      work around. The SEC asks automated clients to declare a User-Agent naming the operator and a contact e-mail address
+      (its sample form, as commonly cited: "Sample Company Name AdminContact@<sample company domain>.com"; not re-read, the
+      page was refused too), and the project has no contact address configured; none is invented and no personal address
+      is used. Which e-mail address (a project mailbox you control, not a personal one) may zohelo-data declare in the User-Agent
+      of its SEC EDGAR requests?'
+    - 'Dev probe run 43321810312 (job 131544106164, branch test/1498-sec-edgar, script dev/sec_edgar_probe.py, 12 Nov 2026;
+      one request at a time, 3 s apart, GET and HEAD only): HTTP 403 on www.sec.gov/robots.txt and data.sec.gov/robots.txt
+      (the first two requests), on /about/developer-resources, /search-filings/edgar-search-assistance/accessing-edgar-data,
+      /search-filings/edgar-application-programming-interfaces and /privacy, on the bulk files /Archives/edgar/daily-index/bulkdata/submissions.zip
+      and /Archives/edgar/daily-index/xbrl/companyfacts.zip, on /files/company_tickers.json, on the company search by country
+      (State=R9, Poland) and on data.sec.gov/submissions/CIK0000320193.json. Nothing was read or stored. Unverified: whether
+      a User-Agent in the SEC''s form is served from GitHub runners (the source review''s probe of 12 Nov read the pages from
+      a runner with a browser-style agent, so the runner addresses are not refused as such).'
+    - 'After the answer (Development Task #1498): re-read the fair-access limit and the User-Agent rule; scope Polish and
+      Poland-related issuers (business address or state of incorporation Poland, EDGAR country code R9, to verify) selected
+      from the nightly submissions.zip while reading it (one request, the archive is not landed), entities only, no natural-person
+      filers, no street addresses or phone numbers; submissions JSON fields only, no filing documents.'
     - 'Filing attachments can hold third-party rights and personal data: ingest the structured JSON, not documents'
     references:
     - https://www.sec.gov/search-filings/edgar-application-programming-interfaces

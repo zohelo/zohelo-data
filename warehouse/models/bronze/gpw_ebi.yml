@@ -1,0 +1,20 @@
+version: 2
+
+sources:
+- name: gpw_ebi
+  description: GPW report list, EBI rows (https://www.gpw.pl/espi-ebi-reports), one reduced JSON document per day of publication
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gpw_ebi/
+    loaded_by: ingestion/to_bronze/gpw_ebi/
+    config: ingestion/sources/gpw_ebi.yaml
+  tables:
+  - name: gpw_ebi_reports
+    description: >-
+      One row per EBI report of the newest landed copy of each day of publication (entity day_<YYYYMMDD>), values as
+      listed, as text: report_id (geru_id), published_text (DD-MM-YYYY HH:MM:SS, Warsaw time), category, report_number,
+      issuer_name, isin ('' when not listed), link; listed is null (the list states no count); provenance raw_sha256,
+      source_version, ingested_at, source_row_number. The title is never stored. Partitioned by entity.
+  - name: gpw_ebi_rejected_files
+    description: GPW EBI Landing files the Bronze decoder rejected, with the reason.

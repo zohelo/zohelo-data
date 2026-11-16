@@ -37,10 +37,11 @@ on:
           - "full dataflow: landing → bronze → silver → gold → portal"
           - "silver/gold: build models"
           - "gold: publish"
+          - "gold: observations"
           - "serving: refresh portal index"
           - "scheduler: dispatch due runs"
       filter:
-        description: "Optional item filter: dataset codes or globs, comma separated (e.g. nama_10_*)"
+        description: "Optional item filter: dataset codes or globs, comma separated (e.g. nama_10_*); gold: observations: * = every block, empty = continue only"
         required: false
         default: ""
       max_items:
@@ -298,6 +299,7 @@ jobs:
     outputs:
       decision: ${{ steps.decide.outputs.decision }}
       covered_by: ${{ steps.decide.outputs.covered_by }}
+      index: ${{ steps.decide.outputs.index }}
     # Least privilege: this job only needs github.token, so it blanks the workflow-level secrets.
     env:
       STORAGE_LAKEHOUSE_CATALOG_WRITE_TOKEN: ""
@@ -375,10 +377,44 @@ jobs:
           source: ${{ inputs.source }}
           activity: gold.publish
 
+  gold-observations:
+    # The source's per-block Gold load (warehouse/observations.py, docs/gold-coverage.md, D35): after the model
+    # build and the publish, so the geography map it reads is the newest and the published files do not wait
+    # for it. It runs in a covered run too (the tables it writes are the source's own). A run that reaches its
+    # budget ends green with a warning and the next run continues.
+    needs: [plan, archive-prune, build-queue, silver-gold-build, gold-publish]
+    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'gold.observations') }}"
+    name: gold.observations
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          # The newest main, not the run's start commit: the Gold SQL is part of every block's recipe, and a
+          # full dataflow can reach this job hours after it started (#2201).
+          ref: main
+      - uses: ./.github/actions/activity
+        with:
+          source: ${{ inputs.source }}
+          activity: gold.observations
+          filter: ${{ inputs.filter }}
+          budget-minutes: "300"
+
   serving-refresh-index:
-    needs: [plan, gold-publish]
-    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'serving.refresh_index') }}"
+    needs: [plan, build-queue, gold-publish, gold-observations]
+    # Not in a run whose build is covered by another source's run: that run refreshes the index after its build.
+    # Covered runs of one scheduler batch refreshed it at the same time and failed on R2's limit of concurrent
+    # requests for one object (#2947).
+    if: "${{ !cancelled() && !failure() && needs.build-queue.outputs.index != 'covered' && contains(fromJSON(needs.plan.outputs.activities), 'serving.refresh_index') }}"
     name: serving.refresh_index
+    # One refresh at a time for the runs that still refresh (covered by a platform run, or not covered).
+    # `queue: max` keeps every waiting job (up to 100) and runs them one after another; without it GitHub
+    # keeps one waiting job per group and cancels the older one, which would end its run cancelled (#2932).
+    concurrency:
+      group: zohelo-pipeline-index
+      cancel-in-progress: false
+      queue: max
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -397,7 +433,8 @@ jobs:
     # A failed or cancelled run opens (or comments on) an `alert` issue, so the owner gets an
     # e-mail. Cancelled counts: a job killed from outside (exit 143) ends as cancelled.
     needs: [scheduler, plan, landing-inspect, landing-extract, landing-verify, bronze-load, bronze-verify,
-            landing-archive, archive-prune, build-queue, silver-gold-build, gold-publish, serving-refresh-index]
+            landing-archive, archive-prune, build-queue, silver-gold-build, gold-publish, gold-observations,
+            serving-refresh-index]
     # A model build replaced in its queue by a newer one (concurrency zohelo-pipeline-build; build-queue should
     # prevent it) ends as cancelled and is not an alert; a failed build is (#878 review).
     if: >-
@@ -415,6 +452,7 @@ jobs:
       needs.landing-archive.result == 'cancelled' ||
       needs.archive-prune.result == 'cancelled' ||
       needs.build-queue.result == 'cancelled' ||
+      needs.gold-observations.result == 'cancelled' ||
       needs.serving-refresh-index.result == 'cancelled')
     name: notify
     runs-on: ubuntu-24.04

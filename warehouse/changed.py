@@ -226,7 +226,8 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
     "full_refresh": incremental models among them to rebuild in full, "waiting": models left out because a
     source table they read does not exist yet, "empty_blocks": the Gold blocks among them that have no table
     either, read as zero rows, "stalled": waiting model → the missing source tables, for every waiting model
-    that has a table (the build must stop on any)}."""
+    that has a table (the build must stop on any), "waiting_tests": the data tests that read a waiting model
+    (waiting_tests; the build leaves them out)}."""
     graph = models(meta)
     relations = {uid: (m["namespace"], m["table"]) for uid, m in graph.items()}
     for uid in {p for m in graph.values() for p in m["parents"] if p.startswith("source.")}:
@@ -296,6 +297,7 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
 
     for uid in graph:
         stale(uid)
+    waits = sorted(graph[u]["name"] for u, b in blocked.items() if b)
     full = sorted(
         m["name"] for m in graph.values() if m["incremental"] and reasons.get(m["name"]) in FULL_REFRESH_REASONS
     )
@@ -304,7 +306,8 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
         "reasons": reasons,
         "unchanged": len(graph) - len(reasons) - sum(blocked.values()),
         "full_refresh": full,
-        "waiting": sorted(graph[u]["name"] for u, b in blocked.items() if b),
+        "waiting": waits,
+        "waiting_tests": sorted(waiting_tests(meta, waits).values()),
         "empty_blocks": sorted(
             graph[u]["name"] for u, b in blocked.items() if b and graph[u]["block"] and state[u] is None
         ),
@@ -313,6 +316,23 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
             for u, b in sorted(blocked.items(), key=lambda item: graph[item[0]]["name"])
             if b and state[u] is not None
         },
+    }
+
+
+def waiting_tests(meta: dict[str, Any], waiting: Iterable[str]) -> dict[str, str]:
+    """unique_id → name of every data test that reads a model named in ``waiting``; pure.
+
+    dbt selects a test as soon as one of its parents is selected (eager indirect selection), so a test that joins
+    a waiting model to a shared one (a relationships test to a reference table, a singular test over several
+    sources) would run when the shared model is rebuilt, against a table that does not exist yet (#2948)."""
+    names = set(waiting)
+    held = {
+        uid for uid, node in meta["nodes"].items() if node.get("resource_type") == "model" and node["name"] in names
+    }
+    return {
+        uid: node["name"]
+        for uid, node in meta["nodes"].items()
+        if node.get("resource_type") == "test" and held & set(node.get("depends_on", {}).get("nodes", []))
     }
 
 
