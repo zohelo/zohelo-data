@@ -1,0 +1,28 @@
+version: 2
+models:
+  - name: ms_isws_tables
+    description: >-
+      Ministry of Justice ISWS multi-year workbooks (register PLG-031), Poland, annual: common courts' cases
+      received, resolved and pending by case type (2011-), average duration of court proceedings in months, total
+      and by court level (2011-), adoption cases (2000-) and notarial acts (1991-). Grain: table_code x
+      measure_code x breakdown_code x period_year. Values as published, found by row label and column header
+      (header comment of the model); '•' (no data) is status missing with no value. Trial run: see
+      ingestion/sources/ms_isws.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', table_code, measure_code, breakdown_code, period_year)"
+    columns:
+      - name: table_code
+        tests: [not_null, {accepted_values: {arguments: {values: [caseload, duration, adoptions, notarial_acts]}}}]
+      - name: measure_code
+        tests: [not_null, {accepted_values: {arguments: {values: [incoming, resolved, pending, granted, avg_duration, acts]}}}]
+      - name: breakdown_code
+        tests: [not_null, {accepted_values: {arguments: {values: [total, criminal, civil, family, labour, social_insurance, commercial, regional, district]}}}]
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: [cases, months, acts]}}}]
+      - name: period_year
+        tests: [not_null]
+      - name: cell_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, missing, not_applicable]}}}]
+      - name: raw_sha256
+        tests: [not_null]
