@@ -252,6 +252,35 @@ def main(argv: list[str]) -> int:
     for u in ("https://api.rspo.gov.pl/api/placowki/?page=1", "https://api.rspo.gov.pl/api/placowki/"):
         _b, info = fetch(u, accept="application/json", limit=2000)
         note("api_noauth", {"url": u, **{k: v for k, v in info.items() if k != "body"}})
+    # 3b. The older public API host (api-rspo.men.gov.pl): does it still answer without credentials?
+    # Structure only: status, content type, top-level keys, the item count and the field names of one record.
+    for u in ("https://api-rspo.men.gov.pl/", "https://api-rspo.men.gov.pl/api/",
+              "https://api-rspo.men.gov.pl/api/placowki/?page=1", "https://api-rspo.men.gov.pl/api/placowki/?format=json&page=1",
+              "https://api-rspo.men.gov.pl/api/typ/", "https://api-rspo.men.gov.pl/api/docs"):
+        b, info = fetch(u, accept="application/json, application/ld+json, text/html", limit=3_000_000)
+        rec: dict = {"url": u, **{k: v for k, v in info.items() if k != "body"}}
+        if b:
+            try:
+                doc = json.loads(b)
+                if isinstance(doc, dict):
+                    rec["keys"] = sorted(doc.keys())[:40]
+                    for k in ("hydra:totalItems", "count", "totalItems"):
+                        if k in doc:
+                            rec[k] = doc[k]
+                    if isinstance(doc.get("hydra:view"), dict):
+                        rec["view"] = {k: v for k, v in doc["hydra:view"].items()}
+                    members = doc.get("hydra:member") or doc.get("results") or doc.get("member") or []
+                elif isinstance(doc, list):
+                    members = doc
+                    rec["n"] = len(doc)
+                else:
+                    members = []
+                if members and isinstance(members[0], dict):
+                    rec["n_page"] = len(members)
+                    rec["fields"] = {k: type(v).__name__ for k, v in members[0].items()}
+            except ValueError:
+                rec["head"] = re.sub(r"\s+", " ", text_of(b[:300]))
+        note("old_api", rec)
     # 4. The old public site (rspo.men.gov.pl): does it still answer, and what does it say?
     for u in ("https://rspo.men.gov.pl/", "https://www.gov.pl/web/edukacja/rejestr-szkol-i-placowek-oswiatowych",
               "https://cie.gov.pl/"):
