@@ -13,7 +13,6 @@ whole month, October 2026, for Gold); GPW from 2025-01-01 (the production floor)
 from __future__ import annotations
 
 from collections import Counter
-import csv
 from datetime import date, datetime
 import json
 from pathlib import Path
@@ -29,16 +28,42 @@ from ingestion.common import bulk_bronze
 from ingestion.common import report_lists as lists
 from ingestion.common.r2 import catalog, req, s3
 from ingestion.common.report import annotate
+from ingestion.to_landing.patterns import bulk_file
 
 SCRATCH = "zz_dev_espi_ebi"
 CAPTURED: list = []
 KNF_TODAY, KNF_BACKFILL = date(2026, 11, 1), 32
 PEAK_DAYS = (date(2026, 4, 30), date(2026, 5, 29), date(2026, 9, 30))
-CONTRACT = ["source_system", "block_id", "block_name", "measure_key", "measure_name", "measure_codes", "unit_code",
-            "unit_name", "geography_source_code", "geography_key", "frequency", "date_key", "period_label",
-            "breakdown_json", "breakdown_label_json", "sex_code", "is_total", "value", "observation_status_key",
-            "source_version", "raw_sha256"]
-SPOT = {"PKN Orlen": "ORLEN", "PKO BP": "PKO BANK POLSKI", "KGHM": "KGHM", "CD Projekt": "CD PROJEKT"}
+CONTRACT = [
+    "source_system",
+    "block_id",
+    "block_name",
+    "measure_key",
+    "measure_name",
+    "measure_codes",
+    "unit_code",
+    "unit_name",
+    "geography_source_code",
+    "geography_key",
+    "frequency",
+    "date_key",
+    "period_label",
+    "breakdown_json",
+    "breakdown_label_json",
+    "sex_code",
+    "is_total",
+    "value",
+    "observation_status_key",
+    "source_version",
+    "raw_sha256",
+]
+SPOT = {
+    "Orlen": "ORLEN",
+    "PKO BP": "PKO BANK POLSKI|POWSZECHNA KASA OSZCZ",
+    "KGHM": "KGHM",
+    "PZU": "^PZU|POWSZECHNY ZAK",
+    "CD Projekt": "CD PROJEKT",
+}
 SOURCES = {
     "knf_espi": {"table": "knf_espi_reports", "silver": "knf_espi_reports", "day": "received_date"},
     "gpw_ebi": {"table": "gpw_ebi_reports", "silver": "gpw_ebi_reports", "day": "published_date"},
@@ -52,6 +77,7 @@ def _capture(level: str, title: str, data) -> None:
 
 lists.annotate = _capture
 bulk_bronze.annotate = _capture
+bulk_file.annotate = _capture
 
 
 def note(title: str, data) -> None:
@@ -92,23 +118,44 @@ def landing(source: str) -> dict:
         CAPTURED.clear()
         start = time.monotonic()
         if source == "knf_espi":
-            code = lists.extract_by_day(source, lists.read_knf_day, budget_minutes=60, landing_root=SCRATCH,
-                                        today=KNF_TODAY, backfill=KNF_BACKFILL)
+            code = lists.extract_by_day(
+                source,
+                lists.read_knf_day,
+                budget_minutes=60,
+                landing_root=SCRATCH,
+                today=KNF_TODAY,
+                backfill=KNF_BACKFILL,
+            )
         else:
             code = lists.extract_newest_first(source, lists.read_gpw_since, lists.GPW_PAGE, landing_root=SCRATCH)
         files, size, receipts = landing_objects(source)
-        out["runs"].append({"run": n, "exit": code, "minutes": round((time.monotonic() - start) / 60, 1),
-                            **summary_of("landing load"), "files_after": files, "bytes_after": size,
-                            "receipts_after": receipts})
+        out["runs"].append(
+            {
+                "run": n,
+                "exit": code,
+                "minutes": round((time.monotonic() - start) / 60, 1),
+                **summary_of("landing load"),
+                "files_after": files,
+                "bytes_after": size,
+                "receipts_after": receipts,
+            }
+        )
     CAPTURED.clear()
     if source == "knf_espi":
         code = lists.inspect(source, lambda r, d: lists.read_knf_day(r, d)[:2], landing_root=SCRATCH, today=KNF_TODAY)
     else:
-        code = lists.inspect(source, lambda r, d: (None, lists.read_gpw_since(r, d)[0].get(d, [])), landing_root=SCRATCH)
+        code = lists.inspect(
+            source, lambda r, d: (None, lists.read_gpw_since(r, d)[0].get(d, [])), landing_root=SCRATCH
+        )
     out["inspect"] = {"exit": code, **summary_of("landing inspect")}
     CAPTURED.clear()
     out["verify_exit"] = lists.verify(source, landing_root=SCRATCH)
-    out["verify"] = {k: v for k, v in summary_of("").items() if k in ("result", "missing", "checked", "receipts")}
+    files = next((d for t, d in CAPTURED if "landing verify" in t), {}).get("files", [])
+    out["verify"] = {
+        "days": len(files),
+        "missing_data": sum(f.get("missing_data", 0) for f in files),
+        "states": dict(Counter(str(f.get("state")) for f in files)),
+    }
     return out
 
 
@@ -118,10 +165,39 @@ def peak_types() -> dict:
     for day in PEAK_DAYS:
         try:
             listed, found, _ = lists.read_knf_day(reader, day)
-            out[day.isoformat()] = {"listed": listed, "rows": len(found),
-                                    "types": Counter(r["report_type"] or "''" for r in found).most_common()}
-        except Exception as exc:  # noqa: BLE001
+            out[day.isoformat()] = {
+                "listed": listed,
+                "rows": len(found),
+                "types": Counter(r["report_type"] or "''" for r in found).most_common(),
+            }
+        except Exception as exc:
             out[day.isoformat()] = {"error": f"{type(exc).__name__}: {str(exc)[:200]}"}
+    out["requests"] = reader.requests
+    return out
+
+
+def gpw_labels() -> dict:
+    """The category label GPW's rows carry for each type of the list's own filter (one request per type, EBI only,
+    first page): the closed list for accepted_values, read from rows, not from the filter's captions."""
+    reader, out = lists.Reader(), {}
+    for kind in ("RB", "P", "Q", "O", "R"):
+        form = [f for f in lists.GPW_FORM if f[0] != "typeRaports[]"] + [
+            ("typeRaports[]", kind),
+            ("offset", "0"),
+            ("limit", str(lists.GPW_PAGE_ROWS)),
+        ]
+        try:
+            found = lists.parse_gpw(
+                reader.fetch("POST", lists.GPW_AJAX, data=form, headers={"X-Requested-With": "XMLHttpRequest"})
+            )
+            out[kind] = {
+                "rows": len(found),
+                "labels": Counter(r["category"] for r in found).most_common(),
+                "systems": Counter(r["system"] for r in found).most_common(),
+                "oldest": found[-1]["published_text"] if found else None,
+            }
+        except Exception as exc:
+            out[kind] = {"error": f"{type(exc).__name__}: {str(exc)[:200]}"}
     out["requests"] = reader.requests
     return out
 
@@ -133,8 +209,13 @@ def bronze(source: str):
         CAPTURED.clear()
         code = lists.bronze_load(source, table, landing_root=SCRATCH, namespace=SCRATCH)
         d = summary_of("Bronze from Landing")
-        out["loads"].append({"run": n, "exit": code, **{k: d.get(k) for k in (
-            "entities_landed", "candidates", "appended_files", "rows_added", "rejected")}})
+        out["loads"].append(
+            {
+                "run": n,
+                "exit": code,
+                **{k: d.get(k) for k in ("entities_landed", "candidates", "appended_files", "rows_added", "rejected")},
+            }
+        )
     cat = catalog()
     t = cat.load_table((SCRATCH, table))
     arrow = t.scan().to_arrow()
@@ -142,7 +223,7 @@ def bronze(source: str):
     out["rows"] = arrow.num_rows
     try:
         rej = cat.load_table((SCRATCH, f"{source}_rejected_files")).scan().to_arrow().to_pylist()
-    except Exception:  # noqa: BLE001
+    except Exception:
         rej = []
     out["rejected_files"] = [{"entity": r.get("entity"), "error": (r.get("error") or "")[:200]} for r in rej]
     return out, arrow
@@ -158,16 +239,21 @@ def bronze_profile(con, source: str) -> dict:
         "days": one(con, f"select count(distinct entity) from {b}"),
         "day_range": rows(con, f"select min(entity), max(entity) from {b}"),
         "dup_report_ids": one(con, f"select count(*) from (select report_id from {b} group by 1 having count(*) > 1)"),
-        "null_or_empty": {c: one(con, f"select count(*) from {b} where {c} is null or {c} = ''")
-                          for c in ("report_id", "issuer_name", day, kind, "link", "raw_sha256")},
+        "null_or_empty": {
+            c: one(con, f"select count(*) from {b} where {c} is null or {c} = ''")
+            for c in ("report_id", "issuer_name", day, kind, "link", "raw_sha256")
+        },
         "kinds": rows(con, f"select {kind}, count(*) from {b} group by 1 order by 2 desc"),
         "issuers": one(con, f"select count(distinct issuer_name) from {b}"),
         "listed_null_days": one(con, f"select count(distinct entity) from {b} where listed is null"),
     }
     if source == "gpw_ebi":
         p["isin_empty"] = one(con, f"select count(*) from {b} where isin = ''")
-        p["report_number_shapes"] = rows(con, f"select regexp_replace(report_number, '[0-9]', '9', 'g'), count(*) "
-                                              f"from {b} group by 1 order by 2 desc", 10)
+        p["report_number_shapes"] = rows(
+            con,
+            f"select regexp_replace(report_number, '[0-9]', '9', 'g'), count(*) from {b} group by 1 order by 2 desc",
+            10,
+        )
     return p
 
 
@@ -176,8 +262,11 @@ def env() -> Environment:
 
 
 def render(path: str, refs: dict[str, str], sources: dict[str, str]) -> str:
-    return env().from_string(Path(path).read_text()).render(
-        config=lambda **_k: "", ref=lambda name: refs.get(name, name), source=lambda _s, t: sources[t])
+    return (
+        env()
+        .from_string(Path(path).read_text())
+        .render(config=lambda **_k: "", ref=lambda name: refs.get(name, name), source=lambda _s, t: sources[t])
+    )
 
 
 def schema_tests(con, yml: str, model: str, table: str) -> dict:
@@ -187,17 +276,23 @@ def schema_tests(con, yml: str, model: str, table: str) -> dict:
     for col in m.get("columns", []):
         for t in col.get("tests", []):
             if t == "not_null":
-                results[f"not_null {col['name']}"] = one(con, f"select count(*) from {table} where {col['name']} is null")
+                results[f"not_null {col['name']}"] = one(
+                    con, f"select count(*) from {table} where {col['name']} is null"
+                )
             elif t == "unique":
                 results[f"unique {col['name']}"] = one(
-                    con, f"select count(*) from (select {col['name']} from {table} group by 1 having count(*) > 1)")
+                    con, f"select count(*) from (select {col['name']} from {table} group by 1 having count(*) > 1)"
+                )
             elif isinstance(t, dict) and "accepted_values" in t:
                 vals = t["accepted_values"]["arguments"]["values"]
                 lst = ", ".join("'" + str(v).replace("'", "''") + "'" for v in vals)
                 sev = (t["accepted_values"].get("config") or {}).get("severity", "error")
                 results[f"accepted_values {col['name']} ({sev})"] = rows(
-                    con, f"select {col['name']}, count(*) from {table} where {col['name']} is not null "
-                         f"and cast({col['name']} as varchar) not in ({lst}) group by 1 order by 2 desc", 30)
+                    con,
+                    f"select {col['name']}, count(*) from {table} where {col['name']} is not null "
+                    f"and cast({col['name']} as varchar) not in ({lst}) group by 1 order by 2 desc",
+                    30,
+                )
     return results
 
 
@@ -209,8 +304,10 @@ def silver(con, source: str) -> dict:
     for _ in (1, 2):
         con.execute(f"create or replace table {model} as {sql}")
         counts.append(one(con, f"select count(*) from {model}"))
-    s: dict = {"rows_two_builds": counts,
-               "tests": schema_tests(con, f"warehouse/models/silver/{source}/_{source}.yml", model, model)}
+    s: dict = {
+        "rows_two_builds": counts,
+        "tests": schema_tests(con, f"warehouse/models/silver/{source}/_{source}.yml", model, model),
+    }
     test = render(f"warehouse/tests/{model}_complete.sql", {}, srcmap)
     s[f"test {model}_complete"] = rows(con, f"select * from ({test})", 10)
     d = SOURCES[source]["day"]
@@ -222,13 +319,27 @@ def silver(con, source: str) -> dict:
         s["report_number_null"] = one(con, f"select count(*) from {model} where report_number is null")
     spots = {}
     for label, needle in SPOT.items():
-        spots[label] = rows(con, f"select issuer_name, count(*), min({d}), max({d}), "
-                                 f"string_agg(distinct {'report_type' if source == 'knf_espi' else 'category'}, ' ') "
-                                 f"from {model} where upper(issuer_name) like '%{needle}%' group by 1 order by 2 desc", 3)
+        spots[label] = rows(
+            con,
+            f"select issuer_name, count(*), min({d}), max({d}), "
+            f"string_agg(distinct {'report_type' if source == 'knf_espi' else 'category'}, ' ') "
+            f"from {model} where regexp_matches(upper(issuer_name), '{needle}') group by 1 order by 2 desc",
+            3,
+        )
     s["spot_issuers"] = spots
-    s["sample"] = rows(con, f"select * exclude (raw_sha256, source_version, ingested_at) from {model} "
-                            f"where upper(issuer_name) like '%ORLEN%' or upper(issuer_name) like '%KGHM%' "
-                            f"order by report_id limit 2", 2)
+    s["sample"] = rows(
+        con,
+        f"select * exclude (raw_sha256, source_version, ingested_at, entity) from {model} "
+        f"where regexp_matches(upper(issuer_name), 'ORLEN|KGHM|PZU|CD PROJEKT') "
+        f"order by {d} desc, report_id limit 3",
+        3,
+    )
+    s["top_issuers"] = rows(
+        con,
+        f"select issuer_name, {'max(isin), ' if source == 'gpw_ebi' else ''}count(*) "
+        f"from {model} group by issuer_name order by count(*) desc, issuer_name limit 5",
+        5,
+    )
     return s
 
 
@@ -242,7 +353,9 @@ def gold(con, source: str) -> dict:
         con.execute(f"create or replace table filing_{source} as {sql}")
         counts.append(one(con, f"select count(*) from filing_{source}"))
     out["filing_rows_two_builds"] = counts
-    out["filing_tests"] = schema_tests(con, f"warehouse/models/gold/_{source}.yml", f"filing_{source}", f"filing_{source}")
+    out["filing_tests"] = schema_tests(
+        con, f"warehouse/models/gold/_{source}.yml", f"filing_{source}", f"filing_{source}"
+    )
     sql = render(f"warehouse/models/gold/poc_build_{source}.sql", refs, {})
     counts = []
     for _ in (1, 2):
@@ -252,27 +365,42 @@ def gold(con, source: str) -> dict:
     out["build_rows_two_builds"] = counts
     out["columns_in_contract_order"] = [d[0] for d in con.execute(f"select * from {b} limit 0").description] == CONTRACT
     out["build_tests"] = schema_tests(con, f"warehouse/models/gold/_{source}.yml", f"poc_build_{source}", b)
-    out["dup_series_date"] = one(con, f"select count(*) from (select measure_key || '|' || geography_key || '|' || "
-                                      f"breakdown_json as series_key, date_key from {b} group by all having count(*) > 1)")
-    out["measures_with_two_frequencies"] = one(con, f"select count(*) from (select measure_key from {b} group by 1 "
-                                                    f"having count(distinct frequency) > 1)")
+    out["dup_series_date"] = one(
+        con,
+        f"select count(*) from (select measure_key || '|' || geography_key || '|' || "
+        f"breakdown_json as series_key, date_key from {b} group by all having count(*) > 1)",
+    )
+    out["measures_with_two_frequencies"] = one(
+        con, f"select count(*) from (select measure_key from {b} group by 1 having count(distinct frequency) > 1)"
+    )
     out["null_values"] = one(con, f"select count(*) from {b} where value is null")
     out["months"] = rows(con, f"select min(date_key), max(date_key), count(distinct date_key) from {b}")
     out["totals"] = rows(con, f"select period_label, value from {b} where is_total order by 1", 30)
-    out["breakdowns"] = rows(con, f"select breakdown_json, sum(value) from {b} where not is_total group by 1 order by 2 desc", 15)
-    out["totals_equal_breakdown_sums"] = one(con, f"select count(*) from (select date_key, sum(value) filter (where is_total) t, "
-                                                  f"sum(value) filter (where not is_total) s from {b} group by 1) where t <> coalesce(s, 0)")
+    out["breakdowns"] = rows(
+        con, f"select breakdown_json, sum(value) from {b} where not is_total group by 1 order by 2 desc", 15
+    )
+    out["totals_equal_breakdown_sums"] = one(
+        con,
+        f"select count(*) from (select date_key, sum(value) filter (where is_total) t, "
+        f"sum(value) filter (where not is_total) s from {b} group by 1) where t <> coalesce(s, 0)",
+    )
     d = SOURCES[source]["day"]
-    out["silver_rows_in_gold_months"] = rows(con, f"select strftime({d}, '%Y-%m'), count(*) from {model} "
-                                                  f"where strftime({d}, '%Y-%m') in (select period_label from {b}) group by 1 order by 1", 30)
+    out["silver_rows_in_gold_months"] = rows(
+        con,
+        f"select strftime({d}, '%Y-%m'), count(*) from {model} "
+        f"where strftime({d}, '%Y-%m') in (select period_label from {b}) group by 1 order by 1",
+        30,
+    )
     return out
 
 
 def terms_pages() -> dict:
     """The producers' own terms pages (read-only, robots.txt first): text around copyright and reuse words."""
     reader, out = lists.Reader(), {}
-    words = re.compile(r"(?i)(prawa autorskie|prawo autorskie|autorsk|copyright|wykorzyst|kopiowa|rozpowszechnia|"
-                       r"reproduc|reuse|liability|odpowiedzialno|©)")
+    words = re.compile(
+        r"(?i)(prawa autorskie|prawo autorskie|autorsk|copyright|wykorzyst|kopiowa|rozpowszechnia|"
+        r"reproduc|reuse|liability|odpowiedzialno|©)"
+    )
     for name, robots, url in (
         ("knf_legal_note", "https://www.knf.gov.pl/robots.txt", "https://www.knf.gov.pl/nota_prawna/index.html"),
         ("knf_oam_list_footer", None, "https://moam.knf.gov.pl/moam.nsf"),
@@ -289,28 +417,34 @@ def terms_pages() -> dict:
             text = lists.text(re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", page))
             hits = []
             for m in words.finditer(text):
-                hits.append(text[max(0, m.start() - 160): m.start() + 260])
+                hits.append(text[max(0, m.start() - 160) : m.start() + 260])
                 if len(hits) >= 4:
                     break
             out[name] = {"url": url, "chars": len(text), "snippets": hits}
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             out[name] = {"url": url, "error": f"{type(exc).__name__}: {str(exc)[:200]}"}
     return out
 
 
 def licence() -> dict:
+    from warehouse import seed_rows
     from warehouse.publish import licensed_sources
 
     def seed(name):
-        with open(f"warehouse/seeds/{name}.csv", newline="", encoding="utf-8") as h:
-            return list(csv.DictReader(h))
+        return seed_rows.rows(name)
 
     out = {}
     licensed = licensed_sources(seed("source"), seed("licence"))
     for source in SOURCES:
         src = [r for r in seed("source") if r["source_key"] == source]
         lic = [r for r in seed("licence") if src and r["licence_key"] == src[0]["licence_key"]]
-        out[source] = {"source_row": src, "licence_row": lic, "licensed_by_gate": source in licensed}
+        out[source] = {
+            "source_row": src,
+            "licence_row": lic,
+            "licensed_by_gate": source in licensed,
+            "unit_map": [r for r in seed("unit_map") if r["source_system"] == source],
+            "unit": [r for r in seed("unit") if r["unit_key"] == "reports"],
+        }
     return out
 
 
@@ -321,14 +455,17 @@ def cleanup() -> None:
         for table in cat.list_tables(SCRATCH):
             try:
                 cat.purge_table(table)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 cat.drop_table(table)
             removed["tables"].append(".".join(table))
         cat.drop_namespace(SCRATCH)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         removed["catalog_error"] = f"{type(exc).__name__}: {str(exc)[:200]}"
     client = s3()
-    for var, label in (("STORAGE_LANDING_BUCKET_NAME", "landing_objects"), ("STORAGE_LAKEHOUSE_BUCKET_NAME", "lake_objects")):
+    for var, label in (
+        ("STORAGE_LANDING_BUCKET_NAME", "landing_objects"),
+        ("STORAGE_LAKEHOUSE_BUCKET_NAME", "lake_objects"),
+    ):
         bucket = req(var)
         for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=f"{SCRATCH}/"):
             keys = [{"Key": o["Key"]} for o in page.get("Contents", [])]
@@ -338,10 +475,11 @@ def cleanup() -> None:
     removed["objects_left"] = sum(
         len(p.get("Contents", []))
         for b in ("STORAGE_LANDING_BUCKET_NAME", "STORAGE_LAKEHOUSE_BUCKET_NAME")
-        for p in client.get_paginator("list_objects_v2").paginate(Bucket=req(b), Prefix=f"{SCRATCH}/"))
+        for p in client.get_paginator("list_objects_v2").paginate(Bucket=req(b), Prefix=f"{SCRATCH}/")
+    )
     try:
         removed["namespace_left"] = SCRATCH in [n[0] for n in cat.list_namespaces()]
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
     note("espi_ebi scratch removed", removed)
 
@@ -350,21 +488,32 @@ def main(argv: list[str]) -> int:
     status = 0
     started = datetime.now()
     try:
-        note("espi_ebi trial setup", {"duckdb": duckdb.__version__, "scratch": SCRATCH, "knf_today": KNF_TODAY,
-                                      "knf_backfill_days": KNF_BACKFILL, "gpw_floor": "2025-01-01",
-                                      "started": started.isoformat(timespec="seconds")})
+        setup = {
+            "duckdb": duckdb.__version__,
+            "scratch": SCRATCH,
+            "knf_today": KNF_TODAY,
+            "knf_backfill_days": KNF_BACKFILL,
+            "gpw_floor": "2025-01-01",
+            "started": started.isoformat(timespec="seconds"),
+        }
+        print(f"### setup: {json.dumps(setup, default=str)}", flush=True)
         con = duckdb.connect()
         for source in SOURCES:
             land = landing(source)
             b, arrow = bronze(source)
             con.register(f"bronze_{source}", arrow)
             note(f"{source} landing (twice), inspect, verify; bronze (twice)", {"landing": land, "bronze": b})
-            note(f"{source} bronze profile", bronze_profile(con, source))
-            note(f"{source} silver", silver(con, source))
-            note(f"{source} gold", gold(con, source))
-        note("knf_espi peak days, form codes (not landed)", peak_types())
+            note(
+                f"{source} bronze profile; silver (twice) with tests",
+                {"bronze": bronze_profile(con, source), "silver": silver(con, source)},
+            )
+            note(f"{source} gold (twice) with tests", gold(con, source))
+        note(
+            "profiles not landed: knf peak days, gpw category labels per filter type",
+            {"knf_peak_days": peak_types(), "gpw_labels": gpw_labels()},
+        )
         note("espi_ebi licence gate and terms pages", {"gate": licence(), "terms": terms_pages()})
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         status = 1
         import traceback
 
