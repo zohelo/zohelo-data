@@ -135,6 +135,32 @@ def local(folder: str) -> int:
     return analyse(duckdb.connect(), pa.Table.from_pylist(rows), {"mode": "local"})
 
 
+def reachability() -> dict:
+    """DNS and one TCP connect (port 443, 10 s) per address of www.gov.pl and of control hosts; no HTTP request."""
+    import socket
+    import time
+
+    out = {}
+    for host in ("www.gov.pl", "stat.gov.pl", "pypi.org"):
+        try:
+            infos = socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
+        except OSError as exc:
+            out[host] = f"dns: {exc}"
+            continue
+        results = []
+        for family, kind, proto, _, addr in infos:
+            start = time.monotonic()
+            try:
+                with socket.socket(family, kind, proto) as sock:
+                    sock.settimeout(10)
+                    sock.connect(addr)
+                results.append(f"{addr[0]} ok {time.monotonic() - start:.2f}s")
+            except OSError as exc:
+                results.append(f"{addr[0]} {type(exc).__name__} {exc.errno} {time.monotonic() - start:.1f}s")
+        out[host] = results
+    return out
+
+
 def main(argv: list[str]) -> int:
     folder = next((a[6:] for a in argv if a.startswith("local=")), None)
     if folder:
@@ -150,6 +176,7 @@ def main(argv: list[str]) -> int:
     land = f"{SCRATCH}/01_landing"
     bucket = req("STORAGE_LANDING_BUCKET_NAME")
     try:
+        report(f"{SOURCE} trial reachability", reachability())
         passes = []
         for attempt in (1, 2):
             bulk_file.main(SOURCE, "load", landing_root=land, pause_seconds=3.0)
