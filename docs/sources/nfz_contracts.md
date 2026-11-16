@@ -24,7 +24,8 @@ one per agreement and contract year; amount in PLN as published: null where NFZ 
 years, agreements). Gold block `agreements` (`gold.build_nfz_contracts`, registered in
 `warehouse/macros/sources/nfz_contracts.sql`): annual counts of agreements and of provider codes and the sum of the
 published amounts, by NFZ branch (= voivodeship, branch codes 01–16 in the voivodeships' alphabetical order) and
-Poland, in total and by NFZ service type. **These counts and sums are zohelo calculations**, not values NFZ
+Poland, totals over the NFZ service types only (every row of a block enters `poc_fact_annual`, which is above its
+warning ceiling, #2294; the breakdown by service type waits for the per-block Gold load, D35). **These counts and sums are zohelo calculations**, not values NFZ
 publishes; the amounts are contract values for the year (ceilings), not expenditure, and agreements without an
 amount (e.g. medical devices, service type 12) are not in the sum. Draft KPIs `nfz_agreements`,
 `nfz_contracted_providers`, `nfz_contracted_amount`; no `kpi_v2_map` row, so nothing is published until the reading
