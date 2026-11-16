@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+companies_house,CD-014,Companies House: rejestr spółek Wielkiej Brytanii,Companies House Free Company Data Product,UK Companies House,registry,file,national-public,companies_house_public_register,https://download.companieshouse.gov.uk/en_output.html
