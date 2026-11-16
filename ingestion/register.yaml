@@ -7070,7 +7070,8 @@ sources:
   name: Generalny Pomiar Ruchu (GPR)
   short_name: GDDKiA traffic census (GPR)
   provider: Generalna Dyrekcja Dróg Krajowych i Autostrad (GDDKiA)
-  status: approved
+  source_system: gddkia_gpr
+  status: built
   family: H
   kpi: true
   geography: Poland
