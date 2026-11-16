@@ -1,9 +1,11 @@
--- NFZ contracts (gold.build_nfz_contracts): every value lies within a plausible range for its unit, for Poland and the
--- NFZ branches (totals over the service types), and Poland's total contracted amount of every contract year but the
--- newest (a year NFZ has just opened can still be small) is at least 10 bn PLN. The bounds catch a unit or scale error
--- (an amount in grosze or in thousands: Poland's total would be about 1.7e8 instead of 1.7e11; a count summed twice),
--- not small mistakes. Measured values: docs/sources/nfz_contracts.md ("Trial"). A live test on the build stage: no
--- metrics model of this source is in tests/metrics_value_range.sql's union. Returns the rows outside.
+-- NFZ contracts (gold.build_nfz_contracts): every value lies within a plausible range for its unit, for Poland and
+-- the NFZ branches (totals over the service types), and Poland's total contracted amount of every contract year but
+-- the newest (a year NFZ has just opened can still be small) is at least 10 bn PLN. The bounds catch a unit or scale
+-- error (an amount in grosze or in thousands: Poland's total would be about 1.7e8 instead of 1.7e11; a count summed
+-- twice), not small mistakes. Measured in Dev trial 43814206385: agreements 1 to 45,846, providers 1 to 26,548,
+-- amount 21,280,419.72 to 174,629,775,553.49 PLN; Poland before the newest year at least 70,042,984,109.78 (2019).
+-- A live test on the build stage: no metrics model of this source is in tests/metrics_value_range.sql's union.
+-- Returns the rows outside.
 with build as (
     select * from {{ ref('poc_build_nfz_contracts') }}
 ),
