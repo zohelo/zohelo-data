@@ -11,6 +11,13 @@ Gold blocks declared waiting (var waiting_blocks) and, in this runner's checkout
 Silver model's namespace pointed at zz_dev_ted_notices; a guard refuses to run when a selected node would land
 outside zz_dev_. Built twice. Other sources' Silver tables are read from production, never written.
 Everything written is removed in `finally`.
+
+Second dispatch (v2): run 43813397994 of this script landed the whole window (pass 1 and 2 and the partial-day
+test, all green) and was stopped by the 350-minute job limit while Bronze committed its files (R2 stalls of up to
+16 minutes), so its cleanup did not run. With RESUME (default) this run takes that scratch Landing as it is: its
+landing.extract is a further run over a complete Landing (must land nothing), then Bronze (resuming: uploads of
+identical bytes are skipped) and dbt. Bronze and dbt run as subprocesses with time limits under DEADLINE_MIN, so
+the scratch is always removed before the job limit.
 """
 
 from __future__ import annotations
@@ -30,6 +37,14 @@ import yaml
 from ingestion.common import report as report_module
 
 SCRATCH = "zz_dev_ted_notices"
+STARTED = time.monotonic()
+DEADLINE_MIN = 315  # job limit 350 min; cleanup and the checks need the rest
+
+
+def left_s() -> float:
+    return DEADLINE_MIN * 60 - (time.monotonic() - STARTED)
+
+
 ROOT = Path(__file__).resolve().parents[1]
 WH = ROOT / "warehouse"
 COLLECTED: dict[str, list] = {}
@@ -89,16 +104,19 @@ def landing_steps(result: dict) -> dict:
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     last = landing.last_day()
     started = time.monotonic()
-    result["exit_pass1_pass2"] = [landing.extract(300, landing_root=SCRATCH, last=last) for _ in (1, 2)]
-    result["minutes_pass1_pass2"] = round((time.monotonic() - started) / 60, 1)
+    receipts, data = landing.listing(client, bucket, SCRATCH)
+    result["left_by_run_43813397994"] = {"entities": len(receipts), "data_files": len(data)}
+    passes = 1 if receipts else 2
+    result["exit_passes"] = [landing.extract(300, landing_root=SCRATCH, last=last) for _ in range(passes)]
+    result["minutes"] = round((time.monotonic() - started) / 60, 1)
     loads = [
         {k: v for k, v in r.items() if k not in ("level", "failed_sample")}
         for r in COLLECTED.get("ted_notices landing load", [])
     ]
-    result["pass1"], result["pass2"] = loads[0], loads[1]
+    result["passes"] = loads
     # partial day: remove page 1 (data and receipt, scratch only) of the first day with 2+ pages
     receipts, data = landing.listing(client, bucket, SCRATCH)
-    multi = sorted(e for e in receipts if e.endswith("_p2"))
+    multi = [] if passes == 1 else sorted(e for e in receipts if e.endswith("_p2"))
     partial: dict = {}
     if multi:
         day_entity = multi[0].replace("_p2", "_p1")
@@ -176,7 +194,11 @@ def dbt(args: list[str], variables: dict) -> subprocess.CompletedProcess:
         "DUCKDB_TEMP_DIRECTORY": "/tmp/duckdb_tmp",
     }
     cmd = ["dbt", *args, "--target", "prod", "--vars", json.dumps(variables)]
-    return subprocess.run(cmd, cwd=WH, env=env, capture_output=True, text=True)
+    try:
+        return subprocess.run(cmd, cwd=WH, env=env, capture_output=True, text=True, timeout=max(60, left_s()))
+    except subprocess.TimeoutExpired as exc:
+        out = exc.stdout.decode() if isinstance(exc.stdout, bytes) else (exc.stdout or "")
+        return subprocess.CompletedProcess(cmd, 124, out + "\nTIMEOUT (trial deadline)", "")
 
 
 def selection(variables: dict) -> tuple[list[str], list[str]]:
@@ -217,14 +239,29 @@ def selection(variables: dict) -> tuple[list[str], list[str]]:
 
 def build(names: list[str], variables: dict, label: str) -> dict:
     started = time.monotonic()
-    args = ["build", "--select", *names, "--indirect-selection", "cautious", "--threads", "2"]
+    # main c7f337bc holds unit `cases` twice (seed_rows/unit/mz_health_bulletin.csv and ms_isws.csv; repo_check
+    # `seed files` fails on main): its unique test would skip every node below `unit`; it runs alone afterwards
+    args = [
+        "build",
+        "--select",
+        *names,
+        "--indirect-selection",
+        "cautious",
+        "--threads",
+        "2",
+        "--exclude",
+        "unique_unit_unit_key",
+    ]
     run = dbt(args, variables)
     for wait in (90, 240, 480):  # catalog HTTP 429: retry the failed and skipped nodes
         if run.returncode == 0 or "429" not in run.stdout:
             break
         time.sleep(wait)
         run = dbt(["retry", "--threads", "1"], variables)
-    results = json.loads((WH / "target/run_results.json").read_text())["results"]
+    try:
+        results = json.loads((WH / "target/run_results.json").read_text())["results"]
+    except (OSError, ValueError, KeyError):  # dbt stopped before writing results
+        results = []
     kinds = Counter((r["unique_id"].split(".")[0], r["status"]) for r in results)
     ours = [
         f"{r['unique_id'].split('.')[2][:55]}:{r['status']}:{r.get('failures')}"
@@ -375,6 +412,34 @@ def recount(ctx: dict, month: str) -> list:
 # ---------------------------------------------------------------- main
 
 
+def bronze_load() -> int:
+    """bronze.load in a subprocess, stopped at the trial deadline (minus 100 min for dbt and cleanup)."""
+    code = (
+        "import sys; from ingestion.to_bronze.ted_notices import load; "
+        f"sys.exit(load.load(0, landing_root='{SCRATCH}', namespace='{SCRATCH}'))"
+    )
+    env = {**os.environ, "GITHUB_ACTIONS": "false"}  # annotations as text lines, gathered here
+    try:
+        run = subprocess.run(
+            ["python", "-c", code],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=max(60, left_s() - 100 * 60),
+        )
+    except subprocess.TimeoutExpired:
+        COLLECTED.setdefault("ted_notices Bronze from Landing", []).append({"result": "timeout"})
+        return 124
+    prefix = "[notice] ted_notices Bronze from Landing: "
+    for line in run.stdout.splitlines():
+        if line.startswith(prefix):
+            COLLECTED.setdefault("ted_notices Bronze from Landing", []).append(json.loads(line[len(prefix) :]))
+    if run.returncode:
+        print(run.stdout[-3000:], run.stderr[-3000:], flush=True)
+    return run.returncode
+
+
 def trial() -> int:
     from ingestion.common import bronze_files as bf
     from ingestion.common.r2 import catalog
@@ -390,8 +455,11 @@ def trial() -> int:
     note("ted trial Landing (scratch zz_dev_ted_notices)", res_l)
 
     t0 = time.monotonic()
-    res_b: dict = {"exit": [bronze.load(0, landing_root=SCRATCH, namespace=SCRATCH) for _ in (1, 2)]}
+    res_b: dict = {"exit": [bronze_load() for _ in (1, 2)]}
     res_b["minutes"] = round((time.monotonic() - t0) / 60, 1)
+    if any(e != 0 for e in res_b["exit"]):
+        note("ted trial Bronze (scratch) not finished", res_b, "warning")
+        return 1
     res_b["loads"] = [
         {
             k: v
@@ -450,8 +518,16 @@ def trial() -> int:
         "dim_series",
     ]
     res_d["rows_after_build1"] = table_rows(cat, watch)
-    res_d["build2"] = build(names, variables, "build2")
-    res_d["rows_after_build2"] = table_rows(cat, watch)
+    alone = dbt(["test", "--select", "unique_unit_unit_key"], variables)
+    res_d["unique_unit_unit_key_alone"] = {
+        "exit": alone.returncode,
+        "lines": [ln[-160:] for ln in alone.stdout.splitlines() if "unique_unit" in ln][-2:],
+    }
+    if left_s() > 50 * 60 and res_d["build1"]["exit"] == 0:
+        res_d["build2"] = build(names, variables, "build2")
+        res_d["rows_after_build2"] = table_rows(cat, watch)
+    else:
+        res_d["build2"] = {"exit": 0, "skipped": f"trial deadline: {round(left_s() / 60)} min left"}
     note("ted trial dbt build (real dbt, scratch)", res_d, "notice" if res_d["build1"]["exit"] == 0 else "warning")
 
     for name, alias in (
