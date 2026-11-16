@@ -3,21 +3,31 @@
    synoptic station data (silver.imgw_archive_synop_daily, IMGW-verified). Grain: measure_key x geography_key x
    date_key. Stations: every synoptic station of the archive files (57-63 a year since 1966) counts for Poland; a
    station counts for a voivodeship when its coordinates (silver.imgw_archive_synop_stations, from the IMGW API
-   station list under the same 9-digit code) lie inside that voivodeship's PRG boundary (silver.prg_units). A
+   station list under the same 9-digit code) lie inside that voivodeship's PRG boundary (silver.prg_units); the
+   area code ('PL' or the 2-digit TERYT code) is mapped in poc_map_geography (macros/sources/imgw_archive.sql). A
    station without coordinates (closed before the API list) counts for Poland only. Statistics:
-   - block synop_daily (D): air temperature = mean of the station daily means (STD) of the stations of the area
-     with a measured STD that day;
+   - block synop_daily (D), Poland only: air temperature = mean of the station daily means (STD) of the stations
+     with a measured STD that day (a daily voivodeship series would rest on one to six stations and add about
+     350,000 rows to fact_daily; the voivodeships get the monthly series);
    - block synop_monthly (M): air temperature = mean over the area's stations of each station's monthly mean of
      its daily STD, for stations with a measured STD on every day of the month; precipitation = mean over the
      area's stations of each station's monthly sum of daily precipitation (SMDB), for stations with every day of
      the month either measured or "phenomenon absent" (status 9: no precipitation, 0 mm); a day with "no
      measurement" (status 8) leaves the station out of that month.
-   Poland needs at least 30 stations for a day or month, a voivodeship at least one. One frequency per
+   Poland needs at least 30 stations for a day or month, a voivodeship at least one station for a month. One frequency per
    measure_key. source_version is the newest file version used; raw_sha256 is the SHA-256 of the sorted list of
    the Landing files used (an aggregate has no single file). A station-day-parameter held twice, or a station
    placed in two voivodeships, fails the build (no silent pick). #}
 {% set min_stations_poland = 30 %}
-with obs as (
+with geo as (
+    select
+        source_code,
+        geography_key
+    from {{ ref('poc_map_geography') }}
+    where source_system = 'imgw_archive'
+),
+
+obs as (
     select
         station_code,
         observation_date,
@@ -72,14 +82,12 @@ placed as (
 areas as (
     select
         station_code,
-        'PL' as geography_key,
-        cast(null as varchar) as geography_source_code,
+        'PL' as geography_source_code,
         {{ min_stations_poland }} as min_stations
     from {{ ref('imgw_archive_synop_stations') }}
     union all
     select
         station_code,
-        'TERC:' || teryt_code as geography_key,
         teryt_code as geography_source_code,
         case
             when voivodeships_found > 1
@@ -91,7 +99,6 @@ areas as (
 
 daily as (
     select
-        a.geography_key,
         a.geography_source_code,
         'synop_daily' as block_id,
         'STD' as parameter,
@@ -103,8 +110,8 @@ daily as (
         sha256(string_agg(distinct o.raw_sha256, ',' order by o.raw_sha256)) as raw_sha256
     from checked as o
     inner join areas as a on o.station_code = a.station_code
-    where o.parameter = 'STD' and o.observation_status = 'ok'
-    group by a.geography_key, a.geography_source_code, o.observation_date
+    where o.parameter = 'STD' and o.observation_status = 'ok' and a.geography_source_code = 'PL'
+    group by a.geography_source_code, o.observation_date
     having count(*) >= max(a.min_stations)
 ),
 
@@ -139,7 +146,6 @@ complete_month as (
 
 monthly as (
     select
-        a.geography_key,
         a.geography_source_code,
         'synop_monthly' as block_id,
         m.parameter,
@@ -151,7 +157,7 @@ monthly as (
         sha256(string_agg(m.files, ',' order by m.files)) as raw_sha256
     from complete_month as m
     inner join areas as a on m.station_code = a.station_code
-    group by a.geography_key, a.geography_source_code, m.parameter, m.month_start
+    group by a.geography_source_code, m.parameter, m.month_start
     having count(*) >= max(a.min_stations)
 ),
 
@@ -163,33 +169,34 @@ observations as (
 
 select
     'imgw_archive' as source_system,
-    block_id,
-    case block_id
-        when 'synop_daily' then 'IMGW synoptic stations, daily (Poland, voivodeships)'
+    o.block_id,
+    case o.block_id
+        when 'synop_daily' then 'IMGW synoptic stations, daily (Poland)'
         else 'IMGW synoptic stations, monthly (Poland, voivodeships)'
     end as block_name,
-    'imgw_archive:' || block_id || ':' || case parameter when 'STD' then 'degC' else 'mm' end || ':' || parameter
+    'imgw_archive:' || o.block_id || ':' || case o.parameter when 'STD' then 'degC' else 'mm' end || ':' || o.parameter
         as measure_key,
     case
-        when parameter = 'STD' and frequency = 'D'
+        when o.parameter = 'STD' and o.frequency = 'D'
             then 'Air temperature, daily mean, mean of IMGW synoptic stations (°C)'
-        when parameter = 'STD' then 'Air temperature, monthly mean, mean of IMGW synoptic stations (°C)'
+        when o.parameter = 'STD' then 'Air temperature, monthly mean, mean of IMGW synoptic stations (°C)'
         else 'Precipitation, monthly total, mean of IMGW synoptic stations (mm)'
     end as measure_name,
-    parameter as measure_codes,
-    case parameter when 'STD' then 'degC' else 'mm' end as unit_code,
-    case parameter when 'STD' then 'degrees Celsius' else 'millimetres' end as unit_name,
-    geography_source_code,
-    geography_key,
-    frequency,
-    date_key,
-    period_label,
+    o.parameter as measure_codes,
+    case o.parameter when 'STD' then 'degC' else 'mm' end as unit_code,
+    case o.parameter when 'STD' then 'degrees Celsius' else 'millimetres' end as unit_name,
+    o.geography_source_code,
+    coalesce(g.geography_key, '_X') as geography_key,
+    o.frequency,
+    o.date_key,
+    o.period_label,
     '{}' as breakdown_json,
     cast(null as varchar) as breakdown_label_json,
     cast(null as varchar) as sex_code,
     true as is_total,
-    round(value, 2) as value,
+    round(o.value, 2) as value,
     'ok' as observation_status_key,
-    source_version,
-    raw_sha256
-from observations
+    o.source_version,
+    o.raw_sha256
+from observations as o
+left join geo as g on o.geography_source_code = g.source_code

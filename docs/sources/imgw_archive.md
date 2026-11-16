@@ -18,11 +18,12 @@ three digits of a synoptic code, the `id_stacji` of `/api/data/synop`; no TERYT,
 of day in the files).
 
 Gold `build_imgw_archive` (blocks `synop_daily` D and `synop_monthly` M, `warehouse/macros/sources/imgw_archive.sql`):
-Poland (every station, at least 30) and voivodeships (stations whose API coordinates lie inside the PRG boundary of the
-voivodeship, at least one; stations closed before the API list have no coordinates and count for Poland only): daily
-mean air temperature = mean of the station daily means; monthly mean air temperature = mean over stations with every
-day measured; monthly precipitation = mean of the station monthly sums over stations with every day measured or
-"phenomenon absent" (0 mm). Draft KPIs
+Poland (every station, at least 30): daily mean air temperature = mean of the station daily means; Poland and
+voivodeships (stations whose API coordinates lie inside the PRG boundary of the voivodeship, at least one; stations
+closed before the API list have no coordinates and count for Poland only; the area code is mapped by
+`poc_geography__imgw_archive`): monthly mean air temperature = mean over stations with every day measured; monthly
+precipitation = mean of the station monthly sums over stations with every day measured or "phenomenon absent" (0 mm).
+No daily voivodeship series (one to six stations each, about 350,000 more rows in `fact_daily`). Draft KPIs
 `air_temperature`, `precipitation`. Schedule: 9th and 23rd of the month, 06:40 UTC.
 
 Not loaded yet (same archive, other layouts): daily klimat and opad files (one ZIP per month since 2001), the term

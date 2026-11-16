@@ -45,7 +45,7 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('social_assistance_recipients', 'mrpips_social_assistance', '%', 0, 1e7),
     -- IMGW synoptic stations, Poland and voivodeship monthly means (#2959): °C, Polish station months lie within
     -- -25 and 30; precipitation mm per month, a voivodeship mean can be one station, and the wettest mountain
-    -- station months reach several hundred mm (Dev trial: see ingestion/sources/imgw_archive.yaml)
+    -- station months reach several hundred mm (maxima in the PR's Dev trial)
     ('air_temperature', 'imgw_archive', '%', -30, 35),
     ('precipitation', 'imgw_archive', '%', 0, 1000),
     ('inflation', 'eurostat', '%', -100, 3000),
