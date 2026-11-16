@@ -12,13 +12,16 @@ Entity = one page of one publication day, ``day_<YYYYMMDD>_p<n>`` (PAGE_SIZE not
 so every Landing file is the exact bytes of one answer and the newest file of its entity (the shared Archive,
 retention and Bronze checks expect one newest file per entity). All pages of a day are fetched in the same run and
 checked together (page sizes, the day's total, no publication number twice) before any is written; a day whose
-pages disagree is not written. Version = the publication day; a page whose bytes equal its newest landed copy is
-not written again. Days without notices land their (empty) answer once, so they are not asked again.
+pages disagree is not written. Page 1 is written last and a day counts as held only when page 1 has a receipt, so a
+day whose writing stopped part-way (a failed write of page k) is fetched again by the next run instead of keeping
+pages 2..k-1 alone. Version = the publication day; a page whose bytes equal its newest landed copy is not written
+again. Days without notices land their (empty) answer once, so they are not asked again.
 
 Layout (docs/landing.md): ``<root>/ted_notices/snapshot/data/day_<YYYYMMDD>_p<n>/<YYYYMMDD>T000000Z__<ingested>.json``
 + receipt. Modes: inspect (window days vs Landing), load, verify. Polite access: one request at a time, a pause
 between requests, bounded retries with backoff on 429/5xx and timeouts, an identifying User-Agent, the documented
-page size. Only the declared FIELDS are asked for: no contact points, persons, addresses, e-mails or winners.
+page size. Only the declared FIELDS are asked for: no buyer names, contact points, persons, addresses, e-mails or
+winners.
 """
 
 from __future__ import annotations
@@ -50,8 +53,10 @@ PAGE_SIZE = 250
 PAUSE_SECONDS = 1.5
 TIMEOUT_SECONDS = (20, 120)
 RETRY_DELAYS = (15, 30, 60, 120, 240)
-# Fields asked for (14 x PAGE_SIZE stays below the API's 10,000 fields a page). Organisation-level only: the buyer's
-# name, country, NUTS code (BT-507) and legal type; no contact point, person, address, e-mail, telephone or winner.
+# Fields asked for (13 x PAGE_SIZE stays below the API's 10,000 fields a page): the buyer's country, NUTS code (BT-507)
+# and legal type, no name, contact point, person, address, e-mail, telephone or winner. Buyer names are left out
+# (review of #3128): a subsidised buyer (legal types org-sub*, art. 6 Pzp) can be a natural person running a
+# business, and no layer needs the name; ask for "buyer-name" only after the register's person-field review.
 FIELDS = [
     "publication-number",
     "notice-type",
@@ -63,7 +68,6 @@ FIELDS = [
     "classification-cpv",
     "buyer-country",
     "buyer-country-sub",
-    "buyer-name",
     "buyer-legal-type",
     "estimated-value-proc",
     "estimated-value-cur-proc",
@@ -115,12 +119,23 @@ def read_receipts(client, bucket: str, keys: list[str]) -> list[dict[str, Any]]:
 
 
 def days_held(receipts: dict[str, list]) -> set[date]:
+    """Days whose page 1 has a receipt. Page 1 is written last (land_day), so such a day has all its pages."""
+    out = set()
+    for entity in receipts:
+        match = ENTITY_RE.fullmatch(entity)
+        if match and match.group(2) == "1":
+            out.add(datetime.strptime(match.group(1), "%Y%m%d").date())
+    return out
+
+
+def days_partial(receipts: dict[str, list]) -> set[date]:
+    """Days with receipts of later pages but none of page 1: a run stopped while writing them."""
     out = set()
     for entity in receipts:
         match = ENTITY_RE.fullmatch(entity)
         if match:
             out.add(datetime.strptime(match.group(1), "%Y%m%d").date())
-    return out
+    return out - days_held(receipts)
 
 
 def post(session: requests.Session, body: dict[str, Any]) -> bytes:
@@ -218,7 +233,8 @@ def put_new(client, bucket: str, key: str, body: bytes, content_type: str) -> No
 
 
 def land_day(client, bucket: str, root: str, session, day: date, newest: dict[str, dict]) -> Counter:
-    """One day: every page fetched and checked, then each page whose bytes differ from its newest copy written."""
+    """One day: every page fetched and checked, then each page whose bytes differ from its newest copy written,
+    page 1 last (it marks the day as held, days_held)."""
     outcomes: Counter = Counter()
     pages = fetch_day(session, day)
     beyond = [e for e in newest if e.startswith(f"day_{day:%Y%m%d}_p") and int(e.rsplit("_p", 1)[1]) > len(pages)]
@@ -227,7 +243,8 @@ def land_day(client, bucket: str, root: str, session, day: date, newest: dict[st
     ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     token = f"{day:%Y%m%d}T000000Z"
     total = parse(pages[0], day, 1)[0]
-    for number, body in enumerate(pages, start=1):
+    for number in [*range(2, len(pages) + 1), 1]:
+        body = pages[number - 1]
         entity = entity_of(day, number)
         digest = sha256(body).hexdigest()
         before = newest.get(entity)
@@ -299,8 +316,10 @@ def extract(budget_minutes: float, landing_root: str = "01_landing", last: date 
     days = window(last)
     missing = [d for d in days if d not in held]
     recheck = [d for d in days[-RECHECK_DAYS:] if d in held]
+    partial = days_partial(receipts)
+    known = set(recheck) | partial  # pages already landed for these days are compared, not written again
     newest_keys = [rows[-1][1] for e, rows in receipts.items() if ENTITY_RE.fullmatch(e) and
-                   datetime.strptime(ENTITY_RE.fullmatch(e).group(1), "%Y%m%d").date() in set(recheck)]  # fmt: skip
+                   datetime.strptime(ENTITY_RE.fullmatch(e).group(1), "%Y%m%d").date() in known]  # fmt: skip
     newest = {r["entity"]: r for r in read_receipts(client, bucket, newest_keys)}
     session = requests.Session()
     session.headers.update({"User-Agent": USER_AGENT, "Accept": "application/json"})
@@ -321,6 +340,7 @@ def extract(budget_minutes: float, landing_root: str = "01_landing", last: date 
         "window": [str(WINDOW_START), str(last)],
         "days_in_window": len(days),
         "days_missing_before": len(missing),
+        "days_partial_before": len(partial & set(missing)),
         "days_rechecked": len(recheck),
         **outcomes,
         "failed_days": len(failed),
@@ -343,6 +363,7 @@ def inspect(landing_root: str = "01_landing", last: date | None = None) -> int:
         "days_in_window": len(days),
         "days_current": len([d for d in days if d in held]),
         "days_missing": len([d for d in days if d not in held]),
+        "days_partial": len(days_partial(receipts) & set(days)),
         "entities": len(receipts),
         "data_files_in_landing": len(data),
         "newest_day_held": str(max(held)) if held else None,

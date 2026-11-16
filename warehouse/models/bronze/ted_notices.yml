@@ -15,7 +15,8 @@ sources:
       One row per notice of the newest answer of each page entity (day_<YYYYMMDD>_p<n>): publication_number and
       every requested field as text (a string as published, a list or language map as its JSON text): notice_type,
       form_type, publication_date, dispatch_date, contract_nature, procedure_type, classification_cpv,
-      buyer_country, buyer_country_sub, buyer_name, buyer_legal_type, estimated_value_proc,
-      estimated_value_cur_proc; source_row_number = position in the page; partitioned by entity.
+      buyer_country, buyer_country_sub, buyer_legal_type, estimated_value_proc, estimated_value_cur_proc (buyer
+      names are not requested); source_row_number = position in the page; day_total_notices = the answer's
+      totalNoticeCount (notices of the publication day); partitioned by entity.
   - name: ted_notices_rejected_files
     description: TED Landing files the Bronze decoder rejected, with the reason.

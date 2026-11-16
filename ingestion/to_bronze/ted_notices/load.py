@@ -4,10 +4,12 @@
 Each Landing file is one TED Search API answer: one page of the notices of Polish buyers published on one day
 (ingestion/to_landing/ted_notices/). One Bronze row per notice: the publication number and every requested field
 as text (a string value as published, any other value as its JSON text, keys sorted), plus the notice's position
-in the page and the provenance columns. The API adds a ``links`` object (addresses of the notice in every
-language and format) to each notice: it is not stored, the publication number gives the address. An answer
-without ``notices``, a notice without a publication number, or a notice with a key that is neither requested nor
-``links`` rejects the file (bronze.ted_notices_rejected_files). A day without notices gives an empty file.
+in the page, the day's total as the answer states it (``totalNoticeCount``, so Silver's test can compare the
+notices of a day with it) and the provenance columns. The API adds a ``links`` object (addresses of the notice in
+every language and format) to each notice: it is not stored, the publication number gives the address. An answer
+without ``notices`` or ``totalNoticeCount``, a notice without a publication number, or a notice with a key that is
+neither requested nor ``links`` rejects the file (bronze.ted_notices_rejected_files). A day without notices gives an
+empty file.
 
 Candidates are found from Landing key names in one listing: the newest file of each entity whose data file is
 still in Landing (a file already moved to the Archive was proven in Bronze first), so a scheduled run reads only
@@ -42,6 +44,7 @@ COLUMNS = [
     *[(column, "VARCHAR") for _, column in FIELD_COLUMNS],
     *bulk_bronze.PROVENANCE,
     ("source_row_number", "BIGINT"),  # position of the notice in the page, from 1
+    ("day_total_notices", "BIGINT"),  # totalNoticeCount of the answer: notices of the publication day
 ]
 ARROW = bulk_bronze.arrow_schema(COLUMNS)
 
@@ -56,6 +59,9 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
     answer = json.loads(body)
     if not isinstance(answer, dict) or not isinstance(answer.get("notices"), list):
         raise ValueError(f"not a TED search answer: {body[:200]!r}")
+    total = answer.get("totalNoticeCount")
+    if type(total) is not int:
+        raise ValueError("answer without totalNoticeCount")
     known = set(extract.FIELDS) | IGNORED
     columns: dict[str, list[Any]] = {name: [] for name, _ in COLUMNS}
     base = bulk_bronze.provenance(receipt)
@@ -70,6 +76,7 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
         for field, column in FIELD_COLUMNS:
             columns[column].append(as_text(notice.get(field)))
         columns["source_row_number"].append(number)
+        columns["day_total_notices"].append(total)
         for name in ("entity", "raw_sha256", "source_version", "ingested_at"):
             columns[name].append(base[name])
     return pa.Table.from_pydict(columns, schema=ARROW)
