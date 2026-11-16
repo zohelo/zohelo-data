@@ -1,0 +1,30 @@
+version: 2
+models:
+  - name: poc_build_uzp_bzp
+    description: >-
+      Build stage — BZP contract and result notices by publication month (complete months only), Poland and the
+      voivodeship of the contracting authority: uzp_bzp:notices:notices (notices, breakdown notice_type with _T)
+      and uzp_bzp:notices:<currency>:contract_value (sum of the contract values reported by the month's result
+      notices, as published). Licence unresolved: internal.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: uzp_bzp_notice
+    description: >-
+      Entity table: one row per BZP contract or result notice published from 2026-01-01, keyed by the BZP notice
+      number; publication day as date_key, the contracting authority's voivodeship as geography_key, codes,
+      contract and estimated values with their currency as published (silver.uzp_bzp_notices). Licence
+      unresolved: internal.
+    columns:
+      - name: notice_number
+        tests: [not_null, unique]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]

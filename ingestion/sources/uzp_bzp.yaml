@@ -1,0 +1,43 @@
+source_system: uzp_bzp
+description: "e-Zamówienia BZP (Biuletyn Zamówień Publicznych, UZP) — contract and result notices from 2026, read API v1"
+
+# Extraction strategy (docs/landing.md, docs/sources/uzp_bzp.md; register PLG-022). BZP has no bulk download; its
+# read API is the documented route ("Usługa Webservice jest bezpłatna", no access application; instruction
+# Załącznik 3 of https://ezamowienia.gov.pl/pl/integracja/): GET /mo-board/api/v1/notice, one notice type per
+# request, at most 500 notices a page, SearchAfter paging, notice/stats for the counts per day; stated limit 30
+# requests a minute, so one request at a time, 2.5 s apart. Tested from Actions (Dev probes 43797263601,
+# 43797627130, 43797993730, 16 Nov 2026): PublicationDateTo reaches 24 h beyond the time given, so a day is asked
+# with From = To = the day and filtered to the UTC day; counts equal notice/stats; identical bytes for a repeated
+# request; about 600 contract and 700 result notices a working day (2025: 142,424 and 148,561). Entity = one
+# notice type on one publication day (ingestion/to_landing/uzp_bzp/); version = the day; each day is fetched once
+# and the newest three days are asked again. Selection #2981: contract and result notices from 2026-01-01; the
+# other 13 notice types and 2021-2025 are left out. Reduced before Landing (no htmlBody: contact persons, e-mails,
+# phones and contractors' names and addresses are never stored; value lines kept), as news feeds are (O33).
+extraction:
+  initial: api
+  production: snapshot                    # each file is the complete reduced answer of one type on a closed day
+  incremental_policy: changed_since_last  # missing days, then the newest three days again; unchanged bytes skipped
+  schedule: # UTC; BZP publishes every day, mostly 05:00-15:00 UTC on working days; daily after the UTC day ended
+    - {cron: "47 2 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/uzp_bzp/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.uzp_bzp_notices, bronze.uzp_bzp_rejected_files]
+silver: [silver.uzp_bzp_notices]
+gold: [gold.build_uzp_bzp, gold.uzp_bzp_notice]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  uzp_bzp_notices: {rows: 400000}  # measured in the Dev trial
+  uzp_bzp_notice: {rows: 400000}  # measured in the Dev trial
+  poc_build_uzp_bzp: {rows: 20000}  # measured in the Dev trial
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a day's file
+# Refresh policy for all layers (D32): Landing and Bronze grow by two files (about 1,300 notices) a day and never
+# reload a closed day; Silver and Gold (about 300,000 notices a year) are rebuilt in full while they stay well below
+# the 1 M ceiling; a longer window (#2981 names incremental by publication month) makes them incremental by
+# publication month first.
+refresh: {mode: full, decided: "D32 + #2981"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
