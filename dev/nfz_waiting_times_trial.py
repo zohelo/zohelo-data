@@ -2,24 +2,31 @@
 
 Landing prefix and lake prefix zz_dev_nfz_waiting_times/, Iceberg namespace zz_dev_nfz_waiting_times; everything
 written is removed in `finally`. A full snapshot (every case and voivodeship) is read once, timed; Landing and
-Bronze each run twice (the second run must write nothing). Silver, the Gold build stage and the metrics rows are
-rendered with Jinja from warehouse/ and run in local DuckDB over the scratch Bronze table, each built twice, with
-the schema tests of the YAML files and the source's singular tests. Also reads the v1.4 site's terms page
-(swagger-ui/statute.html). Read-only reads of production: silver.teryt_terc (voivodeship codes and names).
+Bronze each run twice (the second run must write nothing). Then a real dbt build, twice, of the three Silver models,
+the eight code lists, poc_map_geography (with this source's registration) and poc_build_nfz_waiting_times with every
+dbt test attached to them (metrics_value_range excluded: its other metrics parents are not built here; the KPI bounds
+are checked on the build rows). dbt writes only to a DuckDB file on the runner that plays the database "r2" (target
+prod); the production catalog is attached read-only as "lake" and the other parents are views onto it; the Bronze
+table is a copy of the scratch table. Also reads the v1.4 site's terms page (swagger-ui/statute.html).
 Deleted before merge.
 """
 
 from __future__ import annotations
 
-import csv
 import json
+import os
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 
+from dbt.adapters.duckdb.credentials import Attachment
+from dbt.adapters.duckdb.secrets import Secret
 import duckdb
-from jinja2 import Environment
+import jinja2
 import requests
 import yaml
 
@@ -29,6 +36,8 @@ from ingestion.common.report import annotate
 from ingestion.to_bronze.nfz_waiting_times import load as nfz_load
 from ingestion.to_landing.nfz_waiting_times import extract
 
+ROOT = Path(__file__).resolve().parents[1]
+WAREHOUSE = ROOT / "warehouse"
 SCRATCH = "zz_dev_nfz_waiting_times"
 SOURCE = "nfz_waiting_times"
 CAPTURED: list = []
@@ -37,9 +46,9 @@ CONTRACT = ["source_system", "block_id", "block_name", "measure_key", "measure_n
             "breakdown_json", "breakdown_label_json", "sex_code", "is_total", "value", "observation_status_key",
             "source_version", "raw_sha256"]
 SILVER = ("nfz_waiting_times_queues", "nfz_waiting_times_providers", "nfz_waiting_times_monthly")
-TESTS = {"nfz_waiting_times_queues": "nfz_waiting_times_complete",
-         "nfz_waiting_times_providers": "nfz_waiting_times_providers_complete",
-         "nfz_waiting_times_monthly": "nfz_waiting_times_monthly_complete"}
+SEED_ROWS = ["source", "licence", "kpi", "kpi_measure", "kpi_v2_map", "unit", "unit_map", "unit_decimals"]
+SELECT = [*SILVER, *SEED_ROWS, "poc_map_geography", "poc_build_nfz_waiting_times"]
+FORBIDDEN = {"provider_name", "place_name", "registry_number", "teryt_provider", "regon", "nip"}
 
 
 def _capture(level: str, title: str, data) -> None:
@@ -165,131 +174,161 @@ def bronze_profile(con) -> dict:
         "pcus_shapes": rows(con, "select regexp_replace(coalesce(pcus, 'null'), '[0-9]+', 'n', 'g'), count(*) "
                                  "from bronze group by 1 order by 2 desc limit 12"),
         "as_at_min_max": rows(con, "select min(date_situation_as_at), max(date_situation_as_at) from bronze"),
-        "provider_codes_two_names": one(con, "select count(*) from (select entity[15:], provider_code from bronze "
-                                             "group by all having count(distinct provider_name) > 1 "
-                                             "or count(distinct teryt_provider) > 1)"),
-        "provider_two_names_sample": rows(con, "select entity[15:], provider_code, list(distinct provider_name), "
-                                               "list(distinct teryt_provider) from bronze group by all "
-                                               "having count(distinct provider_name) > 1 or count(distinct teryt_provider) > 1 limit 3"),
-        "same_place_benefit_case_twice": one(con, "select count(*) from (select provider_code, benefit, case_code, "
-                                                  "registry_number, resort_part_vii, resort_part_viii, place_name, locality "
+        "identifier_columns_in_bronze": sorted(FORBIDDEN & {r[0] for r in con.execute("describe bronze").fetchall()}),
+        "same_place_benefit_case_twice": one(con, "select count(*) from (select entity, provider_code, benefit, case_code, "
+                                                  "resort_part_vii, resort_part_viii, teryt_place, locality "
                                                   "from bronze group by all having count(*) > 1)"),
         "teryt_place_outside": one(con, "select count(*) from bronze where coalesce(teryt_place, '') <> '' and left(teryt_place, 2) "
                                         "<> lpad(cast(cast(right(entity, 2) as int) * 2 as varchar), 2, '0')"),
     }
 
 
-def env() -> Environment:
-    return Environment(extensions=["jinja2.ext.do"])
+def rendered(value):
+    env = jinja2.Environment()
+    env.globals["env_var"] = lambda name, default=None: os.environ.get(name, default)
+    if isinstance(value, dict):
+        return {k: rendered(v) for k, v in value.items()}
+    return env.from_string(value).render() if isinstance(value, str) else value
 
 
-MACROS = Path("warehouse/macros/sources/nfz_waiting_times.sql").read_text()
-
-
-def render(path: str, refs: dict[str, str] | None = None) -> str:
-    return env().from_string(MACROS + Path(path).read_text()).render(
-        config=lambda **_k: "", ref=lambda name: (refs or {}).get(name, name), source=lambda _s, _t: "bronze")
-
-
-def schema_tests(con, yml: str, model: str, table: str) -> dict:
-    spec = yaml.safe_load(Path(yml).read_text())
-    m = next(x for x in spec["models"] if x["name"] == model)
+def dbt(work: Path, *args: str) -> tuple[int, dict]:
+    cmd = ["dbt", *args, "--project-dir", str(WAREHOUSE), "--profiles-dir", str(work / "profiles"),
+           "--target", "prod", "--target-path", str(work / "target"), "--no-partial-parse"]
+    proc = subprocess.run(cmd, capture_output=True, text=True, env={**os.environ, "DUCKDB_TEMP_DIRECTORY": str(work / "tmp")})
+    print(proc.stdout[-6000:], proc.stderr[-3000:], flush=True)
     results = {}
-    for t in m.get("tests", []):
-        if "unique" in t:
-            expr = t["unique"]["column_name"]
-            results["unique"] = one(con, f"select count(*) from (select {expr} k from {table} group by 1 having count(*) > 1)")
-    for col in m.get("columns", []):
-        for t in col.get("tests", []):
-            if t == "not_null":
-                results[f"not_null {col['name']}"] = one(con, f"select count(*) from {table} where {col['name']} is null")
-            elif isinstance(t, dict) and "accepted_values" in t:
-                vals = t["accepted_values"]["arguments"]["values"]
-                lst = ", ".join("'" + str(v).replace("'", "''") + "'" for v in vals)
-                results[f"accepted_values {col['name']}"] = one(
-                    con, f"select count(*) from {table} where {col['name']} is not null and cast({col['name']} as varchar) not in ({lst})")
-    return results
+    path = work / "target" / "run_results.json"
+    if args[0] != "parse" and path.exists():
+        for r in json.loads(path.read_text())["results"]:
+            results[r["unique_id"]] = (r["status"], r.get("failures"), (r.get("message") or "")[:200])
+        path.unlink()
+    return proc.returncode, results
 
 
-def silver(con) -> dict:
-    s: dict = {}
-    for model in SILVER:
-        sql = render(f"warehouse/models/silver/{SOURCE}/{model}.sql")
-        counts = []
-        for _ in (1, 2):
-            con.execute(f"create or replace table {model} as {sql}")
-            counts.append(one(con, f"select count(*) from {model}"))
-        test = render(f"warehouse/tests/{TESTS[model]}.sql")
-        s[model] = {"rows_two_builds": counts,
-                    "tests": schema_tests(con, f"warehouse/models/silver/{SOURCE}/_{SOURCE}.yml", model, model),
-                    f"test {TESTS[model]}": rows(con, f"select * from ({test})", 10)}
-    q = "nfz_waiting_times_queues"
-    s["profile"] = {
+def setup_dbt(work: Path, arrow) -> tuple[dict, list[str]]:
+    """Profile with the local file as r2 and the catalog as lake; the Bronze copy and views for the other parents."""
+    profiles = yaml.safe_load((WAREHOUSE / "profiles.yml").read_text())
+    prod = dict(profiles["zohelo"]["outputs"]["prod"])
+    attach = dict(prod["attach"][0], alias="lake")
+    prod["path"] = str(work / "r2.duckdb")
+    (work / "profiles").mkdir()
+    (work / "tmp").mkdir()
+    con = duckdb.connect(str(work / "r2.duckdb"))
+    for ext in prod.get("extensions", []):
+        con.execute(f"install {ext}; load {ext}")
+    for s in prod["secrets"]:
+        s = {k: rendered(v) for k, v in s.items()}
+        con.execute(Secret.create(secret_type=s.pop("type"), name=s.pop("name"), **s).to_sql())
+    a = {k: rendered(v) for k, v in attach.items()}
+    try:
+        con.execute(Attachment(**{**a, "read_only": True}).to_sql())
+        attach["read_only"] = True
+    except duckdb.Error as exc:
+        print("read-only attach refused, attaching without:", str(exc)[:300], flush=True)
+        con.execute(Attachment(**a).to_sql())
+    prod["attach"] = [attach]
+    (work / "profiles" / "profiles.yml").write_text(yaml.safe_dump({"zohelo": {"target": "prod", "outputs": {"prod": prod}}}))
+    code, _ = dbt(work, "parse")
+    if code:
+        raise RuntimeError("dbt parse failed")
+    manifest = json.loads((work / "target" / "manifest.json").read_text())
+    nodes, sources = manifest["nodes"], manifest["sources"]
+    selected = {f"model.zohelo.{m}" for m in SELECT}
+    tests = [k for k, n in nodes.items() if n["resource_type"] == "test" and selected & set(n["depends_on"]["nodes"])
+             and "metrics_value_range" not in k]
+    parents = {p for k in [*selected, *tests] for p in nodes[k]["depends_on"]["nodes"]} - selected
+    for schema in ("bronze", "silver", "gold"):
+        con.execute(f"create schema if not exists {schema}")
+    con.register("queues_arrow", arrow)
+    con.execute(f"create table bronze.{nfz_load.TABLE} as select * from queues_arrow")
+    views = []
+    for p in sorted(parents):
+        if p.startswith(f"source.zohelo.{SOURCE}."):
+            continue
+        n = nodes.get(p) or sources[p]
+        schema, name = n["schema"], n.get("alias") or n.get("identifier") or n["name"]
+        con.execute(f"create schema if not exists {schema}")
+        con.execute(f'create view {schema}."{name}" as select * from lake.{schema}."{name}"')
+        views.append(f"{schema}.{name}")
+    con.close()
+    aliases = {m: (nodes[f"model.zohelo.{m}"]["schema"], nodes[f"model.zohelo.{m}"]["alias"]) for m in SELECT}
+    return aliases, views + [f"read_only_attach={attach.get('read_only', False)}"]
+
+
+def build(arrow, work: Path) -> tuple[dict, dict, dict, list[str]]:
+    """dbt build twice; returns (dbt summary, silver profile, gold checks, failures)."""
+    failures: list[str] = []
+    aliases, views = setup_dbt(work, arrow)
+    runs, fingerprints = [], []
+    for attempt in (1, 2):
+        code, results = dbt(work, "build", "--select", *SELECT, "--exclude", "metrics_value_range")
+        by_status: dict[str, int] = {}
+        for st, _, _ in results.values():
+            by_status[st] = by_status.get(st, 0) + 1
+        bad = {k: v for k, v in results.items() if v[0] not in ("success", "pass")}
+        runs.append({"exit": code, "nodes": len(results), "tests": sum(1 for k in results if k.startswith("test.")),
+                     "status": by_status, "not_passing": bad})
+        if code or bad:
+            failures.append(f"dbt build {attempt}: exit {code}, {bad}")
+        local = duckdb.connect(str(work / "r2.duckdb"), read_only=True)
+        fingerprints.append({m: local.sql(f'select count(*), sum(hash(t)) from {s}."{a}" as t').fetchall()[0]
+                             for m, (s, a) in aliases.items() if m != "poc_map_geography" and m not in SEED_ROWS})
+        local.close()
+    if fingerprints[0] != fingerprints[1]:
+        failures.append("second dbt build changed a table")
+    con = duckdb.connect(str(work / "r2.duckdb"), read_only=True)
+    rel = {m: f'{s}."{a}"' for m, (s, a) in aliases.items()}
+    q, mo, b = rel["nfz_waiting_times_queues"], rel["nfz_waiting_times_monthly"], rel["poc_build_nfz_waiting_times"]
+    dbt_summary = {"runs": runs, "second_build_same_tables": fingerprints[0] == fingerprints[1],
+                   "rows": {m: v[0] for m, v in fingerprints[0].items()}, "views_onto_production": len(views),
+                   "silver_identifier_columns": {m: sorted(FORBIDDEN & {r[0] for r in con.sql(f"describe {rel[m]}").fetchall()})
+                                                 for m in SILVER}}
+    if any(dbt_summary["silver_identifier_columns"].values()):
+        failures.append("identifier columns in Silver")
+    s = {
         "snapshot_month": rows(con, f"select snapshot_month, count(*) from {q} group by 1"),
-        "by_province_case": rows(con, f"select province_code, case_code, count(*) from {q} group by all order by 1, 2", 32),
         "awaiting_by_stat_month": rows(con, f"select statistics_month, count(*), count(awaiting), sum(awaiting) from {q} group by 1 order by 1"),
-        "forecast_applicable": rows(con, f"select forecast_applicable, count(*) from {q} group by 1"),
-        "providers": one(con, "select count(*) from nfz_waiting_times_providers"),
-        # many places: entries of one province x provider x benefit x case with many_places = 'Y'
+        "providers": one(con, f"select count(*) from {rel['nfz_waiting_times_providers']}"),
+        "places_outside_voivodeship": one(con, f"select count(*) from {q} where coalesce(teryt_place, '') <> '' and left(teryt_place, 2) <> lpad(cast(cast(province_code as integer) * 2 as varchar), 2, '0')"),
         "many_places_groups(entries_Y,groups,groups_same_count,groups_differing,entries_in_differing)": rows(
             con, f"with g as (select province_code, case_code, provider_code, benefit, count(*) n, "
                  f"count(distinct awaiting) d, count(awaiting) a, count(distinct statistics_month) m from {q} "
                  f"where many_places = 'Y' group by all) select sum(n), count(*), count(*) filter (where d = 1 and a = n and m = 1), "
                  f"count(*) filter (where not (d = 1 and a = n and m = 1)), sum(n) filter (where not (d = 1 and a = n and m = 1)) from g"),
-        "many_places_differing_sample": rows(
-            con, f"select province_code, case_code, provider_code, benefit, list(awaiting order by awaiting), "
-                 f"list(distinct statistics_month) from {q} where many_places = 'Y' group by all "
-                 f"having count(distinct awaiting) > 1 or count(awaiting) < count(*) limit 3"),
         "naive_sum_vs_lists_PL_case1": rows(
             con, f"select (select sum(awaiting) from {q} where case_code = 1 and statistics_month = snapshot_month - interval 1 month), "
-                 f"(select value from nfz_waiting_times_monthly where province_code = '00' and case_code = 1 and measure_code = 'persons_awaiting')"),
-        "suppression_markers_awaiting_non_numeric": rows(
-            con, "select awaiting, count(*) from bronze where awaiting is not null and try_cast(awaiting as bigint) is null group by 1 limit 10"),
-        "monthly_by_measure": rows(con, "select measure_code, case_code, period_month, count(*), sum(value) filter (where province_code = '00') "
-                                        "from nfz_waiting_times_monthly group by all order by all"),
+                 f"(select value from {mo} where province_code = '00' and case_code = 1 and measure_code = 'persons_awaiting')"),
+        "monthly_by_measure": rows(con, f"select measure_code, case_code, period_month, count(*), sum(value) filter (where province_code = '00') "
+                                        f"from {mo} group by all order by all"),
     }
-    return s
-
-
-def gold(con, teryt: dict) -> dict:
-    con.execute("create or replace table geo as select 'wojewodztwo' as level_name, terc_code, 'TERC:' || terc_code as "
-                f"geography_key from (values {', '.join(repr((k,)) [:-2] + ')' for k in sorted(teryt))}) as t (terc_code)")
-    geo_cte = env().from_string(MACROS + "{{ poc_geography__nfz_waiting_times() }}").render()
-    con.execute(f"create or replace table gmap as with {geo_cte} select * from nfz_waiting_times")
-    sql = render("warehouse/models/gold/poc_build_nfz_waiting_times.sql", {"poc_map_geography": "gmap"})
-    counts = []
-    for _ in (1, 2):
-        con.execute(f"create or replace table build as {sql}")
-        counts.append(one(con, "select count(*) from build"))
-    g: dict = {"rows_two_builds": counts}
-    g["columns_in_contract_order"] = [d[0] for d in con.execute("select * from build limit 0").description] == CONTRACT
-    g["dup_series_date"] = one(con, "select count(*) from (select measure_key || '|' || geography_key || case when geography_key = '_X' "
-                                    "then ':' || coalesce(geography_source_code, '') else '' end || '|' || breakdown_json as series_key, date_key "
-                                    "from build group by all having count(*) > 1)")
-    g["measures_with_two_frequencies"] = one(con, "select count(*) from (select measure_key from build group by 1 having count(distinct frequency) > 1)")
-    g["unmatched_rows"] = one(con, "select count(*) from build where geography_key = '_X'")
-    g["null_values"] = one(con, "select count(*) from build where value is null")
-    g["measures"] = rows(con, "select measure_key, count(*), min(date_key), max(date_key), min(value), max(value) from build group by 1 order by 1")
-    g["tests"] = schema_tests(con, f"warehouse/models/gold/_{SOURCE}.yml", f"poc_build_{SOURCE}", "build")
-    g["map"] = [[c, k, teryt.get(k.removeprefix("TERC:"))] for c, k in con.execute("select source_code, geography_key from gmap order by 1").fetchall()]
-    g["spot_PL"] = rows(con, "select measure_key, period_label, value from build where geography_key = 'PL' order by 1, 2")
-    g["spot_mazowieckie_case1"] = rows(con, "select measure_key, period_label, value from build where geography_key = 'TERC:14' "
+    g: dict = {"rows": one(con, f"select count(*) from {b}")}
+    g["columns_in_contract_order"] = [r[0] for r in con.sql(f"describe {b}").fetchall()] == CONTRACT
+    g["dup_series_date"] = one(con, f"select count(*) from (select measure_key || '|' || geography_key || case when geography_key = '_X' "
+                                    f"then ':' || coalesce(geography_source_code, '') else '' end || '|' || breakdown_json as series_key, date_key "
+                                    f"from {b} group by all having count(*) > 1)")
+    g["measures_with_two_frequencies"] = one(con, f"select count(*) from (select measure_key from {b} group by 1 having count(distinct frequency) > 1)")
+    g["unmatched_rows"] = one(con, f"select count(*) from {b} where geography_key = '_X'")
+    g["null_values"] = one(con, f"select count(*) from {b} where value is null")
+    g["map_rows"] = one(con, f"select count(*) from {rel['poc_map_geography']} where source_system = '{SOURCE}'")
+    g["measures"] = rows(con, f"select measure_key, count(*), min(date_key), max(date_key), min(value), max(value) from {b} group by 1 order by 1")
+    g["spot_PL"] = rows(con, f"select measure_key, period_label, value from {b} where geography_key = 'PL' order by 1, 2")
+    g["spot_mazowieckie_case1"] = rows(con, f"select measure_key, period_label, value from {b} where geography_key = 'TERC:14' "
                                             "and measure_key like '%case1' order by 1")
-    km = "read_csv('warehouse/seeds/kpi_measure.csv', all_varchar=true)"
-    g["kpi_patterns"] = rows(con, f"select k.kpi_key, k.measure_key_pattern, count(b.measure_key), count(distinct b.geography_key) "
-                                  f"from {km} k left join build b on b.measure_key like k.measure_key_pattern "
-                                  f"where k.source_system = '{SOURCE}' group by all order by 1")
+    km = rel["kpi_measure"]
     g["kpi_rows_per_area_period_max"] = one(con, f"select max(c) from (select k.kpi_key, b.geography_key, b.date_key, count(*) c "
-                                                 f"from {km} k join build b on b.measure_key like k.measure_key_pattern "
+                                                 f"from {km} k join {b} b on b.measure_key like k.measure_key_pattern "
                                                  f"where k.source_system = '{SOURCE}' group by all)")
     bounds = re.findall(r"\('(waiting_list[a-z_]*)', 'nfz_waiting_times', '%', ([0-9e.]+), ([0-9e.]+)\)",
-                        Path("warehouse/tests/metrics_value_range.sql").read_text())
+                        (WAREHOUSE / "tests/metrics_value_range.sql").read_text())
     g["bounds"] = bounds
     g["outside_bounds"] = {
-        k: one(con, f"select count(*) from {km} m join build b on b.measure_key like m.measure_key_pattern "
+        k: one(con, f"select count(*) from {km} m join {b} b on b.measure_key like m.measure_key_pattern "
                     f"where m.kpi_key = '{k}' and m.source_system = '{SOURCE}' and (b.value < {lo} or b.value > {hi})")
         for k, lo, hi in bounds}
-    return g
+    con.close()
+    if g["dup_series_date"] or g["unmatched_rows"] or g["null_values"] or any(g["outside_bounds"].values()) or not bounds:
+        failures.append("gold checks")
+    return dbt_summary, s, g, failures
 
 
 def teryt_names() -> dict:
@@ -300,9 +339,7 @@ def teryt_names() -> dict:
 def licence() -> dict:
     from warehouse.publish import licensed_sources
 
-    def seed(name):
-        with open(f"warehouse/seeds/{name}.csv", newline="", encoding="utf-8") as h:
-            return list(csv.DictReader(h))
+    from warehouse.seed_rows import rows as seed
 
     src = [r for r in seed("source") if r["source_key"] == SOURCE]
     lic = [r for r in seed("licence") if src and r["licence_key"] == src[0]["licence_key"]]
@@ -354,15 +391,21 @@ def main(argv: list[str]) -> int:
         note(f"{SOURCE} bronze (twice)", b)
         con = duckdb.connect()
         con.register("bronze", arrow)
-        note(f"{SOURCE} bronze profile", bronze_profile(con))
-        s = silver(con)
-        note(f"{SOURCE} silver", {k: v for k, v in s.items() if k != "profile"})
-        many = {k: s["profile"].pop(k) for k in list(s["profile"]) if k.startswith(("many_places", "naive", "suppression"))}
-        note(f"{SOURCE} silver profile", s["profile"])
-        note(f"{SOURCE} many places and markers", many)
-        g = gold(con, teryt)
-        note(f"{SOURCE} gold", {k: v for k, v in g.items() if k not in ("map", "spot_PL", "spot_mazowieckie_case1")})
-        note(f"{SOURCE} gold geography and spot values", {k: g[k] for k in ("map", "spot_PL", "spot_mazowieckie_case1")})
+        prof = bronze_profile(con)
+        note(f"{SOURCE} bronze profile", prof)
+        con.close()
+        work = Path(tempfile.mkdtemp(prefix="nfz-itl-dbt-"))
+        try:
+            d, s, g, failures = build(arrow, work)
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+        if prof["identifier_columns_in_bronze"]:
+            failures.append("identifier columns in Bronze")
+        note(f"{SOURCE} dbt build x2", d)
+        note(f"{SOURCE} silver profile", s)
+        note(f"{SOURCE} gold", {**g, "teryt_names": {k: teryt.get(k) for k in ("14", "24")}, "failures": failures})
+        if failures:
+            status = 1
         note(f"{SOURCE} licence gate and v1.4 terms page", {**licence(), "terms_pages": {
             k: {"status": v["status"], "head": v["head"][:600]} for k, v in terms_page.items()}})
     except Exception as exc:  # noqa: BLE001
