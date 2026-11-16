@@ -55,7 +55,9 @@ select
     case
         when regexp_full_match(published_at_text, '\d{4}-\d{2}-\d{2} \d{2}:\d{2}')
             then strptime(published_at_text, '%Y-%m-%d %H:%M')
-        else error('kprm_work_list_drafts: Data publikacji not YYYY-MM-DD HH:MM: ' || coalesce(published_at_text, 'null'))
+        else error(
+            'kprm_work_list_drafts: Data publikacji not YYYY-MM-DD HH:MM: ' || coalesce(published_at_text, 'null')
+        )
     end as published_at,
     cast(left(published_at_text, 10) as date) as published_on,
     preview_url,

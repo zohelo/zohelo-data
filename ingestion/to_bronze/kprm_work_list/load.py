@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """KPRM work list bronze.load: newest Landing copy of the work-list CSV → bronze.kprm_work_list_drafts.
 
-The file (``Rejestr_<n>.csv`` linked from https://www.gov.pl/web/premier/wplip-rm, ingestion/sources/kprm_work_list.yaml)
-is UTF-8 with a byte order mark, ';' separated, '"' quoted (long text cells span lines), one header line with the
+The file (``Rejestr_<n>.csv``, linked from https://www.gov.pl/web/premier/wplip-rm; see the source declaration) is
+UTF-8 with a byte order mark, ';' separated, '"' quoted (long text cells span lines), one header line with the
 HEADER below and one row per draft of the work list of the Council of Ministers. One Bronze row per CSV row, every
 value as published text. Not loaded (``None`` in HEADER): the two long text columns (aims and substance of the draft,
 up to 90,000 characters) and the responsible official's name (Osoba odpowiedzialna; register PLG-034: no personal
