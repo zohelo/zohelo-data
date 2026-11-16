@@ -6,7 +6,9 @@
      type id two rows above (2017); 'Razem' columns are the published totals per category (school_type_code '_T').
      Rows: a voivodeship id in column 1 with 'WOJ. <NAME>' beside it, or the Poland row ('POLSKA', 'Razem').
    - 2018: a tidy table (header row with 'Województwo Id'): voivodeship, school type (name only), pupil category,
-     'Absolwenci' and 'Absolwenci - dziewczęta'; 'Razem' rows are Poland.
+     'Absolwenci' and 'Absolwenci - dziewczęta'; the one 'Razem' row is the Poland grand total (category and type
+     '_T'). The type id is taken from the same year's schools workbook (silver.cie_sio_schools, Id TypJedn and Typ
+     jednostki) where the name is printed there with exactly one id; otherwise it stays NULL.
    Year: from the entity name (30092010, ix2014, ...). Grain: period_year x area_code x pupil_category_code x
    school_type_name x sex_code. Values as published; an empty cell is no row. #}
 with cells as (
@@ -188,22 +190,36 @@ unioned as (
     select * from tidy
     union all by name
     select * from crossed
+),
+
+type_ids as (
+    -- school type name -> SIO type id, from the 2018 schools workbook; a name with two ids is not used
+    select
+        school_type_name,
+        min(school_type_code) as school_type_code
+    from {{ ref('cie_sio_schools') }}
+    group by all
+    having count(distinct school_type_code) = 1
 )
 
 select
-    entity,
-    cast(regexp_extract(entity, '(?:3009|ix_?)(20\d{2})', 1) as integer) as period_year,
-    area_code,
-    area_name,
-    {{ poc_cie_sio_category('pupil_category') }} as pupil_category_code,
-    pupil_category,
-    school_type_code,
-    case when school_type_code = '_T' then 'Razem' else school_type_name end as school_type_name,
-    sex_code,
-    measure_label,
+    u.entity,
+    cast(regexp_extract(u.entity, '(?:3009|ix_?)(20\d{2})', 1) as integer) as period_year,
+    u.area_code,
+    u.area_name,
+    case
+        when u.pupil_category is null and u.school_type_code = '_T' then '_T'
+        else {{ poc_cie_sio_category('u.pupil_category') }}
+    end as pupil_category_code,
+    u.pupil_category,
+    coalesce(u.school_type_code, i.school_type_code) as school_type_code,
+    case when u.school_type_code = '_T' then 'Razem' else u.school_type_name end as school_type_name,
+    u.sex_code,
+    u.measure_label,
     'persons' as unit_code,
-    value_text,
-    try_cast(value_text as double) as value,
-    source_version,
-    raw_sha256
-from unioned
+    u.value_text,
+    try_cast(u.value_text as double) as value,
+    u.source_version,
+    u.raw_sha256
+from unioned as u
+left join type_ids as i on u.school_type_name = i.school_type_name

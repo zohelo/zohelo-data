@@ -56,7 +56,8 @@ models:
       SIO graduates (register PLS-022), nine workbooks, 30 September 2010-2018 (graduates of the school year that
       ended that year): graduates and of which girls (sex_code T, F) by voivodeship (GUS id; 'PL' = the published
       Poland row), pupil category and school type (name as printed; SIO type id where printed, '_T' = the published
-      'Razem' column). Grain: period_year x area_code x pupil_category_code x school_type_name x sex_code.
+      'Razem' column; 2018: id from the schools workbook by name, and the one Poland row is the grand total with
+      category and type '_T'). Grain: period_year x area_code x pupil_category_code x school_type_name x sex_code.
     tests:
       - unique:
           column_name: "concat_ws('|', period_year, area_code, pupil_category_code, school_type_name, sex_code)"
@@ -66,7 +67,7 @@ models:
       - name: area_code
         tests: [not_null, {accepted_values: {arguments: {values: [PL, '02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32']}}}]
       - name: pupil_category_code
-        tests: [not_null, {accepted_values: {arguments: {values: ['001', '002', '003']}}}]
+        tests: [not_null, {accepted_values: {arguments: {values: ['001', '002', '003', _T]}}}]
       - name: school_type_name
         tests: [not_null]
       - name: sex_code

@@ -4,7 +4,8 @@
    Blocks: 'teachers' (silver.cie_sio_teachers: persons, full-time, part-time, full-time posts by professional grade;
    the grade total 'Razem' is the total series), 'schools' (silver.cie_sio_schools: schools and pupils 2018 by school
    type, pupil category, publicness and governing body; no published total, none derived), 'graduates'
-   (silver.cie_sio_graduates: graduates and of which girls by school type and pupil category). One measure_key per
+   (silver.cie_sio_graduates: graduates and of which girls by school type (SIO id, the printed name where no id is
+   known) and pupil category). One measure_key per
    measure (frequency A only); areas by GUS voivodeship id or 'PL' (macros/sources/cie_sio.sql). Values and units
    as published; rows without a value are not loaded. #}
 with geo as (
@@ -91,7 +92,8 @@ graduates as (
         make_date(period_year, 9, 30) as reference_date,
         period_year,
         cast(to_json(map(
-            ['school_type', 'pupil_category', 'sex'], [school_type_name, pupil_category_code, sex_code]
+            ['school_type', 'pupil_category', 'sex'],
+            [coalesce(school_type_code, school_type_name), pupil_category_code, sex_code]
         )) as varchar) as breakdown_json,
         cast(to_json(map(
             ['school_type', 'pupil_category', 'sex'],
