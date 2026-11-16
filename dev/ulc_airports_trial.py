@@ -150,7 +150,7 @@ def main(argv) -> int:
             ),
             "count_cells_not_numeric": one(
                 f"select string_agg(v || '=' || c, ' ') from (select v, count(*) c from (select {values} v"
-                " from bronze_rows) where not regexp_full_match(v, '[0-9]{{1,3}}( [0-9]{{3}})*') group by 1)"
+                " from bronze_rows) where not regexp_full_match(v, '[0-9]{1,3}( [0-9]{3})*') group by 1)"
             ),
             "growth_cells_markers": one(
                 "select string_agg(v || '=' || c, ' ') from (select v, count(*) c from (select"
