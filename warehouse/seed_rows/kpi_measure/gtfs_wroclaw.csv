@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+scheduled_transit_trips,gtfs_wroclaw,gtfs_wroclaw:scheduled_trips:trips,"scheduled trips per service day, Wrocław open data GTFS timetable",1,
