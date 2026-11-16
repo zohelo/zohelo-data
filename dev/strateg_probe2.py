@@ -70,29 +70,25 @@ def main(args: list[str]) -> int:
         "keys": sorted({k for r in rows for k in r}),
     }
     annotate("notice", f"strateg strategy {strategy}", summary)
-    sources = collections.Counter()
-    levels = collections.Counter()
-    meta = {}
-    for ind in inds[:40]:
-        _, m = get(f"metrics/{ind}")
-        if isinstance(m, list) and m:
-            sources[m[0].get("data_source")] += 1
-            meta[ind] = {"src": m[0].get("data_source"), "av": m[0].get("data_availability_in_the_system"),
-                         "lvl": m[0].get("territorial_level_of_availability"), "en": m[0].get("indicator_name_en")}
-    annotate("notice", "strateg sources", sources.most_common(20))
-    blob = json.dumps(meta, ensure_ascii=False, separators=(",", ":"))
-    for i in range(0, min(len(blob), 3800 * 3), 3800):
-        annotate("notice", f"strateg meta {i // 3800}", blob[i:i + 3800])
-    data = {}
-    for ind, dim in dims[:6]:
+    levels = {}
+    for ind in inds[:80]:
         _, d = get(f"indicators/{ind}")
         if isinstance(d, dict):
-            levels.update(d.get("territory_levels", {}).keys())
-        _, dd = get(f"indicators/{ind}/dimensions")
+            ys = d.get("years") or []
+            levels[ind] = [sorted((d.get("territory_levels") or {}).keys()), min(ys) if ys else None,
+                           max(ys) if ys else None, len(d.get("genders") or {}), len(d.get("places") or {}),
+                           len(d.get("sections") or {})]
+    blob = json.dumps(levels, separators=(",", ":"))
+    for i in range(0, min(len(blob), 3800 * 3), 3800):
+        annotate("notice", f"strateg levels {i // 3800}", blob[i:i + 3800])
+    data = {}
+    for ind, dim in dims[:3]:
+        get(f"metrics/{ind}")
+        get(f"indicators/{ind}/dimensions")
         for lvl in ("0", "2"):
             st2, v = get(f"indicators/{ind}/dimensions/{dim}?level_id={lvl}")
             data[f"{ind}/{dim}/{lvl}"] = {"st": st2, "len": len(json.dumps(v)) if v is not None else None,
-                                         "head": json.dumps(v, ensure_ascii=False)[:500]}
+                                         "head": json.dumps(v, ensure_ascii=False)[:600]}
     blob = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
     for i in range(0, min(len(blob), 3800 * 3), 3800):
         annotate("notice", f"strateg data {i // 3800}", blob[i:i + 3800])
