@@ -24,6 +24,8 @@ codes and voivodeships by the correspondence `poc_ulc_airports_list()` in `wareh
 (a new airport or spelling fails the build until added); `silver.ulc_airports_airports` is the airport entity table.
 
 Gold block `airport_traffic` (`build_ulc_airports`, quarterly): the airport is the breakdown in its voivodeship, the
-total row is Poland. KPIs `air_passengers` and `air_passenger_operations` (draft). Monthly schedule (9th). Eurostat
+total row is Poland. KPIs `air_passengers` and `air_passenger_operations` (draft). Manual runs only since 16 Nov 2026:
+the listing answers GitHub runners with an Incapsula challenge page at irregular times (production run 43843091936),
+so the monthly check (9th) waits for the owner's answer on #2873 (O44). Eurostat
 `avia_paoa` also carries passengers of Polish airports; both stay as their own series (O31). Licence: unresolved (no
 reuse terms on ulc.gov.pl; internal only).
