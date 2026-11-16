@@ -23,7 +23,11 @@ loads):
 |---|---|---|---|---|
 | Eurostat | about 8,200 datasets | about 7,000 M | about 1,000 M | about 8 GB |
 | GUS BDL | about 2,250 subgroups | about 460 M (340 M of it gminas) | about 76 M | about 3 GB |
-| GUS DBW | 4,903 blocks | about 890 M | not counted | about 3 GB |
+| GUS DBW | 4,903 blocks | about 890 M | not counted (trial sample: one series per 5 rows) | about 2.6 GB |
+
+GUS DBW in Gold: a 52-block trial (52 M rows, #2983) wrote about 7.0 MB per million rows to the observations
+and 3.5 MB to the series table, about 9 GB for all of DBW at that rate (the sample is dominated by one gmina
+block, so this is an upper estimate).
 
 Eurostat by geography: Poland and its regions about 200 M rows; with the EU aggregates and all
 countries about 4,200 M; every geography about 7,000 M. Full Eurostat in Gold is about 22 GB, more
