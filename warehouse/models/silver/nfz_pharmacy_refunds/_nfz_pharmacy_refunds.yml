@@ -1,0 +1,41 @@
+version: 2
+models:
+  - name: nfz_ra_monthly_provisions
+    description: >-
+      NFZ statistics API, pharmacy refunds (/monthly-provisions, register PLS-013) from
+      bronze.nfz_ra_monthly_provisions: monthly totals of medicines reimbursed through pharmacies for Poland (no
+      province filter, area_code PL) and the 16 voivodeships (NFZ codes 01-16), without ATC filter (atc_code _T)
+      and for each of the 14 ATC main groups; the five values as published (quantity in packages, refund, donation,
+      contribution_of_patient, value in PLN). Grain: area_code x atc_code x period_start (one entity <area>_<atc> per
+      area x ATC selection, newest download). History HISTORY (Dev trial TRIAL). tests/nfz_pharmacy_refunds_entities.sql
+      checks that every declared entity has rows, every Bronze entity yields Silver rows and each holds meta_count
+      months.
+    tests:
+      - unique:
+          column_name: "area_code || '|' || atc_code || '|' || period_start"
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: area_code
+        description: PL (no province filter) or the NFZ voivodeship code (01 dolnośląskie ... 16 zachodniopomorskie).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['PL', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16']
+      - name: atc_code
+        description: ATC main group of the filter, _T without ATC filter (all reimbursed medicines, also outside the 14 groups).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['_T', 'A', 'B', 'C', 'D', 'G', 'H', 'J', 'L', 'M', 'N', 'P', 'R', 'S', 'V']
+      - name: period_start
+        description: First day of the month (year, month as published).
+        tests: [not_null]
+      - name: source_version
+        description: end-date of /available-periods when downloaded (YYYYMMDDT000000Z).
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the page (lineage to Landing/Archive).
+        tests: [not_null]
