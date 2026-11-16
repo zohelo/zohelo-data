@@ -7,7 +7,8 @@ models:
       PDFs "statystyki wg portów lotniczych" (register PL-ENV-026; bronze.ulc_airports_rows). Grain: period_date x
       airport_code x measure_code. Each value from the newest file that prints its quarter (files print the quarter
       and the same quarter of the two previous years); transit passengers and general aviation are not included
-      (note under every table). History Q1 2008 - Q1 2026 (Q1 2010 - Q1 2026 files). RUN_NOTE
+      (note under every table). History Q1 2008 - Q1 2026 (Q1 2010 - Q1 2026 files). Dev trial
+      43831892099: 2,228 rows, 73 quarters.
     tests:
       - unique:
           column_name: "cast(period_date as varchar) || '|' || airport_code || '|' || measure_code"
