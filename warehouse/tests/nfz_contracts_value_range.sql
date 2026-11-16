@@ -1,6 +1,6 @@
--- NFZ contracts (gold.build_nfz_contracts): every value lies within a plausible range for its unit, for Poland and the
--- NFZ branches (totals over the service types), and Poland's total contracted amount of every contract year but the newest
--- (a year NFZ has just opened can still be small) is at least 10 bn PLN. The bounds catch a unit or scale error (an
+-- NFZ contracts (gold.build_nfz_contracts): every value lies within a plausible range for its unit, for Poland and
+-- the NFZ branches (totals over the service types), and Poland's total contracted amount of every contract year but
+-- the newest (a year NFZ has just opened can still be small) is at least 10 bn PLN. The bounds catch a unit or scale error (an
 -- amount in grosze or in thousands: Poland's total would be about 1.7e8 instead of 1.7e11; a count summed twice),
 -- not small mistakes. Measured values: docs/sources/nfz_contracts.md ("Trial"). A live test on the build stage: no
 -- metrics model of this source is in tests/metrics_value_range.sql's union. Returns the rows outside.
