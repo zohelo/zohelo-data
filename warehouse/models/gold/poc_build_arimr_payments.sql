@@ -24,8 +24,11 @@ select
     end as measure_name,
     s.measure_code as measure_codes,
     s.unit_code,
-    case s.unit_code when 'PLN' then 'złoty' when 'applications' then 'applications' when 'decisions' then 'decisions' end
-        as unit_name,
+    case s.unit_code
+        when 'PLN' then 'złoty'
+        when 'applications' then 'applications'
+        when 'decisions' then 'decisions'
+    end as unit_name,
     s.area_name as geography_source_code,
     coalesce(g.geography_key, '_X') as geography_key,
     'A' as frequency,
