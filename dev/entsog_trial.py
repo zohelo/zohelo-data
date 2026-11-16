@@ -45,11 +45,15 @@ def render(path: str | None, refs: dict[str, str], sources: dict[str, str], text
         captured["value"] = value
         return ""
 
-    out = Environment(extensions=["jinja2.ext.do"]).from_string(text).render(
-        config=lambda **_k: "",
-        ref=lambda name: refs.get(name, name),
-        source=lambda _s, table: sources[table],
-        **{"return": ret},
+    out = (
+        Environment(extensions=["jinja2.ext.do"])
+        .from_string(text)
+        .render(
+            config=lambda **_k: "",
+            ref=lambda name: refs.get(name, name),
+            source=lambda _s, table: sources[table],
+            **{"return": ret},
+        )
     )
     return captured.get("value", out)
 
@@ -90,76 +94,144 @@ def main() -> int:
         b["rejected"] = [{k: x.get(k) for k in ("entity", "error")} for x in rejected][:5]
         con = duckdb.connect()
         con.register("bronze_rows", arrow)
-        b["profile"] = q(con, """
+        b["profile"] = q(
+            con,
+            """
             select count(*), count(distinct point_key || '|' || direction_key || '|' || period_from),
                    min(period_from), max(period_from), count(distinct entity),
                    count(*) filter (where point_key is null or direction_key is null or period_from is null),
                    count(*) filter (where value_text is null), count(*) filter (where value_text = ''),
                    count(*) filter (where is_na is not null), count(distinct point_key || '|' || direction_key)
-            from bronze_rows""")
-        b["profile_cols"] = "rows, distinct keys, min/max periodFrom, entities, null keys, value null, value '', isNA set, series"
-        b["is_na x flow_status x value"] = q(con, """
-            select is_na, flow_status, value_text = '' as empty, count(*) from bronze_rows group by all order by 4 desc""")
-        b["non_numeric_values"] = q(con, """
-            select value_text, count(*) from bronze_rows where try_cast(value_text as double) is null group by 1""")
-        b["dup_keys_bronze"] = q(con, """
+            from bronze_rows""",
+        )
+        b["profile_cols"] = (
+            "rows, distinct keys, min/max periodFrom, entities, null keys, value null, value '', isNA set, series"
+        )
+        b["is_na x flow_status x value"] = q(
+            con,
+            """
+            select is_na, flow_status, value_text = '' as empty, count(*) from bronze_rows group by all order by 4 desc""",
+        )
+        b["non_numeric_values"] = q(
+            con,
+            """
+            select value_text, count(*) from bronze_rows where try_cast(value_text as double) is null group by 1""",
+        )
+        b["dup_keys_bronze"] = q(
+            con,
+            """
             select count(*) from (select point_key, direction_key, period_from from bronze_rows group by all
-            having count(*) > 1)""")
-        b["unit/indicator/periodType"] = q(con, "select unit, indicator, period_type, count(*) from bronze_rows group by all")
+            having count(*) > 1)""",
+        )
+        b["unit/indicator/periodType"] = q(
+            con, "select unit, indicator, period_type, count(*) from bronze_rows group by all"
+        )
         COLLECTED.clear()
         annotate("notice", "entsog trial Bronze", b)
 
         # Silver twice
         s: dict = {}
-        flow_sql = render("warehouse/models/silver/entsog/entsog_physical_flow.sql", {}, {bronze_load.TABLE: "bronze_rows"})
+        flow_sql = render(
+            "warehouse/models/silver/entsog/entsog_physical_flow.sql", {}, {bronze_load.TABLE: "bronze_rows"}
+        )
         points_sql = render("warehouse/models/silver/entsog/entsog_points.sql", {}, {})
         counts = []
         for _ in (1, 2):
             con.execute(f"create or replace table entsog_physical_flow as {flow_sql}")
             con.execute(f"create or replace table entsog_points as {points_sql}")
-            counts.append(q(con, "select (select count(*) from entsog_physical_flow), (select count(*) from entsog_points)")[0])
+            counts.append(
+                q(con, "select (select count(*) from entsog_physical_flow), (select count(*) from entsog_points)")[0]
+            )
         s["silver_rows_two_builds"] = counts
         grain = "operator_key, point_key, direction_key, indicator, period_type, period_from"
-        s["dup_keys"] = q(con, f"select count(*) from (select {grain} from entsog_physical_flow group by all having count(*) > 1)")
-        s["null_keys"] = q(con, "select count(*) from entsog_physical_flow where " + " or ".join(
-            f"{k.strip()} is null" for k in (grain + ", gas_day, raw_sha256").split(",")))
-        s["range"] = q(con, """select min(gas_day), max(gas_day), count(distinct gas_day), count(value_kwh_d),
+        s["dup_keys"] = q(
+            con, f"select count(*) from (select {grain} from entsog_physical_flow group by all having count(*) > 1)"
+        )
+        s["null_keys"] = q(
+            con,
+            "select count(*) from entsog_physical_flow where "
+            + " or ".join(f"{k.strip()} is null" for k in (grain + ", gas_day, raw_sha256").split(",")),
+        )
+        s["range"] = q(
+            con,
+            """select min(gas_day), max(gas_day), count(distinct gas_day), count(value_kwh_d),
             count(*) filter (where value_kwh_d is null), count(*) filter (where is_na),
-            count(*) filter (where value_kwh_d = 0), max(value_kwh_d), min(value_kwh_d) from entsog_physical_flow""")
+            count(*) filter (where value_kwh_d = 0), max(value_kwh_d), min(value_kwh_d) from entsog_physical_flow""",
+        )
         s["range_cols"] = "first, last day, days, values, nulls, isNA, zeros, max, min"
         s["flow_status"] = q(con, "select flow_status, count(*) from entsog_physical_flow group by 1 order by 2 desc")
-        s["provisional_by_month"] = q(con, """select strftime(gas_day, '%Y-%m'), count(*) from entsog_physical_flow
-            where flow_status = 'Provisional' group by 1 order by 1""")
+        s["provisional_by_month"] = q(
+            con,
+            """select strftime(gas_day, '%Y-%m'), count(*) from entsog_physical_flow
+            where flow_status = 'Provisional' group by 1 order by 1""",
+        )
+        s["running_values"] = q(
+            con,
+            """select gas_day, count(*), min(last_update_utc), max(period_to_utc),
+            bool_or(period_to_utc > now()) from entsog_physical_flow where value_kwh_d is not null
+            and (last_update_utc is null or last_update_utc < period_to_utc) group by 1 order by 1 desc""",
+            10,
+        )
+        s["running_cols"] = "gas_day, values updated before the day ended, min lastUpdate, periodTo, day not ended"
+        s["current_gas_day"] = q(
+            con,
+            """select distinct gas_day, period_from_utc, period_to_utc, now()
+            from entsog_physical_flow where period_from_utc <= now() and period_to_utc > now()""",
+            5,
+        )
         s["tests"] = {
             t: q(con, f"select count(*) from ({render(f'warehouse/tests/{t}.sql', {}, {})})")[0][0]
-            for t in ("entsog_gas_days", "entsog_physical_flow_complete", "entsog_point_groups", "entsog_points_complete")
+            for t in (
+                "entsog_gas_days",
+                "entsog_physical_flow_complete",
+                "entsog_point_groups",
+                "entsog_points_complete",
+            )
         }
         s["yaml_tests_failing_rows"] = {
-            "flow accepted_values": q(con, """select count(*) from entsog_physical_flow where
+            "flow accepted_values": q(
+                con,
+                """select count(*) from entsog_physical_flow where
                 direction_key not in ('entry', 'exit') or indicator <> 'Physical Flow' or period_type <> 'day'
-                or unit <> 'kWh/d' or flow_status not in ('Provisional', 'Confirmed')""")[0][0],
-            "points unique": q(con, """select count(*) from (select operator_key, point_key, direction_key
-                from entsog_points group by all having count(*) > 1)""")[0][0],
-            "points not_null": q(con, """select count(*) from entsog_points where operator_key is null
+                or unit <> 'kWh/d' or flow_status not in ('Provisional', 'Confirmed')""",
+            )[0][0],
+            "points unique": q(
+                con,
+                """select count(*) from (select operator_key, point_key, direction_key
+                from entsog_points group by all having count(*) > 1)""",
+            )[0][0],
+            "points not_null": q(
+                con,
+                """select count(*) from entsog_points where operator_key is null
                 or point_key is null or direction_key is null or point_label is null or raw_sha256 is null
-                or direction_key not in ('entry', 'exit')""")[0][0],
+                or direction_key not in ('entry', 'exit')""",
+            )[0][0],
         }
-        s["complete_failures"] =q(con, f"select * from ({render('warehouse/tests/entsog_physical_flow_complete.sql', {}, {})}) limit 12")
+        s["complete_failures"] = q(
+            con, f"select * from ({render('warehouse/tests/entsog_physical_flow_complete.sql', {}, {})}) limit 12"
+        )
         s["unmapped"] = q(con, f"select * from ({render('warehouse/tests/entsog_point_groups.sql', {}, {})})")
         annotate("notice", "entsog trial Silver", s)
-        pts = q(con, """select point_key || '|' || direction_key || '|' || point_label || '|' || coalesce(point_type, '-')
+        pts = q(
+            con,
+            """select point_key || '|' || direction_key || '|' || point_label || '|' || coalesce(point_type, '-')
             || '|' || first_gas_day || '|' || last_gas_day || '|' || days_with_value || '/' || gas_days
-            from entsog_points order by point_key, direction_key""")
+            from entsog_points order by point_key, direction_key""",
+        )
         half = (len(pts) + 1) // 2
         annotate("notice", "entsog trial points 1/2", [p[0] for p in pts[:half]])
         annotate("notice", "entsog trial points 2/2", [p[0] for p in pts[half:]])
 
         # Gold twice
         g: dict = {}
-        con.execute("create or replace table geo as select * from (values ('PL', 'PL', 'POL', 'country'), "
-                    "('DE', 'DE', 'DEU', 'country')) as t (geography_key, iso2, iso3, level_name)")
-        con.execute(f"create or replace table gmap as with {render(None, {}, {}, text='{{ poc_geography__entsog() }}')} "
-                    "select * from entsog")
+        con.execute(
+            "create or replace table geo as select * from (values ('PL', 'PL', 'POL', 'country'), "
+            "('DE', 'DE', 'DEU', 'country')) as t (geography_key, iso2, iso3, level_name)"
+        )
+        con.execute(
+            f"create or replace table gmap as with {render(None, {}, {}, text='{{ poc_geography__entsog() }}')} "
+            "select * from entsog"
+        )
         build_sql = render("warehouse/models/gold/poc_build_entsog.sql", {"poc_map_geography": "gmap"}, {})
         rows = []
         for _ in (1, 2):
@@ -167,38 +239,71 @@ def main() -> int:
             rows.append(q(con, "select count(*) from build")[0][0])
         g["gold_rows_two_builds"] = rows
         g["registration"] = str(render(None, {}, {}, text="{{ poc_source__entsog() }}"))
-        g["gold_dup_series_date"] = q(con, """select count(*) from (select measure_key || '|' || geography_key || '|' ||
-            breakdown_json as sk, date_key from build group by all having count(*) > 1)""")
-        g["measures"] = q(con, """select measure_key, frequency, count(distinct breakdown_json), count(*), min(date_key),
+        g["gold_dup_series_date"] = q(
+            con,
+            """select count(*) from (select measure_key || '|' || geography_key || '|' ||
+            breakdown_json as sk, date_key from build group by all having count(*) > 1)""",
+        )
+        g["measures"] = q(
+            con,
+            """select measure_key, frequency, count(distinct breakdown_json), count(*), min(date_key),
             max(date_key), max(value), count(*) filter (where observation_status_key = 'provisional')
-            from build group by all order by 1""")
+            from build group by all order by 1""",
+        )
         g["geography"] = q(con, "select geography_key, geography_source_code, count(*) from build group by all")
         g["tests"] = {
-            t: q(con, f"select count(*) from ({render(f'warehouse/tests/{t}.sql', {'poc_build_entsog': 'build'}, {})})")[0][0]
-            for t in ("entsog_value_range",)
+            t: q(
+                con, f"select count(*) from ({render(f'warehouse/tests/{t}.sql', {'poc_build_entsog': 'build'}, {})})"
+            )[0][0]
+            for t in ("entsog_value_range", "entsog_gas_day_final")
         }
+        g["current_gas_day_in_gold"] = q(
+            con,
+            """select count(*) from build b where b.frequency = 'D' and exists (
+            select 1 from entsog_physical_flow f where f.gas_day = b.date_key and f.period_to_utc > now())""",
+        )[0][0]
+        g["newest_daily_day_vs_now"] = q(con, "select max(date_key), now() from build where frequency = 'D'")[0]
+        g["gold_unique"] = q(
+            con,
+            """select count(*) from (select measure_key, geography_key, breakdown_json, date_key
+            from build group by all having count(*) > 1)""",
+        )[0][0]
         g["unmapped_rows"] = q(con, "select count(*) from build where breakdown_json like '%unmapped%'")
-        g["days_total_vs_silver"] = q(con, """
+        g["days_total_vs_silver"] = q(
+            con,
+            """
             select direction_key, count(distinct gas_day) as silver_days,
               (select count(*) from build b where b.frequency = 'D' and b.breakdown_json = '{}'
                  and b.measure_codes = f.direction_key) as complete_days
-            from entsog_physical_flow f group by 1""")
-        g["incomplete_days_sample"] = q(con, """
+            from entsog_physical_flow f group by 1""",
+        )
+        g["incomplete_days_sample"] = q(
+            con,
+            """
             with d as (select distinct direction_key, gas_day from entsog_physical_flow)
             select d.direction_key, strftime(d.gas_day, '%Y-%m') as m, count(*) from d
             left join build b on b.frequency = 'D' and b.breakdown_json = '{}' and b.measure_codes = d.direction_key
               and b.date_key = d.gas_day
-            where b.date_key is null group by all order by 2 desc limit 15""")
-        g["PL latest daily totals"] = q(con, """select measure_key, date_key, value, observation_status_key from build
+            where b.date_key is null group by all order by 2 desc limit 15""",
+        )
+        g["PL latest daily totals"] = q(
+            con,
+            """select measure_key, date_key, value, observation_status_key from build
             where breakdown_json = '{}' and frequency = 'D'
-            qualify row_number() over (partition by measure_key order by date_key desc) = 1""")
-        g["PL 2026-10-15 entry by group"] = q(con, """select breakdown_json, value, observation_status_key from build
-            where frequency = 'D' and date_key = date '2026-10-15' and measure_codes = 'entry' order by value desc""")
-        g["PL monthly totals 2026"] = q(con, """select measure_key, date_key, value, observation_status_key from build
-            where breakdown_json = '{}' and frequency = 'M' and date_key >= date '2026-01-01' order by 1, 2""", 24)
-        g["gold_yaml_tests_failing_rows"] = q(con, """select count(*) from build where measure_key is null
+            qualify row_number() over (partition by measure_key order by date_key desc) <= 2""",
+        )
+        g["PL monthly totals 2026"] = q(
+            con,
+            """select measure_key, date_key, value, observation_status_key from build
+            where breakdown_json = '{}' and frequency = 'M' and date_key >= date '2026-07-01' order by 1, 2""",
+            12,
+        )
+        g["gold_yaml_tests_failing_rows"] = q(
+            con,
+            """select count(*) from build where measure_key is null
             or date_key is null or value is null or raw_sha256 is null or geography_key <> 'PL'
-            or frequency not in ('D', 'M') or observation_status_key not in ('ok', 'provisional')""")[0][0]
+            or frequency not in ('D', 'M') or observation_status_key not in ('ok', 'provisional')""",
+        )[0][0]
         # Spot values recomputed from the landed answer's raw JSON (the operator's own published records), not
         # from Bronze or Silver: sum of the 2026-10-15 values per direction vs the Gold daily total.
         client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
@@ -206,23 +311,47 @@ def main() -> int:
         raw = json.loads(client.get_object(Bucket=bucket, Key=oct_copy["object"]["key"])["Body"].read())
         spot = {}
         for rec in raw["operationaldatas"]:
-            if str(rec.get("periodFrom", "")).startswith("2026-10-15") and rec.get("isNA") not in (1, True, "1") \
-                    and rec.get("value") not in (None, ""):
+            if (
+                str(rec.get("periodFrom", "")).startswith("2026-10-15")
+                and rec.get("isNA") not in (1, True, "1")
+                and rec.get("value") not in (None, "")
+            ):
                 spot[rec["directionKey"]] = spot.get(rec["directionKey"], 0) + float(rec["value"])
-        gold_spot = dict(q(con, """select measure_codes, value from build where frequency = 'D'
-            and breakdown_json = '{}' and date_key = date '2026-10-15'"""))
+        gold_spot = dict(
+            q(
+                con,
+                """select measure_codes, value from build where frequency = 'D'
+            and breakdown_json = '{}' and date_key = date '2026-10-15'""",
+            )
+        )
         g["spot 2026-10-15 raw JSON vs Gold"] = {d: [spot.get(d), gold_spot.get(d)] for d in ("entry", "exit")}
         annotate("notice", "entsog trial Gold", g)
         lic = duckdb.connect()
-        lic.execute("create table source as select * from read_csv('warehouse/seeds/source.csv', all_varchar=true)")
-        lic.execute("create table licence as select * from read_csv('warehouse/seeds/licence.csv', all_varchar=true)")
-        annotate("notice", "entsog trial catalogue licence row", q(lic, """select s.source_key, s.licence_key, l.name,
+        lic.execute(
+            "create table source as select * from read_csv('warehouse/seed_rows/source/*.csv', "
+            "all_varchar=true, union_by_name=true)"
+        )
+        lic.execute(
+            "create table licence as select * from read_csv('warehouse/seed_rows/licence/*.csv', "
+            "all_varchar=true, union_by_name=true)"
+        )
+        annotate(
+            "notice",
+            "entsog trial catalogue licence row",
+            q(
+                lic,
+                """select s.source_key, s.licence_key, l.name,
             l.commercial_ok from source s left join licence l on s.licence_key = l.licence_key
-            where s.source_key = 'entsog'"""))
+            where s.source_key = 'entsog'""",
+            ),
+        )
     except Exception as exc:  # noqa: BLE001
         status = 1
-        annotate("error", "entsog trial failed", {"error": f"{type(exc).__name__}: {str(exc)[:2500]}",
-                                                  "collected": COLLECTED[-3:]})
+        annotate(
+            "error",
+            "entsog trial failed",
+            {"error": f"{type(exc).__name__}: {str(exc)[:2500]}", "collected": COLLECTED[-3:]},
+        )
     finally:
         cleanup()
     return status
@@ -242,7 +371,10 @@ def cleanup() -> None:
     except Exception as exc:  # noqa: BLE001
         removed["catalog_error"] = f"{type(exc).__name__}: {str(exc)[:200]}"
     client = s3()
-    for var, label in (("STORAGE_LANDING_BUCKET_NAME", "landing_objects"), ("STORAGE_LAKEHOUSE_BUCKET_NAME", "lake_objects")):
+    for var, label in (
+        ("STORAGE_LANDING_BUCKET_NAME", "landing_objects"),
+        ("STORAGE_LAKEHOUSE_BUCKET_NAME", "lake_objects"),
+    ):
         bucket = req(var)
         for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=f"{SCRATCH}/"):
             keys = [{"Key": o["Key"]} for o in page.get("Contents", [])]
