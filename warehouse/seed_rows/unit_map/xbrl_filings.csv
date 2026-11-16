@@ -2,3 +2,6 @@ source_system,unit_code,measure_key_pattern,unit_key
 xbrl_filings,filings,,filings
 xbrl_filings,entities,,entities
 xbrl_filings,iso4217:PLN,,pln
+xbrl_filings,iso4217:EUR,,eur
+xbrl_filings,iso4217:USD,,usd
+xbrl_filings,iso4217:UAH,,uah

@@ -29,12 +29,12 @@ bronze: [bronze.xbrl_filings_filings, bronze.xbrl_filings_facts, bronze.xbrl_fil
 silver: [silver.xbrl_filings_filings, silver.xbrl_filings_facts]
 gold: [gold.esef_filing, gold.esef_issuer, gold.esef_financial_fact, gold.build_xbrl_filings]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  xbrl_filings_filings: {rows: 1300}  # 876 (Dev trial TRIAL)
-  xbrl_filings_facts: {rows: 1}  # TRIAL
-  esef_filing: {rows: 1300}  # 876 (Dev trial TRIAL)
-  esef_issuer: {rows: 500}  # 326 (Dev trial TRIAL)
-  esef_financial_fact: {rows: 1}  # TRIAL
-  poc_build_xbrl_filings: {rows: 20}  # TRIAL
+  xbrl_filings_filings: {rows: 1300}  # 876 (Dev trial 43838478762)
+  xbrl_filings_facts: {rows: 4500}  # 2,956 (Dev trial 43838478762)
+  esef_filing: {rows: 1300}  # 876 (Dev trial 43838478762)
+  esef_issuer: {rows: 500}  # 326 (Dev trial 43838478762)
+  esef_financial_fact: {rows: 2200}  # 1,467 (Dev trial 43838478762)
+  poc_build_xbrl_filings: {rows: 20}  # 10 (Dev trial 43838478762; 2 rows per year of period end)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one list of under 1,000 filings and a few thousand facts; the facts step is

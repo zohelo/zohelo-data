@@ -26,6 +26,13 @@ the reporting period per filing, currency as published), and the block `esef_rep
 KRS, NIP or REGON and no region: none is invented. Language versions and refilings are separate filings with the
 next sequence number and no version column, so every filing is kept and nothing is picked between them.
 
+Dev trial 43838478762 (16 Nov 2026): 876 Polish filings of 326 issuers (period ends 2020-12-31 to 2024-03-31;
+added 2021-06-08 to 2024-07-30, so the repository seems to have collected no Polish filing since July 2024), 779
+with an xBRL-JSON document; 3.0 GB read once (56 minutes), 4.3 MB landed; a second run wrote nothing. Bronze 14,578
+facts from 777 documents (2 rejected: no fact of the two concepts). Silver 2,956 fact rows; Gold 1,467 facts
+(revenue 690 filings, profit or loss 777; banks and insurers tag no `ifrs-full:Revenue`), in PLN, EUR, USD and UAH
+as published. Values are kept as tagged: PKO BP's 2020 profit or loss is tagged −2,561 m PLN.
+
 Left out: other countries, other concepts (assets, equity, employees …), dimensional facts (segments, equity
 components) and comparative periods in Gold (they stay in Silver), the report packages and viewers. The
 repository says it is not complete. Refresh full (D32, #1500); weekly, Thursday 02:25 UTC. Terms: "At present,
