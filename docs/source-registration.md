@@ -124,9 +124,9 @@ source declares both in its own file, `warehouse/macros/value_range/<source_syst
 - The test reads the rows and models written in it first (the sources from before the split; edited in place, no
   new rows or models), then each source's file in name order. It fails the parse on a malformed bound, a bound
   declared twice by one source, or a model that is not `poc_metrics_*`.
-- Moved on 16 November: the bounds and the single-source models of crossref, gugik_prng, gus_culture,
+- Moved on 16 November: the bounds and the single-source models of cie_sio, crossref, gugik_prng, gus_culture,
   gus_culture_participation, gus_nsp2021, gus_psr2020, gus_tourism, mrpips_social_assistance, ms_isws, owid,
-  policja_statistics, radon and rpwdl (the compiled test reads the same 112 bounds and 55 models, and returns the
+  policja_statistics, radon and rpwdl (the compiled test reads the same 113 bounds and 56 models, and returns the
   same rows on the same data). The other sources' rows stay in the test file.
 - No model calls these macros (`repo_check` `configuration`), and `warehouse/changed.py` keeps
   `macros/value_range/` out of every build fingerprint: a new or changed bound rebuilds nothing. The test runs when
