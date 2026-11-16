@@ -6,12 +6,13 @@ ZIP of the exact API answers, ``page_<nnnn>.json``. One Bronze row per queue rec
 case), values as published text (numbers as their JSON text, null as null). Every month is its own entity, so the
 newest copy of each month stays (``bronze_latest_only``) and the months accumulate.
 
-Kept: the queue id, case, benefit, provider code and name, the place, its locality, county and TERYT code, the
-RPWDL registry number and the resort code parts VII and VIII, the place's flags, the published statistics
-(month-end persons awaiting, persons removed, average waiting period and their month) and the forecast time to the
-benefit (``pcus``) with its as-at date. Left out on purpose (still in the Landing and Archive bytes): REGON and NIP
-of the provider, street address, coordinates, every phone, fax, e-mail and web address, public transport lines
-(contact data, and for one-person practices data about a person; not needed for the measures).
+Kept: the queue id, case, benefit, the NFZ provider code, the place's locality, county and TERYT code, the resort
+code parts VII and VIII, the place's flags, the published statistics (month-end persons awaiting, persons removed,
+average waiting period and their month) and the forecast time to the benefit (``pcus``) with its as-at date. Left
+out on purpose (still in the Landing and Archive bytes): the provider's and the place's names, the provider's
+REGON, NIP, RPWDL registry number and seat TERYT code, street address, coordinates, every phone, fax, e-mail and web
+address, public transport lines. Many providers are one-person practices named after the practitioner, whose name,
+registry number and seat identify a natural person; the measures need none of them.
 
 A page that is not a queue answer, a page out of order, a record of another type or with an attribute the API
 v1.4 does not describe, or an answer whose records differ from the entity's ``meta.count``, rejects the file into
@@ -41,12 +42,12 @@ ATTRIBUTES = {
     "benefit": "benefit",
     "anesthesia": "anesthesia",
     "many-places": "many_places",
-    "provider": "provider_name",
+    "provider": None,
     "provider-code": "provider_code",
     "regon-provider": None,
     "nip-provider": None,
-    "teryt-provider": "teryt_provider",
-    "place": "place_name",
+    "teryt-provider": None,
+    "place": None,
     "address": None,
     "locality": "locality",
     "county": "county",
@@ -58,7 +59,7 @@ ATTRIBUTES = {
     "email": None,
     "website": None,
     "teryt-place": "teryt_place",
-    "registry-number": "registry_number",
+    "registry-number": None,
     "id-resort-part-VII": "resort_part_vii",
     "id-resort-part-VIII": "resort_part_viii",
     "benefits-for-children": "benefits_for_children",
