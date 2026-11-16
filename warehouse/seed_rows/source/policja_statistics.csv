@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+policja_statistics,PLG-033,Statystyka Policji (statystyka.policja.pl),Police statistics portal,Komenda Główna Policji,cube,file,national-public,unresolved,https://statystyka.policja.pl/

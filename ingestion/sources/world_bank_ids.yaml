@@ -27,6 +27,10 @@ archive_policy:
 bronze: [bronze.ids_observations, bronze.ids_metadata, bronze.ids_rejected_files]
 silver: [silver.ids_observations, silver.ids_series]
 gold: [gold.build_ids, gold.metrics_external_debt_stocks, gold.metrics_external_debt_gni, gold.metrics_external_debt_service, gold.metrics_external_debt_service_gni, gold.metrics_external_debt_service_exports]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  ids_observations: {rows: 4000000, exception: "#2772"}  # 2,647,628 (Dev trial 43085820597); #822 exception, review 2027-01-15
+  ids_series: {rows: 2000}  # 577
+  poc_build_ids: {rows: 50000}  # 31,260 (Dev trial 43202506484)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32, small source: full in every layer): one archive of ~12 MB; rebuilt in full when a new archive lands (about once a year).
