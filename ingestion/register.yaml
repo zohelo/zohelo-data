@@ -6175,7 +6175,8 @@ sources:
   domains: [air quality, environment]
   entities: [monitoring station, sensor, observation]
   granularity: Station/sensor pollutant readings and indexes.
-  coverage: Current operational data; historical API retention was not confirmed.
+  coverage: 'Current operational data; the API keeps the last three days of hourly values (Dev probes of #2960), so history
+    starts with the first daily pass.'
   access:
     endpoint: https://powietrze.gios.gov.pl/pjp/content/api
     kind: api
@@ -6201,9 +6202,10 @@ sources:
   ingestion:
     history: 'New API v1: https://api.gios.gov.pl/pjp-api/v1/rest/data/getData/{sensorId} (measurements), /aqindex/getIndex/{stationId},
       station and sensor lists; the old /pjp-api/rest/ endpoints are withdrawn. Archive series of validated data are published
-      separately: annual ZIP files 2000-2025 on https://powietrze.gios.gov.pl/pjp/archives (/pjp/archives/downloadFile/<id>) and
-      the API v1 archivalData endpoints (getDataBySensor, getDataForAllStationsByYearAndVoivodeship; limit 2 requests a minute),
-      found in Dev probe 43322192937; not loaded by the first build (#2960).'
+      separately: yearly ZIP files listed on https://powietrze.gios.gov.pl/pjp/archives (/pjp/archives/downloadFile/<id>; the
+      job log of Dev probe 43322192937 shows 2022 to 2025, not downloaded) and the API v1 archivalData services (getDataBySensor,
+      getDataForAllStationsByYearAndVoivodeship; limit 2 requests a minute; untested); not loaded by the first build (#2960),
+      follow-up #3119.'
     incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
     identifiers: Station, sensor/parameter and observation timestamp.
   modelling:
@@ -6212,10 +6214,10 @@ sources:
   research:
     priority: review-first
     evidence: tested
-    connection: not-tested
+    connection: tested
     blockers:
     - 'Current data are not validated and may change (GIOŚ): keep snapshots and mark them provisional'
-    - Find the validated-archive download route (annual files) and its terms
+    - Validated archive (yearly files) not loaded yet (#3119)
     references:
     - https://powietrze.gios.gov.pl/pjp/content/api
     - https://powietrze.gios.gov.pl/pjp/content/terms_of_service
