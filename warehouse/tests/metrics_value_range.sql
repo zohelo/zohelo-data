@@ -43,6 +43,9 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('average_farm_area', 'gus_psr2020', '%', 0, 100),
     -- MRPiPS-03 (#2910): persons granted social assistance, PL 2019 = 1,205,506 (Dev trial 43293740538)
     ('social_assistance_recipients', 'mrpips_social_assistance', '%', 0, 1e7),
+    -- Crossref works with affiliation text naming Poland or Polska per publication year (#553): largest PL 2022 =
+    -- 29,413 works (Dev trial 43336945209)
+    ('scholarly_works_pl_affiliation', 'crossref', '%', 0, 2e5),
     -- ISWS (#2968): common courts, all cases, Poland; largest 2019 = 17,728,993 received, 16,400,377 resolved;
     -- average duration in months, 2011-2025 between 4.05 and 7.15 (ISWS workbooks, Dev trial 43804846162)
     ('court_cases_received', 'ms_isws', '%', 0, 5e7),
@@ -634,6 +637,15 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_health_expenditure_gdp') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_scholarly_works_pl_affiliation') }}
     union all
     select
         concept_key,
