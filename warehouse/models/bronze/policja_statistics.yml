@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: policja_statistics
+  description: Polish Police statistics portal statystyka.policja.pl (register PLG-033), offence-category workbooks
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/policja_statistics/
+    loaded_by: ingestion/to_bronze/policja_statistics/
+    config: ingestion/sources/policja_statistics.yaml
+  tables:
+  - name: policja_statistics_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of every landed copy of each
+      category workbook; partitioned by entity.
+  - name: policja_statistics_rejected_files
+    description: Files of policja_statistics the Bronze decoder rejected, with the reason.

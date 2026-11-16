@@ -93,6 +93,11 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- UNHCR (#2415): persons; highest refugees 4,404,995 (all asylum countries 1951-2025, Dev trial 43282453427).
     -- Documentation only (no metrics_refugees_hosted model yet).
     ('refugees_hosted', 'unhcr', '%', 0, 2e7),
+    -- Police statistics portal (#2969): offences; Poland is the largest area, highest 1,466,643 (2003, all
+    -- offences; Dev trial 43806377026); % detected as published, 15.5 to 83.0 there, bound 0-100. Documentation
+    -- only (no metrics models yet).
+    ('recorded_offences', 'policja_statistics', '%', 0, 5e6),
+    ('offence_detection_rate', 'policja_statistics', '%', 0, 100),
     -- EEA GovReg (#2424): published in Gg (kt) CO2e, metrics in Mt CO2e (D33, ÷ 1000); highest member DE 1,253,128 kt
     -- = 1,253.1 Mt (total excl. LULUCF, 1990-2024, Dev trial 43282453427). Documentation only until
     -- metrics_ghg_emissions joins the metrics union below.
