@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: world_bank_findex
+  description: World Bank Global Findex Database — country-level CSV
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/world_bank_findex/
+    loaded_by: ingestion/to_bronze/world_bank_findex/
+    config: ingestion/sources/world_bank_findex.yaml
+  tables:
+  - name: findex_observations
+    description: >-
+      One row per economy or aggregate × survey year × population group × indicator with a value of the newest edition (NA cells are not stored): economy name and code, year, adult population, region, income group, group / group2, indicator id, value as text (shares 0-1).
+  - name: findex_rejected_files
+    description: >-
+      Findex Landing files the Bronze decoder rejected, with the reason.

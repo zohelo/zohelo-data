@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+gtfs_wroclaw,PL-ENV-032,Wrocław rozkład jazdy GTFS,Wrocław public transport GTFS timetable,"Gmina Wrocław, Urząd Miejski Wrocławia",reference,file,subnational-public,cc0_wroclaw_timetable,https://open-data.cui.wroclaw.pl/hdb/metadane/13/

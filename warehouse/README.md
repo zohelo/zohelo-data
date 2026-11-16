@@ -29,7 +29,9 @@ Iceberg commit that does not yet see the build's own `__dbt_tmp` table (#2574) f
 model, `build.py` resumes the build with `dbt retry` on fewer threads, also when a data test
 failed in the same build (#2789; the test still fails the build) (`warehouse.yaml`
 `rate_limit_retry_*`, `commit_retry_threads`), which also replaces tables a failed rename
-left as `__dbt_backup`.
+left as `__dbt_backup`. After the declared waits it goes on retrying with the last wait while
+each retry re-runs fewer nodes than the one before, up to `rate_limit_retry_max` retries and
+`rate_limit_retry_deadline_minutes` from the start of the build step (#2618).
 
 The scheduled build (empty filter) rebuilds only models whose inputs or code changed
 (owner policy #822, `changed.py`): a model is selected when its table is missing, its
@@ -81,8 +83,10 @@ Gold per block (docs/gold-coverage.md, O36, O43, decision D35): `observations.py
 block of a big source into `gold.<source>_observations`, `_series`, `_measures` and `_geography` by
 rule, one file per block, rebuilt only when the block's Silver files, the Gold SQL
 (`entity/gold_*.sql`) or the mapping of its geography codes changed; each block is checked for one
-row per `series_key` × `date_key` before it is accepted. Built for Eurostat and GUS DBW; the Pipeline activity
-`gold.observations` runs it for every source that lists it in `activities` (docs/operating.md; Eurostat; GUS DBW's tables are declared, the activity is not authorized yet): the first load is started by hand with a filter, later
+row per `series_key` × `date_key` before it is accepted. Built for Eurostat, GUS DBW and GUS BDL
+(`entity/gold_gus_dbw_*.sql`, `entity/gold_gus_bdl_*.sql`); the Pipeline activity `gold.observations` runs it for
+every source that lists it in `activities` (docs/operating.md; Eurostat; the tables of GUS DBW and GUS BDL are
+declared, the activity is not authorized yet): the first load is started by hand with a filter, later
 runs continue within their time budget in the order Polish regions, countries and aggregates, the rest
 (O43). Dev trials write to a scratch namespace (`--trial zz_dev_<topic>`).
 
