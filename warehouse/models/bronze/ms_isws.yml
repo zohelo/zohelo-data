@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: ms_isws
+  description: Ministry of Justice ISWS justice statistics (register PLG-031), multi-year workbooks (.xlsx and .xls)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/ms_isws/
+    loaded_by: ingestion/to_bronze/ms_isws/
+    config: ingestion/sources/ms_isws.yaml
+  tables:
+  - name: ms_isws_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of the newest copy of each
+      landed workbook; partitioned by entity (caseload, duration, adoptions, notarial_acts).
+  - name: ms_isws_rejected_files
+    description: Files of ms_isws the Bronze decoder rejected, with the reason.

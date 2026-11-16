@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: nid_monument_register
+    description: >-
+      One row per entry (decision) of the NID register of immovable monuments, register book A, in the newest
+      lists: register number, decision date, the objects it covers, the powiat (or the voivodeship when its objects
+      lie in several), localities, date of the list (NID lists on nid.pl; licence unresolved, internal). No address,
+      no owner.
+    columns:
+      - name: register_key
+        description: list:number:date (ISO date, else the date as printed), built in silver.nid_monuments_decisions.
+        tests: [not_null, unique]
+      - name: geography_key
+        description: >-
+          The powiat (TERC:<WWPP>) when every object of the entry lies in one, else the voivodeship; _X when the
+          powiat name of the list matches no TERYT powiat (counted in the Dev trial). No relationships test: it would
+          be selected by builds of poc_dim_geography before this table exists.
+        tests: [not_null]
+      - name: objects
+        tests: [not_null]
+  - name: poc_build_nid_monuments
+    description: >-
+      Gold build stage of nid_monuments: objects and register entries of the NID register of immovable monuments by
+      powiat, voivodeship and Poland, on the date the lists state (frequency D, one snapshot).
