@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+sejm,PLG-024,"Sejm RP: posiedzenia, głosowania i druki (API Sejmu)","Sejm of the Republic of Poland: sittings, votings and prints (Sejm API)",Kancelaria Sejmu,registry,api,national-public,unresolved,https://api.sejm.gov.pl/sejm.html
