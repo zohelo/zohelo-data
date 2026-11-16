@@ -146,7 +146,7 @@ def _knf_rows(page: str) -> list[dict[str, str]]:
     for cells in KNF_TR.findall(page):
         found = KNF_CELLS.match(cells)
         if not found:
-            raise Layout(f"KNF list row of unknown shape: {text(cells)[:120]!r}")
+            raise Layout(f"KNF list row of unknown shape ({len(cells)} characters)")
         issuer, received, document, title = found.groups()
         rows.append(
             {
@@ -206,20 +206,26 @@ ISIN = re.compile(r"^(.*\S)\s*\(([A-Z]{2}[A-Z0-9]{9}[0-9])\)$")
 def parse_gpw(page: str) -> list[dict[str, str]]:
     """The report rows of a list page or of a "Show more" fragment, ESPI and EBI alike, with ``system`` to tell
     them apart. Each item is ``<date time> | <category> | <system> | <number>``, the issuer with its ISIN in
-    brackets linking the report's page, and the title (matched for the layout, never kept: it can name persons).
-    An item that names a report in another shape raises Layout. The price and change beside the issuer are not
-    read."""
+    brackets linking the report's page, and the title (never kept: it can name persons). In EBI items the link
+    text is the title followed by the issuer (Dev trial 43831909084): the title, as the item's ``<p>`` gives it,
+    is cut off the front; a link text that still holds the title raises Layout, so a title never reaches Landing.
+    An item that names a report in another shape raises Layout; error messages name the report id, never text.
+    The price and change beside the issuer are not read."""
     rows = []
     for item in GPW_ITEM.findall(page):
         if "geru_id=" not in item:
             continue
         found = GPW_PARTS.search(item)
         if not found:
-            raise Layout(f"GPW list item of unknown shape: {text(item)[:120]!r}")
+            raise Layout(f"GPW list item of unknown shape ({len(item)} characters)")
         head = [part.strip() for part in text(found.group(1)).split("|")]
         if len(head) != 4 or not GPW_HEAD.match(head[0]) or head[2] not in {"ESPI", "EBI"}:
-            raise Layout(f"GPW list item head of unknown shape: {head!r}")
-        issuer = text(found.group(3))
+            raise Layout(f"GPW list item head of unknown shape at report {found.group(2)}")
+        issuer, title = text(found.group(3)), text(found.group(4))
+        if title and issuer.startswith(title + " "):
+            issuer = issuer[len(title) :].strip()
+        if title and title in issuer:
+            raise Layout(f"GPW list item {found.group(2)}: the issuer link holds the title")
         with_isin = ISIN.match(issuer)
         rows.append(
             {
