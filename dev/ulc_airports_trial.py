@@ -12,7 +12,6 @@ Bronze, Silver, Gold) runs as in production."""
 
 from __future__ import annotations
 
-import csv
 import json
 from hashlib import sha256
 from pathlib import Path
@@ -254,10 +253,10 @@ def main(argv) -> int:
                 "select string_agg(measure_codes || '=' || m, ' ') from (select measure_codes, max(value) m from build where is_total group by 1)"
             ),
         }
-        with (ROOT / "warehouse/seeds/source.csv").open() as f:
-            src = [r for r in csv.DictReader(f) if r["source_key"] == "ulc_airports"]
-        with (ROOT / "warehouse/seeds/licence.csv").open() as f:
-            lic = [r for r in csv.DictReader(f) if src and r["licence_key"] == src[0]["licence_key"]]
+        from warehouse import seed_rows
+
+        src = [r for r in seed_rows.rows("source") if r["source_key"] == "ulc_airports"]
+        lic = [r for r in seed_rows.rows("licence") if src and r["licence_key"] == src[0]["licence_key"]]
         g["catalogue_row"] = {
             "source_licence_key": src[0]["licence_key"] if src else None,
             "licence": [(r["licence_key"], r["name"], "commercial_ok=" + r["commercial_ok"]) for r in lic],
