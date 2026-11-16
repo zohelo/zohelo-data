@@ -1,0 +1,3 @@
+source_system,unit_code,measure_key_pattern,unit_key
+ulc_airports,passengers,,passengers
+ulc_airports,operations,,flight_operations
