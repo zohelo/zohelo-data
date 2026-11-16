@@ -20,7 +20,7 @@ missing ones (newest year first), then the open years (the current contract year
 still amends: OPEN_YEARS) in every run, and any other year whose newest copy is older than REREAD_DAYS.
 
 Polite access: one request at a time, PAUSE_SECONDS between requests (the terms allow 10 per second per IP), an
-identifying User-Agent, timeouts, bounded retries with backoff on 429, 5xx and timeouts, Retry-After honoured;
+identifying User-Agent, timeouts, bounded retries with backoff on 429, 5xx and any network error, Retry-After honoured;
 FAIL_STREAK failing entities in a row stop the run (the API is down: never hammered). Time-budgeted: no entity is
 started in the last MARGIN_MINUTES; the next run continues from Landing.
 
@@ -44,9 +44,9 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+from ingestion.common.landing_write import USER_AGENT, put_new
 from ingestion.common.r2 import archive_key, archived, get_with_backoff, req, s3
 from ingestion.common.report import annotate, step_summary
-from ingestion.to_landing.world_bank_icp.extract import USER_AGENT, put_new
 
 SOURCE = "nfz_contracts"
 API = "https://api.nfz.gov.pl/app-umw-api"
@@ -76,14 +76,15 @@ def entity_of(year: int, branch: str) -> str:
 
 
 def fetch(session: requests.Session, address: str) -> tuple[bytes, Any]:
-    """GET one answer: (exact body, parsed JSON). 429, 5xx and network errors are retried with backoff; another
-    status fails at once; still failing → Unavailable."""
+    """GET one answer: (exact body, parsed JSON). 429, 5xx and any requests error (connection, timeout, a body cut
+    off or not decodable mid-stream) are retried with backoff; another status fails at once; still failing →
+    Unavailable."""
     last = ""
     for attempt, delay in enumerate((0, *RETRY_DELAYS)):
         time.sleep(PAUSE_SECONDS + delay)
         try:
             response = session.get(address, timeout=TIMEOUT_SECONDS)
-        except (requests.ConnectionError, requests.Timeout) as exc:
+        except requests.RequestException as exc:  # ChunkedEncodingError, ContentDecodingError, ... (#3116 review)
             last = type(exc).__name__
             continue
         if response.status_code == 200:

@@ -6,7 +6,9 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import PurePosixPath
+import random
 import re
+import threading
 import time
 from typing import Any
 
@@ -32,15 +34,120 @@ def req(name: str) -> str:
     return value
 
 
-def s3():
-    return boto3.client(
+# ----------------------------------------------------------------------------- throttling
+# R2 refuses requests while many jobs use one bucket: HTTP 429 "Too Many Requests", and 503 with
+# ServiceUnavailable or SlowDown ("Reduce your rate of simultaneous reads on the same object").
+# botocore's standard mode does not retry 429 at all, and stops retrying 503 once its retry quota
+# is spent (about 100 retries per client, whatever max_attempts says), so one busy evening failed
+# production jobs (#2985). Every storage client is made by storage_client() and shares THROTTLE.
+THROTTLE_STATUSES = (429, 503)
+THROTTLE_CODES = frozenset({"SlowDown", "ServiceUnavailable", "TooManyRequests", "RequestLimitExceeded"})
+THROTTLE_ATTEMPTS = 10  # requests sent for one call at most: waits of 2, 4, ... 60 s, about 5 minutes
+THROTTLE_BASE_SECONDS = 2.0
+THROTTLE_CAP_SECONDS = 60.0
+THROTTLE_BUDGET_SECONDS = 900.0  # time one process spends waiting; the shortest job timeout is 60 minutes
+
+
+def throttle_code(response) -> str | None:
+    """The error code of a throttle answer in botocore's (http response, parsed) pair, else None."""
+    if not response:
+        return None
+    http, parsed = response
+    error = (parsed or {}).get("Error") or {}
+    code, status = str(error.get("Code") or ""), getattr(http, "status_code", None)
+    if status in THROTTLE_STATUSES or code in THROTTLE_CODES or "Reduce your" in str(error.get("Message") or ""):
+        return code or str(status)
+    return None
+
+
+class Throttle:
+    """Bounded retries with exponential backoff and jitter for throttled storage requests.
+
+    A handler of botocore's ``needs-retry`` event: it sees every attempt of every operation of a
+    client (object reads and writes, listings, deletes, each part of a multipart transfer) and
+    answers with the seconds to wait before the same request is sent again, or None to let the
+    error through. A throttled request was refused, not applied, so sending it again writes the
+    same bytes to the same key once. One call is sent at most ``attempts`` times; one process
+    waits at most ``budget`` seconds in total (time during which at least one thread waits), after
+    which a throttled call fails at once. Counts are kept for the activity annotation.
+    """
+
+    def __init__(
+        self,
+        attempts: int = THROTTLE_ATTEMPTS,
+        base: float = THROTTLE_BASE_SECONDS,
+        cap: float = THROTTLE_CAP_SECONDS,
+        budget: float = THROTTLE_BUDGET_SECONDS,
+        clock=time.monotonic,
+        jitter=random.random,
+    ) -> None:
+        self.attempts, self.base, self.cap, self.budget = attempts, base, cap, budget
+        self._clock, self._jitter, self._lock = clock, jitter, threading.Lock()
+        self._waiting_until = 0.0
+        self.waited = 0.0
+        self.retries: dict[str, int] = {}
+        self.gave_up: dict[str, int] = {}
+
+    def __call__(self, response=None, attempts: int = 0, operation=None, **_) -> float | None:
+        code = throttle_code(response)
+        if code is None:
+            return None  # not a throttle answer: botocore's own handler decides
+        label = f"{getattr(operation, 'name', 'request')} {code}"
+        delay = min(self.cap, self.base * 2 ** max(0, attempts - 1)) * (0.5 + self._jitter() / 2)
+        asked = str(getattr(response[0], "headers", {}).get("Retry-After") or "")
+        if asked.isdigit():
+            delay = max(delay, min(self.cap, float(asked)))
+        with self._lock:
+            now = self._clock()
+            added = max(0.0, now + delay - max(now, self._waiting_until))
+            reason = "attempts" if attempts >= self.attempts else "budget" if self.waited + added > self.budget else ""
+            if reason:
+                self.gave_up[f"{label} ({reason})"] = self.gave_up.get(f"{label} ({reason})", 0) + 1
+                return None
+            self.waited += added
+            self._waiting_until = max(self._waiting_until, now + delay)
+            self.retries[label] = self.retries.get(label, 0) + 1
+        return delay
+
+    def report(self) -> dict[str, Any]:
+        """Retries so far by operation and code; empty when nothing was throttled."""
+        with self._lock:
+            if not self.retries and not self.gave_up:
+                return {}
+            return {
+                "retries": sum(self.retries.values()),
+                "waited_seconds": round(self.waited, 1),
+                "by_operation": dict(sorted(self.retries.items())),
+                "gave_up": dict(sorted(self.gave_up.items())),
+                "limits": {"attempts_per_call": self.attempts, "wait_budget_seconds": self.budget},
+            }
+
+
+THROTTLE = Throttle()
+
+
+def storage_client(max_pool_connections: int = 10, throttle: Throttle = THROTTLE):
+    """The S3 client of every activity: R2 endpoint, writer key, and THROTTLE on every operation.
+
+    botocore's standard mode still retries broken connections, timeouts and 5xx answers."""
+    client = boto3.client(
         "s3",
         endpoint_url=req("STORAGE_ENDPOINT_URL").rstrip("/"),
         region_name="auto",
         aws_access_key_id=req("STORAGE_WRITE_ACCESS_KEY"),
         aws_secret_access_key=req("STORAGE_WRITE_SECRET_KEY"),
-        config=Config(signature_version="s3v4", retries={"max_attempts": 8, "mode": "standard"}),
+        config=Config(
+            signature_version="s3v4",
+            retries={"max_attempts": 8, "mode": "standard"},
+            max_pool_connections=max_pool_connections,
+        ),
     )
+    client.meta.events.register_first("needs-retry.s3", throttle)
+    return client
+
+
+def s3():
+    return storage_client()
 
 
 def sql(query: str) -> list[dict[str, Any]]:

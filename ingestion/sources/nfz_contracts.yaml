@@ -16,13 +16,18 @@ description: "NFZ contracts API (API Umowy NFZ): the agreements the 16 NFZ regio
 # packages (/agreements/{id}, /plans/{id}, /months/{id}: one request per agreement or plan, about 327,000 requests for
 # the scope), the provider dictionary with addresses and TERYT commune (/providers, about 26,000 a year) and the
 # product, service-type and orthopedic-supply dictionaries (the agreements carry the service type code and name).
-# Initial load: 13,146 pages at about 1.1 s each, about 4 hours: one scheduled run (330-minute budget; resumable).
+# Initial load: 13,146 pages, measured 113 minutes in Dev trial 43328769016 (about 0.5 s a page): one scheduled run
+# (330-minute budget; resumable per year and branch).
+# Privacy: providers include natural persons (individual and group practices of doctors, nurses, midwives), so the
+# provider's name, NIP, REGON, registry number and place are not loaded into Bronze or Silver (only the Landing bytes
+# hold them); the NFZ provider code and the branch are kept. Owner GDPR review before any person-level load.
 extraction:
   initial: api
   production: snapshot                  # each ZIP is the complete list of one contract year and branch
   incremental_policy: changed_since_last  # data digest per year and branch; open years read again in every run
   schedule: # UTC; release: a live register NFZ updates as agreements are signed and amended (no calendar); weekly
-    # (Saturday 01:15): the current and previous contract year read again (32 lists, 3,579 pages in 2025-2026, ~70 min)
+    # (Saturday 01:15): the current and previous contract year read again (32 lists, 3,579 pages in 2025-2026; about
+    # 30 minutes at the trial's rate, not measured as a whole)
     - {cron: "15 1 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/nfz_contracts/
@@ -34,9 +39,9 @@ bronze: [bronze.nfz_contracts_agreements, bronze.nfz_contracts_rejected_files]
 silver: [silver.nfz_contracts_agreements, silver.nfz_contracts_providers]
 gold: [gold.build_nfz_contracts]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  nfz_contracts_agreements: {rows: 490000}  # TRIAL
-  nfz_contracts_providers: {rows: 40000}  # TRIAL
-  poc_build_nfz_contracts: {rows: 11000}  # TRIAL
+  nfz_contracts_agreements: {rows: 490000}  # 327,177 (Dev trial 43328769016)
+  nfz_contracts_providers: {rows: 50000}  # 33,533 (Dev trial 43328769016)
+  poc_build_nfz_contracts: {rows: 9800}  # 6,506 (Dev trial 43328769016)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32 + #2955): 128 year-and-branch files (under 1 MB each) and a Silver table of

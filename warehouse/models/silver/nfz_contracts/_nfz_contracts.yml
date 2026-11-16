@@ -6,8 +6,11 @@ models:
       NFZ regional branches list for each landed contract year (scope in ingestion/sources/nfz_contracts.yaml), from the
       newest copy of each year and branch. Grain: agreement_id (one id per agreement and contract year). Values as
       published (terms forbid modifying the data): amount_pln is the agreement's value for the year as NFZ states it, a
-      contract ceiling and not expenditure, null where NFZ gives none. Plans by contract product and months are not
-      loaded. tests/nfz_contracts_agreements_complete.sql checks every year and branch in scope is present.
+      contract ceiling and not expenditure, null where NFZ gives none (service type 12), 0.00 where NFZ publishes 0.00.
+      The provider is its NFZ provider code only; name, NIP, REGON, registry number and place are not loaded
+      (providers include natural persons). Plans by contract product and months are not loaded.
+      tests/nfz_contracts_agreements_complete.sql fails on a missing year and branch before the newest year,
+      ..._complete_newest.sql warns on one in the newest year.
     tests:
       - unique:
           column_name: agreement_id
@@ -35,9 +38,10 @@ models:
     description: >-
       NFZ contracts API (register PLS-014): healthcare providers holding an NFZ agreement in the landed contract years,
       from silver.nfz_contracts_agreements. Grain: branch_code x provider_code (NFZ provider codes are per branch).
-      Identifiers (NIP, REGON, registry number), name and place as published on the provider's most recently updated
-      agreements; presence by contract year. Linking to other registers uses NIP or REGON, never the name.
-      tests/nfz_contracts_providers_complete.sql checks every provider of an agreement is here.
+      Presence only (first and last contract year, contract years, agreements): no name, NIP, REGON, registry number or
+      place, because providers include natural persons (individual and group practices) and an owner GDPR review is
+      needed before any person-level load. tests/nfz_contracts_providers_complete.sql checks every provider of an
+      agreement is here with the same counts.
     tests:
       - unique:
           column_name: "branch_code || '|' || provider_code"
@@ -49,4 +53,6 @@ models:
       - name: first_contract_year
         tests: [not_null]
       - name: last_contract_year
+        tests: [not_null]
+      - name: agreements
         tests: [not_null]

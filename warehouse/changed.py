@@ -54,6 +54,8 @@ import re
 import subprocess
 from typing import Any
 
+from warehouse import seed_rows
+
 PROJECT = Path(__file__).resolve().parent
 BLOCK_TAG = "gold_block"  # a Gold block: its children read it only when its table exists
 OPTIONAL_PARENTS = "optional_parents"  # config meta: parents (model names) a model reads only when they exist
@@ -65,6 +67,9 @@ SHARED_CODE = ("macros", "dimensions", "dbt_project.yml", "../requirements.txt")
 SOURCE_MACROS = "macros/sources"
 # The macros that find the per-source macros by name; dbt records no dependency for a macro called that way.
 REGISTRATION = "macros/source_registration.sql"
+# A model that reads a code list kept per source (config meta of warehouse/seed_rows.py) is fingerprinted with the
+# list's files, as a seed is with its CSV: dbt's checksum of the model covers its SQL only.
+SEED_ROWS = seed_rows.META
 SOURCE_MACRO_PREFIX = "poc_"  # a macro of another name there could replace a dbt macro for every model
 EXTERNAL_MODELS: frozenset[str] = frozenset()  # models built outside the scheduled build (none since #875)
 # A Bronze commit stamped just before a build started may become visible only after dbt
@@ -168,7 +173,8 @@ def files_digest(files: list[str]) -> str:
 def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """unique_id → name, namespace, table, parents (unique ids of models, seeds and sources), fingerprint.
     Seeds are planned like models: their checksum is the CSV's, so an edited seed rebuilds itself
-    and the models that ref it."""
+    and the models that ref it. A model that reads a code list kept per source (config meta SEED_ROWS) has the
+    list's files in its fingerprint, so an added or edited file does the same."""
     shared = shared_digest()
     per_source = source_macro_files(meta)
     nodes = {**meta["nodes"], **meta["sources"]}
@@ -179,8 +185,16 @@ def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
         # Parents' resolved relations: repointing a source or ref to another table is a change.
         upstream = node.get("depends_on", {}).get("nodes", [])  # a seed lists none
         parents = sorted(".".join(relation(nodes[p])) for p in upstream if p in nodes)
+        listed = node.get("config", {}).get("meta", {}).get(SEED_ROWS)
+        rows = [path.relative_to(PROJECT).as_posix() for path in seed_rows.files(listed)] if listed else []
         code = json.dumps(
-            [shared, node["checksum"]["checksum"], node.get("config", {}), parents, files_digest(per_source[uid])],
+            [
+                shared,
+                node["checksum"]["checksum"],
+                node.get("config", {}),
+                parents,
+                files_digest(per_source[uid] + rows),
+            ],
             sort_keys=True,
             default=str,
         )
@@ -226,7 +240,8 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
     "full_refresh": incremental models among them to rebuild in full, "waiting": models left out because a
     source table they read does not exist yet, "empty_blocks": the Gold blocks among them that have no table
     either, read as zero rows, "stalled": waiting model → the missing source tables, for every waiting model
-    that has a table (the build must stop on any)}."""
+    that has a table (the build must stop on any), "waiting_tests": the data tests that read a waiting model
+    (waiting_tests; the build leaves them out)}."""
     graph = models(meta)
     relations = {uid: (m["namespace"], m["table"]) for uid, m in graph.items()}
     for uid in {p for m in graph.values() for p in m["parents"] if p.startswith("source.")}:
@@ -296,6 +311,7 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
 
     for uid in graph:
         stale(uid)
+    waits = sorted(graph[u]["name"] for u, b in blocked.items() if b)
     full = sorted(
         m["name"] for m in graph.values() if m["incremental"] and reasons.get(m["name"]) in FULL_REFRESH_REASONS
     )
@@ -304,7 +320,8 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
         "reasons": reasons,
         "unchanged": len(graph) - len(reasons) - sum(blocked.values()),
         "full_refresh": full,
-        "waiting": sorted(graph[u]["name"] for u, b in blocked.items() if b),
+        "waiting": waits,
+        "waiting_tests": sorted(waiting_tests(meta, waits).values()),
         "empty_blocks": sorted(
             graph[u]["name"] for u, b in blocked.items() if b and graph[u]["block"] and state[u] is None
         ),
@@ -313,6 +330,23 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
             for u, b in sorted(blocked.items(), key=lambda item: graph[item[0]]["name"])
             if b and state[u] is not None
         },
+    }
+
+
+def waiting_tests(meta: dict[str, Any], waiting: Iterable[str]) -> dict[str, str]:
+    """unique_id → name of every data test that reads a model named in ``waiting``; pure.
+
+    dbt selects a test as soon as one of its parents is selected (eager indirect selection), so a test that joins
+    a waiting model to a shared one (a relationships test to a reference table, a singular test over several
+    sources) would run when the shared model is rebuilt, against a table that does not exist yet (#2948)."""
+    names = set(waiting)
+    held = {
+        uid for uid, node in meta["nodes"].items() if node.get("resource_type") == "model" and node["name"] in names
+    }
+    return {
+        uid: node["name"]
+        for uid, node in meta["nodes"].items()
+        if node.get("resource_type") == "test" and held & set(node.get("depends_on", {}).get("nodes", []))
     }
 
 
