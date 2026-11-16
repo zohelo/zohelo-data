@@ -368,6 +368,26 @@ def nbp():
         if not fs and "/en/" in u:
             # Say how the page offers its file when no link is in the HTML.
             per_page[u] = {"none": around(t, r"Download|xlsx|\.xls", 60, 160, 2), "scripts": len(re.findall(r"(?i)<script", t)), "chars": len(plain(t))}
+    # The table pages render their "Download" links client-side; ask the site's own content API and sitemap.
+    wp = {}
+    for slug in ("m3-and-counterparts", "assets-and-liabilities-of-monetary-financial-institutions", "podaz-pieniadza-m3-i-czynniki-jego-kreacji", "statystyka-monetarna-i-finansowa", "monetary-and-financial-statistics"):
+        for kind in ("pages", "posts"):
+            j, m = jget(f"https://nbp.pl/wp-json/wp/v2/{kind}?slug={slug}&_fields=id,link,modified,content")
+            if j is None:
+                wp[f"{kind}:{slug}"] = m
+                continue
+            if not j:
+                continue
+            t = json.dumps(j, ensure_ascii=False)
+            fs = file_urls(t.replace("\\/", "/"))
+            for f in fs:
+                files.setdefault(f, "wp-json " + slug)
+            wp[f"{kind}:{slug}"] = {"n": len(j), "link": j[0].get("link"), "mod": j[0].get("modified"), "files": [x.rsplit("/", 1)[-1] for x in fs][:12]}
+            break
+    o["wp_json"] = wp
+    for sm in ("https://nbp.pl/wp-sitemap.xml", "https://nbp.pl/sitemap.xml", "https://nbp.pl/sitemap_index.xml"):
+        r = get(sm, n=400000)
+        o["sitemap " + sm[16:]] = r["err"] if "err" in r else {"http": meta(r), "locs": len(re.findall(r"<loc>", text(r))), "first": re.findall(r"<loc>([^<]+)</loc>", text(r))[:4]}
     FULL["nbp_pages"] = per_page
     o["pages"] = {re.sub(r"https://nbp.pl/(en/)?[^/]+/[^/]+/", lambda m: "en:" if m.group(1) else "pl:", k)[:70]: ([x.rsplit("/", 1)[-1] for x in v][:8] if isinstance(v, list) else v) for k, v in per_page.items()}
     heads = {}
@@ -388,7 +408,7 @@ def nbp():
 # ----------------------------------------------------------------------- CCKP
 def cckp():
     o = {}
-    for h in ("https://climateknowledgeportal.worldbank.org", "https://cckpapi.worldbank.org", "https://worldbank.github.io", "https://datacatalogapi.worldbank.org", "https://wbg-cckp.s3.us-west-2.amazonaws.com"):
+    for h in ("https://climateknowledgeportal.worldbank.org", "https://cckpapi.worldbank.org", "https://worldbank.github.io", "https://datacatalogapi.worldbank.org", "https://wbg-cckp.s3.amazonaws.com"):
         no = robots_ok(h + "/robots.txt")
         o["robots " + h[8:30]] = no or re.sub(r"\s+", " ", ROBOTS_TXT.get(h, ""))[:160]
     r = get("https://worldbank.github.io/climateknowledgeportal/_sources/README.md", n=600000)
@@ -446,8 +466,8 @@ def cckp_api():
         FULL["datacatalog"] = j
         flat = json.dumps(j, ensure_ascii=False)
         o["datacatalog"] = {"keys": sorted(j)[:30], "licence": around(flat, r"licen[sc]e", 20, 220, 3), "updated": around(flat, r"last_updated|release_date|temporal|end_date", 10, 120, 3)}
-    for pre in ("", "data/", "data/era5-x0.25/"):
-        r = get("https://wbg-cckp.s3.us-west-2.amazonaws.com/?list-type=2&delimiter=/&max-keys=40&prefix=" + urllib.parse.quote(pre))
+    for pre in ("", "era5-x0.25/", "era5-x0.25/tas/", "era5-x0.25/tas/era5-x0.25-historical/"):
+        r = get("https://wbg-cckp.s3.amazonaws.com/?list-type=2&delimiter=/&max-keys=40&prefix=" + urllib.parse.quote(pre))
         o["s3 " + (pre or "/")] = r["err"] if "err" in r else {"prefixes": re.findall(r"<Prefix>([^<]+)</Prefix>", text(r))[:30], "keys": re.findall(r"<Key>([^<]+)</Key>", text(r))[:8], "truncated": re.findall(r"<IsTruncated>(\w+)", text(r))}
     return o
 
