@@ -43,6 +43,11 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('average_farm_area', 'gus_psr2020', '%', 0, 100),
     -- MRPiPS-03 (#2910): persons granted social assistance, PL 2019 = 1,205,506 (Dev trial 43293740538)
     ('social_assistance_recipients', 'mrpips_social_assistance', '%', 0, 1e7),
+    -- ISWS (#2968): common courts, all cases, Poland; largest 2019 = 17,728,993 received, 16,400,377 resolved;
+    -- average duration in months, 2011-2025 between 4.05 and 7.15 (ISWS workbooks, Dev trial 43804846162)
+    ('court_cases_received', 'ms_isws', '%', 0, 5e7),
+    ('court_cases_resolved', 'ms_isws', '%', 0, 5e7),
+    ('court_case_duration', 'ms_isws', '%', 0, 60),
     ('inflation', 'eurostat', '%', -100, 3000),
     ('inflation', 'world_bank_wdi', '%', -100, 100000),
     ('unemployment_rate', 'eurostat', '%', 0, 60),
@@ -195,7 +200,14 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- seasonally adjusted unemployment rate 0.5 to 36.7 (MK).
     ('unemployment_rate_monthly_sa', 'unece', '%', 0, 80),
     ('cpi_annual_rate', 'unece', '%', -50, 1e5),
-    ('ppi_annual_rate', 'unece', '%', -80, 1e5)
+    ('ppi_annual_rate', 'unece', '%', -80, 1e5),
+    -- Our World in Data (CD-031, #2982): consumption-based CO2 in tonnes per person (Global Carbon Budget); the V-Dem
+    -- electoral democracy index, 0 to 1 by definition; Maddison GDP per capita in international-$ at 2011 prices
+    -- (bounds as checked in the Dev trial of #2982 on every Gold row). CO2 starts above 0: an exact 0 is a missing
+    -- value for a populated country and poc_build_owid does not build it.
+    ('co2_consumption_per_capita', 'owid', '%', 1e-6, 100),
+    ('electoral_democracy_index', 'owid', '%', 0, 1),
+    ('gdp_per_capita', 'owid', '%', 100, 300000)
 ),
 
 metrics as (
@@ -584,6 +596,33 @@ metrics as (
         geography_key,
         date_key,
         value
+    from {{ ref('poc_metrics_court_cases_received') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_court_cases_resolved') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_court_case_duration') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
     from {{ ref('poc_metrics_internet_users') }}
     union all
     select
@@ -594,6 +633,24 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_health_expenditure_gdp') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_co2_consumption_per_capita') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_electoral_democracy_index') }}
 )
 
 select
