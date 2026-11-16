@@ -267,3 +267,4 @@ population,unece,unece:10_en_MELFOverviewY_r:Thousands of persons:ME.47.c0000803
 sejm_sitting_days,sejm,sejm:sitting_days:days:monthly,"held sitting days per month, terms 9 and 10",1,days
 sejm_votings,sejm,sejm:votings:votings:monthly,"votings per month by the day of the voting, terms 9 and 10",1,votings
 sejm_prints,sejm,sejm:prints:prints:monthly,"prints per month by delivery date, terms 9 and 10",1,prints
+legal_acts_published,eli_pl,eli_pl:acts:acts:monthly,"acts published per month in both journals, all types, by promulgation date",1,acts

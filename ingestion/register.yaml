@@ -5193,7 +5193,8 @@ sources:
   name: ELI Poland — Dziennik Ustaw and Monitor Polski
   short_name: ELI Dziennik Ustaw
   provider: Government Legislation Centre (RCL) / Chancellery of the Sejm
-  status: approved
+  source_system: eli_pl
+  status: built
   family: F
   kpi: false
   geography: Poland
