@@ -272,13 +272,21 @@ def full_rebuild(files: list[Path]) -> list[str]:
 
 
 GOLD_ALIAS = re.compile(r"alias\s*=\s*['\"]([a-z0-9_]+)['\"]")
-NOT_DBT_GOLD = {"gold.coverage"}  # written by each source's bronze.verify (ingestion/common/coverage.py), not dbt
+# Gold tables that dbt does not build: gold.coverage is written by each source's bronze.verify
+# (ingestion/common/coverage.py); the per-block tables of a source with a build stage
+# warehouse/entity/gold_<source>_build.sql are written by gold.observations (warehouse/observations.py, D35).
+PER_BLOCK_TABLES = ("observations", "series", "measures", "geography")
+NOT_DBT_GOLD = {"gold.coverage", "gold.observations_rejected"} | {
+    f"gold.{stage.stem.removeprefix('gold_').removesuffix('_build')}_{table}"
+    for stage in (ROOT / "warehouse" / "entity").glob("gold_*_build.sql")
+    for table in PER_BLOCK_TABLES
+}
 
 
 def gold_list(files: list[Path]) -> list[str]:
     """The declared Gold list (warehouse.yaml `gold` plus each source's `gold:`, warehouse/declared.py) holds every
-    Gold model (by alias) and seed of the dbt project plus gold.coverage, and nothing else (ops/retire_tables.py
-    retires unlisted Gold tables)."""
+    Gold model (by alias) and seed of the dbt project plus the tables dbt does not build (NOT_DBT_GOLD), and nothing
+    else (ops/retire_tables.py retires unlisted Gold tables)."""
     from warehouse import declared
 
     built = set()
@@ -297,6 +305,21 @@ def gold_list(files: list[Path]) -> list[str]:
         for name in built - listed
     ]
     problems += [f"gold: {name} is listed but is not a Gold model or seed" for name in listed - built - NOT_DBT_GOLD]
+    # A source authorized for the per-block load declares the tables it writes (D34): an undeclared Gold table
+    # is a leftover to ops/retire_tables.py.
+    for source, config in declared.sources().items():
+        if "gold.observations" not in (config.get("activities") or []):
+            continue
+        wanted = {f"gold.{source}_{table}" for table in PER_BLOCK_TABLES} | {"gold.observations_rejected"}
+        problems += [
+            f"gold: {name} is written by gold.observations of {source} but is not in `gold:` of "
+            f"ingestion/sources/{source}.yaml"
+            for name in sorted(wanted - set(config.get("gold") or []))
+        ]
+        if not (ROOT / "warehouse" / "entity" / f"gold_{source}_build.sql").exists():
+            problems.append(
+                f"{source}: gold.observations needs the build stage warehouse/entity/gold_{source}_build.sql"
+            )
     return sorted(problems)
 
 
