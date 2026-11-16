@@ -5,10 +5,11 @@ models:
       TED notices of Polish buyers (register PLG-023, TED Search API v3 of the Publications Office of the EU; licence
       unresolved, internal): every notice published from 2025-01-01 whose buyer country is Poland. Grain:
       publication_number (one row per published notice; a change or correction is its own notice). Notice and form
-      type, procedure type, contract nature, CPV codes, buyer countries (ISO alpha-3), buyer NUTS codes, buyer legal
-      types and organisation names as published; estimated value of the procedure with its currency as published.
-      tests/ted_notices_pages_complete.sql checks that no page of a publication day is missing. History and trial
-      run: see ingestion/sources/ted_notices.yaml.
+      type, procedure type, contract nature, CPV codes, buyer countries (ISO alpha-3), buyer NUTS codes and buyer
+      legal types as published (no buyer names: not requested); estimated value of the procedure with its currency
+      as published. tests/ted_notices_pages_complete.sql checks that no page of a publication day is missing and
+      that the day's notices equal the total the answer states. History and trial run: see
+      ingestion/sources/ted_notices.yaml.
     columns:
       - name: publication_number
         tests: [not_null, unique]
@@ -28,13 +29,17 @@ models:
                          'pin-cfc-standard', 'pmc', 'can-tran', 'brin-ecs', 'pin-cfc-social']
               config: {severity: warn}
       - name: form_type
-        description: eForms form type as published; closed list from Dev trial 43344674034.
+        description: >-
+          eForms form type as published; closed list from Dev trial 43344674034. Severity warn, like notice_type:
+          a form type of the eForms list not yet seen for Polish buyers must show up without stopping the daily
+          build.
         tests:
           - not_null
           - accepted_values:
               arguments:
                 values: ['competition', 'result', 'cont-modif', 'planning', 'dir-awa-pre', 'completion',
                          'consultation', 'bri']
+              config: {severity: warn}
       - name: procedure_type
         description: eForms procedure type as published (null for notice types without a procedure); closed list from
           Dev trial 43344674034.
@@ -46,6 +51,8 @@ models:
       - name: publication_date
         tests: [not_null]
       - name: buyer_countries
+        tests: [not_null]
+      - name: day_total_notices
         tests: [not_null]
       - name: entity
         tests: [not_null]

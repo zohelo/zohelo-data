@@ -1,2 +1,2 @@
 v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
-procurement_notices,poland,M,procurement_notices,ted_notices,notices,ted_notices:notices:notices,M,PL;VOIV,notice_type,sum,neutral,ready,"TED notices of Polish buyers by publication month, from 2025; licence unresolved: internal"
+procurement_notices,poland,M,procurement_notices,ted_notices,notices,ted_notices:notices:notices,M,PL;VOIV,,sum,neutral,ready,"TED notices of Polish buyers by publication month, from 2025; licence unresolved: internal"

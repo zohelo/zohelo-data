@@ -4,8 +4,10 @@
    value per notice (types, dates, procedure, estimated value and its currency) fails the build when a notice has
    more than one value, instead of taking one. Codes as published (eForms code lists): notice type, form type,
    contract nature, procedure type, CPV, ISO alpha-3 buyer countries, buyer NUTS codes, buyer legal type. Estimated
-   value of the procedure (BT-27) as published, with its currency (never converted or summed here). Buyer names are
-   organisation names as published (all languages given). A notice found on two pages fails the unique test. #}
+   value of the procedure (BT-27) as published, with its currency (never converted or summed here). No buyer names:
+   Landing does not ask for them (a subsidised buyer, legal types org-sub*, can be a natural person). day_total_notices
+   = the day's total as the answer states it (tests/ted_notices_pages_complete.sql). A notice found on two pages
+   fails the unique test. #}
 {% set listed = [
     'notice_type', 'form_type', 'publication_date', 'dispatch_date', 'contract_nature', 'procedure_type',
     'classification_cpv', 'buyer_country', 'buyer_country_sub', 'buyer_legal_type', 'estimated_value_proc',
@@ -33,19 +35,7 @@ lists as (
                 else [{{ c }}]
             end as {{ c }},
         {% endfor %}
-        case
-            when buyer_name is null then cast(null as varchar[])
-            when left(buyer_name, 1) = '{'
-                then list_distinct(flatten(list_transform(
-                    json_extract(buyer_name, '$.*'),
-                    lambda x: case
-                        when json_type(x) = 'ARRAY' then json_extract_string(x, '$[*]')
-                        else [json_extract_string(x, '$')]
-                    end
-                )))
-            when left(buyer_name, 1) = '[' then list_distinct(json_extract_string(buyer_name, '$[*]'))
-            else [buyer_name]
-        end as buyer_names,
+        day_total_notices,
         raw_sha256,
         source_version,
         ingested_at,
@@ -80,9 +70,9 @@ select
     list_sort(buyer_country) as buyer_countries,
     list_sort(buyer_country_sub) as buyer_nuts,
     list_sort(buyer_legal_type) as buyer_legal_types,
-    list_sort(buyer_names) as buyer_names,
     cast(estimated_value_proc_one as double) as estimated_value,
     estimated_value_cur_proc_one as estimated_value_currency,
+    day_total_notices,
     entity,
     raw_sha256,
     source_version,

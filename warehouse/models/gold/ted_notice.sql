@@ -4,7 +4,8 @@
    (dim_calendar); buyer areas are the voivodeship keys ('TERC:<code>', dim_geography) of the notice's Polish buyers,
    from their NUTS codes through map_geography (the same rule as gold.build_ted_notices; '_X' for a code that maps to
    no voivodeship, an empty list when no Polish buyer gives a regional code). Codes and the estimated value with its
-   currency as published; no person data (the source rows hold organisation names only). #}
+   currency as published. No buyer names: Landing does not ask for them, because a subsidised buyer (legal types
+   org-sub*, art. 6 Pzp) can be a natural person running a business; the register's person-field review is open. #}
 with notices as (
     select * from {{ ref('ted_notices') }}
 ),
@@ -42,7 +43,6 @@ select
     n.procedure_type,
     n.contract_nature,
     n.cpv_codes,
-    n.buyer_names,
     n.buyer_countries,
     n.buyer_nuts,
     n.buyer_legal_types,

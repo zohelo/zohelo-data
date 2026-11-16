@@ -18,7 +18,7 @@ models:
     description: >-
       Entity table: one row per TED notice of Polish buyers, keyed by the TED publication number; publication day
       as date_key, voivodeship keys of the Polish buyers, codes and the estimated value with its currency as
-      published (silver.ted_notices). Licence unresolved: internal.
+      published (silver.ted_notices); no buyer names (not requested). Licence unresolved: internal.
     columns:
       - name: publication_number
         tests: [not_null, unique]
