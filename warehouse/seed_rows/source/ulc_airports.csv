@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+ulc_airports,PL-ENV-026,ULC statystyki wg portów lotniczych,ULC airport traffic statistics,Urząd Lotnictwa Cywilnego (ULC),cube,file,national-public,unresolved,https://ulc.gov.pl/statystyki-analizy/statystyki-wg-portow-lotniczych
