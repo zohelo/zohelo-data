@@ -119,7 +119,8 @@ def read_entity(session: requests.Session, year: int, branch: str) -> list[tuple
         if page * PAGE_LIMIT >= count:
             break
         page += 1
-    ids = [a["id"] for _, _, _, p in out for a in p["data"]["agreements"]]
+    # An empty list (a year or branch without agreements yet) comes as "data": null with meta.count 0.
+    ids = [a["id"] for _, _, _, p in out for a in (p.get("data") or {}).get("agreements") or []]
     if len(ids) != count or len(set(ids)) != count:
         raise ValueError(f"{entity_of(year, branch)}: {len(ids)} agreements ({len(set(ids))} ids), meta.count {count}")
     return out
@@ -287,7 +288,7 @@ def main(argv=None) -> int:
                 try:
                     outcomes[land_entity(client, bucket, args.landing_root, session, entity, held.get(entity))] += 1
                     streak = 0
-                except (RuntimeError, ValueError, KeyError) as exc:  # recorded; the others are still landed
+                except (RuntimeError, ValueError, KeyError, TypeError) as exc:  # recorded; the others are still landed
                     failed.append({"entity": entity, "error": str(exc)[:200]})
                     streak += 1
             summary.update(outcomes)
