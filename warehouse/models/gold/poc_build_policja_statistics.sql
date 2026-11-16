@@ -3,8 +3,10 @@
    silver.policja_statistics_offences. Blocks = category workbooks ('ogolem' all offences, 'wybrane_7' seven selected
    categories); one measure_key per category x measure (frequency A only): offences recorded, offences detected
    (unit offences) and the detection rate (unit pct, as published). Areas: Poland and the 16 voivodeships, mapped in
-   poc_map_geography (macros/sources/policja_statistics.sql); the two police areas inside Mazowieckie stay in Silver
-   only. Cells without a value ('n.d.', empty) are not loaded. #}
+   poc_map_geography (macros/sources/policja_statistics.sql) by the printed name without a trailing note in brackets
+   ('woj. mazowieckie (KWP z/s w Radomiu i KSP Warszawa)' -> 'woj. mazowieckie'; geography_source_code keeps the
+   printed name). The two police areas that split Mazowieckie ('teren działania KSP Warszawa', 'teren działania KWP
+   z/s w Radomiu') stay in Silver only. Cells without a value ('n.d.', empty) are not loaded. #}
 with geo as (
     select
         source_code,
@@ -51,7 +53,7 @@ select
     s.source_version,
     s.raw_sha256
 from {{ ref('policja_statistics_offences') }} as s
-left join geo as g on s.area_name = g.source_code
+left join geo as g on regexp_replace(s.area_name, '\s*\(.*\)$', '') = g.source_code
 where
     s.value is not null
     and (s.area_name = 'Polska' or s.area_name like 'woj. %')

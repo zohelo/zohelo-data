@@ -8,9 +8,10 @@ description: "Polish Police statistics portal — recorded and detected offences
 # workbook "postępowania wszczęte" by registering police unit is not declared. Smallest selection the register names
 # (PLG-033 modelling notes): all offences and the seven selected categories; the other eight category workbooks
 # (criminal, homicide, rape, drugs, economic, corruption, road, drink-driving) have the same layout and are left for a
-# follow-up. Entity = one category workbook, version = the server's Last-Modified (Dev runs 43327577263 and
-# 43344667281). Each file is the whole series of its category (snapshot). Restart unit: one file. robots.txt
-# disallows only /ftp/. End year on 13 Nov 2026: 2021 for all offences, 2023 for the seven selected categories.
+# follow-up. Entity = one category workbook, version = the server's Last-Modified (Dev runs 43327577263,
+# 43344667281 and 43806377026). Each file is the whole series of its category (snapshot). Restart unit: one file.
+# robots.txt disallows only /ftp/. End year on 16 Nov 2026: 2021 for all offences (Last-Modified 25 Mar 2022), 2023
+# for the seven selected categories (25 Sep 2024).
 extraction:
   kind: bulk_file
   bulk_file:
@@ -38,8 +39,8 @@ bronze: [bronze.policja_statistics_cells, bronze.policja_statistics_rejected_fil
 silver: [silver.policja_statistics_offences]
 gold: [gold.build_policja_statistics]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  policja_statistics_offences: {rows: 4000}  # to be measured (Dev trial)
-  poc_build_policja_statistics: {rows: 4000}  # to be measured (Dev trial)
+  policja_statistics_offences: {rows: 4100}  # 2,736: 19 areas x 3 measures x 23 years (ogolem) and 25 years (wybrane_7) (Dev trial 43806377026)
+  poc_build_policja_statistics: {rows: 3700}  # 2,448: Poland and 16 voivodeships (Dev trial 43806377026)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): two workbooks of about 30 kB, a few thousand cells each, at most one new
