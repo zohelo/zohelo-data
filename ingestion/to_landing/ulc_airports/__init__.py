@@ -59,14 +59,16 @@ def discover() -> tuple[dict[str, str], list[str]]:
             if attempt == bulk_file.RETRIES - 1:
                 raise
             time.sleep(30 * (attempt + 1))
-    if response.status_code in REFUSED or CHALLENGE.search(response.content[:20000]):
-        raise Refused(f"listing refused: HTTP {response.status_code}, challenge page: {response.status_code == 200}")
+    # the served page itself carries the Incapsula script (at its end); a challenge page carries it without the links
+    links = [(h, t) for h, t in _anchors(response.text) if h.lower().split("?")[0].endswith(".pdf")]
+    marker = CHALLENGE.search(response.content)
+    if response.status_code in REFUSED or (marker and not links):
+        detail = f"HTTP {response.status_code}, {len(response.content)} bytes, marker {marker and marker.group(0)!r}"
+        raise Refused(f"listing refused: {detail}, PDF links {len(links)}, head {response.content[:160]!r}")
     response.raise_for_status()
     found: dict[str, str] = {}
     unparsed: list[str] = []
-    for href, text in _anchors(response.text):
-        if not href.lower().split("?")[0].endswith(".pdf"):
-            continue
+    for href, text in links:
         entity = entity_of(text)
         if entity is None or entity in found:
             unparsed.append(text[:60])
