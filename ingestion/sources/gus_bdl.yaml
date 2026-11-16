@@ -30,7 +30,11 @@ archive_policy:
 bronze: [bronze.bdl_observations, bronze.bdl_rejected_files, bronze.bdl_metadata_variables,
          bronze.bdl_metadata_units, bronze.bdl_metadata_rejected_files]
 silver: [silver.bdl_observations, silver.bdl_variables, silver.bdl_units]
-gold: []
+gold: [gold.build_bdl]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  bdl_units: {rows: 20000}  # 4,694 (20 Oct, Dev run 39374769989)
+  bdl_variables: {rows: 200000}  # 50,985 (20 Oct, Dev run 39374769989)
+  poc_build_bdl: {rows: 1000000}  # 483,646 (10 Nov) + ~100,000 slice subgroups (Poland and voivodeships only)
 
 # Refresh policy for all layers (owner decision #875): a new subgroup download replaces that
 # subgroup in Bronze, Silver and Gold; nothing else is rewritten.
