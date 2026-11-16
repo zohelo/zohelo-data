@@ -1,0 +1,26 @@
+version: 2
+models:
+  - name: eli_pl_acts
+    description: >-
+      ELI Poland (register PLG-026): one row per act published in Dziennik Ustaw (DU) or Monitor Polski (MP), metadata
+      only. Grain: eli_id (journal / year / position). Title, type and status as published, promulgation and
+      announcement dates, text flags; acts_listed = the journal's act count on /eli/acts. History and trial run:
+      ingestion/sources/eli_pl.yaml.
+    tests:
+      - unique:
+          column_name: "publisher || '|' || year || '|' || position"
+    columns:
+      - name: eli_id
+        tests: [not_null, unique]
+      - name: publisher
+        tests: [not_null, {accepted_values: {arguments: {values: ['DU', 'MP']}}}]
+      - name: year
+        tests: [not_null]
+      - name: position
+        tests: [not_null]
+      - name: act_type
+        tests: [not_null, {accepted_values: {arguments: {values: TYPES_TRIAL}, config: {severity: warn}}}]
+      - name: status
+        tests: [not_null, {accepted_values: {arguments: {values: STATUSES_TRIAL}, config: {severity: warn}}}]
+      - name: raw_sha256
+        tests: [not_null]

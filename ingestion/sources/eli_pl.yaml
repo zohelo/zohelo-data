@@ -1,0 +1,45 @@
+source_system: eli_pl
+description: "ELI Poland (api.sejm.gov.pl/eli): acts of Dziennik Ustaw and Monitor Polski by journal year, metadata only"
+
+# Extraction strategy (docs/landing.md). Register PLG-026. The Chancellery of the Sejm serves the European Legislation
+# Identifier API of the two official journals as public JSON without key (https://api.sejm.gov.pl/eli.html); no bulk
+# file exists, and the year listing /eli/acts/<DU|MP>/<year> returns every act of the journal year in one answer
+# (count = totalCount = items; limit and offset are ignored), so one request per journal year is the full load.
+# robots.txt ("User-agent: * Allow: /") is read first in every run; one request at a time, 2 s apart, user agent of
+# the bulk_file pattern, bounded retries (ingestion/to_landing/eli_pl/). Entities: publishers (/eli/acts: both
+# journals, their act counts and the years they hold) and acts_<DU|MP>_<year> for each listed year. Version =
+# download time (no Last-Modified); a copy lands only when its SHA-256 changed. The current and the previous year are
+# read every run; an older year once, and again every fourth week (year % 4 = ISO week % 4) so that later status
+# changes (repealed, consolidated) arrive within four weeks. Restart unit: one journal year. Not read: act texts (PDF,
+# HTML) and the per-act details (entry into force, references, keywords; one request per act).
+# Size (Dev probe 43797117724, 16 Nov 2026): DU 98,081 acts in 105 years (1918-1939, 1944-2026), MP 66,874 in 92 years
+# (1930-1939, 1945-2026); DU 2025 1,900 acts in 1.0 MB, MP 2025 1,317 in 0.66 MB, DU 1918 76 in 31 KB.
+# History: HISTORY_TRIAL
+extraction:
+  initial: api
+  production: snapshot                    # each year answer is the complete current list of that journal year
+  incremental_policy: changed_since_last  # SHA-256; open years every run, older years on a four-week rotation
+  schedule: # UTC; both journals publish on working days; acts per month need no faster read; weekly, Sunday off-peak
+    - {cron: "20 4 * * 0", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/eli_pl/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.eli_pl_publishers, bronze.eli_pl_acts, bronze.eli_pl_rejected_files]
+silver: [silver.eli_pl_acts]
+gold: [gold.legal_acts, gold.build_eli_pl, gold.metrics_legal_acts_published]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  eli_pl_acts: {rows: 250000}  # TRIAL
+  legal_acts: {rows: 250000}  # TRIAL
+  poc_build_eli_pl: {rows: 60000}  # TRIAL
+  poc_metrics_legal_acts_published: {rows: 2000}  # TRIAL
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): about 200 answers of at most about 1 MB; a weekly run reads about 55 of them
+# (open years and the rotation) and lands the changed ones, which replace their year in Bronze; the API's changed-since
+# list (/eli/changes/acts) is not used. Silver is about 165,000 rows of metadata: rebuilt in full in seconds.
+refresh: {mode: full, decided: "D32 + #483"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
