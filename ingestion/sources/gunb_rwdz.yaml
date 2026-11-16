@@ -48,11 +48,11 @@ bronze: [bronze.gunb_rwdz_records, bronze.gunb_rwdz_rejected_files]
 silver: [silver.gunb_rwdz_records]
 gold: [gold.build_gunb_rwdz]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  poc_build_gunb_rwdz: {rows: 0}  # TRIAL
+  poc_build_gunb_rwdz: {rows: 145000}  # 96,571 (Dev trial 43804193304)
 
 bronze_latest_only: true   # policy #822/#845: one file per entity (entity_tables replace)
-# Refresh policy for all layers (D32): about 4 million records since 2016 in 16 files that the producer rewrites
-# every night and that offer no changed-since filter; each file is the unit: a new version replaces that
+# Refresh policy for all layers (D32): 5.2 million lines (2.9 million records) since 2016 in 16 files that the
+# producer rewrites every night and that offer no changed-since filter; each file is the unit: a new version replaces that
 # voivodeship's file in Bronze and Silver (entity_tables), nothing else is rewritten.
 refresh: {mode: incremental, unit: file, decided: "D32 + #2984"}
 

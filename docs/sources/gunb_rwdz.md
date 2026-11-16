@@ -26,8 +26,14 @@ Silver `silver.gunb_rwdz_records`, the register's entity table: one row per regi
 the column left null and named in `conflicting_columns` (no line is picked). Gold `gold.build_gunb_rwdz`, block
 `permits`: measure `gunb_rwdz:permits:decisions` (unit `decisions`), register records by month of decision from 2020-01
 to the month before the oldest file version, Poland, 16 voivodeships (file) and powiats (`TERC` of the record), by
-`investment_kind` (`jednorodzinny`, `inny`, `_U`) and `_T`. Records without a TERYT code (about 6 % of lines) count
-for Poland and the voivodeship only. KPI `building_permit_decisions` (draft).
+`investment_kind` (`jednorodzinny`, `inny`, `_U`) and `_T`. Records without a TERYT code (155,516 of 2,875,574)
+count for Poland and the voivodeship only; six published codes that are no TERYT powiat (0100, 0251, 0396, 0737,
+0860, 0934) stay `_X` with the code kept. KPI `building_permit_decisions` (draft).
+
+Dev trial 43804193304 (16 Nov 2026): 16 files, 328,946,600 bytes; Bronze 5,170,755 lines, Silver 2,875,574 records
+(no register number appears in two files; 65 records with conflicting lines), second Landing and loader runs changed
+nothing; Gold 96,571 rows, 1,200 series, 2020-01 to 2026-10, 0 duplicates by series × month. Poland: 22,088 decisions
+in 2020-01, 14,018 in 2025-01, 201,231 in 2025 (112,430 single-family houses).
 
 Left out: the two national files of notifications (`wynik_zgloszenia_2016_2021.zip`, `wynik_zgloszenia_2022_up.zip`;
 other header, about 1 M lines since 2022); a count of applications by month of filing (the files hold applications
