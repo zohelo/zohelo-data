@@ -43,7 +43,8 @@ D+1 at about 07:05 UTC), about three requests a run.
   consumers); an unlisted point that reports flows lands in group `unmapped` and `tests/entsog_point_groups.sql`
   warns. Totals rule: a point-direction reports in a month when it has a value on any day of it; a value is final
   when its record was updated at or after the end of its gas day (`last_update_utc >= period_to_utc`; GAZ-SYSTEM
-  publishes running values during the gas day); a daily sum is built only when every reporting point of its scope
+  publishes running values during the gas day; a value last updated during its day counts once that day ended more
+  than 7 days ago, which applies to two records, the last days of the Belarus points); a daily sum is built only when every reporting point of its scope
   has a final value that day, so the current gas day is never shown as a daily total
   (`tests/entsog_gas_day_final.sql`), a monthly sum only for an ended month
   whose every day is complete. `observation_status_key` is `provisional` when any summed value is Provisional.

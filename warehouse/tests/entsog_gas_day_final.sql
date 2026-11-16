@@ -2,6 +2,7 @@
 -- during the gas day (review of #3124: at 03:39 UTC on 16 Nov the trial held gas day 15 Nov, which ran to 05:00 UTC,
 -- as complete), so every Silver value behind a daily row, in its scope (all points of the direction, or the group),
 -- must have been updated at or after the end of its gas day, and no daily row may be a gas day that ends after now.
+-- A value updated during its day counts once the day ended more than 7 days ago (the model's grace rule).
 with groups as ({{ poc_entsog_point_groups() }}),
 
 daily as (
@@ -30,7 +31,13 @@ running as (
         f.indicator = 'Physical Flow'
         and f.period_type = 'day'
         and f.value_kwh_d is not null
-        and (f.last_update_utc is null or f.last_update_utc < f.period_to_utc or f.period_to_utc > now())
+        and (
+            f.period_to_utc > now()
+            or (
+                (f.last_update_utc is null or f.last_update_utc < f.period_to_utc)
+                and f.period_to_utc >= now() - interval 7 day
+            )
+        )
 )
 
 select
