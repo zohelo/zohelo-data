@@ -1,0 +1,77 @@
+version: 2
+models:
+  - name: cie_sio_teachers
+    description: >-
+      SIO teachers (register PLS-022), newest teachers workbook of the cie.gov.pl archive: Poland at 30 September
+      2006-2018 and the 16 voivodeships at the last date, as persons (total, full-time, part-time) and full-time
+      posts, by professional grade (stażysta, kontraktowy, mianowany, dyplomowany; 'Razem' = grade_code '_T').
+      Grain: reference_date x area_code x measure_code x grade_code. Found by header and label text; values as
+      stored. Trial run: see ingestion/sources/cie_sio.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', reference_date, area_code, measure_code, grade_code)"
+    columns:
+      - name: reference_date
+        tests: [not_null]
+      - name: area_code
+        tests: [not_null, {accepted_values: {arguments: {values: [PL, '02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32']}}}]
+      - name: measure_code
+        tests: [not_null, {accepted_values: {arguments: {values: [persons, full_time, part_time, posts]}}}]
+      - name: grade_code
+        tests: [not_null, {accepted_values: {arguments: {values: [stażysta, kontraktowy, mianowany, dyplomowany, _T]}}}]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: cie_sio_schools
+    description: >-
+      SIO schools and pupils (register PLS-022), school year 2018/2019 (30 September 2018): schools and institutions,
+      pupils (with pre-school children and students) and two of-which counts, by voivodeship (GUS id), school type
+      (SIO type id), pupil category, publicness and governing body. No Poland row is published. Grain: period_year x
+      area_code x school_type_code x pupil_category_code x publicness x governing_body x measure_code.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', period_year, area_code, school_type_code, pupil_category_code, publicness, governing_body, measure_code)"
+    columns:
+      - name: period_year
+        tests: [not_null]
+      - name: area_code
+        tests: [not_null, {accepted_values: {arguments: {values: [PL, '02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32']}}}]
+      - name: school_type_code
+        tests: [not_null]
+      - name: pupil_category_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['001', '002', '003']}}}]
+      - name: publicness
+        tests: [not_null]
+      - name: governing_body
+        tests: [not_null]
+      - name: measure_code
+        tests: [not_null, {accepted_values: {arguments: {values: [schools, pupils, pupils_preschool_sections, pupils_other_type_sections]}}}]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: cie_sio_graduates
+    description: >-
+      SIO graduates (register PLS-022), nine workbooks, 30 September 2010-2018 (graduates of the school year that
+      ended that year): graduates and of which girls (sex_code T, F) by voivodeship (GUS id; 'PL' = the published
+      Poland row), pupil category and school type (name as printed; SIO type id where printed, '_T' = the published
+      'Razem' column). Grain: period_year x area_code x pupil_category_code x school_type_name x sex_code.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', period_year, area_code, pupil_category_code, school_type_name, sex_code)"
+    columns:
+      - name: period_year
+        tests: [not_null]
+      - name: area_code
+        tests: [not_null, {accepted_values: {arguments: {values: [PL, '02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32']}}}]
+      - name: pupil_category_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['001', '002', '003']}}}]
+      - name: school_type_name
+        tests: [not_null]
+      - name: sex_code
+        tests: [not_null, {accepted_values: {arguments: {values: [T, F]}}}]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
