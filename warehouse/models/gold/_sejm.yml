@@ -15,8 +15,8 @@ models:
   - name: parliament_sejm_votings
     description: >-
       Entity table (events): one row per voting of the Sejm, terms 9 and 10, keyed by term, sitting number and voting
-      number; date_key = the day of the voting; title, topic and totals as published (empty yes, no and abstain for a
-      list vote). Individual MPs' votes are not kept.
+      number; date_key = the day of the voting; title, topic and totals as published (empty yes, no and abstain for
+      list and traditional votes). Individual MPs' votes are not kept.
     tests:
       - unique:
           column_name: "term || '|' || sitting_number || '|' || voting_number"

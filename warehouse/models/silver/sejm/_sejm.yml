@@ -23,8 +23,9 @@ models:
   - name: sejm_votings
     description: >-
       Sejm API (register PLG-024), terms 9 and 10: one row per voting. Grain: term x sitting_number x voting_number.
-      Time, kind, majority, title, topic, description and totals as published; yes, no and abstain are empty for a
-      list vote (is_list_vote), whose per-option result is not loaded. Individual MPs' votes are not read.
+      Time, kind, majority, title, topic, description and totals as published; yes, no and abstain are empty for
+      list votes (ON_LIST, per-option result not loaded) and traditional votes (TRADITIONAL), for which the API
+      sends 0. Individual MPs' votes are not read.
     tests:
       - unique:
           column_name: "term || '|' || sitting_number || '|' || voting_number"
@@ -38,9 +39,10 @@ models:
       - name: voted_at
         tests: [not_null]
       - name: kind
-        tests: [not_null, {accepted_values: {arguments: {values: KINDS_TRIAL}}}]
+        tests: [not_null, {accepted_values: {arguments: {values: ['ELECTRONIC', 'TRADITIONAL', 'ON_LIST']}}}]
       - name: majority_type
-        tests: [not_null, {accepted_values: {arguments: {values: MAJORITY_TRIAL}}}]
+        # the five types seen in terms 9 and 10 (Dev trial); a rarer type warns, it does not stop the build
+        tests: [not_null, {accepted_values: {arguments: {values: ['SIMPLE_MAJORITY', 'ABSOLUTE_MAJORITY', 'ABSOLUTE_STATUTORY_MAJORITY', 'MAJORITY_THREE_FIFTHS', 'STATUTORY_MAJORITY']}, config: {severity: warn}}}]
       - name: raw_sha256
         tests: [not_null]
   - name: sejm_prints
