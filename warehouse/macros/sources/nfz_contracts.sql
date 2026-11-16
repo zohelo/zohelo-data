@@ -31,3 +31,46 @@ nfz_contracts as (
         'PL' as geography_key
 )
 {% endmacro %}
+
+{# The first contract year in scope (FIRST_YEAR in ingestion/to_landing/nfz_contracts/extract.py). #}
+{% macro poc_nfz_contracts_first_year() %}2019{% endmacro %}
+
+{# Completeness of silver.nfz_contracts_agreements: the year and branch pairs from the first year to the newest landed
+   year without an agreement, `which` = 'earlier' (years before the newest: a gap is an error) or 'newest' (the
+   newest year: NFZ opens a contract year before every branch has signed, and a run can stop on its time budget,
+   so a gap there only warns). #}
+{% macro poc_nfz_contracts_gaps(which) %}
+with counts as (
+    select
+        contract_year,
+        branch_code,
+        count(*) as agreements
+    from {{ ref('nfz_contracts_agreements') }}
+    group by contract_year, branch_code
+),
+
+newest as (
+    select max(contract_year) as contract_year from counts
+),
+
+grid as (
+    select
+        y.contract_year,
+        lpad(cast(b.n as varchar), 2, '0') as branch_code
+    from (
+        select unnest(generate_series({{ poc_nfz_contracts_first_year() }}, max(contract_year))) as contract_year
+        from counts
+    ) as y
+    cross join (select unnest(generate_series(1, 16)) as n) as b
+)
+
+select
+    g.contract_year,
+    g.branch_code
+from grid as g
+cross join newest as n
+left join counts as c on g.contract_year = c.contract_year and g.branch_code = c.branch_code
+where
+    c.agreements is null
+    and g.contract_year {{ '<' if which == 'earlier' else '=' }} n.contract_year
+{% endmacro %}

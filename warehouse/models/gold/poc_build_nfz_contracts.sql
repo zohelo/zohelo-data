@@ -1,18 +1,18 @@
 {{ config(alias='build_nfz_contracts', tags=['gold_block']) }}
 {# Gold build stage: NFZ contracts API (register PLS-014), counts and sums over silver.nfz_contracts_agreements, by
-   contract year (frequency A), NFZ regional branch (= voivodeship, poc_geography__nfz_contracts) and service type.
-   These are zohelo calculations over the published register, not values NFZ publishes: agreements (rows of the
-   register), providers (distinct NFZ provider codes; a code belongs to one branch, so Poland is the sum of the
-   branches and a provider contracting with two branches counts twice) and contracted amount (sum of the published
-   agreement amounts in PLN; agreements without an amount are left out of the sum, never counted as 0; a contract
-   ceiling for the year, not expenditure). Poland ('all_branches') is the sum over the 16 branches. Breakdown:
-   service type (NFZ code as published) and the total over the types (is_total). #}
+   contract year (frequency A) and NFZ regional branch (= voivodeship, poc_geography__nfz_contracts), totals over all
+   service types only: every row of a block model enters poc_fact_annual, which is above its warning ceiling (#2294),
+   so the breakdown by service type waits for the per-block Gold load (D35). These are zohelo calculations over the
+   published register, not values NFZ publishes: agreements (rows of the register), providers (distinct NFZ provider
+   codes; a code belongs to one branch, so Poland is the sum of the branches and a provider contracting with two
+   branches counts twice) and contracted amount (sum of the published agreement amounts in PLN; agreements without an
+   amount, all of service type 12 (medical devices), are left out of the sum and named in measure_name, never counted
+   as 0; published amounts of 0.00 are summed as published; a contract ceiling for the year, not expenditure). Poland
+   ('all_branches') is the sum over the 16 branches. #}
 with agreements as (
     select
         contract_year,
         branch_code,
-        service_type_code,
-        service_type_name,
         provider_code,
         amount_pln,
         source_version,
@@ -32,40 +32,17 @@ areas as (
     from agreements
 ),
 
-by_type as (
+counted as (
     select
         area_code,
         contract_year,
-        service_type_code,
-        string_agg(distinct service_type_name, ' / ' order by service_type_name) as service_type_name,
         count(*) as agreements,
         count(distinct branch_code || ':' || provider_code) as providers,
         sum(amount_pln) as contracted_amount,
         max(source_version) as source_version,
         arg_max(raw_sha256, source_version || raw_sha256) as raw_sha256  -- the newest Landing file counted
     from areas
-    group by area_code, contract_year, service_type_code
-),
-
-all_types as (
-    select
-        area_code,
-        contract_year,
-        '_T' as service_type_code,
-        cast(null as varchar) as service_type_name,
-        count(*) as agreements,
-        count(distinct branch_code || ':' || provider_code) as providers,
-        sum(amount_pln) as contracted_amount,
-        max(source_version) as source_version,
-        arg_max(raw_sha256, source_version || raw_sha256) as raw_sha256
-    from areas
     group by area_code, contract_year
-),
-
-counted as (
-    select * from by_type
-    union all
-    select * from all_types
 ),
 
 measures as (
@@ -109,7 +86,9 @@ select
         when 'providers'
             then 'Healthcare providers with an NFZ agreement in the contract year (NFZ provider codes, zohelo count)'
         when 'contracted_amount'
-            then 'Contracted amount of NFZ agreements in the contract year (PLN, zohelo sum of published amounts)'
+            then
+                'Contracted amount of NFZ agreements in the contract year (PLN, zohelo sum of published amounts; '
+                || 'service type 12, medical devices, has no published amounts and is not included)'
     end as measure_name,
     m.measure_code as measure_codes,
     m.unit_code,
@@ -123,16 +102,10 @@ select
     'A' as frequency,
     make_date(m.contract_year, 1, 1) as date_key,
     cast(m.contract_year as varchar) as period_label,
-    case
-        when m.service_type_code = '_T' then '{}'
-        else '{"service_type":"' || m.service_type_code || '"}'
-    end as breakdown_json,
-    case
-        when m.service_type_code = '_T' then cast(null as varchar)
-        else cast(json_object('service_type', m.service_type_name) as varchar)
-    end as breakdown_label_json,
+    '{}' as breakdown_json,
+    cast(null as varchar) as breakdown_label_json,
     cast(null as varchar) as sex_code,
-    m.service_type_code = '_T' as is_total,
+    true as is_total,
     m.value,
     'ok' as observation_status_key,
     m.source_version,

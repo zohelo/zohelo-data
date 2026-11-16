@@ -20,7 +20,7 @@ missing ones (newest year first), then the open years (the current contract year
 still amends: OPEN_YEARS) in every run, and any other year whose newest copy is older than REREAD_DAYS.
 
 Polite access: one request at a time, PAUSE_SECONDS between requests (the terms allow 10 per second per IP), an
-identifying User-Agent, timeouts, bounded retries with backoff on 429, 5xx and timeouts, Retry-After honoured;
+identifying User-Agent, timeouts, bounded retries with backoff on 429, 5xx and any network error, Retry-After honoured;
 FAIL_STREAK failing entities in a row stop the run (the API is down: never hammered). Time-budgeted: no entity is
 started in the last MARGIN_MINUTES; the next run continues from Landing.
 
@@ -44,9 +44,9 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+from ingestion.common.landing_write import USER_AGENT, put_new
 from ingestion.common.r2 import archive_key, archived, get_with_backoff, req, s3
 from ingestion.common.report import annotate, step_summary
-from ingestion.to_landing.world_bank_icp.extract import USER_AGENT, put_new
 
 SOURCE = "nfz_contracts"
 API = "https://api.nfz.gov.pl/app-umw-api"
@@ -76,14 +76,15 @@ def entity_of(year: int, branch: str) -> str:
 
 
 def fetch(session: requests.Session, address: str) -> tuple[bytes, Any]:
-    """GET one answer: (exact body, parsed JSON). 429, 5xx and network errors are retried with backoff; another
-    status fails at once; still failing → Unavailable."""
+    """GET one answer: (exact body, parsed JSON). 429, 5xx and any requests error (connection, timeout, a body cut
+    off or not decodable mid-stream) are retried with backoff; another status fails at once; still failing →
+    Unavailable."""
     last = ""
     for attempt, delay in enumerate((0, *RETRY_DELAYS)):
         time.sleep(PAUSE_SECONDS + delay)
         try:
             response = session.get(address, timeout=TIMEOUT_SECONDS)
-        except (requests.ConnectionError, requests.Timeout) as exc:
+        except requests.RequestException as exc:  # ChunkedEncodingError, ContentDecodingError, ... (#3116 review)
             last = type(exc).__name__
             continue
         if response.status_code == 200:
@@ -118,7 +119,8 @@ def read_entity(session: requests.Session, year: int, branch: str) -> list[tuple
         if page * PAGE_LIMIT >= count:
             break
         page += 1
-    ids = [a["id"] for _, _, _, p in out for a in p["data"]["agreements"]]
+    # An empty list (a year or branch without agreements yet) comes as "data": null with meta.count 0.
+    ids = [a["id"] for _, _, _, p in out for a in (p.get("data") or {}).get("agreements") or []]
     if len(ids) != count or len(set(ids)) != count:
         raise ValueError(f"{entity_of(year, branch)}: {len(ids)} agreements ({len(set(ids))} ids), meta.count {count}")
     return out
@@ -286,7 +288,7 @@ def main(argv=None) -> int:
                 try:
                     outcomes[land_entity(client, bucket, args.landing_root, session, entity, held.get(entity))] += 1
                     streak = 0
-                except (RuntimeError, ValueError, KeyError) as exc:  # recorded; the others are still landed
+                except (RuntimeError, ValueError, KeyError, TypeError) as exc:  # recorded; the others are still landed
                     failed.append({"entity": entity, "error": str(exc)[:200]})
                     streak += 1
             summary.update(outcomes)
