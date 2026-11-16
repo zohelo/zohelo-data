@@ -25,6 +25,9 @@ archive_policy:
 bronze: [bronze.mf_jst_budgets_cells, bronze.mf_jst_budgets_rejected_files]
 silver: [silver.mf_jst_budget_summary]
 gold: [gold.build_mf_jst_budgets]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  mf_jst_budget_summary: {rows: 32000}  # 21,263 rows, 2022 Q1 - 2026 Q1 (Dev trial 43162316724)
+  poc_build_mf_jst_budgets: {rows: 650}  # 408 rows (Dev trial 43162316724)
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): about 20 workbooks of a few hundred cells a quarter; small, rebuilt in full.

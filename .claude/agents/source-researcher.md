@@ -56,7 +56,7 @@ skills:
 5. **Update rhythm**: release calendar or observed dates, so the schedule can follow the release.
 6. **Size**: bytes and rows of a full load, measured or from the provider's catalogue (say which).
 7. **Shape for modelling**: grain, frequency, geography codes used (ISO2/ISO3, NUTS, TERYT, own codes), units,
-   and which existing KPIs of `warehouse/seeds/kpi.csv` the source also publishes (O31).
+   and which existing KPIs of the `kpi` list (`warehouse/seed_rows/kpi/`) the source also publishes (O31).
 8. **Licence** as above.
 
 ## Deliver
