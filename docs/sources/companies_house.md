@@ -19,7 +19,8 @@ county and postcode (a registered office can be a director's home) and the ten p
 be a person's), and, as unused, accounts, returns, mortgages, partnership counts, URI and confirmation statement
 dates. So Landing holds a reduced copy, not the producer's bytes: the receipt's `sha256` is that of the reduced
 ZIP (`detail.reduced`), the producer's ETag is in `detail.http`. A file that lacks a kept column, or has a row of
-another width, is not landed: the run fails and names the reason. Company names are kept as the names of legal
+another width, is not landed: the run fails and names the reason. Empty lines are no records and are left out
+(the 2026-11-01 file has one mid-file; more than 1,000 refuse the file); the job log prints their count. Company names are kept as the names of legal
 entities (a company can be named after a person; the register publishes the name as the company's).
 
 Bronze `bronze.companies_house_companies`: every company of the newest snapshot (5,711,779 rows, company numbers
