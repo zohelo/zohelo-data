@@ -13,9 +13,9 @@ sources:
   - name: nfz_contracts_agreements
     description: >-
       One row per agreement record of the newest copy of each year and branch (entity agreements_<year>_<branch>):
-      agreement_id and every attribute of the API as the exact JSON text (code, technical_code, origin_code,
-      service_type, service_name, amount_text, updated_at, provider_code, provider_nip, provider_regon,
-      provider_registry_number, provider_name, provider_place, year_text, branch), the page member and the record's
-      position; partitioned by entity.
+      agreement_id and the API's attributes as the exact JSON text (code, technical_code, origin_code, service_type,
+      service_name, amount_text, updated_at, provider_code, year_text, branch), the page member and the record's
+      position; partitioned by entity. The provider's name, NIP, REGON, registry number and place are checked but not
+      stored (providers include natural persons; they stay only in the Landing bytes).
   - name: nfz_contracts_rejected_files
     description: NFZ contracts Landing files the Bronze decoder rejected, with the reason.

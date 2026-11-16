@@ -3,8 +3,11 @@
    agreements_<year>_<branch>). Grain: agreement_id (the API's id of the agreement in that contract year; a
    multi-year agreement has one id per year). Values as published (terms: no modification): the amount is the
    agreement's value for the year in PLN as NFZ states it (a contract ceiling, not expenditure), null where NFZ
-   publishes none (it is never 0); codes as text with their leading zeros. A text that is not a number with at
-   most two decimals (so nothing is rounded) or not a timestamp fails the build. #}
+   publishes none (all of service type 12, medical devices) and 0.00 where NFZ publishes 0.00 (kept as published,
+   profiled in the Dev trial, docs/sources/nfz_contracts.md); codes as text with their leading zeros. A text that is
+   not a number with at most two decimals (so nothing is rounded) or not a timestamp fails the build. The provider
+   is the NFZ provider code only: name, NIP, REGON, registry number and place are not loaded (providers include
+   natural persons; owner GDPR review before any person-level load). #}
 with newest as (
     select *
     from {{ source('nfz_contracts', 'nfz_contracts_agreements') }}
@@ -30,11 +33,6 @@ select
         error('nfz_contracts_agreements: updated-at is not a timestamp: ' || coalesce(updated_at, 'null'))
     ) as updated_at,
     provider_code,
-    provider_nip,
-    provider_regon,
-    provider_registry_number,
-    provider_name,
-    provider_place,
     entity,
     raw_sha256,
     source_version,

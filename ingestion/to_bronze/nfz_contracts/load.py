@@ -7,6 +7,13 @@ exact JSON text (numbers as published, null as SQL NULL), with the page member a
 rejects (bronze.nfz_contracts_rejected_files) when a member is not an agreement list page, a record has an
 attribute other than the known ones or lacks one, a record's year or branch differs from the entity's, or the
 pages do not hold ``meta.count`` agreements with distinct ids. Entities are the folders found in Landing.
+
+Provider identity attributes are left out of Bronze (and Silver): name, NIP, REGON, registry number and place.
+Many NFZ providers are natural persons (individual and group practices of doctors, nurses and midwives), whose name
+and NIP/REGON are personal data; the register entry gives no basis for storing them, and an owner GDPR review is
+needed before any person-level load (as for REGON, register.yaml, and warehouse/dimensions/person.yaml). They stay
+only in the exact Landing bytes; the decoder still requires them to be present (an unknown layout rejects), and
+keeps the NFZ provider code, which identifies a contract party per branch without naming it.
 """
 
 from __future__ import annotations
@@ -25,7 +32,7 @@ from ingestion.to_landing.nfz_contracts import extract
 SOURCE = "nfz_contracts"
 TABLE = "nfz_contracts_agreements"
 REJECTED = "nfz_contracts_rejected_files"
-ATTRIBUTES = [  # the API's attribute → Bronze column
+ATTRIBUTES = [  # the API's attribute → Bronze column (kept)
     ("code", "code"),
     ("technical-code", "technical_code"),
     ("origin-code", "origin_code"),
@@ -34,14 +41,12 @@ ATTRIBUTES = [  # the API's attribute → Bronze column
     ("amount", "amount_text"),
     ("updated-at", "updated_at"),
     ("provider-code", "provider_code"),
-    ("provider-nip", "provider_nip"),
-    ("provider-regon", "provider_regon"),
-    ("provider-registry-number", "provider_registry_number"),
-    ("provider-name", "provider_name"),
-    ("provider-place", "provider_place"),
     ("year", "year_text"),
     ("branch", "branch"),
 ]
+# Present in every record and checked, never stored (personal data of providers who are natural persons, above).
+NOT_STORED = ("provider-nip", "provider-regon", "provider-registry-number", "provider-name", "provider-place")
+EXPECTED = {a for a, _ in ATTRIBUTES} | set(NOT_STORED)
 COLUMNS = [
     ("entity", "VARCHAR"),
     ("agreement_id", "VARCHAR"),
@@ -73,7 +78,7 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
         counts.add(str(page["meta"]["count"]))
         for record in (page.get("data") or {}).get("agreements") or []:
             attributes = record["attributes"]
-            if record.get("type") != "agreement" or set(attributes) != {a for a, _ in ATTRIBUTES}:
+            if record.get("type") != "agreement" or set(attributes) != EXPECTED:
                 raise ValueError(f"{member}: record {record.get('id')}: attributes {sorted(attributes)}")
             if text(attributes["year"]) != year or attributes["branch"] != branch:
                 raise ValueError(f"{member}: record {record['id']} is {attributes['year']}/{attributes['branch']}")
