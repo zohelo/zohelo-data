@@ -12,7 +12,9 @@ first run reads back to 1 January of the previous year. Restart unit: one run's 
 
 Stored per report: geru_id, publication time (Warsaw, as listed), category, report number, issuer name and ISIN
 (where listed), link to the report's page. **Left out:** titles (they can name natural persons), report texts and
-attachments, the prices shown beside each row; KRS, NIP, REGON and LEI are not in the list.
+attachments, the prices shown beside each row; KRS, NIP, REGON and LEI are not in the list. In EBI items the issuer
+link's text starts with the title (Dev trial 43831909084): the title is cut off in memory before Landing, and an item
+whose link still holds the title is rejected as an unknown layout.
 
 Bronze `bronze.gpw_ebi_reports` (one row per report, text). Silver `silver.gpw_ebi_reports` (grain `report_id`;
 `tests/gpw_ebi_reports_complete.sql`: every held day and report reaches Silver, none misfiled). Gold

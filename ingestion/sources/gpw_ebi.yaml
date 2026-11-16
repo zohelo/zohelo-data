@@ -26,10 +26,13 @@ archive_policy:
 bronze: [bronze.gpw_ebi_reports, bronze.gpw_ebi_rejected_files]
 silver: [silver.gpw_ebi_reports]
 gold: [gold.build_gpw_ebi, gold.filing_gpw_ebi]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in the Dev trial cited in the PR
-  gpw_ebi_reports: {rows: 3000}   # trial: see PR
-  filing_gpw_ebi: {rows: 3000}    # one row per Silver report
-  poc_build_gpw_ebi: {rows: 300}  # complete months × (total + categories)
+# Row ceilings (owner policy #822; above: a warning, above twice: the build fails), 1.5 × Dev trial 43831909084, which
+# read the production history (1 January 2025 to 10 November 2026): 407 reports, 51 build rows (21 complete months).
+# Growth about 250 reports and 30 build rows a year: raise the ceilings when the build warns.
+full_rebuild:
+  gpw_ebi_reports: {rows: 620}
+  filing_gpw_ebi: {rows: 620}     # one row per Silver report
+  poc_build_gpw_ebi: {rows: 80}
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded copies of a day
 # Refresh policy for all layers (D32): small (a few hundred reports a year); Landing reads only the newest days,

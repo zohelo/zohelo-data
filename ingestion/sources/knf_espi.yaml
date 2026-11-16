@@ -25,10 +25,14 @@ archive_policy:
 bronze: [bronze.knf_espi_reports, bronze.knf_espi_rejected_files]
 silver: [silver.knf_espi_reports]
 gold: [gold.build_knf_espi, gold.filing_knf_espi]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in the Dev trial cited in the PR
-  knf_espi_reports: {rows: 120000}   # about 90 reports a day × 700 days ≈ 63,000 at full history (trial: see PR)
-  filing_knf_espi: {rows: 120000}    # one row per Silver report
-  poc_build_knf_espi: {rows: 3000}   # 22 complete months × (total + form codes)
+# Row ceilings (owner policy #822; above: a warning, above twice: the build fails). Dev trial 43831909084 measured
+# 2,190 reports for 30 days of receipt (2,006 in October 2026) and 23 build rows for one month (total + 22 form codes).
+# The first production runs fill the history from 1 January 2025: about 23 months × 2,100 ≈ 48,000 reports, ceiling
+# 1.5 × that. Growth about 25,000 reports a year: raise the ceilings when the build warns.
+full_rebuild:
+  knf_espi_reports: {rows: 72000}
+  filing_knf_espi: {rows: 72000}     # one row per Silver report
+  poc_build_knf_espi: {rows: 800}    # about 22 complete months × 23 rows ≈ 510, × 1.5
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded copies of a day
 # Refresh policy for all layers (D32): small (about 90 reports a day, under 70,000 rows for the two years held);
