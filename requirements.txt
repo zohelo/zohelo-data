@@ -427,14 +427,14 @@ dbt-common==1.39.0 \
     #   dbt-adapters
     #   dbt-core
     #   dbt-duckdb
-dbt-core==1.12.6 \
-    --hash=sha256:a14fb6724a557dea781afa19171869a1b0b286a396d5dc012e74b8bd3596325e \
-    --hash=sha256:e4378ecde4740d6b6a5b706ad25162272e28dc20ee8390c42c1ebd637752574f
+dbt-core==1.12.7 \
+    --hash=sha256:1467f0195b91deac5215942920fddf39b4efa9cb9e7b4be51d899d7362fb4a4d \
+    --hash=sha256:9e83a113858310b09bc3af336f1cf1afe2f49c115d86a46f89473ab0e81b9c01
     # via
     #   -r requirements.in
     #   dbt-duckdb
-dbt-core-experimental-parser==2.0.8 \
-    --hash=sha256:35b7760967f9542fd0b1a3cd742ffd24e8e08a18473a84a891a3bc8a9d6b2910
+dbt-core-experimental-parser==2.0.11 \
+    --hash=sha256:3ad5c7a65bae2f5dfab4dfe1f3a6a224a12ede18dbd5274cf56d1b4ad69c5cb8
     # via dbt-core
 dbt-duckdb==1.11.1 \
     --hash=sha256:4fe54c1aea840ccf4725a01851049be2bbe2d4c023faaad044c616505c780b45 \
