@@ -1,0 +1,39 @@
+source_system: gddkia_gpr
+description: "GDDKiA Generalny Pomiar Ruchu (road traffic census) — average annual daily traffic (SDRR) per measured section and vehicle class, national and voivodeship roads"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-022. Bulk feature: one gov.pl page per census edition (every five
+# years) links the result tables as spreadsheet attachments (https://www.gov.pl/attachment/<uuid>, replaced on errata):
+# https://www.gov.pl/web/gddkia/generalny-pomiar-ruchu-2025 (XLSX) and .../generalny-pomiar-ruchu-20202021 (XLS). Landed:
+# table 2 (SDRR) of national roads (dk) and voivodeship roads (dw) of both editions and the 2020/21 dk erratum (21
+# sections), identified by the server's file name (ingestion/to_landing/gddkia_gpr/; the 2020/21 page labels its links
+# only "XLS"). Entity = one file, version = Last-Modified, a copy lands only when the SHA-256 changed; restart unit: one
+# file. Dev probes 43328640246 and 43339250699 (test/gddkia-gpr): pages, links and sheet layouts. Bronze reads .xlsx with
+# xlsx_cells and .xls with xlrd. Not landed: table 1 (section list with coordinates), SDRDR (working days), SDRL
+# (July-August), traffic character, the SHP files, maps and syntheses (PDF); editions before 2020/21 (archive site, not
+# reachable from runners).
+extraction:
+  initial: bulk
+  production: snapshot                  # each file is one edition's table as published; an erratum is a new file
+  incremental_policy: changed_since_last  # file name per edition page, SHA-256 per file
+  schedule: # UTC; a census every five years, results and errata published in stages: a check twice a year (12 Jan, 12 Jul)
+    - {cron: "45 5 12 1,7 *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gddkia_gpr/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 400}   # a replaced file (erratum) stays a year for comparison
+  prune: report
+bronze: [bronze.gddkia_gpr_cells, bronze.gddkia_gpr_rejected_files]
+silver: [silver.gddkia_gpr_sdrr]
+gold: [gold.build_gddkia_gpr, gold.metrics_average_daily_traffic_national_roads]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gddkia_gpr_sdrr: {rows: 150000}  # about 95,000 expected (Dev trial on the final head: see the PR)
+  poc_build_gddkia_gpr: {rows: 300}  # 204 expected: 3 measures x 2 road classes x 17 areas x 2 editions
+  poc_metrics_average_daily_traffic_national_roads: {rows: 60}  # 34 expected: 17 areas x 2 editions
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): five workbooks of about 2,500 to 3,300 sections each, a new edition every five
+# years; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2999"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
