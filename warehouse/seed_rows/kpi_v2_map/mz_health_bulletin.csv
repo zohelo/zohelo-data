@@ -1,0 +1,5 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+doctors_working,society,A,doctors_working,mz_health_bulletin,health_bulletin,mz_health_bulletin:health_bulletin:persons:employed.doctors.count,A,PL;VOIV,,sum,up,ready,"persons by primary workplace on 31 December, MZ-88; licence unresolved (internal)"
+nurses_working,society,A,nurses_working,mz_health_bulletin,health_bulletin,mz_health_bulletin:health_bulletin:persons:employed.nurses.count,A,PL;VOIV,,sum,up,ready,"persons by primary workplace on 31 December, MZ-88; licence unresolved (internal)"
+hospital_beds,society,A,hospital_beds,mz_health_bulletin,health_bulletin,mz_health_bulletin:health_bulletin:beds:hospitals.beds.count,A,PL;VOIV,,sum,neutral,ready,"general hospitals, MZ-29; licence unresolved (internal)"
+hospital_inpatients,society,A,hospital_inpatients,mz_health_bulletin,health_bulletin,mz_health_bulletin:health_bulletin:cases:hospital_activity.inpatients.count,A,PL;VOIV,,sum,neutral,ready,"inpatient cases in the year, general hospitals, MZ-29; licence unresolved (internal)"

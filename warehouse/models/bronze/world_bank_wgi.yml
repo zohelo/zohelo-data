@@ -1,0 +1,20 @@
+version: 2
+sources:
+- name: world_bank_wgi
+  description: World Bank Worldwide Governance Indicators — DataBank bulk CSV archive
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/world_bank_wgi/
+    loaded_by: ingestion/to_bronze/world_bank_wgi/
+    config: ingestion/sources/world_bank_wgi.yaml
+  tables:
+  - name: wgi_observations
+    description: >-
+      One row per economy × series × year with a value of the observation member of the newest WGI_CSV archive (empty cells are not stored); codes, names and values as source text; partitioned by entity (WGI_CSV archive).
+  - name: wgi_metadata
+    description: >-
+      Every other WGI member (country, series) as field/value rows: member file, source row number, field, value text.
+  - name: wgi_rejected_files
+    description: >-
+      WGI Landing archives the Bronze decoder rejected, with the reason.

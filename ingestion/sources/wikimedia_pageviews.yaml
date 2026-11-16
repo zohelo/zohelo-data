@@ -25,6 +25,8 @@ archive_policy:
 bronze: [bronze.wiki_pageviews, bronze.wikimedia_pageviews_rejected_files]
 silver: [silver.topic_attention]
 gold: []
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  topic_attention: {rows: 50000}  # 35 topics × 455 days
 
 # Refresh policy for all layers (owner decision #875): a few dozen small files a day; Silver rebuilt in full.
 refresh: {mode: full, decided: "#875"}
