@@ -39,8 +39,8 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
-import csv
 from concurrent.futures import ThreadPoolExecutor
+import csv
 from datetime import UTC, datetime
 from hashlib import sha256
 import io
