@@ -82,7 +82,10 @@ def main(argv: list[str]) -> int:
         capture_output=True, text=True, timeout=60,
     )
     print("== leaf AIA\n" + out.stdout)
-    aia_probe()
+    try:
+        aia_probe()
+    except Exception as exc:  # noqa: BLE001 - probe
+        print("aia_probe failed", type(exc).__name__, str(exc)[:300])
     for url in REACH:
         time.sleep(PAUSE)
         try:
