@@ -251,7 +251,7 @@ def trial() -> int:
     }
     note("uzp_bzp trial Landing (scratch zz_dev_uzp_bzp)", result)
     t0 = time.monotonic()
-    result_b: dict = {"bronze_exit": [bronze.load(0, landing_root=SCRATCH, namespace=SCRATCH) for _ in (1, 2)]}
+    result_b: dict = {"bronze_exit": [bronze.load(m, landing_root=SCRATCH, namespace=SCRATCH) for m in (190, 20)]}
     result_b["bronze_minutes"] = round((time.monotonic() - t0) / 60, 1)
     result_b["loads"] = COLLECTED.get("uzp_bzp Bronze from Landing")
     cat = catalog()
