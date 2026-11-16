@@ -46,7 +46,7 @@ select
     n.buyer_countries,
     n.buyer_nuts,
     n.buyer_legal_types,
-    coalesce(r.buyer_geography_keys, cast([] as varchar [])) as buyer_geography_keys,
+    coalesce(r.buyer_geography_keys, cast([] as varchar[])) as buyer_geography_keys,
     n.estimated_value,
     n.estimated_value_currency,
     n.source_version,

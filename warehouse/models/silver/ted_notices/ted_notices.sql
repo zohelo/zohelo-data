@@ -27,21 +27,22 @@ lists as (
         publication_number,
         {% for c in listed %}
             case
-                when {{ c }} is null then cast(null as varchar [])
+                when {{ c }} is null then cast(null as varchar[])
                 when left({{ c }}, 1) = '[' then list_distinct(json_extract_string({{ c }}, '$[*]'))
                 when left({{ c }}, 1) = '{' then list_distinct(json_extract_string({{ c }}, '$.*'))
                 else [{{ c }}]
             end as {{ c }},
         {% endfor %}
         case
-            when buyer_name is null then cast(null as varchar [])
-            when left(buyer_name, 1) = '{' then list_distinct(flatten(list_transform(
-                json_extract(buyer_name, '$.*'),
-                lambda x: case
-                    when json_type(x) = 'ARRAY' then json_extract_string(x, '$[*]')
-                    else [json_extract_string(x, '$')]
-                end
-            )))
+            when buyer_name is null then cast(null as varchar[])
+            when left(buyer_name, 1) = '{'
+                then list_distinct(flatten(list_transform(
+                    json_extract(buyer_name, '$.*'),
+                    lambda x: case
+                        when json_type(x) = 'ARRAY' then json_extract_string(x, '$[*]')
+                        else [json_extract_string(x, '$')]
+                    end
+                )))
             when left(buyer_name, 1) = '[' then list_distinct(json_extract_string(buyer_name, '$[*]'))
             else [buyer_name]
         end as buyer_names,
@@ -54,14 +55,14 @@ lists as (
 
 checked as (
     select
-        *,
         {% for c in single %}
             case
                 when len({{ c }}) > 1
                     then error('ted_notices: ' || publication_number || ' has several {{ c }} ' || {{ c }}::varchar)
                 else {{ c }}[1]
-            end as {{ c }}_one{{ ',' if not loop.last }}
+            end as {{ c }}_one,
         {% endfor %}
+        *
     from lists
 )
 

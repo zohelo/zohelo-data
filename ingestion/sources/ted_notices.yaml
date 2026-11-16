@@ -4,10 +4,10 @@ description: "TED (Tenders Electronic Daily) notices of Polish buyers, from 2025
 # Extraction strategy (docs/landing.md, docs/sources/ted_notices.md; register PLG-023). Bulk feature checked first: the
 # TED daily packages hold every notice of the day as eForms XML (all countries), while the Search API answers an
 # expert query with chosen fields, anonymously (https://docs.ted.europa.eu/api/latest/search.html: "does not require
-# authentication"), so the Search API is the route for a Poland selection. Tested from Actions (Dev probes 43327154765,
-# <probe2>): at most 250 notices a page, page x limit at most 15,000, fields x limit at most 10,000, identical bytes
+# authentication"), so the Search API is the route for a Poland selection. Tested from Actions (Dev probe 43327154765,
+# trial 43344674034): at most 250 notices a page, page x limit at most 15,000, fields x limit at most 10,000, identical bytes
 # for a repeated request (stable order); Polish buyers 98,144 notices in 2024, 114,101 in 2025, 110,929 in 2026 to
-# 10 Nov; 500-700 a publication day, none on Saturdays and Sundays. Entity = one page of one publication day
+# 12 Nov; 500-700 a publication day, none on Saturdays and Sundays. Entity = one page of one publication day
 # (ingestion/to_landing/ted_notices/), query buyer-country=POL AND publication-date=<day>; version = the publication
 # day. A published notice never changes (a change is a new notice), so each day is fetched once and the newest three
 # days are asked again. Window from 2025-01-01 (smallest valuable selection); earlier notices and other countries
