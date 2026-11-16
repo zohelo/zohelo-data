@@ -34,8 +34,11 @@ extraction:
   initial: bulk
   production: snapshot                  # each edition file as published; a replaced file lands as a new version
   incremental_policy: changed_since_last  # SHA-256 of each edition file
-  schedule: # UTC; editions are published about two weeks after the quarter (14-17 Jan, Apr, Jul, Oct); monthly check on the 20th
-    - {cron: "40 6 20 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  # UTC; quarterly like the report: editions are published about two weeks after the quarter (14-17 Jan, Apr, Jul,
+  # Oct), so the run on the 20th of those months fetches the seed files again (a replaced file lands as a new version)
+  # and warns when the new edition has no seed row yet; after the row is added, one run is dispatched by hand.
+  schedule:
+    - {cron: "40 6 20 1,4,7,10 *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/internet_gov_broadband/
 archive_policy:

@@ -9,8 +9,9 @@
      coverages; address points: of the address points in coverage).
    - service_type ("... w podziale na rodzaj usług"): Poland by kind of coverage (actual, wholesale only,
      theoretical only, none) and SUMA as '_T': address points with the printed share of all address points.
-   One Bronze cell per row label and column (Bronze rejects a table with a repeated row label), so the pivot below
-   never merges two rows. Numbers as printed (space or no-break space thousands separator, decimal comma); Bronze rejects an edition whose
+   One Bronze cell per row label and column (Bronze rejects a table with a repeated row label); cell_count keeps
+   the number of cells pivoted into each row, and the completeness test fails unless it is the table's column count,
+   so the max() of the pivot never hides a second cell. Numbers as printed (space or no-break space thousands separator, decimal comma); Bronze rejects an edition whose
    cells do not parse or whose classes do not add up to SUMA (to 1 / 10,000 for the bandwidth address points), so a
    cast failing here is a new defect, not data. #}
 with cells as (
@@ -47,6 +48,7 @@ rows as (
         row_label,
         reference_date_text,
         min(page_number) as page_number,
+        count(*) as cell_count,
         max(count_value) filter (where column_code = 'coverages') as coverages,
         max(share_value) filter (where column_code = 'coverages_share') as coverages_share_pct,
         max(count_value) filter (where column_code = 'address_points') as address_points,
@@ -105,6 +107,7 @@ select
     end as address_points_share_basis,
     d.address_points_total,
     d.page_number,
+    d.cell_count,
     d.entity,
     d.source_version,
     d.raw_sha256

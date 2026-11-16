@@ -7689,7 +7689,7 @@ sources:
     incremental: 'Entity = edition (reference quarter) x report file; version = the reference date printed in the report (the
       attachment''s Last-Modified as a check). Each quarter adds a new set; an already loaded edition is fetched again only
       when its bytes change (snapshot, changed_since_last). Whether earlier editions are ever revised is not known. Refresh
-      full (small source). Schedule: monthly check around the 20th, new seed row in January, April, July and October.'
+      full (small source). Schedule: quarterly, the 20th of January, April, July and October, with a new seed row each quarter.'
     identifiers: 'Reference quarter; TERC code in the section headers of the voivodeship PDFs ("TERC: 16" voivodeship, "TERC:
       1601" powiat, "TERC: 1601011" gmina); voivodeship name in the national tables; bandwidth class in Mb/s; medium; service
       type. No address-point identifiers are published.'
