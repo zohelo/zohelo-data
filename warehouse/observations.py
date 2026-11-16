@@ -35,6 +35,17 @@ part; the block keeps the version Gold already holds, if any, and stays listed a
 that fails for another reason (storage, memory) is tried once more alone with the full memory limit,
 then reported and retried by the next run. Work runs in parallel processes; finished blocks are committed in chunks,
 so a run that stops resumes where it stopped. Prints one JSON result line.
+
+Load order (owner decision O43): blocks that hold Polish regions, then blocks that hold Poland, another
+country or an aggregate such as the EU, then the rest; smaller blocks first within a group. The group of a
+waiting block comes from the geography codes of its Silver files (one column, read once per run for the
+blocks to build): the structure messages Eurostat publishes name one GEO code list for all datasets, not
+the codes of each.
+
+The Pipeline activity ``gold.observations`` (run.py) calls ``activity``: a run that reaches its time budget
+ends green with a warning and the next run continues; a run without a filter only continues a load (Gold
+already holds a block of the source), so the first load of a source is started by hand, with a filter.
+Every run ends with a coverage annotation: series in Gold over loaded series.
 """
 
 from __future__ import annotations
@@ -43,6 +54,7 @@ import argparse
 from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
 from concurrent.futures.process import BrokenProcessPool
 from datetime import UTC, datetime
+from fnmatch import fnmatchcase
 from hashlib import sha256
 import json
 import multiprocessing
@@ -74,6 +86,13 @@ MIN_REMOVABLE = 10
 # AVIA_TF_ACC: 92 MB in 13 min; Dev runs 43268232691, 43202733905). 6 MB a minute is below both.
 SERIAL_BYTES_PER_MINUTE = 6_000_000
 MAP_DIGEST = "zohelo.geography_map_digest"  # on gold.<source>_geography: the map its rows were last checked against
+# Load order (O43). Areas of dim_geography below the country level carry a prefix; the Polish ones are
+# TERC: (voivodeship and below), BDL: (podregion) and NUTS:PL (makroregion, region).
+GROUPS = ("Polish regions", "countries and aggregates", "other")
+POLISH_REGION_KEYS = ("TERC:", "BDL:", "NUTS:PL")
+REGION_KEYS = ("TERC:", "BDL:", "NUTS:")
+PROBE_FILES = 200  # Silver files per query when the geography codes of waiting blocks are read
+PROBE_SHARE = 0.1  # of the run's time budget; blocks not read in that time are ordered as group 2
 
 # Columns of the three Gold tables, in the order their models select them.
 TABLES: dict[str, dict[str, Any]] = {
@@ -178,6 +197,11 @@ SOURCES: dict[str, dict[str, Any]] = {
             "codes": ("silver", "eurostat_codes", ("codelist_id", "code", "name_en"), None),
         },
         "keyed_by": ("geo_map",),  # lookups that decide keys: their content is part of the recipe
+        "geography_column": "geo_code",  # of the Silver table: decides the load order (O43)
+        # lookup, block column, dimension column, the geography dimension: a block the structure gives no
+        # geography dimension holds no area, and its Silver files are not read for the load order
+        "geography_dimension": ("dims", "dataset_id", "dimension_id", "geo"),
+        "polish_code": "PL",  # an unmatched code that starts with it and is longer is a Polish region
     },
 }
 
@@ -291,6 +315,141 @@ def remapped_blocks(table, geo_map: dict[str, str]) -> tuple[set[str], str]:
     return {block for block, code, key in rows if expected_area(geo_map, code) != key}, digest
 
 
+def area_group(source: str, geo_map: dict[str, str], codes: set[str]) -> int:
+    """The load-order group (index of GROUPS) of a block that holds these geography codes."""
+    polish = SOURCES[source].get("polish_code", "")
+    group = 2
+    for code in codes:
+        key = geo_map.get(code, "_X")
+        if key.startswith(POLISH_REGION_KEYS) or (
+            key == "_X" and polish and code.startswith(polish) and code != polish
+        ):
+            return 0
+        if key not in ("_X", "_Z") and not key.startswith(REGION_KEYS):
+            group = 1
+    return group
+
+
+def without_geography(source: str, lookups: dict[str, str]) -> set[str] | None:
+    """Blocks whose structure has no geography dimension (upper case), from the source's structure lookup;
+    None when the source declares no such lookup. A block the lookup does not list is not in the set."""
+    import pyarrow.parquet as pq
+
+    spec = SOURCES[source].get("geography_dimension")
+    if not spec:
+        return None
+    lookup, block_column, dimension_column, dimension = spec
+    table = pq.read_table(lookups[lookup], columns=[block_column, dimension_column])
+    listed: dict[str, bool] = {}
+    for block, held in zip(table.column(0).to_pylist(), table.column(1).to_pylist(), strict=True):
+        if block is not None:
+            listed[block.upper()] = listed.get(block.upper(), False) or str(held).lower() == dimension
+    return {block for block, has in listed.items() if not has}
+
+
+def load_order(
+    source: str, todo: list[dict[str, Any]], geo_map: dict[str, str], seconds: float, no_area: set[str] | None = None
+) -> dict[str, int]:
+    """Block -> load-order group. A block without a geography dimension (``no_area``, from the structure)
+    is group 2 and nothing is read for it. For the others the group comes from the geography column of the
+    Silver files of the blocks to build (one column; nothing is read for a block that needs no build). A block
+    whose files could not be read within ``seconds`` is ordered with the countries (group 1)."""
+    import duckdb
+
+    from warehouse import entity
+
+    column = SOURCES[source].get("geography_column")
+    groups = {c["block"]: 2 if c["block"] in (no_area or ()) else 1 for c in todo}
+    todo = [c for c in todo if c["block"] not in (no_area or ())]
+    if not column or not todo:
+        return groups
+    # DuckDB names a file as it was given; the scheme is dropped in case a version spells it another way
+    block_of_path = {path.split("://", 1)[-1]: c["block"] for c in todo for path in c["paths"]}
+    codes: dict[str, set[str]] = {c["block"]: set() for c in todo}
+    read: set[str] = set()
+    paths = [path for c in sorted(todo, key=lambda c: c["rows"]) for path in c["paths"]]
+    deadline = time.monotonic() + seconds
+    con = duckdb.connect()
+    try:
+        if any(path.startswith("s3://") for path in paths):
+            entity._remote(con)
+        for start in range(0, len(paths), PROBE_FILES):
+            if time.monotonic() > deadline:
+                break
+            batch = paths[start : start + PROBE_FILES]
+            files = ", ".join("'" + path.replace("'", "''") + "'" for path in batch)
+            try:
+                rows = con.execute(
+                    f"SELECT DISTINCT filename, {column} FROM read_parquet([{files}], filename = true)"
+                ).fetchall()
+            except duckdb.Error:  # the order is a preference: a batch that cannot be read keeps group 1
+                continue
+            named = [(path.split("://", 1)[-1], code) for path, code in rows]
+            if any(path not in block_of_path for path, _ in named):  # not one of the files asked for
+                continue
+            for path, code in named:
+                if code is not None:
+                    codes[block_of_path[path]].add(code)
+            read.update(block_of_path[path.split("://", 1)[-1]] for path in batch)
+    finally:
+        con.close()
+    for block in read:
+        groups[block] = area_group(source, geo_map, codes[block])
+    return groups
+
+
+def matches(only: set[str] | None, block: str) -> bool:
+    """Whether a block is in the run's filter: block ids or globs, compared in upper case; no filter = all."""
+    return only is None or any(fnmatchcase(block.upper(), pattern) for pattern in only)
+
+
+def blocks_in_gold(cat, source: str, namespace: str = "gold") -> int:
+    """Blocks the source's observations table holds; 0 when the table does not exist. Reads metadata only."""
+    from pyiceberg.exceptions import NoSuchTableError
+
+    try:
+        table = bf.retry(lambda: cat.load_table(table_ids(source, namespace)["observations"]), "observations")
+    except NoSuchTableError:
+        return 0
+    return len(et.state(table, ENTITY))
+
+
+def coverage(source: str, p: dict, built: list[dict[str, Any]], removed: set[str]) -> dict[str, Any]:
+    """Series in Gold over loaded series, after a run (docs/gold-coverage.md, decision 10), from the tables'
+    file lists as the plan read them plus the run's own results; no data is read.
+
+    A block in Gold holds every loaded series that no stated rule excludes (it is accepted whole), so its
+    loaded series are its Gold series: the row count of its file in gold.<source>_series. The loaded series
+    of a block that waits or is rejected are not known before its first build; they are estimated from its
+    Silver rows at the series-per-Silver-row ratio of the blocks in Gold, and the result says so."""
+    series = dict(p["series_held"])
+    for block in removed:
+        series.pop(block, None)
+    for result in built:
+        series[result["block"]] = result["series"]
+    silver_rows = p["silver_rows"]
+    in_gold = sum(series.values())
+    rows_in_gold = sum(silver_rows.get(block, 0) for block in series)
+    rows_waiting = sum(rows for block, rows in silver_rows.items() if block not in series)
+    waiting = sum(1 for block in silver_rows if block not in series)
+    estimate = round(in_gold / rows_in_gold * rows_waiting) if rows_in_gold and rows_waiting else 0
+    out = {
+        "blocks_in_gold": len(series),
+        "blocks_in_silver": len(silver_rows),
+        "blocks_not_in_gold": waiting,
+        "series_in_gold": in_gold,
+        "loaded_series": in_gold + estimate,
+        "loaded_series_estimated": estimate,  # of the blocks not in Gold; 0 = the number is exact
+        "coverage_pct": round(100 * in_gold / (in_gold + estimate), 2) if in_gold + estimate else 0.0,
+        "silver_rows_in_gold_blocks_pct": round(100 * rows_in_gold / (rows_in_gold + rows_waiting), 2)
+        if rows_in_gold + rows_waiting
+        else 0.0,
+    }
+    if waiting and not rows_in_gold:
+        out["coverage_pct"] = 0.0
+    return out
+
+
 def plan(
     cat,
     source: str,
@@ -308,7 +467,7 @@ def plan(
     listed = blocks_of(source, et.state(silver, silver.spec().fields[0].name))
     if not listed:
         raise RuntimeError(f"{source}: the Silver table lists no blocks; nothing is built or removed")
-    blocks = {b: v for b, v in listed.items() if b in only} if only else listed
+    blocks = {b: v for b, v in listed.items() if matches(only, b)}
     ids = table_ids(source, namespace)
     states, tables = {}, {}
     for name, table_id in ids.items():
@@ -334,9 +493,13 @@ def plan(
             todo.append({"block": block, "recipe": recipe, **item})
     held_blocks = set().union(*(set(state) for state in states.values()))
     # a block leaves Gold only when it left Silver; a rejected new version keeps the version Gold holds
-    gone = sorted(b for b in held_blocks if b not in listed and (only is None or b in only))
+    gone = sorted(b for b in held_blocks if b not in listed and matches(only, b))
+    # for the coverage annotation: a block is in Gold when the observations table holds it
+    series_held = {b: states["series"].get(b, {}).get("rows", 0) for b in states["observations"]}
     return {
         "blocks": len(blocks),
+        "series_held": series_held,
+        "silver_rows": {b: v["rows"] for b, v in listed.items()},
         "todo": todo,
         "rejected": rejected,
         "complete": complete,
@@ -417,16 +580,23 @@ def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str
         out["seconds"] = round(time.monotonic() - started, 1)
 
 
-def main(argv=None) -> int:
+def run(argv=None) -> dict[str, Any]:
+    """One run of the builder; returns its summary (``result`` says how it ended)."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", required=True, choices=sorted(SOURCES))
     parser.add_argument(
         "--minutes", type=float, default=50, help="time budget; unfinished blocks wait for the next run"
     )
     parser.add_argument("--workers", type=int, default=3)
-    parser.add_argument("--only", nargs="*", help="block ids (trials)")
+    parser.add_argument("--only", nargs="*", help="block ids or globs: the run builds and removes only these")
     parser.add_argument("--memory", default="4GB", help="DuckDB memory per worker for small blocks")
     parser.add_argument("--trial", default="", help="scratch namespace and prefix (Dev trials): writes only there")
+    parser.add_argument(
+        "--continue-only",
+        action="store_true",
+        help="build only when Gold already holds a block of the source (runs without a filter: the first load "
+        "of a source is started by hand)",
+    )
     args = parser.parse_args(argv)
     source = args.source
     namespace, prefix, rejected_id = "gold", "04_gold/", REJECTED
@@ -435,6 +605,16 @@ def main(argv=None) -> int:
     started = time.monotonic()
     deadline = started + args.minutes * 60
     cat = bf.retry(catalog, "catalog")
+    if args.continue_only and not blocks_in_gold(cat, source, namespace):
+        summary = {
+            "operation": f"{source}-gold-observations",
+            "result": "not_started",
+            "reason": "Gold holds no block of this source and the run has no filter: the first load is started "
+            "by hand, Pipeline run `gold: observations` with filter `*` (every block) or block ids",
+        }
+        print(json.dumps(summary, sort_keys=True), flush=True)
+        annotate("notice", f"{source} gold observations", summary)
+        return summary
     tmp_root = os.environ.get("DUCKDB_TEMP_DIRECTORY") or tempfile.gettempdir()
     Path(tmp_root).mkdir(parents=True, exist_ok=True)
     lookup_dir = Path(tempfile.mkdtemp(prefix=f"gold-{source}-lookups-", dir=tmp_root))
@@ -445,8 +625,14 @@ def main(argv=None) -> int:
         ids = p["ids"]
         for table_id in ids.values():
             et.configure(table_id)
-        todo = sorted(p["todo"], key=lambda c: c["rows"])
+        # O43: Polish regions, then countries and aggregates, then the rest; smaller blocks first in a group
+        groups = load_order(
+            source, p["todo"], geo_map, args.minutes * 60 * PROBE_SHARE, without_geography(source, lookups)
+        )
+        todo = sorted(p["todo"], key=lambda c: (groups[c["block"]], c["rows"]))
         totals = {"built": 0, "rows": 0, "series": 0, "measures": 0, "bytes": 0, "silver_rows": 0}
+        built: list[dict[str, Any]] = []
+        built_by_group = [0, 0, 0]
         rejected_now: list[dict[str, str]] = []
         failed: list[dict[str, str]] = []
         waiting: list[str] = []
@@ -478,6 +664,7 @@ def main(argv=None) -> int:
                     for r in bad
                 ],
             )
+            built.extend(r for r in pending if r["status"] == "ok")  # in Gold only once committed
             pending, last_commit = [], time.monotonic()
 
         def account(result: dict[str, Any]) -> None:
@@ -487,6 +674,7 @@ def main(argv=None) -> int:
             pending.append(result)
             if result["status"] == "ok":
                 totals["built"] += 1
+                built_by_group[groups[result["block"]]] += 1
                 for key in ("rows", "series", "measures", "bytes", "silver_rows"):
                     totals[key] += result[key]
                 slowest.append((result["seconds"], result["block"], result["rows"]))
@@ -504,51 +692,54 @@ def main(argv=None) -> int:
         removal_refused = len(p["gone"]) if len(p["gone"]) > removable else 0
         if p["gone"] and not removal_refused:
             commit(removed=p["gone"])
-        queue = [c for c in todo if c["rows"] <= BIG_ROWS]
-        serial = [c for c in todo if c["rows"] > BIG_ROWS]
-        while queue and time.monotonic() < deadline:
-            broken = False
-            with ProcessPoolExecutor(max_workers=args.workers, mp_context=clean) as pool:
-                running: dict = {}
-                while (queue or running) and not broken:
-                    while queue and len(running) < args.workers and time.monotonic() < deadline:
-                        c = queue.pop(0)
-                        running[pool.submit(work, source, c, lookups, args.memory, tmp_root, prefix)] = c
-                    if not running:
-                        break
-                    finished, _ = wait(running, timeout=60, return_when=FIRST_COMPLETED)
-                    for f in finished:
-                        c = running.pop(f)
-                        try:
-                            account(f.result())
-                        except BrokenProcessPool:  # a worker was killed (memory): unknown which; retry alone
-                            serial.append(c)
-                            broken = True
-                        except Exception:  # not a verdict on the block (memory, storage): once more, alone
-                            serial.append(c)
-                    if len(pending) >= COMMIT_EVERY or (pending and time.monotonic() - last_commit > COMMIT_SECONDS):
-                        commit()
-                if broken:
-                    serial += list(running.values())
-                    pool.shutdown(wait=False, cancel_futures=True)
-            commit()
-        for c in sorted(serial, key=lambda c: c["rows"]):
-            # the budget is checked before a block starts: one that cannot finish in the time left waits
-            if c["bytes"] / SERIAL_BYTES_PER_MINUTE > (deadline - time.monotonic()) / 60:
-                waiting.append(c["block"])
-                continue
-            with ProcessPoolExecutor(max_workers=1, mp_context=clean) as alone:  # a kill fails that block only
-                future = alone.submit(work, source, c, lookups, "10GB", tmp_root, prefix)
-                workers = list((alone._processes or {}).values())  # kept to read the exit code if it dies
-                try:
-                    account(future.result())
-                except BrokenProcessPool as exc:
-                    from ingestion.to_bronze.eurostat.entities import worker_exit
+        for group in range(len(GROUPS)):  # a group is finished, its large blocks included, before the next starts
+            queue = [c for c in todo if groups[c["block"]] == group and c["rows"] <= BIG_ROWS]
+            serial = [c for c in todo if groups[c["block"]] == group and c["rows"] > BIG_ROWS]
+            while queue and time.monotonic() < deadline:
+                broken = False
+                with ProcessPoolExecutor(max_workers=args.workers, mp_context=clean) as pool:
+                    running: dict = {}
+                    while (queue or running) and not broken:
+                        while queue and len(running) < args.workers and time.monotonic() < deadline:
+                            c = queue.pop(0)
+                            running[pool.submit(work, source, c, lookups, args.memory, tmp_root, prefix)] = c
+                        if not running:
+                            break
+                        finished, _ = wait(running, timeout=60, return_when=FIRST_COMPLETED)
+                        for f in finished:
+                            c = running.pop(f)
+                            try:
+                                account(f.result())
+                            except BrokenProcessPool:  # a worker was killed (memory): unknown which; retry alone
+                                serial.append(c)
+                                broken = True
+                            except Exception:  # not a verdict on the block (memory, storage): once more, alone
+                                serial.append(c)
+                        if len(pending) >= COMMIT_EVERY or (
+                            pending and time.monotonic() - last_commit > COMMIT_SECONDS
+                        ):
+                            commit()
+                    if broken:
+                        serial += list(running.values())
+                        pool.shutdown(wait=False, cancel_futures=True)
+                commit()
+            for c in sorted(serial, key=lambda c: c["rows"]):
+                # the budget is checked before a block starts: one that cannot finish in the time left waits
+                if c["bytes"] / SERIAL_BYTES_PER_MINUTE > (deadline - time.monotonic()) / 60:
+                    waiting.append(c["block"])
+                    continue
+                with ProcessPoolExecutor(max_workers=1, mp_context=clean) as alone:  # a kill fails that block only
+                    future = alone.submit(work, source, c, lookups, "10GB", tmp_root, prefix)
+                    workers = list((alone._processes or {}).values())  # kept to read the exit code if it dies
+                    try:
+                        account(future.result())
+                    except BrokenProcessPool as exc:
+                        from ingestion.to_bronze.eurostat.entities import worker_exit
 
-                    account(failure(c, exc, worker_exit(workers)))
-                except Exception as exc:
-                    account(failure(c, exc))
-            commit()
+                        account(failure(c, exc, worker_exit(workers)))
+                    except Exception as exc:
+                        account(failure(c, exc))
+                commit()
         left = len(todo) - totals["built"] - len(rejected_now)
         if left == 0 and not removal_refused and only is None:  # every block is checked against this map
             with p["tables"]["geography"].refresh().transaction() as tx:
@@ -562,6 +753,10 @@ def main(argv=None) -> int:
         "result": "removal_refused" if removal_refused else result,
         "blocks_in_silver": p["blocks"],
         "todo": len(todo),
+        "todo_by_group": dict(
+            zip(GROUPS, [sum(1 for c in todo if groups[c["block"]] == g) for g in range(3)], strict=True)
+        ),
+        "built_by_group": dict(zip(GROUPS, built_by_group, strict=True)),
         "remapped_geography": p["remapped"],
         "remaining": left,
         **totals,
@@ -580,7 +775,30 @@ def main(argv=None) -> int:
     print(json.dumps(summary, sort_keys=True), flush=True)
     clean_run = left == 0 and not rejected_now and not removal_refused
     annotate("notice" if clean_run else "warning", f"{source} gold observations", summary)
-    return 0 if left == 0 and not removal_refused else 2
+    covered = coverage(source, p, built, set() if removal_refused else set(p["gone"]))
+    if only is not None:
+        covered["filter"] = sorted(only)[:10]  # the numbers are the source's, whatever the filter
+    annotate("notice", f"{source} gold coverage", covered)
+    return {**summary, "coverage": covered}
+
+
+def main(argv=None) -> int:
+    """Command line: 0 when every block is built, 2 when blocks are left or a removal was refused."""
+    return 0 if run(argv)["result"] in ("complete", "not_started") else 2
+
+
+def activity(source: str, minutes: float, block_filter: str = "") -> int:
+    """The Pipeline activity ``gold.observations``. ``block_filter``: block ids or globs, comma separated;
+    `*` is every block; empty continues a load that was started and never starts the first one. A run that
+    reaches its time budget is not a failure: its blocks are committed and the next run continues (0, with a
+    warning annotation). Failed blocks or a refused removal fail the run (2)."""
+    argv = ["--source", source, "--minutes", f"{max(minutes, 5):.0f}"]
+    patterns = [part.strip() for part in block_filter.replace(" ", ",").split(",") if part.strip()]
+    if not patterns:
+        argv.append("--continue-only")
+    elif "*" not in patterns:
+        argv += ["--only", *patterns]
+    return 0 if run(argv)["result"] in ("complete", "not_started", "incomplete_time_budget") else 2
 
 
 def completeness(source: str) -> dict[str, Any]:
