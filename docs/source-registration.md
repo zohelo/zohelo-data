@@ -23,6 +23,9 @@ code lists every source adds rows to followed on 13 November (D36, below).
 
 `warehouse.yaml` keeps what belongs to no single source: conformed dimensions, facts, seeds, KPI metrics
 that read several sources, and their ceilings.
+`models/bronze/sources.yml` keeps the tables of no single source's Bronze (the Silver tables the loaders write
+per entity, `gold.coverage`) and `models/gold/_gold.yml` the shared Gold models; the entries of the sources
+registered before D34 moved to their own files on 16 November.
 
 ### The Gold registration file
 
