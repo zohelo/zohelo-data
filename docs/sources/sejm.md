@@ -12,7 +12,7 @@ sittings every run. Restart unit: one answer. Size and history: `ingestion/sourc
 Bronze (`ingestion/to_bronze/sejm/`, an unknown item key rejects the file into `bronze.sejm_rejected_files`):
 `sejm_terms`, `sejm_proceedings`, `sejm_voting_days`, `sejm_votings`, `sejm_prints`, `sejm_mps`. Silver:
 `sejm_sitting_days` (numbered sittings only; planned entries numbered 0 are left out), `sejm_votings` (totals as
-published; yes, no and abstain empty for list votes), `sejm_prints`, `sejm_mps`. Gold: entity tables
+published; yes, no and abstain empty for list and traditional votes), `sejm_prints`, `sejm_mps`. Gold: entity tables
 `parliament_sejm_sitting_days`, `parliament_sejm_votings`, `parliament_sejm_prints`, `parliament_sejm_mps`; build
 stage `build_sejm` (blocks `sitting_days`, `votings`, `prints`: counts per month, Poland, only months with an event);
 draft KPIs `sejm_sitting_days`, `sejm_votings`, `sejm_prints` (no v2 map row). Weekly, Saturday 04:20 UTC. Licence:

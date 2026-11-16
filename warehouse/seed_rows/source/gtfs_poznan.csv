@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+gtfs_poznan,PL-ENV-030,ZTM Poznań rozkład jazdy GTFS,ZTM Poznań GTFS timetable,Zarząd Transportu Miejskiego w Poznaniu,reference,file,subnational-public,ztm_poznan_open_data,https://www.ztm.poznan.pl/otwarte-dane/dla-deweloperow/
