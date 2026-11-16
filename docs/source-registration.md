@@ -126,7 +126,7 @@ source declares both in its own file, `warehouse/macros/value_range/<source_syst
   declared twice by one source, or a model that is not `poc_metrics_*`.
 - Moved on 16 November: the bounds and the single-source models of cie_sio, crossref, gugik_prng, gus_culture,
   gus_culture_participation, gus_nsp2021, gus_psr2020, gus_tourism, mrpips_social_assistance, ms_isws, owid,
-  policja_statistics, radon and rpwdl (the compiled test reads the same 113 bounds and 56 models, and returns the
+  policja_statistics, radon, rpwdl, ted_notices and ulc_airports (the compiled test reads the same 116 bounds and 57 models, and returns the
   same rows on the same data). The other sources' rows stay in the test file.
 - No model calls these macros (`repo_check` `configuration`), and `warehouse/changed.py` keeps
   `macros/value_range/` out of every build fingerprint: a new or changed bound rebuilds nothing. The test runs when
