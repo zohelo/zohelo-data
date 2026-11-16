@@ -40,6 +40,8 @@ report_module.step_summary = lambda _m: None
 
 
 def note(title: str, data, level: str = "notice") -> None:
+    """One annotation (at most 9 per run: GitHub keeps 10 per step), also printed to the log in full."""
+    print(f"NOTE [{level}] {title}: {json.dumps(data, default=str)}", flush=True)
     ANNOTATE(level, title, data)
 
 
@@ -226,9 +228,22 @@ def sejm_trial(con) -> None:
     p, vd, v, pr, mp = (
         s[t] for t in ("sejm_proceedings", "sejm_voting_days", "sejm_votings", "sejm_prints", "sejm_mps")
     )
-    note(
-        "sejm trial Bronze profile",
+    collect(
+        "notice",
+        "sejm trial Bronze profile (log only)",
         {
+            "gap_sittings": q(
+                con,
+                f"select v.term, v.sitting_number, count(*), min(v.voting_number::int), max(v.voting_number::int), "
+                f"max(l.listed) from {v} v left join (select term, sitting_number, sum(votings_num::int) listed "
+                f"from {vd} group by all) l using (term, sitting_number) group by all "
+                f"having min(v.voting_number::int) <> 1 or max(v.voting_number::int) <> count(*) order by 1, 2",
+            ),
+            "non_electronic_totals": q(
+                con,
+                f"select kind, count(*), sum(yes::int), sum(no::int), sum(abstain::int), min(total_voted::int), "
+                f"max(total_voted::int) from {v} where kind <> 'ELECTRONIC' group by 1",
+            ),
             "terms": q(
                 con, f"select term, date_from, date_to, is_current, prints_count from {s['sejm_terms']} order by 1"
             ),
@@ -294,7 +309,7 @@ def sejm_trial(con) -> None:
     }
     yml = Path("warehouse/models/silver/sejm/_sejm.yml").read_text()
     for column in ("kind", "majority_type"):
-        found = re.search(rf"name: {column}\n\s+tests: .*values: \[([^\]]*)\]", yml)
+        found = re.search(rf"name: {column}\n(?:.*\n)*?.*values: \[([^\]]*)\]", yml)
         if found and "'" in found.group(1):
             tests[f"accepted {column}"] = f"select 1 from sejm_votings where {column} not in ({found.group(1)})"
     for name in ("sejm_sitting_days_complete", "sejm_votings_complete", "sejm_prints_complete", "sejm_mps_complete"):
@@ -383,9 +398,17 @@ def eli_trial(con) -> None:
     landing_step("eli_pl", landing)
     s = bronze_step("eli_pl", bronze, con)
     a = s["eli_pl_acts"]
-    note(
-        "eli_pl trial Bronze profile",
+    collect(
+        "notice",
+        "eli_pl trial Bronze profile (log only)",
         {
+            "repeated_positions": q(
+                con,
+                f"select a.publisher, a.year, a.position, a.eli_id, a.address, a.volume, left(a.title, 60) from {a} a "
+                f"join (select publisher, year, position from {a} group by all having count(*) > 1) d "
+                f"using (publisher, year, position) order by 1, 2, 3",
+                30,
+            ),
             "publishers": q(con, f"select publisher, name, acts_count, years_listed from {s['eli_pl_publishers']}"),
             "acts": q(
                 con,
@@ -413,7 +436,7 @@ def eli_trial(con) -> None:
     }
     yml = Path("warehouse/models/silver/eli_pl/_eli_pl.yml").read_text()
     for column in ("act_type", "status"):
-        found = re.search(rf"name: {column}\n\s+tests: .*values: \[([^\]]*)\]", yml)
+        found = re.search(rf"name: {column}\n(?:.*\n)*?.*values: \[([^\]]*)\]", yml)
         if found and "'" in found.group(1):
             tests[f"accepted {column} (warn)"] = f"select 1 from eli_pl_acts where {column} not in ({found.group(1)})"
     result, samples = failing(con, tests)
@@ -435,14 +458,32 @@ def eli_trial(con) -> None:
         "eli_pl trial Gold build_eli_pl and legal_acts",
         {
             "rows_two_builds": gold,
-            **gold_checks(con, "poc_build_eli_pl", {"legal_acts_published": "eli_pl:acts:acts:monthly"}),
-            "max_month": q(con, "select max(value), arg_max(period_label, value) from poc_build_eli_pl where is_total"),
+            **gold_checks(con, "poc_build_eli_pl", {"legal_acts_published": "eli_pl:acts:acts:DU"}),
+            "journal_years": q(
+                con,
+                "select publisher, count(*), count(*) filter (where undated = 0), "
+                "count(*) filter (where undated > 0 and undated <= 0.01 * acts), "
+                "count(*) filter (where undated > 0.01 * acts), "
+                "string_agg(year::varchar, ',' order by year) filter (where undated > 0.01 * acts), "
+                "string_agg(cast(year as varchar) || ':' || cast(undated as varchar), ',' order by year) filter (where undated > 0 and undated <= 0.01 * acts) "
+                "from (select publisher, year, count(*) filter (where promulgation_date is null) undated, count(*) acts "
+                "from eli_pl_acts group by all) group by 1 order by 1",
+            ),
+            "status_by_measure": q(
+                con,
+                "select measure_key, observation_status_key, count(*) from poc_build_eli_pl where is_total "
+                "group by all order by all",
+            ),
+            "max_month": q(
+                con,
+                "select measure_key, max(value), arg_max(period_label, value) from poc_build_eli_pl where is_total group by 1",
+            ),
             "legal_acts_unique": count(con, "select eli_id from legal_acts group by 1 having count(*) > 1"),
             "spot": q(
                 con,
-                "select period_label, breakdown_json, value, observation_status_key from poc_build_eli_pl "
-                "where period_label in ('2025-12', '2026-10') and (is_total or breakdown_json like '%_T\"}' "
-                "or breakdown_json like '%Ustawa%') order by 1, 2",
+                "select measure_key, period_label, breakdown_json, value, observation_status_key from poc_build_eli_pl "
+                "where period_label in ('2025-12', '2026-10') and (is_total or breakdown_json like '%Ustawa%') "
+                "order by 1, 2, 3",
             ),
             "year_2025": q(con, "select publisher, count(*) from eli_pl_acts where year = 2025 group by 1 order by 1"),
         },
@@ -452,6 +493,7 @@ def eli_trial(con) -> None:
 def cleanup() -> None:
     from ingestion.common.r2 import catalog, req, s3
 
+    report = {}
     for scratch in SCRATCH.values():
         removed: dict = {"tables": [], "landing_objects": 0, "lake_objects": 0}
         cat = catalog()
@@ -481,13 +523,14 @@ def cleanup() -> None:
             for b in ("STORAGE_LANDING_BUCKET_NAME", "STORAGE_LAKEHOUSE_BUCKET_NAME")
             for p in client.get_paginator("list_objects_v2").paginate(Bucket=req(b), Prefix=f"{scratch}/")
         )
-        note(f"{scratch} trial scratch removed", removed)
+        report[scratch] = removed
+    note("sejm_eli trial scratch removed", report)
 
 
 def main() -> int:
     status = 0
     con = duckdb.connect()
-    note("sejm_eli trial versions", {"duckdb": duckdb.__version__})
+    collect("notice", "sejm_eli trial versions (log only)", {"duckdb": duckdb.__version__})
     try:
         geo(con)
         for name, step in (("sejm", sejm_trial), ("eli_pl", eli_trial)):
