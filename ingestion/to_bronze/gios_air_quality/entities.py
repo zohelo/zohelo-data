@@ -97,6 +97,7 @@ def plan(bronze: dict[str, dict[str, Any]], today: date) -> dict[str, tuple[str,
     for day in sorted(d for d in days if d <= today):
         files = [u for p in sorted(passes) if day <= p <= day + timedelta(days=WINDOW_DAYS) for u in passes[p]]
         digest = sha256(sql)
+        digest.update(day.isoformat().encode())  # one pass feeds several days: the day is part of the recipe
         for uri in files:
             digest.update(et.recipe_of(uri).encode())
         out[day.isoformat()] = (digest.hexdigest()[:32], files)
@@ -118,7 +119,7 @@ def build(cat, client, lake: str, namespace: str, silver_namespace: str, today: 
         for day, (recipe, files) in todo.items():
             marker = Path(temporary) / f"{day}.day.parquet"
             pq.write_table(pa.table({"day": pa.array([date.fromisoformat(day)], pa.date32())}), marker)
-            output = Path(temporary) / f"{recipe}.parquet"
+            output = Path(temporary) / f"{day}.{recipe}.parquet"
             try:
                 result = entity.apply(
                     MODEL,
@@ -133,7 +134,9 @@ def build(cat, client, lake: str, namespace: str, silver_namespace: str, today: 
             except (entity.EntityModelError, entity.EntityRunError) as exc:
                 totals["failed"].append({"day": day, "error": str(exc)[:400]})
                 continue
-            if not result["rows"]:
+            if not result["rows"]:  # a window day no held pass has values for yet: nothing to write
+                output.unlink(missing_ok=True)
+                totals["empty"] = totals.get("empty", 0) + 1
                 continue
             key = f"{lake_root}/{SOURCE}/{MODEL}/{day}/{recipe}.parquet"
             wanted[day] = [bf.upload(client, lake, key, output, recipe)]
