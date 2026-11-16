@@ -9305,7 +9305,9 @@ sources:
     interfaces: [API, JSON]
     auth: Public; polite pool identification is recommended and no signup is required for basic access.
     cost: free
-    limits: Rate etiquette and service pools apply; no numeric allowance relied on.
+    limits: 'Public pool measured on 12 Nov 2026 (Dev probe 43326689827): x-rate-limit-limit 1 per 1s for /works list
+      queries (pool public-array), 5 per 1s for /funders; the route sends one request at a time, 2 s apart, and retries
+      429 and 5xx with a growing wait. No contact address is sent (polite pool not used).'
   licence:
     status: open-conditional
     notes: 'Terms: https://www.crossref.org/documentation/retrieve-metadata/rest-api/ (read 11 Nov 2026 from a GitHub runner,

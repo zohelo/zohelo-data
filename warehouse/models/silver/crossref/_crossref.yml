@@ -3,9 +3,10 @@ models:
   - name: crossref_works_pl_counts
     description: >-
       Crossref (metadata usable for any purpose, abstracts excluded; none is requested) counts of the works whose
-      deposited author affiliation names Poland or Polska. Grain: entity × facet × facet_value (works_pl_by_year:
-      total and works per publication year; works_pl_<year>, from 2000: total and works by type, publisher and
-      funder of that year). Only works whose publisher deposits affiliations can be counted.
+      deposited affiliation text names Poland or Polska (lower bound; can match foreign addresses). Grain: entity ×
+      facet × facet_value (works_pl_by_year: total and works per publication year; works_pl_<year>, from FIRST_YEAR
+      of ingestion/to_landing/crossref/: total and works by type, publisher and funder of that year). Only works
+      whose publisher deposits affiliations can be counted.
     tests:
       - unique:
           column_name: "entity || '|' || facet || '|' || coalesce(facet_value, '')"
@@ -18,6 +19,15 @@ models:
           - accepted_values:
               arguments:
                 values: ['_total', 'published', 'type-name', 'publisher-name', 'funder-doi']
+      - name: publication_year
+        description: >-
+          Publication year (the facet value of 'published', or the year of a works_pl_<year> request); null only
+          on the all-years '_total' row. A null elsewhere (a non-numeric year) would be dropped by the Gold year
+          range, so it fails here.
+        tests:
+          - not_null:
+              config:
+                where: "facet <> '_total'"
       - name: works
         description: Count as published; a non-numeric count would be null and fail here.
         tests: [not_null]

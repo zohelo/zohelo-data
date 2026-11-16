@@ -1,4 +1,4 @@
-# Crossref: works with a Polish author affiliation (`crossref`)
+# Crossref: works with affiliation text naming Poland or Polska (`crossref`)
 
 **Built (13 Nov 2026, register CD-029, #553).** Route: the Crossref REST API (`https://api.crossref.org`), aggregate
 requests only, one at a time, 2 s apart (the API sends `x-rate-limit-limit: 1` per `1s` for `/works` list queries,
@@ -21,7 +21,8 @@ Gold `gold.build_crossref`, block `works_pl`, unit `works` as published: `crossr
 publication year 1900 to the year of the copy) and per year from 2000 the breakdowns `:type`, `:publisher`
 (Crossref's publisher name) and `:funder` (registry id; the name as label for Polish funders). The year of the copy
 is `provisional`; later years (scheduled issues) and years before 1900 are not loaded. Draft KPI
-`scholarly_works_pl_affiliation`.
+`scholarly_works_pl_affiliation` (label: affiliation text naming Poland or Polska, lower bound, can match foreign
+addresses); its `kpi_v2_map` row is `needs-block`: it reaches no contract yet (review of #3002).
 
 Limits: only works whose publisher deposits affiliations are counted, so the totals are a lower bound of Polish
 output; a field query also matches an affiliation abroad that names Poland; breakdowns are not additive (several

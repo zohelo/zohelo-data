@@ -6,7 +6,10 @@
    (the name Crossref groups by) and :funder {funder: registry id, label the name for Polish funders}. Breakdowns
    are not additive (a work has several funders; none for most) and a facet cut at 1,000 values lacks its tail.
    The year of the copy is still filling: status provisional. Years after it (scheduled issues) and before 1900
-   (the calendar's range) are not loaded. Area: PL by the selection rule. #}
+   (the calendar's range) are not loaded. Area: PL by the selection rule. The label states the matching rule:
+   query.affiliation is a full-text field query, so it can match an address abroad that names Poland and misses
+   works whose publisher deposits no affiliation (precision unmeasured). #}
+{% set selection = 'affiliation text naming Poland or Polska (lower bound; can match foreign addresses)' %}
 with geo as (
     select geography_key
     from {{ ref('poc_map_geography') }}
@@ -24,7 +27,7 @@ counts as (
 observations as (
     select
         'crossref:works_pl:works' as measure_key,
-        'Works with a Polish author affiliation (Crossref DOIs, by publication year)' as measure_name,
+        'Crossref works (DOIs) with {{ selection }}, by publication year' as measure_name,
         'total' as measure_codes,
         publication_year,
         '{}' as breakdown_json,
@@ -39,8 +42,11 @@ observations as (
     union all
     select
         'crossref:works_pl:works:' || m.code as measure_key,
-        'Works with a Polish author affiliation by ' || m.code || ' (Crossref DOIs, by publication year)'
-            as measure_name,
+        'Crossref works (DOIs) with {{ selection }}, by ' || m.code || ' and publication year'
+        || case
+            when m.code = 'funder' then '; at most the 1,000 most frequent funders per year (Crossref facet limit)'
+            else ''
+        end as measure_name,
         m.code as measure_codes,
         c.publication_year,
         cast(to_json(map([m.code], [coalesce(c.funder_id, c.facet_value)])) as varchar) as breakdown_json,
@@ -61,7 +67,8 @@ observations as (
 select
     'crossref' as source_system,
     'works_pl' as block_id,
-    'Crossref works with a Polish author affiliation (annual)' as block_name,
+    'Crossref works with {{ selection }}, annual; '
+    || 'funder breakdowns hold at most the 1,000 most frequent funders per year' as block_name,
     r.measure_key,
     r.measure_name,
     r.measure_codes,

@@ -3,8 +3,9 @@ version: 2
 models:
   - name: poc_build_crossref
     description: >-
-      Gold build stage of Crossref (CD-029): annual works with a Polish author affiliation, total and by type,
-      publisher and funder (block works_pl, unit works as published). Grain: measure_key × breakdown × date_key.
+      Gold build stage of Crossref (CD-029): annual works with affiliation text naming Poland or Polska (lower
+      bound; can match foreign addresses), total and by type, publisher and funder (funder: at most the 1,000 most
+      frequent per year) (block works_pl, unit works as published). Grain: measure_key × breakdown × date_key.
     tests:
       - unique:
           column_name: "measure_key || '|' || breakdown_json || '|' || cast(date_key as varchar)"

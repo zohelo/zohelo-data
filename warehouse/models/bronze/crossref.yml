@@ -2,7 +2,9 @@ version: 2
 
 sources:
 - name: crossref
-  description: Crossref REST API — counts of the works with a Polish author affiliation and the Polish funders, JSON
+  description: >-
+    Crossref REST API — counts of the works with affiliation text naming Poland or Polska and the Polish
+    funders, JSON
   database: r2
   schema: bronze
   meta:

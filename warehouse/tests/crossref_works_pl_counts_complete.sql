@@ -1,10 +1,12 @@
--- Crossref works with a Polish affiliation: every year from 2000 (FIRST_YEAR in ingestion/to_landing/crossref/) to
--- the newest has its own request with a total and a type breakdown, and that total agrees within 1% with the
--- year's count in the all-years request (the two are read seconds apart, so deposits indexed in between may differ).
+-- Crossref works with affiliation text naming Poland or Polska: every year from the first yearly request
+-- (FIRST_YEAR in ingestion/to_landing/crossref/, the one place the year is kept; here read from the landed
+-- works_pl_<year> entities) to the newest has its own request with a total and a type breakdown, and that total
+-- agrees within 1% with the year's count in the all-years request (the two are read seconds apart, so deposits
+-- indexed in between may differ).
 with counts as (select * from {{ ref('crossref_works_pl_counts') }}),
 
 years as (
-    select unnest(generate_series(2000, max(publication_year))) as publication_year
+    select unnest(generate_series(min(publication_year), max(publication_year))) as publication_year
     from counts
     where entity <> 'works_pl_by_year'
 ),

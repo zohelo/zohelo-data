@@ -1,5 +1,5 @@
 source_system: crossref
-description: "Crossref REST API — works with a Polish author affiliation (counts by year, type, publisher, funder) and the Funder Registry entries located in Poland"
+description: "Crossref REST API — works with affiliation text naming Poland or Polska (counts by year, type, publisher, funder) and the Funder Registry entries located in Poland"
 
 # Extraction strategy (docs/landing.md). Crossref's bulk feature (the annual public data file: every work's full
 # metadata) is far larger than this aggregate selection and would land abstracts, so the documented REST API is the
