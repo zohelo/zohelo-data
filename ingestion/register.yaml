@@ -7155,7 +7155,8 @@ sources:
   name: Airport traffic statistics
   short_name: ULC airport traffic
   provider: Urząd Lotnictwa Cywilnego (ULC)
-  status: approved
+  source_system: ulc_airports
+  status: built
   family: H
   kpi: true
   geography: Poland

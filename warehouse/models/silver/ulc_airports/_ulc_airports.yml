@@ -1,0 +1,57 @@
+version: 2
+models:
+  - name: ulc_airports_traffic
+    description: >-
+      Passengers handled and passenger flight operations (take-offs and landings) in regular and charter traffic per
+      Polish airport and in total ('_T', the tables' "Suma"), per quarter, from the quarter tables of ULC's quarterly
+      PDFs "statystyki wg portów lotniczych" (register PL-ENV-026; bronze.ulc_airports_rows). Grain: period_date x
+      airport_code x measure_code. Each value from the newest file that prints its quarter (files print the quarter
+      and the same quarter of the two previous years); transit passengers and general aviation are not included
+      (note under every table). History Q1 2008 - Q1 2026 (Q1 2010 - Q1 2026 files). RUN_NOTE
+    tests:
+      - unique:
+          column_name: "cast(period_date as varchar) || '|' || airport_code || '|' || measure_code"
+    columns:
+      - name: period_date
+        description: First day of the quarter.
+        tests: [not_null]
+      - name: period_quarter
+        tests: [not_null, {accepted_values: {arguments: {values: [1, 2, 3, 4]}}}]
+      - name: airport_code
+        description: ICAO code by the printed name (macro poc_ulc_airports_list); '_T' = total. Null = a printed
+          name that matches no airport or several (a new airport or a new spelling).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [EPWA, EPKK, EPGD, EPKT, EPWR, EPPO, EPMO, EPRZ, EPLL, EPBY, EPSC, EPLB, EPSY, EPZG, EPRA, _T]
+      - name: airport_label
+        description: The name as printed in the chosen file (both spellings when the file's two copies differ).
+        tests: [not_null]
+      - name: measure_code
+        tests: [not_null, {accepted_values: {arguments: {values: [passengers, passenger_operations]}}}]
+      - name: value
+        description: As printed (count); "-" and "b/d" cells are not loaded.
+        tests: [not_null]
+      - name: value_variants
+        description: Distinct printed values of the key in the chosen file (Q1 files print the table twice); must be 1.
+        tests: [not_null, {accepted_values: {arguments: {values: [1]}}}]
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: [passengers, operations]}}}]
+      - name: source_entity
+        description: The file the value is taken from (its reporting quarter, <year>_q<n>).
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of that PDF (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: ulc_airports_airports
+    description: >-
+      The airports of the ULC quarterly tables (register PL-ENV-026) as an entity table. Grain: airport_code (ICAO).
+      ICAO and IATA codes and the TERYT voivodeship from the correspondence of this build (macro
+      poc_ulc_airports_list; the tables print names only); the names as printed and the first and last quarter
+      from ulc_airports_traffic.
+    columns:
+      - name: airport_code
+        tests: [unique, not_null]
+      - name: terc_woj_code
+        tests: [not_null]
