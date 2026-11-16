@@ -435,12 +435,13 @@ jobs:
     needs: [scheduler, plan, landing-inspect, landing-extract, landing-verify, bronze-load, bronze-verify,
             landing-archive, archive-prune, build-queue, silver-gold-build, gold-publish, gold-observations,
             serving-refresh-index]
-    # A model build replaced in its queue by a newer one (concurrency zohelo-pipeline-build; build-queue should
-    # prevent it) ends as cancelled and is not an alert; a failed build is (#878 review).
+    # A failed or cancelled model build is an alert (#878 review, #2950): build-queue keeps builds from being
+    # replaced in their queue, so a cancelled build was lost, and the runs it covered have already ended green.
     if: >-
       always() && (
       failure() ||
       needs.silver-gold-build.result == 'failure' ||
+      needs.silver-gold-build.result == 'cancelled' ||
       (needs.plan.result == 'success' && contains(needs.plan.outputs.activities, 'landing.extract')) ||
       needs.scheduler.result == 'cancelled' ||
       needs.plan.result == 'cancelled' ||

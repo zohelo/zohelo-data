@@ -105,7 +105,8 @@ def repository(files: list[Path]) -> list[str]:
             problems.append(f"{f}: {size:,} bytes is above 1 MB")
         if size == 0 and f.name != "__init__.py":
             problems.append(f"{f}: empty file")
-        seed = f.suffix.lower() == ".csv" and f.as_posix().startswith("warehouse/seeds/")  # dbt seeds (code lists)
+        # Code lists: dbt seeds and the lists kept as rows per source (warehouse/seed_rows.py).
+        seed = f.suffix.lower() == ".csv" and f.as_posix().startswith(("warehouse/seeds/", "warehouse/seed_rows/"))
         if f.suffix.lower() in FORBIDDEN_SUFFIXES and not seed:
             problems.append(f"{f}: {f.suffix} files are not committed")
         if f.name.startswith(".env") and f.name != ".env.example":
@@ -607,11 +608,10 @@ def register(files: list[Path]) -> list[str]:
     declared = {f.stem for f in files if f.parent == Path("ingestion/sources") and f.suffix == ".yaml"}
     problems += [f"register: source_system {s} has no ingestion/sources/{s}.yaml" for s in sorted(linked - declared)]
     problems += [f"register: ingestion/sources/{s}.yaml is not in the register" for s in sorted(declared - linked)]
-    seeds = ROOT / "warehouse" / "seeds"
-    with open(seeds / "licence.csv", newline="", encoding="utf-8") as f:
-        licences = {r["licence_key"] for r in csv.DictReader(f)}
-    with open(seeds / "source.csv", newline="", encoding="utf-8") as f:
-        rows = list(csv.DictReader(f))
+    from warehouse import seed_rows
+
+    licences = {r["licence_key"] for r in seed_rows.rows("licence")}
+    rows = seed_rows.rows("source")
     # One source system may serve several register entries (news feeds: one entry per outlet, docs/topics.md);
     # source.csv names one of them.
     by_system: dict[str, set[str]] = {}
@@ -1053,8 +1053,8 @@ def briefs_problems(
     return problems
 
 
-# What identifies a row of a seed (warehouse/seeds/<name>.csv): the columns dbt's tests or the readers treat as its
-# key. A seed without an entry is checked for repeated rows only.
+# What identifies a row of a code list (warehouse/seeds/<name>.csv, or the files of warehouse/seed_rows/<name>/): the
+# columns dbt's tests or the readers treat as its key. A list without an entry is checked for repeated rows only.
 SEED_KEYS = {
     "dimension": ["dimension_key"],
     "domain": ["domain_key"],
@@ -1074,14 +1074,36 @@ SEED_KEYS = {
 }
 
 
-def seed_file_problems(name: str, text: str) -> list[str]:
+# Lists kept as rows per source (warehouse/seed_rows.py, D36) whose rows name their source: in <source_system>.csv
+# this column holds the file's own name, so a row cannot be put into another source's file.
+SEED_ROW_OWNER = {
+    "source": "source_key",
+    "kpi_measure": "source_system",
+    "kpi_v2_map": "source_key",
+    "unit_map": "source_system",
+}
+# Rows of _shared.csv when each list was split: the file holds the rows from before the split and takes no new
+# ones (two pull requests appending to it would conflict again). Lower a number when rows leave the file.
+SEED_ROWS_SHARED = {
+    "source": 50,
+    "licence": 42,
+    "kpi": 138,
+    "kpi_measure": 265,
+    "kpi_v2_map": 192,
+    "unit": 67,
+    "unit_map": 211,
+    "unit_decimals": 67,
+}
+
+
+def seed_file_problems(name: str, text: str, where: str = "") -> list[str]:
     """What is wrong with one seed CSV as a file; pure. The seed CSVs merge with git's union driver
     (.gitattributes, docs/source-registration.md): a local merge keeps the lines both sides added and never reports
     a conflict, so two pull requests that edited the same row, added the same row or changed the header leave
     both versions in the file. Those leftovers are the findings: a line that does not end with a line break (the
     next appended row would join it), a row whose number of fields differs from the header's, a second header
     line, a repeated row, and a key (SEED_KEYS) on two rows."""
-    where = f"seeds: {name}.csv"
+    where = where or f"seeds: {name}.csv"
     if not text.endswith("\n"):
         return [f"{where}: the last line has no line break"]
     rows = list(csv.reader(text.splitlines(keepends=True)))
@@ -1115,13 +1137,106 @@ def seed_file_problems(name: str, text: str) -> list[str]:
     return problems
 
 
-def seed_files(files: list[Path]) -> list[str]:
-    """Every seed CSV is a clean table: see seed_file_problems."""
+def seed_rows_problems(name: str, texts: dict[str, str], sources: set[str], model: str | None) -> list[str]:
+    """What is wrong with one code list kept as rows per source (warehouse/seed_rows/<name>/, D36); pure.
+    ``texts``: file stem → content; ``sources``: the declared source_system ids; ``model``: the text of
+    warehouse/models/gold/seed_rows/<name>.sql, None when there is none.
+
+    Every file is a clean table (seed_file_problems) with the header of the others, because the model reads the
+    columns by name; a key (SEED_KEYS) is on one row across the files; a file is ``_shared.csv`` or named after a
+    declared source; ``_shared.csv`` has no more rows than at the split (SEED_ROWS_SHARED); in a source's file the
+    owner column (SEED_ROW_OWNER) holds that source; and the model reads this folder and names it in its config
+    meta, which is what puts the files into its build fingerprint (warehouse/changed.py)."""
+    from warehouse import seed_rows
+
+    folder = f"warehouse/seed_rows/{name}"
     problems = []
+    if model is None:
+        problems.append(f"{folder}: no model warehouse/models/gold/seed_rows/{name}.sql reads it")
+    else:
+        if f"/seed_rows/{name}/*.csv'" not in model:
+            problems.append(f"warehouse/models/gold/seed_rows/{name}.sql: does not read seed_rows/{name}/*.csv")
+        if not re.search(rf"meta\s*=\s*\{{\s*'{seed_rows.META}'\s*:\s*'{name}'\s*\}}", model):
+            problems.append(
+                f"warehouse/models/gold/seed_rows/{name}.sql: config needs meta={{'{seed_rows.META}': '{name}'}}"
+            )
+    headers: dict[str, list[str]] = {}
+    keys: dict[tuple[str, ...], str] = {}
+    for stem, text in sorted(texts.items()):
+        where = f"{folder}/{stem}.csv"
+        found = seed_file_problems(name, text, where)
+        problems += found
+        if stem != seed_rows.SHARED and stem not in sources:
+            problems.append(
+                f"{where}: the file is named after the source that adds the rows "
+                f"(ingestion/sources/<source_system>.yaml); {stem} is not one"
+            )
+        if found:
+            continue
+        table = list(csv.reader(text.splitlines(keepends=True)))
+        headers[stem] = table[0]
+        if stem == seed_rows.SHARED and len(table) - 1 > SEED_ROWS_SHARED.get(name, 0):
+            problems.append(
+                f"{where}: {len(table) - 1} rows, it had {SEED_ROWS_SHARED.get(name, 0)} at the split and takes "
+                f"no new ones: move the new rows to {folder}/<source_system>.csv (same header)"
+            )
+        owner = SEED_ROW_OWNER.get(name)
+        if owner in table[0] and stem != seed_rows.SHARED:
+            at = table[0].index(owner)
+            problems += [
+                f"{where} row {number}: {owner} {row[at]} belongs in {folder}/{row[at]}.csv"
+                for number, row in enumerate(table[1:], start=2)
+                if row[at] != stem
+            ]
+        if all(column in table[0] for column in SEED_KEYS.get(name, [])):
+            at_key = [table[0].index(column) for column in SEED_KEYS.get(name, [])] or range(len(table[0]))
+            for row in table[1:]:
+                value = tuple(row[i] for i in at_key)
+                if keys.setdefault(value, stem) != stem:
+                    problems.append(f"{where}: {', '.join(value)} is also in {folder}/{keys[value]}.csv")
+    first = headers.get(seed_rows.SHARED) or next(iter(headers.values()), [])
+    problems += [
+        f"{folder}/{stem}.csv: the header differs from the other files of the list ({','.join(first)})"
+        for stem, header in headers.items()
+        if header != first
+    ]
+    return problems
+
+
+def seed_files(files: list[Path]) -> list[str]:
+    """Every code list is a clean table: the dbt seeds (seed_file_problems) and the lists kept as rows per source
+    (seed_rows_problems). A list is one or the other: a seed CSV put back next to its folder fails."""
+    from warehouse import declared
+
+    problems = []
+    lists: dict[str, dict[str, str]] = {}
+    models: dict[str, str] = {}
     for f in sorted(files):
-        if f.parent == Path("warehouse/seeds") and f.suffix == ".csv" and (ROOT / f).exists():
+        if not (ROOT / f).exists():
+            continue
+        if f.parent == Path("warehouse/seeds") and f.suffix == ".csv":
             with open(ROOT / f, newline="", encoding="utf-8") as handle:
                 problems += seed_file_problems(f.stem, handle.read())
+        elif f.parts[:2] == ("warehouse", "seed_rows") and len(f.parts) == 4 and f.suffix == ".csv":
+            with open(ROOT / f, newline="", encoding="utf-8") as handle:
+                lists.setdefault(f.parts[2], {})[f.stem] = handle.read()
+        elif f.parts[:2] == ("warehouse", "seed_rows"):
+            problems.append(f"{f}: only warehouse/seed_rows/<list>/<source_system>.csv belongs here")
+        elif f.parent == Path("warehouse/models/gold/seed_rows") and f.suffix == ".sql":
+            models[f.stem] = (ROOT / f).read_text(encoding="utf-8")
+    sources = set(declared.sources())
+    for name, texts in lists.items():
+        problems += seed_rows_problems(name, texts, sources, models.get(name))
+        if (ROOT / "warehouse" / "seeds" / f"{name}.csv").exists():
+            problems.append(
+                f"warehouse/seeds/{name}.csv: the list is kept in warehouse/seed_rows/{name}/ (D36, "
+                f"docs/source-registration.md): move your rows to warehouse/seed_rows/{name}/<source_system>.csv "
+                "(same header) and delete this file"
+            )
+    problems += [
+        f"warehouse/models/gold/seed_rows/{name}.sql: no folder warehouse/seed_rows/{name}/"
+        for name in sorted(set(models) - set(lists))
+    ]
     return problems
 
 
@@ -1130,11 +1245,7 @@ def published_v2_seeds() -> list[str]:
     kpi_v2_map.csv; a concept with a ready kpi_v2_map row (in v2 whatever its status, O37) has definition_en and
     definition_pl in kpi.csv; every unit of
     unit.csv has decimals in unit_decimals.csv; kpi_member.csv names v2 keys of the map."""
-    seeds = ROOT / "warehouse" / "seeds"
-
-    def rows(name: str) -> list[dict[str, str]]:
-        with open(seeds / f"{name}.csv", newline="", encoding="utf-8") as handle:
-            return list(csv.DictReader(handle))
+    from warehouse.seed_rows import rows
 
     problems = []
     v2map = rows("kpi_v2_map")
@@ -1194,23 +1305,24 @@ def _schema_problems(value: object, schema: dict, where: str) -> list[str]:
 
 
 def semantic_models() -> list[str]:
-    """Every published KPI of warehouse/seeds/kpi.csv has a metrics model and a semantic model on it."""
+    """Every published KPI of the kpi rows (warehouse/seed_rows/kpi/) has a metrics model and a semantic model on it."""
     semantic = yaml.safe_load((ROOT / "warehouse" / "semantic_models" / "gold.yml").read_text(encoding="utf-8"))
     models = set()
     for entry in semantic.get("semantic_models") or []:
         match = re.fullmatch(r"ref\('(?:poc_)?metrics_(\w+)'\)", str(entry.get("model", "")).strip())
         if match:
             models.add(match.group(1))
+    from warehouse import seed_rows
+
     problems = []
-    with open(ROOT / "warehouse" / "seeds" / "kpi.csv", newline="", encoding="utf-8") as handle:
-        for row in csv.DictReader(handle):
-            if row["status"] != "published":
-                continue
-            k = row["kpi_key"]
-            if k not in models:
-                problems.append(f"semantic models: published KPI {k} has no semantic model on metrics_{k}")
-            if not (ROOT / "warehouse" / "models" / "gold" / f"poc_metrics_{k}.sql").exists():
-                problems.append(f"semantic models: published KPI {k} has no warehouse/models/gold/poc_metrics_{k}.sql")
+    for row in seed_rows.rows("kpi"):
+        if row["status"] != "published":
+            continue
+        k = row["kpi_key"]
+        if k not in models:
+            problems.append(f"semantic models: published KPI {k} has no semantic model on metrics_{k}")
+        if not (ROOT / "warehouse" / "models" / "gold" / f"poc_metrics_{k}.sql").exists():
+            problems.append(f"semantic models: published KPI {k} has no warehouse/models/gold/poc_metrics_{k}.sql")
     return problems
 
 
