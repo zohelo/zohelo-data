@@ -90,6 +90,23 @@ def main(argv) -> int:
     land = f"{SCRATCH}/01_landing"
     out: dict = {}
     try:
+        import socket
+
+        try:
+            addrs = sorted({a[4][0] for a in socket.getaddrinfo("www.gov.pl", 443, proto=socket.IPPROTO_TCP)})
+        except OSError as exc:
+            addrs = [f"dns error {exc}"]
+        reach = {}
+        for a in addrs:
+            try:
+                fam = socket.AF_INET6 if ":" in a else socket.AF_INET
+                with socket.socket(fam, socket.SOCK_STREAM) as sk:
+                    sk.settimeout(15)
+                    sk.connect((a, 443))
+                reach[a] = "ok"
+            except OSError as exc:
+                reach[a] = str(exc)[:60]
+        print("www.gov.pl reachability", reach, flush=True)
         pc = parser_check()
         note("arimr parser over reports since 2025-12-31", pc, "notice" if not pc["rejected"] else "warning")
 
