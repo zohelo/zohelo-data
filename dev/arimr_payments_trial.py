@@ -107,6 +107,9 @@ def main(argv) -> int:
             except OSError as exc:
                 reach[a] = str(exc)[:60]
         print("www.gov.pl reachability", reach, flush=True)
+        if "ok" not in reach.values():
+            note("arimr www.gov.pl not reachable from the runner", reach, "warning")
+            return 1
         pc = parser_check()
         note("arimr parser over reports since 2025-12-31", pc, "notice" if not pc["rejected"] else "warning")
 
