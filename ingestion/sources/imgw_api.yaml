@@ -45,9 +45,9 @@ bronze: [bronze.imgw_api_synop, bronze.imgw_api_meteo, bronze.imgw_api_rejected_
 silver: [silver.imgw_api_synop, silver.imgw_api_stations]
 gold: [gold.build_imgw_api]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822); the synop rows grow by about 500 a day (62 stations x 8 terms)
-  imgw_api_synop: {rows: 300000}  # TRIAL rows (Dev trial TRIAL); about 181,000 a year: about 18 months, then incremental
-  imgw_api_stations: {rows: 1200}  # TRIAL (Dev trial TRIAL)
-  poc_build_imgw_api: {rows: 1000}  # TRIAL; one row per complete day, about 365 a year
+  imgw_api_synop: {rows: 300000}  # 62 stations a snapshot (Dev probe 43336937240); 8 snapshots a day: about 181,000 a year, so about 18 months, then incremental
+  imgw_api_stations: {rows: 1200}  # 788 stations (Dev probe 43336937240)
+  poc_build_imgw_api: {rows: 1000}  # one row per complete day, about 365 a year
 
 # Refresh policy for all layers (D32): small snapshots (14 KB, 520 KB) with no changed-since filter; Silver is rebuilt
 # from the accumulated snapshots, newest snapshot per station and observation time.
