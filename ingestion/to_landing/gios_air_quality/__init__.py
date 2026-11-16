@@ -1,15 +1,19 @@
 """GIOŚ air quality Landing activities: API v1 of the portal Jakość Powietrza (register PL-ENV-010).
 
-Route (docs/sources/gios_air_quality.md; Dev probes 43320759991, 43322192937): https://api.gios.gov.pl/pjp-api/v1/rest/
-answers JSON-LD (``Accept: application/ld+json``; ``application/json`` alone is refused with 406) and pages every list
-(``page``, ``size``; ``totalPages`` in the answer). One pass, one request at a time:
+Route (docs/sources/gios_air_quality.md; Dev probes 43320759991, 43322192937, 43343164588; trial 43328632339):
+https://api.gios.gov.pl/pjp-api/v1/rest/ answers JSON-LD (``Accept: application/ld+json``; without it the API answers
+406) and pages every list (``page``, ``size``; ``totalPages`` in the answer). One pass, one request at a time:
 
-- ``station/findAll?size=500``: every operating station in one page (288 on 12 Nov 2026); the station and sensor
+- ``station/findAll?size=500``: every operating station in one page (288 on 13 Nov 2026); the station and sensor
   lists are limited to 2 requests a minute for some callers ("limit 2 i 1500 żądań na minutę"), so a further page
   waits 31 s;
-- ``station/sensors/{stationId}``: the sensors of each station (about 290 requests, 1 s apart);
-- ``data/getData/{sensorId}?size=500``: hourly values from the last full hour back to the third day, local time,
-  µg/m³ (about 1,100 requests, 1 s apart; the stated limit is 1,500 a minute).
+- ``station/sensors/{stationId}``: the sensors of each station (288 requests, 1 s apart; 1,875 sensors);
+- ``data/getData/{sensorId}?size=500``: hourly values from the last full hour back to the third day, local time
+  (1,875 requests, 1 s apart; the stated limit is 1,500 a minute). A manual sensor (e.g. BaP, metals in PM10,
+  deposition) answers 400 with the reason "Dla stanowiska typu manualnego wyniki pomiarów nie są dostępne na
+  bieżąco" (806 of 1,875 sensors on 12 Nov 2026): it is recorded as ``manual`` in the receipt, not as a failure.
+  A whole pass takes about 50 minutes; the Regulamin asks API users to download "nie częściej niż dwa razy na
+  godzinę", and one pass a day stays well below.
 
 Entity (layout ``<root>/gios_air_quality/snapshot/data/<entity>/<version>__<ingested>.zip``): ``pass_<YYYYMMDD>``,
 one daily pass (UTC day of the run), landed once per day, so a second run on the same day writes nothing. The file is
@@ -17,8 +21,9 @@ a ZIP of the exact answers, one member per page: ``station/page-0.json``, ``sens
 ``data/<station>/<sensor>/page-0.json``. Each pass keeps its own station and sensor lists, so a station that leaves
 the list keeps its last known attributes in Silver. The values are unverified (GIOŚ: "Udostępniane dane nie są na
 bieżąco weryfikowane"): every pass is kept and Silver takes the newest pass per sensor and hour. A sensor that
-answers 4xx is recorded in the receipt and left out of the pass; more than 5% of sensors failing, or the time budget
-running out, lands nothing (the next run starts again).
+answers another 4xx is recorded in the receipt as failed and left out of the pass; more than 5% of the sensors
+failing, or the time budget running out, lands nothing (the next run starts again). An empty answer with status 200
+(seen once in probe 43322192937 on a quick repeat) is retried like a 5xx.
 
 Modes: inspect (today's pass missing or current; one station-list request), load, verify (every receipt has its
 file in Landing or the Archive).
@@ -50,21 +55,30 @@ LISTS = {"stations": "Lista stacji pomiarowych", "sensors": "Lista stanowisk pom
 DATA_LIST = "Lista danych pomiarowych"
 
 
+MANUAL_REASON = "stanowiska typu manualnego"  # the 400 answer of a manual sensor to getData (probe 43343164588)
+
+
 class Refused(RuntimeError):
-    """The API refused one request with a 4xx other than 429 (an unknown or retired id)."""
+    """The API refused one request with a 4xx other than 429 (an unknown or retired id, or a manual sensor)."""
+
+    def __init__(self, message: str, manual: bool = False) -> None:
+        super().__init__(message)
+        self.manual = manual
 
 
 def fetch(session: requests.Session, url: str, params: dict[str, Any]) -> bytes:
-    """One GET with bounded retries: network errors, 429 and 5xx back off (Retry-After when given)."""
+    """One GET with bounded retries: network errors, an empty 200 answer, 429 and 5xx back off (Retry-After when
+    given)."""
     for attempt in range(RETRIES):
         try:
             response = session.get(url, params=params, timeout=(30, 120))
         except (requests.ConnectionError, requests.Timeout):
             response = None
-        if response is not None and response.status_code == 200:
+        if response is not None and response.status_code == 200 and response.content.strip():
             return response.content
         if response is not None and 400 <= response.status_code < 500 and response.status_code != 429:
-            raise Refused(f"{response.status_code} for {response.url}")
+            manual = response.status_code == 400 and MANUAL_REASON in response.text
+            raise Refused(f"{response.status_code} for {response.url}", manual=manual)
         wait = 30 * 2**attempt
         if response is not None and (response.headers.get("Retry-After") or "").isdigit():
             wait = max(wait, int(response.headers["Retry-After"]))
@@ -180,7 +194,7 @@ def run_load(client, bucket: str, root: str, held: dict, budget_minutes: float) 
         for n, body, items in pages(session, f"{API}/station/sensors/{station}", LISTS["sensors"], LIST_PAUSE_SECONDS):
             members[f"sensors/{station}/page-{n}.json"] = body
             sensors += [(station, s["Identyfikator stanowiska"]) for s in items]
-    failed, values = [], 0
+    failed, manual, values = [], [], 0
     for station, sensor in sensors:
         if time.monotonic() > deadline:
             return {"entity": entity, "pass": "not landed: time budget", "sensors_done": len(members)}, 2
@@ -190,14 +204,19 @@ def run_load(client, bucket: str, root: str, held: dict, budget_minutes: float) 
                 members[f"data/{station}/{sensor}/page-{n}.json"] = body
                 values += len(items)
         except Refused as exc:
-            failed.append({"sensor": sensor, "error": str(exc)[:160]})
+            if exc.manual:
+                manual.append(sensor)
+            else:
+                failed.append({"sensor": sensor, "error": str(exc)[:160]})
     summary = {"entity": entity, "stations": len(stations), "sensors": len(sensors), "requests": len(members)}
-    summary.update({"values": values, "sensors_failed": len(failed), "failed_sample": failed[:5]})
-    if len(failed) > MAX_FAILED_SHARE * max(len(sensors), 1):
+    summary.update({"values": values, "sensors_manual": len(manual), "sensors_failed": len(failed)})
+    summary["failed_sample"] = failed[:5]
+    if len(failed) > MAX_FAILED_SHARE * max(len(sensors) - len(manual), 1):
         summary["pass"] = "not landed: too many sensors failed"
         return summary, 1
     body = zipped(members)
     detail = {"stations": len(stations), "sensors": len(sensors), "sensors_failed": failed, "values": values}
+    detail["sensors_manual"] = sorted(manual)
     summary["pass"] = land(client, bucket, root, entity, body, [], detail)
     summary["bytes"] = len(body)
     return summary, 0

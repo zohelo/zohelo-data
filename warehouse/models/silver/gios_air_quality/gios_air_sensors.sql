@@ -1,7 +1,7 @@
 -- Silver: GIOŚ air quality sensors (measuring positions) of the stations (register PL-ENV-010), from the sensor lists
 -- of the daily API passes. Grain: sensor_id; the newest pass that listed the sensor wins (newest version).
--- Source: bronze.gios_air_sensors (station/sensors/{id}); parameter code and name as published (all values in
--- µg/m³, including CO, per the API page).
+-- Source: bronze.gios_air_sensors (station/sensors/{id}); parameter code and name as published. The getData service
+-- states µg/m³ for SO2, NO2, PM10, PM2.5, CO, C6H6 and O3 only; the unit of the other codes is not stated there.
 select
     cast(sensor_id as bigint) as sensor_id,
     cast(station_id as bigint) as station_id,

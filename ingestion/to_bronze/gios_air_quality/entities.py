@@ -1,13 +1,14 @@
 """GIOŚ air quality Silver measurements: silver.gios_air_hourly, one file per measurement day (design #875).
 
-The hourly values grow by about 26,000 rows a day (some 1,100 sensors × 24 hours), past the 1 M ceiling of a
-full-rebuild dbt model within weeks, so they are an entity table written here, right after Bronze: entity =
-measurement day (local date of the value, 'YYYY-MM-DD'); its file is warehouse/entity/gios_air_hourly.sql
-applied to the Bronze files of the passes that can hold the day (pass days ``day`` to ``day + WINDOW_DAYS``; Bronze
-rejects a pass holding older values). The file is named after its recipe, a digest of the SQL and of those Bronze
-files, and replaces the day's partition only when the recipe changed (entity_tables.replace), so a rerun writes
-nothing. Checks before a day is accepted (warehouse/entity.py): sensor_id, measured_at, station_id and raw_sha256
-never null, sensor_id × measured_at unique. A day that fails keeps its previous file and fails the run.
+The hourly values grow by about 26,000 rows a day (1,069 automatic sensors answered on 12 Nov 2026 × 24 hours), past
+the 1 M ceiling of a full-rebuild dbt model within weeks, so they are an entity table written here, right after
+Bronze: entity = measurement day (local date of the value, 'YYYY-MM-DD'); its file is
+warehouse/entity/gios_air_hourly.sql applied to the Bronze files of the passes that can hold the day (pass days
+``day`` to ``day + WINDOW_DAYS``; Bronze rejects a pass holding older values). The file is named after its recipe, a
+digest of the SQL and of those Bronze files, and replaces the day's partition only when the recipe changed
+(entity_tables.replace), so a rerun writes nothing. Checks before a day is accepted (warehouse/entity.py): sensor_id,
+measured_at, station_id and raw_sha256 never null, sensor_id × measured_at unique. A day that fails keeps its
+previous file and fails the run.
 """
 
 from __future__ import annotations
