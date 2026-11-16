@@ -142,7 +142,9 @@ def imd(base: str) -> None:
 
 def main() -> None:
     try:
-        base = "https://usluga.zabytek.gov.pl/INSPIRE_IMD/service.svc/get"
+        # INSPIRE_IMD answers as a WMS 1.3.0 (run 43798051945); the download services of this host are named
+        # INSPIRE_WFS_<code> (MHD, WHD), so the register's is INSPIRE_WFS_IMD.
+        base = "https://usluga.zabytek.gov.pl/INSPIRE_WFS_IMD/service.svc/get"
         wfs(base)
         imd(base)
     finally:
