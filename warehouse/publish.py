@@ -15,7 +15,6 @@ Licence gate (O37, docs/published.md): no row of a source whose licence is unres
 
 from __future__ import annotations
 
-import csv
 from datetime import UTC, date, datetime, timedelta
 import io
 import json
@@ -26,6 +25,8 @@ from typing import Any
 import duckdb
 import pyarrow as pa
 import pyarrow.compute as pc
+
+from warehouse import seed_rows
 
 PROJECT = Path(__file__).resolve().parent
 SCHEMAS = Path(__file__).resolve().parent / "published" / "schemas"
@@ -38,8 +39,8 @@ UNRESOLVED_LICENCE = "unresolved"  # licence.csv: terms not established (licence
 SKIP = {"fx_rate": "one value per currency; latest.json has no currency field"}
 # Sources that reach the published contract v2 only, never v1 (zohelo.com): v1 orders values by source_key, so a new
 # source would change what zohelo.com shows first (review of #2758). BIS, ILOSTAT, UNDP HDR, UNdata and UNECE (#2861)
-# feed published KPIs too (unemployment_rate, population, the GDP KPIs).
-V2_ONLY_SOURCES = {"ecb", "bis", "ilostat", "undp_hdr", "undata", "unece"}
+# feed published KPIs too (unemployment_rate, population, the GDP KPIs); Our World in Data (#2982) feeds gdp_per_capita.
+V2_ONLY_SOURCES = {"ecb", "bis", "ilostat", "undp_hdr", "undata", "unece", "owid"}
 LATEST_LIMIT = 100_000  # bytes, docs/published.md size limits (D22)
 TOPICS_KEY = "06_published/v2/topics.json"  # docs/published.md, "topics.json"
 TOPICS_REVIEW_KEY = "06_published/v1/review/topics.json"  # internal review (docs/topics.md, "Internal review")
@@ -237,8 +238,8 @@ def published_age_hours(client, prefix: str, now: datetime) -> float | None:
 
 
 def seed(name: str) -> list[dict[str, str]]:
-    with (PROJECT / "seeds" / f"{name}.csv").open(encoding="utf-8", newline="") as handle:
-        return list(csv.DictReader(handle))
+    """The rows of a code list in the repository: a dbt seed or a list kept per source (warehouse/seed_rows.py)."""
+    return seed_rows.rows(name)
 
 
 def licensed_sources(sources: list[dict[str, str]], licences: list[dict[str, str]]) -> set[str]:
@@ -929,7 +930,7 @@ def preload(cat, client, prefix: str, namespace: str, measures, licensed: set[st
             feeds.setdefault(table, set()).add(f"v2 {entry['kpi_key']}")
             if entry["kpi_key"] in live_v2:
                 waited_for.add(table)
-    seeds = {table for table in support if (PROJECT / "seeds" / f"{table[1]}.csv").exists() and seed(table[1])}
+    seeds = {table for table in support if seed_rows.exists(table[1]) and seed(table[1])}
     tables, missing, empty = read_tables(
         cat, wanted, waited_for, scans={t: scan for t, (_fed, scan) in support.items()}, never_empty=seeds
     )

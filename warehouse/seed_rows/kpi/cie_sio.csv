@@ -1,0 +1,2 @@
+kpi_key,name_en,name_pl,unit_key,subgroup_key,frequency_default,status,definition_en,definition_pl
+teachers,Teachers,Nauczyciele,persons,education.school,A,draft,"Teachers employed in schools and education institutions on 30 September (persons, all professional grades), System Informacji Oświatowej.","Nauczyciele zatrudnieni w szkołach i placówkach oświatowych według stanu na 30 września (osoby, wszystkie stopnie awansu zawodowego), System Informacji Oświatowej."

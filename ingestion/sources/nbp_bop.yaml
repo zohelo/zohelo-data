@@ -41,6 +41,7 @@ silver: [silver.nbp_bop_observations]
 gold: [gold.build_nbp_bop]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   poc_build_nbp_bop: {rows: 55000}  # 36,888 PLN and EUR rows of Silver (Dev trial 43093233419)
+  nbp_bop_observations: {rows: 85000}  # 55,332 (Dev trial 43093233419)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): three workbooks of about 60,000 values; rebuilt in full.

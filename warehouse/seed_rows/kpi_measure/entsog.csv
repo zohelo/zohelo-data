@@ -1,0 +1,5 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+gas_entry_flow_daily,entsog,entsog:physical_flow:kWh/d:entry,"GAZ-SYSTEM, all entry points, kWh/d as published; point groups as breakdown (ENTSOG TP)",1,
+gas_exit_flow_daily,entsog,entsog:physical_flow:kWh/d:exit,"GAZ-SYSTEM, all exit points, kWh/d as published; point groups as breakdown (ENTSOG TP)",1,
+gas_entry_flow_monthly,entsog,entsog:physical_flow_month_sum:kWh:entry,"GAZ-SYSTEM, all entry points, monthly sum of complete days in kWh (ENTSOG TP)",1,
+gas_exit_flow_monthly,entsog,entsog:physical_flow_month_sum:kWh:exit,"GAZ-SYSTEM, all exit points, monthly sum of complete days in kWh (ENTSOG TP)",1,
