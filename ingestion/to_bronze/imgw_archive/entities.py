@@ -55,7 +55,7 @@ REJECTED = ("bronze", "imgw_archive_rejected_files")
 MODEL = "imgw_archive_synop_daily"
 # Storage roots; a Dev trial points them at zz_dev_ scratch locations.
 LANDING_ROOT, BRONZE_ROOT, SILVER_ROOT = "01_landing", "02_bronze", "03_silver"
-RECEIPT_KEY = re.compile(r"[^/]+/[a-z0-9_]+/snapshot/data/([a-z0-9_]+)/([0-9TZ]+)__([0-9TZ]+)\.receipt\.json")
+RECEIPT_NAME = re.compile(r"([a-z0-9_]+)/([0-9TZ]+)__([0-9TZ]+)\.receipt\.json")  # under the Landing data prefix
 MONTHLY = re.compile(r"^synop_daily_(\d{4})_(\d{2})$")
 STATION_YEAR = re.compile(r"^synop_daily_(\d{4})_\d{3}$")
 # s_d_nagłówek.csv (dobowe/synop, read 13 Nov 2026, Dev probe 43336937240): 65 fields, value/status pairs.
@@ -144,7 +144,7 @@ def landing_newest(client, bucket: str) -> dict[str, dict[str, Any]]:
     prefix = f"{LANDING_ROOT}/{SOURCE}/snapshot/data/"
     for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix):
         for item in page.get("Contents", []):
-            match = RECEIPT_KEY.fullmatch(item["Key"])
+            match = RECEIPT_NAME.fullmatch(item["Key"].removeprefix(prefix))
             if match and (match.group(1) not in newest or match.group(3) > newest[match.group(1)][1]):
                 newest[match.group(1)] = (item["Key"], match.group(3))
 
