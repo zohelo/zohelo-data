@@ -25,7 +25,7 @@ BASE = "https://zsrir.minrol.gov.pl"
 AIA = "http://certumdvtlsg2r39ca.repository.certum.pl/certumdvtlsg2r39ca.cer"
 OUT = Path(os.environ.get("DEV_OUTPUT_DIR", "/tmp/dev-output"))
 PAUSE = 1.5
-REPORTS = {15: "current prices", 2: "cereals", 1: "milk", 14: "pork", 13: "beef", 6: "poultry", 7: "eggs", 16: "overview"}
+REPORTS = {15: "current prices", 2: "cereals", 1: "milk", 14: "pork", 13: "beef", 6: "poultry", 7: "eggs"}
 session = requests.Session()
 session.headers.update({"User-Agent": UA, "Accept": "application/json, text/plain, */*"})
 VERIFY = ""
@@ -60,9 +60,9 @@ def dump(name: str, body: bytes) -> None:
         print(f"  dump {name} failed: {type(exc).__name__} {str(exc)[:200]}")
         return
     print(f"  workbook {name}: {len(rows)} sheets {list(rows)[:30]}")
-    for sn, rs in list(rows.items())[:10]:
+    for sn, rs in list(rows.items())[:14]:
         print(f"   sheet {sn!r}: rows {len(rs)} max_row {max(rs)}")
-        for rn in sorted(rs)[:22]:
+        for rn in sorted(rs)[:40]:
             print(f"     r{rn}: " + " | ".join(rs[rn][:12])[:330])
 
 
@@ -92,12 +92,12 @@ def main(argv: list[str]) -> int:
         print("   head: " + json.dumps(body, ensure_ascii=False)[:1200])
         if items:
             print("   last: " + json.dumps(items[-3:], ensure_ascii=False)[:900])
-            exts = Counter(str(i.get("fileName") or i.get("name") or "").rsplit(".", 1)[-1].lower() for i in items if isinstance(i, dict))
+            exts = Counter(str(i.get("filename") or "").rsplit(".", 1)[-1].lower() for i in items if isinstance(i, dict))
             print("   extensions:", dict(exts))
             dates = sorted(str(v)[:7] for i in items if isinstance(i, dict) for k, v in i.items() if "date" in k.lower() and v)
             print("   date range:", dates[:1], dates[-1:], "per year:", dict(Counter(d[:4] for d in dates)))
-            xl = [i for i in items if isinstance(i, dict) and str(i.get("fileName") or i.get("name") or "").lower().endswith((".xlsx", ".xls"))]
-            picks = xl[:1] + xl[len(xl) // 2: len(xl) // 2 + 1] + xl[-1:]
+            xl = [i for i in items if isinstance(i, dict) and str(i.get("filename") or "").lower().endswith((".xlsx", ".xls"))]
+            picks = xl[:1] + (xl[len(xl) // 2: len(xl) // 2 + 1] if rid == 15 else []) + xl[-1:]
             for it in picks:
                 fid = it.get("id")
                 d = get(f"/api/ZsrirData/DownloadReportFile?id={fid}")
