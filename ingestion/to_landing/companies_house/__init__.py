@@ -2,7 +2,7 @@
 
 Personal data (register CD-014: no natural persons' data; precedent O33): the monthly file has 55 columns, among
 them the registered office's care-of line, PO box, street lines, county and postcode and up to ten previous names.
-A registered office can be a director's home, a care-of line or a former name a person's. ``reduce_snapshot``
+A registered office can be a director's home, a care-of line or a former name a person's. ``reduce_landing``
 (``reduce: companies_house`` in the declaration) keeps the 13 columns the platform uses and drops the rest before
 the copy is landed, so those columns are never stored: not in Landing, the Archive or Bronze. A file without one
 of the kept columns, or with a row of another width, is not landed (the run fails and says why).
@@ -43,7 +43,7 @@ COLUMNS = (  # the columns landed, in the file's order; every other column is dr
 )
 
 
-def reduce_snapshot(body: bytes) -> bytes:
+def reduce_landing(body: bytes) -> bytes:
     """The snapshot ZIP with only ``COLUMNS`` of its one CSV (header names stripped: some follow a space), as a
     ZIP with one CSV of the same name. The same input gives the same bytes (fixed member date, fixed compression).
     Raises when the ZIP does not hold exactly one CSV, a kept column is missing or repeated, or a row has another
