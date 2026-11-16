@@ -5570,7 +5570,8 @@ sources:
   name: Police Statistics portal
   short_name: Police statistics
   provider: Polish Police Headquarters
-  status: approved
+  source_system: policja_statistics
+  status: built
   family: F
   kpi: true
   geography: Poland

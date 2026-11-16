@@ -5,11 +5,12 @@ description: "Polish Police statistics portal — recorded and detected offences
 # offence-category page (server-rendered), an XLSX "<category> wg jednostek podziału administracyjnego kraju -
 # przestępstwa stwierdzone, przestępstwa wykryte, % wykrycia (1999 - <end year>)" of about 30 kB. The file name
 # carries the end year (…-do-2023.xlsx), so the link is found on the category page (url_from); the companion
-# workbook "postępowania wszczęte" by registering police unit is not declared (smallest selection). Entity = one
-# category workbook, version = the server's Last-Modified (Dev probes 43327577263 on test/policja-stats-trial and
-# PROBE_RUN on test/policja_statistics-trial). Each file is the whole series of its category (snapshot).
-# Restart unit: one file. robots.txt disallows only /ftp/. End year on 13 Nov 2026: 2021 for all offences, economic
-# and road offences; 2023 for the other seven categories.
+# workbook "postępowania wszczęte" by registering police unit is not declared. Smallest selection the register names
+# (PLG-033 modelling notes): all offences and the seven selected categories; the other eight category workbooks
+# (criminal, homicide, rape, drugs, economic, corruption, road, drink-driving) have the same layout and are left for a
+# follow-up. Entity = one category workbook, version = the server's Last-Modified (Dev runs 43327577263 and
+# 43344667281). Each file is the whole series of its category (snapshot). Restart unit: one file. robots.txt
+# disallows only /ftp/. End year on 13 Nov 2026: 2021 for all offences, 2023 for the seven selected categories.
 extraction:
   kind: bulk_file
   bulk_file:
@@ -18,40 +19,8 @@ extraction:
         url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-ogolem-do-[0-9]{4}\\.xlsx$"}
         format: raw
         version: last_modified
-      - entity: kryminalne
-        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-kryminalne", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-kryminalne-do-[0-9]{4}\\.xlsx$"}
-        format: raw
-        version: last_modified
       - entity: wybrane_7
         url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-kryminalne/7-wybranych-kategorii-p", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-17x7-do-[0-9]{4}\\.xlsx$"}
-        format: raw
-        version: last_modified
-      - entity: zabojstwo
-        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-kryminalne/zabojstwo", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-zabojstwo-do-[0-9]{4}\\.xlsx$"}
-        format: raw
-        version: last_modified
-      - entity: zgwalcenie
-        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-kryminalne/zgwalcenie", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-zgwalcenie-do-[0-9]{4}\\.xlsx$"}
-        format: raw
-        version: last_modified
-      - entity: narkotyki
-        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-kryminalne/ustawa-o-przeciwdzialan", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-narkotyki-do-[0-9]{4}\\.xlsx$"}
-        format: raw
-        version: last_modified
-      - entity: gospodarcze
-        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-gospodarcz", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-gospodarcze-do-[0-9]{4}\\.xlsx$"}
-        format: raw
-        version: last_modified
-      - entity: korupcja
-        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-gospodarcz/przestepstwa-korupcyjne", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-korupcja-do-[0-9]{4}\\.xlsx$"}
-        format: raw
-        version: last_modified
-      - entity: drogowe
-        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-drogowe", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-drogowe-do-[0-9]{4}\\.xlsx$"}
-        format: raw
-        version: last_modified
-      - entity: drogowe_nietrzezwi
-        url_from: {page: "https://statystyka.policja.pl/st/przestepstwa-ogolem/przestepstwa-drogowe/prowadzenie-pojazdu-w-s", pattern: "/download/[0-9]+/[0-9]+/przestepstwa-drogowe-nietrzezwi-do-[0-9]{4}\\.xlsx$"}
         format: raw
         version: last_modified
   initial: bulk
@@ -69,11 +38,11 @@ bronze: [bronze.policja_statistics_cells, bronze.policja_statistics_rejected_fil
 silver: [silver.policja_statistics_offences]
 gold: [gold.build_policja_statistics]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  policja_statistics_offences: {rows: 10000}  # to be measured
-  poc_build_policja_statistics: {rows: 10000}  # to be measured
+  policja_statistics_offences: {rows: 4000}  # to be measured (Dev trial)
+  poc_build_policja_statistics: {rows: 4000}  # to be measured (Dev trial)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
-# Refresh policy for all layers (D32): ten workbooks of about 30 kB, a few thousand cells each, at most one new
+# Refresh policy for all layers (D32): two workbooks of about 30 kB, a few thousand cells each, at most one new
 # version per category a year; small, rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2969"}
 
