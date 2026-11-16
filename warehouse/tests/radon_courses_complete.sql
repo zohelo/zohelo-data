@@ -4,7 +4,7 @@
 with checks as (
     select
         count(*) as programmes,
-        count(distinct leading_voivodeship) as voivodeships,
+        count(distinct leading_voivodeship) filter (where leading_voivodeship_code is not null) as voivodeships,
         count(*) filter (where level_code is null or status_code is null) as without_level_or_status
     from {{ ref('radon_courses') }}
 )

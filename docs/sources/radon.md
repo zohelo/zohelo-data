@@ -17,8 +17,15 @@ allowlist of non-person fields in memory before it lands (`ingestion/to_landing/
 not the API's exact bytes but the allowlisted records as JSON lines sorted by UUID (as the Open KRS API source does).
 
 Entity: one resource. Version: download time (the API gives none); an unchanged resource (same SHA-256) is not
-landed again. A resource lands only when its distinct records equal the API's `maxCount`; records seen twice while
-paging (the cursor follows the refresh time) keep the newest `lastRefresh`. Restart unit: one resource.
+landed again. A resource lands only when its distinct records equal the API's `maxCount` (no tolerance).
+
+Paging: the API orders a resource by `lastRefresh` (epoch ms) and its cursor is base64 of the page's newest
+`lastRefresh`; the next page starts *after* that millisecond, so records tied with a page's last record are never
+served by the API's own cursor (Dev probe 43799479082: 11,675 of 11,698 courses, every one of the 23 missing at a
+page-boundary millisecond; Dev run 43343139469: 11,670 of 11,696). The extract asks for the next page from one
+millisecond earlier (the boundary records are read again), checks that the cursor decodes to the page's newest
+`lastRefresh` and moves forward, and grows the page when one millisecond fills it; repeats keep the newest
+`lastRefresh` (probe: 11,698 of 11,698, 151 repeats). Restart unit: one resource.
 
 Bronze `bronze.radon_institutions`, `bronze.radon_courses` (one row per record, text, API field names). Silver
 `silver.radon_institutions` (grain `institution_uuid`), `silver.radon_courses` (grain `course_uuid`). Gold entity
