@@ -96,7 +96,13 @@ class Client:
             if response is not None:
                 head = response.content[:6000].decode("utf-8", "replace")
                 if response.status_code in REFUSED or BOT.search(head):
-                    raise Stop(f"refused: HTTP {response.status_code} on {path} (not retried)")
+                    # what refused (the server or a protection layer in front of it), for the owner's decision
+                    seen = " ".join(pages.text(head).split()[:30])
+                    server = response.headers.get("Server") or response.headers.get("server")
+                    raise Stop(
+                        f"refused: HTTP {response.status_code} on {path} (not retried); server={server!r}; "
+                        f"bytes={len(response.content)}; text={seen[:160]!r}"
+                    )
                 if response.status_code == 404:
                     return None
                 if response.status_code == 200:
@@ -319,7 +325,7 @@ def run(
                 put("votes", f"vote_{vote_id}", web.get(f"/prace/posiedzenia/glosowanie-drukuj,{vote_id}.html", "vote"))
             summary["votes_missing_after"] = sum(1 for v in votes if f"vote_{v}" not in held)
     except Stop as exc:
-        summary["stopped"] = str(exc)[:300]
+        summary["stopped"] = str(exc)[:400]
         status = 1 if exc.fatal else 0
     summary.update({"requests": web.made, "outcomes": outcomes, "exit": status})
     return summary
