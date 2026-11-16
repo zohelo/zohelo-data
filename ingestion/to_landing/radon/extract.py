@@ -11,10 +11,17 @@ details. ``reduce`` copies only the allowlisted fields of each resource into a n
 their own allowlist); everything else is dropped in memory and never written (Landing, Archive, logs). Researcher,
 employee, doctoral-student, project and publication resources are not read at all.
 
-Completeness: the cursor follows the records' refresh time, so a record refreshed while a run pages can come
-twice; the copy with the newest ``lastRefresh`` is kept (the newest version of that record) and the repeats are
+Completeness: the API orders a resource by the records' refresh time (``lastRefresh``, epoch milliseconds) and its
+cursor is that time of the page's last record, base64-encoded; the next page starts *after* it. Records that share
+that millisecond with the page's last record but did not fit on the page are therefore never served (Dev run
+43343139469: courses 11,670 of maxCount 11,696, the same 26 in both crawls, from bulk refreshes that stamp many
+records with one time). So the run checks that the cursor decodes to the page's newest ``lastRefresh`` (otherwise it
+stops: unknown cursor) and asks for the next page from one millisecond earlier, re-reading the boundary records;
+when one millisecond holds a whole page, the page size grows (up to ``MAX_PAGE_SIZE``), and the cursor must move
+forward on every page. A page shorter than the page size is the last one. Repeats (the overlap, and records refreshed
+while the run pages) keep the copy with the newest ``lastRefresh`` (the newest version of that record) and are
 counted in the receipt. A resource lands only when the distinct records equal the ``maxCount`` of its last page;
-otherwise the run fails for that resource and Landing keeps its previous copy.
+otherwise the run fails for that resource and Landing keeps its previous copy (no tolerance: no silent loss).
 
 Landing: one entity per resource (``institutions``, ``courses``), each file the complete current state as JSON
 lines sorted by the resource's UUID with sorted keys, so unchanged data gives the same bytes and is not landed
@@ -23,6 +30,8 @@ again (receipt after the file). Version = download time (the API gives no versio
 
 from __future__ import annotations
 
+import base64
+import binascii
 from datetime import UTC, datetime
 from hashlib import sha256
 import json
@@ -39,6 +48,7 @@ from ingestion.to_landing.radon import RESOURCES, SOURCE, specs
 
 API = "https://radon.nauka.gov.pl/opendata/polon/{resource}"
 PAGE_SIZE = 100
+MAX_PAGE_SIZE = 1000  # accepted by the API (probe 43328619935); used only when one millisecond fills a page
 PAUSE_SECONDS = 2.0  # between requests; no limit is published
 MAX_PAGES = 1000  # a guard against a cursor that never ends (courses: about 120 pages)
 RETRY_WAITS = (15, 45, 120)  # seconds before the second, third and fourth attempt
@@ -137,31 +147,62 @@ class Client:
     def resource(self, entity: str, deadline: float) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
         """Every record of one resource, reduced; with the paging facts for the receipt."""
         records: dict[str, dict[str, Any]] = {}
-        token, tokens, pages, repeated, max_count, version = None, set(), 0, 0, None, None
+        token, size, pages, served, max_count, version = None, PAGE_SIZE, 0, 0, None, None
+        floor = -1  # the cursor time of the last request: it must grow on every page
         while True:
             if time.monotonic() > deadline:
                 raise Stop(f"{entity}: time budget ended after {pages} pages")
-            body = self.page(RESOURCES[entity], PAGE_SIZE, token)
+            body = self.page(RESOURCES[entity], size, token)
             pages += 1
             pagination = body.get("pagination") or {}
             max_count, version = pagination.get("maxCount"), body.get("version")
-            for raw in body["results"]:
+            results = body["results"]
+            for raw in results:
                 record = reduce(entity, raw)
                 key = record[KEEP[entity][0]]
-                if key in records:
-                    repeated += 1
-                    if str(record.get("lastRefresh") or "") < str(records[key].get("lastRefresh") or ""):
-                        continue
+                served += 1
+                if key in records and _refresh(records[key]) > _refresh(record):
+                    continue
                 records[key] = record
-            token = pagination.get("token")
-            if not body["results"] or not token or token in tokens:
-                break
-            tokens.add(token)
+            if len(results) < size or not pagination.get("token"):
+                break  # the last page
+            newest = max(_refresh(reduce(entity, raw)) for raw in results)
+            if cursor_time(pagination["token"]) != newest:
+                raise Stop(f"{entity}: unknown cursor {pagination['token'][:40]!r} (page's newest refresh {newest})")
+            if newest - 1 <= floor:  # one millisecond fills the whole page: read it with a larger page
+                if size >= MAX_PAGE_SIZE:
+                    raise Stop(f"{entity}: more than {MAX_PAGE_SIZE} records refreshed at {newest}")
+                size = min(size * 10, MAX_PAGE_SIZE)
+                continue
+            floor, token = newest - 1, cursor(newest - 1)
             if pages >= MAX_PAGES:
                 raise Stop(f"{entity}: more than {MAX_PAGES} pages")
         if not isinstance(max_count, int) or len(records) != max_count:
             raise Stop(f"{entity}: {len(records)} distinct records, the API reports maxCount {max_count}")
-        return records, {"pages": pages, "max_count": max_count, "repeated": repeated, "api_version": version}
+        facts = {"pages": pages, "max_count": max_count, "repeated": served - len(records), "api_version": version}
+        return records, facts
+
+
+def cursor(millis: int) -> str:
+    """The API's cursor for 'records refreshed after this millisecond' (base64 of the decimal epoch milliseconds)."""
+    return base64.b64encode(str(millis).encode()).decode()
+
+
+def cursor_time(token: str) -> int | None:
+    """The epoch milliseconds a cursor stands for; None when it is not of that form."""
+    try:
+        text = base64.b64decode(token, validate=True).decode("ascii")
+    except (binascii.Error, UnicodeDecodeError, ValueError):
+        return None
+    return int(text) if text.isdigit() else None
+
+
+def _refresh(record: dict[str, Any]) -> int:
+    """A record's lastRefresh as epoch milliseconds (-1 when missing or not a number)."""
+    value = record.get("lastRefresh")
+    if isinstance(value, int):
+        return value
+    return int(value) if isinstance(value, str) and value.isdigit() else -1
 
 
 def _land(client: Any, bucket: str, entity: str, records: dict, facts: dict, held: list, landing_root: str) -> bool:
