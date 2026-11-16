@@ -108,13 +108,43 @@ def wfs(base: str) -> None:
         note(f"paging {name} startIndex=1000 -> {st} {len(s or b'')} B")
 
 
+def imd(base: str) -> None:
+    """Round 4: the register service INSPIRE_IMD (INSPIRE metadata record f6947152-...: 'Zabytki nieruchome wpisane do
+    rejestru zabytków', NID, 'No conditions apply to access and use', biannual): output formats and paging."""
+    caps, _ = get(base + "?service=WFS&request=GetCapabilities")
+    if not caps:
+        return
+    types = re.findall(r"<(?:wfs:)?FeatureType>.*?<(?:wfs:)?Name>([^<]+)</", caps.decode("utf-8", "replace"), re.S)
+    for name in types[:3]:
+        for extra in ("&outputFormat=text/csv&count=5", "&outputFormat=text/csv&count=5&startIndex=5",
+                      "&outputFormat=application/vnd.geo%2Bjson&count=2"):
+            b, st = get(f"{base}?service=WFS&version=2.0.0&request=GetFeature&typeNames={name}{extra}", nbytes=300_000)
+            txt = (b or b"").decode("utf-8", "replace")
+            if "csv" in extra:
+                lines = txt.splitlines()
+                note(f"{extra}: {st} header={lines[:1]!r} ids={[x.split(',')[0][:60] for x in lines[1:6]]}"[:1500])
+            else:
+                keys = sorted(set(re.findall(r'"([A-Za-z_]+)"\s*:', txt)))
+                note(f"{extra}: {st} {len(b or b'')} B keys={keys[:40]}")
+        b, st = get(f"{base}?service=WFS&version=2.0.0&request=GetFeature&typeNames={name}&outputFormat=text/csv"
+                    f"&count=2000", nbytes=50_000_000)
+        txt = (b or b"").decode("utf-8", "replace")
+        note(f"csv count=2000: {st} {len(b or b'')} B {len(txt.splitlines())} lines")
+        for woj in ("02", "14"):
+            flt = ("<fes:Filter xmlns:fes='http://www.opengis.net/fes/2.0'><fes:PropertyIsLike wildCard='*' "
+                   "singleChar='.' escapeChar='!'><fes:ValueReference>INSPIREID</fes:ValueReference>"
+                   f"<fes:Literal>*NID_N_{woj}_*</fes:Literal></fes:PropertyIsLike></fes:Filter>")
+            b, st = get(f"{base}?service=WFS&version=2.0.0&request=GetFeature&typeNames={name}&resultType=hits"
+                        f"&FILTER={requests.utils.quote(flt)}")
+            m = re.search(r'numberMatched="([^"]+)"', (b or b"").decode("utf-8", "replace"))
+            note(f"hits woj {woj}: {m.group(1) if m else (b or b'')[:300]!r} {st}")
+
+
 def main() -> None:
     try:
-        for base in ("https://usluga.zabytek.gov.pl/INSPIRE_WFS_MHD/service.svc/get",
-                     "https://usluga.zabytek.gov.pl/INSPIRE_WFS_WHD/service.svc/get"):
-            wfs(base)
-        _, st = get("https://nid.pl/wp-content/uploads/2026/08/MAZ-rej_13.08.2026.pdf", head=True)
-        note(f"HEAD MAZ-rej_13.08.2026.pdf -> {st}")
+        base = "https://usluga.zabytek.gov.pl/INSPIRE_IMD/service.svc/get"
+        wfs(base)
+        imd(base)
     finally:
         print("requests left", BUDGET[0], flush=True)
         chunk, out = "", []
