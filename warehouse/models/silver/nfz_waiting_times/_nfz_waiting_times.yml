@@ -2,7 +2,7 @@ version: 2
 models:
   - name: nfz_waiting_times_queues
     description: >-
-      NFZ waiting times, API Terminy Leczenia v1.4 (register PLS-015; licence nfz_itl_api_terms, the v1.3 regulations): every queue entry
+      NFZ waiting times, API Terminy Leczenia v1.4 (register PLS-015; licence nfz_itl_api_terms, the regulations on the v1.4 statute page): every queue entry
       (provider x place x benefit x case 1 stable / 2 urgent) of the newest complete monthly snapshot, values as
       published (persons awaiting, removed and average waiting period of the statistics month; the forecast time to
       the benefit as published text with its as-at date). No history is offered by the API: snapshots begin with
@@ -32,8 +32,8 @@ models:
   - name: nfz_waiting_times_providers
     description: >-
       Healthcare providers listing queues in the newest complete NFZ waiting-times snapshot (register PLS-015): one
-      row per NFZ voivodeship branch and provider code, name and TERYT seat code as published, with counts of queue
-      entries and places. Grain: province_code x provider_code.
+      row per NFZ voivodeship branch and provider code with counts of queue entries and places (no name, REGON, NIP,
+      registry number or seat: one-person practices are named after the practitioner). Grain: province_code x provider_code.
     tests:
       - unique:
           column_name: "province_code || '|' || provider_code"

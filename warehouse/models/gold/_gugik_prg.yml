@@ -1,0 +1,6 @@
+version: 2
+models:
+  - name: poc_build_prg
+    description: >-
+      Build stage — area of every Polish administrative unit with a PRG boundary as PRG publishes it (JPT_POWIER,
+      hectares; D33: stored as published, KPI area converts to km²), daily at the PRG edition held.

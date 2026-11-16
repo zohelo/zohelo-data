@@ -93,7 +93,7 @@ def fetch(session: requests.Session, address: str) -> tuple[bytes, Any]:
         time.sleep(PAUSE_SECONDS + delay)
         try:
             response = session.get(address, timeout=TIMEOUT_SECONDS)
-        except (requests.ConnectionError, requests.Timeout) as exc:
+        except requests.RequestException as exc:  # connection, timeout, a stream cut mid-body
             last = type(exc).__name__
             continue
         if response.status_code == 200:

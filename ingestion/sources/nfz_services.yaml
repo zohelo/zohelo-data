@@ -1,0 +1,54 @@
+source_system: nfz_services
+description: "NFZ statistics API, services (API Statystyki NFZ – Świadczenia, JGP): benefit dictionaries of the five catalogs and, per benefit and year, the basic-data table for Poland and the 16 NFZ regional branches"
+
+# Extraction strategy (docs/landing.md). Register PLS-012. Bulk feature: none (the API and the statystyki.nfz.gov.pl
+# site serve one table per request). Route: the API https://api.nfz.gov.pl/app-stat-api-jgp/ (version 1.1), tested
+# for a full load by the read-only Dev probes 43305368183, 43311426786 and 43312094156: 1,347 benefits (catalogs
+# 1a 883, 1b 134, 1c 273, 1d 43, 1w 14), years 2009-2024, one basic-data ("general-data") table per benefit and
+# year, plus part-year tables where a benefit changed within a year. robots.txt: 404 (none); terms: 10 requests per
+# second per IP (we make one request at a time with a 0.7 s pause). Own extractor ingestion/to_landing/nfz_services/.
+# Scope decided for #2929: entity = one benefit (catalog + dictionary entry) = its index answer and every page of
+# each basic-data table for Poland (branch=false) and by NFZ branch (branch=true), landed as one ZIP of the exact
+# answers; and the dictionary of each catalog (benefits_<catalog>). Not loaded: the hospital-type splits and the
+# other table types (sex, age, admission and discharge type, healthcare services, product categories, histograms,
+# ICD-9, ICD-10). Version: the API gives no update date (meta.date-modified is the request time), so a copy is
+# written only when the digest of its answers' data members differs from the newest copy; version = download time.
+# Initial load: 1,347 index requests + 2 × ~13,200 benefit-years + 56 dictionary pages ≈ 27,800 requests at the
+# 1.50 s per request measured in Dev trial 43328619774 (1,462 requests in 36.5 minutes) ≈ 11.6 hours, so three
+# weekly runs of the 330-minute budget (320 minutes of requests each); missing benefits first, the canaries first
+# among them; resumable; a run that ends on the budget reports not_started_time_budget and exits 2.
+extraction:
+  initial: api
+  production: snapshot                  # each ZIP is the complete set of answers of one benefit
+  incremental_policy: changed_since_last  # data digest per benefit; canary + weekly quarter of the benefits asked
+  schedule: # UTC; release: NFZ adds a year of JGP statistics about once a year (2024 is the newest year on
+    # 12 Nov 2026), date not announced; weekly check (Sunday 02:40): 56 dictionary pages, 6 canary indexes and a
+    # quarter of the other benefits' indexes (~400 requests); a changed canary index means a release and every
+    # benefit is asked in that run
+    - {cron: "40 2 * * 0", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/nfz_services/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.nfz_services_benefits, bronze.nfz_services_basic_data, bronze.nfz_services_rejected_files]
+silver: [silver.nfz_services_benefits, silver.nfz_services_basic_data]
+gold: [gold.build_nfz_services]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  nfz_services_benefits: {rows: 2100}  # 1,347 dictionary entries (Dev probe 43311426786)
+  # 9,754 rows for 655 tables of 84 benefits = 14.89 rows per table (Dev trial 43328619774); tables per benefit
+  # 1a 10.8, 1c 6.3, 1d 6.0, 1w 8.0 (trial), 1b 11.7 (probe 43312094156 sample) → 883×10.8 + 134×11.7 + 273×6.3
+  # + 260 + 112 ≈ 13,200 tables × 14.89 ≈ 196,500 rows; × 1.5
+  nfz_services_basic_data: {rows: 295000}
+  # 2 measures × ~13,200 Polish benefit-years + 6,800 rows of the four detail groups (Dev trial 43328619774:
+  # 8,006 rows = 6,800 detail + 2 × 603 other Polish benefit-years) ≈ 33,200; × 1.5
+  poc_build_nfz_services: {rows: 50000}
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32 + #2929): about 1,350 small ZIPs (one per benefit, 1.8 MB for 91 files in the
+# trial) and about 200,000 Silver rows; a changed benefit replaces its one Bronze file, and Silver and the Gold build stage are rebuilt in full
+# from Bronze (a few seconds of DuckDB). Landing alone is incremental (changed benefits only).
+refresh: {mode: full, decided: "D32 + #2929"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
