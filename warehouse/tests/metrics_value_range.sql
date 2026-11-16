@@ -88,6 +88,10 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- UNHCR (#2415): persons; highest refugees 4,404,995 (all asylum countries 1951-2025, Dev trial 43282453427).
     -- Documentation only (no metrics_refugees_hosted model yet).
     ('refugees_hosted', 'unhcr', '%', 0, 2e7),
+    -- ARiMR direct payments (#2487): published in PLN, metrics in million PLN (D33, ÷ 1e6); highest Poland campaign
+    -- 2022 = 16,858,050,328 PLN = 16,858 mln (report of 30.09.2026, probe 43345651745). Documentation only (no
+    -- metrics_direct_payments_paid model yet; the build stage has tests/arimr_payments_value_range.sql).
+    ('direct_payments_paid', 'arimr_payments', '%', 0, 3e4),
     -- EEA GovReg (#2424): published in Gg (kt) CO2e, metrics in Mt CO2e (D33, ÷ 1000); highest member DE 1,253,128 kt
     -- = 1,253.1 Mt (total excl. LULUCF, 1990-2024, Dev trial 43282453427). Documentation only until
     -- metrics_ghg_emissions joins the metrics union below.
