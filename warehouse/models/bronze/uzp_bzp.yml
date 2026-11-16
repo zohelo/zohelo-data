@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+- name: uzp_bzp
+  description: e-Zamówienia BZP read API v1 (UZP) — contract and result notices, one reduced answer per notice type and day
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/uzp_bzp/
+    loaded_by: ingestion/to_bronze/uzp_bzp/
+    config: ingestion/sources/uzp_bzp.yaml
+  tables:
+  - name: uzp_bzp_notices
+    description: >-
+      One row per notice of the newest file of each entity (<contract|result>_<YYYYMMDD>): every kept API field as
+      text (object_id, notice_type, notice_number, bzp_number, tender_id, publication_date, client_type, order_type,
+      tender_type, is_tender_amount_below_eu, order_object, cpv_code, submitting_offers_date, procedure_result,
+      organization_id, organization_national_id, organization_name, organization_city, organization_province,
+      organization_country), contractors (JSON: province and country of each contractor only), form_values (JSON:
+      the value lines of the notice form with their part number), stats_count (notice/stats count of the type and
+      day); source_row_number = position in the file; partitioned by entity.
+  - name: uzp_bzp_rejected_files
+    description: BZP Landing files the Bronze decoder rejected, with the reason.
