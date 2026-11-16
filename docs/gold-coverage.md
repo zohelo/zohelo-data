@@ -38,11 +38,18 @@ Every loaded series of every source, all geographies, goes to Gold; the storage 
 accepted. No geography filter: one rule for all blocks is what removes the hand-picking.
 
 **Load order** (O43): Poland and its regions first, then countries and EU aggregates, then the rest.
-A block is built whole, so the order is an order of blocks, decided from the source's structure
-metadata (a dataset's geography code list), not from its data: first the blocks of Polish sources
+A block is built whole, so the order is an order of blocks: first the blocks of Polish sources
 and the blocks that hold Polish regions, then the blocks that hold Poland, other countries or the EU
 aggregates, last the blocks with neither (other countries' regions only, airport pairs). Within a
-group, smaller blocks first.
+group, smaller blocks first, and a group is finished before the next one starts.
+
+How a block's group is found (#2974): a block whose structure has no geography dimension is in the
+last group, from the structure metadata alone. For the other blocks the structure does not help:
+the structure messages Eurostat publishes name one `GEO` code list for every dataset, not the codes a
+dataset holds. So the builder reads the geography column of the Silver files of the blocks it is about
+to build (one column, once per run, at most a tenth of the run's time; nothing is read for a block
+that needs no build) and looks each code up in the geography map. A block not read in that time is
+ordered with the countries. The order is a preference, never a filter: every block is loaded.
 
 ### 2. One path for every statistical source: per block
 
@@ -66,8 +73,14 @@ itself; a table too large for one block is split by an entity column first.
 | `gold.<source>_geography` | block × source geography code | the area the code was mapped to (`_X` unmatched, `_Z` none) and its points |
 
 Each table is partitioned by `block_id` and holds exactly one Parquet file per block
-(`04_gold/<source>/<table>/<block>/<recipe>.parquet`), the layout Silver uses for the big sources
-(design #875).
+(`04_gold/<source>/<table>/<block>/<recipe>.<content>.parquet`), the layout Silver uses for the big
+sources (design #875). `<recipe>` names what the file was made from (decision 4); `<content>` is a
+digest of the file's own bytes. **A Gold file is never replaced:** an upload writes a new key or finds
+the same bytes under the key and keeps them; other bytes under an existing key stop the run, because a
+table may point to that object. The four tables are committed one after the other (observations last)
+and a block counts as built only when all four hold one recipe, so a run that stops between the commits
+rebuilds the block next time under new keys or the same bytes. A superseded file stays as an
+unreferenced object until Ops `orphan_files` removes it.
 
 **Reads are the cost, not storage** (R2 bills read requests, Class B, far above stored bytes). A run
 decides what to build from Iceberg metadata only (file lists and table properties), never by
@@ -143,9 +156,13 @@ convenience, never a filter a KPI depends on: a KPI names its codes in `kpi_meas
 rule-based build stages apply the rules the curated stages already apply:
 
 - Eurostat: `:` is no value and the row is not loaded. A value flagged `c` is loaded with status
-  `confidential`; a value flagged `f` with status `forecast`. A row keeps its status in every table
+  `confidential`; a value flagged `f` with status `forecast`; every row of a projection dataset
+  (`PROJ_*`) is `forecast`, whatever its flag. A row keeps its status in every table
   it reaches; a reader that wants observed values only filters on `observation_status_key`, and a
-  forecast is never presented as an observation.
+  forecast is never presented as an observation. An exact zero (`0`, `0.0`, `0.000`, with or without
+  a flag) is a value Eurostat publishes, most of all in the airport-pair and stock datasets, and is
+  loaded as published: no layer fills a cell, and the bulk file, Silver and Gold hold the same number
+  of zeros per dataset (#2973). A reader that wants no zeros filters on `value`.
 - GUS BDL: an empty value is not loaded; a cell with attribute `x` ("filling the item is impossible
   or pointless") is not loaded even when it carries 0; two different published values for one key
   reject the subgroup in Silver already.
@@ -221,6 +238,31 @@ Per source, one number the portal can show:
 - `gold.coverage` (one row per block a source publishes) gains `silver_series`, `gold_series`,
   `gold_rows`, `excluded_series` and `gold_status` (`in gold` / `rejected` / `to build` /
   `not modelled`), filled from each block's build; `gold.build_check` gains a per-source summary row.
+  Not built yet.
+- Until then every run of `gold.observations` ends with the annotation `<source> gold coverage`, made
+  from the tables' file lists only: blocks in Gold over blocks in Silver, series in Gold (the rows of
+  the series files) over loaded series, and the share of Silver rows whose block is in Gold. A block in
+  Gold is accepted whole, so its loaded series are its Gold series. The loaded series of a block that
+  waits or is rejected are not known before its first build: they are estimated from its Silver rows at
+  the ratio of the blocks in Gold, and `loaded_series_estimated` says how many of the denominator are
+  such an estimate (0 = the number is exact). Excluded series are not counted yet.
+
+### 11. Running in production
+
+The Pipeline activity `gold.observations` (authorized per source in its `activities:`) runs the
+builder for the source; [operating.md](operating.md) has the run rules. It is the last data step of
+the source's full dataflow, after the model build and the publish, so a new block version reaches
+Gold in the run that loaded it, and it is its own run `gold: observations` for a first load or a
+catch-up.
+
+- **Budget and resuming.** A run builds within its time budget (300 minutes of a 350-minute job),
+  commits finished blocks every 200 blocks or 10 minutes, and ends green with a warning when blocks
+  are left; the next run plans from the tables' file lists and continues. Failed blocks and a refused
+  removal end the run red.
+- **The first load is started by hand.** A run without a filter only continues: when Gold holds no
+  block of the source it builds nothing and says so. A filter starts it: `*` for every block, or
+  block ids and globs for some. Scheduled runs have no filter, so merging the authorization starts
+  nothing.
 
 ## Rules for a source's adapter
 
@@ -239,8 +281,10 @@ and nothing else. Everything after the build stage is shared.
    ([source-registration.md](source-registration.md), D34; an official correspondence table where
    codes differ; names only as a reported fallback). When it reads the source's own Silver table, it
    reads it through `poc_optional_ref` as [playbook.md](playbook.md) Gold step 2 says: a plain `ref()`
-   makes the map and every block wait for the source's first load (#2903). The source's per-block Gold
-   tables are declared in its own source YAML `gold:` (D34).
+   makes the map and every block wait for the source's first load (#2903), and the map lists that
+   table in its config meta `optional_parents`. The source's per-block Gold tables and
+   `gold.observations_rejected` are declared in its own source YAML `gold:` (D34); `repo_check` fails
+   when a source authorized for `gold.observations` does not declare them.
 5. Units follow D33: each unit is a `unit.csv` row with `base_unit_key` and `factor`, each source
    code a `unit_map.csv` row; an unmapped code stays as published and is reported.
 6. A Dev trial into `zz_dev_<topic>` shows the grain empty, coverage 100% or each missing series
@@ -256,5 +300,5 @@ and nothing else. Everything after the build stage is shared.
 |---|---|---|---|
 | 1 | Non-KPI measures in zohelo-bi | An additive published v2 catalogue, `catalog/measures_<source>.parquet` from `gold.<source>_measures`; decide once one source is fully loaded | owner |
 | 2 | Names of breakdown codes | One small table per block (`gold.<source>_codes`: dimension, code, name, total code) before the portal shows these tables | architect |
-| 3 | Eurostat codes of Polish NUTS 3 regions are unmatched (`_X`) | Map them to the podregion keys DBW already uses (Eurostat's codes are the `eurostat` CTE of `poc_map_geography.sql`, registered before D34) | architect |
+| 3 | Eurostat codes of Polish NUTS 3 regions: mapped by name (#2974) | `poc_geography__eurostat()` maps a `PLxxx` code to the podregion (`BDL:<id>`) of the same name in the voivodeship of its NUTS 2 parent, because no loaded table holds the NUTS–KTS correspondence. Decide whether to load GUS's correspondence table and map by code | architect |
 | 4 | The series table is more than half of the bytes | Keep it for the first load; then decide whether series attributes move onto the fact for annual blocks | architect |
