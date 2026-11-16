@@ -21,6 +21,11 @@ schedule:
 # nodes) after each of these waits, in seconds; a failing data test does not prevent it (#2789).
 rate_limit_retry_waits: [60, 180, 420]
 rate_limit_retry_threads: 2     # fewer parallel catalog calls than the build's 4
+# After those waits, the last wait again while each retry re-runs fewer nodes than the one before (#2618), at most
+# this many retries in all, and none whose wait would end after the deadline (minutes from the start of the build
+# step; the job's own limit is 180 minutes, pipeline.yml).
+rate_limit_retry_max: 8
+rate_limit_retry_deadline_minutes: 140
 commit_retry_threads: 1         # after an Iceberg commit failure: no concurrent commits
 
 # Topics layer (owner decision O32, docs/topics.md): heat score weights, windows and thresholds, passed to every
