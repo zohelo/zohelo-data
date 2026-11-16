@@ -21,11 +21,12 @@ UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics
 S = requests.Session()
 S.headers["User-Agent"] = UA
 CALLS = {"n": 0}
+LAST: dict = {}
 SITE = "https://strateg.stat.gov.pl/"
 
 
 def get(url: str, accept: str = "application/json") -> requests.Response | None:
-    if CALLS["n"] >= 80:
+    if CALLS["n"] >= 90:
         print("budget reached, skip", url, flush=True)
         return None
     for attempt in range(3):
@@ -118,13 +119,79 @@ def main(extra: list[str]) -> int:
             continue
         try:
             body = r.json()
+            LAST[u] = body
             results[u] = {"st": r.status_code, "b": len(r.content), "shape": shape(body)}
-            print("BODY", u, json.dumps(body, ensure_ascii=False)[:6000], flush=True)
+            print("BODY", u, json.dumps(body, ensure_ascii=False)[:20000], flush=True)
         except ValueError:
             results[u] = {"st": r.status_code, "b": len(r.content), "text": r.text[:300]}
     blob = json.dumps(results, ensure_ascii=False, separators=(",", ":"))
     for i in range(0, min(len(blob), 3800 * 5), 3800):
         annotate("notice", f"strateg calls {i // 3800}", blob[i:i + 3800])
+
+    # Phase 2: one call per templated GET path, each path parameter filled with the first id-like value found in
+    # the list responses (key equal to the parameter name, or 'id').
+    bodies = {}
+    for u in targets:
+        rr = results.get(u)
+        if rr and "shape" in rr:
+            bodies[u] = rr
+    samples: dict[str, list] = {}
+
+    def collect(obj, depth=0):
+        if depth > 5:
+            return
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                if isinstance(v, (str, int)) and not isinstance(v, bool):
+                    samples.setdefault(k.lower(), [])
+                    if len(samples[k.lower()]) < 3 and v not in samples[k.lower()]:
+                        samples[k.lower()].append(v)
+                else:
+                    collect(v, depth + 1)
+        elif isinstance(obj, list):
+            for x in obj[:3]:
+                collect(x, depth + 1)
+
+    for u in targets:
+        r2 = LAST.get(u)
+        if r2 is not None:
+            collect(r2)
+    print("SAMPLES", json.dumps(samples, ensure_ascii=False)[:6000], flush=True)
+    phase2 = {}
+    for p, ops in spec.get("paths", {}).items():
+        if "{" not in p or "get" not in ops:
+            continue
+        filled = p
+        ok = True
+        for name in [seg[1:-1] for seg in p.split("/") if seg.startswith("{")]:
+            cand = samples.get(name.lower()) or samples.get(name.lower().replace("_", "")) or samples.get("id")
+            if not cand:
+                ok = False
+                break
+            filled = filled.replace("{" + name + "}", str(cand[0]))
+        if not ok:
+            phase2[p] = "no sample"
+            continue
+        query = []
+        for x in ops["get"].get("parameters", []):
+            if isinstance(x, dict) and x.get("in") == "query" and x.get("required"):
+                cand = samples.get(str(x.get("name")).lower())
+                if cand:
+                    query.append(f"{x['name']}={cand[0]}")
+        url = urljoin(base, filled.lstrip("/")) + ("?" + "&".join(query) if query else "")
+        r = get(url)
+        if r is None:
+            phase2[url] = None
+            continue
+        try:
+            body = r.json()
+            phase2[url] = {"st": r.status_code, "b": len(r.content), "shape": shape(body)}
+            print("BODY2", url, json.dumps(body, ensure_ascii=False)[:8000], flush=True)
+        except ValueError:
+            phase2[url] = {"st": r.status_code, "b": len(r.content), "text": r.text[:300]}
+    blob = json.dumps(phase2, ensure_ascii=False, separators=(",", ":"))
+    for i in range(0, min(len(blob), 3800 * 4), 3800):
+        annotate("notice", f"strateg phase2 {i // 3800}", blob[i:i + 3800])
     print("calls", CALLS["n"], flush=True)
     return 0
 
