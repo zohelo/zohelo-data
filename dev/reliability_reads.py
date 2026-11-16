@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 
@@ -28,14 +29,28 @@ def _dbt(args: list[str]) -> subprocess.CompletedProcess:
     )
 
 
+MISSING: list[str] = []
+
+
 def _show(sql: str, label: str) -> list[dict] | None:
-    shown = _dbt(["show", "--inline", sql, "--limit", "200", "--output", "json"])
-    out = shown.stdout.strip()
-    try:
-        return json.loads(out[out.index("{") :])["show"]
-    except (ValueError, KeyError):
-        annotate("error", f"{label}: show failed", {"rc": shown.returncode, "out": (out + shown.stderr)[-1500:]})
-        return None
+    """Runs the query; a metrics model not yet built on production (e.g. a source still waiting) is read as empty."""
+    for _ in range(40):
+        for name in MISSING:
+            sql = sql.replace(f'"gold"."{name}"', '(select * from "r2"."gold"."metrics_population" where false) as _e')
+            sql = sql.replace('"r2".(select', "(select")
+        shown = _dbt(["show", "--inline", sql, "--limit", "200", "--output", "json"])
+        out = shown.stdout.strip()
+        try:
+            return json.loads(out[out.index("{") :])["show"]
+        except (ValueError, KeyError):
+            text = out + shown.stderr
+            gone = re.search(r"Table with name (\w+) does not exist", text)
+            if gone and gone.group(1) not in MISSING:
+                MISSING.append(gone.group(1))
+                continue
+            annotate("error", f"{label}: show failed", {"rc": shown.returncode, "missing": MISSING, "out": text[-1500:]})
+            return None
+    return None
 
 
 def value_range() -> None:
@@ -48,7 +63,7 @@ def value_range() -> None:
     rows = _show(sql, "1 rows")
     if rows is None:
         return
-    annotate("warning" if rows else "notice", "1 metrics_value_range rows on production Gold", {"rows": len(rows), "first": rows[:8]})
+    annotate("warning" if rows else "notice", "1 metrics_value_range rows on production Gold", {"rows": len(rows), "first": rows[:8], "not built on prod": MISSING})
     out_dir = Path(os.environ.get("DEV_OUTPUT_DIR", "/tmp/dev-output"))
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "value_range.json").write_text(json.dumps(rows, default=str))
