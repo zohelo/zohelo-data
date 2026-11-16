@@ -212,11 +212,11 @@ rule-based build stages apply the rules the curated stages already apply:
   "Nie dotyczy") is not loaded, a non-zero number with such a sign is loaded as `flagged`; a value whose
   `id_tajnosci` is not 43 "Dane jawne" is loaded with status `confidential`; `id_flaga` gives
   `provisional`, `estimated`, `break`, `low_reliability` and `forecast` (30 "Prognoza").
-- World Bank WDI: an empty cell is not loaded; a year after the year of the archive's version is loaded
-  with status `forecast`. OECD: a period without a number is not loaded; `OBS_STATUS` becomes the status
-  (`A` or none ok, `P`, `E`, `F`, `B`, `D`, `U`, `N`; any other code `flagged`, never silently ok). NBP: a
-  rate a table does not publish (bid and ask in A and B, mid in C) is no row; table B is published
-  weekly and its days in between are not filled.
+- World Bank WDI: an empty cell is not loaded; a year after the year of the archive's version is a
+  projection and is not loaded. OECD: a period without a number is not loaded; `OBS_STATUS` becomes the
+  status (`A` or none ok, `P`, `E`, `B`, `D`, `U`, `N`; any other code `flagged`, never silently ok), and
+  `F` (forecast) is not loaded. NBP: a rate a table does not publish (bid and ask in A and B, mid in C)
+  is no row; table B is published weekly and its days in between are not filled.
 
 **GUS BDL geography by code.** A BDL unit id carries the TERYT code of its area, so Poland, a
 voivodeship, a powiat and a gmina are mapped by that code through the map's rows of the 7-digit
