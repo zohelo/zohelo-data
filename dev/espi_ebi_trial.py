@@ -202,6 +202,31 @@ def gpw_labels() -> dict:
     return out
 
 
+def gpw_anchor_shapes() -> dict:
+    """The tag shape of the issuer link in EBI items (text replaced by its length; one request) and how many link
+    texts start with the item's title, so the cut in parse_gpw is checked against the page."""
+    reader = lists.Reader()
+    form = [*lists.GPW_FORM, ("offset", "0"), ("limit", str(lists.GPW_PAGE_ROWS))]
+    page = reader.fetch("POST", lists.GPW_AJAX, data=form, headers={"X-Requested-With": "XMLHttpRequest"})
+    shapes, prefixed, items = Counter(), 0, 0
+    for item in lists.GPW_ITEM.findall(page):
+        found = lists.GPW_PARTS.search(item)
+        if not found:
+            continue
+        items += 1
+        inner = found.group(3)
+        shapes[re.sub(r">([^<]+)<", lambda m: f">T{len(m.group(1).strip())}<", f">{inner}<")[1:-1]] += 1
+        prefixed += lists.text(inner).startswith(lists.text(found.group(4)) + " ")
+    parsed = lists.parse_gpw(page)
+    return {
+        "items": items,
+        "link_text_starts_with_title": prefixed,
+        "shapes": shapes.most_common(5),
+        "parsed_rows": len(parsed),
+        "parsed_issuers": sorted({r["issuer_name"] for r in parsed})[:15],
+    }
+
+
 def bronze(source: str):
     table = SOURCES[source]["table"]
     out: dict = {"loads": []}
@@ -314,6 +339,13 @@ def silver(con, source: str) -> dict:
     s["range"] = rows(con, f"select min({d}), max({d}), count(distinct {d}) from {model}")
     s["per_month"] = rows(con, f"select strftime({d}, '%Y-%m'), count(*) from {model} group by 1 order by 1")
     s["issuers"] = one(con, f"select count(distinct issuer_name) from {model}")
+    s["issuer_names_with_lowercase_words"] = one(
+        con,
+        f"select count(*) from {model} where regexp_matches(issuer_name, '[a-ząćęłńóśźż]{{4,}} [a-ząćęłńóśźż]{{4,}}')",
+    )
+    s["longest_issuer_names"] = rows(
+        con, f"select distinct issuer_name, length(issuer_name) from {model} order by 2 desc limit 5", 5
+    )
     if source == "gpw_ebi":
         s["isin_null"] = one(con, f"select count(*) from {model} where isin is null")
         s["report_number_null"] = one(con, f"select count(*) from {model} where report_number is null")
@@ -510,7 +542,7 @@ def main(argv: list[str]) -> int:
             note(f"{source} gold (twice) with tests", gold(con, source))
         note(
             "profiles not landed: knf peak days, gpw category labels per filter type",
-            {"knf_peak_days": peak_types(), "gpw_labels": gpw_labels()},
+            {"knf_peak_days": peak_types(), "gpw_labels": gpw_labels(), "gpw_anchor": gpw_anchor_shapes()},
         )
         note("espi_ebi licence gate and terms pages", {"gate": licence(), "terms": terms_pages()})
     except Exception as exc:
