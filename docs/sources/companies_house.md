@@ -12,7 +12,7 @@ published within 5 working days). The REST and streaming APIs, the PSC snapshot 
 not used.
 
 Personal data: no natural persons' data is stored. The file is reduced **before Landing** (`reduce:
-companies_house`, precedent O33) to 13 of its 55 columns: company name and number, category, status, country of
+companies_house`: `reduce_landing` in `ingestion/to_landing/companies_house`, precedent O33) to 13 of its 55 columns: company name and number, category, status, country of
 origin, incorporation and dissolution date, SIC texts 1-4, post town and country of the registered office.
 Dropped and stored nowhere (Landing, Archive, Bronze): the registered office's care-of line, PO box, street lines,
 county and postcode (a registered office can be a director's home) and the ten previous names (a former name can
@@ -35,7 +35,9 @@ not there) and `silver.companies_house_snapshot_counts` (companies per snapshot 
 status, 481 rows a snapshot, with the number incorporated in the month the snapshot closes, which is the month
 before the month of the file's date; one file per snapshot date, kept: the
 monthly history builds up from the first Landing and a month without a landed snapshot has no row; earlier
-snapshots cannot be rebuilt once the Archive retention has passed).
+snapshots cannot be rebuilt once the Archive retention has passed). The loader rejects a Silver file with a null
+key or a repeated grain; one completeness test per Silver model (`warehouse/tests/companies_house_*_complete.sql`)
+checks it against Bronze and against the Gold model built from it.
 
 Gold: `gold.company_uk_poland_origin` (entity table keyed `GB-COH:<company number>`; no KRS, NIP, REGON or LEI in
 the file, so a join to GLEIF goes through GLEIF's own registration-authority fields, never by name) and

@@ -30,8 +30,10 @@ sources:
     description: >-
       Companies on the UK register whose country of origin is Poland, newest snapshot; one row per company
       number (checked by the loader: unique, not null), typed dates, registered office as post town and country.
+      Completeness against Bronze and Gold: warehouse/tests/companies_house_poland_origin_complete.sql.
   - name: companies_house_snapshot_counts
     description: >-
       Companies on the register per snapshot by country of origin, company category and company status, with the
       number incorporated in the month the snapshot closes; one file per snapshot date, kept (monthly history).
       Grain snapshot_date × country_of_origin × company_category × company_status (checked by the loader).
+      Completeness against Bronze and the build stage: warehouse/tests/companies_house_snapshot_counts_complete.sql.

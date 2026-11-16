@@ -11,7 +11,7 @@ Entity = the declared file (``basic_company_data``); its newest Landing version 
 
 Personal data: the source file's street lines, postcode, care-of line, PO box, county and previous names (a
 registered office can be a director's home, a previous name a person's) are dropped before Landing
-(ingestion/to_landing/companies_house ``reduce_snapshot``), with the accounts, returns, mortgage and partnership
+(ingestion/to_landing/companies_house ``reduce_landing``), with the accounts, returns, mortgage and partnership
 columns and the URI (not used), so the landed file has 13 columns and ``raw_sha256`` is the SHA-256 of that
 reduced file. The header must be exactly those 13 columns: another header rejects the file
 (bronze.companies_house_rejected_files) and every table keeps its previous version. Uploads happen only after
