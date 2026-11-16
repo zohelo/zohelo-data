@@ -23,11 +23,20 @@ different values keeps value null and the range, never a picked value). Gold: en
 (LEI, joins GLEIF), `gold.esef_filing` (`fxo_id`) and `gold.esef_financial_fact` (revenue and profit or loss of
 the reporting period per filing, currency as published), and the block `esef_reports` in
 `gold.build_xbrl_filings` (filings and issuers per year of period end, Poland, annual). The repository gives no
-KRS, NIP or REGON and no region: none is invented. Language versions and refilings are separate filings with the
-next sequence number and no version column, so every filing is kept and nothing is picked between them.
+KRS, NIP or REGON and no region: none is invented. Language versions, refilings and a separate next to a
+consolidated report of one issuer and period are separate filings with the next sequence number and no version
+column, so every filing is kept and nothing is picked between them (`esef_issuer_period_values_differ` warns when
+their values differ).
 
 Left out: other countries, other concepts (assets, equity, employees …), dimensional facts (segments, equity
 components) and comparative periods in Gold (they stay in Silver), the report packages and viewers. The
-repository says it is not complete. Refresh full (D32, #1500); weekly, Thursday 02:25 UTC. Terms: "At present,
+repository says it is not complete; its Polish filings were last added on 2024-07-30, so period ends 2023 and
+2024 are partly held (counts in Gold are what it holds, not every report filed). Refresh full (D32, #1500); weekly, Thursday 02:25 UTC. Terms: "At present,
 there are no restrictions on the ways that the data can be used" (https://filings.xbrl.org/docs/about), no licence
 named: `unresolved`, internal (owner question in the register). Restart unit: one filing.
+
+Dev trial 43838478762 (16 Nov 2026): Landing 876 filings in a 1.0 MB list and 779 facts documents (3.0 GB read,
+4.3 MB landed, 56 minutes), a second run wrote nothing; Bronze 876 filing rows and 14,578 fact rows, 2 documents
+rejected (no fact of the selected concepts); Silver 876 filings (326 LEIs, period ends 2020-12-31 to 2024-03-31)
+and 2,956 facts; Gold 876 filings, 326 issuers, 1,467 facts (PLN, EUR, USD, UAH), build stage 10 rows, 0
+duplicates by series_key × date_key.

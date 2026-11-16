@@ -4,7 +4,7 @@ models:
     description: >-
       ESEF annual financial reports of Polish issuers held by filings.xbrl.org (XBRL International; licence
       unresolved, internal), the newest copy of the filing list. Grain: fxo_id. The repository says it is not
-      complete. ROWS_FILINGS (Dev trial TRIAL).
+      complete: its Polish filings were last added on 2024-07-30, so period ends 2023 and 2024 are partly held. 876 rows, 326 LEIs, period ends 2020-12-31 to 2024-03-31 (Dev trial 43838478762).
     columns:
       - name: fxo_id
         description: The repository's filing id (LEI-period end-standard-country-sequence).
@@ -36,7 +36,7 @@ models:
       annual reports (filings.xbrl.org; licence unresolved, internal). Grain: fxo_id × concept × period_start ×
       period_end × unit_code; value is null when a filing states several values for the key (values_distinct > 1);
       comparative periods included (is_reporting_period false).
-      ROWS_FACTS (Dev trial TRIAL).
+      2,956 rows from 777 filings, 0 duplicate keys, 0 null keys (Dev trial 43838478762).
     tests:
       - unique:
           column_name: "fxo_id || '|' || concept || '|' || period_start || '|' || period_end || '|' || unit_code"
@@ -61,7 +61,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['iso4217:PLN']
+                values: ['iso4217:PLN', 'iso4217:EUR', 'iso4217:USD', 'iso4217:UAH']
               config:
                 severity: warn
       - name: values_distinct

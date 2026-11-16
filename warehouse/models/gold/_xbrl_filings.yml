@@ -6,7 +6,8 @@ models:
       One row per ESEF annual financial report filing of a Polish issuer held by filings.xbrl.org (XBRL
       International), keyed by the repository's filing id; issuer LEI, period end, date added, validation counts
       (errors, warnings, inconsistencies of the repository's own validation). Language versions and refilings are
-      separate rows. The repository says it is not complete. Licence unresolved: internal.
+      separate rows, and so are a separate and a consolidated report of one issuer and period. The repository says it is
+      not complete (Polish filings last added 2024-07-30). Licence unresolved: internal.
     columns:
       - name: fxo_id
         description: The repository's filing id (LEI-period end-standard-country-sequence).
@@ -69,7 +70,10 @@ models:
       - name: period_end_year
         tests: [not_null]
       - name: unit_code
-        description: The unit as tagged in the report (iso4217:<currency>); unit_map.csv maps it to the conformed unit (D33).
+        description: >-
+          The unit as tagged in the report (iso4217:<currency>: PLN, EUR, USD, UAH in the trial), never converted.
+          An entity table, not a fact: it does not enter dim_unit, so unit_map has no row for it (D33 covers the
+          build stage's units, filings and entities).
         tests: [not_null]
       - name: value
         tests: [not_null]
