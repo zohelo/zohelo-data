@@ -30,7 +30,7 @@ def q(con, sql):
 
 
 def one(con, sql):
-    return con.execute(sql).fetchone()[0]
+    return con.execute(sql).fetchall()[0][0]  # fetchall: DuckDB 2.0 keeps a half-read result open
 
 
 def render(path: str, refs: dict[str, str], sources: dict[str, str]) -> str:
