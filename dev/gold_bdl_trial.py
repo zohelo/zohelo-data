@@ -271,8 +271,30 @@ def curated(cat, con, sample: list[str]) -> dict:
         """select count(*), count(trial_value), count(*) filter (where trial_value = curated_value),
                count(*) filter (where trial_value <> curated_value), count(distinct block_id) from compared"""
     ).fetchone()
+    # A curated series the rule names otherwise (the curated stage's hand-made measure positions and price
+    # bases): the same subgroup, Poland, date and value under another rule key.
+    elsewhere = con.execute(
+        f"""with missing as (select * from compared where trial_value is null),
+            t as (select series_key, date_key, value, split_part(measure_key, ':', 2) as block_id
+                  from {o} where geography_key = 'PL')
+            select m.block_id, count(distinct m.series_key), count(distinct m.series_key) filter (where t.series_key is not null),
+                   count(distinct t.series_key)
+            from missing as m left join t on t.block_id = m.block_id and t.date_key = m.date_key and t.value = m.curated_value
+            group by 1 order by 1"""
+    ).fetchall()
+    renamed = con.execute(
+        f"""with missing as (select * from compared where trial_value is null)
+            select substr(m.rule_series_key, 1, 90), substr(t.series_key, 1, 90), m.curated_value
+            from missing as m join (select series_key, date_key, value, split_part(measure_key, ':', 2) as block_id
+                                    from {o} where geography_key = 'PL') as t
+              on t.block_id = m.block_id and t.date_key = m.date_key and t.value = m.curated_value
+            qualify row_number() over (partition by m.block_id order by m.rule_series_key) <= 2
+            order by 1 limit 6"""
+    ).fetchall()
     return {"totals_series_found_equal_differ_blocks": totals, "by_block": by_block, "spot": spot,
-            "differ": differ, "missing": missing}
+            "differ": differ, "missing": missing,
+            "missing_by_block (block, missing, same value under another key, keys)": elsewhere,
+            "missing_renamed (curated as rule key, rule key, value)": renamed}
 
 
 def main() -> None:
