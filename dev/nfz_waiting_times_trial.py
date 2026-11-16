@@ -273,7 +273,7 @@ def gold(con, teryt: dict) -> dict:
     g["tests"] = schema_tests(con, f"warehouse/models/gold/_{SOURCE}.yml", f"poc_build_{SOURCE}", "build")
     g["map"] = [[c, k, teryt.get(k.removeprefix("TERC:"))] for c, k in con.execute("select source_code, geography_key from gmap order by 1").fetchall()]
     g["spot_PL"] = rows(con, "select measure_key, period_label, value from build where geography_key = 'PL' order by 1, 2")
-    g["spot_mazowieckie_case1"] = rows(con, "select measure_key, period_label, value from build where geography_key = 'TERC:1400000' "
+    g["spot_mazowieckie_case1"] = rows(con, "select measure_key, period_label, value from build where geography_key = 'TERC:14' "
                                             "and measure_key like '%case1' order by 1")
     km = "read_csv('warehouse/seeds/kpi_measure.csv', all_varchar=true)"
     g["kpi_patterns"] = rows(con, f"select k.kpi_key, k.measure_key_pattern, count(b.measure_key), count(distinct b.geography_key) "
