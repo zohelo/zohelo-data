@@ -40,7 +40,8 @@ WAREHOUSE = ROOT / "warehouse"
 SCRATCH = "zz_dev_rpwdl"
 LAND = f"{SCRATCH}/01_landing"
 SILVER = ["rpwdl_providers", "rpwdl_establishments", "rpwdl_units", "rpwdl_cells", "rpwdl_practices"]
-SELECT = [*SILVER, "poc_map_geography", "poc_build_rpwdl"]
+SEED_ROWS = ["source", "licence", "kpi", "kpi_measure", "kpi_v2_map", "unit", "unit_map", "unit_decimals"]
+SELECT = [*SILVER, *SEED_ROWS, "poc_map_geography", "poc_build_rpwdl"]
 FORBIDDEN = {"book_id", "book_number", "regon", "practice_id", "founder_name", "nip", "name"}
 # Ids read from the Landing ZIPs in memory only, to show no provider ledger or practice entry is in both ledger
 # files (the Silver grain of these two tables is the file row, so the build cannot check it).
@@ -255,7 +256,7 @@ def main(argv) -> int:
                 failures.append(f"dbt build {attempt}: exit {code}, {bad}")
             local = duckdb.connect(str(work / "r2.duckdb"), read_only=True)
             fingerprints.append({m: local.sql(f'select count(*), sum(hash(t)) from {s}."{a}" as t').fetchall()[0]
-                                 for m, (s, a) in aliases.items() if m != "poc_map_geography"})
+                                 for m, (s, a) in aliases.items() if m != "poc_map_geography" and m not in SEED_ROWS})
             local.close()
         if fingerprints[0] != fingerprints[1]:
             failures.append("second dbt build changed a table")
@@ -265,7 +266,9 @@ def main(argv) -> int:
         b = rel["poc_build_rpwdl"]
         gold = {
             "build_rows": one(local, f"select count(*) from {b}"),
-            "dup_series_date": one(local, f"select count(*) from (select 1 from {b} group by measure_key, geography_key, breakdown_json, date_key having count(*) > 1)"),
+            "dup_series_key_x_date_key": one(local, f"select count(*) from (select 1 from {b} group by measure_key || '|' || geography_key || case when geography_key = '_X' then ':' || coalesce(geography_source_code, '') else '' end || '|' || breakdown_json, date_key having count(*) > 1)"),
+            "silver_identifier_columns": {m: sorted(FORBIDDEN & {r[0] for r in local.sql(f"select column_name from (describe {rel[m]})").fetchall()}) for m in SILVER},
+            "code_list_rows_rpwdl": {m: one(local, f"select count(*) from {rel[m]} where " + {"source": "source_key", "kpi_measure": "source_system", "unit_map": "source_system"}.get(m, "1") + (" = 'rpwdl'" if m in ("source", "kpi_measure", "unit_map") else " = 1")) for m in SEED_ROWS},
             "unmatched_X": one(local, f"select count(*) from {b} where geography_key = '_X'"),
             "areas": one(local, f"select count(distinct geography_key) from {b}"),
             "periods": local.sql(f"select distinct period_label from {b}").fetchall(),
@@ -276,10 +279,11 @@ def main(argv) -> int:
             "kpi_rows (metrics input: is_total, kpi measures)": local.sql(f"select measure_key, count(*), min(value), max(value) from {b} where is_total and measure_key in ('rpwdl:register:entities:providers', 'rpwdl:register:practices:practices') group by 1 order by 1").fetchall(),
             "voiv_sum_vs_PL": local.sql(f"select measure_key, sum(value) filter (geography_key <> 'PL') voiv, max(value) filter (geography_key = 'PL') pl from {b} where is_total group by all order by all").fetchall(),
         }
+        gold["metrics_rows_per_kpi (is_total, not _X; ceiling 26)"] = local.sql(f"select measure_key, count(*) from {b} where is_total and geography_key <> '_X' and measure_key in ('rpwdl:register:entities:providers', 'rpwdl:register:practices:practices') group by 1 order by 1").fetchall()
         kpi = gold["kpi_rows (metrics input: is_total, kpi measures)"]
         bounds = {"rpwdl:register:entities:providers": 2e5, "rpwdl:register:practices:practices": 1e6}
         out_of_bounds = [r for r in kpi if r[2] < 0 or r[3] > bounds[r[0]]]
-        if gold["dup_series_date"] or gold["unmatched_X"] or gold["null_values"] or out_of_bounds:
+        if gold["dup_series_key_x_date_key"] or any(gold["silver_identifier_columns"].values()) or gold["unmatched_X"] or gold["null_values"] or out_of_bounds:
             failures.append(f"gold checks {gold} out_of_bounds={out_of_bounds}")
         spot = local.sql(f"select measure_key, breakdown_json, geography_key, value from {b} where geography_key in ('PL', 'TERC:14', 'TERC:24') and is_total order by all").fetchall()
         local.close()
