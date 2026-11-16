@@ -80,6 +80,92 @@ def dump(con, held) -> None:
                 print(line[:230])
 
 
+TERC = {"polska": "PL", "dolnośląskie": "TERC:02", "kujawsko-pomorskie": "TERC:04", "lubelskie": "TERC:06",
+        "lubuskie": "TERC:08", "łódzkie": "TERC:10", "małopolskie": "TERC:12", "mazowieckie": "TERC:14",
+        "opolskie": "TERC:16", "podkarpackie": "TERC:18", "podlaskie": "TERC:20", "pomorskie": "TERC:22",
+        "śląskie": "TERC:24", "świętokrzyskie": "TERC:26", "warmińsko-mazurskie": "TERC:28",
+        "wielkopolskie": "TERC:30", "zachodniopomorskie": "TERC:32"}
+TITLES = r"(?i)(płatnicy|ubezpieczeni)\s+według\s+województw|emerytury i renty wypłacone przez (zus|zakład)"
+
+
+def profile(con) -> None:
+    n = lambda q: con.sql(q).fetchall()[0][0]  # noqa: E731
+    annotate("notice", "zus_yearbook trial bronze profile", {
+        "rows": n("select count(*) from zus_yearbook_lines"),
+        "editions": n("select count(distinct entity) from zus_yearbook_lines"),
+        "null_keys": n("select count(*) from zus_yearbook_lines where entity is null or page_number is null or line_number is null or line_text is null or raw_sha256 is null"),
+        "dup_keys": n("select count(*) from (select 1 from zus_yearbook_lines group by entity, page_number, line_number having count(*) > 1)"),
+        "versions": n("select string_agg(distinct entity || '@' || source_version, ' ') from zus_yearbook_lines"),
+        "title_pages": n(f"select string_agg(entity || ':p' || page_number, ' ' order by entity, page_number) from (select distinct entity, page_number from zus_yearbook_lines where page_number > 16 and regexp_matches(line_text, '{TITLES}'))"),
+    })
+
+
+def dump2(con, client, held, land) -> None:
+    """Log the target table pages of every edition in full (layout mode), and the first pension page in plain mode."""
+    import io
+
+    import pypdf
+
+    from ingestion.common import bulk_bronze
+    from ingestion.to_landing.patterns import bulk_file
+
+    for entity in held:
+        pages = [r[0] for r in con.sql(
+            f"select distinct page_number from zus_yearbook_lines where entity = '{entity}' and page_number > 16 "
+            f"and regexp_matches(line_text, '{TITLES}') order by 1").fetchall()]
+        print(f"\n##### TARGET {entity}: {pages}", flush=True)
+        for page in pages[:8]:
+            print(f"\n======== {entity} PAGE {page}")
+            for (line,) in con.sql(
+                f"select line_text from zus_yearbook_lines where entity = '{entity}' and page_number = {page} order by line_number"
+            ).fetchall():
+                print(line[:420])
+        pension = [r[0] for r in con.sql(
+            f"select distinct page_number from zus_yearbook_lines where entity = '{entity}' and page_number > 16 "
+            "and regexp_matches(line_text, '(?i)emerytury i renty wypłacone przez (zus|zakład)') order by 1").fetchall()]
+        if pension:
+            receipt = bulk_file.landed(client, req("STORAGE_LANDING_BUCKET_NAME"), bulk_file.prefix(SOURCE, entity, land))[-1]
+            body = bulk_bronze.read_raw(client, req("STORAGE_LANDING_BUCKET_NAME"), SOURCE, receipt)
+            page = pypdf.PdfReader(io.BytesIO(body)).pages[pension[0] - 1]
+            print(f"\n======== PLAIN {entity} PAGE {pension[0]}")
+            for line in (page.extract_text() or "").splitlines()[:70]:
+                print(line[:300])
+
+
+def silver_gold(con, silver) -> None:
+    n = lambda q: con.sql(q).fetchall()[0][0]  # noqa: E731
+    con.sql("create or replace table zus_yearbook_tables as " + render(silver, {"zus_yearbook_lines": "zus_yearbook_lines"}))
+    s = "zus_yearbook_tables"
+    stats = {
+        "silver_rows": n(f"select count(*) from {s}"),
+        "dup_grain": n(f"select count(*) from (select 1 from {s} group by measure_code, area_name, period_year having count(*) > 1)"),
+        "null_keys": n(f"select count(*) from {s} where edition is null or table_code is null or measure_code is null or unit_code is null or area_name is null or period_year is null or cell_status is null or raw_sha256 is null"),
+        "per_measure": n(f"select string_agg(x, '; ' order by x) from (select measure_code || ' ' || min(period_year) || '-' || max(period_year) || ' n=' || count(*) || ' areas=' || count(distinct area_name) x from {s} group by measure_code)"),
+        "per_edition": n(f"select string_agg(x, '; ' order by x) from (select edition || ':' || measure_code || ' p' || min(page_number) || ' n=' || count(*) x from {s} group by edition, measure_code)"),
+        "cell_status": n(f"select string_agg(cell_status || '=' || c, ' ') from (select cell_status, count(*) c from {s} group by 1)"),
+        "areas_not_accepted": n(f"select count(*) from {s} where area_name not in ({', '.join(repr(a) for a in TERC)})"),
+    }
+    annotate("notice", "zus_yearbook trial silver", stats)
+    show(con, "silver all", f"select edition, measure_code, area_name, period_year, value_text, value, cell_status, page_number from {s} order by measure_code, area_name, period_year", limit=700)
+    gold = ROOT / "warehouse/models/gold/poc_build_zus_yearbook.sql"
+    con.sql("create or replace table geo as select 'zus_yearbook' as source_system, k as source_code, v as geography_key from (select unnest(map_keys(m)) k, unnest(map_values(m)) v from (select MAP " + "{" + ", ".join(f"'{k}': '{v}'" for k, v in TERC.items()) + "} m))")
+    con.sql("create or replace table g as " + render(gold, {"zus_yearbook_tables": s, "poc_map_geography": "geo"}))
+    annotate("notice", "zus_yearbook trial gold", {
+        "gold_rows": n("select count(*) from g"),
+        "dup_series_date": n("select count(*) from (select 1 from g group by measure_key || '|' || geography_key || '|' || breakdown_json, date_key having count(*) > 1)"),
+        "unmatched": n("select count(*) from g where geography_key = '_X'"),
+        "null_values": n("select count(*) from g where value is null"),
+        "per_measure": n("select string_agg(x, '; ' order by x) from (select measure_key || ' ' || min(period_label) || '-' || max(period_label) || ' n=' || count(*) || ' geo=' || count(distinct geography_key) x from g group by measure_key)"),
+        "per_area_period_max": n("select max(c) from (select count(*) c from g group by measure_key, geography_key, date_key)"),
+    })
+    annotate("notice", "zus_yearbook trial gold Poland spot values", {"values": n(
+        "select string_agg(measure_codes || ' ' || period_label || '=' || value, '; ' order by measure_codes, period_label) from g "
+        "where geography_key = 'PL' and period_label in ('2009', '2011', '2014', '2017', '2020', '2023')")})
+    for test in sorted((ROOT / "warehouse/tests").glob("zus_yearbook_*.sql")):
+        failing = con.sql(render(test, {"zus_yearbook_tables": s, "poc_build_zus_yearbook": "g"})).fetchall()
+        annotate("notice" if not failing else "error", f"zus_yearbook test {test.stem}", {"failing_rows": len(failing), "first": [str(r) for r in failing[:10]]})
+
+
 def render(path: Path, tables: dict[str, str]) -> str:
     macros = "".join(p.read_text() for p in sorted((ROOT / "warehouse/macros/sources").glob(f"{SOURCE}*.sql")))
     text = macros + re.sub(r"\{\{ config\(.*?\) \}\}", "", path.read_text(), flags=re.S)
@@ -142,7 +228,7 @@ def main(argv) -> int:
         })
         if "dump" in argv:
             dump(con, held)
-        for entity in held:
+        for entity in held if "files" in argv else []:
             rows = con.sql(f"select page_number, line_text from zus_yearbook_lines where entity = '{entity}' order by page_number, line_number").fetchall()
             with open(out / f"{entity}.txt", "w", encoding="utf-8") as f:
                 last = None
@@ -151,37 +237,12 @@ def main(argv) -> int:
                         f.write(f"\n=================== PAGE {page_number}\n")
                         last = page_number
                     f.write(text + "\n")
+        profile(con)
+        if "dump2" in argv:
+            dump2(con, client, held, land)
         silver = ROOT / "warehouse/models/silver/zus_yearbook/zus_yearbook_tables.sql"
         if silver.exists():
-            con.sql("create or replace table zus_yearbook_tables as " + render(silver, {"zus_yearbook_lines": "zus_yearbook_lines"}))
-            s = "zus_yearbook_tables"
-            stats = {
-                "silver_rows": n(f"select count(*) from {s}"),
-                "silver_dup": n(f"select count(*) from (select 1 from {s} group by table_code, measure_code, period_year, edition having count(*) > 1)"),
-                "silver_null_keys": n(f"select count(*) from {s} where table_code is null or measure_code is null or period_year is null or raw_sha256 is null"),
-                "per_measure": n(f"select string_agg(x, '; ' order by x) from (select table_code || '/' || measure_code || ' ' || min(period_year) || '-' || max(period_year) || ' n=' || count(*) x from {s} group by all)"),
-                "status": n(f"select string_agg(cell_status || '=' || c, ' ') from (select cell_status, count(*) c from {s} group by 1)"),
-            }
-            annotate("notice", "zus_yearbook trial silver", stats)
-            show(con, "silver all", f"select * exclude (raw_sha256, source_version) from {s} order by table_code, measure_code, period_year, edition", limit=600)
-            for test in sorted((ROOT / "warehouse/tests").glob("zus_yearbook_*.sql")):
-                failing = con.sql(render(test, {"zus_yearbook_tables": s})).fetchall()
-                annotate("notice" if not failing else "error", f"zus_yearbook test {test.stem}", {"failing_rows": len(failing), "first": [str(r) for r in failing[:10]]})
-            gold = ROOT / "warehouse/models/gold/poc_build_zus_yearbook.sql"
-            if gold.exists():
-                con.sql("create or replace table geo as select 'zus_yearbook' as source_system, 'PL' as source_code, 'PL' as geography_key")
-                con.sql("create or replace table g as " + render(gold, {"zus_yearbook_tables": s, "poc_map_geography": "geo"}))
-                annotate("notice", "zus_yearbook trial gold", {
-                    "gold_rows": n("select count(*) from g"),
-                    "dup_series_date": n("select count(*) from (select 1 from g group by measure_key, geography_key, breakdown_json, date_key having count(*) > 1)"),
-                    "unmatched": n("select count(*) from g where geography_key = '_X'"),
-                    "years": n("select min(period_label) || '-' || max(period_label) from g"),
-                    "status": n("select string_agg(observation_status_key || '=' || c, ' ') from (select observation_status_key, count(*) c from g group by 1)"),
-                })
-                annotate("notice", "zus_yearbook trial gold Poland newest", {"values": n(
-                    "select string_agg(measure_codes || ' ' || period_label || '=' || value, '; ' order by measure_codes) from g "
-                    "where (measure_key, date_key) in (select measure_key, max(date_key) from g group by 1)")})
-                show(con, "gold sample", "select measure_key, period_label, value, unit_code, observation_status_key from g order by all", limit=400)
+            silver_gold(con, silver)
     finally:
         removed = 0
         for bucket in (req("STORAGE_LANDING_BUCKET_NAME"), req("STORAGE_LAKEHOUSE_BUCKET_NAME")):
