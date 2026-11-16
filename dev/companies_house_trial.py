@@ -186,9 +186,12 @@ def trial() -> None:  # noqa: PLR0915
     except Exception as exc:  # noqa: BLE001
         geo = f"{type(exc).__name__}: {str(exc)[:200]}"
     seeds = {}
+    from warehouse import seed_rows
+
     for seed, key in (("source", "source_key"), ("licence", "licence_key"), ("unit_map", "source_system")):
-        with Path(f"warehouse/seeds/{seed}.csv").open(encoding="utf-8") as handle:
-            seeds[seed] = [r for r in csv.DictReader(handle) if r[key].startswith("companies_house")]
+        seeds[seed] = [r for r in seed_rows.rows(seed) if r[key].startswith("companies_house")]
+    licence_keys = {r["licence_key"] for r in seed_rows.rows("licence")}
+    seeds["catalogue_licence_resolves"] = [r["licence_key"] in licence_keys for r in seeds["source"]]
     annotate("notice", "companies_house trial: gold build_companies_house", {
         "rows_two_builds_build_entity": rows_builds,
         "dup_series_key_x_date_key": q(con, grain),
