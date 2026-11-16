@@ -39,10 +39,10 @@ bronze: [bronze.prng_names, bronze.prng_rejected_files]
 silver: [silver.prng_objects, silver.prng_object_gminas]
 gold: [gold.build_gugik_prng, gold.metrics_localities]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  prng_objects: {rows: 390000}  # 255,761 = 124,236 localities + 131,525 physiographic objects (Dev trial, PR)
-  prng_object_gminas: {rows: 420000}  # TRIAL
-  poc_build_gugik_prng: {rows: 100000}  # TRIAL
-  poc_metrics_localities: {rows: 5000}  # TRIAL
+  prng_objects: {rows: 390000}  # 255,761 = 124,236 localities + 131,525 physiographic objects (Dev 43806029951)
+  prng_object_gminas: {rows: 400000}  # 261,659 object × gmina rows (272,274 points less 10,615 repeated codes)
+  poc_build_gugik_prng: {rows: 52000}  # 34,608 (Dev 43806029951)
+  poc_metrics_localities: {rows: 4500}  # 2,876 (Dev 43806029951)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): two packages of about 23 MB with no changed-since feature; each copy is the whole

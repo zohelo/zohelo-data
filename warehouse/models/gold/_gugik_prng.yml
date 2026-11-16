@@ -3,9 +3,9 @@ models:
   - name: poc_build_gugik_prng
     description: >-
       Build stage — GUGiK PRNG, state register of geographical names (register PL-ENV-002): counts of named objects
-      (localities by kind, physiographic objects by category, '_T' all) located wholly or partly in Poland, each
-      voivodeship, powiat and gmina, at the export date of the newest package (entity snapshot, frequency D). Unit
-      named_objects as counted. An object spanning several units counts once in each.
+      (localities by kind, physiographic objects by category, '_T' all) in Poland and in each voivodeship, powiat and
+      gmina of a published point (main point, or start and end points of a linear object), at the export date of the newest package (entity snapshot, frequency D). Unit
+      named_objects as counted. A linear object whose two ends lie in different units counts once in each.
     columns:
       - name: measure_key
         tests: [not_null]

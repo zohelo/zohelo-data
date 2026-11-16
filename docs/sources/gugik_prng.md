@@ -10,8 +10,8 @@ export date the package names; a package whose header, sheet or row count is not
 into `bronze.prng_rejected_files`. Silver `silver.prng_objects` (one row per PRNG identifier: names, status, category,
 kind, SIMC id, territory and coordinates as published, decimal latitude and longitude of a main point) and
 `silver.prng_object_gminas` (object × TERYT gmina code). Gold block `gold.build_gugik_prng`, registered in
-`warehouse/macros/sources/gugik_prng.sql`: counts of named objects located wholly or partly in Poland, each
-voivodeship, powiat and gmina (localities by kind, physiographic objects by category), daily at the export date;
+`warehouse/macros/sources/gugik_prng.sql`: counts of named objects in Poland and in each voivodeship, powiat and
+gmina of a published point (main point, or the start and end points of a linear object) (localities by kind, physiographic objects by category), daily at the export date;
 KPI `localities` (draft). Monthly check (the 5th). Licence: "Dane są dostępne bezpłatnie i do dowolnego
 wykorzystania" (PRNG page), attribution "Źródło: GUGiK, PRNG". Left out: the world-names part (`PRNG_SWIAT_*.zip`)
 and the GML/SHP twins of the same records.

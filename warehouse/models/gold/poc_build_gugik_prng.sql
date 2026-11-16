@@ -1,9 +1,9 @@
 {{ config(alias='build_gugik_prng', tags=['gold_block']) }}
 {# Gold build stage (#2971): GUGiK PRNG, state register of geographical names (register PL-ENV-002), an entity snapshot
    of the newest package of each part (silver.prng_objects, latest-only: one date, the export date the package names).
-   Counts of named objects located wholly or partly in each area: Poland (every object), every voivodeship, powiat and
-   gmina whose TERYT code the register gives (silver.prng_object_gminas). An object spanning several units counts once
-   in each, so the gminas of a powiat need not add up to it. Block miejscowosci: measure
+   Counts of named objects per area: Poland (every object), and every voivodeship, powiat and gmina of a published
+   point of the object (its main point, or the start and end points of a linear object; silver.prng_object_gminas).
+   A linear object whose ends lie in two units counts once in each, so the gminas of a powiat need not add up to it. Block miejscowosci: measure
    gugik_prng:miejscowosci:named_objects:count, breakdown object_kind (rodzaj obiektu: wieś, część wsi, miasto, ...).
    Block obiekty_fizjograficzne: measure gugik_prng:obiekty_fizjograficzne:named_objects:count, breakdown
    object_category (kategoria obiektu: hydrografia, ukształtowanie terenu, ...). '_T' is every kind or category

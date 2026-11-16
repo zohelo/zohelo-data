@@ -3,8 +3,8 @@
    (physiographic objects). Grain: prng_id (the register's own identifier, one sequence over both parts; the INSPIRE
    id iip_id beside it). Names, name status, object category and kind, parent locality, SIMC identifier of localities
    (external_system 'TERYT (SIMC)'), the source document, the territory as published (voivodeship, powiat and gmina
-   names and the gmina TERYT codes; several, separated by ';', for an object that spans units: the code pairs are in
-   silver.prng_object_gminas) and the coordinates as published (WGS84 degrees-minutes-seconds and PL-1992 XY text),
+   names and the gmina TERYT codes, one per published point separated by ';': the start and end points of a linear
+   object give two, possibly equal; one row per object and gmina in silver.prng_object_gminas) and the coordinates as published (WGS84 degrees-minutes-seconds and PL-1992 XY text),
    with latitude and longitude in decimal degrees parsed from the WGS84 text of a single main point. Empty text and
    the literal 'NULL' are null. Version and validity dates are Excel serial numbers in the workbook, converted here;
    a value that is not a number fails the build, as does a PRNG identifier that is not a whole number. #}
@@ -122,8 +122,8 @@ select
     case when p.external_system = 'TERYT (SIMC)' then p.external_id end as simc_id,
     case
         when p.gmina_codes is null then 0
-        else len(string_split(p.gmina_codes, ';'))
-    end as gmina_count,
+        else len(list_distinct(list_transform(string_split(p.gmina_codes, ';'), x -> trim(x))))
+    end as gmina_count,  -- distinct gminas of the published points
     case
         when p.representation_kind = 'punkt główny' and p.lat_d <> ''
             then round(
