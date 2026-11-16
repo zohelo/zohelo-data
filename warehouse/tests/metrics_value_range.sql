@@ -37,7 +37,7 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('museum_visiting_share', 'gus_culture_participation', '%', 0, 100),
     ('theatre_attendance_share', 'gus_culture_participation', '%', 0, 100),
     -- RPWDL register counts (#2958), Poland the largest area: active healthcare providers 29,845 ledgers and
-    -- practices about 250,000 in the November 2026 files (Dev probe 43339211206)
+    -- practices 234,327 in the 16 November 2026 files (Dev trial 43796970764)
     ('healthcare_providers', 'rpwdl', '%', 0, 2e5),
     ('medical_practices', 'rpwdl', '%', 0, 1e6),
     -- GUS census tables (#2897): urban share in %; holdings PL 2010 = 1,509,148; ha per holding, highest 22.22
