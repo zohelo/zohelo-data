@@ -10,7 +10,6 @@ any other run (a Dev branch trial, a local build) skips the write (#2106).
 
 from __future__ import annotations
 
-import csv
 from datetime import UTC, datetime
 import json
 import os
@@ -18,6 +17,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
+from warehouse import seed_rows
 
 PROJECT = Path(__file__).resolve().parent
 CATALOG_KEY = "_portal_catalog/v1/catalog.json"
@@ -192,8 +193,6 @@ def manifest_object(semantic: dict, kpis: list[dict], generated_at: str) -> dict
 
 
 def manifest() -> dict:
-    """Build the manifest object from dbt's semantic manifest and kpi.csv; writes nothing."""
+    """Build the manifest object from dbt's semantic manifest and the kpi rows (warehouse/seed_rows.py); no writes."""
     semantic = json.loads((PROJECT / "target" / "semantic_manifest.json").read_text())
-    with (PROJECT / "seeds" / "kpi.csv").open(encoding="utf-8", newline="") as f:
-        kpis = list(csv.DictReader(f))
-    return manifest_object(semantic, kpis, datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"))
+    return manifest_object(semantic, seed_rows.rows("kpi"), datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"))

@@ -43,6 +43,11 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('average_farm_area', 'gus_psr2020', '%', 0, 100),
     -- MRPiPS-03 (#2910): persons granted social assistance, PL 2019 = 1,205,506 (Dev trial 43293740538)
     ('social_assistance_recipients', 'mrpips_social_assistance', '%', 0, 1e7),
+    -- ISWS (#2968): common courts, all cases, Poland; largest 2019 = 17,728,993 received, 16,400,377 resolved;
+    -- average duration in months, 2011-2025 between 4.05 and 7.15 (ISWS workbooks, Dev trial 43804846162)
+    ('court_cases_received', 'ms_isws', '%', 0, 5e7),
+    ('court_cases_resolved', 'ms_isws', '%', 0, 5e7),
+    ('court_case_duration', 'ms_isws', '%', 0, 60),
     ('inflation', 'eurostat', '%', -100, 3000),
     ('inflation', 'world_bank_wdi', '%', -100, 100000),
     ('unemployment_rate', 'eurostat', '%', 0, 60),
@@ -88,6 +93,11 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- UNHCR (#2415): persons; highest refugees 4,404,995 (all asylum countries 1951-2025, Dev trial 43282453427).
     -- Documentation only (no metrics_refugees_hosted model yet).
     ('refugees_hosted', 'unhcr', '%', 0, 2e7),
+    -- Police statistics portal (#2969): offences; Poland is the largest area, highest 1,466,643 (2003, all
+    -- offences; Dev trial 43806377026); % detected as published, 15.5 to 83.0 there, bound 0-100. Documentation
+    -- only (no metrics models yet).
+    ('recorded_offences', 'policja_statistics', '%', 0, 5e6),
+    ('offence_detection_rate', 'policja_statistics', '%', 0, 100),
     -- EEA GovReg (#2424): published in Gg (kt) CO2e, metrics in Mt CO2e (D33, ÷ 1000); highest member DE 1,253,128 kt
     -- = 1,253.1 Mt (total excl. LULUCF, 1990-2024, Dev trial 43282453427). Documentation only until
     -- metrics_ghg_emissions joins the metrics union below.
@@ -192,6 +202,13 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('unemployment_rate_monthly_sa', 'unece', '%', 0, 80),
     ('cpi_annual_rate', 'unece', '%', -50, 1e5),
     ('ppi_annual_rate', 'unece', '%', -80, 1e5),
+    -- Our World in Data (CD-031, #2982): consumption-based CO2 in tonnes per person (Global Carbon Budget); the V-Dem
+    -- electoral democracy index, 0 to 1 by definition; Maddison GDP per capita in international-$ at 2011 prices
+    -- (bounds as checked in the Dev trial of #2982 on every Gold row). CO2 starts above 0: an exact 0 is a missing
+    -- value for a populated country and poc_build_owid does not build it.
+    ('co2_consumption_per_capita', 'owid', '%', 1e-6, 100),
+    ('electoral_democracy_index', 'owid', '%', 0, 1),
+    ('gdp_per_capita', 'owid', '%', 100, 300000),
     -- PKW election results (#486): turnout in per cent as published, Poland, voivodeships, powiats and gminas;
     -- range TRIAL_RANGE (Dev trial TRIAL_ID)
     ('voter_turnout', 'pkw', '%', 0, 100)
@@ -583,6 +600,33 @@ metrics as (
         geography_key,
         date_key,
         value
+    from {{ ref('poc_metrics_court_cases_received') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_court_cases_resolved') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_court_case_duration') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
     from {{ ref('poc_metrics_internet_users') }}
     union all
     select
@@ -593,6 +637,24 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_health_expenditure_gdp') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_co2_consumption_per_capita') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_electoral_democracy_index') }}
     union all
     select
         concept_key,
