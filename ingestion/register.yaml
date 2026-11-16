@@ -8582,7 +8582,7 @@ sources:
     - https://www.xbrl.org/news/well-over-3000-esef-filings-at-filings-xbrl-org-where-are-they-coming-from-and-how-can-we-improve-access/
     - https://www.esma.europa.eu/issuer-disclosure/electronic-reporting
 - id: CD-014
-  name: Companies House Public Data, Document and Streaming APIs
+  name: Companies House Free Company Data Product (basic company data)
   short_name: Companies House
   provider: UK Companies House
   source_system: companies_house
@@ -8592,7 +8592,7 @@ sources:
   geography: United Kingdom
   provider_type: national-public
   domains: [business-register, corporate-filings]
-  entities: [enterprise, officer, filing, person]
+  entities: [enterprise]
   granularity: 'Free Company Data Product: one row per live company on the register (name, number, registered office, status,
     type, country of origin, incorporation date, SIC codes). PSC and accounts products exist but are out of the selection.'
   coverage: Snapshot of live companies, compiled to the end of the previous month; the listing holds only the current snapshot,
